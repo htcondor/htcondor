@@ -22,6 +22,7 @@
 
 #include "common.h"
 #include "operators.h"
+#include "sink.h"
 #include "value.h"
 #include <iostream>
 
@@ -48,7 +49,9 @@ Value( )
 	realValue = 0.0;
 	listValue = NULL;
 	classadValue = NULL;
-	timeValueSecs = 0;
+	relTimeValueSecs = 0;
+	absTimeValueSecs.secs = 0;
+	absTimeValueSecs.offset = 0;
 }
 
 
@@ -155,8 +158,10 @@ CopyFrom( const Value &val )
 			return;
 
 		case ABSOLUTE_TIME_VALUE:
+		  	absTimeValueSecs = val.absTimeValueSecs;
+			return;
 		case RELATIVE_TIME_VALUE:
-			timeValueSecs = val.timeValueSecs;
+			relTimeValueSecs = val.relTimeValueSecs;
 			return;
 
 		default:
@@ -230,15 +235,15 @@ void Value::
 SetRelativeTimeValue( time_t rsecs ) 
 {
 	valueType = RELATIVE_TIME_VALUE;
-	timeValueSecs = rsecs;
+	relTimeValueSecs = rsecs;
 }
 
 
 void Value::
-SetAbsoluteTimeValue( time_t asecs ) 
+SetAbsoluteTimeValue( abstime_t asecs ) 
 {
 	valueType = ABSOLUTE_TIME_VALUE;
-	timeValueSecs = asecs;
+	absTimeValueSecs = asecs;
 }	
 
 
@@ -267,12 +272,14 @@ ostream& operator<<(ostream &stream, Value &value)
 	case Value::REAL_VALUE:
 		stream << value.realValue;
 		break;
-	case Value::RELATIVE_TIME_VALUE:
-		stream << "time value";
-		break;
-	case Value::ABSOLUTE_TIME_VALUE:
-		stream << "time value";
-		break;
+	case Value::RELATIVE_TIME_VALUE: 
+	case Value::ABSOLUTE_TIME_VALUE: {
+	  ClassAdUnParser unpar;
+	  string str;
+	  unpar.Unparse(str,value);
+	  stream <<str;
+	  break;
+	}
 	case Value::STRING_VALUE:
 		stream << value.strValue;
 		break;

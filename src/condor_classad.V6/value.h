@@ -60,7 +60,8 @@ class Value
 		/** Terra factor*/          T_FACTOR = 5
 		};
 
-			/// Values of number multiplication factors
+ 
+		/// Values of number multiplication factors
 		static const double ScaleFactor[];
 
 
@@ -121,10 +122,11 @@ class Value
 		*/
 		void SetStringValue( const char *str );
 
-		/** Sets an absolute time value in seconds since the UNIX epoch.
-			@param secs Number of seconds since the UNIX epoch.
+		/** Sets an absolute time value in seconds since the UNIX epoch, & the 
+            time zone it's measured in.
+			@param secs - Absolute Time Literal(seconds since the UNIX epoch, timezone offset) .
 		*/
-		void SetAbsoluteTimeValue( time_t secs );
+		void SetAbsoluteTimeValue( abstime_t secs );
 
 		/** Sets a relative time value.
 			@param secs Number of seconds.
@@ -243,10 +245,10 @@ class Value
 		*/
 		bool IsAbsoluteTimeValue( ) const;
 		/** Checks if the value is an absolute time value.
-			@param secs Number of seconds since the UNIX epoch.
+			@param secs - Absolute time literal (Number of seconds since the UNIX epoch,timezone offset).
 			@return true iff the value is an absolute time value.
 		*/
-		bool IsAbsoluteTimeValue( time_t& secs ) const;
+		bool IsAbsoluteTimeValue( abstime_t& secs ) const;
 		/** Checks if the value is a relative time value.
 			@return true iff the value is a relative time value
 		*/
@@ -265,13 +267,17 @@ class Value
 		friend class ExprTree;
 
 		ValueType 		valueType;		// the type of the value
+
+
 		union {
 			bool			booleanValue;
 			int				integerValue;
 			double 			realValue;
 			const ExprList	*listValue;
 			ClassAd			*classadValue;
-			time_t			timeValueSecs;
+			time_t			relTimeValueSecs;
+			abstime_t absTimeValueSecs;
+		  
 		};
 		std::string			strValue;		// has ctor/dtor cannot be in the union
 };
@@ -427,9 +433,9 @@ IsAbsoluteTimeValue( ) const
 }
 
 inline bool Value::
-IsAbsoluteTimeValue( time_t &secs ) const
+IsAbsoluteTimeValue( abstime_t &secs ) const
 {
-	secs = timeValueSecs;
+	secs = absTimeValueSecs;
 	return( valueType == ABSOLUTE_TIME_VALUE );
 }
 
@@ -442,7 +448,7 @@ IsRelativeTimeValue( ) const
 inline bool Value::
 IsRelativeTimeValue( time_t &secs ) const
 {
-	secs = timeValueSecs;
+	secs = relTimeValueSecs;
 	return( valueType == RELATIVE_TIME_VALUE );
 }
 inline bool Value::
