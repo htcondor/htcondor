@@ -55,23 +55,26 @@ EnvGetName( CONDOR_ENVIRON which )
     }
 
 	// Otherwise, fill the cache
-	char	*tmps;
+	char	*tmps = NULL;
 	switch ( local->flag )
 	{
 	case  ENV_FLAG_NONE:
-        tmps = (char *) local->string;
+        tmps = strdup((char *) local->string);
 		break;
     case ENV_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() + 1);
         sprintf( tmps, local->string, myDistro->Get() );
 		break;
     case ENV_FLAG_DISTRO_UC:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() + 1);
         sprintf( tmps, local->string, myDistro->GetUc() );
+		break;
+	default:
+		dprintf(D_ALWAYS, "EnvGetName(): SHOULD NEVER HAPPEN!\n");
 		break;
     }
 
