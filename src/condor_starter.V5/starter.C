@@ -408,20 +408,6 @@ get_exec()
 
 
 /*
-  We've been asked to vacate the machine, but we're allowed to checkpoint
-  any running jobs or complete any checkpoints we have in progress first.
-*/
-int
-handle_vacate_req()
-{
-	// dprintf( D_ALWAYS, "Entering function handle_vacate_req()\n" );
-
-	stop_all();				// stop any running user procs
-	return(0);
-}
-
-
-/*
   We've been asked to leave the machine, and we may not create or
   update any more checkpoint files.  We may however transfer any
   existing checkpoint files back to the submitting machine.
