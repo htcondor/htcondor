@@ -72,7 +72,7 @@ LIB = $(LIB_BASE)
 #endif
 
 /* the main condor library target */
-all_target(libclassad.a test_classads test_xml extra_tests)
+all_target(libclassad.a test_classads tester test_xml extra_tests)
 library_target(libclassad.a,$(OBJ))
 
 release:: all
@@ -134,6 +134,7 @@ LDFLAGS =  -Xlinker --export-dynamic -ldl
 
 c_plus_target (cxi, cxi.o, $(LIB))
 c_plus_target (test_classads, test_classads.o, $(LIB))
+c_plus_target (tester, tester.o, $(LIB))
 c_plus_target (test_xml, test_xml.o, $(LIB))
 c_plus_target (extra_tests, extra_tests.o, $(LIB))
 c_plus_target (sample, sample.o, $(LIB))
