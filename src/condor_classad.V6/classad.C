@@ -25,6 +25,8 @@
 #include "classadItor.h"
 #include "source.h"
 
+using namespace std;
+
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
 BEGIN_NAMESPACE( classad )

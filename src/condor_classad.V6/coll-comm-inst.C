@@ -28,6 +28,8 @@
 
 #include <list>
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 //-------------common collection templates-------------

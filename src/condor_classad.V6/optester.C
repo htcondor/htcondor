@@ -2,6 +2,8 @@
 #include "predefContexts.h"
 #include "source.h"
 
+using namespace std;
+
 extern "C" int SetSyscalls () { return 0; }
 
 int main (void)

@@ -27,6 +27,8 @@
 #include "intervalTree.h"
 #include <set>
 
+using namespace std;
+
 IntervalTree::
 IntervalTree( )
 {

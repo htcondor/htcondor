@@ -25,6 +25,8 @@
 #include "collectionServer.h"
 #include "remoteQuery.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 // --- remote collection query implementation begins ---

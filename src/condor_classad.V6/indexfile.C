@@ -24,6 +24,8 @@
 #include "indexfile.h"
 #include <iostream>
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad );
 
 int IndexFile::

@@ -24,6 +24,8 @@
 #include "collectionBase.h"
 #include "query.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 // --- local collection query implementation begins ---

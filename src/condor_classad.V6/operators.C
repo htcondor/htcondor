@@ -23,6 +23,7 @@
 #include "common.h"
 #include "operators.h"
 
+using namespace std;
 
 BEGIN_NAMESPACE( classad )
 

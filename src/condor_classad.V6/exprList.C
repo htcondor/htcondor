@@ -23,6 +23,8 @@
 #include "common.h"
 #include "exprTree.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 ExprList::

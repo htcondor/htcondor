@@ -23,6 +23,8 @@
 #include "common.h"
 #include "classad.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 AttributeReference::

@@ -24,6 +24,8 @@
 #include "exprTree.h"
 #include "sink.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 ClassAdUnParser::

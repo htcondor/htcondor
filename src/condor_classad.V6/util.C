@@ -24,6 +24,8 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 ClassAd* getOldClassAd( Stream *sock )

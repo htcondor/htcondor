@@ -26,6 +26,8 @@
 #include "sink.h"
 #include <regex.h>
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 FunctionCall::FuncTable FunctionCall::functionTable;
@@ -1225,10 +1227,11 @@ strCat( const char*, const ArgumentList &argList, EvalState &state,
 {
 	ClassAdUnParser	unp;
 	string			buf, s;
-	Value			val;
 	bool			errorFlag=false, undefFlag=false, rval=true;
 
 	for( int i = 0 ; (unsigned)i < argList.size() ; i++ ) {
+		Value  val;
+
 		s = "";
 		if( !( rval = argList[i]->Evaluate( state, val ) ) ) {
 			break;

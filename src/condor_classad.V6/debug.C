@@ -24,6 +24,8 @@
 #include "debug.h"
 #include <stdarg.h>
 
+using namespace std;
+
 int  _except_line_number = -1;
 char *_except_file_name = NULL;
 

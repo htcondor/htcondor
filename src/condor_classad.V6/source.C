@@ -25,6 +25,8 @@
 #include "classad.h"
 #include "lexer.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 // ctor

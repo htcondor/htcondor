@@ -24,6 +24,8 @@
 #include "collection.h"
 #include <fcntl.h>
 
+using namespace std;
+
 static bool string_is_empty(const string &text);
  
 const char *const ClassAdCollectionInterface::CollOpStrings[] = {

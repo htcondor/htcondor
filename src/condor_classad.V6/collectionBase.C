@@ -27,6 +27,8 @@
 #include <iostream>
 #include "sink.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 ClassAdCollection::

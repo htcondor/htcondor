@@ -3,6 +3,8 @@
 #include "queryProcessor.h"
 #include "intervalTree.h"
 
+using namespace std;
+
 QueryProcessor::QueryProcessor( )
 {
 }

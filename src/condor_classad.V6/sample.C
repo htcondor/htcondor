@@ -21,6 +21,9 @@
  *********************************************************************/
 
 #include "classad_distribution.h"
+#include <iostream>
+
+using namespace std;
 
 string job_classad_text = 
 "["

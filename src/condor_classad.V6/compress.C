@@ -25,6 +25,8 @@
 #include "condor_classad.h"
 #include "compress.h"
 
+using namespace std;
+
 ClassAdBin::ClassAdBin( )
 {
     count = 0;

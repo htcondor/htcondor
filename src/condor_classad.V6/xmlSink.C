@@ -26,6 +26,8 @@
 #include "sink.h"
 #include "xmlLexer.h"
 
+using namespace std;
+
 static void add_tag(
     string &buffer, 
 	XMLLexer::TagID  tag_id,

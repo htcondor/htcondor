@@ -25,6 +25,8 @@
 #include "collectionBase.h"
 #include "transaction.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 ServerTransaction::

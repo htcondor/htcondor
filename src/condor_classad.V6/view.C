@@ -25,6 +25,8 @@
 #include "collection.h"
 #include "collectionBase.h"
 
+using namespace std;
+
 // ----------- <implementation of ViewMember class> -----------------
 
 BEGIN_NAMESPACE( classad )

@@ -27,6 +27,8 @@
 #include "queryProcessor.h"
 #include <list>
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
     // experimental rectangle

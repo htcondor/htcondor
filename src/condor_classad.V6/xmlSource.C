@@ -26,6 +26,8 @@
 #include "classad.h"
 #include "source.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 ClassAdXMLParser::

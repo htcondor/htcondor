@@ -23,6 +23,8 @@
 #include "classad_distribution.h"
 #include <iostream>
 
+using namespace std;
+
 int main(int argc, char **argv)
 {
 	ClassAdXMLParser  parser;

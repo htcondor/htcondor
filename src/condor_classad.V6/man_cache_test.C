@@ -2,6 +2,8 @@
 #include "query.h"
 #include "view.h"
 #include <iostream>
+using namespace std;
+
 ClassAdCollection server(true);
 /*******************************************************
  Function:

@@ -27,6 +27,8 @@
 #include "rectangle.h"
 #include "sink.h"
 
+using namespace std;
+
 Rectangles::
 Rectangles( )
 {

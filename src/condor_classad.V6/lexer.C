@@ -22,8 +22,9 @@
 
 // Includes 
 #include "common.h"
-
 #include "lexer.h"
+
+using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
