@@ -154,7 +154,7 @@ XInterface::TryUser(const char *user)
 		need_uninit = true;
 	}
 
-	init_user_ids( user );
+	init_user_ids( user, NULL );
 
 	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: \n", 
 		 passwd_entry->pw_name, env);
