@@ -188,7 +188,7 @@ pseudo_reallyexit( int *status, struct rusage *use_p )
 int
 pseudo_free_fs_blocks( const char *path )
 {
-	return free_fs_blocks( path );
+	return sysapi_disk_space( path );
 }
 
 int
