@@ -3,7 +3,7 @@
 
 //--------------------------------------------------------------------------
 
-#include "condor_classad.h"
+#include "matchClassad.h"
 #include "Set.h"
 #include "HashTable.h"
 #include "MyString.h"
@@ -18,21 +18,16 @@ typedef HashTable<int,BaseCollection*> CollectionHashTable;
 typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 int partitionHashFcn( const MyString &, int );
 
-///--------------------------------------------------------------------------
+//--------------------------------------------------------------------------
 
-//@author Adiel Yoaz
-///@include: classad_collection_types.h
-
-/** This is the repository main class. Using the methods of this class
+/** The main repository class. Using the methods of this class
     the user can create and delete class-ads, change their attributes,
     control transactions, create logical collections of class-ads, and
     iterate through the class-ads and the collections. Note that only 
     the operations relating to class-ads are logged. Collection operations
-    are not logged, therefore collections are not persistent.
-
-    @author Adiel Yoaz
+    (such as creating or destroying collections) are not logged, therefore 
+	collections are not persistent.
 */
-
 class ClassAdCollection {
 
 friend class CollChildIterator;
@@ -52,7 +47,7 @@ public:
   /** Constructor (initialization). It reads the log file and initializes
       the class-ads (that are read from the log file) in memory.
     @param filename the name of the log file. If a NULL value is passed, no 
-		log file will be used.
+		log file will be used (i.e., the classads will not be persistent).
     @param rank The rank expression for the collection
     @return nothing
   */
@@ -255,18 +250,27 @@ public:
 
   //@}
 
-  //------------------------------------------------------------------------
-  //@name Iteration methods
+  /**@name Iteration control */
   //@{
 
-  bool InitializeIterator( int CoID, CollContentIterator& i );
-  bool InitializeIterator( int CoID, CollChildIterator& i );
-
-  /** Start iterations on all the class-ad keys in a collection.
-      @param CoID the ID of the collection. The default is the root collection.
-      @return true if the specified collection exists, false otherwise.
+  /** Initialize a collection content iterator to iterate over the ads in a
+   		collection.
+		@param CoID The ID of the collection whose ads are to be iterated over
+		@param i The content iterator to be initialized
+		@return true if the operation succeeded, false otherwise
+		@see CollContentIterator
   */
-  bool StartIterateClassAds( int CoID=0 );
+  bool InitializeIterator( int CoID, CollContentIterator& i );
+
+  /** Initialize a collection child iterator to iterate over the child 
+   		collections of a collection.
+		@param CoID The ID of the collection whose children are to be iterated 
+			over
+		@param i The child iterator to be initialized
+		@return true if the operation succeeded, false otherwise
+		@see CollChildIterator
+  */
+  bool InitializeIterator( int CoID, CollChildIterator& i );
 
   /** Get the next class-ad key in the repository.
       @param key a pointer whick will be assigned the next key value.
@@ -280,22 +284,12 @@ public:
       @return true on success, false otherwise.
   */
   bool IterateAllCollections(int& CoID);
+
+  bool StartIterateChildCollections(int ParentCoID=0);
+  bool IterateChildCollections(int& CoID, int ParentCoID=0);
+  bool StartIterateClassAds( int CoID=0 );
   bool IterateClassAds( char* key, int CoID=0 );
 
-  /** Start iterations on child collections of a specified collection.
-      @param ParentCoID The ID of the parent of the collections to be iterated 
-	  	on.
-      @return true on success, false otherwise.
-  */
-  bool StartIterateChildCollections(int ParentCoID=0);
-
-  /** Get the next child of the specified parent collection.
-      @param CoID The ID of the next collection (output parameter).
-      @param ParentCoID The ID of the parent of the collections to be iterated 
-	  	on.
-      @return true on success, false otherwise.
-  */
-  bool IterateChildCollections(int& CoID, int ParentCoID=0);
 
   //@}
   //------------------------------------------------------------------------
@@ -341,6 +335,7 @@ private:
   //------------------------------------------------------------------------
   // Methods that are used internally
   //------------------------------------------------------------------------
+  static bool makePartitionHashKey( ClassAd*, StringSet&, MyString& );
   bool AddClassAd(int CoID, const MyString& OID);
   bool AddClassAd(int CoID, const MyString& OID, ClassAd* ad);
   bool RemoveClassAd(int CoID, const MyString& OID);
