@@ -39,7 +39,7 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	user_log.C config.C condor_config.C stringSpace.C condor_state.C $(API_SRC)\
 	classad_hashtable.C classad_log.C log_transaction.C log.C \
 	get_full_hostname.C format_time.C renice_self.C condor_version.C \
-	limit.C my_arch.C my_subsystem.C
+	limit.C my_arch.C my_subsystem.C daemon_types.C
 
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
@@ -50,7 +50,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o $(API_OBJ)\
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
-	limit.o my_arch.o my_subsystem.o
+	limit.o my_arch.o my_subsystem.o daemon_types.o
 
 TEST_LIBS = cplus_lib.a ../condor_util_lib/util_lib.a
 
