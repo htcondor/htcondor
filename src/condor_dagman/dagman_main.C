@@ -49,7 +49,7 @@ static void Usage() {
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
-    DC_Exit(1);
+	DC_Exit( 1 );
 }
 
 //---------------------------------------------------------------------------
@@ -77,16 +77,17 @@ int main_config() {
     return TRUE;
 }
 
-int main_shutdown_fast() {
-    G.CleanUp();
-    DC_Exit(0);
-    return TRUE;
+int
+main_shutdown_fast()
+{
+    DC_Exit( 1 );
+    return FALSE;
 }
 
 int main_shutdown_graceful() {
     G.CleanUp();
-    DC_Exit(0);
-    return TRUE;
+	DC_Exit( 1 );
+    return FALSE;
 }
 
 int main_shutdown_remove(Service *, int) {
@@ -96,9 +97,8 @@ int main_shutdown_remove(Service *, int) {
         debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
         G.dag->Rescue(G.rescue_file, G.datafile);
     }
-    G.CleanUp();
-    DC_Exit(0);
-    return TRUE;
+	main_shutdown_graceful();
+	return FALSE;
 }
 
 void main_timer();
@@ -312,15 +312,11 @@ void main_timer () {
     // we are ready to proceed with jobs yet unsubmitted.
     //------------------------------------------------------------------------
     
-    debug_println (DEBUG_DEBUG_2, "%s: Jobs Done: %d/%d", __FUNCTION__,
-                   G.dag->NumJobsDone(), G.dag->NumJobs());
-
-	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-		printf( "%d Jobs Total / %d Submitted / %d Failed / %d Done "
-				"(%d Scripts Running)\n", G.dag->NumJobs(),
-				G.dag->NumJobsSubmitted(), G.dag->NumJobsFailed(),
-				G.dag->NumJobsDone(), G.dag->NumScriptsRunning() );
-	}
+	debug_printf( DEBUG_DEBUG_1,
+				  "%d Jobs Total / %d Submitted / %d Failed / %d Done "
+				  "(%d Scripts Running)\n", G.dag->NumJobs(),
+				  G.dag->NumJobsSubmitted(), G.dag->NumJobsFailed(),
+				  G.dag->NumJobsDone(), G.dag->NumScriptsRunning() );
     
     // If the log has grown
     if (G.dag->DetectLogGrowth()) {
@@ -331,8 +327,8 @@ void main_timer () {
             G.dag->RemoveRunningJobs();
             debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
             G.dag->Rescue(G.rescue_file, G.datafile);
-            G.CleanUp();
-            DC_Exit(0);
+			main_shutdown_graceful();
+			return;
         }
     }
   
@@ -341,11 +337,11 @@ void main_timer () {
     //
     // If DAG is complete, hurray, and exit.
     //
-    if (G.dag->NumJobsDone() >= G.dag->NumJobs()) {
+    if( G.dag->Done() ) {
         assert (G.dag->NumJobsSubmitted() == 0);
         debug_println (DEBUG_NORMAL, "All jobs Completed!");
-        G.CleanUp();
-        DC_Exit(0);
+		G.CleanUp();
+		DC_Exit( 0 );
     }
 
     //
@@ -365,7 +361,6 @@ void main_timer () {
 		else {
 			debug_println( DEBUG_NORMAL, "Rescue file not defined..." );
 		}
-        G.CleanUp();
-        DC_Exit(0);
+		main_shutdown_graceful();
     }
 }
