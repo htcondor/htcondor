@@ -61,6 +61,10 @@
 #include "condor_version.h"
 #include "util_lib_proto.h"
 #include "condor_scanner.h"		// for MAXVARNAME, etc
+#include "my_username.h"
+#ifdef WIN32
+#	include "ntsysinfo.h"		// for WinNT getppid
+#endif
 
 extern "C" {
 	
@@ -687,6 +691,10 @@ param_in_pattern( char *parameter, char *pattern )
 void
 reinsert_specials( char* host )
 {
+	static int reinsert_pid = 0;
+	static int reinsert_ppid = 0;
+	char buf[40];
+
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
 	}
@@ -697,6 +705,34 @@ reinsert_specials( char* host )
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+
+	// Insert login-name for our euid as "username"
+	char *myusernm = my_username();
+	insert( "username", myusernm, ConfigTab, TABLESIZE );
+	free(myusernm);
+
+	// Insert values for "pid" and "ppid".  Use static values since
+	// this is expensive to re-compute on Windows.
+	// Note: we have to resort to ifdef WIN32 crap even though 
+	// DaemonCore can nicely give us this information.  We do this
+	// because the config code is used by the tools as well as daemons.
+	if (!reinsert_pid) {
+#ifdef WIN32
+		reinsert_pid = ::GetCurrentProcessId();
+#else
+		reinsert_pid = getpid();
+#endif
+	}
+	insert( "pid", itoa(reinsert_pid,buf,10), ConfigTab, TABLESIZE );
+	if ( !reinsert_ppid ) {
+#ifdef WIN32
+		CSysinfo system_hackery;
+		reinsert_ppid = system_hackery.GetParentPID(reinsert_pid);
+#else
+		reinsert_ppid = getppid();
+#endif
+	}
+	insert( "ppid", itoa(reinsert_ppid,buf,10), ConfigTab, TABLESIZE );
 }
 
 
