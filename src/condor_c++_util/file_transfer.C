@@ -160,7 +160,6 @@ int
 FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv ) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
-    Value v;
 
 	if( did_init ) {
 			// no need to except, just quietly return success
@@ -431,8 +430,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 			// insert it as an attribute into the ClassAd which
 			// will get sent to our peer.
 			sprintf(buf,"\"%s\"",filelist.Value());
-            v.SetStringValue(buf);
-			Ad->Insert( ATTR_TRANSFER_INTERMEDIATE_FILES, Literal::MakeLiteral(v));
+			Ad->InsertAttr( ATTR_TRANSFER_INTERMEDIATE_FILES, buf );
 			dprintf(D_FULLDEBUG,"%s\n",buf);
 		}
 	}
