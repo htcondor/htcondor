@@ -66,6 +66,7 @@ ckpt         checkpoint/restore
 rsc          remote system calls
 auth         authentication and authorization
 core         core condor functionality (could spans multiple subsystems)
+core-cpp     core C++ functionality
 filexfer     file transfer mechanism
 userlog      the userlog file
 dagman       DAGMan
