@@ -1,6 +1,5 @@
 universe   = scheduler
 executable =  x_copy_binary_file.pl
-b_dagman_basic-node.cmd  job_filexfer_basic_sched.cmd  job_filexfer_basic_van.cmd
 log = job_filexfer_basic_sched.log
 output = job_filexfer_basic_sched.out
 error = job_filexfer_basic_sched.err
