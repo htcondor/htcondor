@@ -277,7 +277,7 @@ SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list libz.a )
+all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list libz.a)
 #else 
 all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
 #endif
@@ -523,8 +523,8 @@ static_library(libcondorsyscall.a,$(STATIC_DIR)/lib)
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
 release_library(libz.a, $(RELEASE_DIR)/lib)
-strip_library(libz.a, $(STRIP_DIR)/lib)
-static_library(libz.a, $(STATIC_DIR)/lib)
+strip_library(libz.a,$(STRIP_DIR)/lib)
+static_library(libz.a,$(STATIC_DIR)/lib)
 #endif
 
 #if DOES_COMPRESS_CKPT
@@ -602,10 +602,10 @@ import(../condor_ckpt,condor_rt0.o)
 import(../condor_ckpt,$(CKPT_OBJ))
 import(../condor_ckpt,$(COMPRESS_OBJ))
 import(../h,syscall_numbers.c)
-import(../condor_util_lib, stub_gen)
-import(../condor_shadow.V6, pseudo_ops.h)
+import(../condor_util_lib,stub_gen)
+import(../condor_shadow.V6,pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
-import( ZLibPath , libz.a )
+import(ZLibPath,libz.a)
 
 authentication.o: ../condor_io/authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
@@ -655,5 +655,5 @@ remote_syscall.C switches.special.C syscall_connect.C xfer_file.c
 depend_source_target($(DEPEND_SRC))
 
 #if CONDOR_ENCRYPTION
-obj_extract( $(OPENSSL_MD_LIB), $(OPENSSL_OBJ) )
+obj_extract($(OPENSSL_MD_LIB),$(OPENSSL_OBJ))
 #endif
