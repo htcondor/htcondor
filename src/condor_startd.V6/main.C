@@ -79,7 +79,7 @@ int main_config();
 int finish_main_config();
 int main_shutdown_fast();
 int main_shutdown_graceful();
-extern "C" int do_cleanup();
+extern "C" int do_cleanup(int,int,char*);
 int reaper( Service*, int pid, int status);
 int	check_free();
 int	shutdown_reaper( Service*, int pid, int status ); 
@@ -554,7 +554,7 @@ shutdown_reaper(Service *, int pid, int status)
 
 
 int
-do_cleanup()
+do_cleanup(int,int,char*)
 {
 	static int already_excepted = FALSE;
 
