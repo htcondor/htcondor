@@ -62,7 +62,6 @@
 #define Libraries \
 		util_lib c++_util procapi sysapi io classad.V6 daemon_core.V6 \
 		condor_ckpt_server/ckpt_server_api.a \
-		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a \
 		ckpt syscall_lib
 
 #if HAS_STATIC
