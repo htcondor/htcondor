@@ -68,6 +68,9 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #endif
 #define ALPHA(ch) (isalpha(ch)||ch=='_')
 
+/* added by Anand -> to permit alphanumeric names in get_name()*/
+#define ALPHANUM(ch) (isalpha(ch)||isdigit(ch)||ch=='_')
+
 #define WHITE(ch) (isspace(ch))
 #define QUOTE(ch) (ch=='"')
 #define DIGIT(ch) (isdigit(ch))
@@ -501,8 +504,13 @@ ELEM	*elem;
 	char	*ptr;
 	char *tmpIn = strdup(In);
 
-	for( ptr=tmpIn; ALPHA(*ptr); ptr++ )
-	  In++;
+	if(ALPHA(*tmpIn)) /* check to see whether the first character is
+			   a letter */
+	{
+	  /* for loop termination changed from ALPHA(*ptr) -> Anand*/
+	  for( ptr=tmpIn; ALPHANUM(*ptr); ptr++ )
+	    In++;
+	}
 	*ptr = '\0';
 	
 	elem->type = NAME;
