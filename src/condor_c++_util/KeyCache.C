@@ -187,14 +187,14 @@ void KeyCache::delete_storage()
 				if( DebugFlags & D_FULLDEBUG ) {
 					dprintf( D_SECURITY, "KEYCACHEENTRY: deleted: %x\n", 
 							 key_entry );
-					delete key_entry;
 				}
-			}
-			if( DebugFlags & D_FULLDEBUG ) {
-				dprintf( D_SECURITY, "KEYCACHE: deleted: %x\n", key_table );
+				delete key_entry;
 			}
 		}
 		delete key_table;
+		if( DebugFlags & D_FULLDEBUG ) {
+			dprintf( D_SECURITY, "KEYCACHE: deleted: %x\n", key_table );
+		}
 		key_table = NULL;
 	}
 }
