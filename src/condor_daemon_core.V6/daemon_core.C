@@ -4398,6 +4398,16 @@ extern "C" {
 void exit(int status)
 {
 
+		// turns out that _exit() does *not* always flush STDOUT and
+		// STDERR, that it's "implementation dependent".  so, to
+		// ensure that daemoncore things that are writing to stdout
+		// and exiting (like "condor_master -version" or
+		// "condor_shadow -classad") will in fact produce output, we
+		// need to call fflush() ourselves right here.
+		// Derek Wright <wright@cs.wisc.edu> 2004-03-28
+	fflush( stdout );
+	fflush( stderr );
+
 	if ( _condor_exit_with_exec == 0 ) {
 		_exit(status);
 	}
