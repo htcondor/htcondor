@@ -2,7 +2,7 @@
 {View log of condor jobs completed to date}
 \Synopsis \SynProg{\Condor{history}}
 \oOpt{-help} \oOpt{-l} \oOptArg{-f}{filename}
-\oArg{cluster \Bar cluster.process \Bar owner}
+\oArg{-constraint expr \Bar cluster \Bar cluster.process \Bar owner}
 
 \Description
 \Condor{history} displays a summary of all condor jobs listed in the
@@ -25,10 +25,12 @@ summarizes each job on a single line, and  contains the following items:
 
 If a job ID (in the form of cluster\_id or cluster\_id.proc\_id) or an owner is provided, 
 output will be restricted only to jobs with the specified IDs and/or submitted by the specified owner.
+The -constraint option can be used to display only jobs that satisfy a specified boolean expression.
 
 \begin{Options}
     \OptItem{\Opt{-help}}{Get a brief description of the supported options}
     \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default history file}
+    \OptItem{\OptArg{-constraint}{expr}}{Display only jobs that satify the expression}
     \OptItem{\Opt{-l}}{Display job ads in long format}
 \end{Options}
 
