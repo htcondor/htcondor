@@ -223,6 +223,19 @@ pseudo_send_rusage( struct rusage *use_p )
 }
 
 int
+pseudo_getrusage(int who, struct rusage *use_p )
+{
+
+	// No need to look at the "who" param; the special switch for getrusage
+	// already checks the "who" param and verifies it is RUSAGE_SELF
+
+	// Pass back the rusage committed so far via checkpoint
+	memcpy(use_p, &Proc->remote_usage[0], sizeof(struct rusage) );
+
+	return 0;
+}
+
+int
 pseudo_perm_error( const char *msg )
 {
 	PERM_ERR( msg );
