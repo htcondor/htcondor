@@ -95,6 +95,7 @@ void _EXCEPT_ ();
 void dprintf ();
 void dprintf_config ();
 #endif
+void fd_panic( int line, char *file );
 
 /*
 **	Definition of exception macro
