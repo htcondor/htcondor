@@ -26,6 +26,8 @@
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
+#include "condor_string.h"
+#include "basename.h"
 #include "master.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_collector.h"
@@ -38,11 +40,6 @@
 #include "string_list.h"
 #include "get_daemon_addr.h"
 #include "daemon_types.h"
-
-#ifndef WANT_DC_PM
-int standard_sigchld(Service *,int);
-int all_reaper_sigchld(Service *,int);
-#endif
 
 #ifdef WIN32
 extern void register_service();
@@ -740,40 +737,6 @@ main_shutdown_graceful()
 }
 
 
-#if !defined(WANT_DC_PM)
-int
-all_reaper_sigchld( Service*, int )
-{
-	int		pid = 0;
-	int	status;
-
-	while( (pid=waitpid(-1,&status,WNOHANG)) > 0 ) {
-		if( WIFSTOPPED(status) ) {
-			continue;
-		}	
-		daemons.AllReaper( pid, status );
-	}
-	return TRUE;
-}	
-
-
-int
-standard_sigchld( Service *, int )
-{
-	int		pid = 0;
-	int	status;
-
-	while( (pid=waitpid(-1,&status,WNOHANG)) > 0 ) {
-		if( WIFSTOPPED(status) ) {
-			continue;
-		}
-		daemons.DefaultReaper( pid, status );
-	}
-	return TRUE;
-}
-
-#endif  // of !defined(WANT_DC_PM)
-
 time_t
 GetTimeStamp(char* file)
 {
@@ -785,6 +748,7 @@ GetTimeStamp(char* file)
 
 	return( sbuf.st_mtime );
 }
+
 
 int
 NewExecutable(char* file, time_t *tsp)
@@ -812,44 +776,32 @@ char	*Shell = "/bin/sh";
 int
 run_preen(Service*)
 {
-	int		child_pid;
+	int		child_pid, size;
+	char	*preen_args, *tmp, *preen_base;
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 
 	if( FS_Preen == NULL ) {
 		return 0;
 	}
-
-	/* Exec Preen to check log, spool, and execute for any junk files left lying around */
-#ifdef WANT_DC_PM
+	preen_base = basename( FS_Preen );
+	if( (tmp = param("PREEN_ARGS")) ) {
+		size = strlen(tmp) + strlen(preen_base) + 2;
+		preen_args = new char[size];
+		sprintf( preen_args, "%s %s", preen_base, tmp );
+		free( tmp );
+	} else {
+		preen_args = strnewp( preen_base );
+	}
 	child_pid = daemonCore->Create_Process(
 					FS_Preen,		// program to exec
-					FS_Preen,			// args
-					PRIV_ROOT,	// privledge level
+					preen_args,		// args
+					PRIV_ROOT,		// privledge level
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
-#else
-	dprintf( D_ALWAYS,
-			"Calling execl( \"%s\", \"sh\", \"-c\", \"%s\", 0 )\n", Shell, FS_Preen );
-
-	if( (child_pid=vfork()) == 0 ) {	/* The child */
-		execl( Shell, "sh", "-c", FS_Preen, 0 );
-		_exit( 127 );
-	} else {				/* The parent */
-		dprintf( D_ALWAYS, "Shell (preen) pid is %d\n", child_pid );
-		return 0;
-	}
-#endif
-	/*
-	   Note: can't use system() here.  That calls wait(), but the child's
-	   status will be captured our own sigchld_handler().  This would
-	   cause the wait() called by system() to hang forever...
-	   -- mike
-
-	   (void)system( FS_Preen );
-	   */
-	return TRUE;
+	delete [] preen_args;
+	return child_pid;
 }
 
 
