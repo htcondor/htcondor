@@ -737,11 +737,7 @@ MPIShadow::cleanUp( void )
 	int i;
     for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
-		char *tmp = NULL;
-		r->getStartdAddress( tmp );
-		dprintf( D_FULLDEBUG, "Killing the starter on %s\n", tmp );
 		r->killStarter();
-		delete [] tmp;
 	}		
 }
 
