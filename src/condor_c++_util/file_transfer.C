@@ -798,7 +798,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		if ((fd = ::open(buf, O_WRONLY | O_CREAT | O_TRUNC | 
 			_O_BINARY | _O_SEQUENTIAL, 0644)) < 0)
 #else
-		if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+		if ((fd = ::open(buf, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 #endif
 		{
 			dprintf(D_ALWAYS, 
