@@ -504,11 +504,11 @@ init_params()
 		shutdown_graceful_timeout = 30 * MINUTE;
 	}
 
-	AllowAdminCommands = FALSE;
+	AllowAdminCommands = TRUE;
 	tmp = param( "ALLOW_ADMIN_COMMANDS" );
 	if( tmp ) {
-		if( *tmp == 'T' || *tmp == 't' ) {
-			AllowAdminCommands = TRUE;
+		if( *tmp == 'F' || *tmp == 'f' ) {
+			AllowAdminCommands = FALSE;
 		}
 		free( tmp );	
 	}
