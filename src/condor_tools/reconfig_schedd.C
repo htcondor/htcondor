@@ -37,11 +37,9 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_debug.h"
 #include "condor_io.h"
 #include "my_hostname.h"
-
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+#include "get_full_hostname.h"
 
 extern "C" char *get_schedd_addr(const char *);
 void reconfig( char *host );
@@ -54,7 +52,7 @@ void usage( char *str )
 
 int main( int argc, char *argv[] )
 {
-	char	hostname[512];
+	char* fullname, *MyName = argv[0];
 
 	config( 0 );
 
@@ -64,7 +62,11 @@ int main( int argc, char *argv[] )
 	}
 
 	for( argv++; *argv; argv++ ) {
-		reconfig( *argv );
+		if( (fullname = get_full_hostname(*argv)) == NULL ) {
+			fprintf( stderr, "%s: unknown host %s\n", MyName, *argv );
+			continue;
+		}
+		reconfig( fullname );
 	}
 	exit( 0 );
 }
@@ -75,23 +77,22 @@ void reconfig( char *host )
 	int			cmd = RECONFIG;
 	char		*scheddAddr;
 
-
 	if ((scheddAddr = get_schedd_addr(host)) == NULL) {
-		dprintf( D_ALWAYS, "Can't find schedd address on %s\n", host );
+		fprintf( stderr, "Can't find schedd address on %s\n", host );
 		return;
 	}
 
 		/* Connect to the schedd */
 	ReliSock sock(scheddAddr, SCHED_PORT);
 	if(sock.get_file_desc() < 0) {
-		dprintf( D_ALWAYS, "Can't connect to condor scheduler (%s)\n",
+		fprintf( stderr, "Can't connect to condor scheduler (%s)\n",
 				 scheddAddr );
 		return;
 	}
 
 	sock.encode();
 	if( !sock.code(cmd) || !sock.eom() ) {
-		dprintf( D_ALWAYS,
+		fprintf( stderr,
 				 "Can't send RECONFIG command to condor scheduler\n" );
 		return;
 	}
