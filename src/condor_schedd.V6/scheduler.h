@@ -417,5 +417,8 @@ class Scheduler : public Service
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
 extern bool sendAlive( match_rec* mrec );
+extern void fixReasonAttrs( PROC_ID job_id, int action );
+extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
+						 const char* new_attr );
 
-#endif
+#endif /* _CONDOR_SCHED_H_ */

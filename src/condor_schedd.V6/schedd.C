@@ -1706,6 +1706,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				}
 				SetAttribute( tmp_id.cluster, tmp_id.proc,
 							  ATTR_ENTERED_CURRENT_STATUS, time_str );
+				fixReasonAttrs( tmp_id, action );
 				results.record( tmp_id, AR_SUCCESS );
 				jobs[num_matches] = tmp_id;
 				num_matches++;
@@ -1769,6 +1770,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			}
 			SetAttribute( tmp_id.cluster, tmp_id.proc,
 						  ATTR_ENTERED_CURRENT_STATUS, time_str );
+			fixReasonAttrs( tmp_id, action );
 			results.record( tmp_id, AR_SUCCESS );
 			jobs[num_matches] = tmp_id;
 			num_matches++;
@@ -3598,6 +3600,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 						 ATTR_JOB_STATUS, HELD );
 		SetAttributeInt( job_id->cluster, job_id->proc,
 						 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+		fixReasonAttrs( *job_id, JA_HOLD_JOBS );
 		ClassAd *jobAd = GetJobAd( job_id->cluster, job_id->proc );
 		char buf[256];
 		sprintf( buf, "Your job (%d.%d) is on hold", job_id->cluster,
@@ -6115,6 +6118,68 @@ fixAttrUser( ClassAd *job )
 	return 0;
 }
 
+
+void
+fixReasonAttrs( PROC_ID job_id, int action )
+{
+		/* 
+		   Fix the given job so that any existing reason attributes in
+		   the ClassAd are modified and changed so that everything
+		   makes sense.  For example, if we're releasing a job, we
+		   want to move the HoldReason to LastHoldReason...
+
+		   CAREFUL!  This method is called from within a queue
+		   management transaction...
+		*/
+	switch( action ) {
+
+	case JA_HOLD_JOBS:
+		moveStrAttr( job_id, ATTR_RELEASE_REASON, 
+					 ATTR_LAST_RELEASE_REASON );
+		break;
+
+	case JA_RELEASE_JOBS:
+		moveStrAttr( job_id, ATTR_HOLD_REASON, ATTR_LAST_HOLD_REASON );
+		break;
+
+	default:
+		return;
+	}
+}
+
+
+bool
+moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr )
+{
+	char* value = NULL;
+	MyString new_value;
+	int rval;
+
+	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
+							  old_attr, &value) < 0 ) { 
+		dprintf( D_FULLDEBUG, "No %s found for job %d.%d\n",
+				 old_attr, job_id.cluster, job_id.proc );
+		return false;
+	}
+	
+	new_value += '"';
+	new_value += value;
+	new_value += '"';
+	free( value );
+	value = NULL;
+
+	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
+						 new_value.Value() ); 
+
+	if( rval < 0 ) { 
+		dprintf( D_FULLDEBUG, "Can't set %s for job %d.%d\n",
+				 new_attr, job_id.cluster, job_id.proc );
+		return false;
+	}
+		// If we successfully set the new attr, we can delete the old. 
+	DeleteAttribute( job_id.cluster, job_id.proc, old_attr );
+	return true;
+}
 
 
 
