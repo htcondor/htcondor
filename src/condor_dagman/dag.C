@@ -88,7 +88,16 @@ Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
-    delete[] (char*) _dapLogName;
+    delete[] _dapLogName;
+
+    // delete all jobs in _jobs
+    Job *job = NULL;
+    _jobs.Rewind();
+    while( job = _jobs.Next() ) {
+      ASSERT( job != NULL );
+      delete job;
+      _jobs.DeleteCurrent();
+    }
 
     delete _preScriptQ;
     delete _postScriptQ;
