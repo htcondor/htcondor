@@ -1,11 +1,8 @@
-\subsection{Introduction}
-
-The Directed Acyclic Graph Manager (DAGMan) is a software tool used with
-Condor, a system developed at the University of Wisconsin. Condor executes
-batch jobs utilizing cycles of idle workstations in the network. DAGMan is
-responsible for submitting batch jobs in a predefined order and processing the
-results. A configuration file is defined prior to execution of DAGMan in which
-the job dependencies and appropriate executables is declared.
+The Directed Acyclic Graph Manager (DAGMan) is a meta-scheduler for Condor
+jobs.  DAGMan is responsible for submitting batch jobs in a predefined order
+and processing the results. A configuration file is defined prior to execution
+of DAGMan in which the jobs, their \textit{CondorConfigFile}, and job
+dependencies are declared.
 
 The importance of such a tool lies in the fact that the user is able to define
 the execution order of a number of Condor Jobs. Just as Condor schedules
@@ -19,6 +16,10 @@ From the point of view of the user, the scheduler is initialized with the
 order of execution of jobs, and then started. DAGMan is responsible for all
 scheduling, recovery and reporting activities of the submitted system of jobs.
 
+The following sections explain the use of DAGMan in full detail.  However, if
+the user only wants the bare essentials, please read
+section~\ref{dagman:essentials} to get started more quickly.
+
 \subsection{DAG Input File}
 
 For Unix users, a useful analogy might be to think of the DAGMan input file as
@@ -29,9 +30,10 @@ unsubmitted, submitted, or complete.  DAGMan also makes a guarantee that a DAG
 is recoverable, even if the machine running DAGMan goes down during execution.
 
 \subsubsection{Description}
+\label{dagman:dagdesc}
 
 Job dependencies are defined prior to execution of the DAGMan program, using a
-DAG input file.  An example input configuration file name is \File{abc.dag}.
+DAG input file.  An example input configuration file name is \File{diamond.dag}.
 The input file is read completely, and the DAG data structure is constructed
 in memory before the first job is submitted.  With the exception of the
 \textit{CondorCommandFile} (see below), the input file is case insensitive.
@@ -48,7 +50,9 @@ contained in the CondorCommandFile.  The DAG file merely describes the
 relationship between the different condor jobs using the semantics just
 described.
 
-\underline{Signature}
+\begin{description}
+
+\item[Signature]
 
 The first line of a DAG input file is the signature, which precisely
 identifies which DAG file format follows.  As of this writing, only one DAG
@@ -63,7 +67,7 @@ Anything different will be rejected by DAGMan.  Having a precise signature tag
 will enable future versions of DAGMan to remain backward compatible with older
 DAG input file formats.
 
-\underline{Job Section}
+\item[Job Section]
 
 The Job Section of the input DAG file declares all the jobs that will appear
 in the DAG.  Each job is described by a single line called a Job Entry.  The
@@ -97,7 +101,7 @@ Job declaration line.
 	JOB <JobName> <CondorCommandFile> DONE
 \end{verbatim}
 
-\underline{Dependency Section}
+\item[Dependency Section]
 
 The dependency section of the DAG input file follows the Job Section and
 describes the dependencies between the jobs listed in the Job Section.  The
@@ -120,31 +124,42 @@ which is followed by one or more \textit{ChildJobName}s.  Each child job
 depends on each and every parent job on this line.  So the line
 ``\texttt{PARENT p1 p2 CHILD c1 c2}'' would produce four dependencies.
 
+\end{description}
+
 \subsubsection{Example}
 
-The following \File{abc.dag} DAG input file shown below is illustrated with
-the drawning that follows.
+The following \File{diamond.dag} DAG input file shown below is illustrated in
+Figure~\ref{fig:dagman-diamond}.
 
 \begin{verbatim}
   ### DAGMan 6.1.0
-  # Filename: abc.dag
+  # Filename: diamond.dag
   #
   Job  A  A.condor 
   Job  B  B.condor 
   Job  C  C.condor	
+  Job  D  D.condor
   PARENT A CHILD B C
-  PARENT B CHILD C
+  PARENT B C CHILD D
 \end{verbatim}
 
-With \File{abc.dag}, the only possible execution is for Job A to execute,
-followed by B, followed by C.  However, in a larger DAG, its very likely and
-desirable for more than one job to be eligible for concurrent submission.
-This can occur if all the parents of each submittable child job successfully
-complete.
+\begin{figure}[hbt]
+\centering
+\includegraphics{user-man/dagman-diamond.eps}
+\caption{\label{fig:dagman-diamond}Diamond DAG}
+\end{figure}
+
+With \File{diamond.dag}, job A must execute first, because all other jobs
+directly or indirectly depend on it.  After job A successfully completes, both
+job B and C are elligible to run.  In fact, they will be submitted at the same
+time and hopefully Condor will find two remote hosts that can run them in
+parallel.  Since job D depends on both B and C, it must wait for both to
+complete successfully before it can be submitted.
 
 \subsection{Execution}
 
 \subsubsection{Preparing Jobs}
+\label{dagman:prepjob}
 
 Each individual job in a DAG is free to be a unique executable, with a unique
 \textit{CondorCommandFile}.  The DAG can contain a mixture of standard and
@@ -155,9 +170,12 @@ However, two limits are imposed.
 
 First, each \textit{CondorCommandFile} must submit a cluster of size one.
 There cannot be multiple \texttt{queue} lines.  The reasoning is long winded,
-but to summarize quickly, the jobs from a multi-job cluster still produce
-completely separate log events.  Thus, DAGMan cannot distinguish between two
-jobs from the same cluster.  This restriction will probably never be lifted.
+so a brief summary will be attemped.  If multi-job clusters were allowed,
+DAGMan would have to parse the \textit{CondorCommandFile} to find out how many
+jobs belong to that cluster.  Otherwise, DAGMan would not know for sure if a
+cluster had terminated based on seeing the event from one job of that
+cluster.  This restriction may be lifted in future DAGMan version, depending
+on the design and implementation issues.
 
 Second, all \textit{CondorCommandFile}s of a DAG must specify the same log.
 In order for DAGMan to follow the order of events correctly, all events from
@@ -173,12 +191,12 @@ we are sending output and error to \File{/dev/null}, sharing the
 \textit{CondorCommandFile} is OK.
 
 \begin{verbatim}
-  # Filename: abc_job.condor
+  # Filename: diamond_job.condor
   #
-  executable   = /path/abc.exe
+  executable   = /path/diamond.exe
   output       = /dev/null
   error        = /dev/null
-  log          = abc_condor.log
+  log          = diamond_condor.log
   universe     = vanilla
   notification = NEVER
   queue
@@ -188,22 +206,25 @@ Note that notification is set to \texttt{NEVER}.  This is recommended if you
 prefer not to have Condor send you e-mail for every job in a large DAG.
 
 \subsubsection{Writing the DAG File}
+\label{dagman:writedag}
 
 The DAG file names the jobs, associates jobs with their
 \textit{CondorCommandFile}, and declares job dependencies.  For our artificial
-ABC example, all three jobs will use the same abc\_job.condor file written
-earlier.  However, a more typical DAG file would have unique
+DIAMOND example, all three jobs will use the same diamond\_job.condor file
+written earlier.  However, a more typical DAG file would have unique
 \textit{CondorCommandFile} for every job.
 
 \begin{verbatim}
-  # Filename: abc.dag
-  # ABC DAG File for DAGMan
+  ### DAGMan 6.1.0
+  # Filename: diamond.dag
+  # DIAMOND DAG File for DAGMan
   #
-  Job  A  abc_job.condor
-  Job  B  abc_job.condor
-  Job  C  abc_job.condor
+  Job  A  diamond_job.condor
+  Job  B  diamond_job.condor
+  Job  C  diamond_job.condor
+  Job  D  diamond_job.condor
   PARENT A CHILD B C
-  PARENT B CHILD C
+  PARENT B C CHILD D
 \end{verbatim}
 
 This DAG file will be the input file for the \Condor{dagman} program.
@@ -223,18 +244,18 @@ the user who originally submitted DAGMan, and could have submitted the DAG
 jobs manually.
 
 Here is an example \textit{CondorCommandFile} that would be used to submit the
-ABC DAG from the previous section.
+DIAMOND DAG from the previous section.
 
 \begin{verbatim}
-  # Filename: abc.dag.condor
+  # Filename: diamond.dag.condor
   # Condor Command File to submit the DAGMan Program
-  # Submit with:  condor_submit abc_dag.condor
+  # Submit with:  condor_submit diamond_dag.condor
   #
   executable   = /path/condor_dagman
-  output       = abc.dag.stdout
-  error        = abc.dag.stderr
-  log          = abc.dag.log
-  arguments    = -f -t -l . -lockfile abc.dag.lock -condorlog abc.dag.condor.log -dag abc.dag
+  output       = diamond.dag.stdout
+  error        = diamond.dag.stderr
+  log          = diamond.dag.log
+  arguments    = -f -t -l . -lockfile diamond.dag.lock -condorlog diamond.dag.condor.log -dag diamond.dag
   universe     = scheduler
   notification = ALWAYS
   queue
@@ -264,13 +285,13 @@ that no other DAGs or Condor jobs can write to this log file.  Future versions
 of DAGMan will allow multiple DAGs and Condor jobs to write to the same log
 file, and DAGMan's recovery engine will be able to distinguish them (see
 section~\ref{dagman:version}).  Finally, the DAG input file is specified to be
-our ABC DAG, \File{abc.dag}.
+our DIAMOND DAG, \File{diamond.dag}.
 
 The \texttt{universe=scheduler} declares that DAGMan is not a typical Condor
 job, but rather a meta-scheduler.  Meta schedulers are run on the local
 schedd, rather than being submitted to a remote host.
 
-To run the DAG, issue the command \Condor{submit} abc.dag.condor.  Because
+To run the DAG, issue the command \Condor{submit} diamond.dag.condor.  Because
 \texttt{notification=ALWAYS} is specified, Condor will send a single e-mail
 message if something significant (successful completion or error) happens to
 the DAG as a whole.
@@ -305,7 +326,33 @@ not loose it.
 DAGMan makes the same guarantee about the DAG as a whole.  If the machine
 running DAGMan goes down or crashes, upon restart DAGMan will be restarted,
 and the state of the DAG jobs will be recovered from the log file
-(\File{abc.dag.condor.log} from our example before).
+(\File{diamond.dag.condor.log} from our example before).
+
+\subsection{Essentials}
+\label{dagman:essentials}
+
+This section is written for those users looking for the boiled down,
+absolutely essential steps to successfully submit a DAG.
+
+\begin{description}
+
+\item[Prepare Jobs] Each job in the DAG must have its own
+\textit{CondorCommandFile}.  Each \textit{CondorCommandFile} can only submit
+one job.  Multi-job clusters (multiple \texttt{queue} lines) are not
+supported.  The \texttt{log=} for all \textit{CondorCommandFile}s must point
+to the same Condor log file, otherwise, DAGMan will not see all the Condor log
+entries for every job in the DAG.  Refer to section~\ref{dagman:prepjob} for
+details on how to prepare jobs.
+
+\item[Write DAG File] Write the DAG file, so that JOB entries refer to the
+\textit{CondorCommandFile}s you wrote in the previous step.  Refer to
+section~\ref{dagman:writedag} to learn about writing a DAG file.
+
+\item[Submit the DAG] Finally, you submit the DAG written in the previous step
+using the \Condor{submit\_dag} script.
+
+\end{description}
+
 
 \subsection{Version Summary}
 \label{dagman:version}
@@ -319,7 +366,7 @@ contribution program.  As such, it is not as rigorously tested as the core
 components of Condor.  A reasonable effort has been made to test large DAGS
 (on the order of 5000 jobs) on Solaris x86 and Sparc.  However, the DAGMan is
 not arrogant enough to claim itself bug free.  Users are encouraged to send
-e-mail to \texttt{}.............
+e-mail to \Email{condor-admin@cs.wisc.edu}.
 
 The following feature summary compares the current version with possible
 versions of DAGMan still to come.
