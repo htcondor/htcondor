@@ -246,13 +246,27 @@ class DedicatedScheduler : public Service {
 
 	void callHandleDedicatedJobs( void );
 
+		/** Do a number of sanity-checks, like releasing resources
+			we're holding onto and not using.
+		*/
+	void checkSanity( void );
+
+		/** Check the given match record to make sure the claim hasn't
+			been unused for too long.
+			@param mrec The match record to check
+			@return how many seconds this match has not been used
+		*/
+	int getUnusedTime( match_rec* mrec );
+
+
 		// // // // // // 
 		// Data members 
 		// // // // // // 
 
 		// Stuff for interacting w/ DaemonCore
-	int		hdjt_tid;					// DC timer id
-	int		rid;						// DC reaper id
+	int		hdjt_tid;		// DC timer id for handleDedicatedJobTimer()
+	int		sanity_tid;		// DC timer id for sanityCheck()
+	int		rid;			// DC reaper id
 
 		// data structures for managing dedicated jobs and resources. 
 	ExtArray<int>*		idle_clusters;	// Idle cluster ids
@@ -293,6 +307,8 @@ class DedicatedScheduler : public Service {
 		                // used for ATTR_SCHEDULER.
 	char* ds_owner;		// "Owner" to identify this dedicated scheduler 
 
+	int unused_timeout;	// How many seconds are we willing to hold
+		// onto a resource without using it before we release it? 
 };
 
 
