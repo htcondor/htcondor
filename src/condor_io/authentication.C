@@ -588,7 +588,6 @@ Authentication::setupEnv( char *hostAddr )
 		else {
 			dprintf( D_ALWAYS, "unable to read x509 directory %s\n", CertDir );
 		}
-		free( CertDir );
 		return;
 	}
 
@@ -602,7 +601,7 @@ Authentication::setupEnv( char *hostAddr )
 		char tmpStr[1024];
 
 		if ( hostAddr[0] != '<' ) { //not already sinful
-			if ( strchr( tmpStr, ':' ) ) { //already has port info
+			if ( strchr( hostAddr, ':' ) ) { //already has port info
 				sprintf( tmpStr, "<%s>", hostAddr );
 			}
 			else {
@@ -621,7 +620,6 @@ Authentication::setupEnv( char *hostAddr )
 			putenv( strdup( tmpstring ) );
 		}
 		else {
-			free( CertDir );
 			return;
 		}
 	}
@@ -641,7 +639,6 @@ Authentication::setupEnv( char *hostAddr )
 	if ( mySock->isClient() ) {
 		canUseFlags |= CAUTH_GSS;
 	}
-	free( CertDir );
 #endif
 }
 
@@ -702,16 +699,15 @@ Authentication::handshake()
 	int clientCanUse = 0;
 	int canUse = (int) canUseFlags;
 
-	switch( mySock->isClient() ) {
-	 case 1:
+	if ( mySock->isClient() ) {
 		mySock->encode();
 		mySock->code( canUse );
 		mySock->end_of_message();
 		mySock->decode();
 		mySock->code( shouldUseMethod );
 		mySock->end_of_message();
-		break;
-	 default: //otherwise, server
+	}
+	else { //server
 		mySock->decode();
 		mySock->code( clientCanUse );
 		mySock->end_of_message();
@@ -719,7 +715,6 @@ Authentication::handshake()
 		mySock->encode();
 		mySock->code( shouldUseMethod );
 		mySock->end_of_message();
-		break;
 	}
 
 	dprintf(D_FULLDEBUG,
@@ -941,6 +936,8 @@ authsock_put(void *arg,  void *buf, size_t size)
 
 	//send size of data to send
 	stat = sock->code( (int &)size );
+
+
 	//if successful, send the data
 	if ( stat ) {
 		if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
@@ -1034,7 +1031,7 @@ Authentication::authenticate_client_gss()
 		  GSS_C_DELEG_FLAG|GSS_C_MUTUAL_FLAG,
 		  &ret_flags, &token_status,
 		  authsock_get, (void *) &authComms,
-		  authsock_put, (void *) this 
+		  authsock_put, (void *) mySock
 	);
 
 	if (major_status != GSS_S_COMPLETE)
@@ -1085,7 +1082,7 @@ Authentication::authenticate_server_gss()
 				 &ret_flags, NULL, /* don't need user_to_user */
 				 &token_status,
 				 authsock_get, (void *) &authComms,
-				 authsock_put, (void *) this
+				 authsock_put, (void *) mySock
 	);
 
 
