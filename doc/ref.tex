@@ -38,7 +38,7 @@
 	\fancyhead[LE,RO]{\thepage}
 	\fancyhead[RE]{\leftmark}
 	\fancyhead[LO]{\rightmark}
-	\fancyfoot[C]{Condor \VersionNotice\ User and Administrator Manual}
+	\fancyfoot[C]{Condor \VersionNotice\ Reference Manual}
 	\renewcommand{\headrulewidth}{0.4pt}
 	\renewcommand{\footrulewidth}{0.4pt}
 	\addtolength{\headwidth}{\oddsidemargin}
@@ -83,8 +83,21 @@ Divided into multiple sections, yada, yada.
 \label{admin-manual}
 \input{admin-man/admin.tex}
 
-% \chapter{Command Reference Manual}
-% \label{command-reference}
-% \input{man-pages/man.tex}
+\chapter{Command Reference Manual}
+\label{command-reference}
+\input{man-pages/man.tex}
+
+%
+%  The fancy header package gets confused after the man pages, so reset
+%  the header and footer style
+%
+\fancyhead[LE,RO]{\thepage}
+\fancyhead[RE]{\leftmark}
+\fancyhead[LO]{\rightmark}
+\fancyfoot[C]{Condor \VersionNotice\ Reference Manual}
+\chapter{Miscellaneous}
+\section{An Introduction to Condor's ClassAd Mechanism}
+\label{classad-reference}
+\input{misc/classad.tex}
 
 \end{document}
