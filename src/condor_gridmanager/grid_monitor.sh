@@ -677,6 +677,7 @@ sub ReadJobs( )
 	    # Skip the lock files
 	    next if ( $File =~ /\.lock$/ );
 	    next if ( $File eq "." || $File eq ".." );
+	    next if ( $File =~ /^gram_condor_log/ );
 
 	    # And, stuff it in the list
 	    push @StateFiles, $File
@@ -697,6 +698,7 @@ sub ReadJobs( )
 	    # Loop 'til we read successfully...
 	    my $Done = 0;
 	    my $Tries = 0;
+	    my $Owner = "";
 	    while( ! $Done )
 	    {
 		# Give up after a lot of tries
@@ -743,6 +745,9 @@ sub ReadJobs( )
 		# If the mtime has changed, go read it again...
 		redo if ( $StartTime != $EndTime );
 
+		# Extract the file's UID
+		$Owner = getpwuid( @{$Stat}[4] );
+
 		# Note the we're done!
 		$Done = 1;
 	    }
@@ -768,8 +773,16 @@ sub ReadJobs( )
 	    # If we don't know the job manager type, skip it..
 	    next if ( ! CheckJob( \%Job ) );
 
+	    # Set the spool directory env
+	    local $ENV{GLOBUS_SPOOL_DIR};
+	    $Owner = "" if ( ! defined $Owner );
+	    if ( ( $StateFile =~ /^$Owner\./ ) ||
+		 ( ( $Owner eq "" ) && ( !($StateFile =~ /^job\./ )) )  )
+	    {
+		$ENV{GLOBUS_SPOOL_DIR} = $StateFileDir;
+	    }
+
 	    # Create a job description and job manager
-	    local $ENV{GLOBUS_SPOOL_DIR} = $StateFileDir;
 	    my $JobDescription = CreateJobDescription( \%Job );
 	    my $JobManager = CreateJobManager( \%Job, $JobDescription );
 
