@@ -289,7 +289,7 @@ ClassAdLog::LogState(int fd)
 	HashKey		hashval;
 	char		key[_POSIX_PATH_MAX];
 	char		*attr_name = NULL;
-	char		attr_val[ATTRLIST_MAX_EXPRESSION];
+	char		*attr_val;
 
 	table.startIterations();
 	while(table.iterate(ad) == 1) {
@@ -303,15 +303,16 @@ ClassAdLog::LogState(int fd)
 		ad->ResetName();
 		attr_name = ad->NextName();
 		while (attr_name) {
-			attr_val[0] = 0;
+			attr_val = NULL;
 			expr = ad->Lookup(attr_name);
 			if (expr) {
-				expr->RArg()->PrintToStr(attr_val);
+				expr->RArg()->PrintToNewStr(&attr_val);
 				log = new LogSetAttribute(key, attr_name, attr_val);
 				if (log->Write(fd) < 0) {
 					EXCEPT("write to %s failed, errno = %d", log_filename,
 						   errno);
 				}
+				free(attr_val);
 				delete log;
 				delete [] attr_name;
 				attr_name = ad->NextName();
