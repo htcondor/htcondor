@@ -455,10 +455,10 @@ GlobusResource::CheckMonitor()
 	//   delay until ping is done or have seperate GahpClient
 	// TODO if resource is down, should we delay any actions?
 	daemonCore->Reset_Timer( checkMonitorTid, TIMER_NEVER );
-dprintf(D_FULLDEBUG,"*** entering CheckMonitor\n");
+	dprintf(D_FULLDEBUG,"*** entering CheckMonitor\n");
 
 	if ( firstPingDone == false ) {
-dprintf(D_FULLDEBUG,"*** first ping not done yet, retry later\n");
+		dprintf(D_FULLDEBUG,"*** first ping not done yet, retry later\n");
 		daemonCore->Reset_Timer( checkMonitorTid, 5 );
 		return TRUE;
 	}
@@ -473,7 +473,7 @@ dprintf(D_FULLDEBUG,"*** first ping not done yet, retry later\n");
 			}
 			daemonCore->Reset_Timer( checkMonitorTid, 30 );
 		} else {
-dprintf(D_FULLDEBUG,"*** grid monitor disabled, stopping\n");
+			dprintf(D_ALWAYS,"*** grid monitor failed to start\n");
 			daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
 		}
 	} else {
@@ -496,13 +496,13 @@ dprintf(D_FULLDEBUG,"*** grid monitor disabled, stopping\n");
 
 		if ( job_status_mod_time > jobStatusFileLastReadTime ) {
 
-dprintf(D_FULLDEBUG,"*** job status file has been refreshed!\n");
+			dprintf(D_FULLDEBUG,"*** job status file has been refreshed!\n");
 			if ( ReadMonitorJobStatusFile() == true ) {
-dprintf(D_FULLDEBUG,"*** read status file successfully\n");
+				dprintf(D_FULLDEBUG,"*** read status file successfully\n");
 				jobStatusFileLastReadTime = time(NULL);
 				daemonCore->Reset_Timer( checkMonitorTid, 30 );
 			} else {
-dprintf(D_FULLDEBUG,"*** error reading job status file, stopping grid monitor\n");
+				dprintf(D_ALWAYS,"*** error reading job status file, stopping grid monitor\n");
 				StopMonitor();
 				daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
 				return TRUE;
@@ -512,28 +512,29 @@ dprintf(D_FULLDEBUG,"*** error reading job status file, stopping grid monitor\n"
 
 		if ( log_mod_time > logFileLastReadTime ) {
 
-dprintf(D_FULLDEBUG,"*** log file has been refreshed!\n");
+			dprintf(D_FULLDEBUG,"*** log file has been refreshed!\n");
 			rc = ReadMonitorLogFile();
 
 			switch( rc ) {
-			case 0:
-dprintf(D_FULLDEBUG,"*** log file looks normal\n");
+			case 0: // Normal / OK
+				dprintf(D_FULLDEBUG,"*** log file looks normal\n");
 				logFileLastReadTime = time(NULL);
 				daemonCore->Reset_Timer( checkMonitorTid, 30 );
 				break;
-			case 1:
-dprintf(D_FULLDEBUG,"*** grid monitor reached max lifetime, restarting...\n");
+
+			case 1: // Exitted normally (should restart)
+				dprintf(D_FULLDEBUG,"*** grid monitor %s reached max lifetime, restarting...\n", resourceName);
 				if ( SubmitMonitorJob() == true ) {
-dprintf(D_FULLDEBUG,"***    success!\n");
+					dprintf(D_FULLDEBUG,"***    success!\n");
 					daemonCore->Reset_Timer( checkMonitorTid, 30 );
 				} else {
-dprintf(D_FULLDEBUG,"***    failure\n");
+					dprintf(D_FULLDEBUG,"***    failure\n");
 					StopMonitor();
 					daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
 				}
 				break;
-			case 2:
-dprintf(D_FULLDEBUG,"*** error in grid monitor, stopping\n");
+			case 2: // Exitted with error
+				dprintf(D_FULLDEBUG,"*** error in grid monitor, stopping\n");
 				StopMonitor();
 				daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
 				break;
@@ -543,7 +544,7 @@ dprintf(D_FULLDEBUG,"*** error in grid monitor, stopping\n");
 
 		} else if ( time(NULL) > logFileLastReadTime + LOG_FILE_TIMEOUT ) {
 
-dprintf(D_FULLDEBUG,"*** log file too old, stopping monitor\n");
+			dprintf(D_ALWAYS,"*** log file too old, stopping monitor\n");
 			StopMonitor();
 			daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
 
