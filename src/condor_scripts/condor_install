@@ -1807,12 +1807,9 @@ sub prompt_java_jvm_path()
 	if ($exec_result == 0) {
 		print "yes.\n";
 		$java_jvm_maxmem_arg = "-Xmx"; # Sun JVM max heapsize flag
-		print "\nThe JVM heap size will be allowed to grow up to 1024 Megs.\n";
 	} else {
 		print "no.\n";
 		$java_jvm_maxmem_arg = "";
-		print "\nThe maximum JVM heap size allowable will default to that " .
-			"specified by your\njava vendor.\n";
 	}
 
 	return $jvm;
