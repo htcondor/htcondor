@@ -50,19 +50,28 @@ outside of Condor to synchronize with a job or set of jobs.
 
 \Examples
 
-\Condor{wait} logfile\\*
-This command waits for all jobs that exist in ``logfile'' to complete.
+\begin{verbatim}
+condor_wait logfile
+\end{verbatim}
+This command waits for all jobs that exist in \File{logfile} to complete.
 
-\Condor{wait} logfile 40\\*
-This command waits for all jobs that exist in ``logfile'' and are part
+\begin{verbatim}
+condor_wait logfile 40
+\end{verbatim}
+This command waits for all jobs that exist in \File{logfile} and are part
 of cluster 40 to complete.
 
-\Condor{wait} logfile 40.1\\*
-This command waits for job 40.1 that exists in ``logfile'' to
+\begin{verbatim}
+condor_wait logfile 40.1
+\end{verbatim}
+This command waits for job 40.1 that exists in \File{logfile} to
 complete.
 
-\Condor{wait} -wait 3600 logfile 40.1. This waits for job 40.1 to
-complete by watching ``logfile'', but it will not wait more than one
+\begin{verbatim}
+condor_wait -wait 3600 logfile 40.1
+\end{verbatim}
+This waits for job 40.1 to
+complete by watching \File{logfile}, but it will not wait more than one
 hour (3600 seconds).
 
 \ExitStatus
