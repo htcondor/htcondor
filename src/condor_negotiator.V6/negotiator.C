@@ -59,15 +59,14 @@
 #include <sys/ioctl.h>
 #include "condor_types.h"
 #include <netinet/in.h>
-#include "debug.h"
-#include "except.h"
-#include "trace.h"
+#include "condor_debug.h"
 //#include "expr.h"
 #include "sched.h"
 #include "clib.h"
 #include "proc.h"
 #include "condor_query.h"
 #include "manager.h"
+
 #include <sys/wait.h>
 
 #if defined(AIX32)
@@ -113,7 +112,6 @@ extern "C"
 	void	config(char*, CONTEXT*);
 	int		config_from_server(char*, char*, CONTEXT*);
 	void	_EXCEPT_(char*...);
-	void    dprintf_config(char*, int);
 	int		udp_connect(char*, int);	
 	int		xdr_mach_rec(XDR*, MACH_REC*); 
 	int		snd_int(XDR*, int, int);
@@ -461,6 +459,7 @@ void reschedule()
 	xdrs->x_op = XDR_ENCODE;
 
 	cmd = GIVE_STATUS;
+	dprintf (D_PROTOCOL, "## 1. Getting list of machines\n");
 	if( !xdr_int(xdrs, &cmd) ) {
 		dprintf( D_ALWAYS, "1. Can't send GIVE_STATUS command\n" );
 		CLOSE_XDR_STREAM;
@@ -516,7 +515,7 @@ void update_accountant()
 	XDR			xdr, *xdrs;
 	MACH_REC	*rec;
 
-	dprintf( D_ALWAYS, "Sending updated priorities to accountant...\n" );
+	dprintf(D_PROTOCOL,"## 3. Updating priorities on accountant...\n" );
 
 		/* Connect to the accountant */
 	if( (sock = connect_to_accountant()) < 0 ) {
@@ -627,13 +626,6 @@ void init_params()
 	}
 
 	memset( (char *)&sin, 0,sizeof sin );
-/*	servp = getservbyname("condor_schedd", "tcp");
-	if( servp ) {
-		SchedD_Port = servp->s_port;
-	} else {
-		SchedD_Port = htons(SCHED_PORT);
-	} this seems redundant since the port ip is in the context itself dhaval */
-
 
 	if( (CollectorHost = param("COLLECTOR_HOST")) == NULL ) {
 		EXCEPT( "COLLECTOR_HOST not specified in config file\n" );
@@ -814,8 +806,7 @@ void do_negotiations()
 		scheddAddr = new char[100]; 
 		if(ptr->EvalString(ATTR_SCHEDD_IP_ADDR, NULL, scheddAddr) == 0)
 		{	
-			dprintf( D_ALWAYS,
-					"Not negotiating with %s - can't evaluate \"%s\"\n", ATTR_SCHEDD_IP_ADDR );
+			dprintf(D_ALWAYS,"Can't evaluate \"%s\"\n", ATTR_SCHEDD_IP_ADDR );
 			delete scheddAddr;
 			continue;
 		}
@@ -920,6 +911,7 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 
 	for(;;) {
 		(void)alarm( (unsigned)ClientTimeout );	/* reset the alarm every time */
+		dprintf (D_PROTOCOL, "## 2. Negotiating with schedd %s\n", addr);
 		if( !snd_int(xdrs,SEND_JOB_INFO,TRUE) ) {
 			dprintf( D_ALWAYS, "\t3.Error negotiating with %s\n", addr );
 			return ERROR;
@@ -946,19 +938,25 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 				if( server = find_server(job_context) ) {
 					dprintf( D_ALWAYS, "\tAllowing %s to run on %s\n",
 						addr, server->name);
-					if( evaluate_string(ATTR_STARTD_IP_ADDR,&address,server->machine_context,0 ) < 0 ) {
+					if( evaluate_string((char *) ATTR_STARTD_IP_ADDR, &address,
+							server->machine_context,0 ) < 0 ) {
 						dprintf(D_ALWAYS,"\tDidn't receive startd_ip_addr\n");
 					}
 
-					final_string=(char *)(malloc(SIZE_OF_FINAL_STRING*sizeof(char)));
-					random_string=(char *)(malloc(SIZE_OF_CAPABILITY_STRING*sizeof(char)));
+					final_string=(char *)(malloc(SIZE_OF_FINAL_STRING*
+							sizeof(char)));
+					random_string=(char *)(malloc(SIZE_OF_CAPABILITY_STRING*
+							sizeof(char)));
 					if(get_random_string(&random_string)!=0)
 					{ 
 						EXCEPT("Error in getting random string\n");
 					}
 
-					sprintf(final_string, "%s %s#%d", address, random_string,sequence_number);
+					sprintf(final_string, "%s %s#%d", address, 
+								random_string,sequence_number);
 					dprintf(D_ALWAYS, "\tmatch %s\n", final_string);
+					dprintf(D_PROTOCOL, "\t## 4. Sending %s to startd ...\n", 
+										final_string);
 					if(send_to_startd(final_string)!=0) {
 						dprintf( D_ALWAYS,
 								"\t6.Error negotiating with %s\n", addr );
@@ -968,6 +966,8 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 						free(address);
 						return ERROR;
 					}
+					dprintf(D_PROTOCOL, "\t## 4. Sending %s to acntnt ...\n", 
+							final_string);
 					if(send_to_accountant(final_string) < 0) {
 						dprintf(D_ALWAYS,
 								"\tCan't send capability to accountant.\n");
@@ -982,6 +982,8 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 						free(address);
 						return ERROR;
 					}
+					dprintf(D_PROTOCOL, "\t## 3. Sending %s to schedd ...\n", 
+						final_string);
 					if( !snd_string(xdrs,final_string,TRUE) ) { /* dhaval */
 						dprintf( D_ALWAYS,
 								"\t9.Error negotiating with %s\n", addr );
@@ -991,7 +993,6 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 						free(address);
 						return ERROR;
 					}
-					dprintf(D_FULLDEBUG, "\tsend %s to schedd\n", final_string);
 					free(final_string);
 					free(address);
 					free(random_string);
@@ -1034,7 +1035,7 @@ int get_priorities()
     char*		 	scheddName;
     int         	prio;
 
-	dprintf(D_FULLDEBUG, "Getting priorities from the accountant...\n");
+	dprintf(D_PROTOCOL, "## 1. Getting priorities from the accountant...\n");
 	if((sock = connect_to_accountant()) < 0)
 	{
 		dprintf(D_ALWAYS, "Can't connect to accountant\n");
@@ -1516,7 +1517,7 @@ connect_to_accountant()
 						  sizeof(Accountant_sin))) == 0 ) {
 		return fd;
 	} else {
-		dprintf( D_ALWAYS, "connect returns %d, errno = %d\n", status, errno );
+		dprintf(D_ALWAYS,"\t(connect returns %d, errno = %d)\n",status,errno);
 		(void)close( fd );
 		return -1;
 	}
