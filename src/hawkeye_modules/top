@@ -332,7 +332,7 @@ sub Configure( )
     if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
     {
 	$Config{TopPeriod} = $1;
-	if ( ( $2 eq HawkeyePublish::TypeString ) || ( $2 eq HawkeyePublish::TypeString ) )
+	if (  ( $2 eq "s" ) || ( $2 eq "s" ) )
 	{
 	    # Do nothing
 	}
@@ -518,7 +518,8 @@ sub RunIt( )
 		# And, add it to our summary
 		foreach my $Attr ( keys %Uptime )
 		{
-		    my $Type = ( $Attr =~ /string/i ) ? HawkeyePublish::TypeString : HawkeyePublish::TypeNumber;
+		    my $Type = ( $Attr =~ /string/i ) ?
+			HawkeyePublish::TypeString:HawkeyePublish::TypeNumber;
 		    $Summary->Add( $Attr, $Type, $Uptime{$Attr} );
 		}
 	    }
@@ -557,8 +558,7 @@ sub RunIt( )
 		    foreach my $Attr ( keys %Load )
 		    {
 			my $Type = ( $Attr =~ /string/i ) ?
-			    HawkeyePublish::TypeString :
-				    HawkeyePublish::TypeNumber;
+			    HawkeyePublish::TypeString:HawkeyePublish::TypeNumber;
 			$Summary->Add( $Attr, $Type, $Load{$Attr} );
 		    }
 		}
