@@ -3507,9 +3507,6 @@ Scheduler::mark_cluster_rejected(int cluster)
 {
 	int		i;
 
-	if ( N_RejectedClusters + 1 == MAX_REJECTED_CLUSTERS ) {
-		EXCEPT("Reached MAX_REJECTED_CLUSTERS");
-	}
 	for( i=0; i<N_RejectedClusters; i++ ) {
 		if( RejectedClusters[i] == cluster ) {
 			return;
