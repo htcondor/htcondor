@@ -311,7 +311,7 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		else {        // its a string
 			bool validStr = true;
 			token.text += " ";
-			Lexer::convert_escapes(token.text, validStr );
+			convert_escapes(token.text, validStr );
 			if(!validStr) {  // invalid string because it had /0 escape sequence
 				return NULL;
 			} else {

@@ -23,14 +23,12 @@
 // Includes 
 #include "common.h"
 #include "lexer.h"
+#include "util.h"
 
 using namespace std;
 extern	time_t timezone;
 
 BEGIN_NAMESPACE( classad )
-
-// macro for recognising octal digits
-#define isodigit(x) (( (x) - '0' < 8 ) && ((x) - '0' >= 0))
 
 // ctor
 Lexer::
@@ -466,7 +464,7 @@ tokenizeString(char delim)
 	cut( );
 	wind( );	// skip over the close quote
 	bool validStr = true; // to check if string is valid after converting escape
-	convert_escapes( lexBuffer, validStr );
+	convert_escapes(lexBuffer, validStr);
 	yylval.SetStringValue( lexBuffer.c_str( ) );
 	if (validStr) {
 		if(delim == '\"') {
@@ -783,97 +781,6 @@ strLexToken (int tokenValue)
 		default:
 				return "** Unknown **";
 	}
-}
-
-void Lexer::convert_escapes(string &text, bool &validStr)
-{
-	char *copy;
-	int  length;
-	int  source, dest;
-
-	// We now it will be no longer than the original.
-	length = text.length();
-	copy = new char[length + 1];
-	
-	// We scan up to one less than the length, because we ignore
-	// a terminating slash: it can't be an escape. 
-	dest = 0;
-	for (source = 0; source < length - 1; source++) {
-		if (text[source] != '\\') {
-			copy[dest++]= text[source]; 
-		}
-		else {
-			source++;
-
-			char new_char;
-			switch(text[source]) {
-			case 'a':	new_char = '\a'; break;
-			case 'b':	new_char = '\b'; break;
-			case 'f':	new_char = '\f'; break;
-			case 'n':	new_char = '\n'; break;
-			case 'r':	new_char = '\r'; break;
-			case 't':	new_char = '\t'; break;
-			case 'v':	new_char = '\v'; break;
-			case '\\':	new_char = '\\'; break;
-			case '\?':	new_char = '\?'; break;
-			case '\'':	new_char = '\''; break;
-			case '\"':	new_char = '\"'; break;
-			default:   
-				if (isodigit(text[source])) {
-					int  number;
-					// There are three allowed ways to have octal escape characters:
-					//  \[0..3]nn or \nn or \n. We check for them in that order.
-					if (   source <= length - 3
-						&& text[source] >= '0' && text[source] <= '3'
-						&& isodigit(text[source+1])
-						&& isodigit(text[source+2])) {
-
-						// We have the \[0..3]nn case
-						char octal[4];
-						octal[0] = text[source];
-						octal[1] = text[source+1];
-						octal[2] = text[source+2];
-						octal[3] = 0;
-						sscanf(octal, "%o", &number);
-						new_char = number;
-						source += 2; // to account for the two extra digits
-					} else if (   source <= length -2
-							   && isodigit(text[source+1])) {
-
-						// We have the \nn case
-						char octal[3];
-						octal[0] = text[source];
-						octal[1] = text[source+1];
-						octal[2] = 0;
-						sscanf(octal, "%o", &number);
-						new_char = number;
-						source += 1; // to account for the extra digit
-					} else if (source <= length - 1) {
-						char octal[2];
-						octal[0] = text[source];
-						octal[1] = 0;
-						sscanf(octal, "%o", &number);
-						new_char = number;
-					} else {
-						new_char = text[source];
-					}
-					if(number == 0) { // "\\0" is an invalid substring within a string literal
-					  validStr = false;
-					  delete [] copy;
-					  return;
-					}
-				} else {
-					new_char = text[source];
-				}
-				break;
-			}
-			copy[dest++] = new_char;
-		}
-	}
-	copy[dest] = 0;
-	text = copy;
-	delete [] copy;
-	return;
 }
 
 END_NAMESPACE // classad

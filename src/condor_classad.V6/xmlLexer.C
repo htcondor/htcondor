@@ -23,6 +23,7 @@
 #include "common.h"
 #include "xmlLexer.h"
 #include "lexer.h"
+#include "util.h"
 
 using namespace std;
 
@@ -382,7 +383,7 @@ BreakdownTag(const char *complete_tag)
 		}
 		bool validStr = true;
 		value += " ";
-		Lexer::convert_escapes(value, validStr);		
+		convert_escapes(value, validStr);		
 		if(!validStr) {  // contains a \0 escape char
 			current_token.tag_type = tagType_Invalid;
 		}

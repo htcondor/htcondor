@@ -200,12 +200,6 @@ class Lexer
 		TokenType PeekToken( TokenValue* = 0 );
 		TokenType ConsumeToken( TokenValue* = 0 );
 
-		/* This converts a string so that sequences like \t
-		 * (two-characters, slash and t) are converted into the 
-		 * correct characters like tab. It also converts octal sequences. 
-		 */
-		 static void convert_escapes(std::string &text, bool &validStr); 
-
 		// internal buffer for token accumulation
 		std::string lexBuffer;					    // the buffer itselfw
 
