@@ -138,12 +138,18 @@ public:
 		  */
 	char* hostname( void );
 
-		/** Return the version of the daemon is running.
-		  This function will return NULL only if there was
-		  an error in the locate() method.
-		  @return Just the hostname where the daemon is running.
-		  */
+		/** 
+			@return The version string of this daemon, or NULL if we
+			don't know it.
+		*/
 	char* version( void );
+
+		/** 
+			@return The platform string of this daemon, or NULL if we
+			don't know it.
+		*/
+	char* platform( void );
+
 
 		/** Return the full hostname where the daemon is running.
 		  This is the fully qualified hostname, including the domain
@@ -301,6 +307,7 @@ protected:
 	char* _full_hostname;
 	char* _addr;
 	char* _version;
+	char* _platform;
 	char* _pool;
 	char* _error;
 	char* _id_str;
@@ -370,6 +377,7 @@ protected:
 	char* New_hostname( char* );
 	char* New_name( char* );
 	char* New_version( char* );
+	char* New_platform( char* );
 	char* New_addr( char* );
 	char* New_pool( char* );
 };
