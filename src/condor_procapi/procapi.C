@@ -751,9 +751,17 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		   last record of the new pid.  That is wrong.  So, we use
 		   each pid's creation time as a secondary identifier to make
 		   sure we've got the right one. Mike & Derek 3/24/99 */
+		/* Allow 2 seconds "slack" on creation time, like we do in
+		   ProcFamily, since (at least on Linux) the value can
+		   oscillate. Jim B. 11/29/00 */
 	phn = NULL;	// clear to NULL before attempting the lookup
-	if( (procHash->lookup( pi->pid, phn ) == 0 ) &&
-		(phn->creation_time == pi->creation_time) )  {
+	if (procHash->lookup( pi->pid, phn ) == 0) {
+		long birth = phn->creation_time - pi->creation_time;
+		if (-2 > birth || birth > 2) {
+			phn = NULL;
+		}
+	}
+	if( phn ) {
 			// success; pid in hash table
 
 			/*	clear the garbage flag.  we need to do this whenever
