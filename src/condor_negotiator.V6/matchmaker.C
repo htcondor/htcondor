@@ -725,6 +725,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	ClassAd		request;
 	ClassAd		*offer;
 	bool		only_consider_startd_rank;
+	bool		display_overlimit = true;
 	char		prioExpr[128], remoteUser[128];
 
 	// 0.  connect to the schedd --- ask the cache for a connection
@@ -762,7 +763,8 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		if ( i >= scheddLimit ) {
 			if ( ignore_schedd_limit ) {
 				only_consider_startd_rank = true;
-				if ( i == scheddLimit ) {  // print message only once
+				if ( display_overlimit ) {  // print message only once
+					display_overlimit = false;
 					dprintf (D_ALWAYS, 	
 						"    Over schedd resource limit (%d) ... "
 					    "only consider startd ranks\n", scheddLimit);
