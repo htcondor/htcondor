@@ -12,7 +12,11 @@
 #include "condor_attributes.h"
 
 int open_url(char *, int, int);
+#if defined(HPUX9)
+extern "C" int gethostname(char *name, unsigned int namelen);
+#else
 extern "C" int gethostname(char *name, int namelen);
+#endif
 extern "C" char*	get_schedd_addr(const char*); 
 
 static char *_FileName_ = __FILE__;
