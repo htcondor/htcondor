@@ -166,6 +166,8 @@ char	*TransferInputFiles = "transfer_input_files";
 char	*TransferOutputFiles = "transfer_output_files";
 char	*TransferFiles = "transfer_files";
 
+char	*CopyToSpool = "copy_to_spool";
+
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 #endif
@@ -629,6 +631,7 @@ void
 SetExecutable()
 {
 	char	*ename = NULL;
+	char	*copySpool = NULL;
 
 #if !defined(WIN32)
 		//Allow GlobusExecutable to override executable
@@ -640,6 +643,7 @@ SetExecutable()
 	if ( ename == NULL ) {
 		ename = condor_param(Executable);
 	}
+
 
 	if( ename == NULL ) {
 		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
@@ -724,11 +728,19 @@ SetExecutable()
 		exit( 1 );
 	}
 
+	copySpool = condor_param(CopyToSpool);
+	if( copySpool == NULL)
+	{
+		copySpool = (char *)malloc(16);
+		strcpy(copySpool, "TRUE");
+	}
+
 	// generate initial checkpoint file
 	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
 
 	// spool executable only if no $$(arch).$$(opsys) specified
-	if ( !strstr(ename,"$$") ) {			
+
+	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' ) {	
 
 		if (SendSpoolFile(IckptName) < 0) {
 			fprintf(stderr,"permission to transfer executable %s denied\n",IckptName);
@@ -745,6 +757,7 @@ SetExecutable()
 	}
 
 	free(ename);
+	free(copySpool);
 }
 
 #ifdef WIN32
