@@ -174,9 +174,6 @@ GlobusJob::~GlobusJob()
 	if ( evaluateStateTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( evaluateStateTid );
 	}
-	if ( myResource != NULL ) {
-		myResource->UnregisterJob( this );
-	}
 	if ( jobContact ) {
 		free( jobContact );
 	}
