@@ -130,6 +130,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 	struct timeval timer;
 	fd_set writefds;
 	fd_set readfds;
+	fd_set exceptfds;
 	int nfds = 0, nfound = 0;
 	char tmpbuf[1];
 	int nro;
@@ -175,6 +176,8 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 #endif
 				FD_ZERO( &writefds );
 				FD_SET( fd, &writefds );
+				FD_ZERO( &exceptfds );
+				FD_SET( fd, &exceptfds );
 				
 				FD_ZERO( &readfds );
 				if( select_for_read ) {
@@ -182,7 +185,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 						// up if the socket is closed
 					FD_SET( fd, &readfds );
 				}
-				nfound = select( nfds, &readfds, &writefds, &writefds, 
+				nfound = select( nfds, &readfds, &writefds, &exceptfds, 
 								 &timer ); 
 
 					// unless we decide we need to select() again, we
@@ -197,6 +200,8 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 					return -1;
 				
 				case 1:
+				case 2:
+				case 3:
 					if( FD_ISSET(fd, &readfds) ) {
 							// see if the socket was closed
 						nro = recv(fd, tmpbuf, 1, MSG_PEEK);
