@@ -65,6 +65,7 @@
 #include "dc_schedd.h"
 #include "my_username.h"
 #include "globus_utils.h"
+#include "enum_utils.h"
 
 #include "list.h"
 
@@ -112,7 +113,7 @@ bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool    UseXMLInLog = false;
-bool never_transfer = false;  // never transfer files or do transfer files
+ShouldTransferFiles_t should_transfer = STF_NO;
 bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
 
 // environment vars in the ClassAd attribute are seperated via
@@ -240,6 +241,10 @@ void 	ComputeRootDir();
 void 	SetRootDir();
 #endif
 void 	SetRequirements();
+void 	SetTransferFiles();
+bool 	SetNewTransferFiles( bool, bool );
+void 	SetOldTransferFiles( bool, bool );
+void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void	SetRank();
 void 	SetIWD();
 void 	ComputeIWD();
@@ -1245,7 +1250,7 @@ calc_image_size( const char *name)
 // is the size of all the transferred input files.  This variable is used
 // by SetImageSize().  So, SetTransferFiles() must be called _before_ calling
 // SetImageSize().
-// SetTransferFiles also sets a global "never_transfer", which is 
+// SetTransferFiles also sets a global "should_transfer", which is 
 // used by SetRequirements().  So, SetTransferFiles must be called _before_
 // calling SetRequirements() as well.
 // If we are transfering files, and stdout or stderr contains
@@ -1259,7 +1264,6 @@ SetTransferFiles()
 	int count;
 	MyString tmp;
 	char* tmp_ptr;
-	bool files_specified = false;
 	bool in_files_specified = false;
 	bool out_files_specified = false;
 	char	 buffer[ATTRLIST_MAX_EXPRESSION];
@@ -1267,7 +1271,7 @@ SetTransferFiles()
 	char	 output_files[ATTRLIST_MAX_EXPRESSION];
 	StringList input_file_list;
 
-	never_transfer = false;
+	should_transfer = STF_YES;
 
 	buffer[0] = input_files[0] = output_files[0] = '\0';
 
@@ -1325,7 +1329,6 @@ SetTransferFiles()
 			(void) sprintf( input_files, "%s = \"%s\"", 
 							ATTR_TRANSFER_INPUT_FILES, tmp_ptr );
 			free( tmp_ptr );
-			files_specified = true;
 			in_files_specified = true;
 		}
 	}
@@ -1355,112 +1358,33 @@ SetTransferFiles()
 				ATTR_TRANSFER_OUTPUT_FILES, tmp_ptr);
 			free(tmp_ptr);
 			tmp_ptr = NULL;
-			files_specified = true;
 			out_files_specified = true;
 		}
 		free(macro_value);
 	}
 
-	macro_value = condor_param( TransferFiles, ATTR_TRANSFER_FILES );
-	if( macro_value ) 
-	{
-		// User explicitly specified TransferFiles; do what user says
-		switch ( macro_value[0] ) {
-				// Handle "Never"
-			case 'n':
-			case 'N':
-				// Handle "Never"
-				if( files_specified ) {
-					MyString err_msg;
-					err_msg += "\nERROR: you specified '";
-					err_msg += TransferFiles;
-					err_msg += " = Never' but listed files you want "
-						"transfered via '";
-					if( in_files_specified ) {
-						err_msg += "transfer_input_files";
-						if( out_files_specified ) {
-							err_msg += "' and 'transfer_output_files'.";
-						} else {
-							err_msg += "'.";
-						}
-					} else {
-						ASSERT( out_files_specified );
-						err_msg += "transfer_output_files'.";
-					}
-					err_msg += "  Please remove this contradiction from "
-						"your submit file and try again.";
-					print_wrapped_text( err_msg.Value(), stderr );
-					DoCleanup(0,0,NULL);
-					exit( 1 );
-				}
-				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
-				never_transfer = true;
-				break;
-			case 'o':
-			case 'O':
-				// Handle "OnExit"
-				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
-				break;
-			case 'a':
-			case 'A':
-				// Handle "Always"
-				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ALWAYS");
-				break;
-			default:
-				// Unrecognized
-				fprintf( stderr, "\nERROR: Unrecognized argument for "
-						 "parameter '%s'\n", TransferFiles );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-				break;
-		}	// end of switch
-
-		free(macro_value);		// condor_param() calls malloc; free it!
-	} else {
-		// User did not explicitly specify TransferFiles; choose a default
-#ifdef WIN32
-		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
-#else
-		if( files_specified ) {
-			MyString err_msg;
-			err_msg += "\nERROR: you specified files you want Condor to "
-				"transfer via '";
-			if( in_files_specified ) {
-				err_msg += "transfer_input_files";
-				if( out_files_specified ) {
-					err_msg += "' and 'transfer_output_files',";
-				} else {
-					err_msg += "',";
-				}
-			} else {
-				ASSERT( out_files_specified );
-				err_msg += "transfer_output_files',";
-			}
-			err_msg += " but you did not specify *when* you want Condor to "
-				"transfer the files.  Please put either \"transfer_files "
-				"= ONEXIT\" or \"transfer_files = ALWAYS\" in your "
-				"submit file and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
-		never_transfer = true;
-#endif
+		// now that we've gathered up all the possible info on files
+		// the user explicitly wants to transfer, see if they set the
+		// right attributes controlling if and when to do the
+		// transfers.  if they didn't tell us what to do, in some
+		// cases, we can give reasonable defaults, but in others, it's
+		// a fatal error.  first we check for the new attribute names
+		// ("ShouldTransferFiles" and "WheToTransferOutput").  If
+		// those aren't defined, we look for the old "TransferFiles". 
+	if( ! SetNewTransferFiles(in_files_specified, out_files_specified) ) {
+		SetOldTransferFiles( in_files_specified, out_files_specified );
 	}
 
-	// Insert what we want for ATTR_TRANSFER_FILES
-	InsertJobExpr (buffer);
-
 	/*
-	In the Java universe, we want to automatically transfer the
-	"executable" (i.e. the entry class) and any requested .jar files.
-	However, the executable is put directly into TransferInputFiles
-	with TransferExecutable set to false, because the FileTransfer object
-	happy renames executables left and right, which we don't want.
+	  In the Java universe, if we might be transfering files, we want
+	  to automatically transfer the "executable" (i.e. the entry
+	  class) and any requested .jar files.  However, the executable is
+	  put directly into TransferInputFiles with TransferExecutable set
+	  to false, because the FileTransfer object happily renames
+	  executables left and right, which we don't want.
 	*/
 
-	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
+	if( should_transfer!=STF_NO && JobUniverse==CONDOR_UNIVERSE_JAVA ) {
 
 		char file_list[ATTRLIST_MAX_EXPRESSION];
 
@@ -1517,7 +1441,7 @@ SetTransferFiles()
 	// file in the working directory.  The shadow will move the
 	// output data to the user-specified path when the job finishes.
 
-	if ( !never_transfer && job ) {
+	if ( should_transfer != STF_NO && job ) {
 		char output[_POSIX_PATH_MAX + 32];
 		char error[_POSIX_PATH_MAX + 32];
 
@@ -1560,9 +1484,9 @@ SetTransferFiles()
 		}
 	}
 
-	// if we did not set ATTR_TRANSFER_FILES to NEVER, 
-	// insert in input/output exprs
-	if ( !never_transfer ) {
+	// if we might be using file transfer, insert in input/output
+	// exprs  
+	if( should_transfer != STF_NO ) {
 		if ( input_files[0] ) {
 			InsertJobExpr (input_files);
 		}
@@ -1571,8 +1495,10 @@ SetTransferFiles()
 		}
 	}
 
-	if( never_transfer && JobUniverse != CONDOR_UNIVERSE_GLOBUS &&
-		JobUniverse != CONDOR_UNIVERSE_JAVA ) {
+	if( should_transfer == STF_NO && 
+		JobUniverse != CONDOR_UNIVERSE_GLOBUS &&
+		JobUniverse != CONDOR_UNIVERSE_JAVA )
+	{
 		char *transfer_exe;
 		transfer_exe = condor_param(TransferExecutable);
 		if(transfer_exe && *transfer_exe != 'F' && *transfer_exe != 'f') {
@@ -1580,14 +1506,18 @@ SetTransferFiles()
 			//but they did not turn on transfer_files, so they are
 			//going to be confused when the executable is _not_
 			//transfered!  Better bail out.
-
-			fprintf(stderr,"\nERROR: You explicitly requested transferral of "
-			               "the executable,\nbut for this to be enabled, "
-				           "you must select one of the file\n"
-					       "transfer modes:\n\n"
-					       "transfer_files = ONEXIT     (OR)\n"
-                           "transfer_files = ALWAYS\n");
-
+			MyString err_msg;
+			err_msg = "\nERROR: You explicitly requested that the "
+				"executable be transfered, but for this to work, you must "
+				"enable Condor's file transfer functionality.  You need "
+				"to define either: \"when_to_transfer_output = ON_EXIT\" "
+				"or \"when_to_transfer_output = ON_EXIT_OR_EVICT\".  "
+				"Optionally, you can define \"should_transfer_files = "
+				"IF_NEEDED\" if you do not want any files to be transfered "
+				"if the job executes on a machine in the same "
+				"FileSystemDomain.  See the Condor manual for more "
+				"details.";
+			print_wrapped_text( err_msg.Value(), stderr );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -1595,6 +1525,255 @@ SetTransferFiles()
 		free(transfer_exe);
 	}
 }
+
+
+bool
+SetNewTransferFiles( bool in_files_specified, bool out_files_specified )
+{
+	bool found_it = false;
+	char *should, *when;
+	FileTransferOutput_t when_output;
+	MyString err_msg;
+	
+	should = condor_param( ATTR_SHOULD_TRANSFER_FILES, 
+						   "should_transfer_files" );
+	if( should ) {
+		should_transfer = getShouldTransferFilesNum( should );
+		if( should_transfer < 0 ) {
+			err_msg = "\nERROR: invalid value (\"";
+			err_msg += should;
+			err_msg += "\") for ";
+			err_msg += ATTR_SHOULD_TRANSFER_FILES;
+			err_msg += ".  Please either specify \"YES\", \"NO\", or ";
+			err_msg += "\"IF_NEEDED\" and try again.";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		found_it = true;
+	}
+	
+	when = condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, 
+						 "when_to_transfer_output" );
+	if( when ) {
+		when_output = getFileTransferOutputNum( when );
+		if( when_output < 0 ) {
+			err_msg = "\nERROR: invalid value (\"";
+			err_msg += when;
+			err_msg += "\") for ";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += ".  Please either specify \"ON_EXIT\", or ";
+			err_msg += "\"ON_EXIT_OR_EVICT\" and try again.";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+			// if they gave us WhenToTransferOutput, but they didn't
+			// specify ShouldTransferFiles yet, give them a default of
+			// "YES", since that's the safest option.
+		if( ! found_it ) {
+			should_transfer = STF_YES;
+		}
+		if( should_transfer == STF_NO ) {
+			err_msg = "\nERROR: you specified ";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += " yet you defined ";
+			err_msg += ATTR_SHOULD_TRANSFER_FILES;
+			err_msg += " to be \"";
+			err_msg += should;
+			err_msg += "\".  Please remove this contradiction from ";
+			err_msg += "your submit file and try again.";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		found_it = true;
+	} else {
+			// we we have an error here, this part of the message will
+			// be the same in both cases, so only construct it once.
+		MyString no_when_err;
+		no_when_err += " but you did not specify *when* you want Condor "
+			"to transfer the output back.  Please put either \"";
+		no_when_err += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		no_when_err += " = ON_EXIT\" or \"";
+		no_when_err += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		no_when_err += " = ON_EXIT_OR_EVICT\" in your submit file and "
+			"try again.";
+		
+		if( found_it && should_transfer != STF_NO ) {
+			err_msg = "\nERROR: you specified ";
+			err_msg += ATTR_SHOULD_TRANSFER_FILES;
+			err_msg += " to be \"";
+			err_msg += should;
+			err_msg += '"';
+			err_msg += no_when_err.Value();
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		if( in_files_specified || out_files_specified ) {
+			err_msg += "\nERROR: you specified files you want Condor to "
+				"transfer via '";
+			if( in_files_specified ) {
+				err_msg += "transfer_input_files";
+				if( out_files_specified ) {
+					err_msg += "' and 'transfer_output_files',";
+				} else {
+					err_msg += "',";
+				}
+			} else {
+				ASSERT( out_files_specified );
+				err_msg += "transfer_output_files',";
+			}
+			err_msg += no_when_err.Value();
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+	}
+	
+		// if we found the new syntax, we're done, and we should now
+		// add the appropriate ClassAd attributes to the job.
+	if( found_it ) {
+		InsertFileTransAttrs( when_output );
+	}
+	return found_it;
+}
+
+
+void
+SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
+{
+	char *macro_value;
+	FileTransferOutput_t when_output;
+
+	macro_value = condor_param( TransferFiles, ATTR_TRANSFER_FILES );
+	if( macro_value ) {
+		// User explicitly specified TransferFiles; do what user says
+		switch ( macro_value[0] ) {
+				// Handle "Never"
+			case 'n':
+			case 'N':
+				// Handle "Never"
+				if( in_files_specified || out_files_specified ) {
+					MyString err_msg;
+					err_msg += "\nERROR: you specified '";
+					err_msg += TransferFiles;
+					err_msg += " = Never' but listed files you want "
+						"transfered via '";
+					if( in_files_specified ) {
+						err_msg += "transfer_input_files";
+						if( out_files_specified ) {
+							err_msg += "' and 'transfer_output_files'.";
+						} else {
+							err_msg += "'.";
+						}
+					} else {
+						ASSERT( out_files_specified );
+						err_msg += "transfer_output_files'.";
+					}
+					err_msg += "  Please remove this contradiction from "
+						"your submit file and try again.";
+					print_wrapped_text( err_msg.Value(), stderr );
+					DoCleanup(0,0,NULL);
+					exit( 1 );
+				}
+				should_transfer = STF_NO;
+				break;
+			case 'o':
+			case 'O':
+				// Handle "OnExit"
+				should_transfer = STF_YES;
+				when_output = FTO_ON_EXIT;
+				break;
+			case 'a':
+			case 'A':
+				// Handle "Always"
+				should_transfer = STF_YES;
+				when_output = FTO_ON_EXIT_OR_EVICT;
+				break;
+			default:
+				// Unrecognized
+				fprintf( stderr, "\nERROR: Unrecognized argument for "
+						 "parameter '%s'\n", TransferFiles );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+				break;
+		}	// end of switch
+
+		free(macro_value);		// condor_param() calls malloc; free it!
+	} else {
+		// User did not explicitly specify TransferFiles; choose a default
+#ifdef WIN32
+		should_transfer = STF_YES;
+		when_output = FTO_ON_EXIT;
+#else
+		if( in_files_specified || out_files_specified ) {
+			MyString err_msg;
+			err_msg += "\nERROR: you specified files you want Condor to "
+				"transfer via '";
+			if( in_files_specified ) {
+				err_msg += "transfer_input_files";
+				if( out_files_specified ) {
+					err_msg += "' and 'transfer_output_files',";
+				} else {
+					err_msg += "',";
+				}
+			} else {
+				ASSERT( out_files_specified );
+				err_msg += "transfer_output_files',";
+			}
+			err_msg += " but you did not specify *when* you want Condor to "
+				"transfer the files.  Please put either \"";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += "= ON_EXIT\" or \"";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += "= ON_EXIT_OR_EVICT\" in your submit file and "
+				"try again.";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		should_transfer = STF_NO;
+#endif
+	}
+		// now that we know what we want, call a shared method to
+		// actually insert the right classad attributes for it (since
+		// this stuff is shared, regardless of the old or new syntax).
+	InsertFileTransAttrs( when_output );
+}
+
+
+void
+InsertFileTransAttrs( FileTransferOutput_t when_output )
+{
+	MyString should = ATTR_SHOULD_TRANSFER_FILES;
+	should += " = \"";
+	MyString when = ATTR_WHEN_TO_TRANSFER_OUTPUT;
+	when += " = \"";
+	MyString ft = ATTR_TRANSFER_FILES;
+	ft += " = \"";
+	
+	should += getShouldTransferFilesString( should_transfer );
+	should += '"';
+	if( should_transfer != STF_NO ) {
+		when += getFileTransferOutputString( when_output );
+		when += '"';
+		if( when_output == FTO_ON_EXIT ) {
+			ft += "ONEXIT\"";
+		} else {
+			ft += "ALWAYS\"";
+		}
+	} else {
+		ft += "NEVER\"";
+	}
+	InsertJobExpr( should.Value() );
+	if( should_transfer != STF_NO ) {
+		InsertJobExpr( when.Value() );
+	}
+	InsertJobExpr( ft.Value() );
+}
+
 
 void
 SetFetchFiles()
@@ -2337,6 +2516,17 @@ SetRequirements()
 	strcpy (JobRequirements, tmp);
 
 	InsertJobExpr (buffer);
+	
+	char* fs_domain = NULL;
+	if( (should_transfer == STF_NO || should_transfer == STF_IF_NEEDED) 
+		&& ! job->LookupString(ATTR_FILE_SYSTEM_DOMAIN, &fs_domain) ) {
+		sprintf( buffer, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
+				 My_fs_domain ); 
+		InsertJobExpr( buffer );
+	}
+	if( fs_domain ) {
+		free( fs_domain );
+	}
 }
 
 void
@@ -3293,6 +3483,7 @@ check_requirements( char *orig )
 	bool	checks_mpi = false;
 	char	*ptr, *tmp;
 	static char	answer[4096];
+	MyString ft_clause;
 
 	if( strlen(orig) ) {
 		(void) sprintf( answer, "(%s)", orig );
@@ -3356,12 +3547,16 @@ check_requirements( char *orig )
 		checks_mpi = findClause( answer, ATTR_HAS_MPI );
 	}
 	if( mightTransfer(JobUniverse) ) { 
-		if( never_transfer ) {
+		switch( should_transfer ) {
+		case STF_IF_NEEDED:
+		case STF_NO:
 			checks_fsdomain = findClause( answer,
 										  ATTR_FILE_SYSTEM_DOMAIN ); 
-		} else {
+			break;
+		case STF_YES:
 			checks_file_transfer = findClause( answer,
 											   ATTR_HAS_FILE_TRANSFER );
+			break;
 		}
 	}
 
@@ -3469,7 +3664,8 @@ check_requirements( char *orig )
 			   system domain.
 			*/
 
-		if( never_transfer ) {
+		switch( should_transfer ) {
+		case STF_NO:
 				// no file transfer used.  if there's nothing about
 				// the FileSystemDomain yet, tack on a clause for
 				// that. 
@@ -3480,14 +3676,35 @@ check_requirements( char *orig )
 				(void)strcat( answer, ATTR_FILE_SYSTEM_DOMAIN );
 				(void)strcat( answer, ")" );
 			} 
-		} else {
-				// we're going to use file transfer.  
+			break;
+			
+		case STF_YES:
+				// we're definitely going to use file transfer.  
 			if( ! checks_file_transfer ) {
 				(void)strcat( answer, "&& (");
 				(void)strcat( answer, ATTR_HAS_FILE_TRANSFER );
 				(void)strcat( answer, ")");
 			}
-		}			
+			break;
+			
+		case STF_IF_NEEDED:
+				// we may or may not use file transfer, so require
+				// either the same FS domain OR the ability to file
+				// transfer.  if the user already refered to fs
+				// domain, but explictly turned on IF_NEEDED, assume
+				// they know what they're doing. 
+			if( ! checks_fsdomain ) {
+				ft_clause = "&& (";
+				ft_clause += ATTR_HAS_FILE_TRANSFER;
+				ft_clause += " || (TARGET.";
+				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
+				ft_clause += " == MY.";
+				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
+				ft_clause += "))";
+				strcat( answer, ft_clause.Value() );
+			}
+			break;
+		}
 	}
 	return answer;
 }
