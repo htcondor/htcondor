@@ -64,7 +64,6 @@ static char *_FileName_ = __FILE__;
 
 int main( int argc, char *argv[], char **envp );
 
-extern int DebugFlags;
 extern volatile int InRestart;
 int _condor_in_file_stream;
 
@@ -81,7 +80,6 @@ MAIN( int argc, char *argv[], char **envp )
 	static char	init_working_dir[_POSIX_PATH_MAX];
 	static char	init_working_dir2[_POSIX_PATH_MAX]; /* Greger */
 	int		i;
-	DebugFlags = D_NOHEADER | D_ALWAYS;
 
 	_condor_prestart( SYS_LOCAL );
 
