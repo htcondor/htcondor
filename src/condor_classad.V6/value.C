@@ -23,6 +23,9 @@
 #include "common.h"
 #include "operators.h"
 #include "value.h"
+#include <iostream>
+
+using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
