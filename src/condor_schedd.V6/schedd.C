@@ -257,7 +257,6 @@ Scheduler::Scheduler()
 	CondorViewHost = NULL;
 	Collector = NULL;
 	Negotiator = NULL;
-	Shadow = NULL;
 	CondorAdministrator = NULL;
 	Mail = NULL;
 	filename = NULL;
@@ -325,8 +324,6 @@ Scheduler::~Scheduler()
 		delete(Negotiator);
 	if (CondorViewHost)
 		free(CondorViewHost);
-	if (Shadow)
-		free(Shadow);
 	if (CondorAdministrator)
 		free(CondorAdministrator);
 	if (Mail)
@@ -3151,9 +3148,11 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 // Start Job Handler
 //-----------------------------------------------------------------
 
-void Scheduler::StartJobHandler() {
+void
+Scheduler::StartJobHandler()
+{
 
-	 StartJobTimer=-1;
+	StartJobTimer=-1;
 	PROC_ID* job_id=NULL;
 	match_rec* mrec=NULL;
 	shadow_rec* srec;
@@ -3197,58 +3196,107 @@ void Scheduler::StartJobHandler() {
 	//-------------------------------
 
 	int		pid;
-	int sh_is_dc;
-
 	char	args[_POSIX_ARG_MAX];
 
-	if (Shadow) free(Shadow);
+	Shadow*	shadow_obj = NULL;
+	int		sh_is_dc = FALSE;
+	char* 	shadow_path = NULL;
+
 #ifdef WIN32
-	Shadow = param("SHADOW");
+		// nothing to choose on NT, there's only 1 shadow
+	shadow_path = param("SHADOW");
 	sh_is_dc = TRUE;
 #else
- 	char opsys_buf[100], *match_opsys=opsys_buf;       
- 	match_opsys[0] = '\0';
- 	if (mrec->my_match_ad) {
- 		mrec->my_match_ad->LookupString(ATTR_OPSYS,match_opsys);
+		// UNIX
+
+	bool old_resource = true;
+	bool nt_resource = false;
+ 	char* match_opsys = NULL;
+ 	char* match_version = NULL;
+ 	if( mrec->my_match_ad ) {
+ 		mrec->my_match_ad->LookupString( ATTR_OPSYS, &match_opsys );
+		mrec->my_match_ad->LookupString( ATTR_VERSION, &match_version );
+	}
+	if( match_version ) {
+		CondorVersionInfo ver_info( match_version );
+		if( ver_info.built_since_version(6, 3, 2) ) {
+			old_resource = false;
+		}
+		free( match_version );
+		match_version = NULL;
 	}
 
-	if ( strincmp(match_opsys,"winnt",5) == MATCH ) {
-		Shadow = param("SHADOW_NT");
-		if( ! Shadow ) {
-			Shadow = param("SHADOWNT");
-			if( Shadow ) {
-				dprintf( D_ALWAYS, 
-						 "WARNING: \"SHADOWNT\" is depricated. "
-						 "Use \"SHADOW_NT\" in your config file, instead\n" );
+	if( match_opsys ) {
+		if( strincmp(match_opsys,"winnt",5) == MATCH ) {
+			nt_resource = true;
+		}
+		free( match_opsys );
+		match_opsys = NULL;
+	}
+	
+	if( nt_resource ) {
+		shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE );
+		if( ! shadow_obj ) {
+			dprintf( D_ALWAYS, "Trying to run a job on a Windows "
+					 "resource but you do not have a condor_shadow "
+					 "that will work, aborting.\n" );
+			return;
+		}
+	}
+
+	if( ! shadow_obj ) {
+		switch( universe ) {
+		case CONDOR_UNIVERSE_PVM:
+			EXCEPT( "Trying to spawn a PVM job with StartJobHandler(), "
+					"not start_pvm()!" );
+			break;
+		case CONDOR_UNIVERSE_STANDARD:
+			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_CHECKPOINTING );
+			if( ! shadow_obj ) {
+				dprintf( D_ALWAYS, "Trying to run a STANDARD job but you "
+						 "do not have a condor_shadow that will work, "
+						 "aborting.\n" );
+				return;
 			}
+			break;
+		case CONDOR_UNIVERSE_VANILLA:
+			if( old_resource ) {
+				shadow_obj = shadow_mgr.findShadow( ATTR_HAS_OLD_VANILLA );
+				if( ! shadow_obj ) {
+					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
+							 "pre-6.3.2 resource, but you do not have a "
+							 "condor_shadow that will work, aborting.\n" );
+					return;
+				}
+			} else {
+				shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE ); 
+				if( ! shadow_obj ) {
+					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
+							 "6.3.2 or later resource, but you do not have "
+							 "condor_shadow that will work, aborting.\n" );
+					return;
+				}
+			}
+			break;
+		case CONDOR_UNIVERSE_JAVA:
+			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_JAVA );
+			if( ! shadow_obj ) {
+				dprintf( D_ALWAYS, "Trying to run a JAVA job but you "
+						 "do not have a condor_shadow that will work, "
+						 "aborting.\n" );
+				return;
+			}
+			break;
+		default:
+			EXCEPT( "StartJobHandler() does not support %d universe jobs",
+					universe );
 		}
-		sh_is_dc = TRUE;
-		if ( !Shadow ) {
-			EXCEPT("Parameter SHADOW_NT not defined!");
-		}
-	} else if( universe==CONDOR_UNIVERSE_JAVA ) {
-		Shadow = param("SHADOW_JAVA");
-		if(!Shadow) {
-			EXCEPT("Parameter SHADOW_JAVA is not defined!");
-		}
-		sh_is_dc = TRUE;
-	} else {
-		Shadow = param("SHADOW");
-		sh_is_dc = FALSE;
 	}
-#endif
 
-	char *shadow_is_dc;
-	shadow_is_dc = param( "SHADOW_IS_DC" );
+	shadow_path = strdup( shadow_obj->path() );
+	sh_is_dc = (int)shadow_obj->isDC();
 
-	if (shadow_is_dc) {
-		if ( (shadow_is_dc[0] == 'T') || (shadow_is_dc[0] == 't') ) {  
-			sh_is_dc = TRUE;
-		} else {
-			sh_is_dc = FALSE;
-		}
-		free( shadow_is_dc );
-	}
+#endif /* ! WIN32 */
 
 	char ipc_dir[_POSIX_PATH_MAX];
 	ipc_dir[0] = '\0';
@@ -3304,21 +3352,21 @@ void Scheduler::StartJobHandler() {
 
 	dprintf(D_FULLDEBUG,
 		"About to Create_Process(%s, ...).  Current priv state: %d\n",
-		Shadow, current_priv);
+		shadow_path, current_priv);
 
 	/* We should create the Shadow as PRIV_ROOT so it can read it if
 	   it needs too.  This used to be PRIV_UNKNOWN, which was determined
 	   to be definately not what we wanted.  -Ballard 2/3/00 */
-	pid = daemonCore->Create_Process(Shadow, args, PRIV_ROOT, 1, 
+	pid = daemonCore->Create_Process(shadow_path, args, PRIV_ROOT, 1, 
                                      sh_is_dc, NULL, NULL, FALSE, NULL, NULL, 
                                      niceness );
 
 	if (pid == FALSE) {
-		dprintf( D_FAILURE|D_ALWAYS, "CreateProcess(%s, %s) failed\n", Shadow, args );
+		dprintf( D_FAILURE|D_ALWAYS, "CreateProcess(%s, %s) failed\n", 
+				 shadow_path, args );
 		pid = -1;
 	} 
-	free(Shadow);
-	Shadow = NULL;
+	free( shadow_path );
 
 	if( pid < 0 ) {
 		mark_job_stopped(job_id);
@@ -3389,6 +3437,8 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	int	 old_proc;  // the class in the cluster.  
                     // needed by the multi_shadow -Bin
 	char			hostname[MAXHOSTNAMELEN];
+	Shadow*			shadow_obj;
+	char* 			shadow_path;
 
 	mrec->my_match_ad->LookupString(ATTR_NAME, hostname);
 
@@ -3414,32 +3464,30 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	/* See if this job is already running */
 	srp = find_shadow_rec(job_id);
 
-
 	if (srp == 0) {
 		int pipes[2];
 		socketpair(AF_UNIX, SOCK_STREAM, 0, pipes);
 
-		if (Shadow) free( Shadow );
-		Shadow = param("SHADOW_PVM");
-		if ( !Shadow ) {
-			Shadow = param("SHADOW_CARMI");
-			if ( !Shadow ) {
-				dprintf ( D_ALWAYS, "Neither SHADOW_PVM nor SHADOW_CARMI "
-						  "defined in config file\n" );
-				return NULL;
-			}
+		shadow_obj = shadow_mgr.findShadow( ATTR_HAS_PVM );
+		if( ! shadow_obj ) {
+			dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
+					 "can't spawn PVM jobs, aborting\n", ATTR_HAS_PVM );
+			return NULL;
 		}
-	    sprintf ( args, "condor_shadow.pvm %s", MyShadowSockName );
+		shadow_path = shadow_obj->path();
+	    sprintf( args, "condor_shadow.pvm %s", MyShadowSockName );
 
 		int fds[3];
 		fds[0] = pipes[0];  // the effect is to dup the pipe to stdin in child.
 	    fds[1] = fds[2] = -1;
-		dprintf ( D_ALWAYS, "About to Create_Process( %s, %s, ... )\n", 
-				  Shadow, args );
+		dprintf( D_ALWAYS, "About to Create_Process( %s, %s, ... )\n", 
+				 shadow_path, args );
 		
-		pid = daemonCore->Create_Process( Shadow, args, PRIV_ROOT, 
+		pid = daemonCore->Create_Process( shadow_path, args, PRIV_ROOT, 
 										  1, FALSE, NULL, NULL, FALSE, 
 										  NULL, fds );
+
+		delete( shadow_obj );
 
 		if ( !pid ) {
 			dprintf ( D_FAILURE|D_ALWAYS, "Problem with Create_Process!\n" );
@@ -4926,12 +4974,6 @@ Scheduler::Init()
 	if( Negotiator ) delete( Negotiator );
 	Negotiator = new Daemon( DT_NEGOTIATOR );
 
-
-	if( Shadow ) free( Shadow );
-	if( ! (Shadow = param("SHADOW")) ) {
-		EXCEPT( "SHADOW not specified in config file\n" );
-	}
-
 	if( CondorAdministrator ) free( CondorAdministrator );
 	if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
 		dprintf(D_FULLDEBUG, 
@@ -5231,6 +5273,9 @@ Scheduler::Init()
 
 		sent_shadow_failure_email = FALSE;
 	}
+
+		// initialize our ShadowMgr, too.
+	shadow_mgr.init();
 
 	first_time_in_init = false;
 }
@@ -5924,7 +5969,6 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "num_reg_contacts", num_reg_contacts );
 	intoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
 	intoAd ( ad, "CondorViewHost", CondorViewHost );
-	intoAd ( ad, "Shadow", Shadow );
 	intoAd ( ad, "CondorAdministrator", CondorAdministrator );
 	intoAd ( ad, "Mail", Mail );
 	intoAd ( ad, "filename", filename );
