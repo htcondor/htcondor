@@ -262,6 +262,10 @@ sub CacheUsage( $$ )
     $Hash->Add( "GlobalDataBytes", "n", $TotalBytes );
     $Hash->Add( "GlobalDataBlocks", "n", $TotalBlocks );
 
+    my $MeanBytes = 0;
+    $MeanBytes = ( $TotalBytes / $Count ) if ( $Count );
+    $Hash->Add( "GlobalDataBytesMean", "n", $MeanBytes );
+
     # Tag & URL counts
     my $TagCount = keys %TagInodes;
     my $UrlCount = keys %UrlInodes;
@@ -365,7 +369,7 @@ sub CheckAge(  )
     $OldCount = 1 if ( 0 == $OldCount );
 
     # Store the results...
-    $Hash->Add( "MeanAge", "n",
+    $Hash->Add( "GlobalMeanAge", "n",
 		sprintf "%.1f", $TotalAge / $Count );
     $Hash->Add( "OldMeanAge", "n",
 		sprintf "%.1f", $OldTotalAge / $OldCount );
@@ -396,7 +400,7 @@ sub CheckSize(  )
     {
 	my $Size = $File->{Bytes};
 
-	my $Count++ if ( $File->{IsGlobal} );
+	$Count++ if ( $File->{IsGlobal} );
 
 	# Some quick calcs.
 	$MaxSize = $Size if ( $Size > $MaxSize );
@@ -413,6 +417,8 @@ sub CheckSize(  )
     # Avoid divide by zeros...
     $Count = 1 if ( 0 == $Count );
 
+    my $BigPct = 100.0 * $BigCount / $Count;
+
     $Hash->Add( "BigCount", "n", $BigCount );
     $BigCount = 1 if ( 0 == $BigCount );
 
@@ -425,7 +431,10 @@ sub CheckSize(  )
 		$BigTotalBlocks );
     $Hash->Add( "BigMeanBlocks", "n",
 		sprintf "%.1f", $BigTotalBlocks / $BigCount );
+    $Hash->Add( "BigPct", "n",
+		sprintf "%.1f", $BigPct );
 
     # And, the old age threshold that we used...
     $Hash->Add( "BigThreshold", "n", $Config{MaxSize} );
+
 }
