@@ -45,8 +45,8 @@
 #include "match_prefix.h"
 #include "string_list.h"
 #include "get_daemon_addr.h"
-#include "get_full_hostname.h"
 #include "daemon.h"
+#include "dc_collector.h"
 #include "daemon_types.h"
 #include "internet.h"
 #include "condor_distribution.h"
@@ -119,8 +119,8 @@ usage()
 }
 
 
-char* GetRemoteParam( char*, char*, char*, char* );
-void  SetRemoteParam( char*, char*, char*, char*, ModeType );
+char* GetRemoteParam( char*, char*, char* );
+void  SetRemoteParam( char*, char*, char*, ModeType );
 
 int
 main( int argc, char* argv[] )
@@ -175,12 +175,7 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-pool" ) ) {
 			if( argv[i + 1] ) {
 				i++;
-				pool = get_full_hostname( (const char *) argv[i] );
-				if( ! pool ) {
-					fprintf( stderr, "%s: unknown host %s\n", MyName, 
-							 argv[i] );
-					my_exit( 1 );
-				}
+				pool = argv[i];
 			} else {
 				usage();
 			}
@@ -255,12 +250,22 @@ main( int argc, char* argv[] )
 		config();
 	}
 
-	if( name || pool || mt != CONDOR_QUERY || dt != DT_MASTER ) {
+	if( pool && ! name ) {
+		fprintf( stderr, "Error: you must specify -name with -pool\n" );
+		my_exit( 1 );
+	}
+
+	if( name || addr || mt != CONDOR_QUERY || dt != DT_MASTER ) {
 		ask_a_daemon = true;
 	}
 
 	if( ask_a_daemon ) {
-		addr = get_daemon_addr( dt, name, pool );
+		DCCollector col( pool );
+		if( ! col.addr() ) {
+			fprintf( stderr, "%s: %s\n", MyName, col.error() );
+			my_exit( 1 );
+		}
+		addr = get_daemon_addr( dt, name, col.addr() );
 		if( ! addr ) {
 			fprintf( stderr, "Can't find address for this %s\n", 
 					 daemonString(dt) );
@@ -278,10 +283,10 @@ main( int argc, char* argv[] )
 	while( (tmp = params.next()) ) {
 		if( mt == CONDOR_SET || mt == CONDOR_RUNTIME_SET ||
 			mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
-			SetRemoteParam( name, addr, pool, tmp, mt );
+			SetRemoteParam( name, addr, tmp, mt );
 		} else {
-			if( name || pool || addr ) {
-				value = GetRemoteParam( name, addr, pool, tmp );
+			if( name || addr ) {
+				value = GetRemoteParam( name, addr, tmp );
 			} else {
 				value = param( tmp );
 			}
@@ -315,7 +320,7 @@ main( int argc, char* argv[] )
 
 
 char*
-GetRemoteParam( char* name, char* addr, char* pool, char* param_name ) 
+GetRemoteParam( char* name, char* addr, char* param_name ) 
 {
     ReliSock s;
 	s.timeout( 30 );
@@ -360,8 +365,7 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 
 
 void
-SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
-				ModeType mt )
+SetRemoteParam( char* name, char* addr, char* param_value, ModeType mt )
 {
 	int cmd, rval;
 	ReliSock s;
