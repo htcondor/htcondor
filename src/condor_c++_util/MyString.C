@@ -84,7 +84,7 @@ MyString::~MyString()
 char 
 MyString::operator[](int pos) const 
 {
-    if (pos >= Len) return '\0';
+    if (pos >= Len || pos < 0) return '\0';
     return Data[pos];
 }
 
@@ -121,14 +121,10 @@ operator=(const MyString& S)
     if (Data) {
 		delete[] Data;
 	}
-    Data=NULL;
-    Len=0;
-    if (S.Data) {
-		Len = S.Len;
-		Data = new char[Len+1];
-		strcpy(Data,S.Data);
-		capacity = Len;
-    }
+	Len = S.Len;
+	Data = new char[Len+1];
+	strcpy(Data,S.Data);
+	capacity = Len;
     return *this;
 }
 
@@ -164,6 +160,9 @@ MyString::operator=( const char *s )
 bool 
 MyString::reserve( const int sz ) 
 {
+	if (sz < 0) {
+		return false;
+	}
     char *buf = new char[ sz+1 ];
     if (!buf) {
 		return false;
@@ -218,7 +217,7 @@ MyString::reserve_at_least(const int sz)
 MyString& 
 MyString::operator+=(const MyString& S) 
 {
-    if( S.Len + Len > capacity ) {
+    if( S.Len + Len > capacity || !Data ) {
 		reserve_at_least( Len + S.Len );
     }
     //strcat( Data, S.Value() );
@@ -327,7 +326,7 @@ MyString::EscapeChars(const MyString& Q, const char escape) const
 int 
 MyString::FindChar(int Char, int FirstPos) const 
 {
-    if (FirstPos >= Len || FirstPos < 0) {
+    if (!Data || FirstPos >= Len || FirstPos < 0) {
 		return -1;
 	}
     char* tmp = strchr(Data + FirstPos, Char);
@@ -350,9 +349,9 @@ MyString::Hash() const
  
 // returns the index of the first match, or -1 for no match found
 int 
-MyString::find(const char *pszToFind, int iStartPos) 
+MyString::find(const char *pszToFind, int iStartPos) const
 { 
-	if (!Data)
+	if (!Data || iStartPos >= Len || iStartPos < 0)
 		return -1;
 	const char *pszFound = strstr(Data + iStartPos, pszToFind);
 	if (!pszFound)

@@ -171,6 +171,34 @@ int main (int argc, char **argv)
 			   __LINE__, r.Value());
 	}
 
+	// ---- Test invalid arguments
+	MyString a("12345");
+	bool retval;
+	retval = a.reserve(-3);
+	if ( retval == false ) {
+		printf("OK: reserve() returned false in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: reserved() didn't returned false in line %d.\n",
+			   __LINE__);
+	}
 
+	// ---- Data==NULL checks
+	MyString b1;
+	char my_char;
+	my_char = b1[0];
+	if ( my_char == '\0' ) {
+		printf("OK: operator[] returned '\\0' in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: operator[] returned '%c' in line %d.\n", my_char,
+			   __LINE__);
+	}
+
+	MyString b2;
+	b2[0] = 'a';
+	printf("OK: operator[] assignment worked in line %d.\n", __LINE__);
+
+	MyString b3a, b3b;
+	b3a += b3b;
+	printf("OK: operator+= worked in line %d.\n", __LINE__);
 }
 
