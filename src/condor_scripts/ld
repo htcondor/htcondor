@@ -61,11 +61,11 @@ fi
 # figure out if this version of the Condor syscall libraries were built with 
 # gcc3 or later. 
 is_gcc3=0
-if [ -f $CONDOR_LIBDIR/libcompiler_libgcc.a ]; then
+if [ -f $CONDOR_LIBDIR/libcomp_libgcc.a ]; then
 	is_gcc3=1
-	libcompiler_libstdcpp="$CONDOR_LIBDIR/libcompiler_libstdc++.a"
-	libcompiler_libgcc="$CONDOR_LIBDIR/libcompiler_libgcc.a"
-	libcompiler_libgcc_eh="$CONDOR_LIBDIR/libcompiler_libgcc_eh.a"
+	libcomp_libstdcpp="$CONDOR_LIBDIR/libcomp_libstdc++.a"
+	libcomp_libgcc="$CONDOR_LIBDIR/libcomp_libgcc.a"
+	libcomp_libgcc_eh="$CONDOR_LIBDIR/libcomp_libgcc_eh.a"
 fi
 
 # now, if we are gcc3 or later, add the stdc++ archive automatically to the
@@ -77,7 +77,7 @@ fi
 # libcondorc++support.a which is good enough anymore for gcc3 and later
 # compilers.
 if [ $is_gcc3 = 1 ]; then
-	CONDOR_CLIB=`echo $CONDOR_CLIB $libcompiler_libstdcpp`
+	CONDOR_CLIB=`echo $CONDOR_CLIB $libcomp_libstdcpp`
 fi
 
 #abi is needed throughout for IRIX
@@ -284,7 +284,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # library is just a shard version of libgcc.a
 	 -lgcc_s ) 
 	 	# However, throwing this out is not quite good enough, if we do, then
-		# we MUST include libcompiler_libgcc_eh in the link line since that
+		# we MUST include libcomp_libgcc_eh in the link line since that
 		# is a part of the -static-libgcc feature set. This gets done below
 		# when processing -lgcc.
 	 	;;
@@ -315,7 +315,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 			# the hard archives, but we only add the CONDOR_CLIB library the 
 			# *first* time we see this flag.
 			if [ $is_gcc3 = 1 ]; then
-				brokenbase=`echo $libcompiler_libgcc $libcompiler_libgcc_eh`
+				brokenbase=`echo $libcomp_libgcc $libcomp_libgcc_eh`
 			fi
 			
 			if [ $lgcc = false ]; then
@@ -339,7 +339,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 			# place on the link line by itself cause the user is doing
 			# wierd, I must failthfully translate it.
 
-			brokenbase=`echo $libcompiler_libgcc_eh`
+			brokenbase=`echo $libcomp_libgcc_eh`
             ldargs=`echo $ldargs $brokenbase`
 
 			;;
@@ -374,7 +374,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 		# version that we ship with Condor. XXX This might need tweaking if
 		# other compilers besides gcc uses libstdc++ too...
 		if [ $is_gcc3 = 1 -a "X$brokenbase" = "X-lstdc++" ]; then
-			brokenbase=`echo $libcompiler_libstdcpp`
+			brokenbase=`echo $libcomp_libstdcpp`
 		fi
 		
 

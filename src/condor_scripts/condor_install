@@ -31,8 +31,8 @@ umask 0022;
 # The first array of files in here are for gcc2 releases, and the second set is
 # for gcc3 releases. condor_install checks the first one, and if it is there
 # makes sure the second one doesn't exist, and vice versa.
-@compiler_lib_names=( ["libcondorc++support.a"], ["libcompiler_libgcc.a", 
-		"libcompiler_libgcc_eh.a", "libcompiler_libstdc++.a"] );
+@compiler_lib_names=( ["libcondorc++support.a"], ["libcomp_libgcc.a", 
+		"libcomp_libgcc_eh.a", "libcomp_libstdc++.a"] );
 
 $needs_lock=0;
 $fs_domain="";
