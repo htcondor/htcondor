@@ -24,7 +24,6 @@
 #include "xfer_summary.h"
 #include "string_list.h"
 #include "internet.h"
-#include "do_connect.h"
 
 
 #undef DEBUG
