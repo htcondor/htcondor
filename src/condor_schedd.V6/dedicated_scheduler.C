@@ -1198,6 +1198,7 @@ int
 DedicatedScheduler::reaper( int pid, int status )
 {
 	shadow_rec*		srec;
+	int q_status;  // status of this job in the queue
 
 	srec = scheduler.FindSrecByPid( pid );
 	if( !srec ) {
@@ -1212,13 +1213,21 @@ DedicatedScheduler::reaper( int pid, int status )
 			// make the schedd treat this like a Shadow Exception so job
 			// just goes back into the queue as idle, but if it happens
 			// to many times we relinquish the match.
-		dprintf( D_FULLDEBUG,
-				 "Shadow pid %d successfully killed because it was hung.\n"
-				 ,pid);
+		dprintf( D_ALWAYS, 
+				 "Shadow pid %d successfully killed because it was hung.\n", 
+				 pid );
 		status = JOB_EXCEPTION;
 	}
+
+	if( GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+						ATTR_JOB_STATUS, &q_status) < 0 ) {
+		EXCEPT( "ERROR no job status for %d.%d in "
+				"DedicatedScheduler::reaper()!",
+				srec->job_id.cluster, srec->job_id.proc );
+	}
+
 	if( WIFEXITED(status) ) {			
-		dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
+		dprintf( D_ALWAYS, "Shadow pid %d exited with status %d\n",
 				 pid, WEXITSTATUS(status) );
 
 		switch( WEXITSTATUS(status) ) {
@@ -1242,13 +1251,17 @@ DedicatedScheduler::reaper( int pid, int status )
 		case JOB_NO_CKPT_FILE:
 		case JOB_KILLED:
 		case JOB_COREDUMPED:
-			set_job_status( srec->job_id.cluster, srec->job_id.proc, 
-							REMOVED );
+			if( q_status != HELD ) {
+				set_job_status( srec->job_id.cluster, srec->job_id.proc,  
+								REMOVED );
+			}
 			break;
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
-			set_job_status( srec->job_id.cluster, srec->job_id.proc,
-							COMPLETED );
+			if( q_status != HELD ) {
+				set_job_status( srec->job_id.cluster,
+								srec->job_id.proc, COMPLETED );
+			}
 			shutdownMpiJob( srec );
 			break;
 		case JOB_SHOULD_HOLD:
