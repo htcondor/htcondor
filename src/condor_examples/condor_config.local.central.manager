@@ -115,6 +115,15 @@ NEGOTIATOR_TIMEOUT	= 30
 ##  What is the halflife of the user priorities? (1 day)
 PRIORITY_HALFLIFE	= 86400
 
+##  The default priority factor for nice users
+#NICE_USER_PRIO_FACTOR = 10000000
+
+##  The default priority factor for remote users
+#REMOTE_PRIO_FACTOR = 10000
+
+##  The UID_DOMAIN of users who are considered local
+#ACCOUNTANT_LOCAL_DOMAIN = cs.wisc.edu
+
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
 ##  and the owner of the idle job has a better priority than the owner
