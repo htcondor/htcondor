@@ -3,18 +3,18 @@ SRC = $(TEXT) $(FIGURES)
 PROOF = $(DOCUMENT).xpr
 VIEW = $(DOCUMENT).view
 POSTSCRIPT = $(DOCUMENT).PS
-FILE_MOD = /u1/condor/bin/file_mod
+FILE_MOD = /usr/home/condor/bin/file_mod
 
 #if IS_R6000_AIX31 || IS_R6000_AIX32
-#define TO_PROOF \
+#	define TO_PROOF \
 	$(FILE_MOD) -b ".ds DT " $(SRC) > modification_date; \
 	tbl $(TEXT) | psfig -d | troff -TX75 -$(MACROS) -mpsfig > $(PROOF)
-#define SHOW_PROOF xpreview $(PROOF)
+#	define SHOW_PROOF xpreview $(PROOF)
 #else
-#define \
+#	define TO_PROOF \
 	$(FILE_MOD) -b ".ds DT " $(SRC) > modification_date; \
 	tbl $(TEXT) | ditroff -t -$(MACROS) > $(PROOF)
-#define SHOW_PROOF xproof $(PROOF)
+#	define SHOW_PROOF xproof $(PROOF)
 #endif
 
 #define TO_POSTSCRIPT \
