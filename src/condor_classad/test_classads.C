@@ -72,7 +72,11 @@ char *classad_strings[] =
 	"&& (AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > Disk))",
 	/* The second one is to test MY and TARGET. OTHER should be treated like target. */
 	"Memory = 60, Disk = 40, OS = Linux, Requirements = ((TARGET.ImageSize > MY.Memory) "
-	"&& (AvailableDisk > Disk) && (OTHER.AvailableDisk > MY.Memory) && (TARGET__ImageSize > MY__Disk))"
+	"&& (AvailableDisk > Disk) && (OTHER.AvailableDisk > MY.Memory) && (TARGET__ImageSize > MY__Disk))",
+
+	/* Test case sensitivity */
+	"DoesMatch = \"Bone Machine\" == \"bone machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\","
+	"DoesntMatch = \"a\" =?= \"A\""
 };
 
 /*----------------------------------------------------------
@@ -152,6 +156,8 @@ void test_token_integer(const Token *token, int integer,
     int line_number, TestResults *test_results);
 void test_integer_value(ClassAd *classad, const char *attribute_name, 
     int expected_value,int line_number, TestResults *results);
+void test_eval_bool(ClassAd *classad, const char  *attribute_name,
+	int expected_value, int line_number, TestResults *results);
 void test_token_float(const Token *token, float number,
     int line_number, TestResults *test_results);
 void test_string_value(ClassAd *classad, const char *attribute_name,
@@ -219,6 +225,8 @@ main(
 		   classad_index < (int) NUMBER_OF_CLASSAD_STRINGS;
 		   classad_index++) {
 		ClassAd *original, *duplicate;
+
+		printf("%s\n", classad_strings[classad_index]);
 
 		original = new ClassAd(classad_strings[classad_index], ',');
 		classads[classad_index] = original;
@@ -339,6 +347,10 @@ main(
 		free(variable);
 		free(expression);
 		free(string);
+
+		/* Test case insensitivity */
+		test_eval_bool(classads[11], "DoesMatch",   1, __LINE__, &test_results);
+		test_eval_bool(classads[11], "DoesntMatch", 0, __LINE__, &test_results);
 	}
 
 	if (parameters.test_references) {
@@ -755,12 +767,47 @@ test_integer_value(
 	int actual_value;
  	int found_integer;
 
-	classad->LookupInteger(attribute_name, actual_value);
+	found_integer = classad->LookupInteger(attribute_name, actual_value);
 	if (expected_value == actual_value) {
 		printf("Passed: %s is %d in line %d\n",
 			   attribute_name, expected_value, line_number);
 		results->AddResult(true);
 	} else if (!found_integer) {
+		printf("Failed: Attribute \"%s\" is not found.\n", attribute_name);
+		results->AddResult(false);
+	} else {
+		printf("Failed: %s is %d not %d in line %d\n",
+			   attribute_name, actual_value, expected_value, line_number);
+		results->AddResult(false);
+	}
+	return;
+}
+
+/***************************************************************
+ *
+ * Function: test_eval_bool
+ * Purpose:  Given a classad and an attribute within the classad,
+ *           test that the attribute evaluates to the boolean we
+ *           expect
+ *
+ ***************************************************************/
+void 
+test_eval_bool(
+    ClassAd     *classad,        // IN: The ClassAd we're examining
+	const char  *attribute_name, // IN: The attribute we're examining
+	int         expected_value,  // IN: The integer we're expecting
+	int         line_number,     // IN: The line number to print
+    TestResults *results)        // OUT: Modified to reflect result of test
+{
+	int actual_value;
+ 	int found_bool;
+
+	found_bool = classad->EvalBool(attribute_name, NULL, actual_value);
+	if (expected_value == actual_value) {
+		printf("Passed: %s is %d in line %d\n",
+			   attribute_name, expected_value, line_number);
+		results->AddResult(true);
+	} else if (!found_bool) {
 		printf("Failed: Attribute \"%s\" is not found.\n", attribute_name);
 		results->AddResult(false);
 	} else {
