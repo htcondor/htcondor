@@ -131,22 +131,26 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
-
 		/* generate a socket */
 	fd = socket( AF_INET, SOCK_STREAM, 0 );
 	assert( fd >= 0 );
 	dprintf( D_FULLDEBUG, "Generated a data socket - fd = %d\n", fd );
 		
-		/* set the address */
+		/* Now we need to bind to the right interface. */
+	if( ! _condor_local_bind(fd) ) {
+			/* error in bind() */
+		close(fd);
+		return -1;
+	}
+
+		/* Now, set the remote address. */
 	ip_addr = htonl( ip_addr );
 	memset( &sin, '\0', sizeof sin );
 	memcpy( &sin.sin_addr, &ip_addr, sizeof(ip_addr) );
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons( port );
-
 	dprintf( D_FULLDEBUG, "Internet address structure set up\n" );
-
-	status = connect( fd,( struct sockaddr *)&sin, sizeof(sin) );
+	status = connect( fd, (struct sockaddr *)&sin, sizeof(sin) );
 	if( status < 0 ) {
 		dprintf( D_ALWAYS, "connect() failed - errno = %d\n", errno );
 		return -1;
