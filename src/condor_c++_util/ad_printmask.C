@@ -244,18 +244,18 @@ display (ClassAd *ad)
 
 
 int ClassAdPrintMask::
-display (FILE *file, ClassAdList *list)
+display (FILE *file, ClassAdList *ca_list)
 {
 	int retval = 1;
 	ClassAd *ad;
 
-	list->Open();
-    while( (ad = (ClassAd *) list->Next()) ) {
+	ca_list->Open();
+    while( (ad = (ClassAd *) ca_list->Next()) ) {
 		if( !display (file, ad) ) {
 			retval = 0;
 		}
     }
-    list->Close ();
+    ca_list->Close ();
 
 	return retval;
 }
