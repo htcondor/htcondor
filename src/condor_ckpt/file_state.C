@@ -2222,7 +2222,7 @@ close( int fd )
 		int rval = FileTab->DoClose( fd );
 		// In standalone mode, this fd might be a socket or pipe which
 		// we didn't catch.  Allow the application to close it
-		// successfully, to allow socket and pipes to be used
+		// successfully, to allow sockets and pipes to be used
 		// successfully between checkpoints.
 		if (rval < 0 && MyImage.GetMode() == STANDALONE) {
 			return syscall( SYS_close, fd );
@@ -2269,6 +2269,13 @@ dup( int old )
 	if( MappingFileDescriptors() ) {
 		rval = FileTab->DoDup( old );
 		restore_condor_sigmask(omask);
+		// In standalone mode, this fd might be a socket or pipe which
+		// we didn't catch.  Allow the application to dup it
+		// successfully, to allow sockets and pipes to be used
+		// successfully between checkpoints.
+		if (rval < 0 && MyImage.GetMode() == STANDALONE) {
+			return syscall( SYS_dup, old );
+		}
 		return rval;
 	}
 
@@ -2295,8 +2302,10 @@ dup2( int old, int new_fd )
 
 	if( MappingFileDescriptors() ) {
 		rval =  FileTab->DoDup2( old, new_fd );
-		// In STANDALONE mode, this must make an actual dup of the fd. -Jim B. 
-		if (rval == new_fd && MyImage.GetMode() == STANDALONE)
+		// In STANDALONE mode, this must make an actual dup of the fd.
+		// We do this even if DoDup2 failed above, to allow the application
+		// to use fds which we're not tracking between checkpoints.
+		if (MyImage.GetMode() == STANDALONE)
 			rval = syscall( SYS_dup2, old, new_fd );
 		return rval;
 	}
@@ -2441,11 +2450,12 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	if ( FileTab == NULL )
 		InitFileState();
 	
-	if ((user_fd = MapFd(fd)) < 0) {
+	// allow fds we don't have in our table in STANDALONE mode
+	if ((user_fd = MapFd(fd)) < 0 && MyImage.GetMode() != STANDALONE) {
 		return -1;
 	}
 	
-	if ( LocalAccess(fd) ) {
+	if ( LocalAccess(fd) || MyImage.GetMode() == STANDALONE ) {
 		use_local_access = TRUE;
 	}
 	
@@ -2466,9 +2476,11 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 
 		if( MappingFileDescriptors() ) {
 			rval =  FileTab->DoDup2( fd, arg );
-				// In STANDALONE mode, this must make an actual dup of
-				// the fd. -Jim B.  
-			if (rval == arg && MyImage.GetMode() == STANDALONE) {
+				// In STANDALONE mode, this must make an actual dup of the
+				// fd.  We do this even if DoDup2 failed above, to allow
+				// the application to use fds which we're not tracking
+				// between checkpoints.
+			if (MyImage.GetMode() == STANDALONE) {
 				rval = syscall( SYS_fcntl, fd, cmd, arg );
 			}
 			return rval;
