@@ -34,7 +34,7 @@ class CollectorBaseStats
   public:
 	CollectorBaseStats( int history_size = 0 );
 	virtual ~CollectorBaseStats( void  );
-	void updateStats( bool sequened, int dropped );
+	int updateStats( bool sequened, int dropped );
 	void reset( void );
 	int setHistorySize( int size );
 	int getTotal( void ) { return updatesTotal; };
@@ -42,7 +42,7 @@ class CollectorBaseStats
 	int getDropped( void ) { return updatesDropped; };
 	char *getHistoryString( void );
 	char *getHistoryString( char * );
-	int getStringLen( void ) { return 1 + ( (historySize + 3) / 4 ); };
+	int getHistoryStringLen( void ) { return 1 + ( (historySize + 3) / 4 ); };
 
   private:
 	int			updatesTotal;			// Total # of updates
@@ -56,7 +56,6 @@ class CollectorBaseStats
 	int			historyWordBits;		// # of bits / word (used a lot)
 	int			historyBitnum;			// Current bit #
 	int			historyMaxbit;			// Max bit #
-	int			historyStringlen;		// Size of required char* buffer
 };
 
 // Per "class" update stats
@@ -78,7 +77,7 @@ class CollectorClassStatsList
   public:
 	CollectorClassStatsList( int history_size );
 	~CollectorClassStatsList( void );
-	void updateStats( const char *class_name, bool sequened, int dropped );
+	int updateStats( const char *class_name, bool sequened, int dropped );
 	int publish ( ClassAd *ad );
 	int setHistorySize( int size );
 
@@ -87,19 +86,64 @@ class CollectorClassStatsList
 	int		historySize;
 };
 
+// This is the tuple that we will be hashing on
+class StatsHashKey
+{
+  public:
+	char type[32];
+    char name [64];
+    char ip_addr [16];
+    friend bool operator== (const HashKey &, const HashKey &);
+	const char *getstr( void );
+  private:
+	char buf[128];
+};
+
+// Type for the hash tables ...
+typedef HashTable <StatsHashKey, CollectorBaseStats *> StatsHashTable;
+
+// Container of the hash table
+class CollectorDaemonStatsList
+{
+  public:
+	CollectorDaemonStatsList( bool enable, int history_size );
+	~CollectorDaemonStatsList( void );
+	int updateStats( const char *class_name,
+					 ClassAd *ad,
+					 bool sequened,
+					 int dropped );
+	int publish ( ClassAd *ad );
+	int setHistorySize( int size );
+	int enable( bool enabled );
+
+  private:
+	bool hashKey( StatsHashKey &key, const char *class_name, ClassAd *ad );
+
+	enum { STATS_TABLE_SIZE = 1024 };
+	StatsHashTable		*hashTable;
+	int					historySize;
+	bool				enabled;
+};
+
 // Collector stats
 class CollectorStats
 {
   public:
-	CollectorStats( int class_history_size, int daemon_history_size );
+	CollectorStats( bool enable_daemon_stats,
+					int class_history_size,
+					int daemon_history_size );
 	virtual ~CollectorStats( void );
 	int update( const char *className, ClassAd *oldAd, ClassAd *newAd );
 	int publishGlobal( ClassAd *Ad );
 	int setClassHistorySize( int size );
+	int setDaemonStats( bool );
+	int setDaemonHistorySize( int size );
 
   private:
-	CollectorBaseStats		global;
-	CollectorClassStatsList	*classList;
+
+	CollectorBaseStats			global;
+	CollectorClassStatsList		*classList;
+	CollectorDaemonStatsList	*daemonList;
 };
 
 #endif /* _CONDOR_COLLECTOR_STATS_H */

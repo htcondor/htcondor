@@ -36,7 +36,7 @@ extern char* mySubSystem;
 extern "C" char* CondorVersion( void );
 extern "C" char* CondorPlatform( void );
 
-CollectorStats CollectorDaemon::collectorStats( 0, 0 );
+CollectorStats CollectorDaemon::collectorStats( false, 0, 0 );
 CollectorEngine CollectorDaemon::collector( &collectorStats );
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
@@ -894,6 +894,26 @@ void CollectorDaemon::Config()
         collectorStats.setClassHistorySize( size );
     } else {
         collectorStats.setClassHistorySize( 0 );
+    }
+
+    tmp = param ("COLLECTOR_DAEMON_STATS");
+	if( tmp ) {
+		if( ( *tmp == 't' || *tmp == 'T' ) ) {
+			collectorStats.setDaemonStats( true );
+		} else {
+			collectorStats.setDaemonStats( false );
+		}
+		free( tmp );
+	} else {
+		collectorStats.setDaemonStats( false );
+	}
+
+    tmp = param ("COLLECTOR_DAEMON_HISTORY_SIZE");
+    if( tmp ) {
+		int	size = atoi( tmp );
+        collectorStats.setDaemonHistorySize( size );
+    } else {
+        collectorStats.setDaemonHistorySize( 0 );
     }
 		
     return;

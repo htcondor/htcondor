@@ -373,7 +373,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
 		retVal=updateClassAd (StartdAds, "StartdAd     ", "Start",
-							  clientAd, hk, hashString, insert);
+							  clientAd, hk, hashString, insert, from );
 
 		// if we want to store private ads
 		if (!sock)
@@ -397,7 +397,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			// insert the private ad into its hashtable --- use the same
 			// hash key as the public ad
 			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ",
-								  "StartdPvt", pvtAd, hk, hashString, insPvt);
+								  "StartdPvt", pvtAd, hk, hashString, insPvt,
+								  from );
 		}
 		break;
 
@@ -410,8 +411,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd", 
-							  clientAd, hk, hashString, insert);
+		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_SUBMITTOR_AD:
@@ -426,7 +427,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		// performed for schedd ads, we don't need a master check in here
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
 		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", "Submittor",
-							  clientAd, hk, hashString, insert);
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_LICENSE_AD:
@@ -441,7 +442,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		// performed for schedd ads, we don't need a master check in here
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
 		retVal=updateClassAd (LicenseAds, "LicenseAd  ", "License",
-							  clientAd, hk, hashString, insert);
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_MASTER_AD:
@@ -453,7 +454,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		sprintf (hashString, "< %s >", hk.name);
 		retVal=updateClassAd (MasterAds, "MasterAd     ", "Master",
-							  clientAd, hk, hashString, insert);
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_CKPT_SRVR_AD:
@@ -466,7 +467,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s >", hk.name);
 		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", "CkptSrvr",
-							  clientAd, hk, hashString, insert);
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_COLLECTOR_AD:
@@ -478,7 +479,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		sprintf (hashString, "< %s >", hk.name);
 		retVal=updateClassAd (CollectorAds, "CollectorAd  ", "Collector",
-							  clientAd, hk, hashString, insert);
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_STORAGE_AD:
@@ -490,7 +491,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		sprintf (hashString, "< %s >", hk.name);
 		retVal=updateClassAd (StorageAds, "StorageAd  ", "Storage",
-							  clientAd, hk, hashString, insert);
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case QUERY_STARTD_ADS:
@@ -629,7 +630,8 @@ updateClassAd (CollectorHashTable &hashTable,
 			   ClassAd *ad, 
 			   HashKey &hk,
 			   char *hashString,
-			   int  &insert )
+			   int  &insert,
+			   const sockaddr_in *from )
 {
 	ClassAd  *old_ad, *new_ad;
 	char     buf [40];

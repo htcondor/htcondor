@@ -27,12 +27,37 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "extArray.h"
+#include "internet.h"
 #include "collector_stats.h"
 #include "collector_engine.h"
 
+// The hash function to use
+static int hashFunction (const StatsHashKey &key, int numBuckets)
+{
+    unsigned int bkt = 0;
+    int i;
+
+    for (i = 0; key.type[i]   ; bkt += key.type[i++]);
+    for (i = 0; key.name[i]   ; bkt += key.name[i++]);
+    for (i = 0; key.ip_addr[i]; bkt += key.ip_addr[i++]);
+
+    bkt %= numBuckets;
+
+    return bkt;
+}
+
+bool operator== (const StatsHashKey &lhs, const StatsHashKey &rhs)
+{
+    return (strcmp (lhs.name, rhs.name) == 0    &&
+			strcmp (lhs.ip_addr, rhs.ip_addr) == 0);
+}
+
+// utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
+void parseIpPort (char *ip_port_pair, char *ip_addr);
 
 // Instantiate things
 template class ExtArray<CollectorClassStats *>;
+template class HashTable <StatsHashKey, CollectorBaseStats *>;
 
 
 // ************************************
@@ -51,6 +76,7 @@ CollectorBaseStats::CollectorBaseStats ( int history_size )
 		historyWords = ( historySize + historyWordBits - 1) / historyWordBits;
 		historyMaxbit = historyWordBits * historyWords - 1;
 		historyBuffer = new unsigned[historyWords];
+		historyBitnum = 0;
 	} else {
 		historyBuffer = NULL;
 		historyWords = 0;
@@ -98,10 +124,12 @@ CollectorBaseStats::setHistorySize ( int new_size )
 
 	// If new & old are equal, nothing to do
 	if ( new_size == historySize ) {
+		dprintf( D_ALWAYS, "HistSize: no change\n" );
 		return 0;
 
 		// New is zero, old non-zero
 	} else if ( 0 == new_size ) {
+		dprintf( D_ALWAYS, "HistSize: -> 0\n" );
 		if ( historyBuffer) {
 			delete( historyBuffer );
 			historyBuffer = NULL;
@@ -112,11 +140,13 @@ CollectorBaseStats::setHistorySize ( int new_size )
 
 		// New size requires equal or less memory
 	} else if ( required_words <= historyWords ) {
+		dprintf( D_ALWAYS, "HistSize: Shrunk\n" );
 		historySize = new_size;
 		return 0;
 
 		// New size is larger than we have...
 	} else {
+		dprintf( D_ALWAYS, "HistSize: Grew\n" );
 		unsigned *newbuf = new unsigned[ required_words ];
 		if ( historyBuffer ) {
 			memcpy( newbuf, historyBuffer, historyWords );
@@ -131,7 +161,7 @@ CollectorBaseStats::setHistorySize ( int new_size )
 }
 
 // Update our statistics
-void
+int
 CollectorBaseStats::updateStats ( bool sequenced, int dropped )
 {
 	int		count = 1;
@@ -170,6 +200,8 @@ CollectorBaseStats::updateStats ( bool sequenced, int dropped )
 			}
 		}
 	}
+
+	return 0;
 }
 
 // Get the history as a hex string
@@ -237,7 +269,7 @@ CollectorBaseStats::getHistoryString ( void )
 
 	// If history is enabled, do it
 	if ( historyBuffer ) {
-		char		*buf = new char[ getStringLen() ];
+		char		*buf = new char[ getHistoryStringLen() ];
 		return getHistoryString( buf );
 	} else {
 		return NULL;
@@ -306,7 +338,7 @@ CollectorClassStatsList::~CollectorClassStatsList( void )
 }
 
 // Update statistics
-void
+int
 CollectorClassStatsList::updateStats( const char *class_name,
 									  bool sequenced,
 									  int dropped )
@@ -331,6 +363,8 @@ CollectorClassStatsList::updateStats( const char *class_name,
 
 	// Update the stats now
 	classStat->updateStats( sequenced, dropped );
+
+	return 0;
 }
 
 // Publish statistics into our ClassAd
@@ -383,37 +417,239 @@ CollectorClassStatsList::setHistorySize( int new_size )
 	return 0;
 }
 
+
+// **********************************************
+// Per daemon List of Collector Statistics
+// **********************************************
+
+// Constructor
+CollectorDaemonStatsList::CollectorDaemonStatsList( bool enable,
+													int history_size )
+{
+	enabled = enable;
+	historySize = history_size;
+	if ( enabled ) {
+		dprintf( D_ALWAYS, "Creating stats hash table\n" );
+		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
+	} else {
+		hashTable = NULL;
+	}
+}
+
+// Destructor
+CollectorDaemonStatsList::~CollectorDaemonStatsList( void )
+{
+	if ( hashTable ) {
+		dprintf( D_ALWAYS, "Destroying stats hash table\n" );
+		delete hashTable;
+		hashTable = NULL;
+	}
+}
+
+// Update statistics
+int
+CollectorDaemonStatsList::updateStats( const char *class_name,
+									   ClassAd *ad,
+									   bool sequenced,
+									   int dropped )
+{
+	StatsHashKey		key;
+	bool				hash_ok = false;
+	CollectorBaseStats	*daemon;
+
+	// If we're not instantiated, do nothing..
+	if ( ( ! enabled ) || ( ! hashTable ) ) {
+		return 0;
+	}
+
+	// Generate the hash key for this ad
+	hash_ok = hashKey ( key, class_name, ad );
+	if ( ! hash_ok ) {
+		return -1;
+	}
+
+	// Ok, we've got a valid hash key
+	// Is it already in the hash?
+	if ( hashTable->lookup ( key, daemon ) == -1 ) {
+		daemon = new CollectorBaseStats( historySize );
+		hashTable->insert( key, daemon );
+		dprintf( D_ALWAYS, "stats: Inserting new hashent for %s\n", key.getstr() );
+	}
+
+	// Compute the size of the string we need..
+	int		size = daemon->getHistoryStringLen( );
+	if ( size < 10 ) {
+		size = 10;
+	}
+	size += strlen( ATTR_UPDATESTATS_SEQUENCED );	// Longest one
+	size += 20;										// Some "buffer" space
+    char		line[size];
+
+	// Update the daemon object...
+	daemon->updateStats( sequenced, dropped );
+
+	sprintf( line, "%s = %d", ATTR_UPDATESTATS_TOTAL,
+			 daemon->getTotal( ) );
+	ad->Insert(line);
+	sprintf( line, "%s = %d", ATTR_UPDATESTATS_SEQUENCED,
+			 daemon->getSequenced( ) );
+	ad->Insert(line);
+	sprintf( line, "%s = %d", ATTR_UPDATESTATS_LOST,
+			 daemon->getDropped( ) );
+	ad->Insert(line);
+
+	// Get the history string & insert it if it's valid
+	char	*tmp = daemon->getHistoryString( );
+	if ( tmp ) {
+		sprintf( line, "%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY, tmp );
+		ad->Insert(line);
+		delete tmp;
+	}
+
+	return 0;
+}
+
+// Publish statistics into our ClassAd
+int 
+CollectorDaemonStatsList::publish( ClassAd *ad )
+{
+	return 0;
+}
+
+// Set the history size
+int 
+CollectorDaemonStatsList::setHistorySize( int new_size )
+{
+	if ( ! hashTable ) {
+		return 0;
+	}
+
+	CollectorBaseStats *daemon;
+
+	// walk the hash table
+	hashTable->startIterations( );
+	while ( hashTable->iterate ( daemon ) )
+	{
+		daemon->setHistorySize( new_size );
+	}
+
+	// Store it off for future reference
+	historySize = new_size;
+	return 0;
+}
+
+// Enable / disable daemon statistics
+int 
+CollectorDaemonStatsList::enable( bool enable )
+{
+	enabled = enable;
+	if ( ( enable ) && ( ! hashTable ) ) {
+		dprintf( D_ALWAYS, "enable: Creating stats hash table\n" );
+		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
+	} else if ( ( ! enable ) && ( hashTable ) ) {
+		dprintf( D_ALWAYS, "enable: Destroying stats hash table\n" );
+		delete hashTable;
+		hashTable = NULL;
+	}
+	return 0;
+}
+
+// Get string of the hash key (for debugging)
+const char *
+StatsHashKey::getstr( void )
+{
+	sprintf( buf, "'%s':'%s':'%s'", type, name, ip_addr );
+	return buf;
+}
+
+// Generate a hash key
+bool
+CollectorDaemonStatsList::hashKey (StatsHashKey &key,
+								   const char *class_name,
+								   ClassAd *ad )
+{
+	char	*string = NULL;
+
+	// Fill in pieces..
+	strcpy( key.type, class_name );
+
+	// The 'name'
+	if (  ( ! ad->LookupString( ATTR_NAME, &string ) ) &&
+		  ( ! ad->LookupString( ATTR_MACHINE, &string ) )  ) {
+		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
+		return false;
+	}
+	strncpy( key.name, string, sizeof( key.name ) );
+	key.name[sizeof(key.name)-1] = '\0';
+	free( string );
+	string = NULL;
+
+	// get the IP and port of the daemon
+	if ( ad->LookupString (ATTR_MY_ADDRESS, &string ) ) {
+		parseIpPort( string, key.ip_addr );
+		free( string );
+	} else {
+		return false;
+	}
+
+	// Ok.
+	return true;
+}
+
+
 // ******************************************
 //  Collector "all" stats
 // ******************************************
 
 // Constructor
-CollectorStats::CollectorStats( int class_history_size, int daemon_history_size  )
+CollectorStats::CollectorStats( bool enable_daemon_stats,
+								int class_history_size,
+								int daemon_history_size )
 {
 	classList = new CollectorClassStatsList( class_history_size );
+	daemonList = new CollectorDaemonStatsList( enable_daemon_stats,
+											   daemon_history_size );
 }
 
 // Destructor
 CollectorStats::~CollectorStats( void )
 {
 	delete classList;
+	delete daemonList;
 }
 
 // Set the "class" history size
 int
 CollectorStats::setClassHistorySize( int new_size )
 {
-	return classList->setHistorySize( new_size );
+	classList->setHistorySize( new_size );
+	daemonList->setHistorySize( new_size );
+	return 0;
+}
+
+// Enable / disable per-daemon stats
+int
+CollectorStats::setDaemonStats( bool enable )
+{
+	return daemonList->enable( enable );
+}
+
+// Set the "daemon" history size
+int
+CollectorStats::setDaemonHistorySize( int new_size )
+{
+	return daemonList->setHistorySize( new_size );
 }
 
 // Update statistics
 int
-CollectorStats::update( const char *className, ClassAd *oldAd, ClassAd *newAd )
+CollectorStats::update( const char *className,
+						ClassAd *oldAd, ClassAd *newAd )
 {
-
 	// No old ad is trivial; handle it & get out
-	if (  oldAd < CollectorEngine::THRESHOLD ) {
+	if ( ! oldAd ) {
 		classList->updateStats( className, false, 0 );
+		daemonList->updateStats( className, newAd, false, 0 );
 		global.updateStats( false, 0 );
 		return 0;
 	}
@@ -438,7 +674,10 @@ CollectorStats::update( const char *className, ClassAd *oldAd, ClassAd *newAd )
 		}
 	}
 	global.updateStats( sequenced, dropped );
+	classList->updateStats( className, sequenced, dropped );
+	daemonList->updateStats( className, newAd, sequenced, dropped );
 
+	// Done
 	return 0;
 }
 

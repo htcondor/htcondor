@@ -98,7 +98,8 @@ class CollectorEngine : public Service
 	void cleanHashTable (CollectorHashTable &, time_t,
 				bool (*) (HashKey &, ClassAd *,sockaddr_in *));
 	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
-						   ClassAd*,HashKey&, char*, int & );
+						   ClassAd*,HashKey&, char*, int &, 
+						   const sockaddr_in * );
 
 	// Statistics
 	CollectorStats	*collectorStats;
