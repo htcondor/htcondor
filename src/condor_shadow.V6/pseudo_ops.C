@@ -1432,7 +1432,7 @@ pseudo_get_a_out_name( char *path )
 	// See if we can find an executable in the spool dir.
 	// Switch to Condor uid first, since ickpt files are 
 	// stored in the SPOOL directory as user Condor.
-	int old_priv = set_condor_priv();
+	priv_state old_priv = set_condor_priv();
 	result = access(ICkptName,F_OK | X_OK);
 	set_priv(old_priv);
 
