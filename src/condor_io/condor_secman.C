@@ -46,7 +46,7 @@ extern char* global_dc_sinful();
 void zz1printf(KeyInfo *k) {
 	if (k) {
 		char hexout[260];  // holds (at least) a 128 byte key.
-		unsigned char* dataptr = k->getKeyData();
+		const unsigned char* dataptr = k->getKeyData();
 		int   length  =  k->getKeyLength();
 
 		for (int i = 0; (i < length) && (i < 24); i++) {
