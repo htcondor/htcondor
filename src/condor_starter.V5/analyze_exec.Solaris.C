@@ -30,7 +30,11 @@ Portability:
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
+#if defined(X86)
+#define SOLARIS_MAGIC 043114
+#elif 
 #define SOLARIS_MAGIC 046106
+#endif
 
 extern "C" {
 #if defined(Solaris)
