@@ -5967,16 +5967,17 @@ Scheduler::Init()
 		// Put SCHEDD_NAME in the environment, so the shadow can use
 		// it.  (Since the schedd's name may have been set on the
 		// command line, the shadow can't compute the schedd's name on
-		// its own.)  Note that the string we pass to putenv() may
-		// become part of the environment, so we can't free it until we
-		// replace it with a new value.
-	char *OldNameInEnv = NameInEnv;
-	NameInEnv = (char *)malloc(strlen("SCHEDD_NAME=")+strlen(Name)+1);
-	sprintf(NameInEnv, "SCHEDD_NAME=%s", Name);
-	if (putenv(NameInEnv) < 0) {
-		dprintf(D_ALWAYS, "putenv(\"%s\") failed!\n", NameInEnv);
+		// its own.)  
+		// Only put in in the env if it is not already there, so 
+		// we don't leak memory without reason.		
+	if ( NameInEnv == NULL || strcmp(NameInEnv,Name) ) {
+		NameInEnv = (char *)malloc(strlen("SCHEDD_NAME=")+strlen(Name)+1);
+		sprintf(NameInEnv, "SCHEDD_NAME=%s", Name);
+		if (putenv(NameInEnv) < 0) {
+			dprintf(D_ALWAYS, "putenv(\"%s\") failed!\n", NameInEnv);
+		}
 	}
-	if (OldNameInEnv) free(OldNameInEnv);
+
 
 	if( AccountantName ) free( AccountantName );
 	if( ! (AccountantName = param("ACCOUNTANT_HOST")) ) {
