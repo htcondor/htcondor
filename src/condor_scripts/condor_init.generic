@@ -13,6 +13,8 @@ set CONFIG_VAL=$RELEASEDIR/bin/config_val
 
 rm -f ~condor/condor_config
 ln -s $RELEASEDIR/lib/condor_config ~condor/condor_config
+rm -f ~condor/condor_config.local
+touch ~condor/condor_config.local
 eval `$CONFIG_VAL LOG EXECUTE SPOOL`
 mkdir $LOG $EXECUTE $SPOOL
 $CHMOD 777 $EXECUTE
