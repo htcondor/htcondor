@@ -4729,9 +4729,20 @@ int DaemonCore::Create_Process(
 			// restricted to LOCALSYSTEM.  
 			//
 			// "Who's your Daddy ?!?!?!   JEFF B.!"
+		
+		// we set_user_priv() here because it really doesn't hurt, and more importantly, 
+		// if we're using an encrypted execute directory, SYSTEM can't read the user's
+		// executable, so the CreateProcessAsUser() call fails. We avoid this by 
+		// flipping into user priv mode first, then making the call, and all is well.
+
+		priv_state s = set_user_priv();
+
 		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : namebuf,
 			(char *)args,NULL,NULL, inherit_handles,
 			new_process_group | CREATE_NEW_CONSOLE, newenv,cwd,&si,&piProcess);
+		
+		set_priv(s);
+
 	}
 
 	if ( !cp_result ) {

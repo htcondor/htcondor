@@ -171,3 +171,23 @@ int filename_split( const char *path, char *dir, char *file )
 		return 0;
 	}
 }
+
+// changes all directory separators to match the DIR_DELIM_CHAR
+// makes changes in place
+void
+canonicalize_dir_delimiters( char *path ) {
+
+	int loc, len;
+	char *path_ptr;
+	
+	loc = 0;
+	path_ptr = path;
+	len = strlen(path);
+
+	while ( loc < len ) {
+		if ( path[loc] == '\\' || path[loc] == '/' ) {
+		   	path[loc] = DIR_DELIM_CHAR;
+		}
+		loc++;
+	}	
+}

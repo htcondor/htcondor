@@ -40,7 +40,9 @@
 #include "condor_attributes.h"
 #include "condor_random_num.h"
 #include "../condor_sysapi/sysapi.h"
+
 #include "perm.h"
+#include "filename_tools.h"
 
 
 extern "C" int get_random_int();
@@ -258,6 +260,11 @@ CStarter::createTempExecuteDir( void )
 #ifdef WIN32
 		// On NT, we've got to manually set the acls, too.
 	{
+		// fix up any goofy /'s in our path since
+		// some of these Win32 calls might not like
+		// them.
+		canonicalize_dir_delimiters(WorkingDir);
+
 		perm dirperm;
 		const char * nobody_login = get_user_loginname();
 		ASSERT(nobody_login);
@@ -269,6 +276,30 @@ CStarter::createTempExecuteDir( void )
 			return false;
 		}
 	}
+
+	// if the user wants the execute directory encrypted, 
+	// go ahead and set that up now too
+
+	char* eed = param("ENCRYPT_EXECUTE_DIRECTORY");
+
+	if ( eed ) {
+		if ( eed[0] == 'T' || eed[0] == 't' ) {
+			wchar_t *WorkingDir_w = new wchar_t[strlen(WorkingDir)+1];
+			swprintf(WorkingDir_w, L"%S", WorkingDir);
+			EncryptionDisable(WorkingDir_w, FALSE);
+			delete[] WorkingDir_w;
+			
+			if ( EncryptFile(WorkingDir) == 0 ) {
+				dprintf(D_ALWAYS, "Could not encrypt execute directory (err=%li)\n", 
+					GetLastError());
+			}
+		}
+
+		free(eed);
+		eed = NULL;
+	}
+	
+
 #endif /* WIN32 */
 
 	if( chdir(WorkingDir) < 0 ) {
