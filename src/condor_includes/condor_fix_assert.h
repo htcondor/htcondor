@@ -8,7 +8,7 @@ installed!
 #if !defined(LINUX)
 
 #if defined(__GNUC__)
-#	define __WAS_GNUC__
+#	define CONDOR_HAD_GNUC __GNUC__
 #	undef __GNUC__
 #endif
 
@@ -16,8 +16,8 @@ installed!
 
 #include <assert.h>
 
-#if defined(__WAS_GNUC__)
-#	define __GNUC__
+#if defined(CONDOR_HAD_GNUC)
+#	define __GNUC__ CONDOR_HAD_GNUC
 #endif
 
 
