@@ -187,7 +187,11 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				// /proc/pid doesn't exist
 			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
 			rval = -1;
-		} else { 
+		} else if ( errno == EACCES ) {
+			dprintf( D_FULLDEBUG, "ProcAPI: No permission to open %s.\n", 
+					 path );
+			rval = -2;
+		} else {
 			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
 					 path, errno );
 			rval = -2;
@@ -224,9 +228,13 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				// pid doesn't exist
 			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
 			rval = -1;
+		} else if ( errno == EACCES ) {
+			dprintf( D_FULLDEBUG, "ProcAPI: No permission to open %s.\n", 
+					 path );
+			rval = -2;
 		} else { 
 			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
-					  path, errno );
+					 path, errno );
 			rval = -2;
 		}
 	} 
@@ -260,9 +268,13 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				// pid doesn't exist
 			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
 			rval = -1;
+		} else if ( errno == EACCES ) {
+			dprintf( D_FULLDEBUG, "ProcAPI: No permission to open %s.\n", 
+					 path );
+			rval = -2;
 		} else { 
 			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
-					  path, errno );
+					 path, errno );
 			rval = -2;
 		}
 	}
@@ -336,6 +348,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				// /proc/pid doesn't exist
 			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
 			rval = -1;
+		} else if ( errno == EACCES ) {
+			dprintf( D_FULLDEBUG, "ProcAPI: No permission to open %s.\n", 
+					 path );
+			rval = -2;
 		} else { 
 			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
 					 path, errno );
