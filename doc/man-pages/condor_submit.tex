@@ -179,10 +179,12 @@ the job produces.
 %% transfer_files
 %%%%%%%%%%%%%%%%%%%
 
-\item[transfer\_files = $<$ONEXIT \Bar\ ALWAYS$>$] Setting
+\item[transfer\_files = $<$ONEXIT \Bar\ ALWAYS \Bar\ NEVER$>$] Setting
 \Opt{transfer\_files} equal to \Arg{ONEXIT} will cause Condor to transfer the
 job's output files back to the submitting machine only when the job
-completes (exits).  If not specified, \Arg{ONEXIT} is used as the default.
+completes (exits).
+If not specified, \Arg{ONEXIT} is used as the default on NT machines.
+If not specified, \Arg{NEVER} is used as the default on Unix machines.
 Specifying \Arg{ALWAYS} forces Condor to transfer output files either when
 the job completes or when the job is preempted or killed
 prior to job completion.
