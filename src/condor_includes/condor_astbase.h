@@ -153,7 +153,7 @@ class FloatBase : public ExprTree
 	virtual int	    operator <(ExprTree&);
 	virtual int	    operator <=(ExprTree&);
 	
-	virtual void        Display();
+	virtual void    Display();
 	float		    Value();
 
     protected :
@@ -165,18 +165,18 @@ class StringBase : public ExprTree
 {
     public :
 
-	  	StringBase(char*);
+	StringBase(char*);
 
-		virtual int	    operator ==(ExprTree&);
+	virtual int	    operator ==(ExprTree&);
 
-		virtual void	Display();
-		char*	const	Value();
+	virtual void	Display();
+	char*	const	Value();
 
-		friend	class	ExprTree;
+	friend	class	ExprTree;
 
     protected :
 
-   		char*           value;
+   	char*           value;
 };
 
 class BooleanBase : public ExprTree
@@ -187,6 +187,7 @@ class BooleanBase : public ExprTree
 	virtual int	    operator ==(ExprTree&);
 
 	virtual void        Display();
+	int                 Value();
 
     protected :
 

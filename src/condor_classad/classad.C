@@ -638,3 +638,29 @@ int ClassAd::get (XDR *xdrs)
 
 	return 1;
 }
+
+void ClassAd::
+ExchangeExpressions (ClassAd *ad)
+{
+    AttrListElem *tmp1;
+    AttrListList *tmp2;
+    int           tmp3;
+
+    // exchange variables which maintain the attribute list
+    // see condor_attrlist.h  --RR
+
+#   define SWAP(a,b,t) {t=a; a=b; b=t;}
+
+    SWAP(associatedList, ad->associatedList, tmp2); // this is AttrListList*
+    SWAP(exprList, ad->exprList, tmp1);             // these are AttrListElem*
+    SWAP(tail, ad->tail, tmp1);
+    SWAP(ptrExpr, ad->ptrExpr, tmp1);
+    SWAP(ptrName, ad->ptrName, tmp1);
+    SWAP (seq, ad->seq, tmp3);                      // this is an int
+
+    // undefine macro to decrease name-space pollution
+#   undef SWAP
+
+    return;
+}
+

@@ -1395,3 +1395,9 @@ char * const StringBase::Value()
 {
 	return value;
 }
+
+int BooleanBase::Value()
+{
+	return value;
+}
+

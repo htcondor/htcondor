@@ -63,6 +63,9 @@ class ClassAd : public AttrList
 		int put (XDR *);
 		int get (XDR *);
 
+		// poor man's update function until ClassAd Update Protocol  --RR
+		 void ExchangeExpressions (ClassAd *);
+
     private :
 
 		AdType*		myType;						// my type field.

@@ -15,7 +15,7 @@
 #include "condor_astbase.h"
 #include "proc_obj.h"
 
-//for the shipping functions -- added by Lei Cao
+//for the shipping functions
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 #include "stream.h"
@@ -87,37 +87,62 @@ class AttrList : public AttrListAbstract
 {
     public :
 
+		// ctors/dtor
 		AttrList();							// No associated AttrList list
         AttrList(AttrListList*);			// Associated with AttrList list
         AttrList(FILE *, char *, int &);	// Constructor, read from file.
 		AttrList(class ProcObj*);			// create from a proc object
-		AttrList(CONTEXT*);			// create from a CONTEXT
+		AttrList(CONTEXT*);					// create from a CONTEXT
         AttrList(char *, char);				// Constructor, from string.
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
 
+		// insert expressions into the ad
         int        	Insert(char*);			// insert at the tail
         int        	Insert(ExprTree*);		// insert at the tail
+
+		// deletion of expressions	
         int			Delete(char*);			// delete the expr with the name
 
+		// to update expression trees
 		void		ResetFlags();			// reset the all the dirty flags
 		int			UpdateExpr(char*, ExprTree*);	// update an expression
 
+		// for iteration through expressions
 		void		ResetExpr() { this->ptrExpr = exprList; }
-		void		ResetName() { this->ptrName = exprList; }
 		ExprTree*	NextExpr();					// next unvisited expression
+
+		// for iteration through names (i.e., lhs of the expressions)
+		void		ResetName() { this->ptrName = exprList; }
 		char*		NextName();					// next unvisited name
-        ExprTree*	Lookup(char*);				// look up an expression
+
+		// lookup values in classads  (for simple assignments)
+		ExprTree*   Lookup(char *);  		// for convenience
+        ExprTree*	Lookup(const char*);	// look up an expression
+		int         LookupString(const char *, char *); 
+        int         LookupInteger(const char *, int &);
+        int         LookupFloat(const char *, float &);
+        int         LookupBool(const char *, int &);
+
+		// evaluate values in classads
+		int         EvalString (const char *, AttrList *, char *);
+		int         EvalInteger (const char *, AttrList *, int &);
+		int         EvalFloat (const char *, AttrList *, float &);
+		int         EvalBool  (const char *, AttrList *, int &);
+
 		int			IsInList(AttrListList*);	// am I in this AttrList list?
 
+		// output functions
 		int			fPrintExpr(FILE*, char*);	// print an expression
         virtual int	fPrint(FILE*);				// print the AttrList to a file
+
+		// conversion function
 		int         MakeContext (CONTEXT *);    // create a context
-        // shipping functions -- added by Lei Cao
+
+        // shipping functions
         int put(Stream& s);
         int get(Stream& s);
         int code(Stream& s);
-
 		int put (XDR *);
 		int get (XDR *);
 
@@ -125,7 +150,7 @@ class AttrList : public AttrListAbstract
 		friend	class	AttrListList;			// access "UpdateAgg()"
 		friend	class	ClassAd;
 
-    private :
+    protected :
 
 		// update an aggregate expression if the AttrList list associated with
 		// this AttrList is changed
@@ -165,7 +190,7 @@ class AttrListList
       	friend	  	class		AttrList;
       	friend	  	class		ClassAd;
   
-    protected:
+    private:
 
         // update aggregate expressions in associated AttrLists
 		void				UpdateAgg(ExprTree*, int);
