@@ -796,12 +796,12 @@ Image::Read()
 
 		// Make sure we have a valid file descriptor to read from
 	if( fd < 0 && file_name && file_name[0] ) {
-		if( (fd=open_url(file_name,O_RDONLY,0)) < 0 ) {
+//		if( (fd=open_url(file_name,O_RDONLY,0)) < 0 ) {
 			if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
 				perror( "open_ckpt_file" );
 				exit( 1 );
 			}
-		}
+//		}		// don't use URL library -- Jim B.
 	}
 
 		// Read in the header
