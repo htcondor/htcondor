@@ -1092,6 +1092,29 @@ obtainAdsFromCollector (
 			newSequence = -1;	
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
 
+			// Next, let's transform the ad. The first thing we might
+			// do is replace the Requirements attribute with whatever
+			// we find in NegotiatorRequirements
+			ExprTree  *tree;
+			char *subReqs, *newReqs;
+			subReqs = NULL;
+			tree  = NULL;
+			int length;
+			tree = ad->Lookup(ATTR_NEGOTIATOR_REQUIREMENTS);
+			if ( tree != NULL && tree->RArg() != NULL ) {
+
+				// Get the requirements expression we're going to 
+				// subsititute in, and convert it to a string... 
+				// Sadly, this might be the best interface :(
+				tree->RArg()->PrintToNewStr(&subReqs); //Print allocs mem
+				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS);
+				newReqs = (char *)malloc(length+16);
+				snprintf(newReqs, length+15, "%s = %s", ATTR_REQUIREMENTS, subReqs); 
+				ad->InsertOrUpdate(newReqs);
+				free(newReqs);
+				free(subReqs);
+			}
+
 			if( reevaluate_ad && newSequence != -1 ) {
 				oldAd = NULL;
 				oldAdEntry = NULL;
@@ -2046,7 +2069,9 @@ addRemoteUserPrios( ClassAdList &cal )
 	ClassAd	*ad;
 	char	remoteUser[64];
 	char	buffer[128];
+	char    vm_prefix[16];
 	float	prio;
+	int     totalVMs, i;
 
 	cal.Open();
 	while( ( ad = cal.Next() ) ) {
@@ -2056,6 +2081,21 @@ addRemoteUserPrios( ClassAdList &cal )
 			prio = (float) accountant.GetPriority( remoteUser );
 			(void) sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , prio );
 			ad->Insert( buffer );
+		}
+		if( ad->LookupInteger( ATTR_TOTAL_VIRTUAL_MACHINES, totalVMs) ) {
+			for(i = 1; i <= totalVMs; i++) {
+				int result = snprintf( vm_prefix, 16, "vm%d_", i);
+				strcpy(buffer, vm_prefix);
+				strcat(buffer, ATTR_REMOTE_USER);
+				if( ad->LookupString( buffer , remoteUser ) ) {
+					// If there is a user on that VM, stick that user's priority
+					// into the ad	
+					prio = (float) accountant.GetPriority( remoteUser );
+					(void) sprintf( buffer , "%s%s = %f" , vm_prefix, 
+									ATTR_REMOTE_USER_PRIO , prio );
+					ad->Insert( buffer );
+				}	
+			}
 		}
 	}
 	cal.Close();
