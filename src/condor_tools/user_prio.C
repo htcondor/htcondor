@@ -140,7 +140,13 @@ main(int argc, char* argv[])
       
   //----------------------------------------------------------
 
-	  // Get into on our negotiator
+  if( ! pool ) {
+		  // If we haven't been told our pool, we're going to need to
+		  // param() to find the local negotiator...
+	  config( 0 );
+  }
+
+	  // Get info on our negotiator
   Daemon negotiator( DT_NEGOTIATOR, NULL, pool );
 
   if (SetPrio) { // set priority
