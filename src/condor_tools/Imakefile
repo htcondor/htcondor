@@ -30,6 +30,11 @@ release_target(condor_userprio,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_userprio,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
 static_target(condor_userprio,user_prio.o,$(LIB),$(STATIC_DIR)/bin)
 
+c_plus_target(condor_findhost,give_interactive.o,$(LIB))
+release_target(condor_findhost,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+strip_target(condor_findhost,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_findhost,history.o,$(LIB),$(STATIC_DIR)/bin)
+
 c_plus_target(condor_history,history.o,$(LIB))
 release_target(condor_history,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_history,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
