@@ -840,6 +840,7 @@ class DaemonCore : public Service
 			@return true if we should allow this, false if not
 		*/
 	bool CheckConfigSecurity( const char* config, Sock* sock );
+	bool CheckConfigAttrSecurity( const char* attr, Sock* sock );
 
 
     /** Invalidate all session related cache since the configuration
