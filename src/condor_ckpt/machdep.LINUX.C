@@ -370,6 +370,7 @@ void display_prmap()
 unsigned long find_correct_vm_addr(unsigned long start, unsigned long end,
 	int prot)
 {
+	int scm=SetSyscalls(SYS_LOCAL | SYS_UNMAPPED);
 
 	if((mprotect((char *)start, end-start, PROT_READ))==0) {
 		/*
@@ -377,6 +378,7 @@ unsigned long find_correct_vm_addr(unsigned long start, unsigned long end,
 		 * protection back to what it was before the call.
 		 */
 		if((mprotect((char *)start, end-start, prot))==0) {
+			SetSyscalls(scm);
 			return end;
 		} else {
 			dprintf(D_ALWAYS, "Fatal error, Can't restore memory protection\n");
@@ -393,6 +395,7 @@ unsigned long find_correct_vm_addr(unsigned long start, unsigned long end,
 		 		* protection back to what it was before the call.
 		 		*/
 				if((mprotect((char *)start, end-start, prot))==0) {
+					SetSyscalls(scm);	
 					return end;
 				} else {
 					dprintf(D_ALWAYS, "Fatal error, Can't restore memory protection\n");
@@ -401,6 +404,7 @@ unsigned long find_correct_vm_addr(unsigned long start, unsigned long end,
 		}
 		dprintf(D_ALWAYS, "Fatal error, Can't read any of this block\n");
 	}
+	SetSyscalls(scm);
 }
 
 
