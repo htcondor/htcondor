@@ -145,9 +145,6 @@ class Scheduler : public Service
 	char*			MySockName;		// dhaval
 	Scheduler*		myself;
 	
-	// information for utilizing cached negotiator socket
-	bool			alreadyStashed;
-
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
 	int				QueueCleanInterval;
