@@ -5,7 +5,7 @@ SETPRIORITY_OBJ = setpriority.o
 CLIP = -DCLIP
 #endif
 
-#if IS_SGI_IRIX53
+#if IS_IRIX
 /* This silliness is because gcc 2.7.2 on IRIX cannot
  * handle really large switches and/or functions, like 
  * stub_gen wants to make for senders.C and receivers.C.
@@ -17,7 +17,7 @@ STUB_CLUMP_SIZE = -s 33
 #endif
 
 /* We need to use dlopen() and dlsym() to extract on IRIX */
-#if IS_SGI_IRIX53
+#if IS_IRIX
 DL_EXTRACT = -DDL_EXTRACT
 #endif
 
@@ -27,13 +27,9 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG) $(DL_EXTRACT)
 
 #if DOES_SAVE_SIGSTATE
 SAVE_SIGSTATE = -DSAVE_SIGSTATE
-#if IS_SPARC_SUNOS41
-SIG_CKPT_OBJS = signals_support.o SIGVEC.o _SIGVEC.o
-#elif IS_ALPHA_OSF1
+#if IS_DUX
 SIG_CKPT_OBJS = signals_support.o SIGPROCMASK.o SIGSUSPEND.o \
 	SIGACTION.o SIGNAL.o
-#elif IS_MIPS_ULTRIX43
-SIG_CKPT_OBJS = signals_support.o SIGVEC.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o
 #else
 SIG_CKPT_OBJS = signals_support.o
 #endif
@@ -43,51 +39,47 @@ IOS_STUBS = ios_stub.o ios_msg.o
 
 #if DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
-#	if IS_HPPAR_HPUX9
-EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o  \
+#	if IS_HPUX
+EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o SYSCALL.o __SYSCALL.o \
 		  MMAP.o PIPE.o GETCWD.o GETLOGIN.o
-#	elif IS_GLIBC && IS_I386_LINUX
+#	elif IS_GLIBC_LINUX
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
 		FORK.o PIPE.o SIGACTION.o GETLOGIN.o SYSDEP.o
 #	elif IS_I386_LINUX
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 		__FORK.o __PIPE.o __SIGACT.o ____SIG.o GETLOGIN.o \
 		__PREV_FSTAT.o __PREV_LSTAT.o __PREV_STAT.o
-#	elif IS_ALPHA_OSF1
+#	elif IS_DUX
 EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o GETCWD.o \
 		  MMAP.o PIPE.o SYSCALL.o
-#	elif (IS_X86_SOLARIS251) 
+#	elif IS_X86_SOLARIS251
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
 		  i386_data.o SYSCONF.o GETLOGIN.o GETRUSAGE.o
-#	elif (IS_X86_SOLARIS26)
+#	elif IS_X86_SOLARIS26
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
 		  GETCWD.o GETRUSAGE.o \
 		  i386_data.o SYSCONF.o GETLOGIN.o LSEEK64.o MMAP64.o
-#	elif (IS_SUN4X_SOLARIS251)
+#	elif IS_SUN4X_SOLARIS251
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
 		  SYSCONF.o GETLOGIN.o GETRUSAGE.o
-#	elif (IS_SUN4X_SOLARIS26)
+#	elif IS_SUN4X_SOLARIS26
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
 		  GETCWD.o GETRUSAGE.o \
 		  SYSCONF.o GETLOGIN.o LSEEK64.o MMAP64.o
-#	elif IS_SGI_IRIX53
+#	elif IS_IRIX
 EXTRACT = /* don't extract anything */
 #	else
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
-		  MMAP.o PIPE.o GETLOGIN.o
+		  MMAP.o PIPE.o GETLOGIN.o SYSCALL.o
 #	endif
 
 #else	/* =============  DOES NOT DO CHECKPOINTING ============*/
 
-#	if IS_HPPAR_HPUX9
-EXTRACT = GETEUID.o GETEGID.o
-#	elif IS_R6000_AIX32
-/* Don't extract anything */
-#     elif (IS_SOLARIS)
+#	if IS_HPUX || IS_SOLARIS
 EXTRACT = GETEUID.o GETEGID.o
 #	else 
 EXTRACT = GETEUID.o GETEGID.o GETWD.o
@@ -95,19 +87,19 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 
 #endif	/* ===============  CHECKPOINTING CONDITIONAL ============*/
 
-#if IS_HPPAR_HPUX9 
+#if IS_HPUX
 PLATFORM_UTIL_OBJ = seteuid.o setegid.o
 #endif
 
-#if IS_SGI_IRIX62
+#if IS_IRIX62
 DEP_OS = IRIX62
-#elif IS_HPPAR_HPUX10
+#elif IS_HPUX10
 DEP_OS = HPUX10
 #else
 DEP_OS = OperatingSystem
 #endif
 
-#if IS_SGI_IRIX53 
+#if IS_IRIX
 SGI_CKPT = MMAP.MIPS.$(DEP_OS).o SYSCALL.MIPS.$(DEP_OS).o
 #endif
 
@@ -146,10 +138,6 @@ SRC = \
         ios_stub.C \
         ios_msg.C
 	 
-#if IS_R6000_AIX32
-LONGJMP = _longjmp.AIX32.o
-#endif
-
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 	cfilter_url.o filter_url.o mailto_url.o ftp_url.o
 
@@ -159,10 +147,6 @@ CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(DEP_OS).o \
 	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o
 #else
 CKPT_OBJ = syscall_mode.o eprintf.o
-#endif
-
-#if IS_R6000_AIX32
-AIX_OBJ = $(LIB_DIR)/syscall.shr.o $(LIB_DIR)/syscall.exp $(LIB_DIR)/libfort.a
 #endif
 
 SYSCALL_SUPPORT_OBJ=senders.o receivers.C syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
@@ -200,7 +184,7 @@ uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
 uppercase_target($(SIMPLE_LIBC),getlogin.o,GETLOGIN.o,getlogin,GETLOGIN)
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 
-#if (IS_X86_SOLARIS)
+#if IS_X86_SOLARIS
 SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) sigaction.o
 	./ToUpper sigaction.o sigaction.tmp.o sigaction SIGACTION
@@ -210,8 +194,7 @@ SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
 
-#if (IS_SOLARIS)
-uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+#if IS_SOLARIS
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
 uppercase_target($(SIMPLE_LIBC),truncate.o,TRUNCATE.o,ftruncate,FTRUNCATE)
 #endif
@@ -228,13 +211,13 @@ uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
 uppercase_target($(SIMPLE_LIBC),getrusage.o,GETRUSAGE.o,getrusage,GETRUSAGE)
 
-#if (IS_SOLARIS26)
+#if IS_SOLARIS26
 uppercase_target($(SIMPLE_LIBC),lseek64.o,LSEEK64.o,lseek64,LSEEK64)
 uppercase_target($(SIMPLE_LIBC),mmap64.o,MMAP64.o,mmap64,MMAP64)
 #endif
 
 
-#if (IS_I386_LINUX) 
+#if IS_I386_LINUX
 ____SIG.o : ToUpper $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) ____sig.o
 	./ToUpper ____sig.o ____SIG_TMP.o ___sig_restore ___SIG_RESTORE
@@ -247,7 +230,7 @@ uppercase_target($(SIMPLE_LIBC),__prev_fstat.o,__PREV_FSTAT.o,fstat,FSTAT)
 #endif
 
 
-#if (IS_GLIBC) && (IS_I386_LINUX)
+#if IS_GLIBC_LINUX
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),sysdep.o,SYSDEP.o,__syscall_error,__SYSCALL_ERROR)
 
@@ -256,17 +239,18 @@ SYSCALL.o: SYSCALL_TMP.o ToUpper
 
 clean::
 	rm -f SYSCALL_TMP.o
-#elif (IS_I386_LINUX) || (IS_ALPHA_OSF1)
+#else
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+uppercase_target($(SIMPLE_LIBC),__syscall.o,__SYSCALL.o,__syscall,__SYSCALL)
 #endif
 
 
-#if (IS_X86_SOLARIS)
+#if IS_X86_SOLARIS
 i386_data.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) i386_data.o
 #endif
 
-#if (IS_SOLARIS)
+#if IS_SOLARIS
 SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 	ar x    $(SIMPLE_LIBC)      sysconf.o 	  ; mv  sysconf.o  $(TMP_DIR)
 	./ToUpper $(TMP_DIR)/sysconf.o   $(TMP_DIR)/SYSCONF.o   sysconf   SYSCONF
@@ -274,13 +258,13 @@ SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 	rm -f $(TMP_DIR)/sysconf.o $(TMP_DIR)/SYSCONF.o
 #endif
 
-#if (DOES_CHECKPOINTING) || (DOES_REMOTE_SYSCALLS)
+#if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
 release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
 strip_copy_target( condor_rt0.o, $(STRIP_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 static_copy_target( condor_rt0.o, $(STATIC_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 #endif
 
-#if (IS_X86_SOLARIS) || ((IS_GLIBC) && (IS_I386_LINUX))
+#if IS_X86_SOLARIS || IS_GLIBC_LINUX
 	library_target(libtmp.a,$(LIB_OBJ))
 
 clean::
@@ -296,7 +280,7 @@ condor_syscall_lib.a: libtmp.a ToUpper
 	library_target(condor_syscall_lib.a,$(LIB_OBJ))
 #endif
 
-#if (DOES_CHECKPOINTING) || (DOES_REMOTE_SYSCALLS)
+#if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
 release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
 strip_library(condor_syscall_lib.a,$(STRIP_DIR)/lib)
 static_library(condor_syscall_lib.a,$(STATIC_DIR)/lib)
@@ -318,6 +302,8 @@ STUB_GEN_PLATFORM = GlibCFlag
 STUB_GEN_PLATFORM = -DSolaris251
 #elif IS_SOLARIS26
 STUB_GEN_PLATFORM = -DSolaris26
+#elif IS_HPUX10
+STUB_GEN_PLATFORM = -DHPUX10
 #elif IS_IRIX62
 STUB_GEN_PLATFORM = -DIRIX62
 #endif
@@ -343,56 +329,14 @@ receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 syscall-list: syscall.tmpl stub_gen 
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	./stub_gen -mode listcalls > syscall-list
+
 clean::
 	rm -f syscall-list
-
-
-#if IS_R6000_AIX32
-CMNT
-CMNT Provide the syscall() routine.
-CMNT Imports: all system calls from /unix
-CMNT Exports: syscall() and CondorErrno
-CMNT
-syscall.shr.o: syscall.o syscall.exp
-	ld -o syscall.shr.o \
-		-bM:SRE -T512 \
-		-bE:syscall.exp \
-		-bI:$(SYSCALLS_EXP) \
-		-H8 \
-		syscall.o
-clean::
-	rm -f syscall.shr.o syscall.o
-
-release_target( syscall.shr.o, $(LIB_DIR), OBJECT_MODE)
-release_target( syscall.exp, $(LIB_DIR), OBJECT_MODE)
-
-#
-# The aix fortran library libxlf.a defines a getenv() routine which takes 2
-# arguments, the name of the environment variable, and buffer in which to
-# put the associated value.
-#
-# The aix C library libc.a defines a getenv routine which takes 1 argument,
-# the name of the environment variable, and it returns a pointer to the
-# associated value.
-#
-# Condor programs need to be linked with the condor libraries, which will
-# end up calling getenv(), and expecting the C version.  We therefore
-# supply our own C version, so that we can get it linked in before the
-# fortran version gets linked.
-#
-# Of course this will break any fortran programs which call getenv and expect
-# the fortran version!  If some AIXpert knows how to fix this, I would be
-# very happy to learn about it. -- mike
-#
-library_target(libfort.a,C_getenv.o)
-release_library(libfort.a,$(RELEASE_DIR)/lib)
-#endif /* AIX */
 
 clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.C receivers.C *.o
 
 depend_target($(SRC))
-
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_io,$(IO_OBJ))
