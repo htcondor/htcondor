@@ -304,7 +304,7 @@ MAIN( int argc, char *argv[], char **envp )
 			  expected.  --RR
 			*/
 		if( (strcmp(arg, "debug_wait") == MATCH) ) {
-			int j = 1;
+			volatile int j = 1;
 			while (j);
 			continue;
 		}
