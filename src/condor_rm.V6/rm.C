@@ -222,7 +222,6 @@ init_params()
 }
 #endif
 
-#if DBM_QUEUE
 void
 notify_schedd( int cluster, int proc )
 {
@@ -282,7 +281,6 @@ notify_schedd( int cluster, int proc )
 	xdr_destroy( xdrs );
 	(void)close( sock );
 }
-#endif
 
 
 #if DBM_QUEUE
@@ -338,6 +336,7 @@ void ProcArg(const char* arg)
 			{
 				fprintf(stderr, "Couldn't delete %s\n", arg);
 			}
+			notify_schedd( c, -1 );
 			return;
 		}
 		if(*tmp == '.')
@@ -355,6 +354,7 @@ void ProcArg(const char* arg)
 				{
 					fprintf(stderr, "Couldn't delete %s\n", arg);
 				}
+				notify_schedd( c, p );
 				return;
 			}
 			fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
