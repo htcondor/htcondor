@@ -80,7 +80,9 @@ char *
 get_x509_proxy_filename()
 {
 	char *proxy_file = NULL;
+#if defined(CONDOR_GSI)
 	proxy_get_filenames(NULL, 1, NULL, NULL, &proxy_file, NULL, NULL);
+#endif
 	return proxy_file;
 }
 
