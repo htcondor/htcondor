@@ -265,10 +265,11 @@ if ( $DoPing )
 	# If there are hosts in our list to ping...
 	if ( $HostCount )
 	{
-	    die "Can't run pingfilt" if ( ! open( IN, "$PingCmd|") );
+	    die "Can't run pingfilt" if ( ! open( IN, "$PingCmd 2>&1 |") );
 	    while( <IN> )
 	    {
 		chomp;
+		next if ( /^ping:/ );
 		$PingOk{$_} = 1;
 	    }
 	    close( IN );
