@@ -161,6 +161,11 @@ char	*MailerPgm = NULL;
 // count of network bytes send and received for this job so far
 extern float	TotalBytesSent, TotalBytesRecvd;
 
+// count of network bytes previously sent and received for RSC only;
+// unlike TotalBytesSent and TotalBytesRecvd, these counts do not
+// include any network usage in this current run
+float RSCBytesSent = 0.0, RSCBytesRecvd = 0.0;
+
 // count of network bytes send and received outside of CEDAR RSC socket
 extern float	BytesSent, BytesRecvd;
 
@@ -773,6 +778,14 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 							   ATTR_BYTES_SENT, TotalBytesSent );
 			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
 							   ATTR_BYTES_RECVD, TotalBytesRecvd );
+			float RSCBytesSentUpdate =
+				sock_RSC1->get_bytes_sent() + RSCBytesSent;
+			float RSCBytesRecvdUpdate = 
+				sock_RSC1->get_bytes_recvd() + RSCBytesRecvd;
+			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
+							   ATTR_RSC_BYTES_SENT, RSCBytesSentUpdate );
+			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
+							   ATTR_RSC_BYTES_RECVD, RSCBytesRecvdUpdate );
 		}
 
 		if( ExitReason == JOB_CKPTED || ExitReason == JOB_NOT_CKPTED ) {
@@ -892,6 +905,8 @@ start_job( char *cluster_id, char *proc_id )
 
 	JobAd->LookupFloat(ATTR_BYTES_SENT, TotalBytesSent);
 	JobAd->LookupFloat(ATTR_BYTES_RECVD, TotalBytesRecvd);
+	JobAd->LookupFloat(ATTR_RSC_BYTES_SENT, RSCBytesSent);
+	JobAd->LookupFloat(ATTR_RSC_BYTES_RECVD, RSCBytesRecvd);
 	JobAd->LookupInteger(ATTR_NUM_CKPTS, NumCkpts);
 	JobAd->LookupInteger(ATTR_NUM_RESTARTS, NumRestarts);
 
