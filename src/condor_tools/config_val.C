@@ -44,6 +44,7 @@
 #include "condor_uid.h"
 #include "match_prefix.h"
 #include "string_list.h"
+#include "condor_string.h"
 #include "get_daemon_name.h"
 #include "daemon.h"
 #include "dc_collector.h"
@@ -474,7 +475,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	}
 
 	if (!mixedcase) {
-		lower_case(param_name);		// make the config name case insensitive
+		strlwr(param_name);		// make the config name case insensitive
 	}
 
 		// We need a version with a newline at the end to make

@@ -179,7 +179,7 @@ int Read_config( char* config_file, BUCKET** table,
 				  table.  Everything now behaves like macros used to
 				  Derek Wright <wright@cs.wisc.edu> 4/11/00
 				*/
-			lower_case( name );
+			strlwr( name );
 
 			/* Put the value in the Configuration Table */
 			insert( name, value, table, table_size );
@@ -236,7 +236,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 
 		/* Make sure not already in hash table */
 	strcpy( tmp_name, name );
-	lower_case( tmp_name );
+	strlwr( tmp_name );
 	loc = hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( strcmp(tmp_name,ptr->name) == 0 ) {
@@ -640,7 +640,7 @@ lookup_macro( const char *name, BUCKET **table, int table_size )
 	char			tmp_name[ 1024 ];
 
 	strcpy( tmp_name, name );
-	lower_case( tmp_name );
+	strlwr( tmp_name );
 	loc = hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( !strcmp(tmp_name,ptr->name) ) {

@@ -3129,7 +3129,7 @@ read_condor_file( FILE *fp )
 			forcedAttributes.insert( MyString( name ), MyString( value ) );
 		} 
 
-		lower_case( name );
+		strlwr( name );
 
 		if( strcmp(name, Executable) == 0 ) {
 			NewExecutable = true;
