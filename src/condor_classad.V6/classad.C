@@ -399,7 +399,7 @@ Update( const ClassAd& ad )
 {
 	AttrList::const_iterator itr;
 	for( itr=ad.attrList.begin( ); itr!=ad.attrList.end( ); itr++ ) {
-		attrList[itr->first] = itr->second->Copy( );
+		Insert( itr->first, itr->second->Copy( ) );
 	}
 }
 
@@ -447,18 +447,20 @@ Modify( ClassAd& mod )
 			return;
 		}
 		itor.Initialize( list );
-		while( ( expr = itor.NextExpr( ) ) ) {
+		while( ( expr = itor.CurrentExpr( ) ) ) {
 			if( !expr->Evaluate( val ) || !val.IsStringValue( attrName ) ) {
 				return;
 			}
+			itor.NextExpr( );
 		}
 
 			// now go through and delete all the named attributes ...
 		itor.Initialize( list );
-		while( ( expr = itor.NextExpr( ) ) ) {
+		while( ( expr = itor.CurrentExpr( ) ) ) {
 			if( expr->Evaluate( val ) && val.IsStringValue( attrName ) ) {
 				ctx->Delete( attrName );
 			}
+			itor.NextExpr( );
 		}
 	}
 
@@ -656,6 +658,13 @@ EvaluateAttrNumber( const string &attr, double &r )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val ) && val.IsNumber( r ) );
+}
+
+bool ClassAd::
+EvaluateAttrString( const string &attr, char *buf, int len ) const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsStringValue( buf, len ) );
 }
 
 bool ClassAd::
@@ -1064,13 +1073,15 @@ _MakeRectangles( const ExprTree *tree, const string &allowed, Rectangles &r,
 			// ref <op> lit
 		attr = t1;
 		lit  = t2;
-		if( !_CheckRef( attr, allowed ) ) return( false );
+			// if not the attribute we're interested in, ignore
+		if( !_CheckRef( attr, allowed ) ) return( true );
 	} else if(t2->GetKind()==ExprTree::ATTRREF_NODE && 
 			t1->GetKind()==ExprTree::LITERAL_NODE){
 			// lit <op> ref
 		attr = t2;
 		lit  = t1;
-		if( !_CheckRef( attr, allowed ) ) return( false );
+			// if not the attribute we're interested in, ignore
+		if( !_CheckRef( attr, allowed ) ) return( true );
 		switch( op ) {
 			case Operation::LESS_THAN_OP: 
 				op = Operation::GREATER_THAN_OP; 
@@ -1185,6 +1196,7 @@ bool ClassAdIterator::
 CurrentAttribute (string &attr, const ExprTree *&expr) const
 {
 	if (!ad ) return( false );
+	if( itr==ad->attrList.end( ) ) return( false );
 	attr = itr->first;
 	expr = itr->second;
 	return true;	
