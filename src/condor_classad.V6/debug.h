@@ -20,8 +20,8 @@
  *
  *********************************************************************/
 
-#ifndef __CLASSAD_DEBUG_H
-#define __CLASSAD_DEBUG_H
+#ifndef __CLASSAD_DEBUG_H__
+#define __CLASSAD_DEBUG_H__
 
 #include "common.h"
 
