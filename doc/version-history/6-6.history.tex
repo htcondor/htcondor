@@ -102,13 +102,16 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
   HoldReasonSubCode are now properly moved to LastHoldReasonCode and
   LastHoldReasonSubCode.
 
-\item Fixed a bug that would cause the RemoveReason attribute for a job 
-  to be set incorrectly in some circumstances. (Specifically, when a job
-  was not running and a \AdAttr{periodic\_remove} expression caused the job to be
-  cancelled.)
+\item Fixed a bug that would cause the \Attr{RemoveReason} attribute
+  for a job 
+  to be set incorrectly in some circumstances.
+  Specifically, this was when a job
+  was not running and a \AdAttr{periodic\_remove} expression
+  caused the job to be cancelled.
 
-\item Fixed \Condor{submit} so that for all possible submit file
-  settings, both \verb@ThisStyle@ and \verb@this_style@ will work.
+\item Fixed \Condor{submit} such that submit description file
+  commands written with syntax both of
+  \verb@ThisStyle@ and \verb@this_style@ will work.
 
 \end{itemize}
 
