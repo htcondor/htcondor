@@ -3,13 +3,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fexternal-templates
 
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
-#if IS_ALPHA_OSF1
-CPP = /usr/ucb/cpp
-#elif IS_I386_LINUX
-CPP = /lib/cpp
-#else
-CPP = ansi_cpp -
-#endif
+CPP = PreProcessCmd
 
 #if IS_I386_LINUX
 LDFLAGS = $(LIBDBM) -liostream
@@ -58,12 +52,12 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, stub_gen)
 
 qmgmt_receivers.C: qmgmt.tmpl stub_gen qmgmt_receivers.prologue qmgmt_receivers.epilogue
-	$(CPP) -DRECEIVER  < qmgmt.tmpl | \
+	$(CPP) -DRECEIVER  qmgmt.tmpl | \
 	stub_gen -n syscheck -mode receivers -p qmgmt_receivers.prologue \
 	-e qmgmt_receivers.epilogue > qmgmt_receivers.C
 
 qmgmt_send_stubs.c: qmgmt.tmpl stub_gen qmgmt_send_stubs.prologue
-	$(CPP) -DSWITCHES  < qmgmt.tmpl | \
+	$(CPP) -DSWITCHES  qmgmt.tmpl | \
 	stub_gen -mode send_stub -n syscheck -n localcalls \
 	-p qmgmt_send_stubs.prologue > qmgmt_send_stubs.c
 

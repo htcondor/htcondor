@@ -1780,13 +1780,8 @@ void mark_jobs_idle()
 {
     char    queue[MAXPATHLEN];
 
-    /* set_condor_euid(); */
-
     WalkJobQueue(mark_idle );
 
-    if (getuid()==0) {
-        set_root_euid();
-    }
 }
 
 /*

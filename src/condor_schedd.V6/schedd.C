@@ -197,7 +197,7 @@ Scheduler::Scheduler()
 	rec = new Mrec*[MAXMATCHES];
 	aliveFrequency = 0;
 	aliveInterval = 0;
-	port = 0; 
+	port = 0;
 }
 
 Scheduler::~Scheduler()
@@ -205,7 +205,8 @@ Scheduler::~Scheduler()
 	int		i;
 
     delete ad;
-    delete MySockName;
+    if (MySockName)
+        free(MySockName);
     delete []CollectorHost;
     delete []NegotiatorHost;
     delete []Shadow;
@@ -903,7 +904,6 @@ shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 
 	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s\n",
 			job_id->cluster, job_id->proc, mrec->peer);
-
 
 	(void)sprintf( cluster, "%d", job_id->cluster );
 	(void)sprintf( proc, "%d", job_id->proc );
@@ -2274,7 +2274,7 @@ void Scheduler::SetSockName(int sock)
 		
 	addr.sin_family = AF_INET;
 	get_inet_address(&(addr.sin_addr));
-	MySockName = sin_to_string(&addr);
+	MySockName = strdup(sin_to_string(&addr));
 	dprintf(D_FULLDEBUG, "MySockName = %s\n", MySockName);
 	if (MySockName !=0){
 		sprintf(tmpExpr, "%s = %s", ATTR_SCHEDD_IP_ADDR, MySockName);

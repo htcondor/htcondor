@@ -247,7 +247,7 @@ main(int argc, char* argv[])
 	scheduler.Register(&core);
 	scheduler.SetSockName(core.OpenTcp(argv[0], scheduler.Port()));
 	
-	scheduler.timeout();						// UPDOWN
+	scheduler.timeout();
 	
 	core.Driver();
 } 

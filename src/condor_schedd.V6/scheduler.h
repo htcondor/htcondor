@@ -104,7 +104,7 @@ class Scheduler : public Service
 	
 	// information about this scheduler
 	ClassAd*		ad;
-	char*			MySockName;					// dhaval
+	char*			MySockName;		// dhaval
 	int				UdpSock;					// for talking to collector
 	Scheduler*		myself;
 	u_short			port;
