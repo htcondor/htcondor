@@ -162,11 +162,11 @@ void Parameters::ParseCommandLine(
 
 	// Then we parse to see what the user wants. 
 	for (int arg_index = 1; arg_index < argc; arg_index++) {
-		if (   !strcmp(argv[arg_index], "-d")
-            || !strcmp(argv[arg_index], "-debug")) {
+		if (   !strcasecmp(argv[arg_index], "-d")
+            || !strcasecmp(argv[arg_index], "-debug")) {
 			debug = true;
-		} else if (   !strcmp(argv[arg_index], "-v")
-                   || !strcmp(argv[arg_index], "-verbose")) {
+		} else if (   !strcasecmp(argv[arg_index], "-v")
+                   || !strcasecmp(argv[arg_index], "-verbose")) {
 			verbose = true;
 		} else {
 			if (input_file == NULL) {
