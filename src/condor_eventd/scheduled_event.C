@@ -178,7 +178,7 @@ ScheduledEvent::ActivateEvent()
 	
 	DeactivateTid =
 		daemonCore->Register_Timer(EndTime+1-time(0),
-								   (Eventcpp)DeactivateEvent,
+								   (Eventcpp)&DeactivateEvent,
 								   "ScheduledEvent::DeactivateEvent()", this);
 
 	active = true;
@@ -466,7 +466,7 @@ ScheduledShutdownEvent::ActivateEvent()
 	}
 
 	TimeoutTid =
-		daemonCore->Register_Timer(0, (Eventcpp)Timeout,
+		daemonCore->Register_Timer(0, (Eventcpp)&Timeout,
 								   "ScheduledShutdownEvent::Timeout()", this);
 
 	// make sure to get an updated StartdList with the new config values
