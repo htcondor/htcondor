@@ -1132,7 +1132,7 @@ CS_SUSPEND      = $(MachineBusy)
 CS_CONTINUE     = (KeyboardIdle > $(ContinueIdleTime)) && $(CPU_Idle)
 CS_PREEMPT      = ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
                    (Activity == "Suspended") ) || \
-                  ( $(MachineBusy) && (WANT_SUSPEND == False) )
+                  ( CS_SUSPEND && (WANT_SUSPEND == False) )
 CS_KILL         = ($(ActivityTimer) > $(MaxVacateTime))
 \end{verbatim}
 
@@ -1202,7 +1202,7 @@ CS_SUSPEND  = $(CPU_Busy) || $(KeyboardBusy)
 CS_CONTINUE = (KeyboardIdle > $(ContinueIdleTime)) && $(CPU_Idle)
 CS_PREEMPT  = ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
                (Activity == "Suspended") ) || \
-              ( $(MachineBusy) && (WANT_SUSPEND == False) )
+              ( CS_SUSPEND && (WANT_SUSPEND == False) )
 CS_KILL     = ($(ActivityTimer) > $(MaxVacateTime))
 
 START       : $(CS_START)
