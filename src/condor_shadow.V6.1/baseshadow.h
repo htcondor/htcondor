@@ -233,6 +233,13 @@ class BaseShadow : public Service
 
  private:
 
+	// private methods
+
+		/** See if there's enough swap space for this shadow, and if  
+			not, exit with JOB_NO_MEM.
+		*/
+	void checkSwap( void );
+
 	// config file parameters
 	char *spool;
 	char *fsDomain;

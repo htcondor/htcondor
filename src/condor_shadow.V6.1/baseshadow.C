@@ -93,6 +93,9 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 
 	initUserLog();
 
+		// Make sure we've got enough swap space to run
+	checkSwap();
+
 		// register SIGUSR1 (condor_rm) for shutdown...
 	daemonCore->Register_Signal(DC_SIGUSR1, "DC_SIGUSR1", 
 		(SignalHandlercpp)&BaseShadow::handleJobRemoval, "HandleJobRemoval", 
@@ -385,6 +388,31 @@ BaseShadow::endingUserLog( int exitStatus, int exitReason )
 
 	}	// end of switch
 }
+
+
+void
+BaseShadow::checkSwap( void )
+{
+	int	reserved_swap, free_swap;
+	char* tmp;
+	tmp = param( "RESERVED_SWAP" );
+	if( tmp ) {
+			// Reserved swap is specified in megabytes
+		reserved_swap = atoi( tmp ) * 1024;	
+		free( tmp );
+	} else {
+		reserved_swap = 5 * 1024;
+	}
+	free_swap = sysapi_swap_space();
+
+	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
+	dprintf( D_FULLDEBUG, "*** Free Swap = %d\n", free_swap );
+
+	if( free_swap < reserved_swap ) {
+		dprintf( D_ALWAYS, "Not enough reserved swap space\n" );
+		exit( JOB_NO_MEM );
+	}
+}	
 
 
 // Note: log_except is static
