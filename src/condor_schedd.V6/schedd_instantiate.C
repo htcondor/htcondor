@@ -45,7 +45,6 @@ template class ExtArray<int>;
 
 // for condor-G
 template class HashTable<MyString,GridUniverseLogic::gman_node_t *>;
-template class HashBucket<MyString,GridUniverseLogic::gman_node_t *>;
 
 // for MPI use:
 template class ExtArray <match_rec*>;
