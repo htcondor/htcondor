@@ -7,6 +7,7 @@
 #include <windows.h>
 #include "_condor_fix_nt.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #else
 
