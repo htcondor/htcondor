@@ -101,7 +101,11 @@ extern int part_send_job( int test_starter, char *host, int &reason,
 	      		  int &sd2, char **name);
 extern int send_cmd_to_startd(char *sin_host, char *capability, int cmd);
 
-int do_REMOTE_syscall();
+extern int do_REMOTE_syscall();
+extern int do_REMOTE_syscall1(int);
+extern int do_REMOTE_syscall2(int);
+extern int do_REMOTE_syscall3(int);
+extern int do_REMOTE_syscall4(int);
 
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
