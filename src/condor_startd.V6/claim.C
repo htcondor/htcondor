@@ -1069,7 +1069,7 @@ Claim::resetClaim( void )
 		delete( c_starter );
 		c_starter = NULL;
 	}
-	if( c_ad ) {
+	if( c_ad && c_is_cod ) {
 		delete( c_ad );
 		c_ad = NULL;
 	}
