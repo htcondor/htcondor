@@ -322,12 +322,10 @@ toClassAd()
 	char* eventTimeStr = time_to_iso8601(tmdup, ISO8601_ExtendedFormat,
 										 ISO8601_DateAndTime, FALSE);
 	if( eventTimeStr ) {
-//		char buf1[strlen(eventTimeStr) + 16];
-		char buf1[16];
-		snprintf(buf1, strlen(eventTimeStr) + 16,
-				 "EventTime = \"%s\"", eventTimeStr);
+		MyString buf1;
+		buf1.sprintf("EventTime = \"%s\"", eventTimeStr);
 		free(eventTimeStr);
-		if( !myad->Insert(buf1) ) return NULL;
+		if( !myad->Insert(buf1.Value()) ) return NULL;
 	} else {
 		return NULL;
 	}
