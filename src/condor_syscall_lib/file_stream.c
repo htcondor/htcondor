@@ -33,6 +33,7 @@
 #endif
 
 #include "condor_common.h"
+#include "condor_constants.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
 #include "condor_fix_assert.h"
@@ -50,6 +51,8 @@ static char *_FileName_ = __FILE__;
 
 int open_tcp_stream( unsigned int ip_addr, unsigned short port );
 int open_file_stream( const char *file, int flags, size_t *len );
+
+int _condor_in_file_stream;
 
 /*
   Open a file using the stream access protocol.  If we are to access
@@ -70,6 +73,8 @@ open_file_stream( const char *file, int flags, size_t *len )
 	int				mode;
 	int				scm;
 
+		/* first assume we'll open it locally */
+	_condor_in_file_stream = FALSE;
 
 		/* Ask the shadow how we should access this file */
 	scm = SetSyscalls( SYS_REMOTE | SYS_MAPPED );
@@ -118,6 +123,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 		} else {
 			dprintf( D_ALWAYS,"Opened \"%s\" via file stream\n", local_path);
 		}
+		_condor_in_file_stream = TRUE;
 	}
 
 	if( MappingFileDescriptors() ) {
