@@ -538,7 +538,7 @@ int Parse(const char* s, ExprTree*& tree)
 		return 0;
     }
 	delete nextToken;
-	delete str;
+	delete [] str;
     return count;
 }
 
