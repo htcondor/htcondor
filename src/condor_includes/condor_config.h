@@ -49,6 +49,9 @@ extern "C" {
 	int  set_runtime_config(char *admin, char *config);
 	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
 						  char *self=NULL );
+	int get_var( register char *value, register char **leftp,
+	      register char **namep, register char **rightp, char *self=NULL,
+		  bool getdollardollar=false);
 	void lower_case( char *str );
 #endif
 
