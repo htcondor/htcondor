@@ -1,3 +1,6 @@
+12/31/04 V6_7-post_merge-V6_6-merge-31
+   The state of the V6_7-branch after another merge from V6_6-branch.
+
 12/31/04 V6_6-merge-31
    The state of the V6_6-branch for yet another merge into the
    V6_7-branch.  This includes another fix to the race condition in
