@@ -10,6 +10,10 @@
 #include "Set.h"
 #include "TimeClass.h"
 
+// this is the required minimum separation between two priorities for them
+// to be considered distinct values
+static const double PriorityDelta = 0.5;
+
 class Accountant {
 
 public:
