@@ -86,6 +86,7 @@ int		GotQueueCommand;
 char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 
 char GlobusArgs[8192]; /* need to build large string */
+char GlobusEnv[2048]; 
 char GlobusExec[_POSIX_PATH_MAX];
 char	*MyName;
 int		Quiet = 1;
@@ -97,6 +98,14 @@ int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
 bool	NewExecutable = false;
 bool	UserLogSpecified = false;
+// environment vars in the ClassAd attribute are seperated via
+// the env_delimiter character; currently a '|' on NT and ';' on Unix
+#ifdef WIN32
+	char env_delimiter[] = "|";
+#else
+	char env_delimiter[] = ";";
+#endif
+
 
 #define PROCVARSIZE	32
 BUCKET *ProcVars[ PROCVARSIZE ];
@@ -132,7 +141,10 @@ char	*NotifyUser		= "notify_user";
 char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
-char	*X509CertDir	= "x509certdir";
+
+char	*X509Directory	= "x509directory";
+char	*X509UserProxy	= "x509userproxy";
+
 char	*RendezvousDir	= "rendezvousdir";
 char	*FileRemaps = "file_remaps";
 char	*BufferSize = "buffer_size";
@@ -189,10 +201,12 @@ void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
 void	InsertJobExpr (char *expr, bool clustercheck = true);
 void	check_umask();
+void setupAuthentication();
 
 char *owner = NULL;
 
 extern char **environ;
+
 
 extern "C" {
 int SetSyscalls( int foo );
@@ -370,7 +384,7 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	// Need X509_CERT_DIR set before connectQ if in submit file
+	// Need X509_* values set before connectQ if in submit file
 
 	//  Parse the file, stopping at "queue" command
 	if( read_condor_file( fp, 1 ) < 0 ) {
@@ -378,33 +392,7 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-		//RendezvousDir can be specified in submit-description file,
-		//else use InitialDir as specified or default InitialDir.
-	char *Rendezvous = NULL;
-	if ( (Rendezvous = condor_param( RendezvousDir ) ) )
-	{
-		dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n",
-				Rendezvous );
-		char tmpstring[1024];
-		sprintf( tmpstring, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
-			//putenv because Authentication::authenticate() expects them there.
-		putenv( strdup( tmpstring ) );
-		if ( Rendezvous )
-			free( Rendezvous );
-	}
-
-
-		//if defined in file, set up to use x509certdir
-	char *CertDir;
-	if ( CertDir = condor_param( X509CertDir ) ) {
-		dprintf( D_FULLDEBUG, "setting env X509_CERT_DIR=%s from submit file\n",
-				CertDir );
-		char tmpstring[1024];
-		sprintf( tmpstring, "X509_CERT_DIR=%s/", CertDir );
-			//putenv because Authentication::authenticate() expects them there.
-		putenv( strdup( tmpstring ) );
-		free( CertDir );
-	}
+	setupAuthentication();
 
 	if (ConnectQ(ScheddAddr) == 0) {
 		if( ScheddName ) {
@@ -535,14 +523,18 @@ reschedule()
 	/* Connect to the schedd */
 	ReliSock sock;
 	if(!sock.connect(ScheddAddr)) {
-		EXCEPT( "Can't connect to condor scheduler (%s)\n",
+		fprintf(stderr, "Can't connect to condor scheduler (%s)\n",
 				ScheddAddr );
+		DoCleanup();
+		exit( 1 );
 	}
 
 	sock.encode();
 	cmd = RESCHEDULE;
 	if( !sock.code(cmd) || !sock.eom() ) {
-		EXCEPT( "Can't send RESCHEDULE command to condor scheduler\n" );
+		fprintf(stderr, "Can't send RESCHEDULE command to condor scheduler\n" );
+		DoCleanup();
+		exit( 1 );
 	}
 }
 
@@ -568,7 +560,9 @@ SetExecutable()
 	ename = condor_param(Executable);
 
 	if( ename == NULL ) {
-		EXCEPT("No '%s' parameter was provided", Executable);
+		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
+		DoCleanup();
+		exit( 1 );
 	}
 
 #if !defined(WIN32)
@@ -578,11 +572,15 @@ SetExecutable()
 		struct stat statbuf;
 		char size[32];
 		if ( !(globusrun = param( "GLOBUSRUN" )) ) {
-			EXCEPT( "\"GLOBUSRUN\" value not in configuration file\n" );
+			fprintf(stderr, "\"GLOBUSRUN\" value not configured in your pool\n" );
+			DoCleanup();
+			exit( 1 );
 		}
 			//check for existence & size of globusrun pgm
 		if ( stat( globusrun, &statbuf ) ) {
-			EXCEPT( "cannot get stat() on %s\n", globusrun );
+			fprintf(stderr, "cannot get stat() on %s\n", globusrun );
+			DoCleanup();
+			exit( 1 );
 		}
 			//value in submit file is probably for globus job, not globusrun pgm
 			//so just override it here
@@ -645,18 +643,24 @@ SetExecutable()
 		InsertJobExpr (buffer);
 		break;
 	default:
-		EXCEPT( "Unknown universe (%d)", JobUniverse );
+		fprintf(stderr, "Unknown universe (%d)\n", JobUniverse );
+		DoCleanup();
+		exit( 1 );
 	}
 
 	// generate initial checkpoint file
 	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
 
 	if (SendSpoolFile(IckptName) < 0) {
-		EXCEPT("permission to transfer executable %s denied", IckptName);
+		fprintf(stderr,"permission to transfer executable %s denied\n",IckptName);
+		DoCleanup();
+		exit( 1 );
 	}
 
 	if (SendSpoolFileBytes(ename) < 0) {
-		EXCEPT("failed to transfer executable file %s", ename);
+		fprintf(stderr,"failed to transfer executable file %s\n", ename);
+		DoCleanup();
+		exit( 1 );
 	}
 
 	free(ename);
@@ -720,7 +724,9 @@ SetUniverse()
 			free(mach_count);
 		}
 		else {
-			EXCEPT( "No machine_count specified!\n" );
+			fprintf(stderr, "No machine_count specified!\n" );
+			DoCleanup();
+			exit( 1 );
 		}
 
 		(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
@@ -829,7 +835,9 @@ SetImageSize()
 		}
 		free( tmp );
 		if( size < 1 ) {
-			EXCEPT( "Image Size must be positive" );
+			fprintf(stderr, "Image Size must be positive\n" );
+			DoCleanup();
+			exit( 1 );
 		}
 	}
 
@@ -895,7 +903,7 @@ calc_image_size( char *name )
 void
 SetStdFile( int which_file )
 {
-	const char	*macro_value;
+	char	*macro_value;
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
@@ -911,7 +919,8 @@ SetStdFile( int which_file )
 		generic_name = Error;
 		break;
 	  default:
-		EXCEPT( "Unknown standard file descriptor (%d)\n", which_file );
+		fprintf(stderr, "Unknown standard file descriptor (%d)\n", which_file );
+		DoCleanup();
 	}
 
 
@@ -924,8 +933,10 @@ SetStdFile( int which_file )
 	
 	if( whitespace(macro_value) ) 
 	{
-		EXCEPT("The '%s' takes exactly one argument (%s)", generic_name, 
-				macro_value);
+		fprintf(stderr,"The '%s' takes exactly one argument (%s)\n", 
+				generic_name, macro_value);
+		DoCleanup();
+		exit( 1 );
 	}	
 
 	check_path_length(macro_value, generic_name);
@@ -995,7 +1006,10 @@ SetPriority()
 		prioval = atoi (prio);
 		if( prioval < -20 || prioval > 20 ) 
 		{
-			EXCEPT("Priority must be in the range -20 thru 20 (%d)", prioval );
+			fprintf(stderr,"Priority must be in the range -20 thru 20 (%d)\n", 
+					prioval );
+			DoCleanup();
+			exit( 1 );
 		}
 		free(prio);
 	}
@@ -1026,15 +1040,21 @@ SetNotification()
 
 	if( (how == NULL) || (stricmp(how, "COMPLETE") == 0) ) {
 		notification = NOTIFY_COMPLETE;
-	} else if( stricmp(how, "NEVER") == 0 ) {
+	} 
+	else if( stricmp(how, "NEVER") == 0 ) {
 		notification = NOTIFY_NEVER;
-	} else if( stricmp(how, "ALWAYS") == 0 ) {
+	} 
+	else if( stricmp(how, "ALWAYS") == 0 ) {
 		notification = NOTIFY_ALWAYS;
-	} else if( stricmp(how, "ERROR") == 0 ) {
+	} 
+	else if( stricmp(how, "ERROR") == 0 ) {
 		notification = NOTIFY_ERROR;
-	} else 
-	{
-	EXCEPT("Notification must be 'Never', 'Always', 'Complete', or 'Error'");
+	} 
+	else {
+		fprintf(stderr,"Notification must be 'Never', 'Always', 'Complete', "
+		"or 'Error'\n");
+		DoCleanup();
+		exit( 1 );
 	}
 
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_NOTIFICATION, notification);
@@ -1042,7 +1062,6 @@ SetNotification()
 
 	if ( how )
 		free(how);
-
 }
 
 void
@@ -1078,15 +1097,29 @@ SetArguments()
 	if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			//put specified args into RSL, then insert GlobusArgs into Ad
 		if ( strcmp( args, "" ) ) {
-			strcat( GlobusArgs, "(arguments=\\\"" );
-			strcat( GlobusArgs, args );
-			strcat( GlobusArgs, "\\\")" ); 
+				//unfortunately, Globus args are a pain in the as*. Each 
+				//argument has to be surrounded by double quotes and (probably)
+				//separated by a space. To simplify things, just strip out all
+				//double quotes and add each arg with double quotes.
+			StringList newargs( args, ",\"" );
+			char buf[1024];
+			newargs.rewind();
+			strcat( GlobusArgs, "(arguments=" );
+			for ( char *nextarg = NULL; nextarg = newargs.next();  ) {
+				if ( strcmp( nextarg, "" ) ) {
+					sprintf( buf, "\\\"%s\\\" ", nextarg );
+					strcat( GlobusArgs, buf );
+				}
+			}
+			strcat( GlobusArgs, ")" ); 
 		}
          //if the universe is Globus, need to specify GlobusScheduler
       char *globushost;
       if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
-         EXCEPT( "Globus universe jobs require a \"%s\" parameter\n",
+         fprintf(stderr, "Globus universe jobs require a \"%s\" parameter\n",
                GlobusScheduler );
+			DoCleanup();
+			exit( 1 );
       }
 		strcat( GlobusArgs, " -w -r " );
 		strcat( GlobusArgs, globushost );
@@ -1113,18 +1146,12 @@ SetEnvironment()
 	int envlen;
 	bool first = true;
 
-	// environment vars in the ClassAd attribute are seperated via
-	// the env_delimiter character; currently a '|' on NT and ';' on Unix
-	char env_delimiter[2];
-#ifdef WIN32
-	env_delimiter[0] = '|';
-#else
-	env_delimiter[0] = ';';
-#endif
-	env_delimiter[1] = '\0';
 
 	sprintf(newenv, "%s = \"", ATTR_JOB_ENVIRONMENT);
 
+	if ( JobUniverse == GLOBUS_UNIVERSE ) {
+		strcat( newenv, GlobusEnv );
+	}
 
 	if (env) {
 		strcat(newenv, env);
@@ -1201,7 +1228,9 @@ ComputeRootDir()
 	else 
 	{
 		if( access(rootdir, F_OK|X_OK) < 0 ) {
-			EXCEPT("No such directory: %s", rootdir);
+			fprintf(stderr,"No such directory: %s\n", rootdir);
+			DoCleanup();
+			exit( 1 );
 		}
 
 		check_path_length(rootdir, RootDir);
@@ -1276,7 +1305,7 @@ SetRank()
 	}		
 
 	if( orig_pref && orig_rank ) {
-		fprintf(stderr, "\nERROR: %s and %s may not both be specified for a job\n",
+		fprintf(stderr,"\nERROR: %s and %s may not both be specified for a job\n",
 			   Preferences, Rank);
 		exit(1);
 	} else if( orig_rank ) {
@@ -1391,7 +1420,9 @@ check_iwd( char *iwd )
 	compress( pathname );
 
 	if( access(pathname, F_OK|X_OK) < 0 ) {
-		EXCEPT("No such directory: %s", pathname);
+		fprintf(stderr, "No such directory: %s\n", pathname);
+		DoCleanup();
+		exit( 1 );
 	}
 }
 
@@ -1402,7 +1433,9 @@ SetUserLog()
 
 	if (ulog) {
 		if (whitespace(ulog)) {
-			EXCEPT("Only one %s can be specified.", UserLogFile);
+			fprintf(stderr,"Only one %s can be specified.\n", UserLogFile);
+			DoCleanup();
+			exit( 1 );
 		}
 		check_path_length(ulog, UserLogFile);
 		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
@@ -1961,8 +1994,9 @@ check_open( const char *name, int flags )
 	compress( pathname );
 
 	if( (fd=open(pathname,flags,0664)) < 0 ) {
-		fprintf(stdout,"\n");
-		EXCEPT( "Can't open \"%s\"  with flags 0%o", pathname, flags );
+		fprintf(stderr, "\nCan't open \"%s\"  with flags 0%o\n", pathname, flags );
+		DoCleanup();
+		exit( 1 );
 	}
 	(void)close( fd );
 
@@ -2032,17 +2066,23 @@ init_params()
 	Architecture = param( "ARCH" );
 
 	if( Architecture == NULL ) {
-		EXCEPT( "ARCH not specified in config file" );
+		fprintf(stderr, "ARCH not specified in config file\n" );
+		DoCleanup();
+		exit( 1 );
 	}
 
 	OperatingSystem = param( "OPSYS" );
 	if( OperatingSystem == NULL ) {
-		EXCEPT( "OPSYS not specified in config file" );
+		fprintf(stderr,"OPSYS not specified in config file\n" );
+		DoCleanup();
+		exit( 1 );
 	}
 
 	Spool = param( "SPOOL" );
 	if( Spool == NULL ) {
-		EXCEPT( "SPOOL not specified in config file" );
+		fprintf(stderr,"SPOOL not specified in config file\n" );
+		DoCleanup();
+		exit( 1 );
 	}
 
 	Flavor = param( "FLAVOR" );
@@ -2120,7 +2160,7 @@ log_submit()
 	 UserLog usr_log;
 	 SubmitEvent jobSubmit;
 
-	if (Quiet) fprintf(stdout, "Logging submit event(s)");
+	if (Quiet) fprintf(stdout, "Logging submit event(s)\n");
 
 	strcpy (jobSubmit.submitHost, ScheddAddr);
 
@@ -2142,7 +2182,7 @@ log_submit()
 			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
 				usr_log.initialize(SubmitInfo[i].cluster, j, 0);
 				if (!usr_log.writeEvent (&jobSubmit))
-					fprintf (stderr, "\nERROR: Failed to log submit event.\n");
+					fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 				if (Quiet) fprintf(stdout, ".");
 			}
 		}
@@ -2222,7 +2262,9 @@ InsertJobExpr (char *expr, bool clustercheck)
 			fputc( ' ', stderr );
 		}
 		fprintf (stderr, "^^^\n");
-		EXCEPT ("Error in submit file");
+		fprintf(stderr,"Error in submit file\n");
+		DoCleanup();
+		exit( 1 );
 	}
 
 	if (lhs = tree->LArg()) 
@@ -2230,19 +2272,25 @@ InsertJobExpr (char *expr, bool clustercheck)
 	else
 	{
 		fprintf (stderr, "\nERROR: Expression not assignment: %s\n", expr);
-		EXCEPT ("Error in submit file");
+		fprintf(stderr,"Error in submit file\n");
+		DoCleanup();
+		exit( 1 );
 	}
 	
 	if (!job->InsertOrUpdate (expr))
 	{	
-		EXCEPT ("Unable to insert expression: %s\n", expr);
+		fprintf(stderr,"Unable to insert expression: %s\n", expr);
+		DoCleanup();
+		exit( 1 );
 	}
 
 	if ( clustercheck && ProcId < 1 ) {
 		// We are working on building the ad which will serve as our
 		// cluster ad.  Thus insert this expr into our hashtable.
 		if ( ClusterAdAttrs.insert(hashkey,unused) < 0 ) {
-			EXCEPT("Unable to insert expression into hashtable\n", expr);
+			fprintf(stderr,"Unable to insert expression into hashtable\n", expr);
+			DoCleanup();
+			exit( 1 );
 		}
 	}
 
@@ -2276,4 +2324,120 @@ check_umask()
 		umask( 002 );
 	}
 #endif
+}
+
+void 
+setupAuthentication()
+{
+	char *pbuf;
+
+		//RendezvousDir can be specified in submit-description file.
+	char *Rendezvous = NULL;
+	if ( (Rendezvous = condor_param( RendezvousDir ) ) )
+	{
+		dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n",
+				Rendezvous );
+		sprintf( buffer, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
+			//putenv because Authentication::authenticate() expects them there.
+		putenv( strdup( buffer ) );
+		if ( Rendezvous )
+			free( Rendezvous );
+	}
+
+		//the order of X509_* definitions is: X509Directory in submit file,
+		//then try the ENV, then try the default $HOME/.condorcerts directory.
+	char *CertDir = NULL;
+	int override = 0;
+	if ( CertDir = condor_param( X509Directory ) ) {
+		override = 1;
+	}
+	else {
+		char *home;
+		if ( home = getenv( "HOME" ) ) {
+			sprintf( buffer, "%s/.condorcerts", home );
+			CertDir = strdup( buffer );
+		}
+		else {
+			EXCEPT( "Cannot get environment variable $HOME\n" );
+		}
+	}
+	dprintf( D_FULLDEBUG, "using X509_DIRECTORY=%s\n", CertDir );
+
+		//Make sure these vars are in the environment, the ClassAd, and
+		//the environment list if a Globus Universe Job
+	if ( override || !( pbuf = getenv( "X509_CERT_DIR" ) ) ) {
+		sprintf( buffer, "X509_CERT_DIR=%s/certdir", CertDir );
+		putenv( strdup( buffer ) );
+		strcat( GlobusEnv, buffer );
+		sprintf( buffer, "X509_CERT_DIR = \"%s/certdir\"", CertDir );
+	}
+	else {
+		sprintf( buffer, "X509_CERT_DIR=%s", pbuf );
+		strcat( GlobusEnv, buffer );
+		sprintf( buffer, "X509_CERT_DIR = \"%s\"", pbuf );
+	}
+	strcat( GlobusEnv, env_delimiter );
+	InsertJobExpr( buffer );
+
+
+	if ( override || !( pbuf = getenv( "X509_USER_CERT" ) ) ) {
+		sprintf( buffer, "X509_USER_CERT=%s/usercert.pem", CertDir );
+		putenv( strdup( buffer ) );
+		strcat( GlobusEnv, buffer );
+		sprintf( buffer, "X509_USER_CERT = \"%s/usercert.pem\"", CertDir );
+	}
+	else {
+		sprintf( buffer, "X509_USER_CERT=%s", pbuf );
+		strcat( GlobusEnv, buffer );
+		sprintf( buffer, "X509_USER_CERT = \"%s\"", pbuf );
+	}
+	strcat( GlobusEnv, env_delimiter );
+	InsertJobExpr( buffer );
+
+
+	if ( override || !( pbuf = getenv( "X509_USER_KEY" ) ) ) {
+		sprintf( buffer, "X509_USER_KEY=%s/userkey.pem", CertDir );
+		putenv( strdup( buffer ) );
+		strcat( GlobusEnv, buffer );
+		sprintf( buffer, "X509_USER_KEY = \"%s/userkey.pem\"", CertDir );
+	}
+	else {
+		sprintf( buffer, "X509_USER_KEY=%s", pbuf );
+		strcat( GlobusEnv, buffer );
+		sprintf( buffer, "X509_USER_KEY = \"%s\"", pbuf );
+	}
+	strcat( GlobusEnv, env_delimiter );
+	InsertJobExpr( buffer );
+
+
+	free( CertDir );
+	CertDir = NULL;
+
+		//User proxy should be separate, because it usually lives in a 
+		//different directory, /tmp, which is often in a different filesystem 
+		//than the other X509 files, and is often not specified even when
+		//the other X509 values are.
+	if ( CertDir = condor_param( X509UserProxy ) ) {
+		override = 1;
+	}
+	else {
+		char *tmpDir;
+		if ( tmpDir  = getenv( "X509_USER_PROXY" ) ) {
+			CertDir = strdup( tmpDir );
+		}
+		override = 0;
+	}
+
+	if ( CertDir ) {
+		sprintf( buffer, "X509_USER_PROXY=%s", CertDir );
+		strcat( GlobusEnv, buffer );
+		strcat( GlobusEnv, env_delimiter );
+		sprintf( buffer, "X509_USER_PROXY = \"%s\"", CertDir );
+		InsertJobExpr( buffer );
+
+		if ( override ) {
+			putenv( strdup( buffer ) );
+		}
+		free( CertDir );
+	}
 }
