@@ -203,7 +203,7 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::ABSOLUTE_TIME_VALUE: {
-			struct  tm *tms;
+			struct  tm tms;
 			time_t t;
 			char    TimeBuf[32], sign;
 			abstime_t	asecs;
@@ -212,15 +212,15 @@ Unparse( string &buffer, const Value &val )
 
 			buffer += "absTime(\"";
 			tzsecs = asecs.offset;  
-			t = asecs.secs + timezone_offset() + tzsecs;
+			t = asecs.secs;
 			if (tzsecs > 0) { 
 				sign = '+';         // timezone offset's sign
 			} else {
 				sign = '-';
 				tzsecs = -tzsecs;
 			}
-			tms = localtime(&t);
-			strftime(TimeBuf, sizeof(TimeBuf), "%Y-%m-%dT%H:%M:%S", tms);
+			getGMTime(&t, &tms);
+			strftime(TimeBuf, sizeof(TimeBuf), "%Y-%m-%dT%H:%M:%S", &tms);
 			buffer += TimeBuf;
 			sprintf(TimeBuf, "%c%02d%02d", sign, tzsecs / 3600, (tzsecs / 60) % 60);
 			buffer += TimeBuf;

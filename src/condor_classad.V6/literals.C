@@ -29,6 +29,8 @@ using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
+static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
+
 Literal::
 Literal ()
 {
@@ -110,8 +112,7 @@ MakeAbsTime( abstime_t *tim )
 		abst.offset = -timezone_offset();
 		if (tt->tm_isdst > 0) { // add an hour to the offset, if day-light saving is set
 			abst.offset += 3600;
-	  }	  
-		abst.secs -= abst.offset + timezone_offset();
+        }	  
 	}
 	else { //make a literal out of the passed value
 		abst = *tim;
@@ -213,9 +214,9 @@ findOffset(time_t epochsecs)
 
 /* Creates an absolute time literal, from the string timestr, 
  *parsing it as the regular expression:
- D* dddd [D* dd [D* dd [D* dd [D* dd [D* dd D*]]]]] [-dddd | +dddd | z | Z]
+ D* dddd [D* dd [D* dd [D* dd [D* dd [D* dd D*]]]]] [-dd:dd | +dd:dd | z | Z]
  D => non-digit, d=> digit
- Ex - 2003-01-25T09:00:00-0600
+ Ex - 2003-01-25T09:00:00-06:00
 */
 Literal* Literal::
 MakeAbsTime(string timeStr )
@@ -224,15 +225,10 @@ MakeAbsTime(string timeStr )
 	Value val;
 	bool offset = false; // to check if the argument conatins a timezone offset parameter
 	
-	tm abstm;
-	abstm.tm_year =0;
-	abstm.tm_mon = 0;
-	abstm.tm_mday = 0;
-	abstm.tm_hour = 0;
-	abstm.tm_min =0;
-	abstm.tm_sec = 0;
-	int tzhr = 0; // corresponds to 1st "dd" in -|+dddd
-	int tzmin = 0; // corresponds to 2nd "dd" in -|+dddd
+	struct tm abstm;
+    memset(&abstm, 0, sizeof(abstm));
+	int tzhr = 0; // corresponds to 1st "dd" in -|+dd:dd
+	int tzmin = 0; // corresponds to 2nd "dd" in -|+dd:dd
 	
 	int len = timeStr.length();
 	int i=len-1; 
@@ -242,23 +238,13 @@ MakeAbsTime(string timeStr )
 		timeStr.erase(i,1); // remove the offset section from the string
 		tzhr = 0;
 		tzmin = 0;
-	}
-	else if((i-4)>0) { // check the offset in the form of -|+dddd
-		string offStr = timeStr.substr(i-4,5);
-		if(((offStr[0] == '+') || (offStr[0] == '-')) && 
-		   (isdigit(offStr[1]))&& (isdigit(offStr[2]))&& (isdigit(offStr[3]))&& (isdigit(offStr[4]))) {
-			offset = true;
-			timeStr.erase(i-4,5);
-			if(offStr[0] == '+') {
-				tzhr = atoi(offStr.substr(1,2).c_str());
-				tzmin = atoi(offStr.substr(3,2).c_str());
-			}
-			else {
-				tzhr = -atoi(offStr.substr(1,2).c_str());
-				tzmin = -atoi(offStr.substr(3,2).c_str());
-			}
-		}
-	}
+    } else if (timeStr[len-5] == '+' || timeStr[len-5] == '-') {
+        offset = extractTimeZone(timeStr, tzhr, tzmin);
+    } else if ((timeStr[len-6] == '+' || timeStr[len-6] == '-') && timeStr[len-3] == ':') {
+        timeStr.erase(len-3, 1);
+        offset = extractTimeZone(timeStr, tzhr, tzmin);
+    }
+
 	i=0;
 	len = timeStr.length();
 	
@@ -307,25 +293,26 @@ MakeAbsTime(string timeStr )
 		return(MakeLiteral( val ));
 	}      
 	
-	abstm.tm_min -= tzmin;
-	abstm.tm_hour -= tzhr;
-	
 	abst.secs = mktime(&abstm);
 	
 	if(abst.secs == -1)  { // the time should be one, which can be supported by the time_t type
 		val.SetErrorValue( );
 		return(MakeLiteral( val ));
 	}      
+
+    // mktime() creates the time assuming we specified something in
+    // local time.  We want the time as if we were in Greenwich (we'll
+    // call gmTime later to extract it, not localtime()), so we adjust
+    // by our timezone.
+    abst.secs -= timezone_offset();
 	
 	if(offset) {
 		abst.offset = (tzhr*3600) + (tzmin*60);
 	}
 	else { // if offset is not specified, the offset of the current locality is taken
 		abst.offset = findOffset(abst.secs);
-		abst.secs -= abst.offset;
+		//abst.secs -= abst.offset;
 	}
-	
-	abst.secs -= timezone_offset();
 	
 	if(abst.offset == -1) { // corresponds to illegal offset
 		val.SetErrorValue( );
@@ -544,6 +531,29 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int*) const
 {
 	tree = NULL;
 	return( _Evaluate( state, val ) );
+}
+
+static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin) 
+{
+	int    len    = timeStr.length();
+	int    i      = len-1; 
+    bool   offset = false;
+    string offStr = timeStr.substr(i-4,5);
+
+    if (((offStr[0] == '+') || (offStr[0] == '-')) && 
+        (isdigit(offStr[1])) && (isdigit(offStr[2])) && (isdigit(offStr[3])) && (isdigit(offStr[4]))) {
+        offset = true;
+        timeStr.erase(i-4,5);
+        if (offStr[0] == '+') {
+            tzhr = atoi(offStr.substr(1,2).c_str());
+            tzmin = atoi(offStr.substr(3,2).c_str());
+        }
+        else {
+            tzhr = -atoi(offStr.substr(1,2).c_str());
+            tzmin = -atoi(offStr.substr(3,2).c_str());
+        }
+    }
+    return offset;
 }
 
 END_NAMESPACE // classad
