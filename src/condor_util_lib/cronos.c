@@ -100,7 +100,7 @@ typedef struct {
 
 static EVENT	Schedule[128];
 static int	N_Events = 0;
-static int	Initialized = FALSE;
+static int	did_startup = 0;
 static int	prev[N_ELEM];
 static int	now[N_ELEM];
 
@@ -137,9 +137,9 @@ schedule_event( int month, int day, int hour, int minute, int second,
 event_mgr()
 {
 
-	if( !Initialized ) {
+	if( !did_startup ) {
 		get_moment( prev );
-		Initialized = TRUE;
+		did_startup = 1;
 		return;
 	}
 	get_moment( now );
