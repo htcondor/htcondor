@@ -15,3 +15,15 @@
 #   define PublicTargetName	alpha_linux2
 #endif
 
+/* For now, try a "clipped" version */
+#undef DOES_CHECKPOINTING
+#define DOES_CHECKPOINTING NO
+
+#undef DOES_COMPRESS_CKPT
+#define DOES_COMPRESS_CKPT NO
+
+#undef DOES_REMOTE_SYSCALLS
+#define DOES_REMOTE_SYSCALLS NO
+
+#undef HAS_PVM
+#define HAS_PVM NO
