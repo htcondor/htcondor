@@ -5249,17 +5249,20 @@ Scheduler::clean_shadow_recs()
 	dprintf( D_FULLDEBUG, "============ End clean_shadow_recs =============\n" );
 }
 
+
 void
-Scheduler::preempt(int n)
+Scheduler::preempt( int n, bool force_sched_jobs )
 {
 	shadow_rec *rec;
-	bool preempt_all;
+	bool preempt_sched = force_sched_jobs;
 
-	dprintf( D_ALWAYS, "Called preempt( %d )\n", n );
-	if (n >= numShadows-SchedUniverseJobsRunning) {	// preempt all
-		preempt_all = true;
-	} else {
-		preempt_all = false;
+	dprintf( D_ALWAYS, "Called preempt( %d )%s\n", n, 
+			 force_sched_jobs ? " forcing scheduler univ preemptions" : "" );
+
+	if( n >= numShadows-SchedUniverseJobsRunning ) {
+			// we only want to start preempting scheduler universe
+			// jobs once all the shadows have been preempted...
+		preempt_sched = true;
 	}
 	shadowsByPid->startIterations();
 
@@ -5297,7 +5300,7 @@ Scheduler::preempt(int n)
 				rec->preempted = TRUE;
 				n--;
 			} 
-			else if (preempt_all) {
+			else if (preempt_sched) {
 				if ( !rec->preempted ) {
 					// This is the scheduler universe job case.  We get here
 					// because scheduler universe jobs don't have associated
@@ -5325,9 +5328,24 @@ Scheduler::preempt(int n)
 				rec->preempted = TRUE;
 				n--;
 			}
-		}
+		} 
+	}
+		/*
+		  we've now broken out of our loop.  if n is still >0, it
+		  means we wanted to preempt more than we were able to do.
+		  this could be because of a mis-match regarding scheduler
+		  universe jobs (namely, all we have left are scheduler jobs,
+		  but we have a bogus value for SchedUniverseJobsRunning and
+		  don't think we want to preempt any of those).  so, if we
+		  weren't trying to preempt scheduler but we still have n to
+		  preempt, try again and force scheduler preemptions.
+		  derek <wright@cs.wisc.edu> 2005-04-01
+		*/ 
+	if( n > 0 && preempt_sched == false ) {
+		preempt( n, true );
 	}
 }
+
 
 void
 send_vacate(match_rec* match,int cmd)

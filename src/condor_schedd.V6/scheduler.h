@@ -380,7 +380,7 @@ private:
 	int				insert_owner(char*, char*);
 	void			child_exit(int, int);
 	void			clean_shadow_recs();
-	void			preempt(int);
+	void			preempt( int n, bool force_sched_jobs = false );
 	void			preempt_one_job();
 	static void		refuse( Stream* s );
 	void			tryNextJob( void );
