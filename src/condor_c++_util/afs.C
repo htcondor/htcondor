@@ -123,6 +123,20 @@ AFS_Info::which_cell( const char *path )
 	fs = new SubProc( fs_pathname, args, "r" );
 	answer = fs->parse_output("in cell", "'", "'" );
 	delete fs;
+
+	// file might not be created yet; if answer is NULL, try to find
+	// directory on AFS
+	if (answer == NULL) {
+		int i;
+		for (i = strlen(args); i >= 0 && args[i] != '/'; i--);
+		if (i >= 0) {
+			args[i] = '\0';
+			fs = new SubProc( fs_pathname, args, "r" );
+			answer = fs->parse_output("in cell", "'", "'" );
+			delete fs;
+		}
+	}
+
 	return answer;
 }
 
@@ -146,6 +160,20 @@ AFS_Info::which_vol( const char *path )
 	fs = new SubProc( fs_pathname, args, "r" );
 	answer = fs->parse_output( "Volume status", "named ", "\n" );
 	delete fs;
+
+	// file might not be created yet; if answer is NULL, try to find
+	// directory on AFS
+	if (answer == NULL) {
+		int i;
+		for (i = strlen(args); i >= 0 && args[i] != '/'; i--);
+		if (i >= 0) {
+			args[i] = '\0';
+			fs = new SubProc( fs_pathname, args, "r" );
+			answer = fs->parse_output("in cell", "'", "'" );
+			delete fs;
+		}
+	}
+
 	return answer;
 }
 
