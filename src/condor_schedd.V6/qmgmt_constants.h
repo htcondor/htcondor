@@ -42,3 +42,4 @@
 #define CONDOR_GetNextJobByConstraint	10020
 #define	CONDOR_SetAttributeByConstraint	10021		/* Todd */
 #define	CONDOR_InitializeReadOnlyConnection 10022	/* Todd */
+#define CONDOR_BeginTransaction		10023			/* Todd */
