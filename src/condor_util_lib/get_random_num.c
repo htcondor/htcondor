@@ -21,13 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#include <time.h>
-#if !defined(WIN32)
-#include <values.h>
-#endif
-#include <stdlib.h>
+#include "condor_common.h" 
 
 /* srand48, lrand48, and drand48 seem to be available on all Condor
    platforms except WIN32.  -Jim B. */
