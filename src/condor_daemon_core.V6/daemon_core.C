@@ -245,6 +245,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	}
 
 	Default_Priv_State = PRIV_CONDOR;
+	
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -1667,6 +1668,7 @@ void DaemonCore::Driver()
 	struct timeval *ptimer;
 	int temp;
 	int result;
+
 #ifndef WIN32
 	sigset_t fullset, emptyset;
 	sigfillset( &fullset );
@@ -1729,17 +1731,21 @@ void DaemonCore::Driver()
 		//   TRUE, set the select timeout to zero so that we break thru select
 		//   and service this outstanding signal and yet we do not 
 		//   starve commands...
+	
+
 		temp = t.Timeout();
-		if ( sent_signal == TRUE )
+	
+		if ( sent_signal == TRUE ) {
 			temp = 0;
+		}
 		timer.tv_sec = temp;
 		timer.tv_usec = 0;
-		if ( temp < 0 )
+		if ( temp < 0 ) {
 			ptimer = NULL;
-		else
+		} else {
 			ptimer = &timer;		// no timeout on the select() desired
+		}
 		
-
 		// Setup what socket descriptors to select on.  We recompute this
 		// every time because 1) some timeout handler may have removed/added
 		// sockets, and 2) it ain't that expensive....
@@ -1862,7 +1868,7 @@ void DaemonCore::Driver()
 					// figure out if we should call a handler.
 					(*pipeTable)[i].call_handler = false;	
 #ifdef WIN32
-					// For Unix, check if our pidwatcher thread set the flag
+					// For Windows, check if our pidwatcher thread set the flag
 					ASSERT( (*pipeTable)[i].pentry );
 					if (InterlockedExchange(&((*pipeTable)[i].pentry->pipeReady),0L))
 					{
@@ -3262,7 +3268,9 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 					   sure select() wakes up, etc, etc.
 					   -Derek Wright <wright@cs.wisc.edu> 5/17/02 
 					*/
-				return Shutdown_Graceful(pid);
+				if ( target_has_dcpm == FALSE ) { // I think Derek forgot this
+					return Shutdown_Graceful(pid); // -stolley 6/18/2002
+				}
 			}
 			break;
 		case SIGKILL:
@@ -3340,7 +3348,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	}
 
 	// handle case of sending to a child process; get info on this pid
-	if ( pid != mypid ) {		
+	if ( pid != mypid ) {
 		if ( target_has_dcpm == FALSE || pidinfo == NULL) {
 			// this child process does not have a command socket
 			dprintf(D_ALWAYS,
