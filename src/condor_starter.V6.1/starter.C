@@ -217,8 +217,16 @@ CStarter::StartJob()
 		// Now that we have the right user for priv_state code, we can
 		// finally make the scratch execute directory for this job.
 
-		// Be sure we're in user priv for this
+		// On Unix, be sure we're in user priv for this.
+		// But on NT (at least for now), we should be in Condor priv
+		// because the execute directory on NT is not wworld writable.
+#ifndef WIN32
+		// UNIX
 	priv_state priv = set_user_priv();
+#else
+		// WIN32
+	priv_state priv = set_condor_priv();
+#endif
 
 	sprintf( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 			 daemonCore->getpid() );
