@@ -1770,9 +1770,9 @@ sub prompt_fullhost {
 	chop($fh = <STDIN>);    
 	print "\nYou entered: $fh\n";
 	if( $fh =~ /.?\..?/ ) {
-	    print "Is that right? [no]";
+	    print "Is that right? [no] ";
 	    chop($_ = <STDIN>);    
-	    if( /^y$/i ) {
+	    if( /((^y$)|(^yes$))/i ) {
 		return $fh;
 	    }
 	} else {
