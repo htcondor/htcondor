@@ -189,6 +189,8 @@ class GlobusJob : public BaseJob
 private:
 	// Copy constructor not implemented.  Don't call.
 	GlobusJob( GlobusJob& copy );
+
+	bool mergedGridShellOutClassad;
 };
 
 bool WriteGlobusSubmitEventToUserLog( ClassAd *job_ad );

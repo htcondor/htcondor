@@ -667,6 +667,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	communicationTimeoutTid = -1;
 
 	useGridShell = false;
+	mergedGridShellOutClassad = false;
 
 	{
 		int use_gridshell;
@@ -1574,11 +1575,13 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
 
-			if(useGridShell) {
+			if(useGridShell && !mergedGridShellOutClassad) {
 				if( ! merge_file_into_classad(outputClassadFilename.GetCStr(), ad) ) {
 					/* TODO: put job on hold or otherwise don't let it
 					   quietly pass into the great beyond? */
 					dprintf(D_ALWAYS,"(%d.%d) Failed to add job result attributes to job's classad.  Job's history will lack run information.\n",procID.cluster,procID.proc);
+				} else {
+					mergedGridShellOutClassad = true;
 				}
 			}
 
