@@ -22,6 +22,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item A Condor pool can now support multiple Collectors. This should
+  improve stability due to automatic failover. All daemons will now
+  send updates to ALL of the specified collectors. All daemons/tools
+  will query the Collectors in sequence, until an appropriate 
+  response is received. Thus if one (or more) of the Collectors are 
+  down, the pool will continue to function normally, as long as 
+  there is at least one functioning Collector. 
+  You can specify multiple (comma-separated) collector host (and port) 
+  addresses in the \Expr{COLLECTOR\_HOST} entry in the configuration
+  file. A given \Condor{master} can only run one Collector.
+
 \item When the \Condor{master} is started with the \Opt{-r} option to
   indicate that it should quite after a period of time, the
   \Condor{startd} will now indicate how much time is remaining before it
