@@ -55,6 +55,8 @@ StrVector::StrVector( int max )
 	cur_size = 0;
 }
 
+
+void
 StrVector::Init( int max )
 {
 	max_size = max;
@@ -62,6 +64,7 @@ StrVector::Init( int max )
 	assert( data );
 	cur_size = 0;
 }
+
 
 void
 StrVector::Add( const char *str )
