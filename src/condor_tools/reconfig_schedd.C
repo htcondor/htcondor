@@ -39,6 +39,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_io.h"
+#include "my_hostname.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -58,8 +59,7 @@ int main( int argc, char *argv[] )
 	config( 0 );
 
 	if( argc < 2 ) {
-		gethostname( hostname, sizeof hostname );
-		reconfig( hostname );
+		reconfig( my_full_hostname() );
 		exit( 0 );
 	}
 
