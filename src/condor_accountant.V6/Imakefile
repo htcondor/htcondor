@@ -24,7 +24,8 @@ library_target(libacct.a, $(OBJ))
 
 c_plus_target(condor_accountant,accountant_main.o $(OBJ),$(LIB))
 pure_c_plus_target(condor_accountant.pure,$(OBJ),$(LIB))
-release_target(condor_accountant,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, stub_gen)
+
+release:
