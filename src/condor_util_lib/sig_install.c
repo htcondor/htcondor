@@ -27,13 +27,14 @@
 */ 
 
 #define _POSIX_SOURCE
-#include <signal.h>
+#include "sig_install.h"
 #include "condor_debug.h"
 
 static char *_FileName_ = __FILE__;
 
-
-typedef void (*SIG_HANDLER)();
+#ifdef __cplusplus 
+extern "C" {
+#endif
 
 void
 install_sig_handler( int sig, SIG_HANDLER handler )
@@ -88,3 +89,7 @@ block_signal( int sig)
         EXCEPT("block_signal:Error in setting procmask, errno = %d\n", errno);
     }
 }	
+
+#ifdef __cplusplus 
+}
+#endif
