@@ -25,7 +25,7 @@
 
 #include <vector>
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 class ExprListIterator;
 

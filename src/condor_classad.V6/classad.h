@@ -28,7 +28,7 @@
 #include <vector>
 #include "exprTree.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 #if defined( EXPERIMENTAL )
 	typedef std::set<std::string, CaseIgnLTStr> References;

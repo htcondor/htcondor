@@ -24,6 +24,9 @@
 #include <iostream>
 
 using namespace std;
+#ifdef WANT_NAMESPACES
+using namespace classad;
+#endif
 
 string job_classad_text = 
 "["

@@ -33,7 +33,7 @@ using namespace __gnu_cxx;
 #include "value.h"
 
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 // forward declarations
 class ExprTree;

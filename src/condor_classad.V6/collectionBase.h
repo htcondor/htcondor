@@ -33,7 +33,7 @@
 //#endif
 #define MaxCacheSize 5
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 class ServerTransaction;
 

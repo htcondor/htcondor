@@ -25,7 +25,7 @@
 
 #include "common.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 #define EXCEPT \
     _except_line_number = __LINE__, \

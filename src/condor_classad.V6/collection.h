@@ -27,7 +27,7 @@
 #include "source.h"
 #include "sink.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 
 class ClassAdCollectionInterface {

@@ -25,7 +25,7 @@
 
 #include "common.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 class Literal;
 class ExprList;

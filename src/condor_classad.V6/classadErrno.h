@@ -25,7 +25,7 @@
 
 #include "common.h"
 
-BEGIN_NAMESPACE(classad);
+BEGIN_NAMESPACE(classad)
 
 // bring in Condor system errors used if not in Condor
 #if defined(CLASSAD_DISTRIBUTION)

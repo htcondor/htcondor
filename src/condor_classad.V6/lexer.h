@@ -26,7 +26,7 @@
 #include "common.h"
 #include "value.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 
 // the lexical analyzer class

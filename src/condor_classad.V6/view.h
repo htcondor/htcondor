@@ -37,7 +37,7 @@ using namespace __gnu_cxx;
 #include "exprTree.h"
 #include "matchClassad.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 	// class declarations
 class ExprTree;

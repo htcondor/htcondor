@@ -26,6 +26,9 @@
 #include <ctype.h>
 
 using namespace std;
+#ifdef WANT_NAMESPACES
+using namespace classad;
+#endif
 
 /*--------------------------------------------------------------------
  *

@@ -23,7 +23,7 @@
 #ifndef __ATTRREFS_H__
 #define __ATTRREFS_H__
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 /** Represents a attribute reference node in the expression tree
 */

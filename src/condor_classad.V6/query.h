@@ -27,7 +27,7 @@
 #include <list>
 #include <string>
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 class ClassAdCollection;
 class ExprTree;

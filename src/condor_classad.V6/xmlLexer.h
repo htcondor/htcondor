@@ -26,7 +26,7 @@
 #include "common.h"
 #include <map>
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 typedef std::map<std::string, std::string> XMLAttributes;
 typedef std::map<std::string, std::string>::iterator XMLAttributesIterator;

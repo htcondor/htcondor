@@ -27,6 +27,7 @@
 #include <regex.h>
 
 using namespace std;
+extern long timezone;
 
 BEGIN_NAMESPACE( classad )
 
@@ -945,8 +946,6 @@ bool FunctionCall::
 timeZoneOffset (const char *, const ArgumentList &argList, EvalState &, 
 	Value &val)
 {
-	extern long timezone;
-
 		// no arguments
 	if( argList.size( ) > 0 ) {
 		val.SetErrorValue( );

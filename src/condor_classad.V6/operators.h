@@ -25,7 +25,7 @@
 
 #include "exprTree.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 /** Represents a node of the expression tree which is an operation applied to
 	expression operands

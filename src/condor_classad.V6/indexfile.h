@@ -31,7 +31,7 @@
 #endif
 #include <sys/types.h>
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 typedef struct{
 	int offset;

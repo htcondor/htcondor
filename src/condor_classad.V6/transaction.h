@@ -34,7 +34,7 @@
 #include "sink.h"
 #include "view.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 class ClassAd;
 class ClassAdCollection;

@@ -29,7 +29,7 @@
 #include <utility>	// for pair template
 #include <string>
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 /// The unparser object
 class ClassAdXMLUnParser

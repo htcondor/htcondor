@@ -27,6 +27,9 @@
 #include "xmlLexer.h"
 
 using namespace std;
+extern  time_t timezone;
+
+BEGIN_NAMESPACE( classad )
 
 static void add_tag(
     string &buffer, 
@@ -35,7 +38,6 @@ static void add_tag(
 	const char *attribute_name = NULL,
 	const char *attribute_value = NULL);
 
-BEGIN_NAMESPACE( classad )
 
 ClassAdXMLUnParser::
 ClassAdXMLUnParser()
@@ -201,7 +203,6 @@ Unparse(
 		case Value::ABSOLUTE_TIME_VALUE: {
 			struct  tm tms;
 			char    ascTimeBuf[32], timeZoneBuf[32];
-			extern  time_t timezone;
 			time_t	asecs;
 			val.IsAbsoluteTimeValue( asecs );
 
@@ -364,4 +365,4 @@ static void add_tag(
 	buffer += '>';
 }
 
-END_NAMESPACE // classad
+END_NAMESPACE

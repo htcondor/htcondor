@@ -26,6 +26,8 @@
 
 using namespace std;
 
+BEGIN_NAMESPACE( classad )
+
 static bool string_is_empty(const string &text);
  
 const char *const ClassAdCollectionInterface::CollOpStrings[] = {
@@ -502,3 +504,5 @@ static bool string_is_empty(const string &text)
 	}
 	return is_empty;
 }
+
+END_NAMESPACE

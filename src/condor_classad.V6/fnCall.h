@@ -27,7 +27,7 @@
 #include <vector>
 #include "classad.h"
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 typedef std::vector<ExprTree*> ArgumentList;
 

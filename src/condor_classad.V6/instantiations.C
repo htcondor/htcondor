@@ -59,9 +59,11 @@ template map<string, ClassAd *>;
 template map<string, ClassAdCollection *>;
 
 #ifdef CLASSAD_DISTRIBUTION
+END_NAMESPACE
 template vector<string>;
 #include "transaction.h"
 #include "view.h"
+BEGIN_NAMESPACE(classad)
 
 // view content
 template multiset<ViewMember, ViewMemberLT>;
@@ -96,10 +98,6 @@ template hash_map<string, ServerTransaction*, StringHash>::iterator;
 // operations in transaction
 template list<XactionRecord>;
 
-#if (__GNUC__>=3)
-template string std::operator+<char, std::char_traits<char>, std::allocator<char> >(const string&, const string&);
-#endif
-
 #endif
 
 class _ClassAdInit 
@@ -109,3 +107,7 @@ class _ClassAdInit
 } __ClassAdInit;
 
 END_NAMESPACE
+
+#if (__GNUC__>=3)
+template string std::operator+<char, std::char_traits<char>, std::allocator<char> >(const string&, const string&);
+#endif

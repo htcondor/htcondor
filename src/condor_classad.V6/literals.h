@@ -23,7 +23,7 @@
 #ifndef __LITERALS_H__
 #define __LITERALS_H__
 
-BEGIN_NAMESPACE( classad );
+BEGIN_NAMESPACE( classad )
 
 /** Represents the literals of the ClassAd language, such as integers,
 		reals, booleans, strings, undefined and real.

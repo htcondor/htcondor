@@ -25,6 +25,7 @@
 #include "lexer.h"
 
 using namespace std;
+extern	time_t timezone;
 
 BEGIN_NAMESPACE( classad )
 
@@ -473,7 +474,6 @@ tokenizeAbsoluteTime( const char *buf, time_t &asecs )
 	time_t	secs;
 	time_t	absTime=0;
 	char	*tzStr, *tzOff=NULL;
-	extern	time_t timezone;
 
 		// format of abstime:  `Wed Nov 11 13:11:47 1998 (CST) +6:00`
 		// get the position of the timezone string and timezone offSet

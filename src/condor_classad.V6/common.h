@@ -71,7 +71,12 @@ using namespace std;
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "classad_features.h"
+#endif /* CLASSAD_DISTRIBUTION */
+
+#ifdef __cplusplus
+#include <string>
 #endif
+
 
 BEGIN_NAMESPACE( classad )
 
@@ -105,7 +110,6 @@ static const char ATTR_RANK					[]	= "Rank";
 #endif
 
 #if defined(__cplusplus)
-#include <string>
 struct CaseIgnLTStr {
     bool operator( )( const std::string &s1, const std::string &s2 ) const {
        return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
@@ -144,20 +148,15 @@ struct StringCaseIgnHash {
 		return( h );
 	}
 };
+extern std::string       CondorErrMsg;
 #endif
 
+extern int 		CondorErrno;
+static const std::string NULL_XACTION = "";
 
 END_NAMESPACE // classad
 
 char* strnewp( const char* );
-
-extern int 		CondorErrno;
-
-#ifdef __cplusplus
-#include <string>
-extern std::string       CondorErrMsg;
-static const std::string NULL_XACTION = "";
-#endif
 
 #if defined(CLASSAD_DISTRIBUTION)
 #include "classadErrno.h"
