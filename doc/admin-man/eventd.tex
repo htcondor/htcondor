@@ -1,0 +1,127 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:EventD}
+Condor Event Daemon}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Event Daemon is an administrative tool for scheduling events in a
+Condor pool.
+Every \Macro{EVENTD\_INTERVAL}, for each defined event, the event
+daemon computes an estimate of the time required to complete or
+prepare for the event.  If the time required is less than the time
+between the next interval and the start of the event, the event daemon
+activates the event.
+
+Currently, this daemon supports SHUTDOWN events, which place machines
+in the ``Owner'' state during scheduled times.
+The daemon vacates jobs one at a time in anticipation of SHUTDOWN
+events.
+To determine the estimate of the time required to complete a SHUTDOWN
+event, the ImageSize values for all running standard universe jobs are
+totalled and then divided by the maximum bandwidth specified for this
+event.
+When a SHUTDOWN event is activated, the eventd contacts all startds
+which match the given constraint and places them in ``shutdown'' mode.
+All startds which are not running jobs will immediately transition to
+the ``Owner'' state.
+The eventd then sends a ``vacate'' command to the each startd in
+the list which is currently running a job.
+Once the job is vacated, the startd will immediately transition to the
+``Owner'' state.
+
+The \Condor{eventd} must run on a machine with ``administrator''
+access to your pool.
+See section~\ref{sec:Host-Security} on
+page~\pageref{sec:Host-Security} for full details about IP/host-based
+security in Condor.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:EventD-Installation}
+Installing the Event Daemon} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \Condor{eventd} requires version 6.1.3 or later of the
+\Condor{startd}.
+So, you should first install either the latest version of the SMP
+\Condor{startd} contrib module or the latest release of Condor version
+6.1.
+
+Then, download the \Condor{eventd} contrib module.
+When you uncompress and untar the file, you'll have a directory that
+contains a \File{eventd.tar}.
+The \File{eventd.tar} acts much like the \File{release.tar} file from
+a main release.
+This archive contains these files:
+\begin{verbatim}
+	sbin/condor_eventd
+	etc/examples/condor_config.local.eventd
+\end{verbatim}
+These are all new files, not found in the main release, so you can
+safely untar the archive directly into your existing release
+directory.
+\File{\condor{eventd}} is the eventd binary.
+The example config file is described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:EventD-Configuration}
+Configuring the Event Daemon} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The file \File{etc/examples/condor\_config.local.eventd} contains an
+example \Condor{eventd} configuration.
+To define events, you must first set the \Macro{EVENT\_LIST} macro.
+This macro contains a list of macro names which define the individual
+events.
+The definition of individual events depends on the type of the event.
+Currently, there is only one event type: SHUTDOWN.
+The format for SHUTDOWN events is:
+\begin{verbatim}
+	SHUTDOWN DAY TIME DURATION BANDWIDTH CONSTRAINT RANK
+\end{verbatim}
+TIME and DURATION are specified in an hours:minutes format.
+For example:
+\begin{verbatim}
+EVENT_LIST	= TestEvent, TestEvent2
+TestEvent	= SHUTDOWN W 16:00 1:00 2.5 TestEventConstraint TestEventRank
+TestEvent2	= SHUTDOWN F 14:00 0:30 6.0 TestEventConstraint2 TestEventRank
+TestEventConstraint		= (Arch == "INTEL")
+TestEventConstraint2		= (True)
+TestEventRank			= (0 - ImageSize)
+\end{verbatim}
+In this example, the ``TestEvent'' is a SHUTDOWN type event, which
+specifies that all machines whose startd ads match the constraint
+(Arch == ``INTEL'') should be shutdown for one hour starting at
+16:00 every Wednesday, and no more than 2.5 Mb/s of bandwidth
+should be used to vacate jobs in anticipation of the shutdown
+event.  According to the TestEventRank, jobs will be vacated in
+reverse order of their ImageSize (larger jobs first, smaller jobs
+last).  ``TestEvent2'' is a SHUTDOWN type event, which specifies
+that all machines should be shutdown for 30 minutes starting at
+14:00 every Friday, and no more than 6.0 Mb/s of bandwidth should
+be used to vacate jobs in anticipation of the shutdown event.
+
+Note that the \Macro{DAEMON\_LIST} macro (Described in
+section~\ref{sec:Master-Config-File-Entries}) is defined in the
+section of settings you may want to customize.
+If you want the event daemon managed by the \Condor{master}, the
+\Macro{DAEMON\_LIST} entry must contain both MASTER and EVENTD.
+You should verify that this macro is set to run the correct daemons on
+this machine.  By default, the list also includes SCHEDD and STARTD.
+
+See section~\ref{sec:Eventd-Config-File-Entries} on
+page~\pageref{sec:Eventd-Config-File-Entries} for a description of
+optional event daemon parameters.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Spawn-EventD} 
+Spawning the Event Daemon} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To spawn a event daemon once it is configured to run on a given
+machine, all you have to do is restart Condor on that host to enable
+the \Condor{master} to notice the new configuration.
+You can do this by sending a \Condor{restart} command from any machine
+with ``administrator'' access to your pool.
+See section~\ref{sec:Host-Security} on
+page~\pageref{sec:Host-Security} for full details about IP/host-based
+security in Condor.
+
