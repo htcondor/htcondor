@@ -583,7 +583,12 @@ req_ckpt_exit_all()
 			if( proc->is_running() || proc->is_suspended() ) {
 				dprintf( D_ALWAYS, "Requesting Exit on proc #%d\n",
 						proc->get_id());
-				proc->request_ckpt();
+				if( proc->get_class() == VANILLA ) {
+					proc->kill_forcibly();
+				} else {
+					proc->request_ckpt();
+				}
+
 			}
 		}
 	}
