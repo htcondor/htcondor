@@ -908,6 +908,7 @@ int main( int argc, char** argv )
 
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
 
+#ifndef WIN32
 		// Want to do this dprintf() here, since we can't do it w/n 
 		// the priv code itself or we get major problems. 
 		// -Derek Wright 12/21/98 
@@ -916,6 +917,8 @@ int main( int argc, char** argv )
 	} else {
 		dprintf(D_PRIV, "** Running as root: Privilege switching in effect\n");
 	}
+#endif
+
 	dprintf(D_ALWAYS,"******************************************************\n");
 
 #ifdef WIN32
@@ -1027,7 +1030,7 @@ int main( int argc, char** argv )
 		// first command socket registered is TCP, so we must
 		// register the rsock socket first.
 		daemonCore->Register_Command_Socket( (Stream*)rsock );
-		daemonCore->Register_Command_Socket( (Stream*)ssock );		
+		daemonCore->Register_Command_Socket( (Stream*)ssock );
 
 		dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
 				 daemonCore->InfoCommandSinfulString());
