@@ -5,12 +5,8 @@ all_target($(NAME))
 CKPT_FLAG = -DNO_CKPT
 #endif
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -fno-implicit-templates
-#if (IS_LINUX)
-LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
-#else
-LDFLAGS = KernLib SocketLib RpcLib MldLib 
-#endif
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG)
+
 REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/senders.o \
 	../condor_syscall_lib/syscall_mode.o \
