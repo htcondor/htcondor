@@ -53,7 +53,23 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 int		ConfigLineNo;
 
+#if defined(LINUX)
+int
+condor_isalnum(int c)
+{
+	if( ('a' <= c && c <= 'z') ||
+		('A' <= c && c <= 'Z') ||
+		('0' <= c && c <= '9') ) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+#define ISIDCHAR(c)		(condor_isalnum(c) || ((c) == '_'))
+#else
 #define ISIDCHAR(c)		(isalnum(c) || ((c) == '_'))
+#endif
+
 #define ISOP(c)		(((c) == '=') || ((c) == ':'))
 
 int Read_config(char* config_file, ClassAd* classAd,
