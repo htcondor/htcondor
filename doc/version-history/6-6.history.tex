@@ -26,18 +26,27 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a memory management bug introduced in version 6.6.8 that
+could result in deallocated memory being referenced after a child
+process forked from a Condor daemon exits.
+
+\item Fixed a security bug in the \Condor{schedd} that could enable a
+maliciously modified \Condor{submit} tool to overwrite files in the Condor
+\Macro{SPOOL} subdirectory, including the job queue.
+
 \item Fixed a bug where under very pathological file permission failure
 conditions with a standard universe job, there would be a cycle of an
 execute event followed by a termination event in the user log when the
 job had not actually ran.
 
-\item Fixed a memory management bug introduced in version 6.6.8 that could result
-in deallocated memory being referenced after a child process forked from a
-Condor daemon exits.
-
-\item Fixed a security bug in the \Condor{schedd} that could enable a
-maliciously modified \Condor{submit} tool to overwrite files in the Condor
-\Macro{SPOOL} subdirectory, including the job queue.
+\item Removed a fixed-length buffer in the code that handled the
+  \Macro{SUBSYS\_EXPRS} config file setting.
+  Previously, if any attributes referred to were larger than
+  approximate 1000 bytes, Condor daemons would crash.
+  Now, there is no limit to the size of the attributes listed in 
+  \MacroNI{SUBSYS\_EXPRS}.
+  For more information about this setting, see
+  section~\ref{param:SubsysExprs} on page~\pageref{param:SubsysExprs}.
 
 \end{itemize}
 
