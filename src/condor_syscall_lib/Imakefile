@@ -395,7 +395,7 @@ receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue pseudo_
 	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) > receivers.C
 
 syscall-list: syscall.tmpl stub_gen 
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) $(FILE_TABLE) $(REMOTE_SYSCALLS) -D$(OS) syscall.tmpl | \
+	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) syscall.tmpl | \
 	./stub_gen -mode listcalls > syscall-list
 
 clean::
