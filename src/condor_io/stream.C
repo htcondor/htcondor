@@ -1364,7 +1364,7 @@ Stream::get( long long	&l)
 				}
 				if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
 				if (!hton_is_noop()) { // need to convert to host order
-					l = ntohL(l);
+					l = ntohLL(l);
 				}
 				sign = (l >= 0) ? 0 : 0xff;
 				for (int s=0; s < INT_SIZE-sizeof(long long); s++) { // overflow?
@@ -1408,7 +1408,7 @@ Stream::get( unsigned long long	&l)
 				}
 				if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
 				if (!hton_is_noop()) { // need to convert to host order
-					l = ntohL(l);
+					l = ntohLL(l);
 				}
 				for (int s=0; s < INT_SIZE-sizeof(long long); s++) { // overflow?
 					if (pad[s] != 0) {
