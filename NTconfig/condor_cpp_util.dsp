@@ -453,6 +453,14 @@ SOURCE="..\src\condor_c++_util\log_transaction.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\lsa_mgr.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\lsa_mgr.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\metric_units.C"
 # End Source File
 # Begin Source File
@@ -547,6 +555,14 @@ SOURCE="..\src\condor_c++_util\sig_name.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\simplelist.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\store_cred.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\store_cred.h"
 # End Source File
 # Begin Source File
 

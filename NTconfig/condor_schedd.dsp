@@ -88,6 +88,14 @@ LINK32=link.exe
 # Name "condor_schedd - Win32 Release"
 # Begin Source File
 
+SOURCE=..\src\condor_schedd.V6\autocluster.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\autocluster.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_schedd.V6\dedicated_scheduler.C
 # End Source File
 # Begin Source File
