@@ -556,7 +556,7 @@ is_supported_attr(const char* name, char* error_diagnosis, size_t error_diag_len
 	snprintf(error_diagnosis, error_diag_len, "Attribute name is empty");
     else if (strcmp(name, DRMAA_REMOTE_COMMAND) == 0 ||
 	     strcmp(name, DRMAA_JS_STATE) == 0 || 
-	     //strcmp(name, DRMAA_WD) == 0 || 
+	     strcmp(name, DRMAA_WD) == 0 || 
 	     //strcmp(name, DRMAA_JOB_CATEGORY) == 0 || 
 	     strcmp(name, DRMAA_NATIVE_SPECIFICATION) == 0 ||
 	     strcmp(name, DRMAA_BLOCK_EMAIL) == 0 || 
@@ -886,12 +886,13 @@ write_job_attr(FILE* fs, const job_attr_t* ja)
 	    num_bw = fprintf(fs, "%-*s= True\n", SUBMIT_FILE_COL_SIZE, 
 				   "Hold");
     }
-    /*
     else if (strcmp(ja->name, DRMAA_WD) == 0){
-	// TODO: $drmaa_incr_ph$
+	sub_ph = substitute_placeholders(ja->val.value);
 	num_bw = fprintf(fs, "%-*s= %s\n", SUBMIT_FILE_COL_SIZE, 
-			       "Initialdir",ja->val.value);
+			 "Initialdir", sub_ph);
+	free(sub_ph);
     }
+    /*
     else if (strcmp(ja->name, DRMAA_JOB_CATEGORY) == 0){
 	// TODO: DRMAA_JOB_CATEGORY
 
@@ -920,14 +921,12 @@ write_job_attr(FILE* fs, const job_attr_t* ja)
 	free(sub_ph);
     }
     else if (strcmp(ja->name, DRMAA_OUTPUT_PATH) == 0){
-	// TODO: remove this quick and dirty implementation
 	sub_ph = substitute_placeholders(ja->val.value);
 	num_bw = fprintf(fs, "%-*s= %s\n", SUBMIT_FILE_COL_SIZE, 
 			       "Output", sub_ph);
 	free(sub_ph);
     }
     else if (strcmp(ja->name, DRMAA_ERROR_PATH) == 0){
-	// TODO: $drmaa_incr_ph$, $drmaa_hd_ph$, $drmaa_wd_ph$
 	sub_ph = substitute_placeholders(ja->val.value);
 	num_bw = fprintf(fs, "%-*s= %s\n", SUBMIT_FILE_COL_SIZE, 
 			       "Error", sub_ph);

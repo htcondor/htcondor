@@ -1,5 +1,5 @@
 
-Last Updated: 9/23/2004
+Last Updated: 11/30/2004
 This README file describes the DRMAA Condor UNIX C library.  
 
 GENERAL: libDrmaa.a
@@ -35,7 +35,6 @@ organized by section number of the specification.
 
 - 2.4.1 job categories 
 - 3.2.3.1  the following mandatory attributes:
-	job working directory (DRMAA_WD),
 	job category (DRMAA_JOB_CATEGORY),
 	job start time (DRMAA_START_TIME),
 	job name (DRMAA_JOB_NAME),

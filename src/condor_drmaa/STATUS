@@ -1,4 +1,4 @@
-Last Update: 2/16/2004
+Last Update: 11/30/2004
 This document describes the current status of the Condor DRMAA implementation.
 
 The work so far was developed according to the following two specifications:
@@ -31,7 +31,6 @@ drmaa_get_vector_attribute()
  - add warning if output buffer is not large enough to contain value string
 3.2.3.1
  - add support for the following mandatory attributes:
-	job working directory (DRMAA_WD),
 	job category (DRMAA_JOB_CATEGORY),
 	job start time (DRMAA_START_TIME),
 	job name (DRMAA_JOB_NAME),

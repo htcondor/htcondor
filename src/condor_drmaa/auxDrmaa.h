@@ -68,7 +68,7 @@ BEGIN_C_DECLS
 #define TERMINATE_CMD_LEN 2000
 #define MAX_READ_LEN 1024  // max # of bytes to read
 #define JOBID_TOKENIZER "."
-#define NUM_SUPP_SCALAR_ATTR 12  // # of supported scalar attributes
+#define NUM_SUPP_SCALAR_ATTR 8  // # of supported scalar attributes
 #define NUM_SUPP_VECTOR_ATTR 3
 
 #define STAT_ABORTED -1

@@ -558,7 +558,7 @@ int
 drmaa_get_attribute_names(drmaa_attr_names_t **values, char *error_diagnosis, 
 			  size_t error_diag_len)
 {
-    int i;
+    int i, j;
     
     if(!is_lib_init()) {
         snprintf(error_diagnosis, error_diag_len, "Library not initialized");
@@ -582,20 +582,21 @@ drmaa_get_attribute_names(drmaa_attr_names_t **values, char *error_diagnosis,
 	(*values)->attrs[i][DRMAA_ATTR_BUFFER-1] = '\0';  
     }
 
-    // copy attribute names into place
-    strncpy((*values)->attrs[0], DRMAA_REMOTE_COMMAND, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[1], DRMAA_JS_STATE, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[2], DRMAA_WD, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[3], DRMAA_JOB_CATEGORY, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[4], DRMAA_NATIVE_SPECIFICATION, 
+    // copy attribute names into place, starting with required attributes
+    j = 0;
+    strncpy((*values)->attrs[j++], DRMAA_REMOTE_COMMAND, DRMAA_ATTR_BUFFER-1);
+    strncpy((*values)->attrs[j++], DRMAA_JS_STATE, DRMAA_ATTR_BUFFER-1);
+    strncpy((*values)->attrs[j++], DRMAA_WD, DRMAA_ATTR_BUFFER-1);
+    //strncpy((*values)->attrs[XXX], DRMAA_JOB_CATEGORY, DRMAA_ATTR_BUFFER-1);
+    strncpy((*values)->attrs[j++], DRMAA_NATIVE_SPECIFICATION, 
 	    DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[5], DRMAA_BLOCK_EMAIL, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[6], DRMAA_START_TIME, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[7], DRMAA_JOB_NAME, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[8], DRMAA_INPUT_PATH, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[9], DRMAA_OUTPUT_PATH, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[10], DRMAA_ERROR_PATH, DRMAA_ATTR_BUFFER-1);
-    strncpy((*values)->attrs[11], DRMAA_JOIN_FILES, DRMAA_ATTR_BUFFER-1);
+    strncpy((*values)->attrs[j++], DRMAA_BLOCK_EMAIL, DRMAA_ATTR_BUFFER-1);
+    //strncpy((*values)->attrs[XXX], DRMAA_START_TIME, DRMAA_ATTR_BUFFER-1);
+    //strncpy((*values)->attrs[XXX], DRMAA_JOB_NAME, DRMAA_ATTR_BUFFER-1);
+    strncpy((*values)->attrs[j++], DRMAA_INPUT_PATH, DRMAA_ATTR_BUFFER-1);
+    strncpy((*values)->attrs[j++], DRMAA_OUTPUT_PATH, DRMAA_ATTR_BUFFER-1);
+    strncpy((*values)->attrs[j++], DRMAA_ERROR_PATH, DRMAA_ATTR_BUFFER-1);
+    //strncpy((*values)->attrs[XXX], DRMAA_JOIN_FILES, DRMAA_ATTR_BUFFER-1);
 
     // TODO: add optional scalar job attributes
     //strncpy((*values)->attrs[12], DRMAA_TRANSFER_FILES, DRMAA_ATTR_BUFFER-1);
