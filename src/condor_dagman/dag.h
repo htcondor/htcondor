@@ -66,8 +66,9 @@ class Dag {
   public:
   
     /** Create a DAG
-		@param condorLogFiles the list of log files for all of the jobs
-		       in the DAG
+		@param dagFile the DAG file name
+		@param condorLogName the log file name specified by the -Condorlog
+		       command line argument
         @param maxJobsSubmitted the maximum number of jobs to submit to Condor
                at one time
         @param maxPreScripts the maximum number of PRE scripts to spawn at
@@ -77,14 +78,20 @@ class Dag {
 		@param allowExtraRuns whether to tolerate the Condor "submit once,
 			   run twice" bug
 		@param dapLogName the name of the Stork (DaP) log file
+		@param allowLogError whether to allow the DAG to run even if we
+			   have an error determining the job log files
     */
 
-    Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
+    Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 bool allowExtraRuns, const char *dapLogName );
+		 bool allowExtraRuns, const char *dapLogName, bool allowLogError );
 
     ///
     ~Dag();
+
+	/** Initialize log files, lock files, etc.
+	*/
+	void InitializeDagFiles( char *lockFileName );
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
 		@param the appropriate Dagman object
@@ -311,6 +318,10 @@ class Dag {
 	
   protected:
 
+	/** Find all Condor (not DaP) log files associated with this DAG.
+	*/
+	void FindLogFiles();
+
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()
 	   @return true on success, false on failure
@@ -340,11 +351,18 @@ class Dag {
 	/* DFS number the jobs in the DAG in order to detect cycle*/
 	void DFSVisit (Job * job);
 	
+		// The DAG file name.
+	char *		_dagFile;
+
+		// The log file name specified by the -Condorlog command line
+		// argument (not used for much anymore).
+	char *		_condorLogName;
+
     // name of consolidated condor log
-	StringList &_condorLogFiles;
+	StringList _condorLogFiles;
 
     // Documentation on ReadUserLog is present in condor_c++_util
-	ReadMultipleUserLogs _condorLog;
+	ReadMultipleUserLogs _condorLogRdr;
 
     //
     bool          _condorLogInitialized;
@@ -372,6 +390,10 @@ class Dag {
         unlimited
     */
     const int _maxJobsSubmitted;
+
+		// Whether to allow the DAG to run even if we have an error
+		// determining the job log files.
+	bool		_allowLogError;
 
 	// queue of jobs ready to be submitted to Condor
 	SimpleList<Job*>* _readyQ;

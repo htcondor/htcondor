@@ -45,8 +45,8 @@ class Dagman {
 		// maximum number of jobs to submit in a single periodic timer
 		// interval
     int max_submits_per_interval;
+
     char *datafile;
-	StringList condorLogFiles;
 		// whether to peform expensive cycle-detection at startup
 		// (note: we perform run-time cycle-detection regardless)
 	bool startup_cycle_detect;

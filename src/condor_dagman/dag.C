@@ -40,12 +40,22 @@
 #endif
 
 //---------------------------------------------------------------------------
-Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
+void touch (const char * filename) {
+    int fd = open(filename, O_RDWR | O_CREAT, 0600);
+    if (fd == -1) {
+        debug_error( 1, DEBUG_QUIET, "Error: can't open %s\n", filename );
+    }
+    close (fd);
+}
+
+//---------------------------------------------------------------------------
+Dag::Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
-		  bool allowExtraRuns, const char* dapLogName ) :
+		  bool allowExtraRuns, const char* dapLogName, bool allowLogError ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
-    _condorLogFiles       (condorLogFiles),
+	_dagFile			  (NULL),
+	_condorLogName		  (NULL),
     _condorLogInitialized (false),
     _dapLogName           (NULL),
     _dapLogInitialized    (false),             //<--DAP
@@ -54,14 +64,24 @@ Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
     _numJobsFailed        (0),
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
+	_allowLogError		  (allowLogError),
 	_ce                   (true, allowExtraRuns)
 {
 
-	ASSERT( condorLogFiles.number() > 0 || dapLogName );
+	_dagFile = strnewp( dagFile );
+	ASSERT( _dagFile );
+
+	_condorLogName = strnewp( condorLogName );
+	ASSERT( _condorLogName );
+
 	if( dapLogName ) {
 		_dapLogName = strnewp( dapLogName );
 		ASSERT( _dapLogName );
 	}
+
+	FindLogFiles();
+
+	ASSERT( _condorLogFiles.number() > 0 || _dapLogName );
 
  	_readyQ = new SimpleList<Job*>;
 	_preScriptQ = new ScriptQ( this );
@@ -91,6 +111,10 @@ Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
+
+	delete _dagFile;
+	delete _condorLogName;
+
     // NOTE: we cast this to char* because older MS compilers
     // (contrary to the ISO C++ spec) won't allow you to delete a
     // const.  This has apparently been fixed in Visual C++ .NET, but
@@ -116,6 +140,51 @@ Dag::~Dag() {
 	delete[] _dot_include_file_name;
     
     return;
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::InitializeDagFiles( char *lockFileName )
+{
+		// if there is an older version of the log files,
+		// we need to delete these.
+
+		// pfc: why in the world would this be a necessary or good
+		// thing?  apparently b/c old submit events from a
+		// previous run of the same dag will contain the same dag
+		// node names as those from current run, which will
+		// completely f0rk the event-processing process (dagman
+		// will see the events from the first run and think they
+		// are from this one)...
+
+		// instead of deleting the old logs, which seems evil,
+		// maybe what we need is to add the submitting dagman
+		// daemon's job id in each of the submit events in
+		// addition to the dag node name we already write, so that
+		// we can differentiate between identically-named nodes
+		// from different dag instances.  (to take this to the
+		// extreme, we might also want a unique schedd id in there
+		// too...)  Or, we can do as Doug Thain suggests, and
+		// have DAGMan keep its own log independant of
+		// Condor -- but Miron hates that idea...
+
+	debug_printf( DEBUG_VERBOSE,
+				  "Deleting any older versions of log files...\n" );
+
+	ReadMultipleUserLogs::DeleteLogs( _condorLogFiles );
+
+	if ( access( _dapLogName, F_OK) == 0 ) {
+		debug_printf( DEBUG_VERBOSE, "Deleting older version of %s\n",
+				_dapLogName);
+		if ( remove (_dapLogName) == -1 ) {
+			debug_error( 1, DEBUG_QUIET, "Error: can't remove %s\n",
+					_dapLogName );
+		}
+	}
+
+	if ( _condorLogName != NULL ) touch (_condorLogName);  //<-- DAP
+	if ( _dapLogName != NULL ) touch (_dapLogName);
+	touch (lockFileName);
 }
 
 //-------------------------------------------------------------------------
@@ -217,7 +286,7 @@ Dag::DetectCondorLogGrowth () {
 	}
 
     if (!_condorLogInitialized) {
-		_condorLogInitialized = _condorLog.initialize( _condorLogFiles );
+		_condorLogInitialized = _condorLogRdr.initialize( _condorLogFiles );
 		if( !_condorLogInitialized ) {
 				// this can be normal before we've actually submitted
 				// any jobs and the log doesn't yet exist, but is
@@ -228,7 +297,7 @@ Dag::DetectCondorLogGrowth () {
 		}
     }
 
-	bool growth = _condorLog.detectLogGrowth();
+	bool growth = _condorLogRdr.detectLogGrowth();
     debug_printf( DEBUG_DEBUG_4, "%s\n",
 				  growth ? "Log GREW!" : "No log growth..." );
     return growth;
@@ -279,7 +348,7 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 
 	if ( logsource == CONDORLOG ) {
 		if ( !_condorLogInitialized ) {
-			_condorLogInitialized = _condorLog.initialize(_condorLogFiles);
+			_condorLogInitialized = _condorLogRdr.initialize(_condorLogFiles);
 		}
 	} else if ( logsource == DAPLOG ) {
 		if ( !_dapLogInitialized ) {
@@ -296,7 +365,7 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 		ULogEventOutcome outcome;
 
 		if ( logsource == CONDORLOG ) {
-			outcome = _condorLog.readEvent(e);
+			outcome = _condorLogRdr.readEvent(e);
 		} else if ( logsource == DAPLOG ){
 			outcome = _dapLog.readEvent(e);
 		}
@@ -308,7 +377,7 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 		result = result && tmpResult;
 
 		if( e != NULL ) {
-			// event allocated earlier by _condorLog.readEvent()
+			// event allocated earlier by _condorLogRdr.readEvent()
 			delete e;
 		}
 	}
@@ -850,6 +919,59 @@ Job * Dag::GetJob (const CondorID condorID) const {
     Job * job;
     while ((job = iList.Next())) if (job->_CondorID == condorID) return job;
     return NULL;
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::FindLogFiles()
+{
+		// Attempt to get the log file name(s) from the submit files;
+		// if that doesn't work, use the value from the command-line
+		// argument.
+    
+	MyString dagFileName( _dagFile );
+	MyString jobKeyword("job");
+	MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
+				dagFileName, jobKeyword, _condorLogFiles );
+	if ( msg != "" ) {
+		debug_printf( DEBUG_VERBOSE,
+				"Possible error when parsing DAG: %s ...\n", msg.Value());
+		if ( _allowLogError ) {
+			debug_printf( DEBUG_VERBOSE,
+					"...continuing anyhow because of -AllowLogError flag\n");
+		} else {
+			debug_printf( DEBUG_VERBOSE, "...exiting -- try again with "
+					"the '-AllowLogError' flag if you *really* think "
+					"this shouldn't be a fatal error\n");
+			DC_Exit( 1 );
+		}
+	}
+
+		// The "&& !_dapLogName" check below is kind of a kludgey fix to allow
+		// DaP jobs that have no "regular" Condor jobs to run.  Kent Wenger
+		// (wenger@cs.wisc.edu) 2003-09-05.
+	if ( (msg != "" || _condorLogFiles.number() == 0) && !_dapLogName ) {
+		_condorLogFiles.rewind();
+		while( _condorLogFiles.next() ) {
+		    _condorLogFiles.deleteCurrent();
+		}
+
+		_condorLogFiles.append( _condorLogName );
+	}
+
+	if ( _condorLogFiles.number() > 0 ) {
+		_condorLogFiles.rewind();
+		debug_printf( DEBUG_VERBOSE, "All DAG node user log files:\n");
+		const char *logfile;
+		while( (logfile = _condorLogFiles.next()) ) {
+			debug_printf( DEBUG_VERBOSE, "  %s\n", logfile );
+		}
+	}
+
+	if( _dapLogName ) {
+		debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
+					  _dapLogName );
+	}
 }
 
 //-------------------------------------------------------------------------
@@ -1400,12 +1522,13 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
                 // now we print the value, but we have to re-escape certain characters
                 for(int i = 0; i < strVal->Length(); i++) {
                     char c = (*strVal)[i];
-                    if(c == '\"')
+                    if(c == '\"') {
                         fprintf(fp, "\\\"");
-                    else if(c == '\\')
+                    } else if(c == '\\') {
                         fprintf(fp, "\\\\");
-                    else
+                    } else {
                         fprintf(fp, "%c", c);
+					}
                 }
                 fprintf(fp, "\"");
             }

@@ -44,7 +44,7 @@ const char* DAGManJobIdAttrName = "DAGManJobID";
 
 bool run_post_on_failure = TRUE;
 
-char* lockFileName = NULL;
+static char* lockFileName = NULL;
 char* DAGManJobId;
 
 static Dagman dagman;
@@ -70,15 +70,6 @@ static void Usage() {
             "(0 means unlimited)\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( 1 );
-}
-
-//---------------------------------------------------------------------------
-void touch (const char * filename) {
-    int fd = open(filename, O_RDWR | O_CREAT, 0600);
-    if (fd == -1) {
-        debug_error( 1, DEBUG_QUIET, "Error: can't open %s\n", filename );
-    }
-    close (fd);
 }
 
 //---------------------------------------------------------------------------
@@ -414,60 +405,10 @@ int main_init (int argc, char ** const argv) {
     // Create the DAG
     //
 
-		// Attempt to get the log file name(s) from the submit files;
-		// if that doesn't work, use the value from the command-line
-		// argument.
-    
-	MyString dagFileName( dagman.datafile );
-	MyString jobKeyword("job");
-	MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
-				dagFileName, jobKeyword, dagman.condorLogFiles );
-	if ( msg != "" ) {
-    	debug_printf( DEBUG_VERBOSE,
-				"Possible error when parsing DAG: %s ...\n", msg.Value());
-		if ( dagman.allowLogError ) {
-    		debug_printf( DEBUG_VERBOSE,
-					"...continuing anyhow because of -AllowLogError flag\n");
-		} else {
-    		debug_printf( DEBUG_VERBOSE, "...exiting -- try again with "
-					"the '-AllowLogError' flag if you *really* think "
-					"this shouldn't be a fatal error\n");
-			DC_Exit( 1 );
-		}
-	}
-
-		// The "&& !dapLogName" check below is kind of a kludgey fix to allow
-		// DaP jobs that have no "regular" Condor jobs to run.  Kent Wenger
-		// (wenger@cs.wisc.edu) 2003-09-05.
-	if( (msg != "" || dagman.condorLogFiles.number() == 0)
-        && !dapLogName ) {
-
-		dagman.condorLogFiles.rewind();
-		while( dagman.condorLogFiles.next() ) {
-		    dagman.condorLogFiles.deleteCurrent();
-		}
-
-		dagman.condorLogFiles.append( condorLogName );
-
-	}
-
-	if( dagman.condorLogFiles.number() > 0 ) {
-		dagman.condorLogFiles.rewind();
-		debug_printf( DEBUG_VERBOSE, "All DAG node user log files:\n");
-		const char *logfile;
-		while( (logfile = dagman.condorLogFiles.next()) ) {
-			debug_printf( DEBUG_VERBOSE, "  %s\n", logfile );
-		}
-	}
-
-	if( dapLogName ) {
-		debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
-					  dapLogName );
-	}
-
-    dagman.dag = new Dag( dagman.condorLogFiles, dagman.maxJobs,
+    dagman.dag = new Dag( dagman.datafile, condorLogName, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dagman.allowExtraRuns, dapLogName ); //<-- DaP
+						  dagman.allowExtraRuns, dapLogName, //<-- DaP
+						  dagman.allowLogError );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -507,7 +448,6 @@ int main_init (int argc, char ** const argv) {
     {
       bool recovery = ( (access(lockFileName,  F_OK) == 0 &&
 			 access(condorLogName, F_OK) == 0) 
-			
 			|| (access(lockFileName,  F_OK) == 0 &&
 			    access(dapLogName, F_OK) == 0) ) ; //--> DAP
       
@@ -515,45 +455,7 @@ int main_init (int argc, char ** const argv) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
                            lockFileName);
         } else {
-      
-            // if there is an older version of the log files,
-            // we need to delete these.
-
-			// pfc: why in the world would this be a necessary or good
-			// thing?  apparently b/c old submit events from a
-			// previous run of the same dag will contain the same dag
-			// node names as those from current run, which will
-			// completely f0rk the event-processing process (dagman
-			// will see the events from the first run and think they
-			// are from this one)...
-
-			// instead of deleting the old logs, which seems evil,
-			// maybe what we need is to add the submitting dagman
-			// daemon's job id in each of the submit events in
-			// addition to the dag node name we already write, so that
-			// we can differentiate between identically-named nodes
-			// from different dag instances.  (to take this to the
-			// extreme, we might also want a unique schedd id in there
-			// too...)  Or, we can do as Doug Thain suggests, and
-			// have DAGMan keep its own log independant of
-			// Condor -- but Miron hates that idea...
-
-			debug_printf( DEBUG_VERBOSE,
-						  "Deleting any older versions of log files...\n" );
-      
-            ReadMultipleUserLogs::DeleteLogs( dagman.condorLogFiles );
-
-	    if ( access( dapLogName, F_OK) == 0 ) {
-	      debug_printf( DEBUG_VERBOSE, "Deleting older version of %s\n",
-			    dapLogName);
-	      if (remove (dapLogName) == -1)
-		debug_error( 1, DEBUG_QUIET, "Error: can't remove %s\n",
-			     dapLogName );
-            }
-
-	    if (condorLogName != NULL) touch (condorLogName);  //<-- DAP
-	    if (dapLogName != NULL) touch (dapLogName);
-            touch (lockFileName);
+			dagman.dag->InitializeDagFiles( lockFileName );
         }
 
         debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
