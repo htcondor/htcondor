@@ -39,6 +39,8 @@ CollectorEngine CollectorDaemon::collector;
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName;
+Daemon* CollectorDaemon::View_Collector;
+Sock* CollectorDaemon::view_sock;
 
 ClassAd* CollectorDaemon::__query__;
 Stream* CollectorDaemon::__sock__;
@@ -80,6 +82,8 @@ void CollectorDaemon::Init()
 	// read in various parameters from condor_config
 	CollectorName=NULL;
 	ad=NULL;
+	View_Collector=NULL;
+	view_sock=NULL;
 	UpdateTimerId=-1;
 	Config();
 
@@ -156,6 +160,7 @@ void CollectorDaemon::Init()
 
 	// ClassAd evaluations use this function to resolve names
 	ClassAdLookupRegister( process_global_query, this );
+
 }
 
 int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
@@ -318,6 +323,10 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, ad, sock);
 
+	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) || 
+		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
+		send_classad_to_sock(command, View_Collector, &ad);
+	}	
     // all done; let daemon core will clean up connection
 	return TRUE;
 }
@@ -353,6 +362,10 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 		}
 	}
 
+	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
+			(command == UPDATE_SUBMITTOR_AD)) ) {
+		send_classad_to_sock(command, View_Collector, ad);
+	}	
 	// let daemon core clean up the socket
 	return TRUE;
 }
@@ -676,7 +689,29 @@ void CollectorDaemon::Config()
     collector.scheduleHousekeeper( ClassadLifetime );
     if (MasterCheckInterval>0) collector.scheduleDownMasterCheck( MasterCheckInterval );
 
-	return;
+    // if we're not the View Collector, let's set something up to forward
+    // all of our ads to the view collector.
+    if(View_Collector) {
+        delete View_Collector;
+    }
+
+    if(view_sock) {
+        delete view_sock;
+    }	
+
+    tmp = param("CONDOR_VIEW_HOST");
+    if(tmp) {
+       if(!same_host(my_full_hostname(), tmp) ) {
+           dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", tmp);
+           View_Collector = new Daemon(tmp, CONDOR_VIEW_PORT);
+       } 
+       free(tmp);
+       if(View_Collector) {
+           view_sock = View_Collector->safeSock(); 
+       }
+    }
+
+    return;
 }
 
 void CollectorDaemon::Exit()
@@ -790,3 +825,35 @@ void CollectorDaemon::init_classad(int interval)
     config_fill_ad( ad );      
 }
 
+void 
+CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
+{
+    // view_sock is static
+    if(!view_sock) {
+	dprintf(D_ALWAYS, "Trying to forward ad on, but no connection to View "
+		"Collector!\n");
+        return;
+    }
+    if(!theAd) {
+	dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL!!!\n"); 
+        return;
+    }
+    if (! d->startCommand(cmd, view_sock)) {
+        dprintf( D_ALWAYS, "Can't send command %d to View Collector\n", cmd);
+        view_sock->end_of_message();
+        return;
+    }
+
+    if( theAd ) {
+        if( ! theAd->put( *view_sock ) ) {
+            dprintf( D_ALWAYS, "Can't forward classad to View Collector\n");
+            view_sock->end_of_message();
+            return;
+        }
+    }
+    if( ! view_sock->end_of_message() ) {
+        dprintf( D_ALWAYS, "Can't send end_of_message to View Collector\n");
+        return;
+    }
+    return;
+}

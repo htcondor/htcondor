@@ -7,6 +7,7 @@
 #include "../condor_status.V6/totals.h"
 
 #include "collector_engine.h"
+#include "daemon.h"
 
 //----------------------------------------------------------------
 // Collector daemon class declaration
@@ -44,10 +45,13 @@ public:
 	
 	static void init_classad(int interval);
 	static int sendCollectorAd();
-	
+
+	static void send_classad_to_sock( int cmd, Daemon * d, ClassAd* theAd);	
 protected:
 
 	static CollectorEngine collector;
+	static Daemon* View_Collector;
+	static Sock* view_sock;
 
 	static int ClientTimeout;
 	static int QueryTimeout;
