@@ -35,6 +35,10 @@ extern const char *PARAM_CONDOR_DEVELOPERS_COLLECTOR_PORT;
 // Negotiator parameters
 extern const char *PARAM_NEGOTIATOR_PORT;
 
+// Gridmanager parameters
+extern const char *PARAM_HOLD_IF_CRED_EXPIRED;
+extern const char *PARAM_GLOBUS_GATEKEEPER_TIMEOUT;
+
 // Utility functions
 int param_get_collector_port(void);
 int param_get_condor_view_port(void);
