@@ -134,7 +134,8 @@ initialize( const char *file, int c, int p, int s )
 		dprintf( D_ALWAYS, "UserLog::initialize: "
 				 "fdopen(%i) failed - errno %d (%s)\n", fd, errno,
 				 strerror(errno) );
-		// should return here?
+		close( fd );
+		return false;
 	}
 #else
 	// Windows (Visual C++)
