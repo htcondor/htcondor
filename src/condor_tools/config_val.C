@@ -121,6 +121,7 @@ usage()
 
 char* GetRemoteParam( char*, char*, char* );
 void  SetRemoteParam( char*, char*, char*, ModeType );
+static void PrintConfigFiles(void);
 
 int
 main( int argc, char* argv[] )
@@ -130,6 +131,7 @@ main( int argc, char* argv[] )
 	int		i;
 	bool	ask_a_daemon = false;
 	bool    verbose = false;
+	bool    print_config_files = false;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -204,6 +206,8 @@ main( int argc, char* argv[] )
 			mt = CONDOR_RUNTIME_UNSET;
 		} else if( match_prefix( argv[i], "-mixedcase" ) ) {
 			mixedcase = true;
+		} else if( match_prefix( argv[i], "-config" ) ) {
+			print_config_files = true;
 		} else if( match_prefix( argv[i], "-verbose" ) ) {
 			verbose = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
@@ -248,6 +252,9 @@ main( int argc, char* argv[] )
 		config_host( host );
 	} else {
 		config();
+		if (print_config_files) {
+			PrintConfigFiles();
+		}
 	}
 
 	if( pool && ! name ) {
@@ -276,7 +283,7 @@ main( int argc, char* argv[] )
 
 	params.rewind();
 
-	if( ! params.number() ) {
+	if( ! params.number() && !print_config_files ) {
 		usage();
 	}
 
@@ -521,4 +528,35 @@ SetRemoteParam( char* name, char* addr, char* param_value, ModeType mt )
 
 	free( buf );
 	free( param_name );
+}
+
+static void PrintConfigFiles(void)
+{
+	if (global_config_file.Length() > 0) {
+		printf("Config file: %s\n", global_config_file.Value());
+	} else {
+		printf("Can't find the config file.\n");
+	}
+	if (global_root_config_file.Length() > 0) {
+		printf("Root config file: %s\n", 
+			   global_root_config_file.Value());
+	}
+	if (local_config_files.Length() > 0) {
+		StringList files;
+
+		files.initializeFromString(local_config_files.Value());
+		
+		if (files.number() < 2) {
+			printf("Local config file: %s\n",
+				   local_config_files.Value());
+		} else {
+			printf("Local config files:\n");
+			files.rewind();
+			char *file;
+			while ((file = files.next()) != NULL) {
+				printf("    %s\n", file);
+			}
+		}
+	}
+	return;
 }
