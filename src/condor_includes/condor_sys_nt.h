@@ -95,6 +95,8 @@ typedef DWORD pid_t;
 #define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
 #define rint(num) floor(num + .5)
 
+#define ETIMEDOUT ERROR_TIMEOUT
+
 typedef fd_set *SELECT_FDSET_PTR;
 
 struct rusage {
