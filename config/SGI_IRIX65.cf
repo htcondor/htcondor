@@ -5,3 +5,6 @@
 #define PlatformFlags		-DIRIX65
 #define IS_SGI_IRIX65		YES
 #define IS_IRIX65		YES
+
+/* inet_ntoa is broken in GCC for -n32 and -64 ABIs */
+#define HAS_INET_NTOA NO

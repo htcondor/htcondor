@@ -21,6 +21,7 @@
 #	define IRIXABI -n32
 #endif
 
+#define RealMldLib /**/
 #define IRIX_ABI IRIXABI
 #if IRIXABI == -n32
 #	define BaseLibPath /usr/lib32
@@ -28,24 +29,25 @@
 #	define BaseLibPath /usr/lib64
 #else
 #	define BaseLibPath /usr/lib
+#	define RealMldLib concat(BaseLibPath,/libmld.a)
 #endif
 
 
 #define MldLib concat(BaseLibPath,/libelf.a)
 #define RpcSvc	concat(BaseLibPath,/librpcsvc.so)
 #define RpcSun	concat(BaseLibPath,/libsun.a)
+/*
 #define RpcLib RpcSvc RpcSun 
+*/
 #define MallocLib	concat(BaseLibPath,/libmalloc.so)
-#define KernLib /**/
-#define SyscallsExp /**/
-#define SocketLib /**/
-#define SimpleLibC concat(BaseLibPath,/libc.so)
-#define LibC RpcLib SimpleLibC
+#define SimpleLibC concat(BaseLibPath,/libc.so.1)
+#define LibC SimpleLibC
+
 #define Crt0 concat(BaseLibPath,/crt1.o)
 #define CrtN concat(BaseLibPath,/crtn.o)
-#define RealMldLib concat(BaseLibPath,/libmld.a)
 
-#define PlatformLdFlags /usr/lib/libelf.a /usr/lib/libmld.a RpcLib
+PLATFORM_LDFLAGS = MldLib RealMldLib 
+#define SyscallsExp /**/
 
 #define XLibPath -lX11
 #define XExtLibPath concat(BaseLibPath,/libXext.a)
