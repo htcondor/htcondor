@@ -200,6 +200,7 @@ class ReadUserLog
 
     /** The log's file descriptor */  int    _fd;
     /** The log's file pointer    */  FILE * _fp;
+    /** The log file lock         */  FileLock* lock;
 };
 
 #endif /* __cplusplus */
