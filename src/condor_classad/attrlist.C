@@ -983,6 +983,22 @@ int AttrList::LookupString (const char *name, char *value)
 	return 0;
 }
 
+int AttrList::LookupString (const char *name, char *value, int max_len)
+{
+	ExprTree *tree, *rhs;
+	char     *strVal;
+
+	tree = Lookup (name);
+	if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_STRING) &&
+		(strVal = ((String *) rhs)->Value()) && strVal)
+	{
+		strncpy (value, strVal, max_len);
+		return 1;
+	}
+
+	return 0;
+}
+
 int AttrList::LookupInteger (const char *name, int &value)
 {
     ExprTree *tree, *rhs;
