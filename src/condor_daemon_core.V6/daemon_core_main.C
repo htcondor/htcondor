@@ -112,15 +112,30 @@ handle_dc_sigquit( Service*, int )
 	return TRUE;
 }
 
-
-main( int argc, char** argv )
+// This is the main entry point for daemon core.  On WinNT, however, we
+// have a different, smaller main which checks if "-f" is ommitted from
+// the command line args of the condor_master, in which case it registers as 
+// an NT service.
+#ifdef WIN32
+int dc_main( int argc, char** argv )
+#else
+int main( int argc, char** argv )
+#endif
 {
 	char**	ptr;
 	int		command_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char*	ptmp;
+	char*	ptmp1;
+	int		i;
 	ReliSock* rsock = NULL;	// tcp command socket
 	SafeSock* ssock = NULL;	// udp command socket
+
+#ifdef WIN32
+	// Call SetErrorMode so that Win32 "critical errors" and such do not open up a
+	// dialog window!
+	::SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX );
+#endif
 
 	// instantiate a daemon core
 	// have lots of pid table hash buckets if we're the SCHEDD, since the
@@ -158,7 +173,8 @@ main( int argc, char** argv )
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
-	for(ptr = argv + 1; *ptr; ptr++)
+	i = 0;
+	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
 	{
 		int done = FALSE;
 
@@ -183,6 +199,15 @@ main( int argc, char** argv )
 						// note: "-p 0" means _no_ command socket
 			command_port = atoi( *(++ptr) );
 			dcargs += 2;
+			break;
+		  case 'c':		// specify directory where config file lives
+			ptmp = *(++ptr);
+			dcargs += 2;
+			ptmp1 = (char *)malloc( strlen(ptmp) + 25 );
+			if ( ptmp1 ) {
+				sprintf(ptmp1,"CONDOR_CONFIG=%s\0",ptmp);
+				putenv(ptmp1);
+			}
 			break;
 		  default:
 			done = TRUE;
@@ -257,22 +282,40 @@ main( int argc, char** argv )
 		// already inherit them above.
 		// If rsock/ssock are not NULL, it means we inherited them from our parent
 		if ( rsock == NULL && ssock == NULL ) {
-			if ( command_port == -1 ) {
-				// choose any old port (dynamic port)
-				rsock = new ReliSock( 0 );
-				// now open a SafeSock _on the same port_ choosen above
-				if ( rsock )
-					ssock = new SafeSock( rsock->get_port() );
-			} else {
-				// use well-known port specified by command_port
-				rsock = new ReliSock( command_port );
-				ssock = new SafeSock( command_port );
-			}
+			rsock = new ReliSock;
+			ssock = new SafeSock;
 			if ( !rsock ) {
 				EXCEPT("Unable to create command Relisock");
 			}
 			if ( !ssock ) {
 				EXCEPT("Unable to create command SafeSock");
+			}
+			if ( command_port == -1 ) {
+				// choose any old port (dynamic port)
+				if ( !rsock->listen( 0 ) ) {
+					EXCEPT("Failed to post listen on command ReliSock");
+				}
+				// now open a SafeSock _on the same port_ choosen above
+				if ( !ssock->bind(rsock->get_port()) ) {
+					EXCEPT("Failed to bind on SafeSock");
+				}
+			} else {
+				// use well-known port specified by command_port
+				int on = 1;
+	
+				// Set options on this socket, SO_REUSEADDR, so that
+				// if we are binding to a well known port, and we crash, we can be
+				// restarted and still bind ok back to this same port. -Todd T, 11/97
+				if( (!rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ||
+					(!ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ) {
+					EXCEPT("setsockopt() SO_REUSEADDR failed\n");
+				}
+				
+				if ( (!rsock->listen(command_port)) ||
+					 (!ssock->bind(command_port)) ) {
+					EXCEPT("Failed to post listen on command socket(s)");
+				}
+				
 			}
 		}
 
@@ -317,4 +360,51 @@ main( int argc, char** argv )
 	return FALSE;
 }	
 
+#ifdef WIN32
+int 
+main( int argc, char** argv)
+{
+	char **ptr;
+	int i;
+
+	// Scan our command line arguments for a "-f".  If we don't find a "-f",
+	// then we want to register as an NT Service.
+	i = 0;
+	for( ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
+	{
+		int done = FALSE;
+
+		if(ptr[0][0] != '-') {
+			break;
+		}
+		switch(ptr[0][1])
+		{
+		  case 'f':		// run in foreground
+			Foreground = 1;
+			break;
+		  case 't':		// log to terminal (stderr)
+			break;
+		  case 'b':		// run in background (default)
+			break;
+		  case 'p':		// use well-known port for command socket				
+			ptr++;
+			break;
+		  case 'c':		// specify directory where config file lives
+			ptr++;
+			break;
+		  default:
+			done = TRUE;
+			break;	
+		}
+		if ( done == TRUE )
+			break;		// break out of for loop
+	}
+	if ( (Foreground != 1) && (strcmp(mySubSystem,"MASTER") == 0) ) {
+		main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
+		return 1;
+	} else {
+		return(dc_main(argc,argv));
+	}
+}
+#endif // of ifdef WIN32
 
