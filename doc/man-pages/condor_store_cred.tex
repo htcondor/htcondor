@@ -9,37 +9,35 @@
 
 \Description 
 
-\Condor{store\_cred} stores the password of a user/domain pair
-securely in the Windows registry.
-Using this stored password,
-Condor is able to run jobs with the user ID of the submitting user
-when running scheduler universe jobs and DAGMan.
-The password is stored
-in the same manner as 
-the system does when
+\Condor{store\_cred} stores the password of a user/domain pair securely
+in the Windows registry.  Using this stored password, Condor is able to
+run jobs with the user ID of the submitting user when running scheduler
+universe jobs and DAGMan. In addition, Condor uses this password to
+acquire the submitting user's credentials when writing output or log
+files. The password is stored in the same manner as the system does when
 setting or changing account passwords.
 
-When \Condor{store\_cred} is invoked,
-it contacts the \Condor{schedd} daemon to 
-carry out the requested operations on behalf of the user.
-This is necessary since registry keys
-are accessible only by the Windows SYSTEM account, not by administrators
-or other users. 
+When \Condor{store\_cred} is invoked, it contacts the \Condor{schedd}
+daemon to carry out the requested operations on behalf of the user.
+This is necessary since registry keys are accessible only by the Windows
+SYSTEM account, not by administrators or other users.
 
 The password is stashed in a persistent manner; it is maintained
 across system reboots.
 
 \begin{Options}
 
-	\OptItem{\Opt{add}}{Store the current user's password in the
-	registry.  The user is prompted to enter the password
-	twice for confirmation, and
-	characters are not echoed.
-	If there is already have a password stashed,
-	the old password will be overwritten by the new password.}
+	\OptItem{\Opt{add}}{Store the current user's password securely
+	in the registry. The user is prompted to enter the password
+	twice for confirmation, and characters are not echoed.	If there
+	is already have a password stashed, the old password will be
+	overwritten by the new password.}
 
 	\OptItem{\Opt{delete}}{Delete the current user's
 	stashed password, if it exists.}
+
+	\OptItem{\Opt{query}}{Report whether the current user's password 
+	is stored or not.}
 
 \end{Options}
 
