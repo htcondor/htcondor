@@ -13,23 +13,62 @@ The details of each version are described below.
 
 \begin{itemize}
 
-  \item Added a \Opt{-num} option to the \Condor{wait} tool to wait for
-      a specified number of jobs to finish.
+\item Added support for vanilla and Java jobs to reconnect when the
+  connection between the submitting and execution nodes is lost for
+  any reason.
+  Possible reasons for this disconnect include: network outages,
+  rebooting the submit machine, restarting the Condor daemons on the
+  submit machine, etc.
+  If the execution machine is rebooted or the Condor daemons are
+  restarted, reconnection is not possible.
+  To take advantage of this reconnect feature, jobs must be submitted
+  with a \Attr{JobLeaseDuration}.
+  There are new events in the UserLog related to disconnect and
+  reconnect.
 
-  \item Added a configuration option \Macro{STARTER\_JOB\_ENVIRONMENT}
-      so the admin can configure the default environment inherited by
-      user jobs.
+\item Added a new Condor tool, \Condor{vacate\_job}.
+  This command is similar to \Condor{vacate}, except the kinds of
+  arguments it takes define jobs in a job queue, not machines to
+  vacate.
+  For example, a user can vacate a specific job id, all the jobs in a
+  given cluster, all the jobs matching a job queue constraint, or even
+  all jobs owned by that user.
+  The owner of a job can always vacate their own jobs, regardless of
+  the pool security policy controlling \Condor{vacate} (which is an
+  administrative command which acts directly on machines).
+  
+\item Scheduler universe jobs on UNIX can now specify a
+  \Attr{HoldKillSig}, the signal that should be sent when the job is
+  put on hold.
+  If not specified, the default is to use the \Attr{KillSig}, and if
+  that is not defined, the job will be sent a SIGTERM.
+  The submit file keyword to use for defining this signal is
+  \AdAttr{hold\_kill\_sig}, for example,
+  \verb@hold_kill_sig = SIGUSR1@.
+
+\item Added a \Opt{-num} option to the \Condor{wait} tool to wait for
+   a specified number of jobs to finish.
+
+\item Added a configuration option \Macro{STARTER\_JOB\_ENVIRONMENT}
+   so the admin can configure the default environment inherited by
+   user jobs.
 
 \end{itemize}
+
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
-  \item
+
+\item None.
+
 \end{itemize}
+
 
 \noindent Known Bugs:
 
 \begin{itemize}
-  \item
+
+\item None.
+
 \end{itemize}
