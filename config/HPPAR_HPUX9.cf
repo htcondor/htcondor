@@ -17,8 +17,7 @@
 #define XLibPath /**/
 #define XExtLibPath /**/
 
-#define DbmLibrary ../../libhpdbm.a   /* Changed by jbasney per Todd T. */
-/* #define DbmLibrary ../../libgdbm.a */
+#define DbmLibrary /usr/lib/libndbm.a
 #define BSDLibrary /usr/lib/libBSD.a
 
 #define MALLOC_DEBUG 			NO
