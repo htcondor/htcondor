@@ -39,6 +39,8 @@
 #include "job_report.h"
 #include "../condor_c++_util/directory.h"
 
+#include "user_job_policy.h"
+
 #if defined(AIX31) || defined(AIX32)
 #include "syscall.aix.h"
 #endif
@@ -774,46 +776,63 @@ Wrapup( )
 	perform actions based upon what special attributes evaluate to. */
 bool periodic_policy(void)
 {
+	ClassAd *result;
+	int val;
+	int action;
 	char buf[4096];
-	int phc, prc;
 
-	if (JobAd == NULL) {
-		EXCEPT( "Could not evaluate periodic policy due to no job ad!\n" );
-	}
-
-	/* we are going to look at PERIODIC_HOLD_CHECK and PERIODIC_REMOVE_CHECK
-		to see if they force me to do something with this job. There is
-		precedence here. If the HOLD is false, THEN we check the REMOVE. */
-
+	/* See what the user job policy has in store for me. */
+	result = user_job_policy(JobAd);
 	
-	if (JobAd->EvalBool(ATTR_PERIODIC_HOLD_CHECK, JobAd, phc) == 0) {
-		return false;
-	}
-	
-	/* Should I hold? */
-	if (phc == 1)
+	result->EvalBool(ATTR_USER_POLICY_ERROR, result, val);
+	if (val == 1)
 	{
-		dprintf(D_ALWAYS, "Periodic policy: holding job.\n");
-		sprintf(buf, "Your job has been held because %s has become true\n",
-			ATTR_PERIODIC_HOLD_CHECK);
-
-		/* This exits */
-		HoldJob(buf);
-	}
-
-	if (JobAd->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, JobAd, prc) == 0) {
+		dprintf(D_ALWAYS, "There was an error in the periodic policy\n");
+		delete result;
 		return false;
 	}
 
-	/* Should I remove? */
-	if (prc == 1)
+	result->EvalBool(ATTR_TAKE_ACTION, result, val);
+	if (val == 1)
 	{
-		dprintf(D_ALWAYS, "Periodic policy: remove job.\n");
-		JobStatus = 0;
-		JobExitStatus = 0;
-		return true;
+		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf);
+
+		result->LookupInteger(ATTR_USER_POLICY_ACTION, action);
+		switch(action)
+		{
+			case REMOVE_JOB:
+				dprintf(D_ALWAYS, "Periodic Policy: removing job because %s "
+					"has become true\n", buf);
+				/* set some yucky global variables */
+				JobStatus = 0;
+				JobExitStatus = 0;
+				delete result;
+				return true;
+				break;
+
+			case HOLD_JOB:
+				sprintf(buf, "Periodic Policy: holding job because %s has "
+					"become true\n", buf);
+
+				sprintf(buf, "Your job has been held because %s has become "
+					"true\n", ATTR_PERIODIC_HOLD_CHECK);
+
+				delete result;
+
+				/* This exits */
+				HoldJob(buf);
+				break;
+
+			default:
+				dprintf(D_ALWAYS, "WARNING! Ignoring unknown action type in "
+						"periodic_policy()\n");
+				delete result;
+				return false;
+				break;
+		}
 	}
 
+	delete result;
 	return false;
 }
 
@@ -821,53 +840,68 @@ bool periodic_policy(void)
 	true or not */
 void static_policy(void)
 {
+	ClassAd *result;
+	int val;
+	int action;
 	char buf[4096];
-	int ehc, erc;
-	int prc;
 
-	ASSERT( JobAd != NULL );
-
-	/* check the exit hold policy */
-	if (JobAd->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, JobAd, ehc) == 0) {
+	/* See what the user job policy has in store for me. */
+	result = user_job_policy(JobAd);
+	
+	result->EvalBool(ATTR_USER_POLICY_ERROR, result, val);
+	if (val == 1)
+	{
+		dprintf(D_ALWAYS, "There was an error in the static policy\n");
+		delete result;
 		return;
 	}
-	if (ehc == 1)
-	{
-		dprintf( D_ALWAYS, "Static policy: hold on exit\n");
-		/* This will exit */
-		sprintf(buf, "Your job has been held because your job exited and "
-			"%s became true.\n", ATTR_ON_EXIT_HOLD_CHECK);
-		HoldJob(buf);
-	}
-	else
-	{
-		dprintf( D_ALWAYS, "Static policy: don't hold on exit\n" );
-	}
 
-	/* if the periodic remove check said to remove, then ignore what the exit
-		remove check said to do. */
-	if (JobAd->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, JobAd, prc) != 0) {
-		if (prc == 1) {
-		dprintf( D_ALWAYS, "Static policy: ignoring on_exit remove policy "
-			"because periodic exit remove policy takes precedence\n" );
-		return;
+	result->EvalBool(ATTR_TAKE_ACTION, result, val);
+	if (val == 1)
+	{
+		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf);
+
+		result->LookupInteger(ATTR_USER_POLICY_ACTION, action);
+		switch(action)
+		{
+			case REMOVE_JOB:
+				dprintf(D_ALWAYS, "Static Policy: removing job because %s has "
+					"become true\n", buf);
+
+				/* do nothing, the nasty old shadow logic takes it from here. */
+
+				delete result;
+				return;
+				break;
+
+			case HOLD_JOB:
+				dprintf(D_ALWAYS, "Static Policy: holding job because %s has "
+					"become true\n", buf);
+
+				delete result;
+
+				sprintf(buf, "Your job has been held because %s has become "
+					"true\n", ATTR_PERIODIC_HOLD_CHECK);
+
+				/* This exits */
+				HoldJob(buf);
+				return;
+				break;
+
+			default:
+				dprintf(D_ALWAYS, "WARNING! Ignoring unknown action type in "
+						"periodic_policy()\n");
+				delete result;
+				return;
+				break;
 		}
 	}
 
-	/* Now check the exit remove policy */
-	if (JobAd->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, JobAd, erc) == 0) {
-		return;
-	}
-	if (erc == 1)
-	{
-		dprintf( D_ALWAYS, "Static policy: remove on exit\n" );
-	}
-	else
-	{
-		dprintf( D_ALWAYS, "Static policy: don't remove on exit\n" );
-		EXCEPT( "Job didn't exit under conditions specifed in %s",
-			ATTR_ON_EXIT_REMOVE_CHECK );
-	}
+	delete result;
+
+	dprintf( D_ALWAYS, "Static policy: don't remove on exit\n" );
+	EXCEPT( "Job didn't exit under conditions specifed in %s",
+		ATTR_ON_EXIT_REMOVE_CHECK );
 }
 
 void
