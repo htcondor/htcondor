@@ -27,14 +27,16 @@
 extern "C" {
 #endif
 
-void DumpOpenFds();
-void SaveFileState();
-void RestoreFileState();
+void InitFileState( void );
+void DumpOpenFds( void );
+void SaveFileState( void );
+void RestoreFileState( void );
 int MapFd( int );
 void Set_CWD( const char *working_dir );
+int LocalAccess( int );
 
 #if defined(__cplusplus)
 }
 #endif
 
-#endif
+#endif /* _FILE_TABLE_INTERF_H */
