@@ -1,6 +1,4 @@
-#include <strings.h>
-
-char * chomp( char *buffer );
+#include "condor_common.h"
 
 //strip off newline if exists
 char *
