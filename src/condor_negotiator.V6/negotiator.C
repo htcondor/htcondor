@@ -66,6 +66,7 @@
 #include "proc.h"
 #include "condor_query.h"
 #include "manager.h"
+#include "condor_io.h"
 
 #include <sys/wait.h>
 
@@ -76,10 +77,9 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 char		*strdup(), *index();
-XDR			*xdr_Init(), *xdr_Udp_Init();
 CONTEXT		*create_context();
 MACH_REC	*create_mach_rec(MACH_REC*), *find_rec(MACH_REC*), *find_server(CONTEXT*);
-void 		say_goodby( XDR *xdrs, const char *name );
+void 		say_goodby( ReliSock *s, const char *name );
 void 		unblock_signals();
 char*		get_random_string(char**);
 void		find_update_prio(const char*, int);
@@ -88,7 +88,7 @@ void		init_params();
 int			init_tcp_sock(char*, int);
 void		reschedule();
 void		accept_tcp_connection();
-void		do_command(XDR*);
+void		do_command(ReliSock *);
 int			connect_to_collector();
 void		update_machine_info(MACH_REC*);
 void		do_negotiations();
@@ -368,8 +368,8 @@ init_tcp_sock( char* service, int port )
 void accept_tcp_connection()
 {
 	struct sockaddr_in	from;
-	int		len;
-	XDR		xdr, *xdrs; 
+	int					len;
+	ReliSock			sock; 
 
 	len = sizeof from;
 	memset( (char *)&from, 0,sizeof from );
@@ -383,34 +383,24 @@ void accept_tcp_connection()
 		EXCEPT( "accept" );
 	}
 
-	xdrs = xdr_Init( &CommandSock, &xdr );
+	sock.attach_to_file_desc(CommandSock);
 
 	(void)alarm( (unsigned)ClientTimeout );	/* don't hang here forever */
-	do_command( xdrs );
+	do_command( &sock );
 	(void)alarm( 0 );				/* cancel alarm */
-
-	xdr_destroy( xdrs );
-	if( CommandSock >= 0 ) {
-		(void)close( CommandSock );
-		dprintf( D_FULLDEBUG,
-			"Closed CommandSock (%d) at %d\n",
-			CommandSock, __LINE__
-		);
-		CommandSock = -1;
-	}
 }
 
 /*
 ** Somebody has connected to our socket with a request.  Read the request
 ** and handle it.
 */
-void do_command( XDR* xdrs )
+void do_command( ReliSock* sock )
 {
 	int		cmd;
 
 		/* Read the request */
-	xdrs->x_op = XDR_DECODE;
-	if( !xdr_int(xdrs,&cmd) ) {
+	sock->decode();
+	if( !sock->code(cmd) ) {
 		dprintf( D_ALWAYS, "Can't receive command from client\n" );
 		return;
 	}
@@ -433,6 +423,7 @@ void do_command( XDR* xdrs )
 		default:
 			EXCEPT( "Got unknown command (%d)\n", cmd );
 	}
+	sock->end_of_message();
 }
 
 #define CLOSE_XDR_STREAM \
@@ -459,7 +450,6 @@ void reschedule()
 	xdrs->x_op = XDR_ENCODE;
 
 	cmd = GIVE_STATUS;
-	dprintf (D_PROTOCOL, "## 1. Getting list of machines\n");
 	if( !xdr_int(xdrs, &cmd) ) {
 		dprintf( D_ALWAYS, "1. Can't send GIVE_STATUS command\n" );
 		CLOSE_XDR_STREAM;
@@ -824,12 +814,12 @@ void do_negotiations()
 #define TRACE dprintf(D_ALWAYS,"%s:%d\n",__FILE__,__LINE__)
 
 int		call_schedd(char*, int);
-int		simple_negotiate(char*, ClassAd*, XDR*, int&);
+int		simple_negotiate(char*, ClassAd*, ReliSock*, int&);
 
 void negotiate( char* addr, ClassAd* rec )
 {
 
-	XDR			xdr, *xdrs = NULL; 
+	ReliSock	sock;
 	int			prio, next_prio;
 	int			status;
 	ClassAd*	next; 
@@ -853,13 +843,14 @@ void negotiate( char* addr, ClassAd* rec )
 			);
 
 	(void)alarm( (unsigned)ClientTimeout );	/* don't hang here forever */
-	xdrs = xdr_Init( &ClientSock, &xdr );
-	status = snd_int( xdrs, NEGOTIATE, FALSE );
+	sock.attach_to_file_desc(ClientSock);
+	sock.encode();
+	status = sock.put(NEGOTIATE);
+	sock.end_of_message();
 	(void)alarm( 0 );				/* cancel alarm */
 
 	if( !status ) {
 		dprintf( D_ALWAYS, "\t1.Error negotiating with %s\n", addr); 
-		xdr_destroy( xdrs );
 		return;
 	}
 
@@ -871,7 +862,7 @@ void negotiate( char* addr, ClassAd* rec )
 	while( prio >= next_prio ) {
 
 		(void)alarm( (unsigned)ClientTimeout );	/* don't hang here forever */
-		status = simple_negotiate( addr, rec, xdrs, prio );
+		status = simple_negotiate( addr, rec, &sock, prio );
 		(void)alarm( (unsigned)0 );
 
 		if( status != SUCCESS ) {
@@ -883,17 +874,7 @@ void negotiate( char* addr, ClassAd* rec )
 		   we must tell it we are done.  Otherwise, it ran out of jobs
 		   to send us, and has already broken the connection. */
 	if( status == SUCCESS ) {
-		say_goodby( xdrs, addr );
-	}
-
-	xdr_destroy( xdrs );
-	if( ClientSock != -1 ) {
-		(void)close( ClientSock );
-		dprintf( D_FULLDEBUG,
-			"Closed ClientSock (%d) to %s\n",
-			ClientSock, addr
-		);
-		ClientSock = -1;
+		say_goodby( &sock, addr );
 	}
 }
 
@@ -901,24 +882,28 @@ int		send_to_startd(const char*);
 int		send_to_accountant(const char*);
 void	decrement_idle(char*, ClassAd*);
 
-int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
+int simple_negotiate( char* addr, ClassAd* rec, ReliSock* sock, int& prio )
 {
 	int			op;
 	MACH_REC	*server;
 	CONTEXT		*job_context = NULL;
+	ClassAd		ad;
 	char 		*address,*final_string, *random_string;
 	int 		sequence_number=0;
 
 	for(;;) {
 		(void)alarm( (unsigned)ClientTimeout );	/* reset the alarm every time */
 		dprintf (D_PROTOCOL, "## 2. Negotiating with schedd %s\n", addr);
-		if( !snd_int(xdrs,SEND_JOB_INFO,TRUE) ) {
+		sock->encode();
+		if( !sock->put(SEND_JOB_INFO) ) {
 			dprintf( D_ALWAYS, "\t3.Error negotiating with %s\n", addr );
 			return ERROR;
 		}
+		sock->end_of_message();
 
 		errno = 0;
-		if( !rcv_int(xdrs,&op,FALSE) ) {
+		sock->decode();
+		if( !sock->get(op) ) {
 			dprintf( D_ALWAYS, "\t4.Error negotiating with %s\n", addr );
 			dprintf( D_ALWAYS, "\terrno = %d\n", errno );
 			return ERROR;
@@ -926,14 +911,17 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 
 		switch( op ) {
 			case JOB_INFO:
-				job_context = create_context();
-				if( !rcv_context(xdrs,job_context,TRUE) ) {
+				if( !ad.get(*sock) ) {
 					dprintf(D_ALWAYS,
 							"\t5.Error negotiating with %s\n", addr );
-					free_context( job_context );
 					return ERROR;
 				}
-
+				if (!sock->end_of_message()) {
+					dprintf(D_ALWAYS, "end_of_message failed\n");
+					return ERROR;
+				}
+				job_context = create_context();
+				ad.MakeContext(job_context);
 
 				if( server = find_server(job_context) ) {
 					dprintf( D_ALWAYS, "\tAllowing %s to run on %s\n",
@@ -973,7 +961,8 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 								"\tCan't send capability to accountant.\n");
 					}
 
-					if( !snd_int(xdrs,PERMISSION,TRUE) ) {
+					sock->encode();
+					if( !sock->put(PERMISSION) ) {
 						dprintf( D_ALWAYS,
 								"\t8.Error negotiating with %s\n", addr );
 						free_context( job_context );
@@ -982,15 +971,23 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 						free(address);
 						return ERROR;
 					}
+					if (!sock->eom()) {
+						dprintf(D_ALWAYS, "eom() failed\n");
+						return ERROR;
+					}
 					dprintf(D_PROTOCOL, "\t## 3. Sending %s to schedd ...\n", 
 						final_string);
-					if( !snd_string(xdrs,final_string,TRUE) ) { /* dhaval */
+					if( !sock->put(final_string) ) { /* dhaval */
 						dprintf( D_ALWAYS,
 								"\t9.Error negotiating with %s\n", addr );
 						free_context( job_context );
 						free(final_string);
 						free(random_string);
 						free(address);
+						return ERROR;
+					}
+					if (!sock->eom()) {
+						dprintf(D_ALWAYS, "eom() failed\n");
 						return ERROR;
 					}
 					free(final_string);
@@ -1005,7 +1002,8 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 					/* PREEMPTION : dhruba */
 					create_prospective_list(prio,job_context);
 
-					if( !snd_int(xdrs,REJECTED,TRUE) ) {
+					sock->encode();
+					if( !sock->put(REJECTED) ) {
 						dprintf( D_ALWAYS,
 						"\t9.Error negotiating with %s\n", addr );
 						free_context( job_context );
@@ -1013,9 +1011,11 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 					}
 				}
 				free_context( job_context );
+				sock->end_of_message();
 				break;
 			case NO_MORE_JOBS:
-				xdrrec_skiprecord( xdrs );
+				sock->end_of_message();
+				/* xdrrec_skiprecord( xdrs ); */
 				dprintf( D_FULLDEBUG, "Done negotiating with %s\n", addr );
 				return FAIL;
 			default:
@@ -1667,8 +1667,8 @@ void create_prospective_list( int prio , CONTEXT* job_context)
 	char* cli, flag;
 	int count = 0, curPrio,i;
 	int curTime, jobTime;
-	int     sock;
-	XDR     xdr, *xdrs;
+	int     sd;
+	ReliSock	sock;
 	int     cmd;
 	int 	jobUniverse;
 
@@ -1798,24 +1798,24 @@ void create_prospective_list( int prio , CONTEXT* job_context)
 	{
 		dprintf(D_ALWAYS,"\tVACATING %s\n", prospect[0].rec->name);
 		insertInVacate(prospect[0].rec->name);
-		if( (sock = do_connect(prospect[0].rec->name, "condor_startd", 
+		if( (sd = do_connect(prospect[0].rec->name, "condor_startd", 
 							   START_PORT)) < 0 ) {
 			dprintf( D_ALWAYS, 
 					"Can't connect to startd on %s\n", 
 					prospect[0].rec->name );
 		} else {
-			xdrs = xdr_Init( &sock, &xdr );
-			xdrs->x_op = XDR_ENCODE;
+			sock.attach_to_file_desc(sd);
+			sock.encode();
 
 			cmd = CKPT_FRGN_JOB;
-			ASSERT( xdr_int(xdrs, &cmd) );
-			ASSERT( xdrrec_endofrecord(xdrs,TRUE) );
+			ASSERT( sock.code(cmd) );
+			ASSERT( sock.end_of_message() );
 
 			dprintf( D_ALWAYS,
 					"Sent CKPT_FRGN_JOB command to startd on %s\n", 
 					prospect[0].rec->name );
-			xdr_destroy( xdrs );
-			close( sock );
+			/* xdr_destroy( xdrs ); */
+			/* close( sd ); */
 		}
 	}
 	free(prospect);
@@ -1867,14 +1867,14 @@ createVacateList()
 }
 
 void
-say_goodby( XDR *xdrs, const char *name )
+say_goodby( ReliSock *sock, const char *name )
 {
 	int		status;
 
 	dprintf( D_FULLDEBUG, "\tSending END_NEGOTIATE to %s\n", name );
 
 	(void)alarm( (unsigned)ClientTimeout );	/* don't hang here forever */
-	status = snd_int( xdrs, END_NEGOTIATE, TRUE );
+	status = sock->put( END_NEGOTIATE );
 	(void)alarm( 0 );				/* cancel alarm */
 
 	if( status ) {
@@ -1937,46 +1937,42 @@ return 0;
 
 /* addr is in the format "<xxx.xxx.xxx.xxx:xxxx> xxxxxxxxxxxxxxx#xxx" */
 int send_to_startd(const char *addr)
-	{
-	XDR 	*xdrs, xdr;
-	int		sock,port;
+{
+	ReliSock sock;
+	int		sd,port;
 	int		cmd=MATCH_INFO;
 	char	*str;
 
-	if((sock = do_connect(addr,"condor_startd",START_PORT))<0)
+	if((sd = do_connect(addr,"condor_startd",START_PORT))<0)
 	{ 
 		return -1;
 	}
 	dprintf(D_FULLDEBUG, "\tconnected to startd\n");
 
-	xdrs = xdr_Init(&sock,&xdr);
-	xdrs->x_op = XDR_ENCODE;
+	sock.attach_to_file_desc(sd);
+	sock.encode();
 
-	if(!snd_int(xdrs,cmd,FALSE) ) {
-		xdr_destroy( xdrs );
-		close(sock);
+	if(!sock.code(cmd) ) {
 		dprintf(D_ALWAYS, "can't send command MATCH_INFO to startd\n");
 		return -1;
 	}
 
 	str = strchr(addr, ' ');
 	str++;
-	if(!snd_string(xdrs,str,TRUE)) {
-		xdr_destroy( xdrs );
-		close(sock);
+	if(!sock.code(str)) {
 		return -1;
 	}
 
+	sock.eom();
+
 	dprintf(D_FULLDEBUG, "\tsend match %s to startd\n", str);
 
-	xdr_destroy( xdrs );
-	close(sock);
 	return 0;
 }
 
 int send_to_accountant(const char* capability)
 {
-	int		sock;
+	int		sd;
 	XDR		xdr, *xdrs;
 	int		cmd = MATCH_INFO;
 
@@ -1985,31 +1981,31 @@ int send_to_accountant(const char* capability)
 		dprintf(D_FULLDEBUG, "\tno accountant in configuration file\n");
 		return 0;
 	}
-	if((sock = connect_to_accountant()) < 0)
+	if((sd = connect_to_accountant()) < 0)
 	{
 		dprintf(D_ALWAYS, "\tCan't connect to accountant\n");
 		return 0;
 	}
 	dprintf(D_FULLDEBUG, "\tconnected to accountant\n");
 
-	xdrs = xdr_Init(&sock,&xdr);
+	xdrs = xdr_Init(&sd,&xdr);
 	xdrs->x_op = XDR_ENCODE;
 
 	if(!xdr_int(xdrs,&cmd) ) {
 		xdr_destroy( xdrs );
-		close(sock);
+		close(sd);
 		dprintf(D_ALWAYS, "can't send command MATCH_INFO to startd\n");
 		return -1;
 	}
 
 	if(!snd_string(xdrs,capability,TRUE)) {
 		xdr_destroy( xdrs );
-		close(sock);
+		close(sd);
 		return -1;
 	}
 
 	dprintf(D_FULLDEBUG, "\tsend match %s to accountant\n", capability);
 	xdr_destroy( xdrs );
-	close(sock);
+	close(sd);
 	return 0;
 }
