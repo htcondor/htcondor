@@ -97,6 +97,7 @@ const char ATTR_GLOBUS_CONTACT_STRING	 [] = "GlobusContactString";
 const char ATTR_GLOBUS_RESOURCE			 [] = "GlobusResource";
 const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
 const char ATTR_GLOBUS_STATUS			 [] = "GlobusStatus";
+const char ATTR_X509_USER_PROXY          [] = "x509userproxy";			
 const char ATTR_HELD_JOBS				 [] = "HeldJobs";
 const char ATTR_IDLE_JOBS                [] = "IdleJobs";
 const char ATTR_IMAGE_SIZE				 [] = "ImageSize";
