@@ -364,9 +364,10 @@ whoami( FILE *fp )
         } else {
                 fprintf( fp, "(?.?) (%d):", MyPid );
         }
+		return 0;
 }
 
-extern "C" int SetSyscalls(){}
+extern "C" int SetSyscalls(){ return 0; }
 
 /*
 Convert a time value from the POSIX style "clock_t" to a BSD style
