@@ -71,9 +71,9 @@ typedef enum {
 typedef int uid_t;
 typedef int gid_t;
 HANDLE priv_state_get_handle();
-const char *get_user_loginname();
 #endif
 
+const char *get_user_loginname(); 
 void _condor_disable_uid_switching();
 void init_condor_ids();
 void uninit_user_ids();
