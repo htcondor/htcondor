@@ -41,6 +41,11 @@ X11_INCLUDE =           /usr/X11R6/include
 #define CPlusLinker CPlusCompiler
 #endif
 
+#if !defined(PlatformGccFlags)
+#define PlatformGccFlags
+#endif
+
+
 LIBX = XLibPath
 LIBXEXT = XExtLibPath
 CC = CCompiler
@@ -185,11 +190,21 @@ AUTH_FLAGS = GssAuthentication
 #define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag
 #define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
 
-STD_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
-  -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) -D$(OS_FLAG)=$(OS_FLAG) \
-  $(DEBUG_FLAG) PlatformFlags $(SITE_C_FLAGS) $(AUTH_FLAGS)
+VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
+		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
+		 -D$(OS_FLAG)=$(OS_FLAG) \
+		 $(DEBUG_FLAG) $(SITE_C_FLAGS) $(AUTH_FLAGS)
 
+STD_C_FLAGS = $(VENDOR_C_FLAGS) PlatformFlags PlatformGccFlags
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates
+
+TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
+TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
+TESTSUITE_FLAGS_G77 =  $(STD_C_FLAGS)
+TESTSUITE_FLAGS_CC = $(VENDOR_C_FLAGS) PlatformFlags
+TESTSUITE_FLAGS_CPP =  $(VENDOR_C_FLAGS) PlatformFlags
+TESTSUITE_FLAGS_F77 =  $(VENDOR_C_FLAGS) PlatformFlags
+
 
 CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
 QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
