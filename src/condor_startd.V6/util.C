@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "startd.h"
-static char *_FileName_ = __FILE__;
 
 void
 check_perms()
@@ -239,4 +238,3 @@ send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA )
 	}
 	return TRUE;
 }
-
