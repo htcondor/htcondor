@@ -33,17 +33,13 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
+static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 #ifndef WIN32
-#include "_condor_fix_resource.h"
 #include <std.h>
 #include <pwd.h>
-extern "C" {
-#include <netdb.h>
-}
+
 #if defined(Solaris)
 #define __EXTENSIONS__
 #endif
@@ -54,11 +50,11 @@ extern "C" {
 #include <rpc/types.h>
 #endif	// of ifndef WIN32
 
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_expressions.h"
 #include "condor_config.h"
 #include "condor_uid.h"
+#include "my_hostname.h"
 #include "master.h"
 #include "file_lock.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -80,7 +76,6 @@ extern "C" {
 #endif
 
 #ifndef WIN32
-#include <sys/wait.h>
 void unix_sigusr1(int);
 #endif
 
@@ -111,13 +106,8 @@ extern "C" char	*SigNames[];
 // prototypes of library functions
 extern "C"
 {
-#if	(defined(SUNOS41) || defined(Solaris))
-	int		sigsetmask(int mask);
-	int		sigpause(int mask);
-#if !defined(Solaris251) 
-	pid_t		vfork();
-#endif
-#elif defined(IRIX53)
+
+#if defined(IRIX53)
 	int	vfork();
 		/* The following got clobbered when _POSIX_SOURCE was defined
 		   before stdio.h was included */
@@ -125,7 +115,6 @@ extern "C"
 	int pclose(FILE *stream);
 #endif
 
-		/* 	char*	getwd(char* pathname); no longer needed because using getcwdnow */
 #if defined(IRIX62)
 	int	killpg(long pgrp, int sig);
 #elif !defined(WIN32)
@@ -134,29 +123,13 @@ extern "C"
 
 	int 	detach();
 	int	param_in_pattern(char*, char*);
-	char*	strdup(const char*);
-	int	SetSyscalls( int );
 
-#if defined(LINUX) || defined(HPUX9)
-	int	gethostname(char*, unsigned int);
-#elif !defined(WIN32)
-	int	gethostname(char*, int);
-#endif
-
-#if defined(HPUX9)
-	long sigsetmask(long);
-#elif !defined(WIN32)
-	int	sigsetmask(int);
-#endif
 
 	char*	get_arch();
 	char*	get_op_sys(); 
 //	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int); 
 	int	get_inet_address(struct in_addr*); 
 }
-
-extern	int		Parse(const char*, ExprTree*&);
-char	*param(char*) ;
 
 // void	sigchld_handler(), sigquit_handler(),  sighup_handler();
 
@@ -184,14 +157,13 @@ int		daily_housekeeping(Service*);
 void	usage(const char* );
 void	report_to_collector();
 int		GetConfig(char*, char*);
-int		IsSameHost(const char*);
 void	StartConfigServer();
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
 int		sigusr1_handler(Service *,int);
 int		master_reaper(Service *, int, int);
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+
 extern "C" int	DoCleanup();
 
 #define MINUTE	60
@@ -219,9 +191,6 @@ int		NotFlag;
 int		PublishObituaries;
 int		Lines;
 
-extern int ConfigLineNo;
-extern int Termlog;
-
 char	*default_daemon_list[] = {
 	"MASTER",
 	"STARTD",
@@ -232,11 +201,9 @@ char	*default_daemon_list[] = {
 // create an object of class daemons.
 class Daemons daemons;
 char*			configServer;
-extern BUCKET	*ConfigTab[];
 
 // for daemonCore
 char *mySubSystem = "MASTER";
-
 
 
 int
@@ -456,14 +423,9 @@ sigchld_handler(Service *,int)
 		master_reaper(NULL,pid,status);
 		errno = 0;
 	}
+	return TRUE;
 }
 #endif  // of !defined(WANT_DC_PM)
-
-int
-SetSyscalls( int val )
-{
-	return val;
-}
 
 
 void
@@ -474,7 +436,6 @@ init_params()
 	char	*daemon_name;
 	int		i;
 	daemon	*new_daemon;
-	ExprTree*	tree;
 
 	Log = param( "LOG" );
 	if( Log == NULL )  {
@@ -539,16 +500,10 @@ init_params()
         interval = 300;
     }
 
-	tmp = new char[100];
-	sprintf(tmp, "Machine = \"");
-	if(gethostname(tmp+11, 80) < 0)
-	{
-		EXCEPT("gethostname(), errno = %d", errno);
-	}
-	strcat(tmp, "\"");
-	Parse(tmp, tree);
-	ad.Insert(tree);
-	delete tmp;
+	char line[100];
+	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_hostname() );
+	ad.Insert(line);
+
 	ad.SetMyTypeName(MASTER_ADTYPE);
 	ad.SetTargetTypeName("");
 
@@ -589,7 +544,6 @@ obituary( int pid, int status )
 {
 #if !defined(WIN32)		// until we add email support to WIN32 port...
     char    cmd[512];
-    char    hostname[512];
     FILE    *mailer;
     char    *name, *log;
     char    *mail_prog;
@@ -624,10 +578,6 @@ obituary( int pid, int status )
     dprintf( D_ALWAYS, "Sending obituary for \"%s\" to \"%s\"\n",
 			name, CondorAdministrator );
 
-    if( gethostname(hostname,sizeof(hostname)) < 0 ) {
-        EXCEPT( "gethostname(0x%x,%d)", hostname, sizeof(hostname) );
-    }
-
     mail_prog = param("MAIL");
     if (mail_prog) {
         (void)sprintf( cmd, "%s %s -s \"%s\"", mail_prog,
@@ -645,7 +595,7 @@ obituary( int pid, int status )
 
     if( WIFSIGNALED(status) ) {
         fprintf( mailer, "\"%s\" on \"%s\" died due to signal %d\n",
-				name, hostname, WTERMSIG(status) );
+				name, my_hostname(), WTERMSIG(status) );
         /*
 		   fprintf( mailer, "(%s core was produced)\n",
 		   status->w_coredump ? "a" : "no" );
@@ -653,7 +603,7 @@ obituary( int pid, int status )
     } else {
         fprintf( mailer,
 				"\"%s\" on \"%s\" exited with status %d\n",
-				name, hostname, WEXITSTATUS(status) );
+				name, my_hostname(), WEXITSTATUS(status) );
     }
     tail_log( mailer, log, Lines );
 
@@ -866,6 +816,7 @@ main_shutdown_fast()
 	wait_all_children();
 	dprintf( D_ALWAYS, "All daemons have exited.\n" );
 	master_exit( 0 );
+	return TRUE;
 #endif
 }
 
@@ -889,6 +840,7 @@ main_shutdown_graceful()
 	wait_all_children();
 	dprintf( D_ALWAYS, "All daemons have exited.\n" );
 	master_exit( 0 );
+	return TRUE;
 #endif
 }
 
@@ -1026,34 +978,6 @@ void report_to_collector()
 	}
 
 	dprintf(D_FULLDEBUG, "exit report_to_collector\n");
-}
-
-
-int IsSameHost(const char* host)
-{
-	struct in_addr		local;
-	struct hostent*		hostp;
-	
-	if(get_inet_address(&local) < 0)
-	{
-		EXCEPT("Can't find address");
-	}
-	
-	hostp = gethostbyname(host);
-	if(!hostp)
-	{
-		EXCEPT("Can't find host %s", host);
-	}
-	if(hostp->h_addrtype != AF_INET)
-	{
-		EXCEPT("host (%s) address isn't AF_INET type", host);
-	}
-	
-	if(memcmp((char*)&local, hostp->h_addr_list[0], sizeof(local)) != 0)
-	{
-		return FALSE;
-	}
-	return TRUE; 
 }
 
 void StartConfigServer()

@@ -95,11 +95,6 @@ extern "C"
 	extern	int vfork();
 #endif
 	extern	int		event_mgr();
-#if defined(HPUX9)
-	extern	int		gethostname(char*, unsigned int);
-#elif !defined(WIN32)
-	extern	int		gethostname(char*, int);
-#endif
 }
 
 // to add a new process as a condor daemon, just add one line in 
@@ -412,7 +407,7 @@ int daemon::StartDaemon()
 {
 	char	*shortname;
 
-	if( shortname = strrchr(process_name,'/') ) {
+	if( (shortname = strrchr(process_name,'/')) ) {
 		shortname += 1;
 	} else {
 #ifdef WIN32
@@ -693,7 +688,7 @@ int Daemons::NumberOfChildren()
 }
 
 int
-Daemons::Wait_Reaper(int pid, int status)
+Daemons::Wait_Reaper(int pid, int)
 {
 		// find out which daemon died
 	for ( int i=0; i < no_daemons; i++) {
