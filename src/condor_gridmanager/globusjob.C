@@ -124,6 +124,8 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	enteredCurrentGlobusState = time(NULL);
 	numSubmitAttempts = 0;
 	// ad = NULL;
+	syncedOutputSize = 0;
+	syncedErrorSize = 0;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIME_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
@@ -158,6 +160,9 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	if ( buf[0] != '\0' ) {
 		userLogFile = strdup( buf );
 	}
+
+	classad->LookupInteger( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
+	classad->LookupInteger( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
 
 	if ( !full_rsl_given ) {
 		RSL = buildRSL( classad );
@@ -475,26 +480,9 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_DONE_SAVE;
 					break;
 				}
-				int output_size = -1;
-				int error_size = -1;
-				struct stat file_status;
-				char size_str[50];
-				if ( localOutput ) {
-					rc = stat( localOutput, &file_status );
-					if ( rc < 0 ) {
-						output_size = 0;
-					} else {
-						output_size = file_status.st_size;
-					}
-				}
-				if ( localError ) {
-					rc = stat( localError, &file_status );
-					if ( rc < 0 ) {
-						error_size = 0;
-					} else {
-						error_size = file_status.st_size;
-					}
-				}
+				syncIO();
+				int output_size = localOutput ? syncedOutputSize : -1;
+				int error_size = localError ? syncedErrorSize : -1;
 				sprintf( size_str, "%d %d", output_size, error_size );
 				rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_SIZE,
@@ -889,6 +877,83 @@ void GlobusJob::UpdateGlobusState( int new_state, new_error_code )
 GlobusResrouce *GlobusJob::GetResource()
 {
 	return myResource;
+}
+
+int GlobusJob::syncIO()
+{
+	int rc;
+	int fd;
+	struct stat file_status;
+
+	if ( localOutput != NULL ) {
+		rc = stat( localOutput, &file_status );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS,
+				"stat failed for job %d.%d's output file %s (errno=%d)\n",
+				procID.cluster, procID.proc, localOutput, errno );
+			file_status.st_size = 0;
+		}
+
+		if ( file_status.st_size > syncedOutputSize ) {
+			errno = 0;
+			fd = open( localOutput, O_WRONLY );
+			if ( fd < 0 ) {
+				dprintf( D_ALWAYS,
+						 "open failed for job %d.%d's output file %s (errno=%d)\n",
+						 procID.cluster, procID.proc, localOutput, errno );
+			}
+			if ( fd >= 0 && fsync( fd ) < 0 ) {
+				dprintf( D_ALWAYS,
+						 "fsync failed for job %d.%d's output file %s (errno=%d)\n",
+						 procID.cluster, procID.proc, localOutput, errno );
+			}
+			if ( fd >= 0 && close( fd ) < 0 ) {
+				dprintf( D_ALWAYS,
+						 "close failed for job %d.%d's output file %s (errno=%d)\n",
+						 procID.cluster, procID.proc, localOutput, errno );
+			}
+			if ( errno == 0 ) {
+				syncedOutputSize = file_status.st_size;
+				addScheddUpdateAction( this, UA_UPDATE_STDOUT_SIZE, 0 );
+			}
+		}
+	}
+
+	if ( localError != NULL ) {
+		rc = stat( localError, &file_status );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS,
+				"stat failed for job %d.%d's error file %s (errno=%d)\n",
+				procID.cluster, procID.proc, localError, errno );
+			file_status.st_size = 0;
+		}
+
+		if ( file_status.st_size > syncedErrorSize ) {
+			errno = 0;
+			fd = open( localError, O_WRONLY );
+			if ( fd < 0 ) {
+				dprintf( D_ALWAYS,
+						 "open failed for job %d.%d's error file %s (errno=%d)\n",
+						 procID.cluster, procID.proc, localError, errno );
+			}
+			if ( fd >= 0 && fsync( fd ) < 0 ) {
+				dprintf( D_ALWAYS,
+						 "fsync failed for job %d.%d's error file %s (errno=%d)\n",
+						 procID.cluster, procID.proc, localError, errno );
+			}
+			if ( fd >= 0 && close( fd ) < 0 ) {
+				dprintf( D_ALWAYS,
+						 "close failed for job %d.%d's error file %s (errno=%d)\n",
+						 procID.cluster, procID.proc, localError, errno );
+			}
+			if ( errno == 0 ) {
+				syncedErrorSize = file_status.st_size;
+				addScheddUpdateAction( this, UA_UPDATE_STDERR_SIZE, 0 );
+			}
+		}
+	}
+
+	return TRUE;
 }
 
 const char *GlobusJob::errorString()

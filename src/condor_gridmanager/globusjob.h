@@ -25,6 +25,7 @@ class GlobusJob : public Service
 	void UpdateCondorState( int new_state );
 	void UpdateGlobusState( int new_state, int new_error_code );
 	GlobusResource *GetResource();
+	int syncIO();
 
 	void setProbeInterval( int new_interval );
 
@@ -43,6 +44,8 @@ class GlobusJob : public Service
 	time_t enteredCurrentGmState;
 	time_t enteredCurrentGlobusState;
 	int numSubmitAttempts;
+	int syncedOutputSize;
+	int syncedErrorSize;
 
 	GahpClient gahp;
 
