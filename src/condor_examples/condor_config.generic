@@ -357,6 +357,14 @@ GLIDEIN_SERVER_URLS = \
 ##  way.
 #TRUST_UID_DOMAIN = False
 
+## If you would like to be informed in near real-time via condor_q when
+## a vanilla job is in the suspension state. Then set this attribute to
+## TRUE. However, this real-time update of the condor_schedd by the shadows 
+## could cause performance issues if there are thousands of concurrently
+## running vanilla jobs under a single condor_schedd and they are allowed
+## to suspend and resume.
+#REAL_TIME_JOB_SUSPEND_UPDATES = False
+
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
