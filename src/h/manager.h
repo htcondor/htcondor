@@ -28,6 +28,9 @@
 */ 
 
 
+#if !defined(_MANAGER_H)
+#define _MANAGER_H
+
 #define MINUTE		60
 #define POLICY_TIME atoi(param("POLICY_TIME", "120"))
 #define TIMEOUT 15
@@ -77,3 +80,5 @@ typedef struct prio_rec {
 } PRIO_REC;
 
 #define DUMMY	(MACH_REC *)0
+
+#endif /* _MANAGER_H */
