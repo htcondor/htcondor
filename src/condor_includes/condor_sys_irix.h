@@ -24,8 +24,33 @@
 #define CONDOR_SYS_IRIX_H
 
 
-#define _XOPEN_SOURCE 1
-#define _XOPEN_SOURCE_EXTENDED 1
+#if defined(IRIX65)
+
+/* On IRIX 6.5 the header files are just generally wacky.  So lets
+   define what we want.  NOTE: things like _ABIAPI only work in #if
+   statments! */
+
+/* The following should set things like _ABIAPI to something that
+we want, and it gives us a lot of the 64 bit stuff that was lacking
+before */
+
+#define _SGI_SOURCE 1
+#define _ABI_SOURCE 1
+
+/* We also want LARGEFILE support so define: */
+
+#define _LARGEFILE64_SOURCE 1
+
+/* We also can do without _POSIX_SOURCE on IRIX */
+#if defined(_POSIX_SOURCE)
+#	undef _POSIX_SOURCE
+#endif
+
+#endif
+
+//#define _XOPEN_SOURCE 1
+//#define _XOPEN_SOURCE_EXTENDED 1
+
 #define _BSD_COMPAT 1
 
 /* While we want _BSD_TYPES defined, we can't just define it ourself,
@@ -34,23 +59,46 @@
    <rpc/types.h> as our first header, to make sure we get BSD_TYPES.
    This also includes <sys/types.h>, so we don't need to include that
    ourselves anymore. */
+
 #include <rpc/types.h>
 
-/* For some reason this isn't found in sys/types */
-typedef long long blkcnt64_t;
+#if defined(IRIX65)
+/* Now time for some sanity checks... */
+#if !(_ABIAPI)
+#	error "STOP:  Check out why _ABIAPI is FALSE!"
+#endif
+
+#endif
+
+
+#if defined(IRIX65)
+#	undef _ABIAPI
+#	include <sys/resource.h>
+#	define _ABIAPI 1
+#endif /* defined (IRIX65) */
 
 /* For strdup to get prototyped, we need to still have the XOPEN stuff 
-   defined when we include string.h */
+   defined when we include string.h */ // Need to check this
 #include <string.h>
 
 /******************************
 ** unistd.h
 ******************************/
-#define __vfork fork
-#define _save_BSD_COMPAT _BSD_COMPAT
+//#define __vfork fork
+
+/* if _BSD_COMPAT is defined, then getpgrp will get funny arguments from 
+   <unistd.h> and that will break receivers.c - Ballard 10/99
+   ( and note how this is done! )*/
+#if _BSD_COMPAT
+#	define _save_BSD_COMPAT 1
+#else
+#	define _save_BSD_COMPAT 0
+#endif
 #undef _BSD_COMPAT
+
 #include <unistd.h>
-#undef __vfork
+//#undef __vfork
+
 #define _BSD_COMPAT _save_BSD_COMPAT
 #undef _save_BSD_COMPAT
 
@@ -80,8 +128,8 @@ int pclose(FILE *stream);
 #define _save_NO_ANSIMODE _NO_ANSIMODE
 #undef _NO_ANSIMODE
 #define _NO_ANSIMODE 1
-#undef _SGIAPI
-#define _SGIAPI 1
+//#undef _SGIAPI
+//#define _SGIAPI 1
 #include <signal.h>
 #include <sys/signal.h>
 /* We also want _NO_ANSIMODE and _SGIAPI defined to 1 for sys/wait.h,
@@ -97,9 +145,9 @@ int pclose(FILE *stream);
 #undef _NO_ANSIMODE
 #define _NO_ANSIMODE _save_NO_ANSIMODE
 #undef _save_NO_ANSIMODE
-#undef _SGIAPI
-#define _SGIAPI _save_SGIAPI
-#undef _save_SGIAPI
+//#undef _SGIAPI
+//#define _SGIAPI _save_SGIAPI
+//#undef _save_SGIAPI
 
 /******************************
 ** sys/socket.h
@@ -111,6 +159,7 @@ int pclose(FILE *stream);
 	!!!THIS IS BAAAAD. We are just hacking the _NO_XOPEN4 since we
 	know what the value is. This should be fixed to correctly hold
 	onto the value and restore it afterward.
+
 * #if defined(IRIX65) && defined(IN_CKPT_LIB)
 * #undef _NO_XOPEN4
 * #define _NO_XOPEN4 1
@@ -118,26 +167,54 @@ int pclose(FILE *stream);
 * #undef _NO_XOPEN4
 * #define _NO_XOPEN4 0
 * #endif
+
+	-- NOTE.  You cannot do the following:
+
+	# define _save_foo foo
+	# define foo 1
+	....
+
+	#define foo _save_foo
+
 */
-#if defined(IRIX65)
-#undef _save_ABIAPI
-#define _save_ABIAPI _ABIAPI
-#undef _ABIAPI
-#define _ABIAPI 1
-#undef _save_NO_XOPEN4
-#define _save_NO_XOPEN4 _NO_XOPEN4
-#undef _NO_XOPEN4
-#define _NO_XOPEN4 0
-#include <sys/socket.h>
-#undef _NO_XOPEN4
-#define _NO_XOPEN4 _save_NO_XOPEN4
-#undef _save_NO_XOPEN4
-#undef _ABIAPI
-#define _ABIAPI _save_ABIAPI
-#undef _save_ABIAPI
-#endif
+
+
 
 #include <sys/select.h>
+
+/* A bunch of sanity checks. */
+
+#if !(_LFAPI)
+#	error "STOP:  Find out why _LFAPI is false!!!"
+#endif
+#if !(_SGI_SOURCE)
+#	error "STOP:  Find out why _SGIAPI is false!!!"
+#endif
+
+#if !(_NO_POSIX)
+#	error "STOP:  Find out why _NO_POSIX is false!!!"
+#endif
+
+#if (!_NO_XOPEN4)
+#	error "STOP:  Find out why _NO_XOPEN4 is false!!!"
+#endif
+
+#if (!_NO_XOPEN5)
+#	error "STOP:  Find out why _NO_XOPEN5 is false!!!"
+#endif
+
+#if !(_SGIAPI)
+#	error "STOP:  Find out why _SGIAPI is false!!!"
+#endif
+
+#if defined(_POSIX_SOURCE)
+#	error "STOP:  why is _POSIX_SOURCE defined?"
+#endif
+
+#if defined(_POSIX_C_SOURCE)
+#	error "STOP:  why is _POSIX_C_SOURCE defined?"
+#endif
+
 
 #undef _SGIAPI
 #define _SGIAPI 1
@@ -146,12 +223,19 @@ int pclose(FILE *stream);
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
-/* Needed to get TIOCNOTTY defined */
+#if defined(IRIX62)
+/* Needed to get TIOCNOTTY defined - not needed after IRIX62 */
 #include <sys/ttold.h>
+#endif
 
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
+
+#if defined(IRIX65)
+#	include <sys/file.h>
+#	define HAS_64BIT_SYSCALLS 1
+#endif
 
 #define HAS_U_TYPES			1
 #define SIGSET_CONST			const
