@@ -84,8 +84,6 @@ MachAttributes::init()
 void
 MachAttributes::compute( amask_t how_much )
 {
-	javaInfo->compute(how_much);
-
 	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
 
 			// Since we need real values for them as soon as a
@@ -326,6 +324,8 @@ MachAttributes::benchmark( Resource* rip, int force )
 		dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
 		rip->change_state( idle_act );
 	}
+
+	javaInfo->compute(A_STATIC);
 }
 
 
