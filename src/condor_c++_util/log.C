@@ -274,12 +274,12 @@ LogRecord::WriteTail(FILE *fp)
 {
 	int	rval, tot;
 
-	rval = fprintf(fp, "%d ", op_type);
+	rval = fprintf(fp, "\n%d ", op_type);
 	if (rval < 0) {
 		return rval;
 	}
 	tot = rval;
-	rval = fprintf(fp, "%d \n", op_type);
+	rval = fprintf(fp, "%d\n", body_size);
 
 	if (rval < 0) {
 		return rval;
@@ -300,7 +300,7 @@ LogRecord::ReadHeader(FILE *fp)
 		return rval;
 	}
 	tot = rval;
-	rval = fscanf(fp,"%d", &op_type);
+	rval = fscanf(fp,"%d", &body_size);
 	if (rval < 0) {
 		return rval;
 	}
@@ -318,7 +318,7 @@ int LogRecord::ReadTail(FILE *fp)
 		return rval;
 	}
 	tot = rval;
-	rval = fscanf(fp,"%d", &op_type);
+	rval = fscanf(fp,"%d", &body_size);
 	if (rval < 0) {
 		return rval;
 	}
