@@ -23,10 +23,6 @@ calc_idle_time( int & user_idle, int & console_idle)
 
 #else /* !defined(WIN32) */
 
-#ifndef MIN
-#define MIN(a,b) ((a)<(b)?(a):(b))
-#endif
-
 #include <utmp.h>
 
 #if defined(OSF1)
