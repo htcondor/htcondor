@@ -54,6 +54,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "strupr.h"
+#include "sig_name.h"
 #include "env.h"
 #include "condor_secman.h"
 #include "condor_distribution.h"
@@ -630,16 +631,16 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip,
     }
 
 	// Semantics dictate that certain signals CANNOT be caught!
-	// In addition, allow DC_SIGCHLD to be automatically replaced (for backwards
-	// compatibility), so cancel any previous registration for DC_SIGCHLD.
+	// In addition, allow SIGCHLD to be automatically replaced (for backwards
+	// compatibility), so cancel any previous registration for SIGCHLD.
 	switch (sig) {
-		case DC_SIGKILL:
-		case DC_SIGSTOP:
-		case DC_SIGCONT:
+		case SIGKILL:
+		case SIGSTOP:
+		case SIGCONT:
 			EXCEPT("Trying to Register_Signal for sig %d which cannot be caught!",sig);
 			break;
-		case DC_SIGCHLD:
-			Cancel_Signal(DC_SIGCHLD);
+		case SIGCHLD:
+			Cancel_Signal(SIGCHLD);
 			break;
 		default:
 			break;
@@ -3195,96 +3196,30 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	// handle the "special" action signals which are really just telling
 	// DaemonCore to do something.
 	switch (sig) {
-		case DC_SIGTERM:
-			// if the process we are signalling is a daemon core process, 
-			// then target_has_dcpm == TRUE and we will just fall thru and
-			// send the DC_SIGTERM as usual.
-			if ( target_has_dcpm == FALSE ) {
-				return Shutdown_Graceful(pid);
-			}
+		case SIGTERM:
+			return Shutdown_Graceful(pid);
 			break;
-		case DC_SIGKILL:
+		case SIGKILL:
 			return Shutdown_Fast(pid);
 			break;
-		case DC_SIGSTOP:
+		case SIGSTOP:
 			return Suspend_Process(pid);
 			break;
-		case DC_SIGCONT:
+		case SIGCONT:
 			return Continue_Process(pid);
 			break;
 		default:
 #ifndef WIN32
 			// If we are on Unix, and we are not sending a 'special' signal,
 			// and our child is not a daemon-core process, then just send
-			// the signal as usual via kill() after translating DC sig num
-			// into the equivelent Unix signal on this platform.
+			// the signal as usual via kill()
 			if ( target_has_dcpm == FALSE ) {
-#define TRANSLATE_SIG( x ) case DC_##x: unixsig = x; unixsigname = #x; break;
-
-				int unixsig;
-				char *unixsigname;
-				switch( sig ) {
-					TRANSLATE_SIG( SIGHUP )
-					TRANSLATE_SIG( SIGINT )
-					TRANSLATE_SIG( SIGQUIT )
-					TRANSLATE_SIG( SIGILL )
-					TRANSLATE_SIG( SIGTRAP )
-					TRANSLATE_SIG( SIGABRT )
-#if defined(SIGEMT)
-					TRANSLATE_SIG( SIGEMT )
-#endif
-					TRANSLATE_SIG( SIGFPE )
-					TRANSLATE_SIG( SIGKILL )
-					TRANSLATE_SIG( SIGBUS )
-					TRANSLATE_SIG( SIGSEGV )
-#if defined(SIGSYS)
-					TRANSLATE_SIG( SIGSYS )
-#endif
-					TRANSLATE_SIG( SIGPIPE )
-					TRANSLATE_SIG( SIGALRM )
-					TRANSLATE_SIG( SIGTERM )
-#if defined(SIGURG)
-					TRANSLATE_SIG( SIGURG )
-#endif
-					TRANSLATE_SIG( SIGSTOP )
-					TRANSLATE_SIG( SIGTSTP )
-					TRANSLATE_SIG( SIGCONT )
-					TRANSLATE_SIG( SIGCHLD )
-					TRANSLATE_SIG( SIGTTIN )
-					TRANSLATE_SIG( SIGTTOU )
-#if defined(SIGIO)
-					TRANSLATE_SIG( SIGIO )
-#endif
-#if defined(SIGXCPU)
-					TRANSLATE_SIG( SIGXCPU )
-#endif
-#if defined(SIGXFSZ)
-					TRANSLATE_SIG( SIGXFSZ )
-#endif
-#if defined(SIGVTALRM)
-					TRANSLATE_SIG( SIGVTALRM )
-#endif
-#if defined(SIGPROF)
-					TRANSLATE_SIG( SIGPROF )
-#endif
-#if defined(SIGWINCH)
-					TRANSLATE_SIG( SIGWINCH )
-#endif
-#if defined(SIGINFO)
-					TRANSLATE_SIG( SIGINFO )
-#endif
-					TRANSLATE_SIG( SIGUSR1 )
-					TRANSLATE_SIG( SIGUSR2 )
-					default:   	
-						{
-							EXCEPT("Trying to send unknown signal");
-						}
-				}
-				dprintf(D_DAEMONCORE,
-					"Send_Signal(): Doing kill(%d,%d) [sig %d=%s]\n",
-					pid, unixsig,unixsig,unixsigname);
+				const char* tmp = sigNameLookup(sig);
+				dprintf( D_DAEMONCORE,
+						 "Send_Signal(): Doing kill(%d,%d) [%s]\n",
+						 pid, sig, tmp ? tmp : "Unknown" );
 				priv_state priv = set_root_priv();
-				int status = ::kill(pid, unixsig);
+				int status = ::kill(pid, sig);
 				set_priv(priv);
 				// return 1 if kill succeeds, 0 otherwise
 				return (status >= 0);
@@ -3487,10 +3422,10 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	}
 
 	if ( pidinfo->sinful_string[0] != '\0' ) {
-		// pid is a DaemonCore Process; send it a DC_SIGTERM signal instead.
+		// pid is a DaemonCore Process; send it a SIGTERM signal instead.
 		dprintf(D_PROCFAMILY,
-					"Shutdown_Graceful: Sending pid %d DC_SIGTERM\n",pid);
-		return Send_Signal(pid,DC_SIGTERM);
+					"Shutdown_Graceful: Sending pid %d SIGTERM\n",pid);
+		return Send_Signal(pid,SIGTERM);
 	}
 
 	// Find the Window Handle to this pid, if we don't already know it
@@ -5404,7 +5339,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	bool first_time = true;
 
 
-	assert( sig == DC_SIGCHLD );
+	assert( sig == SIGCHLD );
 
 	for(;;) {
 		errno = 0;
@@ -5867,7 +5802,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	if (pid == ppid) {
 		dprintf(D_ALWAYS,
 				"Our Parent process (pid %lu) exited; shutting down\n",pid);
-		Send_Signal(mypid,DC_SIGTERM);	// SIGTERM means shutdown graceful
+		Send_Signal(mypid,SIGTERM);	// SIGTERM means shutdown graceful
 	}
 
 	return TRUE;
