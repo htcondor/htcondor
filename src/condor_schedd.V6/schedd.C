@@ -126,7 +126,7 @@ extern "C"
 	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int);
 	int		udp_unconnect();
 	char*	sin_to_string(struct sockaddr_in*);
-	EXPR*	build_expr(char*, ELEM*);
+	EXPR*	build_expr(const char*, ELEM*);
 	void	get_inet_address(struct in_addr*);
 	int		prio_compar(prio_rec*, prio_rec*);
 }
@@ -276,16 +276,16 @@ Scheduler::count_jobs()
 
     tmp.type = INT;
     tmp.val.integer_val = JobsRunning;
-    store_stmt( build_expr("Running",&tmp), MachineContext );
+    store_stmt( build_expr(ATTR_RUNNING_JOBS,&tmp), MachineContext );
 
     tmp.val.integer_val = JobsIdle;
-    store_stmt( build_expr("Idle",&tmp), MachineContext );
+    store_stmt( build_expr(ATTR_IDLE_JOBS,&tmp), MachineContext );
 
     tmp.val.integer_val = N_Owners;
-    store_stmt( build_expr("Users",&tmp), MachineContext );
+    store_stmt( build_expr(ATTR_NUM_USERS,&tmp), MachineContext );
 
     tmp.val.integer_val = MaxJobsRunning;
-    store_stmt( build_expr("MAX_JOBS_RUNNING",&tmp), MachineContext );
+    store_stmt( build_expr(ATTR_MAX_JOBS_RUNNING,&tmp), MachineContext );
 
 	/*
 	sprintf(tmp, "RunningJobs = %d", JobsRunning);
@@ -1636,13 +1636,13 @@ void Scheduler::Init()
 	MySockName = sin_to_string(&addr);
 	dprintf(D_FULLDEBUG, "MySockName = %s\n", MySockName);
 	if (MySockName !=0){
-		sprintf(tmpExpr, "SCHEDD_IP_ADDR = %s", MySockName);
+		sprintf(tmpExpr, "%s = %s", ATTR_SCHEDD_IP_ADDR, MySockName);
 		ad->Insert(tmpExpr);
 		ELEM	tmp;
 
 		tmp.type = STRING;
 		tmp.val.string_val = MySockName;
-		store_stmt(build_expr("SCHEDD_IP_ADDR", &tmp), MachineContext);
+		store_stmt(build_expr(ATTR_SCHEDD_IP_ADDR, &tmp), MachineContext);
 	}
 
 	CollectorHost = param( "COLLECTOR_HOST" );

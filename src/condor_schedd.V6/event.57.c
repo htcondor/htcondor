@@ -53,6 +53,7 @@
 #include "exit.h"
 #include "dgram_io_handle.h"
 #include "prio_rec.h"
+#include "condor_attributes.h"
 
 #if defined(NDBM)
 #include <ndbm.h>
@@ -165,7 +166,7 @@ timeout()
 	if (MySockName1!=0){  /* dhaval */
 		tmp.type = STRING;
 		tmp.s_val = MySockName1;
-		store_stmt( build_expr("SCHEDD_IP_ADDR", &tmp), MachineContext);
+		store_stmt( build_expr(ATTR_SCHEDD_IP_ADDR, &tmp), MachineContext);
 	}
 
 	update_central_mgr();
@@ -221,16 +222,16 @@ count_jobs()
 
 	tmp.type = INT;
 	tmp.i_val = JobsRunning;
-	store_stmt( build_expr("Running",&tmp), MachineContext );
+	store_stmt( build_expr(ATTR_RUNNING_JOBS,&tmp), MachineContext );
 
 	tmp.i_val = JobsIdle;
-	store_stmt( build_expr("Idle",&tmp), MachineContext );
+	store_stmt( build_expr(ATTR_IDLE_JOBS,&tmp), MachineContext );
 
 	tmp.i_val = N_Owners;
-	store_stmt( build_expr("Users",&tmp), MachineContext );
+	store_stmt( build_expr("ATTR_NUM_USERS",&tmp), MachineContext );
 
 	tmp.i_val = MaxJobsRunning;
-	store_stmt( build_expr("MAX_JOBS_RUNNING",&tmp), MachineContext );
+	store_stmt( build_expr(ATTR_MAX_JOBS_RUNNING,&tmp), MachineContext );
 
 }
 
