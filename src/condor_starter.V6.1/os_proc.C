@@ -390,8 +390,14 @@ OsProc::StartJob()
 		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName, 
 				 &(Args[skip]) );
 	} else {
-		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
+		if (strlen(CONDOR_EXEC) != strlen(Args)){
+			/* some arguments exist, so skip and print them out */
+			dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
 				 &(Args[skip]) );
+		} else {
+			/* no arguments exist, so just print out executable */
+			dprintf( D_ALWAYS, "About to exec %s\n", JobName);
+		}
 	}
 
 		// Grap the full environment back out of the Env object 
