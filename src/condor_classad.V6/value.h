@@ -225,13 +225,15 @@ class Value
 		friend class ExprTree;
 
 		ValueType 		valueType;		// the type of the value
-		bool			booleanValue;
-		int				integerValue;
-		double 			realValue;
-		string			strValue;
-		const ExprList	*listValue;
-		const ClassAd	*classadValue;
-		time_t			timeValueSecs;
+		union {
+			bool			booleanValue;
+			int				integerValue;
+			double 			realValue;
+			const ExprList	*listValue;
+			const ClassAd	*classadValue;
+			time_t			timeValueSecs;
+		};
+		string			strValue;		// has ctor/dtor cannot be in the union
 };
 
 

@@ -37,7 +37,6 @@ Value( )
 	listValue = NULL;
 	classadValue = NULL;
 	timeValueSecs = 0;
-	strValue = "";
 }
 
 
