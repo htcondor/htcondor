@@ -210,6 +210,7 @@ email_open_implementation(char *Mailer, char *final_command)
 	FILE *mailerstream;
 	pid_t pid;
 	int pipefds[2];
+	//char tempbuf[4096];
 
 	/* The gist of this code is to exec a mailer whose stdin is dup2'ed onto
 		the write end of a pipe. The parent gets the fdopen'ed read end
@@ -281,13 +282,6 @@ email_open_implementation(char *Mailer, char *final_command)
 		chdir("/");
 		umask(0);
 
-		/* Need to do some OS hackery */
-		#if defined(IRIX)
-			envp = _environ;
-		#else
-			envp = environ;
-		#endif
-
 		/* Change my userid permanently to "condor" */
 		/* WARNING  This code must happen before the close/dup operation. */
 		condor_uid = get_condor_uid();
@@ -314,11 +308,12 @@ email_open_implementation(char *Mailer, char *final_command)
 		putenv(pe_user);
 
 		/* invoke the mailer */
-		execle("/bin/sh", "sh", "-c", final_command, NULL, envp);
+		execl("/bin/sh", "sh", "-c", final_command, NULL);
+
 
 		/* I hope this EXCEPT gets recorded somewhere */
-		EXCEPT("EMAIL PROCESS: Could not exec mailer with %s because: %s", 
-			"/bin/sh", strerror(errno));
+		EXCEPT("EMAIL PROCESS: Could not exec mailer with %s with command %s because: %s.", 
+			"/bin/sh", final_command, strerror(errno));
 	}
 
 	/* for completeness */
@@ -397,18 +392,14 @@ email_close(FILE *mailer)
 	*/
 	prev_umask = umask(022);
 	/* 
-	** On many Unix platforms, we cannot use
-	** 'pclose()' here: it does its own wait, and messes
-    ** with our handling of SIGCHLD! So do fclose() instead.
-	** Except on HPUX & Win32, pclose() is both safe and required.
+	** we fclose() on UNIX, pclose on win32 
 	*/
-#if defined(HPUX) 
-	pclose( mailer );
-#elif defined(WIN32)
+#if defined(WIN32)
 	if (EMAIL_FINAL_COMMAND == NULL) {
 		pclose( mailer );
 	} else {
 		char *email_filename = NULL;
+		/* Should this be a pclose??? -Erik 9/21/00 */ 
 		fclose( mailer );
 		dprintf(D_FULLDEBUG,"Sending email via system(%s)\n",
 			EMAIL_FINAL_COMMAND);
