@@ -314,7 +314,7 @@ class MyString
 		Tokenize() and a call to GetNextToken() will result in an error
 		(incorrect value from GetNextToken()).
 	    */
-	const char *GetNextToken(const char *delim);
+	const char *GetNextToken(const char *delim, bool skipBlankTokens);
 	//@}
 
 private:

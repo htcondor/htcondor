@@ -114,7 +114,7 @@ private:
 		 * @return The parameter value defined in that line, or "" if the
 		 *   parameter is not defined.
 		 */
-	static MyString getParamFromSubmitLine(MyString submitLine,
+	static MyString getParamFromSubmitLine(MyString &submitLine,
 			const char *paramName);
 
 		/**

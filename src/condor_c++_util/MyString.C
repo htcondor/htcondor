@@ -720,7 +720,7 @@ MyString::Tokenize()
 }
 
 const char *
-MyString::GetNextToken(const char *delim)
+MyString::GetNextToken(const char *delim, bool skipBlankTokens)
 {
 	const char *result = nextToken;
 
@@ -737,6 +737,10 @@ MyString::GetNextToken(const char *delim)
 		} else {
 			nextToken = NULL;
 		}
+	}
+
+	if ( skipBlankTokens && result && strlen(result) == 0 ) {
+		result = GetNextToken(delim, skipBlankTokens);
 	}
 
 	return result;
