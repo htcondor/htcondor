@@ -148,8 +148,10 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 void
 init_filter()
 {
-	static URLProtocol	*FILTER_URL;
+	static URLProtocol	*FILTER_URL = 0;
 
-	FILTER_URL = new URLProtocol("filter", "CondorFilterUrl", 
-								 condor_open_filter);
+	if (FILTER_URL == 0) {
+	    FILTER_URL = new URLProtocol("filter", "CondorFilterUrl", 
+					 condor_open_filter);
+	}
 }

@@ -75,9 +75,10 @@ int condor_open_mailto_url( const char *name, int flags,
 void
 init_mailto()
 {
-	static URLProtocol	*MAILTO_URL;
+	static URLProtocol	*MAILTO_URL = 0;
 
-	MAILTO_URL = new URLProtocol("mailto", "MailToUrl", 
-								 condor_open_mailto_url);
+	if (MAILTO_URL == 0) {
+	    MAILTO_URL = new URLProtocol("mailto", "MailToUrl", 
+					 condor_open_mailto_url);
+	}
 }
-

@@ -83,8 +83,10 @@ int condor_open_cfilter_url( const char *name, int flags, size_t n_bytes )
 void
 init_cfilter()
 {
-	static URLProtocol	*CFILTER_URL;
+    static URLProtocol	*CFILTER_URL = 0;
 
-	CFILTER_URL = new URLProtocol("cfilter", "CompressedFilterUrl", 
-								  condor_open_cfilter_url);
+    if (CFILTER_URL == 0) {
+        CFILTER_URL = new URLProtocol("cfilter", "CompressedFilterUrl", 
+				      condor_open_cfilter_url);
+    }
 }

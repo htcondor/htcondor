@@ -104,9 +104,11 @@ URLProtocol CBSTP_URL("cbstp",
 void
 init_cbstp()
 {
-	static URLProtocol	*CBSTP_URL;
+    static URLProtocol	*CBSTP_URL = 0;
 
-	CBSTP_URL = new URLProtocol("cbstp", 
-								"CondorByteStreamProtocol",
-								condor_bytes_stream_open_ckpt_file);
+    if (CBSTP_URL == 0) {
+        CBSTP_URL = new URLProtocol("cbstp", 
+				    "CondorByteStreamProtocol",
+				    condor_bytes_stream_open_ckpt_file);
+    }
 }

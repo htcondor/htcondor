@@ -142,7 +142,10 @@ int open_http( const char *name, int flags, size_t n_bytes )
 void
 init_http()
 {
-	static URLProtocol	*HTTP_URL;
+	static URLProtocol	*HTTP_URL = 0;
 
-	HTTP_URL = new URLProtocol("http", "HyperTextTransferProtocol", open_http);
+	if (HTTP_URL == 0) {
+		HTTP_URL = new URLProtocol("http", "HyperTextTransferProtocol", 
+								   open_http);
+	}
 }
