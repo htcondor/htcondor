@@ -28,16 +28,21 @@
 #include "file_table_interf.h"
 #include <assert.h>
 
-static const int FI_RSC =			0; 		/* access via remote sys calls   */
-static const int FI_OPEN =			1<<0;	/* file is open             	 */
-static const int FI_DUP =			1<<1;	/* file is a dup of 'fi_fdno'    */
-static const int FI_PREOPEN =		1<<2;	/* file was opened previously    */
-static const int FI_NFS =			1<<3;	/* access via direct sys calls   */
-static const int FI_DIRECT =		1<<3;
-static const int FI_WELL_KNOWN =	1<<4;	/* connection to shadow          */
 
 static OpenFileTable	FileTab;
 static char				Condor_CWD[ _POSIX_PATH_MAX ];
+
+#define DEBUGGING
+
+#if defined(DEBUGGING)
+#	if defined( OSF1 )
+		extern "C" void srandom( int );
+		extern "C" int random();
+#	else
+		extern "C" void srandom( int );
+		extern "C" long random();
+#	endif
+#endif
 
 char * shorten( char *path );
 
@@ -64,6 +69,10 @@ OpenFileTable::OpenFileTable()
 	PreOpen( 2 );
 
 	SetSyscalls( SYS_MAPPED | SYS_LOCAL );
+
+#if defined(DEBUGGING)
+	srandom( 0 );
+#endif
 }
 
 
@@ -73,7 +82,7 @@ OpenFileTable::Display()
 	int		i;
 
 	printf( "%4s %3s %3s %3s %3s %3s %3s %8s %6s %6s %s\n",
-		"   ", "Dup", "Pre", "Rem", "Sha", "Rd", "Wr", "Offset", "FdNum", "DupOf", "Pathname" );
+		"   ", "Dup", "Pre", "Rem", "Sha", "Rd", "Wr", "Offset", "RealFd", "DupOf", "Pathname" );
 	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
 		if( !file[i].isOpen() ) {
 			continue;
@@ -93,7 +102,7 @@ File::Display()
 	printf( "%3c ", isReadable() ? 'T' : 'F' );
 	printf( "%3c ", isWriteable() ? 'T' : 'F' );
 	printf( "%8d ", offset );
-	printf( "%6d ", fd_num );
+	printf( "%6d ", real_fd );
 	if( isDup() ) {
 		printf( "%6d ", dup_of );
 	} else {
@@ -156,7 +165,7 @@ OpenFileTable::DoOpen( const char *path, int flags, int mode )
 	file[user_fd].remote_access = RemoteSysCalls();
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
-	file[user_fd].fd_num = real_fd;
+	file[user_fd].real_fd = real_fd;
 	if( path[0] == '/' ) {
 		file[user_fd].pathname = string_copy( path );
 	} else {
@@ -199,9 +208,9 @@ OpenFileTable::DoClose( int fd )
 		// simple case, no dups - just clean up
 	if( !was_duped )  {
 		if( file[fd].isRemoteAccess() ) {
-			rval = REMOTE_syscall( SYS_close, file[fd].fd_num );
+			rval = REMOTE_syscall( SYS_close, file[fd].real_fd );
 		} else {
-			rval = syscall( SYS_close, file[fd].fd_num );
+			rval = syscall( SYS_close, file[fd].real_fd );
 		}
 		file[fd].open = FALSE;
 		delete [] file[fd].pathname;
@@ -261,7 +270,7 @@ OpenFileTable::PreOpen( int fd )
 	file[fd].remote_access = RemoteSysCalls();
 	file[fd].shadow_sock = FALSE;
 	file[fd].offset = 0;
-	file[fd].fd_num = fd;
+	file[fd].real_fd = fd;
 	file[fd].dup_of = 0;
 	file[fd].pathname = string_copy( "(Pre-Opened)" );
 
@@ -294,7 +303,7 @@ OpenFileTable::Map( int user_fd )
 		return -1;
 	}
 
-	return file[user_fd].fd_num;
+	return file[user_fd].real_fd;
 }
 
 int
@@ -355,9 +364,9 @@ OpenFileTable::Save()
 		f = &file[i];
 		if( f->isOpen() && !f->isDup() ) {
 			if( f->isRemoteAccess() ) {
-				pos = REMOTE_syscall( SYS_lseek, f->fd_num, (off_t)0, SEEK_CUR);
+				pos = REMOTE_syscall( SYS_lseek, f->real_fd, (off_t)0,SEEK_CUR);
 			} else {
-				pos = syscall( SYS_lseek, f->fd_num, (off_t)0, SEEK_CUR);
+				pos = syscall( SYS_lseek, f->real_fd, (off_t)0, SEEK_CUR);
 			}
 			if( pos < (off_t)0 && f->isPreOpened() && errno == ESPIPE ) {
 				pos = (off_t)0;		// probably it's a tty
@@ -373,8 +382,8 @@ OpenFileTable::Save()
 
 /*
   The given user_fd has been re-opened after a checkpoint, and may have a
-  differend fd_num now than it did at the time of the checkpoint.  Here
-  we go through the open file table, and fix up the fd_num of any
+  differend real_fd now than it did at the time of the checkpoint.  Here
+  we go through the open file table, and fix up the real_fd of any
   duplicates of this file.
 */
 void
@@ -384,7 +393,7 @@ OpenFileTable::fix_dups( int user_fd  )
 
 	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
 		if( file[i].isOpen() && file[i].isDup() && file[i].dup_of == user_fd ) {
-			file[i].fd_num = file[user_fd].fd_num;
+			file[i].real_fd = file[user_fd].real_fd;
 		}
 	}
 }
@@ -402,6 +411,22 @@ OpenFileTable::Restore()
 	} else {
 		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
+
+#if defined(DEBUGGING)
+	 /*
+	When we are operating in remote mode, we could potentially get
+	different sets of real file descriptor numbers to correspond
+	with the user's fd numbers after each migration.  Here we
+	simulate that even in local mode so that we can more thoroughly
+	test the file descriptor mapping stuff.
+	 */
+	int		n_files;
+	n_files = random() % 5;
+
+	for( i=0; i<n_files; i++ ) {
+		(void)open("/dev/null",O_RDONLY);
+	}
+#endif
 		
 
 	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
@@ -419,8 +444,8 @@ OpenFileTable::Restore()
 				// This is not quite right yet - we need to learn whether
 				// the file is opened locally or remotely this time around,
 				// and set f->remote_access accordingly.
-			f->fd_num = open( f->pathname, mode );
-			if( f->fd_num < 0 ) {
+			f->real_fd = open( f->pathname, mode );
+			if( f->real_fd < 0 ) {
 				perror( "open" );
 				abort();
 			}
@@ -428,7 +453,7 @@ OpenFileTable::Restore()
 				// No need to seek if pos is 0, but more importantly, this
 				// fd could be a tty if pos is 0.
 			if( pos != 0 ) {
-				pos = lseek( f->fd_num, f->offset, SEEK_SET );
+				pos = lseek( f->real_fd, f->offset, SEEK_SET );
 			}
 
 			if( pos != f->offset ) {
