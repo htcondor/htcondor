@@ -527,7 +527,7 @@ return write(fd,buf,size);
 }
 
 /* These are similar additions as above.  This problem cropped up for 
-   FORTRAN programs on Solaris 2.4.  -Jim B. */
+   FORTRAN programs on Solaris 2.4 and OSF1.  -Jim B. */
 
 #if !defined(HPUX9)
 #if defined( SYS_write )
@@ -542,6 +542,11 @@ _read( int fd, void *buf, size_t len )
 {
 	return read(fd,buf,len);
 }
+
+__read( int fd, void *buf, size_t len )
+{
+	return read(fd,buf,len);
+}
 #endif
 
 #if defined( SYS_lseek )
@@ -550,5 +555,58 @@ _lseek( int fd, off_t offset, int whence )
 {
 	return lseek(fd,offset,whence);
 }
+
+__lseek( int fd, off_t offset, int whence )
+{
+	return lseek(fd,offset,whence);
+}
 #endif
-#endif
+
+#if defined(OSF1)
+char *
+__getwd( char *path_name )
+{
+	return getwd(path_name);
+}
+
+char *getcwd ( char *buffer, size_t size )
+{
+	if (buffer == NULL) {
+		buffer = (char *)malloc(size);
+	}
+	return getwd( buffer );
+}	
+
+#if defined( SYS_ftruncate )
+int
+ftruncate( int fd, off_t length )
+{
+	int	rval;
+	int	user_fd;
+	int use_local_access = FALSE;
+
+	/* The below length check is a hack to patch an f77 problem on
+	   OSF1.  - Jim B. */
+
+	if (length < 0)
+		return 0;
+
+	if( (user_fd=MapFd(fd)) < 0 ) {
+		return (int)-1;
+	}
+	if( LocalAccess(fd) ) {
+		use_local_access = TRUE;
+	}
+
+	if( LocalSysCalls() || use_local_access ) {
+		rval = syscall( SYS_ftruncate, user_fd, length );
+	} else {
+		rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
+	}
+
+	return rval;
+}
+#endif /* defined( SYS_ftruncate ) */
+
+#endif /* defined(OSF1) */
+#endif /* !defined(HPUX9) */
