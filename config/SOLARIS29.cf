@@ -24,8 +24,6 @@ SYSNAME = sun4x_59
 
 #define IS_CLIPPED NO
 
-#undef WANT_MAN_PAGES
-
 #define PlatformFlags	-DSolaris29=Solaris29
 
 #define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \

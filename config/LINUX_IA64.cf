@@ -35,7 +35,5 @@ SYSNAME = ia64_linux24
 
 #define WANT_PVM	NO
 
-#undef WANT_MAN_PAGES
-
 #undef GLOBUS_FLAVOR
 #define GLOBUS_FLAVOR gcc64dbg
