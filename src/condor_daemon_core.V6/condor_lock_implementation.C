@@ -96,10 +96,10 @@ CondorLockImpl::ImplementLock( void )
 
 // Set period information
 int
-CondorLockImpl::SetPeriods( time_t	poll,
+CondorLockImpl::SetPeriods( time_t	poll_period,
 							time_t	lock_hold_time )
 {
-	this->poll_period = poll;
+	this->poll_period = poll_period;
 	this->lock_hold_time = lock_hold_time;
 	return StartTimer( );
 }
@@ -116,7 +116,7 @@ CondorLockImpl::StartTimer( void )
 	}
 
 		// Valid time info?
-	if ( ( 0 == poll ) || ( 0 == lock_hold_time ) ) {
+	if ( ( 0 == poll_period ) || ( 0 == lock_hold_time ) ) {
 		last_poll = 0;
 		return 0;
 	}

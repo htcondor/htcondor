@@ -43,7 +43,7 @@ class CondorLockImpl : public CondorLockBase
 	~CondorLockImpl( void );
 
 	// Adjust the peeriods
-	virtual int SetPeriods( time_t	poll,
+	virtual int SetPeriods( time_t	poll_period,
 							time_t	lock_hold_time );
 
 	// Basic lock operations

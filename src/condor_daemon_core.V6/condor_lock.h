@@ -45,7 +45,7 @@ class CondorLock : public CondorLockBase
 						   const char	*lock_name );
 
 	// Adjust the periods
-	virtual int SetPeriods( time_t	poll,
+	virtual int SetPeriods( time_t	poll_period,
 							time_t	lock_hold_time );
 
 	// Basic lock operations

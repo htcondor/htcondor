@@ -77,10 +77,10 @@ CondorLock::BuildLock( const char	*lock_url,
 
 // Set period information
 int
-CondorLock::SetPeriods( time_t	poll,
+CondorLock::SetPeriods( time_t	poll_period,
 						time_t	lock_hold_time )
 {
-	return real_lock->SetPeriods( poll, lock_hold_time );
+	return real_lock->SetPeriods( poll_period, lock_hold_time );
 }
 
 // Application level "Acquire Lock"
