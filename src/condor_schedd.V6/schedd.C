@@ -3280,6 +3280,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		return NULL;
 	}
 
+	set_priv( priv );  // back to regular privs...
+
 	if (GetAttributeStringNew(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
 							&env) < 0) {
 		// Note that GetAttributeStringNew always fills in the env variable,
