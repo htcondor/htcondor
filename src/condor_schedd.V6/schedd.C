@@ -35,11 +35,7 @@
 ** Cleaned up for V6 by Derek Wright 7/8/97
 ** 
 */ 
-
-#ifdef __GNUG__
-#pragma implementation "HashTable.h"
 #pragma implementation "list.h"
-#endif
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -111,10 +107,12 @@ shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
+#ifdef WIN32    // on unix, this is in instantiate.C
 bool operator==(const PROC_ID a, const PROC_ID b)
 {
 	return a.cluster == b.cluster && a.proc == b.proc;
 }
+#endif
 
 match_rec::match_rec(char* i, char* p, PROC_ID* id)
 {
