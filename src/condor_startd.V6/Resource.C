@@ -526,6 +526,19 @@ Resource::wants_vacate( void )
 {
 	int want_vacate = 0;
 	bool unknown = true;
+
+	if( ! r_starter->active() ) {
+			// There's no job here, so chances are good that some of
+			// the job attributes that WANT_VACATE might be defined in
+			// terms of won't exist.  So, instead of getting
+			// undefined, just return True, since w/o a job, vacating
+			// a job is basically a no-op.
+			// Derek Wright <wright@cs.wisc.edu>, 6/21/00
+		dprintf( D_FULLDEBUG,
+				 "In Resource::wants_vacate() w/o a job, returning TRUE\n" );
+		return 1;
+	}
+
 	if( r_cur->universe() == VANILLA ) {
 		if( r_classad->EvalBool("WANT_VACATE_VANILLA",
 								r_cur->ad(),
@@ -537,10 +550,22 @@ Resource::wants_vacate( void )
 		if( r_classad->EvalBool( "WANT_VACATE",
 								 r_cur->ad(),
 								 want_vacate ) == 0) { 
+
+			dprintf( D_ALWAYS,
+					 "In Resource::wants_vacate() with undefined WANT_VACATE\n" );
+			dprintf( D_ALWAYS, "INTERNAL AD:\n" );
+			r_classad->dPrint( D_ALWAYS );
+			if( r_cur->ad() ) {
+				dprintf( D_ALWAYS, "JOB AD:\n" );
+				(r_cur->ad())->dPrint( D_ALWAYS );
+			} else {
+				dprintf( D_ALWAYS, "ERROR! No job ad!!!!\n" );
+			}
+
 				// This should never happen, since we already check 
 				// when we're constructing the internal config classad
 				// if we've got this defined. -Derek Wright 4/12/00
-			EXCEPT( "Can't find WANT_VACATE in internal ClassAd" );
+			EXCEPT( "WANT_VACATE undefined in internal ClassAd" );
 		}
 	}
 	return want_vacate;
