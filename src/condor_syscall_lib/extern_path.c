@@ -237,8 +237,9 @@ char	*name;
 		if( (st_buf.st_mode & S_IFMT) == S_IFLNK ) {
 			done = FALSE;
 			if( (count=readlink(path,maps_to,sizeof(maps_to))) < 0 ) {
-				perror( "readlink" );
-				exit( 1 );
+				dprintf(D_ALWAYS, "readlink failed in xlate_link: %s\n",
+						strerror(errno));
+				return NULL;
 			}
 			maps_to[count] = '\0';
 			if( maps_to[0] == '/' ) {
