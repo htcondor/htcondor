@@ -541,6 +541,7 @@ bool
 OsProc::renameCoreFile( void )
 {
 	bool rval = false;
+	int t_errno = 0;
 
 	priv_state old_priv;
 
@@ -562,6 +563,7 @@ OsProc::renameCoreFile( void )
 	old_priv = set_user_priv();
 	if( rename(old_name.Value(), new_name.Value()) >= 0 ) {
 		rval = true;
+		t_errno = errno; // grab errno right away
 	}
 	set_priv( old_priv );
 
@@ -569,10 +571,10 @@ OsProc::renameCoreFile( void )
 			// make sure it'll get transfered back, too.
 		Starter->jic->addToOutputFiles( buf );
 		dprintf( D_FULLDEBUG, "Found core file, renamed to %s\n", buf );
-	} else if( errno != ENOENT ) {
+	} else if( t_errno != ENOENT ) {
 		dprintf( D_ALWAYS, "Failed to rename(%s,%s): errno %d (%s)\n",
-				 old_name.Value(), new_name.Value(), errno,
-				 strerror(errno) );
+				 old_name.Value(), new_name.Value(), t_errno,
+				 strerror(t_errno) );
 	}
 
 	return rval;
