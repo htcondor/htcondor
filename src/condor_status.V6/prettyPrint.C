@@ -28,7 +28,10 @@
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
-#include "condor_xml_classads.h"
+//#include "condor_xml_classads.h"
+#include "../condor_classad.V6/xmlSource.h"
+#include "../condor_classad.V6/xmlSink.h"
+
 
 extern ppOption				ppStyle;
 extern ClassAdPrintMask 	pm;
@@ -463,7 +466,7 @@ void
 printStorageNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm;
+	static ClassAdPrintMask pm;
 
 	if (ad)
 	{
@@ -483,7 +486,7 @@ printStorageNormal(ClassAd *ad)
 }
 
 /*
-We can't use the AttrListPrintMask here, because the AttrList does not actually contain 
+We can't use the ClassAdPrintMask here, because the AttrList does not actually contain 
 the MyType and TargetType fields that we want to display.  
 These are actually contained in the ClassAd.
 */
@@ -493,7 +496,8 @@ printAnyNormal(ClassAd *ad)
 {
 	static bool first = true;
 	char name[ATTRLIST_MAX_EXPRESSION];
-	const char *my_type, *target_type;
+//	char *my_type, *target_type;
+	string my_type, target_type;
 
 	if (ad)
 	{
@@ -502,17 +506,27 @@ printAnyNormal(ClassAd *ad)
 			printf ("\n%-20.20s %-20.20s %-30.30s\n\n", ATTR_MY_TYPE, ATTR_TARGET_TYPE, ATTR_NAME );
 			first = false;
 		}
-		if(!ad->LookupString(ATTR_NAME,name)) {
+//		if(!ad->LookupString(ATTR_NAME,name)) {
+		if(!ad->EvaluateAttrString(ATTR_NAME,name,ATTRLIST_MAX_EXPRESSION)) {
 			strcpy(name,"[???]");
 		}
 
-		my_type = ad->GetMyTypeName();
-		if(!my_type[0]) my_type = "None";
+//		my_type = ad->GetMyTypeName();
+//		if(!my_type[0]) my_type = "None";
 
-		target_type = ad->GetTargetTypeName();
-		if(!target_type[0]) target_type = "None";
+		if(!ad->EvaluateAttrString(ATTR_MY_TYPE,my_type)) {	// NAC
+			my_type = "None";						  		// NAC
+		}											  		// NAC
 
-		printf("%-20.20s %-20.20s %-30.30s\n",my_type,target_type,name);
+//		target_type = ad->GetTargetTypeName();
+//		if(!target_type[0]) target_type = "None";
+
+		if(!ad->EvaluateAttrString(ATTR_TARGET_TYPE,target_type)) {	// NAC
+			target_type = "None";					   		  		// NAC
+		}													  		// NAC
+
+		printf("%-20.20s %-20.20s %-30.30s\n",my_type.c_str( ),
+			   target_type.c_str( ),name);
 	}
 	pm.display (stdout, ad);
 }
@@ -534,21 +548,22 @@ printVerbose (ClassAd *ad)
 void
 printXML (ClassAd *ad, bool first_ad, bool last_ad)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
+	ClassAdXMLUnParser  unparser;
+//	MyString            xml;
+	string				xml;
 
-	if (first_ad) {
-		unparser.AddXMLFileHeader(xml);
-	}
+//	if (first_ad) {
+//		unparser.AddXMLFileHeader(xml);
+//	}
 
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(ad, xml);
+	unparser.SetCompactSpacing(false);
+	unparser.Unparse(xml, ad);
 
-	if (last_ad) {
-		unparser.AddXMLFileFooter(xml);
-	}
+//	if (last_ad) {
+//		unparser.AddXMLFileFooter(xml);
+//	}
 
-	printf("%s\n", xml.Value());
+	printf("%s\n", xml.c_str( ));
 	return;
 }
 
