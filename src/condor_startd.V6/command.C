@@ -388,7 +388,7 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	sprintf(tmp,"ClientMachine=\"%s\"",rip->r_clientmachine);
 	(rip->r_context)->Insert(tmp);
 	
-	rip->r_user = RemoteUser;
+	rip->r_user = strdup(RemoteUser);
 	sprintf(tmp,"RemoteUser=\"%s\"",rip->r_user);
 	(rip->r_context)->Insert(tmp);
 	
@@ -829,8 +829,10 @@ command_relservice(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 					rip->r_capab);
 				free(rip->r_capab);
 				free(rip->r_client);
+				free(rip->r_user);
 				rip->r_capab = NULL;
 				rip->r_client = NULL;
+				rip->r_user = NULL;
 				rip->r_claimed = FALSE;
 			}
 		} else
