@@ -396,9 +396,6 @@ is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask)
 				// format is a.b.c.d/m.a.s.k
 				// is_ipaddr fills in the value for both ip and mask,
 				// so we are done!
-				if (mask) {
-					dprintf ( D_SECURITY, "ISVALIDNETWORK: netmask mask is %lx\n", mask->s_addr );
-				}
 				return TRUE;
 			} else {
 				// try format a.b.c.d/num
@@ -410,7 +407,6 @@ is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask)
 						// fill in the structure
 					    mask->s_addr = 0;
 					    mask->s_addr = htonl(~(~(mask->s_addr) >> numbits));
-						dprintf ( D_SECURITY, "ISVALIDNETWORK: netmask mask is %lx\n", mask->s_addr );
 					}
 					return TRUE;
 				} else {
