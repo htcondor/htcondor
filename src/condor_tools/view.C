@@ -316,11 +316,11 @@ int TimeLine(int FromDate, int ToDate, int Res)
 {
   double Interval=double(ToDate-FromDate)/double(Res);
   float RelT;
-  long T;
+  time_t T;
   FILE* TimeFile=fopen("time.dat","w");
   if (!TimeFile) return -1;
   for (int i=0; i<=Res; i++) {
-    T=FromDate+((int)Interval*i);
+    T=(time_t)FromDate+((int)Interval*i);
     RelT=float(100.0/Res)*i;
 	fprintf(TimeFile,"%.2f\t%s",RelT,asctime(localtime(&T)));
   }
