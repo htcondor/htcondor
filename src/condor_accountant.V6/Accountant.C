@@ -179,6 +179,22 @@ int Accountant::GetResourcesUsed(const MyString& CustomerName)
 
 float Accountant::GetPriority(const MyString& CustomerName) 
 {
+  float PriorityFactor=GetPriorityFactor(CustomerName);
+  float Priority=MinPriority;
+  GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
+  if (Priority<MinPriority) {
+    Priority=MinPriority;
+    SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
+  }
+  return Priority*PriorityFactor;
+}
+
+//------------------------------------------------------------------
+// Return the priority factor of a customer
+//------------------------------------------------------------------
+
+float Accountant::GetPriorityFactor(const MyString& CustomerName) 
+{
   float PriorityFactor=0;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
   if (PriorityFactor<1) {
@@ -190,13 +206,7 @@ float Accountant::GetPriority(const MyString& CustomerName)
       PriorityFactor=DefaultPriorityFactor;
     SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
   }
-  float Priority=MinPriority;
-  GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
-  if (Priority<MinPriority) {
-    Priority=MinPriority;
-    SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
-  }
-  return Priority*PriorityFactor;
+  return PriorityFactor;
 }
 
 //------------------------------------------------------------------
