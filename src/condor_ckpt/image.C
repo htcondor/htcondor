@@ -105,6 +105,9 @@ unsigned int _condor_numrestarts = 0;
 int condor_compress_ckpt = 1; // compression off(0) or on(1)
 int condor_slow_ckpt = 0;
 
+// set mySubSystem for Condor components which expect it
+char *mySubSystem = "JOB";
+
 static int
 net_read(int fd, void *buf, int size)
 {
