@@ -53,6 +53,7 @@
 #define INT		20
 #define BOOL	21
 #define ERROR	22
+#define MOD		23
 
 #define ENDMARKER	-1
 
