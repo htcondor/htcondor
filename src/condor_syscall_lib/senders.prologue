@@ -26,7 +26,7 @@
 #include <signal.h>
 #include "condor_fix_assert.h"
 #include "condor_syscall_mode.h"
-#include "condor_xdr.h"
+#include "condor_io.h"
 #include "condor_constants.h"
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
@@ -34,7 +34,6 @@
 #if defined(OSF1) && defined(__GNUC__)
 #	include "condor_fdset.h"
 #endif
-#include "xdr_lib.h"
 
 #if defined(SUNOS41)
 #	include "condor_fdset.h"
@@ -110,8 +109,9 @@ static char *_FileName_ = __FILE__;
 
 int CurrentSysCall;
 
-extern XDR *xdr_syscall;
+extern ReliSock *syscall_sock;
 
+extern "C" {
 
 sigset_t
 block_condor_signals()
@@ -143,6 +143,8 @@ void restore_condor_sigmask(sigset_t omask)
 	}
 	SetSyscalls( sigscm );
 }	
+
+} // extern "C"
 
 int
 REMOTE_syscall( int syscall_num, ... )
