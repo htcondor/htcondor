@@ -1068,8 +1068,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 	if( claimStartd(m_rec, &dummy_job, true) ) {
 		return true;
 	} else {
-		m_rec->status = M_UNCLAIMED;
-		m_rec->entered_current_status = (int)time(0);
+		m_rec->setStatus( M_UNCLAIMED );
 		return false;
 	}
 }
@@ -1077,10 +1076,9 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 
 // Before each bad return we check to see if there's a pending call in
 // the contact queue.
-#define BAILOUT                        \
-        mrec->status = M_UNCLAIMED;    \
-		mrec->entered_current_status = (int)time(0);	\
-		scheduler.checkContactQueue(); \
+#define BAILOUT                         \
+        mrec->setStatus( M_UNCLAIMED ); \
+		scheduler.checkContactQueue();  \
 		return FALSE;
 
 int
@@ -1119,8 +1117,7 @@ DedicatedScheduler::startdContactSockHandler( Stream *sock )
 		return FALSE;
 	}
 	
-	mrec->status = M_CLAIMED; // we assume things will work out.
-	mrec->entered_current_status = (int)time(0);
+	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
 	// were called by as a Register_Socket callback, this should not 
@@ -1973,10 +1970,7 @@ DedicatedScheduler::spawnJobs( void )
 			n = ((*allocation->matches)[p])->getlast();
 			for( i=0; i<=n; i++ ) {
 				(*(*allocation->matches)[p])[i]->shadowRec = srec;
-				(*(*allocation->matches)[p])[i]->status = M_ACTIVE;
-				(*(*allocation->matches)[p])[i]->
-					entered_current_status = (int)time(0);
-
+				(*(*allocation->matches)[p])[i]->setStatus( M_ACTIVE );
 			}
 		}
 			// TODO: Deal w/ pushing matches (this is just a
@@ -3088,6 +3082,5 @@ deallocMatchRec( match_rec* mrec )
 	mrec->shadowRec = NULL;
 	mrec->num_exceptions = 0;
 		// Status is no longer active, but we're still claimed
-	mrec->status = M_CLAIMED;
-	mrec->entered_current_status = (int)time(0);
+	mrec->setStatus( M_CLAIMED );
 }

@@ -52,11 +52,13 @@ const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
 extern	DLL_IMPORT_MAGIC char**		environ;
 
+class match_rec;
+
 struct shadow_rec
 {
     int             pid;
     PROC_ID         job_id;
-    struct match_rec*    match;
+    match_rec*	    match;
     int             preempted;
     int             conn_fd;
 	int				removed;
@@ -78,8 +80,9 @@ struct OwnerData {
   JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnsubmittedJobs=0; }
 };
 
-struct match_rec
+class match_rec
 {
+ public:
     match_rec(char*, char*, PROC_ID*, ClassAd*, char*, char* pool);
 	~match_rec();
     char    		id[SIZE_OF_CAPABILITY_STRING];
@@ -105,6 +108,10 @@ struct match_rec
 	bool			sent_alive_interval;
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
+
+		// Set the mrec status to the given value (also updates
+		// entered_current_status)
+	void	setStatus( int stat );
 };
 
 enum MrecStatus {

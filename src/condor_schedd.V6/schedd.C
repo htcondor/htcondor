@@ -174,6 +174,14 @@ match_rec::~match_rec()
 }
 
 
+void
+match_rec::setStatus( int stat )
+{
+	status = stat;
+	entered_current_status = (int)time(0);
+}
+
+
 ContactStartdArgs::ContactStartdArgs( char* the_capab, char* the_owner,  
 									  char* the_sinful, PROC_ID the_id, 
 									  ClassAd* match, char* the_pool, 
@@ -2157,7 +2165,7 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 		BAILOUT;
 	}
 
-	mrec->status = M_STARTD_CONTACT_LIMBO;
+	mrec->setStatus( M_STARTD_CONTACT_LIMBO );
 
 	char to_startd[256];
 	sprintf ( to_startd, "to startd %s", mrec->peer );
@@ -2228,7 +2236,7 @@ Scheduler::startdContactSockHandler( Stream *sock )
 	
 	dprintf ( D_FULLDEBUG, "Got mrec data pointer %x\n", mrec );
 
-	mrec->status = M_CLAIMED; // we assume things will work out.
+	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
 	// were called by as a Register_Socket callback, this should not 
@@ -2495,7 +2503,7 @@ Scheduler::StartJobs()
 		rec->cluster = id.cluster;
 		rec->proc = id.proc;
 			// Now that the shadow has spawned, consider this match "ACTIVE"
-		rec->status = M_ACTIVE;
+		rec->setStatus( M_ACTIVE );
 	}
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
