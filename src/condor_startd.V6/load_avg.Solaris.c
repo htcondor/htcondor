@@ -28,94 +28,77 @@
 */ 
 
 #include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <errno.h>
-#include <nlist.h>
-#include <kvm.h>
+#include <kstat.h>
+#include <sys/param.h>
 
 #include "debug.h"
 #include "except.h"
 #include "condor_uid.h"
 
-struct nlist nl[] = {
-    { "avenrun" }, {0}
-};
-
-static int Kmem;
+static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 static int KernelLookupFailed = 0;
 
-#define DEFAULT_LOADAVG         0.10
-
-float lookup_load_avg_via_uptime();
-double kvm_load_avg();
+double kstat_load_avg();
 
 float
 calc_load_avg()
 {
+
 	float val;
 
 	if (!KernelLookupFailed)
-		val = (float)kvm_load_avg();
+		val = (float)kstat_load_avg();
 	if (KernelLookupFailed)
 		val = lookup_load_avg_via_uptime();
 
 	return val;
 }
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
+
+#undef RETURN
+#define RETURN \
+    dprintf( D_ALWAYS, "Getting load avg from uptime.\n" );\
+	KernelLookupFailed = 1;\
+	return 0.0
 
 double
-kvm_load_avg(void)
+kstat_load_avg(void)
 {
-	long avenrun[3];
-	int i;
-	int offset;
-	kvm_t *kd;
-	priv_state priv;
+	static kstat_ctl_t	*kc = NULL;		/* libkstat cookie */
+	static kstat_t		*ksp = NULL;	/* kstat pointer */
+	kstat_named_t 		*ksdp = NULL;  	/* kstat data pointer */
 
-	priv = set_root_priv();
-	kd = kvm_open(NULL, NULL, NULL, O_RDONLY, NULL);
-	set_priv(priv);
-
-	/* test kvm_open return value */
-	if (kd == NULL) {
-		dprintf(D_ALWAYS, "kvm_load_avg: kvm_open failed, "
-				"getting loadavg from uptime\n");
-		KernelLookupFailed = 1;
-		return 0.0;
+	if( ! kc ) {
+		if( (kc = kstat_open()) == NULL ) {
+			dprintf( D_ALWAYS, "kstat_open() failed, errno = %d\n", errno );
+			RETURN;
+		}
 	}
 
-	if (kvm_nlist(kd, nl) < 0) {
-		kvm_close(kd);
-		dprintf(D_ALWAYS, "kvm_load_avg: kvm_nlist failed, "
-				"getting loadavg from uptime\n");
-		KernelLookupFailed = 1;
-		return 0.0;
+	if( ! ksp ) {
+		if( (ksp = kstat_lookup(kc, "unix", 0, "system_misc")) == NULL ) {
+			dprintf( D_ALWAYS, "kstat_lookup() failed, errno = %d\n", errno );
+			RETURN;
+		}
 	}
 
-	if (nl[0].n_type == 0) {
-		kvm_close(kd);
-		dprintf(D_ALWAYS, "kvm_load_avg: avenrun not found, "
-				"getting loadavg from uptime\n");
-		KernelLookupFailed = 1;
+	if( kstat_read(kc, ksp, NULL) == -1 ) {
+		dprintf( D_ALWAYS, "kstat_read() failed, errno = %d\n", errno );
+		RETURN;
 	}
 
-	if (kvm_read(kd, nl[0].n_value, (char *) avenrun, sizeof (avenrun))
-	    != sizeof (avenrun)) {
-		kvm_close(kd);
-		dprintf(D_ALWAYS, "kvm_load_avg: avenrun not found, "
-				"getting loadavg from uptime\n");
-		KernelLookupFailed = 1;
-  	}
-
-	kvm_close(kd);
-	return ((double)(avenrun[2]) / FSCALE);
+	ksdp = (kstat_named_t *) kstat_data_lookup(ksp, "avenrun_1min");
+	if( ksdp ) {
+		return (double) ksdp->value.l / FSCALE;
+	} else {
+		dprintf( D_ALWAYS, "kstat_data_lookup() failed, errno = %d\n",
+				 errno);
+		RETURN;
+	}		
 }
 
 /* just adding get_k_vars to avoid runtime errors */
-
 get_k_vars()
 {
 }
