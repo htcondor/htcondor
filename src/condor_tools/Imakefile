@@ -11,12 +11,14 @@ LDFLAGS = RpcLib SocketLib
 
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 
-SRC = config_val.C preen.C user_prio.C history.C tool.C stats.C releasejob.C
+SRC = config_val.C preen.C user_prio.C history.C tool.C stats.C releasejob.C \
+	view_collection.C
 
 LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a $(AUTH2_LIB)
 LIBDIRS =../condor_util_lib ../condor_c++_util
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
-		condor_userprio condor_history condor test_calc condor_release
+		condor_userprio condor_history condor test_calc \
+		condor_release view_collection
 
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
@@ -91,6 +93,8 @@ link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_master_off)
 c_plus_target(condor_stats,stats.o,$(LIB))
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
+
+c_plus_target(view_collection,view_collection.o,$(LIB))
 
 condor_master_on: master_on.c
 	gcc -o condor_master_on master_on.c
