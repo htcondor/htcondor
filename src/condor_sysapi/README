@@ -18,7 +18,7 @@ and what not. There are a lot of places where doubles are now used to
 calculate stuff, then the answer either gets typecasted to an int, or
 INT_MAX is returned.
 
-WIERD THINGS
+WEIRD THINGS
 
 The library is a completely C linkaged entity. This means that is you
 have c++ code in there, you must extern "C" the functions that will be
