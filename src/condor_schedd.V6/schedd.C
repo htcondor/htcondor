@@ -53,7 +53,9 @@
 
 #include "sched.h"
 #include "condor_config.h"
+#if !defined(WIN32)
 #include "condor_fix_unistd.h"
+#endif
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
 #include "proc.h"
