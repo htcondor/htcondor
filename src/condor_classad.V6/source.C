@@ -787,7 +787,6 @@ parseClassAd( ClassAd *ad , bool full )
 {
 	TokenType 	tt;
 	TokenValue	tv;
-	char		*attr;
 	ExprTree	*tree = NULL;
 
 	if( !ad ) return false;
@@ -800,7 +799,6 @@ parseClassAd( ClassAd *ad , bool full )
 			ad->clear();
 			return false;
 		}
-		attr = tv.strValue;
 
 		// consume the intermediate '='
 		if( ( tt = lexer.consumeToken() ) != LEX_BOUND_TO ) {
@@ -816,7 +814,7 @@ parseClassAd( ClassAd *ad , bool full )
 		}
 
 		// insert the attribute into the classad
-		if( !ad->insert( attr, tree ) ) {
+		if( !ad->insert( tv.strValue, tree ) ) {
 			delete tree;
 			ad->clear();
 			return false;
