@@ -60,6 +60,8 @@ private:
 	int				r_mips;
 	int				r_kflops;
 	int				r_last_benchmark;   // Last time we computed benchmarks
+	int				r_clock_day;
+	int				r_clock_min;
 		// Static info
 	int				r_phys_mem;
 #if !defined(WIN32)

@@ -66,6 +66,13 @@ ResAttributes::compute( ResAttr_t how_much )
 				 r_load, r_condor_load, tmp );
 
 		calc_idle_time( r_idle, r_console_idle );
+
+		time_t my_timer;
+		struct tm *the_time;
+		time( &my_timer );
+		the_time = localtime(&my_timer);
+		r_clock_min = (the_time->tm_hour * 60) + the_time->tm_min;
+		r_clock_day = the_time->tm_wday;
 	}
 }
 
@@ -107,6 +114,12 @@ ResAttributes::refresh( ClassAd* cp, ResAttr_t how_much)
 		cp->Insert(line);
 		
 		sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, (int)r_idle );
+		cp->Insert(line); 
+
+		sprintf(line, "%s=%d", ATTR_CLOCK_MIN, r_clock_min );
+		cp->Insert(line); 
+
+		sprintf(line, "%s=%d", ATTR_CLOCK_DAY, r_clock_day );
 		cp->Insert(line); 
   
 			// ConsoleIdle cannot be determined on all platforms; thus, only
