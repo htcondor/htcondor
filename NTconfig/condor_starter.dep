@@ -142,6 +142,7 @@
 
 ..\src\condor_starter.V6.1\java_proc.C : \
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\env.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -155,6 +156,7 @@
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
 	"..\src\condor_c++_util\translation_utils.h"\
+	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_c++_util\utc_time.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
@@ -195,7 +197,10 @@
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_starter.V6.1\java_proc.h"\
+	"..\src\condor_starter.V6.1\job_info_communicator.h"\
+	"..\src\condor_starter.V6.1\local_user_log.h"\
 	"..\src\condor_starter.V6.1\os_proc.h"\
+	"..\src\condor_starter.V6.1\starter.h"\
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_starter.V6.1\vanilla_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\

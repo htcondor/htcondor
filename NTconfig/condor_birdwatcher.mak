@@ -25,10 +25,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-MTL=midl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_birdwatcher - Win32 Release"
 
 OUTDIR=.\..\Release
@@ -56,8 +52,42 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /Fp"$(INTDIR)\condor_birdwatcher.pch" /Yu"stdafx.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+MTL=midl.exe
 MTL_PROJ=/nologo /D "NDEBUG" /mktyplib203 /win32 
+RSC=rc.exe
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\birdwatcher.res" /d "NDEBUG" 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_birdwatcher.bsc" 
@@ -108,30 +138,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /Fp"$(INTDIR)\condor_birdwatcher.pch" /Yu"stdafx.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /GZ /c 
-MTL_PROJ=/nologo /D "_DEBUG" /mktyplib203 /win32 
-RSC_PROJ=/l 0x409 /fo"$(INTDIR)\birdwatcher.res" /d "_DEBUG" 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_birdwatcher.bsc" 
-BSC32_SBRS= \
-	
-LINK32=link.exe
-LINK32_FLAGS=/nologo /subsystem:windows /incremental:yes /pdb:"$(OUTDIR)\condor_birdwatcher.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_birdwatcher.exe" /pdbtype:sept 
-LINK32_OBJS= \
-	"$(INTDIR)\birdwatcher.obj" \
-	"$(INTDIR)\birdWatcherDlg.obj" \
-	"$(INTDIR)\StdAfx.obj" \
-	"$(INTDIR)\SystrayManager.obj" \
-	"$(INTDIR)\SystrayMinimize.obj" \
-	"$(INTDIR)\WindowsMessageReceiver.obj" \
-	"$(INTDIR)\birdwatcher.res"
-
-"$(OUTDIR)\condor_birdwatcher.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
-    $(LINK32) @<<
-  $(LINK32_FLAGS) $(LINK32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -163,6 +171,32 @@ LINK32_OBJS= \
    $(CPP_PROJ) $< 
 <<
 
+MTL=midl.exe
+MTL_PROJ=/nologo /D "_DEBUG" /mktyplib203 /win32 
+RSC=rc.exe
+RSC_PROJ=/l 0x409 /fo"$(INTDIR)\birdwatcher.res" /d "_DEBUG" 
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_birdwatcher.bsc" 
+BSC32_SBRS= \
+	
+LINK32=link.exe
+LINK32_FLAGS=/nologo /subsystem:windows /incremental:yes /pdb:"$(OUTDIR)\condor_birdwatcher.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_birdwatcher.exe" /pdbtype:sept 
+LINK32_OBJS= \
+	"$(INTDIR)\birdwatcher.obj" \
+	"$(INTDIR)\birdWatcherDlg.obj" \
+	"$(INTDIR)\StdAfx.obj" \
+	"$(INTDIR)\SystrayManager.obj" \
+	"$(INTDIR)\SystrayMinimize.obj" \
+	"$(INTDIR)\WindowsMessageReceiver.obj" \
+	"$(INTDIR)\birdwatcher.res"
+
+"$(OUTDIR)\condor_birdwatcher.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
+
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
 !IF EXISTS("condor_birdwatcher.dep")
@@ -186,14 +220,14 @@ SOURCE=..\src\condor_birdwatcher\birdwatcher.rc
 
 
 "$(INTDIR)\birdwatcher.res" : $(SOURCE) "$(INTDIR)"
-	$(RSC) /l 0x409 /fo"$(INTDIR)\birdwatcher.res" /i "\condor-v66\src\condor_birdwatcher" /d "NDEBUG" $(SOURCE)
+	$(RSC) /l 0x409 /fo"$(INTDIR)\birdwatcher.res" /i "\condor\workspaces\v66-clean\src\condor_birdwatcher" /d "NDEBUG" $(SOURCE)
 
 
 !ELSEIF  "$(CFG)" == "condor_birdwatcher - Win32 Debug"
 
 
 "$(INTDIR)\birdwatcher.res" : $(SOURCE) "$(INTDIR)"
-	$(RSC) /l 0x409 /fo"$(INTDIR)\birdwatcher.res" /i "\condor-v66\src\condor_birdwatcher" /d "_DEBUG" $(SOURCE)
+	$(RSC) /l 0x409 /fo"$(INTDIR)\birdwatcher.res" /i "\condor\workspaces\v66-clean\src\condor_birdwatcher" /d "_DEBUG" $(SOURCE)
 
 
 !ENDIF 

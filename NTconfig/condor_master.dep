@@ -132,8 +132,6 @@
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_master.V6\master.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\cctp.h"\
-	"..\src\h\cctp_msg.h"\
 	"..\src\h\condor_types.h"\
 	"..\src\h\exit.h"\
 	"..\src\h\file_lock.h"\

@@ -151,13 +151,13 @@ LIB32_OBJS= \
 	"$(INTDIR)\match_prefix.obj" \
 	"$(INTDIR)\mkargv.obj" \
 	"$(INTDIR)\nullfile.obj" \
+	"$(INTDIR)\printf_format.obj" \
 	"$(INTDIR)\proc_id.obj" \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\win32_posix.obj" \
-	"$(INTDIR)\printf_format.obj"
+	"$(INTDIR)\win32_posix.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -289,13 +289,13 @@ LIB32_OBJS= \
 	"$(INTDIR)\match_prefix.obj" \
 	"$(INTDIR)\mkargv.obj" \
 	"$(INTDIR)\nullfile.obj" \
+	"$(INTDIR)\printf_format.obj" \
 	"$(INTDIR)\proc_id.obj" \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\win32_posix.obj" \
-	"$(INTDIR)\printf_format.obj"
+	"$(INTDIR)\win32_posix.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
