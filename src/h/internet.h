@@ -23,6 +23,10 @@ typedef struct job_id
 	PROC_ID			id;
 } JOB_ID;
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /* 
 **  returns the internet address of this host 
 **  returns 1 on success and -1 on failure 
@@ -52,5 +56,9 @@ char *sin_to_string(struct sockaddr_in *sin);
 
 void
 display_from( struct sockaddr_in *from );
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif INTERNET_H
