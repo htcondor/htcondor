@@ -102,10 +102,10 @@ class Variable : public VariableBase
 
 	protected:
 
-		virtual int         _EvalTree(class AttrList*, EvalResult*);
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*);
-		virtual int         _EvalTreeRecursive(char *name, AttrList*, AttrList*, EvalResult*);
-		virtual int         _EvalTreeSimple(char *name, AttrList*, AttrList*, EvalResult*);
+		virtual int         _EvalTree(const class AttrList*, EvalResult*);
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*);
+		virtual int         _EvalTreeRecursive(char *name, const AttrList*, const AttrList*, EvalResult*);
+		virtual int         _EvalTreeSimple(char *name, const AttrList*, const AttrList*, EvalResult*);
 };
 
 class Integer : public IntegerBase
@@ -125,8 +125,8 @@ class Integer : public IntegerBase
 
 	protected:
 
-  	virtual int     _EvalTree(AttrList*, EvalResult*);
-    virtual int     _EvalTree(AttrList*,AttrList*, EvalResult*);
+  	virtual int     _EvalTree(const AttrList*, EvalResult*);
+    virtual int     _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 };
 
 
@@ -146,8 +146,8 @@ class Float: public FloatBase
 
 	protected:
 
-  	virtual int     _EvalTree(AttrList*, EvalResult*);
-    virtual int     _EvalTree(AttrList*,AttrList*, EvalResult*);
+  	virtual int     _EvalTree(const AttrList*, EvalResult*);
+    virtual int     _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 };
 
 
@@ -162,8 +162,8 @@ class String : public StringBase
 
 	protected:
 
-  	virtual int         _EvalTree(AttrList*, EvalResult*);
-    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
+  	virtual int         _EvalTree(const AttrList*, EvalResult*);
+    virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 };
 
 
@@ -178,8 +178,8 @@ class ISOTime : public ISOTimeBase
 
 	protected:
 
-  	virtual int         _EvalTree(AttrList*, EvalResult*);
-    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
+  	virtual int         _EvalTree(const AttrList*, EvalResult*);
+    virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 };
 
 class ClassadBoolean : public BooleanBase
@@ -193,8 +193,8 @@ class ClassadBoolean : public BooleanBase
 
 	protected:
 
-  	virtual int         _EvalTree(AttrList*, EvalResult*);
-    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
+  	virtual int         _EvalTree(const AttrList*, EvalResult*);
+    virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 };
 
 
@@ -209,8 +209,8 @@ class Undefined : public UndefinedBase
 
 	protected:
 
-  	virtual int         _EvalTree(AttrList*, EvalResult*);
-    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
+  	virtual int         _EvalTree(const AttrList*, EvalResult*);
+    virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 };
 
 class Error : public ErrorBase
@@ -224,8 +224,8 @@ class Error : public ErrorBase
 
 	protected:
 
-  	virtual int         _EvalTree(AttrList*, EvalResult*);
-    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
+  	virtual int         _EvalTree(const AttrList*, EvalResult*);
+    virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 };
 
 class BinaryOp: public BinaryOpBase
@@ -389,8 +389,8 @@ class Function: public FunctionBase
     virtual void        PrintToStr(char*);
 	virtual ExprTree    *DeepCopy(void) const;
 
-  	virtual int     _EvalTree(AttrList*, EvalResult*);
-    virtual int     _EvalTree(AttrList*,AttrList*, EvalResult*);
+  	virtual int     _EvalTree(const AttrList*, EvalResult*);
+    virtual int     _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 
 	int FunctionScript(int number_of_arguments, EvalResult *arguments, 
 					   EvalResult *result);

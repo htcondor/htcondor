@@ -1013,14 +1013,12 @@ count( ClassAd *job )
 		}
 
 		// Don't count HELD jobs that have ATTR_JOB_MANAGED set to false.
-		if ( (status != HELD && status != COMPLETED && status != REMOVED) 
-					|| job_managed != 0 ) 
+		if ( status != HELD || job_managed != 0 ) 
 		{
 			needs_management = 1;
 			scheduler.Owners[OwnerNum].GlobusJobs++;
 		}
-		if ( status != HELD && status != COMPLETED && status != REMOVED
-					&& job_managed == 0 ) 
+		if ( status != HELD && job_managed == 0 ) 
 		{
 			scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
 		}

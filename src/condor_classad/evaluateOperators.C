@@ -29,14 +29,14 @@ static OpKind LexemeTypeToOpKind( LexemeType );
 static void ValueToEvalResult( Value&, EvalResult& );
 
 int BinaryOpBase::
-_EvalTree( AttrList *myScope, EvalResult *result )
+_EvalTree( const AttrList *myScope, EvalResult *result )
 {
 	return( this->EvalTree( myScope, NULL, result ) );
 }
 
 
 int BinaryOpBase::
-_EvalTree( AttrList *myScope, AttrList *targetScope, EvalResult *result )
+_EvalTree( const AttrList *myScope, const AttrList *targetScope, EvalResult *result )
 {
 	EvalResult 	lArgResult, rArgResult;
 	Value		lValue, rValue, resultValue;

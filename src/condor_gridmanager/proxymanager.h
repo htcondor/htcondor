@@ -29,7 +29,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "simplelist.h"
 
-#include "gahp-client.h"
+struct ProxySubject;
 
 struct MyProxyEntry {
 	char * myproxy_host;
@@ -56,11 +56,18 @@ struct Proxy {
 	char *proxy_filename;
 	int expiration_time;
 	bool near_expired;
-	int gahp_proxy_id;
+	int id;
 	int num_references;
 	SimpleList<int> notification_tids;
 	
 	SimpleList<MyProxyEntry*> myproxy_entries;
+	ProxySubject *subject;
+};
+
+struct ProxySubject {
+	char *subject_name;
+	Proxy *master_proxy;
+	List<Proxy> proxies;
 };
 
 #define PROXY_NEAR_EXPIRED( p ) \
@@ -71,12 +78,10 @@ struct Proxy {
 extern int CheckProxies_interval;
 extern int minProxy_time;
 
-bool UseMultipleProxies( const char *proxy_dir,
-						 bool(*init_gahp_func)(const char *proxy) );
-bool UseSingleProxy( const char *proxy_path,
-					 bool(*init_gahp_func)(const char *proxy) );
+bool InitializeProxyManager( const char *proxy_dir );
 
 Proxy *AcquireProxy( const char *proxy_path, int notify_tid = -1 );
+Proxy *AcquireProxy( Proxy *proxy, int notify_tid = -1 );
 void ReleaseProxy( Proxy *proxy, int notify_tid = -1 );
 void DeleteProxy (Proxy *& proxy);
 void DeleteMyProxyEntry (MyProxyEntry *& proxy);

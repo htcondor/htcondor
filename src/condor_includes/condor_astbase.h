@@ -101,8 +101,8 @@ class ExprTree
 		virtual void        PrintToNewStr(char **str);
 		virtual void        PrintToStr(char*) {} // print the expr to a string
 
-		int         		EvalTree(AttrList*, EvalResult*);
-		int         		EvalTree(AttrList*, AttrList*, EvalResult*);
+		int         		EvalTree(const AttrList*, EvalResult*);
+		int         		EvalTree(const AttrList*, const AttrList*, EvalResult*);
 		virtual void        GetReferences(const AttrList *base_attrlist,
 										  StringList &internal_references,
 										  StringList &external_references) const;
@@ -145,8 +145,8 @@ class ExprTree
 
     protected :
 		virtual void        CopyBaseExprTree(class ExprTree *const recipient) const;
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 
 		LexemeType	    	type;         // lexeme type of the node
 		bool				evalFlag;	  // to check for circular evaluation
@@ -176,8 +176,8 @@ class VariableBase : public ExprTree
 		friend	class	ExprTree;
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 
 #ifdef USE_STRING_SPACE_IN_CLASSADS
         int                 stringSpaceIndex;
@@ -201,8 +201,8 @@ class IntegerBase : public ExprTree
 		int		    	Value();
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 
   		int	 	    value;
 };
@@ -223,8 +223,8 @@ class FloatBase : public ExprTree
 	float		    Value();
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 
   	float	 	    value;
 };
@@ -244,8 +244,8 @@ class StringBase : public ExprTree
 	friend	class	ExprTree;
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 
 #ifdef USE_STRING_SPACE_IN_CLASSADS
         int                 stringSpaceIndex;
@@ -268,8 +268,8 @@ class ISOTimeBase : public ExprTree
 	friend	class	ExprTree;
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 
 #ifdef USE_STRING_SPACE_IN_CLASSADS
         int                 stringSpaceIndex;
@@ -288,8 +288,8 @@ class BooleanBase : public ExprTree
 	int                 Value();
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 
    	int                 value;
 };
@@ -303,8 +303,8 @@ class UndefinedBase : public ExprTree
 	virtual void        Display();
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 };
 
 class ErrorBase : public ExprTree
@@ -316,8 +316,8 @@ class ErrorBase : public ExprTree
 	virtual void        Display();
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*) = 0;
 };
 
 class BinaryOpBase : public ExprTree
@@ -338,8 +338,8 @@ class BinaryOpBase : public ExprTree
 		friend	class	      AggOp;
 
     protected :
-		virtual int         _EvalTree(AttrList*, EvalResult*);
-		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*);
+		virtual int         _EvalTree(const AttrList*, EvalResult*);
+		virtual int         _EvalTree(const AttrList*, const AttrList*, EvalResult*);
 
 		ExprTree* 	      lArg;
         ExprTree* 	      rArg;

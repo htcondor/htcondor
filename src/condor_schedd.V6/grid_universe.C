@@ -489,9 +489,10 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		} else {
 			owner_or_user = ATTR_OWNER;
 		}
-		constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
+		constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
 			owner_or_user,full_owner_name.Value(),
-			ATTR_X509_USER_PROXY_SUBJECT,proxy);
+			ATTR_X509_USER_PROXY_SUBJECT,proxy,
+			ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GLOBUS);
 		strcat(gman_final_args,constraint.Value());
 	}
 

@@ -24,21 +24,32 @@
 #ifndef CONDOR_GAHP_CLIENT_H
 #define CONDOR_GAHP_CLIENT_H
 
+#include "condor_common.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+
+#include "classad_hashtable.h"
 #include "globus_utils.h"
+#include "proxymanager.h"
 
 		class Gahp_Args {
 			public:
 				Gahp_Args();
 				~Gahp_Args();
-				char ** read_argv(int readfd);
 				void free_argv();
 				char **argv;
 				int argc;
-				static int pipe_ready();
-			private:
-				static bool skip_next_r;
 		};
 
+
+struct GahpProxyInfo
+{
+	Proxy *proxy;
+	int cached_expiration;
+	int num_references;
+};
+
+static const char *GAHPCLIENT_DEFAULT_SERVER_ID = "DEFAULT";
+static const char *GAHPCLIENT_DEFAULT_SERVER_PATH = "DEFAULT";
 
 // Additional error values that GAHP calls can return
 ///
@@ -50,15 +61,131 @@ static const int GAHPCLIENT_COMMAND_NOT_SUBMITTED = -102;
 ///
 static const int GAHPCLIENT_COMMAND_TIMED_OUT = -103;
 
-// Special values for what proxy to use with commands
-//   Use default proxy (not any cached proxy)
-static const int GAHPCLIENT_CACHE_DEFAULT_PROXY = -1;
-//   Use last proxy (use whatever proxy was used for the previous command)
-static const int GAHPCLIENT_CACHE_LAST_PROXY = -2;
 
+void GahpReconfig();
+
+class GahpClient;
+
+class GahpServer : public Service {
+ public:
+	static GahpServer *FindOrCreateGahpServer(const char *id, const char *path);
+	static HashTable <HashKey, GahpServer *> GahpServersById;
+
+	GahpServer(const char *id, const char *path);
+	~GahpServer();
+
+	bool Startup();
+	bool Initialize(Proxy * proxy);
+
+	void read_argv(Gahp_Args &g_args);
+	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
+	void write_line(const char *command);
+	void write_line(const char *command,int req,const char *args);
+	void Reaper(Service*,int pid,int status);
+	int pipe_ready();
+
+	void AddGahpClient( GahpClient *client );
+	void RemoveGahpClient( GahpClient *client );
+
+	int doProxyCheck();
+	GahpProxyInfo *RegisterProxy( Proxy *proxy );
+	void UnregisterProxy( Proxy *proxy );
+
+	/** Set interval to automatically poll the Gahp Server for results.
+		If the Gahp server supports async result notification, then
+		the poll interval defaults to zero (disabled).  Otherwise,
+		it will default to 5 seconds.  
+	 	@param interval Polling interval in seconds, or zero
+		to disable polling all together.  
+		@return true on success, false otherwise.
+		@see getPollInterval
+	*/
+	void setPollInterval(unsigned int interval);
+
+	/** Retrieve the interval used to auto poll the Gahp Server 
+		for results.  Also used to determine if async notification
+		is in effect.
+	 	@return Polling interval in seconds, or a zero
+		to represent auto polling is disabled (likely if
+		the Gahp server supports async notification).
+		@see setPollInterval
+	*/
+	unsigned int getPollInterval();
+
+	/** Immediately poll the Gahp Server for results.  Normally,
+		this method is invoked automatically either by a timer set
+		via setPollInterval or by a Gahp Server async result
+		notification.
+		@return The number of pending commands which have completed
+		since the last poll (note: could easily be zero).	
+		@see setPollInterval
+	*/
+	int poll();
+
+	void poll_real_soon();
+
+	bool cacheProxyFromFile( GahpProxyInfo *new_proxy );
+	bool uncacheProxy( GahpProxyInfo *gahp_proxy );
+	bool useCachedProxy( GahpProxyInfo *new_proxy, bool force = false );
+
+	bool command_cache_proxy_from_file( GahpProxyInfo *new_proxy );
+	bool command_use_cached_proxy( GahpProxyInfo *new_proxy );
+
+		// Methods for private GAHP commands
+	bool command_version(bool banner_string = false);
+	bool command_initialize_from_file(const char *proxy_path,
+									  const char *command=NULL);
+	bool command_commands();
+	bool command_async_mode_on();
+	bool command_response_prefix(const char *prefix);
+
+	int new_reqid();
+
+	int next_reqid;
+	bool rotated_reqids;
+
+	unsigned int m_reference_count;
+	HashTable<int,GahpClient*> *requestTable;
+	Queue<int> waitingToSubmit;
+
+	int m_gahp_pid;
+	int m_reaperid;
+	int m_gahp_readfd;
+	int m_gahp_writefd;
+	char m_gahp_version[150];
+	StringList * m_commands_supported;
+	bool use_prefix;
+	unsigned int m_pollInterval;
+	int poll_tid;
+	bool poll_pending;
+	int max_pending_requests;
+	int num_pending_requests;
+	GahpProxyInfo *current_proxy;
+	bool skip_next_r;
+	char *binary_path;
+	char *my_id;
+
+	char *globus_gass_server_url;
+	char *globus_gt2_gram_callback_contact;
+	void *globus_gt2_gram_user_callback_arg;
+	globus_gram_client_callback_func_t globus_gt2_gram_callback_func;
+	int globus_gt2_gram_callback_reqid;
+
+	char *globus_gt3_gram_callback_contact;
+	void *globus_gt3_gram_user_callback_arg;
+	globus_gram_client_callback_func_t globus_gt3_gram_callback_func;
+	int globus_gt3_gram_callback_reqid;
+
+	GahpProxyInfo *master_proxy;
+	int proxy_check_tid;
+	bool is_initialized;
+	HashTable<HashKey,GahpProxyInfo*> *ProxiesByFilename;
+}; // end of class GahpServer
+	
 ///
 class GahpClient : public Service {
 	
+	friend GahpServer;
 	public:
 		
 		/** @name Instantiation. 
@@ -66,33 +193,21 @@ class GahpClient : public Service {
 		//@{
 	
 			/// Constructor
-		GahpClient();
+		GahpClient(const char *id=GAHPCLIENT_DEFAULT_SERVER_ID,
+				   const char *path=GAHPCLIENT_DEFAULT_SERVER_PATH);
 			/// Destructor
 		~GahpClient();
 		
 		//@}
 
 		///
-		bool Startup(const char * gahp_server_path = NULL);
+		bool Startup();
 
 		///
-		bool Initialize(const char * proxy_path,
-						const char * gahp_server_path = NULL);
+		bool Initialize(Proxy *proxy);
 
 		///
 		void purgePendingRequests() { clear_pending(); }
-
-		///
-		void setMaxPendingRequests(int max) { max_pending_requests = max; }
-
-		///
-		int getMaxPendingRequests() { return max_pending_requests; }
-
-		///
-		static bool getUsePrefix() { return use_prefix; }
-
-		/// Return -1 if gahp does not exist, else returns the gahp pid
-		static int getPid() { return m_gahp_pid; }
 
 		/** @name Mode methods.
 		 * Methods to set/get the mode.
@@ -141,16 +256,6 @@ class GahpClient : public Service {
 		 */
 		//@{
 		
-		/** Immediately poll the Gahp Server for results.  Normally,
-			this method is invoked automatically either by a timer set
-			via setPollInterval or by a Gahp Server async result
-			notification.
-			@return The number of pending commands which have completed
-			since the last poll (note: could easily be zero).	
-			@see setPollInterval
-		*/
-		static int poll();
-
 		/** Reset the specified timer to go off immediately when a
 			pending command has completed.
 			@param tid The timer id to reset via DaemonCore's Reset_Timer 
@@ -169,39 +274,15 @@ class GahpClient : public Service {
 		*/
 		int getNotificationTimerId() { return user_timerid; }
 
-		/** Set interval to automatically poll the Gahp Server for results.
-			If the Gahp server supports async result notification, then
-			the poll interval defaults to zero (disabled).  Otherwise,
-			it will default to 5 seconds.  
-		 	@param interval Polling interval in seconds, or zero
-			to disable polling all together.  
-			@return true on success, false otherwise.
-			@see getPollInterval
-		*/
-		static void setPollInterval(unsigned int interval);
-
-		/** Retrieve the interval used to auto poll the Gahp Server 
-			for results.  Also used to determine if async notification
-			is in effect.
-		 	@return Polling interval in seconds, or a zero
-			to represent auto polling is disabled (likely if
-			the Gahp server supports async notification).
-			@see setPollInterval
-		*/
-		static unsigned int getPollInterval() { return m_pollInterval; }
-
-		static void poll_real_soon();
 		//@}
-					
-		bool cacheProxyFromFile( int id, const char *proxy_path );
-		bool uncacheProxy( int id );
-		bool useCachedProxy( int id, bool force = false );
 
-		void setNormalProxyCacheId( int id ) { normal_proxy_cache_id = id; }
-		int getNormalProxyCacheId() { return normal_proxy_cache_id; }
+		void setNormalProxy( Proxy *proxy );
 
-		void setDelegProxyCacheId( int id ) { deleg_proxy_cache_id = id; }
-		int getDelegProxyCacheId() { return deleg_proxy_cache_id; }
+		void setDelegProxy( Proxy *proxy );
+
+		Proxy *getMasterProxy();
+
+		bool isInitialized() { return server->is_initialized; }
 
 		//-----------------------------------------------------------
 		
@@ -210,6 +291,9 @@ class GahpClient : public Service {
 		 * Toolkit counterparts.  
 		 */
 		//@{
+
+		const char *
+			getGlobusGassServerUrl() { return server->globus_gass_server_url; }
 
 		/// cache it from the gahp
 		const char *
@@ -268,16 +352,52 @@ class GahpClient : public Service {
 
 		///
 		int
-		globus_gram_client_set_credentials(const char *proxy_path);
-
-		///
-		int
 		globus_gram_client_job_refresh_credentials(const char *job_contact);
 
 		///
 		int
 		globus_gass_server_superez_init( char **gass_url, int port );
 
+
+		///
+		int
+		gt3_gram_client_callback_allow(
+			globus_gram_client_callback_func_t callback_func,
+			void * user_callback_arg,
+			char ** callback_contact);
+
+		///
+		int 
+		gt3_gram_client_job_create(const char * resource_manager_contact,
+			const char * description,
+			const char * callback_contact,
+			char ** job_contact);
+
+		///
+		int
+		gt3_gram_client_job_start(const char *job_contact);
+
+		///
+		int 
+		gt3_gram_client_job_destroy(const char * job_contact);
+
+		///
+		int
+		gt3_gram_client_job_status(const char * job_contact,
+			int * job_status);
+
+		///
+		int
+		gt3_gram_client_job_callback_register(const char * job_contact,
+			const char * callback_contact);
+
+		///
+		int 
+		gt3_gram_client_ping(const char * resource_manager_contact);
+
+		///
+		int
+		gt3_gram_client_job_refresh_credentials(const char *job_contact);
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
@@ -295,27 +415,16 @@ class GahpClient : public Service {
 	private:
 
 			// Various Private Methods
-		const char* escape(const char *input);
-		int new_reqid();
 		void clear_pending();
 		bool is_pending(const char *command, const char *buf);
 		void now_pending(const char *command,const char *buf,
-						 int cache_id = GAHPCLIENT_CACHE_DEFAULT_PROXY);
+						 GahpProxyInfo *proxy = NULL);
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
 		int reset_user_timer(int tid);
 		int reset_user_timer_alarm();
 
-			// Methods for private GAHP commands
-		bool command_version(bool banner_string = false);
-		bool command_initialize_from_file(const char *proxy_path,
-			const char *command=NULL);
-		bool command_commands();
-		bool command_async_mode_on();
-		bool command_response_prefix(const char *prefix);
-
 			// Private Data Members
-		static unsigned int m_reference_count;
 		unsigned int m_timeout;
 		mode m_mode;
 		char pending_command[150];
@@ -325,38 +434,17 @@ class GahpClient : public Service {
 		time_t pending_timeout;
 		int pending_timeout_tid;
 		bool pending_submitted_to_gahp;
-		static HashTable<int,GahpClient*> *requestTable;
-		static Queue<int> waitingToSubmit;
 		int user_timerid;
-		int normal_proxy_cache_id;
-		int deleg_proxy_cache_id;
-		int pending_cache_id;
+		GahpProxyInfo *normal_proxy;
+		GahpProxyInfo *deleg_proxy;
+		GahpProxyInfo *pending_proxy;
 
 			// These data members all deal with the GAHP
 			// server.  Since there is only one instance of the GAHP
 			// server, all the below data members are static.
-		static int m_gahp_pid;
-		static int m_reaperid;
-		static int m_gahp_readfd;
-		static int m_gahp_writefd;
-		static char m_gahp_version[150];
-		static StringList * m_commands_supported;
-		static bool use_prefix;
-		static void write_line(const char *command);
-		static void write_line(const char *command,int req,const char *args);
-		static void Reaper(Service*,int pid,int status);
-		static unsigned int m_pollInterval;
-		static int poll_tid;
-		static bool poll_pending;
-		static char* m_callback_contact;	
-		static void* m_user_callback_arg;
-		static globus_gram_client_callback_func_t m_callback_func;
-		static int m_callback_reqid;
-		static int max_pending_requests;
-		static int num_pending_requests;
-		static int current_cache_id;
+		GahpServer *server;
 
 };	// end of class GahpClient
 
-	
+
 #endif /* ifndef CONDOR_GAHP_CLIENT_H */

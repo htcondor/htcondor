@@ -29,9 +29,6 @@
 #include "globusresource.h"
 #include "gridmanager.h"
 
-// timer id value that indicates the timer is not registered
-#define TIMER_UNSET		-1
-
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
@@ -45,7 +42,16 @@ int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
 
+#define HASH_TABLE_SIZE			500
+
+template class HashTable<HashKey, GlobusResource *>;
+template class HashBucket<HashKey, GlobusResource *>;
+
+HashTable <HashKey, GlobusResource *> ResourcesByName( HASH_TABLE_SIZE,
+													   hashFunction );
+
 GlobusResource::GlobusResource( const char *resource_name )
+	: BaseResource( resource_name )
 {
 	resourceDown = false;
 	firstPingDone = false;
@@ -54,14 +60,12 @@ GlobusResource::GlobusResource( const char *resource_name )
 								"GlobusResource::DoPing", (Service*)this );
 	lastPing = 0;
 	lastStatusChange = 0;
-	gahp.setNotificationTimerId( pingTimerId );
-	gahp.setMode( GahpClient::normal );
-	gahp.setTimeout( gahpCallTimeout );
-	resourceName = strdup( resource_name );
+	gahp = new GahpClient();
+	gahp->setNotificationTimerId( pingTimerId );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
 	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
-
-	myProxy = AcquireProxy( NULL, pingTimerId );
 
 	checkMonitorTid = TIMER_UNSET;
 	monitorActive = false;
@@ -81,13 +85,9 @@ GlobusResource::GlobusResource( const char *resource_name )
 
 GlobusResource::~GlobusResource()
 {
-	ReleaseProxy( NULL, pingTimerId );
 	daemonCore->Cancel_Timer( pingTimerId );
 	if ( checkMonitorTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( checkMonitorTid );
-	}
-	if ( resourceName != NULL ) {
-		free( resourceName );
 	}
 	if ( monitorJobStatusFile != NULL ) {
 		unlink( monitorJobStatusFile );
@@ -103,7 +103,9 @@ void GlobusResource::Reconfig()
 {
 	char *param_value;
 
-	gahp.setTimeout( gahpCallTimeout );
+	BaseResource::Reconfig();
+
+	gahp->setTimeout( gahpCallTimeout );
 
 	submitLimit = -1;
 	param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE" );
@@ -346,11 +348,6 @@ bool GlobusResource::IsDown()
 	return resourceDown;
 }
 
-char *GlobusResource::ResourceName()
-{
-	return resourceName;
-}
-
 int GlobusResource::DoPing()
 {
 	int rc;
@@ -380,12 +377,18 @@ int GlobusResource::DoPing()
 
 	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
 
-	if ( PROXY_IS_EXPIRED( myProxy ) ) {
+	if ( gahp->isInitialized() == false ) {
+		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
+		daemonCore->Reset_Timer( pingTimerId, 5 );
+		return TRUE;
+	}
+	gahp->setNormalProxy( gahp->getMasterProxy() );
+	if ( PROXY_IS_EXPIRED( gahp->getMasterProxy() ) ) {
 		dprintf( D_ALWAYS,"proxy near expiration or invalid, delaying ping\n" );
 		return TRUE;
 	}
 
-	rc = gahp.globus_gram_client_ping( resourceName );
+	rc = gahp->globus_gram_client_ping( resourceName );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		return 0;
@@ -641,6 +644,7 @@ GlobusResource::SubmitMonitorJob()
 		return false;
 	}
 
+	const char *gassServerUrl = tmp_gahp.getGlobusGassServerUrl();
 	RSL.sprintf( "&(executable=%s%s)(stdout=%s%s)(arguments='--dest-url=%s%s')",
 				 gassServerUrl, monitor_executable, gassServerUrl,
 				 monitorLogFile, gassServerUrl, monitorJobStatusFile );

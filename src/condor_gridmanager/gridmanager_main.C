@@ -42,7 +42,7 @@ void
 usage( char *name )
 {
 	dprintf( D_ALWAYS, 
-		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-x <x509_user_proxy>] [-C <job constraint>] [-S <scratch dir>]\n",
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-C <job constraint>] [-S <scratch dir>]\n",
 		basename( name ) );
 	DC_Exit( 1 );
 }
@@ -78,14 +78,6 @@ main_init( int argc, char ** const argv )
 			if ( argc <= i + 1 )
 				usage( argv[0] );
 			GridmanagerScratchDir = strdup( argv[i + 1] );
-			i++;
-			break;
-		case 'x':
-			// Use a different user_proxy;
-			if ( argc <= i + 1 )
-				usage( argv[0] );
-			X509Proxy = strdup( argv[i + 1] );
-			useDefaultProxy = false;
 			i++;
 			break;
 		case 'o':
