@@ -85,7 +85,7 @@ check_parent()
 void
 check_session_cache()
 {
-	// daemonCore->getSecMan()->RemoveExpiredKeys();
+	daemonCore->getSecMan()->invalidateExpiredCache();
 }
 
 char* global_dc_sinful() {
