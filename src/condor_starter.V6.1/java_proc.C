@@ -111,6 +111,9 @@ int JavaProc::ParseExceptionLine( const char *line, char *name, char *type )
 {
 	char *copy, *tok, *last;
 
+	name[0] = 0;
+	type[0] = 0;
+
 	copy = strdup(line);
 	if(!copy) return 0;
 
@@ -119,6 +122,7 @@ int JavaProc::ParseExceptionLine( const char *line, char *name, char *type )
 	while(tok) {
 		if(
 			!strcmp(tok,"java.lang.Error") ||
+			!strcmp(tok,"java.lang.LinkageError") ||
 			!strcmp(tok,"java.lang.Exception") ||
 			!strcmp(tok,"java.lang.RuntimeException")
 		) {
