@@ -1,3 +1,7 @@
+#if !DOES_REMOTE_SYSCALLS
+CLIP = -DCLIP
+#endif
+
 OS = OperatingSystem
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
@@ -35,7 +39,11 @@ XDR_OBJ = \
  	xdr_rlimit.o \
  	xdr_utsname.o
 
+#if DOES_CHECKPOINTING
 CKPT_OBJ = file_state.o image.o tmp_stack.o machdep.$(OS).o syscall_mode.o
+#else
+CKPT_OBJ = syscall_mode.o
+#endif
 
 UTIL_OBJ = dprintf.o dprintf_config.o except.o update_rusage.o condor_errlst.o
 
@@ -62,27 +70,30 @@ CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
 CMNT
 condor_rt0.o: Crt0 ToUpper
 	ToUpper Crt0 condor_rt0.o main MAIN
-release:: condor_rt0.o
-	COPY_LIBRARY( condor_rt0.o, $(RELEASE_DIR)/lib )
 clean::
 	rm -f condor_rt0.o
 
+release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
 
-library_target(condor_syscall_lib.a,$(LIB_OBJ),release)
-program_target(ToUpper,ToUpper.o,$(NULL),release)
+
+library_target(condor_syscall_lib.a,$(LIB_OBJ))
+release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
+
+program_target(ToUpper,ToUpper.o,$(NULL))
+release_target(ToUpper,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 switches.c: syscall.tmpl switches.prologue stub_gen
-	/usr/ucb/cpp -DSWITCH < syscall.tmpl | \
+	/usr/ucb/cpp -DSWITCH $(CLIP) < syscall.tmpl | \
 	stub_gen -mode switches  -p switches.prologue \
 	> switches.c
 
 senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
-	/usr/ucb/cpp -DSENDER < syscall.tmpl | \
+	/usr/ucb/cpp -DSENDER $(CLIP) < syscall.tmpl | \
 	stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	> senders.c
 
 receivers.c: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
-	/usr/ucb/cpp -DRECEIVER < syscall.tmpl | \
+	/usr/ucb/cpp -DRECEIVER $(CLIP) < syscall.tmpl | \
 	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
 	> receivers.c
 
@@ -96,7 +107,7 @@ clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c receivers.c *.o
 
 depend_target($(SRC))
-program_target(stub_gen,y.tab.o lex.yy.o,$(NULL),no_realeas)
+program_target(stub_gen,y.tab.o lex.yy.o,$(NULL))
 
 
 IMPORT_LINKS = ../../config/import_links
