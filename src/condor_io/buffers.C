@@ -159,21 +159,24 @@ int Buf::read(
 
 			switch(nfound) {
 			case 0:
+				dprintf( D_ALWAYS, "select timed out in Buf::read()\n" );
 				return -1;
-				break;
 			case 1:
 				break;
 			default:
 				dprintf( D_ALWAYS, "select returns %d, recv failed\n",
 					nfound );
 				return -1;
-				break;
 			}
 		}
 
 		nro = recv(sockd, &_dta[num_used()+nr], sz-nr, 0);
 
-		if (nro <= 0) return -1;
+		if (nro <= 0) {
+			dprintf( D_ALWAYS, "recv returned %d, errno = %d\n", 
+					 nro, errno );
+			return -1;
+		}
 
 		nr += nro;
 	}
