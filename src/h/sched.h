@@ -174,6 +174,7 @@ typedef struct {        /* record sent by startd to shadow */
 #define	REQUEST_SERVICE		(SCHED_VERS+42)
 #define	RELINQUISH_SERVICE	(SCHED_VERS+43)
 #define	VACATE_SERVICE		(SCHED_VERS+44)
+#define PRIORITY_INFO       (SCHED_VERS+45)     /* negotiator to accountant */
 
 #include "condor_network.h"	/* for port numbers */
 
