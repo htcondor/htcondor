@@ -14,6 +14,7 @@
 \oOpt{-io}
 \oOpt{-dag}
 \oOpt{-long}
+\oOpt{-xml}
 \oOptArg{-format} {formatter attribute}
 \oOpt{-cputime}
 \oOpt{-currentrun}
@@ -197,6 +198,9 @@ per machine basis.
 	\OptItem{\Opt{-dag}}{Display DAG jobs under their DAGMan.}
 	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
 	\OptItem{\Opt{-long}}{Display job ads in long format}
+	\OptItem{\Opt{-xml}}{Display job ads  in xml format.
+	        The xml format is fully defined at
+		\URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
 	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \emph{attr} in
 		format \emph{fmt}.
 		To display the attribute the format must contain a single
