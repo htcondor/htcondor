@@ -469,6 +469,10 @@ SOURCE="..\src\condor_c++_util\my_distribution.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\my_dynuser.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\my_hostname.C"
 # End Source File
 # Begin Source File
