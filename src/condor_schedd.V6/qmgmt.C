@@ -93,6 +93,7 @@ static ClassAdLog *JobQueue = 0;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
+static bool JobQueueDirty = false;
 
 class Service;
 
@@ -140,6 +141,20 @@ InitJobQueue(const char *job_queue_name)
 												   ATTR_NEXT_CLUSTER_NUM,
 												   cluster_str);
 		JobQueue->AppendLog(log);
+	}
+}
+
+
+void
+CleanJobQueue()
+{
+	if (JobQueueDirty) {
+		dprintf(D_ALWAYS, "Cleaning job queue...\n");
+		JobQueue->TruncLog();
+		JobQueueDirty = false;
+	} else {
+		dprintf(D_ALWAYS,
+				"CleanJobQueue() doing nothing since !JobQueueDirty.\n");
 	}
 }
 
@@ -485,6 +500,8 @@ int DestroyProc(int cluster_id, int proc_id)
 		(void)unlink( ckpt_file_name );
 	}
 
+	JobQueueDirty = true;
+
 	return 0;
 }
 
@@ -531,6 +548,8 @@ int DestroyCluster(int cluster_id)
 		gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
 	(void)unlink( ickpt_file_name );
 
+	JobQueueDirty = true; 
+
 	return 0;
 }
 
@@ -553,8 +572,8 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 		return false;
 	}
 	delete tree;
-	if (result.type == LX_BOOL) {
-		return (bool)result.b;
+	if (result.type == LX_INTEGER) {
+		return (bool)result.i;
 	}
 	dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n", constraint);
 	return false;
@@ -602,6 +621,9 @@ int DestroyClusterByConstraint(const char* constraint)
 			}
 		}
 	}
+
+	JobQueueDirty = true;
+
 	if(flag) return -1;
 	return 0;
 }
@@ -672,6 +694,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 
 	log = new LogSetAttribute(key, attr_name, attr_value);
 	JobQueue->AppendLog(log);
+
+	JobQueueDirty = true;
 
 	return 0;
 }
@@ -836,6 +860,8 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 
 	log = new LogDeleteAttribute(key, attr_name);
 	JobQueue->AppendLog(log);
+
+	JobQueueDirty = true;
 
 	return 1;
 }

@@ -15,6 +15,7 @@ class Service;
 extern "C" {
 #endif
 void InitJobQueue(const char *job_queue_name);
+void CleanJobQueue();
 int handle_q(Service *, int, Stream *sock);
 int GetJobList(const char *constraint, ClassAdList &list);
 #if defined(__cplusplus)

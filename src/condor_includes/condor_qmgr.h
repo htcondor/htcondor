@@ -49,6 +49,7 @@ void DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
 
 void InitJobQueue(const char *job_queue_name);
+void CleanJobQueue();
 
 int rusage_to_float(struct rusage, float *, float *);
 int float_to_rusage(float, float, struct rusage *);
