@@ -50,6 +50,8 @@ void update_central_mgr __P((void));
 static int eval_state(resource_info_t* rip)
 {
   int start = FALSE, tmp;
+  int want_vacate, want_suspend;
+
   resource_context(rip);
   if (rip->r_state == SYSTEM)
     resmgr_changestate(rip->r_rid, NO_JOB);
@@ -87,8 +89,26 @@ static int eval_state(resource_info_t* rip)
 
   if (!rip->r_jobcontext)
     return 0;
-  
-  if (rip->r_state == CHECKPOINTING) 
+ 
+  if ( rip->r_universe == VANILLA ) {
+  	if ( (rip->r_context)->EvalBool("WANT_SUSPEND_VANILLA",rip->r_jobcontext,want_suspend) == 0 ) {
+  		want_suspend = 1;
+	}
+  	if ( (rip->r_context)->EvalBool("WANT_VACATE_VANILLA",rip->r_jobcontext,want_vacate) == 0 ) {
+  		want_vacate = 1;
+	}
+  } else {
+	if ( (rip->r_context)->EvalBool("WANT_SUSPEND",rip->r_jobcontext,want_suspend) == 0 ) {
+  		want_suspend = 1;
+	}
+  	if ( (rip->r_context)->EvalBool("WANT_VACATE",rip->r_jobcontext,want_vacate) ==  0 ) {
+  		want_vacate = 1;
+	}
+  }
+
+  if ( (rip->r_state == CHECKPOINTING) ||
+		((rip->r_state == JOB_RUNNING) && (!want_suspend) && (!want_vacate)) ||
+		((rip->r_state == SUSPENDED) && (!want_vacate)) )
   {
     if (rip->r_universe == VANILLA) 
     {
@@ -112,7 +132,8 @@ static int eval_state(resource_info_t* rip)
     }
   }
 
-  if (rip->r_state == SUSPENDED) 
+  if ( (rip->r_state == SUSPENDED) ||
+		((rip->r_state == JOB_RUNNING) && (!want_suspend) && (want_vacate)) )
   {
     if (rip->r_universe == VANILLA) 
     {
@@ -135,7 +156,7 @@ static int eval_state(resource_info_t* rip)
     }
   }
 
-  if (rip->r_state == JOB_RUNNING) 
+  if ( (rip->r_state == JOB_RUNNING) && want_suspend )
   {
     if (rip->r_universe == VANILLA) 
     {
