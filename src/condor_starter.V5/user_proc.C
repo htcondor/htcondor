@@ -191,6 +191,7 @@ UserProc::display()
 	display_bool( D_ALWAYS, "  ckpt_transferred", ckpt_transferred );
 	display_bool( D_ALWAYS, "  core_created", core_created );
 	display_bool( D_ALWAYS, "  core_transferred", core_transferred );
+	display_bool( D_ALWAYS, "  exit_requested", exit_requested );
 	dprintf( D_ALWAYS, "  image_size = %d blocks\n", image_size );
 
 	dprintf( D_ALWAYS, "  user_time = %d\n", user_time );
@@ -657,7 +658,11 @@ UserProc::handle_termination( int exit_st )
 	exit_status_valid = TRUE;
 	accumulate_cpu_time();
 
-	if( WIFEXITED(exit_status) ) {	// exited on own accord with some status
+	if( exit_requested && job_class == VANILLA ) { // job exited by request
+		dprintf( D_ALWAYS, "Process exited by request\n" );
+		state = NON_RUNNABLE;
+	} else if( WIFEXITED(exit_status) ) { 
+                                     // exited on own accord with some status
 		dprintf( D_ALWAYS,
 			"Process %d eixted with status %d\n", pid, WEXITSTATUS(exit_status)
 		);
@@ -955,6 +960,7 @@ UserProc::request_periodic_ckpt()
 void
 UserProc::request_exit()
 {
+	exit_requested = TRUE;
 	send_sig( soft_kill_sig );
 }
 
@@ -1103,6 +1109,7 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	ckpt_transferred( FALSE ),
 	core_created( FALSE ),
 	core_transferred( FALSE ),
+	exit_requested( FALSE ),
 	image_size( -1 ),
 	user_time( 0 ),
 	sys_time( 0 ),

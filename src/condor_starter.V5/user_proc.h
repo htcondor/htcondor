@@ -203,6 +203,7 @@ private:
 	int		ckpt_transferred;
 	int		core_created;
 	int		core_transferred;
+	int		exit_requested;
 	int		image_size;		// in 1024 bytes blocks
 
 		// CPU guaranteed by transfer of ckpt or termination of job
