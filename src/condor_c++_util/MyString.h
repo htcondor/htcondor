@@ -219,4 +219,6 @@ private:
   
 };
 
+int MyStringHash( const MyString &str, int buckets );
+
 #endif
