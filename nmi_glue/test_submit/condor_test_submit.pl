@@ -109,9 +109,14 @@ sub generate_cmdfile() {
     print "++tag is $tag\n";
     print "++module is $module\n";
  
-    (my $release = $module) =~ s/_BUILD//;
-    $release =~ s/V//; 
+    my $release = $tag;
+    $release =~ s/BUILD-V//;
+    $release =~ s/-branch-.*//;
     my @versions = split("_", $release);
+    if( ! $versions[2] ) {
+        $versions[2] = "x";
+    }
+    my $vers_string = "$versions[0], $versions[1], $versions[2]";
 
     my $cmdfile = "condor_cmdfile-$tag";
     my $srcsfile = "condor_srcsfile-$tag";
@@ -147,12 +152,12 @@ sub generate_cmdfile() {
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
-    print CMDFILE "description = nightly condor $versions[0].$versions[1] test run\n";
+    print CMDFILE "description = TEST: $tag\n";
     print CMDFILE "run_type = test\n";
     print CMDFILE "project = condor\n";
-    print CMDFILE "project_release = $versions[0], $versions[1], x\n";
+    print CMDFILE "project_release = $vers_string\n";
     print CMDFILE "component = condor\n";
-    print CMDFILE "component_version = $versions[0], $versions[1], x\n";
+    print CMDFILE "component_version = $vers_string\n";
     print CMDFILE "sources = $runidfile, $gluefile\n";
     print CMDFILE "pre_all = nmi_glue/test/pre_all\n";
     print CMDFILE "platform_pre = nmi_glue/test/platform_pre\n";
