@@ -671,13 +671,9 @@ Claim::starterExited( void )
 		// execute directory, and do any other cleanup. 
 	c_starter->exited();
 	
-		// Next, we can delete the starter object itself.
-	delete( c_starter );
-	c_starter = NULL;
-	
-		// Clear out the last periodic checkpoint info, since it's no
-		// longer valid now that the starter is gone.
-	c_last_pckpt = -1;
+		// Now, clear out this claim with all the starter-specific
+		// info, including the starter object itself.
+	resetClaim();
 
 		// finally, let our resource know that our starter exited, so
 		// it can do the right thing.
@@ -1009,14 +1005,19 @@ Claim::finishDeactivateCmd( void )
 void
 Claim::resetClaim( void )
 {
-	delete( c_starter );
-	c_starter = NULL;
-	delete( c_ad );
-	c_ad = NULL;
+	if( c_starter ) {
+		delete( c_starter );
+		c_starter = NULL;
+	}
+	if( c_ad ) {
+		delete( c_ad );
+		c_ad = NULL;
+	}
 	c_universe = -1;
 	c_cluster = -1;
 	c_proc = -1;
 	c_job_start = -1;
+	c_last_pckpt = -1;
 }
 
 
