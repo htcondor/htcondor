@@ -10,6 +10,8 @@ The ClassAd Distribution consists of two components.
 		non-trivial application which use classads will find this library 
 		useful.
 \end{enumerate}
+
+Please contact \URL[condor-admin]{mailto:condor-admin@cs.wisc.edu} for support.
 */
 //@{
 	/**@name ClassAd Library Classes
