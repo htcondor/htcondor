@@ -377,7 +377,6 @@ sub Configure( )
 sub RunIt( )
 {
     # Build the command & start it
-    my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
     my $Cmd = "nice -20 top " . $Config{TopOpt}{Batch} . " " .
 	$Config{TopOpt}{Delay} . "$Config{TopPeriod}";
     $TopPid = open ( TOP, "$Cmd|" );
@@ -409,12 +408,17 @@ sub RunIt( )
 	# Store the # of processes that we should read
 	my $NumProcesses = 0;
 
+	# Hash of the summary info
+	my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
+
 	# Read the header
       READHEADER:
 	my @Buffer;
-	while ( <TOP> ) {
+	while ( <TOP> )
+	{
 	    # Uptime line?
-	    if ( /.*up.*load/ ) {
+	    if ( /.*up.*load average:/ )
+	    {
 		my %Uptime;
 
 		# Parse the uptime line
@@ -427,8 +431,10 @@ sub RunIt( )
 		    $Summary->Add( $Attr, $Type, $Uptime{$Attr} );
 		}
 	    }
+
 	    # Older tops just dump a "load" line
-	    elsif ( /^load averages:\s+(.*)/ ) {
+	    elsif ( /^load averages:\s+(.*)/ )
+	    {
 		chomp;
 
 		# Hack out the commas
@@ -443,13 +449,15 @@ sub RunIt( )
 		    $Load{Load15} = shift( @LoadInfo );
 
 		    my $TimeStr = shift( @LoadInfo );
-		    if ( $TimeStr =~ /(\d+):(\d+)([ap])m/ ) {
+		    if ( $TimeStr =~ /(\d+):(\d+)([ap])m/ )
+		    {
 			my $Time = ( $1 * 60 ) + $2;
 			$Time += (12 * 60 ) if ( $3 =~ /p/ );
 			$Load{Time} = $Time;
 			$Load{TimeString} = $TimeStr;
 		    }
-		    elsif ( $TimeStr =~ /(\d+):(\d+):(\d+)/ ) {
+		    elsif ( $TimeStr =~ /(\d+):(\d+):(\d+)/ )
+		    {
 			$Load{Time} = ( $1 * 60 ) + $2;
 			$Load{TimeString} = $TimeStr;
 		    }
@@ -462,8 +470,10 @@ sub RunIt( )
 		    }
 		}
 	    }
-	    # Processes summary?
-	    elsif ( /^(\d*)(.*):(.*)/ ) {
+
+	    # Processes summary information?
+	    elsif ( /^(\d*)(.*):(.*)/ )
+	    {
 		my $Num = $1;
 		my $Name = $2;
 		my $Rest = $3;
@@ -471,7 +481,8 @@ sub RunIt( )
 		$Name =~ s/\s+/_/g;
 
 		# Openning summary #?
-		if ( $Num ne "" ) {
+		if ( $Num ne "" )
+		{
 		    $Summary->Add( $Name, "n", $Num );
 		    $NumProcesses = $Num if ( $Name eq "processes" );
 		}
@@ -480,8 +491,10 @@ sub RunIt( )
 		$Rest =~ s/\s{2,}/,/g;
 		my @Fields = split ( /,/, $Rest );
 		my $Field;
-		foreach $Field ( @Fields ) {
-		    if ( $Field =~ /\s*(\S+)(.*)/ ) {
+		foreach $Field ( @Fields )
+		{
+		    if ( $Field =~ /\s*(\S+)(.*)/ )
+		    {
 			my $Value = $1;
 			my $Var = $2;
 			$Var =~ s/^\s+//;
@@ -496,7 +509,8 @@ sub RunIt( )
 	    }
 
 	    # Header line?
-	    elsif ( /\s+PID\s+USER/ ) {
+	    elsif ( /\s+PID\s+USER/ )
+	    {
 		while( <TOP> )
 		{
 		    chomp;
@@ -550,7 +564,8 @@ sub RunIt( )
 	    }
 
 	    # Clean up numbers where required
-	    foreach my $n ( 0 .. $#Process ) {
+	    foreach my $n ( 0 .. $#Process )
+	    {
 		FixString( \$Process[$n] );
 	    }
 	    $Processes{$Proc} = \@Process;
@@ -578,15 +593,19 @@ sub RunIt( )
 	    next;
 	}
 	ProcessData( \%Processes );
+	%Processes = ();
 
 	# Timing logic
 	my $CurTime = time();
 	my $TimeDiff = $CurTime - $LastTime;
 	my $MaxTime = $Config{TopPeriod} * 1.5;
-	if ( ( $LastTime > 0 ) && ( $TimeDiff < $Config{TopPeriod} ) ) {
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < $Config{TopPeriod} ) )
+	{
 	    print STDERR "output looped in $TimeDiff seconds ($Proc lines)!\n";
 	    $Done++ if ( ++$FastCount > 1 );
-	} else {
+	}
+	else
+	{
 	    $FastCount-- if ( $FastCount > 0 );
 	}
 	$LastTime = $CurTime;
@@ -604,7 +623,8 @@ sub RunIt( )
 
     # All done reading!
     sleep( 1 );
-    if ( $TopPid >= 0 ) {
+    if ( $TopPid >= 0 )
+    {
 	print STDERR "Killing top (PID = $TopPid )\n";
 	kill( "TERM", $TopPid )
     }
