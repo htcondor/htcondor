@@ -171,7 +171,7 @@
 #	include <sys/msg.h>
 #	include <sys/mman.h>
 #	include <sys/addrconf.h>
-#	include <sys/sysinfo.h>
+/* #	include <sys/sysinfo.h> */
 #endif
 
 #if defined(LINUX)
