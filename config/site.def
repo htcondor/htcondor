@@ -3,7 +3,7 @@
 #define HasGcc		YES
 #define HasGPlusPlus	YES
 
-#define CCompiler	gcc 
+#define CCompiler	gcc
 #define CPlusCompiler	g++
 #define PreProcessCmd	CCompiler -E -x c-header
 #define Demangler	c++filt
@@ -27,14 +27,12 @@
 
 #endif  /* BeforeVendorCF */
 
-
-
 #ifdef AfterVendorCF
 
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /p/condor/workspaces/shared.2/hbwang/V6_3/
+#define Top /afs/cs.wisc.edu/p/condor/workspaces/psilord/v63/v63-dirty
 
 #define TmpDir		/tmp
 
@@ -82,7 +80,12 @@ KERBEROS_LIB =             \
                          $(KERBEROS_DIR)/lib/libcrypto.a      \
                          $(KERBEROS_DIR)/lib/libcom_err.a
 
+#if WANT_KERBEROS
 CREDENTIAL_LIB = $(KERBEROS_LIB)
+#else
+CREDENTIAL_LIB =
+#endif
+
 
 #endif  /* AfterVendorCF */
 
