@@ -5,11 +5,6 @@ $config = "condor_config.glidein";
 @DAEMONS = ( "condor_master", "condor_startd", "condor_starter",
 	     "condor_pvmd", "condor_starter.pvm" );
 
-	##contact string for globus gass server...Change 'do_remote_setup()' if
-	##you change the method of file staging (e.g. gass to gsiftp)
-$SERVER_NAME = "vulture.cs.wisc.edu";
-$SERVER_PATH = "/p/condor/public/binaries/glidein";
-
 
 if ( ( $error = parse_command_line() )
 		|| ( $error = gather_info() ) )
@@ -191,6 +186,16 @@ sub gather_info() {
 	( $_, $CONDOR_VERSION, $_) = split( / *[$: ]+/, $TMP );
 	if ( $CONDOR_VERSION eq "" ) {
 		return( "Can't determine Condor version.\n" );
+	}
+
+	#Find out where the glidein tarball server is
+	chomp( $SERVER_NAME = `$CONFIGVAL GLIDEIN_SERVER_NAME` );
+	if ( $SERVER_NAME eq "" ) {
+	    return( "Error, GLIDEIN_SERVER_NAME needs to be defined in the Condor config file" );
+	}
+	chomp( $SERVER_DIR = `$CONFIGVAL GLIDEIN_SERVER_DIR` );
+	if ( $SERVER_DIR eq "" ) {
+	    return( "Error, GLIDEIN_SERVER_DIR needs to be defined in the Condor config file" );
 	}
 
 		##if archdir was specified on command line
@@ -545,13 +550,6 @@ sub do_remote_setup() {
 		return( "Couldn't create Condor config file" );
 	}
 
-	`$G_FTP $SERVER_NAME . $SERVER_PATH/$arch.tar.gz`;
-
-	if ( ( $? != 0  ) || !( -f "$arch.tar.gz" ) ) {
-		unlink( $config );
-		return( "Couldn't retrieve $arch.tar.gz from server" );
-	}
-
 	$REM_SETUP = "/tmp/remote_setup.glidein.$$";
 	open( REM_SETUP, ">$REM_SETUP" );
 	print REM_SETUP<<"EOF";
@@ -560,8 +558,8 @@ sub do_remote_setup() {
 	ARCHDIR=\$2
 	ARCH=\$3
 	LOCALDIR=\$4
-	GLOBUS_COPY=\$5
-	GASS_SERVER=\$6
+	GASS_SERVER=\$5
+	TARBALL_SERVER=\$6
 
 	CONFIG=\$BASEDIR/$config
 
@@ -576,7 +574,7 @@ sub do_remote_setup() {
 	done
 
 	if [ ! -f \$CONFIG -o -h \$CONFIG ];
-		then \$GLOBUS_COPY \$GASS_SERVER/$config file:\$BASEDIR/$config 
+		then \$GLOBUS_LOCATION/bin/globus-url-copy \$GASS_SERVER/$config file:\$BASEDIR/$config 
 	fi
 
 	cd \$ARCHDIR
@@ -587,9 +585,9 @@ sub do_remote_setup() {
 		fi
 	done
 	if [ \$GETFILES -eq 1 ]; then
-		\$GLOBUS_COPY \$GASS_SERVER/\$ARCH.tar.gz file:\$ARCHDIR/\$ARCH.tar.gz;
-		if [ ! -f \$ARCHDIR/\$ARCH.tar.gz ]
-			then \$GLOBUS_SH_ECHO "Error: unable to copy \$GASS_SERVER/\$ARCH.tar.gz"
+		\$GLOBUS_LOCATION/bin/globus-url-copy \$TARBALL_SERVER/\$ARCH.tar.gz file:\$ARCHDIR/\$ARCH.tar.gz;
+		if [ \$? != 0 -o ! -f \$ARCHDIR/\$ARCH.tar.gz ]; then
+			\$GLOBUS_SH_ECHO "Error: unable to retrieve \$TARBALL_SERVER/\$ARCH.tar.gz"
 			exit 1;
 		fi
 
@@ -602,11 +600,10 @@ sub do_remote_setup() {
 
 EOF
 	close( REM_SETUP );
-	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_LOCATION)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUS_LOCATION)/bin/globus-url-copy \$(GLOBUSRUN_GASS_URL)$remotedir)(queue=$CONTACT_SETUP_QUEUE)'";
+	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_LOCATION)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUSRUN_GASS_URL)$remotedir gsiftp://$SERVER_NAME$SERVER_DIR)(queue=$CONTACT_SETUP_QUEUE)'";
 
 	$err = system( $SYSTEM );
 
-	unlink( "$remotedir/$arch.tar.gz" );
 	unlink( "$remotedir/$config" );
 	unlink( $REM_SETUP );
 
