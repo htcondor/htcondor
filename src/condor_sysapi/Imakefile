@@ -7,11 +7,14 @@ LIB = $(STD_LIBS)
 
 OBJ = phys_mem.o free_fs_blocks.o ncpus.o clinpack.o dhry21a.o \
 		dhry21b.o timers_b.o idle_time.o reconfig.o last_x_event.o \
-		load_avg.o arch.o virt_mem.o test.o
+		load_avg.o arch.o virt_mem.o
+
+# the test files for the sysapi tester
+TEST_OBJS = sysapi.t.o test.o 
 
 library_target(libsysapi.a,$(OBJ))
 
-c_plus_target(condor_test_sysapi,sysapi.t.o,$(LIB))
+c_plus_target(condor_test_sysapi,$(TEST_OBJS),$(LIB))
 
 html:
 release:: all
