@@ -52,11 +52,6 @@ MPIComradeProc::Suspend() {
            take it as a violation of our basic rights.  Therefore, 
            we walk off the job and notify the shadow immediately! */
 	dprintf(D_FULLDEBUG,"in MPIComradeProc::Suspend()\n");
-		/* I'm using the fast shutdown because I want to make sure it
-		   leaves, and we're nuking the job anyway...plus, we really
-		   should never wind up here if we're on dedicated resources. */
-//	VanillaProc::ShutdownFast();
-//	VanillaProc::ShutdownGraceful();
 		// must do this so that we exit...
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
 }

@@ -28,6 +28,13 @@
 #include "condor_classad.h"
 #include "mpi_comrade_proc.h"
 
+/** This class is for the MPICH "master" process.  It's derived from
+	the comrade class (it's "more equal" than the others :-) ).  It 
+	is special because it alters the path of the master before it's 
+	started, so that our sneaky rsh can get called instead of the
+	regular rsh.  Also, a variable is slipped into the environment for
+	our rsh so it knows how to contact the shadow... */
+
 class MPIMasterProc : public MPIComradeProc
 {
  public:

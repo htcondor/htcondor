@@ -28,6 +28,11 @@
 #include "condor_classad.h"
 #include "vanilla_proc.h"
 
+/** Mostly, this class is a wrapper around VanillaProc, with the
+	exception that Suspends really cause the job to exit.  The notion
+	for this class is that all the mpi nodes are "comrades"  (none
+	of this master-slave stuff...).  */
+
 class MPIComradeProc : public VanillaProc
 {
  public:
