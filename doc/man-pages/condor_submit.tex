@@ -875,6 +875,7 @@ job to the queue, and defaults to 1.
 
 In addition to commands, the submit description file can contain macros
 and comments:
+\index{macro!in submit description file}
 
 \begin{description}
 
@@ -915,9 +916,10 @@ submit description file. The special substitution macro is of the form:
 $$(attribute)
 \end{verbatim}
 
+\index{substitution macro!in submit description file}
 The substitution macro may only be used in three expressions in the
-submit description file: \Macro{executable}, \Macro{environment}, and
-\Macro{arguments}. The most common use of this macro is for heterogeneous
+submit description file: \MacroNI{executable}, \MacroNI{environment}, and
+\MacroNI{arguments}. The most common use of this macro is for heterogeneous
 submission of an executable:
 \begin{verbatim}
 executable = povray.$$(opsys).$$(arch)
@@ -945,6 +947,22 @@ argument = $$(input_file_path:/usr/foo)
 On the machine, if the attribute \Attr{input\_file\_path} is not
 defined, then the path \File{/usr/foo} is used instead.
 
+\index{\$ENV!in submit description file}
+\index{environment variables!in submit description file}
+The environment macro, \$ENV, allows the evaluation of an environment
+variable to be used in setting a submit description file command.
+The syntax used is
+\begin{verbatim} 
+$ENV(variable)
+\end{verbatim}
+An example submit description file command that uses this functionality
+evaluates the submitter's home directory in order to set the
+path and file name of a log file:
+\begin{verbatim} 
+log = $ENV(HOME)/jobs/logfile
+\end{verbatim}
+The environment variable is evaluated when the submit description
+file is processed.
 
 \item[Comments] Blank lines and lines beginning with a 
 pound sign
