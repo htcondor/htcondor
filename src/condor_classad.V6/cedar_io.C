@@ -68,4 +68,21 @@ _Flush( )
 	return( true );
 }
 
+#if 0
+bool CedarStream::
+_Connect( std::string url )
+{
+    Socket * s = NULL;
+
+    switch (this->SockType()) {
+      case Sock_STREAM: s = new ReliSock(); break;
+      case Sock_DGRAM:  s = new SafeSock(); break;
+      default: assert (false);
+    }
+
+    ((CedarSource*)m_src)->strm = s;
+    ((CedarSource*)m_src)->strm = s;
+}
+#endif
+
 END_NAMESPACE // classad
