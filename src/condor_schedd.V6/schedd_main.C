@@ -61,15 +61,13 @@ extern	void	mark_jobs_idle();
 
 
 // global variables to control the daemon's running and logging
-char*		Spool;							// spool directory
-char* 		JobHistoryFileName=NULL;
+char*		Spool = NULL;							// spool directory
+char* 		JobHistoryFileName = NULL;
+char*		Name = NULL;
 char*		mySubSystem = "SCHEDD";
 
 // global objects
 Scheduler	scheduler;
-char*		Name = NULL;
-
-void Init();
 
 void usage(char* name)
 {
@@ -100,47 +98,24 @@ main_init(int argc, char* argv[])
 		}
 	}
 	
-	ClassAd *ScheddClassad = new ClassAd();
-	config( ScheddClassad, mySubSystem );
-
-	Init();
-	
 	// if a name if not specified, use the full hostname of the machine
 	if(!Name) {
 		Name = strdup( my_full_hostname() );
 	}
-
-	ScheddClassad->SetMyTypeName(SCHEDD_ADTYPE);
-	ScheddClassad->SetTargetTypeName("");
-
-		// Throw name into the classad.
-	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
-	ScheddClassad->Insert(expr);
 	
+		// Initialize all the modules
+	scheduler.Init();
+	scheduler.Register();
+
 		// Initialize the job queue
 	sprintf(job_queue_name, "%s/job_queue.log", Spool);
 	InitJobQueue(job_queue_name);
 	mark_jobs_idle();
 
-		// Initialize all the modules
-	scheduler.SetClassAd(ScheddClassad);
-	scheduler.Init();
-	scheduler.Register();
 	scheduler.timeout();
 
 	return 0;
 } 
-
-void Init()
-{
-	Spool = param("SPOOL");
-	if(!Spool)
-	{
-		EXCEPT("No spool directory specified");
-	}
-	JobHistoryFileName=param("HISTORY");
-}
-
 
 int
 main_config()
