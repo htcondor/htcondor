@@ -502,6 +502,9 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "Failed to connect to schedd! (in ADD_JOBS)\n");
+		daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
+					(TimerHandlercpp)&GridManager::ADD_JOBS_signalHandler,
+					"ADD_JOBS", (Service*) &gridmanager );
 		return FALSE;
 	}
 
@@ -719,6 +722,9 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "Failed to connect to schedd! (in REMOVE_JOBS)\n");
+		daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
+					(TimerHandlercpp)&GridManager::REMOVE_JOBS_signalHandler,
+					"REMOVE_JOBS", (Service*) &gridmanager );
 		return FALSE;
 	}
 

@@ -29,9 +29,9 @@ class GridManager : public Service
 	void reconfig();
 	
 	// handlers
-	int ADD_JOBS_signalHandler( int );
+	int ADD_JOBS_signalHandler( int = 0 );
 	int SUBMIT_JOB_signalHandler( int );
-	int REMOVE_JOBS_signalHandler( int );
+	int REMOVE_JOBS_signalHandler( int = 0 );
 	int CANCEL_JOB_signalHandler( int );
 	int COMMIT_JOB_signalHandler( int );
 	int RESTART_JM_signalHandler( int );
