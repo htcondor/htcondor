@@ -388,7 +388,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	{
 		result = attempt_access((char *)name.Value(), ACCESS_WRITE, uid, gid, scheddAddr );
 		if( result == FALSE ) {
-			fprintf(stderr, "\nWARNING: File %s is not writeable by condor.\n",
+			fprintf(stderr, "\nWARNING: File %s is not writable by condor.\n",
 					name.Value());
 		}
 	}

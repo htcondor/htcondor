@@ -216,13 +216,13 @@ int attempt_access(char *filename, int mode, int uid, int gid,
 		if( return_val )
 		{
 			dprintf(D_FULLDEBUG, 
-					"Schedd says this file '%s' is writeable.\n",
+					"Schedd says this file '%s' is writable.\n",
 					filename);
 		}
 		else
 		{
 			dprintf(D_FULLDEBUG, 
-					"Schedd says this file '%s' is not writeable.\n",
+					"Schedd says this file '%s' is not writable.\n",
 					filename);
 		}
 		break;
