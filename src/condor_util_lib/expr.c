@@ -791,7 +791,7 @@ CONTEXT	*cont2;
 		result = create_elem();
 		result->type = INT;
 		/* use random() instead of rand() when possible */
-#if defined(OSF1) || defined(Solaris) || defined(SUNOS)
+#if defined(OSF1) || defined(SUNOS)
 		srandom(time(NULL));
 		result->i_val = random();
 #else
@@ -805,7 +805,7 @@ CONTEXT	*cont2;
 		result = create_elem();
 		result->type = FLOAT;
 		/* use random() instead of rand() when possible */
-#if defined(OSF1) || defined(Solaris) || defined(SUNOS)
+#if defined(OSF1) || defined(SUNOS)
 		srandom(time(NULL));
 		result->f_val = random()/((float) MAXINT);
 #else
