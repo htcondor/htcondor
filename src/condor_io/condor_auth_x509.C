@@ -25,8 +25,6 @@
 
 #include "condor_auth_x509.h"
 #include "sslutils.h"
-#include "credential.h"
-#include "condor_credential.h"
 #include "environ.h"
 #include "condor_config.h"
 
