@@ -12,7 +12,7 @@ OBJ = main.o submit.o dag.o job.o util.o parse.o debug.o types.o
 LIB = ../condor_daemon_core.V6/daemon_core.a \
       ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a \
-      ../condor_classad/expr_lib.a $(AUTH2_LIB)
+      ../condor_classad/expr_lib.a $(AUTH2_LIB) 
 
 all_target(dagman.a condor_dagman)
 
