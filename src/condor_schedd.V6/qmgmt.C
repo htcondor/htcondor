@@ -512,7 +512,8 @@ InitializeConnection( char *owner, char *tmp_file )
 #if !defined(WIN32)
 	active_owner_uid = get_user_uid();
 	if (active_owner_uid == (uid_t)-1) {
-		return -1;
+		UnauthenticatedConnection();
+		return 0;
 	}
 #endif
 	active_owner = strdup( owner );
