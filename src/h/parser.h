@@ -1,28 +1,17 @@
-/******************************************************************************
-  program: parser.h
-******************************************************************************/
+//******************************************************************************
+// parser.h
+//
+// Parse() converts a string expression into an expression tree. If an error
+// is encountered, the partially parsed tree is preserved and the number of
+// characters parsed is returned; Otherwise 0 is returned.
+//
+//******************************************************************************
 
 #ifndef _PARSER_H
 #define _PARSER_H
 
-#include "scanner.h"
+#include "ast.h"
 
-#define TABLE_SIZE 20
+int Parse(char*, ExprTree*&);
 
-static token next_t;
-static int already_read;
-
-extern "C" char *lookup_macro(char *, BUCKET *[], int);
-
-Expression *parse(char *, Context *);
-Expression *parse_expr(char **);
-Expression *parse_x1(Expression *, char **);
-Expression *parse_simple_expr(char **);
-Expression *parse_x2(Expression *, char **);
-Expression *parse_add_op(char **);
-Expression *parse_x3(Expression *, char **);
-Expression *parse_mult_op(char **);
-Expression *parse_x4(Expression *, char **);
-Expression *parse_factor(char **);
-
-#endif /* _PARSER_H */
+#endif
