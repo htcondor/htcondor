@@ -26,6 +26,7 @@
 #include "file_state.h"
 #include "condor_constants.h"
 #include "file_table_interf.h"
+#include <assert.h>
 
 static const int FI_RSC =			0; 		/* access via remote sys calls   */
 static const int FI_OPEN =			1<<0;	/* file is open             	 */
@@ -356,11 +357,10 @@ OpenFileTable::Save()
 			if( f->isRemoteAccess() ) {
 				pos = REMOTE_syscall( SYS_lseek, f->fd_num, (off_t)0, SEEK_CUR);
 			} else {
-				if( isatty(f->fd_num) ) {
-					pos = off_t( 0 );
-				} else {
-					pos = syscall( SYS_lseek, f->fd_num, (off_t)0, SEEK_CUR);
-				}
+				pos = syscall( SYS_lseek, f->fd_num, (off_t)0, SEEK_CUR);
+			}
+			if( pos < (off_t)0 && f->isPreOpened() && errno == ESPIPE ) {
+				pos = (off_t)0;		// probably it's a tty
 			}
 			if( pos < (off_t)0 ) {
 				perror( "lseek" );
@@ -424,7 +424,13 @@ OpenFileTable::Restore()
 				perror( "open" );
 				abort();
 			}
-			pos = lseek( f->fd_num, f->offset, SEEK_SET );
+
+				// No need to seek if pos is 0, but more importantly, this
+				// fd could be a tty if pos is 0.
+			if( pos != 0 ) {
+				pos = lseek( f->fd_num, f->offset, SEEK_SET );
+			}
+
 			if( pos != f->offset ) {
 				perror( "lseek" );
 				abort();
