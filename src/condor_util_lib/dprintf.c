@@ -52,6 +52,9 @@ FILE *open_debug_file( int debug_level, char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
 void _condor_dprintf_exit();
+void _condor_set_debug_flags( char *strflags );
+int _condor_mkargv( int* argc, char* argv[], char* line );
+
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
@@ -613,9 +616,6 @@ open_debug_file(int debug_level, char flags[])
 void
 _condor_dprintf_exit()
 {
-
-	char* null_ptr = NULL;
-
 		/* First, set a flag so we know not to try to keep using
 		   dprintf during the rest of this */
 	DprintfBroken = 1;
