@@ -416,6 +416,37 @@ page~\pageref{sec:Policy-Examples}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure Condor such that all machines do not produce checkpoints at the same time?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:randomchoiceusage}
+If machines are configured to produce checkpoints at fixed intervals,
+a large number of jobs are queued (submitted) at the same time,
+and these jobs start on machines at about the same time,
+then all these jobs will be trying to write out their checkpoints
+at the same time.
+It is likely to cause rather poor performance during this burst of
+writing.
+
+The \MacroU{RANDOM\_CHOICE()} macro can help in this instance.
+Instead of defining \MacroNI{PERIODIC\_CHECKPOINT} to be a fixed
+interval, each machine is configured to randomly choose 
+one of a set of intervals.
+For example, to set a machine's interval for producing checkpoints
+to within the range of two to three hours, use the following
+configuration:
+\begin{verbatim}
+PERIODIC_CHECKPOINT = $(LastCkpt) > ( 2 * $(HOUR) + \
+      $RANDOM_CHOICE(0,10,20,30,40,50,60) * $(MINUTE) )
+\end{verbatim}
+
+The interval used is set at configuration time.
+Each machine is randomly assigned a different interval 
+(2 hours, 2 hours and 10 minutes, 2 hours and 20 minutes, etc.)
+at which to produce checkpoints.
+Therefore, the various machines will not all attempt to
+produce checkpoints at the same time.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why will the \Condor{master} not run when a local configuration file is missing?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

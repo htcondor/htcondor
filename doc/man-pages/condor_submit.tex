@@ -1298,6 +1298,7 @@ On the machine, if the attribute \Attr{input\_file\_path} is not
 defined, then the path \File{/usr/foo} is used instead.
 
 \index{\$ENV!in submit description file}
+\index{submit commands!\$ENV macro}
 \index{environment variables!in submit description file}
 The environment macro, \$ENV, allows the evaluation of an environment
 variable to be used in setting a submit description file command.
@@ -1313,6 +1314,18 @@ log = $ENV(HOME)/jobs/logfile
 \end{verbatim}
 The environment variable is evaluated when the submit description
 file is processed.
+
+\index{\$RANDOM\_CHOICE()!in submit description file}
+\index{submit commands!\$RANDOM\_CHOICE() macro}
+\index{RANDOM\_CHOICE() macro!use in submit description file}
+The \$RANDOM\_CHOICE macro allows a random choice to be made
+from a given list of parameters at submission time.
+For an expression, if some randomness needs to be generated,
+the macro may appear as
+\begin{verbatim} 
+    $RANDOM_CHOICE(0,1,2,3,4,5,6)
+\end{verbatim}
+When evaluated, one of the parameters values will be chosen. 
 
 \item[Comments] Blank lines and lines beginning with a 
 pound sign

@@ -124,13 +124,13 @@ in your config files, and these attributes will just be treated as
 macros.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-File-Env}
-Config File Environment References}
+\subsubsection{\label{sec:Config-File-Special}
+Special Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration file!\$ENV definition}
 \index{\$ENV!in configuration file}
-References to the Condor process's environment are also allowed in the
+References to the Condor process's environment are allowed in the
 configuration file.
 Environment references are of the form:
 \begin{verbatim}
@@ -144,6 +144,26 @@ binds \MacroNI{A} to the value of the HOME environment variable.
 Environment references are not currently used in standard Condor
 configurations.
 However, they can sometimes be useful in custom configurations.
+
+\index{RANDOM\_CHOICE() macro!use in configuration file}
+\index{configuration macro!RANDOM\_CHOICE() macro}
+This same syntax is used to allow a random choice of a parameter
+within a configuration file.
+These references are of the form:
+\begin{verbatim}
+        $RANDOM_CHOICE(list of parameters)
+\end{verbatim}
+This allows a random choice within the parameter list to be made
+at configuration time.  Of the list of parameters, one is
+chosen when encountered during configuration.  For example,
+if one of the integers 0-8 (inclusive) should be randomly
+chosen, the macro usage is
+\begin{verbatim}
+        $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
+\end{verbatim}
+  See section~\ref{sec:randomchoiceusage} on
+  page~\pageref{sec:randomchoiceusage}
+  for an actual use of this specialized macro.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Other-Syntax}
@@ -273,6 +293,7 @@ Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
 Only do so if you know what you are doing.
   
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Condor-wide-Config-File-Entries}
 Condor-wide Configuration File Entries}
