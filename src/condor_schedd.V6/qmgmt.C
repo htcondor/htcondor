@@ -558,6 +558,31 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 */
 extern "C" {
 
+bool
+setQSock( ReliSock* rsock )
+{
+	if( ! rsock ) {
+		return false;
+	}
+	Q_SOCK = rsock;
+	if( InitializeConnection(rsock->getOwner()) < 0 ) {
+		return false;
+	}
+	return true;
+}
+
+
+void
+unsetQSock( void )
+{
+	Q_SOCK = NULL;
+	uninit_user_ids();
+#ifndef WIN32
+	active_owner_uid = 0;
+#endif
+}
+
+
 int
 handle_q(Service *, int, Stream *sock)
 {

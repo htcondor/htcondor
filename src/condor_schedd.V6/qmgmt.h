@@ -41,6 +41,8 @@ void InitQmgmt();
 void CleanJobQueue();
 void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);
+bool setQSock( ReliSock* rsock );
+void unsetQSock( void );
 void BeginTransaction();
 void CommitTransaction();
 void AbortTransaction();
