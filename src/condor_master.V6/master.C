@@ -157,6 +157,8 @@ void	usage(const char* );
 int		hourly_housekeeping(void);
 void	report_to_collector();
 int		GetConfig(char*);
+int		IsSameHost(const char*);
+void	StartConfigServer();
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 int	DoCleanup();
@@ -231,7 +233,7 @@ main( int argc, char* argv[] )
 {
 	struct passwd		*pwd;
 	char				**ptr, *startem;
-
+	
 	MyName = argv[0];
 
 #if defined(X86) && defined(Solaris)
@@ -263,7 +265,7 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	// Look for the master configuration file condor_config.master. If found,
 	// get configuration files from the configuration server. Use default
 	// otherwise.
-	if(read_config(".", MASTER_CONFIG, NULL, ConfigTab, 20,
+	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, 20,
 				   EXPAND_LAZY) < 0)
 	// use default configuration files
 	{
@@ -281,6 +283,13 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 		else
 		// use configuration server
 		{
+			// Check to see if this is the configuration server host. If it is,
+			// start configuration server immediately.
+			if(IsSameHost(configServer))
+			{
+				StartConfigServer();
+			}
+
 			// GetConfig will add the configuration file timestamp attribute
 			// into the master's classad. If a configuration server location is
 			// specified in the master configuration file but the connection
@@ -1295,3 +1304,34 @@ int GetConfig(char* config_server_name)
     fprintf(conf_fp, "%s", configList);
     fclose(conf_fp);
 }
+
+int IsSameHost(const char* host)
+{
+	struct hostent*			local = gethostent();
+	struct hostent*			remote = gethostbyname(host);
+
+	if(memcmp(local->h_addr, remote->h_addr, local->h_length) != 0)
+	{
+		return FALSE;
+	} 
+	if(local->h_length != remote->h_length)
+	{
+		return FALSE;
+	} 
+	return TRUE;
+}
+
+void StartConfigServer()
+{
+	daemon*			newDaemon;
+	
+	newDaemon = new daemon("CONFIG_SERVER");
+	init_params();
+	newDaemon->StartDaemon();
+	newDaemon->timeStamp = GetTimeStamp(newDaemon->process_name);
+	
+	// sleep for a while because we want the config server to stable down
+	// before doing anything else
+	sleep(10); 
+}
+

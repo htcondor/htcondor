@@ -57,7 +57,7 @@ public:
 	Daemons();
 	void	RegisterDaemon(daemon *);
 	void 	InitParams();
-	int	GetIndex(const char* process_name);
+	int		GetIndex(const char* process_name);
 	void 	StartAllDaemons();
 	int		StartDaemon(char* name);      // retuns pid
 	void	Restart(int pid);              // process pid got killed somehow
@@ -67,8 +67,8 @@ public:
 	char*   DaemonName(int pid);	       // full process path name
 	char*	DaemonLog(int pid);	       // full log file path name
 	char*	SymbolicName(int pid);	       // name as in config file
-	int	NumberRestarts(int pid);        // number of restarts
-	int	IsDaemon(int pid);	       // returns 1 if pid is a daemon
+	int		NumberRestarts(int pid);        // number of restarts
+	int		IsDaemon(int pid);	       // returns 1 if pid is a daemon
 	void	CheckForNewExecutable();
 };
 

@@ -342,6 +342,11 @@ void Daemons::StartAllDaemons()
 
 	for ( int i=0; i < no_daemons; i++) {
 		// create only those processes that exists in this machine
+		if(daemon_ptr[i]->pid != 0)
+		// the daemon is already started
+		{
+			continue;
+		} 
 		if ( daemon_ptr[i]->flag == FALSE ) continue;
 		daemon_ptr[i]->StartDaemon();
 		daemon_ptr[i]->timeStamp = GetTimeStamp(daemon_ptr[i]->process_name);
@@ -396,9 +401,14 @@ int daemon::StartDaemon()
 	}
 
 	if( pid == 0 ) {	/* The child */
+		// Weiru
+		// In version 6 daemons are not started as root but as Condor
 		/* Daemons need to be started as root. */
+		// 	if(getuid()==0) {
+		// 			set_root_euid();
+		// 		}
 		if(getuid()==0) {
-			set_root_euid();
+			set_condor_euid();
 		}
 		
 		pid = getpid();
@@ -409,7 +419,6 @@ int daemon::StartDaemon()
 		//		getuid(), geteuid(), getgid(), getegid());
 		(void)execl( process_name, shortname, "-f", 0 );
 		/* Must be condor to write to log files. */
-		set_condor_euid();
 		EXCEPT( "execl( %s, %s, -f, 0 )", process_name, shortname );
 		return 0;
 	} else { 			/* The parent */
