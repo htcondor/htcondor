@@ -56,6 +56,11 @@ The details of each version are described below.
   job description files that contain a single \verb@queue@ statement
   with no modifiers.
 
+\item Fixed a bug in the AIX \Condor{starter} that was causing the
+starter to sometimes kill itself when the job completed.  Because this
+happened before the \Condor{starter} reported the job completion back
+to the \Condor{shadow}, such a job would be restarted.
+
 \end{itemize}
 
 \noindent Known Bugs:
