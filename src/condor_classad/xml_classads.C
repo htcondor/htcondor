@@ -120,16 +120,6 @@ private:
 	char         *_attribute_value;
 };
 
-union RealHexUnion
-{ 
-	double     real; 
-#ifdef WIN32
-	__int64    hex;
-#else
-	long long  hex; 
-#endif
-};
-
 struct tag_name
 {
 	TagName  id; // Defined in the condor_xml_classads.h
@@ -337,19 +327,8 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				case tag_Number:
 				case tag_Integer:
 				case tag_Expr:
-					to_insert += token_text;
-					break;
 				case tag_Real:
-					RealHexUnion  real_to_hex;
-#ifdef WIN32
-					if (sscanf(token_text.Value(), "%I64x", &real_to_hex.hex) == 1) {
-#else
-					if (sscanf(token_text.Value(), "%llx", &real_to_hex.hex) == 1) {
-#endif
-						to_insert.sprintf_cat("%lg", real_to_hex.real);
-					} else {
-						add_to_classad = false;
-					}
+					to_insert += token_text;
 					break;
 				case tag_Undefined:
 					to_insert += "UNDEFINED";
@@ -679,10 +658,10 @@ ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
 			
 			add_attribute_start_tag(buffer, name);
 			
-			char      number_string[20];
+			MyString  number_string;
 			char      *expr_string;
 			int       int_number;
-			RealHexUnion  real_to_hex;
+            double    double_number;
 			MyString  fixed_string;
 			
 			switch (value_expr->MyType()) {
@@ -691,22 +670,17 @@ ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
 				if (value_expr->unit == 'k') {
 					int_number *= 1024;
 				}
-				sprintf(number_string, "%d", int_number);
+				number_string.sprintf("%d", int_number);
 				add_tag(buffer, tag_Integer, true);
 				buffer += number_string;
 				add_tag(buffer, tag_Integer, false);
 				break;
 			case LX_FLOAT:
-				real_to_hex.real = ((FloatBase *)value_expr)->Value();
+				double_number = ((FloatBase *)value_expr)->Value();
 				if (value_expr->unit == 'k') {
-					real_to_hex.real *= 1024;
+					double_number *= 1024;
 				}
-#ifdef WIN32
-				snprintf(number_string, 17, "%016I64x", real_to_hex.hex);
-#else
-				snprintf(number_string, 17, "%016llx", real_to_hex.hex);
-#endif
-
+                number_string.sprintf("%1.15E", double_number);
 				add_tag(buffer, tag_Real, true);
 				buffer += number_string;
 				add_tag(buffer, tag_Real, false);
