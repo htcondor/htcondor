@@ -100,6 +100,7 @@ class FunctionCall : public ExprTree
 		static bool timeZoneOffset(char*,ArgumentList&,EvalState&,Value&);
 		static bool dayTime(char*,ArgumentList&,EvalState&,Value&);
 		static bool makeTime(char*,ArgumentList&,EvalState&,Value&);
+		static bool makeDate(char*,ArgumentList&,EvalState&,Value&);
 			// time management (selectors)
 		static bool getField(char*,ArgumentList&,EvalState&,Value&);
 			// time management (conversions)
