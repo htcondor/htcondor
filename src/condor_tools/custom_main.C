@@ -57,27 +57,34 @@ int check_host( const char *name );
 */
 Macro release_dir(
 	"RELEASEDIR",
-	"Directory where users should access bin and lib",
+	"Full pathname of the parent directory of Condor's \"bin\" and \"lib\"\n\
+directories.  For example: specifying \"/usr/psup/condor\" means that\n\
+users will find Condor libraries and executables in \"/usr/psup/condor/lib\"\n\
+and \"/usr/psup/condor/bin\" respectively.",
 	"/usr/psup/condor"
 );
 Macro condor_host(
 	"CONDOR_HOST",
-	"Host where central manager should run",
+	"Host where central manager should run, this should be a fully qualified\n\
+internet domain name.",
 	"frigg.cs.wisc.edu"
 );
 Macro condor_admin(
 	"CONDOR_ADMIN",
-	"Address where mail regarding problems should be sent",
+"Address of the local condor administrator, for automatically generated\n\
+mail regarding problems",
 	"condor-admin"
 );
 Macro condor_developers(
 	"CONDOR_DEVELOPERS",
-	"Address of condor development team",
+"Address of condor development team at University of Wisconsin, for\n\
+automatically generated mail regarding status of Condor at your site",
 	"condor-admin@cs.wisc.edu"
 );
 Macro local_dir(
 	"LOCAL_DIR",
-	"Directory for things local to an individual machine",
+"Parent directory for machine specific directories \"spool\", \"log\", and\n\
+\"execute\".  Specifying $(TILDE) means condor's home directory",
 	"$(TILDE)"
 );
 Macro has_afs(
@@ -102,7 +109,7 @@ Macro vos_path(
 );
 Macro mailer_path(
 	"MAIL",
-	"Pathname of program to send mail",
+	"Pathname of user level program Condor software should use to send mail",
 #if defined(SUNOS41) || defined(ULTRIX43)
 	"/usr/ucb/mail"
 #else
@@ -111,12 +118,16 @@ Macro mailer_path(
 );
 Macro uid_domain(
 	"UID_DOMAIN",
-	"Internet domain of machines sharing a common UID space",
+	"Internet domain of machines sharing a common UID space.  If you\n\
+specify a UID space, Condor will execute user jobs under the\n\
+UID of the submitting user - otherwise Condor will execute user\n\
+jobs with the UID \"nobody\".  Specify \"none\" unless all machines\n\
+in your pool are guaranteed to have consistent UIDs.",
 	"cs.wisc.edu"
 );
 Macro filesystem_domain(
 	"FILESYSTEM_DOMAIN",
-	"Internet domain of machines sharing a common file space",
+	"\nInternet domain of machines sharing a common NFS file space",
 	"cs.wisc.edu"
 );
 
@@ -134,10 +145,10 @@ main()
 	condor_developers.init();
 	release_dir.init( check_dir );
 	local_dir.init( check_dir );
-	if( confirm("Does this machine run AFS? ") ) {
+	if( confirm("Will all machines in your pool participate in a common file system via AFS? ") ) {
 		we_have_afs = 1;
 		has_afs.init( TRUE );
-		if( confirm("Do you want to use AFS for condor file access? ") ) {
+		if( confirm("\nDo you want to use AFS for condor file access? (This may not have\n a positive impact on performance.)") ) {
 			use_afs.init( TRUE );
 		} else {
 			use_afs.init( FALSE );
@@ -149,7 +160,7 @@ main()
 	}
 	mailer_path.init( check_exec );
 	uid_domain.init();
-	if( confirm("Does this site have a common filesystem? ") ) {
+	if( confirm("Will all machines in your pool participate in a common file system via NFS? ") ) {
 		we_have_fs_domain = 1;
 		filesystem_domain.init();
 	}
