@@ -248,7 +248,9 @@ int IOProxyHandler::convert( int result, int unix_errno )
 		case EMFILE:
 			return CHIRP_ERROR_TOO_MANY_OPEN;
 		case EBUSY:
+#ifndef WIN32
 		case ETXTBSY:
+#endif
 			return CHIRP_ERROR_BUSY;
 		case EAGAIN:
 		case EINTR:
