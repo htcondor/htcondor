@@ -42,6 +42,7 @@ OsProc::OsProc()
 	JobAd = NULL;
 	JobPid = Cluster = Proc = -1;
 	job_suspended = FALSE;
+	ShadowAddr[0] = '\0';
 }
 
 OsProc::~OsProc()
@@ -86,31 +87,31 @@ OsProc::StartJob()
 		return 0;
 	}
 
-	char JobName[40];
-	sprintf(JobName, "condor_exec");
-	if (REMOTE_syscall(CONDOR_get_executable, JobName) < 0) {
-		dprintf(D_ALWAYS, "Failed to get/store job executable from Shadow."
-				"  Aborting StartJob.\n");
+	char JobName[_POSIX_PATH_MAX];
+	if ( JobAd->LookupString( ATTR_JOB_CMD, JobName ) != 1 ) {
+		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
+				 ATTR_JOB_CMD );
 		return 0;
 	}
 
-	if ( chmod ( JobName, S_IRWXU | S_IRWXO | S_IRWXG ) == -1 ) {
-		dprintf ( D_ALWAYS, "Failed to chmod condor_exec.  Huh?\n" );
-		return 0;
+	// get sinfullstring of our shadow, if shadow told us
+	JobAd->LookupString(ATTR_MY_IP_ADDR,ShadowAddr);
+
+	// if name is condor_exec, we transferred it, so make certain
+	// it is executable.
+	if ( strcmp("condor_exec",JobName) == 0 ) {
+		if ( chmod ( JobName, S_IRWXU | S_IRWXO | S_IRWXG ) == -1 ) {
+			dprintf ( D_ALWAYS, "Failed to chmod condor_exec.  Huh?\n" );
+			return 0;
+		}
 	}
 
 	// get job universe
 
 	// init_user_ids
-	char Executable[_POSIX_PATH_MAX];
-	if (JobAd->LookupString(ATTR_JOB_CMD, Executable) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  "
-				"Aborting DC_StartCondorJob.\n", ATTR_JOB_CMD);
-		return 0;
-	}
 
-	char Args[_POSIX_PATH_MAX];
-	char tmp[_POSIX_PATH_MAX];
+	char Args[_POSIX_ARG_MAX];
+	char tmp[_POSIX_ARG_MAX];
 	if (JobAd->LookupString(ATTR_JOB_ARGUMENTS, tmp) != 1) {
 		dprintf(D_ALWAYS, "%s not found in JobAd.  "
 				"Aborting DC_StartCondorJob.\n", ATTR_JOB_CMD);
@@ -154,7 +155,7 @@ OsProc::StartJob()
 	priv = set_user_priv();
 
 	if (JobAd->LookupString(ATTR_JOB_INPUT, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 ) {
+		if ( strcmp(filename,NULL_FILE) != 0 ) {
 			strcat ( infile, filename );
 			if ( (fds[0]=open( infile, O_RDONLY ) ) < 0 ) {
 				dprintf(D_ALWAYS,"failed to open stdin file %s, errno %d\n",
@@ -165,26 +166,38 @@ OsProc::StartJob()
 	}
 
 	if (JobAd->LookupString(ATTR_JOB_OUTPUT, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 ) {
+		if ( strcmp(filename,NULL_FILE) != 0 ) {
 			strcat ( outfile, filename );
-			if ( (fds[1]=open( outfile, O_WRONLY | O_CREAT, 0666)) < 0 ) {
-				dprintf(D_ALWAYS,"failed to open stdout file %s, errno %d\n",
-						outfile, errno);
+			if ((fds[1]=open(outfile,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
+					// if failed, try again without O_TRUNC
+				if ( (fds[1]=open( outfile, O_WRONLY | O_CREAT, 0666)) < 0 ) {
+					dprintf(D_ALWAYS,
+							"failed to open stdout file %s, errno %d\n",
+							outfile, errno);
+				}
 			}
 			dprintf ( D_ALWAYS, "Output file: %s\n", outfile );
 		}
 	}
 
 	if (JobAd->LookupString(ATTR_JOB_ERROR, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 ) {
+		if ( strcmp(filename,NULL_FILE) != 0 ) {
 			strcat ( errfile, filename );
-			if ( (fds[2]=open( errfile, O_WRONLY | O_CREAT, 0666)) < 0 ) {
-				dprintf(D_ALWAYS,"failed to open stderr file %s, errno %d\n",
-						errfile, errno);
+			if ((fds[2]=open( errfile,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
+					// if failed, try again without O_TRUNC
+				if ((fds[2]=open( errfile,O_WRONLY|O_CREAT, 0666)) < 0 ) {
+					dprintf(D_ALWAYS,
+							"failed to open stderr file %s, errno %d\n",
+							errfile, errno);
+				}
 			}
 			dprintf ( D_ALWAYS, "Error file: %s\n", errfile );
 		}
 	}
+
+	// in below dprintf, display &(Args[11]) to skip past argv[0] 
+	// which we know will always be condor_exec
+	dprintf(D_ALWAYS,"About to exec %s %s\n",JobName,&(Args[11]));
 
 	set_priv ( priv );
 
@@ -198,7 +211,7 @@ OsProc::StartJob()
 	}
 
 	if ( JobPid == FALSE ) {
-		dprintf(D_ALWAYS,"ERROR Create_Process(%s,%s, ...) failed\n",
+		EXCEPT("ERROR Create_Process(%s,%s, ...) failed",
 			JobName, Args );
 		return 0;
 	}
