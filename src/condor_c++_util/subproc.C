@@ -326,11 +326,8 @@ do_exec( const char *pathname, const char *args )
 	char	*ptr;
 
 		// get simple program name
-	if( ptr = (char *)strrchr((const char *)pathname,'/') ) {
-		strcpy( shortname, ptr + 1 );
-	} else {
-		strcpy( shortname, pathname );
-	}
+	ptr = basename(pathname);
+	strcpy( shortname, ptr);
 
 		// set up arg vector
 	strcpy( buf, args );
