@@ -44,6 +44,7 @@ class ExtArray
 	int	getlast (void) const;
 	Element *getarray (void);
 	void resize (int);
+	void truncate (int);
 	void fill (Element);
 	void setFiller( Element );
 
@@ -118,7 +119,7 @@ operator[] (int i) const
 	{
 		i = 0;
 	}
-	else if (i >= size) 
+	else if (i > last) 
 	{
 		return filler;
 	}
@@ -195,6 +196,14 @@ resize (int newsz) {
 	delete [] array;
 	size = newsz;	
 	array = newarray;
+}
+
+
+template <class Element>
+void ExtArray<Element>::
+truncate (int newlast)
+{
+	last = newlast;
 }
 		
 
