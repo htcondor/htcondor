@@ -66,6 +66,10 @@
 	int fchmod( int fd, unsigned int mode );
 #endif
 
+#if defined(IRIX53)
+#	include <dlfcn.h>	/* for dlopen and dlsym */
+#endif
+
 #if defined(Solaris)
 #undef fstat 
 #undef stat 
@@ -313,7 +317,7 @@ typedef int	bool_t;
 #	include <nfs/nfs.h>
 #endif
 
-#if	defined(HPUX9)
+#if	defined(HPUX9) || defined(IRIX53)
 
 #include <sys/types.h>
 
@@ -370,6 +374,10 @@ type_6 arg_6; \
 return old( arg_1, arg_2, arg_3, arg_4, arg_5, arg_6 ); \
 }
 
+#endif
+
+#if	defined(HPUX9)
+
 TWO( access, _access, char *, int );
 ONE( unlink, _unlink, char * )
 ONE( close, _close, int )
@@ -416,3 +424,6 @@ THREE( socket, _socket, int, int, int )
 #include "switches.linux.h"
 #endif
 
+#if defined(IRIX53)
+ONE( getwd, _getwd, char * )
+#endif
