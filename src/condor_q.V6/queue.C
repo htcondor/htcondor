@@ -514,7 +514,7 @@ job_time(float cpu_time,ClassAd *ad)
 
 static void io_header()
 {
-	printf("%-8s %-8s %8s %8s %8s %10s %8s %8s\n", "ID","OWNER","READ","WRITE","SEEK","XPUT","BUFSIZE","BLOCKSIZE");
+	printf("%-8s %-8s %8s %8s %8s %10s %8s %8s\n", "ID","OWNER","READ","WRITE","SEEK","XPUT","BUFSIZE","BLKSIZE");
 }
 
 static void
@@ -544,27 +544,24 @@ buffer_io_display( ClassAd *ad )
 	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
 	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
 
-	sprintf(return_buff, "%4d.%-3d %-8s ",cluster,proc,owner);
+	sprintf(return_buff, "%4d.%-3d %-8s",cluster,proc,owner);
 
 	if(wall_clock<0) {
 		strcat(return_buff, "          [ no i/o data collected yet ]\n");
 	} else {
 		if(wall_clock==0) wall_clock=1;
-		sprintf( return_buff,
-		"%s"
-		"%8s "
-		"%8s "
-		"%8d "
-		"%10s/s "
-		"%8s "
-		"%8s\n"
-		,return_buff
-		,metric_units(read_bytes)
-		,metric_units(write_bytes)
-		,seek_count
-		,metric_units((int)((read_bytes+write_bytes)/wall_clock))
-		,metric_units(buffer_size)
-		,metric_units(block_size) );
+
+		/*
+		Note: metric_units() cannot be used twice in the same
+		statement -- it returns a pointer to a static buffer.
+		*/
+
+		sprintf( return_buff,"%s %8s", return_buff, metric_units(read_bytes) );
+		sprintf( return_buff,"%s %8s", return_buff, metric_units(write_bytes) );
+		sprintf( return_buff,"%s %8d", return_buff, seek_count );
+		sprintf( return_buff,"%s %8s/s", return_buff, metric_units((int)((read_bytes+write_bytes)/wall_clock)) );
+		sprintf( return_buff,"%s %8s", return_buff, metric_units(buffer_size) );
+		sprintf( return_buff,"%s %8s\n", return_buff, metric_units(block_size) );
 	}
 	return ( return_buff );
 }
