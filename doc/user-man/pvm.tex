@@ -303,9 +303,9 @@ universe = PVM
 # The executable of the master PVM program is ``master.exe''.
 executable = master.exe
 
-In = "in.dat"
-Out = "out.dat"
-Err = "err.dat"
+input = "in.dat"
+output = "out.dat"
+error = "err.dat"
 
 ###################  Machine class 0  ##################
 
@@ -348,6 +348,11 @@ The command \verb@executable = master.exe@ tells Condor that the PVM
 master program is \Prog{master.exe}.  This program will be started on
 the submitting machine.  The workers should be spawned by this master
 program during execution.
+
+The \verb@input@, \verb@output@, and \verb@error@ commands specify
+files that should be redirected to the standard in, out, and error of
+the PVM master program.  Note that these files will not include output
+from worker processes unless the master calls \func{pvm\_catchout()}.
 
 This submit file also tells Condor that the virtual machine
 consists of three different classes of machine.  Class
