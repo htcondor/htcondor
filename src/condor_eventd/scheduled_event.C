@@ -569,7 +569,7 @@ ScheduledShutdownEvent::GetStartdList()
 static const char ShutdownConfig[] =
 "EndDownTime = %d\n"
 "Shutdown = (CurrentTime < EndDownTime)\n"
-"START : $(START) && ($(Shutdown) == False)\n"
+"START : ($(START)) && ($(Shutdown) == False)\n"
 "STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime\n";
 
 static const char ShutdownAdminId[] = "ScheduledShutdownEvent";
