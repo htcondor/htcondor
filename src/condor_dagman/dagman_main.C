@@ -341,6 +341,8 @@ int main_init (int argc, char ** const argv) {
 			wait_for_debug = 1;
 
         } else {
+    		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
+						argv[i] );
 			Usage();
 		}
     }

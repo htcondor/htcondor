@@ -51,6 +51,8 @@ struct SubmitDagOptions
 	int iMaxPost;
 	bool bNoPostFail;
 	MyString strRemoteSchedd;
+	bool bNoEventChecks;
+	bool bAllowLogError;
 	int iDebugLevel;
 	MyString strDagFile;
 	
@@ -74,6 +76,8 @@ struct SubmitDagOptions
 		iMaxPost = 0;
 		bNoPostFail = false;
 		strRemoteSchedd = "";
+		bNoEventChecks = false;
+		bAllowLogError = false;
 		iDebugLevel = 3;
 		strDagFile = "";
 
@@ -345,6 +349,14 @@ void writeSubmitFile(const SubmitDagOptions &opts)
 	{
 		strArgs += " -Storklog " + opts.strStorkLog;
     }
+	if(opts.bNoEventChecks)
+	{
+		strArgs += " -NoEventChecks";
+	}
+	if(opts.bAllowLogError)
+	{
+		strArgs += " -AllowLogError";
+	}
 
     fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
 
@@ -388,57 +400,62 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			break;
 		}
 
-		if (strArg.find("-no_s") != -1)
+		strArg.lower_case();
+
+		// Note: in checking the argument names here, we only check for
+		// as much of the full name as we need to unambiguously define
+		// the argument.
+		if (strArg.find("-no_s") != -1) // -no_submit
 		{
 			opts.bSubmit = false;
 		}
-		else if (strArg.find("-v") != -1)
+		else if (strArg.find("-v") != -1) // -verbose
 		{
 			opts.bVerbose = true;
 		}
-		else if (strArg.find("-f") != -1)
+		else if (strArg.find("-f") != -1) // -force
 		{
 			opts.bForce = true;
 		}
-		else if (strArg.find("-not") != -1)
+		else if (strArg.find("-not") != -1) // -notification
 		{
 			if (bIsLastArg)
 				printUsage();
 			opts.strNotification = argv[++iArg];
 		}
-		else if (strArg.find("-l") != -1)
+		else if (strArg.find("-l") != -1) // -log
 		{
 			if (bIsLastArg)
 				printUsage();
 			opts.strJobLog = argv[++iArg];
 		}
-		else if (strArg.find("-maxj") != -1)
+		else if (strArg.find("-maxj") != -1) // -maxjobs
 		{
 			if (bIsLastArg)
 				printUsage();
 			opts.iMaxJobs = atoi(argv[++iArg]);
 		}
-		else if (strArg.find("-MaxPr") != -1)
+		else if (strArg.find("-maxpr") != -1) // -maxpre
 		{
 			if (bIsLastArg)
 				printUsage();
 			opts.iMaxPre = atoi(argv[++iArg]);
 		}
-		else if (strArg.find("-MaxPo") != -1)
+		else if (strArg.find("-maxpo") != -1) // -maxpost
 		{
 			if (bIsLastArg)
 				printUsage();
 			opts.iMaxPost = atoi(argv[++iArg]);
 		}
-		else if (strArg.find("-NoPo") != -1)
+		else if (strArg.find("-nopo") != -1) // -nopostfail
 		{
 			opts.bNoPostFail = true;
 		}
-		else if (strArg.find("-r") != -1)
+		else if (strArg.find("-r") != -1) // submit to remote schedd
 		{
 			if (bIsLastArg)
 				printUsage();
-			opts.strRemoteSchedd = argv[++iArg];
+			opts.strRemoteSchedd = MyString("-r ") + argv[++iArg];
 		}
 		else if (strArg.find("-dagman") != -1)
 		{
@@ -452,11 +469,19 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				printUsage();
 			opts.strStorkLog = argv[++iArg];
 		}
-		else if (strArg.find("-d") != -1)
+		else if (strArg.find("-d") != -1) // -debug
 		{
 			if (bIsLastArg)
 				printUsage();
 			opts.iDebugLevel = atoi(argv[++iArg]);
+		}
+		else if (strArg.find("-noev") != -1) // -noeventchecks
+		{
+			opts.bNoEventChecks = true;
+		}
+		else if (strArg.find("-allow") != -1) // -allowlogerror
+		{
+			opts.bAllowLogError = true;
 		}
 		else
 		{
@@ -480,14 +505,18 @@ int printUsage()
     printf("    -MaxPre number      (Maximum number of PRE scripts to run at once)\n");
     printf("    -MaxPost number     (Maximum number of POST scripts to run at once)\n");
     printf("    -NoPostFail         (Don't run POST scripts after failed jobs)\n");
-    printf("    -log filename       (Specify the log file shared by all jobs in the DAG)\n");
+    printf("    -log filename       (Deprecated -- don't use)\n");
 // -->STORK
-    printf("    -storklog filename    (Specify the Stork log file shared by all DaP jobs in the DAG)\n");
+    printf("    -storklog filename  (Specify the Stork log file shared by all DaP jobs\n");
+    printf("        in the DAG)\n");
 // <--STORK
-    printf("    -notification value (Determines how much email you get from Condor)\n");
-    printf("    -debug number       (Determines how verbosely DAGMan logs its work)\n");
+    printf("    -notification value (Determines how much email you get from Condor.\n");
+    printf("        See the condor_submit man page for values.)\n");
+    printf("    -NoEventChecks      (Turns off checks for \"bad\" events\n"); 
+    printf("    -AllowLogError     (Allows the DAG to attempt execution even if the log\n");
+    printf("        reading code finds errors when parsing the submit files)\n"); 
+    printf("    -debug number       (Determines how verbosely DAGMan logs its work\n");
     printf("         about the life of the condor_dagman job.  'value' must be\n");
-    printf("         one of \"always\", \"never\", \"error\", or \"complete\".\n");
-    printf("         See the condor_submit man page for details.)\n");
+    printf("         an integer with a value of 0-7 inclusive.)\n");
 	exit(1);
 }
