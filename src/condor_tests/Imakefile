@@ -65,9 +65,11 @@ the BUILD_DEP_LIB() rule, which provides maximum flexibility.  but, in
 this case, we only need to specify libs, not dependent .o files, so we
 leave the 4th argument empty...
 */
-/* turn off until building/linking in NWO and workspace resolved
+
 BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
+
+/* turn off until building/linking in NWO and workspace resolved
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
 TESTCLASS(lib_userlog,lib)
@@ -420,10 +422,12 @@ TESTCLASS(job_filexfer_md5_van,filexfer)
 /* Dagman Tests */
 
 DESC(job_dagman_comlog,"Run a dag with multiple nodes sharing a common log")
+DEPS(job_dagman_comlog,x_read_joblog.exe)
 RUN(job_dagman_comlog)
 TESTCLASS(job_dagman_comlog,dagman)
 
 DESC(job_dagman_fullremove,"Ensure a removed dag is completely removed")
+DEPS(job_dagman_fullremove,x_read_joblog.exe)
 RUN(job_dagman_fullremove)
 TESTCLASS(job_dagman_fullremove,dagman)
 
@@ -444,19 +448,23 @@ RUN(job_dagman_prepost)
 TESTCLASS(job_dagman_prepost,dagman)
 
 DESC(job_dagman_retry,"Make sure a retry dag runs correctly.")
+DEPS(job_dagman_retry,x_read_joblog.exe)
 RUN(job_dagman_retry)
 TESTCLASS(job_dagman_retry,dagman)
 
 DESC(job_dagman_throttle,"Test Dagman throttling ability")
+DEPS(job_dagman_throttle,x_read_joblog.exe)
 RUN(job_dagman_throttle)
 TESTCLASS(job_dagman_throttle,dagman)
 
 DESC(job_dagman_uncomlog,"Test Dagmans ability to have sepaarate job log files")
+DEPS(job_dagman_uncomlog,x_read_joblog.exe)
 RUN(job_dagman_uncomlog)
 TESTCLASS(job_dagman_uncomlog,dagman)
 
 /* Valid starting v6_7 branch......
 DESC(job_dagman_unlessexit,"Test that the retries can be stopped with particular exit values from node.")
+DEPS(job_dagman_unlessexit,x_read_joblog.exe)
 RUN(job_dagman_unlessexit)
 TESTCLASS(job_dagman_unlessexit,dagman)
 */
