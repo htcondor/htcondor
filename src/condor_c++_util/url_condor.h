@@ -3,7 +3,6 @@
 
 #include <sys/types.h>
 #include <limits.h>
-#include "machdep.h"
 
 typedef int (*open_function_type)(const char *, int, size_t);
 
