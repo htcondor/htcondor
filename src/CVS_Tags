@@ -1,3 +1,10 @@
+04/15/02 V6_3-merge-1
+		The state of the V6_3-branch right before being merged into
+		trunk-merge-V6_3-branch-1
+
+04/15/02 trunk-merge-V6_3-branch-1
+		A new branch from the trunk for merging in the 6_3-branch.
+
 04/04/02 V6_3-privnet-branch
 	A new branch for a second generation of sonny's private
 	network support, including a first pass of udp w/ ack. 
