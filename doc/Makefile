@@ -1,3 +1,5 @@
+SUBDIR = v6.1
+SUBVER = V6_1
 all:  ref.dvi
 #all:  man.ps
 
@@ -23,7 +25,7 @@ ref.pdf:
 	rm -f ref.ps
 
 release-pdf: ref.pdf
-	cp ref.pdf /p/condor/public/html/manual/condor-V6-Manual.pdf
+	cp ref.pdf /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.pdf
 
 
 ref.dvi: 
@@ -45,12 +47,12 @@ ref.ps: ref.dvi
 	dvips ref.dvi
 
 release-ps: ref.ps
-	cp ref.ps /p/condor/public/html/manual/ref.ps
-	cp /p/condor/public/html/manual/ref.ps /p/condor/public/html/manual/condor-V6-Manual.ps
-	compress /p/condor/public/html/manual/condor-V6-Manual.ps
-	cp /p/condor/public/html/manual/ref.ps /p/condor/public/html/manual/condor-V6-Manual.ps
-	gzip /p/condor/public/html/manual/condor-V6-Manual.ps
-	mv /p/condor/public/html/manual/ref.ps /p/condor/public/html/manual/condor-V6-Manual.ps
+	cp ref.ps /p/condor/public/html/manual/$(SUBDIR).new/ref.ps
+	cp /p/condor/public/html/manual/$(SUBDIR).new/ref.ps /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
+	compress /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
+	cp /p/condor/public/html/manual/$(SUBDIR).new/ref.ps /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
+	gzip /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
+	mv /p/condor/public/html/manual/$(SUBDIR).new/ref.ps /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
 
 ref.html:  
 	rm -f timesfont.tex
@@ -66,16 +68,19 @@ ref.html:
 	latex ref.tex
 	latex ref.tex
 	latex ref.tex
-	latex2html -address condor-team@cs.wisc.edu -split 4 -link 2 -show_section_numbers ref.tex
+	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers ref.tex
 	rm -f ref.dvi
 	mv ref ref.new
-	mv -f ref.new  /p/condor/public/html/manual
+	mv -f ref.new/*  /p/condor/public/html/manual/$(SUBDIR).new
+	mv -f ref.new/.??*  /p/condor/public/html/manual/$(SUBDIR).new
+	rmdir ref.new
 
 release-html: 
 	make ref.html
-	mv -f /p/condor/public/html/manual/condor-V6-Manual /p/condor/public/html/manual/condor-V6-Manual.old
-	mv -f /p/condor/public/html/manual/ref.new /p/condor/public/html/manual/condor-V6-Manual
-	/p/condor/public/html/manual/links/human_header_links.pl
+	rm -rf /p/condor/public/html/manual/$(SUBDIR).old
+	mv -f /p/condor/public/html/manual/$(SUBDIR) /p/condor/public/html/manual/$(SUBDIR).old
+	mv -f /p/condor/public/html/manual/$(SUBDIR).new /p/condor/public/html/manual/$(SUBDIR)
+	/p/condor/public/cgi-bin/manual/$(SUBDIR)-links/human_header_links.pl
 	
 admin-man/startd-states.eps: admin-man/startd-states.fig
 	rm -f admin-man/startd-states.eps
@@ -93,9 +98,11 @@ figures: admin-man/startd-states.eps admin-man/startd-activities.eps admin-man/p
 
 clean:
 	rm -rf ref man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf
+	rm -rf /p/condor/public/html/manual/$(SUBDIR).new
 
 release:
 	make clean
+	mkdir /p/condor/public/html/manual/$(SUBDIR).new
 	make release-ps
 	make release-pdf
 	make release-html
