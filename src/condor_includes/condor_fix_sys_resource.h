@@ -29,6 +29,7 @@
    really take enums.  -Derek Wright 4/17/98 */
 #define getpriority __hide_getpriority
 #define getrlimit __hide_getrlimit
+#define __getrlimit __hide__getrlimit
 #define setrlimit __hide_setrlimit
 #endif /* LINUX && GLIBC */
 
@@ -43,10 +44,12 @@ extern "C" {
 #if defined(LINUX) && defined(GLIBC)
 #undef getpriority
 #undef getrlimit
+#undef __getrlimit
 #undef setrlimit
 int getrlimit(int, struct rlimit *);
+int __getrlimit(int, struct rlimit *);
 int setrlimit(int, const struct rlimit *);
-
+int getpriority(int, int);
 
 #endif /* LINUX && GLIBC */
 
