@@ -23,6 +23,10 @@
 #	include <sys/mount.h>
 #endif
 
+#if defined(SUNOS41)
+#	include <sys/vfs.h>
+#endif
+
 
 %%
 int read( map(int fd), void *buf, size_t len );
