@@ -42,14 +42,19 @@ parameter: Hawkeye_pool_submit = true
 HAWKEYE_POOL_SUBMIT = true/false
 Enable / disable submit check
 
-parameter: Hawkeye_pool_description="Our super Condor pool"
+parameter: Hawkeye_pool_submit_munge = true
+HAWKEYE_POOL_SUBMIT_MUNGE = true/false
+Munge the name ( "@" -> " at " ) of submitter's email address in the
+Hawkeye output?
+
+parameter: Hawkeye_pool_description = "Our super Condor pool"
 HAWKEYE_POOL_DESCRIPTION = My Condor Pool
 Set a text description of the pool (free form)
 
-parameter: HAWKEYE_POOL_ROSTER_DIR=$(CONDOR)/etc
+parameter: HAWKEYE_POOL_ROSTER_DIR = $(CONDOR)/etc
 Specify the directory used for the Condor Roster tools
 
-parameter: HAWKEYE_POOL_PATHADD=$(CONDOR)/scripts:$(CONDOR)/bin
+parameter: HAWKEYE_POOL_PATHADD = $(CONDOR)/scripts:$(CONDOR)/bin
 Forcibly add this string to the PATH used by the module.  Can also be
 accomplished using the HAWKEYE_POOL_ENV param (above)
 
