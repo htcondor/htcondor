@@ -1181,7 +1181,7 @@ DedicatedScheduler::callHandleDedicatedJobs( void )
 
 
 bool
-DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp = true )
+DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 {
 	Sock *sock;
 
