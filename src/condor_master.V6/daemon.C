@@ -800,6 +800,13 @@ Daemons::InitParams()
 			tmp = daemon_ptr[i]->process_name;
 		}
 		daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
+		if( !daemon_ptr[i]->process_name ) {
+			dprintf( D_ALWAYS, 
+					 "%s from your DAEMON_LIST is not defined the config files!\n", 
+					 daemon_ptr[i]->name_in_config_file ); 
+			EXCEPT( "Must have the path to %s defined.", 
+					daemon_ptr[i]->name_in_config_file ); 
+		}
 		if( tmp && strcmp(daemon_ptr[i]->process_name, tmp) ) {
 				// The path to this daemon has changed in the config
 				// file, we will need to start the new version.
