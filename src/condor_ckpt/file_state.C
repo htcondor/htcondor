@@ -407,6 +407,7 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 	return user_fd;
 }
 
+extern "C" char *getwd( char * );
 
 void
 OpenFileTable::Save()
@@ -595,6 +596,7 @@ open( const char *path, int flags, ... )
 
 	if( LocalSysCalls() ) {
 		fd = syscall( SYS_open, path, flags, creat_mode );
+		strcpy( local_path, path );
 	} else {
 		status = REMOTE_syscall( CONDOR_file_info, path, &pipe_fd, local_path );
 		if( status < 0 ) {
