@@ -79,7 +79,6 @@ uid_t get_my_uid();
 gid_t get_my_gid();
 
 #if !defined(WIN32)
-void init_user_nobody_loginname() {} ;
 uid_t get_condor_uid();
 gid_t get_condor_gid();
 uid_t get_user_uid();
