@@ -16,7 +16,7 @@ use HawkeyeLib;
 my $SortOffset;
 my $Hawkeye;
 my $Debug = 0;
-my $TopTime = 30;
+my $TopPeriod = 30;
 
 # Valid field list:
 my %TopFields =
@@ -70,7 +70,7 @@ sub Init {
 	} elsif ( $Arg =~ /^-c$/ ) {
 	    HawkeyeLib::HardConfig( "_sort" );
 	    HawkeyeLib::HardConfig( "_fields" );
-	    HawkeyeLib::HardConfig( "_time" );
+	    HawkeyeLib::HardConfig( "_period" );
 	}
     }
 
@@ -94,28 +94,28 @@ sub Configure {
     #ReadConfig();
     my $ConfigStringSort = HawkeyeLib::ReadConfig( "_sort", ":5" );
     my $ConfigStringFields = HawkeyeLib::ReadConfig( "_fields", "*" );
-    my $ConfigStringTime = HawkeyeLib::ReadConfig( "_time", "30" );
+    my $ConfigStringPeriod = HawkeyeLib::ReadConfig( "_period", "30" );
 
-    # Check the config time string
-    if ( $ConfigStringTime =~ /(\d+)([sSmMhH]?)/ )
+    # Check the config period string
+    if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
     {
-	$TopTime = $1;
+	$TopPeriod = $1;
 	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
 	{
 	    # Do nothing
 	}
 	elsif ( ( $2 eq "m" ) || ( $2 eq "M" ) )
 	{
-	    $TopTime *= 60;
+	    $TopPeriod *= 60;
 	}
 	elsif ( ( $2 eq "h" ) || ( $2 eq "H" ) )
 	{
-	    $TopTime *= 3600;
+	    $TopPeriod *= 3600;
 	}
     }
     else
     {
-	print STDERR "Ignoring top config time '$ConfigStringTime'\n";
+	print STDERR "Ignoring top config time '$ConfigStringPeriod'\n";
     }
 
     # Run top to get the list of fields that it outputs
@@ -229,7 +229,7 @@ sub RunIt
 {
     my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
     #my $Cmd = "/bin/nice -20 top -b -n 1";
-    my $Cmd = "/bin/nice -20 top -b -d $TopTime";
+    my $Cmd = "/bin/nice -20 top -b -d $TopPeriod";
     Carp::confess( "Can't run top '$Cmd'" ) if ( ! open ( TOP, "$Cmd|" ) );
 
     # Make stdout unbufferred
