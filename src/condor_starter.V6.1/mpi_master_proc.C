@@ -58,10 +58,12 @@ MPIMasterProc::JobExit( int pid, int status )
 
 		// First, we've got to clean up the mpi port file, so that
 		// doesn't get transfered back to the user.
-	priv_state priv;
-	priv = set_user_priv();
-	unlink( port_file );
-	set_priv( priv );
+	if( port_file ) {
+		priv_state priv;
+		priv = set_user_priv();
+		unlink( port_file );
+		set_priv( priv );
+	}
 
 		// Now, just let our parent versions of this function do their
 		// magic. 
@@ -295,6 +297,15 @@ MPIMasterProc::checkPortFile( void )
 	FILE* fp;
 	char buf[100];
 	char* rval;
+
+	if( ! port_file ) {
+			// This is really bad, there's no filename for the port
+			// file.  this really should NEVER happen, since we don't
+			// call checkPortFile until after we've spawned the job,
+			// and we *ALWAYS* at least have a value for the file name
+			// as soon as we call preparePortFile()
+		EXCEPT( "checkPortFile(): no port_file defined!" );
+	}
 
 	fp = fopen( port_file, "r" );
 	if( fp ) {
