@@ -83,9 +83,7 @@ AllocationNode::AllocationNode( int cluster_id, int n_procs )
 	jobs = new ExtArray< ClassAd* >(num_procs);
 	matches = new ExtArray< MRecArray* >(num_procs);
 	jobs->fill(NULL);
-	jobs->truncate(-1);
 	matches->fill(NULL);
-	matches->truncate(-1);
 }
 
 
@@ -330,11 +328,11 @@ DedicatedScheduler::DedicatedScheduler()
 
 DedicatedScheduler::~DedicatedScheduler()
 {
-	if(	idle_jobs ) delete idle_jobs;
-	if(	resources ) delete resources;
-	if(	avail_time_list ) delete avail_time_list;
-	if( ds_owner ) delete [] ds_owner;
-	if( ds_name ) delete [] ds_name;
+	if(	idle_clusters ) { delete idle_clusters; }
+	if(	resources ) { delete resources; }
+	if(	avail_time_list ) { delete avail_time_list; }
+	if( ds_owner ) { delete [] ds_owner; }
+	if( ds_name ) { delete [] ds_name; }
 
         // for the stored claim records
 	AllocationNode* foo;
@@ -1525,7 +1523,6 @@ DedicatedScheduler::getDedicatedJobs( void )
 	}
 	idle_jobs = new ExtArray<ClassAd*>;
 	idle_jobs->fill(NULL);
-	idle_jobs->truncate(-1);
 
 	sprintf( constraint, "%s == %d && %s == %d", ATTR_JOB_UNIVERSE, 
 			 MPI, ATTR_JOB_STATUS, IDLE );
@@ -1855,7 +1852,6 @@ DedicatedScheduler::computeSchedule( void )
 			last = 0;
 			new_matches = new MRecArray();
 			new_matches->fill(NULL);
-			new_matches->truncate(-1);
 
 				// Debugging hack: allow config file to specify which
 				// ip address we want the master to run on.
