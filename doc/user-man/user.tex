@@ -177,7 +177,7 @@ added a physical location attribute to your machine ClassAds.
 %
 \begin{center}
 \begin{figure}
-\begin{scriptsize}
+\CondorVerySmall
 \begin{verbatim}
 MyType = "Machine"
 TargetType = "Job"
@@ -209,7 +209,7 @@ Rank = Owner == "johndoe" || Owner == "friendofjohn"
 CurrentRank =  - 1.000000
 LastHeardFrom = 892191963
 \end{verbatim}
-\end{scriptsize}
+\normalsize
 \caption{\label{fig:CondorStatusL}Sample output from \Condor{status -l alfred}}
 \end{figure}
 \end{center}
@@ -548,15 +548,16 @@ can be found in section~\ref{classad-reference} on
 page~\pageref{classad-reference}.
 
 All of the commands in the submit-description file are case insensitive, 
-\underline{except} for the ClassAd attribute names that appear in the
-ClassAd expressions that you write!  ClassAds attribute and string
+\underline{except} for the ClassAd attribute string values that appear in the
+ClassAd expressions that you write!  ClassAds attribute names are
+case insensitive, but ClassAd string
 values are always \underline{case sensitive}.  If you accidently say
 \begin{verbatim}
-        requirements = memory >= 128
+        requirements = arch == "alpha"
 \end{verbatim}
 instead of what you should have said, which is:
 \begin{verbatim}
-        requirements = Memory >= 128
+        requirements = arch == "ALPHA"
 \end{verbatim}
 you will not get what you want.
 
@@ -709,7 +710,9 @@ accounts would only use cycles not wanted by other users of the system.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \Todo
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{More about how Condor vacates a job}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 When Condor needs to vacate a job from a machine for whatever reason, it
 sends the job an asynchronous signal specified in the ``KillSig''
@@ -738,7 +741,9 @@ by calling one of the following functions exported by the Condor libraries:
 restart the process again later, potentially on a different machine
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Special Environment Considerations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{AFS}
 
@@ -818,7 +823,9 @@ the UID (user id) specified by the RealUid attribute.  Often this may
 mean doing a ``chmod 777'' on the directory where you submit your Condor
 job.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Potential Problems}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Renaming of argv[0]}
 
