@@ -357,7 +357,7 @@ int ReliSock::RcvMsg::rcv_packet(
     len = 0;
     while (len < 5) {
         tmp_len = read(_sock, hdr+len, 5-len);
-        if (tmp_len < 0)
+        if (tmp_len <= 0)
             return FALSE;
         len += tmp_len;
     }
