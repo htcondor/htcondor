@@ -382,8 +382,9 @@ int GlobusJob::doEvaluateState()
 				if ( rc < 0 ) {
 					file_status.st_size = 0;
 				}
-				sprintf( buffer, "(stdout=%s%s)(stdout_position=%d)",
-						 gassServerUrl, localOutput, file_status.st_size );
+				sprintf( buffer, "%s%s", gassServerUrl, localOutput );
+				sprintf( buffer, "(stdout=%s)(stdout_position=%d)",
+						 rsl_stringify( buffer ), file_status.st_size );
 				strcat( rsl, buffer );
 			}
 			if ( localError ) {
@@ -391,8 +392,9 @@ int GlobusJob::doEvaluateState()
 				if ( rc < 0 ) {
 					file_status.st_size = 0;
 				}
-				sprintf( buffer, "(stderr=%s%s)(stderr_position=%d)",
-						 gassServerUrl, localError, file_status.st_size );
+				sprintf( buffer, "%s%s", gassServerUrl, localError );
+				sprintf( buffer, "(stderr=%s)(stderr_position=%d)",
+						 rsl_stringify( buffer ), file_status.st_size );
 				strcat( rsl, buffer );
 			}
 			rc = gahp.globus_gram_client_job_signal( jobContact,
@@ -745,8 +747,9 @@ int GlobusJob::doEvaluateState()
 					if ( rc < 0 ) {
 						file_status.st_size = 0;
 					}
-					sprintf( buffer, "(stdout=%s%s)(stdout_position=%d)",
-							 gassServerUrl, localOutput, file_status.st_size );
+					sprintf( buffer, "%s%s", gassServerUrl, localOutput );
+					sprintf( buffer, "(stdout=%s)(stdout_position=%d)",
+							 rsl_stringify( buffer ), file_status.st_size );
 					strcat( rsl, buffer );
 				}
 				if ( localError ) {
@@ -754,8 +757,9 @@ int GlobusJob::doEvaluateState()
 					if ( rc < 0 ) {
 						file_status.st_size = 0;
 					}
-					sprintf( buffer, "(stderr=%s%s)(stderr_position=%d)",
-							 gassServerUrl, localError, file_status.st_size );
+					sprintf( buffer, "%s%s", gassServerUrl, localError );
+					sprintf( buffer, "(stderr=%s)(stderr_position=%d)",
+							 rsl_stringify( buffer ), file_status.st_size );
 					strcat( rsl, buffer );
 				}
 				rc = gahp.globus_gram_client_job_request(
