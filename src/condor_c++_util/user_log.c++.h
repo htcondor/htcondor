@@ -91,6 +91,8 @@ class UserLog {
     UserLog(const char *owner, const char *domain, const char *file,
 			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     
+    UserLog(const char *owner, const char *file,
+			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     ///
     ~UserLog();
     
