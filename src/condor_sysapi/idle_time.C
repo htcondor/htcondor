@@ -207,14 +207,18 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 			_sysapi_last_x_event = now;
 		} else {
 			// no keypress detected, test if mouse moved
-			POINT current_pos;
-			if ( ! GetCursorPos(&current_pos) ) {
-				dprintf(D_ALWAYS,"GetCursorPos failed (err=%li)\n", GetLastError());
+			CURSORINFO cursor_inf;
+			cursor_inf.cbSize = sizeof(CURSORINFO);
+			if ( ! GetCursorInfo(&cursor_inf) ) {
+				dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
+					   	GetLastError());
 			} else {
-				if ( (current_pos.x != previous_pos.x) || 
-					(current_pos.y != previous_pos.y) ) {
-					// the mouse has moved!
-					previous_pos = current_pos;	// stash new position
+				if ( (cursor_inf.ptScreenPos.x != previous_pos.x) || 
+					(cursor_inf.ptScreenPos.y != previous_pos.y) ) {
+						// the mouse has moved!
+						// stash new position
+					previous_pos.x = cursor_inf.ptScreenPos.x; 
+					previous_pos.y = cursor_inf.ptScreenPos.y; 
 					_sysapi_last_x_event = now;
 				}
 			}
