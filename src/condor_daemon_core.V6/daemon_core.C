@@ -2785,8 +2785,11 @@ int DaemonCore::HandleReq(int socki)
 				// it will be detected as long as some crypto is used.
 
 
+				// we know the ..METHODS_LIST attribute exists since it was put
+				// in by us.  pre 6.5.0 protocol does not put it in.
 				char * auth_methods = NULL;
-				the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods);
+				the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods);
+
 				if (!auth_methods) {
 					dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad, failing!\n");
 					result = FALSE;
@@ -2806,26 +2809,32 @@ int DaemonCore::HandleReq(int socki)
 				}
 				free( auth_methods );
 
-
-				// check to see if the kerb IP is the same
+				// check to see if the auth IP is the same
 				// as the socket IP.  this cast is safe because
 				// we return above if sock is not a ReliSock.
 				if ( ((ReliSock*)sock)->authob ) {
-					const char* sockip = sin_to_string(sock->endpoint());
-					const char* kerbip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
 
-					result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
+					// after authenticating, update the classad to reflect
+					// which method we actually used.
+					char* the_method = ((ReliSock*)sock)->authob->getMethodUsed();
+					sprintf(buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, the_method);
+					the_policy->InsertOrUpdate(buf);
+
+					const char* sockip = sin_to_string(sock->endpoint());
+					const char* authip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
+
+					result = !strncmp (sockip + 1, authip, strlen(authip) );
 
 					if (!result) {
 						dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: auth ip -> %s\n", authip);
 						dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
 
 						result = FALSE;
 						goto finalize;
 
 					} else {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", kerbip);
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", authip);
 					}
 				}
 
