@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.2.2 2004-06-25 02:35:59 wright Exp $
+# $Id: remote_pre.pl,v 1.1.2.3 2004-06-25 02:53:06 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -12,6 +12,12 @@ my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
 
 my $logsize = "50000000"; # size for logs of personal Condor
+
+if( -z "tasklist.nmi" ) {
+    # our tasklist is empty, so don't do any real work
+    print "No tasks in tasklist.nmi, nothing to do\n";
+    exit 0;
+}
 
 
 ######################################################################
