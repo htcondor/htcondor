@@ -24,4 +24,4 @@
 #include "HashTable.h"
 #include "procapi.h"
 
-template class HashTable<long, procHashNode *>;
+template class HashTable<pid_t, procHashNode *>;
