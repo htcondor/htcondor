@@ -433,6 +433,12 @@ OpenFileTable::Save()
 				abort();
 			}
 			f->offset = pos;
+
+				// Close shadow end so we don't have a fd leak if
+				// we're doing checkpoint/restart repetitively
+			if( f->isRemoteAccess() ) {
+				REMOTE_syscall( CONDOR_close, f->real_fd );
+			}
 		}
 	}
 }
