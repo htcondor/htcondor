@@ -997,8 +997,8 @@ process_runtime_configs(ClassAd *classAd)
 					 "process_runtime_configs\n", errno );
 			exit(1);
 		}
-		Read_config( filename, classAd, ConfigTab, TABLESIZE,
-					 EXPAND_LAZY );
+		rval = Read_config( filename, classAd, ConfigTab, TABLESIZE,
+							EXPAND_LAZY );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",
