@@ -93,6 +93,7 @@ Starter::reallykill( int signo, int pg )
 				 errno );
 		return -1;
 	}
+	return ret;
 }
 
 
@@ -130,21 +131,20 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 	int i;
 	int pid;
 	int n_fds = getdtablesize();
-	int omask;
-	ELEM tmp;
-	sigset_t set;
 
-	/*
-	  omask = sigblock(sigmask(SIGTSTP));
-	  */
 #if defined(Solaris)
-	if (sigprocmask(SIG_SETMASK,0,&set)  == -1)
-		{EXCEPT("Error in reading procmask, errno = %d\n", errno);}
-	for (i=0; i < MAXSIG; i++) block_signal(i);
+	sigset_t set;
+	if( sigprocmask(SIG_SETMASK,0,&set)  == -1 ) {
+		EXCEPT("Error in reading procmask, errno = %d\n", errno);
+	}
+	for (i=0; i < MAXSIG; i++) {
+		block_signal(i);
+	}
 #else
-	omask = sigblock(-1);
+	int omask = sigblock(-1);
 #endif
-	if ((pid = fork()) < 0) {
+
+	if( (pid = fork()) < 0 ) {
 		EXCEPT( "fork" );
 	}
 
