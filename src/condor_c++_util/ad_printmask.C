@@ -170,7 +170,6 @@ display (AttrList *al)
 					case LX_STRING:
 						sprintf( stringValue, fmt->printfFmt,
 							result.s );
-						delete[] result.s;
 						strcat( retval, stringValue );
 						break;
 
