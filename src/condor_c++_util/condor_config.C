@@ -897,6 +897,21 @@ macro_expand( const char *str )
 	return( expand_macro(str, ConfigTab, TABLESIZE) );
 }
 
+/*
+** Same as param_boolean but for C -- returns 0 or 1
+** The parameter value is expected to be set to the string
+** "TRUE" or "FALSE" (no quotes, case insensitive).
+** If the value is not defined or not a valid, then
+** return the default_value argument.
+*/
+int
+param_boolean_int( const char *name, int default_value )
+{
+    bool default_bool;
+
+    default_bool = default_value == 0 ? false : true;
+    return param_boolean(name, default_bool) ? 1 : 0;
+}
 
 /*
 ** Return non-zero iff the named configuration parameter contains the given
