@@ -158,12 +158,6 @@ int pclose(FILE *stream);
 #define _NO_ANSIMODE _save_NO_ANSIMODE
 #undef _save_NO_ANSIMODE
 
-#if defined(IRIX62)
-#	undef _SGIAPI
-#	define _SGIAPI _save_SGIAPI
-#	undef _save_SGIAPI
-#endif
-
 /******************************
 ** sys/socket.h
 ******************************/
