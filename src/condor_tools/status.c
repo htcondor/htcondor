@@ -557,7 +557,8 @@ STATUS_LINE	*line;
 	s->running += line->run;
 	Total.running += line->run;
 	
-	if( strncmp(line->state, "Run", 3) == 0 ) {
+	if(( strncmp(line->state, "Run", 3) == 0 )
+	   ||(strncmp(line->state, "Susp", 4)==0)) {
 	  s->condor += 1;
 	  Total.condor += 1;
 	}
