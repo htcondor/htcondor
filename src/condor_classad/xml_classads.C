@@ -302,6 +302,15 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 						}
 					}
 					break;
+				case tag_Time:
+					if (token_text[0] != '\'') {
+							to_insert += '\'';
+					}
+					to_insert += token_text;
+					if (token_text[token_text.Length()-1] != '\'') {
+						to_insert += '\'';
+					}
+					break;
 				case tag_Bool:
 					{
 						MyString bool_attribute_name, bool_attribute_value;
@@ -326,7 +335,6 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 					to_insert += "ERROR";
 					break;
 				case tag_List:
-				case tag_Time:
 				default:
 					add_to_classad = false;
 					break;
@@ -637,6 +645,13 @@ ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
 				buffer += fixed_string;
 				fixed_string = "";
 				add_tag(buffer, tag_String, false);
+				break;
+			case LX_TIME:
+				add_tag(buffer, tag_Time, true);
+				fix_characters(((TimeBase *)value_expr)->Value(), fixed_string);
+				buffer += fixed_string;
+				fixed_string = "";
+				add_tag(buffer, tag_Time, false);
 				break;
 			case LX_BOOL:
 				add_bool_start_tag(buffer, (BooleanBase *)value_expr);
