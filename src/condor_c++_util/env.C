@@ -98,14 +98,15 @@ environToString( const char** env ) {
 char**
 environDup( const char** env ) {
 	char **newEnv;
+	int i;
 
 	int numElements = 0;
-    for( int i = 0; env[i] && env[i][0] != '\0'; i++ ) {
+    for( i = 0; env[i] && env[i][0] != '\0'; i++ ) {
 		 numElements++;
 	}
 
 	newEnv = (char **) malloc( numElements * sizeof( char* ) );
-	for( int i = 0; i < numElements; i++ ) {
+	for( i = 0; i < numElements; i++ ) {
 		newEnv[i] = strdup( env[i] );
 	}
 
