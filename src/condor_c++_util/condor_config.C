@@ -29,10 +29,10 @@
   optionally a pointer to a string containing the hostname that should
   be inserted for $(HOSTNAME).
 
-  When looking the global config file, config() checks the
+  When looking for the global config file, config() checks the
   "CONDOR_CONFIG" environment variable to find its location.  If that
   doesn't exist, it looks in /etc/condor.  If the condor_config isn't
-  there, it try's ~condor/.  If none of the above locations contain a
+  there, it tries ~condor/.  If none of the above locations contain a
   config file, config() prints an error message and exits.
 
   The root config file is found in the same way, except no environment
@@ -57,6 +57,7 @@
 #include "my_hostname.h"
 #include "my_arch.h"
 #include "condor_version.h"
+#include "util_lib_proto.h"
 
 extern "C" {
 	
@@ -75,6 +76,7 @@ void clear_config();
 void reinsert_specials(char*);
 void process_file(char*, char*, char*, ClassAd*);
 void process_locals( char*, char*, ClassAd*);
+int  process_runtime_configs(ClassAd *);
 void check_params();
 
 // External variables
@@ -230,7 +232,6 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 		// Try to find and read the global root config file
 	if( config_file = find_global_root() ) {
 		process_file( config_file, "global root config file", host, classAd );
-		free( config_file );
 
 			// Re-insert the special macros.  We don't want the user
 			// to override them, since it's not going to work.
@@ -240,6 +241,29 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 			// process all the files in the order they are listed.
 		process_locals( "LOCAL_ROOT_CONFIG_FILE", host, classAd );
 	}
+
+		// Re-insert the special macros.  We don't want the user
+		// to override them, since it's not going to work.
+	reinsert_specials( host );
+
+	if (process_runtime_configs(classAd) == 1) {
+			// if we found runtime config files, we process the root
+			// config file again
+		if (config_file) {
+			process_file( config_file, "global root config file", host,
+						  classAd );
+
+				// Re-insert the special macros.  We don't want the user
+				// to override them, since it's not going to work.
+			reinsert_specials( host );
+
+				// Read in the LOCAL_ROOT_CONFIG_FILE as a string list and
+				// process all the files in the order they are listed.
+			process_locals( "LOCAL_ROOT_CONFIG_FILE", host, classAd );
+		}
+	}
+
+	if (config_file) free( config_file );
 
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
 		// is set, we need to re-initilize my_full_hostname(). 
@@ -594,5 +618,329 @@ check_params()
 #endif
 }
 
+/* Begin code for runtime support for modifying a daemon's config file.
+   See condor_daemon_core.V6/README.config for more details. */
+
+static StringList PersistAdminList;
+
+class RuntimeConfigItem {
+public:
+	RuntimeConfigItem() : admin(NULL), config(NULL) { }
+	~RuntimeConfigItem() { if (admin) free(admin); if (config) free(config); }
+	initialize() { admin = config = NULL; }
+	char *admin;
+	char *config;
+};
+
+#include "extArray.h"
+template class ExtArray<RuntimeConfigItem>;
+
+static ExtArray<RuntimeConfigItem> rArray;
+
+static char toplevel_runtime_config[_POSIX_PATH_MAX] = { '\0' };
+
+static void
+set_toplevel_runtime_config()
+{
+	if (!toplevel_runtime_config[0]) {
+		char filename_parameter[50], *tmp;
+		sprintf(filename_parameter, "%s_CONFIG", mySubSystem);
+		tmp = param(filename_parameter);
+		if (tmp) {
+			sprintf(toplevel_runtime_config, "%s", tmp);
+			free(tmp);
+		} else {
+			tmp = param("LOG");
+			if (!tmp) {
+				dprintf( D_ALWAYS, "Condor error: neither %s nor LOG is "
+						 "specified in the configuration file.\n",
+						 filename_parameter );
+				exit( 1 );
+			}
+			sprintf(toplevel_runtime_config, "%s%c.config.%s", tmp,
+					DIR_DELIM_CHAR,	mySubSystem);
+			free(tmp);
+		}
+	}
+}
+
+/* 
+** Caller is responsible for allocating admin and config with malloc.
+** Caller should not free admin and config after the call.
+*/
+int
+set_persistent_config(char *admin, char *config)
+{
+	char tmp_filename[_POSIX_PATH_MAX], filename[_POSIX_PATH_MAX];
+	int fd, i;
+	char *tmp;
+
+	if (!admin || !admin[0]) {
+		if (admin) free(admin);
+		if (config) free(config);
+		return -1;
+	}
+
+	// make sure toplevel config filename is set
+	set_toplevel_runtime_config();
+
+	if (config && config[0]) {	// (re-)set config
+		// write new config to temporary file
+		sprintf(filename, "%s.%s", toplevel_runtime_config, admin);
+		sprintf(tmp_filename, "%s.tmp", filename);
+		if ((fd = open(tmp_filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
+			dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
+					 "set_persistent_config\n", tmp_filename,
+					 fd, errno );
+			free(admin);
+			free(config);
+			return -1;
+		}
+		if (write(fd, config, strlen(config)) != strlen(config)) {
+			dprintf( D_ALWAYS, "write failed with errno %d in "
+					 "set_persistent_config\n", errno );
+			free(admin);
+			free(config);
+			return -1;
+		}
+		if (close(fd) < 0) {
+			dprintf( D_ALWAYS, "close failed with errno %d in "
+					 "set_persistent_config\n", errno );
+			free(admin);
+			free(config);
+			return -1;
+		}
+		
+		// commit config changes
+		if (rotate_file(tmp_filename, filename) < 0) {
+			dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with errno %d in "
+					 "set_persistent_config\n", tmp_filename, filename,
+					 errno );
+			free(admin);
+			free(config);
+			return -1;
+		}
+	
+		// update admin list in memory
+		if (!PersistAdminList.contains(admin)) {
+			PersistAdminList.append(admin);
+		} else {
+			free(admin);
+			free(config);
+			return 0;		// if no update is required, then we are done
+		}
+
+	} else {					// clear config
+
+		// update admin list in memory
+		PersistAdminList.remove(admin);
+		if (config) {
+			free(config);
+			config = NULL;
+		}
+	}		
+
+	// update admin list on disk
+	sprintf(tmp_filename, "%s.tmp", toplevel_runtime_config);
+	if ((fd = open(tmp_filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
+		dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
+				 "set_persistent_config\n", tmp_filename,
+				 fd, errno );
+		free(admin);
+		if (config) free(config);
+		return -1;
+	}
+	const char param[] = "RUNTIME_CONFIG_ADMIN = ";
+	if (write(fd, param, strlen(param)) != strlen(param)) {
+		dprintf( D_ALWAYS, "write failed with errno %d in "
+				 "set_persistent_config\n", errno );
+		free(admin);
+		if (config) free(config);
+		return -1;
+	}
+	PersistAdminList.rewind();
+	bool first_time = true;
+	while (tmp = PersistAdminList.next()) {
+		if (!first_time) {
+			if (write(fd, ", ", 2) != 2) {
+				dprintf( D_ALWAYS, "write failed with errno %d in "
+						 "set_persistent_config\n", errno );
+				free(admin);
+				if (config) free(config);
+				return -1;
+			}
+		} else {
+			first_time = false;
+		}
+		if (write(fd, tmp, strlen(tmp)) != strlen(tmp)) {
+			dprintf( D_ALWAYS, "write failed with errno %d in "
+					 "set_persistent_config\n", errno );
+			free(admin);
+			if (config) free(config);
+			return -1;
+		}
+	}
+	if (write(fd, "\n", 1) != 1) {
+		dprintf( D_ALWAYS, "write failed with errno %d in "
+				 "set_persistent_config\n", errno );
+		free(admin);
+		if (config) free(config);
+		return -1;
+	}
+	if (close(fd) < 0) {
+		dprintf( D_ALWAYS, "close failed with errno %d in "
+				 "set_persistent_config\n", errno );
+		free(admin);
+		if (config) free(config);
+		return -1;
+	}
+	
+	if (rotate_file(tmp_filename, toplevel_runtime_config) < 0) {
+		dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with errno %d in "
+				 "set_persistent_config\n", tmp_filename, filename, errno );
+		free(admin);
+		if (config) free(config);
+		return -1;
+	}
+
+	// if we removed a config, then we should clean up by removing the file(s)
+	if (!config || !config[0]) {
+		sprintf(filename, "%s.%s", toplevel_runtime_config, admin);
+		unlink(filename);
+		if (PersistAdminList.number() == 0) {
+			unlink(toplevel_runtime_config);
+		}
+	}
+
+	free(admin);
+	if (config) free(config);
+	return 0;
+}
+
+int
+set_runtime_config(char *admin, char *config)
+{
+	int i;
+
+	if (!admin || !admin[0]) {
+		if (admin) free(admin);
+		if (config) free(config);
+		return -1;
+	}
+
+	if (config && config[0]) {
+		for (i=0; i <= rArray.getlast(); i++) {
+			if (strcmp(rArray[i].admin, admin) == MATCH) {
+				free(admin);
+				free(rArray[i].config);
+				rArray[i].config = config;
+				return 0;
+			}
+		}
+		rArray[i].admin = admin;
+		rArray[i].config = config;
+	} else {
+		for (i=0; i <= rArray.getlast(); i++) {
+			if (strcmp(rArray[i].admin, admin) == MATCH) {
+				free(admin);
+				if (config) free(config);
+				free(rArray[i].admin);
+				free(rArray[i].config);
+				rArray[i] = rArray[rArray.getlast()];
+				rArray[rArray.getlast()].initialize();
+				rArray.truncate(rArray.getlast()-1);
+				return 0;
+			}
+		}
+	}
+
+	return 0;
+}
+
+/* 
+** returns 1 if runtime configs were processed; 0 if no runtime configs
+** were defined, and -1 on error.  persistent configs are also processed
+** by this function.
+*/
+static int
+process_runtime_configs(ClassAd *classAd)
+{
+	char filename[_POSIX_PATH_MAX];
+	char *tmp;
+	int i, rval, fd;
+	bool processed = false;
+
+	set_toplevel_runtime_config();
+
+	if( access( toplevel_runtime_config, R_OK ) == 0 &&
+		PersistAdminList.number() == 0 ) {
+
+		processed = true;
+
+		rval = Read_config( toplevel_runtime_config, classAd, ConfigTab,
+							TABLESIZE, EXPAND_LAZY );
+		if (rval < 0) {
+			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
+					 "top-level runtime config file: %s\n",
+					 ConfigLineNo, toplevel_runtime_config );
+			exit(1);
+		}
+
+		tmp = param ("RUNTIME_CONFIG_ADMIN");
+		if (tmp) {
+			PersistAdminList.initializeFromString(tmp);
+			free(tmp);
+		}
+	}
+
+	PersistAdminList.rewind();
+	while ((tmp = PersistAdminList.next())) {
+		processed = true;
+		sprintf(filename, "%s.%s", toplevel_runtime_config, tmp);
+		rval = Read_config( filename, classAd, ConfigTab, TABLESIZE,
+							EXPAND_LAZY );
+		if (rval < 0) {
+			dprintf( D_ALWAYS, "Configuration Error Line %d "
+					 "while reading runtime config file: %s %s\n",
+					 ConfigLineNo, filename );
+			exit(1);
+		}
+	}
+
+	tmpnam(filename);
+	for (i=0; i <= rArray.getlast(); i++) {
+		processed = true;
+		if ((fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0) {
+			dprintf( D_ALWAYS, "open(%s) returns %d, errno %d in "
+					 "process_runtime_configs\n", filename,
+					 fd, errno );
+			exit(1);
+		}
+		if (write(fd, rArray[i].config, strlen(rArray[i].config))
+			!= strlen(rArray[i].config)) {
+			dprintf( D_ALWAYS, "write failed with errno %d in "
+					 "process_runtime_configs\n", errno );
+			exit(1);
+		}
+		if (close(fd) < 0) {
+			dprintf( D_ALWAYS, "close failed with errno %d in "
+					 "process_runtime_configs\n", errno );
+			exit(1);
+		}
+		Read_config( filename, classAd, ConfigTab, TABLESIZE,
+					 EXPAND_LAZY );
+		if (rval < 0) {
+			dprintf( D_ALWAYS, "Configuration Error Line %d "
+					 "while reading %s, runtime config: %s\n",
+					 ConfigLineNo, filename, rArray[i].admin );
+			exit(1);
+		}
+		unlink(filename);
+	}
+
+	return (int)processed;
+}
+
+/* End code for runtime support for modifying a daemon's config file. */
 
 } /* extern "C" */
