@@ -73,7 +73,6 @@ main_init(int argc, char* argv[])
 {
 	char**		ptr; 
 	char		job_queue_name[_POSIX_PATH_MAX];
-	char	expr[200];
  
 	int argc_count = 1;
 	for(ptr = argv + 1, argc_count = 1; argc_count<argc && *ptr; ptr++,argc_count++)
