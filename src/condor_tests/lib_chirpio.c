@@ -23,6 +23,7 @@ main(int argc, char **argv)
 	char chktstmessage[20];
 	int res;
 	int tstmsglen;
+	struct chirp_client * chirp_clnt;
 
 	filenmbuf[0] = '\0';
 	strcat(filenmbuf, REMDIR);
@@ -30,7 +31,7 @@ main(int argc, char **argv)
 
 	printf("Chirp testing\n");
 	// open a connection
-	struct chirp_client * chirp_clnt = chirp_client_connect_default();
+	chirp_clnt = chirp_client_connect_default();
 	if(chirp_clnt != NULL)
 	{
 		printf("Connected!\n");
