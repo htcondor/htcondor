@@ -31,13 +31,13 @@
 #	undef SYSVoffset
 #	undef __SYS_S__
 #	include <sys.s>
+#elif defined(WIN32)
 #else
 #	include <syscall.h>
 #endif
 
-
+#ifndef WIN32
 typedef int BOOL;
-
 static const int 	SYS_LOCAL = 1;
 static const int 	SYS_REMOTE = 0;
 static const int	SYS_RECORDED = 2;
@@ -45,6 +45,7 @@ static const int	SYS_MAPPED = 2;
 
 static const int	SYS_UNRECORDED = 0;
 static const int	SYS_UNMAPPED = 0;
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
