@@ -226,6 +226,7 @@ OsProc::StartJob()
 	// handle stdin, stdout, and stderr redirection
 	int fds[3];
 	fds[0] = -1; fds[1] = -1; fds[2] = -1;
+	int failedStdin, failedStdout, failedStderr = 0;
 	char filename1[_POSIX_PATH_MAX];
 	char *filename;
 	char infile[_POSIX_PATH_MAX];
@@ -237,7 +238,7 @@ OsProc::StartJob()
 	priv = set_user_priv();
 
 	if (JobAd->LookupString(ATTR_JOB_INPUT, filename1) == 1) {
-		if ( strcmp(filename1,"NUL") != 0 ) {
+		if ( !nullFile(filename1) ) {
 			if( Starter->wantsFileTransfer() ) {
 				filename = basename( filename1 );
 			} else {
@@ -252,13 +253,22 @@ OsProc::StartJob()
 			if ( (fds[0]=open( infile, O_RDONLY ) ) < 0 ) {
 				dprintf(D_ALWAYS,"failed to open stdin file %s, errno %d\n",
 						infile, errno);
+				failedStdin = 1;
 			}
 		dprintf ( D_ALWAYS, "Input file: %s\n", infile );
 		}
+	} else {
+	#ifndef WIN32
+		if ( (fds[0]=open( "/dev/null", O_RDONLY ) ) < 0 ) {
+			dprintf(D_ALWAYS, "failed to open stdin file /dev/null, errno %d\n",
+				errno);
+			failedStdin = 1;
+		}
+	#endif
 	}
 
 	if (JobAd->LookupString(ATTR_JOB_OUTPUT, filename1) == 1) {
-		if ( strcmp(filename1,"NUL") != 0 ) {
+		if ( !nullFile(filename1) ) {
 			if( Starter->wantsFileTransfer() ) {
 				filename = basename( filename1 );
 			} else {
@@ -276,14 +286,27 @@ OsProc::StartJob()
 					dprintf(D_ALWAYS,
 							"failed to open stdout file %s, errno %d\n",
 							outfile, errno);
+					failedStdout = 1;
 				}
 			}
 			dprintf ( D_ALWAYS, "Output file: %s\n", outfile );
 		}
+	} else {
+	#ifndef WIN32
+		if ((fds[1]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
+			// if failed, try again without O_TRUNC
+			if ( (fds[1]=open( "/dev/null", O_WRONLY | O_CREAT, 0666)) < 0 ) {
+				dprintf(D_ALWAYS, 
+					"failed to open stdout file /dev/null, errno %d\n", 
+					 errno);
+				failedStdout = 1;
+			}
+		}
+	#endif
 	}
 
 	if (JobAd->LookupString(ATTR_JOB_ERROR, filename1) == 1) {
-		if ( strcmp(filename1,"NUL") != 0 ) {
+		if ( !nullFile(filename1) ) {
 			if( Starter->wantsFileTransfer() ) {
 				filename = basename( filename1 );
 			} else {
@@ -301,14 +324,28 @@ OsProc::StartJob()
 					dprintf(D_ALWAYS,
 							"failed to open stderr file %s, errno %d\n",
 							errfile, errno);
+					failedStderr = 1;
 				}
 			}
 			dprintf ( D_ALWAYS, "Error file: %s\n", errfile );
 		}
+	} else {
+	#ifndef WIN32
+		if ((fds[2]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
+			// if failed, try again without O_TRUNC
+			if ( (fds[2]=open( "/dev/null", O_WRONLY | O_CREAT, 0666)) < 0 ) {
+				dprintf(D_ALWAYS, 
+						"failed to open stderr file /dev/null, errno %d\n", 
+						errno);
+				failedStderr = 1;
+			}
+		}
+	#endif
 	}
 
+
 	/* Bail out if we couldn't open the std files correctly */
-	if (fds[0] == -1 || fds[1] == -1 || fds[2] == -1) {
+	if ( failedStdin || failedStdout || failedStderr ) {
 		/* only close ones that had been opened correctly */
 		if (fds[0] != -1) {
 			close(fds[0]);
@@ -634,4 +671,38 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 	return true;
+}
+
+int 
+nullFile(const char *filename)
+{
+	// On WinNT, /dev/null is NUL
+	// on UNIX, /dev/null is /dev/null
+	
+	// a UNIX->NT submit will result in the NT starter seeing /dev/null, so it
+	// needs to recognize that /dev/null is the null file
+
+	// an NT->NT submit will result in the NT starter seeing NUL as the null 
+	// file
+
+	// a UNIX->UNIX submit ill result in the UNIX starter seeing /dev/null as
+	// the null file
+	
+	// NT->UNIX submits are not worried about - we don't think that anyone can
+	// do them, and to make it clean we'll fix submit to always use /dev/null,
+	// in the job ad, even on NT. 
+
+	#ifdef WIN32
+	if(_stricmp(filename, "NUL") == 0) {
+		return 1;
+	}
+	#endif
+	dprintf(D_FULLDEBUG, "Considering %s as a possible NULL file:..", 
+		filename);
+	if(strcmp(filename, "/dev/null") == 0 ) {
+		dprintf(D_FULLDEBUG, "Yes\n");
+		return 1;
+	}
+	dprintf(D_FULLDEBUG, "No\n");
+	return 0;
 }
