@@ -1,0 +1,79 @@
+SRC_DIR = $(SRC_TREE)/condor_startd.V6
+TARGET_SYSTEM = condor
+
+CFLAGS = $(STD_C_FLAGS) -g -DNEW_PROC
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+
+RESOURCE_SRC = resource.c
+RESOURCE_OBJ = resource.o
+RESOURCE_HDR = resource.h
+
+#if IS_R6000_AIX32
+#	define LOAD_AVG_SRC load_avg.AIX.c
+#	define LOAD_AVG_OBJ load_avg.AIX.o
+#elif IS_ALPHA_OSF1
+#	define LOAD_AVG_SRC load_avg.OSF1.c
+#	define LOAD_AVG_OBJ load_avg.OSF1.o
+#elif IS_I386_LINUX
+#	define LOAD_AVG_SRC load_avg.LINUX.C
+#	define LOAD_AVG_OBJ load_avg.LINUX.o
+#elif IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
+#       define LOAD_AVG_SRC load_avg.Solaris.c
+#       define LOAD_AVG_OBJ load_avg.Solaris.o
+#elif IS_X86_SOLARIS || IS_X86_SOLARIS25
+#       define LOAD_AVG_SRC load_avg.Solaris.c
+#       define LOAD_AVG_OBJ load_avg.Solaris.o
+#else
+#	define LOAD_AVG_SRC load_avg.BSD.c
+#	define LOAD_AVG_OBJ load_avg.BSD.o
+#endif
+
+STARTD_SRC = $(RESOURCE_SRC) command.c event.c main.c resmgr.c rpc.c glue.c LOAD_G_SRC startd_classad.C
+STARTD_OBJ = $(RESOURCE_OBJ) command.o event.o main.o resmgr.o rpc.o glue.o LOAD_AVG_OBJ startd_classad.o
+
+#if 0
+#if IS_V5
+REMOTE_SYSCALL_LIB = \
+    ../condor_syscall_lib/syscall_mode.o \
+    ../condor_syscall_lib/syscall_connect.o \
+    ../condor_syscall_lib/remote_syscall.o \
+    ../condor_syscall_lib/syscall_numbers.o \
+	$(PVM_LIB)
+#else
+#if IS_R6000_AIX32
+REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(PVM_LIB)
+#else
+REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(PVM_LIB)
+#endif
+#endif
+#endif
+
+#if (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS25) || (IS_SUN4M_SOLARIS251)
+LIB= $(REMOTE_SYSCALL_LIB)  ../condor_classad/expr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a SocketLib RpcLib MldLib KernLib
+#else
+LIB= $(REMOTE_SYSCALL_LIB) ../condor_classad/expr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a  ../condor_xdr_lib/xdr_lib.a RpcLib MldLib KernLib
+#endif
+LIBDIRS= ../condor_xdr_lib ../condor_util_lib ../condor_classad
+
+all_target(condor_startd)
+
+$(RESOURCE_SRC):
+	@rm -f resource.c resource.h
+	ln -s resource.$(TARGET_SYSTEM).c resource.c
+	ln -s resource.$(TARGET_SYSTEM).h resource.h
+
+tags_target($(STARTD_SRC),$(LIBDIRS))
+depend_target($(STARTD_SRC))
+
+#if IS_V6
+c_plus_target(condor_startd,$(STARTD_OBJ),$(LIB))
+release_target(condor_startd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+#if DO_BENCHMARKING
+	program_target(bench,$(BENCH_MAIN_OBJ),$(LIB))
+#endif
+#else
+program_target(condor_startd,$(STARTD_OBJ),$(LIB),release)
+#endif
+
+clean::
+	rm -f resource.c resource.h
