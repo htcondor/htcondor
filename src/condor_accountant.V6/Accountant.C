@@ -219,19 +219,29 @@ void Accountant::CheckMatches(ClassAdList& ResourceList) {
 // Report the whole list of priorities
 //------------------------------------------------------------------
 
-ClassAd* Accountant::ReportState() {
+AttrList* Accountant::ReportState() {
 
   dprintf(D_FULLDEBUG,"Reporting State\n");
 
   MyString CustomerName, ResourceName;
   CustomerRecord* Customer;
-  ClassAd* ad=new ClassAd();
-  char tmp[200];
+  AttrList* ad=new AttrList();
+  char tmp[512];
+  double d=(double) LastUpdateTime;
+  int l=(int) d;
+  sprintf(tmp, "LastUpdate = %d", l);
+  ad->Insert(tmp);
 
+  int OwnerNum=1;
   Customers.startIterations();
   while (Customers.iterate(CustomerName, Customer)) {
-    sprintf(tmp, "%s = %.3f", CustomerName.Value(), Customer->Priority);
-    ad->InsertOrUpdate(tmp);
+    sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
+    ad->Insert(tmp);
+    sprintf(tmp,"Priority%d = %f",OwnerNum,Customer->Priority);
+    ad->Insert(tmp);
+    sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,Customer->ResourceNames.Count());
+    ad->Insert(tmp);
+    OwnerNum++;
   }
 
   return ad;

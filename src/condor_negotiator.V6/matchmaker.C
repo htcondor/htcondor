@@ -159,7 +159,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	}
 
 	// get the priority
-	ClassAd* ad=accountant.ReportState();
+	AttrList* ad=accountant.ReportState();
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
 	if (!ad->put(*strm) ||

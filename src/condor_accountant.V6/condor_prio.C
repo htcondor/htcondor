@@ -43,8 +43,9 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
+#include "TimeClass.h"
 
-static void PrintInfo(ClassAd* ad);
+static void PrintInfo(AttrList* ad);
 static void Usage(char* argv[]);
 
 main(int argc, char* argv[])
@@ -78,6 +79,7 @@ main(int argc, char* argv[])
     sock.encode();
     if (!sock.put(SET_PRIORITY) ||
         !sock.put(tmp) ||
+        !sock.put(Priority) ||
         !sock.end_of_message()) {
       printf("failed to send SET_PRIORITY command to negotiator\n");
       exit(1);
@@ -97,7 +99,7 @@ main(int argc, char* argv[])
 
     // get reply
     sock.decode();
-    ClassAd* ad=new ClassAd();
+    AttrList* ad=new AttrList();
     if (!ad->get(sock) ||
         !sock.end_of_message()) {
       printf("failed to get classad from negotiator\n");
@@ -112,9 +114,34 @@ main(int argc, char* argv[])
 
 //----------------------------------------------------------
 
-static void PrintInfo(ClassAd* ad)
+static void PrintInfo(AttrList* ad)
 {
-  ad->fPrint(stdout);
+  // ad->AttrList::fPrint(stdout);
+  char tmp[10000];
+  ExprTree* exp;
+  char* Name;
+  float Priority;
+  int Res;
+  ad->ResetExpr();
+  exp=ad->NextExpr();
+  Time T=((Integer*) exp->RArg())->Value();
+  // printf("%f\n",d);
+  printf("Last Priority Update: %s\n",T.Asc());
+
+  char* Fmt1="%-30s   %8.3f   %4d\n"; 
+  char* Fmt2="%-30s   %-8s   %-4s\n"; 
+
+  printf(Fmt2,"Name","Priority","Resources Used");
+  printf(Fmt2,"----","--------","--------------");
+
+  while(exp=ad->NextExpr()) {
+    Name=((String*) exp->RArg())->Value();
+    Priority=((Float*) ad->NextExpr()->RArg())->Value();
+    Res=((Integer*) ad->NextExpr()->RArg())->Value();
+    printf(Fmt1,Name,Priority,Res);
+  }
+
+  return;
 }
 
 //----------------------------------------------------------
