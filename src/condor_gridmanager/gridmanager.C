@@ -93,6 +93,7 @@ bool addJobsSignaled = false;
 bool removeJobsSignaled = false;
 int contactScheddTid = TIMER_UNSET;
 int contactScheddDelay;
+time_t lastContactSchedd = 0;
 
 List<Service> ObjectDeleteList;
 
@@ -202,7 +203,12 @@ void
 RequestContactSchedd()
 {
 	if ( contactScheddTid == TIMER_UNSET ) {
-		contactScheddTid = daemonCore->Register_Timer( contactScheddDelay,
+		time_t now = time(NULL);
+		time_t delay = 0;
+		if ( lastContactSchedd + contactScheddDelay > now ) {
+			delay = (lastContactSchedd + contactScheddDelay) - now;
+		}
+		contactScheddTid = daemonCore->Register_Timer( delay,
 												(TimerHandler)&doContactSchedd,
 												"doContactSchedd", NULL );
 	}
@@ -567,6 +573,7 @@ doContactSchedd()
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
 		// Should we be retrying infinitely?
+		lastContactSchedd = time(NULL);
 		RequestContactSchedd();
 		return TRUE;
 	}
@@ -896,6 +903,8 @@ doContactSchedd()
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	}
+
+	lastContactSchedd = time(NULL);
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return TRUE;
