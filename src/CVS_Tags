@@ -1,3 +1,11 @@
+9/11/03 V6_5_5
+   The 6.5.5 release tag.  It's also the end of the V6_5-branch, and
+   the same versions of files as the root of V6_6-branch and
+   V6_7-branch (although those will have their own tags, as well).  In
+   addition to everything in the V6_5_ALL module, V6_5_5 is also found
+   in the gahp directory (which lives next to src, config, and so on)
+   on the trunk.
+
 9/4/03 V6_5-dag-java-fix
    The state of the V6_5-branch used for a pre-release 6.5.5 DAGMan
    executable sent to Jens at Fermi (see condor-admin #7370).
