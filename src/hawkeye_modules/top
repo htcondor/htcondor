@@ -127,25 +127,31 @@ my %TopFields =
     );
 my %TopTypes =
     (
-     HawkeyePublish::TypeString =>
+
+     HawkeyePublish::TypeString() =>
      {
       pubtype => HawkeyePublish::TypeString,
-      prefix => ""
+      prefix => "",
      },
-     HawkeyePublish::TypeNumber =>
+
+     HawkeyePublish::TypeNumber() =>
      {
       pubtype => HawkeyePublish::TypeNumber,
-      prefix => "" },
+      prefix => "",
+     },
+
      "t" =>
      {
       pubtype => HawkeyePublish::TypeNumber,
-      prefix => ""
+      prefix => "",
      },
+
      "%" =>
      {
       pubtype => HawkeyePublish::TypeNumber,
-      prefix => "pct_"
+      prefix => "pct_",
      },
+
     );
 my %SortOut;
 
@@ -446,7 +452,7 @@ sub Configure( )
 		}
 		$TopFields{$Name}{enabled} = 1;
 		my $Type = $TopFields{$Name}{type};
-		$Fields = $Fields . $TopTypes{$Type}{prefix} . $Name . " ";
+		$Fields .= $TopTypes{$Type}{prefix} . $Name . " ";
 		print STDERR "$Name " if ( $Config{Debug} );
 	    }
 	    print STDERR "\n" if ( $Config{Debug} );
@@ -550,7 +556,9 @@ sub RunIt( )
 		    # And, add it to our summary
 		    foreach my $Attr ( keys %Load )
 		    {
-			my $Type = ( $Attr =~ /string/i ) ? HawkeyePublish::TypeString : HawkeyePublish::TypeNumber;
+			my $Type = ( $Attr =~ /string/i ) ?
+			    HawkeyePublish::TypeString :
+				    HawkeyePublish::TypeNumber;
 			$Summary->Add( $Attr, $Type, $Load{$Attr} );
 		    }
 		}
