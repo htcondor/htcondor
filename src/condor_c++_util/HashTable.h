@@ -43,7 +43,7 @@ class HashBucket {
 typedef enum {
 	allowDuplicateKeys,   // original (arguably broken) default behavior
 	rejectDuplicateKeys,
-//	updateDuplicateKeys,  // not yet implemented
+	updateDuplicateKeys,
 } duplicateKeyBehavior_t;
 
 template <class Index, class Value>
@@ -179,8 +179,9 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 
   HashBucket<Index, Value> *bucket;
 
-  // if rejectDuplicateKeys is set and index already exists in the
-  // table, return -1
+  // if rejectDuplicateKeys is set and a bucket already exists in the
+  // table with this key, return -1
+
   if ( duplicateKeyBehavior == rejectDuplicateKeys ) {
 	  bucket = ht[idx];
 	  while (bucket) {
@@ -191,6 +192,25 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 		  bucket = bucket->next;
 	  }
   }
+
+  // if updateDuplicateKeys is set and a bucket already exists in the
+  // table with this key, update the bucket's value
+
+  else if( duplicateKeyBehavior == updateDuplicateKeys ) {
+	  bucket = ht[idx];
+	  while( bucket ) {
+          if( bucket->index == index ) {
+			  bucket->value = value;
+			  return 0;
+          }
+          bucket = bucket->next;
+      }
+  }
+
+  ASSERT( duplicateKeyBehavior == acceptDuplicateKeys );
+
+  // don't worry about whether a bucket already exists with this key,
+  // just go ahead and insert another one...
 
   if (!(bucket = new HashBucket<Index, Value>)) {
     cerr << "Insufficient memory" << endl;
