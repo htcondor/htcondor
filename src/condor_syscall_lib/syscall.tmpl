@@ -90,25 +90,30 @@
 	  success.  code_bytes() itself just returns the number of
 	  bytes read or written, and -1 on failure. 
 
-	map()
+  map()
+	  Wrapping "map()" around an argument indicates that the
+	  argument is a file descriptor which should be mapped from
+	  the "user" file descriptor (i.e., the file descriptor which
+	  the user program sees) and the "real" file descriptor (i.e.,
+	  the actual file descriptor used in the system call).
 
-	Some system calls simply must be handled specially.  Examples
-	are those system calls which directly affect the open files
-	table used for checkpoint/restart.  Unfortunately, this
-	"specialness" dosen't necessarily span all three pieces of code
-	we want to generate.  For example, the switch for open() must
-	be special because it affects the open files table, but the
-	sender and receiver for open() don't need any special
-	treatment.  We would therefore like to include a prototype for
-	open(), but we must somehow tell the switch generator that it
-	should not generate anything for open().  We solve the problem
-	by running this file through the C preprocessor (cpp) before
-	processing it.  The switch generator will ensure that the macro
-	SWITCH is defined, the sender generator will instead define the
-	macro SENDER, and similarly the reveiver generator will define
-	the macro RECEIVER.  We then use cpp conditional statements to
-	ensure that each generator sees only the prototypes for which it
-	should generate code.
+  Some system calls simply must be handled specially.  Examples
+  are those system calls which directly affect the open files
+  table used for checkpoint/restart.  Unfortunately, this
+  "specialness" dosen't necessarily span all three pieces of code
+  we want to generate.  For example, the switch for open() must
+  be special because it affects the open files table, but the
+  sender and receiver for open() don't need any special
+  treatment.  We would therefore like to include a prototype for
+  open(), but we must somehow tell the switch generator that it
+  should not generate anything for open().  We solve the problem
+  by running this file through the C preprocessor (cpp) before
+  processing it.  The switch generator will ensure that the macro
+  SWITCH is defined, the sender generator will instead define the
+  macro SENDER, and similarly the reveiver generator will define
+  the macro RECEIVER.  We then use cpp conditional statements to
+  ensure that each generator sees only the prototypes for which it
+  should generate code.
 */
 
 	/* Use 32 bits for file mode (mode_t) everywhere - hope nobody wants more */
