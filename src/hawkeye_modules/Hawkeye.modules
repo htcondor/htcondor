@@ -1,5 +1,6 @@
 # Master Hawkeye targets data file
 directory: /scratch/nleroy/workspace/Hawkeye-Release/modules
+prefix: Hawkeye-module-
 
 target: all
 version: 1.0-rc2
