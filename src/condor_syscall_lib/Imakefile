@@ -11,7 +11,9 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 #	if IS_SPARC_SUNOS41
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
-#	else /* IS_SPARC_SUNOS41 */
+#	elif IS_R6000_AIX32
+/* Don't extract anything */
+#	else
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
 #	endif
@@ -69,14 +71,19 @@ XDR_OBJ = \
  	xdr_utsname.o
 #endif
 
+#if IS_R6000_AIX32
+LONGJMP = _longjmp.AIX32.o
+#endif
+
 #if DOES_CHECKPOINTING
-CKPT_OBJ = file_state.o image.o tmp_stack.o machdep.$(OS).o syscall_mode.o
+CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(OS).o \
+			syscall_mode.o $(LONGJMP)
 #else
 CKPT_OBJ = syscall_mode.o
 #endif
 
 #if IS_R6000_AIX32
-SYSCALL_SHR = $(RELEASE_DIR)/lib/syscall.shr.o
+AIX_OBJ = $(LIB_DIR)/syscall.shr.o $(LIB_DIR)/syscall.exp $(LIB_DIR)/libfort.a
 #endif
 
 UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
@@ -85,9 +92,10 @@ UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 		$(CKPT_OBJ)
 
-SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o
+SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o
+SYSCALL_LIB = $(LIB_DIR)/condor_syscall_lib.a
 
-all_target(condor_syscall_lib.a receivers.c $(SIMPLE_OBJ) $(SYSCALL_SHR))
+all_target($(SYSCALL_LIB) receivers.c $(SIMPLE_OBJ) $(AIX_OBJ))
 stubs: switches.c senders.c receivers.c
 
 uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
@@ -173,9 +181,29 @@ syscall.shr.o: syscall.o syscall.exp
 clean::
 	rm -f syscall.shr.o syscall.o
 
-$(SYSCALL_SHR): syscall.shr.o
-	rm -f $(SYSCALL_SHR)
-	cp syscall.shr.o $(SYSCALL_SHR)
+release_target( syscall.shr.o, $(LIB_DIR), OBJECT_MODE)
+release_target( syscall.exp, $(LIB_DIR), OBJECT_MODE)
+
+#
+# The aix fortran library libxlf.a defines a getenv() routine which takes 2
+# arguments, the name of the environment variable, and buffer in which to
+# put the associated value.
+#
+# The aix C library libc.a defines a getenv routine which takes 1 argument,
+# the name of the environment variable, and it returns a pointer to the
+# associated value.
+#
+# Condor programs need to be linked with the condor libraries, which will
+# end up calling getenv(), and expecting the C version.  We therefore
+# supply our own C version, so that we can get it linked in before the
+# fortran version gets linked.
+#
+# Of course this will break any fortran programs which call getenv and expect
+# the fortran version!  If some AIXpert knows how to fix this, I would be
+# very happy to learn about it. -- mike
+#
+library_target(libfort.a,C_getenv.o)
+release_library(libfort.a,$(RELEASE_DIR)/lib)
 #endif /* AIX */
 
 
