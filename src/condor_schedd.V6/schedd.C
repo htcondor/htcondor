@@ -4389,6 +4389,7 @@ Scheduler::Init()
 			dprintf( D_FULLDEBUG, "UID_DOMAIN has changed.  "
 					 "Inserting new ATTR_USER into all classads.\n" );
 			WalkJobQueue((int(*)(ClassAd *)) fixAttrUser );
+			dirtyJobQueue();
 		}
 			// we're done with the old version, so don't leak memory 
 		free( oldUidDomain );
