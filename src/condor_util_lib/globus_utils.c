@@ -108,63 +108,66 @@ x509_proxy_subject_name( const char *proxy_file )
 	return NULL;
 #else
 
-	proxy_cred_desc *pcd = NULL;
-	struct stat stx;
-	char *subject = NULL;
+	globus_gsi_cred_handle_t         handle       = NULL;
+	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
+	char *subject_name = NULL;
 	int must_free_proxy_file = FALSE;
+	int deactivate_globus = FALSE;
 
-	/* initialize SSLeay and the error strings */
-	ERR_load_prxyerr_strings(0);
-	SSLeay_add_ssl_algorithms();
+	if (globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE)) {
+		_globus_error_message = "problem during internal initialization0";
+		goto cleanup;
+	}
+	deactivate_globus = TRUE;
 
-    pcd = proxy_cred_desc_new(); // Added. But not sure if it's correct. Hao
-
-	if (!pcd) {
-		_globus_error_message = "problem during internal initialization";
-		if ( must_free_proxy_file ) free(proxy_file);
-		return NULL;
+	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
+		_globus_error_message = "problem during internal initialization1";
+		goto cleanup;
 	}
 
-	/* Load proxy */
-	if (!proxy_file)  {
-		proxy_get_filenames(pcd, 1, NULL, NULL, &proxy_file, NULL, NULL);
+	if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
+		_globus_error_message = "problem during internal initialization2";
+		goto cleanup;
+	}
+
+	/* Check for proxy file */
+	if (proxy_file == NULL) {
+		proxy_file = get_x509_proxy_filename();
+		if (proxy_file == NULL) {
+			goto cleanup;
+		}
 		must_free_proxy_file = TRUE;
 	}
 
-	if (!proxy_file || (stat(proxy_file,&stx) != 0) ) {
-		_globus_error_message = "unable to find proxy file";
-		if ( must_free_proxy_file ) free(proxy_file);
-		proxy_cred_desc_free(pcd);
-		return NULL;
+	// We should have a proxy file, now, try to read it
+	if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
+		_globus_error_message = "unable to read proxy file";
+	   goto cleanup;
 	}
 
-	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
-		_globus_error_message = "unable to load proxy";
-		if ( must_free_proxy_file ) free(proxy_file);
-		proxy_cred_desc_free(pcd);
-		return NULL;
+	if (globus_gsi_cred_get_subject_name(handle, &subject_name)) {
+		_globus_error_message = "unable to extract subject name";
+		goto cleanup;
 	}
 
-	if ((pcd->upkey = X509_get_pubkey(pcd->ucert)) == NULL) {
-		_globus_error_message = "unable to load public key from proxy";
-		if ( must_free_proxy_file ) free(proxy_file);
-		proxy_cred_desc_free(pcd);
-		return NULL;
-	}
-
-    subject=X509_NAME_oneline(X509_get_subject_name(pcd->ucert),NULL,0);
-
-	if (!subject) {
-		_globus_error_message = "unable to load subject from proxy";
-	}
-
-	if ( must_free_proxy_file ) {
+ cleanup:
+	if (must_free_proxy_file) {
 		free(proxy_file);
 	}
-    
-    proxy_cred_desc_free(pcd);       // Added, not sure if it's correct. Hao
 
-	return subject;
+	if (handle_attrs) {
+		globus_gsi_cred_handle_attrs_destroy(handle_attrs);
+	}
+
+	if (handle) {
+		globus_gsi_cred_handle_destroy(handle);
+	}
+
+	if (deactivate_globus) {
+		globus_module_deactivate(GLOBUS_GSI_CREDENTIAL_MODULE);
+	}
+
+	return subject_name;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
