@@ -203,23 +203,28 @@ Daemon::idStr( void )
 	if( _id_str ) {
 		return _id_str;
 	}
-	if( ! locate() ) {
-		return "unknown daemon";
+	locate();
+
+	const char* dt_str;
+	if( _type == DT_ANY ) {
+		dt_str = "daemon";
+	} else {
+		dt_str = daemonString(_type);
 	}
 	char buf[128];
 	if( _is_local ) {
-		sprintf( buf, "local %s", daemonString(_type) );
+		sprintf( buf, "local %s", dt_str );
 	} else if( _name ) {
-		sprintf( buf, "%s %s", daemonString(_type), _name );
+		sprintf( buf, "%s %s", dt_str, _name );
 	} else if( _addr ) {
-		sprintf( buf, "%s at %s", daemonString(_type), _addr );
+		sprintf( buf, "%s at %s", dt_str, _addr );
 		if( _full_hostname ) {
 			strcat( buf, " (" );
 			strcat( buf, _full_hostname );
 			strcat( buf, ")" );
 		}
 	} else {
-		EXCEPT( "Daemon::idStr: locate() successful but _addr not found" );
+		return "unknown daemon";
 	}
 	_id_str = strnewp( buf );
 	return _id_str;
