@@ -211,6 +211,8 @@ The script \File{pre.csh} may use these arguments
 	gunzip $argv[1]$argv[2]
 \end{verbatim}
 
+% $ % this comment just has a dollar sign so that emacs will not think
+%	  we're inside of a math section and will draw things more nicely
 
 The third type of item in the DAG input file describes the
 dependencies within the DAG.
@@ -463,5 +465,62 @@ of a node are completed,
 then the Rescue DAG file will also contain Retry entries.
 The number of retries will be set to the appropriate remaining
 number of retries. 
+
+\subsection{Visualizing DAGs with dot}
+\index{DAGMan!dot}
+\index{dot}
+\index{DAGMan!visualizing dags}
+
+DAGMan can assist you in visualizing DAGs by creating \emph{dot}
+files. Dot is a program that is part of the graphviz package,
+available from \Url{http://www.research.att.com/sw/tools/graphviz},
+and it is used to draw pictures of DAGs. 
+
+You can instruct DAGMan to produce one or more dot files by adding a
+line to your DAGMan input file. For example, to produce a single dot
+file that shows the state of your DAG before any jobs are running, add
+the following line:
+
+\begin{verbatim}
+	DOT dag.dot
+\end{verbatim}
+
+This will create a file called dag.dot. You can create a visualization
+of your DAG by giving this file to dot. For example, if you want to
+create a Postscript file, you can execute:
+
+\begin{verbatim}
+    dot -Tps dag.dot -o dag.ps
+\end{verbatim}
+
+The DOT command can take several optional parameters:
+
+\begin{itemize}
+
+\item \emph{UPDATE}  This will update the dot file every time a
+significant update happens. 
+
+\item \emph{DONT-UPDATE} This will only create a single dot file, when
+the DAGMan begins executing. It is the default if you don't specify
+UPDATE. 
+
+\item \emph{OVERWRITE} This will overwrite the dot file each time it
+is created. It is the default if you don't specify DONT-OVERWRITE.
+
+\item \emph{DONT-OVERWRITE} Instead of using the name you specify,
+DAGMan will create a file with the name followed by a period and a
+number. For example, if you file is dag.dot, it will create files
+``dag.dot.0'', ``dag.dot.1'', ``dag.dot.2'', and so on. This option is
+the most useful when you combine it with the UPDATE option so that you
+can visualize the history of the DAG after it has finished executing. 
+
+\item \emph{INCLUDE include-file} If you want to include extra dot
+commands in your dot file, this command will instruct DAGMan to
+include your file in the dot files that it produces. This may be
+useful if you don't want to edit the dot files that are created,
+perhaps because you are automatically visualizing the dag as it
+progresses. 
+
+\end{itemize}
 
 \index{DAGMan|)}
