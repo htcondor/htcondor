@@ -252,7 +252,7 @@
 	
 
 "..\src\condor_c++_util\condor_common.C" : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\

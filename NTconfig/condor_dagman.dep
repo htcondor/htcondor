@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_dagman.mak
 
 ..\src\condor_dagman\dag.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -67,7 +67,7 @@
 	
 
 ..\src\condor_dagman\dagman_instantiate.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -124,7 +124,7 @@
 	
 
 ..\src\condor_dagman\dagman_main.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -187,7 +187,7 @@
 	
 
 ..\src\condor_dagman\dagman_submit.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -245,7 +245,7 @@
 	
 
 ..\src\condor_dagman\dagman_util.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_dagman\debug.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -258,7 +258,7 @@
 	
 
 ..\src\condor_dagman\debug.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -309,7 +309,7 @@
 	
 
 ..\src\condor_dagman\job.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -352,7 +352,7 @@
 	
 
 ..\src\condor_dagman\parse.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -416,7 +416,7 @@
 	
 
 ..\src\condor_dagman\script.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\env.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -478,7 +478,7 @@
 	
 
 ..\src\condor_dagman\scriptQ.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -535,7 +535,7 @@
 	
 
 ..\src\condor_dagman\types.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\

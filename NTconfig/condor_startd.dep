@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_startd.mak
 
 ..\src\condor_startd.V6\AvailStats.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -81,7 +81,7 @@
 	
 
 ..\src\condor_startd.V6\command.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -161,7 +161,7 @@
 	
 
 ..\src\condor_startd.V6\LoadQueue.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -241,7 +241,7 @@
 	
 
 ..\src\condor_startd.V6\Match.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -321,7 +321,7 @@
 	
 
 ..\src\condor_startd.V6\mds.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -353,7 +353,7 @@
 	
 
 ..\src\condor_startd.V6\Reqexp.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -433,7 +433,7 @@
 	
 
 ..\src\condor_startd.V6\ResAttributes.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -513,7 +513,7 @@
 	
 
 ..\src\condor_startd.V6\ResMgr.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
@@ -594,7 +594,7 @@
 	
 
 ..\src\condor_startd.V6\Resource.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -675,7 +675,7 @@
 	
 
 ..\src\condor_startd.V6\ResState.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -755,7 +755,7 @@
 	
 
 ..\src\condor_startd.V6\startd_cronjob.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -838,7 +838,7 @@
 	
 
 ..\src\condor_startd.V6\startd_cronmgr.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -894,7 +894,7 @@
 	
 
 ..\src\condor_startd.V6\startd_main.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -979,7 +979,7 @@
 	
 
 ..\src\condor_startd.V6\Starter.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\dynuser.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -1061,7 +1061,7 @@
 	
 
 ..\src\condor_startd.V6\starter_mgr.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
@@ -1141,7 +1141,7 @@
 	
 
 ..\src\condor_startd.V6\util.C : \
-	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\directory.h"\
 	"..\src\condor_c++_util\dynuser.h"\
 	"..\src\condor_c++_util\extArray.h"\
