@@ -125,6 +125,10 @@ begin-classad Misc
   Average = avg(Set);
   Min = min(Set);
   Max = max(Set);
+  AllSmall = allcompare("<", Set, 100);
+  AllBig   = allcompare(">", Set, 100); 
+  AnyTwo   = anycompare("==", Set, 2);
+  AllTwo   = allcompare("==", Set, 2);
 ]
 end-classad
 
@@ -141,6 +145,10 @@ evaluate Misc Sum
 evaluate Misc Average
 evaluate Misc Min
 evaluate Misc Max
+evaluate Misc AllSmall
+evaluate Misc AllBig
+evaluate Misc AnyTwo
+evaluate Misc AllTwo
 
 ######################################################################
 #
