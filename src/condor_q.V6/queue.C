@@ -42,7 +42,6 @@ int main (int argc, char **argv)
 	ClassAd     *job;
 	ClassAd		*ad;
 	bool		first = true;
-	int         cluster, proc;
 	char		scheddAddr[64];
 	char		scheddName[64];
 	char		scheddMachine[64];
