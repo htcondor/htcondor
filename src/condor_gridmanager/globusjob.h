@@ -32,7 +32,7 @@ class GlobusJob : public Service
 	void UpdateCondorState( int new_state );
 	void UpdateGlobusState( int new_state, int new_error_code );
 	void GramCallback( int new_state, int new_error_code );
-	bool GetCallbacks( bool ignore_failed = false );
+	bool GetCallbacks();
 	void ClearCallbacks();
 	GlobusResource *GetResource();
 

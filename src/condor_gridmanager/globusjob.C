@@ -1670,7 +1670,14 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			}
 			} break;
 		case GM_JOBMANAGER_ASLEEP: {
-			GetCallbacks( true );
+			if ( callbackGlobusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED &&
+				 callbackGlobusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ) {
+				// Small hack to ignore the callback caused by the STOP
+				// signal we sent to GM_PUT_TO_SLEEP
+				ClearCallbacks();
+			} else {
+				GetCallbacks();
+			}
 			globusError = 0;
 			if ( JmShouldSleep() == false ) {
 				gmState = GM_RESTART;
@@ -1886,14 +1893,12 @@ void GlobusJob::GramCallback( int new_state, int new_error_code )
 	}
 }
 
-bool GlobusJob::GetCallbacks( bool ignore_failed )
+bool GlobusJob::GetCallbacks()
 {
 	if ( callbackGlobusState != 0 ) {
-		if ( callbackGlobusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ||
-			 ignore_failed == false ) {
-			UpdateGlobusState( callbackGlobusState,
-							   callbackGlobusStateErrorCode );
-		}
+		UpdateGlobusState( callbackGlobusState,
+						   callbackGlobusStateErrorCode );
+
 		callbackGlobusState = 0;
 		callbackGlobusStateErrorCode = 0;
 		return true;
