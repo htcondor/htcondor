@@ -1924,7 +1924,6 @@ setupAuthentication( FILE * &infp )
 		useAuth = 1;
 	}
 
-	//could probably stat for dir to do minimal idiot checking of existance
 	if ( useAuth ) {
 		struct stat statbuf;
 
@@ -1973,6 +1972,12 @@ setupAuthentication( FILE * &infp )
 			sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CondorCertDir);
 			putenv( strdup( tmpstring ) );
 		}
+
+		if ( !getenv( "SSLEAY_CONF" ) ) {
+			sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CondorCertDir);
+			putenv( strdup( tmpstring ) );
+		}
+
 		free( CondorCertDir );
 		//end of authentication setup
 	}
