@@ -320,7 +320,7 @@ int X509_Credential :: check_x509_proxy( char *proxy_file )
 		return 1;
 	}
 
-	if (proxy_load_user_cert(pcd, proxy_file, NULL)) {
+	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
 		fprintf(stderr,"ERROR: unable to load proxy");
 		return 1;
 	}

@@ -1695,7 +1695,7 @@ int Authentication::get_user_x509name(char *proxy_file, char* name)
        return 1;
     }
 
-    if (proxy_load_user_cert(pcd, proxy_file, NULL))
+    if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL))
     {
     	dprintf(D_ALWAYS,"ERROR: unable to load proxy");
 	    return 1;

@@ -90,7 +90,7 @@ check_x509_proxy( char *proxy_file )
 		return 1;
 	}
 
-	if (proxy_load_user_cert(pcd, proxy_file, NULL)) {
+	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
 		fprintf(stderr,"ERROR: unable to load proxy");
 		return 1;
 	}
@@ -122,6 +122,7 @@ check_x509_proxy( char *proxy_file )
 	}
 
 	if ( time_diff < min_time_left ) {
+		fprintf(stderr,"ERROR: proxy lifetime too short\n");
 		dprintf(D_ALWAYS,"ERROR: proxy lifetime too short\n");
 		return 1;
 	}
