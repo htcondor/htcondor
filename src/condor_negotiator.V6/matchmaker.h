@@ -61,7 +61,7 @@ class Matchmaker : public Service
 
 	private:
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList&);	
+		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList& );	
 		int  negotiate(char *, char *, double, double, int,
 			ClassAdList &, ClassAdList &, int, bool );
 		ClassAd *matchmakingAlgorithm(char*,char*,ClassAd&,ClassAdList&,
