@@ -714,13 +714,89 @@ __lseek( int fd, off_t offset, int whence )
 
 
 #if defined(LINUX)
+
 /* 
-   Whole bunch of Linux-specific evilness w/ [_fxl]*stat.  Basically,
-   we need to trap all these things and send them over the wire as
-   CONDOR_stat, CONDOR_fstat, or CONDOR_lstat as appropriate, and
-   handle them locally with whatever SYS_*stat is defined on this
-   host.  glibc and libc5 do this differently, which is why we need
-   the pre-processor junk in the local case.  -Derek Wright 3/30/99 
+   There's a whole bunch of Linux-specific evilness w/ [_fxl]*stat.
+   Basically, we need to trap all these things and send them over the
+   wire as CONDOR_stat, CONDOR_fstat, or CONDOR_lstat as appropriate
+   and handle them locally with whatever SYS_*stat is defined on this
+   host.  While it's all the same actual number, glibc and libc5 do
+   this differently, which is why we need all the pre-processor junk.
+  
+   If that's not bad enough, there are two versions of the stat
+   structure (struct stat) on Linux!  One is a version of the stat
+   structure the kernel understands, which is the "old" stat.  The
+   other is the version of the stat structure that glibc understands,
+   which is the "new" stat.  Each of [_fxl]*stat pass in a version
+   argument, which specifies which version of the stat structure the
+   caller wants.
+  
+   So, if we want to do a local stat(), we call syscall() and pass in
+   a pointer to a struct kernel_stat, which we define.  This is the
+   version of the stat structure that the kernel expects.  Then, we
+   pass a pointer to this structure, the pointer we were given, and
+   the version number, into _condor_k_stat_convert(), which converts a
+   struct kernel_stat into the appropriate struct stat, depending on
+   the version.
+
+   If we need to do a remote stat(), we use the native struct stat,
+   whatever that happens to be, since that's what CEDAR knows about.
+   The RSC will get the fields we care about, and CEDAR knows how to
+   give those to us.  Again, we have to convert this into the right
+   kind of stat structure, depending on what our caller expects, so we
+   use _condor_s_stat_convert() which converts a struct stat into the
+   right version of the struct stat we were passed.  This might seem
+   unneccesary, but CEDAR only knows about certain fields, and if our
+   caller is looking for a "new" struct stat, we've got to zero out
+   everything else.  "Just memset() it to 0 before you give it to
+   CEDAR!", you say?  And what sizeof() do you propose we use?  We
+   have no idea what size the struct stat we are being passed is,
+   since it depends on the version.  This method just seems safer to
+   me.  If someone has a better solution, I'm all ears.
+
+  -Derek Wright 6/30/99 */
+
+/* 
+   First, do all the hell to figure out what actual numbers we'll want
+   to use with syscall() in the local cases.  Define our own
+   CONDOR_SYS_stat* to be whatever pre-processor definition we already
+   have.
+*/
+
+#if defined(SYS_prev_stat)
+#   define CONDOR_SYS_stat SYS_prev_stat
+#elif defined(SYS_stat)
+#   define CONDOR_SYS_stat SYS_stat
+#elif defined(SYS_old_stat)
+#   define CONDOR_SYS_stat SYS_old_stat
+#else
+#   error "No local version of SYS_*_stat on this platform!"
+#endif
+
+#if defined(SYS_prev_fstat)
+#   define CONDOR_SYS_fstat SYS_prev_fstat
+#elif defined(SYS_fstat)
+#   define CONDOR_SYS_fstat SYS_fstat
+#elif defined(SYS_old_fstat)
+#   define CONDOR_SYS_fstat SYS_old_fstat
+#else
+#error "No local version of SYS_*_fstat on this platform!"
+#endif
+
+#if defined(SYS_prev_lstat)
+#   define CONDOR_SYS_lstat SYS_prev_lstat
+#elif defined(SYS_lstat)
+#   define CONDOR_SYS_lstat SYS_lstat
+#elif defined(SYS_old_lstat)
+#   define CONDOR_SYS_lstat SYS_old_lstat
+#else
+#error "No local version of SYS_*_lstat on this platform!"
+#endif
+
+
+/* 
+   Now, trap all the various [_flx]*stat calls, and convert them all
+   to _condor_[xlf]stat().
 */
 
 int _xstat(int version, const char *path, struct stat *buf)
@@ -732,28 +808,6 @@ int _xstat(int version, const char *path, struct stat *buf)
 int __xstat(int version, const char *path, struct stat *buf)
 {
 	return _condor_xstat( version, path, buf );
-}
-
-
-int _condor_xstat(int version, const char *path, struct stat *buf)
-{
-    int rval;
-
-    if( LocalSysCalls() ) {
-#if defined(SYS_prev_stat)
-        rval = syscall( SYS_prev_stat, path, buf );
-#elif defined(SYS_stat)
-        rval = syscall( SYS_stat, path, buf );
-#elif defined(SYS_old_stat)
-        rval = syscall( SYS_old_stat, path, buf );
-#else
-#error "No local version of SYS_*stat on this platform!"
-#endif
-    } else {
-        rval = REMOTE_syscall( CONDOR_stat, path, buf );
-    }
-
-    return rval;
 }
 
 
@@ -769,38 +823,6 @@ int __fxstat(int version, int fd, struct stat *buf)
 }
 
 
-int
-_condor_fxstat(int version, int fd, struct stat *buf)
-{
-    int rval;
-    int user_fd;
-    int use_local_access = FALSE;
-
-    if( (user_fd=MapFd(fd)) < 0 ) {
-        return (int)-1;
-    }
-    if( LocalAccess(fd) ) {
-        use_local_access = TRUE;
-    }
-
-    if( LocalSysCalls() || use_local_access ) {
-#if defined(SYS_prev_fstat)
-        rval = syscall( SYS_prev_fstat, fd, buf );
-#elif defined(SYS_fstat)
-        rval = syscall( SYS_fstat, fd, buf );
-#elif defined(SYS_old_fstat)
-        rval = syscall( SYS_old_fstat, fd, buf );
-#else
-#error "No local version of SYS_*fstat on this platform!"
-#endif
-    } else {
-        rval = REMOTE_syscall( CONDOR_fstat, user_fd, buf );
-    }
-
-    return rval;
-}
-
-
 int _lxstat(int version, const char *path, struct stat *buf)
 {
 	return _condor_lxstat( version, path, buf );
@@ -813,28 +835,189 @@ int __lxstat(int version, const char *path, struct stat *buf)
 }
 
 
-int _condor_lxstat(int version, const char *path, struct stat *buf)
+/*
+   _condor_k_stat_convert() takes in a version, and two pointers, one
+   to a struct kernel_stat (which we define in kernel_stat.h), and one
+   to a struct stat (the type of which is determined by the version
+   arg).  For all versions of struct stat, copy out the fields we care
+   about, and depending on the version, zero out the fields we don't
+   care about.  
+*/
+
+
+#include "linux_kernel_stat.h"
+
+void 
+_condor_k_stat_convert( int version, const struct kernel_stat *source, 
+						struct stat *target )
+{
+		/* In all cases, we need to copy the fields we care about. */
+	target->st_dev = source->st_dev;
+	target->st_ino = source->st_ino;
+	target->st_mode = source->st_mode;
+	target->st_nlink = source->st_nlink;
+	target->st_uid = source->st_uid;
+	target->st_gid = source->st_gid;
+	target->st_rdev = source->st_rdev;
+	target->st_size = source->st_size;
+	target->st_blksize = source->st_blksize;
+	target->st_blocks = source->st_blocks;
+	target->st_atime = source->st_atime;
+	target->st_mtime = source->st_mtime;
+	target->st_ctime = source->st_ctime;
+
+		/* Now, handle the different versions we might be passed */
+	switch( version ) {
+	case _STAT_VER_LINUX_OLD:
+			/*
+			  This is the old version, which is identical to the
+			  kernel version.  We already copied all the fields we
+			  care about, so we're done.
+			*/
+		break;
+    case _STAT_VER_LINUX:
+			/* 
+			  This is the new version, that has some extra fields we
+			  need to 0-out.
+			*/
+		target->__pad1 = 0;
+		target->__pad2 = 0;
+		target->__unused1 = 0;
+		target->__unused2 = 0;
+		target->__unused3 = 0;
+		target->__unused4 = 0;
+		target->__unused5 = 0;
+		break;
+	default:
+			/* Some other version: blow-up */
+		EXCEPT( "_condor_k_stat_convert: unknown version (%d) of struct stat!", version );
+		break;
+	}
+}
+
+
+/*
+  _condor_s_stat_convert() is just like _condor_k_stat_convert(),
+  except that it deals with two struct stat's, instead of a struct
+  kernel_stat and a struct_stat 
+*/
+
+void 
+_condor_s_stat_convert( int version, const struct stat *source, 
+						struct stat *target )
+{
+		/* In all cases, we need to copy the fields we care about. */
+	target->st_dev = source->st_dev;
+	target->st_ino = source->st_ino;
+	target->st_mode = source->st_mode;
+	target->st_nlink = source->st_nlink;
+	target->st_uid = source->st_uid;
+	target->st_gid = source->st_gid;
+	target->st_rdev = source->st_rdev;
+	target->st_size = source->st_size;
+	target->st_blksize = source->st_blksize;
+	target->st_blocks = source->st_blocks;
+	target->st_atime = source->st_atime;
+	target->st_mtime = source->st_mtime;
+	target->st_ctime = source->st_ctime;
+
+		/* Now, handle the different versions we might be passed */
+	switch( version ) {
+	case _STAT_VER_LINUX_OLD:
+			/*
+			  This is the old version, which is identical to the
+			  kernel version.  We already copied all the fields we
+			  care about, so we're done.
+			*/
+		break;
+    case _STAT_VER_LINUX:
+			/* 
+			  This is the new version, that has some extra fields we
+			  need to 0-out.
+			*/
+		target->__pad1 = 0;
+		target->__pad2 = 0;
+		target->__unused1 = 0;
+		target->__unused2 = 0;
+		target->__unused3 = 0;
+		target->__unused4 = 0;
+		target->__unused5 = 0;
+		break;
+	default:
+			/* Some other version: blow-up */
+		EXCEPT( "_condor_s_stat_convert: unknown version (%d) of struct stat!", version );
+		break;
+	}
+}
+
+
+/*
+   Finally, implement the _condor_[xlf]stat() functions which do all
+   the work of checking if we want local or remote, and handle the
+   different versions of the stat struct as appropriate.
+*/
+
+int _condor_xstat(int version, const char *path, struct stat *buf)
 {
     int rval;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
 
     if( LocalSysCalls() ) {
-#if defined(SYS_prev_lstat)
-        rval = syscall( SYS_prev_lstat, path, buf );
-#elif defined(SYS_lstat)
-        rval = syscall( SYS_lstat, path, buf );
-#elif defined(SYS_old_lstat)
-        rval = syscall( SYS_old_lstat, path, buf );
-#else
-#error "No local version of SYS_*_lstat on this platform!"
-#endif
+        rval = syscall( CONDOR_SYS_stat, path, &kbuf );
+		_condor_k_stat_convert( version, &kbuf, buf );
     } else {
-        rval = REMOTE_syscall( CONDOR_lstat, path, buf );
+        rval = REMOTE_syscall( CONDOR_stat, path, &sbuf );
+		_condor_s_stat_convert( version, &sbuf, buf );
     }
-
     return rval;
 }
 
-#endif /* LINUX */
+
+int
+_condor_fxstat(int version, int fd, struct stat *buf)
+{
+    int rval;
+    int user_fd;
+    int use_local_access = FALSE;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
+
+    if( (user_fd=MapFd(fd)) < 0 ) {
+        return (int)-1;
+    }
+    if( LocalAccess(fd) ) {
+        use_local_access = TRUE;
+    }
+
+    if( LocalSysCalls() || use_local_access ) {
+        rval = syscall( CONDOR_SYS_fstat, fd, &kbuf );
+		_condor_k_stat_convert( version, &kbuf, buf );
+    } else {
+        rval = REMOTE_syscall( CONDOR_fstat, user_fd, &sbuf );
+		_condor_s_stat_convert( version, &sbuf, buf );
+    }
+    return rval;
+}
+
+
+int _condor_lxstat(int version, const char *path, struct stat *buf)
+{
+    int rval;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
+
+    if( LocalSysCalls() ) {
+        rval = syscall( CONDOR_SYS_lstat, path, &kbuf );
+		_condor_k_stat_convert( version, &kbuf, buf );
+    } else {
+        rval = REMOTE_syscall( CONDOR_lstat, path, &sbuf );
+		_condor_s_stat_convert( version, &sbuf, buf );
+    }
+    return rval;
+}
+
+#endif /* LINUX stat hell */
 
 
 /* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
