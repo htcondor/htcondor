@@ -85,6 +85,16 @@ The details of each version are described below.
 	by a specific option in the submit description file.
   \end{itemize}
 
+\item Improvements for Windows:
+  \begin{itemize}
+  \item Added support for encrypting the execute directory
+    on Windows 2000/XP. This feature is enabled by setting
+    \MacroNI{ENCRYPT\_EXECUTE\_DIRECTORY} = True.
+  \item Added the \MacroNI{VMx\_USER} config file parameter for specifying
+    an account to run jobs as (instead of the condor nobody accounts). A
+    different account can be specified for each VM.
+  \end{itemize}
+
 \item Added new option \Opt{-dagman} to \Condor{submit\_dag} which allows 
 specification of an alternate \Condor{dagman} executable. 
 
@@ -172,6 +182,10 @@ use 3 more file descriptors.
   error.
   Now, they function properly, since there's no reason for them to
   consider this a problem.
+
+ \item Fixed a minor bug on Windows where the \Condor{starter} would
+   incorrectly determine the VM number if StarterLog path contained
+   periods.
 
 \end{itemize}
 
