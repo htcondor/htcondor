@@ -619,6 +619,13 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 				 "with root privileges rejected\n" );
 		return FALSE;
 	}
+		// So if we are not root, trying to use any user id is bogus
+		// since the OS will disallow it.  So if we are not running as
+		// root, may as well just set the user id to be the real id.
+	if ( get_my_uid() != ROOT ) {
+		uid = get_my_uid();
+		gid = get_my_gid();
+	}
 
 	if( UserIdsInited && UserUid != uid && !is_quiet ) {
 		dprintf( D_ALWAYS, 
@@ -721,6 +728,14 @@ init_user_ids_implementation( const char username[], int is_quiet )
     struct passwd       *pwd;
 	int					scm;
 
+		// So if we are not root, trying to use any user id is bogus
+		// since the OS will disallow it.  So if we are not running as
+		// root, may as well just set the user id to be the real id.
+	if ( get_my_uid() != ROOT ) {
+		return set_user_ids_implementation( get_my_uid(), get_my_gid(),
+										NULL, is_quiet ); 
+	}
+
 	/*
 	** N.B. if we are using the yellow pages, system calls which are
 	** not supported by either remote system calls or file descriptor
@@ -738,6 +753,8 @@ init_user_ids_implementation( const char username[], int is_quiet )
 		if( ! is_quiet ) {
 			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
 		}
+		(void)endpwent();
+		(void)SetSyscalls( scm );
 		return FALSE;
 	}
 	(void)endpwent();
