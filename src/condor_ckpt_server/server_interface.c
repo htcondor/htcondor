@@ -49,6 +49,7 @@
 #endif
 
 extern char* param(char*);
+static char* getserveraddr();
 
 void StripPrefix(const char* pathname,
 				 char        filename[MAX_CONDOR_FILENAME_LENGTH])
@@ -364,7 +365,68 @@ int RenameRemoteFile(const char* owner,
 						   NULL, NULL, NULL, NULL));
 }
 
-extern int ckpt_server_number;
+static char *server_host = NULL;
+
+int SetCkptServerHost(const char *host)
+{
+	if (server_host) free(server_host);
+	if (host) {
+		server_host = strdup(host);
+	} else {
+		server_host = NULL;
+	}
+	return 0;
+}
+
+/******************************************************************************
+*                                                                             *
+*   Function: getserveraddr(void)                                             *
+*                                                                             *
+*******************************************************************************
+*                                                                             *
+*   This function returns a pointer to the IP address of the Checkpoint       *
+*   Server.  The pointer is a character pointer (char*) since the             *
+*   gethostbyname() function is used and returns a char** pointer (see        *
+*   gethostaddr() above).                                                     *
+*                                                                             *
+*******************************************************************************
+*                                                                             *
+*   Parameters:                                                               *
+*        <none>                                                               *
+*                                                                             *
+*******************************************************************************
+*                                                                             *
+*   Return Type:                                                              *
+*        char* - a pointer to a static area where the Checkpoint Server's IP  *
+*                address is held                                              *
+*                                                                             *
+******************************************************************************/
+
+static char* getserveraddr()
+{
+	struct hostent* h;
+
+	if (server_host) {
+		h = gethostbyname(server_host);
+	} else {
+		dprintf(D_FULLDEBUG,
+				"Can't get address for checkpoint server host: %s\n",
+				(server_host) ? server_host : "(NULL)");
+		return NULL;
+	}
+	if (h == NULL) {
+		fprintf(stderr, "\nERROR:\n");
+		fprintf(stderr, "ERROR:\n");
+		fprintf(stderr, "ERROR: cannot get host information (pid=%d)\n", 
+				(int) getpid());
+		fprintf(stderr, "ERROR:\n");
+		fprintf(stderr, "ERROR:\n\n");
+		return NULL;
+        }
+	return(h->h_addr);
+}
+
+static int ckpt_server_number;
 
 int
 set_ckpt_server_number(int new_server)
