@@ -2,7 +2,7 @@
 #include "condor_config.h"
 
 extern "C" {
-	int free_fs_blocks( char* );
+	int free_fs_blocks( const char* );
 	int	calc_phys_memory();
 }
 
