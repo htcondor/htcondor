@@ -11,13 +11,16 @@
 
 char *mySubSystem = "GRIDMANAGER";	// used by Daemon Core
 
+char *myUserName = NULL;
+
 // this appears at the bottom of this file
 extern "C" int display_dprintf_header(FILE *fp);
 
 void
 usage( char *name )
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] -x <x509_user_proxy>]\n",
+	dprintf( D_ALWAYS, 
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-x <x509_user_proxy>] [-C <job constraint>] [-S <scratch dir>]\n",
 		basename( name ) );
 	DC_Exit( 1 );
 }
@@ -113,11 +116,23 @@ main_init( int argc, char **argv )
 			usage( argv[0] );
 
 		switch( argv[i][1] ) {
+		case 'C':
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			ScheddJobConstraint = strdup( argv[i + 1] );
+			i++;
+			break;
 		case 's':
 			// don't check parent for schedd addr. use this one instead
 			if ( argc <= i + 1 )
 				usage( argv[0] );
 			ScheddAddr = strdup( argv[i + 1] );
+			i++;
+			break;
+		case 'S':
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			GridmanagerScratchDir = strdup( argv[i + 1] );
 			i++;
 			break;
 		case 'x':
@@ -126,6 +141,15 @@ main_init( int argc, char **argv )
 				usage( argv[0] );
 			X509Proxy = strdup( argv[i + 1] );
 			useDefaultProxy = false;
+			i++;
+			break;
+		case 'o':
+			// use a different owner name; this is useful if
+			// Condor-G is running as non-root, and yet
+			// different users are allowed to submit to the schedd.
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			myUserName = strdup( argv[i + 1] );
 			i++;
 			break;
 		default:
@@ -138,12 +162,6 @@ main_init( int argc, char **argv )
 
 	// Setup dprintf to display pid
 	DebugId = display_dprintf_header;
-
-	// Activate Globus libraries
-	if ( main_activate_globus() == false ) {
-		dprintf(D_ALWAYS,"Failed to activate Globus Libraries\n");
-		DC_Exit(1);
-	}
 
 	Init();
 	Register();
@@ -161,7 +179,6 @@ main_config( bool is_full )
 int
 main_shutdown_fast()
 {
-	main_deactivate_globus();
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
@@ -169,7 +186,6 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
-	main_deactivate_globus();
 	DC_Exit(0);
 	return TRUE;	// to satify c++
 }

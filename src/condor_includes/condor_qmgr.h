@@ -52,12 +52,15 @@ int InitializeReadOnlyConnection(const char * );
 */		 
 Qmgr_connection *ConnectQ(char *qmgr_location, int timeout=0, 
 				bool read_only=false );
-/** Commit all operations in the transaction and close the connection
-	to the schedd job queue.
+
+/** Close the connection to the schedd job queue, and optionally commit
+	the transaction.
 	@param qmgr pointer to Qmgr_connection object returned by ConnectQ
+	@param commit_transactions set to true to commit the transaction, 
+	and false to abort the transaction.
 	@return true if commit was successful; false if transaction was aborted
 */
-bool DisconnectQ(Qmgr_connection *qmgr);
+bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true);
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.

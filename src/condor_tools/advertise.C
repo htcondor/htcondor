@@ -79,7 +79,9 @@ int main( int argc, char *argv[] )
 			version();
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
-			set_debug_flags("D_FULLDEBUG");
+				// dprintf to console
+			Termlog = 1;
+			dprintf_config ("TOOL", 2 );
 		} else if(argv[i][0]!='-') {
 			if(command==-1) {
 				command = getCollectorCommandNum(argv[i]);
@@ -144,20 +146,21 @@ int main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	dprintf(D_FULLDEBUG,"collector is %s <%s:%d>\n",collector->hostname(),collector->addr(),collector->port());
+	dprintf(D_FULLDEBUG,"collector is %s located at %s\n",
+						collector->hostname(),collector->addr());
 	
 	if ( use_tcp ) {
-		sock = collector->reliSock();
+		sock = collector->startCommand(command,Stream::reli_sock,20);
 	} else {
-		sock = collector->safeSock();
+		sock = collector->startCommand(command,Stream::safe_sock,20);
 	}
 
 	int result = 0;
-	sock->encode();
-	result += sock->put( command );
-	result += ad->put( *sock );
-	result += sock->end_of_message();
-	if ( result != 3 ) {
+	if ( sock ) {
+		result += ad->put( *sock );
+		result += sock->end_of_message();
+	}
+	if ( result != 2 ) {
 		fprintf(stderr,"failed to send classad to %s\n",collector->addr());
 		exit(1);
 	}

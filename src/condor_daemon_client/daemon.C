@@ -45,7 +45,7 @@ void Daemon::common_init() {
 	_port = -1;
 	_is_local = false;
 	_tried_locate = false;
-
+	_is_configured = true;
 	_addr = NULL;
 	_name = NULL;
 	_pool = NULL;
@@ -672,6 +672,18 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 	struct				sockaddr_in sockaddr;
 	struct				hostent* hostp;
 
+		// If we were not passed a name or an addr, check the
+		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
+	if (!_name && !_addr ) {
+		sprintf(buf,"%s_HOST",subsys);
+		char *specified_host = param(buf);
+		if ( specified_host ) {
+				// Found an entry.  Use this name.
+			_name = strnewp( specified_host );
+			free(specified_host);
+		}
+	}
+
 		// Figure out if we want to find a local daemon or not, and
 		// fill in the various hostname fields.
 	if( _name ) {
@@ -943,6 +955,7 @@ Daemon::getCmInfo( const char* subsys, int port )
 		sprintf( buf, "%s address or hostname not specified in config file",
 				 subsys ); 
 		newError( buf );
+		_is_configured = false;
 		if( local_host ) free( local_host );
 		if( remote_host ) free( remote_host );
 		return false;

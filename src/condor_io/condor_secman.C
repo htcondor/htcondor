@@ -462,7 +462,6 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	sprintf(buf, "%s=\"%s\"", ATTR_SEC_SUBSYSTEM, mySubSystem);
 	ad->Insert(buf);
 
-
 	// key duration
 	// ZKM TODO HACK
 	// need to check kerb expiry.
@@ -1021,11 +1020,17 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 	}
 
 
+	// fill in return address, if we are a daemon
+	char* dcss = global_dc_sinful();
+	if (dcss) {
+		sprintf(buf, "%s=\"%s\"", ATTR_SEC_SERVER_COMMAND_SOCK, dcss);
+		auth_info.Insert(buf);
+	}
+
 	// fill in command
 	sprintf(buf, "%s=%i", ATTR_SEC_COMMAND, cmd);
 	auth_info.Insert(buf);
 	dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
-
 
 	if (cmd == DC_AUTHENTICATE) {
 		// fill in sub-command
@@ -1307,9 +1312,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 			char * auth_methods = NULL;
 			auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods );
 			if (auth_methods) {
-				dprintf (D_ALWAYS, "SECMAN: ZKM: %s\n", auth_methods);
+				dprintf (D_SECURITY, "SECMAN: ZKM: %s\n", auth_methods);
 			} else {
-				dprintf (D_ALWAYS, "SECMAN: ZKM: (null)\n", auth_methods);
+				dprintf (D_SECURITY, "SECMAN: ZKM: (null)\n", auth_methods);
 				auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
 			}
 
@@ -1872,4 +1877,25 @@ MyString SecMan::getDefaultCryptoMethods() {
 		;
 
 }
+
+void SecMan::send_invalidate_packet ( char* sinful, char* sessid ) {
+	if ( sinful ) {
+		SafeSock s;
+		if (s.connect(sinful)) {
+			s.encode();
+			s.put(DC_INVALIDATE_KEY);
+			s.code(sessid);
+			s.eom();
+			s.close();
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
+				sessid, sinful);
+		} else {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
+				sessid, sinful);
+		}
+	} else {
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
+	}
+}
+
 

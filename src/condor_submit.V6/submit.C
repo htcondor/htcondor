@@ -82,7 +82,7 @@ char	 buffer[_POSIX_ARG_MAX + 64];
 
 char	*OperatingSystem;
 char	*Architecture;
-char	*Spool;
+// char	*Spool;
 char	*Flavor;
 char	*ScheddName = NULL;
 char	*ScheddAddr = NULL;
@@ -189,6 +189,9 @@ char	*TransferInput = "transfer_input";
 char	*TransferOutput = "transfer_output";
 char	*TransferError = "transfer_error";
 
+char	*StreamOutput = "stream_output";
+char	*StreamError = "stream_error";
+
 char	*CopyToSpool = "copy_to_spool";
 char	*LeaveInQueue = "leave_in_queue";
 
@@ -199,6 +202,9 @@ char	*OnExitHoldCheck = "on_exit_hold";
 char	*OnExitRemoveCheck = "on_exit_remove";
 
 char	*GlobusResubmit = "globus_resubmit";
+char	*GlobusRematch = "globus_rematch";
+
+char	*LastMatchListLength = "match_list_length";
 
 char	*DAGNodeName = "dag_node_name";
 char	*DAGManJobId = "dagman_job_id";
@@ -271,6 +277,7 @@ void	SetPeriodicRemoveCheck(void);
 void	SetExitHoldCheck(void);
 void	SetExitRemoveCheck(void);
 void SetDAGNodeName();
+void SetMatchListLen();
 void SetDAGManJobId();
 void SetLogNotes();
 void SetUserNotes();
@@ -914,7 +921,7 @@ SetUniverse()
 
 
 	if( univ && stricmp(univ,"globus") == MATCH ) {
-		if ( have_condor_g() == 0 ) {
+		if ( (!Remote) && (have_condor_g() == 0) ) {
 			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
 			exit( 1 );
 		}
@@ -1604,7 +1611,9 @@ void
 SetStdFile( int which_file )
 {
 	bool	transfer_it = true;
+	bool	stream_it = true;
 	char	*macro_value = NULL;
+	char	*macro_value2 = NULL;
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
@@ -1612,15 +1621,17 @@ SetStdFile( int which_file )
 	{
 	case 0:
 		generic_name = Input;
-		macro_value = condor_param( TransferInput );
+		macro_value = condor_param( TransferInput, ATTR_TRANSFER_INPUT );
 		break;
 	case 1:
 		generic_name = Output;
-		macro_value = condor_param( TransferOutput );
+		macro_value = condor_param( TransferOutput, ATTR_TRANSFER_OUTPUT );
+		macro_value2 = condor_param( StreamOutput, ATTR_STREAM_OUTPUT );
 		break;
 	case 2:
 		generic_name = Error;
-		macro_value = condor_param( TransferError );
+		macro_value = condor_param( TransferError, ATTR_TRANSFER_ERROR );
+		macro_value2 = condor_param( StreamError, ATTR_STREAM_ERROR );
 		break;
 	default:
 		fprintf( stderr, "\nERROR: Unknown standard file descriptor (%d)\n",
@@ -1635,11 +1646,19 @@ SetStdFile( int which_file )
 		free( macro_value );
 	}
 
+	if ( macro_value2 ) {
+		if ( macro_value2[0] == 'F' || macro_value2[0] == 'f' ) {
+			stream_it = false;
+		}
+		free( macro_value2 );
+	}
+
 	macro_value = condor_param( generic_name, NULL );
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
 		transfer_it = false;
+		stream_it = false;
 		// always canonicalize to the UNIX null file (i.e. /dev/null)
 		macro_value = strdup(UNIX_NULL_FILE);
 	}
@@ -1671,6 +1690,10 @@ SetStdFile( int which_file )
 		InsertJobExpr (buffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+			if ( !stream_it ) {
+				sprintf( buffer, "%s = FALSE", ATTR_STREAM_OUTPUT );
+				InsertJobExpr( buffer );
+			}
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
 			InsertJobExpr( buffer );
@@ -1681,6 +1704,10 @@ SetStdFile( int which_file )
 		InsertJobExpr (buffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+			if ( !stream_it ) {
+				sprintf( buffer, "%s = FALSE", ATTR_STREAM_ERROR );
+				InsertJobExpr( buffer );
+			}
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
 			InsertJobExpr( buffer );
@@ -1964,6 +1991,19 @@ SetNotifyUser()
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
 		free(who);
+	}
+}
+
+void
+SetMatchListLen()
+{
+	int len = 0;
+	char* tmp = condor_param( LastMatchListLength, ATTR_LAST_MATCH_LIST_LENGTH );
+	if( tmp ) {
+		len = atoi(tmp);
+		(void) sprintf( buffer, "%s = %d", ATTR_LAST_MATCH_LIST_LENGTH, len );
+		InsertJobExpr( buffer );
+		free( tmp );
 	}
 }
 
@@ -2567,6 +2607,12 @@ SetGlobusParams()
 		InsertJobExpr (buff, false );
 	}
 
+	if( (tmp = condor_param(GlobusRematch,ATTR_REMATCH_CHECK)) ) {
+		sprintf( buff, "%s = %s", ATTR_REMATCH_CHECK, tmp );
+		free(tmp);
+		InsertJobExpr (buff, false );
+	} 
+
 	if( (tmp = condor_param(GlobusRSL)) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
@@ -2976,6 +3022,29 @@ queue(int num)
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 				exit( 1 );
 			}
+
+			/* Insert the proxy subject name into the ad */
+			char *proxy_subject = x509_proxy_subject_name(proxy_file);
+			if ( !proxy_subject ) {
+				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				exit( 1 );
+			}
+			/* Dreadful hack: replace all the spaces in the cert subject
+			 * with underscores.... why?  because we need to pass this
+			 * as a command line argument to the gridmanager, and until
+			 * daemoncore handles command-line args w/ an argv array, spaces
+			 * will cause trouble.  
+			 */
+			char *space_tmp;
+			do {
+				if ( (space_tmp = strchr(proxy_subject,' ')) ) {
+					*space_tmp = '_';
+				}
+			} while (space_tmp);
+			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+						   proxy_subject);
+			InsertJobExpr(buffer);	
+			free( proxy_subject );
 #endif
 			
 			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
@@ -3031,6 +3100,7 @@ queue(int num)
 			//SetArguments needs to be last for Globus universe args
 		SetArguments(); 
 		SetGlobusParams();
+		SetMatchListLen();
 		SetDAGNodeName();
 		SetDAGManJobId();
 		SetJarFiles();
@@ -3533,12 +3603,14 @@ init_params()
 		exit( 1 );
 	}
 
+#if 0
 	Spool = param( "SPOOL" );
 	if( Spool == NULL ) {
 		fprintf(stderr,"SPOOL not specified in config file\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
+#endif
 
 	Flavor = param( "FLAVOR" );
 	if( Flavor == NULL ) {

@@ -81,6 +81,22 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 
 
 ClassAd*
+DCSchedd::removeXJobs( const char* constraint, const char* reason,
+					   action_result_type_t result_type,
+					   bool notify_scheduler )
+{
+	if( ! constraint ) {
+		dprintf( D_ALWAYS, "DCSchedd::removeXJobs: "
+				 "constraint is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_REMOVE_X_JOBS, "removeX", constraint, NULL,
+					  reason, ATTR_REMOVE_REASON, result_type,
+					  notify_scheduler );
+}
+
+
+ClassAd*
 DCSchedd::releaseJobs( const char* constraint, const char* reason,
 					   action_result_type_t result_type,
 					   bool notify_scheduler )
@@ -129,6 +145,22 @@ DCSchedd::removeJobs( StringList* ids, const char* reason,
 
 
 ClassAd*
+DCSchedd::removeXJobs( StringList* ids, const char* reason,
+					   action_result_type_t result_type,
+					   bool notify_scheduler )
+{
+	if( ! ids ) {
+		dprintf( D_ALWAYS, "DCSchedd::removeXJobs: "
+				 "list of jobs is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_REMOVE_X_JOBS, "removeX", NULL, ids,
+					  reason, ATTR_REMOVE_REASON, result_type,
+					  notify_scheduler );
+}
+
+
+ClassAd*
 DCSchedd::releaseJobs( StringList* ids, const char* reason,
 					   action_result_type_t result_type,
 					   bool notify_scheduler )
@@ -143,6 +175,12 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 					  notify_scheduler );
 }
 
+
+bool
+DCSchedd::reschedule()
+{
+	return sendCommand(RESCHEDULE, Stream::safe_sock, 0);
+}
 
 bool 
 DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
@@ -463,6 +501,7 @@ JobActionResults::readResults( ClassAd* ad )
 		switch( tmp ) {
 		case JA_HOLD_JOBS:
 		case JA_REMOVE_JOBS:
+		case JA_REMOVE_X_JOBS:
 		case JA_RELEASE_JOBS:
 			action = (job_action_t)tmp;
 			break;
@@ -587,6 +626,7 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	case AR_SUCCESS:
 		sprintf( buf, "Job %d.%d %s", job_id.cluster, job_id.proc,
 				 (action==JA_REMOVE_JOBS)?"marked for removal":
+				 (action==JA_REMOVE_X_JOBS)?"removed locally (remote state unknown)":
 				 (action==JA_HOLD_JOBS)?"held":"released" );
 		rval = true;
 		break;
@@ -604,6 +644,7 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	case AR_PERMISSION_DENIED: 
 		sprintf( buf, "Permission denied to %s job %d.%d", 
 				 (action==JA_REMOVE_JOBS)?"remove":
+				 (action==JA_REMOVE_X_JOBS)?"force removal of":
 				 (action==JA_HOLD_JOBS)?"hold":"release", 
 				 job_id.cluster, job_id.proc );
 		break;
@@ -625,6 +666,12 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 					 job_id.cluster, job_id.proc );
 		} else if( action == JA_REMOVE_JOBS ) { 
 			sprintf( buf, "Job %d.%d already marked for removal",
+					 job_id.cluster, job_id.proc );
+		} else if( action == JA_REMOVE_X_JOBS ) { 
+				// pfc: due to the immediate nature of a forced
+				// remove, i'm not sure this should ever happen, but
+				// just in case...
+			sprintf( buf, "Job %d.%d already marked for forced removal",
 					 job_id.cluster, job_id.proc );
 		} else {
 				// we should have gotten AR_BAD_STATUS if we tried to

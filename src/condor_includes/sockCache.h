@@ -23,35 +23,47 @@
 #ifndef __SOCK_CACHE_H__
 #define __SOCK_CACHE_H__
 
-#include "condor_io.h"
+// due to various insanities with our header files (namely condor_io.h
+// and reli_sock.h including each other *sigh*), we can sometimes get
+// into trouble if we include one of those here to declare class
+// ReliSock.  so, just do the declaration ourselves...
+class ReliSock;
 
 class SocketCache
 {
-	public:
+public:
 		// ctor/dtor
-		SocketCache(int=16);
-		~SocketCache();
+	SocketCache( int size = 16 );
+	~SocketCache();
 
-		void clearCache(void);
-		void invalidateSock(char *);
-		bool getReliSock(Sock *&, char *, int cmd, int=30);
-		bool getSafeSock(Sock *&, char *, int cmd, int=30);		
+	void resize( int size );
 
-	private:
-		int 	 getCacheSlot();
+	void clearCache( void );
+	void invalidateSock( const char* );
 
-		struct sockEntry
-		{
-			bool		valid;
-			char 		addr[32];
-			Sock		*sock;
-			int			timeStamp;
+	ReliSock*	findReliSock( const char* addr );
+	void		addReliSock( const char* addr, ReliSock* rsock );
 
-			Stream::stream_type sockType;
-		};
+	bool	isFull( void );
+	int		size( void );
+
+private:
+
+	struct sockEntry
+	{
+		bool		valid;
+		char 		addr[32];
+		ReliSock	*sock;
 		int			timeStamp;
-		sockEntry 	*sockCache;
-		int			cacheSize;
+	};
+
+	int getCacheSlot( void );
+	void invalidateEntry( int i );
+	void initEntry( sockEntry* entry );
+
+	int			timeStamp;
+	sockEntry 	*sockCache;
+	int			cacheSize;
 };
 			
 		

@@ -179,12 +179,14 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 
 // we can ignore the parameter because there is only one connection
 bool
-DisconnectQ(Qmgr_connection *)
+DisconnectQ(Qmgr_connection *,bool commit_transactions)
 {
-	int rval;
+	int rval = -1;
 
 	if( !qmgmt_sock ) return( false );
-	rval = CloseConnection();
+	if ( commit_transactions ) {
+		rval = CloseConnection();
+	}
 	delete qmgmt_sock;
 	qmgmt_sock = NULL;
 	return( rval >= 0 );

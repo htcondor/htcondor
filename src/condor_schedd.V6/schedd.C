@@ -263,8 +263,8 @@ Scheduler::Scheduler()
 	N_RejectedClusters = 0;
 	N_Owners = 0;
 	LastTimeout = time(NULL);
-	CondorViewHost = NULL;
 	Collector = NULL;
+	ViewCollector = NULL;
 	Negotiator = NULL;
 	CondorAdministrator = NULL;
 	Mail = NULL;
@@ -280,7 +280,9 @@ Scheduler::Scheduler()
 	numMatches = 0;
 	numShadows = 0;
 	IdleSchedUniverseJobIDs = NULL;
-	FlockCollectors = FlockNegotiators = FlockViewServers = NULL;
+	FlockCollectors = NULL;
+	FlockNegotiators = NULL;
+	FlockViewServers = NULL;
 	MaxFlockLevel = 0;
 	FlockLevel = 0;
 	StartJobTimer=-1;
@@ -323,12 +325,15 @@ Scheduler::~Scheduler()
 		// they're already getting cleaned up, so if we do it again,
 		// we'll seg fault.
 
-	if (Collector)
-		delete(Collector);
-	if (Negotiator)
-		delete(Negotiator);
-	if (CondorViewHost)
-		free(CondorViewHost);
+	if( Collector ) {
+		delete( Collector );
+	}
+	if( ViewCollector ) {
+		delete( ViewCollector );
+	}
+	if( Negotiator ) {
+		delete( Negotiator );
+	}
 	if (CondorAdministrator)
 		free(CondorAdministrator);
 	if (Mail)
@@ -375,6 +380,9 @@ Scheduler::~Scheduler()
 	if (FlockCollectors) delete FlockCollectors;
 	if (FlockNegotiators) delete FlockNegotiators;
 	if (FlockViewServers) delete FlockViewServers;
+	FlockCollectors = NULL;
+	FlockNegotiators = NULL;
+	FlockViewServers = NULL;
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
@@ -443,8 +451,7 @@ Scheduler::count_jobs()
 	int		prio_compar();
 	char	tmp[512];
 
-	int collector_port = param_get_collector_port();
-	int view_port      = param_get_condor_view_port();
+	ExtArray<OwnerData> SubmittingOwners;
 
 	 // copy owner data to old-owners table
 	ExtArray<OwnerData> OldOwners(Owners);
@@ -597,8 +604,7 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	ad->InsertOrUpdate(tmp);
 
-		// Port doesn't matter, since we've got the sinful string. 
-	updateCentralMgr( UPDATE_SCHEDD_AD, ad, Collector->addr(), 0 ); 
+	Collector->sendUpdate( UPDATE_SCHEDD_AD, ad );
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
 			 N_Owners );
@@ -628,44 +634,68 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	ad->InsertOrUpdate(tmp);
 
-	for ( i=0; i<N_Owners; i++) {
-	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+
+		// Make another owners array that is independent of X509 proxy crap.
+	int numSubmittingOwners = 0;
+	for (i=0;i<N_Owners;i++) {
+		bool already_done = false;
+		int j;
+		for (j=0;j<numSubmittingOwners;j++) {
+			if (strcmp(SubmittingOwners[j].Name,Owners[i].Name)==0) {
+				already_done = true;
+				SubmittingOwners[j].JobsRunning += Owners[i].JobsRunning;
+				SubmittingOwners[j].JobsIdle += Owners[i].JobsIdle;
+				SubmittingOwners[j].JobsHeld += Owners[i].JobsHeld;
+				SubmittingOwners[j].JobsFlocked += Owners[i].JobsFlocked;
+				break;
+			}
+		}
+		if ( already_done ) continue;
+		j = numSubmittingOwners;
+		SubmittingOwners[j].JobsRunning = Owners[i].JobsRunning;
+		SubmittingOwners[j].JobsIdle = Owners[i].JobsIdle;
+		SubmittingOwners[j].JobsHeld = Owners[i].JobsHeld;
+		SubmittingOwners[j].JobsFlocked = Owners[i].JobsFlocked;
+		SubmittingOwners[j].Name = Owners[i].Name;
+		numSubmittingOwners++;
+	}
+
+	for ( i=0; i<numSubmittingOwners; i++) {
+	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, SubmittingOwners[i].JobsRunning);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, SubmittingOwners[i].JobsIdle);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, Owners[i].JobsHeld);
+	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, SubmittingOwners[i].JobsHeld);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+	  sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS, SubmittingOwners[i].JobsFlocked);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
+	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, SubmittingOwners[i].Name, UidDomain);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-		  // Port doesn't matter, since we've got the sinful string. 
-	  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, Collector->addr(), 0 ); 
+	  Collector->sendUpdate( UPDATE_SUBMITTOR_AD, ad ); 
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
-				Owners[i].Name, UidDomain );
+				SubmittingOwners[i].Name, UidDomain );
 
 	  // condor view uses the acct port - because the accountant today is not
 	  // an independant daemon. In the future condor view will be the
 	  // accountant
 
-		  // The CondorViewHost MAY BE NULL!!!!!  It's optional
+		  // The ViewCollector MAY BE NULL!!!!!  It's optional
 		  // whether you define it or not.  This will cause a seg
 		  // fault if we assume it's defined and use it.  
 		  // -Derek Wright 11/4/98 
-	  if( CondorViewHost && CondorViewHost[0] != '\0' ) {
-		  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, CondorViewHost, 
-							view_port );
+	  if( ViewCollector ) {
+		  ViewCollector->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
 	  }
 	}
 
@@ -752,7 +782,7 @@ Scheduler::count_jobs()
 		for (i=0; i < N_Owners; i++) {
 			if ( Owners[i].GlobusJobs > 0 ) {
 				GridUniverseLogic::JobCountUpdate(Owners[i].Name, 
-						Owners[i].Domain,Owners[i].X509, 0, 0, 
+						Owners[i].Domain,Owners[i].X509, NULL, 0, 0, 
 						Owners[i].GlobusJobs,Owners[i].GlobusUnmanagedJobs);
 			}
 		}
@@ -792,8 +822,7 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
-		  // Port doesn't matter, since we've got the sinful string. 
-	  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, Collector->addr(), 0 ); 
+	  Collector->sendUpdate( UPDATE_SUBMITTOR_AD, ad ); 
 
 	  // also update all of the flock hosts
 	  char *host;
@@ -891,12 +920,22 @@ count( ClassAd *job )
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
 
-	if(job->LookupString(ATTR_X509_USER_PROXY, buf, _POSIX_PATH_MAX ) == 0) {
-		x509userproxy = NULL;
+	x509userproxy = NULL;
+	if ( GridUniverseLogic::group_per_subject() ) {
+		job->LookupString(ATTR_X509_USER_PROXY_SUBJECT, &x509userproxy);
+		if ( (!x509userproxy) && (universe==CONDOR_UNIVERSE_GLOBUS) ) {
+			int cluster = 0;
+			int proc = 0;
+			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
+			job->LookupInteger(ATTR_PROC_ID, proc);
+			dprintf(D_ALWAYS, 
+				"ERROR %d.%d has no %s attribute.  Ignoring. "
+				"Update your condor_submit!\n",
+				cluster, proc, ATTR_X509_USER_PROXY_SUBJECT);
+			return 0;
+		}
 	} else {
-		x509userproxy = strdup(buf);
-		dprintf(D_FULLDEBUG, "Job has a X509_proxy and it's %s\n",
-				 x509userproxy);	
+		job->LookupString(ATTR_X509_USER_PROXY, &x509userproxy);
 	}
 
 	// calculate owner for per submittor information.
@@ -971,11 +1010,15 @@ count( ClassAd *job )
 			status = HELD;
 		}
 		// Don't count HELD jobs that have ATTR_JOB_MANAGED set to false.
-		if ( status != HELD || job_managed != 0 ) {
+		if ( (status != HELD && status != COMPLETED && status != REMOVED) 
+					|| job_managed != 0 ) 
+		{
 			needs_management = 1;
 			scheduler.Owners[OwnerNum].GlobusJobs++;
 		}
-		if ( status != HELD && job_managed == 0 ) {
+		if ( status != HELD && status != COMPLETED && status != REMOVED
+					&& job_managed == 0 ) 
+		{
 			scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
 		}
 		if ( gridman_per_job ) {
@@ -983,7 +1026,7 @@ count( ClassAd *job )
 			int proc = 0;
 			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			job->LookupInteger(ATTR_PROC_ID, proc);
-			GridUniverseLogic::JobCountUpdate(owner,domain,x509userproxy,
+			GridUniverseLogic::JobCountUpdate(owner,domain,x509userproxy,NULL,
 				cluster, proc, needs_management, job_managed ? 0 : 1);
 		}
 			// If we do not need to do matchmaking on this job (i.e.
@@ -1172,11 +1215,15 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			proxy[0] = '\0';
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			job_ad->LookupString(ATTR_X509_USER_PROXY,proxy);
-			if ( gridman_per_job ) {
-				GridUniverseLogic::JobRemoved(owner, domain ,proxy,job_id.cluster,job_id.proc);
+			if ( GridUniverseLogic::group_per_subject() ) {
+				job_ad->LookupString(ATTR_X509_USER_PROXY_SUBJECT,proxy);
 			} else {
-				GridUniverseLogic::JobRemoved(owner, domain, proxy,0,0);
+				job_ad->LookupString(ATTR_X509_USER_PROXY,proxy);
+			}
+			if ( gridman_per_job ) {
+				GridUniverseLogic::JobRemoved(owner,domain,proxy,NULL,job_id.cluster,job_id.proc);
+			} else {
+				GridUniverseLogic::JobRemoved(owner,domain,proxy,NULL,0,0);
 			}
 			return;
 		}
@@ -1638,18 +1685,17 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
 	const char *AttrsToModify[] = { 
-		// ATTR_JOB_CMD,  // someday...
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
 		ATTR_JOB_ERROR,
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_ULOG_FILE,
+		ATTR_X509_USER_PROXY,
 		NULL };		// list must end with a NULL
 
 
 	dprintf(D_FULLDEBUG,"JobFilesReaper tid=%d status=%d\n",tid,exit_status);
-
 
 		// find the list of jobs which we just finished receiving the files
 	spoolJobFileWorkers->lookup(tid,jobs);
@@ -1733,9 +1779,13 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			char *old_path_buf;
 			bool changed = false;
 			char *base = NULL;
-			while ( old_path_buf=old_paths.next() ) {
+			char new_path_buf[_POSIX_PATH_MAX];
+			while ( (old_path_buf=old_paths.next()) ) {
 				base = basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
+					snprintf(new_path_buf,_POSIX_PATH_MAX,
+						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
+					base = new_path_buf;
 					changed = true;
 				}
 				new_paths.append(base);
@@ -1744,12 +1794,10 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 					// Backup original value
 				sprintf(new_attr_value,"SUBMIT_%s",AttrsToModify[index]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
-//				dprintf(D_FULLDEBUG,"TODD set %d.%d %s=%s\n",cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();
 				ASSERT(new_value);
 				SetAttributeString(cluster,proc,AttrsToModify[index],new_value);
-//				dprintf(D_FULLDEBUG,"TODD set %d.%d %s=%s\n",cluster,proc,AttrsToModify[index],new_value);
 				free(new_value);
 			}
 		}
@@ -1986,8 +2034,8 @@ Scheduler::actOnJobs(int, Stream* s)
 		/* 
 		   Find out what they want us to do.  This classad should
 		   contain:
-		   ATTR_JOB_ACTION - either JA_HOLD_JOBS, JA_RELEASE_JOBS, or
-		                     JA_REMOVE_JOBS 
+		   ATTR_JOB_ACTION - either JA_HOLD_JOBS, JA_RELEASE_JOBS,
+		                     JA_REMOVE_JOBS, or JA_REMOVE_X_JOBS
 		   ATTR_ACTION_RESULT_TYPE - either AR_TOTALS or AR_LONG
 		   and one of:
 		   ATTR_ACTION_CONSTRAINT - a string with a ClassAd constraint 
@@ -2018,6 +2066,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		reason_attr_name = ATTR_RELEASE_REASON;
 		break;
 	case JA_REMOVE_JOBS:
+		sprintf( status_str, "%d", REMOVED );
+		reason_attr_name = ATTR_REMOVE_REASON;
+		break;
+	case JA_REMOVE_X_JOBS:
 		sprintf( status_str, "%d", REMOVED );
 		reason_attr_name = ATTR_REMOVE_REASON;
 		break;
@@ -2085,6 +2137,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_JOBS:
 				// Don't remove removed jobs
 			sprintf( buf, "(%s!=%d) && (", ATTR_JOB_STATUS, REMOVED );
+			break;
+		case JA_REMOVE_X_JOBS:
+				// only allow forced removal of previously "removed" jobs
+			sprintf( buf, "(%s==%d) && (", ATTR_JOB_STATUS, REMOVED );
 			break;
 		case JA_HOLD_JOBS:
 				// Don't hold held jobs
@@ -2210,6 +2266,18 @@ Scheduler::actOnJobs(int, Stream* s)
 					continue;
 				}
 				break;
+			case JA_REMOVE_X_JOBS:
+				if( status != REMOVED ) {
+					results.record( tmp_id, AR_BAD_STATUS );
+					continue;
+				}
+					// set LeaveJobInQueue to false...
+				if( SetAttribute( tmp_id.cluster, tmp_id.proc,
+								  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+					continue;
+				}
+				break;
 			case JA_HOLD_JOBS:
 				if( status == HELD ) {
 					results.record( tmp_id, AR_ALREADY_DONE );
@@ -2314,6 +2382,14 @@ Scheduler::actOnJobs(int, Stream* s)
 	} else if( action == JA_RELEASE_JOBS ) {
 		for( i=0; i<num_matches; i++ ) {
 			WriteReleaseToUserLog( jobs[i] );		
+		}
+	} else if( action == JA_REMOVE_X_JOBS ) {
+		for( i=0; i<num_matches; i++ ) {		
+			if( !scheduler.WriteAbortToUserLog( jobs[i] ) ) {
+				dprintf( D_ALWAYS, 
+						 "Failed to write abort event to the user log\n" ); 
+			}
+			DestroyProc( jobs[i].cluster, jobs[i].proc );
 		}
 	}
 	return TRUE;
@@ -2900,6 +2976,63 @@ Scheduler::negotiate(int, Stream* s)
 
 					if ( my_match_ad ) {
 						dprintf(D_PROTOCOL,"Received match ad\n");
+
+							// Look to see if the job wants info about 
+							// old matches.  If so, store info about old
+							// matches in the job ad as:
+							//   LastMatchName0 = "some-startd-ad-name"
+							//   LastMatchName1 = "some-other-startd-ad-name"
+							//   ....
+							// LastMatchName0 will hold the most recent.  The
+							// list will be rotated with a max length defined
+							// by attribute ATTR_JOB_LAST_MATCH_LIST_LENGTH, which
+							// has a default of 0 (i.e. don't keep this info).
+						int c = -1;
+						int p = -1;
+						int list_len = 0;
+						ad->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
+						if ( list_len > 0 ) {								
+							int list_index;
+							char attr_buf[100];
+							char *last_match = NULL;
+							my_match_ad->LookupString(ATTR_NAME,&last_match);
+							for (list_index=0; 
+								 last_match && (list_index < list_len); 
+								 list_index++) 
+							{
+								char *curr_match = last_match;
+								last_match = NULL;
+								sprintf(attr_buf,"%s%d",
+									ATTR_LAST_MATCH_LIST_PREFIX,list_index);
+								ad->LookupString(attr_buf,&last_match);
+								if ( c == -1 ) {
+									ad->LookupInteger(ATTR_CLUSTER_ID, c);
+									ad->LookupInteger(ATTR_PROC_ID, p);
+									ASSERT( c != -1 );
+									ASSERT( p != -1 );
+									BeginTransaction();
+								}
+								SetAttributeString(c,p,attr_buf,curr_match);
+								free(curr_match);
+							}
+							if (last_match) free(last_match);
+						}
+							// Increment ATTR_NUM_MATCHES
+						int num_matches = 0;
+						ad->LookupInteger(ATTR_NUM_MATCHES,num_matches);
+						num_matches++;
+							// If a transaction is already open, may as well
+							// use it to store ATTR_NUM_MATCHES.  If not,
+							// don't bother --- just update in RAM.
+						if ( c != -1 && p != -1 ) {
+							SetAttributeInt(c,p,ATTR_NUM_MATCHES,num_matches);
+							CommitTransaction();
+						} else {
+							char tbuf[200];
+							sprintf(tbuf,"%s=%d",
+										ATTR_NUM_MATCHES,num_matches);
+							ad->Insert(tbuf);
+						}
 					}
 
 					if ( stricmp(capability,"null") == 0 ) {
@@ -5635,15 +5768,33 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 	strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
 	if ( owner ) {
 		if ( IsDirectory(ckpt_name) ) {
-			{
-				// Must put this in braces so the Directory object
-				// destructor is called, which will free the iterator
-				// handle.  If we didn't do this, the below rmdir 
-				// would fail.
-				Directory ckpt_dir(ckpt_name);
-				ckpt_dir.Remove_Entire_Directory();
+			if ( param_boolean("KEEP_OUTPUT_SANDBOX",false) ) {
+				// Blow away only the input files from the job's spool.
+				// The user is responsible for garbage collection of the
+				// rest of the sandbox.  Good luck.  
+				FileTransfer sandbox;
+				ClassAd *ad = GetJobAd(cluster,proc);
+				if ( ad ) {
+					sandbox.SimpleInit(ad,
+								false,  // want_check_perms
+								true,	// is_server
+								NULL,	// sock_to_use
+								PRIV_CONDOR		// priv_state to use
+								);
+					sandbox.RemoveInputFiles(ckpt_name);
+				}
+			} else {
+				// Blow away entire sandbox.  This is the default.
+				{
+					// Must put this in braces so the Directory object
+					// destructor is called, which will free the iterator
+					// handle.  If we didn't do this, the below rmdir 
+					// would fail.
+					Directory ckpt_dir(ckpt_name);
+					ckpt_dir.Remove_Entire_Directory();
+				}
+				rmdir(ckpt_name);
 			}
-			rmdir(ckpt_name);
 		} else {
 			if (universe == CONDOR_UNIVERSE_STANDARD) {
 				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
@@ -5716,11 +5867,17 @@ Scheduler::Init()
 		EXCEPT( "No spool directory specified in config file" );
 	}
 
-	if( CondorViewHost ) free( CondorViewHost );
-	CondorViewHost = param("CONDOR_VIEW_HOST");
-
-	if( Collector ) delete( Collector );
-	Collector = new Daemon( DT_COLLECTOR );
+	if( ViewCollector ) {
+		delete ViewCollector;
+	}; 
+	tmp = param("CONDOR_VIEW_HOST");
+	if( tmp ) {
+		ViewCollector = new DCCollector( tmp, CONDOR_VIEW_PORT );
+	}
+	if( Collector ) {
+		delete( Collector );
+	}
+	Collector = new DCCollector;
 
 	if( Negotiator ) delete( Negotiator );
 	Negotiator = new Daemon( DT_NEGOTIATOR );
@@ -6309,7 +6466,7 @@ Scheduler::invalidate_ads()
     sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
              Name );
     ad->Insert( line );
-	updateCentralMgr( INVALIDATE_SCHEDD_ADS, ad, Collector->addr(), 0 );
+	Collector->sendUpdate( INVALIDATE_SCHEDD_ADS, ad );
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
@@ -6317,8 +6474,7 @@ Scheduler::invalidate_ads()
 	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
 			 Name );
     ad->InsertOrUpdate( line );
-	updateCentralMgr( INVALIDATE_SUBMITTOR_ADS, ad, Collector->addr(), 0 );
-	int collector_port = param_get_collector_port();
+	Collector->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
 			 i <= FlockLevel && (host = FlockCollectors->next()); i++ ) {
@@ -6766,7 +6922,9 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "startJobsDelayBit", startJobsDelayBit );
 	intoAd ( ad, "num_reg_contacts", num_reg_contacts );
 	intoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
-	intoAd ( ad, "CondorViewHost", CondorViewHost );
+	if( ViewCollector ) {
+		intoAd ( ad, "CondorViewHost", ViewCollector->fullHostname() );
+	}
 	intoAd ( ad, "CondorAdministrator", CondorAdministrator );
 	intoAd ( ad, "Mail", Mail );
 	intoAd ( ad, "filename", filename );

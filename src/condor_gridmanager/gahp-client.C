@@ -51,6 +51,7 @@ bool GahpClient::use_prefix = false;
 bool Gahp_Args::skip_next_r = false;
 HashTable<int,GahpClient*> * GahpClient::requestTable = NULL;
 Queue<int> GahpClient::waitingToSubmit;
+int GahpClient::current_cache_id = GAHPCLIENT_CACHE_DEFAULT_PROXY;
 
 
 #ifndef WIN32
@@ -76,7 +77,10 @@ GahpClient::GahpClient()
 	pending_timeout = 0;
 	pending_timeout_tid = -1;
 	pending_submitted_to_gahp = false;
+	pending_cache_id = GAHPCLIENT_CACHE_DEFAULT_PROXY;
 	user_timerid = -1;
+	normal_proxy_cache_id = GAHPCLIENT_CACHE_LAST_PROXY;
+	deleg_proxy_cache_id = GAHPCLIENT_CACHE_DEFAULT_PROXY;
 	if ( requestTable == NULL ) {
 		requestTable = new HashTable<int,GahpClient*>( 300, &hashFuncInt );
 		ASSERT(requestTable);
@@ -367,7 +371,7 @@ GahpClient::Reaper(Service*,int pid,int status)
 }
 
 bool
-GahpClient::Initialize(const char *proxy_path, const char *input_path)
+GahpClient::Startup(const char *input_path)
 {
 	char *gahp_path = NULL;
 	char *gahp_args = NULL;
@@ -503,11 +507,6 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		// linked with the GAHP server spit out crap to stdout.
 	use_prefix = command_response_prefix( GAHP_PREFIX );
 	
-		// Give the server our x509 proxy.
-	if ( command_initialize_from_file(proxy_path) == false ) {
-		return false;
-	}
-
 		// try to turn on gahp async notification mode
 	if  ( !command_async_mode_on() ) {
 		// not supported, set a poll interval
@@ -529,6 +528,145 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		}
 	}
 		
+	return true;
+}
+
+bool
+GahpClient::Initialize(const char *proxy_path, const char *input_path)
+{
+		// Check if we already have spawned a GAHP server.  
+	if ( m_gahp_pid == -1 ) {
+			// GAHP not running, start it up
+		if ( Startup( input_path ) == false ) {
+			return false;
+		}
+	}
+
+		// Give the server our x509 proxy.
+	if ( command_initialize_from_file(proxy_path) == false ) {
+		return false;
+	}
+		
+	return true;
+}
+
+bool
+GahpClient::cacheProxyFromFile( int id, const char *proxy_path )
+{
+	static const char *command = "CACHE_PROXY_FROM_FILE";
+
+	ASSERT(proxy_path);		// Gotta have it...
+
+		// Check if this command is supported
+	if  (m_commands_supported->contains_anycase(command)==FALSE) {
+		return false;
+	}
+
+	char buf[_POSIX_PATH_MAX];
+	int x = snprintf(buf,sizeof(buf),"%s %d %s",command,id,
+					 escape(proxy_path));
+	ASSERT( x > 0 && x < (int)sizeof(buf) );
+	write_line(buf);
+	Gahp_Args result;
+	char **argv = result.read_argv(m_gahp_readfd);
+	if ( argv[0] == NULL || argv[0][0] != 'S' ) {
+		char *reason;
+		if ( argv[1] ) {
+			reason = argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",command,reason);
+		return false;
+	}
+
+	if ( id == current_cache_id ) {
+		useCachedProxy( id, true );
+	}
+
+	return true;
+}
+
+bool
+GahpClient::uncacheProxy( int id )
+{
+	static const char *command = "UNCACHE_PROXY";
+
+		// Check if this command is supported
+	if  (m_commands_supported->contains_anycase(command)==FALSE) {
+		return false;
+	}
+
+	char buf[_POSIX_PATH_MAX];
+	int x = snprintf(buf,sizeof(buf),"%s %d",command,id);
+	ASSERT( x > 0 && x < (int)sizeof(buf) );
+	write_line(buf);
+	Gahp_Args result;
+	char **argv = result.read_argv(m_gahp_readfd);
+	if ( argv[0] == NULL || argv[0][0] != 'S' ) {
+		char *reason;
+		if ( argv[1] ) {
+			reason = argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",command,reason);
+		return false;
+	}
+
+	if ( current_cache_id == id ) {
+		if ( useCachedProxy( GAHPCLIENT_CACHE_DEFAULT_PROXY ) == false ) {
+			EXCEPT( "useCachedProxy failed in uncacheProxy" );
+		}
+	}
+
+	return true;
+}
+
+bool
+GahpClient::useCachedProxy( int id, bool force )
+{
+	static const char *command = "USE_CACHED_PROXY";
+
+		// Check if this command is supported
+	if  (m_commands_supported->contains_anycase(command)==FALSE) {
+		return false;
+	}
+
+	if ( force == false && id == current_cache_id ) {
+		return true;
+	}
+
+	char buf[_POSIX_PATH_MAX];
+	if ( id == GAHPCLIENT_CACHE_LAST_PROXY ) {
+		return true;
+	} else if ( id == GAHPCLIENT_CACHE_DEFAULT_PROXY ) {
+		int x = snprintf(buf,sizeof(buf),"%s DEFAULT",command);
+		ASSERT( x > 0 && x < (int)sizeof(buf) );
+	} else if ( id >= 0 ) {
+		int x = snprintf(buf,sizeof(buf),"%s %d",command,id);
+		ASSERT( x > 0 && x < (int)sizeof(buf) );
+	} else {
+		dprintf(D_ALWAYS,
+				"GahpClient::useCachedProxy called with invalid id=%d\n",id);
+		return false;
+	}
+	write_line(buf);
+	Gahp_Args result;
+	char **argv = result.read_argv(m_gahp_readfd);
+	if ( argv[0] == NULL || argv[0][0] != 'S' ) {
+		char *reason;
+		if ( argv[1] ) {
+			reason = argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",command,reason);
+		return false;
+	}
+
+	current_cache_id = id;
+
 	return true;
 }
 
@@ -838,7 +976,7 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 
 int 
 GahpClient::globus_gram_client_job_request(
-	char * resource_manager_contact,
+	const char * resource_manager_contact,
 	const char * description,
 	const int job_state_mask,
 	const char * callback_contact,
@@ -877,7 +1015,7 @@ GahpClient::globus_gram_client_job_request(
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf);
+		now_pending(command,buf,deleg_proxy_cache_id);
 	}
 
 		// If we made it here, command is pending.
@@ -934,7 +1072,7 @@ GahpClient::globus_gram_client_job_cancel(const char * job_contact)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf);
+		now_pending(command,buf,normal_proxy_cache_id);
 	}
 
 		// If we made it here, command is pending.
@@ -989,7 +1127,7 @@ GahpClient::globus_gram_client_job_status(const char * job_contact,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf);
+		now_pending(command,buf,normal_proxy_cache_id);
 	}
 
 		// If we made it here, command is pending.
@@ -1056,7 +1194,7 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf);
+		now_pending(command,buf,normal_proxy_cache_id);
 	}
 
 		// If we made it here, command is pending.
@@ -1089,7 +1227,7 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 
 
 int
-GahpClient::globus_gram_client_job_callback_register(char * job_contact,
+GahpClient::globus_gram_client_job_callback_register(const char * job_contact,
 	const int job_state_mask,
 	const char * callback_contact,
 	int * job_status,
@@ -1123,7 +1261,7 @@ GahpClient::globus_gram_client_job_callback_register(char * job_contact,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf);
+		now_pending(command,buf,normal_proxy_cache_id);
 	}
 
 		// If we made it here, command is pending.
@@ -1181,7 +1319,7 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf);
+		now_pending(command,buf,normal_proxy_cache_id);
 	}
 
 		// If we made it here, command is pending.
@@ -1209,7 +1347,7 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 }
 
 int
-GahpClient::globus_gram_client_job_refresh_credentials(char *job_contact)
+GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact)
 {
 	static const char* command = "GRAM_JOB_REFRESH_PROXY";
 
@@ -1234,7 +1372,7 @@ GahpClient::globus_gram_client_job_refresh_credentials(char *job_contact)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf);
+		now_pending(command,buf,deleg_proxy_cache_id);
 	}
 
 		// If we made it here, command is pending.
@@ -1337,7 +1475,7 @@ GahpClient::reset_user_timer(int tid)
 }
 
 void
-GahpClient::now_pending(const char *command,const char *buf)
+GahpClient::now_pending(const char *command,const char *buf,int cache_id)
 {
 
 		// First, if command is not NULL we have a new pending request.
@@ -1355,6 +1493,7 @@ GahpClient::now_pending(const char *command,const char *buf)
 		if (m_timeout) {
 			pending_timeout = m_timeout;
 		}
+		pending_cache_id = cache_id;
 			// add new reqid to hashtable
 		requestTable->insert(pending_reqid,this);
 	}
@@ -1364,6 +1503,11 @@ GahpClient::now_pending(const char *command,const char *buf)
 			// this request for later.
 		waitingToSubmit.enqueue(pending_reqid);
 		return;
+	}
+
+		// Make sure the command is using the proxy it wants.
+	if ( useCachedProxy( pending_cache_id ) != true ) {
+		EXCEPT( "useCachedProxy() failed!" );
 	}
 
 		// Write the command out to the gahp server.

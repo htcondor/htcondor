@@ -103,13 +103,11 @@ sysapi_reconfig(void)
 		const int striplen = strlen( striptxt );
 		_sysapi_console_devices->rewind();
 		while( (devname = _sysapi_console_devices->next()) ) {
-		  dprintf(D_ALWAYS, "before: %s\n", devname);
 		  if( strncmp( devname, striptxt, striplen ) == 0 &&
 		      strlen( devname ) > striplen ) {
 		    char *tmpname = strnewp( devname );
 		    _sysapi_console_devices->deleteCurrent();
 		    _sysapi_console_devices->insert( tmpname + striplen );
-		    dprintf(D_ALWAYS, "after: %s\n", tmpname + striplen);
 		    delete[] tmpname;
 		  }
 		}

@@ -49,9 +49,10 @@ class SimpleList
     inline ~SimpleList () { delete [] items; }
 
     // General
-    bool Append (ObjType);
+    bool Append (const ObjType &);
     inline bool IsEmpty() const { return (size == 0); }
 	inline int Number(void) { return size; }
+	inline int Length(void) { return Number(); }
 
     // Scans
     inline void    Rewind() { current = -1; }
@@ -59,7 +60,8 @@ class SimpleList
     bool    Next(ObjType &);
     inline bool    AtEnd() const { return (current >= size-1); }
     void    DeleteCurrent();
-	bool	ReplaceCurrent(ObjType &);
+	bool Delete(const ObjType &, bool delete_all = false);
+	bool	ReplaceCurrent(const ObjType &);
 	bool IsMember( const ObjType & ) const;
 
     // Debugging
@@ -92,7 +94,7 @@ SimpleList (const SimpleList<ObjType> & list):
 
 template <class ObjType>
 bool SimpleList<ObjType>::
-Append (ObjType item)
+Append (const ObjType &item)
 {
     if (size >= maximum_size)
 	{
@@ -141,7 +143,33 @@ DeleteCurrent ()
 
 template <class ObjType>
 bool SimpleList<ObjType>::
-ReplaceCurrent (ObjType &item)
+Delete (const ObjType &item, bool delete_all)
+{
+	bool found_it = false;
+
+	for ( int i = 0; i < size; i++ ) {
+		if ( items[i] == item ) {
+			found_it = true;
+			for ( int j = i; j < size - 1; j++ ) {
+				items[j] = items[j+1];
+			}
+			size--;
+			if ( current >= i ) {
+				current--;
+			}
+			if ( delete_all == false ) {
+				return true;
+			}
+			i--;
+		}
+	}
+
+	return found_it;
+}
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+ReplaceCurrent (const ObjType &item)
 {
     if (items && current < size && current >= 0) {
 		items [current] = item;

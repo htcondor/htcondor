@@ -353,14 +353,15 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 					  break;
 				  }
 
+                  _numJobsSubmitted--;
+                  ASSERT( _numJobsSubmitted >= 0 );
+
 				  if( job->retries++ < job->GetRetryMax() ) {
 					  RestartNode( job, recovery );
 					  break;
 				  }
 
 				  job->_Status = Job::STATUS_ERROR;
-                  _numJobsSubmitted--;
-                  ASSERT( _numJobsSubmitted >= 0 );
 
 				  sprintf( job->error_text, "Condor reported %s event",
 						   ULogEventNumberNames[e->eventNumber] );

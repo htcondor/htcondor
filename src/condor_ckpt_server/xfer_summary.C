@@ -31,8 +31,10 @@
 #include "condor_network.h"
 #include "condor_collector.h"
 #include "condor_attributes.h"
+#include "condor_version.h"
 #include "condor_parameters.h"
 #include "my_hostname.h"
+
 
 extern "C" {
 	char* calc_subnet_name(char*);
@@ -45,7 +47,8 @@ XferSummary::XferSummary()
 {
 	subnet = 0;
 	log_file = 0;
-	CondorViewHost=NULL;
+	Collector = NULL;
+	ViewCollector = NULL;
 }
 
 
@@ -60,14 +63,6 @@ XferSummary::~XferSummary()
 void
 XferSummary::init()
 {
-	// Get the collector host name from the config file
-	if (CollectorHost) free (CollectorHost);
-	CollectorHost = param( "COLLECTOR_HOST" );
-
-	// Get the condor view host name from the config file
-	if( CondorViewHost ) free( CondorViewHost );
-    CondorViewHost = param("CONDOR_VIEW_HOST");
-
 	start_time = time(0);
 
 	num_sends = 0;
@@ -79,6 +74,18 @@ XferSummary::init()
 	bytes_recv = 0;
 	tot_recv_bandwidth = 0;
 	time_recving = 0;
+
+	if( ! Collector ) {
+		Collector = new DCCollector;
+	}
+
+	char* tmp = param( "CONDOR_VIEW_HOST" );
+	if( tmp ) {
+		if( ! ViewCollector ) { 
+			ViewCollector = new DCCollector( tmp, COLLECTOR_PORT );
+		}
+		free( tmp );
+	}
 
 	if( subnet ) { free( subnet ); }
 	subnet = (char *)calc_subnet_name(NULL);
@@ -137,7 +144,6 @@ XferSummary::time_out(time_t now)
 {
 	ClassAd	   	info;
 	char		line[128], *tmp;
-	int			command = UPDATE_CKPT_SRVR_AD;
 
 	info.SetMyTypeName("CkptServer");
 	info.SetTargetTypeName("CkptFile");
@@ -145,6 +151,10 @@ XferSummary::time_out(time_t now)
 	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
 	info.Insert(line);
 	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
+	info.Insert(line);
+	sprintf(line, "%s = \"%s\"", ATTR_VERSION, CondorVersion() );
+	info.Insert(line);
+	sprintf(line, "%s = \"%s\"", ATTR_PLATFORM, CondorPlatform() );
 	info.Insert(line);
 	sprintf(line, "Subnet = \"%s\"", subnet);
 	info.Insert(line);
@@ -178,28 +188,19 @@ XferSummary::time_out(time_t now)
 	info.Insert(line);
 	
 	// Send to collector
-	if (CollectorHost) {
-        SafeSock sock;
-		int collector_port = param_get_collector_port();
-        sock.encode();
-        if (!sock.connect(CollectorHost, collector_port) ||
-			!sock.put(command) ||
-            !info.put(sock) ||
-            !sock.end_of_message()) {
-            dprintf(D_ALWAYS, "failed to update collector!\n");
+	if( Collector ) {
+		if( ! Collector->sendUpdate(UPDATE_CKPT_SRVR_AD, &info) ) {
+            dprintf( D_ALWAYS, "Failed to update collector %s: %s\n", 
+					 Collector->updateDestination(), Collector->error() );
 		}
 	}
 
 	// Send to condor view host
-	if (CondorViewHost) {
-        SafeSock sock;
-		sock.encode();
-		int view_port = param_get_condor_view_port();
-        if (!sock.connect(CondorViewHost, view_port) ||
-			!sock.put(command) ||
-            !info.put(sock) ||
-            !sock.end_of_message()) {
-            dprintf(D_ALWAYS, "failed to update condor view server!\n");
+	if( ViewCollector ) {
+		if( ! ViewCollector->sendUpdate(UPDATE_CKPT_SRVR_AD, &info) ) {
+            dprintf( D_ALWAYS, "Failed to update view server %s: %s\n", 
+					 ViewCollector->fullHostname(),
+					 ViewCollector->error() );
 		}
 	}
 

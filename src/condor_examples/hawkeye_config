@@ -253,7 +253,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  hawkeye account, it's probably hawkeye.  Otherwise, it's whatever
 ##  you've set in the HAWKEYE_IDS environment variable.  See the Admin
 ##  manual for details on this.
-LOCK		= $(LOCAL_DIR)/log
+LOCK		= $(LOG)
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
@@ -546,7 +546,9 @@ RunBenchmarks = False
 ##  expressions.
 ##  Then, you'd set the STARTD_EXPRS setting to this:
 #STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
-STARTD_EXPRS=COLLECTOR_HOST
+
+COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)" 
+STARTD_EXPRS = COLLECTOR_HOST_STRING 
 
 ##  When the startd is claimed by a remote user, it can also advertise
 ##  arbitrary attributes from the ClassAd of the job its working on.

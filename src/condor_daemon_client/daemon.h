@@ -327,6 +327,7 @@ protected:
 	daemon_t _type;
 	bool _is_local;
 	bool _tried_locate;
+	bool _is_configured; 
 	SecMan _sec_man;
 
 

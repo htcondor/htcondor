@@ -6,8 +6,10 @@
 #include "condor_classad.h"
 #include "MyString.h"
 #include "globus_utils.h"
-#include "gahp-client.h"
+
+#include "proxymanager.h"
 #include "globusresource.h"
+#include "gahp-client.h"
 
 #define JM_COMMIT_TIMEOUT	600
 
@@ -33,13 +35,13 @@ class GlobusJob : public Service
 	bool GetCallbacks();
 	void ClearCallbacks();
 	GlobusResource *GetResource();
-	int syncIO();
 
 	static int probeInterval;
 	static int submitInterval;
 	static int restartInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
+	static int outputWaitGrowthTimeout;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
@@ -71,20 +73,29 @@ class GlobusJob : public Service
 	time_t enteredCurrentGlobusState;
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
-	int syncedOutputSize;
-	int syncedErrorSize;
 	int submitFailureCode;
 	int lastRestartReason;
 	time_t lastRestartAttempt;
 	int numRestartAttempts;
 	int numRestartAttemptsThisSubmit;
 	time_t jmProxyExpireTime;
+	time_t outputWaitLastGrowth;
+	int outputWaitOutputSize;
+	int outputWaitErrorSize;
+	// HACK!
+	bool retryStdioSize;
+	char *resourceManagerString;
+	bool useGridJobMonitor;
 
+	bool gahp_proxy_id_set;
+	Proxy *myProxy;
 	GahpClient gahp;
 
 	MyString *buildSubmitRSL();
 	MyString *buildRestartRSL();
 	MyString *buildStdioUpdateRSL();
+	bool GetOutputSize( int& output, int& error );
+	void DeleteOutput();
 
 	void UpdateJobAd( const char *name, const char *value );
 	void UpdateJobAdInt( const char *name, int value );
@@ -102,6 +113,10 @@ class GlobusJob : public Service
 	MyString errorString;
 	char *localOutput;
 	char *localError;
+	bool streamOutput;
+	bool streamError;
+	bool stageOutput;
+	bool stageError;
 	int globusError;
 	bool submitLogged;
 	bool executeLogged;
@@ -120,12 +135,17 @@ class GlobusJob : public Service
 
 	int wantResubmit;
 	int doResubmit;
+	int wantRematch;
 	int numGlobusSubmits;
 
  protected:
 	bool callbackRegistered;
 	int connect_failure_counter;
 	bool AllowTransition( int new_state, int old_state );
+
+	bool FailureIsRestartable( int error_code );
+	bool FailureNeedsCommit( int error_code );
+	bool JmShouldSleep();
 };
 
 #endif

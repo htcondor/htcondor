@@ -1,3 +1,53 @@
+04/08/03 V6_5-pre-merge-V6_5_1
+   The V6_5-branch just before merging in the changes from V6_5_0-branch
+   as tagged at V6_5_1 and since tagged at V6_5_0-merge-1.
+
+04/08/03 V6_5_1
+   The 6.5.1 release, which lives on the V6_5_0-branch for everything
+   except the gahp, which lives on the trunk.
+
+04/01/03 v6_5_1_prerelease_for_edg_vdt_1_apr_2003
+   This tag is for the prerelease of Condor 6.5.1 that we gave
+   to EDG via VDT 1.1.8. 
+
+03/18/03 V6_5_0
+   The 6.5.0 release, which lives on the V6_5_0-branch
+
+03/13/03 V6_5_0-post_merge-V6_5_0-tcp_update-merge-1
+    The state of the V6_5_0 branch after merging in
+    V6_5_0-tcp_update-branch as tagged at V6_5_0-tcp_update-merge-1.
+    this enables condor to send TCP updates to the collector (which
+    now uses a SocketCache) if the right things are defined in the
+    config file.  flocking is not yet dealt with.  this was required
+    by D0 but might be generally useful to other sites.
+
+03/13/03 V6_5_0-pre_merge-V6_5_0-tcp_update-merge-1
+    The state of the V6_5_0 branch before merging in
+    V6_5_0-tcp_update-branch as tagged at V6_5_0-tcp_update-merge-1.  
+
+03/13/03 V6_5_0-tcp_update-merge-1
+    The state of the V6_5_0-tcp_update-branch when it was merged back
+    into V6_5_0-branch.
+
+03/07/05 V6_5_0-tcp_update-branch
+    A new branch off of V6_5_0-branch for developing the feature where
+    we can optionally send updates to the collector (or a tree of
+    collectors) via TCP.
+
+03/07/03 V6_5_0-post_merge-V6_4-merge-7
+    The state of the V6_5_0 branch after merging in V6_4-branch as
+    tagged at V6_4-merge-7. The last merge was at V6_4-merge-6
+
+03/07/03 V6_5_0-pre-merge-V6_4-merge-7
+    The state of the V6_5_0 branch before merging in V6_4-branch as
+    tagged at V6_4-merge-7. The last merge was at V6_4-merge-6
+
+03/07/03 V6_4-merge-7
+    the state of the V6_4-branch before merging into V6_5_0-branch
+    (again).  this includes a few minor but important bug fixes that
+    have gone into V6_4-branch that need to be present before we ship
+    6.5.0. 
+
 03/05/03 V6_5-post-V6_5-MB-V6_5-cod-merge-1-MB-m-1
     the state of the V6_5-branch after merging in the COD merge
     branch (V6_5-MB-V6_5-cod-merge-1-branch)

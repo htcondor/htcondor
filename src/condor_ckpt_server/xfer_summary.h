@@ -25,7 +25,7 @@
 
 #include "condor_io.h"
 #include "xferstat2.h"
-
+#include "dc_collector.h"
 
 class XferSummary {
 public:
@@ -52,8 +52,8 @@ private:
 	char	*subnet;
 	char	pwd[_POSIX_PATH_MAX];
 
-	char* CollectorHost;
-	char* CondorViewHost;
+	DCCollector* Collector;
+	DCCollector* ViewCollector;
 
 	void log_transfer(time_t, transferinfo *, bool success_flag,
 					  struct in_addr peer, int xfer_size);

@@ -200,7 +200,10 @@ typedef enum
 	GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND = 156,
 	GLOBUS_GRAM_PROTOCOL_ERROR_DELEGATION_FAILED = 157,
 	GLOBUS_GRAM_PROTOCOL_ERROR_LOCKING_STATE_LOCK_FILE = 158,
-	GLOBUS_GRAM_PROTOCOL_ERROR_LAST = 159
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_ATTR = 159,
+	GLOBUS_GRAM_PROTOCOL_ERROR_NULL_PARAMETER = 160,
+	GLOBUS_GRAM_PROTOCOL_ERROR_STILL_STREAMING = 161,
+	GLOBUS_GRAM_PROTOCOL_ERROR_LAST = 162
 } globus_gram_protocol_error_t;
 typedef enum
 {
@@ -236,13 +239,21 @@ char *GlobusJobStatusName( int status );
 
 char *get_x509_proxy_filename();
 
-int check_x509_proxy( char *proxy_file );
+int check_x509_proxy( const char *proxy_file );
 
-int x509_proxy_seconds_until_expire( char *proxy_file );
+time_t x509_proxy_expiration_time( const char *proxy_file );
+
+char* x509_proxy_subject_name( const char *proxy_file );
+
+int x509_proxy_seconds_until_expire( const char *proxy_file );
 
 const char* x509_error_string();
 
 int have_condor_g();
+
+void parse_resource_manager_string( const char *string, char **host,
+									char **port, char **service,
+									char **subject );
 
 #if 0
 int check_globus_rm_contacts( char* resource );

@@ -331,7 +331,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  condor account, it's probably condor.  Otherwise, it's whatever
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
-LOCK		= $(LOCAL_DIR)/log
+LOCK		= $(LOG)
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
@@ -682,6 +682,17 @@ RESERVED_DISK		= 5
 ##  user@UID_DOMAIN won't work.
 #EMAIL_DOMAIN = $(FULL_HOSTNAME)
 
+##  If your site needs to use TCP updates to the collector, instead of
+##  UDP, you can enable this feature.  HOWEVER, WE DO NOT RECOMMEND
+##  THIS FOR MOST SITES!  In general, the only sites that might want
+##  this feature are pools made up of machines connected via a
+##  wide-area network where UDP packets are frequently or always
+##  dropped.  If you enable this feature, you *MUST* turn on the
+##  COLLECTOR_SOCKET_CACHE_SIZE setting at your collector, and each
+##  entry in the socket cache uses another file descriptor.  If not
+##  defined, this feature is disabled by default.
+#UPDATE_COLLECTOR_WITH_TCP = True
+
 
 ######################################################################
 ##  Daemon-specific settings:
@@ -850,7 +861,9 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  expressions.
 ##  Then, you'd set the STARTD_EXPRS setting to this:
 #STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
-STARTD_EXPRS = COLLECTOR_HOST
+
+COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)"
+STARTD_EXPRS = COLLECTOR_HOST_STRING
 
 ##  When the startd is claimed by a remote user, it can also advertise
 ##  arbitrary attributes from the ClassAd of the job its working on.

@@ -90,7 +90,7 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
-Daemon	*Collector = NULL;
+DCCollector	*Collector = NULL;
 StringList *secondary_collectors = NULL;
 
 int		ceiling = 3600;
@@ -508,7 +508,7 @@ init_params()
 	if( Collector ) {
 		delete( Collector );
 	}
-	Collector = new Daemon( DT_COLLECTOR );
+	Collector = new DCCollector;
 	
 	StartDaemons = TRUE;
 	tmp = param("START_DAEMONS");

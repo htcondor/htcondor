@@ -94,12 +94,85 @@ get_x509_proxy_filename()
 	return proxy_file;
 }
 
-/* Return the number of seconds until the supplied proxy
- * file will expire.  
- * On error, return -1.    - Todd <tannenba@cs.wisc.edu>
+/* Return the subject name of a given proxy cert. 
+  On error, return NULL.
+  On success, return a pointer to a null-terminated string.
+  IT IS THE CALLER'S RESPONSBILITY TO DE-ALLOCATE THE STIRNG
+  WITH free().
  */
-int
-x509_proxy_seconds_until_expire( char *proxy_file )
+char *
+x509_proxy_subject_name( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return NULL;
+#else
+
+	proxy_cred_desc *pcd = NULL;
+	struct stat stx;
+	char *subject = NULL;
+	int must_free_proxy_file = FALSE;
+
+	/* initialize SSLeay and the error strings */
+	ERR_load_prxyerr_strings(0);
+	SSLeay_add_ssl_algorithms();
+
+    pcd = proxy_cred_desc_new(); // Added. But not sure if it's correct. Hao
+
+	if (!pcd) {
+		_globus_error_message = "problem during internal initialization";
+		if ( must_free_proxy_file ) free(proxy_file);
+		return NULL;
+	}
+
+	/* Load proxy */
+	if (!proxy_file)  {
+		proxy_get_filenames(pcd, 1, NULL, NULL, &proxy_file, NULL, NULL);
+		must_free_proxy_file = TRUE;
+	}
+
+	if (!proxy_file || (stat(proxy_file,&stx) != 0) ) {
+		_globus_error_message = "unable to find proxy file";
+		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
+		return NULL;
+	}
+
+	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
+		_globus_error_message = "unable to load proxy";
+		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
+		return NULL;
+	}
+
+	if ((pcd->upkey = X509_get_pubkey(pcd->ucert)) == NULL) {
+		_globus_error_message = "unable to load public key from proxy";
+		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
+		return NULL;
+	}
+
+    subject=X509_NAME_oneline(X509_get_subject_name(pcd->ucert),NULL,0);
+
+	if (!subject) {
+		_globus_error_message = "unable to load subject from proxy";
+	}
+
+	if ( must_free_proxy_file ) {
+		free(proxy_file);
+	}
+    
+    proxy_cred_desc_free(pcd);       // Added, not sure if it's correct. Hao
+
+	return subject;
+
+#endif /* !defined(GSS_AUTHENTICATION) */
+}
+
+/* Return the time at which the proxy expires. On error, return -1.
+ */
+time_t
+x509_proxy_expiration_time( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
@@ -108,11 +181,7 @@ x509_proxy_seconds_until_expire( char *proxy_file )
 
     globus_gsi_cred_handle_t         handle       = NULL;
     globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
-    time_t time_after;
-	time_t time_now;
-	time_t time_diff;
-	ASN1_UTCTIME *asn1_time = NULL;
-	int result = -1;
+	time_t expiration_time = -1;
 	int must_free_proxy_file = FALSE;
 
     globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE);
@@ -142,34 +211,14 @@ x509_proxy_seconds_until_expire( char *proxy_file )
        goto cleanup;
     }
 
-	/* validity: set time_diff to time to expiration (in seconds) */
-	asn1_time = ASN1_UTCTIME_new();
-	X509_gmtime_adj(asn1_time,0);
-	
-    if (!globus_gsi_cert_utils_make_time(asn1_time, &time_now)) {
+	if (!globus_gsi_cred_get_goodtill(handle, &expiration_time)) {
+		_globus_error_message = "unable to extract expiration time";
         goto cleanup;
     }
-
-	if (!globus_gsi_cred_get_goodtill(handle, &time_after)) {
-        goto cleanup;
-    }
-
-	time_diff = time_after - time_now ;
-
-	if ( time_diff < 0 ) {
-		time_diff = 0;
-	}
-
-	result = (int) time_diff;
-
-    globus_module_deactivate(GLOBUS_GSI_CREDENTIAL_MODULE);
 
  cleanup:
     if (must_free_proxy_file) {
         free(proxy_file);
-    }
-    if (asn1_time) {
-       	ASN1_UTCTIME_free( asn1_time ); 
     }
 
     if (handle_attrs) {
@@ -180,13 +229,49 @@ x509_proxy_seconds_until_expire( char *proxy_file )
         globus_gsi_cred_handle_destroy(handle);
     }
 
-	return result;
+    globus_module_deactivate(GLOBUS_GSI_CREDENTIAL_MODULE);
+
+	return expiration_time;
+
+#endif /* !defined(GSS_AUTHENTICATION) */
+}
+
+/* Return the number of seconds until the supplied proxy
+ * file will expire.  
+ * On error, return -1.    - Todd <tannenba@cs.wisc.edu>
+ */
+int
+x509_proxy_seconds_until_expire( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return -1;
+#else
+
+	time_t time_now;
+	time_t time_expire;
+	time_t time_diff;
+
+	time_now = time(NULL);
+	time_expire = x509_proxy_expiration_time( proxy_file );
+
+	if ( time_expire == -1 ) {
+		return -1;
+	}
+
+	time_diff = time_expire - time_now;
+
+	if ( time_diff < 0 ) {
+		time_diff = 0;
+	}
+
+	return (int)time_diff;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
 
 int
-check_x509_proxy( char *proxy_file )
+check_x509_proxy( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 
@@ -253,6 +338,72 @@ have_condor_g()
 #endif
 }
 
+void parse_resource_manager_string( const char *string, char **host,
+									char **port, char **service,
+									char **subject )
+{
+	char *p;
+	char *q;
+	int len = strlen( string );
+
+	char *my_host = (char *)calloc( len+1, sizeof(char) );
+	char *my_port = (char *)calloc( len+1, sizeof(char) );
+	char *my_service = (char *)calloc( len+1, sizeof(char) );
+	char *my_subject = (char *)calloc( len+1, sizeof(char) );
+
+	p = my_host;
+	q = my_host;
+
+	while ( *string != '\0' ) {
+		if ( *string == ':' ) {
+			if ( q == my_host ) {
+				p = my_port;
+				q = my_port;
+				string++;
+			} else if ( q == my_port || q == my_service ) {
+				p = my_subject;
+				q = my_subject;
+				string++;
+			} else {
+				*(p++) = *(string++);
+			}
+		} else if ( *string == '/' ) {
+			if ( q == my_host || q == my_port ) {
+				p = my_service;
+				q = my_service;
+				string++;
+			} else {
+				*(p++) = *(string++);
+			}
+		} else {
+			*(p++) = *(string++);
+		}
+	}
+
+	if ( host != NULL ) {
+		*host = my_host;
+	} else {
+		free( my_host );
+	}
+
+	if ( port != NULL ) {
+		*port = my_port;
+	} else {
+		free( my_port );
+	}
+
+	if ( service != NULL ) {
+		*service = my_service;
+	} else {
+		free( my_service );
+	}
+
+	if ( subject != NULL ) {
+		*subject = my_subject;
+	} else {
+		free( my_subject );
+	}
+}
 
 #if 0 /* We're not currently using these functions */
 

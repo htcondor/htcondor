@@ -32,6 +32,7 @@
 #ifndef _CONDOR_SCHED_H_
 #define _CONDOR_SCHED_H_
 
+#include "dc_collector.h"
 #include "daemon.h"
 #include "condor_classad.h"
 #include "condor_io.h"
@@ -286,7 +287,8 @@ class Scheduler : public Service
 	void addActiveShadows( int num ) { CurNumActiveShadows += num; };
 	
 	// info about our central manager
-	Daemon*			Collector;
+	DCCollector*	Collector;
+	DCCollector*	ViewCollector;
 	Daemon*			Negotiator;
 
 	void			updateCentralMgr( int command, ClassAd* ca, 
@@ -358,7 +360,6 @@ private:
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
 	
 	// useful names
-	char*			CondorViewHost;
 	char*			CondorAdministrator;
 	char*			Mail;
 	char*			filename;					// save UpDown object

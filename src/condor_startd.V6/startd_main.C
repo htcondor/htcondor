@@ -52,8 +52,8 @@ StringList *startd_job_exprs = NULL;
 static StringList *valid_cod_users = NULL; 
 
 // Hosts
-Daemon*	Collector = NULL;
-Daemon* View_Collector = NULL;
+DCCollector*	Collector = NULL;
+DCCollector*	View_Collector = NULL;
 char*	condor_view_host = NULL;
 char*	accountant_host = NULL;
 
@@ -185,8 +185,6 @@ main_init( int, char* argv[] )
 
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
-
-	resmgr->init_socks();
 
 		// Compute all attributes
 	resmgr->compute( A_ALL );
@@ -371,7 +369,6 @@ finish_main_config( void )
 		// Rebuild ads for each resource.  
 	resmgr->walk( &Resource::init_classad );  
 		// Reset various settings in the ResMgr.
-	resmgr->init_socks();
 	resmgr->reset_timers();
 
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
@@ -390,7 +387,7 @@ int
 init_params( int first_time)
 {
 	char *tmp;
-    Daemon *new_collector = NULL;
+    DCCollector* new_collector = NULL;
 
 	resmgr->init_config_classad();
 
@@ -415,7 +412,7 @@ init_params( int first_time)
 	if( Collector ) {
 			// See if we changed collectors.  If so, invalidate our
 			// ads at the old one, and start using the new info.
-		new_collector = new Daemon( DT_COLLECTOR );
+		new_collector = new DCCollector;
 		if( strcmp(new_collector->addr(), 
 				   Collector->addr()) != MATCH ) {
 				// The addresses are different, so we must really have
@@ -430,7 +427,7 @@ init_params( int first_time)
 	} else {
 			// No Collector yet, there's nothing to do except create a
 			// new object.
-		Collector = new Daemon( DT_COLLECTOR );
+		Collector = new DCCollector;
 	}
 
 
@@ -438,13 +435,12 @@ init_params( int first_time)
 		free( condor_view_host );
 	}
 	condor_view_host = param( "CONDOR_VIEW_HOST" );
-
     if (View_Collector) {
         delete View_Collector;
     }
     if (condor_view_host) {
-		int view_port = param_get_collector_port();
-        View_Collector = new Daemon(condor_view_host, view_port);
+        View_Collector = new DCCollector( condor_view_host, 
+										  CONDOR_VIEW_PORT );
     }
 
 	tmp = param( "POLLING_INTERVAL" );

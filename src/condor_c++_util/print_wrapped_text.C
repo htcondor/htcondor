@@ -41,25 +41,25 @@ void print_wrapped_text(
 		int token_length;
 		token_length = strlen(token);
 		if (token_length < (chars_per_line - char_count)) {
-			printf("%s", token);
+			fprintf(output, "%s", token);
 			char_count += token_length;
 		}
 		else {
 			// We should do a better job here: we might have
 			// some text that is longer than chars_per_line long.
-			printf("\n%s", token);
+			fprintf(output, "\n%s", token);
 			char_count = token_length;
 		}
 		if (char_count < chars_per_line) {
-			printf(" ");
+			fprintf(output, " ");
 			char_count++;
 		} else {
-			printf("\n");
+			fprintf(output, "\n");
 			char_count = 0;
 		}			
 		token = strtok(NULL, " \t");
 	}
-	printf("\n");
+	fprintf(output, "\n");
 
 	free(t);
 	return;

@@ -31,10 +31,12 @@
 #include "condor_config.h"
 #include "format_time.h"  // for format_time and friends
 #include "condor_string.h"	// for strnewp and friends
+#include "daemon.h"
+#include "dc_schedd.h"
 
 #include "gridmanager.h"
 
-#define QMGMT_TIMEOUT 5
+#define QMGMT_TIMEOUT 15
 
 #define UPDATE_SCHEDD_DELAY		5
 
@@ -43,10 +45,13 @@
 // timer id values that indicates the timer is not registered
 #define TIMER_UNSET		-1
 
+extern char *myUserName;
+
 struct ScheddUpdateAction {
 	GlobusJob *job;
 	int actions;
 	int request_id;
+	bool deleted;
 };
 
 struct OrphanCallback_t {
@@ -58,6 +63,7 @@ struct OrphanCallback_t {
 // Stole these out of the schedd code
 int procIDHash( const PROC_ID &procID, int numBuckets )
 {
+	//dprintf(D_ALWAYS,"procIDHash: cluster=%d proc=%d numBuck=%d\n",procID.cluster,procID.proc,numBuckets);
 	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
 }
 
@@ -105,6 +111,8 @@ char *gassServerUrl = NULL;
 char *ScheddAddr = NULL;
 char *X509Proxy = NULL;
 bool useDefaultProxy = true;
+char *ScheddJobConstraint = NULL;
+char *GridmanagerScratchDir = NULL;
 
 HashTable <HashKey, GlobusJob *> JobsByContact( HASH_TABLE_SIZE,
 												hashFunction );
@@ -117,15 +125,6 @@ bool firstScheddContact = true;
 
 char *Owner = NULL;
 
-int checkProxy_tid = TIMER_UNSET;
-int checkProxy_interval;
-int minProxy_time;
-
-time_t Proxy_Expiration_Time = 0;
-
-int syncJobIO_tid = TIMER_UNSET;
-int syncJobIO_interval;
-
 int checkResources_tid = TIMER_UNSET;
 
 GahpClient GahpMain;
@@ -137,8 +136,6 @@ int checkResources();
 // handlers
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
-int checkProxy();
-int syncJobIO();
 
 
 // return value of true means requested update has been committed to schedd.
@@ -173,6 +170,7 @@ addScheddUpdateAction( GlobusJob *job, int actions, int request_id )
 		curr_action->job = job;
 		curr_action->actions = actions;
 		curr_action->request_id = request_id;
+		curr_action->deleted = false;
 
 		pendingScheddUpdates.insert( job->procID, curr_action );
 		RequestContactSchedd();
@@ -217,15 +215,36 @@ RequestContactSchedd()
 	}
 }
 
+char *
+globusJobId( const char *contact )
+{
+	static char buff[1024];
+	char *first_end;
+	char *second_begin;
+
+	ASSERT( strlen(contact) < sizeof(buff) );
+
+	first_end = strrchr( contact, ':' );
+	ASSERT( first_end );
+
+	second_begin = strchr( first_end, '/' );
+	ASSERT( second_begin );
+
+	strncpy( buff, contact, first_end - contact );
+	strcpy( buff + ( first_end - contact ), second_begin );
+
+	return buff;
+}
+
 void
 rehashJobContact( GlobusJob *job, const char *old_contact,
 				  const char *new_contact )
 {
 	if ( old_contact ) {
-		JobsByContact.remove(HashKey(old_contact));
+		JobsByContact.remove(HashKey(globusJobId(old_contact)));
 	}
 	if ( new_contact ) {
-		JobsByContact.insert(HashKey(new_contact), job);
+		JobsByContact.insert(HashKey(globusJobId(new_contact)), job);
 	}
 }
 
@@ -253,6 +272,52 @@ Init()
 	if ( Owner == NULL ) {
 		EXCEPT( "Can't determine username" );
 	}
+
+	if ( ScheddJobConstraint == NULL ) {
+		// CRUFT: Backwards compatibility with pre-6.5.1 schedds that don't
+		//   give us a constraint expression for querying our jobs. Build
+		//   it ourselves like the old gridmanager did.
+		MyString buf;
+		MyString expr = "";
+
+		if ( myUserName ) {
+			if ( strchr(myUserName,'@') ) {
+				// we were given a full name : owner@uid-domain
+				buf.sprintf("%s == \"%s\"", ATTR_USER, myUserName);
+			} else {
+				// we were just give an owner name without a domain
+				buf.sprintf("%s == \"%s\"", ATTR_OWNER, myUserName);
+			}
+		} else {
+			buf.sprintf("%s == \"%s\"", ATTR_OWNER, Owner);
+		}
+		expr += buf;
+
+		if(useDefaultProxy == false) {
+			buf.sprintf(" && %s =?= \"%s\" ", ATTR_X509_USER_PROXY, X509Proxy);
+		} else {
+			buf.sprintf(" && %s =?= UNDEFINED ", ATTR_X509_USER_PROXY);
+		}
+		expr += buf;
+
+		ScheddJobConstraint = strdup( expr.Value() );
+
+		if ( X509Proxy == NULL ) {
+			EXCEPT( "Old schedd didn't specify proxy with -x" );
+		}
+		if ( UseSingleProxy( X509Proxy, InitializeGahp ) == false ) {
+			EXCEPT( "Failed to initialize ProxyManager" );
+		}
+
+	} else {
+
+		if ( GridmanagerScratchDir == NULL ) {
+			EXCEPT( "Schedd didn't specify scratch dir with -S" );
+		}
+		if ( UseMultipleProxies( GridmanagerScratchDir, InitializeGahp ) == false ) {
+			EXCEPT( "Failed to initialize Proxymanager" );
+		}
+	}
 }
 
 void
@@ -273,11 +338,10 @@ void
 Reconfig()
 {
 	int tmp_int;
-	char *tmp = NULL;
+	bool tmp_bool;
 
 	// This method is called both at startup [from method Init()], and
 	// when we are asked to reconfig.
-
 
 	if ( checkResources_tid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer(checkResources_tid);
@@ -287,106 +351,33 @@ Reconfig()
 												(TimerHandler)&checkResources,
 												"checkResources", NULL );
 
-	contactScheddDelay = -1;
-	tmp = param("GRIDMANAGER_CONTACT_SCHEDD_DELAY");
-	if ( tmp ) {
-		contactScheddDelay = atoi(tmp);
-		free(tmp);
-	} 
-	if ( contactScheddDelay < 0 ) {
-		contactScheddDelay = 5; // default delay = 5 seconds
-	}
+	contactScheddDelay = param_integer("GRIDMANAGER_CONTACT_SCHEDD_DELAY", 5);
 
-	tmp_int = -1;
-	tmp = param("GRIDMANAGER_JOB_PROBE_INTERVAL");
-	if ( tmp ) {
-		tmp_int = atoi(tmp);
-		free(tmp);
-	}
-	if ( tmp_int < 0 ) {
-		tmp_int = 5 * 60; // default interval is 5 minutes
-	}
+	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
 	GlobusJob::setProbeInterval( tmp_int );
 
-	tmp_int = -1;
-	tmp = param("GRIDMANAGER_RESOURCE_PROBE_INTERVAL");
-	if ( tmp ) {
-		tmp_int = atoi(tmp);
-		free(tmp);
-	}
-	if ( tmp_int < 0 ) {
-		tmp_int = 5 * 60; // default interval is 5 minutes
-	}
+	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	GlobusResource::setProbeInterval( tmp_int );
 
-	int max_pending_submits = -1;
-	tmp = param("GRIDMANAGER_MAX_PENDING_SUBMITS");
-	if ( tmp ) {
-		max_pending_submits = atoi(tmp);
-		free(tmp);
-	}
-	if ( max_pending_submits < 0 ) {
-		max_pending_submits = 5; // default limit is 5
-	}
-	GlobusResource::setSubmitLimit( max_pending_submits );
-
-	tmp_int = -1;
-	tmp = param("GRIDMANAGER_GAHP_CALL_TIMEOUT");
-	if ( tmp ) {
-		tmp_int = atoi(tmp);
-		free(tmp);
-	}
-	if ( tmp_int < 0 ) {
-		tmp_int = 5 * 60; // default interval is 5 minutes
-	}
+	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	GlobusJob::setGahpCallTimeout( tmp_int );
 	GlobusResource::setGahpCallTimeout( tmp_int );
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	GlobusJob::setConnectFailureRetry( tmp_int );
 
-	checkProxy_interval = -1;
-	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
-	if ( tmp ) {
-		checkProxy_interval = atoi(tmp);
-		free(tmp);
-	} 
-	if ( checkProxy_interval < 0 ) {
-		checkProxy_interval = 10 * 60 ; // default interval = 10 minutes
-	}
+	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",false);
+	GlobusResource::setEnableGridMonitor( tmp_bool );
 
-	minProxy_time = -1;
-	tmp = param("GRIDMANAGER_MINIMUM_PROXY_TIME");
-	if ( tmp ) {
-		minProxy_time = atoi(tmp);
-		free(tmp);
-	} 
-	if ( minProxy_time < 0 ) {
-		minProxy_time = 3 * 60 ; // default = 3 minutes
-	}
+	CheckProxies_interval = param_integer( "GRIDMANAGER_CHECKPROXY_INTERVAL",
+										   10 * 60 );
 
-	syncJobIO_interval = -1;
-	tmp = param("GRIDMANAGER_SYNC_JOB_IO_INTERVAL");
-	if ( tmp ) {
-		syncJobIO_interval = atoi(tmp);
-		free(tmp);
-	}
-	if ( syncJobIO_interval < 0 ) {
-		syncJobIO_interval = 5 * 60; // default interval = 5 minutes
-	}
+	minProxy_time = param_integer( "GRIDMANAGER_MINIMUM_PROXY_TIME", 3 * 60 );
 
-	int max_requests = 50;
-	tmp = param("GRIDMANAGER_MAX_PENDING_REQUESTS");
-	if ( tmp ) {
-		max_requests = atoi(tmp);
-		free(tmp);
-		if ( max_requests < 1 ) {
-			max_requests = 50;
-		}
-		if ( max_requests < max_pending_submits * 5 ) {
-		        max_requests = max_pending_submits * 5;
-		}
-	}
+	int max_requests = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
+//	if ( max_requests < max_pending_submits * 5 ) {
+//		max_requests = max_pending_submits * 5;
+//	}
 	GahpMain.setMaxPendingRequests(max_requests);
 
 	// Tell all the job objects to deal with their new config values
@@ -408,152 +399,38 @@ Reconfig()
 	}
 
 	// Always check the proxy on a reconfig.
-	checkProxy();
-
-	// Always sync IO on a reconfig
-	syncJobIO();
+	doCheckProxies();
 }
 
-int
-checkProxy()
+bool
+InitializeGahp( const char *proxy_filename )
 {
-	time_t now = 	time(NULL);
-	ASSERT(X509Proxy);
-	int seconds_left = x509_proxy_seconds_until_expire(X509Proxy);
-	time_t current_expiration_time = now + seconds_left;
-	static time_t last_expiration_time = 0;
+	int err;
 
-	if ( seconds_left < 0 ) {
-		// Proxy file is gone. Since the GASS needs the proxy file for
-		// new connections, we should treat this as an expired proxy.
-		seconds_left = 0;
-		current_expiration_time = now;
-		Proxy_Expiration_Time = current_expiration_time;
+	if ( GahpMain.Initialize( proxy_filename ) == false ) {
+		dprintf( D_ALWAYS, "Error initializing GAHP\n" );
+		return false;
 	}
 
-	if ( Proxy_Expiration_Time == 0 ) {
-		// First time through....
-		Proxy_Expiration_Time = current_expiration_time;
-		dprintf(D_ALWAYS,
-			"Condor-G proxy cert valid for %s\n",format_time(seconds_left));
+	GahpMain.setMode( GahpClient::blocking );
+
+	err = GahpMain.globus_gram_client_callback_allow( gramCallbackHandler,
+													  NULL,
+													  &gramCallbackContact );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d - %s\n", 
+				 err, GahpMain.globus_gram_client_error_string(err) );
+		return false;
 	}
 
-	if ( last_expiration_time == 0 ) {
-		// First time through....
-		last_expiration_time = Proxy_Expiration_Time;
+	err = GahpMain.globus_gass_server_superez_init( &gassServerUrl, 0 );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
+		return false;
 	}
+	dprintf( D_FULLDEBUG, "GASS server URL: %s\n", gassServerUrl );
 
-	// If our proxy expired in the past, make it seem like it expired
-	// right now so we don't have to deal with time_t negative overflows
-	if ( now > Proxy_Expiration_Time ) {
-		Proxy_Expiration_Time = now;
-	}
-	if ( now > last_expiration_time ) {
-		last_expiration_time = now;
-	}
-
-	// Check if we have a refreshed proxy
-	if ( (current_expiration_time > Proxy_Expiration_Time) &&
-		 (current_expiration_time > last_expiration_time) ) 
-	{
-		// We have a refreshed proxy!
-		dprintf(D_FULLDEBUG,"New proxy found, valid for %s\n",
-				format_time(seconds_left));
-		last_expiration_time = current_expiration_time;
-
-		// Try to refresh the proxy cached in the gahp server
-		int res = GahpMain.globus_gram_client_set_credentials( X509Proxy );
-		if ( res == 0  ) {
-			// Success!  Gahp server has refreshed the proxy
-			Proxy_Expiration_Time = current_expiration_time;
-			// signal every job, in case some were waiting for a new proxy
-			GlobusJob *next_job;
-			JobsByProcID.startIterations();
-			while ( JobsByProcID.iterate( next_job ) != 0 ) {
-				next_job->SetEvaluateState();
-			}
-		} else {
-			// Failed to refresh proxy in the gahp server
-			dprintf(D_FULLDEBUG,"Failed to reset credentials to new proxy\n");
-		}
-	}
-
-	// Verify our proxy is longer than the minimum allowed
-	if ((Proxy_Expiration_Time - now) <= minProxy_time) 
-	{
-		// Proxy is either already expired, or will expire in
-		// a very short period of time.
-		// Write something out to the log and send a signal to shutdown.
-		// The schedd will try to restart us every few minutes.
-		// TODO: should email the user somewhere around here....
-
-		char *formated_minproxy = strdup(format_time(minProxy_time));
-		dprintf(D_ALWAYS,
-			"ERROR: Condor-G proxy expiring; "
-			"valid for %s - minimum allowed is %s\n",
-			format_time((int)(Proxy_Expiration_Time - now) ), 
-			formated_minproxy);
-		free(formated_minproxy);
-
-			// Shutdown with haste!
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );  
-		return FALSE;
-	}
-
-	// Setup timer to automatically check it next time.  We want the
-	// timer to go off either at the next user-specified interval,
-	// or right before our credentials expire, whichever is less.
-	int interval = MIN(checkProxy_interval, 
-						Proxy_Expiration_Time - now - minProxy_time);
-
-	if ( interval ) {
-		if ( checkProxy_tid != TIMER_UNSET ) {
-			daemonCore->Reset_Timer(checkProxy_tid,interval);
-		} else {
-			checkProxy_tid = daemonCore->Register_Timer( interval,
-												(TimerHandler)&checkProxy,
-												"checkProxy", NULL );
-		}
-	} else {
-		// interval is 0, cancel any timer if we have one
-		if (checkProxy_tid != TIMER_UNSET ) {
-			daemonCore->Cancel_Timer(checkProxy_tid);
-			checkProxy_tid = TIMER_UNSET;
-		}
-	}
-
-	return TRUE;
-}
-
-int
-syncJobIO()
-{
-	GlobusJob *next_job;
-
-	JobsByProcID.startIterations();
-
-	while ( JobsByProcID.iterate( next_job ) != 0 ) {
-		daemonCore->Register_Timer( 0, (TimerHandlercpp)&GlobusJob::syncIO,
-									"syncIO", (Service *)next_job );
-	}
-
-	if ( syncJobIO_interval ) {
-		if ( syncJobIO_tid != TIMER_UNSET ) {
-			daemonCore->Reset_Timer( syncJobIO_tid, syncJobIO_interval);
-		} else {
-			syncJobIO_tid = daemonCore->Register_Timer( syncJobIO_interval,
-												(TimerHandler)&syncJobIO,
-												"syncJobIO", NULL );
-		}
-	} else {
-		// syncJobIO_interval is 0, cancel any timer if we have one
-		if (syncJobIO_tid != TIMER_UNSET ) {
-			daemonCore->Cancel_Timer(syncJobIO_tid);
-			syncJobIO_tid = TIMER_UNSET;
-		}
-	}
-
-	return TRUE;
+	return true;
 }
 
 int
@@ -660,17 +537,23 @@ checkResources()
 int
 doContactSchedd()
 {
+	int rc;
 	Qmgr_connection *schedd;
 	ScheddUpdateAction *curr_action;
 	GlobusJob *curr_job;
 	ClassAd *next_ad;
-	char expr_buf[_POSIX_PATH_MAX];
-	char owner_buf[_POSIX_PATH_MAX];
+	char expr_buf[12000];
+	bool schedd_updates_complete = false;
+	bool schedd_deletes_complete = false;
+	bool add_remove_jobs_complete = false;
+	bool commit_transaction = true;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
+//bool foo=false;while(!foo)sleep(1);
 
 	contactScheddTid = TIMER_UNSET;
 
+	// Write user log events before connection to the schedd
 	pendingScheddUpdates.startIterations();
 
 	while ( pendingScheddUpdates.iterate( curr_action ) != 0 ) {
@@ -734,9 +617,14 @@ doContactSchedd()
 		// Check the job status on the schedd to see if the job's been
 		// held or removed. We don't want to blindly update the status.
 		int job_status_schedd;
-		GetAttributeInt( curr_job->procID.cluster,
-						 curr_job->procID.proc,
-						 ATTR_JOB_STATUS, &job_status_schedd );
+		rc = GetAttributeInt( curr_job->procID.cluster,
+							  curr_job->procID.proc,
+							  ATTR_JOB_STATUS, &job_status_schedd );
+		if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+			commit_transaction = false;
+			goto contact_schedd_disconnect;
+		}
 
 		// If the job is marked as REMOVED or HELD on the schedd, don't
 		// change it. Instead, modify our state to match it.
@@ -745,30 +633,35 @@ doContactSchedd()
 			curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
 			curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
 		} else if ( curr_action->actions & UA_HOLD_JOB ) {
-			char *reason;
-			if ( GetAttributeStringNew( curr_job->procID.cluster,
+			char *reason = NULL;
+			rc = GetAttributeStringNew( curr_job->procID.cluster,
 										curr_job->procID.proc,
-										ATTR_RELEASE_REASON, &reason )
-				 >= 0 ) {
-				SetAttributeString( curr_job->procID.cluster,
-									curr_job->procID.proc,
-									ATTR_LAST_RELEASE_REASON, reason );
+										ATTR_RELEASE_REASON, &reason );
+			if ( rc >= 0 ) {
+				curr_job->UpdateJobAdString( ATTR_LAST_RELEASE_REASON,
+											 reason );
+			} else if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
 			}
-			free( reason );
-			DeleteAttribute(curr_job->procID.cluster,
-							curr_job->procID.proc,
-							ATTR_RELEASE_REASON );
-			SetAttributeInt( curr_job->procID.cluster, 
-							 curr_job->procID.proc,
-				ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+			if ( reason ) {
+				free( reason );
+			}
+			curr_job->UpdateJobAd( ATTR_RELEASE_REASON, "UNDEFINED" );
+			curr_job->UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS,
+									  (int)time(0) );
 			int sys_holds = 0;
-			GetAttributeInt(curr_job->procID.cluster, 
-						curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
-						&sys_holds);
+			rc=GetAttributeInt(curr_job->procID.cluster, 
+							   curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
+							   &sys_holds);
+			if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
 			sys_holds++;
-			SetAttributeInt(curr_job->procID.cluster, 
-						curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
-						sys_holds);
+			curr_job->UpdateJobAdInt( ATTR_NUM_SYSTEM_HOLDS, sys_holds );
 		} else {	// !UA_HOLD_JOB
 			// If we have a
 			// job marked as HELD, it's because of an earlier hold
@@ -784,9 +677,8 @@ doContactSchedd()
 					// Finally, if we are just changing from one unintersting state
 					// to another, update the ATTR_ENTERED_CURRENT_STATUS time.
 				if ( curr_job->condorState != job_status_schedd ) {
-					SetAttributeInt( curr_job->procID.cluster,
-									 curr_job->procID.proc, 
-						ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+					curr_job->UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS,
+											  (int)time(0) );
 				}
 			}
 		}
@@ -808,19 +700,28 @@ doContactSchedd()
 			// The job has stopped an interval of running, add the current
 			// interval to the accumulated total run time
 			float accum_time = 0;
-			GetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
-							  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
+			rc = GetAttributeFloat(curr_job->procID.cluster,
+								   curr_job->procID.proc,
+								   ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
+			if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
 			accum_time += (float)( time(NULL) - shadowBirthdate );
-			SetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
-							  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
-			DeleteAttribute(curr_job->procID.cluster, curr_job->procID.proc,
-							ATTR_JOB_WALL_CLOCK_CKPT);
+			curr_job->UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK,
+										accum_time );
+			curr_job->UpdateJobAd( ATTR_JOB_WALL_CLOCK_CKPT, "UNDEFINED" );
 			// ATTR_SHADOW_BIRTHDATE on the schedd will be updated below
 			curr_job->UpdateJobAdInt( ATTR_SHADOW_BIRTHDATE, 0 );
 
 		}
 
-dprintf(D_FULLDEBUG,"Updating classad values:\n");
+		if ( curr_action->actions & UA_FORGET_JOB ) {
+			curr_job->UpdateJobAdBool( ATTR_JOB_MANAGED, 0 );
+		}
+
+dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",curr_job->procID.cluster, curr_job->procID.proc);
 		char attr_name[1024];
 		char attr_value[1024];
 		ExprTree *expr;
@@ -832,49 +733,69 @@ dprintf(D_FULLDEBUG,"Updating classad values:\n");
 			expr->RArg()->PrintToStr(attr_value);
 
 dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
-			SetAttribute( curr_job->procID.cluster,
-						  curr_job->procID.proc,
-						  attr_name,
-						  attr_value);
+			rc = SetAttribute( curr_job->procID.cluster,
+							   curr_job->procID.proc,
+							   attr_name,
+							   attr_value);
+			if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
 		}
 
 		curr_job->ad->ClearAllDirtyFlags();
 
-		if ( curr_action->actions & UA_FORGET_JOB ) {
-			int dummy;
-			SetAttribute( curr_job->procID.cluster,
-						  curr_job->procID.proc,
-						  ATTR_JOB_MANAGED,
-						  "FALSE" );
-			if ( curr_job->ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-				SetAttribute( curr_job->procID.cluster,
-							  curr_job->procID.proc,
-							  ATTR_JOB_MATCHED,
-							  "FALSE" );
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_CURRENT_HOSTS,
-								 0 );
-			}
-		}
+	}
+
+	if ( CloseConnection() < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		commit_transaction = false;
+		goto contact_schedd_disconnect;
+	}
+
+	schedd_updates_complete = true;
+
+	pendingScheddUpdates.startIterations();
+
+	while ( pendingScheddUpdates.iterate( curr_action ) != 0 ) {
 
 		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
-			CloseConnection();
+dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_action->job->procID.cluster, curr_action->job->procID.proc);
 			BeginTransaction();
-			DestroyProc(curr_job->procID.cluster,
-						curr_job->procID.proc);
+			if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
+			rc = DestroyProc(curr_action->job->procID.cluster,
+							 curr_action->job->procID.proc);
+			if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
+			if ( CloseConnection() < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
+			curr_action->deleted = true;
 		}
+
 	}
 
+	schedd_deletes_complete = true;
 
-	// setup for AddJobs and RemoveJobs
-	if(useDefaultProxy == false) {
-		sprintf(owner_buf, "%s == \"%s\" && %s =?= \"%s\" ", ATTR_OWNER, Owner,
-				ATTR_X509_USER_PROXY, X509Proxy);
-	} else {
-		sprintf(owner_buf, "%s == \"%s\" && %s =?= UNDEFINED ", ATTR_OWNER, 
-						Owner, ATTR_X509_USER_PROXY);
+//	if ( BeginTransaction() < 0 ) {
+	errno = 0;
+	BeginTransaction();
+	if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		commit_transaction = false;
+		goto contact_schedd_disconnect;
 	}
+
 
 	// AddJobs
 	/////////////////////////////////////////////////////
@@ -894,17 +815,18 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 		if ( firstScheddContact ) {
 //			sprintf( expr_buf, "%s && %s == %d && !(%s == %d && %s =!= TRUE)",
 			sprintf( expr_buf, 
-				"%s && %s == %d && (%s =!= FALSE || %s =?= TRUE) && (%s == %d && %s =!= TRUE) == FALSE",
-					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS, 
+				"(%s) && %s == %d && (%s =!= FALSE || %s =?= TRUE) && ((%s == %d || %s == %d || %s == %d) && %s =!= TRUE) == FALSE",
+					 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS, 
 					 ATTR_JOB_MATCHED, ATTR_JOB_MANAGED, ATTR_JOB_STATUS, HELD,
-					 ATTR_JOB_MANAGED );
+					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
 		} else {
 			sprintf( expr_buf, 
-				"%s && %s == %d && %s =!= FALSE && %s != %d && %s =!= TRUE",
-					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
-					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
+				"%s && %s == %d && %s =!= FALSE && %s != %d && %s != %d && %s != %d && %s =!= TRUE",
+					 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, 
+					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
 		}
-
+		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
@@ -929,53 +851,81 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 				resource_name[0] = '\0';
 				int must_expand = 0;
 
-					next_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-					if ( !must_expand ) {
-						next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
-						if ( strstr(resource_name,"$$") ) {
-							must_expand = 1;
-						}
+				next_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
+				if ( !must_expand ) {
+					next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+					if ( strstr(resource_name,"$$") ) {
+						must_expand = 1;
 					}
+				}
 
-					if (must_expand) {
-						// Get the expanded ClassAd from the schedd, which
-						// has the globus resource filled in with info from
-						// the matched ad.
-						delete next_ad;
-						next_ad = NULL;
-						next_ad = GetJobAd(procID.cluster,procID.proc);
-						ASSERT(next_ad);
-						resource_name[0] = '\0';
-						next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+				if (must_expand) {
+					// Get the expanded ClassAd from the schedd, which
+					// has the globus resource filled in with info from
+					// the matched ad.
+					delete next_ad;
+					next_ad = NULL;
+					next_ad = GetJobAd(procID.cluster,procID.proc);
+					if ( next_ad == NULL && errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
 					}
+					ASSERT(next_ad);
+					resource_name[0] = '\0';
+					next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+				}
 
 				if ( resource_name[0] == '\0' ) {
 
 					const char *hold_reason =
 						"GlobusResource is not set in the job ad";	
 					char buffer[128];
-					char *reason;
+					char *reason = NULL;
 					dprintf( D_ALWAYS, "Job %d.%d has no Globus resource name!\n",
 							 procID.cluster, procID.proc );
 					// No GlobusResource, so put the job on hold
-					SetAttributeInt( procID.cluster,
-									 procID.proc,
-									 ATTR_JOB_STATUS,
-									 HELD );
-					if ( GetAttributeStringNew( procID.cluster, procID.proc,
-												ATTR_RELEASE_REASON, &reason )
-						 >= 0 ) {
-						SetAttributeString( procID.cluster, procID.proc,
-											ATTR_LAST_RELEASE_REASON, reason );
+					rc = SetAttributeInt( procID.cluster,
+										  procID.proc,
+										  ATTR_JOB_STATUS,
+										  HELD );
+					if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
 					}
-					free( reason );
-					DeleteAttribute( procID.cluster,
-									 procID.proc,
-									 ATTR_RELEASE_REASON );
-					SetAttributeString( procID.cluster,
-										procID.proc,
-										ATTR_HOLD_REASON,
-										hold_reason );
+					if ( next_ad->LookupString(ATTR_RELEASE_REASON, &reason)
+						     != 0 ) {
+						rc = SetAttributeString( procID.cluster, procID.proc,
+												 ATTR_LAST_RELEASE_REASON,
+												 reason );
+						free( reason );
+						if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+							delete next_ad;
+							commit_transaction = false;
+							goto contact_schedd_disconnect;
+						}
+					}
+					rc = SetAttribute( procID.cluster, procID.proc,
+									   ATTR_RELEASE_REASON, "UNDEFINED" );
+					if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
+					}
+					rc = SetAttributeString( procID.cluster,
+											 procID.proc,
+											 ATTR_HOLD_REASON,
+											 hold_reason );
+					if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+ 						goto contact_schedd_disconnect;
+					}
 					sprintf( buffer, "%s = \"%s\"", ATTR_HOLD_REASON,
 							 hold_reason );
 					next_ad->InsertOrUpdate( buffer );
@@ -985,13 +935,15 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 
 				} else {
 
-					rc = ResourcesByName.lookup( HashKey( resource_name ),
+					const char *canonical_name = GlobusResource::CanonicalName( resource_name );
+					ASSERT(canonical_name);
+					rc = ResourcesByName.lookup( HashKey( canonical_name ),
 												  resource );
 
 					if ( rc != 0 ) {
-						resource = new GlobusResource( resource_name );
+						resource = new GlobusResource( canonical_name );
 						ASSERT(resource);
-						ResourcesByName.insert( HashKey( resource_name ),
+						ResourcesByName.insert( HashKey( canonical_name ),
 												 resource );
 					} else {
 						ASSERT(resource);
@@ -1000,14 +952,25 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 					GlobusJob *new_job = new GlobusJob( next_ad, resource );
 					ASSERT(new_job);
 					new_job->SetEvaluateState();
+					dprintf(D_ALWAYS,"Found job %d.%d --- inserting\n",new_job->procID.cluster,new_job->procID.proc);
 					JobsByProcID.insert( new_job->procID, new_job );
 					num_ads++;
 
 					if ( !job_is_managed ) {
-						SetAttribute( new_job->procID.cluster,
-								  new_job->procID.proc,
-								  ATTR_JOB_MANAGED,
-								  "TRUE" );
+						// Set Managed to true in the local ad and leave it
+						// dirty so that if our update here to the schedd is
+						// aborted, the change will make it the first time
+						// the job tries to update anything on the schedd.
+						new_job->UpdateJobAdBool( ATTR_JOB_MANAGED, 1 );
+						rc = SetAttribute( new_job->procID.cluster,
+										   new_job->procID.proc,
+										   ATTR_JOB_MANAGED,
+										   "TRUE" );
+						if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+							commit_transaction = false;
+							goto contact_schedd_disconnect;
+						}
 					}
 
 				}
@@ -1021,11 +984,13 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}	// end of while next_ad
+		if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+			commit_transaction = false;
+			goto contact_schedd_disconnect;
+		}
 
 		dprintf(D_FULLDEBUG,"Fetched %d new job ads from schedd\n",num_ads);
-
-		firstScheddContact = false;
-		addJobsSignaled = false;
 	}	// end of handling add jobs
 
 	/////////////////////////////////////////////////////
@@ -1040,8 +1005,8 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 		// Grab jobs marked as REMOVED or marked as HELD that we haven't
 		// previously indicated that we're done with (by setting JobManaged
 		// to FALSE. If JobManaged is undefined, equate it with false.
-		sprintf( expr_buf, "%s && %s == %d && (%s == %d || (%s == %d && %s =?= TRUE))",
-				 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+		sprintf( expr_buf, "(%s) && %s == %d && (%s == %d || (%s == %d && %s =?= TRUE))",
+				 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 				 ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD,
 				 ATTR_JOB_MANAGED );
 
@@ -1059,14 +1024,11 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 				// Should probably skip jobs we already have marked as
 				// held or removed
 
-				next_job->UpdateCondorState( curr_status );
-				num_ads++;
-
 				// Save the remove reason in our local copy of the job ad
 				// so that we can write it in the abort log event.
 				if ( curr_status == REMOVED ) {
 					int rc;
-					char *remove_reason;
+					char *remove_reason = NULL;
 					rc = GetAttributeStringNew( procID.cluster,
 												procID.proc,
 												ATTR_REMOVE_REASON,
@@ -1074,9 +1036,21 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 					if ( rc == 0 ) {
 						next_job->UpdateJobAdString( ATTR_REMOVE_REASON,
 													 remove_reason );
+					} else if ( rc < 0 && errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
 					}
-					free( remove_reason );
+					if ( remove_reason ) {
+						free( remove_reason );
+					}
 				}
+
+				// Don't update the condor state if a communications error
+				// kept us from getting a remove reason to go with it.
+				next_job->UpdateCondorState( curr_status );
+				num_ads++;
 
 			} else if ( curr_status == REMOVED ) {
 
@@ -1089,7 +1063,13 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 						 procID.proc );
 				// Log the removal of the job from the queue
 				WriteAbortEventToUserLog( next_ad );
-				DestroyProc( procID.cluster, procID.proc );
+				rc = DestroyProc( procID.cluster, procID.proc );
+				if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+					delete next_ad;
+					commit_transaction = false;
+					goto contact_schedd_disconnect;
+				}
 
 			} else {
 
@@ -1102,14 +1082,33 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 			delete next_ad;
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}
+		if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+			commit_transaction = false;
+			goto contact_schedd_disconnect;
+		}
 
 		dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
-
-		removeJobsSignaled = false;
 	}
 	/////////////////////////////////////////////////////
 
-	DisconnectQ( schedd );
+	if ( CloseConnection() < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		commit_transaction = false;
+		goto contact_schedd_disconnect;
+	}
+
+	add_remove_jobs_complete = true;
+
+ contact_schedd_disconnect:
+	DisconnectQ( schedd, commit_transaction );
+
+	if ( schedd_updates_complete == false ) {
+		dprintf( D_ALWAYS, "Schedd connection error during updates! Will retry\n" );
+		lastContactSchedd = time(NULL);
+		RequestContactSchedd();
+		return TRUE;
+	}
 
 	// Wake up jobs that had schedd updates pending and delete job
 	// objects that wanted to be deleted
@@ -1120,19 +1119,34 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 		curr_job = curr_action->job;
 
 		if ( curr_action->actions & UA_FORGET_JOB ) {
-			if ( curr_job->jobContact != NULL ) {
-				JobsByContact.remove( HashKey( curr_job->jobContact ) );
-			}
-			JobsByProcID.remove( curr_job->procID );
-			GlobusResource *resource = curr_job->GetResource();
-			delete curr_job;
 
-			if ( resource->IsEmpty() ) {
-				ResourcesByName.remove( HashKey( resource->ResourceName() ) );
-				delete resource;
-			}
+			if ( (curr_action->actions & UA_DELETE_FROM_SCHEDD) ?
+				 curr_action->deleted == true :
+				 true ) {
 
-			delete curr_action;
+				if ( curr_job->jobContact != NULL ) {
+					JobsByContact.remove( HashKey( globusJobId(curr_job->jobContact) ) );
+				}
+				JobsByProcID.remove( curr_job->procID );
+					// If wantRematch is set, send a reschedule now
+				if ( curr_job->wantRematch ) {
+					static DCSchedd* schedd_obj = NULL;
+					if ( !schedd_obj ) {
+						schedd_obj = new DCSchedd(NULL,NULL);
+						ASSERT(schedd_obj);
+					}
+					schedd_obj->reschedule();
+				}
+				GlobusResource *resource = curr_job->GetResource();
+				delete curr_job;
+
+				if ( resource->IsEmpty() ) {
+					ResourcesByName.remove( HashKey( resource->ResourceName() ) );
+					delete resource;
+				}
+
+				delete curr_action;
+			}
 		} else if ( curr_action->request_id != 0 ) {
 			completedScheddUpdates.insert( curr_job->procID, curr_action );
 			curr_job->SetEvaluateState();
@@ -1144,6 +1158,12 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 
 	pendingScheddUpdates.clear();
 
+	if ( add_remove_jobs_complete == true ) {
+		firstScheddContact = false;
+		addJobsSignaled = false;
+		removeJobsSignaled = false;
+	}
+
 	// Check if we have any jobs left to manage. If not, exit.
 	if ( JobsByProcID.getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
@@ -1151,6 +1171,11 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 	}
 
 	lastContactSchedd = time(NULL);
+
+	if ( add_remove_jobs_complete == false ) {
+		dprintf( D_ALWAYS, "Schedd connection error! Will retry\n" );
+		RequestContactSchedd();
+	}
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return TRUE;
@@ -1172,12 +1197,12 @@ orphanCallbackHandler()
 	OrphanCallbackList.DeleteCurrent();
 
 	// Find the right job object
-	rc = JobsByContact.lookup( HashKey( orphan->job_contact ), this_job );
+	rc = JobsByContact.lookup( HashKey( globusJobId(orphan->job_contact) ), this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"orphanCallbackHandler: Can't find record for globus job with "
-			"contact %s on globus event %d, ignoring\n", orphan->job_contact,
-			 orphan->state );
+			"contact %s on globus state %d, errorcode %d, ignoring\n",
+			orphan->job_contact, orphan->state, orphan->errorcode );
 		free( orphan->job_contact );
 		delete orphan;
 		return TRUE;
@@ -1203,11 +1228,12 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 	GlobusJob *this_job;
 
 	// Find the right job object
-	rc = JobsByContact.lookup( HashKey( job_contact ), this_job );
+	rc = JobsByContact.lookup( HashKey( globusJobId(job_contact) ), this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"gramCallbackHandler: Can't find record for globus job with "
-			"contact %s on globus event %d, delaying\n", job_contact, state );
+			"contact %s on globus state %d, errorcode %d, delaying\n",
+			job_contact, state, errorcode );
 		OrphanCallback_t *new_orphan = new OrphanCallback_t;
 		new_orphan->job_contact = strdup( job_contact );
 		new_orphan->state = state;

@@ -199,7 +199,9 @@ ClassAdLog::AbortTransaction()
 void
 ClassAdLog::CommitTransaction()
 {
-	assert(active_transaction);
+	// Sometimes we do a CommitTransaction() when we don't know if there was
+	// an active transaction.  This is allowed.
+	if (!active_transaction) return;
 	if (!EmptyTransaction) {
 		LogEndTransaction *log = new LogEndTransaction;
 		active_transaction->AppendLog(log);

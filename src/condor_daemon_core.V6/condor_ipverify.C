@@ -326,7 +326,7 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, int & mask, MySt
     int             found = -1;
     assert(perm);
 
-    if (user && (strcmp("*", user) != 0)) {
+    if (user && *user && (strcmp("*", user) != 0)) {
         userid = MyString(user);
         if ( (found = perm->lookup(userid, mask)) == -1 ) {
             // try *@..../...

@@ -2315,22 +2315,9 @@ int DaemonCore::HandleReq(int socki)
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
-
 				// but first, we should be nice and send a message back to
 				// the people who sent us the wrong session id.
-				SafeSock s;
-				if (s.connect(return_address_ss)) {
-					s.encode();
-					s.put(DC_INVALIDATE_KEY);
-					s.code(sess_id);
-					s.eom();
-					s.close();
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				}
+				sec_man->send_invalidate_packet ( return_address_ss, sess_id );
 
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2423,21 +2410,14 @@ int DaemonCore::HandleReq(int socki)
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
+				sec_man->send_invalidate_packet( return_address_ss, sess_id );
 
-				SafeSock s;
-				if (s.connect(return_address_ss)) {
-					s.encode();
-					s.put(DC_INVALIDATE_KEY);
-					s.code(sess_id);
-					s.eom();
-					s.close();
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
 				}
-
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			}
@@ -2445,12 +2425,24 @@ int DaemonCore::HandleReq(int socki)
 			if (!session->key()) {
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			}
 
 			if (!stream->set_crypto_key(session->key())) {
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			} else {
@@ -2594,6 +2586,13 @@ int DaemonCore::HandleReq(int socki)
 
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 						   "invalid session %s, failing.\n", the_sid);
+
+				char * return_addr = NULL;
+				if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr)) {
+					sec_man->send_invalidate_packet( return_addr, the_sid );
+					free (return_addr);
+				}
+
 
 				// close the connection.
 				result = FALSE;
@@ -2997,39 +2996,44 @@ int DaemonCore::HandleReq(int socki)
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
 
-			ClassAd our_policy;
-        	if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
-				dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
-						 "Our security policy is invalid!\n" );
-				result = FALSE;
-				goto finalize;
-			}
+			// if the command was registered as "ALLOW", then it doesn't matter what the
+			// security policy says, we just allow it.
+			if (comTable[index].perm != ALLOW) {
 
-			// well, they didn't authenticate, turn on encryption,
-			// or turn on integrity.  check to see if any of those
-			// were required.
+				ClassAd our_policy;
+				if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
+					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+							 "Our security policy is invalid!\n" );
+					result = FALSE;
+					goto finalize;
+				}
 
-			if (  (sec_man->sec_lookup_req(our_policy, ATTR_SEC_NEGOTIATION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_AUTHENTICATION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_ENCRYPTION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_INTEGRITY)
-				   == SecMan::SEC_REQ_REQUIRED) ) {
+				// well, they didn't authenticate, turn on encryption,
+				// or turn on integrity.  check to see if any of those
+				// were required.
 
-				// yep, they were.  deny.
+				if (  (sec_man->sec_lookup_req(our_policy, ATTR_SEC_NEGOTIATION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_AUTHENTICATION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_ENCRYPTION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_INTEGRITY)
+					   == SecMan::SEC_REQ_REQUIRED) ) {
 
-				dprintf(D_ALWAYS,
-					"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
-					req,
-					(is_tcp) ? "TCP" : "UDP",
-					(user[0] != '\0') ? " from " : "",
-					(user[0] != '\0') ? user : "",
-					sin_to_string(((Sock*)stream)->endpoint()) );
+					// yep, they were.  deny.
 
-				result = FALSE;
-				goto finalize;
+					dprintf(D_ALWAYS,
+						"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
+						req,
+						(is_tcp) ? "TCP" : "UDP",
+						(user[0] != '\0') ? " from " : "",
+						(user[0] != '\0') ? user : "",
+						sin_to_string(((Sock*)stream)->endpoint()) );
+
+					result = FALSE;
+					goto finalize;
+				}
 			}
 		}
 	}
@@ -4279,13 +4283,13 @@ int DaemonCore::SetEnv( char *env_var )
 
 
 int DaemonCore::Create_Process(
-			char		*name,
-			char		*args,
+			const char	*name,
+			const char	*args,
 			priv_state	priv,
 			int			reaper_id,
 			int			want_command_port,
-			char		*env,
-			char		*cwd,
+			const char	*env,
+			const char	*cwd,
 			int			new_process_group,
 			Stream		*sock_inherit_list[],
 			int			std[],
@@ -4304,6 +4308,13 @@ int DaemonCore::Create_Process(
 	//is saved (so the error can be reported in the user-log).
 	int return_errno = 0;
 	pid_t newpid = FALSE; //return FALSE to caller, by default
+
+	// Name buffer to really use
+	const char	*namebuf = strdup( name );
+	if ( NULL == namebuf ) {
+		dprintf( D_ALWAYS, "strdup failed!\n" );
+		return FALSE;
+	}
 
 	char inheritbuf[_INHERITBUF_MAXSIZE];
 		// note that these are on the stack; they go away nicely
@@ -4324,7 +4335,7 @@ int DaemonCore::Create_Process(
 	int inherit_handles;
 #endif
 
-	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",name);
+	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",namebuf);
 
 	// First do whatever error checking we can that is not platform specific
 
@@ -4336,7 +4347,7 @@ int DaemonCore::Create_Process(
 	}
 
 	// check name validity
-	if ( !name ) {
+	if ( !namebuf ) {
 		dprintf(D_ALWAYS,"Create_Process: null name to exec\n");
 		goto wrapup;
 	}
@@ -4596,7 +4607,7 @@ int DaemonCore::Create_Process(
 	// failed.  So we init the part of the structure we care about and just 
 	// ignore the return value.  
 	loaded.fDOSImage = FALSE;
-	MapAndLoad(name, NULL, &loaded, FALSE, TRUE);
+	MapAndLoad((char *)namebuf, NULL, &loaded, FALSE, TRUE);
 	if (loaded.fDOSImage == TRUE)
 		bIs16Bit = true;
 	UnMapAndLoad(&loaded);
@@ -4609,7 +4620,7 @@ int DaemonCore::Create_Process(
 	{
 		// surround the executable name with quotes or you'll have problems 
 		// when the execute directory contains spaces!
-		strArgs = "\"" + MyString(name) + MyString("\" ");
+		strArgs = "\"" + MyString(namebuf) + MyString("\" ");
 
 		// make sure we're only using backslashes
 		strArgs.replaceString("/", "\\", 0); 
@@ -4627,7 +4638,7 @@ int DaemonCore::Create_Process(
 	
 	BOOL cp_result;
 	if ( priv != PRIV_USER_FINAL ) {
-		cp_result = ::CreateProcess(bIs16Bit ? NULL : name,args,NULL,
+		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)args,NULL,
 			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
@@ -4669,8 +4680,8 @@ int DaemonCore::Create_Process(
 			// restricted to LOCALSYSTEM.  
 			//
 			// "Who's your Daddy ?!?!?!   JEFF B.!"
-		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : name,
-			args,NULL,NULL, inherit_handles,
+		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : namebuf,
+			(char *)args,NULL,NULL, inherit_handles,
 			new_process_group | CREATE_NEW_CONSOLE, newenv,cwd,&si,&piProcess);
 	}
 
@@ -4717,11 +4728,11 @@ int DaemonCore::Create_Process(
 	}
 
 	// First, check to see that the specified executable exists.
-	if( access(name,F_OK | X_OK) < 0 ) {
+	if( access(namebuf,F_OK | X_OK) < 0 ) {
 		return_errno = errno;
 		dprintf( D_ALWAYS, "Create_Process: "
 				 "Cannot access specified executable \"%s\": " 
-				 "errno = %d (%s)\n", name, errno, strerror(errno) );
+				 "errno = %d (%s)\n", namebuf, errno, strerror(errno) );
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv( current_priv );
 		}
@@ -4792,8 +4803,8 @@ int DaemonCore::Create_Process(
 		if( (args == NULL) || (args[0] == 0) ) {
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
 			unix_args = new char*[2];
-			unix_args[0] = new char[strlen(name)+1];
-			strcpy ( unix_args[0], name );
+			unix_args[0] = new char[strlen(namebuf)+1];
+			strcpy ( unix_args[0], namebuf );
 			unix_args[1] = 0;
 		}
 		else {
@@ -4832,13 +4843,31 @@ int DaemonCore::Create_Process(
 					exit(errno);
 				}
 
-				char nametemp[_POSIX_PATH_MAX];
-				strcpy( nametemp, name );
-				strcpy( name, currwd );
-				strcat( name, "/" );
-				strcat( name, nametemp );
-				
-				dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", name );
+				// Allocate a new buffer to store the modified name
+				const char	*origname = namebuf;
+				int			namelen = strlen( namebuf ) + strlen ( currwd ) + 2;
+
+				// Allocate the "final" buffer to use
+				char *nametmp = (char *) malloc( namelen );
+				if ( NULL == nametmp ) {
+					dprintf( D_ALWAYS, "malloc(%d) failed!\n", namelen );
+					return FALSE;					
+				}
+
+				// Build the new (absolute) name in nametmp2
+				strcpy( nametmp, currwd );
+				strcat( nametmp, "/" );
+				strcat( nametmp, origname );
+
+				// Done with the original buffer
+				free( (void *) origname );
+
+				// Ok, we're done modifying the buffer, stuff it back 
+				// into our const char * namebuf
+				namebuf = (const char *) nametmp;
+
+				// Finally, log it
+				dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", namebuf );
 			}
 			
 		}
@@ -4964,12 +4993,12 @@ int DaemonCore::Create_Process(
             SetEnv( "DISPLAY", display );
             free ( display );
             char purebuf[256]; 
-            sprintf ( purebuf, "-program-name=%s", name );
+            sprintf ( purebuf, "-program-name=%s", namebuf );
             SetEnv( "PUREOPTIONS", purebuf );
         }
 #endif
 
-		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", name );
+		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", namebuf );
 
 			// now head into the proper priv state...
 		if ( priv != PRIV_UNKNOWN ) {
@@ -5006,9 +5035,9 @@ int DaemonCore::Create_Process(
 	
 			// and ( finally ) exec:
 		if( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
-			exec_results =  execve(name, unix_args, unix_env); 
+			exec_results =  execve(namebuf, unix_args, unix_env); 
 		} else {
-			exec_results =  execv(name, unix_args);
+			exec_results =  execv(namebuf, unix_args);
 		}
 		if( exec_results == -1 )
 		{
@@ -5059,6 +5088,9 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 #endif
+
+	// Free up the name buffer
+	free( (void *) namebuf );
 
 	// Now that we have a child, store the info in our pidTable
 	pidtmp = new PidEntry;
@@ -6214,7 +6246,7 @@ int DaemonCore::SendAliveToParent()
 }
 	
 #ifndef WIN32
-char **DaemonCore::ParseEnvArgsString(char *str, bool env)
+char **DaemonCore::ParseEnvArgsString(const char *str, bool env)
 {
 	char separator1, separator2;
 	int maxlength;

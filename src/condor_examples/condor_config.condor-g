@@ -277,7 +277,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  condor account, it's probably condor.  Otherwise, it's whatever
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
-LOCK		= $(LOCAL_DIR)/log
+LOCK		= $(LOG)
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
@@ -427,8 +427,8 @@ SHADOW_LOCK = $(LOCK)/ShadowLock
 ##  In most cases, your condor_collector and condor_negotiator are
 ##  going to run on the same machine.  If for some reason, this isn't
 ##  the case, here's where you'd change it:
-NEGOTIATOR_HOST = $(CONDOR_HOST)
-COLLECTOR_HOST  = $(CONDOR_HOST)
+#NEGOTIATOR_HOST = $(CONDOR_HOST)
+#COLLECTOR_HOST  = $(CONDOR_HOST)
 
 ##  How long are you willing to let daemons try their graceful
 ##  shutdown methods before they do a hard shutdown? (30 minutes)

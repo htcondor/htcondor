@@ -7,7 +7,7 @@
 #include "../condor_status.V6/totals.h"
 
 #include "collector_engine.h"
-#include "daemon.h"
+#include "dc_collector.h"
 
 //----------------------------------------------------------------
 // Collector daemon class declaration
@@ -72,9 +72,12 @@ protected:
 	static int machinesTotal,machinesUnclaimed,machinesClaimed,machinesOwner;
 
 	static ClassAd *ad;
-	static SafeSock updateSock;
+	static DCCollector* updateCollector;
 	static int UpdateTimerId;
 
+	static SocketCache* sock_cache;
+	static int sockCacheHandler( Service*, Stream* sock );
+	static int stashSocket( Stream* sock );
 };
 
 #endif
