@@ -7,6 +7,7 @@
 	/* Temporary - need to get real PSEUDO definitions brought in... */
 #define PSEUDO_getwd	1
 
+#include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
 #include "condor_constants.h"
 #include "file_table_interf.h"
@@ -18,19 +19,14 @@
 #include <sys/uio.h>
 
 /*
-  In remote mode the process should send the exit status to the shadow,
-  then do a local exit() - so it really goes away.
+  The process should exit making the status value available to its parent
+  (the starter) - can only be a local operation.
 */
 void
 _exit( status )
 int status;
 {
-	if( LocalSysCalls() ) {
-		(void) syscall( SYS_exit, status );
-	} else {
-		(void)REMOTE_syscall( SYS_exit, status );
-		(void) syscall( SYS_exit, status );
-	}
+	(void) syscall( SYS_exit, status );
 }
 
 /*
@@ -50,7 +46,7 @@ chdir( const char *path )
 	if( LocalSysCalls() ) {
 		rval = syscall( SYS_chdir, path );
 	} else {
-		rval = REMOTE_syscall( SYS_chdir, path );
+		rval = REMOTE_syscall( CONDOR_chdir, path );
 	}
 
 		/* If it fails we can stop here */
@@ -58,26 +54,62 @@ chdir( const char *path )
 		return rval;
 	}
 
-		/* Need to keep Condor's version of the CWD up to date */
 	if( MappingFileDescriptors ) {
-			/* Get the information */
-		if( LocalSysCalls() ) {
-			status = getwd( tbuf );
-		} else {
-			status = REMOTE_syscall( PSEUDO_getwd, tbuf );
-		}
-
-			/* These routines return 0 on error! */
-		if( status == 0 ) {
-			fprintf( stderr, tbuf );
-			abort();
-		}
-
-			/* Ok - everything worked */
-		Set_CWD( tbuf );
+		store_working_directory();
 	}
 
 	return rval;
+}
+
+int
+fchdir( int fd )
+{
+	int rval, real_fd;
+
+	if( MappingFileDescriptors() ) {
+		if( (real_fd = MapFd(fd)) < 0 ) {
+			return -1;
+		}
+	}
+
+		/* Try the system call */
+	if( LocalSysCalls() ) {
+		rval = syscall( SYS_fchdir, real_fd );
+	} else {
+		rval = REMOTE_syscall( CONDOR_fchdir, real_fd );
+	}
+
+		/* If it fails we can stop here */
+	if( rval < 0 ) {
+		return rval;
+	}
+
+	if( MappingFileDescriptors ) {
+		store_working_directory();
+	}
+
+	return rval;
+}
+
+/*
+Keep Condor's version of the CWD up to date
+*/
+store_working_directory()
+{
+	char	tbuf[ _POSIX_PATH_MAX ];
+	int		status;
+
+		/* Get the information */
+	status = getwd( tbuf );
+
+		/* This routine returns 0 on error! */
+	if( status == 0 ) {
+		fprintf( stderr, tbuf );
+		abort();
+	}
+
+		/* Ok - everything worked */
+	Set_CWD( tbuf );
 }
 
 /*
@@ -112,7 +144,7 @@ getrusage( int who, struct rusage *rusage )
 		syscall( SYS_getrusage, who, rusage);
 
 			/* Get accumulated rusage from previous runs */
-		rval = REMOTE_syscall( SYS_getrusage, who, &accum_rusage );
+		rval = REMOTE_syscall( CONDOR_getrusage, who, &accum_rusage );
 
 			/* Sum the two. */
 		update_rusage(rusage, &accum_rusage);
@@ -128,8 +160,8 @@ getrusage( int who, struct rusage *rusage )
   therefore provide a "quick and dirty" substitute here.  This may
   not always be correct, but it will get you by in most cases.
 */
-isatty( filedes )
-int		filedes;
+int
+isatty( int filedes )
 {
 		/* Stdin, stdout, and stderr are redirected to normal
 		** files for all condor jobs.
@@ -184,7 +216,7 @@ fake_readv( int fd, struct iovec *iov, int iovcnt )
 	register int i, rval = 0, cc;
 
 	for( i = 0; i < iovcnt; i++ ) {
-		cc = REMOTE_syscall( SYS_read, fd, iov->iov_base, iov->iov_len );
+		cc = REMOTE_syscall( CONDOR_read, fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) {
 			return cc;
 		}
@@ -235,7 +267,7 @@ fake_writev( int fd, struct iovec *iov, int iovcnt )
 	register int i, rval = 0, cc;
 
 	for( i = 0; i < iovcnt; i++ ) {
-		cc = REMOTE_syscall( SYS_write, fd, iov->iov_base, iov->iov_len );
+		cc = REMOTE_syscall( CONDOR_write, fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) {
 			return cc;
 		}
