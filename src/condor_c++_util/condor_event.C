@@ -1238,6 +1238,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
 		return 0;
 	
+		// THIS CODE IS TOTALLY BROKEN.  Please fix me.
 	if( fscanf (file, "\t%f  -  Run Bytes Sent By ", &sent_bytes) == 0 ||
 		fscanf (file, header) == 0 ||
 		fscanf (file, "\n") == 0 ||
