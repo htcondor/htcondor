@@ -162,6 +162,7 @@ const char ATTR_Q_DATE                   [] = "QDate";
 const char ATTR_RANK					 [] = "Rank";
 const char ATTR_REAL_UID				 [] = "RealUid";
 const char ATTR_REMOTE_HOST				 [] = "RemoteHost";
+const char ATTR_REMOTE_OWNER			 [] = "RemoteOwner";
 const char ATTR_REMOTE_POOL				 [] = "RemotePool";
 const char ATTR_REMOTE_USER              [] = "RemoteUser";
 const char ATTR_REMOTE_USER_PRIO         [] = "RemoteUserPrio";
