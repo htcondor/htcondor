@@ -23,7 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "condor_string.h"
 #include "basename.h"
 #include "dag.h"
@@ -44,9 +44,6 @@ bool run_post_on_failure = TRUE;
 char* lockFileName = NULL;
 char* DAGManJobId;
 char* DAP_SERVER = "skywalker.cs.wisc.edu";
-
-// Required for linking with condor libs
-extern "C" int SetSyscalls() { return 0; }
 
 Global G;
 
