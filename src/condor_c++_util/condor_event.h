@@ -61,6 +61,8 @@ enum ULogEventNumber {
     /** Shadow threw an exception */  ULOG_SHADOW_EXCEPTION,
 	/** Job was suspended         */  ULOG_JOB_SUSPENDED,
 	/** Job was unsuspended       */  ULOG_JOB_UNSUSPENDED,
+	/** Job was held              */  ULOG_JOB_HELD,
+	/** Job was released          */  ULOG_JOB_RELEASED,
 #if defined(GENERIC_EVENT)
     /** Generic Log Event         */  ULOG_GENERIC,
 #endif      
@@ -710,7 +712,63 @@ class JobUnsuspendedEvent : public ULogEvent
 		starter unsuspended the same number of jobs it suspended. Alas.
 	*/
 };
-    
+
+//------------------------------------------------------------------------
+/** Framework for a JobHeld event object.  Occurs if the job goes on hold.
+*/
+class JobHeldEvent : public ULogEvent
+{
+  public:
+    ///
+    JobHeldEvent ();
+    ///
+    ~JobHeldEvent ();
+
+    /** Read the body of the next JobHeldEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobHeldEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** message about why a job became held */
+	char msg[BUFSIZ];
+};
+
+//------------------------------------------------------------------------
+/** Framework for a JobReleased event object.  Occurs if the job becomes
+	released from the held state.
+*/
+class JobReleasedEvent : public ULogEvent
+{
+  public:
+    ///
+    JobReleasedEvent ();
+    ///
+    ~JobReleasedEvent ();
+
+    /** Read the body of the next JobReleasedEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobReleasedEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** message about why a job got released */
+	char msg[BUFSIZ];
+};
+
+/* MPI events */
 class NodeExecuteEvent : public ULogEvent
 {
   public:

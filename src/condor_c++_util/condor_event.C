@@ -47,6 +47,8 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_SHADOW_EXCEPTION", // Shadow threw an exception
 	"ULOG_JOB_SUSPENDED   ", // Job was suspended
 	"ULOG_JOB_UNSUSPENDED "  // Job was unsuspended
+	"ULOG_JOB_HELD        "  // Job was held
+	"ULOG_JOB_RELEASED    "  // Job was released
 #if defined(GENERIC_EVENT)
 	,"ULOG_GENERIC        "
 #endif	    
@@ -100,6 +102,18 @@ instantiateEvent (ULogEventNumber event)
 
 	  case ULOG_JOB_ABORTED:
 		return new JobAbortedEvent;
+
+	  case ULOG_JOB_SUSPENDED:
+		return new JobSuspendedEvent;
+
+	  case ULOG_JOB_UNSUSPENDED:
+		return new JobUnsuspendedEvent;
+
+	  case ULOG_JOB_HELD:
+		return new JobHeldEvent;
+
+	  case ULOG_JOB_RELEASED:
+		return new JobReleasedEvent;
 
 	case ULOG_NODE_EXECUTE:
 		return new NodeExecuteEvent;
@@ -845,11 +859,76 @@ readEvent (FILE *file)
 	return 1;
 }
 
-
 int JobUnsuspendedEvent::
 writeEvent (FILE *file)
 {
 	if (fprintf (file, "Job was unsuspended.\n") < 0)
+		return 0;
+
+	return 1;
+}
+
+JobHeldEvent::
+JobHeldEvent ()
+{
+	eventNumber = ULOG_JOB_HELD;
+}
+
+JobHeldEvent::
+~JobHeldEvent ()
+{
+}
+
+int JobHeldEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was held.\n\t") == EOF)
+		return 0;
+	if (fscanf (file, "Action caused by: %s\n", &msg) == EOF)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+int JobHeldEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was held.\n\t") < 0)
+		return 0;
+	if (fprintf (file, "Action caused by: %s\n", msg) < 0)
+		return 0;
+
+	return 1;
+}
+
+JobReleasedEvent::
+JobReleasedEvent ()
+{
+	eventNumber = ULOG_JOB_RELEASED;
+}
+
+JobReleasedEvent::
+~JobReleasedEvent ()
+{
+}
+
+int JobReleasedEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was released.\n\t") == EOF)
+		return 0;
+	if (fscanf (file, "Action caused by: %s\n", msg) == EOF)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+int JobReleasedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was released.\n\t") < 0)
+		return 0;
+	if (fprintf (file, "Action caused by: %s\n", msg) < 0)
 		return 0;
 
 	return 1;
