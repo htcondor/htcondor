@@ -80,7 +80,7 @@ lex.yy.o: lex.yy.c
 	$(CC) $(CFLAGS) -c lex.yy.c
 
 stub_gen: y.tab.o lex.yy.o
-	$(CC) $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(ALL_LDFLAGS)
+	$(CC) $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(LEXLIB) $(ALL_LDFLAGS)
 
 clean::
 	rm -f stub_gen y.tab.o lex.yy.o 
