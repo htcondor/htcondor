@@ -2847,7 +2847,7 @@ GahpClient::gt4_gram_client_callback_allow(
 			// Badness !
 		const char *es = result.argc >= 3 ? result.argv[2] : "???";
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",
-						es);
+				command, es);
 		if ( result.argc >= 3 && strcasecmp(result.argv[2], NULLSTRING) ) {
 			error_string = result.argv[2];
 		} else {
