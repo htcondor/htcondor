@@ -264,7 +264,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  job->_Status = Job::STATUS_ERROR;
                   _numJobsSubmitted--;
                   assert( _numJobsSubmitted >= 0 );
-				  _numJobsFailed++;
 
 				  sprintf( job->error_text, "Condor reported %s event",
 						   ULogEventNumberNames[e->eventNumber] );
@@ -277,9 +276,10 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  }
  				  if( job->_scriptPost == NULL || 
 					  run_post_on_failure == FALSE ) {
+					  _numJobsFailed++;
 					  break;
 				  }
-				  // if a POST script is specified for the job, run it
+				  // a POST script is specified for the job, so run it
 				  job->_Status = Job::STATUS_POSTRUN;
 				  // there's no easy way to represent these errors as
 				  // return values or signals, so just say SIGABRT
@@ -340,7 +340,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					  else {
 						  // no more retries -- job failed
 						  job->_Status = Job::STATUS_ERROR;
-						  _numJobsFailed++;
 						  if( job->retry_max > 0 ) {
 							  // add # of retries to error_text
 							  char *tmp = strnewp( job->error_text );
@@ -351,6 +350,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 						  }
 						  if( job->_scriptPost == NULL ||
 							  run_post_on_failure == FALSE ) {
+							  _numJobsFailed++;
 							  break;
 						  }
 					  }
@@ -414,8 +414,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 							job->_scriptPre->_done = false;
 						}
                         if( job->retval != 0 ) {
-							// undo job failure
-                            _numJobsFailed--;
+							// clear job error text
 							strcpy( job->error_text, "" );
                         }
 						if( !recovery ) {
@@ -425,19 +424,19 @@ bool Dag::ProcessLogEvents (bool recovery) {
                     else {
 						// no more retries -- node failed
 						job->_Status = Job::STATUS_ERROR;
+						_numJobsFailed++;
 						if( job->retval == 0 ) {
 							// job had succeeded but POST failed
-							_numJobsFailed++;
 							sprintf( job->error_text,
 									 "POST Script died on signal %d",
 									 termEvent->signalNumber );
 						}
 						else {
 							// job failed prior to POST failing
-							// (_numJobsFailed already incremented)
                             sprintf( job->error_text, 
-                                     "Job failed with status %d",
-									 job->retval );
+                                     "Job failed with status %d and "
+									 "POST Script died on signal %d",
+									 job->retval, termEvent->signalNumber );
 						}
 						if( job->retry_max > 0 ) {
 							// add # of retries to error_text
@@ -463,8 +462,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 							job->_scriptPre->_done = false;
 						}
                         if( job->retval != 0 ) {
-							// undo job failure
-                            _numJobsFailed--;
+							// clear job error text
                             strcpy( job->error_text, "" );
                         }
 						if( !recovery ) {
@@ -474,19 +472,19 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					else {
 						// no more retries -- node failed
 						job->_Status = Job::STATUS_ERROR;
+						_numJobsFailed++;
 						if( job->retval == 0 ) {
 					   		// job had succeeded but POST failed
-							_numJobsFailed++;
 							sprintf( job->error_text,
 									 "POST Script failed with status %d",
 									 termEvent->returnValue );
 						}
 						else {
 						   	// job failed prior to POST failing
-							// (_numJobsFailed already incremented)
 							sprintf( job->error_text,
-                                     "Job failed with status %d",
-									 job->retval );
+                                     "Job failed with status %d and "
+									 "POST Script failed with status %d",
+									 job->retval, termEvent->returnValue );
 						}
 						if( job->retry_max > 0 ) {
 							// add # of retries to error_text
@@ -502,17 +500,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					// POST script succeeded
 					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 								   "completed successfully.\n" );
-					if( job->retval == 0 ) {
-						// update DAG dependencies with the successful
-						// completion of this node
-						job->_Status = Job::STATUS_DONE;
-						TerminateJob( job, recovery );
-					}
-					else {
-						// job failed prior to POST succeeding
-						// (_numJobsFailed already incremented)
-						job->_Status = Job::STATUS_ERROR;
-					}
+					job->_Status = Job::STATUS_DONE;
+					TerminateJob( job, recovery );
 				}
 				PrintReadyQ( DEBUG_DEBUG_4 );
 				break;
@@ -672,6 +661,8 @@ Dag::SubmitReadyJobs()
   
     CondorID condorID(0,0,0);
     if( ! submit_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
+		// NOTE: this failure does not observe the "retry" feature
+		// (for better or worse)
         job->_Status = Job::STATUS_ERROR;
         _numJobsFailed++;
 		sprintf( job->error_text, "Job submit failed" );
@@ -751,7 +742,9 @@ Dag::PreScriptReaper( Job* job, int status )
 	return true;
 }
 
-//---------------------------------------------------------------------------
+// Note that the actual handling of the post script's exit status is
+// done not when the reaper is called, but in ProcessLogEvents when
+// the log event (written by the reaper) is seen...
 int
 Dag::PostScriptReaper( Job* job, int status )
 {
@@ -864,9 +857,9 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     fprintf (fp, "# Rescue DAG file, created after running\n");
     fprintf (fp, "#   the %s DAG file\n", datafile);
     fprintf (fp, "#\n");
-    fprintf (fp, "# Total number of jobs: %d\n", NumJobs());
-    fprintf (fp, "# Jobs premarked DONE: %d\n", _numJobsDone);
-    fprintf (fp, "# Jobs that failed: %d\n", _numJobsFailed);
+    fprintf (fp, "# Total number of Nodes: %d\n", NumJobs());
+    fprintf (fp, "# Nodes premarked DONE: %d\n", _numJobsDone);
+    fprintf (fp, "# Nodes that failed: %d\n", _numJobsFailed);
 
     //
     // Print the names of failed Jobs
