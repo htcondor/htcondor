@@ -321,8 +321,7 @@ sub RunSubmit(  )
 	$Cmd = $Cmd .
 	    " -format \"" . $Field->{Format} . " \" " . $Field->{Name};
     }
-    my $Last = rindex( $Cmd, "\"" );
-    substr( $Cmd, $Last, 0, "\\n" );
+    $Cmd = $Cmd . " -format \"\\n\" Name";
     if ( ! open( SUB, "$Cmd|" ) )
     {
 	print STDERR "Can't get submit info\n";
