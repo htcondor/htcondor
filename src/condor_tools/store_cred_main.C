@@ -103,7 +103,10 @@ int main(int argc, char *argv[]) {
 		case QUERY_MODE:
 			result = queryCredential(my_full_name);
 			if ( result == SUCCESS ) {
-				fprintf(stdout, "Your credential is stored.\n");
+				fprintf(stdout, "A credential is stored and is valid.\n");
+			} else if ( result == FAILURE_BAD_PASSWORD ){
+				fprintf(stdout, "A credential is stored, but it is invalid. "
+						"Run 'condor_store_cred add' again.\n");
 			} else {
 				fprintf(stdout, "No credential is stored.\n");
 			}
