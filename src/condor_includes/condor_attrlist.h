@@ -106,6 +106,7 @@ class AttrListRep: public AttrListAbstract
 class AttrList : public AttrListAbstract
 {
     public :
+	    void ChainToAd( AttrList * );
 
 		// ctors/dtor
 		AttrList();							// No associated AttrList list
@@ -120,15 +121,17 @@ class AttrList : public AttrListAbstract
 		// insert expressions into the ad
         int        	Insert(char*);			// insert at the tail
         int        	Insert(ExprTree*);		// insert at the tail
-		int			InsertOrUpdate(char*);
+		int			InsertOrUpdate(char*expr) { return Insert(expr); }
 
 		// deletion of expressions	
         int			Delete(const char*); 	// delete the expr with the name
 
 		// to update expression trees
 		void		ResetFlags();			// reset the all the dirty flags
+#if 0
 		int			UpdateExpr(char*, ExprTree*);	// update an expression
 		int			UpdateExpr(ExprTree*);
+#endif
 
 		// for iteration through expressions
 		void		ResetExpr() { this->ptrExpr = exprList; }
@@ -166,6 +169,7 @@ class AttrList : public AttrListAbstract
         int put(Stream& s);
         int get(Stream& s);
         int code(Stream& s);
+
 #if defined(USE_XDR)
 		int put (XDR *);
 		int get (XDR *);
@@ -176,6 +180,7 @@ class AttrList : public AttrListAbstract
 		friend	class	ClassAd;
 
     protected :
+	    AttrListElem**	chainedAttrs;
 
 		// update an aggregate expression if the AttrList list associated with
 		// this AttrList is changed
@@ -189,6 +194,8 @@ class AttrList : public AttrListAbstract
 		AttrListElem*	ptrExpr;		// used by NextExpr 
 		AttrListElem*	ptrName;		// used by NextName
 		int				seq;			// sequence number
+private:
+	bool inside_insert;
 };
 
 class AttrListList
