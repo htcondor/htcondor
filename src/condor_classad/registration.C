@@ -85,15 +85,13 @@ int Registration::RegisterType(const char *type)
     {                                      // table is full, reallocation
         int tempSize = 2 * regiTableSize;  // necessary. 
         regiTable = (char **) realloc(regiTable, tempSize*sizeof(char *));
-        if(regiTable == NULL)
-        {
+        if(regiTable == NULL) {
             EXCEPT("Warning : you ran out of memory -- quitting !");
         }
-        for(int i=regiTableSize; i<tempSize; i++)
-	{
-	    regiTable[i] = NULL;
-	}
-	regiTableSize = tempSize;
+        for(int i=regiTableSize; i<tempSize; i++) {
+			regiTable[i] = NULL;
+		}
+		regiTableSize = tempSize;
     }
   
     regiTable[regiNumber] = new char[strlen(type)+1];
