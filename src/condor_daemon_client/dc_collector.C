@@ -252,8 +252,8 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 		// about to try that, and we're trying to talk to a local
 		// collector, we should try re-reading the address file and
 		// re-setting our port.
-	if( _port == 0 && _is_local) {
-		dprintf( D_HOSTNAME, "About to update local collector with port 0, "
+	if( _port == 0 ) {
+		dprintf( D_HOSTNAME, "About to update collector with port 0, "
 				 "attempting to re-read address file\n" );
 		if( readAddressFile(_subsys) ) {
 			_port = string_to_port( _addr );
