@@ -482,6 +482,7 @@ Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 
 		if(AlreadyMatched(&PrioRec[i].id))
 		{
+			dprintf( D_FULLDEBUG, "Job already matched\n");
 			continue;
 		}
 
@@ -1047,9 +1048,8 @@ Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
 				if (Shadow == 0) {
 					Shadow = param("SHADOW_CARMI");
 				}
-				argv[1] = "-d";
-				argv[2] = MySockName;
-				argv[3] = 0;
+				argv[1] = MySockName;
+				argv[2] = 0;
 				
 				dprintf( D_ALWAYS, "About to call: %s ", Shadow );
 				for( ptr = argv; *ptr; ptr++ ) {
@@ -1095,7 +1095,7 @@ Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
 	
 	dprintf( D_ALWAYS, "First Line: %s", out_buf );
 	write(shadow_fd, out_buf, strlen(out_buf));
-	sprintf(out_buf, "%s %d\n", mrec->peer, job_id->proc);
+	sprintf(out_buf, "%s %s %d\n", mrec->peer, mrec->id, job_id->proc);
 	dprintf( D_ALWAYS, "sending %s", out_buf);
 	write(shadow_fd, out_buf, strlen(out_buf));
 	return srp;
@@ -2408,6 +2408,13 @@ int
 Scheduler::AlreadyMatched(PROC_ID* id)
 {
 	int			i;
+	int universe;
+
+	if (GetAttributeInt(id->cluster, id->proc, ATTR_JOB_UNIVERSE, &universe) < 0)
+		dprintf(D_ALWAYS, "GetAttributeInt() failed\n");
+
+	if (universe == PVM)
+		return FALSE;
 
 	for(i = 0; i < nMrec; i++)
 	{
