@@ -478,6 +478,9 @@ close and delete.  Same goes for the file pointer.
 
 int CondorFileTable::close( int fd )
 {
+	/* assume success in case of multiple closes */
+	int rval = 0;
+
 	if( (fd<0) || (fd>=length) || (pointers[fd]==0) ) {
 		errno = EBADF;
 		return -1;
@@ -489,7 +492,7 @@ int CondorFileTable::close( int fd )
 	// If this is the last use of the file, flush, close, and delete
 	if(count_file_uses(file)==1) {
 		pointers[fd]->info->report();
-		file->close();
+		rval = file->close();
 		delete file;
 	}
 
@@ -501,7 +504,7 @@ int CondorFileTable::close( int fd )
 	// In any case, mark the fd as unused.
 	pointers[fd]=0;
 
-	return 0;
+	return rval;
 }
 
 ssize_t CondorFileTable::read( int fd, void *data, size_t nbyte )

@@ -88,14 +88,16 @@ int CondorFileBasic::open(const char *path, int flags, int mode)
 
 int CondorFileBasic::close()
 {
+	int rval;
+
 	if( fd!=-1 ) {
 		int scm = SetSyscalls(syscall_mode);
-		::close(fd);
+		rval = ::close(fd);
 		SetSyscalls(scm);
 	}
 
 	fd = -1;
-	return 0;
+	return rval;
 }
 
 void CondorFileBasic::checkpoint()
