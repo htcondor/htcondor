@@ -26,11 +26,7 @@
 %type <param_mode> use_type
 
 %{
-#include <stdio.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+#include "condor_common.h"
 #include "scanner.h"
 extern int yyline;
 struct node *

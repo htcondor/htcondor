@@ -3,10 +3,7 @@
 %a 4000
 %e 2500
 %{
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <stdlib.h>
+#include "condor_common.h"
 #include "scanner.h"
 #include "y.tab.h"
 

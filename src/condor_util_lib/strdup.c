@@ -21,12 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
+#include "condor_common.h" 
 #include "clib.h"
 #include "debug.h"
 
