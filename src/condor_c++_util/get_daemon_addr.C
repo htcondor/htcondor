@@ -195,7 +195,7 @@ char*
 get_negotiator_addr(const char* name)
 {
 	static char addr[100];
-	Daemon d( DT_COLLECTOR, name );
+	Daemon d( DT_NEGOTIATOR, name );
 	if( d.locate() ) {
 		strncpy( addr, d.addr(), 100 );
 		return addr;
