@@ -82,10 +82,10 @@ usage()
 {
 	fprintf( stderr, "Usage: %s [options] variable [variable] ...\n", MyName );
 	fprintf( stderr,
-			 "   or: %s [options] -set variable value [variable value] ...\n",
+			 "   or: %s [options] -set string [string] ...\n",
 			 MyName );
 	fprintf( stderr,
-			 "   or: %s [options] -rset variable value [variable value] ...\n",
+			 "   or: %s [options] -rset string [string] ...\n",
 			 MyName );
 	fprintf( stderr, "   or: %s [options] -unset variable [variable] ...\n",
 			 MyName );
@@ -116,11 +116,11 @@ usage()
 
 
 char* GetRemoteParam( char*, char*, char*, char* );
-void  SetRemoteParam( char*, char*, char*, char*, char*, ModeType );
+void  SetRemoteParam( char*, char*, char*, char*, ModeType );
 
 main( int argc, char* argv[] )
 {
-	char	*value, *tmp, *host = NULL;
+	char	*value, *tmp, *foo, *host = NULL;
 	char	*addr = NULL, *name = NULL, *pool = NULL;
 	int		i;
 	bool	ask_a_daemon = false;
@@ -241,9 +241,8 @@ main( int argc, char* argv[] )
 			printf( "%s\n", tmp );
 			my_exit( 0 );
 		} else {
-			fprintf( stderr,
-					 "Error: Specified -tilde but can't find %s\n",
-					 "condor's home directory." );
+			fprintf( stderr, "Error: Specified -tilde but can't find " 
+					 "condor's home directory\n" );
 			my_exit( 1 );
 		}
 	}		
@@ -260,11 +259,9 @@ main( int argc, char* argv[] )
 	}
 
 	while( (tmp = params.next()) ) {
-		if( mt == CONDOR_SET || mt == CONDOR_RUNTIME_SET ) {
-			value = params.next();
-			SetRemoteParam( name, addr, pool, tmp, value, mt );
-		} else if( mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
-			SetRemoteParam( name, addr, pool, tmp, "", mt );
+		if( mt == CONDOR_SET || mt == CONDOR_RUNTIME_SET ||
+			mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
+			SetRemoteParam( name, addr, pool, tmp, mt );
 		} else {
 			if( name || pool || addr ) {
 				value = GetRemoteParam( name, addr, pool, tmp );
@@ -331,20 +328,26 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 
 
 void
-SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
-				char* param_value, ModeType mt )
+SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
+				ModeType mt )
 {
 	int cmd, rval;
 	ReliSock s;
+	bool set = false;
 
-	s.timeout( 30 );
-
+		// We need to know two things: what command to send, and (for
+		// error messages) if we're setting or unsetting.  Since our
+		// bool "set" defaults to false, we only hit the "set = true"
+		// statements when we want to, and fall through to also set
+		// the right commands in those cases... Derek Wright 9/1/99
 	switch (mt) {
 	case CONDOR_SET:
+		set = true;
 	case CONDOR_UNSET:
 		cmd = DC_CONFIG_PERSIST;
 		break;
 	case CONDOR_RUNTIME_SET:
+		set = true;
 	case CONDOR_RUNTIME_UNSET:
 		cmd = DC_CONFIG_RUNTIME;
 		break;
@@ -357,6 +360,59 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
 		name = "";
 	}
 
+		// Now, process our strings for sanity.
+	char* param_name = strdup( param_value );
+	char* tmp = NULL;
+
+	if( set ) {
+		tmp = strchr( param_name, ':' );
+		if( ! tmp ) {
+			tmp = strchr( param_name, '=' );
+		}
+		if( ! tmp ) {
+			fprintf( stderr, "%s: Can't set configuration value (\"%s\")\n" 
+					 "You must specify \"macro_name = value\" or " 
+					 "\"expr_name : value\"\n", MyName, param_name );
+			my_exit( 1 );
+		}
+			// If we're still here, we found a ':' or a '=', so, now,
+			// chop off everything except the attribute name
+			// (including spaces), so we can send that seperately. 
+		do {
+			*tmp = '\0';
+			tmp--;
+		} while( *tmp == ' ' );
+	} else {
+			// Want to do different sanity checking.
+		if( (tmp = strchr(param_name, ':')) || 
+			(tmp = strchr(param_name, '=')) ) {
+			fprintf( stderr, "%s: Can't unset configuration value (\"%s\")\n" 
+					 "To unset, you only specify the name of the attribute\n", 
+					 MyName, param_name );
+			my_exit( 1 );
+		}
+		tmp = strchr( param_name, ' ' );
+		if( tmp ) {
+			*tmp = '\0';
+		}
+	}
+
+		// At this point, in either set or unset mode, param_name
+		// should hold a valid name, so do a final check to make sure
+		// there are no spaces.
+	if( (tmp = strchr(param_name, ' ')) ) {
+		fprintf( stderr, 
+				 "%s: Error: Configuration variable names cannot contain spaces\n",
+				 MyName );
+		my_exit( 1 );
+	}
+
+		// We need a version with a newline at the end to make
+		// everything cool at the other end.
+	char* buf = (char*)malloc( strlen(param_value) + 2 );
+	sprintf( buf, "%s\n", param_value );
+
+	s.timeout( 30 );
 	if( ! s.connect( addr, 0 ) ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
 				 daemonString(dt), name, addr );
@@ -369,16 +425,16 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
 		my_exit(1);
 	}
 	if( !s.code(param_name) ) {
-		fprintf( stderr, "Can't send param name (%s)\n", param_name );
+		fprintf( stderr, "Can't send config name (%s)\n", param_name );
 		my_exit(1);
 	}
-	char *buf = NULL;
-	if (param_value && param_value[0]) {
-		buf = (char *)malloc(strlen(param_name)+strlen(param_value)+5);
-		sprintf(buf, "%s : %s\n", param_name, param_value);
-		if( !s.code(buf) ) {
-			fprintf( stderr, "Can't send config setting (%s)\n", buf );
-			free(buf);
+	if( set ) {
+		if( !s.code(param_value) ) {
+			fprintf( stderr, "Can't send config setting (%s)\n", param_value );
+			my_exit(1);
+		}
+		if( !s.put('\n') ) {
+			fprintf( stderr, "Can't send newline\n" );
 			my_exit(1);
 		}
 	} else {
@@ -389,7 +445,6 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
 	}
 	if( !s.end_of_message() ) {
 		fprintf( stderr, "Can't send end of message\n" );
-		if (buf) free(buf);
 		my_exit(1);
 	}
 
@@ -397,36 +452,33 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
 	if( !s.code(rval) ) {
 		fprintf( stderr, "Can't receive reply from %s on %s %s\n",
 				 daemonString(dt), name, addr );
-		if (buf) free(buf);
 		my_exit(1);
 	}
 	if( !s.end_of_message() ) {
 		fprintf( stderr, "Can't receive end of message\n" );
-		if (buf) free(buf);
 		my_exit(1);
 	}
-	if (buf) buf[strlen(buf)-1] = '\0';	// remove newline
 	if (rval < 0) {
-		if (buf) {
+		if (set) {
 			fprintf( stderr, "Attempt to set configuration \"%s\" on %s %s "
 					 "%s failed.\n",
-					 buf, daemonString(dt), name, addr );
-			free(buf);
+					 param_value, daemonString(dt), name, addr );
 		} else {
 			fprintf( stderr, "Attempt to unset configuration \"%s\" on %s %s "
 					 "%s failed.\n",
-					 param_name, daemonString(dt), name, addr );
+					 param_value, daemonString(dt), name, addr );
 		}
 		my_exit(1);
 	}
-	if (buf) {
+	if (set) {
 		fprintf( stderr, "Successfully set configuration \"%s\" on %s %s "
 				 "%s.\n",
-				 buf, daemonString(dt), name, addr );
-		free(buf);
+				 param_value, daemonString(dt), name, addr );
 	} else {
 		fprintf( stderr, "Successfully unset configuration \"%s\" on %s %s "
 				 "%s.\n",
-				 param_name, daemonString(dt), name, addr );
+				 param_value, daemonString(dt), name, addr );
 	}
+	free( buf );
+	free( param_name );
 }
