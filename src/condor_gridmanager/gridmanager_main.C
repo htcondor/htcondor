@@ -57,6 +57,7 @@ main_activate_globus()
 		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
 		return false;
 	}
+	dprintf( D_FULLDEBUG, "GASS server URL: %s\n", gassServerUrl );
 
 	return true;
 }
@@ -139,4 +140,21 @@ main_shutdown_graceful()
 	main_deactivate_globus();
 	DC_Exit(0);
 	return TRUE;	// to satify c++
+}
+
+// This function is called by dprintf - always display our pid in our
+// log entries. 
+extern "C" 
+int
+display_dprintf_header(FILE *fp)
+{
+	static pid_t mypid = 0;
+
+	if (!mypid) {
+		mypid = daemonCore->getpid();
+	}
+
+	fprintf( fp, "[%ld]: ", mypid );
+
+	return TRUE;
 }
