@@ -265,7 +265,7 @@ makeQuery (ClassAd &ad)
 		{
 			bool firstTime = true;
 			strcat (req, firstCategory ? "(" : " && (");
-			while (item = stringConstraints [i].Next ())
+			while ((item = stringConstraints [i].Next ()))
 			{
 				sprintf (buf, "%s(TARGET.%s == \"%s\")", 
 						 firstTime ? " " : " || ", 
@@ -326,7 +326,7 @@ makeQuery (ClassAd &ad)
 	{
 		bool firstTime = true;
 		strcat (req, firstCategory ? "(" : " && (");
-		while (item = customANDConstraints.Next ())
+		while ((item = customANDConstraints.Next ()))
 		{
 			sprintf (buf, "%s(%s)", firstTime ? " " : " && ", item);
 			strcat (req, buf);
@@ -342,7 +342,7 @@ makeQuery (ClassAd &ad)
 	{
 		bool firstTime = true;
 		strcat (req, firstCategory ? "(" : " && (");
-		while (item = customORConstraints.Next ())
+		while ((item = customORConstraints.Next ()))
 		{
 			sprintf (buf, "%s(%s)", firstTime ? " " : " || ", item);
 			strcat (req, buf);
@@ -386,7 +386,7 @@ clearStringCategory (List<char> &str_category)
 {
     char *x;
     str_category.Rewind ();
-    while (x = str_category.Next ())
+    while ((x = str_category.Next ()))
     {
         delete [] x;
         str_category.DeleteCurrent ();
@@ -449,7 +449,7 @@ copyStringCategory (List<char> &to, List<char> &from)
 
 	clearStringCategory (to);
 	from.Rewind ();
-	while (item = from.Next ())
+	while ((item = from.Next ()))
 		to.Append (new_strdup (item));
 }
 
