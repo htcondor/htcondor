@@ -71,6 +71,8 @@ or are preempted.
 \item A number of PVM universe bugs are fixed in this release.
 Bugs in how the \Condor{shadow.pvm} exited, which caused jobs to hang
 at exit or to run multiple times, have been fixed.
+The \Condor{shadow.pvm} no longer exits if there is a problem starting
+up PVM on one remote host.
 The \Condor{schedd} now sets the status correctly on multi-class PVM
 jobs and removes them from the job queue correctly on exit.
 \Condor{submit} no longer ignores the machine\_count command for PVM
