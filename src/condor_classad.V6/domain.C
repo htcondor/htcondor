@@ -3,8 +3,6 @@
 
 static char _FileName_[] = __FILE__;
 
-ClassAdDomainManager domMan;
-
 ClassAdDomainManager::
 ClassAdDomainManager ()
 {

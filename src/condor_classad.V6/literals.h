@@ -1,23 +1,15 @@
-#ifndef __CONSTANTS_H__
-#define __CONSTANTS_H__
+#ifndef __LITERALS_H__
+#define __LITERALS_H__
 
-enum NumberFactor 
-{ 
-	NO_FACTOR 	= 1,
-	K_FACTOR	= 1024,				// kilo
-	M_FACTOR	= 1024*1024,		// mega
-	G_FACTOR	= 1024*1024*1024	// giga
-};
-
-class Constant : public ExprTree 
+class Literal : public ExprTree 
 {
   	public:
 		// ctor/dtor
-    	Constant ();
-    	~Constant ();
+    	Literal ();
+    	~Literal ();
 
     	// override methods
-    	virtual ExprTree *copy (void);
+    	virtual ExprTree *copy (CopyMode = EXPR_DEEP_COPY);
 		virtual bool toSink (Sink &);
 
     	// specific methods
@@ -28,12 +20,15 @@ class Constant : public ExprTree
     	void setUndefinedValue  (void);
     	void setErrorValue      (void);
 
-  	private:
- 		virtual void    _evaluate (EvalState &, Value &);
+	protected:
+		virtual void setParentScope( ClassAd* ) {};
 
-		// constant specific information
+  	private:
+ 		virtual void    _evaluate (EvalState &, EvalValue &);
+
+		// literal specific information
     	Value   		value;
 		NumberFactor	factor;
 };
 
-#endif//__CONSTANTS_H__
+#endif//__LITERALS_H__

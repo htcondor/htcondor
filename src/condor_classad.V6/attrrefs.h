@@ -11,20 +11,23 @@ class AttributeReference : public ExprTree
     	~AttributeReference ();
 
     	// override methods
-    	virtual ExprTree *copy (void);
+    	virtual ExprTree *copy (CopyMode);
 		virtual bool toSink (Sink &);
 
-    	// specific methods; the strings are *not* strdup()d internally
-    	void setReference (char *, char *);
+    	// specific methods
+    	void setReference (ExprTree *, char *, bool = false);
+
+	protected:
+		virtual void setParentScope( ClassAd* );
 
   	private:
-    	virtual void _evaluate (EvalState &, Value &);
+    	virtual void _evaluate( EvalState & , EvalValue & );
+		int	findExpr( EvalState , ExprTree* , ExprTree*& , EvalState& );
 
-		// attr reference specific information
+		ExprTree	*expr;
+		bool		absolute;
     	char        *attributeStr;
     	SSString    attributeName;
-		char		*scopeStr;
-		SSString	scopeName;		// which string space??  --RR
 };
 
 #endif//__ATTRREFS_H__

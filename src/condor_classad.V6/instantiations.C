@@ -1,14 +1,14 @@
-#pragma implementation "extArray.h"
+#include "HashTable.h"
 #include "extArray.h"
-
-#pragma implementation "list.h"
 #include "list.h"
+#include "exprTree.h"
 
-#include "classad.h"
-#include "evalContext.h"
+template class HashTable<MyString,FunctionCall::ClassAdFunc>;
+template class HashBucket<MyString,FunctionCall::ClassAdFunc>;
 
-typedef ExtArray<Closure>   extClosureArray;
-typedef ExtArray<Attribute> extAttributeArray;
-typedef List<Value>         extValueList;
-typedef List<ExprTree>      extExprTreeList;
+template class ExtArray<Attribute>;
+template class ExtArray<ExprTree*>;
+
+template class List<Value>;		template class Item<Value>;
+template class List<ExprTree>;	template class Item<ExprTree>;
 

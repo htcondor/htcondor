@@ -21,7 +21,7 @@ class Attribute
 };
 
 
-class ClassAd
+class ClassAd : public ExprTree
 {
   public:
 	// Ctors/dtor
@@ -30,25 +30,42 @@ class ClassAd
 	ClassAd (const ClassAd &);
 	~ClassAd ();
 
-	// Accessors/modifiers
-	bool 		insert (char *, ExprTree *);
-	ExprTree 	*lookup (char *);
-	bool 		remove (char *);
+	// override methods
+	virtual ExprTree *copy(CopyMode);
+	virtual bool toSink (Sink &);	
 	
-	// dump function
-	bool	toSink (Sink &);	
+	// Accessors/modifiers
+	void		clear( );
+	bool 		insert( char *, ExprTree * );
+	ExprTree 	*lookup( char * );
+	bool 		remove( char * );
+	
+	// evaluation methods
+	void		evaluateAttr( char* , Value & );	// lookup+eval'n
+	bool		evaluate( const char*, Value&, int=-1);// parse+eval (strings)
+	bool		evaluate( char* , Value & , int=-1);// parse+eval'n (strBuffers)
+	void		evaluate( ExprTree*, Value & );		// eval'n
 	
 	// factory methods to procure classads
 	static ClassAd *augmentFromSource 	(Source &, ClassAd &);
 	static ClassAd *fromSource 			(Source &);
 
+  protected:
+	virtual void setParentScope( ClassAd* ad );
+
   private:
+	friend	class AttributeReference;
 	friend class ExprTree;
 	friend class ClassAdIterator;
 
-	ExtArray<Attribute> attrList;
-	StringSpace	*schema;
-	int			last;
+	virtual void _evaluate( EvalState& , EvalValue& );
+
+	static	ClassAdDomainManager 	domMan;
+	ExtArray<Attribute> 			attrList;
+
+	StringSpace		*schema;
+	ClassAd			*parentScope;
+	int				last;
 };
 
 

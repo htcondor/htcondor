@@ -1,35 +1,31 @@
 #include "stringSpace.h"
 #include "exprTree.h"
-#include "evalContext.h"
-#include "source.h"
 
 
 ExprTree::
 ExprTree ()
 {
-	for (int i = 0; i < NumLayers; i++) 
-		evalFlags[i]=false;
+	refCount = 0;
+	evalFlag = false;
 }
 
 
 void ExprTree::
-evaluate (EvalState &state, Value &val)
+evaluate (EvalState &state, EvalValue &val)
 {
-	int layer = state.layer;
-
-	if (evalFlags[layer])				// check layer'th flag
-	{
+	if(evalFlag) {
 		val.setErrorValue ();
-		evalFlags[layer] = false;  		// clear layer'th flag
+		evalFlag = false; 
 		return;
 	}
 
-	evalFlags[layer] = true; 			// set layer'th flag
-	_evaluate (state, val);
-	evalFlags[layer] = false; 			// clear layer'th flag
+	evalFlag = true; 	
+	_evaluate( state, val );
+	evalFlag = false; 
 
 	return;
 }
+
 
 
 ExprTree *ExprTree::

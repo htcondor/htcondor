@@ -4,14 +4,9 @@
 #include <ctype.h>
 #include "caseSensitivity.h"
 #include "lexer.h"
-#include "source.h"
-#include "parserFixes.h"
 
 // for EXCEPT in condor_debug.h
 static char _FileName_[] = __FILE__;
-
-// a psuedo-token
-#define  LEX_END_OF_INPUT	0
 
 // ctor
 Lexer::
@@ -21,20 +16,19 @@ Lexer ()
 	lexInputSource = LEXER_SRC_NONE;
 	lexInputStream = NULL;
 	lexInputLength = 0;
-	parseTarget = NO_TARGET;
 
 	// initialize lexer state (token, etc.) variables
-	tokenType = -1;
+	tokenType = LEX_END_OF_INPUT;
 	lexTokenString = NULL;
 	lexBufferCount = 0;
 	savedChar = 0;
 	ch = 0;
 	pos = 0;	
-	yylval = NULL;
 	inString = false;
+	tokenConsumed = true;
 
 	// debug flag
-	debug = 0;
+	debug = false;
 }
 
 
@@ -64,6 +58,7 @@ initializeWithString (const char *buf, int buflen)
 	lexBufferCount = 0;
 	lexTokenString = NULL;
 	inString = false;
+	tokenConsumed = true;
 
 	return true;
 }
@@ -88,6 +83,7 @@ initializeWithStringBuffer (char *buf, int buflen)
 	lexBufferCount = 0;
 	lexTokenString = NULL;
 	inString = false;
+	tokenConsumed = true;
 
 	return true;
 }
@@ -112,6 +108,7 @@ initializeWithCedar (Sock &s)
 	lexTokenString = NULL;
 	if (!sock->get_bytes (lexBuffer, 1)) return false;
 	inString = false;
+	tokenConsumed = true;
 
 	// the first character
 	ch = *lexBuffer;
@@ -139,6 +136,7 @@ initializeWithFd (int desc)
     lexTokenString = NULL;
 	if (read (fd, lexBuffer, 1) < 0) return false;
 	inString = false;
+	tokenConsumed = true;
 
 	// the first character
 	ch = *lexBuffer;
@@ -165,6 +163,7 @@ initializeWithFile (FILE *fp)
     lexBufferCount = 0;
     lexTokenString = NULL;
 	inString = false;
+	tokenConsumed = true;
 
 	// the first character
 	if ((ch = getc (fp)) == EOF) return false;
@@ -175,12 +174,6 @@ initializeWithFile (FILE *fp)
     return true;
 }
 
-
-void Lexer::
-setTarget (int target)
-{
-	parseTarget = target;
-}
 
 
 // FinishedParse:  This function implements the cleanup phase of a parse.
@@ -386,32 +379,32 @@ wind (void)
 }
 
 				
-// yylex:  The main lexical scanning function.
-int Lexer::
-yylex (YYSTYPE *lvalp)
+TokenType Lexer::
+consumeToken (TokenValue *lvalp)
 {
-	// if we're being called for the first time, return the token associated
-	// with the anticipated target
-	if (parseTarget != NO_TARGET)
+	if (lvalp) *lvalp = yylval;
+
+	// if a token has already been consumed, get another token
+	if (tokenConsumed) peekToken (lvalp);
+
+	tokenConsumed = true;
+	return tokenType;
+}
+
+
+// peekToken() returns the same token till consumeToken() is called
+TokenType Lexer::
+peekToken (TokenValue *lvalp)
+{
+	if (!tokenConsumed)
 	{
-		int pt = parseTarget; 
-
-		// switch the target so that we don't do this again
-		parseTarget = NO_TARGET;
-
-		switch (pt)
-		{
-			case CLASSAD_LIST_TARGET:	return LEX_CLASSAD_LIST_TARGET;
-			case CLASSAD_TARGET:		return LEX_CLASSAD_TARGET;
-			case EXPRESSION_TARGET:		return LEX_EXPRESSION_TARGET;
-			default:					return LEX_TOKEN_ERROR;
-		}
+		if( lvalp ) *lvalp = yylval;
+		return tokenType;
 	}
 
-	// set the yylval pointer to point to the correct location
-	// we don't care about the YYLTYPE
-	yylval = lvalp;
-
+	// set the token to unconsumed
+	tokenConsumed = false;
+	
 	// the last token was cut, so restore the buffer
 	uncut ();
 
@@ -422,7 +415,11 @@ yylex (YYSTYPE *lvalp)
 	}
 
 	// check if this is the end of the input
-	if (ch == 0 || ch == EOF) return LEX_END_OF_INPUT;
+	if (ch == 0 || ch == EOF) 
+	{
+		tokenType = LEX_END_OF_INPUT;
+		return tokenType;
+	}
 
 	// this is the start of the token
 	mark ();
@@ -444,17 +441,10 @@ yylex (YYSTYPE *lvalp)
 		printf ("%s\n", strLexToken(tokenType));
 	}
 
+	if (lvalp) *lvalp = yylval;
+
 	return tokenType;
 }	
-
-
-// A degenerate yyerror() function required by the parser generator
-int Lexer::
-yyerror (char *str)
-{
-	dprintf (D_ALWAYS, "ClassAd Parser:  yyerror(%s) called\n", str);
-	return 0;
-}
 
 
 // Tokenize number constants:
@@ -495,8 +485,8 @@ tokenizeNumber (void)
 
 		// token is an integer
 		tokenType = LEX_INTEGER_VALUE;
-		yylval->intValue.value  = atoi (lexTokenString);
-		yylval->intValue.factor = f;
+		yylval.intValue.value  = atoi (lexTokenString);
+		yylval.intValue.factor = f;
 		uncut ();
 		return tokenType;
 	}
@@ -527,8 +517,8 @@ tokenizeNumber (void)
 		}
 
 		tokenType = LEX_REAL_VALUE;
-		yylval->realValue.value  = atof (lexTokenString);
-		yylval->realValue.factor = f;
+		yylval.realValue.value  = atof (lexTokenString);
+		yylval.realValue.factor = f;
 
 		uncut ();
 		return tokenType;
@@ -563,7 +553,7 @@ tokenizeAlphaHead (void)
 		cut ();
 
 		tokenType = LEX_IDENTIFIER;
-		yylval->strValue = strings.getCanonical(lexTokenString);
+		yylval.strValue = strings.getCanonical(lexTokenString);
 		
 		return tokenType;
 	}	
@@ -573,15 +563,15 @@ tokenizeAlphaHead (void)
 	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "true") == 0) 
 	{
 		tokenType = LEX_INTEGER_VALUE;
-		yylval->intValue.value = 1;
-		yylval->intValue.factor = NO_FACTOR;
+		yylval.intValue.value = 1;
+		yylval.intValue.factor = NO_FACTOR;
 	} 
 	else
 	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "false") == 0) 
 	{
 		tokenType = LEX_INTEGER_VALUE;
-		yylval->intValue.value = 0;
-		yylval->intValue.factor = NO_FACTOR;
+		yylval.intValue.value = 0;
+		yylval.intValue.factor = NO_FACTOR;
 	} 
 	else
 	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "undefined") == 0) 
@@ -597,7 +587,7 @@ tokenizeAlphaHead (void)
 	{
 		// token is a character only identifier
 		tokenType = LEX_IDENTIFIER;
-		yylval->strValue = strings.getCanonical (lexTokenString);
+		yylval.strValue = strings.getCanonical (lexTokenString);
 	}
 
 	return tokenType;
@@ -626,7 +616,7 @@ tokenizeStringLiteral (void)
 		// correctly got the end of string delimiter
 		cut ();
 		tokenType = LEX_STRING_VALUE;
-		yylval->strValue = strings.getCanonical(lexTokenString);
+		yylval.strValue = strings.getCanonical(lexTokenString);
 
 		return tokenType;
 	}
@@ -650,7 +640,7 @@ tokenizePunctOperator (void)
 	{
 		// these cases don't need lookaheads
 		case '.':
-			tokenType = LEX_SCOPE_RESOLUTION;
+			tokenType = LEX_SELECTION;
 			break;
 
 
@@ -895,7 +885,7 @@ strLexToken (int tokenValue)
 		case LEX_ERROR_VALUE:            return "LEX_ERROR_VALUE";
 
 		case LEX_IDENTIFIER:             return "LEX_IDENTIFIER";
-		case LEX_SCOPE_RESOLUTION:       return "LEX_SCOPE_RESOLUTION";
+		case LEX_SELECTION:       		 return "LEX_SELECTION";
 
 		case LEX_MULTIPLY:               return "LEX_MULTIPLY";
 		case LEX_DIVIDE:                 return "LEX_DIVIDE";

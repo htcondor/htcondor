@@ -2,8 +2,27 @@
 #define __LEXER_H__
 
 #include "condor_io.h"		// for cedar
-#include "grammar.h"		// for YYSTYPE
 #include "stringSpace.h"
+#include "common.h"
+#include "tokens.h"
+
+struct IntValue {
+    int             value;
+    NumberFactor    factor;
+};
+
+struct RealValue {
+    double          value;
+    NumberFactor    factor;
+};
+
+union TokenValue
+{
+    IntValue    intValue;
+    RealValue   realValue;
+    int         strValue;
+};
+
 
 // the lexical analyzer class
 class Lexer
@@ -20,24 +39,21 @@ class Lexer
 		bool initializeWithFd 			(int);				// file descriptor
 		bool initializeWithFile 		(FILE *);			// FILE structure
 
-		// set the anticipated parse target
-		void setTarget (int);
-
 		// return the character string from the string space given the ID
 		inline char *getCharString (int);
 
 		// cleanup function --- purges strings from string space
 		void finishedParse();
 		
-		// the 'extract token' function
-		int	yylex (YYSTYPE *);
+		// the 'extract token' functions
+		TokenType peekToken (TokenValue * = NULL);
+		TokenType consumeToken (TokenValue * = NULL);
 
 		// internal buffer for string, CEDAR and file token accumulation
 		enum 	{ LEX_BUFFER_SIZE = 4096 };		// starting size
 		char   	lexBuffer[LEX_BUFFER_SIZE];		// the buffer itself
 
-		// miscellaneous auxillary functions
-		int 	yyerror (char *);				// error printing
+		// miscellaneous functions
 		static char *strLexToken (int);			// string rep'n of token
 
 	private:
@@ -56,7 +72,7 @@ class Lexer
 		int     lexInputLength;	   				// length of buffer
 
 		// internal state of lexical analyzer
-		int    	tokenType;              		// the integer id of the token
+		TokenType	tokenType;             		// the integer id of the token
 		char   	*lexTokenString;        		// pointer to marked character
 		int    	markedPos;              		// index of marked character
 		char   	savedChar;          			// stores character when cut
@@ -66,6 +82,10 @@ class Lexer
 		bool	inString;						// lexing a string constant
 
 		StringSpace strings;					// identifiers/constants
+
+		// cached last token
+		TokenValue yylval;						// the token itself
+		bool	tokenConsumed;					// has the token been consumed?
 
 		// internal lexing functions
 		void 	wind (void);					// consume character from source
@@ -84,9 +104,6 @@ class Lexer
 		int		fd;								// the file descriptor
 		FILE 	*file;							// the file structure
 		int 	debug; 							// debug flag
-		int 	parseTarget;					// current parse target
-
-		YYSTYPE *yylval;
 };
 
 

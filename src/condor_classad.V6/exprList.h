@@ -11,19 +11,21 @@ class ExprList : public ExprTree
 		~ExprList();
 
 		// override methods
-		virtual ExprTree *copy (void);
+		virtual ExprTree *copy (CopyMode);
 		virtual bool toSink (Sink &);
 
 		// specific methods
 		void appendExpression(ExprTree *);
-		bool isMember (const Value &);
+		int  getLength();
 
 	protected:
+		virtual void setParentScope( ClassAd* );
+
 		void clear (void);
 		List<ExprTree> exprList;
 
 	private:
-		virtual void _evaluate (EvalState &, Value &);
+		virtual void _evaluate (EvalState &, EvalValue &);
 };
 
 

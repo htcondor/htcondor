@@ -40,6 +40,7 @@ char *Operation::opString[] =
 	">>",
 
 	"()",	//misc --- no "single token" representation
+	"[]",
 	"?:"
 };
 
@@ -47,6 +48,7 @@ char *Operation::opString[] =
 Operation::
 Operation ()
 {
+	nodeKind = OP_NODE;
 	operation = __NO_OP__;
 	child1    = NULL;
 	child2    = NULL;
@@ -64,7 +66,7 @@ Operation::
 
 
 ExprTree *Operation::
-copy (void)
+copy (CopyMode)
 {
 	Operation *newTree = new Operation ();
 	if (newTree == 0) 
@@ -121,7 +123,6 @@ toSink (Sink &s)
 		(operation == BITWISE_NOT_OP && !s.sendToSink((void*)"~", 1)))
 			return false;
 
-
 	// there must be at least one child
 	if (!child1 || !child1->toSink (s))	return false;
 
@@ -136,8 +137,18 @@ toSink (Sink &s)
 		else
 			return true;
 	}
+	else
+	if( operation == SUBSCRIPT_OP )
+	{
+		if( ( !s.sendToSink( (void*)"[", 1 ) )	||	
+			( !child2 || !child2->toSink( s ) ) ||
+			( !s.sendToSink( (void*)"]", 1 ) ) )
+				return false;
+		else
+			return true;
+	}
 
-	// the rest are all binary operators
+	// the rest are infix binary operators
 	switch (operation)
 	{
 		case LESS_THAN_OP:		flag = s.sendToSink ((void*)" < ",  3);	break;
@@ -174,22 +185,25 @@ toSink (Sink &s)
 void Operation::
 operate (OpKind op, Value &op1, Value &op2, Value &result)
 {
-	Value dummy;
+	Value dummy, answer;
 
-	_doOperation (op, op1, op2, dummy, true, true, false, result);
+	_doOperation (op, op1, op2, dummy, true, true, false, answer);
+	result.copyFrom( answer );
 }
 
 
 void Operation::
 operate (OpKind op, Value &op1, Value &op2, Value &op3, Value &result)
 {
-	_doOperation (op, op1, op2, op3, true, true, true, result);
+	Value answer;
+	_doOperation (op, op1, op2, op3, true, true, true, answer);
+	result.copyFrom( answer );
 }
 
 
 void Operation::
-_doOperation (OpKind op, Value &val1, Value &val2, Value &val3, bool valid1, 
-			bool valid2, bool valid3, Value &result)
+_doOperation (OpKind op, EvalValue &val1, EvalValue &val2, EvalValue &val3, 
+			bool valid1, bool valid2, bool valid3, EvalValue &result)
 {
 	ValueType	vt1,  vt2,  vt3;
 
@@ -201,20 +215,20 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3, bool valid1,
 	// take care of the easy cases
 	if (op == __NO_OP__ 	|| op == PARENTHESES_OP)
 	{
-		result.copy (val1);
+		result.copyFrom (val1);
 		return;
 	}
 	else
 	if (op == UNARY_PLUS_OP)
 	{
-		if (vt1 == STRING_VALUE)
-			result.setUndefinedValue();
+		if (vt1 == STRING_VALUE || vt1 == LIST_VALUE || vt1 == CLASSAD_VALUE)
+			result.setErrorValue();
 		else
-			result.copy (val1);
+			result.copyFrom (val1);
 		return;
 	}
 
-	// test for cases when evaluation is strict w.r.t. "error" and "undefined"
+	// test for cases when evaluation is strict
 	if (op != META_EQUAL_OP && op != META_NOT_EQUAL_OP 	&&
 		op != LOGICAL_OR_OP && op != LOGICAL_AND_OP		&&
 		op != TERNARY_OP)
@@ -271,16 +285,15 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3, bool valid1,
 		int   i; 
 		double r;
 
-		// if the selector expression is error, propagate it
-		if (vt1==ERROR_VALUE)
+		// if the selector is error, classad or list, propagate error
+		if (vt1==ERROR_VALUE || vt1==CLASSAD_VALUE || vt1==LIST_VALUE)
 		{
 			result.setErrorValue();	
 			return;
 		}
 
-		// if the selector is a string or UNDEFINED, the value of the
-		// expression is undefined
-		if (vt1==STRING_VALUE || vt1==UNDEFINED_VALUE) 
+		// if the selector is UNDEFINED, the result is undefined
+		if (vt1==UNDEFINED_VALUE) 
 		{
 			result.setUndefinedValue();
 			return;
@@ -288,9 +301,9 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3, bool valid1,
 
 		// val1 is either a real or an integer
 		if ((val1.isIntegerValue(i)&&(i!=0)) || (val1.isRealValue(r)&&(r!=0)))
-				result.copy (val2);
+				result.copyFrom (val2);
 		else
-				result.copy (val3);
+				result.copyFrom (val3);
 
 		return;
 	}
@@ -301,9 +314,9 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3, bool valid1,
 
 
 void Operation::
-_evaluate (EvalState &state, Value &result)
+_evaluate (EvalState &state, EvalValue &result)
 {
-	Value	val1, val2, val3;
+	EvalValue	val1, val2, val3;
 	bool	valid1, valid2, valid3;
 
 	valid1 = false;
@@ -337,12 +350,12 @@ _evaluate (EvalState &state, Value &result)
 
 
 void Operation::
-doComparison (OpKind op, Value &v1, Value &v2, Value &result)
+doComparison (OpKind op, EvalValue &v1, EvalValue &v2, EvalValue &result)
 {
 	ValueType vt1, vt2, coerceResult;
 
 	// do numerical type promotions --- other types/values are unchanged
-	coerceResult = coerceToNumber (v1, v2);
+	coerceResult = coerceToNumber(v1, v2);
 	vt1 = v1.getType();
 	vt2 = v2.getType();
 
@@ -409,6 +422,11 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			compareReals (op, v1, v2, result);
             return;
 	
+		case LIST_VALUE:
+		case CLASSAD_VALUE:
+			result.setErrorValue();
+			return;
+
 		default:
 			// should not get here
 			EXCEPT ("Should not get here");
@@ -418,16 +436,16 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 void Operation::
-doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
+doArithmetic (OpKind op, EvalValue &v1, EvalValue &v2, EvalValue &result)
 {
 	int		i1, i2;
 	double 	r1;
-	char	*s;
 
-	// ensure the operands are not strings
-	if (v1.isStringValue (s) || v2.isStringValue (s))
+	// ensure the operands have arithmetic types
+	if( ( !v1.isIntegerValue() && !v1.isRealValue() ) ||
+	    ( !v2.isIntegerValue() && !v2.isRealValue() ) )
 	{
-		result.setUndefinedValue ();
+		result.setErrorValue ();
 		return;
 	}
 
@@ -447,7 +465,7 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 		}
 
 		// v1 is either UNDEFINED or ERROR ... the result is the same as v1
-		result.copy (v1);
+		result.copyFrom (v1);
 		return;
 	}
 
@@ -495,7 +513,7 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 void Operation::
-doLogical (OpKind op, Value &v1, Value &v2, Value &result)
+doLogical (OpKind op, EvalValue &v1, EvalValue &v2, EvalValue &result)
 {
 	int		i1, i2;
 	double	r1, r2;
@@ -508,9 +526,11 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 	v2.isIntegerValue (i2);
 	v2.isRealValue (r2);
 
-	// no logic on strings --- a string is equivalent to the UNDEFINED value
-	if (vt1==STRING_VALUE) vt1 = UNDEFINED_VALUE;
- 	if (vt2==STRING_VALUE) vt2 = UNDEFINED_VALUE;
+	// no logic on strings, classads or lists 
+	if (vt1==STRING_VALUE || vt1==LIST_VALUE || vt1==CLASSAD_VALUE) 
+		vt1 = ERROR_VALUE;
+	if (vt2==STRING_VALUE || vt2==LIST_VALUE || vt2==CLASSAD_VALUE) 
+		vt2 = ERROR_VALUE;
 
 	// handle unary operator
 	if (op == LOGICAL_NOT_OP)
@@ -521,9 +541,8 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 		if (vt1 == REAL_VALUE)
 			result.setIntegerValue((int)(!r1));
 		else
-			// v1 is either UNDEFINED or ERROR; actually should never reach
-			// here --- this case is handled very early on in _evaluate
-			result.copy(v1);
+			// v1 is either UNDEFINED or ERROR
+			result.copyFrom(v1);
 
 		return;
 	}
@@ -581,7 +600,7 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 void Operation::
-doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
+doBitwise (OpKind op, EvalValue &v1, EvalValue &v2, EvalValue &result)
 {
 	int	i1, i2;
 	int signMask = 1 << (WORD_BIT-1);	// now at the position of the sign bit
@@ -592,25 +611,14 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 	{
 		if (!v1.isIntegerValue(i1))
 		{
-			// make sure that ERROR is propagated
-			if (v1.isErrorValue()) 
-				result.setErrorValue();
-			else
-				result.setUndefinedValue();
+			result.setErrorValue();
 			return;
 		}
 	}
 	else
 	if (!v1.isIntegerValue(i1) || !v2.isIntegerValue(i2))
 	{
-		// make sure that errors are propagated
-		if (v1.isErrorValue() || v2.isErrorValue())
-		{
-			result.setErrorValue();
-			return;
-		}
-		
-		result.setUndefinedValue();
+		result.setErrorValue();
 		return;
 	}
 
@@ -673,7 +681,7 @@ void ClassAd_SIGFPE_handler (int) { ClassAdExprFPE = true; }
 #endif
 
 void Operation::
-doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
+doRealArithmetic (OpKind op, EvalValue &v1, EvalValue &v2, EvalValue &result)
 {
 	double r1, r2;	
 	double comp;
@@ -733,7 +741,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 void Operation::
-compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
+compareStrings (OpKind op, EvalValue &v1, EvalValue &v2, EvalValue &result)
 {
 	char *s1, *s2;
 	int  cmp;
@@ -778,7 +786,7 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 void Operation::
-compareIntegers (OpKind op, Value &v1, Value &v2, Value &result)
+compareIntegers (OpKind op, EvalValue &v1, EvalValue &v2, EvalValue &result)
 {
 	int i1, i2, compResult;
 
@@ -804,7 +812,7 @@ compareIntegers (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 void Operation::
-compareReals (OpKind op, Value &v1, Value &v2, Value &result)
+compareReals (OpKind op, EvalValue &v1, EvalValue &v2, EvalValue &result)
 {
 	double r1, r2;
 	int	compResult;
@@ -837,13 +845,15 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 //  + if v1 is an int and v2 is a real, convert v1 to real; return REAL_VALUE
 //  + if v1 is a real and v2 is an int, convert v2 to real; return REAL_VALUE
 ValueType Operation::
-coerceToNumber (Value &v1, Value &v2)
+coerceToNumber (EvalValue &v1, EvalValue &v2)
 {
 	char 	*s;
 	int	 	i;
 	double 	r;
 
 	// either of v1, v2 not numerical?
+	if (v1.isClassAdValue()   || v2.isClassAdValue())   return CLASSAD_VALUE;
+	if (v1.isListValue()      || v2.isListValue())   	return LIST_VALUE;
 	if (v1.isStringValue (s)  || v2.isStringValue (s))  return STRING_VALUE;
 	if (v1.isUndefinedValue() || v2.isUndefinedValue()) return UNDEFINED_VALUE;
 	if (v1.isErrorValue ()    || v2.isErrorValue ())    return ERROR_VALUE;
@@ -870,4 +880,13 @@ setOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 	child1    = e1;
 	child2    = e2;
 	child3    = e3;
+}
+
+
+void Operation::
+setParentScope( ClassAd *ad )
+{
+	if( child1 ) child1->setParentScope( ad );
+	if( child2 ) child2->setParentScope( ad );
+	if( child3 ) child3->setParentScope( ad );
 }

@@ -150,12 +150,9 @@ flushSink ()
 			return (fflush(file) == 0);
 
 		case FILE_DESC_SINK:
+		case CEDAR_SINK:
 			// no-op
 			return true;
-
-		case CEDAR_SINK:
-			// send eom()
-			return ((bool)sock->eom());
 	}
 
 	return false;

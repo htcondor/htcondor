@@ -1,12 +1,11 @@
 #ifndef __EXPR_TREE_H__
 #define __EXPR_TREE_H__
 
-#include "condor_common.h"
+#include "common.h"
 #include "values.h"
 
 // forward declarations
 class ClassAd;
-class EvalState;
 class Source;
 class Sink;
 
@@ -16,17 +15,20 @@ class Sink;
 // kinds of nodes in the expression tree
 enum NodeKind 
 {
-	CONSTANT_NODE,
+	LITERAL_NODE,
 	ATTRREF_NODE,
 	OP_NODE,
 	FN_CALL_NODE,
-	ARGUMENT_LIST_NODE
+	CLASSAD_NODE,
+	EXPR_LIST_NODE
 };
 
 
-// upto 'NumLayers' evaluations can be performed concurrently in a closure
-typedef unsigned char Layer;
-const   int NumLayers = 1;
+// Required info for handling scopes during eval'n
+struct EvalState {
+	ClassAd	*rootAd;
+	ClassAd *curAd;
+};
 
 
 // abstract base class for expression tree node class
@@ -39,36 +41,41 @@ class ExprTree
 		// factory method to parse expressions
 		static ExprTree *fromSource (Source &s);
 		
-		// operations defined on expressions
+		// external interface operations defined on expressions
 		virtual bool toSink (Sink &)  = 0;
-		virtual ExprTree *copy (void) = 0;
+		virtual ExprTree *copy (CopyMode = EXPR_DEEP_COPY) = 0;
 
 		// general purpose methods
 		NodeKind getKind (void) { return nodeKind; }
 
   	protected:
 		ExprTree ();
-		void evaluate (EvalState &, Value &); 
+
+		void evaluate (EvalState &, EvalValue &); 
+		virtual void setParentScope( ClassAd* ) = 0;
 
 		NodeKind	nodeKind;
+		int			refCount;
 
   	private:
-		friend class EvalContext;
 		friend class Operation;
 		friend class AttributeReference;
-		friend class ArgumentList;
+		friend class FunctionCall;
+		friend class FunctionTable;
 		friend class ExprList;
+		friend class ClassAd; 
 
-		virtual void _evaluate (EvalState &, Value &) = 0;
+		virtual void _evaluate (EvalState &, EvalValue &) = 0;
 
-		bool evalFlags[NumLayers];	// for cycle detection
+		bool evalFlag;	// for cycle detection
 };
 
 
-#include "constants.h"
+#include "literals.h"
 #include "attrrefs.h"
 #include "operators.h"
 #include "fnCall.h"
 #include "exprList.h"
+#include "classad.h"
 
 #endif//__EXPR_TREE_H__

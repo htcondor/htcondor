@@ -3,6 +3,7 @@
 ExprList::
 ExprList()
 {
+	nodeKind = EXPR_LIST_NODE;
 }
 
 
@@ -27,8 +28,18 @@ clear ()
 }
 
 	
+void ExprList::
+setParentScope( ClassAd *ad )
+{
+	ExprTree *tree;
+	exprList.Rewind();
+	while( (tree = exprList.Next()) )
+		tree->setParentScope( ad );
+}
+
+
 ExprTree *ExprList::
-copy (void)
+copy (CopyMode)
 {
 	ExprList *newList = new ExprList;
 	ExprTree *newTree, *tree;
@@ -75,6 +86,13 @@ toSink (Sink &s)
 }
 
 
+int ExprList::
+getLength()
+{
+	return exprList.Number();
+}
+
+
 void ExprList::
 appendExpression (ExprTree *tree)
 {
@@ -83,27 +101,23 @@ appendExpression (ExprTree *tree)
 
 
 void ExprList::
-_evaluate (EvalState &state, Value &val)
+_evaluate (EvalState &state, EvalValue &val)
 {
 	ExprTree *tree;
 	Value	 *v;
 	ValueList *vl = new ValueList;
 
-	if (vl == NULL)
-	{
+	if (vl == NULL) {
 		val.setUndefinedValue();
 		return;
 	}	
 
-	val.clear();
 	exprList.Rewind();
-	while ((tree = exprList.Next()))
-	{
+	while ((tree = exprList.Next())) {
 		v = new Value;
 		tree->evaluate (state, *v);
 		vl->Append (v);
 	}
 		
-
-	val.setListValue (vl, VALUE_LIST_ADOPT);
+	val.setListValue (vl);
 }

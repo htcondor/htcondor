@@ -51,6 +51,7 @@ enum OpKind
 
 	__MISC_START__,
 	PARENTHESES_OP 			= __MISC_START__,
+	SUBSCRIPT_OP,			// (misc) -- subscripting elements from lists
 	TERNARY_OP,				// (misc)
 	__MISC_END__ 			= TERNARY_OP,
 
@@ -66,7 +67,7 @@ class Operation : public ExprTree
 		~Operation ();
 
 		// override methods
-		virtual ExprTree *copy (void);
+		virtual ExprTree *copy (CopyMode);
 		virtual bool toSink (Sink &);
 
 		// specific methods (allow for unary, binary and ternary ops) 
@@ -80,21 +81,24 @@ class Operation : public ExprTree
 		static void operate (OpKind, Value &, Value &, Value &);
 		static void operate (OpKind, Value &, Value &, Value &, Value &);
 
+	protected:
+		virtual void setParentScope( ClassAd * );
+
   	private:
-		virtual void _evaluate (EvalState &, Value &);
+		virtual void _evaluate (EvalState &, EvalValue &);
 
 		// auxillary functionms
-		static ValueType  coerceToNumber (Value&, Value &);
-		static void _doOperation(OpKind,Value&,Value&,Value&,bool,bool,bool,
-						Value&);
-		static void doComparison 	(OpKind, Value &, Value &, Value &);
-		static void doArithmetic 	(OpKind, Value &, Value &, Value &);
-		static void doLogical 		(OpKind, Value &, Value &, Value &);
-		static void doBitwise 		(OpKind, Value &, Value &, Value &); 
-		static void compareStrings (OpKind, Value &, Value &, Value &);
-		static void compareReals 	(OpKind, Value &, Value &, Value &);
-		static void compareIntegers(OpKind, Value &, Value &, Value &);
-		static void doRealArithmetic(OpKind,Value &, Value &, Value &);
+		static ValueType  coerceToNumber (EvalValue&, EvalValue &);
+		static void _doOperation(OpKind,EvalValue&,EvalValue&,EvalValue&,
+								bool,bool,bool, EvalValue&);
+		static void doComparison(OpKind, EvalValue&, EvalValue&, EvalValue&);
+		static void doArithmetic(OpKind, EvalValue&, EvalValue&, EvalValue&);
+		static void doLogical 	(OpKind, EvalValue&, EvalValue&, EvalValue&);
+		static void doBitwise 	(OpKind, EvalValue&, EvalValue&, EvalValue&); 
+		static void compareStrings(OpKind, EvalValue&, EvalValue&, EvalValue&);
+		static void compareReals(OpKind, EvalValue&, EvalValue&, EvalValue&);
+		static void compareIntegers(OpKind, EvalValue&, EvalValue&, EvalValue&);
+		static void doRealArithmetic(OpKind,EvalValue&, EvalValue&, EvalValue&);
 
 		// operation specific information
 		OpKind		operation;

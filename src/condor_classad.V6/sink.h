@@ -24,12 +24,11 @@ class Sink
 		friend class ClassAdList;
 		friend class ClassAd;
 		friend class ExprTree;
-		friend class Value;
-		friend class Constant;
+		friend class EvalValue;
+		friend class Literal;
 		friend class AttributeReference;
 		friend class Operation;	
 		friend class FunctionCall;
-		friend class ArgumentList;
 		friend class ExprList;
 		friend class ValueList;
 

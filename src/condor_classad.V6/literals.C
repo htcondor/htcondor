@@ -1,34 +1,39 @@
 #include "exprTree.h"
 #include "domain.h"
 
-Constant::
-Constant ()
+Literal::
+Literal ()
 {
-	nodeKind = CONSTANT_NODE;
+	nodeKind = LITERAL_NODE;
 	factor = NO_FACTOR;
 }
 
 
-Constant::
-~Constant ()
+Literal::
+~Literal ()
 {
 }
 
 
-ExprTree *Constant::
-copy (void)
+ExprTree *Literal::
+copy (CopyMode cm)
 {
-	Constant *newTree = new Constant;
+	if( cm == EXPR_DEEP_COPY )
+	{	
+		Literal *newTree = new Literal;
 
-	if (newTree == 0) return 0;
-	newTree->value.copy (value);
-	newTree->nodeKind = nodeKind;
+		if (newTree == 0) return 0;
+		newTree->value.copyFrom (value);
+		newTree->nodeKind = nodeKind;
 
-	return newTree;
+		return newTree;
+	}
+
+	return this;
 }
 
 
-bool Constant::
+bool Literal::
 toSink (Sink &s)
 {
 	if (!value.toSink (s)) return false;
@@ -44,13 +49,15 @@ toSink (Sink &s)
 }
 
 
-void Constant::
-_evaluate (EvalState &, Value &val)
+void Literal::
+_evaluate (EvalState &, EvalValue &val)
 {
 	int		i;
 	double	r;
+	Value	v;
 
-	val.copy (value);
+	v.copyFrom (value);
+	val.copyFrom( v );
 
 	// if integer or real, multiply by the factor
 	if (val.isIntegerValue(i))
@@ -65,7 +72,7 @@ _evaluate (EvalState &, Value &val)
 }
 
 
-void Constant::
+void Literal::
 setIntegerValue (int i, NumberFactor f)
 {
 	value.setIntegerValue (i);
@@ -73,7 +80,7 @@ setIntegerValue (int i, NumberFactor f)
 }
 
 
-void Constant::
+void Literal::
 setRealValue (double d, NumberFactor f)
 {
 	value.setRealValue (d);
@@ -81,15 +88,15 @@ setRealValue (double d, NumberFactor f)
 }
 
 
-void Constant::
+void Literal::
 adoptStringValue (char *str)
 {
-	value.adoptStringValue (str);
+	value.adoptStringValue (str, SS_ADOPT_C_STRING);
 	factor = NO_FACTOR;
 }
 
 
-void Constant::
+void Literal::
 setStringValue (char *str)
 {
 	value.setStringValue (str);
@@ -97,7 +104,7 @@ setStringValue (char *str)
 }
 
 
-void Constant::
+void Literal::
 setUndefinedValue (void)
 {
 	value.setUndefinedValue ();
@@ -105,7 +112,7 @@ setUndefinedValue (void)
 }
 
 
-void Constant::
+void Literal::
 setErrorValue (void)
 {
 	value.setErrorValue ();

@@ -3,7 +3,6 @@
 
 #include "stringSpace.h"
 #include "extArray.h"
-#include "memman.h"
 
 class ClassAdDomainManager
 {

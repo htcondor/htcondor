@@ -2,38 +2,54 @@
 #include "operators.h"
 #include "values.h"
 
-StringSpace Value::stringValues;
+StringSpace EvalValue::stringValues;
 
-Value::
-~Value()
+EvalValue::
+EvalValue()
 {
-	if (valueType == LIST_VALUE) delete listValue;
-}
-
-
-void Value::
-clear()
-{
-	switch (valueType)
-	{
-		case STRING_VALUE:
-			strValue.dispose();
-			break;
-
-		case LIST_VALUE:
-			delete listValue;
-			listValue = NULL;
-			break;
-
-		default:
-			break;
-	}
-
+	listValue = NULL;
+	classadValue = NULL;
 	valueType = UNDEFINED_VALUE;
 }
 
 
-bool Value::
+EvalValue::
+~EvalValue()
+{
+	clear();
+}
+
+
+void EvalValue::
+clear()
+{
+	switch( valueType ) {
+		case LIST_VALUE:
+			// all list values are explicitly created on evaluation, so they 
+			// must be explicitly destroyed
+			if( listValue ) delete listValue;
+			listValue = NULL;
+			break;
+
+		case CLASSAD_VALUE:
+			// classad values live in the evaluation environment, so they must 
+			// never be explicitly destroyed
+			classadValue = NULL;
+			break;
+
+		case STRING_VALUE:
+			// string values are handled with reference counts
+			strValue.dispose();
+			break;
+
+		default:
+			valueType = UNDEFINED_VALUE;
+	}
+	valueType 	= UNDEFINED_VALUE;
+}
+
+
+bool EvalValue::
 isNumber (int &i)
 {
 	switch (valueType)
@@ -52,7 +68,7 @@ isNumber (int &i)
 }
 
 
-bool Value::
+bool EvalValue::
 isNumber (double &r)
 {
 	switch (valueType)
@@ -71,21 +87,26 @@ isNumber (double &r)
 }
 
 
-void Value::
-copy (Value &val)
+// this function implements "handoff" semantics
+void EvalValue::
+copyFrom(EvalValue &val)
 {
 	switch (val.valueType)
 	{
 		case STRING_VALUE:
-			setStringValue (val.strValue);
+			setStringValue( val.strValue );
+			val.strValue.dispose();
+			val.valueType = UNDEFINED_VALUE;
 			return;
 
 		case INTEGER_VALUE:
-			setIntegerValue (val.integerValue);
+			setIntegerValue( val.integerValue );
+			val.valueType = UNDEFINED_VALUE;
 			return;
 
 		case REAL_VALUE:
-			setRealValue (val.realValue);
+			setRealValue( val.realValue );
+			val.valueType = UNDEFINED_VALUE;
 			return;
 
 		case UNDEFINED_VALUE:
@@ -94,10 +115,19 @@ copy (Value &val)
 
 		case ERROR_VALUE:
 			setErrorValue ();
+			val.valueType = UNDEFINED_VALUE;
 			return;
 	
 		case LIST_VALUE:
-			setListValue (val.listValue, VALUE_LIST_DUP);
+			setListValue (val.listValue);
+			val.listValue = NULL;
+			val.valueType = UNDEFINED_VALUE;
+			return;
+
+		case CLASSAD_VALUE:
+			setClassAdValue (val.classadValue);
+			val.classadValue = NULL;
+			val.valueType = UNDEFINED_VALUE;
 			return;
 
 		default:
@@ -106,7 +136,7 @@ copy (Value &val)
 }
 
 
-bool Value::
+bool EvalValue::
 toSink (Sink &dest)
 {
 	char tempBuf[512];
@@ -154,6 +184,15 @@ toSink (Sink &dest)
 			if (!dest.sendToSink((void*)" } ", 3)) return false;
 			return true;
 
+		case CLASSAD_VALUE:
+			// sanity check
+			if (!classadValue)
+			{
+				clear();
+				return false;
+			}
+			return classadValue->toSink( dest );
+
       	default:
         	return false;
     }
@@ -163,7 +202,7 @@ toSink (Sink &dest)
 }
 
 
-void Value::
+void EvalValue::
 setRealValue (double r)
 {
     clear();
@@ -171,7 +210,7 @@ setRealValue (double r)
     realValue = r;
 }
 
-void Value::
+void EvalValue::
 setIntegerValue (int i)
 {
     clear();
@@ -179,21 +218,21 @@ setIntegerValue (int i)
     integerValue = i;
 }
 
-void Value::
+void EvalValue::
 setUndefinedValue (void)
 {
     clear();
     valueType=UNDEFINED_VALUE;
 }
 
-void Value::
+void EvalValue::
 setErrorValue (void)
 {
     clear();
     valueType=ERROR_VALUE;
 }
 
-void Value::
+void EvalValue::
 adoptStringValue(char *s, int adopt)
 {
     clear();
@@ -202,7 +241,7 @@ adoptStringValue(char *s, int adopt)
 }
 
 
-void Value::
+void EvalValue::
 setStringValue(char *s)
 {
     clear();
@@ -210,29 +249,124 @@ setStringValue(char *s)
     stringValues.getCanonical (s, strValue, SS_DUP);
 }
 
-void Value::
-setStringValue(const SSString &s)
+void EvalValue::
+setStringValue(SSString &s)
 {
     clear();
     valueType = STRING_VALUE;
     strValue.copy (s);
 }
 
-void Value::
-setListValue (ValueList *l, int mode)
+void EvalValue::
+setListValue (ValueList *l)
 {
     clear();
     valueType = LIST_VALUE;
-    if (mode == VALUE_LIST_ADOPT)
-        listValue = l;
-    else
-    if (mode == VALUE_LIST_DUP)
-	{
-		listValue = new ValueList;
-        listValue->copy(l);
-	}
+    listValue = l;
 }
 
+void EvalValue::
+setClassAdValue( ClassAd *ad )
+{
+	clear();
+	valueType = CLASSAD_VALUE;
+	classadValue = ad;
+}
+
+
+// Implementation of (User-level) Value 
+Value::
+Value() : EvalValue()
+{
+}
+
+
+Value::
+Value( const Value& val )
+{
+	// assuming base class EvalValue already constructed
+	copyFrom( (Value&) val );
+}
+
+
+Value::
+~Value()
+{
+	clear();
+}
+
+void Value::
+clear()
+{
+	switch( valueType ) {
+		case LIST_VALUE:
+			// all list values are explicitly created on evaluation, so they 
+			// must be explicitly destroyed
+			if( listValue ) delete listValue;
+			listValue = NULL;
+			break;
+
+		case CLASSAD_VALUE:
+			if( classadValue ) delete classadValue;
+			classadValue = NULL;
+			break;
+
+		case STRING_VALUE:
+			// string values are handled with reference counts
+			strValue.dispose();
+			break;
+
+		default:
+			valueType = UNDEFINED_VALUE;
+	}
+	valueType 	= UNDEFINED_VALUE;
+}
+
+
+void Value::
+copyFrom( EvalValue &val )
+{
+	switch (val.valueType)
+	{
+		case STRING_VALUE:
+			setStringValue( val.strValue );
+			return;
+
+		case INTEGER_VALUE:
+			setIntegerValue( val.integerValue );
+			return;
+
+		case REAL_VALUE:
+			setRealValue( val.realValue );
+			return;
+
+		case UNDEFINED_VALUE:
+			setUndefinedValue ();
+			return;
+
+		case ERROR_VALUE:
+			setErrorValue ();
+			return;
+	
+		case LIST_VALUE:
+			setListValue( val.listValue );
+			val.listValue = NULL;
+			val.valueType = UNDEFINED_VALUE;
+			return;
+
+		case CLASSAD_VALUE:
+			clear();
+			classadValue = new ClassAd( (*val.classadValue) );
+			valueType = CLASSAD_VALUE;
+			return;
+
+		default:
+			setUndefinedValue ();
+	}	
+}
+
+
+// Implementation of value lists follows
 
 ValueList::
 ValueList()
@@ -274,7 +408,7 @@ copy (ValueList *list)
 	while ((val = list->Next()))
 	{
 		newVal = new Value;
-		newVal->copy(*val);
+		newVal->copyFrom(*val);
 		Append (newVal);
 	}
 }
