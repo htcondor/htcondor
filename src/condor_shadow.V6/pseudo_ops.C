@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
@@ -34,6 +32,9 @@
 #include "afs.h"
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 #include "my_hostname.h"
+#include "pseudo_ops.h"
+#include "condor_ckpt_name.h"
+#include "../condor_ckpt_server/server_interface.h"
 
 #ifdef CARMI_OPS
 #include <ProcList.h>
@@ -228,7 +229,7 @@ pseudo_perm_error( const char *msg )
 int
 pseudo_getwd( char *path )
 {
-	return getwd(path);
+	return (int)getwd(path);
 }
 
 int
@@ -461,9 +462,9 @@ pseudo_get_file_stream(
 	int		connect_sock;
 	int		data_sock;
 	int		file_fd;
-	ssize_t		bytes_sent;
-	ssize_t		bytes_read;
-	pid_t		child_pid;
+	int		bytes_sent;
+	int		bytes_read;
+	pid_t	child_pid;
 #if defined(ALPHA)
 	unsigned int	status;		/* 32 bit unsigned */
 #else
@@ -482,7 +483,7 @@ pseudo_get_file_stream(
 	*len = 0;
 		/* open the file */
 	if (CkptFile && UseCkptServer)
-		rval = RequestRestore(p->owner,file,len,ip_addr,port);
+		rval = RequestRestore(p->owner,file,len,(struct in_addr*)ip_addr,port);
 	else
 		rval = -1;
 
@@ -502,7 +503,7 @@ pseudo_get_file_stream(
 		}
 		if (CkptFile || ICkptFile) set_priv(priv); // restore user privileges
 		while (rval == 1 && retry_wait < 20) {
-			rval = RequestRestore(p->owner,file,len,&ip_addr,port);
+			rval = RequestRestore(p->owner,file,len,(struct in_addr*)ip_addr,port);
 			if (rval == 1) {
 				sleep(retry_wait);
 				retry_wait *= 2;
@@ -593,8 +594,8 @@ pseudo_put_file_stream(
 	int		connect_sock;
 	int		data_sock;
 	int		file_fd;
-	ssize_t		bytes_read;
-	ssize_t		answer;
+	int		bytes_read;
+	int		answer;
 	pid_t	child_pid;
 	int		rval;
 	PROC *p = (PROC *)Proc;
@@ -612,11 +613,9 @@ pseudo_put_file_stream(
 
 		/* open the file */
 	if (CkptFile && UseCkptServer) {
-		rval = RequestStore(p->owner, file, len, ip_addr, port);
+		rval = RequestStore(p->owner, file, len, (struct in_addr*)ip_addr, port);
 		display_ip_addr( *ip_addr );
-#if !defined(LINUX) /* FIX ME GREGER */
 		*ip_addr = ntohl(*ip_addr);
-#endif
 		*port = ntohs( *port );
 		dprintf(D_ALWAYS,  "Returned addr\n");
 		display_ip_addr( *ip_addr );
