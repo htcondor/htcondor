@@ -9,6 +9,9 @@
 #             wylie@cs.wisc.edu
 # 19-Apr-2000 Peter Couvares <pfc@cs.wisc.edu> made 'off' persistent
 #             across reboots
+# 27-Apr-2000 Peter Couvares <pfc@cs.wisc.edu> added check to make
+#             sure the host this is being run from is authorized to
+#             turn condor on/off; also added logging of the hostname
 #
 # This is a very simple, first pass to solve this problem.
 # Future work required:
@@ -33,23 +36,27 @@ use FileHandle;
 ### Config variables
 
        $RELEASE_DIR = "/unsup/condor";
-          $NUMNODES = 64;   # (note: we assume $NUMNODES <=99 in a few places)
+          $NUMNODES = 64;  # (beware: we assume $NUMNODES<=99 in a few places)
          $STARTNODE = 2;
-         $CONDOR_CM = "condor.cs.wisc.edu";
+       $CONDOR_POOL = "condor.cs.wisc.edu";
            $LOGFILE = "/p/condor/workspaces/cluster/condor_cluster_tool.log";
              $DEBUG = 0;
 
 
 ### Global variables (not user-servicable)
 
-           $SBIN = "$RELEASE_DIR/sbin";
-            $BIN = "$RELEASE_DIR/bin";
-     $CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_CM -fast";
-      $CONDOR_ON = "$SBIN/condor_on -pool $CONDOR_CM";
-     $CONFIG_OFF = "$BIN/condor_config_val -pool $CONDOR_CM -set 'start_daemons = false'";
-      $CONFIG_ON = "$BIN/condor_config_val -pool $CONDOR_CM -unset start_daemons";
-  $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_CM";
-$CONDOR_RECONFIG = "$SBIN/condor_reconfig -pool $CONDOR_CM";
+            $SBIN = "$RELEASE_DIR/sbin";
+             $BIN = "$RELEASE_DIR/bin";
+      $CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_POOL -fast";
+       $CONDOR_ON = "$SBIN/condor_on -pool $CONDOR_POOL";
+      $CONFIG_OFF = "$BIN/condor_config_val -pool $CONDOR_POOL " .
+                    "-set 'start_daemons = false'";
+       $CONFIG_ON = "$BIN/condor_config_val -pool $CONDOR_POOL " .
+                    "-unset start_daemons";
+   $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_POOL";
+ $CONDOR_RECONFIG = "$SBIN/condor_reconfig -pool $CONDOR_POOL";
+$CONDOR_HOSTALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL " .
+                    "-name c33 hostallow_administrator";
 
 
 ### The guts
@@ -60,11 +67,14 @@ if( $#ARGV < 0 ) {
     exit 1;
 }
 
-# determine username and then open logfile
+# determine username & hostname and then open logfile
 $user = scalar getpwuid( $UID );
+$hostname = `hostname`;
+chomp $hostname;
+$user = "$user\@$hostname";
 open( LOG, ">>$LOGFILE" ) || warn "$0: error opening $LOGFILE: $!\n";
 
-# make sure partial logging occurs even if user kills us mid-way
+# make sure initial logging occurs even if user kills us mid-way
 LOG->autoflush();
 
 # log command-line args
@@ -78,28 +88,10 @@ print LOG "\n";
 $cmd = shift;    # "on, "off", "check", etc.
 @args = @ARGV;   # args to prior command, if any
 
-if( $cmd eq "on" )
+if( $cmd =~ /^ch/ )
 {
     if( $#args < 0 )
     {
-	usage();
-	exit 1;
-    }
-    start_condor( @args );
-}
-elsif( $cmd =~ /^of/ )
-{
-    if( $#args < 0 )
-    {
-	usage();
-	exit 1;
-    }
-    stop_condor( @args );
-}
-elsif( $cmd =~ /^ch/ )
-{
-    if( $#args < 0 )
-{
 	foreach $n ($STARTNODE .. 9)
 	{
 	    push @args, "c0$n";
@@ -110,6 +102,26 @@ elsif( $cmd =~ /^ch/ )
 	}
     }
     check_condor( @args );
+}
+elsif( $cmd eq "on" )
+{
+    if( $#args < 0 )
+    {
+	usage();
+	exit 1;
+    }
+    check_auth();
+    start_condor( @args );
+}
+elsif( $cmd =~ /^of/ )
+{
+    if( $#args < 0 )
+    {
+	usage();
+	exit 1;
+    }
+    check_auth();
+    stop_condor( @args );
 }
 else
 {
@@ -139,6 +151,21 @@ sub usage()
 	"          $0 off 4\n",
 	"          $0 on c03 c05 c07 c09\n",
 	"          $0 check c03 c04\n";
+}
+
+
+sub check_auth()
+{
+    $auth_hosts = `$CONDOR_HOSTALLOW`;
+    unless( $auth_hosts =~ /$hostname/ ) {
+	print "Error: current host ($hostname) is not authorized ";
+	print "to manage nodes\n\n";
+	print "Please use one of the following authorized hosts: ";
+	print "$auth_hosts\n";
+	print "...or contact c-cluster-admin\@cs.wisc.edu with any ";
+	print "questions.\n\n";
+	exit 1;
+    }
 }
 
 
