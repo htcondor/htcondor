@@ -327,6 +327,8 @@ private:
 	int				PeriodicExprInterval;
 	int             RequestClaimTimeout;
 	int				JobStartDelay;
+	int				JobStartCount;
+	int				JobsThisBurst;
 	int				MaxJobsRunning;
 	bool			NegotiateAllJobsInCluster;
 	int				JobsStarted; // # of jobs started last negotiating session
@@ -401,6 +403,7 @@ private:
 	void			preempt_one_job();
 	static void		refuse( Stream* s );
 	void			tryNextJob( void );
+	int				jobThrottle( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 
 

@@ -67,6 +67,7 @@
 #include "sig_name.h"
 
 #define DEFAULT_SHADOW_SIZE 125
+#define DEFAULT_JOB_START_COUNT 1
 
 #define SUCCESS 1
 #define CANT_RUN 0
@@ -4343,8 +4344,11 @@ Scheduler::makeReconnectRecords( PROC_ID* job, ClassAd* match_ad )
 		EXCEPT("Cannot put job into run queue\n");
 	}
 	if( StartJobTimer<0 ) {
+		// Queue the next job start via the daemoncore timer.  jobThrottle()
+		// implements job bursting, and returns the proper delay for the timer.
 		StartJobTimer = daemonCore->Register_Timer(
-				0, (Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
+				jobThrottle(),
+				(Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
 	}
 }
 
@@ -4990,7 +4994,9 @@ Scheduler::tryNextJob( void )
 		// Re-set timer if there are any jobs left in the queue
 	if( !RunnableJobQueue.IsEmpty() ) {
 		StartJobTimer = daemonCore->
-			Register_Timer( JobStartDelay,
+		// Queue the next job start via the daemoncore timer.  jobThrottle()
+		// implements job bursting, and returns the proper delay for the timer.
+			Register_Timer( jobThrottle(),
 							(Eventcpp)&Scheduler::StartJobHandler,
 							"start_job", this ); 
 	} else {
@@ -5116,8 +5122,11 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 		EXCEPT("Cannot put job into run queue\n");
 	}
 	if (StartJobTimer<0) {
+		// Queue the next job start via the daemoncore timer.  jobThrottle()
+		// implements job bursting, and returns the proper delay for the timer.
 		StartJobTimer = daemonCore->Register_Timer(
-				0, (Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
+				jobThrottle(),
+				(Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
 	 }
 
 	return srec;
@@ -6995,6 +7004,14 @@ Scheduler::Init()
 		free( tmp );
 	}
 	
+	JobStartCount =	param_integer(
+						"JOB_START_COUNT",			// name
+						DEFAULT_JOB_START_COUNT,	// default value
+						DEFAULT_JOB_START_COUNT		// min value
+					);
+
+	JobsThisBurst = -1;
+
 	tmp = param( "MAX_JOBS_RUNNING" );
 	if( ! tmp ) {
 		MaxJobsRunning = 200;
@@ -7977,6 +7994,8 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "SchedDInterval", SchedDInterval );
 	intoAd ( ad, "QueueCleanInterval", QueueCleanInterval );
 	intoAd ( ad, "JobStartDelay", JobStartDelay );
+	intoAd ( ad, "JobStartCount", JobStartCount );
+	intoAd ( ad, "JobsThisBurst", JobsThisBurst );
 	intoAd ( ad, "MaxJobsRunning", MaxJobsRunning );
 	intoAd ( ad, "JobsStarted", JobsStarted );
 	intoAd ( ad, "SwapSpace", SwapSpace );
@@ -8503,5 +8522,29 @@ releaseJob( int cluster, int proc, const char* reason,
 	}
 
 	return result;
+}
+
+// Throttle job starts, with bursts of JobStartCount jobs, every
+// JobStartDelay seconds.  That is, start JobStartCount jobs as quickly as
+// possible, then delay for JobStartDelay seconds.  The daemoncore timer is
+// used to generate the job start bursts and delays.  This function should be
+// used to generate the delays for all timer calls of StartJobHandler().  See
+// the schedd WISDOM file for the need and rationale for job bursting and
+// jobThrottle().
+int
+Scheduler::jobThrottle( void )
+{
+	int delay;
+
+	if ( ++JobsThisBurst < JobStartCount ) {
+		delay = 0;
+	} else {
+		JobsThisBurst = 0;
+		delay = JobStartDelay;
+	}
+
+	dprintf( D_FULLDEBUG, "start next job after %d sec, JobsThisBurst %d\n",
+			delay, JobsThisBurst);
+	return delay;
 }
 
