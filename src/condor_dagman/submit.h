@@ -14,7 +14,7 @@
     version of Condor, and how it's condor_submit outputs results on the
     command line.
     
-    @error contain a description of the error that occurred
+    @param cmdFile the job's Condor command file.
     @param condorID will hold the ID for the submitted job (if successful)
     @return true on success, false on failure
 */

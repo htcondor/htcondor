@@ -14,43 +14,55 @@ typedef int bool;
 typedef int JobID_t;
 
 //---------------------------------------------------------------------------
-/** Condor uses three integers to identify jobs. This structure 
-    will be used to store those three numbers.  
+/** An object to represent the Condor ID of a job.  Condor uses three integers
+    (cluster, proc, subproc) to identify jobs.  This structure will be used to
+    store those three numbers.
 */
 class CondorID {
- public:
-  ///
-  CondorID () : _cluster(-1), _proc(-1), _subproc(-1) {}
+  public:
+    /// Constructor
+    CondorID () : _cluster(-1), _proc(-1), _subproc(-1) {}
 
-  ///
-  CondorID (int cluster, int proc, int subproc):
-    _cluster(cluster), _proc(proc), _subproc(subproc) {}
+    /// Copy Constructor
+    CondorID (int cluster, int proc, int subproc):
+        _cluster(cluster), _proc(proc), _subproc(subproc) {}
+    
+    ///
+    inline void Set (int cluster, int proc, int subproc) {
+        _cluster = cluster;
+        _proc    = proc;
+        _subproc = subproc;
+    }
 
-  ///
-  inline void Set (int cluster, int proc, int subproc) {
-    _cluster = cluster;
-    _proc    = proc;
-    _subproc = subproc;
-  }
+    /** Compares this condorID's with another.
+        @param condorID the other CondorID to compare
+        @return zero if they match
+    */
+    int Compare (const CondorID condorID) const;
+    
+    /** Test for equality between two CondorID's.
+        @param the other CondorID object
+        @return true if equal, false if not
+    */
+    inline bool operator == (const CondorID condorID) const {
+        return Compare (condorID) == 0;
+    }
+    
+    /** Send a printable string of this CondorID to a file
+        @param The FILE * to send to
+    */
+    inline void Print (FILE * file = stdout) const {
+        fprintf (file, "(%d.%d.%d)", _cluster, _proc, _subproc);
+    }
 
-  /** Compare this condorID's with another
-      @return zero if they match
-  */
-  int Compare (const CondorID condorID) const;
+    /// The job cluster
+    int _cluster;
 
-  ///
-  inline bool operator == (const CondorID condorID) const {
-    return Compare (condorID) == 0;
-  }
+    /// The job process number
+    int _proc;
 
-  ///
-  inline void Print (FILE * file = stdout) const {
-    fprintf (file, "(%d.%d.%d)", _cluster, _proc, _subproc);
-  }
-
-  /** */ int _cluster;
-  /** */ int _proc;
-  /** */ int _subproc;
+    /// The job subprocess number
+    int _subproc;
 };
 
 

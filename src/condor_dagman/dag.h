@@ -7,30 +7,25 @@
 #include "user_log.c++.h"          /* from condor_c++_util/ directory */
 #include "condor_constants.h"      /* from condor_includes/ directory */
 
-/** Termination Queue Item (TQI).  EXPLANATION NEEDED HERE!
- */
+// Termination Queue Item (TQI).
 class TQI {
   public:
-    ///
     inline TQI () : parent(NULL) {}
-    ///
     inline TQI (Job * p) : parent(p) {}
-    ///
     inline TQI (Job * p, const SimpleList<JobID_t> & c) :
         parent(p), children(c) {}
 
-    ///
     void Print () const;
 
-    /** The job that terminated      */   Job                 * parent;
-    /** Children net yet seen in log */   SimpleList<JobID_t>   children;
+    Job                 * parent;   // The job that terminated
+    SimpleList<JobID_t>   children; // Children net yet seen in log
 };
 
 
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,
     and the state of jobs as they are running. Jobs are run by
-    submitting them to condor using the API in CondorSubmit.[hc].
+    submitting them to condor using the UserLog API<p>
     
     The public interface to a Dag allows you to add jobs, add
     dependencies, submit jobs, control the locations of log files,
@@ -41,8 +36,10 @@ class Dag {
   public:
   
     /** Create a DAG
-        @param condorLog
-        @param dagLockFile
+        @param condorLog the condor log where job events are being written to
+        @param lockFileName the name of the lock file
+        @param numJobsRunningMax the maximum number of jobs to submit to Condor
+               at one time
     */
     Dag (const char *condorLog, const char *lockFileName,
          const int  numJobsRunningMax);
@@ -50,7 +47,10 @@ class Dag {
     ///
     ~Dag();
 
-    /// Prepare DAG for initial run.  Call this function ONLY ONCE.
+    /** Prepare DAG for initial run.  Call this function ONLY ONCE.
+        @param recovery specifies if this is a recovery
+        @return true: successful, false: failure
+    */
     bool Bootstrap (bool recovery);
 
     /// Add a job to the collection of jobs managed by this Dag.
@@ -58,6 +58,9 @@ class Dag {
   
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
+        @param parent The parent job
+        @param child The child job (depends on the parent)
+        @return true: successful, false: failure
     */
     bool AddDependency (Job * parent, Job * child);
   
@@ -71,42 +74,48 @@ class Dag {
         This may cause the state of some jobs to change.
 
         @param recover Process Log in Recover Mode, from beginning to end
-        @param job The next log event should be for this job
         @return true on success, false on failure
     */
     bool ProcessLogEvents (bool recover = false);
 
     /** Get pointer to job with id jobID
+        @param the handle of the job in the DAG
         @return address of Job object, or NULL if not found
     */
     Job * GetJob (const JobID_t jobID) const;
 
     /** Get pointer to job with name jobName
+        @param jobName the name of the job in the DAG
         @return address of Job object, or NULL if not found
     */
     Job * GetJob (const char * jobName) const;
 
     /** Get pointer to job with condor ID condorID
+        @param condorID the CondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
     Job * GetJob (const CondorID condorID) const;
 
-    ///
+    /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;
 
-    ///
+    //
     void Print_TermQ () const;
 
-    ///
+    /** @return the total number of jobs in the DAG
+     */
     inline int NumJobs() const { return _jobs.Number(); }
 
-    ///
+    /** @return the number of jobs completed
+     */
     inline int NumJobsDone() const { return _numJobsDone; }
 
-    ///
+    /** @return the number of jobs that failed in the DAG
+     */
     inline int NumJobsFailed() const { return _numJobsFailed; }
 
-    ///
+    /** @return the number of jobs currently submitted to Condor
+     */
     inline int NumJobsRunning() const { return _numJobsRunning; }
 
     /** Remove all jobs (using condor_rm) that are currently running.
@@ -120,26 +129,28 @@ class Dag {
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
+        @param rescue_file The name of the rescue file to generate
+        @param datafile The original DAG config file to read from
     */
     void Rescue (const char * rescue_file, const char * datafile) const;
 
   protected:
 
-    /** Submit job to Condor.  If job is not submittable (!job->CanSubmit())
+    /*  Submit job to Condor.  If job is not submittable (!job->CanSubmit())
         then function will return false for failure
         @return true on success, false on failure
     */
     bool Submit (Job * job);
 
-    /** Submit job with ID jobID to Condor
+    /*  Submit job with ID jobID to Condor
         @return true on success, false on failure
     */
     // bool Submit (JobID_t jobID);
 
-    /// Update the state of a job to "Done", and run child jobs if possible.
+    //  Update the state of a job to "Done", and run child jobs if possible.
     void TerminateJob (Job * job);
   
-    /** Get the first appearing job in the termination queue marked SUBMITTED.
+    /*  Get the first appearing job in the termination queue marked SUBMITTED.
         This function is called by ProcessLogEvents when a SUBMIT log
         entry is read.  The challenge is to correctly match the condorID
         found in the SUBMIT log event written by Condor with the Job object
@@ -150,24 +161,24 @@ class Dag {
     */
     Job * GetSubmittedJob (bool recovery);
 
-    /** Submit all ready jobs, provided they are not waiting on a parent job.
+    /*  Submit all ready jobs, provided they are not waiting on a parent job.
         @return true: success, false: fatal error
     */
     bool SubmitReadyJobs ();
   
-    /// name of consolidated condor log
+    // name of consolidated condor log
     char        * _condorLogName;
 
-    /// Documentation on ReadUserLog is present in condor_c++_util
+    // Documentation on ReadUserLog is present in condor_c++_util
     ReadUserLog   _condorLog;
 
-    ///
+    //
     bool          _condorLogInitialized;
 
-    /// Last known size of condor log, used by DetectLogGrowth()
+    //  Last known size of condor log, used by DetectLogGrowth()
     off_t         _condorLogSize;
 
-    /** used for recovery purposes presence of file indicates
+    /*  used for recovery purposes presence of file indicates
         abnormal termination
     */
     char        * _lockFileName;
@@ -175,22 +186,22 @@ class Dag {
     /// List of Job objects
     List<Job>     _jobs;
 
-    ///
+    //
     List<TQI>    _termQ;
 
-    /// For debugging
+    // For debugging
     bool         _termQLock;
 
-    /// Number of Jobs that are done (completed execution)
+    // Number of Jobs that are done (completed execution)
     int _numJobsDone;
     
-    /// Number of Jobs that failed (or their PRE or POST script failed).
+    // Number of Jobs that failed (or their PRE or POST script failed).
     int _numJobsFailed;
 
-    /// Number of Jobs currently running (submitted to Condor)
+    // Number of Jobs currently running (submitted to Condor)
     int _numJobsRunning;
 
-    /** Maximum number of jobs to run at once.  Non-negative.  Zero means
+    /*  Maximum number of jobs to run at once.  Non-negative.  Zero means
         unlimited
     */
     int _numJobsRunningMax;

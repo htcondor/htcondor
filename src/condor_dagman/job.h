@@ -12,8 +12,26 @@
 #include "debug.h"
 #include "script.h"
 
-/**  A Job instance will be used to pass job attributes to the
-     AddJob() function.
+/**  The job class represents a job in the DAG and it's state in the Condor
+     system.  A job is given a name, a CondorID, and three queues.  The
+     incoming queue is a list of parent jobs that this one depends on.  That
+     queue never changes once set.  The waiting queue is the same as the
+     incoming queue, but shrinks to emptiness has the parent jobs complete.
+     The outgoing queue is a list of child jobs that depend on this one.
+     Once set, this queue never changes.<p>
+
+     From DAGMan's point of view, a job has four basic states in the Condor
+     system (refer to the Job::status_t enumeration).  It starts out as
+     READY, meaning that it has not yet been submitted.  The job's state
+     changes to SUBMITTED once in the Condor system.  Only one of the remaining
+     states is possible after that.  Either the job is DONE, if I completes
+     successfully, or is in the ERROR if it completes abnormally.<p>
+
+     The DAG class will control the job by modifying and viewing its three
+     queues.  Once the WAITING queue becomes empty, the job is submitted, and
+     its state goes from READY to SUBMITTED.  If the job completes
+     successfully, its state is changed to DONE, and the children (listed in
+     this jobs OUTGOING queue) are put on the DAG's ready list.
 */
 class Job {
   public:
@@ -21,22 +39,49 @@ class Job {
     /** Enumeration for specifying which queue for Add() and Remove().
         If you change this enum, you *must* also update queue_t_names
     */
-    enum queue_t { Q_INCOMING, Q_WAITING, Q_OUTGOING };
+    enum queue_t {
+        /** Parents of this job.  The list of parent jobs, which does not
+            change while DAGMan is running.
+        */
+        Q_INCOMING,
 
-    /// The string names for the queue_t enumeration
+        /** Parents of this job not finished.  The list of parents that
+            have not yet finished.  Once this queue is empty, this job may
+            run.
+        */
+        Q_WAITING,
+
+        /** Children of this job.  The list of child jobs, which does not
+            change while DAGMan is running.
+        */
+        Q_OUTGOING
+    };
+
+    /** The string names for the queue_t enumeration.  Use this for printing
+        the names "Q_INCOMING", "Q_WAITING", or "Q_OUTGOING".  For example,
+        to print out whether the outgoing queue is empty:<p>
+        <pre>
+          Job * job;  // Assume this is assigned to a job
+          printf ("The %s queue of job %s is %s empty\n",
+                  Job::queue_t_names[Q_OUTGOING], job->GetJobName(),
+                  job->IsEmpty(Q_OUTGOING) ? "", "not");
+        </pre>
+    */
     static const char *queue_t_names[];
   
     /** The Status of a Job
         If you update this enum, you *must* also update status_t_names
     */
     enum status_t {
-        /** Job is ready */               STATUS_READY,
-        /** Job has been submitted */     STATUS_SUBMITTED,
-        /** Job is done */                STATUS_DONE,
-        /** Job exited abnormally */      STATUS_ERROR
+        /** Job is ready for submission */ STATUS_READY,
+        /** Job has been submitted */      STATUS_SUBMITTED,
+        /** Job is done */                 STATUS_DONE,
+        /** Job exited abnormally */       STATUS_ERROR
     };
 
-    /// The string names for the status_t enumeration
+    /** The string names for the status_t enumeration.  Use this the same
+        way you would use the queue_t_names array.
+    */
     static const char * status_t_names[];
   
     /** Constructor
@@ -85,7 +130,10 @@ class Job {
     */
     bool Remove (const queue_t queue, const JobID_t jobID);
 
-    ///
+    /** Returns true if a queue is empty (has no jobs)
+        @param queue Selects which queue to look at
+        @return true: queue is empty, false: otherwise
+    */
     inline bool IsEmpty (const queue_t queue) const {
         return _queues[queue].IsEmpty();
     }
@@ -95,7 +143,8 @@ class Job {
     */
     void Dump () const;
   
-    /** Print the identification info for this Job.
+    /** Print the identification info for this Job to stdout.
+        @param condorID If true, also print the job's CondorID
      */
     void Print (bool condorID = false) const;
   
@@ -104,13 +153,13 @@ class Job {
   
   private:
   
-    /// filename of condor submit file
+    // filename of condor submit file
     char * _cmdFile;
   
-    /// name given to the job by the user
+    // name given to the job by the user
     char * _jobName;
   
-    /** Job queue's
+    /*  Job queue's
       
         incoming -> dependencies coming into the Job
         outgoing -> dependencies going out of the Job
@@ -118,17 +167,21 @@ class Job {
     */
     SimpleList<JobID_t> _queues[3];
   
-    /** The ID of this job.  This serves as a primary key for Job's, where each
+    /*  The ID of this job.  This serves as a primary key for Job's, where each
         Job's ID is unique from all the rest
     */
     JobID_t _jobID;
 
-    /** Ensures that all jobID's are unique.  Starts at zero and increments
+    /*  Ensures that all jobID's are unique.  Starts at zero and increments
         by one for every Job object that is constructed
     */
     static JobID_t _jobID_counter;
 };
 
+/** A wrapper function for Job::Print which allows a NULL job pointer.
+    @param job Pointer to job object, if NULL then "(UNKNOWN)" is printed
+    @param condorID If true, also print the job's CondorID
+*/
 void job_print (Job * job, bool condorID = false);
 
 
