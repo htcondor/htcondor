@@ -846,6 +846,34 @@ if test "x$TarCmd" = "x"; then
 fi
 AC_SUBST(TarCmd,$TarCmd)
 
+# We use "cp -r" to package parts of Condor.  However, we need to make
+# sure that it dereferences symlinks, instead of copying the links.
+# GNU cp copies symlinks by default with -r, so we need to add "-Lr"
+# to get the behavior we want.  Unfortunately, the vendor cp on many
+# platforms doesn't recognize "-L".  So, we just do some tests here to
+# figure out what flags get the behavior we want, and pass that on to
+# the places that need it via the Makefiles.
+AC_PATH_PROG([_cv_cp],[cp],[none],[$PATH])
+if test "$_cv_cp" = "none" ; then
+  AC_MSG_ERROR([no cp in your PATH! Either fix your PATH or your machine])
+fi
+AC_CACHE_CHECK([what options to cp recursively copy and follow symlinks],
+               _cv_cp_flags,
+ [_cv_cp_flags="none" ;
+  for a in "-rL" "-r" ; do
+    CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG([$_cv_cp],[$a],[_cv_cp_flags])
+    if ! test "$_cv_cp_flags" = "none" ; then
+      break;
+    fi  
+  done;
+ ]
+)
+if test "$_cv_cp_flags" = "none" ; then
+  AC_MSG_ERROR([The cp in your PATH does not work, try installing GNU cp])
+else
+  AC_SUBST(CpCmd,"$_cv_cp $_cv_cp_flags")
+fi  
+
 # gzip is required for packaging up Condor releases. 
 AC_CHECK_PROG(ac_gzip,gzip,yes,no)
 if test $ac_gzip = no; then
