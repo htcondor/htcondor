@@ -28,7 +28,7 @@
 /*
  * GccVersion should be the only one that needs to be changed from time to time
  */
-#define GccVersion 2.7.2
+#define GccVersion 2.7.2.1
 
 #define GccPath concat(/s/gcc-,GccVersion)
 #define CCompiler concat3(GccPath,/bin/,gcc)
