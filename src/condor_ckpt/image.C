@@ -327,7 +327,7 @@ Image::Save()
 		rtn = segment_bounds(i, addr_start, addr_end, prot);
 		switch (rtn) {
 		case -1:
-			dprintf( D_ALWAYS, "Internal error, segment_bounds returned -1");
+			dprintf( D_ALWAYS, "Internal error, segment_bounds returned -1\n");
 			Suicide();
 			break;
 		case 0:
@@ -345,7 +345,7 @@ Image::Save()
 			break;		// don't add DATA segment again
 		default:
 			dprintf( D_ALWAYS, "Internal error, segment_bounds"
-					 "returned unrecognized value");
+					 "returned unrecognized value\n");
 			Suicide();
 		}
 	}	
@@ -366,7 +366,7 @@ Image::Save()
 	}
 
 	if( pos < 0 ) {
-		dprintf( D_ALWAYS, "Internal error, ckpt size calculated is %d", pos );
+		dprintf( D_ALWAYS, "Internal error, ckpt size calculated is %d\n", pos );
 		Suicide();
 	}
 
@@ -814,7 +814,7 @@ SegMap::Read( int fd, ssize_t pos )
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
 			dprintf( D_ALWAYS,
 					 "Unable to open /dev/zero in read/write mode.\n");
-			dprintf( D_ALWAYS, "open: %s", strerror(errno));
+			dprintf( D_ALWAYS, "open: %s\n", strerror(errno));
 			Suicide();
 		}
 
@@ -863,7 +863,7 @@ SegMap::Read( int fd, ssize_t pos )
 		if (SYSCALL(SYS_close, zfd) < 0) {
 			dprintf( D_ALWAYS,
 					 "Unable to close /dev/zero file descriptor.\n" );
-			dprintf( D_ALWAYS, "close: %s", strerror(errno));
+			dprintf( D_ALWAYS, "close: %s\n", strerror(errno));
 			Suicide();
 		}
 	}		
