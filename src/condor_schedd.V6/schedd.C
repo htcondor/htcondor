@@ -5133,7 +5133,7 @@ Scheduler::Relinquish(match_rec* mrec)
 }
 
 void
-Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
+Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 {
 	bool		found = false;
 	match_rec	*rec;
@@ -5148,8 +5148,13 @@ Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 			found = true;
 		}
 	}
-	if (!found) {
-		dprintf(D_FULLDEBUG, "Shadow does not have a match record, so did not remove it from the match\n");
+	if( !found ) {
+			// Try the dedicated scheduler
+		found = dedicated_scheduler.removeShadowRecFromMrec( shadow );
+	}
+	if( ! found ) {
+		dprintf( D_FULLDEBUG, "Shadow does not have a match record, "
+				 "so did not remove it from the match\n");
 	}
 }
 
