@@ -82,35 +82,20 @@ LIB32=link.exe -lib
 # Name "condor_classad - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_classad\ast.C
+SOURCE=..\src\condor_classad.V6\classad.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Release"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_classad\astbase.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\attrlist.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\buildtable.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\classad.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\classad_lookup.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\classad_util.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\classifiedjobs.C
+SOURCE=..\src\condor_classad.V6\classad.h
 # End Source File
 # Begin Source File
 
@@ -178,43 +163,11 @@ SOURCE=..\src\condor_includes\condor_scanner.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_classad\environment.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\evaluateOperators.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\operators.C
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_classad\operators.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_classad\parser.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\registration.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\scanner.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\value.C
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_classad\value.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_classad\xml_classads.C
 # End Source File
 # End Target
 # End Project

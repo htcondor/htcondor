@@ -2,7 +2,7 @@
 REM Build Condor from a batch file
 REM Todd Tannenbaum <tannenba@cs.wisc.edu> Feb 2002
 if defined INCLUDE goto :compiler_ready
-call VCVARS32.BAT
+REM call VCVARS32.BAT
 if defined INCLUDE goto :compiler_ready
 echo *** Visual C++ bin direcotory not in the path, or compiler not installed.
 goto failure
