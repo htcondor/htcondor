@@ -17,8 +17,8 @@
 #  endif
 
 
-#elif defined( IS_BSD )
-#  define PlatformIncludeFile <BSD.cf>
+#elif defined( IS_DARWIN )
+#  define PlatformIncludeFile <DARWIN.cf>
 
 
 #elif defined( IS_SOLARIS )
