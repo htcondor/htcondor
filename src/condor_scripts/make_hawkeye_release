@@ -9,8 +9,11 @@ my @BinDirs = ( "bin", "sbin" );
 my $Modules = "hawkeye_modules";
 my $ModulesTarget = "modules";
 my $Examples = "condor_examples";
+my $CondorRel = "condor_release";
+my $ClassAdViewer = "/p/condor/workspaces/shared/wenger/dist/";
 my $ReleaseDir = "../Hawkeye-Release";
-my $TarBallPat = "$ReleaseDir/Hawkeye-%s.tar.gz";
+my $TarBallPat = "$ReleaseDir/Hawkeye-%s.tar";
+my $RelTarBallPat = "$ReleaseDir/Hawkeye-%s.tar.gz";
 
 # Script version, etc
 my $Version = "0.1";
@@ -38,6 +41,10 @@ die "$Usage" if ( $HawkeyeVersion eq "" );
 # Temp better not exist!
 die "$Temp exists" if ( -d $Temp );
 
+# Check modules dir
+die "No '$Modules' dir!" if ( ! -d $Modules );
+die "'$Modules' is empty!" if ( ! -f "$Modules/df" );
+
 # Make the hawkeye release dir
 print "Creating the Hawkeye directory..\n";
 die "Can't make hawkeye!" if ( system( "./condor_scripts/make_hawkeye" ) );
@@ -64,11 +71,33 @@ CopyAll( $Examples, "$Temp", "*hawkeye*" );
 mkdir( $ReleaseDir, 0755 ) if ( ! -d $ReleaseDir );
 
 # Finally, make the damn tarball
-my $TarBall = sprintf( $TarBallPat, $HawkeyeVersion );
-print "Creating tarball '$TarBall'...  ";
-system( "gtar --gzip -C $Temp -cf $TarBall ." );
-print "Done\n";
-system( "ls -l $TarBall" );
+{
+    my $TarBall = sprintf( $TarBallPat, $HawkeyeVersion );
+    print "Creating tarball '$TarBall'...  ";
+    system( "gtar -C $Temp -cf $TarBall ." );
+    print "Done\n";
+    system( "ls -l $TarBall" );
+
+    # Blow away tmp, and move the newly created tarball there
+    system( "rm -r $Temp" );
+    die "Can't create $Temp" if ( ! mkdir( "$Temp", 0755 ) );
+    system( "mv $TarBall $Temp" );
+
+}
+
+# Copy in the last minute pieces..
+CopyAll( $CondorRel, $Temp, "*hawkeye*" );
+CopyAll( $ClassAdViewer, $Temp, "h*tgz*" );
+
+# Now, make the release tarball...
+{
+    my $TarBall = sprintf( $RelTarBallPat, $HawkeyeVersion );
+    print "Creating release tarball '$TarBall'...  ";
+    system( "gtar --gzip -C $Temp -cf $TarBall ." );
+    system( "ls -l $TarBall" );
+    system( "tar tvfz $TarBall" );
+    print "Done\n";
+}
 
 # Clean up the temp dir
 print "Cleaning up the $Temp directory...\n";

@@ -4,7 +4,6 @@ use strict;
 # Things we know about
 my $Hawkeye = "hawkeye_dir";
 my $Release = "release_dir";
-my $Modules = "hawkeye_modules";
 my @BinDirs = ( "bin", "sbin" );
 my @KillList = (
 		"condor_checkpoint",
@@ -38,8 +37,6 @@ my @KillList = (
 	       );
 
 # Are we in the right home?
-die "No '$Modules' dir!" if ( ! -d $Modules );
-die "'$Modules' is empty!" if ( ! -f "$Modules/df" );
 die "No '$Release' dir!" if ( ! -d $Release );
 
 # Process command line..
