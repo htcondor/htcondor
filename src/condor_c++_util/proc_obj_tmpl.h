@@ -63,5 +63,7 @@ display_common_elements( Type *p )
 	d_string( "preferences", p->preferences );
 	d_rusage( "local_usage", p->local_usage );
 }
+#if !defined(AIX32)
 template static void display_common_elements(V2_PROC *);
+#endif
 /*#endif */
