@@ -352,6 +352,18 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 					  break;
 				  }
 
+				  if( job->_Status == Job::STATUS_ERROR ) {
+						  // sometimes condor prints *both* a
+						  // termination and an abort event for a job;
+						  // in such cases, we need to make sure not
+						  // to process both...
+					  debug_printf( DEBUG_NORMAL,
+									"WARNING: Job %s already marked %s; "
+									"ignoring job aborted event...\n",
+									job->GetJobName(), job->GetStatusName() );
+					  break;
+				  }
+
                   _numJobsSubmitted--;
                   ASSERT( _numJobsSubmitted >= 0 );
 
@@ -749,7 +761,12 @@ Dag::SubmitReadyJobs()
 	}
 
 		// sleep for a specified time before submitting
-	sleep( G.submit_delay );
+	if( G.submit_delay ) {
+		debug_printf( DEBUG_VERBOSE, "Sleeping for %d seconds "
+					  "(DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
+					  G.submit_delay );
+		sleep( G.submit_delay );
+	}
 
 	if (job->job_type == Job::CONDOR_JOB){
 	  debug_printf( DEBUG_VERBOSE, "Submitting Condor Job %s ...\n",
