@@ -649,7 +649,17 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		tmp = NULL;
 	}
 
-	if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
+	if( ad->LookupString(ATTR_NAME, &tmp) ) {
+		if( machineName ) {
+			if( is_valid_sinful(machineName) ) {
+				delete [] machineName;
+				machineName = strnewp( tmp );
+			}
+		}	
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
+		free( tmp );
+		tmp = NULL;
+	} else if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
 				delete [] machineName;
