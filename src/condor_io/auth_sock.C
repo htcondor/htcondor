@@ -196,9 +196,9 @@ AuthSock::auth_connection_client()
 		return FALSE;
 	}
 
-//	authComms.sock = this;
-//	authComms.buffer = NULL;
-//	authComms.size = 0;
+	authComms.sock = this;
+	authComms.buffer = NULL;
+	authComms.size = 0;
 
 	major_status = globus_gss_assist_init_sec_context(&minor_status,
 		  credential_handle, &context_handle,
@@ -251,10 +251,9 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 		free ( GSSClientname );
 	authsock.GSSClientname = NULL;
 	 
-//get rid of authComms, it's no longer used
-//	authComms.sock = &authsock;
-//	authComms.buffer = NULL;
-//	authComms.size = 0;
+	authComms.sock = &authsock;
+	authComms.buffer = NULL;
+	authComms.size = 0;
 
 	major_status = globus_gss_assist_accept_sec_context(&minor_status,
 				 &context_handle, credential_handle,
@@ -420,7 +419,7 @@ int AuthSock::authenticate() {
 void AuthSock::auth_setup() {
 	authComms.buffer = NULL;
 	authComms.size = 0;
-GSSClientname = NULL;
+	GSSClientname = NULL;
 }
 
 #endif //#!defined GSS_AUTHENTICATION
