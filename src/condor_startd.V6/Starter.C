@@ -561,9 +561,11 @@ int
 Starter::execCODStarter( void )
 {
 	MyString args;
+	MyString env;
+	char* tmp;
 	int cluster = s_claim->cluster();
 	int proc = s_claim->proc();
-	args = "condor_starter -f -append cod -lockfile StarterLock.cod ";
+	args = "condor_starter -f -append cod ";
 	args += "-header (";
 	if( resmgr->is_smp() ) {
 		args += s_claim->rip()->r_id_str;
@@ -580,7 +582,20 @@ Starter::execCODStarter( void )
 		args += " -job_proc ";
 		args += proc;
 	} 
-	return execDCStarter( args.Value(), NULL );
+
+	tmp = param( "LOCK" );
+	if( ! tmp ) { 
+		tmp = param( "LOG" );
+	}
+	if( ! tmp ) { 
+		EXCEPT( "LOG not defined!" );
+	}
+	env = "_condor_STARTER_LOCK=";
+	env += tmp;
+	free( tmp );
+	env += DIR_DELIM_CHAR;
+	env += "StarterLock.cod";
+	return execDCStarter( args.Value(), env.Value(), NULL );
 }
 
 
@@ -598,14 +613,14 @@ Starter::execDCStarter( Stream* s )
 	} else {
 		sprintf(args, "condor_starter -f %s", hostname );
 	}
-	execDCStarter( args, s );
+	execDCStarter( args, NULL, s );
 
 	return s_pid;
 }
 
 
 int
-Starter::execDCStarter( const char* args, Stream* s )
+Starter::execDCStarter( const char* args, const char* env, Stream* s )
 {
 	Stream *sock_inherit_list[] = { s, 0 };
 	Stream** inherit_list = NULL;
@@ -617,7 +632,7 @@ Starter::execDCStarter( const char* args, Stream* s )
 
 	s_pid = daemonCore->
 		Create_Process( s_path, (char*)args, PRIV_ROOT, main_reaper,
-						TRUE, NULL, NULL, TRUE, inherit_list );
+						TRUE, env, NULL, TRUE, inherit_list );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;

@@ -93,7 +93,7 @@ private:
 	int		execOldStarter( void );
 	int		execCODStarter( void );
 	int		execDCStarter( Stream* s );
-	int		execDCStarter( const char* args, Stream* s );
+	int		execDCStarter( const char* args, const char* env, Stream* s );
 	void	initRunData( void );
 
 	int		startKillTimer( void );	    // Timer for how long we're willing 
