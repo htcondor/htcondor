@@ -76,8 +76,8 @@
 #define StaticFlag -static
 #define UnixName /hp-ux				/* pathname of the system executable */
 /* #define syscall_lib  */
-#define PsAllFlag -ef				/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $2 }'	/* Pick out pid from "ps" output */
+#define PsAllFlag /bin/ps -e				/* "Ps" flag when you want everything */
+#define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
 #define CompatFlags /**/
 
 #ifndef Ctags
