@@ -87,6 +87,8 @@ int IsPseudo = FALSE;
 int DoSysChk = TRUE;
 
 
+static char global_func[20],global_fd[20];
+static int ioserver_mapping;
 #if 0
 input
 	: /* empty */
@@ -910,6 +912,7 @@ void
 output_mapping( char *func_type_name, int is_ptr,  struct node *list )
 {
 	struct node	*n;
+        struct node     *p;
 	int	found_mapping = 0;
 
 	for( n = list->next; n != list; n = n->next ) {
@@ -922,6 +925,24 @@ output_mapping( char *func_type_name, int is_ptr,  struct node *list )
 	if( found_mapping ) {
 		printf( "\tint use_local_access = FALSE;\n" );
 		printf( "\n" );
+	}
+
+	if ( ioserver_mapping ) {
+		printf( "\tint scm;\n");
+		printf( "\tif ( !LocalSysCalls() && IOServerAccess(%s) ) {\n",global_fd);
+		printf( "\t\tscm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );\n");
+		printf( "\t\trval = ioserver_%s( ",global_func);
+
+		for( p=list->next; p != list; p = p->next ) {
+			printf( "%s", p->id );
+			if( p->next != list ) {
+				printf( ", " );
+			}
+		}
+		printf( " );\n");
+		printf( "\t\tSetSyscalls( scm );\n");
+		printf( "\t\treturn rval;\n");
+		printf( "\t}\n");
 	}
 
 	for( n = list->next; n != list; n = n->next ) {
@@ -1253,6 +1274,7 @@ output_sender( struct node *n )
 	printf( "\n" );
 }
 
+
 /*
   Output code for one system call switch.
 */
@@ -1273,6 +1295,16 @@ output_switch( struct node *n )
 	output_switch_decl( n->param_list );
 	printf( "{\n" );
 	printf( "	int	rval;\n" );
+
+	ioserver_mapping=0;
+	if (( strcmp(n->id,"write") == 0 ) || (strcmp(n->id,"read")==0)
+	|| ( strcmp(n->id,"lseek")==0) || (strcmp(n->id, "fstat") == 0))
+	    {
+		ioserver_mapping = 1;
+		strcpy( global_func, n->id ) ;
+		strcpy( global_fd, n->param_list->next->id ) ;
+	    }
+	    
 
 	if (gen_local_calls ) {
 		output_mapping( n->type_name, n->is_ptr, n->param_list );
