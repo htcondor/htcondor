@@ -26,6 +26,7 @@
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "globus_utils.h"
+#include "get_port_range.h"
 #include "gahp-client.h"
 
 	// Initialize static data members
@@ -371,6 +372,9 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 	char *gahp_args = NULL;
 	int stdin_pipefds[2];
 	int stdout_pipefds[2];
+	int low_port;
+	int high_port;
+	char *newenv = NULL;
 
 		// Check if we already have spawned a GAHP server.  
 	if ( m_gahp_pid != -1 ) {
@@ -388,6 +392,12 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 	}
 
 	if (!gahp_path) return false;
+
+	if ( get_port_range( &low_port, &high_port ) == TRUE ) {
+		newenv = (char *)malloc( 64 );
+		snprintf( newenv, 64, "GLOBUS_TCP_PORT_RANGE=%d,%d", low_port,
+				  high_port );
+	}
 
 		// Now register a reaper, if we haven't already done so.
 		// Note we use ReaperHandler instead of ReaperHandlercpp
@@ -410,6 +420,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 			errno);
 		free( gahp_path );
 		if (gahp_args) free(gahp_args);
+		if (newenv) free(newenv);
 		return false;
 	}
 
@@ -424,7 +435,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 			PRIV_UNKNOWN,	// Priv State ---- keep the same 
 			m_reaperid,		// id for our registered reaper
 			FALSE,			// do not want a command port
-			NULL,			// env
+			newenv,			// env
 			NULL,			// cwd
 			FALSE,			// new process group?
 			NULL,			// network sockets to inherit
@@ -436,6 +447,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 				gahp_path);
 		free( gahp_path );
 		if (gahp_args) free(gahp_args);
+		if (newenv) free(newenv);
 		return false;
 	} else {
 		dprintf(D_ALWAYS,"GAHP server pid = %d\n",m_gahp_pid);
@@ -443,6 +455,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 
 	free( gahp_path );
 	if (gahp_args) free(gahp_args);
+	if (newenv) free(newenv);
 
 		// Now that the GAHP server is running, close the sides of
 		// the pipes we gave away to the server, and stash the ones
