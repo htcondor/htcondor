@@ -198,7 +198,7 @@ calc_virt_memory()
 }
 #endif /* SunOS4.0 and SunOS4.1 code */
 
-#if defined(HPUX8)
+#if defined(HPUX)
 /*
 ** This is wrong!  This only gets the system defined limit on the data
 ** segment size of an individual process.  It really has nothing to do
@@ -216,7 +216,7 @@ calc_virt_memory()
 }
 #endif
 	
-#if !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX8) && !defined(OSF1)
+#if !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX) && !defined(OSF1)
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
