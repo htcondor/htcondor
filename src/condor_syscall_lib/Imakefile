@@ -116,7 +116,7 @@ all_target($(SYSCALL_LIB) receivers.c $(SIMPLE_OBJ) $(AIX_OBJ))
 stubs: switches.c senders.c receivers.c
 
 ToUpper:
-	ln -s ../condor_ckpt/ToUpper
+	ln -s ../condor_ckpt/ToUpper ToUpper
 
 uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
 uppercase_target($(SIMPLE_LIBC),getppid.o,GETPPID.o,getppid,GETPPID)
