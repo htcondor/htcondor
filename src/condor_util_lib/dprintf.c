@@ -100,7 +100,6 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 {
 	struct tm *tm, *localtime();
 	time_t clock;
-	int scm;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
 	mode_t		old_umask;
@@ -456,7 +455,7 @@ preserve_log_file(int debug_level)
 			/* now truncate the original by reopening _not_ with append */
 			DebugFP = open_debug_file(debug_level, "w");
 			if ( DebugFP ==  NULL ) {
-				still_in_old_file == TRUE;
+				still_in_old_file = TRUE;
 			}
 		}
 	}
