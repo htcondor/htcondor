@@ -1,0 +1,28 @@
+#!/usr/bin/env perl
+
+######################################################################
+# $Id: remote_pre,v 1.1.2.1 2004-06-25 04:05:03 wright Exp $
+# script to setup the Condor build
+######################################################################
+
+use Cwd;
+my $BaseDir = getcwd();
+my $SrcDir = "$BaseDir/src";
+
+
+######################################################################
+# run configure on the source tree
+######################################################################
+
+chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
+print "running CONFIGURE ...\n"; 
+open( CONFIG, "./configure 2>&1 |") ||
+    die "Can't open configure as a pipe: $!\n";
+while ( <CONFIG> ) {
+  print $_;
+}
+close( CONFIG );
+$configstat = $?;
+print "CONFIGURE returned a code of $configstat\n"; 
+($configstat == 0) || die "CONFIGURE failed, aborting build\n";  
+

@@ -1,0 +1,19 @@
+#!/usr/bin/env perl
+
+######################################################################
+# $Id: remote_post_always,v 1.1.2.1 2004-06-25 04:05:02 wright Exp $
+# post script to cleanup after a Condor build, successful or not
+######################################################################
+
+
+######################################################################
+# tar up test results
+######################################################################
+
+#note - tar with 2 options fails on a lot of the platforms (-cr)  
+# we should be using gnu tar for all - make sure path is correct
+print "Tarring up results\n";
+system( "tar zcf results.tar.gz public" );
+if( $? >> 8 ) {
+    die "Can't tar zcf results.tar.gz public\n";
+}
