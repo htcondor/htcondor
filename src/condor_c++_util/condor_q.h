@@ -65,6 +65,9 @@ class CondorQ
 	// CondorQ (const CondorQ &);
 	~CondorQ ();
 
+	// initialize defaults, etc.
+	bool init();  
+
 	// add constraints
 	int add (CondorQIntCategories, int);
 	int add (CondorQStrCategories, char *);
@@ -82,6 +85,9 @@ class CondorQ
   private:
 	GenericQuery query;
 	
+	// default timeout when talking the schedd (via ConnectQ())
+	int connect_timeout;
+
 	// helper functions
 	int getAndFilterAds( ClassAd &, ClassAdList & );
 	int getFilterAndProcessAds( ClassAd &, process_function );
