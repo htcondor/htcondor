@@ -31,9 +31,22 @@
 #define writev __hide_writev
 #endif /* LINUX && GLIBC */
 
+#if defined(OSF1) && !defined(_LIBC_POLLUTION_H_)
+#define _LIBC_POLLUTION_H_condor_fix_sys_uio.h
+#define CONDOR_LIBC_POLLUTION_H_
+#endif
+
+
 #if !defined(WIN32)
 #include <sys/uio.h>
 #endif
+
+
+#if defined(OSF1) && defined(CONDOR_LIBC_POLLUTION_H_)
+#undef _LIBC_POLLUTION_H_
+#undef CONDOR_LIBC_POLLUTION_H_
+#endif
+
 
 #if defined(__cplusplus)
 extern "C" {
