@@ -168,6 +168,6 @@ const char ATTR_UPDATES			[] 	= "Updates";
 const char ATTR_WANT_LIST		[]	= "WantList";
 const char ATTR_WANT_PRELUDE	[]	= "WantPrelude";
 const char ATTR_WANT_RESULTS	[]	= "WantResults";
-const char ATTR_WANT_SUMMARY	[]	= "WantSummary";
+const char ATTR_WANT_POSTLUDE	[]	= "WantPostlude";
 
 #endif//__COMMON_H__

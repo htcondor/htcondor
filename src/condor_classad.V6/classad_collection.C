@@ -514,7 +514,7 @@ void ClassAdCollection::QueryCollection( int CoID, ClassAd *query, Sink &s )
 	bool					wantPrelude;
 	bool					wantList;
 	bool					wantResults;
-	bool					wantSummary;
+	bool					wantPostlude;
 	ExprList				*projectionAttrs;
 	Value					value;
 	ClassAd					*ad;
@@ -536,8 +536,8 @@ void ClassAdCollection::QueryCollection( int CoID, ClassAd *query, Sink &s )
 	if( !query->EvaluateAttrBool( ATTR_WANT_RESULTS, wantResults ) ) {
 		wantResults = true;
 	}
-	if( !query->EvaluateAttrBool( ATTR_WANT_SUMMARY, wantSummary ) ) {
-		wantSummary = true;
+	if( !query->EvaluateAttrBool( ATTR_WANT_POSTLUDE, wantPostlude ) ) {
+		wantPostlude = true;
 	}
 	if( !query->EvaluateAttr( ATTR_PROJECT_THROUGH, value ) || 
 		!value.IsListValue( projectionAttrs ) ) {
