@@ -639,6 +639,15 @@ reinsert_specials( char* host )
 }
 
 
+void
+config_insert( char* attrName, char* attrValue ) {
+
+	if( ! (attrName && attrValue) ) {
+		return;
+	}
+	insert( attrName, attrValue, ConfigTab, TABLESIZE );
+}
+
 
 #if defined(__cplusplus)
 }
