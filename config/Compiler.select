@@ -108,6 +108,11 @@
 #				define C_Comp_Patch -DC_COMP_PATCH_GCC_3_2_1
 #				undef IS_C_COMP_PATCH_GCC_3_2_1
 #				define IS_C_COMP_PATCH_GCC_3_2_1 YES
+
+#			elif defined(IS_C_COMP_PATCH_GCC_3_2_2)
+#				define C_Comp_Patch -DC_COMP_PATCH_GCC_3_2_2
+#				undef IS_C_COMP_PATCH_GCC_3_2_2
+#				define IS_C_COMP_PATCH_GCC_3_2_2 YES
 #			endif
 #		endif
 
