@@ -22,7 +22,11 @@ However, there are some limitations to our current implementation.
 \item[MPICH] Your MPI job must be compiled with MPICH, Argonne National
 Labs' implementation of MPI.  Specifically, you must use the ``ch\_p4'' 
 device for MPICH.  For information on MPICH, see Argonne's web page
-at \Url{http://www-unix.mcs.anl.gov/mpi/mpich/}
+at \Url{http://www-unix.mcs.anl.gov/mpi/mpich/}. Your version of MPICH must
+not be compiled with the path to RSH hard-coded into the library 
+(As a result of running configure as \verb ./configure -rsh=/path/to/your/rsh
+possilbly.) Condor provides a special version of rsh that it uses to start 
+jobs. 
 
 \item[Dedicated Resources] You must make sure that your MPICH jobs
 will be running on machines that will not vacate the job before the job
@@ -50,7 +54,7 @@ binaries, see below.
 to run must have a shared file system.  There is no remote I/O for
 our MPI support like there is for our Standard Universe jobs.
 
-\item[Condor Version 6.1.11+] You must be running this version of 
+\item[Condor Version 6.1.14+] You must be running this version of 
 the Condor distribution (or greater) in order to use this contrib 
 module.
 \end{description}
