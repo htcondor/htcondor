@@ -33,6 +33,19 @@
 
 #include "condor_query.h"
 
+#undef V5_COMPAT
+#if defined(V5_COMPAT)
+extern "C"
+{
+char* get_schedd_addr(const char* name)
+{
+	char*				scheddAddr = (char*)malloc(sizeof(char)*100);
+
+	sprintf(scheddAddr, "<localhost:%d>", SCHED_PORT);
+	return scheddAddr;
+}
+}
+#else
 extern "C"
 {
 char* get_schedd_addr(const char* name)
@@ -61,3 +74,4 @@ char* get_schedd_addr(const char* name)
 	return scheddAddr;
 } 
 }
+#endif
