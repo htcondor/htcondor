@@ -20,15 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include <iostream.h>
-#include <nlist.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/file.h>
-#include <sys/param.h>
-#include <unistd.h>
-#include <sys/utsname.h>
-#include <string.h>
+
+#include "condor_common.h"
 #include <sys/table.h>
 #include <sys/resource.h>
 
