@@ -42,6 +42,8 @@ command_handler( Service*, int cmd, Stream* stream )
 		// RELEASE_CLAIM only makes sense in two states
 	if( cmd == RELEASE_CLAIM ) {
 		if( (s == claimed_state) || (s == matched_state) ) {
+			rip->dprintf( D_ALWAYS, 
+						  "State change: received RELEASE_CLAIM command\n" );
 			return rip->release_claim();
 		} else {
 			rip->log_ignore( cmd, s );
@@ -141,7 +143,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 		// If we got this far and we're not in claimed/idle, there
 		// really is a problem activating the claim.
 	if( a != idle_act ) {
-		rip->log_ignore( ACTIVATE_CLAIM, s );
+		rip->log_ignore( ACTIVATE_CLAIM, s, a );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
 		return FALSE;
@@ -158,9 +160,11 @@ command_vacate_all( Service*, int cmd, Stream* )
 	dprintf( D_ALWAYS, "command_vacate_all() called.\n" );
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
+		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
 		resmgr->walk( &Resource::release_claim );
 		break;
 	case VACATE_ALL_FAST:
+		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
 		resmgr->walk( &Resource::kill_claim );
 		break;
 	default:
@@ -231,7 +235,10 @@ command_request_claim( Service*, int cmd, Stream* stream )
 
 	if( ! stream->code(cap) ) {
 		dprintf( D_ALWAYS, "Can't read capability\n" );
-		free( cap );
+		if( cap ) { 
+			free( cap );
+		}
+		refuse( stream );
 		return FALSE;
 	}
 
@@ -241,26 +248,24 @@ command_request_claim( Service*, int cmd, Stream* stream )
 				 "Error: can't find resource with capability (%s)\n",
 				 cap );
 		free( cap );
+		refuse( stream );
 		return FALSE;
 	}
 
 	if( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
 		free( cap );
+		refuse( stream );
 		return FALSE;
 	}
 
 	State s = rip->state();
-	switch( s ) {
-	case claimed_state:
-	case matched_state:
-	case unclaimed_state:
-		rval = request_claim( rip, cap, stream );
-		break;
-	default:
+	if( s == preempting_state ) {
 		rip->log_ignore( REQUEST_CLAIM, s );
+		refuse( stream );
 		rval = FALSE;
-		break;
+	} else {
+		rval = request_claim( rip, cap, stream );
 	}
 	free( cap );
 	return rval;
@@ -297,6 +302,8 @@ command_name_handler( Service*, int cmd, Stream* stream )
 	switch( cmd ) {
 	case VACATE_CLAIM:
 		if( (s == claimed_state) || (s == matched_state) ) {
+			rip->dprintf( D_ALWAYS, 
+						  "State change: received VACATE_CLAIM command\n" );
 			return rip->release_claim();
 		} else {
 			rip->log_ignore( cmd, s );
@@ -308,6 +315,8 @@ command_name_handler( Service*, int cmd, Stream* stream )
 		case claimed_state:
 		case matched_state:
 		case preempting_state:
+			rip->dprintf( D_ALWAYS, 
+						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim();
 			break;
 		default:
@@ -360,14 +369,14 @@ command_match_info( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-		// Check resource state.  If we're in claimed or unclaimed,
-		// process the command.  Otherwise, ignore it.  
+		// Check resource state.  Ignore if we're preempting or
+		// matched, otherwise process the command. 
 	State s = rip->state();
-	if( s == claimed_state || s == unclaimed_state ) {
-		rval = match_info( rip, cap );
-	} else {
+	if( s == matched_state || s == preempting_state ) {
 		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
+	} else {
+		rval = match_info( rip, cap );
 	}
 	free( cap );
 	return rval;
@@ -473,11 +482,6 @@ command_query_ads( Service*, int, Stream* stream)
 //////////////////////////////////////////////////////////////////////
 // Protocol helper functions
 //////////////////////////////////////////////////////////////////////
-#define REFUSE \
-stream->end_of_message();	\
-stream->encode();			\
-stream->put(NOT_OK);		\
-stream->end_of_message();			
 
 #define ABORT \
 delete req_classad;						\
@@ -486,6 +490,9 @@ if( s == claimed_state ) {				\
 	delete rip->r_pre;					\
 	rip->r_pre = new Match( rip );		\
 } else {								\
+    if( s != owner_state ) {			\
+        rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
+    }									\
 	rip->change_state( owner_state );	\
 }										\
 return FALSE
@@ -594,7 +601,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		if( !req_requirements ) {
 			rip->dprintf( D_ALWAYS, "Job requirements not satisfied.\n" );
 		}
-		REFUSE;
+		refuse( stream );
 		ABORT;
 	}
 
@@ -609,7 +616,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		if( !rip->r_pre ) {
 			rip->dprintf( D_ALWAYS, 
 			   "In CLAIMED state without preempting match object, aborting.\n" );
-			REFUSE;
+			refuse( stream );
 			ABORT;
 		}
 		if( rip->r_pre->cap()->matches(cap) ) {
@@ -633,6 +640,14 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
 
 					// Get rid of the current claim.
+				if( rank > rip->r_cur->rank() ) {
+					rip->dprintf( D_ALWAYS, 
+					 "State change: preempting claim based on machine rank\n" );
+				} else {
+					ASSERT( rank == rip->r_cur->rank() );
+					rip->dprintf( D_ALWAYS, 
+					 "State change: preempting claim based on user priority\n" );
+				}
 				rip->release_claim();
 
 					// Tell daemon core not to do anything to the stream.
@@ -672,7 +687,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 			// finish the claiming process.
 		return accept_request_claim( rip );
 	} else {
-		REFUSE;
+		refuse( stream );
 		ABORT;
 	}
 }
@@ -684,6 +699,7 @@ if( client_addr )					\
 stream->encode();					\
 stream->end_of_message();			\
 rip->r_cur->setagentstream( NULL );	\
+rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
 rip->change_state( owner_state );	\
 return KEEP_STREAM
 
@@ -692,8 +708,8 @@ accept_request_claim( Resource* rip )
 {
 	int interval;
 	char *client_addr = NULL, *client_host, *full_client_host, *tmp;
-	char RemoteUser[512];
-	RemoteUser[0] = '\0';
+	char RemoteOwner[512];
+	RemoteOwner[0] = '\0';
 
 		// There should not be a pre match object now.
 	assert( rip->r_pre == NULL );
@@ -761,22 +777,27 @@ accept_request_claim( Resource* rip )
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
-		EvalString( ATTR_USER, rip->r_cur->ad(), RemoteUser ) == 0 ) { 
+		EvalString( ATTR_USER, rip->r_cur->ad(), RemoteOwner ) == 0 ) { 
 		rip->dprintf( D_ALWAYS, 
 				 "Can't evaluate attribute %s in request ad.\n", 
 				 ATTR_USER );
-		RemoteUser[0] = '\0';
+		RemoteOwner[0] = '\0';
 	}
-	if( RemoteUser ) {
-		rip->r_cur->client()->setname( RemoteUser );
-		rip->dprintf( D_ALWAYS, "Remote user is %s\n", RemoteUser );
+	if( RemoteOwner ) {
+		rip->r_cur->client()->setowner( RemoteOwner );
+			// For now, we say the remote user is the same as the
+			// remote owner.  In the future, we might decide to leave
+			// RemoteUser undefined until the resource is busy...
+		rip->r_cur->client()->setuser( RemoteOwner );
+		rip->dprintf( D_ALWAYS, "Remote owner is %s\n", RemoteOwner );
 	} else {
-		rip->dprintf( D_ALWAYS, "Remote user is NULL\n" );
-			// What else should we do here???
+		rip->dprintf( D_ALWAYS, "Remote owner is NULL\n" );
+			// TODO: What else should we do here???
 	}		
 		// Since we're done talking to this schedd agent, delete the stream.
 	rip->r_cur->setagentstream( NULL );
 
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
 
 		// Want to return KEEP_STREAM so that daemon core doesn't try
@@ -809,10 +830,11 @@ activate_claim( Resource* rip, Stream* stream )
 	int universe, job_cluster, job_proc, starter;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->endpoint() ));
+	bool found_attr_user = false;	// did we find ATTR_USER in the ad?
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
-		REFUSE;
+		refuse( stream );
 		ABORT;
 	}
 
@@ -824,18 +846,18 @@ activate_claim( Resource* rip, Stream* stream )
 	if( ! stream->code( starter ) ) {
 		rip->dprintf( D_ALWAYS, "Can't read starter type from %s\n",
 				 shadow_addr );
-		REFUSE;
+		refuse( stream );
 		ABORT;
 	}
 	if( starter >= MAX_STARTERS ) {
 	    rip->dprintf( D_ALWAYS, "Requested starter is out of range.\n" );
-		REFUSE;
+		refuse( stream );
 	    ABORT;
 	}
 
 	if( ! (rip->r_starter->settype(starter)) ) {
 	    rip->dprintf( D_ALWAYS, "Requested starter is invalid.\n" );
-		REFUSE;
+		refuse( stream );
 	    ABORT;
 	}
 
@@ -858,9 +880,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
 
-		// This recomputes all attributes and fills in the machine classad 
-	rip->update_classad();
-	
+		// Now, ask the ResMgr to recompute so we have totally
+		// up-to-date values for everything in our classad.
+		// Unfortunately, this happens to all the resources in an SMP
+		// at once, but that's the only way to compute anything... 
+	resmgr->compute( A_TIMEOUT | A_UPDATE );
+
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
 	if( DebugFlags & D_JOB ) {
@@ -885,10 +910,28 @@ activate_claim( Resource* rip, Stream* stream )
 		req_requirements = 0;
 	}
 	if( !mach_requirements || !req_requirements ) {
-	    rip->dprintf( D_ALWAYS,"mach_requirements = %d, request_requirements = %d\n",
-				 mach_requirements, req_requirements );
-		REFUSE;
+	    rip->dprintf( D_ALWAYS, "Requirements check failed! "
+					  "resource = %d, request = %d\n",
+					  mach_requirements, req_requirements );
+		refuse( stream );
 	    ABORT;
+	}
+
+		// Make sure the classad we got includes an ATTR_USER field,
+		// so we know who to charge for our services.  If it's not
+		// there, refuse to run the job.
+	char remote_user[256];
+	remote_user[0] = '\0';
+	if( req_classad->EvalString(ATTR_USER, rip->r_classad, 
+								remote_user) == 0 ) {
+		rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in request "
+					  "classad!  Using old value (%s)\n", ATTR_USER,
+					  rip->r_cur->client()->user() );
+	} else {
+		rip->dprintf( D_FULLDEBUG, 
+					  "Got RemoteUser (%s) from request classad\n",	
+					  remote_user );
+		found_attr_user = true;
 	}
 
 		// If we're here, we've decided to activate the claim.  Tell
@@ -974,45 +1017,57 @@ activate_claim( Resource* rip, Stream* stream )
 
 	ji.ji_hname = rip->r_cur->client()->host();
 
+	int now = (int)time( NULL );
+
+		// Actually spawn the starter
+	if( ! rip->spawn_starter(&ji, now) ) {
+			// Error spawning starter!
+		ABORT;
+	}
+
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in the machine ad and cur Match object
 
 	req_classad->EvalInteger( ATTR_CLUSTER_ID, req_classad, job_cluster );
 	req_classad->EvalInteger( ATTR_PROC_ID, req_classad, job_proc );
-	rip->r_cur->setproc( job_proc );
-	rip->r_cur->setcluster( job_cluster );
-	rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", job_cluster, job_proc );
 
-	rip->r_cur->setad( req_classad );
+	rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", job_cluster,
+				  job_proc );
 
-	if( !rip->r_cur->ad() ||
-		((rip->r_cur->ad())->EvalInteger( ATTR_JOB_UNIVERSE,
-										  rip->r_classad,universe)==0) ) {
+	if( req_classad->EvalInteger(ATTR_JOB_UNIVERSE,
+								 rip->r_classad, universe) == 0 ) {
 		universe = STANDARD;
 		rip->dprintf( D_ALWAYS,
-				 "Default universe (%d) since not in classad \n", 
-				 universe );
+					  "Default universe (%d) since not in classad \n", 
+					  universe );
 	} else {
 		rip->dprintf( D_ALWAYS, "Got universe (%d) from request classad\n",
-				 universe );
+					  universe );
 	}
 	if( universe == VANILLA ) {
-		rip->dprintf( D_ALWAYS, "Startd using *_VANILLA control expressions.\n" );
+		rip->dprintf( D_ALWAYS, 
+					  "Startd using *_VANILLA control expressions.\n" );
 	} else {
-		rip->dprintf( D_ALWAYS, "Startd using standard control expressions.\n" );
+		rip->dprintf( D_ALWAYS, 
+					  "Startd using standard control expressions.\n" );
 	}
+
+	if( found_attr_user ) {
+		rip->r_cur->client()->setuser( remote_user );
+	}
+	rip->r_cur->setproc( job_proc );
+	rip->r_cur->setcluster( job_cluster );
+	rip->r_cur->setad( req_classad );
 	rip->r_cur->setuniverse(universe);
 
-		// Actually spawn the starter
-	rip->r_starter->spawn( &ji );
-
-	int now = (int)time( NULL );
 	rip->r_cur->setjobstart(now);	
 	rip->r_cur->setlastpckpt(now);	
 
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 
+	rip->dprintf( D_ALWAYS, 
+				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 
 	free( shadow_addr );
@@ -1026,7 +1081,8 @@ match_info( Resource* rip, char* cap )
 	int rval = FALSE;
 	rip->dprintf(D_ALWAYS, "match_info called\n");
 
-	if( rip->state() == claimed_state ) {
+	switch( rip->state() ) {
+	case claimed_state:
 		if( rip->r_cur->cap()->matches(cap) ) {
 				// The capability we got matches the one for the
 				// current match, and we're already claimed.  There's
@@ -1048,8 +1104,9 @@ match_info( Resource* rip, char* cap )
 				// some cap in the first place.
 			EXCEPT( "Should never get here" );
 		}
-	} else {
-		assert( rip->state() == unclaimed_state );
+		break;
+	case unclaimed_state:
+	case owner_state:
 		if( rip->r_cur->cap()->matches(cap) ) {
 			rip->dprintf( D_ALWAYS, "Received match %s\n", cap );
 
@@ -1059,6 +1116,8 @@ match_info( Resource* rip, char* cap )
 
 				// Entering matched state sets our reqexp to unavail
 				// and updates CM.
+			rip->dprintf( D_ALWAYS, 
+						  "State change: match notification protocol successful\n" );
 			rip->change_state( matched_state );
 			rval = TRUE;
 		} else {
@@ -1067,6 +1126,11 @@ match_info( Resource* rip, char* cap )
 					 cap );			
 			rval = FALSE;
 		}
+		break;
+	default:
+		EXCEPT( "match_info() called with unexpected state (%s)", 
+				state_to_string(rip->state()) );
+		break;
 	}
 	return rval;
 }

@@ -70,7 +70,7 @@
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
 #define HAS_SETLINEBUF			YES
-#define HAS_PVM				NO
+#define HAS_PVM				YES
 #define PVM_ARCH			ALPHA
 #define USE_GCC				YES
 #define HAS_STATIC			YES
@@ -89,4 +89,6 @@
 #ifndef MkDepend
 #define MkDepend ../../GENERIC/mdepend.sh
 #endif MkDepend
+
+#define VendorCTestFlags -std
 

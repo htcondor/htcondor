@@ -33,7 +33,7 @@ static_target(condor_userprio,user_prio.o,$(LIB),$(STATIC_DIR)/bin)
 c_plus_target(condor_findhost,give_interactive.o,$(LIB))
 release_target(condor_findhost,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_findhost,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
-static_target(condor_findhost,history.o,$(LIB),$(STATIC_DIR)/bin)
+static_target(condor_findhost,give_interactive.o,$(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_history,history.o,$(LIB))
 release_target(condor_history,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
@@ -98,19 +98,22 @@ static_link_target($(STATIC_DIR)/bin/condor,bin,condor_vacate)
 static_link_target($(STATIC_DIR)/bin/condor,bin,condor_reschedule)
 
 c_plus_target(condor_stats,stats.o,$(LIB))
-static_target(condor_stats,stats.o,$(LIB),$(STATIC_DIR)/sbin)
-strip_target(condor_stats,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-release_target(condor_stats,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor_stats,stats.o,$(LIB),$(STATIC_DIR)/bin)
+strip_target(condor_stats,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+release_target(condor_stats,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
 
 c_plus_target(view_collection,view_collection.o,$(LIB))
 
+c_plus_target(condor_invalidate_host,invalidate_host.o,$(LIB))
+
+
 condor_master_on: master_on.c
 	gcc -o condor_master_on master_on.c
 
 condor_kill: kill.C
-	g++ -o condor_kill kill.C -I../condor_c++_util
+	g++ -o condor_kill kill.C -I../condor_c++_util -I../condor_includes
 
 clean::
 	rm -f condor_kill condor_master_on *.o

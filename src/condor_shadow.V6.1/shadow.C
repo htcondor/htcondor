@@ -40,18 +40,27 @@ UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
 }
 
+
 int
-UniShadow::UpdateFromStarter(int command, Stream *s)
+UniShadow::updateFromStarter(int command, Stream *s)
 {
 	ClassAd updateAd;
 	ClassAd *jobad = getJobAd();
 	char buf[300];
-	int int_value;
-	float float_value;
+	bool had_change = false;
+	bool disk_change = false;
+	bool image_change = false;
+	bool rusage_change = false;
+	int int_val;
+	struct rusage rusage_val;
 	
 	// get info from the starter encapsulated in a ClassAd
 	s->decode();
-	updateAd.get(*s);
+	if( ! updateAd.get(*s) ) {
+		dprintf( D_ALWAYS, "ERROR in UniShadow::updateFromStarter:"
+				 "Can't read ClassAd, aborting.\n" );
+		return FALSE;
+	}
 	s->end_of_message();
 
 	if ( !jobad ) {
@@ -59,77 +68,82 @@ UniShadow::UpdateFromStarter(int command, Stream *s)
 		return FALSE;
 	}
 
-	// update the schedd queue and our jobad with the info from the starter
+	int prev_image = remRes->getImageSize();
+	int prev_disk = remRes->getDiskUsage();
+	struct rusage prev_rusage = remRes->getRUsage();
+
+		// Stick everything we care about in our RemoteResource. 
+	remRes->updateFromStarter( &updateAd );
+
+		// First, update our local copy of the job classad for
+		// anything that's changed. 
+
+	int_val = remRes->getImageSize();
+	if( int_val > prev_image ) {
+		had_change = true;
+		image_change = true;
+		sprintf( buf, "%s=%d", ATTR_IMAGE_SIZE, int_val );
+		jobad->InsertOrUpdate( buf );
+
+			// also update the User Log with an image size event
+		JobImageSizeEvent event;
+		event.size = int_val;
+		if (!uLog.writeEvent (&event)) {
+			dprintf( D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n" );
+		}
+	}
+
+	int_val = remRes->getDiskUsage();
+	if( int_val > prev_disk ) {
+		had_change = true;
+		disk_change = true;
+		sprintf( buf, "%s=%d", ATTR_DISK_USAGE, int_val );
+		jobad->InsertOrUpdate( buf );
+	}
+
+	rusage_val = remRes->getRUsage();
+	if( (rusage_val.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec) ||
+		(rusage_val.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec) ) {
+		had_change = true;
+		rusage_change = true;
+	}
+		
+	if( ! had_change ) {
+			// we're done, no need to connect to the schedd
+		return TRUE;
+	}
+
+		// If we got this far, something changed, so we've got to
+		// connect to the schedd and tell it.
 	if ( ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT) ) {
 
-		// update image size
-		if ( updateAd.LookupInteger(ATTR_IMAGE_SIZE, int_value) == 1 ) 
-		{
-			// lookup old image size
-			int previous_size = 0;
-			jobad->LookupInteger(ATTR_IMAGE_SIZE, previous_size);
+		if( image_change ) {
+			SetAttributeInt( getCluster(), getProc(), ATTR_IMAGE_SIZE,
+							 remRes->getImageSize() );
 			
-			// if new image size is larger, update it
-			if ( int_value > previous_size ) {
-
-				SetAttributeInt(getCluster(),getProc(),ATTR_IMAGE_SIZE,
-					int_value);
-				sprintf(buf,"%s=%d",ATTR_IMAGE_SIZE,int_value);
-				jobad->InsertOrUpdate(buf);
-
-				// also update the User Log with an image size event
-				JobImageSizeEvent event;
-				event.size = int_value;
-				if (!uLog.writeEvent (&event)) {
-					dprintf (D_ALWAYS, 
-						"Unable to log ULOG_IMAGE_SIZE event\n");
-				}
-			}
 		}
 
-		// update disk usage size
-		if ( updateAd.LookupInteger(ATTR_DISK_USAGE, int_value) == 1 ) 
-		{
-			// lookup old disk usage size
-			int previous_size = 0;
-			jobad->LookupInteger(ATTR_DISK_USAGE, previous_size);
-			
-			// if new disk usage size is larger, update it
-			if ( int_value > previous_size ) {
-
-				SetAttributeInt(getCluster(),getProc(),ATTR_DISK_USAGE,
-					int_value);
-				sprintf(buf,"%s=%d",ATTR_DISK_USAGE,int_value);
-				jobad->InsertOrUpdate(buf);
-			}
+		if( disk_change ) {
+			SetAttributeInt( getCluster(), getProc(), ATTR_DISK_USAGE,
+							 remRes->getDiskUsage() );
 		}
 
 		// update remote sys cpu
-		if ( updateAd.LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, 
-			float_value) == 1 ) 
-		{
-			SetAttributeFloat(getCluster(),getProc(),ATTR_JOB_REMOTE_SYS_CPU,
-				float_value);
-			sprintf(buf,"%s=%f",ATTR_JOB_REMOTE_SYS_CPU,float_value);
-			jobad->InsertOrUpdate(buf);
-		}
-			
-		// update remote user cpu
-		if ( updateAd.LookupFloat(ATTR_JOB_REMOTE_USER_CPU, 
-			float_value) == 1 ) 
-		{
-			SetAttributeFloat(getCluster(),getProc(),ATTR_JOB_REMOTE_USER_CPU,
-				float_value);
-			sprintf(buf,"%s=%f",ATTR_JOB_REMOTE_USER_CPU,float_value);
-			jobad->InsertOrUpdate(buf);
+		if( rusage_change ) {
+			SetAttributeFloat( getCluster(), getProc(),
+							   ATTR_JOB_REMOTE_SYS_CPU,
+							   rusage_val.ru_stime.tv_sec );
+
+			SetAttributeFloat( getCluster(), getProc(),
+							   ATTR_JOB_REMOTE_USER_CPU, 
+							   rusage_val.ru_utime.tv_sec );
 		}
 
-		// close our connection to the queue
+			// close our connection to the queue
 		DisconnectQ(NULL);
 
 		return TRUE;
 	}		
-
 	return FALSE;
 }
 
@@ -140,15 +154,6 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	if ( !jobAd ) {
 		EXCEPT("No jobAd defined!");
 	}
-
-		// Register command which gets updates from the starter
-		// on the job's image size, cpu usage, etc.  
-		// Eventually this belongs in Remote Resource so we handle
-		// this properly for parallel jobs.
-	daemonCore->Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO",
-			(CommandHandlercpp)&UniShadow::UpdateFromStarter, 
-			"UniShadow::UpdateFromStarter", this, WRITE);
-
 
 		// we're only dealing with one host, so this is trivial:
 	remRes->setExecutingHost( host );
@@ -179,6 +184,15 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 		(SocketHandlercpp)&RemoteResource::handleSysCalls, "HandleSyscalls", 
 								remRes);
 
+		// Register command which gets updates from the starter
+		// on the job's image size, cpu usage, etc.  Each kind of
+		// shadow implements it's own version of this to deal w/ it
+		// properly depending on parallel vs. serial jobs, etc. 
+	daemonCore->
+		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO",
+						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
+						  "UniShadow::updateFromStarter", this, WRITE );
+
 }
 
 void UniShadow::shutDown( int reason, int exitStatus ) 
@@ -195,13 +209,38 @@ void UniShadow::shutDown( int reason, int exitStatus )
 	}
 	
 		// if we are being called from the exception handler, return
-		// now.
+		// now to prevent infinite loop in case we call EXCEPT below.
 	if ( reason == JOB_EXCEPTION ) {
 		return;
 	}
 
+		// if job exited, check and see if it meets the user's
+		// ExitRequirements, and/or update the job ad in the schedd
+		// so that the exit status is recoreded in the history file.
+	if ( reason == JOB_EXITED ) {
+		char buf[200];
+		sprintf(buf,"%s=%d",ATTR_JOB_EXIT_STATUS,exitStatus);
+		jobAd->InsertOrUpdate(buf);
+		int exit_requirements = TRUE;	// default to TRUE if not specified
+		jobAd->EvalBool(ATTR_JOB_EXIT_REQUIREMENTS,jobAd,exit_requirements);
+		if ( exit_requirements ) {
+			// exit requirements are met; update the classad with
+			// the exit status so it is properly recorded in the
+			// history file.
+			if ( ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT) ) {
+				SetAttributeInt(getCluster(),getProc(),ATTR_JOB_EXIT_STATUS,
+					exitStatus);
+				DisconnectQ(NULL);
+			}
+		} else {
+			// exit requirements expression is FALSE! 
+			EXCEPT("Job exited with status %d; failed %s expression",
+				exitStatus,ATTR_JOB_EXIT_REQUIREMENTS);
+		}
+	}
+
 		// write stuff to user log:
-	endingUserLog( exitStatus, reason, remRes );
+	endingUserLog( exitStatus, reason );
 
 		// returns a mailer if desired
 	FILE* mailer;
@@ -298,13 +337,37 @@ int UniShadow::handleJobRemoval(int sig) {
 	return 0;
 }
 
-float UniShadow::bytesSent()
+
+float
+UniShadow::bytesSent()
 {
 	return remRes->bytesSent();
 }
 
-float UniShadow::bytesReceived()
+
+float
+UniShadow::bytesReceived()
 {
-	return remRes->bytesRecvd();
+	return remRes->bytesReceived();
 }
 
+
+struct rusage
+UniShadow::getRUsage( void ) 
+{
+	return remRes->getRUsage();
+}
+
+
+int
+UniShadow::getImageSize( void )
+{
+	return remRes->getImageSize();
+}
+
+
+int
+UniShadow::getDiskUsage( void )
+{
+	return remRes->getDiskUsage();
+}

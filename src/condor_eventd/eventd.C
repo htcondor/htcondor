@@ -155,6 +155,7 @@ EventDaemon::Timeout()
 								TimeToNearestEvent-MaxEventPreparation,
 								EventInterval);
 	}
+	return TRUE;
 }
 
 ScheduledEvent *

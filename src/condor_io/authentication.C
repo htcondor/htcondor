@@ -518,6 +518,10 @@ Authentication::authenticate_nt()
 	CredHandle cred;
 	CtxtHandle theCtx;
 
+	cred.dwLower = 0L;
+	cred.dwUpper = 0L;
+	theCtx.dwLower = 0L;
+	theCtx.dwUpper = 0L;
 
 	if ( pf == NULL ) {
 		PSecurityFunctionTable (*pSFT)( void );
@@ -547,8 +551,10 @@ Authentication::authenticate_nt()
 	}
 
 	// clean up
-	(pf->DeleteSecurityContext)( &theCtx );
-	(pf->FreeCredentialHandle)( &cred );
+	if ( theCtx.dwLower != 0L || theCtx.dwUpper != 0L )
+		(pf->DeleteSecurityContext)( &theCtx );
+	if ( cred.dwLower != 0L || cred.dwUpper != 0L )
+		(pf->FreeCredentialHandle)( &cred );
 
 	//return 1 for success, 0 for failure. Server should send sucess/failure
 	//back to client so client can know what to return.
@@ -836,7 +842,9 @@ Authentication::authenticate_filesystem( int remote = 0 )
 		} 
 		else {
 			retval = -1;
-			dprintf(D_ALWAYS,"invalid state in authenticate_filesystem\n" );
+			dprintf(D_ALWAYS,
+					"invalid state in authenticate_filesystem (file %s)\n",
+					new_file ? new_file : "(null)" );
 		}
 
 		mySock->code( retval );
@@ -1127,6 +1135,7 @@ Authentication::authenticate_server_gss()
 				 &GSSClientname,
 				 &ret_flags, NULL, /* don't need user_to_user */
 				 &token_status,
+				 NULL,             /* don't delegate credential */
 				 authsock_get, (void *) &authComms,
 				 authsock_put, (void *) mySock
 	);

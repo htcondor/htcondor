@@ -75,6 +75,8 @@ public:
 	void	resize_load_queue( void ); 
 	float	owner_load( void ) {return r_attr->owner_load();};
 	void	set_owner_load( float val ) {r_attr->set_owner_load(val);};
+	void	compute_cpu_busy( void );
+	time_t	cpu_busy_time( void );
 
 	void	display( amask_t m ) {r_attr->display(m);}
 
@@ -88,10 +90,14 @@ public:
 		// came in while we were in an unexpected state, or while
 		// we're shutting down.
 	void	log_ignore( int cmd, State s );
+	void	log_ignore( int cmd, State s, Activity a );
 	void	log_shutdown_ignore( int cmd );
 
 		// Called from the reaper to handle things for this rip
 	void	starter_exited( void );	
+
+		// Called by command_activate_claim() to spawn a starter
+	int		spawn_starter( start_info_t*, time_t );
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
@@ -103,11 +109,10 @@ public:
 
 		// Methods to initialize and refresh the resource classads.
 	int		init_classad( void );		
-	void	update_classad( void );	
-	void	timeout_classad( void );	
+	void	refresh_classad( amask_t mask );	
 	int		force_benchmark( void );
 
-	int		update( void );				// Schedule to update the central manager.
+	int		update( void );		// Schedule to update the central manager.
 	int		do_update( void );			// Actually update the CM
 	int		eval_and_update( void );	// Evaluate state and update CM. 
 	void	final_update( void );		// Send a final update to the CM
@@ -118,13 +123,16 @@ public:
 	void	cancel_kill_timer( void );	// be in preempting/killing state. 
 
  		// Helper functions to evaluate resource expressions
-	int		wants_vacate( void );
-	int		wants_suspend( void );
-	int		wants_pckpt( void );
-	int		eval_kill( void );
-	int		eval_preempt( void );
-	int		eval_suspend( void );
-	int		eval_continue( void );
+	int		wants_vacate( void );		// EXCEPT's on undefined
+	int		wants_suspend( void );		// EXCEPT's on undefined
+	int		wants_pckpt( void );		// Defaults to FALSE on undefined
+	int		eval_kill( void );			// EXCEPT's on undefined
+	int		eval_preempt( void );		// EXCEPT's on undefined
+	int		eval_suspend( void );		// EXCEPT's on undefined
+	int		eval_continue( void );		// EXCEPT's on undefined
+	int		eval_is_owner( void );		// EXCEPT's on undefined
+	int		eval_start( void );			// returns -1 on undefined
+	int		eval_cpu_busy( void );		// returns FALSE on undefined
 
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
@@ -138,6 +146,8 @@ public:
 	char*			r_name;		// Name of this resource
 	int				r_id;		// CPU id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
+	procInfo		r_pinfo;	// aggregate ProcAPI info for starter & job
+	AvailStats		r_avail_stats; // computes resource availability stats
 
 	int				type( void ) { return r_attr->type(); };
 
@@ -146,9 +156,10 @@ private:
 	int		update_tid;	// DaemonCore timer id for update delay
 
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
-	int		r_load_num_called;	// Counter used for CondorLoadAvg
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 	bool	r_is_deactivating;	// Are we in the middle of deactivating a claim?
+	int		r_cpu_busy;
+	time_t	r_cpu_busy_start_time;
 };
 
 #endif _STARTD_RESOURCE_H

@@ -38,10 +38,18 @@
 	  Current		- return ref or ptr to current object
 	  AtEnd			- true only if scan pointer is at end of list
 	  DeleteCurrent - remove item at scan pointer from list
+	  Head			- return ref or ptr to the head of the list
 
   Notes:
-	1. The only way to add objects to the list is with Append, the only
-	   way to "read" objects from the list is with Next.
+
+	1. The only ways to add objects to the list are with Append or
+       Insert (Append sticks it at the end, Insert sticks it before
+       the current position, with special, broken semantics if you
+       Insert when at the end of the list - in which case you get
+       inserted *before* the last current element, instead of it just
+       working like an Append, which you'd expect).
+       The only ways to read items from the list are Next, Current,
+	   and Head.  
 	2. Two versions of Append are supplied.  One takes a reference to an
 	   object, and is useful for objects allocated on the stack or
 	   in global data space.  The other takes a pointer to an object,
@@ -103,12 +111,11 @@
 
 			// To scan this list
 		for( bar.Rewind(); x = bar.Next(); cout << x << endl )
-			;
-*/
+			; */
 
 #ifndef LIST_H
 #define LIST_H
-#include <assert.h>
+#include "condor_fix_assert.h"
 
 template <class ObjType> class Item;
 template <class ObjType> class ListIterator;
@@ -131,6 +138,7 @@ public:
 	void	Insert( ObjType * obj );
 	bool	IsEmpty() const;
 	int		Number() const;
+	int		Length() { return Number(); };
 
 		// Scans
 	void	Rewind();
@@ -141,15 +149,19 @@ public:
     bool        Next (ObjType   & obj);
     inline bool Next (ObjType * & obj) { return (obj = Next()) != NULL; }
 
+	ObjType *   Head ( void );
+    bool        Head (ObjType   & obj);
+
 	bool	AtEnd() const;
 	void	DeleteCurrent();
+	bool	Delete( ObjType *obj );
 
 		// Debugging
 #if 0
 	void	Display() const;
 #endif
 
-private:
+protected:
 	void	RemoveItem( Item<ObjType> * );
 	Item<ObjType>	*dummy;
 	Item<ObjType>	*current;
@@ -456,6 +468,40 @@ List<ObjType>::Next()
 	return current->obj;
 }
 
+
+/*
+  Generate a reference to the first object in the list.  Returns false
+  if the list is empty.  This does *NOT* effect the "current" position
+  of the list.  Use Rewind() for that.
+*/
+template <class ObjType>
+bool
+List<ObjType>::Head( ObjType & answer )
+{
+	if( IsEmpty() ) {
+		return false;
+	}
+	answer = *dummy->next->obj;
+	return true;
+}
+
+
+/*
+  Return a pointer to the first object in the list.  Returns NULL if
+  the list is empty.  This does *NOT* effect the "current" position of
+  the list.  Use Rewind() for that.
+*/
+template <class ObjType>
+ObjType *
+List<ObjType>::Head()
+{
+	if( IsEmpty() ) {
+		return 0;
+	}
+	return dummy->next->obj;
+}
+
+
 /*
   Return true if the scan pointer is at the end of the list or the list
   is empty, and false otherwise.
@@ -495,6 +541,26 @@ List<ObjType>::DeleteCurrent()
 	assert( current != dummy );
 	current = current->prev;
 	RemoveItem( current->next );
+}
+
+template <class ObjType>
+bool
+List<ObjType>::Delete( ObjType* obj)
+{
+	assert( current != dummy );
+	Item<ObjType> *tmp = dummy->next;
+	while( tmp != dummy ) {
+		if( tmp->obj == obj ) {
+			if( tmp == current ) {
+				DeleteCurrent();
+			} else {
+				RemoveItem( tmp );
+			}
+			return true;
+		}
+		tmp = tmp->next;
+	}	
+	return false;
 }
 
 template <class ObjType>

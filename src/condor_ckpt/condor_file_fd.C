@@ -5,6 +5,10 @@ CondorFileFD::CondorFileFD() : CondorFileLocal()
 {
 }
 
+CondorFileFD::~CondorFileFD()
+{
+}
+
 int CondorFileFD::open(const char *url_in, int flags, int mode)
 {
 	strcpy( url, url_in );
@@ -32,3 +36,7 @@ int CondorFileFD::open(const char *url_in, int flags, int mode)
 	return fd;
 }
 
+int CondorFileFD::close()
+{
+	return 0;
+}

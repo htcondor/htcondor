@@ -109,8 +109,15 @@ initialize( const char *file, int c, int p, int s )
 	strcpy( path, file );
 	in_block = FALSE;
 
-	if (fp) fclose(fp);
-
+	if( fp ) {
+		if( fclose( fp ) != 0 ) {
+			dprintf( D_ALWAYS,
+					 "UserLog::initialize: fclose(\"%s\") failed (%s)",
+					 path, strerror( errno ) );
+		}
+		fp = NULL;
+	}
+	
 #ifndef WIN32
 	// Unix
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
@@ -358,6 +365,12 @@ initialize (const char *filename)
 {	
 	if ((_fd = open (filename, O_RDONLY, 0)) == -1) return false;
 	if ((_fp = fdopen (_fd, "r")) == NULL) return false;
+
+    lock = new FileLock( _fd );
+	if( !lock ) {
+		return false;
+	}
+
 	return true;
 }
 	
@@ -368,11 +381,19 @@ readEvent (ULogEvent *& event)
 	long   filepos;
 	int    eventnumber;
 	int    retval1, retval2;
-	
+
+	// we obtain a write lock here not because we want to write
+	// anything, but because we want to ensure we don't read
+	// mid-way through someone else's write
+    lock->obtain( WRITE_LOCK );
+
 	// store file position so that if we are unable to read the event, we can
 	// rewind to this location
 	if (!_fp || ((filepos = ftell(_fp)) == -1L))
+	{
+		lock->release();
 		return ULOG_UNK_ERROR;
+	}
 
 	retval1 = fscanf (_fp, "%d", &eventnumber);
 
@@ -383,6 +404,7 @@ readEvent (ULogEvent *& event)
 	event = instantiateEvent ((ULogEventNumber) eventnumber);
 	if (!event) 
 	{
+		lock->release();
 		return ULOG_UNK_ERROR;
 	}
 
@@ -392,13 +414,21 @@ readEvent (ULogEvent *& event)
 	// check if error in reading event
 	if (!retval1 || !retval2)
 	{	
-		// try to synchronize the log
-		if (synchronize())
+		// wait a second, rewind to our initial position (in case a
+		// buggy getEvent() slurped up more than one event), then
+		// synchronize the log
+		sleep( 1 );
+		if( fseek( _fp, filepos, SEEK_SET) == -1 ) {
+			dprintf( D_ALWAYS, "fseek() failed in %s()", __FUNCTION__ );
+			return ULOG_UNK_ERROR;
+		}
+		if( synchronize() )
 		{
 			// if synchronization was successful, reset file position and ...
 			if (fseek (_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
+				lock->release();
 				return ULOG_UNK_ERROR;
 			}
 			
@@ -413,10 +443,12 @@ readEvent (ULogEvent *& event)
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
 				synchronize ();
+				lock->release();
 				return ULOG_RD_ERROR;
 			}
 			else
 			{
+				lock->release();
 				return ULOG_OK;
 			}
 		}
@@ -427,11 +459,13 @@ readEvent (ULogEvent *& event)
 			if (fseek (_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
+				lock->release();
 				return ULOG_UNK_ERROR;
 			}
 			clearerr (_fp);
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
+			lock->release();
 			return ULOG_NO_EVENT;
 		}
 	}
@@ -440,6 +474,7 @@ readEvent (ULogEvent *& event)
 		// got the event successfully -- synchronize the log
 		if (synchronize ())
 		{
+			lock->release();
 			return ULOG_OK;
 		}
 		else
@@ -449,11 +484,13 @@ readEvent (ULogEvent *& event)
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr (_fp);
+			lock->release();
 			return ULOG_NO_EVENT;
 		}
 	}
 
 	// will not reach here
+	lock->release();
 	return ULOG_UNK_ERROR;
 }
 
@@ -461,10 +498,11 @@ readEvent (ULogEvent *& event)
 bool ReadUserLog::
 synchronize ()
 {
-	char buffer[32];
-	while (1) {
-		if (fgets (buffer, 32, _fp) == NULL)      return false;
-		if (strcmp (buffer, SynchDelimiter) == 0) return true;
-	}
+    char buffer[512];
+    while( fgets( buffer, 512, _fp ) != NULL ) {
+		if( strcmp( buffer, SynchDelimiter) == 0 ) {
+            return true;
+        }
+    }
     return false;
 }

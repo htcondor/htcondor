@@ -28,6 +28,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_rw.h"
+#include "condor_socket_types.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -88,9 +89,18 @@ int
 ReliSock::listen()
 {
 	if (_state != sock_bound) return FALSE;
-	if (::listen(_sock, 5) < 0) return FALSE;
 
-	dprintf( D_NETWORK, "LISTEN %s\n", sock_to_string(_sock) );
+	// many modern OS's now support a >5 backlog, so we ask for 200,
+	// but since we don't know how they behave when you ask for too
+	// many, if 200 doesn't work we try 5 before returning failure
+	if( ::listen( _sock, 200 ) < 0 ) {
+		if( ::listen( _sock, 5 ) < 0 ) {
+			return FALSE;
+		}
+	}
+
+	dprintf( D_NETWORK, "LISTEN %s fd=%d\n", sock_to_string(_sock),
+			 _sock );
 
 	_state = sock_special;
 	_special_state = relisock_listen;
@@ -102,9 +112,8 @@ ReliSock::listen()
 int 
 ReliSock::accept( ReliSock	&c )
 {
-	int			c_sock;
-	int			addr_sz;
-
+	int c_sock;
+	SOCKET_LENGTH_TYPE addr_sz;
 
 	if (_state != sock_special || _special_state != relisock_listen ||
 													c._state != sock_virgin)
@@ -161,8 +170,14 @@ ReliSock::accept( ReliSock	&c )
 	int on = 1;
 	c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
 
-	dprintf( D_NETWORK, "ACCEPT %s ", sock_to_string(_sock) );
-	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(c.endpoint()) );
+	if( DebugFlags & D_NETWORK ) {
+		char* src = strdup(	sock_to_string(_sock) );
+		char* dst = strdup( sin_to_string(c.endpoint()) );
+		dprintf( D_NETWORK, "ACCEPT src=%s fd=%d dst=%s\n",
+				 src, c._sock, dst );
+		free( src );
+		free( dst );
+	}
 	
 	return TRUE;
 }
@@ -200,14 +215,14 @@ ReliSock::accept()
 }
 
 int 
-ReliSock::connect( char	*host, int port )
+ReliSock::connect( char	*host, int port, bool non_blocking_flag )
 {
 	is_client = 1;
 	if( ! host ) {
 		return FALSE;
 	}
 	hostAddr = strdup( host );
-	return do_connect( host, port );
+	return do_connect( host, port, non_blocking_flag );
 }
 
 int 
@@ -390,7 +405,6 @@ int
 ReliSock::put_file(const char *source)
 {
 	int fd;
-	char buf[65536];
 	struct stat filestat;
 	unsigned int filesize;
 	unsigned int eom_num = 666;
@@ -399,6 +413,7 @@ ReliSock::put_file(const char *source)
 #if defined(WIN32)
 	if ((fd = ::open(source, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0)) < 0)
 #else
+	char buf[65536];
 	int nbytes, nrd;
 	if ((fd = ::open(source, O_RDONLY, 0)) < 0)
 #endif
@@ -725,6 +740,7 @@ ReliSock::attach_to_file_desc( int fd )
 
 	_sock = fd;
 	_state = sock_connect;
+	timeout(0);	// make certain in blocking mode
 	return TRUE;
 }
 #endif

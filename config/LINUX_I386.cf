@@ -29,3 +29,4 @@
 #   define EgcsLibc /usr/local/lib/gcc-lib/i686-pc-linux-gnu/egcs-2.91.66/libgcc.a
 #endif
 
+#define HAS_GLOBUS	YES

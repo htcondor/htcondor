@@ -62,6 +62,7 @@
 class RemoteResource : public Service {
 
  public: 
+
 		/** Constructor.  Pass it a pointer to the shadow which creates
 			it, this is handy while in handleSysCalls.  
 		*/
@@ -207,10 +208,17 @@ class RemoteResource : public Service {
 	float bytesSent();
 		
 		/// The number of bytes received from this resource.
-	float bytesRecvd();
-
+	float bytesReceived();
 
 	FileTransfer filetrans;
+
+	virtual void resourceExit( int exit_reason, int exit_status );
+
+	virtual void updateFromStarter( ClassAd* update_ad );
+
+	int getImageSize( void ) { return image_size; };
+	int getDiskUsage( void ) { return disk_usage; };
+	struct rusage getRUsage( void ) { return remote_rusage; };
 
  protected:
 
@@ -242,15 +250,18 @@ class RemoteResource : public Service {
 		/// This is the timeout period to hear from a startd.  (90 seconds).
 	static const int SHADOW_SOCK_TIMEOUT;
 
-		// The rusage at the remote machine...to be implemented.
-	// struct rusage remote_rusage;
-
 		// More resource-specific stuff goes here.
 
 		// we keep a pointer to the shadow class around.  This is useful
 		// in handleSysCalls.
 	BaseShadow *shadow;
 	
+		// Info about the job running on this particular remote
+		// resource:  
+	struct rusage	remote_rusage;
+	int 			image_size;
+	int 			disk_usage;
+
  private:
 
 		// initialization done in both constructors.

@@ -24,7 +24,8 @@ umask 0022;
 @tool_names=("checkpoint", "off", "on", "reconfig", "reconfig_schedd", 
 	       "reschedule", "restart", "vacate" );
 @bin_names=( "q", "rm", "submit", "status", "prio", "userprio", 
-		"compile", "history", "config_val" );
+		"compile", "history", "config_val", "findhost", "glidein", "release",
+         "run", "userlog" );
 @full_lib_names=( "ld", "libcondorc++support.a", "condor_rt0.o",
 		  "libcondorsyscall.a" );
 @sbin_master_names=( "master", "preen" );
@@ -292,7 +293,7 @@ sub configure_submit_only {
     "I can either install these files into a directory that is already in\n",
     "your PATH that you have write access to, or I can put them into any\n",
     "directory you specify (in which case you would have to add that\n",
-    "directory to your PATH or explicity use a full pathname to access the\n",
+    "directory to your PATH or explicitly use a full pathname to access the\n",
     "Condor tools).\n";
     $path = &prompt_install_path();
 
@@ -796,11 +797,11 @@ sub customize_config_file {
 	  if( /^CONDOR_HOST.*$/ ) { $_ = "CONDOR_HOST\t\t= $cm\n"; last SWITCH; }
 	  if( /^RELEASE_DIR.*$/ ) { $_ = "RELEASE_DIR\t\t= $release_dir\n"; last SWITCH; }
 	  if( /^LOCAL_DIR.*$/ ) { $_ = "LOCAL_DIR\t\t= $local_dir_str\n"; last SWITCH; }
-	  if( /^LOCAL_CONFIG_FILE.*$/ ) { 
+	  if( /^LOCAL[^_A-Za-z0-9]*$/ ) { 
 	      if( $local_config_str ) {
-		  $_ = "LOCAL_CONFIG_FILE\t\t= $local_config_str\n";
+		  $_ = "LOCAL\t\t= $local_config_str\n";
 	      } else {
-		  $_ = "#LOCAL_CONFIG_FILE\t\t= \$(LOCAL_DIR)/condor_config.local\n";
+		  $_ = "#LOCAL\t\t= \$(LOCAL_DIR)/condor_config.local\n";
 	      }
 	      last SWITCH;
 	  }  
@@ -1140,7 +1141,7 @@ sub configure_full_install {
 	"in the default PATH to point to these binaries, so that Condor users do not\n",
 	"have to change their PATH.  Alternatively, I can leave them where they are\n",
 	"and Condor users will have to add $path\n",
-	"to their PATH or explicity use a full pathname to access the Condor tools.\n",
+	"to their PATH or explicitly use a full pathname to access the Condor tools.\n",
 	"\nShall I create links in some other directory? [yes] ";
 	chop( $_ = <STDIN> );
 	if( /(^[Yy].*)|^$/ ) {    
@@ -1239,9 +1240,12 @@ sub configure_full_install {
 	    chop( $_ = <STDIN> );
 	    $local_dir_str = $_;
 	    if( $_ =~ s/^(.*)\/\$\(HOSTNAME\)$/$1/ ) {
-		$local_dir = $_;
-		$has_mach = 1;
-	    }
+			$local_dir = $_;
+			$has_mach = 1;
+	    } else {
+			$local_dir = $local_dir_str;
+			$has_mach = 0;
+		}
 	    if( ! -d $local_dir ) {
 		mkdir($local_dir, 0777) || 
 		    die "\nCan't create $local_dir: $!\n\n";
@@ -1524,7 +1528,7 @@ sub find_lock_dir {
     "\nDo you want to specify a local partition for file locking? [yes] ";
     $_ = <STDIN>;
     if( /^[Nn].*/ ) {
-	print "\nAlright, but you might run into trouble latter...\n";
+	print "\nAlright, but you might run into trouble later...\n";
 	return "";
     }
 
@@ -1770,9 +1774,9 @@ sub prompt_fullhost {
 	chop($fh = <STDIN>);    
 	print "\nYou entered: $fh\n";
 	if( $fh =~ /.?\..?/ ) {
-	    print "Is that right? [no]";
+	    print "Is that right? [no] ";
 	    chop($_ = <STDIN>);    
-	    if( /^y$/i ) {
+	    if( /((^y$)|(^yes$))/i ) {
 		return $fh;
 	    }
 	} else {

@@ -1,15 +1,134 @@
-9/14/00 trunk-pre-merge-V6_3-post-merge-V6_1_16
-	The state of the trunk before merging in the V6_3-branch where
-	it stood after merging in V6_1_16 from the V6_2-branch.
-	(confused yet?) :) 
+4/16/01 V6_3-pre-merge-V6_2-merge-4
+	The state of the V6_3-branch before merging the
+	still-slightly- post-6.2.0 V6_2 branch in preparation for
+	releasing 6.3.0.  (Phew.)
 
-7/7/00 trunk-pre-merge-V6_1-NewAds-3-branch-merge-1
-	The state of the trunk before merging in the NewAds-3-branch.
+4/16/01 V6_2-merge-4
+        V6_2 branch state, still slightly post 6.2.0.  Used for
+        merging into the V6_3 branch, in preparation for releasing
+        6.3.0.
 
-7/7/00 V6_1-NewAds-3-branch-merge-1
-	This is the NewAds-3-branch, at the time it was about to be
-	merged into the 6.5 trunk.  This should be the end of the road
-	for the NewAds branches, since now, the trunk will be NewAds. 
+4/9/01 V6_3-umn-branch  (take two)
+        This is a new branch (with the same name) for UMN folks who
+	want to hack DAGMan.  Since the old umn branch was created
+	before the big CEDAR cleanup in CVS, and since we didn't want
+	any trouble with that down the road, we wanted to make a new
+	branch for them before they started their work.  Since nothing
+	had been checked in to the new branch, we could safely delete
+	the old branch tag (which I did in both the V6_3-branch and in
+	the V6_3-bandwidth-branch to make sure we removed that tag
+	from all files, even ones that had been deleted on the main
+	V6_3-branch), and re-tag with the same name, creating a new
+	branch.
+
+4/3/01 V6_3-bandwidth-branch
+        A new branch off of V6_3 for all the bandwidth control stuff.
+        This branch contains modifications to condor_io and
+        condor_includes.
+
+4/3/01 V6_3-pre-bandwidth-branch-fix
+        The state of the V6_3-branch before I started doing all the
+        trickery to create the V6_3-bandwidth-branch, just in case we
+        need to back out of any mistakes I might make.  -Derek Wright
+
+3/30/01 V6_3-condor-g-release-2
+        The release tag for the second CondorG client-distro. This
+        release is from the mainline V6_3-branch, and not the
+        V6_3-condor-g-branch, which is now abandoned.
+
+3/29/01 V6_3-umn-branch
+        New branch off of V6_3-branch for UMN folks who want to hack
+        DAGMan.
+
+3/29/01 V6_3-branch-post-merge-V6_3-condor-g-release-1
+        The state of the V6_3-branch after merging in the
+        V6_3-condor-g-branch as tagged at V6_3-condor-g-release-1.
+
+3/29/01 V6_3-branch-pre-merge-V6_3-condor-g-release-1
+        The state of the V6_3-branch before merging in the
+        V6_3-condor-g-branch as tagged at V6_3-condor-g-release-1.
+
+3/29/01 V6_3-condor-g-release-1
+        The state of the CondorG branch for the first client-side
+        release. It lives on the V6_3-condor-g-branch
+
+3/28/01 V6_3-post-merge-V6_2-merge-3
+	The state of the V6_3-branch after merging the V6_2 branch as
+	tagged at V6_2-merge-3
+
+3/28/01 V6_3-pre-merge-V6_2-merge-3
+	The state of the V6_3-branch before merging the V6_2 branch
+
+3/28/01 V6_2-merge-3
+        V6_2-branch state, slightly post 6.2.0. Used for the merge
+        into 6.3 at the end of March (right around the CondorG merge
+        back in, and the split-off of the Minnesota DAGMan branch)
+
+3/15/01 V6_2_0 
+	6.2.0 release tags, which lives on the V6_2-branch. The date
+        on this release is probably bogus, since I forgot to add it to
+        this file til well after the fact.
+
+3/6/01  V6_3-galileo-1
+	This is a tag of the V6_3 branch for the purposes of giving
+	a company called Galileo some experimental/new features 
+	concerning job suspension and control from the shadow side.
+
+2/28/01 V6_3-condor-g-branch
+	A branch for Condor-G development in anticipation of a release
+	in the near future.  Branched from the end of the V6_3-branch
+	at 5:45pm on 2/28/01.  Only Condor-G development should go on
+	on this branch, and it should be merged back into the regular
+	V6_3-branch at the appropriate time.
+
+2/9/01  V6_1_17
+	6.1.17 release tag, which lives on the V6_2-branch. The good
+	lord willing this will be the last 6.1
+
+12/22/00 V6_3-post-merge-V6_2-merge-2
+	The state of the V6_3-branch after merging in the V6_2-branch
+	as tagged at V6_2-merge-2.
+
+12/22/00 V6_3-pre-merge-V6_2-merge-2
+	The state of the V6_3-branch before merging in the V6_2-branch
+	as tagged at V6_2-merge-2.
+
+12/22/00 V6_2-merge-2
+	V6_2 branch state (still prior to 6.1.17, so not quite worthy
+        of the V6_1_17 tag) for merging into V6_3 branch
+
+12/6/00 V6_3-post-merge-V6_2-merge-1
+	The state of the V6_3-branch after merging in the V6_2-branch
+	as tagged at V6_2-merge-1.
+
+12/6/00 V6_3-pre-merge-V6_2-merge-1
+	The state of the V6_3-branch before merging in the V6_2-branch
+	as tagged at V6_2-merge-1.
+
+12/6/00 V6_2-merge-1
+	V6_2 branch state (just prior to 6.1.17, so not quite worthy
+        of the V6_1_17 tag) for merging into V6_3 branch
+
+9/14/00 V6_3-post-merge-V6_1_16
+	The state of the V6_3-branch after merging in the V6_2-branch
+	as tagged at V6_1_16.
+
+9/13/00 V6_3-pre-merge-V6_1_16
+	The state of the V6_3-branch before merging in the V6_2-branch
+	as tagged at V6_1_16.
+
+9/8?/00 V6_1_16
+	6.1.16 release tag, which lives on the V6_2-branch.  config
+	was tagged on 9/12, with the code from the earlier date.
+	NTconfig and doc were tagged on 9/13/00 with the tail of the
+	branch (since I don't think NTconfig changed, doc didn't
+	change much, and it doesn't matter nearly as much) There are
+	now a bunch more module names and renewed awareness of using
+	the *_ALL module names to help avoid these sorts of things in
+	the future.  -Derek
+
+8/22/00 V6_1_15
+	6.1.15 release tag, which lives on the V6_2-branch.
 
 7/6/00 V6_3-branch
 	The branch for all of Condor version 6.3.X (and, probably,
@@ -19,13 +138,6 @@
 	features, Globus universe stuff, Condor-G, Personal Condor
 	stuff, etc.  It should *NOT* contain new classads, new schedd,
 	etc, etc. 
-
-	Note: when merging V6_3-branch condor_netman directory into
-	the trunk, please make sure CVS takes the V6_3-branch version
-	of the code instead of the trunk version.  Jim Basney added
-	the condor_netman directory to both the V6_3-branch and the
-	trunk (by mistake) on 12/1/00.  The V6_3-branch version is the
-	authoritative one.
 
 7/6/00 V6_2-branch The branch for all of Condor version 6.2.X.  In
 	addition, the last few 6.1.X releases (hopefully, just

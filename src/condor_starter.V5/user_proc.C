@@ -60,10 +60,10 @@ const mode_t LOCAL_DIR_MODE =
 
 extern char	*Execute;			// Name of directory where user procs execute
 extern char VirtualMachineName[];  // Virtual machine where we're allocated (SMP)
+extern int ExecTransferAttempts; // attempts at bringing over the initial exec.
 
 extern "C" {
 	void _updateckpt( char *, char *, char * );
-	void killkids(pid_t, int);
 }
 void open_std_file( int which );
 void set_iwd();
@@ -279,22 +279,33 @@ int
 UserProc::transfer_executable( char *src, int &error_code )
 {
 	int		status;
+	int		attempts = 0;
+	int tmp_errno;
 
-	errno = 0;
-	status = get_file( src, cur_ckpt, EXECUTABLE_FILE_MODE );
+	dprintf( D_ALWAYS, "Going to try %d %s at getting the inital executable\n",
+		ExecTransferAttempts, ExecTransferAttempts==1?"attempt":"attempts" );
 
-	if( status < 0 ) {
-		dprintf( D_ALWAYS,
-			"Failed to fetch orig ckpt file \"%s\" into \"%s\", errno = %d\n",
-			src, cur_ckpt, errno
-		);
-	} else {
-		dprintf( D_ALWAYS,
-			"Fetched orig ckpt file \"%s\" into \"%s\"\n", src, cur_ckpt
-		);
+	do
+	{
+		errno = 0;
+		status = get_file( src, cur_ckpt, EXECUTABLE_FILE_MODE );
+		tmp_errno = errno;
+
+		attempts++;
+
+		if( status < 0 ) {
+			dprintf( D_ALWAYS,
+				"Failed to fetch orig ckpt file \"%s\" into \"%s\", "
+				"attempt = %d, errno = %d\n", src, cur_ckpt, attempts, errno );
+		} else {
+			dprintf( D_ALWAYS,
+				"Fetched orig ckpt file \"%s\" into \"%s\" with %d %s\n", 
+				src, cur_ckpt, attempts, attempts==1?"attempt":"attempts" );
+		}
 	}
+	while( (status < 0) && (attempts < ExecTransferAttempts) );
 
-	error_code = errno;
+	error_code = tmp_errno;
 	return status;
 }
 
@@ -515,6 +526,18 @@ UserProc::execute()
 
 			// renice
 		renice_self( "JOB_RENICE_INCREMENT" );
+
+			// make certain the syscall sockets which are being passed
+			// to the user job are setup to be blocking sockets.  this
+			// is done by calling timeout(0) CEDAR method.
+			// we must do this because the syscall lib does _not_ 
+			// expect to see any failures due to errno EAGAIN...
+		if ( SyscallStream ) {
+			SyscallStream->timeout(0);
+		}
+		if ( new_reli ) {
+			new_reli->timeout(0);
+		}
 
 			// child process should have only it's submitting uid, and cannot
 			// switch back to root or some other uid.  
@@ -758,20 +781,22 @@ UserProc::send_sig( int sig )
 	priv = set_user_priv();  
 
 	if ( job_class == VANILLA ) {
-		// Here we call killkids() to forward the signal to all of our
+		// Here we call ProcFamily methods to forward the signal to all of our
 		// decendents, since a VANILLA job in condor can fork.  But first,
 		// we block all of our async events, since killkids is relatively
-		// slow, does popen and runs /bin/ps, etc.  Thus it is not re-enterant.
-		// -Todd Tannenbaum, 5/9/95
+		// slow, could potentially do a  popen and runs /bin/ps, etc.  
+		// Thus it is not re-enterant. -Todd Tannenbaum, 5/9/95
 		switch (sig) {
 		case SIGTERM:
 			family->softkill(sig);
 			break;
 		case SIGSTOP:
 			family->suspend();
+			pids_suspended = family->size();
 			break;
 		case SIGCONT:
 			family->resume();
+			pids_suspended = 0;
 			break;
 		case SIGKILL:
 			family->hardkill();
@@ -798,6 +823,8 @@ UserProc::send_sig( int sig )
 			perror("kill");
 			EXCEPT( "kill(%d,SIGCONT)", pid  );
 		}
+		/* standard jobs can't fork, so.... */
+		pids_suspended = 1;
 		dprintf( D_ALWAYS, "Sent signal SIGCONT to user job %d\n", pid);
 	}
 
@@ -811,6 +838,12 @@ UserProc::send_sig( int sig )
 		}
 		perror("kill");
 		EXCEPT( "kill(%d,%d)", pid, sig );
+	}
+	
+	/* record the fact we unsuspended the job. */
+	if (sig == SIGCONT)
+	{
+		pids_suspended = 0;
 	}
 
 	set_priv(priv);
@@ -1013,40 +1046,75 @@ pre_open( int, int, int ) { return 0; }
   Open a standard file (0, 1, or 2), given its fd number.
 */
 void
-open_std_file( int which )
+open_std_file( int fd )
 {
-	char	name[ _POSIX_PATH_MAX ];
+	char	logical_name[ _POSIX_PATH_MAX ];
+	char	physical_name[ _POSIX_PATH_MAX ];
 	char	buf[ _POSIX_PATH_MAX + 50 ];
-	int		pipe_fd;
-	int		answer;
-	int		status;
+	char	*file_name;
+	int	flags;
+	int	success;
+	int	real_fd;
+	FILE	*debug;
 
-	status =  REMOTE_syscall( CONDOR_std_file_info, which, name, &pipe_fd );
-	if( status == IS_PRE_OPEN ) {
-		EXCEPT( "Don't know how to deal with pipelined VANILLA jobs" );
-	} else {
-		switch( which ) {			/* it's an ordinary file */
-		  case 0:
-			answer = open( name, O_RDONLY, 0 );
-			break;
-		  case 1:
-		  case 2:
-			answer = open( name, O_WRONLY|O_TRUNC, 0 );
-				// Some things, like /dev/null, can't be truncated, so
-				// try again w/o O_TRUNC. Jim, Todd and Derek 5/26/99
-			if( answer < 0 ) {
-				answer = open( name, O_WRONLY, 0 );
-			}
-			break;
-		}
+	/* First, try the new set of remote lookups */
+
+	success = REMOTE_syscall( CONDOR_get_std_file_info, fd, logical_name );
+	if(success>=0) {
+		success = REMOTE_syscall( CONDOR_get_file_info_new, logical_name, physical_name );
 	}
-	if( answer < 0 ) {
-		sprintf( buf, "Can't open \"%s\" - %s", name, strerror(errno) );
-		REMOTE_syscall(CONDOR_report_error, buf );
+
+	/* If either of those fail, fall back to the old way */
+
+	if(success<0) {
+		success = REMOTE_syscall( CONDOR_std_file_info, fd, logical_name, &real_fd );
+		if(success<0) {
+			EXCEPT("Couldn't get standard file info!");
+		}
+		sprintf(physical_name,"local:%s",logical_name);
+	}
+
+	if(fd==0) {
+		flags = O_RDONLY;
+	} else {
+		flags = O_CREAT|O_WRONLY|O_TRUNC;
+	}
+
+	/* The starter doesn't have the whole elaborate url mechanism. */
+	/* So, just strip off the pathname from the end */
+
+	file_name = strrchr(physical_name,':');
+	if(file_name) {
+		file_name++;
+	} else {
+		file_name = physical_name;
+	}
+
+	/* Check to see if appending is forced */
+
+	if(strstr(physical_name,"append:")) {
+		flags = flags | O_APPEND;
+		flags = flags & ~O_TRUNC;
+	}
+
+	/* Now, really open the file. */
+
+	real_fd = open(file_name,flags,0);
+	if(real_fd<0) {
+		// Some things, like /dev/null, can't be truncated, so
+		// try again w/o O_TRUNC. Jim, Todd and Derek 5/26/99
+		flags = flags & ~O_TRUNC;
+		real_fd = open(file_name,flags,0);
+	}
+
+	if(real_fd<0) {
+		sprintf(buf,"Can't open \"%s\": %s", file_name,strerror(errno));
+		dprintf(D_ALWAYS,buf);
+		REMOTE_syscall(CONDOR_report_error, buf);
 		exit( 4 );
 	} else {
-		if( answer != which ) {
-			dup2( answer, which );
+		if( real_fd != fd ) {
+			dup2( real_fd, fd );
 		}
 	}
 }
@@ -1073,7 +1141,8 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	user_time( 0 ),
 	sys_time( 0 ),
 	guaranteed_user_time( 0 ),
-	guaranteed_sys_time( 0 )
+	guaranteed_sys_time( 0 ),
+	pids_suspended( -1 )
 {
 	char	buf[ _POSIX_PATH_MAX ];
 	char	*value;
@@ -1092,6 +1161,28 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 		// add name of SMP virtual machine (from startd) into environment
 	env_obj.add_string(VirtualMachineName);	
+
+	/* Port regulation for user job */
+	char *low = NULL, *high = NULL;
+	int low_port, high_port;
+
+	if ( (low = param("LOWPORT")) != NULL ) {
+		if ( (high = param("HIGHPORT")) != NULL ) {
+			low_port = atoi(low);
+			high_port = atoi(high);
+			sprintf(buf, "_condor_LOWPORT=%d", low_port);
+			env_obj.add_string(buf);
+			sprintf(buf, "_condor_HIGHPORT=%d", high_port);
+			env_obj.add_string(buf);
+			free(low);
+			free(high);
+		} else {
+			dprintf(D_ALWAYS, "LOWPORT is defined but HIGHPORT is not!\n");
+			dprintf(D_ALWAYS, "LOWPORT will be ignored!\n");
+			free(low);
+		}
+	}
+	/* end - Port regulation for user job */
 
 
 		// Generate a directory where process can run and do its checkpointing
@@ -1156,8 +1247,8 @@ set_iwd()
 			EXCEPT("Connection timed out for 30 minutes on chdir(%s)", iwd);
 		}
 			
-		sprintf( buf, "Can't open working directory \"%s\", errno = %d", iwd,
-			    errno );
+		sprintf( buf, "Can't open working directory \"%s\": %s", iwd,
+			    strerror(errno) );
 		REMOTE_syscall( CONDOR_report_error, buf );
 		exit( 4 );
 	}

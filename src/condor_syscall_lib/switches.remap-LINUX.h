@@ -181,4 +181,25 @@ REMAP_TWO( truncate, __truncate, int , const char *, size_t )
 
 #endif
 
+#include "condor_socket_types.h"
+
+REMAP_THREE( accept, __accept, int, int, SOCKET_ADDR_CONST_ACCEPT SOCKET_ADDR_TYPE, SOCKET_ALTERNATE_LENGTH_TYPE *)
+REMAP_THREE( bind, __bind, int, int, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE, SOCKET_LENGTH_TYPE )
+REMAP_THREE( connect, __connect, int, int, SOCKET_ADDR_CONST_CONNECT SOCKET_ADDR_TYPE, SOCKET_LENGTH_TYPE)
+REMAP_THREE( getpeername, __getpeername, int, int, SOCKET_ADDR_TYPE, SOCKET_ALTERNATE_LENGTH_TYPE *)
+REMAP_THREE( getsockname, __getsockname, int, int, SOCKET_ADDR_TYPE, SOCKET_ALTERNATE_LENGTH_TYPE *)
+REMAP_FIVE( getsockopt, __getsockopt, int, int, int, int, SOCKET_DATA_TYPE, SOCKET_ALTERNATE_LENGTH_TYPE * )
+REMAP_TWO( listen, __listen, int, int, SOCKET_COUNT_TYPE )
+REMAP_FOUR( send, __send, int, int, SOCKET_DATA_CONST SOCKET_DATA_TYPE, SOCKET_SENDRECV_LENGTH_TYPE, SOCKET_FLAGS_TYPE )
+REMAP_FOUR( recv, __recv, int, int, SOCKET_DATA_TYPE, SOCKET_SENDRECV_LENGTH_TYPE, SOCKET_FLAGS_TYPE )
+REMAP_SIX( recvfrom, __recvfrom, int, int, SOCKET_DATA_TYPE, SOCKET_SENDRECV_LENGTH_TYPE, SOCKET_FLAGS_TYPE, SOCKET_ADDR_TYPE, SOCKET_ALTERNATE_LENGTH_TYPE * )
+REMAP_THREE( recvmsg, __recvmsg, int, int, struct msghdr *, SOCKET_FLAGS_TYPE )
+REMAP_THREE( sendmsg, __sendmsg, int, int, SOCKET_MSG_CONST struct msghdr *, SOCKET_FLAGS_TYPE )
+REMAP_SIX( sendto, __sendto, int, int, SOCKET_DATA_CONST SOCKET_DATA_TYPE, SOCKET_SENDRECV_LENGTH_TYPE, SOCKET_FLAGS_TYPE, const SOCKET_ADDR_TYPE, SOCKET_LENGTH_TYPE )
+REMAP_FIVE( setsockopt, __setsockopt, int, int, int, int, SOCKET_DATA_CONST SOCKET_DATA_TYPE, SOCKET_LENGTH_TYPE )
+REMAP_TWO( shutdown, __shutdown, int, int, int )
+REMAP_THREE( socket, __socket, int, int, int, int )
+REMAP_FOUR( socketpair, __socketpair, int, int, int, int, int * )
+
+
 #endif /* REMOTE_SYSCALLS */

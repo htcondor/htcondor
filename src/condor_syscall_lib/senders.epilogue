@@ -233,8 +233,7 @@
 	}
 #endif 
 
-	_condor_signals_enable();
-
+	_condor_signals_enable( omask );
 	SetSyscalls( scm );
 	return rval;
 }

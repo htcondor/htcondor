@@ -2,6 +2,8 @@ all_target(condor_install condor_init condor_compile ld)
 
 CFLAGS = $(STD_C_FLAGS)
 
+GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib
+
 release_copy_target(condor_install,$(RELEASE_DIR)/sbin,condor_install,EXECUTABLE_MODE)
 release_copy_target(condor_init,$(RELEASE_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 #if IS_CLIPPED
@@ -50,9 +52,26 @@ all_symlink_target(ld,real-ld)
 	header files that can't be used with glibc 2.1.1. */
 #if IS_GLIBC21
 #if ! IS_CLIPPED
-release_copy_target(/usr/lib/libc.a,$(RELEASE_DIR)/lib,libc.a,OBJECT_MODE)
-static_copy_target(/usr/lib/libc.a,$(STATIC_DIR)/lib,libc.a,OBJECT_MODE)
-strip_copy_target(/usr/lib/libc.a,$(STRIP_DIR)/lib,libc.a,OBJECT_MODE)
+release_copy_target($(GLIBC_DIR)/libc.a,$(RELEASE_DIR)/lib,libc.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libc.a,$(STATIC_DIR)/lib,libc.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libc.a,$(STRIP_DIR)/lib,libc.a,OBJECT_MODE)
+
+release_copy_target($(GLIBC_DIR)/libnss_files.a,$(RELEASE_DIR)/lib,libnss_files.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libnss_files.a,$(STATIC_DIR)/lib,libnss_files.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libnss_files.a,$(STRIP_DIR)/lib,libnss_files.a,OBJECT_MODE)
+
+release_copy_target($(GLIBC_DIR)/libnss_dns.a,$(RELEASE_DIR)/lib,libnss_dns.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libnss_dns.a,$(STATIC_DIR)/lib,libnss_dns.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libnss_dns.a,$(STRIP_DIR)/lib,libnss_dns.a,OBJECT_MODE)
+
+release_copy_target($(GLIBC_DIR)/libresolv.a,$(RELEASE_DIR)/lib,libresolv.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libresolv.a,$(STATIC_DIR)/lib,libresolv.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libresolv.a,$(STRIP_DIR)/lib,libresolv.a,OBJECT_MODE)
+
+release_plain_symlink_target($(RELEASE_DIR)/lib/libresolv.a,libresolv.a)
+release_plain_symlink_target($(RELEASE_DIR)/lib/libc.a,libc.a)
+release_plain_symlink_target($(RELEASE_DIR)/lib/libnss_files.a,libnss_files.a)
+release_plain_symlink_target($(RELEASE_DIR)/lib/libnss_dns.a,libnss_dns.a)
 #endif
 #endif
 

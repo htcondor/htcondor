@@ -57,8 +57,9 @@ INET_NTOA_OBJ = inet_ntoa.o
 #define ObjectFiles \
 	blankline.o do_connect.o except.o \
 	dprintf.o dprintf_common.o dprintf_config.o \
-	ltrunc.o mkargv.o proc.o signames.o killkids.o \
+	ltrunc.o mkargv.o proc.o signames.o \
 	stricmp.o \
+	get_port_range.o \
 	ctrace.o detach.o update_rusage.o cronos.o \
 	$(FLOCK_OBJ) \
 	$(SETREUID_OBJ) email.o email_file.o \
@@ -69,7 +70,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
 	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
-	filename_tools.o d_format_time.o chomp.o strupr.o
+	filename_tools.o d_format_time.o chomp.o strupr.o globus_utils.o
 
 test.o: test.c
 	gcc $(CFLAGS) -c test.c
@@ -79,7 +80,17 @@ test: test.o util_lib.a
 
 library_target(util_lib.a,ObjectFiles)
 
-program_target(stub_gen,y.tab.o lex.yy.o,$(NULL))
+y.tab.o: y.tab.c
+	gcc $(CFLAGS) -c y.tab.c
+
+lex.yy.o: lex.yy.c
+	gcc $(CFLAGS) -c lex.yy.c
+
+stub_gen: y.tab.o lex.yy.o
+	gcc $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(ALL_LDFLAGS)
+
+clean::
+	rm -f stub_gen y.tab.o lex.yy.o 
 
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
 	lex stub_gen_lex.l
@@ -96,7 +107,7 @@ clean::
 IMPORT_LINKS = ../../config/import_links
 import(../h,syscall_numbers.c)
 
-release:
-stripped:
-static:
+release:: all
+stripped:: all
+static:: all
 html:

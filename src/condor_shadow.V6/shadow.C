@@ -80,7 +80,6 @@ extern "C" {
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
-	void MvTmpCkpt();
 	FILE	*fdopen();
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
@@ -88,6 +87,7 @@ extern "C" {
 	int DoCleanup();
 	int unlink_local_or_ckpt_server( char* );
 	int update_rusage( struct rusage*, struct rusage* );
+	void HoldJob( const char * );
 }
 
 extern int part_send_job( int test_starter, char *host, int &reason,
@@ -96,6 +96,8 @@ extern int part_send_job( int test_starter, char *host, int &reason,
 extern int send_cmd_to_startd(char *sin_host, char *capability, int cmd);
 extern int InitJobAd(int cluster, int proc);
 extern int MakeProc(ClassAd *ad, PROC *p);
+static bool periodic_policy(void);
+static void static_policy(void);
 
 extern int do_REMOTE_syscall();
 extern int do_REMOTE_syscall1(int);
@@ -103,8 +105,6 @@ extern int do_REMOTE_syscall2(int);
 extern int do_REMOTE_syscall3(int);
 extern int do_REMOTE_syscall4(int);
 extern int do_REMOTE_syscall5(int);
-
-extern "C" void RequestRSCBandwidth();
 
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
@@ -126,16 +126,25 @@ int  PeriodicSync;
 int  SlowCkptSpeed;
 char *CkptServerHost = NULL;
 char *LastCkptServer = NULL;
+int  ShadowBDate = -1;
 int  LastRestartTime = -1;		// time_t when job last restarted from a ckpt
 								// or completed a periodic ckpt
 int  LastCkptTime = -1;			// time when job last completed a ckpt
 int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
 int  CommittedTime = 0;			// run-time committed in checkpoints
-bool ManageBandwidth = false;	// notify negotiator about network usage?
-int	 BWInterval = 0;			// how often do we request RSC bandwidth?
+
+#ifdef WANT_NETMAN
+extern bool ManageBandwidth;	// notify negotiator about network usage?
+extern int NetworkHorizon;		// how often do we request network bandwidth?
+extern "C" void file_stream_child_exit(pid_t pid);
+extern "C" void abort_file_stream_transfer();
+extern "C" void RequestRSCBandwidth();
+#endif
 
 extern char *Executing_Arch, *Executing_OpSys;
+
+extern char *IpcFile;
 
 int		MyPid;
 int		LogPipe;
@@ -150,13 +159,11 @@ GENERIC_PROC GenProc;
 
 extern "C"  void initializeUserLog();
 extern "C"  void log_termination(struct rusage *, struct rusage *);
-extern "C"  void log_execute(char *);
 extern "C"  void log_except(char *);
 
 char	*Spool = NULL;
 char	*ExecutingHost = NULL;
 char	*GlobalCap = NULL;
-char	*MailerPgm = NULL;
 
 // count of total network bytes previously send and received for this
 // job from previous runs (i.e., includes ckpt transfers)
@@ -190,15 +197,12 @@ int		InitialJobStatus = -1;
 
 int JobStatus;
 struct rusage JobRusage;
-struct rusage AccumRusage;
-int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
+int ExitReason = JOB_EXCEPTION;		/* Schedd counts on knowing exit reason */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup(int,int,char*);
-int Termlog;
-
-time_t	RunTime;
+extern int Termlog;
 
 ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
@@ -206,7 +210,7 @@ int HandleLog();
 
 int MainSymbolExists = 1;
 
-int
+void
 usage()
 {
 	dprintf( D_ALWAYS, "Usage: shadow schedd_addr host capability cluster proc\n" );
@@ -231,7 +235,7 @@ usage()
 
 extern ClassAd *JobAd;
 
-char*		schedd = NULL;
+char		*schedd = NULL, *scheddName = NULL;
 
 /*ARGSUSED*/
 main(int argc, char *argv[], char *envp[])
@@ -281,7 +285,7 @@ main(int argc, char *argv[], char *envp[])
 		}
 	}
 
-	LastRestartTime = time(0);
+	ShadowBDate = LastRestartTime = time(0);
 
 	/* Start up with condor.condor privileges. */
 	set_condor_priv();
@@ -320,7 +324,7 @@ main(int argc, char *argv[], char *envp[])
     {
         dprintf(D_FULLDEBUG, "argv[%d] = %s\n", i, argv[i]);
     }
-	if( argc != 6 ) {
+	if( argc < 6 ) {
 		usage();
 	}
 
@@ -342,8 +346,15 @@ main(int argc, char *argv[], char *envp[])
 		capability = argv[3];
 		cluster = argv[4];
 		proc = argv[5];
+		if ( argc > 6 ) {
+			IpcFile = argv[6];
+			dprintf(D_FULLDEBUG,"Setting IpcFile to %s\n",IpcFile);
+		} else {
+			IpcFile = NULL;
+		}
 		regular_setup( host, cluster, proc, capability );
 	}
+	scheddName = getenv("SCHEDD_NAME");
 
 	GlobalCap = strdup(capability);
 
@@ -389,7 +400,7 @@ main(int argc, char *argv[], char *envp[])
 	// if job specifies a checkpoint server host, this overrides
 	// the config file parameters
 	tmp = (char *)malloc(_POSIX_PATH_MAX);
-	if (JobAd->LookupString(ATTR_USE_CKPT_SERVER, tmp) == 1) {
+	if (JobAd->LookupString(ATTR_CKPT_SERVER, tmp) == 1) {
 		if (CkptServerHost) free(CkptServerHost);
 		UseCkptServer = TRUE;
 		CkptServerHost = strdup(tmp);
@@ -472,6 +483,7 @@ main(int argc, char *argv[], char *envp[])
 		SlowCkptSpeed = 0;
 	}
 
+#ifdef WANT_NETMAN
 	tmp = param("MANAGE_BANDWIDTH");
 	if (!tmp) {
 		ManageBandwidth = false;
@@ -482,19 +494,15 @@ main(int argc, char *argv[], char *envp[])
 			ManageBandwidth = false;
 		}
 		free(tmp);
-		tmp = param("RSC_BANDWIDTH_INTERVAL");
+		tmp = param("NETWORK_HORIZON");
 		if (!tmp) {
-			BWInterval = 300;	// should be equal to NETWORK_HORIZON
+			NetworkHorizon = 300;
 		} else {
-			BWInterval = atoi(tmp);
+			NetworkHorizon = atoi(tmp);
 			free(tmp);
 		}
 	}
-
-	MailerPgm = param( "MAIL" );
-	if( MailerPgm == NULL ) {
-		MailerPgm = "/bin/mail";
-	}
+#endif
 
 	// Install signal handlers such that all signals are blocked when inside
 	// the handler.
@@ -520,7 +528,16 @@ main(int argc, char *argv[], char *envp[])
 
 	Wrapup();
 
-	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+	/* HACK! WHOOO!!!!! Throw the old shadow away already! */
+	/* This will figure out whether or not the job should go on hold AFTER the
+		job has exited for whatever reason, or if the job should be allowed
+		to exit. It modifies ExitReason approriately for job holding, or, get
+		this, just EXCEPTs if the jobs is supposed to go into idle state and
+		not leave. :) */
+	static_policy();
+
+	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+		ExitReason );
 	exit( ExitReason );
 }
 
@@ -533,8 +550,8 @@ HandleSyscalls()
 	register int	cnt;
 	fd_set 			readfds;
 	int 			nfds = -1;
-	priv_state		priv;
-	time_t			last_bw_update = time(0);
+
+	time_t			periodic_interval_len = 20; /* secs, empirically found :) */
 
 	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
@@ -551,6 +568,12 @@ HandleSyscalls()
 	dprintf(D_SYSCALLS, "Shadow: Starting to field syscall requests\n");
 	errno = 0;
 
+	time_t current_time = time(0);
+	time_t next_periodic_update = current_time + periodic_interval_len;
+#if WANT_NETMAN
+	time_t next_bw_update = current_time + NetworkHorizon;
+#endif
+	
 	for(;;) {	/* get a request and fulfill it */
 
 		FD_ZERO(&readfds);
@@ -558,9 +581,23 @@ HandleSyscalls()
 		FD_SET(CLIENT_LOG, &readfds);
 
 		struct timeval *ptimer = NULL, timer;
-		if (ManageBandwidth) {
-			timer.tv_sec = BWInterval;
+		timer.tv_sec = next_periodic_update - current_time;
+		timer.tv_usec = 0;
+		ptimer = &timer;
+#if WANT_NETMAN
+		if (ManageBandwidth && next_bw_update > current_time) {
+			timer.tv_sec = next_bw_update - current_time;
 			timer.tv_usec = 0;
+			ptimer = &timer;
+		}
+#endif
+		/* if the current timer is set for a time longer than this, than
+			truncate the timer required to the periodic limit. After 
+			inspection of the bandwidth timer, it seems that it will recorrect
+			itself if select comes out of the loop before the timer goes off
+			anyway to handle syscalls */
+		if ( timer.tv_sec > periodic_interval_len) {
+			timer.tv_sec = next_periodic_update - current_time;
 			ptimer = &timer;
 		}
 
@@ -602,13 +639,29 @@ HandleSyscalls()
 			exit(1);
 		}
 
-		if (ManageBandwidth) {
-			time_t current_time = time(0);
-			if (current_time > last_bw_update + BWInterval) {
-				RequestRSCBandwidth();
-				last_bw_update = current_time;
+		current_time = time(0);
+
+		/* if this is true, then do the periodic_interval_len events */
+		if (current_time >= next_periodic_update) {
+			next_periodic_update = current_time + periodic_interval_len;
+
+			/* evaluate some attributes for policies like determining what to
+			do if a job suspends wierdly or some such thing. This function
+			has the possibility of making the shadow exit with JOB_SHOULD_HOLD
+			or futzing up some global variables about how the job could've
+			exited and letting Wraup take care of it. */
+			if (periodic_policy() == true)
+			{
+				break;
 			}
 		}
+
+#if WANT_NETMAN
+		if (ManageBandwidth && current_time >= next_bw_update) {
+			RequestRSCBandwidth();
+			next_bw_update = current_time + NetworkHorizon;
+		}
+#endif
 
 #if defined(SYSCALL_DEBUG)
 		strcpy( SyscallLabel, "shadow" );
@@ -700,6 +753,106 @@ Wrapup( )
 	}
 }
 
+/* evaluate various periodic checks during the running of the shadow and
+	perform actions based upon what special attributes evaluate to. */
+bool periodic_policy(void)
+{
+	char buf[4096];
+	int phc, prc;
+
+	if (JobAd == NULL) {
+		EXCEPT( "Could not evaluate periodic policy due to no job ad!\n" );
+	}
+
+	/* we are going to look at PERIODIC_HOLD_CHECK and PERIODIC_REMOVE_CHECK
+		to see if they force me to do something with this job. There is
+		precedence here. If the HOLD is false, THEN we check the REMOVE. */
+
+	
+	if (JobAd->EvalBool(ATTR_PERIODIC_HOLD_CHECK, JobAd, phc) == 0) {
+		return false;
+	}
+	
+	/* Should I hold? */
+	if (phc == 1)
+	{
+		dprintf(D_ALWAYS, "Periodic policy: holding job.\n");
+		sprintf(buf, "Your job has been held because %s has become true\n",
+			ATTR_PERIODIC_HOLD_CHECK);
+
+		/* This exits */
+		HoldJob(buf);
+	}
+
+	if (JobAd->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, JobAd, prc) == 0) {
+		return false;
+	}
+
+	/* Should I remove? */
+	if (prc == 1)
+	{
+		dprintf(D_ALWAYS, "Periodic policy: remove job.\n");
+		JobStatus = 0;
+		JobExitStatus = 0;
+		return true;
+	}
+
+	return false;
+}
+
+/* After the job exits, look into the classad to see if certain things are
+	true or not */
+void static_policy(void)
+{
+	char buf[4096];
+	int ehc, erc;
+	int prc;
+
+	ASSERT( JobAd != NULL );
+
+	/* check the exit hold policy */
+	if (JobAd->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, JobAd, ehc) == 0) {
+		return;
+	}
+	if (ehc == 1)
+	{
+		dprintf( D_ALWAYS, "Static policy: hold on exit\n");
+		/* This will exit */
+		sprintf(buf, "Your job has been held because your job exited and "
+			"%s became true.\n", ATTR_ON_EXIT_HOLD_CHECK);
+		HoldJob(buf);
+	}
+	else
+	{
+		dprintf( D_ALWAYS, "Static policy: don't hold on exit\n" );
+	}
+
+	/* if the periodic remove check said to remove, then ignore what the exit
+		remove check said to do. */
+	if (JobAd->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, JobAd, prc) != 0) {
+		if (prc == 1) {
+		dprintf( D_ALWAYS, "Static policy: ignoring on_exit remove policy "
+			"because periodic exit remove policy takes precedence\n" );
+		return;
+		}
+	}
+
+	/* Now check the exit remove policy */
+	if (JobAd->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, JobAd, erc) == 0) {
+		return;
+	}
+	if (erc == 1)
+	{
+		dprintf( D_ALWAYS, "Static policy: remove on exit\n" );
+	}
+	else
+	{
+		dprintf( D_ALWAYS, "Static policy: don't remove on exit\n" );
+		EXCEPT( "Job didn't exit under conditions specifed in %s",
+			ATTR_ON_EXIT_REMOVE_CHECK );
+	}
+}
+
 void
 update_job_rusage( struct rusage *localp, struct rusage *remotep )
 {
@@ -741,6 +894,27 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
+	int tot_sus=0, cum_sus=0, last_sus=0;
+
+	// If the job completed, and there is no HISTORY file specified,
+	// the don't bother to update the job ClassAd since it is about to be
+	// flushed into the bit bucket by the schedd anyway.
+	char *myHistoryFile = param("HISTORY");
+	if ((Proc->status == COMPLETED) && (myHistoryFile==NULL)) {
+		return;
+	}
+
+	if (myHistoryFile) {
+		free(myHistoryFile);
+	}
+
+	if (!JobAd)
+	{
+		EXCEPT( "update_job_status(): No job ad\n");
+	}
+	JobAd->LookupInteger(ATTR_TOTAL_SUSPENSIONS, tot_sus);
+	JobAd->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME, cum_sus);
+	JobAd->LookupInteger(ATTR_LAST_SUSPENSION_TIME, last_sus);
 
 	//new syntax, can use filesystem to authenticate
 	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT) ||
@@ -754,6 +928,15 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed "
 				 "by condor_rm\n", Proc->id.cluster, Proc->id.proc );
 	} else {
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_TOTAL_SUSPENSIONS, tot_sus);
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_CUMULATIVE_SUSPENSION_TIME, cum_sus);
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_LAST_SUSPENSION_TIME, last_sus);
 
 		update_job_rusage( localp, remotep );
 
@@ -854,7 +1037,9 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		}
 	}
 
-	DisconnectQ(0);
+	if (!DisconnectQ(0)) {
+		EXCEPT("Failed to commit updated job queue status!");
+	}
 }
 
 /*
@@ -863,7 +1048,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 ** remote starter, and the scheduler will send back an aux port number to
 ** be used for out of band (error) traffic.
 */
-int
+void
 #if defined(NEW_PROC)
 send_job( PROC *proc, char *host, char *cap)
 #else
@@ -880,7 +1065,8 @@ send_job( V2_PROC *proc, char *host, char *cap)
 	retval = part_send_job(0, host, reason, capability, schedd, proc, sd1, sd2, NULL);
 	if (retval == -1) {
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+		dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			reason);
 		exit( reason );
 	}
 	if( sd1 != RSC_SOCK ) {
@@ -905,7 +1091,7 @@ extern char	*SigNames[];
 ** Opens job queue (Q), and reads in process structure (Proc) as side
 ** affects.
 */
-int
+void
 start_job( char *cluster_id, char *proc_id )
 {
 	int		cluster_num;
@@ -936,7 +1122,8 @@ start_job( char *cluster_id, char *proc_id )
 	if( Proc->status != RUNNING ) {
 		dprintf( D_ALWAYS, "Shadow: Asked to run proc %d.%d, but status = %d\n",
 							Proc->id.cluster, Proc->id.proc, Proc->status );
-		dprintf(D_ALWAYS, "********** Shadow Exiting **********\n" );
+		dprintf(D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			JOB_BAD_STATUS);
 		exit( JOB_BAD_STATUS );	/* don't cleanup here */
 	}
 #endif
@@ -982,6 +1169,10 @@ DoCleanup()
 															TmpCkptName);
 		(void) unlink_local_or_ckpt_server( TmpCkptName );
 	}
+
+#if WANT_NETMAN
+	abort_file_stream_transfer(); // if we've got one
+#endif
 
 	return 0;
 }
@@ -1044,7 +1235,8 @@ send_quit( char *host, char *capability )
 		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
 				 host );
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Parent Exiting **********\n" );
+		dprintf( D_ALWAYS, "********** Shadow Parent Exiting(%d) **********\n",
+			JOB_NOT_STARTED);
 		exit( JOB_NOT_STARTED );
 	}
 }
@@ -1145,6 +1337,11 @@ reaper()
 				pid, WTERMSIG(status)
 			);
 		}
+#if WANT_NETMAN
+			// tell the file_stream code whenever a child exits, so it
+			// can do some cleanup with its children
+		file_stream_child_exit(pid);
+#endif
 	}
 
 #ifdef HPUX

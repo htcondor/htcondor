@@ -27,18 +27,59 @@
 /*
 **	Shadow exit statuses which reflect the exit status of the job
 */
-#define JOB_EXITED		0	/* The job exited (not killed)                   */
-#define JOB_CKPTED		1	/* The job was checkpointed                      */
-#define JOB_KILLED		2	/* The job was killed                            */
-#define JOB_COREDUMPED	3	/* The job was killed and a core file produced   */
-#define JOB_EXCEPTION	4	/* The job exited with an exception              */
-#define JOB_NO_MEM		5	/* Not enough memory to start the shadow 		 */
-#define JOB_SHADOW_USAGE 6	/* incorrect arguments to condor_shadow		 */
-#define JOB_NOT_CKPTED	7	/* The job was kicked off without a checkpoint	 */
-#define JOB_NOT_STARTED	8	/* Can't connect to startd or request refused	 */
-#define JOB_BAD_STATUS	9	/* Job status != RUNNING on startup				 */
-#define JOB_EXEC_FAILED 10  /* Exec failed for some reason other than ENOMEM */
-#define JOB_NO_CKPT_FILE 11 /* There is no checkpoint file (lost)            */
-#define JOB_SHOULD_HOLD 12	/* The job should be put on hold                 */
 
-#define DPRINTF_ERROR 44	/* There is a fatal error with dprintf()         */
+/* ok, because of strange exit codes from the util lib and such(which
+	shouldn't be there, but that story is for another time), we can't
+	be totally sure that the exit values with low numbers will mean
+	what we think they mean. So I'm offsetting the exit codes from the
+	shadow so that we know for sure(relatively anyway) what happened.
+	Any exit code less than the offset should be treated as a shadow
+	exception. Please make sure you don't roll over 255 in the return
+	code. For legacy reasons DPRINTF_ERROR and JOB_EXCEPTION must
+	remain the same. */
+
+#define EXIT_CODE_OFFSET 100
+
+/* The job exited (not killed) */
+#define JOB_EXITED		(0 + EXIT_CODE_OFFSET)
+
+/* The job was checkpointed */
+#define JOB_CKPTED		(1 + EXIT_CODE_OFFSET)
+
+/* The job was killed */
+#define JOB_KILLED		(2 + EXIT_CODE_OFFSET)
+
+/* The job was killed and a core file produced */
+#define JOB_COREDUMPED	(3 + EXIT_CODE_OFFSET)
+
+/* The job exited with an exception */
+#define JOB_EXCEPTION	4
+
+/* Not enough memory to start the shadow */
+#define JOB_NO_MEM		(5 + EXIT_CODE_OFFSET)
+
+/* incorrect arguments to condor_shadow */
+#define JOB_SHADOW_USAGE (6 + EXIT_CODE_OFFSET)
+
+/* The job was kicked off without a checkpoint */
+#define JOB_NOT_CKPTED	(7 + EXIT_CODE_OFFSET)
+
+/* Can't connect to startd or request refused */
+#define JOB_NOT_STARTED	(8 + EXIT_CODE_OFFSET)
+
+/* Job status != RUNNING on startup */
+#define JOB_BAD_STATUS	(9 + EXIT_CODE_OFFSET)
+
+/* Exec failed for some reason other than ENOMEM */
+#define JOB_EXEC_FAILED (10 + EXIT_CODE_OFFSET)
+
+/* There is no checkpoint file (lost) */
+#define JOB_NO_CKPT_FILE (11 + EXIT_CODE_OFFSET)
+
+/* The job should be put on hold */
+#define JOB_SHOULD_HOLD (12 + EXIT_CODE_OFFSET)
+
+/* There is a fatal error with dprintf() */
+#define DPRINTF_ERROR 44
+
+

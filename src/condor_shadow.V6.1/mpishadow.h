@@ -88,13 +88,24 @@ class MPIShadow : public BaseShadow
 		/** Handle job removal. */
 	int handleJobRemoval( int sig );
 
+	int updateFromStarter(int command, Stream *s);
+
+	struct rusage getRUsage( void );
+
+	int getImageSize( void );
+
+	int getDiskUsage( void );
+
+	float bytesSent( void );
+	float bytesReceived( void );
+
  private:
 
         /** After the schedd claims a resource, it puts it in a queue
             and then sends us a RESOURCE_AVAILABLE signal.  Upon
             receipt of that signal (it's registered in init()), we
             enter this function */
-    int getResources( int cmd, Stream *s );
+    int getResources( void );
 
         /** When we've got all the resources we need, we enter this
             function, which starts the mpi job */
@@ -106,11 +117,11 @@ class MPIShadow : public BaseShadow
 
         /** Does necessary things to the args obtained from the 
             sneaky rsh. */
-    void hackComradeArgs( char *comradeArgs, ClassAd *ad );
+    void hackComradeAd( char *comradeArgs, ClassAd *ad );
 
         /** Pretty simple: takes the args, adds a -p4gp ..., puts
             the args back in. */
-    void hackMasterArgs( ClassAd *ad );
+    void hackMasterAd( ClassAd *ad );
     
 		/** A complex function that deals with the end of an MPI
 			job.  It has two functions: 1) figure out if all the 
@@ -135,6 +146,13 @@ class MPIShadow : public BaseShadow
 		/** Used to determine actual exit conditions...*/
 	int actualExitStatus;
 
+		/** Find the MpiResource corresponding to the given node
+			number.
+			@param node Which node you're looking for.
+			@return The MpiResource object, or NULL if not found. 
+		*/
+	MpiResource* findResource( int node );
+
 		// the list of remote (mpi) resources
 		// Perhaps use STL soon.
 	ExtArray<MpiResource *> ResourceList;
@@ -143,6 +161,8 @@ class MPIShadow : public BaseShadow
 	void replaceNode ( ClassAd *ad, int nodenum );
 	
     int printAdToFile(ClassAd *ad, char *JobHistoryFileName);
+
+	int info_tid;	// DC id for our timer to get resource info 
 
 };
 

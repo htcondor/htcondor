@@ -57,43 +57,33 @@ X11_INCLUDE =           /usr/X11R6/include
 #define Strip strip
 #endif
 
+/*
+   These next few lines are not supposed to be pre-processor
+   directives, but GNU-make understood directives.  They don't want a
+   # in front of them.  If you're having problems at these lines,
+   you're probably not using gmake.  -peter keller 9/8/2000
+*/
+ifdef DEBUG_BUILD
+CC =  $(DEBUG_BUILD) CCompiler
+CPlusPlus = $(DEBUG_BUILD) CPlusCompiler
+C_LINK = $(DEBUG_BUILD) CLinker
+CC_LINK = $(DEBUG_BUILD) CPlusLinker
+else
+CC = CCompiler
+CPlusPlus = CPlusCompiler
+C_LINK = CLinker
+CC_LINK = CPlusLinker
+endif
+
 LIBX = XLibPath
 LIBXEXT = XExtLibPath
-CC = CCompiler
-C_LINK = CLinker
-CPlusPlus = CPlusCompiler
 STRIP = Strip
-CC_LINK = CPlusLinker
 STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags
 TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
-
-##########
-# Orbacus settings
-##########
-#if !defined( PlatformOBLibs )
-#define PlatformOBLibs
-#endif
-
-# Libraries needed to link with OB
-OB_LIBS = -lOB -lJTC -lpthread PlatformOBLibs
-
-# Where are all the OB files kept
-OB_ROOT = /unsup/OB
-
-# IDL is an Orbacus tool for creating source files from .idl files
-IDL = $(OB_ROOT)/bin/idl --c-suffix .C -I$(OB_ROOT)/include 
-
-# In general, we need to use a different version of g++ to build the
-# idl-generated source files (gcc 2.95) than we use to build the rest
-# of Condor (egcs 1.1.2)
-IDL_CC = /s/gcc-2.95.2/bin/g++
-
-# Particle Physics Data Grid CORBA IDL dir
-PPDG_IDL_DIR = /p/condor/workspaces/ppdg/ppdg_idl/idl
 
 /*
    These next few lines are not supposed to be pre-processor
@@ -158,7 +148,7 @@ endif
 #endif
 
 #ifndef FORTRAN_HAS_RECURSION
-#define FORTRAN_HAS_RECURSION YES
+#define FORTRAN_HAS_RECURSION NO
 #endif
 
 #ifndef HAS_INET_NTOA
@@ -214,27 +204,63 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
-#if !defined( GSS_AUTHENTICATION )
+#if WANT_GLOBUS && HAS_GLOBUS
 
-#  define GssAuthentication
-#  define ImakeGssFlag
+# define GLOBUS_SUPPORT 1
 
+  /* GLOBUS_SUPPORT includes GSS_AUTHENTICATION as well */
+# undef GSS_AUTHENTICATION
+# define GSS_AUTHENTICATION 1
+
+  GLOBUS_DIR = /unsup/globus-1.1.3
+  LDAP_DIR = /unsup/OpenLDAP-1.2.7-G
+
+  GLOBUS_FLAGS = -DGLOBUS_SUPPORT -DLDAP_DEBUG -DLDAP_REFERRALS \
+    -I$(GLOBUS_DIR)/include -I$(LDAP_DIR)/include
+
+  GLOBUS_LIB = $(GLOBUS_DIR)/lib/libglobus_rsl_assist.a \
+    $(GLOBUS_DIR)/lib/libglobus_rsl.a \
+    $(GLOBUS_DIR)/lib/libglobus_gram_client.a \
+    $(GLOBUS_DIR)/lib/libglobus_gass_server_ez.a \
+    $(GLOBUS_DIR)/lib/libglobus_gass_transfer.a \
+    $(GLOBUS_DIR)/lib/libglobus_io.a \
+    $(GLOBUS_DIR)/lib/libglobus_common.a \
+    $(LDAP_DIR)/lib/libldap.a \
+    $(LDAP_DIR)/lib/liblber.a
+
+# define IsCondorG -DCONDOR_G
 #else
+# define IsCondorG 
+#endif /*HasGlobus && WantsGlobus */
 
-#  define GssAuthentication -DGSS_AUTHENTICATION \
-          -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include 
+#if defined( GSS_AUTHENTICATION )
+
+#  define GssAuthFlags -DGSS_AUTHENTICATION -DNO_GSSAPI_CONFIG_H \
+          -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include
 #  define ImakeGssFlag -DGSS_AUTHENTICATION
 
-  SSL_DIR = /p/condor/workspaces/ssl
-  GLOBUS_DIR = /p/condor/workspaces/globus
+  SSL_DIR = /unsup/SSLeay-0.9.0b
   AUTH2_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
     $(GLOBUS_DIR)/lib/libglobus_gss.a \
     $(GLOBUS_DIR)/lib/libglobus_gaa.a \
-    $(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a 
+    $(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a
+
+#else
+
+#  define GssAuthFlags
+#  define ImakeGssFlag
 
 #endif /* !defined( GSS_AUTHENTICATION ) */
 
-AUTH_FLAGS = GssAuthentication
+AUTH_FLAGS = GssAuthFlags
+
+#if WANT_NETMAN
+NETMAN_LIB = ../condor_netman/libnetman.a
+NETMAN_FLAGS = -DWANT_NETMAN
+#else
+NETMAN_LIB =
+NETMAN_FLAGS =
+#endif
 
 #define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag
 #define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
@@ -242,12 +268,23 @@ AUTH_FLAGS = GssAuthentication
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) \
-		 $(SITE_C_FLAGS) $(AUTH_FLAGS)
+		 $(SITE_C_FLAGS) $(AUTH_FLAGS) $(GLOBUS_FLAGS) $(NETMAN_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) PlatformFlags PlatformGccFlags
-STD_C_PLUS_FLAGS  = $(STD_C_FLAGS)
-INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -w
-NON_INST_C_PLUS_FLAGS = -fno-implicit-templates $(C_PLUS_FLAGS)
+/*
+Generally, compile with -fPIC for position-independent code.
+However, leave it as a separate Make variable so that particular
+modules that cannot use it (i.e. checkpointing) can turn it off.
+
+This is commented out by default.
+This will only be activated for special builds done by hand to
+make the SDK.
+*/
+
+/* CC_PIC_FLAG = -fPIC */
+
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags
+STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates
+INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
@@ -259,7 +296,7 @@ TESTSUITE_FLAGS_F77 = -g $(VENDOR_C_FLAGS) VendorFTestFlags PlatformFlags
 
 CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
 QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
-CLASSAD_LIB = ../condor_classad.V6/libclassad.a
+CLASSAD_LIB = ../condor_classad/libclassad.a
 IO_LIB = ../condor_io/libcedar.a
 CUTIL_LIB = ../condor_util_lib/util_lib.a
 CPLUS_LIB = ../condor_c++_util/cplus_lib.a
@@ -275,6 +312,8 @@ STD_LIBS = \
   $(CUTIL_LIB) \
   $(CPLUS_LIB) \
   $(CKPT_SERV_LIB) \
+  $(QMGMT_LIB) \
+  $(ACCT_LIB) \
   $(PROCAPI_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \
@@ -282,6 +321,7 @@ STD_LIBS = \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
+  $(GLOBUS_LIB) \
   $(AUTH2_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \

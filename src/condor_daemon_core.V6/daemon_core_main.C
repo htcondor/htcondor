@@ -28,6 +28,7 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "limit.h"
+#include "condor_email.h"
 #include "sig_install.h"
 
 #include "condor_debug.h"
@@ -60,6 +61,20 @@ char*	addrFile = NULL;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+
+
+#define CONFIG_ATTRIBUTE_SECURITY 0
+/* 
+   We need to figure out how we really want to handle this.  As it
+   stands now, it's a little clumsy, not fully thought out, and unset
+   was broken.  For now, we'll just rely on HOSTALLOW_CONFIG and root
+   config files.  We should have a more complete solution at some
+   point, just not before 6.2.0.  Derek Wright 9/7/00
+*/
+#if CONFIG_ATTRIBUTE_SECURITY
+static StringList* SecureAttrList = NULL;
+static void init_secure_attr_list( void );
+#endif
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -127,9 +142,13 @@ DC_Exit( int status )
 	delete daemonCore;
 	daemonCore = NULL;
 
+		// Free up the memory from the config hash table, too.
+	clear_config();
+	
 		// Finally, exit with the status we were given.
 	exit( status );
 }
+
 
 void
 drop_addr_file()
@@ -405,9 +424,6 @@ drop_core_in_log( void )
 }
 
 
-
-
-
 // See if we should set the limits on core files.  If the parameter is
 // defined, do what it says.  Otherwise, do nothing.
 // On NT, if CREATE_CORE_FILES is False, then we will use the
@@ -449,12 +465,14 @@ check_core_files()
 
 }
 
+
 int
 handle_off_fast( Service*, int, Stream* )
 {
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
 	return TRUE;
 }
+
 	
 int
 handle_off_graceful( Service*, int, Stream* )
@@ -462,6 +480,7 @@ handle_off_graceful( Service*, int, Stream* )
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
 	return TRUE;
 }
+
 	
 int
 handle_reconfig( Service*, int, Stream* )
@@ -523,11 +542,163 @@ handle_config_val( Service*, int, Stream* stream )
 	return TRUE;
 }
 
+
+
+#if CONFIG_ATTRIBUTE_SECURITY
+bool
+check_config_security( const char* config, Sock* sock )
+{
+	char *name, *tmp;
+	char buf[128];
+	char* ip_str;
+
+	if( ! (name = strdup(config)) ) {
+		EXCEPT( "Out of memory!" );
+	}
+	tmp = strchr( name, '=' );
+	if( ! tmp ) {
+		tmp = strchr( name, ':' );
+	}
+	if( ! tmp ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR in handle_config(): can't parse config string \"%s\"\n", 
+				 config );
+		free( name );
+		return false;
+	}
+
+		// Trim off white space
+	*tmp = ' ';
+	while( isspace(*tmp) ) {
+		*tmp = '\0';
+		tmp--;
+	}
+
+		// Now, name should point to a NULL-terminated version of the
+		// attribute name we're trying to set.  This is what we must
+		// compare against the NETWORK_SECURE_ATTRIBUTES list.
+	if( ! SecureAttrList->contains_anycase(name) ) {
+			// Everything's cool.  Continue on.
+		free( name );
+		return true;
+	}
+
+		// If we're still here, someone is trying to set one of the
+		// special settings they shouldn't be.  Try to let as many
+		// people know as possible.  
+
+		// Grab a pointer to this string, since it's a little bit
+		// expensive to re-compute.
+	ip_str = sock->endpoint_ip_str();
+		// Upper-case-ify the string for everything we print out.
+	strupr(name);
+
+		// First, log it.
+	dprintf( D_ALWAYS,
+			 "WARNING: Someone at %s is trying to set \"%s\"\n",
+			 ip_str, name );
+	dprintf( D_ALWAYS, 
+			 "WARNING: Potential security problem, request refused\n" );
+	dprintf( D_ALWAYS, 
+			 "WARNING: Emailing the Condor Administrator\n" );
+
+		// Now, try to email the Condor Admins
+	sprintf( buf, "Potential security attack from %s", ip_str );
+	FILE* email = email_admin_open( buf );
+	if( ! email ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR: Can't send email to the Condor Administrator\n" );
+		free( name );
+		return false;
+	}
+	fprintf( email, 
+			 "Someone at %s is attempting to modify the value of:\n", ip_str );
+	fprintf( email, "\"%s\" on %s (%s)\n\n", name, my_full_hostname(),
+			 inet_ntoa(*(my_sin_addr())) );
+	fprintf( email, 
+			 "This is a potential security attack.  You should probably add\n" );
+	fprintf( email, 
+			 "\"%s\" to your HOSTDENY_READ, HOSTDENY_WRITE, and\n",
+			 ip_str );
+	fprintf( email, "HOSTDENY_ADMINSITRATOR settings.  "
+			 "See the Condor Manual for\n" );
+	fprintf( email, "details on these config file entries.\n\n" );
+	fprintf( email, "If possible, try to further investigate this potential "
+			 "attack.\n" );
+	email_close( email );
+
+	free( name );
+	return false;
+}
+
+
+void
+init_secure_attr_list( void )
+{
+	char buf[64];
+	int i;
+	char* tmp;
+
+	if( SecureAttrList ) {
+		delete( SecureAttrList );
+	}
+	SecureAttrList = new StringList();
+
+	if( (tmp = param("NETWORK_SECURE_ATTRIBUTES")) ) {
+		SecureAttrList->initializeFromString( tmp );
+	} else {
+			// The defaults
+
+			// Paths
+		SecureAttrList->append( "RELEASE_DIR" );
+		SecureAttrList->append( "BIN" );
+		SecureAttrList->append( "SBIN" );
+		
+			// Daemons and programs spawned by Condor
+		SecureAttrList->append( "MASTER" );
+		SecureAttrList->append( "STARTD" );
+		SecureAttrList->append( "SCHEDD" );
+		SecureAttrList->append( "COLLECTOR" );
+		SecureAttrList->append( "NEGOTIATOR" );
+		SecureAttrList->append( "KBDD" );
+		SecureAttrList->append( "EVENTD" );
+		SecureAttrList->append( "CKPT_SERVER" );
+		SecureAttrList->append( "PREEN" );
+		SecureAttrList->append( "MAIL" );
+		SecureAttrList->append( "PVMD" );
+		SecureAttrList->append( "PVMGS" );
+		SecureAttrList->append( "SHADOW" );
+		SecureAttrList->append( "SHADOW_CARMI" );
+		SecureAttrList->append( "SHADOW_GLOBUS" );
+		SecureAttrList->append( "SHADOW_MPI" );
+		SecureAttrList->append( "SHADOW_NT" );
+		SecureAttrList->append( "SHADOWNT" );
+		SecureAttrList->append( "SHADOW_PVM" );
+		SecureAttrList->append( "STARTER" );
+		for( i=0; i<10; i++ ) {
+			sprintf( buf, "STARTER_%d", i );
+			SecureAttrList->append( buf );
+			sprintf( buf, "ALTERNATE_STARTER_%d", i );
+			SecureAttrList->append( buf );
+		}
+
+			// Other settings
+		SecureAttrList->append( "DAEMON_LIST" );
+		SecureAttrList->append( "LOCAL_ROOT_CONFIG_FILE" );
+		SecureAttrList->append( "PREEN_ARGS" );
+	}
+		// In either event, we don't want to let condor_config_val
+		// -set change NETWORK_SECURE_ATTRIBUTES itself!
+	SecureAttrList->append( "NETWORK_SECURE_ATTRIBUTES" );
+}
+#endif /* CONFIG_ATTRIBUTE_SECURITY */
+
 int
 handle_config( Service *, int cmd, Stream *stream )
 {
 	char *admin = NULL, *config = NULL;
 	int rval = 0;
+	bool failed = false;
 
 	stream->decode();
 
@@ -544,20 +715,41 @@ handle_config( Service *, int cmd, Stream *stream )
 		return FALSE;
 	}
 
-	switch(cmd) {
-	case DC_CONFIG_PERSIST:
-		rval = set_persistent_config(admin, config);
-		// set_persistent_config will free admin and config when appropriate
-		break;
-	case DC_CONFIG_RUNTIME:
-		rval = set_runtime_config(admin, config);
-		// set_runtime_config will free admin and config when appropriate
-		break;
-	default:
-		dprintf( D_ALWAYS, "unknown DC_CONFIG command!\n" );
-		free( admin );
-		free( config );
-		return FALSE;
+#if CONFIG_ATTRIBUTE_SECURITY 
+	if( config && config[0] ) {
+			// They're trying to set something, so check to make sure
+			// we want to allow that
+		if( ! check_config_security(config, (Sock*)stream) ) {
+				// This config string is insecure, so don't try to do 
+				// anything with it.  We can't return yet, since we
+				// want to send back an rval indicating the error. 
+			free( admin );
+			free( config );
+			rval = -1;
+			failed = true;
+		}
+	} 
+#endif /* CONFIG_ATTRIBUTE_SECURITY */
+
+		// If we haven't hit an error yet, try to process the command  
+	if( ! failed ) {
+		switch(cmd) {
+		case DC_CONFIG_PERSIST:
+			rval = set_persistent_config(admin, config);
+				// set_persistent_config will free admin and config
+				// when appropriate  
+			break;
+		case DC_CONFIG_RUNTIME:
+			rval = set_runtime_config(admin, config);
+				// set_runtime_config will free admin and config when
+				// appropriate 
+			break;
+		default:
+			dprintf( D_ALWAYS, "unknown DC_CONFIG command!\n" );
+			free( admin );
+			free( config );
+			return FALSE;
+		}
 	}
 
 	stream->encode();
@@ -570,8 +762,9 @@ handle_config( Service *, int cmd, Stream *stream )
 		return FALSE;
 	}
 
-	return TRUE;
+	return (failed ? FALSE : TRUE);
 }
+
 
 #ifndef WIN32
 void
@@ -580,11 +773,13 @@ unix_sighup(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
 }
 
+
 void
 unix_sigterm(int)
 {
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
 }
+
 
 void
 unix_sigquit(int)
@@ -592,11 +787,13 @@ unix_sigquit(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
 }
 
+
 void
 unix_sigchld(int)
 {
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGCHLD );
 }
+
 
 void
 unix_sigusr1(int)
@@ -604,7 +801,8 @@ unix_sigusr1(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGUSR1 );
 }
 
-#endif WIN32
+#endif /* ! WIN32 */
+
 
 int
 handle_dc_sighup( Service*, int )
@@ -646,6 +844,10 @@ handle_dc_sighup( Service*, int )
 		drop_pid_file();
 	}
 
+#if CONFIG_ATTRIBUTE_SECURITY
+	init_secure_attr_list();
+#endif
+
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
 	char* ptmp;
@@ -658,7 +860,7 @@ handle_dc_sighup( Service*, int )
 			// should never make it to here!
 			EXCEPT("FAILED TO DROP CORE");	
 	}
-		
+
 	// call this daemon's specific main_config()
 	main_config();
 
@@ -734,8 +936,6 @@ int main( int argc, char** argv )
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
-	ReliSock* rsock = NULL;	// tcp command socket
-	SafeSock* ssock = NULL;	// udp command socket
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	char	*logAppend = NULL;
 	int runfor = 0; //allow cmd line option to exit after *runfor* minutes
@@ -1097,115 +1297,8 @@ int main( int argc, char** argv )
 	}
 #endif
 
-		// Now take care of inheriting resources from our parent
-	daemonCore->Inherit(rsock,ssock);
-
-	// SETUP COMMAND SOCKET
-
-	if ( command_port != 0 ) {
-		dprintf(D_DAEMONCORE,"Setting up command socket\n");
-		
-		// we want a command port for this process, so create
-		// a tcp and a udp socket to listen on if we did not
-		// already inherit them above.
-		// If rsock/ssock are not NULL, it means we inherited them from our parent
-		if ( rsock == NULL && ssock == NULL ) {
-			rsock = new ReliSock;
-			ssock = new SafeSock;
-			if ( !rsock ) {
-				EXCEPT("Unable to create command Relisock");
-			}
-			if ( !ssock ) {
-				EXCEPT("Unable to create command SafeSock");
-			}
-			if ( command_port == -1 ) {
-				// choose any old port (dynamic port)
-				if (!BindAnyCommandPort(rsock, ssock)) {
-					EXCEPT("BindAnyCommandPort failed");
-				}
-				if ( !rsock->listen() ) {
-					EXCEPT("Failed to post listen on command ReliSock");
-				}
-			} else {
-				// use well-known port specified by command_port
-				int on = 1;
-	
-				// Set options on this socket, SO_REUSEADDR, so that
-				// if we are binding to a well known port, and we crash, we can be
-				// restarted and still bind ok back to this same port. -Todd T, 11/97
-				if( (!rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ||
-					(!ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ) {
-					EXCEPT("setsockopt() SO_REUSEADDR failed\n");
-				}
-				
-				if ( (!rsock->listen(command_port)) ||
-					 (!ssock->bind(command_port)) ) {
-					EXCEPT("Failed to bind to or post listen on command socket(s)");
-				}
-				
-			}
-		}
-
-		// If we are the collector, increase the socket buffer size.  This
-		// helps minimize the number of updates (UDP packets) the collector
-		// drops on the floor.
-		if ( strcmp(mySubSystem,"COLLECTOR") == 0 ) {
-			int desired_size;
-			char *tmp;
-
-			if ( (tmp=param("COLLECTOR_SOCKET_BUFSIZE")) ) {
-				desired_size = atoi(tmp);
-				free(tmp);
-			} else {
-				// default to 1 meg of buffers.  Gulp!  
-				desired_size = 1024000;
-			}		
-			
-			// set the UDP (ssock) read size to be large, so we do not
-			// drop incoming updates.
-			int final_size = ssock->set_os_buffers(desired_size);
-
-			// and also set the outgoing TCP write size to be large so the
-			// collector is not blocked on the network when answering queries
-			rsock->set_os_buffers(desired_size, true);				
-
-			dprintf(D_FULLDEBUG,"Reset OS socket buffer size to %dk\n", 
-				final_size / 1024 );
-		}
-
-		// now register these new command sockets.
-		// Note: In other parts of the code, we assume that the
-		// first command socket registered is TCP, so we must
-		// register the rsock socket first.
-		daemonCore->Register_Command_Socket( (Stream*)rsock );
-		daemonCore->Register_Command_Socket( (Stream*)ssock );
-
-		dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
-				 daemonCore->InfoCommandSinfulString());
-
-			// Now, drop this sinful string into a file, if
-			// mySubSystem_ADDRESS_FILE is defined.
-		drop_addr_file();
-
-		// now register any DaemonCore "default" handlers
-
-		// register the command handler to take care of signals
-		daemonCore->Register_Command(DC_RAISESIGNAL,"DC_RAISESIGNAL",
-			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
-				"HandleSigCommand()",daemonCore,IMMEDIATE_FAMILY);
-
-		// this handler receives process exit info
-		daemonCore->Register_Command(DC_PROCESSEXIT,"DC_PROCESSEXIT",
-			(CommandHandlercpp)&DaemonCore::HandleProcessExitCommand,
-				"HandleProcessExitCommand()",daemonCore,IMMEDIATE_FAMILY);
-
-		// this handler receives keepalive pings from our children, so
-		// we can detect if any of our kids are hung.
-		daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
-			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
-			"HandleChildAliveCommand",daemonCore,IMMEDIATE_FAMILY, 
-			D_FULLDEBUG );
-	}
+		// SETUP COMMAND SOCKET
+	daemonCore->InitCommandSocket( command_port );
 	
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( DC_SIGHUP, "DC_SIGHUP", 
@@ -1218,6 +1311,9 @@ int main( int argc, char** argv )
 								 (SignalHandler)handle_dc_sigterm,
 								 "handle_dc_sigterm()" );
 #ifndef WIN32
+	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
+								(SignalHandlercpp)&DaemonCore::HandleDC_SERVICEWAITPIDS,
+								"HandleDC_SERVICEWAITPIDS()",daemonCore,IMMEDIATE_FAMILY);
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
 								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
 								 "HandleDC_SIGCHLD()",daemonCore,IMMEDIATE_FAMILY);
@@ -1279,6 +1375,13 @@ int main( int argc, char** argv )
 	// reconfig, we still wait 8 hours instead of just using a
 	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
 	daemonCore->ReInit();
+
+
+#if CONFIG_ATTRIBUTE_SECURITY
+		// Initialize the StringList that contains the attributes we
+		// don't want to allow anyone to set with condor_config_val. 
+	init_secure_attr_list();
+#endif
 
 	// call the daemon's main_init()
 	main_init( argc, argv );

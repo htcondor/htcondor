@@ -167,3 +167,21 @@ main_shutdown_graceful()
 }
 
 
+void
+dumpClassad( const char* header, ClassAd* ad, int debug_flag )
+{
+	if( ! header  ) {
+		dprintf( D_ALWAYS, "ERROR: called dumpClassad() w/ NULL header\n" ); 
+		return;
+	}
+	if( ! ad  ) {
+		dprintf( D_ALWAYS, "ERROR: called dumpClassad(\"%s\") w/ NULL ad\n", 
+				 header );   
+		return;
+	}
+	if( DebugFlags & debug_flag ) {
+		dprintf( debug_flag, "*** ClassAd Dump: %s ***\n", header );  
+		ad->dPrint( debug_flag );
+		dprintf( debug_flag, "--- End of ClassAd ---\n" );
+	}
+}

@@ -244,9 +244,10 @@ Directory::Directory( const char *name, priv_state priv )
 
 #ifndef WIN32
 	// Unix
+	errno = 0;
 	dirp = opendir( name );
 	if( dirp == NULL ) {
-		EXCEPT( "Can't open directory \"%s\"", name );
+		EXCEPT( "Can't open directory \"%s\", errno: %d", name, errno );
 	}
 	rewinddir( dirp );
 #else

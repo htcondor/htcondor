@@ -14,6 +14,10 @@ CondorFileRemote::CondorFileRemote()
 {
 }
 
+CondorFileRemote::~CondorFileRemote()
+{
+}
+
 /* A read results in a CONDOR_lseekread */
 
 int CondorFileRemote::read(int pos, char *data, int length) 
@@ -30,7 +34,7 @@ int CondorFileRemote::write(int pos, char *data, int length)
 
 	if(result>0) {
 		if((pos+result)>get_size()) {
-			set_size(pos+result);
+			size = pos+result;
 		}
 	}
 
@@ -91,7 +95,7 @@ in an infinite loop.
 
 int CondorFileRemote::ftruncate( size_t s )
 {
-	set_size(s);
+	size = s;
 	return REMOTE_syscall( CONDOR_ftruncate, fd, s );
 }
 

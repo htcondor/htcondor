@@ -149,6 +149,7 @@ REMOTE_syscall( int syscall_num, ... )
 	{
 		int status;
 		int reason;
+		ClassAd* ad;
 
         dprintf ( D_SYSCALLS, "Doing CONDOR_job_exit\n" );
 
@@ -156,11 +157,13 @@ REMOTE_syscall( int syscall_num, ... )
 
 		status = va_arg( ap, int );
 		reason = va_arg( ap, int );
+		ad = va_arg( ap, ClassAd * );
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(CurrentSysCall) );
 		assert( syscall_sock->code(status) );
 		assert( syscall_sock->code(reason) );
+		assert( ad->put(*syscall_sock) );
 		assert( syscall_sock->end_of_message() );
 
 		syscall_sock->decode();

@@ -43,22 +43,28 @@
 #include "util_lib_proto.h"
 #include "condor_version.h"
 #include "condor_ver_info.h"
+#include "string_list.h"
+#include "condor_socket_types.h"
 
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
 	void log_image_size (int);
+	void log_execute (char *);
 	int access_via_afs (const char *);
 	int access_via_nfs (const char *);
 	int use_local_access (const char *);
 	int use_special_access (const char *);
+	int use_buffer( char *method, char *path );
+	int use_compress( char *method, char *path );
+	int use_fetch( char *method, char *path );
+	int use_append( char *method, char *path );
 	void HoldJob( const char* buf );
-	void log_execute(char *);
+	void reaper();
 }
 
 extern int JobStatus;
 extern int ImageSize;
 extern struct rusage JobRusage;
-extern struct rusage AccumRusage;
 extern ReliSock *syscall_sock;
 extern PROC *Proc;
 extern char CkptName[];
@@ -70,12 +76,13 @@ extern int  LastCkptTime;
 extern int  NumCkpts;
 extern int  NumRestarts;
 extern int MaxDiscardedRunTime;
-extern bool ManageBandwidth;
 extern char *ExecutingHost;
+extern char *scheddName;
 
 int		LastCkptSig = 0;
 
-char	CurrentWorkingDir[ _POSIX_PATH_MAX ];
+/* Until the cwd is actually set, use "dot" */
+char CurrentWorkingDir[ _POSIX_PATH_MAX ]=".";
 
 extern "C" {
 
@@ -88,7 +95,7 @@ void display_ip_addr( unsigned int addr );
 int has_ckpt_file();
 void update_job_status( struct rusage *localp, struct rusage *remotep );
 void update_job_rusage( struct rusage *localp, struct rusage *remotep );
-void RequestCkptBandwidth(unsigned int ip_addr);
+bool JobPreCkptServerScheddNameChange();
 
 static char Executing_Filesystem_Domain[ MAX_STRING ];
 static char Executing_UID_Domain[ MAX_STRING ];
@@ -112,6 +119,14 @@ extern float BytesSent, BytesRecvd;
 
 const int MaxRetryWait = 3600;
 static bool CkptWanted = true;	// WantCheckpoint from Job ClassAd
+static bool RestoreCkptWithNoScheddName = false; // compat with old naming
+
+#ifdef WANT_NETMAN
+bool ManageBandwidth = false;   // notify negotiator about network usage?
+int	 NetworkHorizon = 0;		// how often do we request network bandwidth?
+static Daemon Negotiator(DT_NEGOTIATOR);
+void RequestCkptBandwidth();
+#endif
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -142,7 +157,6 @@ pseudo_getpid()
 int
 pseudo_getlogin(char *loginbuf)
 {
-	int		rval;
 	char *temp;
 
 	temp = ((PROC *)Proc)->owner; 
@@ -249,15 +263,13 @@ int
 pseudo_send_rusage( struct rusage *use_p )
 {
 	/* A periodic checkpoint (checkpoint and keep running) now results in the 
-	 * condor_syscall_lib calling send_rusage.  So, we do what we did before
-	 * (which is add to AccumRusage, used by the PVM code??), _AND_ now we
-	 * also update the CPU usages in the job queue. -Todd Tannenbaum 10/95. */
+	 * condor_syscall_lib calling send_rusage.  So, we now
+	 * update the CPU usages in the job queue. -Todd Tannenbaum 10/95. */
 
 	/* Change (11/30/98): we now receive the rusage before the job has
 	 * committed the checkpoint, so we store it in uncommitted_rusage
 	 * until the checkpoint is committed or until the job exits.  -Jim B */
 	
-	memcpy( &AccumRusage, use_p, sizeof(struct rusage) );
 	memcpy( &uncommitted_rusage, use_p, sizeof(struct rusage) );
 
 	return 0;
@@ -494,6 +506,25 @@ is_ickpt_file(const char path[])
 }
 
 
+#if WANT_NETMAN
+enum file_stream_transfer_type {
+	INITIAL_CHECKPOINT, CHECKPOINT_RESTART,
+	PERIODIC_CHECKPOINT, VACATE_CHECKPOINT, COREFILE_TRANSFER
+};
+static 
+struct _file_stream_info {
+	_file_stream_info() : active(false) {}
+	bool active;
+	bool remote;
+	pid_t pid;
+	file_stream_transfer_type type;
+	char src[16], dst[16];
+	int bytes_so_far;
+	int total_bytes;
+	time_t last_update;
+} file_stream_info;
+#endif
+
 /*
    rename() becomes a psuedo system call because the file may be a checkpoint
    stored on the checkpoint server.  If it is a checkpoint file and we're
@@ -528,17 +559,28 @@ pseudo_rename(char *from, char *to)
 			(void)umask( omask );
 			set_priv(priv);
 			if (rval == 0) {	// if the rename was successful
+					// Commit our usage and ckpt location before removing
+					// the checkpoint left on a checkpoint server.
+				char *PrevCkptServer = LastCkptServer;
+				LastCkptServer = NULL; // stored ckpt file on local disk
 				LastCkptTime = time(0);
 				NumCkpts++;
+#if WANT_NETMAN
+				file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+				RequestCkptBandwidth();
+				file_stream_info.active = false;
+#endif
 				commit_rusage();
 					// We just successfully wrote a local checkpoint,
 					// so we should remove the checkpoint we left on
 					// a checkpoint server, if any.
-				if (LastCkptServer) {
-					SetCkptServerHost(LastCkptServer);
-					RemoveRemoteFile(p->owner, to);
-					free(LastCkptServer);
-					LastCkptServer = NULL; // stored ckpt file on local disk
+				if (PrevCkptServer) {
+					SetCkptServerHost(PrevCkptServer);
+					RemoveRemoteFile(p->owner, scheddName, to);
+					if (JobPreCkptServerScheddNameChange()) {
+						RemoveRemoteFile(p->owner, NULL, to);
+					}
+					free(PrevCkptServer);
 				}
 			}
 		}
@@ -547,11 +589,18 @@ pseudo_rename(char *from, char *to)
 
 	} else {
 
-		if (RenameRemoteFile(p->owner, from, to) < 0)
+		if (RenameRemoteFile(p->owner, scheddName, from, to) < 0)
 			return -1;
+			// Commit our usage and ckpt location before removing
+			// our previous checkpoint.
+		char *PrevCkptServer = LastCkptServer;
+		LastCkptServer = strdup(CkptServerHost);
+		LastCkptTime = time(0);
+		NumCkpts++;
+		commit_rusage();
 			// if we just wrote a checkpoint to a new checkpoint server,
 			// we should remove any previous checkpoints we left around.
-		if (!LastCkptServer) {
+		if (!PrevCkptServer) {
 				// previous checkpoint is on the local disk
 			priv = set_condor_priv();
 			omask = umask( 022 );
@@ -559,17 +608,27 @@ pseudo_rename(char *from, char *to)
 			unlink(to);
 			(void)umask( omask );
 			set_priv(priv);
-		} else if (LastCkptServer &&
-				   same_host(LastCkptServer, CkptServerHost) == FALSE) {
-				// previous checkpoint is on a different ckpt server
-			SetCkptServerHost(LastCkptServer);
-			RemoveRemoteFile(p->owner, to);
-			SetCkptServerHost(CkptServerHost);
+		} else {
+			if (same_host(PrevCkptServer, CkptServerHost) == FALSE) {
+					// previous checkpoint is on a different ckpt server
+				SetCkptServerHost(PrevCkptServer);
+				RemoveRemoteFile(p->owner, scheddName, to);
+				if (JobPreCkptServerScheddNameChange()) {
+					RemoveRemoteFile(p->owner, NULL, to);
+				}
+				SetCkptServerHost(CkptServerHost);
+			}
+			free(PrevCkptServer);
 		}
 		if (LastCkptServer) free(LastCkptServer);
 		if (CkptServerHost) LastCkptServer = strdup(CkptServerHost);
 		LastCkptTime = time(0);
 		NumCkpts++;
+#if WANT_NETMAN
+		file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+		RequestCkptBandwidth();
+		file_stream_info.active = false;
+#endif
 		commit_rusage();
 		return 0;
 
@@ -591,13 +650,7 @@ pseudo_get_file_stream(
 	int		data_sock;
 	int		file_fd;
 	int		bytes_sent;
-	int		bytes_read;
 	pid_t	child_pid;
-#if defined(ALPHA)
-	unsigned int	status;		/* 32 bit unsigned */
-#else
-	unsigned long	status;		/* 32 bit unsigned */
-#endif
 	int		rval;
 	PROC *p = (PROC *)Proc;
 	int		retry_wait;
@@ -605,11 +658,24 @@ pseudo_get_file_stream(
 	bool	ICkptFile = is_ickpt_file(file);
 	priv_state	priv;
 
-		// Should we log an execute event to the user log?  
-	static int NeedsExecuteLog = 1;	
-
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
+#if WANT_NETMAN
+	if (file_stream_info.active) {
+#if !defined(PVM_RECEIVE)
+		if (!file_stream_info.remote) {
+			reaper();
+		}
+#endif
+		if (file_stream_info.active) {
+			dprintf(D_ALWAYS, "\tWarning: previous file_stream transfer "
+					"still active!  Cleaning up...\n");
+			file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+			RequestCkptBandwidth();
+			file_stream_info.active = false;
+		}
+	}
+#endif
 
 	*len = 0;
 
@@ -619,7 +685,10 @@ pseudo_get_file_stream(
 		SetCkptServerHost(LastCkptServer);
 		retry_wait = 5;
 		do {
-			rval = RequestRestore(p->owner,file,len,
+			rval = RequestRestore(p->owner,
+								  (RestoreCkptWithNoScheddName) ? NULL :
+								  								  scheddName,
+								  file,len,
 								  (struct in_addr*)ip_addr,port);
 			if (rval) { // network error, try again
 				dprintf(D_ALWAYS, "ckpt server restore failed, trying again"
@@ -631,6 +700,22 @@ pseudo_get_file_stream(
 				}
 			}
 		} while (rval);
+
+#if WANT_NETMAN
+		file_stream_info.active = true;
+		file_stream_info.remote = true;
+		file_stream_info.pid = getpid();
+		file_stream_info.type = CHECKPOINT_RESTART;
+		struct in_addr sin;
+		memcpy(&sin, ip_addr, sizeof(struct in_addr));
+		strcpy(file_stream_info.src, inet_ntoa(sin));
+		strncpy(file_stream_info.dst, ExecutingHost+1, 16);
+		char *str = strchr(file_stream_info.dst, ':');
+		*str = '\0';
+		file_stream_info.bytes_so_far = 0;
+		file_stream_info.total_bytes = *len;
+		RequestCkptBandwidth();
+#endif
 
 		*ip_addr = ntohl( *ip_addr );
 		display_ip_addr( *ip_addr );
@@ -653,8 +738,6 @@ pseudo_get_file_stream(
 
 	if (file_fd < 0) return -1;
 
-	if (CkptFile) NumRestarts++;
-
 	*len = file_size( file_fd );
 	dprintf( D_FULLDEBUG, "\tlen = %d\n", *len );
 	BytesSent += *len;
@@ -665,6 +748,21 @@ pseudo_get_file_stream(
 	create_tcp_port( port, &connect_sock );
 	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
 		
+#if WANT_NETMAN
+	if (CkptFile || ICkptFile) {
+		file_stream_info.active = true;
+		file_stream_info.remote = false;
+		file_stream_info.type = CkptFile ? CHECKPOINT_RESTART :
+			INITIAL_CHECKPOINT;
+		strcpy(file_stream_info.src, inet_ntoa(*my_sin_addr()));
+		strncpy(file_stream_info.dst, ExecutingHost+1, 16);
+		char *str = strchr(file_stream_info.dst, ':');
+		*str = '\0';
+		file_stream_info.bytes_so_far = 0;
+		file_stream_info.total_bytes = *len;
+	}
+#endif
+
 	switch( child_pid = fork() ) {
 	case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
@@ -685,35 +783,18 @@ pseudo_get_file_stream(
 			exit(1);
 		}
 
-#if 0	/* For compressed checkpoints, we need to close the socket
-		   so the client knows we are done sending (i.e., so the client's
-		   read will return), so we no longer require this confirmation. */
-			/*
-			  Here we should get a confirmation that our peer was able to
-			  read the same number of bytes we sent, but the starter doesn't
-			  send it, so if our peer just closes his end, we let that go.
-			*/
-		bytes_read = read( data_sock, &status, sizeof(status) );
-		if( bytes_read == 0 ) {
-			exit( 0 );
-		}
-				
-		assert( bytes_read == sizeof(status) );
-		status = ntohl( status );
-		assert( status == *len );
-		dprintf( D_ALWAYS,
-				 "\tSTREAM FILE SENT OK (%d bytes)\n", status );
-#endif
-		if( NeedsExecuteLog ) {
-				// log a ULOG_EXECUTE event
-			log_execute(ExecutingHost);
-		}
 		exit( 0 );
 	default:	/* the parent */
 		close( file_fd );
 		close( connect_sock );
-		if (CkptFile || ICkptFile) set_priv(priv);
-		NeedsExecuteLog = 0;
+		if (CkptFile || ICkptFile) {
+			set_priv(priv);
+			if (CkptFile) NumRestarts++;
+#if WANT_NETMAN
+			file_stream_info.pid = child_pid;
+			RequestCkptBandwidth();
+#endif
+		}
 		return 0;
 	}
 
@@ -725,6 +806,13 @@ pseudo_get_file_stream(
   Provide a process which will accept the given file as a
   stream.  The ip_addr and port number passed back are in host
   byte order.
+
+  Note: len can be -1 here, if the sender doesn't know how much it's
+  going to send (for example, in the case of compressed checkpoints).
+  That causes problems for our accounting and network bandwidth
+  allocation.  We really should get an estimate somehow of how much
+  the sender is going to send and record how much it actually ends up
+  sending.
 */
 int
 pseudo_put_file_stream(
@@ -748,6 +836,22 @@ pseudo_put_file_stream(
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
 	dprintf( D_ALWAYS, "\tlen = %d\n", len );
 	dprintf( D_ALWAYS, "\towner = %s\n", p->owner );
+#if WANT_NETMAN
+	if (file_stream_info.active) {
+#if !defined(PVM_RECEIVE)
+		if (!file_stream_info.remote) {
+			reaper();
+		}
+#endif
+		if (file_stream_info.active) {
+			dprintf(D_ALWAYS, "\tWarning: previous file_stream transfer "
+					"still active!  Cleaning up...\n");
+			file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+			RequestCkptBandwidth();
+			file_stream_info.active = false;
+		}
+	}
+#endif
 
 	get_host_addr( ip_addr );
 	display_ip_addr( *ip_addr );
@@ -756,7 +860,7 @@ pseudo_put_file_stream(
 	if (CkptFile && UseCkptServer) {
 		SetCkptServerHost(CkptServerHost);
 		do {
-			rval = RequestStore(p->owner, file, len,
+			rval = RequestStore(p->owner, scheddName, file, len,
 								(struct in_addr*)ip_addr, port);
 			if (rval) {	/* request denied or network error, try again */
 				dprintf(D_ALWAYS, "store request to ckpt server failed, "
@@ -768,6 +872,23 @@ pseudo_put_file_stream(
 				}
 			}
 		} while (rval);
+
+#if WANT_NETMAN
+		file_stream_info.active = true;
+		file_stream_info.remote = true;
+		file_stream_info.pid = getpid();
+		file_stream_info.type = (LastCkptSig == SIGUSR2) ?
+			PERIODIC_CHECKPOINT : VACATE_CHECKPOINT;
+		struct in_addr sin;
+		memcpy(&sin, ip_addr, sizeof(struct in_addr));
+		strcpy(file_stream_info.dst, inet_ntoa(sin));
+		strncpy(file_stream_info.src, ExecutingHost+1, 16);
+		char *str = strchr(file_stream_info.src, ':');
+		*str = '\0';
+		file_stream_info.bytes_so_far = 0;
+		file_stream_info.total_bytes = len;
+#endif
+
 		display_ip_addr( *ip_addr );
 		*ip_addr = ntohl(*ip_addr);
 		*port = ntohs( *port );
@@ -779,10 +900,15 @@ pseudo_put_file_stream(
 	}
 	if (!rval) {
 		/* Checkpoint server says ok */
-		BytesRecvd += len;
-		if (CkptFile && ManageBandwidth) {
-			// tell negotiator that the job is writing a checkpoint
-			RequestCkptBandwidth(*ip_addr);
+		if (len > 0) {
+				// need to handle the len == -1 case someday
+			BytesRecvd += len;
+#if WANT_NETMAN		
+			if (CkptFile && ManageBandwidth) {
+					// tell negotiator that the job is writing a checkpoint
+				RequestCkptBandwidth();
+			}
+#endif
 		}
 		return 0;
 	}
@@ -810,12 +936,21 @@ pseudo_put_file_stream(
 
 	create_tcp_port( port, &connect_sock );
 	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
-	BytesRecvd += len;
-	if (CkptFile && ManageBandwidth) {
-		// tell negotiator that the job is writing a checkpoint
-		RequestCkptBandwidth(*ip_addr);
-	}
 	
+#ifdef WANT_NETMAN
+	file_stream_info.active = true;
+	file_stream_info.remote = false;
+	file_stream_info.type = (CkptFile || ICkptFile) ?
+		((LastCkptSig == SIGUSR2) ?	PERIODIC_CHECKPOINT : VACATE_CHECKPOINT) :
+		COREFILE_TRANSFER;
+	strcpy(file_stream_info.dst, inet_ntoa(*my_sin_addr()));
+	strncpy(file_stream_info.src, ExecutingHost+1, 16);
+	char *str = strchr(file_stream_info.src, ':');
+	*str = '\0';
+	file_stream_info.bytes_so_far = 0;
+	file_stream_info.total_bytes = len;
+#endif
+
 	switch( child_pid = fork() ) {
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
@@ -842,7 +977,23 @@ pseudo_put_file_stream(
 	  default:	/* the parent */
 	    close( file_fd );
 		close( connect_sock );
-		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
+		if (CkptFile || ICkptFile) {
+			set_priv(priv);	// restore user privileges
+#ifdef WANT_NETMAN
+			file_stream_info.pid = child_pid;
+#endif
+			if (CkptFile) NumRestarts++;
+		}
+		if (len > 0) {
+				// need to handle the len == -1 case someday
+			BytesRecvd += len;
+#ifdef WANT_NETMAN
+			if (CkptFile && ManageBandwidth) {
+					// tell negotiator that the job is writing a checkpoint
+				RequestCkptBandwidth();
+			}
+#endif
+		}
 		return 0;
 	}
 
@@ -850,19 +1001,137 @@ pseudo_put_file_stream(
 	return -1;
 }
 
+#ifdef WANT_NETMAN
+/* This function is called whenever a child process exits.   */
 void
-RequestCkptBandwidth(unsigned int ip_addr)
+file_stream_child_exit(pid_t pid)
+{
+	if (file_stream_info.active && !file_stream_info.remote &&
+		file_stream_info.pid == pid) {
+		switch(file_stream_info.type) {
+		case INITIAL_CHECKPOINT:
+			file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+			RequestCkptBandwidth();
+			file_stream_info.active = false;
+			break;
+		case COREFILE_TRANSFER:
+			file_stream_info.active = false;
+			break;
+		case CHECKPOINT_RESTART:
+				// handled in pseudo_get_ckpt_mode()
+		case PERIODIC_CHECKPOINT:
+		case VACATE_CHECKPOINT:
+				// handled in rename() (yuk!)
+			break;
+		default:
+			dprintf(D_ALWAYS, "Bad file_stream_transfer_type %d in "
+					"file_stream_child_exit!\n", file_stream_info.type);
+			return;
+		}
+	}
+}
+
+extern "C" {
+void
+file_stream_progress_report(int bytes_moved)
+{
+	if (!file_stream_info.active) {
+		dprintf(D_ALWAYS, "Warning: file_stream_progress_report() called with "
+				"no active file_stream_transfer.\n");
+		return;
+	}
+	if (file_stream_info.remote) {
+		dprintf(D_ALWAYS, "Warning: file_stream_progress_report() called with "
+				"active REMOTE file_stream_transfer.\n");
+		return;
+	}
+	file_stream_info.bytes_so_far = bytes_moved;
+	time_t current_time = time(0);
+	if (current_time >= file_stream_info.last_update + NetworkHorizon) {
+		RequestCkptBandwidth();
+	}
+}
+}
+
+void
+abort_file_stream_transfer()
+{
+	if (file_stream_info.active) {
+		if (!file_stream_info.remote) {
+			priv_state priv = set_condor_priv();
+			kill(file_stream_info.pid, SIGKILL);
+			set_priv(priv);
+		}
+			// invalidate our network bandwidth allocation
+		file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+		RequestCkptBandwidth();
+		file_stream_info.active = false;
+	}
+}
+
+/* 
+   We allocate bandwidth for checkpoint and executable transfers here
+   (i.e., anything transferred using the file_stream protocol).  We
+   include the startd vm id so the matchmaker can uniquely identify
+   checkpoint transfers to/from SMP machines.  The matchmaker may have
+   already allocated the bandwidth for this transfer.  In that case,
+   our request serves as an update on the amount of data we're
+   expecting to transfer.  We can update our request at any time
+   during the transfer.  We must send a final update when the transfer
+   completes, so the matchmaker can free the allocation.  The
+   allocation will timeout if our update is lost.
+*/
+void
+RequestCkptBandwidth()
 {
 	ClassAd request;
-	char buf[100], source[100], owner[100], user[100], *str;
-	int executable_size = 0, nice_user = 0;
+	char buf[100], owner[100], user[100];
+	int nice_user = 0, vm_id = 1;
 
-	ip_addr = htonl(ip_addr);
+	if (!ManageBandwidth) return;
 
-	if (LastCkptSig == SIGUSR2) {
+	if (!file_stream_info.active) {
+		dprintf(D_ALWAYS, "Warning: RequestCkptBandwidth() called with no "
+				"active file_stream_transfer.\n");
+		return;
+	}
+	if (file_stream_info.total_bytes < 0) return; // TODO (someday)
+	
+	switch(file_stream_info.type) {
+	case INITIAL_CHECKPOINT:
+		sprintf(buf, "%s = \"InitialCheckpoint\"", ATTR_TRANSFER_TYPE);
+		dprintf(D_ALWAYS, "Transferring InitialCkpt from %s to %s: "
+				"%d bytes to go.\n", file_stream_info.src,
+				file_stream_info.dst,
+				file_stream_info.total_bytes-file_stream_info.bytes_so_far);
+		break;
+	case CHECKPOINT_RESTART:
+		sprintf(buf, "%s = \"CheckpointRestart\"", ATTR_TRANSFER_TYPE);
+		dprintf(D_ALWAYS, "Transferring RestartCkpt from %s to %s: "
+				"%d bytes to go.\n", file_stream_info.src,
+				file_stream_info.dst,
+				file_stream_info.total_bytes-file_stream_info.bytes_so_far);
+		break;
+	case PERIODIC_CHECKPOINT:
 		sprintf(buf, "%s = \"PeriodicCheckpoint\"", ATTR_TRANSFER_TYPE);
-	} else {
+		dprintf(D_ALWAYS, "Transferring PeriodicCkpt from %s to %s: "
+				"%d bytes to go.\n", file_stream_info.src,
+				file_stream_info.dst,
+				file_stream_info.total_bytes-file_stream_info.bytes_so_far);
+		break;
+	case VACATE_CHECKPOINT:
 		sprintf(buf, "%s = \"VacateCheckpoint\"", ATTR_TRANSFER_TYPE);
+		dprintf(D_ALWAYS, "Transferring VacateCkpt from %s to %s: "
+				"%d bytes to go.\n", file_stream_info.src,
+				file_stream_info.dst,
+				file_stream_info.total_bytes-file_stream_info.bytes_so_far);
+		break;
+	case COREFILE_TRANSFER:
+		return;					// ignore for now
+	default:
+		dprintf(D_ALWAYS, "Bad file_stream_transfer_type %d in "
+				"RequestCkptBandwidth!\n", file_stream_info.type);
+		return;
 	}
 	request.Insert(buf);
 	JobAd->LookupInteger(ATTR_NICE_USER, nice_user);
@@ -871,33 +1140,53 @@ RequestCkptBandwidth(unsigned int ip_addr)
 			My_UID_Domain);
 	sprintf(buf, "%s = \"%s\"", ATTR_USER, user);
 	request.Insert(buf);
+	sprintf(buf, "%s = %d", ATTR_CLUSTER_ID, Proc->id.cluster);
+	request.Insert(buf);
+	sprintf(buf, "%s = %d", ATTR_PROC_ID, Proc->id.proc);
+	request.Insert(buf);
+ 	JobAd->LookupInteger(ATTR_REMOTE_VIRTUAL_MACHINE_ID, vm_id);
+	dprintf(D_ALWAYS, "vm_id = %d\n", vm_id);
+ 	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm_id);
+ 	request.Insert(buf);
+	sprintf(buf, "%s = \"%u.%d\"", ATTR_TRANSFER_KEY, my_ip_addr(),
+			file_stream_info.pid);
+ 	request.Insert(buf);
 	sprintf(buf, "%s = 1", ATTR_FORCE);
 	request.Insert(buf);
-	strcpy(source, ExecutingHost+1);
-	str = strchr(source, ':');
-	*str = '\0';
-	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, source);
+	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, file_stream_info.src);
 	request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_REMOTE_HOST, ExecutingHost);
 	request.Insert(buf);
-	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION,
-			inet_ntoa(*(struct in_addr *)&ip_addr));
+	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, file_stream_info.dst);
 	request.Insert(buf);
-	JobAd->LookupInteger(ATTR_EXECUTABLE_SIZE, executable_size);
-	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
-			(float)(ImageSize-executable_size)*1024.0);
+	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY,
+			file_stream_info.total_bytes-file_stream_info.bytes_so_far);
 	request.Insert(buf);
-	Daemon Negotiator(DT_NEGOTIATOR);
 	SafeSock sock;
 	sock.timeout(10);
 	if (!sock.connect(Negotiator.addr())) {
-		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
+		dprintf(D_ALWAYS, "Couldn't connect to negotiator (%s)!\n",
+				Negotiator.addr());
 		return;
 	}
 	sock.put(REQUEST_NETWORK);
 	sock.put(1);
 	request.put(sock);
 	sock.end_of_message();
+	buf[0] = '\0';
+	if (JobAd->LookupString(ATTR_REMOTE_POOL, buf)) {
+		Daemon FlockNegotiator(DT_NEGOTIATOR, buf, buf);
+		if (!sock.connect(FlockNegotiator.addr())) {
+			dprintf(D_ALWAYS, "Couldn't connect to flock negotiator (%s)!\n",
+					FlockNegotiator.addr());
+			return;
+		}
+		sock.put(REQUEST_NETWORK);
+		sock.put(1);
+		request.put(sock);
+		sock.end_of_message();
+	}
+	file_stream_info.last_update = time(0);
 }
 
 /* 
@@ -912,21 +1201,21 @@ void
 RequestRSCBandwidth()
 {
 	static float prev_bytes_sent=0.0, prev_bytes_recvd=0.0;
-	static float send_estimate=0.0, recv_estimate=0.0;
+	static int send_estimate=0, recv_estimate=0;
 	ClassAd send_request, recv_request;
 	char buf[100], endpoint[100], owner[100], user[100], *str;
 	int nice_user = 0;
 
-	if (!syscall_sock) return;
+	if (!syscall_sock || !ManageBandwidth) return;
 
-	float bytes_sent = syscall_sock->get_bytes_sent() - prev_bytes_sent;
-	float bytes_recvd = syscall_sock->get_bytes_recvd() - prev_bytes_recvd;
+	int bytes_sent = (int)(syscall_sock->get_bytes_sent()-prev_bytes_sent);
+	int bytes_recvd = (int)(syscall_sock->get_bytes_recvd()-prev_bytes_recvd);
 
 	prev_bytes_sent = syscall_sock->get_bytes_sent();
 	prev_bytes_recvd = syscall_sock->get_bytes_recvd();
 
-	float prev_send_estimate = send_estimate;
-	float prev_recv_estimate = recv_estimate;
+	int prev_send_estimate = send_estimate;
+	int prev_recv_estimate = recv_estimate;
 
 	send_estimate = (bytes_sent + send_estimate) / 2;
 	recv_estimate = (bytes_recvd + recv_estimate) / 2;
@@ -934,7 +1223,6 @@ RequestRSCBandwidth()
 	// don't bother allocating anything under 1KB
 	if (send_estimate < 1024.0 && recv_estimate < 1024.0) return;
 
-	Daemon Negotiator(DT_NEGOTIATOR);
 	SafeSock sock;
 	sock.timeout(10);
 	if (!sock.connect(Negotiator.addr())) {
@@ -953,13 +1241,13 @@ RequestRSCBandwidth()
 			My_UID_Domain);
 	sprintf(buf, "%s = \"%s\"", ATTR_USER, user);
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_BYTES_SENT, bytes_sent);
+	sprintf(buf, "%s = %d", ATTR_BYTES_SENT, bytes_sent);
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_BYTES_RECVD, bytes_recvd);
+	sprintf(buf, "%s = %d", ATTR_BYTES_RECVD, bytes_recvd);
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_PREV_SEND_ESTIMATE, prev_send_estimate);
+	sprintf(buf, "%s = %d", ATTR_PREV_SEND_ESTIMATE, prev_send_estimate);
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_PREV_RECV_ESTIMATE, prev_recv_estimate);
+	sprintf(buf, "%s = %d", ATTR_PREV_RECV_ESTIMATE, prev_recv_estimate);
 	send_request.Insert(buf);
 	strcpy(endpoint, ExecutingHost+1);
 	str = strchr(endpoint, ':');
@@ -975,18 +1263,33 @@ RequestRSCBandwidth()
 	send_request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, inet_ntoa(*my_sin_addr()));
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY, recv_estimate);
+	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY, recv_estimate);
 	send_request.Insert(buf);
 	send_request.put(sock);
 	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, endpoint);
 	recv_request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, inet_ntoa(*my_sin_addr()));
 	recv_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY, send_estimate);
+	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY, send_estimate);
 	recv_request.Insert(buf);
 	recv_request.put(sock);
 	sock.end_of_message();
+	buf[0] = '\0';
+	if (JobAd->LookupString(ATTR_REMOTE_POOL, buf)) {
+		Daemon FlockNegotiator(DT_NEGOTIATOR, buf, buf);
+		if (!sock.connect(FlockNegotiator.addr())) {
+			dprintf(D_ALWAYS, "Couldn't connect to flock negotiator (%s)!\n",
+					FlockNegotiator.addr());
+			return;
+		}
+		sock.put(REQUEST_NETWORK);
+		sock.put(2);
+		send_request.put(sock);
+		recv_request.put(sock);
+		sock.end_of_message();
+	}
 }
+#endif
 
 /*
   Accept a TCP connection on the connect_sock.  Close the connect_sock,
@@ -1052,7 +1355,7 @@ int
 create_tcp_port( u_short *port, int *fd )
 {
 	struct sockaddr_in	sin;
-	int		addr_len = sizeof sin;
+	SOCKET_LENGTH_TYPE	addr_len = sizeof sin;
 
 		/* create a tcp socket */
 	if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
@@ -1143,8 +1446,6 @@ char *Strdup( const char *str)
 int
 pseudo_startup_info_request( STARTUP_INFO *s )
 {
-	struct stat	st_buf;
-	char	*env_string;
 	PROC *p = (PROC *)Proc;
 
 	s->version_num = STARTUP_VERSION;
@@ -1168,13 +1469,13 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 	s->env = Strdup( p->env );
 	s->iwd = Strdup( p->iwd );
 
-	s->is_restart = has_ckpt_file();
-
 	if (JobAd->LookupBool(ATTR_WANT_CHECKPOINT, s->ckpt_wanted) == 0) {
 		s->ckpt_wanted = TRUE;
 	}
 
 	CkptWanted = s->ckpt_wanted;
+
+	s->is_restart = has_ckpt_file();
 
 	if (JobAd->LookupInteger(ATTR_CORE_SIZE, s->coredump_limit) == 1) {
 		s->coredump_limit_exists = TRUE;
@@ -1249,45 +1550,79 @@ static void complete_path( const char *short_path, char *full_path )
 }
 
 /*
-This call translates a logical path name specified by a user job
+These calls translates a logical path name specified by a user job
 into an actual url which describes how and where to fetch
 the file from.
 
-Example:
-	The user opens a file named:
-		data
-	The shadow adds on the current directory to get:
-		/usr/data
-	The shadow then determines the access method for the full path:
-		remote:/usr/data
-	The syscall lib receives this url and then opens the file appropriately.
+For example, joe/data might become buffer:remote:/usr/joe/data
+
+The "new" version of the call allows the nesting of methods.
+The "old" version of the call only returns the basic method,
+such as "local:" or "remote:" and assumes the syscall lib will
+add the necessary transformations.
 */
+
+int do_get_file_info( char *logical_name, char *url, int allow_complex );
+void append_buffer_info( char *url, char *method, char *path );
+
+int
+pseudo_get_file_info_new( const char *logical_name, char *actual_url )
+{
+	return do_get_file_info( (char*)logical_name, actual_url, 1 );
+}
 
 int
 pseudo_get_file_info( const char *logical_name, char *actual_url )
 {
+	return do_get_file_info( (char*)logical_name, actual_url, 0 );
+}
+
+int
+do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
+{
 	char	remap_list[ATTRLIST_MAX_EXPRESSION];
+	char	split_dir[_POSIX_PATH_MAX];
+	char	split_file[_POSIX_PATH_MAX];
 	char	full_path[_POSIX_PATH_MAX];
+	char	remap[_POSIX_PATH_MAX];
 	char	*method;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
 
-	/* First check to see if the logical name matches a
-	   filename that is remapped by the job ad. */
+	/* The incoming logical name might be a simple, relative, or complete path */
+	/* We need to examine both the full path and the simple name. */
 
-	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list)) {
-		if(filename_remap_find(remap_list,(char*)logical_name,actual_url)) {
-			dprintf(D_SYSCALLS,"\tremapped to: %s\n",actual_url);
-			return 1;
+	filename_split( (char*) logical_name, split_dir, split_file );
+	complete_path( logical_name, full_path );
+
+	/* Any name comparisons must check the logical name, the simple name, and the full path */
+
+	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list) &&
+	  (filename_remap_find( remap_list, (char*) logical_name, remap ) ||
+	   filename_remap_find( remap_list, split_file, remap ) ||
+	   filename_remap_find( remap_list, full_path, remap ))) {
+
+		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap);
+
+		/* If the remap is a full URL, return right away */
+		/* Otherwise, continue processing */
+
+		if(strchr(remap,':')) {
+			dprintf(D_SYSCALLS,"\tremap is complete url\n");
+			strcpy(actual_url,remap);
+			return 0;
+		} else {
+			dprintf(D_SYSCALLS,"\tremap is simple file\n");
+			complete_path( remap, full_path );
 		}
+	} else {
+		dprintf(D_SYSCALLS,"\tnot remapped\n");
 	}
 
-	dprintf( D_SYSCALLS, "\tnot remapped.\n");
+	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path );
 
-	/* No special remap was specified by the user, so decide what
-	   method is to be used, based on the complete path. */
-
-	complete_path(logical_name,full_path);
+	/* Now, we have a full pathname. */
+	/* Figure out what url modifiers to slap on it. */
 
 #ifdef HPUX
 	/* I have no idea why this is happening, but I have seen it happen many
@@ -1304,17 +1639,116 @@ pseudo_get_file_info( const char *logical_name, char *actual_url )
 		method = "local";
 	} else if( access_via_afs(full_path) ) {
 		method = "local";
-	} else if(access_via_nfs(full_path) ) {
+	} else if( access_via_nfs(full_path) ) {
 		method = "local";
 	} else {
 		method = "remote";
 	}
 
-	sprintf(actual_url,"%s:%s",method,full_path);
+	actual_url[0] = 0;
+
+	if( allow_complex ) {
+		if( use_fetch(method,full_path) ) {
+			strcat(actual_url,"fetch:");
+		}
+		if( use_compress(method,full_path) ) {
+			strcat(actual_url,"compress:");
+		}
+
+		append_buffer_info(actual_url,method,full_path);
+
+		if( use_append(method,full_path) ) {
+			strcat(actual_url,"append:");
+		}
+	}
+
+	strcat(actual_url,method);
+	strcat(actual_url,":");
+	strcat(actual_url,full_path);
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
 
 	return 0;
+}
+
+void append_buffer_info( char *url, char *method, char *path )
+{
+	char buffer_list[ATTRLIST_MAX_EXPRESSION];
+	char buffer_string[ATTRLIST_MAX_EXPRESSION];
+	char dir[_POSIX_PATH_MAX];
+	char file[_POSIX_PATH_MAX];
+	int s,bs,ps;
+	int result;
+
+	filename_split(path,dir,file);
+
+	/* Get the default buffer setting */
+	pseudo_get_buffer_info( &s, &bs, &ps );
+
+	/* Now check for individual file overrides */
+	/* These lines have the same syntax as a remap list */
+
+	if(JobAd->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
+		if( filename_remap_find(buffer_list,path,buffer_string) ||
+		    filename_remap_find(buffer_list,file,buffer_string) ) {
+
+			/* If the file is merely mentioned, turn on the default buffer */
+			strcat(url,"buffer:");
+
+			/* If there is also a size setting, use that */
+			result = sscanf(buffer_string,"(%d,%d)",&s,&bs);
+			if( result==2 ) strcat(url,buffer_string);
+
+			return;
+		}
+	}
+
+	/* Turn on buffering if the value is set and is not special or local */
+	/* In this case, use the simple syntax 'buffer:' so as not to confuse old libs */
+
+	if( s>0 && bs>0 && strcmp(method,"local") && strcmp(method,"special")  ) {
+		strcat(url,"buffer:");
+	}
+}
+
+/* Return true if this JobAd attribute contains this path */
+
+static int attr_list_has_file( const char *attr, char *path )
+{
+	char dir[_POSIX_PATH_MAX];
+	char file[_POSIX_PATH_MAX];
+	char str[ATTRLIST_MAX_EXPRESSION];
+	StringList *list=0;
+
+	filename_split( path, dir, file );
+
+	str[0] = 0;
+	JobAd->LookupString(attr,str);
+	list = new StringList(str);
+
+	if( list->contains_withwildcard(path) || list->contains_withwildcard(file) ) {
+		delete list;
+		return 1;
+	} else {
+		delete list;
+		return 0;
+	}
+}
+
+
+int use_append( char *method, char *path )
+{
+	return attr_list_has_file( ATTR_APPEND_FILES, path );
+}
+
+int use_compress( char *method, char *path )
+{
+	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
+}
+
+int use_fetch( char *method, char *path )
+{
+	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
 
 /*
@@ -1367,12 +1801,25 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_b
 	return 0;
 }
 
+
 /*
   Return process's initial working directory
 */
 int
 pseudo_get_iwd( char *path )
 {
+		/*
+		  Try to log an execute event.  We had made logging the
+		  execute event it's own pseudo syscall, but that broke
+		  compatibility with older versions of Condor.  So, even
+		  though this is still kind of hacky, it should be right,
+		  since all vanilla jobs call this, and all standard jobs call
+		  pseudo_chdir(), before they start executing.  log_execute()
+		  keeps track of itself and makes sure it only really logs the
+		  event once in the lifetime of a shadow.
+		*/
+	log_execute( ExecutingHost );
+
 	PROC	*p = (PROC *)Proc;
 
 	strcpy( path, p->iwd );
@@ -1380,14 +1827,13 @@ pseudo_get_iwd( char *path )
 	return 0;
 }
 
+
 /*
   Return name of checkpoint file for this process
 */
 int
 pseudo_get_ckpt_name( char *path )
 {
-	PROC	*p = (PROC *)Proc;
-
 	strcpy( path, RCkptName );
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
 	return 0;
@@ -1411,6 +1857,20 @@ pseudo_get_ckpt_mode( int sig )
 		if (PeriodicSync) mode |= CKPT_MODE_MSYNC;
 	} else if (sig == 0) {		// restart
 		if (PeriodicSync) mode |= CKPT_MODE_MSYNC;
+#ifdef WANT_NETMAN
+			// The job has completed its checkpoint restart now, so we
+			// can release the network bandwidth allocation (by
+			// updating our bandwidth request).
+		if (file_stream_info.active &&
+			file_stream_info.type == CHECKPOINT_RESTART) {
+			file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+			RequestCkptBandwidth();
+			file_stream_info.active = false;
+		} else {
+			dprintf( D_ALWAYS, "Warning: received get_ckpt_mode(0) with no "
+					 "info about active checkpoint restart transfer!\n" );
+		}
+#endif
 	} else {
 		dprintf( D_ALWAYS,
 				 "pseudo_get_ckpt_mode called with unknown signal %d\n", sig );
@@ -1435,29 +1895,25 @@ pseudo_get_ckpt_speed()
 int
 pseudo_get_a_out_name( char *path )
 {
-	PROC	*p = (PROC *)Proc;
-	char exec_buf[_POSIX_PATH_MAX], *exec_name=exec_buf;
-	char final_buf[_POSIX_PATH_MAX], *final=final_buf;
-	char *tptr;
-
-	exec_buf[0] = '\0';
-	final_buf[0] = '\0';
 	path[0] = '\0';
+	int result;
 
-	if ( JobAd ) {
-			JobAd->LookupString(ATTR_JOB_CMD,exec_name);
-			if ( (tptr=substr(exec_name,"$$")) ) {
-				JobAd->LookupString(ATTR_JOB_CMDEXT,final);
-				if ( final[0] ) {
-					strcpy(tptr,final);
-					strcpy(path,exec_name);
-				}
-			}
-	}
+	// See if we can find an executable in the spool dir.
+	// Switch to Condor uid first, since ickpt files are 
+	// stored in the SPOOL directory as user Condor.
+	priv_state old_priv = set_condor_priv();
+	result = access(ICkptName,R_OK);
+	set_priv(old_priv);
 
-
-	if ( path[0] == '\0' ) {
+	if ( result >= 0 ) {
+			// we can access an executable in the spool dir
 		strcpy( path, ICkptName );
+	} else {
+			// nothing in the spool dir; the executable 
+			// probably has $$(opsys) in it... so use what
+			// the jobad tells us.
+		ASSERT(JobAd);
+		JobAd->LookupString(ATTR_JOB_CMD,path);
 	}
 
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
@@ -1473,6 +1929,18 @@ int
 pseudo_chdir( const char *path )
 {
 	int		rval;
+	
+		/*
+		  Try to log an execute event.  We had made logging the
+		  execute event it's own pseudo syscall, but that broke
+		  compatibility with older versions of Condor.  So, even
+		  though this is still kind of hacky, it should be right,
+		  since all standard jobs call this, and all vanilla jobs call
+		  pseudo_get_iwd(), before they start executing.
+		  log_execute() keeps track of itself and makes sure it only
+		  really logs the event once in the lifetime of a shadow.
+		*/
+	log_execute( ExecutingHost );
 
 	dprintf( D_SYSCALLS, "\tpath = \"%s\"\n", path );
 	dprintf( D_SYSCALLS, "\tOrig CurrentWorkingDir = \"%s\"\n", CurrentWorkingDir );
@@ -1496,13 +1964,13 @@ pseudo_chdir( const char *path )
 }
 
 /*
-  Take note of the executing machine's filesystem domain
-*/
+  Take note of the executing machine's filesystem domain */
 int
 pseudo_register_fs_domain( const char *fs_domain )
 {
 	strcpy( Executing_Filesystem_Domain, fs_domain );
 	dprintf( D_SYSCALLS, "\tFS_Domain = \"%s\"\n", fs_domain );
+	return 0;
 }
 
 /*
@@ -1513,6 +1981,18 @@ pseudo_register_uid_domain( const char *uid_domain )
 {
 	strcpy( Executing_UID_Domain, uid_domain );
 	dprintf( D_SYSCALLS, "\tUID_Domain = \"%s\"\n", uid_domain );
+	return 0;
+}
+
+/*
+  Take note that the job is about to start executing and log that to
+  the userlog
+*/
+int
+pseudo_register_begin_execution( void )
+{
+	log_execute( ExecutingHost );
+	return 0;
 }
 
 int
@@ -1618,6 +2098,27 @@ access_via_nfs( const char *file )
 	return TRUE;
 }
 
+/*
+**  Starting with version 6.2.0, we store checkpoints on the checkpoint
+**  server using "owner@scheddName" instead of just "owner".  If the job
+**  was submitted before this change, we need to check to see if its
+**  checkpoint was stored using the old naming scheme.
+*/
+bool
+JobPreCkptServerScheddNameChange()
+{
+	char job_version[150];
+	job_version[0] = '\0';
+	if (JobAd && JobAd->LookupString(ATTR_VERSION, job_version)) {
+		CondorVersionInfo ver(job_version, "JOB");
+		if (ver.built_since_version(6,2,0) &&
+			ver.built_since_date(11,16,2000)) {
+			return false;
+		}
+	}
+	return true;				// default to version compat. mode
+}
+
 int
 has_ckpt_file()
 {
@@ -1627,12 +2128,19 @@ has_ckpt_file()
 	long	accum_usage;
 
 	if (p->universe != STANDARD) return 0;
+	if (!CkptWanted) return 0;
 	accum_usage = p->remote_usage[0].ru_utime.tv_sec +
 		p->remote_usage[0].ru_stime.tv_sec;
 	priv = set_condor_priv();
 	do {
 		SetCkptServerHost(LastCkptServer);
-		rval = FileExists(RCkptName, p->owner);
+		rval = FileExists(RCkptName, p->owner, scheddName);
+		if (rval == 0 && JobPreCkptServerScheddNameChange()) {
+			rval = FileExists(RCkptName, p->owner, NULL);
+			if (rval == 1) {
+				RestoreCkptWithNoScheddName = true;
+			}
+		}
 		if(rval == -1 && LastCkptServer && accum_usage > MaxDiscardedRunTime) {
 			dprintf(D_ALWAYS, "failed to contact ckpt server, trying again"
 					" in %d seconds\n", retry_wait);
@@ -1896,6 +2404,8 @@ pseudo_register_syscall_version( const char *version )
 	char buf[4096];
 	char line[256];
 
+	buf[0] = '\0';
+	line[0] = '\0';
 	strcat( buf, "Since the time that you ran condor_compile to link your job with\n" );
 	strcat( buf, "the Condor libraries, your local Condor administrator has\n" );
 	strcat( buf, "installed a different version of the condor_shadow program.\n" );

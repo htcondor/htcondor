@@ -30,15 +30,33 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "condor_socket_types.h"
 
+_condorMsgID SafeSock::_outMsgID = {0, 0, 0, 0};
 /* 
    NOTE: All SafeSock constructors initialize with this, so you can
    put any shared initialization code here.  -Derek Wright 3/12/99
 */
-void
-SafeSock::init()
+void SafeSock::init()
 {
 	_special_state = safesock_none;
+
+	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++)
+		_inMsgs[i] = NULL;
+	_msgReady = false;
+	_longMsg = NULL;
+	_tOutBtwPkts = SAFE_SOCK_MAX_BTW_PKT_ARVL;
+
+	// initialize msgID
+	if(_outMsgID.msgNo == 0) { // first object of this class
+		_outMsgID.ip_addr = (unsigned long)my_ip_addr();
+		_outMsgID.pid = (short)getpid();
+		_outMsgID.time = (unsigned long)time(NULL);
+		_outMsgID.msgNo = (unsigned long)get_random_int();
+
+		// initialize statistics
+		resetStat();
+	}
 }
 
 
@@ -56,59 +74,94 @@ SafeSock::SafeSock(const SafeSock & orig)
 	char *buf = NULL;
 	buf = orig.serialize();	// get state from orig sock
 	assert(buf);
-	serialize(buf);			// put the state into the new sock
+	serialize(buf);	// put the state into the new sock
 	delete [] buf;
 }
 
 SafeSock::~SafeSock()
 {
+	_condorInMsg *tempMsg, *delMsg;
+
+	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++) {
+		tempMsg = _inMsgs[i];
+		while(tempMsg) {
+			delMsg = tempMsg;
+			tempMsg = tempMsg->nextMsg;
+			delete delMsg;
+		}
+		_inMsgs[i] = NULL;
+	}
 	close();
 }
 
 
-int SafeSock::handle_incoming_packet()
-{
-	/* do not queue up more than one message at a time on safe sockets */
-	/* but return 1, because old message can still be read.	           */
-	if (rcv_msg.ready) return TRUE;
-
-	if (!rcv_packet(_sock)) return FALSE;
-
-	return TRUE;
-}
-
-
+/* End of the current message
+ * This method will be called when the application program reaches
+ * the end of the current message.
+ * In the encode mode, the current message is marshalled with _outMsgID
+ * and sent to _who, and
+ *	@returns: TRUE, if the message has been successfully sent
+ *	        : FALSE, if failed
+ *
+ * In the decode mode, the current message is deleted from the input buffer,
+ * if it is long, and _msgReady is set to false
+ *	@returns: TRUE, if all the data of the current message has been consumed
+ *	          FALSE, if not
+ */
 int SafeSock::end_of_message()
 {
 	int ret_val = FALSE;
+	int sent;
 
 	switch(_coding){
 		case stream_encode:
-			if (!snd_msg.buf.empty()){
-				return snd_packet(_sock);
-			}
-			break;
+			sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID);
+			_outMsgID.msgNo++; // It doesn't hurt to increment msgNO even if fails
+			if(sent < 0)
+				return FALSE;
+			else return TRUE;
 
 		case stream_decode:
-			if ( rcv_msg.ready ) {
-				if ( rcv_msg.buf.consumed() )
-					ret_val = TRUE;
-				rcv_msg.ready = FALSE;
-				rcv_msg.buf.reset();
+			if(_msgReady) {
+				if(_longMsg) { // long message is ready
+					if(_longMsg->consumed())
+						ret_val = TRUE;
+					// unlink the message
+					if(_longMsg->prevMsg)
+						_longMsg->prevMsg->nextMsg = _longMsg->nextMsg;
+					else {
+						int index = labs(_longMsg->msgID.ip_addr +
+						                 _longMsg->msgID.time +
+								     _longMsg->msgID.msgNo) % SAFE_SOCK_HASH_BUCKET_SIZE;
+						_inMsgs[index] = _longMsg->nextMsg;
+					}
+					if(_longMsg->nextMsg)
+						_longMsg->nextMsg->prevMsg = _longMsg->prevMsg;
+					// delete the message
+					delete _longMsg;
+					_longMsg = NULL;
+				} else { // short message is ready
+					if(_shortMsg.consumed())
+						ret_val = TRUE;
+					_shortMsg.reset();
+				}
+				_msgReady = false;
 			}
+			else // message is not ready
+				return TRUE;
 			break;
 
 		default:
-			assert(0);
+			break;
 	}
-
 	return ret_val;
 }
 
 
 int SafeSock::connect(
 	char	*host,
-	int		port
+	int		port, 
+	bool
 	)
 {
 	struct hostent	*hostp = NULL;
@@ -116,11 +169,16 @@ int SafeSock::connect(
 
 	if (!host || port < 0) return FALSE;
 
-		/* we bind here so that a sock may be	*/
-		/* assigned to the stream if needed		*/
+	/* we bind here so that a sock may be	*/
+	/* assigned to the stream if needed		*/
 	if (_state == sock_virgin || _state == sock_assigned) bind();
 
-	if (_state != sock_bound) return FALSE;
+	if (_state != sock_bound) {
+		dprintf(D_ALWAYS,
+		        "SafeSock::connect bind() failed: _state = %d\n",
+			  _state); 
+		return FALSE;
+	}
 	
 	memset(&_who, 0, sizeof(sockaddr_in));
 	_who.sin_family = AF_INET;
@@ -137,6 +195,7 @@ int SafeSock::connect(
 		/* if dotted notation fails, try host database	*/
 		hostp = gethostbyname(host);
 		if( hostp == (struct hostent *)0 ) {
+			dprintf(D_NETWORK, "SafeSock::connect: no host entry\n");
 			return FALSE;
 		} else {
 			memcpy(&_who.sin_addr, hostp->h_addr, sizeof(hostp->h_addr));
@@ -147,175 +206,318 @@ int SafeSock::connect(
 	return TRUE;
 }
 
-
-int SafeSock::put_bytes(
-	const void	*dta,
-	int			sz
-	)
+/* Put 'sz' bytes of data to _outMsg buffer
+ * This method puts 'sz' bytes into the message, while adding packets as needed
+ *	@returns: the number of bytes actually stored into _outMsg buffer,
+ *	          including '0'
+ */
+int SafeSock::put_bytes(const void *dta, int sz)
 {
-	int		tw;
-	int		nw;
+	int bytesPut;
 
-	for(nw=0;;){
+	bytesPut = _outMsg.putn((char *)dta, sz);
+	return bytesPut;
+}
 
-		if (snd_msg.buf.full()){
-			return FALSE;
-		}
 
 /*
-		if (snd_msg.buf.empty()){
-			snd_msg.buf.seek(5);
-		}
-*/
-
-		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0)
-			return -1;
-		nw += tw;
-		if (nw == sz) break;
-	}
-
-	return nw;
-}
-
-
-int SafeSock::get_bytes(
-	void		*dta,
-	int			max_sz
-	)
+ * copy n bytes from the ready message into 'dta'
+ * This method copies next 'size' bytes either from '_longMsg' or from '_shortMsg',
+ * depending on whether the ready message is long or short one
+ *
+ * param: dta - buffer to which data will be copied
+ *        size - 'size' bytes
+ * return: the number of bytes actually copied, if success
+ *         -1, if failed
+ */
+int SafeSock::get_bytes(void *dta, int size)
 {
-	while (!rcv_msg.ready) {
-		if (!handle_incoming_packet()){
-			return FALSE;
+	while(!_msgReady) {
+		if(_timeout > 0) {
+			struct timeval timer;
+			fd_set readfds;
+			int nfds=0, nfound;
+			timer.tv_sec = _timeout;
+			timer.tv_usec = 0;
+#if !defined(WIN32) // nfds is ignored on WIN32
+			nfds = _sock + 1;
+#endif
+			FD_ZERO(&readfds);
+			FD_SET(_sock, &readfds);
+				
+			nfound = select( nfds, &readfds, 0, 0, &timer );
+			switch(nfound) {
+				case 0:
+					return 0;
+					break;
+				case 1:
+					break;
+				default:
+					dprintf(D_NETWORK,
+					        "select returns %d, recv failed\n",
+						  nfound );
+					return 0;
+					break;
+			}
 		}
+		(void)handle_incoming_packet();
 	}
 
-	return rcv_msg.buf.get_max(dta, max_sz);
-}
-
-
-int SafeSock::get_ptr(
-	void		*&ptr,
-	char		delim
-	)
-{
-	int nr;
-	int tr;
-
-	while (!rcv_msg.ready){
-		if (!handle_incoming_packet()) return FALSE;
-	}
-
-	if ((tr = rcv_msg.buf.find(delim)) < 0) {
+	char *tempBuf = (char *)malloc(size);
+	int readSize;
+	if(_longMsg) // long message
+		readSize = _longMsg->getn(tempBuf, size);
+	else // short message
+		readSize = _shortMsg.getn(tempBuf, size);
+	if(readSize == size) {
+		memcpy(dta, tempBuf, readSize);
+		free(tempBuf);
+		return readSize;
+	} else {
+		free(tempBuf);
 		return -1;
 	}
-	ptr = rcv_msg.buf.get_ptr();
-	nr = rcv_msg.buf.seek(0);
-	rcv_msg.buf.seek(nr+tr+1);
-	return tr+1;
 }
 
 
-int SafeSock::peek(
-	char		&c
-	)
+/* Get arbitrary bytes of data
+ * This method copies arbitrary bytes from the ready message
+ * to the buffer pointed by 'ptr', starting from the current position
+ * until the given 'delim' get encountered.
+ *	@returns: the result from _longMsg.getPtr or _shortMsg.getPtr
+ *	          : the number of bytes in the buffer pointed by 'ptr'
+ *	          : -1, if failed
+ *
+ * Notice: the buffer pointed by 'ptr' will be allocated this time and deleted
+ *         later by the next call to this method.
+ *         So 'ptr' must point nothing and caller must NOT free 'ptr'
+ */
+int SafeSock::get_ptr(void *&ptr, char delim)
 {
-	while (!rcv_msg.ready) {
-		if (!handle_incoming_packet()) return FALSE;
-	}
+	int size;
 
-	return rcv_msg.buf.peek(c);
-}
-
-
-int SafeSock::rcv_packet(
-	SOCKET _sock
-	)
-{
-	char	tmp[65536];
-	int		len, fromlen;
-
-	fromlen = sizeof(struct sockaddr_in);
-
-	if (_timeout > 0) {
-		struct timeval	timer;
-		fd_set			readfds;
-		int				nfds=0, nfound;
-		timer.tv_sec = _timeout;
-		timer.tv_usec = 0;
+	while(!_msgReady) {
+		if(_timeout > 0) {
+			struct timeval timer;
+			fd_set readfds;
+			int nfds=0, nfound;
+			timer.tv_sec = _timeout;
+			timer.tv_usec = 0;
 #if !defined(WIN32) // nfds is ignored on WIN32
-		nfds = _sock + 1;
+			nfds = _sock + 1;
 #endif
-		FD_ZERO( &readfds );
-		FD_SET( _sock, &readfds );
-
-		nfound = select( nfds, &readfds, 0, 0, &timer );
-
-		switch(nfound) {
-		case 0:
-			return FALSE;
-			break;
-		case 1:
-			break;
-		default:
-			dprintf( D_ALWAYS, "select returns %d, recv failed\n",
-				nfound );
-			return FALSE;
-			break;
+			FD_ZERO(&readfds);
+			FD_SET(_sock, &readfds);
+				
+			nfound = select( nfds, &readfds, 0, 0, &timer );
+			switch(nfound) {
+				case 0:
+					return 0;
+					break;
+				case 1:
+					break;
+				default:
+					dprintf(D_NETWORK,
+					        "select returns %d, recv failed\n",
+						  nfound );
+					return 0;
+					break;
+			}
 		}
+		(void)handle_incoming_packet();
 	}
 
-	if ((len = recvfrom(_sock, tmp, 65536, 0,
-						(struct sockaddr *)&_who,&fromlen)) < 0) {
+	if(_longMsg) { // long message
+		size = _longMsg->getPtr(ptr, delim);
+		return size;
+	}
+	else { // short message
+		size = _shortMsg.getPtr(ptr, delim);
+		return size;
+	}
+}
+
+
+int SafeSock::peek(char &c)
+{
+	while(!_msgReady) {
+		if(_timeout > 0) {
+			struct timeval timer;
+			fd_set readfds;
+			int nfds=0, nfound;
+			timer.tv_sec = _timeout;
+			timer.tv_usec = 0;
+#if !defined(WIN32) // nfds is ignored on WIN32
+			nfds = _sock + 1;
+#endif
+			FD_ZERO(&readfds);
+			FD_SET(_sock, &readfds);
+				
+			nfound = select( nfds, &readfds, 0, 0, &timer );
+			switch(nfound) {
+				case 0:
+					return 0;
+					break;
+				case 1:
+					break;
+				default:
+					dprintf(D_NETWORK,
+					        "select returns %d, recv failed\n",
+						  nfound );
+					return 0;
+					break;
+			}
+		}
+		(void)handle_incoming_packet();
+	}
+
+	if(_longMsg) // long message
+		return _longMsg->peek(c);
+	else // short message
+		return _shortMsg.peek(c);
+}
+
+
+/* Receive a packet
+ *
+ * This method receives a packet from _sock UDP socket and buffer it appropriatly
+ * return: TRUE, if a message becomes ready
+ *         FALSE, if not ready
+ * side-effect: _who will be updated to the address of the sender
+ */
+int SafeSock::handle_incoming_packet()
+{
+	SOCKET_LENGTH_TYPE fromlen = sizeof(struct sockaddr_in);
+	bool last;
+	int seqNo, length;
+	_condorMsgID mID;
+	void* data;
+	int index;
+	int received;
+	_condorInMsg *tempMsg, *delMsg, *prev = NULL;
+	time_t curTime;
+
+	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
+	                    0, (struct sockaddr *)&_who, &fromlen );
+	if(received < 0) {
+		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
 	}
 	dprintf( D_NETWORK, "RECV %s ", sock_to_string(_sock) );
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
-	if (!rcv_msg.buf.put_max(tmp, len)) {
-		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
-		return FALSE;
+	length = received;
+	if(_shortMsg.getHeader(last, seqNo, length, mID, data)) { // short message
+		_shortMsg.curIndex = 0;
+		_msgReady = true;
+		_whole++;
+		if(_whole == 1)
+			_avgSwhole = length;
+		else
+			_avgSwhole = ((_whole - 1) * _avgSwhole + length) / _whole;
+
+		_noMsgs++;
+		return TRUE;
 	}
 
-	rcv_msg.ready = TRUE;
-
-	return TRUE;
+	/* long message */
+	curTime = (unsigned long)time(NULL);
+	index = labs(mID.ip_addr + mID.time + mID.msgNo) % SAFE_SOCK_HASH_BUCKET_SIZE;
+	tempMsg = _inMsgs[index];
+	while(tempMsg != NULL && !same(tempMsg->msgID, mID)) {
+		prev = tempMsg;
+		tempMsg = tempMsg->nextMsg;
+		// delete 'timeout'ed message
+		if(curTime - prev->lastTime > _tOutBtwPkts) {
+			delMsg = prev;
+			prev = delMsg->prevMsg;
+			if(prev)
+				prev->nextMsg = delMsg->nextMsg;
+			else  // delMsg is the 1st message in the chain
+				_inMsgs[index] = tempMsg;
+			if(tempMsg)
+				tempMsg->prevMsg = prev;
+			_deleted++;
+			if(_deleted == 1)
+				_avgSdeleted = delMsg->msgLen;
+			else {
+				_avgSdeleted = ((_deleted - 1) * _avgSdeleted + delMsg->msgLen) / _deleted;
+			}
+			dprintf(D_NETWORK, "Timeouted message deleted\n");
+			delete delMsg;
+		}
+	}
+	if(tempMsg != NULL) { // found
+		if(tempMsg->addPacket(last, seqNo, length, data)) { // message is ready
+			_longMsg = tempMsg;
+			_msgReady = true;
+			_whole++;
+			if(_whole == 1)
+				_avgSwhole = _longMsg->msgLen;
+			else
+				_avgSwhole = ((_whole - 1) * _avgSwhole + _longMsg->msgLen) / _whole;
+			return TRUE;
+		}
+		return FALSE;
+	} else { // not found
+		if(prev) { // add a new message at the end of the chain
+			prev->nextMsg = new _condorInMsg(mID, last, seqNo,
+			                                 length, data, prev);
+			if(!prev->nextMsg) {
+				EXCEPT("Error:handle_incomming_packet: Out of Memory");
+			}
+			_noMsgs++;
+			return FALSE;
+		} else { // first message in the bucket
+			_inMsgs[index] = new _condorInMsg(mID, last, seqNo,
+			                                  length, data, NULL);
+			if(!_inMsgs[index]) {
+				EXCEPT("Error:handle_incomming_packet: Out of Memory");
+			}
+			_noMsgs++;
+			return FALSE;
+		}
+	}
 }
 
 
-int SafeSock::snd_packet(
-	int		_sock
-	)
+void SafeSock::getStat(unsigned long &noMsgs,
+			     unsigned long &noWhole,
+			     unsigned long &noDeleted,
+			     unsigned long &avgMsgSize,
+                       unsigned long &szComplete,
+			     unsigned long &szDeleted)
 {
-	int		ns;
+	noMsgs = _noMsgs;
+	noWhole = _whole;
+	noDeleted = _deleted;
+	avgMsgSize = _outMsg.getAvgMsgSize();
+	szComplete = _avgSwhole;
+	szDeleted = _avgSdeleted;
+}
 
-	ns = snd_msg.buf.num_used();
-
-	if (sendto(_sock, (const char *)snd_msg.buf.get_ptr(),
-			   snd_msg.buf.num_used(), 0,
-			   (const struct sockaddr *)&_who,
-			   sizeof(struct sockaddr_in)) < 0) {
-		return FALSE;
-	}
-	dprintf( D_NETWORK, "SEND %s ", sock_to_string(_sock) );
-	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
-	snd_msg.buf.reset();
-
-	return TRUE;
+void SafeSock::resetStat()
+{
+	_noMsgs = 0;
+	_whole = 0;
+	_deleted = 0;
+	_avgSwhole = 0;
+	_avgSdeleted = 0;
 }
 
 
 #ifndef WIN32
 	// interface no longer supported
-int SafeSock::attach_to_file_desc(
-	int		fd
-	)
+int SafeSock::attach_to_file_desc(int fd)
 {
 	if (_state != sock_virgin) return FALSE;
 
 	_sock = fd;
 	_state = sock_connect;
+	timeout(0); // make certain in block mode
 	return TRUE;
 }
 #endif
+
 
 char * SafeSock::serialize() const
 {
@@ -348,3 +550,67 @@ char * SafeSock::serialize(char *buf)
 
 	return NULL;
 }
+
+#ifdef DEBUG
+int SafeSock::getMsgSize()
+{
+	int result;
+
+	while(!_msgReady) {
+		if(_timeout > 0) {
+			struct timeval timer;
+			fd_set readfds;
+			int nfds=0, nfound;
+			timer.tv_sec = _timeout;
+			timer.tv_usec = 0;
+#if !defined(WIN32) // nfds is ignored on WIN32
+			nfds = _sock + 1;
+#endif
+			FD_ZERO(&readfds);
+			FD_SET(_sock, &readfds);
+				
+			nfound = select( nfds, &readfds, 0, 0, &timer );
+			switch(nfound) {
+				case 0:
+					return 0;
+					break;
+				case 1:
+					break;
+				default:
+					dprintf(D_NETWORK,
+					        "select returns %d, recv failed\n",
+						  nfound );
+					return FALSE;
+					break;
+			}
+		}
+		(void)handle_incoming_packet();
+	}
+
+	if(_longMsg)
+		return _longMsg->msgLen;
+	return _shortMsg.length;
+}
+
+void SafeSock::dumpSock()
+{
+	_condorInMsg *tempMsg;
+
+	dprintf(D_NETWORK, "[In] Long Messages\n");
+	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++) {
+		dprintf(D_NETWORK, "\nBucket [%d]\n", i);
+		tempMsg = _inMsgs[i];
+		while(tempMsg) {
+			tempMsg->dumpMsg();
+			tempMsg = tempMsg->nextMsg;
+		}
+	}
+
+	dprintf(D_NETWORK, "\n\n[In] Short Message\n");
+	if(_msgReady && _longMsg == NULL)
+		_shortMsg.dumpPacket();
+	
+	dprintf(D_NETWORK, "\n\n[Out] out message\n");
+	_outMsg.dumpMsg(_outMsgID);
+}
+#endif

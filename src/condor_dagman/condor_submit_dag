@@ -23,6 +23,7 @@ print "\n";
 $submit = 1;
 $force = 0;
 $max_jobs = 0;
+$max_scripts = 0;
 $notification = "";
 while( $_ = shift ) {
   SWITCH: {	    
@@ -53,7 +54,7 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
-    if( /^-m.*/ ) {
+    if( /^-maxj.*/ ) {
 	$max_jobs = shift;
 	if( ! $max_jobs ) {
 	    &usage();
@@ -63,6 +64,26 @@ while( $_ = shift ) {
 	    "You must specify a number.\n\n";
 	    &usage();
 	}
+	last SWITCH;
+    }
+    if( /^-maxs.*/ ) {
+	$max_scripts = shift;
+	if( ! $max_scripts ) {
+	    &usage();
+	}
+	if( !($max_scripts =~ /^\d+$/) ) {
+	    print "ERROR: Invalid argument \"$max_scripts\" to -maxscripts.\n",
+	    "You must specify a number.\n\n";
+	    &usage();
+	}
+	last SWITCH;
+    }
+    if( /^-r/ ) {
+	$remote_schedd = shift;
+	if( ! $remote_schedd ) {
+	    &usage();
+	}
+	$remote_schedd = "-r $remote_schedd";
 	last SWITCH;
     }
     $dagfile = $_;
@@ -80,8 +101,16 @@ if( ! $dagfile ) {
     $rescue_file = "$dagfile.rescue";
 }
 
-# Figure out if condor_dagman is installed, and if so, where. 
-chop( $dagman_path = `which condor_dagman` );
+
+# See if there is an executable 'condor_dagman' anywhere in our path.
+foreach $dir ( split /:/, $ENV{PATH} )
+{
+    $cur_path = "$dir/condor_dagman";
+    if( -x $cur_path ) {
+        $dagman_path = $cur_path;
+        last;
+    }
+}
 -x $dagman_path || 
     die "Can't find the condor_dagman exectuable in your PATH, aborting.\n";
 
@@ -120,7 +149,7 @@ print "\n";
 print "Condor Log file for all jobs of this DAG : $job_log\n";
 
 if( $submit ) {
-    print `condor_submit $sub_file`;
+    print `condor_submit $remote_schedd $sub_file`;
 } else {
     print "-no_submit given, not submitting DAG to Condor.  You can do this with:\n";
     print "\"condor_submit $sub_file\"\n";
@@ -141,6 +170,7 @@ sub usage {
     print "    -verbose            (Verbose error messages from condor_submit_dag)\n";
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
     print "    -maxjobs number     (Maximum number of jobs ever submitted at once)\n";
+    print "    -maxscripts number  (Maximum number of PRE/POST scripts to run at once)\n";
     print "    -log filename       (Specify the log file shared by all jobs in the DAG)\n";
     print "    -notification value (Determines how much email you get from Condor\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
@@ -150,7 +180,7 @@ sub usage {
 }
 
 sub parse_dag_file {
-    local( %cmd_files, %log_names, $log_name, $had_error, $did_one, $len, $max );
+    local( %cmd_files, %log_names, $log_name, $had_error, $did_one, $len );
     $had_error = 0;
     $did_one = 0;
     open( DAG, "<$dagfile" ) || die "Can't open $dagfile for reading: $!\n";
@@ -161,7 +191,7 @@ sub parse_dag_file {
 			$nextdl =~ s/^\s*//;			# remove the beginning whitespace
 			$_ = $thisdl ." ". $nextdl;		# slam them together
 		}
-	if( /^job\s*(\S*)\s*(\S*)$/i ) {
+	if( /^job\s+(\S+)\s+(\S+)/i ) {
 	    $cmd_files{$2} = 1;
 	}
     }
@@ -241,6 +271,9 @@ sub write_submit_file {
     $args = $args . " -Rescue $rescue_file";
     if( $max_jobs ) {
 	$args = $args . " -MaxJobs $max_jobs";
+    }
+    if( $max_scripts ) {
+	$args = $args . " -MaxScripts $max_scripts";
     }
     print SUBMIT "arguments\t= $args\n";
     print SUBMIT "environment\t= PATH=$path\n";

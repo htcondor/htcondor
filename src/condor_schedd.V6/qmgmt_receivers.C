@@ -255,6 +255,27 @@ do_Q_request(ReliSock *syscall_sock)
 		return 0;
 	}
 
+	case CONDOR_BeginTransaction:
+	  {
+		int terrno;
+
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = 0;	// BeginTransaction returns void (sigh), so always success
+		BeginTransaction( );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 	case CONDOR_CloseConnection:
 	  {
 		int terrno;
@@ -458,7 +479,7 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		ad = GetJobAd( cluster_id, proc_id );
+		ad = GetJobAd( cluster_id, proc_id, true );
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
@@ -471,7 +492,12 @@ do_Q_request(ReliSock *syscall_sock)
 		if( rval >= 0 ) {
 			assert( ad->code(*syscall_sock) );
 		}
-		FreeJobAd(ad);
+		// Here we must really, truely delete the ad.  Why? Because
+		// when GetJobAd is called with the third bool argument set
+		// to True (expandedAd), it does a deep copy of the ad in the
+		// queue in order to expand the $$() attributes.  So we must
+		// always delete it.
+		if (ad) delete ad;	// need to really delete it cuz expanded
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}

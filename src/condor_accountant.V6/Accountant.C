@@ -81,6 +81,7 @@ void Accountant::Initialize()
   char* tmp;
   NiceUserPriorityFactor=10000000;
   RemoteUserPriorityFactor=10000;
+  DefaultPriorityFactor=1;
   HalfLifePeriod=86400;
 
   // get half life period
@@ -107,6 +108,14 @@ void Accountant::Initialize()
 	  free(tmp);
   }
 
+  // get default priority factor
+
+  tmp = param("DEFAULT_PRIO_FACTOR");
+  if(tmp) {
+	  DefaultPriorityFactor=(float)atof(tmp);
+	  free(tmp);
+  }
+
   // get accountant local domain
 
   tmp = param("ACCOUNTANT_LOCAL_DOMAIN");
@@ -121,6 +130,7 @@ void Accountant::Initialize()
   dprintf(D_ALWAYS,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
   dprintf(D_ALWAYS,"NICE_USER_PRIO_FACTOR=%f\n",NiceUserPriorityFactor);
   dprintf(D_ALWAYS,"REMOTE_PRIO_FACTOR=%f\n",RemoteUserPriorityFactor);
+  dprintf(D_ALWAYS,"DEFAULT_PRIO_FACTOR=%f\n",DefaultPriorityFactor);
   dprintf(D_ALWAYS,"ACCOUNTANT_LOCAL_DOMAIN=%s\n",
 				  AccountantLocalDomain.Value());
 
@@ -169,6 +179,22 @@ int Accountant::GetResourcesUsed(const MyString& CustomerName)
 
 float Accountant::GetPriority(const MyString& CustomerName) 
 {
+  float PriorityFactor=GetPriorityFactor(CustomerName);
+  float Priority=MinPriority;
+  GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
+  if (Priority<MinPriority) {
+    Priority=MinPriority;
+    SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
+  }
+  return Priority*PriorityFactor;
+}
+
+//------------------------------------------------------------------
+// Return the priority factor of a customer
+//------------------------------------------------------------------
+
+float Accountant::GetPriorityFactor(const MyString& CustomerName) 
+{
   float PriorityFactor=0;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
   if (PriorityFactor<1) {
@@ -177,16 +203,10 @@ float Accountant::GetPriority(const MyString& CustomerName)
     else if (AccountantLocalDomain!=GetDomain(CustomerName))
       PriorityFactor=RemoteUserPriorityFactor;
     else
-      PriorityFactor=1;
+      PriorityFactor=DefaultPriorityFactor;
     SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
   }
-  float Priority=MinPriority;
-  GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
-  if (Priority<MinPriority) {
-    Priority=MinPriority;
-    SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
-  }
-  return Priority*PriorityFactor;
+  return PriorityFactor;
 }
 
 //------------------------------------------------------------------

@@ -899,8 +899,6 @@ RestoreStack()
 
 	dprintf(D_CKPT, "RestoreStack() Exit!\n");
 	
-	_condor_signals_enable();
-
 	LONGJMP( Env, 1 );
 }
 
@@ -952,36 +950,7 @@ Image::Write( const char *ckpt_file )
 		ckpt_file = file_name;
 	}
 
-	if( MyImage.GetMode() == REMOTE ) {
-		// In remote mode we update the shadow on our image size
-		report_image_size( (MyImage.GetLen() + KILO - 1) / KILO );
-
-		// Get checkpoint parameters from the shadow
-		int mode = get_ckpt_mode(check_sig);
-		if (mode > 0) {
-			condor_compress_ckpt = (mode&CKPT_MODE_USE_COMPRESSION) ? 1 : 0;
-			if (mode&CKPT_MODE_SLOW) {
-				condor_slow_ckpt = get_ckpt_speed();
-				dprintf(D_ALWAYS, "Checkpointing at %d KB/s.\n",
-						condor_slow_ckpt);
-			} else {
-				condor_slow_ckpt = 0;
-			}
-			if (mode&CKPT_MODE_MSYNC) {
-				dprintf(D_ALWAYS,
-						"Performing an msync() on all dirty pages...\n");
-				MSync();
-			}
-			if (mode&CKPT_MODE_ABORT) {
-				dprintf(D_ALWAYS, "Checkpoint aborted by shadow request.\n");
-				return -1;
-			}
-		} else {
-			condor_compress_ckpt = condor_slow_ckpt = 0;
-		}
-		head.ResetMagic();			// set magic according to compression mode
-	}
-
+	head.ResetMagic();		// set magic according to compression mode
 
 		// Generate tmp file name
 	dprintf( D_ALWAYS, "Checkpoint name is \"%s\"\n", ckpt_file );
@@ -1535,22 +1504,28 @@ Checkpoint( int sig, int code, void *scp )
 	int		scm, p_scm;
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 	int		write_result;
+	sigset_t	mask;
 
-		// First thing, make sure we don't do recursive checkpointing.
-	_condor_ckpt_disable();
+		// Block ckpt signals while we are ckpting
+	mask = _condor_signals_disable();
+
+		// If checkpointing is temporarily disabled, remember that and return
+	if( _condor_ckpt_is_disabled() )  {
+		_condor_ckpt_defer(sig);
+		_condor_signals_enable(mask);
+		return;
+	}
 
 	if( InRestart ) {
-		if ( sig == SIGTSTP )
+		if ( sig == SIGTSTP ) {
 			Suicide();		// if we're supposed to vacate, kill ourselves
-		else {
+		} else {
+			_condor_signals_enable(mask);
 			return;			// if periodic ckpt or we're currently ckpting
 		}
 	} else {
 		InRestart = TRUE;
 	}
-
-	_condor_save_sigstates();
-	dprintf( D_ALWAYS, "Saved signal state.\n");
 
 	check_sig = sig;
 
@@ -1604,7 +1579,6 @@ Checkpoint( int sig, int code, void *scp )
 		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
 
-
 	if ( sig == SIGTSTP ) {
 		dprintf( D_ALWAYS, "Got SIGTSTP\n" );
 	} else {
@@ -1618,12 +1592,65 @@ Checkpoint( int sig, int code, void *scp )
 		;
 #endif
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
+			// First, take a snapshot of our memory image to prepare
+			// for the checkpoint and accurately report our image size.
+		dprintf( D_ALWAYS, "About to update MyImage\n" );
+		MyImage.Save();
+
+			// If we're in REMOTE mode, report our status and ask the
+			// shadow for instructions.  We need to do this before we
+			// start checkpointing our file state or memory image,
+			// since the shadow may tell us not to checkpoint at all.
+			// It may just want a status update.
+		if( MyImage.GetMode() == REMOTE ) {
+				// Give the shadow our updated image size
+			report_image_size( (MyImage.GetLen() + KILO - 1) / KILO );
+
+				// Report some file table statistics here???
+
+				// Get checkpoint parameters from the shadow.
+				// At some point, this may also include some instructions
+				// for manipulating the file table without doing a full
+				// checkpoint.
+			int mode = get_ckpt_mode(check_sig);
+			if (mode > 0) {
+				condor_compress_ckpt = (mode&CKPT_MODE_USE_COMPRESSION)?1:0;
+				if (mode&CKPT_MODE_SLOW) {
+					condor_slow_ckpt = get_ckpt_speed();
+					dprintf(D_ALWAYS, "Checkpointing at %d KB/s.\n",
+							condor_slow_ckpt);
+				} else {
+					condor_slow_ckpt = 0;
+				}
+				if (mode&CKPT_MODE_MSYNC) {
+					dprintf(D_ALWAYS,
+							"Performing an msync() on all dirty pages...\n");
+					MyImage.MSync();
+				}
+				if (mode&CKPT_MODE_ABORT) {
+					dprintf(D_ALWAYS,
+							"Checkpoint aborted by shadow request.\n");
+						// We can't just return here.  We need to cleanup
+						// anything we've done above first.
+					SetSyscalls( scm );
+					dprintf( D_ALWAYS, "About to return to user code\n" );
+					InRestart = FALSE;
+					_condor_signals_enable(mask);
+					return;
+				}
+			} else {
+				condor_compress_ckpt = condor_slow_ckpt = 0;
+			}
+		}
+
+		_condor_save_sigstates();
+		dprintf( D_ALWAYS, "Saved signal state.\n");
+
 		dprintf( D_ALWAYS, "About to save file state\n");
 		_condor_file_table_checkpoint();
 		dprintf( D_ALWAYS, "Done saving file state\n");
 
-		dprintf( D_ALWAYS, "About to save MyImage\n" );
-		MyImage.Save();
+		dprintf( D_ALWAYS, "About to write checkpoint\n");
 		write_result = MyImage.Write();
 		if ( sig == SIGTSTP ) {
 			/* we have just checkpointed; now time to vacate */
@@ -1680,8 +1707,8 @@ Checkpoint( int sig, int code, void *scp )
 			patch_registers( scp );
 		}
 
-       		dprintf( D_ALWAYS, "About to restore file state\n");
-	       	_condor_file_table_resume();
+		dprintf( D_ALWAYS, "About to restore file state\n");
+		_condor_file_table_resume();
 		dprintf( D_ALWAYS, "Done restoring file state\n" );
 
 #ifdef HPUX10
@@ -1737,11 +1764,9 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "About to restore signal state\n" );
 		_condor_restore_sigstates();
 
-			// match _condor_ckpt_disable() call at start of function
-		_condor_ckpt_enable();
-
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
+		_condor_signals_enable(mask);
 		return;
 	}
 }

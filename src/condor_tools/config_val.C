@@ -53,6 +53,7 @@ char	*MyName;
 char	*mySubSystem = NULL;
 StringList params;
 daemon_t dt = DT_MASTER;
+bool	mixedcase = false;
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -118,6 +119,7 @@ usage()
 char* GetRemoteParam( char*, char*, char*, char* );
 void  SetRemoteParam( char*, char*, char*, char*, ModeType );
 
+int
 main( int argc, char* argv[] )
 {
 	char	*value, *tmp, *foo, *host = NULL;
@@ -200,6 +202,8 @@ main( int argc, char* argv[] )
 			mt = CONDOR_RUNTIME_SET;
 		} else if( match_prefix( argv[i], "-runset" ) ) {
 			mt = CONDOR_RUNTIME_UNSET;
+		} else if( match_prefix( argv[i], "-mixedcase" ) ) {
+			mixedcase = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -284,6 +288,7 @@ main( int argc, char* argv[] )
 		}
 	}
 	my_exit( 0 );
+	return 0;
 }
 
 
@@ -411,6 +416,10 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 				 "%s: Error: Configuration variable names cannot contain spaces\n",
 				 MyName );
 		my_exit( 1 );
+	}
+
+	if (!mixedcase) {
+		lower_case(param_name);		// make the config name case insensitive
 	}
 
 		// We need a version with a newline at the end to make

@@ -37,7 +37,10 @@ typedef struct {
 	char	*name;	/* for named pipes, NULL otherwise */
 } P_DESC;
 
-	/* Condor "universes" */
+	/*	Condor "universes".
+		Be certain to update the below JobUniverseNames array if you
+		change this.
+	 */
 #define STANDARD	1	/* Original - single process jobs, 1 per machine */
 /* 
    2 and 3 used to be "PIPE" and "LINDA", which never worked and just
@@ -48,7 +51,25 @@ typedef struct {
 #define PVMD		6	/* Explicit, PVM daemon process */
 #define SCHED_UNIVERSE	7	/* Scheduler universe: run job locally */
 #define MPI         8   /* Parallel app via MPI */
-#define GLOBUS_UNIVERSE  9   /* Use Globusrun as scheduler universe */
+#define GLOBUS_UNIVERSE  9   /* Use condor_gmanager to manage the jobs */
+
+#ifdef INCLUDE_UNIVERSE_NAME_ARRAY
+char    *JobUniverseNames[] = {
+	"NULL",		// STANDARD starts at 1, not 0, so we need a place holder
+    "STANDARD",
+	"PIPE",
+	"LINDA",
+    "PVM",
+    "VANILLA",
+    "PVMD",
+    "SCHEDULER",
+	"MPI",
+    "GLOBUS"
+};
+#else
+extern char *JobUniverseNames[];
+#endif
+
 
 #if !defined(WIN32) // hopefully we won't need PROC structures in V6 so don't bother porting to NT
 /*

@@ -135,8 +135,8 @@ public:
 	/** Report all cached I/O summaries */
 	void	report_all();
 
-	/** If flush mode is set to 1, all writes are immediately flushed */
-	void	set_flush_mode( int on_off );
+	/** Close all files */
+	void	close_all();
 
 	/** If aggravation is enabled, virtual fds will never match real fds. */
 	void	set_aggravate_mode( int on_off );
@@ -210,6 +210,15 @@ public:
 	    perform a UNIX fsync/fdsync/fdatasync as appropriate. */
 	int	fsync( int fd );
 
+	/** Do a UNIX fstat() */
+	int fstat( int fd, struct stat *buf);
+
+	/** Do a UNIX stat() */
+	int stat( const char *name, struct stat *buf);
+
+	/** Do a UNIX lstat() */
+	int lstat( const char *name, struct stat *buf);
+
 	/** Return the max number of bytes to buffer per file */
 	int	get_buffer_size();
 
@@ -244,10 +253,12 @@ private:
 	int	find_logical_name( char *logical_name );
 	void	complete_path( const char *short_path, char *long_path );
 	void	lookup_url( char *logical_name, char *url );
+	void	replace_file( CondorFile *o, CondorFile *n );
 
-	CondorFile * open_url( char *url, int flags, int mode, int allow_buffer );
-	CondorFile * open_url_retry( char *url, int flags, int mode, int allow_buffer );
-	CondorFile * open_file_unique( char *logical_name, int flags, int mode, int allow_buffer );
+	CondorFile * create_url_chain( char *url );
+	CondorFile * open_url( char *url, int flags, int mode );
+	CondorFile * open_url_retry( char *url, int flags, int mode );
+	CondorFile * open_file_unique( char *logical_name, int flags, int mode );
 	CondorFileInfo	* make_info( char *logical_name );
 
 	CondorFilePointer	**pointers;
@@ -258,7 +269,6 @@ private:
 	int	buffer_size;
 	int	buffer_block_size;
 	int	got_buffer_info;
-	int	flush_mode;
 	int	aggravate_mode;
 	int	info_count;
 };

@@ -41,9 +41,9 @@ if( $versarg ) {
     # If we weren't told on the command line, try to run ident
     # directly on the condor_master binary.
     if( -f "strip_dir/sbin/condor_master" ) {
-        $_=`ident strip_dir/sbin/condor_master`;
+        $_=`strip_dir/sbin/condor_master -version`;
     } elsif ( -f "static_dir/sbin/condor_master" ) {
-        $_=`ident static_dir/sbin/condor_master`;
+        $_=`static_dir/sbin/condor_master -version`;
     } else {
 	die "ERROR: can't find a condor_master, and no -v specified";
     }
@@ -66,9 +66,8 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-#@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "mpi" );
-@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm" );
-#@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm" );
+@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "sdk","eventd", "mpi" );
+#@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm", "sdk" );
 #@modules = ( "condor" );
 
 # List any special files, other than README, DOC, INSTALL, and
@@ -100,7 +99,9 @@ require 5.002;
   "dagman"        => "DagMan contrib module",
   "pvm"           => "PVM contrib module",
   "ckpt_server"   => "Checkpoint Server contrib module",
-  "mpi"           => "MPI contrib module"
+  "mpi"           => "MPI contrib module",
+  "sdk"           => "software developer's kit",
+  "eventd"        => "Condor Eventd contrib module"
 );	   
 
 ######################################################################

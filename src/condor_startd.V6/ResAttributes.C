@@ -44,28 +44,19 @@ MachAttributes::MachAttributes()
 		// value for this as soon as the MachAttributes object exists.
 	m_num_cpus = sysapi_ncpus();
 
-		// The same is true of physical memory.  First, try to param
-		// for it.  If it's defined, use what they say.  If not, try
-		// to figure it out for ourselves.  If we had an error in
-		// sysapi_phys_memory(), we can't param() (since we'd only call
-		// sysapi_phys_memory() if param() returned NULL), so we need to
-		// just EXCEPT with a message telling the user to define
-		// MEMORY manually.  Derek Wright 1/8/99 amended Keller 06/1/99
-	char* ptr;
-	if( (ptr = param("MEMORY")) != NULL ) {
-		m_phys_mem = atoi(ptr);
-		free(ptr);
-	} else {
-		m_phys_mem = sysapi_phys_memory();
-		if( m_phys_mem <= 0 ) {
-			dprintf( D_ALWAYS, 
-					 "Error computing physical memory with calc_phys_mem().\n" );
-			dprintf( D_ALWAYS | D_NOHEADER, 
-					 "\t\tMEMORY parameter not defined in config file.\n" );
-			dprintf( D_ALWAYS | D_NOHEADER, 
-					 "\t\tTry setting MEMORY to the number of megabytes of RAM.\n" );
-			EXCEPT( "Can't compute physical memory." );
-		}
+		// The same is true of physical memory.  If we had an error in
+		// sysapi_phys_memory(), we need to just EXCEPT with a message
+		// telling the user to define MEMORY manually.
+	m_phys_mem = sysapi_phys_memory();
+	if( m_phys_mem <= 0 ) {
+		dprintf( D_ALWAYS, 
+				 "Error computing physical memory with calc_phys_mem().\n" );
+		dprintf( D_ALWAYS | D_NOHEADER, 
+				 "\t\tMEMORY parameter not defined in config file.\n" );
+		dprintf( D_ALWAYS | D_NOHEADER, 
+				 "\t\tTry setting MEMORY to the number of megabytes of RAM.\n"
+				 );
+		EXCEPT( "Can't compute physical memory." );
 	}
 }
 
@@ -290,6 +281,8 @@ MachAttributes::benchmark( Resource* rip, int force )
 			return;
 		}
 			// Enter benchmarking activity
+		dprintf( D_ALWAYS, "State change: %s is TRUE\n", 
+				 ATTR_RUN_BENCHMARKS );
 		rip->change_state( benchmarking_act );
 	}
 
@@ -322,6 +315,7 @@ MachAttributes::benchmark( Resource* rip, int force )
 	m_last_benchmark = (int)time(NULL);
 
 	if( ! force ) {
+		dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
 		rip->change_state( idle_act );
 	}
 }

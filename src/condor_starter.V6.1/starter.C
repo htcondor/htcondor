@@ -87,17 +87,6 @@ CStarter::Init(char peer[])
 	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&CStarter::Reaper,
 		"Reaper", this);
 
-	// move to working directory
-	sprintf(WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
-			daemonCore->getpid());
-	if (mkdir(WorkingDir,0777) < 0) {
-		EXCEPT("mkdir(%s)", WorkingDir);
-	}
-	if (chdir(WorkingDir) < 0) {
-		EXCEPT("chdir(%s)", WorkingDir);
-	}
-	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir );
-
 	// init environment info
 	char *mfhn = strnewp ( my_full_hostname() );
 	REMOTE_syscall(CONDOR_register_machine_info, UIDDomain, FSDomain,
@@ -199,8 +188,71 @@ CStarter::StartJob()
 		return;
 	}
 
+		// Now that we have the job ad, figure out what the owner
+		// should be and initialize our priv_state code:
+
+	char owner[128];
+	if ( jobAd->LookupString( ATTR_OWNER, owner ) != 1 ) {
+		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
+				 ATTR_OWNER );
+			// DREADFUL HACK (see below)
+		EXCEPT("Failed to start job");
+	}
+
+#ifndef WIN32
+	// Unix
+	dprintf( D_FULLDEBUG, "About to initialize user ids with %s\n", owner );
+	init_user_ids( owner );
+#else
+	// Win32
+	// taken origionally from OsProc::StartJob.  Here we create the
+	// user and initialize user_priv
+	{	
+		// we only support running jobs as user nobody for the first pass
+		char nobody_login[60];
+		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		init_user_nobody_loginname(nobody_login);
+		init_user_ids("nobody");
+	}
+#endif
+
+		// Now that we have the right user for priv_state code, we can
+		// finally make the scratch execute directory for this job.
+
+		// Be sure we're in user priv for this
+	priv_state priv = set_user_priv();
+
+	sprintf( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
+			 daemonCore->getpid() );
+	if( mkdir(WorkingDir, 0777) < 0 ) {
+		EXCEPT( "mkdir(%s)", WorkingDir );
+	}
+
+#ifdef WIN32
+		// On NT, we've got to manually set the acls, too.
+	{
+		perm dirperm;
+		dirperm.init(nobody_login);
+		int ret_val = dirperm.set_acls( WorkingDir );
+		if ( ret_val < 0 ) {
+			EXCEPT("UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
+		}
+	}
+#endif /* WIN32 */
+
+	if( chdir(WorkingDir) < 0 ) {
+		EXCEPT("chdir(%s)", WorkingDir);
+	}
+	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir );
+
+		// Return to our old priv state
+	set_priv ( priv );
+
     // printAdToFile( jobAd, "/tmp/starter_ad" );
 
+		// Now that the scratch dir is setup, we can figure out what
+		// kind of job we're starting up, instantiate the appropriate
+		// userproc class, and actually start the job.
     int universe = STANDARD;
     if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
         dprintf( D_ALWAYS, "No universe attr. in jobAd!\n" );

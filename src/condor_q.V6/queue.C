@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -23,12 +23,11 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-//#include "condor_accountant.h"
+#include "condor_accountant.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "condor_api.h"
-//#include "condor_query.h"
-//#include "condor_q.h"
+#include "condor_query.h"
+#include "condor_q.h"
 #include "condor_io.h"
 #include "condor_string.h"
 #include "condor_attributes.h"
@@ -39,7 +38,7 @@
 #include "MyString.h"
 #include "extArray.h"
 #include "files.h"
-//#include "ad_printmask.h"
+#include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"
 #include "format_time.h"
@@ -47,11 +46,10 @@
 #include "my_hostname.h"
 #include "basename.h"
 #include "metric_units.h"
+#include "globus_utils.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
-extern  void short_print_to_buffer(char*,int,int,const char*,int,int,int,int,
-							int, const char *);
 static  void processCommandLineArguments(int, char *[]);
 
 static  bool process_buffer_line( ClassAd * );
@@ -67,10 +65,8 @@ static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine)
 static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
 
-static 	int verbose = 0, summarize = 1, global = 0, show_io = 0;
+static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0;
 static 	int malformed, unexpanded, running, idle, held;
-
-static const float PriorityDelta = 0.5;  // NAC - from condor_accountant.h
 
 static	CondorQ 	Q;
 static	QueryResult result;
@@ -78,16 +74,29 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
 
+static char* format_owner( char*, AttrList* );
+
 // clusterProcString is the container where the output strings are
 //    stored.  We need the cluster and proc so that we can sort in an
 //    orderly manner (and don't need to rely on the cluster.proc to be
 //    available....)
 
-typedef struct {
+class clusterProcString {
+public:
+	clusterProcString();
+	int parent_cluster;
+	int parent_proc;
 	int cluster;
 	int proc;
 	char * string;
-} clusterProcString;
+};
+
+clusterProcString::
+clusterProcString() {
+	// these need to be initialized so that sorting works
+	parent_cluster = 0;
+	parent_proc = 0;
+}
 
 static  ExtArray<clusterProcString *> *output_buffer;
 static	bool		output_buffer_empty = true;
@@ -103,8 +112,7 @@ static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static	char		*pool = NULL;
 static	char		scheddAddr[64];	// used by format_remote_host()
-//static	AttrListPrintMask 	mask;
-static	ClassAdPrintMask 	mask;
+static	AttrListPrintMask 	mask;
 
 // for run failure analysis
 static  int			findSubmittor( char * );
@@ -180,8 +188,8 @@ int main (int argc, char **argv)
 			fprintf( stderr, "Can't display queue of local schedd\n" );
 			exit( 1 );
 		}
-  	}
-
+	}
+	
 	// if a global queue is required, query the schedds instead of submittors
 	if (global) {
 		querySchedds = true;
@@ -209,24 +217,21 @@ int main (int argc, char **argv)
 		exit(1);
 	}
 	
+
 	// get queue from each ScheddIpAddr in ad
 	scheddList.Open();
 	while ((ad = scheddList.Next()))
 	{
 		// get the address of the schedd
-//		if (!ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)	||
-//			!ad->LookupString(ATTR_NAME, scheddName)			||
-//			!ad->LookupString(ATTR_MACHINE, scheddMachine))
-		if( !ad->EvaluateAttrString( ATTR_SCHEDD_IP_ADDR, scheddAddr, 64 ) 	||	// NAC
-			!ad->EvaluateAttrString( ATTR_NAME, scheddName, 64 )		    ||	// NAC
-			!ad->EvaluateAttrString( ATTR_MACHINE, scheddMachine, 64 ) ) {	  	// NAC
+		if (!ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)	||
+			!ad->LookupString(ATTR_NAME, scheddName)			||
+			!ad->LookupString(ATTR_MACHINE, scheddMachine))
 				continue;
-		}
-		
-  		if ( verbose ) {
-  			show_queue( scheddAddr, scheddName, scheddMachine );
-  		} else {
- 			show_queue_buffered( scheddAddr, scheddName, scheddMachine );
+	
+		if ( verbose ) {
+			show_queue( scheddAddr, scheddName, scheddMachine );
+		} else {
+			show_queue_buffered( scheddAddr, scheddName, scheddMachine );
 		}
 		first = false;
 	}
@@ -255,12 +260,19 @@ processCommandLineArguments (int argc, char *argv[])
 	
 	for (i = 1; i < argc; i++)
 	{
-		// if the argument begins with a '-', use only the part following
+		if( *argv[i] != '-' ) {
+			// no dash means this arg is the desired job owner
+			if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
+				// this error doesn't seem very helpful... can't we say more?
+				fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
+				exit( 1 );
+			}
+			continue;
+		}
+
+		// the argument began with a '-', so use only the part after
 		// the '-' for prefix matches
-		if (*argv[i] == '-') 
-			arg = argv[i]+1;
-		else
-			arg = argv[i];
+		arg = argv[i]+1;
 
 		if (match_prefix (arg, "long")) {
 			verbose = 1;
@@ -271,8 +283,7 @@ processCommandLineArguments (int argc, char *argv[])
 			if( pool ) {
 				delete [] pool;
 			}
-			i++;
-			if( ! (argv[i] && *argv[i]) ) {
+            if( ++i >= argc ) {
 				fprintf( stderr, 
 						 "Error: Argument -pool requires another parameter\n" );
 				exit(1);
@@ -286,8 +297,13 @@ processCommandLineArguments (int argc, char *argv[])
 		} 
 		else
 		if (match_prefix (arg, "D")) {
+			if( ++i >= argc ) {
+				fprintf( stderr, 
+						 "Error: Argument -D requires another parameter\n" );
+				exit( 1 );
+			}
 			Termlog = 1;
-			set_debug_flags( argv[++i] );
+			set_debug_flags( argv[i] );
 		} 
 		else
 		if (match_prefix (arg, "name")) {
@@ -471,13 +487,14 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else
 		if (match_prefix( arg, "goodput")) {
-			cputime = false;
+			// goodput and show_io require the same column
+			// real-estate, so they're mutually exclusive
 			goodput = true;
+			show_io = false;
 		}
 		else
 		if (match_prefix( arg, "cputime")) {
 			cputime = true;
-			goodput = false;
 			JOB_TIME = "CPU_TIME";
 		}
 		else
@@ -491,14 +508,17 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else
 		if (match_prefix(arg,"io")) {
+			// goodput and show_io require the same column
+			// real-estate, so they're mutually exclusive
 			show_io = true;
+			goodput = false;
+		}   
+		else if( match_prefix( arg, "dag" ) ) {
+			dag = true;
 		}   
 		else {
-			// assume name of owner of job
-			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
-				fprintf (stderr, "Error: Argument %d (%s)\n", i, argv[i]);
-				exit (1);
-			}
+			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
+			exit( 1 );
 		}
 	}
 }
@@ -515,18 +535,12 @@ job_time(float cpu_time,ClassAd *ad)
 	int cur_time = 0;
 	int shadow_bday = 0;
 	float previous_runs = 0;
-	double previous_runsD;		// NAC
 
-//	ad->LookupInteger( ATTR_JOB_STATUS, job_status);
-//	ad->LookupInteger( ATTR_SERVER_TIME, cur_time);
-//	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-	ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status);			// NAC
-	ad->EvaluateAttrInt( ATTR_SERVER_TIME, cur_time);			// NAC
-	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );	// NAC
+	ad->LookupInteger( ATTR_JOB_STATUS, job_status);
+	ad->LookupInteger( ATTR_SERVER_TIME, cur_time);
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	if ( current_run == false ) {
-//		ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
-		ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runsD );
-		previous_runs = (float)previous_runsD;
+		ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
 	}
 
 		// if we have an old schedd, there is no ATTR_SERVER_TIME,
@@ -554,11 +568,6 @@ job_time(float cpu_time,ClassAd *ad)
 	return total_wall_time;
 }
 
-static void io_header()
-{
-	printf("%-8s %-8s %8s %8s %8s %10s %8s %8s\n", "ID","OWNER","READ","WRITE","SEEK","XPUT","BUFSIZE","BLKSIZE");
-}
-
 static void
 io_display(ClassAd *ad)
 {
@@ -573,38 +582,28 @@ buffer_io_display( ClassAd *ad )
 	int buffer_size=0, block_size=0;
 	float wall_clock=-1;
 
-	double read_bytesD, write_bytesD, seek_countD, wall_clockD;
-
 	char owner[256];
 
-//	ad->EvalInteger(ATTR_CLUSTER_ID,NULL,cluster);
-//	ad->EvalInteger(ATTR_PROC_ID,NULL,proc);
-//	ad->EvalString(ATTR_OWNER,NULL,owner);
-	ad->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );	// NAC
-	ad->EvaluateAttrInt( ATTR_PROC_ID, proc );			// NAC
-	ad->EvaluateAttrString( ATTR_OWNER, owner, 256 );	// NAC
+	ad->EvalInteger(ATTR_CLUSTER_ID,NULL,cluster);
+	ad->EvalInteger(ATTR_PROC_ID,NULL,proc);
+	ad->EvalString(ATTR_OWNER,NULL,owner);
 
-//  	ad->EvalFloat(ATTR_FILE_READ_BYTES,NULL,read_bytes);
-//  	ad->EvalFloat(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
-//  	ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
-//  	ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,wall_clock);
-//  	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
-//  	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
-	ad->EvaluateAttrReal( ATTR_FILE_READ_BYTES, read_bytesD );			// NAC
-	ad->EvaluateAttrReal( ATTR_FILE_WRITE_BYTES, write_bytesD );		// NAC
-	ad->EvaluateAttrReal( ATTR_FILE_SEEK_COUNT, seek_countD );			// NAC
-	ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clockD );	// NAC
-	ad->EvaluateAttrInt( ATTR_BUFFER_SIZE, buffer_size );				// NAC
-	ad->EvaluateAttrInt( ATTR_BUFFER_BLOCK_SIZE, block_size );			// NAC
+	ad->EvalFloat(ATTR_FILE_READ_BYTES,NULL,read_bytes);
+	ad->EvalFloat(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
+	ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
+	ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,wall_clock);
+	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
+	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
 
-	sprintf(return_buff, "%4d.%-3d %-8s",cluster,proc,owner);
+	sprintf( return_buff, "%4d.%-3d %-14s", cluster, proc,
+			 format_owner( owner, ad ) );
 
 	/* If the jobAd values are not set, OR the values are all zero,
 	   report no data collected.  This could be true for a vanilla
 	   job, or for a standard job that has not checkpointed yet. */
 
 	if(wall_clock<0 || (!read_bytes && !write_bytes && !seek_count) ) {
-		strcat(return_buff, "          [ no i/o data collected yet ]\n");
+		strcat(return_buff, "   [ no i/o data collected ]\n");
 	} else {
 		if(wall_clock==0) wall_clock=1;
 
@@ -633,38 +632,25 @@ static char *
 bufferJobShort( ClassAd *ad ) {
 	int cluster, proc, date, status, prio, image_size;
 	float utime;
-	double utimeD;
-//	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
-//	char buffer[ATTRLIST_MAX_EXPRESSION];
-	char owner[64], cmd[10240], args[10240];
-	char buffer[10240];	
-//  	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
-//  		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
-//  		!ad->EvalInteger (ATTR_Q_DATE, NULL, date)				||
-//  		!ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
-//  		!ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)		||
-//  		!ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)			||
-//  		!ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)	||
-//  		!ad->EvalString  (ATTR_OWNER, NULL, owner)				||
-//  		!ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
-	if (!ad->EvaluateAttrInt( ATTR_CLUSTER_ID,  cluster )			||	// NAC
-		!ad->EvaluateAttrInt( ATTR_PROC_ID,  proc )					||	// NAC
-		!ad->EvaluateAttrInt( ATTR_Q_DATE,  date )					||	// NAC
-		!ad->EvaluateAttrReal( ATTR_JOB_REMOTE_USER_CPU,  utimeD )	||	// NAC
-		!ad->EvaluateAttrInt( ATTR_JOB_STATUS,  status )			||	// NAC
-		!ad->EvaluateAttrInt( ATTR_JOB_PRIO,  prio )				||	// NAC
-		!ad->EvaluateAttrInt( ATTR_IMAGE_SIZE,  image_size )		||	// NAC
-		!ad->EvaluateAttrString( ATTR_OWNER, owner, 64 )   			||	// NAC
-		!ad->EvaluateAttrString( ATTR_JOB_CMD, cmd, 10240 ) )	   		// NAC
-	{	
+	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+
+	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
+		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
+		!ad->EvalInteger (ATTR_Q_DATE, NULL, date)				||
+		!ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
+		!ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)		||
+		!ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)			||
+		!ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)	||
+		!ad->EvalString  (ATTR_OWNER, NULL, owner)				||
+		!ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
+	{
 		sprintf (return_buff, " --- ???? --- \n");
 		return( return_buff );
 	}
-	utime = (float)utimeD;
-
+	
 	int niceUser;
-//    if( ad->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-    if( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {	// NAC
+    if( ad->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
         char tmp[100];
         strncpy(tmp,NiceUserName,99);
         strcat(tmp,".");
@@ -673,15 +659,24 @@ bufferJobShort( ClassAd *ad ) {
     }
 
 	shorten (owner, 14);
-//	if (ad->EvalString ("Args", NULL, args)) {
-	if (ad->EvaluateAttrString ("Args", args, 10240 ) ) {
+	if (ad->EvalString ("Args", NULL, args)) {
 		sprintf( buffer, "%s %s", basename(cmd), args );
 	} else {
 		sprintf( buffer, "%s", basename(cmd) );
 	}
 	utime = job_time(utime,ad);
-	short_print_to_buffer (return_buff, cluster, proc, owner, date, (int)utime,
-					status, prio, image_size, buffer); 
+
+	sprintf( return_buff,
+			 "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
+			 cluster,
+			 proc,
+			 format_owner( owner, ad ),
+			 format_date( (time_t)date ),
+			 format_time( utime ),
+			 encode_status( status ),
+			 prio,
+			 (image_size / 1024.0),
+			 buffer );
 
 	switch (status)
 	{
@@ -696,19 +691,20 @@ bufferJobShort( ClassAd *ad ) {
 static void 
 short_header (void)
 {
-	if ( goodput || run ) {
-		printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
-				"SUBMITTED", JOB_TIME,
-				run ? "HOST(S)" : "GOODPUT CPU_UTIL   Mb/s" );
+	printf( " %-7s %-14s ", "ID", dag ? "OWNER/NODENAME" : "OWNER" );
+	if( goodput ) {
+		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME,
+				"GOODPUT CPU_UTIL   Mb/s" );
 	} else if ( globus ) {
-		printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
-			"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
+		printf( "%-7s %-8s %-18s  %-18s\n", "STATUS",
+				"MANAGER", "HOST", "EXECUTABLE" );
 	} else if ( show_io ) {
-		io_header();
+		printf( "%8s %8s %8s %10s %8s %8s\n",
+				"READ", "WRITE", "SEEK", "XPUT", "BUFSIZE", "BLKSIZE" );
+	} else if( run ) {
+		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME, "HOST(S)" );
 	} else {
-		printf( " %-7s %-14s %11s %12s %-2s %-3s %-4s %-18s\n",
-			"ID",
-			"OWNER",
+		printf( "%11s %12s %-2s %-3s %-4s %-18s\n",
 			"SUBMITTED",
 			JOB_TIME,
 			"ST",
@@ -720,16 +716,35 @@ short_header (void)
 }
 
 static char *
-//format_remote_host (char *, AttrList *ad)
-format_remote_host (char *, ClassAd *ad)	// NAC
+format_remote_host (char *, AttrList *ad)
 {
 	static char result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
 	char* tmp;
-
 	struct sockaddr_in sin;
-//	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
-	if ( ad->EvaluateAttrString( ATTR_REMOTE_HOST, result, MAXHOSTNAMELEN ) ) {	// NAC
+
+	int universe = STANDARD;
+	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
+	if (universe == SCHED_UNIVERSE &&
+		string_to_sin(scheddAddr, &sin) == 1) {
+		if( (tmp = sin_to_hostname(&sin, NULL)) ) {
+			strcpy( result, tmp );
+			return result;
+		} else {
+			return unknownHost;
+		}
+	} else if (universe == PVM) {
+		int current_hosts;
+		if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
+			if (current_hosts == 1) {
+				sprintf(result, "1 host");
+			} else {
+				sprintf(result, "%d hosts", current_hosts);
+			}
+			return result;
+		}
+	}
+	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
 		if( is_valid_sinful(result) && 
 			(string_to_sin(result, &sin) == 1) ) {  
 			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
@@ -739,60 +754,26 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 			}
 		}
 		return result;
-	} else {
-		int universe = STANDARD;
-//		ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
-		ad->EvaluateAttrInt( ATTR_JOB_UNIVERSE, universe );	// NAC
-		if (universe == SCHED_UNIVERSE &&
-			string_to_sin(scheddAddr, &sin) == 1) {
-			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-				strcpy( result, tmp );
-				return result;
-			} else {
-				return unknownHost;
-			}
-		} else if (universe == PVM) {
-			int current_hosts;
-//			if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
-			if ( ad->EvaluateAttrInt( ATTR_CURRENT_HOSTS, current_hosts ) ) {	// NAC
-				if (current_hosts == 1) {
-					sprintf(result, "1 host");
-				} else {
-					sprintf(result, "%d hosts", current_hosts);
-				}
-				return result;
-			}
-		}
 	}
 	return unknownHost;
 }
 
 static char *
-//format_cpu_time (float utime, AttrList *ad)
-format_cpu_time ( float utime, ClassAd *ad )	// NAC
+format_cpu_time (float utime, AttrList *ad)
 {
-//	return format_time( (int) job_time(utime,(ClassAd *)ad) );
-	return format_time( (int) job_time(utime, ad) );
+	return format_time( (int) job_time(utime,(ClassAd *)ad) );
 }
 
 static char *
-//format_goodput (int job_status, AttrList *ad)
-format_goodput ( int job_status, ClassAd *ad )	// NAC
+format_goodput (int job_status, AttrList *ad)
 {
 	static char result[9];
 	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0;
 	float wall_clock = 0.0;
-	double wall_clockD;
-//	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
-//	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-//	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-//	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-	ad->EvaluateAttrInt( ATTR_JOB_COMMITTED_TIME, ckpt_time );			// NAC
-	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );			// NAC
-	ad->EvaluateAttrInt( ATTR_LAST_CKPT_TIME, last_ckpt );				// NAC
-	ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clockD );	// NAC
-	wall_clock = (float)wall_clockD;									// NAC
-	
+	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
+	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
 	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
@@ -805,29 +786,19 @@ format_goodput ( int job_status, ClassAd *ad )	// NAC
 }
 
 static char *
-//format_mbps (float bytes_sent, AttrList *ad)
-format_mbps (float bytes_sent, ClassAd *ad)
+format_mbps (float bytes_sent, AttrList *ad)
 {
 	static char result[10];
 	float wall_clock=0.0, bytes_recvd=0.0, total_mbits;
 	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
-	double wall_clockD, bytes_recvdD;	// NAC
-//  	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-//  	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-//  	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-//  	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
-	ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clockD );	// NAC
-	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );			// NAC
-	ad->EvaluateAttrInt( ATTR_LAST_CKPT_TIME, last_ckpt );				// NAC
-	ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status );					// NAC
-	wall_clock = (float)wall_clockD;									// NAC
-
+	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
+	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
 	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
-//  	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
-	ad->EvaluateAttrReal( ATTR_BYTES_RECVD, bytes_recvdD );				// NAC
-	bytes_recvd = (float)bytes_recvdD;									// NAC
+	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
 	total_mbits = (bytes_sent+bytes_recvd)*8/(1024*1024); // bytes to mbits
 	if (total_mbits <= 0) return " [????]";
 	sprintf(result, " %6.2f", total_mbits/wall_clock);
@@ -835,13 +806,11 @@ format_mbps (float bytes_sent, ClassAd *ad)
 }
 
 static char *
-//format_cpu_util (float utime, AttrList *ad)
-format_cpu_util (float utime, ClassAd *ad)
+format_cpu_util (float utime, AttrList *ad)
 {
 	static char result[10];
 	int ckpt_time = 0;
-//	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
-	ad->EvaluateAttrInt( ATTR_JOB_COMMITTED_TIME, ckpt_time);	// NAC
+	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
 	if (ckpt_time == 0) return " [??????]";
 	float util = (ckpt_time) ? utime/ckpt_time*100.0 : 0.0;
 	if (util > 100.0) util = 100.0;
@@ -851,13 +820,34 @@ format_cpu_util (float utime, ClassAd *ad)
 }
 
 static char *
-//format_owner (char *owner, AttrList *ad)
-format_owner (char *owner, ClassAd *ad)
+format_owner (char *owner, AttrList *ad)
 {
-	static char result[15];
+	static char result[15] = "";
+
+	// [this is a somewhat kludgey place to implement DAG formatting,
+	// but for a variety of reasons (maintainability, allowing future
+	// changes to be made in only one place, etc.), Todd & I decided
+	// it's the best way to do it given the existing code...  --pfc]
+
+	// if -dag is specified, check whether this job was started by a
+	// DAGMan (by seeing if it has a valid DAGManJobId attribute), and
+	// if so, print DAGNodeName in place of owner
+
+	// (we need to check that the DAGManJobId is valid because DAGMan
+	// >= v6.3 inserts "unknown..." into DAGManJobId when run under a
+	// pre-v6.3 schedd)
+
+	char dagman_job_id[ATTRLIST_MAX_EXPRESSION];
+	char dag_node_name[ATTRLIST_MAX_EXPRESSION];
+	if( dag && ad->LookupString( ATTR_DAGMAN_JOB_ID, dagman_job_id ) &&
+//		strstr( dagman_job_id, "unknown" ) != dagman_job_id &&
+		ad->LookupString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
+		sprintf( result, " |-%-11.11s", dag_node_name );
+		return result;
+	}
+
 	int niceUser;
-//	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
-	if ( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {	// NAC
+	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
 		char tmp[100];
 		strncpy(tmp,NiceUserName,99);
 		strcat(tmp, ".");
@@ -869,82 +859,76 @@ format_owner (char *owner, ClassAd *ad)
 	return result;
 }
 
-
 static char *
-//format_globusHostJMAndExec( char  *globusArgs, AttrList * )
-format_globusHostJMAndExec( char  *globusArgs, ClassAd * )
+format_globusStatus( int globusStatus, AttrList *ad )
 {
 	static char result[64];
-	char	host[80], jobManager[80], exec[10240];
-	char	*tmp, *jm, *ex;
-	int		i, p;
 
-	strcpy( result, "[?????] [?????]\n" );
-
-	if( ( tmp = strstr( globusArgs, "jobmanager-" ) ) == NULL ) {
-		return( result );
-	} 
-
-	jm = tmp + 11; // 11==strlen("jobmanager-")
-
-		// A.  Get the HOST part
-		// scan backwards until (')
-	while( *tmp != '\'' ) {
-			// make sure we don't overrun the beginning of the string
-		if( tmp == globusArgs ) return( result );
-		tmp--;
+fprintf(stderr,"status is %d\n", globusStatus);
+	switch ( globusStatus ) {
+	case G_UNSUBMITTED:
+		strcpy( result, GlobusJobStatusNames[G_UNSUBMITTED] );
+		break;
+	case G_PENDING:
+		strcpy( result, GlobusJobStatusNames[G_PENDING] );
+		break;
+	case G_ACTIVE:
+		strcpy( result, GlobusJobStatusNames[G_ACTIVE] );
+		break;
+	case G_FAILED:
+		strcpy( result, GlobusJobStatusNames[G_FAILED] );
+		break;
+	case G_DONE:
+		strcpy( result, GlobusJobStatusNames[G_DONE] );
+		break;
+	case G_SUSPENDED:
+		strcpy( result, GlobusJobStatusNames[G_SUSPENDED] );
+		break;
+	default:
+		strcpy( result, "[?????]" );
 	}
-	tmp++;
-	i = 0;
-	while( *tmp != ':' && i < sizeof(host)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *tmp == '\0' ) return( result );
-		host[i] = *tmp;
-		tmp++;
-		i++;
-	}
-	host[i] = '\0';
 
-		// B.  Get the JOBMANAGER part
-	i = 0;
-	while( *jm != ':' && i < sizeof(jobManager)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *jm == '\0' ) return( result );
-		jobManager[i] = *jm;
-		jm++;
-		i++;
-	}
-	jobManager[i] = '\0';
-		
-		// C.  Get the globus executable
-	if( ( tmp = strstr( globusArgs, "&(executable=" ) ) == NULL ) {
-		return( result );
-	}
-	ex = tmp + 13;	// 13==strlen("&(executable=")
-	i = 0;
-	p = 1;
-	while( p > 0 && i < sizeof(exec)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *ex == '\0' ) return( result );
-		exec[i] = *ex;
-		ex++;
-		i++;
-		if( *ex == '(' ) p++;
-		if( *ex == ')' ) p--;
-	}
-	exec[i] = '\0';
+	return result;
+}
 
-		// done --- pack components into the result string and return
-	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jobManager, host, 
-		basename(exec) );
+static char *
+format_globusHostAndJM( char  *globusResource, AttrList *ad )
+{
+	static char result[64];
+	char	host[80] = "[?????]";
+	char	jm[80] = "[?????]";
+	char	*tmp;
+	int	p;
+
+	if ( globusResource != NULL ) {
+		// copy the hostname
+		p = strcspn( globusResource, ":/" );
+		if ( p > sizeof(host) )
+			p = sizeof(host) - 1;
+		strncpy( host, globusResource, p );
+		host[p] = '\0';
+
+		if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
+			tmp += 11; // 11==strlen("jobmanager-")
+
+			// copy the jobmanager name
+			p = strcspn( tmp, ":" );
+			if ( p > sizeof(jm) )
+				p = sizeof(jm) - 1;
+			strncpy( jm, tmp, p );
+			jm[p] = '\0';
+		}
+	}
+
+	// done --- pack components into the result string and return
+	sprintf( result, " %-8.8s %-18.18s  ", jm, host );
 	return( result );
 }
 
 
 
 static char *
-//format_q_date (int d, AttrList *)
-format_q_date (int d, ClassAd *)
+format_q_date (int d, AttrList *)
 {
 	return format_date(d);
 }
@@ -989,6 +973,15 @@ output_sorter( const void * va, const void * vb ) {
 	a = ( clusterProcString ** ) va;
 	b = ( clusterProcString ** ) vb;
 
+	// when -dag is specified, we want to display DAG jobs under the
+	// DAGMan that started them, so we sort first by parent_cluster,
+	// which is zero for non-DAG jobs (and the DAGMan jobs themselves)
+
+	if ((*a)->parent_cluster < (*b)->parent_cluster ) { return -1; }
+	if ((*a)->parent_cluster > (*b)->parent_cluster ) { return  1; }
+	if ((*a)->parent_proc    < (*b)->parent_proc    ) { return -1; }
+	if ((*a)->parent_proc    > (*b)->parent_proc    ) { return  1; }
+
 	if ((*a)->cluster < (*b)->cluster ) { return -1; }
 	if ((*a)->cluster > (*b)->cluster ) { return  1; }
 	if ((*a)->proc    < (*b)->proc    ) { return -1; }
@@ -1024,7 +1017,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
 								  ATTR_JOB_REMOTE_USER_CPU,
 								  "[??????????]");
-			if ( run ) {
+			if( run && !goodput ) {
 				mask.registerFormat(" ", "*bogus*", " "); // force space
 				// We send in ATTR_OWNER since we know it is always
 				// defined, and we need to make sure
@@ -1055,10 +1048,12 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 			mask.registerFormat ( (StringCustomFmt) format_owner,
 								  ATTR_OWNER, "[????????????] " );
-			mask.registerFormat( "%7s ", "GlobusStatus" );
+			mask.registerFormat( (IntCustomFmt) format_globusStatus,
+								 ATTR_GLOBUS_STATUS, "[?????]" );
 			mask.registerFormat( (StringCustomFmt)
-								 format_globusHostJMAndExec,
-								 "GlobusArgs", "[?????] [?????]\n" );
+								 format_globusHostAndJM,
+								 ATTR_GLOBUS_RESOURCE, "[?????] [?????]" );
+			mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 			setup_mask = true;
 			usingPrintMask = true;
 		}
@@ -1074,6 +1069,17 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 		delete output_buffer;
 
 		return false;
+	}
+
+	// before sorting, for non-DAGMan-spawned jobs (i.e., those whose
+	// parent_cluster is zero), set parent_cluster equal to cluster so
+	// that they sort properly against parent DAGMan jobs
+	for( int i = 0; i <= output_buffer->getlast(); i++ ) {
+		clusterProcString* cps = (*output_buffer)[i];
+		if( cps && cps->parent_cluster == 0 ) {
+			cps->parent_cluster = cps->cluster;
+			cps->parent_proc = cps->proc;
+		}
 	}
 
 	// If this is a global, don't print anything if this schedd is empty.
@@ -1114,7 +1120,9 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
            	printf("\n");
 		}
 	}
+
 	delete output_buffer;
+
 	return true;
 }
 
@@ -1128,13 +1136,11 @@ process_buffer_line( ClassAd *job )
 {
 	clusterProcString * tempCPS = new clusterProcString;
 	(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
-//	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
-//	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
-	job->EvaluateAttrInt( ATTR_CLUSTER_ID, tempCPS->cluster );
-	job->EvaluateAttrInt( ATTR_PROC_ID, tempCPS->proc );
+	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
+	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
 
 	if( analyze ) {
-  		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
+		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
 	} else if ( show_io ) {
 		tempCPS->string = strnewp( buffer_io_display( job ) );
 	} else if ( usingPrintMask ) {
@@ -1203,24 +1209,25 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
 		
 		if( verbose ) {
-//			jobs.fPrintAttrListList( stdout );
-			jobs.PrintClassAdList();	// NAC
+			jobs.fPrintAttrListList( stdout );
 		} else if( customFormat ) {
 			summarize = false;
 			mask.display( stdout, &jobs );
 		} else if( globus ) {
 			summarize = false;
-			printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
+			printf( " %-7s %-14s %-11s %-8s %-18s  %-18s\n", 
 				"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
 			if (!setup_mask) {
 				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
 				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 				mask.registerFormat ( (StringCustomFmt) format_owner,
 									  ATTR_OWNER, "[????????????] " );
-				mask.registerFormat( "%7s ", "GlobusStatus" );
+				mask.registerFormat( (IntCustomFmt) format_globusStatus,
+									 ATTR_GLOBUS_STATUS, "[?????]" );
 				mask.registerFormat( (StringCustomFmt)
-									 format_globusHostJMAndExec,
-									 "GlobusArgs", "[?????] [?????]\n" );
+									 format_globusHostAndJM,
+									 ATTR_GLOBUS_RESOURCE, "[?????] [?????]" );
+				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 				setup_mask = true;
 				usingPrintMask = true;
 			}
@@ -1268,7 +1275,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			}
 			mask.display(stdout, &jobs);
 		} else if( show_io ) {
-			io_header();
+			short_header();
 			jobs.Open();
 			while( (job=jobs.Next()) ) {
 				io_display( job );
@@ -1310,8 +1317,6 @@ setupAnalysis()
 	char		remoteUser[128];
 	int			index;
 
-	ClassAdParser	parser;	// NAC
-
 	// fetch startd ads
 	if( pool ) {
 		rval = query.fetchAds( startdAds , pool );
@@ -1329,14 +1334,11 @@ setupAnalysis()
 	// populate startd ads with remote user prios
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
-//		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
-		if( ad->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {	// NAC 
+		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
-//				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
-//							prioTable[index].prio );
-//				ad->Insert( buffer );
-				ad->InsertAttr( ATTR_REMOTE_USER_PRIO, 
-								( double )( prioTable[index].prio ) ); // NAC
+				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
+							prioTable[index].prio );
+				ad->Insert( buffer );
 			}
 		}
 	}
@@ -1345,28 +1347,23 @@ setupAnalysis()
 
 	// setup condition expressions
     sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
-//    Parse( buffer, stdRankCondition );
-	parser.ParseExpression( buffer, stdRankCondition );		// NAC
-	
+    Parse( buffer, stdRankCondition );
+
     sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
-//    Parse( buffer, preemptRankCondition );
-	parser.ParseExpression( buffer, preemptRankCondition );	// NAC
+    Parse( buffer, preemptRankCondition );
 
 	sprintf( buffer, "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO, 
 			ATTR_SUBMITTOR_PRIO, PriorityDelta );
-//	Parse( buffer, preemptPrioCondition ) ;
-	parser.ParseExpression( buffer, preemptPrioCondition );	// NAC
+	Parse( buffer, preemptPrioCondition ) ;
 
 	// setup preemption requirements expression
 	if( !( preq = param( "PREEMPTION_REQUIREMENTS" ) ) ) {
 		fprintf( stderr, "\nWarning:  No PREEMPTION_REQUIREMENTS expression in"
 					" config file --- assuming FALSE\n\n" );
-//		Parse( "FALSE", preemptionReq );
-		parser.ParseExpression( "FALSE", preemptionReq );	// NAC
+		Parse( "FALSE", preemptionReq );
 	} else {
-//		if( Parse( preq , preemptionReq ) ) {
-		if( !parser.ParseExpression( (string)preq, preemptionReq ) ) {	// NAC
-		fprintf( stderr, "\nError:  Failed parse of "
+		if( Parse( preq , preemptionReq ) ) {
+			fprintf( stderr, "\nError:  Failed parse of "
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );
 		}
@@ -1379,13 +1376,11 @@ setupAnalysis()
 static void
 fetchSubmittorPrios()
 {
-//	AttrList	al;
-	ClassAd		ad;	// NAC
+	AttrList	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	priority;
 	int		i = 1;
-	double 	priorityD;
 
 		// Minor hack, if we're talking to a remote pool, assume the
 		// negotiator is on the same host as the collector.
@@ -1398,16 +1393,15 @@ fetchSubmittorPrios()
 	sock.encode();
 	if( !sock.put( GET_PRIORITY ) || !sock.end_of_message() ) {
 		fprintf( stderr, 
-				 "(1) Error:  Could not get priorities from negotiator (%s)\n",
+				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
 		exit( 1 );
 	}
 
 	sock.decode();
-//	if( !al.get(sock) || !sock.end_of_message() ) {
-	if( ( !getOldClassAdNoTypes( &sock, ad ) ) || !sock.end_of_message() ) {
+	if( !al.get(sock) || !sock.end_of_message() ) {
 		fprintf( stderr, 
-				 "(2) Error:  Could not get priorities from negotiator (%s)\n",
+				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
 		exit( 1 );
 	}
@@ -1417,14 +1411,9 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-//      	if( !al.LookupString( attrName, name ) || 
-//  			!al.LookupFloat( attrPrio, priority ) )
-//              break;
-    	if( !ad.EvaluateAttrString( attrName, name, 128 ) || 
-			!ad.EvaluateAttrReal( attrPrio, priorityD ) ) {
+    	if( !al.LookupString( attrName, name ) || 
+			!al.LookupFloat( attrPrio, priority ) )
             break;
-		}
-		priority = (float)priorityD;
 
 		prioTable[i-1].name = name;
 		prioTable[i-1].prio = priority;
@@ -1451,12 +1440,10 @@ doRunAnalysisToBuffer( ClassAd *request )
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
-//	EvalResult	result;
-	Value	result;			// NAC
+	EvalResult	result;
 	int		cluster, proc;
 	int		jobState;
 	int		niceUser;
-	bool 	niceUserBool;	// NAC
 
 	int 	fReqConstraint 	= 0;
 	int		fOffConstraint 	= 0;
@@ -1466,39 +1453,20 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		available		= 0;
 	int		totalMachines	= 0;
 
-	bool 	match;			// NAC
-	double	matchD;			// NAC
-	bool 	boolValue; 		// NAC
-	int 	intValue;  		// NAC
-	Value	val;	   		// NAC
-
 	return_buff[0]='\0';
 
-
-//	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
-//	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
-	if( !request->EvaluateAttrString( ATTR_OWNER, owner, 128 ) ) {		// NAC
-		return "Nothing here.\n";										// NAC
-	}																	// NAC
-	if( !request->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) ) {		// NAC
-		niceUser = 0;													// NAC
-	}																	// NAC
+	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
+	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
 
 	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
 		return "Nothing here.\n";
 
-//	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
-//	request->Insert( buffer );
+	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
+	request->Insert( buffer );
 
-	request->InsertAttr( ATTR_SUBMITTOR_PRIO, ( double )( prioTable[index].prio ) ); // NAC
-
-//	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
-//	request->LookupInteger( ATTR_PROC_ID, proc );
-//	request->LookupInteger( ATTR_JOB_STATUS, jobState );
-	request->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
-	request->EvaluateAttrInt( ATTR_PROC_ID, proc );
-	request->EvaluateAttrInt( ATTR_JOB_STATUS, jobState );
-
+	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	request->LookupInteger( ATTR_PROC_ID, proc );
+	request->LookupInteger( ATTR_JOB_STATUS, jobState );
 	if( jobState == RUNNING ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
@@ -1518,130 +1486,72 @@ doRunAnalysisToBuffer( ClassAd *request )
 		return return_buff;
 	}
 
-  	startdAds.Open();
+	startdAds.Open();
 	while( ( offer = startdAds.Next() ) ) {
 		// 0.  info from machine
 		remoteUser[0] = '\0';
 		totalMachines++;
-//		offer->LookupString( ATTR_NAME , buffer );
-		offer->EvaluateAttrString( ATTR_NAME, buffer, 128 );		// NAC
+		offer->LookupString( ATTR_NAME , buffer );
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
-//		if( !( (*offer) >= (*request) ) ) {
-
-		request->SetParentScope(offer);								// NAC
-		if( !request->EvaluateAttr( ATTR_REQUIREMENTS, val ) ) {	// NAC
-               // there was a problem with the match				// NAC
-			if( verbose ) {											// NAC
-				sprintf( return_buff,								// NAC 
-						 "%sError in matchmaking\n",				// NAC
-						 return_buff );								// NAC
-			}														// NAC
-			request->SetParentScope( NULL );						// NAC
-			continue;												// NAC
-		}															// NAC
-		else if ( ( !val.IsBooleanValue() && !val.IsNumber() )	||	// NAC
-				  ( val.IsBooleanValue( match ) && !match )		||	// NAC
-				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
-
-			if( verbose ) {
-				sprintf( return_buff,
-						 "%sFailed request constraint\n",
-						 return_buff );
-
-			}
+		if( !( (*offer) >= (*request) ) ) {
+			if( verbose ) sprintf( return_buff,
+				"%sFailed request constraint\n", return_buff );
 			fReqConstraint++;
-			request->SetParentScope( NULL );						// NAC
 			continue;
-		}
-		request->SetParentScope( NULL );							// NAC
+		} 
 
-			// 2. Offer satisfied? 
-//		if( !( (*offer) <= (*request) ) ) {
-		offer->SetParentScope( request );							// NAC
-		if( !offer->EvaluateAttr( ATTR_REQUIREMENTS, val ) ) {		// NAC
-                // there was a problem with the match				// NAC
-  			if( verbose ) {											// NAC
-				sprintf( return_buff,								// NAC 
-						 "%sError in matchmaking\n",				// NAC
-						 return_buff );								// NAC
-			}														// NAC
-			offer->SetParentScope( NULL );							// NAC
-			continue;												// NAC
-		}															// NAC
-		else if ( ( !val.IsBooleanValue() && !val.IsNumber() )	||	// NAC
-				  ( val.IsBooleanValue( match ) && !match )		||	// NAC
-				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
-
-  			if( verbose ) { 
-				strcat( return_buff, "Failed offer constraint\n");
-			}  
+		// 2. Offer satisfied? 
+		if( !( (*offer) <= (*request) ) ) {
+			if( verbose ) strcat( return_buff, "Failed offer constraint\n");
 			fOffConstraint++;
-			offer->SetParentScope( NULL );							// NAC
 			continue;
 		}	
-		offer->SetParentScope( NULL );								// NAC
-		
+
+			
 		// 3. Is there a remote user?
-//		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
-		if( !offer->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {	// NAC 
-//			if( stdRankCondition->EvalTree( offer, request, &result ) &&
-//					result.type == LX_INTEGER && result.i == TRUE ) {
-			stdRankCondition->SetParentScope( offer );				// NAC
-			offer->EvaluateExpr( stdRankCondition, result );		// NAC
-			if( result.IsBooleanValue( boolValue ) && boolValue ) {	// NAC
-					// both sides satisfied and no remote user
+		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
+			if( stdRankCondition->EvalTree( offer, request, &result ) &&
+					result.type == LX_INTEGER && result.i == TRUE ) {
+				// both sides satisfied and no remote user
 				if( verbose ) sprintf( return_buff, "%sAvailable\n",
-									   return_buff );
-				available++;	
+					return_buff );
+				available++;
 				continue;
 			} else {
-					// no remote user, but std rank condition failed
+				// no remote user, but std rank condition failed
 				fRankCond++;
 				if( verbose ) {
 					sprintf( return_buff,
-							 "%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
-							 return_buff);
+						"%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
+						return_buff);
 				}
 				continue;
 			}
 		}
 
 		// 4. Satisfies preemption priority condition?
-//		if( preemptPrioCondition->EvalTree( offer, request, &result ) &&
-//			result.type == LX_INTEGER && result.i == TRUE ) {
-		preemptPrioCondition->SetParentScope( offer );				// NAC
-		offer->EvaluateExpr( preemptPrioCondition, result );		// NAC
-		if( result.IsBooleanValue( boolValue ) && boolValue ) {		// NAC
+		if( preemptPrioCondition->EvalTree( offer, request, &result ) &&
+			result.type == LX_INTEGER && result.i == TRUE ) {
+
 			// 5. Satisfies standard rank condition?
-//			if( stdRankCondition->EvalTree( offer , request , &result ) &&
-//				result.type == LX_INTEGER && result.i == TRUE )  
-//			{
-			stdRankCondition->SetParentScope( offer );				// NAC
-			offer->EvaluateExpr( stdRankCondition, result );		// NAC
-			if( result.IsBooleanValue( boolValue ) && boolValue ) {	// NAC
-				if( verbose ) {
+			if( stdRankCondition->EvalTree( offer , request , &result ) &&
+				result.type == LX_INTEGER && result.i == TRUE )  
+			{
+				if( verbose )
 					sprintf( return_buff, "%sAvailable\n", return_buff );
-				}
 				available++;
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
-//				if( preemptRankCondition->EvalTree( offer, request, &result ) &&
-//					result.type == LX_INTEGER && result.i == TRUE )
-//				{
-				preemptRankCondition->SetParentScope( offer );			// NAC
-				offer->EvaluateExpr( preemptRankCondition, result );	// NAC
-				if(	result.IsBooleanValue( boolValue ) && boolValue ) {	// NAC
+				if( preemptRankCondition->EvalTree( offer, request, &result ) &&
+					result.type == LX_INTEGER && result.i == TRUE )
+				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-//					if( preemptionReq->EvalTree( offer , request , &result ) &&
-//						result.type == LX_INTEGER && result.i == FALSE ) 
-//					{
-					preemptionReq->SetParentScope( offer );							   // NAC
-					offer->EvaluateExpr( preemptionReq, result );					   // NAC
-					if( ( result.IsBooleanValue( boolValue ) && !boolValue ) ||		   // NAC
-						( result.IsIntegerValue( intValue ) && intValue == FALSE ) ) { // NAC
+					if( preemptionReq->EvalTree( offer , request , &result ) &&
+						result.type == LX_INTEGER && result.i == FALSE ) 
+					{
 						fPreemptReqTest++;
 						if( verbose ) {
 							sprintf( return_buff,
@@ -1680,9 +1590,6 @@ doRunAnalysisToBuffer( ClassAd *request )
 	}
 	startdAds.Close();
 
-		// this is where we should do additional analysis
-		// params: request, startdAds
-
 	sprintf( return_buff,
 		"%s---\n%03d.%03d:  Run analysis summary.  Of %d resource offers,\n" 
 		"\t%5d do not satisfy the request's constraints\n"
@@ -1700,6 +1607,28 @@ doRunAnalysisToBuffer( ClassAd *request )
 		fPreemptReqTest,
 		available );
 
+	int last_match_time=0, last_rej_match_time=0;
+	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
+	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+	if (last_match_time) {
+		time_t t = (time_t)last_match_time;
+		sprintf( return_buff, "%s\tLast successful match: %s",
+				 return_buff, ctime(&t) );
+	} else if (last_rej_match_time) {
+		strcat( return_buff, "\tNo successful match recorded.\n" );
+	}
+	if (last_rej_match_time > last_match_time) {
+		time_t t = (time_t)last_rej_match_time;
+		sprintf( return_buff, "%s\tLast failed match: %s",
+				 return_buff, ctime(&t) );
+		buffer[0] = '\0';
+		request->LookupString(ATTR_LAST_REJ_MATCH_REASON, buffer);
+		if (buffer[0]) {
+			sprintf( return_buff, "%s\tReason for last match failure: %s\n",
+					 return_buff, buffer );
+		}
+	}
+
 	if( niceUser ) {
 		sprintf( return_buff, 
 				 "%s\n\t(*)  Since this is a \"nice-user\" request, this request "
@@ -1709,10 +1638,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 			
 
 	if( fReqConstraint == totalMachines ) {
-		ClassAdUnParser unp;		// NAC
-		unp.SetOldClassAd( true );	// NAC
 		char reqs[2048];
-		string reqsS;				// NAC
 		ExprTree *reqExp;
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
 		strcat( return_buff, "   No resources matched request's constraints\n");
@@ -1722,20 +1648,19 @@ doRunAnalysisToBuffer( ClassAd *request )
 			sprintf( return_buff, "%s   ERROR:  No %s expression found" ,
 				return_buff, ATTR_REQUIREMENTS );
 		} else {
-//			reqs[0] = '\0';
-//			reqExp->PrintToStr( reqs );
-			unp.Unparse( reqsS, reqExp );	// NAC
-			strncpy( reqs, reqsS.c_str( ), 2048 );
+			reqs[0] = '\0';
+			reqExp->PrintToStr( reqs );
 			sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
 		}
 	}
 
 	if( fOffConstraint == totalMachines ) {
 		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
-		sprintf( return_buff, "%s   Request %d.%d did not match any"
+		sprintf( return_buff, "%s   Request %d.%d did not match any "
 			"resource's constraints\n\n", return_buff, cluster, proc);
 	}
 
+	//printf("%s",return_buff);
 	return return_buff;
 }
 

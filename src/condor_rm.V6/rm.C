@@ -380,7 +380,8 @@ void ProcArg(const char* arg)
 					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
 			} else {
 				fprintf(stderr, "Cluster %d %s.\n", c,
-					(mode==REMOVED)?"removed":(mode==HELD)?"held":"released",c);
+					(mode==REMOVED)?"has been marked for removal":
+						(mode==HELD)?"held":"released");
 				nToProcess = -1;
 			}
 			return;
@@ -413,11 +414,12 @@ void ProcArg(const char* arg)
 				if(SetAttributeInt(c, p, ATTR_JOB_STATUS, mode ) < 0)
 				{
 					fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
-					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
+					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", 
+					 c, p);
 				} else {
 					fprintf(stdout, "Job %d.%d %s.\n", c, p,
-						(mode==REMOVED)?"removed":(mode==HELD)?"held":"released"
-						,c);
+						(mode==REMOVED)?"has been marked for removal":
+							(mode==HELD)?"held":"released");
 					if ( mode != IDLE && nToProcess != -1 ) {
 						nToProcess++;
 						id = new PROC_ID;
@@ -450,7 +452,8 @@ void ProcArg(const char* arg)
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",arg );
 		} else {
 			fprintf(stdout, "User %s's job(s) %s.\n", arg,
-				(mode==REMOVED)?"removed":(mode==HELD)?"held":"released");
+				(mode==REMOVED)?"have been marked for removal":
+					(mode==HELD)?"held":"released");
 			nToProcess = -1;
 		}
 	}
@@ -474,8 +477,9 @@ handle_constraint( const char *constraint )
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",
 				 constraint);
 	} else {
-		fprintf( stdout, "Jobs matching constraint %s %s\n", constraint,
-				(mode==REMOVED)?"removed":(mode==HELD)?"held":"released");
+		fprintf( stdout, "Jobs matching constraint %s %s.\n", constraint,
+				(mode==REMOVED)?"have been marked for removal":
+					(mode==HELD)?"held":"released");
 		nToProcess = -1;
 	}
 }

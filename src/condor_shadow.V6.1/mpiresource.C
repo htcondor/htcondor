@@ -29,6 +29,7 @@ MpiResource::MpiResource( BaseShadow *shadow ) :
 	RemoteResource( shadow ) 
 {
 	state = PRE;
+	node_num = -1;
 }
 
 MpiResource::MpiResource( BaseShadow *shadow, 
@@ -37,14 +38,30 @@ MpiResource::MpiResource( BaseShadow *shadow,
 	RemoteResource( shadow, executingHost, capability ) 
 {
 	state = PRE;
+	node_num = -1;
 }
 
 
 int 
 MpiResource::requestIt( int starterVersion )  {
+
+	char buf[256];
+	sprintf( buf, "%s, node: %d", "MpiResource::requestIt()", node_num );
+	dumpClassad( buf, jobAd, D_JOB );
+
 	int r = RemoteResource::requestIt( starterVersion );
 	if ( r == 0 ) { // success
 		setResourceState( EXECUTING );
+		NodeExecuteEvent event;
+        strcpy( event.executeHost, executingHost );
+		event.node = node_num;
+		shadow->uLog.initialize( shadow->getCluster(),
+								 shadow->getProc(), node_num );
+        if ( !shadow->uLog.writeEvent( &event )) {
+            dprintf ( D_ALWAYS, "Unable to log NODE_EXECUTE event." );
+        }
+		shadow->uLog.initialize( shadow->getCluster(),
+								 shadow->getProc(), 0 );
 	}
 	return r;
 }
@@ -88,3 +105,63 @@ MpiResource::setExitStatus( int status ) {
 	setResourceState( FINISHED );
 }
 
+
+void
+MpiResource::resourceExit( int exit_reason, int exit_status ) 
+{
+	dprintf( D_FULLDEBUG, "Inside MpiResource::resourceExit()\n" );
+
+	RemoteResource::resourceExit( exit_reason, exit_status );
+
+		// Also log a NodeTerminatedEvent to the ULog
+
+	NodeTerminatedEvent event;
+	switch( exit_reason ) {
+	case JOB_EXITED:
+		{
+			// Job exited on its own, normally or abnormally
+			NodeTerminatedEvent event;
+			event.node = node_num;
+			if( (event.normal = (WIFEXITED(exitStatus)!=0)) ) {
+				event.returnValue = WEXITSTATUS(exitStatus);
+			} else {
+				event.signalNumber = WTERMSIG(exitStatus);
+			}
+			
+				// TODO: fill in local/total rusage
+				// event.run_local_rusage = r;
+			event.run_remote_rusage = remote_rusage;
+				// event.total_local_rusage = r;
+			event.total_remote_rusage = remote_rusage;
+			
+				/* we want to log the events from the perspective
+				   of the user job, so if the shadow *sent* the
+				   bytes, then that means the user job *received*
+				   the bytes */
+			event.recvd_bytes = bytesSent();
+			event.sent_bytes = bytesReceived();
+				// TODO: total sent and recvd
+			event.total_recvd_bytes = bytesSent();
+			event.total_sent_bytes = bytesReceived();
+			
+			shadow->uLog.initialize( shadow->getCluster(),
+									 shadow->getProc(), node_num );
+			if( !shadow->uLog.writeEvent(&event) ) {
+				dprintf( D_ALWAYS,"Unable to log "
+						 "ULOG_NODE_TERMINATED event\n" );
+			}
+			shadow->uLog.initialize( shadow->getCluster(),
+									 shadow->getProc(), 0 );
+
+		}
+		break;	
+	case JOB_CKPTED:
+	case JOB_NOT_CKPTED:
+			// XXX Todo: Do we want a Node evicted event?
+		break;
+	default:
+		dprintf( D_ALWAYS, "Warning: Unknown exit_reason %d in "
+				 "MpiResource::resourceExit()\n", exit_reason );  
+	}	
+
+}

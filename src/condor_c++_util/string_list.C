@@ -112,6 +112,22 @@ StringList::contains( const char *st )
 	return FALSE;
 }
 
+
+BOOLEAN
+StringList::contains_anycase( const char *st )
+{
+	char	*x;
+
+	strings.Rewind ();
+	while (x = strings.Next ()) {
+		if( stricmp(st, x) == MATCH ) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+
 void
 StringList::remove(char *str)
 {
@@ -142,12 +158,24 @@ StringList::substring( const char *st )
 	return FALSE;
 }
 
+BOOLEAN
+StringList::contains_withwildcard(const char *string)
+{
+	return contains_withwildcard(string, false);
+}
+
+BOOLEAN
+StringList::contains_anycase_withwildcard(const char *string)
+{
+	return contains_withwildcard(string, true);
+}
+	
 // contains_withwildcard() is just like the contains() method except that
 // list members can have an asterisk wildcard in them.  So, if
 // the string passed in is "pppmiron.cs.wisc.edu", and an entry in the
 // the list is "ppp*", then it will return TRUE.
 BOOLEAN
-StringList::contains_withwildcard(const char *string)
+StringList::contains_withwildcard(const char *string, bool anycase)
 {
 	char *x;
 	char *matchstart;
@@ -155,6 +183,7 @@ StringList::contains_withwildcard(const char *string)
 	char *asterisk;
 	int matchendlen, len;
 	BOOLEAN result;
+	int temp;
 	
 	if ( !string )
 		return FALSE;
@@ -165,7 +194,12 @@ StringList::contains_withwildcard(const char *string)
 
 		if ( (asterisk = strchr(x,'*')) == NULL ) {
 			// There is no wildcard in this entry; just compare
-			if ( strcmp(x,string) == MATCH )
+			if (anycase) {
+				temp = strcasecmp(x,string);
+			} else {
+				temp = strcmp(x,string);
+			}
+			if ( temp == MATCH )
 				return TRUE;
 			else
 				continue;
@@ -179,7 +213,11 @@ StringList::contains_withwildcard(const char *string)
 			if ( asterisk[1] == '\0' ) {
 				// asterisk at the end behavior.
 				*asterisk = '\0';	// remove asterisk
-				int temp = strncmp(x,string,strlen(x));
+				if (anycase) {
+					temp = strncasecmp(x,string,strlen(x));
+				} else {
+					temp = strncmp(x,string,strlen(x));
+				}
 				*asterisk = '*';	// replace asterisk
 				if ( temp == MATCH ) {
 					return TRUE;
@@ -200,7 +238,12 @@ StringList::contains_withwildcard(const char *string)
 		result = TRUE;
 		*asterisk = '\0';	// replace asterisk with a NULL
 		if ( matchstart ) {
-			if ( strncmp(matchstart,string,strlen(matchstart)) != MATCH ) 
+			if ( anycase ) {
+				temp = strncasecmp(matchstart,string,strlen(matchstart));
+			} else {
+				temp = strncmp(matchstart,string,strlen(matchstart));
+			}
+			if ( temp != MATCH ) 
 				result = FALSE;
 		}
 		if ( matchend && result == TRUE) {
@@ -208,8 +251,15 @@ StringList::contains_withwildcard(const char *string)
 			matchendlen = strlen(matchend);
 			if ( matchendlen > len )	// make certain we do not SEGV below
 				result = FALSE;
-			if ( result == TRUE && strcmp(&(string[len-matchendlen]),matchend) != MATCH )
-				result = FALSE;
+			if ( result == TRUE ) {
+				if (anycase) {
+					temp = strcasecmp(&(string[len-matchendlen]),matchend);
+				} else {
+					temp = strcmp(&(string[len-matchendlen]),matchend);
+				}
+				if ( temp != MATCH )
+					result = FALSE;
+			}
 		}
 		*asterisk = '*';	// set asterisk back no matter what the result
 		if ( result == TRUE ) {

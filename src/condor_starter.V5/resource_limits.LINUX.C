@@ -28,7 +28,7 @@
 #include "condor_debug.h"
 #include "condor_constants.h"
 #include "proto.h"
-
+#include "limit.h"
 
 #define SLOP 50
 

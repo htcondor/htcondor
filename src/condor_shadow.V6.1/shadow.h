@@ -89,11 +89,16 @@ class UniShadow : public BaseShadow
 	float bytesSent();
 	float bytesReceived();
 
+	int updateFromStarter(int command, Stream *s);
+
+	struct rusage getRUsage( void );
+
+	int getImageSize( void );
+
+	int getDiskUsage( void );
+
  private:
-
 	RemoteResource *remRes;
-
-	int UpdateFromStarter(int command, Stream *s);
 
 };
 

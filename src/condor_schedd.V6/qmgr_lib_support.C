@@ -34,33 +34,16 @@
 #include "get_daemon_addr.h"
 
 int open_url(char *, int, int);
-extern "C" char* get_schedd_addr(const char*, const char*); 
-int	strcmp_until(const char *, const char *, const char);
+extern "C" char*	get_schedd_addr(const char*, const char*); 
+extern "C" int		strcmp_until(const char *, const char *, const char);
 
 ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
-int
-strcmp_until( const char *s1, const char *s2, const char until ) {
-   while ( ( *s1 || *s2 ) && *s1 != until && *s2 != until ) {
-
-      if ( *s1 != *s2 ) {
-         return( *s2 - *s1 );
-      }
-      s1++;
-      s2++;
-   }
-   return( 0 );
-}
-
 Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only )
 {
-	int		rval, fd, cmd, ok, is_local = FALSE;
-	char	tmp_file[255];
-#if !defined(WIN32)
-	struct  passwd *pwd;
-#endif
+	int		rval, cmd, ok, is_local = FALSE;
 	char*	scheddAddr = get_schedd_addr(0);
 	char*	localScheddAddr = NULL;
 
@@ -228,8 +211,6 @@ WalkJobQueue(scan_func func)
 int
 rusage_to_float(struct rusage ru, float *utime, float *stime )
 {
-	float rval;
-
 	if ( utime )
 		*utime = (float) ru.ru_utime.tv_sec;
 

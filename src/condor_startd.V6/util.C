@@ -31,16 +31,23 @@ check_perms()
 {
 	struct stat st;
 	mode_t mode;
+#ifdef WIN32
+	mode_t desired_mode = _S_IREAD | _S_IWRITE;
+#else
+	mode_t desired_mode = (0777 | S_ISVTX);
+#endif
+		// We want execute to be world-writable w/ the sticky bit set.  
 
 	if (stat(exec_path, &st) < 0) {
-		EXCEPT("stat exec path");
+		EXCEPT( "stat exec path (%s), errno: %d", exec_path, errno ); 
 	}
 
-	if ((st.st_mode & 0777) != 0777) {
+	if ((st.st_mode & desired_mode) != desired_mode) {
 		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
-		mode = st.st_mode | 0777;
+		mode = st.st_mode | desired_mode;
 		if (chmod(exec_path, mode) < 0) {
-			EXCEPT("chmod exec path");
+			EXCEPT( "chmod exec path (%s), errno: %d", exec_path,
+					errno );  
 		}
 	}
 }
@@ -52,6 +59,7 @@ cleanup_execute_dir(int pid)
 	char buf[2048];
 
 #if defined(WIN32)
+
 	dynuser nobody_login;
 
 	if( pid ) {
@@ -74,32 +82,58 @@ cleanup_execute_dir(int pid)
 		// get rid of everything in the execute directory
 		Directory dir(exec_path);
 
-		// loop through the subdirs we find, and remove any nobody
-		// accounts left laying about by the starter.
-		const char *curdir = dir.Next();
-		while (curdir) {
-			if ( dir.IsDirectory() && (strncmp(curdir,"dir_",4)==0) ) {
-				sprintf(buf,"condor-run-%s",curdir);
-				if ( nobody_login.deleteuser(buf) ) {
-					dprintf(D_FULLDEBUG,
-						"Removed account %s left by starter\n",buf);
-				}
-			}
-			curdir = dir.Next();
-		}	
+		// remove all users matching this prefix
+		nobody_login.cleanup_condor_users("condor-run-");
+
 		// now that we took care of any old nobody accounts, blow away
 		// everything in the execute directory.
 		dir.Remove_Entire_Directory();
 	}
+
+
 #else
 	if( pid ) {
-		sprintf( buf, "/bin/rm -rf %.256s/dir_%d",
-				exec_path, pid );
+		sprintf( buf, "%.256s/dir_%d", exec_path, pid );
 	} else {
-		sprintf( buf, "/bin/rm -rf %.256s/condor_exec* %.256s/dir_*",
-				 exec_path, exec_path );
+		sprintf( buf, "%.256s", exec_path );
 	}
-	system( buf );
+	
+		// Evil kludge.  Since the Directory object currently calls
+		// EXCEPT() if you instantiate it with a path that doesn't
+		// exist, we need to call stat() here, first, to make sure
+		// there's a directory to clean up.
+	struct stat statbuf;
+	errno = 0;
+	if( stat(buf, &statbuf) < 0 ) {
+		if( errno == ENOENT ) {
+				// directory is gone, our work is done.
+			return;
+		}
+	}
+
+	priv_state old_priv = set_root_priv();
+	Directory dir( buf );
+	if( ! dir.Remove_Entire_Directory() ) {
+		dprintf( D_ALWAYS, "Error deleting contents of \"%s\"\n", 
+				 buf );
+		set_priv( old_priv );
+		return;
+	}
+	if( pid ) {
+			// If we've got a pid, we want to remove the dir_XXX
+			// directory itself, which Remove_Entire_Directory() won't
+			// do for us.
+		if( rmdir(buf) < 0 ) {
+			dprintf( D_ALWAYS, "Warning, unlink(%s) failed, errno: %d\n", 
+					 buf, errno );
+		} else {
+			dprintf( D_FULLDEBUG, "Removed \"%s\" and all its contents\n", 
+					 buf );
+		}
+	} else {
+		dprintf( D_FULLDEBUG, "Removed all contents of \"%s\"\n", buf );
+	}
+	set_priv( old_priv );
 #endif
 }
 
@@ -169,15 +203,30 @@ command_to_string( int cmd )
 }
 
 
-int
+bool
 reply( Stream* s, int cmd )
 {
 	s->encode();
 	if( !s->code( cmd ) || !s->end_of_message() ) {
-		return FALSE;
+		return false;
 	} else {
-		return TRUE;
+		return true;
 	}
+}
+
+
+bool
+refuse( Stream* s )
+{
+	s->end_of_message();
+	s->encode();
+	if( !s->put(NOT_OK) ) {
+		return false;
+	} 
+	if( !s->end_of_message() ) {
+		return false;
+	}
+	return true;
 }
 
 
@@ -226,7 +275,20 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 bool
 configInsert( ClassAd* ad, const char* attr, bool is_fatal )
 {
-	char* val = param( attr );
+	return configInsert( ad, attr, attr, is_fatal );
+}
+
+
+/*
+  This version just allows for the name of the thing you're looking
+  for in the config file to be different than the classad attribute
+  name you want to insert it as.
+*/
+bool
+configInsert( ClassAd* ad, const char* param_name, 
+			  const char* attr, bool is_fatal ) 
+{
+	char* val = param( param_name );
 	char* tmp;
 	if( ! val ) {
 		if( is_fatal ) {

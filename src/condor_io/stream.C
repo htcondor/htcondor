@@ -723,6 +723,7 @@ Stream::put( int		i)
   getcount =0;
   putcount +=4;
   NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
+  //dprintf(D_ALWAYS, "put(int) required\n");
 
 	switch(_code){
 		case internal:
@@ -1524,6 +1525,16 @@ Stream::get( double	&d)
 
 
 
+/* Get the next string from the UDP port
+ * This function copies the next string arrived at the UDP port
+ * to the arg 's'. When a message has not been received, its behaviour
+ * is dependent on the current value of 'timeout', which can be set by
+ * 'timeout(int)'. If 'timeout' is 0, it blocks until a message is ready
+ * at the port, otherwise, it returns FALSE after waiting that amount of time.
+ *
+ * Notice: This function allocates space for the arg 's' when s = NULL,
+ *         hence calling function must free memory pointed by s after using it
+ */
 int 
 Stream::get( char	*&s)
 {
@@ -1544,9 +1555,11 @@ Stream::get( char	*&s)
 				if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
 				if (s) {
 					strcpy(s, (char *)tmp_ptr);
+					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
 				}
 				else {
 					s = strdup((char *)tmp_ptr);
+					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
 				}
 			}
 			break;
@@ -1560,6 +1573,9 @@ Stream::get( char	*&s)
 
 
 
+/*
+ * Do not FREE memory pointed by the arg 's' when you call this function with s = NULL
+ */
 int 
 Stream::get( char	*&s, int		&l)
 {
@@ -1578,10 +1594,13 @@ Stream::get( char	*&s, int		&l)
 			else{
 				/* tmp_ptr = s; */
 				if ((l = get_ptr(tmp_ptr, '\0')) <= 0) return FALSE;
-				if (s)
+				if (s) {
 					strcpy(s, (char *)tmp_ptr);
-				else
+					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+				} else {
 					s = (char *)tmp_ptr;
+					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+				}
 			}
 			break;
 

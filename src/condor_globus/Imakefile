@@ -1,11 +1,11 @@
-NAME=condor_shadow.globus
+NAME=condor_gridmanager
 all_target($(NAME) condor_glidein)
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-OBJ = gshadow.o 
+OBJ = gridmanager_main.o gridmanager.o globusjob.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 

@@ -35,10 +35,15 @@
 #include "condor_uid.h"
 #include "daemon.h"
 #include "extArray.h"
+#include "HashTable.h"
+#include "classad_hashtable.h"
 #include "MyString.h"
 #include "basename.h"
 
 // Globals
+
+template class HashBucket<HashKey, int>;
+template class HashTable<HashKey, int>;
 
 double priority = 0.00001;
 const char *pool = NULL;
@@ -100,12 +105,15 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	bool			newBestFound;
 		// to store results of evaluations
 	char			remoteUser[128];
+	char			remoteHost[256];
 	EvalResult		result;
 	float			tmp;
+	
 
 
 
 	// scan the offer ads
+
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
@@ -159,10 +167,19 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		candidateRankValue = tmp;
 
 		// the quality of a match is determined by a lexicographic sort on
-		// the following values, but more is better for each component
+		// the following values, but more is better for each component.  
+		// The standard condor_negotiator works in this order of preference:
 		//  1. job rank of offer 
 		//	2. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
 		//  3. preemption rank (if preempting)
+		//
+		// But the below code for condor_find_host places the desires of the
+		// system ahead of the desires of the resource requestor.  Thus the code
+		// below works in the following order of preference:
+		//	1. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
+		//  2. preemption rank (if preempting)
+		//  3. job rank of offer 
+
 		newBestFound = false;
 		candidatePreemptRankValue = -(FLT_MAX);
 		if( candidatePreemptState != NO_PREEMPTION ) {
@@ -176,6 +193,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 					"expression to a float.\n");
 			}
 		}
+/**** old negotiator-style code: ***
 		if( ( candidateRankValue > bestRankValue ) || 	// first by job rank
 				( candidateRankValue==bestRankValue && 	// then by preempt state
 				candidatePreemptState > bestPreemptState ) ) {
@@ -188,6 +206,24 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 				newBestFound = true;
 			}
 		} 
+******************************/
+		if( candidatePreemptState > bestPreemptState ) {	// first by preempt state
+			newBestFound = true;
+		} else if( candidatePreemptState==bestPreemptState &&  // then by preempt rank				
+				bestPreemptState != NO_PREEMPTION ) {
+				// check if the preemption rank is better than the best
+			if( candidatePreemptRankValue > bestPreemptRankValue ) {
+				newBestFound = true;
+			}
+		} 
+		if( (candidatePreemptState==bestPreemptState &&
+			( (bestPreemptState == NO_PREEMPTION) ||
+			  ((bestPreemptState != NO_PREEMPTION) && (candidatePreemptRankValue == bestPreemptRankValue))
+			)) 
+			&& (candidateRankValue > bestRankValue) )	// finally by job rank
+		{
+			newBestFound = true;
+		}
 
 		if( newBestFound ) {
 			bestSoFar = candidate;
@@ -197,7 +233,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		}
 	}
 	startdAds.Close ();
-
+	
 
 	// this is the best match
 	return bestSoFar;
@@ -378,10 +414,16 @@ findSubmittor( char *name )
 }
 
 void
-usage()
+usage(char *name)
 {
-	//TODO
-	printf("Usage: .. TODO ..\n");
+	printf("\nUsage: %s [-m] -[n number] [-c c_expr] [-r r_expr] [-p pool] \n", name);
+	printf(" -m: Return entire machine, not virtual machines\n");
+	printf(" -n num: Return num machines, where num is an integer "
+			"greater than zero\n");
+	printf(" -c c_expr: Use c_expr as the constraint expression\n");
+	printf(" -r r_expr: Use r_expr as the rank expression\n");
+	printf(" -p pool: Contact the Condor pool \"pool\"\n");
+	printf(" -h: this screen\n\n");
 	exit(1);
 }
 
@@ -398,7 +440,9 @@ main(int argc, char *argv[])
 	char *tmp;
 	int i;
 	char buffer[1024];
+	HashTable<HashKey, int>	*virtualMachineCounts;
 
+	virtualMachineCounts = new HashTable <HashKey, int> (25, hashFunction); 
 	mySubSystem = "INTERACTIVE";
 	config();
 
@@ -417,7 +461,7 @@ main(int argc, char *argv[])
 				}					
 				NumMachinesWanted = atoi(*ptr);
 				if ( NumMachinesWanted < 1 ) {
-					fprintf( stderr, "%s: -n requires another argument ", 
+					fprintf( stderr, "%s: -n requires another argument "
 							 "which is an integer greater than 0\n",
 							 basename(argv[0]) );
 					exit(1);
@@ -448,7 +492,7 @@ main(int argc, char *argv[])
 				rank = *ptr;
 				break;
 			default:
-				usage();
+				usage(basename(argv[0]));
 			}		
 		}
 	}
@@ -521,12 +565,56 @@ main(int argc, char *argv[])
 		if (!offer) {
 			fprintf(stderr,
 				"\nERROR: %d machines not available\n",NumMachinesWanted);
-			exit(1);
+			exit(i+1);
 		}
+
+		// If we want the entire machine, and not just a VM...
+		if(WantMachineNames) {
+			if (offer->LookupString (ATTR_MACHINE, remoteHost) ) {
+				int virtMachCount;
+				int virtMachID;
+				int vmCountThusFar;
+
+				HashKey key(remoteHost);
+
+				// How many VM's are on that machine?
+				if(! offer->LookupInteger (ATTR_TOTAL_VIRTUAL_MACHINES,
+										 virtMachCount) ) {
+						//printf("DEBUG: Setting virtMachineCount to 1\n");
+						virtMachCount = 1;
+				}
+
+				vmCountThusFar = 0;
+				// Keep track of what we've seen in a hashtable
+				if(!virtualMachineCounts->lookup(key, vmCountThusFar)) {
+					//printf("DEBUG: Already seen a %s %d times\n",
+					//		 remoteHost, vmCountThusFar);
+					virtualMachineCounts->remove(key);
+				}			
+
+				// If we don't have enough virtual machines to complete
+				// the set, stick it in the hash table, remove it from the
+				// list of startd ads, and keep looking.
+				// FIXME(?) This would probably blow up with bogus ads 
+				// (ie duplicate ads, but I dunno if those can happen)
+				if(++vmCountThusFar < virtMachCount) {
+					//printf("DEBUG: Adding %s with %d\n", remoteHost, 
+					//		vmCountThusFar);
+					virtualMachineCounts->insert(key, vmCountThusFar);
+					startdAds.Delete(offer);
+					i--;
+					continue;
+				}
+			}
+		} //end if(WantMachineNames) 
 
 		// here we found a machine; spit out the name to stdout
 		remoteHost[0] = '\0';
-		offer->LookupString(ATTR_NAME, remoteHost);
+		if(WantMachineNames)
+			offer->LookupString(ATTR_MACHINE, remoteHost);
+		else
+			offer->LookupString(ATTR_NAME, remoteHost);
+
 		if ( remoteHost[0] ) {
 			printf("%s\n", remoteHost);
 		}

@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#define INCLUDE_UNIVERSE_NAME_ARRAY		// for JobUniverseNames[]
 #include "condor_io.h"
 #include "string_list.h"
 #include "condor_debug.h"
@@ -38,9 +39,13 @@
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_ckpt_name.h"
+#include "scheduler.h"	// for shadow_rec definition
+#include "condor_email.h"
 
 extern char *Spool;
+extern char *Name;
 extern char* JobHistoryFileName;
+extern Scheduler scheduler;
 
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -48,6 +53,7 @@ extern "C" {
 
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, const char*);
+extern	bool	service_this_universe(int);
 static ReliSock *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
@@ -55,6 +61,7 @@ void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 					 char * user);
 void	FindPrioJob(PROC_ID &);
 int		Runnable(PROC_ID*);
+int		Runnable(ClassAd*);
 int		get_job_prio(ClassAd *ad);
 
 #if !defined(WIN32)
@@ -203,12 +210,17 @@ InitJobQueue(const char *job_queue_name)
 	ClassAd *ad;
 	ClassAd *clusterad;
 	HashKey key;
-	int 	cluster_num, cluster, proc;
+	int 	cluster_num, cluster, proc, universe;
 	int		stored_cluster_num;
 	int 	*numOfProcs = NULL;	
 	bool	CreatedAd = false;
 	char	cluster_str[40];
 	char	owner[_POSIX_PATH_MAX];
+	char	user[_POSIX_PATH_MAX];
+	char	correct_user[_POSIX_PATH_MAX];
+	char	buf[_POSIX_PATH_MAX];
+	char	attr_scheduler[_POSIX_PATH_MAX];
+	char	correct_scheduler[_POSIX_PATH_MAX];
 
 	if (!JobQueue->LookupClassAd(HeaderKey, ad)) {
 		// we failed to find header ad, so create one
@@ -225,6 +237,13 @@ InitJobQueue(const char *job_queue_name)
 		// computed value 
 		stored_cluster_num = 0;
 	}
+
+		// Figure out what the correct ATTR_SCHEDULER is for any
+		// dedicated jobs in this queue.  Since it'll be the same for
+		// all jobs, we only have to figure it out once.  We use '%'
+		// as the delimiter, since ATTR_NAME might already have '@' in
+		// it, and we don't want to confuse things any further.
+	sprintf( correct_scheduler, "DedicatedScheduler!%s", Name );
 
 	next_cluster_num = 1;
 	JobQueue->StartIterateAllClassAds();
@@ -276,6 +295,75 @@ InitJobQueue(const char *job_queue_name)
 				continue;
 			}
 
+			if( !ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
+				dprintf( D_ALWAYS,
+						 "Job %s has no %s attribute.  Removing....\n", 
+						 tmp, ATTR_JOB_UNIVERSE );
+				JobQueue->DestroyClassAd( tmp );
+				continue;
+			}
+
+				// Figure out what ATTR_USER *should* be for this job
+			int nice_user = 0;
+			ad->LookupInteger( ATTR_NICE_USER, nice_user );
+			sprintf( correct_user, "%s%s@%s", 
+					 (nice_user) ? "nice-user." : "", owner, 
+					 scheduler.uidDomain() );  
+
+			if (!ad->LookupString(ATTR_USER, user)) {
+				dprintf( D_FULLDEBUG,
+						"Job %s has no %s attribute.  Inserting one now...\n",
+						tmp, ATTR_USER);
+				sprintf( buf, "%s = \"%s\"", ATTR_USER, correct_user );
+				ad->Insert( buf );
+				JobQueueDirty = true;
+			} else {
+					// ATTR_USER exists, make sure it's correct, and
+					// if not, insert the new value now.
+				if( strcmp(user,correct_user) ) {
+						// They're different, so insert the right value
+					dprintf( D_FULLDEBUG,
+							 "Job %s has stale %s attribute.  "
+							 "Inserting correct value now...\n",
+							 tmp, ATTR_USER );
+					sprintf( buf, "%s = \"%s\"", ATTR_USER, correct_user );
+					ad->Insert( buf );
+					JobQueueDirty = true;
+				}
+			}
+
+				// Make sure ATTR_SCHEDULER is correct.
+				// XXX TODO: Need a better way than hard-coded
+				// universe check to decide if a job is "dedicated" 
+			if( universe == MPI ) {
+				if( !ad->LookupString(ATTR_SCHEDULER, attr_scheduler) ) { 
+					dprintf( D_FULLDEBUG, "Job %s has no %s attribute.  "
+							 "Inserting one now...\n", tmp,
+							 ATTR_SCHEDULER );
+					sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER,
+							 correct_scheduler ); 
+					ad->Insert( buf );
+					JobQueueDirty = true;
+				} else {
+
+						// ATTR_SCHEDULER exists, make sure it's correct,
+						// and if not, insert the new value now.
+					if( strcmp(attr_scheduler,correct_scheduler) ) {
+							// They're different, so insert the right
+							// value 
+						dprintf( D_FULLDEBUG,
+								 "Job %s has stale %s attribute.  "
+								 "Inserting correct value now...\n",
+								 tmp, ATTR_SCHEDULER );
+						sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER,
+								 correct_scheduler ); 
+						ad->Insert( buf );
+						JobQueueDirty = true;
+					}
+				}
+			}
+				
+
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
 				// First proc we've seen in this cluster; set size to 1
@@ -312,9 +400,32 @@ CleanJobQueue()
 		dprintf(D_ALWAYS, "Cleaning job queue...\n");
 		JobQueue->TruncLog();
 		JobQueueDirty = false;
-	} else {
-		dprintf(D_ALWAYS,
-				"CleanJobQueue() doing nothing since !JobQueueDirty.\n");
+	}
+}
+
+
+void
+DestroyJobQueue( void )
+{
+	if (JobQueueDirty) {
+			// We can't destroy it until it's clean.
+		CleanJobQueue();
+	}
+	ASSERT( JobQueueDirty == false );
+	delete JobQueue;
+	JobQueue = NULL;
+
+		// There's also our hashtable of the size of each cluster
+	delete ClusterSizeHashTable;
+	ClusterSizeHashTable = NULL;
+
+		// Also, clean up the array of super users
+	if( super_users ) {
+		int i;
+		for( i=0; i<num_super_users; i++ ) {
+			delete [] super_users[i];
+		}
+		delete [] super_users;
 	}
 }
 
@@ -622,7 +733,7 @@ int DestroyProc(int cluster_id, int proc_id)
 //	LogDestroyClassAd	*log;
 	int					*numOfProcs = NULL;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
 	}
@@ -639,6 +750,21 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 	else {
 		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
+	}
+
+	int universe = STANDARD;
+	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+	if (universe == PVM) {
+			// PVM jobs take up a whole cluster.  If we've been ask to
+			// destroy any of the procs in a PVM job cluster, we
+			// should destroy the entire cluster.  This hack lets the
+			// schedd just destroy the proc associated with the shadow
+			// when a multi-class PVM job exits without leaving other
+			// procs in the cluster around.  It also ensures that the
+			// user doesn't delete only some of the procs in the PVM
+			// job cluster, since that's going to really confuse the
+			// PVM shadow.
+		return DestroyCluster(cluster_id);
 	}
 
     // Append to history file
@@ -865,6 +991,30 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 			return -1;
 		}
 		delete [] test_owner;
+
+			// If we got this far, we're allowing the given value for
+			// ATTR_OWNER to be set.  However, now, we should try to
+			// insert a value for ATTR_USER, too, so that's always in
+			// the job queue.
+		int nice_user = 0;
+		char user[_POSIX_PATH_MAX];
+			// We can't just use attr_value, since it contains '"'
+			// marks.  Carefully remove them here.
+		char owner_buf[_POSIX_PATH_MAX];
+		strcpy( owner_buf, attr_value );
+		char *owner = owner_buf;
+		if( *owner == '"' ) {
+			owner++;
+			int endquoteindex = strlen(owner) - 1;
+			if ( endquoteindex >= 0 && owner[endquoteindex] == '"' ) {
+				owner[endquoteindex] = '\0';
+			}
+		}
+		GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
+						 &nice_user ); 
+		sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
+				 owner, scheduler.uidDomain() );  
+		SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 	} 
 	else if (strcmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
@@ -876,6 +1026,33 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 			return -1;
 		}
 	} 
+	else if (strcmp(attr_name, ATTR_NICE_USER) == 0) {
+			// Because we're setting a new value for nice user, we
+			// should create a new value for ATTR_USER while we're at
+			// it, since that might need to change now that
+			// ATTR_NICE_USER is set.
+		char owner_buf[ _POSIX_PATH_MAX];
+		char *owner = owner_buf;
+		char user[_POSIX_PATH_MAX];
+		bool nice_user = false;
+		if( ! stricmp(attr_value, "TRUE") ) {
+			nice_user = true;
+		}
+		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner_buf) 
+			>= 0 ) {
+				// carefully strip off any '"' marks from ATTR_OWNER.  
+			if( *owner == '"' ) {
+				owner++;
+				int endquoteindex = strlen(owner) - 1;
+				if ( endquoteindex >= 0 && owner[endquoteindex] == '"' ) { 
+					owner[endquoteindex] = '\0';
+				}
+			}
+			sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." :
+					 "", owner, scheduler.uidDomain() );  
+			SetAttribute( cluster_id, proc_id, ATTR_USER, user );
+		}
+	}
 	else if (strcmp(attr_name, ATTR_PROC_ID) == 0) {
 		if (atoi(attr_value) != proc_id) {
 #if !defined(WIN32)
@@ -957,19 +1134,13 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
 	char	*attr_val;
-	int		rval;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
-	switch (rval) {
-	case 1:
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%f", val);
+		free( attr_val );
 		return 1;
-	case 0:
-		break;
-	default:
-		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -987,19 +1158,13 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
 	char	*attr_val;
-	int		rval;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
-	switch (rval) {
-	case 1:
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%d", val);
+		free( attr_val );
 		return 1;
-	case 0:
-		break;
-	default:
-		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -1012,24 +1177,19 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 
 
 int
-GetAttributeString(int cluster_id, int proc_id, const char *attr_name, char *val)
+GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
+					char *val )
 {
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
 	char	*attr_val;
-	int		rval;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
-	switch (rval) {
-	case 1:
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		strcpy(val, attr_val);
+		free( attr_val );
 		return 1;
-	case 0:
-		break;
-	default:
-		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -1048,19 +1208,13 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	char		key[_POSIX_PATH_MAX];
 	ExprTree	*tree;
 	char		*attr_val;
-	int			rval;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
-	switch (rval) {
-	case 1:
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		strcpy(val, attr_val);
+		free( attr_val );
 		return 1;
-	case 0:
-		break;
-	default:
-		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -1085,16 +1239,24 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	ClassAd				*ad;
 	char				key[_POSIX_PATH_MAX];
 //	LogDeleteAttribute	*log;
-	char				*attr_val;
+	char				*attr_val = NULL;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
-		if (JobQueue->LookupInTransaction(key, attr_name, attr_val) != 1) {
+		if( ! JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 			return -1;
 		}
 	}
 
+		// If we found it in the transaction, we need to free attr_val
+		// so we don't leak memory.  We don't use the value, we just
+		// wanted to make sure we could find the attribute so we know
+		// to return failure if needed.
+	if( attr_val ) {
+		free( attr_val );
+	}
+	
 	if (Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 		return -1;
 	}
@@ -1110,16 +1272,181 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 
 
 ClassAd *
-GetJobAd(int cluster_id, int proc_id)
+GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 {
 	char	key[_POSIX_PATH_MAX];
 	ClassAd	*ad;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 	if (JobQueue->LookupClassAd(key, ad)) {
-		return ad;
-	} else
+		if ( !expStartdAd ) {
+			// we're done, return the ad.
+			return ad;
+		}
+
+		// if we made it here, we have the ad, but
+		// expStartdAd is true.  so we need to dig up 
+		// the startd ad which matches this job ad.
+		char *bigbuf = NULL;
+		char *bigbuf2 = NULL;
+		PROC_ID job_id;
+		shadow_rec *srec;
+		ClassAd *startd_ad;
+		ClassAd *expanded_ad;
+		int index;
+		const char *AttrsToExpand[] = { ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS,
+			ATTR_JOB_ENVIRONMENT, NULL };	// ATTR_JOB_CMD must be first
+		char *left,*name,*right,*value,*tvalue;
+
+		// we must make a deep copy of the job ad; we do not
+		// want to expand the ad we have in memory.
+		expanded_ad = new ClassAd(*ad);  
+
+		job_id.cluster = cluster_id;
+		job_id.proc = proc_id;
+
+		if ((srec = scheduler.FindSrecByProcID(job_id)) == NULL) {
+			// pretty weird... no shadow, nothing we can do
+			return expanded_ad;
+		}
+
+		if ( srec->match == NULL ) {
+			// pretty weird... no match rec, nothing we can do
+			// could be a PVM job?
+			return expanded_ad;
+		}
+
+		startd_ad = srec->match->my_match_ad;
+
+		index = 0;
+		bool no_startd_ad = false;
+		bool attribute_not_found = false;
+		while ( AttrsToExpand[index] && !no_startd_ad &&
+				!attribute_not_found ) 
+		{
+			if (!bigbuf) 
+				bigbuf = new char[ATTRLIST_MAX_EXPRESSION];
+			bigbuf[0] = '\0';
+			ad->LookupString(AttrsToExpand[index],bigbuf);
+
+				// Some backwards compatibility: if the
+				// user just has $$opsys.$$arch in the
+				// ATTR_JOB_CMD attribute, convert it to the
+				// new format w/ parenthesis: $$(opsys).$$(arch)
+			if ( (index == 0) && ((tvalue=strstr(bigbuf,"$$")) != NULL) ) 
+			{
+				if ( stricmp("$$OPSYS.$$ARCH",tvalue) == MATCH ) 
+				{
+					// convert to the new format
+					strcpy(tvalue,"$$(OPSYS).$$(ARCH)");
+					bigbuf2 = new char[ATTRLIST_MAX_EXPRESSION];
+					sprintf(bigbuf2,"%s=\"%s\"",AttrsToExpand[index],
+						bigbuf);
+					ad->Insert(bigbuf2);
+					delete [] bigbuf2;
+				}
+			}
+
+			while( !no_startd_ad && !attribute_not_found &&
+					get_var(bigbuf,&left,&name,&right,NULL,true) )
+			{
+				if (!startd_ad) {
+					no_startd_ad = true;
+					break;
+				}
+				value = startd_ad->sPrintExpr(NULL,0,name);
+				if (!value) {
+					attribute_not_found = true;
+					break;
+				}
+				// we just want the attribute value, so strip
+				// out the "attrname=" prefix and any quotation marks 
+				// around string value.
+				tvalue = strchr(value,'=');
+				ASSERT(tvalue);	// we better find the "=" sign !
+				tvalue++;	// skip past "=" sign
+				while ( *tvalue && isspace(*tvalue) ) {
+					tvalue++;
+				}
+				// skip any quotation marks around strings
+				if (*tvalue == '"') {
+					tvalue++;
+					int endquoteindex = strlen(tvalue) - 1;
+					if ( endquoteindex >= 0 && 
+						 tvalue[endquoteindex] == '"' ) {
+						    tvalue[endquoteindex] = '\0';
+					}
+				}
+				bigbuf2 = new char[ATTRLIST_MAX_EXPRESSION];
+				sprintf(bigbuf2,"%s%s%s",left,tvalue,right);
+				sprintf(bigbuf,"%s=\"%s\"",AttrsToExpand[index],
+					bigbuf2);
+				expanded_ad->Insert(bigbuf);
+				dprintf(D_FULLDEBUG,"$$ substitution: %s\n",bigbuf);
+				free(value);	// must use free here, not delete[]
+				delete [] bigbuf;
+				bigbuf = bigbuf2;
+				bigbuf2 = NULL;
+			}
+			index++;
+		}
+
+
+		if ( no_startd_ad || attribute_not_found ) {
+			// no ClassAd in the match record; probably
+			// an older negotiator.  put the job on hold and send email.
+			dprintf( D_ALWAYS, 
+				"Putting job %d.%d on hold - cannot expand $$(%s)\n",
+				 cluster_id, proc_id, name );
+			// SetAttribute does security checks if Q_SOCK is not NULL.
+			// So, set Q_SOCK to be NULL before placing the job on hold
+			// so that SetAttribute knows this request is not coming from
+			// a client.  Then restork Q_SOCK back to the original value.
+			ReliSock* saved_sock = Q_SOCK;
+			Q_SOCK = NULL;
+			SetAttributeInt( cluster_id, proc_id,ATTR_JOB_STATUS, HELD );
+			Q_SOCK = saved_sock;
+			char buf[256];
+			sprintf(buf,"Your job (%d.%d) is on hold",cluster_id,proc_id);
+			FILE* email = email_user_open(ad,buf);
+			if ( email ) {
+				fprintf(email,"Condor failed to start your job %d.%d \n",
+					cluster_id,proc_id);
+				fprintf(email,"because job attribute %s contains $$(%s).\n",
+					AttrsToExpand[index-1],name);
+				fprintf(email,"\nAttribute $$(%s) cannot be expanded because",
+					name);
+				if ( attribute_not_found ) {
+					fprintf(email,"\nthis attribute was not found in the "
+							"machine ClassAd.\n");
+				} else {
+					fprintf(email,
+							"\nthis feature is not supported by the version"
+							" of the Condor Central Manager\n"
+							"currently installed.  Please ask your site's"
+							" Condor administrator to upgrade the\n"
+							"Central Manager to a more recent revision.\n");
+				}
+				fprintf(email,
+					"\n\nPlease correct this problem and release your "
+					"job with:\n   \"condor_release %d.%d\"\n\n",
+					cluster_id,proc_id);
+				email_close(email);
+			}
+		}
+
+		if ( bigbuf ) delete [] bigbuf;
+		if ( bigbuf2 ) delete [] bigbuf2;
+
+		if ( no_startd_ad || attribute_not_found )
+			return NULL;
+		else 
+			return expanded_ad;
+
+	} else {
+		// we could not find this job ad
 		return NULL;
+	}
 }
 
 
@@ -1266,36 +1593,45 @@ int get_job_prio(ClassAd *job)
     int     cur_hosts;
     int     max_hosts;
 	int 	niceUser;
+	int		universe;
 
 	buf[0] = '\0';
 	owner[0] = '\0';
 
-    job->LookupInteger(ATTR_JOB_STATUS, job_status);
-    job->LookupInteger(ATTR_JOB_PRIO, job_prio);
-    job->LookupInteger(ATTR_Q_DATE, q_date);
-
-	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-		strcpy(owner,NiceUserName);
-		strcat(owner,".");
-	}
-
-    job->LookupString(ATTR_OWNER, buf);
-	strcat(owner,buf);
-
-	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
-	job->LookupInteger(ATTR_PROC_ID, id.proc);
+	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+	job->LookupInteger(ATTR_JOB_STATUS, job_status);
     if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
         cur_hosts = ((job_status == RUNNING) ? 1 : 0);
     }
     if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
         max_hosts = ((job_status == IDLE || job_status == UNEXPANDED) ? 1 : 0);
     }
-
-	
+	// Figure out if we should contine and put this job into the PrioRec array
+	// or not.
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
-    if (cur_hosts>=max_hosts || job_status==HELD)
+    if (cur_hosts>=max_hosts || job_status==HELD || 
+		   !service_this_universe(universe)) 
+	{
         return cur_hosts;
+	}
+
+
+	// --- Insert this job into the PrioRec array ---
+
+    job->LookupInteger(ATTR_JOB_PRIO, job_prio);
+    job->LookupInteger(ATTR_Q_DATE, q_date);
+	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
+		strcpy(owner,NiceUserName);
+		strcat(owner,".");
+	}
+    job->LookupString(ATTR_OWNER, buf);
+	strcat(owner,buf);
+		// Note, we should use this method instead of just looking up
+		// ATTR_USER directly, since that includes UidDomain, which we
+		// don't want for this purpose...
+	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
+	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
     PrioRec[N_PrioRecs].id       = id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
@@ -1317,12 +1653,13 @@ extern void mark_job_stopped(PROC_ID* job_id);
 
 int mark_idle(ClassAd *job)
 {
-    int     status, cluster, proc;
+    int     status, cluster, proc, hosts;
 	PROC_ID	job_id;
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job->LookupInteger(ATTR_PROC_ID, proc);
     job->LookupInteger(ATTR_JOB_STATUS, status);
+	job->LookupInteger(ATTR_CURRENT_HOSTS, hosts);
 
 	job_id.cluster = cluster;
 	job_id.proc = proc;
@@ -1333,7 +1670,7 @@ int mark_idle(ClassAd *job)
 	else if ( status == UNEXPANDED ) {
 		SetAttributeInt(cluster,proc,ATTR_JOB_STATUS,IDLE);
 	}
-	else if ( status == RUNNING ) {
+	else if ( status == RUNNING || hosts > 0 ) {
 		mark_job_stopped(&job_id);
 	}
 		
@@ -1400,6 +1737,38 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 	char				*the_at_sign;
 	static char			nice_user_prefix[50];	// static since no need to recompute
 	static int			nice_user_prefix_len = 0;
+
+		// First, see if jobid points to a runnable job.  If it does,
+		// there's no need to build up a PrioRec array, since we
+		// requested matches in priority order in the first place.
+		// And, we'd like to start the job we used to get the match if
+		// possible, just to keep things simple.
+	if (jobid.proc >= 0 && Runnable(&jobid)) {
+		return;
+	}
+
+
+	// BIOTECH
+	char *biotech = param("BIOTECH");
+	if (biotech) {
+		free(biotech);
+		ad = GetNextJob(1);
+		while (ad != NULL) {
+			if ( Runnable(ad) ) {
+				if ( (my_match_ad && 
+					     (*ad == ((ClassAd &)(*my_match_ad)))) 
+					 || (my_match_ad == NULL) ) 
+				{
+					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
+					ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
+					break;
+				}
+			}
+			ad = GetNextJob(0);
+		}
+		return;
+	}
+
 
 	if ( nice_user_prefix_len == 0 ) {
 		strcpy(nice_user_prefix,NiceUserName);
@@ -1482,67 +1851,74 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 	FindPrioJob(jobid);
 }
 
-int Runnable(PROC_ID* id)
+int Runnable(ClassAd *job)
 {
-	int		cur, max;					// current hosts and max hosts
-	int		status, universe;
-	
-	dprintf (D_FULLDEBUG, "Job %d.%d:", id->cluster, id->proc);
+	int status, universe, cur, max;
 
-	if(id->cluster < 1 || id->proc < 0)
-	{
-		dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable\n");
-		return FALSE;
-	}
-	
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_JOB_STATUS, &status) < 0)
+	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_JOB_STATUS);
 		return FALSE;
 	}
-	if(status == HELD)
+	if (status == HELD)
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
 		return FALSE;
 	}
-	if(status == REMOVED)
+	if (status == REMOVED)
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
 		return FALSE;
 	}
 
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_JOB_UNIVERSE,
-					   &universe) < 0)
+	if ( job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
 				ATTR_JOB_UNIVERSE);
 		return FALSE;
 	}
-	if(universe == SCHED_UNIVERSE)
+	if( !service_this_universe(universe) )
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (SCHED_UNIVERSE)\n");
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n",
+			JobUniverseNames[universe]);
 		return FALSE;
 	}
-	
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_CURRENT_HOSTS, &cur) < 0)
+
+	if ( job->LookupInteger(ATTR_CURRENT_HOSTS, cur) == 0 )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
 				ATTR_CURRENT_HOSTS);
 		return FALSE; 
 	}
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_MAX_HOSTS, &max) < 0)
+	if ( job->LookupInteger(ATTR_MAX_HOSTS, max) == 0 )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
 				ATTR_MAX_HOSTS);
 		return FALSE; 
 	}
-	if(cur < max)
+	if (cur < max)
 	{
 		dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");
 		return TRUE;
 	}
+	
 	dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable (default rule)\n");
 	return FALSE;
+}
+
+int Runnable(PROC_ID* id)
+{
+	ClassAd *jobad;
+	
+	dprintf (D_FULLDEBUG, "Job %d.%d:", id->cluster, id->proc);
+
+	if (id->cluster < 1 || id->proc < 0 || (jobad=GetJobAd(id->cluster,id->proc))==NULL )
+	{
+		dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable\n");
+		return FALSE;
+	}
+
+	return Runnable(jobad);
 }
 
 // From the priority records, find the runnable job with the highest priority
@@ -1618,4 +1994,11 @@ static void AppendHistory(ClassAd* ad)
   fprintf(LogFile,"***\n");   // separator
   fclose(LogFile);
   return;
+}
+
+
+void
+dirtyJobQueue()
+{
+	JobQueueDirty = true;
 }

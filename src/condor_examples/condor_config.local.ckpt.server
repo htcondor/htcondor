@@ -3,11 +3,13 @@
 ##  condor_config.local.ckpt.server
 ##
 ##  This is the default local configuration file for your checkpoint
-##  server machine.  You should copy this file to the appropriate
-##  location and customize it for your needs.  The file is divided
-##  into three main parts: settings you must customize, settings you
-##  may want to customize and settings you should probably leave alone
-##  (unless you know what you're doing).
+##  server machine.  This file has an accompanying file that is called
+##  condor_config.local.root.ckpt.server which contains some configuration
+##  entries that shouldn't be changed.   You should copy both of these
+##  files to their appropriate location and customize them for your
+##  needs. This file is divided into three main parts: settings you
+##  must customize, settings you may want to customize and settings
+##  you should probably leave alone (unless you know what you're doing).
 ##
 ######################################################################
 
@@ -21,24 +23,12 @@
 ##  files?
 CKPT_SERVER_DIR	= /ckpt_server
 
-
 ######################################################################
 ######################################################################
 ##  Settings you may want to customize: 
 ##  (it is generally safe to leave these untouched) 
 ######################################################################
 ######################################################################
-
-##  What daemons do you want to run on your checkpoint server?
-##  NOTE: For it to be the checkpoint server, you need the 
-##  CKPT_SERVER to run.  It's optional whether or not you want to
-##  run the schedd (to allow jobs to be submited) and/or the startd
-##  (to allow Condor jobs to execute) on your checkpoint server.
-DAEMON_LIST	= MASTER, CKPT_SERVER, STARTD, SCHEDD
-
-##  Where is the binary for the daemon?  (Note: MASTER, SCHEDD,
-##  and STARTD are already defined in the global config file).
-CKPT_SERVER	= $(SBIN)/condor_ckpt_server
 
 ##  The checkpoint server creates a child process for each active file
 ##  transfer.  What is the maximum number of processes it should

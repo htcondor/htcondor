@@ -252,6 +252,7 @@ ProcFamily::getPidFamilyByLogin(pid_t *pidFamily)
 #ifndef WIN32
 	// Not yet implemented on Unix.
 	EXCEPT("getPidFamilyByLogin not implemented");
+	return 0;
 #else
 	// Win32 version
 	ExtArray<pid_t> pids(256);
@@ -579,6 +580,13 @@ ProcFamily::currentfamily( pid_t* & ptr  )
 {
 	pid_t* tmp;
 	int i;
+
+	if( family_size <= 0 ) {
+		dprintf( D_ALWAYS, 
+				 "ProcFamily::currentfamily: ERROR: family_size is 0\n" );
+		ptr = NULL;
+		return 0;
+	}
 	tmp = new pid_t[ family_size ];
 	if( !tmp ) {
 		EXCEPT( "Out of memory!" );

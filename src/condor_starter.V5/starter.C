@@ -66,11 +66,12 @@ char* mySubSystem = "STARTER";
 	// Constants
 const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
-ReliSock	*SyscallStream;		// stream to shadow for remote system calls
+ReliSock	*SyscallStream = NULL;	// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
+int		ExecTransferAttempts;	// How many attempts at getting the initial ckpt
 int		DoDelays;				// Insert artificial delays for testing
-char	*UidDomain;				// Machines we share UID space with
+char	*UidDomain=NULL;		// Machines we share UID space with
 
 Alarm		MyAlarm;			// Don't block forever on user process exits
 char	*InitiatingHost;		// Machine where shadow is running
@@ -97,9 +98,8 @@ void req_exit_all();
 void req_ckpt_exit_all();
 int needed_fd( int fd );
 void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
-int host_in_domain( const char *domain, const char *hostname );
 void init_environment_info();
-
+void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 StateMachine	*condor_starter_ptr;
 
 
@@ -268,21 +268,6 @@ init_shadow_connections()
 }
 
 /*
-  Get relevant information from "condor_config" and "condor_config.local"
-  files.
-*/
-void
-read_config_files( void )
-{
-	config();
-
-		/* bring important parameters into global data items */
-	init_params();
-
-	dprintf( D_ALWAYS, "Done reading config files\n" );
-}
-
-/*
   Change directory to where we will run our user processes.
 */
 void
@@ -363,6 +348,26 @@ init_params()
 	if( UidDomain[0] == '*' ) {
 		UidDomain[0] = '\0';
 	}
+
+	// We can configure how many times the starter wishes to attempt to
+	// pull over the initial checkpoint
+	if ( (tmp=param( "EXEC_TRANSFER_ATTEMPTS" )) == NULL)
+	{
+		ExecTransferAttempts = 3;
+	}
+	else
+	{
+		ExecTransferAttempts = atoi(tmp);
+		// This catches errors on atoi(), and if the user did something stupid
+		if (ExecTransferAttempts < 1)
+		{
+			dprintf( D_ALWAYS, "Please check your EXEC_TRANSFER_ATTEMPTS "
+			"macro. It must be a number greater than or equal to one. "
+			"Defaulting EXEC_TRANSFER_ATTEMPTS to 3.\n") ;
+			ExecTransferAttempts = 3;
+		}
+		free(tmp);
+	}
 }
 
 /*
@@ -404,20 +409,6 @@ get_exec()
 		return FAILURE;
 	}
 	return SUCCESS;
-}
-
-
-/*
-  We've been asked to vacate the machine, but we're allowed to checkpoint
-  any running jobs or complete any checkpoints we have in progress first.
-*/
-int
-handle_vacate_req()
-{
-	// dprintf( D_ALWAYS, "Entering function handle_vacate_req()\n" );
-
-	stop_all();				// stop any running user procs
-	return(0);
 }
 
 
@@ -674,9 +665,48 @@ susp_ckpt_timer()
 int
 susp_all()
 {
+	char *susp_msg = "TISABH Starter: Suspended user job: ";
+	char *unsusp_msg = "TISABH Starter: Unsuspended user job.";
+	char msg[4096];
+	UserProc	*proc;
+	int sum;
+
 	stop_all();
 
+	/* determine how many pids the starter suspended */
+	sum = 0;
+	UProcList.Rewind();
+	while( proc = UProcList.Next() ) {
+		if( proc->is_suspended() ) {
+			sum += proc->get_num_pids_suspended();
+		}
+	}
+
+	/* Now that we've suspended the jobs, write to our client log
+		fd some information about what we did so the shadow
+		can figure out we suspended the job. TISABH stands for
+		"This Is Such A Bad Hack".  Note: The starter isn't
+		supposed to be messing with this fd like this, but
+		the high poobah wanted this feature hacked into
+		the old starter/shadow combination. So here it
+		is. Sorry. If you change this string, please go to
+		ops.C in the shadow.V6 directory and change the function
+		log_old_starter_shadow_suspend_event_hack() to reflect
+		the new choice.  -psilord 2/1/2001 */
+
+	sprintf(msg, "%s%d\n", susp_msg, sum);
+	/* Hmm... maybe I should write a loop that checks to see if this is ok */
+	write(CLIENT_LOG, msg, strlen(msg));
+
 	susp_self();
+
+	/* Before we unsuspend the jobs, write to the client log that we are
+		about to so the shadow knows. Make sure to do this BEFORE we unsuspend
+		the jobs.
+		-psilord 2/1/2001 */
+	sprintf(msg, "%s\n", unsusp_msg);
+	/* Hmm... maybe I should write a loop that checks to see if this is ok */
+	write(CLIENT_LOG, msg, strlen(msg));
 
 	resume_all();
 
@@ -1164,100 +1194,6 @@ needed_fd( int fd )
 		  return FALSE;
 	}
 }
-
-/*
-  Return true if the given domain contains the given hostname.  For
-  example the domain "cs.wisc.edu" constain the host "padauk.cs.wisc.edu".
-*/
-int
-host_in_domain( const char *domain, const char *hostname )
-{
-	const char	*ptr;
-
-	for( ptr=hostname; *ptr; ptr++ ) {
-		if( strcmp(ptr,domain) == MATCH ) {
-			return TRUE;
-		}
-	}
-
-	return FALSE;
-}
-
-/*
-  We've been requested to start the user job with the given UID, but
-  we apply our own rules to determine whether we'll honor that request.
-*/
-void
-determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
-{
-
-	struct passwd	*pwd_entry;
-
-		// don't allow any root processes
-	if( requested_uid == 0 || requested_gid == 0 ) {
-		EXCEPT( "Attempt to start user process with root privileges" );
-	}
-		
-		// if the submitting machine is in our shared UID domain, honor
-		// the request
-	if( host_in_domain(UidDomain,InitiatingHost) ) {
-
-		/* check to see if there is an entry in the passwd file for this uid */
-		if( (pwd_entry=getpwuid(requested_uid)) == NULL ) {
-			char *want_soft = NULL;
-	
-			if ( (want_soft=param("SOFT_UID_DOMAIN")) == NULL || 
-				 (*want_soft != 'T' && *want_soft != 't') ) {
-			  EXCEPT("Uid not found in passwd file & SOFT_UID_DOMAIN is False");
-			}
-			if ( want_soft ) {
-				free(want_soft);
-			}
-		}
-		(void)endpwent();
-
-		return;
-	}
-
-		// otherwise, we run the process an "nobody"
-	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
-#ifdef HPUX
-		// the HPUX9 release does not have a default entry for nobody,
-		// so we'll help condor admins out a bit here...
-		requested_uid = 59999;
-		requested_gid = 59999;
-		return;
-#else
-		EXCEPT( "Can't find UID for \"nobody\" in passwd file" );
-#endif
-	}
-
-	requested_uid = pwd_entry->pw_uid;
-	requested_gid = pwd_entry->pw_gid;
-
-#ifdef HPUX
-	// HPUX9 has a bug in that getpwnam("nobody") always returns
-	// a gid of 60001, no matter what the group file (or NIS) says!
-	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
-	// patch here, we will generate an EXCEPT later when we try a
-	// setgid().  -Todd Tannenbaum, 3/95
-	if ( (requested_uid > 59999) || (requested_uid < 0) )
-		requested_uid = 59999;
-	if ( (requested_gid > 59999) || (requested_gid < 0) )
-		requested_gid = 59999;
-#endif
-
-#ifdef IRIX
-		// Same weirdness on IRIX.  60001 is the default uid for
-		// nobody, lets hope that works.
-	if ( (requested_uid >= UID_MAX ) || (requested_uid < 0) )
-		requested_uid = 60001;
-	if ( (requested_gid >= UID_MAX) || (requested_gid < 0) )
-		requested_gid = 60001;
-#endif
-
-}
-
 
 /*
   Find out information about our UID domain and file sharing

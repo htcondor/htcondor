@@ -127,7 +127,7 @@
 #define REQUEST_NETWORK		(SCHED_VERS+73)	// negotiator network mgmt
 #define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given VM
-
+#define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
 
 /************
 *** Command ids used by the collector 
@@ -224,7 +224,7 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define DC_SIGPCKPT		104	// periodic checkpoint
 
 /*
-*** Daemon Core Commands
+*** Daemon Core Commands and Signals
 */
 #define DC_BASE	60000
 #define DC_RAISESIGNAL		(DC_BASE+0)
@@ -236,6 +236,7 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define DC_OFF_FAST			(DC_BASE+6)
 #define DC_CONFIG_VAL		(DC_BASE+7)
 #define DC_CHILDALIVE		(DC_BASE+8)
+#define DC_SERVICEWAITPIDS	(DC_BASE+9) 
 
 /*
 *** Commands used by the FileTransfer object
@@ -259,11 +260,20 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define SHADOW_UPDATEINFO	(DCSHADOW_BASE+0)
 #define TAKE_MATCH          (DCSHADOW_BASE+1)  // for MPI shadow
 #define MPI_START_COMRADE   (DCSHADOW_BASE+2)  // for MPI shadow
+#define GIVE_MATCHES 	    (DCSHADOW_BASE+3)  // for MPI shadow
+
 
 /*
 *** Used only in THE TOOL to choose the condor_squawk option.
 */
 #define SQUAWK 72000
+
+/*
+*** Commands used by the gridmanager daemon
+*/
+#define DCGRIDMANAGER_BASE 73000
+#define GRIDMAN_REMOVE_JOBS DC_SIGUSR1
+#define GRIDMAN_ADD_JOBS DC_SIGUSR2
 
 /*
 *** Replies used in various stages of various protocols

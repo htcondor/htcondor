@@ -27,7 +27,6 @@
 #include "condor_adtypes.h"
 #include "condor_qmgr.h"
 #include "format_time.h"
-#include "condor_classad.h"
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
@@ -120,10 +119,8 @@ fetchQueue (ClassAdList &list, ClassAd *ad)
 		return result;
 
 	// insert types into the query ad   ###
-//	filterAd.SetMyTypeName ("Query");
-//	filterAd.SetTargetTypeName ("Job");
-	filterAd.InsertAttr( ATTR_MY_TYPE, (string)QUERY_ADTYPE );		// NAC
-	filterAd.InsertAttr( ATTR_TARGET_TYPE, (string)JOB_ADTYPE ); 	// NAC	
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
 
 	// connect to the Q manager
 	if (ad == 0)
@@ -135,13 +132,11 @@ fetchQueue (ClassAdList &list, ClassAd *ad)
 	else
 	{
 		// remote case to handle condor_globalq
-//		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString))
-		if ( !ad->EvaluateAttrString( ATTR_SCHEDD_IP_ADDR, scheddString, 32 ) ) {	// NAC
-			return Q_NO_SCHEDD_IP_ADDR;	
-		}
-		if (!(qmgr = ConnectQ (scheddString,20,true))) {
+		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString))
+			return Q_NO_SCHEDD_IP_ADDR;
+
+		if (!(qmgr = ConnectQ (scheddString,20,true)))
 			return Q_SCHEDD_COMMUNICATION_ERROR;
-		}
 	}
 
 	// get the ads and filter them
@@ -163,11 +158,8 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 		return result;
 
 	// insert types into the query ad   ###
-//	filterAd.SetMyTypeName ("Query");
-//	filterAd.SetTargetTypeName ("Job");
-	filterAd.InsertAttr( ATTR_MY_TYPE, (string)QUERY_ADTYPE );		// NAC
-	filterAd.InsertAttr( ATTR_TARGET_TYPE, (string)JOB_ADTYPE ); 	// NAC	
-
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
 
 	/*
 	 connect to the Q manager.
@@ -176,9 +168,9 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 	 that whenever one needs a periodic time value, 20 is always
 	 optimal.  :^).
 	*/
-	if (!(qmgr = ConnectQ (host,20,true))) {
+	if (!(qmgr = ConnectQ (host,20,true)))
 		return Q_SCHEDD_COMMUNICATION_ERROR;
-	}
+
 	// get the ads and filter them
 	result = getAndFilterAds (filterAd, list);
 
@@ -189,9 +181,6 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 int CondorQ::
 fetchQueueFromHostAndProcess ( char *host, process_function process_func )
 {
-		// DEBUG NAC
-//	printf("entered fetchQueueFromHostAndProcess\n");	// NAC
-
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
 	int     		result;
@@ -201,10 +190,8 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func )
 		return result;
 
 	// insert types into the query ad   ###
-//	filterAd.SetMyTypeName ("Query");
-//	filterAd.SetTargetTypeName ("Job");
-	filterAd.InsertAttr( ATTR_MY_TYPE, (string)QUERY_ADTYPE );		// NAC
-	filterAd.InsertAttr( ATTR_TARGET_TYPE, (string)JOB_ADTYPE ); 	// NAC	
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
 
 	/*
 	 connect to the Q manager.
@@ -218,45 +205,25 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func )
 
 	// get the ads and filter them
 	result = getFilterAndProcessAds (filterAd, process_func);
-	result = Q_OK; // NAC
 
 	DisconnectQ (qmgr);
-
-		// DEBUG NAC
-//	printf("exiting fetchQueueFromHostAndProcess\n");	// NAC
 	return result;
 }
 
 int CondorQ::
 getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 {
-		// DEBUG NAC
-//	printf("entered getFilterAndProcessAds\n");	// NAC
-
-//	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */ 
-	char		constraint[10240];	// NAC
-	string		constraint_string; 	// NAC
+	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */ 
 	ExprTree	*tree;
 	ClassAd		*ad;
-	ClassAdUnParser	unp;			// NAC
-	unp.SetOldClassAd(true); 		// NAC
 
-//	constraint[0] = '\0';
+	constraint[0] = '\0';
 	tree = queryad.Lookup(ATTR_REQUIREMENTS);
-//	if (!tree) {
-//		return Q_INVALID_QUERY;
-//	}
-//	tree->RArg()->PrintToStr(constraint);
-	unp.Unparse( constraint_string, tree );  // NAC
+	if (!tree) {
+		return Q_INVALID_QUERY;
+	}
 
-		// DEBUG NAC
-//	cout << "constraints_string = " << constraint_string << endl;	// NAC
-
-	strncpy( constraint, constraint_string.c_str( ), 10240 ); // NAC
-
-		// DEBUG NAC
-//	cout << "constraint = " << constraint << endl;  // NAC
-
+	tree->RArg()->PrintToStr(constraint);
 
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 		// Process the data and insert it into the list
@@ -266,18 +233,11 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 
 		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
 			// Process the data and insert it into the list
-
-				// DEBUG NAC
-//			cout << "about to call process_func" << endl;
 			if ( ( *process_func )( ad ) ) {
 				delete(ad);
 			}
-//			cout << "done process_func" << endl;
 		}
 	}
-
-		// DEBUG NAC
-//	cout << "done GetNextJobByConstraint" << endl;
 
 	// here GetNextJobByConstraint returned NULL.  check if it was
 	// because of the network or not.  if qmgmt had a problem with
@@ -285,8 +245,6 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 	if ( errno == ETIMEDOUT ) {
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
-		// DEBUG NAC
-//	printf("exiting getFilterAndProcessAds\n");	// NAC
 
 	return Q_OK;
 }
@@ -295,23 +253,16 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 int CondorQ::
 getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 {
-//	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */
-	char		constraint[10240];  // NAC
-	string		constraint_string; 	// NAC
+	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */
 	ExprTree	*tree;
 	ClassAd		*ad;
-	ClassAdUnParser	unp;		// NAC
-	unp.SetOldClassAd(true); 	// NAC
 
-//	constraint[0] = '\0';
-	tree = queryad.Lookup( ATTR_REQUIREMENTS );
-//	if (!tree) {
-//		return Q_INVALID_QUERY;
-//	}
-//	tree->RArg()->PrintToStr(constraint);
-	unp.Unparse( constraint_string, tree );  // NAC
-	strncpy( constraint, constraint_string.c_str( ), 10240 ); // NAC
-	
+	constraint[0] = '\0';
+	tree = queryad.Lookup(ATTR_REQUIREMENTS);
+	if (!tree) {
+		return Q_INVALID_QUERY;
+	}
+	tree->RArg()->PrintToStr(constraint);
 
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 		list.Insert(ad);
@@ -335,16 +286,12 @@ int JobSort(ClassAd *job1, ClassAd *job2, void *data)
 {
 	int cluster1=0, cluster2=0, proc1=0, proc2=0;
 
-//	job1->LookupInteger(ATTR_CLUSTER_ID, cluster1);
-//	job2->LookupInteger(ATTR_CLUSTER_ID, cluster2);
-	job1->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster1 );	// NAC
-	job2->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster2 );	// NAC
+	job1->LookupInteger(ATTR_CLUSTER_ID, cluster1);
+	job2->LookupInteger(ATTR_CLUSTER_ID, cluster2);
 	if (cluster1 < cluster2) return 1;
 	if (cluster1 > cluster2) return 0;
-//	job1->LookupInteger(ATTR_PROC_ID, proc1);
-//	job2->LookupInteger(ATTR_PROC_ID, proc2);
-	job1->EvaluateAttrInt( ATTR_PROC_ID, proc1 );	// NAC
-	job2->EvaluateAttrInt( ATTR_PROC_ID, proc2 );	// NAC
+	job1->LookupInteger(ATTR_PROC_ID, proc1);
+	job2->LookupInteger(ATTR_PROC_ID, proc2);
 	if (proc1 < proc2) return 1;
 	else return 0;
 }
@@ -353,7 +300,7 @@ int JobSort(ClassAd *job1, ClassAd *job2, void *data)
   Encode a status from a PROC structure as a single letter suited for
   printing.
 */
-static char
+const char
 encode_status( int status )
 {
 	switch( status ) {
@@ -406,30 +353,3 @@ short_print(
 		cmd
 	);
 }
-
-void
-short_print_to_buffer(
-	char *buffer,
-	int cluster,
-	int proc,
-	const char *owner,
-	int date,
-	int time,
-	int status,
-	int prio,
-	int image_size,
-	const char *cmd
-	) {
-	sprintf( buffer, "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
-		cluster,
-		proc,
-		owner,
-		format_date((time_t)date),
-		format_time(time),
-		encode_status(status),
-		prio,
-		image_size/1024.0,
-		cmd
-	);
-}
-	

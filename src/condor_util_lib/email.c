@@ -44,7 +44,7 @@ static FILE *email_open_implementation(char *Mailer,char *final_command);
 #if defined(IRIX)
 extern char **_environ;
 #else
-extern char **environ;
+extern DLL_IMPORT_MAGIC char **environ;
 #endif
 
 extern int Termlog;
@@ -260,7 +260,6 @@ email_open_implementation(char *Mailer, char *final_command)
 		const char *condor_name;
 		uid_t condor_uid;
 		gid_t condor_gid;
-		char **envp = NULL;
 
 		/* XXX This must be the FIRST thing in this block of code. For some
 			reason, at least on IRIX65, this forked process
@@ -275,12 +274,11 @@ email_open_implementation(char *Mailer, char *final_command)
 		Termlog = 1;
 		dprintf_config(mySubSystem,2);
 
-		/* Need to do some OS hackery */
-		#if defined(IRIX)
-			envp = _environ;
-		#else
-			envp = environ;
-		#endif
+		/* this is a simple daemon that if it needs to stat . should be
+			able to. You might not be able to if the shadow's cwd is in the
+			user dir somewhere and not readable by the Condor Account. */
+		chdir("/");
+		umask(0);
 
 		/* Change my userid permanently to "condor" */
 		/* WARNING  This code must happen before the close/dup operation. */
@@ -295,38 +293,37 @@ email_open_implementation(char *Mailer, char *final_command)
 		/* connect the write end of the pipe to the stdin of the mailer */
 		if (dup2(pipefds[0], STDIN_FILENO) < 0)
 		{
+			/* I hope this EXCEPT gets recorded somewhere */
 			EXCEPT("EMAIL PROCESS: Could not connect stdin to child!\n");
 		}
 
 		/* prop up the environment with goodies to get the Mailer to do the
 			right thing */
 		condor_name = get_condor_username();
+
+		/* Should be snprintf() but we don't have it for all platforms */
 		sprintf(pe_logname,"LOGNAME=%s", condor_name);
-		putenv(pe_logname);
+		if (putenv(pe_logname) != 0)
+		{
+			EXCEPT("EMAIL PROCESS: Unable to insert LOGNAME=%s into "
+				" environment correctly: %s\n", pe_logname, strerror(errno));
+		}
+
+		/* Should be snprintf() but we don't have it for all platforms */
 		sprintf(pe_user,"USER=%s", condor_name);
-		putenv(pe_user);
+		if( putenv(pe_user) != 0)
+		{
+			EXCEPT("EMAIL PROCESS: Unable to insert USER=%s into "
+				" environment correctly: %s\n", pe_user, strerror(errno));
+		}
 
-		/* figure out how to call the mailer */
-		execle("/bin/sh", "sh", "-c", final_command, NULL, envp);
+		/* invoke the mailer */
+		execl("/bin/sh", "sh", "-c", final_command, NULL);
 
-		/* Try the almost conforming popen implementation, I say almost because
-			I added the environ explicitly */
-		execle("/usr/bin/ksh", "ksh", "-c", final_command, NULL, envp);
-
-		/* Try the NON-conforming popen implementation, I added the environ
-			explicitly */
-		execle("/usr/bin/sh", "sh", "-c", final_command, NULL, envp);
-
-		/* To hell with it, just keep trying shells until we get it! */
-		execle("/bin/ksh", "ksh", "-c", final_command, NULL, envp);
-		execle("/sbin/ksh", "ksh", "-c", final_command, NULL, envp);
-		execle("/sbin/sh", "sh", "-c", final_command, NULL, envp);
-		execle("/usr/ucb/ksh", "ksh", "-c", final_command, NULL, envp);
-		execle("/usr/ucb/sh", "sh", "-c", final_command, NULL, envp);
-
-		/* If it gets this far, the rest failed, I hope it gets recorded 
-			somewhere */
-		EXCEPT("EMAIL PROCESS: Could not exec Mailer!\n");
+		/* I hope this EXCEPT gets recorded somewhere */
+		EXCEPT("EMAIL PROCESS: Could not exec mailer using '%s' with command "
+			"'%s' because of error: %s.", "/bin/sh", 
+			(final_command==NULL)?"(null)":final_command, strerror(errno));
 	}
 
 	/* for completeness */
@@ -405,18 +402,14 @@ email_close(FILE *mailer)
 	*/
 	prev_umask = umask(022);
 	/* 
-	** On many Unix platforms, we cannot use
-	** 'pclose()' here: it does its own wait, and messes
-    ** with our handling of SIGCHLD! So do fclose() instead.
-	** Except on HPUX & Win32, pclose() is both safe and required.
+	** we fclose() on UNIX, pclose on win32 
 	*/
-#if defined(HPUX) 
-	pclose( mailer );
-#elif defined(WIN32)
+#if defined(WIN32)
 	if (EMAIL_FINAL_COMMAND == NULL) {
 		pclose( mailer );
 	} else {
 		char *email_filename = NULL;
+		/* Should this be a pclose??? -Erik 9/21/00 */ 
 		fclose( mailer );
 		dprintf(D_FULLDEBUG,"Sending email via system(%s)\n",
 			EMAIL_FINAL_COMMAND);

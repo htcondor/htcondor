@@ -60,6 +60,11 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
+#include "condor_scanner.h"		// for MAXVARNAME, etc
+#include "my_username.h"
+#ifdef WIN32
+#	include "ntsysinfo.h"		// for WinNT getppid
+#endif
 
 extern "C" {
 	
@@ -90,23 +95,21 @@ extern char* mySubSystem;
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
 static char* tilde = NULL;
-extern char **environ;
+extern DLL_IMPORT_MAGIC char **environ;
 
-static char* _FileName_ = __FILE__;
 
 // Function implementations
 
 void
 config_fill_ad( ClassAd* ad )
 {
-	char 			buffer[1024];
-	char 			*tmp;
-	char			*expr;
-	StringList		reqdExprs;
-	ClassAdParser	parser;
-	ExprTree		*exprTree;
+	char 		buffer[1024];
+	char 		*tmp;
+	char		*expr;
+	StringList	reqdExprs;
 	
 	if( !ad ) return;
+
 	sprintf (buffer, "%s_EXPRS", mySubSystem);
 	tmp = param (buffer);
 	if( tmp ) {
@@ -117,10 +120,8 @@ config_fill_ad( ClassAd* ad )
 		while ((tmp = reqdExprs.next())) {
 			expr = param(tmp);
 			if (expr == NULL) continue;
-			if( !( exprTree = parser.ParseExpression( expr ) ) ) {
-				EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
-			}
-			ad->Insert (tmp, exprTree);
+			sprintf (buffer, "%s = %s", tmp, expr);
+			ad->Insert (buffer);
 			free (expr);
 		}	
 	}
@@ -135,30 +136,18 @@ config_fill_ad( ClassAd* ad )
 		while ((tmp = reqdExprs.next())) {
 			expr = param(tmp);
 			if (expr == NULL) continue;
-			if( !( exprTree = parser.ParseExpression( expr ) ) ) {
-				EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
-			}
-			ad->Insert (tmp, exprTree);
+			sprintf (buffer, "%s = %s", tmp, expr);
+			ad->Insert (buffer);
 			free (expr);
 		}	
 	}
-	if( !( tmp = param (buffer) ) ) return;
-	reqdExprs.initializeFromString (tmp);	
-	free (tmp);
-
-	reqdExprs.rewind();
-	while ((tmp = reqdExprs.next())) {
-		if( ( expr = param(tmp) ) == NULL ) continue;
-		if( !parser.ParseExpression( expr, exprTree ) ) {
-			EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
-		}
-		ad->Insert( tmp, exprTree );
-		free (expr);
-	}
 	
 	/* Insert the version into the ClassAd */
-	ad->InsertAttr(ATTR_VERSION, CondorVersion( ));
-	ad->InsertAttr(ATTR_PLATFORM, CondorPlatform( ));
+	sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion() );
+	ad->Insert(buffer);
+
+	sprintf(buffer,"%s=\"%s\"", ATTR_PLATFORM, CondorPlatform() );
+	ad->Insert(buffer);
 }
 
 
@@ -282,7 +271,7 @@ real_config(char* host, int wantsQuiet)
 		// Now, insert any macros defined in the environment.  Note we do
 		// this before the root config file!
 	{
-		char varname[10240];
+		char varname[MAXVARNAME];
 		char *thisvar;
 		int i,j;
 		char *varvalue;
@@ -470,6 +459,9 @@ find_file(const char *env_name, const char *file_name)
 {
 
 	char	*config_file = NULL, *env;
+#if defined(CONDOR_G)
+	char	*home_dir;
+#endif
 	int		fd;
 
 		// If we were given an environment variable name, try that first. 
@@ -488,8 +480,34 @@ find_file(const char *env_name, const char *file_name)
 
 #ifndef WIN32
 	// Only look in /etc/condor and in ~condor on Unix.
+#if defined(CONDOR_G)
+    // For Condor-G, first check in the default install path, which is the
+    // user's homedirectory/CondorG/etc/condor_config 
 	if( ! config_file ) {
-			// try /etc/condor/file_name
+		struct passwd *pwent;      
+		
+		if( pwent = getpwuid( getuid() ) ) {
+			home_dir = strdup( pwent->pw_dir );
+	
+			config_file = (char *)malloc((strlen(file_name) + strlen(home_dir) +
+                            strlen("CondorG/etc/") + 3 ) * sizeof(char));	
+			config_file[0] = '\0';
+			strcat(config_file, home_dir);
+			strcat(config_file, "/CondorG/etc/");
+			strcat(config_file, file_name); 
+			if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+				free( config_file );
+				config_file = NULL;
+			} else {
+				close( fd );
+			}
+			free( home_dir);
+		}
+	}
+#endif /* CONDOR_G */
+
+	if( ! config_file ) {
+		// try /etc/condor/file_name
 		config_file = (char *)malloc( (strlen(file_name) + 14) * sizeof(char) ); 
 		config_file[0] = '\0';
 		strcat( config_file, "/etc/condor/" );
@@ -702,6 +720,10 @@ param_in_pattern( char *parameter, char *pattern )
 void
 reinsert_specials( char* host )
 {
+	static unsigned int reinsert_pid = 0;
+	static unsigned int reinsert_ppid = 0;
+	char buf[40];
+
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
 	}
@@ -712,6 +734,36 @@ reinsert_specials( char* host )
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+
+	// Insert login-name for our euid as "username"
+	char *myusernm = my_username();
+	insert( "username", myusernm, ConfigTab, TABLESIZE );
+	free(myusernm);
+
+	// Insert values for "pid" and "ppid".  Use static values since
+	// this is expensive to re-compute on Windows.
+	// Note: we have to resort to ifdef WIN32 crap even though 
+	// DaemonCore can nicely give us this information.  We do this
+	// because the config code is used by the tools as well as daemons.
+	if (!reinsert_pid) {
+#ifdef WIN32
+		reinsert_pid = ::GetCurrentProcessId();
+#else
+		reinsert_pid = getpid();
+#endif
+	}
+	sprintf(buf,"%u",reinsert_pid);
+	insert( "pid", buf, ConfigTab, TABLESIZE );
+	if ( !reinsert_ppid ) {
+#ifdef WIN32
+		CSysinfo system_hackery;
+		reinsert_ppid = system_hackery.GetParentPID(reinsert_pid);
+#else
+		reinsert_ppid = getppid();
+#endif
+	}
+	sprintf(buf,"%u",reinsert_ppid);
+	insert( "ppid", buf, ConfigTab, TABLESIZE );
 }
 
 

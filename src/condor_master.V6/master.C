@@ -89,6 +89,7 @@ int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
 Daemon	*Collector = NULL;
+StringList *secondary_collectors = NULL;
 
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
@@ -105,6 +106,7 @@ int		PublishObituaries;
 int		Lines;
 int		AllowAdminCommands = FALSE;
 int		StartDaemons = TRUE;
+int		GotDaemonsOff = FALSE;
 
 char	*default_daemon_list[] = {
 	"MASTER",
@@ -442,6 +444,11 @@ init_params()
 		}
 		free( tmp );
 	} 
+		// If we were sent the daemons_off command, don't forget that
+		// here. 
+	if( GotDaemonsOff ) {
+		StartDaemons = FALSE;
+	}
 
 	PublishObituaries = TRUE;
 	tmp = param("PUBLISH_OBITUARIES");
@@ -506,9 +513,16 @@ init_params()
 	tmp = param( "MASTER_CHECK_NEW_EXEC_INTERVAL" );
     if( tmp ) {
         check_new_exec_interval = atoi( tmp );
+		if( tmp[0] != '0' && check_new_exec_interval == 0 ) { 
+				// They put something there other than "0", but atoi()
+				// got confused.  Warn them and set it.
+			dprintf( D_ALWAYS, "Warning, can't parse value in "
+					 "%s: \"%s\", using default of 5 minutes\n",
+					 "MASTER_CHECK_NEW_EXEC_INTERVAL", tmp );
+			check_new_exec_interval = 5 * MINUTE;
+		}
 		free( tmp );
-    }
-	if( !check_new_exec_interval ) {
+    } else {
         check_new_exec_interval = 5 * MINUTE;
     }
 
@@ -565,6 +579,16 @@ init_params()
 		free( FS_Preen );
 	}
 	FS_Preen = param( "PREEN" );
+
+	tmp = param( "SECONDARY_COLLECTOR_LIST" );
+	if( tmp ) {
+		if (secondary_collectors) delete secondary_collectors;
+		secondary_collectors = new StringList(tmp);
+		free(tmp);
+	} else {
+		if (secondary_collectors) delete secondary_collectors;
+		secondary_collectors = NULL;
+	}
 }
 
 

@@ -8,13 +8,18 @@ LIB = libcedar.a $(STD_LIBS)
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
-		authentication.o $(CONDOR_TYPE_OBJ) condor_rw.o
+		authentication.o $(CONDOR_TYPE_OBJ) condor_rw.o \
+		SafeMsg.o
+#		autoTest.o manTest.o
 
 library_target(libcedar.a, $(OBJ))
 
 c_plus_target(cedar.t, cedar.t.o, $(LIB))
+pure_c_plus_target(cedar.t.pure,$(OBJ),$(LIB))
+purecov_c_plus_target(cedar.t.pc,$(OBJ),$(LIB))
+c_plus_target(buftest, buftest.o, $(LIB))
 html_target( ../condor_includes/stream.h ../condor_includes/reli_sock.h ../condor_includes/safe_sock.h ../condor_includes/sock.h )
 
-release:
-stripped:
-static:
+release:: all
+stripped:: all
+static:: all

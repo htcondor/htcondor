@@ -183,6 +183,7 @@ void get_ckpt_name();
 extern volatile int InRestart;
 void _condor_setup_dprintf();
 
+extern int _condor_dprintf_works;
 extern int	_condor_DebugFD;
 static int do_remote_syscalls = 1;
 
@@ -453,6 +454,7 @@ MAIN( int argc, char *argv[], char **envp )
 	#else
 		exit( main( argc, argv, envp ));
 	#endif
+	return 0;
 }
 
 void
@@ -851,4 +853,6 @@ _condor_setup_dprintf()
 		// Now, initialize what FD we print to.  If we got to this
 		// function, we want to use the socket back to the shadow. 
 	_condor_DebugFD = CLIENT_LOG;
+
+	_condor_dprintf_works = 1;
 }

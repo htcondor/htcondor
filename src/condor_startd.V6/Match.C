@@ -69,7 +69,7 @@ Match::Match( Resource* rip )
 	m_proc = -1;
 	m_job_start = -1;
 	m_last_pckpt = -1;
-	this->rip = rip;
+	m_rip = rip;
 }
 
 
@@ -105,35 +105,6 @@ Match::vacate()
 }
 
 
-int
-Match::send_accountant( int cmd )
-{
-	if( !accountant_host ) {
-		return FALSE;
-	}
-	ReliSock sock;
-	sock.timeout( 30 );
-	if( ! sock.connect( accountant_host, ACCOUNTANT_PORT ) ) {
-		dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
-		return FALSE;
-	}
-	if( !sock.put( cmd ) ) {
-		dprintf(D_ALWAYS, "Can't send command (%d) to accountant\n", cmd ); 
-		return FALSE;
-	}
-	if( !sock.put( m_cap->capab() ) ) {
-		dprintf(D_ALWAYS, "Can't send capability to accountant\n");
-		return FALSE;
-	}
-	if( !sock.eom() ) {
-		dprintf(D_ALWAYS, "Can't send EOM to accountant\n");
-		return FALSE;
-	}
-	sock.close();
-	return TRUE;
-}
-
-
 void
 Match::publish( ClassAd* ad, amask_t how_much )
 {
@@ -148,9 +119,14 @@ Match::publish( ClassAd* ad, amask_t how_much )
 	ad->Insert( line );
 
 	if( m_client ) {
-		tmp = m_client->name();
+		tmp = m_client->user();
 		if( tmp ) {
 			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_USER, tmp );
+			ad->Insert( line );
+		}
+		tmp = m_client->owner();
+		if( tmp ) {
+			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
 			ad->Insert( line );
 		}
 		tmp = m_client->host();
@@ -182,7 +158,7 @@ Match::dprintf( int flags, char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
-	rip->dprintf_va( flags, fmt, args );
+	m_rip->dprintf_va( flags, fmt, args );
 	va_end( args );
 }
 
@@ -201,6 +177,29 @@ Match::refuse_agent()
 void
 Match::start_match_timer()
 {
+	if( m_match_tid != -1 ) {
+			/*
+			  We got matched twice for the same capability.  This
+			  must be because we got matched, we sent an update that
+			  said we're unavailable, but the collector dropped that
+			  update, and we got matched again.  This shouldn't be a
+			  fatal error, b/c UDP gets dropped all the time.  We just
+			  need to cancel the old timer, print a warning, and then
+			  continue. 
+			*/
+		
+	   dprintf( D_ALWAYS, "Warning: got matched twice for same capability."
+				" Canceling old match timer (%d)\n", m_match_tid );
+	   if( daemonCore->Cancel_Timer(m_match_tid) < 0 ) {
+		   dprintf( D_ALWAYS, "Failed to cancel old match timer (%d): "
+					"daemonCore error\n", m_match_tid );
+	   } else {
+		   dprintf( D_FULLDEBUG, "Cancelled old match timer (%d)\n", 
+					m_match_tid );
+	   }
+	   m_match_tid = -1;
+	}
+
 	m_match_tid = 
 		daemonCore->Register_Timer( match_timeout, 0, 
 								   (TimerHandlercpp)
@@ -209,18 +208,25 @@ Match::start_match_timer()
 	if( m_match_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
-	dprintf( D_FULLDEBUG, "Started match timer for %d seconds.\n", 
-			 match_timeout );
+	dprintf( D_FULLDEBUG, "Started match timer (%d) for %d seconds.\n", 
+			 m_match_tid, match_timeout );
 }
 
 
 void
 Match::cancel_match_timer()
 {
+	int rval;
 	if( m_match_tid != -1 ) {
-		daemonCore->Cancel_Timer( m_match_tid );
+		rval = daemonCore->Cancel_Timer( m_match_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel match timer (%d): "
+					 "daemonCore error\n", m_match_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled match timer (%d)\n", 
+					 m_match_tid );
+		}
 		m_match_tid = -1;
-		dprintf( D_FULLDEBUG, "Canceled match timer.\n" );
 	}
 }
 
@@ -228,27 +234,47 @@ Match::cancel_match_timer()
 int
 Match::match_timed_out()
 {
-	char* cap = capab();
-	if( !cap ) {
+	char* my_cap = capab();
+	if( !my_cap ) {
 			// We're all confused.
-		dprintf( D_ALWAYS,
-				 "ERROR: Match timed out but there's no capability\n" );
+			// Don't use our dprintf(), use the "real" version, since
+			// if we're this confused, our rip pointer might be messed
+			// up, too, and we don't want to seg fault.
+		::dprintf( D_ALWAYS,
+				   "ERROR: Match timed out but there's no capability\n" );
 		return FALSE;
 	}
 		
-	Resource* rip = resmgr->get_by_any_cap( cap );
+	Resource* rip = resmgr->get_by_any_cap( my_cap );
 	if( !rip ) {
-		dprintf( D_ALWAYS,
-				 "ERROR: Can't find resource of expired match\n" );
+		::dprintf( D_ALWAYS,
+				   "ERROR: Can't find resource of expired match\n" );
 		return FALSE;
 	}
 
 	if( rip->r_cur->cap()->matches( capab() ) ) {
 		if( rip->state() != matched_state ) {
-			EXCEPT( "Current match timed out but not in matched state." );
+				/* 
+				   This used to be an EXCEPT(), since it really
+				   shouldn't ever happen.  However, it kept happening,
+				   and we couldn't figure out why.  For now, just log
+				   it and silently ignore it, since there's no real
+				   harm done, anyway.  We use D_FULLDEBUG, since we
+				   don't want people to worry about it if they see it
+				   in D_ALWAYS in the 6.2.X stable series.  However,
+				   in the 6.3 series, we should probably try to figure 
+				   out what's going on with this, for example, by
+				   sending email at this point with the last 300 lines
+				   of the log file or something.  -Derek 10/9/00
+				*/
+			dprintf( D_FULLDEBUG, 
+					 "WARNING: Current match timed out but in %s state.",
+					 state_to_string(rip->state()) );
+			return FALSE;
 		}
 		delete rip->r_cur;
 		rip->r_cur = new Match( rip );
+		dprintf( D_ALWAYS, "State change: match timed out\n" );
 		rip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting match.
@@ -257,7 +283,7 @@ Match::match_timed_out()
 			// restore our reqexp, and update the CM. 
 		delete rip->r_pre;
 		rip->r_pre = new Match( rip );
-		rip->r_reqexp->pub();
+		rip->r_reqexp->restore();
 		rip->update();
 	}		
 	return TRUE;
@@ -272,6 +298,10 @@ Match::start_claim_timer()
 				 "Warning: starting claim timer before alive interval set.\n" );
 		m_aliveint = 300;
 	}
+	if( m_claim_tid != -1 ) {
+	   EXCEPT( "Match::start_claim_timer() called w/ m_claim_tid = %d", 
+			   m_claim_tid );
+	}
 	m_claim_tid =
 		daemonCore->Register_Timer( (3 * m_aliveint), 0,
 				(TimerHandlercpp)&Match::claim_timed_out,
@@ -279,18 +309,25 @@ Match::start_claim_timer()
 	if( m_claim_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
-	dprintf( D_FULLDEBUG, "Started claim timer w/ %d second alive interval.\n", 
-			 m_aliveint );
+	dprintf( D_FULLDEBUG, "Started claim timer (%d) w/ %d second "
+			 "alive interval.\n", m_claim_tid, m_aliveint );
 }
 
 
 void
 Match::cancel_claim_timer()
 {
+	int rval;
 	if( m_claim_tid != -1 ) {
-		daemonCore->Cancel_Timer( m_claim_tid );
+		rval = daemonCore->Cancel_Timer( m_claim_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel claim timer (%d): "
+					 "daemonCore error\n", m_claim_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled claim timer (%d)\n",
+					 m_claim_tid );
+		}
 		m_claim_tid = -1;
-		dprintf( D_FULLDEBUG, "Canceled claim timer.\n" );
 	}
 }
 
@@ -308,6 +345,9 @@ Match::claim_timed_out()
 		delete m_client;
 		m_client = NULL;
 	}
+
+	dprintf( D_ALWAYS, "State change: claim timed out (condor_schedd gone?)\n" );
+
 		// Kill the claim.
 	rip->kill_claim();
 	return TRUE;
@@ -370,7 +410,8 @@ Match::capab( void )
 
 Client::Client()
 {
-	c_name = NULL;
+	c_user = NULL;
+	c_owner = NULL;
 	c_addr = NULL;
 	c_host = NULL;
 }
@@ -378,22 +419,37 @@ Client::Client()
 
 Client::~Client() 
 {
-	free( c_name );
-	free( c_addr );
-	free( c_host );
+	if( c_user) free( c_user );
+	if( c_owner) free( c_owner );
+	if( c_addr) free( c_addr );
+	if( c_host) free( c_host );
 }
 
 
 void
-Client::setname(char* name)
+Client::setuser( char* user )
 {
-	if( c_name ) {
-		free( c_name);
+	if( c_user ) {
+		free( c_user);
 	}
-	if( name ) {
-		c_name = strdup( name );
+	if( user ) {
+		c_user = strdup( user );
 	} else {
-		c_name = NULL;
+		c_user = NULL;
+	}
+}
+
+
+void
+Client::setowner( char* owner )
+{
+	if( c_owner ) {
+		free( c_owner);
+	}
+	if( owner ) {
+		c_owner = strdup( owner );
+	} else {
+		c_owner = NULL;
 	}
 }
 
@@ -432,7 +488,7 @@ Client::vacate(char* cap)
 	ReliSock sock;
 	sock.timeout( 20 );
 
-	if( ! (c_addr || c_host || c_name ) ) {
+	if( ! (c_addr || c_host || c_owner ) ) {
 			// Client not really set, nothing to do.
 		return;
 	}

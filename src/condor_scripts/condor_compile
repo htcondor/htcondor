@@ -3,17 +3,15 @@
 #	Author Todd Tannenbaum, 6/97
 #	Copyright 1997 by the Condor Team, All Rights Reserved.
 #	mailto:condor-admin@cs.wisc.edu  http://www.cs.wisc.edu/condor
-
 # --------------------------------------------------
-
-
 # Here are the default paths/directories to use.
 # These defaults can be overidden with command-line args.
 # Customize these if desired.  The defaults provided should be
 # correct for most installations, however.
+
 CONDOR_LIBDIR=`condor_config_val LIB`
 CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
-STATIC_ZLIB=/usr/lib/libz.a
+STATIC_ZLIB=$CONDOR_LIBDIR/libz.a
 CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
 CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
@@ -91,6 +89,7 @@ do
 		# Reset anything based off of the libdir by default
 		CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
 		CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
+		STATIC_ZLIB=$CONDOR_LIBDIR/libz.a
 		CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 		CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 		CONDOR_LD_DIR=$CONDOR_LIBDIR
@@ -121,9 +120,19 @@ if [ `uname` = "Linux" ]; then
 	fi
 fi
 
-if [ -r $STATIC_ZLIB -a -r $CONDOR_ZCLIB ]; then
-	CONDOR_CLIB="$CONDOR_ZCLIB $STATIC_ZLIB"
+#
+# If the compressed ckpt library is available, use it.
+#
+
+if [ -r $CONDOR_ZCLIB ]; then
+	CONDOR_CLIB="$CONDOR_ZCLIB"
 fi
+
+#
+# However, we still always need the compression library for other purposes.
+#
+
+CONDOR_CLIB="$CONDOR_CLIB $STATIC_ZLIB"
 
 if [ -r $CONDOR_SPECIAL_CLIB ]; then
 	CONDOR_CLIB="$CONDOR_SPECIAL_CLIB"
@@ -406,15 +415,15 @@ case $os in
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi 
 
 		if [ $myname = "fort77" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi 
 		
 		;;

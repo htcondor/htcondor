@@ -108,6 +108,8 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	if ( cdToIwd() == -1 ) {
 		EXCEPT("Could not cd to initial working directory");
 	}
+
+	dumpClassad( "BaseShadow::baseInit()", this->jobAd, D_JOB );
 }
 
 void BaseShadow::config()
@@ -286,20 +288,13 @@ void BaseShadow::initUserLog()
 	}
 }
 
-void BaseShadow::endingUserLog( int exitStatus, int exitReason, 
-								RemoteResource *res ) 
+void
+BaseShadow::endingUserLog( int exitStatus, int exitReason )
 {
 	struct rusage run_remote_rusage;
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
 
-	// fill in remote rusage
-	float float_value = 0;
-	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU,float_value);
-	run_remote_rusage.ru_stime.tv_sec = (int) float_value;
-	float_value = 0;
-	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU,float_value);
-	run_remote_rusage.ru_utime.tv_sec = (int) float_value;
-
+	run_remote_rusage = getRUsage();
 
 	switch( exitReason ) {
 
@@ -353,20 +348,15 @@ void BaseShadow::endingUserLog( int exitStatus, int exitReason,
 			event.recvd_bytes = bytesSent();
 			event.sent_bytes = bytesReceived();
 			// TODO: total sent and recvd
-			event.total_recvd_bytes = 0.0;
-			event.total_sent_bytes = 0.0;
-
+			event.total_recvd_bytes = bytesSent();
+			event.total_sent_bytes = bytesReceived();
+			
 			if (!uLog.writeEvent (&event)) {
 				dprintf (D_ALWAYS,"Unable to log "
 						 "ULOG_JOB_TERMINATED event\n");
 			}
 			}
 			break;	
-
-		default:
-			dprintf(D_ALWAYS,"Error - Received unrecognized exit reason"
-				"(%d) from starter\n",exitReason);
-			break;
 
 	}	// end of switch
 }

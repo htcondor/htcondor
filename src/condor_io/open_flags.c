@@ -25,13 +25,14 @@
 #include "condor_common.h"
 #include <fcntl.h>
 
-#define CONDOR_O_RDONLY 0x000
-#define CONDOR_O_WRONLY 0x001
-#define CONDOR_O_RDWR	0x002
-#define CONDOR_O_CREAT	0x100
-#define CONDOR_O_TRUNC	0x200
-#define CONDOR_O_EXCL	0x400
-#define CONDOR_O_NOCTTY	0x800
+#define CONDOR_O_RDONLY 0x0000
+#define CONDOR_O_WRONLY 0x0001
+#define CONDOR_O_RDWR	0x0002
+#define CONDOR_O_CREAT	0x0100
+#define CONDOR_O_TRUNC	0x0200
+#define CONDOR_O_EXCL	0x0400
+#define CONDOR_O_NOCTTY	0x0800
+#define CONDOR_O_APPEND 0x1000
 
 static struct {
 	int		system_flag;
@@ -45,7 +46,8 @@ static struct {
 #ifndef WIN32
 	{O_NOCTTY, CONDOR_O_NOCTTY},
 #endif
-	{O_EXCL, CONDOR_O_EXCL}	
+	{O_EXCL, CONDOR_O_EXCL},
+	{O_APPEND, CONDOR_O_APPEND}
 };
 
 int open_flags_encode(int old_flags)

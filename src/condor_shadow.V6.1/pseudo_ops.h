@@ -33,7 +33,6 @@
 int pseudo_register_machine_info(char *uiddomain, char *fsdomain, 
 								 char *starterAddr, char *full_hostname);
 int pseudo_get_job_info(ClassAd *&ad);
-int pseudo_get_executable(char *source);
-int pseudo_job_exit(int status, int reason);
+int pseudo_job_exit(int status, int reason, ClassAd* ad);
 
 #endif

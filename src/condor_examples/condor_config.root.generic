@@ -8,36 +8,81 @@
 ##  you specify below, which should also be controlled by root).
 ##
 ##  Please read the INSTALL file (or the Install chapter in the
-##  Condor Administrator's Manual) for detailed explainations of the 
+##  Condor Administrator's Manual) for detailed explanations of the 
 ##  various settings in here and possible ways to configure your
 ##  pool. 
+##
+##  NOTE:  The only thing you will probably have to change here is
+##  the MAIL definition (below).
 ##
 ######################################################################
 
 ##  Where is the machine-specific root config file for each host?
+##  If you are using a condor_config.root file, THIS IS VERY IMPORTANT
+##  TO KEEP DEFINED! (and it must exist)
 LOCAL_ROOT_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.root.local
 #LOCAL_ROOT_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).root
 
-##  Daemons you want the master to keep running for you:
-DAEMON_LIST	= MASTER, STARTD, SCHEDD
-
-##  Location of the daemons and programs that Condor will start up.
-##  If the master is started as root, all of these will be started as
-##  root.  
+##  RELEASE_DIR defines where Condor has been installed.
 RELEASE_DIR		= /usr/local/condor
+
+##  Pathnames and arguments.
 SBIN			= $(RELEASE_DIR)/sbin
+
+##--------------------------------------------------------------------
+##  condor_master
+##--------------------------------------------------------------------
+
 MASTER			= $(SBIN)/condor_master
-STARTD			= $(SBIN)/condor_startd
-SCHEDD			= $(SBIN)/condor_schedd
+
+##  Daemons you want the master to keep running for you:  (This will
+##  most likely need to be overwritten by the local root config file
+##  for your central manager machine!)
+
+DAEMON_LIST		= MASTER, STARTD, SCHEDD
+
+##  Where should the master find the condor_preen binary? If you don't
+##  want preen to run at all, just comment out this setting.
+PREEN			= $(SBIN)/condor_preen
+
+##  How do you want preen to behave?  The "-m" means you want email
+##  about files preen finds that it thinks it should remove.  The "-r"
+##  means you want preen to actually remove these files.  If you don't
+##  want either of those things to happen, just remove the appropriate
+##  one from this setting.
+PREEN_ARGS		= -m -r
+
 COLLECTOR		= $(SBIN)/condor_collector
 NEGOTIATOR		= $(SBIN)/condor_negotiator
 KBDD			= $(SBIN)/condor_kbdd
-PREEN			= $(SBIN)/condor_preen
-PREEN_ARGS		= -m -r
+
+##  Full path to a mail delivery program that understands that "-s"   
+##  means you want to specify a subject:    
+MAIL			= /usr/ucb/mail
+
+##--------------------------------------------------------------------
+##  condor_startd
+##--------------------------------------------------------------------
+
+STARTD			= $(SBIN)/condor_startd
+STARTER			= $(SBIN)/condor_starter
+ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
+
+##--------------------------------------------------------------------
+##  condor_schedd
+##--------------------------------------------------------------------
+
+SCHEDD			= $(SBIN)/condor_schedd
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
+SHADOW_NT		= $(SBIN)/condor_shadow.v61
+
+##  Where is the condor pvm daemon installed?
 PVMD			= $(SBIN)/condor_pvmd
-STARTER			= $(SBIN)/condor_starter
-ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
-MAIL			= /usr/ucb/mail
+
+##  Where is the condor pvm group server daemon installed?
+PVMGS			= $(SBIN)/condor_pvmgs
+
+
+

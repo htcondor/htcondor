@@ -21,6 +21,13 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+/* 
+** shadow_common.C: This horrible file is an attempt to share code
+** between condor_shadow.V6 and condor_shadow.jim.  BE CAREFUL WHEN
+** CALLING EXCEPT OR ASSERT IN THIS FILE!  What may be a fatal error
+** in the condor_shadow.V6 may be a recoverable error in
+** condor_shadow.jim (for example, failing to activate a claim).  */
+
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_io.h"
@@ -52,7 +59,6 @@ extern "C" {
 	char *d_format_time( double dsecs );
 	int unlink_local_or_ckpt_server( char *file );
 	int whoami();
-	void MvTmpCkpt();
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );
@@ -66,6 +72,8 @@ extern "C" {
         V2_PROC *Proc;
 #endif
 
+char *IpcFile;
+
 extern int ExitReason;
 extern int JobExitStatus;
 extern char    ICkptName[];
@@ -74,6 +82,7 @@ extern char    TmpCkptName[];
 extern int             MyPid;
 extern char    *Spool;
 extern char    RCkptName[];
+extern int ShadowBDate;
 extern int LastRestartTime;
 extern int CommittedTime;
 extern int NumCkpts;
@@ -94,7 +103,8 @@ extern char    *MailerPgm;
 extern char My_UID_Domain[];
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
-extern char *schedd;
+extern char *schedd, *scheddName;
+extern "C" bool JobPreCkptServerScheddNameChange();
 
 void
 NotifyUser( char *buf, PROC *proc )
@@ -144,14 +154,16 @@ NotifyUser( char *buf, PROC *proc )
 				proc->id.cluster, proc->id.proc);
 
 		if( ! JobAd ) {
-			EXCEPT( "In NotifyUser() w/ NULL JobAd!" );
+			dprintf( D_ALWAYS, "In NotifyUser() w/ NULL JobAd!" );
+			return;
 		}
 		mailer = email_user_open(JobAd, subject);
         if( mailer == NULL ) {
-                EXCEPT(
+                dprintf(D_ALWAYS,
                         "Shadow: Cannot notify user( %s, %s, %s )\n",
                         subject, proc->owner, "w"
                 );
+				return;
         }
 
         /* if we got the subject line set correctly earlier, and we
@@ -189,7 +201,7 @@ NotifyUser( char *buf, PROC *proc )
 				if (JobAd) {
 					JobAd->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK, run_time);
 				}
-				run_time += proc->completion_date - LastRestartTime;
+				run_time += proc->completion_date - ShadowBDate;
 				
 				fprintf(mailer, "\tRun Time:            %s\n",
 						d_format_time(run_time));
@@ -287,12 +299,16 @@ HoldJob( const char* buf )
 			 Proc->id.cluster, Proc->id.proc );
 
 	if( ! JobAd ) {
-		EXCEPT( "In HoldJob() w/ NULL JobAd!" );
+		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );
+		exit( JOB_SHOULD_HOLD );
 	}
 	mailer = email_user_open(JobAd, subject);
 	if( ! mailer ) {
 			// User didn't want email, so just exit now with the right
 			// value so the schedd actually puts the job on hold.
+		dprintf( D_ALWAYS, "Job going into Hold state.\n");
+		dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			JOB_SHOULD_HOLD);
 		exit( JOB_SHOULD_HOLD );
 	}
 
@@ -307,6 +323,9 @@ HoldJob( const char* buf )
 	email_close(mailer);
 
 		// Now that the user knows why, exit with the right code. 
+	dprintf( D_ALWAYS, "Job going into Hold state.\n");
+	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+		JOB_SHOULD_HOLD);
 	exit( JOB_SHOULD_HOLD );
 }
 
@@ -328,9 +347,14 @@ unlink_local_or_ckpt_server( char *file )
                    should do that anyway??? */
 				/* We only need to check the server for standard universe 
 				   jobs. -Jim B. */
-                dprintf( D_FULLDEBUG, "Remove from ckpt server returns %d\n",
-                                RemoveRemoteFile(Proc->owner, file));
+			rval = RemoveRemoteFile(Proc->owner, scheddName, file);
+			if (JobPreCkptServerScheddNameChange()) {
+				rval = RemoveRemoteFile(Proc->owner, NULL, file);
+			}
+			dprintf( D_FULLDEBUG, "Remove from ckpt server returns %d\n",
+					 rval );
         }
+		return rval;
 }
 
 
@@ -346,66 +370,10 @@ whoami( FILE *fp )
         } else {
                 fprintf( fp, "(?.?) (%d):", MyPid );
         }
+		return 0;
 }
 
-void
-MvTmpCkpt()
-{
-        char buf[ BUFSIZ * 8 ];
-        register int tfd, rfd, rcnt, wcnt;
-        priv_state      priv;
-
-        /* checkpoint file is owned by user (???) */
-        priv = set_user_priv();
-
-        (void)sprintf( TmpCkptName, "%s/job%06d.ckpt.%d.tmp",
-                        Spool, Proc->id.cluster, Proc->id.proc );
-
-        (void)sprintf( RCkptName, "%s/job%06d.ckpt.%d",
-                                Proc->rootdir, Proc->id.cluster, Proc->id.proc )
-;
-
-        rfd = open( RCkptName, O_RDONLY, 0 );
-        if( rfd < 0 ) {
-                EXCEPT(RCkptName);
-        }
-
-        tfd = open(TmpCkptName, O_WRONLY|O_CREAT|O_TRUNC, 0775);
-        if( tfd < 0 ) {
-                EXCEPT(TmpCkptName);
-        }
-
-        for(;;) {
-                rcnt = read( rfd, buf, sizeof(buf) );
-                if( rcnt < 0 ) {
-                        EXCEPT("read <%s>", RCkptName);
-                }
-
-                wcnt = write( tfd, buf, rcnt );
-                if( wcnt != rcnt ) {
-                        EXCEPT("wcnt %d != rcnt %d", wcnt, rcnt);
-                }
-
-                if( rcnt != sizeof(buf) ) {
-                        break;
-                }
-        }
-
-        (void)unlink_local_or_ckpt_server( RCkptName );
-
-        if( rename(TmpCkptName, CkptName) < 0 ) {
-                EXCEPT("rename(%s, %s)", TmpCkptName, CkptName);
-        }
-
-        /* (void)fchown( tfd, CondorUid, CondorGid ); */
-
-        (void)close( rfd );
-        (void)close( tfd );
-
-        set_priv(priv);
-}
-
-extern "C" int SetSyscalls(){}
+extern "C" int SetSyscalls(){ return 0; }
 
 /*
 Convert a time value from the POSIX style "clock_t" to a BSD style
@@ -453,10 +421,13 @@ void
 handle_termination( PROC *proc, char *notification, int *jobstatus,
 			char *coredir )
 {
+	char buf[4096];
 	int status = *jobstatus;
 	struct stat st_buf;
 	char my_coredir[_POSIX_PATH_MAX];
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
+
+	ASSERT (JobAd != NULL );
 
 	switch( WTERMSIG(status) ) {
 	 case -1: /* On Digital Unix, WTERMSIG returns -1 if we weren't
@@ -482,6 +453,12 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 
 		proc->status = COMPLETED;
 		proc->completion_date = time( (time_t *)0 );
+
+		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = %d", ATTR_ON_EXIT_CODE, WEXITSTATUS(status));
+		JobAd->Insert(buf);
+
 		break;
 
 	 case SIGKILL:	/* Kicked off without a checkpoint */
@@ -495,15 +472,27 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 			ExitReason = JOB_NO_CKPT_FILE;
 		}
 #endif
+		/* in here, we disregard what the user wanted.
+			Otherwise doing a condor_rm will result in the
+			wanting to be resubmitted or held by the shadow. */
+		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
+		JobAd->Insert(buf);
 		break;
 
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
 		dprintf(D_ALWAYS, "Shadow: Job was checkpointed\n" );
-		if( strcmp(proc->rootdir, "/") != 0 ) {
-			MvTmpCkpt();
-		}
 		proc->status = IDLE;
 		ExitReason = JOB_CKPTED;
+
+		/* in here, we disregard what the user wanted.
+			Otherwise doing a condor_vacate will result in the
+			wanting to be resubmitted or held by the shadow. */
+		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
+		JobAd->Insert(buf);
 		break;
 
 	 default:	/* Job exited abnormally */
@@ -537,6 +526,12 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 
 		proc->status = COMPLETED;
 		proc->completion_date = time( (time_t *)0 );
+
+		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_BY_SIGNAL);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = %d", ATTR_ON_EXIT_SIGNAL, WTERMSIG(status));
+		JobAd->Insert(buf);
+
 		break;
 	}
 }
@@ -545,14 +540,46 @@ int
 InitJobAd(int cluster, int proc)
 {
   if (!JobAd) {   // just get the job ad from the schedd once
-	  if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
+
+	if ( IpcFile ) {
+		// get the jobad file a file
+		priv_state priv = set_condor_priv();
+		FILE* ipc_fp = fopen(IpcFile,"r");
+		int isEOF = 0;
+		int isError = 0;
+		int isEmpty = 0;
+		if ( ipc_fp ) {
+			JobAd = new ClassAd(ipc_fp,"***",isEOF,isError,isEmpty);
+			fclose(ipc_fp);
+			unlink(IpcFile);
+		}
+		set_priv(priv);
+		// if constructor failed, remove the JobAd, and
+		// fallback on getting it via sockets.
+		if (isError != 0 ) {
+			if (JobAd) delete JobAd;
+			JobAd = NULL;
+		}
+		if (JobAd) {
+			// we're done
+			return 0;
+		}
+
+		// if we made it here, we wanted to get the job ad
+		// via the file, but failed
+		dprintf(D_FULLDEBUG,
+			"Failed to read job ad file %s, using socket\n",
+			IpcFile);
+	}
+
+	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
 		EXCEPT("Failed to connect to schedd!");
-	  }
-  	JobAd = GetJobAd( cluster, proc );
-  	DisconnectQ(NULL);
+	}
+	JobAd = GetJobAd( cluster, proc );
+	DisconnectQ(NULL);
   }
   if (!JobAd) {
-	  EXCEPT( "failed to get job ad" );
+	EXCEPT( "failed to get job ad" );
   }
 
   return 0;
@@ -571,7 +598,7 @@ part_send_job(
 	      char **name)
 {
   int cmd, sd, reply;
-  ReliSock *sock;
+  ReliSock *sock = NULL;
   StartdRec stRec;
   PORTS ports;
   bool done = false;
@@ -589,22 +616,22 @@ part_send_job(
 	  sock = new ReliSock();
 	  sock->timeout(90);
 	  if ( sock->connect(host,START_PORT) == FALSE ) {
-		  reason = JOB_NOT_STARTED;
-		  delete sock;
-		  return -1;
+		  goto returnfailure;
 	  }
 
 	  sock->encode();
 
 		  // Send the command
 	  if( !sock->code(cmd) ) {
-		  EXCEPT( "sock->code(%d)", cmd );
+		  dprintf( D_ALWAYS, "sock->code(%d) failed", cmd );
+		  goto returnfailure;
 	  }
 
 		  // Send the capability
 	  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
 	  if( !sock->code(capability) ) {
-		  EXCEPT( "sock->put()" );
+		  dprintf( D_ALWAYS, "sock->put(\"%s\") failed", capability );
+		  goto returnfailure;
 	  }
 
 	  // Send the starter number
@@ -614,22 +641,27 @@ part_send_job(
 		  dprintf( D_ALWAYS, "Requesting Primary Starter\n" );
 	  }
 	  if( !sock->code(test_starter) ) {
-		  EXCEPT( "sock->code(%d)", test_starter );
+		  dprintf( D_ALWAYS, "sock->code(%d) failed", test_starter );
+		  goto returnfailure;
 	  }
 
 		  // Send the job info 
 	  if( !JobAd->put(*sock) ) {
-		  EXCEPT( "failed to send job ad" );
+		  dprintf( D_ALWAYS, "failed to send job ad" );
+		  goto returnfailure;
 	  }	
 
 	  if( !sock->end_of_message() ) {
-		  EXCEPT( "end_of_message failed" );
+		  dprintf( D_ALWAYS, "failed to send message to startd" );
+		  goto returnfailure;
 	  }
 
 		  // We're done sending.  Now, get the reply.
 	  sock->decode();
-	  ASSERT( sock->code(reply) );
-	  ASSERT( sock->end_of_message() );
+	  if( !sock->code(reply) || !sock->end_of_message() ) {
+		  dprintf( D_ALWAYS, "failed to receive reply from startd" );
+		  goto returnfailure;
+	  }
 	  
 	  switch( reply ) {
 	  case OK:
@@ -639,21 +671,18 @@ part_send_job(
 
 	  case NOT_OK:
 		  dprintf( D_ALWAYS, "Shadow: Request to run a job was REFUSED\n");
-		  reason = JOB_NOT_STARTED;
-		  delete sock;
-		  return -1;
+		  goto returnfailure;
 		  break;
 
 	  case CONDOR_TRY_AGAIN:
 		  num_retries++;
-		  delete sock;
 		  dprintf( D_ALWAYS,
 				   "Shadow: Request to run a job was TEMPORARILY REFUSED\n" );
 		  if( num_retries > 20 ) {
 			  dprintf( D_ALWAYS, "Shadow: Too many retries, giving up.\n" );
-			  reason = JOB_NOT_STARTED;
-			  return -1;
+			  goto returnfailure;
 		  }			  
+		  delete sock;
 		  dprintf( D_ALWAYS,
 				   "Shadow: will try again in %d seconds\n", retry_delay );
 		  sleep( retry_delay );
@@ -662,9 +691,7 @@ part_send_job(
 	  default:
 		  dprintf(D_ALWAYS,"Unknown reply from startd for command ACTIVATE_CLAIM\n");
 		  dprintf(D_ALWAYS,"Shadow: Request to run a job was REFUSED\n");
-		  reason = JOB_NOT_STARTED;
-		  delete sock;
-		  return -1;
+		  goto returnfailure;
 		  break;
 	  }
   }
@@ -674,8 +701,10 @@ part_send_job(
   /* start flock : dhruba */
   sock->decode();
   memset( &stRec, '\0', sizeof(stRec) );
-  ASSERT( sock->code(stRec));
-  ASSERT( sock->end_of_message() );
+  if( !sock->code(stRec) || !sock->end_of_message() ) {
+	  dprintf(D_ALWAYS, "Can't read reply from startd.\n");
+	  goto returnfailure;
+  }
   ports = stRec.ports;
   if( stRec.ip_addr ) {
 	host = stRec.server_name;
@@ -696,26 +725,53 @@ part_send_job(
   if( ports.port1 == 0 ) {
     dprintf( D_ALWAYS, "Shadow: Request to run a job on %s was REFUSED\n",
 	     host );
-    reason = JOB_NOT_STARTED;
-	delete sock;
-    return -1;
+	goto returnfailure;
   }
   /* end  flock ; dhruba */
 
+	  // We don't use the server_name in the StartdRec, because our
+	  // DNS query may fail or may give us the wrong IP address
+	  // (either because it's stale or because we're talking to a
+	  // machine with multiple network interfaces).  Sadly, we can't
+	  // use the ip_addr either, because the startd doesn't send it in
+	  // the correct byte ordering on little-endian machines.  So, we
+	  // grab the IP address from the ReliSock, since we konw the
+	  // startd always uses the same IP address for all of its
+	  // communication.
+  char sinfulstring[40];
+
+  // We can't use snprintf as it isn't availble on all platforms. We'll put
+  // it in the util lib post-6.2.0
+  // epaulson 7-21-2000
+  //snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
+  sprintf(sinfulstring, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
+  if( (sd1 = do_connect(sinfulstring, (char *)0, (u_short)ports.port1)) < 0 ) {
+    dprintf( D_ALWAYS, "failed to connect to scheduler on %s", sinfulstring );
+	goto returnfailure;
+  }
+ 
+  // No snprintf. See above - epaulson 7-21-2000
+  //snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
+  sprintf(sinfulstring, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
+  if( (sd2 = do_connect(sinfulstring, (char *)0, (u_short)ports.port2)) < 0 ) {
+    dprintf( D_ALWAYS, "failed to connect to scheduler on %s", sinfulstring );
+	close(sd1);
+	goto returnfailure;
+  }
+
   delete sock;
-  if( (sd1 = do_connect(host, (char *)0, (u_short)ports.port1)) < 0 ) {
-    EXCEPT( "connect to scheduler on \"%s\", port1 = %d", host, ports.port1 );
-  }
-  
-  if( (sd2 = do_connect(host, (char *)0, (u_short)ports.port2)) < 0 ) {
-    EXCEPT( "connect to scheduler on \"%s\", port2 = %d", host, ports.port2 );
-  }
+  sock = NULL;
 
   if ( stRec.server_name ) {
 	  free( stRec.server_name );
   }
 
   return 0;
+
+returnfailure:
+  reason = JOB_NOT_STARTED;
+  delete sock;
+  return -1;
 }
 
 

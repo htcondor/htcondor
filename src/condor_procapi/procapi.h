@@ -209,6 +209,8 @@ const int PHBUCKETS = 101;  // why 101?  Well...it's slightly greater than
 */
 
 struct procHashNode {
+  /// Ctor
+  procHashNode();
   /// the last time (secs) this data was retrieved.
   double lasttime;
   /// old cpu usage number (raw, not percent)
@@ -225,6 +227,11 @@ struct procHashNode {
   long minfaultrate;
   /// The "time of birth" of this process (in sec)
   long creation_time;
+  /** A pretty good band... no, really, this flag is used by a simple garbage collection sheme
+	  which controls when procHashNodes should be deleted.  First we set garbage to true.  
+	  Then everytime we access this procHashNode we set it to false.  After an hour has passed,
+	  any node which still has garbage set to true is deleted. */
+  bool garbage;
 };
 
 
@@ -471,6 +478,9 @@ class ProcAPI {
   static long unsigned boottime; // this is used only in linux.  It
 		// represents the number of seconds after the epoch that the
 		// machine was booted.  Used in age calculation.
+  static long unsigned boottime_expiration; // the boottime value will
+		// change if the time is adjusted on this machine (by ntpd or afs,
+		// for example), so we recompute it when our value expires
 
 #endif // LINUX
 

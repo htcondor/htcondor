@@ -61,4 +61,8 @@ extern int _sysapi_config;
 /* needed by ncpus.c */
 extern int _sysapi_ncpus;
 
+/* needed by phys_mem.c */
+extern int _sysapi_memory;
+extern int _sysapi_reserve_memory;
+
 #endif /* SYSAPI_EXTERNS_H */

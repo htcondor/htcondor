@@ -467,6 +467,19 @@ void CollectorDaemon::reportToDevelopers (void)
 	FILE	*mailer;
 	TrackTotals	totals( PP_STARTD_NORMAL );
 
+    // compute machine information
+    machinesTotal = 0;
+    machinesUnclaimed = 0;
+    machinesClaimed = 0;
+    machinesOwner = 0;
+    if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
+            dprintf (D_ALWAYS, "Error counting machines in devel report \n");
+    }
+
+    // If we don't have any machines reporting to us, bail out early
+    if(machinesTotal == 0) 	
+        return; 
+
 	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
 		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
 		return;
@@ -620,6 +633,11 @@ int CollectorDaemon::sendCollectorAd()
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
 
+    // If we don't have any machines, then bail out. You oftentimes see people
+    // run a collector on each macnine in their pool. Duh.
+    if(machinesTotal == 0) {
+		return 1;
+	} 
     // insert values into the ad
     char line[100];
     sprintf(line,"%s = %d",ATTR_RUNNING_JOBS,submittorRunningJobs);

@@ -1,3 +1,26 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+ ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 
 #include "job.h"
@@ -204,8 +227,24 @@ bool parse (char *filename, Dag *dag) {
             while (*rest != '\0') rest++;
             if (rest < endline)   rest++;
 
-            if (post) job->_scriptPost = new Script (post, rest, job);
-            else      job->_scriptPre  = new Script (post, rest, job);
+            if( post ) {
+				job->_scriptPost =
+					new Script( post, rest, job );
+				if( job->_scriptPost == NULL ) {
+					debug_error( 1, DEBUG_SILENT,
+								 "ERROR: out of memory (%s() in %s:%d)!\n",
+								 __FUNCTION__, __FILE__, __LINE__ );
+				}
+			}
+            else {
+				job->_scriptPre =
+					new Script( post, rest, job );
+				if( job->_scriptPre == NULL ) {
+					debug_error( 1, DEBUG_SILENT,
+								 "ERROR: out of memory (%s() in %s:%d)!\n",
+								 __FUNCTION__, __FILE__, __LINE__ );
+				}
+			}
         }
 
         //

@@ -20,6 +20,20 @@
 #include "pseudo_ops.h"
 #include "../condor_shadow.V6/job_report.h"
 
+	/*
+	Have assert() really call EXCEPT instead of doing a sigabrt 
+	and dumping core.  This change results in a shadow exception when
+	communication with the remote job is interrupted in the middle of 
+	a remote system call, instead of the shadow dumping core in the
+	user's current working directory.
+	Note: the definition to CONDOR_ASSERT() macro is in condor_debug.h
+	-Todd <tannenba@cs.wisc.edu> 10/10/2000
+	*/
+#ifdef assert
+#	undef assert
+#endif
+#define assert(cond) CONDOR_ASSERT(cond)
+
 #if defined(Solaris)
 extern "C" {
 	int flock( int, int );
@@ -67,7 +81,16 @@ do_REMOTE_syscall()
 
 	syscall_sock->decode();
 
-	ASSERT( syscall_sock->code(condor_sysnum) );
+	rval = syscall_sock->code(condor_sysnum);
+	if(!rval) {
+		char *error;
+		if(errno==0) {
+			error = "disconnected";
+		} else {
+			error = strerror(errno);
+		}
+		EXCEPT("Unable to talk to job: %s\n",error);
+	}
 
 #if defined(SYSCALL_DEBUG)
 	sprintf( SyscallLabel, "%-6d", condor_sysnum );
@@ -94,15 +117,12 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 	int condor_sysnum;
 	int rval;
 	int	read_ok;
-	extern int SyscallSockClosed;
 
 	syscall_sock->decode();
 
-	/* SyscallSockClosed = FALSE; */
 	read_ok = syscall_sock->code(condor_sysnum);
 
 	if( !read_ok ) {
-		/* ASSERT( SyscallSockClosed ); */
 		dprintf( D_ALWAYS, 
 		"Failed to get syscall_code for proc %d removing..\n", process);
 

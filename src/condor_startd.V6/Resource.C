@@ -56,10 +56,26 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_attr = cap;
 	r_attr->attach( this );
 
-	r_load_num_called = 8;
 	kill_tid = -1;
 	update_tid = -1;
 	r_is_deactivating = false;
+
+		// Set ckpt filename for avail stats here, since this object
+		// knows the resource id, and we need to use a different ckpt
+		// file for each resource.
+	if( compute_avail_stats ) {
+		char *log = param("LOG");
+		if (log) {
+			MyString avail_stats_ckpt_file(log);
+			free(log);
+			sprintf(tmp, "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
+			avail_stats_ckpt_file += tmp;
+			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
+		}
+	}
+
+	r_cpu_busy = 0;
+	r_cpu_busy_start_time = 0;
 
 	if( r_attr->type() ) {
 		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
@@ -75,7 +91,10 @@ Resource::~Resource()
 	this->cancel_kill_timer();
 
 	if ( update_tid != -1 ) {
-		daemonCore->Cancel_Timer(update_tid);
+		if( daemonCore->Cancel_Timer(update_tid) < 0 ) {
+			::dprintf( D_ALWAYS, "failed to cancel update timer (%d): "
+					   "daemonCore error\n", update_tid );
+		}
 		update_tid = -1;
 	}
 
@@ -281,9 +300,17 @@ Resource::starter_exited( void )
 		// would send it SIGKILL.
 	cancel_kill_timer();
 
+		// All of the potential paths from here result in a state
+		// change, and all of them are triggered by the starter
+		// exiting, so let folks know that happened.  The logic in
+		// leave_preempting_state() is more complicated, and we'll
+		// describe why we make the change we do in there.
+	dprintf( D_ALWAYS, "State change: starter exited\n" );
+
 	State s = state();
 	switch( s ) {
 	case claimed_state:
+		r_cur->client()->setuser( r_cur->client()->owner() );
 		change_state( idle_act );
 		break;
 	case preempting_state:
@@ -299,6 +326,32 @@ Resource::starter_exited( void )
 }
 
 
+int
+Resource::spawn_starter( start_info_t* info, time_t now )
+{
+	int rval;
+	if( ! r_starter ) {
+			// Big error!
+		dprintf( D_ALWAYS, "ERROR! Resource::spawn_starter() called "
+				 "w/ no Starter object! Returning failure\n" );
+		return 0;
+	}
+
+	rval = r_starter->spawn( info, now );
+
+		// Fake ourselves out so we take another snapshot in 15
+		// seconds, once the starter has had a chance to spawn the
+		// user job and the job as (hopefully) done any initial
+		// forking it's going to do.  If we're planning to check more
+		// often that 15 seconds, anyway, don't bother with this.
+	if( pid_snapshot_interval > 15 ) {
+		r_starter->set_last_snapshot( (now + 15) -
+									  pid_snapshot_interval );
+	} 
+	return rval;
+}
+
+
 /* 
    This function is called whenever we're in the preempting state
    without a starter.  This situation occurs b/c either the starter
@@ -311,6 +364,8 @@ Resource::starter_exited( void )
 void
 Resource::leave_preempting_state( void )
 {
+	int tmp;
+
 	r_cur->vacate();	// Send a vacate to the client of the match
 	delete r_cur;		
 	r_cur = NULL;
@@ -319,7 +374,7 @@ Resource::leave_preempting_state( void )
 	switch( dest ) {
 	case claimed_state:
 			// If the machine is still available....
-		if( r_reqexp->eval() != 0 ) {
+		if( ! eval_is_owner() ) {
 			r_cur = r_pre;
 			r_pre = NULL;
 				// STATE TRANSITION preempting -> claimed
@@ -348,8 +403,28 @@ Resource::leave_preempting_state( void )
  
 		// In english:  "If the machine is available and someone
 		// is waiting for it..." 
-	if( (r_reqexp->eval() != 0) &&
-		r_pre && r_pre->agentstream() ) {
+	bool allow_it = false;
+	if( r_pre && r_pre->agentstream() ) {
+		allow_it = true;
+		if( (r_classad->EvalBool("START", r_pre->ad(), tmp)) 
+			&& !tmp ) {
+				// Only if it's defined and false do we consider the
+				// machine busy.  We have a job ad, so local
+				// evaluation gotchas don't apply here.
+			dprintf( D_ALWAYS, 
+					 "State change: preempting match refused - START is false\n" );
+			allow_it = false;
+		} else {
+			dprintf( D_ALWAYS, 
+					 "State change: preempting match exists - "
+					 "START is true or undefined\n" );
+		}
+	} else {
+		dprintf( D_ALWAYS, 
+				 "State change: No preempting match, returning to owner\n" );
+	}
+
+	if( allow_it ) {
 		r_cur = r_pre;
 		r_pre = NULL;
 			// STATE TRANSITION preempting -> claimed
@@ -370,23 +445,20 @@ Resource::init_classad( void )
 	r_classad = new ClassAd( *resmgr->config_classad );
 
 		// Publish everything we know about.
-	this->publish( r_classad, A_PUBLIC | A_ALL );
+	this->publish( r_classad, A_PUBLIC | A_ALL | A_EVALUATED );
 	
 	return TRUE;
 }
 
 
 void
-Resource::timeout_classad( void )
+Resource::refresh_classad( amask_t mask )
 {
-	publish( r_classad, A_PUBLIC | A_TIMEOUT );
-}
-
-
-void
-Resource::update_classad( void )
-{
-	publish( r_classad, A_PUBLIC | A_UPDATE );
+	if( ! r_classad ) {
+			// Nothing to do (except prevent a segfault *grin*)
+		return;
+	}
+	this->publish( r_classad, (A_PUBLIC | mask) );
 }
 
 
@@ -438,7 +510,7 @@ Resource::do_update( void )
 	ClassAd private_ad;
 	ClassAd public_ad;
 
-	this->publish( &public_ad, A_PUBLIC | A_ALL );
+	this->publish( &public_ad, A_PUBLIC | A_ALL | A_EVALUATED );
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
 		// Send class ads to collector(s)
@@ -513,10 +585,17 @@ Resource::start_kill_timer( void )
 void
 Resource::cancel_kill_timer( void )
 {
+	int rval;
 	if( kill_tid != -1 ) {
-		daemonCore->Cancel_Timer( kill_tid );
+		rval = daemonCore->Cancel_Timer( kill_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel kill timer (%d): "
+					 "daemonCore error\n", kill_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled claim timer (%d)\n",
+					 kill_tid );
+		}
 		kill_tid = -1;
-		dprintf( D_FULLDEBUG, "Canceled kill timer.\n" );
 	}
 }
 
@@ -536,6 +615,7 @@ Resource::wants_vacate( void )
 			// Derek Wright <wright@cs.wisc.edu>, 6/21/00
 		dprintf( D_FULLDEBUG,
 				 "In Resource::wants_vacate() w/o a job, returning TRUE\n" );
+		dprintf( D_ALWAYS, "State change: no job, WANT_VACATE considered TRUE\n" );
 		return 1;
 	}
 
@@ -543,6 +623,8 @@ Resource::wants_vacate( void )
 		if( r_classad->EvalBool("WANT_VACATE_VANILLA",
 								r_cur->ad(),
 								want_vacate ) ) { 
+			dprintf( D_ALWAYS, "State change: WANT_VACATE_VANILLA is %s\n",
+					 want_vacate ? "TRUE" : "FALSE" );
 			unknown = false;
 		}
 	} 
@@ -567,6 +649,8 @@ Resource::wants_vacate( void )
 				// if we've got this defined. -Derek Wright 4/12/00
 			EXCEPT( "WANT_VACATE undefined in internal ClassAd" );
 		}
+		dprintf( D_ALWAYS, "State change: WANT_VACATE is %s\n",
+				 want_vacate ? "TRUE" : "FALSE" );
 	}
 	return want_vacate;
 }
@@ -716,6 +800,54 @@ Resource::eval_continue( void )
 }
 
 
+int
+Resource::eval_is_owner( void )
+{
+	int tmp;
+	if( (r_classad->EvalBool( ATTR_IS_OWNER, 
+							  r_cur->ad(),
+							  tmp)) == 0 ) {
+		EXCEPT("Can't evaluate %s", ATTR_IS_OWNER);
+	}
+	return tmp;
+}
+
+
+int
+Resource::eval_start( void )
+{
+	int tmp;
+	if( (r_classad->EvalBool( "START", 
+							  r_cur->ad(),
+							  tmp)) == 0 ) {
+			// Undefined
+		return -1;
+	}
+	return tmp;
+}
+
+
+int
+Resource::eval_cpu_busy( void )
+{
+	int tmp = 0;
+	if( ! r_classad ) {
+			// We don't have our classad yet, so just return that
+			// we're not busy.
+		return 0;
+	}
+	if( (r_classad->EvalBool( ATTR_CPU_BUSY, r_cur->ad(), tmp )) == 0 ) {
+			// Undefined, try "cpu_busy"
+		if( (r_classad->EvalBool( "CPU_BUSY", r_cur->ad(), 
+								  tmp )) == 0 ) {   
+				// Totally undefined, return false;
+			return 0;
+		}
+	}
+	return tmp;
+}
+
+
 void
 Resource::publish( ClassAd* cap, amask_t mask ) 
 {
@@ -750,9 +882,20 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// undefined in r_classad, we need to insert a default
 			// value, since we don't want to use the job ClassAd's
 			// Rank expression when we evaluate our Rank value.
-		if (!caInsert( cap, r_classad, ATTR_RANK )) {
+		if( !caInsert(cap, r_classad, ATTR_RANK) ) {
 			sprintf( line, "%s = 0.0", ATTR_RANK );
 			cap->Insert( line );
+		}
+
+			// Similarly, the CpuBusy expression only lives in the
+			// config file and in the r_classad.  So, we have to
+			// insert it here, too.  This is just the expression that
+			// defines what "CpuBusy" means, not the current value of
+			// it and how long it's been true.  Those aren't static,
+			// and need to be re-published after they're evaluated. 
+		if( !caInsert(cap, r_classad, ATTR_CPU_BUSY) ) {
+			EXCEPT( "%s not in internal resource classad, but default "
+					"should be added by ResMgr!", ATTR_CPU_BUSY );
 		}
 
 			// Include everything from STARTD_EXPRS.
@@ -777,6 +920,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 				while( (ptr = startd_job_exprs->next()) ) {
 					caInsert( cap, r_cur->ad(), ptr );
 				}
+			}
+				// update ImageSize attribute from procInfo
+			if (r_pinfo.imgsize) {
+				sprintf( line, "%s = %lu", ATTR_IMAGE_SIZE, r_pinfo.imgsize );
+				cap->Insert( line );
 			}
 		}
 	}
@@ -804,6 +952,18 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Put in ResMgr-specific attributes 
 	resmgr->publish( cap, mask );
 
+		// If this is a public ad, publish anything we had to evaluate
+		// to "compute"
+	if( IS_PUBLIC(mask) && IS_EVALUATED(mask) ) {
+		sprintf( line, "%s=%d", ATTR_CPU_BUSY_TIME,
+				 (int)cpu_busy_time() ); 
+		cap->Insert(line); 
+
+		sprintf( line, "%s=%s", ATTR_CPU_IS_BUSY, 
+				 r_cpu_busy ? "True" : "False" );
+		cap->Insert(line); 
+	}
+
 		// Put in state info
 	r_state->publish( cap, mask );
 
@@ -814,12 +974,34 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	if( r_cur ) {
 		r_cur->publish( cap, mask );
 	}
+
+		// Put in availability statistics
+	r_avail_stats.publish( cap, mask );
 }
 
 
 void
 Resource::compute( amask_t mask ) 
 {
+	if( IS_EVALUATED(mask) ) {
+			// We need to evaluate some classad expressions to
+			// "compute" their values.  We don't want to propagate
+			// this mask to any other objects, since this bit only
+			// applies to the Resource class
+
+			// If we don't have a classad, we can bail now, since none
+			// of this is going to work.
+		if( ! r_classad ) {
+			return;
+		}
+
+			// Evaluate the CpuBusy expression and compute CpuBusyTime
+			// and CpuIsBusy.
+		compute_cpu_busy();
+
+		return;
+	}
+
 		// Only resource-specific things that need to be computed are
 		// in the CpuAttributes object.
 	r_attr->compute( mask );
@@ -827,6 +1009,9 @@ Resource::compute( amask_t mask )
 		// Actually, we'll have the Reqexp object compute too, so that
 		// we get static stuff recomputed on reconfig, etc.
 	r_reqexp->compute( mask );
+
+		// Compute availability statistics
+	r_avail_stats.compute( mask );
 
 }
 
@@ -860,14 +1045,12 @@ Resource::compute_condor_load( void )
 	float max;
 	float load;
 	int numcpus = resmgr->num_cpus();
-	procInfo* pinfo = NULL;
 	int i;
 
 	if( r_starter->active() ) { 
-		r_load_num_called++;
-		if( r_load_num_called >= 10 ) {
-			r_starter->recompute_pidfamily();
-			r_load_num_called = 0;
+		time_t now = time(NULL);
+		if( now - r_starter->last_snapshot() >= pid_snapshot_interval ) { 
+			r_starter->recompute_pidfamily( now );
 		}
 
 		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
@@ -878,9 +1061,12 @@ Resource::compute_condor_load( void )
 			::dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 		}
 
+			// ProcAPI wants a non-const pointer reference, so we need
+			// a temporary.
+		procInfo *pinfoPTR = &r_pinfo;
 		if( (ProcAPI::getProcSetInfo( r_starter->pidfamily(), 
 									  r_starter->pidfamily_size(),  
-									  pinfo) < -1) ) {
+									  pinfoPTR) < -1) ) {
 				// If we failed, it might be b/c our pid family has
 				// stale info, so before we give up for real,
 				// recompute and try once more.
@@ -897,19 +1083,15 @@ Resource::compute_condor_load( void )
 
 			if( (ProcAPI::getProcSetInfo( r_starter->pidfamily(), 
 										  r_starter->pidfamily_size(),  
-										  pinfo) < -1) ) {
+										  pinfoPTR) < -1) ) {
 				EXCEPT( "Fatal error getting process info for the starter and decendents" ); 
 			}
 		}
-		if( !pinfo ) {
-			EXCEPT( "Out of memory!" );
-		}
 		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
 			dprintf( D_FULLDEBUG, "Percent CPU usage for those pids is: %f\n", 
-					 pinfo->cpuusage );
+					 r_pinfo.cpuusage );
 		}
-		r_load_queue->push( 1, pinfo->cpuusage );
-		delete pinfo;
+		r_load_queue->push( 1, r_pinfo.cpuusage );
 	} else {
 		r_load_queue->push( 1, 0.0 );
 	}
@@ -944,11 +1126,61 @@ Resource::resize_load_queue( void )
 
 
 void
+Resource::compute_cpu_busy( void )
+{
+	int old_cpu_busy;
+	old_cpu_busy = r_cpu_busy;
+	r_cpu_busy = eval_cpu_busy();
+	
+	if( ! old_cpu_busy && r_cpu_busy ) {
+			// It's busy now and it wasn't before, so set the
+			// start time to now
+		r_cpu_busy_start_time = time( NULL );
+	}
+	if( old_cpu_busy && ! r_cpu_busy ) {
+			// It was busy before, but isn't now, so clear the 
+			// start time
+		r_cpu_busy_start_time = 0;
+	}
+}	
+
+
+time_t
+Resource::cpu_busy_time( void )
+{
+	time_t now;
+	int val;
+
+	if( r_cpu_busy ) {
+		now = time(NULL);
+		val = now - r_cpu_busy_start_time;
+		if( val < 0 ) {
+			dprintf( D_ALWAYS, "ERROR in CpuAttributes::cpu_busy_time() "
+					 "- negative cpu busy time!, returning 0\n" );
+			return 0;
+		}
+		return val;
+	} 
+	return 0;
+}
+
+
+void
 Resource::log_ignore( int cmd, State s ) 
 {
 	dprintf( D_ALWAYS, "Got %s while in %s state, ignoring.\n", 
 			 command_to_string(cmd), state_to_string(s) );
 }
+
+
+void
+Resource::log_ignore( int cmd, State s, Activity a ) 
+{
+	dprintf( D_ALWAYS, "Got %s while in %s/%s state, ignoring.\n", 
+			 command_to_string(cmd), state_to_string(s),
+			 activity_to_string(a) );
+}
+
 
 void
 Resource::log_shutdown_ignore( int cmd ) 

@@ -41,7 +41,7 @@ int blankline ( char *str );
 char * gen_exec_name ( int cluster, int proc, int subproc );
 
 void lower_case ( register char *str );
-int config_hash ( register char *string, register int size );
+int hash ( register char *string, register int size );
 char * getline ( FILE *fp );
 
 int rotate_file(const char *new_filename, const char *old_filename);
@@ -61,6 +61,10 @@ void debug_unlock ( void );
 void _EXCEPT_ ( char *fmt, ... );
 int flock ( int fd, int op );
 int getdtablesize ( void );
+
+#ifndef WIN32  // on WIN32, it messes with our macro in condor_sys_nt.h
+char* strupr( char* );
+#endif
 
 #ifndef WIN32	// on WIN32, it messes with our getwd macro in condor_sys_nt.h
 char * getwd ( char *path );
@@ -94,7 +98,7 @@ int blankline ();
 char * gen_exec_name ();
 
 void lower_case ();
-int config_hash ();
+int hash ();
 char * getline ();
 
 

@@ -26,6 +26,7 @@
 #include <errno.h>
 #include "condor_event.h"
 #include "user_log.c++.h"
+#include "condor_string.h"
 
 //--------------------------------------------------------
 #include "condor_debug.h"
@@ -43,11 +44,18 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_EVICTED     ", // Job evicted from machine
 	"ULOG_JOB_TERMINATED  ", // Job terminated
 	"ULOG_IMAGE_SIZE      ", // Image size of job updated
-	"ULOG_SHADOW_EXCEPTION"  // Shadow threw an exception
+	"ULOG_SHADOW_EXCEPTION", // Shadow threw an exception
+	"ULOG_JOB_SUSPENDED   ", // Job was suspended
+	"ULOG_JOB_UNSUSPENDED "  // Job was unsuspended
+	"ULOG_JOB_HELD        "  // Job was held
+	"ULOG_JOB_RELEASED    "  // Job was released
 #if defined(GENERIC_EVENT)
 	,"ULOG_GENERIC        "
 #endif	    
-	,"ULOG_JOB_ABORTED    "  // Job terminated
+	,"ULOG_JOB_ABORTED    "  // Job aborted
+	,"ULOG_NODE_EXECUTE   "  // Node executing
+	,"ULOG_NODE_TERMINATED"  // Node terminated
+,
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -94,6 +102,24 @@ instantiateEvent (ULogEventNumber event)
 
 	  case ULOG_JOB_ABORTED:
 		return new JobAbortedEvent;
+
+	  case ULOG_JOB_SUSPENDED:
+		return new JobSuspendedEvent;
+
+	  case ULOG_JOB_UNSUSPENDED:
+		return new JobUnsuspendedEvent;
+
+	  case ULOG_JOB_HELD:
+		return new JobHeldEvent;
+
+	  case ULOG_JOB_RELEASED:
+		return new JobReleasedEvent;
+
+	case ULOG_NODE_EXECUTE:
+		return new NodeExecuteEvent;
+
+	case ULOG_NODE_TERMINATED:
+		return new NodeTerminatedEvent;
 
 	  default:
         EXCEPT( "Invalid ULogEventNumber" );
@@ -200,12 +226,16 @@ SubmitEvent::
 SubmitEvent()
 {	
 	submitHost [0] = '\0';
+	submitEventLogNotes = NULL;
 	eventNumber = ULOG_SUBMIT;
 }
 
 SubmitEvent::
 ~SubmitEvent()
 {
+    if( submitEventLogNotes ) {
+        delete[] submitEventLogNotes;
+    }
 }
 
 int SubmitEvent::
@@ -216,18 +246,31 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+	if( submitEventLogNotes ) {
+		retval = fprintf( file, "    %.8191s\n", submitEventLogNotes );
+		if( retval < 0 ) {
+			return 0;
+		}
+	}
 	return (1);
 }
 
 int SubmitEvent::
 readEvent (FILE *file)
 {
-    int retval  = fscanf (file, "Job submitted from host: %s", submitHost);
+	char s[8192];
+	if( submitEventLogNotes ) {
+		delete[] submitEventLogNotes;
+	}
+	int retval = fscanf( file, "Job submitted from host: %s\n", submitHost );
     if (retval != 1)
     {
 	return 0;
     }
+	if( ! fscanf( file, "    %8191[^\n]\n", s ) ) {
+		return 0;
+    }
+	submitEventLogNotes = strnewp( s );
     return 1;
 }
 
@@ -353,7 +396,7 @@ readEvent (FILE *file)
 	char buffer [128];
 
 	// get the error number
-	retval = fscanf (file, "(%d)", &errType);
+	retval = fscanf (file, "(%d)", (int*)&errType);
 	if (retval != 1) 
 	{ 
 		return 0;
@@ -519,11 +562,9 @@ readEvent (FILE *file)
 }
 
 
-// ----- JobTerminatedEvent class
-JobTerminatedEvent::
-JobTerminatedEvent ()
+// ----- TerminatedEvent baseclass
+TerminatedEvent::TerminatedEvent()
 {
-	eventNumber = ULOG_JOB_TERMINATED;
 	coreFile[0] = '\0';
 	returnValue = signalNumber = -1;
 
@@ -533,35 +574,32 @@ JobTerminatedEvent ()
 	sent_bytes = recvd_bytes = total_sent_bytes = total_recvd_bytes = 0.0;
 }
 
-JobTerminatedEvent::
-~JobTerminatedEvent()
+TerminatedEvent::~TerminatedEvent()
 {
 }
 
-int JobTerminatedEvent::
-writeEvent (FILE *file)
+
+int
+TerminatedEvent::writeEvent( FILE *file, const char* header )
 {
 	int retval=0;
 
-	if (fprintf (file, "Job terminated.\n") < 0) return 0;
-	if (normal)
-	{
-		if (fprintf (file,"\t(1) Normal termination (return value %d)\n\t", 
-						  returnValue) < 0)
+	if( normal ) {
+		if( fprintf(file, "\t(1) Normal termination (return value %d)\n\t", 
+					returnValue) < 0 ) {
 			return 0;
-	}
-	else
-	{
-		if (fprintf (file,"\t(0) Abnormal termination (signal %d)\n",
-						  signalNumber) < 0)
+		}
+	} else {
+		if( fprintf(file, "\t(0) Abnormal termination (signal %d)\n",
+					signalNumber) < 0 ) {
 			return 0;
-
-		if (coreFile [0])
-			retval = fprintf (file, "\t(1) Corefile in: %s\n\t", coreFile);
-		else
-			retval = fprintf (file, "\t(0) No core file\n\t");
+		}
+		if( coreFile[0] ) {
+			retval = fprintf( file, "\t(1) Corefile in: %s\n\t", coreFile );
+		} else {
+			retval = fprintf( file, "\t(0) No core file\n\t" );
+		}
 	}
-
 
 	if ((retval < 0)										||
 		(!writeRusage (file, run_remote_rusage))			||
@@ -575,74 +613,110 @@ writeEvent (FILE *file)
 		return 0;
 
 
-	if (fprintf (file, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes) < 0 ||
-		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
-				 recvd_bytes) < 0 ||
-		fprintf (file, "\t%.0f  -  Total Bytes Sent By Job\n",
-				 total_sent_bytes) < 0 ||
-		fprintf (file, "\t%.0f  -  Total Bytes Received By Job\n",
-				 total_recvd_bytes) < 0)
+	if (fprintf(file, "\t%.0f  -  Run Bytes Sent By %s\n", 
+				sent_bytes, header) < 0 ||
+		fprintf(file, "\t%.0f  -  Run Bytes Received By %s\n",
+				recvd_bytes, header) < 0 ||
+		fprintf(file, "\t%.0f  -  Total Bytes Sent By %s\n",
+				total_sent_bytes, header) < 0 ||
+		fprintf(file, "\t%.0f  -  Total Bytes Received By %s\n",
+				total_recvd_bytes, header) < 0)
 		return 1;				// backwards compatibility
 
 	return 1;
 }
 
 
-int JobTerminatedEvent::
-readEvent (FILE *file)
+int
+TerminatedEvent::readEvent( FILE *file, const char* header )
 {
 	char buffer[128];
 	int  normalTerm;
 	int  gotCore;
 	int  retval1, retval2;
 
-	if ((retval1 = (fscanf (file, "Job terminated.") == EOF)) 	||
-		(retval2 = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1)
+	if( (retval2 = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1 ) {
 		return 0;
+	}
 
-	if (normalTerm)
-	{
+	if( normalTerm ) {
 		normal = true;
 		if(fscanf(file,"Normal termination (return value %d)",&returnValue)!=1)
 			return 0;
-	}
-	else
-	{
+	} else {
 		normal = false;
 		if((fscanf(file,"Abnormal termination (signal %d)",&signalNumber)!=1)||
 		   (fscanf(file,"\n\t(%d) ", &gotCore) != 1))
 			return 0;
 
-		if (gotCore)
-		{
+		if( gotCore ) {
 			if (fscanf (file, "Corefile in: %s", coreFile) != 1) 
 				return 0;
-		}
-		else
-		{
+		} else {
 			if (fgets (buffer, 128, file) == 0) 
 				return 0;
 		}
 	}
 
-	// read in rusage values
+		// read in rusage values
 	if (!readRusage(file,run_remote_rusage) || !fgets(buffer, 128, file) ||
 		!readRusage(file,run_local_rusage)   || !fgets(buffer, 128, file) ||
 		!readRusage(file,total_remote_rusage)|| !fgets(buffer, 128, file) ||
 		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
 		return 0;
 	
-	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
-		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
+	if( fscanf (file, "\t%f  -  Run Bytes Sent By ", &sent_bytes) == 0 ||
+		fscanf (file, header) == 0 ||
+		fscanf (file, "\n") == 0 ||
+		fscanf (file, "\t%f  -  Run Bytes Received By ",
 				&recvd_bytes) == 0 ||
-		fscanf (file, "\t%f  -  Total Bytes Sent By Job\n",
+		fscanf (file, header) == 0 || 
+		fscanf (file, "\n") == 0 ||
+		fscanf (file, "\t%f  -  Total Bytes Sent By ",
 				&total_sent_bytes) == 0 ||
-		fscanf (file, "\t%f  -  Total Bytes Received By Job\n",
-				&total_recvd_bytes) == 0)
-		return 1;				// backwards compatibility
-
+		fscanf (file, header) == 0 ||
+		fscanf (file, "\n") == 0 ||
+		fscanf (file, "\t%f  -  Total Bytes Received By ",
+				&total_recvd_bytes) == 0 ||
+		fscanf (file, header) == 0 ||
+		fscanf (file, "\n") == 0 ) {
+		return 1;		// backwards compatibility
+	}
 	return 1;
 }
+
+
+// ----- JobTerminatedEvent class
+JobTerminatedEvent::JobTerminatedEvent() : TerminatedEvent()
+{
+	eventNumber = ULOG_JOB_TERMINATED;
+}
+
+
+JobTerminatedEvent::~JobTerminatedEvent()
+{
+}
+
+
+int
+JobTerminatedEvent::writeEvent (FILE *file)
+{
+	if( fprintf(file, "Job terminated.\n") < 0 ) {
+		return 0;
+	}
+	return TerminatedEvent::writeEvent( file, "Job" );
+}
+
+
+int
+JobTerminatedEvent::readEvent (FILE *file)
+{
+	if( fscanf(file, "Job terminated.") == EOF ) {
+		return 0;
+	}
+	return TerminatedEvent::readEvent( file, "Job" );
+}
+
 
 
 JobImageSizeEvent::
@@ -729,6 +803,137 @@ writeEvent (FILE *file)
 	return 1;
 }
 
+JobSuspendedEvent::
+JobSuspendedEvent ()
+{
+	eventNumber = ULOG_JOB_SUSPENDED;
+}
+
+JobSuspendedEvent::
+~JobSuspendedEvent ()
+{
+}
+
+int JobSuspendedEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was suspended.\n\t") == EOF)
+		return 0;
+	if (fscanf (file, "Number of processes actually suspended: %d\n",
+			&num_pids) == EOF)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+
+int JobSuspendedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was suspended.\n\t") < 0)
+		return 0;
+	if (fprintf (file, "Number of processes actually suspended: %d\n", 
+			num_pids) < 0)
+		return 0;
+
+	return 1;
+}
+
+JobUnsuspendedEvent::
+JobUnsuspendedEvent ()
+{
+	eventNumber = ULOG_JOB_UNSUSPENDED;
+}
+
+JobUnsuspendedEvent::
+~JobUnsuspendedEvent ()
+{
+}
+
+int JobUnsuspendedEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was unsuspended.\n") == EOF)
+		return 0;
+
+	return 1;
+}
+
+int JobUnsuspendedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was unsuspended.\n") < 0)
+		return 0;
+
+	return 1;
+}
+
+JobHeldEvent::
+JobHeldEvent ()
+{
+	eventNumber = ULOG_JOB_HELD;
+}
+
+JobHeldEvent::
+~JobHeldEvent ()
+{
+}
+
+int JobHeldEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was held.\n\t") == EOF)
+		return 0;
+	if (fscanf (file, "Action caused by: %s\n", &msg) == EOF)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+int JobHeldEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was held.\n\t") < 0)
+		return 0;
+	if (fprintf (file, "Action caused by: %s\n", msg) < 0)
+		return 0;
+
+	return 1;
+}
+
+JobReleasedEvent::
+JobReleasedEvent ()
+{
+	eventNumber = ULOG_JOB_RELEASED;
+}
+
+JobReleasedEvent::
+~JobReleasedEvent ()
+{
+}
+
+int JobReleasedEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was released.\n\t") == EOF)
+		return 0;
+	if (fscanf (file, "Action caused by: %s\n", msg) == EOF)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+int JobReleasedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was released.\n\t") < 0)
+		return 0;
+	if (fprintf (file, "Action caused by: %s\n", msg) < 0)
+		return 0;
+
+	return 1;
+}
+
 static const int seconds = 1;
 static const int minutes = 60 * seconds;
 static const int hours = 60 * minutes;
@@ -783,5 +988,68 @@ readRusage (FILE *file, rusage &usage)
 		sys_days*days;
 
 	return (1);
+}
+
+
+// ----- the NodeExecuteEvent class
+NodeExecuteEvent::NodeExecuteEvent()
+{	
+	executeHost [0] = '\0';
+	eventNumber = ULOG_NODE_EXECUTE;
+}
+
+
+NodeExecuteEvent::~NodeExecuteEvent()
+{
+}
+
+
+int
+NodeExecuteEvent::writeEvent (FILE *file)
+{	
+	return( fprintf(file, "Node %d executing on host: %s\n",
+					node, executeHost) >= 0 );
+}
+
+
+int
+NodeExecuteEvent::readEvent (FILE *file)
+{
+	return( fscanf(file, "Node %d executing on host: %s", 
+				   &node, executeHost) != EOF );
+}
+
+
+// ----- NodeTerminatedEvent class
+NodeTerminatedEvent::NodeTerminatedEvent() : TerminatedEvent()
+{
+	eventNumber = ULOG_NODE_TERMINATED;
+	node = -1;
+}
+
+
+NodeTerminatedEvent::
+~NodeTerminatedEvent()
+{
+}
+
+
+int
+NodeTerminatedEvent::writeEvent( FILE *file )
+{
+	if( fprintf(file, "Node %d terminated.\n", node) < 0 ) {
+		return 0;
+	}
+	return TerminatedEvent::writeEvent( file, "Node" );
+}
+
+
+int
+NodeTerminatedEvent::readEvent( FILE *file )
+{
+	if( fscanf(file, "Node %d terminated.", &node) == EOF ) {
+		return 0;
+	}
+	return TerminatedEvent::readEvent( file, "Node" );
 }
 

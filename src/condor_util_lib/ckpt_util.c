@@ -36,6 +36,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#ifdef WANT_NETMAN
+/* Perform a callback during file stream transfers so we can manage
+   our network usage. */
+void file_stream_progress_report(int bytes_moved);
+#endif
+
 /*
   Transfer a whole file from the "src_fd" to the "dst_fd".  Return
   bytes transferred.
@@ -100,6 +106,11 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 			);
 			return bytes_moved;
 		}
+#ifdef WANT_NETMAN
+		else {
+			file_stream_progress_report((int)bytes_moved);
+		}
+#endif
 	}
 }
 

@@ -1,16 +1,17 @@
 FILES = README condor.generic condor_config.local.central.manager
 
 CONTRIB_FILES = $(FILES) condor_config.local.ckpt.server \
+	condor_config.local.root.ckpt.server \
 	condor_config.local.smp condor_config.local.view_server \
 	condor_config.local.eventd
 
-all:
+all::
 
-clean:
+clean::
 
-release:
+release:: all
 
-stripped: $(STRIP_DIR)/etc/examples/README
+stripped:: $(STRIP_DIR)/etc/examples/README
 
 $(STRIP_DIR)/etc/examples/README: 
 	/bin/cp -f $(FILES) $(STRIP_DIR)/etc/examples
@@ -18,7 +19,7 @@ $(STRIP_DIR)/etc/examples/README:
 	perl ./customize $(STRIP_DIR)
 	perl ./customize $(STRIP_CONTRIB)
 
-static: $(STATIC_DIR)/etc/examples/README
+static:: $(STATIC_DIR)/etc/examples/README
 
 $(STATIC_DIR)/etc/examples/README:
 	/bin/cp -f $(FILES) $(STATIC_DIR)/etc/examples

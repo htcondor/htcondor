@@ -225,7 +225,7 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			char *lkey = ((LogSetAttribute *)log)->get_key();
 			if (strcmp(lkey, key) == 0) {
 				char *lname = ((LogSetAttribute *)log)->get_name();
-				if (strcmp(lname, name) == 0) {
+				if (stricmp(lname, name) == 0) {
 					if (ValFound) {
 						free(val);
 					}
@@ -242,7 +242,7 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			char *lkey = ((LogDeleteAttribute *)log)->get_key();
 			if (strcmp(lkey, key) == 0) {
 				char *lname = ((LogDeleteAttribute *)log)->get_name();
-				if (strcmp(lname, name) == 0) {
+				if (stricmp(lname, name) == 0) {
 					if (ValFound) {
 						free(val);
 					}

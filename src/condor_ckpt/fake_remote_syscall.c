@@ -37,4 +37,5 @@ int
 REMOTE_syscall( int syscall_num, ... )
 {
        	EXCEPT( "Linked for standalone checkpointing, but called REMOTE_syscall()");
+		return -1;
 }

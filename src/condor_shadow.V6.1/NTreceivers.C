@@ -41,7 +41,10 @@ do_REMOTE_syscall()
 
 	syscall_sock->decode();
 
-	ASSERT( syscall_sock->code(condor_sysnum) );
+	rval = syscall_sock->code(condor_sysnum);
+	if (!rval) {
+	 EXCEPT("Can no longer communicate with condor_starter on execute machine");
+	}
 
 	dprintf(D_SYSCALLS,
 		"Got request for syscall %d\n",
@@ -112,41 +115,20 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
-#if 0	// no longer needed; executable should go via FileTransfer object
-	case CONDOR_get_executable:
-	{
-		char source[_POSIX_PATH_MAX];
-
-		assert( syscall_sock->end_of_message() );
-
-		errno = 0;
-		rval = pseudo_get_executable(source);
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
-		} else {
-			assert( syscall_sock->put_file(source) > -1 );
-		}
-		assert( syscall_sock->end_of_message() );
-		return 0;
-	}
-#endif
 
 	case CONDOR_job_exit:
 	{
 		int status=0;
 		int reason=0;
+		ClassAd ad;
 
 		assert( syscall_sock->code(status) );
 		assert( syscall_sock->code(reason) );
+		assert( ad.get(*syscall_sock) );
 		assert( syscall_sock->end_of_message() );
 
 		errno = 0;
-		rval = pseudo_job_exit(status, reason);
+		rval = pseudo_job_exit(status, reason, &ad);
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 

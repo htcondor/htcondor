@@ -1,12 +1,41 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+ ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
+#include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 #include "dag.h"
 #include "debug.h"
 #include "parse.h"
+#include "my_username.h"
 
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
+
+bool run_post_on_failure;	// for DAGMAN_RUN_POST_ON_FAILURE config setting
+
+char* DAGManJobId;
 
 // Required for linking with condor libs
 extern "C" int SetSyscalls() { return 0; }
@@ -16,11 +45,13 @@ class Global {
     inline Global ():
         dag          (NULL),
         maxJobs      (0),
+        maxScripts   (0),
         rescue_file  (NULL),
         datafile     (NULL) {}
     inline void CleanUp () { delete dag; }
     Dag * dag;
     int maxJobs;  // Maximum number of Jobs to run at once
+    int maxScripts;  // max. number of PRE/POST scripts to run at once
     char *rescue_file;
     char *datafile;
 };
@@ -37,11 +68,12 @@ static void Usage() {
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-Rescue <Rescue.dag>\n"
             "\t\t[-MaxJobs] <int N>\n\n"
+            "\t\t[-MaxScripts] <int N>\n\n"
             "\twhere NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
-    DC_Exit(1);
+	DC_Exit( 1 );
 }
 
 //---------------------------------------------------------------------------
@@ -56,19 +88,30 @@ void touch (const char * filename) {
 //---------------------------------------------------------------------------
 
 int main_config() { 
+	char* s = param( "DAGMAN_RUN_POST_ON_FAILURE" );
+	if( s != NULL && !strcasecmp( s, "TRUE" ) ) {
+		run_post_on_failure = TRUE;
+	}	
+	else {
+		run_post_on_failure = FALSE;
+	}
+	if( s != NULL ) {
+		free( s );
+	}
     return TRUE;
 }
 
-int main_shutdown_fast() {
-    G.CleanUp();
-    DC_Exit(0);
-    return TRUE;
+int
+main_shutdown_fast()
+{
+    DC_Exit( 1 );
+    return FALSE;
 }
 
 int main_shutdown_graceful() {
     G.CleanUp();
-    DC_Exit(0);
-    return TRUE;
+	DC_Exit( 1 );
+    return FALSE;
 }
 
 int main_shutdown_remove(Service *, int) {
@@ -78,12 +121,12 @@ int main_shutdown_remove(Service *, int) {
         debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
         G.dag->Rescue(G.rescue_file, G.datafile);
     }
-    G.CleanUp();
-    DC_Exit(0);
-    return TRUE;
+	main_shutdown_graceful();
+	return FALSE;
 }
 
 void main_timer();
+void print_status();
 
 
 //---------------------------------------------------------------------------
@@ -106,6 +149,12 @@ int main_init (int argc, char **argv) {
     }
   
     if (argc < 2) Usage();  //  Make sure an input file was specified
+
+	// get dagman job id from environment
+	DAGManJobId = getenv( "CONDOR_ID" );
+	if( DAGManJobId == NULL ) {
+		DAGManJobId = strdup( "unknown (requires condor_schedd >= v6.3)" );
+	}
   
     //
     // Process command-line arguments
@@ -155,6 +204,14 @@ int main_init (int argc, char **argv) {
                 Usage();
             }
             G.maxJobs = atoi (argv[i]);
+        } else if( !strcmp( "-MaxScripts", argv[i] ) ) {
+            i++;
+            if( argc <= i ) {
+                debug_println( DEBUG_SILENT,
+							   "Integer missing after -MaxScripts" );
+                Usage();
+            }
+            G.maxScripts = atoi( argv[i] );
         } else Usage();
     }
   
@@ -178,6 +235,10 @@ int main_init (int argc, char **argv) {
         debug_println (DEBUG_SILENT, "-MaxJobs must be non-negative");
         Usage();
     }
+    if( G.maxScripts < 0 ) {
+        debug_println( DEBUG_SILENT, "-MaxScripts must be non-negative" );
+        Usage();
+    }
  
     debug_println (DEBUG_VERBOSE,"Condor log will be written to %s",
                    condorLogName);
@@ -194,16 +255,27 @@ int main_init (int argc, char **argv) {
         char *temp;
         debug_println (DEBUG_DEBUG_1,"Current path is %s",
                        (temp=getcwd(NULL, _POSIX_PATH_MAX)) ? temp : "<null>");
-        free(temp);
-        debug_println (DEBUG_DEBUG_1,"Current user is %s",
-                       (temp=getenv("USER")) ? temp : "<null>");
+		if( temp ) {
+			free( temp );
+		}
+		temp = my_username();
+		debug_println( DEBUG_DEBUG_1, "Current user is %s",
+					   temp ? temp : "<null>" );
+		if( temp ) {
+			free( temp );
+		}
     }
   
     //
     // Create the DAG
     //
   
-    G.dag = new Dag (condorLogName, lockFileName, G.maxJobs);
+    G.dag = new Dag( condorLogName, lockFileName, G.maxJobs, G.maxScripts );
+
+    if( G.dag == NULL ) {
+        EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
+                __FUNCTION__, __FILE__, __LINE__ );
+    }
   
     //
     // Parse the input file.  The parse() routine
@@ -217,8 +289,6 @@ int main_init (int argc, char **argv) {
     debug_println (DEBUG_VERBOSE, "Dag contains %d total jobs",
                    G.dag->NumJobs());
 
-    if (DEBUG_LEVEL(DEBUG_DEBUG_3)) G.dag->PrintJobList();
-  
     //------------------------------------------------------------------------
     // Bootstrap and Recovery
     //
@@ -254,13 +324,31 @@ int main_init (int argc, char **argv) {
 
         debug_println (DEBUG_VERBOSE, "Bootstrapping...");
         if (!G.dag->Bootstrap (recovery)) {
-            if (DEBUG_LEVEL(DEBUG_DEBUG_1)) G.dag->Print_TermQ();
+            G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error (1, DEBUG_QUIET, "ERROR while bootstrapping");
         }
     }
 
-    daemonCore->Register_Timer (2, 2, (TimerHandler) main_timer, "main_timer");
+    daemonCore->Register_Timer( 1, 5, (TimerHandler)main_timer,
+								"main_timer" );
     return 0;
+}
+
+void
+print_status() {
+    time_t clock;
+    struct tm *tm;
+
+    (void)time( (time_t*)&clock );
+    tm = localtime( (time_t*)&clock );
+	debug_printf( DEBUG_VERBOSE, "%02d/%02d %02d:%02d:%02d: %d/%d done, "
+				  "%d failed, %d submitted, %d ready, %d script%s\n",
+				  tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
+				  tm->tm_sec, G.dag->NumJobsDone(), G.dag->NumJobs(),
+				  G.dag->NumJobsFailed(), G.dag->NumJobsSubmitted(),
+				  G.dag->NumJobsReady(), G.dag->NumScriptsRunning(),
+				  G.dag->NumScriptsRunning() == 1 ? "" : "s" );
+	return;
 }
 
 void main_timer () {
@@ -275,44 +363,74 @@ void main_timer () {
     // If recovery was needed, the log file has been completely read and
     // we are ready to proceed with jobs yet unsubmitted.
     //------------------------------------------------------------------------
-    
-    debug_println (DEBUG_DEBUG_2, "%s: Jobs Done: %d/%d", __FUNCTION__,
-                   G.dag->NumJobsDone(), G.dag->NumJobs());
-    
+
+    static int prevJobsDone = 0;
+    static int prevJobs = 0;
+    static int prevJobsFailed = 0;
+    static int prevJobsSubmitted = 0;
+    static int prevJobsReady = 0;
+    static int prevScriptsRunning = 0;
+
     // If the log has grown
     if (G.dag->DetectLogGrowth()) {
         if (G.dag->ProcessLogEvents() == false) {
-            if (DEBUG_LEVEL(DEBUG_DEBUG_1)) G.dag->Print_TermQ();
+			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_println (DEBUG_QUIET, "Aborting DAG..."
                            "removing running jobs");
             G.dag->RemoveRunningJobs();
             debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
             G.dag->Rescue(G.rescue_file, G.datafile);
-            G.CleanUp();
-            DC_Exit(0);
+			main_shutdown_graceful();
+			return;
         }
     }
   
+    // print status if anything's changed (or we're in a high debug level)
+    if( prevJobsDone != G.dag->NumJobsDone()
+        || prevJobs != G.dag->NumJobs()
+        || prevJobsFailed != G.dag->NumJobsFailed()
+        || prevJobsSubmitted != G.dag->NumJobsSubmitted()
+        || prevJobsReady != G.dag->NumJobsReady()
+        || prevScriptsRunning != G.dag->NumScriptsRunning()
+		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
+		print_status();
+        prevJobsDone = G.dag->NumJobsDone();
+        prevJobs = G.dag->NumJobs();
+        prevJobsFailed = G.dag->NumJobsFailed();
+        prevJobsSubmitted = G.dag->NumJobsSubmitted();
+        prevJobsReady = G.dag->NumJobsReady();
+        prevScriptsRunning = G.dag->NumScriptsRunning();
+	}
+
     assert (G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs());
 
     //
     // If DAG is complete, hurray, and exit.
     //
-    if (G.dag->NumJobsDone() >= G.dag->NumJobs()) {
-        assert (G.dag->NumJobsRunning() == 0);
-        debug_println (DEBUG_NORMAL, "All jobs Completed!");
-        G.CleanUp();
-        DC_Exit(0);
+    if( G.dag->Done() ) {
+        assert (G.dag->NumJobsSubmitted() == 0);
+        debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
+		G.CleanUp();
+		DC_Exit( 0 );
     }
 
     //
-    // If no jobs are running, but the dag is not complete,
+    // If no jobs are submitted, but the dag is not complete,
     // then at least one job failed, or a cycle exists.
     // 
-    if (G.dag->NumJobsRunning() == 0 && G.rescue_file != NULL) {
-        debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
-        G.dag->Rescue(G.rescue_file, G.datafile);
-        G.CleanUp();
-        DC_Exit(0);
+    if( G.dag->NumJobsSubmitted() == 0 &&
+		G.dag->NumScriptsRunning() == 0 ) {
+		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
+			printf( "ERROR: the following job(s) failed:\n" );
+			G.dag->PrintJobList( Job::STATUS_ERROR );
+		}
+		if( G.rescue_file != NULL ) {
+			debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
+			G.dag->Rescue(G.rescue_file, G.datafile);
+		}
+		else {
+			debug_println( DEBUG_NORMAL, "Rescue file not defined..." );
+		}
+		main_shutdown_graceful();
     }
 }

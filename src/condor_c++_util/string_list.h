@@ -37,8 +37,10 @@ public:
 	~StringList();
 	void initializeFromString (char *);
 	BOOLEAN contains( const char * );
-	BOOLEAN substring( const char * );
-	BOOLEAN contains_withwildcard(const char *string);
+	BOOLEAN substring( const char * );	
+	BOOLEAN contains_anycase( const char * );
+	BOOLEAN contains_withwildcard( const char *str );				
+	BOOLEAN contains_anycase_withwildcard( const char * );
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	void append (const char* str) { strings.Append( strdup(str) ); }
@@ -48,6 +50,7 @@ public:
 	int number (void) { return strings.Number(); };
 	bool isEmpty(void) { return strings.IsEmpty(); };
 private:
+	BOOLEAN contains_withwildcard(const char *string, bool anycase);
 	List<char> strings;
 	char *delimiters;
 

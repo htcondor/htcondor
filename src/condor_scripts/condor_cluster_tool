@@ -17,6 +17,11 @@
 # 25-Jul-2000 Peter Couvares <pfc@cs.wisc.edu> fixed status checking
 #             to ask nodes directly so fast shutdown works reliably
 #
+# 17-Sep-2000 Erik Paulson <epaulson@cs.wisc.edu> added condor_findhost 
+#             to the 'off' command; 
+# 04-Oct-2000 Erik Paulson <epaulson@cs.wisc.edu> fix check_auth() to
+#             know about the database nodes, and update the usage
+#
 # This is a very simple, first pass to solve this problem.
 # Future work required:
 #   reservations into the future
@@ -41,7 +46,8 @@ use Sys::Hostname;
 
        $RELEASE_DIR = "/unsup/condor";
           $NUMNODES = 64;  # (beware: we assume $NUMNODES<=99 in a few places)
-         $STARTNODE = 2;
+	   $DBNODES = 36;
+         $STARTNODE = 1;
        $CONDOR_POOL = "condor.cs.wisc.edu";
            $LOGFILE = "/p/condor/workspaces/cluster/condor_cluster_tool.log";
              $DEBUG = 0;
@@ -53,14 +59,20 @@ use Sys::Hostname;
              $BIN = "$RELEASE_DIR/bin";
       $CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_POOL -fast";
        $CONDOR_ON = "$SBIN/condor_on -pool $CONDOR_POOL";
+ $CONDOR_FINDHOST = "$BIN/condor_findhost -m -pool $CONDOR_POOL";  
       $CONFIG_OFF = "$BIN/condor_config_val -pool $CONDOR_POOL " .
                     "-set 'start_daemons = false'";
        $CONFIG_ON = "$BIN/condor_config_val -pool $CONDOR_POOL " .
                     "-unset start_daemons";
    $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_POOL -direct";
  $CONDOR_RECONFIG = "$SBIN/condor_reconfig -pool $CONDOR_POOL";
-$CONDOR_HOSTALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL " .
-                    "-name c33 hostallow_administrator";
+$CONDOR_HOSTALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL "; 
+  $CONDOR_DBALLOW = "-name db31 hostallow_administrator";
+  $CONDOR_CCALLOW = "-name c33 hostallow_administrator";
+  $CCLUSTER_CONST = " -c 'IsComputeCluster==TRUE'";
+ $DBCLUSTER_CONST = " -c 'IsDBCluster==TRUE'";
+   $GIGABIT_CONST = " -c 'HasGigabit==TRUE'";
+       $USE_CONST = $CCLUSTER_CONST;
 
 
 ### The guts
@@ -72,9 +84,9 @@ if( $#ARGV < 0 ) {
 }
 
 # determine username & hostname and then open logfile
-$user = scalar getpwuid( $UID );
+$username = scalar getpwuid( $UID );
 $hostname = hostname();
-$user = "$user\@$hostname";
+$user = "$username\@$hostname";
 open( LOG, ">>$LOGFILE" ) || warn "$0: error opening $LOGFILE: $!\n";
 
 # make sure initial logging occurs even if user kills us mid-way
@@ -103,8 +115,21 @@ if( $cmd =~ /^ch/ )
 	{
 	    push @args, "c$n";
 	}
+	foreach $n ($STARTNODE .. 9)
+	{
+	    push @args, "db0$n";
+	}
+	foreach $n (10 .. $DBNODES)
+	{
+	    push @args, "db$n";
+	}
+	$print_summary = 1;
     }
+    $on_total = 0;
+    $off_total = 0;
     check_condor( @args );
+    print "$on_total nodes running Condor, $off_total not running Condor\n"
+	if $print_summary;
 }
 elsif( $cmd eq "on" )
 {
@@ -113,7 +138,6 @@ elsif( $cmd eq "on" )
 	usage();
 	exit 1;
     }
-    check_auth();
     start_condor( @args );
 }
 elsif( $cmd =~ /^of/ )
@@ -123,7 +147,6 @@ elsif( $cmd =~ /^of/ )
 	usage();
 	exit 1;
     }
-    check_auth();
     stop_condor( @args );
 }
 else
@@ -141,40 +164,103 @@ exit 0;
 sub usage()
 {
     print STDERR
-	"Usage: $0 off N\n",
-	"       $0 on hosts\n",
+	"Usage: $0 off N [-cnode] [-dbnode] [-gigabit]\n",
+	"       $0 on hosts [-a]\n",
 	"       $0 check [hosts]\n",
 	"\n",
 	"       off   Stop Condor on any N nodes, and print their hostnames ",
 	"to STDOUT\n",
+	"            -cnode:   Pick from the Compute Cluster (default)\n ",
+	"            -dbnode:  Pick from the Database Cluster\n ",
+ 	"            -gigabit: Pick from the nodes with gigabit\n ",     
+    "\n",
 	"       on    Start Condor on the given hosts\n",
+	"             -a: Return all nodes that you currently hae checked out\n",
+	"\n",
 	"       check Print state of Condor on all nodes (or specific nodes, if given)\n",
 	"\n",
 	"       Examples:\n",
 	"          $0 off 4\n",
+	"          $0 off 2 -dbnode\n",
 	"          $0 on c03 c05 c07 c09\n",
-	"          $0 check c03 c04\n";
+	"          $0 on -a\n",
+	"          $0 check c03 c04\n",
+	"\nFor help, please send mail to c-cluster-admin\@cs.wisc.edu\n";
 }
 
 
 sub check_auth()
 {
-    $auth_hosts = `$CONDOR_HOSTALLOW`;
-    unless( $auth_hosts =~ /$hostname/ ) {
+    $DBCHECK = $CONDOR_HOSTALLOW . $CONDOR_DBALLOW;
+    $CCCHECK = $CONDOR_HOSTALLOW . $CONDOR_CCALLOW;
+
+    $db_auth_hosts = `$DBCHECK`;
+	#print "$DBCHECK\n";
+    $cc_auth_hosts = `$CCCHECK`;
+    unless( ($cc_auth_hosts =~ /$hostname/ )||($db_auth_hosts =~ /$hostname/)) {
 	print "Error: current host ($hostname) is not authorized ";
 	print "to manage nodes\n\n";
-	print "Please use one of the following authorized hosts: ";
-	print "$auth_hosts\n";
+	print "Please use one of the following authorized hosts for "; 
+	print "compute cluster nodes:\n ";
+	print "$cc_auth_hosts\n";
+	print "Or use one of the following hosts for DB nodes:\n ";
+	print "$db_auth_hosts\n";
 	print "...or contact c-cluster-admin\@cs.wisc.edu with any ";
 	print "questions.\n\n";
 	exit 1;
     }
 }
 
+sub everyone() {
+
+	foreach $n ($STARTNODE .. 9)
+	{
+	    push @allnodes, "c0$n";
+	}
+	foreach $n (10 .. $NUMNODES)
+	{
+	    push @allnodes, "c$n";
+	}
+	foreach $n ($STARTNODE .. 9)
+	{
+	    push @allnodes, "db0$n";
+	}
+	foreach $n (10 .. $DBNODES)
+	{
+	    push @allnodes, "db$n";
+	}
+
+	return(@allnodes);
+}
 
 sub start_condor
 {
-    my @hosts = @_;
+    my (@hosts);
+    %nodes = ();
+    foreach $arg (@_) {
+        if( $arg eq "-a") {
+            @allhosts = everyone();
+            parse_logfile();
+            foreach $host (@allhosts)
+            {
+                $reserver = ${$nodes{$host}}[1];
+                $reserver =~ s/\@.*$//;
+                if ( $reserver eq $username)
+                {
+                    #print " (reserved by $reserver at ";
+                    #print "${$nodes{$host}}[0])";
+                    #print "$user has $host checked out\n";
+                    push(@hosts, $host);
+                }
+            }
+         }
+         else {
+             push(@hosts, $arg);
+        }
+    }
+
+    check_auth();
+
     foreach $host ( @hosts )
     {
 	# if the user just specified a number, translate to a "cXX" node name
@@ -190,6 +276,7 @@ sub start_condor
 	    }
 	}
 	print LOG timestamp() . " $user    (returned $host)\n";
+	#print timestamp() . " $user    (returned $host)\n";
 	system( "$CONDOR_ON $host" );
 	system( "$CONFIG_ON -name $host > /dev/null" );
 	system( "$CONDOR_RECONFIG $host > /dev/null" );
@@ -198,17 +285,34 @@ sub start_condor
 
 
 sub stop_condor {
-    my ($num) = @_;
-    my ($host, @hosts);
+    my ($num, $host, @hosts);
+
+    foreach $arg (@_) {
+         if( $arg eq "-gigabit") {
+            $USE_CONST = $GIGABIT_CONST;
+         }
+         elsif ($arg eq "-dbnode") {
+             $USE_CONST = $DBCLUSTER_CONST;
+         }
+         elsif ($arg eq "-cnode") {
+			$USE_CONST = $CCLUSTER_CONST;
+         }
+         else {
+			$num = $arg;
+         }
+    }
 
     if( $num =~ /\D/ ) {
-	die "$0: error: $num is not a number, try again\n";
+        die "$0: error: $num is not a number, try again\n";
     }
     if( $num > $NUMNODES ) {
-	die "$0: error: the cluster only has $NUMNODES machines, try again\n";
+        die "$0: error: the cluster only has $NUMNODES machines, try again\n";
     }
 
+    check_auth();
+
     @hosts = find_avail( $num );
+    @hosts = sort(@hosts);
 
     foreach $host ( @hosts ) {
 	kill_condor( $host );
@@ -221,6 +325,7 @@ sub stop_condor {
 	    print "DEBUG: $host still up...\n" if $DEBUG;
 	    sleep 1;
 	}
+	$host =~ s/\.cs\.wisc\.edu//;
 	print $host, "\n";
 	print LOG timestamp() . " $user    (given $host)\n";
     }
@@ -232,23 +337,19 @@ sub find_avail {
     my ($found, $host, @avail);
 
     $found = 0;
-    for( $i = $STARTNODE; $i <= $NUMNODES; $i++ ) {
-	if( $i < 10 ) {
-	    $host = "c0$i";
-	} else {
-	    $host = "c$i";
-	}
-	if( condor_up ( $host ) )
-	{
-	    # this node is available; give it up
-	    push @avail, $host;
-	    $found++;
-	} 
-	if( $found == $num ) {
-	    return @avail;
-	}
+
+    $CONDOR_FINDHOST_COMMAND = $CONDOR_FINDHOST . $USE_CONST . " -n $num";
+    open ( GETMACHINES, "$CONDOR_FINDHOST_COMMAND 2>&1 |\n");
+    while(<GETMACHINES>) {
+        chomp;
+        push @avail, $_;
     }
-    die "$0: error: only $found nodes found running Condor, try again\n";
+
+    close(GETMACHINES);
+    $exit = ($? >> 8);
+    $found = $exit - 1;
+    die "$0: error: only $found nodes found running Condor, try again\n" if $exit > 0;
+    return @avail;
 }
 
 
@@ -259,32 +360,13 @@ sub kill_condor {
     system( "$CONDOR_RECONFIG $host > /dev/null" );
 }
 
+sub parse_logfile {
+    my( $date, $user, $checkedout);
 
-sub check_condor {
-    my( @hosts ) = @_;
-    
-    %nodes = ();
     $date = '';
     $user = '';
     $checkedOut = 'returned';
-    
-    foreach $host ( @hosts )
-    {
-	#if the user just specifies a number, prepend the "cXX" node name
-	if( $host =~ /^\d+$/ ) 
-	{
-	    if( $host < 10 ) 
-	    {
-		$host = "c0$host";
-	    }
-	    else
-	    {
-		$host = "c$host";
-	    }
-	}
-	push( @{$nodes{"$host"}}, $date, $user, $checkedOut);  
-    }
-    
+
     open( CLUSTER_LOG, $LOGFILE ) || die "$0: error opening $LOGFILE: $!\n";
     while( <CLUSTER_LOG> )
     {
@@ -324,21 +406,48 @@ sub check_condor {
 
 	}
     }
+}
+
+sub check_condor {
+    my( @hosts ) = @_;
+    
+    %nodes = ();
+    
+    foreach $host ( @hosts )
+    {
+	#if the user just specifies a number, prepend the "cXX" node name
+	if( $host =~ /^\d+$/ ) 
+	{
+	    if( $host < 10 ) 
+	    {
+		$host = "c0$host";
+	    }
+	    else
+	    {
+		$host = "c$host";
+	    }
+	}
+	push( @{$nodes{"$host"}}, $date, $user, $checkedOut);  
+    }
+
+    parse_logfile();
 
     #foreach $node (sort keys %nodes) 
+
     foreach $host (@hosts)
     {
 	$isUp = check_host($host);
 	print "$host: $isUp";
 	if ( ${$nodes{$host}}[2] eq "given")
         {
-	    print " (reserved by ${$nodes{$host}}[1] at ";
+	    $reserver = ${$nodes{$host}}[1];
+            $reserver =~ s/\@.*$//;
+	    print " (reserved by $reserver at ";
 	    print "${$nodes{$host}}[0])";
 	}
         print"\n";
     }
 }
-
 
 sub check_host
 {
@@ -350,6 +459,7 @@ sub check_host
     if( $up == 1 )
     {
 	$status = "Condor is on ";
+	$on_total++;
     }
     elsif( $up == -1 )
     {
@@ -358,6 +468,7 @@ sub check_host
     else
     {
 	$status = "Condor is off";
+	$off_total++;
     }
     return $status;
 }

@@ -131,7 +131,8 @@ public:
 	void	*bsd_exit_status();		// BSD style exit status for shadow
 	void	*accumulated_rusage();	// accumulated so far
 	void	*guaranteed_rusage();	// guaranteed by xfer of ckpt or termination
-	void set_times(int u_time, int s_time) { user_time = u_time; sys_time = s_time; }
+	void set_times(int u_time, int s_time) { user_time = u_time; sys_time = s_time; };
+	int get_num_pids_suspended(void) { return pids_suspended; }; 
 
 
 protected:
@@ -202,6 +203,8 @@ private:
 
 	ProcFamily *family;
 
+	// number of pids that are currently suspended
+	int		pids_suspended;
 };
 
 

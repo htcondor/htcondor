@@ -37,13 +37,23 @@ extern int	LockFd;
 extern int	ImageSize;
 extern int	ClientUid;
 extern int	ClientGid;
-extern struct rusage AccumRusage;
 
 extern int UsePipes;
 
 extern V2_PROC *Proc;
 
 ReliSock *syscall_sock = NULL;
+
+/* This is a nasty hack that allows the shadow to record into the user log when 
+the starter suspends its job. It is such a bad hack because the starter
+writes to the CLIENT_LOG socket in the starter after it suspends
+the job, and just before it unsuspends the job. This is a bad idea
+because the starter should NEVER write to the CLIENT_LOG or RSC_LOG
+sockets(only the client should), but someone wanted the functionality
+in the old shadow/starter instead of the new one, so here it is. The long
+function name denotates my dislike for this feature to be here.
+-psilord 2/1/2001 */
+extern "C" void log_old_starter_shadow_suspend_event_hack(char *s1, char *s2);
 
 ReliSock *
 RSC_ShadowInit( int rscsock, int errsock )
@@ -156,6 +166,12 @@ HandleLog()
 					// NOTICE: no break here, we fall thru....
 				case '\0' :
 					if ( buf[nli] != '\0' ) {
+
+						/* if this is a suspend/unsuspend event, deal with it */
+						log_old_starter_shadow_suspend_event_hack(oldbuf,
+							&(buf[nli]));
+
+						/* print the final message into the userlog */
 						dprintf(D_ALWAYS,"Read: %s%s\n",oldbuf,&(buf[nli]));
 					}
 					nli = i+1;

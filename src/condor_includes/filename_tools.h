@@ -7,6 +7,17 @@
 BEGIN_C_DECLS
 
 /**
+Take any pathname -- simple, relative, or complete -- and split it
+into a directory and a file name.   Always succeeds, but return
+code gives some information about the path actually present.
+Returns true if there was a directory component to split off.
+Returns false if there was no directory component, but in this case,
+still fills "dir" with "."
+*/
+
+int filename_split( char *path, char *dir, char *file );
+
+/**
 Take an input string in URL form, and split it into its components.
 URLs are of the form "method://server:port/filename".  Any component
 that is missing will be recorded as the string with one null character.
@@ -30,6 +41,8 @@ filename_url_parse().
 <p>
 The filename argument may be up to _POSIX_PATH_MAX, and output must
 point to a buffer of _POSIX_PATH_MAX*3.
+<p>
+The delimiting characters = and ; may be escaped with a backslash.
 <p>
 Currently, this data is represented as a string attribute within
 a ClassAd.  A much better implementation would be to store it

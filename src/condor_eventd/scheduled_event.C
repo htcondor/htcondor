@@ -182,6 +182,7 @@ ScheduledEvent::ActivateEvent()
 								   "ScheduledEvent::DeactivateEvent()", this);
 
 	active = true;
+	return 0;
 }
 
 int ScheduledShutdownEvent::SlowStartInterval = -1;

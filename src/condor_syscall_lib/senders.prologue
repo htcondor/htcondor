@@ -19,7 +19,6 @@
 #include "condor_error.h"
 #include "startup.h"
 #include "syscall_param_sizes.h"
-
 #include "../condor_ckpt/signals_control.h"
 
 #ifdef LINK_PVM
@@ -39,7 +38,7 @@ REMOTE_syscall( int syscall_num, ... )
 	int		scm;
 	int		terrno;
 	int		rval;
-	sigset_t	omask;
+	sigset_t	mask, omask;
 	va_list ap;
 #if defined(USE_STUB_CLUMPS) || defined(IRIX)
 	int keep_going = 0;
@@ -49,7 +48,7 @@ REMOTE_syscall( int syscall_num, ... )
 
 	va_start( ap, syscall_num );
 
-	_condor_signals_disable();
+	omask = _condor_signals_disable();
 	
 	switch( syscall_num ) {
 

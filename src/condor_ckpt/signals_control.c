@@ -2,58 +2,78 @@
 #include "condor_syscall_mode.h"
 #include "condor_debug.h"
 
-static int disable_count = 0;
+/* Please read documentation in signals_control.h */
 
-void _condor_signals_disable()
-{
-	_condor_ckpt_disable();
-}
-
-void _condor_signals_enable()
-{
-	_condor_ckpt_enable();
-}
+static int ckpt_disable_count = 0;
+static int ckpt_deferred = 0;
+static int ckpt_deferred_signal = 0;
 
 void _condor_ckpt_disable()
 {
-	int sigscm;
-	sigset_t mask;
-
-	disable_count++;
-
-	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-
-	sigemptyset( &mask );
-	sigaddset( &mask, SIGTSTP );
-	sigaddset( &mask, SIGUSR2 );
-
-	if( sigprocmask(SIG_BLOCK,&mask,0) < 0 ) {
-		dprintf(D_ALWAYS, "_condor_ckpt_disable: sigprocmask failed: %s\n", strerror(errno));
-	}
-
-	SetSyscalls( sigscm );
+	ckpt_disable_count++;
 }
 
 void _condor_ckpt_enable()
 {
-	int sigscm;
-	sigset_t mask;
+	int scm;
 
-	disable_count--;
+	ckpt_disable_count--;
 
-	if(disable_count<=0) {
-		disable_count=0;
+	if(ckpt_disable_count<=0) {
+		ckpt_disable_count=0;
+		if(ckpt_deferred) {
+			dprintf(D_ALWAYS,"_condor_ckpt_enable: forcing a deferred checkpoint on signal %d\n",ckpt_deferred_signal);
+			ckpt_deferred=0;
+			scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+			kill( getpid(), ckpt_deferred_signal );
+			SetSyscalls( scm );
+		}
+	}
+}
 
-		sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+int _condor_ckpt_is_disabled()
+{
+	return ckpt_disable_count;
+}
 
-		sigemptyset( &mask );
-		sigaddset( &mask, SIGTSTP );
-		sigaddset( &mask, SIGUSR2 );
+int _condor_ckpt_is_deferred()
+{
+	return ckpt_deferred;
+}
 
-		if( sigprocmask(SIG_UNBLOCK,&mask,0) < 0 )
-			dprintf(D_ALWAYS, "_condor_ckpt_enable: sigprocmask failed: %s\n", strerror(errno));
+void _condor_ckpt_defer( int s )
+{
+	ckpt_deferred = 1;
+	ckpt_deferred_signal = s;
+	dprintf(D_ALWAYS,"received ckpt signal %d, but deferred it for later\n",s);
+}
 
-		SetSyscalls( sigscm );
+sigset_t _condor_signals_disable()
+{
+	sigset_t mask, omask;
+	int scm;
+
+	sigfillset( &mask );
+	sigdelset( &mask, SIGABRT );
+	sigdelset( &mask, SIGBUS );
+	sigdelset( &mask, SIGFPE );
+	sigdelset( &mask, SIGILL );
+	sigdelset( &mask, SIGSEGV );
+	sigdelset( &mask, SIGTRAP );
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
+		dprintf(D_ALWAYS, "_condor_signals_disable: sigprocmask failed: %s\n", strerror(errno));
+	}
+	SetSyscalls( scm );
+
+	return omask;
+}
+
+void _condor_signals_enable( sigset_t mask )
+{
+	if( sigprocmask(SIG_SETMASK,&mask,0) < 0 ) {
+		dprintf(D_ALWAYS, "_condor_signals_enable: sigprocmask failed: %s\n", strerror(errno));
 	}
 }	
 

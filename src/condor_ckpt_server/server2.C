@@ -37,11 +37,16 @@
 #include "alarm2.h"
 #include "condor_uid.h"
 #include "classad_collection.h"
+#include "daemon.h"
 
 XferSummary	xfer_summary;
 
 Server server;
 Alarm  rt_alarm;
+#ifdef WANT_NETMAN
+static bool ManageBandwidth = false;
+static int NetworkHorizon = 300;
+#endif
 
 extern "C" {
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
@@ -60,6 +65,7 @@ Server::Server()
 	restore_req_sd = -1;
 	service_req_sd = -1;
 	replicate_req_sd = -1;
+	socket_bufsize = 0;
 	max_xfers = 0;
 	max_store_xfers = 0;
 	max_restore_xfers = 0;
@@ -85,7 +91,6 @@ Server::~Server()
 
 void Server::Init()
 {
-	struct stat log_stat;
 	char		*ckpt_server_dir, *level, *interval, *collection_log;
 	char		*tmp;
 #ifdef DEBUG
@@ -151,6 +156,14 @@ void Server::Init()
 		clean_interval = CLEAN_INTERVAL;
 	}
 
+	tmp = param( "CKPT_SERVER_SOCKET_BUFSIZE" );
+	if (tmp) {
+		socket_bufsize = atoi(tmp);
+		free(tmp);
+	} else {
+		socket_bufsize = 0;
+	}
+
 	tmp = param( "CKPT_SERVER_MAX_PROCESSES" );
 	if (tmp) {
 		max_xfers = atoi(tmp);
@@ -176,6 +189,27 @@ void Server::Init()
 	}
 
 	max_replicate_xfers = max_store_xfers/5;
+
+#ifdef WANT_NETMAN
+	tmp = param( "MANAGE_BANDWIDTH" );
+	if (!tmp) {
+		ManageBandwidth = false;
+	} else {
+		if (tmp[0] == 'T' || tmp[0] == 't') {
+			ManageBandwidth = true;
+		} else {
+			ManageBandwidth = false;
+		}
+		free(tmp);
+		tmp = param( "NETWORK_HORIZON" );
+		if (tmp) {
+			NetworkHorizon = atoi(tmp);
+			free(tmp);
+		} else {
+			NetworkHorizon = 300;
+		}
+	}
+#endif
 
 	if (first_time) {
 		store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
@@ -939,8 +973,9 @@ void Server::Replicate()
 	Log("Checking replication schedule...");
 	ReplicationEvent *e = replication_schedule.GetNextReplicationEvent();
 	if (e) {
+		server_sa = e->ServerAddr();
 		sprintf(log_msg, "Replicating: Prio=%d, Serv=%s, File=%s",
-				e->Prio(), sin_to_string(&(e->ServerAddr())), e->File());
+				e->Prio(), sin_to_string(&server_sa), e->File());
 		Log(log_msg);
 		sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
 				inet_ntoa(e->ShadowIP()), e->Owner(), e->File());
@@ -955,7 +990,6 @@ void Server::Replicate()
 			Log("Unable to perform replication.  Cannot fork child process.");
 		} else if (child_pid == 0) {
 #endif
-			server_sa = e->ServerAddr();
 			req.ticket = htonl(AUTHENTICATION_TCKT);
 			req.priority = htonl(0);
 			req.time_consumed = htonl(0);
@@ -1093,7 +1127,6 @@ void Server::SendStatus(int data_conn_sd)
   struct sockaddr_in chkpt_addr;
   int                chkpt_addr_len;
   int                xfer_sd;
-  int                buf_size=DATA_BUFFER_SIZE;
 
   chkpt_addr_len = sizeof(struct sockaddr_in);
   if ((xfer_sd=I_accept(data_conn_sd, &chkpt_addr, &chkpt_addr_len)) ==
@@ -1107,12 +1140,80 @@ void Server::SendStatus(int data_conn_sd)
       exit(CHILDTERM_ACCEPT_ERROR);
     }
   close(data_conn_sd);
-  // Changing buffer size may fail
-  setsockopt(xfer_sd, SOL_SOCKET, SO_SNDBUF, (char*) &buf_size, 
-	     sizeof(buf_size));
+  if (socket_bufsize) {
+		  // Changing buffer size may fail
+	  setsockopt(xfer_sd, SOL_SOCKET, SO_SNDBUF, (char*) &socket_bufsize, 
+				 sizeof(socket_bufsize));
+  }
   imds.TransferFileInfo(xfer_sd);
 }
 
+#ifdef WANT_NETMAN
+static struct _file_stream_info {
+	struct in_addr shadow_IP;
+	int shadow_pid;
+	struct in_addr startd_IP;
+	bool store_req;
+	int total_bytes;
+	time_t last_update;
+	char user[MAX_NAME_LENGTH];
+} file_stream_info;
+
+extern "C" {
+void
+file_stream_progress_report(int bytes_moved)
+{
+	if (!ManageBandwidth) return;
+
+	time_t current_time = time(0);
+	if (current_time < file_stream_info.last_update + NetworkHorizon) return;
+
+	dprintf(D_ALWAYS, "Sending CkptServerUpdate: %d bytes to go.\n", 
+			file_stream_info.total_bytes-bytes_moved);
+	ClassAd request;
+	char buf[100];
+
+	sprintf(buf, "%s = \"CkptServerUpdate\"", ATTR_TRANSFER_TYPE);
+	request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_USER, file_stream_info.user);
+	request.Insert(buf);
+	sprintf(buf, "%s = 1", ATTR_FORCE);
+	request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
+			file_stream_info.store_req ?
+			inet_ntoa(file_stream_info.startd_IP) :
+			inet_ntoa(*my_sin_addr()));
+	request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION,
+			file_stream_info.store_req ?
+			inet_ntoa(*my_sin_addr()) :
+			inet_ntoa(file_stream_info.startd_IP));
+	request.Insert(buf);
+	sprintf(buf, "%s = \"<%s:0>\"", ATTR_REMOTE_HOST,
+			inet_ntoa(file_stream_info.startd_IP));
+	request.Insert(buf);
+	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY,
+			file_stream_info.total_bytes-bytes_moved);
+	request.Insert(buf);
+	sprintf(buf, "%s = \"%u.%d\"", ATTR_TRANSFER_KEY,
+			ntohl(file_stream_info.shadow_IP.s_addr),
+			file_stream_info.shadow_pid);
+ 	request.Insert(buf);
+	Daemon Negotiator(DT_NEGOTIATOR);
+	SafeSock sock;
+	sock.timeout(10);
+	if (!sock.connect(Negotiator.addr())) {
+		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
+		return;
+	}
+	sock.put(REQUEST_NETWORK);
+	sock.put(1);
+	request.put(sock);
+	sock.end_of_message();
+	file_stream_info.last_update = time(0);
+}
+}
+#endif
 
 void Server::ProcessStoreReq(int            req_id,
 							 int            req_sd,
@@ -1296,6 +1397,15 @@ void Server::ProcessStoreReq(int            req_id,
 			sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
 					inet_ntoa(shadow_IP), store_req.owner, 
 					store_req.filename);
+#ifdef WANT_NETMAN
+			memcpy(&file_stream_info.shadow_IP, &shadow_IP,
+				   sizeof(struct in_addr));
+			file_stream_info.shadow_pid = ntohl(store_req.key);
+			file_stream_info.store_req = true;
+			file_stream_info.total_bytes = (int) store_req.file_size;
+			file_stream_info.last_update = time(0);
+			strcpy(file_stream_info.user, store_req.owner);
+#endif
 			ReceiveCheckpointFile(data_conn_sd, pathname,
 								  (int) store_req.file_size);
 			exit(CHILDTERM_SUCCESS);
@@ -1303,7 +1413,6 @@ void Server::ProcessStoreReq(int            req_id,
 		UnblockSignals();
 	}
 }
-
 
 void Server::ReceiveCheckpointFile(int         data_conn_sd,
 								   const char* pathname,
@@ -1313,7 +1422,6 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	int                chkpt_addr_len;
 	int                xfer_sd;
 	int				   bytes_recvd=0;
-	int                buf_size=DATA_BUFFER_SIZE;
 	int				   file_fd;
 	int				   peer_info_fd;
 	char			   peer_info_filename[100];
@@ -1349,9 +1457,14 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 		exit(CHILDTERM_ACCEPT_ERROR);
     }
 	close(data_conn_sd);
-	// Changing buffer size may fail
-	setsockopt(xfer_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size, 
-			   sizeof(buf_size));
+	if (socket_bufsize) {
+			// Changing buffer size may fail
+		setsockopt(xfer_sd, SOL_SOCKET, SO_RCVBUF, (char*) &socket_bufsize, 
+				   sizeof(socket_bufsize));
+	}
+#ifdef WANT_NETMAN
+	file_stream_info.startd_IP = chkpt_addr.sin_addr;
+#endif
 	bytes_recvd = stream_file_xfer(xfer_sd, file_fd, file_size);
 	// note that if file size == -1, we don't know if we got the complete 
 	// file, so we must rely on the client to commit via SERVICE_RENAME
@@ -1550,6 +1663,15 @@ void Server::ProcessRestoreReq(int             req_id,
 			  close(store_req_sd);
 			  close(restore_req_sd);
 			  close(service_req_sd);
+#ifdef WANT_NETMAN
+			  memcpy(&file_stream_info.shadow_IP, &shadow_IP,
+					 sizeof(struct in_addr));
+			  file_stream_info.shadow_pid = ntohl(restore_req.key);
+			  file_stream_info.store_req = false;
+			  file_stream_info.total_bytes = (int) chkpt_file_status.st_size;
+			  file_stream_info.last_update = time(0);
+			  strcpy(file_stream_info.user, restore_req.owner);
+#endif
 			  TransmitCheckpointFile(data_conn_sd, pathname,
 									 chkpt_file_status.st_size);
 			  exit(CHILDTERM_SUCCESS);
@@ -1570,7 +1692,6 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	int                bytes_to_read;
 	int                bytes_sent=0;
 	int                temp;
-	int                buf_size=DATA_BUFFER_SIZE;
 	int				   file_fd;
 	int				   peer_info_fd;
 	char			   peer_info_filename[100];
@@ -1601,10 +1722,15 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
     }
 	close(data_conn_sd);
 
-	// Changing buffer size may fail
-	setsockopt(xfer_sd, SOL_SOCKET, SO_SNDBUF, (char*) &buf_size, 
-			   sizeof(buf_size));
+	if (socket_bufsize) {
+			// Changing buffer size may fail
+		setsockopt(xfer_sd, SOL_SOCKET, SO_SNDBUF, (char*) &socket_bufsize, 
+			   sizeof(socket_bufsize));
+	}
 
+#ifdef WANT_NETMAN
+	file_stream_info.startd_IP = chkpt_addr.sin_addr;
+#endif
 	bytes_sent = stream_file_xfer(file_fd, xfer_sd, file_size);
 
 	close(xfer_sd);

@@ -29,6 +29,7 @@
 #ifdef WIN32
 #include "perm.h"
 #endif
+#include "condor_uid.h"
 
 class FileTransfer;	// forward declatation
 
@@ -55,7 +56,8 @@ class FileTransfer {
 		a check is perfomed to see if the ATTR_OWNER attribute defined in the
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
-	int Init(ClassAd *Ad, bool check_file_perms = false);
+	int Init( ClassAd *Ad, bool check_file_perms = false, 
+			  priv_state priv = PRIV_UNKNOWN );
 
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
@@ -146,6 +148,8 @@ class FileTransfer {
 #ifdef WIN32
 	perm* perm_obj;
 #endif		
+    priv_state desired_priv_state;
+	bool want_priv_change;
 	static TranskeyHashTable* TranskeyTable;
 	static TransThreadHashTable* TransThreadTable;
 	static int CommandsRegistered;

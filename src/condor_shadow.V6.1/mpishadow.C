@@ -40,6 +40,7 @@ MPIShadow::MPIShadow() {
     ResourceList.truncate(-1);
 	actualExitReason = -1;
 	actualExitStatus = -1;    
+	info_tid = -1;
 }
 
 MPIShadow::~MPIShadow() {
@@ -51,7 +52,8 @@ MPIShadow::~MPIShadow() {
 
 void 
 MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[], 
-                 char capability[], char cluster[], char proc[])  {
+                 char capability[], char cluster[], char proc[])
+{
 
     if ( !jobAd ) {
         EXCEPT( "No jobAd defined!" );
@@ -60,10 +62,14 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
         // BaseShadow::baseInit - basic init stuff...
     baseInit( jobAd, schedd_addr, cluster, proc );
 
-        /* Register command to take pushed matches */
-    daemonCore->Register_Command( TAKE_MATCH, "TAKE_MATCH", 
-         (CommandHandlercpp)&MPIShadow::getResources, "getResurces", 
-         this, WRITE );
+		// Register command which gets updates from the starter
+		// on the job's image size, cpu usage, etc.  Each kind of
+		// shadow implements it's own version of this to deal w/ it
+		// properly depending on parallel vs. serial jobs, etc. 
+	daemonCore->
+		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO", 
+						  (CommandHandlercpp)&MPIShadow::updateFromStarter,
+						  "MPIShadow::updateFromStarter", this, WRITE ); 
 
         /* Register Command for sneaky rsh: */
 	daemonCore->Register_Command( MPI_START_COMRADE, "MPI_START_COMRADE", 
@@ -85,71 +91,124 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
     }
 
 	replaceNode ( temp, 0 );
-
-//	printAdToFile ( temp, "mpi-master-ad" );
-
+	rr->setNode( 0 );
+	sprintf( buf, "%s = 0", ATTR_NODE );
+	temp->InsertOrUpdate( buf );
     rr->setJobAd( temp );
 
     ResourceList[ResourceList.getlast()+1] = rr;
 
-        /* Now we wait.  We'll enter the getResources handler momentarily, 
-           as the schedd contacts us and sends us matches */
+		/*
+		  Finally, register a timer to call getResources(), which
+		  sends a command to the schedd to get all the job classads,
+		  startd sinful strings, and capabilities for all the matches
+		  for our computation.  
+		  In the future this will just be a backup way to get the
+		  info, since the schedd will start to push all this info to
+		  our UDP command port.  For now, this is the only way we get
+		  the info.
+		*/
+	info_tid = daemonCore->
+		Register_Timer( 1, 0,
+						(TimerHandlercpp)&MPIShadow::getResources,
+						"getResources", this );
+	if( info_tid < 0 ) {
+		EXCEPT( "Can't register DC timer!" );
+	}
 }
 
-int 
-MPIShadow::getResources(int cmd, Stream *s) {
-/* The sender of this command is the Scheduler::pushMPIMatches() function. */
 
+int 
+MPIShadow::getResources( void )
+{
     dprintf ( D_FULLDEBUG, "Getting machines from schedd now...\n" );
 
     char *host = NULL;
     char *capability = NULL;
     MpiResource *rr;
+	int cluster;
+	char buf[128];
+
     int numProcs=0;    // the # of procs to come
     int numInProc=0;   // the # in a particular proc.
-    ClassAd *otherAd = NULL;
-	ClassAd *tmpAd = NULL;
+	ClassAd *job_ad = NULL;
+	ClassAd *tmp_ad = NULL;
 	int nodenum = 1;
+	ReliSock sock;
+	int cmd = GIVE_MATCHES;
 
-    s->decode();
+	cluster = getCluster();
+    rr = ResourceList[0];
+	rr->getCapability( capability );
+
+	sock.timeout(20);
+
+		// First, contact the schedd and send the command, the
+		// cluster, and the capability
+
+	if( ! sock.connect( getScheddAddr() ) ) {
+		EXCEPT( "Can't connect to schedd at %s", getScheddAddr() );
+	}
+		
+	sock.encode();
+	if( ! sock.code(cmd) ) {
+		EXCEPT( "Can't send cmd (%d) to schedd", cmd );
+	}
+	if( ! sock.code(cluster) ) {
+		EXCEPT( "Can't send cluster (%d) to schedd\n", cluster );
+	}
+	if( ! sock.code(capability) ) {
+		EXCEPT( "Can't send capability to schedd\n" );
+	}
+
+		// Now that we sent this, free the memory that was allocated
+		// with getCapability() above
+	delete [] capability;
+	capability = NULL;
+
+	if( ! sock.end_of_message() ) {
+		EXCEPT( "Can't send EOM to schedd\n" );
+	}
+	
+		// Ok, that's all we need to send, now we can read the data
+		// back off the wire
+	sock.decode();
 
         // We first get the number of proc classes we'll be getting.
-    if ( !s->code( numProcs ) ) {
+    if ( !sock.code( numProcs ) ) {
         EXCEPT( "Failed to get number of procs" );
-    }
-
-    if ( numProcs>1 ) {
-            // will have to connect to schedd to get other ads...
-		if (!ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT, true)) {
-			EXCEPT("Failed to connect to schedd!");
-		}
-
-            // disconnect is below the main for loop.
     }
 
         /* Now, do stuff for each proc: */
     for ( int i=0 ; i<numProcs ; i++ ) {
-        int pn;
-        if( !s->code( pn ) ||
-            !s->code( numInProc ) ) {
-            EXCEPT( "Failed to get number in proc" );
-        }
-        if ( pn != i ) {
-            EXCEPT( "Bad proc number - communication error?" );
+		job_ad = new ClassAd();
+		if( !job_ad->get(sock)  ) {
+            EXCEPT( "Failed to get job classad for proc %d", i );
+		}
+        if( !sock.code( numInProc ) ) {
+            EXCEPT( "Failed to get number of matches in proc %d", i );
         }
 
-        dprintf ( D_FULLDEBUG, "Got proc # %d, num %d.\n", pn, numInProc );
-           
+        dprintf ( D_FULLDEBUG, "Got %d matches for proc # %d\n",
+				  numInProc, i );
+
         for ( int j=0 ; j<numInProc ; j++ ) {
-            if ( !s->code( host ) ||
-                 !s->code( capability ) ) {
+            if ( !sock.code( host ) ||
+                 !sock.code( capability ) ) {
                 EXCEPT( "Problem getting resource %d, %d", i, j );
             }
             dprintf ( D_FULLDEBUG, "Got host: %s   cap: %s\n",host,capability);
             
             if ( i==0 && j==0 ) {
+					/* 
+					   TODO: once this is just backup for if the
+					   schedd doesn't push it, we need to NOT ignore
+					   the first match, since we don't already have
+					   it, really.
+					*/
                     /* first host passed on command line...we already 
                        have it!  We ignore it here.... */
+
                 free( host );
                 free( capability );
                 host = NULL;
@@ -161,26 +220,16 @@ MPIShadow::getResources(int cmd, Stream *s) {
             rr->setExecutingHost ( host );
             rr->setCapability ( capability );
             rr->setMachineName ( "Unknown" );
-            if ( i==0 ) {
-                    // First proc; already have jobAd */
-				tmpAd = new ClassAd ( *(getJobAd()) );
-				replaceNode ( tmpAd, nodenum++ );
-                rr->setJobAd( tmpAd );
-            }
-            else {
-                    // Other procs: need jobAd from Schedd....
-                if ( !otherAd ) {
-                    otherAd = GetJobAd( getCluster(), i );
-                    if ( !otherAd ) {
-                        dprintf ( D_ALWAYS, "GetJobAd failure, errno %d\n", 
-                                  errno );
-                        EXCEPT( "Failed to get job ad from schedd" );
-                    }
-                }
-				tmpAd = new ClassAd ( *otherAd );
-				replaceNode ( tmpAd, nodenum++ );
-                rr->setJobAd( tmpAd );
-            }
+			tmp_ad = new ClassAd ( *job_ad );
+			replaceNode ( tmp_ad, nodenum );
+			rr->setNode( nodenum );
+			sprintf( buf, "%s = %d", ATTR_NODE, nodenum );
+			tmp_ad->InsertOrUpdate( buf );
+			sprintf( buf, "%s = \"%s\"", ATTR_MY_ADDRESS,
+					 daemonCore->InfoCommandSinfulString() );
+			tmp_ad->InsertOrUpdate( buf );
+			rr->setJobAd( tmp_ad );
+			nodenum++;
 
             ResourceList[ResourceList.getlast()+1] = rr;
 
@@ -192,22 +241,14 @@ MPIShadow::getResources(int cmd, Stream *s) {
 
         } // end of for loop for this proc
         
-            // clear out ad for this proc
-        if ( otherAd ) {
-                // not sure if FreeJobAd is proper here or not...
-            FreeJobAd( otherAd );
-        }
+		delete job_ad;
+		job_ad = NULL;
 
     } // end of for loop on all procs...
 
-    if ( numProcs>1 ) {
-            // disconnect if we connected above...
-        DisconnectQ( NULL );
-    }
+    sock.end_of_message();
 
-    s->end_of_message();
-
-	numNodes = nodenum + 1;  // for later use...
+	numNodes = nodenum;  // for later use...
 
     dprintf ( D_PROTOCOL, "#1 - Shadow started; %d machines gotten.\n", 
 			  numNodes );
@@ -217,9 +258,10 @@ MPIShadow::getResources(int cmd, Stream *s) {
     return TRUE;
 }
 
-void
-MPIShadow::startMaster() {
 
+void
+MPIShadow::startMaster()
+{
     dprintf ( D_FULLDEBUG, "In MPIShadow::startMaster()\n" );
 
     MpiResource *rr;
@@ -298,7 +340,7 @@ MPIShadow::startMaster() {
     rr = ResourceList[0];
 
         // alter the master's args...
-    hackMasterArgs( rr->getJobAd() );
+    hackMasterAd( rr->getJobAd() );
 
         // yak with this startd.  Others will come in startComrade.
     if ( rr->requestIt() == -1 ) {
@@ -319,7 +361,8 @@ MPIShadow::startMaster() {
 }
 
 int
-MPIShadow::startComrade( int cmd, Stream* s ) {
+MPIShadow::startComrade( int cmd, Stream* s )
+{
 /* This command made by sneaky rsh:  condor_starter.V6.1/condor_rsh.C */
 
     dprintf ( D_FULLDEBUG, "Getting information for a comrade node\n" );
@@ -338,7 +381,7 @@ MPIShadow::startComrade( int cmd, Stream* s ) {
     MpiResource *rr = ResourceList[nextResourceToStart++];
     
         // modify this comrade's arguments...using the comradeArgs given.
-    hackComradeArgs( comradeArgs, rr->getJobAd() );
+    hackComradeAd( comradeArgs, rr->getJobAd() );
 
     dprintf ( D_PROTOCOL, "#9 - Added args to jobAd, now requesting:\n" );
 
@@ -367,7 +410,8 @@ MPIShadow::startComrade( int cmd, Stream* s ) {
 }
 
 void 
-MPIShadow::hackMasterArgs( ClassAd *ad ) {
+MPIShadow::hackMasterAd( ClassAd *ad )
+{
 /* simple:  get args, add -p4pg (and more...), put args back in */
 
 	char args[_POSIX_ARG_MAX];
@@ -378,8 +422,9 @@ MPIShadow::hackMasterArgs( ClassAd *ad ) {
 	}
     
     char tmp[_POSIX_ARG_MAX];
-    sprintf ( tmp, "%s = \"%s%s-p4pg %s/procgroup.%d.%d\"", 
-              ATTR_JOB_ARGUMENTS, args, args[0]?" ":"", getIwd(), getCluster(), getProc() );
+
+    sprintf ( tmp, "%s = \"-p4pg procgroup.%d.%d %s\"", 
+              ATTR_JOB_ARGUMENTS, getCluster(), getProc(), args );
 
     ad->Delete( ATTR_JOB_ARGUMENTS );
 
@@ -387,10 +432,43 @@ MPIShadow::hackMasterArgs( ClassAd *ad ) {
 		dprintf( D_ALWAYS, "Unable to update args! Aborting.\n" );
 		shutDown( JOB_NOT_STARTED, 0 );
 	}
+
+		// While we're at it, if the job wants files transfered,
+		// include the procgroup file in the list of input files.
+		// This is only needed on the master.
+	if( !ad->LookupString(ATTR_TRANSFER_FILES, args) ) {
+			// Nothing, we're done.
+		return;
+	}
+		// Ok, we found it.  If it's set to anything other than
+		// "Never", we need to do our work.
+	if( args[0] == 'n' || args[0] == 'N' ) {
+			// It's "never", we're done.
+		return;
+	}
+
+		// Now, see if they already gave us a list.
+	if( !ad->LookupString(ATTR_TRANSFER_INPUT_FILES, args) ) {
+			// Nothing here, so we can safely add it ourselves. 
+		sprintf( tmp, "%s = \"procgroup.%d.%d\"",
+				 ATTR_TRANSFER_INPUT_FILES, getCluster(), getProc() ); 
+	} else {
+			// There's a list already.  We've got to append to it. 
+		sprintf( tmp, "%s = \"%s, procgroup.%d.%d\"",
+				 ATTR_TRANSFER_INPUT_FILES, args, getCluster(),
+				 getProc() );
+
+	}
+	dprintf( D_FULLDEBUG, "About to append to job ad: %s\n", tmp );
+	if ( !ad->Insert( tmp )) {
+		dprintf( D_ALWAYS, "Unable to update %s! Aborting.\n",
+				 ATTR_TRANSFER_INPUT_FILES );
+		shutDown( JOB_NOT_STARTED, 0 );
+	}
 }
 
 void
-MPIShadow::hackComradeArgs( char *comradeArgs, ClassAd *ad )
+MPIShadow::hackComradeAd( char *comradeArgs, ClassAd *ad )
 {
 
 /* Args are in form:
@@ -412,13 +490,13 @@ MPIShadow::hackComradeArgs( char *comradeArgs, ClassAd *ad )
     
     char args[2048];
     if ( !ad->LookupString( ATTR_JOB_ARGUMENTS, args )) {
-        dprintf ( D_ALWAYS, "Failed to get Job args in hackComradeArgs!\n" );
+        dprintf ( D_ALWAYS, "Failed to get Job args in hackComradeAd!\n" );
         shutDown( JOB_NOT_STARTED, 0 );
     }
 
     char tmp[2048];
-    sprintf ( tmp, "%s = \"%s%s%s\"", 
-              ATTR_JOB_ARGUMENTS, args, args[0]?" ":"", newargs, getIwd() );
+    sprintf( tmp, "%s = \"%s %s\"", 
+			 ATTR_JOB_ARGUMENTS, newargs, args );
     free( comradeArgs );
 
     dprintf ( D_FULLDEBUG, "Inserting args: %s\n", tmp );
@@ -453,9 +531,21 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
         }
     }
 
-		/* write a terminate event to the user log.  This will
-		   contain only information from the 'master' node. */
-	endingUserLog( exitStatus, exitReason, ResourceList[0] );
+		/* write a terminate event to the user log. */
+	endingUserLog( exitStatus, exitReason );
+
+	// As we leave, we need to deactivate the claim.
+	// Does this go here, or should it go earlier
+	// does killing the starter
+	MpiResource *r;
+    for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
+		r = ResourceList[i];
+		char *tmp = NULL;
+		r->getExecutingHost( tmp );
+		dprintf(D_FULLDEBUG, "Killing the starter on %s\n",tmp);
+		r->killStarter();
+		delete [] tmp;
+	}		
 
 	MpiResource *rr;
     if ( getJobAd() ) {
@@ -479,6 +569,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
     } else {
         DC_Exit( exitReason );
     }
+
 
 		// if we are being called from the exception handler, return
 		// now.
@@ -658,26 +749,30 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 	char *tmp;
 	int i;
 
-	sprintf ( node, "%d", nodenum );
+	sprintf( node, "%d", nodenum );
 
 	ad->ResetExpr();
-	while ( tree = ad->NextExpr() ) {
+	while( (tree = ad->NextExpr()) ) {
 		rhstr[0] = '\0';
 		lhstr[0] = '\0';
-		if (lhs = tree->LArg()) lhs->PrintToStr (lhstr);
-		if (rhs = tree->RArg()) rhs->PrintToStr (rhstr);
-		if (!lhs || !rhs) {
-			dprintf ( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
+		if( (lhs = tree->LArg()) ) {
+			lhs->PrintToStr (lhstr);
+		}
+		if( (rhs = tree->RArg()) ) {
+			rhs->PrintToStr (rhstr);
+		}
+		if( !lhs || !rhs ) {
+			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			return;
 		}
-		if ( tmp=strstr( rhstr, "#MpInOdE#" ) ) {
-			for ( i=0 ; i<strlen(node) ; i++ ) {
+		if( (tmp=strstr(rhstr, "#MpInOdE#")) ) {
+			for( i=0 ; i<(int)strlen(node) ; i++ ) {
 				*(tmp++) = node[i];
 			}
 			*(tmp++) = '\0';
-			sprintf ( final, "%s = %s%s", 
-					  lhstr, rhstr, tmp+(8-strlen(node)) );
-			ad->InsertOrUpdate ( final );
+			sprintf( final, "%s = %s%s", lhstr, rhstr,
+					 tmp+(8-strlen(node)) ); 
+			ad->InsertOrUpdate( final );
 		}
 	}	
 }
@@ -702,3 +797,141 @@ MPIShadow::printAdToFile(ClassAd *ad, char* JobHistoryFileName) {
     fclose(LogFile);
     return true;
 }
+
+
+int
+MPIShadow::updateFromStarter(int command, Stream *s)
+{
+	ClassAd update_ad;
+	MpiResource* mpi_res = NULL;
+	int mpi_node = -1;
+	
+	// get info from the starter encapsulated in a ClassAd
+	s->decode();
+	update_ad.get(*s);
+	s->end_of_message();
+
+		// First, figure out what remote resource this info belongs
+		// to. 
+
+	if( ! update_ad.LookupInteger(ATTR_NODE, mpi_node) ) {
+			// No ATTR_NODE in the update ad!
+		dprintf( D_ALWAYS, "ERROR in MPIShadow::updateFromStarter: "
+				 "no %s defined in update ad, can't process!\n",
+				 ATTR_NODE );
+		return FALSE;
+	}
+	if( ! (mpi_res = findResource(mpi_node)) ) {
+		dprintf( D_ALWAYS, "ERROR in MPIShadow::updateFromStarter: "
+				 "can't find remote resource for node %d, "
+				 "can't process!\n", mpi_node );
+		return FALSE;
+	}
+
+		// Now, we're in good shape.  Grab all the info we care about
+		// and put it in the appropriate place.
+	mpi_res->updateFromStarter( &update_ad );
+
+		// XXX TODO: Do we want to update our local job ad?  Do we
+		// want to store the maximum in there?  Seperate stuff for
+		// each node?  
+
+	return TRUE;
+}
+
+
+MpiResource*
+MPIShadow::findResource( int node )
+{
+	MpiResource* mpi_res;
+	int i;
+	for( i=0; i<=ResourceList.getlast() ; i++ ) {
+		mpi_res = ResourceList[i];
+		if( node == mpi_res->node() ) {
+			return mpi_res;
+		}
+	}
+	return NULL;
+}
+
+
+struct rusage
+MPIShadow::getRUsage( void ) 
+{
+	MpiResource* mpi_res;
+	struct rusage total;
+	struct rusage cur;
+	int i;
+	memset( &total, 0, sizeof(struct rusage) );
+	for( i=0; i<=ResourceList.getlast() ; i++ ) {
+		mpi_res = ResourceList[i];
+		cur = mpi_res->getRUsage();
+		total.ru_stime.tv_sec += cur.ru_stime.tv_sec;
+		total.ru_utime.tv_sec += cur.ru_utime.tv_sec;
+	}
+	return total;
+}
+
+
+int
+MPIShadow::getImageSize( void )
+{
+	MpiResource* mpi_res;
+	int i, max = 0, val;
+	for( i=0; i<=ResourceList.getlast() ; i++ ) {
+		mpi_res = ResourceList[i];
+		val = mpi_res->getImageSize();
+		if( val > max ) {
+			max = val;
+		}
+	}
+	return max;
+}
+
+
+int
+MPIShadow::getDiskUsage( void )
+{
+	MpiResource* mpi_res;
+	int i, max = 0, val;
+	for( i=0; i<=ResourceList.getlast() ; i++ ) {
+		mpi_res = ResourceList[i];
+		val = mpi_res->getDiskUsage();
+		if( val > max ) {
+			max = val;
+		}
+	}
+	return max;
+}
+
+
+float
+MPIShadow::bytesSent( void )
+{
+	MpiResource* mpi_res;
+	int i;
+	float total = 0;
+	for( i=0; i<=ResourceList.getlast() ; i++ ) {
+		mpi_res = ResourceList[i];
+		total += mpi_res->bytesSent();
+	}
+	return total;
+}
+
+
+float
+MPIShadow::bytesReceived( void )
+{
+	MpiResource* mpi_res;
+	int i;
+	float total = 0;
+	for( i=0; i<=ResourceList.getlast() ; i++ ) {
+		mpi_res = ResourceList[i];
+		total += mpi_res->bytesReceived();
+	}
+	return total;
+}
+
+
+
+

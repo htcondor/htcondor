@@ -1,9 +1,9 @@
 NAME = condor_startd
 all_target( $(NAME) )
 
-CFLAGS = $(STD_C_FLAGS)
+CFLAGS = $(STD_C_FLAGS) -Wall
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 #if IS_ALPHA_OSF1
@@ -20,7 +20,9 @@ LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = LoadQueue.o Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
-	setsyscalls.o startd_instantiate.o
+	setsyscalls.o startd_instantiate.o AvailStats.o
+
+template_inst( startd_instantiate.C, startd_instantiate.o )
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
@@ -29,6 +31,7 @@ static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
+c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
 
 html:
 

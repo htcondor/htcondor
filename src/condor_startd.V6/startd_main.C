@@ -67,8 +67,14 @@ int		startd_noclaim_shutdown = 0;
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
 
+bool	compute_avail_stats = false;
+	// should the startd compute vm availability statistics; currently 
+	// false by default
+
 char* Name = NULL;
 
+int		pid_snapshot_interval = 50;
+    // How often do we take snapshots of the pid families? 
 
 char*	mySubSystem = "STARTD";
 
@@ -183,6 +189,11 @@ main_init( int, char* argv[] )
 	}
 
 	resmgr->walk( &(Resource::init_classad) );
+
+		// Now that we have our classads, we can compute things that
+		// need to be evaluated
+	resmgr->walk( &(Resource::compute), A_EVALUATED );
+	resmgr->walk( &(Resource::refresh_classad), A_PUBLIC | A_EVALUATED ); 
 
 		// Do a little sanity checking and cleanup
 	check_perms();
@@ -501,7 +512,16 @@ init_params( int first_time)
 	if( tmp ) {
 		startd_noclaim_shutdown = atoi( tmp );
 		free( tmp );
-	} 
+	}
+
+	compute_avail_stats = false;
+	tmp = param( "STARTD_COMPUTE_AVAIL_STATS" );
+	if( tmp ) {
+		if( tmp[0] == 'T' || tmp[0] == 't' ) {
+			compute_avail_stats = true;
+		}
+		free( tmp );
+	}
 
 	tmp = param( "STARTD_NAME" );
 	if( tmp ) {
@@ -510,6 +530,12 @@ init_params( int first_time)
 		}
 		Name = build_valid_daemon_name( tmp );
 		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );
+		free( tmp );
+	}
+
+	tmp = param( "PID_SNAPSHOT_INTERVAL" );
+	if( tmp ) {
+		pid_snapshot_interval = atoi( tmp );
 		free( tmp );
 	}
 

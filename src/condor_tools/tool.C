@@ -182,8 +182,9 @@ usage( char *str )
 				 "they are done checkpointing." );
 		break;
 	case SQUAWK:
-		fprintf( stderr, "  %s\n", str, 
-				 "is a developer-only command used to talk to daemons." );
+		fprintf( stderr, "  %s\n"
+				 "is a developer-only command used to talk to daemons.", 
+				 str );
 		break;
 	default:
 		fprintf( stderr, "  Valid commands are:\n%s%s",
@@ -672,10 +673,13 @@ doCommand( char *name )
 		cmd = DAEMON_ON;
 		dt = DT_MASTER;
 	}
-	if( cmd == RESTART && subsys ) {
+	if( cmd == RESTART && subsys && old_dt != DT_MASTER ) {
 			// We're trying to restart something and we were told a
 			// specific subsystem to restart.  So, just send a DC_OFF
 			// to that daemon, and the master will restart for us. 
+			// Note: we don't want to do this if we were told to
+			// restart the master, since if we send this, the master
+			// itself will exit, which isn't what we want.
 		cmd = DC_OFF_GRACEFUL;
 	}
 

@@ -47,6 +47,9 @@ extern ClassAd *JobAd;
 
 extern ReliSock *syscall_sock;
 
+static int WroteExecuteEvent = 0;
+extern char* ExecutingHost;
+
 // count of total network bytes previously send and received for this
 // job from previous runs (i.e., includes ckpt transfers)
 float	TotalBytesSent = 0.0, TotalBytesRecvd = 0.0;
@@ -54,6 +57,36 @@ float	TotalBytesSent = 0.0, TotalBytesRecvd = 0.0;
 // count of network bytes send and received outside of CEDAR RSC
 // socket during this run
 float	BytesSent = 0.0, BytesRecvd = 0.0;
+
+/* a stupid hack to amend the in memory job ad with statistics about job
+	un/suspensions */
+void record_suspension_hack(unsigned int action);
+
+extern "C" void
+log_execute (char *host)
+{
+	if( WroteExecuteEvent ) {
+		return;
+	}
+	// log execute event
+	ExecuteEvent event;
+	strcpy (event.executeHost, host);
+	if( !ULog.writeEvent(&event) ) {
+		dprintf (D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
+	} else {
+		WroteExecuteEvent = 1;
+	}
+}
+	
+
+extern "C" void
+check_execute_event( void )
+{
+	if( ! WroteExecuteEvent ) {
+		log_execute( ExecutingHost );
+	}
+}
+
 
 extern "C" void 
 initializeUserLog ()
@@ -76,6 +109,8 @@ initializeUserLog ()
 extern "C" void
 log_termination (struct rusage *localr, struct rusage *remoter)
 {
+	check_execute_event();
+
 	switch (WTERMSIG(JobStatus))
 	{
 	  case 0:
@@ -235,6 +270,8 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 extern "C" void 
 log_checkpoint (struct rusage *localr, struct rusage *remoter)
 {
+	check_execute_event();
+
 	CheckpointedEvent event;
 	event.run_local_rusage = *localr;
 	event.run_remote_rusage = *remoter;
@@ -249,6 +286,8 @@ log_checkpoint (struct rusage *localr, struct rusage *remoter)
 extern "C" void 
 log_image_size (int size)
 {
+	check_execute_event();
+
 	// log the event
 	JobImageSizeEvent event;
 	event.size = size;
@@ -260,20 +299,10 @@ log_image_size (int size)
 
 
 extern "C" void
-log_execute (char *host)
-{
-	// log execute event
-	ExecuteEvent event;
-	strcpy (event.executeHost, host);
-	if (!ULog.writeEvent (&event))
-	{
-		dprintf (D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
-	}
-}
-	
-extern "C" void
 log_except (char *msg)
 {
+	check_execute_event();
+
 	// log shadow exception event
 	ShadowExceptionEvent event;
 	sprintf(event.message, msg);
@@ -293,3 +322,117 @@ log_except (char *msg)
 		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}
 }
+
+extern "C" void
+log_old_starter_shadow_suspend_event_hack (char *s1, char *s2)
+{
+	char *magic_suspend = "TISABH Starter: Suspended user job: ";
+	char *magic_unsuspend = "TISABH Starter: Unsuspended user job.";
+
+	/* This should be bug enough to hold the two string params */
+	char buffer[BUFSIZ * 2 + 2];
+
+	int size_suspend, size_unsuspend;
+
+	size_suspend = strlen(magic_suspend);
+	size_unsuspend = strlen(magic_unsuspend);
+	sprintf(buffer, "%s%s", s1, s2);
+
+	/* depending on if it is a suspend or unsuspend event, do something
+		about it. */
+
+	if (strncmp(buffer, magic_suspend, size_suspend) == 0)
+	{
+		/* matched a suspend event */
+		JobSuspendedEvent event;
+		sscanf(buffer,"TISABH Starter: Suspended user job: %d",&event.num_pids);
+
+		if (!ULog.writeEvent (&event))
+		{
+			dprintf (D_ALWAYS, "Unable to log ULOG_JOB_SUSPENDED event\n");
+		}
+
+		record_suspension_hack(ULOG_JOB_SUSPENDED);
+		return;
+	}
+
+	if (strncmp(buffer, magic_unsuspend, size_unsuspend) == 0)
+	{
+		/* matched an unsuspend event */
+
+		JobUnsuspendedEvent event;
+
+		if (!ULog.writeEvent (&event))
+		{
+			dprintf (D_ALWAYS, "Unable to log ULOG_JOB_UNSUSPENDED event\n");
+		}
+		record_suspension_hack(ULOG_JOB_UNSUSPENDED);
+		return;
+	}
+
+	/* otherwise, do nothing */
+}
+
+/* Mess up the in memory job ad with interesting statistics about suspensions */
+void record_suspension_hack(unsigned int action)
+{
+	char tmp[256];
+	int total_suspensions;
+	int last_suspension_time;
+	int cumulative_suspension_time;
+
+	if (!JobAd)
+	{
+		EXCEPT("Suspension code: Non-existant JobAd\n");
+	}
+
+	switch(action)
+	{
+		case ULOG_JOB_SUSPENDED:
+			/* Add to ad number of suspensions */
+			JobAd->LookupInteger(ATTR_TOTAL_SUSPENSIONS, total_suspensions);
+			total_suspensions++;
+			sprintf(tmp, "%s = %d", ATTR_TOTAL_SUSPENSIONS, total_suspensions);
+			JobAd->Insert(tmp);
+
+			/* Add to ad the current suspension time */
+			last_suspension_time = time(NULL);
+			sprintf(tmp, "%s = %d", ATTR_LAST_SUSPENSION_TIME, 
+				last_suspension_time);
+			JobAd->Insert(tmp);
+			break;
+		case ULOG_JOB_UNSUSPENDED:
+			/* add in the time I spent suspended to a running total */
+			JobAd->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME,
+				cumulative_suspension_time);
+			JobAd->LookupInteger(ATTR_LAST_SUSPENSION_TIME,
+				last_suspension_time);
+			cumulative_suspension_time += time(NULL) - last_suspension_time;
+			sprintf(tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
+				cumulative_suspension_time);
+			JobAd->Insert(tmp);
+
+			/* set the current suspension time to zero, meaning not suspended */
+			last_suspension_time = 0;
+			sprintf(tmp, "%s = %d", ATTR_LAST_SUSPENSION_TIME, 
+				last_suspension_time);
+			JobAd->Insert(tmp);
+			break;
+		default:
+			EXCEPT("record_suspension_hack(): Action event not recognized.\n");
+			break;
+	}
+
+	/* Sanity output */
+	JobAd->LookupInteger(ATTR_TOTAL_SUSPENSIONS, total_suspensions);
+	dprintf(D_FULLDEBUG,"%s = %d\n", ATTR_TOTAL_SUSPENSIONS, total_suspensions);
+	JobAd->LookupInteger(ATTR_LAST_SUSPENSION_TIME, last_suspension_time);
+	dprintf(D_FULLDEBUG, "%s = %d\n", ATTR_LAST_SUSPENSION_TIME,
+		last_suspension_time);
+	JobAd->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME, 
+		cumulative_suspension_time);
+	dprintf(D_FULLDEBUG, "%s = %d\n", ATTR_CUMULATIVE_SUSPENSION_TIME,
+		cumulative_suspension_time);
+}
+
+

@@ -28,6 +28,9 @@
 #include "exit.h"             // for JOB_BLAH_BLAH exit reasons
 #include "condor_debug.h"     // for D_debuglevel #defines
 #include "condor_string.h"    // for strnewp()
+#include "condor_attributes.h"
+#include "internet.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
@@ -46,16 +49,21 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	init( shad );
 }
 
+
 RemoteResource::RemoteResource( BaseShadow * shad, 
 								const char * eHost, 
 								const char * cbility )
 {
-	executingHost = strnewp( eHost );
+	executingHost = NULL;
+	setExecutingHost( eHost );
 	capability    = strnewp( cbility );
 	init( shad );
 }
 
-void RemoteResource::init( BaseShadow *shad ) {
+
+void
+RemoteResource::init( BaseShadow *shad )
+{
 	shadow = shad;
 	machineName = NULL;
 	starterAddress = NULL;
@@ -64,9 +72,13 @@ void RemoteResource::init( BaseShadow *shad ) {
 	uid_domain = NULL;
 	claimSock = new ReliSock();
 	exitReason = exitStatus = -1;
-}	
+	memset( &remote_rusage, 0, sizeof(struct rusage) );
+	disk_usage = 0;
+	image_size = 0;
+}
 
-RemoteResource::~RemoteResource() {
+RemoteResource::~RemoteResource()
+{
 	if ( executingHost ) delete [] executingHost;
 	if ( machineName   ) delete [] machineName;
 	if ( capability    ) delete [] capability;
@@ -77,7 +89,10 @@ RemoteResource::~RemoteResource() {
 	if ( jobAd         ) delete jobAd;
 }
 
-int RemoteResource::requestIt( int starterVersion ) {
+
+int
+RemoteResource::requestIt( int starterVersion )
+{
 /* starterVersion is a default to 2. */
 
 	int reply;
@@ -136,7 +151,10 @@ int RemoteResource::requestIt( int starterVersion ) {
 	return 0;
 }
 
-int RemoteResource::killStarter() {
+
+int
+RemoteResource::killStarter()
+{
 
 	ReliSock sock;
 
@@ -169,7 +187,10 @@ int RemoteResource::killStarter() {
 	return 0;
 }
 
-void RemoteResource::dprintfSelf( int debugLevel ) {
+
+void
+RemoteResource::dprintfSelf( int debugLevel )
+{
 	shadow->dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
 					  "host info:\n");
 	if ( executingHost )
@@ -184,8 +205,10 @@ void RemoteResource::dprintfSelf( int debugLevel ) {
 	shadow->dprintf ( debugLevel, "\texitStatus:    %d\n", exitStatus);
 }
 
-void RemoteResource::printExit( FILE *fp ) {
 
+void
+RemoteResource::printExit( FILE *fp )
+{
 		/* Add more cases to the switch as they develop... */
 
 	switch ( exitReason ) {
@@ -238,7 +261,10 @@ void RemoteResource::printExit( FILE *fp ) {
 	} // switch()
 }
 
-int RemoteResource::handleSysCalls( Stream *sock ) {
+
+int
+RemoteResource::handleSysCalls( Stream *sock )
+{
 
 		// change value of the syscall_sock to correspond with that of
 		// this claim sock right before do_REMOTE_syscall().
@@ -257,7 +283,10 @@ int RemoteResource::handleSysCalls( Stream *sock ) {
 	return KEEP_STREAM;
 }
 
-void RemoteResource::getExecutingHost( char *& eHost ) {
+
+void
+RemoteResource::getExecutingHost( char *& eHost )
+{
 
 	if (!eHost) {
 		eHost = strnewp ( executingHost );
@@ -270,7 +299,10 @@ void RemoteResource::getExecutingHost( char *& eHost ) {
 	}
 }
 
-void RemoteResource::getMachineName( char *& mName ) {
+
+void
+RemoteResource::getMachineName( char *& mName )
+{
 
 	if ( !mName ) {
 		mName = strnewp( machineName );
@@ -281,9 +313,12 @@ void RemoteResource::getMachineName( char *& mName ) {
 			mName[0] = '\0';
 		}
 	}
-}			
+}
 
-void RemoteResource::getUidDomain( char *& uidDomain ) {
+
+void
+RemoteResource::getUidDomain( char *& uidDomain )
+{
 
 	if ( !uidDomain ) {
 		uidDomain = strnewp( uid_domain );
@@ -294,9 +329,12 @@ void RemoteResource::getUidDomain( char *& uidDomain ) {
 			uidDomain[0] = '\0';
 		}
 	}
-}			
+}
 
-void RemoteResource::getFilesystemDomain( char *& filesystemDomain ) {
+
+void
+RemoteResource::getFilesystemDomain( char *& filesystemDomain )
+{
 
 	if ( !filesystemDomain ) {
 		filesystemDomain = strnewp( fs_domain );
@@ -307,9 +345,12 @@ void RemoteResource::getFilesystemDomain( char *& filesystemDomain ) {
 			filesystemDomain[0] = '\0';
 		}
 	}
-}			
+}
 
-void RemoteResource::getCapability( char *& cbility ) {
+
+void
+RemoteResource::getCapability( char *& cbility )
+{
 
 	if (!cbility) {
 		cbility = strnewp( capability );
@@ -322,7 +363,10 @@ void RemoteResource::getCapability( char *& cbility ) {
 	}
 }
 
-void RemoteResource::getStarterAddress( char *& starterAddr ) {
+
+void
+RemoteResource::getStarterAddress( char *& starterAddr )
+{
 
 	if (!starterAddr) {
 		starterAddr = strnewp( starterAddress );
@@ -335,27 +379,60 @@ void RemoteResource::getStarterAddress( char *& starterAddr ) {
 	}
 }
 
-ReliSock* RemoteResource::getClaimSock() {
+
+ReliSock*
+RemoteResource::getClaimSock()
+{
 	return claimSock;
 }
 
-int RemoteResource::getExitReason() {
+
+int
+RemoteResource::getExitReason()
+{
 	return exitReason;
 }
 
-int RemoteResource::getExitStatus() {
+
+int
+RemoteResource::getExitStatus()
+{
 	return exitStatus;
 }
 
-void RemoteResource::setExecutingHost( const char * eHost ) {
+
+void
+RemoteResource::setExecutingHost( const char * eHost )
+{
 
 	if ( executingHost )
 		delete [] executingHost;
 	
 	executingHost = strnewp( eHost );
+
+		/*
+		  Tell daemonCore that we're willing to
+		  grant WRITE permission to whatever machine we are claiming.
+		  This greatly simplifies DaemonCore permission stuff
+		  for flocking, since submitters don't have to know all the
+		  hosts they might possibly run on, all they have to do is
+		  trust the central managers of all the pools they're flocking
+		  to (which they have to do, already).  
+		  Added on 3/15/01 by Todd Tannenbaum <tannenba@cs.wisc.edu>
+		*/
+	char *addr;
+	if( (addr = string_to_ipstr(eHost)) ) {
+		daemonCore->AddAllowHost( addr, WRITE );
+	} else {
+		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
+				 eHost );
+	}
+
 }
 
-void RemoteResource::setMachineName( const char * mName ) {
+void
+RemoteResource::setMachineName( const char * mName )
+{
 
 	if ( machineName )
 		delete [] machineName;
@@ -363,7 +440,9 @@ void RemoteResource::setMachineName( const char * mName ) {
 	machineName = strnewp ( mName );
 }
 
-void RemoteResource::setUidDomain( const char * uidDomain ) {
+void
+RemoteResource::setUidDomain( const char * uidDomain )
+{
 
 	if ( uid_domain )
 		delete [] uid_domain;
@@ -371,7 +450,10 @@ void RemoteResource::setUidDomain( const char * uidDomain ) {
 	uid_domain = strnewp ( uidDomain );
 }
 
-void RemoteResource::setFilesystemDomain( const char * filesystemDomain ) {
+
+void
+RemoteResource::setFilesystemDomain( const char * filesystemDomain )
+{
 
 	if ( fs_domain )
 		delete [] fs_domain;
@@ -379,7 +461,10 @@ void RemoteResource::setFilesystemDomain( const char * filesystemDomain ) {
 	fs_domain = strnewp ( filesystemDomain );
 }
 
-void RemoteResource::setCapability( const char * cbility ) {
+
+void
+RemoteResource::setCapability( const char * cbility )
+{
 
 	if ( capability )
 		delete [] capability;
@@ -387,7 +472,10 @@ void RemoteResource::setCapability( const char * cbility ) {
 	capability = strnewp ( cbility );
 }
 
-void RemoteResource::setStarterAddress( const char * starterAddr ) {
+
+void
+RemoteResource::setStarterAddress( const char * starterAddr )
+{
 
 	if ( starterAddress )
 		delete [] starterAddress;
@@ -395,11 +483,17 @@ void RemoteResource::setStarterAddress( const char * starterAddr ) {
 	starterAddress = strnewp( starterAddr );
 }
 
-void RemoteResource::setClaimSock( ReliSock * cSock ) {
+
+void
+RemoteResource::setClaimSock( ReliSock * cSock )
+{
 	claimSock = cSock;
 }
 
-void RemoteResource::setExitReason( int reason ) {
+
+void
+RemoteResource::setExitReason( int reason )
+{
 	// Set the exitReason, but not if the reason is JOB_KILLED.
 	// This prevents exitReason being reset from JOB_KILLED to
 	// JOB_NOT_CKPTED or some such when the starter gets killed
@@ -413,14 +507,19 @@ void RemoteResource::setExitReason( int reason ) {
 	}
 }
 
-void RemoteResource::setExitStatus( int status ) {
+
+void
+RemoteResource::setExitStatus( int status )
+{
 	shadow->dprintf ( D_FULLDEBUG, "setting exit status on %s to %d\n", 
 					  machineName ? machineName : "???", status );
 
 	exitStatus = status;
 }
 
-float RemoteResource::bytesSent()
+
+float
+RemoteResource::bytesSent()
 {
 	float bytes = 0.0;
 
@@ -439,7 +538,8 @@ float RemoteResource::bytesSent()
 }
 
 
-float RemoteResource::bytesRecvd()
+float
+RemoteResource::bytesReceived()
 {
 	float bytes = 0.0;
 
@@ -457,3 +557,44 @@ float RemoteResource::bytesRecvd()
 	return bytes;
 }
 
+
+void
+RemoteResource::updateFromStarter( ClassAd* update_ad )
+{
+	int int_value;
+	float float_value;
+	
+	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
+
+	if( DebugFlags & D_MACHINE ) {
+		dprintf( D_MACHINE, "Update ad:\n" );
+		update_ad->dPrint( D_MACHINE );
+		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
+	}
+
+	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
+		remote_rusage.ru_stime.tv_sec = (int) float_value; 
+	}
+			
+	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
+		remote_rusage.ru_utime.tv_sec = (int) float_value; 
+	}
+
+	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
+		image_size = int_value;
+	}
+			
+	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
+		disk_usage = int_value;
+	}
+
+}
+
+
+void
+RemoteResource::resourceExit( int exit_reason, int exit_status )
+{
+	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
+	setExitReason( exit_reason );
+	setExitStatus( exit_status );
+}

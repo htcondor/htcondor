@@ -7,24 +7,21 @@ class CondorChunk;
 
 /**
 This class buffers reads and writes by keeping variable-sized
-buffers of data.  The minumum chunk size to read is determined
-by OpenFileTable::get_buffer_block_size, and the maximum amount
-of data to store is determined by OpenFileTable::get_buffer_size.
-<p>
-This object is simply wrapped around an existing file:
+buffers of data.  The maximum amount of data to store and
+the maximum block size to use are given in the constructor:
 <pre>
 CondorFile *original = new CondorFileRemote;
-CondorFile *faster = new CondorFileBuffer(original);
-
-faster->open(...);
-faster->read(...);
-...
+CondorFile *faster = new CondorFileBuffer(original,10000,1000);
+</pre>
+However, they values may also be overridden in the URL like so:
+<pre>
+faster->open("buffer:(1000,100)local:/tmp/file");
 </pre>
 */
 
 class CondorFileBuffer : public CondorFile {
 public:
-	CondorFileBuffer( CondorFile *original );
+	CondorFileBuffer( CondorFile *original, int buffer_size, int buffer_block_size );
 	virtual ~CondorFileBuffer();
 
 	virtual int open(const char *url, int flags, int mode);
@@ -36,10 +33,13 @@ public:
 	virtual int ioctl( int cmd, int arg );
 	virtual int ftruncate( size_t length ); 
 	virtual int fsync();
+	virtual int flush();
+	virtual int fstat( struct stat *buf );
 
 	virtual int	is_readable();
 	virtual int	is_writeable();
-	virtual void	set_size(size_t size);
+	virtual int	is_seekable();
+
 	virtual int	get_size();
 	virtual char	*get_url();
 
@@ -52,6 +52,9 @@ private:
 	void evict( CondorChunk *c );
 	void clean( CondorChunk *c );
 
+	// The url of this file
+	char url[_POSIX_PATH_MAX];
+
 	// The raw file being buffered
 	CondorFile *original;
 
@@ -63,6 +66,12 @@ private:
 
 	// The logical size of the buffered file
 	int size;
+
+	// The maximum amount of data to buffer
+	int buffer_size;
+
+	// The largest chunk to buffer
+	int buffer_block_size;
 };
 
 #endif

@@ -102,7 +102,7 @@ int Buf::write(
 			FD_ZERO( &writefds );
 			FD_SET( sockd, &writefds );
 
-			nfound = select( nfds, 0, &writefds, 0, &timer );
+			nfound = select( nfds, 0, &writefds, &writefds, &timer );
 
 			switch(nfound) {
 			case 0:

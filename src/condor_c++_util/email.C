@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
+#include "condor_config.h"
 #include "my_hostname.h"
 
 extern "C" {
@@ -38,9 +39,11 @@ email_user_open( ClassAd *jobAd, const char *subject )
 	int cluster = 0, proc = 0;
     int notification = NOTIFY_COMPLETE; // default
 
-    jobAd->EvaluateAttrInt( ATTR_JOB_NOTIFICATION, notification );
-	jobAd->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
-	jobAd->EvaluateAttrInt( ATTR_PROC_ID, proc );
+	ASSERT(jobAd);
+
+    jobAd->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
+	jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	jobAd->LookupInteger( ATTR_PROC_ID, proc );
 
     switch( notification ) {
 	case NOTIFY_NEVER:
@@ -65,10 +68,10 @@ email_user_open( ClassAd *jobAd, const char *subject )
 	  Job may have an email address to whom the notification
 	  message should go.  This info is in the classad.
     */
-    if ( (!jobAd->EvaluateAttrString(ATTR_NOTIFY_USER, email_addr, 256)) ||
+    if ( (!jobAd->LookupString(ATTR_NOTIFY_USER, email_addr)) ||
          (email_addr[0] == '\0') ) {
 			// no email address specified in the job ad; try owner 
-		if ( (!jobAd->EvaluateAttrString(ATTR_OWNER, email_addr, 256)) ||
+		if ( (!jobAd->LookupString(ATTR_OWNER, email_addr)) ||
 			 (email_addr[0] == '\0') ) {
 				// we're screwed, give up.
 			return NULL;
@@ -80,10 +83,19 @@ email_user_open( ClassAd *jobAd, const char *subject )
 			// Note: UID_DOMAIN is set to the fullhostname by default.
 		char domain[256];
 		domain[0] = '\0';
-		if ( (!jobAd->EvaluateAttrString(ATTR_UID_DOMAIN, domain, 256)) ||
+		if ( (!jobAd->LookupString(ATTR_UID_DOMAIN, domain)) ||
 			 (domain[0] == '\0') ) {
-				// No uid domain!  Use fullhostname
-			strcat( domain, my_full_hostname() );
+				// No uid domain found in the job ClassAd, fall back
+				// on the uid domain specified in the config file.
+				char *config_uid_domain;
+				if ( (config_uid_domain=param("UID_DOMAIN")) != NULL ) {
+					strcpy(domain,config_uid_domain);
+					free(config_uid_domain);
+				} else {
+					// No uid domain in the job ad or in the
+					// config file!  Use fullhostname.
+					strcpy( domain, my_full_hostname() );
+				}
 		}
         strcat( email_addr, "@" );
         strcat( email_addr, domain );
