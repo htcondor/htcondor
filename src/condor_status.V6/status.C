@@ -34,6 +34,7 @@
 #include "string_list.h"
 #include "condor_string.h"   // for strnewp()
 #include "print_wrapped_text.h"
+#include "error_utils.h"
 #include "condor_distribution.h"
 
 // global variables
@@ -257,42 +258,8 @@ main (int argc, char *argv[])
 
 	if ((q = query->fetchAds (result, addr)) != Q_OK) {
 		if (q == Q_COMMUNICATION_ERROR) {
-			char error_message[1000];
-			char *log_directory, *collector_host;
-
-			log_directory = param("LOG");
-			if (addr != NULL) {
-				collector_host = addr; 
-			} else {
-				collector_host = param("COLLECTOR_HOST");
-			}
-			sprintf(error_message, 
-					"Error: Couldn't contact the condor_collector on %s.",
-					collector_host ? collector_host : "your central manager");
-			print_wrapped_text(error_message, stderr);
-			if (!expert) {
-				fprintf(stderr, "\n");
-				print_wrapped_text("Extra Info: the condor_collector is a process "
-								   "that runs on the central manager of your Condor "
-								   "pool and collects the status of all the machines "
-								   "and jobs in the Condor pool. "
-								   "The condor_collector might not be running, "
-								   "it might be refusing to communicate with you, "
-								   "there might be a network problem, or there may be "
-								   "some other problem. Check with your system "
-								   "administrator to fix this problem.", stderr);
-				fprintf(stderr, "\n");
-				sprintf(error_message, 
-						"If you are the system administrator, check that the "
-						"condor_collector is running on %s, check the HOSTALLOW "
-						"configuration in your condor_config, and check the "
-						"MasterLog and CollectorLog files in your log directory "
-						"for possible clues as to why the condor_collector "
-						"is not responding. Also see the Troubleshooting "
-						"section of the manual.", 
-						collector_host ? collector_host : "your central manager");
-				print_wrapped_text(error_message, stderr);
-			}
+				// if we're not an expert, we want verbose output
+			printNoCollectorContact( stderr, addr, !expert );
 		}
 		else {
 			fprintf (stderr, "Error:  Could not fetch ads --- %s\n", 
