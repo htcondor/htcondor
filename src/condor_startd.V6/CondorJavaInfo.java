@@ -65,7 +65,7 @@ public class CondorJavaInfo {
 
 			if( name.equals("line.separator") ) continue;
 
-			System.out.print( UnDotString(name) + " = \"" + BackwhackString(value) + "\"");
+			System.out.print( UnDotString(name) + " = \"" + value + "\"");
 
 			if( newmode ) {
 				System.out.println(";");
@@ -79,25 +79,6 @@ public class CondorJavaInfo {
 		}
 
 		System.out.flush();
-	}
-
-	/*
-	Look for backwhacks in the input string,
-	and prepend them with another backwhack.
-	*/
-    
-	static String BackwhackString( String s ) {
-		String result = new String("");
-		int i;
-
-		for( i=0; i<s.length(); i++ ) {
-			char c = s.charAt(i);
-			if( c=='\\' ) {
-				result = result + '\\';
-			}
-			result = result + c;
-		}
-		return result;
 	}
 
 	/*
