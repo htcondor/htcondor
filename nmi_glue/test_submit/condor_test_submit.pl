@@ -121,22 +121,6 @@ sub generate_cmdfile() {
     print "++tag is $tag\n";
     print "++module is $module\n";
  
-    my $release = $tag;
-    $release =~ s/BUILD-//;
-    my $desc = $release;
-    $release =~ s/-branch-.*//;
-    $release =~ s/V//;
-    if( $release =~ /(\d+)(\D*)_(\d+)(\D*)_?(\d+)?(\D*)/ ) {
-        $versions[0] = $1;
-        $versions[1] = $3;
-	if( $5 ) {
-            $versions[2] = $5;
-        } else {
-            $versions[2] = "x";
-	}
-    }
-    my $vers_string = "$versions[0], $versions[1], $versions[2]";
-
     my $cmdfile = "condor_cmdfile-$tag";
     my $srcsfile = "condor_srcsfile-$tag";
     my $gluefile = "condor_test.src";
