@@ -31,7 +31,6 @@
 #include "master.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_collector.h"
-#include "cctp_msg.h"
 #include "condor_attributes.h"
 #include "condor_network.h"
 #include "condor_adtypes.h"
