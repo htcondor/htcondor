@@ -24,6 +24,11 @@
 #include "condor_common.h"
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
+#include "dynuser.h"
+
+#ifdef WIN32
+extern dynuser *myDynuser;
+#endif
 
 ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 {
@@ -40,9 +45,11 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 
 #ifdef WIN32
 	// Always find the family via the Condor run login on NT, for now
-	//searchLogin = strdup("condor-run-dir");
-	searchLogin = strdup("condor-run-");
 
+	// should be able to get the accountname, but in case it returns null, use the prefix.
+	searchLogin = strdup((myDynuser->get_accountname()) ? myDynuser->get_accountname() : 
+			myDynuser->account_prefix());
+	ASSERT(searchLogin); 
 	// On Win32, all ProcFamily activity needs to be done as LocalSystem
 	mypriv = PRIV_ROOT;
 #endif
@@ -251,7 +258,12 @@ ProcFamily::getPidFamilyByLogin(pid_t *pidFamily)
 	ASSERT(searchLogin);
 
 	// add daddy_pid to the list of pids
-	pidFamily[index_pidFamily++] = daddy_pid;
+	
+	// I think this is wrong. Why add it to the family if you're not even sure
+	// that it exists? Furthermore, what happens if the real daddy pid exits, but
+	// winblows reuses the pid right away for another, completely unrelated process? 
+	// Sounds like we're asking for trouble. - stolley 08/02
+	// pidFamily[index_pidFamily++] = daddy_pid;
 	
 	// get a list of all pids on the system
 	num_pids = sysinfo.GetPIDs(pids);
@@ -261,10 +273,12 @@ ProcFamily::getPidFamilyByLogin(pid_t *pidFamily)
 
 		// find owner for pid pids[s]
 		
-		  // skip the daddy_pid, we already added it to our list
-		  if ( pids[s] == daddy_pid ) {
-			  continue;
-		  }
+	// again, this is assumed to be wrong, so I'm 
+	// nixing it for now.
+	// skip the daddy_pid, we already added it to our list
+//		  if ( pids[s] == daddy_pid ) {
+//			  continue;
+//		  }
 
 		  // get a handle for the process
 		  procHandle=OpenProcess(PROCESS_QUERY_INFORMATION,
@@ -358,8 +372,13 @@ ProcFamily::getPidFamilyByLogin(pid_t *pidFamily)
 	// denote end of list with a zero entry
 	pidFamily[index_pidFamily] = 0;
 
-	// return success
-	return 0;
+	if ( index_pidFamily > 0 ) {
+		// return success
+		return 0;
+	} else {
+		// return failure
+		return -1;
+	}
 #endif  // of WIN32
 }
 
@@ -382,8 +401,15 @@ ProcFamily::takesnapshot()
 	new_pids = new ExtArray<a_pid>(10);
 	newpidindex = 0;
 
-	// On some systems, we can only see process we own, so set_priv
-	priv = set_priv(mypriv);
+	// On some systems, we can only see process we own, so we must be either
+	// the user or root. However, being the user in this function causes many,
+	// many priv state changes from user to root and back again since 
+	// getProcInfo changes to root(and back again) to look at the pid. This
+	// smashes the NIS master with too many calls and the load on it
+	// skyrockets so, we are root here. The real way to solve this problem is
+	// to cache the groups in the code so changes from/to the user uid don't
+	// talk to the NIS master. But that is for another day. -psilord 8/22/02
+	priv = set_root_priv();
 
 	// grab all pids in the family we can see now
 	if ( searchLogin ) {
@@ -391,6 +417,7 @@ ProcFamily::takesnapshot()
 	} else {
 		ret_val = ProcAPI::getPidFamily(daddy_pid,pidfamily);
 	}
+
 	if ( ret_val < 0 ) {
 		// daddy_pid must be gone!
 		dprintf( D_PROCFAMILY, 

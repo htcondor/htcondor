@@ -31,6 +31,11 @@
 #include "vanilla_proc.h"
 #include "starter.h"
 #include "syscall_numbers.h"
+#include "dynuser.h"
+
+#ifdef WIN32
+extern dynuser* myDynuser;
+#endif
 
 extern CStarter *Starter;
 
@@ -62,7 +67,7 @@ VanillaProc::StartJob()
 	// edit the ad so we start up a shell, pass the executable as
 	// an argument to the shell, if we are asked to run a .bat file.
 #ifdef WIN32
-	char argstmp[_POSIX_ARG_MAX];
+
 	char systemshell[_POSIX_PATH_MAX];
 	char tmp[_POSIX_PATH_MAX];
 
@@ -80,14 +85,40 @@ VanillaProc::StartJob()
 
 		// now change arguments to include name of program cmd.exe 
 		// should run
-		if (JobAd->LookupString(ATTR_JOB_ARGUMENTS,argstmp) != 1) {
-			argstmp[0] = '\0';
+
+		// this little piece of code preserves the backwhacking of quotes,
+		// so when it's re-inserted into the JobAd any original backwhacks are still there.
+		ExprTree  *tree;
+        char	  *job_args;
+		char      *argstmp;
+		int		  length;
+
+		job_args = argstmp = NULL;
+		
+		tree = JobAd->Lookup(ATTR_JOB_ARGUMENTS);
+		if ( tree != NULL && tree->RArg() != NULL ) {
+			tree->RArg()->PrintToNewStr(&argstmp);
+			job_args = argstmp+1;		// skip first quote
+			length = strlen(job_args);
+			job_args[length-1] = '\0';	// destroy last quote
+		} else {
+			job_args = (char*) malloc(1*sizeof(char));
+			job_args[0] = '\0';
 		}
+		
 		// also pass /Q and /C arguments to cmd.exe, to tell it we do not
 		// want an interactive shell -- just run the command and exit
 		sprintf ( tmp, "%s=\"/Q /C condor_exec.bat %s\"",
-				  ATTR_JOB_ARGUMENTS, argstmp );
+				  ATTR_JOB_ARGUMENTS, job_args );
 		JobAd->InsertOrUpdate(tmp);		
+
+		if ( argstmp != NULL ) {
+			// this is needed if we had to call PrintToNewStr() in classads
+			free(argstmp);
+		} else {
+			// otherwise we just need to free the byte we used to store the empty string
+			free(job_args);
+		}
 
 		// finally we must rename file condor_exec to condor_exec.bat
 		rename(CONDOR_EXEC,"condor_exec.bat");
@@ -108,9 +139,13 @@ VanillaProc::StartJob()
 
 #ifdef WIN32
 		// we only support running jobs as user nobody for the first pass
-		char nobody_login[60];
-		//sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
-		sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
+		char nobody_login[100];
+
+		// we should be able to get the accountname, but in case it fails, just use
+		// the prefix.
+		strcpy(nobody_login, (myDynuser->get_accountname()) ? myDynuser->get_accountname() : 
+			myDynuser->account_prefix());
+
 		// set ProcFamily to find decendants via a common login name
 		family->setFamilyLogin(nobody_login);
 #endif

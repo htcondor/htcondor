@@ -20,7 +20,15 @@ int CondorFileAppend::open( const char *u, int flags, int mode )
 	char sub_url[_POSIX_PATH_MAX];
 
 	strcpy(url,u);
-	sscanf(url,"%[^:]:%s",junk,sub_url);
+
+	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't 
+		work with 8bit numbers */
+	#if defined(LINUX) && (defined(GLIBC20) || defined(GLIBC21))
+	sscanf(url,"%[^:]:%[\x1-\x7F]",junk,sub_url);
+	#else
+	sscanf(url,"%[^:]:%[\x1-\xFF]",junk,sub_url);
+	#endif
+
 	return original->open(sub_url,flags|O_APPEND,mode);
 }
 

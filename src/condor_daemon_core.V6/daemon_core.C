@@ -62,6 +62,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
+CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
 
 #if 0
@@ -144,6 +145,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	pidTable = new PidHashTable(PidSize, compute_pid_hash);
 	ppid = 0;
 #ifdef WIN32
+	// init the mutex
+	InitializeCriticalSection(&Big_fat_mutex);
+	EnterCriticalSection(&Big_fat_mutex);
+
 	mypid = ::GetCurrentProcessId();
 #else
 	mypid = ::getpid();
@@ -345,6 +350,10 @@ DaemonCore::~DaemonCore()
 		delete( pipeTable );
 	}
 	t.CancelAllTimers();
+
+#ifdef WIN32
+	 DeleteCriticalSection(&Big_fat_mutex);
+#endif
 }
 
 void DaemonCore::Set_Default_Reaper( int reaper_id )
@@ -1424,8 +1433,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	char tbuf[16];
 
 	for (i = 0; i < maxCommand; i++) {
-		if ((comTable[i].handler != NULL) || 
-						(comTable[i].handlercpp != NULL)) 
+		if ( ( (comTable[i].handler != NULL) || (comTable[i].handlercpp != NULL) ) &&
+			 ( comTable[i].perm == perm ) )
 		{
 
 			sprintf (tbuf, "%i", comTable[i].num);
@@ -1795,6 +1804,9 @@ void DaemonCore::Driver()
 		// Unblock all signals so that we can get them during the
 		// select.
 		sigprocmask( SIG_SETMASK, &emptyset, NULL );
+#else
+		//Win32 - grab coarse-grained mutex
+		LeaveCriticalSection(&Big_fat_mutex);
 #endif
 
 		errno = 0;
@@ -1824,6 +1836,7 @@ void DaemonCore::Driver()
 		}
 #else
 		// Windoze
+		EnterCriticalSection(&Big_fat_mutex);
 		if ( rv == SOCKET_ERROR ) {
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
@@ -4524,10 +4537,48 @@ int DaemonCore::Create_Process(
 	
 	}	// end of dealing with the environment....
 
+	// Check if it's a 16-bit application
+	bool bIs16Bit = false;
+	LOADED_IMAGE loaded;
+	// NOTE (not in MSDN docs): Even when this function fails it still 
+	// may have "failed" with LastError = "operation completed successfully"
+	// and still filled in our structure.  It also might really have 
+	// failed.  So we init the part of the structure we care about and just 
+	// ignore the return value.  
+	loaded.fDOSImage = FALSE;
+	MapAndLoad(name, NULL, &loaded, FALSE, TRUE);
+	if (loaded.fDOSImage == TRUE)
+		bIs16Bit = true;
+	UnMapAndLoad(&loaded);
+	
+	// CreateProcess requires different params for 16-bit apps:
+	//		NULL for the app name
+	//		args begins with app name
+	MyString strArgs = args;
+	if (bIs16Bit)
+	{
+		// surround the executable name with quotes or you'll have problems 
+		// when the execute directory contains spaces!
+		strArgs = "\"" + MyString(name) + MyString("\" ");
+
+		// make sure we're only using backslashes
+		strArgs.replaceString("/", "\\", 0); 
+		
+		// args already should contain the executable name as the first param
+		// we have to strip it out but preserve any real args after it
+		MyString strOldArgs = args;
+		int iFindFirstSpace = strOldArgs.FindChar(' ');
+		if (iFindFirstSpace != -1)
+			strArgs += (args + iFindFirstSpace + 1);
+		
+		args = const_cast<char *>(strArgs.GetCStr());
+		dprintf(D_ALWAYS, "Create_Process: 16-bit job detected, args=%s\n", args);
+	}
+	
 	BOOL cp_result;
 	if ( priv != PRIV_USER_FINAL ) {
-		cp_result = ::CreateProcess(name,args,NULL,NULL,inherit_handles,
-			new_process_group,newenv,cwd,&si,&piProcess);
+		cp_result = ::CreateProcess(bIs16Bit ? NULL : name,args,NULL,
+			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
@@ -4567,9 +4618,9 @@ int DaemonCore::Create_Process(
 			// restricted to LOCALSYSTEM.  
 			//
 			// "Who's your Daddy ?!?!?!   JEFF B.!"
-		cp_result = ::CreateProcessAsUser(user_token,name,args,NULL,NULL,
-			inherit_handles,new_process_group | CREATE_NEW_CONSOLE, 
-			newenv,cwd,&si,&piProcess);
+		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : name,
+			args,NULL,NULL, inherit_handles,
+			new_process_group | CREATE_NEW_CONSOLE, newenv,cwd,&si,&piProcess);
 	}
 
 	if ( !cp_result ) {
@@ -4616,10 +4667,9 @@ int DaemonCore::Create_Process(
 
 	// First, check to see that the specified executable exists.
 	if( access(name,F_OK | X_OK) < 0 ) {
-		dprintf(D_ALWAYS, 
-				"Create_Process: Specified executable %s cannot be found. "
-				"errno = %d (%s).\n",
-				name, errno, strerror(errno));	   
+		dprintf( D_ALWAYS, "Create_Process: "
+				 "Cannot access specified executable \"%s\": " 
+				 "errno = %d (%s)\n", name, errno, strerror(errno) );
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv( current_priv );
 		}
@@ -4630,9 +4680,9 @@ int DaemonCore::Create_Process(
 	struct stat stat_struct;
 	if( cwd && (cwd[0] != '\0') ) {
 		if( stat(cwd, &stat_struct) == -1 ) {
-			dprintf(D_ALWAYS, 
-				"Create_Process: Specified cwd %s cannot be found.\n",
-				cwd);	   
+			dprintf( D_ALWAYS, "Create_Process: "
+					 "Cannot access specified cwd \"%s\": "
+					 "errno = %d (%s)\n", cwd, errno, strerror(errno) ); 
 			if ( priv != PRIV_UNKNOWN ) {
 				set_priv( current_priv );
 			}	
@@ -5518,6 +5568,8 @@ pidWatcherThread( void* arg )
 	int last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 	unsigned int exited_pid;
 	
+	
+
 	entry = (DaemonCore::PidWatcherEntry *) arg;
 
 	for (;;) {
@@ -5554,7 +5606,7 @@ pidWatcherThread( void* arg )
 	hKids[numentries] = entry->event;
 	entry->nEntries = numentries;
 	::LeaveCriticalSection(&(entry->crit_section));
-
+	
 	// if there are no more entries to watch, we're done.
 	if ( numentries == 0 )
 		return TRUE;	// this return will kill this thread
@@ -5598,6 +5650,9 @@ pidWatcherThread( void* arg )
 			// Can no longer use localhost (127.0.0.1) here because we may
 			// only have our command socket bound to a specific address. -Todd
 			// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());		
+			// Also - in the post v6.4.x world, SafeSock and startCommand
+			// are no longer thread safe, so we must grab our Big_fat lock.
+			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
 	        SafeSock sock;
 			Daemon d(daemonCore->InfoCommandSinfulString());
 
@@ -5614,6 +5669,7 @@ pidWatcherThread( void* arg )
 					!sock.connect(daemonCore->InfoCommandSinfulString()) ||
 					!d.sendCommand(DC_NOP, &sock, 1);
 			}
+			::LeaveCriticalSection(&Big_fat_mutex); // leave big fat mutex
 
             if ( notify_failed )
 			{
@@ -5636,6 +5692,8 @@ pidWatcherThread( void* arg )
 	}
 
 	}	// end of infinite for loop
+	
+	
 
 }
 
@@ -6066,46 +6124,55 @@ int DaemonCore::SendAliveToParent()
 }
 	
 #ifndef WIN32
-char **DaemonCore::ParseEnvArgsString(char *incomming, bool env)
+char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 {
-	char seperator;
-	char **argv = 0;
-	char *temp = 0;
-	char *cur = 0;
-	int num_args = 0;
-	int i = 0;
-	int length = 0;
+	char separator;
+	int maxlength;
+	char **argv, *arg;
+	int nargs=0;
 
 	if(env) {
-		seperator = ';';
+		separator = ';';
 	} else {
-		seperator = ' ';
-	}
-	// Count the number of arguments
-	temp = incomming;
-	do {
-		num_args++;
-		temp++;
-	} while( ( temp = strchr(temp, seperator) ) != NULL);
-
-	argv = new char *[num_args + 1];
-
-	cur = incomming;
-	while( (temp = strchr(cur, seperator) ) )
-	{
-		length = temp - cur;
-		argv[i] = new char[length + 1]; 
-		strncpy(argv[i], cur, length);
-		argv[i][length] = 0;
-		cur = temp + 1;
-		i++;
+		separator = ' ';
 	}
 
-	argv[i] = new char[strlen(cur) + 1];
-	strcpy(argv[i], cur);
-	
-	argv[num_args] = 0;
+	/*
+	maxlength is the maximum number of args and the maximum
+	length of any one arg that could be found in this string.
+	A little waste is insignificant here.
+	*/
 
+	maxlength = strlen(str+1);
+
+	argv = new char*[maxlength];
+
+	/* While there are characters left... */
+	while(*str) {
+		/* Skip over any sequence of whitespace */
+		while( *str == separator ) {
+			str++;
+		}
+
+		/* If we are not at the end... */
+		if(*str) {
+
+			/* Allocate a new string */
+			argv[nargs] = new char[maxlength];
+
+			/* Copy the arg into the new string */
+			arg = argv[nargs];
+			while( *str && *str != separator ) {
+				*arg++ = *str++;
+			}
+			*arg = 0;
+
+			/* Move on to the next argument */
+			nargs++;
+		}
+	}
+
+	argv[nargs] = 0;
 	return argv;
 }
 #endif

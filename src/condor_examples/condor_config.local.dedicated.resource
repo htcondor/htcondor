@@ -111,12 +111,6 @@ DedicatedScheduler = "DedicatedScheduler@full.host.name"
 ##  and does NOT work for interactive use.  Do not use it directly!
 MPI_CONDOR_RSH_PATH = $(SBIN)
 
-##  Path to the condor_starter that handles MPI jobs.
-ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
-
-##  A flag needed to allow the MPI starter to work properly.
-STARTER_2_IS_DC	= TRUE
-
 ##  This setting puts the DedicatedScheduler attribute, defined above,
 ##  into your machine's classad.  This way, the dedicated scheduler
 ##  (and you) can identify which machines are configured as dedicated

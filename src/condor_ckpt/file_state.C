@@ -404,7 +404,14 @@ CondorFile * CondorFileTable::create_url_chain( char *url )
 	char *next;
 	CondorFile *f;
 
-	int fields = sscanf( url, "%[^:]:%s", method, rest );
+	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
+		work with 8bit numbers */
+	#if defined(LINUX) && (defined(GLIBC20) || defined(GLIBC21))
+	int fields = sscanf( url, "%[^:]:%[\x1-\x7F]", method, rest );
+	#else
+	int fields = sscanf( url, "%[^:]:%[\x1-\xFF]", method, rest );
+	#endif
+
 	if( fields!=2 ) return 0;
 
 	/* Options interpreted by each layer go in () following the : */

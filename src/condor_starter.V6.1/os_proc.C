@@ -38,11 +38,13 @@
 #include "exit.h"
 #include "condor_uid.h"
 #include "condor_distribution.h"
+#include "nullfile.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
 
 extern CStarter *Starter;
+
 
 /* OsProc class implementation */
 
@@ -133,12 +135,31 @@ OsProc::StartJob()
 		return 0;
 	}
 
-		// Support USER_JOB_WRAPPER parameter...
-
 		// First, put "condor_exec" at the front of Args, since that
 		// will become argv[0] of what we exec(), either the wrapper
 		// or the actual job.
-	strcpy( Args, CONDOR_EXEC );
+
+		// The Java universe cannot tolerate an incorrect argv[0].
+		// For Java, set it correctly.  In a future version, we
+		// may consider removing the CONDOR_EXEC feature entirely.
+
+	int universe;
+	if ( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
+		universe = CONDOR_UNIVERSE_VANILLA;
+	}
+
+	if(universe==CONDOR_UNIVERSE_JAVA) {
+		strcpy( Args, JobName );
+	} else {
+		strcpy( Args, CONDOR_EXEC );
+	}
+
+		// This variable is used to keep track of the position
+		// of the arguments immediately following argv[0].
+
+	int skip = strlen(Args)+1;
+
+		// Support USER_JOB_WRAPPER parameter...
 
 	char *wrapper = NULL;
 	if( (wrapper=param("USER_JOB_WRAPPER")) ) {
@@ -380,16 +401,24 @@ OsProc::StartJob()
 	}
 
 		// in the below dprintfs, we want to skip past argv[0], which
-		// we know will always be condor_exec, in the Args string. 
-	int skip = strlen(CONDOR_EXEC) + 1;
+		// is sometimes condor_exec, in the Args string. 
+		// We rely on the "skip" variable defined above when
+		// argv[0] was set according to the universe and job name.
+
 	if( has_wrapper ) { 
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
 		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName, 
 				 &(Args[skip]) );
 	} else {
-		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
+		if (skip < strlen(Args)){
+			/* some arguments exist, so skip and print them out */
+			dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
 				 &(Args[skip]) );
+		} else {
+			/* no arguments exist, so just print out executable */
+			dprintf( D_ALWAYS, "About to exec %s\n", JobName);
+		}
 	}
 
 		// Grap the full environment back out of the Env object 
@@ -672,34 +701,4 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 	return true;
-}
-
-int 
-nullFile(const char *filename)
-{
-	// On WinNT, /dev/null is NUL
-	// on UNIX, /dev/null is /dev/null
-	
-	// a UNIX->NT submit will result in the NT starter seeing /dev/null, so it
-	// needs to recognize that /dev/null is the null file
-
-	// an NT->NT submit will result in the NT starter seeing NUL as the null 
-	// file
-
-	// a UNIX->UNIX submit ill result in the UNIX starter seeing /dev/null as
-	// the null file
-	
-	// NT->UNIX submits are not worried about - we don't think that anyone can
-	// do them, and to make it clean we'll fix submit to always use /dev/null,
-	// in the job ad, even on NT. 
-
-	#ifdef WIN32
-	if(_stricmp(filename, "NUL") == 0) {
-		return 1;
-	}
-	#endif
-	if(strcmp(filename, "/dev/null") == 0 ) {
-		return 1;
-	}
-	return 0;
 }

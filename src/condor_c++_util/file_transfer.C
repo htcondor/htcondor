@@ -37,6 +37,7 @@
 #include "util_lib_proto.h"
 #include "daemon.h"
 #include "daemon_types.h"
+#include "nullfile.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -292,7 +293,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	}
 	if (Ad->LookupString(ATTR_JOB_INPUT, buf) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( file_strcmp(buf,NULL_FILE) != 0 ) {			
+		if ( ! nullFile(buf) ) {			
 			if ( !InputFiles->file_contains(buf) )
 				InputFiles->append(buf);			
 		}
@@ -379,7 +380,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	// and now check stdout/err
 	if (Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( file_strcmp(buf,NULL_FILE) != 0 ) {
+		if ( ! nullFile(buf) ) {
 			if ( OutputFiles ) {
 				if ( !OutputFiles->file_contains(buf) )
 					OutputFiles->append(buf);
@@ -389,7 +390,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	}
 	if (Ad->LookupString(ATTR_JOB_ERROR, buf) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( file_strcmp(buf,NULL_FILE) != 0 ) {
+		if ( ! nullFile(buf) ) {
 			if ( OutputFiles ) {
 				if ( !OutputFiles->file_contains(buf) )
 					OutputFiles->append(buf);

@@ -867,8 +867,6 @@ class DaemonCore : public Service
 	ReliSock* dc_rsock;	// tcp command socket
 	SafeSock* dc_ssock;	// udp command socket
 
-    int getAuthBitmask( char* methods );
-
     void Inherit( void );  // called in main()
 	void InitCommandSocket( int command_port );  // called in main()
 

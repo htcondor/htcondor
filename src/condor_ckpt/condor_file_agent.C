@@ -28,7 +28,15 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	char sub_url[_POSIX_PATH_MAX];
 
 	strcpy( url, url_in );
-	sscanf( url, "%[^:]:%s",junk,sub_url );
+
+	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't 
+		work with 8bit numbers */
+	#if defined(LINUX) && (defined(GLIBC20) || defined(GLIBC21))
+	sscanf( url, "%[^:]:%[\x1-\x7F]",junk,sub_url );
+	#else
+	sscanf( url, "%[^:]:%[\x1-\xFF]",junk,sub_url );
+	#endif
+
 
 	// First, fudge the flags.  Even if the file is opened
 	// write-only, we must open it read/write to get the 

@@ -9,6 +9,7 @@
 int GlobusResource::probeInterval = 300;	// default value
 int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::submitLimit = 5;		// default value
+int GlobusResource::gahpCallTimeout = 300;	// default value
 
 GlobusResource::GlobusResource( char *resource_name )
 {
@@ -18,8 +19,10 @@ GlobusResource::GlobusResource( char *resource_name )
 								(TimerHandlercpp)&GlobusResource::DoPing,
 								"GlobusResource::DoPing", (Service*)this );
 	lastPing = 0;
+	lastStatusChange = 0;
 	gahp.setNotificationTimerId( pingTimerId );
 	gahp.setMode( GahpClient::normal );
+	gahp.setTimeout( gahpCallTimeout );
 	resourceName = strdup( resource_name );
 }
 
@@ -65,6 +68,7 @@ void GlobusResource::RequestPing( GlobusJob *job )
 bool GlobusResource::RequestSubmit( GlobusJob *job )
 {
 	GlobusJob *jobptr;
+	static int oldSubmitLimit = -1;
 
 	submitsQueued.Rewind();
 	while ( submitsQueued.Next( jobptr ) ) {
@@ -82,10 +86,14 @@ dprintf(D_FULLDEBUG,"*** Job %d.%d already in submitsInProgress\n",job->procID.c
 		}
 	}
 
+		// don't EXCEPT here if submitLimit changed due to a condor_reconfig.
+		// we check against oldSumitLimit to check for this case...
 	if ( submitsInProgress.Length() < submitLimit &&
+		 submitLimit == oldSubmitLimit && 
 		 submitsQueued.Length() > 0 ) {
 		EXCEPT("In GlobusResource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n");
 	}
+	oldSubmitLimit = submitLimit;
 	if ( submitsInProgress.Length() < submitLimit ) {
 		submitsInProgress.Append( job );
 dprintf(D_FULLDEBUG,"*** Job %d.%d appended to submitsInProgress\n",job->procID.cluster,job->procID.proc);
@@ -150,13 +158,13 @@ int GlobusResource::DoPing()
 
 	lastPing = time(NULL);
 
-	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
+	if ( rc != GLOBUS_SUCCESS ) {
 		ping_failed = true;
 	}
 
 	if ( ping_failed == resourceDown && firstPingDone == true ) {
 		// State of resource hasn't changed. Notify ping requesters only.
-		dprintf(D_FULLDEBUG,"resource %s is still %s\n",resourceName,
+		dprintf(D_ALWAYS,"resource %s is still %s\n",resourceName,
 				ping_failed?"down":"up");
 
 		pingRequesters.Rewind();
@@ -170,10 +178,11 @@ int GlobusResource::DoPing()
 		}
 	} else {
 		// State of resource has changed. Notify every job.
-		dprintf(D_FULLDEBUG,"resource %s is now %s\n",resourceName,
+		dprintf(D_ALWAYS,"resource %s is now %s\n",resourceName,
 				ping_failed?"down":"up");
 
 		resourceDown = ping_failed;
+		lastStatusChange = lastPing;
 
 		firstPingDone = true;
 

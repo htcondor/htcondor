@@ -1806,7 +1806,13 @@ int pseudo_file_info( const char *logical_name, int *fd, char *physical_name )
 	result = pseudo_get_file_info( logical_name, url );
 	if(result<0) return result;
 
-	sscanf(url,"%[^:]:%s",method,physical_name);
+	/* glibc21 (and presumeably glibc20) have a problem where the range
+		specifier can't be 8bit. So, this only allows a 7bit clean filename. */
+	#if defined(LINUX) && (defined(GLIBC20) || defined(GLIBC21))
+	sscanf(url,"%[^:]:%[\x1-\x7F]",method,physical_name);
+	#else
+	sscanf(url,"%[^:]:%[\x1-\xFF]",method,physical_name);
+	#endif
 
 	if(!strcmp(method,"local")) {
 		result = IS_LOCAL;

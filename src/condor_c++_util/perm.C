@@ -195,59 +195,10 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 //
 bool perm::domainAndNameMatch( const char *account1, const char *account2, const char *domain1, const char *domain2 ) {
 	
-	// for debugging
-//		printf("%s\\%s\t%s\\%s\n", ( domain1 ? domain1 : "NULL" ), account1, ( domain2 ? domain2 : "NULL" ), account2);
-	
-	return ( ( strcmp ( account1, account2 ) == 0 ) && 
+	return ( ( stricmp ( account1, account2 ) == 0 ) && 
 		( domain1 == NULL || domain1 == "" || 
-		strcmp ( domain1, domain2 ) == 0 ) );	
-}
+		stricmp ( domain1, domain2 ) == 0 ) );
 
-//
-//  returns account and domain string from a SID pointer
-//  It's just a wrapper method, but it saves time since this is a common operation
-//
-//  returns 0=success, -1=something bad happened
-//
-int perm::getAccountFromSid( LPTSTR Sid, char* &account, char* &domain ) {
-	// call lookupAccountSid and get name and domain
-	
-	unsigned long name_buffer_size = 0;
-	unsigned long domain_name_size = 0;
-	SID_NAME_USE peSid;
-	
-	// get buffer sizes first
-	int success = LookupAccountSid( NULL,	// name of local or remote computer
-		Sid,							// security identifier
-		account,						// account name buffer
-		&name_buffer_size,				// size of account name buffer
-		domain,							// domain name
-		&domain_name_size,				// size of domain name buffer
-		&peSid							// SID type
-		);	
-	
-	// set buffer sizes
-	account = new char[name_buffer_size];
-	domain = new char[domain_name_size];
-	
-	// now look up the sid and get the name and domain so we can compare 
-	// them to what we're searching for
-	success = LookupAccountSid( NULL,		// computer to lookup on (NULL means local)
-		Sid,			// security identifier
-		account,							// account name buffer
-		&name_buffer_size,				// size of account name buffer
-		domain,						// domain name
-		&domain_name_size,				// size of domain name buffer
-		&peSid							// SID type
-		);	
-	if ( ! success ) {
-		dprintf(D_ALWAYS, "perm::LookupAccountSid failed (err=%d)\n", GetLastError());
-		delete[] account;
-		delete[] domain;
-		return -1;
-	}
-	
-	return 0;
 }
 
 //
@@ -264,8 +215,9 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 	unsigned long entries_read;	
 	unsigned long total_entries;
 	NET_API_STATUS status;
-	wchar_t *group_name_unicode = new wchar_t[strlen(group_name)+1]; 
-	MultiByteToWideChar(CP_ACP, 0, group_name, -1, group_name_unicode, strlen(group_name)+1);
+	wchar_t group_name_unicode[MAX_GROUP_LENGTH+1];
+	_snwprintf(group_name_unicode, MAX_GROUP_LENGTH+1, L"%S", group_name);
+	
 	
 	DWORD resume_handle = 0;
 	
@@ -286,7 +238,6 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 		case ERROR_ACCESS_DENIED:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_ACCESS_DENIED\n");
 			NetApiBufferFree( buf );
-			delete[] group_name_unicode;	
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
 				total_entries, entries_read );
 			return -1;
@@ -294,7 +245,6 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 		case NERR_InvalidComputer:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_InvalidComputer\n");
 			NetApiBufferFree( buf );
-			delete[] group_name_unicode;	
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
 				total_entries, entries_read );
 			return -1;
@@ -302,7 +252,6 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 		case ERROR_NO_SUCH_ALIAS:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_NO_SUCH_ALIAS\n");
 			NetApiBufferFree( buf );
-			delete[] group_name_unicode;			
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
 				total_entries, entries_read );
 			return -1;
@@ -316,8 +265,8 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 		{
 			wchar_t* member_unicode = cur->lgrmi3_domainandname;
 			// convert unicode string to ansi string
-			char* member = new char[wcslen( member_unicode)+1];
-			WideCharToMultiByte(CP_ACP, 0, member_unicode, -1, member, wcslen( member_unicode)+1, NULL, NULL);
+			char member[MAX_DOMAIN_LENGTH+MAX_ACCOUNT_LENGTH+2];  // domain+acct+slash+null
+			snprintf(member, MAX_DOMAIN_LENGTH+MAX_ACCOUNT_LENGTH+2, "%S", member_unicode);
 			
 			// compare domain and name to find a match
 			char *member_name, *member_domain;
@@ -325,15 +274,11 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 
 			if ( domainAndNameMatch (account, member_name, domain, member_domain) )
 			{
-				delete[] member;
-				delete[] group_name_unicode;
 				NetApiBufferFree( buf );
 				return 1;
 			}
-			delete[] member;
 		}
 	} while ( status == ERROR_MORE_DATA );
-	delete[] group_name_unicode;
 	// having exited the for loop without finding anything, we conclude
 	// that the account does not exist in the explicit access structure
 	
@@ -349,15 +294,15 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 int perm::userInGlobalGroup( const char *account, const char *domain, const char* group_name, const char* group_domain ) {
 	
 	dprintf(D_FULLDEBUG,"in perm::processGlobalGroupTrustee() looking at group '%s\\%s'\n", 
-		(group_name) ? group_name : "NULL", (group_domain) ? group_domain : "NULL" );
+		(group_domain) ? group_domain : "NULL", (group_name) ? group_name : "NULL" );
 
 	unsigned char* BufPtr; // buffer pointer
-	wchar_t* group_domain_unicode = new wchar_t[strlen(group_domain)+1];
-	wchar_t* group_name_unicode = new wchar_t[strlen(group_name)+1];
-	MultiByteToWideChar(CP_ACP, 0, group_domain, -1, group_domain_unicode, strlen(group_domain)+1);
-	MultiByteToWideChar(CP_ACP, 0, group_name, -1, group_name_unicode, strlen(group_name)+1);
+	wchar_t group_domain_unicode[MAX_DOMAIN_LENGTH+1];	// computer names restricted to 254 chars
+	wchar_t group_name_unicode[MAX_GROUP_LENGTH+1];	// groups limited to 256 chars
+	_snwprintf(group_domain_unicode, MAX_DOMAIN_LENGTH+1, L"%S", group_domain);
+	_snwprintf(group_name_unicode, MAX_GROUP_LENGTH+1, L"%S", group_name);
 	
-	GROUP_USERS_INFO_0* group_members;
+	GROUP_USERS_INFO_0 *group_members;
 	unsigned long entries_read, total_entries;
 	NET_API_STATUS status;
 	
@@ -370,15 +315,10 @@ int perm::userInGlobalGroup( const char *account, const char *domain, const char
 	if (status == NERR_DCNotFound ) {
 		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: DCNotFound (domain looked up: %s)", group_domain);
 		NetApiBufferFree( BufPtr );
-		delete[] group_domain_unicode;
-		delete[] group_name_unicode;
-		
 		return -1;
 	} else if ( status == ERROR_INVALID_NAME ) {
 		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: Error Invalid Name (domain looked up: %s)", group_domain);
 		NetApiBufferFree( BufPtr );
-		delete[] group_domain_unicode;
-		delete[] group_name_unicode;
 		return -1;
 	}
 	
@@ -410,46 +350,41 @@ int perm::userInGlobalGroup( const char *account, const char *domain, const char
 			dprintf(D_ALWAYS, "perm::NetGroupGetUsers failed: (domain: %s, domain controller: %s, total entries: %d, entries read: %d, err=%d)",
 				group_domain, DCname, total_entries, entries_read, GetLastError());
 			delete[] DCname;
-			delete[] group_domain_unicode;
-			delete[] group_name_unicode;
 			NetApiBufferFree( BufPtr );
 			NetApiBufferFree( DomainController );
 			return -1;
 		}
 		
 		DWORD i;
-		GROUP_USERS_INFO_0* cur;
-		
-		for ( i = 0, cur = group_members; i < entries_read; ++ i, ++ cur )			{
+				
+		for ( i = 0; i < entries_read; i++ )			{
 			
-			char* t_domain;
-			char* t_name;
-			char *t_str = new char[ strlen((char*) group_members->grui0_name)+1];
-			strcpy( t_str, (char*)group_members->grui0_name );
-			getDomainAndName( t_str, t_domain, t_name);	
+			char t_name[MAX_ACCOUNT_LENGTH+1]; // account names are restricted to 20 chars, but I'm 
+								// gonna be safe and say 256.
+							 
+			snprintf(t_name, MAX_ACCOUNT_LENGTH+1, "%S", group_members[i].grui0_name);
+			dprintf(D_FULLDEBUG, "GlobalGroupMember: %s\n", t_name);
+			//getDomainAndName( t_str, t_domain, t_name);	
 			
-			if ( domainAndNameMatch( account, t_name, domain, t_domain ) )
+			if ( domainAndNameMatch( account, t_name, domain, group_domain ) )
 			{
-				delete[] group_domain_unicode;
-				delete[] group_name_unicode;
-				delete[] t_str;
+				//delete[] t_str;
 				NetApiBufferFree( BufPtr );
 				NetApiBufferFree( DomainController );
 				return 1;
 			}
+		
 		}
 	}while ( status == ERROR_MORE_DATA ); // loop if there's more group members to look at
 	
 	// exiting the for loop means we didn't find anything
-	delete[] group_domain_unicode;
-	delete[] group_name_unicode;
 	NetApiBufferFree( BufPtr );
 	NetApiBufferFree( DomainController );
 	return 0;			
 }
 
 //
-// check if given account and domain are in the specified EXPLICIT_ACCESS structure
+// check if given account and domain are in the specified ACE
 // This could be granted or denied access, we don't care at this point
 //
 // return 0 = No, 1 = yes, -1 = unknown/error
@@ -462,12 +397,12 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 	unsigned long domain_name_size = 0;
 	SID_NAME_USE peSid;
 
-	LPVOID psid = &((ACCESS_ALLOWED_ACE*) cur_ace)->SidStart;
+	LPVOID ace_sid = &((ACCESS_ALLOWED_ACE*) cur_ace)->SidStart;
 	
 	// lookup the ACE's SID
 	// get buffer sizes first
 	int success = LookupAccountSid( NULL,	// name of local or remote computer
-		psid,								// security identifier
+		ace_sid,							// security identifier
 		trustee_name ,						// account name buffer
 		&name_buffer_size,					// size of account name buffer
 		trustee_domain,						// domain name
@@ -482,7 +417,7 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 	// now look up the sid and get the name and domain so we can compare 
 	// them to what we're searching for
 	success = LookupAccountSid( NULL,		// computer to lookup on (NULL means local)
-		psid,								// security identifier
+		ace_sid,								// security identifier
 		trustee_name,						// account name buffer
 		&name_buffer_size,					// size of account name buffer
 		trustee_domain,						// domain name
@@ -495,9 +430,11 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 		if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
 		if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
 		return -1;
+	} else {
+		dprintf(D_FULLDEBUG, "perm::UserInAce: Checking %s\\%s\n", 
+			trustee_domain, trustee_name);
 	}
-	
-	
+
 	if ( peSid == SidTypeUser ) 
 	{
 		int result = domainAndNameMatch( account, trustee_name, domain, trustee_domain );
@@ -604,9 +541,10 @@ bool perm::init( const char *accountname, char *domain )
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE
 	{
+		
 		dprintf(D_ALWAYS,
-			"perm::init: Lookup Account Name %s failed, using Everyone\n",
-			accountname);
+			"perm::init: Lookup Account Name %s failed (err=%lu), using Everyone\n",
+			accountname, GetLastError());
 		
 		// SID_IDENTIFIER_AUTHORITY  NTAuth = SECURITY_NT_AUTHORITY;
 		SID_IDENTIFIER_AUTHORITY  NTAuth = SECURITY_WORLD_SID_AUTHORITY;
@@ -1027,31 +965,44 @@ int perm::set_acls( const char *filename )
 	return 1;
 }
 
+
 #ifdef PERM_OBJ_DEBUG
+
+extern void dprintf_config( char* subsys, FILE* logfd );
+extern void set_debug_flags( char *strflags );
+extern "C" FILE	*DebugFP;
+
 // Main method for testing the Perm functions
 int 
 main(int argc, char* argv[]) {
 	
+	char *filename, *domain, *username;
 	perm* foo = new perm();
+
+	DebugFP = stdout;
+	set_debug_flags( "D_ALL" );
 	//char p_ntdomain[80];
 	//char buf[100];
 	
-	if (argc < 2) { 
-		cout << "Enter a file name" << endl;
+	if (argc < 4) { 
+		cout << "Usage:\nperm filename domain username" << endl;
 		return (1);
 	}
+	filename = argv[1];
+	domain = argv[2];
+	username = argv[3];
 	
-	foo->init("stolley", NULL);
+	foo->init(username, domain);
 	
-	cout << "Checking write access for " << argv[1] << endl;
+	cout << "Checking write access for " << filename << endl;
 	
-	int result = foo->write_access(argv[1]);
+	int result = foo->write_access(filename);
 	
 	if ( result == 1) {
-		cout << "You can write to " << argv[1] << endl;
+		cout << "You can write to " << filename << endl;
 	}
 	else if (result == 0) {
-		cout << "You are not allowed to write to " << argv[1] << endl;
+		cout << "You are not allowed to write to " << filename << endl;
 	}
 	else if (result == -1) {
 		cout << "An error has occured\n";

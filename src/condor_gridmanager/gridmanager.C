@@ -126,10 +126,13 @@ time_t Proxy_Expiration_Time = 0;
 int syncJobIO_tid = TIMER_UNSET;
 int syncJobIO_interval;
 
+int checkResources_tid = TIMER_UNSET;
+
 GahpClient GahpMain;
 
 void RequestContactSchedd();
 int doContactSchedd();
+int checkResources();
 
 // handlers
 int ADD_JOBS_signalHandler( int );
@@ -275,6 +278,15 @@ Reconfig()
 	// This method is called both at startup [from method Init()], and
 	// when we are asked to reconfig.
 
+
+	if ( checkResources_tid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer(checkResources_tid);
+		checkResources_tid = TIMER_UNSET;
+	}
+	checkResources_tid = daemonCore->Register_Timer( 1, 60,
+												(TimerHandler)&checkResources,
+												"checkResources", NULL );
+
 	contactScheddDelay = -1;
 	tmp = param("GRIDMANAGER_CONTACT_SCHEDD_DELAY");
 	if ( tmp ) {
@@ -328,6 +340,10 @@ Reconfig()
 		tmp_int = 5 * 60; // default interval is 5 minutes
 	}
 	GlobusJob::setGahpCallTimeout( tmp_int );
+	GlobusResource::setGahpCallTimeout( tmp_int );
+
+	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
+	GlobusJob::setConnectFailureRetry( tmp_int );
 
 	checkProxy_interval = -1;
 	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
@@ -549,6 +565,56 @@ REMOVE_JOBS_signalHandler( int signal )
 }
 
 int
+checkResources()
+{
+	GlobusResource * next_resource;
+	int num_resources = 0;
+	int num_down_resources = 0;
+	time_t most_recent_time = 0;
+
+	ResourcesByName.startIterations();
+	while ( ResourcesByName.iterate( next_resource ) != 0 ) {
+		num_resources++;
+		if ( next_resource->IsDown() ) {
+			time_t downtime = next_resource->getLastStatusChangeTime();
+			if ( downtime == 0 ) {
+				// don't know when.... useless!
+				continue;
+			}
+			most_recent_time = MAX(most_recent_time,downtime);
+			num_down_resources++;
+		}
+	}
+
+	dprintf(D_FULLDEBUG,"checkResources(): %d resources, %d are down\n",
+		num_resources, num_down_resources);
+
+	if ( num_resources > 0 && num_resources == num_down_resources ) {
+			// all resources are down!  see for how long...
+		time_t downfor = time(NULL) - most_recent_time;
+		int max_downtime = param_integer(
+							"GRIDMANAGER_MAX_TIME_DOWN_RESOURCES",
+							15 * 60 );	// 15 minutes default
+		if ( downfor > max_downtime ) {
+			dprintf(D_ALWAYS,
+				"All resources down for more than %d secs -- killing GAHP\n",
+				max_downtime);
+			if ( GahpMain.getPid() > 0 ) {
+				daemonCore->Send_Signal(GahpMain.getPid(),SIGKILL);
+			} else {
+				dprintf(D_ALWAYS,"ERROR - no gahp found???\n");
+			}
+		} else {
+			dprintf(D_ALWAYS,"All resources down for %d seconds!\n",
+				downfor);
+		}
+	}
+
+	return TRUE;
+}
+
+
+int
 doContactSchedd()
 {
 	Qmgr_connection *schedd;
@@ -572,6 +638,7 @@ doContactSchedd()
 			 !curr_job->submitLogged ) {
 			WriteGlobusSubmitEventToUserLog( curr_job->ad );
 			curr_job->submitLogged = true;
+			curr_job->increment_globus_submits = true;
 		}
 		if ( curr_action->actions & UA_LOG_EXECUTE_EVENT &&
 			 !curr_job->executeLogged ) {
@@ -622,6 +689,17 @@ doContactSchedd()
 
 		curr_job = curr_action->job;
 
+		if ( curr_job->increment_globus_submits ) {
+ 				// Increment the number of times we've
+ 				// successfully submitted to Globus
+ 			(curr_job->numGlobusSubmits)++;
+ 			SetAttributeInt( curr_job->procID.cluster,
+ 						curr_job->procID.proc,
+ 						ATTR_NUM_GLOBUS_SUBMITS, curr_job->numGlobusSubmits );
+ 			curr_job->increment_globus_submits = false;
+ 		}
+			
+
 		// Check the job status on the schedd to see if the job's been
 		// held or removed. We don't want to blindly update the status.
 		int job_status_schedd;
@@ -649,6 +727,17 @@ doContactSchedd()
 			DeleteAttribute(curr_job->procID.cluster,
 							curr_job->procID.proc,
 							ATTR_RELEASE_REASON );
+			SetAttributeInt( curr_job->procID.cluster, 
+							 curr_job->procID.proc,
+				ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+			int sys_holds = 0;
+			GetAttributeInt(curr_job->procID.cluster, 
+						curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
+						&sys_holds);
+			sys_holds++;
+			SetAttributeInt(curr_job->procID.cluster, 
+						curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
+						sys_holds);
 		} else {	// !UA_HOLD_JOB
 			// If we have a
 			// job marked as HELD, it's because of an earlier hold
@@ -660,6 +749,14 @@ doContactSchedd()
 			if ( curr_job->condorState == HELD ) {
 				curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
 				curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
+			} else {
+					// Finally, if we are just changing from one unintersting state
+					// to another, update the ATTR_ENTERED_CURRENT_STATUS time.
+				if ( curr_job->condorState != job_status_schedd ) {
+					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc, 
+						ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+				}
 			}
 		}
 
@@ -773,8 +870,8 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 			if ( JobsByProcID.lookup( procID, old_job ) != 0 ) {
 
 				int rc;
-				char resource_name[200];
-				GlobusResource *resource;
+				char resource_name[800];
+				GlobusResource *resource = NULL;
 
 				resource_name[0] = '\0';
 				next_ad->LookupString( ATTR_GLOBUS_RESOURCE, resource_name );

@@ -749,11 +749,17 @@ param_integer( const char *name, int default_value )
 	int fields;
 	char *string;
 
-	string = lookup_macro( name, ConfigTab, TABLESIZE );
-	if(!string) return default_value;
+	string = param( name );
+	if( ! string ) {
+		return default_value;
+	}
 
-	fields = sscanf(string,"%d",&result);
-	if(fields==1) return result;
+	fields = sscanf( string, "%d", &result );
+	free( string );
+	
+	if( fields==1 ) {
+		return result;
+	}
 
 	return default_value;
 }

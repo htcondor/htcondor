@@ -17,7 +17,7 @@
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
 #define CondorGFiles sbin/condor_gridmanager sbin/gahp_server \
-    etc/examples/condor_config.local.condor-g
+    bin/condor_glidein etc/examples/condor_config.local.condor-g
  
 #define DAGManFiles bin/condor_dagman bin/condor_submit_dag \
   bin/condor_submit
@@ -56,7 +56,7 @@
 #endif
 
 #if WANT_CONDOR_G && HAS_GLOBUS
-#define GlobusProgs gridmanager
+#define GlobusProgs gridmanager globus
 #else
 #define GlobusProgs
 #endif
@@ -121,7 +121,7 @@ libs:: h h_all condor_includes makefiles Directories Libraries
 public:: strip.tar 
 
 strip.tar: stripped
-	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server AllFiles
+	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server --exclude bin/condor_glidein AllFiles
 
 afs_release.tar:: afs_strip.tar
 
@@ -134,7 +134,7 @@ public:: static.tar
 afs_release.tar:: afs_static.tar
 
 static.tar: static
-	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server AllFiles
+	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server --exclude bin/condor_glidein AllFiles
 
 afs_static.tar: static.tar
 	cp static_dir/release.tar $(PUBLIC_S_TARGET)
@@ -275,6 +275,7 @@ object_target(prio)
 object_target(scripts)
 #if WANT_CONDOR_G && HAS_GLOBUS
     object_target(gridmanager)
+	object_target(globus)
 #endif
 object_target(starter.V6.1)
 object_target(shadow.V6.1)

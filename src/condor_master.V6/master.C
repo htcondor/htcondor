@@ -778,13 +778,20 @@ init_classad()
 	config_fill_ad( ad ); 	
 }
 
+#ifndef WIN32
 FileLock *MasterLock;
+#endif
 
 void
 lock_or_except( const char* file_name )
 {
-	if( (MasterLockFD=open(file_name,O_WRONLY|O_CREAT|O_APPEND, S_IREAD|S_IWRITE)) < 0 ) {
-		EXCEPT( "can't open(%s,O_WRONLY|O_CREAT|O_APPEND,S_IREAD|S_IWRITE) - errno %i", file_name, errno );
+#ifndef WIN32	// S_IRUSR and S_IWUSR don't exist on WIN32, and 
+				// we don't need to worry about multiple masters anyway
+				// because it's a service.
+	MasterLockFD=_condor_open_lock_file(file_name,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR);
+	if( MasterLockFD < 0 ) {
+		EXCEPT( "can't open(%s,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR) - errno %i", 
+			file_name, errno );
 	}
 
 	// This must be a global so that it doesn't go out of scope
@@ -794,6 +801,7 @@ lock_or_except( const char* file_name )
 	if( !MasterLock->obtain(WRITE_LOCK) ) {
 		EXCEPT( "Can't get lock on \"%s\"", file_name );
 	}
+#endif
 }
 
 

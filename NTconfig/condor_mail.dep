@@ -1,0 +1,13 @@
+# Microsoft Developer Studio Generated Dependency File, included by condor_mail.mak
+
+..\src\condor_mail\condor_email_main.cpp : \
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_mail\smtp.h"\
+	"..\src\condor_mail\StdAfx.h"\
+	
+
+..\src\condor_mail\smtp.cpp : \
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_mail\smtp.h"\
+	"..\src\condor_mail\StdAfx.h"\
+	

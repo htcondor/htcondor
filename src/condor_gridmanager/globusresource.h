@@ -27,6 +27,8 @@ class GlobusResource : public Service
 	bool IsDown();
 	char *ResourceName();
 
+	time_t getLastStatusChangeTime() { return lastStatusChange; }
+
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
 
@@ -36,6 +38,9 @@ class GlobusResource : public Service
 	static void setSubmitLimit( int new_limit )
 		{ submitLimit = new_limit; }
 
+	static void setGahpCallTimeout( int new_timeout )
+		{ gahpCallTimeout = new_timeout; }
+
  private:
 	int DoPing();
 
@@ -44,6 +49,7 @@ class GlobusResource : public Service
 	bool firstPingDone;
 	int pingTimerId;
 	time_t lastPing;
+	time_t lastStatusChange;
 	List<GlobusJob> registeredJobs;
 	List<GlobusJob> pingRequesters;
 	List<GlobusJob> submitsInProgress;
@@ -51,6 +57,7 @@ class GlobusResource : public Service
 	static int probeInterval;
 	static int probeDelay;
 	static int submitLimit;
+	static int gahpCallTimeout;
 
 	GahpClient gahp;
 };

@@ -106,6 +106,4 @@ protected:
 	int rm_kill_sig;
 };
 
-// a little helper function that will move to the util lib later
-int nullFile(const char *filename);
 #endif

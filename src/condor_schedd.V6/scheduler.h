@@ -435,6 +435,9 @@ extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
 					 bool notify_shadow = true,  
+					 bool email_user = false, bool email_admin = false,
+					 bool system_hold = true);
+extern bool releaseJob( int cluster, int proc, const char* reason = NULL, 
+					 bool use_transaction = false, 
 					 bool email_user = false, bool email_admin = false );
-
 #endif /* _CONDOR_SCHED_H_ */

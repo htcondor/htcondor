@@ -1,9 +1,31 @@
+10/17/02 V6_5-pre-merge-V6_4_3
+	The V6_5 branch, before we merged in the V6_4-branch as tagged
+	at V6_4_3. 
+
+10/16/02 V6_4_3 
+	The 6.4.3 release tag, which lives on the V6_4-branch
+
+09/26/02 V6_4-branch-pre-V6_3-doc-merge-1
+	The V6_4-branch right before merging V6_3-branch (since V6_4_1 [which
+	is also on the V6_3-branch]) as tagged at V6_3-doc-merge-1
+
+09/26/02 V6_4-branch-post-V6_3-doc-merge-1
+	The V6_4-branch right after merging V6_3-branch (since V6_4_1 [which
+	is also on the V6_3-branch]) as tagged at V6_3-doc-merge-1
+
+09/26/02 V6_3-doc-merge-1
+	Some changes to the manual were accidentally checked into the V6_3-branch
+	after it was abandonded.  This is a tag on V6_3-branch, only on doc/.
 
 08/19/02 V6_5-tdp-2-branch
 	 	Branch for all the "TDP" work, which stands for "Tool Daemon
 	 	Protocol".  This is the work to integrate Condor with
 	 	Paradyn, creating paused processes, etc.  Branched off of the
 	 	main V6_5-branch.  
+
+08/18/02 V6_4_2
+	The 6.4.2 release, which was only a relink of the Globus libraries to
+    fix OpenSSL security problems. It came from the 6_4-branch 
 
 08/02/02 V6_5-tdp-branch
 	 	Branch for all the "TDP" work, which stands for "Tool Daemon

@@ -16,6 +16,9 @@ const int max_domain_length = 100;
 #define STATUS_INVALID_PARAMETER    ((NTSTATUS)0xC000000DL) 
 #endif 
 
+#define ACCOUNT_PREFIX			"condor-run-"
+#define ACCOUNT_PREFIX_REUSE	"condor-reuse-"
+
 class dynuser {
 public:
 	dynuser();
@@ -30,6 +33,11 @@ public:
     bool cleanup_condor_users(char* user_prefix);
 
 	void reset(); // used to be private
+
+	const char* account_prefix() { 
+		if ( reuse_account ) { return ACCOUNT_PREFIX_REUSE; }
+		else { return ACCOUNT_PREFIX; }
+	};
 
 
 private:

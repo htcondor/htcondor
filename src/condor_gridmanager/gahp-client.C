@@ -26,6 +26,7 @@
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "globus_utils.h"
+#include "get_port_range.h"
 #include "gahp-client.h"
 
 	// Initialize static data members
@@ -45,6 +46,7 @@ void* GahpClient::m_user_callback_arg = NULL;
 globus_gram_client_callback_func_t GahpClient::m_callback_func = NULL;
 int GahpClient::m_callback_reqid = 0;
 bool GahpClient::poll_pending = false;
+bool GahpClient::use_prefix = false;
 bool Gahp_Args::skip_next_r = false;
 HashTable<int,GahpClient*> * GahpClient::requestTable = NULL;
 Queue<int> GahpClient::waitingToSubmit;
@@ -58,6 +60,8 @@ Queue<int> GahpClient::waitingToSubmit;
 #endif	
 
 #define NULLSTRING "NULL"
+#define GAHP_PREFIX "GAHP:"
+#define GAHP_PREFIX_LEN 5
 
 GahpClient::GahpClient()
 {
@@ -178,6 +182,7 @@ Gahp_Args::read_argv(int readfd)
 	int ibuf = 0;
 	int iargv = 0;
 	int result = 0;
+	bool trash_this_line;
 	static const int buf_size = 1024 * 500;
 	static const int argv_size = 60;
 
@@ -250,9 +255,25 @@ dprintf(D_FULLDEBUG,"GAHP -> EOF\n");
 			argc = iargv + 1;
 
 			// We are all done and about to return.  But first,
+			// check for our prefix if using one.
+			trash_this_line = false;
+			if ( GahpClient::getUsePrefix() ) {
+				if ( argv[0] && 
+					 strncmp(GAHP_PREFIX,argv[0],GAHP_PREFIX_LEN)==0)
+				{
+					// Prefix is good.
+					// Fixup argv[0] so prefix is transparent.
+					memmove(argv[0],&(argv[0][GAHP_PREFIX_LEN]),
+									1 + strlen(&(argv[0][GAHP_PREFIX_LEN])));
+				} else {
+					// Prefix is bad.
+					trash_this_line = true;
+				}
+			}
+
 			// check for a single "R".  This means we should check
 			// for results in gahp async mode.  
-			if ( argv[0] && argv[0][0] == 'R' ) {
+			if ( trash_this_line==false && argv[0] && argv[0][0] == 'R' ) {
 				if ( skip_next_r ) {
 					// we should not poll this time --- apparently we saw
 					// this R come through via our pipe handler.
@@ -260,7 +281,12 @@ dprintf(D_FULLDEBUG,"GAHP -> EOF\n");
 				} else {
 					GahpClient::poll_real_soon();
 				}
-				// now reset all our buffers and read the next line
+					// ignore anything else on this line & read again
+				trash_this_line = true;
+			}
+
+			if ( trash_this_line ) {
+				// reset all our buffers and read the next line
 				free_argv();
 				argv = (char**)calloc(argv_size, sizeof(char*));
 				ibuf = 0;
@@ -346,6 +372,9 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 	char *gahp_args = NULL;
 	int stdin_pipefds[2];
 	int stdout_pipefds[2];
+	int low_port;
+	int high_port;
+	char *newenv = NULL;
 
 		// Check if we already have spawned a GAHP server.  
 	if ( m_gahp_pid != -1 ) {
@@ -363,6 +392,12 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 	}
 
 	if (!gahp_path) return false;
+
+	if ( get_port_range( &low_port, &high_port ) == TRUE ) {
+		newenv = (char *)malloc( 64 );
+		snprintf( newenv, 64, "GLOBUS_TCP_PORT_RANGE=%d,%d", low_port,
+				  high_port );
+	}
 
 		// Now register a reaper, if we haven't already done so.
 		// Note we use ReaperHandler instead of ReaperHandlercpp
@@ -385,6 +420,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 			errno);
 		free( gahp_path );
 		if (gahp_args) free(gahp_args);
+		if (newenv) free(newenv);
 		return false;
 	}
 
@@ -399,7 +435,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 			PRIV_UNKNOWN,	// Priv State ---- keep the same 
 			m_reaperid,		// id for our registered reaper
 			FALSE,			// do not want a command port
-			NULL,			// env
+			newenv,			// env
 			NULL,			// cwd
 			FALSE,			// new process group?
 			NULL,			// network sockets to inherit
@@ -411,6 +447,8 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 				gahp_path);
 		free( gahp_path );
 		if (gahp_args) free(gahp_args);
+		if (newenv) free(newenv);
+		m_gahp_pid = -1;
 		return false;
 	} else {
 		dprintf(D_ALWAYS,"GAHP server pid = %d\n",m_gahp_pid);
@@ -418,6 +456,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 
 	free( gahp_path );
 	if (gahp_args) free(gahp_args);
+	if (newenv) free(newenv);
 
 		// Now that the GAHP server is running, close the sides of
 		// the pipes we gave away to the server, and stash the ones
@@ -440,6 +479,11 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 	if ( command_commands() == false ) {
 		return false;
 	}
+
+		// Try and use a reponse prefix, to shield against
+		// errors which could arise if the Globus libraries
+		// linked with the GAHP server spit out crap to stdout.
+	use_prefix = command_response_prefix( GAHP_PREFIX );
 	
 		// Give the server our x509 proxy.
 	if ( command_initialize_from_file(proxy_path) == false ) {
@@ -586,6 +630,29 @@ GahpClient::command_initialize_from_file(const char *proxy_path,
 	return true;
 }
 
+
+bool
+GahpClient::command_response_prefix(const char *prefix)
+{
+	static const char* command = "RESPONSE_PREFIX";
+
+	if  (m_commands_supported->contains_anycase(command)==FALSE) {
+		return false;
+	}
+
+	char buf[_POSIX_PATH_MAX];
+	int x = snprintf(buf,sizeof(buf),"%s %s",command,escape(prefix));
+	ASSERT( x > 0 && x < sizeof(buf) );
+	write_line(buf);
+	Gahp_Args result;
+	char **argv = result.read_argv(m_gahp_readfd);
+	if ( argv[0] == NULL || argv[0][0] != 'S' ) {
+		dprintf(D_ALWAYS,"GAHP command '%s' failed\n",command);
+		return false;
+	}
+
+	return true;
+}
 
 bool
 GahpClient::command_async_mode_on()

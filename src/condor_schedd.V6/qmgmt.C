@@ -1825,8 +1825,22 @@ extern void mark_job_stopped(PROC_ID* job_id);
 
 int mark_idle(ClassAd *job)
 {
-    int     status, cluster, proc, hosts;
+    int     status, cluster, proc, hosts, job_managed, universe;
 	PROC_ID	job_id;
+
+	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
+		universe = CONDOR_UNIVERSE_STANDARD;
+	}
+	if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
+		job_managed = 0;
+		job->LookupBool(ATTR_JOB_MANAGED, job_managed);
+		if ( job_managed ) {
+			// if a Globus Universe job is currently managed,
+			// don't touch a damn thing!!!  the gridmanager is
+			// in control.  stay out of its way!  -Todd 9/13/02
+			return 1;
+		}
+	}
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job->LookupInteger(ATTR_PROC_ID, proc);

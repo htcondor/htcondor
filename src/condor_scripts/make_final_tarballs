@@ -133,6 +133,7 @@ $realskel="condor_release";
   "i386_linux3"   => "linux",
   "i386_rh62"     => "linux",
   "i386_rh71"     => "linux",
+  "i386_rh72"     => "linux",
   "alpha_linux3"  => "linux",
   "alpha_linux22" => "linux",
   "alpha_dux40"   => "dux40",

@@ -133,6 +133,9 @@ int main_init (int argc, char ** const argv) {
 
 	printf ("Executing condor dagman ... \n");
 
+		// flag used if DAGMan is invoked with -WaitForDebug so we
+		// wait for a developer to attach with a debugger...
+	int wait_for_debug = 0;
 		
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
@@ -229,6 +232,8 @@ int main_init (int argc, char ** const argv) {
             G.maxPostScripts = atoi( argv[i] );
         } else if( !strcmp( "-NoPostFail", argv[i] ) ) {
 			run_post_on_failure = FALSE;
+        } else if( !strcmp( "-WaitForDebug", argv[i] ) ) {
+			wait_for_debug = 1;
         } else Usage();
     }
   
@@ -271,6 +276,9 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
                        G.rescue_file);
     }
+
+		// if requested, wait for someone to attach with a debugger...
+	while( wait_for_debug );
 
     {
         char *temp;

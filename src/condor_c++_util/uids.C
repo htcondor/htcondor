@@ -123,7 +123,8 @@ gid_t get_my_gid() { return 999999; }
 uid_t getuid() { return get_my_uid(); }
 
 // Static/Global objects
-static dynuser DynUser;		// object to create a dynamic nobody user
+extern dynuser *myDynuser; 	// the "system wide" dynuser object
+
 static HANDLE CurrUserHandle = NULL;
 static char *NobodyLoginName = NULL;
 
@@ -161,13 +162,13 @@ init_user_ids(const char username[])
 	
 	// see if we already have a user handle for the requested user.
 	// if so, just make it the CurrUserHandle and we're done.
-	const char *cur_acct = DynUser.get_accountname();
+	const char *cur_acct = myDynuser->get_accountname();
 	if ( cur_acct && strcmp(cur_acct,username) == 0 ) {
-		CurrUserHandle = DynUser.get_token();
+		CurrUserHandle = myDynuser->get_token();
 		return 1;
 	}
 
-	DynUser.reset();
+	myDynuser->reset();
 
 	if ( strcmp(username,"nobody") != 0 ) {
 		// here we call routines to deal with password server
@@ -181,15 +182,15 @@ init_user_ids(const char username[])
 	// initialize NobodyLoginName unless it has been explicitly
 	// set already...
 		
-	if ( !DynUser.init_user() ) {
+	if ( !myDynuser->init_user() ) {
 		// Oh shit.  
 		EXCEPT("Failed to create a user nobody");
 	}
 	
-	NobodyLoginName = (char*) DynUser.get_accountname();
+	NobodyLoginName = (char*) myDynuser->get_accountname();
 
 	// we created a new user, now just stash the token
-	CurrUserHandle = DynUser.get_token();
+	CurrUserHandle = myDynuser->get_token();
 	return 1;
 }
 

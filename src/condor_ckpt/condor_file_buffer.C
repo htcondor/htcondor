@@ -178,7 +178,15 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 	int result;
 
 	strcpy(url,url_in);
-	result = sscanf( url, "%[^:]:%s", junk, sub_url );
+	
+	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
+		work with 8bit numbers */
+	#if defined(LINUX) && (defined(GLIBC20) || defined(GLIBC21))
+	result = sscanf( url, "%[^:]:%[\x1-\x7F]", junk, sub_url );
+	#else
+	result = sscanf( url, "%[^:]:%[\x1-\xFF]", junk, sub_url );
+	#endif
+
 	if(result!=2) {
 		_condor_warning(CONDOR_WARNING_KIND_BADURL, "Couldn't understand url '%s'",url_in);
 		errno = EINVAL;
@@ -187,7 +195,15 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 
 	if(sub_url[0]=='(') {
 		char path[_POSIX_PATH_MAX];
-		result = sscanf(sub_url,"(%d,%d)%s",&buffer_size,&buffer_block_size,path);
+
+		/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
+			work with 8bit numbers */
+		#if defined(LINUX) && (defined(GLIBC20) || defined(GLIBC21))
+		result = sscanf(sub_url,"(%d,%d)%[\x1-\x7F]",&buffer_size,&buffer_block_size,path);
+		#else
+		result = sscanf(sub_url,"(%d,%d)%[\x1-\xFF]",&buffer_size,&buffer_block_size,path);
+		#endif
+
 		if(result!=3) {
 			_condor_warning(CONDOR_WARNING_KIND_BADURL, "Couldn't understand url '%s'",sub_url);
 			errno = EINVAL;

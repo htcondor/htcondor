@@ -85,6 +85,7 @@ extern int (*DebugId)(FILE *);		/* set header message */
 void dprintf ( int flags, char *fmt, ... );
 void dprintf_config( char *subsys, int logfd );
 void _condor_dprintf_va ( int flags, char* fmt, va_list args );
+int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void _EXCEPT_ ( char *fmt, ... );
 void Suicide();
 void set_debug_flags( char *strflags );

@@ -78,6 +78,7 @@ extern "C" {
 	char * expand_macro();
 	char * lookup_macro();
 	char * macro_expand();
+	int param_integer();
 	int param_in_pattern ();
 	void init_config ();
 	void clear_config ();

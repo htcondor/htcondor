@@ -62,12 +62,11 @@ static 	void io_display (ClassAd *);
 static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
-static 	void shorten (char *, int);
 static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine);
 static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
 
-static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0;
+static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
 static  bool expert = false;
 static 	int malformed, unexpanded, running, idle, held;
@@ -572,6 +571,11 @@ processCommandLineArguments (int argc, char *argv[])
 			run = true;
 		}
 		else
+		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
+			Q.add (CQ_STATUS, HELD);		
+			show_held = true;
+		}
+		else
 		if (match_prefix( arg, "goodput")) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
@@ -745,16 +749,6 @@ bufferJobShort( ClassAd *ad ) {
 		return( return_buff );
 	}
 	
-	int niceUser;
-    if( ad->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-        char tmp[100];
-        strncpy(tmp,NiceUserName,99);
-        strcat(tmp,".");
-        strcat(tmp,owner);
-        strncpy(owner,tmp, 63);
-    }
-
-	shorten (owner, 14);
 	if (ad->EvalString ("Args", NULL, args)) {
 		sprintf( buffer, "%s %s", basename(cmd), args );
 	} else {
@@ -795,6 +789,8 @@ short_header (void)
 	} else if ( globus ) {
 		printf( "%-7s %-8s %-18s  %-18s\n", "STATUS",
 				"MANAGER", "HOST", "EXECUTABLE" );
+	} else if ( show_held ) {
+		printf( "%11s %-30s\n", "HELD_SINCE", "HOLD_REASON" );
 	} else if ( show_io ) {
 		printf( "%8s %8s %8s %10s %8s %8s\n",
 				"READ", "WRITE", "SEEK", "XPUT", "BUFSIZE", "BLKSIZE" );
@@ -1014,11 +1010,6 @@ format_q_date (int d, AttrList *)
 	return format_date(d);
 }
 
-static void
-shorten (char *buff, int len)
-{
-	if ((unsigned int)strlen (buff) > (unsigned int)len) buff[len] = '\0';
-}
 		
 static void
 usage (char *myName)
@@ -1033,6 +1024,7 @@ usage (char *myName)
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
+		"\t\t-hold\t\t\tGet information about jobs placed on hold\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
@@ -1137,6 +1129,20 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 								 format_globusHostAndJM,
 								 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
 			mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
+			setup_mask = true;
+			usingPrintMask = true;
+		}
+	} else if ( show_held ) {
+		if (!setup_mask) {
+			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+			mask.registerFormat ( (StringCustomFmt) format_owner,
+								  ATTR_OWNER, "[????????????] " );
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat ( (IntCustomFmt) format_q_date,
+								  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat( "%-43.43s\n", ATTR_HOLD_REASON );
 			setup_mask = true;
 			usingPrintMask = true;
 		}
@@ -1322,6 +1328,23 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 									 format_globusHostAndJM,
 									 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
 				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
+				setup_mask = true;
+				usingPrintMask = true;
+			}
+			mask.display( stdout, &jobs );
+		} else if ( show_held ) {
+			printf( " %-7s %-14s %11s %-30s\n", 
+				"ID", "OWNER", "HELD_SINCE", "HOLD_REASON" );
+			if (!setup_mask) {
+				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+				mask.registerFormat ( (StringCustomFmt) format_owner,
+									  ATTR_OWNER, "[????????????] " );
+				mask.registerFormat(" ", "*bogus*", " ");  // force space
+				mask.registerFormat ( (IntCustomFmt) format_q_date,
+									  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
+				mask.registerFormat(" ", "*bogus*", " ");  // force space
+				mask.registerFormat( "%-43.43s\n", ATTR_HOLD_REASON );
 				setup_mask = true;
 				usingPrintMask = true;
 			}
