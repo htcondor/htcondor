@@ -229,8 +229,10 @@ resource_free(resource_id_t rid)
 	if (rip->r_pid == NO_PID)
 		return -1;
 // C H A N G E -> N Anand
-	if (rip->r_jobcontext)
+	if (rip->r_jobcontext) {
 		delete rip->r_jobcontext;
+		rip->r_jobcontext = NULL;
+	}
 	/* XXX boundary crossing */
 	free(rip->r_clientmachine);
 	rip->r_clientmachine = NULL;
