@@ -53,6 +53,17 @@ void ClassAdLibraryVersion(std::string &version_string);
 /// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
 {
+    /** \mainpage C++ ClassAd API Documentation
+     *  Welcome to the C++ ClassAd API Documentation. 
+     *  Use the links at the top to navigate. A good link to start with
+     *  is the "Class List" link.
+     *
+     *  If you are unfamiliar with the ClassAd library, look at the 
+     *  sample.C file that comes with the ClassAd library. Also check
+     *  out the online ClassAd tutorial at: 
+     *  http://www.cs.wisc.edu/condor/classad/c++tut.html
+     */
+
   	public:
 		/**@name Constructors/Destructor */
 		//@{
