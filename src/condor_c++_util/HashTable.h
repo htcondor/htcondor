@@ -520,6 +520,9 @@ void HashTable<Index,Value>::dump()
       cerr << endl;
   }
 }
-#endif
+#endif // DEBUGHASH
 
-#endif
+/// basic hash function for an unpredictable integer key
+int hashFuncInt( const int& n, int numBuckets );
+
+#endif // HASH_H

@@ -21,7 +21,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o daemon_types.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	daemon.o uids.o metric_units.o condor_ver_info.o
+	daemon.o uids.o metric_units.o condor_ver_info.o HashTable.o
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
