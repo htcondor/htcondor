@@ -209,7 +209,12 @@ DEBUG_FLAG = DebugFlag
     -I$(GLOBUS_DIR)/include -I$(LDAP_DIR)/include
 
   GLOBUS_LIB = $(GLOBUS_DIR)/lib/libglobus_rsl_assist.a \
+    $(GLOBUS_DIR)/lib/libglobus_duroc_control.a \
     $(GLOBUS_DIR)/lib/libglobus_rsl.a \
+    $(GLOBUS_DIR)/lib/libglobus_duct_control.a \
+    $(GLOBUS_DIR)/lib/libglobus_nexus.a \
+    $(GLOBUS_DIR)/lib/libglobus_mp.a \
+    $(GLOBUS_DIR)/lib/libglobus_dc.a \
     $(GLOBUS_DIR)/lib/libglobus_gram_client.a \
     $(GLOBUS_DIR)/lib/libglobus_gass_server_ez.a \
     $(GLOBUS_DIR)/lib/libglobus_gass_transfer.a \
