@@ -617,6 +617,9 @@ VLINK( compiler, vanillatarg, obj );
 /*
 ** Link a program for running remotely
 */
+#if IS_CLIPPED
+#define RLINK( compiler, remotetarg, obj )	/* */
+#else
 #define RLINK( compiler, remotetarg, obj )	@@\
 remotetarg: obj					@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(TEST_LDFLAGS) @@\
@@ -624,6 +627,7 @@ remotetarg: obj					@@\
 clean::						@@\
 	rm -f remotetarg obj			@@\
 all:: remotetarg
+#endif
 
 
 /*
@@ -781,7 +785,7 @@ html: files							@@\
 ** the comment in src/condor_c++_util/condor_version.C for more
 ** details.  -Derek Wright <wright@cs.wisc.edu> 1/25/00
 */ 
-#define x_dollar_paren(a) $( ## a ## )
+#define x_dollar_paren(a) $(##a##)
 #define dollar_paren(a) x_dollar_paren(a)
 
 
