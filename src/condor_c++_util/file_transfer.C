@@ -91,6 +91,8 @@ FileTransfer::FileTransfer()
 	SpooledIntermediateFiles = NULL;
 	FilesToSend = NULL;
 	ExecFile = NULL;
+	UserLogFile = NULL;
+	X509UserProxy = NULL;
 	TransSock = NULL;
 	TransKey = NULL;
 	SpoolSpace = NULL;
@@ -111,11 +113,13 @@ FileTransfer::FileTransfer()
 	desired_priv_state = PRIV_UNKNOWN;
 	want_priv_change = false;
 	did_init = false;
+	simple_init = true;
+	simple_sock = NULL;
 }
 
 FileTransfer::~FileTransfer()
 {
-	if (ActiveTransferTid >= 0) {
+	if (daemonCore && ActiveTransferTid >= 0) {
 		dprintf(D_ALWAYS, "FileTransfer object destructor called during "
 				"active transfer.  Cancelling transfer.\n");
 		daemonCore->Kill_Thread(ActiveTransferTid);
@@ -126,6 +130,8 @@ FileTransfer::~FileTransfer()
 	if (TransferPipe[1] >= 0) close(TransferPipe[1]);
 	if (Iwd) free(Iwd);
 	if (ExecFile) free(ExecFile);
+	if (UserLogFile) free(UserLogFile);
+	if (X509UserProxy) free(X509UserProxy);
 	if (SpoolSpace) free(SpoolSpace);
 	if (TmpSpoolSpace) free(TmpSpoolSpace);
 	if (InputFiles) delete InputFiles;
@@ -158,7 +164,8 @@ FileTransfer::~FileTransfer()
 }
 
 int
-FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv ) 
+FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
+						 ReliSock *sock_to_use, priv_state priv ) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 
@@ -167,7 +174,9 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		return 1;
 	}
 
-	dprintf(D_FULLDEBUG,"entering FileTransfer::Init\n");
+	user_supplied_key = is_server ? FALSE : TRUE;
+
+	dprintf(D_FULLDEBUG,"entering FileTransfer::SimpleInit\n");
 
 	desired_priv_state = priv;
     if ( priv == PRIV_UNKNOWN ) {
@@ -176,81 +185,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
         want_priv_change = true;
     }
 
-	if (Iwd) {
-		EXCEPT("FileTransfer::Init called twice!");
-	}
-
-	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::Init called during active transfer!");
-	}
-
-	if (!TranskeyTable) {
-		// initialize our hashtable
-		if (!(TranskeyTable = new TranskeyHashTable(7, compute_transkey_hash)))
-		{
-			// failed to allocate our hashtable ?!?!
-			return 0;
-		}
-		
-	}
-
-	if (!TransThreadTable) {
-		// initialize our thread hashtable
-		if (!(TransThreadTable =
-			  new TransThreadHashTable(7, compute_transthread_hash))) {
-			// failed to allocate our hashtable ?!?!
-			return 0;
-		}
-	}
-
-
-	// Note: we must register commands here instead of our constructor 
-	// to ensure that daemonCore object has been initialized before we 
-	// call Register_Command.
-	if ( !CommandsRegistered ) {
-		CommandsRegistered = TRUE;
-		daemonCore->Register_Command(FILETRANS_UPLOAD,"FILETRANS_UPLOAD",
-				(CommandHandler)&FileTransfer::HandleCommands,
-				"FileTransfer::HandleCommands()",NULL,WRITE);
-		daemonCore->Register_Command(FILETRANS_DOWNLOAD,"FILETRANS_DOWNLOAD",
-				(CommandHandler)&FileTransfer::HandleCommands,
-				"FileTransfer::HandleCommands()",NULL,WRITE);
-		ReaperId = daemonCore->Register_Reaper("FileTransfer::Reaper",
-							(ReaperHandler)&FileTransfer::Reaper,
-							"FileTransfer::Reaper()",NULL);
-		if (ReaperId == 1) {
-			EXCEPT("FileTransfer::Reaper() can not be the default reaper!\n");
-		}
-
-		// we also need to initialize the random number generator.  since
-		// this only has to happen once, and we will only be in this section
-		// of the code once (because the CommandsRegistered flag is static),
-		// initialize the C++ random number generator here as well.
-		set_seed( time(NULL) + (unsigned long)this + (unsigned long)Ad );
-	}
-
-	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf) != 1) {
-		char tempbuf[80];
-		// classad did not already have a TRANSFER_KEY, so
-		// generate a new one.  It must be unique and not guessable.
-		sprintf(tempbuf,"%x#%x%x%x",++SequenceNum,(unsigned)time(NULL),
-			get_random_int(),get_random_int());
-		TransKey = strdup(tempbuf);
-		user_supplied_key = FALSE;
-		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_KEY,TransKey);
-		Ad->InsertOrUpdate(tempbuf);
-
-		// since we generated the key, it is only good on our socket.
-		// so update TRANSFER_SOCK now as well.
-		char *mysocket = daemonCore->InfoCommandSinfulString();
-		ASSERT(mysocket);
-		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_SOCKET,mysocket);
-		Ad->InsertOrUpdate(tempbuf);
-	} else {
-		// Here the ad we were given already has a Transfer Key.
-		TransKey = strdup(buf);
-		user_supplied_key = TRUE;
-	}
+	simple_sock = sock_to_use;
 
 	// user must give us an initial working directory.
 	if (Ad->LookupString(ATTR_JOB_IWD, buf) != 1) {
@@ -285,7 +220,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	}
 
 	// Set InputFiles to be ATTR_TRANSFER_INPUT_FILES plus 
-	// ATTR_JOB_INPUT, ATTR_JOB_CMD.
+	// ATTR_JOB_INPUT, ATTR_JOB_CMD, and ATTR_ULOG_FILE if simple_init.
 	if (Ad->LookupString(ATTR_TRANSFER_INPUT_FILES, buf) == 1) {
 		InputFiles = new StringList(buf,",");
 	} else {
@@ -298,6 +233,23 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 				InputFiles->append(buf);			
 		}
 	}
+	if ( Ad->LookupString(ATTR_ULOG_FILE, buf) == 1 ) {
+		UserLogFile = strdup(basename(buf));
+			// add to input files if sending from submit to the schedd
+		if ( (simple_init) && (!nullFile(buf)) ) {			
+			if ( !InputFiles->file_contains(buf) )
+				InputFiles->append(buf);			
+		}
+	}
+	if ( Ad->LookupString(ATTR_X509_USER_PROXY, buf) == 1 ) {
+		X509UserProxy = strdup(basename(buf));
+			// add to input files
+		if ( !nullFile(buf) ) {			
+			if ( !InputFiles->file_contains(buf) )
+				InputFiles->append(buf);			
+		}
+	}
+
 	if ( IsServer() && (Ad->LookupString(ATTR_JOB_CMD, buf) == 1) ) {
 		// stash the executable name for comparison later, so
 		// we know that this file should be called condor_exec on the
@@ -399,7 +351,107 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		}
 	}
 
+	did_init = true;
+	return 1;
+}
 
+int
+FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv ) 
+{
+	char buf[ATTRLIST_MAX_EXPRESSION];
+
+	ASSERT( daemonCore );	// full Init require DaemonCore methods
+
+	if( did_init ) {
+			// no need to except, just quietly return success
+		return 1;
+	}
+
+	dprintf(D_FULLDEBUG,"entering FileTransfer::Init\n");
+
+	simple_init = false;
+
+	if (!TranskeyTable) {
+		// initialize our hashtable
+		if (!(TranskeyTable = new TranskeyHashTable(7, compute_transkey_hash)))
+		{
+			// failed to allocate our hashtable ?!?!
+			return 0;
+		}
+		
+	}
+
+	if (ActiveTransferTid >= 0) {
+		EXCEPT("FileTransfer::Init called during active transfer!");
+	}
+
+	if (!TransThreadTable) {
+		// initialize our thread hashtable
+		if (!(TransThreadTable =
+			  new TransThreadHashTable(7, compute_transthread_hash))) {
+			// failed to allocate our hashtable ?!?!
+			return 0;
+		}
+	}
+
+
+	// Note: we must register commands here instead of our constructor 
+	// to ensure that daemonCore object has been initialized before we 
+	// call Register_Command.
+	if ( !CommandsRegistered  ) {
+		CommandsRegistered = TRUE;
+		daemonCore->Register_Command(FILETRANS_UPLOAD,"FILETRANS_UPLOAD",
+				(CommandHandler)&FileTransfer::HandleCommands,
+				"FileTransfer::HandleCommands()",NULL,WRITE);
+		daemonCore->Register_Command(FILETRANS_DOWNLOAD,"FILETRANS_DOWNLOAD",
+				(CommandHandler)&FileTransfer::HandleCommands,
+				"FileTransfer::HandleCommands()",NULL,WRITE);
+		ReaperId = daemonCore->Register_Reaper("FileTransfer::Reaper",
+							(ReaperHandler)&FileTransfer::Reaper,
+							"FileTransfer::Reaper()",NULL);
+		if (ReaperId == 1) {
+			EXCEPT("FileTransfer::Reaper() can not be the default reaper!\n");
+		}
+
+		// we also need to initialize the random number generator.  since
+		// this only has to happen once, and we will only be in this section
+		// of the code once (because the CommandsRegistered flag is static),
+		// initialize the C++ random number generator here as well.
+		set_seed( time(NULL) + (unsigned long)this + (unsigned long)Ad );
+	}
+
+	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf) != 1) {
+		char tempbuf[80];
+		// classad did not already have a TRANSFER_KEY, so
+		// generate a new one.  It must be unique and not guessable.
+		sprintf(tempbuf,"%x#%x%x%x",++SequenceNum,(unsigned)time(NULL),
+			get_random_int(),get_random_int());
+		TransKey = strdup(tempbuf);
+		user_supplied_key = FALSE;
+		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_KEY,TransKey);
+		Ad->InsertOrUpdate(tempbuf);
+
+		// since we generated the key, it is only good on our socket.
+		// so update TRANSFER_SOCK now as well.
+		char *mysocket = daemonCore->InfoCommandSinfulString();
+		ASSERT(mysocket);
+		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_SOCKET,mysocket);
+		Ad->InsertOrUpdate(tempbuf);
+	} else {
+		// Here the ad we were given already has a Transfer Key.
+		TransKey = strdup(buf);
+		user_supplied_key = TRUE;
+	}
+
+
+		// Init all the file lists, etc.
+	if ( !SimpleInit(Ad, want_check_perms, IsServer(), 
+			NULL, priv ) ) 
+	{
+		return 0;
+	}
+
+		// At this point, we'd better have a transfer socket
 	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, buf) != 1) {
 		return 0;		
 	}
@@ -421,6 +473,10 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		bool print_comma = false;
 		Directory spool_space( SpoolSpace, PRIV_CONDOR );
 		while ( (current_file=spool_space.Next()) ) {
+			if ( !file_strcmp(UserLogFile,current_file) ) {
+					// dont send UserLog file to the starter
+				continue;
+			}
 			if ( print_comma ) {
 				filelist += ",";
 			} else {
@@ -468,6 +524,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	}
 
 	did_init = true;
+	
 	return 1;
 }
 
@@ -476,6 +533,7 @@ FileTransfer::DownloadFiles(bool blocking)
 {
 	int ret_value;
 	ReliSock sock;
+	ReliSock *sock_to_use;
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles\n");
 
@@ -488,28 +546,35 @@ FileTransfer::DownloadFiles(bool blocking)
 		EXCEPT("FileTransfer: Init() never called");
 	}
 
-	// This method should only be called on the client side, so if
-	// we are the server side, there is a programmer error -- do EXCEPT.
-	if ( IsServer() ) {
-		EXCEPT("FileTransfer: DownloadFiles called on server side");
+	if (!simple_init) {
+		// This method should only be called on the client side, so if
+		// we are the server side, there is a programmer error -- do EXCEPT.
+		if ( IsServer() ) {
+			EXCEPT("FileTransfer: DownloadFiles called on server side");
+		}
+
+		Daemon d(TransSock);
+
+		if ( !sock.connect(TransSock,0) ) {
+			EXCEPT("Unable to connect to server %s\n", TransSock);
+		}
+
+		d.startCommand(FILETRANS_UPLOAD, &sock, 0);
+
+		sock.encode();
+
+		if ( !sock.code(TransKey) ||
+			!sock.end_of_message() ) {
+			return 0;
+		}
+
+		sock_to_use = &sock;
+	} else {
+		ASSERT(simple_sock);
+		sock_to_use = simple_sock;
 	}
 
-	Daemon d(TransSock);
-
-    if ( !sock.connect(TransSock,0) ) {
-        EXCEPT("Unable to connect to server %s\n", TransSock);
-    }
-
-    d.startCommand(FILETRANS_UPLOAD, &sock, 0);
-
-	sock.encode();
-
-	if ( !sock.code(TransKey) ||
-		!sock.end_of_message() ) {
-		return 0;
-	}
-
-	ret_value = Download(&sock,blocking);
+	ret_value = Download(sock_to_use,blocking);
 
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current
@@ -522,7 +587,7 @@ FileTransfer::DownloadFiles(bool blocking)
 		// which run real quickly (i.e. less than a second) would not
 		// have their output files uploaded.  The real reason we must
 		// sleep here is time_t is only at the resolution on 1 second.
-		sleep(1);
+		if ( !simple_init ) sleep(1);
 	}
 
 	return ret_value;
@@ -532,6 +597,7 @@ int
 FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 {
     ReliSock sock;
+	ReliSock *sock_to_use;
 
 	StringList changed_files(NULL,",");
 
@@ -550,7 +616,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 	// This method should only be called on the client side, so if
 	// we are the server side, there is a programmer error -- do EXCEPT.
-	if ( IsServer() ) {
+	if ( !simple_init && IsServer() ) {
 		EXCEPT("FileTransfer: UploadFiles called on server side");
 	}
 
@@ -560,6 +626,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 	if (IntermediateFiles) delete(IntermediateFiles);
 	IntermediateFiles = NULL;
 	FilesToSend = NULL;
+	
 
 	if ( upload_changed_files && last_download_time > 0 ) {
 		// Here we will upload only files in the Iwd which have changed
@@ -617,35 +684,49 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		}
 		delete dir;
 	} else {
-		// Here we want to upload the files listed in OutputFiles.
-		FilesToSend = OutputFiles;
+		if ( simple_init ) {
+			// condor_submit going to the schedd
+			FilesToSend = InputFiles;
+		} else {
+			// starter sending back to the shadow
+			FilesToSend = OutputFiles;
+		}
 	}
 	
-	// Optimization: files_to_send now contains the files to upload.
-	// If files_to_send is NULL, then we have nothing to send, so
-	// we can return with SUCCESS immedidately.
-	if ( FilesToSend == NULL ) {
-		return 1;
+	if ( !simple_init ) {
+		// Optimization: files_to_send now contains the files to upload.
+		// If files_to_send is NULL, then we have nothing to send, so
+		// we can return with SUCCESS immedidately.
+		if ( FilesToSend == NULL ) {
+			return 1;
+		}
+
+		Daemon d(TransSock);
+
+		if ( !sock.connect(TransSock,0) ) {
+			EXCEPT("Unable to connect to server %s\n", TransSock);
+		}
+
+		d.startCommand(FILETRANS_DOWNLOAD, &sock);
+
+		sock.encode();
+
+		if ( !sock.code(TransKey) ||
+			!sock.end_of_message() ) {
+			return 0;
+		}
+
+		dprintf( D_FULLDEBUG,
+				 "FileTransfer::UploadFiles: sent TransKey=%s\n", TransKey );
+
+		sock_to_use = &sock;
+	} else {
+		ASSERT(simple_sock);
+		sock_to_use = simple_sock;
 	}
 
-	Daemon d(TransSock);
 
-    if ( !sock.connect(TransSock,0) ) {
-        EXCEPT("Unable to connect to server %s\n", TransSock);
-    }
-
-	d.startCommand(FILETRANS_DOWNLOAD, &sock);
-
-	sock.encode();
-
-	if ( !sock.code(TransKey) ||
-		!sock.end_of_message() ) {
-		return 0;
-	}
-
-	dprintf( D_FULLDEBUG,
-			 "FileTransfer::UploadFiles: sent TransKey=%s\n", TransKey );
-	int retval = Upload(&sock,blocking);
+	int retval = Upload(sock_to_use,blocking);
 
 	return( retval );
 }
@@ -696,11 +777,20 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 			// And before we do that, call CommitFiles() to finish any
 			// previous commit which may have been prematurely aborted.
 			{
+			const char *currFile;
 			transobject->CommitFiles();
 			Directory spool_space( transobject->SpoolSpace,
 								   PRIV_CONDOR );
-			while ( spool_space.Next() ) {
-				transobject->InputFiles->append( spool_space.GetFullPath() );
+			while ( currFile=spool_space.Next() ) {
+				if (transobject->UserLogFile && 
+						!file_strcmp(transobject->UserLogFile,currFile)) 
+				{
+						// Don't send the userlog from the shadow to starter
+					continue;
+				} else {
+						// We aren't looking at the userlog file... ship it!
+					transobject->InputFiles->append(spool_space.GetFullPath());
+				}
 			}
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->Upload(sock,true);		// blocking = true for now...
@@ -798,6 +888,8 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 
 	} else {
 
+		ASSERT( daemonCore );
+
 		// make a pipe to communicate with our thread
 		if (pipe(TransferPipe) < 0) {
 			dprintf(D_ALWAYS, "pipe failed with errno %d in "
@@ -868,7 +960,8 @@ FileTransfer::DoDownload(ReliSock *s)
 	// is _not_ when it was really modified, but when the modifications are actually
 	// commited to disk.  thus we must fsync in order to make certain we do not think
 	// that files like condor_exec.exe have been modified, etc. -Todd <tannenba@cs>
-	bool want_fsync = ( (IsClient()) && upload_changed_files );
+	bool want_fsync = ( ((IsClient() && !simple_init) || (IsServer() && simple_init)) 
+						 && upload_changed_files );
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoDownload sync=%d\n",
 					want_fsync ? 1 : 0);
@@ -880,6 +973,7 @@ FileTransfer::DoDownload(ReliSock *s)
 	if( !s->code(final_transfer) ) {
 		return_and_resetpriv( -1 );
 	}
+//	dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload final_transfer=%d\n",final_transfer);
 	if( !s->end_of_message() ) {
 		return_and_resetpriv( -1 );
 	}	
@@ -926,6 +1020,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		// time of the file we just wrote backwards in time by a few
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
+//		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname);
 		if( ((bytes = s->get_file(fullname)) < 0) ) {
 			return_and_resetpriv( -1 );
 		}
@@ -1039,6 +1134,8 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 		return Info.success;
 
 	} else {
+
+		ASSERT( daemonCore );
 
 		// make a pipe to communicate with our thread
 		if (pipe(TransferPipe) < 0) {
@@ -1189,6 +1286,7 @@ FileTransfer::Suspend()
 	int result = TRUE;	// return TRUE if there currently is no thread
 
 	if (ActiveTransferTid != -1 ) {
+		ASSERT( daemonCore );
 		result = daemonCore->Suspend_Thread(ActiveTransferTid);
 	}
 
@@ -1201,6 +1299,7 @@ FileTransfer::Continue()
 	int result = TRUE;	// return TRUE if there currently is no thread
 
 	if (ActiveTransferTid != -1 ) {
+		ASSERT( daemonCore );
 		result = daemonCore->Continue_Thread(ActiveTransferTid);
 	}
 

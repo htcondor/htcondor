@@ -29,6 +29,7 @@
 #include "daemon.h"
 #include "dc_schedd.h"
 #include "proc.h"
+#include "file_transfer.h"
 
 
 // // // // //
@@ -142,6 +143,104 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 					  notify_scheduler );
 }
 
+void 
+DCSchedd::forceAuthentication(ReliSock & rsock)
+{
+		// If we're not already authenticated, do that now. 
+	if( ! rsock.isAuthenticated() ) {
+		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
+		MyString methods;
+		if (p) {
+			methods = p;
+			free(p);
+		} else {
+			methods = SecMan::getDefaultAuthenticationMethods();
+		}
+		rsock.authenticate(methods.Value());
+	}
+}
+
+bool 
+DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
+{
+	int reply;
+	int i;
+	ReliSock rsock;
+
+		// // // // // // // //
+		// On the wire protocol
+		// // // // // // // //
+
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
+				 "Failed to connect to schedd (%s)\n", _addr );
+		return false;
+	}
+	if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock) ) {
+		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
+				 "Failed to send command (SPOOL_JOB_FILES) to the schedd\n" );
+		return false;
+	}
+
+
+		// First, if we're not already authenticated, force that now. 
+	forceAuthentication(rsock);
+
+		// Send the number of jobs
+	rsock.encode();
+	if ( !rsock.code(JobAdsArrayLen) ) {
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+				"Can't send JobAdsArrayLen to the schedd\n");
+		return false;
+	}
+
+	rsock.eom();
+
+		// Now, put the job ids onto the wire
+	PROC_ID jobid;
+	for (i=0; i<JobAdsArrayLen; i++) {
+		if (!JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,jobid.cluster)) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Job ad %d did not have a cluster id\n",i);
+			return false;
+		}
+		if (!JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,jobid.proc)) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Job ad %d did not have a proc id\n",i);
+			return false;
+		}
+		rsock.code(jobid);
+	}
+
+	rsock.eom();
+
+		// Now send all the files via the file transfer object
+	for (i=0; i<JobAdsArrayLen; i++) {
+		FileTransfer ftrans;
+		if ( !ftrans.SimpleInit(JobAdsArray[i], false, false, &rsock) ) {
+			return false;
+		}
+		if ( !ftrans.UploadFiles(true,false) ) {
+			return false;
+		}
+	}	
+		
+		
+	rsock.eom();
+
+	rsock.decode();
+
+	reply = 0;
+	rsock.code(reply);
+	rsock.eom();
+
+	if ( reply == 1 ) 
+		return true;
+	else
+		return false;
+}
+
 
 ClassAd*
 DCSchedd::actOnJobs( job_action_t action, const char* action_str, 
@@ -235,17 +334,7 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 		return NULL;
 	}
 		// First, if we're not already authenticated, force that now. 
-	if( ! rsock.isAuthenticated() ) {
-		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
-		MyString methods;
-		if (p) {
-			methods = p;
-			free(p);
-		} else {
-			methods = SecMan::getDefaultAuthenticationMethods();
-		}
-		rsock.authenticate(methods.Value());
-	}
+	forceAuthentication(rsock);
 
 		// Now, put the command classad on the wire
 	if( ! (cmd_ad.put(rsock) && rsock.eom()) ) {
@@ -565,5 +654,6 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	*str = strdup( buf );
 	return rval;
 }
+
 
 

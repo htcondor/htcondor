@@ -56,6 +56,9 @@
 #include "dc_schedd.h"  // for JobActionResults class and enums we use  
 #include "nullfile.h"
 #include "store_cred.h"
+#include "file_transfer.h"
+#include "basename.h"
+#include "nullfile.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -269,6 +272,7 @@ Scheduler::Scheduler()
 	ExitWhenDone = FALSE;
 	matches = NULL;
 	shadowsByPid = NULL;
+	spoolJobFileWorkers = NULL;
 
 	shadowsByProcID = NULL;
 	resourcesByProcID = NULL;
@@ -346,6 +350,15 @@ Scheduler::~Scheduler()
 			delete rec;
 		}
 		delete shadowsByPid;
+	}
+	if (spoolJobFileWorkers) {
+		spoolJobFileWorkers->startIterations();
+		ExtArray<PROC_ID> * rec;
+		int pid;
+		while (spoolJobFileWorkers->iterate(pid, rec) == 1) {
+			delete rec;
+		}
+		delete spoolJobFileWorkers;
 	}
 	if (shadowsByProcID) {
 		delete shadowsByProcID;
@@ -445,7 +458,7 @@ Scheduler::count_jobs()
 
 	// clear owner table contents
 	time_t current_time = time(0);
-	for ( i = 0; i < Owners.getlast(); i++) {
+	for ( i = 0; i < Owners.getsize(); i++) {
 		Owners[i].Name = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
@@ -1616,6 +1629,295 @@ Scheduler::abort_job(int, Stream* s)
 	return TRUE;
 }
 
+int
+Scheduler::spoolJobFilesReaper(int tid,int exit_status)
+{
+	ExtArray<PROC_ID> *jobs;
+	const char *AttrsToModify[] = { 
+		// ATTR_JOB_CMD,  // someday...
+		ATTR_JOB_INPUT,
+		ATTR_JOB_OUTPUT,
+		ATTR_JOB_ERROR,
+		ATTR_TRANSFER_INPUT_FILES,
+		ATTR_TRANSFER_OUTPUT_FILES,
+		ATTR_ULOG_FILE,
+		NULL };		// list must end with a NULL
+
+
+	dprintf(D_FULLDEBUG,"JobFilesReaper tid=%d status=%d\n",tid,exit_status);
+
+
+		// find the list of jobs which we just finished receiving the files
+	spoolJobFileWorkers->lookup(tid,jobs);
+
+	if (!jobs) {
+		dprintf(D_ALWAYS,"ERROR - JobFilesReaper no entry for tid %d\n",tid);
+		return FALSE;
+	}
+
+	if (exit_status == FALSE) {
+		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
+		spoolJobFileWorkers->remove(tid);
+		delete jobs;
+		return FALSE;
+	}
+
+
+	int i,cluster,proc,index;
+	char *Spool = param("SPOOL");
+	ASSERT(Spool);
+	char new_attr_value[500];
+	char *buf = NULL;
+	char *SpoolSpace = NULL;
+		// figure out how many jobs we're dealing with
+	int len = (*jobs).getlast() + 1;
+
+
+		// For each job, modify its ClassAd
+	for (i=0; i < len; i++) {
+		cluster = (*jobs)[i].cluster;
+		proc = (*jobs)[i].proc;
+
+		ClassAd *ad = GetJobAd(cluster,proc);
+		if (!ad) {
+			// didn't find this job ad, must've been removed?
+			// just go to the next one
+			continue;
+		}
+	
+		if ( SpoolSpace ) free(SpoolSpace);
+		SpoolSpace = strdup( gen_ckpt_name(Spool,cluster,proc,0) );
+		ASSERT(SpoolSpace);
+
+		BeginTransaction();
+
+			// Backup the original IWD at submit time
+		if (buf) free(buf);
+		buf = NULL;
+		ad->LookupString(ATTR_JOB_IWD,&buf);
+		if ( buf ) {
+			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
+			SetAttributeString(cluster,proc,new_attr_value,buf);
+			free(buf);
+			buf = NULL;
+		}
+			// Modify the IWD to point to the spool space			
+		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
+
+			// Now, for all the attributes listed in 
+			// AttrsToModify, change them to be relative to new IWD
+			// by taking the basename of all file paths.
+		index = -1;
+		while ( AttrsToModify[++index] ) {
+				// Lookup original value
+			if (buf) free(buf);
+			buf = NULL;
+			ad->LookupString(AttrsToModify[index],&buf);
+			if (!buf) {
+				// attribute not found, so no need to modify it
+				continue;
+			}
+			if ( nullFile(buf) ) {
+				// null file -- no need to modify it
+				continue;
+			}
+				// Create new value - deal with the fact that
+				// some of these attributes contain a list of pathnames
+			StringList old_paths(buf,",");
+			StringList new_paths(NULL,",");
+			old_paths.rewind();
+			char *old_path_buf;
+			bool changed = false;
+			char *base = NULL;
+			while ( old_path_buf=old_paths.next() ) {
+				base = basename(old_path_buf);
+				if ( strcmp(base,old_path_buf)!=0 ) {
+					changed = true;
+				}
+				new_paths.append(base);
+			}
+			if ( changed ) {
+					// Backup original value
+				sprintf(new_attr_value,"SUBMIT_%s",AttrsToModify[index]);
+				SetAttributeString(cluster,proc,new_attr_value,buf);
+//				dprintf(D_FULLDEBUG,"TODD set %d.%d %s=%s\n",cluster,proc,new_attr_value,buf);
+					// Store new value
+				char *new_value = new_paths.print_to_string();
+				ASSERT(new_value);
+				SetAttributeString(cluster,proc,AttrsToModify[index],new_value);
+//				dprintf(D_FULLDEBUG,"TODD set %d.%d %s=%s\n",cluster,proc,AttrsToModify[index],new_value);
+				free(new_value);
+			}
+		}
+
+			// And now release the job.
+		releaseJob(cluster,proc,"Data files spooled",false,false,false,false);
+		CommitTransaction();
+	}
+
+	spoolJobFileWorkers->remove(tid);
+	delete jobs;
+	if (Spool) free(Spool);
+	if (SpoolSpace) free(SpoolSpace);
+	if (buf) free(buf);
+	return TRUE;
+}
+
+int
+Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
+{
+	ReliSock* rsock = (ReliSock*)s;
+	int JobAdsArrayLen = 0;
+	int i;
+	ExtArray<PROC_ID> **tjobs = ( ExtArray<PROC_ID> **) arg;
+	ExtArray<PROC_ID> *jobs = *tjobs;
+
+	int cluster, proc;
+	JobAdsArrayLen = jobs->getlast() + 1;
+//	dprintf(D_FULLDEBUG,"TODD spoolJobFilesWorkerThread: JobAdsArrayLen=%d\n",JobAdsArrayLen);
+	for (i=0; i<JobAdsArrayLen; i++) {
+		FileTransfer ftrans;
+		cluster = (*jobs)[i].cluster;
+		proc = (*jobs)[i].proc;
+		ClassAd * ad = GetJobAd( cluster, proc );
+		if ( !ad ) {
+			dprintf( D_ALWAYS, "spoolJobFiles(): "
+					 "job ad %d.%d not found\n",cluster,proc );
+			refuse(s);
+			return FALSE;
+		} else {
+			dprintf(D_FULLDEBUG,"spoolJobFiles(): "
+					"transfer files for job %d.%d\n",cluster,proc);
+		}
+		if ( !ftrans.SimpleInit(ad, true, true, rsock) ) {
+			dprintf( D_ALWAYS, "spoolJobFiles(): "
+					 "failed to init filetransfer for job %d.%d \n",
+					 cluster,proc );
+			refuse(s);
+			return FALSE;
+		}
+		if ( !ftrans.DownloadFiles() ) {
+			dprintf( D_ALWAYS, "spoolJobFiles(): "
+					 "failed to transfer files for job %d.%d \n",
+					 cluster,proc );
+			refuse(s);
+			return FALSE;
+		}
+	}	
+		
+		
+	rsock->eom();
+
+	rsock->encode();
+	int answer = OK;
+	rsock->code(answer);
+	rsock->eom();
+
+	return TRUE;
+}
+
+
+int
+Scheduler::spoolJobFiles(int, Stream* s)
+{
+	ReliSock* rsock = (ReliSock*)s;
+	int JobAdsArrayLen = 0;
+	ExtArray<PROC_ID> *jobs = NULL;
+	int i;
+	static int reaper_id = -1;
+	PROC_ID a_job;
+
+		// make sure this connection is authenticated, and we know who
+		// the user is.  also, set a timeout, since we don't want to
+		// block long trying to read from our client.   
+	rsock->timeout( 10 );  
+	rsock->decode();
+
+	if( ! rsock->isAuthenticated() ) {
+		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "WRITE");
+		MyString methods;
+		if (p) {
+			methods = p;
+			free (p);
+		} else {
+			methods = SecMan::getDefaultAuthenticationMethods();
+		}
+		if( ! rsock->authenticate(methods.Value()) ) {
+				// we failed to authenticate, we should bail out now
+				// since we don't know what user is trying to perform
+				// this action.
+				// TODO: it'd be nice to print out what failed, but we
+				// need better error propagation for that...
+			dprintf( D_ALWAYS, "spoolJobFiles(): "
+					 "failed to authenticate, aborting\n" );
+			refuse( s );
+			return FALSE;
+		}
+	}	
+
+		// read the number of jobs involved
+	rsock->decode();
+	if ( !rsock->code(JobAdsArrayLen) || JobAdsArrayLen <= 0 ) {
+			dprintf( D_ALWAYS, "spoolJobFiles(): "
+					 "failed to read JobAdsArrayLen (%d)\n",JobAdsArrayLen );
+			refuse(s);
+			return FALSE;
+	}
+	rsock->eom();
+	dprintf(D_FULLDEBUG,"spoolJobFiles(): read JobAdsArrayLen - %d\n",JobAdsArrayLen);
+
+	if (JobAdsArrayLen <= 0) {
+		refuse(s);
+		return FALSE;
+	}
+
+	jobs = new ExtArray<PROC_ID>;
+	ASSERT(jobs);
+
+	for (i=0; i<JobAdsArrayLen; i++) {
+		rsock->code(a_job);
+		(*jobs)[i] = a_job;
+	}
+
+	rsock->eom();
+
+	if ( reaper_id == -1 ) {
+		reaper_id = daemonCore->Register_Reaper(
+				"spoolJobFilesReaper",
+				(ReaperHandlercpp) &Scheduler::spoolJobFilesReaper,
+				"spoolJobFilesReaper",
+				this
+			);
+	}
+
+		// We want to pass out thread a pointer to the jobs ExtArray.
+		// But daemonCore frees the thread argument when the thread exits.
+		// We cannot allow this, because we want our reaper to use it.
+		// So, malloc a buffer to hold the pointer --- daemoncore can
+		// free this buffer without causing any harm.
+	void ** thread_arg = (void **)malloc( sizeof(jobs) );
+	*thread_arg = (void *)jobs;
+
+		// Start a new thread (process on Unix) to do the work
+	int tid = daemonCore->Create_Thread(
+			(ThreadStartFunc) &Scheduler::spoolJobFilesWorkerThread,
+			(void *)thread_arg,
+			s,
+			reaper_id
+			);
+
+	if ( tid == FALSE ) {
+		free(thread_arg);
+		delete jobs;
+		refuse(s);
+		return FALSE;
+	}
+
+		// Place this tid into a hashtable so our reaper can finish up.
+	spoolJobFileWorkers->insert(tid, jobs);
+	
+	return TRUE;
+}
 
 int
 Scheduler::actOnJobs(int, Stream* s)
@@ -5569,6 +5871,11 @@ Scheduler::Init()
 											 updateDuplicateKeys);
 	}
 
+	if ( spoolJobFileWorkers == NULL ) {
+		spoolJobFileWorkers = 
+			new HashTable <int, ExtArray<PROC_ID> *>(5, pidHash);
+	}
+
 	char *flock_collector_hosts, *flock_negotiator_hosts, *flock_view_servers;
 	flock_collector_hosts = param( "FLOCK_COLLECTOR_HOSTS" );
 	if (!flock_collector_hosts) { // backward compatibility
@@ -5752,6 +6059,9 @@ Scheduler::Register()
 	 daemonCore->Register_Command(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
 			"actOnJobs", this, WRITE);
+	 daemonCore->Register_Command(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
+			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
+			"spoolJobFiles", this, WRITE);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
@@ -6722,7 +7032,7 @@ holdJob( int cluster, int proc, const char* reason,
 bool
 releaseJob( int cluster, int proc, const char* reason,
 		 bool use_transaction, bool email_user,
-		 bool email_admin )
+		 bool email_admin, bool write_to_user_log )
 {
 	int status;
 	PROC_ID tmp_id;
@@ -6777,7 +7087,9 @@ releaseJob( int cluster, int proc, const char* reason,
 		 CommitTransaction();
 	}
 
-	scheduler.WriteReleaseToUserLog(tmp_id);
+	if ( write_to_user_log ) {
+		scheduler.WriteReleaseToUserLog(tmp_id);
+	}
 
 	dprintf( D_ALWAYS, "Job %d.%d released from hold: %s\n", cluster, proc,
 			 reason );

@@ -169,6 +169,8 @@ public:
 						  action_result_type_t result_type = AR_LONG,
 						  bool notify_scheduler = true );
 
+	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[]);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
@@ -198,6 +200,8 @@ private:
 						const char* reason, const char* reason_attr,
 						action_result_type_t result_type,
 						bool notify_scheduler );
+
+	void forceAuthentication(ReliSock & rsock);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

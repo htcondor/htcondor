@@ -213,6 +213,9 @@ class Scheduler : public Service
 	friend  int		find_idle_sched_universe_jobs(ClassAd *);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
+	int				spoolJobFiles(int, Stream *);
+	static int		spoolJobFilesWorkerThread(void *, Stream*);
+	int				spoolJobFilesReaper(int,int);
 
 	// match managing
     match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*, char*);
@@ -379,7 +382,7 @@ private:
 	void			clean_shadow_recs();
 	void			preempt(int);
 	void			preempt_one_job();
-	void			refuse( Stream* s );
+	static void		refuse( Stream* s );
 	void			tryNextJob( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 
@@ -411,6 +414,7 @@ private:
 	HashTable <HashKey, match_rec *> *matches;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
+	HashTable <int, ExtArray<PROC_ID> *> *spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
 	List <PROC_ID>	*IdleSchedUniverseJobIDs;
@@ -447,5 +451,6 @@ extern bool holdJob( int cluster, int proc, const char* reason = NULL,
 					 bool system_hold = true);
 extern bool releaseJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
-					 bool email_user = false, bool email_admin = false );
+					 bool email_user = false, bool email_admin = false,
+					 bool write_to_user_log = true);
 #endif /* _CONDOR_SCHED_H_ */

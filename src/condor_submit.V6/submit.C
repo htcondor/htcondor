@@ -63,7 +63,7 @@
 #include "which.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
-
+#include "dc_schedd.h"
 #include "my_username.h"
 #include "globus_utils.h"
 
@@ -114,6 +114,7 @@ bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool    UseXMLInLog = false;
 bool never_transfer = false;  // never transfer files or do transfer files
+bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
 
 // environment vars in the ClassAd attribute are seperated via
 // the env_delimiter character; currently a '|' on NT and ';' on Unix
@@ -189,6 +190,7 @@ char	*TransferOutput = "transfer_output";
 char	*TransferError = "transfer_error";
 
 char	*CopyToSpool = "copy_to_spool";
+char	*LeaveInQueue = "leave_in_queue";
 
 char	*PeriodicHoldCheck = "periodic_hold";
 char	*PeriodicReleaseCheck = "periodic_release";
@@ -298,8 +300,12 @@ struct SubmitRec {
 ExtArray <SubmitRec> SubmitInfo(10);
 int CurrentSubmitInfo = -1;
 
+ExtArray <ClassAd*> JobAdsArray(100);
+int JobAdsArrayLen = 0;
+
 // explicit template instantiations
 template class ExtArray<SubmitRec>;
+template class ExtArray<ClassAd*>;
 
 void TestFilePermissions( char *scheddAddr = NULL )
 {
@@ -334,6 +340,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 		}
 	}
 }
+
 
 void
 init_job_ad()
@@ -420,6 +427,7 @@ main( int argc, char *argv[] )
 	char	**ptr;
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
+	int i;
 
 	// Initialize env_delimiter string... note that 
 	// const char env_delimiter is defined in condor_constants.h
@@ -475,8 +483,13 @@ main( int argc, char *argv[] )
 					DisableFileChecks = 1;
 				}
 				break;
+			case 's':
+				Remote++;
+				DisableFileChecks = 1;
+				break;
 			case 'r':
 				Remote++;
+				DisableFileChecks = 1;
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -r requires another argument\n", 
 							 MyName );
@@ -632,16 +645,34 @@ main( int argc, char *argv[] )
 
 	ActiveQueueConnection = FALSE; 
 
-	if(ProcId != -1 ) {
-		reschedule();
-	}
-
 	if ( !DisableFileChecks ) {
 		TestFilePermissions( ScheddAddr );
 	}
 
+	if ( Remote && JobAdsArrayLen > 0 ) {
+		bool result;
+		DCSchedd schedd(ScheddAddr);
+			// perhaps check for proper schedd version here?
+		fprintf(stdout,"Spooling data files for %d jobs...\n",JobAdsArrayLen);
+		result = schedd.spoolJobFiles(JobAdsArrayLen,JobAdsArray.getarray());
+		if ( !result ) {
+			fprintf(stderr, 
+				"\nERROR: Failed to spool job files.\n");
+			exit(1);
+		}
+	}
+
+	if(ProcId != -1 ) {
+		reschedule();
+	}
+
 	if( dag_pause ) {
 		sleep(4);
+	}
+
+	// Deallocate some memory just to keep Purify happy
+	for (i=0;i<JobAdsArrayLen;i++) {
+		delete JobAdsArray[i];
 	}
 
 	return 0;
@@ -789,7 +820,7 @@ SetExecutable()
 	if( copySpool == NULL)
 	{
 		copySpool = (char *)malloc(16);
-		if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
+		if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS && !Remote ) {
 			strcpy(copySpool, "FALSE");
 		} else {
 			strcpy(copySpool, "TRUE");
@@ -1597,6 +1628,14 @@ SetJobStatus()
 		(void)sprintf( buffer, "%s=\"submitted on hold at user's request\"", 
 					   ATTR_HOLD_REASON );
 		InsertJobExpr( buffer );
+	} else 
+	if ( Remote ) {
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, HELD);
+		InsertJobExpr (buffer);
+
+		(void)sprintf( buffer, "%s=\"Spooling input data files\"", 
+					   ATTR_HOLD_REASON );
+		InsertJobExpr( buffer );
 	} else {
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
 		InsertJobExpr (buffer);
@@ -1723,6 +1762,42 @@ SetExitHoldCheck(void)
 
 	InsertJobExpr( buffer );
 }
+
+void
+SetLeaveInQueue()
+{
+	char *erc = condor_param(LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE);
+
+	if (erc == NULL)
+	{
+		/* user didn't have one, so add one */
+		if ( !Remote ) {
+			sprintf( buffer, "%s = FALSE", ATTR_JOB_LEAVE_IN_QUEUE );
+		} else {
+				/* if remote spooling, leave in the queue after the job completes
+				   for up to 10 days, so user can grab the output.
+				 */
+			sprintf( buffer, 
+				"%s = %s == %d && (%s =?= UNDEFINED || ((CurrentTime - %s) < %d))",
+				ATTR_JOB_LEAVE_IN_QUEUE,
+				ATTR_JOB_STATUS,
+				COMPLETED,
+				ATTR_COMPLETION_DATE,
+				ATTR_COMPLETION_DATE,
+				60 * 60 * 24 * 10 
+				);
+		}
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_JOB_LEAVE_IN_QUEUE, erc );
+		free(erc);
+	}
+
+	InsertJobExpr( buffer );
+}
+
 
 void
 SetExitRemoveCheck(void)
@@ -2875,6 +2950,7 @@ queue(int num)
 		SetPeriodicRemoveCheck();
 		SetExitHoldCheck();
 		SetExitRemoveCheck();
+		SetLeaveInQueue();
 			//SetArguments needs to be last for Globus universe args
 		SetArguments(); 
 		SetGlobusParams();
@@ -2940,8 +3016,11 @@ queue(int num)
 		}
 		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
 
-		delete job;
+		if ( job_ad_saved == false ) {
+			delete job;
+		}
 		job = new ClassAd();
+		job_ad_saved = false;
 
 		if (Quiet) {
 			fprintf(stdout, ".");
@@ -3318,6 +3397,7 @@ usage()
 			 "	-a line       \tadd line to submit file before processing\n"
 			 "                \t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( stderr, "	-d\t\tdisable file permission checks\n\n" );
+	fprintf( stderr, "	-s\t\tspool all files to the schedd\n\n" );
 	fprintf( stderr, "	If [cmdfile] is omitted, input is read from stdin\n" );
 	exit( 1 );
 }
@@ -3506,11 +3586,12 @@ SaveClassAd ()
 	char *lhstr, *rhstr;
 	int  retval = 0;
 	int myprocid = ProcId;
+	static ClassAd* current_cluster_ad = NULL;
 
 	if ( ProcId > 0 ) {
 		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
 	} else {
-		myprocid = -1;
+		myprocid = -1;		// means this is a cluster ad
 		SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId);
 	}
 
@@ -3534,6 +3615,26 @@ SaveClassAd ()
 
 	if ( ProcId == 0 ) {
 		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
+	}
+
+	// If spooling entire job "sandbox" to the schedd, then we need to keep
+	// the classads in an array to later feed into the filetransfer object.
+	if ( Remote ) {
+		char tbuf[200];
+		sprintf(tbuf,"%s=%d",ATTR_CLUSTER_ID, ClusterId);
+		job->Insert(tbuf);
+		sprintf(tbuf,"%s=%d",ATTR_PROC_ID, ProcId);
+		job->Insert(tbuf);
+		if ( ProcId == 0 ) {
+			// new cluster -- save pointer to cluster ad
+			current_cluster_ad = job;
+		} else {
+			// chain ad to previously seen cluster ad
+			ASSERT(current_cluster_ad);
+			job->ChainToAd(current_cluster_ad);
+		}
+		JobAdsArray[ JobAdsArrayLen++ ] = job;
+		job_ad_saved = true;
 	}
 
 	return retval;
@@ -3653,3 +3754,34 @@ setupAuthentication()
 		free( Rendezvous );
 	}
 }
+
+
+/************************************
+	The following are dummy stubs for the DaemonCore class to allow
+	tools using DCSchedd to link.  DaemonCore is brought in
+	because of the FileTransfer object.
+	These stub functions will become obsoluete once we start linking
+	in the real DaemonCore library with the tools, -or- once
+	FileTransfer is broken down.
+*************************************/
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+	DaemonCore* daemonCore = NULL;
+	int DaemonCore::Kill_Thread(int) { return 0; }
+	char * DaemonCore::InfoCommandSinfulString(int) { return NULL; }
+	int DaemonCore::Register_Command(int,char*,CommandHandler,char*,Service*,
+		DCpermission,int) {return 0;}
+	int DaemonCore::Register_Reaper(char*,ReaperHandler,
+		char*,Service*) {return 0;}
+	int DaemonCore::Create_Thread(ThreadStartFunc,void*,Stream*,
+		int) {return 0;}
+	int DaemonCore::Suspend_Thread(int) {return 0;}
+	int DaemonCore::Continue_Thread(int) {return 0;}
+//	int DaemonCore::Register_Reaper(int,char*,ReaperHandler,ReaperHandlercpp,
+//		char*,Service*,int) {return 0;}
+//	int DaemonCore::Register_Reaper(char*,ReaperHandlercpp,
+//		char*,Service*) {return 0;}
+//	int DaemonCore::Register_Command(int,char*,CommandHandlercpp,char*,Service*,
+//		DCpermission,int) {return 0;}
+/**************************************/
+
+
