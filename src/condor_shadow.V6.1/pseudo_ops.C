@@ -56,7 +56,7 @@ pseudo_get_job_info(ClassAd *&ad)
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
-	thisRemoteResource->filetrans.Init( the_ad, true );
+	thisRemoteResource->filetrans.Init( the_ad, true, PRIV_USER );
 
 	ad = the_ad;
 	return 0;
@@ -64,7 +64,7 @@ pseudo_get_job_info(ClassAd *&ad)
 
 
 int
-pseudo_job_exit(int status, int reason)
+pseudo_job_exit(int status, int reason, ClassAd* ad)
 {
 	// reset the reason if less than EXIT_CODE_OFFSET so that
 	// an older starter can be made compatible with the newer
@@ -78,8 +78,8 @@ pseudo_job_exit(int status, int reason)
 	}
 	dprintf(D_SYSCALLS, "in pseudo_job_exit: status=%d,reason=%d\n",
 			status, reason);
-	thisRemoteResource->setExitStatus(status);
-	thisRemoteResource->setExitReason(reason);
+	thisRemoteResource->updateFromStarter( ad );
+	thisRemoteResource->resourceExit( reason, status );
 	return 0;
 }
 
