@@ -233,7 +233,11 @@
 	}
 #endif 
 
-	_condor_signals_enable();
+	// Use sigprocmask to block all signals instead of the
+	// signals_control API, since the functions in that API
+	// always unblock SIGTSTP and SIGUSR2, and the starter wants
+	// them to remain blocked in some cases.
+	sigprocmask( SIG_SETMASK, &omask, 0 );
 
 	SetSyscalls( scm );
 	return rval;
