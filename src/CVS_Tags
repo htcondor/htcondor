@@ -1,3 +1,8 @@
+04/23/04 V6_6-merge-10
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  More build system fixes for AIX 5.1 compatibility,
+   the highly elusive windoze bug, etc.
+
 04/21/04 V6_6-merge-9
    The state of the V6_6-branch for another merge into V6_7-branch.
    This gets some last minute bug fixes and build system changes into
