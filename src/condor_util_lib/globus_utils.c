@@ -131,6 +131,7 @@ x509_proxy_seconds_until_expire( char *proxy_file )
 	time_now = ASN1_UTCTIME_mktime(asn1_time);
 	time_after = ASN1_UTCTIME_mktime(X509_get_notAfter(pcd->ucert));
 	time_diff = time_after - time_now ;
+	ASN1_UTCTIME_free( asn1_time );
 
 	if ( time_diff < 0 ) {
 		time_diff = 0;

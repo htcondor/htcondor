@@ -852,6 +852,8 @@ doContactSchedd()
 		if ( curr_action->request_id != 0 ) {
 			completedScheddUpdates.insert( curr_job->procID, curr_action );
 			curr_job->SetEvaluateState();
+		} else {
+			delete curr_action;
 		}
 
 	}

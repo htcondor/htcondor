@@ -338,6 +338,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 	if ( (pipe(stdin_pipefds) < 0) || (pipe(stdout_pipefds) < 0) ) {
 		dprintf(D_ALWAYS,"GahpClient::Initialize - pipe() failed, errno=%d\n",
 			errno);
+		free( gahp_path );
 		return false;
 	}
 
@@ -362,10 +363,13 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 	if ( m_gahp_pid == FALSE ) {
 		dprintf(D_ALWAYS,"Failed to start GAHP server (%s)\n",
 				gahp_path);
+		free( gahp_path );
 		return false;
 	} else {
 		dprintf(D_ALWAYS,"GAHP server pid = %d\n",m_gahp_pid);
 	}
+
+	free( gahp_path );
 
 		// Now that the GAHP server is running, close the sides of
 		// the pipes we gave away to the server, and stash the ones

@@ -102,7 +102,7 @@ SafeSock::~SafeSock()
 	}
 	close();
 	if (_fqu) {
-		delete _fqu;
+		delete []_fqu;
 	}
 }
 
@@ -635,9 +635,9 @@ char * SafeSock::serialize(char *buf)
 	string_to_sin(sinful_string, &_who);
 
 	if (_fqu) {
-		delete _fqu;
+		delete []_fqu;
 	}
-	_fqu = strdup(usernamebuf);
+	_fqu = strnewp(usernamebuf);
 
 	return NULL;
 }
@@ -786,7 +786,7 @@ const char* SafeSock::getFullyQualifiedUser() {
 
 void SafeSock::setFullyQualifiedUser(char * u) {
 	if (_fqu) {
-		delete _fqu;
+		delete []_fqu;
 		_fqu = NULL;
 	}
 	if (u) {
