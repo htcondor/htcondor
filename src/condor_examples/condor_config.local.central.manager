@@ -35,7 +35,7 @@
 ##  and COLLECTOR to run.  It's optional whether or not you want to
 ##  run the schedd (to allow jobs to be submited) and/or the startd
 ##  (to allow Condor jobs to execute) on your central manager.
-DAEMON_LIST	= MASTER, NEGOTIATOR, COLLECTOR, STARTD, SCHEDD
+DAEMON_LIST	= MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
 
 ##  Where are the binaries for these daemons?  (Note: MASTER, SCHEDD,
 ##  and STARTD are already defined in the global config file).
