@@ -35,7 +35,6 @@ void Accountant::SetPriority(const MyString& CustomerName, double Priority)
     if (Priority==0) return;
     Customer=new CustomerRecord;
     if (Customers.insert(CustomerName,Customer)==-1) {
-      dprintf (D_ALWAYS, "ERROR in Accountant::SetPriority - unable to insert to customers table");
       EXCEPT ("ERROR in Accountant::SetPriority - unable to insert to customers table");
     }
   }
@@ -50,14 +49,12 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   if (Customers.lookup(CustomerName,Customer)==-1) {
     Customer=new CustomerRecord;
     if (Customers.insert(CustomerName,Customer)==-1) {
-      dprintf (D_ALWAYS, "ERROR in Accountant::AddMatch - unable to insert to Customers table");
       EXCEPT ("ERROR in Accountant::AddMatch - unable to insert to Customers table");
     }
   }
   Customer->ResourceNames.Add(ResourceName);
   ResourceRecord* Resource=new ResourceRecord;
   if (Resources.insert(ResourceName,Resource)==-1) {
-    dprintf (D_ALWAYS, "ERROR in Accountant::AddMatch - unable to insert to Resources table");
     EXCEPT ("ERROR in Accountant::AddMatch - unable to insert to Resources table");
   }
   Resource->CustomerName=CustomerName;
@@ -115,32 +112,25 @@ void Accountant::UpdatePriorities()
 }
 
 //---------------------------------------------------------------
-// Resource functions
+// Utility functions
 //---------------------------------------------------------------
 
 // Extract resource name from class-ad
-MyString Accountant::GetResourceName(ClassAd* Resource) 
+MyString Accountant::GetResourceName(ClassAd* ResourceAd) 
 {
-  ExprTree *tree;
-	char startdName[64];
-	char startdAddr[64];
+  char startdName[64];
+  char startdAddr[64];
   
-  // get the name of the startd
-  if (!Resource->LookupString (ATTR_NAME, startdName))
-  {
-      dprintf(D_ALWAYS,"ERROR in Accountant::GetResourceName - '%s' not specified\n",ATTR_NAME);
-      EXCEPT ("ERROR in GetResourceName: Error - Name not specified\n");
+  if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
+    EXCEPT ("ERROR in GetResourceName: Error - Name not specified\n");
   }
   MyString Name=startdName;
 
-  if (!Resource->LookupString (ATTR_STARTD_IP_ADDR, startdAddr))
-  {
-    // get the IP and port of the startd 
-    dprintf (D_ALWAYS, "ERROR in Accountant::GetResourceName - No IP addr in class ad\n");
+  if (!ResourceAd->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)) {
     EXCEPT ("ERROR in Accountant::GetResourceName - No IP addr in class ad\n");
   }
   Name+=startdAddr;
-
+  
   return Name;
 }
 
@@ -148,11 +138,10 @@ MyString Accountant::GetResourceName(ClassAd* Resource)
 // otherwise 0
 int Accountant::NotClaimed(ClassAd* ResourceAd) {
   int state;
-  if (!ResourceAd->LookupInteger (ATTR_STATE, state))
-	{
-		dprintf (D_ALWAYS, "Could not lookup state --- assuming CLAIMED\n");
-		return 0;
-	}
- 
+  if (!ResourceAd->LookupInteger (ATTR_STATE, state)) {
+    dprintf (D_ALWAYS, "Warning in Accountant::NotClaimed - Could not lookup state... assuming CLAIMED\n");
+    return 0;
+  }
+  
   return 0;
 }

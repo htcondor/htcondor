@@ -71,9 +71,12 @@ main(int argc, char* argv[])
   
   accountant.UpdatePriorities();
 
-  while(1) { accountant.UpdatePriorities(); sleep(1); }
+  for (int i=0;i<30;i++) { accountant.UpdatePriorities(); sleep(1); }
+  accountant.AddMatch("Yoram",Ad1);
+  for (int i=0;i<30;i++) { accountant.UpdatePriorities(); sleep(1); }  
 
-  cout<<"End."<<endl;
+  dprintf(D_ALWAYS,"End.");
+
   //----------------------------------------------
   
   // ClassAd* AccountantClassAd=new ClassAd();
