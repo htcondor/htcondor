@@ -7,39 +7,19 @@
 #include "syscall_numbers.h"
 #include "image.h"
 
+/* A CondorFileLocal is just like a CondorFileBasic, but it does its operations in local and unmapped mode. */
+
 CondorFileLocal::CondorFileLocal()
+	: CondorFileBasic( SYS_LOCAL|SYS_UNMAPPED )
 {
-	init();
-	kind = "local file";
 }
 
-int CondorFileLocal::open(const char *path, int flags, int mode ) {
-
-	int result, scm;
-
-	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-	result = CondorFile::open(path,flags,mode);
-	SetSyscalls(scm);
-
-	return result;
-}
-
-int CondorFileLocal::close() {
-	int result, scm;
-
-	if( fd!=-1 ) {
-		scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-		CondorFile::close();
-		SetSyscalls(scm);
-	}
-
-	return result;
-}
+/* Read requires a seek and a read.  This could be optimized to use pread on the platforms that support it. */
 
 int CondorFileLocal::read(int pos, char *data, int length) {
 	int result, scm;
 
-	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
+	scm = SetSyscalls(syscall_mode);
 	::lseek(fd,pos,SEEK_SET);
 	result = ::read(fd,data,length);
 	SetSyscalls(scm);
@@ -47,10 +27,12 @@ int CondorFileLocal::read(int pos, char *data, int length) {
 	return result;
 }
 
+/* Write requires a seek and a write.  This could be optimized to use pwrite on the platforms that support it. */
+
 int CondorFileLocal::write(int pos, char *data, int length) {
 	int result, scm;
 
-	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
+	scm = SetSyscalls(syscall_mode);
 	::lseek(fd,pos,SEEK_SET);
 	result = ::write(fd,data,length);
 	SetSyscalls(scm);
@@ -66,14 +48,13 @@ int CondorFileLocal::write(int pos, char *data, int length) {
 
 /*
 We can happily support any fcntl or ioctl command in local mode.
-Remote mode is a different story, see below.
 */
 
 int CondorFileLocal::fcntl( int cmd, int arg )
 {
 	int result, scm;
 
-	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
+	scm = SetSyscalls(syscall_mode);
 	result = ::fcntl(fd,cmd,arg);
 	SetSyscalls(scm);
 
@@ -84,88 +65,11 @@ int CondorFileLocal::ioctl( int cmd, int arg )
 {
 	int result, scm;
 
-	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
+	scm = SetSyscalls(syscall_mode);
 	result = ::ioctl(fd,cmd,arg);
 	SetSyscalls(scm);
 
 	return result;
-}
-
-int CondorFileLocal::ftruncate( size_t length )
-{
-	int result, scm;
-
-	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-	result = ::ftruncate(fd,length);
-	SetSyscalls(scm);
-
-	return result;
-}
-
-int CondorFileLocal::fsync()
-{
-	int result, scm;
-
-	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-	result = ::fsync(fd);
-	SetSyscalls(scm);
-
-	return result;
-}
-
-void CondorFileLocal::checkpoint()
-{
-	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-
-	#ifdef I_GETSIG
-	ioctl_sig = ioctl( I_GETSIG, 0 );
-	#endif
-
-	fcntl_fl = fcntl( F_GETFL, 0 );
-	fcntl_fd = fcntl( F_GETFD, 0 );
-
-	SetSyscalls(scm);
-}
-
-void CondorFileLocal::suspend()
-{
-	if(forced) return;
-	if(fd==-1) return;
-	checkpoint();
-	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-	::close(fd);
-	SetSyscalls(scm);
-	fd=-1;
-}
-
-void CondorFileLocal::resume( int count )
-{
-	if(count==resume_count) return;
-	resume_count = count;
-
-	if(forced) return;
-
-	int flags;
-
-	if( readable&&writeable )	flags = O_RDWR;
-	else if( writeable )		flags = O_WRONLY;
-	else				flags = O_RDONLY;
-
-	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-
-	fd = ::open(name,flags);
-	if( fd==-1 ) {
-		_condor_error_retry("Unable to reopen local file %s after a checkpoint!\n",name);
-	}
-
-	#ifdef I_SETSIG
-	ioctl( I_SETSIG, ioctl_sig );
-	#endif
-
-	fcntl( F_SETFL, fcntl_fl );
-	fcntl( F_SETFD, fcntl_fd );
-
-	SetSyscalls(scm);
 }
 
 int CondorFileLocal::local_access_hack()
@@ -173,7 +77,7 @@ int CondorFileLocal::local_access_hack()
 	return 1;
 }
 
-int CondorFileLocal::map_fd_hack()
+char * CondorFileLocal::get_kind()
 {
-	return fd;
+	return "local file";
 }

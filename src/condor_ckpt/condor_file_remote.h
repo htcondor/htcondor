@@ -2,32 +2,28 @@
 #ifndef CONDOR_FILE_REMOTE_H
 #define CONDOR_FILE_REMOTE_H
 
-#include "condor_file.h"
+#include "condor_file_basic.h"
 
 /**
 This class sends all I/O operations to a remotely opened file.
+Notice that the class is only a few extensions to CondorFileBasic.
+The only operations which are unique to this class are the methods
+listed here.  Operations that are common to both local and remote
+files should go in CondorFileBasic.
 */
 
-class CondorFileRemote : public CondorFile {
+class CondorFileRemote : public CondorFileBasic {
 public:
 	CondorFileRemote();
 
-	virtual int open(const char *path, int flags, int mode);
-	virtual int close();
 	virtual int read(int offset, char *data, int length);
 	virtual int write(int offset, char *data, int length);
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int ioctl( int cmd, int arg );
-	virtual int ftruncate( size_t length ); 
-	virtual int fsync();
-
-	virtual void checkpoint();
-	virtual void suspend();
-	virtual void resume(int count);
 
 	virtual int local_access_hack();
-	virtual int map_fd_hack();
+	virtual char * get_kind();
 };
 
 #endif

@@ -25,14 +25,14 @@ is disabled in file_state.C
 class CondorFileAgent : public CondorFileLocal {
 public:
 	CondorFileAgent( CondorFile *f );
-	~CondorFileAgent();
+	virtual ~CondorFileAgent();
 
 	virtual int open( const char *path, int flags, int mode );
 	virtual int close();
 
 	virtual void checkpoint();
 	virtual void suspend();
-	virtual void resume(int count);
+	virtual void resume( int count );
 
 private:
 	void open_temp();
@@ -45,3 +45,4 @@ private:
 };
 
 #endif
+

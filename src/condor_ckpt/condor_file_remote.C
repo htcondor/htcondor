@@ -7,39 +7,21 @@
 #include "syscall_numbers.h"
 #include "image.h"
 
+/* A CondorFileRemote is a CondorFileBasic that does syscalls in remote and unmapped mode. */
+
 CondorFileRemote::CondorFileRemote()
+	: CondorFileBasic( SYS_REMOTE|SYS_UNMAPPED )
 {
-	init();
-	kind = "remote file";
 }
 
-int CondorFileRemote::open(const char *path, int flags, int mode )
-{
-	int scm, result;
-
-	scm = SetSyscalls(SYS_REMOTE|SYS_UNMAPPED);
-	result = CondorFile::open(path,flags,mode);
-	SetSyscalls(scm);
-
-	return result;
-}
-
-int CondorFileRemote::close() {
-	int scm,result;
-
-	if( fd!=-1 ) {
-		scm = SetSyscalls(SYS_REMOTE|SYS_UNMAPPED);
-		CondorFile::close();
-		SetSyscalls(scm);
-	}
-
-	return result;
-}
+/* A read results in a CONDOR_lseekread */
 
 int CondorFileRemote::read(int pos, char *data, int length) 
 {
        	return REMOTE_syscall( CONDOR_lseekread, fd, pos, SEEK_SET, data, length );
 }
+
+/* A write results in a CONDOR_lseekwrite */
 
 int CondorFileRemote::write(int pos, char *data, int length)
 {
@@ -53,62 +35,6 @@ int CondorFileRemote::write(int pos, char *data, int length)
 	}
 
 	return result;
-}
-
-void CondorFileRemote::checkpoint()
-{
-	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-
-	#ifdef I_GETSIG
-	ioctl_sig = ioctl( I_GETSIG, 0 );
-	#endif
-
-	fcntl_fl = fcntl( F_GETFL, 0 );
-	fcntl_fd = fcntl( F_GETFD, 0 );
-
-	SetSyscalls(scm);
-}
-
-void CondorFileRemote::suspend()
-{
-	if(fd==-1) return;
-	checkpoint();
-	int scm = SetSyscalls(SYS_REMOTE|SYS_UNMAPPED);
-	::close(fd);
-	SetSyscalls(scm);
-	fd = -1;
-}
-
-void CondorFileRemote::resume( int count )
-{
-	if(count==resume_count) return;
-	resume_count = count;
-
-	int flags;
-
-	if( readable&&writeable ) {
-		flags = O_RDWR;
-	} else if( writeable ) {
-		flags = O_WRONLY;
-	} else {
-		flags = O_RDONLY;
-	}
-
-	int scm = SetSyscalls(SYS_REMOTE|SYS_UNMAPPED);
-
-	fd = ::open(name,flags,0);
-	if(fd<0) {
-		_condor_error_retry("Unable to re-open remote file %s after checkpoint!\n",name);
-	}
-
-	#ifdef I_SETSIG
-	ioctl( I_SETSIG, ioctl_sig );
-	#endif
-
-	fcntl( F_SETFL, fcntl_fl );
-	fcntl( F_SETFD, fcntl_fd );
-
-	SetSyscalls(scm);
 }
 
 /*
@@ -139,7 +65,7 @@ int CondorFileRemote::fcntl( int cmd, int arg )
 		#ifdef F_SETFL
 		case F_SETFL:
 		#endif
-			scm = SetSyscalls(SYS_REMOTE|SYS_UNMAPPED);
+			scm = SetSyscalls(syscall_mode);
 			result = ::fcntl(fd,cmd,arg);
 			SetSyscalls(scm);
 			return result;
@@ -175,7 +101,7 @@ int CondorFileRemote::ioctl( int cmd, int arg )
 {
 	#ifdef I_SETSIG
 	if(cmd==I_SETSIG) {
-		int scm = SetSyscalls(SYS_REMOTE|SYS_UNMAPPED);
+		int scm = SetSyscalls(syscall_mode);
 		int result = ::ioctl( fd, cmd, arg );
 		SetSyscalls(scm);
 		return result;
@@ -187,35 +113,14 @@ int CondorFileRemote::ioctl( int cmd, int arg )
 	return -1;
 }
 
-int CondorFileRemote::ftruncate( size_t length )
-{
-	int scm,result;
-
-	set_size(length);
-	scm = SetSyscalls(SYS_REMOTE|SYS_UNMAPPED);
-	result = ::ftruncate(fd,length);
-	SetSyscalls(scm);
-
-	return result;
-}
-
-int CondorFileRemote::fsync()
-{
-	int scm,result;
-
-	scm = SetSyscalls(SYS_REMOTE|SYS_UNMAPPED);
-	result = ::fsync(fd);
-	SetSyscalls(scm);
-
-	return result;
-}
+/* This file cannot be accessed locally */
 
 int CondorFileRemote::local_access_hack()
 {
 	return 0;
 }
 
-int CondorFileRemote::map_fd_hack()
+char * CondorFileRemote::get_kind()
 {
-	return fd;
+	return "remote file";
 }

@@ -27,8 +27,6 @@ public:
 	CondorFileBuffer( CondorFile *original );
 	virtual ~CondorFileBuffer();
 
-	virtual void dump();
-
 	virtual int open(const char *path, int flags, int mode);
 	virtual int close();
 	virtual int read(int offset, char *data, int length);
@@ -41,8 +39,16 @@ public:
 
 	virtual void checkpoint();
 	virtual void suspend();
-	virtual void resume(int count);
+	virtual void resume( int count );
 
+	virtual int	is_readable();
+	virtual int	is_writeable();
+	virtual void	set_size(size_t size);
+	virtual int	get_size();
+	virtual char	*get_kind();
+	virtual char	*get_name();
+
+	virtual int attach( int fd, char *name, int readable, int writable );
 	virtual int map_fd_hack();
 	virtual int local_access_hack();
 
@@ -51,7 +57,6 @@ private:
 	void flush( int deallocate );
 	void evict( CondorChunk *c );
 	void clean( CondorChunk *c );
-	double benefit_cost( CondorChunk *c );
 
 	// The raw file being buffered
 	CondorFile *original;
@@ -61,6 +66,9 @@ private:
 
 	// The integer time used for LRU.
 	int time;
+
+	// The logical size of the buffered file
+	int size;
 };
 
 #endif

@@ -43,7 +43,7 @@
 typedef int BOOL;
 #endif
 
-static const int 	SYS_LOCAL = 1;
+static const int SYS_LOCAL = 1;
 static const int 	SYS_REMOTE = 0;
 static const int	SYS_RECORDED = 2;
 static const int	SYS_MAPPED = 2;

@@ -7,7 +7,7 @@ CMNT
 PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 
 FILE_TABLE = -DFILE_TABLE
-FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_buffer.o file_table_interf.o switches.o switches.special.o
+FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_basic.o condor_file_buffer.o file_table_interf.o
 
 #if DOES_SAVE_SIGSTATE
 SAVE_SIGSTATE = -DSAVE_SIGSTATE
@@ -49,7 +49,6 @@ COMPRESS_OBJ = malloc.o zimage.o _rem.o _div.o umultiply.o
 COMPRESS_OBJ = malloc.o zimage.o
 #endif
 COMPRESS_FLAGS = -DCOMPRESS_CKPT -I/s/zlib/include
-COMPRESS_LIB = libcondorzckpt.a
 #endif
 
 #if HAS_DYNAMIC_USER_JOBS
@@ -91,13 +90,14 @@ ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
 
 CPP_UTIL_OBJ = condor_version.o
 
-UTIL_OBJ =  dprintf_common.o mkargv.o condor_error.o
+UTIL_OBJ =  dprintf_common.o mkargv.o
 
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
-	local_startup.o fake_remote_syscall.o fake_hooks.o \
+	fake_remote_syscall.o fake_hooks.o condor_error.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
-	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ) $(UTIL_OBJ) $(FILE_TABLE_OBJ) shared_utils.o
+	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ) $(UTIL_OBJ) $(FILE_TABLE_OBJ) \
+	$(COMPRESS_OBJ) shared_utils.o
 
 #else /* !DOES_CHECKPOINTING */
 
@@ -114,43 +114,14 @@ OBJ =	syscall_mode.o shared_utils.o
 
 #if DOES_CHECKPOINTING
 
-    all_target(ToUpper libcondorckpt.a libcondorc++support.a condor_rt0.o \
-	       $(COMPRESS_LIB) $(RELEASE_OBJ) )
+    all_target(ToUpper libcondorc++support.a condor_rt0.o \
+	       $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ) )
 
     library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
 
-#if IS_X86_SOLARIS || IS_GLIBC_LINUX
-	library_target(libtmp.a,$(OBJ))
-
-clean::
-	rm -f libcondorckpt.a
-
-libcondorckpt.a: libtmp.a ToUpper
-#   if (IS_X86_SOLARIS)
-	./ToUpper libtmp.a libcondorckpt.a __cerror __CERROR
-#   else /* GLIBC Linux */
-	./ToUpper libtmp.a libcondorckpt.a __syscall_error __SYSCALL_ERROR
-#   endif /* Solaris */
-#else  /* Not GLIBC Linux or Intel Solaris */
-
-	library_target(libcondorckpt.a,$(OBJ))
-
-#endif /* GLIBC Linux or Intel Solaris */
-
-	release_library(libcondorckpt.a,$(RELEASE_DIR)/lib)
 	release_target(libcondorc++support.a,$(RELEASE_DIR)/lib,OBJECT_MODE)
-
-	strip_library(libcondorckpt.a,$(STRIP_DIR)/lib)
 	strip_library(libcondorc++support.a,$(STRIP_DIR)/lib)
-
-	static_library(libcondorckpt.a,$(STATIC_DIR)/lib)
 	static_library(libcondorc++support.a,$(STATIC_DIR)/lib)
-
-#if	DOES_COMPRESS_CKPT
-	release_library($(COMPRESS_LIB),$(RELEASE_DIR)/lib)
-	strip_library($(COMPRESS_LIB),$(STRIP_DIR)/lib)
-	static_library($(COMPRESS_LIB),$(STATIC_DIR)/lib)
-#endif
 
 #else /* Not DOES_CHECKPOINTING */
 
@@ -297,51 +268,6 @@ $(COMPRESS_LIB): libcondorckpt.a $(COMPRESS_OBJ)
 clean::
 	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
 #endif
-
-CMNT
-CMNT The libc entry points to the file table are built
-CMNT using the same mechanism as the syscall library.
-CMNT
-
-IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib,stub_gen)
-import(../condor_syscall_lib,linux_kernel_stat.h)
-import(../condor_syscall_lib,syscall.tmpl)
-import(../condor_syscall_lib,switches.special.C)
-import(../condor_syscall_lib,switches.prologue)
-import(../condor_syscall_lib,switches.epilogue)
-import(../condor_syscall_lib,syscall_macros.h)
-import(../condor_syscall_lib,switches.remap-SOLARIS.h)
-import(../condor_syscall_lib,switches.remap-SOLARIS26.h)
-import(../condor_syscall_lib,switches.remap-LINUX.h)
-import(../condor_syscall_lib,switches.remap-HPUX.h)
-import(../condor_syscall_lib,switches.remap-IRIX.h)
-import(../condor_syscall_lib,switches.remap-DUX4.h)
-
-CPP = PreProcessCmd
-
-#if IS_I386_LINUX
-STUB_GEN_PLATFORM = GlibCFlag
-#elif IS_SOLARIS251
-STUB_GEN_PLATFORM = -DSolaris251
-#elif IS_SOLARIS26
-STUB_GEN_PLATFORM = -DSolaris26
-#elif IS_HPUX10
-STUB_GEN_PLATFORM = -DHPUX10
-#elif IS_IRIX62
-STUB_GEN_PLATFORM = -DIRIX62
-#endif
-
-STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) \
-	$(SAVE_SIGSTATE) $(FILE_TABLE) $(CLIP) -Wall
-
-switches.C: syscall.tmpl stub_gen switches.prologue switches.epilogue syscall_macros.h switches.remap-SOLARIS.h switches.remap-SOLARIS26.h switches.remap-LINUX.h switches.remap-HPUX.h switches.remap-IRIX.h switches.remap-DUX4.h linux_kernel_stat.h
-	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) syscall.tmpl | \
-	./stub_gen -mode switches -p switches.prologue -e switches.epilogue \
-	> switches.C
-
-clean::
-	rm -f switches.C *.o
 
 CMNT
 CMNT Create a replacement for crt0.o to be linked with condor programs.

@@ -1078,10 +1078,12 @@ they should be built in the special "clipped" version.
 			alloc( s, STARTUP_INFO_SIZE );
 		}
 	#endif
+
 	int report_error( char *msg ) : pseudo {
 		in code( msg );
 		alloc( msg, MAX_STRING );
 	}
+
 	int report_file_info(
 		char *kind, char *name,
 		int open_count, int read_count, int write_count,

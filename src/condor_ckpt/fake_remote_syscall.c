@@ -36,18 +36,5 @@
 int
 REMOTE_syscall( int syscall_num, ... )
 {
-	char *text;
-
-	va_list args;
-	va_start( args, syscall_num );
-
-	text = va_arg( args, char * );
-
-	if( syscall_num==CONDOR_report_error ) {
-		fprintf(stderr,"Condor Warning: %s\n",text);
-	} else {
-		EXCEPT( "Linked for standalone checkpointing, but called REMOTE_syscall()");
-	}
-
-	va_end(args);
+       	EXCEPT( "Linked for standalone checkpointing, but called REMOTE_syscall()");
 }

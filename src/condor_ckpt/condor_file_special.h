@@ -20,6 +20,9 @@ class CondorFileSpecial : public CondorFileLocal {
 public:
 	CondorFileSpecial( char *kind );
 	virtual ~CondorFileSpecial();
+	virtual char * get_kind();
+protected:
+	char *kind;	
 };
 
 #endif

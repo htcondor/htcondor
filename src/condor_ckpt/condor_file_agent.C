@@ -11,8 +11,6 @@ static char buffer[TRANSFER_BLOCK_SIZE];
 
 CondorFileAgent::CondorFileAgent( CondorFile *file )
 {
-	init();
-	kind = "agent";
 	original = file;
 }
 
@@ -62,13 +60,11 @@ void CondorFileAgent::suspend()
 
 void CondorFileAgent::resume( int count )
 {
+	if( resume_count==count ) return;
 	original->resume( count );
-
-	if(count==resume_count) return;
-	resume_count = count;
-
 	open_temp();
 	pull_data();
+	resume_count = count;
 }
 
 void CondorFileAgent::open_temp()

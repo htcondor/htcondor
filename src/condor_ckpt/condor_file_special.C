@@ -7,7 +7,6 @@
 
 CondorFileSpecial::CondorFileSpecial(char *k)
 {
-	init();
 	kind = k;
 	readable = writeable = 1;
 	_condor_signals_disable();
@@ -16,4 +15,9 @@ CondorFileSpecial::CondorFileSpecial(char *k)
 CondorFileSpecial::~CondorFileSpecial()
 {
 	_condor_signals_enable();
+}
+
+char * CondorFileSpecial::get_kind()
+{
+	return kind;
 }

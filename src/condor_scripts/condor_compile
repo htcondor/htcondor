@@ -75,8 +75,11 @@ do
 	fi
 
 	if [ $1 = "-condor_standalone" ]; then
-		CONDOR_CLIB=$CONDOR_LIBDIR/libcondorckpt.a
-		CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzckpt.a
+		#
+		# This option is ignored.  Standalone checkpointing
+		# has the same build procedure as standard jobs now.
+		# This option is kept for compatibility.
+		#
 		shift
 		continue
 	fi
@@ -224,7 +227,7 @@ esac
 
 # Usage info should go here...
 if [ $# = 0 ]; then
-	echo "Usage: condor_compile [ -condor_standalone ] <command> [options/files .... ]"
+	echo "Usage: condor_compile <command> [options/files .... ]"
 	if [ $CONDOR_FULLINSTALL = true ]; then
 		echo "  where <commmand> is whatever you enter to compile/link your application."
 		exit 1
@@ -395,7 +398,7 @@ case $os in
 esac
 
 # If we made it here, we did not do anything, so print out usage
-	echo "Usage: condor_compile [ -condor_standalone ] <command> [options/files .... ]"
+	echo "Usage: condor_compile <command> [options/files .... ]"
 	if [ $CONDOR_FULLINSTALL = true ]; then
 		echo "  where <commmand> is whatever you enter to compile/link your application."
 		exit 1

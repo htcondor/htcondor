@@ -24,11 +24,10 @@
  
 
 /*
-  This is the startup routine for "normal" condor programs - that is
-  linked for both remote system calls and checkpointing.  "Standalone"
-  condor programs - those linked for checkpointing, but not remote
-  system calls, get linked with a completely different version of
-  MAIN() (found in the "condor_ckpt" directory.  We assume here that
+  This is the startup routine for ALL condor programs.
+  If the appropriate command-line arguments are given, remote syscalls
+  and checkpointing will be initialized.  If not, only checkpointing
+  will be enabled.  We assume here that
   our parent will provide command line arguments which tell us how to
   attach to a "command stream", and then provide commands which control
   how we start things.
@@ -163,11 +162,6 @@ COMMAND CmdTable[] = {
 	NO_COMMAND,		"",
 };
 
-#if 0
-	static int		DebugFd;
-	void debug_msg( const char *msg );
-#endif
-
 void _condor_interp_cmd_stream( int fd );
 static void _condor_scan_cmd( char *buf, int *argc, char *argv[] );
 static enum result _condor_do_cmd( int argc, char *argv[] );
@@ -191,6 +185,7 @@ extern volatile int InRestart;
 void _condor_setup_dprintf();
 
 extern int	_condor_DebugFD;
+static int do_remote_syscalls = 1;
 
 int
 #if defined(HPUX)
@@ -205,7 +200,10 @@ MAIN( int argc, char *argv[], char **envp )
 	int		scm;
 	char	*arg;
 	int		i, warning = TRUE;
-	
+	int	should_restart = FALSE;
+
+	char	ckpt_file[_POSIX_PATH_MAX];
+
 		/*
 		  These will hold the argc and argv we actually give to the
 		  user's code, with any Condor-specific flags stripped out. 
@@ -213,17 +211,12 @@ MAIN( int argc, char *argv[], char **envp )
 	int		user_argc;
 	char*	user_argv[_POSIX_ARG_MAX];
 
-#undef WAIT_FOR_DEBUGGER
-#if defined(WAIT_FOR_DEBUGGER)
-	{
-		i = 1;
-		while( i );
-	}
-#endif
-
 		/* The first arg will always be the same */
 	user_argv[0] = argv[0];
 	user_argc = 1;
+
+		/* Default checkpoint file is argv[0].ckpt */
+	sprintf(ckpt_file,"%s.ckpt",argv[0]);
 
 		/*
 		  Now, process our command-line args to see if there are
@@ -249,15 +242,12 @@ MAIN( int argc, char *argv[], char **envp )
 			*/
 		if( (strcmp(arg, "cmd_fd") == MATCH) ) {
 			if( ! argv[i+1] ) {
-				dprintf( D_ALWAYS, "Error in command line syntax\n" );
-				Suicide();
+				_condor_error_fatal("Error in command line syntax");
 			} else {
 				i++;
 				cmd_fd = strtol( argv[i], &extra, 0 );
 				if( extra[0] ) {
-					dprintf( D_ALWAYS, "Can't parse cmd stream fd (%s)\n", 
-							 argv[i] );
-					Suicide();
+					_condor_error_fatal("Can't parse cmd stream fd (%s)", argv[i] );
 				}
 			}
 			continue;
@@ -274,15 +264,12 @@ MAIN( int argc, char *argv[], char **envp )
 		if( (strcmp(arg, "cmd_file") == MATCH) ) {
 			dprintf( D_FULLDEBUG, "Found -_condor_cmd_file\n" );
 			if( ! argv[i+1] ) {
-				dprintf( D_ALWAYS, "Error in command line syntax\n" );
-				Suicide();
+				_condor_error_fatal("Error in command line syntax");
 			} else {
 				i++;
 				cmd_fd = open( argv[i], O_RDONLY );
 				if( cmd_fd < 0 ) {
-					dprintf( D_ALWAYS, "Can't read cmd file \"%s\"\n", 
-							 argv[i] ); 
-					Suicide();
+					_condor_error_fatal("Can't read cmd file %s", argv[i] );
 				}
 			}
 			continue;
@@ -332,6 +319,49 @@ MAIN( int argc, char *argv[], char **envp )
 			continue;
 		}
 
+
+			/* 
+			   '-_condor_ckpt <ckpt_filename>' is used to specify the 
+			   file we want to checkpoint to.
+			*/
+		if( (strcmp(arg, "ckpt") == MATCH) ) {
+			if( ! argv[i+1] ) {
+				_condor_error_fatal("-_condor_ckpt requires another argument");
+			} else {
+				i++;
+				strcpy( ckpt_file, argv[i] );
+			 }	
+			continue;
+		}
+		
+			/*
+			  '-_condor_restart <ckpt_file>' is used to specify that
+			  we should restart from the given checkpoint file.
+			*/
+		if( (strcmp(arg, "restart") == MATCH) ) {
+			if( ! argv[i+1] ) {
+				_condor_error_fatal("-_condor_restart requires an argument");
+			} else {
+				i++;
+				strcpy( ckpt_file, argv[i] );
+				should_restart = TRUE;
+			}
+			continue;
+		}
+		
+			 /*
+			   '-_condor_D_XXX' can be set to add the D_XXX
+			   (e.g. D_ALWAYS) debug level for this job's output.
+			   This is for debug messages inside our checkpointing and
+			   remote syscalls code.  If a user sets a given level,
+			   messages from that level go to stderr.  
+			   -Derek Wright 9/30/99
+			 */
+		if( (strncmp(arg, "D_", 2) == MATCH) ) {
+			_condor_set_debug_flags( arg );
+			continue;
+		}
+
 	}
 
 		/*
@@ -339,93 +369,73 @@ MAIN( int argc, char *argv[], char **envp )
 		  user_arg* stuff back into the real argv and argc. 
 		  First, we must terminate the final element.
 		*/
+
 	user_argv[user_argc] = NULL;
 	argc = user_argc;
 	for( i=0; i<=argc; i++ ) {
 		argv[i] = user_argv[i];
 	}
 
-		/*
-		  We must be started by a parent providing a command stream,
-		  if we're running in Condor, which would mean cmd_fd is set.
-		  So here we check and see if we have been started properly
-		  with a command stream, as a condor_starter would do.  If
-		  not, we set syscalls to local, print out a warning, and
-		  attempt to run normally "outside" of condor (with no
-		  checkpointing, remote syscalls, etc).  This allows users to
-		  have one condor-linked binary which can be run either inside
-		  or outside of condor.  -Todd, 5/97.
-		*/
-	if( cmd_fd < 0) {
-			/* Run the job "normally" outside of condor */
-		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-		_condor_file_table_init();
-		if ( warning ) {
-			fprintf( stderr,
-					 "WARNING: This binary has been linked for Condor.\n"
-					 "WARNING: Setting up to run outside of Condor...\n" );
-		} 
+	/* If a command fd is given, we are doing remote system calls. */
 
-			/* Now start running user code and forget about condor */
-#if defined(HPUX)
-		exit(_start( argc, argv, envp ));
-#else
-		exit( main( argc, argv, envp ));
-#endif
+	if( cmd_fd>=0 ) {
+
+		/* This is the remote syscalls startup */
+
+		_condor_prestart( SYS_REMOTE );
+		init_syscall_connection(0);
+		_condor_setup_dprintf();
+		_condor_set_iwd();
+		_condor_interp_cmd_stream( cmd_fd );
+
+		_condor_file_table_init();
+
+		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
+		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
+
+		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
+
+		get_ckpt_name();
+		open_std_file( 0 );
+		open_std_file( 1 );
+		open_std_file( 2 );
+	
+	} else {
+
+		/* This is the checkpointing-only startup */
+
+		do_remote_syscalls = 0;
+		_condor_prestart( SYS_LOCAL );
+
+		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
+		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
+
+		init_image_with_file_name( ckpt_file );
+
+		if( should_restart ) {
+			if( warning ) {
+				fprintf( stderr, "Condor: Will restart from %s\n",ckpt_file);
+			}
+			restart();
+		} else {
+			if ( warning ) {
+				fprintf( stderr, "Condor: Will checkpoint to %s\n", ckpt_file );
+				fprintf( stderr, "Condor: Remote system calls disabled.\n");
+			} 
+
+			SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+		}
 	}
 
-	
-		/* now setup signal handlers, etc */
-	_condor_prestart( SYS_REMOTE );
-
-
-		/* Initialize our sockets back to the shadow */
-#define USE_PIPES 0
-#if USE_PIPES
-	init_syscall_connection( TRUE );
-#else
-	init_syscall_connection( FALSE );
-#endif
-
-		/* Do everything we need to get dprintf() working */
-	_condor_setup_dprintf();
-
-		/* 
-		   Now, dprintf() our version string.  This serves many
-		   purposes: 1) it means anything linked with any Condor
-		   library, standalone or regular, will reference the
-		   CondorVersion() symbol, so our magic-ident string will
-		   always be included by the linker, 2) in standard jobs,
-		   we'll actually see (in the ShadowLog) what version of the
-		   libraries the user job is linked with, 3) b/c dprintf() is
-		   stubbed out of standalone jobs, we *won't* get the clutter
-		   there, unless people explicitly turn on debugging output. 
-		   -Derek Wright 5/26/99
-
-		   Moved here on 9/29/99, since we don't want the dprintf() in
-		   _condor_prestart() for standard jobs b/c that'd mean we
-		   dprintf() before we get our sockets initialized. -Derek
-		*/
-	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
-
-	_condor_set_iwd();
-	_condor_interp_cmd_stream( cmd_fd );
-
 	_condor_unblock_signals();
-	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
-
-	get_ckpt_name();
-	open_std_file( 0 );
-	open_std_file( 1 );
-	open_std_file( 2 );
 
 	InRestart = FALSE;
-		/* Now start running user code */
-#if defined(HPUX)
-	exit(_start( argc, argv, envp ));
-#else
-	exit( main( argc, argv, envp ));
-#endif
+
+	#if defined(HPUX)
+		exit(_start( argc, argv, envp ));
+	#else
+		exit( main( argc, argv, envp ));
+	#endif
 }
 
 void
@@ -450,8 +460,7 @@ _condor_interp_cmd_stream( int fd )
 			return;
 		}
 	}
-	dprintf( D_ALWAYS, "ERROR: EOF on command stream\n" );
-	Suicide();
+	_condor_error_retry("EOF on command stream");
 }
 
 static void
@@ -567,13 +576,7 @@ condor_restart()
 	size_t	n_bytes;
 
 	dprintf( D_ALWAYS, "condor_restart:\n" );
-
-#if 0
-	fd = open_ckpt_file( "", O_RDONLY, n_bytes );
-	init_image_with_file_descriptor( fd );
-#else
 	get_ckpt_name();
-#endif
 	restart();
 
 		/* Can never get here - restart() jumps back into user code */
@@ -639,14 +642,25 @@ open_ckpt_file( const char *name, int flags, size_t n_bytes )
 	char			file_name[ _POSIX_PATH_MAX ];
 	int				status;
 
-	return open_file_stream( name, flags, &n_bytes );
+	if( !do_remote_syscalls ) {
+		if( flags & O_WRONLY ) {
+			return open( name, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
+		} else {
+			return open( name, O_RDONLY );
+		}
+	} else {
+		return open_file_stream( name, flags, &n_bytes );
+	}
 }
 
 void
 report_image_size( int kbytes )
 {
-	dprintf( D_ALWAYS, "Sending Image Size Report of %d kilobytes\n", kbytes );
-	REMOTE_syscall( CONDOR_image_size, kbytes );
+	if( !do_remote_syscalls ) {
+		return;
+	} else {
+		REMOTE_syscall( CONDOR_image_size, kbytes );
+	}
 }
 
 /*
@@ -661,7 +675,11 @@ report_image_size( int kbytes )
 int
 get_ckpt_mode( int sig )
 {
-	return REMOTE_syscall( CONDOR_get_ckpt_mode, sig );
+	if( !do_remote_syscalls ) {
+		return 0;
+	} else {
+		return REMOTE_syscall( CONDOR_get_ckpt_mode, sig );
+	}
 }
 
 /*
@@ -671,7 +689,11 @@ get_ckpt_mode( int sig )
 int
 get_ckpt_speed()
 {
-	return REMOTE_syscall( CONDOR_get_ckpt_speed );
+	if( !do_remote_syscalls ) {
+		return 0;
+	} else {
+		return REMOTE_syscall( CONDOR_get_ckpt_speed );
+	}
 }
 
 /*
@@ -696,9 +718,7 @@ _condor_unblock_signals( void )
 		/* unblock signals */
 	sigfillset( &sig_mask );
 	if( sigprocmask(SIG_UNBLOCK,&sig_mask,0) < 0 ) {
-		dprintf( D_ALWAYS, "sigprocmask failed in unblock_signals: %s",
-				 strerror(errno));
-		Suicide();
+		_condor_error_retry("sigprocmask failed: %s",strerror(errno));
 	}
 
 	SetSyscalls( scm );
@@ -797,18 +817,10 @@ _condor_set_iwd()
 	char	buf[ _POSIX_PATH_MAX + 50 ];
 
 	if( REMOTE_syscall(CONDOR_get_iwd,iwd) < 0 ) {
-		REMOTE_syscall(
-			CONDOR_report_error,
-			"Can't determine initial working directory"
-		);
-		dprintf( D_ALWAYS, "Can't determine initial working directory\n" );
-		Suicide();
+		_condor_error_fatal( "Can't determine initial working directory" );
 	}
 	if( REMOTE_syscall(CONDOR_chdir,iwd) < 0 ) {
-		sprintf( buf, "Can't open working directory \"%s\"", iwd );
-		REMOTE_syscall( CONDOR_report_error, buf );
-		dprintf( D_ALWAYS, "Can't chdir(%s)\n", iwd );
-		Suicide();
+		_condor_error_retry( "Can't move to directory %s", iwd );
 	}
 }
 
@@ -820,26 +832,11 @@ get_ckpt_name()
 
 	status = REMOTE_syscall( CONDOR_get_ckpt_name, ckpt_name );
 	if( status < 0 ) {
-		dprintf( D_ALWAYS, "Can't get checkpoint file name!\n" );
-		Suicide(0);
+		_condor_error_fatal("Can't get checkpoint file name!\n");
 	}
 	dprintf( D_ALWAYS, "Checkpoint file name is \"%s\"\n", ckpt_name );
 	init_image_with_file_name( ckpt_name );
 }
-
-#if 0
-void
-debug_msg( const char *msg )
-{
-	int		status;
-
-	status = syscall( SYS_write, DebugFd, msg, strlen(msg) );
-	if( status < 0 ) {
-		exit( errno );
-	}
-}
-#endif
-
 
 void
 _condor_setup_dprintf()

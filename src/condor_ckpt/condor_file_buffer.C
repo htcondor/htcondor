@@ -155,38 +155,22 @@ passing the operation on to the original file.
 
 CondorFileBuffer::CondorFileBuffer( CondorFile *o )
 {
-	init();
-	kind = new char[_POSIX_PATH_MAX];
-	strcpy(kind,"buffered ");
-	strcat(kind,o->get_kind());
 	original = o;
 	head = 0;
 	time = 0;
+	size = 0;
 }
 
 CondorFileBuffer::~CondorFileBuffer()
 {
-	delete [] kind;
 	delete original;
-}
-
-void CondorFileBuffer::dump()
-{
-	original->dump();
 }
 
 int CondorFileBuffer::open( const char *path, int flags, int mode )
 {
 	int result;
-
 	result = original->open(path,flags,mode);
-
-	strcpy(name,original->get_name());
-
-	readable = original->is_readable();
-	writeable = original->is_writeable();
 	size = original->get_size();
-
 	return result;
 }
 
@@ -263,11 +247,9 @@ int CondorFileBuffer::read(int offset, char *data, int length)
 			continue;
 		}
 
-		// Otherwise, make a new chunk.  Try to read a
-		// full block of data, but don't waste time by reading
-		// past hole_top.
+		// Otherwise, make a new chunk.  Try to read a whole block
 
-		c = new CondorChunk(offset,MIN(FileTab->get_buffer_block_size(),piece));
+		c = new CondorChunk(offset,FileTab->get_buffer_block_size());
 		piece = original->read(offset,c->data,c->size);
 		if(piece<0) {
 			delete c;
@@ -348,9 +330,44 @@ void CondorFileBuffer::suspend()
 	original->suspend();
 }
 
-void CondorFileBuffer::resume(int count)
+void CondorFileBuffer::resume( int count )
 {
-	original->resume(count);
+	original->resume( count );
+}
+
+int CondorFileBuffer::is_readable()
+{
+	return original->is_readable();
+}
+
+int CondorFileBuffer::is_writeable()
+{
+	return original->is_writeable();
+}
+
+void CondorFileBuffer::set_size( size_t s )
+{
+	size = s;
+}
+
+int CondorFileBuffer::get_size()
+{
+	return size;
+}
+
+char * CondorFileBuffer::get_kind()
+{
+	return "buffered file";
+}
+
+char * CondorFileBuffer::get_name()
+{
+	return original->get_name();
+}
+
+int CondorFileBuffer::attach( int fd, char *name, int r, int w )
+{
+	return -1;
 }
 
 int CondorFileBuffer::map_fd_hack()
@@ -365,7 +382,7 @@ int CondorFileBuffer::local_access_hack()
 
 /*
 Trim this buffer down to size.  As long as it is too big,
-select the block with the highest benefit/cost, and write it out.
+select the block that is least recently used, and write it out.
 */
 
 void CondorFileBuffer::trim()
@@ -376,38 +393,18 @@ void CondorFileBuffer::trim()
 
 	while(1) {
 		int space_used = 0;
-		double best_ratio = 0;
 
 		for( i=head; i; i=i->next ) {
-			int ratio = (int) benefit_cost(i);
-			if(ratio>best_ratio) {
-				best_ratio = ratio;
+			if( i->last_used < best_chunk->last_used ) {
 				best_chunk = i;
 			}
 			space_used += i->size;
-
 		}
 
 		if( space_used <= FileTab->get_buffer_size() ) return;
 
 		evict( best_chunk );
 	}
-}
-
-/*
-The benefit of evicting a block is the number of bytes freed multiplied by the time before it is expected to be used again.  Assume this time is equal to the time since last use.  The cost of evicting a block is the time necessary to clean it plus the likelihood that another read will hit the block.
-*/
-
-#define LATENCY   (.001)
-#define BANDWIDTH (10.0*1024*1024/8)
-
-double CondorFileBuffer::benefit_cost( CondorChunk *c )
-{
-	/* Prevent division by zero */
-	if( c->size==0 || size==0 ) return 0;
-
-	double csize = (double) c->size;
-	return (csize*(time-c->last_used+1)) /( (csize/size + c->dirty)*(LATENCY+csize/BANDWIDTH) );
 }
 
 void CondorFileBuffer::flush( int deallocate )
@@ -433,7 +430,7 @@ void CondorFileBuffer::clean( CondorChunk *c )
 {
 	if(c && c->dirty) {
 		int result = original->write(c->begin,c->data,c->size);
-		if(!result) _condor_error_retry("Unable to write buffered data to %s!",original->get_name());
+		if(!result) _condor_error_retry("Unable to write buffered data to %s! (%s)",original->get_name(),strerror(errno));
 		c->dirty = 0;
 	}
 }

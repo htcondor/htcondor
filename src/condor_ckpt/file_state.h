@@ -232,7 +232,6 @@ private:
 	int	install_special( char *kind, int real_fd );
 	int	find_name(const char *name);
 	int	find_empty();
-	void	replace_file( CondorFile *oldfile, CondorFile *newfile );
 	int	count_file_uses( CondorFile *f );
 	int	count_pointer_uses( CondorFilePointer *f );
 	CondorFileInfo	* find_info( char *name, char *kind );
@@ -242,11 +241,11 @@ private:
 
 	int	length;
 	char	working_dir[_POSIX_PATH_MAX];
-	int	resume_count;
 	int	buffer_size;
 	int	buffer_block_size;
 	int	got_buffer_info;
 	int	flush_mode;
+	int	resume_count;
 };
 
 

@@ -222,9 +222,9 @@
 	}
 
 	  default:
-		_condor_warning("%s -- system call not supported",
-			_condor_syscall_name( syscall_num ),
-			syscall_num );
+		char text[1024];
+		sprintf(text,"%s -- system call not supported", _condor_syscall_name( syscall_num ) );
+		REMOTE_syscall( CONDOR_report_error, text);
 		errno = EINVAL;
 		rval = -1;
 		break;

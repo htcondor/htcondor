@@ -112,7 +112,7 @@ public:
 /*
 This is a little tricky.
 
-When a progam exists, the last thing the startup code does is flush
+When a program exits, the last thing the startup code does is flush
 any (stdio or iostream) buffered files and close them. If any files are
 (Condor) buffered, this data will sit in the (Condor) buffer until file
 is closed, whereupon it will be flushed to the shadow.
@@ -140,11 +140,11 @@ notice.
 
 void CondorFileTable::init()
 {
-	resume_count = 0;
 	got_buffer_info = 0;
 	buffer_size = 0;
 	buffer_block_size = 0;
 	flush_mode = 0;
+	resume_count = 0;
 
 	int scm = SetSyscalls( SYS_UNMAPPED | SYS_LOCAL );
 	length = sysconf(_SC_OPEN_MAX);
@@ -152,8 +152,7 @@ void CondorFileTable::init()
 
 	pointers = new (CondorFilePointer *)[length];
 	if(!pointers) {
-		EXCEPT("Condor Error: CondorFileTable: Out of memory!\n");
-		Suicide();
+		_condor_error_retry("Out of memory!\n");
 	}
 
 	for( int i=0; i<length; i++ ) {
@@ -166,15 +165,15 @@ void CondorFileTable::init()
 
 	info = find_info("stream","stdin");
 	pointers[0] = new CondorFilePointer(new CondorFileLocal,info);
-	pointers[0]->file->force_open( 0, "stdin", 1, 0 );
+	pointers[0]->file->attach( 0, "stdin", 1, 0 );
 
 	info = find_info("stream","stdout");
 	pointers[1] = new CondorFilePointer(new CondorFileLocal,info);
-	pointers[1]->file->force_open( 1, "stdout", 0, 1 );
+	pointers[1]->file->attach( 1, "stdout", 0, 1 );
 
 	info = find_info("stream","stderr");
 	pointers[2] = new CondorFilePointer(new CondorFileLocal,info);
-	pointers[2]->file->force_open( 2, "stderr", 0, 1 );
+	pointers[2]->file->attach( 2, "stderr", 0, 1 );
 
 	atexit( _condor_disable_buffering );
 }
@@ -200,8 +199,7 @@ void CondorFileTable::dump()
 
 	for( int i=0; i<length; i++ ) {
 		if( pointers[i] ) {
-			dprintf(D_ALWAYS,"fd: %d offset: %d dups: %d ", i, pointers[i]->offset, count_pointer_uses(pointers[i]));
-			pointers[i]->file->dump();
+			dprintf(D_ALWAYS,"%d\t%s\t%s\tsize: %d offset: %d dups: %d ", i, pointers[i]->file->get_kind(), pointers[i]->file->get_name(), pointers[i]->file->get_size(), pointers[i]->offset, count_pointer_uses(pointers[i]));
 		}
 		dprintf(D_ALWAYS,"\n");
 	}
@@ -249,13 +247,6 @@ int CondorFileTable::find_empty()
 	return -1;
 }
 
-void CondorFileTable::replace_file( CondorFile *oldfile, CondorFile *newfile )
-{
-	for( int fd=0; fd<length; fd++ )
-		if(pointers[fd] && (pointers[fd]->file==oldfile))
-			pointers[fd]->file==newfile;
-}
-
 int CondorFileTable::count_pointer_uses( CondorFilePointer *p )
 {
 	int count=0;
@@ -280,7 +271,7 @@ int CondorFileTable::count_file_uses( CondorFile *f )
 
 int CondorFileTable::open( const char *logical_name, int flags, int mode )
 {
-	int	fd, real_fd, temp, result;
+	int	fd, temp, result;
 	char	full_path[_POSIX_PATH_MAX];
 	char	url[_POSIX_PATH_MAX];
 	char	method[_POSIX_PATH_MAX];
@@ -335,27 +326,20 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 			return -1;
 		}
 
-		real_fd = f->open(full_path,flags,mode);
-		if( real_fd<0 ) {
+		if( f->open(full_path,flags,mode)<0 ) {
 			delete f;
 			return -1;
 		}
 	}
 
-	// Standalone checkpointing requires that the virtual
-	// fd match the real fd.  Full remote syscalls can
-	// have any arbitrary mapping.
+	// Find a fresh file descriptor
 
-	if( MyImage.GetMode()==STANDALONE ) {
-		fd = real_fd;
-	} else {
-		fd = find_empty();
-		if(fd<0) {
-			errno = EMFILE;
-			f->close();
-			delete f;
-			return -1;
-		}
+	fd = find_empty();
+	if(fd<0) {
+		errno = EMFILE;
+		f->close();
+		delete f;
+		return -1;
 	}
 
 	// Look up the info block for this file.
@@ -375,7 +359,7 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 			( (flags&O_RDONLY) && (info->write_bytes) )
 		)
 	) {
-		_condor_warning("File '%s' opened for both reading and writing.  This is not safe in a program that may be checkpointed\n",logical_name);
+		_condor_warning("'%s' opened for read and write.  This is not checkpoint-safe.",logical_name);
 		info->already_warned = 1;
 	}
 
@@ -414,7 +398,7 @@ int CondorFileTable::install_special( char * kind, int real_fd )
 	}
 
 	pointers[fd] = fp;
-	pointers[fd]->file->force_open(real_fd,"",1,1);
+	pointers[fd]->file->attach(real_fd,"",1,1);
 
 	return fd;
 }
@@ -513,6 +497,9 @@ ssize_t CondorFileTable::read( int fd, void *data, size_t nbyte )
 
 	if( nbyte==0 ) return 0;
 
+	// make sure the file is resumed
+	f->resume(resume_count);
+
 	// get the data from the object
 	int actual = f->read( fp->offset, (char*) data, nbyte );
 
@@ -546,6 +533,9 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 
 	CondorFilePointer *fp = pointers[fd];
 	CondorFile *f = fp->file;
+
+	// make sure the file is resumed
+	f->resume(resume_count);
 
 	// Write to the object at the current offset
 	int actual = f->write( fp->offset, (char *) data, nbyte );
@@ -602,21 +592,6 @@ off_t CondorFileTable::lseek( int fd, off_t offset, int whence )
 	}
 }
 
-/* This function does a local dup2 one way or another. */
-static int _condor_internal_dup2( int oldfd, int newfd )
-{
-	#if defined(SYS_dup2)
-		return syscall( SYS_dup2, oldfd, newfd );
-	#elif defined(SYS_fcntl) && defined(F_DUP2FD)
-		return syscall( SYS_fcntl, oldfd, F_DUP2FD, newfd );
-	#elif defined(SYS_fcntl) && defined(F_DUPFD)
-		syscall( SYS_close, newfd );
-		return syscall( SYS_fcntl, oldfd, F_DUPFD, newfd );
-	#else
-		#error "_condor_internal_dup2: I need SYS_dup2 or F_DUP2FD or F_DUPFD!"
-	#endif
-}
-
 int CondorFileTable::dup( int fd )
 {
 	return search_dup2( fd, 0 );
@@ -656,19 +631,6 @@ int CondorFileTable::dup2( int fd, int nfd )
 	if( pointers[nfd]!=0 ) close(nfd);
 
 	pointers[nfd] = pointers[fd];
-
-	/* If we are in standalone checkpointing mode,
-	   we need to perform a real dup.  Because we
-	   are constructing this file table identically
-	   to the real system table, the result of
-	   the syscall _ought_ to be the same as the
-	   result of this virtual dup, but we will
-	   check just to be sure. */
-
-	if( MyImage.GetMode()==STANDALONE ) {
-		result = _condor_internal_dup2(fd,nfd);
-		if(result!=nfd) _condor_error_fatal("internal_dup2(%d,%d) returned %d but I wanted %d!\n",fd,nfd,result,nfd);
-	}
 	    
 	return nfd;
 }
@@ -711,6 +673,8 @@ int CondorFileTable::ioctl( int fd, int cmd, int arg )
 		return -1;
 	}
 
+	pointers[fd]->file->resume(resume_count);
+
 	return pointers[fd]->file->ioctl(cmd,arg);
 }
 
@@ -725,6 +689,8 @@ int CondorFileTable::ftruncate( int fd, size_t length )
 	   OSF1.  - Jim B. */
 
 	if( length<0 ) return 0;
+
+	pointers[fd]->file->resume(resume_count);
 
 	return pointers[fd]->file->ftruncate(length);
 }
@@ -744,6 +710,8 @@ int CondorFileTable::fcntl( int fd, int cmd, int arg )
 		errno = EBADF;
 		return -1;
 	}
+
+	pointers[fd]->file->resume(resume_count);
 
 	switch(cmd) {
 		#ifdef F_DUPFD
@@ -768,6 +736,8 @@ int CondorFileTable::fsync( int fd )
 		errno = EBADF;
 		return -1;
 	}
+
+	pointers[fd]->file->resume(resume_count);
 
 	pointers[fd]->file->fsync();
 }
@@ -946,7 +916,7 @@ void CondorFileTable::resume()
 
 	resume_count++;
 
-	dprintf(D_ALWAYS,"CondorFileTable::resume_count=%d\n");
+	dprintf(D_ALWAYS,"CondorFileTable::resume\n");
 	dprintf(D_ALWAYS,"working dir = %s\n",working_dir);
 
 	if(MyImage.GetMode()!=STANDALONE) {
@@ -956,37 +926,10 @@ void CondorFileTable::resume()
 		result = ::chdir( working_dir );
 	}
 
-	if(result<0) _condor_error_retry("After checkpointing, I couldn't find %s again!",working_dir);
+	if(result<0) _condor_error_retry("Couldn't move to %s (%s).  Please fix it.\n",working_dir,strerror(errno));
 
-	/* Resume works a little differently, depending on the image mode.
-	   In the standard condor universe, we just go through each file
-	   object and call its resume method to reopen the file. */
-
-	for( int i=0; i<length; i++ ) {
-		if( pointers[i] ) {
-
-			/* No matter what the mode, we tell the file to
-			   resume itself. */
-
-			pointers[i]->file->resume(resume_count);
-
-			/* In standalone mode, we check to see if fd i shares
-			   an fp with a lower numbered fd.  If it does, then
-			   we need to dup the lower number into the upper number.
-			   Just like dup2, we need to check that the result of
-			   the syscall is what we expected. */
-
-			if( MyImage.GetMode()==STANDALONE ) {
-				for( int j=0; j<i; j++ ) {
-					if( pointers[j]==pointers[i] ) {
-						int result = _condor_internal_dup2(j,i);
-						if(result!=i) _condor_error_fatal("internal_dup2(%d,%d) returned %d but I wanted %d!\n",j,i,result,i);
-						break;
-					}
-				}
-			}	
-		}
-	}
+	/* We do _not_ resume the files here. */
+	/* Those are done on demand at each point a file might be referenced */
 
 	dump();
 }
@@ -998,6 +941,8 @@ int CondorFileTable::map_fd_hack( int fd )
 		return -1;
 	}
 
+	pointers[fd]->file->resume(resume_count);
+
 	return pointers[fd]->file->map_fd_hack();
 }
 
@@ -1008,6 +953,7 @@ int CondorFileTable::local_access_hack( int fd )
 		return -1;
 	}
 
+	pointers[fd]->file->resume(resume_count);
 	return pointers[fd]->file->local_access_hack();
 }
 

@@ -21,7 +21,7 @@ CMNT
 #endif
 
 FILE_TABLE = -DFILE_TABLE
-FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_buffer.o file_table_interf.o
+FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_basic.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_buffer.o file_table_interf.o
 
 #if IS_IRIX
 /* This silliness is because gcc 2.7.2 on IRIX cannot
@@ -161,9 +161,9 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 CKPT_OBJ = $(FILE_TABLE_OBJ)\
 	image.o tmp_stack.o machdep.$(DEP_OS).o \
 	syscall_mode.o fake_hooks.o $(LONGJMP) $(HP_CKPT) \
-	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o shared_utils.o
+	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o shared_utils.o condor_error.o
 #else
-CKPT_OBJ = $(FILE_TABLE_OBJ) syscall_mode.o eprintf.o shared_utils.o
+CKPT_OBJ = $(FILE_TABLE_OBJ) syscall_mode.o eprintf.o shared_utils.o condor_error.o
 #endif
 
 #if DOES_COMPRESS_CKPT
@@ -179,8 +179,7 @@ COMPRESS_LIB = libcondorzsyscall.a
 SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o 
 
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
-	condor_errlst.o internet.o $(PLATFORM_UTIL_OBJ) mkargv.o \
-	condor_error.o
+	condor_errlst.o internet.o $(PLATFORM_UTIL_OBJ) mkargv.o
 
 CPP_UTIL_OBJ = condor_version.o
 
