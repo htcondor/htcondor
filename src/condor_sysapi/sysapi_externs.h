@@ -39,7 +39,7 @@
    sysapi should include this, while everything outside of the sysapi
    only includes sysapi.h, which is merely function prototypes 
 
-   All of these variables are declared in reconfig.h 
+   All of these variables are declared in config.C 
 */
 
 /* needed by idle_time.C and last_x_event.c */
@@ -54,5 +54,8 @@ extern int _sysapi_reserve_disk;
 
 /* needed by idle_time.C */
 extern int _sysapi_startd_has_bad_utmp;
+
+/* needed by test.C */
+extern int _sysapi_config;
 
 #endif
