@@ -5,6 +5,7 @@
 #include "util.h"
 #include "debug.h"
 #include "list.h"
+#include "util_lib_proto.h"
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
@@ -41,7 +42,7 @@ bool parse (char *filename, Dag *dag) {
         }
     }
 
-    char line [MAX_LENGTH + 1];
+    char *line;
   
     int lineNumber = 0;
   
@@ -51,8 +52,11 @@ bool parse (char *filename, Dag *dag) {
     int len;
     bool done = false;
 
-    while (!done && (len = util_getline(fp, line, MAX_LENGTH)) >= 0) {
+    while ( !done && ((line=getline(fp)) != NULL) ) {
         lineNumber++;
+		if ( line ) {
+			len = strlen(line);
+		}
 
         //
         // Find the terminating '\0'
