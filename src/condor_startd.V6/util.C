@@ -182,9 +182,7 @@ refuse( Stream* s )
 bool
 caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 {
-	char buf[4096];
-	buf[0] = '\0';
-	ExprTree* tree;
+	ExprTree *tree, *new_tree;
 	if( !attr ) {
 		EXCEPT( "caInsert called with NULL attribute" );
 	}
@@ -201,13 +199,18 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 		}
 		return false;
 	}
-	tree->PrintToStr( buf );
-
-	if( ! target->Insert( buf ) ) {
+		// we need to make a copy of this before we can insert it into
+		// another ClassAd, since the Insert() that takes a pointer to
+		// an ExprTree doesn't make its own copy.
+	new_tree = tree->DeepCopy();
+	if( ! target->Insert( new_tree ) ) {
 		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n",
 				 attr );
+		delete new_tree;
 		return false;
 	}		
+		// if we inserted it, the memory is now owned by the classad,
+		// so we don't want to delete it
 	return true;
 }
 
