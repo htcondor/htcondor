@@ -239,8 +239,10 @@ rusage_to_float(struct rusage ru, float *utime, float *stime )
 int
 float_to_rusage(float utime, float stime, struct rusage *ru)
 {
-	ru->ru_utime.tv_sec = (int) utime;
-	ru->ru_stime.tv_sec = (int) stime;
+	ru->ru_utime.tv_sec = utime;
+	ru->ru_stime.tv_sec = stime;
+	ru->ru_utime.tv_usec = 0;
+	ru->ru_stime.tv_usec = 0;
 	return 0;
 }
 
