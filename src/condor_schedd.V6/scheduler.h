@@ -81,8 +81,16 @@ struct match_rec
 	~match_rec();
     char    		id[SIZE_OF_CAPABILITY_STRING];
     char    		peer[50];
+	
+		// cluster of the job we used to obtain the match
+	int				origcluster; 
+
+		// if match is currently active, cluster and proc of the
+		// running job associated with this match; otherwise,
+		// cluster==origcluster and proc==-1
     int     		cluster;
     int     		proc;
+
     int     		status;
 	shadow_rec*		shadowRec;
 	int				alive_countdown;
