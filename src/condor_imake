@@ -364,7 +364,7 @@ fi
 
 # look around for "-v" or "-verbose" and act upon it.
 verbose_info=0
-for i in "$*"
+for i in "$@"
 do
 	if [ "X$i" = "X-verbose" -o "X$i" = "X-v" ]; then
 		verbose_info=1
