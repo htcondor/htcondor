@@ -4,7 +4,6 @@
 #include "condor_parser.h"
 #include "sched.h"
 #include "condor_status.h"
-#include "manager.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_network.h"
