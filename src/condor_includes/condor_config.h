@@ -30,8 +30,9 @@ extern "C" {
 	char * expand_macro ( char *value, BUCKET *table[], int table_size );
 	char * lookup_macro ( char *name, BUCKET *table[], int table_size );
 	char * macro_expand ( char *name );
-	int boolean ( char *parameter, char *pattern);
+	int param_in_pattern ( char *parameter, char *pattern);
 	void init_config ( void );
+	void set_debug_flags( char * );
 #else
 	void config();
 	void config_master();
@@ -41,8 +42,9 @@ extern "C" {
 	char * expand_macro();
 	char * lookup_macro();
 	char * macro_expand();
-	int boolean ();
+	int param_in_pattern ();
 	void init_config ();
+	void set_debug_flags ();
 #endif
 
 #if defined(__cplusplus)
