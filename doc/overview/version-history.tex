@@ -24,6 +24,45 @@ When you upgrade to a new development release, make certain you upgrade all
 machines in your pool to the same version.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-16}Version 6.1.16}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Condor now supports multiple pvmds per user on a machine.  Users
+can now submit more than one PVM job at a time, PVM tasks can now run
+on the submission machine, and multiple PVM tasks can run on SMP
+machines.  \Condor{submit} no longer inserts default job requirements
+to restrict PVM jobs to one pvmd per user on a machine.  This new
+functionality requires the \Condor{pvmd} included in this (and future)
+Condor releases.  If you set ``PVM\_OLD\_PVMD = True'' in the Condor
+configuration file, \Condor{submit} will insert the default PVM job
+requirements as it did in previous releases.  You must set this if you
+don't upgrade your \Condor{pvmd} binary or if your jobs flock with pools
+that user an older \Condor{pvmd}.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The \Condor{shadow.pvm} should now correctly return core files
+when a task or \Condor{pvmd} crashes.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-1-15}Version 6.1.15}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
