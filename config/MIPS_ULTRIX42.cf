@@ -57,6 +57,7 @@
 #define HAS_INSQUE				YES
 
 #define CCompiler cc
+#define StaticFlag -static
 #define CPlusCompiler g++
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_ultrix
