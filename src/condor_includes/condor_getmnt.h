@@ -27,8 +27,7 @@
 #	include <sys/mount.h>
 #endif
 
-#if !defined(OSF1) && !defined(ULTRIX42) && !defined(ULTRIX43) && !defined(AIX32) && !defined(Solaris) /*
-Solaris specific change ..dhaval 6/26 */
+#if !defined(OSF1) && !defined(ULTRIX42) && !defined(ULTRIX43) && !defined(AIX32) && !defined(Solaris) && !defined(WIN32)
 #	include <mntent.h>
 #endif
 
