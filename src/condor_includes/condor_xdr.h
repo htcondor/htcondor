@@ -54,10 +54,18 @@ extern "C" {
 #undef xdr_u_long
 #undef xdr_u_short
 #undef xdr_void
-#endif
+#endif /* __STDC__ || __cplusplus */
+
 #if defined(OSF1)
 #define mem_alloc(bsize)        malloc(bsize)
-#endif
+
+#undef xdr_destroy
+#undef XDR_DESTROY
+#define xdr_destroy				my_xdr_destroy
+#define XDR_DESTROY				my_xdr_destroy
+extern int my_xdr_destroy(XDR *);
+#endif /* OSF1 */
+
 
 
 
