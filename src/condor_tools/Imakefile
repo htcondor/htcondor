@@ -128,7 +128,7 @@ c_plus_target(condor_invalidate_host,invalidate_host.o,$(LIB))
 
 
 condor_master_on: master_on.c
-	gcc -o condor_master_on master_on.c
+	gcc -I/usr/afsws/include -o condor_master_on master_on.c
 
 condor_kill: kill.C
 	g++ -o condor_kill kill.C -I../condor_c++_util -I../condor_includes
