@@ -63,6 +63,11 @@ specification of an alternate \Condor{dagman} executable.
   The \Condor{kbdd} is only needed on Digital Unix and IRIX platforms,
   so this bug did not effect most Condor users.
 
+\item Fixed a minor bug in the \Condor{startd} that caused it to exit
+  with a fatal error when it fails to execute the \Condor{starter}. 
+  This problem is now handled gracefully and is not considered a fatal
+  error. 
+
 \item Fixed a minor problem (introduced in version 6.5.2 while fixing
   another bug) that made it difficult to use a \Condor{master} to
   spawn the Hawkeye daemons.
