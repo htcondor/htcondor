@@ -114,7 +114,7 @@ int FileExists(const char *filename, const char *owner)
 
 int RequestStore(const char*     owner,
 				 const char*     filename,
-				 u_lint          len,
+				 size_t          len,
 				 struct in_addr* server_IP,
 				 u_short*        port)
 {
@@ -159,7 +159,7 @@ int RequestStore(const char*     owner,
 
 int RequestRestore(const char*     owner,
 				   const char*     filename,
-				   u_lint*         len,
+				   size_t*         len,
 				   struct in_addr* server_IP,
 				   u_short*        port)
 {

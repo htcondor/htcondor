@@ -16,14 +16,14 @@ int FileExists(const char *path, const char *filename);
 
 int RequestStore(const char*     owner,
 				 const char*     filename,
-				 u_lint          len,
+				 size_t          len,
 				 struct in_addr* server_IP,
 				 u_short*        port);
 
 
 int RequestRestore(const char*     owner,
 				   const char*     filename,
-				   u_lint*         len,
+				   size_t*         len,
 				   struct in_addr* server_IP,
 				   u_short*        port);
 
