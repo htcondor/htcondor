@@ -503,8 +503,8 @@ Claim::start_claim_timer()
 			   c_claim_tid );
 	}
 	c_claim_tid =
-		daemonCore->Register_Timer( (3 * c_aliveint), 0,
-				(TimerHandlercpp)&Claim::claim_timed_out,
+		daemonCore->Register_Timer( (max_claim_alives_missed * c_aliveint),
+				0, (TimerHandlercpp)&Claim::claim_timed_out,
 				"claim_timed_out", this );
 	if( c_claim_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
@@ -558,7 +558,8 @@ void
 Claim::alive()
 {
 		// Process a keep alive command
-	daemonCore->Reset_Timer( c_claim_tid, (3 * c_aliveint), 0 );
+	daemonCore->Reset_Timer( c_claim_tid,
+							 (max_claim_alives_missed * c_aliveint), 0 );
 }
 
 

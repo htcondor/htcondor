@@ -111,6 +111,9 @@ extern	int		match_timeout;	// How long you're willing to be
 extern	int		killing_timeout;  // How long you're willing to be
 	                              // in preempting/killing before you
 								  // drop the hammer on the starter
+extern	int		max_claim_alives_missed;  // how many keepalives can we
+										  // miss until we timeout the
+										  // claim and give up
 extern	int		last_x_event;		// Time of the last x event
 extern  time_t	startd_startup;		// Time when the startd started up
 
