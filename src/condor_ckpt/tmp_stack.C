@@ -51,7 +51,10 @@ ExecuteOnTmpStk( void (*func)() )
 	if( SETJMP(env) == 0 ) {
 			// First time through - move SP
 		if( StackGrowsDown() ) {
-			JMP_BUF_SP(env) = (long)(TmpStack + TmpStackSize);
+			// when StackGrowsDown, set the stack pointer inside the
+			// TmpStack and give some padding -- previously values
+			// were getting overwritten above the stack -- Jim B. 2/7/96
+			JMP_BUF_SP(env) = (long)(TmpStack + TmpStackSize - 2);
 		} else {
 			JMP_BUF_SP(env) = (long)TmpStack;
 		}
