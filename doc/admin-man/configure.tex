@@ -1313,7 +1313,99 @@ SMP machine.
 See section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP} on ``Configuring The Startd for 
 SMP Machines'' for more details.
-\input{admin-man/smp-params.tex}
+
+\begin{description}
+
+\item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}] 
+\label{param:VirtualMachinesConnectedToConsole}
+  This should be an integer which indicates how many of the virtual
+  machines the startd is representing should be "connected" to the
+  console (in other words, notice when there's console activity).
+  This defaults to all virtual machines (N in a machine with N CPUs).
+  This must be an integer ("N" isn't a valid setting, that's just used
+  to represent the default).
+
+\item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}]
+\label{param:VirtualMachinesConnectedToKeyboard}
+  This should be an integer which indicates how many of the virtual
+  machines the startd is representing should be "connected" to the
+  keyboard (for remote tty activity, as well as console activity).
+  Defaults to 1.
+
+\item[\Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}]
+\label{param:DisconnectedKeyboardIdleBoost}
+  If there are virtual machines not connected to either the keyboard
+  or the console, the corresponding idle time reported will be the
+  time since the startd was spawned, plus the value of this parameter.
+  It defaults to 1200 seconds (20 minutes). 
+  We do this because if the virtual machine is configured not to care
+  about keyboard activity, we want it to be available to Condor jobs
+  as soon as the startd starts up, instead of having to wait for 15
+  minutes or more (which is the default time a machine must be idle
+  before Condor will start a job).
+  If you don't want this boost, just set the value to 0.  
+  If you change your START expression to require more than 15 minutes
+  before a job starts, but you still want jobs to start right away on
+  some of your SMP nodes, just increase this parameter.
+
+\end{description}
+
+The following settings control the number of virtual machines reported
+for a given SMP host, and what attributes each one has.  
+They are only needed if you do not want to have an SMP machine report
+to Condor with a seperate virtual machine for each CPU, with all
+shared system resources evenly divided among them.
+Please read section~\ref{sec:SMP-Divide} on
+page~\pageref{sec:SMP-Divide} for details on how to properly configure
+these settings to suit your needs.
+
+\Note You can only change the number of each type of virtual machine
+the \Condor{startd} is reporting with a simple reconfig (such as
+sending a SIGHUP signal, or using the \Condor{reconfig} command).
+You cannot change the definition of the different virtual machine
+types with a reconfig.  
+If you change them, you must restart the \Condor{startd} for the
+change to take effect (for example, using ``\condor{restart}
+-startd''.
+
+\begin{description}
+
+\item[\Macro{MAX\_VIRTUAL\_MACHINE\_TYPES}]
+\label{param:MaxVirtualMachineTypes}
+  The maximum number of different virtual machine types.  
+  Note: this is the maximum number of different \Bold{types} not of
+  actual virtual machines.
+  Defaults to 10.  
+  (You should only need to change this setting if you define more than
+  10 seperate virtual machine types, which would be pretty rare.)
+
+\item[\Macro{VIRUAL\_MACHINE\_TYPE\_<N>}]
+\label{param:VirtualMachineTypeN}
+  This setting defines a given virtual machine type, by specifying
+  what part of each shared system resource (like RAM, swap space, etc)
+  this kind of virtual machine gets.
+  The ``<N>'' can be any integer from 1 to the value of
+  \Macro{MAX\_VIRTUAL\_MACHINE\_TYPES}, such as
+  \Macro{VIRTUAL\_MACHINE\_TYPE\_1}. 
+  The format of this entry can be somewhat complex, so please refer to
+  section~\ref{sec:SMP-Divide} on page~\pageref{sec:SMP-Divide} for
+  details on the different possibilities.
+
+\item[\Macro{NUM\_VIRUAL\_MACHINES\_TYPE\_<N>}]
+\label{param:NumVirtualMachinesTypeN}
+  This setting controls how many of a given virtual machine type
+  (defined above) are actually reported to Condor.
+  There is no default.
+
+\item[\Macro{NUM\_VIRUAL\_MACHINES}]
+\label{param:NumVirtualMachines}
+  If you your SMP machine is being evenly divided, and the virtual
+  machine type settings described above are not being used, this
+  setting controls how many virtual machines will be reported.  
+  The default is one virtual machine for each CPU.
+
+\end{description}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Schedd-Config-File-Entries}
