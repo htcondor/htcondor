@@ -76,11 +76,9 @@ Script::BackgroundRun( int reaperId )
         send += ' ';
     }
 
-	char *env = environToString( (const char**)environ );
 	_pid = daemonCore->Create_Process( cmd, (char*) send.Value(),
 									   PRIV_UNKNOWN, reaperId, FALSE,
-									   env, NULL, FALSE, NULL, NULL, 0 );
-	delete [] env;
+									   NULL, NULL, FALSE, NULL, NULL, 0 );
     delete [] cmd;
 	return _pid;
 }
