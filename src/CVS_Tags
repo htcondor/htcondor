@@ -1,3 +1,9 @@
+12/30/04 V6_7-condorg_nordugrid-branch
+   A branch that has implementation of Condor-G submitting to NorduGrid
+   batch system.
+   Created off 6_7-branch at V6_7-condorg_nordugrid-root. By ckireyev.
+   Should be merged in when the functionality is deemed useful.
+
 12/29/04 V6_7-post_merge-V6_6-merge-30
    The state of the V6_7-branch after another merge from V6_6-branch.
 
