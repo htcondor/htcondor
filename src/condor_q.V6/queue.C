@@ -81,6 +81,7 @@ static	void		doRunAnalysis( ClassAd* );
 struct 	PrioEntry { MyString name; float prio; };
 static 	bool		analyze	= false;
 static	bool		run = false;
+static	bool		goodput = false;
 static	char		*fixSubmittorName( char*, int );
 static	ClassAdList startdAds;
 static	ExprTree	*stdRankCondition;
@@ -389,8 +390,14 @@ processCommandLineArguments (int argc, char *argv[])
 			run = true;
 		}
 		else
+		if (match_prefix( arg, "goodput")) {
+			cputime = false;
+			goodput = true;
+		}
+		else
 		if (match_prefix( arg, "cputime")) {
 			cputime = true;
+			goodput = false;
 			JOB_TIME = "CPU_TIME";
 		}
 		else
@@ -543,6 +550,41 @@ format_cpu_time (float utime, AttrList *ad)
 }
 
 static char *
+format_goodput (float wall_clock, AttrList *ad)
+{
+	static char result[9];
+	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
+	int last_vacate = 0;
+	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
+	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
+	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
+	if (job_status == RUNNING && last_ckpt > shadow_bday) {
+		wall_clock += last_ckpt - shadow_bday;
+	}
+	float goodput = (wall_clock > 0.0) ? ckpt_time/wall_clock*100.0 : 0.0;
+	if (goodput > 100.0) goodput = 100.0;
+	else if (goodput < 0.0) return " [?????]";
+	sprintf(result, " %6.1f%%", goodput);
+	return result;
+}
+
+static char *
+format_cpu_util (float utime, AttrList *ad)
+{
+	static char result[10];
+	int ckpt_time = 0;
+	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
+	if (ckpt_time == 0) return " [??????]";
+	float util = (ckpt_time) ? utime/ckpt_time*100.0 : 0.0;
+	if (util > 100.0) util = 100.0;
+	else if (util < 0.0) return " [??????]";
+	sprintf(result, "  %6.1f%%", util);
+	return result;
+}
+
+static char *
 format_owner (char *owner, AttrList *ad)
 {
 	static char result[15];
@@ -583,6 +625,7 @@ usage (char *myName)
 		"\t\t-long\t\t\tVerbose output\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
+		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
 		"\t\trestriction list\n"
@@ -645,12 +688,12 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		
 		if( verbose ) {
 			jobs.fPrintAttrListList( stdout );
-		} else if ( run ) {
+		} else if ( run || goodput ) {
 			summarize = false;
 			AttrListPrintMask mask;
 			printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
 					"SUBMITTED", JOB_TIME,
-					"HOST(S)" );
+					run ? "HOST(S)" : "GOODPUT CPU_UTIL" );
 			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
 			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 			mask.registerFormat ( (StringCustomFmt) format_owner,
@@ -661,13 +704,21 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat(" ", "*bogus*", " ");  // force space
 			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
 								  ATTR_JOB_REMOTE_USER_CPU, "[??????????]");
-			mask.registerFormat(" ", "*bogus*", " "); // force space
-			// We send in ATTR_OWNER since we know it is always
-			// defined, and we need to make sure format_remote_host() is
-			// always called. We are actually displaying ATTR_REMOTE_HOST if
-			// defined, but we play some tricks if it isn't defined.
-			mask.registerFormat ( (StringCustomFmt) format_remote_host,
-								  ATTR_OWNER, "[????????????????]");
+			if ( run ) {
+				mask.registerFormat(" ", "*bogus*", " "); // force space
+				// We send in ATTR_OWNER since we know it is always
+				// defined, and we need to make sure
+				// format_remote_host() is always called. We are
+				// actually displaying ATTR_REMOTE_HOST if defined,
+				// but we play some tricks if it isn't defined.
+				mask.registerFormat ( (StringCustomFmt) format_remote_host,
+									  ATTR_OWNER, "[????????????????]");
+			} else {			// goodput
+				mask.registerFormat ( (FloatCustomFmt) format_goodput,
+									  ATTR_JOB_REMOTE_WALL_CLOCK, " [?????]");
+				mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
+									  ATTR_JOB_REMOTE_USER_CPU, " [??????]");
+			}
 			mask.registerFormat("\n", "*bogus*", "\n");  // force newline
 			mask.display(stdout, &jobs);
 		} else {
