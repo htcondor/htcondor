@@ -48,8 +48,10 @@ before */
 
 #endif
 
-//#define _XOPEN_SOURCE 1
-//#define _XOPEN_SOURCE_EXTENDED 1
+#if defined(IRIX62)
+#	define _XOPEN_SOURCE 1
+#	define _XOPEN_SOURCE_EXTENDED 1
+#endif
 
 #define _BSD_COMPAT 1
 
@@ -84,7 +86,9 @@ before */
 /******************************
 ** unistd.h
 ******************************/
-//#define __vfork fork
+#if defined(IRIX62)
+#	define __vfork fork
+#endif
 
 /* if _BSD_COMPAT is defined, then getpgrp will get funny arguments from 
    <unistd.h> and that will break receivers.c - Ballard 10/99
@@ -97,8 +101,9 @@ before */
 #undef _BSD_COMPAT
 
 #include <unistd.h>
-//#undef __vfork
-
+#if defined(IRIX62)
+#	undef __vfork
+#endif
 #define _BSD_COMPAT _save_BSD_COMPAT
 #undef _save_BSD_COMPAT
 
@@ -125,11 +130,17 @@ int pclose(FILE *stream);
 #define SIGTRAP 5
 #define SIGBUS 10
 #define SIGIO 22
+
+/* XXX fix me */
 #define _save_NO_ANSIMODE _NO_ANSIMODE
 #undef _NO_ANSIMODE
 #define _NO_ANSIMODE 1
-//#undef _SGIAPI
-//#define _SGIAPI 1
+
+#if defined(IRIX62)
+#	undef _SGIAPI
+#	define _SGIAPI 1
+#endif
+
 #include <signal.h>
 #include <sys/signal.h>
 /* We also want _NO_ANSIMODE and _SGIAPI defined to 1 for sys/wait.h,
@@ -145,9 +156,12 @@ int pclose(FILE *stream);
 #undef _NO_ANSIMODE
 #define _NO_ANSIMODE _save_NO_ANSIMODE
 #undef _save_NO_ANSIMODE
-//#undef _SGIAPI
-//#define _SGIAPI _save_SGIAPI
-//#undef _save_SGIAPI
+
+#if defined(IRIX62)
+#	undef _SGIAPI
+#	define _SGIAPI _save_SGIAPI
+#	undef _save_SGIAPI
+#endif
 
 /******************************
 ** sys/socket.h
@@ -183,6 +197,7 @@ int pclose(FILE *stream);
 #include <sys/select.h>
 
 /* A bunch of sanity checks. */
+#if defined(IRIX65)
 
 #if !(_LFAPI)
 #	error "STOP:  Find out why _LFAPI is false!!!"
@@ -214,6 +229,8 @@ int pclose(FILE *stream);
 #if defined(_POSIX_C_SOURCE)
 #	error "STOP:  why is _POSIX_C_SOURCE defined?"
 #endif
+
+#endif /* IRIX65 */
 
 
 #undef _SGIAPI
