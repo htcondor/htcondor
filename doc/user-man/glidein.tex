@@ -20,7 +20,7 @@ is referred to as the remote node.
 These requirements are general to using any Globus resource:
 \begin{enumerate}
 
-\item An X.509 certificate issued by a Globus certificate authority.
+\item An X.509 certificate issued by a certificate authority.
 
 \item Access to a Globus resource.
 You must be a valid Globus user and be mapped to a valid login account by
@@ -28,8 +28,7 @@ the site's Globus administrator on every Globus resource that will be
 added to the local Condor pool using \Condor{glidein}.
 More information can be found at \URL{http://www.globus.org}
 
-\item The environment variables \Env{HOME} and either
-\Env{GLOBUS\_INSTALL\_PATH} or \Env{GLOBUS\_DEPLOY\_PATH}
+\item The environment variables \Env{HOME} and \Env{GLOBUS\_LOCATION}
 must be set.
 
 \end{enumerate}
@@ -44,13 +43,6 @@ given above.
 \begin{enumerate}
 \item Use Globus v1.1 or better.
 
-\item Have \Prog{gsincftp} installed. This program is an ftp
-  client modified to use Globus X.509 authentication.
-  More information ca be found at
-  \URL{http://www.globus.org/datagrid/deliverables/gsiftp-tools.html}.
-
-\item Be an authorized user of the local Condor pool.
-
 \item The local Condor pool configuration file(s) must 
   give \Macro{HOSTALLOW\_WRITE} permission
   to every resource that will be added using \Condor{glidein}. 
@@ -60,10 +52,6 @@ given above.
   \Macro{HOSTALLOW\_WRITE} list.
   Recall that the changes take effect when all machines
   in the local pool are sent a reconfigure command.
-
-\item The local Condor pool's configuration file(s) must
-  set \Macro{GLOBUSRUN} to be the path of \Prog{globusrun}
-  and \Macro{SHADOW\_GLOBUS} to be the path of the \Condor{shadow.globus}.
 
 \item Included in the \Env{PATH} must be the common user programs
   directory \File{/bin}, globus tools, and the Condor user program
@@ -94,7 +82,7 @@ resource.
 The Condor daemons exit gracefully when no jobs run on the daemons for a
 configurable period of time. The default length of time is 20 minutes.
 
-The Condor executables on the Globus resource contact the local pool and
+The Condor daemons on the Globus resource contact the local pool and
 attempt to join the pool.  The \Expr{START}
 expression for the \Condor{startd} daemon requires that the username
 of the person running \Condor{glidein} matches the username of the jobs
