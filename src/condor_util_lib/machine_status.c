@@ -106,6 +106,7 @@ int		status;
 			EXCEPT( "write(%d,0x%x,%d\n", WriteFd,Buf,strlen(Buf) );
 		}
 	}
+	fsync(WriteFd);
 }
 
 get_machine_status()
