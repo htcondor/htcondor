@@ -83,7 +83,7 @@ Condor can be registered with:
    administrator rights to the pool.  This includes things like
    changing user priorities (with ``\Condor{userprio -set}''), turning
    Condor on and off (``\Condor{off $<$machine$>$}), asking Condor to
-   reconfigure or restart itself, etc.  Typically you would want only
+   restart itself, etc.  Typically you would want only
    a couple machines in this list - perhaps the workstations where the
    Condor administrators or sysadmins typically work, or perhaps just
    your Condor central manager.
@@ -210,6 +210,16 @@ them, and what permission they are registered with.  With this
 information, you should be able to grant exactly the permission you
 wish for your pool:
 
+ALL DAEMONS:
+
+\begin{description}
+\item[\DCPerm{WRITE}] : The command sent by \Condor{reconfig} to
+  reconfigure the daemon.
+
+\item[\DCPerm{ADMINISTRATOR}] : The command sent by \Condor{reconfig}
+when you specify \Arg{-full} to perform a full reconfig on the
+daemon. 
+\end{description}
 
 STARTD:
 
@@ -275,9 +285,6 @@ SCHEDD:
   This additional user-level authentication prevents, for example, an
   ordinary user from removing a different user's jobs.
 
-\item[\DCPerm{OWNER}] : The command that \Condor{reconfig\_schedd}
-  sends to get the schedd to re-read it's config files.
-
 \item[\DCPerm{READ}] : The command which all
   tools which view the status of the job queue send (such as
   \Condor{q}).  
@@ -287,7 +294,6 @@ MASTER:  All commands are registered with \DCPerm{ADMINISTRATOR}
 access:
 
 \begin{description}
-\item[reconfig] : Master and all its children reconfigure themselves
 \item[restart] : Master restarts itself (and all its children)	
 \item[off] : Master shuts down all its children
 \item[on] : Master spawns all the daemons it's configured to spawn
