@@ -1300,7 +1300,7 @@ void DaemonCore::Driver()
 			if(tmpErrno != EINTR)
 			// not just interrupted by a signal...
 			{
-				EXCEPT("select, error # = %d", tmpErrno);
+				EXCEPT("DaemonCore: select() returned an unexpected error: %d (%s)\n",tmpErrno,strerror(tmpErrno));
 			}
 		}
 #else
