@@ -34,7 +34,7 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	NON_POSIX.set_prog_env.C alarm.C string_set.C alloc.C \
 	directory.C my_hostname.C file_lock.C disk.C up_down.C \
-	environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C carmi_context.C \
+	environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C \
 	instantiate.C string_list.C condor_event.C $(URL_SRC) get_daemon_addr.C \
 	user_log.C config.C condor_config.C stringSpace.C condor_state.C $(API_SRC)\
 	classad_hashtable.C classad_log.C log_transaction.C log.C \
@@ -45,7 +45,7 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	NON_POSIX.set_prog_env.o alarm.o string_set.o alloc.o \
 	directory.o my_hostname.o file_lock.o disk.o up_down.o \
-	environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o carmi_context.o \
+	environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o \
 	instantiate.o string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o $(API_OBJ)\
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
@@ -71,7 +71,7 @@ libapi.tar: libapi.a
 
 c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
 
-c_plus_target(test_context, test_carmi_context.o, $(TEST_LIBS) ../condor_xdr_lib/xdr_lib.a)
+c_plus_target(test_context, $(TEST_LIBS) ../condor_xdr_lib/xdr_lib.a)
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
 
