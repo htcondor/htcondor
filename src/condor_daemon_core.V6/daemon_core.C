@@ -6124,46 +6124,55 @@ int DaemonCore::SendAliveToParent()
 }
 	
 #ifndef WIN32
-char **DaemonCore::ParseEnvArgsString(char *incomming, bool env)
+char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 {
-	char seperator;
-	char **argv = 0;
-	char *temp = 0;
-	char *cur = 0;
-	int num_args = 0;
-	int i = 0;
-	int length = 0;
+	char separator;
+	int maxlength;
+	char **argv, *arg;
+	int nargs=0;
 
 	if(env) {
-		seperator = ';';
+		separator = ';';
 	} else {
-		seperator = ' ';
-	}
-	// Count the number of arguments
-	temp = incomming;
-	do {
-		num_args++;
-		temp++;
-	} while( ( temp = strchr(temp, seperator) ) != NULL);
-
-	argv = new char *[num_args + 1];
-
-	cur = incomming;
-	while( (temp = strchr(cur, seperator) ) )
-	{
-		length = temp - cur;
-		argv[i] = new char[length + 1]; 
-		strncpy(argv[i], cur, length);
-		argv[i][length] = 0;
-		cur = temp + 1;
-		i++;
+		separator = ' ';
 	}
 
-	argv[i] = new char[strlen(cur) + 1];
-	strcpy(argv[i], cur);
-	
-	argv[num_args] = 0;
+	/*
+	maxlength is the maximum number of args and the maximum
+	length of any one arg that could be found in this string.
+	A little waste is insignificant here.
+	*/
 
+	maxlength = strlen(str+1);
+
+	argv = new char*[maxlength];
+
+	/* While there are characters left... */
+	while(*str) {
+		/* Skip over any sequence of whitespace */
+		while( *str == separator ) {
+			str++;
+		}
+
+		/* If we are not at the end... */
+		if(*str) {
+
+			/* Allocate a new string */
+			argv[nargs] = new char[maxlength];
+
+			/* Copy the arg into the new string */
+			arg = argv[nargs];
+			while( *str && *str != separator ) {
+				*arg++ = *str++;
+			}
+			*arg = 0;
+
+			/* Move on to the next argument */
+			nargs++;
+		}
+	}
+
+	argv[nargs] = 0;
 	return argv;
 }
 #endif
