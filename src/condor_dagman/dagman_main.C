@@ -111,6 +111,9 @@ Dagman::Config()
 	allowExtraRuns = param_boolean(
 			"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION", false );
 	retrySubmitFirst = param_boolean( "DAGMAN_RETRY_SUBMIT_FIRST", true );
+	maxJobs =
+		param_integer( "DAGMAN_MAX_JOBS_SUBMITTED", maxJobs, 0, INT_MAX );
+
 	return true;
 }
 
@@ -205,7 +208,8 @@ int main_init (int argc, char ** const argv) {
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
 
-		// process any config vars
+		// process any config vars -- this happens before we process
+		// argv[], since arguments should override config settings
 	dagman.Config();
 
 #ifdef WIN32
