@@ -81,13 +81,13 @@ CheckPlatformType:														@@\
 */
 #ifndef library_target
 #define library_target(libname, objlist,rel)		@@\
-libname:	objlist									@@\
+## libname ## :	objlist								@@\
 	rm -f libname									@@\
 	AR_REPLACE( libname, objlist )					@@\
-rel:: libname										@@\
+## rel ## :: libname								@@\
 	COPY_LIBRARY( libname, $(RELEASE_DIR)/lib )		@@\
 	RANLIB_TOUCH( $(RELEASE_DIR)/lib/libname )		@@\
-clean::												@@\
+clean ## ::											@@\
 	rm -f libname objlist
 #endif
 
@@ -348,3 +348,13 @@ release::																	@@\
 	rm -f targ
 #endif
 
+/*
+** Import ".o" files from another directory as symbolic links.  Uses
+** Make macro "IMPORT_LINKS" which must be initialized to the
+** "import_links" shell script in this directory.
+*/
+#define import(dir,obj)			@@\
+## obj ## :						@@\
+	$(IMPORT_LINKS) dir obj		@@\
+## clean::						@@\
+	rm -f obj
