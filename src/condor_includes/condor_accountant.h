@@ -28,9 +28,6 @@ public:
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
 
-  void LoadState(); // Save to file
-  void SaveState(); // Read from file
-
   //--------------------------------------------------------
   // Misc public functions
   //--------------------------------------------------------
@@ -44,14 +41,19 @@ public:
   
   Accountant(int MaxCustomers=1024, int MaxResources=1024);
                                                 
-private:
+protected:
 
   //--------------------------------------------------------
-  // Private Methods
+  // Protected Methods
   //--------------------------------------------------------
 
   void AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T); 
   void RemoveMatch(const MyString& ResourceName, const Time& T);
+
+  void LoadState(); // Save to file
+  void SaveState(); // Read from file
+
+private:
 
   //--------------------------------------------------------
   // Configuration variables
