@@ -304,6 +304,7 @@ object_target(test_suite_C.V5)
 #if WANT_JAVA
    object_target($(TEST_SUITE_JAVA))
 #endif
+object_target(test_dagman)
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
