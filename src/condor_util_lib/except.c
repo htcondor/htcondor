@@ -51,20 +51,7 @@ _EXCEPT_(char *fmt, ...)
 	(void)SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 	va_start(pvar, fmt);
 
-#if vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
-	{
-		FILE _strbuf;
-		int *argaddr = &va_arg(pvar, int);
-
-		_strbuf._flag = _IOWRT/*+_IOSTRG*/;
-		_strbuf._ptr  = buf;
-		_strbuf._cnt  = BUFSIZ;
-		_doprnt( fmt, argaddr, &_strbuf );
-		putc('\0', &_strbuf);
-	}
-#else vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 	vsprintf( buf, fmt, pvar );
-#endif vax || (i386 && !LINUXi && !defined(Solaris)) || bobcat || ibm032
 
 	if( _EXCEPT_Errno < 0 ) {
 		_EXCEPT_Errno = -_EXCEPT_Errno;
