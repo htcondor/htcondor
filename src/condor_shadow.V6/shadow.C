@@ -228,7 +228,7 @@ usage()
 
 extern ClassAd *JobAd;
 
-char*		schedd = NULL;
+char		*schedd = NULL, *scheddName = NULL;
 
 /*ARGSUSED*/
 main(int argc, char *argv[], char *envp[])
@@ -341,6 +341,7 @@ main(int argc, char *argv[], char *envp[])
 		proc = argv[5];
 		regular_setup( host, cluster, proc, capability );
 	}
+	scheddName = getenv("SCHEDD_NAME");
 
 	GlobalCap = strdup(capability);
 
