@@ -52,6 +52,7 @@ class HashTable {
   int getNext(Index &index, void *current, Value &value,
 	      void *&next);
   int remove(const Index &index);  
+  int getNumElements( ) { return numElems; }
   int clear();
 
   void startIterations (void);
@@ -71,6 +72,7 @@ class HashTable {
   HashBucket<Index, Value> *currentItem;
   int *chainsUsed;	// array which says which chains have items; speeds iterating
   int chainsUsedLen;	// index to end of chainsUsed array
+  int numElems; // number of elements in the hashtable
 };
 
 // Construct hash table. Allocate memory for hash table and
@@ -97,6 +99,7 @@ HashTable<Index,Value>::HashTable(int tableSz,
   currentBucket = -1;
   currentItem = 0;
   chainsUsedLen = 0;
+  numElems = 0;
 }
 
 // Insert entry into hash table mapping Index to Value.
@@ -126,6 +129,7 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
   dump();
 #endif
 
+  numElems++;
   return 0;
 }
 
@@ -277,6 +281,7 @@ int HashTable<Index,Value>::remove(const Index &index)
       		dump();
 #			endif
 
+			numElems--;
       		return 0;
     	}
 
