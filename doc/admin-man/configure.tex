@@ -2215,6 +2215,20 @@ contrib module.
 \item[\Macro{EVENT\_LIST}] \label{param:EventList} List of macros
 which define events to be managed by the event daemon.
 
+\item[\Macro{EVENTD\_CAPACITY\_INFO}] \label{param:EventdCapInfo}
+Configures the bandwidth limits used when scheduling job checkpoint
+transfers before \Macro{SHUTDOWN} events.
+The \Macro{EVENTD\_CAPACITY\_INFO} file has the same
+format as the \Macro{NETWORK\_CAPACITY\_INFO} file, described in
+section~\ref{sec:Bandwidth-Alloc-Capinfo}.
+
+\item[\Macro{EVENTD\_ROUTING\_INFO}] \label{param:EventdRouteInfo}
+Configures the network routing information used when scheduling job
+checkpoint transfers before \Macro{SHUTDOWN} events.
+The \Macro{EVENTD\_ROUTING\_INFO} file has the same
+format as the \Macro{NETWORK\_ROUTING\_INFO} file, described in
+section~\ref{sec:Bandwidth-Alloc-Routes}.
+
 \item[\Macro{EVENTD\_INTERVAL}] \label{param:EventdInterval} The number
 of seconds between collector queries to determine pool
 state.  The default is 15 minutes (300 seconds).
