@@ -598,6 +598,9 @@ handle_invalidate_key( Service*, int, Stream* stream)
 		dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: did not remove %s, no KeyCache exists!\n", key_id);
 	}
 
+    if (key_id) {
+        free(key_id);
+    }
 	return TRUE;
 }
 
