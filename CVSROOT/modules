@@ -72,7 +72,9 @@ COMMON_CODE	-a src/Imakefile \
 			src/condor_xdr_lib \
 			src/h
 
-ALPHA_CODE	-a src/Imakefile \
+ALPHA_CODE	-a \
+			TOOLS \
+			src/Imakefile \
 			src/CODING_GUIDELINES \
 			src/CVS_Tags \
 			src/condor_c++_util \
