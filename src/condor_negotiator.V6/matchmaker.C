@@ -1570,6 +1570,7 @@ reeval(ClassAd *ad)
 	stashedAds->lookup( rhost, oldAdEntry);
 		
 	cur_matches++;
+	snprintf(buffer, 255, "CurMatches = %d", cur_matches);
 	ad->InsertOrUpdate(buffer);
 	delete(oldAdEntry->oldAd);
 	oldAdEntry->oldAd = new ClassAd(*ad);
