@@ -130,6 +130,8 @@ int async_daemon(void);
 int nfssvc(int,int,int);
 int swapon(const char *,int);
 int initgroups(const char *, gid_t);	/* DEC screwed up the signature on this one */
+int sigblock( int mask );
+int sigsetmask( int mask );
 END_C_DECLS
 
 /****************************************
