@@ -99,7 +99,7 @@ int Sock::getportbyserv(
 	return ntohs(sp->s_port);
 }
 
-#ifdef WIN32
+#if defined(WIN32) && defined(_WINSOCK2API_)
 int Sock::assign(
 	LPWSAPROTOCOL_INFO pProtoInfo
 	)
@@ -131,6 +131,43 @@ int Sock::assign(
 }
 #endif
 
+#ifdef WIN32
+int Sock::set_inheritable( int flag )
+{
+	// on unix, all sockets are always inheritable by a child process.
+	// but on Win32, each individual socket has a flag that says if it can
+	// or cannot be inherited by a child.  this method effectively sets
+	// that flag (by duplicating the socket).  
+	// pass flag as "TRUE" to make this socket inheritable, "FALSE" to make
+	// it private to this process.
+	// Returns TRUE on sucess, FALSE on failure.
+
+	SOCKET DuplicateSock;
+
+	if ( (flag != TRUE) && (flag != FALSE) )
+		return FALSE;	// flag must be either TRUE or FALSE...
+
+	if (!DuplicateHandle(GetCurrentProcess(),
+        (HANDLE)_sock,
+        GetCurrentProcess(),
+        (HANDLE*)&DuplicateSock,
+        0,
+        flag, // inheritable flag
+        DUPLICATE_SAME_ACCESS)) {
+			// failed to duplicate
+			dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed in Sock:set_inheritable(%d), error=%d\n"
+				,flag,GetLastError());
+			closesocket(DuplicateSock);
+			return FALSE;
+	}
+	// if made it here, successful duplication; replace original
+	closesocket(_sock);
+	_sock = DuplicateSock;
+
+	return TRUE;
+}
+#endif	// of WIN32
+
 int Sock::assign(
 	SOCKET		sockd
 	)
@@ -159,34 +196,14 @@ int Sock::assign(
 
 	if ((_sock = socket(AF_INET, my_type, 0)) < 0) return FALSE;
 
-#ifdef WIN32
 	// on WinNT, sockets are created as inheritable by default.  we
 	// want to create the socket as non-inheritable by default.  so 
 	// we duplicate the socket as non-inheritable and then close
 	// the default inheritable socket.  Note on Win95, it is the opposite:
 	// i.e. on Win95 sockets are created non-inheritable by default.
-	{
-		SOCKET DuplicateSock;
-
-		if (!DuplicateHandle(GetCurrentProcess(),
-            (HANDLE)_sock,
-            GetCurrentProcess(),
-            (HANDLE*)&DuplicateSock,
-            0,
-            FALSE, // i.e. Not Inheritable
-            DUPLICATE_SAME_ACCESS)) {
-				// failed to duplicate
-				dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed in Sock:assign, error=%d\n"
-					,GetLastError());
-				closesocket(_sock);
-				return FALSE;
-		}
-		// if made it here, successful duplication; replace original
-		closesocket(_sock);
-		_sock = DuplicateSock;
-	}
-#endif	// of WIN32
-
+	// note: on UNIX, set_inheritable just always return TRUE.
+	if ( !set_inheritable(FALSE) ) return FALSE;
+	
 	_state = sock_assigned;
 
 	// If we called timeout() previously on this object, then called close() on the
@@ -220,12 +237,8 @@ int Sock::bind(
 	sin.sin_port = htons((u_short)port);
 
 	if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
-#if defined(WIN32)
 		int error = WSAGetLastError();
 		dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
-#else
-		dprintf( D_ALWAYS, "bind failed: errno = %d\n", errno );
-#endif
 		return FALSE;
 	}
 
@@ -367,3 +380,32 @@ int Sock::timeout(int sec)
 
 	return t;
 }
+
+char * Sock::do_serialize(char *buf)
+{
+	char *ptmp;
+	int i;
+
+	if ( buf == NULL ) {
+		// here we want to save our state into a buffer
+		char * outbuf = new char[100];
+		sprintf(outbuf,"%u*%d*%d",_sock,_state,_timeout);
+		return( outbuf );
+	}
+
+
+	// here we want to restore our state from the incoming buffer
+	sscanf(buf,"%u*%d*%d",&_sock,&_state,&_timeout);
+
+	// set our return value to a pointer beyond the 3 state values...
+	ptmp = buf;
+	for (i=0;i<3;i++) {
+		if ( ptmp ) {
+			ptmp = strchr(ptmp,'*');
+			ptmp++;
+		}
+	}
+
+	return ptmp;
+}
+

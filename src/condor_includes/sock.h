@@ -33,7 +33,7 @@
 #include "stream.h"
 
 #if !defined(WIN32)
-typedef int SOCKET;
+typedef int SOCKET
 #define INVALID_SOCKET -1
 #endif
 
@@ -46,6 +46,8 @@ class Sock : public Stream {
 //	PUBLIC INTERFACE TO ALL SOCKS
 //
 public:
+
+	friend class DaemonCore;
 
 	/*
 	**	Methods
@@ -64,13 +66,12 @@ public:
 	//
 
 	int assign(SOCKET =INVALID_SOCKET);
-#ifdef WIN32
+#if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 	int bind(int =0);
     int setsockopt(SOCKET, int, const char*, int); 
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
-	inline SOCKET get_socket (void) { return _sock; }
 	int close();
 
 	// if any operation takes more than sec seconds, timeout
@@ -106,13 +107,21 @@ protected:
 
 	int getportbyserv(char *);
 	int do_connect(char *, int);
-
+	inline SOCKET get_socket (void) { return _sock; }
+	char * do_serialize(char *);
+	inline char * do_serialize() { return(do_serialize(NULL)); };
+#ifdef WIN32
+	int set_inheritable( int flag );
+#else
+	// On unix, sockets are always inheritable
+	inline int set_inheritable( int flag ) { return TRUE; }
+#endif
 
 	/*
 	**	Data structures
 	*/
 
-	SOCKET				_sock;
+	SOCKET			_sock;
 	sock_state		_state;
 	int				_timeout;
 };
