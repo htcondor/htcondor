@@ -53,11 +53,13 @@ do_Q_request(AuthSock *syscall_sock)
 {
 	int	request_num;
 	int	rval;
-	int auth = 1;
+	int auth = 0;
 
-	if ( !CondorCertDir ) {
-		auth = 0;
+#if defined(GSS_AUTHENTICATION)
+	if ( CondorCertDir ) {
+		auth = 1;
 	}
+#endif
 
 	syscall_sock->decode();
 
@@ -68,7 +70,6 @@ do_Q_request(AuthSock *syscall_sock)
 	switch( request_num ) {
 
 	case CONDOR_InitializeConnectionAuth:
-#if defined(GSS_AUTHENTICATION)
 	{
 		char *owner=NULL;
 		// XXX: shouldn't need a fixed size here -- at least keep
@@ -79,6 +80,7 @@ do_Q_request(AuthSock *syscall_sock)
 		qmgmt_sock->encode();
 		qmgmt_sock->code( auth ); 
 		qmgmt_sock->end_of_message();
+#if defined(GSS_AUTHENTICATION)
 		if ( auth ) {
 			int time = qmgmt_sock->timeout(60 * 5); //wait 5 min for user to type
       	assert( qmgmt_sock->authenticate() );
@@ -100,7 +102,11 @@ do_Q_request(AuthSock *syscall_sock)
 			dprintf( D_FULLDEBUG,"accepted GSS connection for %s\n", 
 					qmgmt_sock->GSSClientname );
 		}
-		else {
+		else 
+#else
+/* nothing for now */
+#endif
+		{
 			syscall_sock->decode();
 			assert( syscall_sock->code(owner) );
 			assert( syscall_sock->end_of_message() );
@@ -129,7 +135,6 @@ do_Q_request(AuthSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );
 		return 0;
 	}
-#endif
 
 	case CONDOR_InitializeConnection:
 	{
