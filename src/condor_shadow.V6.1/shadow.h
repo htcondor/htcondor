@@ -21,72 +21,84 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#if !defined(_SHADOW_H)
-#define _SHADOW_H
+#ifndef SHADOW_H
+#define SHADOW_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "condor_classad.h"
-#include "user_log.c++.h"
-#include "exit.h"
+#include "baseshadow.h"
+#include "remoteresource.h"
 
-const int SHADOW_SOCK_TIMEOUT = 90;		// timeout sockets after 90 seconds
+/** This class is the implementation for the shadow.  It is 
+	called UniShadow because:
+	<ul>
+	 <li>It's not named CShadow (sorry, Todd).
+	 <li>It deals with <b>one</b> remote host.
+	 <li>Calling it 'Shadow' isn't good, with all the Shadow flavors.
+	 <li>I suck at naming things.
+	</ul>
 
-class CShadow : public Service
+	<p>
+	Much of the base functionality of Shadowness can be found in
+	BaseShadow.  This class uses one instance of RemoteResource to
+	represent the remote job.
+
+	<p>
+	Based heavily on code by Todd Tannenbaum.
+	@see RemoteResource
+	@author Mike Yoder
+*/
+class UniShadow : public BaseShadow
 {
-public:
-	CShadow();
-	virtual ~CShadow();
+ public:
 
-	virtual void Init(char schedd_addr[], char host[], char capability[],
-					  char cluster[], char proc[]);
-	virtual void Config();
-	virtual void RequestResource();
-	virtual void Shutdown(int reason);
-	virtual void InitUserLog();
-	virtual int HandleSyscalls(Stream *sock);
-	virtual int HandleJobRemoval(int sig);
-	virtual void KillStarter();
-	virtual void SetExitStatus(int status) { ExitStatus = status; }
-	virtual void SetExitReason(int reason) { if (ExitReason != JOB_KILLED) ExitReason = reason; }
-	virtual ClassAd *GetJobAd() { return JobAd; }
-	virtual int GetCluster() { return Cluster; }
-	virtual int GetProc() { return Proc; }
-	virtual char *GetSpool() { return Spool; }
-	virtual FILE* EmailUser(char *subjectline);
-	virtual void dprintf_va( int flags, char* fmt, va_list args );
-	virtual void dprintf( int flags, char* fmt, ... );
+		/// Constructor.  Only makes a new RemoteResource.
+	UniShadow();
 
-private:
-	// config file parameters
-	char *Spool;
-	char *FSDomain;
-	char *UIDDomain;
-	char *CkptServerHost;
-	bool UseAFS;
-	bool UseNFS;
-	bool UseCkptServer;
+		/// Destructor, it's virtual
+	virtual ~UniShadow();
 
-	// job parameters
-	ClassAd *JobAd;
-	int Cluster;
-	int Proc;
-	char Owner[_POSIX_PATH_MAX];
-	char Iwd[_POSIX_PATH_MAX];
-	char *ScheddAddr;
-	bool JobExitedGracefully;
-	int ExitStatus;
-	int ExitReason;
+		/** This is the init() method that gets called upon startup.
 
-	// claim parameters
-	char *ExecutingHost;
-	char *Capability;
+			Does the following:
+			<ul>
+			 <li>Checks some parameters
+			 <li>Sets up the remote Resource
+			 <li>Calls BaseShadow::init()
+			 <li>Requests the remote resource
+			 <li>Makes a log execute event
+			 <li>Registers the RemoteResource's claimSock
+			</ul>
+			The parameters passed are all gotten from the 
+			command line and should be easy to figure out.
+		*/
+	void init( ClassAd *jobAd, char schedd_addr[], char host[], 
+			   char capability[], char cluster[], char proc[]);
+	
+		/** Makes the job go away.  Updates the job's classAs in the
+			Q manager, sends email to the user ir requested, and
+			calls DC_Exit().  It doesn't return.
+			@param reason The reason this job exited.
+			@param exitStatus Status upon exit.
+		 */
+	void shutDown( int reason, int exitStatus );
+	
+		/**
+		 */
+	int handleJobRemoval(int sig);
 
-	// others
-	char *AFSCell;
-	int StarterNum;
-	UserLog ULog;
-	ReliSock ClaimSock;
+ private:
+
+	RemoteResource *remRes;
+
+		// This makes this class un-copy-able:
+	UniShadow( const UniShadow& );
+	UniShadow& operator = ( const UniShadow& );
 };
 
+
+
 #endif
+
+
+
+
