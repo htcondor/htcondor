@@ -20,7 +20,7 @@
 #define DbmLibrary /home/puma/condor/db/my_db.a
 #define BSDLibrary /home/puma/condor/lib/libBSD.a
 #else
-#define DbmLibrary /usr/lib/libndbm.a
+#define DbmLibrary /p/condor/ws1/gdbm-1.7.3/libgdbm.a
 #define BSDLibrary /usr/lib/libBSD.a
 #endif
 
@@ -33,8 +33,8 @@
 #define HAS_X					NO
 #define HAS_X_EXTENSIONS		NO
 
-#define DOES_CHECKPOINTING		NO
-#define DOES_REMOTE_SYSCALLS	NO
+#define DOES_CHECKPOINTING		YES
+#define DOES_REMOTE_SYSCALLS	YES
 
 
 #define HAS_NDBM				YES
@@ -75,7 +75,7 @@
 #define CPlusCompiler g++
 #define StaticFlag -static
 #define UnixName /hp-ux				/* pathname of the system executable */
-#define syscall_lib syscall_lib_bsd
+/* #define syscall_lib  */
 #define PsAllFlag -ef				/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $2 }'	/* Pick out pid from "ps" output */
 #define CompatFlags /**/
