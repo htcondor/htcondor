@@ -429,9 +429,7 @@ system.
 \end{verbatim}
   
 \item[\Macro{LOG}] \label{param:Log} Used to specify the
-  directory where each Condor daemon writes its log files, and the
-  operating system writes core files.
-  The names
+  directory where each Condor daemon writes its log files.  The names
   of the log files themselves are defined with other macros, which use
   the \MacroUNI{LOG} macro by default.  The log directory also acts as
   the current working directory of the Condor daemons as the run, so
@@ -716,38 +714,28 @@ system.
 %	segfault!!! (This needs fixing...)
  
 \item[\Macro{CREATE\_CORE\_FILES}] \label{param:CreateCoreFiles}
-  Under Unix operating systems, this parameter
-  defines whether or not Condor daemons are to
-  create a core file if something really bad happens.  It is
+  Defines whether or not Condor daemons are to
+  create a core file in the \Macro{LOG} directory
+  if something really bad happens.  It is
   used to set
-  the resource limit for the size of a core file.
-  If this parameter is TRUE, the limit is increased to
+  the resource limit for the size of a core file.  If not defined,
+  it leaves in place whatever limit was in effect
+  when the Condor daemons (normally the \Condor{master}) were started.
+  This allows Condor to inherit the default system core file generation
+  behavior at startup.  For Unix operating systems, this behavior can
+  be inherited from the parent shell, or specified in a shell script
+  that starts Condor.
+  If this parameter is set and TRUE, the limit is increased to
   the maximum.  If it is set to FALSE, the limit is set at 0
-  (which means that no core files are created).  Unix
-  core files have the name syntax \texttt{core.}\textit{nnnnn}, where
-  \textit{nnnnn} indicates the process id of the originating Condor daemon.
-
-  Under Windows operating systems, the resulting "core" file is actually a
-  debugging diagnostic file, composed primarily of a stack backtrace.  Windows
-  "core" files have the name syntax
-  \texttt{core.}\textit{SUBSYS}.\texttt{WIN32},
-  where
-  \textit{SUBSYS} indicates the originating Condor daemon, such as
-  \texttt{SCHEDD}, \texttt{STARTD}, etc.
-
-  Core files
+  (which means that no core files are created).  Core files
   greatly help the Condor developers debug any problems you might be
   having.  By using the parameter, you do not have to worry about
   tracking down where in your boot scripts you need to set the core
   limit before starting Condor. You set the parameter
-  to whatever behavior you want Condor to enforce.
-  For all operating systems,
-  the default value for this parameter is TRUE, and core files are produced in
-  the directory defined by the
-  \Macro{LOG}, macro, 
-  section~\ref{sec:Condor-wide-Config-File-Entries}.
-  Core files can be quite large.  Set this parameter to FALSE if your disk
-  resources are tight, and you do not need the resulting debugging information.
+  to whatever behavior you want Condor to enforce.  This parameter
+  defaults to undefined to allow the initial operating system default
+  value to take precedence, 
+  and is commented out in the default configuration file. 
 % PKK
 % Described in default config file: YES
 % Defined in the default config file: NO
