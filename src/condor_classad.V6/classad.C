@@ -228,7 +228,7 @@ lookupInScope( char* name, ExprTree*& expr, EvalState &state )
 {
 	extern int exprHash( ExprTree* const&, int );
 	HashTable<ExprTree*,bool> superChase( 16, &exprHash );
-	ClassAd 	*current = this, *parent;
+	ClassAd 	*current = this, *superScope;
 	ExprTree	*super;
 	bool		visited = false;
 	Value		val;
@@ -255,17 +255,17 @@ lookupInScope( char* name, ExprTree*& expr, EvalState &state )
 			return( EVAL_OK );
 		}
 
-		// not in current scope; try parent
+		// not in current scope; try superScope
 		if( !( super = lookup( "super" ) ) ) {
 			// no explicit super attribute; get lexical parent
-			parent = current->parentScope;
+			superScope = current->parentScope;
 		} else {
 			// explicit super attribute
 			if( !super->evaluate( state, val ) ) {
 				return( EVAL_FAIL );
 			}
 
-			if( !val.isClassAdValue( parent ) ) {
+			if( !val.isClassAdValue( superScope ) ) {
 				return( val.isUndefinedValue( ) ? EVAL_UNDEF : EVAL_ERROR );
 			}
 		}
@@ -273,7 +273,7 @@ lookupInScope( char* name, ExprTree*& expr, EvalState &state )
 		// Case insensitive to "reserved keywords"
 		if( strcasecmp( name, "super" ) == 0 ) {
 			// if the "super" attribute was requested ...
-			expr = parent;
+			expr = superScope;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name, "toplevel" ) == 0 ) {
 			// if the "toplevel" attribute was requested ...
@@ -283,9 +283,13 @@ lookupInScope( char* name, ExprTree*& expr, EvalState &state )
 			// if the "self" ad was requested
 			expr = state.curAd;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
+		} else if( strcasecmp( name, "parent" ) == 0 ) {
+			// the lexical parent
+			expr = state.curAd->parentScope;
+			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else {
-			// continue searching from the parent scope ...
-			current = parent;
+			// continue searching from the superScope ...
+			current = superScope;
 		}
 	}	
 
@@ -300,6 +304,9 @@ remove (char *name)
 
 	// sanity check
 	if (!name) return false;
+
+    // get rid of prefix or postfix white space
+    name = strtok( name, " \t\n" );
 
     // if the classad is domainized
     if (schema) {
