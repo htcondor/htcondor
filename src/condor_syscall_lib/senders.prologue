@@ -37,6 +37,7 @@
 #endif
 
 #if defined(OSF1)
+#	include "_condor_fix_types.h"
 #	include <sys/param.h>
 #	include <sys/mount.h>
 #elif defined(ULTRIX43)
