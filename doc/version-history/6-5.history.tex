@@ -14,6 +14,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item DAGMan now supports both Condor computational jobs and Stork data
+placement (DaP) jobs.  (See \URL{http://www.cs.wisc.edu/condor/stork/}
+for more info on Stork.)
+
 \item Starter exceptions, such as failure to open standard input, are
 now recorded in the user log.
 
@@ -23,9 +27,9 @@ now recorded in the user log.
 
 \begin{itemize}
 
-\item DAGMan now supports both Condor computational jobs and Stork data
-placement (DaP) jobs.  (See \URL{http://www.cs.wisc.edu/condor/stork/}
-for more info on Stork.)
+\item A DAGMan bug introduced in Condor 6.5.0 has been fixed, where
+DAGMan could crash (with a failed assertion) when recovering from a
+rescue DAG.
 
 \end{itemize}
 
