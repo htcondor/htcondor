@@ -54,6 +54,13 @@ The default \Condor{reconfig} has also been changed so that it will
 work from any host with \DCPerm{WRITE} permission in your pool,
 instead of requiring \DCPerm{ADMINISTRATOR} access.
 
+\item Added the \Macro{EMAIL\_DOMAIN} config file setting.
+This allows Condor administrators to define a default domain where
+Condor should send email if whatever \Macro{UID\_DOMAIN} is set to
+would yield invalid email addresses.
+For more information, see section~\ref{Param:EmailDomain} on
+page~\pageref{Param:EmailDomain}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
