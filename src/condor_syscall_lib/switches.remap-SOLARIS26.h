@@ -39,7 +39,6 @@ REMAP_TWO( getrlimit64, _getrlimit64, int, int, struct rlimit64 * )
 REMAP_TWO( link, __link, int , const char *, const char *)
 REMAP_TWO( lstat64, _lstat64, int, const char *, struct stat64 * )
 REMAP_SIX( mmap64, _mmap64, caddr_t, caddr_t, size_t, int, int, int, off64_t )
-REMAP_ONE( nuname, _nuname, int , struct utsname *)
 REMAP_TWO( setrlimit64, _setrlimit64, int, int, const struct rlimit64 * ) 
 REMAP_TWO( stat64, _stat64, int, const char *, struct stat64 * )
 
