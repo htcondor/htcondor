@@ -21,3 +21,5 @@ EXT_PVM_VERSION=@ext_pvm_version@
 
 EXT_GT3GAHP_VERSION=@ext_gt3gahp_version@
 
+EXT_SRB_VERSION=@ext_srb_version@
+
