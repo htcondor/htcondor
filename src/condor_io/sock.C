@@ -758,7 +758,10 @@ bool Sock::test_connection()
 	struct sockaddr_in test_addr;
 	memset((char *) &test_addr, 0, sizeof(test_addr));
 	test_addr.sin_family = AF_INET;
-	SOCKET_LENGTH_TYPE nbytes = sizeof(test_addr);
+
+	SOCKET_LENGTH_TYPE nbytes;
+	
+	nbytes = sizeof(test_addr);
 	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
 		sleep(1);	// try once more -- sometimes it fails the first time
 		if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
@@ -1105,7 +1108,10 @@ int
 Sock::get_port()
 {
 	sockaddr_in	addr;
-	SOCKET_LENGTH_TYPE addr_len = sizeof(sockaddr_in);
+
+	SOCKET_LENGTH_TYPE addr_len;
+	
+	addr_len = sizeof(sockaddr_in);
 
 	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return -1;
 	return (int) ntohs(addr.sin_port);
@@ -1116,7 +1122,9 @@ unsigned int
 Sock::get_ip_int()
 {
 	sockaddr_in	addr;
-	SOCKET_LENGTH_TYPE addr_len = sizeof(sockaddr_in);
+	SOCKET_LENGTH_TYPE addr_len;
+
+	addr_len = sizeof(sockaddr_in);
 
 	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return 0;
 	return (unsigned int) ntohl(addr.sin_addr.s_addr);
