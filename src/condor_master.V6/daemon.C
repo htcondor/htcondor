@@ -394,6 +394,8 @@ int daemon::StartDaemon()
 		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );
 		// flag = FALSE;
 		pid = 0; 
+		// Schedule to try and restart it a little later
+		Restart();
 		return 0;
 	}
 
