@@ -1,0 +1,29 @@
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -static
+CFLAGS = $(STD_C_FLAGS)
+
+SRC_DIR = $(SRC_TREE)/condor_ckpt
+
+OS = OperatingSystem
+
+DRIVER_SRC = driver.C driver2.C driver3.C display.C gen_test.C
+PACKAGE_SRC = image.C machdep.$(OS).C stubs.c
+
+#if IS_HPPAR_HPUX9
+ASSEMBLER_SRC = get_reginfo.s
+ASSEMBLER_OBJ = get_reginfo.o
+.s.o:
+	as /lib/pcc_prefix.s $<
+#endif
+
+SRC = $(DRIVER_SRC) $(PACKAGE_SRC)
+PACKAGE = image.o stubs.o machdep.$(OS).o $(ASSEMBLER_OBJ)
+
+depend_target($(SRC) $(PACKAGE) )
+all_target(test3)
+
+c_plus_target(test,driver.o $(PACKAGE),,no_release)
+c_plus_target(test2,driver2.o $(PACKAGE),,no_release)
+c_plus_target(test3,driver3.o $(PACKAGE),,no_release)
+c_plus_target(test4,driver4.o $(PACKAGE),,no_release)
+c_plus_target(display,display.o $(PACKAGE),,no_release)
+c_plus_target(gen_test,gen_test.o $(PACKAGE),,no_release)

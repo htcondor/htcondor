@@ -1,5 +1,4 @@
 #include <sys/types.h>
-#include "machdep.h"
 
 #define NAME_LEN 64
 typedef long RAW_ADDR;
@@ -85,3 +84,22 @@ void restart();
 
 const int MAGIC = 0xfeafea;
 const int SEG_INCR = 25;
+
+#include <setjmp.h>
+#define SETJMP _setjmp
+#define LONGJMP _longjmp
+extern "C" {
+	int SETJMP( jmp_buf env );
+	void LONGJMP( jmp_buf env, int retval );
+}
+
+int data_start_addr();
+int data_end_addr();
+int stack_start_addr();
+int stack_end_addr();
+int	StackGrowsDown();
+int JmpBufSP_Index();
+void ExecuteOnTmpStk( void (*func)() );
+void patch_registers( void  *);
+
+#define JMP_BUF_SP(env) (((int *)(env))[JmpBufSP_Index()])

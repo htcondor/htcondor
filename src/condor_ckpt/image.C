@@ -14,6 +14,17 @@
 #endif
 
 
+	// Somebody should get together on this...
+#if defined(ULTRIX42) || defined(SUNOS41)
+	extern "C" int brk( void * );
+#elif defined(ULTRIX43)
+	extern "C" char *brk( char * );
+#elif defined(HPUX9)
+	extern "C" int brk( const void * );
+#else
+#	error UNKNOWN PLATFORM
+#endif
+
 static Image MyImage;
 static jmp_buf Env;
 
@@ -352,7 +363,7 @@ SegMap::Read( int fd, ssize_t pos )
 	if( strcmp(name,"DATA") == 0 ) {
 		brk( (char *)(core_loc + len) );
 	}
-	nbytes =  read(fd,core_loc,len);
+	nbytes =  read(fd,(char *)core_loc,len);
 	if( nbytes < 0 ) {
 		return -1;
 	}
@@ -365,12 +376,13 @@ SegMap::Write( int fd, ssize_t pos )
 	if( pos != file_loc ) {
 		fprintf( stderr, "Checkpoint sequence error\n" );
 	}
-	return write(fd,core_loc,len);
+	return write(fd,(char *)core_loc,len);
 }
 
 extern "C" {
+
 void
-Checkpoint( )
+Checkpoint( int sig, int code, void *scp )
 {
 
 	fprintf( stderr, "Got SIGTSTP\n" );
@@ -381,13 +393,14 @@ Checkpoint( )
 		fprintf( stderr, "Ckpt exit\n" );
 		exit( 0 );
 	} else {
+		patch_registers( scp );
 		fprintf( stderr, "About to return to user code\n" );
 		return;
 	}
 }
-}
 
-extern "C" {
+}	// end of extern "C"
+
 void
 restart()
 {
@@ -400,4 +413,33 @@ ckpt()
 {
 	kill( getpid(), SIGTSTP );
 }
+
+/*
+  Switch to a temporary stack area in the DATA segment, then execute the
+  given function.  Note: we save the address of the function in a
+  global data location - referencing a value on the stack after the SP
+  is moved would be an error.
+*/
+static void (*SaveFunc)();
+
+const int	TmpStackSize = 4096;
+static char	TmpStack[ TmpStackSize ];
+void
+ExecuteOnTmpStk( void (*func)() )
+{
+	jmp_buf	env;
+	SaveFunc = func;
+
+	if( SETJMP(env) == 0 ) {
+			// First time through - move SP
+		if( StackGrowsDown() ) {
+			JMP_BUF_SP(env) = (int)TmpStack + TmpStackSize;
+		} else {
+			JMP_BUF_SP(env) = (int)TmpStack;
+		}
+		LONGJMP( env, 1 );
+	} else {
+			// Second time through - call the function
+		SaveFunc();
+	}
 }
