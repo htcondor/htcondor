@@ -57,7 +57,7 @@
 #define CCompiler cc
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd
-#define PsAllFlag -ax				/* "Ps" flag when you want everything */
+#define PsAllFlag ps -ax				/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
 #define CompatFlags /**/
 

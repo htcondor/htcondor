@@ -69,7 +69,7 @@
 #define StaticFlag	-static
 #define UnixName /zImage			/* pathname of the system executable */
 #define syscall_lib syscall_lib
-#define PsAllFlag -ax				/* "Ps" flag when you want everything */
+#define PsAllFlag ps -ax				/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
 #define CompatFlags /**/
 
