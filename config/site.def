@@ -77,18 +77,16 @@ the soft links.  The links will point back to Top/src/... */
  * Condor Credential API related
  *------------------------------------------*/
 #if WANT_KERBEROS && HAS_KERBEROS
-KERBEROS_DIR = KERBEROS_PATH
-KERBEROS_INCLUDE =       $(KERBEROS_DIR)/include
-#ifdef IS_SOLARIS28
-KERBEROS_LIB =             \
-                         $(KERBEROS_DIR)/lib/libkrb5.a        \
-                         $(KERBEROS_DIR)/lib/libk5crypto.a      \
-                         $(KERBEROS_DIR)/lib/libcom_err.a
+KERBEROS_DIR = 			KERBEROS_PATH
+KERBEROS_INCLUDE =		$(KERBEROS_DIR)/include
+#if KERBEROS_K5
+KERBEROS_LIB =			$(KERBEROS_DIR)/lib/libkrb5.a        \
+						$(KERBEROS_DIR)/lib/libk5crypto.a    \
+						$(KERBEROS_DIR)/lib/libcom_err.a
 #else
-KERBEROS_LIB =             \
-                         $(KERBEROS_DIR)/lib/libkrb5.a     \
-                         $(KERBEROS_DIR)/lib/libcrypto.a  \
-                         $(KERBEROS_DIR)/lib/libcom_err.a
+KERBEROS_LIB =			$(KERBEROS_DIR)/lib/libkrb5.a        \
+						$(KERBEROS_DIR)/lib/libcrypto.a      \
+						$(KERBEROS_DIR)/lib/libcom_err.a
 #endif
 
 CREDENTIAL_LIB = $(KERBEROS_LIB)
@@ -98,7 +96,5 @@ CREDENTIAL_LIB =
 
 
 #endif  /* AfterVendorCF */
-
-
 
 
