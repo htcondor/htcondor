@@ -1,0 +1,478 @@
+#! /s/std/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+my $SortOffset;
+my $Hawkeye;
+my $Debug = 0;
+my $TopTime = 30;
+
+# Valid field list:
+my %TopFields =
+    (
+     pid	=> { enabled => 0, type => "n", l => "PID" },
+     user	=> { enabled => 0, type => "s", l => "USER" },
+     priority	=> { enabled => 0, type => "n", l => "PRI" },
+     nice	=> { enabled => 0, type => "n", l => "NI" },
+     size	=> { enabled => 0, type => "n", l => "SIZE" },
+     rss	=> { enabled => 0, type => "n", l => "RSS" },
+     share	=> { enabled => 0, type => "n", l => "SHARE" },
+     state	=> { enabled => 0, type => "s", l => "STAT" },
+     lib	=> { enabled => 0, type => "n", l => "LIB" },
+     cpu	=> { enabled => 0, type => "%", l => "%CPU" },
+     mem	=> { enabled => 0, type => "%", l => "%MEM" },
+     time	=> { enabled => 0, type => "t", l => "TIME" },
+     command	=> { enabled => 0, type => "s", l => "COMMAND" },
+    );
+my %TopTypes =
+    (
+     "s"		=> { pubtype => "s", prefix => "" },
+     "n"		=> { pubtype => "n", prefix => "" },
+     "t"		=> { pubtype => "n", prefix => "" },
+     "%"		=> { pubtype => "n", prefix => "pct_" },
+    );
+my %SortOut;
+
+# Main logic
+$| = 1;
+my $Reconfig = 0;
+my $RunOnce = 0;
+Init();
+$SIG{HUP} = sub{ print STDERR "Got HUP\n"; $Reconfig = 1; };
+while( 1 )
+{
+    Configure( );
+    $Reconfig = 0;
+    RunIt();
+    exit 0 if ( $RunOnce );
+}
+
+sub Init {
+    # Parse command line args
+    foreach my $Arg ( @ARGV )
+    {
+	if ( $Arg =~ /^-1$/ ) {
+	    $RunOnce = 1;
+	} elsif ( $Arg =~ /^-c$/ ) {
+	    HawkeyeLib::HardConfig( "top", "_sort" );
+	    HawkeyeLib::HardConfig( "top", "_fields" );
+	    HawkeyeLib::HardConfig( "top", "_time" );
+	}
+    }
+
+    HawkeyeLib::DoConfig( );
+
+    # Setup the hawkeye stuff
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 0 );
+}
+
+
+sub Configure {
+    ### Valid fields are:
+    ###   pid, user, priority, nice, size, rss, share, status, lib,
+    ###    cpu,mem,time,command
+    ###
+    ### Examples
+    ###
+    ###  10:pid,command
+    ###  15:*
+
+    #ReadConfig();
+    my $ConfigStringSort = HawkeyeLib::ReadConfig( "top", "_sort", ":5" );
+    my $ConfigStringFields = HawkeyeLib::ReadConfig( "top", "_fields", "*" );
+    my $ConfigStringTime = HawkeyeLib::ReadConfig( "top", "_time", "30" );
+
+    # Check the config time string
+    if ( $ConfigStringTime =~ /(\d+)([sSmMhH]?)/ )
+    {
+	$TopTime = $1;
+	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
+	{
+	    # Do nothing
+	}
+	elsif ( ( $2 eq "m" ) || ( $2 eq "M" ) )
+	{
+	    $TopTime *= 60;
+	}
+	elsif ( ( $2 eq "h" ) || ( $2 eq "H" ) )
+	{
+	    $TopTime *= 3600;
+	}
+    }
+    else
+    {
+	print STDERR "Ignoring top config time '$ConfigStringTime'\n";
+    }
+
+    # Run top to get the list of fields that it outputs
+    # my @TopFields = split ( /\s+/, `top|grep COMMAND`);
+    foreach my $Key ( keys %TopFields )
+    {
+	$TopFields{$Key}{offset} = -1;
+    }
+    my $Offset = 0;
+    foreach my $tf ( split ( /\s+/, `top -b -n 1 |grep COMMAND`) )
+    {
+	next if ( $tf eq "" );
+	foreach my $Key ( keys %TopFields )
+	{
+	    if ( $TopFields{$Key}{l} eq $tf )
+	    {
+		$TopFields{$Key}{offset} = $Offset;
+	    }
+	}
+	$Offset++;
+    }
+
+    # Build the "published" names & types
+    foreach my $Name ( keys %TopFields )
+    {
+	my $Pre = "";
+	my $PubType = $TopFields{$Name}{type};
+	if ( $PubType eq "%" )
+	{
+	    $Pre = "ptc_";
+	    $PubType = "s";
+	}
+	$TopFields{$Name}{pubname} = $Pre . $Name;
+	$TopFields{$Name}{pubtype} = $PubType;
+    }
+
+    # Extract the sort info
+    {
+	$ConfigStringSort =~ s/\s+/,/g;
+	my ( @List ) = split ( /,+/, $ConfigStringSort );
+	my $String;
+	foreach $String ( @List )
+	{
+	    my ( $Name, $Count ) = split ( /:/, $String );
+	    $Count = 1 if ( $Count eq "" );
+
+	    # "*" and "" mean use top's sort
+	    if (  ($Name eq "*" ) || ( $Name eq "" )  )
+	    {
+		$SortOut{"*"} = $Count;
+	    }
+	    elsif ( exists $TopFields{$Name} )
+	    {
+		$SortOut{$Name} = $Count;
+	    }
+	    else
+	    {
+		print STDERR "Warning: Ignoring $Name: not supported by cvs2svn $Count\n";
+	    }
+	}
+    }
+
+    # Extract the display fields
+    {
+	my $Fields = "";
+	my $Name;
+	$ConfigStringFields =~ s/\s+/,/g;
+	my ( @List ) = split ( /,+/, $ConfigStringFields );
+	if ( $List[0] eq "*" )
+	{
+	    print STDERR "Enabling: " if ( $Debug );
+	    foreach $Name ( keys %TopFields )
+	    {
+		next if ( $TopFields{$Name}{offset} < 0 );
+		$TopFields{$Name}{enabled} = 1;
+		my $Type = $TopFields{$Name}{type};
+		$Fields = $Fields . $TopTypes{$Type}{prefix} . $Name . " ";
+		print STDERR "$Name " if ( $Debug );
+	    }
+	    print STDERR "\n" if ( $Debug );
+	}
+	else
+	{
+	    print STDERR "Enabling: " if ( $Debug );
+	    foreach $Name ( @List )
+	    {
+		chomp $Name;
+		if ( ! exists $TopFields{$Name} )
+		{
+		    print STDERR
+			"Warning: Invalid field '$Name' in Top list\n";
+		    next;
+		}
+		next if ( $TopFields{$Name}{offset} < 0 );
+		$TopFields{$Name}{enabled} = 1;
+		my $Type = $TopFields{$Name}{type};
+		$Fields = $Fields . $TopTypes{$Type}{prefix} . $Name . " ";
+		print STDERR "$Name " if ( $Debug );
+	    }
+	    print STDERR "\n" if ( $Debug );
+	}
+	$Hawkeye->Store( "FIELDS" , $Fields );
+    }
+}
+
+
+###
+### Get top output for the top n processes
+###
+sub RunIt
+{
+
+    my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
+    #my $Cmd = "/bin/nice -20 top -b -n 1";
+    my $Cmd = "/bin/nice -20 top -b -d $TopTime";
+    Carp::confess( "Can't run top '$Cmd'" ) if ( ! open ( TOP, "$Cmd|" ) );
+
+    # Make stdout unbufferred
+    $| = 1;
+
+    # Flag to skip the first input line
+    my $SkipFirst = 0;
+
+    while( 1 )
+    {
+	# Throw away the first line
+	$_ = <TOP> if ( $SkipFirst );
+
+	# Store the # of processes that we should read
+	my $NumProcesses = 0;
+
+	# Read the header
+      READHEADER:
+	while ( <TOP> ) {
+	    # Uptime display?
+	    if ( /.*up.*load/ ) {
+		my %Uptime;
+
+		# Parse the uptime line
+		HawkeyeLib::ParseUptime( $_, \%Uptime );
+
+		# And, add it to our summary
+		foreach my $Attr ( keys %Uptime )
+		{
+		    $Summary->Add( $Attr, "n", $Uptime{$Attr} );
+		}
+	    }
+	    # Processes summary?
+	    elsif ( /^(\d*)(.*):(.*)/ ) {
+		my $Num = $1;
+		my $Name = $2;
+		my $Rest = $3;
+		$Name =~ s/^\s+//g;
+		$Name =~ s/\s+/_/g;
+
+		# Openning summary #?
+		if ( $Num ne "" ) {
+		    $Summary->Add( $Name, "n", $Num );
+		    $NumProcesses = $Num if ( $Name eq "processes" );
+		}
+
+		# Split the rest of the line...
+		$Rest =~ s/\s{2,}/,/g;
+		my @Fields = split ( /,/, $Rest );
+		my $Field;
+		foreach $Field ( @Fields ) {
+		    if ( $Field =~ /\s*(\S+)(.*)/ ) {
+			my $Value = $1;
+			my $Var = $2;
+			$Var =~ s/^\s+//;
+			my $Type = FixString( \$Value );
+			my $What = 
+			    $Name . "_" . $TopTypes{$Type}{prefix} . $Var;
+			$Summary->Add( $What,
+				       $TopTypes{$Type}{pubtype},
+				       $Value );
+		    }
+		}
+	    }
+
+	    # Header line?
+	    elsif ( /\s+PID\s+USER\s+PRI/ ) {
+		last;
+	    }
+	}
+
+	# Ok, summary is done...
+	$Summary->Store( "Summary_" );
+
+
+	# Read the processes themselves
+	my $Proc = 0;
+	my %Processes;
+      READPROC:
+	while ( <TOP> ) {
+
+	    # Verify that we start with a process ID type thingy, 
+	    # then parse it..
+	    next if ( ! /\s*\d+/ );
+	    my @Process = split;
+	    my $Pid = $Process[0];
+	    my $Stat = $TopFields{state}{offset};
+
+	    # Unfortunately, the "State" field can be space separated, so
+	    # split screws it up (bad split, bad bad).
+	    # Here, we combine, say, ("N" "R") into "N R"...
+	    while ( $Process[$Stat+1] =~ /[a-zA-Z]/ ) {
+		$Process[$Stat] = $Process[$Stat] . " " . $Process[$Stat+1];
+		splice( @Process, $Stat+1, 1 );
+	    }
+
+	    # Clean up numbers where required
+	    foreach my $n ( 0 .. $#Process ) {
+		FixString( \$Process[$n] );
+	    }
+	    $Processes{$Proc} = \@Process;
+	    my $p = $Processes{$Proc};
+	    $Proc++;
+
+	    # We can't read the last line 'cause it doesn't have a
+	    # line terminator on it (thanks, top!), so <TOP> blocks, which
+	    # really sucks, so we ignore that last line for now.
+	    # Perhaps we'll do better later
+	    if ( $Proc == ( $NumProcesses - 1 ) )
+	    {
+		$SkipFirst = 1;
+		last;
+	    }
+	}
+	ProcessData( \%Processes );
+
+	# Run once mode?
+	exit 0 if ( $RunOnce );
+
+	# Check for reconfig
+	last if ( $Reconfig );
+    }
+
+    # All done reading!
+    close( TOP );
+}
+
+###
+### Process the collected data....
+###
+sub ProcessData
+{
+    my $ProcessHash = shift;
+
+    my $Publish = HawkeyeHash->new( \$Hawkeye, "" );
+    #my %Publish;
+    my $SortKey;
+    my $ProcNum = 0;
+    foreach $SortKey ( keys %SortOut )
+    {
+	my $Count = $SortOut{$SortKey};
+	print STDERR "Sorting on $SortKey ($Count)\n" if ( $Debug );
+	#my $SortFunc;
+	my @SortedProcs;
+	if ( $SortKey eq "*" )
+	{
+	    @SortedProcs = sort keys %{$ProcessHash};
+	    # $SortFunc = sub { $a <=> $b; };
+
+	}
+	else
+	{
+	    my $SO = $TopFields{$SortKey}{offset};
+	    #$SortFunc =
+		#sub
+		#{
+		#    return (  ( @{$ProcessHash{$b}}[$SortOffset] ) <=>
+		#	      ( @{$ProcessHash{$a}}[$SortOffset] )  );
+		#};
+	    my @Keys = keys %{$ProcessHash};
+	    @SortedProcs = sort
+	    { @{$ProcessHash->{$a}}[$SO] <=> @{$ProcessHash->{$b}}[$SO] }
+		keys %{$ProcessHash};
+	}
+
+	# Walk through the process list...
+	my $Proc;
+	#foreach $Proc ( sort $SortFunc ( keys %{$ProcessHash} ) )
+	foreach $Proc ( @SortedProcs )
+	{
+	    my $Process = $ProcessHash->{$Proc};
+	    my $Pid = \@{$Process}[0];
+
+	    # Should we publish this one?
+	    last if ( $Count-- <= 0 );	# No more for this sort?
+	    next if ( $$Pid < 0 );	# Already published?
+
+	    # Publish it
+	    my $Key;
+	    foreach $Key ( keys %TopFields )
+	    {
+		next if ( $TopFields{$Key}{offset} < 0 );
+		if ( $TopFields{$Key}{enabled} )
+		{
+		    my $Type = $TopFields{$Key}{type};
+		    my $Name =
+			$ProcNum . "_" . $TopTypes{$Type}{prefix} . $Key;
+		    my $Value = @{$Process}[ $TopFields{$Key}{offset} ];
+		    $Publish->Add( $Name, $TopTypes{$Type}{pubtype}, $Value );
+		}
+	    }
+	    $Hawkeye->StoreIndex( $ProcNum );
+	    $ProcNum++;
+	    $$Pid = -1;
+	}
+    }
+
+    # Store off the data
+    $Publish->Store( );
+
+    # Finally, publish it!
+    $Hawkeye->Publish( );
+}
+
+sub FixString
+{
+    my $String = shift;
+
+    # Convert Megs to * 10^6, etc
+    if ( $$String =~ /^(\d+)([KMG])$/ )
+    {
+	my $Value = $1;
+	my $Modifier = $2;
+	$$String = $Value * 1e3 if ( $Modifier =~ /k/i );
+	$$String = $Value * 1e6 if ( $Modifier =~ /m/i );
+	$$String = $Value * 1e9 if ( $Modifier =~ /g/i );
+	return "n";
+    }
+    # Clean up hrs:minutes
+    elsif ( $$String =~ /^(\d+):(\d+)$/ )
+    {
+	$$String = $1 * 60 + $2;
+	return "t";
+    }
+    # Clean up nnnnm (ie 12345m = 12345 minutes)
+    elsif ( $$String =~ /^(\d+)m$/ )
+    {
+	$$String = $1;
+	return "n";
+    }
+    # Percentages (just return the number portion, strip the %)
+    elsif ( $$String =~ /^(\d+\.?\d*)\%$/ )
+    {
+	$$String = $1;
+	return "%";
+    }
+    # Just a plain 'ol number?
+    elsif ( $$String =~ /^(\d+)$/ )
+    {
+	return "n";
+    }
+    else
+    {
+	return "s";
+    }
+}

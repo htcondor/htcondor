@@ -1,0 +1,193 @@
+#! /s/std/bin/perl -w
+use strict;
+
+my $netdev = "";
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+		push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# My Hawkeye object
+my $Hawkeye;
+my $OsInfo = ();
+my $OS;
+my @OsInfo = (
+	      { ostype => "IRIX.*", osrev => ".*",
+			net => ($netdev ? $netdev : "eth0"),
+			cmd => "" },
+	      { ostype => "HP-UX", osrev => ".*",
+			net => ($netdev ? $netdev : "eth0"),
+			cmd => "" },
+	      { ostype => "SunOS", osrev => "5",
+			net => ($netdev ? $netdev : "hme0"),
+			cmd => "/usr/bin/netstat -I " },
+	      { ostype => "SunOS", osrev => "4",
+			net => ($netdev ? $netdev : "hme0"),
+			cmd => "/usr/bin/netstat -I " },
+	      { ostype => "Linux", osrev => ".*",
+			net => ($netdev ? $netdev : "eth0"),
+		  	cmd => "/bin/netstat -i "}
+	  );
+my %net_info = (
+		#tx_ok => "",
+		#tx_err => "",
+		#rx_ok => "",
+		#rx_err => "",
+		perc_error => "" );
+
+main();
+
+# Main
+sub main
+{
+    $| = 1;
+    Init();
+    RunIt();
+}
+
+# Initialize
+sub Init
+{
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 0 );
+
+    # Learn about our O/S
+    foreach my $OsNum ( 0 .. $#OsInfo )
+    {
+		my $OsType = $OsInfo[$OsNum]{ostype};
+		my $OsRev = $OsInfo[$OsNum]{osrev};
+		if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
+		      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
+		{
+		    $OS = $OsInfo[$OsNum];
+		    last;
+		}
+    }
+
+    # Did we find a match?
+    if ( ! defined( $OS->{cmd} ) )
+    {
+		die "O/S Not defined\n";
+    }
+}
+
+# ***********************************************
+# Do the actual work
+sub RunIt
+{
+
+    ###
+    ### Monitors memory usage
+    ###
+
+    # Read my config string
+    my $ConfigString = HawkeyeLib::ReadConfig( "memory_used", "", "" );
+
+
+	my %net_info = ();
+	my $net_output = `$OS->{cmd} $OS->{net}`;
+
+	if ($OS->{"ostype"} eq "Linux") {
+		if ($net_output =~ m/^$OS->{net} \s+ #iface
+							\d+ \s+			# mtu
+							\d+ \s+			# met
+							(\d+) \s+		# rx-ok
+							(\d+) \s+		# rx-err
+							(\d+) \s+		# rx-drop
+							(\d+) \s+		# rx-ovr
+							(\d+) \s+		# tx-ok
+							(\d+) \s+		# tx-err
+							(\d+) \s+		# tx-drop
+							(\d+) \s+		# tx-ovr
+							\w+ \s*			# flg
+							$/xm) {
+			#$net_info{rx_ok} = $1;
+			#$net_info{rx_err} = $2;
+			#$net_info{tx_ok} = $5;
+			#$net_info{tx_err} = $6;
+			$net_info{perc_err} = ($2+$6)/($1+$2+$3+$4+$5+$6+$7+$8);
+		}
+		else {
+			die "bad output from `$OS->{cmd} $OS->{net}`\n";
+		}
+	} elsif ($OS->{"ostype"} eq "SunOS") {
+		if ($net_output =~ m/^$OS->{net} \s+ #iface
+							\d+ \s+			# mtu
+							[-.\w]+ \s+			# net-dest
+							[-.\w]+ \s+			# address
+							(\d+) \s+		# rx-ok
+							(\d+) \s+		# rx-err
+							(\d+) \s+		# tx-ok
+							(\d+) \s+		# tx-err
+							\d+ \s+		# Colis
+							\d+ \s*			# queue
+							$/xm) {
+			#$net_info{rx_ok} = $1;
+			#$net_info{rx_err} = $2;
+			#$net_info{tx_ok} = $3;
+			#$net_info{tx_err} = $4;
+			$net_info{perc_err} = ($2+$4)/($1+$2+$3+$4);
+		}
+		els {
+			die "bad output from `$OS->{cmd} $OS->{net}`\n";
+		}
+	} elsif ($OS->{"ostype"} eq "HP-UX") {
+		print "CRAP\n";
+	} elsif ($OS->{"ostype"} eq "IRIX.*") {
+		print "CRAP\n";
+	}
+
+
+
+    ###
+    ### The format of @Config is
+    ###
+    ### 
+    ###
+    ### Examples
+    ### 
+    ###
+
+
+    ###
+    ### Store the fields used
+    ###
+    {
+		# Publish to Hawkeye
+		my $Key;
+		$Hawkeye->StoreIndex( $net_info{perc_err} );
+		foreach $Key ( keys %net_info )
+		{
+		    # Pull out & clean up the value, and store it away
+		    my $Value = $net_info{$Key};
+		    my $Name = $Key;
+		    if ( $Value =~ /^(\d+)\%$/ )
+		    {
+				$Value = $1;
+				$Name = "$Name (Percent)";
+				$Hawkeye->StoreNum( $Name, $Value );
+		    }
+		    elsif ( $Value =~ /^\d+$/ )
+		    {
+				$Hawkeye->StoreNum( $Name, $Value );
+		    }
+		    else
+		    {
+				$Hawkeye->Store( $Name, $Value );
+		    }
+		}
+    }
+
+    $Hawkeye->Publish( );
+}

@@ -1,0 +1,9 @@
+network_errors
+
+Reports the percentage of network packets (Rx and Tx) that are reported 
+as "errors" via netstat.
+
+INDEX = "Network_Errors"
+perc_err = "3.76453220656549e-07"
+			<number of tx-err/rx-err packets divided by total packets
+				sent and received>
