@@ -138,6 +138,29 @@ END_C_DECLS
 /* to get the sysinfo() function call */
 #include <sys/sysinfo.h>
 
+/* For the i386 execution domains for standard
+	universe executables. Under redhat 9 and later there is a
+	sys/personality.h we could include here as well so we can use
+	the personality() function to change execution domains to get
+	good memory map layout behavior. However, before redhat 9 that
+	header file and function call don't exist. The system call
+	itself does exist, however, so we'll just be calling syscall()
+	with the right system call symbol to get the job done on all of the
+	distributions. */
+
+#include <sys/syscall.h>
+
+/* Here is where we find the PER_* constants for the personality system call. */
+#if defined(IS_LINUX_RH72) || defined(IS_LINUX_RH80)
+/* Warning: this defines a lexical replacement for 'personality()'
+	which is not a function call */ 
+#include <linux/personality.h>
+#else
+/* this defines a true function called 'personality()' which changes the
+	execution domain of the process */
+#include <sys/personality.h>
+#endif
+
 /****************************************
 ** Condor-specific system definitions
 ***************************************/
