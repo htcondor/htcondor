@@ -45,6 +45,9 @@
 #if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>
+#else
+// WINDOWS only
+#include "store_cred.h"
 #endif
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
@@ -270,6 +273,7 @@ void SetJarFiles();
 void SetParallelStartupScripts(); //JDB
 
 char *owner = NULL;
+char *ntdomain = NULL;
 
 extern DLL_IMPORT_MAGIC char **environ;
 
@@ -355,24 +359,9 @@ init_job_ad()
 
 #ifdef WIN32
 	// put the NT domain into the ad as well
-	char *ntdomain = strnewp(get_condor_username());
-	if (ntdomain) {
-		char *slash = strchr(ntdomain,'/');
-		if ( slash ) {
-			*slash = '\0';
-			if ( strlen(ntdomain) > 0 ) {
-				if ( strlen(ntdomain) > 80 ) {
-					fprintf( stderr, "\nERROR: NT Domain Overflow (%s)\n",
-							 ntdomain );
-					exit(1);
-				}
-				(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, 
-										ntdomain);
-				InsertJobExpr (buffer);
-			}
-		}
-		delete [] ntdomain;
-	}
+	ntdomain = my_domainname();
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, ntdomain);
+	InsertJobExpr (buffer);
 #endif
 		
 	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_WALL_CLOCK);
@@ -451,7 +440,7 @@ main( int argc, char *argv[] )
 	//TODO:this should go away, and the owner name be placed in ad by schedd!
 	owner = my_username();
 	if( !owner ) {
-		owner = "unknown";
+		owner = strdup("unknown");
 	}
 
 	MyName = basename(argv[0]);
@@ -554,6 +543,17 @@ main( int argc, char *argv[] )
 	// We must strdup ScheddAddr, cuz we got it from
 	// get_schedd_addr which uses a (gasp!) _static_ buffer.
 	ScheddAddr = strdup(ScheddAddr);
+
+#ifdef WIN32
+	char userdom[256];
+	sprintf(userdom, "%s@%s", my_username(), my_domainname());
+	if ( queryCredential(userdom) != SUCCESS ) {
+		fprintf( stderr, "\nERROR: No credential stored for %s\n"
+				"\n\tCorrect this by running:\n"
+				"\tcondor_store_cred add\n", userdom );
+		exit(1);
+	}
+#endif
 
 	
 	// open submit file
@@ -3339,6 +3339,13 @@ DoCleanup(int,int,char*)
 		}
 	}
 
+	if (owner) {
+		free(owner);
+	}
+	if (ntdomain) {
+		free(ntdomain);
+	}
+
 	return 0;		// For historical reasons...
 }
 } /* extern "C" */
@@ -3458,8 +3465,7 @@ log_submit()
 			}
 			jobSubmit.submitEventLogNotes = strnewp( SubmitInfo[i].lognotes );
 
-			usr_log.initialize(owner, simple_name, 0, 0, 0);
-
+			usr_log.initialize(owner, ntdomain, simple_name, 0, 0, 0);
 			// Output the information
 			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
 				usr_log.initialize(SubmitInfo[i].cluster, j, 0);
