@@ -393,7 +393,7 @@ int GlobusJob::doEvaluateState()
 					file_status.st_size = 0;
 				}
 				sprintf( buffer, "%s%s", gassServerUrl, localOutput );
-				sprintf( buffer, "(stdout=%s)(stdout_position=%d)",
+				sprintf( buffer, "(stdout=%s)(stdout_position=%lu)",
 						 rsl_stringify( buffer ), file_status.st_size );
 				strcat( rsl, buffer );
 			}
@@ -403,7 +403,7 @@ int GlobusJob::doEvaluateState()
 					file_status.st_size = 0;
 				}
 				sprintf( buffer, "%s%s", gassServerUrl, localError );
-				sprintf( buffer, "(stderr=%s)(stderr_position=%d)",
+				sprintf( buffer, "(stderr=%s)(stderr_position=%lu)",
 						 rsl_stringify( buffer ), file_status.st_size );
 				strcat( rsl, buffer );
 			}
@@ -758,7 +758,7 @@ int GlobusJob::doEvaluateState()
 						file_status.st_size = 0;
 					}
 					sprintf( buffer, "%s%s", gassServerUrl, localOutput );
-					sprintf( buffer, "(stdout=%s)(stdout_position=%d)",
+					sprintf( buffer, "(stdout=%s)(stdout_position=%lu)",
 							 rsl_stringify( buffer ), file_status.st_size );
 					strcat( rsl, buffer );
 				}
@@ -768,7 +768,7 @@ int GlobusJob::doEvaluateState()
 						file_status.st_size = 0;
 					}
 					sprintf( buffer, "%s%s", gassServerUrl, localError );
-					sprintf( buffer, "(stderr=%s)(stderr_position=%d)",
+					sprintf( buffer, "(stderr=%s)(stderr_position=%lu)",
 							 rsl_stringify( buffer ), file_status.st_size );
 					strcat( rsl, buffer );
 				}
