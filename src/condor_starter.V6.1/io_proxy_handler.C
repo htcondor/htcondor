@@ -121,15 +121,10 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			flags |= O_RDONLY;
 		}
 
-		if(strchr(flags_string,'c')) {
-			flags |= O_CREAT;
-		} else if(strchr(flags_string,'t')) {
-			flags |= O_TRUNC;
-		} else if(strchr(flags_string,'x')) {
-			flags |= O_EXCL;
-		} else if(strchr(flags_string,'a')) {
-			flags |= O_APPEND;
-		}
+		if(strchr(flags_string,'c')) flags |= O_CREAT;
+		if(strchr(flags_string,'t')) flags |= O_TRUNC;
+		if(strchr(flags_string,'x')) flags |= O_EXCL;
+		if(strchr(flags_string,'a')) flags |= O_APPEND;
 
 		result = REMOTE_CONDOR_open(path,(open_flags_t)flags,mode);
 		sprintf(line,"%d",convert(result,errno));
