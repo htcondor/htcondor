@@ -314,10 +314,11 @@ void main_timer () {
     
     debug_printf( DEBUG_DEBUG_1,
 				  "%d Jobs Total / %d Done / %d Submitted / %d Ready / "
-				  "%d Failed / %d Scripts Running\n", G.dag->NumJobs(),
+				  "%d Failed / %d Script%s Running\n", G.dag->NumJobs(),
 				  G.dag->NumJobsDone(), G.dag->NumJobsSubmitted(),
 				  G.dag->NumJobsReady(), G.dag->NumJobsFailed(), 
-				  G.dag->NumScriptsRunning() );
+				  G.dag->NumScriptsRunning(),
+				  G.dag->NumScriptsRunning() == 1 ? "" : "s" );
     
     // If the log has grown
     if (G.dag->DetectLogGrowth()) {

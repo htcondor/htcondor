@@ -151,7 +151,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
         CondorID condorID;
         if (e != NULL) condorID = CondorID (e->cluster, e->proc, e->subproc);
         
-        debug_printf( DEBUG_DEBUG_1, " Log outcome: %s\n",
+        debug_printf( DEBUG_DEBUG_2, "Log outcome: %s\n",
                       ULogEventOutcomeNames[outcome] );
         
         if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
@@ -160,7 +160,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
             
             //----------------------------------------------------------------
           case ULOG_NO_EVENT:      
-            debug_printf (DEBUG_DEBUG_1, "\n");
             done = true;
             break;
             //----------------------------------------------------------------
@@ -290,24 +289,18 @@ bool Dag::ProcessLogEvents (bool recovery) {
 
                   // if a POST script is specified for the job, run it
                   if (job->_scriptPost != NULL) {
-					  debug_printf( DEBUG_NORMAL,
-									"Running POST script of Job %s...\n",
-									job->GetJobName() );
+					  job->_Status = Job::STATUS_POSTRUN;
 					  // let the script know the job's exit status
                       job->_scriptPost->_retValJob = termEvent->normal
                           ? termEvent->returnValue : -1;
-
-					  job->_Status = Job::STATUS_POSTRUN;
 					  _scriptQ->Run( job->_scriptPost );
-					  SubmitReadyJobs();					  
-					  break;
 				  }
-
-				  // no POST script was specified, so update DAG
-				  // dependencies given our successful completion
-
-				  job->_Status = Job::STATUS_DONE;
-				  TerminateJob( job, recovery );
+				  // no POST script was specified, so update DAG with
+				  // job's successful completion
+				  else {
+					  job->_Status = Job::STATUS_DONE;
+					  TerminateJob( job, recovery );
+				  }
 				  SubmitReadyJobs();
 				  PrintReadyQ( DEBUG_DEBUG_1 );
 			  }
@@ -414,8 +407,6 @@ bool Dag::Submit (Job * job) {
 	// actual job to Condor if/when the script exits successfully
 
     if( job->_scriptPre && job->_scriptPre->_done == FALSE ) {
-		debug_printf( DEBUG_NORMAL, "Running PRE Script of Job %s ...\n",
-					  job->GetJobName() );
 		job->_Status = Job::STATUS_PRERUN;
 		_scriptQ->Run( job->_scriptPre );
 		return true;

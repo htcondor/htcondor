@@ -38,13 +38,16 @@ ScriptQ::~ScriptQ()
 int
 ScriptQ::Run( Script *script )
 {
+	debug_printf( DEBUG_NORMAL, "Running %s script of Job %s...\n",
+				  script->_post ? "POST" : "PRE", script->_job->GetJobName() );
+
 	// if we have no script limit, or we're under the limit, run now
 	if( _dag->_maxScriptsRunning == 0 ||
-		_numScriptsRunning <= _dag->_maxScriptsRunning ) {
+		_numScriptsRunning < _dag->_maxScriptsRunning ) {
 		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
 			_numScriptsRunning++;
 			_scriptPidTable->insert( pid, script );
-			debug_printf( DEBUG_DEBUG_1, "  spawned pid %d: %s\n", pid,
+			debug_printf( DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid,
 						  script->_cmd );
 			return 1;
 		}
@@ -57,13 +60,9 @@ ScriptQ::Run( Script *script )
 		}
 	}
 	// max scripts already running
-	else if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
-		printf( "  max. scripts (%d) already running; deferring %s script of "
-				"Job ", _dag->_maxScriptsRunning,
-				script->_post ? "POST" : "PRE" );
-		script->_job->Print();
-		printf( "\n" );
-	}
+	debug_printf( DEBUG_DEBUG_1, "\tmax scripts (%d) already running; "
+				  "deferring %s script of Job %s\n", _dag->_maxScriptsRunning,
+				  script->_post ? "POST" : "PRE", script->_job->GetJobName() );
 
 	_waitingQueue->enqueue( script );
 	return 0;
