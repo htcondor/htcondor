@@ -13,11 +13,12 @@ URL_SRC = url_condor.C cbstp_url.C file_url.C http_url.C filter_url.C \
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o
 
-API_SRC = generic_query.C condor_query.C condor_q.C ad_printmask.C \
-			condor_event.C user_log.C
+API_SRC = generic_query.C /* condor_query.C condor_q.C ad_printmask.C \
+			condor_event.C user_log.C */
 
-API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-			condor_event.o user_log.o
+API_OBJ = generic_query.o /* condor_query.o condor_q.o ad_printmask.o \
+			condor_event.o user_log.o */
+
 
 SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	alarm.C alloc.C \
@@ -37,7 +38,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	environ.o afs.o subproc.o \
 	instantiate.o string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o $(API_OBJ)\
-	classad_hashtable.o classad_log.o log_transaction.o log.o \
+	classad_hashtable.o classad_log.o log_transaction.o log.o  \
 	classad_collection.o usagemon.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o \
