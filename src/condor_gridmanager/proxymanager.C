@@ -40,7 +40,6 @@
 
 template class HashTable<HashKey, Proxy *>;
 template class HashBucket<HashKey, Proxy *>;
-template class SimpleList<int>;
 
 HashTable <HashKey, Proxy *> ProxiesByPath( HASH_TABLE_SIZE,
 											hashFunction );
