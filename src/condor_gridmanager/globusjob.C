@@ -1081,7 +1081,11 @@ int GlobusJob::doEvaluateState()
 			// old jobmanager process is still alive.
 			errorString = "";
 			if ( jobContact == NULL ) {
-				gmState = GM_CLEAR_REQUEST;
+				if ( condorState == COMPLETED ) {
+					gmState = GM_DELETE;
+				} else {
+					gmState = GM_CLEAR_REQUEST;
+				}
 			} else if ( wantResubmit || doResubmit ) {
 				gmState = GM_CLEAN_JOBMANAGER;
 			} else {
