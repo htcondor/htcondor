@@ -60,6 +60,16 @@ machines (claimed resources) which would, under certain circumstances,
 cause some jobs to remain idle until other jobs in the queue complete
 or are preempted.
 
+\item The change introduced in 6.1.13 to the \Condor{shadow} regarding
+when it logged the execute event to the user log produced situations
+where the shadow could log other events (like the shadow exception
+event) before the execute event was logged.
+Now, the shadow will always log an execute event before it logs any
+other events.
+The timing is still improved over 6.1.12 and older versions, with the
+execute event getting logged after the bulk of the job initialization
+has finished, right before the job will actually start executing.
+
 \end{itemize}
 
 \noindent Known Bugs:
