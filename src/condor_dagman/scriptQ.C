@@ -44,9 +44,8 @@ ScriptQ::Run( Script *script )
 		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
 			_numScriptsRunning++;
 			_scriptPidTable->insert( pid, script );
-			if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
-				printf( "  spawned pid %d: %s\n", pid, script->_cmd );
-			}
+			debug_printf( DEBUG_DEBUG_1, "  spawned pid %d: %s\n", pid,
+						  script->_cmd );
 			return 1;
 		}
 		// BackgroundRun() returned pid 0
