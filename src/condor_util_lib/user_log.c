@@ -58,24 +58,25 @@ static char *_FileName_ = __FILE__;
 int seteuid( uid_t );
 int setegid( gid_t );
 
-static void release_lock( struct UserLog *LP );
-static void get_lock( struct UserLog *LP );
-static void output_header( struct UserLog *LP );
-static void restore_id( struct UserLog *LP );
-static void set_user_id( struct UserLog *LP );
+static void release_lock( USER_LOG *LP );
+static void get_lock( USER_LOG *LP );
+static void output_header( USER_LOG *LP, int msg_num );
+static void restore_id( USER_LOG *LP );
+static void set_user_id( USER_LOG *LP );
 static void switch_ids( uid_t new_euid, gid_t new_egid );
 static void display_ids();
+static char *find_fmt( int msg_num );
 
 /*
   Initialize a new user log "instance".
 */
-struct UserLog *
+USER_LOG *
 OpenUserLog( const char *owner, const char *file, int c, int p, int s )
 {
 	struct passwd	*pwd;
-	struct UserLog	*LP;
+	USER_LOG	*LP;
 
-	LP = (struct UserLog *)malloc( sizeof(struct UserLog) );
+	LP = (USER_LOG *)malloc( sizeof(USER_LOG) );
 
 		/* Save parameter info */
 	LP->path = malloc( strlen(file) + 1 );
@@ -119,7 +120,7 @@ OpenUserLog( const char *owner, const char *file, int c, int p, int s )
   Delete a user log "instance".
 */
 void
-CloseUserLog( struct UserLog *LP )
+CloseUserLog( USER_LOG *LP )
 {
 	if( !LP ) {
 		return;
@@ -133,7 +134,7 @@ CloseUserLog( struct UserLog *LP )
   Display content of a user log "instance" for debugging purposes.
 */
 void
-DisplayUserLog( struct UserLog *LP )
+DisplayUserLog( USER_LOG *LP )
 {
 	if( !LP ) {
 		return;
@@ -155,13 +156,21 @@ DisplayUserLog( struct UserLog *LP )
   arguments are as provided by  printf().
 */
 void
-PutUserLog( struct UserLog *LP, const char *fmt, ... )
+PutUserLog( USER_LOG *LP, int msg_num, ... )
 {
 	va_list		ap;
-	va_start( ap, fmt );
+	char		*fmt;
+
+	va_start( ap, msg_num );
+
 
 	if( !LP ) {
 		return;
+	}
+
+	fmt = find_fmt( msg_num );
+	if( !fmt ) {
+		EXCEPT( "Unknown msg number (%d)\n", msg_num );
 	}
 
 	if( !LP->in_block ) {
@@ -169,8 +178,9 @@ PutUserLog( struct UserLog *LP, const char *fmt, ... )
 		fseek( LP->fp, 0, SEEK_END );
 	}
 
-	output_header( LP );
+	output_header( LP, msg_num );
 	vfprintf( LP->fp, fmt, ap );
+	putc( '\n', LP->fp );
 
 	if( !LP->in_block ) {
 		release_lock( LP );
@@ -178,12 +188,11 @@ PutUserLog( struct UserLog *LP, const char *fmt, ... )
 }
 
 /*
-  Begin a block of output to a user log.  Blocks have a single timestamp
-  labeling the whole block, but each line still gets a Condor process
-  id.  A lock is maintained during the output of the entire block.
+  Begin a block of output to a user log.  A lock is maintained during
+  the output of the entire block.
 */
 void
-BeginUserLogBlock( struct UserLog *LP )
+BeginUserLogBlock( USER_LOG *LP )
 {
 	struct tm	*tm;
 	time_t		clock;
@@ -195,13 +204,6 @@ BeginUserLogBlock( struct UserLog *LP )
 	get_lock( LP );
 	fseek( LP->fp, 0, SEEK_END );
 
-	(void)time(  (time_t *)&clock );
-	tm = localtime( (time_t *)&clock );
-	fprintf( LP->fp, "(%d.%d.%d) %d/%d %02d:%02d:%02d\n",
-		LP->cluster, LP->proc, LP->subproc,
-		tm->tm_mon + 1, tm->tm_mday,
-		tm->tm_hour, tm->tm_min, tm->tm_sec
-	);
 	LP->in_block = TRUE;
 }
 
@@ -209,7 +211,7 @@ BeginUserLogBlock( struct UserLog *LP )
   End a block of output (releases the lock ).
 */
 void
-EndUserLogBlock( struct UserLog *LP )
+EndUserLogBlock( USER_LOG *LP )
 {
 	if( !LP ) {
 		return;
@@ -223,7 +225,7 @@ EndUserLogBlock( struct UserLog *LP )
   Output a timestamp and Condor process id.
 */
 static void
-output_header( struct UserLog *LP )
+output_header( USER_LOG *LP, int msg_num )
 {
 	struct tm	*tm;
 	time_t		clock;
@@ -232,24 +234,20 @@ output_header( struct UserLog *LP )
 		return;
 	}
 
-	if( LP->in_block ) {
-		fprintf( LP->fp, "(%d.%d.%d) ", LP->cluster, LP->proc, LP->subproc );
-	} else {
-		(void)time(  (time_t *)&clock );
-		tm = localtime( (time_t *)&clock );
-		fprintf( LP->fp, "(%d.%d.%d) %d/%d %02d:%02d:%02d ",
-			LP->cluster, LP->proc, LP->subproc,
-			tm->tm_mon + 1, tm->tm_mday,
-			tm->tm_hour, tm->tm_min, tm->tm_sec
-		);
-	}
+	(void)time(  (time_t *)&clock );
+	tm = localtime( (time_t *)&clock );
+	fprintf( LP->fp, MSG_HDR, msg_num,
+		LP->cluster, LP->proc, LP->subproc,
+		tm->tm_mon + 1, tm->tm_mday,
+		tm->tm_hour, tm->tm_min, tm->tm_sec
+	);
 }
 
 /*
   Set effective uid to that of the owner of the file.
 */
 static void
-set_user_id( struct UserLog *LP )
+set_user_id( USER_LOG *LP )
 {
 	LP->saved_uid = geteuid();
 	LP->saved_gid = getegid();
@@ -263,7 +261,7 @@ set_user_id( struct UserLog *LP )
   Reset effective uid to whatever it was when we started.
 */
 static void
-restore_id( struct UserLog *LP )
+restore_id( USER_LOG *LP )
 {
 	if( LP->saved_uid != LP->user_uid || LP->saved_gid != LP->saved_gid ) {
 		switch_ids( LP->saved_uid, LP->saved_gid );
@@ -309,7 +307,7 @@ display_ids()
   Obtain a write lock on the file (blocks).
 */
 static void
-get_lock( struct UserLog *LP )
+get_lock( USER_LOG *LP )
 {
 	if( LP->locked ) {
 		return;
@@ -322,11 +320,24 @@ get_lock( struct UserLog *LP )
   Release any lock on the file.
 */
 static void
-release_lock( struct UserLog *LP )
+release_lock( USER_LOG *LP )
 {
 	if( !LP->locked ) {
 		return;
 	}
 	lock_file( LP->fd, UN_LOCK, TRUE );
 	LP->locked = FALSE;
+}
+
+static char *
+find_fmt( int msg_num )
+{
+	USR_MSG	*ptr;
+
+	for( ptr=MsgCatalog; ptr->num >= 0; ptr++ ) {
+		if( ptr->num == msg_num ) {
+			return ptr->fmt;
+		}
+	}
+	return NULL;
 }
