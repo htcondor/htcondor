@@ -34,7 +34,7 @@ while(@ARGV)
     }
     elsif($_ eq "-t") # test program file
     {
-	open(PROGS, shift);
+	open(PROGS, shift) || die "Can't open $_: $!.\n";
 	while(<PROGS>)
 	{
 	    chomp;
