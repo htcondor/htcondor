@@ -64,6 +64,7 @@
 #include "condor_fix_sys_wait.h"
 #include "condor_file_lock.h"
 #include "condor_fix_assert.h"
+#include "condor_fix_sys_uio.h"	/* before socket since on Alpha, socket includes uio */
 #include "condor_fix_socket.h"
 #include "condor_fix_netdb.h"
 #include <sys/utsname.h>		
