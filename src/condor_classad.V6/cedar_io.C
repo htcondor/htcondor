@@ -70,7 +70,7 @@ _Flush( )
 
 #if 0
 bool CedarStream::
-_Connect( std::string url )
+_Connect( string url )
 {
     Socket * s = NULL;
 

@@ -285,7 +285,7 @@ class ByteStream {
     };
 
     ///
-    bool Connect (std::string url, int socktype = Sock_STREAM) {
+    bool Connect (string url, int socktype = Sock_STREAM) {
         m_socktype = socktype;
         return _Connect (url);
     }
@@ -308,7 +308,7 @@ class ByteStream {
     ByteSink   * m_snk;
 
     ///
-    virtual bool _Connect (std::string url) = 0;
+    virtual bool _Connect (string url) = 0;
 
     ///
     virtual bool _Close () = 0;
@@ -340,7 +340,7 @@ class FileStream : public ByteStream {
 
   protected:
     ///
-    virtual bool _Connect (std::string url);
+    virtual bool _Connect (string url);
 
     ///
     virtual bool _Close ();
@@ -367,7 +367,7 @@ class FileDescStream : public ByteStream {
 
   protected:
     ///
-    virtual bool _Connect (std::string url);
+    virtual bool _Connect (string url);
 
     ///
     virtual bool _Close ();
