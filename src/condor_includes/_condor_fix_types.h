@@ -72,6 +72,10 @@ typedef char * caddr_t;
 typedef unsigned long rlim_t;
 #endif
 
+#if defined(LINUX)
+typedef long rlim_t;
+#endif
+
 #endif
 
 
