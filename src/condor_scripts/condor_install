@@ -98,6 +98,9 @@ if( ! @install_type ) {
     exit(1);
 }
 
+print "\nPress enter to continue. ";
+$_ = <STDIN>;
+
 print "\n***************************************************************************\n",
     "\tSTEP 2: How many machines are you setting up for Condor?\n",
     "***************************************************************************\n";
@@ -108,31 +111,42 @@ if( grep(/central_manager/, @install_type) ) {
 }
 
 
+print "\nPress enter to continue. ";
+$_ = <STDIN>;
+
 print "\n***************************************************************************\n",
     "\tSTEP 3: Install the Condor \"release directory\", which holds\n",
     "\tvarious binaries, libraries, scripts and files used by Condor.\n",
     "***************************************************************************\n";
 $release_dir = &install_release_dir();
 
-
-print "\n***************************************************************************\n",
-    "\tSTEP 4: How and where should Condor send email if things go wrong?\n",
-    "***************************************************************************\n";
-&prompt_mail_settings();
-
+print "\nUsing $release_dir as the Condor release directory.\n",
+"\nPress enter to continue. ";
+$_ = <STDIN>;
 
 ###  Do what we need to do:
 if( grep(/submit/, @install_type) ) {
+
+    ### Only need to prompt for mail settings for full-install or submit-only
+    print "\n***************************************************************************\n",
+    "\tSTEP 4: How and where should Condor send email if things go wrong?\n",
+    "***************************************************************************\n";
+    &prompt_mail_settings();
+
+    print "\nUsing $mail_path to send email to $condor_admin\n",
+    "\nPress enter to continue. ";
+    $_ = <STDIN>;
+
     if( grep(/execute/, @install_type) ) {
         &configure_full_install();
     } else {
         &configure_submit_only();
     }
 } elsif( grep(/central_manager/, @install_type) ) { 
+    # If we're just doing CM, can skip step 4, etc.
+
     &configure_central_manager();
 }
-
-print "\ncondor_install has completed successfully.\n";
 
 
 ###########################################################################
@@ -231,7 +245,11 @@ sub prompt_submit_only {
 }
 
 sub prompt_install_central_manager {
-    print "\nWould you like to setup this host as a Condor Central Manager? [no] ";
+    print "\nWould you like to setup this host as a Condor Central Manager?\n",
+    "(Only choose this option if you have already done a full installation on\n",
+    "a file server and want to setup the local machine
+
+ [no] ";
     $_ = <STDIN>;
     /^[Yy].*/;
 }
@@ -1048,6 +1066,9 @@ sub configure_full_install {
 	$path = "";
     }
 
+    print "\nPress enter to continue. ";
+    $_ = <STDIN>;
+
     print "\n***************************************************************************\n",
     "\tSTEP 6: What machine will be your central manager?\n",
     "***************************************************************************\n";
@@ -1058,6 +1079,9 @@ sub configure_full_install {
 	$is_cm = 1;
     }
     
+    print "\nPress enter to continue. ";
+    $_ = <STDIN>;
+
     print "\n***************************************************************************\n",
     "\tSTEP 7: Where will the \"local directory\" go?\n",
     "***************************************************************************\n";
@@ -1231,6 +1255,12 @@ sub configure_full_install {
     "***************************************************************************\n";
     $has_config=0;
 
+    print "\nCondor searches a few locations to find its main config file.  The first\n",
+    "is the home directory of user condor, if that user exists.  The second is in\n",
+    "/etc/condor/.  If neither of those locations contain a valid \"condor_config\"\n",
+    "file, you will have to set the CONDOR_CONFIG environment variable so the Condor\n",
+    "daemons and tools can find their config file.\n";
+
     if( $condor_home ) {
 	print "\nShould I put in a soft link from $condor_home/condor_config to\n",
 	"$config_file [yes] ";
@@ -1310,7 +1340,9 @@ sub configure_full_install {
     "$release_dir/etc/examples/condor.boot\n",
     "for a script that you can use to start and stop Condor.\n",
     "\nPlease read the \"Condor is installed... now what?\" section of the INSTALL\n",
-    "file for things you should do before and after starting the Condor daemons.\n";
+    "file for things you should do before and after starting the Condor daemons.\n",
+    "In particular, you might want to set up host/ip access security.  See the\n",
+    "Adminstrator's Manual for details.\n";
 }
 
 
@@ -1389,8 +1421,16 @@ sub configure_central_manager {
     if( ! $local_config ) {
 	chop($_ = `$release_dir/bin/condor_config_val LOCAL_CONFIG_FILE 2> /dev/null`);
 	if( ! /^\/.*/ ) {
-	    print "\nCan't find the local config file for this host.\n";
-	    return "";
+	    print "\nCan't find the local config file for this host.\n\n",
+	    "That probably means you haven't done a full-install of Condor yet.\n",
+	    "Please do a full install before you choose \"Central Manager\" in STEP 1.\n",
+	    "If you're using a shared filesystem for your Condor binaries, you should\n",
+	    "do the full install on your file server.  If you want the same machine to\n",
+	    "be your central manager, the full-install will take care of that for you\n",
+	    "automatically.  If you don't have a shared filesystem, you will have to\n",
+	    "run condor_install on every machine in your pool, anyway.\n\n";
+	    exit(1);
+		
 	}
 	$local_config = $_;
     }
