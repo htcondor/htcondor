@@ -235,7 +235,7 @@ int Termlog;
 
 ReliSock	*sock_RSC1, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
-
+int HandleLog();
 
 int MainSymbolExists = 1;
 
@@ -486,12 +486,15 @@ void
 HandleSyscalls()
 {
 	int		fake_arg;
+	register int cnt;
+	fd_set readfds;
+	int nfds = -1;
+
+	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
 #ifdef CARMI_OPS
 	struct timeval select_to;
-	fd_set readfds, exceptfds;
-	int cnt;
-	int max_fd = -1;
+	fd_set exceptfds;
 	int sockfd, errsock;
 	struct sockaddr_in from;
 	int len = sizeof(from);
@@ -573,7 +576,7 @@ HandleSyscalls()
 #ifdef CARMI_OPS
 		FD_ZERO(&readfds);
 		FD_SET(fileno(stdin), &readfds);
-		max_fd = (max_fd > fileno(stdin))?max_fd:fileno(stdin);
+		nfds = (nfds > fileno(stdin))?nfds:fileno(stdin);
 		
 		plist = ProcList;
 		while (plist != NULL)
@@ -581,9 +584,9 @@ HandleSyscalls()
 		  if (plist->proc.status != COMPLETED)
 		  {
 		     FD_SET(plist->rsc_sock, &readfds);
-		     if (plist->rsc_sock > max_fd) max_fd = plist->rsc_sock;
+		     if (plist->rsc_sock > nfds) nfds = plist->rsc_sock;
 		     FD_SET(plist->client_log, &readfds);
-		     if (plist->client_log > max_fd) max_fd = plist->client_log;
+		     if (plist->client_log > nfds) nfds = plist->client_log;
 		  }
 		  plist = plist->next;
 		}
@@ -592,7 +595,8 @@ HandleSyscalls()
 		select_to.tv_usec = 0;
 		unblock_signal(SIGCHLD);
 		unblock_signal(SIGUSR1);
-		cnt = select(max_fd + 1, (fd_set *) &readfds, (fd_set *) 0,
+		/* TODO: include LogSock in this select */
+		cnt = select(nfds + 1, (fd_set *) &readfds, (fd_set *) 0,
 			 (fd_set *) 0, &select_to);
 		block_signal(SIGCHLD);
 		block_signal(SIGUSR1);
@@ -664,7 +668,7 @@ HandleSyscalls()
 			  close(plist->client_log);
 			  close(plist->rsc_sock);
 			  for(tempproc = ProcList; 
-			      ((tempproc->next != plist)&&(ProcList != plist));
+v			      ((tempproc->next != plist)&&(ProcList != plist));
 			      tempproc = tempproc->next);
 			  if (ProcList == plist)
 			    {
@@ -721,15 +725,53 @@ HandleSyscalls()
 		  else
 		    plist = plist->next;
 		}
-		max_fd = -1;
+		nfds = -1;
 		if ((ProcList == NULL) && (SpawnList == NULL))  break;
-	      }
 	
 #else
-		if( do_REMOTE_syscall() < 0 ) {
-			dprintf(D_SYSCALLS, "Shadow: do_REMOTE_syscall returned < 0\n");
-			break;
+		FD_ZERO(&readfds);
+		FD_SET(RSC_SOCK, &readfds);
+		FD_SET(CLIENT_LOG, &readfds);
+
+		unblock_signal(SIGCHLD);
+		unblock_signal(SIGUSR1);
+#if defined(AIX31) || defined(AIX32)
+		errno = EINTR; /* Shouldn't need to do this... */ 
+#endif
+#if defined(LINUX) || defined(IRIX62) || defined(Solaris)
+		cnt = select(nfds, &readfds, (fd_set *)0, (fd_set *)0,
+					 (struct timeval *)0);
+#else
+		cnt = select(nfds, &readfds, 0, 0,
+					 (struct timeval *)0);
+#endif
+		block_signal(SIGCHLD);
+		block_signal(SIGUSR1);
+
+		if( cnt < 0 && errno != EINTR ) {
+			EXCEPT("HandleSyscalls: select: errno=%d, rsc_sock=%d, client_log=%d",errno,RSC_SOCK,CLIENT_LOG);
 		}
+		
+		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
+			if( HandleLog() < 0 ) {
+				EXCEPT( "Peer went away" );
+			}
+		}
+
+		if( FD_ISSET(RSC_SOCK, &readfds) ) {
+			if( do_REMOTE_syscall() < 0 ) {
+				dprintf(D_SYSCALLS,
+						"Shadow: do_REMOTE_syscall returned < 0\n");
+				break;
+			}
+		}
+
+		if( FD_ISSET(UMBILICAL, &readfds) ) {
+			dprintf(D_ALWAYS,
+				"Shadow: Local scheduler apparently died, so I die too\n");
+			exit(1);
+		}
+
 #if defined(SYSCALL_DEBUG)
 		strcpy( SyscallLabel, "shadow" );
 #endif
