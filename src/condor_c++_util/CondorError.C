@@ -1,5 +1,6 @@
 #include "condor_common.h"
 #include "CondorError.h"
+#include "condor_snutils.h"
 
 
 CondorError::CondorError() {

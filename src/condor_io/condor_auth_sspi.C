@@ -342,7 +342,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 }
 
 int
-Condor_Auth_SSPI::authenticate(const char * remoteHost)
+Condor_Auth_SSPI::authenticate(const char * remoteHost, CondorError* errstack)
 {
 	int ret_value;
 	CredHandle cred;
