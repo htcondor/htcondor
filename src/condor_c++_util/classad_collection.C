@@ -73,22 +73,31 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
 {
   LogRecord* log=new LogNewClassAd(key,ad->GetMyTypeName(),ad->GetTargetTypeName());
   ClassAdLog::AppendLog(log);
+  ClassAdUnParser unp;
   ExprTree* expr;
-  ExprTree* L_expr;
-  ExprTree* R_expr;
-  char name[1000];
-  char *value;
-  ad->ResetExpr();
-  while ((expr=ad->NextExpr())!=NULL) {
-    strcpy(name,"");
-    L_expr=expr->LArg();
-    L_expr->PrintToStr(name);
-    R_expr=expr->RArg();
-	value = NULL;
-    R_expr->PrintToNewStr(&value);
-    LogRecord* log=new LogSetAttribute(key,name,value);
-	free(value);
-    ClassAdLog::AppendLog(log);
+//  ExprTree* L_expr;
+//  ExprTree* R_expr;
+//  char name[1000];
+//  char *value;
+  string name;
+  string value;
+//  ad->ResetExpr();
+//  while ((expr=ad->NextExpr())!=NULL) {
+  ClassAd::iterator adIter;
+  for( adIter = ad->begin( ); adIter != ad->end( ); adIter++ ) {
+//	strcpy(name,"");
+//	L_expr=expr->LArg();
+//	L_expr->PrintToStr(name);
+//	R_expr=expr->RArg();
+//	value = NULL;
+//  R_expr->PrintToNewStr(&value);
+	  name = adIter->first;
+	  expr = adIter->second;
+	  unp.Unparse( value, expr );
+//    LogRecord* log=new LogSetAttribute(key,name,value);
+	  LogRecord* log = new LogSetAttribute( key, name.c_str(), value.c_str() );
+//	free(value);
+	  ClassAdLog::AppendLog(log);
   }
   // return AddClassAd(0,key);
   return true;
@@ -223,14 +232,14 @@ int ClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString
 //----------------------------------------------------------------------------------
 
 #if 0	// Todd - not used yet
-int ClassAdCollection::CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList)
+int ClassAdCollection::CreatePartition(int ParentCoID, const MyString& Rank, StringSet& attrList)
 {
   // Lookup the parent
   BaseCollection* Parent;
   if (Collections.lookup(ParentCoID,Parent)==-1) return -1;
 
   // Initialize and insert to collection table
-  PartitionParent* Coll=new PartitionParent(Rank,AttrList);
+  PartitionParent* Coll=new PartitionParent(Rank,attrList);
   int CoID=LastCoID+1;
   if (Collections.insert(CoID,Coll)==-1) return -1;
   LastCoID=CoID;
@@ -316,21 +325,25 @@ bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
 bool ClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID, ClassAd* Ad) 
 {
   if (Coll->Type()==PartitionParent_e) {
+	  ClassAdUnParser unp;
     PartitionParent* ParentColl=(PartitionParent*) Coll;
     StringSet Values;
     MyString AttrName;
     MyString AttrValue;
-    char tmp[1000];
+//    char tmp[1000];
+	string tmp;
     ParentColl->Attributes.StartIterations();
 // printf("Checking OID %s\n",OID.Value());
     while (ParentColl->Attributes.Iterate(AttrName)) {
-      *tmp='\0';
+//      *tmp='\0';
       ExprTree* expr=Ad->Lookup(AttrName.Value());
       if (expr) {
-        expr=expr->RArg();
-        expr->PrintToStr(tmp);
+//        expr=expr->RArg();
+//        expr->PrintToStr(tmp);
+		  unp.Unparse( tmp, expr );
       }
-      AttrValue=tmp;
+//      AttrValue=tmp;
+	  AttrValue = tmp.c_str( );
       Values.Add(AttrValue);
     }
 // Values.StartIterations(); while (Values.Iterate(AttrValue)) { printf("Val: AttrValue=%s\n",AttrValue.Value()); }
@@ -509,7 +522,9 @@ float ClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr)
   if (RankExpr.Length()==0) return 0.0;
   char tmp[200];
   sprintf(tmp,"%s=%s",ATTR_RANK,RankExpr.Value());
-  AttrList RankingAd(tmp,'\0');
+  ClassAdParser parser;
+  ClassAd RankingAd;
+  parser.ParseClassAd( string(tmp), RankingAd );
   float Rank;
   if (!RankingAd.EvalFloat(ATTR_RANK,Ad,Rank)) Rank=0.0;
   return Rank;
