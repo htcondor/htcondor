@@ -14,6 +14,19 @@ use DBI;
 use File::Copy;
 use Cwd;
 use Getopt::Long;
+use File::Basename;
+my $LIBDIR;
+BEGIN {
+    my $dir1 = dirname($0);
+    my $dir2 = dirname($dir1);
+    if( $dir1 eq $dir2 ) {
+	$LIBDIR = $dir2 . "/../lib";
+    } else {
+	$LIBDIR = $dir2 . "/lib";
+    }
+}
+use lib "$LIBDIR";
+use CondorGlue;
 
 use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify/;
 
@@ -90,10 +103,9 @@ while ( my($id, $tag_module_string) = each(%ids) ) {
     $gid = &get_gid($id);
     my $cmdfile = &generate_cmdfile($id, $tag_module_string, @platforms);
     print "Submitting condor test suite run for build $id ($tag_module_string) ...\n";
-    run("/nmi/bin/nmi_submit $cmdfile", 0);
+    CondorGlue::run( "/nmi/bin/nmi_submit $cmdfile", 0 );
 } 
 chdir($cwd);
-#run("rm -rf $workspace", 0);
 
 exit 0;
 
@@ -159,12 +171,9 @@ sub generate_cmdfile() {
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
-    print CMDFILE "description = $desc\n";
-    print CMDFILE "run_type = test\n";
-    print CMDFILE "project = condor\n";
-    print CMDFILE "project_release = $vers_string\n";
-    print CMDFILE "component = condor\n";
-    print CMDFILE "component_version = $vers_string\n";
+    
+    CondorGlue::printIdentifiers( *CMDFILE, $tag );
+
     print CMDFILE "sources = $runidfile, $gluefile\n";
     print CMDFILE "pre_all = nmi_glue/test/pre_all\n";
     print CMDFILE "platform_pre = nmi_glue/test/platform_pre\n";
@@ -176,26 +185,21 @@ sub generate_cmdfile() {
     print CMDFILE "remote_pre = nmi_glue/test/remote_pre\n";
     print CMDFILE "remote_task = nmi_glue/test/remote_task\n";
     print CMDFILE "remote_post = nmi_glue/test/remote_post\n";
+
     print CMDFILE "platforms = ";
     foreach $platform (@platforms) { 
         print CMDFILE "$platform,";
     }
     print CMDFILE "\n";
 
-    # global prereqs
-    print CMDFILE "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, coreutils-5.2.1, binutils-2.15\n";
-
-    # platform-specific prereqs
-    print CMDFILE "prereqs_sun4u_sol_5.9 = gcc-2.95.3\n";
-    print CMDFILE "prereqs_sun4u_sol_5.8 = gcc-2.95.3\n";
-    print CMDFILE "prereqs_ppc_aix_5.2 = vac-6, vacpp-6\n";
+    CondorGlue::printPrereqs( *CMDFILE );
 
     print CMDFILE "notify = $notify\n";
     print CMDFILE "priority = 1\n";
     close CMDFILE;
-
     return $cmdfile;
 }
+
 
 sub get_nightlyids() {
     print "Getting build ids and source to run against ...\n";
@@ -282,32 +286,3 @@ List of users to be notified about the results
 END_USAGE
 }
 
-sub run () {
-    my ($cmd, $fatal) = @_;
-    my $ret;
-    my $output = "";
-
-    # if not specified, the command is fatal
-    if (!defined($fatal) or ($fatal != 0 and $fatal != 1)) {
-        $fatal = 1;
-    }
-
-    print "\n";
-    print "#  $cmd\n";
-
-    # run the command
-    system("($cmd)  </dev/null 2>&1");
-    $ret = $? / 256;
-
-    # should we die here?
-    if ($fatal && $ret != 0) {
-        print "\n";
-        print "FAILED COMMAND: $cmd\n";
-        print "RETURN VALUE:  $ret\n";
-        print "\n";
-        exit(1);
-    }
-
-    # return the commands return value
-    return $ret;
-}
