@@ -11,41 +11,45 @@ asked questions that are asked about Condor.
 
 \section{Obtaining Condor Distributions}
 
-\subsection{Where can I download Condor?}
-
+\subsection{\index{Condor!Downloading|(}Where can I download Condor?}
 Condor can be downloaded from \Url{http://www.cs.wisc.edu/condor/downloads/} or from
 \Url{http://www.bo.infn.it/condor-mirror/downloads/}.
+\index{Condor!Downloading|)}
 
 \subsection{If I try to download Condor, it sends me back to the downloads page!}
 
 If you are try to download Condor with a "junk-busting" web-proxy, try disabling it.
 We follow the path you take through our download menus, and sometimes these proxies strip off necessary information.
 
-\subsection{Do you have any website mirrors?}
+\subsection{\index{Condor!Mirror Sites|(}Do you have any web site mirrors?}
 
 Yes.  We have our main site at \Url{http://www.cs.wisc.edu/condor/}
 which is located in Madison, Wisconsin, USA.  We also operate a mirror
 site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy
 at \Url{http://www.bo.infn.it/condor-mirror/}.  Currently we have the 
-binary distrubations of Condor and the Condor Manual available on the
+binary distributions of Condor and the Condor Manual available on the
 mirror site.
+
+\index{Condor!Mirror Sites|)}
 
 \subsection{What platforms do you support?}
 
 See Section~\ref{sec:Availability}, on page~\pageref{sec:Availability}.
 
-\subsection{Do you distribute source code?}
+\subsection{\index{Condor!source code|(}Do you distribute source code?}
 
 At this time we do \Bold{not} distribute source code.
 Even so, if you need the source code, email us at \Email{condor-admin@cs.wisc.edu} and tell us why.
+\index{Condor!source code|)}
 
-\subsection{What is Personal Condor?}
+\subsection{\index{Personal Condor|(}What is Personal Condor?}
 
 Personal Condor is a term used for a specific style of installing Condor.
 A Personal Condor is a one-machine pool.  When you use flocking to bind
 them together, its simular to a normal Condor pool, except that you are restricted
 to "standard" jobs, and you are running additional \condor{collector} and \condor{negotiator} 
 daemons.
+\index{Personal Condor|)}
 
 \subsection{Do you support submitting to Globus?}
 
@@ -59,7 +63,7 @@ Yes, we do.  At this time, however, we have not released it (yet!)
 \subsection{How do I get more than one job to run on my SMP machine?}
 
 Starting with Condor version 6.1, Condor will recognize a SMP machine and advertise each CPU of the
-machine seperately.  For more details, see section~\ref{sec:Configuring-SMP} on page~\pageref{sec:Configuring-SMP}.
+machine separately.  For more details, see section~\ref{sec:Configuring-SMP} on page~\pageref{sec:Configuring-SMP}.
 
 Support for SMP machines in Condor Version 6.0 is available as a contrib module from the download site.
 
@@ -74,17 +78,22 @@ Support for SMP machines in Condor Version 6.0 is available as a contrib module 
 
 \subsection{I'm at the University of Wisconsin--Madison, Computer Science department, and I am having problems!}
 
-First, please read the webpage \Url{http://www.cs.wisc.edu/condor/uwcs.html} before proceeding!
+First, please read the web page \Url{http://www.cs.wisc.edu/condor/uwcs/} before proceeding!
 Specifically, your home directory is in AFS, which causes Condor some specific problems.
 The above URL will contain the way to fix things here at UWCS.
 
-\subsection{I'm getting a lot of email from Condor, should I just delete all of it?}
+\subsection{I'm getting a lot of email from Condor, can I just delete all of it?}
 
-Generally you shouldn't ignore all of the mail Condor sends.  Often, Condor will
-be sending legitimate email.  To reduce the email that a job will send you, see
+Generally you shouldn't ignore all of the mail Condor sends.  Often,
+Condor will be sending important email regarding errors that your
+jobs are reporting.  To reduce the amount email that a job will send
+you, see the notification parameter under the the \condor{q} man page
+on page~\pageref{man-condor-submit-notification} of this manual.
 
-\Todo
-
+Most of the time if you want to reduce the amount of email you receive
+from Condor, set notification = error.  If notification is set to
+error, then you will only receive email from Condor if it is encountering
+errors.
 
 \subsection{Why do my vanilla jobs only run on the machine where I submitted them from?}
 Consider the following:
@@ -94,7 +103,7 @@ your vanilla jobs?}
 
 See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
 
-\item{Did you submit the job from a shared filesystem?}
+\item{Did you submit the job from a shared file-system?}
 
 See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
 
@@ -113,7 +122,7 @@ Common problems that are often reported to us are that no jobs are running, or
 something like:
 
 \begin{verbatim}
-> I have submitted 100 jobs to my pool, and only 18 apper to be running,
+> I have submitted 100 jobs to my pool, and only 18 appear to be running,
 > and there are plenty of resources available.  What should I do to
 > investigate the reason why this happens?
 \end{verbatim}
@@ -123,7 +132,7 @@ Start by using the following steps to solve this problem:
 \begin{enumerate}
 \item Try \condor{q} -analyze 
 
-\item Look at the UserLog file (whatever you specify "log = XXX" in the
+\item Look at the User Log file (whatever you specify "log = XXX" in the
 submit file).  See if the jobs are starting to run and then exit right
 away, or if they never even start to run.
 
@@ -150,17 +159,17 @@ something like this.
 If the central manager crashes, all running jobs will continue to
 run. All queued jobs will simply remain in the queues until the central
 manager comes up and begins matchmaking again.  Nothing special needs
-to be done when the cenrtal manager is brought back online. 
+to be done when the central manager is brought back online. 
 
 
 \section{Other questions}
 
 
-\subsection{Is Condor Y2K compliant?}
+\subsection{\index{Condor!Y2K compliance}Is Condor Y2K compliant?}
 
 Yes.
 
-\subsection{Is there a Condor mailing list?}
+\subsection{\index{Condor!mailing list|(}Is there a Condor mailing list?}
 
 Yes.  We run an extremely low traffic mailing list that announces new versions of Condor.
 To subscribe email
@@ -169,6 +178,7 @@ with the message body of
 \begin{verbatim}
 subscribe condor-world
 \end{verbatim}
+\index{Condor!mailing list|)}
 
 \subsection{My question isn't in the FAQ!}
 
