@@ -68,6 +68,14 @@ static char	*Afs_Cache_Name;
 #define FS_COMMAND "getcacheparms"
 #define FS_OUTPUT_FORMAT "\nAFS using %d of the cache's available %d"
 
+#if defined(__STDC__)
+FILE * my_popen( char * cmd, char * mode );
+int my_pclose( FILE *fp );
+#else
+FILE * my_popen();
+int my_pclose();
+#endif
+
 /*
   How much disk space we need to reserve for the AFS cache.  Answer is
   in kilobytes.
@@ -101,9 +109,9 @@ reserve_for_afs_cache()
 		   how much is in use. */
 	dprintf( D_FULLDEBUG, "Checking AFS cache parameters\n" );
 	sprintf( cmd, "%s %s", FS_PROGRAM, FS_COMMAND );
-	fp = popen( cmd, "r" );
+	fp = my_popen( cmd, "r" );
 	fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size );
-	fclose( fp );
+	my_pclose( fp );
 	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",
 		cache_in_use,
 		cache_size
