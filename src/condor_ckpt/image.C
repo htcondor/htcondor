@@ -47,11 +47,10 @@ static char *_FileName_ = __FILE__;
 #endif
 
 extern int errno;
-int _Ckpt_Via_TCP_Stream;
 
 const int KILO = 1024;
 
-extern "C" int open_write_stream( const char * ckpt_file, size_t n_bytes );
+extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 extern "C" void report_image_size( int );
 
 #if defined(OSF1)
@@ -381,7 +380,7 @@ Image::Write()
 
 /*
   Set up a stream to write our checkpoint information onto, then write
-  it.  Note: there are two versions of "open_write_stream", one in
+  it.  Note: there are two versions of "open_ckpt_stream", one in
   "local_startup.c" to be linked with programs for "standalone"
   checkpointing, and one in "remote_startup.c" to be linked with
   programs for "remote" checkpointing.  Of course, they do very different
@@ -395,6 +394,7 @@ Image::Write( const char *ckpt_file )
 	int	status;
 	int	scm;
 	int bytes_read;
+	char	tmp_name[ _POSIX_PATH_MAX ];
 #if defined(ALPHA)
 	unsigned int  nbytes;		// 32 bit unsigned
 #else
@@ -405,25 +405,24 @@ Image::Write( const char *ckpt_file )
 		ckpt_file = file_name;
 	}
 
-	if( (fd=open_write_stream(ckpt_file,len)) < 0 ) {
-		perror( "open_write_stream" );
+		// Generate tmp file name
+	sprintf( tmp_name, "%s.tmp", ckpt_file );
+	dprintf( D_ALWAYS, "Checkpoint name is \"%s\"\n", ckpt_file );
+	dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
+
+		// Open the tmp file
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	if( (fd=open_ckpt_file(tmp_name,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
+		perror( "open_ckpt_file" );
 		exit( 1 );
 	}
 
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		// Write out the checkpoint
 	if( Write(fd) < 0 ) {
 		return -1;
 	}
 
-		// In remote mode, our peer will send back the actual
-		// number of bytes transferred as a check
-	if( _Ckpt_Via_TCP_Stream ) {
-		if( MyImage.GetMode() == REMOTE ) {
-			bytes_read = read( fd, &nbytes, sizeof(nbytes) );
-			nbytes = ntohl( nbytes );
-		}
-	}
-
+		// Have to check close() in AFS
 	dprintf( D_ALWAYS, "About to close ckpt fd (%d)\n", fd );
 	if( close(fd) < 0 ) {
 		dprintf( D_ALWAYS, "Close failed!\n" );
@@ -431,9 +430,18 @@ Image::Write( const char *ckpt_file )
 	}
 	dprintf( D_ALWAYS, "Closed OK\n" );
 
-	dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE SENT OK\n" );
 	SetSyscalls( scm );
 
+		// We now know it's complete, so move it to the real ckpt file name
+	dprintf( D_ALWAYS, "About to rename \"%s\" to \"%s\"\n",tmp_name,ckpt_file);
+	if( rename(tmp_name,ckpt_file) < 0 ) {
+		perror( "rename" );
+		exit( 1 );
+	}
+	dprintf( D_ALWAYS, "Renamed OK\n" );
+
+		// Report
+	dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE SENT OK\n" );
 
 		// In remote mode we update the shadow on our image size
 	if( MyImage.GetMode() == REMOTE ) {
