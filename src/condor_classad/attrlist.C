@@ -5,7 +5,6 @@
 //
 //******************************************************************************
 
-# include <std.h>
 # include <ctype.h>
 # include <assert.h>
 # include <string.h>

@@ -6,7 +6,6 @@
 //   Written by Wei Chen & Taxiao Wang, Fall 1995
 //
 
-#include <std.h>
 #include <string.h>
 #include <assert.h>
 #include <except.h>

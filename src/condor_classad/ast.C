@@ -5,7 +5,6 @@
 //
 //******************************************************************************
 
-#include <std.h>
 #include <string.h>
 #include "condor_exprtype.h"
 #include "condor_ast.h"

@@ -6,7 +6,6 @@
 //
 //******************************************************************************
 
-#include <std.h>
 #include "condor_classad.h"
 #include "condor_classifiedjobs.h"
 
