@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -273,10 +273,12 @@ class MyString
   
 private:
 
-  char* Data;	
-  char dummy;
-  int Len;
-  int capacity;
+    void init();
+
+  char* Data;	// array containing the C string of this MyString's value
+  char dummy;	// used for '\0' char in operator[] (dangerous)
+  int Len;		// the length of the string
+  int capacity;	// capacity of the data array, not counting null terminator
   
 };
 

@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -34,17 +34,17 @@
 
 MyString::MyString() 
 {
-    Data=NULL;
-    Len=0;
-    capacity = 0;
+	init();
     return;
 }
   
 MyString::MyString(int i) 
 {
-    char tmp[50];
-	::snprintf(tmp,50,"%d",i);
+	const int bufLen = 50;
+    char tmp[bufLen];
+	::snprintf(tmp,bufLen,"%d",i);
     Len=strlen(tmp);
+	ASSERT(Len < bufLen);
     Data=new char[Len+1];
     capacity = Len;
     strcpy(Data,tmp);
@@ -53,18 +53,14 @@ MyString::MyString(int i)
 
 MyString::MyString(const char* S) 
 {
-    Data=NULL;
-    Len=0;
-	capacity = 0; 
+	init();
     *this=S;
 	return;
 };
 
 MyString::MyString(const MyString& S) 
 {
-    Data=NULL;
-	Len = 0;
-	capacity = 0;
+	init();
     *this=S;
 	return;
 }
@@ -74,6 +70,7 @@ MyString::~MyString()
     if (Data) {
 		delete[] Data;
 	}
+	init(); // for safety -- errors if you try to re-use this object
 	return;
 }
 
@@ -90,6 +87,11 @@ MyString::operator[](int pos) const
     return Data[pos];
 }
 
+// Hmm -- this seems pretty dangerous.  What if the string is zero-length
+// and the caller changes the returned char& to something other than '\0'?
+// Or what if we return a character from the string and the caller changes
+// it to '\0'?  Either way, bad things will probably happen!
+// wenger 2003-04-28.
 char& 
 MyString::operator[](int pos) 
 {
@@ -173,7 +175,7 @@ MyString::reserve( const int sz )
     if (Data) {
       strncpy( buf, Data, sz); 
 	  // Make sure it's NULL terminated. strncpy won't make sure of it.
-	  buf[sz] = 0; 
+	  buf[sz] = '\0'; 
       delete [] Data;
     }
     Len = strlen( buf );
@@ -268,9 +270,11 @@ MyString operator+(const MyString& S1, const MyString& S2)
 MyString& 
 MyString::operator+=( int i )
 {
-	char tmp[64];
-	::snprintf( tmp, 64, "%d", i );
+	const int bufLen = 64;
+	char tmp[bufLen];
+	::snprintf( tmp, bufLen, "%d", i );
     int s_len = strlen( tmp );
+	ASSERT(s_len < bufLen);
     if( s_len + Len > capacity ) {
 		reserve_at_least( Len + s_len );
     }
@@ -283,9 +287,11 @@ MyString::operator+=( int i )
 MyString& 
 MyString::operator+=( double d )
 {
-	char tmp[128];
-	::snprintf( tmp, 128, "%f", d );
+	const int bufLen = 128;
+	char tmp[bufLen];
+	::snprintf( tmp, bufLen, "%f", d );
     int s_len = strlen( tmp );
+	ASSERT(s_len < bufLen);
     if( s_len + Len > capacity ) {
 		reserve_at_least( Len + s_len );
     }
@@ -305,8 +311,13 @@ MyString
 MyString::Substr(int pos1, int pos2) const 
 {
     MyString S;
-    if (pos2 > Len) {
-		pos2 = Len;
+
+	if (Len <= 0) {
+	    return S;
+	}
+
+    if (pos2 >= Len) {
+		pos2 = Len - 1;
 	}
     if (pos1 < 0) {
 		pos1=0;
@@ -501,6 +512,16 @@ lower_case(void)
 	return;
 }
 
+
+
+void
+MyString::init()
+{
+    Data=NULL;
+    Len=0;
+    capacity = 0;
+}
+
 /*--------------------------------------------------------------------
  *
  * Comparisions
@@ -601,4 +622,5 @@ int MyStringHash( const MyString &str, int buckets )
 {
 	return str.Hash()%buckets;
 }
+
 
