@@ -41,6 +41,14 @@ typedef int SOCKET;
 **	B A S E    S O C K
 */
 
+/** The Sock class defines an interface for connection establishment.
+This interface is implemented with TCP in the ReliSock class and with
+UDP in the SafeSock class.  ReliSock and SafeSock are the only Cedar
+classes which should be instantiated; however, pointers to the Stream
+base class are often used at points in the application where it is not
+important if the underlying medium is TCP or UDP (for example, in a
+daemon which handles the same commands over both TCP and UDP).
+*/
 class Sock : public Stream {
 
 //	PUBLIC INTERFACE TO ALL SOCKS
@@ -57,8 +65,26 @@ public:
 	//
 
 	virtual int handle_incoming_packet() { assert(0); return 0; }
-	virtual int connect(char *, int) { assert(0); return 0; }
-	inline int connect(char *h, char *s) { return connect(h,getportbyserv(s)); }
+
+	/** Connect the socket to a remote peer.
+		@param host Hostname of peer, either a DNS name or an IP address, or 
+		an IP address and port together in the format "&lt;IP:PORT&gt;", such as 
+		<p> &lt;128.105.44.66:3354&gt;
+		<b>Note:</b> The "&lt;" and "&gt;" are required when giving both the
+		IP and Port.
+		@param port The port to connect to.  If host is in the form <IP:PORT>,
+		then the port parameter is ignored.
+	*/
+	virtual int connect(char *host, int port) { assert(0); return 0; }
+
+	/** Connect the socket to a remote peer.
+		@param host Hostname of the peer, either a DNS name or IP address.
+		@param service The name of a service that represents a port address,
+		which can be passed to getportbyserv().
+	*/
+	inline int connect(char *host, char *service) { 
+		return connect(host,getportbyserv(service)); 
+	}
 
 
 
