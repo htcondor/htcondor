@@ -21,7 +21,11 @@
  *
  *********************************************************************/
 
+#if defined( CLASSAD_DISTRIBUTION )
 #include "classad_distribution.h"
+#else
+#include "condor_classad.h"
+#endif
 #include "lexerSource.h"
 #include "xmlSink.h"
 #include <fstream>
