@@ -621,6 +621,8 @@ SetImageSize()
 	(void)sprintf (buffer, "%s = %d", ATTR_IMAGE_SIZE,
 				   mem_req > size ? mem_req : size);
 	InsertJobExpr (buffer);
+	(void)sprintf (buffer, "%s = %d", ATTR_EXECUTABLE_SIZE, size);
+	InsertJobExpr (buffer);
 }
 
 /*
@@ -895,7 +897,8 @@ SetRank()
 	static char rank[ATTRLIST_MAX_EXPRESSION];
 	char *orig_pref = condor_param(Preferences);
 	char *orig_rank = condor_param(Rank);
-	char *ptr = NULL;
+	char *default_rank = NULL;
+	char *append_rank = NULL;
 
 	if (orig_pref && orig_rank) {
 		fprintf(stderr, "%s and %s may not both be specified for a job\n",
@@ -911,20 +914,26 @@ SetRank()
 
 	if ( JobUniverse == STANDARD ) 
 	{
-		ptr = param("APPEND_RANK_STANDARD");
+		default_rank = param("DEFAULT_RANK_STANDARD");
+		append_rank = param("APPEND_RANK_STANDARD");
 	} 
 	if ( JobUniverse == VANILLA ) 
 	{
-		ptr = param("APPEND_RANK_VANILLA");
+		default_rank = param("DEFAULT_RANK_VANILLA");
+		append_rank = param("APPEND_RANK_VANILLA");
 	} 
 
-	if ( ptr != NULL ) {
+	if ( default_rank != NULL && rank[0] == '\0' ) {
+		(void) strcpy( rank, default_rank );
+	}
+
+	if ( append_rank != NULL ) {
 		if( rank[0] ) {
 			(void)strcat( rank, " && (" );
 		} else {
 			(void)strcpy( rank, "(" );
 		}
-		(void) strcat( rank, ptr );
+		(void) strcat( rank, append_rank );
 		(void) strcat( rank,")" );
 	}
 				
@@ -1396,20 +1405,36 @@ check_requirements( char *orig )
 {
 	int		has_opsys = FALSE;
 	int		has_arch = FALSE;
+	int		has_disk = FALSE;
+	int		has_virtmem = FALSE;
 	int		has_fsdomain = FALSE;
 	char	*ptr;
 	static char	answer[2048];
 
 	for( ptr = orig; *ptr; ptr++ ) {
-		if( strincmp("Arch",ptr,4) == MATCH ) {
+		if( strincmp(ATTR_ARCH,ptr,4) == MATCH ) {
 			has_arch = TRUE;
 			break;
 		}
 	}
 
 	for( ptr = orig; *ptr; ptr++ ) {
-		if( strincmp("OpSys",ptr,5) == MATCH ) {
+		if( strincmp(ATTR_OPSYS,ptr,5) == MATCH ) {
 			has_opsys = TRUE;
+			break;
+		}
+	}
+ 
+	for( ptr = orig; *ptr; ptr++ ) {
+		if( strincmp(ATTR_DISK,ptr,5) == MATCH ) {
+			has_disk = TRUE;
+			break;
+		}
+	}
+ 
+	for( ptr = orig; *ptr; ptr++ ) {
+		if( strincmp(ATTR_VIRTUAL_MEMORY,ptr,5) == MATCH ) {
+			has_virtmem = TRUE;
 			break;
 		}
 	}
@@ -1434,6 +1459,14 @@ check_requirements( char *orig )
 
 	if( !has_opsys && !has_arch ) {
 		magic_check();
+	}
+
+	if( !has_disk ) {
+		(void)strcat( answer, " && (Disk >= ExecutableSize)" );
+	}
+
+	if ( !has_virtmem ) {
+		(void)strcat( answer, " && (VirtualMemory >= ImageSize)" );
 	}
 
 	if (JobUniverse == PVM) {
