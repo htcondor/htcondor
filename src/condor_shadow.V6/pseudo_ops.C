@@ -63,7 +63,6 @@ extern "C" {
 extern int JobStatus;
 extern int ImageSize;
 extern struct rusage JobRusage;
-extern struct rusage AccumRusage;
 extern ReliSock *syscall_sock;
 extern PROC *Proc;
 extern char CkptName[];
@@ -75,7 +74,6 @@ extern int  LastCkptTime;
 extern int  NumCkpts;
 extern int  NumRestarts;
 extern int MaxDiscardedRunTime;
-extern bool ManageBandwidth;
 extern char *ExecutingHost;
 
 int		LastCkptSig = 0;
@@ -118,6 +116,9 @@ extern float BytesSent, BytesRecvd;
 
 const int MaxRetryWait = 3600;
 static bool CkptWanted = true;	// WantCheckpoint from Job ClassAd
+
+bool ManageBandwidth = false;   // notify negotiator about network usage?
+
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -254,15 +255,13 @@ int
 pseudo_send_rusage( struct rusage *use_p )
 {
 	/* A periodic checkpoint (checkpoint and keep running) now results in the 
-	 * condor_syscall_lib calling send_rusage.  So, we do what we did before
-	 * (which is add to AccumRusage, used by the PVM code??), _AND_ now we
-	 * also update the CPU usages in the job queue. -Todd Tannenbaum 10/95. */
+	 * condor_syscall_lib calling send_rusage.  So, we now
+	 * update the CPU usages in the job queue. -Todd Tannenbaum 10/95. */
 
 	/* Change (11/30/98): we now receive the rusage before the job has
 	 * committed the checkpoint, so we store it in uncommitted_rusage
 	 * until the checkpoint is committed or until the job exits.  -Jim B */
 	
-	memcpy( &AccumRusage, use_p, sizeof(struct rusage) );
 	memcpy( &uncommitted_rusage, use_p, sizeof(struct rusage) );
 
 	return 0;
