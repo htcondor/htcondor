@@ -1034,10 +1034,11 @@ int DaemonCore::Create_Pipe( int *filedes, bool nonblocking_read,
 		psize = 1024 * 4;
 	}
 
+	bool failed = false;
+
 #ifdef WIN32
 	// WIN32
 	long handle;
-	bool failed = false;
 	DWORD Mode = PIPE_READMODE_BYTE | PIPE_NOWAIT;
 	if ( _pipe(filedes, psize, _O_BINARY) == -1 ) {
 		dprintf(D_ALWAYS,"Create_Pipe(): call to pipe() failed\n");
