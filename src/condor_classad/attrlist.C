@@ -128,7 +128,7 @@ AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(A
     ptrExpr = NULL;
     ptrName = NULL;
 
-    char c;
+    int c;
     int buffer_size = 10;                    // size of the input buffer.
     int current = 0;                         // current position in buffer. 
     char *buffer = new char[buffer_size];
