@@ -1348,8 +1348,10 @@ int Sock :: authenticate(KeyInfo *&, const char * methods, CondorError* errstack
 
 int Sock :: authenticate(const char * methods, CondorError* errstack)
 {
+	/*
 	errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
 			"Failure: This version of condor was not compiled with authentication enabled");
+	*/
 	return -1;
 }
 

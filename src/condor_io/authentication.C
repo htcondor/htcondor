@@ -90,8 +90,10 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 {
 #if defined(SKIP_AUTHENTICATION)
 	dprintf(D_ALWAYS, "Skipping....\n");
+	/*
 	errstack->push ( "AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
 			"this condor was built with SKIP_AUTHENTICATION");
+	*/
 	return 0;
 #else
 Condor_Auth_Base * auth = NULL;
