@@ -78,7 +78,7 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	MyString	buf2;
 	int  inferred = 0;
 	ClassAdUnParser unp;
-	string buffString;
+	std::string buffString;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -140,7 +140,7 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	MyString	buf2;
 	int  inferred = 0;
 	ClassAdUnParser unp;
-	string buffString;
+	std::string buffString;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -203,7 +203,7 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	MyString buf2;
 	int  inferred = 0;
 	ClassAdUnParser unp;
-	string buffString;
+	std::string buffString;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -259,7 +259,7 @@ makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
 	ClassAdUnParser unp;
-	string buffString;
+	std::string buffString;
 
 	if (!(tree = ad->Lookup ("Name")))
 	{
