@@ -265,6 +265,12 @@ V6_6_2_EXT	-a V6_6_COMMON_EXT \
 		   externals/bundles/glibc/2.2.93 \
 		   externals/bundles/glibc/2.3.2.27.9.7
 
+# Externals needed for V6_6_3
+V6_6_3_EXT	-a V6_6_COMMON_EXT \
+		   externals/bundles/gahp/1.0.10 \
+		   externals/bundles/glibc/2.2.93 \
+		   externals/bundles/glibc/2.3.2.27.9.7
+
 # Externals needed for the head of the V6_6-branch
 V6_6_EXT	-a V6_6_COMMON_EXT \
 		   externals/bundles/gahp/1.0.10 \
