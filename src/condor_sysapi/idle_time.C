@@ -142,6 +142,7 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	time_t tty_idle;
 	time_t now = time( 0 );
 	char* tmp;
+	time_t m_interrupt_idle;
 
 		// Find idle time from ptys/ttys.  See if we should trust
 		// utmp.  If so, only stat the devices that utmp says are
@@ -187,10 +188,10 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	   on device files in Linux 2.6 kernel), get keyboard and mouse idle
 	   time via /proc/interrupts.  Update user_idle appropriately too.
 	*/
-	if (m_console_idle == -1){
-	    m_console_idle = km_idle_time(now);
-	    m_idle = MIN(m_console_idle, m_idle);
-	}
+	m_interrupt_idle = km_idle_time(now);
+	m_console_idle = MIN(m_interrupt_idle, m_console_idle);
+
+	m_idle = MIN(m_console_idle, m_idle);
 
 	if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
 		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n", 
