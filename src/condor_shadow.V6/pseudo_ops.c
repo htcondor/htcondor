@@ -1224,3 +1224,29 @@ pseudo_subproc_status(int subproc, union wait *statp, struct rusage *rusagep)
 }
 
 #endif /* PVM_RECEIVE */
+
+int
+pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len)
+{
+        int rval;
+
+        if ( lseek( fd, offset, whence ) < 0 ) {
+                return (off_t) -1;
+        }
+
+        rval = read( fd, buf, len );
+        return rval;    
+}
+
+int
+pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len)
+{
+	int rval;
+
+	if ( lseek( fd, offset, whence ) < 0 ) {
+		return (off_t) -1;
+	}
+
+	rval = write( fd, buf, len );
+	return rval;
+}

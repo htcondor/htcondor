@@ -86,7 +86,7 @@ XDR_Read( int *iohandle, void *buf, size_t len )
 	dprintf(D_XDR, "XDR_Read: about to read(%d, 0x%x, %d)\n",
 			fd, buf, len);
 
-	cnt = read(fd, buf, len);
+	cnt = syscall( SYS_read, fd, buf, len );
 	if( cnt == 0 ) {
 		dprintf(D_XDR, "XDR_Read: cnt was zero, returning -1\n");
 		cnt = -1;
@@ -115,7 +115,7 @@ XDR_Write( int *iohandle, void *buf, size_t len )
 	dprintf(D_XDR, "XDR_Write: about to write(%d, 0x%x, %d)\n",
 			fd, buf, len);
 
-	cnt = write( fd, buf, len );
+	cnt = syscall( SYS_write, fd, buf, len );
 
 	dprintf(D_XDR, "XDR_Write: cnt = %d\n", cnt);
 

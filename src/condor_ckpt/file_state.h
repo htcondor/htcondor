@@ -1,6 +1,6 @@
 /* 
 ** Copyright 1994 by Miron Livny, and Mike Litzkow
-** 
+**
 ** Permission to use, copy, modify, and distribute this software and its
 ** documentation for any purpose and without fee is hereby granted,
 ** provided that the above copyright notice appear in all copies and that
@@ -32,9 +32,28 @@
 #include <limits.h>
 #include <sys/types.h>
 
+const int MAXBUF = 131072;
+const int PREFETCH = 2048;
+
 typedef unsigned int	Bit;
 typedef int				BOOL;
 typedef int				FD;
+
+struct BufElem {
+
+  friend class File;
+  friend class OpenFileTable;
+
+ public:
+
+ private:
+
+  int offset;
+  int len;
+  char *buf;
+  BufElem *next;
+
+};
 
 class OpenFileTable;
 
@@ -43,25 +62,31 @@ friend class OpenFileTable;
 public:
 	void	Init();
 	void	Display();
-	BOOL	isOpen()			{ return open; }
-	BOOL	isDup()				{ return duplicate; }
+        void    setOffset(off_t temp)   { offset = temp; }
+        void    setSize(off_t temp)     { size = temp; }
+        off_t   getOffset()             { return offset; }
+        off_t   getSize()               { return size; }
+	BOOL	isOpen()		{ return open; }
+	BOOL	isDup()			{ return duplicate; }
 	BOOL	isPreOpened()		{ return pre_opened; }
 	BOOL	isRemoteAccess()	{ return remote_access; }
 	BOOL	isShadowSock()		{ return shadow_sock; }
 	BOOL	isReadable()		{ return readable; }
 	BOOL	isWriteable()		{ return writeable; }
 private:
-	Bit	open : 1;			// file is open
+	Bit	open : 1;		// file is open
 	Bit	duplicate : 1;		// file is dup of another fd
 	Bit	pre_opened : 1;		// file was pre_opened (stdin, stdout, stderr)
 	Bit	remote_access : 1;	// access via remote sys calls (via the shadow)
 	Bit	shadow_sock : 1;	// TCP connection to the shadow
 	Bit	readable : 1;		// File open for read or read/write
 	Bit	writeable : 1;		// File open for write or read/write
+	off_t   size;                   // File size
 	off_t	offset;			// File pointer position
-	FD		real_fd;		// File descriptor number
-	FD		dup_of;			// File descriptor this is a dup of
+	FD		real_fd;	// File descriptor number
+	FD		dup_of;		// File descriptor this is a dup of
 	char	*pathname;		// *FULL* pathname of the file
+	BufElem *firstBuf;              // first buffer element.
 };
 
 class OpenFileTable {
@@ -76,6 +101,7 @@ public:
 #else
 	int DoOpen( const char *path, int flags, int fd, int is_remote );
 #endif
+	off_t DoLseek(int fd, off_t offset, int whence);
 	int DoClose( int fd );
 	int DoDup( int fd );
 	int DoDup2( int fd, int dupfd );
@@ -84,8 +110,26 @@ public:
 	int Map( int user_fd );
 	BOOL IsLocalAccess( int user_fd );
 	BOOL IsDup( int user_fd );
+	void SetOffset(int i, off_t temp)  { file[i].setOffset(temp); }
+	void SetSize(int i, off_t temp)    { file[i].setSize(temp); }
+	off_t GetOffset(int i)             { return file[i].getOffset(); }
+	off_t GetSize(int i)               { return file[i].getSize(); }
+	void IncreBufCount( int i )        { bufCount += i; }
+	BOOL IsReadable(int i)             { return file[i].isReadable(); }
+	BOOL IsWriteable(int i)            { return file[i].isWriteable(); }
+	int InsertR( int, void *, int, int, int, BufElem *, BufElem * );
+	int InsertW( int, const void *, int, int, BufElem *, BufElem * );
+	int OverlapR1( int, void *, int, int, int, BufElem *, BufElem * );
+	int OverlapR2( int, void *, int, int, int, BufElem *, BufElem * );
+	int OverlapW1( int, const void *, int, int, BufElem *, BufElem * );
+	int OverlapW2( int, const void *, int, int, BufElem *, BufElem * );
+	int PreFetch( int, void *, size_t );
+	int Buffer( int, const void *, size_t );
+	void FlushBuf();
+	void DisplayBuf();
 	int find_avail( int start );
 private:
+	int     bufCount;       // running count of the used buffer. 
 	void	fix_dups( int user_fd );
 	char	cwd[ _POSIX_PATH_MAX ];
 	File	*file;		// array allocated at run time
@@ -94,3 +138,6 @@ private:
 char *string_copy( const char *);
 
 #endif
+
+
+

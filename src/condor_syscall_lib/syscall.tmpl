@@ -146,6 +146,29 @@
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
+#if defined( BufferCondorIO )
+	off_t lseek( map(int fd), off_t offset, int whence ); 
+	ssize_t read( map(int fd), void *buf, size_t len ) {
+		out xdr_bytes( &buf, &rval, len );
+		alloc( buf, len );
+	}
+	
+        ssize_t write( map(int fd), const void *buf, size_t len ) {
+		in xdr_bytes( &buf, &len, len );
+		alloc( buf, len );
+	}
+
+	int lseekread( map(int fd), off_t offset, int whence, void *buf, size_t len ) : pseudo {
+		out xdr_bytes( &buf, &rval, len );
+		alloc( buf, len );
+	}
+
+        int lseekwrite( map(int fd), off_t offset, int whence, const void *buf, size_t len ) : pseudo {
+		in xdr_bytes( &buf, &len, len );
+		alloc( buf, len );
+        }
+#endif
+
 #endif	/* not SWITCH and not CLIP */
 
 #if !defined(SWITCH)
@@ -181,17 +204,22 @@
 			build senders and recievers for everybody, and switches for
 			everybody but AIX
 		*/
+#if !defined( BufferCondorIO )
 		ssize_t write( map(int fd), const void *buf, size_t len ) {
 			in xdr_bytes( &buf, &len, len );
 			alloc( buf, len );
 		}
+
 		ssize_t read( map(int fd), void *buf, size_t len ) {
 			out xdr_bytes( &buf, &rval, len );
 			alloc( buf, len );
-		}
+		} 
+#endif
 #	endif
 
+#if !defined( BufferCondorIO )
 	off_t lseek( map(int fd), off_t offset, int whence );
+#endif
 	int access( const char *path, int access_mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );

@@ -1,6 +1,6 @@
 /* 
 ** Copyright 1994 by Miron Livny, and Mike Litzkow
-** 
+**
 ** Permission to use, copy, modify, and distribute this software and its
 ** documentation for any purpose and without fee is hereby granted,
 ** provided that the above copyright notice appear in all copies and that
@@ -23,6 +23,7 @@
 ** OR PERFORMANCE OF THIS SOFTWARE.
 ** 
 ** Author:  Mike Litzkow
+** Modified by Wei Chen, Spring 1996
 **
 */ 
 
@@ -49,6 +50,7 @@
 typedef struct fd_set fd_set;
 #endif
 
+#include <std.h>
 #include <stdio.h>
 #include <signal.h>
 #include "fcntl.h"
@@ -59,6 +61,9 @@ typedef struct fd_set fd_set;
 #include "condor_syscalls.h"
 #include <stdarg.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <malloc.h>
+#include <memory.h>
 #include "file_state.h"
 #include "condor_constants.h"
 #include "file_table_interf.h"
@@ -94,6 +99,7 @@ void
 File::Init()
 {
 	open = FALSE;
+	firstBuf = NULL;
 	pathname = 0;
 }
 
@@ -108,13 +114,9 @@ OpenFileTable::Init()
 
 	MaxOpenFiles = sysconf(_SC_OPEN_MAX);
 	file = new File[ MaxOpenFiles ];
+	bufCount = 0;
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		file[i].Init();
-#if 0
-		if (i > 2) {
-			syscall( SYS_close, i );
-		}
-#endif
 	}
 
 	PreOpen( 0, TRUE, FALSE, FALSE );
@@ -134,6 +136,7 @@ OpenFileTable::Display()
 {
 	int		i;
 	int		scm;
+
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
@@ -174,11 +177,15 @@ File::Display()
 	}
 }
 
+
+int
 OpenFileTable::DoOpen(
 	const char *path, int flags, int real_fd, int is_remote )
 {
 	int	user_fd;
+	int     rval;
 	char	buf[ _POSIX_PATH_MAX ];
+	off_t   tempSize;
 
 	if (MyImage.GetMode() == STANDALONE) {
 		user_fd = real_fd;
@@ -215,6 +222,36 @@ OpenFileTable::DoOpen(
 	file[user_fd].remote_access = is_remote;
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
+
+	        // set the initial file size
+	if( LocalSysCalls() || FileTab->IsLocalAccess( user_fd ) ) {
+	        tempSize = syscall( SYS_lseek, real_fd, 0, SEEK_END );
+		if( tempSize > 0 ) {
+		        rval = syscall( SYS_lseek, real_fd, -tempSize, SEEK_END );
+			if( rval < 0 ) {
+			        return -1;
+			}
+			file[user_fd].size = tempSize; 
+		} else if( tempSize < 0 ) {
+		        return -1;
+		} else {
+		        file[user_fd].size = 0;
+		}
+	} else {
+	        tempSize = REMOTE_syscall( CONDOR_lseek, real_fd, 0, SEEK_END );
+		if( tempSize > 0 ) {
+		        rval = REMOTE_syscall( CONDOR_lseek, real_fd, -tempSize, SEEK_END );
+			if( rval < 0 ) {
+			        return -1;
+			}  
+			file[user_fd].size = tempSize;
+		} else if( tempSize < 0 ) {
+		        return -1;
+		} else {
+		        file[user_fd].size = 0;
+		}		        
+	 }
+
 	file[user_fd].real_fd = real_fd;
 	if( path[0] == '/' ) {
 		file[user_fd].pathname = string_copy( path );
@@ -224,6 +261,7 @@ OpenFileTable::DoOpen(
 	}
 	return user_fd;
 }
+
 
 int
 OpenFileTable::DoClose( int fd )
@@ -245,6 +283,9 @@ OpenFileTable::DoClose( int fd )
 		file[fd].open = FALSE;
 		return 0;
 	}
+
+//	DisplayBuf();                     // for debugging purpose only.
+	FlushBuf();		
 
 		// Look for another file which is a dup of this one
 	was_duped = FALSE;
@@ -304,7 +345,7 @@ int
 OpenFileTable::PreOpen(
 	int fd, BOOL readable, BOOL writeable, BOOL shadow_connection )
 {
-		// Make sure fd not already open
+   		// Make sure fd not already open
 	if( file[fd].isOpen() ) {
 		errno = EBADF;
 		return -1;
@@ -686,8 +727,670 @@ OpenFileTable::Restore()
 		// SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		SetSyscalls( scm);
 	}
+} 
+
+//
+// This function inserts a new read buffer block to the list. 
+//
+ssize_t
+OpenFileTable::InsertR( int user_fd, void *buf, int tempPos, int tempRead, int tempFetch, BufElem *prevP, BufElem *afterP )
+{
+        int rval;
+        int real_fd;
+	BufElem *newBuf;
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+		return -1;
+	}                      
+	 
+	newBuf = new BufElem;
+	if( !newBuf ) {
+		exit( 1 );
+	}
+		
+	if( !prevP ) {
+	         newBuf->next = afterP;
+		 file[user_fd].firstBuf = newBuf;
+	} else {
+	         prevP->next = newBuf;
+		 newBuf->next = afterP;
+	}		  
+
+	newBuf->buf = new char[tempFetch+1];
+	if( !newBuf->buf ) {
+		exit( 1 );
+	}
+	rval = REMOTE_syscall( CONDOR_lseekread, real_fd, tempPos, SEEK_SET, (void *)newBuf->buf, tempFetch );
+	if( rval != tempFetch ) {
+	        return -1;
+	}
+	newBuf->offset = tempPos;
+	newBuf->len = rval;
+	bufCount += (sizeof(BufElem)+1) + rval;      
+	strncpy( (char *) buf, newBuf->buf, tempRead );
+	char * tempB = ( char * ) buf;
+	tempB[tempRead] = '\0';
+
+	return tempRead;
 }
 
+//
+// This function handles a reading (fetching) from a buffer like 
+//     Fetch : -----        or -----       or -----
+//     Buffer :       -----         -----       -----
+// Merge in cases like  
+//     Fetch : -----        or -----    
+//     Buffer :     -----        -----
+//
+ssize_t
+OpenFileTable::OverlapR1( int user_fd, void *buf, int tempPos, int tempRead, int tempFetch, BufElem *prevP, BufElem *afterP )
+{
+        int rval;
+        int real_fd;
+	char * tempB;
+
+	if( afterP == NULL ) {
+	        return -1;
+	}
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+		return -1;
+	}                       
+                                                // case I.
+	if( tempPos+tempFetch < afterP->offset ) {
+	        return InsertR( user_fd, buf, tempPos, tempRead, tempFetch, prevP, afterP );
+	} else {                                // case II & III.
+	        if( !prevP ) {
+		        file[user_fd].firstBuf = afterP;
+		} else {
+		        prevP->next = afterP;
+		}
+
+	        tempFetch = afterP->offset - tempPos;     
+		char *fetch = new char[tempFetch+1];
+		if( !fetch ) {
+			exit( 1 );
+		}
+		rval = REMOTE_syscall( CONDOR_lseekread, real_fd, tempPos, SEEK_SET, fetch, tempFetch );
+		if( rval != tempFetch ) {
+		        return -1;
+		}
+		if( tempRead <= tempFetch ) {
+		        strncpy( (char *) buf, fetch, tempRead );
+			tempB = ( char * ) buf;
+			tempB[tempRead] = '\0';
+		} else {
+		        char *temp = ( char * ) buf;
+		        strncpy( (char *) buf, fetch, tempFetch );
+			temp += tempFetch;
+			strncpy( temp, afterP->buf, tempRead-tempFetch );
+			tempB = ( char * ) buf;
+			tempB[tempRead] = '\0';
+		}
+		char *newbuf = new char[tempFetch+afterP->len+1];
+		if( !newbuf ) {
+			exit( 1 );
+		}
+		char *tempP = newbuf;
+		strncpy( newbuf, fetch, tempFetch );
+		tempP += tempFetch;
+		strncpy( tempP, afterP->buf, afterP->len );
+		newbuf[tempFetch+afterP->len] = '\0';
+		afterP->len += tempFetch;
+		afterP->offset = tempPos;
+		delete []fetch;
+		delete []afterP->buf;
+		afterP->buf = newbuf;
+		bufCount += tempFetch;
+
+		return tempRead;
+	}
+}
+
+//
+// This function handles a reading (fetching) from a buffer like 
+//     Fetch :        -----    or    -----    or    -----
+//     Buffer :  -----             -----        -----   -----
+// Merge the buffers
+//
+ssize_t
+OpenFileTable::OverlapR2( int user_fd, void *buf, int tempPos, int tempRead, int tempFetch, BufElem *prevP, BufElem *afterP )
+{
+        int rval;
+        int real_fd;
+	char *tempB;
+
+	if( prevP == NULL ) {
+	        return -1;
+	}
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+		return -1;
+	}                       
+                                                // case I & case II
+	if( !afterP || tempPos+tempFetch < afterP->offset ) {
+	    tempFetch -= prevP->offset + prevP->len - tempPos;
+
+	    char *fetch = new char[tempFetch+1];
+	    if( !fetch ) {
+		exit( 1 );
+	    }
+	    rval = REMOTE_syscall( CONDOR_lseekread, real_fd, prevP->offset + prevP->len, SEEK_SET, fetch, tempFetch );
+	    if( rval != tempFetch ) {
+	            return -1;
+	    }
+    	
+	    char *temp = prevP->buf + tempPos - prevP->offset;
+	    if( tempRead <= prevP->offset+prevP->len - tempPos ) {
+	        strncpy( (char *) buf, temp, tempRead );
+		tempB = ( char * ) buf;
+		tempB[tempRead] = '\0';
+	    } else {  
+	        char *tempP = (char *) buf;
+	        strncpy( (char *) buf, temp, prevP->offset + prevP->len - tempPos );
+		tempP += prevP->offset + prevP->len - tempPos;
+		strncpy( tempP, fetch, tempRead - prevP->offset - prevP->len + tempPos );
+		tempB = ( char * ) buf;
+		tempB[tempRead] = '\0';
+	    }
+
+	    char *newbuf = new char[tempFetch+prevP->len+1];
+	    if( !newbuf ) {
+       		exit( 1 );
+	    }
+	    char *tempP = newbuf;
+	    strncpy( newbuf, prevP->buf, prevP->len );
+	    tempP += prevP->len;
+	    strncpy( tempP, fetch, tempFetch ); 
+	    newbuf[tempFetch+prevP->len] = '\0';
+	    prevP->len += tempFetch;
+	    delete []fetch;
+	    delete []prevP->buf;
+	    prevP->buf = newbuf;
+	    prevP->next = afterP;
+	    bufCount += tempFetch;
+        } else {                                // case III
+	    tempFetch = afterP->offset - prevP->offset - prevP->len;
+
+	    char *fetch = new char[tempFetch+1];
+	    if( !fetch ) {
+		exit( 1 );
+	    }
+	    rval = REMOTE_syscall( CONDOR_lseekread, real_fd, prevP->offset + prevP->len, SEEK_SET, fetch, tempFetch );
+	    if( rval != tempFetch ) {
+	            return -1;
+	    }
+    	
+	    char *temp = prevP->buf + tempPos - prevP->offset;
+	    if( tempRead <= prevP->offset+prevP->len - tempPos ) {
+	        strncpy( (char *) buf, temp, tempRead );
+		tempB = ( char * ) buf;
+		tempB[tempRead] = '\0';
+	    } else if( tempRead <= afterP->offset - tempPos ) {
+	        char *tempP = ( char * ) buf; 
+	        strncpy( (char *) buf, temp, prevP->offset + prevP->len - tempPos );
+		tempP += prevP->offset + prevP->len - tempPos;
+		strncpy( tempP, fetch, tempRead - prevP->offset - prevP->len + tempPos );
+		tempB = ( char * ) buf;
+		tempB[tempRead] = '\0';
+	    } else {
+	        char *tempP = ( char * ) buf;
+	        strncpy( (char *) buf, temp, prevP->offset + prevP->len - tempPos );
+		tempP += prevP->offset + prevP->len - tempPos;
+		strncpy( tempP, fetch, tempFetch );
+		tempP += tempFetch;
+       		strncpy( tempP, afterP->buf, tempPos+tempRead-afterP->offset );
+		tempB = ( char * ) buf;
+		tempB[tempRead] = '\0';
+	    }
+
+	    char *newbuf = new char[afterP->offset+afterP->len-prevP->offset+1];
+	    if( !newbuf ) {
+		exit( 1 );
+	    }
+	    char *tempP = newbuf;
+	    strncpy( newbuf, prevP->buf, prevP->len );
+	    tempP += prevP->len;
+	    strncpy( tempP, fetch, tempFetch ); 
+	    tempP += tempFetch;
+	    strncpy( tempP, afterP->buf, afterP->len ); 
+	    newbuf[tempFetch+prevP->len+afterP->len] = '\0';
+	    prevP->len += tempFetch + afterP->len;
+	    delete []fetch;
+	    delete []prevP->buf;
+	    delete []afterP->buf;
+	    prevP->buf = newbuf;
+	    prevP->next = afterP->next;
+	    delete afterP;
+	    bufCount += tempFetch - (sizeof(BufElem)+1);	    
+	}
+	
+	return tempRead;
+}
+
+//
+// Prefetching for read-only files.
+//
+ssize_t 
+OpenFileTable::PreFetch( int user_fd, void *buf, size_t nbyte )
+{
+        int tempPos;
+	int tempSize;
+	int rval; 
+	char *tempB;
+	int real_fd;
+	int tempRead;
+	int tempFetch;
+	BufElem *prevP;
+	BufElem *afterP;
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+		return -1;
+	}                      
+
+	tempPos = file[user_fd].getOffset();
+	tempSize = file[user_fd].getSize();
+
+	tempRead = tempSize - tempPos;      // # of bytes need to transfer.
+	if( tempRead > nbyte ) {
+	    tempRead = nbyte;
+        }
+	if( tempRead > MAXBUF - (sizeof(BufElem)+1) ) { // if too large, read directly.
+	    rval = REMOTE_syscall( CONDOR_lseekread, real_fd, tempPos, SEEK_SET, buf, nbyte );
+	    return rval;
+	}
+
+	if( tempRead > PREFETCH ) {         // # of bytes to prefetch.
+	    tempFetch = tempRead;
+	} else if( tempSize - tempPos < PREFETCH ) {
+	    tempFetch = tempSize - tempPos;
+	} else {
+	    tempFetch = PREFETCH;
+	}
+	if( tempFetch + bufCount > MAXBUF - (sizeof(BufElem)+1) ) {
+	    FlushBuf();                     // if too full, flush the buffer.
+	}          	
+
+	if( !file[user_fd].firstBuf ) {     // bring the 1st buffer block.
+	        return InsertR( user_fd, buf, tempPos, tempRead, tempFetch, NULL, NULL );
+        }
+
+	prevP = NULL;
+	for( afterP=file[user_fd].firstBuf; afterP; afterP=afterP->next ) {
+	    if( tempPos < afterP->offset ) {
+	        if( tempPos+tempFetch-1 >= afterP->offset+afterP->len ) {
+		    BufElem *currP;
+		    while( 1 ) {
+		        currP = afterP->next;
+			afterP->next = NULL;
+			delete []afterP->buf;
+			bufCount -= (sizeof(BufElem)+1) + afterP->len;
+			delete afterP;
+			afterP = currP;
+			if( !currP ) {
+			    break;
+			}
+			if( tempPos+tempFetch-1 >= afterP->offset+afterP->len ) {
+			    ;               // keep erasing old buffers.
+			} else {
+			    return OverlapR1( user_fd, buf, tempPos, tempRead, tempFetch, prevP, afterP );
+			}
+		    }
+		    return InsertR( user_fd, buf, tempPos, tempRead, tempFetch, prevP, afterP );		    
+		} else {		  
+		    return OverlapR1( user_fd, buf, tempPos, tempRead, tempFetch, prevP, afterP );
+		}                           // cache hits.
+            } else if( tempPos+tempRead-1 < afterP->offset+afterP->len ) {
+	        char *tempP = afterP->buf + ( tempPos - afterP->offset );
+	        strncpy( (char *) buf, tempP, tempRead );
+		tempB = ( char * ) buf;
+		tempB[tempRead] = '\0';
+		return tempRead;
+	    } else if( tempPos > afterP->offset+afterP->len ) {
+	        prevP = afterP;             // go to next buffer block.
+	    } else {
+	        BufElem *currP;
+	        BufElem *saveP = afterP;
+		afterP = afterP->next;
+		while( 1 ) {
+		    currP = afterP;
+		    if( !currP ) {
+		        break;
+		    }
+		    afterP = afterP->next;
+		    if( tempPos+tempFetch >= currP->offset+currP->len ) {
+		        currP->next = NULL;
+			delete []currP->buf;
+			bufCount -= (sizeof(BufElem)+1) + currP->len;
+			delete currP;
+		    } else {
+		        return OverlapR2( user_fd, buf, tempPos, tempRead, tempFetch, saveP, currP );
+		    }
+		}
+		return OverlapR2( user_fd, buf, tempPos, tempRead, tempFetch, saveP, afterP );    
+	    }
+	}
+	return InsertR( user_fd, buf, tempPos, tempRead, tempFetch, prevP, afterP );
+}
+
+//
+// This function inserts a new write buffer block to the list. 
+//
+ssize_t
+OpenFileTable::InsertW( int user_fd, const void *buf, int tempPos, int len, BufElem *prevP, BufElem *afterP )
+{
+        int rval;
+        int real_fd;
+	BufElem *newBuf;
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+		return -1;
+	}                      
+	 
+	newBuf = new BufElem;
+	if( !newBuf ) {
+		exit( 1 );
+	}
+		
+	if( !prevP ) {
+	         newBuf->next = afterP;
+		 file[user_fd].firstBuf = newBuf;
+	} else {
+	         prevP->next = newBuf;
+		 newBuf->next = afterP;
+	}		  
+
+	newBuf->buf = new char[len+1];
+	if( !newBuf->buf ) {
+      		exit( 1 );
+	}
+	newBuf->offset = tempPos;
+	newBuf->len = len;
+	bufCount += (sizeof(BufElem)+1) + len;      
+	strncpy( newBuf->buf, ( char * ) buf, len );	    
+	newBuf->buf[len] = '\0';
+
+	return len;
+}
+
+//
+// This function handles a write to a buffer like 
+//     Write : -----        or -----       or -----
+//     Buffer :       -----         -----       -----
+// Merge in cases like  
+//     Write : -----        or -----    
+//     Buffer :     -----        -----
+//
+ssize_t
+OpenFileTable::OverlapW1( int user_fd, const void *buf, int tempPos, int len, BufElem *prevP, BufElem *afterP )
+{
+        int rval;
+        int real_fd;
+	int tempWrite;                          // from the old buffer.
+
+	if( afterP == NULL ) {
+	        return -1;
+	}
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+		return -1;
+	}                      
+
+	if( tempPos+len < afterP->offset ) {    // case I.
+	        return InsertW( user_fd, buf, tempPos, len, prevP, afterP );
+	} else {                                // case II & III.
+	        if( !prevP ) {
+		        file[user_fd].firstBuf = afterP;
+		} else {
+		        prevP->next = afterP;
+		}
+
+	        tempWrite = afterP->offset + afterP->len - tempPos - len;     
+	     
+		char *newbuf = new char[tempWrite+len+1];
+		if( !newbuf ) {
+			exit( 1 );
+		}
+		char *tempP = newbuf;
+		strncpy( newbuf, ( char * )buf, len );
+		tempP += len;
+		strncpy( tempP, afterP->buf+afterP->len-tempWrite, tempWrite );
+		newbuf[tempWrite+len] = '\0';
+		bufCount += afterP->offset - tempPos;
+		afterP->len = len + tempWrite;
+		afterP->offset = tempPos;
+		delete []afterP->buf;
+		afterP->buf = newbuf;
+
+		return len;
+	}
+}
+
+//
+// This function handles a write to a buffer like 
+//     Write :        -----    or    -----    or    -----
+//     Buffer :  -----             -----        -----   -----
+// Merge the buffers
+//
+ssize_t
+OpenFileTable::OverlapW2( int user_fd, const void *buf, int tempPos, int len, BufElem *prevP, BufElem *afterP )
+{
+        int rval;
+        int real_fd;
+	int tempWrite;                          // from old buffer.
+
+	if( prevP == NULL ) {
+	        return -1;
+	}
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+		return -1;
+	}                       
+                                                // case I & case II
+	if( !afterP || tempPos+len < afterP->offset ) {
+	    tempWrite = tempPos - prevP->offset;
+
+	    char *newbuf = new char[tempWrite+len+1];
+	    if( !newbuf ) {
+		exit( 1 );
+	    }
+	    char *tempP = newbuf;
+	    strncpy( newbuf, prevP->buf, tempWrite );
+	    tempP += tempWrite;
+	    strncpy( tempP, ( char * ) buf, len ); 
+	    newbuf[tempWrite+len] = '\0';
+	    bufCount += tempWrite + len  - prevP->len;
+	    prevP->len = tempWrite + len;
+	    delete []prevP->buf;
+	    prevP->buf = newbuf;
+	    prevP->next = afterP;
+        } else {                                // case III
+	    char *newbuf = new char[afterP->offset+afterP->len-prevP->offset+1];
+	    if( !newbuf ) {
+		exit( 1 );
+	    }
+	    char *tempP = newbuf;
+	    strncpy( newbuf, prevP->buf, tempPos-prevP->offset );
+	    tempP += tempPos-prevP->offset;
+	    strncpy( tempP, ( char * ) buf, len ); 
+	    tempP += len;
+	    tempWrite = afterP->offset + afterP->len - tempPos - len; 
+	    strncpy( tempP, afterP->buf+afterP->len-tempWrite, tempWrite ); 
+	    newbuf[afterP->offset+afterP->len-prevP->offset] = '\0';
+	    bufCount += afterP->offset - prevP->offset - prevP->len - (sizeof(BufElem)+1);      
+    	    prevP->len = afterP->offset+afterP->len-prevP->offset;
+	    delete []prevP->buf;
+	    delete []afterP->buf;
+	    prevP->buf = newbuf;
+	    prevP->next = afterP->next;
+	    delete afterP;
+	}
+	
+	return len;
+}
+
+//
+// Buffering for write-only files.
+//
+ssize_t
+OpenFileTable::Buffer( int user_fd, const void *buf, size_t len )
+{
+        int tempPos;
+	int rval;
+	int real_fd;
+	BufElem *prevP;
+	BufElem *afterP;
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+                return -1;
+        }
+                                            
+        tempPos = file[user_fd].getOffset();
+        
+	if( len > MAXBUF - (sizeof(BufElem)+1) ) {           // if too large, write directly
+	    rval = REMOTE_syscall( CONDOR_lseekwrite, real_fd, tempPos, SEEK_SET, buf, len );
+	    return rval;
+	}
+
+	if( len + bufCount > MAXBUF - (sizeof(BufElem)+1) ) {
+	     FlushBuf();                    // if too full, flush the buffer.
+	}
+
+	if( !file[user_fd].firstBuf ) {     // write the 1st buffer block.
+	    return InsertW( user_fd, buf, tempPos, len, NULL, NULL ); 
+	}
+
+	prevP = NULL;
+	for( afterP=file[user_fd].firstBuf; afterP; afterP=afterP->next ) {
+	    if( tempPos < afterP->offset ) {
+	        if( tempPos+len-1 >= afterP->offset+afterP->len ) {
+		    BufElem *currP;
+		    while( 1 ) {
+		        currP = afterP->next;
+			afterP->next = NULL;
+			delete []afterP->buf;
+			bufCount -= (sizeof(BufElem)+1) + afterP->len;
+			delete afterP;
+			afterP = currP;
+			if( !currP ) {
+			    break;
+			}
+			if( tempPos+len-1 >= afterP->offset+afterP->len ) {
+			    ;               // keep erasing old buffers.
+			} else {
+			    return OverlapW1( user_fd, buf, tempPos, len, prevP, afterP );
+			}
+		    }
+		    return InsertW( user_fd, buf, tempPos, len, prevP, afterP );
+		} else {
+		    return OverlapW1( user_fd, buf, tempPos, len, prevP, afterP ); 
+	        }                           // cache hits.
+	    } else if( tempPos+len-1 < afterP->offset+afterP->len ) {	      
+	        char *tempP = afterP->buf + ( tempPos - afterP->offset );
+		strncpy( tempP, (char *) buf, len );
+		return len;
+	    } else if( tempPos > afterP->offset+afterP->len ) {
+	        prevP = afterP;             // go to the next buffer block.
+	    } else {
+	        BufElem *currP;
+		BufElem *saveP = afterP;
+		afterP = afterP->next;
+		while( 1 ) {
+		    currP = afterP;
+		    if( !currP ) {
+		        break;
+		    }
+		    afterP = afterP->next;
+		    if( tempPos+len >= currP->offset+currP->len ) {
+		        currP->next = NULL;
+			delete []currP->buf;
+			bufCount -= (sizeof(BufElem)+1) + currP->len;
+			delete currP;
+		    } else {
+		        return OverlapW2( user_fd, buf, tempPos, len, saveP, currP );
+		    }
+		}
+		return OverlapW2( user_fd, buf, tempPos, len, saveP, afterP );
+	    }
+	}
+	return InsertW( user_fd, buf, tempPos, len, prevP, afterP );       
+}
+
+//
+// Buffers for both RDONLY and WRONLY (flushed first) files are released.
+//
+void 
+OpenFileTable::FlushBuf()
+{
+        int real_fd;
+	int rval;
+        BufElem *tempBuf;
+
+        for( int i=0; i<MaxOpenFiles; i++ ) {
+	    if( file[i].firstBuf ) {
+		if( file[i].isReadable() && !file[i].isWriteable() ) {
+		    while( file[i].firstBuf ) {
+			tempBuf = file[i].firstBuf;
+			file[i].firstBuf = tempBuf->next;
+			tempBuf->next = NULL;
+			delete tempBuf;
+		    }
+		} else if( file[i].isWriteable && ! file[i].isReadable() ) {
+		    while( file[i].firstBuf ) {
+		        tempBuf = file[i].firstBuf;
+			file[i].firstBuf = tempBuf->next;
+			tempBuf->next = NULL;
+			if( ( real_fd=MapFd( i ) ) < 0 ) {
+			    exit( 1 );  
+			}
+			rval = REMOTE_syscall( CONDOR_lseekwrite, real_fd, tempBuf->offset, SEEK_SET, tempBuf->buf, tempBuf->len );
+			if( rval != tempBuf->len ) {
+			        exit( 1 );
+			}
+			delete tempBuf;
+		    }
+		} else {
+		    exit( 1 ) ; 
+		}
+	    }
+	}
+	bufCount = 0;                       // buffer is empty now.
+}
+
+//
+// Display the buffers for both RDONLY and WRONLY files.
+// For debugging purposes only.
+//
+void 
+OpenFileTable::DisplayBuf()
+{
+        int real_fd;
+	int rval;
+        BufElem *tempBuf;
+
+	printf( "%s%d\n", "Total occupied buffer space is : ", bufCount );
+
+        for( int i=0; i<MaxOpenFiles; i++ ) {
+	    if( tempBuf = file[i].firstBuf ) {
+	        if( file[i].isReadable() && !file[i].isWriteable() ) {
+		    printf( "%s%d%s\n", "\nRDONLY file ", i, " : " );
+		} else if( file[i].isWriteable && ! file[i].isReadable() ) {
+		    printf( "%s%d%s\n", "\nWRONLY file ", i, " : " );
+		} else {
+		    exit( 1 ) ; 
+		}
+		
+		int j = 1;
+		for( ; tempBuf; tempBuf=tempBuf->next ) {
+		    printf( "%s%d\n", "    Buffer ", j );
+		    printf( "%s%d\n", "        offset : ", tempBuf->offset );
+		    printf( "%s%d\n", "        length : ", tempBuf->len );
+		    printf( "%s%s\n", "        contents : ", tempBuf->buf );
+		    j++;
+		}
+	    }
+	}
+}
 
 /*
   Given a string, create and return a pointer to a copy of it.  We use
@@ -733,6 +1436,240 @@ shorten( char *path )
 
 extern "C" {
 
+#if defined( BufferCondorIO )
+
+#if defined( SYS_lseek )
+
+off_t
+lseek( int user_fd, off_t offset, int whence )
+{
+  
+        int real_fd;
+	off_t temp;
+
+	errno = 0;
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+	        errno = EBADF;
+                return (off_t)-1;
+        }
+
+	if( whence == SEEK_SET ) {
+             	if( offset < 0 ) {
+		        errno = EINVAL;
+			return (off_t)-1;
+		} else {
+		        FileTab->SetOffset( user_fd, offset );
+			return offset;
+		}
+	} else if( whence == SEEK_CUR ) {
+	        temp = FileTab->GetOffset( user_fd )+offset;
+		if( temp < 0 )  {
+		        errno = EINVAL;
+		        return (off_t)-1;
+		} else {
+		        FileTab->SetOffset( user_fd, temp );
+			return temp;
+		}
+	} else if( whence == SEEK_END ) {
+	        temp = FileTab->GetSize( user_fd )+offset;
+		if( temp < 0 ) {
+		        errno = EINVAL;
+		        return (off_t)-1;
+		} else {
+		        FileTab->SetOffset( user_fd, temp );
+			return temp;		       
+		}
+	} else {
+		errno = EINVAL;
+		return (off_t)-1;
+	}       	
+}
+
+#if defined( SYS_read )
+
+ssize_t
+read( int user_fd, void *buf, size_t nbyte )
+{
+        int rval;
+        int real_fd;
+	off_t tempPos, tempSize;
+	int use_local_access = FALSE;
+
+	errno = 0;
+
+	if( !FileTab->IsReadable( user_fd ) ) {
+	        errno = EBADF;
+		return (ssize_t)-1;
+	}
+
+        if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+                errno = EBADF;
+                return (ssize_t)-1;
+        } else if( ( int ) nbyte < 0 ) {
+	        errno = EINVAL;
+		return (ssize_t)-1;
+	} else if ( nbyte == 0 ) {
+	        return (ssize_t) 0;
+	}
+
+	if( FileTab->IsLocalAccess( user_fd ) ) {
+		use_local_access = TRUE;
+	}
+
+	tempPos = FileTab->GetOffset( user_fd );
+	tempSize = FileTab->GetSize( user_fd );
+
+	if( LocalSysCalls() || use_local_access ) {
+	        if( tempSize == 0 ) {
+		        rval = syscall( SYS_lseek, real_fd, tempPos, SEEK_SET );
+			if( rval < 0 && user_fd != 14 ) {
+			        return (ssize_t)-1;
+			}
+			rval = syscall( SYS_read, real_fd, buf, nbyte );
+			return rval;
+		}
+
+		if( tempPos >= tempSize ) {	     
+		        return (ssize_t)0;
+		} else if( tempPos+nbyte < tempSize ) {
+		        rval = syscall( SYS_lseek, real_fd, tempPos, SEEK_SET );
+			if( rval < 0 ) {
+			        return (ssize_t)-1;
+			}
+			FileTab->SetOffset( user_fd, tempPos+nbyte );
+			rval = syscall( SYS_read, real_fd, buf, nbyte );
+			if( rval != nbyte ) {
+			        return -1;
+			}
+		} else {
+		        rval = syscall( SYS_lseek, real_fd, tempPos, SEEK_SET );
+			if( rval < 0 ) {
+			        return (ssize_t)-1;
+			}
+			FileTab->SetOffset( user_fd, tempSize );
+			rval = syscall( SYS_read, real_fd, buf, nbyte );
+			if( rval != tempSize - tempPos ) {
+			        return -1;
+			}
+		}
+	} else {
+	        if( tempSize == 0 ) {
+		        rval = REMOTE_syscall( CONDOR_lseekread, real_fd, tempPos, SEEK_SET, buf, nbyte );
+			return rval;
+		}
+
+		if( tempPos >= tempSize ) {	     
+		        return (ssize_t)0;
+		} else if( tempPos+nbyte < tempSize ) {
+		        if( !FileTab->IsWriteable( user_fd ) ) {
+			 	rval = FileTab->PreFetch( user_fd, buf, nbyte );
+			} else {
+			        rval = REMOTE_syscall( CONDOR_lseekread, real_fd, tempPos, SEEK_SET, buf, nbyte );
+		        }
+			if( rval > 0 ) {
+			        FileTab->SetOffset( user_fd, tempPos+nbyte );
+			}
+			if( rval != nbyte ) {
+			        return -1;
+			}
+		} else {
+		        if( !FileTab->IsWriteable( user_fd ) ) {
+				rval = FileTab->PreFetch( user_fd, buf, nbyte );
+			} else { 
+			        rval = REMOTE_syscall( CONDOR_lseekread, real_fd, tempPos, SEEK_SET, buf, nbyte );
+		        }
+			if( rval > 0 ) {
+			        FileTab->SetOffset( user_fd, tempSize );
+			}
+			if( rval != tempSize - tempPos ) {
+			        return -1;
+			}
+		}
+	}
+	
+	return rval;
+}
+
+#endif
+
+
+#if defined( SYS_write )
+
+ssize_t
+write( int user_fd, const void *buf, size_t len )
+{
+        int rval;
+        int real_fd;
+	off_t tempPos, tempSize;
+	int use_local_access = FALSE;
+
+	errno = 0;
+        
+	if( !FileTab->IsWriteable( user_fd ) ) {
+	        errno = EBADF;
+		return (ssize_t)-1;
+	}
+
+	if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
+                errno = EBADF;
+                return (ssize_t)-1;
+        } else if( ( int ) len < 0 ) {
+	        errno = EINVAL;
+		return (ssize_t)-1;
+	} else if ( len == 0 ) {
+	        return (ssize_t) 0;
+	}
+
+	if( FileTab->IsLocalAccess( user_fd ) ) {
+		use_local_access = TRUE;
+	}
+
+	tempPos = FileTab->GetOffset( user_fd );
+	tempSize = FileTab->GetSize( user_fd );
+
+	if( LocalSysCalls() || use_local_access ) {
+	        rval = syscall( SYS_lseek, real_fd, tempPos, SEEK_SET );
+		if( rval < 0 ) {
+		        return (ssize_t)-1;
+		}
+		rval = syscall( SYS_write, real_fd, buf, len );
+		if( rval != len ) {
+		        return -1;
+		}
+		if( rval > 0 ) {
+			FileTab->SetOffset( user_fd, tempPos+len );
+			if( tempPos+len < tempSize ) {
+                                ;
+		        } else {
+				FileTab->SetSize( user_fd, tempPos+len );
+	        	}
+                }
+	} else {
+	        if( !FileTab->IsReadable( user_fd ) ) {
+		        rval = FileTab->Buffer( user_fd, buf, len );
+		} else {
+		        rval = REMOTE_syscall( CONDOR_lseekwrite, real_fd, tempPos, SEEK_SET, buf, len );
+		}
+                if( rval != len ) {
+		        return -1;
+		}
+		if( rval > 0 ) {
+			FileTab->SetOffset( user_fd, tempPos+len );
+			if( tempPos+len < tempSize ) {
+                                ;
+		        } else {
+				FileTab->SetSize( user_fd, tempPos+len );
+	        	}
+                }
+        }
+
+	return rval;
+}
+
+#endif
+
+#endif
 
 #if defined( SYS_open )
 
@@ -1149,5 +2086,7 @@ fcntl(int fd, int cmd, ...)
 	}
 }
 #endif
+
+#endif // #if defined( BufferCondorIO )
 
 } // end of extern "C"
