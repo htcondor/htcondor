@@ -124,6 +124,12 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 
     ResourceList[ResourceList.getlast()+1] = rr;
 
+		// now, we want to re-initialize the shadow_user_policy object
+		// with the ClassAd for our master node, since the one sitting
+		// in the Shadow object itself will never get updated with
+		// exit status, info about the run, etc, etc.
+	shadow_user_policy.init( temp, this );
+
 		/*
 		  Finally, register a timer to call getResources(), which
 		  sends a command to the schedd to get all the job classads,
