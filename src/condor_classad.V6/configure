@@ -22,9 +22,10 @@ print_usage()
 	cat <<EOF
 Use: configure [options]
 Where options are:
- --prefix  <dir>  The directory in which to install $project
- --enable-shlib   Allow user functions in shared libraries.
- --help           Show this message         
+ --prefix  <dir>     The directory in which to install $project
+ --enable-shlib      Allow user functions in shared libraries.
+ --enable-namespace  Use the classad namespace
+ --help              Show this message         
 Use configure.rerun to rerun configure with previously saved arguments.
 EOF
 	return
@@ -35,6 +36,7 @@ hold_arguments "$@"
 project="ClassAds"
 install_dir="/usr/local"
 enable_shlib=0
+enable_namespace=0
 
 while [ $# -gt 0 ]
 do
@@ -46,6 +48,10 @@ do
 		--enable-shlib)
 			shift
 			enable_shlib=1
+			;;
+		--enable-namespace)
+			shift
+			enable_namespace=1
 			;;
 		-h | -help | --h | --help)
 			print_usage
@@ -74,6 +80,11 @@ if [ ${enable_shlib} = 1 ]
 then
 echo "EXTRA_LD_FLAGS = -Xlinker --export-dynamic -ldl" >> Makefile.config
 echo "all:: shared" >> Makefile.config
+fi
+
+if [ ${enable_namespace} = 1 ]
+then
+echo "EXTRA_C_PLUS_FLAGS = -DWANT_NAMESPACES" >> Makefile.config
 fi
 
 echo "Creating classad_features.h..."
