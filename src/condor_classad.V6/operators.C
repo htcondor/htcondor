@@ -1,6 +1,5 @@
 #include "condor_common.h"
 #include "operators.h"
-#include "caseSensitivity.h"
 
 static char *_FileName_ = __FILE__;
 
@@ -100,7 +99,7 @@ _copy( CopyMode cm )
 }
 
 void Operation::
-setParentScope( ClassAd* parent ) 
+_setParentScope( ClassAd* parent ) 
 {
 	if( child1 ) child1->setParentScope( parent );
 	if( child2 ) child2->setParentScope( parent );
@@ -189,29 +188,15 @@ toSink (Sink &s)
 void Operation::
 operate (OpKind op, Value &op1, Value &op2, Value &result)
 {
-	Value dummy, v1, v2;
-	/*
-		make (deep) copies so that op1,op2 don't become UNDEFINED
-		due to HANDOVER copies made during evaluation
-	*/	
-	v1.copyFrom( op1 );
-	v2.copyFrom( op2 );
-	_doOperation(op, v1, v2, dummy, true, true, false, result);
+	Value dummy;
+	_doOperation(op, op1, op2, dummy, true, true, false, result);
 }
 
 
 void Operation::
 operate (OpKind op, Value &op1, Value &op2, Value &op3, Value &result)
 {
-	Value v1, v2, v3;
-	/*
-		make (deep) copies so that op1,op2,op3 don't become UNDEFINED
-		due to HANDOVER copies made during evaluation
-	*/	
-	v1.copyFrom( op1 );
-	v2.copyFrom( op2 );
-	v3.copyFrom( op3 );
-	_doOperation(op, v1, v2, v3, true, true, true, result);
+	_doOperation(op, op1, op2, op3, true, true, true, result);
 }
 
 
@@ -228,7 +213,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 
 	// take care of the easy cases
 	if (op == __NO_OP__ || op == PARENTHESES_OP) {
-		result.copyFrom( val1, VALUE_HANDOVER );
+		result.copyFrom( val1 );
 		return SIG_LEFT;
 	} else if (op == UNARY_PLUS_OP) {
 		if (vt1 == BOOLEAN_VALUE || vt1 == STRING_VALUE || 
@@ -236,7 +221,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			result.setErrorValue();
 		} else {
 			// applies for ERROR, UNDEFINED and numbers
-			result.copyFrom( val1, VALUE_HANDOVER );
+			result.copyFrom( val1 );
 		}
 		return SIG_LEFT;
 	}
@@ -265,7 +250,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		}
 		if( valid2 && vt2==UNDEFINED_VALUE ) {
 			result.setUndefinedValue();
-			return SIG_MIDDLE;
+			return( !valid3 ? SIG_RIGHT :  SIG_MIDDLE );
 		}
 		if( valid3 && vt3==UNDEFINED_VALUE ) {
 			result.setUndefinedValue();
@@ -311,14 +296,12 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		}
 
 		if( val1.isBooleanValue(b) && b ) {
-			result.copyFrom(val2, VALUE_HANDOVER );
+			result.copyFrom(val2 );
 			return( SIG_LEFT | SIG_MIDDLE );
 		} else {
-			result.copyFrom(val3, VALUE_HANDOVER );
+			result.copyFrom(val3 );
 			return( SIG_LEFT | SIG_RIGHT );
 		}
-
-		return SIG_NONE;
 	} else if( op == SUBSCRIPT_OP ) {
 		int			index;
 		ExprTree	*tree;
@@ -348,10 +331,13 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 
 		if( es ) {
 			// if an EvalState has been provided, use it
-			tree->evaluate( *es, result );
+			if( !tree->evaluate( *es, result ) ) {
+				result.setErrorValue( );
+				return( SIG_NONE );
+			}
 		} else {
-			// invoke as external evaluation (more expensive)
-			tree->evaluate( result );
+			// this needs to be changed
+			result.setUndefinedValue( );
 		}
 
 		return( SIG_LEFT | SIG_RIGHT );
@@ -363,29 +349,49 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 }
 
 
-void Operation::
+bool Operation::
 _evaluate (EvalState &state, Value &result)
 {
 	Value	val1, val2, val3;
 	bool	valid1, valid2, valid3;
+	int		rval;
 
 	valid1 = false;
 	valid2 = false;
 	valid3 = false;
 
 	// evaluate all valid children
-	if (child1) { child1->evaluate (state, val1); valid1 = true; }
-	if (child2) { child2->evaluate (state, val2); valid2 = true; }
-	if (child3) { child3->evaluate (state, val3); valid3 = true; }
+	if (child1) { 
+		if( !child1->evaluate (state, val1) ) {
+			result.setErrorValue( );
+			return( false );
+		}
+		valid1 = true;
+	}
 
-	_doOperation (operation, val1, val2, val3, valid1, valid2, valid3, result, 
-		&state );
+	if (child2) {
+		if( !child2->evaluate (state, val2) ) {
+			result.setErrorValue( );
+			return( false );
+		}
+		valid2 = true;
+	}
+	if (child3) {
+		if( !child3->evaluate (state, val3) ) {
+			result.setErrorValue( );
+			return( false );
+		}
+		valid3 = true;
+	}
 
-	return;
+	rval = _doOperation (operation, val1, val2, val3, valid1, valid2, valid3,
+				result, &state );
+
+	return( rval != SIG_NONE );
 }
 
 
-void Operation::
+bool Operation::
 _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 {
 	int			sig;
@@ -394,9 +400,29 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 	bool		valid1=false, valid2=false, valid3=false;
 
 	// evaluate all valid children
-	if (child1) { child1->evaluate( state, val1, tl ); valid1 = true; }
-	if (child2) { child2->evaluate( state, val2, tr ); valid2 = true; }
-	if (child3) { child3->evaluate( state, val3, tm ); valid3 = true; }
+	tree = NULL;
+	if (child1) { 
+		if( !child1->evaluate (state, val1) ) {
+			result.setErrorValue( );
+			return( false );
+		}
+		valid1 = true;
+	}
+
+	if (child2) {
+		if( !child2->evaluate (state, val2) ) {
+			result.setErrorValue( );
+			return( false );
+		}
+		valid2 = true;
+	}
+	if (child3) {
+		if( !child3->evaluate (state, val3) ) {
+			result.setErrorValue( );
+			return( false );
+		}
+		valid3 = true;
+	}
 
 	// do evaluation
 	sig = _doOperation( operation,val1,val2,val3,valid1,valid2,valid3,result,
@@ -407,12 +433,19 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 	if( valid2 && !( sig & SIG_RIGHT ))	{ delete tr; tr = NULL; }
 	if( valid3 && !( sig & SIG_MIDDLE )){ delete tm; tm = NULL; }
 
+	if( sig == SIG_NONE ) {
+		result.setErrorValue( );
+		tree = NULL;
+		return( false );
+	}
+
 	// in case of strict operators, if a subexpression is significant and the
 	// corresponding value is UNDEFINED or ERROR, propagate only that tree
 	if( isStrictOperator( operation ) ) {
-		// strict unary operators:  unary -, unary +, !, ~
+		// strict unary operators:  unary -, unary +, !, ~, ()
 		if( operation == UNARY_MINUS_OP || operation == UNARY_PLUS_OP ||
-		  	operation == LOGICAL_NOT_OP || operation == BITWISE_NOT_OP ) {
+		  	operation == LOGICAL_NOT_OP || operation == BITWISE_NOT_OP ||
+			operation == PARENTHESES_OP ) {
 			if( val1.isExceptional() ) {
 				// the operator is only propagating the value;  only the
 				// subexpression is significant
@@ -422,23 +455,23 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 				// significant
 				tree = makeOperation( operation, tl );
 			}
-			return;	
+			return( true );	
 		} else {
 			// strict binary operators
 			if( val1.isExceptional() || val2.isExceptional() ) {
 				// exceptional values are only being propagated
 				if( sig & SIG_LEFT ) {
 					tree = tl;
-					return;
+					return( true );
 				} else if( sig & SIG_RIGHT ) {
 					tree = tr;
-					return;
+					return( true );
 				} 
 				EXCEPT( "Should not reach here" );
 			} else {
 				// the node is also significant
 				tree = makeOperation( operation, tl, tr );
-				return;
+				return( true );
 			}
 		}
 	} else {
@@ -446,19 +479,19 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 		if( operation == IS_OP || operation == ISNT_OP ) {
 			// the operation is *always* significant for IS and ISNT
 			tree = makeOperation( operation, tl, tr );
-			return;
+			return( true );
 		}
 		// other non-strict binary operators
 		if( operation == LOGICAL_AND_OP || operation == LOGICAL_OR_OP ) {
 			if( ( sig & SIG_LEFT ) && ( sig & SIG_RIGHT ) ) {
 				tree = makeOperation( operation, tl, tr );
-				return;
+				return( true );
 			} else if( sig & SIG_LEFT ) {
 				tree = tl;
-				return;
+				return( true );
 			} else if( sig & SIG_RIGHT ) {
 				tree = tr;
-				return;
+				return( true );
 			} else {
 				EXCEPT( "Shouldn't reach here" );
 			}
@@ -473,17 +506,19 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 			// "true" consequent taken
 			if( sig & SIG_MIDDLE ) {
 				tree = makeOperation( TERNARY_OP, tl, tm, tree );
-				return;
+				return( true );
 			} else if( sig & SIG_RIGHT ) {
 				tree = makeOperation( TERNARY_OP, tl, tree, tr );
-				return;
+				return( true );
 			}
 			// neither consequent; selector was exceptional; return ( s )
 			tree = tl;
-			return;
+			return( true );
 		}
-		EXCEPT( "Should not reach here" );
 	}
+
+	EXCEPT( "Should not reach here" );
+	return( false );
 }
 
 
@@ -589,12 +624,12 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 	} else if( !tree1 && (tree2 && op2 == __NO_OP__ ) ) {
 		// leftson is a value, rightson is a tree
 		tree = tree2;
-		val.copyFrom( val1, VALUE_HANDOVER );
+		val.copyFrom( val1 );
 		return true;
 	} else if( !tree2 && (tree1 && op1 == __NO_OP__ ) ) {
 		// rightson is a value, leftson is a tree
 		tree = tree1;
-		val.copyFrom( val2, VALUE_HANDOVER );
+		val.copyFrom( val2 );
 		return true;
 	} else if( ( tree1 && op1 == __NO_OP__ ) && ( tree2 && op2 == __NO_OP__ ) ){
 		// left and rightsons are trees only
@@ -668,7 +703,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 				return false;
 			}
 			newOp->setOperation( op, tree1, tree2 );
-			val.copyFrom( val1, VALUE_HANDOVER );
+			val.copyFrom( val1 );
 			return true;
 		}
 	} else if( op == op2 ) {
@@ -686,7 +721,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 				return false;
 			}
 			newOp->setOperation( op, tree1, tree2 );
-			val.copyFrom( val2, VALUE_HANDOVER );
+			val.copyFrom( val2 );
 			return true;
 		}
 	}
@@ -700,7 +735,8 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 int Operation::
 doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	ValueType vt1, vt2, coerceResult;
+	ValueType 	vt1, vt2, coerceResult;
+	bool		exact = false;	
 
 	// do numerical type promotions --- other types/values are unchanged
 	coerceResult = coerceToNumber(v1, v2);
@@ -720,7 +756,8 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return( SIG_LEFT | SIG_RIGHT );
 		}
 
-		// if not the above cases, =?= is just like ==
+		// if not the above cases, =?= is just like == ; but remember =?=
+		exact = true;
 		op = EQUAL_OP;
 	}
 	// perform comparison for =!= ; negation of =?=
@@ -737,7 +774,8 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return( SIG_LEFT | SIG_RIGHT );
 		}
 
-		// if not the above cases, =!= is just like !=
+		// if not the above cases, =!= is just like !=; but remember =?=
+		exact = true;
 		op = NOT_EQUAL_OP;
 	}
 
@@ -751,7 +789,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 				result.setErrorValue();
 				return( SIG_LEFT | SIG_RIGHT );
 			}
-			compareStrings (op, v1, v2, result);
+			compareStrings (op, v1, v2, result, exact);
 			return( SIG_LEFT | SIG_RIGHT );
 
 		case INTEGER_VALUE:
@@ -933,8 +971,8 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 		return( SIG_LEFT | SIG_RIGHT );
 	}
 
-	// done
-	return SIG_NONE;
+	EXCEPT( "Shouldn't reach here" );
+	return( SIG_NONE );
 }
 
 
@@ -1071,7 +1109,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 void Operation::
-compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
+compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 {
 	char *s1, *s2;
 	int  cmp;
@@ -1080,7 +1118,11 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
 	v2.isStringValue (s2);
 
 	result.setBooleanValue( false );
-	cmp = CLASSAD_STR_VALUES_STRCMP (s1, s2);
+	if( exact ) {
+		cmp = strcmp( s1, s2 );
+	} else {
+		cmp = strcasecmp( s1, s2 );
+	}
 	if (cmp < 0) {
 		// s1 < s2
 		if (op == LESS_THAN_OP 		|| 

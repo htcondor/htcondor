@@ -5,33 +5,70 @@
 
 class Sink;
 
+/** Represents a node of the expression tree which is an operation applied to
+	expression operands
+*/
 class Operation : public ExprTree
 {
   	public:
-		// ctors/dtor
+		/// Constructor
 		Operation ();
+
+		/// Destructor
 		~Operation ();
 
-		// override methods
+        /** Sends the function call object to a Sink.
+            @param s The Sink object.
+            @return false if the expression could not be successfully
+                unparsed into the sink.
+            @see Sink
+        */
 		virtual bool toSink (Sink &);
-		virtual void setParentScope( ClassAd* );
 
-		// specific methods (allow for unary, binary and ternary ops) 
+		/** Sets the type and children of the expression node.
+			@param kind The kind of operation.
+			@param e1 The first sub-expression child of the node.
+			@param e2 The second sub-expression child of the node (if any).
+			@param e3 The third sub-expression child of the node (if any).
+		*/
 		void setOperation (OpKind, ExprTree* = NULL, ExprTree* = NULL,
 				ExprTree* = NULL);
 
-		// table of string representations of operators; indexed by OpKind
+		/// table of string representations of operators; indexed by OpKind
 		static char *opString[];
 
 		// public access to operation function
-		static void operate (OpKind, Value &, Value &, Value &);
-		static void operate (OpKind, Value &, Value &, Value &, Value &);
+		/** Convenience method which operates on binary operators.
+			@param op The kind of operation.
+			@param op1 The first operand.
+			@param op2 The second operand.
+			@param result The result of the operation.
+			@see OpKind, Value
+		*/
+		static void operate (OpKind op, Value &op1, Value &op2, Value &result);
+
+		/** Convenience method which operates on ternary operators.
+			@param op The kind of operation.
+			@param op1 The first operand.
+			@param op2 The second operand.
+			@param op3 The third operand.
+			@param result The result of the operation.
+			@see OpKind, Value
+		*/
+		static void operate (OpKind op, Value &op1, Value &op2, Value &op3, 
+			Value &result);
+
+		/** Predicate which tests if an operator is strict.
+			@param op The operator to be tested.
+			@return true if the operator is strict, false otherwise.
+		*/
 		static bool isStrictOperator( OpKind );
 
   	private:
 		virtual ExprTree* _copy( CopyMode );
-		virtual void _evaluate( EvalState &, Value &);
-		virtual void _evaluate( EvalState &, Value &, ExprTree*& );
+		virtual void _setParentScope( ClassAd* );
+		virtual bool _evaluate( EvalState &, Value &);
+		virtual bool _evaluate( EvalState &, Value &, ExprTree*& );
 		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 
 		// auxillary functionms
@@ -55,7 +92,7 @@ class Operation : public ExprTree
 		static int doLogical 	(OpKind, Value&, Value&, Value&);
 		static int doBitwise 	(OpKind, Value&, Value&, Value&); 
 		static int doRealArithmetic(OpKind,Value&, Value&, Value&);
-		static void compareStrings(OpKind, Value&, Value&, Value&);
+		static void compareStrings(OpKind, Value&, Value&, Value&, bool);
 		static void compareReals(OpKind, Value&, Value&, Value&);
 		static void compareIntegers(OpKind, Value&, Value&, Value&);
 
