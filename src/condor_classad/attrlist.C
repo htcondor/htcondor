@@ -786,7 +786,7 @@ int AttrList::InsertOrUpdate(char* attr)
 // Delete an expression with the name "name" from this AttrList. Return TRUE if
 // successful; FALSE if the expression can not be found.
 ////////////////////////////////////////////////////////////////////////////////
-int AttrList::Delete(char* name)
+int AttrList::Delete(const char* name)
 {
     AttrListElem*	prev = exprList;
     AttrListElem*	cur = exprList;
