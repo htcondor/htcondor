@@ -502,6 +502,19 @@ in Explorer, choose Quickview, and look under ``Import List''.
 
 \index{job!exiting!status 128 \(NT\)|)}
 
+\subsection{Why does the startd crash on CondorNT with the error\\
+"caInsert: Can't insert CpuBusy into target classad."?}
+
+\index{decimal point!problems with}
+This is a common problem with European installations on Windows.
+The problem is Condor expects all decimal points to be the
+period character (.),
+but the Windows locale defines them as the comma character(,).
+This will be fixed in the next version of Condor for NT,
+however we have users who have fixed the problem by 
+changing the following registry value to a period instead of a comma:
+\verb@HKEY_USERS\.DEFAULT\Control Panel\International\sDecimal@
+
 \subsection{How can I access network files with Condor on NT?}
 
 Features to allow Condor NT to work well with a network file server are 
