@@ -35,7 +35,8 @@ class ExprTree;
 class ExprList;
 class FunctionCall;
 
-/// The parser object
+/// This reads %ClassAd strings from various sources and converts them into a ClassAd.
+/// It can read from C++ strings, C strings, FILEs, and streams.
 class ClassAdParser
 {
 	public:

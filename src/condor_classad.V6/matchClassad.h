@@ -28,36 +28,36 @@
 
 BEGIN_NAMESPACE( classad )
 
-/** Special case of a ClassAd which sets up the scope names for bilateral 
-  	matching.  The top-level scope is defined as follows:
+/** Special case of a ClassAd which make it easy to do matching.  
+    The top-level ClassAd is defined as follows:
 	<pre>
-|   [
-|      symmetricMatch   = leftMatchesRight && rightMatchesLeft;
-|      leftMatchesRight = adcr.ad.requirements;
-|      rightMatchesLeft = adcl.ad.requirements;
-|      leftRankValue    = adcl.ad.rank;
-|      rightRankValue   = adcr.ad.rank;
-|      adcl             =
-|          [
-|              other    = adcr.ad;
-|              my       = ad;       // for condor backwards compatibility
-|              target   = other;    // for condor backwards compatibility
-|              ad       = 
-|                 [
-|                     // the ``left'' match candidate goes here
-|                 ]
-|   	   ];
-|      adcr             =
-|          [
-|              other    = adcl.ad;
-|              my       = ad;       // for condor backwards compatibility
-|              target   = other;    // for condor backwards compatibility
-|              ad       = 
-|                 [
-|                     // the ``right'' match candidate goes here
-|                 ]
-|   	   ];
-|   ]
+    [
+       symmetricMatch   = leftMatchesRight && rightMatchesLeft;
+       leftMatchesRight = adcr.ad.requirements;
+       rightMatchesLeft = adcl.ad.requirements;
+       leftRankValue    = adcl.ad.rank;
+       rightRankValue   = adcr.ad.rank;
+       adcl             =
+           [
+               other    = adcr.ad;
+               my       = ad;       // for condor backwards compatibility
+               target   = other;    // for condor backwards compatibility
+               ad       = 
+                  [
+                      // the ``left'' match candidate goes here
+                  ]
+    	   ];
+       adcr             =
+           [
+               other    = adcl.ad;
+               my       = ad;       // for condor backwards compatibility
+               target   = other;    // for condor backwards compatibility
+               ad       = 
+                  [
+                      // the ``right'' match candidate goes here
+                  ]
+    	   ];
+    ]
 	</pre>
 */
 class MatchClassAd : public ClassAd

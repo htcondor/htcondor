@@ -428,7 +428,7 @@ initFromStream(Stream& s)
 
 		// output functions
 int	ClassAd::
-fPrint( FILE *f )
+fPrint( FILE *file )
 {
 	ClassAdUnParser unp;
 	unp.SetOldClassAd( true );

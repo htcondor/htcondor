@@ -50,7 +50,7 @@ typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
 void ClassAdLibraryVersion(std::string &version_string);
 
-/// An internal node of an expression which represents a ClassAd. 
+/// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
 {
   	public:
@@ -59,33 +59,13 @@ class ClassAd : public ExprTree
 		/// Default constructor 
 		ClassAd ();
 
-		/** Copy constructor */
-		ClassAd (const ClassAd &);
+		/// Copy constructor
+        ///	@param ad The ClassAd to copy
+		ClassAd (const ClassAd &ad);
 
-		/** Destructor */
+		/// Destructor
 		~ClassAd ();
 		//@}
-
-		/**@name Inherited virtual methods */
-		//@{
-		// override methods
-        /** Makes a deep copy of the expression tree
-           	@return A deep copy of the expression, or NULL on failure.
-         */
-		virtual ExprTree* Copy( ) const;
-		//@}
-
-		/** Factory method to make a classad
-		 * 	@param vec A vector of (name,expression) pairs to make a classad
-		 * 	@return The constructed classad
-		 */
-		static ClassAd *MakeClassAd( std::vector< std::pair< std::string, ExprTree* > > &vec );
-
-		/** Deconstructor to get the components of a classad
-		 * 	@param vec A vector of (name,expression) pairs which are the
-		 * 		attributes of the classad
-		 */
-		void GetComponents( std::vector< std::pair< std::string, ExprTree *> > &vec ) const;
 
 		/**@name Insertion Methods */
 		//@{	
@@ -143,6 +123,7 @@ e		*/
 			@param value The real value of the attribute.
 			@param f The multiplicative factor to be attached to value.
 			@see Value::NumberFactor
+            @return true on success, false otherwise
 		*/
 		bool InsertAttr( const std::string &attrName,double value, 
 				Value::NumberFactor f=Value::NO_FACTOR);
@@ -155,6 +136,9 @@ e		*/
 			@param scopeExpr String representation of the scope expression.
 			@param attrName The name of the attribute.
 			@param value The string attribute
+            @param f A multipler for the number.
+			@see Value::NumberFactor
+            @return true on success, false otherwise
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
 				double value, Value::NumberFactor f=Value::NO_FACTOR);
@@ -349,73 +333,80 @@ e		*/
 		bool EvaluateExpr( const ExprTree* expr, Value &result, ExprTree *&sig) const;
 
 		/** Evaluates an attribute to an integer.
-			@param attrName The name of the attribute.
+			@param attr The name of the attribute.
 			@param intValue The value of the attribute.
 			@return true if attrName evaluated to an integer, false otherwise.
 		*/
-		bool EvaluateAttrInt( const std::string &attrName, int& intValue ) const;
+		bool EvaluateAttrInt( const std::string &attr, int& intValue ) const;
 
 		/** Evaluates an attribute to a real.
-			@param attrName The name of the attribute.
+			@param attr The name of the attribute.
 			@param realValue The value of the attribute.
 			@return true if attrName evaluated to a real, false otherwise.
 		*/
-		bool EvaluateAttrReal( const std::string &attrName, double& realValue )const;
+		bool EvaluateAttrReal( const std::string &attr, double& realValue )const;
 
 		/** Evaluates an attribute to an integer. If the attribute evaluated to 
 				a real, it is truncated to an integer.
-			@param attrName The name of the attribute.
+			@param attr The name of the attribute.
 			@param intValue The value of the attribute.
 			@return true if attrName evaluated to an number, false otherwise.
 		*/
-		bool EvaluateAttrNumber( const std::string &attrName, int& intValue ) const;
+		bool EvaluateAttrNumber( const std::string &attr, int& intValue ) const;
 
 		/** Evaluates an attribute to a real.  If the attribute evaluated to an 
 				integer, it is promoted to a real.
-			@param attrName The name of the attribute.
+			@param attr The name of the attribute.
 			@param realValue The value of the attribute.
 			@return true if attrName evaluated to a number, false otherwise.
 		*/
-		bool EvaluateAttrNumber(const std::string &attrName,double& realValue) const;
+		bool EvaluateAttrNumber(const std::string &attr,double& realValue) const;
 
 		/** Evaluates an attribute to a string.  If the string value does not 
 				fit into the buffer, only the portion that does fit is copied 
 				over.
-			@param attrName The name of the attribute.
+			@param attr The name of the attribute.
 			@param buf The buffer for the string value.
 			@param len Size of buffer
 			@return true iff attrName evaluated to a string
 		*/
-		bool EvaluateAttrString( const std::string &attrName, char *buf, int len) 
+		bool EvaluateAttrString( const std::string &attr, char *buf, int len) 
 				const;
 
 		/** Evaluates an attribute to a string.  If the string value does not 
 				fit into the buffer, only the portion that does fit is copied 
 				over.
-			@param attrName The name of the attribute.
+			@param attr The name of the attribute.
 			@param buf The buffer for the string value.
 			@return true iff attrName evaluated to a string
 		*/
-		bool EvaluateAttrString( const std::string &attrName, std::string &buf ) const;
+		bool EvaluateAttrString( const std::string &attr, std::string &buf ) const;
 
 		/** Evaluates an attribute to a boolean.  A pointer to the string is 
 				returned.
-			@param attrName The name of the attribute.
+			@param attr The name of the attribute.
 			@param boolValue The value of the attribute.
 			@return true if attrName evaluated to a boolean value, false 
 				otherwise.
 		*/
-		bool EvaluateAttrBool( const std::string &attrName, bool& boolValue ) const;
+		bool EvaluateAttrBool( const std::string &attr, bool& boolValue ) const;
 
-		/** Evaluates an attribute to a boolean.  A pointer to the ClassAd is 
+		/** Evaluates an attribute to a ClassAd.  A pointer to the ClassAd is 
 				returned. You do not own the ClassAd--do not free it.
-			@param attrName The name of the attribute.
-			@param boolValue The value of the attribute.
-			@return true if attrName evaluated to a boolean value, false 
+			@param attr The name of the attribute.
+			@param classad The value of the attribute.
+			@return true if attrName evaluated to a ClassAd, false 
 				otherwise.
 		*/
         bool EvaluateAttrClassAd( const std::string &attr, ClassAd *&classad ) const;
 
+		/** Evaluates an attribute to an ExprList.  A pointer to the ExprList is 
+				returned. You do not own the ExprList--do not free it.
+			@param attr The name of the attribute.
+			@param l The value of the attribute.
+			@return true if attrName evaluated to a ExprList, false 
+				otherwise.
+		*/
         bool EvaluateAttrList( const std::string &attr, ExprList *&l ) const;
 		//@}
 
@@ -443,26 +434,79 @@ e		*/
 		/** Returns a constant iterator pointing past the end of the
 			attribute/value pairs in the ClassAd */
 		const_iterator end() const { return attrList.end(); }
-		//@}
 
-		// STL-like functions
+        /** Return an interator pointing to the attribute with a particular name.
+         */
 		iterator find(std::string const& attrName);
+
+        /** Return a constant interator pointing to the attribute with a particular name.
+         */
 		const_iterator find(std::string const& attrName) const;
 
+        /** Return the number of attributes at the root level of this ClassAd.
+         */
         int size(void) const { return attrList.size(); }
+		//@}
 
 		/**@name Miscellaneous */
 		//@{
+		/** Factory method to make a classad
+		 * 	@param vec A vector of (name,expression) pairs to make a classad
+		 * 	@return The constructed classad
+		 */
+		static ClassAd *MakeClassAd( std::vector< std::pair< std::string, ExprTree* > > &vec );
+
+		/** Deconstructor to get the components of a classad
+		 * 	@param vec A vector of (name,expression) pairs which are the
+		 * 		attributes of the classad
+		 */
+		void GetComponents( std::vector< std::pair< std::string, ExprTree *> > &vec ) const;
+
+        /** Make sure everything in the ad is in this ClassAd.
+         *  This is different than CopyFrom() because we may have many 
+         *  things that the ad doesn't have: we just ensure that everything we 
+         *  import everything from the other ad. This could be called Merge().
+         *  @param ad The ad to copy attributes from.
+         */
 		void Update( const ClassAd& ad );	
 
+        /** Modify this ClassAd in a specific way
+         *  Ad is a ClassAd that looks like:
+         *  [ Context = expr;    // Sub-ClassAd to operate on
+         *    Replace = classad; // ClassAd to Update() replace context
+         *    Updates = classad; // ClassAd to merge into context (via Update())
+         *    Deletes = {a1, a2};  // A list of attribute names to delete from the context
+         *  @param ad is a description of how to modify this ClassAd
+         */
 		void Modify( ClassAd& ad );
 
+        /** Makes a deep copy of the ClassAd.
+           	@return A deep copy of the ClassAd, or NULL on failure.
+         */
+		virtual ExprTree* Copy( ) const;
+
+        /** Make a deep copy of the ClassAd, via the == operator. 
+         */
 		ClassAd &operator=(const ClassAd &rhs);
 
+        /** Fill in this ClassAd with the contents of the other ClassAd.
+         *  This ClassAd is cleared of its contents before the copy happens.
+         *  @return true if the copy succeeded, false otherwise.
+         */
 		bool CopyFrom( const ClassAd &ad );
 
+        /** Is this ClassAd the same as the tree?
+         *  Two ClassAds are identical if they have the same
+         *  number of elements, and each is the SameAs() the other. 
+         *  This is a deep comparison.
+         *  @return true if it is the same, false otherwise
+         */
         virtual bool SameAs(const ExprTree *tree) const;
 
+        /** Are the two ClassAds the same?
+         *  Uses SameAs() to decide if they are the same. 
+         *  @return true if they are, false otherwise.
+         */
         friend bool operator==(ClassAd &list1, ClassAd &list2);
 
 		/** Flattens (a partial evaluation operation) the given expression in 
@@ -480,20 +524,41 @@ e		*/
 		bool FlattenAndInline( const ExprTree* expr, Value& val,	// NAC
 							   ExprTree *&fexpr )const;				// NAC
 		
+        /** Return a list of attribute references in the expression that are not 
+         *  contained within this ClassAd.
+         *  @param tree The ExprTree for the expression that has references that you are
+         *  wish to know about. 
+         *  @param refs The list of references
+         *  @param fullNames true if you want full names (like other.foo)
+         *  @return true on success, false on failure. 
+         */
 		bool GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames );
 
+        /** Return a list of attribute references in the expression that are not 
+         *  contained within this ClassAd.
+         *  @param tree The ExprTree for the expression that has references that you are
+         *  wish to know about. 
+         *  @param refs The list of references
+         *  @return true on success, false on failure. 
+         */
 		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs);
+		//@}
+
 #if defined( EXPERIMENTAL )
 		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
 					const std::string &allowed, const References &imported );
 #endif
-		//@}
 
 #if defined( CLASSAD_DEPRECATED )
-// AttrList methods
-
-		// insert expressions into the ad
-        int        	Insert(const char*);
+		/**@name Deprecated functions (only for use within Condor) */
+        //@{
+        /** Insert an attribute/value into the ClassAd 
+         *  @param str A string of the form "Attribute = Value"
+         */
+        int        	Insert(const char *str);
+        /** Insert an attribute/value into the ClassAd 
+         *  @param expr A string of the form "Attribute = Value"
+         */
 		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
 
 		// for iteration through expressions
@@ -508,60 +573,176 @@ e		*/
 //		ExprTree*   Lookup(char *) const;  		// for convenience
 //      ExprTree*	Lookup(const char*) const;	// look up an expression
 
-		int         LookupString(const char *, char *) const; 
-		int         LookupString(const char *, char *, int) const; //uses strncpy
+        /** Lookup (don't evaluate) an attribute that is a string.
+         *  @param name The attribute
+         *  @param value The string, copied with strcpy (DANGER)
+         *  @return true if the attribute exists and is a string, false otherwise
+         */
+		int         LookupString(const char *name, char *value) const; 
+        /** Lookup (don't evaluate) an attribute that is a string.
+         *  @param name The attribute
+         *  @param value The string, copied with strncpy
+         *  @param max_len The maximum number of bytes in the string to copy
+         *  @return true if the attribute exists and is a string, false otherwise
+         */
+		int         LookupString(const char *name, char *value, int max_len) const;
+        /** Lookup (don't evaluate) an attribute that is a string.
+         *  @param name The attribute
+         *  @param value The string, allocated with malloc() not new.
+         *  @return true if the attribute exists and is a string, false otherwise
+         */
 		int         LookupString (const char *name, char **value) const;
-        int         LookupInteger(const char *, int &) const;
-        int         LookupFloat(const char *, float &) const;
-        int         LookupBool(const char *, int &) const;
-        int         LookupBool(const char *, bool &) const;
+        /** Lookup (don't evaluate) an attribute that is an integer.
+         *  @param name The attribute
+         *  @param value The integer
+         *  @return true if the attribute exists and is an integer, false otherwise
+         */
+        int         LookupInteger(const char *name, int &value) const;
+        /** Lookup (don't evaluate) an attribute that is a float.
+         *  @param name The attribute
+         *  @param value The integer
+         *  @return true if the attribute exists and is a float, false otherwise
+         */
+        int         LookupFloat(const char *name, float &value) const;
+        /** Lookup (don't evaluate) an attribute that can be considered a boolean
+         *  @param name The attribute
+         *  @param value 0 if the attribute is 0, 1 otherwise
+         *  @return true if the attribute exists and is a boolean/integer, false otherwise
+         */
+        int         LookupBool(const char *name, int &value) const;
+        /** Lookup (don't evaluate) an attribute that can be considered a boolean
+         *  @param name The attribute
+         *  @param value false if the attribute is 0, true otherwise
+         *  @return true if the attribute exists and is a boolean/integer, false otherwise
+         */
+        int         LookupBool(const char *name, bool &value) const;
 
-		// evaluate values in classads
-		int         EvalString (const char *, class ClassAd *, char *);
-		int         EvalInteger (const char *, class ClassAd *, int &);
-		int         EvalFloat (const char *, class ClassAd *, float &);
-		int         EvalBool  (const char *, class ClassAd *, int &);
+		/** Lookup and evaluate an attribute in the ClassAd that is a string
+         *  @param name The name of the attribute
+         *  @param target A ClassAd to resolve MY or other references
+         *  @param value Where we the copy the string. Danger: we just use strcpy.
+         *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
+         *  but is not a string.
+         */
+		int         EvalString (const char *name, class ClassAd *target, char *value);
+		/** Lookup and evaluate an attribute in the ClassAd that is an integer
+         *  @param name The name of the attribute
+         *  @param target A ClassAd to resolve MY or other references
+         *  @param value Where we the copy the value.
+         *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
+         *  but is not an integer
+         */
+		int         EvalInteger (const char *name, class ClassAd *target, int &value);
+		/** Lookup and evaluate an attribute in the ClassAd that is a float
+         *  @param name The name of the attribute
+         *  @param target A ClassAd to resolve MY or other references
+         *  @param value Where we the copy the value. Danger: we just use strcpy.
+         *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
+         *  but is not a float.
+         */
+		int         EvalFloat (const char *name, class ClassAd *target, float &value);
+		/** Lookup and evaluate an attribute in the ClassAd that is a boolean
+         *  @param name The name of the attribute
+         *  @param target A ClassAd to resolve MY or other references
+         *  @param value Where we a 1 (if the value is non-zero) or a 1. 
+         *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
+         *  but is not a number.
+         */
+		int         EvalBool  (const char *name, class ClassAd *target, int &value);
 
-		// chaining
-// ClassAd methods
-
+        /** A constructor that reads old ClassAds from a FILE */
         ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
 
-		// Type operations
-        void		SetMyTypeName(const char *); /// my type name set.
-        const char*	GetMyTypeName();		// my type name returned.
-        void 		SetTargetTypeName(const char *);// target type name set.
-        const char*	GetTargetTypeName();	// target type name returned.
+        /** Set the MyType attribute */
+        void		SetMyTypeName(const char *);
+        /** Get the value of the MyType attribute */
+        const char*	GetMyTypeName();
+        /** Set the value of the TargetType attribute */
+        void 		SetTargetTypeName(const char *);
+        /** Get the value of the TargetType attribtute */
+        const char*	GetTargetTypeName();
 
-        // shipping functions
+        /** Print the ClassAd as an old ClassAd to the stream
+         * @param s the stream
+         */
         int put(Stream& s);
+
+        /** Read the old ClassAd from the stream, and fill in this ClassAd.
+         * @param s the stream
+         */
 		int initFromStream(Stream& s);
 
-		// output functions
-        virtual int	fPrint(FILE*);			// print the ClassAd to a file
-		void		dPrint( int );			// dprintf to given dprintf level
+        /** Print the ClassAd as an old ClassAd to the FILE
+            @param file The file handle to print to.
+            @return TRUE
+         */
+        virtual int	fPrint(FILE *file);
 
-// Back compatiblity helper methods
+        /** Print the ClassAd as an old ClasAd with dprintf
+            @param level The dprintf level.
+         */
+		void		dPrint( int level);
 
 		bool AddExplicitConditionals( ExprTree *expr, ExprTree *&newExpr );
 		ClassAd *AddExplicitTargetRefs( );
-		
+		//@}
 #endif
 
+		/**@name Chaining functions */
+        //@{
+        /** Chain this ad to the parent ad.
+         *  After chaining, any attribute we look for that is not
+         *  in this ad will be looked for in the parent ad. This is
+         *  a simple form of compression: many ads can be linked to a 
+         *  parent ad that contains common attributes between the ads. 
+         *  If an attribute is in both this ad and the parent, a lookup
+         *  will only show it in the parent. If we make any modifications to
+         *  this ad, it will not affect the parent. 
+         *  @param new_chain_parent_ad the parent ad we are chained too.
+         */
 	    void		ChainToAd(ClassAd *new_chain_parent_ad);
+        /** If we are chained to a parent ad, remove the chain. 
+         */
 		void		Unchain(void);
+        //@}
 
+		/**@name Dirty Tracking */
+        //@{
+        /** Turn on dirty tracking for this ClassAd. 
+         *  If tracking is on, every insert will label the attribute that was inserted
+         *  as dirty. Dirty tracking is always turned off during Copy() and
+         *  CopyFrom().
+         */ 
 		void        EnableDirtyTracking(void)  { do_dirty_tracking = true;  }
+        /** Turn off ditry tracking for this ClassAd.
+         */
 		void        DisableDirtyTracking(void) { do_dirty_tracking = false; }
+        /** Mark all attributes in the ClassAd as not dirty
+         */
 		void		ClearAllDirtyFlags(void);
+        /** Mark a particular attribute as dirty
+         * @param name The attribute name
+         */
 		void        MarkAttributeDirty(const std::string &name);
+        /** Mark a particular attribute as not dirty 
+         * @param name The attribute name
+         */
 		void        MarkAttributeClean(const std::string &name);
+        /** Return true if an attribute is dirty
+         *  @param name The attribute name
+         *  @return true if the attribute is dirty, false otherwise
+         */
 		bool        IsAttributeDirty(const std::string &name);
 
 		typedef DirtyAttrList::iterator dirtyIterator;
+        /** Return an interator to the first dirty attribute so all dirty attributes 
+         * can be iterated through.
+         */
 		dirtyIterator dirtyBegin() { return dirtyAttrList.begin(); }
+        /** Return an iterator past the last dirty attribute
+         */
 		dirtyIterator dirtyEnd() { return dirtyAttrList.end(); }
-		
+        //@}
 
   	private:
 		friend 	class AttributeReference;

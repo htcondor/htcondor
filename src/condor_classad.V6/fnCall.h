@@ -57,8 +57,7 @@ typedef struct
 typedef	 ClassAdFunctionMapping *(*ClassAdSharedLibraryInit)(void);
 #endif
 
-/// Node of the expression which represents a call to an inbuilt
-//function
+/// Node of the expression which represents a call to an function
 class FunctionCall : public ExprTree
 {
  public:

@@ -26,13 +26,13 @@
 
 BEGIN_NAMESPACE( classad )
 
-/** An object for iterating over the attributes of a ClassAd.  Several
-    iterators may be active over the same ClassAd at any time, and the same
-    iterator object may be used to iterate over other ClassAds as well.
-	Note that attributes will not be provided in any specific order.  Also,
-	ClassAdIterator is a ``forward iterator'' only; i.e., there is no 
-	PreviousAttribute() method.
-*/
+/// An object for iterating over the attributes of a ClassAd--deprecated. 
+/// We recommend that you now use the STL-like iterators defined with
+/// ClassAd.  Several iterators may be active over the same ClassAd at
+/// any time, and the same iterator object may be used to iterate over
+/// other ClassAds as well.  Note that attributes will not be provided
+/// in any specific order.  Also, ClassAdIterator is a ``forward
+/// iterator'' only; i.e., there is no PreviousAttribute() method.
 class ClassAdIterator
 {
     public:
@@ -54,7 +54,7 @@ class ClassAdIterator
                 return false if the iterator has not been initialized.)  This
                 method may be called any number of times, with different
                 ClassAds as arguments.
-            @param l The expression list to iterate over (i.e., the iteratee).
+            @param ca The ClassAd to iterate over (i.e., the iteratee).
         */
         inline void Initialize(const ClassAd &ca){ ad=&ca; ToFirst( ); }
 

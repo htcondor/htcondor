@@ -120,17 +120,31 @@ class ExprTree
 		/// A debugging method; send expression to stdout
 		void Puke( ) const;
 
-		// ajr--made public on 4-nov-2002. Needed for user functions.
-		bool Evaluate( EvalState &, Value & ) const; 
+        /** Evaluate this tree
+         *  @param state The current state
+         *  @param val   The result of the evaluation
+         *  @return true on success, false on failure
+         */
+		bool Evaluate( EvalState &state, Value &val ) const; 
 		
-		// This only works if the exprtree is within a ClassAd.
+        /** Evaluate this tree.
+         *  This only works if the expression is currently part of a ClassAd.
+         *  @param val   The result of the evaluation
+         *  @return true on success, false on failure
+         */
 		bool Evaluate( Value& v ) const;
 
+        /** Is this ExprTree the same as the tree?
+         *  @return true if it is the same, false otherwise
+         */
         virtual bool SameAs(const ExprTree *tree) const = 0;
 
   	protected:
 		ExprTree ();
 
+        /** Fill in this ExprTree with the contents of the other ExprTree.
+         *  @return true if the copy succeeded, false otherwise.
+         */
         void CopyFrom(const ExprTree &literal);
 
 		bool Evaluate( Value& v, ExprTree*& t ) const;

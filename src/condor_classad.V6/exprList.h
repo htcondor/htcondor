@@ -30,9 +30,7 @@ BEGIN_NAMESPACE( classad )
 
 class ExprListIterator;
 
-/** 
-	Expression node which represents a list of expressions 
-*/
+/// Represents a list of expressions, like {1, 2, 3}
 class ExprList : public ExprTree
 {
 	public:
@@ -96,9 +94,7 @@ class ExprList : public ExprTree
 };
 
 
-/** 
-	Expression List iterator
-*/
+/// An iterator for an ExprList--deprecated: you should use the STL-like iterators now
 class ExprListIterator
 {
 	public:

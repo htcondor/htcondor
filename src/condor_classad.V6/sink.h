@@ -32,7 +32,7 @@
 
 BEGIN_NAMESPACE( classad )
 
-/// The unparser object
+/// This converts a ClassAd into a string representing the %ClassAd
 class ClassAdUnParser
 {
 	public:
@@ -93,7 +93,7 @@ class ClassAdUnParser
 };
 
 
-/// The pretty print object --- unparsing with format
+/// This is a special case of the ClassAdParser which prints the ClassAds more nicely.
 class PrettyPrint : public ClassAdUnParser
 {
     public:

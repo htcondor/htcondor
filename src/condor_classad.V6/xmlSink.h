@@ -32,7 +32,7 @@
 
 BEGIN_NAMESPACE( classad )
 
-/// The unparser object
+/// This converts a ClassAd into an XML string representing the %ClassAd
 class ClassAdXMLUnParser
 {
  public:

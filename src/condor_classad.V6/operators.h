@@ -29,7 +29,7 @@
 BEGIN_NAMESPACE( classad )
 
 /** Represents a node of the expression tree which is an operation applied to
-	expression operands
+	expression operands, like 3 + 2
 */
 class Operation : public ExprTree
 {

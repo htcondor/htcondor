@@ -26,8 +26,7 @@
 
 BEGIN_NAMESPACE( classad )
 
-/** Represents a attribute reference node in the expression tree
-*/
+/// Represents a attribute reference node (like .b) in the expression tree
 class AttributeReference : public ExprTree 
 {
   	public:
@@ -62,13 +61,28 @@ class AttributeReference : public ExprTree
 		 */
 		void GetComponents( ExprTree *&expr,std::string &attr, bool &abs ) const;
 
+        /** Return a copy of this attribute reference.
+         */
 		virtual ExprTree* Copy( ) const;
 
+        /** Copy from the given reference into this reference.
+         *  @param ref The reference to copy from.
+         *  @return true if the copy succeeded, false otherwise.
+         */
         bool CopyFrom(const AttributeReference &ref);
 
+        /** Is this attribute reference the same as another?
+         *  @param tree The reference to compare with
+         *  @return true if they are the same, false otherwise.
+         */
         virtual bool SameAs(const ExprTree *tree) const;
 
-        friend bool operator==(const AttributeReference &op1, const AttributeReference &op2);
+        /** Are the two attribute references the same?
+         *  @param ref1 An attribute reference
+         *  @param ref2 Another attribute reference
+         *  @return true if they are the same, false otherwise.
+         */
+        friend bool operator==(const AttributeReference &ref1, const AttributeReference &ref2);
 
 	protected:
 		/// Constructor
