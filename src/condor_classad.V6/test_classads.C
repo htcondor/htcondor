@@ -156,7 +156,6 @@ cleanup(void)
 	// each classad in each collection, then delete all of the ClassAds. 
 	CollectionMapIterator ci;
 
-	printf("####### Cleaning Up Collections.\n");
 	for (ci = collections.begin(); ci != collections.end(); ci++ ) {
 		ClassAdCollection *collection;
 
@@ -178,7 +177,6 @@ cleanup(void)
 		delete collection;
 	}
 
-	printf("####### Cleaning Up ClassAds.\n");
 	ClassAdMapIterator i;
 	for (i = classads.begin(); i != classads.end(); i++) {
 		ClassAd *classad;
@@ -190,7 +188,6 @@ cleanup(void)
 			delete classad;
 		}
 	}
-
 	return;
 
 	
