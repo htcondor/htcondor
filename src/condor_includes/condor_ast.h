@@ -167,11 +167,11 @@ class String : public StringBase
 };
 
 
-class Time : public TimeBase
+class ISOTime : public ISOTimeBase
 {
     public :
 
-  	Time(char* s) : TimeBase(s) {}
+  	ISOTime(char* s) : ISOTimeBase(s) {}
 	virtual int         CalcPrintToStr(void);
     virtual void        PrintToStr(char*);
 	virtual ExprTree*     DeepCopy(void) const;

@@ -253,12 +253,12 @@ class StringBase : public ExprTree
 		char*           value;
 };
 
-class TimeBase : public ExprTree
+class ISOTimeBase : public ExprTree
 {
     public :
 
-	TimeBase(char*);
-	virtual ~TimeBase();
+	ISOTimeBase(char*);
+	virtual ~ISOTimeBase();
 
 	virtual int	    operator ==(ExprTree&);
 
