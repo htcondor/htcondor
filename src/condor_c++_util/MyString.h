@@ -36,6 +36,14 @@ public:
     return;
   }
   
+  MyString(int i) {
+    char tmp[50];
+	sprintf(tmp,"%d",i);
+    Len=strlen(tmp);
+    Data=new char[Len+1];
+    strcpy(Data,tmp);
+  };
+
   MyString(const char* S) {
     Data=NULL;
     Len=0;
@@ -59,6 +67,8 @@ public:
     return Len;
   }
 
+  // Comparison operations
+
   friend int operator==(const MyString& S1, const MyString& S2) {
     if (!S1.Data && !S2.Data) return 1;
     if (!S1.Data || !S2.Data) return 0;
@@ -66,8 +76,29 @@ public:
     return 0;
   }
 
+/*
   friend int operator==(const char* S1, const MyString& S2) { return (MyString(S1)==S2); }
   friend int operator==(const MyString& S1, const char* S2) { return (S1==MyString(S2)); } 
+*/
+
+  friend int operator!=(const MyString& S1, const MyString& S2) { return ((S1==S2) ? 0 : 1); }
+/*
+  friend int operator!=(const char* S1, const MyString& S2) { return ((S1==S2) ? 0 : 1); }
+  friend int operator!=(const MyString& S1, const char* S2) { return ((S1==S2) ? 0 : 1); } 
+*/
+
+  friend int operator<(const MyString& S1, const MyString& S2) {
+    if (!S1.Data && !S2.Data) return 0;
+    if (!S1.Data || !S2.Data) return (S1.Data==NULL);
+    if (strcmp(S1.Data,S2.Data)<0) return 1;
+    return 0;
+  }
+
+  friend int operator<=(const MyString& S1, const MyString& S2) { return (S1<S2) ? 1 : (S1==S2); }
+  friend int operator>(const MyString& S1, const MyString& S2) { return (!(S1<=S2)); }
+  friend int operator>=(const MyString& S1, const MyString& S2) { return (!(S1<S2)); }
+
+  // Assignment
 
   MyString& operator=(const MyString& S) {
     if (Data) delete[] Data;
@@ -114,7 +145,7 @@ public:
   }
 
   const char* Value() const { return (Data ? Data : ""); }
-  operator const char*() const { return (Data ? Data : ""); }
+  // operator const char*() const { return (Data ? Data : ""); }
     
   friend ostream& operator<<(ostream& os, const MyString& S) {
     if (S.Data) os << S.Data;
