@@ -73,6 +73,30 @@ pseudo_get_job_info(ClassAd *&ad)
 
 
 int
+pseudo_get_user_info(ClassAd *&ad)
+{
+	static ClassAd* user_ad = NULL;
+	char buf[1024];
+
+	if( ! user_ad ) {
+			// if we don't have the ClassAd yet, allocate it and fill
+			// it in with the info we care about
+		user_ad = new ClassAd;
+
+		sprintf( buf, "%s = %d", ATTR_UID, (int)get_user_uid() );
+		user_ad->Insert( buf );
+
+		sprintf( buf, "%s = %d", ATTR_GID, (int)get_user_gid() );
+		user_ad->Insert( buf );
+
+	}
+
+	ad = user_ad;
+	return 0;
+}
+
+
+int
 pseudo_job_exit(int status, int reason, ClassAd* ad)
 {
 	// reset the reason if less than EXIT_CODE_OFFSET so that
