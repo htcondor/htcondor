@@ -15,4 +15,13 @@ static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 
+release_copy_target($(GAHP_DIR)/gahp_server,$(RELEASE_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
+static_copy_target($(GAHP_DIR)/gahp_server,$(STATIC_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
+strip_copy_target($(GAHP_DIR)/gahp_server,$(STRIP_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
+
+strip_target($(NAME),$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
+static_copy_target($(GAHP_DIR)/gahp_server,$(STATIC_CONTRIB)/sbin,gahp_server,EXECUTABLE_MODE)
+strip_copy_target($(GAHP_DIR)/gahp_server,$(STRIP_CONTRIB)/sbin,gahp_server,EXECUTABLE_MODE)
+
 html:

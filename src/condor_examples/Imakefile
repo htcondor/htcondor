@@ -1,11 +1,12 @@
 FILES = README condor.generic condor_config.local.central.manager \
 	condor_config.local.dedicated.resource \
-	condor_config.local.dedicated.submit
+	condor_config.local.dedicated.submit 
 
 CONTRIB_FILES = $(FILES) condor_config.local.ckpt.server \
 	condor_config.local.root.ckpt.server \
 	condor_config.local.view_server \
-	condor_config.local.eventd
+	condor_config.local.eventd  \
+	condor_config.local.condor-g
 
 all::
 
