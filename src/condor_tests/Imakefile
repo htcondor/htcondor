@@ -98,6 +98,7 @@ TESTCLASS(lib_userlog,lib)
 **
 **DESC(job_core_killsignal_van,"Vanilla: Verify the specified input file is used")
 **RUN(job_core_killsignal_van)
+**DEPS(job_core_killsignal_van,x_trapsig.exe)
 **TESTCLASS(job_core_killsignal_van,core)
 **
 **DESC(job_core_corefiles_van,"Vanillla limit of core file size - FAILS!")
@@ -187,26 +188,17 @@ TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 **
 **DESC(job_core_rmkillsig_sched,"Scheduler: Verify the  remove_kill_sig")
 **RUN(job_core_rmkillsig_sched)
+**DEPS(job_core_rmkillsig_sched,x_trapsig.exe)
 **TESTCLASS(job_core_rmkillsig_sched,core)
 **
 **DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
 **RUN(job_core_killsignal_sched)
+**DEPS(job_core_killsignal_sched,x_trapsig.exe)
 **TESTCLASS(job_core_killsignal_sched,core)
-**
-**DESC(job_core_perhold_van,"Vanilla: verify true and false triggers for periodic hold")
-**RUN(job_core_perhold_van)
-**TESTCLASS(job_core_perhold_van,core)
-**
-**DESC(job_core_holdrelease_sched,"Scheduler: Test state changes from running to hold to release.")
-**RUN(job_core_holdrelease_sched)
-**TESTCLASS(job_core_holdrelease_sched,core)
-**
-**DESC(job_core_onexithold_van,"Vanilla: Verify true and false triggers of on_exit_hold")
-**RUN(job_core_onexithold_van)
-**TESTCLASS(job_core_onexithold_van,core)
 **
 **DESC(job_core_holdkillsig_sched,"Scheduler: Verify ability to control signal for holds and kills")
 **RUN(job_core_holdkillsig_sched)
+**DEPS(job_core_holdkillsig_sched,x_trapsig.exe)
 **TESTCLASS(job_core_holdkillsig_sched,core)
 **
 **DESC(job_core_matchlist_van,"Vanilla: test that match_list_length is storing and rotating matches")
@@ -215,6 +207,18 @@ TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 **
 **
 */
+
+DESC(job_core_holdrelease_sched,"Scheduler: Test state changes from running to hold to release.")
+RUN(job_core_holdrelease_sched)
+TESTCLASS(job_core_holdrelease_sched,core)
+
+DESC(job_core_onexithold_van,"Vanilla: Verify true and false triggers of on_exit_hold")
+RUN(job_core_onexithold_van)
+TESTCLASS(job_core_onexithold_van,core)
+
+DESC(job_core_perhold_van,"Vanilla: verify true and false triggers for periodic hold")
+RUN(job_core_perhold_van)
+TESTCLASS(job_core_perhold_van,core)
 
 
 /* runable core coverage tests */

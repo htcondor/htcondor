@@ -45,7 +45,7 @@ get_host_part( const char* name )
 {
 	char* tmp;
 	if (name == NULL) return NULL;
-	tmp = strchr( name, '@' );
+	tmp = strrchr( name, '@' );
 	if( tmp ) {
 		return ++tmp;
 	} else {
@@ -69,9 +69,9 @@ get_daemon_name( const char* name )
 	dprintf( D_HOSTNAME, "Finding proper daemon name for \"%s\"\n",
 			 name ); 
 
-		// First, check for a '@' in the name.
+		// First, check for a '@' in the name. 
 	tmpname = strdup( name );
-	tmp = strchr( tmpname, '@' );
+	tmp = strrchr( tmpname, '@' );
 	if( tmp ) {
 			// There's a '@'.
 		*tmp = '\0';
@@ -134,7 +134,7 @@ build_valid_daemon_name( char* name )
 
 	if( name && *name ) {
 		tmpname = strnewp( name );
-		tmp = strchr( tmpname, '@' );
+		tmp = strrchr( tmpname, '@' );
 		if( tmp ) {
 				// name we were passed has an '@', ignore everything
 				// after (and including) the '@'.  

@@ -17,8 +17,11 @@ $execute = sub {
 
 	# avoid reentrant death
 	if($alreadydone != 0) {
+		CondorTest::RegisterTimed($testname, $timed, 120);
+		print "Seeing job run and about to place on hold\n";
 		return true;
 	} else {
+		print "Have already run once and don't expect this!\n";
 		$alreadydone = 1;
 	}
 	
@@ -67,7 +70,6 @@ CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterHold($testname, $hold);
 CondorTest::RegisterRelease($testname, $release);
 CondorTest::RegisterExitedSuccess($testname, $success);
-CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";

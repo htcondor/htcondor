@@ -26,6 +26,7 @@
 #include "condor_config.h"
 #include "condor_ver_info.h"
 #include "condor_version.h"
+#include "condor_environ.h"
 
 #include "authentication.h"
 #include "condor_string.h"
@@ -85,6 +86,9 @@ char* SecMan::sec_req_rev[] = {
 KeyCache* SecMan::session_cache = NULL;
 HashTable<MyString,MyString>* SecMan::command_map = NULL;
 int SecMan::sec_man_ref_count = 0;
+char* SecMan::_my_unique_id = 0;
+char* SecMan::_my_parent_unique_id = 0;
+bool SecMan::_should_check_env_for_unique_id = true;
 
 SecMan::sec_req
 SecMan::sec_alpha_to_sec_req(char *b) {
@@ -441,6 +445,22 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 
 	// subsystem
 	sprintf(buf, "%s=\"%s\"", ATTR_SEC_SUBSYSTEM, mySubSystem);
+	ad->Insert(buf);
+
+    char * parent_id = my_parent_unique_id();
+    if (parent_id) {
+		sprintf(buf, "%s=\"%s\"", ATTR_SEC_PARENT_UNIQUE_ID, parent_id);
+		ad->Insert(buf);
+	}
+
+	// pid
+	int    mypid = 0;
+#ifdef WIN32
+	mypid = ::GetCurrentProcessId();
+#else
+	mypid = ::getpid();
+#endif
+	sprintf(buf, "%s=%i", ATTR_SEC_SERVER_PID, mypid);
 	ad->Insert(buf);
 
 	// key duration
@@ -1650,7 +1670,7 @@ bool SecMan :: invalidateHost(const char * sin)
 					keyEntry->policy()->LookupString( ATTR_SEC_SERVER_COMMAND_SOCK, &local_sinful);
 					if (local_sinful && local_sinful[0] && (addr == MyString(local_sinful))) {
 						if (DebugFlags & D_FULLDEBUG) {
-							dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), local_sinful);
+							dprintf (D_SECURITY, "KEYCACHEX: removing session %s for %s\n", id.Value(), local_sinful);
 						}
 						// remove_commands shouldn't be necessary for incoming connections
 						// remove_commands(keyEntry);
@@ -1668,6 +1688,40 @@ bool SecMan :: invalidateHost(const char * sin)
     }
 
     return removed;
+}
+
+bool SecMan :: invalidateByParentAndPid(const char * parent, int pid) {
+	if (parent && parent[0]) {
+
+    	KeyCacheEntry * keyEntry = NULL;
+        MyString  id;
+
+		if (session_cache) {
+			session_cache->key_table->startIterations();
+			while (session_cache->key_table->iterate(id, keyEntry)) {
+
+				char * parent_unique_id = NULL;
+				int    tpid = 0;
+
+				keyEntry->policy()->LookupString( ATTR_SEC_PARENT_UNIQUE_ID, &parent_unique_id);
+				keyEntry->policy()->LookupInteger( ATTR_SEC_SERVER_PID, tpid);
+
+				if (parent_unique_id && parent_unique_id[0] && (strcmp(parent, parent_unique_id) == 0) && (pid == tpid)) {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), parent_unique_id);
+					}
+					// remove_commands shouldn't be necessary for incoming connections
+					// remove_commands(keyEntry);
+					session_cache->remove(id.Value());
+				}
+				if (parent_unique_id) {
+					free(parent_unique_id);
+					parent_unique_id = 0;
+				}
+			}
+        }
+	}
+	return true;
 }
 
 bool SecMan :: invalidateKey(const char * key_id)
@@ -2006,6 +2060,71 @@ void SecMan::send_invalidate_packet ( char* sinful, char* sessid ) {
 	} else {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
 	}
+}
+
+
+char* SecMan::my_unique_id() {
+
+    if (!_my_unique_id) {
+        // first time we were called, construct the unique ID
+        // in member variable _my_unique_id
+
+        int    mypid = 0;
+
+#ifdef WIN32
+        mypid = ::GetCurrentProcessId();
+#else
+        mypid = ::getpid();
+#endif
+
+        MyString tid;
+        tid.sprintf( "%s:%i:%i", my_hostname(), mypid, (int)time(0));
+
+        _my_unique_id = strdup(tid.Value());
+    }
+
+    return _my_unique_id;
+
+}
+
+bool SecMan::set_parent_unique_id(const char* value) {
+	if (_my_parent_unique_id) {
+		free (_my_parent_unique_id);
+		_my_parent_unique_id = NULL;
+	}
+
+	// if the value is explicitly set using this method,
+	// do not check the environment for it, even if we
+	// set it to NULL
+	_should_check_env_for_unique_id = false;
+
+	if (value && value[0]) {
+		_my_parent_unique_id = strdup(value);
+	}
+
+	return (_my_parent_unique_id != NULL);
+}
+
+char* SecMan::my_parent_unique_id() {
+	if (_should_check_env_for_unique_id) {
+		// we only check in the environment once
+		_should_check_env_for_unique_id = false;
+
+		// look in the env for ENV_PARENT_ID
+		const char* envName = EnvGetName ( ENV_PARENT_ID );
+#ifdef WIN32
+		char value[_POSIX_PATH_MAX];
+		value[0] = '\0';
+		GetEnvironmentVariable( envName, value, sizeof(value) );
+#else
+		char * value = getenv( envName );
+#endif
+		if (value && value[0]) {
+			set_parent_unique_id(value);
+		}
+	}
+
+	return _my_parent_unique_id;
 }
 
 

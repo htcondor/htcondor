@@ -549,7 +549,6 @@ static gid_t CondorGid, UserGid, MyGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
 static char* UserName = NULL;
 static char* OwnerName = NULL;
-static passwd_cache pcache;
 
 static int set_condor_euid();
 static int set_condor_egid();
@@ -569,6 +568,22 @@ static int set_condor_rgid();
 /* We don't use EXCEPT here because this file is used in
    condor_syscall_lib.a.  -Jim B. */
 
+/* We use the pcache() function to give us our "global" passwd_cache
+   instead of declaring a global, static passwd_cache. We want
+   to avoid declaring the passwd_cache globally, since it's contructor
+   calls param(), which we shouldn't do until the config file has 
+   been parsed. */
+passwd_cache* 
+pcache(void) {
+
+	static passwd_cache *pcache = NULL;
+
+	if ( pcache == NULL ) {
+		pcache = new passwd_cache();
+	}
+	return pcache;
+}
+
 void
 _condor_disable_uid_switching()
 {
@@ -578,7 +593,7 @@ _condor_disable_uid_switching()
 
 void
 clear_passwd_cache() {
-	pcache.reset();
+	pcache()->reset();
 }
 
 void
@@ -606,8 +621,8 @@ init_condor_ids()
 		 * the default is MAXINT */
 	RealCondorUid = MAXINT;
 	RealCondorGid = MAXINT;
-	pcache.get_user_uid( myDistro->Get(), RealCondorUid );
-	pcache.get_user_gid( myDistro->Get(), RealCondorGid );
+	pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
+	pcache()->get_user_gid( myDistro->Get(), RealCondorGid );
 
 	const char	*envName = EnvGetName( ENV_UG_IDS ); 
 	if( (env_val = getenv(envName)) ) {
@@ -629,7 +644,7 @@ init_condor_ids()
 			free( CondorUserName );
 			CondorUserName = NULL;
 		}
-		result = pcache.get_user_name( envCondorUid, CondorUserName );
+		result = pcache()->get_user_name( envCondorUid, CondorUserName );
 
 		if( ! result ) {
 
@@ -695,7 +710,7 @@ init_condor_ids()
 			free( CondorUserName );
 			CondorUserName = NULL;
 		}
-		result = pcache.get_user_name( CondorUid, CondorUserName );
+		result = pcache()->get_user_name( CondorUid, CondorUserName );
 		if( !result ) {
 			/* Cannot find an entry in the passwd file for this uid */
 			CondorUserName = strdup("Unknown");
@@ -764,7 +779,7 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 
 	if ( !username ) {
 
-		if ( !pcache.get_user_name( UserUid, UserName ) ) {
+		if ( !(pcache()->get_user_name( UserUid, UserName )) ) {
 			UserName = NULL;
 		}
 	} else {
@@ -799,8 +814,8 @@ init_nobody_ids( int is_quiet )
 	uid_t nobody_uid = 0;
 	gid_t nobody_gid = 0;
 
-	result = ( 	pcache.get_user_uid("nobody", nobody_uid) &&
-	   			pcache.get_user_gid("nobody", nobody_gid) );
+	result = ( 	(pcache()->get_user_uid("nobody", nobody_uid)) &&
+	   			(pcache()->get_user_gid("nobody", nobody_gid)) );
 
 	if (! result ) {
 
@@ -889,8 +904,8 @@ init_user_ids_implementation( const char username[], int is_quiet )
 		return init_nobody_ids( is_quiet );
 	}
 
-	if( !pcache.get_user_uid(username, usr_uid) ||
-	 	!pcache.get_user_gid(username, usr_gid) ) {
+	if( !(pcache()->get_user_uid(username, usr_uid)) ||
+	 	!(pcache()->get_user_gid(username, usr_gid)) ) {
 		if( ! is_quiet ) {
 			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
 		}
@@ -963,7 +978,7 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 	if( OwnerName ) {
 		free( OwnerName );
 	}
-	if ( !pcache.get_user_name( OwnerUid, OwnerName ) ) {
+	if ( !(pcache()->get_user_name( OwnerUid, OwnerName )) ) {
 		OwnerName = NULL;
 	}
 	return TRUE;
@@ -1206,7 +1221,7 @@ set_user_egid()
 		
 	if( UserName ) {
 		errno = 0;
-		if(!pcache.init_groups(UserName) ) {
+		if(!(pcache()->init_groups(UserName)) ) {
 			dprintf( D_ALWAYS, 
 					 "set_user_egid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %s\n", UserName, UserGid, strerror(errno) );
@@ -1246,7 +1261,7 @@ set_user_rgid()
 		
 	if( UserName ) {
 		errno = 0;
-		if( !pcache.init_groups(UserName) ) {
+		if( !(pcache()->init_groups(UserName)) ) {
 			dprintf( D_ALWAYS, 
 					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %d\n", UserName, UserGid, errno );
@@ -1293,7 +1308,7 @@ set_owner_egid()
 		// is a serious security problem.
 	if( OwnerName ) {
 		errno = 0;
-		if(!pcache.init_groups(OwnerName) ) {
+		if(!(pcache()->init_groups(OwnerName)) ) {
 			dprintf( D_ALWAYS, 
 					 "set_owner_egid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %s\n", OwnerName, OwnerGid, strerror(errno) );
@@ -1338,7 +1353,7 @@ get_real_username( void )
 {
 	if( ! RealUserName ) {
 		uid_t my_uid = getuid();
-		if ( !pcache.get_user_name( my_uid, (char*)RealUserName ) ) {
+		if ( !(pcache()->get_user_name( my_uid, (char*)RealUserName )) ) {
 			char buf[64];
 			sprintf( buf, "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );

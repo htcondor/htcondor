@@ -972,7 +972,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		ClassAd*			scan;
 		ClassAdList			ads;
 
-		if( _type == DT_STARTD ) {
+		if( _type == DT_STARTD && ! strchr(_name, '@') ) { 
 				/*
 				  So long as an SMP startd has only 1 command socket
 				  per startd, we want to take advantage of that and
@@ -982,6 +982,16 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 				  host" will vacate all VMs on that host, but only if
 				  condor_vacate can find the address in the first
 				  place.  -Derek Wright 8/19/99 
+
+				  HOWEVER, we only want to query based on ATTR_MACHINE
+				  if the name we were given doesn't include an '@'
+				  sign already.  if it does, the caller/user must know
+				  what they're looking for, and doing the query based
+				  just on ATTR_MACHINE will be wrong.  this is
+				  especially true in the case of glide-in startds
+				  where multiple startds are running on the same
+				  machine all reporting to the same collector.
+				  -Derek Wright 2005-03-09
 				*/
 			buf.sprintf( "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
 			query.addANDConstraint( buf.Value() );
