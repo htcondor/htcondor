@@ -168,7 +168,7 @@ gid_t getegid() : extract, pseudo;
 		alloc( use_p, RUSAGE_SIZE );
 		return( NEG_ONE );
 	}
-	int image_size( int megs ) : pseudo;
+	int image_size( int kbytes ) : pseudo;
 	int send_rusage( struct rusage *use_p ) : pseudo {
 		in xdr_rusage( use_p );
 		alloc( use_p, RUSAGE_SIZE );
@@ -445,8 +445,6 @@ getwd( char *path_name ) : pseudo, extract {
 	// one day soon.
 not_supported {
 	int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
-	int sigaction( int sig, const struct sigaction *act,
-					struct sigaction *o_act ) : extract;
 	int sigpending( sigset_t *set );
 	int sigreturn( struct sigcontext *scp );
 	int setitimer( int which, struct itimerval *value, struct itimerval *oval );
@@ -454,6 +452,15 @@ not_supported {
 	int sigsuspend( const sigset_t *mask );
 	int sigstack( struct sigstack *instack, struct sigstack *outstack );
 	int kill( pid_t pid, int sig ) : extract;
+}
+
+	// We don't support these, but we ignore attempts to do them remotely
+	// for the benefit of Fortran compilers...
+ignored {
+	int sigaction( int sig, const struct sigaction *act,
+					struct sigaction *o_act ) : extract;
+	int setsysinfo( unsigned long op, char *buffer, unsigned long nbytes,
+					char * arg, unsigned long flag );
 }
 
 #if 0
@@ -468,6 +475,7 @@ not_supported {
 	int msync( char * addr, size_t len, int flags );
 }
 #endif
+
 	// Calls intended only for the super user or system managers
 not_supported {
 	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
@@ -540,8 +548,6 @@ not_supported {
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes,
 					int *start, char *arg );
-	int setsysinfo( unsigned long op, char *buffer, unsigned long nbytes,
-					char * arg, unsigned long flag );
 }
 
 

@@ -12,6 +12,7 @@
 %token ALLOC
 %token RETURN
 %token NOSUPP
+%token IGNORE
 
 %type <node> stub_spec param_list param simple_param map_param
 %type <node> stub_body action_func_list
@@ -66,6 +67,7 @@ char *malloc( unsigned int );
 #define RECEIVERS 3
 
 int Supported = TRUE;
+int Ignored = FALSE;
 int	Mode = 0;
 int ErrorEncountered = 0;
 int IsExtracted = FALSE;
@@ -89,8 +91,10 @@ input
 input
 	: stub_spec
 	| non_support_list
+	| ignore_list
 	| input stub_spec
 	| input non_support_list
+	| input ignore_list
 	| error stub_body
 	;
 
@@ -112,6 +116,27 @@ nosupp_begin
 		{
 		Trace( "nosupp_begin" );
 		Supported = FALSE;
+		}
+	;
+
+ignore_list
+	: ignore_begin stub_spec
+		{
+		Trace( "ignore_list( 1 )" );
+		Ignored = FALSE;
+		}
+	| ignore_begin '{' stub_list '}'
+		{
+		Trace( "ignore_list( 2 )" );
+		Ignored = FALSE;
+		}
+	;
+
+ignore_begin
+	: IGNORE
+		{
+		Trace( "ignore_begin" );
+		Ignored = TRUE;
 		}
 	;
 
@@ -909,6 +934,8 @@ output_receiver( struct node *n )
 	printf( "\t\terrno = 0;\n" );
 	if( !Supported  ) {
 		printf( "\t\trval = CONDOR_NotSupported( CONDOR_%s );\n", n->id  );
+	} else if( Ignored ) {
+		printf( "\t\trval = CONDOR_Ignored( CONDOR_%s );\n", n->id  );
 	} else {
 		printf( "\t\trval = %s%s( ",
 			n->pseudo ? "pseudo_" : "",

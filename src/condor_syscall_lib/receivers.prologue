@@ -30,6 +30,7 @@ extern XDR *xdr_syscall;
 
 
 int CONDOR_NotSupported( int num, ... );
+int CONDOR_Ignored( int num, ... );
 
 int
 do_REMOTE_syscall()

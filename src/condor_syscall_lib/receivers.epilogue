@@ -13,3 +13,13 @@ CONDOR_NotSupported( int condor_sysnum,  ... )
 		/* Can never get here */
 	return -1;
 }
+
+CONDOR_Ignored( int condor_sysnum,  ... )
+{
+	dprintf(
+		D_SYSCALLS,
+		"%s - system call not supported by Condor - IGNORED!",
+		_condor_syscall_name(condor_sysnum)
+	);
+	return 0;
+}
