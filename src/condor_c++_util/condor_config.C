@@ -87,7 +87,7 @@ void check_domain_attributes();
 void init_config();
 void clear_config();
 void reinsert_specials(char*);
-void process_file(char*, char*, char*);
+void process_file(char*, char*, char*, int);
 void process_locals( char*, char*);
 static int  process_runtime_configs();
 void check_params();
@@ -269,7 +269,7 @@ real_config(char* host, int wantsQuiet)
 
 		// Read in the global file
 	if( have_config_file ) {
-		process_file( config_file, "global config file", NULL );
+		process_file( config_file, "global config file", NULL, true );
 		global_config_file = config_file;
 		free( config_file );
 	}
@@ -362,7 +362,7 @@ real_config(char* host, int wantsQuiet)
 		// Try to find and read the global root config file
 	if( (config_file = find_global_root()) ) {
 		global_root_config_file = config_file;
-		process_file( config_file, "global root config file", host );
+		process_file( config_file, "global root config file", host, true );
 
 			// Re-insert the special macros.  We don't want the user
 			// to override them, since it's not going to work.
@@ -381,7 +381,7 @@ real_config(char* host, int wantsQuiet)
 			// if we found runtime config files, we process the root
 			// config file again
 		if (config_file) {
-			process_file( config_file, "global root config file", host );
+			process_file( config_file, "global root config file", host, true );
 
 				// Re-insert the special macros.  We don't want the user
 				// to override them, since it's not going to work.
@@ -423,10 +423,12 @@ real_config(char* host, int wantsQuiet)
 
 
 void
-process_file( char* file, char* name, char* host )
+process_file( char* file, char* name, char* host, int required )
 {
 	int rval;
 	if( access( file, R_OK ) != 0 ) {
+		if( !required) { return; }
+
 		if( !host ) {
 			fprintf( stderr, "ERROR: Can't read %s %s\n", 
 					 name, file );
@@ -451,6 +453,17 @@ process_locals( char* param_name, char* host )
 {
 	StringList locals;
 	char *file;
+	char *tmp;
+	int local_required;
+	
+	local_required = true;	
+    tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
+    if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
+        local_required = false;
+    } else {
+        local_required = true;
+    }
+    if( tmp ) free( tmp );
 
 	file = param( param_name );
 	if( file ) {
@@ -458,7 +471,7 @@ process_locals( char* param_name, char* host )
 		free( file );
 		locals.rewind();
 		while( (file = locals.next()) ) {
-			process_file( file, "config file", host );
+			process_file( file, "config file", host, local_required );
 			if (local_config_files.Length() > 0) {
 				local_config_files += " ";
 			}
