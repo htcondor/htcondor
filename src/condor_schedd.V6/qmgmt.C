@@ -38,9 +38,12 @@
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_ckpt_name.h"
+#include "scheduler.h"	// for shadow_rec definition
+#include "condor_email.h"
 
 extern char *Spool;
 extern char* JobHistoryFileName;
+extern Scheduler scheduler;
 
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -1122,16 +1125,181 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 
 
 ClassAd *
-GetJobAd(int cluster_id, int proc_id)
+GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 {
 	char	key[_POSIX_PATH_MAX];
 	ClassAd	*ad;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
 	if (JobQueue->LookupClassAd(key, ad)) {
-		return ad;
-	} else
+		if ( !expStartdAd ) {
+			// we're done, return the ad.
+			return ad;
+		}
+
+		// if we made it here, we have the ad, but
+		// expStartdAd is true.  so we need to dig up 
+		// the startd ad which matches this job ad.
+		char *bigbuf = NULL;
+		char *bigbuf2 = NULL;
+		PROC_ID job_id;
+		shadow_rec *srec;
+		ClassAd *startd_ad;
+		ClassAd *expanded_ad;
+		int index;
+		const char *AttrsToExpand[] = { ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS,
+			ATTR_JOB_ENVIRONMENT, NULL };	// ATTR_JOB_CMD must be first
+		char *left,*name,*right,*value,*tvalue;
+
+		// we must make a deep copy of the job ad; we do not
+		// want to expand the ad we have in memory.
+		expanded_ad = new ClassAd(*ad);  
+
+		job_id.cluster = cluster_id;
+		job_id.proc = proc_id;
+
+		if ((srec = scheduler.FindSrecByProcID(job_id)) == NULL) {
+			// pretty weird... no shadow, nothing we can do
+			return expanded_ad;
+		}
+
+		if ( srec->match == NULL ) {
+			// pretty weird... no match rec, nothing we can do
+			// could be a PVM job?
+			return expanded_ad;
+		}
+
+		startd_ad = srec->match->my_match_ad;
+
+		index = 0;
+		bool no_startd_ad = false;
+		bool attribute_not_found = false;
+		while ( AttrsToExpand[index] && !no_startd_ad &&
+				!attribute_not_found ) 
+		{
+			if (!bigbuf) 
+				bigbuf = new char[ATTRLIST_MAX_EXPRESSION];
+			bigbuf[0] = '\0';
+			ad->LookupString(AttrsToExpand[index],bigbuf);
+
+				// Some backwards compatibility: if the
+				// user just has $$opsys.$$arch in the
+				// ATTR_JOB_CMD attribute, convert it to the
+				// new format w/ parenthesis: $$(opsys).$$(arch)
+			if ( (index == 0) && ((tvalue=strstr(bigbuf,"$$")) != NULL) ) 
+			{
+				if ( stricmp("$$OPSYS.$$ARCH",tvalue) == MATCH ) 
+				{
+					// convert to the new format
+					strcpy(tvalue,"$$(OPSYS).$$(ARCH)");
+					bigbuf2 = new char[ATTRLIST_MAX_EXPRESSION];
+					sprintf(bigbuf2,"%s=\"%s\"",AttrsToExpand[index],
+						bigbuf);
+					ad->Insert(bigbuf2);
+					delete [] bigbuf2;
+				}
+			}
+
+			while( !no_startd_ad && !attribute_not_found &&
+					get_var(bigbuf,&left,&name,&right,NULL,true) )
+			{
+				if (!startd_ad) {
+					no_startd_ad = true;
+					break;
+				}
+				value = startd_ad->sPrintExpr(NULL,0,name);
+				if (!value) {
+					attribute_not_found = true;
+					break;
+				}
+				// we just want the attribute value, so strip
+				// out the "attrname=" prefix and any quotation marks 
+				// around string value.
+				tvalue = strchr(value,'=');
+				ASSERT(tvalue);	// we better find the "=" sign !
+				tvalue++;	// skip past "=" sign
+				while ( *tvalue && isspace(*tvalue) ) {
+					tvalue++;
+				}
+				// skip any quotation marks around strings
+				if (*tvalue == '"') {
+					tvalue++;
+					int endquoteindex = strlen(tvalue) - 1;
+					if ( endquoteindex >= 0 && 
+						 tvalue[endquoteindex] == '"' ) {
+						    tvalue[endquoteindex] = '\0';
+					}
+				}
+				bigbuf2 = new char[ATTRLIST_MAX_EXPRESSION];
+				sprintf(bigbuf2,"%s%s%s",left,tvalue,right);
+				sprintf(bigbuf,"%s=\"%s\"",AttrsToExpand[index],
+					bigbuf2);
+				expanded_ad->Insert(bigbuf);
+				dprintf(D_FULLDEBUG,"$$ substitution: %s\n",bigbuf);
+				free(value);	// must use free here, not delete[]
+				delete [] bigbuf;
+				bigbuf = bigbuf2;
+				bigbuf2 = NULL;
+			}
+			index++;
+		}
+
+
+		if ( no_startd_ad || attribute_not_found ) {
+			// no ClassAd in the match record; probably
+			// an older negotiator.  put the job on hold and send email.
+			dprintf( D_ALWAYS, 
+				"Putting job %d.%d on hold - cannot expand $$(%s)\n",
+				 cluster_id, proc_id, name );
+			// SetAttribute does security checks if Q_SOCK is not NULL.
+			// So, set Q_SOCK to be NULL before placing the job on hold
+			// so that SetAttribute knows this request is not coming from
+			// a client.  Then restork Q_SOCK back to the original value.
+			ReliSock* saved_sock = Q_SOCK;
+			Q_SOCK = NULL;
+			SetAttributeInt( cluster_id, proc_id,ATTR_JOB_STATUS, HELD );
+			Q_SOCK = saved_sock;
+			char buf[256];
+			sprintf(buf,"Your job (%d.%d) is on hold",cluster_id,proc_id);
+			FILE* email = email_user_open(ad,buf);
+			if ( email ) {
+				fprintf(email,"Condor failed to start your job %d.%d \n",
+					cluster_id,proc_id);
+				fprintf(email,"because job attribute %s contains $$(%s).\n",
+					AttrsToExpand[index-1],name);
+				fprintf(email,"\nAttribute $$(%s) cannot be expanded because",
+					name);
+				if ( attribute_not_found ) {
+					fprintf(email,"\nthis attribute was not found in the "
+							"machine ClassAd.\n");
+				} else {
+					fprintf(email,
+							"\nthis feature is not supported by the version"
+							" of the Condor Central Manager\n"
+							"currently installed.  Please ask your site's"
+							" condor administrator to upgrade the\n"
+							"Central Manager to a more recent revision.\n");
+				}
+				fprintf(email,
+					"\n\nPlease correct this problem and release your "
+					"job with:\n   \"condor_release %d.%d\"\n\n",
+					cluster_id,proc_id);
+				email_close(email);
+			}
+		}
+
+		if ( bigbuf ) delete [] bigbuf;
+		if ( bigbuf2 ) delete [] bigbuf2;
+
+		if ( no_startd_ad || attribute_not_found )
+			return NULL;
+		else 
+			return expanded_ad;
+
+	} else {
+		// we could not find this job ad
 		return NULL;
+	}
 }
 
 
