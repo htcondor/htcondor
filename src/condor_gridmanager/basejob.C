@@ -440,8 +440,7 @@ int BaseJob::EvalOnExitJobExpr()
 	// If the ON_EXIT attributes haven't been set at all, fake
 	// a normal job exit.
 	int dummy;
-	if ( !ad->LookupBool( ATTR_ON_EXIT_BY_SIGNAL, dummy ) &&
-		 !ad->LookupInteger( ATTR_ON_EXIT_SIGNAL, dummy ) &&
+	if ( !ad->LookupInteger( ATTR_ON_EXIT_SIGNAL, dummy ) &&
 		 !ad->LookupInteger( ATTR_ON_EXIT_CODE, dummy ) ) {
 
 		exitStatusKnown = false;
