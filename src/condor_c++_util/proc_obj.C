@@ -473,6 +473,9 @@ static void
 d_string( const char *name, char *val )
 {
 	do_indent();
+	if( val == NULL ) {
+		val = "\0";     // Solaris drops core if printf passed NULL
+	}
 	printf( "%s: \"%s\"\n", name, val );
 }
 
@@ -480,6 +483,9 @@ static char*
 b_string( const char *name, char *val )
 {
 	char *temp = new char[150];
+	if( val == NULL ) {
+		val = "\0";     // Solaris drops core if printf passed NULL
+	}
 	sprintf(temp,  "%s\t\"%s\"\n", name, val );
 	return temp;
 }
