@@ -477,6 +477,7 @@ fetch_cluster_list( DBM *Q )
 	datum	data;
 	CLUSTER_LIST	*answer, *make_cluster_list(), *copy_cluster_list();
 
+	memset( &data, '\0', sizeof(data) );
 	data = dbm_fetch( Q, ClusterKey );
 	if( data.dptr ) {
 		answer = copy_cluster_list( (CLUSTER_LIST *)data.dptr );
