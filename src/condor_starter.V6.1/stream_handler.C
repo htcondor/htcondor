@@ -11,6 +11,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 {
 	int flags;
 	int result;
+	HandlerType handler_mode;
 
 	strcpy(filename,fn);
 	strcpy(streamname,sn);
@@ -38,13 +39,15 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 	if(is_output) {
 		job_pipe = pipe_fds[1];
 		handler_pipe = pipe_fds[0];
+		handler_mode = HANDLE_READ;
 	} else {
 		job_pipe = pipe_fds[0];
 		handler_pipe = pipe_fds[1];
+		handler_mode = HANDLE_WRITE;
 	}
 
 	offset = 0;
-	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",(PipeHandlercpp)&StreamHandler::Handler,"Stream I/O Handler",this,HANDLE_READ_WRITE);
+	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",(PipeHandlercpp)&StreamHandler::Handler,"Stream I/O Handler",this,handler_mode);
 	return true;
 }
 
