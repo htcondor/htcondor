@@ -1442,11 +1442,11 @@ Scheduler::negotiate(int, Stream* s)
 			}
 				// All commands from CM during the negotiation cycle
 				// just send the command followed by eom, except
-				// PERMISSION and PERMISSION_AND_AD, 
-				// which also sends the capability for the
-				// match.  Do the end_of_message here, except for
-				// PERMISSON and PERMISSION_AND_AD.
-			if( (op != PERMISSION) && (op != PERMISSION_AND_AD) ) {
+				// PERMISSION, PERMISSION_AND_AD, and REJECTED_WITH_REASON
+				// Do the end_of_message here, except for
+				// those commands.
+			if( (op != PERMISSION) && (op != PERMISSION_AND_AD) &&
+				(op != REJECTED_WITH_REASON) ) {
 				if( !s->end_of_message() ) {
 					dprintf( D_ALWAYS, "Can't receive eom from manager\n" );
 					return (!(KEEP_STREAM));
@@ -1454,6 +1454,22 @@ Scheduler::negotiate(int, Stream* s)
 			}
 
 			switch( op ) {
+				 case REJECTED_WITH_REASON: {
+					 char *diagnostic_message = NULL;
+					 if( !s->code(diagnostic_message) ||
+						 !s->end_of_message() ) {
+						 dprintf( D_ALWAYS,
+								  "Can't receive request from manager\n" );
+						 return (!(KEEP_STREAM));
+					 }
+					 dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
+							 id.cluster, id.proc, diagnostic_message);
+					 SetAttributeString(id.cluster, id.proc,
+										ATTR_LAST_REJ_MATCH_REASON,
+										diagnostic_message);
+					 free(diagnostic_message);
+				 }
+					 // don't break: fall through to REJECTED case
 				 case REJECTED:
 					job_universe = 0;
 					GetAttributeInt(id.cluster, id.proc, ATTR_JOB_UNIVERSE,
@@ -1464,6 +1480,8 @@ Scheduler::negotiate(int, Stream* s)
 					}
 					host_cnt = max_hosts + 1;
 					JobsRejected++;
+					SetAttributeInt(id.cluster, id.proc,
+									ATTR_LAST_REJ_MATCH_TIME, (int)time(0));
 					break;
 				case SEND_JOB_INFO: {
 					/* Really, we're trying to make sure we don't have too
@@ -1548,6 +1566,10 @@ Scheduler::negotiate(int, Stream* s)
 					sprintf (temp, "%s = \"%s\"", ATTR_USER, owner);
 					ad->Insert (temp);
 
+					// request match diagnostics
+					sprintf (temp, "%s = True", ATTR_WANT_MATCH_DIAGNOSTICS);
+					ad->Insert (temp);
+
 					// Send the ad to the negotiator
 					if( !ad->put(*s) ) {
 						dprintf( D_ALWAYS,
@@ -1573,6 +1595,9 @@ Scheduler::negotiate(int, Stream* s)
 					 * If things are cool, contact the startd.
 					 */
 					dprintf ( D_FULLDEBUG, "In case PERMISSION\n" );
+
+					SetAttributeInt(id.cluster, id.proc,
+									ATTR_LAST_MATCH_TIME, (int)time(0));
 
 					if( !s->get(capability) ) {
 						dprintf( D_ALWAYS,
