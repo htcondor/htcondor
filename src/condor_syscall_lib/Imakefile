@@ -39,9 +39,14 @@ EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
-#	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS) || (IS_X86_SOLARIS25)
+#	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o
+#	elif (IS_X86_SOLARIS25)
+EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
+		  i386_data.o
+
 #	elif IS_SGI_IRIX53
 EXTRACT = /* don't extract anything */
 #	else
@@ -204,6 +209,10 @@ uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG2.o,___masksig_restore,___MASKS
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 #endif
 
+#if (IS_X86_SOLARIS25)
+i386_data.o : $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) i386_data.o
+#endif
 
 release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
 
