@@ -111,7 +111,11 @@ extern "C"
 	void 	_EXCEPT_(char*...);
 	char* 	gen_ckpt_name(char*, int, int, int);
 	int	 	do_connect(const char*, const char*, u_int);
+#if defined(HPUX9)
+	int	 	gethostname(char*, unsigned int);
+#else
 	int	 	gethostname(char*, int);
+#endif
 	int		send_context_to_machine(DGRAM_IO_HANDLE*, int, CONTEXT*);
 	int	 	boolean(char*, char*);
 	char*	param(char*);
