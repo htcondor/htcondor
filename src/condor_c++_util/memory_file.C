@@ -21,7 +21,11 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+/* the below is defined in test suite programs that use these files. */
+#ifndef NO_CONDOR_COMMON
 #include "condor_common.h"
+#endif
+
 #include "memory_file.h"
 
 static const int DEFAULT_BUFFER_SIZE=1024;

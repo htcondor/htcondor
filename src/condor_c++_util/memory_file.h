@@ -30,7 +30,10 @@ The primary use of this class is to have a second implementation
 of read/write/seek, against which to test the real read/write/seek,
 */
 
+/* The bottom is defined for test suites that use this code in themselves */
+#ifndef NO_CONDOR_COMMON
 #include "condor_common.h"
+#endif
 
 class memory_file {
 public:
