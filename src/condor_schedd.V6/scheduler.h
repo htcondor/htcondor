@@ -194,6 +194,7 @@ class Scheduler : public Service
 	int				QueueCleanInterval;
 	int				JobStartDelay;
 	int				MaxJobsRunning;
+	bool			NegotiateAllJobsInCluster;
 	int				JobsStarted; // # of jobs started last negotiating session
 	int				SwapSpace;	 // available at beginning of last session
 	int				ShadowSizeEstimate;	// Estimate of swap needed to run a job
@@ -299,7 +300,6 @@ class Scheduler : public Service
 	void			Relinquish(match_rec*);
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
-	void			mark_job_running(PROC_ID*);
 	int				is_alive(shadow_rec* srec);
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
