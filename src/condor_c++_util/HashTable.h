@@ -86,7 +86,7 @@ class HashTable {
   int tableSize;                                // size of hash table
   HashBucket<Index, Value> **ht;                // actual hash table
   int (*hashfcn)(const Index &index, int numBuckets); // user-provided hash function
-  duplicateKeyBehavior_t behavior;              // duplicate key behavior
+  duplicateKeyBehavior_t duplicateKeyBehavior;        // duplicate key behavior
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
   int *chainsUsed;	// array which says which chains have items; speeds iterating
@@ -158,6 +158,7 @@ HashTable<Index,Value>::HashTable( int tableSz,
   numElems = 0;
   endOfFreeList = 0 - tableSize - 10;
   chainsUsedFreeList = endOfFreeList;
+  duplicateKeyBehavior = behavior;
 }
 
 // Insert entry into hash table mapping Index to Value.
@@ -169,7 +170,8 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 	// if rejectDuplicateKeys is set and index already exists in the
 	// table, return -1
 	Value *tempVal;
-	if( behavior == rejectDuplicateKeys && lookup( index, tempVal ) == 0 ) {
+	if( duplicateKeyBehavior == rejectDuplicateKeys 
+		&& lookup( index, tempVal ) == 0 ) {
 		return -1;
 	}
 
