@@ -90,6 +90,13 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_JOB_IWD);
 	}
 
+	if( !jobAd->LookupFloat(ATTR_BYTES_SENT, prev_run_bytes_sent) ) {
+		prev_run_bytes_sent = 0;
+	}
+	if( !jobAd->LookupFloat(ATTR_BYTES_RECVD, prev_run_bytes_recvd) ) {
+		prev_run_bytes_recvd = 0;
+	}
+
 		// construct the core file name we'd get if we had one.
 	int size = strlen(iwd) + strlen(cluster) + strlen(proc) + 11;
 	core_file_name = (char*)malloc( size * sizeof(char) );
@@ -217,6 +224,8 @@ BaseShadow::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_TOTAL_SUSPENSIONS );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
+	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
+	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -828,7 +837,11 @@ BaseShadow::updateJobInQueue( update_t type )
 	static bool checked_for_history = false;
 	static bool has_history = false;
 	char* name;
+	char buf[128];
 	
+
+	dprintf( D_FULLDEBUG, "Entering BaseShadow::updateJobInQueue\n" );
+
 	if( ! checked_for_history ) {
 		char* history = param( "HISTORY" );
 		if( history ) {
@@ -873,6 +886,19 @@ BaseShadow::updateJobInQueue( update_t type )
 				 "queue and schedd has no history file, aborting update\n" );
 		return true;
 	}
+
+		// insert the bytes sent/recv'ed by this job into our job ad.
+		// we want this from the perspective of the job, so it's
+		// backwards from the perspective of the shadow.  if this
+		// value hasn't changed, it won't show up as dirty and we
+		// won't actually connect to the job queue for it.  we do this
+		// here since we want it for all kinds of updates...
+	sprintf( buf, "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
+											   bytesReceived()) );
+	jobAd->Insert( buf );
+	sprintf( buf, "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
+											   bytesSent()) );
+	jobAd->Insert( buf );
 
 	jobAd->ResetExpr();
 	while( (tree = jobAd->NextDirtyExpr()) ) {

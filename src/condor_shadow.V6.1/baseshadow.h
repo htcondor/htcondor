@@ -384,6 +384,8 @@ class BaseShadow : public Service
 	char *scheddAddr;
 	bool jobExitedGracefully;
 	char *core_file_name;
+	float prev_run_bytes_sent;
+	float prev_run_bytes_recvd;
 
 	// misc
 	int q_update_tid;
