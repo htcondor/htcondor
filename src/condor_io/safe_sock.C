@@ -643,7 +643,7 @@ char * SafeSock::serialize(char *buf)
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
-	sscanf(ptmp,"%d*",&_special_state);
+	sscanf(ptmp,"%d*",(int*)&_special_state);
     // skip through this
     ptmp = strchr(ptmp, '*');
     ptmp++;
