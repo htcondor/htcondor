@@ -158,11 +158,8 @@ int getMemInfo_test(bool verbose) {
   // in parent
   int status = 10;
   wait(&status);
-  if(status == 1){
-    return -1;
-  }
-  else if(status == 0){
+  if(status == 0){
     return 1;
   }
- 
+  return -1;
 }
