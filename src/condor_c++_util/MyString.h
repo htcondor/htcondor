@@ -113,8 +113,8 @@ public:
     return S;
   }
 
-  const char* Value() const { return Data; }
-  operator const char*() const { return Data; }
+  const char* Value() const { return (Data ? Data : ""); }
+  operator const char*() const { return (Data ? Data : ""); }
     
   friend ostream& operator<<(ostream& os, const MyString& S) {
     if (S.Data) os << S.Data;
