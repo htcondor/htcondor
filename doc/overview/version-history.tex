@@ -82,6 +82,12 @@ Bugs in how the \Condor{shadow.pvm} exited, which caused jobs to hang
 at exit or to run multiple times, have been fixed.
 The \Condor{shadow.pvm} no longer exits if there is a problem starting
 up PVM on one remote host.
+The \Condor{starter.pvm} now ignores the periodic checkpoint command
+from the startd.  Previously, it would vacate the job when it received
+the periodic checkpoint command.
+A number of bugs with how the \Condor{starter.pvm} handled
+asynchronous events, which caused it to take a long time to clean up
+an exited PVM task, have been fixed.
 The \Condor{schedd} now sets the status correctly on multi-class PVM
 jobs and removes them from the job queue correctly on exit.
 \Condor{submit} no longer ignores the machine\_count command for PVM
