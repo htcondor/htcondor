@@ -153,28 +153,6 @@ HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 #USE_AFS		= False
 
 ##--------------------------------------------------------------------
-##  I/O Buffering:
-##--------------------------------------------------------------------
-
-## Enabling I/O buffering may improve application performance by reducing
-## the number of remote system calls.  To enable I/O buffering, uncomment
-## _both_ of the following parameters.
-
-## The number of buffer blocks in each user job.  More buffer blocks generally
-## improve I/O performance, but make each user job bigger, thus increasing
-## checkpoint and restart time.
-#BUFFER_BLOCK_COUNT	20
-
-## The size, in bytes, of a buffer block.  This should be a multiple
-## of your disk block size, which is typically 4096 bytes.
-#BUFFER_BLOCK_SIZE 	16384
-
-## The number of bytes to automatically read and buffer when
-## a file is opened remotely.  Should be a multiple of the buffer block
-## size.  Default is zero.
-#BUFFER_PREFETCH_BYTES 32768
-
-##--------------------------------------------------------------------
 ##  Checkpoint server:
 ##--------------------------------------------------------------------
 ##  Do you want to use a checkpoint server?
