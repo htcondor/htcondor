@@ -27,7 +27,9 @@
 
 using namespace std;
 
+#ifndef __APPLE_CC__
 extern DLL_IMPORT_MAGIC long timezone;
+#endif
 
 BEGIN_NAMESPACE( classad )
 
