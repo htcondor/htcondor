@@ -46,7 +46,6 @@ simple_dir_target(release_dir/lib)
 object_target(util_lib)
 object_target(c++_util)
 object_target(xdr_lib)
-object_target($(SYSCALL_LIB))
 
 #if WANT_PVM && HAS_PVM
 	object_target($(PVM_LIBRARY))
@@ -61,10 +60,12 @@ object_target(tools)
 	object_target(starter.Alpha)
 	object_target(test_suite)
 	object_target(ckpt)
+	object_target(syscall_lib)
 #else
 	object_target(shadow)
 	object_target(starter)
 	object_target(submit.v2)
+	object_target($(SYSCALL_LIB))
 #	if DOES_CHECKPOINTING
 		object_target(standalone)
 		object_target(test_suite_C)
