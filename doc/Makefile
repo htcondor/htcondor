@@ -1,5 +1,5 @@
-SUBDIR = v6.1
-SUBVER = V6_1
+SUBDIR = v6.3
+SUBVER = V6_3
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 all:  ref.dvi
@@ -97,6 +97,26 @@ ref.html: $(TARGETDIR)
 	mv -f ref.new/* $(TARGETDIR)
 	rmdir ref.new
 	touch ref.html
+
+local.html:
+	rm -f timesfont.tex
+	echo "% do not want times" > timesfont.tex
+	rm -f fontsize.tex
+	rm -f symbol.tex
+	rm -f figuresizing.tex
+	ln -s regularfont.tex fontsize.tex
+	ln -s symbol-html.tex symbol.tex
+	ln -s figuresizing-html.tex figuresizing.tex
+	make clean
+	make figures
+	latex ref.tex
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	makeindex ref
+	latex ref.tex -interaction=batchmode
+	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 
 release-html: ref.html $(TARGETDIR)
 	rm -rf $(MANDIR).old

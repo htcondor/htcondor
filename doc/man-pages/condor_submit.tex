@@ -5,6 +5,7 @@
 \oOpt{-v}
 \oOptArg{-n}{schedd\_name}
 \oOptArg{-r}{schedd\_name}
+\oOpt{-d}
 \Arg{submit-description file}
 
 \index{Condor commands!condor\_submit}
@@ -544,7 +545,6 @@ Globus resource to which the job should be submitted. More than one scheduler
 can be submitted to, simply place a \Arg{queue} command after each instance
 of globusscheduler. Each instance should be a valid Globus scheduler, using
 either the full Globus contact string or the host/scheduler format shown below:
-\Note{Submit attributes which start with "globus" are not macro expanded}
 \begin{description}
 \item[Example:]
 To submit to the LSF scheduler of the Globus gatekeeper on lego at 
@@ -557,31 +557,11 @@ queue
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%
-%% globusarguments
-%%%%%%%%%%%%%%%%%%%
-
-\item[globusarguments = $<$argument-list$>$] This space-separated list
-of arguments is copied into the \Prog{globusrun} arguments attribute 
-To have Condor expand the macros before passing the arguments on to 
-\Prog{globusrun}, use the arguments attribute rather than globusarguments.
-\Note{Submit attributes which start with "globus" are not macro expanded}
-
-%%%%%%%%%%%%%%%%%%%
-%% globusexecutable
-%%%%%%%%%%%%%%%%%%%
-
-\item[globusexecutable = $<$executable-path$>$] Similar to the executable
-attribute, but without macro expansion. The [globus]executable argument
-is passed to \Prog{globusrun} to be executed on the remote Globus node.
-
-%%%%%%%%%%%%%%%%%%%
 %% globusrsl
 %%%%%%%%%%%%%%%%%%%
 
 \item[globusrsl = $<$RSL-string$>$] Used to provide any additional Globus RSL
-string attributes which are not covered by globusexecutable, globusarguments,
-and globusscheduler.
-\Note{Submit attributes which start with "globus" are not macro expanded}
+string attributes which are not covered by regular submit file parameters.
 
 %%%%%%%%%%%%%%%%%%%
 % +
@@ -646,6 +626,8 @@ character are ignored by the submit-description file parser.
 	systems, the Condor administrator for you site must override the default 
 	AUTHENTICATION\_METHODS configuration setting to enable remote filesystem 
 	(FS\_REMOTE) authentication.}
+
+	\OptItem{\Opt{-d}}{Disable file permission checks.}
 
 \end{Options}
 

@@ -1,0 +1,63 @@
+%% This section constructs various classes of argument options. A class
+%% is a set of arguments that all perform a similar function or should
+%% always be together.
+
+%% Every single tool should implement these
+\newcommand{\ToolArgsBase}{
+\oOptnm{-help $|$ -version}
+}
+
+%% How to locate the machines with which you want to mess.
+\newcommand{\ToolArgsLocate}{
+\oOptnm{-pool hostname $|$ -name hostname $|$ -addr "\SinfulAny" 
+	$|$ hostname ...}
+}
+
+%% Which daemons you wish to affect. XXX maybe split up nicer...
+\newcommand{\ToolArgsAffect}{
+\oOptnm{-master $|$ -startd $|$ -schedd $|$ -collector $|$ -negotiator 
+	$|$ -kbdd}
+}
+
+%% This is the common set of arguments
+\newcommand{\ToolArgs}{
+\ToolArgsBase
+\ToolArgsLocate
+\ToolArgsAffect
+}
+
+%% ----- descriptions of above arguments
+
+\newcommand{\ToolArgsBaseDesc}{
+\OptItem{\Opt{-help}}{Display usage information}
+\OptItem{\Opt{-version}}{Display version information}
+}
+
+%%  Argument descriptions for different classes of arguments 
+\newcommand{\ToolArgsLocateDesc}{
+\OptItem{\OptArg{-pool}{hostname}}{Use the given central manager to
+	find daemons}
+\OptItem{\OptArg{-name}{hostname}}{Send the specified command to specified 
+	machine}
+\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the specified command
+	to a machine's master located at "\SinfulAny"}
+\OptItem{\Opt{hostname ...}}{A list of affected machines}
+}
+
+%% Descriptions of Affected Daemons
+\newcommand{\ToolArgsAffectDesc}{
+\OptItem{\Opt{-master}}{Send the specified command to the master (default)}
+\OptItem{\Opt{-startd}}{Send the specified command to the startd}
+\OptItem{\Opt{-schedd}}{Send the specified command to the schedd}
+\OptItem{\Opt{-collector}}{Send the specified command to the collector}
+\OptItem{\Opt{-kbdd}}{Send the specified command to the kbdd}
+}
+
+%% This is the description of the common arguments
+\newcommand{\ToolArgsDesc}{
+\ToolArgsBaseDesc
+\ToolArgsLocateDesc
+\ToolArgsAffectDesc
+}
+
+

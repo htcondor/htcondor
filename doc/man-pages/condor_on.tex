@@ -1,9 +1,12 @@
 \begin{ManPage}{\label{man-condor-on}\Condor{on}}{1}
 {Startup condor daemons}
 \Synopsis \SynProg{\Condor{on}}
-\oOpt{-help}
-\oOpt{-version}
-\oOpt{hostname ...}
+\oOpt{general-options}
+\oOpt{targets}
+\oOpt{subsystem}
+
+\SynProg{\Condor{on}}
+\ToolArgs
 
 \index{Condor commands!condor\_on}
 \index{condor\_on command}
@@ -18,9 +21,7 @@ will tell the \Condor{master} to start up the condor daemons specified
 in the configuration variable DAEMON\_LIST.
 
 \begin{Options}
-	\OptItem{\Opt{-help}}{Display usage information}
-	\OptItem{\Opt{-version}}{Display version information}
-	\OptItem{\Opt{hostname ...}}{Turn condor on on this list of machines}
+	\ToolArgsDesc
 \end{Options}
 
 \end{ManPage}

@@ -8,7 +8,7 @@ Configuring Condor}
 
 This section describes how to configure all parts of the Condor
 system.  General information about the configuration
-files and their syntax is follwed by a description of
+files and their syntax is followed by a description of
 settings that affect all
 Condor daemons and tools.  At the end is a section describing the
 settings for each part of Condor.  The 
@@ -115,7 +115,7 @@ evaluate.
 \Note Macros should not be incrementally defined in the
 \Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
 
-\Note Condor used to distingish between ``macros'' and ``expressions''
+\Note Condor used to distinguish between ``macros'' and ``expressions''
 in its config files.
 Begining with Condor version 6.1.13, this distinction has been
 removed.
@@ -1895,6 +1895,12 @@ jobs at your site use the following macros:
 \item[\Macro{APPEND\_REQ\_STANDARD}] \label{param:AppendReqStandard}
   Expression to be appended to standard job requirements.
 
+\item[\Macro{APPEND\_REQUREMENTS}] \label{param:AppendReqStandard}
+  Expression to be appended to any type of universe jobs. 
+  However, if \Macro{APPEND\_REQ\_VANILLA} or \Macro{APPEND\_REQ\_STANDARD}
+  is defined, then ignore the \Macro{APPEND\_REQUREMENTS} for those
+  universes.
+
 \item[\Macro{APPEND\_RANK\_STANDARD}] \label{param:AppendRankStandard}
   Expression to be appended to standard job rank.
 
@@ -1962,7 +1968,7 @@ as:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Preen-Config-File-Entries}
-\condor{preen} Configutation File Entries}
+\condor{preen} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These macros affect \Condor{preen}.

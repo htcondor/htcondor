@@ -15,23 +15,77 @@ The details of each version are described below.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent New Features Over the 6.0 Release Series
-
 \begin{itemize}
 
-\item Support for running multiple jobs on SMP (Symmetric
-Mutli-Processor) machines.
+\item Support for running multiple jobs on SMP (Symmetric Mutli-Processor)
+machines.
 
-\Todo
+\end{itemize}
+
+\noindent New Features Over the Last Development Series: 6.1.17
+\begin{itemize}
+
+\item if \Attr{CkptArch} isn't specified in the job submission file's
+\Attr{Requirements} attribute, then automatically add this expression:
+
+\begin{verbatim}
+CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) &&
+	((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
+\end{verbatim}
+
+to the \Attr{Requirements} expression. This allows for users who specify
+a heterogeneous submission to not have to worry about having their checkpoints
+incorrectly starting up on architectures for which they were not designed
+to run.
+
+\item The \Macro{APPEND\_REQ\_<universe>} config file entries now get
+appended to the beginning of the expressions before Condor adds internal
+default expressions.  This allows the sysadmin to override any default
+policy that Condor enforces.
+
+\item There is now a single \Macro{APPEND\_REQUIREMENTS} attribute that will get
+appended to all universe's \Attr{Requirements} expressions unless a specific
+\Macro{APPEND\_REQ\_STANDARD} or \Macro{APPEND\_REQ\_VANILLA} expression.
+
+\item Increased certain networking parameters to help alleviate the 
+\Condor{shadow}'s inability to contact the \Condor{schedd} during heavy load
+of the system.
+
+\item Added a \Condor{glidein} man page to the manual.
+
+\end{itemize}
+
+\noindent Bugs fixed since 6.1.17
+\begin{itemize}
+
+\item On NT, the Registry would increase in size while Condor was
+servicing jobs. This has been fixed.
+
+\item Added \File{utmpx} support for Solaris 2.8 to fix a problem where
+\AdAttr{KeyBoardIdle} wasn't being set correctly.
+
+\item When doing a \Condor{hold} under NT, the job was removed instead of
+held. This has been fixed.
+
+\end{itemize}
+
+\noindent Bugs fixed since 6.2.0
+\begin{itemize}
+
+\item In \Condor{q}, dash-arguments (e.g., -pool, -run, etc.) were being
+parsed incorrectly such that the same arguments specified without a
+dash would be interpreted as if the dash were present, making it
+impossible to specify ``pool'' or ``globus'' or ``run'' as an owner
+argument.
 
 \end{itemize}
 
 \noindent Known Bugs:
-
 \begin{itemize}
 
-\item None.
-
-\Todo
+\item \Attr{STARTD\_HAS\_BAD\_UTMP} does not work if set to True on Solaris 
+2.8.  However, since \File{utmpx} support is enabled, you shouldn't
+need to do this normally.
 
 \end{itemize}
 

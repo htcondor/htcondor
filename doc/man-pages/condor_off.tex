@@ -1,8 +1,15 @@
 \begin{ManPage}{\label{man-condor-off}\Condor{off}}{1}
 {Shutdown condor daemons}
 \Synopsis \SynProg{\Condor{off}}
-\oOpt{-help}
-\oOpt{-version}
+\oOpt{general-options}
+\oOpt{targets}
+\oOpt{subsystem}
+
+\SynProg{\Condor{off}}
+% because of graceful, need to do this by hand
+\oOpt{-help $|$ -version $|$ -pool hostname $|$ -graceful $|$ -fast}
+\oOpt{hostname $|$ "\SinfulAny" $|$ -name hostname $|$ -addr "\SinfulAny" ...}
+\oOpt{-master $|$ -startd $|$ -schedd $|$ -collector $|$ -negotiator $|$ -kbdd}
 \oOpt{hostname ...}
 
 \index{Condor commands!condor\_off}
@@ -18,11 +25,10 @@ running is the \Condor{master}, which can handle both local and remote
 requests to restart the other condor daeomns if need be.  To restart
 condor running on a machine, see the \Condor{on} command.
 
-
 \begin{Options}
-	\OptItem{\Opt{-help}}{Display usage information}
-	\OptItem{\Opt{-version}}{Display version information}
-	\OptItem{\Opt{hostname ...}}{Turn condor off on this list of machines}
+	\OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)}
+	\OptItem{\Opt{-fast}}{Quickly shutdown daemons}
+	\ToolArgsDesc
 \end{Options}
 
 \end{ManPage}
