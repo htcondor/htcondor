@@ -107,6 +107,7 @@
 #define RESTART				(SCHED_VERS+53)
 #define DAEMONS_OFF			(SCHED_VERS+54)
 #define DAEMONS_ON			(SCHED_VERS+55)
+#define MASTER_OFF			(SCHED_VERS+56)
 
 /************
 *** Command ids used by the collector 
