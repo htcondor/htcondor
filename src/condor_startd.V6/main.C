@@ -157,7 +157,7 @@ main_init( int, char* argv[] )
 		free( tmp );
 	}
 
-	resmgr->walk( &Resource::init_classad );
+	resmgr->walk( &(Resource::init_classad) );
 
 		// Do a little sanity checking and cleanup
 	check_perms();
@@ -289,12 +289,12 @@ main_config()
 		// Recompute machine-wide attributes object.
 	resmgr->compute( A_ALL );
 		// Rebuild ads for each resource.  
-	resmgr->walk( Resource::init_classad );  
+	resmgr->walk( &(Resource::init_classad) );  
 		// Reset various settings in the ResMgr.
 	resmgr->init_socks();
 	resmgr->reset_timers();
 	if( old_poll != polling_interval ) {
-		resmgr->walk( Resource::resize_load_queue );
+		resmgr->walk( &(Resource::resize_load_queue) );
 	}
 
 		// Re-evaluate and update the CM for each resource (again, we
@@ -491,7 +491,7 @@ main_shutdown_fast()
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
-	resmgr->walk( &Resource::kill_claim );
+	resmgr->walk( &(Resource::kill_claim) );
 
 	daemonCore->Register_Timer( 0, 5, 
 								(TimerHandler)check_free,
@@ -511,7 +511,7 @@ main_shutdown_graceful()
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
-	resmgr->walk( &Resource::release_claim );
+	resmgr->walk( &(Resource::release_claim) );
 
 	daemonCore->Register_Timer( 0, 5, 
 								(TimerHandler)check_free,
@@ -559,7 +559,7 @@ do_cleanup()
 			// If the machine is already free, we can exit right away.
 		check_free();		
 			// Otherwise, quickly kill all the active starters.
-		resmgr->walk( &Resource::kill_claim );
+		resmgr->walk( &(Resource::kill_claim) );
 		dprintf( D_ALWAYS, "Exiting because of fatal exception.\n" );
 	}
 

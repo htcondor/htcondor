@@ -170,7 +170,7 @@ MachAttributes::compute( amask_t how_much )
 	}
 
 	if( IS_TIMEOUT(how_much) && IS_SUMMED(how_much) ) {
-		m_condor_load = resmgr->sum( Resource::condor_load );
+		m_condor_load = resmgr->sum( &(Resource::condor_load) );
 		if( m_condor_load > m_load ) {
 			m_condor_load = m_load;
 		}

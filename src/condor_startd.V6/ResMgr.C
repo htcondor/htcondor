@@ -651,7 +651,7 @@ ResMgr::final_update()
 	if( ! resources ) {
 		return;
 	}
-	walk( Resource::final_update );
+	walk( &(Resource::final_update) );
 }
 
 
@@ -701,7 +701,7 @@ void
 ResMgr::first_eval_and_update_all()
 {
 	num_updates = 0;
-	walk( Resource::eval_and_update );
+	walk( &(Resource::eval_and_update) );
 	report_updates();
 	check_polling();
 }
@@ -712,7 +712,7 @@ ResMgr::eval_and_update_all()
 {
 	num_updates = 0;
 	compute( A_TIMEOUT | A_UPDATE );
-	walk( Resource::eval_and_update );
+	walk( &(Resource::eval_and_update) );
 	report_updates();
 	check_polling();
 }
@@ -723,7 +723,7 @@ ResMgr::eval_all()
 {
 	num_updates = 0;
 	compute( A_TIMEOUT );
-	walk( Resource::eval_state );
+	walk( &(Resource::eval_state) );
 	report_updates();
 	check_polling();
 }
@@ -756,9 +756,9 @@ ResMgr::compute( amask_t how_much )
 	}
 
 	m_attr->compute( (how_much & ~(A_SUMMED)) | A_SHARED );
-	walk( Resource::compute, (how_much & ~(A_SHARED)) );
+	walk( &(Resource::compute), (how_much & ~(A_SHARED)) );
 	m_attr->compute( (how_much & ~(A_SHARED)) | A_SUMMED );
-	walk( Resource::compute, (how_much | A_SHARED) );
+	walk( &(Resource::compute), (how_much | A_SHARED) );
 
 		// Sort the resources so when we're assigning owner load
 		// average and keyboard activity, we get to them in the
@@ -770,7 +770,7 @@ ResMgr::compute( amask_t how_much )
 	assign_keyboard();
 
 		// Now that we're done assigning, display all values 
-	walk( Resource::display, how_much );
+	walk( &(Resource::display), how_much );
 }
 
 
@@ -876,7 +876,7 @@ ResMgr::start_update_timer()
 {
 	up_tid = 
 		daemonCore->Register_Timer( update_interval, update_interval,
-									(TimerHandlercpp)eval_and_update_all,
+									(TimerHandlercpp)&eval_and_update_all,
 									"eval_and_update_all", this );
 	if( up_tid < 0 ) {
 		EXCEPT( "Can't register DaemonCore timer" );
@@ -895,7 +895,7 @@ ResMgr::start_poll_timer()
 	poll_tid = 
 		daemonCore->Register_Timer( polling_interval,
 									polling_interval, 
-									(TimerHandlercpp)eval_all,
+									(TimerHandlercpp)&eval_all,
 									"poll_resources", this );
 	if( poll_tid < 0 ) {
 		EXCEPT( "Can't register DaemonCore timer" );
