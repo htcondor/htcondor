@@ -149,6 +149,25 @@ circumstances:
 	number CONDOR_fstat, because we want to use
 	one receiver to interpret both calls.
 
+  : also_implements( id )
+
+  	The same receiver implementation also handles system calls
+	with the given name.  Up to ten also_implements() modifiers,
+	each with a different id, can be used on each entry.
+
+	For example, also_implements() can be used to preserve
+	backwards compatibility between new shadows and older versions
+	of the syscall lib.  The 6.1.8 syscall_lib had a seperate
+	receiver for fstat() and for fstat64().  Newer versions of Condor
+	have just one receiver for fstat and fstat64; fstat64 calls now
+	get "mapped" into an CONDOR_fstat call [by using the remote_name() modifier].
+	However, old versions of the syscall lib will still send 
+	CONDOR_fstat64 system calls to the shadow.  In order to preserve
+	backwards compatibility, we add the modifier also_implements(fstat64)
+	to the fstat entry.  This tells the stub generator that the given
+	receiver stub should be used for both CONDOR_fstat and for
+	CONDOR_fstat64 remote system calls.
+
   Some system calls simply must be handled specially.  Examples
   are those system calls which directly affect the open files
   table used for checkpoint/restart.  Unfortunately, this
@@ -331,7 +350,7 @@ All of these calls manipulate the open file table.
 	}
 
 	off_t lseek( int fd, off_t offset, int whence )
-		: file_table; 
+		: file_table, also_implements(lseek64), also_implements(llseek); 
 
 	#if !defined(IRIX65)
 		offset_t llseek( int fd, offset_t offset, int whence )
@@ -388,10 +407,11 @@ All of these calls manipulate the open file table.
 	/* Truncate must go through the table to update the file size. */
 
 	#if defined(LINUX) && !defined(GLIBC)
-		int ftruncate( int fd, size_t length ) :  file_table;
+		int ftruncate( int fd, size_t length ) :
 	#else
-		int ftruncate( int fd, off_t length ) :  file_table;
+		int ftruncate( int fd, off_t length ) :
 	#endif
+		file_table, also_implements(ftruncate64);
 
 	int ftruncate64( int fd, off64_t length )
 		: file_table_name(ftruncate), remote_name(ftruncate);
@@ -449,13 +469,14 @@ version.
 
 
 	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
-		int fstat( map(int fd), struct stat *buf )
+		int fstat( map(int fd), struct stat *buf ) :
 			#if defined(STAT_NEEDS_EXTRACT)
-				: extract
+				extract,
 			#endif
 			#if defined(IRIX65)
-				: no_sys_chk
+				no_sys_chk,
 			#endif
+				also_implements(fstat64)   /* for backwards compatibility */
 		{
 			out code( buf );
 			alloc( buf, STAT_SIZE );
@@ -464,13 +485,14 @@ version.
 	#endif
 
 	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
-		int stat( const char *name, struct stat *buf )
+		int stat( const char *name, struct stat *buf ) :
 			#if defined(STAT_NEEDS_EXTRACT)
-				: extract
+				extract,
 			#endif
 			#if defined(IRIX65)
-				: no_sys_chk
+				no_sys_chk,
 			#endif
+				also_implements(stat64)   /* for backwards compatibility */
 		{
 			SEND_PATH( name );
 			ALLOC_PATH( name );
@@ -481,13 +503,14 @@ version.
 	#endif
 
 	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
-		int lstat( const char *name, struct stat *buf )
+		int lstat( const char *name, struct stat *buf ) :
 			#if defined(STAT_NEEDS_EXTRACT)
-				: extract
+				extract,
 			#endif
 			#if defined(IRIX65)
-				: no_sys_chk
-			#endif
+				no_sys_chk,
+			#endif	
+				also_implements(lstat64)   /* for backwards compatibility */
 		{
 			SEND_PATH( name );
 			ALLOC_PATH( name );
@@ -559,7 +582,7 @@ version.
 		}
 
 	int flock( map(int fd), int op );
-	int lockf( map(int fd), int op, off_t where );
+	int lockf( map(int fd), int op, off_t where ) : also_implements(lockf64);
 	int lockf64( map(int fd), int op, off64_t where )
 		: remote_name(lockf);
 
@@ -573,7 +596,8 @@ version.
 			alloc( basep, LONG_SIZE );
 		}
 	#elif defined(Solaris) || defined(IRIX)
-		int getdents( map(int fd), struct dirent *buf, size_t nbytes )
+		int getdents( map(int fd), struct dirent *buf, size_t nbytes ) :
+			also_implements(getdents64)
 		{
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
