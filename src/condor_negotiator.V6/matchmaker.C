@@ -51,6 +51,9 @@ Matchmaker::
 void Matchmaker::
 initialize ()
 {
+    // Initialize accountant params
+    accountant.Initialize();
+
 	// read in params
 	reinitialize ();
 
