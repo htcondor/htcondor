@@ -118,9 +118,11 @@ typedef DWORD pid_t;
 class DaemonCore : public Service
 {
 	friend class TimerManager;
-	friend main( int argc, char** argv );
 #ifdef WIN32
+	friend dc_main( int argc, char** argv );
 	friend DWORD pidWatcherThread(void*);	
+#else
+	friend main(int, char**);
 #endif
 
 	public:
@@ -209,7 +211,7 @@ class DaemonCore : public Service
 		
 	private:
 		int		HandleSigCommand(int command, Stream* stream);
-		void	HandleReq(int socki);
+		int		HandleReq(int socki);
 		int		HandleSig(int command, int sig);
 		void	Inherit( ReliSock* &rsock, SafeSock* &ssock );  // called in main()
 		int		HandleProcessExitCommand(int command, Stream* stream);
