@@ -664,6 +664,7 @@ mk_func_node( char *type, char *name, struct node * p_list,
 	answer->is_ref = 0;
 	answer->is_array = 0;
 	answer->is_const = 0;
+	answer->is_const_ptr = 0;
 	answer->extract = IsExtracted;
 	IsExtracted = FALSE;
 	answer->dl_extract = IsDLExtracted;
