@@ -204,8 +204,8 @@ class Dag {
 	bool isCycle ();
 
 	// max number of PRE & POST scripts to run at once (0 means no limit)
-    int _maxPreScripts;
-    int _maxPostScripts;
+    const int _maxPreScripts;
+    const int _maxPostScripts;
 
 	void SetDotFileName(char *dot_file_name);
 	void SetDotIncludeFileName(char *include_file_name);
@@ -251,7 +251,7 @@ class Dag {
 	void DFSVisit (Job * job);
 	
     // name of consolidated condor log
-    char        * _condorLogName;
+    const char* _condorLogName;
 
     // Documentation on ReadUserLog is present in condor_c++_util
     ReadUserLog   _condorLog;
@@ -263,7 +263,7 @@ class Dag {
     off_t         _condorLogSize;
 
     //-->DAP
-    char        * _dapLogName;
+    const char* _dapLogName;
     ReadUserLog   _dapLog;
     bool          _dapLogInitialized;
     off_t         _dapLogSize;
@@ -284,7 +284,7 @@ class Dag {
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
-    int _maxJobsSubmitted;
+    const int _maxJobsSubmitted;
 
 	// queue of jobs ready to be submitted to Condor
 	SimpleList<Job*>* _readyQ;
