@@ -1,3 +1,10 @@
+12/28/04 V6_7-honda-2-branch
+   A new branch for honda-specific changes (mostly parallel universe).
+   The old V6_7-honda-branch will be merged directly into this and
+   abandoned.  This is mostly to grab all the latest V6_7 changes from
+   the V6_7-dedicated-branch (now merged in) along with other fixes. 
+   Created from the V6_7-honda-2-root tag.
+
 12/28/04 V6_7-post_merge-V6_7_3-merge-1
    The state of the V6_7-branch after merging in the V6_7_3-branch as
    tagged at V6_7_3-merge-1
