@@ -52,7 +52,6 @@
 ** Settings related to various externals that are shared across all
 ** versions of Digital Unix.
 */
-#define GLOBUS_FLAVOR	gcc64dbg
 #define HAS_GLOBUS	YES
 #define HAS_GSI		YES
 #define HAS_OPENSSL	YES
