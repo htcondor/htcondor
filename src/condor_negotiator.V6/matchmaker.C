@@ -738,7 +738,7 @@ obtainAdsFromCollector (
 	        allAds.MyLength(),startdPvtAds.MyLength());
 
 	dprintf(D_ALWAYS, "Public ads include %d schedd, %d startd, %d claimed startd\n",
-		startdAds.MyLength(), scheddAds.MyLength(), ClaimedStartdAds.MyLength() );
+		scheddAds.MyLength(), startdAds.MyLength(), ClaimedStartdAds.MyLength() );
 
 	return true;
 }
