@@ -22,8 +22,8 @@ Other of the subroutines denote actions to be taken by Perl.
 Some of these subroutines take other subroutines as arguments.
 
 \subsubsection{Subroutines}
-\begin{enumerate}
-	\item Submit(submit\_description\_file) \\
+\begin{description}
+	\item [\Code{Submit(submit\_description\_file)}]
 	This subroutine takes the action of submitting a job to Condor.
 	The argument is the name of a submit description file.
 	The \Condor{submit} program should be in the
@@ -32,36 +32,36 @@ Some of these subroutines take other subroutines as arguments.
 	submitted is returned. For more information
 	see the \Condor{submit} man page.
 	
-	\item Vacate(machine) \\
+	\item [\Code{Vacate(machine)}]
 	This subroutine takes the action of sending a
 	\Condor{vacate} command to the machine specified as an argument.
 	The machine may be specified
 	either by host name, or by \Term{sinful string}.  For more information
 	see the \Condor{vacate} man page.
 
-	\item Reschedule(machine) \\
+	\item [\Code{Reschedule(machine)}]
 	This subroutine takes the action of sending a
 	\Condor{reschedule} command to the machine specified as an argument.
 	The machine may be specified either
  	by host name, or by \Term{sinful string}.  For more information see
 	the \Condor{reschedule} man page.
 
-	\item Monitor(cluster) \\
+	\item [\Code{Monitor(cluster)}]
 	Takes the action of monitoring this cluster.
 	It returns when all jobs in cluster terminate.
 	
-	\item Wait() \\
+	\item [\Code{Wait()}] 
 	Takes the action of waiting until all monitor subroutines finish,
 	and then exits the Perl script.
 
-	\item DebugOn() \\
+	\item [\Code{DebugOn()}]
 	Takes the action of turning debug messages on.
 	This may be useful when attempting to debug the Perl script.
 
-	\item DebugOff() \\
+	\item [\Code{DebugOff()}]
 	Takes the action of turning debug messages off.
 
-	\item RegisterEvicted(sub) \\
+	\item [\Code{RegisterEvicted(sub)}]
 	Register a subroutine (called \Code{sub})
 	to be used as a callback when a job from
 	a specified cluster is evicted.  The subroutine will be
@@ -69,34 +69,34 @@ Some of these subroutines take other subroutines as arguments.
 	and job are the cluster number and process number of the job that
 	was evicted.
 	
-	\item RegisterEvictedWithCheckpoint(sub) \\
+	\item [\Code{RegisterEvictedWithCheckpoint(sub)}]
 	Same as RegisterEvicted except that the handler is called when the 
 	evicted job was checkpointed.
 
-	\item RegisterEvictedWithoutCheckpoint(sub) \\
+	\item [\Code{RegisterEvictedWithoutCheckpoint(sub)}]
 	Same as RegisterEvicted except that the handler is called when the
 	evicted job was not checkpointed.
 
-	\item RegisterExit(sub) \\
+	\item [\Code{RegisterExit(sub)}]
 	Register a termination handler that is called when a job exits.
 	The termination handler will be called with two arguments: cluster and
 	job. The cluster and job are the cluster and process numbers of the
 	existing job. 
 	
-	\item RegisterExitSuccess(sub) \\
+	\item [\Code{RegisterExitSuccess(sub)}]
 	Register a termination handler that is called when a job exits without
 	errors. The termination handler will be called with two arguments: 
 	cluster and job  The cluster and job are the cluster and process
 	numbers of the existing job. 
 
-	\item RegisterExitFailure(sub) \\
+	\item [\Code{RegisterExitFailure(sub)}]
 	Register a termination handler that is called when a job exits with 
 	errors. The termination handler will be called with three arguments:
 	cluster, job and retval. The cluster and job are the cluster 
 	and process numbers of the existing job and the retval is the exit
 	code of the job.
 
-	\item RegisterExitAbnormal(sub) \\
+	\item [\Code{RegisterExitAbnormal(sub)}]
 	Register an termination handler that is called when a job abnormally
 	exits (segmentation fault, bus error, ...). The termination handler
 	will be called with four arguments: cluster, job  signal and
@@ -105,13 +105,13 @@ Some of these subroutines take other subroutines as arguments.
 	died with and core indicates whether a core file was created and if 
 	so, what the full path to the core file is.
 
-	\item RegisterAbort(sub) \\
+	\item [\Code{RegisterAbort(sub)}]
 	Register a handler that is called when a job is aborted by a user.
 
-	\item RegisterJobErr(sub) \\
+	\item [\Code{RegisterJobErr(sub)}]
 	Register a handler that is called when a job is not executable.
 
-	\item RegisterExecute(sub) \\
+	\item [\Code{RegisterExecute(sub)}]
 	Register an execution handler that is called whenever a job starts
 	running on a given host.  The handler is called with four arguments:
 	cluster, job  host, and sinful.  Cluster and job are the cluster and
@@ -119,7 +119,7 @@ Some of these subroutines take other subroutines as arguments.
 	machine running the job, and sinful is the Internet address and 
 	command port of the \Condor{starter} supervising the job.
 
-	\item RegisterSubmit(sub) \\
+	\item [\Code{RegisterSubmit(sub)}]
 	Register a submit handler that is called whenever a job is submitted
 	with the given cluster.  The handler is called with cluster, job 
 	host, and sinful. Cluster and job are the cluster and
@@ -127,21 +127,21 @@ Some of these subroutines take other subroutines as arguments.
 	machine running the job, and sinful is the Internet address and
 	command port of the \Condor{schedd} responsible for the job.
 
-	\item Monitor(cluster) \\
+	\item [\Code{Monitor(cluster)}]
 	Begin monitoring this cluster. Returns when all jobs in cluster
 	terminate.  \\
 	
-	\item Wait() \\
+	\item [\Code{Wait()}]
 	Wait until all monitors finish and exit.
 
-	\item DebugOn() \\
+	\item [\Code{DebugOn()}]
 	Turn debug messages on.  This may be useful if you don't understand
 	what your script is doing.	
 
-	\item DebugOff() \\
+	\item [\Code{DebugOff()}]
 	Turn debug messages off.
 
-\end{enumerate}
+\end{description}
 
 
 \subsubsection{Examples}
