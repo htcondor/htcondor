@@ -1679,6 +1679,26 @@ SecMan::invalidateAllCache() {
 	command_map = new HashTable<MyString,MyString>(209, MyStringHash, rejectDuplicateKeys);
 }
 
+void 
+SecMan :: invalidateExpiredCache()
+{
+    // Go through all cache and invalide the ones that are expired
+    StringList * list = session_cache->getExpiredKeys();
+
+    // The current session cache, command map does not allow
+    // easy random access based on host direcly. Therefore,
+    // we need to decide which list to be the outerloop
+    // In this case, I assume the command map will be bigger
+    // so, outloop will be command map, inner loop will be host
+
+    list->rewind();
+    char * p;
+    while (p = list->next()) {
+        invalidateKey(p);
+    }
+    delete list;
+}
+
 /*
 
    was used to remove invalid keys...
