@@ -736,7 +736,7 @@ The startd evaluates the \Expr{WANT\_SUSPEND} expression to decide
 which other expressions to evaluate.  
 If \Expr{WANT\_SUSPEND} is TRUE, then the startd evaluates the
 \Expr{SUSPEND} expression.
-If \Expr{SUSPEND} is FALSE, then the startd will
+If \Expr{WANT\_SUSPEND} is FALSE, then the startd will
 evaluate the \Expr{PREEMPT} expression and skip the Suspended activity
 entirely.
 By transition, the possible state/activity destinations from Claimed/Busy:
