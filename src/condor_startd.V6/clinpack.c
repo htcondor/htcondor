@@ -24,6 +24,7 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 
 #include <stdio.h>
 #include <math.h>
+#include <unistd.h>
 
 #ifdef SP
 #define REAL float
@@ -61,6 +62,15 @@ clinpack_kflops ()
    double t1,tm,tm2,dtime();
    static int ipvt[200],n,i,ntimes,info,lda,ldaa,kflops;
 
+   static long clock_tick = -1;
+   static float one_tick;
+   if ( clock_tick < 1 || clock_tick > 1000) {
+                clock_tick = sysconf( _SC_CLK_TCK );
+					/* clock_tick is the number of ticks per second */
+				one_tick = (float) 1 / clock_tick;
+					/* one_tick is the length of time for one tick */
+   }
+
    lda = 201;
    ldaa = 200;
    cray = .056; 
@@ -78,6 +88,15 @@ clinpack_kflops ()
 	dgesl(a,lda,n,ipvt,b,0);
 	st[1][0] = dtime() - t1;
 	total = st[0][0] + st[1][0];
+
+		/* 
+		   On extremely fast machines, the total time between checks
+		   can be less than the resolution of the clock.  In this
+		   case, total will be 0.  Set it to the time 1 clock tick
+		   takes as a way to avoid dividing by 0.
+		   Derek Wright, 9/4/97 
+		 */
+	if( total == 0 ) total = one_tick;
 
 /*     compute a residual to verify results.  */ 
 
@@ -120,6 +139,15 @@ clinpack_kflops ()
 	st[1][1] = dtime() - t1;
 	total = st[0][1] + st[1][1];
 	
+		/* 
+		   On extremely fast machines, the total time between checks
+		   can be less than the resolution of the clock.  In this
+		   case, total will be 0.  Set it to the time 1 clock tick
+		   takes as a way to avoid dividing by 0.
+		   Derek Wright, 9/4/97 
+		 */
+	if( total == 0 ) total = one_tick;
+
 	st[2][1] = total;
 	st[3][1] = ops/(1.0e3*total);
 	st[4][1] = 2.0e3/st[3][1];
@@ -136,6 +164,16 @@ clinpack_kflops ()
 	st[1][2] = dtime() - t1;
 	
 	total = st[0][2] + st[1][2];
+
+		/* 
+		   On extremely fast machines, the total time between checks
+		   can be less than the resolution of the clock.  In this
+		   case, total will be 0.  Set it to the time 1 clock tick
+		   takes as a way to avoid dividing by 0.
+		   Derek Wright, 9/4/97 
+		 */
+	if( total == 0 ) total = one_tick;
+
 	st[2][2] = total;
 	st[3][2] = ops/(1.0e3*total);
 	st[4][2] = 2.0e3/st[3][2];
@@ -161,6 +199,16 @@ clinpack_kflops ()
 
 	st[1][3] = (dtime() - t1)/ntimes;
 	total = st[0][3] + st[1][3];
+
+		/* 
+		   On extremely fast machines, the total time between checks
+		   can be less than the resolution of the clock.  In this
+		   case, total will be 0.  Set it to the time 1 clock tick
+		   takes as a way to avoid dividing by 0.
+		   Derek Wright, 9/4/97 
+		 */
+	if( total == 0 ) total = one_tick;
+
 	st[2][3] = total;
 	st[3][3] = ops/(1.0e3*total);
 	st[4][3] = 2.0e3/st[3][3];
@@ -174,6 +222,15 @@ clinpack_kflops ()
 	t1 = dtime();
 	dgesl(aa,ldaa,n,ipvt,b,0);
 	st[1][4] = dtime() - t1;
+
+		/* 
+		   On extremely fast machines, the total time between checks
+		   can be less than the resolution of the clock.  In this
+		   case, total will be 0.  Set it to the time 1 clock tick
+		   takes as a way to avoid dividing by 0.
+		   Derek Wright, 9/4/97 
+		 */
+	if( total == 0 ) total = one_tick;
 
 	total = st[0][4] + st[1][4];
 	st[2][4] = total;
@@ -191,6 +248,16 @@ clinpack_kflops ()
 	st[1][5] = dtime() - t1;
 
 	total = st[0][5] + st[1][5];
+
+		/* 
+		   On extremely fast machines, the total time between checks
+		   can be less than the resolution of the clock.  In this
+		   case, total will be 0.  Set it to the time 1 clock tick
+		   takes as a way to avoid dividing by 0.
+		   Derek Wright, 9/4/97 
+		 */
+	if( total == 0 ) total = one_tick;
+
 	st[2][5] = total;
 	st[3][5] = ops/(1.0e3*total);
 	st[4][5] = 2.0e3/st[3][5];
@@ -206,6 +273,16 @@ clinpack_kflops ()
    st[1][6] = dtime() - t1;
 
    total = st[0][6] + st[1][6];
+
+	   /* 
+		  On extremely fast machines, the total time between checks
+		  can be less than the resolution of the clock.  In this
+		  case, total will be 0.  Set it to the time 1 clock tick
+		  takes as a way to avoid dividing by 0.
+		  Derek Wright, 9/4/97 
+		*/
+   if( total == 0 ) total = one_tick;
+
    st[2][6] = total;
    st[3][6] = ops/(1.0e3*total);
    st[4][6] = 2.0e3/st[3][6];
@@ -230,6 +307,16 @@ clinpack_kflops ()
 
    st[1][7] = (dtime() - t1)/ntimes;
    total = st[0][7] + st[1][7];
+
+		/* 
+		   On extremely fast machines, the total time between checks
+		   can be less than the resolution of the clock.  In this
+		   case, total will be 0.  Set it to the time 1 clock tick
+		   takes as a way to avoid dividing by 0.
+		   Derek Wright, 9/4/97 
+		 */
+   if( total == 0 ) total = one_tick;
+
    st[2][7] = total;
    st[3][7] = ops/(1.0e3*total);
    st[4][7] = 2.0e3/st[3][7];
