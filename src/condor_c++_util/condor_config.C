@@ -63,6 +63,7 @@
 #include "my_username.h"
 #ifdef WIN32
 #	include "ntsysinfo.h"		// for WinNT getppid
+#	include <locale.h>
 #endif
 #include "directory.h"			// for StatInfo
 #include "condor_scanner.h"		// for MAXVARNAME, etc
@@ -157,6 +158,9 @@ config_fill_ad( ClassAd* ad )
 void
 config( int wantsQuiet )
 {
+#ifdef WIN32
+	setlocale( LC_ALL, "English" );
+#endif
 	real_config( NULL, wantsQuiet );
 }
 
