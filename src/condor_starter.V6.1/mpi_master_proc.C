@@ -27,6 +27,7 @@
 #include "condor_attributes.h"
 #include "condor_string.h"  // for strnewp
 #include "my_hostname.h"
+#include "env.h"
 
 extern int main_shutdown_graceful();
 
@@ -269,29 +270,28 @@ MPIMasterProc::preparePortFile( void )
 		// environment of our job ad so we set the right env var so
 		// MPICH puts the port in here.
 
-		// Eventually, we're going to need to reinsert this as a
-		// ClassAd attribute, so we might as well initialize it with 
-		// 'ATTR_JOB_ENVIRONMENT = "'...
-	char buf[1024];
-	sprintf( buf, "%s = \"", ATTR_JOB_ENVIRONMENT );
-	MyString env( buf );
+	Env envobject;
 
 		// Now, grab the existing environment.  Do so without static
 		// buffers so we can handle really huge environments
 		// correctly.  
 	char* env_str = NULL;
 	if( JobAd->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) ) {
-		env += env_str;
+		envobject.Merge(env_str);
 		free( env_str );
 	} else {
 			// Maybe this is a little harsh, but it should never 
 			// happen.   
 		EXCEPT( "MPI Master node started w/o an environment!" );
 	}
-	sprintf( buf, "%cMPICH_EXTRA=%s\"", env_delimiter, port_file );
-	env += buf;
+	envobject.Put("MPICH_EXTRA",port_file);
 
-	if( JobAd->Insert(env.Value()) ) {
+	env_str = envobject.getDelimitedString();
+	bool assigned = JobAd->Assign(ATTR_JOB_ENVIRONMENT,env_str);
+	if(env_str) {
+		delete[] env_str;
+	}
+	if(assigned) {
 		return true;
 	} 
 	return false;
