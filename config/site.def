@@ -123,7 +123,4 @@ KERBEROS_LIB =
 KERBEROS_INCLUDE = 
 #endif
 
-/* where to find the "new classads" libs/headers (used by dagman helper) */
-CLASSADS_ROOT = /unsup/classads
-
 #endif  /* AfterVendorCF */
