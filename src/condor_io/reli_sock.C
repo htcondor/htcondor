@@ -245,7 +245,14 @@ ReliSock::connect( char	*host, int port, bool non_blocking_flag )
 {
 	if (authob) {                                                           
 		delete authob;                                                  
+		authob = NULL;
 	}  	                                                                     
+
+	if (hostAddr != NULL)
+	{
+		free(hostAddr);
+		hostAddr = NULL;
+	}
  
 	init();     
 	is_client = 1;
@@ -1063,7 +1070,11 @@ ReliSock::serialize(char *buf)
     ASSERT(buf);
     memset(fqu, 0, 256);
     memset(sinful_string, 0 , 28);
+
 	// here we want to restore our state from the incoming buffer
+	if (fqu_ != NULL) {
+		free(fqu_);
+	}
     fqu_ = NULL;
 
 	// first, let our parent class restore its state
