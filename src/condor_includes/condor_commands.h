@@ -165,6 +165,10 @@ const int QUERY_HIST_SUBMITTORGROUPS_LIST = 29;
 const int QUERY_HIST_CKPTSRVR = 30;
 const int QUERY_HIST_CKPTSRVR_LIST = 31;
 
+const int UPDATE_LICENSE_AD			= 42;
+const int QUERY_LICENSE_ADS			= 43;
+const int INVALIDATE_LICENSE_ADS	= 44;
+
 /*
 *** Daemon Core Signals
 */

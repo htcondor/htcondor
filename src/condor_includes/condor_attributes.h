@@ -125,6 +125,7 @@ const char ATTR_REQUIREMENTS             [] = "Requirements";
 const char ATTR_RUNNING_JOBS             [] = "RunningJobs";
 const char ATTR_RUN_BENCHMARKS			 [] = "RunBenchmarks";
 const char ATTR_SHADOW_IP_ADDR			 [] = "ShadowIpAddr";
+const char ATTR_MY_IP_ADDR               [] = "MyIpAddr";
 const char ATTR_SCHEDD_IP_ADDR           [] = "ScheddIpAddr";
 const char ATTR_START                    [] = "Start";
 const char ATTR_STARTD_IP_ADDR           [] = "StartdIpAddr";

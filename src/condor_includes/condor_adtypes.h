@@ -38,5 +38,6 @@ static char QUERY_ADTYPE		[] = "Query";
 static char COLLECTOR_ADTYPE	[] = "Collector";
 static char CKPT_FILE_ADTYPE	[] = "CkptFile";
 static char USERAUTH_ADTYPE   [] = "Authentication"; //mikeu added 
+static char LICENSE_ADTYPE		[] = "License";
 
 #endif
