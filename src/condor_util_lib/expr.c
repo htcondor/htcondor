@@ -68,6 +68,10 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #endif
 #define ALPHA(ch) (isalpha(ch)||ch=='_')
 
+#if defined(SUNOS41)
+#define RAND_MAX 32767
+#endif
+
 #define WHITE(ch) (isspace(ch))
 #define QUOTE(ch) (ch=='"')
 #define DIGIT(ch) (isdigit(ch))
