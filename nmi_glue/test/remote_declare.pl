@@ -1,17 +1,17 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.1.2.3 2004-06-24 02:20:49 wright Exp $
+# $Id: remote_declare.pl,v 1.1.2.4 2004-06-24 19:39:08 wright Exp $
 # generate list of all tests to run
 ######################################################################
 
 use Cwd;
 
-my $HomeDir = $ENV{HOME};
+my $BaseDir = $ENV{BASE_DIR};
 my $SrcDir = $ENV{SRC_DIR};
 
-open( TASKLIST, ">$HomeDir/tasklist.nmi" ) || 
-    die "Can't open $HomeDir/tasklist.nmi: $!\n"; 
+open( TASKLIST, ">$BaseDir/tasklist.nmi" ) || 
+    die "Can't open $BaseDir/tasklist.nmi: $!\n"; 
 
 ######################################################################
 # generate makefile, compiler_list and run_list for each test group 

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.2 2004-06-24 00:58:02 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.3 2004-06-24 19:39:08 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = good
@@ -16,7 +16,7 @@ my $teststatus = 2; # set to failed by default
 # set up path 
 ######################################################################
 
-my $HomeDir = $ENV{HOME};
+my $BaseDir = $ENV{BASE_DIR};
 my $MakeDir = $ENV{SRC_DIR};
 print "PATH is $ENV{PATH}\n";
 
@@ -86,11 +86,11 @@ if ($batchteststatus == 0) {
 # copy test results to results dir
 ######################################################################
 
-system ("mkdir -p $HomeDir/results");
+system ("mkdir -p $BaseDir/results");
 chdir ("$MakeDir/$testdir");
-system ("cp $compiler/$testname.out $HomeDir/results");
-system ("cp $compiler/$testname.error $HomeDir/results");
-system ("cp $compiler/$testname.log $HomeDir/results");
+system ("cp $compiler/$testname.out $BaseDir/results");
+system ("cp $compiler/$testname.error $BaseDir/results");
+system ("cp $compiler/$testname.log $BaseDir/results");
 
 
 sub verbose_system {

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_post_always.pl,v 1.1.2.3 2004-06-24 00:58:02 wright Exp $
+# $Id: remote_post_always.pl,v 1.1.2.4 2004-06-24 19:39:08 wright Exp $
 # post script for Condor testsuite that is run regardless of the
 # testsuite end status  
 ######################################################################
@@ -10,14 +10,14 @@
 # set up path 
 ######################################################################
 
-my $HomeDir = $ENV{HOME};
+my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 print "PATH is $ENV{PATH}\n";
 
 ######################################################################
 # kill test suite personal condor daemons
 ######################################################################
 
-$pid_file = "$HomeDir/condor_master_pid";
+$pid_file = "$BaseDir/condor_master_pid";
 # Get master PID from file
 open (PIDFILE, "$pid_file") || die "cannot open $pid_file for reading\n";
 while (<PIDFILE>){

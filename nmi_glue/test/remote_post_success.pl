@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_post_success.pl,v 1.1.2.2 2004-06-24 00:58:02 wright Exp $
+# $Id: remote_post_success.pl,v 1.1.2.3 2004-06-24 19:39:08 wright Exp $
 # post script for a successful Condor testsuite run   
 ######################################################################
 
@@ -9,7 +9,7 @@
 # set up path 
 ######################################################################
 
-my $HomeDir = $ENV{HOME};
+my $BaseDir = $ENV{BASE_DIR};
 my $MakeDir = $ENV{SRC_DIR};
 print "PATH is $ENV{PATH}\n";
 
@@ -21,13 +21,13 @@ print "PATH is $ENV{PATH}\n";
 # we should be using gnu tar for all - make sure path is correct
 $logs = "logs.tar.gz";
 $results = "results.tar.gz";
-chdir("$HomeDir");
+chdir("$BaseDir");
 
 print "Tarring up debug stuff - condor logs, config files and daemons\n";
-&verbose_system("tar zcf $HomeDir/$logs condor local");
+&verbose_system("tar zcf $BaseDir/$logs condor local");
 
 print "Tarring up debug stuff - condor logs, config files and daemons\n";
-&verbose_system("tar zcf $HomeDir/$results condor/etc/condor_config results");
+&verbose_system("tar zcf $BaseDir/$results condor/etc/condor_config results");
 
 
 sub verbose_system {

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_pre,v 1.1.2.4 2004-06-24 02:04:17 wright Exp $
+# $Id: remote_pre,v 1.1.2.5 2004-06-24 19:39:08 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -17,17 +17,17 @@ my $logsize = "50000000"; # size for logs of personal Condor
 
 
 
-my $HomeDir = getcwd();
-my $SrcDir = "$HomeDir/src";
+my $BaseDir = getcwd();
+my $SrcDir = "$BaseDir/src";
 
 open(ENVSETUP, ">setup_test_env") || die "cannot open setup_test_env for writing\n";
 
-print ENVSETUP "HOME=$HomeDir\n";
-$ENV{"HOME"}="$HomeDir";
-print ENVSETUP "CONDOR_CONFIG=$HomeDir/condor/etc/condor_config\n";
-$ENV{"CONDOR_CONFIG"}="$HomeDir/condor/etc/condor_config";
-print ENVSETUP "PATH=$HomeDir/condor/bin:$HomeDir/condor/sbin:\$PATH\n";
-$ENV{"PATH"}="$HomeDir/condor/bin:$HomeDir/condor/sbin:$PATH";
+print ENVSETUP "BASE_DIR=$BaseDir\n";
+$ENV{"BASE_DIR"}="$BaseDir";
+print ENVSETUP "CONDOR_CONFIG=$BaseDir/condor/etc/condor_config\n";
+$ENV{"CONDOR_CONFIG"}="$BaseDir/condor/etc/condor_config";
+print ENVSETUP "PATH=$BaseDir/condor/bin:$BaseDir/condor/sbin:\$PATH\n";
+$ENV{"PATH"}="$BaseDir/condor/bin:$BaseDir/condor/sbin:$PATH";
 print ENVSETUP "SRC_DIR=$SrcDir\n";
 $ENV{"SRC_DIR"}="$SrcDir";
 
@@ -39,7 +39,7 @@ print "PATH is $ENV{PATH}\n";
 ######################################################################
 
 print "Untarring RELEASE tarball\n";
-chdir("$HomeDir") || die "Can't chdir($HomeDir): $!\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 my $release_tarball = $ENV{"_NMI_BUILD_condor_binary_tarball"} ||
     die "_NMI_BUILD_condor_binary_tarball not in environment!\n";
 print "Release tarball is: $release_tarball\n";
@@ -51,11 +51,11 @@ open( UNTAR, "tar -zxvf $release_tarball |" ) ||
 print "Untarring $release_tarball ...\n";
 while( <UNTAR> ) {
   if( /.*\/condor_configure/ ) {
-    $configure = "$HomeDir/$_";
+    $configure = "$BaseDir/$_";
      chomp( $configure );
   }
   if( /.*\/release.tar/ ) {
-    $reltar = "$HomeDir/$_";
+    $reltar = "$BaseDir/$_";
     chomp( $reltar );
   }
   print;
@@ -74,15 +74,15 @@ my $version = substr($release_tarball, 7, 5);
 print "VERSION string is $version\n";
 # XXX TODO XXX !!!!
 
-my $configure = "$HomeDir/condor-$version/condor_configure";
-my $reltar = "$HomeDir/condor-$version/release.tar";
+my $configure = "$BaseDir/condor-$version/condor_configure";
+my $reltar = "$BaseDir/condor-$version/release.tar";
 
 print "SETTING UP PERSONAL CONDOR\n";
-mkdir( "$HomeDir/local" ) || die "Can't mkdir $HomeDir/local: $!\n";
-mkdir( "$HomeDir/condor" ) || die "Can't mkdir $HomeDir/condor: $!\n";
+mkdir( "$BaseDir/local" ) || die "Can't mkdir $BaseDir/local: $!\n";
+mkdir( "$BaseDir/condor" ) || die "Can't mkdir $BaseDir/condor: $!\n";
 
 print "RUNNING condor_configure\n";
-$conf = &verbose_system("$configure --make-personal-condor --local-dir=$HomeDir/local --install=$reltar --install-dir=$HomeDir/condor");
+$conf = &verbose_system("$configure --make-personal-condor --local-dir=$BaseDir/local --install=$reltar --install-dir=$BaseDir/condor");
 ($conf == 0) || die "Problem installing Personal Condor. Return val $conf\n";
 
 # make sure ports for Personal Condor are valid  
@@ -96,14 +96,14 @@ if ($col_port < 1024){
 }
 my $neg_port = $col_port + 1;
 
-rename( "$HomeDir/local/condor_config.local",
-	"$HomeDir/local/condor_config.local.orig" )
+rename( "$BaseDir/local/condor_config.local",
+	"$BaseDir/local/condor_config.local.orig" )
     || die "Can't rename condor_config.local: $!\n";
 
-open( ORIG, "<$HomeDir/local/condor_config.local.orig" ) ||
-    die "Can't open $HomeDir/local/condor_config.local.orig: $!\n";
-open( FIX, ">$HomeDir/local/condor_config.local" ) ||
-    die "Can't open $HomeDir/local/condor_config.local: $!\n";
+open( ORIG, "<$BaseDir/local/condor_config.local.orig" ) ||
+    die "Can't open $BaseDir/local/condor_config.local.orig: $!\n";
+open( FIX, ">$BaseDir/local/condor_config.local" ) ||
+    die "Can't open $BaseDir/local/condor_config.local: $!\n";
 while( <ORIG> ) {
   if( /CONDOR_HOST.*/ ) {
     print FIX;
@@ -174,14 +174,14 @@ print "CONFIGURE returned a code of $configstat\n";
 
 chdir( "$SrcDir/condor_syscall_lib" )
     || die "Can't chdir($SrcDir/condor_syscall_lib): $!\n";
-opendir( DIR, "$HomeDir/condor/lib" ) ||
-  die "can't opendir $HomeDir/condor/lib for condor_syscall_lib: $!\n";
+opendir( DIR, "$BaseDir/condor/lib" ) ||
+  die "can't opendir $BaseDir/condor/lib for condor_syscall_lib: $!\n";
 @files = readdir(DIR);
 closedir DIR;
 foreach $file ( @files ) {
     if( $file =~ /.*\.[oa]/ ) {
-	symlink( "$HomeDir/condor/lib/$file", "$file" ) ||
-	    die "Can't symlink($HomeDir/condor/lib/$file): $!\n";
+	symlink( "$BaseDir/condor/lib/$file", "$file" ) ||
+	    die "Can't symlink($BaseDir/condor/lib/$file): $!\n";
     }
 }
 
@@ -190,30 +190,30 @@ chdir( "$SrcDir/condor_scripts" ) ||
 
 unlink( "condor_compile" ) || die "Can't unlink(condor_compile): $!\n";
 unlink( "ld" ) || die "Can't unlink(ld): $!\n";
-symlink( "$HomeDir/condor/lib/ld", "ld" ) ||
-    die "Can't symlink($HomeDir/condor/lib/ld): $!\n";
-symlink( "$HomeDir/condor/bin/condor_compile", "condor_compile" ) ||
-    die "Can't symlink($HomeDir/condor/lib/condor_compile): $!\n";
+symlink( "$BaseDir/condor/lib/ld", "ld" ) ||
+    die "Can't symlink($BaseDir/condor/lib/ld): $!\n";
+symlink( "$BaseDir/condor/bin/condor_compile", "condor_compile" ) ||
+    die "Can't symlink($BaseDir/condor/lib/condor_compile): $!\n";
 
 
 ######################################################################
 # spawn the personal condor
 ######################################################################
 
-chdir($HomeDir);
-print "Starting condor_master, about to FORK in $HomeDir\n";
+chdir($BaseDir);
+print "Starting condor_master, about to FORK in $BaseDir\n";
 
 $master_pid = fork();
 if( $master_pid == 0) {
-  exec("$HomeDir/condor/sbin/condor_master -f");
+  exec("$BaseDir/condor/sbin/condor_master -f");
   print "MASTER EXEC FAILED!!!!!\n";
   exit 1;
 }
 
 # save the master pid for later use
 print "Master PID is $master_pid\n";
-open( PIDFILE, ">$HomeDir/condor_master_pid") || 
-    die "cannot open $HomeDir/condor_master_pid: $!\n";
+open( PIDFILE, ">$BaseDir/condor_master_pid") || 
+    die "cannot open $BaseDir/condor_master_pid: $!\n";
 print PIDFILE "$master_pid";
 close PIDFILE;   
 
