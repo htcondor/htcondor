@@ -8,11 +8,22 @@
  * Tests for FULL ports
  ********************************/
 
+DESC(job_core_bigenv_std,"Standard job with an enormous environment")
+CBUILD($(CC),job_core_bigenv,c)
+DEPS(job_core_bigenv_std,job_core_bigenv.exe)
+RUN(job_core_bigenv_std)
+TESTCLASS(job_core_bigenv_std,quick)
+
 DESC(job_rsc_hello_std,"Tests various RSC I/O methods")
 CBUILD($(CC),job_rsc_hello_std,c)
-RUN(job_rsc_hello_std)
 DEPS(job_rsc_hello_std,x_hello.in)
+RUN(job_rsc_hello_std)
 TESTCLASS(job_rsc_hello_std,quick)
+
+DESC(job_rsc_fcntl_std,"Does fcntl() work remotely?")
+CBUILD($(CC),job_rsc_fcntl_std,c)
+RUN(job_rsc_fcntl_std)
+TESTCLASS(job_rsc_fcntl_std,quick)
 
 DESC(job_ckpt_floats_std,"ckpt/restore floating point registers")
 CBUILD($(CC),job_ckpt_floats_std,c)
