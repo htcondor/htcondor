@@ -131,6 +131,11 @@ CBUILD_DEP($(CC),job_ckpt_gettimeofday_std,c,x_waste_second.o)
 DEP_SYMLINK_EXT(job_ckpt_gettimeofday_std,cmd)
 RUN(job_ckpt_gettimeofday_std)
 
+DESC(job_ckpt_open-async-ckpt_std,"async ckpt/restore of open file table")
+CBUILD($(CC),job_ckpt_open-async-ckpt_std,c)
+DEP_SYMLINK_EXT(job_ckpt_open-async-ckpt_std,cmd)
+RUN(job_ckpt_open-async-ckpt_std)
+
 DESC(job_ckpt_getrusage-loop_std,"Does getrusage() work across ckpts?")
 CBUILD_DEP($(CC),job_ckpt_getrusage-loop_std,c,x_waste_second.o)
 DEP_SYMLINK_EXT(job_ckpt_getrusage-loop_std,cmd)
