@@ -459,15 +459,15 @@ bool
 AvailAttributes::decrement( CpuAttributes* cap ) 
 {
 	int new_cpus, new_phys_mem;
-	float new_virt_mem, new_disk;
-
+	float new_virt_mem, new_disk, floor = -0.000001;
+	
 	new_cpus = a_num_cpus - cap->c_num_cpus;
 	new_phys_mem = a_phys_mem - cap->c_phys_mem;
 	new_virt_mem = a_virt_mem_percent - cap->c_virt_mem_percent;
 	new_disk = a_disk_percent - cap->c_disk_percent;
 
-	if( new_cpus < 0 || new_phys_mem < 0 || 
-		new_virt_mem < 0 || new_disk < 0 ) {
+	if( new_cpus < floor || new_phys_mem < floor || 
+		new_virt_mem < floor || new_disk < floor ) {
 		return false;
 	} else {
 		a_num_cpus = new_cpus;
