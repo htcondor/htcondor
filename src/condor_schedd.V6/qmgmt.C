@@ -175,6 +175,7 @@ InitJobQueue(const char *job_queue_name)
 			// Oh no!  Somehow the header ad in the queue says to reuse cluster nums!
 			EXCEPT("JOB QUEUE DAMAGED; header ad NEXT_CLUSTER_NUM invalid");
 		}
+		next_cluster_num = stored_cluster_num;
 	}
 
 }
