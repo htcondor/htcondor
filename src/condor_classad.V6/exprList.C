@@ -85,6 +85,11 @@ _SetParentScope( const ClassAd *parent )
 	}
 }
 
+void ExprList::
+SetShallowParentScope( const ClassAd* p )
+{
+	parentScope = p;
+}
 
 ExprList *ExprList::
 MakeExprList( const vector<ExprTree*> &exprs )
@@ -111,7 +116,6 @@ GetComponents( vector<ExprTree*> &exprs ) const
 		exprs.push_back( *itr );
 	}
 }
-
 
 bool ExprList::
 _Evaluate (EvalState &, Value &val) const

@@ -50,6 +50,9 @@ class ExprList : public ExprTree
 		 */
 		void GetComponents( std::vector<ExprTree*>& list) const;
 
+			// experimental method
+		void SetShallowParentScope( const ClassAd* p );
+
 		/// Make a deep copy of the expression
 		virtual ExprList* Copy( ) const;
 
