@@ -100,8 +100,7 @@ void *bsd_status( int, PROC_STATE, int, int );
 class UserProc {
 public:
 		// Constructors, etc.
-	UserProc( V2_PROC &, char *, char *, char *, uid_t, uid_t, int );
-	UserProc( V3_PROC &, char *, char *, char *, uid_t, uid_t, int, int );
+	UserProc( STARTUP_INFO & );
 	virtual ~UserProc();
 	void display();
 
@@ -152,23 +151,17 @@ protected:
 	int		cluster;
 	int		proc;
 
-	char	*in;
-	char	*out;
-	char	*err;
-	char	*rootdir;
-	char	*iwd;
 	char	*cmd;
 	char	*args;
 	char	*env;
 	Environ	env_obj;
 
+#if 0
 	char	*a_out;			// on submitting machine
-	char	*orig_ckpt;		// on submitting machine
-	char	*target_ckpt;	// on submitting machine
+#endif
 
 	char	*local_dir;		// on executing machine
 	char	*cur_ckpt;		// on executing machine
-	char	*tmp_ckpt;		// on executing machine
 	char	*core_name;		// on executing machine
 
 	uid_t	uid;

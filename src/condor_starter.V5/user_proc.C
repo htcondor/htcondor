@@ -36,6 +36,7 @@
 #include "condor_config.h"
 #include "condor_jobqueue.h"
 #include "condor_uid.h"
+#include "condor_file_info.h"
 #include <signal.h>
 #include <sys/wait.h>
 #include <sys/file.h>
@@ -44,6 +45,7 @@
 #include "name_tab.h"
 #include "proto.h"
 #include "condor_sys.h"
+#include "startup.h"
 
 #if defined(AIX32)
 #	include <sys/id.h>
@@ -87,7 +89,8 @@ extern "C" {
 	void _updateckpt( char *, char *, char * );
 	int free_fs_blocks(char *filename);
 }
-void open_std_file( const char *name, int mode, int needed_fd );
+void open_std_file( int which );
+void set_iwd();
 
 /*
   With bytestream checkpointing, there is no updating of checkpoints - the
@@ -120,241 +123,13 @@ extern int Running_PVMD;
 
 int connect_to_port( int );
 
-#if 0
-	int send_file( char *src, char *dst, mode_t mode );
-	int get_file( char *src, char *dst, mode_t mode );
-#endif
-
-UserProc::UserProc( V3_PROC &p, char *exec, char *orig, char *targ, uid_t u, uid_t g, int id, int soft ) :
-	cluster( p.id.cluster ),
-	proc( p.id.proc),
-	uid( u ),
-	gid( g ),
-	v_pid( id ),
-	pid( 0 ),
-	exit_status_valid( FALSE ),
-	exit_status( 0 ),
-	soft_kill_sig( soft ),
-	job_class( p.universe ),
-	ckpt_wanted( FALSE ),
-	state( NEW ),
-	new_ckpt_created( FALSE ),
-	ckpt_transferred( FALSE ),
-	core_created( FALSE ),
-	core_transferred( FALSE ),
-	image_size( p.image_size ),
-	user_time( 0 ),
-	sys_time( 0 ),
-	guaranteed_user_time( 0 ),
-	guaranteed_sys_time( 0 )
-{
-	char	buf[ _POSIX_PATH_MAX ];
-	char	*value;
-
-	in = new char [ strlen(p.in[0]) + 1 ];
-	strcpy( in, p.in[0] );
-
-	out = new char [ strlen(p.out[0]) + 1 ];
-	strcpy( out, p.out[0] );
-
-	err = new char [ strlen(p.err[0]) + 1 ];
-	strcpy( err, p.err[0] );
-
-	rootdir = new char [ strlen(p.rootdir) + 1 ];
-	strcpy( rootdir, p.rootdir );
-
-	iwd = new char [ strlen(p.iwd) + 1 ];
-	strcpy( iwd, p.iwd );
-
-	cmd = new char [ strlen(p.cmd[0]) + 1 ];
-	strcpy( cmd, p.cmd[0] );
-
-	args = new char [ strlen(p.args[0]) + 1 ];
-	strcpy( args, p.args[0] );
-
-	env = new char [ strlen(p.env) + 1 ];
-	strcpy( env, p.env );
-
-	a_out = new char [ strlen(exec) + 1 ];
-	strcpy( a_out, exec );
-
-	orig_ckpt = new char [ strlen(orig) + 1 ];
-	strcpy( orig_ckpt, orig );
-
-	target_ckpt = new char [ strlen(targ) + 1 ];
-	strcpy( target_ckpt, targ );
-
-		// Generate a directory where process can run and do its checkpointing
-	sprintf( buf, "dir_%d", proc_index++ );
-	local_dir = new char [ strlen(buf) + 1 ];
-	strcpy( local_dir, buf );
-	if( mkdir(local_dir,LOCAL_DIR_MODE) < 0 ) {
-		EXCEPT( "mkdir(%s,0%o)", local_dir, LOCAL_DIR_MODE );
-	}
-
-	sprintf( buf, "%s/condor_exec.%d.%d", local_dir, cluster, proc );
-	cur_ckpt = new char [ strlen(buf) + 1 ];
-	strcpy( cur_ckpt, buf );
-
-	sprintf( buf, "%s/condor_exec.%d.%d.tmp", local_dir, cluster, proc );
-	tmp_ckpt = new char [ strlen(buf) + 1 ];
-	strcpy( tmp_ckpt, buf );
-
-	sprintf( buf, "%s/core", local_dir );
-	core_name = new char [ strlen(buf) + 1 ];
-	strcpy( core_name, buf );
-
-		// Find out if user wants checkpointing
-#if defined(NO_CKPT)
-	ckpt_wanted = FALSE;
-	dprintf(D_ALWAYS,
-			"This platform doesn't implement checkpointing yet\n"
-	);
-#else
-	ckpt_wanted = p.checkpoint;
-#endif
-
-		// Figure out if this is a restart from a checkpoint
-	if( strcmp(a_out,orig_ckpt) == MATCH ) {
-		restart = FALSE;
-	} else {
-		restart = TRUE;
-	}
-
-		// find out if user wants to limit size of coredumps
-	env_obj.add_string( env );	// set up environment as an object
-	value = env_obj.getenv( "CONDOR_CORESIZE" );
-	if( value ) {
-		coredump_limit_exists = TRUE;
-		coredump_limit = atoi( value );
-	} else {
-		coredump_limit_exists = FALSE;
-	}
-}
-
-UserProc::UserProc( V2_PROC &p, char *exec, char *orig, char *targ, uid_t u, uid_t g ,int soft) :
-	cluster( p.id.cluster ),
-	proc( p.id.proc),
-	uid( u ),
-	gid( g ),
-	v_pid( 0 ),
-	pid( 0 ),
-	exit_status_valid( FALSE ),
-	exit_status( 0 ),
-	soft_kill_sig( soft ),
-	job_class( STANDARD ),
-	ckpt_wanted( FALSE ),
-	state( NEW ),
-	new_ckpt_created( FALSE ),
-	ckpt_transferred( FALSE ),
-	core_created( FALSE ),
-	core_transferred( FALSE ),
-	image_size( p.image_size ),
-	user_time( 0 ),
-	sys_time( 0 ),
-	guaranteed_user_time( 0 ),
-	guaranteed_sys_time( 0 )
-{
-	char	buf[ _POSIX_PATH_MAX ];
-	char	*value;
-
-	in = new char [ strlen(p.in) + 1 ];
-	strcpy( in, p.in );
-
-	out = new char [ strlen(p.out) + 1 ];
-	strcpy( out, p.out );
-
-	err = new char [ strlen(p.err) + 1 ];
-	strcpy( err, p.err );
-
-	rootdir = new char [ strlen(p.rootdir) + 1 ];
-	strcpy( rootdir, p.rootdir );
-
-	iwd = new char [ strlen(p.iwd) + 1 ];
-	strcpy( iwd, p.iwd );
-
-	cmd = new char [ strlen(p.cmd) + 1 ];
-	strcpy( cmd, p.cmd );
-
-	args = new char [ strlen(p.args) + 1 ];
-	strcpy( args, p.args );
-
-	env = new char [ strlen(p.env) + 1 ];
-	strcpy( env, p.env );
-
-	a_out = new char [ strlen(exec) + 1 ];
-	strcpy( a_out, exec );
-
-	orig_ckpt = new char [ strlen(orig) + 1 ];
-	strcpy( orig_ckpt, orig );
-
-	target_ckpt = new char [ strlen(targ) + 1 ];
-	strcpy( target_ckpt, targ );
-
-		// Generate a directory where process can run and do its checkpointing
-	sprintf( buf, "dir_%d", proc_index++ );
-	local_dir = new char [ strlen(buf) + 1 ];
-	strcpy( local_dir, buf );
-	if( mkdir(local_dir,LOCAL_DIR_MODE) < 0 ) {
-		EXCEPT( "mkdir(%s,0%o)", local_dir, LOCAL_DIR_MODE );
-	}
-
-	sprintf( buf, "%s/condor_exec.%d.%d", local_dir, cluster, proc );
-	cur_ckpt = new char [ strlen(buf) + 1 ];
-	strcpy( cur_ckpt, buf );
-
-	sprintf( buf, "%s/condor_exec.%d.%d.tmp", local_dir, cluster, proc );
-	tmp_ckpt = new char [ strlen(buf) + 1 ];
-	strcpy( tmp_ckpt, buf );
-
-	sprintf( buf, "%s/core", local_dir );
-	core_name = new char [ strlen(buf) + 1 ];
-	strcpy( core_name, buf );
-
-	env_obj.add_string( env );	// set up environment as an object
-
-		// Find out if user wants checkpointing
-	value = env_obj.getenv( "CHECKPOINT" );
-	dprintf( D_ALWAYS,
-		"value of CHECKPOINT environment variable is \"%s\"\n", value
-	);
-#if DOES_CHECKPOINTING
-	if( value && (value[0] == 'f' || value[0] == 'F') ) {
-		ckpt_wanted = FALSE;
-	} else {
-		ckpt_wanted = TRUE;
-	}
-#else
-	ckpt_wanted = FALSE;
-	dprintf(D_ALWAYS,
-			"This platform doesn't implement checkpointing yet\n"
-	);
-#endif
-
-		// Find out if user wants to limit size of coredumps
-	value = env_obj.getenv( "CONDOR_CORESIZE" );
-	if( value ) {
-		coredump_limit_exists = TRUE;
-		coredump_limit = atoi( value );
-	} else {
-		coredump_limit_exists = FALSE;
-	}
-}
-
 UserProc::~UserProc()
 {
-	delete [] in;
-	delete [] out;
-	delete [] err;
-	delete [] rootdir;
 	delete [] cmd;
 	delete [] args;
 	delete [] env;
-	delete [] orig_ckpt;
-	delete [] target_ckpt;
 	delete [] local_dir;
 	delete [] cur_ckpt;
-	delete [] tmp_ckpt;
 	delete [] core_name;
 }
 
@@ -363,21 +138,12 @@ UserProc::display()
 {
 	dprintf( D_ALWAYS, "User Process %d.%d {\n", cluster, proc );
 
-	dprintf( D_ALWAYS, "  in = %s\n", in );
-	dprintf( D_ALWAYS, "  out = %s\n", out );
-	dprintf( D_ALWAYS, "  err = %s\n", err );
-	dprintf( D_ALWAYS, "  rootdir = %s\n", rootdir );
 	dprintf( D_ALWAYS, "  cmd = %s\n", cmd );
 	dprintf( D_ALWAYS, "  args = %s\n", args );
 	dprintf( D_ALWAYS, "  env = %s\n", env );
 
-	dprintf( D_ALWAYS, "  a_out = %s\n", a_out );
-	dprintf( D_ALWAYS, "  orig_ckpt = %s\n", orig_ckpt );
-	dprintf( D_ALWAYS, "  target_ckpt = %s\n", target_ckpt );
-
 	dprintf( D_ALWAYS, "  local_dir = %s\n", local_dir );
 	dprintf( D_ALWAYS, "  cur_ckpt = %s\n", cur_ckpt );
-	dprintf( D_ALWAYS, "  tmp_ckpt = %s\n", tmp_ckpt );
 	dprintf( D_ALWAYS, "  core_name = %s\n", core_name );
 
 	dprintf( D_ALWAYS, "  uid = %d, gid = %d\n", uid, gid );
@@ -444,7 +210,13 @@ UserProc::expand_exec_name( int &on_this_host )
 	char	*host_part;
 	char	*path_part;
 	char	*tmp;
+	char	a_out[ _POSIX_PATH_MAX ];
+	int		status;
 
+	status = REMOTE_syscall( CONDOR_get_a_out_name, a_out );
+	if( status < 0 ) {
+		EXCEPT( "Can't get name of a.out file" );
+	}
 	if( strchr(a_out,':') ) {		// form is <hostname>:<path>
 		host_part = strtok( a_out, " \t:" );
 		if( host_part == NULL ) {
@@ -559,12 +331,8 @@ UserProc::linked_for_condor()
 		return FALSE;
 	}
 
-	// Don't look for sym tab in ckpt files or PVM processes
-#if 0
-	if( this->is_restart() && job_class != PVM ) {	
-#else
+	// Don't look for symbol "MAIN" in vanilla jobs or PVM processes
 	if( job_class != PVM && job_class != VANILLA ) {	
-#endif
 		if( symbol_main_check(cur_ckpt) < 0 ) {
 			state = BAD_LINK;
 			dprintf( D_ALWAYS, "symbol_main_check() failed\n" );
@@ -629,17 +397,6 @@ UserProc::fetch_ckpt()
 #define TAB '\t'
 #define SEMI ';'
 
-#if 0
-inline int
-UserProc::is_restart()
-{
-	if( strcmp(orig_ckpt,target_ckpt) == MATCH ) {
-		return FALSE;
-	} else {
-		return TRUE;
-	}
-}
-#endif
 
 void
 UserProc::execute()
@@ -705,12 +462,16 @@ UserProc::execute()
 		break;
 
 	  case PVM:
+#if 1
+		EXCEPT( "Don't know how to deal with PVM jobs" );
+#else
 		argv[0] = shortname;
 		argv[1] = "-1";
 		argv[2] = in;
 		argv[3] = out;
 		argv[4] = err;
 		mkargv( &argc, &argv[5], tmp );
+#endif
 		break;
 
 	  case VANILLA:
@@ -795,17 +556,12 @@ UserProc::execute()
 			break;
 
 		  case VANILLA:
-			if( chdir(iwd) < 0 ) {
-				EXCEPT( "chdir(%s)", local_dir );
-			}
-			dprintf( D_ALWAYS, "Changed to directory \"%s\"\n", iwd );
+			set_iwd();
+			open_std_file( 0 );
+			open_std_file( 1 );
+			open_std_file( 2 );
+
 			(void)close( RSC_SOCK );
-			close_unused_file_descriptors();	// shouldn't need this
-
-			open_std_file( in, O_RDONLY, 0 );
-			open_std_file( out, O_WRONLY, 1 );
-			open_std_file( err, O_WRONLY, 2 );
-
 			(void)close( CLIENT_LOG );
 
 			break;
@@ -835,21 +591,16 @@ UserProc::execute()
 		dprintf( D_ALWAYS, "cmd_fp = 0x%x\n", cmd_fp );
 
 		if( is_restart() ) {
+#if 1
+			fprintf( cmd_fp, "restart\n" );
+			dprintf( D_ALWAYS, "restart\n" );
+#else
 			fprintf( cmd_fp, "restart %s\n", target_ckpt );
 			dprintf( D_ALWAYS, "restart %s\n", target_ckpt );
+#endif
 			fprintf( cmd_fp, "end\n" );
 			dprintf( D_ALWAYS, "end\n" );
 		} else {
-			fprintf( cmd_fp, "iwd %s\n", iwd );
-			dprintf( D_ALWAYS, "iwd %s\n", iwd );
-			fprintf( cmd_fp, "fd 0 %s O_RDONLY\n", in );
-			dprintf( D_ALWAYS, "fd 0 %s O_RDONLY\n", in );
-			fprintf( cmd_fp, "fd 1 %s O_WRONLY\n", out );
-			dprintf( D_ALWAYS, "fd 1 %s O_WRONLY\n", out );
-			fprintf( cmd_fp, "fd 2 %s O_WRONLY\n", err );
-			dprintf( D_ALWAYS, "fd 2 %s O_WRONLY\n", err );
-			fprintf( cmd_fp, "ckpt %s\n", target_ckpt );
-			dprintf( D_ALWAYS, "ckpt %s\n", target_ckpt );
 			fprintf( cmd_fp, "end\n" );
 			dprintf( D_ALWAYS, "end\n" );
 		}
@@ -880,7 +631,6 @@ void
 UserProc::delete_files()
 {
 	do_unlink( cur_ckpt );
-	do_unlink( tmp_ckpt );
 	do_unlink( core_name );
 
 	if( rmdir(local_dir) < 0 ) {
@@ -1019,11 +769,14 @@ UserProc::commit_ckpt()
 	// then on some platforms the "tmp_ckpt" file gets removed from the
 	// directory, but the disk space doesn't get freed.
 
+#if 0
 	(void)unlink( cur_ckpt );
 
 	if( rename(tmp_ckpt,cur_ckpt) < 0 ) {
 		EXCEPT( "rename" );
 	}
+
+#endif
 	state = RUNNABLE;
 }
 
@@ -1033,6 +786,7 @@ UserProc::store_ckpt()
 	char	tmp_name[ _POSIX_PATH_MAX ];
 	int		status;
 
+#if 0
 	if( new_ckpt_created ) {
 		sprintf( tmp_name, "%s.tmp", target_ckpt );
 		delay( 15 );
@@ -1054,6 +808,7 @@ UserProc::store_ckpt()
 		dprintf( D_ALWAYS, "Checkpoint file never updated - not sending\n" );
 		ckpt_transferred = FALSE;
 	}
+#endif
 }
 
 
@@ -1065,6 +820,7 @@ UserProc::update_ckpt()
 	int		answer;
 	char	*old_brk, *new_brk;
 
+#if 0
 	free_disk = free_fs_blocks( "." );
 
 	if( !core_created ) {
@@ -1115,6 +871,9 @@ UserProc::update_ckpt()
 	}
 
 	return answer;
+#else
+	return FALSE;
+#endif
 }
 
 inline void
@@ -1348,19 +1107,6 @@ connect_to_port( int portnum )
 	return fd;
 }
 
-#if 0
-int
-get_file( char *src, char *dst, mode_t mode )
-{
-	return REMOTE_syscall( CONDOR_get_file, src, dst, mode );
-}
-
-int
-send_file( char *src, char *dst, mode_t mode )
-{
-	return REMOTE_syscall( CONDOR_send_file, src, dst, mode );
-}
-#endif
 
 extern "C"
 {
@@ -1368,6 +1114,7 @@ int
 pre_open( int, int, int ) { return 0; }
 }
 
+#if 0
 void
 open_std_file( const char *name, int mode, int needed_fd )
 {
@@ -1380,4 +1127,139 @@ open_std_file( const char *name, int mode, int needed_fd )
 		dup2( fd, needed_fd );
 		close( fd );
 	}
+}
+#endif
+
+/*
+  Open a standard file (0, 1, or 2), given its fd number.
+*/
+void
+open_std_file( int which )
+{
+	char	name[ _POSIX_PATH_MAX ];
+	char	buf[ _POSIX_PATH_MAX + 50 ];
+	int		pipe_fd;
+	int		answer;
+	int		status;
+
+	status =  REMOTE_syscall( CONDOR_std_file_info, which, name, &pipe_fd );
+	if( status == IS_PRE_OPEN ) {
+		EXCEPT( "Don't know how to deal with pipelined VANILLA jobs" );
+	} else {
+		switch( which ) {			/* it's an ordinary file */
+		  case 0:
+			answer = open( name, O_RDONLY, 0 );
+			break;
+		  case 1:
+		  case 2:
+			answer = open( name, O_WRONLY, 0 );
+			break;
+		}
+	}
+	if( answer < 0 ) {
+		sprintf( buf, "Can't open \"%s\"", name );
+		REMOTE_syscall(CONDOR_perm_error, buf );
+		exit( 4 );
+	} else {
+		if( answer != which ) {
+			dup2( answer, which );
+		}
+	}
+}
+
+UserProc::UserProc( STARTUP_INFO &s ) :
+	cluster( s.cluster ),
+	proc( s.proc ),
+	uid( s.uid ),
+	gid( s.gid ),
+	v_pid( s.virt_pid ),
+	pid( 0 ),
+	exit_status_valid( FALSE ),
+	exit_status( 0 ),
+	soft_kill_sig( s.soft_kill_sig ),
+	job_class( s.job_class ),
+	ckpt_wanted( s.ckpt_wanted ),
+	state( NEW ),
+	new_ckpt_created( FALSE ),
+	ckpt_transferred( FALSE ),
+	core_created( FALSE ),
+	core_transferred( FALSE ),
+	image_size( -1 ),
+	user_time( 0 ),
+	sys_time( 0 ),
+	guaranteed_user_time( 0 ),
+	guaranteed_sys_time( 0 )
+{
+	char	buf[ _POSIX_PATH_MAX ];
+	char	*value;
+
+	cmd = new char [ strlen(s.cmd) + 1 ];
+	strcpy( cmd, s.cmd );
+
+	args = new char [ strlen(s.args) + 1 ];
+	strcpy( args, s.args );
+
+	env = new char [ strlen(s.env) + 1 ];
+	strcpy( env, s.env );
+
+		// Generate a directory where process can run and do its checkpointing
+	sprintf( buf, "dir_%d", proc_index++ );
+	local_dir = new char [ strlen(buf) + 1 ];
+	strcpy( local_dir, buf );
+	if( mkdir(local_dir,LOCAL_DIR_MODE) < 0 ) {
+		EXCEPT( "mkdir(%s,0%o)", local_dir, LOCAL_DIR_MODE );
+	}
+
+	sprintf( buf, "%s/condor_exec.%d.%d", local_dir, cluster, proc );
+	cur_ckpt = new char [ strlen(buf) + 1 ];
+	strcpy( cur_ckpt, buf );
+
+	sprintf( buf, "%s/core", local_dir );
+	core_name = new char [ strlen(buf) + 1 ];
+	strcpy( core_name, buf );
+
+		// Find out if user wants checkpointing
+#if defined(NO_CKPT)
+	ckpt_wanted = FALSE;
+	dprintf(D_ALWAYS,
+			"This platform doesn't implement checkpointing yet\n"
+	);
+#else
+	ckpt_wanted = s.ckpt_wanted;
+#endif
+
+	restart = s.is_restart;
+	coredump_limit_exists = s.coredump_limit_exists;
+	coredump_limit = s.coredump_limit;
+}
+
+void
+set_iwd()
+{
+	char	iwd[ _POSIX_PATH_MAX ];
+	char	buf[ _POSIX_PATH_MAX + 50 ];
+
+	if( REMOTE_syscall(CONDOR_get_iwd,iwd) < 0 ) {
+		REMOTE_syscall(
+			CONDOR_perm_error,
+			"Can't determine initial working directory"
+		);
+		exit( 4 );
+	}
+	if( chdir(iwd) < 0 ) {
+		sprintf( buf, "Can't open working directory \"%s\"", iwd );
+		REMOTE_syscall( CONDOR_perm_error, buf );
+		exit( 4 );
+	}
+}
+
+extern "C"	int MappingFileDescriptors();
+
+extern "C" int
+MarkOpen( const char *file, int flags, int fd, int is_remote )
+{
+	if( MappingFileDescriptors() ) {
+		EXCEPT( "MarkOpen() called, but should never be used!" );
+	}
+	return fd;
 }
