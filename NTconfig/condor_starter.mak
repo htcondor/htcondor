@@ -54,7 +54,6 @@ CLEAN :
 	-@erase "$(INTDIR)\java_proc.obj"
 	-@erase "$(INTDIR)\jic_local.obj"
 	-@erase "$(INTDIR)\jic_local_config.obj"
-	-@erase "$(INTDIR)\jic_local_stdin.obj"
 	-@erase "$(INTDIR)\jic_shadow.obj"
 	-@erase "$(INTDIR)\job_info_communicator.obj"
 	-@erase "$(INTDIR)\local_user_log.obj"
@@ -135,7 +134,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\starter_class.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
 	"$(INTDIR)\vanilla_proc.obj" \
-	"$(INTDIR)\jic_local_stdin.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -178,7 +176,6 @@ CLEAN :
 	-@erase "$(INTDIR)\java_proc.obj"
 	-@erase "$(INTDIR)\jic_local.obj"
 	-@erase "$(INTDIR)\jic_local_config.obj"
-	-@erase "$(INTDIR)\jic_local_stdin.obj"
 	-@erase "$(INTDIR)\jic_shadow.obj"
 	-@erase "$(INTDIR)\job_info_communicator.obj"
 	-@erase "$(INTDIR)\local_user_log.obj"
@@ -257,7 +254,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\starter_class.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
 	"$(INTDIR)\vanilla_proc.obj" \
-	"$(INTDIR)\jic_local_stdin.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -500,12 +496,6 @@ SOURCE=..\src\condor_starter.V6.1\jic_local.C
 SOURCE=..\src\condor_starter.V6.1\jic_local_config.C
 
 "$(INTDIR)\jic_local_config.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_starter.V6.1\jic_local_stdin.C
-
-"$(INTDIR)\jic_local_stdin.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
