@@ -55,8 +55,7 @@ public:
   void RemoveLast();               // remove the last element iterated
   void Insert(const KeyType& Key); // Insert before current node
 
-  void operator=(Set& S);
-  bool operator==(Set& S);
+  void operator=(Set<KeyType>& S);
 
 private:
   
@@ -89,19 +88,6 @@ void Set<KeyType>::operator=(Set<KeyType>& S) {
   KeyType Key;
   S.StartIterations();
   while(S.Iterate(Key)) Insert(Key);
-}
-
-template <class KeyType>
-bool Set<KeyType>::operator==(Set<KeyType>& S) {
-  Curr=Head;
-  S.StartIterations();
-  KeyType Key;
-  while(Curr) {
-    if (!S.Iterate(Key)) return false;
-    if (Curr->Key!=Key) return false;
-    Curr=Curr->Next;
-  }
-  return (!S.Iterate(Key));
 }
 
 // Constructor
