@@ -140,6 +140,7 @@ typedef struct {        /* record sent by startd to shadow */
 #define SEND_ALL_JOBS		(SCHED_VERS+33)
 #define SEND_ALL_JOBS_PRIO	(SCHED_VERS+34)
 #define REQ_NEW_PROC		(SCHED_VERS+35)
+#define PCKPT_FRGN_JOB		(SCHED_VERS+36)
 
 #define SCHED_PORT			9605
 #define START_PORT			9611
