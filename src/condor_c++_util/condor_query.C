@@ -264,16 +264,19 @@ fetchAds (ClassAdList &adList, const char *poolName)
 	while (more)
 	{
 		if (!sock.code (more)) {
+			sock.end_of_message();
 			return Q_COMMUNICATION_ERROR;
 		}
 		if (more) {
 			ad = new ClassAd;
 			if (!ad->get (sock)) {
+				sock.end_of_message();
 				return Q_COMMUNICATION_ERROR;
 			}
 			adList.Insert (ad);
 		}
 	}
+	sock.end_of_message();
 
 	// finalize
 	sock.close ();
