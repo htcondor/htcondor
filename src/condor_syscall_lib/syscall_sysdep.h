@@ -34,6 +34,10 @@
 #   define SYSCALL_PTR	char
 #   define INV_SYSCALL_PTR	const void
 #	define NEED_CONST
+#elif defined(Solaris27)
+#   define SYSCALL_PTR	void
+#   define INV_SYSCALL_PTR void
+#	define NEED_CONST const
 #else
 #   define SYSCALL_PTR	char
 #   define INV_SYSCALL_PTR	void
@@ -50,9 +54,17 @@
 #	define SYNC_RETURNS_VOID 1
 #endif
 
-#if defined(HPUX10) || defined(Solaris26)
+#if defined(HPUX10) || (defined(Solaris) && !defined(Solaris251))
 #	define HAS_64BIT_STRUCTS	1
 #	define HAS_64BIT_SYSCALLS	1
+#endif
+
+#if defined(Solaris27)
+#   define SOCKLEN_PTR Psocklen_t
+#	define SOCKLEN_T socklen_t
+#else
+#   define SOCKLEN_PTR int *
+#	define SOCKLEN_T int
 #endif
 
 #endif /* CONDOR_SYSCALL_SYSDEP_H */
