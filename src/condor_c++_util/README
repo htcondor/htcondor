@@ -113,6 +113,13 @@ list.h
 
     Defines a list template class.
 
+memory_file.h
+memory_file.C
+
+    A simple implementation of read/write/seek on a memory object.
+    This is handy for verifying the (much) more complex implementation
+    of read/write/seek in Condor.
+
 my_hostname.C
 
     Find out the name of host the process is running on.
