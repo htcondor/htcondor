@@ -183,6 +183,7 @@ writeEvent (ULogEvent *event)
 	if (path == 0) return 1;
 
 	int retval;
+	priv_state priv = set_user_priv();
 
 	// fill in event context
 	event->cluster = cluster;
@@ -195,6 +196,7 @@ writeEvent (ULogEvent *event)
 	if (!retval) fputc ('\n', fp);
 	if (fprintf (fp, SynchDelimiter) < 0) retval = 0;
 	lock->release ();
+	set_priv( priv );
 	return retval;
 }
 	
