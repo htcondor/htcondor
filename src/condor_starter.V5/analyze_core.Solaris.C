@@ -61,7 +61,8 @@ core_is_valid( char *name )
 	);
 
 	if( (fd=open(name,O_RDONLY)) < 0 ) {
-		dprintf( D_ALWAYS, "Can't open core file \"%s\"", name );
+		dprintf( D_ALWAYS, "Can't open core file \"%s\", errno = %d\n",
+				 name, errno );
 		return FALSE;
 	}
 
