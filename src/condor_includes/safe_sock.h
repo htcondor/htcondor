@@ -21,9 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
 #ifndef SAFE_SOCK_H
 #define SAFE_SOCK_H
 
@@ -80,15 +77,6 @@ public:
     ///
 	void init();				/* shared initialization method */
 
-    ///
-	int get_port();
-    ///
-	struct sockaddr_in *endpoint();
-    ///
-	char *endpoint_IP();
-    ///
-	int endpoint_port();
-
 #ifndef WIN32
 	// interface no longer supported
 	int attach_to_file_desc(int);
@@ -128,7 +116,6 @@ protected:
 	*/
 	char * serialize(char *);
 	inline char * serialize() { return(serialize(NULL)); }
-	int get_file_desc();
 
 	/*
 	**	Data structures
@@ -154,6 +141,4 @@ protected:
 	safesock_state	_special_state;
 };
 
-
-
-#endif
+#endif /* SAFE_SOCK_H */
