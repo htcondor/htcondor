@@ -380,7 +380,7 @@ pseudo_work_request( PROC *p, char *a_out, char *targ, char *orig, int *kill_sig
 
 
 /*
-  Returns true if this path points to the executable or checkpoint
+  Returns true if this path points to the checkpoint
   file for this job.  Used to determine if we should switch to 
   Condor privileges to access the file.
 */
@@ -389,8 +389,6 @@ is_ckpt_file(const char path[])
 {
 	char *test_path;
 
-	test_path = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
-	if (strcmp(path, test_path) == 0) return true;
 	test_path = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
 	if (strcmp(path, test_path) == 0) return true;
 	strcat(test_path, ".tmp");
@@ -398,6 +396,20 @@ is_ckpt_file(const char path[])
 	return false;
 }
 
+/*
+  Returns true if this path points to the executable file
+  for this job.  Used to determine if we should switch to 
+  Condor privileges to access the file.
+*/
+bool
+is_ickpt_file(const char path[])
+{
+	char *test_path;
+
+	test_path = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
+	if (strcmp(path, test_path) == 0) return true;
+	return false;
+}
 
 
 /*
@@ -461,6 +473,7 @@ pseudo_get_file_stream(
 	PROC *p = (PROC *)Proc;
 	int		retry_wait = 1;
 	bool	CkptFile = is_ckpt_file(file);
+	bool	ICkptFile = is_ickpt_file(file);
 	priv_state	priv;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
@@ -474,7 +487,7 @@ pseudo_get_file_stream(
 		rval = -1;
 
 	// need Condor privileges to access checkpoint files
-	if (CkptFile) {
+	if (CkptFile || ICkptFile) {
 		priv = set_condor_priv();
 	}
 
@@ -487,7 +500,7 @@ pseudo_get_file_stream(
 		if (file_fd >= 0) {
 			close(file_fd);
 		}
-		if (CkptFile) set_priv(priv);	// restore user privileges
+		if (CkptFile || ICkptFile) set_priv(priv); // restore user privileges
 		while (rval == 1 && retry_wait < 20) {
 			rval = RequestRestore(p->owner,file,len,&ip_addr,port);
 			if (rval == 1) {
@@ -522,7 +535,7 @@ pseudo_get_file_stream(
 		switch( child_pid = fork() ) {
 		    case -1:	/* error */
 			    dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
-				if (CkptFile) set_priv(priv);	// restore user privileges
+				if (CkptFile || ICkptFile) set_priv(priv);
 				return -1;
 			case 0:	/* the child */
 				data_sock = connect_file_stream( connect_sock );
@@ -559,7 +572,7 @@ pseudo_get_file_stream(
 			default:	/* the parent */
 				close( file_fd );
 				close( connect_sock );
-				if (CkptFile) set_priv(priv);	// restore user privileges
+				if (CkptFile || ICkptFile) set_priv(priv);
 				return 0;
 			}
 	}
@@ -586,6 +599,7 @@ pseudo_put_file_stream(
 	int		rval;
 	PROC *p = (PROC *)Proc;
 	bool	CkptFile = is_ckpt_file(file);
+	bool	ICkptFile = is_ickpt_file(file);
 	priv_state	priv;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
@@ -616,12 +630,12 @@ pseudo_put_file_stream(
 	}
 
 	// need Condor privileges to access checkpoint files
-	if (CkptFile) {
+	if (CkptFile || ICkptFile) {
 		priv = set_condor_priv();
 	}
 
 	if( (file_fd=open(file,O_WRONLY|O_CREAT|O_TRUNC,0664)) < 0 ) {
-		if (CkptFile) set_priv(priv);	// restore user privileges
+		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
 		return -1;
 	}
 
@@ -634,7 +648,7 @@ pseudo_put_file_stream(
 	switch( child_pid = fork() ) {
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
-		if (CkptFile) set_priv(priv);	// restore user privileges
+		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
 		return -1;
 	  case 0:	/* the child */
 		data_sock = connect_file_stream( connect_sock );
@@ -657,7 +671,7 @@ pseudo_put_file_stream(
 	  default:	/* the parent */
 	    close( file_fd );
 		close( connect_sock );
-		if (CkptFile) set_priv(priv);	// restore user privileges
+		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
 		return 0;
 	}
 
@@ -953,7 +967,7 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 
 	// this first one is a special case: if the full_path is a 
 	// checkpoint, ALWAYS transfer via Remote System Call.
-	if(is_ckpt_file(full_path)) {
+	if(is_ckpt_file(full_path) || is_ickpt_file(full_path)) {
 		answer = IS_RSC;
 		dprintf( D_SYSCALLS, "\tanswer = IS_RSC\n" );
 	} else if( use_local_access(full_path) ) {
@@ -1175,6 +1189,7 @@ has_ckpt_file()
 	PROC *p = (PROC *)Proc;
 	priv_state	priv;
 
+	if (p->universe != STANDARD) return 0;
 	priv = set_condor_priv();
 	rval = FileExists(RCkptName, p->owner);
 	set_priv(priv);
