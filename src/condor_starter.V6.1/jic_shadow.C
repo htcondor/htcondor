@@ -908,9 +908,17 @@ JICShadow::initStdFiles( void )
 {
 		// now that we know about file transfer and the real iwd we'll
 		// be using, we can initialize the std files... 
-	job_input_name = getJobStdFile( ATTR_JOB_INPUT, NULL );
-	job_output_name = getJobStdFile( ATTR_JOB_OUTPUT, ATTR_JOB_OUTPUT_ORIG );
-	job_error_name = getJobStdFile( ATTR_JOB_ERROR, ATTR_JOB_ERROR_ORIG );
+	if( ! job_input_name ) {
+		job_input_name = getJobStdFile( ATTR_JOB_INPUT, NULL );
+	}
+	if( ! job_output_name ) {
+		job_output_name = getJobStdFile( ATTR_JOB_OUTPUT,
+										 ATTR_JOB_OUTPUT_ORIG );
+	}
+	if( ! job_error_name ) {
+		job_error_name = getJobStdFile( ATTR_JOB_ERROR,
+										ATTR_JOB_ERROR_ORIG );
+	}
 
 		// so long as all of the above are initialized, we were
 		// successful, regardless of if any of them are NULL...
