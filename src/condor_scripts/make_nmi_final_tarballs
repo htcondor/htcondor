@@ -77,7 +77,7 @@ require 5.002;
 # LICENSE.TXT (which are included in all releases) that you want in
 # the skeleton for a given module.
 %skelfiles = (
-  "condor"   => [ "condor_install", "examples", ],
+  "condor"   => [ "condor_install", "condor_configure", "examples", ],
 );
 
 # If any of the files you specify aren't found in the $realskel
@@ -85,6 +85,7 @@ require 5.002;
 # be found here.
 %filesource = (
   "condor_install" => "condor_scripts/condor_install",
+  "condor_configure" => "condor_scripts/condor_configure",
 );	   
 
 # If the tar file for this module has a different name than

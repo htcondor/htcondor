@@ -1,4 +1,4 @@
-all_target(condor_install condor_init condor_compile ld)
+all_target(condor_install condor_init condor_compile ld condor_configure)
 
 CFLAGS = $(STD_C_FLAGS)
 
@@ -15,6 +15,7 @@ MANDIR = /p/condor/workspaces/man/v6.4
 
 
 release_copy_target(condor_install,$(RELEASE_DIR)/sbin,condor_install,EXECUTABLE_MODE)
+release_copy_target(condor_configure,$(RELEASE_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
 release_copy_target(condor_init,$(RELEASE_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 #if IS_CLIPPED
 release_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
@@ -25,6 +26,7 @@ release_link_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
 strip_copy_target(condor_install,$(STRIP_DIR)/sbin,condor_install,EXECUTABLE_MODE)
+strip_copy_target(condor_configure,$(STRIP_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
 strip_copy_target(condor_init,$(STRIP_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 strip_copy_target(condor_clean_checkpoints,$(STRIP_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
 #if IS_CLIPPED
@@ -36,6 +38,7 @@ strip_link_target($(STRIP_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
 static_copy_target(condor_install,$(STATIC_DIR)/sbin,condor_install,EXECUTABLE_MODE)
+static_copy_target(condor_configure,$(STATIC_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
 static_copy_target(condor_init,$(STATIC_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 static_copy_target(condor_clean_checkpoints,$(STATIC_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
 #if IS_CLIPPED
