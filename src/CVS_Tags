@@ -1,3 +1,7 @@
+05/04/04 V6_6_5_WINDOWS
+   The is the 6.6.5 release tag for windoze.  The version string was:
+   "$CondorVersion: 6.6.5 May  4 2004 $"
+
 05/03/04 V6_6_5
    The is the 6.6.5 release tag for all platforms except windoze.  The
    version string was: "$CondorVersion: 6.6.5 May  3 2004 $"
