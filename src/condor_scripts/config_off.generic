@@ -1,4 +1,5 @@
 -------- Do not delete this line, awk uses it ---------------------
+CSH
 echo "Configuring condor off... "
 
 set CONFIG_VAL=$RELEASEDIR/bin/config_val

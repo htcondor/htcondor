@@ -1,4 +1,5 @@
 -------- Do not delete this line, awk uses it ---------------------
+CSH
 set CondorMaster='condor_master'
 set CondorDaemons='condor_(master|startd|schedd|negotiator|collector)'
 
