@@ -2,7 +2,9 @@
 #include <stdio.h>
 
 int
-main( int argc, char *argv[] )
+main( argc, argv )
+int		argc;
+char	*argv[];
 {
 	char	*path = argv[1];
 	char 	**args = &argv[1];
