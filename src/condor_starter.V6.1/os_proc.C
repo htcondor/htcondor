@@ -63,6 +63,7 @@ OsProc::StartJob()
 {
 	int i;
 	int nice_inc = 0;
+	bool has_wrapper = false;
 
 	dprintf(D_FULLDEBUG,"in OsProc::StartJob()\n");
 
@@ -104,6 +105,12 @@ OsProc::StartJob()
 	// if name is condor_exec, we transferred it, so make certain
 	// it is executable.
 	if ( strcmp(CONDOR_EXEC,JobName) == 0 ) {
+			// also, prepend the full path to this name so that we
+			// don't have to rely on the PATH inside the
+			// USER_JOB_WRAPPER or for exec().
+		sprintf( JobName, "%s%c%s", Starter->GetWorkingDir(),
+				 DIR_DELIM_CHAR, CONDOR_EXEC );
+
 		priv_state old_priv = set_user_priv();
 		int retval = chmod( JobName, S_IRWXU | S_IRWXO | S_IRWXG );
 		set_priv( old_priv );
@@ -121,11 +128,37 @@ OsProc::StartJob()
 				"Aborting DC_StartCondorJob.\n", ATTR_JOB_ARGUMENTS);
 		return 0;
 	}
-		// for now, simply prepend "condor_exec" to the args - this
-		// becomes argv[0].  This should be made smarter later....
-	strcpy ( Args, CONDOR_EXEC );
-	strcat ( Args, " " );
-	strcat ( Args, tmp );
+
+		// Support USER_JOB_WRAPPER parameter...
+
+		// First, put "condor_exec" at the front of Args, since that
+		// will become argv[0] of what we exec(), either the wrapper
+		// or the actual job.
+	strcpy( Args, CONDOR_EXEC );
+
+	char *wrapper = NULL;
+	if( (wrapper=param("USER_JOB_WRAPPER")) ) {
+			// make certain this wrapper program exists and is executable
+		if( access(wrapper,X_OK) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "Cannot find/execute USER_JOB_WRAPPER file %s\n",
+					 wrapper );
+			return 0;
+		}
+		has_wrapper = true;
+			// Now, we've got a valid wrapper.  We want that to become
+			// "JobName" so we exec it directly, and we want to put
+			// what was the JobName (with the full path) as the first
+			// argument to the wrapper
+		strcat( Args, " " );
+		strcat( Args, JobName );
+		strcpy( JobName, wrapper );
+		free(wrapper);
+	} 
+		// Either way, we now have to add the user-specified args as
+		// the rest of the Args string.
+	strcat( Args, " " );
+	strcat( Args, tmp );
 
 	char Env[ATTRLIST_MAX_EXPRESSION];
 	if (JobAd->LookupString(ATTR_JOB_ENVIRONMENT, Env) != 1) {
@@ -218,10 +251,18 @@ OsProc::StartJob()
 		nice_inc = 0;
 	}
 
-	// in below dprintf, display &(Args[11]) to skip past argv[0] 
-	// which we know will always be condor_exec
-	dprintf(D_ALWAYS,"About to exec %s %s\n",JobName,
-		&(Args[strlen(CONDOR_EXEC)]));
+		// in the below dprintfs, we want to skip past argv[0], which
+		// we know will always be condor_exec, in the Args string. 
+	int skip = strlen(CONDOR_EXEC) + 1;
+	if( has_wrapper ) { 
+			// print out exactly what we're doing so folks can debug
+			// it, if they need to.
+		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName, 
+				 &(Args[skip]) );
+	} else {
+		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
+				 &(Args[skip]) );
+	}
 
 	set_priv ( priv );
 
