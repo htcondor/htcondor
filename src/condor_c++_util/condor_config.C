@@ -284,7 +284,7 @@ real_config(char* host, int wantsQuiet)
 		}
 
 		// isolate variable name by finding & nulling the '='
-		int equals_offset = index( varname, '=' ) - varname;
+		int equals_offset = strchr( varname, '=' ) - varname;
 		varname[equals_offset] = '\0';
 		// isolate value by pointing to everything after the '='
 		char *varvalue = varname + equals_offset + 1;
@@ -1078,6 +1078,7 @@ set_runtime_config(char *admin, char *config)
 ** were defined, and -1 on error.  persistent configs are also processed
 ** by this function.
 */
+extern "C"
 static int
 process_runtime_configs()
 {
