@@ -102,7 +102,11 @@ _Evaluate (EvalState &, Value &val)
 
 	// if integer or real, multiply by the factor
 	if (val.IsIntegerValue(i)) {
-		val.SetIntegerValue (i*factor);
+		if( factor != NO_FACTOR ) {
+			val.SetRealValue( ((double)i)*factor );
+		} else {
+			val.SetIntegerValue (i*factor);
+		}
 	} else if (val.IsRealValue(r)) {
 		val.SetRealValue (r*(double)factor);
 	}
