@@ -59,6 +59,11 @@ handle_dc_sighup( Service*, int )
 
 	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
 
+		// Actually re-read the files...  Added by Derek Wright on
+		// 12/8/97 (long after this function was first written... 
+		// nice goin', Todd).  *grin*
+	config(NULL);
+
 	// Reinitialize logging system; after all, LOG may have been changed.
 	dprintf_config(mySubSystem,2);
 	
