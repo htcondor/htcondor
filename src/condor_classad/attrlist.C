@@ -952,6 +952,11 @@ int AttrList::LookupInteger (const char *name, int &value)
         value = ((Integer *) rhs)->Value();
         return 1;
     }
+    if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_BOOL))
+	{
+        value = ((Boolean *) rhs)->Value();
+        return 1;
+    }
 
     return 0;
 }
