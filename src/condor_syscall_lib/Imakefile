@@ -115,7 +115,8 @@ XDR_OBJ = \
  	xdr_timezone.o \
  	xdr_rlimit.o \
 	xdr_startup_info.o \
-	xdr_open_flags_t.o
+	xdr_open_flags_t.o \
+	xdr_sig_num.o
 
 #if 0
  	xdr_utsname.o
