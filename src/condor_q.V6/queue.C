@@ -166,10 +166,14 @@ int main (int argc, char **argv)
 	// close list
 	scheddList.Close();
 
-	if (first)
-	{
-		fprintf (stderr,"Error: Collector has no record of schedd/submitter\n");
-		exit(1);
+	if( first ) {
+		if( global ) {
+			printf( "All queues are empty\n" );
+		} else {
+			fprintf(stderr,"Error: Collector has no record of "
+							"schedd/submitter\n");
+			exit(1);
+		}
 	}
 
 	return 0;
