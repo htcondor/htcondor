@@ -2581,7 +2581,8 @@ int DaemonCore::HandleReq(int socki)
 				if (the_user) {
 					// copy this to the HandleReq() scope
 					strcpy (user, the_user);
-					delete the_user;
+					free( the_user );
+					the_user = NULL;
 				}
 			}
 			new_session = false;
