@@ -164,6 +164,31 @@ public:
     return true;
   }
     
+  // I hope ths doesn't seem strange. There are times when we do lots
+  // of operations on a MyString. For example, in xml_classads.C, we
+  // add characters one at a time to the string (see
+  // fix_characters). Every single addition requires a call to new[]
+  // and a call to strncpy(). When we make large strings this way, it
+  // just blows.  I am changing it so that all operator+= functions
+  // call this new reserve, anticipating that the string might
+  // continue to grow.  Note that the string will never be more than
+  // 50% too big, and operator+= will be way more efficient. Alain,
+  // 20-Dec-2001
+  bool reserve_at_least(const int sz) {
+	  int twice_as_much;
+	  bool success;
+
+	  twice_as_much = 2 * capacity;
+	  if (twice_as_much > sz) {
+		  success = reserve(twice_as_much);
+		  if (!success) { // allocate failed, get just enough?
+			  success = reserve(sz);
+		  }
+	  } else {
+		  success = reserve(sz);
+	  }
+	  return success;
+  }
     
   char operator[](int pos) const {
     if (pos>=Len) return '\0';
@@ -180,9 +205,10 @@ public:
 
   MyString& operator+=(const MyString& S) {
     if( S.Len + Len > capacity ) {
-       reserve( Len + S.Len );
+       reserve_at_least( Len + S.Len );
     }
-    strcat( Data, S.Value() );
+    //strcat( Data, S.Value() );
+	strcpy( Data + Len, S.Value());
 	Len += S.Len;
     return *this;
   }
@@ -193,16 +219,17 @@ public:
 	}
     int s_len = strlen( s );
     if( s_len + Len > capacity ) {
-       reserve( Len + s_len );
+       reserve_at_least( Len + s_len );
     }
-    strcat( Data, s );
+    //strcat( Data, s );
+	strcpy( Data + Len, s);
 	Len += s_len;
     return *this;
   }
 
   MyString& operator+=( const char c ) {
     if( Len + 1 > capacity ) {
-       reserve( Len + 1 );
+       reserve_at_least( Len + 1 );
     }
 	Data[Len] = c;
 	Data[Len+1] = '\0';
