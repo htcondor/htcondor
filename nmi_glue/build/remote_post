@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post,v 1.1.2.2 2004-06-25 06:32:23 wright Exp $
+# $Id: remote_post,v 1.1.2.3 2004-07-01 23:26:42 wright Exp $
 # post script to cleanup after a Condor build, successful or not
 ######################################################################
 
@@ -25,7 +25,7 @@ if( defined $ENV{_NMI_STEP_FAILED} ) {
 ######################################################################
 
 print "Tarring up results\n";
-open( TAR, "tar zcf results.tar.gz public|" ) || 
+open( TAR, "tar zcvf results.tar.gz public|" ) || 
     die "Can't open tar as a pipe: $!\n";
 while( <TAR> ) { 
     print;
