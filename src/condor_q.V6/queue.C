@@ -260,12 +260,19 @@ processCommandLineArguments (int argc, char *argv[])
 	
 	for (i = 1; i < argc; i++)
 	{
-		// if the argument begins with a '-', use only the part following
+		if( *argv[i] != '-' ) {
+			// no dash means this arg is the desired job owner
+			if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
+				// this error doesn't seem very helpful... can't we say more?
+				fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
+				exit( 1 );
+			}
+			continue;
+		}
+
+		// the argument began with a '-', so use only the part after
 		// the '-' for prefix matches
-		if (*argv[i] == '-') 
-			arg = argv[i]+1;
-		else
-			arg = argv[i];
+		arg = argv[i]+1;
 
 		if (match_prefix (arg, "long")) {
 			verbose = 1;
@@ -276,8 +283,7 @@ processCommandLineArguments (int argc, char *argv[])
 			if( pool ) {
 				delete [] pool;
 			}
-			i++;
-			if( ! (argv[i] && *argv[i]) ) {
+            if( ++i >= argc ) {
 				fprintf( stderr, 
 						 "Error: Argument -pool requires another parameter\n" );
 				exit(1);
@@ -291,8 +297,13 @@ processCommandLineArguments (int argc, char *argv[])
 		} 
 		else
 		if (match_prefix (arg, "D")) {
+			if( ++i >= argc ) {
+				fprintf( stderr, 
+						 "Error: Argument -D requires another parameter\n" );
+				exit( 1 );
+			}
 			Termlog = 1;
-			set_debug_flags( argv[++i] );
+			set_debug_flags( argv[i] );
 		} 
 		else
 		if (match_prefix (arg, "name")) {
@@ -506,11 +517,8 @@ processCommandLineArguments (int argc, char *argv[])
 			dag = true;
 		}   
 		else {
-			// assume name of owner of job
-			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
-				fprintf (stderr, "Error: Argument %d (%s)\n", i, argv[i]);
-				exit (1);
-			}
+			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
+			exit( 1 );
 		}
 	}
 }
