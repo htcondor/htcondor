@@ -56,6 +56,12 @@ extern char *gen_ckpt_name();
 
 #include "condor_qmgr.h"
 
+#if defined(GSS_AUTHENTICATION)
+#include "auth_sock.h"
+#else
+#define AuthSock ReliSock
+#endif
+
 extern "C"
 {
 /*	int		SetCkptServerHost(const char *host);
@@ -2936,7 +2942,9 @@ Scheduler::Init()
 		// Now create another command port to be used exclusively by shadows.
 		// Stash the sinfull string of this new command port in MyShadowSockName.
 	if ( ! MyShadowSockName ) {
-		shadowCommandrsock = new ReliSock;
+//		shadowCommandrsock = new ReliSock;
+// mju changed to AuthSock
+		shadowCommandrsock = new AuthSock;
 		shadowCommandssock = new SafeSock;
 
 		if ( !shadowCommandrsock || !shadowCommandssock ) {

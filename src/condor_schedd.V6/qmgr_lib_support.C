@@ -38,6 +38,7 @@ static char *_FileName_ = __FILE__;
 #else
 #define AuthSock ReliSock
 #endif
+
 int open_url(char *, int, int);
 extern "C" char*	get_schedd_addr(const char*, const char*); 
 
@@ -115,6 +116,9 @@ ConnectQ(char *qmgr_location, int auth )
 		//mju replaced strcmp with new method that strcmp until char (:)
 		if( ! is_local && ! strcmp_until(localScheddAddr, scheddAddr, ':' ) ) {
 			is_local = TRUE;
+		}
+		else {
+			dprintf(D_FULLDEBUG,"ConnectQ failed on check for localScheddAddr\n" );
 		}
 		free(localScheddAddr);
 	}

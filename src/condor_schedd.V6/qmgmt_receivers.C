@@ -29,7 +29,6 @@
 
 #if defined(GSS_AUTHENTICATION)
 #include "auth_sock.h"
-
 #else
 #define AuthSock ReliSock
 #endif

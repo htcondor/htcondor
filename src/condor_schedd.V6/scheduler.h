@@ -43,6 +43,12 @@
 #include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
 
+#if defined(GSS_AUTHENTICATION)
+#include "auth_sock.h"
+#else
+#define AuthSock ReliSock
+#endif
+
 const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 
@@ -148,7 +154,9 @@ class Scheduler : public Service
 
 	// information about the command port which Shadows use
 	char*			MyShadowSockName;
-	ReliSock*		shadowCommandrsock;
+//	ReliSock*		shadowCommandrsock;
+//mju: changed to AuthSock
+	AuthSock*		shadowCommandrsock;
 	SafeSock*		shadowCommandssock;
 	
 	// parameters controling the scheduling and starting shadow
