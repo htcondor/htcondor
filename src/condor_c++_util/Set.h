@@ -1,7 +1,9 @@
 #ifndef _Set_H_
 #define _Set_H_
 
+#if !defined(WIN32)
 #pragma interface
+#endif
 
 //----------------------------------------------------------------
 // Set template class

@@ -1,5 +1,7 @@
+#if !defined(WIN32)
 #pragma implementation "HashTable.h"
 #pragma implementation "Set.h"
+#endif
 
 #include <math.h>
 

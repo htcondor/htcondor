@@ -2,7 +2,9 @@
 #define _TimeClass_H_
 
 #include "condor_debug.h"
+#if !defined(WIN32)
 #include <sys/time.h>
+#endif
 
 static char *_FileName_ = __FILE__;
 
@@ -28,11 +30,15 @@ public:
   int operator<(const Time& T) { return (Sec==T.Sec ? MicroSec<T.MicroSec : Sec<T.Sec); }
   
   static Time Now() {
+#if defined(WIN32)
+	  return Time(time(NULL), 0);
+#else
     struct timeval tp;
     if (gettimeofday(&tp,NULL)==-1) {
       EXCEPT ("gettimeofday()");
     }
     return Time(tp.tv_sec,tp.tv_usec);
+#endif
   }
 
   static double DiffTime(Time From, Time To) {

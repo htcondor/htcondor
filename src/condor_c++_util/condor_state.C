@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "condor_state.h"
 static char *_FileName_ = __FILE__;
 
