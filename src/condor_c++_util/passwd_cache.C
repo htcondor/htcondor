@@ -37,7 +37,7 @@ passwd_cache::passwd_cache() {
 	uid_table = new UidHashTable(10, compute_user_hash);
 	group_table = new GroupHashTable(10, compute_user_hash);
 		/* set the number of seconds until a cache entry expires */
-	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", 3600);
+	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", 300);
 }
 void
 passwd_cache::reset() {
