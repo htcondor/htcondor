@@ -392,9 +392,13 @@ negotiationTime ()
 	int			result;
 	int			numStartdAds;
 	double		maxPrioValue;
+	double		maxAbsPrioValue;
 	double		normalFactor;
+	double		normalAbsFactor;
 	double		scheddPrio;
+	double		scheddPrioFactor;
 	double		scheddShare;
+	double		scheddAbsShare;
 	int			scheddLimit;
 	int			scheddUsage;
 	int			MaxscheddLimit;
@@ -468,7 +472,8 @@ negotiationTime ()
 		spin_pie++;
 		hit_schedd_prio_limit = FALSE;
 		hit_network_prio_limit = FALSE;
-		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor);
+		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
+									  maxAbsPrioValue, normalAbsFactor);
 		numStartdAds = startdAds.MyLength();
 		MaxscheddLimit = 0;
 		// ----- Negotiate with the schedds in the sorted list
@@ -502,21 +507,32 @@ negotiationTime ()
 			scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
 			if (scheddLimit>MaxscheddLimit) MaxscheddLimit=scheddLimit;
 
+			// calculate this schedd's absolute fair-share for allocating
+			// resources other than CPUs (like network capacity and licenses)
+			scheddPrioFactor = accountant.GetPriorityFactor ( scheddName );
+			scheddAbsShare =
+				maxAbsPrioValue/(scheddPrioFactor*normalAbsFactor);
+
 			// print some debug info
 			dprintf (D_FULLDEBUG, "  Calculating schedd limit with the "
 				"following parameters\n");
-			dprintf (D_FULLDEBUG, "    ScheddPrio     = %f\n", scheddPrio);
-			dprintf (D_FULLDEBUG, "    scheddShare    = %f\n", scheddShare);
-			dprintf (D_FULLDEBUG, "    ScheddUsage    = %d\n", scheddUsage);
-			dprintf (D_FULLDEBUG, "    scheddLimit    = %d\n", scheddLimit);
-			dprintf (D_FULLDEBUG, "    MaxscheddLimit = %d\n", MaxscheddLimit);
+			dprintf (D_FULLDEBUG, "    ScheddPrio       = %f\n", scheddPrio);
+			dprintf (D_FULLDEBUG, "    ScheddPrioFactor = %f\n",
+					 scheddPrioFactor);
+			dprintf (D_FULLDEBUG, "    scheddShare      = %f\n", scheddShare);
+			dprintf (D_FULLDEBUG, "    scheddAbsShare   = %f\n",
+					 scheddAbsShare);
+			dprintf (D_FULLDEBUG, "    ScheddUsage      = %d\n", scheddUsage);
+			dprintf (D_FULLDEBUG, "    scheddLimit      = %d\n", scheddLimit);
+			dprintf (D_FULLDEBUG, "    MaxscheddLimit   = %d\n",
+					 MaxscheddLimit);
 		
 			if ( scheddLimit < 1 ) {
 				// Optimization: If limit is 0, don't waste time with negotiate
 				result = MM_RESUME;
 			} else {
-				result=negotiate( scheddName,scheddAddr,scheddPrio,scheddShare,
-								  scheddLimit,
+				result=negotiate( scheddName,scheddAddr,scheddPrio,
+								  scheddAbsShare, scheddLimit,
 								  startdAds, startdPvtAds, 
 								  send_ad_to_schedd);
 			}
@@ -936,7 +952,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 #ifdef WANT_NETMAN
 	// initialize network information for this request
 	char scheddIPbuf[128];
-	strncpy(scheddIPbuf, scheddAddr, strlen(scheddAddr));
+	strcpy(scheddIPbuf, scheddAddr);
 	char *colon = strchr(scheddIPbuf, ':');
 	if (!colon) {
 		dprintf(D_ALWAYS, "      Invalid %s: %s\n", ATTR_SCHEDD_IP_ADDR,
@@ -1238,17 +1254,17 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 
 void Matchmaker::
-calculateNormalizationFactor (ClassAdList &scheddAds, double &max, 
-				double &normalFactor)
+calculateNormalizationFactor (ClassAdList &scheddAds,
+							  double &max, double &normalFactor,
+							  double &maxAbs, double &normalAbsFactor)
 {
 	ClassAd *ad;
 	char	scheddName[64];
-	double	prio;
+	double	prio, prioFactor;
 	char	old_scheddName[64];
-	int 	num_scheddAds;
 
 	// find the maximum of the priority values (i.e., lowest priority)
-	max = DBL_MIN;
+	max = maxAbs = DBL_MIN;
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
 	{
@@ -1256,16 +1272,17 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 		ad->LookupString (ATTR_NAME, scheddName);
 		prio = accountant.GetPriority (scheddName);
 		if (prio > max) max = prio;
+		prioFactor = accountant.GetPriorityFactor (scheddName);
+		if (prioFactor > maxAbs) maxAbs = prioFactor;
 	}
 	scheddAds.Close();
 
 	// calculate the normalization factor, i.e., sum of the (max/scheddprio)
 	// also, do not factor in ads with the same ATTR_NAME more than once -
 	// ads with the same ATTR_NAME signify the same user submitting from multiple
-	// machines.  count the number of ads with unique ATTR_NAME's into 
-	// the num_scheddsAds paramenter.
+	// machines.
 	normalFactor = 0.0;
-	num_scheddAds = 0;	
+	normalAbsFactor = 0.0;
 	old_scheddName[0] = '\0';
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
@@ -1273,9 +1290,10 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 		ad->LookupString (ATTR_NAME, scheddName);
 		if ( strcmp(scheddName,old_scheddName) == 0) continue;
 		strncpy(old_scheddName,scheddName,sizeof(old_scheddName));
-		num_scheddAds++;
 		prio = accountant.GetPriority (scheddName);
 		normalFactor = normalFactor + max/prio;
+		prioFactor = accountant.GetPriorityFactor (scheddName);
+		normalAbsFactor = normalAbsFactor + maxAbs/prioFactor;
 	}
 	scheddAds.Close();
 
