@@ -23,7 +23,48 @@
 
 
 #include "condor_common.h"
+#include "common.h"
 #include "collection.h"
+
+static const char *const CollOpStrings[] = {
+    "no op",
+
+    "create sub view",
+    "create partition",
+    "delete view",
+    "set view info",
+    "ack view operation",
+
+    "add classad",
+    "update classad",
+    "modify classad",
+    "remove classad",
+    "ack classad op",
+
+    "open transaction",
+    "ack open transaction",
+    "commit transaction",
+    "abort transaction",
+    "ack commit transaction",
+    "forget transaction",
+
+    "get classad",
+    "get view info",
+    "get sub view names",
+    "get partitioned view names",
+    "find partition name",
+    "is active transaction?",
+    "is committed transaction?",
+    "get all active transactions",
+    "get all committed transactions",
+    "get server transaction state",
+    "ack read op",
+
+    "connect to server",
+    "query view",
+	"disconnect from server"
+};
+
 
 ClassAdCollectionInterface::
 ClassAdCollectionInterface( )

@@ -28,16 +28,69 @@
 #include "source.h"
 #include "sink.h"
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
-	// outcome from a commit
-enum { XACTION_ABORTED, XACTION_COMMITTED, XACTION_UNKNOWN };
 
 class ClassAdCollectionInterface {
 public:
 	ClassAdCollectionInterface( );
 	virtual ~ClassAdCollectionInterface( );
 
+	enum {
+	    ClassAdCollOp_NoOp                  = 10000,
+
+		__ClassAdCollOp_ViewOps_Begin__,
+		ClassAdCollOp_CreateSubView         = __ClassAdCollOp_ViewOps_Begin__,
+		ClassAdCollOp_CreatePartition       ,
+		ClassAdCollOp_DeleteView            ,
+		ClassAdCollOp_SetViewInfo           ,
+		ClassAdCollOp_AckViewOp             ,
+		__ClassAdCollOp_ViewOps_End__       = ClassAdCollOp_AckViewOp,
+
+		__ClassAdCollOp_ClassAdOps_Begin__,
+		ClassAdCollOp_AddClassAd            =__ClassAdCollOp_ClassAdOps_Begin__,
+		ClassAdCollOp_UpdateClassAd         ,
+		ClassAdCollOp_ModifyClassAd         ,
+		ClassAdCollOp_RemoveClassAd         ,
+		ClassAdCollOp_AckClassAdOp          ,
+		__ClassAdCollOp_ClassAdOps_End__    = ClassAdCollOp_AckClassAdOp,
+
+		__ClassAdCollOp_XactionOps_Begin__,
+		ClassAdCollOp_OpenTransaction       =__ClassAdCollOp_XactionOps_Begin__,
+		ClassAdCollOp_AckOpenTransaction    ,
+		ClassAdCollOp_CommitTransaction     ,
+		ClassAdCollOp_AbortTransaction      ,
+		ClassAdCollOp_AckCommitTransaction  ,
+		ClassAdCollOp_ForgetTransaction     ,
+		__ClassAdCollOp_XactionOps_End__    = ClassAdCollOp_ForgetTransaction,
+
+		__ClassAdCollOp_ReadOps_Begin__     ,
+		ClassAdCollOp_GetClassAd            = __ClassAdCollOp_ReadOps_Begin__,
+		ClassAdCollOp_GetViewInfo           ,
+		ClassAdCollOp_GetSubordinateViewNames,
+		ClassAdCollOp_GetPartitionedViewNames,
+		ClassAdCollOp_FindPartitionName     ,
+		ClassAdCollOp_IsActiveTransaction   ,
+		ClassAdCollOp_IsCommittedTransaction,
+		ClassAdCollOp_GetAllActiveTransactions,
+		ClassAdCollOp_GetAllCommittedTransactions,
+		ClassAdCollOp_GetServerTransactionState,
+		ClassAdCollOp_AckReadOp             ,
+		__ClassAdCollOp_ReadOps_End__       = ClassAdCollOp_AckReadOp,
+
+		__ClassAdCollOp_MiscOps_Begin__     ,
+		ClassAdCollOp_Connect               = __ClassAdCollOp_MiscOps_Begin__,
+		ClassAdCollOp_QueryView             ,
+		ClassAdCollOp_Disconnect            ,
+		__ClassAdCollOp_MiscOps_End__       = ClassAdCollOp_Disconnect
+	};
+
+	static const char * const CollOpStrings[];
+
+	enum AckMode { _DEFAULT_ACK_MODE, WANT_ACKS, DONT_WANT_ACKS };
+
+		// outcome from a commit
+	enum { XACTION_ABORTED, XACTION_COMMITTED, XACTION_UNKNOWN };
 
         // Logfile control
 	virtual bool InitializeFromLog( const string &filename ) = 0;
