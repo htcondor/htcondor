@@ -2,6 +2,8 @@
 \section{\label{sec:DaemonCore}DaemonCore}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{daemoncore|(}
+\index{Condor!shared functionality in daemons}
 This section is a brief description of \Term{DaemonCore}.  DaemonCore
 is a library that is shared among most of the Condor daemons which
 provides common functionality.  Currently, the following daemons use
@@ -25,6 +27,7 @@ options that can be used to start up each daemon.
 \subsection{\label{sec:DaemonCore-Signals}DaemonCore and Unix signals}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{daemoncore!Unix signals}
 One of the most visible features DaemonCore provides for
 administrators is that all daemons which use it behave the same way on
 certain Unix signals.  The signals and the behavior DaemonCore
@@ -68,6 +71,8 @@ details on what settings are in the config files and what they do.
 Command-line Arguments} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{daemoncore!command line arguments}
+\index{Condor daemon!command line arguments}
 The other visible feature that DaemonCore provides to administrators
 is a common set of command-line arguments that all daemons understand.
 The arguments and what they do are described below:
@@ -141,5 +146,35 @@ The arguments and what they do are described below:
 \item[-r minutes] Causes the daemon to set a timer, upon expiration
   of which, sends itself a SIGTERM for graceful shutdown.
 
+\item[-q] Quiet output; write less verbose error
+ messages to \File{stderr} when something goes wrong,
+ and before regular logging can be initialized.
+
+\item[-d] Use dynamic directories.
+ The \File{LOG}, \File{SPOOL}, and \File{EXECUTE} directories
+ are all created by the daemon at run time,
+ and they are named by appending the
+ parent's IP address and PID to the value in the 
+ configuration file.
+ These settings are then inherited by all children of the daemon
+ invoked with this \Arg{-d} argument.
+ For the \Condor{master},
+ all Condor processes will use the new directories.
+ If a \Condor{schedd} is invoked with the \Arg{-d} argument,
+ then only the \Condor{schedd} daemon and any
+ \Condor{shadow} daemons it spawns will use the dynamic
+ directories (named with the \Condor{schedd} daemon's PID).
+
+ Note that by using a dynamically created spool directory
+ named by the IP address and PID,
+ upon restarting daemons,
+ jobs submitted to the original \Condor{schedd} daemon
+ that were stored in the old spool directory will not be noticed
+ by the new \Condor{schedd} daemon,
+ unless you manually specify the old, dyanmically-generated 
+ \MacroNI{SPOOL} directory path in the configuration of the
+ new \Condor{schedd} daemon.
+
 \end{description}
 
+\index{daemoncore|)}

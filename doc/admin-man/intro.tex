@@ -135,6 +135,8 @@ these functions.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Condor-Daemons}The Condor Daemons}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor daemon!descriptions}
+\index{daemons!descriptions}
 
 The following list describes all the daemons and programs that could
 be started under Condor and what they do:
@@ -142,6 +144,7 @@ be started under Condor and what they do:
 \begin{description} 
 
 \item[\Condor{master}] This daemon
+\index{Condor daemon!condor\_master@\Condor{master}}
 \index{daemon!condor\_master@\Condor{master}}
 \index{condor\_master}
 is responsible for keeping all the
@@ -157,6 +160,7 @@ your Condor pool, regardless of what functions each machine are
 performing.  
 
 \item[\Condor{startd}] This daemon
+\index{Condor daemon!condor\_startd@\Condor{startd}}
 \index{daemon!condor\_startd@\Condor{startd}}
 \index{condor\_startd}
 represents a given resource
@@ -170,6 +174,7 @@ suspended, resumed, vacated, or killed.  When the startd is ready to
 execute a Condor job, it spawns the \Condor{starter}, described below.
 
 \item[\Condor{starter}] This program
+\index{Condor daemon!condor\_starter@\Condor{starter}}
 \index{daemon!condor\_starter@\Condor{starter}}
 \index{condor\_starter}
 is the entity that actually
@@ -179,6 +184,7 @@ job completes, the starter notices this, sends back any status
 information to the submitting machine, and exits.
 
 \item[\Condor{schedd}] This daemon
+\index{Condor daemon!condor\_schedd@\Condor{schedd}}
 \index{daemon!condor\_schedd@\Condor{schedd}}
 \index{condor\_schedd}
 represents resources requests to
@@ -197,6 +203,7 @@ schedd spawns a \Condor{shadow} (described below) to serve that
 particular request.
 
 \item[\Condor{shadow}] This program
+\index{Condor daemon!condor\_shadow@\Condor{shadow}}
 \index{daemon!condor\_shadow@\Condor{shadow}}
 \index{condor\_shadow}
 runs on the machine where a given
@@ -212,6 +219,7 @@ where checkpoint files should be stored, how certain files should be
 accessed, etc).  
 
 \item[\Condor{collector}] This daemon
+\index{Condor daemon!condor\_collector@\Condor{collector}}
 \index{daemon!condor\_collector@\Condor{collector}}
 \index{condor\_collector}
 is responsible for collecting
@@ -227,6 +235,7 @@ important information, such as what address to use for sending
 commands to a remote machine. 
 
 \item[\Condor{negotiator}] This daemon
+\index{Condor daemon!condor\_negotiator@\Condor{negotiator}}
 \index{daemon!condor\_negotiator@\Condor{negotiator}}
 \index{condor\_negotiator}
 is responsible for all the
@@ -248,6 +257,7 @@ can have is 0.5, the lowest numerical value, and your priority gets
 worse as this number grows.
 
 \item[\Condor{kbdd}] This daemon
+\index{Condor daemon!condor\_kbdd@\Condor{kbdd}}
 \index{daemon!condor\_kbdd@\Condor{kbdd}}
 \index{condor\_kbdd}
 is only needed on Digital Unix and
@@ -260,6 +270,7 @@ is using the machine again and can perform whatever actions are
 necessary, given the policy it has been configured to enforce.
 
 \item[\Condor{ckpt\_server}] This is the checkpoint server.
+\index{Condor daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
 \index{daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
 \index{condor\_ckpt\_server}
 It services requests to store and retrieve checkpoint files.  If your

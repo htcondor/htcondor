@@ -1216,8 +1216,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
         STRING = This is a string 
         NUMBER = 666
         BOOL1 = True
-        BOOL2 = CurrentTime >= $(NUMBER_MACRO) || $(BOOL1)
-        MY_STRING = "$(STRING_MACRO)"
+        BOOL2 = CurrentTime >= $(NUMBER) || $(BOOL1)
+        MY_STRING = "$(STRING)"
         STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
 \end{verbatim}
 
@@ -3019,6 +3019,19 @@ as:
   This can significantly decrease the amount of time required to submit
   a large group of jobs.
   The default value is False.
+
+\item[\Macro{SUBMIT\_SEND\_RESCHEDULE}] \label{param:SubmitSendReschedule}
+  A boolean expression that when False, prevents \Condor{submit} from
+  automatically sending a \Condor{reschedule} command as it completes.
+  The \Condor{reschedule} command causes the \Condor{schedd} daemon
+  to start searching for machines with which to match the submitted
+  jobs.  When True, this step always occurs.
+  In the case that the machine where the job(s) are submitted is
+  managing a huge number of jobs (thousands or tens of thousands),
+  this step would hurt performance in such a way that it became
+  an obstacle to scalability.
+  The default value is True.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3094,18 +3107,19 @@ These macros affect the \Condor{collector}.
   Condor will send e-mail once per week to this address with the output
   of the \Condor{status} command, which lists how many machines
   are in the pool and how many are running jobs.  The default
-  value of \textit{condor-admin@cs.wisc.edu} will send this report to
+  value of \Email{condor-admin@cs.wisc.edu} will send this report to
   the Condor Team developers at the University of Wisconsin-Madison.
   The Condor Team uses
   these weekly status messages in order to have some idea as to how
   many Condor pools exist in the world.  We appreciate
   getting the reports, as this is one way we can convince funding
-  agencies that Condor is being used in the real world.  If you do
-  not wish this information to be sent to the Condor Team, you must explicitly
-  set the value to \textit{NONE} to disable this feature, or put in some other
-  address that you want the weekly status report sent to.  If this macro
-  definition is commented out in the configuration file, Condor will assume
-  the default behavior to send the weekly email.
+  agencies that Condor is being used in the real world.  
+  If you do not wish this information to be sent to the Condor Team,
+  explicitly set the value to \Expr{NONE} to disable this feature,
+  or replace the
+  address with a desired location.  
+  If undefined (commented out) in the configuration file, Condor follows
+  its default behavior.
 
 \item[\Macro{COLLECTOR\_NAME}] \label{param:CollectorName}
   This macro is used to specify a short description of your pool.
@@ -3117,15 +3131,15 @@ These macros affect the \Condor{collector}.
   periodic updates to a central \Condor{collector} at UW-Madison with
   basic information about the status of your pool.  This includes only
   the number of total machines, the number of jobs submitted, the
-  number of machines running jobs, the hostname of your central
+  number of machines running jobs, the host name of your central
   manager, and the \MacroUNI{COLLECTOR\_NAME} specified above.  These
   updates help the Condor Team see how Condor is being used around the world.
-  By default, they will be sent to \textit{condor.cs.wisc.edu}.  If you don't want
-  these updates to be sent from your pool, you must explicitly set this macro to
-   \textit{NONE}. 
-  If this macro
-  definition is commented out in the configuration file, Condor will assume
-  the default behavior to send the periodic updates.
+  By default, they will be sent to \File{condor.cs.wisc.edu}.
+  If you do not want
+  these updates to be sent from your pool,
+  explicitly set this macro to \Expr{NONE}. 
+  If undefined (commented out) in the configuration file, Condor follows
+  its default behavior.
 
 \item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 
   \label{param:CollectorSocketBufsize} This specifies the buffer size, in
@@ -3730,6 +3744,12 @@ X.509 proxy to be used in GSI authentication.
 When this configuration variable is defined, use of this proxy
 takes precedence over use of a certificate and key.
 
+\item[\Macro{GRIDMAP}]
+\label{param:GridMap}
+The complete path and file name of the Globus Gridmap file.
+The Gridmap file is used to map
+X.509 distinguished names to Condor user ids.
+
 \item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
 \label{param:SessionDuration} The amount of time in seconds before
 a communication session expires.
@@ -3741,6 +3761,12 @@ between a client and daemon, and is protected by a shared secret key.
 The session expires to reduce the window of opportunity where
 the key may be compromised by attack.
 
+\item[\Macro{FS\_REMOTE\_DIR}]
+\label{param:FSRemoteDir}
+The location of a file visible to both server and client in
+Remote File System authentication.
+The default when not defined is the directory 
+\File{/shared/scratch/tmp}.
 \end{description}
 
 

@@ -597,11 +597,15 @@ before servicing other requests (such as a \Condor{rm}).  It cannot be
 set to less than 1, or more than 1000; if undefined, it defaults to 5.
 
 \index{DAGMan!DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}
+\index{DAGMan!submit retry}
 \Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS} is an integer that controls how
 many times in a row \Condor{dagman} will attempt to execute
-\Condor{submit} for a given job before giving up.  It cannot be
-set to less than 1, or more than 10; if left undefined, it defaults to
-6.
+\Condor{submit} for a given job before giving up.  Note that
+consecutive attempts use an exponential backoff, starting with 1
+second.  DAGMAN\_MAX\_SUBMIT\_ATTEMPTS cannot be set to less than 1,
+or more than 16 (which would result in \Condor{dagman} trying for
+approximately 36 hours before giving up); if left undefined, it
+defaults to 6 (approximately two minutes before giving up).
 
 \index{DAGMan!DAGMAN\_SUBMIT\_DELAY}
 \Macro{DAGMAN\_SUBMIT\_DELAY} is an integer that controls the number
@@ -746,7 +750,7 @@ Here is a very simple DAG input file used as an example of the inner DAG.
 Use \Condor{submit\_dag} to create a submit description file for this
 inner dag:
 \begin{verbatim}
-   condor_submit_dag -nosubmit inner.dag
+   condor_submit_dag -no_submit inner.dag
 \end{verbatim}
 The resulting file will be named \File{inner.dag.condor.sub}.
 This file will be needed in the DAG input file of the outer DAG.
