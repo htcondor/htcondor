@@ -1,4 +1,5 @@
-#! /usr/bin/perl -w
+#! /usr/bin/env perl
+use warnings;
 use strict;
 
 sub ParseHex($);
@@ -43,6 +44,7 @@ foreach my $Arg ( @ARGV )
     {
 	print( STDERR
 	       "usage: condor_updates_stats [options]\n" .
+	       "\t[--long or -l]\t\tEnables long output\n" .
 	       "\t[--history=[min][-max]]\tSet history range from min to max\n" .
 	       "\t[--interval=seconds]\tForce update interval to seconds\n" .
 	       "\t[--time]\t\tEnables time dump (if available)\n" .
