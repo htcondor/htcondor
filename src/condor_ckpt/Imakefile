@@ -162,8 +162,9 @@ uppercase_target($(SIMPLE_LIBC),sigprocmask.o,SIGPROCMASK.o,sigprocmask,SIGPROCM
 SIGSUSPEND.o :  $(SIMPLE_LIBC)  ToUpper
 	ar x    $(SIMPLE_LIBC)      sigsuspend.o 	  ; mv  sigsuspend.o  $(TMP_DIR)
 	ToUpper $(TMP_DIR)/sigsuspend.o   $(TMP_DIR)/SIGSUSPEND.o   sigsuspend   SIGSUSPEND
-	ToUpper $(TMP_DIR)/SIGSUSPEND.o SIGSUSPEND.o _SIGSUSPEND _sigsuspend
-	rm -f $(TMP_DIR)/sigsuspend.o $(TMP_DIR)/SIGSUSPEND.o
+	ToUpper $(TMP_DIR)/SIGSUSPEND.o $(TMP_DIR)/SIGSUSPEND1.o _SIGSUSPEND _sigsuspend
+	ToUpper $(TMP_DIR)/SIGSUSPEND1.o SIGSUSPEND.o __sigsuspend __SIGSUSPEND
+	rm -f $(TMP_DIR)/sigsuspend.o $(TMP_DIR)/SIGSUSPEND.o $(TMP_DIR)/SIGSUSPEND1.o
 SIGACTION.o : $(SIMPLE_LIBC) ToUpper
 	ar x $(SIMPLE_LIBC) sigaction.o; mv sigaction.o $(TMP_DIR)
 	ToUpper $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o sigaction SIGACTION
