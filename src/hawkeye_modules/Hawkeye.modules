@@ -3,7 +3,7 @@ directory: /scratch/nleroy/workspace/Hawkeye-Release/modules
 prefix: Hawkeye_modules_
 
 target: all
-version: 1.0.rc5
+version: 1.0.rc6
 os: Unix-Any
 +condor_jobhist
 +condor_node
@@ -84,7 +84,7 @@ version: 1.0.rc1
 
 target: top
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +top
 
 target: uptime
@@ -94,7 +94,7 @@ version: 1.0.rc1
 
 target: vmstat
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +vmstat
 
 target: w

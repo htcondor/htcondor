@@ -17,7 +17,7 @@ use HawkeyeLib;
 sub Init( );
 sub MainLoop( );
 sub Configure( );
-sub RunIt( $ );
+sub RunIt( );
 sub ProcessData( $ );
 sub FixString( $ );
 
@@ -29,6 +29,7 @@ my %Config =
      Debug	=> 0,
      TopPeriod	=> 30,
      RunOnce	=> 0,
+     MaxLoops	=> 100,
      TopOpt	=> {
 		    Batch => "-b ",
 		    Delay => "-d ",
@@ -140,10 +141,10 @@ sub MainLoop( )
 	}
 
 	# Run the test
-	RunIt( $Config{RunOnce} );
+	my $Exit = RunIt( );
 
 	# If we're in run once mode, we're "all done"
-	if ( $Config{RunOnce} ) {
+	if ( $Exit ) {
 	    $AllDone++;
 	} else {
 	    sleep( 5 );
@@ -231,6 +232,10 @@ sub Configure( )
     my $ConfigStringSort = HawkeyeLib::ReadConfig( "_sort", ":5" );
     my $ConfigStringFields = HawkeyeLib::ReadConfig( "_fields", "*" );
     my $ConfigStringPeriod = HawkeyeLib::ReadConfig( "_period", "30" );
+
+    # Max loops
+    $Config{MaxLoops} = HawkeyeLib::ReadConfig( "_maxloops", "100" );
+    $Config{MaxLoops} = 1 if ( $Config{RunOnce} );
 
     # Check the config period string
     if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
@@ -369,11 +374,8 @@ sub Configure( )
 ###
 ### Get top output for the top n processes
 ###
-sub RunIt( $ )
+sub RunIt( )
 {
-    # Process args
-    my $RunOnce = shift;
-
     # Build the command & start it
     my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
     my $Cmd = "nice -20 top " . $Config{TopOpt}{Batch} . " " .
@@ -390,6 +392,8 @@ sub RunIt( $ )
 
     # Are we done yet (yes if in 'run once' mode)
     my $Done = 0;
+    my $Loops = 0;
+    my $Exit = 0;
 
     # Timing info
     my $LastTime = -1;
@@ -398,9 +402,6 @@ sub RunIt( $ )
     # Loop til top dies..
     while( ! $Done )
     {
-	# Init done to run-once
-	$Done = $RunOnce;
-
 	# Throw away the first line
 	$_ = <TOP> if ( $SkipFirst );
 	last if ( eof TOP );
@@ -567,6 +568,9 @@ sub RunIt( $ )
 	    }
 	}
 
+	# Count a run
+	$Loops++;
+
 	# Ok, process the collected data now
 	if ( $Proc < 3 )
 	{
@@ -589,6 +593,13 @@ sub RunIt( $ )
 
 	# Check for reconfig
 	$Done++ if ( $Reconfig );
+
+	# Check for max runs
+	if ( $Loops >= $Config{MaxLoops} )
+	{
+	    $Done++;
+	    $Exit++;
+	}
     }
 
     # All done reading!
@@ -598,6 +609,8 @@ sub RunIt( $ )
 	kill( "TERM", $TopPid )
     }
     close( TOP );
+
+    return $Exit;
 }
 
 ###
