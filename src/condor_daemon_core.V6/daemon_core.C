@@ -2944,7 +2944,7 @@ int DaemonCore::HandleReq(int socki)
 
 						result = !strncmp (sockip + 1, authip, strlen(authip) );
 
-						if (!result && !param_boolean( "DISBABLE_AUTHENTICATION_IP_CHECK", false)) {
+						if (!result && !param_boolean( "DISABLE_AUTHENTICATION_IP_CHECK", false)) {
 							dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
 							dprintf (D_ALWAYS, "DC_AUTHENTICATE: auth ip -> %s\n", authip);
 							dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
