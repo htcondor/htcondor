@@ -71,7 +71,8 @@ extern "C"
 }
 
 extern int get_job_prio(ClassAd *ad);
-extern void	FindRunnableJob(int, int&);
+extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+					 char * user);
 extern int Runnable(PROC_ID*);
 extern bool	operator==( PROC_ID, PROC_ID );
 
@@ -116,7 +117,8 @@ dc_reconfig()
 }
 
 
-match_rec::match_rec(char* i, char* p, PROC_ID* id)
+match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match, 
+					 char *the_user)
 {
 	strcpy(this->id, i);
 	strcpy(peer, p);
@@ -126,10 +128,18 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id)
 	shadowRec = NULL;
 	alive_countdown = 0;
 	num_exceptions = 0;
+	my_match_ad = match;
+	user = the_user;
         // this is a HACK.  True if it's MPI and matched, but can be true
         // before the Mpi shadow starts.  Used so that we don't try to 
         // start the mpi shadow every time through StartJob()...
     isMatchedMPI = FALSE;
+}
+
+match_rec::~match_rec()
+{
+	if (my_match_ad) delete my_match_ad;
+	if (user) free(user);
 }
 
 Scheduler::Scheduler()
@@ -173,7 +183,6 @@ Scheduler::Scheduler()
 	timeoutid = -1;
 	startjobsid = -1;
 
-	reschedule_request_pending = false;
 	startJobsDelayBit = FALSE;
 	numRegContacts = 0;
 #ifndef WIN32
@@ -739,7 +748,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	char iwd[_POSIX_PATH_MAX];
 
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_IWD, iwd);
-	if (tmp[0] == '/') {
+	if ( tmp[0] == '/' || tmp[0]=='\\' || (tmp[1]==':' && tmp[2]=='\\') ) {
 		strcpy(logfilename, tmp);
 	} else {
 		sprintf(logfilename, "%s/%s", iwd, tmp);
@@ -1058,13 +1067,10 @@ Scheduler::negotiate(int, Stream* s)
 	int		serviced_other_commands = 0;	
 	Sock*	sock = (Sock*)s;
 	contactStartdArgs * args;
+	ClassAd* my_match_ad;
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
-
-	if (!FlockHosts) {
-		reschedule_request_pending = false;
-	}
 
 	if (FlockHosts) {
 		// first, check if this is our local negotiator
@@ -1077,18 +1083,10 @@ Scheduler::negotiate(int, Stream* s)
 			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
 				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
 					match = true;
-						// since we now know we have heard back from our 
-						// local negotiator, we must clear the 
-						// reschedule_request_pending flag to
-						// permit subsequent reschedule commands to occur.
-					reschedule_request_pending = false;
 				}
 			}
 		}
 		// if it isn't our local negotiator, check the FlockHosts list.
-		// note we do _not_ clear the reschedule_request_pending flag here, since
-		// a reschedule event means we want to hear from our local negotiator, not
-		// a flocking negotiator.
 		if (!match) {
 			char *host;
 			int n;
@@ -1239,10 +1237,11 @@ Scheduler::negotiate(int, Stream* s)
 			}
 				// All commands from CM during the negotiation cycle
 				// just send the command followed by eom, except
-				// PERMISSION, which also sends the capability for the
+				// PERMISSION and PERMISSION_AND_AD, 
+				// which also sends the capability for the
 				// match.  Do the end_of_message here, except for
-				// PERMISSON.
-			if( op != PERMISSION ) {
+				// PERMISSON and PERMISSION_AND_AD.
+			if( (op != PERMISSION) && (op != PERMISSION_AND_AD) ) {
 				if( !s->end_of_message() ) {
 					dprintf( D_ALWAYS, "Can't receive eom from manager\n" );
 					return (!(KEEP_STREAM));
@@ -1332,6 +1331,11 @@ Scheduler::negotiate(int, Stream* s)
 
 					}					
 
+					// add User = "owner@uiddomain" to ad
+					char temp[512];
+					sprintf (temp, "%s = \"%s\"", ATTR_USER, owner);
+					ad->Insert (temp);
+
 					// Send the ad to the negotiator
 					if( !ad->put(*s) ) {
 						dprintf( D_ALWAYS,
@@ -1352,6 +1356,7 @@ Scheduler::negotiate(int, Stream* s)
 					break;
 				}
 				case PERMISSION:
+				case PERMISSION_AND_AD:
 					/*
 					 * If things are cool, contact the startd.
 					 */
@@ -1362,9 +1367,24 @@ Scheduler::negotiate(int, Stream* s)
 								"Can't receive capability from mgr\n" );
 						return (!(KEEP_STREAM));
 					}
+					my_match_ad = NULL;
+					if ( op == PERMISSION_AND_AD ) {
+						// get startd ad from negotiator as well
+						my_match_ad = new ClassAd();
+						if( !my_match_ad->get(*s) ) {
+							dprintf( D_ALWAYS,
+								"Can't get my match ad from mgr\n" );
+							delete my_match_ad;
+							FREE( capability );
+							return (!(KEEP_STREAM));
+						}
+					}
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
 								"Can't receive eom from mgr\n" );
+						if (my_match_ad)
+							delete my_match_ad;
+						FREE( capability );
 						return (!(KEEP_STREAM));
 					}
 						// capability is in the form
@@ -1374,6 +1394,10 @@ Scheduler::negotiate(int, Stream* s)
 
 					dprintf( D_PROTOCOL, 
 							 "## 4. Received capability %s\n", capability );
+
+					if ( my_match_ad ) {
+						dprintf(D_PROTOCOL,"Received match ad\n");
+					}
 
 						// Pull out the sinful string.
 					host = strdup( capability );
@@ -1387,6 +1411,8 @@ Scheduler::negotiate(int, Stream* s)
 						FREE( capability );
 						host = NULL;
 						capability = NULL;
+						if (my_match_ad)
+							delete my_match_ad;
 						break;
 					}
 						// host should now point to the sinful string
@@ -1411,10 +1437,17 @@ Scheduler::negotiate(int, Stream* s)
 					args->host = host;
 					args->id.cluster = id.cluster;
 					args->id.proc = id.proc;
+					args->my_match_ad = my_match_ad;
 					if ( startdContactQueue.enqueue( args ) < 0 ) {
 						perm_rval = 0;	// failure
 						dprintf(D_ALWAYS,"Failed to enqueue contactStartd "
 							"args=%x, startd=%s\n", args, host);
+						FREE( host );
+						FREE( capability );
+						FREE( args->owner );
+						if (my_match_ad)
+							delete my_match_ad;
+						delete args;
 					} else {
 						perm_rval = 1;	// happiness
 						// if we havn't already done so, register a timer
@@ -1527,14 +1560,13 @@ Scheduler::vacate_service(int, Stream *sock)
 #define BAILOUT              \
 		DelMrec( mrec );     \
         free( capability );  \
-        free( user );        \
         free( server );      \
         delete sock;         \
         return 0;
 
 int
 Scheduler::contactStartd( char* capability, char *user, 
-						  char* server, PROC_ID* jobId)
+						  char* server, PROC_ID* jobId, ClassAd *my_match_ad)
 {
 	match_rec* mrec;   // match record pointer
 	ReliSock *sock = new ReliSock();
@@ -1544,11 +1576,15 @@ Scheduler::contactStartd( char* capability, char *user,
     dprintf ( D_FULLDEBUG, "%s %s %s %d.%d\n", capability, user, server, 
               jobId->cluster, jobId->proc );
 
-	mrec = AddMrec(capability, server, jobId);
+		// Note: my_match_ad and user are deleted/free-ed by the
+		// match record destructor.  Thus we should only free them
+		// in the function _if_ AddMrec fails.
+	mrec = AddMrec(capability, server, jobId, my_match_ad, user);
 	if(!mrec) {
         free( capability );
         free( user );
         free( server );
+		if (my_match_ad) delete my_match_ad;
         delete sock;
         return 0;
 	}
@@ -1608,7 +1644,6 @@ Scheduler::contactStartd( char* capability, char *user,
 	dprintf ( D_FULLDEBUG, "Set data pointer to %x\n", mrec );
 
 	free( capability );
-	free( user );
 	free( server );
 
 	numRegContacts++;
@@ -1722,7 +1757,7 @@ Scheduler::checkContactQueue()
 		dprintf ( D_FULLDEBUG, "In checkContactQueue(), args = %x, host=%s\n", 
 				  args, args->host );
 		contactStartd( args->capability, args->owner,
-							  args->host, &(args->id) );	
+							  args->host, &(args->id), args->my_match_ad );	
 		delete args;
 	}
 }
@@ -1825,7 +1860,7 @@ Scheduler::StartJobs()
 		if(!Runnable(&id))
 		// find the job in the cluster with the highest priority
 		{
-			FindRunnableJob(rec->cluster, id.proc);
+			FindRunnableJob(id,rec->my_match_ad,rec->user);
 		}
 		if(id.proc < 0)
 		// no more jobs to run
@@ -3630,10 +3665,38 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	 dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%x )\n", pid, job_id );
 }
 
+#ifdef WIN32
+	// On Win32, we don't deal with the old ckpt server, so we stub it,
+	// thus we do not have to link in the ckpt_server_api.
+	// Furthermore, NT uses the new starter/shadow, where the ckpt
+	// "file" is now a directory.
+#include "directory.h"
+int 
+RemoveLocalOrRemoteFile(const char *, const char *filename)
+{
+	{
+		// Must put this in braces so the Directory object
+		// destructor is called, which will free the iterator
+		// handle.  If we didn't do this, the below rmdir 
+		// would fail.
+		Directory ckpt_dir(filename);
+		ckpt_dir.Remove_Entire_Directory();
+	}
+	_rmdir(filename);
+
+	return 0;
+}
+int
+SetCkptServerHost(const char *)
+{
+	return 0;
+}
+#endif // of ifdef WIN32
+
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
 {
-	 char	 ckpt_name[MAXPATHLEN];
+    char	 ckpt_name[MAXPATHLEN];
 	char	buf[_POSIX_PATH_MAX];
 	char	server[_POSIX_PATH_MAX];
 	char	*tmp;
@@ -3653,10 +3716,14 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 							server) == 0) {
 		SetCkptServerHost(server);
 	} else {
-		tmp = param("CKPT_SERVER_HOST");
-		if (tmp) {
-			SetCkptServerHost(tmp);
+		tmp = param("USE_CKPT_SERVER");
+		if ( tmp && (*tmp=='T' || *tmp=='t') ) {
 			free(tmp);
+			tmp = param("CKPT_SERVER_HOST");
+			if (tmp) {
+				SetCkptServerHost(tmp);
+				free(tmp);
+			}
 		}
 	}
 
@@ -4207,36 +4274,27 @@ Scheduler::reschedule_negotiator(int, Stream *)
 
 	timeout();							// update the central manager now
 
-		// only send reschedule command to negotiator if there is not a
-		// reschedule request already pending.
-	if ( !reschedule_request_pending ) {
-		dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
-		SafeSock sock;
-		sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
+	dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
+	SafeSock sock;
+	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 
-		if (!sock.connect(Negotiator->addr(), 0)) {
-			dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
-				 Negotiator->addr() );
-			return;
-		}
-
-		sock.encode();
-		if (!sock.code(cmd)) {
-			dprintf( D_ALWAYS,
-				"failed to send RESCHEDULE command to negotiator\n");
-			return;
-		}
-		if (!sock.eom()) {
-			dprintf( D_ALWAYS,
-				"failed to send RESCHEDULE command to negotiator\n");
-			return;
-		}
-	} else {
-		dprintf(D_ALWAYS,"reschedule requested -- already pending\n");
+	if (!sock.connect(Negotiator->addr(), 0)) {
+		dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
+			 Negotiator->addr() );
+		return;
 	}
 
-		// if made it here, we have told to negotiator to contact us
-	reschedule_request_pending = true;
+	sock.encode();
+	if (!sock.code(cmd)) {
+		dprintf( D_ALWAYS,
+			"failed to send RESCHEDULE command to negotiator\n");
+		return;
+	}
+	if (!sock.eom()) {
+		dprintf( D_ALWAYS,
+			"failed to send RESCHEDULE command to negotiator\n");
+		return;
+	}
 
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
@@ -4246,7 +4304,8 @@ Scheduler::reschedule_negotiator(int, Stream *)
 }
 
 match_rec*
-Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId)
+Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
+				   char *user)
 {
 	match_rec *rec;
 
@@ -4255,7 +4314,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId)
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
 		return NULL;
 	} 
-	rec = new match_rec(id, peer, jobId);
+	rec = new match_rec(id, peer, jobId, my_match_ad, user);
 	if(!rec)
 	{
 		EXCEPT("Out of memory!");
@@ -4287,6 +4346,7 @@ Scheduler::DelMrec(char* id)
 		if (rec->shadowRec)
 			rec->shadowRec->match = NULL;
 		delete rec;
+
 		numMatches--; 
 	}
 	return 0;
