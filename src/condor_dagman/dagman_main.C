@@ -11,6 +11,8 @@ char* mySubSystem = "DAGMAN";         // used by Daemon Core
 
 bool run_post_on_failure;	// for DAGMAN_RUN_POST_ON_FAILURE config setting
 
+char* DAGManJobId;
+
 // Required for linking with condor libs
 extern "C" int SetSyscalls() { return 0; }
 
@@ -122,6 +124,9 @@ int main_init (int argc, char **argv) {
     }
   
     if (argc < 2) Usage();  //  Make sure an input file was specified
+
+	// get dagman job id from argv[0]
+	DAGManJobId = strdup( "(-1.-1)" );
   
     //
     // Process command-line arguments
