@@ -241,7 +241,6 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 	ExprTree	*tree;
 	ClassAd		*ad;
 	ClassAdUnParser	unp;			// NAC
-	unp.SetOldClassAd(true); 		// NAC
 
 //	constraint[0] = '\0';
 	tree = queryad.Lookup(ATTR_REQUIREMENTS);
@@ -303,7 +302,6 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 	ExprTree	*tree;
 	ClassAd		*ad;
 	ClassAdUnParser	unp;		// NAC
-	unp.SetOldClassAd(true); 	// NAC
 
 //	constraint[0] = '\0';
 	tree = queryad.Lookup( ATTR_REQUIREMENTS );

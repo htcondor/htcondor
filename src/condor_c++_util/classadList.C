@@ -76,8 +76,6 @@ PrintClassAdList()
 	ClassAd *	tmpClassAd;
 	PrettyPrint	pp;
 	string		buffer;
-
-	pp.SetOldClassAd( true );
 	
   	calist.Rewind();
   	while( calist.Next( tmpClassAd ) ) {
