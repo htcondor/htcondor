@@ -15,6 +15,7 @@ is called an \Term{attribute}.  Figure~\ref{ClassAd:example} shows an example
 of a ClassAd with ten attributes.
 
 \begin{figure}[hbt]
+\footnotesize
 \begin{verbatim}
 MyType       = "Machine"
 TargetType   = "Job"
@@ -27,6 +28,7 @@ KeyboardIdle = 173
 LoadAvg      = 0.1000
 Requirements = TARGET.Owner=="smith" || LoadAvg<=0.3 && KeyboardIdle>15*60
 \end{verbatim}
+\normalsize
 \caption{\label{ClassAd:example}An example ClassAd}
 \end{figure}
 
@@ -301,6 +303,7 @@ supply ClassAd constraint expressions from the command line.
 
 For example, to find all computers which have had their keyboards idle for 
 more than 20 minutes and have more than 100 MB of memory:
+\footnotesize
 \begin{verbatim}
 % condor_status -const 'KeyboardIdle > 20*60 && Memory > 100'
 
@@ -322,6 +325,7 @@ beatrice.c INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:30:02
 
                Total       29     0      28         1       0          0
 \end{verbatim}
+\normalsize
 
 The similar flexibility exists in querying job queues in the Condor system.
 

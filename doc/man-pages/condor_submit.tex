@@ -507,8 +507,9 @@ variables that the user had at submit time. Defaults to \Arg{False}.
 %%%%%%%%%%%%%%%%%%%
 
 \item[hold = $<$True \Bar\ False$>$] If \Opt{hold} is set to
-\Arg{True}, then the job will be submitted in the hold state.  Jobs in
+True, then the job will be submitted in the hold state.  Jobs in
 the hold state will not run until released by \Condor{release}.
+Defaults to false.
 
 %%%%%%%%%%%%%%%%%%%
 %% environment
@@ -556,7 +557,7 @@ single log file, it is up to you to make sure that all of them specify
 
 \item[jar\_files = $<$file\_list$>$]
 Specifies a list of additional JAR files to include when using
-the Java Universe.  JAR files will be transferred along with
+the Java universe.  JAR files will be transferred along with
 the executable and automatically added to the classpath.
 
 %%%%%%%%%%%%%%%%%%%
@@ -921,7 +922,35 @@ job to the queue, and it defaults to 1.
 %%%%%%%%%%%%%%%%%%%
 %% allow_startup_script
 %%%%%%%%%%%%%%%%%%%
-%\item[allow\_startup\_script ]
+\item[allow\_startup\_script = $<$True \Bar\ False$>$]
+If True, a standard universe job will execute a script
+instead of submitting the job,
+and the consistency check to see if the executable has
+been linked using \Condor{compile} is omitted.
+The \Opt{executable} command within the submit description
+file specifies the name of the script.
+The script is used to do preprocessing before the
+job is submitted.
+The shell script ends with an \Prog{exec} of the
+job executable, such that the process id of the executable is the
+same as that of the shell script.
+Here is an example script that gets a copy of a machine-specific
+executable before the \Prog{exec}.
+\begin{verbatim} 
+   #! /bin/sh
+
+   # get the host name of the machine
+   $host=`uname -n`
+
+   # grab a standard universe executable designed specifically
+   # for this host
+   scp elsewhere@cs.wisc.edu:${host} executable
+
+   # The pid MUST stay the same, so exec the new standard universe process.
+   exec executable ${1+"$@"}
+\end{verbatim} 
+If this command is not present (defined), then the value
+defaults to false.
 
 \end{description}
 

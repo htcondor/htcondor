@@ -36,6 +36,9 @@ which contain two nodes with the same name; in the past DAGMan
 did not detect this, and would not exit even when the DAG was
 complete.
 
+\item DAGMan now correctly reports an error when the null string
+is passed to any of its arguments which require a filename.
+
 \item The \Opt{-format} option to \Condor{q} and \Condor{status} can
 now be used to print out boolean expressions in ClassAds, not just
 strings, integers and floating point numbers.

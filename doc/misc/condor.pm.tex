@@ -159,6 +159,7 @@ that the job was evicted before the job completes.
 After the job completes, the termination
 callback (called \verb@normal@) prints out a summary of what happened.
 
+\footnotesize
 \begin{verbatim}
 #!/usr/bin/perl
 use Condor;
@@ -212,6 +213,7 @@ printf("Could not open. Access Denied\n");
 &Condor::Monitor($cluster);
 &Condor::Wait();
 \end{verbatim}
+\normalsize
 
 This example program will submit the command file 'mycmdfile.cmd' and attempt
 to vacate any machine that the job runs on. The termination
@@ -222,6 +224,7 @@ A second example Perl script facilitates the metascheduling of
 two of Condor jobs.
 It submits a second job if the first job successfully completes.
 
+\footnotesize
 \begin{verbatim}
 #!/s/std/bin/perl
 
@@ -296,6 +299,7 @@ if (($cluster) == 0)
 &Condor::Monitor($cluster);
 &Condor::Wait();
 \end{verbatim}
+\normalsize
 
 Some notes are in order about this example.
 The same task could be accomplished using the Condor DAGMan
@@ -316,6 +320,7 @@ submitted.
 This is a very simple example of a branch and bound technique,
 to focus the search for a problem solution.
 
+\footnotesize
 \begin{verbatim}
 #!/s/std/bin/perl
 
@@ -444,3 +449,4 @@ if (($cluster) == 0)
 &Condor::Monitor($cluster);
 &Condor::Wait();
 \end{verbatim}
+\normalsize
