@@ -14,8 +14,10 @@ CFLAGS = $(STD_C_FLAGS)
 
 #if WANT_PVM && HAS_PVM
    #define PvmProgs starter.jim shadow.jim 
+   #define PvmDirs release_pvm release_pvm/lib release_pvm/sbin
 #else
    #define PvmProgs
+   #define PvmDirs
 #endif
 
 #if USE_CONFIG_SERVER
@@ -26,14 +28,15 @@ CFLAGS = $(STD_C_FLAGS)
 		accountant.V6 ckpt_server $(CONFIG_SERVER) \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		tools kbdd PvmProgs collector.V6
+		tools kbdd collector.V6
 
 #define Libraries \
 		util_lib c++_util ckpt io classad daemon_core.V6 \
 		syscall_lib
 
 #define Directories release_dir release_dir/bin release_dir/lib \
-	release_dir/sbin release_dir/etc release_dir/etc/examples
+	release_dir/sbin release_dir/etc release_dir/etc/examples \
+	PvmDirs
 
 all: h makefiles Directories Libraries Programs examples
 release:: all
@@ -43,7 +46,15 @@ release:: all
 	condor_vacate condor_master_off
 
 #define SubmitSbinFiles sbin/condor_master sbin/condor_schedd \
-	sbin/condor_shadow sbin/condor_preen Tools
+	sbin/condor_shadow sbin/condor_preen
+
+#ifndef PublicTarget
+#define PublicTarget /p/condor/scratch/V6_release
+#endif
+PUBLIC_TARGET = PublicTarget
+public: release.tar
+	rm -f $(PUBLIC_TARGET)/release.tar
+	cp release_dir/release.tar $(PUBLIC_TARGET)
 
 release.tar: stripped
 	cd release_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
@@ -56,12 +67,25 @@ stripped: release
 	cd release_dir/sbin; rm Tools; strip *; echo 
 	cd condor_tools; make stripped
 
+#if WANT_PVM && HAS_PVM
+pvm.tar: pvm_stripped
+	cd release_pvm; rm -f pvm.tar; tar -cvf pvm.tar lib sbin
+
+pvm_stripped: PvmProgs
+	cd release_pvm/sbin; strip *; echo
+#endif
+
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 simple_dir_target(release_dir/sbin)
 simple_dir_target(release_dir/etc)
 simple_dir_target(release_dir/etc/examples)
+#if WANT_PVM && HAS_PVM
+simple_dir_target(release_pvm)
+simple_dir_target(release_pvm/sbin)
+simple_dir_target(release_pvm/lib)
+#endif
 object_target(util_lib)
 object_target(c++_util)
 object_target(tools)
