@@ -140,7 +140,6 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
 	// SetRankExpr ("Rank = 0");
 	// SetRequirements ("Requirements = TRUE");
 
-	val = new EvalResult;
     tree = Lookup("MyType");
 	if(!tree)
     {
@@ -152,12 +151,14 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
     }
     else
     {
+        val = new EvalResult;
 		tree->EvalTree(this, val);
 		myType = new AdType(val->s);
 		if(myType == NULL)
 		{
             EXCEPT("Warning : you ran out of space");
 		}
+        delete val;
     }
 
 	if(!(tree = Lookup("TargetType")))
@@ -170,18 +171,16 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
     }
     else
     {
+        val = new EvalResult;
 		tree->EvalTree(this, val);
 		targetType = new AdType(val->s);
 		if(targetType == NULL)
 		{
             EXCEPT("Warning : you ran out of space");
 		}
-    }
-
-    if(val)
-    {
         delete val;
     }
+
     Delete("MyType");                        // eliminate redundant storage.
     Delete("TargetType");
 }
