@@ -1926,7 +1926,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	if( fOffConstraint == totalMachines ) {
 		sprintf( big_return_buff, "%s\nWARNING:  Be advised:", big_return_buff );
-		sprintf( big_return_buff, "%s   Job %d.%d did not match any"
+		sprintf( big_return_buff, "%s   Job %d.%d did not match any "
 			"machine's requirements\n\n", big_return_buff, cluster, proc);
 	}
 
