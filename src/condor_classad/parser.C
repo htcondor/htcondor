@@ -342,128 +342,122 @@ int ParseAddOp(char*& s, ExprTree*& newTree, int& count)
     return TRUE;
 }
 
-int ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+int ParseX2p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t = LookToken(s);
     ExprTree*	subTree;
     ExprTree*	rArg;
 
-    switch(t->type)
-    {
-        case LX_META_EQ :
-
-            Match(LX_META_EQ, s, count);
-            if(ParseAddOp(s, rArg, count))
-			{
-                subTree = new MetaEqOp(lArg, rArg);
-			}
-			else
-			{
-                newTree = new MetaEqOp(lArg, rArg);
-				return FALSE;
-			}
-            break;
-
-        case LX_META_NEQ :
-
-            Match(LX_META_NEQ, s, count);
-            if(ParseAddOp(s, rArg, count))
-			{
-                subTree = new MetaNeqOp(lArg, rArg);
-			}
-			else
-			{
-                newTree = new MetaNeqOp(lArg, rArg);
-				return FALSE;
-			}
-            break;
-
-        case LX_EQ :
-
-            Match(LX_EQ, s, count);
-            if(ParseAddOp(s, rArg, count))
-			{
-                subTree = new EqOp(lArg, rArg);
-			}
-			else
-			{
-                newTree = new EqOp(lArg, rArg);
-				return FALSE;
-			}
-            break;
-
-        case LX_NEQ :
-
-            Match(LX_NEQ, s, count);
-            if(ParseAddOp(s, rArg, count))
-			{
-                subTree = new NeqOp(lArg, rArg);
-			}
-			else
-			{
-                newTree = new NeqOp(lArg, rArg);
-				return FALSE;
-			}
-            break;
-
+    switch(t->type) {
         case LX_LT:
-
             Match(LX_LT, s, count);
-            if(ParseAddOp(s, rArg, count))
-			{
+            if(ParseAddOp(s, rArg, count)) {
 				subTree = new LtOp(lArg, rArg);
-			}
-			else
-			{
+			} else {
 				newTree = new LtOp(lArg, rArg);
 				return FALSE;
 			}
             break;
 
         case LX_LE :
-
             Match(LX_LE, s, count);
-            if(ParseAddOp(s, rArg, count))
-			{
+            if(ParseAddOp(s, rArg, count)) {
                 subTree = new LeOp(lArg, rArg);
-			}
-			else
-			{
+			} else {
                 newTree = new LeOp(lArg, rArg);
 				return FALSE;
 			}
             break;
 
         case LX_GT:
-
             Match(LX_GT, s, count);
-            if(ParseAddOp(s, rArg, count))
-			{
+            if(ParseAddOp(s, rArg, count)) {
                 subTree = new GtOp(lArg, rArg);
-			}
-			else
-			{
+			} else {
                 newTree = new GtOp(lArg, rArg);
 				return FALSE;
 			}
             break;
 
         case LX_GE :
-
             Match(LX_GE, s, count);
-            if(ParseAddOp(s, rArg, count))
-			{
+            if(ParseAddOp(s, rArg, count)) {
                 subTree = new GeOp(lArg, rArg);
-			}
-			else
-			{
+			} else {
                 newTree = new GeOp(lArg, rArg);
 				return FALSE;
 			}
             break;
 
         default :
+			newTree = lArg;
+            return TRUE;
+    }
 
+    return ParseX2p5(subTree, s, newTree, count);
+}
+
+
+int ParseEqualityOp(char*& s, ExprTree*& newTree, int& count)
+{
+    ExprTree*	lArg;
+
+    if(ParseAddOp(s, lArg, count)) {
+        return ParseX2p5(lArg, s, newTree, count);
+    }
+    newTree = lArg;
+    return FALSE;
+}
+
+
+int ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+{
+    Token*		t = LookToken(s);
+    ExprTree*	subTree;
+    ExprTree*	rArg;
+
+    switch(t->type) {
+        case LX_META_EQ :
+            Match(LX_META_EQ, s, count);
+            if(ParseEqualityOp(s, rArg, count)) {
+                subTree = new MetaEqOp(lArg, rArg);
+			} else {
+                newTree = new MetaEqOp(lArg, rArg);
+				return FALSE;
+			}
+            break;
+
+        case LX_META_NEQ :
+            Match(LX_META_NEQ, s, count);
+            if(ParseEqualityOp(s, rArg, count)) {
+                subTree = new MetaNeqOp(lArg, rArg);
+			} else {
+                newTree = new MetaNeqOp(lArg, rArg);
+				return FALSE;
+			}
+            break;
+
+        case LX_EQ :
+            Match(LX_EQ, s, count);
+            if(ParseEqualityOp(s, rArg, count)) {
+                subTree = new EqOp(lArg, rArg);
+			} else {
+                newTree = new EqOp(lArg, rArg);
+				return FALSE;
+			}
+            break;
+
+        case LX_NEQ :
+            Match(LX_NEQ, s, count);
+            if(ParseEqualityOp(s, rArg, count)) {
+                subTree = new NeqOp(lArg, rArg);
+			} else {
+                newTree = new NeqOp(lArg, rArg);
+				return FALSE;
+			}
+            break;
+
+        default :
 			newTree = lArg;
             return TRUE;
     }
@@ -471,17 +465,53 @@ int ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
     return ParseX2(subTree, s, newTree, count);
 }
 
+
 int ParseSimpleExpr(char*& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg;
 
-    if(ParseAddOp(s, lArg, count))
-    {
+    if(ParseEqualityOp(s, lArg, count)) {
         return ParseX2(lArg, s, newTree, count);
     }
     newTree = lArg;
     return FALSE;
 }
+
+
+int ParseX1p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+{
+    Token*		t = LookToken(s);
+    ExprTree*	subTree;
+    ExprTree*	rArg;
+
+    if( t->type == LX_AND ) {
+        Match(LX_AND, s, count);
+        if(ParseSimpleExpr(s, rArg, count)) {
+            subTree = new AndOp(lArg, rArg);
+		} else {
+            newTree = new AndOp(lArg, rArg);
+			return FALSE;
+		}
+	} else {
+		newTree = lArg;
+        return TRUE;
+    }
+
+    return ParseX1p5(subTree, s, newTree, count);
+}
+
+
+int ParseAndExpr(char*& s, ExprTree*& newTree, int& count)
+{
+    ExprTree*	lArg;
+
+    if(ParseSimpleExpr(s, lArg, count)) {
+        return ParseX1p5(lArg, s, newTree, count);
+    }
+    newTree = lArg;
+    return FALSE;
+}
+
 
 int ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
@@ -489,40 +519,17 @@ int ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
     ExprTree*	subTree;
     ExprTree*	rArg;
 
-    switch(t->type)
-    {
-        case LX_AND :
-
-            Match(LX_AND, s, count);
-            if(ParseSimpleExpr(s, rArg, count))
-			{
-                subTree = new AndOp(lArg, rArg);
-			}
-			else
-			{
-                newTree = new AndOp(lArg, rArg);
-				return FALSE;
-			}
-            break;
-
-        case LX_OR :
-
-            Match(LX_OR, s, count);
-            if(ParseSimpleExpr(s, rArg, count))
-			{
-                subTree = new OrOp(lArg, rArg);
-			}
-			else
-			{
-                newTree = new OrOp(lArg, rArg);
-				return FALSE;
-			}
-            break;
-
-        default :
-
-			newTree = lArg;
-            return TRUE;
+    if( t->type == LX_OR ) {
+        Match(LX_OR, s, count);
+        if(ParseAndExpr(s, rArg, count)) {
+            subTree = new OrOp(lArg, rArg);
+		} else {
+            newTree = new OrOp(lArg, rArg);
+			return FALSE;
+		}
+	} else {
+		newTree = lArg;
+        return TRUE;
     }
 
     return ParseX1(subTree, s, newTree, count);
@@ -532,8 +539,7 @@ int ParseExpr(char*& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg;
 
-    if(ParseSimpleExpr(s, lArg, count))
-    {
+    if(ParseAndExpr(s, lArg, count)) {
         return ParseX1(lArg, s, newTree, count);
     }
     newTree = lArg;
