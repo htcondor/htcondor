@@ -56,7 +56,18 @@ private:
 
 // Global variables
 extern int errno;
+
+// We know Linux's ps is BSD-like
+#if defined( linux ) && !defined( BSD_PS )
+#define BSD_PS
+#endif
+
+#if defined( BSD_PS ) 
+static const char* PS_CMD = "/bin/ps auwwx";
+#else 
 static const char* PS_CMD = "/bin/ps -ef";
+#endif
+
 List<CondorPid>* condor_pids = NULL;
 
 
