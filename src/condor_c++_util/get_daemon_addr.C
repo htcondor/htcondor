@@ -234,7 +234,7 @@ get_schedd_addr(const char* name, const char* pool)
 char*
 get_startd_addr(const char* name, const char* pool)
 {
-	return real_get_daemon_addr( ATTR_MACHINE, name, STARTD_AD, 
+	return real_get_daemon_addr( ATTR_MACHINE, get_host_part(name), STARTD_AD, 
 								 ATTR_STARTD_IP_ADDR, "STARTD", pool );
 } 
 
