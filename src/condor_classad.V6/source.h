@@ -82,6 +82,8 @@ class Source
 		*/
 		bool SetSource( ByteSource* b );
 
+		ByteSource *GetSource( ) { return( src ); }
+
 		// parser entry points
 		/** Parses a ClassAd from this Source object.
 			@param ad Reference to ClassAd which will be populated with
