@@ -36,6 +36,9 @@ BEGIN_NAMESPACE( classad );
 #include "rectangle.h"
 #endif
 
+#if defined( DEPRECATED )
+#include "stream.h"
+#endif
 
 typedef std::hash_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
 
@@ -443,6 +446,57 @@ class ClassAd : public ExprTree
 #endif
 		//@}
 
+#if defined( DEPRECATED )
+// AttrList methods
+
+		// insert expressions into the ad
+        int        	Insert(const char*);
+		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
+
+		// for iteration through expressions
+//		void		ResetExpr();
+//		ExprTree*	NextExpr();
+
+		// for iteration through names (i.e., lhs of the expressions)
+//		void		ResetName() { this->ptrName = exprList; }
+//		const char* NextNameOriginal();
+
+		// lookup values in classads  (for simple assignments)
+//		ExprTree*   Lookup(char *) const;  		// for convenience
+//      ExprTree*	Lookup(const char*) const;	// look up an expression
+
+		int         LookupString(const char *, char *); 
+        int         LookupInteger(const char *, int &);
+        int         LookupFloat(const char *, float &);
+        int         LookupBool(const char *, int &);
+
+		// evaluate values in classads
+		int         EvalString (const char *, class ClassAd *, char *);
+		int         EvalInteger (const char *, class ClassAd *, int &);
+		int         EvalFloat (const char *, class ClassAd *, float &);
+		int         EvalBool  (const char *, class ClassAd *, int &);
+
+
+// ClassAd methods
+
+        ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
+
+		// Type operations
+        void		SetMyTypeName(const char *); /// my type name set.
+        const char*	GetMyTypeName();		// my type name returned.
+        void 		SetTargetTypeName(const char *);// target type name set.
+        const char*	GetTargetTypeName();	// target type name returned.
+
+        // shipping functions
+        int put(Stream& s);
+		int initFromStream(Stream& s);
+
+		// output functions
+        virtual int	fPrint(FILE*);			// print the ClassAd to a file
+		void		dPrint( int );			// dprintf to given dprintf level
+
+#endif
+
   	private:
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
@@ -456,6 +510,10 @@ class ClassAd : public ExprTree
 					EvalState &, PortReferences& );
 		bool _MakeRectangles(const ExprTree*,const string&,Rectangles&, bool);
 		bool _CheckRef( ExprTree *, const std::string & );
+#endif
+
+#if defined( DEPRECATED )
+		void evalFromEnvironment( const char *name, Value val );
 #endif
 
 		ClassAd *_GetDeepScope( const std::string& ) const;

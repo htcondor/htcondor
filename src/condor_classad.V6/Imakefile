@@ -46,9 +46,18 @@ CLASSAD_SRC_2		= $(CLASSAD_SRC_1)
 CLASSAD_OBJ_2		= $(CLASSAD_OBJ_1)
 #endif
 
+#if defined(DEPRECATED)
+CLASSAD_SRC_3		= $(CLASSAD_SRC_2) classad_deprecated.C
+CLASSAD_OBJ_3		= $(CLASSAD_OBJ_2) classad_deprecated.o
 
-SRC = $(CLASSAD_SRC_2) ../condor_c++_util/condor_attributes.C
-OBJ = $(CLASSAD_OBJ_2) ../condor_c++_util/condor_attributes.o
+#else
+CLASSAD_SRC_3		= $(CLASSAD_SRC_2)
+CLASSAD_OBJ_3		= $(CLASSAD_OBJ_2)
+#endif
+
+
+SRC = $(CLASSAD_SRC_3) ../condor_c++_util/condor_attributes.C
+OBJ = $(CLASSAD_OBJ_3) ../condor_c++_util/condor_attributes.o
 
 
 LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
