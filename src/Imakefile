@@ -60,6 +60,12 @@
 #define GlobusProgs
 #endif
 
+#if WANT_NETMAN
+#define NetmanLibs netman
+#else
+#define NetmanLibs
+#endif
+
 #define Programs \
 		accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
@@ -71,7 +77,7 @@
 		util_lib c++_util procapi sysapi io classad daemon_core.V6 \
 		condor_ckpt_server/ckpt_server_api.a \
 		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a \
-		ckpt syscall_lib
+		ckpt syscall_lib NetmanLibs
 
 #if HAS_STATIC
 #define StaticDirectories \
@@ -235,6 +241,9 @@ object_target(rm.V6)
 object_target(submit.V6)
 object_target(ckpt)
 object_target(syscall_lib)
+#if WANT_NETMAN
+object_target(netman)
+#endif
 object_target(io)
 object_target(classad)
 object_target(daemon_core.V6)
