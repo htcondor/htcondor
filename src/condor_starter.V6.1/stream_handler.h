@@ -4,7 +4,7 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
-#define STREAM_BUFFER_SIZE 1048576
+#define STREAM_BUFFER_SIZE 4096
 
 class StreamHandler : public Service {
 public:
