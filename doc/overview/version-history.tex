@@ -82,11 +82,24 @@ This provides consistancy with other Condor tools that require the
 For all of the above mentioned tools, you can still just provide
 hostnames or addresses, the new flags are not required.
 
+\item Added \Opt{-pool} and \Opt{-addr} options to \Condor{rm},
+\Condor{hold} and \Condor{release}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item If a SIGTERM was delivered to a \Condor{shadow}, it used to
+remove the job it was running from the job queue, as if \Condor{rm}
+had been used.
+This could have caused jobs to leave the queue unexpectedly.
+Now, the \Condor{shadow} ignores SIGTERM (since the \Condor{schedd}
+knows how to gracefully shutdown all the shadows when it gets a
+SIGTERM), so jobs should no longer leave the queue prematurely.
+In addition, on a SIGQUIT, the shadow now does a fast shutdown, just
+like the rest of the Condor daemons.
 
 \item Fixed a bug which caused restarts from a checkpoint to fail on
 some releases of Irix 6.5.
@@ -108,6 +121,10 @@ queue which have already checkpointed.
 would perform a segmentation violation if you specified a \Opt{-pool} 
 option and did not specify a hostname.
 This case now results in an error message, instead.
+
+\item Fixed a bug where the \Condor{schedd} could die with a
+segmentation violation if there was an error mapping an IP address
+into a hostname.
 
 \item Fixed a bug where resetting the time in a large negative direction
 caused the \Condor{negotiator} to have a floating point error on some
