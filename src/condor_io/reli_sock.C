@@ -162,7 +162,7 @@ ReliSock *ReliSock::accept()
 
 
 
-virtual int ReliSock::close()
+int ReliSock::close()
 {
 	if (_state == sock_virgin) return FALSE;
 
@@ -174,7 +174,7 @@ virtual int ReliSock::close()
 
 
 
-virtual int ReliSock::handle_incoming_packet()
+int ReliSock::handle_incoming_packet()
 {
 	/* if socket is listening, and packet is there, it is ready for accept */
 	if (_state == sock_special && _special_state == relisock_listen)
@@ -191,7 +191,7 @@ virtual int ReliSock::handle_incoming_packet()
 
 
 
-virtual int ReliSock::end_of_message()
+int ReliSock::end_of_message()
 {
 	switch(_coding){
 		case stream_encode:
@@ -217,7 +217,7 @@ virtual int ReliSock::end_of_message()
 
 
 
-virtual int ReliSock::connect(
+int ReliSock::connect(
 	char	*host,
 	int		port
 	)
@@ -227,7 +227,7 @@ virtual int ReliSock::connect(
 
 
 
-virtual int ReliSock::put_bytes(
+int ReliSock::put_bytes(
 	const void	*dta,
 	int			sz
 	)
@@ -256,7 +256,7 @@ virtual int ReliSock::put_bytes(
 }
 
 
-virtual int ReliSock::get_bytes(
+int ReliSock::get_bytes(
 	void		*dta,
 	int			max_sz
 	)
@@ -274,7 +274,7 @@ virtual int ReliSock::get_bytes(
 }
 
 
-virtual int ReliSock::get_ptr(
+int ReliSock::get_ptr(
 	void		*&ptr,
 	char		delim
 	)
@@ -289,7 +289,7 @@ virtual int ReliSock::get_ptr(
 }
 
 
-virtual int ReliSock::peek(
+int ReliSock::peek(
 	char		&c
 	)
 {
