@@ -65,6 +65,22 @@ Authentication::~Authentication()
 #endif
 }
 
+int Authentication::authenticate( char *hostAddr, KeyInfo *& key, int clientFlags)
+{
+    int retval = authenticate(hostAddr, clientFlags);
+    
+#if !defined(SKIP_AUTHENTICATION)
+    if (retval) {        // will always try to exchange key!
+        // This is a hack for now, when we have only one authenticate method
+        // this will be gone
+        mySock->allow_empty_message_flag = FALSE;
+        retval = exchangeKey(key);
+        mySock->allow_one_empty_message();
+    }
+#endif
+    return retval;
+}
+
 int Authentication::authenticate( char *hostAddr, int clientFlags )
 {
 #if defined(SKIP_AUTHENTICATION)
@@ -372,6 +388,67 @@ int Authentication :: unwrap(char*  input,
 
 
 #if !defined(SKIP_AUTHENTICATION)
+
+int Authentication::exchangeKey(KeyInfo *& key)
+{
+    int retval = 1;
+    int hasKey, keyLength, protocol, duration;
+    int outputLen;
+    char * encryptedKey = 0, * decryptedKey = 0;
+
+    if (mySock->isClient()) {
+        mySock->decode();
+        mySock->code(hasKey);
+        mySock->end_of_message();
+        if (hasKey) {
+            mySock->code(keyLength);
+            mySock->code(protocol);
+            mySock->code(duration);
+            encryptedKey = (char *) malloc(keyLength);
+            mySock->get_bytes(encryptedKey, keyLength);
+            mySock->end_of_message();
+
+            // Now, unwrap it
+            authenticator_->unwrap(encryptedKey,  keyLength, decryptedKey, outputLen);
+            key = new KeyInfo((unsigned char *)decryptedKey, outputLen, (Protocol) protocol, duration);
+        }
+    }
+    else {  // server sends the key!
+
+        mySock->encode();
+        if (key == 0) {
+            hasKey = 0;
+            mySock->code(hasKey);
+            mySock->end_of_message();
+            return 1;
+        }
+        else { // First, wrap it
+            hasKey = 1;
+            mySock->code(hasKey);
+            mySock->end_of_message();
+            keyLength = key->getKeyLength();
+            protocol  = (int) key->getProtocol();
+            duration  = key->getDuration();
+
+            authenticator_->wrap((char *)key->getKeyData(), keyLength, encryptedKey, outputLen);
+            mySock->code(keyLength);
+            mySock->code(protocol);
+            mySock->code(duration);
+            mySock->put_bytes(encryptedKey, outputLen);
+            mySock->end_of_message();
+        }
+    }
+
+    if (encryptedKey) {
+        free(encryptedKey);
+    }
+
+    if (decryptedKey) {
+        free(decryptedKey);
+    }
+
+    return retval;
+}
 
 void Authentication::setupEnv( char *hostAddr )
 {
