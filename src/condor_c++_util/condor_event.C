@@ -37,7 +37,6 @@
 					 return 0; }
 
 const char * ULogEventNumberNames[] = {
-<<<<<<< condor_event.C
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -1315,7 +1314,6 @@ readRusage (FILE *file, rusage &usage)
 
 	return (1);
 }
-<<<<<<< condor_event.C
 
 
 // ----- the NodeExecuteEvent class
@@ -1441,5 +1439,3 @@ readEvent( FILE* file )
     }
     return 1;
 }
-=======
->>>>>>> 1.19.8.2
