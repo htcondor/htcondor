@@ -32,6 +32,20 @@ The details of each version are described below.
   release if you run into problems with \Condor{configure} and would
   prefer to use the old method. 
 
+\item You can now define \MacroNI{CONDOR\_IDS} in the Condor
+  configuration files, not just as an environment variable.
+  This setting is used to specify what effective user id the Condor
+  daemons should run as when they are spawned with root privileges.
+  This is the effective user id that Condor daemons write to their log
+  files as, manipulate the job queue, and so on.
+  Therefore, the \File{log} and \File{spool} directories should be
+  owned by this user.
+  If the Condor daemons are spawned as root and \verb@CONDOR_IDS@ is
+  not set, Condor searches for a ``condor'' user in the local user
+  information database (the /etc/passwd file, NIS, etc).
+  For more information about the \verb@CONDOR_IDS@ setting, see
+  section~\ref{sec:uids} on page~\pageref{sec:uids}.
+
 \item Added the \Dflag{HOSTNAME} debugging level to print out verbose
   messages regarding how Condor resolves hostnames, domain names,
   IP addresses, and so on.
@@ -75,6 +89,16 @@ specification of an alternate \Condor{dagman} executable.
 
 \item Fixed the serious bug with periodic checkpointing that was
   introduced in version 6.5.2.
+
+\item Fixed a security hole in the \Condor{schedd} when it was running
+  not as root on UNIX.
+  Starting with Condor version 6.5.1, if you did not run the
+  \Condor{schedd} as root, it would incorrectly allow other users to
+  modify the job queue.
+  In particular, a user could remove another user's jobs, to submit
+  jobs to another user's personal \Condor{schedd}, and so on.
+  This bug has now been fixed, and the \Condor{schedd} will no longer
+  allow users to remove or modify other user's jobs.
 
 \item Fixed some bugs in the \Condor{kbdd} that prevented it from
   communicating with the \Condor{startd} to send updates about console
