@@ -91,8 +91,8 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
-    delete[] _condorLogName;
-    delete[] _dapLogName;
+    delete[] (char*) _condorLogName;
+    delete[] (char*) _dapLogName;
 
     delete _preScriptQ;
     delete _postScriptQ;

@@ -53,7 +53,7 @@ Script::Script( bool post, const char* cmd, const char* nodeName ) :
 //-----------------------------------------------------------------------------
 Script::~Script () {
     delete [] _cmd;
-	delete [] _nodeName;
+	delete [] (char*) _nodeName;
 }
 
 //-----------------------------------------------------------------------------
