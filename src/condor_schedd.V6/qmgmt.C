@@ -1123,7 +1123,6 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	char		key[_POSIX_PATH_MAX];
 	ExprTree	*tree;
 	char		*attr_val;
-	int			rval;
 
 	strcpy(key, IdToStr(cluster_id,proc_id) );
 
