@@ -35,6 +35,7 @@ extern "C" void event_mgr (void);
 #include "condor_network.h"
 #include "condor_io.h"
 #include "internet.h"
+#include "my_hostname.h"
 #include "condor_email.h"
 
 #include "condor_attributes.h"
@@ -124,7 +125,7 @@ scheduleHousekeeper (int timeout)
 	{
 		// schedule housekeeper
 		housekeeperTimerID = daemonCore->Register_Timer(machineUpdateInterval,
-						machineUpdateInterval,(TimerHandlercpp)housekeeper,
+						machineUpdateInterval,(TimerHandlercpp)&housekeeper,
 						"CollectorEngine::housekeeper",this);
 		if (housekeeperTimerID == -1)
 			return 0;
@@ -200,7 +201,7 @@ scheduleDownMasterCheck (int timeout)
     if (timeout > 0) {
         // schedule master checks
 		masterCheckTimerID = daemonCore->Register_Timer(masterCheckInterval,
-						masterCheckInterval,(TimerHandlercpp)masterCheck,
+						masterCheckInterval,(TimerHandlercpp)&masterCheck,
 						"CollectorEngine::masterCheck",this);
         if (masterCheckTimerID == -1)
             return 0;
@@ -791,7 +792,6 @@ masterCheck ()
 	ClassAd	 *nextStatus;
 	HashKey  hk;
 	char     hkString [128];
-	char	 whoami [128];
 	char	 buffer [128];
 	FILE* 	 mailer = NULL;
 	int		 more;
@@ -833,12 +833,8 @@ masterCheck ()
 		// need to report for recently down masters (children still alive)
 		if (ad == RECENTLY_DOWN) {
 			if (mailer == NULL) {
-				if (get_machine_name (whoami) == -1) {
-					dprintf (D_ALWAYS, "Failed get_machine_name() call\n");
-					whoami[0] = '\0';
-				}
-				sprintf (buffer, "Collector (%s): Dead condor_masters", 
-							whoami);
+				sprintf( buffer, "Collector (%s): Dead condor_masters", 
+						 my_full_hostname() );
 				if ((mailer = email_admin_open(buffer)) == NULL) {
 					dprintf (D_ALWAYS, "Error sending email --- aborting\n");
 					return FALSE;
