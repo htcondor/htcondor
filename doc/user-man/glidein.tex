@@ -166,37 +166,6 @@ $BASE_DIR
    specified, it will be relative to your $HOME directory on the
    remote Globus host.
 
-$SCRIPT
-   Prefix for the name of the script generated to remotely run the
-   Condor daemons. The hostname of the remote Globus machine is appended
-   to this prefix.
-   This prefix can be overridden by using the --savescript option and
-   specifying a script name prefix. This is useful if you want to
-   avoid the overhead of running this program, and simply use the
-   generated script for future fly-ins.
-   See the section on INVOCATION OPTIONS below for details.
-
-$START_EXPRESSION
-   Condor configuration expression that is required to be satisfied
-   before a job can be matched by Condor and run on the remote Globus
-   node. It is recommended that you use caution if you change this,
-   since modifying the default start expression could allow other users
-   who submit jobs to your Condor pool to run Condor jobs on your
-   remote Globus resource, possibly violating usage agreements with
-   the owners of the Globus resources.
-
-$RUN_FOR
-   Default time (in minutes) that the condor daemons will run on the
-   remote host.  If you set the default to 0 (zero), the daemons will run
-   until shut down with the --kill option.
-   This value can be overridden with the --runfor option
-   See the section on INVOCATION OPTIONS below for details.
-
-$INCLUDE_PVM
-   Setting this variable to non-zero will cause the Condor binaries
-   needed by Condor-PVM to be copied along with the necessary standard
-   binaries, and add the appropriate entries to the configuration files.
-
 OTHER USEFUL INFORMATION
    PVM user \Note If you are using Condor-PVM, PVM jobs only use one
    (of potentially many) of the CPUs on a multi-processor machine.
@@ -208,6 +177,12 @@ OTHER USEFUL INFORMATION
 \end{verbatim}
 
 \subsection{Invocation options}
+--scheduler
+	Select the scheduler type to be used by Globus. Defaults to "fork".
+
+--queue
+	Specify which queue=<queuename> to submit to for the Globus scheduler.
+
 --runfor[ mins]
    How many minutes the condor daemons should run for before gracefully
    exiting. Use of this option overrides the \texttt{\$RUN\_FOR} default value.
@@ -240,12 +215,6 @@ OTHER USEFUL INFORMATION
    an error code.
    (Cannot be run simultaneously with --setuponly)
 
---savescript <prefix>
-   Specify the prefix for the script generated for launching Condor
-   on the remote host. The hostname of the remote node is appended
-   to this prefix. The script is not deleted, but is retained for
-   debugging or customization options.
-
 --kill
    Gracefully shut down the Condor daemons running on the remote host
    that were started by flying in. This should not interfere with other
@@ -259,19 +228,10 @@ OTHER USEFUL INFORMATION
 --showdefaults
    Prints the current settings of configuration values and exits.
 
---scheduler
-	Select the scheduler type to be used by Globus. Defaults to "fork".
-
 \subsection{Future plans}
---Use a separate configuration file for default values, rather than
-having to set values within the perl script itself.
-
---Utilize an FTP server with the necessary Condor executables so the
-user need not be bothered with trying to figure out the location of 
-the executable files needed on the remote host.
-
---Explore the use of GASS tools as an alternative to copying the
-Condor executables to the remote node.
+--Utilize a Globus GASS server with the necessary Condor executables 
+so the user need not be bothered with trying to figure out the location 
+of the executable files needed on the remote host.
 
 --Add support to utilize ssh and rsh tools as an alternative to Globus
 tools to perform a glidein.
