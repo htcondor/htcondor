@@ -205,7 +205,7 @@ class RemoteResource : public Service {
 	static const int SHADOW_SOCK_TIMEOUT;
 
 		// The rusage at the remote machine...to be implemented.
-	struct rusage remote_rusage;
+	// struct rusage remote_rusage;
 
 		// The number of bytes sent and received to/from this resource.
 		// To be implemented.
