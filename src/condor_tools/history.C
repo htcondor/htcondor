@@ -163,9 +163,13 @@ if (constraint) puts(constraint);
 static void
 displayJobShort(AttrList* ad)
 {
-        int cluster, proc, date, status, prio, image_size, CompDate;
-        float utime;
-        char owner[64], cmd[2048], args[2048];
+    int cluster, proc, date, status, prio, image_size, CompDate;
+    float utime;
+    char *owner, *cmd, *args;
+
+    owner = NULL;
+    cmd   = NULL;
+    args  = NULL;
 
 	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
 		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
@@ -180,19 +184,32 @@ displayJobShort(AttrList* ad)
                 !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)        ||
                 !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)            ||
                 !ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)    ||
-                !ad->EvalString  (ATTR_OWNER, NULL, owner)              ||
-                !ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
+                !ad->EvalString  (ATTR_OWNER, NULL, &owner)             ||
+                !ad->EvalString  (ATTR_JOB_CMD, NULL, &cmd) )
         {
                 printf (" --- ???? --- \n");
                 return;
         }
         
         shorten (owner, 14);
-        if (ad->EvalString ("Args", NULL, args)) strcat (cmd, args);
+        if (ad->EvalString ("Args", NULL, &args)) {
+            int cmd_len = strlen(cmd);
+            int extra_len = 14 - cmd_len;
+            if (extra_len > 0) {
+                cmd = (char *) realloc(cmd, 16);
+                strcat(cmd, " ");
+                strncat(cmd, args, extra_len);
+            }
+        }
         shorten (cmd, 15);
         short_print (cluster, proc, owner, date, CompDate, (int)utime, status, 
                prio, image_size, cmd); 
 
+
+        if (owner) free(owner);
+        if (cmd)   free(cmd);
+        if (args)  free(args);
+        return;
 }
 
 //------------------------------------------------------------------------
