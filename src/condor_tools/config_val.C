@@ -123,6 +123,7 @@ main( int argc, char* argv[] )
 	char	*value, *tmp, *host = NULL;
 	char	*addr = NULL, *name = NULL, *pool = NULL;
 	int		i;
+	bool	ask_a_daemon = false;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -182,6 +183,7 @@ main( int argc, char* argv[] )
 			pt = CONDOR_TILDE;
 		} else if( match_prefix( argv[i], "-master" ) ) {
 			dt = DT_MASTER;
+			ask_a_daemon = true;
 		} else if( match_prefix( argv[i], "-schedd" ) ) {
 			dt = DT_SCHEDD;
 		} else if( match_prefix( argv[i], "-startd" ) ) {
@@ -220,7 +222,11 @@ main( int argc, char* argv[] )
 		config( 0 );
 	}
 
-	if( name || pool || mt != CONDOR_QUERY ) {
+	if( name || pool || mt != CONDOR_QUERY || dt != DT_MASTER ) {
+		ask_a_daemon = true;
+	}
+
+	if( ask_a_daemon ) {
 		addr = get_daemon_addr( dt, name, pool );
 		if( ! addr ) {
 			fprintf( stderr, "Can't find address for %s %s\n", 
