@@ -380,7 +380,7 @@ int GlobusResource::DoPing()
 
 	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
 
-	if ( PROXY_NEAR_EXPIRED( myProxy ) ) {
+	if ( PROXY_IS_EXPIRED( myProxy ) ) {
 		dprintf( D_ALWAYS,"proxy near expiration or invalid, delaying ping\n" );
 		return TRUE;
 	}
@@ -393,7 +393,9 @@ int GlobusResource::DoPing()
 
 	lastPing = time(NULL);
 
-	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+		 rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) 
+	{
 		ping_failed = true;
 	}
 
