@@ -96,5 +96,5 @@ int main_shutdown_graceful()
   return TRUE;
 }
 
-int main(int argc, char* argv[]) { return main_init(argc, argv); }
+// int main(int argc, char* argv[]) { return main_init(argc, argv); }
 

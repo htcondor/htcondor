@@ -29,6 +29,7 @@ public:
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
+  ClassAd* ReportState();
 
   //--------------------------------------------------------
   // Misc public functions

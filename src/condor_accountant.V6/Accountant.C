@@ -55,6 +55,7 @@ double Accountant::GetPriority(const MyString& CustomerName)
 {
   CustomerRecord* Customer;
   double Priority=0;
+  if (CustomerName==NiceUserName) return MAXFLOAT;
   if (Customers.lookup(CustomerName,Customer)==0) Priority=Customer->Priority;
   if (Priority<MinPriority) Priority=MinPriority;
   return Priority;
@@ -202,6 +203,28 @@ void Accountant::CheckMatches(ClassAdList& ResourceList) {
     if (NotClaimed(ResourceAd)) RemoveMatch(GetResourceName(ResourceAd));
   }
   return;
+}
+
+//------------------------------------------------------------------
+// Report the whole list of priorities
+//------------------------------------------------------------------
+
+ClassAd* Accountant::ReportState() {
+
+  dprintf(D_FULLDEBUG,"Reporting State\n");
+
+  MyString CustomerName, ResourceName;
+  CustomerRecord* Customer;
+  ClassAd* ad=new ClassAd();
+  char tmp[200];
+
+  Customers.startIterations();
+  while (Customers.iterate(CustomerName, Customer)) {
+    sprintf(tmp, "%s = %.3f", CustomerName.Value(), Customer->Priority);
+    ad->InsertOrUpdate(tmp);
+  }
+
+  return ad;
 }
 
 //------------------------------------------------------------------

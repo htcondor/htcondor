@@ -80,6 +80,7 @@
 #define GIVE_STATE			(SCHED_VERS+48)
 #define SET_PRIORITY		(SCHED_VERS+49)		// negotiator(priviliged) cmd 
 #define GIVE_CLASSAD		(SCHED_VERS+50)
+#define GET_PRIORITY		(SCHED_VERS+51)		// negotiator
 
 
 /************

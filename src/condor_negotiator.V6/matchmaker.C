@@ -64,6 +64,9 @@ initialize ()
     daemonCore->Register_Command (SET_PRIORITY, "SetPriority",
             (CommandHandlercpp) SET_PRIORITY_commandHandler, 
 			"SET_PRIORITY_commandHandler", this, NEGOTIATOR);
+    daemonCore->Register_Command (GET_PRIORITY, "GetPriority",
+            (CommandHandlercpp) GET_PRIORITY_commandHandler, 
+			"GET_PRIORITY_commandHandler", this);
 
     // ensure that we renegotiate at least once every 'NegtiatorInterval'
     daemonCore->Register_Timer (0, NegotiatorInterval, 
@@ -141,6 +144,33 @@ SET_PRIORITY_commandHandler (int, Stream *strm)
 	dprintf (D_ALWAYS,"Setting the priority of %s to %f\n",scheddName,priority);
 	accountant.SetPriority (scheddName, priority);
 	
+	return TRUE;
+}
+
+
+int Matchmaker::
+GET_PRIORITY_commandHandler (int, Stream *strm)
+{
+	// read the required data off the wire
+	if (!strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not read eom\n");
+		return FALSE;
+	}
+
+	// get the priority
+	ClassAd* ad=accountant.ReportState();
+	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
+	
+	if (!ad->put(*strm) ||
+	    !strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not send priority information\n");
+		return FALSE;
+	}
+
+	delete ad;
+
 	return TRUE;
 }
 
