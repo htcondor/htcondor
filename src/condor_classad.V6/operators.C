@@ -980,6 +980,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	v1.IsRealValue (r1);
 	v2.IsRealValue (r2);
 
+#if 0
 #ifndef WIN32
     struct sigaction sa1, sa2;
     sa1.sa_handler = ClassAd_SIGFPE_handler;
@@ -989,6 +990,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
        EXCEPT("Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
 			errno);
     }
+#endif
 #endif
 
 	ClassAdExprFPE = false;
@@ -1013,11 +1015,13 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 		result.SetRealValue (comp);
 
 	// restore the state
+#if 0
 #ifndef WIN32 
     if (sigaction (SIGFPE, &sa2, &sa1)) {
         EXCEPT( "Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
 			errno);
     }
+#endif
 #endif
 	return( SIG_CHLD1 | SIG_CHLD2 );
 }
@@ -1132,7 +1136,7 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 void Operation::
 compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 {
-	char *s1, *s2;
+	const char *s1, *s2;
 	int  cmp;
 	
 	v1.IsStringValue (s1);
@@ -1323,14 +1327,13 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 ValueType Operation::
 coerceToNumber (Value &v1, Value &v2)
 {
-	char 	*s;
 	int	 	i;
 	double 	r;
 
 	// either of v1, v2 not numerical?
 	if (v1.IsClassAdValue()   || v2.IsClassAdValue())   return CLASSAD_VALUE;
 	if (v1.IsListValue()      || v2.IsListValue())   	return LIST_VALUE;
-	if (v1.IsStringValue (s)  || v2.IsStringValue (s))  return STRING_VALUE;
+	if (v1.IsStringValue ()   || v2.IsStringValue ())  return STRING_VALUE;
 	if (v1.IsUndefinedValue() || v2.IsUndefinedValue()) return UNDEFINED_VALUE;
 	if (v1.IsErrorValue ()    || v2.IsErrorValue ())    return ERROR_VALUE;
 	if (v1.IsBooleanValue()	  || v2.IsBooleanValue())	return BOOLEAN_VALUE;
