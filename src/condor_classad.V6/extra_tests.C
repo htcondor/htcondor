@@ -24,7 +24,11 @@
 // This is a program that does a bunch of testing that is easier to do
 // without user input, like in test_classads.
 
+#if defined( CLASSAD_DISTRIBUTION )
 #include "classad_distribution.h"
+#else
+#include "condor_classad.h"
+#endif
 #include "classad_features.h"
 #include "lexerSource.h"
 #include <fstream>
@@ -49,6 +53,7 @@ string chaining_child_text = "[ AA = 14;  B = \"bonnet\"; CC = false; ]";
 string dirty_classad_text = "[ A = 1; ]";
 
 int main(int argc, char **argv);
+static void test_quoting_bug(void);
 static void test_parsing(void);
 static void test_parsing_helper(ClassAd *classad_a, ClassAd *classad_b);
 static void read_from_string(ClassAd **classad_a, ClassAd **classad_b);
@@ -84,11 +89,24 @@ static bool triple(
 int 
 main(int argc, char **argv)
 {
+    test_quoting_bug();
 	test_parsing();
 	test_chaining();
 	test_dirty();
 	test_user_functions();
 	return 0;
+}
+
+static void test_quoting_bug(void)
+{
+    ClassAdParser par ;
+    string attr = "other.GlueCEStateStatus == \"Production\"";
+    if (!par.ParseExpression(attr, true)) {
+        cout << "Error in parsing quotes.\n";
+    } else {
+        cout << "No problem in parsing quotes.\n";
+    }
+    return;
 }
 
 static void test_parsing(void)

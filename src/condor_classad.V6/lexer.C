@@ -456,6 +456,9 @@ tokenizeString(char delim)
 				tempch = lexSource->ReadCharacter();
 			}
 			if (tempch != delim) {  // a new token exists after the string
+                if (tempch != -1) {
+                    lexSource->UnreadCharacter();
+                }
 				stringComplete = true;
 			} else {    // the adjacent string is to be concatenated to the existing string
 				lexBuffer.erase(lexBufferCount--); // erase the lagging '\"'
