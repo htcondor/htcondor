@@ -197,9 +197,9 @@ class DaemonCore : public Service
 			int			want_commanand_port = TRUE,
 			char		*env = NULL,
 			char		*cwd = NULL,
-		//	unsigned int std[3] = { 0, 0, 0 },
 			int			new_process_group = FALSE,
-			Stream		*sock_inherit_list[] = NULL 			
+			Stream		*sock_inherit_list[] = NULL,
+			int			std[] = NULL
 			);
 
 		// NULL terminated array of inherited sockets
@@ -313,9 +313,11 @@ class DaemonCore : public Service
 		struct PidEntry
 		{
 			pid_t pid;
+			int new_process_group;
 #ifdef WIN32
 			HANDLE hProcess;
 			HANDLE hThread;
+			DWORD tid;
 			HWND hWnd;
 #endif
 			char sinful_string[28];
@@ -361,7 +363,8 @@ class DaemonCore : public Service
 
 #ifdef WIN32
 		DWORD	dcmainThreadId;		// the thread id of the thread running the main daemon core
-		static CSysinfo ntsysinfo;	// class to do undocumented NT process management
+		CSysinfo ntsysinfo;		// class to do undocumented NT process management
+		int SetFDInheritFlag(int fd, int flag);	// set files inheritable or not on NT
 #endif
 
 #ifndef WIN32

@@ -185,12 +185,17 @@ DaemonCore::~DaemonCore()
 
 	if (sockTable != NULL)
 	{
+		// There may be CEDAR objects stored in the table,
+		// but the only one we created is the 
+		// initial_commmand_sock, so that is the only one we
+		// should delete.  "He who creates should delete",
+		// otherwise the socket(s) may get deleted multiple times.
+		if ( (*sockTable)[initial_command_sock].iosock ) {
+			delete (*sockTable)[initial_command_sock].iosock;
+		}
 		for (i=0;i<nSock;i++) {
 			free_descrip( (*sockTable)[i].iosock_descrip );
-			free_descrip( (*sockTable)[i].handler_descrip );
-			if( (*sockTable)[i].iosock ) {
-				delete (*sockTable)[i].iosock;
-			}
+			free_descrip( (*sockTable)[i].handler_descrip );		
 		}
 		delete sockTable;
 	}
@@ -1493,20 +1498,22 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	int target_has_dcpm = TRUE;		// is process pid a daemon core process?
 
 
-	// First, if not sending a signal to ourselves, we need the PidEntry struct.
+	// First, if not sending a signal to ourselves, lookup the PidEntry struct
+	// so we can determine if our child is a daemon core process or not.
 	if ( pid != mypid ) {
 		if ( pidTable->lookup(pid,pidinfo) < 0 ) {
-			// invalid pid
-			dprintf(D_ALWAYS,"Send_Signal: ERROR invalid pid %d\n",pid);
-			return FALSE;
+			// we did not find this pid in our hashtable
+			pidinfo = NULL;
+			target_has_dcpm = FALSE;
 		}
-		if ( pidinfo->sinful_string[0] == '\0' ) {
-			// process pid does not have a command socket
+		if ( pidinfo && pidinfo->sinful_string[0] == '\0' ) {
+			// process pid found in our table, but does not 
+			// our table says it does _not_ have a command socket
 			target_has_dcpm = FALSE;
 		}
 	}
 
-	// first, handle the "special" action signals which are really just telling
+	// handle the "special" action signals which are really just telling
 	// DaemonCore to do something.
 	switch (sig) {
 		case DC_SIGTERM:
@@ -1530,10 +1537,63 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 #ifndef WIN32
 			// If we are on Unix, and we are not sending a 'special' signal,
 			// and our child is not a daemon-core process, then just send
-			// the signal as usual via kill().
+			// the signal as usual via kill() after translating DC sig num
+			// into the equivelent Unix signal on this platform.
 			if ( target_has_dcpm == FALSE ) {
+#define TRANSLATE_SIG( x ) case DC_##x: unixsig = x; unixsigname = #x; break;
+				int unixsig;
+				char *unixsigname;
+				switch( sig ) {
+					TRANSLATE_SIG( SIGHUP )
+					TRANSLATE_SIG( SIGINT )
+					TRANSLATE_SIG( SIGQUIT )
+					TRANSLATE_SIG( SIGILL )
+					TRANSLATE_SIG( SIGTRAP )
+					TRANSLATE_SIG( SIGABRT )
+#if defined(SIGEMT)
+					TRANSLATE_SIG( SIGEMT )
+#endif
+					TRANSLATE_SIG( SIGFPE )
+					TRANSLATE_SIG( SIGKILL )
+					TRANSLATE_SIG( SIGBUS )
+					TRANSLATE_SIG( SIGSEGV )
+#if defined(SIGSYS)
+					TRANSLATE_SIG( SIGSYS )
+#endif
+					TRANSLATE_SIG( SIGPIPE )
+					TRANSLATE_SIG( SIGALRM )
+					TRANSLATE_SIG( SIGTERM )
+					TRANSLATE_SIG( SIGURG )
+					TRANSLATE_SIG( SIGSTOP )
+					TRANSLATE_SIG( SIGTSTP )
+					TRANSLATE_SIG( SIGCONT )
+					TRANSLATE_SIG( SIGCHLD )
+					TRANSLATE_SIG( SIGTTIN )
+					TRANSLATE_SIG( SIGTTOU )
+					TRANSLATE_SIG( SIGIO )
+#if defined(SIGXCPU)
+					TRANSLATE_SIG( SIGXCPU )
+#endif
+#if defined(SIGXFSZ)
+					TRANSLATE_SIG( SIGXFSZ )
+#endif
+					TRANSLATE_SIG( SIGVTALRM )
+					TRANSLATE_SIG( SIGPROF )
+					TRANSLATE_SIG( SIGWINCH )
+#if defined(SIGINFO)
+					TRANSLATE_SIG( SIGINFO )
+#endif
+					TRANSLATE_SIG( SIGUSR1 )
+					TRANSLATE_SIG( SIGUSR2 )
+					default:   	
+						{
+							EXCEPT("Trying to send unknown signal");
+						}
+				}
+				dprintf(D_DAEMONCORE,"Send_Signal(): Doing kill(%d,%d) [sig %d=%s]\n",
+					pid, unixsig,unixsig,unixsigname);
 				priv_state priv = set_root_priv();
-				int status = ::kill(pid, sig);
+				int status = ::kill(pid, unixsig);
 				set_priv(priv);
 				return (status >= 0);	// return 1 if kill succeeds, 0 otherwise
 			}
@@ -1585,15 +1645,17 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	}
 
 	// handle case of sending to a child process; get info on this pid
-	if ( pid != mypid ) {
-		is_local = pidinfo->is_local;
-		destination = pidinfo->sinful_string;
-		if ( target_has_dcpm == FALSE ) {
+	if ( pid != mypid ) {		
+		if ( target_has_dcpm == FALSE || pidinfo == NULL) {
 			// this child process does not have a command socket
-			dprintf(D_ALWAYS,"Send_Signal: ERROR Attempt to send signal %d to pid %d, but pid %d has no command socket\n",
+			dprintf(D_ALWAYS,
+				"Send_Signal: ERROR Attempt to send signal %d to pid %d, but pid %d has no command socket\n",
 				sig,pid,pid);
 			return FALSE;
 		}
+
+		is_local = pidinfo->is_local;
+		destination = pidinfo->sinful_string;
 	}
 
 	// now destination process is local, send via UDP; if remote, send via TCP
@@ -1626,7 +1688,7 @@ int DaemonCore::Send_WM_CLOSE(pid_t pid)
 #ifdef WIN32
 	PidEntry *pidinfo;
 	if ( (pidTable->lookup(pid, pidinfo) < 0) || (pidinfo->hWnd == 0) ) {
-		dprintf(D_ALWAYS, "DaemonCore Shutdown_Graceful: No hWnd set!\n");
+		dprintf(D_DAEMONCORE, "Send_WM_CLOSE: hWnd for pid %d unknown\n",pid);
 		return FALSE;
 	}
 	if (SendMessage(pidinfo->hWnd, WM_CLOSE, 0, 0) == 0) {
@@ -1680,7 +1742,17 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 		return FALSE;		// cannot shut down our parent
 
 #if defined(WIN32)
-	return Send_WM_CLOSE(pid);
+	PidEntry *pidinfo;
+	if ( (pidTable->lookup(pid, pidinfo) < 0) 
+		|| (pidinfo->new_process_group == 0) ) {
+		EXCEPT("Shutdown_Graceful: Pid %d is not a known process group id!",pid);
+	}
+	if ( !GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT,pid) ) {
+		dprintf(D_DAEMONCORE,"Shutdown_Graceful: send CTRL_BREAK failed\n");
+		return FALSE;
+	} else {
+		return TRUE;
+	}
 #else
 	priv_state priv = set_root_priv();
 	int status = kill(pid, SIGTERM);
@@ -1698,20 +1770,69 @@ int DaemonCore::Suspend_Process(pid_t pid)
 		return FALSE;	// cannot suspend our parent
 
 #if defined(WIN32)
-	// TODO: We need to enum all the threads in the process, not
-	// just the primary thread.
-	PidEntry *pidinfo;
-	if (pidTable->lookup(pid, pidinfo) < 0) {
+	// We need to enum all the threads in the process, and
+	// then suspend all the threads.  We need to repeat this
+	// process until all the threads are suspended, since a thread
+	// we have not yet suspended may continue a thread we already
+	// suspended.  Thus we may need to make several passes.
+	// Furthermore, WIN32 maintains a suspend count for each thread.
+	// We need to make certain we leave each thread's suspend count
+	// incremented only by 1, otherwise we'll screw things up on resume.
+	// Questions? See Todd Tannenbaum <tannenba@cs.wisc.edu>.
+	int i,j,numTids,allDone,numExtraSuspends;
+	ExtArray<HANDLE> hThreads;
+	ExtArray<DWORD> tids;
+
+	numTids = ntsysinfo.GetTIDs(pid,tids);
+
+	// if numTids is 0, this process has no threads, which likely
+	// means the process does not exist (or an error in GetTIDs).
+	if ( !numTids ) {
+		dprintf(D_DAEMONCORE,
+			"Suspend_Process failed: cannot get threads for pid %d\n",pid);
 		return FALSE;
 	}
-	if ( pidinfo->hThread == NULL ) {
-		return FALSE;
+
+	// open handles to all the threads.
+	for (j=0; j < numTids; j++) {
+		hThreads[j] = ntsysinfo.OpenThread(tids[j]);
 	}
-	if ( ::SuspendThread(pidinfo->hThread) == 0xFFFFFFFF ) {
-		// SuspendThread had an error.  Yes, thats what 0xFFFFFFFF means.
-		// Seem like a stupid return code?  Call up Bill Gates.  ;^)
-		return FALSE;
+
+	// Keep calling SuspendThread until they are all suspended.
+	numExtraSuspends = 0;
+	do {
+		allDone = TRUE;
+		for (j=0; j < numTids; j++) {
+			if ( hThreads[j] ) {
+				// Note: SuspendThread returns > 1 if already suspended
+				if ( ::SuspendThread(hThreads[j]) == 0 ) {
+					 allDone = FALSE;
+				}
+			}
+		}
+		if ( allDone == FALSE ) {
+			numExtraSuspends++;
+		}
+	} while ( allDone == FALSE );
+
+	// Now all threads are suspended, but numExtraSuspends
+	// contains the number of times we called SuspendThread 
+	// extraneously.  So decrement all the thread counts by this amount.
+	for (i=0;i<numExtraSuspends;i++) {
+		for (j=0; j < numTids; j++) {
+			if ( hThreads[j] ) {
+				::ResumeThread(hThreads[j]);
+			}
+		}
 	}
+
+	// Finally, close all the thread handles we opened.
+	for (j=0; j < numTids; j++) {
+		if ( hThreads[j] ) {
+			ntsysinfo.CloseThread(hThreads[j]);
+		}
+	}
+		
 	return TRUE;	
 #else
 	priv_state priv = set_root_priv();
@@ -1726,23 +1847,169 @@ int DaemonCore::Continue_Process(pid_t pid)
 	dprintf(D_DAEMONCORE,"called DaemonCore::Continue_Process(%d)\n",
 		pid);
 
-#if defined(WIN32)
-	// TODO: we need to resume all threads in the process, not just
-	// the primary thread!!!
+#if defined(WIN32)	
+	// We need to get all the threads for this process, and keep calling
+	// ResumeThread until at least one thread is no longer suspended.
+	// However, if any one thread is not suspended, we need to leave this
+	// process alone and not mess up the thread suspend counts. There is
+	// no perfect way to figure this out, but usually it is less dangerous
+	// to Suspend a running thread than to Resume a thread which the user
+	// process explicitly suspended (more likely to mess up synchronization).
+	// So, we use SuspendThread instead of ResumeThread to probe the 
+	// process's thread counts.
+	// This is a lot of system calls, so we optimize for a case that is rather
+	// common in Condor : when we call Continue_Process() on a job
+	// which has not been suspended.  This optimization works as follows: we
+	// try to get the primary thread from our internal DaemonCore hashtable,
+	// and if this primary thread is not suspended, we return immediately.
+	// Questions? See Todd Tannenbaum <tannenba@cs.wisc.edu>.
 	PidEntry *pidinfo;
+	HANDLE hPriThread;	// handle to the primary thread of the child
+	DWORD PriTid;
+	DWORD result;
+	int numTids,i,j;
+	int all_done = FALSE;
+
 	if (pidTable->lookup(pid, pidinfo) < 0) {
+		hPriThread = NULL;
+		PriTid = 0;
+	} else {
+		hPriThread = pidinfo->hThread;
+		PriTid = pidinfo->tid;
+	}
+
+	if ( hPriThread ) {
+		result = ::SuspendThread(hPriThread);
+		switch ( result ) {
+		case 0xFFFFFFFF:
+			// SuspendThread had an error.  Yes, that's what 0xFFFFFFFF means.
+			// Seem like a stupid return code?  Call up Bill Gates.  ;^)
+			dprintf(D_DAEMONCORE,
+				"Continue_Process: error resuming primary thread\n");
+			return FALSE;
+			break;
+		case 0:
+			// Optimization: if SuspendThread returns 0, that means this thread
+			// was not suspended.  Thus, we have no need to go any further,
+			// just resume it to put the count back, and we're done.
+			::ResumeThread(hPriThread);
+			dprintf(D_DAEMONCORE,"Continue_Process: pid %d not suspended\n",pid);
+			return TRUE;
+			break;
+		default:
+			// Here we know the primary thread was already Suspended.  So,
+			// we'll need to continue on enumerate all the threads in the process
+			// and resume them. 
+			break;
+		}
+	}
+		
+	// If we made it here, then the primary thread was indeed suspended.
+	// So, we need to enumerate all the threads in this process and call
+	// ResumeThread on them until at least one thread's suspend count 
+	// drop all the way back down to zero.  But first probe all the thread
+	// suspend counts using SuspendThread (because it is safer than Resuming)
+	// and make certain there is not already an active thread.  Without doing
+	// this check, we may just Resume threads that the user process has 
+	// explicitly Suspended (perhaps they are sleeping, waiting on an event, etc).
+	// Remember: if we found the pid in our internal hash table, we have 
+	// already called SuspendThread once on the primary thread.
+	ExtArray<HANDLE> hThreads;
+	ExtArray<DWORD> tids;
+
+	numTids = ntsysinfo.GetTIDs(pid,tids);
+	dprintf(D_DAEMONCORE,"Continue_Process: numTids = %d\n",numTids);
+
+	// if numTids is 0, this process has no threads, which likely
+	// means the process no longer exists (or an error in GetTIDs).
+	if ( !numTids ) {
+		dprintf(D_DAEMONCORE,
+			"Continue_Process failed: cannot get threads for pid %d\n",pid);
+		if ( hPriThread ) {
+			::ResumeThread(hPriThread);
+		}
 		return FALSE;
 	}
-	if ( pidinfo->hThread == NULL ) {
-		return FALSE;
+
+	// open handles to all the threads.
+	for (j=0; j < numTids; j++) {
+		hThreads[j] = ntsysinfo.OpenThread(tids[j]);
 	}
-	if ( ::ResumeThread(pidinfo->hThread) == 0xFFFFFFFF ) {
-		// SuspendThread had an error.  Yes, thats what 0xFFFFFFFF means.
-		// Seem like a stupid return code?  Call up Bill Gates.  ;^)
-		return FALSE;
+
+	// Probe all the thread suspend counts using SuspendThread (because 
+	// it is safer than Resuming) and make certain there is not already an 
+	// active thread.
+	for (j=0; j < numTids; j++) {
+		if ( hThreads[j] ) {
+			// Check if this is the primary thread.  If so, continue, since
+			// we already called SuspendThead on it above and we do not want
+			// to mess up the thread count.  Note we compare tids, not the 
+			// handles, since although the handles may refer to the same object
+			// they may not be equal.  If we did not have the pid in our hash
+			// table, PriTid is 0, so we'll do the right thing.
+			if ( tids[j] == PriTid ) {
+				continue;
+			}
+			// Note: SuspendThread returns 0 if thread was previously active
+			if ( ::SuspendThread(hThreads[j]) == 0 ) {
+				// Oh shit! This process was already active.  Resume all
+				// the threads we have suspended and return.
+				dprintf(D_DAEMONCORE,"Continue_Process: pid %d has active thread\n",pid);
+				for (i=0; i<j+1; i++ ) {
+					if ( hThreads[i] ) {
+						::ResumeThread(hThreads[i]);
+					}
+					if ( tids[i] == PriTid ) {
+						PriTid = 0;
+					}
+				}
+				if ( hPriThread && PriTid ) {
+					::ResumeThread(hPriThread);
+				}
+				all_done = TRUE;
+				break;
+			}
+		}
 	}
-	return TRUE;
-#else
+
+	// Now resume all threads until some thread becomes active.
+	dprintf(D_DAEMONCORE,"Continue_Process: resuming all threads\n");
+	while ( all_done == FALSE ) {
+		all_done = TRUE;	// set to TRUE in case all handles in hThreads are NULL
+		for (j=0; j < numTids; j++) {			
+			if ( hThreads[j] ) {
+				all_done = FALSE;
+				result = ::ResumeThread(hThreads[j]);
+				dprintf(D_DAEMONCORE,
+					"Continue_Process: ResumeThread returned %d for thread %d\n",
+					result, j);
+				if ( result < 2 ) {
+					 all_done = TRUE;
+				} else {
+					if ( result == 0xFFFFFFFF ) {
+						all_done = -1;
+					}
+				}
+			}
+		}
+	}
+
+	// Finally, close all the thread handles we opened.
+	for (j=0; j < numTids; j++) {
+		if ( hThreads[j] ) {
+			ntsysinfo.CloseThread(hThreads[j]);
+		}
+	}
+
+	if ( all_done == -1 ) {
+		return FALSE;
+	} else {
+		return TRUE;
+	}
+
+#else	// of ifdef WIN32
+	// Implementation for UNIX
+
 	priv_state priv = set_root_priv();
 	int status = kill(pid, SIGCONT);
 	set_priv(priv);
@@ -1790,6 +2057,74 @@ void *DaemonCore::GetDataPtr()
 }
 
 #if defined(WIN32)
+// WinNT Helper function: given a C runtime library file descriptor,
+// set whether or not the underlying WIN32 handle should be
+// inheritable or not.  If flag = TRUE, that means inheritable,
+// else FALSE means not inheritable.  Note this is highly
+// specific to Microsoft Visual C++ v5.0.  See OSFINFO.C and
+// internal.h in the C runtime library source code.  We set all
+// these macros below to be able to parse into the open file handle table.
+// We have an ASSERT below which _should_ catch if Microsoft changes things.
+#define IOINFO_L2E          5
+#define IOINFO_ARRAY_ELTS   (1 << IOINFO_L2E)
+#define _pioinfo(i) ( __pioinfo[i >> IOINFO_L2E] + (i & (IOINFO_ARRAY_ELTS - \
+                              1)) )
+#define _osfhnd(i)  ( _pioinfo(i)->osfhnd )
+#define _osfile(i)  ( _pioinfo(i)->osfile )
+#define FOPEN 0x01
+typedef struct {
+        long osfhnd;    /* underlying OS file HANDLE */
+        char osfile;    /* attributes of file (e.g., open in text mode?) */
+        char pipech;    /* one char buffer for handles opened on pipes */
+#if defined (_MT)
+        int lockinitflag;
+        CRITICAL_SECTION lock;
+#endif  /* defined (_MT) */
+    }   ioinfo;
+extern "C"  _CRTIMP ioinfo * __pioinfo[];
+extern "C" int _nhandle;
+int DaemonCore::SetFDInheritFlag(int fh, int flag)
+{
+	HANDLE DuplicateFile;
+
+	// check that fh is a valid, open file descriptor.
+	if ( !( ((unsigned)fh < (unsigned)_nhandle) && 
+		(_osfile(fh) & FOPEN) &&
+		(_osfhnd(fh) != (long)INVALID_HANDLE_VALUE) ) ) {
+		
+		// here we discovered that fh is not open; we're done
+		return TRUE;
+	}
+
+	// ASSERT that the ugly macros we have above are still
+	// valid and have not changed with a new version of 
+	// Visual C++.
+	ASSERT( _get_osfhandle(fh) == _osfhnd(fh) );
+
+	// Set the inheritable flag by duplicating the underlying
+	// handle with the flags we want, then replace the original
+	// with the duplicate.
+	if (!::DuplicateHandle(GetCurrentProcess(),
+        (HANDLE)_osfhnd(fh),
+        GetCurrentProcess(),
+        (HANDLE*)&DuplicateFile,
+        0,
+        flag, // inheritable flag
+        DUPLICATE_SAME_ACCESS)) {
+			// failed to duplicate
+			dprintf(D_ALWAYS,
+				"ERROR: DuplicateHandle() failed in SetFDInheritFlag(%d), error=%d\n"
+				,flag,GetLastError());			
+			return FALSE;
+	}
+	// if made it here, successful duplication; replace original.
+	// remember to close the old one!
+	CloseHandle((HANDLE)_osfhnd(fh));
+	_osfhnd(fh) = (long)DuplicateFile;
+	return TRUE;
+}
+
+// Callback function for EnumWindow call to find hWnd for a pid
 BOOL CALLBACK
 DCFindWindow(HWND hWnd, LPARAM p)
 {
@@ -1802,7 +2137,7 @@ DCFindWindow(HWND hWnd, LPARAM p)
 	}
 	return TRUE;
 }
-#endif
+#endif	// of ifdef WIN32
 
 int DaemonCore::Create_Process(
 			char		*name,
@@ -1812,9 +2147,9 @@ int DaemonCore::Create_Process(
 			int			want_command_port,
 			char		*env,
 			char		*cwd,
-		//	unsigned int std[3],
 			int			new_process_group,
-			Stream		*sock_inherit_list[] )
+			Stream		*sock_inherit_list[],
+			int			std[])
 {
 	int i;
 	char *ptmp;
@@ -1827,6 +2162,9 @@ int DaemonCore::Create_Process(
 	PROCESS_INFORMATION piProcess;
 	SECURITY_ATTRIBUTES sa;
 	SECURITY_DESCRIPTOR sd;
+	BOOL inherit_handles = FALSE;
+#else
+	int inherit_handles;
 #endif
 
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",name);
@@ -1850,6 +2188,7 @@ int DaemonCore::Create_Process(
 	strcat(inheritbuf,InfoCommandSinfulString());
 
 	if ( sock_inherit_list ) {
+		inherit_handles = TRUE;
 		for (i = 0; (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS); i++) {
 			// check that this is a valid cedar socket
 			if ( !(sock_inherit_list[i]->valid()) ) {
@@ -1887,6 +2226,7 @@ int DaemonCore::Create_Process(
 	// an inheritable tcp and a udp socket to listen on, and place 
 	// the info into the inheritbuf.
 	if ( want_command_port != FALSE ) {
+		inherit_handles = TRUE;
 		if ( want_command_port == TRUE ) {
 			// choose any old port (dynamic port)
 			if (!BindAnyCommandPort(&rsock, &ssock)) {
@@ -1951,7 +2291,50 @@ int DaemonCore::Create_Process(
 	// prepare a STARTUPINFO structure for the new process
 	ZeroMemory(&si,sizeof(si));
 	si.cb = sizeof(si);
-	
+
+	// we do _not_ want our child to inherit our file descriptors
+	// unless explicitly requested.  so, set the underlying handle
+	// of all files opened via the C runtime library to non-inheritable.
+	for (i = 0; i < _nhandle; i++) {
+		SetFDInheritFlag(i,FALSE);
+	}
+
+	// handle re-mapping of stdout,in,err if desired.  note we just
+	// set all our file handles to non-inheritable, so for any files
+	// being redirected, we need to reset to inheritable.
+	if ( std ) {
+		long longTemp;
+		int valid = FALSE;
+		if ( std[0] > -1 ) {
+			SetFDInheritFlag(std[0],TRUE);	// set handle inheritable
+			longTemp = _get_osfhandle(std[0]);
+			if (longTemp != -1 ) {
+				valid = TRUE;
+				si.hStdInput = (HANDLE)longTemp;
+			}
+		}
+		if ( std[1] > -1 ) {
+			SetFDInheritFlag(std[1],TRUE);	// set handle inheritable
+			longTemp = _get_osfhandle(std[1]);
+			if (longTemp != -1 ) {
+				valid = TRUE;
+				si.hStdOutput = (HANDLE)longTemp;
+			}
+		}
+		if ( std[2] > -1 ) {
+			SetFDInheritFlag(std[2],TRUE);	// set handle inheritable
+			longTemp = _get_osfhandle(std[2]);
+			if (longTemp != -1 ) {
+				valid = TRUE;
+				si.hStdError = (HANDLE)longTemp;
+			}
+		}
+		if ( valid ) {
+			si.dwFlags |= STARTF_USESTDHANDLES;
+			inherit_handles = TRUE;
+		}
+	}
+		
 	// prepare the SECURITY_ATTRIBUTES structure
 	ZeroMemory(&sa,sizeof(sa));
 	sa.nLength = sizeof(sa);
@@ -1965,15 +2348,14 @@ int DaemonCore::Create_Process(
 		return FALSE;
 	}
 
-	// should be DETACHED_PROCESS (for debug, can use CREATE_NEW_CONSOLE)
 	if ( new_process_group == TRUE )
-		new_process_group = CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS;
+		new_process_group = CREATE_NEW_PROCESS_GROUP;
 	else
-		new_process_group =  DETACHED_PROCESS;
+		new_process_group =  0;
 
 
-	if ( !::CreateProcess(name,args,NULL,NULL,TRUE,new_process_group,
-			env,cwd,&si,&piProcess) ) {
+	if ( !::CreateProcess(name,args,NULL,NULL,inherit_handles,
+			new_process_group,env,cwd,&si,&piProcess) ) {
 		dprintf(D_ALWAYS,
 			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
 		return FALSE;
@@ -1995,6 +2377,7 @@ int DaemonCore::Create_Process(
 	// Now that we have a child, store the info in our pidTable
 	PidEntry *pidtmp = new PidEntry;
 	pidtmp->pid = newpid;
+	pidtmp->new_process_group = new_process_group;
 	if ( want_command_port != FALSE )
 		strcpy(pidtmp->sinful_string,sock_to_string(rsock._sock));
 	else
@@ -2005,10 +2388,15 @@ int DaemonCore::Create_Process(
 #ifdef WIN32
 	pidtmp->hProcess = piProcess.hProcess;
 	pidtmp->hThread = piProcess.hThread;
+	pidtmp->tid = piProcess.dwThreadId;
 	pidtmp->hWnd = 0;
-	if ( want_command_port == FALSE ) {
-		EnumWindows((WNDENUMPROC)DCFindWindow, (LPARAM)pidtmp);
-	}
+		// Note: below code to find hWnd is commented out since EnumWindows
+		// apparently does not see windows on the service desktop!  :^(. -Todd
+	/************* 
+	 * if ( want_command_port == FALSE ) {
+	 *	  EnumWindows((WNDENUMPROC)DCFindWindow, (LPARAM)pidtmp);
+	 * }
+	***********/
 #endif 
 	assert( pidTable->insert(newpid,pidtmp) == 0 );
 	dprintf(D_DAEMONCORE,
@@ -2334,8 +2722,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 
 	// Fetch the PidEntry for this pid from our hash table.
 	if ( pidTable->lookup(pid,pidentry) == -1 ) {
-		// we did not find this pid!1???!?
-		dprintf(D_ALWAYS,"Unknown process exited - pid=%d\n",pid);
+		// we did not find this pid... probably popen finished.
+		dprintf(D_DAEMONCORE,"Unknown process exited (popen?) - pid=%d\n",pid);
 		return FALSE;
 	}
 
@@ -2408,6 +2796,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 
 	// Finally, some hard-coded logic.  If the pid that exited was our parent,
 	// then shutdown gracefully.
+	// TODO: should also set a timer and do a fast/hard kill later on!
 	if (pid == ppid) {
 		dprintf(D_ALWAYS,"Our Parent process (pid %lu) exited; shutting down\n",pid);
 		Send_Signal(mypid,DC_SIGTERM);	// SIGTERM means shutdown graceful
@@ -2450,17 +2839,20 @@ BindAnyCommandPort(AuthSock *rsock, SafeSock *ssock)
 	return TRUE;
 }
 
-// IsPidAlive() returns TRUE is pid lives, FALSE is that pid has exited.
-// It is the callers responsibility to make certain priv_state is set!
+// Is_Pid_Alive() returns TRUE is pid lives, FALSE is that pid has exited.
 int DaemonCore::Is_Pid_Alive(pid_t pid)
 {
 	int status = FALSE;
 
 #ifndef WIN32
 	// on Unix, just try to send pid signal 0.  if sucess, pid lives.
+	// first set priv_state to root, to make certain kill() does not fail
+	// due to permissions.
+	priv_state priv = set_root_priv();
 	status = ::kill(pid,0);
 	if ( status == 0 )
 		status = TRUE;	
+	set_priv_state(priv);
 #else
 	// on Win32, open a handle to the pid and call GetExitStatus
 	HANDLE pidHandle = ::OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,pid);
@@ -2473,7 +2865,17 @@ int DaemonCore::Is_Pid_Alive(pid_t pid)
 		::CloseHandle(pidHandle);
 	} else {
 		dprintf(D_FULLDEBUG,"DaemonCore::IsPidAlive(): OpenProcess failed\n");
-		status = TRUE;	// return TRUE to be on the safe side...
+		// OpenProcess() may have failed
+		// due to permissions, or because all handles to that pid are gone.
+		if ( ::GetLastError() == 5 ) {
+			// failure due to permissions.  this means the process object must
+			// still exist, although we have no idea if the process itself still
+			// does or not.  error on the safe side; return TRUE.
+			status = TRUE;
+		} else {
+			// process object no longer exists, so process must be gone.
+			status = FALSE;	
+		}
 	}
 #endif
 
