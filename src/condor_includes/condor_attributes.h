@@ -31,6 +31,7 @@
 #define __CONDOR_ATTRIBUTES_H__
 
 const char ATTR_ACTIVITY				 [] = "Activity";
+const char ATTR_APPEND_FILES			[] = "AppendFiles";
 const char ATTR_ARCH                     [] = "Arch";
 const char ATTR_AVAIL_BANDWIDTH_TO_SUBMIT_MACHINE[] = "AvailBandwidthToSubmitMachine";
 const char ATTR_AVAIL_BANDWIDTH_TO_LAST_CKPT_SERVER[] = "AvailBandwidthToLastCkptServer";
