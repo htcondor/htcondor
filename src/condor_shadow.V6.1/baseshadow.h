@@ -100,19 +100,17 @@ class BaseShadow : public Service
 			If we should email the user, it opens a mailer file with
 			the subject line "Job Cluster.Proc" and returns the FILE*.
 			@param reason The reason for shutting down this job.
-			@param exitStatus Status upon exit.
 			@return A mailer file for sending email.  Don't forget
 			to do an email_close() on it!  NULL returned if no email
 			to be sent.
 		 */
-	FILE* shutDownEmail(int reason, int exitStatus);
+	FILE* shutDownEmail( int reason );
 
 		/** Everyone should be able to shut down.<p>
 			This function is <b>pure virtual</b>.
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
-			@param exitStatus The status upon exit
 		 */
-	virtual void shutDown( int reason, int exitStatus ) = 0;
+	virtual void shutDown( int reason ) = 0;
 
 		/** Put this job on hold, if requested, notify the user about
 			it, and exit with the appropriate status so that the
@@ -150,12 +148,11 @@ class BaseShadow : public Service
 
 		/** Write out the proper things to the user log upon
 			a job's exit.  
-			@param exitStatus The number from wait()
 			@param exitReason The reason we exited
 			@param res The remote resource that exited.  Needed for 
 			             such things as amount of bytes transferred, etc.
 		*/
-	void endingUserLog( int exitStatus, int exitReason );
+	void endingUserLog( int exitReason );
 
 		/** Change to the 'Iwd' directory.  Send email if problem.
 			@return 0 on success, -1 on failure.
@@ -219,6 +216,23 @@ class BaseShadow : public Service
 	virtual struct rusage getRUsage( void ) = 0;
 
 	virtual bool setMpiMasterInfo( char* str ) = 0;
+
+		/** Did this shadow's job exit by a signal or not?  This is
+			virtual since each kind of shadow will need to implement a
+			different method to decide this. */
+	virtual bool exitedBySignal( void ) = 0;
+
+		/** If this shadow's job exited by a signal, what was it?  If
+			not, return -1.  This is virtual since shadow will need to
+			implement a different method to supply this
+			information. */ 
+	virtual int exitSignal( void ) = 0;
+
+		/** If this shadow's job exited normally, what was the return
+			code?  If it was killed by a signal, return -1.  This is
+			virtual since shadow will need to implement a different
+			method to supply this information. */
+	virtual int exitCode( void ) = 0;
 
 		// make UserLog static so it can be accessed by EXCEPTION handler
 	static UserLog uLog;

@@ -53,7 +53,7 @@ class MpiResource : public RemoteResource {
 		/** Call RemoteResource::resourceExit() and log a
 			NodeTerminatedEvent to the UserLog
 		*/
-	void resourceExit( int exit_reason, int exit_status );
+	void resourceExit( int reason, int status );
 
 		/** Before we log anything to the UserLog, we want to
 			initialize the UserLog with our node number.  

@@ -73,25 +73,27 @@ MpiResource::printExit( FILE *fp ) {
 
 
 void
-MpiResource::resourceExit( int exit_reason, int exit_status ) 
+MpiResource::resourceExit( int reason, int status ) 
 {
 	dprintf( D_FULLDEBUG, "Inside MpiResource::resourceExit()\n" );
 
-	RemoteResource::resourceExit( exit_reason, exit_status );
+	RemoteResource::resourceExit( reason, status );
 
 		// Also log a NodeTerminatedEvent to the ULog
 
 	NodeTerminatedEvent event;
-	switch( exit_reason ) {
+	switch( reason ) {
 	case JOB_EXITED:
 		{
 			// Job exited on its own, normally or abnormally
 			NodeTerminatedEvent event;
 			event.node = node_num;
-			if( (event.normal = (WIFEXITED(exitStatus)!=0)) ) {
-				event.returnValue = WEXITSTATUS(exitStatus);
+			if( exited_by_signal ) {
+				event.normal = false;
+				event.signalNumber = exit_value;
 			} else {
-				event.signalNumber = WTERMSIG(exitStatus);
+				event.normal = true;
+				event.returnValue = exit_value;
 			}
 			
 				// TODO: fill in local/total rusage
@@ -121,7 +123,7 @@ MpiResource::resourceExit( int exit_reason, int exit_status )
 		break;
 	default:
 		dprintf( D_ALWAYS, "Warning: Unknown exit_reason %d in "
-				 "MpiResource::resourceExit()\n", exit_reason );  
+				 "MpiResource::resourceExit()\n", reason );  
 	}	
 
 }

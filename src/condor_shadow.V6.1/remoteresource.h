@@ -184,11 +184,6 @@ class RemoteResource : public Service {
 		*/ 
 	int  getExitReason();
 
-		/** Return the status this host exited with.
-			@return The exit status for this host.
-		*/ 
-	int  getExitStatus();
-	
 		/** Set the sinful string and capability for the startd
 			associated with this remote resource.
 			@param sinful The sinful string for the startd
@@ -215,11 +210,6 @@ class RemoteResource : public Service {
 			@param reason Why did it exit?  Film at 11.
 		*/
 	virtual void setExitReason( int reason );
-
-		/** Set the status this host exited with.  
-			@param status Host exit status.
-		*/
-	virtual void setExitStatus( int status );
 
 		/** Set this resource's jobAd */
 	void setJobAd( ClassAd *jA ) { this->jobAd = jA; };
@@ -287,6 +277,17 @@ class RemoteResource : public Service {
 		*/
 	virtual bool writeULogEvent( ULogEvent* event );
 
+		/// Did the job on this resource exit with a signal?
+	bool exitedBySignal( void ) { return exited_by_signal; };
+
+		/** If the job on this resource exited with a signal, return
+			the signal.  If not, return -1. */
+	int exitSignal( void );
+
+		/** If the job on this resource exited normally, return the
+			exit code.  If it was killed by a signal, return -1. */ 
+	int exitCode( void );
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -304,8 +305,9 @@ class RemoteResource : public Service {
 	char *fs_domain;
 	char *uid_domain;
 	ReliSock *claim_sock;
-	int exitReason;
-	int exitStatus;
+	int exit_reason;
+	int exit_value;
+	bool exited_by_signal;
 
 		/// This is the timeout period to hear from a startd.  (90 seconds).
 	static const int SHADOW_SOCK_TIMEOUT;

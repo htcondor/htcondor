@@ -246,7 +246,7 @@ BaseShadow::emailUser( char *subjectline )
 }
 
 
-FILE* BaseShadow::shutDownEmail(int reason, int exitStatus) 
+FILE* BaseShadow::shutDownEmail( int reason ) 
 {
 
 		// everything else we do only makes sense if there is a JobAd, 
@@ -274,8 +274,7 @@ FILE* BaseShadow::shutDownEmail(int reason, int exitStatus)
 			// do not send email if the job has not exited yet, or
 			// if the job exited with something other than a signal.
 			if( (reason != JOB_EXITED) || 
-				((reason == JOB_EXITED) && 
-				 (WIFEXITED(exitStatus))) ) {
+				((reason == JOB_EXITED) && !(exitedBySignal())) ) {
                 send_email = FALSE;
 			}
 			break;
@@ -317,7 +316,7 @@ void BaseShadow::initUserLog()
 }
 
 void
-BaseShadow::endingUserLog( int exitStatus, int exitReason )
+BaseShadow::endingUserLog( int exitReason )
 {
 	struct rusage run_remote_rusage;
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
@@ -340,7 +339,6 @@ BaseShadow::endingUserLog( int exitStatus, int exitReason )
 			// remote rusage
 			event.run_remote_rusage = run_remote_rusage;
 			
-			
 				// we want to log the events from the perspective of the
 				// user job, so if the shadow *sent* the bytes, then that
 				// means the user job *received* the bytes
@@ -357,10 +355,12 @@ BaseShadow::endingUserLog( int exitStatus, int exitReason )
 			// Job exited on its own, normally or abnormally
 			{
 			JobTerminatedEvent event;
-			if ( (event.normal = (WIFEXITED(exitStatus)!=0)) ) {
-				event.returnValue = WEXITSTATUS(exitStatus);
+			if( exitedBySignal() ) {
+				event.normal = false;
+				event.signalNumber = exitSignal();
 			} else {
-				event.signalNumber = WTERMSIG(exitStatus);
+				event.normal = true;
+				event.returnValue = exitCode();
 			}
 			
 			// TODO: fill in local/total rusage

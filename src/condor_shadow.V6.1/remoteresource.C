@@ -64,7 +64,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	fs_domain = NULL;
 	uid_domain = NULL;
 	claim_sock = NULL;
-	exitReason = exitStatus = -1;
+	exit_reason = -1;
+	exited_by_signal = false;
+	exit_value = -1;
 	memset( &remote_rusage, 0, sizeof(struct rusage) );
 	disk_usage = 0;
 	image_size = 0;
@@ -212,8 +214,16 @@ RemoteResource::dprintfSelf( int debugLevel )
 		shadow->dprintf( debugLevel, "\tstarterAddr: %s\n", 
 						 starterAddress );
 	}
-	shadow->dprintf( debugLevel, "\texitReason: %d\n", exitReason );
-	shadow->dprintf( debugLevel, "\texitStatus: %d\n", exitStatus );
+	shadow->dprintf( debugLevel, "\texit_reason: %d\n", exit_reason );
+	shadow->dprintf( debugLevel, "\texited_by_signal: %s\n", 
+					 exited_by_signal ? "True" : "False" );
+	if( exited_by_signal ) {
+		shadow->dprintf( debugLevel, "\texit_signal: %d\n", 
+						 exit_value );
+	} else {
+		shadow->dprintf( debugLevel, "\texit_code: %d\n", 
+						 exit_value );
+	}
 }
 
 
@@ -222,21 +232,22 @@ RemoteResource::printExit( FILE *fp )
 {
 	char ename[ATTRLIST_MAX_EXPRESSION];
 	int got_exception = jobAd->LookupString(ATTR_EXCEPTION_NAME,ename);
+	char* reason_str = NULL;
+	jobAd->LookupString( ATTR_EXIT_REASON, &reason_str );
 
-	switch ( exitReason ) {
+	switch ( exit_reason ) {
 	case JOB_EXITED: {
-		if ( WIFSIGNALED(exitStatus) ) {
-			
-			if(got_exception) {
-				fprintf ( fp, "died with exception %s\n", ename );
+		if( exited_by_signal ) {
+			if( got_exception ) {
+				fprintf( fp, "died with exception %s\n", ename );
 			} else {
-				fprintf ( fp, "died on %s.\n", 
-						  daemonCore->GetExceptionString(WTERMSIG(exitStatus)) );
+				fprintf( fp, "died on %s.\n", reason_str ? 
+						 reason_str :
+						 daemonCore->GetExceptionString(exit_value) );
 			}
-		}
-		else {
+		} else {
 #ifndef WIN32
-			if ( WEXITSTATUS(exitStatus) == ENOEXEC ) {
+			if( exit_value == ENOEXEC ) {
 					/* What has happened here is this:  The starter
 					   forked, but the exec failed with ENOEXEC and
 					   called exit(ENOEXEC).  The exit appears normal, 
@@ -247,8 +258,8 @@ RemoteResource::printExit( FILE *fp )
 			} else 
 #endif  // of ifndef WIN32
 			{
-				fprintf ( fp, "exited normally with status %d.\n", 
-						  WEXITSTATUS(exitStatus) );
+				fprintf( fp, "exited normally with status %d.\n", 
+						 exit_value );
 			}
 		}
 
@@ -273,7 +284,7 @@ RemoteResource::printExit( FILE *fp )
 		break;
 	}
 	default: {
-		fprintf ( fp, "has a strange exit reason of %d.\n", exitReason );
+		fprintf ( fp, "has a strange exit reason of %d.\n", exit_reason );
 	}
 	} // switch()
 }
@@ -292,7 +303,7 @@ RemoteResource::handleSysCalls( Stream *sock )
 	if (do_REMOTE_syscall() < 0) {
 		shadow->dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
 			// we call our shadow's shutdown method:
-		shadow->shutDown(exitReason, exitStatus);
+		shadow->shutDown( exit_reason );
 			// close sock on this end...the starter has gone away.
 		return TRUE;
 	}
@@ -447,14 +458,27 @@ RemoteResource::getClaimSock()
 int
 RemoteResource::getExitReason()
 {
-	return exitReason;
+	return exit_reason;
 }
 
 
 int
-RemoteResource::getExitStatus()
+RemoteResource::exitSignal( void )
 {
-	return exitStatus;
+	if( exited_by_signal ) {
+		return exit_value;
+	}
+	return -1;
+}
+
+
+int
+RemoteResource::exitCode( void )
+{
+	if( ! exited_by_signal ) {
+		return exit_value;
+	}
+	return -1;
 }
 
 
@@ -552,32 +576,17 @@ RemoteResource::setStarterOpsys( const char * opsys )
 void
 RemoteResource::setExitReason( int reason )
 {
-	// Set the exitReason, but not if the reason is JOB_KILLED.
-	// This prevents exitReason being reset from JOB_KILLED to
+	// Set the exit_reason, but not if the reason is JOB_KILLED.
+	// This prevents exit_reason being reset from JOB_KILLED to
 	// JOB_NOT_CKPTED or some such when the starter gets killed
 	// and the syscall sock goes away.
 
 	shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
 					 machineName ? machineName : "???", reason ); 
 
-	if( exitReason != JOB_KILLED ) {
-		exitReason = reason;
+	if( exit_reason != JOB_KILLED ) {
+		exit_reason = reason;
 	}
-}
-
-
-void
-RemoteResource::setExitStatus( int status )
-{
-	shadow->dprintf ( D_FULLDEBUG, "setting exit status on %s to %d\n", 
-					  machineName ? machineName : "???", status );
-	exitStatus = status;
-
-		// In addition, we insert the status into our job ClassAd so
-		// that all the user policy stuff can refer to it.
-	char buf[ATTRLIST_MAX_EXPRESSION];
-	sprintf( buf, "%s=%d", ATTR_JOB_EXIT_STATUS, exitStatus );
-	jobAd->InsertOrUpdate( buf );
 
 	setResourceState( RR_FINISHED );
 }
@@ -657,17 +666,45 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_HIERARCHY,string_value) ) {
 		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_HIERARCHY,string_value);
-		jobAd->InsertOrUpdate(tmp);
+		jobAd->Insert( tmp );
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_NAME,string_value) ) {
 		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_NAME,string_value);
-		jobAd->InsertOrUpdate(tmp);
+		jobAd->Insert( tmp );
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_TYPE,string_value) ) {
 		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_TYPE,string_value);
-		jobAd->InsertOrUpdate(tmp);
+		jobAd->Insert( tmp );
+	}
+
+	if( update_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_value) ) {
+		if( int_value ) {
+			sprintf( tmp, "%s=TRUE", ATTR_ON_EXIT_BY_SIGNAL );
+			exited_by_signal = true;
+		} else {
+			sprintf( tmp, "%s=FALSE", ATTR_ON_EXIT_BY_SIGNAL );
+			exited_by_signal = false;
+		}
+		jobAd->Insert( tmp );
+	}
+
+	if( update_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_value) ) {
+		sprintf( tmp, "%s=%d", ATTR_ON_EXIT_SIGNAL, int_value );
+		exit_value = int_value;
+		jobAd->Insert( tmp );
+	}
+
+	if( update_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_value) ) {
+		sprintf( tmp, "%s=%d", ATTR_ON_EXIT_CODE, int_value );
+		exit_value = int_value;
+		jobAd->Insert( tmp );
+	}
+
+	if( update_ad->LookupString(ATTR_EXIT_REASON,string_value) ) {
+		sprintf( tmp, "%s=\"%s\"", ATTR_EXIT_REASON, string_value );
+		jobAd->Insert( tmp );
 	}
 
 	char* job_state = NULL;
@@ -837,7 +874,30 @@ RemoteResource::resourceExit( int exit_reason, int exit_status )
 {
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( exit_reason );
-	setExitStatus( exit_status );
+
+	if( exit_value == -1 ) {
+			/* 
+			   Backwards compatibility code...  If we don't have a
+			   real value for exit_value yet, it means the starter
+			   we're talking to doesn't parse the status integer
+			   itself and set the various ClassAd attributes
+			   appropriately.  To prevent any trouble in this case, we
+			   do the parsing here so everything in the shadow can
+			   still work.  Doing this ourselves is potentially
+			   inaccurate, since the starter might be a different
+			   platform and we might get different results, but it's
+			   better than nothing.  However, this is what we've
+			   always done in the past, so it's no less accurate than
+			   an old shadow talking to the same starter...
+			*/
+		if( WIFSIGNALED(exit_status) ) {
+			exited_by_signal = true;
+			exit_value = WTERMSIG( exit_status );
+		} else {
+			exited_by_signal = false;
+			exit_value = WEXITSTATUS( exit_status );
+		}
+	}
 }
 
 

@@ -87,9 +87,8 @@ class MPIShadow : public BaseShadow
 		/** Shut down properly.  Send email to the user if requested.
 			Calls DC_Exit(), therefore it doesn't return.
 			@param exitReason The reason this mpi job exited.
-			@param exitStatus The Status upon exit. 
 		*/
-	void shutDown( int exitReason, int exitStatus );
+	void shutDown( int exitReason );
 
 		/** Handle job removal. */
 	int handleJobRemoval( int sig );
@@ -104,6 +103,12 @@ class MPIShadow : public BaseShadow
 
 	float bytesSent( void );
 	float bytesReceived( void );
+
+	bool exitedBySignal( void );
+
+	int exitSignal( void );
+
+	int exitCode( void );
 
 		/** Record the IP and port where the MPI master is running for
 			this computation.  Once we get this info, we can spawn all
@@ -163,9 +168,8 @@ class MPIShadow : public BaseShadow
 			job.  It has two functions: 1) figure out if all the 
 			resources should be told to kill themselves and 
 			2) return TRUE if every resource is dead. 
-		    @param exitReason The job exit reason.
-		    @param exitStatus The exit status.*/
-	int shutDownLogic( int& exitReason, int& exitStatus );
+		    @param exitReason The job exit reason. */
+	int shutDownLogic( int& exitReason );
 
         /** The number of the next resource to start...when in start mode */
     int nextResourceToStart;
@@ -179,9 +183,6 @@ class MPIShadow : public BaseShadow
 		/** Used to determine actual exit conditions...*/
 	int actualExitReason;
 	
-		/** Used to determine actual exit conditions...*/
-	int actualExitStatus;
-
 		/** Find the MpiResource corresponding to the given node
 			number.
 			@param node Which node you're looking for.

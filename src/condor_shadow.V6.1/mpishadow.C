@@ -40,7 +40,6 @@ MPIShadow::MPIShadow() {
     ResourceList.fill(NULL);
     ResourceList.truncate(-1);
 	actualExitReason = -1;
-	actualExitStatus = -1;    
 	info_tid = -1;
 #if ! MPI_USES_RSH
 	master_addr = NULL;
@@ -114,7 +113,7 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
     sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
     if( !temp->Insert(buf) ) {
         dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
 
 	replaceNode( temp, 0 );
@@ -339,7 +338,7 @@ MPIShadow::startMaster()
     if( (pg=fopen( pgfilename, "w" )) == NULL ) {
         dprintf( D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
         
         // get the machine name (using string_to_sin and sin_to_hostname)
@@ -368,13 +367,13 @@ MPIShadow::startMaster()
     if ( fchmod( fileno( pg ), 0666 ) < 0 ) {
         dprintf ( D_ALWAYS, "fchmod failed! errno %d\n", errno );
         fclose( pg );
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
 #endif
 
     if ( fclose( pg ) == EOF ) {
         dprintf ( D_ALWAYS, "fclose failed!  errno = %d\n", errno );
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
 
         // back to master resource:
@@ -421,7 +420,7 @@ MPIShadow::startComrade( int cmd, Stream* s )
          !s->end_of_message() )
     {
         dprintf ( D_ALWAYS, "Failed to receive comrade args!" );
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
 
     dprintf ( D_PROTOCOL, "#8 - Received args from sneaky rsh\n" );
@@ -449,7 +448,7 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 	if ( !ad->LookupString( ATTR_JOB_ARGUMENTS, args )) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_JOB_ARGUMENTS );
-		shutDown( JOB_NOT_STARTED, 0 );
+		shutDown( JOB_NOT_STARTED );
 	}
     
     char tmp[_POSIX_ARG_MAX];
@@ -461,7 +460,7 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 
 	if ( !ad->Insert( tmp )) {
 		dprintf( D_ALWAYS, "Unable to update args! Aborting.\n" );
-		shutDown( JOB_NOT_STARTED, 0 );
+		shutDown( JOB_NOT_STARTED );
 	}
 
 		// While we're at it, if the job wants files transfered,
@@ -494,7 +493,7 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 	if ( !ad->Insert( tmp )) {
 		dprintf( D_ALWAYS, "Unable to update %s! Aborting.\n",
 				 ATTR_TRANSFER_INPUT_FILES );
-		shutDown( JOB_NOT_STARTED, 0 );
+		shutDown( JOB_NOT_STARTED );
 	}
 }
 
@@ -515,14 +514,14 @@ MPIShadow::hackComradeAd( char *comradeArgs, ClassAd *ad )
     if ( !(tmparg = strstr( comradeArgs, "condor_exec" )) ) {
         dprintf ( D_ALWAYS, "No \"condor_exec\" found in comradeArgs!\n" );
         dprintf ( D_ALWAYS, "Comrade Args: %s\n", comradeArgs );
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
     sprintf( newargs, "%s", &tmparg[12] );
     
     char args[2048];
     if ( !ad->LookupString( ATTR_JOB_ARGUMENTS, args )) {
         dprintf ( D_ALWAYS, "Failed to get Job args in hackComradeAd!\n" );
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
 
     char tmp[2048];
@@ -536,7 +535,7 @@ MPIShadow::hackComradeAd( char *comradeArgs, ClassAd *ad )
 
     if ( !ad->Insert( tmp )) {
         dprintf ( D_ALWAYS, "Failed to insert Job args!\n" );
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
 }
 
@@ -673,7 +672,7 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 					 "ERROR: can't parse sinful string (%s) of root node!\n", 
 					 sinful );
 			delete [] sinful;
-			shutDown( JOB_NOT_STARTED, 0 );
+			shutDown( JOB_NOT_STARTED );
 		}
 		sprintf( buf, "MPICH_ROOT=%s", &sinful[1] );
 		env += buf;
@@ -701,7 +700,7 @@ MPIShadow::spawnNode( MpiResource* rr )
 {
 		// First, contact the startd to spawn the job
     if( rr->activateClaim() != OK ) {
-        shutDown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED );
     }
 
     dprintf ( D_PROTOCOL, "Just requested resource for node %d\n",
@@ -720,14 +719,14 @@ MPIShadow::spawnNode( MpiResource* rr )
 
 
 void 
-MPIShadow::shutDown( int exitReason, int exitStatus ) {
+MPIShadow::shutDown( int exitReason ) {
 
 		/* With many resources, we have to figure out if all of
 		   them are done, and we have to figure out if we need
 		   to kill others.... */
 	int i;
 
-	if( !shutDownLogic( exitReason, exitStatus ) ) {
+	if( !shutDownLogic( exitReason ) ) {
 		return;  // leave if we're not *really* ready to shut down.
 	}
 
@@ -743,7 +742,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
     }
 
 		/* write a terminate event to the user log. */
-	endingUserLog( exitStatus, exitReason );
+	endingUserLog( exitReason );
 
 	// As we leave, we need to deactivate the claim.
 	// Does this go here, or should it go earlier
@@ -790,7 +789,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 
 		// returns a mailer if desired
 	FILE* mailer;
-	mailer = shutDownEmail( exitReason, exitStatus );
+	mailer = shutDownEmail( exitReason );
 	if ( mailer ) {
 		fprintf( mailer, "Your Condor-MPI job %d.%d has completed.\n", 
 				 getCluster(), getProc() );
@@ -803,11 +802,11 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 		fprintf( mailer, " ------------------------    -----------\n" );
 
 		int allexitsone = TRUE;
-		int status;
+		int exit_code;
 		for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 			(ResourceList[i])->printExit( mailer );
-			status = (ResourceList[i])->getExitStatus();
-			if ( WEXITSTATUS(status) != 1 ) {
+			exit_code = (ResourceList[i])->exitCode();
+			if( exit_code != 1 ) {
 				allexitsone = FALSE;
 			}
 		}
@@ -831,7 +830,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 }
 
 int 
-MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
+MPIShadow::shutDownLogic( int& exitReason ) {
 
 		/* What sucks for us here is that we know we want to shut 
 		   down, but we don't know *why* we are shutting down.
@@ -841,8 +840,8 @@ MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
 		   time we *don't* remove everything is when all the 
 		   resources have exited normally.  */
 
-	dprintf ( D_FULLDEBUG, "Entering shutDownLogic(r=%d, s=0x%x).\n",
-			  exitReason, exitStatus );
+	dprintf( D_FULLDEBUG, "Entering shutDownLogic(r=%d)\n", 
+			 exitReason );
 
 		/* if we have a 'pre-startup' exit reason, we can just
 		   dupe that to all resources and exit right away. */
@@ -850,7 +849,6 @@ MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
 		 exitReason == JOB_SHADOW_USAGE ) {
 		for ( int i=0 ; i<ResourceList.getlast() ; i++ ) {
 			(ResourceList[i])->setExitReason( exitReason );
-			(ResourceList[i])->setExitStatus( exitStatus );
 		}
 		return TRUE;
 	}
@@ -861,8 +859,8 @@ MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
 
 		/* If the job on the resource has exited normally, then
 		   we don't want to remove everyone else... */
-	if ( (exitReason == JOB_EXITED) && (WIFEXITED(exitStatus)) )  {
-		dprintf ( D_FULLDEBUG, "Normal exit\n" );
+	if( (exitReason == JOB_EXITED) && !(exitedBySignal()) ) {
+		dprintf( D_FULLDEBUG, "Normal exit\n" );
 		normal_exit = TRUE;
 	}
 
@@ -872,7 +870,6 @@ MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
 		handleJobRemoval( 666 );
 
 		actualExitReason = exitReason;
-		actualExitStatus = exitStatus;
 		shutDownMode = TRUE;
 	}
 
@@ -885,9 +882,9 @@ MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
 		r = ResourceList[i];
 		char *res = NULL;
 		r->getMachineName( res );
-		dprintf ( D_FULLDEBUG, "Resource %s...%13s %d 0x%x\n", res,
-				  rrStateToString(r->getResourceState()), 
-				  r->getExitReason(), r->getExitStatus() );
+		dprintf( D_FULLDEBUG, "Resource %s...%13s %d\n", res,
+				 rrStateToString(r->getResourceState()), 
+				 r->getExitReason() );
 		delete [] res;
 		switch ( r->getResourceState() )
 		{
@@ -897,7 +894,6 @@ MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
 				break;            // move on...
 			case RR_PRE: {
 					// what the heck is going on? - shouldn't happen.
-				r->setExitStatus( 0 );
 				r->setExitReason( JOB_NOT_STARTED );
 				break;
 			}
@@ -916,11 +912,10 @@ MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
 	} // for()
 
 	if ( (!normal_exit) && shutDownMode ) {
-		/* We want the exit reason and status to be set to the exit
-		   reason and status of the job that caused us to shut down.
-		   Therefore, we set these here: */
+		/* We want the exit reason  to be set to the exit
+		   reason of the job that caused us to shut down.
+		   Therefore, we set this here: */
 		exitReason = actualExitReason;
-		exitStatus = actualExitStatus;
 	}
 
 	if ( alldone ) {
@@ -1147,6 +1142,36 @@ MPIShadow::setMpiMasterInfo( char* str )
 #else /* ! MPI_USES_RSH */
 	return false;
 #endif /* ! MPI_USES_RSH */
+}
+
+
+bool
+MPIShadow::exitedBySignal( void )
+{
+	if( ResourceList[0] ) {
+		return ResourceList[0]->exitedBySignal();
+	}
+	return false;
+}
+
+
+int
+MPIShadow::exitSignal( void )
+{
+	if( ResourceList[0] ) {
+		return ResourceList[0]->exitSignal();
+	}
+	return -1;
+}
+
+
+int
+MPIShadow::exitCode( void )
+{
+	if( ResourceList[0] ) {
+		return ResourceList[0]->exitCode();
+	}
+	return -1;
 }
 
 

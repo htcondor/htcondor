@@ -217,7 +217,7 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 		logExecuteEvent();
 	} else {
 			// we're screwed, give up:
-		shutDown( JOB_NOT_STARTED, 0 );
+		shutDown( JOB_NOT_STARTED );
 	}
 }
 
@@ -235,7 +235,8 @@ UniShadow::logExecuteEvent( void )
 }
 
 
-void UniShadow::shutDown( int reason, int exitStatus ) 
+void
+UniShadow::shutDown( int reason ) 
 {
 
 		// Deactivate the claim
@@ -254,12 +255,19 @@ void UniShadow::shutDown( int reason, int exitStatus )
 		return;
 	}
 
+	int exit_value;
+	if( exitedBySignal() ) {
+		exit_value = exitSignal();
+	} else {
+		exit_value = exitCode();
+	}
+
 		// if job exited, check and see if it meets the user's
 		// ExitRequirements, and/or update the job ad in the schedd
 		// so that the exit status is recoreded in the history file.
 	if ( reason == JOB_EXITED ) {
 		char buf[ATTRLIST_MAX_EXPRESSION];
-		sprintf(buf,"%s=%d",ATTR_JOB_EXIT_STATUS,exitStatus);
+		sprintf(buf,"%s=%d",ATTR_JOB_EXIT_STATUS, exit_value);
 		jobAd->InsertOrUpdate(buf);
 		int exit_requirements = TRUE;	// default to TRUE if not specified
 		jobAd->EvalBool(ATTR_JOB_EXIT_REQUIREMENTS,jobAd,exit_requirements);
@@ -269,7 +277,7 @@ void UniShadow::shutDown( int reason, int exitStatus )
 			// history file.
 			if ( ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT) ) {
 				SetAttributeInt(getCluster(),getProc(),ATTR_JOB_EXIT_STATUS,
-					exitStatus);
+					exit_value);
 				if(jobAd->LookupString(ATTR_EXCEPTION_HIERARCHY,buf)) {
 					SetAttributeString(getCluster(),getProc(),ATTR_EXCEPTION_HIERARCHY,buf);
 				}
@@ -284,16 +292,16 @@ void UniShadow::shutDown( int reason, int exitStatus )
 		} else {
 			// exit requirements expression is FALSE! 
 			EXCEPT("Job exited with status %d; failed %s expression",
-				exitStatus,ATTR_JOB_EXIT_REQUIREMENTS);
+				exit_value,ATTR_JOB_EXIT_REQUIREMENTS);
 		}
 	}
 
 		// write stuff to user log:
-	endingUserLog( exitStatus, reason );
+	endingUserLog( reason );
 
 		// returns a mailer if desired
 	FILE* mailer;
-	mailer = shutDownEmail( reason, exitStatus );
+	mailer = shutDownEmail( reason );
 	if ( mailer ) {
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
@@ -420,3 +428,26 @@ UniShadow::getDiskUsage( void )
 {
 	return remRes->getDiskUsage();
 }
+
+
+bool
+UniShadow::exitedBySignal( void )
+{
+	return remRes->exitedBySignal();
+}
+
+
+int
+UniShadow::exitSignal( void )
+{
+	return remRes->exitSignal();
+}
+
+
+int
+UniShadow::exitCode( void )
+{
+	return remRes->exitCode();
+}
+
+

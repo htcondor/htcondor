@@ -78,9 +78,8 @@ class UniShadow : public BaseShadow
 			Q manager, sends email to the user if requested, and
 			calls DC_Exit().  It doesn't return.
 			@param reason The reason this job exited.
-			@param exitStatus Status upon exit.
 		 */
-	void shutDown( int reason, int exitStatus );
+	void shutDown( int reason );
 	
 		/**
 		 */
@@ -99,6 +98,12 @@ class UniShadow : public BaseShadow
 	int getImageSize( void );
 
 	int getDiskUsage( void );
+
+	bool exitedBySignal( void );
+
+	int exitSignal( void );
+
+	int exitCode( void );
 
 		/** This function is specifically used for spawning MPI jobs.
 			So, if for some bizzare reason, it gets called for a
