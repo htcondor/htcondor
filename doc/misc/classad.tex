@@ -138,41 +138,42 @@ ClassAds, there is a potential for namespace ambiguities.  The following
 rules define the semantics of attribute references made by ad $A$ that is being 
 evaluated in a context with another ad $B$:
 \begin{enumerate}
-	\item If the reference is prefixed by a scope resolution prefix, 
-	\begin{itemize}
-		\item If the prefix is \texttt{MY.}, the attribute is looked up in 
-			ClassAd $A$.  If the named attribute does not exist in $A$, the
-			value of the reference is \texttt{UNDEFINED}.  Otherwise, the
-			value of the reference is the value of the expression bound to
-			the attribute name.
+    \item If the reference is prefixed by a scope resolution prefix, 
+    \begin{itemize}
+        \item If the prefix is \texttt{MY.}, the attribute is looked up in 
+        ClassAd $A$.  If the named attribute does not exist in $A$, the
+        value of the reference is \texttt{UNDEFINED}.  Otherwise, the
+        value of the reference is the value of the expression bound to
+        the attribute name.
 
-		\item Similarly, if the prefix is \texttt{TARGET.}, the attribute is 
-			looked up in ClassAd $B$.  If the named attribute does not exist in 
-			$B$, the value of the reference is \texttt{UNDEFINED}.  Otherwise, 
-			the value of the reference is the value of the expression bound to
-			the attribute name.
+        \item Similarly, if the prefix is \texttt{TARGET.}, the attribute is 
+        looked up in ClassAd $B$.  If the named attribute does not exist in 
+        $B$, the value of the reference is \texttt{UNDEFINED}.  Otherwise, 
+        the value of the reference is the value of the expression bound to
+        the attribute name.
 
-		\item Finally, if the prefix is \texttt{ENV.}, the attribute is
-			evaluated in the ``environment.''  Currently, the only attribute
-			of the environment is \Attr{CurrentTime}, which evaluates to the
-			integer value returned by the system call \texttt{time(2)}.
-	\end{itemize}
+    \end{itemize}
 
-	\item If the reference is not prefixed by a scope resolution prefix,
-	\begin{itemize}
-		\item If the attribute is defined in $A$, the value of the reference
-			is the value of the expression bound to the attribute name in $A$.
-		\item Otherwise, if the attribute is defined in $B$, the value of the
-			reference is the value of the expression bound to the attribute
-			name in $B$.
-		\item Otherwise, if the attribute is defined in the environment, the
-			value of the reference is the evaluated value in the environment.
-		\item Otherwise, the value of the reference is \texttt{UNDEFINED}.
-	\end{itemize}
+    \item If the reference is not prefixed by a scope resolution prefix,
+    \begin{itemize}
+        \item If the attribute is defined in $A$, the value of the reference
+        is the value of the expression bound to the attribute name in $A$.
+        \item Otherwise, if the attribute is defined in $B$, the value of the
+        reference is the value of the expression bound to the attribute
+        name in $B$.
+        \item Otherwise, if the attribute is defined in the ClassAd environment, the
+        value from the environment is returned.
+        This is a special environment, to be
+        distinguished from the Unix environment.
+        Currently, the only attribute
+        of the environment is \Attr{CurrentTime}, which evaluates to the
+        integer value returned by the system call \texttt{time(2)}.
+        \item Otherwise, the value of the reference is \texttt{UNDEFINED}.
+    \end{itemize}
 
-	\item Finally, if the reference refers to an expression that is itself in 
-	the process of being evaluated, there is a circular dependency in the 
-	evaluation.  The value of the reference is \texttt{ERROR}.
+    \item Finally, if the reference refers to an expression that is itself in 
+    the process of being evaluated, there is a circular dependency in the 
+    evaluation.  The value of the reference is \texttt{ERROR}.
 \end{enumerate}
 
 \subsubsection{Operators}
