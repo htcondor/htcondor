@@ -85,7 +85,7 @@ KILL		: $(ActivityTimer) > $(MaxVacateTime)
 #CONTINUE_VANILLA	: $(CPU_Idle) && KeyboardIdle > $(ContinueIdleTime)
 #PREEMPT_VANILLA	: ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
 			   (Activity == "Suspended") ) || \
-			  ( $(MachineBusy) && (Activity != "Suspended") )
+			  ( SUSPEND_VANILLA && (Activity != "Suspended") )
 #KILL_VANILLA		: $(ActivityTimer) > $(MaxVacateTime)
 
 ##  Periodic checkpointing, comment out to disable.  For jobs smaller
