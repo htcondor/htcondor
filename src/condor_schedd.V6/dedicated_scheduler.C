@@ -302,7 +302,7 @@ ResTimeNode::satisfyJob( ClassAd* job, int max_hosts,
 
 DedicatedScheduler::DedicatedScheduler()
 {
-	idle_jobs = NULL;
+	idle_clusters = NULL;
 	avail_time_list = NULL;
 	resources = NULL;
 	resource_requests = NULL;
@@ -329,7 +329,7 @@ DedicatedScheduler::DedicatedScheduler()
 
 DedicatedScheduler::~DedicatedScheduler()
 {
-	if(	idle_jobs ) { delete idle_jobs; }
+	if(	idle_clusters ) { delete idle_clusters; }
 	if(	resources ) { delete resources; }
 	if(	avail_time_list ) { delete avail_time_list; }
 	if( ds_scheduler ) { delete [] ds_scheduler; }
@@ -1471,6 +1471,117 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 }
 
 
+void
+DedicatedScheduler::clearDedicatedClusters( void )
+{
+	if( ! idle_clusters ) {
+			// we're done
+		return;
+	}
+	delete idle_clusters;
+	idle_clusters = NULL;
+}
+
+
+void
+DedicatedScheduler::addDedicatedCluster( int cluster )
+{
+	if( ! idle_clusters ) {
+		idle_clusters = new ExtArray<int>;
+		idle_clusters->fill(0);
+	}
+	int next = idle_clusters->getlast() + 1;
+	(*idle_clusters)[next] = cluster;
+	dprintf( D_FULLDEBUG, "Found idle MPI cluster %d\n", cluster );
+}
+
+
+// Go through our list of idle clusters we're supposed to deal with,
+// get pointers to all the classads, put it in a big array, and sort
+// that array based on QDate.
+bool
+DedicatedScheduler::sortJobs( void )
+{
+	ClassAd *job;
+	int i, last_cluster, next_cluster, cluster, status;
+	ExtArray<int>* verified_clusters;
+	
+	if( ! idle_clusters ) {
+			// No dedicated jobs found, we're done.
+		dprintf( D_FULLDEBUG, 
+				 "DedicatedScheduler::sortJobs: no jobs found\n" );
+		return false;
+	}
+
+		// First, verify that all the clusters in our array are still
+		// valid jobs, that are still, in fact idle.  If we find any
+		// that are no longer jobs or no longer idle, remove them from
+		// the array.
+	last_cluster = idle_clusters->getlast() + 1;
+	if( ! last_cluster ) {
+			// No dedicated jobs found, we're done.
+		dprintf( D_FULLDEBUG, 
+				 "DedicatedScheduler::sortJobs: no jobs found\n" );
+		return false;
+	}		
+	verified_clusters= new ExtArray<int>( last_cluster );
+	verified_clusters->fill(0);
+	next_cluster = 0;
+	for( i=0; i<last_cluster; i++ ) {
+		cluster = (*idle_clusters)[i];
+		job = GetJobAd( cluster, 0 );
+		if( ! job ) {
+				// This cluster is no longer in the job queue, don't
+				// freak out, just move onto the next cluster.
+			dprintf( D_FULLDEBUG, "Cluster %d is in idle_clusters, "
+					 "but no longer in job queue, removing\n", 
+					 cluster );
+			continue;
+		}
+			// If we found the job ad, make sure it's still idle
+		if (job->LookupInteger(ATTR_JOB_STATUS, status) < 0) {
+			dprintf( D_ALWAYS, "Job %d.0 has no %s attribute.  Ignoring\n",  
+					 cluster, ATTR_JOB_STATUS );
+			continue;
+
+		}
+		if( status != IDLE ) {
+			dprintf( D_FULLDEBUG, "Job %d.0 has non idle status (%d).  "
+					 "Ignoring\n", cluster, status );
+			continue;
+		}
+
+			// If we made it this far, this cluster has been verified,
+			// so put it in our array.
+		(*verified_clusters)[next_cluster++] = cluster;
+
+			// While we're at it, make sure ATTR_SCHEDULER is right
+		setScheduler( job );
+	}
+
+		// No matter what, we want to remove our old array and start
+		// using the verified one...
+	delete idle_clusters;
+	idle_clusters = verified_clusters;
+
+	if( ! next_cluster ) {
+		dprintf( D_FULLDEBUG, "Found no idle dedicated job(s)\n" );		
+		return false;
+	}
+
+	dprintf( D_FULLDEBUG, "Found %d idle dedicated job(s)\n",
+			 next_cluster );
+
+		// Now, sort them by qdate
+	qsort( &(*idle_clusters)[0], next_cluster, sizeof(int), 
+		   clusterSortByDate ); 
+
+		// Show the world what we've got
+	listDedicatedJobs( D_FULLDEBUG );
+	return true;
+}
+	
+
 int
 DedicatedScheduler::handleDedicatedJobs( void )
 {
@@ -1483,11 +1594,12 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	now = 0;
 	dprintf( D_FULLDEBUG, "Set now to: %d\n", (int)now );
 
-		// See if we have any idle MPI jobs to run.
-	if( ! getDedicatedJobs() ) { 
-		dprintf( D_FULLDEBUG, "No dedicated jobs found, "
-				 "done with handleDedicatedJobs()\n" );
-			// Don't treat this as an error...
+		// This will gather up pointers to all the job classads we
+		// care about, and sort them by QDate.
+	if( ! sortJobs() ) {
+			// No jobs, we're done.
+		dprintf( D_FULLDEBUG, "No idle dedicated jobs, "
+				 "handleDedicatedJobs() returning\n" );
 		return TRUE;
 	}
 
@@ -1527,8 +1639,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 		// we bail out early, we won't leak, since we delete all of
 		// these things again before we need to create them the next
 		// time around.
-	delete( idle_jobs );
-	idle_jobs = NULL;
 	if( avail_time_list ) {
 		delete avail_time_list;
 		avail_time_list = NULL;
@@ -1540,78 +1650,24 @@ DedicatedScheduler::handleDedicatedJobs( void )
 }
 
 
-// Iterate through the whole job queue, finding all idle MPI jobs 
-bool
-DedicatedScheduler::getDedicatedJobs( void )
-{
-	ClassAd *job;
-	char constraint[128];
-	int i;
-
-	if( idle_jobs ) {
-		delete idle_jobs;
-	}
-	idle_jobs = new ExtArray<ClassAd*>;
-	idle_jobs->fill(NULL);
-
-	sprintf( constraint, "%s == %d && %s == %d", ATTR_JOB_UNIVERSE, 
-			 MPI, ATTR_JOB_STATUS, IDLE );
-
-	job = GetNextJobByConstraint( constraint, 1 );	// start new interation
-	if( ! job ) {
-			// No dedicated jobs, we're done!
-		dprintf( D_FULLDEBUG, 
-				 "DedicatedScheduler::getDedicatedJobs found no jobs\n" );
-		return false;
-	}
-		// If we're still here, we found something, so keep looking.
-		// We can safely use the same iteration, since no one else
-		// will have done anything between the last call and these
-		// (for example, handling commands, etc).
-
-		// We need to be very careful, since GetNextJobByConstraint()
-		// is just returning pointers to the versions in the job
-		// queue, and we don't want to be deleting or changing those
-		// versions at all.
-	i = 0;
-	(*idle_jobs)[i++] = job;
-	setScheduler( job );
-	while( (job = GetNextJobByConstraint(constraint,0)) ) {
-		(*idle_jobs)[i++] = job;
-		setScheduler( job );
-	}
-
-	dprintf( D_FULLDEBUG, "Found %d dedicated job(s)\n", i );
-
-		// Now, sort them by qdate
-	qsort( &(*idle_jobs)[0], i, sizeof(ClassAd*), jobSortByDate );
-
-		// Show the world what we've got
-	listDedicatedJobs( D_FULLDEBUG );
-
-	return true;
-}
-	
-
 void
 DedicatedScheduler::listDedicatedJobs( int debug_level )
 {
-	ClassAd* job;
 	int cluster, proc;
 	char owner[100];
 
-	if( ! idle_jobs ) {
+	if( ! idle_clusters ) {
 		dprintf( debug_level, "DedicatedScheduler: No dedicated jobs\n" );
 		return;
 	}
 	dprintf( debug_level, "DedicatedScheduler: Listing all dedicated "
 			 "jobs - \n" );
-	int i, last = idle_jobs->getlast();
+	int i, last = idle_clusters->getlast();
 	for( i=0; i<=last; i++ ) {
-		job = (*idle_jobs)[i];
-		job->LookupInteger( ATTR_CLUSTER_ID, cluster );
-		job->LookupInteger( ATTR_PROC_ID, proc );
-		job->LookupString( ATTR_OWNER, owner );
+		cluster = (*idle_clusters)[i];
+		proc = 0;
+		owner[0] = '\0';
+		GetAttributeString( cluster, proc, ATTR_OWNER, owner ); 
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
 				 proc, owner );
 	}
@@ -1824,9 +1880,14 @@ DedicatedScheduler::computeSchedule( void )
 	MRecArray* new_matches;
 
 		// For each job, try to satisfy it as soon as possible.
-	l = idle_jobs->getlast();
+	l = idle_clusters->getlast();
 	for( i=0; i<=l; i++ ) {
-		job = (*idle_jobs)[i];
+
+		job = GetJobAd( (*idle_clusters)[i], 0 );
+		if( ! job ) {
+				// Job is no longer in queue, skip it.
+			continue;
+		}
 
 		if( ! avail_time_list->hasAvailResources() ) {
 				// We no longer have any resources that are available
@@ -1840,6 +1901,7 @@ DedicatedScheduler::computeSchedule( void )
 				// ATTR_CLUSTER_ID is undefined!
 			continue;
 		}
+		ASSERT( cluster == (*idle_clusters)[i] );
 		if( ! job->LookupInteger(ATTR_PROC_ID, proc) ) {
 				// ATTR_PROC_ID is undefined!
 			continue;
@@ -2547,6 +2609,22 @@ jobSortByDate( const void *ptr1, const void* ptr2 )
         return -1;
     }
 
+	return (qdate1 < qdate2);
+}
+
+
+// Comparison function for sorting job ads by QDate
+int
+clusterSortByDate( const void *ptr1, const void* ptr2 )
+{
+	int cluster1 = *((int*)ptr1);
+	int cluster2 = *((int*)ptr2);
+	int qdate1, qdate2;
+
+	if( (GetAttributeInt(cluster1, 0, ATTR_Q_DATE, &qdate1) < 0) || 
+		(GetAttributeInt(cluster2, 0, ATTR_Q_DATE, &qdate2) < 0) ) {
+		return -1;
+	}
 	return (qdate1 < qdate2);
 }
 
