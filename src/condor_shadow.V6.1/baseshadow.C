@@ -1285,7 +1285,7 @@ BaseShadow::updateExprTree( char* name, ExprTree* tree )
 		// Derek Wright, 3/25/02
 //	char* tmp = NULL;
 	ClassAdUnParser unp;
-	string tmpString;
+	std::string tmpString;
 	unp.Unparse( tmpString, tree );
 //	rhs->PrintToNewStr( &tmp );
 	
