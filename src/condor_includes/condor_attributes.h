@@ -52,6 +52,7 @@ const char ATTR_CURRENT_RANK			 [] = "CurrentRank";
 const char ATTR_DISK                     [] = "Disk";
 const char ATTR_ENTERED_CURRENT_ACTIVITY [] = "EnteredCurrentActivity";
 const char ATTR_ENTERED_CURRENT_STATE	 [] = "EnteredCurrentState";
+const char ATTR_EXECUTABLE_SIZE			 [] = "ExecutableSize";
 const char ATTR_FILE_SYSTEM_DOMAIN       [] = "FileSystemDomain";
 const char ATTR_FLAVOR                   [] = "Flavor";
 const char ATTR_IDLE_JOBS                [] = "IdleJobs";
