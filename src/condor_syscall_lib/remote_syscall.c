@@ -3,7 +3,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <stdarg.h>
-#include <assert.h>
+#include "condor_fix_assert.h"
 #include "condor_syscall_mode.h"
 #include "condor_xdr.h"
 #include "condor_constants.h"

@@ -140,7 +140,7 @@
 #include "condor_common.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
-#include <assert.h>
+#include "condor_fix_assert.h"
 
 #include <sys/socket.h>
 
