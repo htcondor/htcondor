@@ -50,8 +50,6 @@ AttrListPrintMask::
 void AttrListPrintMask::
 registerFormat (char *fmt, const char *attr, char *alternate)
 {
-	char *tmp;
-
 	Formatter *newFmt = new Formatter;
 
 	newFmt->fmtKind = PRINTF_FMT;
