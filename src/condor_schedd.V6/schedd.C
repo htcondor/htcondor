@@ -5471,6 +5471,10 @@ Scheduler::shutdown_fast()
 	invalidate_ads();
 
 	int num_closed = daemonCore->Cancel_And_Close_All_Sockets();
+		// now that these have been canceled and deleted, we should
+		// set these to NULL so that we don't try to use them again.
+	shadowCommandrsock = NULL;
+	shadowCommandssock = NULL;
 	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
 			 num_closed ); 
 
@@ -5495,6 +5499,10 @@ Scheduler::schedd_exit()
 	invalidate_ads();
 
 	int num_closed = daemonCore->Cancel_And_Close_All_Sockets();
+		// now that these have been canceled and deleted, we should
+		// set these to NULL so that we don't try to use them again.
+	shadowCommandrsock = NULL;
+	shadowCommandssock = NULL;
 	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
 			 num_closed ); 
 
