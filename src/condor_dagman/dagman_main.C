@@ -331,6 +331,7 @@ void main_timer () {
     if( G.dag->NumJobsRunning() == 0 ) {
 		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 			printf( "ERROR: some jobs failed\n" );
+			G.dag->PrintJobList( Job::STATUS_ERROR );
 		}
 		if( G.rescue_file != NULL ) {
 			debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");

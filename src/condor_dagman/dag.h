@@ -106,6 +106,7 @@ class Dag : public Service {
 
     /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;
+    void PrintJobList( Job::status_t status ) const;
 
     //
     void Print_TermQ () const;

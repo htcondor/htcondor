@@ -614,6 +614,23 @@ void Dag::PrintJobList() const {
     printf ("\t<END>\n");
 }
 
+void
+Dag::PrintJobList( Job::status_t status ) const
+{
+    Job* job;
+    printf( "%s Job List:\n", Job::status_t_names[status] );
+
+    ListIterator<Job> iList( _jobs );
+    while( ( job = iList.Next() ) != NULL ) {
+		if( job->_Status == status ) {
+			printf( "---------------------------------------" );
+			job->Dump();
+			printf( "\n" );
+		}
+    }
+    printf( "---------------------------------------\n" );
+}
+
 //---------------------------------------------------------------------------
 void Dag::Print_TermQ () const {
     printf ("Termination Queue:");
