@@ -502,14 +502,15 @@ by Condor.
    except those specified in
    the \File{condor\_config.root} configuration file.
 
-\item[\DCPerm{IMMEDIATE\_FAMILY}] \label{sec-level-immfamily} 
-   This access level is only used by Condor daemons for internal
-   exchange of requests.
-   An example is the message sent from the \Condor{startd} daemon
-   to the \Condor{schedd} daemon in order to claim a resource.
-   In general, this level of access should be granted to all Condor
-   daemons, implying that this level of access should be granted
-   to the id under which the Condor daemons are run.
+% commented out June 04, as it has not been implemented
+%\item[\DCPerm{DAEMON}] \label{sec-level-daemon} 
+%   This access level is only used by Condor daemons for internal
+%   exchange of requests.
+%   An example is the message sent from the \Condor{startd} daemon
+%   to the \Condor{schedd} daemon in order to claim a resource.
+%   In general, this level of access should be granted to all Condor
+%   daemons, implying that this level of access should be granted
+%   to the id under which the Condor daemons are run.
 
 \item[\DCPerm{OWNER}] \label{sec-level-owner} This level of access is
    required for commands that the owner of a machine (any local user)
@@ -537,19 +538,6 @@ by Condor.
 \subsubsection{\label{sec:Security-NamesValues} Security Macro Names and Values}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-%\index{configuration macro!\texttt{SEC\_DEFAULT\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_READ\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_WRITE\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_CONFIG\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_OWNER\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_NEGOTIATION}}
-% client-side 
-%\index{configuration macro!\texttt{SEC\_DEFAULT\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_CLIENT\_NEGOTIATION}}
-
 The configuration macro names follow a pattern.
 Each of the names starts with the string
 \MacroNI{SEC\_}.
@@ -561,12 +549,14 @@ The levels are
     READ
     WRITE
     ADMINISTRATOR
-    IMMEDIATE_FAMILY
     CONFIG
     OWNER
     NEGOTIATOR
     CLIENT
 \end{verbatim}
+% commented out June 04, as it has not been implemented
+%   DAEMON
+
 Both \MacroNI{DEFAULT} and \MacroNI{CLIENT} 
 from this list are not access levels.
 The \MacroNI{DEFAULT} is used to define all levels of access
@@ -661,15 +651,16 @@ The client uses one of two macros to configure authentication:
     SEC_CLIENT_AUTHENTICATION
 \end{verbatim}
 
-For the daemon, there are eight macros to configure authentication:
+For the daemon, there are seven macros to configure authentication:
 \index{SEC\_READ\_AUTHENTICATION macro@\texttt{SEC\_READ\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_READ\_AUTHENTICATION}}
 \index{SEC\_WRITE\_AUTHENTICATION macro@\texttt{SEC\_WRITE\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION}}
 \index{SEC\_ADMINISTRATOR\_AUTHENTICATION macro@\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION}}
-\index{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION} macro}
-\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_AUTHENTICATION macro@\texttt{SEC\_DAEMON\_AUTHENTICATION} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION}}
 \index{SEC\_CONFIG\_AUTHENTICATION macro@\texttt{SEC\_CONFIG\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_AUTHENTICATION}}
 \index{SEC\_OWNER\_AUTHENTICATION macro@\texttt{SEC\_OWNER\_AUTHENTICATION} macro}
@@ -681,11 +672,12 @@ For the daemon, there are eight macros to configure authentication:
     SEC_READ_AUTHENTICATION
     SEC_WRITE_AUTHENTICATION
     SEC_ADMINISTRATOR_AUTHENTICATION
-    SEC_IMMEDIATE_FAMILY_AUTHENTICATION
     SEC_CONFIG_AUTHENTICATION
     SEC_OWNER_AUTHENTICATION
     SEC_NEGOTIATOR_AUTHENTICATION
 \end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_AUTHENTICATION
 
 As an example, the macro defined in the configuration file
 for a daemon as
@@ -728,8 +720,9 @@ macros
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION\_METHODS}}
 \index{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS}}
-\index{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\__AUTHENTICATION\_METHODS}}
 \index{SEC\_CONFIG\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS}}
 \index{SEC\_OWNER\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_OWNER\_AUTHENTICATION\_METHODS} macro}
@@ -741,11 +734,12 @@ macros
     SEC_READ_AUTHENTICATION_METHODS
     SEC_WRITE_AUTHENTICATION_METHODS
     SEC_ADMINISTRATOR_AUTHENTICATION_METHODS
-    SEC_IMMEDIATE_FAMILY_AUTHENTICATION_METHODS
     SEC_CONFIG_AUTHENTICATION_METHODS
     SEC_OWNER_AUTHENTICATION_METHODS
     SEC_NEGOTIATOR_AUTHENTICATION_METHODS
 \end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_AUTHENTICATION_METHODS
 The methods are
 given as a comma-separated list of acceptable values.
 These variables list the authentication methods that are available
@@ -796,7 +790,7 @@ The client uses one of two macros to enable or disable encryption:
     SEC_CLIENT_ENCRYPTION
 \end{verbatim}
 
-For the daemon, there are eight macros to enable or disable encryption:
+For the daemon, there are seven macros to enable or disable encryption:
 \index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
 \index{SEC\_READ\_ENCRYPTION macro@\texttt{SEC\_READ\_ENCRYPTION} macro}
@@ -805,8 +799,9 @@ For the daemon, there are eight macros to enable or disable encryption:
 \index{configuration macro!\texttt{SEC\_WRITE\_ENCRYPTION}}
 \index{SEC\_ADMINISTRATOR\_ENCRYPTION macro@\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION}}
-\index{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_ENCRYPTION macro@\texttt{SEC\_DAEMON\_ENCRYPTION} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\_ENCRYPTION}}
 \index{SEC\_CONFIG\_ENCRYPTION macro@\texttt{SEC\_CONFIG\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_ENCRYPTION}}
 \index{SEC\_OWNER\_ENCRYPTION macro@\texttt{SEC\_OWNER\_ENCRYPTION} macro}
@@ -818,19 +813,20 @@ For the daemon, there are eight macros to enable or disable encryption:
     SEC_READ_ENCRYPTION
     SEC_WRITE_ENCRYPTION
     SEC_ADMINISTRATOR_ENCRYPTION
-    SEC_IMMEDIATE_FAMILY_ENCRYPTION
     SEC_CONFIG_ENCRYPTION
     SEC_OWNER_ENCRYPTION
     SEC_NEGOTIATOR_ENCRYPTION
 \end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_ENCRYPTION
 
 As an example, the macro defined in the configuration file
 for a daemon as
 \begin{verbatim}
-SEC_IMMEDIATE_FAMILY_ENCRYPTION = REQUIRED
+SEC_CONFIG_ENCRYPTION = REQUIRED
 \end{verbatim}
-signifies that any daemon to daemon communication must be
-encrypted.
+signifies that any communication that changes a daemon's configuration
+must be encrypted.
 If a daemon's configuration contains
 \begin{verbatim}
 SEC_DEFAULT_ENCRYPTION = REQUIRED
@@ -864,8 +860,9 @@ macros
 \index{configuration macro!\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
 \index{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS}}
-\index{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_CRYPTO\_METHODS macro@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
 \index{SEC\_CONFIG\_CRYPTO\_METHODS macro@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_CRYPTO\_METHODS}}
 \index{SEC\_OWNER\_CRYPTO\_METHODS macro@\texttt{SEC\_OWNER\_CRYPTO\_METHODS} macro}
@@ -877,11 +874,12 @@ macros
     SEC_READ_CRYPTO_METHODS
     SEC_WRITE_CRYPTO_METHODS
     SEC_ADMINISTRATOR_CRYPTO_METHODS
-    SEC_IMMEDIATE_FAMILY_CRYPTO_METHODS
     SEC_CONFIG_CRYPTO_METHODS
     SEC_OWNER_CRYPTO_METHODS
     SEC_NEGOTIATOR_CRYPTO_METHODS
 \end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_CRYPTO_METHODS
 
 The methods are
 given as a comma-separated list of acceptable values.
@@ -917,7 +915,7 @@ The client uses one of two macros to enable or disable an integrity check:
     SEC_CLIENT_INTEGRITY
 \end{verbatim}
 
-For the daemon, there are eight macros to enable or disable an integrity check:
+For the daemon, there are seven macros to enable or disable an integrity check:
 \index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
 \index{SEC\_READ\_INTEGRITY macro@\texttt{SEC\_READ\_INTEGRITY} macro}
@@ -926,8 +924,9 @@ For the daemon, there are eight macros to enable or disable an integrity check:
 \index{configuration macro!\texttt{SEC\_WRITE\_INTEGRITY}}
 \index{SEC\_ADMINISTRATOR\_INTEGRITY macro@\texttt{SEC\_ADMINISTRATOR\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_INTEGRITY}}
-\index{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_INTEGRITY macro@\texttt{SEC\_DAEMON\_INTEGRITY} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\_INTEGRITY}}
 \index{SEC\_CONFIG\_INTEGRITY macro@\texttt{SEC\_CONFIG\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_INTEGRITY}}
 \index{SEC\_OWNER\_INTEGRITY macro@\texttt{SEC\_OWNER\_INTEGRITY} macro}
@@ -939,19 +938,20 @@ For the daemon, there are eight macros to enable or disable an integrity check:
     SEC_READ_INTEGRITY
     SEC_WRITE_INTEGRITY
     SEC_ADMINISTRATOR_INTEGRITY
-    SEC_IMMEDIATE_FAMILY_INTEGRITY
     SEC_CONFIG_INTEGRITY
     SEC_OWNER_INTEGRITY
     SEC_NEGOTIATOR_INTEGRITY
 \end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_INTEGRITY
 
 As an example, the macro defined in the configuration file
 for a daemon as
 \begin{verbatim}
-SEC_IMMEDIATE_FAMILY_INTEGRITY = REQUIRED
+SEC_CONFIG_INTEGRITY = REQUIRED
 \end{verbatim}
-signifies that any daemon to daemon communication must
-have its integrity assured.
+signifies that any communication that changes a daemon's configuration
+must have its integrity assured.
 If a daemon's configuration contains
 \begin{verbatim}
 SEC_DEFAULT_INTEGRITY = REQUIRED
@@ -981,14 +981,16 @@ suggesting settings that enable security features.
 Here is that example of the daemon-side portion.
 
 % from Zach  (3/7/03)
+\footnotesize
 \begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION=REQUIRED
-SEC_DEFAULT_ENCRYPTION=REQUIRED
-SEC_DEFAULT_INTEGRITY=REQUIRED
+SEC_DEFAULT_AUTHENTICATION         = REQUIRED
+SEC_DEFAULT_ENCRYPTION             = REQUIRED
+SEC_DEFAULT_INTEGRITY              = REQUIRED
 
 SEC_DEFAULT_AUTHENTICATION_METHODS = FS, KERBEROS
-SEC_DEFAULT_CRYPTO_METHODS = 3DES, BLOWFISH
+SEC_DEFAULT_CRYPTO_METHODS         = 3DES, BLOWFISH
 \end{verbatim}
+\normalsize
 
 This set of configuration macros forces security features
 to be used at all times.
@@ -1076,6 +1078,7 @@ To use X.509 certificates for authentication, the Condor configuration file
 must have the following configuration macros set.
 This setting is an example.
 
+\footnotesize
 \begin{verbatim}
 SEC_DEFAULT_AUTHENTICATION = REQUIRED
 SEC_DEFAULT_AUTHENTICATION_METHODS = GSS_AUTHENTICATION 
@@ -1083,6 +1086,7 @@ X509_DIRECTORY = /path/to/daemon/certificatedirectory
 GSI_DAEMON_NAME = /C=US/O=Condor/O=University of Wisconsin
 /OU=Computer Sciences Department/CN=condor@cs.wisc.edu
 \end{verbatim}
+\normalsize
 
 The
 \MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
@@ -1113,9 +1117,11 @@ The macro \MacroNI{GSI\_DAEMON\_NAME} configuration macro
 provides daemons with a distinguished name to use for
 X.509 authentication.
 This name is specified with the following format
+\footnotesize
 \begin{verbatim}
 GSI_DAEMON_NAME = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
 \end{verbatim}
+\normalsize
 A complete example that has the question marks filled in and the
 daemon's user name filled in is given in the 
 example above.
@@ -1229,7 +1235,7 @@ a slash character, the host name, an '@' (at sign character),
 and the Kerberos realm.
 As an example, the configuration
 \begin{verbatim}
-CONDOR_SERVER_PRINCIPAL=condor-daemon
+CONDOR_SERVER_PRINCIPAL = condor-daemon
 \end{verbatim}
 results in Condor's use of
 \begin{verbatim}
@@ -1241,12 +1247,14 @@ Here is
 an example of configuration settings that use Kerberos for
 authentication and require authentication of all communications
 of the write or administrator access level.
+\footnotesize
 \begin{verbatim}
-SEC_WRITE_AUTHENTICATION = REQUIRED
-SEC_WRITE_AUTHENTICATION_METHODS = KERBEROS
-SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED
+SEC_WRITE_AUTHENTICATION                 = REQUIRED
+SEC_WRITE_AUTHENTICATION_METHODS         = KERBEROS
+SEC_ADMINISTRATOR_AUTHENTICATION         = REQUIRED
 SEC_ADMINISTRATOR_AUTHENTICATION_METHODS = KERBEROS
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:FS-Authentication}File System Authentication}
@@ -1362,8 +1370,9 @@ A complete list of the authorization macros:
 \index{configuration macro!\texttt{ALLOW\_ADMINISTRATOR}}
 \index{ALLOW\_CONFIG macro@\texttt{ALLOW\_CONFIG} macro}
 \index{configuration macro!\texttt{ALLOW\_CONFIG}}
-\index{ALLOW\_IMMEDIATE\_FAMILY macro@\texttt{ALLOW\_IMMEDIATE\_FAMILY} macro}
-\index{configuration macro!\texttt{ALLOW\_IMMEDIATE\_FAMILY}}
+% commented out June 04, as it has not been implemented
+%\index{ALLOW\_DAEMON macro@\texttt{ALLOW\_DAEMON} macro}
+%\index{configuration macro!\texttt{ALLOW\_DAEMON}}
 \index{ALLOW\_OWNER macro@\texttt{ALLOW\_OWNER} macro}
 \index{configuration macro!\texttt{ALLOW\_OWNER}}
 \index{ALLOW\_NEGOTIATOR macro@\texttt{ALLOW\_NEGOTIATOR} macro}
@@ -1376,8 +1385,9 @@ A complete list of the authorization macros:
 \index{configuration macro!\texttt{DENY\_ADMINISTRATOR}}
 \index{DENY\_CONFIG macro@\texttt{DENY\_CONFIG} macro}
 \index{configuration macro!\texttt{DENY\_CONFIG}}
-\index{DENY\_IMMEDIATE\_FAMILY macro@\texttt{DENY\_IMMEDIATE\_FAMILY} macro}
-\index{configuration macro!\texttt{DENY\_IMMEDIATE\_FAMILY}}
+% commented out June 04, as it has not been implemented
+%\index{DENY\_DAEMON macro@\texttt{DENY\_DAEMON} macro}
+%\index{configuration macro!\texttt{DENY\_DAEMON}}
 \index{DENY\_OWNER macro@\texttt{DENY\_OWNER} macro}
 \index{configuration macro!\texttt{DENY\_OWNER}}
 \index{DENY\_NEGOTIATOR macro@\texttt{DENY\_NEGOTIATOR} macro}
@@ -1387,17 +1397,18 @@ A complete list of the authorization macros:
     ALLOW_WRITE
     ALLOW_ADMINISTRATOR
     ALLOW_CONFIG
-    ALLOW_IMMEDIATE_FAMILY
     ALLOW_OWNER
     ALLOW_NEGOTIATOR
     DENY_READ
     DENY_WRITE
     DENY_ADMINISTRATOR
     DENY_CONFIG
-    DENY_IMMEDIATE_FAMILY
     DENY_OWNER
     DENY_NEGOTIATOR
 \end{verbatim}
+% commented out June 04, as it has not been implemented
+%   ALLOW_DAEMON
+%   DENY_DAEMON
 
 Each macro is defined by a comma-separated list of fully qualified
 users.
@@ -1493,9 +1504,11 @@ which specifies the bit mask
 
 A single complete example of a configuration variable that uses
 a net mask is
+\footnotesize
 \begin{verbatim}
 ALLOW_WRITE = joesmith@cs.wisc.edu/128.105.128.0/17
 \end{verbatim}
+\normalsize
 User \verb@joesmith@ within the
 \verb@cs.wisc.edu@ domain is given write authorization
 when originating from machines that match their leftmost
@@ -1522,14 +1535,17 @@ authorization is derived from the necessary access levels
 as described in
 Section~\ref{sec:Security-access-levels}.
 
+\footnotesize
 \begin{verbatim}
 ALLOW_READ            = *@cs.wisc.edu/*
 ALLOW_WRITE           = *@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_ADMINISTRATOR   = condor-admin@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/$(NEGOTIATOR_HOST)
 ALLOW_CONFIG          = condor-admin@cs.wisc.edu/*.cs.wisc.edu
-ALLOW_IMMEDIATE_FAMILY= condor@cs.wisc.edu/*.cs.wisc.edu
 \end{verbatim}
+\normalsize
+% commented out June 04, as it has not been implemented
+%ALLOW_DAEMON          = condor@cs.wisc.edu/*.cs.wisc.edu
 
 This example configuration authorizes
 any user in the 
@@ -1559,22 +1575,25 @@ the \verb@cs.wisc.edu@ domain is authorized at the
 And, the last line of the example presumes that there is a
 user called condor, and that the daemons have all been started
 up as this user.
-It authorizes only programs (which will be the daemons)
-running as 
-\verb@condor@ to
-carry out requests that require the 
-\DCPerm{IMMEDIATE\_FAMILY} access level,
-where the commands originate from
-any machine in the
-\verb@cs.wisc.edu@ domain.
+% commented out June 04, as it has not been implemented
+%It authorizes only programs (which will be the daemons)
+%running as 
+%\verb@condor@ to
+%carry out requests that require the 
+%\DCPerm{DAEMON} access level,
+%where the commands originate from
+%any machine in the
+%\verb@cs.wisc.edu@ domain.
 
 In the local configuration file for each host, the host's
 owner should be authorized
 as the owner of the machine.
 An example of the entry in the local configuration file:
+\footnotesize
 \begin{verbatim}
 ALLOW_OWNER           = username@cs.wisc.edu/hostname.cs.wisc.edu
 \end{verbatim}
+\normalsize
 In this example the owner has a login of
 \verb@username@, and the machine's name is represented by
 \verb@hostname@.
@@ -1744,6 +1763,7 @@ will automatically have \DCPerm{OWNER} access, given how
 \DCPerm{OWNER} access is set within the configuration.
 
 The default access configuration is
+\footnotesize
 \begin{verbatim}
 HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
@@ -1756,6 +1776,7 @@ HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
 HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
 HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 \end{verbatim}
+\normalsize
 
 For each access level, an ALLOW or a DENY may be added.
 \begin{itemize}
@@ -1806,9 +1827,11 @@ section~\ref{sec:Condor-Subsystem-Names} on Subsystem Names),
 which is one of: STARTD, SCHEDD, MASTER, NEGOTIATOR,
 or COLLECTOR.
 For example, to grant different read access for the \Condor{schedd}:
+\footnotesize
 \begin{verbatim}
-        HOSTALLOW_READ_SCHEDD = <list of machines>
+HOSTALLOW_READ_SCHEDD = <list of machines>
 \end{verbatim}
+\normalsize
 
 The following is a list of registered commands that daemons will
 accept.  The list is ordered by daemon.
@@ -1932,19 +1955,23 @@ a small number of machines.  We recommend this.
 \item Let any machine join your pool.
 Only the central manager has
 administrative access (this is the default that ships with Condor)
+\footnotesize
 \begin{verbatim}
 HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 \end{verbatim}
+\normalsize
 
 \item Only allow machines at NCSA to join or view the pool.
 The central manager is the only machine with \DCPerm{ADMINISTRATOR} access.
+\footnotesize
 \begin{verbatim}
 HOSTALLOW_READ = *.ncsa.uiuc.edu
 HOSTALLOW_WRITE = *.ncsa.uiuc.edu
 HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 \end{verbatim}
+\normalsize
 
 \item Only allow machines at NCSA and the U of I Math department join the
 pool, EXCEPT do \textbf{not} allow lab machines to do so.
@@ -1952,12 +1979,14 @@ Also, do not
 allow the 177.55 subnet (perhaps this is the dial-in subnet).
 Allow anyone to view pool statistics.  The machine named
 bigcheese administers the pool (not the central manager).
+\footnotesize
 \begin{verbatim}
 HOSTALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu
 HOSTDENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.*
 HOSTALLOW_ADMINISTRATOR = bigcheese.ncsa.uiuc.edu
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 \end{verbatim}
+\normalsize
 
 \item Only allow machines at NCSA and UW-Madison's CS department to
 view the pool.  Only NCSA machines and the machine raven.cs.wisc.edu can join
@@ -1968,6 +1997,7 @@ This example also shows
 how to use ``\verb@\@'' to continue a long list of machines
 onto multiple lines, making it more readable (this works for all
 configuration file entries, not just host access entries)
+\footnotesize
 \begin{verbatim}
 HOSTALLOW_READ = *.ncsa.uiuc.edu, *.cs.wisc.edu
 HOSTALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu
@@ -1975,6 +2005,7 @@ HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
                           biggercheese.uiuc.edu
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 \end{verbatim}
+\normalsize
 
 \item Allow anyone except the military to view the status of the
 pool, but only let machines at NCSA view the job queues.
@@ -1982,6 +2013,7 @@ Only NCSA machines can join the pool.
 The central manager, bigcheese, and
 biggercheese can perform most administrative functions.
 However, only biggercheese can update user priorities.
+\footnotesize
 \begin{verbatim}
 HOSTDENY_READ = *.mil
 HOSTALLOW_READ_SCHEDD = *.ncsa.uiuc.edu 
@@ -1991,6 +2023,7 @@ HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
 HOSTALLOW_ADMINISTRATOR_NEGOTIATOR = biggercheese.uiuc.edu
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 \end{verbatim}
+\normalsize
 
 \end{itemize}
 
@@ -2057,9 +2090,11 @@ The control lists are defined by configuration settings that contain
 \Macro{SETTABLE\_ATTRS} in their name.
 The name of the control lists have the following form: 
 
+\footnotesize
 \begin{verbatim}
 SUBSYS_SETTABLE_ATTRS_PERMISSION-LEVEL
 \end{verbatim}
+\normalsize
 
 The two parts of this name that can vary are
 PERMISSION-LEVEL and the SUBSYS.
