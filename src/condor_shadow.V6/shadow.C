@@ -71,8 +71,8 @@ int	UsePipes;
 char* mySubSystem = "SHADOW";
 
 extern "C" {
-#if (defined(LINUX) && defined(GLIBC22)) || defined(HPUX11)
-	/* XXX fix declarations as well.  */
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+	/* XXX These should really be selected in a better fashion */
 	void reaper(int);
 	void handle_sigusr1(int);
 	void handle_sigquit(int);
@@ -1417,7 +1417,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
-#if (defined(LINUX) && defined(GLIBC22)) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
 void
 reaper(int unused)
 #else
@@ -1478,7 +1478,7 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && defined(GLIBC22)) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
 void
 handle_sigusr1( int unused )
 #else
@@ -1503,7 +1503,7 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && defined(GLIBC22)) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
 void
 handle_sigquit( int unused )
 #else
