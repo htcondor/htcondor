@@ -25,7 +25,7 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
   MinPriority=0.5;
   Epsilon=0.001;
   LogFileName=param("SPOOL");
-  LogFileName+="/p/condor/workspaces/adiel/local/spool";
+  // LogFileName+="/p/condor/workspaces/adiel/local/spool";
   LogFileName+="/Accountant.log";
   LoadState();
   LogEnabled=1;
