@@ -5,10 +5,10 @@
 **             Author : Dhrubajyoti Borthakur
 **               28 July, 1994
 */
-#include <stdio.h>
-#include <errno.h>
+
+#include "condor_common.h"
+
 #include <sys/time.h>
-#include <sys/types.h>
 #include <netdb.h>
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -20,7 +20,6 @@
 #include "proc.h"
 #include "internet.h"
 #include "expr.h"
-#include "condor_fix_string.h"
 
 /* 
 **  returns the internet address of this host 
