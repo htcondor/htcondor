@@ -72,11 +72,6 @@ reinitialize ()
 {
 	char *tmp;
 
-	// get accountant information
-	if (AccountantHost) free (AccountantHost);
-	AccountantHost == param ("AccountantHost");
-	accountant.SetAccountant (AccountantHost);
-	
 	// get timeout values
 	NegotiatorInterval 	= (tmp=param("NEGOTIATOR_INTERVAL")) ? atoi(tmp): 300;
 	NegotiatorTimeout  	= (tmp=param("NEGOTIATOR_TIMEOUT"))  ? atoi(tmp): 30;
