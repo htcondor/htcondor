@@ -53,6 +53,12 @@ sub Init()
     $Config{PoolDescription} =
 	HawkeyeLib::ReadConfig( "_description", "" );
 
+    $Tmp = HawkeyeLib::ReadConfig( "_roster_dir", "" );
+    $ENV{CONDOR_ROSTER_DIR} = $Tmp if ( $Tmp ne "" );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_pathadd", "" );
+    $ENV{PATH} = "$Tmp:$ENV{PATH}" if ( $Tmp ne "" );
+
     $Tmp = HawkeyeLib::ReadConfig( "_cluster", "true" );
     $Config{Cluster} = " -cluster" if ( $Tmp =~ /true/i );
 
@@ -137,7 +143,6 @@ sub Init()
 # Do the real work here...
 sub RunIt()
 {
-
     # Start things off
     $Hash = HawkeyeHash->new( \$Hawkeye, "" );
 
