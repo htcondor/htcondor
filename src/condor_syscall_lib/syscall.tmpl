@@ -729,6 +729,8 @@ int rename( const char *from, const char *to ) : pseudo {
 
 #if defined(IRIX) || defined(Solaris)
 	int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
+#elif defined(OSF1)
+	int fstatfs( map(int fd), struct statfs *buf, int len ) {
 #else
 	int fstatfs( map(int fd), struct statfs *buf ) {
 #endif
@@ -738,6 +740,8 @@ int rename( const char *from, const char *to ) : pseudo {
 
 #if defined(IRIX) || defined(Solaris)
 	int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
+#elif defined(OSF1)
+	int statfs( const char *path, struct statfs *buf, int len ) {
 #else
 	int statfs( const char *path, struct statfs *buf ) {
 #endif
