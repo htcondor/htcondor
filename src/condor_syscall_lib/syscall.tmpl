@@ -593,12 +593,12 @@ int rename( const char *from, const char *to ) {
 		int sigreturn( struct sigcontext *scp );
 		int sigsuspend( const sigset_t *mask );
 		int sigstack( struct sigstack *instack, struct sigstack *outstack );
-#	endif
 #	if defined( AIX32)
 		int kill( pid_t pid, int sig );
 #	else
-		int kill( pid_t pid, int sig ) : extract;
+        int kill( pid_t pid, int sig ) : extract;
 #	endif
+#endif  /* of !defined(SAVE_SIGSTATE) */
 		int setitimer( int which, struct itimerval *value,
 											struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
