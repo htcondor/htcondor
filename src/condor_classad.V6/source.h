@@ -127,9 +127,9 @@ class ClassAdParser
 		bool parsePrimaryExpression( ExprTree*& );
 		bool parseArgumentList( std::vector<ExprTree*>& );
 
-		bool shouldEvaluateAtParseTime(const string &functionName,
+		bool shouldEvaluateAtParseTime(const std::string &functionName,
 									   vector<ExprTree*> &argList);
-		ExprTree *evaluateFunction(const string &functionName,
+		ExprTree *evaluateFunction(const std::string &functionName,
 								  vector<ExprTree*> &argList);
 
 };
