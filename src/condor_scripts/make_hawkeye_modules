@@ -10,6 +10,7 @@ my $Program = "make_hawkeye_modules";
 my %Options =
     (
      "[-d=dir]"		=> "Specify target directory 'dir'",
+     "[-r]"		=> "Enable release mode",
      "[-f]"		=> "force",
      "[-h]"		=> "Dump help",
      "tarball"		=> "Target tarball",
