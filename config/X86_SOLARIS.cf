@@ -84,7 +84,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 
 #define CCompiler /s/std/bin/gcc /* different than SunOS */ 
 #define CPlusCompiler /s/std/bin/g++ /* different than SunOS */
-/*#define Demangler /usr/psup/gcc-2.6.3/bin/c++filt  not present on Pentium Solaris yet */
+#define Demangler /opt/SUNWspro/bin/c++filt
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd /* ask Jim */
