@@ -278,33 +278,76 @@ insert( char *name, char *value, BUCKET **table, int table_size )
 /*
 ** Read one line and any continuation lines that go with it.  Lines ending
 ** with <white space><backslash> are continued onto the next line.
+** Lines can be of any lengh.  We pass back a pointer to a buffer; do _not_
+** free this memory.  It will get freed the next time getline() is called (this
+** function used to contain a fixed-size static buffer).
 */
 char *
 getline( FILE *fp )
 {
-	static char	buf[2048];
+	static char	*buf = NULL;
+	static unsigned int buflen = 0;
 	int		len;
-	char	*read_buf = buf;
+	char	*read_buf;
 	char	*line = NULL;
 	char	*ptr;
+	char	*tmp_ptr;
 
+	if ( buflen != 1024 ) {
+		if ( buf ) free(buf);
+		buf = (char *)malloc(1024);
+		buflen = 1024;
+	}
+	read_buf = buf;
 
 	for(;;) {
-		len = sizeof(buf) - (read_buf - buf);
-		if( len <= 0 ) {
-			EXCEPT( "Config file line too long" );
+		len = buflen - (read_buf - buf);
+		if( len <= 5 ) {
+			// we need a larger buffer -- grow buffer by 4kbytes
+			char *newbuf = (char *)realloc(buf,4096 + buflen);
+			if ( newbuf ) {
+				read_buf = (read_buf - buf) + newbuf;
+				buf = newbuf;	// note: realloc() freed our old buf if needed
+				buflen += 4096;
+			} else {
+				// malloc returned NULL, we're out of memory
+				EXCEPT( "Out of memory - config file line too long" );
+			}
 		}
+
 		if( fgets(read_buf,len,fp) == NULL )
 			return line;
 
+		// See if fgets read an entire line, or simply ran out of buffer space
+		if ( *read_buf == '\0' ) {
+			continue;
+		}
+		if( strrchr((const char *)read_buf,'\n') == NULL ) {
+			// if we made it here, fgets() ran out of buffer space.
+			// move our read_buf pointer forward so we concatenate the
+			// rest on after we realloc our buffer above.
+			read_buf += strlen(read_buf);
+			continue;	// since we are not finished reading this line
+		}
+
 		ConfigLineNo++;
-		
+
 			/* See if a continuation is indicated */
 		line = ltrunc( read_buf );
 		if( line != read_buf ) {
 			(void)strcpy( read_buf, line );
 		}
-		if( (ptr = (char *)strrchr((const char *)line,'\\')) == NULL )
+			/* Start the strrchr() search one character back from
+			 * the beginning of the line, if possible, because it is possible
+			 * that our "\" character and the newline character spanned across
+			 * a buffer boundary. -Todd T, 1/2000
+			 */
+		if ( line > buf ) {
+			tmp_ptr = line - 1;
+		} else {
+			tmp_ptr = line;
+		}
+		if( (ptr = (char *)strrchr((const char *)tmp_ptr,'\\')) == NULL )
 			return buf;
 		if( *(ptr+1) != '\0' )
 			return buf;
