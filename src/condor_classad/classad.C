@@ -38,7 +38,6 @@ static Registration regi;                   // this is the registration for
                                             // the AttrList type names. It 
                                             // should be defined in the calling
                                             // procedure.
-static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 #if defined(USE_XDR)
 extern "C" int xdr_mywrapstring (XDR *, char **);
 #endif

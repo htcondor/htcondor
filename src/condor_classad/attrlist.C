@@ -27,8 +27,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-static 	char *_FileName_ = __FILE__;
-
 #include "condor_ast.h"
 #include "condor_attrlist.h"
 

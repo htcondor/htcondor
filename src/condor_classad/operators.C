@@ -24,8 +24,6 @@
 #include "condor_debug.h"
 #include "operators.h"
 
-static char *_FileName_ = __FILE__;
-
 static void _doOperation	(OpKind,Value&,Value&,Value&,bool,bool,bool,Value&);
 static void doComparison	(OpKind, Value&, Value&, Value&);
 static void doArithmetic	(OpKind, Value&, Value&, Value&);
