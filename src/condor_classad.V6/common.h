@@ -35,7 +35,9 @@ enum {
 	EVAL_FAIL,
 	EVAL_OK,
 	EVAL_UNDEF,
-	EVAL_ERROR
+	PROP_UNDEF,
+	EVAL_ERROR,
+	PROP_ERROR
 };
 
 /// The kinds of nodes in expression trees
