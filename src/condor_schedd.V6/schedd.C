@@ -146,6 +146,11 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	alive_countdown = 0;
 	num_exceptions = 0;
 	if( match ) {
+		if( DebugFlags && D_MACHINE ) {
+			dprintf( D_MACHINE, "*** ClassAd of Matched Resource ***\n" );
+			match->dPrint( D_MACHINE );
+			dprintf( D_MACHINE | D_NOHEADER, "*** End of ClassAd ***\n" );
+		}
 		my_match_ad = new ClassAd( *match );
 	} else {
 		my_match_ad = NULL;
