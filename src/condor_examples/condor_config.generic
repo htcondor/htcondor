@@ -889,7 +889,7 @@ STARTD_JOB_EXPRS = ImageSize, JobUniverse
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
-SHADOW_NT		= $(SBIN)/condor_shadow.v61
+SHADOW_NT		= $(SBIN)/condor_shadow.v63
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
