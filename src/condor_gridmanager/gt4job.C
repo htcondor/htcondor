@@ -1896,23 +1896,22 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 		Environ env_obj;
 		env_obj.add_string(attr_value);
 		char **env_vec = env_obj.get_vector();
-		int i = 0;
-		const char * envrionment_header = "<environment>";
-		const char * environment_footer = "</environment>";
 
-		while (env_vec[i]) {
+		for ( int i = 0; env_vec[i]; i++ ) {
 			char *equals = strchr(env_vec[i],'=');
 			if ( !equals ) {
 				// this environment entry has no equals sign!?!?
 				continue;
 			}
 			
-			*rsl += envrionment_header;
+			*equals = '\0';
+
+			*rsl += "<environment>";
 			*rsl += printXMLParam ("name", env_vec[i]);
 			*rsl += printXMLParam ("value", equals + 1);
-			*rsl += environment_footer;
+			*rsl += "</environment>";
 
-			i++;
+			*equals = '=';
 		}
 	}
 	if ( attr_value ) {
