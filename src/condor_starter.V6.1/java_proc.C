@@ -120,6 +120,9 @@ int JavaProc::ParseExceptionFile( FILE *file )
 {
 	if(!fgets(ex_hier,sizeof(ex_hier),file)) return 0;
 	if(!fgets(ex_hier,sizeof(ex_hier),file)) return 0;
+
+	/* Kill the newline at the end of the line */
+	ex_hier[strlen(ex_hier)-1] = 0;
 	if(!ParseExceptionLine(ex_hier,ex_name,ex_type)) return 0;
 	return 1;
 }
