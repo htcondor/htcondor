@@ -242,7 +242,6 @@ Condor environment:
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:PVM-Submit}Sample PVM submit file}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -332,5 +331,26 @@ host from any machine class is allocated.
 
 The \func{queue} command should be inserted after the specifications of
 each class.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Restrictions of the Condor-PVM Environment}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The following restrictions currently apply to the Condor-PVM
+Environment:
+
+\begin{itemize}
+
+\item Each user can submit only one PVM Universe job at a time from a
+given machine.
+
+\item Only one PVM task may execute on each machine, including SMP
+machines.
+
+\end{itemize}
+
+These restrictions are caused by the fact that a user can not normally
+run more than one PVM daemon on a machine.  We are currently
+investigating to see if these restrictions can be removed.
 
 \index{PVM (Parallel Virtual Machines)|)}
