@@ -336,6 +336,7 @@ universes for user jobs:
 	\item Standard
 	\item Vanilla
 	\item PVM
+	\item Globus
 \end{itemize}
 You state the universe to use for each job in a
 submit description file when the job is submitted. 
@@ -354,6 +355,8 @@ The vanilla universe has very few restrictions, so
 it can be used when either the standard universe's additional services are not
 desired,  or when the job cannot abide by the restrictions
 of the standard universe.
+The globus universe allows users to submit Globus jobs (see 
+\Url{http://www.globus.org}) through the Condor interface.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
@@ -461,6 +464,17 @@ Jobs submitted as vanilla universe jobs must also rely on an
 external mechanism 
 for accessing data files from different machines
 such as NFS or AFS.
+
+%%%%%%%%%%%%
+\subsubsection{Globus Universe}
+%%%%%%%%%%%%
+
+\index{universe!Globus}
+The Globus universe in Condor is intended to provide the standard
+Condor interface to users who wish to start Globus system jobs
+from Condor. Each job queued in the job submission file is translated
+into a Globus RSL string and used as the arguments to the \Exec{globusrun}
+program.
 
 %%%%%%%%%%%%%%
 \subsection{Relinking for the Standard Universe}

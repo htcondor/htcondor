@@ -243,18 +243,20 @@ Condor does not create a log for this cluster.
 %% universe
 %%%%%%%%%%%%%%%%%%%
 
-\item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler$>$] Specifies 
-which Condor Universe to use when running this job.  The Condor Universe
-specifies a Condor execution environment.  The \Arg{standard} Universe
-is the default, and tells Condor that this job has been re-linked via
-\Condor{compile} with the Condor libraries and therefore supports
+\item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler \Bar\ globus$>$] 
+Specifies which Condor Universe to use when running this job.  The Condor 
+Universe specifies a Condor execution environment.  The \Arg{standard} 
+Universe is the default, and tells Condor that this job has been re-linked 
+via \Condor{compile} with the Condor libraries and therefore supports
 checkpointing and remote system calls.  The \Arg{vanilla} Universe is an
 execution environment for jobs which have not been linked with the
 Condor libraries.  \textit{Note:} use the \Arg{vanilla} Universe to
 submit shell scripts to Condor.  The \Arg{pvm} Universe is for a
-parallel job written with PVM 3.3, and \Arg{scheduler} is for a job that
-should act as a metascheduler.  See the Condor User's Manual for more
-information about using Universe.
+parallel job written with PVM 3.3. The \Arg{scheduler} is for a job that
+should act as a metascheduler. The \Arg{globus} universe translates the
+submit description file to a Globus RSL string and passes it to 
+the \Exec{globusrun} program for execution. 
+See the Condor User's Manual for more information about using Universe.
 
 %%%%%%%%%%%%%%%%%%%
 %% image_size
@@ -405,8 +407,37 @@ file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
 \item[rendezvousdir = $<$directory-path$>$] Used to specify the 
 shared-filesystem directory to be used for filesystem authentication
 when submitting to a remote scheduler.  Should be a path to a preexisting 
-directory.  If not specified, \Condor{submit} will automatically use
-the \Opt{initialdir} as the value for \Opt{rendezvousdir}. 
+directory.  
+
+%%%%%%%%%%%%%%%%%%%
+%% globusscheduler
+%%%%%%%%%%%%%%%%%%%
+
+\item[rendezvousdir = $<$pathname$>$] Used to specify the 
+Globus resource to which the job should be submitted. More than one scheduler
+can be submitted to, simply place a \Arg{queue} command after each instance
+of globusscheduler. Each instance should be a valid Globus scheduler.
+\begin{description}
+\item[Example:]
+To submit to the LSF scheduler of the Globus gatekeeper on lego at 
+Boston University:
+\begin{verbatim}
+GlobusScheduler = lego.bu.edu-lsf
+\end{verbatim}
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%
+%% x509certdir
+%%%%%%%%%%%%%%%%%%%
+
+\item[x509certdir = $<$directory-path$>$] Used to specify the directory 
+which contains the certificate, public key, and trusted certificate directory
+for GSS authentication. If included, the environment variables X509_USER_KEY,
+X509_USER_CERT, and X509_CERT_DIR are automatically exported. If the default
+filenames of usercert.pem, userkey.pem and certdir/ are not located in the 
+default location, \$HOME/.globus/, or if AFS permissions are a problem, you
+can set the environment variables manually or in your submit file to point
+to the correct locations. Should be a path to a preexisting directory.  
 
 %%%%%%%%%%%%%%%%%%%
 % +
@@ -421,7 +452,7 @@ following \Arg{attribute} into the job ClasssAd with the given
 %% queue
 %%%%%%%%%%%%%%%%%%%
 
-\item[queue [number-of-procs]] Places one or more copies of the job into
+\item[queue [number-of-procs] ] Places one or more copies of the job into
 the Condor queue. If desired, new \Opt{input}, \Opt{output},
 \Opt{error}, \Opt{initialdir}, \Opt{arguments}, \Opt{nice\_user},
 \Opt{priority}, \Opt{kill\_sig}, \Opt{coresize}, or \Opt{image\_size}
