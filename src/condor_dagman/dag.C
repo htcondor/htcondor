@@ -1,3 +1,4 @@
+#include <limits.h>  /* for ARG_MAX in Dag::RemoveRunningJobs() */
 #include "dag.h"
 #include "debug.h"
 #include "simplelist.h"
@@ -139,7 +140,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
     
     bool done = false;  // Keep scaning until ULOG_NO_EVENT
     bool result = true;
-    
+    static unsigned int log_unk_count;
+
     while (!done) {
         
         ULogEvent * e;  // refer to condor_event.h
@@ -151,6 +153,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
         debug_printf (DEBUG_VERBOSE, " Log outcome: %s",
                       ULogEventOutcomeNames[outcome]);
         
+        if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
+
         switch (outcome) {
             
             //----------------------------------------------------------------
@@ -160,18 +164,19 @@ bool Dag::ProcessLogEvents (bool recovery) {
             break;
             //----------------------------------------------------------------
           case ULOG_RD_ERROR:
-            debug_printf (DEBUG_QUIET, "ERROR: failure to read log\n");
+            debug_printf (DEBUG_QUIET, "  ERROR: failure to read log\n");
             done   = true;
             result = false;
             break;
             //----------------------------------------------------------------
           case ULOG_UNK_ERROR:
-            if (!_condorLog.synchronize()) {
-                debug_printf (DEBUG_QUIET, 
-                              "ERROR: log synchronization failure\n");
+            log_unk_count++;
+            if (recovery || log_unk_count >= 5) {
+                debug_printf (DEBUG_QUIET, "  ERROR: Unknown log error");
+                result = false;
             }
+            debug_printf (DEBUG_VERBOSE, "\n");
             done   = true;
-            result = false;
             break;
             //----------------------------------------------------------------
           case ULOG_OK:
@@ -367,6 +372,55 @@ void Dag::Print_TermQ () const {
         printf ("  ");
         tqi->Print();
         putchar ('\n');
+    }
+}
+
+
+//---------------------------------------------------------------------------
+void Dag::run_popen (char * cmd) const {
+    debug_println (DEBUG_VERBOSE, "Running: %s", cmd);
+    FILE *fp = popen (cmd, "r");
+    int r;
+    if (fp == NULL || (r = pclose(fp)) != 0) {
+        if (DEBUG_LEVEL(DEBUG_NORMAL)) {
+            printf ("WARNING: failure: %s", cmd);
+            if (fp != NULL) printf ("returned %d", r);
+            putchar('\n');
+        }
+    }
+}
+
+//---------------------------------------------------------------------------
+void Dag::RemoveRunningJobs () const {
+    char cmd     [ARG_MAX];
+
+    unsigned int len  = 0;  // Number of character in cmd so far
+    unsigned int jobs = 0;  // Number of jobs appended to cmd so far
+
+    ListIterator<Job> iList(_jobs);
+    Job * job;
+    while (iList.Next(job)) {
+
+        if (jobs == 0) {
+            len = 0;
+            len += snprintf (cmd, ARG_MAX, "condor_rm");
+        }
+
+        if (job->_Status == Job::STATUS_SUBMITTED) {
+            len += snprintf (&cmd[len], ARG_MAX - len,
+                             " %d", job->_CondorID._cluster);
+            jobs++;
+        }
+
+        if (jobs > 0 && len >= ARG_MAX - 10) {
+            run_popen (cmd);
+            jobs = 0;
+        }
+    }
+
+    if (jobs > 0) {
+        run_popen (cmd);
+        jobs = 0;
     }
 }
 

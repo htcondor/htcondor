@@ -3,7 +3,7 @@
 #include <assert.h>
 
 //------------------------------------------------------------------------
-int getline(FILE *fp, char *line, int max) {
+int util_getline(FILE *fp, char *line, int max) {
   int c, i = 0;
     
   assert (EOF  == -1);

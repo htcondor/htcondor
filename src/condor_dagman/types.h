@@ -10,10 +10,6 @@ typedef int bool;
 #define false 0
 #endif
 
-//---------------------------------------------------------------------------
-#define     OK   true
-#define NOT_OK   false
-
 ///
 typedef int JobID_t;
 

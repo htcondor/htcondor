@@ -8,6 +8,7 @@
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
+static const char * SIG        = "### DAGMan 6.1.0";
 
 //---------------------------------------------------------------------------
 bool parse (char *filename, Dag *dag) {
@@ -17,8 +18,8 @@ bool parse (char *filename, Dag *dag) {
   FILE *fp = fopen(filename, "r");
   if (fp == NULL) {
     if (DEBUG_LEVEL(DEBUG_QUIET)) {
-      printf ("%s: Could not open file %s for input",debug_progname,filename);
-      perror (filename);
+      debug_println (DEBUG_QUIET, "Could not open file %s for input",
+                     filename);
       return false;
     }
   }
@@ -33,11 +34,19 @@ bool parse (char *filename, Dag *dag) {
   int len;
   bool done = false;
 
-  while (!done && (len = getline(fp, line, MAX_LENGTH)) >= 0) {
+  while (!done && (len = util_getline(fp, line, MAX_LENGTH)) >= 0) {
     lineNumber++;
+
+    if (lineNumber == 1) {
+        if (strcmp (line, SIG)) {
+            debug_println (DEBUG_QUIET, "First line of %s must be the "
+                           "signature \"%s\"", filename, SIG);
+            return false;
+        }
+    }
       
     if (len == 0) continue;     // Ignore blank lines
-      
+
     //
     // Ignore comments
     //

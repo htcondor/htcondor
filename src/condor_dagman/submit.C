@@ -36,7 +36,7 @@ static bool submit_try (const char *exe,
   // by repeatedly calling this function.
 
   do {
-    if (getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
+    if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
       pclose(fp);
       return false;
     }

@@ -19,6 +19,6 @@ const int UTIL_MAX_LINE_LENGTH = 1024;
     whitespace into the line buffer. Return the number of characters
     read (excluding \n). Returns -1 on EOF.
 */ 
-extern "C" int getline (FILE *fp, char *line, int max);
+extern "C" int util_getline (FILE *fp, char *line, int max);
 
 #endif /* #ifndef _UTIL_H_ */

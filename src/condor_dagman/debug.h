@@ -1,5 +1,5 @@
-#ifndef DEBUG_H
-#define DEBUG_H
+#ifndef DAGMAN_DEBUG_H
+#define DAGMAN_DEBUG_H
 
 #include "condor_header_features.h"
 
@@ -138,5 +138,5 @@ void debug_perror (int error, debug_level_t level, const char *s);
 
 END_C_DECLS /* from condor_header_features.h */
 
-#endif /* ifndef DEBUG_H */
+#endif /* ifndef DAGMAN_DEBUG_H */
 

@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+// Declare DC_Exit so we don't have to include
+// "../condor_daemon_core.V6/condor_daemon_core.h"
+// and open a huge can of C++ worms.
+extern void DC_Exit( int status );	
+
 debug_level_t debug_level    = DEBUG_NORMAL;
 char *        debug_progname = NULL;
 
@@ -46,13 +51,15 @@ void debug_error (int error, debug_level_t level, const char *fmt, ...) {
     printf ("\n");
     if (DEBUG_LEVEL(DEBUG_DEBUG_1)) debug_fflush();
   }
-  exit (error);
+  DC_Exit(error);
+  /* exit(error); */
 }
 
 /*--------------------------------------------------------------------------*/
 void debug_perror (int error, debug_level_t level, const char *s) {
   if (DEBUG_LEVEL(level)) {
     perror (s);
-    exit(error);
+    DC_Exit(error);
+    /* exit(error); */
   }
 }

@@ -115,7 +115,18 @@ class Dag {
     ///
     inline int NumJobsDone() const { return _numJobsDone; }
 
+    /** Remove all jobs (using condor_rm) that are currently running.
+        All jobs currently marked Job::STATUS_SUBMITTED will be fed
+        as arguments to condor_rm via popen.  This function is called
+        when the Dagman Condor job itself is removed by the user via
+        condor_rm.  This function <b>is not</b> called when the schedd
+        kills Dagman.
+    */
+    void RemoveRunningJobs () const;
+
   protected:
+
+    void run_popen (char * cmd) const;
 
     /** Submit job to Condor.  If job is not submittable (!job->CanSubmit())
         then function will return false for failure
