@@ -11,6 +11,7 @@ questions about Condor.
 \section{Obtaining \& Installing Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{FAQ!installing Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Where can I download Condor?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -868,6 +869,7 @@ Condor sends the value SIGKILL to all the PIDs in the family.
 \section{Condor on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{FAQ!Condor on Windows machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Will Condor work on a network of mixed Unix and NT machines?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -911,6 +913,37 @@ Condor does run under Windows 2000 Professional and Server and
 also under Windows XP.
 
 Personal Condor also works.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My Windows program works fine when executed on its own, but it
+does not work when submitted to Condor.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\underline{First}, make sure that the program really does work
+outside of Condor under Windows,
+that the disk is not full,
+and that the system is not out of user resources.
+
+\underline{As the next consideration},
+know that 
+some Windows programs do not run properly because they are dynamically linked,
+and they cannot find the \File{.dll} files that they depend on.
+Version 6.4.x of Condor sets the \Env{PATH} to be empty when
+running a job.
+To avoid these difficulties, do one of the following
+\begin{enumerate}
+\item statically link the application
+\item wrap the job in a script that sets up the environment
+\item submit the job from a correctly-set environment with the command
+\begin{verbatim}
+getenv = true
+\end{verbatim}
+in the submit description file.
+This will copy your environment into the job's environment.
+\item send the required \File{.dll} files along with the job
+using the submit description file command \Opt{transfer\_input\_files}.
+\end{enumerate}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
