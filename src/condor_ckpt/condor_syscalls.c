@@ -48,3 +48,10 @@ REMOTE_syscall( int syscall_num, ... )
 	abort();
 	return -1;
 }
+
+#if defined(AIX32)	/* Just to test linking */
+int syscall( int num, ... )
+{
+	return 0;
+}
+#endif
