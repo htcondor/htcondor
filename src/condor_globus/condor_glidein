@@ -58,7 +58,7 @@ foreach $CONTACT ( @CONTACTS ) {
 }
 
 if ( $#ARGV == -1 ) {
-    print "No target resource specified.  Use -help for usage information.\n";
+    print STDERR "No target resource specified.  Use -help for usage information.\n";
     exit( -1 );
 }
 
@@ -68,6 +68,7 @@ exit( 0 );
 
 sub do_submit() {
 
+	print "\nLaunching Glidein...\n";
 	if ( $arch =~ /linux/ ) {
 		$mail_arch = "/usr/bin/mail";
 	}
@@ -246,16 +247,7 @@ sub gather_info() {
 	chomp( $COLLECTOR_HOST = `$CONFIGVAL COLLECTOR_HOST` );
 
 	#set CONDOR_VERSION
-	$TMP = `$STATUS -master -format "%s" CondorVersion $CONDOR_HOST`;
-		#if we get a blank response because the collector isn't running
-		#a master in the same pool, try our master...
-	if ( $? != 0 || !($TMP =~ /\S/) ) {
-			$HOST = $ENV{'HOST'};
-			$TMP = `$STATUS -master -format "%s" CondorVersion $HOST`;
-			if ( $? != 0 ) {
-				$TMP = "";
-			}
-	}
+	$TMP = `$condor_wait -version | grep CondorVersion`;
 	( $_, $CONDOR_VERSION, $_) = split( / *[$: ]+/, $TMP );
 	if ( $CONDOR_VERSION eq "" ) {
 		return( "Can't determine Condor version.\n" );
@@ -323,7 +315,7 @@ print STDERR "	Valid options:\n"
 . "   -setuponly|-runonly     Setup and exit  |  No setup, just run\n"
 . "   -forcesetup             During setup, force copying of files\n"
 . "   -setup_jobmanager <X>   Jobmanager to use for setup.\n"
-. "   -setup_here             Run setup procedure directly rather than remotely.\n"
+. "   -setup_here             Run setup procedure directly, rather than remotely.\n"
 . "   -arch <architecture>    Condor architecture to install on remote fesource.\n"
 . "   -queue <queue>          Queue to use on Globus scheduler\n"
 . "   -project <project>      Project to use on Globus resource\n"
@@ -426,9 +418,10 @@ sub parse_command_line() {
 	}
 
 	if ( $help ) {
-		print STDERR "Add a remote node to your local Condor pool\n";
+		print STDERR "Add one or more remote nodes to your local "
+		             . "Condor pool\n";
 		print STDERR "For detailed help, see the condor documentation "
-			. "concerning condor_glidein\n\n";
+		             . "concerning condor_glidein\n\n";
 		usage();
 		exit( 0 );
 	}
@@ -741,8 +734,12 @@ sub host_info()
 	    }
 	}
 	if( $setup_here ) {
-	    $CONTACT_SETUP = "none";
-	    $CONTACT_SETUP_QUEUE = "unknown";
+	    if( $CONTACT_SETUP eq "" ) {
+		$CONTACT_SETUP = "none";
+	    }
+	    if( $CONTACT_SETUP_QUEUE eq "" ) {
+		$CONTACT_SETUP_QUEUE = "unknown";
+	    }
 	}
 	if( $setup_arch ne "" ) {
 	    $arch = $setup_arch;
@@ -768,8 +765,8 @@ sub host_info()
 	}
 
 	if( $arch eq "" ) {
-	    print STDERR "Can't determine architecture of $GLOBUSHOST\n";
-	    print STDERR "Try inserting something like -arch=${CONDOR_VERSION}-i686-pc-Linux-2.4\non your condor_glidein command-line.\n";
+	    print STDERR "\nPROBLEM: Can't determine architecture of $GLOBUSHOST\n";
+	    print STDERR "You can bypass this by specifying the architecture on the command line.\nExample: -arch=${CONDOR_VERSION}-i686-pc-Linux-2.4\n";
 	    print STDERR "For a full list of supported architectures, visit\nhttp://www.cs.wisc.edu/condor/glidein/binaries\n";
 	    return( 1 );
 	}
@@ -818,6 +815,7 @@ sub do_remote_setup() {
 	my $glidein_startup;
 	my $glidein_startup_is_temporary = 0;
 
+	print "\nRunning/verifying Glidein installation and setup...\n";
 	if ( $use_config ne "" ) {
 		$glidein_condor_config = $use_config;
 	} else {
@@ -999,7 +997,7 @@ EOF
 
 
 	if( $setup_here ) {
-	    #Run setup script directly rather than submitting it
+	    #Run setup script directly, rather than submitting it
 	    #for remote execution on the gatekeeper.
 
 	    my $basedir_arg = $basedir;
@@ -1108,7 +1106,7 @@ EOF
 	    #condor_wait does not pay attention to hold status,
 	    #so make sure job is not on hold or we'll wait forever.
 	    if(system("grep -q 'Job was held' $glidein_setup_log") == 0) {
-		print "Error: the setup job has been put on hold!  Reason given:\n";
+		print STDERR "Error: the setup job has been put on hold!  Reason given:\n";
 		#Sometimes it takes a few seconds for the hold reason
 		#to appear in the ClassAd.
 		my $hold_reason_timeout_time = time() + 30;
