@@ -389,8 +389,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				if (ExecRecs.lookup(key, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
-								"internal error: hashtable lookup failed for "
-								"%s!\n", hash);
+								"internal error: can't find execute event for "
+								"evicted job %s!\n", hash);
 					}
 					delete event;
 					break;
@@ -445,8 +445,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				if (ExecRecs.lookup(key, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
-								"internal error: hashtable lookup failed "
-								"for %s!\n", hash);
+								"internal error: can't find execute event for "
+								"terminated job %s!\n", hash);
 					}
 					delete event;
 					break;
@@ -491,8 +491,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				if (ExecRecs.lookup(key, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
-								"internal error: hashtable lookup failed for "
-								"%s!\n", hash);
+								"internal error: can't find execute event for "
+								"job %s!\n", hash);
 					}
 					delete event;
 					break;
