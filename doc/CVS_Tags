@@ -8,6 +8,18 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+07/11/03 V6_5_3-doc-post-merge-V6_5-branch-doc-merge-1
+    The state of the doc directory in V6_5-branch after merging
+    changes from the V6_5_3-branch as tagged V6_5_3-doc-merge-1.
+
+07/11/03 V6_5_3-doc-pre-merge-V6_5-branch-doc-merge-1
+    The state of the doc directory in V6_5-branch before merging
+    changes from the V6_5_3-branch as tagged V6_5_3-doc-merge-1.
+
+07/11/03 V6_5_3-doc-merge-1
+    The state of the doc directory in V6_5_3-branch before merging
+    into the V6_5-branch.
+
 06/24/03 V6_5_3-branch
     The 6.5.3 release branch, which came from the V6_5-branch, and is
     rooted at the spot tagged with "V6_5_3-root"
