@@ -32,7 +32,7 @@
    Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
    will EXCEPT at startup time.  
 */
-static char* CondorVersionString = "$HawkeyeVersion: 0.1.1 " __DATE__ " $";
+static char* CondorVersionString = "$CondorVersion: 6.3.2 " __DATE__ " $";
 
 /* 
    This is some wisdom from Cygnus's web page.  If you just try to use
@@ -64,7 +64,7 @@ static char* CondorVersionString = "$HawkeyeVersion: 0.1.1 " __DATE__ " $";
 #define str(s) #s
 
 /* Here is the platform string.  You don't need to edit this */
-static char* CondorPlatformString = "$HawkeyePlatform: " xstr(PLATFORM) " $";
+static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";
 
 extern "C" {
 
