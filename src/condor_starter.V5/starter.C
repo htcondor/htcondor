@@ -1148,6 +1148,7 @@ get_job_info()
 	display_startup_info( &s, D_ALWAYS );
 
 	determine_user_ids( s.uid, s.gid );
+
 	dprintf( D_ALWAYS, "User uid set to %d\n", s.uid );
 	dprintf( D_ALWAYS, "User uid set to %d\n", s.gid );
 
@@ -1362,6 +1363,20 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 		// if the submitting machine is in our shared UID domain, honor
 		// the request
 	if( host_in_domain(UidDomain,InitiatingHost) ) {
+
+		/* check to see if there is an entry in the passwd file for this uid */
+		if( (pwd_entry=getpwuid(requested_uid)) == NULL ) {
+			char *want_soft = NULL;
+	
+			if ( (want_soft=param("SOFT_UID_DOMAIN")) == NULL || 
+				 *want_soft != 'T' || *want_soft != 't' ) {
+			  EXCEPT("Uid not found in passwd file & SOFT_UID_DOMAIN is False");
+			}
+			if ( want_soft )
+				free(want_soft);
+		}
+		(void)endpwent();
+
 		return;
 	}
 
