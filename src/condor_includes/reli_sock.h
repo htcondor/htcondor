@@ -56,7 +56,8 @@ public:
 	// Reliable socket services
 	//
 
-	ReliSock() : Sock() {}		/* virgin reli_sock		*/
+	ReliSock() : Sock(), ignore_next_encode_eom(FALSE),
+		ignore_next_decode_eom(FALSE) {} /* virgin reli_sock */
 	ReliSock(int);				/* listen on port		*/
 	ReliSock(char *);			/* listen on serv 		*/
 	ReliSock(char *, int, int timeout_val=0);		/* connect to host/port	*/
@@ -71,17 +72,17 @@ public:
 	int accept(ReliSock &);
 	int accept(ReliSock *);
 
+	int put_bytes_nobuffer(char *buf, int length, int send_size=1);
+	int get_bytes_nobuffer(char *buffer, int max_length,
+							 int receive_size=1);
+	int get_file(const char *destination);
+	int put_file(const char *source);
+
 	//authenticate[_user] are dummy functions to allow upward compatibility
 	//with AuthSock where globus is not implemented for a platform
 	int authenticate() { return 0; }
 	int authenticate_user() { return -1; }
 	int isAuthenticated() { return FALSE; }
-
-	// Send & Recv Files: Takes buffer pointers and lengths as arguments, 
-	// sends the data in a bulk optimized method. Returns -1 on failure,
-	// or the number of bytes read or written on success. 
-	int RecvFile(char *buffer, int max_length);
-	int SendFile(char *file, int length);
 
 	int get_port();
 	struct sockaddr_in *endpoint();
@@ -111,7 +112,6 @@ public:
 //	PRIVATE INTERFACE TO RELIABLE SOCKS
 //
 protected:
-
 	/*
 	**	Types
 	*/
@@ -123,6 +123,7 @@ protected:
 	*/
 	virtual char * serialize(char *);
 	inline char * serialize() { return(serialize(NULL)); }
+	int prepare_for_nobuffering( stream_coding = stream_unknown);
 
 	/*
 	**	Data structures
@@ -145,6 +146,8 @@ protected:
 	} snd_msg;
 
 	relisock_state	_special_state;
+	int	ignore_next_encode_eom;
+	int	ignore_next_decode_eom;
 };
 
 
