@@ -87,7 +87,7 @@ template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 
 /* Standalone distribution of classads/collections */
 DIST_VERSION = 0.9.7
-DISTRIBUTION_DIR = classads_$(DIST_VERSION)
+DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
 DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h					\
 classad_functional_tester.C classad_functional_tester.h					\
