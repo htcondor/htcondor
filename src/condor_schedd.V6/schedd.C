@@ -36,28 +36,10 @@
 ** 
 */ 
 
-#define _POSIX_SOURCE
 #include "condor_common.h"
-
-#if !defined(WIN32)
-#include <netdb.h>
-#include <pwd.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <sys/file.h>
-#include <netinet/in.h>
-#include <sys/wait.h>
-#include <values.h>
-#endif
-
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "sched.h"
 #include "condor_config.h"
-#if !defined(WIN32)
-#include "condor_fix_unistd.h"
-#endif
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
 #include "proc.h"
 #include "exit.h"
@@ -71,16 +53,6 @@
 #include "url_condor.h"
 #include "condor_updown.h"
 #include "condor_uid.h"
-#include "condor_config.h"
-
-#if defined(HPUX9) || defined(Solaris)
-#include "fake_flock.h"
-#endif
-
-#if defined(Solaris)
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -97,16 +69,9 @@ extern void	Init();
 
 extern "C"
 {
-    void 	dprintf(int, char*...);
 	int	 	calc_virt_memory();
 	int	 	getdtablesize();
 	char* 	gen_ckpt_name(char*, int, int, int);
-	int	 	do_connect(const char*, const char*, u_int);
-	int	 	boolean(char*, char*);
-	int	 	param_in_pattern(char*, char*);
-	char*	param(char*);
-	void	block_signal(int);
-	void	unblock_signal(int);
 	void	handle_q(Service *, int, Stream *sock);
 	int		udp_unconnect();
 	char*	sin_to_string(struct sockaddr_in*);
@@ -478,7 +443,8 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	// goofy in going on.
 	if (command != NEGOTIATE)
 	{
-		dprintf(D_ALWAYS,"Negotiator command was not NEGOTIATE --- aborting\n");
+		dprintf(D_ALWAYS,
+				"Negotiator command was %d (not NEGOTIATE) --- aborting\n", command);
 		alreadyStashed = false;
 		return (!(KEEP_STREAM));
 	}
@@ -786,6 +752,19 @@ Scheduler::negotiate(int, Stream* s)
 					return (!(KEEP_STREAM));
 			}
 		}
+	}
+
+		// We've broken out of our loops here because we're out of
+		// jobs.  The Negotiator has asked us for one more job... so
+		// we need to flush that request down the bit-bucket before we
+		// stash this socket for future use.  -Derek Wright 12/9/97
+	s->decode();
+	if( !s->code(op) || !s->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error: Can't read command from negotiator.\n" );
+	}		
+	if( op != SEND_JOB_INFO ) {
+		dprintf( D_ALWAYS, 
+				 "Got unexpected command (%d) from negotiator.\n", op );
 	}
 
 		/* Out of jobs */
