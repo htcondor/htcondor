@@ -28,7 +28,8 @@
 #include "stdio.h"
 #include "math.h"
 
-int mips_test(int test_blocksize, double perc_sd_variation_ok, double perc_failed_test_blocks_ok)
+int mips_test(int test_blocksize, double perc_sd_variation_ok, 
+	double perc_failed_test_blocks_ok)
 {
 	int foo,  bar;
 	int	return_val = 0;
@@ -41,16 +42,25 @@ int mips_test(int test_blocksize, double perc_sd_variation_ok, double perc_faile
 	double testblocks_sd[test_blocksize], raw_testblocks_sd[test_blocksize];
 	double testblocks_mean[test_blocksize], raw_testblocks_mean[test_blocksize];
 
-	dprintf(D_ALWAYS, "SysAPI: Running mips_test.\n");
-	dprintf(D_ALWAYS, "        I will test sysapi_mips (and sysapi_mips_raw) in blocks of "
-					"%d tests, and take the standard\n", test_blocksize);
-	dprintf(D_ALWAYS, "        deviation of those test blocks. If the standard deviation is "
-					"above %d%% of the average,\n", perc_sd_variation_ok);
-	dprintf(D_ALWAYS, "        the mips reported are erratic and the test block is considered "
-					"a failure.\n");
-	dprintf(D_ALWAYS, "        I will run %d test blocks, and if more than %d%% of those blocks "
-					"fail, this entire test fails.\n", test_blocksize, 
-					perc_failed_test_blocks_ok*100);
+	dprintf(D_ALWAYS, 
+		"SysAPI: Running mips_test.\n");
+	dprintf(D_ALWAYS, 
+		"\tI will test sysapi_mips (and sysapi_mips_raw) in\n");
+	dprintf(D_ALWAYS, 
+		"\tblocks of %d tests, and take the standard\n", test_blocksize);
+	dprintf(D_ALWAYS, 
+		"\tdeviation of those test blocks. If the standard\n");
+	dprintf(D_ALWAYS, 
+		"\tdeviation is above %d%% of the average,\n", perc_sd_variation_ok);
+	dprintf(D_ALWAYS, 
+		"\tthe mips reported are erratic and the test block\n");
+	dprintf(D_ALWAYS, 
+		"\tis considered a failure.\n");
+	dprintf(D_ALWAYS, 
+		"\tI will run %d test blocks, and if more than %d%% of those blocks\n",
+		perc_failed_test_blocks_ok*100);
+	dprintf(D_ALWAYS, 
+		"\tfail, this entire test fails.\n");
 
 	foo = sysapi_mips_raw();
 	dprintf(D_ALWAYS, "SysAPI: Initial sysapi_mips_raw -> %d\n", foo);
