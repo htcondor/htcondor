@@ -1,7 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-//
-//
 // Adiel Yoaz
 //
 //////////////////////////////////////////////////////////////////////////////
@@ -10,7 +8,7 @@
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 #include "condor_classad.h"
-#include "Accountant.h"
+#include "condor_accountant.h"
 
 // extern int Termlog;
 
@@ -40,43 +38,47 @@ main(int argc, char* argv[])
   // Test
   //----------------------------------------------
 
-  ClassAd* Ad1=new ClassAd("Name = \"XXX\",StartdIpAddr = \"1.2.3\"",',');
-  ClassAd* Ad2=new ClassAd("Name = \"XXX\",StartdIpAddr = \"2.2.3\"",',');
-  ClassAd* Ad3=new ClassAd("Name = \"XXX\",StartdIpAddr = \"3.2.3\"",',');
-  ClassAd* Ad4=new ClassAd("Name = \"XXX\",StartdIpAddr = \"4.2.3\"",',');
-  ClassAd* Ad5=new ClassAd("Name = \"XXX\",StartdIpAddr = \"5.2.3\"",',');
-  ClassAd* Ad6=new ClassAd("Name = \"XXX\",StartdIpAddr = \"6.2.3\"",',');
+  ClassAd* Ad1=new ClassAd("Name = \"1\",StartdIpAddr = \"fred\"",',');
+  ClassAd* Ad2=new ClassAd("Name = \"2\",StartdIpAddr = \"fred\"",',');
+  ClassAd* Ad3=new ClassAd("Name = \"3\",StartdIpAddr = \"fred\"",',');
+  ClassAd* Ad4=new ClassAd("Name = \"4\",StartdIpAddr = \"fred\"",',');
+  ClassAd* Ad5=new ClassAd("Name = \"5\",StartdIpAddr = \"fred\"",',');
+  ClassAd* Ad6=new ClassAd("Name = \"6\",StartdIpAddr = \"fred\"",',');
 
   dprintf(D_ALWAYS,"Start\n");
 
-  accountant.SetPriority("Arieh",10);
-  accountant.SetPriority("Shlomo",20);
-  accountant.SetPriority("Arieh",27);
-  accountant.SetPriority("Yuval",200);
-
   accountant.AddMatch("Arieh",Ad1);
-  accountant.AddMatch("Shlomo",Ad2);
-  //accountant.AddMatch("Yuval",Ad6);
-
-  accountant.UpdatePriorities();
-
-  accountant.AddMatch("Arieh",Ad3);
-  accountant.AddMatch("Shlomo",Ad1);
-  accountant.UpdatePriorities();
-
   accountant.AddMatch("Arieh",Ad2);
+  accountant.AddMatch("Arieh",Ad3);
   accountant.AddMatch("Shlomo",Ad4);
   accountant.AddMatch("Shlomo",Ad5);
-  accountant.AddMatch("Yoram",Ad6);
-  
+  accountant.AddMatch("Yuval",Ad6);
+
+  accountant.SetPriority("Arieh",3);
+  accountant.SetPriority("Shlomo",2);
+  accountant.SetPriority("Yuval",1);
+
   accountant.UpdatePriorities();
 
-  for (int i=0;i<30;i++) { accountant.UpdatePriorities(); sleep(1); }
-  accountant.AddMatch("Yoram",Ad1);
-  accountant.AddMatch("Shlomo",Ad6);
-  accountant.AddMatch("Shlomo",Ad1);
-  accountant.AddMatch("Yoram",Ad2);
-  for (int i=0;i<30;i++) { accountant.UpdatePriorities(); sleep(1); }  
+  //  sleep(1);
+  //accountant.RemoveMatch("XXX6.2.3");
+  //sleep(1);
+  //accountant.UpdatePriorities();
+  
+  //sleep(10);
+  sleep(2);
+  accountant.RemoveMatch("1@fred");
+  dprintf(D_ALWAYS,"Before second removal\n");
+  accountant.RemoveMatch("1@fred");
+  sleep(4);
+  dprintf(D_ALWAYS,"Before addMatch\n");
+  accountant.AddMatch("Arieh",Ad1);
+  sleep(4);
+  //for (int i=0,j; i<10000000; i++) j=(i+1)*2/3+(i*7);
+  accountant.UpdatePriorities();
+  sleep(10);
+  
+  while(1) { sleep(1); accountant.UpdatePriorities(); }
 
   dprintf(D_ALWAYS,"End.");
 
