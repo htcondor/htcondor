@@ -61,6 +61,7 @@ Copy( ) const
 	if (newList == 0) return 0;
 	newList->parentScope = parentScope;
 
+
 	vector<ExprTree*>::const_iterator itr;
 	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
 		if( !( newTree = (*itr)->Copy( ) ) ) {
@@ -283,10 +284,10 @@ GetValue( Value& val, const ExprTree *tree, EvalState *es )
 
 	currentState->cache[ tree ] = cv;
 	
-	const ClassAd *tmpScope = es->curAd;
-	es->curAd = (ClassAd*) tree->GetParentScope();
+	const ClassAd *tmpScope = currentState->curAd;
+	currentState->curAd = (ClassAd*) tree->GetParentScope();
 	tree->Evaluate( *currentState, val );
-	es->curAd = (ClassAd*) tmpScope;
+	currentState->curAd = (ClassAd*) tmpScope;
 
 	// replace temporary cached value (above) with actual evaluation
 	currentState->cache[ tree ] = val;
@@ -343,10 +344,10 @@ GetValue( Value& val, ExprTree*& sig, const ExprTree *tree, EvalState *es )
 	cv.SetUndefinedValue( );
 	currentState->cache[ tree ] = cv;
 
-	const ClassAd *tmpScope = es->curAd;
-	es->curAd = (ClassAd*) tree->GetParentScope();
+	const ClassAd *tmpScope = currentState->curAd;
+	currentState->curAd = (ClassAd*) tree->GetParentScope();
 	tree->Evaluate( *currentState, val, sig );
-	es->curAd = (ClassAd*) tmpScope;
+	currentState->curAd = (ClassAd*) tmpScope;
 
 	// replace temporary cached value (above) with actual evaluation
 	currentState->cache[ tree ] = val;
