@@ -144,7 +144,7 @@ do_REMOTE_syscall()
 	case CONDOR_open:
 	  {
 		char *  path;
-		int   flags;
+		open_flags_t flags;
 		int   lastarg;
 		int terrno;
 

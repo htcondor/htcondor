@@ -2,6 +2,8 @@
 #ifndef NT_SENDERS_H
 #define NT_SENDERS_H
 
+#include "condor_common.h"
+
 class ClassAd;
 
 extern "C" {
@@ -9,7 +11,7 @@ extern "C" {
 	int REMOTE_CONDOR_get_job_info( ClassAd *ad );
 	int REMOTE_CONDOR_get_executable( char *destination );
 	int REMOTE_CONDOR_job_exit( int status, int reason, ClassAd *ad );
-	int REMOTE_CONDOR_open( char *path, int flags, int mode );
+	int REMOTE_CONDOR_open( char *path, open_flags_t flags, int mode );
 	int REMOTE_CONDOR_close( int fd );
 	int REMOTE_CONDOR_unlink( char *path );
 	int REMOTE_CONDOR_rename( char *path, char *newpath );

@@ -131,7 +131,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			flags |= O_APPEND;
 		}
 
-		result = REMOTE_CONDOR_open(path,flags,mode);
+		result = REMOTE_CONDOR_open(path,(open_flags_t)flags,mode);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 

@@ -158,7 +158,7 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 }
 
 int
-REMOTE_CONDOR_open( char *  path , int flags , int   lastarg)
+REMOTE_CONDOR_open( char *  path , open_flags_t flags , int   lastarg)
 {
         int     rval;
         int     terrno;
