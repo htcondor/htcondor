@@ -32,7 +32,7 @@ osver=`uname -r`
 
 LINUX_LIB="NOT_SO_LINUX"
 if [ $os = "Linux" ]; then
-        libc = `condor_version -syscall -libc`
+        libc=`condor_version -syscall -libc`
         if [ $libc = "GLIBC21" ]; then
                 LINUX_LIB="glibc21"
         elif [ -f /lib/libc-2.1* ]; then
