@@ -261,11 +261,9 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 	);
 
 
-dprintf(D_ALWAYS,"problem!\n" );
 	if ( (major_status != GSS_S_COMPLETE) ||
 			( ( lookup_user( client_name ) ) < 0 ) ) 
 	{
-dprintf(D_ALWAYS,"got failure\n" );
 		if (major_status != GSS_S_COMPLETE) {
 			dprintf(D_ALWAYS, "server: GSS authentication failure, status:0x%x\n",
 					major_status );
