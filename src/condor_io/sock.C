@@ -108,7 +108,6 @@ int Sock::assign(
 	LPWSAPROTOCOL_INFO pProtoInfo
 	)
 {
-	if (!valid()) return FALSE;
 	if (_state != sock_virgin) return FALSE;
 
 	// verify the win32 socket type we are about to inherit matches
@@ -178,7 +177,6 @@ int Sock::assign(
 {
 	int		my_type;
 
-	if (!valid()) return FALSE;
 	if (_state != sock_virgin) return FALSE;
 
 	if (sockd != INVALID_SOCKET){
@@ -228,8 +226,6 @@ int Sock::bind(
 {
 	sockaddr_in		sin;
 	
-	if (!valid()) return FALSE;
-
 		/* if stream not assigned to a sock, do it now	*/
 	if (_state == sock_virgin) assign();
 
@@ -289,7 +285,6 @@ int Sock::do_connect(
 	hostent			*hostp;
 	unsigned long	inaddr;
 
-	if (!valid()) return FALSE;
 	if (!host || port < 0) return FALSE;
 
 
@@ -439,7 +434,10 @@ int Sock::close()
 
 	if (::closesocket(_sock) < 0) return FALSE;
 
+	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
+	_timeout = 0;
+	memset(&_who, 0, sizeof( struct sockaddr_in ) );
 	return TRUE;
 }
 
