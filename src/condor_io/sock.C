@@ -448,11 +448,11 @@ int Sock::timeout(int sec)
 	if (_timeout == 0) {
 		unsigned long mode = 0;	// reset blocking mode
 		if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
-			return FALSE;
+			return -1;
 	} else {
 		unsigned long mode = 1;	// nonblocking mode
 		if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
-			return FALSE;
+			return -1;
 	}
 
 	return t;
