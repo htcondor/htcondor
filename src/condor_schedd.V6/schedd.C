@@ -1229,7 +1229,7 @@ Scheduler::negotiate(int, Stream* s)
 				 !match && (host = FlockNegotiators->next());
 				 n++) {
 				hent = gethostbyname(host);
-				if (hent->h_addrtype == AF_INET) {
+				if (hent && hent->h_addrtype == AF_INET) {
 					for (int a=0;
 						 !match && (addr = hent->h_addr_list[a]);
 						 a++) {
