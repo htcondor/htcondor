@@ -191,7 +191,6 @@ int open_file_stream( const char *local_path, int flags, size_t *len );
 int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 void get_ckpt_name();
 extern volatile int InRestart;
-extern void InitFileState();
 void _condor_disable_uid_switching();
 
 int
@@ -207,6 +206,7 @@ MAIN( int argc, char *argv[], char **envp )
 	int		scm;
 	char	*argv0;
 	char 	*argv1;
+	int		do_wait = 1;
 	
 		/* 
 		   Since we're the user job, we want to just disable any
@@ -220,12 +220,10 @@ MAIN( int argc, char *argv[], char **envp )
 		*/
 	_condor_disable_uid_switching();
 
-#undef WAIT_FOR_DEBUGGER
-#if defined(WAIT_FOR_DEBUGGER)
-	int		do_wait = 1;
-	while( do_wait )
-		;
-#endif
+	#undef WAIT_FOR_DEBUGGER
+	#if defined(WAIT_FOR_DEBUGGER)
+	while( do_wait ) {}
+	#endif
 
 	/* Some platforms have very picky strcmp()'s which like
 	 * to coredump (IRIX) so make certain argv[1] points to something 
@@ -252,7 +250,6 @@ MAIN( int argc, char *argv[], char **envp )
 				/* Run the job "normally" outside of condor */
 				SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 				DebugFlags = 0;		/* disable dprintf messages */
-				InitFileState();  /* to create a file_state table so no SEGV */
 				if ( strcmp("-_condor_nowarn",argv1) != MATCH ) {
 					fprintf(stderr,"WARNING: This binary has been linked for Condor.\nWARNING: Setting up to run outside of Condor...\n");
 				} else {
@@ -284,13 +281,11 @@ MAIN( int argc, char *argv[], char **envp )
 	init_syscall_connection( FALSE );
 #endif
 
-#if 0
 	dprintf( D_ALWAYS, "User process started\n" );
 	dprintf( D_ALWAYS, "\nOriginal\n" );
 	DumpOpenFds();
 	dprintf( D_ALWAYS, "END\n\n" );
 	delay();
-#endif
 
 	if( strcmp("-_condor_cmd_fd",argv[1]) == MATCH ) {
 #if 0
@@ -307,7 +302,7 @@ MAIN( int argc, char *argv[], char **envp )
 		delay();
 #endif
 		/* scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED ); */
-		pre_open( cmd_fd, TRUE, FALSE );
+		pre_open( cmd_fd, TRUE, FALSE, FALSE );
 
 #if 0
 		dprintf( D_ALWAYS, "\nBefore reading commands\n" );
@@ -333,15 +328,14 @@ MAIN( int argc, char *argv[], char **envp )
 		Suicide();
 	}
 
-#if 0
 	dprintf( D_ALWAYS, "\nCalling cmd stream processor\n" );
 	delay();
-#endif
+
 	_condor_interp_cmd_stream( cmd_fd );
-#if 0
+
 	dprintf( D_ALWAYS, "Done\n\n" );
 	delay();
-#endif
+
 	cmd_name = argv[0];
 	argv += 2;
 	argc -= 2;
@@ -505,7 +499,8 @@ condor_iwd( const char *path )
 	delay();
 #endif
 	REMOTE_syscall( CONDOR_chdir, path );
-	Set_CWD( path );
+	//The wd is tracked entirely by the shadow now
+	//	Set_CWD( path );
 	return TRUE;
 }
 
@@ -779,7 +774,8 @@ set_iwd()
 		dprintf( D_ALWAYS, "Can't chdir(%s)\n", iwd );
 		Suicide();
 	}
-	Set_CWD( iwd );
+	// The wd is tracked entirely by the shadow now
+	//	Set_CWD( iwd );
 }
 
 void
