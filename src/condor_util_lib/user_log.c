@@ -73,7 +73,6 @@ OpenUserLog( const char *owner, const char *file, int c, int p, int s )
 {
 	struct passwd	*pwd;
 	USER_LOG	*LP;
-	mode_t omask;
 	char *file_name;
 
 	LP = (USER_LOG *)malloc( sizeof(USER_LOG) );
@@ -95,14 +94,10 @@ OpenUserLog( const char *owner, const char *file, int c, int p, int s )
     	if( !file_name ) {
         	EXCEPT( "No USERLOG_LOCK file specified in config file\n" );
     	}
-
-    	omask = umask( 0 );
- 
-    	if( (ULogLockFd = open(file_name,O_RDWR|O_CREAT,0664)) < 0 ) {
+    	if( (ULogLockFd = open(file_name,O_RDWR|O_CREAT,0666)) < 0 ) {
         	EXCEPT( "Cannot open User Log lock file \"%s\"", file_name );
     	}
- 
-    	umask( omask );
+		free( file_name );
 	}
 
 		/* Look up process owner's UID and GID */
