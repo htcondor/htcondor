@@ -464,23 +464,23 @@ SetExecutable()
   switch(JobUniverse) 
 	{
 	case STANDARD:
-	  (void) sprintf (buffer, "%s = 1", ATTR_WANT_REMOTE_SYSCALLS);
+	  (void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
 	  InsertJobExpr (buffer);
-	  (void) sprintf (buffer, "%s = 1", ATTR_WANT_CHECKPOINT);
+	  (void) sprintf (buffer, "%s = TRUE", ATTR_WANT_CHECKPOINT);
 	  InsertJobExpr (buffer);
 	  break;
 	case PVM:
 	case PIPE:
-	  (void) sprintf (buffer, "%s = 1", ATTR_WANT_REMOTE_SYSCALLS);
+	  (void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
 	  InsertJobExpr (buffer);
-	  (void) sprintf (buffer, "%s = 0", ATTR_WANT_CHECKPOINT);
+	  (void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
 	  InsertJobExpr (buffer);
 	  break;
 	case VANILLA:
 	case SCHED_UNIVERSE:
-	  (void) sprintf (buffer, "%s = 0", ATTR_WANT_REMOTE_SYSCALLS);
+	  (void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
 	  InsertJobExpr (buffer);
-	  (void) sprintf (buffer, "%s = 0", ATTR_WANT_CHECKPOINT);
+	  (void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
 	  InsertJobExpr (buffer);
 	  break;
 	default:
