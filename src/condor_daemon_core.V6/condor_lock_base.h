@@ -23,7 +23,7 @@
 #ifndef __CONDOR_LOCK_BASE__
 #define __CONDOR_LOCK_BASE__
 
-#include "condor_common.h"
+
 #include "condor_timer_manager.h"
 #include "condor_daemon_core.h"
 
