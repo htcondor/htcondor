@@ -99,7 +99,7 @@ input the program requires (that is, this file becomes \File{stdin}).
 If not specified, the default value
 of \File{/dev/null} is used for submission to a Unix machine.
 If not specified, input is ignored
-for submission to an NT machine.
+for submission to a Windows machine.
 For globus universe jobs, \Opt{input} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
@@ -115,7 +115,7 @@ any information the program would normally write to the screen
 If not specified, the default value of
 \File{/dev/null} is used for submission to a Unix machine.
 If not specified, output is ignored
-for submission to an NT machine.
+for submission to a Windows machine.
 More than one job should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
@@ -134,7 +134,7 @@ error messages the program would normally write to the screen
 If not specified, the default value of
 \File{/dev/null} is used for submission to a Unix machine.
 If not specified, error messages are ignored
-for submission to an NT machine.
+for submission to a Windows machine.
 More than one job should not use the same error file, since
 this will cause one job to overwrite the errors of another.
 For globus universe jobs, \Opt{error} may be a URL that the Globus
@@ -475,20 +475,35 @@ but you know if you run the job again with the same data,
 chances are that the will finish successfully.
 This is
 how you would represent that with \AdAttr{on\_exit\_remove}
-(assuming the signal identifier for segmentation fault is 4):
+(assuming the signal identifier for segmentation fault is 11 on the
+platform where your job will be running):
 
 \begin{verbatim}
-	on_exit_remove = (ExitBySignal == False) && (ExitSignal != 4)
+	on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
 \end{verbatim}
 
-This expression will not let the job leave the queue,
-if the job exited by a signal and
-that signal number was 4 (representing segmentation fault).
+This expression will only let the job leave the queue if the job was
+not killed by a signal (it exited normally on its own) or if it was
+killed by a signal other than 11 (representing segmentation fault).
+So, if it was killed by signal 11, it will stay in the job queue.
 In any other case of the job exiting, 
 the job will leave the queue as it normally would have done.
 
-If left unspecified, this will default to \Expr{True}.
+As another example,
+if your job should only leave the queue if it exited on its own with
+status 0,
+you would use this \AdAttr{on\_exit\_remove} expression: 
 
+\begin{verbatim}
+	on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
+\end{verbatim}
+
+If the job was killed by a signal or exited with a non-zero exit
+status, Condor would leave the job in the queue to run again.
+
+If left unspecified, the \AdAttr{on\_exit\_remove} expression will
+default to \Expr{True}.
+ 
 \AdAttr{periodic\_*} expressions take
 precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
@@ -761,7 +776,7 @@ of the form :
 Multiple environment variables can be specified by separating them with a
 semicolon (;) when submitting from a Unix platform.
 Multiple environment variables can be specified by separating them with a
-vertical bar (\Bar) when submitting from an NT platform.
+vertical bar (\Bar) when submitting from a Windows platform.
 These environment variables will be placed (as given) into the
 job's environment before execution. The length of all characters
 specified in the environment is currently limited to 10240 characters.  

@@ -1041,6 +1041,31 @@ Condor evicts the currently running job before proceeding
 with the shutdown.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Condor does not stop the Condor jobs running on my Linux machine
+when I use my keyboard and mouse.  Is there a bug?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Linux!keyboard and mouse activity}
+
+There is no bug in Condor.
+Unfortunately,
+recent Linux 2.4.x and all Linux 2.6.x kernels through 
+version 2.6.10
+do not post proper state information,
+such that Condor can detect keyboard and mouse activity.
+Condor version 6.6.8 and later versions of Condor
+implement workarounds to piece together the needed
+state information for PS/2 devices.
+A better fix of the problem utilizes the 
+kernel patch linked to from the directions posted at
+\URL{http://www.cs.wisc.edu/condor/kernel.patch.html}.
+This patch works better for PS/2 devices, and
+may also work for USB devices.
+A future version of Condor will implement better recognition
+of USB devices,
+such that the kernel patch will also definitively work for USB devices.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{What signals get sent to my jobs when Condor needs to preempt or kill them, or when I remove them from the queue?  Can I tell Condor which signals to send?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1250,36 +1275,36 @@ of the intermediate files.
 
 \index{FAQ!Condor on Windows machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Will Condor work on a network of mixed Unix and NT machines?}
+\subsection*{Will Condor work on a network of mixed Unix and Windows machines?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-You can have a Condor pool that consists of both Unix and NT machines.
+You can have a Condor pool that consists of both Unix and Windows machines.
 
-Your central manager can be either Windows NT or Unix.  For example,
+Your central manager can be either Windows or Unix.  For example,
 even if you had a pool consisting strictly of Unix machines, you could
-use an NT box for your central manager, and vice versa.
+use a Windows box for your central manager, and vice versa.
 
 Submitted jobs can originate from either a 
-Windows NT \Bold{or} a Unix machine,
-and be destined to run on Windows NT 
+Windows \Bold{or} a Unix machine,
+and be destined to run on Windows
 \Bold{or} a Unix machine.
 Note that there are still restrictions on the supported universes
-for jobs executed on Windows NT machines.
+for jobs executed on Windows machines.
 
 So, in summary:
 
 \begin{enumerate}
 
-\item{A single Condor pool can consist of both Windows NT and Unix
+\item{A single Condor pool can consist of both Windows and Unix
 machines.}
 
-\item{It does not matter at all if your Central Manager is Unix or NT.}
+\item{It does not matter at all if your Central Manager is Unix or Windows.}
 
-\item{Unix machines can submit jobs to run on other Unix or Windows NT
+\item{Unix machines can submit jobs to run on other Unix or Windows
 machines.}
 
 \item{Windows NT machines can submit jobs to run on other Windows
-NT or Unix machines.}
+or Unix machines.}
 
 \end{enumerate}
 
@@ -1338,16 +1363,16 @@ or start the Condor service from the Service Control Manager located in
 the Windows Control Panel.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Jobs submitted from NT give an error referring to a credential.}
+\subsection*{Jobs submitted from Windows give an error referring to a credential.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Jobs submitted from an NT machine require a stashed password in order
+Jobs submitted from a Windows machine require a stashed password in order
 for Condor to run the jobs as the user submitting the jobs.
 The command which stashes a password for a user is \Condor{store\_cred}.
 See the manual page on
 on page~\pageref{man-condor-store-cred}
 for usage details.
-\index{job!credential error on NT}
+\index{job!credential error on Windows}
 
 The error message that Condor gives if a user has not stashed a
 password is of the form:
@@ -1361,11 +1386,11 @@ ERROR: No credential stored for username@machinename
 \normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Jobs submitted from Unix to execute on NT do not work properly.}
+\subsection*{Jobs submitted from Unix to execute on Windows do not work properly.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A difficulty with defaults causes jobs submitted from Unix for execution
-on an NT platform to remain in the queue, but make no progress.
+on a Windows platform to remain in the queue, but make no progress.
 For jobs with this problem, log files will contain error messages
 pointing to shadow exceptions.
 
@@ -1376,7 +1401,7 @@ The workaround for this problem is to place the line
    TRANSFER_FILES  = ALWAYS
 \end{verbatim}
 into the submit description file for jobs submitted from a Unix
-machine for execution on a Windows NT machine.
+machine for execution on a Windows machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1391,13 +1416,13 @@ regular network interface.
 To solve this problem, either change the order of your network
 interfaces in the Control Panel, or explicitly set which network
 interface Condor should use by adding the following parameter to your
-Condor config file:
+Condor configuration file:
 
 \begin{verbatim}
 NETWORK_INTERFACE = ip-address
 \end{verbatim}
 
-Where ``ip-address'' is the IP address of the interface you wish
+Where \verb@ip-address@ is the IP address of the interface you wish
 Condor to use.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1415,7 +1440,7 @@ in Explorer, choose Quickview, and look under ``Import List''.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why does the startd crash on Condor NT with the error\\
+\subsection*{Why does the startd crash on Condor with the error\\
 "caInsert: Can't insert CpuBusy into target classad."?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{decimal point!problems with}
@@ -1424,18 +1449,18 @@ This is a common problem with European installations on Windows.
 The problem is Condor expects all decimal points to be the
 period character (.),
 but the Windows locale defines them as the comma character(,).
-This will be fixed in the next version of Condor for NT,
+This will be fixed in the next version of Condor,
 however we have users who have fixed the problem by 
 changing the following registry value to a period instead of a comma:
 \verb@HKEY_USERS\.DEFAULT\Control Panel\International\sDecimal@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{How can I access network files with Condor on NT?}
+\subsection*{How can I access network files with Condor on Windows?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Features to allow Condor NT to work well with a network file server are 
+Features to allow Condor to work well with a network file server are 
 coming very soon.  However, there are a couple of work-arounds which you 
-can do immediately with the current version of Condor NT in order to access 
+can do immediately with the current version of Condor in order to access 
 a file server.
 
 The heart of the problem is that on the execute machine, Condor creates a 
@@ -1759,6 +1784,30 @@ to restart the Condor daemons and effect the change.
 %To correct this incomplete host name on Windows NT Version 4,
 %set the domain in the TCP/IP Properties dialog box.
 %Restart Condor after making this change.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Does \MacroNI{USER\_JOB\_WRAPPER} work on Windows machines?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The \Macro{USER\_JOB\_WRAPPER} configuration variable
+does work on Windows machines.
+The wrapper must be either a
+batch script with a file extension of \File{.bat} or \File{.cmd},
+or an
+executable with a file extension of \File{.exe} or \File{.com}.
+
+An example of a batch script sets environment variables:
+\footnotesize
+\begin{verbatim}
+REM set some environment variables
+set LICENSE_SERVER=192.168.1.202:5012
+set MY_PARAMS=2
+
+REM Run the actual job now
+%*
+\end{verbatim}
+\normalsize
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}

@@ -373,35 +373,39 @@ system.
   
 \item[\Macro{COLLECTOR\_HOST}] \label{param:CollectorHost} The
   hostname of the machine where the \Condor{collector} is running for
-  your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
-  macro described above.  There is no default value for this macro;
-  \Macro{COLLECTOR\_HOST} must be defined for your pool to work
+  your pool.  Normally, it is defined relative to
+  the \MacroUNI{CONDOR\_HOST}
+  macro.  There is no default value for this macro;
+  \Macro{COLLECTOR\_HOST} must be defined for the pool to work
   properly.
 
   In addition to defining the hostname, this setting can optionally be
-  used to specify the network port that the \Condor{collector} should
-  use.
-  The port is seperated from the hostname by a ':' symbol.
-  For example, \verb@COLLECTOR_HOST = $(CONDOR_HOST):1234@.
+  used to specify the network port of the \Condor{collector}.
+  The port is separated from the hostname by a colon ('\verb@:@').
+  For example,
+\begin{verbatim}
+  COLLECTOR_HOST = $(CONDOR_HOST):1234
+\end{verbatim}
   If no port is specified, the default port of 9618 is used.
   Using the default port is recommended for most sites.
-  This should only be modified if there is a conflict with another
+  It is only changed if there is a conflict with another
   service listening on the same network port.
   For more information about specifying a non-standard port for the
-  \Condor{collector}, see section~\ref{sec:Ports-NonStandard} on
+  \Condor{collector} daemon,
+  see section~\ref{sec:Ports-NonStandard} on
   page~\pageref{sec:Ports-NonStandard}.
 
 
 \item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} The
-  hostname of the machine where the \Condor{negotiator} is running for
-  your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
-  macro described above.  There is no default value for this macro;
-  \Macro{NEGOTIATOR\_HOST} must be defined for your pool to work
+  host name of the machine where the \Condor{negotiator} is running for
+  the pool.
+  Normally, it is defined relative to the \MacroUNI{CONDOR\_HOST}
+  macro.  There is no default value for this macro;
+  \Macro{NEGOTIATOR\_HOST} must be defined for the pool to work
   properly.
-  This setting also be used to optionally define a network port for
-  the \Condor{negotatior}.
-  For more information, see the \MacroNI{COLLECTOR\_HOST} setting
-  above.
+  This variable may also be used to optionally define a network port for
+  the \Condor{negotatior} daemon, as explained for the
+  the \MacroNI{COLLECTOR\_HOST} variable.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
   hostname of the machine where the CondorView server is running.
@@ -1218,23 +1222,37 @@ server, shadow, and starter, none of which use DaemonCore yet).
 %  \end{itemize}
 
 \item[\Macro{SUBSYS\_ADDRESS\_FILE}]
-  \label{param:SubsysAddressFile} Every Condor daemon that uses
-  DaemonCore has a command port where commands are sent.  The
-  IP/port of the daemon is put in that daemon's ClassAd so that other
-  machines in the pool can query the \Condor{collector} (which listens
-  on a well-known port) to find the address of a given daemon on a
-  given machine.  However, tools and daemons executing on the same
-  machine they wish to communicate with are not required to query the
-  collector. They look in a file on the local disk to find
-  the IP/port.  Setting this macro will cause daemons to write the
-  IP/port of their command socket to a specified file.  In this way,
-  local tools will continue to operate, even if the machine running
-  the \Condor{collector} crashes.  Using this file will also generate
-  slightly less network traffic in your pool (since \Condor{q},
-  \Condor{rm}, and others do not have to send any messages over the network to
-  locate the \Condor{schedd}).  This macro is not needed
-  for the collector or negotiator, since their command sockets are at
-  well-known ports.  
+  \label{param:SubsysAddressFile}
+  \index{}
+  \index{NEGOTIATOR\_ADDRESS\_FILE macro@\texttt{NEGOTIATOR\_ADDRESS\_FILE} macro}
+  \index{configuration macro!\texttt{NEGOTIATOR\_ADDRESS\_FILE}}
+  \index{COLLECTOR\_ADDRESS\_FILE macro@\texttt{COLLECTOR\_ADDRESS\_FILE} macro}
+  \index{configuration macro!\texttt{COLLECTOR\_ADDRESS\_FILE}}
+  A complete path to a file that is to contain an
+  IP address and port number for a daemon. 
+  Every Condor daemon that uses
+  DaemonCore has a command port where commands are sent.
+  The IP/port of the daemon is put in that daemon's ClassAd,
+  so that other machines in the pool can query the
+  \Condor{collector} (which listens on a well-known port)
+  to find the address of a given daemon on a given machine.
+  When tools and daemons are all executing on the same
+  single machine, communications do not require a query of the
+  \Condor{collector} daemon.
+  Instead, they look in a file on the local disk
+  to find the IP/port.
+  This macro causes daemons to write the
+  IP/port of their command socket to a specified file.
+  In this way,
+  local tools will continue to operate,
+  even if the machine running the \Condor{collector} crashes.
+  Using this file will also generate
+  slightly less network traffic in the pool,
+  since tools including \Condor{q} and
+  \Condor{rm} do not need to send any messages over the network to
+  locate the \Condor{schedd} daemon.
+  This macro is not necessary for the \Condor{collector} or \Condor{negotiator}
+  daemons, since their command sockets are at well-known ports.  
   
 \item[\Macro{SUBSYS\_ATTRS} or \label{param:SubsysExprs}
 \Macro{SUBSYS\_EXPRS}] \label{param:SubsysAttrs}
@@ -3033,16 +3051,19 @@ The amount of time (in seconds) between ClassAd updates that the
 \Condor{starter} daemon sends to the \Condor{shadow} daemon.
 Defaults to 1200 (20 minutes).
 
-\item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} This macro
-  allows the administrator to specify a ``wrapper'' script to handle the
+\item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} 
+  The full path to an executable or script.
+  This macro
+  allows an administrator to specify a wrapper script to handle the
   execution of all user jobs.  
-  If specified, Condor will never directly execute a job but instead will
-  invoke the program specified by this macro.
+  If specified, Condor never directly executes a job, but instead
+  invokes the program specified by this macro.
   The command-line arguments passed to this program will include the
   full-path to the actual user job which should be executed, followed by all
   the command-line parameters to pass to the user job.
   This wrapper program must ultimately replace its image with the user job;
-  in other words, it must \Term{exec()} the user job, not \Term{fork()} it.
+  in other words,
+  it must \Procedure{exec} the user job, not \Procedure{fork} it.
   For instance, if the wrapper program is a C/Korn shell script, the
   last line of execution should be:
 \begin{verbatim}
@@ -3059,10 +3080,14 @@ Defaults to 1200 (20 minutes).
 \end{verbatim}
 
 \item[\Macro{STARTER\_JOB\_ENVIRONMENT}] \label{param:StarterJobEnvironment}
-This macro sets the default environment inherited by jobs.  The syntax is
-the same as the syntax for environment settings in the job submit file.
-If the same environment variable is assigned by this macro and by the user
-in the submit file, the user's setting takes precedence.
+  This macro sets the default environment inherited by jobs.  The syntax is
+  the same as the syntax for environment settings in the job submit file.
+  If the same environment variable is assigned by this macro and by the user
+  in the submit file, the user's setting takes precedence.
+
+  For Windows machines, the wrapper will either be
+  a batch script (with a file extension of \File{.bat} or \File{.cmd})
+  or an executable (with a file extension of \File{.exe} or \File{.com}).
 
 \end{description}
 
