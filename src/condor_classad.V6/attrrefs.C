@@ -46,6 +46,7 @@ Copy( )
 	}
 
 	newTree->nodeKind = nodeKind;
+	newTree->parentScope = parentScope;
 	newTree->absolute = absolute;
 
 	return newTree;
