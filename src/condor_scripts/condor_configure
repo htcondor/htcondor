@@ -1,7 +1,5 @@
 #!/usr/bin/env perl
 
-use Text::Wrap;
-
 ###########################################################################
 #
 #  This is condor_configure. It performs initial installation of the Condor
@@ -17,11 +15,18 @@ use Text::Wrap;
 
 # Set some global settings
 umask 0022;			# default file creation permissions
-use Getopt::Long;	# "long" command line options parser
 use strict;			# restrict unsafe constructs
 #use warnings;		# Doesn't work on 5.004_05 built for irix-n32
 BEGIN { $^W = 1; }	# "heritage" way to enable warnings from #!/usr/bin/env perl
 
+require 5.003;		# Perl version for function prototypes
+
+# Library modules
+use Text::Wrap;		# line wrapping to form simple paragraphs
+use Getopt::Long;	# "long" command line options parser
+use strict;			# restrict unsafe constructs
+#use warnings;		# Doesn't work on 5.004_05 built for irix-n32
+BEGIN { $^W = 1; }	# "heritage" way to enable warnings from #!/usr/bin/env perl
 
 my $Program; ($Program = $0) =~ s|.*/||;    # This program name.
 my $Usage = <<END_USAGE;
@@ -46,6 +51,9 @@ there).  Moves log,spool,execute directories there from the old local directory
 --make-personal-condor
 Creates a personal Condor (i.e. a 1-node pool running on local machine). 
 
+--make-personal-stork
+Creates a personal Stork, using the credential manager daemon.
+
 --type=<[submit],[execute],[manager]> 
 Determines which role(s) the machine will perform in a pool (which translates to
 which daemons will run). In the case of a personal Condor this value is
@@ -53,6 +61,13 @@ automatically forced to be \"submit,execute,manager\".
 
 --central-manager=<host>
 Connect to existing pool with Central manager on <host>. 
+
+--stork
+Configures Stork data placement server.  It is recommended to also use the
+--credd option with the --stork option.
+
+--credd
+Configure credential manager daemon.
 
 --owner=<user>
 Run Condor daemons as specified user (can be either ID or username). (Only
@@ -86,12 +101,15 @@ my (
 	$opt_install_dir,
 	$opt_local_dir,
 	$opt_make_personal_condor,
+	$opt_make_personal_stork,
 	$opt_type,
 	$opt_central_manager,
+	$opt_stork,
+	$opt_credd,
 	$opt_owner,
-	$opt_verbose,
 	$opt_maybe_daemon_owner,
 	$opt_install_log,
+	$opt_verbose,
 );
 
 
@@ -100,6 +118,7 @@ my ($who, $host, $fullhost, $domain);
 my $no_config_modify=0;
 my %comment_hash;
 my @allparams;
+my %daemon_list = (MASTER => 1);	# We always want a master.
 my $logfile;
 my $printed_log_message = 0;
 
@@ -120,9 +139,15 @@ sub set_central_manager ($);
 sub set_config_values ($$$);
 sub set_java_jvm_path();
 sub make_personal_condor();
+sub make_personal_stork();
 sub get_config_value($;$);
 sub debug($);
 sub read_config_file_comments();
+#sub is_dynamic($);
+sub which($);
+sub myproxy();
+sub credd();
+sub stork();
 sub log_message($);
 
 parse_command_line();
@@ -131,7 +156,7 @@ my $timestamp=time();
 
 if ($opt_install_log) {
     open(LOGFILE, ">>$opt_install_log")
-        or die "Couldn't open $opt_install_log\n";
+        or die "Couldn't open $opt_install_log: $!\n";
     $logfile = *LOGFILE;
 } else {
     $logfile = *STDOUT;
@@ -246,7 +271,10 @@ if ($opt_central_manager) {
 if ($opt_make_personal_condor ||
     (defined($opt_install) && !$opt_type)) {
 
-    $local_config{DAEMON_LIST}="MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD";
+	$daemon_list{COLLECTOR} = 1;
+	$daemon_list{NEGOTIATOR} = 1;
+	$daemon_list{STARTD} = 1;
+	$daemon_list{SCHEDD} = 1;
     $local_config{START}="TRUE";
     $local_config{PREEMPT}="FALSE";
     $local_config{SUSPEND}="FALSE";
@@ -258,7 +286,6 @@ if ($opt_make_personal_condor ||
 elsif ($opt_type) {
 
     my @types=split(/\,/, $opt_type);
-    my $daemon_list="MASTER";
 
     $local_config{START}="";
     $local_config{PREEMPT}="";
@@ -269,17 +296,31 @@ elsif ($opt_type) {
 
     foreach $type (@types) {
 	if ($type eq "execute") {
-	    $daemon_list .= ",STARTD";
+		$daemon_list{STARTD} = 1;
 	} elsif ($type eq "submit") {
-	    $daemon_list .= ",SCHEDD";
+		$daemon_list{SCHEDD} = 1;
 	} elsif ($type eq "manager") {
-	    $daemon_list .= ",COLLECTOR,NEGOTIATOR";
+		$daemon_list{COLLECTOR} = 1;
+		$daemon_list{NEGOTIATOR} = 1;
 	} else {
 	    die "Illegal -type argument: $opt_type!\n";
 	}
     }
+}
 
-    $local_config{DAEMON_LIST}=$daemon_list;
+if ($opt_make_personal_stork) {
+	make_personal_stork();
+}
+
+# Condor-G and CredD can use MyProxy.
+myproxy();
+
+if ($opt_credd)  {
+	credd();
+}
+
+if ($opt_stork)  {
+	stork();
 }
 
 # Change ownership if necessary
@@ -298,6 +339,8 @@ unless (defined($opt_install)) {
 # Write out values to local and global config files
 unless ($no_config_modify) {
     read_config_file_comments();
+
+    $local_config{DAEMON_LIST}=join(', ', sort keys %daemon_list );
     set_config_values (\%local_config, $local_config_file, 1);
     set_config_values (\%global_config, $config_file, 0);
 }
@@ -381,7 +424,7 @@ e.g. mymachine.mydomain.com \n";
 	if( ! ($fullhost =~ /.*\..*/) ) { 
 	    $fullhost=$host;
 	    $domain="";
-	    print "\nWARNING: Unable to determine full hostname.\n Condor may not work properly\n";
+	    warn "\nWARNING: Unable to determine full hostname.\n Condor may not work properly\n";
 	} else {
 	    # Grab just the domain, so we have it.
 	    $fullhost =~ /\w*\.(.*)/;
@@ -404,13 +447,16 @@ sub parse_command_line() {
 		"install-dir=s"			=>	\$opt_install_dir,
 		"local-dir=s"			=>	\$opt_local_dir,
 		"make-personal-condor!"	=>	\$opt_make_personal_condor,
+		"make-personal-stork!"	=>	\$opt_make_personal_stork,
 		"type=s"				=>	\$opt_type,
 		"central-manager=s"		=>	\$opt_central_manager,
+		"stork!"				=>	\$opt_stork,
+		"credd!"				=>	\$opt_credd,
 	  	"owner=s"				=>	\$opt_owner,
-		"verbose!"				=>	\$opt_verbose,
-		"help"					=>	sub {print $Usage; exit 0},
 		"maybe-daemon-owner!"	=>	\$opt_maybe_daemon_owner,
 		"install-log=s"	        =>	\$opt_install_log,
+		"verbose!"				=>	\$opt_verbose,
+		"help"					=>	sub {print $Usage; exit 0},
 	) or die $Usage;
 
     if ($opt_local_dir && !($opt_local_dir =~ m/^\//)) {
@@ -501,8 +547,8 @@ sub find_local_config_file() {
     $from_config=$files[$#files];
     if ($#files > 0) {
 	
-	print "\nWARNING: There are several local config files used: \
-$from_config \
+	warn "\nWARNING: There are several local config files used: \
+@files \
 The script will modify the following file (it will be backed up):
 $from_config\n";
     }
@@ -742,7 +788,7 @@ sub set_mail_settings() {
     if ( $local_config{MAIL} ) {
 	debug ("Setting mail path to: $local_config{MAIL}");
     } else {
-	print "\n\n WARNING: Unable to find mail program! Condor will not be \n
+	warn "\n\n WARNING: Unable to find mail program! Condor will not be \n
 able to send status notifications until MAIL parameter is configured.\n";
     }
 
@@ -761,7 +807,7 @@ sub set_central_manager ($) {
     my $cm=shift(@_);
 
     if (!(gethostbyname($cm))[0]) {
-	print "\nWARNING: Unable to contact central manager: $cm!\n";
+	warn "\nWARNING: Unable to contact central manager: $cm!\n";
     }
 
     $local_config{CONDOR_HOST}=$cm;
@@ -788,7 +834,7 @@ sub set_config_values ($$$) {
 	  
 	  foreach my $key (@keylist) {
 	      if ($line =~ m/^\s*$key\s*=.*/) {
-		  print TEMP "#$ line\n";  # Comment the old line
+		  #print TEMP "#$ line\n";  # Comment the old line
 
 		  if (exists $hashref->{$key}) {
 		      my $value=$hashref->{$key};
@@ -918,7 +964,10 @@ my $java_jvm_maxmem_arg = "";
 }
 
 sub make_personal_condor() {
-    $local_config{DAEMON_LIST}="MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD";
+	$daemon_list{COLLECTOR} = 1;
+	$daemon_list{NEGOTIATOR} = 1;
+	$daemon_list{STARTD} = 1;
+	$daemon_list{SCHEDD} = 1;
     $local_config{START}="TRUE";
     $cm=set_central_manager($fullhost);
 }
@@ -975,6 +1024,64 @@ sub read_config_file_comments() {
     close (CONFIG);
 }
 
+# find first occurrence of file in PATH, or undef.
+sub which($) {
+	my $file = shift;
+	foreach my $path ( split /:/, $ENV{PATH} ) {
+		my $fullpath = join( '/' , $path, $file);
+		if ( -x $fullpath ) {
+			return $fullpath;
+		}
+	}
+	return undef;
+}
+
+# Configure myproxy.  Condor-G and CredD can use this service to
+# auto-refresh GSI credentials.  Look for myproxy in the PATH, and add
+# to configuration, if found.  If the binary is dyanamically linked,
+# also add the LD_LIBRARY_PATH to config.
+sub myproxy() {
+	my $myproxy_get_delegation = which "myproxy-get-delegation";
+	if ($myproxy_get_delegation) {
+			$local_config{MYPROXY_GET_DELEGATION} = $myproxy_get_delegation;
+	}
+}
+
+# Create a personal Stork/CredD
+sub make_personal_stork()
+{
+	$daemon_list{COLLECTOR} = 1;
+	$opt_credd = 1;
+	$opt_stork = 1;
+}
+
+# Configure CredD credential management daemon.
+sub credd() {
+	$daemon_list{CREDD} = 1;
+
+	# Create/publish credential store directory.
+	my $cred_dir = "$local_dir/cred_dir";
+	unless (-d $cred_dir) {
+		mkdir ($cred_dir, 0700) or die "Create $cred_dir: $!";
+    }
+	my $cred_dir_mode = 0700;
+	chmod $cred_dir_mode, $cred_dir or die "chmod $cred_dir: $!";
+	$local_config{CRED_STORE_DIR} = '$(LOCAL_DIR)/cred_dir';
+
+	unless ( $local_config{MYPROXY_GET_DELEGATION} ) {
+		warn<<EOF;
+myproxy-get-delegation not found in PATH.  To enable GSI proxy auto-refresh,
+edit MYPROXY_GET_DELEGATION configuration macro.
+EOF
+	}
+}
+
+# Configure Stork server.
+sub stork() {
+	$daemon_list{STORK} = 1;
+
+}
+
 sub log_message($)
 {
     my $message = shift;
@@ -993,3 +1100,4 @@ sub log_message($)
     print $logfile "\n";
     return;
 }
+
