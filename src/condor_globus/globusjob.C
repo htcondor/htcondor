@@ -56,6 +56,7 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 	localOutput = (copy.localOutput == NULL) ? NULL : strdup( copy.localOutput );
 	localError = (copy.localError == NULL) ? NULL : strdup( copy.localError );
 	errorCode = copy.errorCode;
+	jmFailureCode = copy.jmFailureCode;
 	userLogFile = (copy.userLogFile == NULL) ? NULL : strdup( copy.userLogFile );
 	executeLogged = copy.executeLogged;
 	exitLogged = copy.exitLogged;
@@ -90,6 +91,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	userLogFile = NULL;
 	jobState = 0;
 	errorCode = 0;
+	jmFailureCode = 0;
 	exitValue = 0;
 	executeLogged = false;
 	exitLogged = false;
@@ -234,7 +236,7 @@ bool GlobusJob::start()
 			return true;
 
 		} else {
-			errorCode = rc;
+			errorCode = jmFailureCode = rc;
 			return false;
 		}
 
@@ -273,7 +275,7 @@ bool GlobusJob::start()
 
 			return true;
 		} else {
-			errorCode = rc;
+			errorCode = jmFailureCode = rc;
 			return false;
 		}
 
@@ -494,6 +496,7 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 					// by just restarting it, or we are talking to a job
 					// manager which cannot be restarted (old version).
 					jobState = G_FAILED;
+					jmFailureCode = error;
 					stateChanged = true;
 					addJobUpdateEvent( this, JOB_UE_FAILED );
 					// TODO

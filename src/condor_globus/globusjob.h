@@ -38,6 +38,7 @@ class GlobusJob
 	char *localOutput;
 	char *localError;
 	int errorCode;
+	int jmFailureCode;
 	char *userLogFile;
 	bool removedByUser;
 	int exitValue;

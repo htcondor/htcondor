@@ -1213,13 +1213,21 @@ GridManager::updateSchedd()
 			if ( curr_job->newJM && curr_job->jobContact != NULL ) {
 				break;
 			}
-			if ( !curr_job->executeLogged ) {
-				WriteExecuteToUserLog( curr_job );
-				curr_job->executeLogged = true;
-			}
-			if ( !curr_job->exitLogged ) {
-				WriteTerminateToUserLog( curr_job );
-				curr_job->exitLogged = true;
+			if ( curr_event->event == JOB_UE_FAILED && curr_job->jmFailureCode ==
+				     GLOBUS_GRAM_CLIENT_ERROR_JOB_EXECUTION_FAILED ) {
+				// This error means the submission to the local scheduler
+				// failed. Treat it as a submission error.
+				curr_job->errorCode = curr_job->jmFailureCode;
+				WriteGlobusSubmitFailedEventToUserLog( curr_job );
+			} else {
+				if ( !curr_job->executeLogged ) {
+					WriteExecuteToUserLog( curr_job );
+					curr_job->executeLogged = true;
+				}
+				if ( !curr_job->exitLogged ) {
+					WriteTerminateToUserLog( curr_job );
+					curr_job->exitLogged = true;
+				}
 			}
 			break;
 		case JOB_UE_CANCELED:
