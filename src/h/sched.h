@@ -30,7 +30,6 @@
 #if defined(HPUX9)
 #include "fake_flock.h"
 #endif
-#include "proc.h"
 
 typedef struct {
 	int		p_disk_avail;
