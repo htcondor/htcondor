@@ -83,6 +83,7 @@ V6_SRC		-a \
 			src/condor_classad \
 			src/condor_collector.V6 \
 			src/condor_daemon_core \
+			src/condor_daemon_core.V6 \
 			src/condor_globalq \
 			src/condor_includes \
 			src/condor_io \
