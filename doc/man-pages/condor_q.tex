@@ -10,6 +10,7 @@
 \oOpt{-run}
 \oOpt{-goodput}
 \oOpt{-long}
+\oOptArg{-format} {formatter attribute}
 \oOpt{-cputime}
 \oOpt{-currentrun}
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
@@ -49,8 +50,14 @@ one of the \Arg{owner} restrictions \emph{and} at least one non-owner
 restriction.
 
 If the \Opt{-long} option is specified, \Condor{q} displays a long description 
-of the jobs in the queue.  Otherwise, a one line summary of information is
-displayed as follows:
+of the queried jobs by printing the entire job classad.
+The attributes of the job classad may be displayed by means of the
+\Opt{-format} option, which displays attributes with a \verb+printf(3)+
+format.
+(Multiple \Opt{-format} options may be specified in the option list to display
+several attributes of the job.)
+If neither \Opt{-long} or \Opt{-format} are specified, \Condor{q} displays a 
+a one line summary of information as follows:
 
 \begin{description}
 \item[ID] The cluster/process id of the condor job. 
@@ -126,6 +133,8 @@ per machine basis.
 	\OptItem{\Opt{-goodput}}{Display job goodput statistics.}
 	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
 	\OptItem{\Opt{-long}}{Display job ads in long format}
+	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \emph{attr} in
+		format \emph{fmt}}
 	\OptItem{\Opt{-cputime}} Instead of wall-clock allocation time (RUN\_TIME), 
 		display remote CPU time accumulated by the job to date in days,
 		hours, minutes, and seconds.  (If the job is currently running, time
