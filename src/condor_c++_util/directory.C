@@ -446,72 +446,42 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 #ifndef WIN32
 		if ( ( want_priv_change ) && ( rem_priv == DIR_REMPRIV_OWNER ) ) {
 
-				// Let's learn about the file's owner
-			uid_t		uid;
-			gid_t		gid;
-			const char	*full;
-			if ( is_curr ) {
-				uid = curr->GetOwner( );
-				gid = curr->GetGroup( );
-				full = curr->FullPath( );
-			} else {
-				GetIds( path, &uid, &gid );
-				full = path;
-			}
+			rmdirAsOwner( path, is_curr );
 
-				// !! Refuse to remove entries owned by root !!
-			if ( ( 0 == uid ) || ( 0 == gid ) ) {
-				dprintf( D_ALWAYS, "NOT Removing %s as with ids to %d.%d\n",
-						 full, uid, gid );
-				dprintf( D_ALWAYS, "It's owned by root, I won't do that\n" );
-				return_and_resetpriv(ret_val);
-			}
-
-				// Log what we're about to do
-			dprintf( D_FULLDEBUG, 
-					 "Attempting to remove %s as file owner (%d.%d)\n",
-					 full, uid, gid );
-
-				// Become the user who owns the directory
-			uninit_user_ids( );
-			set_user_ids( uid, gid );
-			priv = set_user_priv( );
-
-				// Finally, do the work
-#if DEBUG_DIRECTORY_CLASS
-			dprintf( D_ALWAYS,
-					 "Directory: with \"owner\" priv about to call %s\n",
-					 buf.Value() );
-#else
-			try_2_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
-#endif
-
-				// When all of that is done, switch back to our normal user
-			set_priv(priv);
-
-			if( try_2_rc != 0 ) { 
-				MyString errmsg;
-				if( try_2_rc < 0 ) {
-					errmsg = "my_spawnl returned -1";
+				// Check to make sure everything is now gone.
+			StatInfo info( path );
+			if( info.Error() != SINoFile ) {
+					// we've got a problem.  this file should be gone,
+					// but it's not. 
+				dprintf( D_FULLDEBUG, "warning: %s "
+						 "still exists after trying to remove it\n",
+						 path );
+				Directory subdir( path, desired_priv_state );
+				dprintf( D_FULLDEBUG, 
+						 "Attempting to chmod(0700) %s and all subdirs\n",
+						 path );
+				if( ! subdir.chmodDirectories(0700) ) {
+					dprintf( D_ALWAYS,
+							 "Failed to chmod(0700) %s and all subdirs\n",
+							 path );
+					return_and_resetpriv( false );
 				} else {
-					errmsg = "/bin/rm ";
-					statusString( try_2_rc, errmsg );
+					if( ! rmdirAsOwner(path, is_curr) ) {
+							// if that didn't work after the chmod(),
+							// we're screwed, so give up now.
+						return_and_resetpriv( false );
+					}
 				}
-				dprintf( D_ALWAYS,
-						 "Removing %s as file owner (%d.%d) failed: %s\n",
-						 path, (int)uid, (int)gid, errmsg.Value() );
 			}
-
-		}
-
-		else
+		} else
 #endif
 
-			// for good measure, repeat the above operation a second
-			// time as user Condor.  We do this because if we currently
-			// have root priv, and we are accessing files across NFS, we
-			// will get re-mapped to user "nobody" by any NFS daemon worth
-			// its salt.
+			// if we didn't attempt to remove things as the file
+			// owner, and we tried initially to remove as root, we
+			// repeat the remove a second time in PRIV_CONDOR.  We do
+			// this because if we currently have root priv, and we are
+			// accessing files across NFS, we will get re-mapped to
+			// user "nobody" by any NFS daemon worth its salt.
 		if ( want_priv_change && (desired_priv_state == PRIV_ROOT) ) {
 			priv = set_condor_priv(); 
 
@@ -591,6 +561,116 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 
 	return_and_resetpriv(ret_val);
 }
+
+
+#ifndef WIN32
+bool
+Directory::rmdirAsOwner( const char* path, bool is_curr )
+{
+		// Let's learn about the file's owner
+	int		rval;
+	uid_t	uid;
+	gid_t	gid;
+	priv_state priv;
+	const char *fullpath;
+
+	if( is_curr ) {
+		uid = curr->GetOwner( );
+		gid = curr->GetGroup( );
+		fullpath = curr->FullPath( );
+	} else {
+		GetIds( path, &uid, &gid );
+		fullpath = path;
+	}
+
+		// !! Refuse to remove entries owned by root !!
+	if ( ( 0 == uid ) || ( 0 == gid ) ) {
+		dprintf( D_ALWAYS, "NOT Removing %s as with ids to %d.%d\n",
+				 fullpath, uid, gid );
+		dprintf( D_ALWAYS, "It's owned by root, I won't do that\n" );
+		return false;
+	}
+
+		// Log what we're about to do
+	dprintf( D_FULLDEBUG, 
+			 "Attempting to remove %s as file owner (%d.%d)\n",
+			 fullpath, uid, gid );
+
+		// Become the user who owns the directory
+	uninit_user_ids( );
+	set_user_ids( uid, gid );
+	priv = set_user_priv( );
+
+		// Finally, do the work
+#if DEBUG_DIRECTORY_CLASS
+	dprintf( D_ALWAYS,
+			 "Directory: with \"owner\" priv about to call /bin/rm -rf %s\n",
+			 fullpath );
+#else
+	rval = my_spawnl( "/bin/rm", "/bin/rm", "-rf", fullpath, NULL );
+#endif
+
+		// When all of that is done, switch back to our normal user
+	set_priv(priv);
+
+	if( rval != 0 ) { 
+		MyString errmsg;
+		if( rval < 0 ) {
+			errmsg = "my_spawnl returned ";
+			errmsg += rval;
+		} else {
+			errmsg = "/bin/rm ";
+			statusString( rval, errmsg );
+		}
+		dprintf( D_ALWAYS,
+				 "Removing %s as file owner (%d.%d) failed: %s\n",
+				 fullpath, (int)uid, (int)gid, errmsg.Value() );
+		return false;
+	}
+	return true;
+}
+#endif /* ! WIN32 */
+
+
+#ifndef WIN32
+bool
+Directory::chmodDirectories( mode_t mode )
+{
+	const char* thefile = NULL;	
+	int chmod_rval;
+	bool rval = true;
+
+		// First, change the mode on the parent directory itself.
+	chmod_rval = chmod( GetDirectoryPath(), mode );
+	if( chmod_rval < 0 ) {
+		dprintf( D_ALWAYS, "chmod(%s) failed: %s (errno %d)\n",
+				 GetDirectoryPath(), strerror(errno), errno );
+		return false;
+	}
+
+		// Now, iterate over everything in this directory.  If we find
+		// any subdirectories that aren't symlinks, we'll instantiate
+		// another Directory object and recursively call
+		// chmodDirectories() on it. 
+	Rewind();
+	while( (thefile = Next()) ) {
+		if( IsDirectory() && !IsSymlink() ) {
+			chmod_rval = chmod( GetFullPath(), mode );
+			if( chmod_rval < 0 ) {
+				dprintf( D_ALWAYS, "chmod(%s) failed: %s (errno %d)\n",
+						 GetFullPath(), strerror(errno), errno );
+				return false;
+			}
+			Directory subdir( GetFullPath(), desired_priv_state );
+			if( ! subdir.chmodDirectories(mode) ) {
+				rval = false;
+			}
+		}
+	}
+	return rval;
+}
+#endif /* ! WIN32 */
+
 
 bool
 Directory::Rewind()

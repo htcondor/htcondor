@@ -336,6 +336,19 @@ public:
 								  DIR_REMPRIV_DEFAULT );
 	
 
+#ifndef WIN32
+
+		/** Recursively walk through the directory tree and chmod()
+			any real directories (ignoring symlinks) to the given
+			mode.
+			NOTE: This will call Rewind(), so it is NOT safe to use
+			this during another iteration over the directory.
+			@param mode The file mode you want to set directories to
+		*/
+	bool chmodDirectories( mode_t mode );
+
+#endif /* ! WIN32 */
+
 private:
 	char *curr_dir;
 	StatInfo* curr;
@@ -347,6 +360,7 @@ private:
 	struct _finddata_t filedata;
 #else
 	DIR *dirp;
+	bool rmdirAsOwner( const char* path, bool is_curr );
 #endif
 };
 
