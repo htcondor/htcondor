@@ -94,7 +94,7 @@ GETMNT_OBJ = getmnt.o
 	$(MALLOC_SRC) disk_req.c env_param.c ckpt_name.c lock_file.NON_POSIX.c \
 	block_condor.c my_popen.c $(GETMNT_SRC) syscall_numbers.c $(VIRT_MEM_SRC) \
 	sig_install.c internet.c user_log.c startup_info.c \
-	ckpt_server_api_stubs.c
+	ckpt_server_api_stubs.c ckpt_util.c
 
 #define ObjectFiles \
 	blankline.o config.o do_connect.o dprintf.o dprintf_config.o except.o \
@@ -108,7 +108,7 @@ GETMNT_OBJ = getmnt.o
 	$(GETWD_OBJ) $(INSQUE_OBJ) disk_req.o env_param.o ckpt_name.o \
 	lock_file.NON_POSIX.o block_condor.o my_popen.o $(GETMNT_OBJ) \
 	syscall_numbers.o sig_install.o internet.o user_log.o startup_info.o \
-	ckpt_server_api_stubs.o
+	ckpt_server_api_stubs.o ckpt_util.o
 
 all_target( util_lib.a )
 
