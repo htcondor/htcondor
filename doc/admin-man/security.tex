@@ -105,6 +105,11 @@ daemons running as root.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:uids}UIDs in Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-Security} Security through Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -253,49 +258,48 @@ The two access levels that are not included in the hierarchy:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % server-side 
-\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION}
-\index{configuration macro!SEC\_DEFAULT\_ENCRYPTION}
-\index{configuration macro!SEC\_DEFAULT\_INTEGRITY}
-%\index{configuration macro!SEC\_DEFAULT\_NEGOTIATION}
-\index{configuration macro!SEC\_READ\_AUTHENTICATION}
-\index{configuration macro!SEC\_READ\_ENCRYPTION}
-\index{configuration macro!SEC\_READ\_INTEGRITY}
-%\index{configuration macro!SEC\_READ\_NEGOTIATION}
-\index{configuration macro!SEC\_WRITE\_AUTHENTICATION}
-\index{configuration macro!SEC\_WRITE\_ENCRYPTION}
-\index{configuration macro!SEC\_WRITE\_INTEGRITY}
-%\index{configuration macro!SEC\_WRITE\_NEGOTIATION}
-\index{configuration macro!SEC\_ADMIN\_AUTHENTICATION}
-\index{configuration macro!SEC\_ADMIN\_ENCRYPTION}
-\index{configuration macro!SEC\_ADMIN\_INTEGRITY}
-%\index{configuration macro!SEC\_ADMIN\_NEGOTIATION}
-\index{configuration macro!SEC\_DAEMON\_AUTHENTICATION}
-\index{configuration macro!SEC\_DAEMON\_ENCRYPTION}
-\index{configuration macro!SEC\_DAEMON\_INTEGRITY}
-%\index{configuration macro!SEC\_DAEMON\_NEGOTIATION}
-\index{configuration macro!SEC\_CONFIG\_AUTHENTICATION}
-\index{configuration macro!SEC\_CONFIG\_ENCRYPTION}
-\index{configuration macro!SEC\_CONFIG\_INTEGRITY}
-%\index{configuration macro!SEC\_CONFIG\_NEGOTIATION}
-
-\index{configuration macro!SEC\_OWNER\_AUTHENTICATION}
-\index{configuration macro!SEC\_OWNER\_ENCRYPTION}
-\index{configuration macro!SEC\_OWNER\_INTEGRITY}
-%\index{configuration macro!SEC\_OWNER\_NEGOTIATION}
-\index{configuration macro!SEC\_NEGOTIATOR\_AUTHENTICATION}
-\index{configuration macro!SEC\_NEGOTIATOR\_ENCRYPTION}
-\index{configuration macro!SEC\_NEGOTIATOR\_INTEGRITY}
-%\index{configuration macro!SEC\_NEGOTIATOR\_NEGOTIATION}
+\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION@\texttt{SEC\_DEFAULT\_AUTHENTICATION}}
+\index{configuration macro!SEC\_DEFAULT\_ENCRYPTION@\texttt{SEC\_DEFAULT\_ENCRYPTION}}
+\index{configuration macro!SEC\_DEFAULT\_INTEGRITY@\texttt{SEC\_DEFAULT\_INTEGRITY}}
+%\index{configuration macro!SEC\_DEFAULT\_NEGOTIATION@\texttt{SEC\_DEFAULT\_NEGOTIATION}}
+\index{configuration macro!SEC\_READ\_AUTHENTICATION@\texttt{SEC\_READ\_AUTHENTICATION}}
+\index{configuration macro!SEC\_READ\_ENCRYPTION@\texttt{SEC\_READ\_ENCRYPTION}}
+\index{configuration macro!SEC\_READ\_INTEGRITY@\texttt{SEC\_READ\_INTEGRITY}}
+%\index{configuration macro!SEC\_READ\_NEGOTIATION@\texttt{SEC\_READ\_NEGOTIATION}}
+\index{configuration macro!SEC\_WRITE\_AUTHENTICATION@\texttt{SEC\_WRITE\_AUTHENTICATION}}
+\index{configuration macro!SEC\_WRITE\_ENCRYPTION@\texttt{SEC\_WRITE\_ENCRYPTION}}
+\index{configuration macro!SEC\_WRITE\_INTEGRITY@\texttt{SEC\_WRITE\_INTEGRITY}}
+%\index{configuration macro!SEC\_WRITE\_NEGOTIATION@\texttt{SEC\_WRITE\_NEGOTIATION}}
+\index{configuration macro!SEC\_ADMIN\_AUTHENTICATION@\texttt{SEC\_ADMIN\_AUTHENTICATION}}
+\index{configuration macro!SEC\_ADMIN\_ENCRYPTION@\texttt{SEC\_ADMIN\_ENCRYPTION}}
+\index{configuration macro!SEC\_ADMIN\_INTEGRITY@\texttt{SEC\_ADMIN\_INTEGRITY}}
+%\index{configuration macro!SEC\_ADMIN\_NEGOTIATION@\texttt{SEC\_ADMIN\_NEGOTIATION}}
+\index{configuration macro!SEC\_DAEMON\_AUTHENTICATION@\texttt{SEC\_DAEMON\_AUTHENTICATION}}
+\index{configuration macro!SEC\_DAEMON\_ENCRYPTION@\texttt{SEC\_DAEMON\_ENCRYPTION}}
+\index{configuration macro!SEC\_DAEMON\_INTEGRITY@\texttt{SEC\_DAEMON\_INTEGRITY}}
+%\index{configuration macro!SEC\_DAEMON\_NEGOTIATION@\texttt{SEC\_DAEMON\_NEGOTIATION}}
+\index{configuration macro!SEC\_CONFIG\_AUTHENTICATION@\texttt{SEC\_CONFIG\_AUTHENTICATION}} 
+\index{configuration macro!SEC\_CONFIG\_ENCRYPTION@\texttt{SEC\_CONFIG\_ENCRYPTION}}
+\index{configuration macro!SEC\_CONFIG\_INTEGRITY@\texttt{SEC\_CONFIG\_INTEGRITY}}
+%\index{configuration macro!SEC\_CONFIG\_NEGOTIATION@\texttt{SEC\_CONFIG\_NEGOTIATION}}
+\index{configuration macro!SEC\_OWNER\_AUTHENTICATION@\texttt{SEC\_OWNER\_AUTHENTICATION}}
+\index{configuration macro!SEC\_OWNER\_ENCRYPTION@\texttt{SEC\_OWNER\_ENCRYPTION}}
+\index{configuration macro!SEC\_OWNER\_INTEGRITY@\texttt{SEC\_OWNER\_INTEGRITY}}
+%\index{configuration macro!SEC\_OWNER\_NEGOTIATION@\texttt{SEC\_OWNER\_NEGOTIATION}}
+\index{configuration macro!SEC\_NEGOTIATOR\_AUTHENTICATION@\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION}}
+\index{configuration macro!SEC\_NEGOTIATOR\_ENCRYPTION@\texttt{SEC\_NEGOTIATOR\_ENCRYPTION}}
+\index{configuration macro!SEC\_NEGOTIATOR\_INTEGRITY@\texttt{SEC\_NEGOTIATOR\_INTEGRITY}}
+%\index{configuration macro!SEC\_NEGOTIATOR\_NEGOTIATION@\texttt{SEC\_NEGOTIATOR\_NEGOTIATION}}
 
 % client-side 
-\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION}
-\index{configuration macro!SEC\_DEFAULT\_ENCRYPTION}
-\index{configuration macro!SEC\_DEFAULT\_INTEGRITY}
-%\index{configuration macro!SEC\_DEFAULT\_NEGOTIATION}
-\index{configuration macro!SEC\_CLIENT\_AUTHENTICATION}
-\index{configuration macro!SEC\_CLIENT\_ENCRYPTION}
-\index{configuration macro!SEC\_CLIENT\_INTEGRITY}
-%\index{configuration macro!SEC\_CLIENT\_NEGOTIATION}
+\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION@\texttt{SEC\_DEFAULT\_AUTHENTICATION}}
+\index{configuration macro!SEC\_DEFAULT\_ENCRYPTION@\texttt{SEC\_DEFAULT\_ENCRYPTION}}
+\index{configuration macro!SEC\_DEFAULT\_INTEGRITY@\texttt{SEC\_DEFAULT\_INTEGRITY}}
+%\index{configuration macro!SEC\_DEFAULT\_NEGOTIATION@\texttt{SEC\_DEFAULT\_NEGOTIATION}}
+\index{configuration macro!SEC\_CLIENT\_AUTHENTICATION@\texttt{SEC\_CLIENT\_AUTHENTICATION}}
+\index{configuration macro!SEC\_CLIENT\_ENCRYPTION@\texttt{SEC\_CLIENT\_ENCRYPTION}}
+\index{configuration macro!SEC\_CLIENT\_INTEGRITY@\texttt{SEC\_CLIENT\_INTEGRITY}}
+%\index{configuration macro!SEC\_CLIENT\_NEGOTIATION@\texttt{SEC\_CLIENT\_NEGOTIATION}}
 
 There are many macros that define security.
 The configuration macro names follow a pattern.
@@ -372,24 +376,42 @@ NEVER      OPTIONAL       No
 NEVER      NEVER          No
 \end{verbatim}
 
-\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_READ\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_WRITE\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_ADMIN\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_DAEMON\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_CONFIG\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_OWNER\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_NEGOTIATOR\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_CLIENT\_AUTHENTICATION\_METHODS}
-\index{configuration macro!SEC\_DEFAULT\_CRYPTO\_METHODS}
-\index{configuration macro!SEC\_READ\_CRYPTO\_METHODS}
-\index{configuration macro!SEC\_WRITE\_CRYPTO\_METHODS}
-\index{configuration macro!SEC\_ADMIN\_CRYPTO\_METHODS}
-\index{configuration macro!SEC\_DAEMON\_CRYPTO\_METHODS}
-\index{configuration macro!SEC\_CONFIG\_CRYPTO\_METHODS}
-\index{configuration macro!SEC\_OWNER\_CRYPTO\_METHODS}
-\index{configuration macro!SEC\_NEGOTIATOR\_CRYPTO\_METHODS}
-\index{configuration macro!SEC\_CLIENT\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION\_METHODS@\texttt{SEC\_DEFAULT\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_READ\_AUTHENTICATION\_METHODS@\texttt{SEC\_READ\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_WRITE\_AUTHENTICATION\_METHODS@\texttt{SEC\_WRITE\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_ADMIN\_AUTHENTICATION\_METHODS@\texttt{SEC\_ADMIN\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_DAEMON\_AUTHENTICATION\_METHODS@\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_CONFIG\_AUTHENTICATION\_METHODS@\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_OWNER\_AUTHENTICATION\_METHODS@\texttt{SEC\_OWNER\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_NEGOTIATOR\_AUTHENTICATION\_METHODS@\texttt{SEC\_NEGOTIATOR\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_CLIENT\_AUTHENTICATION\_METHODS@\texttt{SEC\_CLIENT\_AUTHENTICATION\_METHODS}}
+
+\index{configuration macro!SEC\_DEFAULT\_CRYPTO\_METHODS@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
+
+\index{configuration macro!SEC\_READ\_CRYPTO\_METHODS@\texttt{SEC\_READ\_CRYPTO\_METHODS}}
+
+\index{configuration macro!SEC\_WRITE\_CRYPTO\_METHODS@\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
+
+\index{configuration macro!SEC\_ADMIN\_CRYPTO\_METHODS@\texttt{SEC\_ADMIN\_CRYPTO\_METHODS}}
+
+\index{configuration macro!SEC\_DAEMON\_CRYPTO\_METHODS@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
+
+\index{configuration macro!SEC\_CONFIG\_CRYPTO\_METHODS@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS}}
+
+\index{configuration macro!SEC\_OWNER\_CRYPTO\_METHODS@\texttt{SEC\_OWNER\_CRYPTO\_METHODS}}
+
+\index{configuration macro!SEC\_NEGOTIATOR\_CRYPTO\_METHODS@\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS}}
+
+\index{configuration macro!SEC\_CLIENT\_CRYPTO\_METHODS@\texttt{SEC\_CLIENT\_CRYPTO\_METHODS}}
+
 
 18 additional configuration variables are formed by using one
 of two other communication types:
@@ -487,21 +509,21 @@ configuration macros based on fully qualified user names.
 These configuration variables define a set of users that will be
 allowed to (or denied from) carrying out various Condor commands.
 % NAMES OF ALL THE MACROS
-\index{configuration macro!ALLOW\_READ}
-\index{configuration macro!ALLOW\_WRITE}
-\index{configuration macro!ALLOW\_ADMINISTRATOR}
-\index{configuration macro!ALLOW\_CONFIG}
-\index{configuration macro!ALLOW\_DAEMON}
-\index{configuration macro!DENY\_READ}
-\index{configuration macro!DENY\_WRITE}
-\index{configuration macro!DENY\_ADMINISTRATOR}
-\index{configuration macro!DENY\_CONFIG}
-\index{configuration macro!DENY\_DAEMON}
+\index{configuration macro!ALLOW\_READ@\texttt{ALLOW\_READ}}
+\index{configuration macro!ALLOW\_WRITE@\texttt{ALLOW\_WRITE}}
+\index{configuration macro!ALLOW\_ADMINISTRATOR@\texttt{ALLOW\_ADMINISTRATOR}}
+\index{configuration macro!ALLOW\_CONFIG@\texttt{ALLOW\_CONFIG}}
+\index{configuration macro!ALLOW\_DAEMON@\texttt{ALLOW\_DAEMON}}
+\index{configuration macro!DENY\_READ@\texttt{DENY\_READ}}
+\index{configuration macro!DENY\_WRITE@\texttt{DENY\_WRITE}}
+\index{configuration macro!DENY\_ADMINISTRATOR@\texttt{DENY\_ADMINISTRATOR}}
+\index{configuration macro!DENY\_CONFIG@\texttt{DENY\_CONFIG}}
+\index{configuration macro!DENY\_DAEMON@\texttt{DENY\_DAEMON}}
 
-\index{configuration macro!ALLOW\_OWNER}
-\index{configuration macro!ALLOW\_NEGOTIATOR}
-\index{configuration macro!DENY\_OWNER}
-\index{configuration macro!DENY\_NEGOTIATOR}
+\index{configuration macro!ALLOW\_OWNER@\texttt{ALLOW\_OWNER}}
+\index{configuration macro!ALLOW\_NEGOTIATOR@\texttt{ALLOW\_NEGOTIATOR}}
+\index{configuration macro!DENY\_OWNER@\texttt{DENY\_OWNER}}
+\index{configuration macro!DENY\_NEGOTIATOR@\texttt{DENY\_NEGOTIATOR}}
 
 The configuration macro names
 begin with either the string
