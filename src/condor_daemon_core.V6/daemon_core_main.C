@@ -868,23 +868,18 @@ void
 dc_config_auth()
 {
 #if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
-    // First, if there is X509_USER_PROXY, we clear it
-    int i,j;
-    char *temp=NULL,*temp1=NULL;
+    int i;
+	char *x509_env = "X509_USER_PROXY=";
 
+    // First, if there is X509_USER_PROXY, we clear it.
     for (i=0;environ[i] != NULL;i++) {
-         temp1 = (char*)strdup(environ[i]);
-         if (!temp1)
-             break;
-         temp = (char*)strtok(temp1,"=");
-         if (temp && !strcmp(temp, "X509_USER_PROXY" )) {
-             for (j = i;environ[j] != NULL;j++)
-                 environ[j] = environ[j+1];
+         if (strncmp(environ[i], x509_env, strlen(x509_env) ) == 0) {
+             for (;environ[i] != NULL;i++) {
+                 environ[i] = environ[i+1];
+			}
              break;
          }
     }
-    // Wouldn't unsetenv("X509_USER_PROXY") be easier? I might be
-    // missing something here.  Hao
 
     // Next, we param the configuration file for GSI related stuff and 
     // set the corresponding environment variables for it
