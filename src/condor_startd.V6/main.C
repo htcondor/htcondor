@@ -1,0 +1,341 @@
+/*
+ * Main routine and function for the startd.
+ */
+
+#define _STARTD_NO_DECLARE_GLOBALS 1
+#include "startd.h"
+static char *_FileName_ = __FILE__;
+
+// Define global variables
+
+// Resource manager
+ResMgr*	resmgr;			// Pointer to the resource manager object
+
+// Polling variables
+int	polling_interval;	// Interval for polling when there are resources in use
+int	update_interval;	// Interval to update CM
+
+// Paths
+char*	exec_path = NULL;
+char*	kbd_dev = NULL;
+char*	mouse_dev = NULL;
+
+// Starter paths
+char*	PrimaryStarter = NULL;
+char*	AlternateStarter[MAX_STARTERS];
+char*	RealStarter = NULL;
+
+// Hosts
+char*	negotiator_host = NULL;
+char*	collector_host = NULL;
+char*	condor_view_host = NULL;
+char*	accountant_host = NULL;
+
+// Others
+int		match_timeout;			// How long you're willing to be
+								// matched before claimed 
+int		last_x_event = 0;		// Time of the last x event
+
+char*	mySubSystem = "STARTD";
+
+/*
+ * Prototypes of static functions.
+ */
+
+void usage( const char *s );
+int main_init( int argc, char* argv[] );
+int init_params(int);
+int main_config();
+int main_shutdown_fast();
+int main_shutdown_graceful();
+void reaper_loop();
+int	handle_dc_sigchld( Service*, int );
+int	shutdown_sigchld( Service*, int ); 
+
+int
+main_init( int argc, char* argv[] )
+{
+		// Seed the random number generator for capability generation.
+	set_seed( 0 );
+
+	init_params(1);		// The 1 indicates that this is the first time
+
+	resmgr = new ResMgr;
+	resmgr->walk( config_classad );
+
+		// Do a little sanity checking and cleanup
+	check_perms();
+	cleanup_execute_dir();
+
+		// register daemoncore stuff
+
+		// Commands
+		// RegisterCommand( int cmd, char* "name_of_command",
+		// 					(CommandHandler)handler_function,
+		//					char* "name_of_handler_function" );
+
+		// These commands all read the capability off the wire, find
+		// the resource with that capability, and call appropriate
+		// action on that resource.  Plus, all of these commands only
+		// make sense when we're in the claimed state.  So, we can
+		// handle them all with a common handler.
+	daemonCore->Register_Command( ALIVE, "ALIVE", 
+								  (CommandHandler)command_handler,
+								  "command_handler" );
+	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
+								  (CommandHandler)command_handler,
+								  "command_handler" );
+	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
+								  (CommandHandler)command_handler,
+								  "command_handler" );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM,
+								  "DEACTIVATE_CLAIM",  
+								  (CommandHandler)command_handler,
+								  "command_handler" );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY, 
+								  "DEACTIVATE_CLAIM_FORCIBLY", 
+								  (CommandHandler)command_handler,
+								  "command_handler" );
+	daemonCore->Register_Command( PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB", 
+								  (CommandHandler)command_handler,
+								  "command_handler" );
+	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
+								  (CommandHandler)command_handler,
+								  "command_handler" );
+
+		// These commands are special and need their own handlers
+	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
+								  (CommandHandler)command_request_claim,
+								  "command_request_claim" );
+	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
+								  (CommandHandler)command_pckpt_all,
+								  "command_pckpt_all" );
+	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
+								  "X_EVENT_NOTIFICATION",
+								  (CommandHandler)command_x_event,
+								  "command_x_event" );
+	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
+								  "VACATE_ALL_CLAIMS",
+								  (CommandHandler)command_vacate,
+								  "command_vacate" );
+	daemonCore->Register_Command( GIVE_STATE,
+								  "GIVE_STATE",
+								  (CommandHandler)command_give_state,
+								  "command_give_state" );
+
+		// This command should be registered with negotiator permission
+	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
+								  (CommandHandler)command_match_info,
+								  "command_match_info", NULL,
+								  NEGOTIATOR ); 
+
+		// Signals 
+	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
+								 (SignalHandler)handle_dc_sigchld,
+								 "handle_dc_sigchld" );
+
+		// Reapers (not yet, since we're doing it outside DC)
+
+		// Walk through all resources and start an update timer for
+		// each one.  
+	resmgr->walk( Resource::start_update_timer );
+
+		// Evaluate the state of all resources and update CM
+	resmgr->walk( Resource::eval_and_update );
+
+	return TRUE;
+}
+
+
+int
+main_config()
+{
+	resmgr->walk( config_classad );
+	init_params(0);
+}
+
+
+int
+init_params( int first_time)
+{
+	char *tmp, *pval, buf[1024];
+	int i;
+	struct hostent *hp;
+
+	if( exec_path ) {
+		free( exec_path );
+	}
+	exec_path = param( "EXECUTE" );
+	if( exec_path == NULL ) {
+		EXCEPT( "No Execute file specified in config file" );
+	}
+
+	// make sure we have the canonical name for the negotiator host
+	tmp = param( "NEGOTIATOR_HOST" );
+	if( tmp == NULL ) {
+		EXCEPT("No Negotiator host specified in config file");
+	}
+	if( (hp = gethostbyname(tmp)) == NULL ) {
+		EXCEPT( "gethostbyname failed for negotiator host" );
+	}
+	free( tmp );
+	if( negotiator_host ) {
+		free( negotiator_host );
+	}
+	negotiator_host = strdup( hp->h_name );
+
+	if( collector_host ) {
+		free( collector_host );
+	}
+	collector_host = param( "COLLECTOR_HOST" );
+	if( collector_host == NULL ) {
+		EXCEPT( "No Collector host specified in config file" );
+	}
+
+	if( condor_view_host ) {
+		free( condor_view_host );
+	}
+	condor_view_host = param( "CONDOR_VIEW_HOST" );
+
+	tmp = param( "POLLING_INTERVAL" );
+	if( tmp == NULL ) {
+		polling_interval = 5;
+	} else {
+		polling_interval = atoi( tmp );
+		free( tmp );
+	}
+
+	tmp = param( "UPDATE_INTERVAL" );
+	if( tmp == NULL ) {
+		update_interval = 300;
+	} else {
+		update_interval = atoi( tmp );
+		free( tmp );
+	}
+
+	tmp = param( "STARTD_DEBUG" );
+	if( tmp == NULL ) {
+		EXCEPT( "STARTD_DEBUG not defined in config file" );
+	}
+	free( tmp );
+
+	if( PrimaryStarter ) {
+		free(PrimaryStarter);
+	}
+	PrimaryStarter = param( "STARTER" );
+	if( PrimaryStarter == NULL ) {
+		EXCEPT("No Starter file specified in config file\n");
+	}
+	RealStarter = PrimaryStarter;
+
+	for( i = 0; i < MAX_STARTERS; i++ ) {
+		sprintf( buf, "ALTERNATE_STARTER_%d", i );
+		if( ! first_time && AlternateStarter[i] ) { 
+			free( AlternateStarter[i] );
+		}
+		AlternateStarter[i] = param( buf );
+	}
+
+	if( accountant_host ) {
+		free( accountant_host );
+	}
+	accountant_host = param("ACCOUNTANT_HOST");
+
+	tmp = param( "MATCH_TIMEOUT" );
+	if( !tmp ) {
+		match_timeout = 120;
+	} else {
+		match_timeout = atoi( tmp );
+		free( tmp );
+	}
+
+	if( kbd_dev ) {
+		free( kbd_dev );
+	}
+	kbd_dev = param("KBD_DEVICE");
+
+	if( mouse_dev ) {
+		free( mouse_dev );
+	}
+	mouse_dev = param("MOUSE_DEVICE");
+
+}
+
+
+int
+main_shutdown_fast()
+{
+		// Quickly kill all the starters that are running
+	resmgr->walk( kill_claim );
+	exit(0);
+}
+
+
+int
+main_shutdown_graceful()
+{
+	daemonCore->Cancel_Signal( DC_SIGCHLD );
+	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
+								 (SignalHandler)shutdown_sigchld,
+								 "shutdown_sigchld" );
+
+		// Release all claims, active or not
+	resmgr->walk( release_claim );
+
+	if( resmgr->in_use() ) {
+			// There are still claims, we need to return.
+		return 0;
+	} else {
+			// Machine is free, we can just exit right away.
+		exit(0);
+	}
+}
+
+
+int
+handle_dc_sigchld( Service*, int )
+{
+	reaper_loop();
+	return TRUE;
+}
+
+void
+reaper_loop()
+{
+	int pid, status;
+	Resource* rip;
+
+	while( (pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0 ) {
+		if (WIFSTOPPED(status)) {
+			dprintf(D_ALWAYS, "pid %d stopped.\n", pid);
+			continue;
+		}
+		if( WIFSIGNALED(status) ) {
+			dprintf(D_ALWAYS, "pid %d died on signal %d\n",
+					pid, WTERMSIG(status));
+		} else {
+			dprintf(D_ALWAYS, "pid %d exited with status %d\n",
+					pid, WEXITSTATUS(status));
+		}
+		rip = resmgr->get_by_pid(pid);
+		if( rip == NULL ) {
+			continue;
+		}		
+		rip->starter_exited();
+	}
+}
+
+
+int
+shutdown_sigchld( Service*, int )
+{
+	reaper_loop();
+	if( ! resmgr->in_use() ) {
+		exit(0);
+	} else {
+		return TRUE;
+	}
+}
+
+
+

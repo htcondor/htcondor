@@ -1,0 +1,134 @@
+/*  
+	This file defines the following classes:
+
+	Match, Capability, and Client
+
+	A Match object contains all of the information a startd needs
+    about a given match, such as the capability, the client of this
+    match, etc.  The capability in the match is just a pointer to a
+    Capability object.  The client is also just a pointer to a Client
+    object.  The startd maintains two Match objects in the "rip", the
+    per-resource information structure.  One for the current match,
+    and one for the possibly preempting match that is pending.
+ 
+	A Capability object contains the capability string, and some
+	functions to manipulate and compare against this string.  The
+	constructor generates a new capability with the following form:
+	<ip:port>#random_integer
+
+	A Client object contains all the info about a given client of a
+	startd.  In particular, the client name (a.k.a. "user"), the
+	address ("<www.xxx.yyy.zzz:pppp>" formed ip/port), and the
+	hostname.
+
+	Written 9/29/97 by Derek Wright <wright@cs.wisc.edu> 
+*/
+
+#ifndef _MATCH_H
+#define _MATCH_H
+
+
+class Capability
+{
+public:
+	Capability();
+	~Capability();
+
+	char*	capab() {return c_capab;};
+	int		matches(char* capab);	// Return 1 if given capab matches
+									// current, 0 if not.
+		// Only needed for old protocol
+	void	setcapab(char* capab);
+private:
+	char*	c_capab;	// capability string
+};
+
+
+class Client
+{
+public:
+	Client();
+	~Client();
+
+	char*	name()	{return c_name;};
+	char*	user()	{return c_name;};	// For compatibility only
+	char*	host()	{return c_host;};
+	char*	addr() 	{return c_addr;};
+
+	void	setname(char* name);
+	void	setaddr(char* addr);
+	void	sethost(char* host);
+
+		// send a message to the client and accountant that the match
+		// is a being vacated
+	void	vacate(char* cap);
+private:
+	char	*c_name;	// name of the client, a.k.a. "user"
+	char	*c_host;	// hostname of the clientmachine
+	char	*c_addr;	// <ip:port> of the client
+};
+
+
+class Match
+{
+public:
+	Match();
+	~Match();
+
+		// Operations you can perform on a Match
+	void vacate();	
+		// Process a keep alive for this match
+	void alive();
+	void start_match_timer();
+	void cancel_match_timer();
+	void start_claim_timer();
+	void cancel_claim_timer();
+	void claim_timed_out();
+
+		// Functions that return data
+	float	rank()		{return m_rank;};
+	float	oldrank()	{return m_oldrank;};
+	char*	capab() 	{return m_cap->capab();};
+	
+	Client* client() 	{return m_client;};
+	Capability* cap()	{return m_cap;};
+	ClassAd*	ad() 	{return m_ad;};
+	int		universe()	{return m_universe;};
+	Stream*	agentstream()	{return m_agentstream;};
+
+		// Functions that set the values of data
+	void setrank(float rank) {m_rank=rank;};
+	void setoldrank(float rank) {m_oldrank=rank;};
+
+	void setad(ClassAd *ad);		// Set our ad to the given pointer
+	void deletead(void);
+
+	void setuniverse(int universe)	{m_universe=universe;};
+	void setagentstream(Stream* stream);	
+	void setaliveint(int alive)		{m_aliveint=alive;};
+
+private:
+	Client 		*m_client;
+	Capability 	*m_cap;
+	ClassAd*	m_ad;
+	float		m_rank;
+	float		m_oldrank;
+	int			m_universe;
+	Stream*		m_agentstream;	// cedar sock that the schedd agent is
+								// waiting for a response on
+
+	int			m_match_tid;	// DaemonCore timer id for this
+								// match.  If we're matched but not
+								// claimed within 5 minutes, throw out
+								// the match.
+	int			m_claim_tid;	// DeamonCore timer id for this
+								// claim.  If we don't get a keep
+								// alive in 3 alive intervals, the
+								// schedd has died and we need to
+								// release the claim.
+	int			m_aliveint;		// Alive interval for this match
+};
+
+
+#endif _MATCH_H
+

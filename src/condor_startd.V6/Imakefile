@@ -1,0 +1,55 @@
+SRC_DIR = $(SRC_TREE)/condor_startd.V6
+TARGET_SYSTEM = condor
+
+# Use "-O2" in CFLAGS for benchmark code, i.e. clinpack.c & dhry*.c
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -O2
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+
+#if IS_R6000_AIX32
+#	define LOAD_AVG_SRC load_avg.AIX.c
+#	define LOAD_AVG_OBJ load_avg.AIX.o
+#elif IS_ALPHA_OSF1
+#	define LOAD_AVG_SRC load_avg.OSF1.c
+#	define LOAD_AVG_OBJ load_avg.OSF1.o
+#elif IS_I386_LINUX
+#	define LOAD_AVG_SRC load_avg.LINUX.C
+#	define LOAD_AVG_OBJ load_avg.LINUX.o
+#elif IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
+#       define LOAD_AVG_SRC load_avg.Solaris.c load_avg.uptime.c
+#       define LOAD_AVG_OBJ load_avg.Solaris.o load_avg.uptime.o
+#elif IS_X86_SOLARIS || IS_X86_SOLARIS25
+#       define LOAD_AVG_SRC load_avg.Solaris.c load_avg.uptime.c
+#       define LOAD_AVG_OBJ load_avg.Solaris.o load_avg.uptime.o
+#else
+#	define LOAD_AVG_SRC load_avg.BSD.c load_avg.uptime.c
+#	define LOAD_AVG_OBJ load_avg.BSD.o load_avg.uptime.o
+#endif
+
+#if IS_ALPHA_OSF1
+PLATFORM_SPECIAL_SRC = tty_idle.OSF1.C
+PLATFORM_SPECIAL_OBJ = tty_idle.OSF1.o
+#endif
+
+STARTD_SRC = Match.C Reqexp.C ResAttributes.C ResMgr.C ResState.C Resource.C Starter.C action.C calc.C command.C LOAD_AVG_SRC main.C util.C $(PLATFORM_SPECIAL_SRC) clinpack.c dhry21a.c dhry21b.c timers_b.c 
+
+STARTD_OBJ = Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o Resource.o Starter.o action.o calc.o command.o LOAD_AVG_OBJ main.o util.o $(PLATFORM_SPECIAL_SRC) clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o 
+ 
+#if (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS25) || (IS_SUN4M_SOLARIS251)
+LIB= $(REMOTE_SYSCALL_LIB) ../condor_daemon_core.V6/daemon_core.a  ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_classad/expr_lib.a SocketLib RpcLib MldLib KernLib
+#else
+LIB= $(REMOTE_SYSCALL_LIB) ../condor_daemon_core.V6/daemon_core.a ../condor_c++_util/cplus_lib.a ../condor_classad/expr_lib.a ../condor_util_lib/util_lib.a RpcLib MldLib KernLib
+#endif
+LIBDIRS= ../condor_util_lib ../condor_classad ../condor_daemon_core.V6
+
+all_target(condor_startd)
+
+tags_target($(STARTD_SRC),$(LIBDIRS))
+depend_target($(STARTD_SRC))
+
+c_plus_target(condor_startd,$(STARTD_OBJ),$(LIB))
+release_target(condor_startd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+pure_c_plus_target(condor_startd.pure, $(STARTD_OBJ), $(LIB) )
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_util_lib, setsyscalls.o )
