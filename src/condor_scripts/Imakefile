@@ -37,6 +37,9 @@ static_copy_target(ld,$(STATIC_DIR)/lib,ld,EXECUTABLE_MODE)
 static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
+#if ! IS_CLIPPED
+all_symlink_target(ld,real-ld)
+#endif /* ! IS_CLIPPED */
 
 #if IS_IRIX
 release_link_target($(RELEASE_DIR)/lib/ld,lib,uld)
@@ -68,6 +71,16 @@ static_symlink_target(/usr/lib/c++/cfront,lib,cfront)
 static_symlink_target(/usr/lib/c++/markc++,lib,markc++)
 static_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
 static_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
+
+all_symlink_target(ld,uld)
+all_symlink_target(ld,old_ld)
+all_symlink_target(ld,ld32)
+all_symlink_target(/usr/lib/c++/c++filt,c++filt)
+all_symlink_target(/usr/lib/c++/c++patch,c++patch)
+all_symlink_target(/usr/lib/c++/cfront,cfront)
+all_symlink_target(/usr/lib/c++/markc++,markc++)
+all_symlink_target(/usr/lib/c++/ptcomp,ptcomp)
+all_symlink_target(/usr/lib/c++/ptlink,ptlink)
 #endif
 
 release_copy_target(Condor.pm,$(RELEASE_DIR)/lib,Condor.pm,OBJECT_MODE)
