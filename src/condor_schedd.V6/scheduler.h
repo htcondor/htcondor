@@ -81,7 +81,7 @@ struct OwnerData {
   int GlobusJobs;
   int GlobusUnmanagedJobs;
   time_t NegotiationTimestamp;
-  OwnerData() { Name=NULL;
+  OwnerData() { Name=NULL; Domain=NULL; X509=NULL;
   JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnmanagedJobs=0; }
 };
 
