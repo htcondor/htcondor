@@ -7,7 +7,7 @@ LIB = $(STD_LIBS)
 
 OBJ = sysapi.o phys_mem.o free_fs_blocks.o ncpus.o clinpack.o dhry21a.o \
 		dhry21b.o timers_b.o idle_time.o reconfig.o last_x_event.o \
-		load_avg.o arch.o
+		load_avg.o arch.o virt_mem.o test.o
 
 library_target(libsysapi.a,$(OBJ))
 
