@@ -55,25 +55,30 @@ StringList::StringList(const char *s, const char *delim )
 void
 StringList::initializeFromString (const char *s)
 {
-	char buffer[1024];
-	char *ptr = (char*)s;
-	int  index = 0;
+	char *walk_ptr = (char*)s;
 
-	while (*ptr != '\0')
+	while (*walk_ptr != '\0')
 	{
 		// skip leading separators & whitespace
-		while ((isSeparator (*ptr) || isspace(*ptr)) 
-					&& *ptr != '\0') 
-			ptr++;
+		while ((isSeparator (*walk_ptr) || isspace(*walk_ptr)) 
+					&& *walk_ptr != '\0') 
+			walk_ptr++;
 
-		// copy filename into buffer
-		index = 0;
-		while (!isSeparator (*ptr) && *ptr != '\0')
-			buffer[index++] = *ptr++;
+		// mark the beginning of this String in the list.
+		char *begin_ptr = walk_ptr;
 
+		// walk to the end of this string
+		while (!isSeparator (*walk_ptr) && *walk_ptr != '\0')
+			walk_ptr++;
+
+		// malloc new space for just this item
+		int len = (walk_ptr - begin_ptr);
+		char *tmp_string = (char*)malloc( 1 + len );
+		strncpy (tmp_string, begin_ptr, len);
+		tmp_string[len] = '\0';
+		
 		// put the string into the StringList
-		buffer[index] = '\0';
-		strings.Append (strdup (buffer));
+		strings.Append (tmp_string);
 	}
 }
 
