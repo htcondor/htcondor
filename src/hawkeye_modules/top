@@ -81,6 +81,15 @@ $SIG{TERM} = sub {
     }
     $AllDone++;
 };
+$SIG{INT} = sub {
+    if ( $TopPid > 0 ) {
+	print STDERR "Got SIGINT; killing top (PID = $TopPid)\n";
+	kill( "INT", $TopPid ) || print STDERR "Can't kill $TopPid\n";
+    } else {
+	print STDERR "Got SIGINT (no top to kill)\n";
+    }
+    $AllDone++;
+};
 $SIG{CHLD} = sub {
     my $Pid = wait ();
     if ( ( $Pid > 0 ) && ( $Pid == $TopPid ) ) {
@@ -157,6 +166,8 @@ sub Init( )
 	}
 	elsif ( $Arg =~ /^-d$/ ) {
 	    $Config{Debug}++;
+	} else {
+	    print STDERR "Unknown argument '$Arg'\n";
 	}
     }
 
@@ -339,15 +350,18 @@ sub RunIt( $ )
     my $SkipFirst = 0;
 
     # Are we done yet (yes if in 'run once' mode
-    my $Done = $RunOnce;
+    my $Done = 0;
 
     # Timing info
     my $LastTime = -1;
     my $FastCount = 0;
 
     # Loop til top dies..
-    do
+    while( ! $Done )
     {
+	# Init done to run-once
+	$Done = $RunOnce;
+
 	# Throw away the first line
 	$_ = <TOP> if ( $SkipFirst );
 	last if ( eof TOP );
@@ -476,7 +490,6 @@ sub RunIt( $ )
 	# Check for reconfig
 	$Done++ if ( $Reconfig );
     }
-    while( ! $Done );
 
     # All done reading!
     print STDERR "Killing top (PID = $TopPid )\n";
