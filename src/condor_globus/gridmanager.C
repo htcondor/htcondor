@@ -23,15 +23,23 @@
 // For developmental testing
 int test_mode = 0;
 
-// Stole this out of the schedd code
+// Stole these out of the schedd code
 int procIDHash( const PROC_ID &procID, int numBuckets )
 {
 	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
 }
 
+bool operator==( const PROC_ID a, const PROC_ID b)
+{
+	return a.cluster == b.cluster && a.proc == b.proc;
+}
+
 template class HashTable<HashKey, GlobusJob *>;
+template class HashBucket<HashKey, GlobusJob *>;
 template class HashTable<PROC_ID, GlobusJob *>;
+template class HashBucket<PROC_ID, GlobusJob *>;
 template class List<GlobusJob *>;
+template class Item<GlobusJob *>;
 
 
 GridManager::GridManager()
@@ -148,7 +156,6 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	ClassAdList new_ads;
 	ClassAd *next_ad;
 	char expr_buf[1024];
-	bool my_update_schedd = false;
 
 	// Make sure we grab all Globus Universe jobs when we first start up
 	// in case we're recovering from a shutdown/meltdown.
@@ -195,23 +202,12 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 
 			}
 
-			new_job->updateSchedd = true;
-			JobsToUpdate.Append( new_job );
-			my_update_schedd = true;
+			needsUpdate( new_job, JOB_STATE | JOB_CONTACT );
 
 		}
 
 		new_ads.Delete( next_ad );
 		FreeJobAd( next_ad );
-
-	}
-
-	if ( my_update_schedd == true && updateScheddTimerSet == false ) {
-
-		daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
-				(TimerHandlercpp)&GridManager::updateSchedd,
-				"updateSchedd", (Service*)this );
-		updateScheddTimerSet = true;
 
 	}
 
@@ -221,6 +217,68 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 int
 GridManager::REMOVE_JOBS_signalHandler( int signal )
 {
+	ClassAdList new_ads;
+	ClassAd *next_ad;
+	char expr_buf[1024];
+
+	snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d && %s == %d",
+			  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+			  ATTR_JOB_STATUS, REMOVED );
+
+	// Get all the new Grid job ads
+	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
+	if ( !schedd ) {
+		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
+		return FALSE;
+	}
+
+	next_ad = GetNextJobByConstraint( expr_buf, 1 );
+	while ( next_ad != NULL ) {
+		new_ads.Insert( next_ad );
+		next_ad = GetNextJobByConstraint( expr_buf, 0 );
+	}
+
+	DisconnectQ( schedd );
+
+	// Try to cancel the jobs
+	new_ads.Open();
+
+	while ( ( next_ad = new_ads.Next() ) != NULL ) {
+
+		int rc;
+		PROC_ID curr_procid;
+		GlobusJob *curr_job;
+
+		next_ad->LookupInteger( ATTR_CLUSTER_ID, curr_procid.cluster );
+		next_ad->LookupInteger( ATTR_PROC_ID, curr_procid.proc );
+
+		JobsByProcID->lookup( curr_procid, curr_job );
+		if ( rc != 0 || curr_job == NULL ) {
+			new_ads.Delete( next_ad );
+			FreeJobAd( next_ad );
+			continue;
+		}
+
+		if ( curr_job->jobContact != NULL ) {
+
+			if ( curr_job->cancel() == false ) {
+
+				// Error
+
+			}
+
+			if ( curr_job->jobContact != NULL )
+				JobsByContact->remove( HashKey( curr_job->jobContact ) );
+			JobsByProcID->remove( curr_procid );
+			needsUpdate( curr_job, JOB_REMOVED );
+
+		}
+
+		new_ads.Delete( next_ad );
+		FreeJobAd( next_ad );
+
+	}
+
 	return TRUE;
 }
 
@@ -248,48 +306,70 @@ GridManager::updateSchedd()
 
 	while ( JobsToUpdate.Next( curr_job ) ) {
 
-		SetAttributeInt( curr_job->procID.cluster,
-						 curr_job->procID.proc,
-						 ATTR_GLOBUS_STATUS, curr_job->jobState );
+		if ( curr_job->updateFlags & JOB_STATE ) {
 
-		switch ( curr_job->jobState ) {
-		case G_PENDING:
 			SetAttributeInt( curr_job->procID.cluster,
 							 curr_job->procID.proc,
-							 ATTR_JOB_STATUS, IDLE );
-			break;
-		case G_ACTIVE:
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_JOB_STATUS, RUNNING );
-			// Any other changes to classad?
+							 ATTR_GLOBUS_STATUS, curr_job->jobState );
 
-			// Probably send a command to the schedd here?
-			break;
-		case G_FAILED:
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_JOB_STATUS, COMPLETED );
-			// Any other changes to classad?
+			switch ( curr_job->jobState ) {
+			case G_PENDING:
+				// Send new job state command
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_JOB_STATUS, IDLE );
+				break;
+			case G_ACTIVE:
+				// Send new job state command
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_JOB_STATUS, RUNNING );
+				break;
+			case G_FAILED:
+				// Send new job state command
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_JOB_STATUS, COMPLETED );
+				break;
+			case G_DONE:
+				// Send new job state command
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_JOB_STATUS, COMPLETED );
+				break;
+			case G_SUSPENDED:
+				// Send new job state command
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_JOB_STATUS, IDLE );
+				break;
+			}
 
-			// Probably send a command to the schedd here?
-			break;
-		case G_DONE:
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_JOB_STATUS, COMPLETED );
-			// Any other changes to classad?
-
-			// Probably send a command to the schedd here?
-			break;
-		case G_SUSPENDED:
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_JOB_STATUS, IDLE );
-			break;
 		}
 
-		curr_job->updateSchedd = false;
+		if ( curr_job->updateFlags & JOB_CONTACT ) {
+
+			SetAttributeString( curr_job->procID.cluster,
+								curr_job->procID.proc,
+								ATTR_GLOBUS_CONTACT_STRING,
+								curr_job->jobContact );
+
+		}
+
+		if ( curr_job->updateFlags & JOB_REMOVED ) {
+
+			// Send "removed" command
+
+			delete curr_job;
+
+			// Since we just deleted the current job, skip the stuff
+			// at the loop bottom that references it.
+			JobsToUpdate.DeleteCurrent();
+			continue;
+
+		}
+
+		curr_job->updateFlags = 0;
 
 		JobsToUpdate.DeleteCurrent();
 	}
@@ -345,7 +425,6 @@ GridManager::gramCallbackHandler( void *user_arg, char *job_contact,
 	int cluster_id;
 	int proc_id;
 	char buf[1024];
-	bool my_update_schedd = false;
 	GlobusJob *this_job;
 	GridManager *this_ = (GridManager *)user_arg;
 
@@ -362,13 +441,13 @@ fprintf(stderr,"callback: job %s, state %d\n", job_contact, state);
 		if ( this_job->jobState != G_PENDING ) {
 			this_job->jobState = G_PENDING;
 
-			my_update_schedd = true;
+			this_->needsUpdate( this_job, JOB_STATE );
 		}
 	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_ACTIVE ) {
 		if ( this_job->jobState != G_ACTIVE ) {
 			this_job->jobState = G_ACTIVE;
 
-			my_update_schedd = true;
+			this_->needsUpdate( this_job, JOB_STATE );
 
 			// put this in updateSchedd?
 			this_->WriteExecuteToUserLog( this_job );
@@ -382,7 +461,7 @@ fprintf(stderr,"callback: job %s, state %d\n", job_contact, state);
 		if ( this_job->jobState != G_FAILED ) {
 			this_job->jobState = G_FAILED;
 
-			my_update_schedd = true;
+			this_->needsUpdate( this_job, JOB_STATE );
 
 			// put the following stuff in updateSchedd?
 
@@ -398,7 +477,7 @@ fprintf(stderr,"callback: job %s, state %d\n", job_contact, state);
 		if ( this_job->jobState != G_DONE ) {
 			this_job->jobState = G_DONE;
 
-			my_update_schedd = true;
+			this_->needsUpdate( this_job, JOB_STATE );
 
 			// put the following in updateSchedd?
 
@@ -412,26 +491,33 @@ fprintf(stderr,"callback: job %s, state %d\n", job_contact, state);
 		if ( this_job->jobState != G_SUSPENDED ) {
 			this_job->jobState = G_SUSPENDED;
 
-			my_update_schedd = true;
+			this_->needsUpdate( this_job, JOB_STATE );
 		}
 	} else {
 		dprintf( D_ALWAYS, "Unknown globus job state %d for job %d.%d\n",
 				 state, this_job->procID.cluster, this_job->procID.proc );
 	}
 
-	if ( my_update_schedd == true ) {
-		this_job->updateSchedd = true;
-		JobsToUpdate.Append( this_job );
-
-		if ( updateScheddTimerSet == false ) {
-			daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
-					(TimerHandlercpp)&GridManager::updateSchedd,
-					"updateSchedd", (Service*)this );
-			updateScheddTimerSet = true;
-		}
-	}
-
 fprintf(stderr,"callback returning\n");
+}
+
+void
+GridManager::needsUpdate( GlobusJob *job, unsigned int flags )
+{
+    if ( !flags )
+	return;
+
+    if ( !job->updateFlags )
+	JobsToUpdate.Append( job );
+
+    job->updateFlags |= flags;
+
+    if ( updateScheddTimerSet == false ) {
+	daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
+		    (TimerHandlercpp)&GridManager::updateSchedd,
+		    "updateSchedd", (Service*)this );
+	updateScheddTimerSet = true;
+    }
 }
 
 // Initialize a UserLog object for a given job and return a pointer to

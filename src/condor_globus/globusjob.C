@@ -16,7 +16,7 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 	rmContact = (copy.rmContact == NULL) ? NULL : strdup( copy.rmContact );
 	errorCode = copy.errorCode;
 	userLogFile = (copy.userLogFile == NULL) ? NULL : strdup( copy.userLogFile );
-	updateSchedd = copy.updateSchedd;
+	updateFlags = copy.updateFlags;
 }
 
 GlobusJob::GlobusJob( ClassAd *classad )
@@ -43,7 +43,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	classad->LookupString( ATTR_ULOG_FILE, buf );
 	if ( buf[0] != '\0' )
 		userLogFile = strdup( buf );
-	updateSchedd = false;
+	updateFlags = 0;
 }
 
 GlobusJob::~GlobusJob()

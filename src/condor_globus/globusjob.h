@@ -29,7 +29,7 @@ class GlobusJob
 	char *rmContact;
 	int errorCode;
 	char *userLogFile;
-	bool updateSchedd;
+	unsigned int updateFlags;
 };
 
 #endif

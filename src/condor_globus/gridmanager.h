@@ -16,6 +16,11 @@ extern int test_mode;
 #define ADD_JOBS	42
 #define REMOVE_JOBS	43
 
+// Job attributes that need to be updated on the schedd
+#define JOB_STATE		1
+#define JOB_CONTACT		2
+#define JOB_REMOVED		4
+
 
 class GridManager : public Service
 {
@@ -40,9 +45,12 @@ class GridManager : public Service
 
 	static void gramCallbackHandler( void *, char *, int, int );
 
+	void needsUpdate( GlobusJob *, unsigned int );
+
 	UserLog *InitializeUserLog( GlobusJob * );
 	bool WriteExecuteToUserLog( GlobusJob * );
 	bool WriteTerminateToUserLog( GlobusJob * );
+
 
 	// This is public because it needs to be accessible from main_init()
 	char *gramCallbackContact;
