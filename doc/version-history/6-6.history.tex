@@ -9,6 +9,49 @@ in the 6.6 series.
 The details of each version are described below.
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-6}Version 6.6.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed an error in the \Condor{dagman} submit file parsing code:
+  if one job referred to a log file with a relative path, and another
+  job referred to the same log file with an absolute path, the log file
+  reading failed.  Note: things can still get goofed up by symbolic
+  links or paths with ".." in them.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-5}Version 6.6.5}
@@ -74,15 +117,6 @@ to log in interactively. This has been fixed.
 \item Fixed a bug on Windows that would cause the \Condor{schedd} to
 crash if \Dflag{FULL\_DEBUG} was turned on, and the submitting user
 account did not have Administrator access rights.
-
-% this bug was fixed by kent but not in time for 6.6.5, so i'm just
-% commenting it out of the version history for now.  we can uncomment
-% this blurb and stick it in the 6.6.6 version history... 
-%\item Fixed an error in the \Condor{dagman} submit file parsing code:
-%  if one job referred to a log file with a relative path, and another
-%  job referred to the same log file with an absolute path, the log file
-%  reading failed.  Note: things can still get goofed up by symbolic
-%  links or paths with ".." in them.
 
 \end{itemize}
 
