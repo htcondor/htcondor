@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_io.h"
+#include "common.h"
 #include "transaction.h"
 #include "collectionServer.h"
 
@@ -120,7 +121,7 @@ Commit( )
 		caitr = server->classadTable.find( uitr->key );	
 
 			// if we have to undo a "remove classad" op ...
-		if( uitr->op == ClassAdCollOp_RemoveClassAd ) {
+		if(uitr->op==ClassAdCollectionInterface::ClassAdCollOp_RemoveClassAd) {
 				// try to restore a backup only if we have a backup at all ...
 			if( uitr->backup ) {
 				ClassAdProxy	proxy;
@@ -178,7 +179,8 @@ Log( FILE *fp, ClassAdUnParser *unp )
 	if( !fp ) return( true );
 
         // write out a "OpenTransaction" record
-    if( !rec.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_OpenTransaction ) 	||
+    if(!rec.InsertAttr(ATTR_OP_TYPE,
+			ClassAdCollectionInterface::ClassAdCollOp_OpenTransaction)||
             !rec.InsertAttr( "XactionName", xactionName ) 				||
 			( local && !rec.InsertAttr( "LocalTransaction", true ) ) ) {
 		CondorErrMsg += "; FATAL ERROR: failed to log transaction";
@@ -207,7 +209,8 @@ Log( FILE *fp, ClassAdUnParser *unp )
     }
     
         // write out a "CommitTransaction" record and flush the sink
-    if( !rec.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_CommitTransaction ) ) {
+    if(!rec.InsertAttr(ATTR_OP_TYPE,
+			ClassAdCollectionInterface::ClassAdCollOp_CommitTransaction)){
 		CondorErrMsg += "; FATAL ERROR: failed to log transaction";
         return( false );
     }
@@ -256,10 +259,11 @@ LogCommit( FILE *fp, ClassAdUnParser *unp )
 	ClassAd	rec;
 	string	buf;
 
-    if( !rec.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_CommitTransaction )||
-            !rec.InsertAttr( "XactionName", xactionName ) 	||
-			!rec.InsertAttr( "ServerAddr", addr )	||
-			!rec.InsertAttr( "ServerPort", port )	) {
+    if(!rec.InsertAttr(ATTR_OP_TYPE,
+			ClassAdCollectionInterface::ClassAdCollOp_CommitTransaction)
+			|| !rec.InsertAttr( "XactionName", xactionName ) 	
+			|| !rec.InsertAttr( "ServerAddr", addr )	
+			|| !rec.InsertAttr( "ServerPort", port )	) {
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );
 	}
@@ -286,7 +290,8 @@ LogAckCommit( FILE *fp, ClassAdUnParser *unp )
 	ClassAd	rec;
 	string	buf;
 
-    if( !rec.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_AckCommitTransaction )||
+    if(!rec.InsertAttr(ATTR_OP_TYPE,
+			ClassAdCollectionInterface::ClassAdCollOp_AckCommitTransaction )||
             !rec.InsertAttr( "XactionName", xactionName) ) {
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );
@@ -314,8 +319,9 @@ LogAbort( FILE *fp, ClassAdUnParser *unp )
 	ClassAd	rec;
 	string	buf;
 
-    if( !rec.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_AbortTransaction )||
-            !rec.InsertAttr( "XactionName", xactionName.c_str( ) ) ) {
+    if(!rec.InsertAttr(ATTR_OP_TYPE,
+			ClassAdCollectionInterface::ClassAdCollOp_AbortTransaction)
+			|| !rec.InsertAttr( "XactionName", xactionName.c_str( ) ) ) {
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );
 	}

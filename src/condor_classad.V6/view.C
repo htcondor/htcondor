@@ -151,7 +151,7 @@ SetViewInfo( ClassAdCollectionServer *coll, ClassAd *ad )
 	}
 	
 	if( ( ( tmp = ad->Remove( ATTR_PARTITION_EXPRS ) ) &&
-			tmp->GetKind( ) != EXPR_LIST_NODE ) || !tmp ) {
+			tmp->GetKind( ) != ExprTree::EXPR_LIST_NODE ) || !tmp ) {
 		vector<ExprTree*>	vec;
 		if( tmp ) delete tmp;
 		partitionExprs = ExprList::MakeExprList( vec );
@@ -362,7 +362,7 @@ SetPartitionExprs( ClassAdCollectionServer *coll, const string &expr )
 
 		// parse the expression and insert it into ad in left context
 	if( !coll->parser.ParseExpression( expr, exprList ) || 
-			!exprList->GetKind( ) != EXPR_LIST_NODE ) {
+			!exprList->GetKind( ) != ExprTree::EXPR_LIST_NODE ) {
 		if( exprList ) delete exprList;
 		CondorErrno = ERR_BAD_PARTITION_EXPRS;
 		CondorErrMsg += "; failed to set partition expresssions";
@@ -881,7 +881,7 @@ ClassAdModified( ClassAdCollectionServer *coll, const string &key,
 	if( wasMember && match ) {
 		string 	sig;
 			// was and still is a member; check if rank has changed
-		Operation::Operate( IS_OP, rankValue, oldAdRank, equal );
+		Operation::Operate( Operation::IS_OP, rankValue, oldAdRank, equal );
 		if( !equal.IsBooleanValue( sameRank ) || !sameRank ) {
 				// rank changed ... need to re-order
 			ViewMember	vm;
@@ -1109,8 +1109,8 @@ GetPartitionedViewNames( vector<string>& views )
 bool ViewMemberLT::
 operator()( const ViewMember &vm1, const ViewMember &vm2 ) const
 {
-	Value		val1, val2;
-	ValueType	vt1, vt2;
+	Value				val1, val2;
+	Value::ValueType	vt1, vt2;
 
 	vm1.GetRankValue( val1 );
 	vm2.GetRankValue( val2 );
@@ -1120,12 +1120,12 @@ operator()( const ViewMember &vm1, const ViewMember &vm2 ) const
 
 		// if the values are of the same scalar type, or if they are both
 		// numbers, use the builtin < comparison operator
-	if( ( vt1 == vt2 && vt1 != CLASSAD_VALUE && vt2 != LIST_VALUE ) ||
-			( vt1 == INTEGER_VALUE && vt2 == REAL_VALUE )			||
-			( vt1 == REAL_VALUE && vt2 == INTEGER_VALUE ) ) {
+	if( ( vt1==vt2 && vt1!=Value::CLASSAD_VALUE && vt2!=Value::LIST_VALUE ) ||
+			( vt1==Value::INTEGER_VALUE && vt2==Value::REAL_VALUE )			||
+			( vt1 == Value::REAL_VALUE && vt2 == Value::INTEGER_VALUE ) ) {
 		Value	result;
 		bool	lessThan;
-		Operation::Operate( LESS_THAN_OP, val1, val2, result );
+		Operation::Operate( Operation::LESS_THAN_OP, val1, val2, result );
 		return( result.IsBooleanValue( lessThan ) && lessThan );
 	}
 
