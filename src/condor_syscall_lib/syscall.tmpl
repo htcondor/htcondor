@@ -362,11 +362,6 @@
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#if defined(LINUX) 
-	int sync();
-#else
-	void sync();
-#endif
 
 		/*
 		These get special treatment by the shadow, but should work normally
@@ -631,16 +626,11 @@ int rename( const char *from, const char *to ) : pseudo {
 #if defined(LINUX)
 	int fstat( map(int fd), struct stat *buf ) : extract, no_sys_chk ;
 #else
-#  if defined(IRIX53)
-	int fstat( map(int fd), struct stat *buf ) : no_sys_chk {
-#  else
 	int fstat( map(int fd), struct stat *buf ) {
-#  endif
+#endif
 			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
-#endif /* defined(LINUX) */
-
 
 #if defined(LINUX)
     int stat( const char *path, struct stat *buf ) : extract, no_sys_chk ;
@@ -718,7 +708,7 @@ not_supported{
 
 #if defined(LINUX)
 	int readlink( const char *path, char *buf, size_t buf_size ) {
-#elif defined(OSF1) || defined(AIX32)
+#elif defined(OSF1) || defined(AIX32) || defined(IRIX62)
 	int readlink( const char *path, char *buf, int buf_size ) {
 #else
 	int readlink( const char *path, void *buf, int buf_size ) {
