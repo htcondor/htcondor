@@ -93,7 +93,7 @@ reinitialize ()
 			AccountantHost : "None (local)");
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT  = %d sec\n",NegotiatorTimeout);
-	dprintf (D_ALWAYS,"PREEMPTION_HOLD     = %s\n", (tmp?tmp:"(none)"));
+	dprintf (D_ALWAYS,"PREEMPTION_HOLD     = %s\n", (tmp?tmp:"None"));
 
 	// done
 	return TRUE;
@@ -190,6 +190,14 @@ RESCHEDULE_commandHandler (int, Stream *)
 		// calculate the percentage of machines that this schedd can use
 		scheddPrio   = accountant.GetPriority ( scheddName );
 		numStartdAds = startdAds.MyLength();
+
+		dprintf (D_FULLDEBUG, "\tCalculating schedd limit with the following "
+					"parameters\n");
+		dprintf (D_FULLDEBUG, "\t\tMaxPrioValue = %f\n", maxPrioValue);
+		dprintf (D_FULLDEBUG, "\t\tScheddPrio   = %f\n", scheddPrio);
+		dprintf (D_FULLDEBUG, "\t\tNormalFactor = %f\n", normalFactor);
+		dprintf (D_FULLDEBUG, "\t\tNumStartdAds = %d\n", numStartdAds);
+
 		scheddLimit  = (int) floor (maxPrioValue/(scheddPrio*normalFactor) *
 									numStartdAds);
 
@@ -432,7 +440,8 @@ negotiate (char *scheddName, char *scheddAddr, float priority, int scheddLimit,
 
 		// 2g.  move the offer from the startdAds to the consumedStartds so
 		// 		that it will not be considered again in this negotiation cycle
-		consumedStartds.Insert (offer);
+
+		// consumedStartds.Insert (offer);  --- ClassAd code doesn't work 
 		startdAds.Delete (offer);
 	}
 
