@@ -34,7 +34,7 @@ static:: condor_##obj_name					@@\
 clean:: condor_##obj_name					@@\
 	cd condor_##obj_name; make clean			@@\
 docs:: condor_##obj_name					@@\
-	cd condor_##obj_name; make docs				@@\
+	cd condor_##obj_name; make html				@@\
 makefiles:: condor_##obj_name condor_##obj_name##/Makefile	@@\
 condor_##obj_name##/Makefile:					@@\
 	cd condor_##obj_name ; imake IMAKE_FLAGS		@@\
@@ -532,14 +532,14 @@ all:: vanillatarg
 ***********************************************************************/
 
 /* This can't be called doc++_target b/c Imake doesn't like "+" */
-#ifndef doc_target
-#define doc_target( files )					@@\
-docs: files							@@\
+#ifndef html_target
+#define html_target( files )					@@\
+html: files							@@\
 	/bin/rm -rf html					@@\
 	/unsup/doc++/bin/doc++ -H -d html -u -g -l -j \		@@\
 		-m -f -B ../html/condor_banner.html \		@@\
 		files
-#endif /* doc_target */
+#endif /* html_target */
 
 
 /***********************************************************************
