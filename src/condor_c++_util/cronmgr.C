@@ -137,6 +137,7 @@ bool JobListParser::nextJob( void )
 			skipJob( );
 			continue;
 		}
+		dprintf( D_ALWAYS, "prefix = '%s'\n", prefix );
 
 		// Path: must exist, non-zero length
 		path = nextField( );
@@ -209,7 +210,7 @@ const char *JobListParser::nextField( void )
 
 	// Keep looking 'til end...
 	start = cur;
-	while( *cur ) {
+	while( cur ) {
 
 		// First, is this the end of a quoted chunk?
 		if ( '\0' != quote )
@@ -243,7 +244,7 @@ const char *JobListParser::nextField( void )
 			} else {
 				cur++;
 			}
-		} else {
+		} else if ( '\0' != *cur ) {
 			// Not quoted; separator?
 			if ( ':' == *cur ) {
 				*cur = '\0';
@@ -258,6 +259,11 @@ const char *JobListParser::nextField( void )
 			} else {
 				cur++;
 			}
+		} else {
+			// End of string
+			curJobPointer = NULL;
+			nextJobStart = NULL;
+			return start;
 		}
 	}
 
