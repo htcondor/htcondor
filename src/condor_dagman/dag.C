@@ -109,7 +109,7 @@ bool Dag::Bootstrap (bool recovery) {
 	while( jobs.Next( job ) ) {
 		if( job->_Status == Job::STATUS_READY &&
 			job->IsEmpty( Job::Q_WAITING ) ) {
-			Submit( job );
+			StartNode( job );
 		}
 	}
 
@@ -246,18 +246,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  }
 
 				  if( job->retries++ < job->retry_max ) {
-					  // retry job
-					  job->_Status = Job::STATUS_READY;
-					  if( job->_scriptPre ) {
-						  // undo PRE script completion
-						  job->_scriptPre->_done = false;
-					  }
-					  strcpy( job->error_text, "" );
-					  debug_printf( DEBUG_VERBOSE, "Retrying node %s ...\n",
-									job->GetJobName() );
-					  if( !recovery ) {
-						  Submit( job );
-					  }
+					  RestartNode( job, recovery );
 					  break;
 				  }
 
@@ -321,20 +310,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 										termEvent->signalNumber );
 					  }
 					  if( job->retries < job->retry_max ) {
-						  // retry job
-						  job->retries++;
-						  job->_Status = Job::STATUS_READY;
-						  if( job->_scriptPre ) {
-							  // undo PRE script completion
-							  job->_scriptPre->_done = false;
-						  }
-						  strcpy( job->error_text, "" );
-						  debug_printf( DEBUG_VERBOSE,
-										"Retrying node %s ...\n",
-										job->GetJobName() );
-						  if( !recovery ) {
-							  Submit( job );
-						  }
+						  RestartNode( job, recovery );
 						  break;
 					  }
 					  else {
@@ -406,20 +382,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 								   "died on signal %d\n",
 								   termEvent->signalNumber );
 					if( job->retries < job->retry_max ) {
-						// retry node
-                        job->retries++;
-                        job->_Status = Job::STATUS_READY;
-						if( job->_scriptPre ) {
-							// undo PRE script completion
-							job->_scriptPre->_done = false;
-						}
-                        if( job->retval != 0 ) {
-							// clear job error text
-							strcpy( job->error_text, "" );
-                        }
-						if( !recovery ) {
-							Submit( job );
-						}
+						RestartNode( job, recovery );
                     }
                     else {
 						// no more retries -- node failed
@@ -454,20 +417,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 								   "failed with status %d\n",
 								   termEvent->returnValue );
 					if( job->retries < job->retry_max ) {
-						// retry node
-						job->retries++;
-						job->_Status = Job::STATUS_READY;
-						if( job->_scriptPre ) {
-							// undo PRE script completion
-							job->_scriptPre->_done = false;
-						}
-                        if( job->retval != 0 ) {
-							// clear job error text
-                            strcpy( job->error_text, "" );
-                        }
-						if( !recovery ) {
-							Submit( job );
-						}
+						RestartNode( job, recovery );
 					}
 					else {
 						// no more retries -- node failed
@@ -610,21 +560,23 @@ Job * Dag::GetJob (const CondorID condorID) const {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::Submit (Job * job) {
-    assert (job != NULL);
-	assert( job->CanSubmit() );
+bool
+Dag::StartNode( Job *node )
+{
+    assert( node != NULL );
+	assert( node->CanSubmit() );
 
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
 	// actual job to Condor if/when the script exits successfully
 
-    if( job->_scriptPre && job->_scriptPre->_done == FALSE ) {
-		job->_Status = Job::STATUS_PRERUN;
-		_preScriptQ->Run( job->_scriptPre );
+    if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
+		node->_Status = Job::STATUS_PRERUN;
+		_preScriptQ->Run( node->_scriptPre );
 		return true;
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
-	_readyQ->Append( job );
+	_readyQ->Append( node );
 	SubmitReadyJobs();
 	return TRUE;
 }
@@ -709,15 +661,7 @@ Dag::PreScriptReaper( Job* job, int status )
 					 WEXITSTATUS(status) );
 		}
 		if( job->retries < job->retry_max ) {
-			// retry node
-			job->retries++;
-			// undo PRE script completion
-			job->_scriptPre->_done = false;
-			strcpy( job->error_text, "" );
-			debug_printf( DEBUG_VERBOSE, "Retrying node %s ...\n",
-						  job->GetJobName() );
-			job->_Status = Job::STATUS_PRERUN;
-			_preScriptQ->Run( job->_scriptPre );
+			RestartNode( job, false );
 		}
 		else {
 			job->_Status = Job::STATUS_ERROR;
@@ -952,7 +896,7 @@ Dag::TerminateJob( Job* job, bool bootstrap )
 		// if child has no more parents in its waiting queue, submit it
 		if( child->_Status == Job::STATUS_READY &&
 			child->IsEmpty( Job::Q_WAITING ) && bootstrap == FALSE ) {
-			Submit( child );
+			StartNode( child );
 		}
     }
     _numJobsDone++;
@@ -971,5 +915,21 @@ PrintEvent( debug_level_t level, const char* eventName, Job* job,
 		debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d): "
 					  "ignoring...\n", eventName, condorID._cluster,
 					  condorID._proc, condorID._subproc );
+	}
+}
+
+void
+Dag::RestartNode( Job *node, bool recovery )
+{
+	node->_Status = Job::STATUS_READY;
+	if( node->_scriptPre ) {
+		// undo PRE script completion
+		node->_scriptPre->_done = false;
+	}
+	strcpy( node->error_text, "" );
+	debug_printf( DEBUG_VERBOSE, "Retrying node %s ...\n",
+				  node->GetJobName() );
+	if( !recovery ) {
+		StartNode( node );
 	}
 }

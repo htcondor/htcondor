@@ -187,7 +187,7 @@ class Dag {
        otherwise adds job to _readyQ and calls SubmitReadyJobs()
 	   @return true on success, false on failure
     */
-    bool Submit (Job * job);
+    bool StartNode( Job *node );
 
     // add job to termination queue and report termination to all
     // child jobs by removing job ID from each child's waiting queue
@@ -211,6 +211,8 @@ class Dag {
   
 	void PrintEvent( debug_level_t level, const char* eventName, Job* job,
 					 CondorID condorID );
+
+	void RestartNode( Job *node, bool recovery );
 
     // name of consolidated condor log
     char        * _condorLogName;
