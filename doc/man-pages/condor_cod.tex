@@ -42,6 +42,46 @@
 \Condor{cod} issues commands that manage and use COD claims on
 machines, given proper authorization.
 
+Instead of specifying an argument of
+\Arg{request}, \Arg{release}, \Arg{activate}, \Arg{deactivate}, \Arg{suspend},
+or \Arg{resume},
+the user may invoke the \Condor{cod} tool by appending an
+underscore followed by one of these arguments.
+As an example, the following two commands are equivalent:
+\begin{verbatim}
+    condor_cod release -id "<128.105.121.21:49973>#1073352104#4"
+\end{verbatim}
+\begin{verbatim}
+    condor_cod_release -id "<128.105.121.21:49973>#1073352104#4"
+\end{verbatim}
+To make these extended-name commands work,
+hard link  the extended name to the \Condor{cod} executable.
+For example on a Unix machine:
+\begin{verbatim}
+ln condor_cod_request condor_cod
+\end{verbatim}
+
+The \Arg{request} argument gives a claim ID, and the other 
+commands (\Arg{release}, \Arg{activate}, \Arg{deactivate}, \Arg{suspend},
+and \Arg{resume}) use the claim ID.
+The claim ID is given as the last line of output for a \Arg{request},
+and the output appears of the form:
+\footnotesize
+\begin{verbatim}
+ID of new claim is: "<a.b.c.d:portnumber>#x#y"
+\end{verbatim}
+\normalsize
+An actual example of this line of output is 
+\footnotesize
+\begin{verbatim}
+ID of new claim is: "<128.105.121.21:49973>#1073352104#4"
+\end{verbatim}
+\normalsize
+
+Also see
+section~\ref{sec:cod}
+for more a complete description of COD.
+
 \begin{Options}
 	\ToolArgsBaseDesc
 	\ToolLocateDesc
