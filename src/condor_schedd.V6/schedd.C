@@ -2637,7 +2637,7 @@ Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
             // XXX todo: add rec to slowstart Q
 
         if (Shadow) free(Shadow);
-        Shadow = param("SHADOW");
+        Shadow = param("SHADOW_MPI");
 
         for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
             dprintf ( D_FULLDEBUG, "peer: %s\n", (*MpiMatches)[i]->peer );
@@ -3690,18 +3690,7 @@ Scheduler::child_exit(int pid, int status)
 				if (!srec->removed) {
 						/* See if it's an mpi job here... */
 					if ( (srec->match) && (srec->match->isMatchedMPI) ) {
-							/* remove all in cluster */
-						ExtArray<match_rec*> *matches;
-						if ( storedMatches->lookup( srec->match->cluster, 
-													matches ) != -1 ) {
-							int n = matches->getlast();
-							for ( int m=0 ; m <= n ; m++ ) {
-								Relinquish( (*matches)[m] );
-								DelMrec( (*matches)[m] );
-							}
-							matches->fill( NULL );
-							matches->truncate(-1);
-						}
+						nuke_mpi ( srec );
 					} else {
 							/* Otherwise it's a normal job... */
 						Relinquish(srec->match);
@@ -3720,8 +3709,13 @@ Scheduler::child_exit(int pid, int status)
 					// relinquish the match if we get too many
 					// exceptions 
 				if( !srec->removed ) {
-						// Only if this job wasn't removed, do we
-						// have anything to do. 
+						/* See if it's an mpi job here... */
+					if ( (srec->match) && (srec->match->isMatchedMPI) ) {
+							/* I'm doing this so we don't leave Claimed/Idle
+							   nodes lying around all the time.  There 
+							   may be a better way to do this... */
+						nuke_mpi( srec );
+					}
 					HadException(srec->match);
 				}
 				break;
@@ -3759,6 +3753,35 @@ Scheduler::child_exit(int pid, int status)
 		// activate all our claims and start jobs on them.
 	if( ! ExitWhenDone ) {
 		if (StartJobsFlag) StartJobs();
+	}
+}
+
+void
+Scheduler::nuke_mpi ( shadow_rec *srec ) {
+		/* remove all in cluster */
+	ExtArray<match_rec*> *matches;
+	if ( storedMatches->lookup( srec->match->cluster, 
+								matches ) != -1 ) {
+		int n = matches->getlast();
+		for ( int m=0 ; m <= n ; m++ ) {
+			Relinquish( (*matches)[m] );
+			DelMrec( (*matches)[m] );
+		}
+		matches->fill( NULL );
+		matches->truncate(-1);
+	}
+		/* it may be that the mpi shadow crashed and left around a 
+		   file named 'procgroup' in the IWD of the job.  We should 
+		   check and delete it here. */
+	char pg_file[256];
+	GetAttributeString(srec->job_id.cluster, srec->job_id.proc, 
+					   ATTR_JOB_IWD, pg_file );
+	strcat ( pg_file, "/procgroup" );
+	if ( unlink ( pg_file ) == -1 ) {
+		if ( errno != ENOENT ) {
+			dprintf ( D_FULLDEBUG, "Couldn't remove %s. errno %d.\n", 
+					  pg_file, errno );
+		}
 	}
 }
 
