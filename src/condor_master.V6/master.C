@@ -30,31 +30,28 @@
  ** 			 University of Wisconsin, Computer Sciences Dept.
  */ 
 
-#include <std.h>
-
 #define _POSIX_SOURCE
 
-#include <signal.h>
+#include "condor_common.h"
+#include "_condor_fix_resource.h"
 
-#include <errno.h>
+#include <std.h>
 #include <pwd.h>
 
 extern "C" {
 #include <netdb.h>
 }
+
 #if defined(Solaris)
 #define __EXTENSIONS__
 #endif
 #include <sys/time.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/socket.h>
 #include <rpc/types.h>
-#include "condor_fix_stdio.h"    
-#include <sys/resource.h>
+
 #include "condor_constants.h"
-#include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_expressions.h"
 #include "condor_config.h"
@@ -105,13 +102,11 @@ extern "C"
 #if	(defined(SUNOS41) || defined(Solaris))
 	int		sigsetmask(int mask);
 	int		sigpause(int mask);
-	int 	gethostname(char* name, int len);
 #if !defined(Solaris251)
 	pid_t		vfork();
 #endif
 #elif defined(IRIX53)
 	int	vfork();
-	int	gethostname(char *name, int len);
 	/* The following got clobbered when _POSIX_SOURCE was defined
 	   before stdio.h was included */
 	FILE *popen (const char *command, const char *type);
@@ -119,21 +114,25 @@ extern "C"
 #endif
 
 	/* 	char*	getwd(char* pathname); no longer needed because using getcwdnow */
-	int		killpg(int pgrp, int sig);
+	int	killpg(int pgrp, int sig);
 	int 	dprintf_config( char*, int);
 	int 	detach();
-	int		boolean(char*, char*);
+	int	boolean(char*, char*);
 	char*	strdup(const char*);
 	void	set_machine_status(int);
-	int		SetSyscalls( int );
-	int		gethostname(char*, int);
-	int		sigsetmask(int);
-	int		udp_connect(char*, int);
+	int	SetSyscalls( int );
+#if defined(LINUX)
+	int	gethostname(char*, unsigned int);
+#else
+	int	gethostname(char*, int);
+#endif
+	int	sigsetmask(int);
+	int	udp_connect(char*, int);
 	char*	get_arch();
 	char*	get_op_sys(); 
-	int		udp_unconnect();
+	int	udp_unconnect();
 	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int); 
-	int		get_inet_address(struct in_addr*); 
+	int	get_inet_address(struct in_addr*); 
 }
 
 extern	int		Parse(const char*, ExprTree*&);
