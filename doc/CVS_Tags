@@ -7,6 +7,14 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+12/23/03 V6_6-full_redhat9_port-branch 
+   A new branch off the end of the V6_6-branch for the redhat 9 full port.
+   Created from the V6_6-full_redhat9_port-root tag.  Includes the
+   doc directory.
+
+12/23/03 V6_6-full_redhat9_port-root
+    The state of the V6_6-branch on 12/23/03. This is the root tag
+    for the V6_6-full_redhat9_port-branch tag and subsequent branch.
 
 12/19/03 V6_6-doc-merge-1
     The state of the doc directory in V6_6-branch before merging
