@@ -215,6 +215,9 @@ InitJobQueue(const char *job_queue_name)
 	bool	CreatedAd = false;
 	char	cluster_str[40];
 	char	owner[_POSIX_PATH_MAX];
+	char	user[_POSIX_PATH_MAX];
+	char	correct_user[_POSIX_PATH_MAX];
+	char	buf[_POSIX_PATH_MAX];
 
 	if (!JobQueue->LookupClassAd(HeaderKey, ad)) {
 		// we failed to find header ad, so create one
@@ -281,6 +284,34 @@ InitJobQueue(const char *job_queue_name)
 				JobQueue->DestroyClassAd(tmp);
 				continue;
 			}
+
+				// Figure out what ATTR_USER *should* be for this job
+			int nice_user = 0;
+			ad->LookupInteger( ATTR_NICE_USER, nice_user );
+			sprintf( correct_user, "%s%s@%s", 
+					 (nice_user) ? "nice-user." : "", owner, 
+					 scheduler.uidDomain() );  
+
+			if (!ad->LookupString(ATTR_USER, user)) {
+				dprintf( D_FULLDEBUG,
+						"Job %s has no %s attribute.  Inserting one now...\n",
+						tmp, ATTR_USER);
+				sprintf( buf, "%s = \"%s\"", ATTR_USER, correct_user );
+				ad->Insert( buf );
+			} else {
+					// ATTR_USER exists, make sure it's correct, and
+					// if not, insert the new value now.
+				if( strcmp(user,correct_user) ) {
+						// They're different, so insert the right value
+					dprintf( D_FULLDEBUG,
+							 "Job %s has stale %s attribute.  "
+							 "Inserting correct value now...\n",
+							 tmp, ATTR_USER );
+					sprintf( buf, "%s = \"%s\"", ATTR_USER, correct_user );
+					ad->Insert( buf );
+				}
+			}
+
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
@@ -625,7 +656,7 @@ int DestroyProc(int cluster_id, int proc_id)
 //	LogDestroyClassAd	*log;
 	int					*numOfProcs = NULL;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
 	}
@@ -840,6 +871,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 //	LogSetAttribute	*log;
 	char			key[_POSIX_PATH_MAX];
 	ClassAd			*ad;
+	char			*tmp;
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
@@ -883,6 +915,27 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 			return -1;
 		}
 		delete [] test_owner;
+
+			// If we got this far, we're allowing the given value for
+			// ATTR_OWNER to be set.  However, now, we should try to
+			// insert a value for ATTR_USER, too, so that's always in
+			// the job queue.
+		int nice_user = 0;
+		char user[_POSIX_PATH_MAX];
+			// We can't just use attr_value, since it contains '"'
+			// marks.  So, we have to strip those off...  owner[0]
+			// will be one, so after this, we'll have to use owner[1]
+			// as the begining of the string.
+		char owner[_POSIX_PATH_MAX];
+		strcpy( owner, attr_value );
+		while( (tmp = strrchr(owner, '"')) ) {
+			*tmp = '\0';
+		}
+		GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
+						 &nice_user ); 
+		sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
+				 &owner[1], scheduler.uidDomain() );  
+		SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 	} 
 	else if (strcmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
@@ -894,6 +947,30 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 			return -1;
 		}
 	} 
+	else if (strcmp(attr_name, ATTR_NICE_USER) == 0) {
+			// Because we're setting a new value for nice user, we
+			// should create a new value for ATTR_USER while we're at
+			// it, since that might need to change now that
+			// ATTR_NICE_USER is set.
+		char owner[ _POSIX_PATH_MAX];
+		char user[_POSIX_PATH_MAX];
+		bool nice_user = false;
+		if( ! stricmp(attr_value, "TRUE") ) {
+			nice_user = true;
+		}
+		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner)
+			>= 0 ) {
+				// strip off any '"' marks from ATTR_OWNER.  owner[0]
+				// will be one, so after this, we'll have to use
+				// owner[1] as the begining of the string.
+			while( (tmp = strrchr(owner, '"')) ) {
+				*tmp = '\0';
+			}
+			sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." :
+					 "", &owner[1], scheduler.uidDomain() );  
+			SetAttribute( cluster_id, proc_id, ATTR_USER, user );
+		}
+	}
 	else if (strcmp(attr_name, ATTR_PROC_ID) == 0) {
 		if (atoi(attr_value) != proc_id) {
 #if !defined(WIN32)
@@ -975,19 +1052,12 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
 	char	*attr_val;
-	int		rval;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
-	switch (rval) {
-	case 1:
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%f", val);
 		return 1;
-	case 0:
-		break;
-	default:
-		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -1005,19 +1075,12 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
 	char	*attr_val;
-	int		rval;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
-	switch (rval) {
-	case 1:
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%d", val);
 		return 1;
-	case 0:
-		break;
-	default:
-		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -1030,24 +1093,18 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 
 
 int
-GetAttributeString(int cluster_id, int proc_id, const char *attr_name, char *val)
+GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
+					char *val )
 {
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
 	char	*attr_val;
-	int		rval;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
-	switch (rval) {
-	case 1:
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		strcpy(val, attr_val);
 		return 1;
-	case 0:
-		break;
-	default:
-		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -1068,17 +1125,11 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	char		*attr_val;
 	int			rval;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
-	switch (rval) {
-	case 1:
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		strcpy(val, attr_val);
 		return 1;
-	case 0:
-		break;
-	default:
-		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -1105,10 +1156,10 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 //	LogDeleteAttribute	*log;
 	char				*attr_val;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
-		if (JobQueue->LookupInTransaction(key, attr_name, attr_val) != 1) {
+		if( ! JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 			return -1;
 		}
 	}
@@ -1133,7 +1184,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 	char	key[_POSIX_PATH_MAX];
 	ClassAd	*ad;
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
 	if (JobQueue->LookupClassAd(key, ad)) {
 		if ( !expStartdAd ) {
 			// we're done, return the ad.
@@ -1483,6 +1534,9 @@ int get_job_prio(ClassAd *job)
 	}
     job->LookupString(ATTR_OWNER, buf);
 	strcat(owner,buf);
+		// Note, we should use this method instead of just looking up
+		// ATTR_USER directly, since that includes UidDomain, which we
+		// don't want for this purpose...
 	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
