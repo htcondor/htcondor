@@ -57,7 +57,7 @@ CondorCronMgr::KillAll( )
 	dprintf( D_FULLDEBUG, "CronMgr: Killing all jobs\n" );
 
 	// Reconfigure all running jobs
-	Cron.KillAll( );
+	return Cron.KillAll( );
 }
 
 // Handle Reconfig
