@@ -1,3 +1,13 @@
+09/16/04 V6_6-file_lock_test-branch
+   A branch for testing changes to file locking in the user log code.
+   NOT for release; if the changes work they'll probably make their
+   way into 6.7, but we want to start changing things from a stable
+   point.
+
+09/16/04 V6_6-file_lock_test-root
+   The state of the V6_6-branch for an upcomming V6_6-file_lock_test-branch
+   to test changes to file locking in the user log code.
+
 08/09/04 V6_6-merge-20
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  This merges includes: mission-critical bug fix to
