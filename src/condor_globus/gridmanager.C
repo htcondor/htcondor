@@ -230,12 +230,19 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	// Make sure we grab all Globus Universe jobs when we first start up
 	// in case we're recovering from a shutdown/meltdown.
 	if ( grabAllJobs ) {
-		snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d",
-				  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
+		//Should be snprintf, but it's not on all platforms.
+		//snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d",
+		//		  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
+		sprintf( expr_buf, "%s == \"%s\" && %s == %d",
+				ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
 	} else {
-		snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d && %s == %d",
-				  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
-				  ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
+		//Should be snprintf, but it's not on all platforms.
+		//snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d && %s == %d",
+		//		  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+		//		  ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
+		sprintf( expr_buf, "%s == \"%s\" && %s == %d && %s == %d",
+			ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+			ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
 	}
 
 	// Get all the new Grid job ads
@@ -331,9 +338,13 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 
 	dprintf(D_FULLDEBUG,"in REMOVE_JOBS_signalHandler\n");
 
-	snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d && %s == %d",
-			  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
-			  ATTR_JOB_STATUS, REMOVED );
+	//Should be snprintf, but it's not on all platforms.
+	//snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d && %s == %d",
+	//		  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+	//		  ATTR_JOB_STATUS, REMOVED );
+	sprintf( expr_buf, "%s == \"%s\" && %s == %d && %s == %d",
+		ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+		ATTR_JOB_STATUS, REMOVED );
 
 	// Get all the new Grid job ads
 	dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
