@@ -2111,6 +2111,12 @@ These macros control the \Condor{schedd}.
   longer, but it will ensure that all jobs that can be started will be
   started.
 
+\item[\Macro{PERIODIC\_EXPR\_INTERVAL}]
+  \label{param:PeriodicExprInterval}
+  This macro determines the period, in seconds, betwen evaluation
+  of periodic job control expressions, such as periodic\_hold,
+  periodic\_release, and periodic\_remove, given by the user in
+  a Condor submit file. By default, this value is sixty seconds.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
