@@ -207,7 +207,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 free( (char *)orig );
                 free( (char *)targ );
                 free( (char *)a_out );
-                free( (ClassAd *)ad );
+				delete ad;
                 assert( syscall_sock->end_of_message() );;
                 return 0;
         }
