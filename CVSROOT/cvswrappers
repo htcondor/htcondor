@@ -32,3 +32,6 @@
 *.dll -k 'b'
 *.lib -k 'b'
 *.a -k 'b'
+*.Z -k 'b'
+*.bz2 -k 'b'
+*.so -k 'b'
