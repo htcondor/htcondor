@@ -121,7 +121,7 @@ void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
 
 void KeyCacheEntry::delete_storage() {
 	if (_id) {
-	  delete _id;
+        free( _id );
 	}
 	if (_addr) {
 	  delete _addr;
@@ -179,15 +179,16 @@ void KeyCache::copy_storage(const KeyCache &copy) {
 void KeyCache::delete_storage() {
 	if (key_table) {
 		// Delete all entries from the hash, and the table itself
-		KeyCacheEntry* key_entry;
-		key_table->startIterations();
-		while (key_table->iterate(key_entry)) {
-			if ( key_entry ) {
-				dprintf ( D_SECURITY, "KEYCACHEENTRY: deleted: %x\n", key_entry );
-				delete key_entry;
-			}
-		}
+		//KeyCacheEntry* key_entry;
+		//key_table->startIterations();
+		//while (key_table->iterate(key_entry)) {
+		//	if ( key_entry ) {
+		//		dprintf ( D_SECURITY, "KEYCACHEENTRY: deleted: %x\n", key_entry );
+		//		delete key_entry;
+		//	}
+		//}
 
+        key_table->clear();
 		dprintf ( D_SECURITY, "KEYCACHE: deleted: %x\n", key_table );
 		delete key_table;
 		key_table = NULL;
@@ -269,14 +270,11 @@ void KeyCache::expire(KeyCacheEntry *e) {
 
 	dprintf (D_SECURITY, "KEYCACHE: Session %s expired at %s.\n", e->id(), ctime(&key_exp) );
 
-	// delete the object
-	delete e;
-
 	// remove its reference from the hash table
-	remove(key_id);
+	remove(key_id);       // This should do it
 	dprintf (D_SECURITY, "KEYCACHE: Removed %s from key cache.\n", key_id);
 
-	delete key_id;
+	free( key_id );
 }
 
 void KeyCache::RemoveExpiredKeys() {
@@ -286,8 +284,9 @@ void KeyCache::RemoveExpiredKeys() {
 
 	// iterate through all entries from the hash
 	KeyCacheEntry* key_entry;
+    MyString id;
 	key_table->startIterations();
-	while (key_table->iterate(key_entry)) {
+	while (key_table->iterate(id, key_entry)) {
 		// check the freshness date on that key
 		if (key_entry->expiration() && key_entry->expiration() < cutoff_time) {
 			expire(key_entry);
