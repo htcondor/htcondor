@@ -1824,17 +1824,17 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	sprintf( big_return_buff,
 			 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n" 
-			 "\t%5d were rejected by the job's requirements\n",
+			 "  %5d are rejected by your job's requirements\n",
 			 big_return_buff, cluster, proc, totalMachines,
 			 fReqConstraint );
 	
 	if( fReqConstraint < totalMachines ) {
 		sprintf( big_return_buff,
-				 "%s\t%5d rejected the job\n"
-				 "\t%5d are serving equal or higher priority customers%s\n" 
-				 "\t%5d do not prefer this job\n"
-				 "\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
-				 "\t%5d are available to service your job\n",
+				 "%s  %5d reject your job because of their own requirements\n"
+				 "  %5d match, but are serving users with a better priority in the pool%s\n" 
+				 "  %5d match, but prefer another specific job despite its worse user-priority\n"
+				 "  %5d match, but will not currently preempt their existing job\n"
+				 "  %5d are available to run your job\n",
 				 big_return_buff,
 				 fOffConstraint,
 				 fPreemptPrioCond, niceUser ? "(*)" : "",
