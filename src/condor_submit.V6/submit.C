@@ -184,7 +184,7 @@ void	SetKillSig();
 #endif
 void	SetForcedAttributes();
 void 	check_iwd( char *iwd );
-int	read_condor_file( FILE *fp, int stopBeforeQueuing=0 );
+int	read_condor_file( FILE *fp );
 char * 	condor_param( char *name );
 void 	set_condor_param( char *name, char *value );
 void 	queue(int num);
@@ -299,7 +299,7 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
 #endif
 
-	for( ptr=argv+1; *ptr; ptr++ ) {
+	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
 			switch( ptr[0][1] ) {
 			case 'v': 
@@ -314,8 +314,7 @@ main( int argc, char *argv[] )
 				break;
 			case 'r':
 				Remote++;
-				ptr++;
-				if( ! *ptr ) {
+				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -r requires another argument\n", 
 							 MyName );
 					exit(1);
@@ -330,8 +329,7 @@ main( int argc, char *argv[] )
 				}
 				break;
 			case 'n':
-				ptr++;
-				if( ! *ptr ) {
+				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -n requires another argument\n", 
 							 MyName );
 					exit(1);
@@ -360,10 +358,6 @@ main( int argc, char *argv[] )
 		job->SetTargetTypeName (STARTD_ADTYPE);
 	}
 
-	if( cmd_file == NULL ) {
-		usage();
-	}
-
 	if( !(ScheddAddr = get_schedd_addr(ScheddName)) ) {
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Can't find address of schedd %s\n", ScheddName );
@@ -379,32 +373,15 @@ main( int argc, char *argv[] )
 
 	
 	// open submit file
-	if( (fp=fopen(cmd_file,"r")) == NULL ) {
-		fprintf( stderr, "ERROR: Failed to open command file\n");
-		exit(1);
-	}
-
-	// Need X509_* values set before connectQ if in submit file
-
-	//  Parse the file, stopping at "queue" command
-	if( read_condor_file( fp, 1 ) < 0 ) {
-		fprintf(stderr, "ERROR: Failed to parse command file.\n");
-		exit(1);
-	}
-
-	setupAuthentication();
-
-	if (ConnectQ(ScheddAddr) == 0) {
-		if( ScheddName ) {
-			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
-					 ScheddName );
-		} else {
-			fprintf( stderr, "ERROR: Failed to connect to local queue manager\n" );
+	if ( !cmd_file ) {
+		// no file specified, read from stdin
+		fp = stdin;
+	} else {
+		if( (fp=fopen(cmd_file,"r")) == NULL ) {
+			fprintf( stderr, "ERROR: Failed to open command file\n");
+			exit(1);
 		}
-		exit(1);
 	}
-
-	ActiveQueueConnection = TRUE;
 
 	// in case things go awry ...
 	_EXCEPT_Cleanup = DoCleanup;
@@ -454,8 +431,6 @@ main( int argc, char *argv[] )
 		fprintf(stdout, "Submitting job(s)");
 	}
 
-		//NOTE: this is actually the SECOND time file gets (at least partially)
-		//read. setupAuthentication needs to read it before call to ConnectQ
 	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
 		fprintf(stderr, "\nERROR: Failed to parse command file.\n");
@@ -1586,7 +1561,7 @@ SetKillSig()
 
 
 int
-read_condor_file( FILE *fp, int stopBeforeQueuing )
+read_condor_file( FILE *fp )
 {
 	char	*name, *value;
 	char	*ptr;
@@ -1620,12 +1595,12 @@ read_condor_file( FILE *fp, int stopBeforeQueuing )
 		}
 
 		if( strincmp(name, "queue", strlen("queue")) == 0 ) {
-			//sleazy hack to deal with fact that queue must happen AFTER
-			//connection is authenticated, but cert_dir must be read
-			//before user or connection authentication -- mju
-			if ( stopBeforeQueuing ) {
-				rewind( fp );
-				return 0;
+			name = expand_macro( name, ProcVars, PROCVARSIZE );
+			if( name == NULL ) {
+				(void)fclose( fp );
+				fprintf(stderr, 
+					"\nERROR: Failed to expand macros in: %s\n", name);
+				return( -1 );
 			}
 			if (sscanf(name+strlen("queue"), "%d", &queue_modifier) == EOF) {
 				queue_modifier = 1;
@@ -1751,10 +1726,42 @@ strcmpnull(const char *str1, const char *str2)
 }
 
 void
+connect_to_the_schedd()
+{	
+	if ( ActiveQueueConnection == TRUE ) {
+		// we are already connected; do not connect again
+		return;
+	}
+
+	setupAuthentication();
+
+	if (ConnectQ(ScheddAddr) == 0) {
+		if( ScheddName ) {
+			fprintf( stderr, 
+					"ERROR: Failed to connect to queue manager %s\n",
+					 ScheddName );
+		} else {
+			fprintf( stderr, 
+				"ERROR: Failed to connect to local queue manager\n" );
+		}
+		exit(1);
+	}
+
+	ActiveQueueConnection = TRUE;
+}
+
+void
 queue(int num)
 {
 	char tmp[ BUFSIZ ], *logfile;
 	int		rval;
+
+	// First, connect to the schedd if we have not already done so
+
+	if (ActiveQueueConnection != TRUE) 
+	{
+		connect_to_the_schedd();
+	}
 
 	/* queue num jobs */
 	for (int i=0; i < num; i++) {
@@ -1774,7 +1781,8 @@ queue(int num)
 		}
 
 		if ( ClusterId == -1 ) {
-			fprintf(stderr,"\nERROR: Used queue command without specifying an executable\n");
+			fprintf(stderr,
+			"\nERROR: Used queue command without specifying an executable\n");
 			exit(1);
 		}
 
