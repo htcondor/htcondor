@@ -231,8 +231,13 @@ sub RunTest
     }
 
     # if evicted, call condor_resched so job runs again quickly
-    Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
-    
+    if( !defined $test{$handle}{"RegisterEvicted"} )
+    {
+        Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
+    } else {
+	Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
+    }
+
     # monitor the cluster and return its exit status
     $retval = Condor::Monitor();
 
