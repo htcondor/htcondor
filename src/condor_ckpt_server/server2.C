@@ -973,8 +973,9 @@ void Server::Replicate()
 	Log("Checking replication schedule...");
 	ReplicationEvent *e = replication_schedule.GetNextReplicationEvent();
 	if (e) {
+		server_sa = e->ServerAddr();
 		sprintf(log_msg, "Replicating: Prio=%d, Serv=%s, File=%s",
-				e->Prio(), sin_to_string(&(e->ServerAddr())), e->File());
+				e->Prio(), sin_to_string(&server_sa), e->File());
 		Log(log_msg);
 		sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
 				inet_ntoa(e->ShadowIP()), e->Owner(), e->File());
@@ -989,7 +990,6 @@ void Server::Replicate()
 			Log("Unable to perform replication.  Cannot fork child process.");
 		} else if (child_pid == 0) {
 #endif
-			server_sa = e->ServerAddr();
 			req.ticket = htonl(AUTHENTICATION_TCKT);
 			req.priority = htonl(0);
 			req.time_consumed = htonl(0);
