@@ -686,5 +686,5 @@ bad_file( char *dir, char *name )
 	} else {
 		sprintf( buf, "\"%s\" - Not Removed", pathname );
 	}
-	BadFiles->Append( string_copy(buf) );
+	BadFiles->Append( strdup(buf) );
 }
