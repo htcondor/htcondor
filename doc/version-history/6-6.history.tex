@@ -34,7 +34,12 @@ The details of each version are described below.
 
 \item Fixed the faulty argument parsing in condor_rm, condor_release,
   and condor_hold. Before you could accidentally type ``condor_rm
-  -analyze'', and it would remove all of your jobs. Now it gives an error.
+  -analyze'', and it would remove all of your jobs. Now it gives an
+  error.
+
+\item One Windows, when you type a command like
+  ``condor_reconfig.exe'' instead of ``condor_reconfig'', you no
+  longer get an error.
 
 \end{itemize}
 
