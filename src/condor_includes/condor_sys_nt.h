@@ -144,5 +144,31 @@ struct rusage {
     long    ru_nivcsw;      /* involuntary " */
 };
 
+	/* Throw in signal values. Don't do values > 20. */
+
+#define	SIGHUP		1	/* Hangup (POSIX).  */
+#define	SIGINT		2	/* Interrupt (ANSI).  */
+#define	SIGQUIT		3	/* Quit (POSIX).  */
+#define	SIGILL		4	/* Illegal instruction (ANSI).  */
+#define	SIGTRAP		5	/* Trace trap (POSIX).  */
+#define	SIGABRT		6	/* Abort (ANSI).  */
+#define	SIGIOT		6	/* IOT trap (4.2 BSD).  */
+#define	SIGBUS		7	/* BUS error (4.2 BSD).  */
+#define	SIGFPE		8	/* Floating-point exception (ANSI).  */
+#define	SIGKILL		9	/* Kill, unblockable (POSIX).  */
+#define	SIGUSR1		10	/* User-defined signal 1 (POSIX).  */
+#define	SIGSEGV		11	/* Segmentation violation (ANSI).  */
+#define	SIGUSR2		12	/* User-defined signal 2 (POSIX).  */
+#define	SIGPIPE		13	/* Broken pipe (POSIX).  */
+#define	SIGALRM		14	/* Alarm clock (POSIX).  */
+#define	SIGTERM		15	/* Termination (ANSI).  */
+#define	SIGSTKFLT	16	/* Stack fault.  */
+#define	SIGCLD		SIGCHLD	/* Same as SIGCHLD (System V).  */
+#define	SIGCHLD		17	/* Child status has changed (POSIX).  */
+#define	SIGCONT		18	/* Continue (POSIX).  */
+#define	SIGSTOP		19	/* Stop, unblockable (POSIX).  */
+#define	SIGTSTP		20	/* Keyboard stop (POSIX).  */
+
+
 #endif /* CONDOR_SYS_NT_H */
 

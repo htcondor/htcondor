@@ -186,20 +186,6 @@ const int QUERY_ANY_ADS = 48;
 *** Daemon Core Signals
 */
 
-#if defined(WIN32)
-
-/*
-  windoze doesn't define these, but they have special meaning for
-  DaemonCore::Send_Signal(), so we still use them in the code.
-*/
-
-#define SIGKILL 9
-#define SIGTERM 15
-#define SIGSTOP 23
-#define SIGCONT 25
-
-#endif /* WIN32 */
-
 
 // Signals used for Startd -> Starter communication
 #define DC_SIGSUSPEND	100
