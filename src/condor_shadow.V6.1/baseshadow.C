@@ -47,6 +47,7 @@ BaseShadow::BaseShadow() {
 	cluster = proc = -1;
 	owner[0] = '\0';
 	iwd[0] = '\0';
+	core_file_name = NULL;
 	scheddAddr = NULL;
 	ASSERT( !myshadow_ptr );	// make cetain we're only instantiated once
 	myshadow_ptr = this;
@@ -85,6 +86,15 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	if ( !jobAd->LookupString(ATTR_JOB_IWD, iwd)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_JOB_IWD);
 	}
+
+		// construct the core file name we'd get if we had one.
+	int size = strlen(iwd) + strlen(cluster) + strlen(proc) + 11;
+	core_file_name = (char*)malloc( size * sizeof(char) );
+	if( ! core_file_name ) {
+		EXCEPT( "Out of memory!" );
+	}
+	sprintf( core_file_name, "%s%ccore.%s.%s", iwd, DIR_DELIM_CHAR,
+			 cluster, proc );
 
         // put the shadow's sinful string into the jobAd.  Helpful for
         // the mpi shadow, at least...and a good idea in general.
@@ -216,6 +226,7 @@ BaseShadow::initJobQueueAttrLists( void )
 	terminate_job_queue_attrs = new StringList();
 	terminate_job_queue_attrs->insert( ATTR_EXIT_REASON );
 	terminate_job_queue_attrs->insert( ATTR_JOB_EXIT_STATUS );
+	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_DUMPED );
 	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_BY_SIGNAL );
 	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_SIGNAL );
 	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_CODE );
@@ -595,9 +606,15 @@ void BaseShadow::initUserLog()
 void
 BaseShadow::logTerminateEvent( int exitReason )
 {
-	if( !(exitReason == JOB_EXITED)||(exitReason == JOB_COREDUMPED) ) {
-		EXCEPT( "logTerminateEvent called with %d reason!", 
-				exitReason );  
+	switch( exitReason ) {
+	case JOB_EXITED:
+	case JOB_COREDUMPED:
+		break;
+	default:
+		dprintf( D_ALWAYS, 
+				 "logTerminateEvent with unknown reason (%d), aborting",
+				 exitReason ); 
+		return;
 	}
 
 	struct rusage run_remote_rusage;
@@ -613,7 +630,7 @@ BaseShadow::logTerminateEvent( int exitReason )
 		event.normal = true;
 		event.returnValue = exitCode();
 	}
-	
+
 		// TODO: fill in local/total rusage
 		// event.run_local_rusage = r;
 	event.run_remote_rusage = run_remote_rusage;
@@ -632,7 +649,9 @@ BaseShadow::logTerminateEvent( int exitReason )
 	event.total_recvd_bytes = bytesSent();
 	event.total_sent_bytes = bytesReceived();
 	
-		// TODO: deal w/ coredump and corefile name
+	if( exitReason == JOB_COREDUMPED ) {
+		strcpy( event.coreFile, core_file_name );
+	}
 	
 	if (!uLog.writeEvent (&event)) {
 		dprintf (D_ALWAYS,"Unable to log "
@@ -692,6 +711,8 @@ BaseShadow::logRequeueEvent( const char* reason )
 
 	run_remote_rusage = getRUsage();
 
+	int exit_reason = getExitReason();
+
 	JobEvictedEvent event;
 
 	event.terminate_and_requeued = true;
@@ -699,12 +720,15 @@ BaseShadow::logRequeueEvent( const char* reason )
 	if( exitedBySignal() ) {
 		event.normal = false;
 		event.signal_number = exitSignal();
-		// TODO: deal w/ coredump and corefile name
 	} else {
 		event.normal = true;
 		event.return_value = exitCode();
 	}
 			
+	if( exit_reason == JOB_COREDUMPED ) {
+		event.setCoreFile( core_file_name );
+	}
+
 	if( reason ) {
 		event.setReason( reason );
 	}
