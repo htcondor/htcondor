@@ -160,7 +160,7 @@ int main_init (int argc, char ** const argv) {
 
 		// flag used if DAGMan is invoked with -WaitForDebug so we
 		// wait for a developer to attach with a debugger...
-	int wait_for_debug = 0;
+	volatile int wait_for_debug = 0;
 
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
