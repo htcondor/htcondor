@@ -191,7 +191,7 @@ int		InitialJobStatus = -1;
 int JobStatus;
 struct rusage JobRusage;
 struct rusage AccumRusage;
-int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
+int ExitReason = JOB_EXCEPTION;		/* Schedd counts on knowing exit reason */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
@@ -520,7 +520,8 @@ main(int argc, char *argv[], char *envp[])
 
 	Wrapup();
 
-	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+		ExitReason );
 	exit( ExitReason );
 }
 
@@ -880,7 +881,8 @@ send_job( V2_PROC *proc, char *host, char *cap)
 	retval = part_send_job(0, host, reason, capability, schedd, proc, sd1, sd2, NULL);
 	if (retval == -1) {
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+		dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			reason);
 		exit( reason );
 	}
 	if( sd1 != RSC_SOCK ) {
@@ -936,7 +938,8 @@ start_job( char *cluster_id, char *proc_id )
 	if( Proc->status != RUNNING ) {
 		dprintf( D_ALWAYS, "Shadow: Asked to run proc %d.%d, but status = %d\n",
 							Proc->id.cluster, Proc->id.proc, Proc->status );
-		dprintf(D_ALWAYS, "********** Shadow Exiting **********\n" );
+		dprintf(D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			JOB_BAD_STATUS);
 		exit( JOB_BAD_STATUS );	/* don't cleanup here */
 	}
 #endif
@@ -1044,7 +1047,8 @@ send_quit( char *host, char *capability )
 		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
 				 host );
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Parent Exiting **********\n" );
+		dprintf( D_ALWAYS, "********** Shadow Parent Exiting(%d) **********\n",
+			JOB_NOT_STARTED);
 		exit( JOB_NOT_STARTED );
 	}
 }
