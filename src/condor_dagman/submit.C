@@ -31,6 +31,12 @@
 #include "util.h"
 #include "debug.h"
 
+#ifdef WIN32
+	char cCommandLineQuoteChar = '\"';
+#else
+	char cCommandLineQuoteChar = '\'';
+#endif
+
 static bool submit_try (const char *exe,
                         const char * command,
                         CondorID & condorID) {
@@ -101,11 +107,19 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   // DAG and the DAGMan's job id, and to print the former in the
   // submit log
 
+#ifdef WIN32
   sprintf( prependLines, 
 		   "-a \"dag_node_name = %s\" "
 		   "-a \"dagman_job_id = %s\" "
 		   "-a \"submit_event_notes = DAG Node: $(dag_node_name)\"",
 		   DAGNodeName, DAGManJobId );
+#else
+  sprintf( prependLines, 
+		   "-a 'dag_node_name = %s' "
+		   "-a 'dagman_job_id = %s' "
+		   "-a 'submit_event_notes = DAG Node: $(dag_node_name)'",
+		   DAGNodeName, DAGManJobId );
+#endif
 
   cmdLen = strlen( exe ) + strlen( prependLines ) + strlen( cmdFile ) + 16;
   command = new char[cmdLen];
