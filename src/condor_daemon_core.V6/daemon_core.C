@@ -60,6 +60,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_environ.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
+#include "condor_fix_assert.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
@@ -5243,8 +5244,10 @@ int DaemonCore::Create_Process(
 	pidtmp->pipeReady = 0;
 	pidtmp->deallocate = 0;
 #endif 
-	int insert_result = pidTable->insert(newpid,pidtmp);  
-	assert( insert_result == 0); 
+	{
+	   int insert_result = pidTable->insert(newpid,pidtmp);  
+	   assert( insert_result == 0); 
+	}
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
 #ifdef WIN32
@@ -5384,7 +5387,8 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 #else
 	pidtmp->pid = tid;
 #endif 
-	assert( pidTable->insert(tid,pidtmp) == 0 );  
+	int insert_result = pidTable->insert(tid,pidtmp);
+	assert( insert_result == 0 );  
 #ifdef WIN32
 	WatchPid(pidtmp);		
 #endif
@@ -5489,7 +5493,8 @@ DaemonCore::Inherit( void )
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
 		pidtmp->deallocate = 0L;
 #endif
-		assert( pidTable->insert(ppid,pidtmp) == 0 );
+		int insert_result = pidTable->insert(ppid,pidtmp);
+		assert( insert_result == 0 );
 #ifdef WIN32
 		WatchPid(pidtmp);
 #endif
