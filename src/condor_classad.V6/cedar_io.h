@@ -72,7 +72,9 @@ class CedarStream : public ByteStream {
 
   protected:
 
-    ///
+    /** @param url sinful string
+        @return true if connection successful
+     */
     virtual bool _Connect (std::string url);
 
     ///
