@@ -36,7 +36,7 @@
 #include "../condor_ckpt/file_state.h"
 #include "condor_file_info.h"
 #include "syscall_numbers.h"
-#include "condor_sys.h"
+#include "condor_syscall_mode.h"
 
 extern OpenFileTable   *FileTab; 
 
