@@ -20,15 +20,6 @@
 <Build_Instructions>
      <Build_Step>mkdir -p INSTALLDIR_GPTMACRO/bin</Build_Step>
      <Build_Step>mkdir -p INSTALLDIR_GPTMACRO/sbin</Build_Step>
-     <Build_Step>mkdir -p INSTALLDIR_GPTMACRO/var/log</Build_Step>
-     <Build_Step>mkdir -p INSTALLDIR_GPTMACRO/var/condor/log/GridLogs</Build_Step>
-     <Build_Step>mkdir -p INSTALLDIR_GPTMACRO/var/condor/spool</Build_Step> 
-     <Build_Step>mkdir -p INSTALLDIR_GPTMACRO/var/condor/execute</Build_Step>
-     <Build_Step>chmod 755 INSTALLDIR_GPTMACRO/var/log</Build_Step>
-     <Build_Step>chmod 755 INSTALLDIR_GPTMACRO/var/condor/log</Build_Step>
-     <Build_Step>chmod 755 INSTALLDIR_GPTMACRO/var/condor/spool</Build_Step>
-     <Build_Step>chmod 1777 INSTALLDIR_GPTMACRO/var/condor/execute</Build_Step>
-     <Build_Step>chmod 755 INSTALLDIR_GPTMACRO/var/condor</Build_Step>
         <Build_Step>cp $DIST_DIR/sbin/condor_schedd INSTALLDIR_GPTMACRO/sbin/condor_schedd</Build_Step>
         <Build_Step>cp $DIST_DIR/sbin/condor_gridmanager INSTALLDIR_GPTMACRO/sbin/condor_gridmanager</Build_Step>
 	<Build_Step>cp $DIST_DIR/sbin/grid_monitor.sh INSTALLDIR_GPTMACRO/sbin/grid_monitor.sh</Build_Step>
