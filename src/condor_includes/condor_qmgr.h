@@ -3,7 +3,6 @@
 
 #include "proc.h"
 class ClassAd;
-class ClassAdList;
 
 
 typedef struct {
