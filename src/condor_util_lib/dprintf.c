@@ -54,11 +54,10 @@ void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
 void _condor_dprintf_exit();
 
-extern int	errno;
-
+extern	int		errno;
 extern	int		DebugFlags;
-extern 	FILE*	_condor_DebugFP;
 
+FILE*	DebugFP		= NULL;
 
 /*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
@@ -185,29 +184,29 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 				/* Open and lock the log file */
 			(void)debug_lock(debug_level);
 
-			if (_condor_DebugFP) {
+			if (DebugFP) {
 
 				/* Print the message with the time and a nice identifier */
 				if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
 					if( (saved_flags|flags) & D_SECONDS ) {
-						fprintf( _condor_DebugFP, "%d/%d %02d:%02d:%02d ", 
+						fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
 								 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
 								 tm->tm_min, tm->tm_sec );
 					} else {
-						fprintf( _condor_DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
+						fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
 								 tm->tm_mday, tm->tm_hour, tm->tm_min );
 					}
 
 					if ( (saved_flags|flags) & D_FDS ) {
-						fprintf ( _condor_DebugFP, "(fd:%d) ", fileno(_condor_DebugFP) );
+						fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
 					}
 
 					if( DebugId ) {
-						(*DebugId)( _condor_DebugFP );
+						(*DebugId)( DebugFP );
 					}
 				}
 
-				vfprintf( _condor_DebugFP, fmt, args );
+				vfprintf( DebugFP, fmt, args );
 
 			}
 
@@ -247,8 +246,8 @@ debug_lock(int debug_level)
 	priv_state	priv;
 	char*		dirpath = NULL;
 
-	if ( _condor_DebugFP == NULL ) {
-		_condor_DebugFP = stderr;
+	if ( DebugFP == NULL ) {
+		DebugFP = stderr;
 	}
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -327,9 +326,9 @@ debug_lock(int debug_level)
 	if( DebugFile[debug_level] ) {
 		errno = 0;
 
-		_condor_DebugFP = open_debug_file(debug_level, "a");
+		DebugFP = open_debug_file(debug_level, "a");
 
-		if( _condor_DebugFP == NULL ) {
+		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;
 #if !defined(WIN32)
 			if( errno == EMFILE ) {
@@ -340,19 +339,19 @@ debug_lock(int debug_level)
 			_condor_dprintf_exit();
 		}
 			/* Seek to the end */
-		if( (length=lseek(fileno(_condor_DebugFP),0,2)) < 0 ) {
+		if( (length=lseek(fileno(DebugFP),0,2)) < 0 ) {
 			if (debug_level > 0) {
-				fclose( _condor_DebugFP );
-				_condor_DebugFP = NULL;
+				fclose( DebugFP );
+				DebugFP = NULL;
 				return NULL;
 			}
-			fprintf( _condor_DebugFP, "Can't seek to end of _condor_DebugFP file\n" );
+			fprintf( DebugFP, "Can't seek to end of DebugFP file\n" );
 			_condor_dprintf_exit();
 		}
 
 			/* If it's too big, preserve it and start a new one */
 		if( MaxLog[debug_level] && length > MaxLog[debug_level] ) {
-			fprintf( _condor_DebugFP, "MaxLog = %d, length = %d\n",
+			fprintf( DebugFP, "MaxLog = %d, length = %d\n",
 					 MaxLog[debug_level], length );
 			preserve_log_file(debug_level);
 		}
@@ -360,7 +359,7 @@ debug_lock(int debug_level)
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
-	return _condor_DebugFP;
+	return DebugFP;
 }
 
 void
@@ -374,7 +373,7 @@ debug_unlock(int debug_level)
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	if (_condor_DebugFP) (void)fflush( _condor_DebugFP );
+	if (DebugFP) (void)fflush( DebugFP );
 
 	if( DebugLock ) {
 			/* Don't forget to unlock the file */
@@ -384,8 +383,8 @@ debug_unlock(int debug_level)
 		if( flock(LockFd,LOCK_UN) < 0 ) 
 #endif
 		{
-			if (_condor_DebugFP) {
-				fprintf( _condor_DebugFP,"Can't release exclusive lock on \"%s\"\n",
+			if (DebugFP) {
+				fprintf( DebugFP,"Can't release exclusive lock on \"%s\"\n",
 						 DebugLock );
 			} else {
 				fprintf( stderr,"Can't release exclusive lock on \"%s\"\n",
@@ -397,8 +396,8 @@ debug_unlock(int debug_level)
 	}
 
 	if( DebugFile[debug_level] ) {
-		if (_condor_DebugFP) (void)fclose( _condor_DebugFP );
-		_condor_DebugFP = NULL;
+		if (DebugFP) (void)fclose( DebugFP );
+		DebugFP = NULL;
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -419,11 +418,11 @@ preserve_log_file(int debug_level)
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	(void)sprintf( old, "%s.old", DebugFile[debug_level] );
-	fprintf( _condor_DebugFP, "Saving log file to \"%s\"\n", old );
-	(void)fflush( _condor_DebugFP );
+	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
+	(void)fflush( DebugFP );
 
-	fclose( _condor_DebugFP );
-	_condor_DebugFP = NULL;
+	fclose( DebugFP );
+	DebugFP = NULL;
 
 	unlink(old);
 
@@ -448,8 +447,8 @@ preserve_log_file(int debug_level)
 			}
 
 			/* now truncate the original by reopening _not_ with append */
-			_condor_DebugFP = open_debug_file(debug_level, "w");
-			if ( _condor_DebugFP ==  NULL ) {
+			DebugFP = open_debug_file(debug_level, "w");
+			if ( DebugFP ==  NULL ) {
 				still_in_old_file == TRUE;
 			}
 		}
@@ -476,27 +475,27 @@ preserve_log_file(int debug_level)
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
 			/* Debug file exists! */
-			fprintf (_condor_DebugFP, "Double check on rename failed!\n");
-			fprintf (_condor_DebugFP, "%s still exists\n", DebugFile[debug_level]);
+			fprintf (DebugFP, "Double check on rename failed!\n");
+			fprintf (DebugFP, "%s still exists\n", DebugFile[debug_level]);
 			_condor_dprintf_exit();
 		}
 	}
 
 #endif
 
-	if (_condor_DebugFP == NULL) {
-		_condor_DebugFP = open_debug_file(debug_level, "a");
+	if (DebugFP == NULL) {
+		DebugFP = open_debug_file(debug_level, "a");
 	}
 
-	if (_condor_DebugFP == NULL) _condor_dprintf_exit();
+	if (DebugFP == NULL) _condor_dprintf_exit();
 
 	if ( !still_in_old_file ) {
-		fprintf (_condor_DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
+		fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
 	}
 
 	if ( failed_to_rotate ) {
-		fprintf(_condor_DebugFP,"ERROR: Failed to rotate log into file %s!\n",old);
-		fprintf(_condor_DebugFP,"       Perhaps someone is keeping log files open???");
+		fprintf(DebugFP,"ERROR: Failed to rotate log into file %s!\n",old);
+		fprintf(DebugFP,"       Perhaps someone is keeping log files open???");
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -521,18 +520,18 @@ _condor_fd_panic( int line, char* file )
 		(void)close( i );
 	}
 	if( DebugFile[0] ) {
-		_condor_DebugFP = fopen(DebugFile[0], "a");
+		DebugFP = fopen(DebugFile[0], "a");
 	}
 
-	if( _condor_DebugFP == NULL ) {
+	if( DebugFP == NULL ) {
 		_condor_dprintf_exit();
 	}
 		/* Seek to the end */
-	(void)lseek( fileno(_condor_DebugFP), 0, 2 );
+	(void)lseek( fileno(DebugFP), 0, 2 );
 
-	fprintf( _condor_DebugFP,
+	fprintf( DebugFP,
 	"**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s\n", line, file );
-	(void)fflush( _condor_DebugFP );
+	(void)fflush( DebugFP );
 	_condor_dprintf_exit();
 }
 #endif
@@ -589,12 +588,12 @@ open_debug_file(int debug_level, char flags[])
 			_condor_fd_panic( __LINE__, __FILE__ );
 		}
 #endif
-		if (_condor_DebugFP == 0) {
-			_condor_DebugFP = stderr;
+		if (DebugFP == 0) {
+			DebugFP = stderr;
 		}
-		fprintf( _condor_DebugFP, "Can't open \"%s\"\n", DebugFile[debug_level] );
+		fprintf( DebugFP, "Can't open \"%s\"\n", DebugFile[debug_level] );
 #if !defined(WIN32)
-		fprintf( _condor_DebugFP, "errno = %d, euid = %d, egid = %d\n",
+		fprintf( DebugFP, "errno = %d, euid = %d, egid = %d\n",
 				 errno, geteuid(), getegid() );
 #endif
 		if (debug_level == 0) _condor_dprintf_exit();
@@ -629,20 +628,33 @@ _condor_dprintf_exit()
 }
 
 
+#if !defined(WIN32)	// Need to port this to WIN32.  It is used when logging to a socket.
+/*
+** Initialize the DebugFP to a specific file number.  */
+void
+dprintf_init( int fd )
+{
+	FILE *fp;
+
+	errno = 0;
+	fp = fdopen( fd, "a" );
+
+	if( fp != NULL ) {
+		DebugFP = fp;
+	} else {
+		fprintf(stderr, "dprintf_init: failed to fdopen(%d)\n", fd );
+		_condor_dprintf_exit();
+	}
+}
+#endif /* ! LOOSE32 */
+
+
 /*
   We want these all to have _condor in front of them for inside the
   user job, but the rest of the Condor code just calls the regular
   versions.  So, we'll just call the "safe" version so we can share
   the code in both places. -Derek Wright 9/29/99
 */
-
-void
-dprintf_init( int fd )
-{
-	_condor_dprintf_init( fd );
-}
-
-
 void
 set_debug_flags( char *strflags )
 {

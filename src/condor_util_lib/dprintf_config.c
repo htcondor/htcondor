@@ -39,7 +39,7 @@
 int		Termlog;
 
 extern int		DebugFlags;
-extern FILE		*_condor_DebugFP;
+extern FILE		*DebugFP;
 extern int		MaxLog[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
@@ -121,18 +121,18 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 					free(pval);
 				}
 				if( first_time && want_truncate ) {
-					_condor_DebugFP = open_debug_file(debug_level, "w");
+					DebugFP = open_debug_file(debug_level, "w");
 				} else {
-					_condor_DebugFP = open_debug_file(debug_level, "a");
+					DebugFP = open_debug_file(debug_level, "a");
 				}
 
-				if( _condor_DebugFP == NULL && debug_level == 0 ) {
+				if( DebugFP == NULL && debug_level == 0 ) {
 					EXCEPT("Cannot open log file '%s'",
 						   DebugFile[debug_level]);
 				}
 
-				if (_condor_DebugFP) (void)fclose( _condor_DebugFP );
-				_condor_DebugFP = (FILE *)0;
+				if (DebugFP) (void)fclose( DebugFP );
+				DebugFP = (FILE *)0;
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "MAX_%s_LOG", subsys);

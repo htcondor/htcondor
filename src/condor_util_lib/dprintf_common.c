@@ -35,8 +35,6 @@
 #include "condor_sys.h"
 
 
-FILE*	_condor_DebugFP		= NULL;
-
 /* 
    This should default to 0 so we only get dprintf() messages if we
    actually request them somewhere, either in dprintf_config(), or the
@@ -63,32 +61,6 @@ dprintf(int flags, char* fmt, ...)
     _condor_dprintf_va( flags, fmt, args );
     va_end( args );
 }
-
-
-#if !defined(WIN32)	// Need to port this to WIN32.  It is used when logging to a socket.
-/*
-** Initialize the _condor_DebugFP to a specific file number.  */
-void
-_condor_dprintf_init( int fd )
-{
-	int scm;
-	FILE *fp;
-
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-
-	errno = 0;
-	fp = fdopen( fd, "a" );
-
-	if( fp != NULL ) {
-		_condor_DebugFP = fp;
-	} else {
-		fprintf(stderr, "dprintf_init: failed to fdopen(%d)\n", fd );
-		_condor_dprintf_exit();
-	}
-
-	(void) SetSyscalls( scm );
-}
-#endif /* ! LOOSE32 */
 
 
 void
