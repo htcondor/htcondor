@@ -42,9 +42,12 @@ allowing a checkpoint to be produced first.
 	\ToolLocateDesc
         \OptItem{\Arg{cluster}}{Hold all jobs in the specified cluster}
         \OptItem{\Arg{cluster.process}}{Hold the specific job in the cluster}
-        \OptItem{\Arg{user}}{Hold jobs belonging to specified user}
+        \OptItem{\Arg{user}}{Hold all jobs belonging to specified user}
         \OptItem{\OptArg{-constraint}{expression}} {Hold all jobs which match
-	        the job ClassAd expression constraint}
+	        the job ClassAd expression constraint (within quotation
+		marks).
+		Note that quotation marks must be escaped with the
+		backslash characters for most shells.  }
         \OptItem{\Arg{-all}}{Hold all the jobs in the queue}
 
 \end{Options}
@@ -61,15 +64,31 @@ assigned its own cluster number, and each machine class is assigned a
 machine classes for a PVM job on hold is not supported.
 
 \Examples
-To place on hold all jobs of a user named Mary that are not currently running:
+To place on hold all jobs
+(of the user that issued the \Condor{hold} command)
+that are not currently running:
 \footnotesize
 \begin{verbatim}
-% condor_hold Mary -constraint Activity!=\"Busy\"
+% condor_hold -constraint "JobStatus!=2"
 \end{verbatim}
 \normalsize
-Note that quotation marks must be escaped with the backslash characters
-for most shells.
 
+Multiple options within the same command cause the union of 
+all jobs that meet either (or both) of the options to be placed in the
+hold state.
+Therefore, the command
+\footnotesize
+\begin{verbatim}
+% condor_hold Mary -constraint "JobStatus!=2"
+\end{verbatim}
+\normalsize
+places all of Mary's queued jobs into the hold state, 
+and the constraint holds all queued jobs not currently running.
+It also sends a hard kill signal to any of Mary's jobs that are
+currently running.
+Note that the jobs specified by the constraint will also be
+Mary's jobs, if it is Mary that issues this
+example \Condor{hold} command.
 
 \ExitStatus
 

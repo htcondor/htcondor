@@ -441,7 +441,7 @@ As such, it needs a submit description file.
 \Condor{submit\_dag} produces the needed file,
 naming it by appending the \Arg{DAGInputFileName} with
 \File{.condor.sub}.
-This submit description file may be editted if the DAG is
+This submit description file may be edited if the DAG is
 submitted with
 
 \begin{verbatim}
@@ -449,7 +449,7 @@ condor_submit_dag -no_submit diamond.dag
 \end{verbatim}
 causing \Condor{submit\_dag} to generate the submit description file,
 but not submit DAGMan to Condor.
-To submit the DAG, once the submit description file is editted,
+To submit the DAG, once the submit description file is edited,
 use
 
 \begin{verbatim}
@@ -499,7 +499,7 @@ If a problem is detected,
 \Condor{submit\_dag} prints out an error message and aborts.
 
 DAGMan normally generates a list of job log files to
-monitor by examing all of the job submission files.  If
+monitor by examining all of the job submission files.  If
 that will not work (some job submission files will be generated
 by \Arg{PRE} scripts, for example), you can specify a single
 common log file with the \Arg{-log} option.
@@ -695,4 +695,78 @@ progresses.
 
 If conflicting parameters are used in a DOT command, the last one
 listed is used.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGsinDAGs}Advanced Usage: A DAG within a DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!DAGs within DAGs}
+
+The organization and dependencies of the jobs within a DAG
+are the keys to its utility.
+There are cases when a DAG is easier to visualize and 
+construct hierarchically,
+as when a node within a DAG is also a DAG.
+Condor DAGMan handles this situation with grace.
+
+Since more than one DAG is being discussed, 
+terminology is introduced to clarify which DAG is which. 
+Reuse the example DAG as given in 
+Figure~\ref{fig:dagman-diamond}.
+Assume that node B of this diamond-shaped DAG
+will itself be a DAG.
+The DAG of node B is called the inner DAG,
+and the diamond-shaped DAG is called the outer DAG.
+
+To make DAGs within DAGs,
+the essential element is getting the name of the submit description
+file for the inner DAG correct within the outer DAG's input
+file.
+
+Work on the inner DAG first.
+The goal is to generate a Condor submit description file for this inner DAG.
+Here is a very simple DAG input file used as an example of the inner DAG.
+\begin{verbatim}
+	# Filename: inner.dag
+	#
+	Job  X  X.submit
+	Job  Y  Y.submit
+	Job  Z  Z.submit
+	PARENT X CHILD Y
+	PARENT Y CHILD Z
+\end{verbatim}
+
+Use \Condor{submit\_dag} to create a submit description file for this
+inner dag:
+\begin{verbatim}
+   condor_submit_dag -nosubmit inner.dag
+\end{verbatim}
+The resulting file will be named \File{inner.dag.condor.sub}.
+This file will be needed in the DAG input file of the outer DAG.
+The naming of the file is the name of the DAG input file
+(\File{inner.dag}) with the suffix \File{.condor.sub}.
+
+A simple example of a DAG input file for the outer DAG is
+\begin{verbatim}
+	# Filename: diamond.dag
+	#
+	Job  A  A.submit 
+	Job  B  inner.dag.condor.sub
+	Job  C  C.submit	
+	Job  D  D.submit
+	PARENT A CHILD B C
+	PARENT B C CHILD D
+\end{verbatim}
+
+The outer DAG is then submitted as before, with
+\begin{verbatim}
+   condor_submit_dag diamond.dag
+\end{verbatim}
+
+More than one level of nested DAGs is supported.
+
+One item to get right:
+to locate the log files used in ordering the DAG,
+DAGMan either needs a completely flat directory structure
+(\emph{all} files for outer and inner DAGS within the same directory)
+or
+it needs full pathnames to all log files.
 \index{DAGMan|)}
