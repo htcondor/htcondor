@@ -37,6 +37,9 @@
 #include "condor_string.h"  // for strnewp
 #include "condor_attributes.h"
 #include "condor_random_num.h"
+#include "io_proxy.h"
+
+extern ReliSock *syscall_sock;
 
 extern "C" int get_random_int();
 
@@ -59,8 +62,8 @@ CStarter::~CStarter()
 	if (FSDomain) free(FSDomain);
 }
 
-void
-CStarter::Init(char peer[])
+bool
+CStarter::Init( char peer[] )
 {
 	InitiatingHost = peer;
 
@@ -97,7 +100,7 @@ CStarter::Init(char peer[])
 
 	set_resource_limits();
 
-	StartJob();
+	return StartJob();
 }
 
 void
@@ -173,7 +176,7 @@ CStarter::ShutdownFast(int)
 	return 0;
 }
 
-void
+bool
 CStarter::StartJob()
 {
         // We want to get the jobAd first, make an appropriate 
@@ -185,7 +188,7 @@ CStarter::StartJob()
 	if (REMOTE_CONDOR_get_job_info(jobAd) < 0) {
 		dprintf(D_ALWAYS, 
 				"Failed to get job info from Shadow.  Aborting StartJob.\n");
-		return;
+		return false;
 	}
 
 		// Now that we have the job ad, figure out what the owner
@@ -195,8 +198,7 @@ CStarter::StartJob()
 	if ( jobAd->LookupString( ATTR_OWNER, owner ) != 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_OWNER );
-			// DREADFUL HACK (see below)
-		EXCEPT("Failed to start job");
+		return false;
 	}
 
 #ifndef WIN32
@@ -231,7 +233,8 @@ CStarter::StartJob()
 	sprintf( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 			 daemonCore->getpid() );
 	if( mkdir(WorkingDir, 0777) < 0 ) {
-		EXCEPT( "mkdir(%s)", WorkingDir );
+		dprintf(D_ALWAYS,"couldn't create dir %s: %s\n",WorkingDir,strerror(errno));
+		return false;
 	}
 
 #ifdef WIN32
@@ -241,16 +244,38 @@ CStarter::StartJob()
 		dirperm.init(nobody_login);
 		int ret_val = dirperm.set_acls( WorkingDir );
 		if ( ret_val < 0 ) {
-			EXCEPT("UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
+			dprintf(D_ALWAYS,"UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
+			return false;
 		}
 	}
 #endif /* WIN32 */
 
 	if( chdir(WorkingDir) < 0 ) {
-		EXCEPT("chdir(%s)", WorkingDir);
+		dprintf(D_ALWAYS,"couldn't move to %s: %s\n",WorkingDir,strerror(errno));
+		return false;
 	}
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir );
 
+	int want_io_proxy = 0;
+	char io_proxy_config_file[_POSIX_PATH_MAX];
+
+	if( jobAd->LookupBool( ATTR_WANT_IO_PROXY, want_io_proxy ) < 1 ) {
+		dprintf(D_ALWAYS,"StartJob: Job does not define %s\n",ATTR_WANT_IO_PROXY);
+		want_io_proxy = 0;
+	} else {
+		dprintf(D_ALWAYS,"StartJob: Job has %s=%s\n",ATTR_WANT_IO_PROXY,want_io_proxy?"true":"false");
+	}
+
+	if(want_io_proxy) {
+		sprintf(io_proxy_config_file,"%s%cchirp.config",WorkingDir,DIR_DELIM_CHAR);
+		if(!io_proxy.init(io_proxy_config_file)) {
+			dprintf(D_ALWAYS,"StartJob: Couldn't initialize proxy.\n");
+			return false;
+		} else {
+			dprintf(D_ALWAYS,"StartJob: Initialized IO Proxy.\n");
+		}
+	}
+		
 		// Return to our old priv state
 	set_priv ( priv );
 
@@ -299,25 +324,21 @@ CStarter::StartJob()
         }
         case PVM: {
             dprintf ( D_ALWAYS, "PVM not (yet) supported\n" );
-            return;
+            return false;
         }
         default: {
             dprintf ( D_ALWAYS, "What the heck kinda universe is %d?\n", 
                       universe );
-            return;
+            return false;
         }
     } /* switch */
 
 	if (job->StartJob()) {
 		JobList.Append(job);		
+		return true;
 	} else {
 		delete job;
-
-		// DREADFUL HACK:  for now, if we fail to start the job,
-		// do an EXCEPT.  Of course this is wrong for a multi-starter,
-		// this is just a quick hack to get the first pass at WinNT
-		// Condor out the door.
-		EXCEPT("Failed to start job");
+		return false;
 	}
 }
 

@@ -80,7 +80,10 @@ main_init(int argc, char *argv[])
 	}
 	syscall_sock = (ReliSock *)socks[0];
 
-	Starter->Init(argv[1]);
+	if(!Starter->Init(argv[1])) {
+		dprintf(D_ALWAYS, "Unable to start job.\n");
+		DC_Exit(1);
+	}
 
 	return 0;
 }

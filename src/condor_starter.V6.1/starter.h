@@ -28,6 +28,7 @@
 #include "list.h"
 #include "os_proc.h"
 #include "user_proc.h"
+#include "io_proxy.h"
 
 void set_resource_limits();
 extern ReliSock *syscall_sock;
@@ -61,7 +62,7 @@ public:
 			limits, then calls StartJob()
 		    @param peer The sumbitting machine (sinful string)
 		*/
-	virtual void Init(char peer[]);
+	virtual bool Init(char peer[]);
 
 		/** Params for "EXECUTE", "UID_DOMAIN", and "FILESYSTEM_DOMAIN".
 		 */
@@ -80,7 +81,7 @@ public:
 		/** For now, make a VanillaProc class instance and call
 			StartJob on it.  Append it to the JobList.
 		*/
-	virtual void StartJob();
+	virtual bool StartJob();
 
 		/** Call Suspend() on all elements in JobList */
 	virtual int Suspend(int);
@@ -112,8 +113,9 @@ private:
 	char WorkingDir[_POSIX_PATH_MAX];
 	int Key;
 	int ShuttingDown;
+	IOProxy io_proxy;
 
-    int printAdToFile(ClassAd *ad, char* JobHistoryFileName);
+	int printAdToFile(ClassAd *ad, char* JobHistoryFileName);
 
 };
 

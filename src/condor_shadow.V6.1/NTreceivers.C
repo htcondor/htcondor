@@ -141,6 +141,208 @@ do_REMOTE_syscall()
 		return -1;
 	}
 
+	case CONDOR_open:
+	  {
+		char *  path;
+		int   flags;
+		int   lastarg;
+		int terrno;
+
+		assert( syscall_sock->code(flags) );
+		dprintf( D_SYSCALLS, "  flags = %d\n", flags );
+		assert( syscall_sock->code(lastarg) );
+		dprintf( D_SYSCALLS, "  lastarg = %d\n", lastarg );
+		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
+		assert( syscall_sock->code(path) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = open( path , flags , lastarg);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)path );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+	case CONDOR_close:
+	  {
+		int   fd;
+		int terrno;
+
+		assert( syscall_sock->code(fd) );
+		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = close( fd);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+	case CONDOR_read:
+	  {
+		int   fd;
+		void *  buf;
+		size_t   len;
+		int terrno;
+
+		assert( syscall_sock->code(fd) );
+		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
+		assert( syscall_sock->code(len) );
+		dprintf( D_SYSCALLS, "  len = %d\n", len );
+		buf = (void *)malloc( (unsigned)len );
+		memset( buf, 0, (unsigned)len );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = read( fd , buf , len);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		if( rval >= 0 ) {
+			assert( syscall_sock->code_bytes_bool(buf, rval) );
+		}
+		free( (char *)buf );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+	case CONDOR_write:
+	  {
+		int   fd;
+		void *  buf;
+		size_t   len;
+		int terrno;
+
+		assert( syscall_sock->code(fd) );
+		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
+		assert( syscall_sock->code(len) );
+		dprintf( D_SYSCALLS, "  len = %d\n", len );
+		buf = (void *)malloc( (unsigned)len );
+		memset( buf, 0, (unsigned)len );
+		assert( syscall_sock->code_bytes_bool(buf, len) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = write( fd , buf , len);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)buf );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+	case CONDOR_lseek:
+	case CONDOR_lseek64:
+	case CONDOR_llseek:
+	  {
+		int   fd;
+		off_t   offset;
+		int   whence;
+		int terrno;
+
+		assert( syscall_sock->code(fd) );
+		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
+		assert( syscall_sock->code(offset) );
+		dprintf( D_SYSCALLS, "  offset = %d\n", offset );
+		assert( syscall_sock->code(whence) );
+		dprintf( D_SYSCALLS, "  whence = %d\n", whence );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = lseek( fd , offset , whence);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+	case CONDOR_unlink:
+	  {
+		char *  path;
+		int terrno;
+
+		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
+		assert( syscall_sock->code(path) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = unlink( path);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)path );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+	case CONDOR_rename:
+	  {
+		char *  from;
+		char *  to;
+		int terrno;
+
+		to = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		memset( to, 0, (unsigned)_POSIX_PATH_MAX );
+		from = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		memset( from, 0, (unsigned)_POSIX_PATH_MAX );
+		assert( syscall_sock->code(to) );
+		assert( syscall_sock->code(from) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = rename( from , to);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)to );
+		free( (char *)from );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
 
 	case CONDOR_register_mpi_master_info:
 	{
