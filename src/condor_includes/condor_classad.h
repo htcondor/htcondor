@@ -11,7 +11,6 @@
 
 #include <fstream.h>
 
-#include "condor_expressions.h"
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_attrlist.h"
