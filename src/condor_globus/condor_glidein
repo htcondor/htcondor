@@ -193,16 +193,25 @@ sub gather_info() {
 	}
 
 		## globus programs
-	chomp( $G_RUN = `which globusrun` );
-	chomp( $G_INFO = `which grid-proxy-info` );
-	chomp( $G_SEARCH = `which grid-info-search` );
-	chomp( $G_FTP = `which gsincftpget` );
-	chomp( $G_HOSTNAME = `which globus-hostname` );
-
-	foreach $G_PROG ( $G_RUN, $G_INFO, $G_SEARCH, $G_FTP, $G_HOSTNAME ) {
-		if ( ! -x $G_PROG ) {
-			return( "Error, cannot find Globus program \"$G_PROG\"" );
-		}
+	chomp( $G_RUN = `which globusrun 2>/dev/null` );
+	if ( ! -x $G_RUN ) {
+	    return( "Error, cannot find globusrun" );
+	}
+	chomp( $G_INFO = `which grid-proxy-info 2>/dev/null` );
+	if ( ! -x $G_INFO ) {
+	    return( "Error, cannot find grid-proxy-info" );
+	}
+	chomp( $G_SEARCH = `which grid-info-search 2>/dev/null` );
+	if ( ! -x $G_SEARCH ) {
+	    return( "Error, cannot find grid-info-search" );
+	}
+	chomp( $G_FTP = `which gsincftpget 2>/dev/null` );
+	if ( ! -x $G_FTP ) {
+	    return( "Error, cannot find gsincftpget" );
+	}
+	chomp( $G_HOSTNAME = `which globus-hostname 2>/dev/null` );
+	if ( ! -x $G_HOSTNAME ) {
+	    return( "Error, cannot find globus-hostname" );
 	}
 
 	if ( silently( "$G_INFO -exists" ) ) {
@@ -326,8 +335,8 @@ sub parse_command_line() {
 	}
 	chomp( @CONTACTS );
 
-	if ( $#CONTACTS == 0 ) {
-	    print "No resources specified\n";
+	if ( $#ARGV == -1 ) {
+	    print "No resource specified\n";
 	    exit( -1 );
 	}
 
