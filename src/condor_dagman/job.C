@@ -138,3 +138,21 @@ void job_print (Job * job, bool condorID) {
     if (job == NULL) dprintf( D_ALWAYS, "(UNKNOWN)");
     else job->Print(condorID);
 }
+
+const char*
+Job::GetPreScriptName() const
+{
+	if( !_scriptPre ) {
+		return NULL;
+	}
+	return _scriptPre->GetCmd();
+}
+
+const char*
+Job::GetPostScriptName() const
+{
+	if( !_scriptPost ) {
+		return NULL;
+	}
+	return _scriptPost->GetCmd();
+}

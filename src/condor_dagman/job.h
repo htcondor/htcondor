@@ -127,11 +127,13 @@ class Job {
     ///
     ~Job();
   
-    // returns _jobName
-	inline const char* GetJobName() { return _jobName; }
-
-    /** */ inline char *  GetCmdFile () const { return _cmdFile; }
-    /** */ inline JobID_t GetJobID   () const { return _jobID;   }
+	inline const char* GetJobName() const { return _jobName; }
+	inline const char* GetCmdFile() const { return _cmdFile; }
+	inline const JobID_t GetJobID() const { return _jobID; }
+	inline const int GetRetryMax() const { return retry_max; }
+	inline const int GetRetries() const { return retries; }
+	const char* GetPreScriptName() const;
+	const char* GetPostScriptName() const;
 
     Script * _scriptPre;
     Script * _scriptPost;
