@@ -254,6 +254,7 @@ usage ()
 void
 firstPass (int argc, char *argv[])
 {
+	int had_pool_error = 0;
 	// Process arguments:  there are dependencies between them
 	// o -l/v and -serv are mutually exclusive
 	// o -sub, -avail and -run are mutually exclusive
@@ -265,12 +266,17 @@ firstPass (int argc, char *argv[])
 			setMode (MODE_STARTD_AVAIL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-pool")) {
-			if (pool == NULL) {
-				pool = argv[++i];
-			} else {
-				fprintf (stderr, "At most one -pool argument may be used\n");
-				exit (1);
+			if( pool ) {
+				free( pool );
+				had_pool_error = 1;
 			}
+			pool = get_daemon_name(argv[++i]);
+			if( !pool ) {
+				fprintf( stderr, "Error:  unknown host %s\n", argv[i] );
+				exit( 1 );
+			} else {
+				pool = strdup( pool );
+			}	
 		} else
 		if (matchPrefix (argv[i], "-format")) {
 			setPPstyle (PP_CUSTOM, i, argv[i]);
@@ -346,6 +352,11 @@ firstPass (int argc, char *argv[])
 			usage ();
 			exit (1);
 		}
+	}
+	if( had_pool_error ) {
+		fprintf( stderr, 
+				 "Warning:  Multiple -pool arguments given, using \"%s\"\n",
+				 pool );
 	}
 }
 
