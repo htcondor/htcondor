@@ -1272,13 +1272,13 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char 	input[_POSIX_PATH_MAX];
 	char 	output[_POSIX_PATH_MAX];
 	char 	error[_POSIX_PATH_MAX];
-	char	env[_POSIX_PATH_MAX];		// fixed size is bad here!!
-	char   	job_args[_POSIX_PATH_MAX]; 	// fixed size is bad here!!
-	char	args[_POSIX_PATH_MAX];
+	char	env[ATTRLIST_MAX_EXPRESSION];		// fixed size is bad here!!
+	char   	job_args[_POSIX_ARG_MAX];
+	char	args[_POSIX_ARG_MAX];
 	char	owner[20], iwd[_POSIX_PATH_MAX];
 	Environ	env_obj;
 	char	**envp;
-	char	*argv[_POSIX_PATH_MAX];		// bad
+	char	*argv[_POSIX_ARG_MAX];
 	int		fd, pid, argc;
 	struct passwd	*pwd;
 
@@ -1761,7 +1761,7 @@ NotifyUser(shadow_rec* srec, char* msg, int status)
 #if !defined(WIN32)
 	int fd, notification;
 	char owner[20], url[25], buf[80];
-	char cmd[_POSIX_PATH_MAX], args[_POSIX_PATH_MAX];
+	char cmd[_POSIX_PATH_MAX], args[_POSIX_ARG_MAX];
 
 	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
 						"Notification", &notification) < 0) {
