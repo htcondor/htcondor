@@ -82,6 +82,7 @@ MAIN( int argc, char *argv[], char **envp )
 		Set_CWD( init_working_dir );
 		argc -= 2;
 		argv += 2;
+		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		return main( argc, argv, envp );
 	}
 
@@ -103,6 +104,7 @@ MAIN( int argc, char *argv[], char **envp )
 #if 0
 		init_file_table();
 #endif
+		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		return main( argc, argv, envp );
 	}
 
@@ -120,4 +122,10 @@ open_write_stream( const char * ckpt_file, size_t n_bytes )
 	int		fd;
 
 	return open( ckpt_file, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
+}
+
+void
+report_image_size( int kbytes )
+{
+	/* noop in local mode */
 }
