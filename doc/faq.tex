@@ -96,11 +96,11 @@ using \Condor{hold}.
 Place all jobs into the hold state while replacing binaries.
 
 
-\item[Step 3:  Download Condor \VersionNotice]
+\item[Step 3:  Download Condor 6.6.x]
 To ensure that both new and current binaries are within
 the same volume,
 make a new directory within your current release
-directory where \VersionNotice 
+directory where 6.6.x 
 will go. 
 Unix commands will be of the form
 \begin{verbatim}
@@ -109,7 +109,7 @@ Unix commands will be of the form
   cd new
 \end{verbatim}
 
-Locate the correct \VersionNotice
+Locate the correct version of the Condor
 binary, and download into this \File{new} directory.
 
 Do \emph{not} install the downloaded version.
@@ -131,19 +131,18 @@ From this list of created directories,
 \File{lib} will be used to replace current directories.
 
 \item[Step 4:  Configuration files]
-The downloaded \VersionNotice
+The downloaded version 6.6.x
 configuration file will have extra, new suggestions
 for configuration macro settings,
 to go with new features in Condor.
 These extra configuration macros
-are not be required in order to run \VersionNotice.
+are not be required in order to run version Condor 6.6.x.
 
 Make a backup copy of the current configuration, to
 safeguard backing out of the upgrade, if something goes wrong.
 
 Work through the new
-\VersionNotice
- example configuration file to see if there
+example configuration file to see if there
 is anything useful and merge with your site-specific (current)
 configuration file.
 
@@ -187,16 +186,16 @@ The Unix commands to do this will be of the form
 \begin{verbatim}
   cd <release-dir>
 
-  mv bin bin.v62
+  mv bin bin.v64
   mv new/bin bin
 
-  mv include include.v62
+  mv include include.v64
   mv new/include include
 
-  mv sbin sbin.v62
+  mv sbin sbin.v64
   mv new/sbin sbin
 
-  mv lib lib.v62
+  mv lib lib.v64
   mv new/lib lib
 \end{verbatim}
 
@@ -233,7 +232,7 @@ If these test jobs fail (possibly by leaving the queue before
 finishing), then the upgrade is unsuccessful.
 If unsuccessful, back out of the upgrade by
 replacing the new configuration file with the backup copy and
-moving the Version 6.2.x release directories back to their
+moving the Version 6.4.x release directories back to their
 previous location.
 Also send e-mail to \Email{condor-admin@cs.wisc.edu},
 explaining the situation and we'll help you work through it.
@@ -243,7 +242,7 @@ Release all jobs in the queue, but running \Condor{release}.
 
 \item[Step 9:  (Optional) Install manual pages]
 
-The \File{man} directory is new with Condor version 6.4.
+The \File{man} directory was new with Condor version 6.4.x.
 It contains manual pages.
 Note that installation of manual pages is optional;
 the chapter containing manual pages are in
