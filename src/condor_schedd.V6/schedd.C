@@ -284,12 +284,28 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 	
     sprintf(tmp, "%s = \"%s\"", ATTR_NAME, Name);
-    dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
     ad->InsertOrUpdate(tmp);
-	ad->Delete (ATTR_IDLE_JOBS);
-	update_central_mgr();  // Send even if no owners
-	dprintf (D_ALWAYS, "Sent HEART BEAT ad to central mgr: N_Owners=%d\n",N_Owners);
 
+	// The schedd's ad should not have idle and running job counts --- 
+	// only the per user queue ads should.  Instead, the schedd has
+	// TotalIdleJobs and TotalRunningJobs.
+	ad->Delete (ATTR_IDLE_JOBS);
+	ad->Delete (ATTR_RUNNING_JOBS);
+	sprintf(tmp, "%s = %d", ATTR_TOTAL_IDLE_JOBS, JobsIdle);
+	ad->Insert (tmp);
+	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
+	ad->Insert (tmp);
+
+	update_central_mgr();// Send even if no owners
+	dprintf (D_ALWAYS, "Sent HEART BEAT ad to central mgr: N_Owners=%d\n",
+				N_Owners);
+
+	// The per user queue ads should not have NumUsers in them --- only
+	// the schedd ad should.  In addition, they should not have TotalRunningJobs
+	// and TotalIdleJobs
+	ad->Delete (ATTR_NUM_USERS);
+	ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
+	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
 	for ( i=0; i<N_Owners; i++) {
 
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
