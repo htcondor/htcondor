@@ -1,5 +1,5 @@
 universe        = standard
-executable      = job_ckpt_memory-file_std.cndr.$$(OPSYS).$$(ARCH)
+executable      = job_ckpt_memory-file_std.cndr.exe.$$(OPSYS).$$(ARCH)
 output          = job_ckpt_memory-file_std.out
 error           = job_ckpt_memory-file_std.err
 log             = job_ckpt_memory-file_std.log
