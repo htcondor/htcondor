@@ -35,6 +35,7 @@ extern "C" char *get_host_cell();
 extern "C" int event_killall(resource_id_t rid, job_id_t jid, task_id_t tid);
 extern "C" int event_pcheckpoint(resource_id_t rid,job_id_t jid,task_id_t tid);
 extern "C" int event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid);
+extern "C" int event_new_proc_order(resource_id_t rid, job_id_t jid, task_id_t tid);
 
 extern "C" int calc_virt_memory();
 extern "C" float calc_load_avg();
@@ -616,6 +617,27 @@ event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid)
 }
 
 int
+event_new_proc_order(resource_id_t rid, job_id_t jid, task_id_t tid)
+{
+	resource_info_t *rip;
+
+	dprintf(D_ALWAYS, "Called event_new_proc_order()\n");
+	if (!(rip = resmgr_getbyrid(rid))) {
+		dprintf(D_ALWAYS, "Could not find resource.\n");
+		return -1;
+	}
+
+	if (rip->r_pid == NO_PID || rip->r_pid == getpid()) {
+		dprintf(D_ALWAYS, "Resource not allocated.\n");
+		return -1;
+	}
+
+	// resmgr_changestate(rip->r_rid, NO_JOB);
+
+	return kill_starter(rip->r_pid, SIGHUP);
+}
+
+int
 event_pcheckpoint(resource_id_t rid, job_id_t jid, task_id_t tid)
 {
 	resource_info_t *rip;
@@ -738,7 +760,7 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 		console_idle = console_oldval;
 		return;
 	}
- 
+
 	kbdd_counter = 0;
 
 	user_idle = tty_pty_idle_time();
@@ -1049,7 +1071,7 @@ get_load_avg()
 	static int first = 1;
 	static float oldval;
 	static int load_counter = 0;
- 
+
 	if (++load_counter != polls_per_update_load && !first)
 		return oldval;
 	first = 0;
