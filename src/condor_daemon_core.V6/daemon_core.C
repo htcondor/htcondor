@@ -2978,6 +2978,7 @@ int DaemonCore::HandleReq(int socki)
 
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SERVER_COMMAND_SOCK );
 					// it matters if the version is empty, so we must explicitly delete it
 					the_policy->Delete( ATTR_SEC_REMOTE_VERSION );
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_REMOTE_VERSION );
