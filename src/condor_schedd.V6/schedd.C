@@ -208,9 +208,6 @@ Scheduler::~Scheduler()
 void
 Scheduler::timeout()
 {
-#if !defined(WIN32)
-	block_signal(SIGCHLD);
-#endif
 #if 0
 	/* the step size in the UPDOWN algo depends on the time */
 	/* interval of sampling			                */
@@ -452,14 +449,6 @@ Scheduler::abort_job(int, Stream* s)
 	abort_job_myself(job_id);
 }
 
-#if defined(WIN32)
-#define RETURN return
-#else
-#define RETURN \
-	unblock_signal(SIGCHLD); \
-	return
-#endif
-
 
 int
 Scheduler::negotiatorSocketHandler (Stream *stream)
@@ -572,11 +561,11 @@ Scheduler::negotiate(int, Stream* s)
 	s->decode();
 	if (!s->code(ownerptr)) {
 		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-		RETURN (!(KEEP_STREAM));
+		return (!(KEEP_STREAM));
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-		RETURN (!(KEEP_STREAM));
+		return (!(KEEP_STREAM));
 	}
 	dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
 	//-----------------------------------------------
@@ -1855,7 +1844,6 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 	Mrec*		mrec;
 	shadow_rec*	srec;
 
-	block_signal(SIGALRM);
     if( sig == 0 ) {
         dprintf( D_ALWAYS, "***********  Begin Extra Checking ********\n" );
     } else {
@@ -1933,7 +1921,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
     }
 	if( ExitWhenDone && NShadowRecs == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
-		kill( getpid(), SIGKILL );
+		exit(0);
 	}
 
 		// If we're not trying to shutdown, now that either an agent
@@ -1943,7 +1931,6 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 		StartJobs();
 	}
 
-	unblock_signal(SIGALRM);
 #endif /* !defined(WIN32) */
 }
 
@@ -2235,12 +2222,6 @@ prio_compar(prio_rec* a, prio_rec* b)
 }
 } // end of extern
 
-void
-Scheduler::sigint_handler()
-{
-	dprintf( D_ALWAYS, "Killed by SIGINT\n" );
-	exit(0);
-}
 
 void
 Scheduler::reconfig()
@@ -2260,10 +2241,9 @@ void
 Scheduler::shutdown_graceful()
 {
 #if !defined(WIN32)
-	block_signal(SIGCHLD);
 	if( NShadowRecs == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
-		kill( getpid(), SIGKILL );  
+		exit(0);
 	} else {
 			/* 
 			   There are shadows running, so set a flag that tells the
@@ -2273,7 +2253,6 @@ Scheduler::shutdown_graceful()
 		MaxJobsRunning = 0;
 		ExitWhenDone = TRUE;
 		preempt( NShadowRecs );
-		unblock_signal(SIGCHLD);
 	}
 #endif
 }
@@ -2288,7 +2267,7 @@ Scheduler::shutdown_fast()
 		kill( ShadowRecs[i].pid, SIGKILL );
 	}
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
-	kill( getpid(), SIGKILL );
+	exit(0);
 #endif
 }
 
