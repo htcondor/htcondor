@@ -1,3 +1,19 @@
+9/17/01 V6_3-post-merge-V6_2-merge-6
+		The state of the V6_3-branch right after we merged in the
+		changes on the V6_2-branch from V6_2_1 to 
+		V6_2-merge-6.
+
+9/17/01 V6_3-pre-merge-V6_2-merge-6
+		The state of the V6_3-branch right before we merge in the
+		changes on the V6_2-branch from V6_2_1 to 
+		V6_2-merge-6.
+
+9/17/01 V6_2-merge-6
+		The state of the V6_2-branch (after v6.2.1 and soon before release
+		of v6.2.2) when we merged it into V6_3-branch.   Note that there
+		is no V6_2-merge-5 tag.... because that is really the V6_2_1 tag.
+
+
 9/17/01 V6_3-INFN-CondorG-2
 		Basically, the V6_3-INFN-CondorG-6_3_1 tag, with an bug fix from the
 		V6_3-branch to condor_event.C. Then added new features to the grid 
