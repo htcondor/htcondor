@@ -197,7 +197,7 @@ sub RunAbsent()
 	}
 
 	# Down cluster nodes
-	elsif ( /Cluster '.*' is down/ )
+	elsif ( /Cluster '(.*)' is down/ )
 	{
 	    push( @ClusterDown, $1 );
 	}
