@@ -684,7 +684,7 @@ all_reaper_sigchld( Service*, int )
 		if( WIFSTOPPED(status) ) {
 			continue;
 		}	
-		daemons.AllReaper( NULL, pid, status );
+		daemons.AllReaper( pid, status );
 	}
 	return TRUE;
 }	
@@ -700,7 +700,7 @@ standard_sigchld( Service *, int )
 		if( WIFSTOPPED(status) ) {
 			continue;
 		}
-		daemons.DefaultReaper( NULL, pid, status );
+		daemons.DefaultReaper( pid, status );
 	}
 	return TRUE;
 }
