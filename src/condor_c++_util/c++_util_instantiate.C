@@ -69,21 +69,6 @@ template class HashTable<MyString, uid_entry*>;
 template class SimpleList<Daemon*>;
 template class HashTable<Credential_t, Condor_Credential_B*>;
 
-// This line was added to work around a weird problem. 
-// For some reason, when compiling this on the trunk, we 
-// were getting an error in programs (like the master) that use pow():
-//    undefined reference to `float std::__CMATH_POWER(float, unsigned)'
-// Either adding this or compiling without -fno-implicit-templates
-// (which isn't an option) gets rid of the error. Some googling,
-// suggested that this was a bug in gcc 3.0.0, but it was fixed
-// by 3.0.1. Why does the trunk exhibit this behavior for me using
-// gcc 3.2.2? Why doesn't Condor 6.7? For the life of me, I can't
-// figure it out. I'm going to leave this in for now, and hope
-// that I can figure out the real problem as I continue to make
-// the trunk work. 
-template float std::__cmath_power<float>(float, unsigned);
-template double std::__cmath_power<double>(double, unsigned);
-
 int 	CondorErrno;
-string	CondorErrMsg;
+std::string	CondorErrMsg;
 

@@ -99,11 +99,6 @@
 #define _POSIX_C_SOURCE 199506L /* To get asctime_r */
 #endif
 
-#ifdef __cplusplus
-using namespace std;
-#endif
-
-	
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
