@@ -19,7 +19,7 @@
  * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+ ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_classad.h"
@@ -86,6 +86,7 @@ struct parameters
 	bool test_assignment;
 	bool test_classads;
 	bool test_references;
+	bool test_xml;
 };
 
 class TestResults
@@ -227,13 +228,44 @@ main(
 			printf("ClassAd %d:\n", classad_index);
 			classads[classad_index]->fPrint(stdout);
 			printf("\n");
+		}
+	}
+
+	if (parameters.test_xml) {
+		printf("Testing XML...\n");
+		for (  int classad_index = 0; 
+			   classad_index < (int) NUMBER_OF_CLASSAD_STRINGS;
+			   classad_index++) {
 			ClassAdXMLUnparser unparser;
-			MyString xml;
+			ClassAdXMLParser   parser;
+			ClassAd            *after_classad;
+			MyString xml, before_classad_string, after_classad_string;
 			
+			// 1) Print each ClassAd to a string.
+			// 2) Convert it to XML and back and 
+			// 3) see if the string is the same. 
+			classads[classad_index]->sPrint(before_classad_string);
+
 			unparser.SetUseCompactSpacing(false);
 			unparser.SetUseCompactNames(false);
 			unparser.Unparse(classads[classad_index], xml);
-			printf("%s\n", xml.Value());
+			if (parameters.verbose) {
+				printf("Classad %d in XML:\n%s", classad_index, xml.Value());
+			}
+			after_classad = parser.ParseClassAd(xml.Value());
+
+			after_classad->sPrint(after_classad_string);
+			if (strcmp(before_classad_string.Value(), after_classad_string.Value()) != 0) {
+				printf("Failed: XML Parse and UnParse for classad %d\n", classad_index);
+				printf("---- Original ClassAd:\n%s\n", before_classad_string.Value());
+				printf("---- After ClassAd:\n%s\n", after_classad_string.Value());
+				printf("---- Intermediate XML:\n%s\n", xml.Value());
+				test_results.AddResult(false);
+			} else {
+				printf("Passed: XML Parse and Unparse for classad %d\n\n", classad_index);
+				test_results.AddResult(true);
+			}
+			delete after_classad;
 		}
 	}
 
@@ -380,6 +412,7 @@ parse_command_line(
 	parameters->test_assignment       = false;
 	parameters->test_classads         = false;
 	parameters->test_references       = false;
+	parameters->test_xml              = false;
 
 	argument_index = 1;
 
@@ -399,6 +432,7 @@ parse_command_line(
 			}
 			parameters->test_classads         = true;
 			parameters->test_references       = true;
+			parameters->test_xml              = true;
 		} else if (!strcmp(argv[argument_index], "-s")
 		    || !strcmp(argv[argument_index], "-scanner")) {
 			parameters->test_scanner          = true;
@@ -416,6 +450,9 @@ parse_command_line(
 		    || !strcmp(argv[argument_index], "-assignment")) {
 			parameters->test_assignment       = true;
 			parameters->test_copy_constructor = false;
+		} else if (!strcmp(argv[argument_index], "-x")
+		    || !strcmp(argv[argument_index], "-xml")) {
+			parameters->test_xml              = true;
 		} else {
 			fprintf(stderr, "Unknown argument: %s\n", 
 					argv[argument_index]);
@@ -787,7 +824,7 @@ test_targettype(
 	int         line_number,     // IN: The line number to print
     TestResults *results)        // OUT: Modified to reflect result of test
 {
-	static char *actual_value;
+	static const char *actual_value;
 
 	actual_value = classad->GetTargetTypeName();
 	if (!strcmp(expected_value, actual_value)) {
