@@ -52,6 +52,7 @@ if ($opt_owner) {
     if ($<) {
 	die "Option --owner is only valid when condor_configure is run as root!\n";
     }
+
     $owner=&find_owner($opt_owner);
 } else {
     $owner=&find_owner();
@@ -321,9 +322,11 @@ Determines which role(s) the machine will perform in a pool (which translates to
 --central-manager=<host>
 Connect to existing pool with Central manager on <host>. 
 
---owner=<owner>
-Run Condor daemons as user: <owner> (Only applicable when 
-condor_configure is run by root). 
+--owner=<uid.gid>
+Run Condor daemons as user: uid (Group: gid). (Only applicable when 
+condor_configure is run by root). Changes ownership of log,spool,execute
+directories to specified user, and instructs Condor system to run
+as that user.
 
 --verbose
 Print more information. 
@@ -335,63 +338,45 @@ END_USAGE
 																	    }
 
 sub find_owner {
-    my $owner = shift(@_);
+    my $param = shift(@_);
 
-    my @pwdent_condor = getpwnam( "condor" );
-    my $condor_uid=$pwdent_condor[2];
+    my $uid;
+    my $gid;
+    my $uname;
 
     if ( $< ) {
-		# Non-root
-		$owner=$<;
-    } # We're root, see who should own the Condor files/directories
-    elsif ($owner) {
-		# Try to change ownership to specified owner
-		if ($owner =~ m/^\d+$/) {
-			# fall through
-		} else {
-			my @pwdent = getpwnam( $owner );
-			if ($pwdent[2]) {
-				$owner=$pwdent[2];
-			} else {
-				die "Invalid user: $owner!\n";
-			}
-		}
+	# Non-root
+	$uid=$<;
+    } 
+    elsif ($param) {
+	# We're root, see who should own the Condor files/directories
+	if ($param =~ m/^\d+$/) {
+	    # owner as uid
+	    # fall through
+	    $uid=$param;
+	} else {
+	    #owner as uname
+	    $uname=$param;
+	}
     }
-    elsif ( $ENV{CONDOR_IDS} ) {
-		$_=$ENV{CONDOR_IDS};
-		s/(\d*)\.\d*/$1/;
-		$owner = $_;
-		my @pwdent = getpwuid($owner);
-		if( ! $pwdent[0] ) {
-			print "\nuid specified in CONDOR_IDS ($owner) is not valid.  Please ",
-			"set the\nCONDOR_IDS environment variable to the uid.gid pair ",
-			"that Condor\nshould use.\n\n";
-			exit(1);
-		}
-    } elsif ( $condor_uid ) {
-		$owner = $condor_uid;
-    } elsif ($opt_maybe_daemon_owner) {
-    	my @pwdent = getpwnam("daemon");
-		if ($pwdent[2]) {
-			$owner=$pwdent[2];
-			log_message("Condor is being configured to use the daemon user, which "
-						. "will work, but usually isn't "
-						. "what you want. Usually it's the condor user, which doesn't "
-						. "exist on this system. If you like, you can rerun the condor_configure "
-						. "program with the --owner option when you decide which user "
-						. "should be used by the Condor daemons.\n");
-		} else {
-			die wrap("", "", "Unable to determine which user to run Condor as. "
-               . "Please re-run the configure script with the "
-               . "--owner=<uname> option.\n");
-		}
+    else {
+	die "\nUnable to find the user to run Condor daemons as. Please specify it
+using the --owner option\n";
+    }
+
+    my @uinfo;
+    if ($uname) {
+	@uinfo=getpwnam ($uname);
     } else {
-			die wrap("", "", "Unable to determine which user to run Condor as. "
-               . "Please re-run the configure script with the "
-               . "--owner=<uname> option.\n");
+	@uinfo=getpwuid ($uid);
     }
-	
-    return $owner;
+
+    $uid=$uinfo[2];
+    $gid=$uinfo[3];
+
+    $local_config{CONDOR_IDS}="$uid.$gid";
+        
+    return $uid;
 }
 
 sub find_config_file {
@@ -502,8 +487,8 @@ sub install {
 	$local_config{LOCAL_DIR}="$opt_local_dir";
     } else { 
 	# Set up local directory
-	$local_dir=&condor_init ("$release_dir/condor_home.$host");
-	$local_config{LOCAL_DIR}="$release_dir/condor_home.\$(HOSTNAME)";
+	$local_dir=&condor_init ("$release_dir/local.$host");
+	$local_config{LOCAL_DIR}="$release_dir/local.\$(HOSTNAME)";
     }
 
     # Create local config file
@@ -518,6 +503,7 @@ sub install {
     $local_config{NEGOTIATOR}="\$(SBIN)/condor_negotiator";
     $local_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
+    $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)";
 
     chomp (my $network_interface=`host $host | grep \"has address\" | awk \'\{print \$4\}\'`);
     
