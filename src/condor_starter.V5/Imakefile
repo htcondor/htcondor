@@ -14,8 +14,9 @@ CKPT_FLAG = -DNO_CKPT
 
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
-	$(PVM_FLAG) -fexternal-templates
-#	$(PVM_FLAG) $(STATIC)
+	$(PVM_FLAG) -fexternal-templatesi
+
+/* #	$(PVM_FLAG) $(STATIC) */
 
 #if IS_ALPHA_OSF1
 LDFLAGS = -lmld
@@ -74,7 +75,7 @@ REMOTE_SYSCALL_LIB = \
 	$(CLASS_LIB) \
 	$(PVM_LIB)
 #else
-#if IS_R6000_AIX32
+#if IS_R6000_AIX32 
 REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(PVM_LIB)
 #else
 REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(XDR_LIB) $(PVM_LIB)
@@ -107,13 +108,12 @@ c_plus_target(test_it,test_it.o,$(NULL))
 c_plus_target(hound,hound.o,$(NULL))
 */
 
-#if IS_R6000_AIX31 || IS_R6000_AIX32
+#if IS_R6000_AIX31 || IS_R6000_AIX32 
 G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
 condor_starter.V5.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(G++_DIR)/ld \
 	-T512 -H512 -btextro -bhalt:4 -bnodelcsect \
 	-L/usr/gnu/lib \
-	-L$(RELEASE_DIR)/lib \
 	-L$(INSTALL_DIR)/lib \
 	-o condor_starter.V5.mike \
 	/lib/crt0.o \
@@ -122,7 +122,6 @@ condor_starter.V5.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(UTIL_LIB) \
 	$(XDR_LIB) \
 	$(REMOTE_SYSCALL_LIB) \
-	$(RELEASE_DIR)/lib/syscall.shr.o \
 	-lg++ $(G++_DIR)/libgcc.a -lc
 clean::
 	rm -f condor_starter.V5.mike $(OBJ)
