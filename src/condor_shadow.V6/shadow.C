@@ -177,7 +177,7 @@ int MaxDiscardedRunTime = 3600;
 extern "C" int ExceptCleanup();
 int Termlog;
 time_t	RunTime;
-ReliSock	*sock_RSC1, *RSC_ShadowInit(int rscsock, int errsock);
+ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
 int HandleLog();
 
@@ -755,9 +755,11 @@ Wrapup( )
 		handle_termination( Proc, notification, &JobStatus, NULL );
 	}
 
-	TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
-	TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
-	
+	if( sock_RSC1 ) {
+		TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
+		TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
+	}
+
 	/*
 	 * the job may have an email address to whom the notification message
      * should go.  this info is in the classad, and must be gotten from the
@@ -937,8 +939,8 @@ send_job( V2_PROC *proc, char *host, char *cap)
 	retval = part_send_job(0, host, reason, capability, schedd, proc, sd1, sd2, NULL);
 	if (retval == -1) {
 		DoCleanup();
-                dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-                exit( reason );
+		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+		exit( reason );
 	}
 
 #ifdef CARMI_OPS
