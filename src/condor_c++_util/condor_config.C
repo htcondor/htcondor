@@ -59,9 +59,9 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
+	
 // Function prototypes
-int real_config(const char*, const char*, const char*, ClassAd*);
+void real_config(ClassAd *classAd, char *mySubsystem, char* host);
 int Read_config(char*, ClassAd*, BUCKET**, int, int);
 char* get_arch();
 char* get_op_sys();
@@ -115,8 +115,21 @@ config_fill_ad(ClassAd* ad, char* mySubsys)
 }
 
 
-void 
-config(ClassAd *classAd, char *mySubsystem)
+void
+config( ClassAd* classAd, char* mySubsystem )
+{
+	real_config( classAd, mySubsystem, NULL );
+}
+
+
+void
+config_host( ClassAd* classAd, char* mySubsystem, char* host )
+{
+	real_config( classAd, mySubsystem, host );
+}
+
+void
+real_config(ClassAd *classAd, char *mySubsystem, char* host)
 {
 	char	hostname[1024];
 	char	*config_file;
@@ -142,7 +155,6 @@ config(ClassAd *classAd, char *mySubsystem)
 		// Try to find user "condor" in the passwd file.
 	init_tilde();
 
-
 		// Insert entries for "tilde" and "hostname". Note that
 		// "hostname" ends up as just the machine name w/o the
 		// . separators
@@ -151,8 +163,11 @@ config(ClassAd *classAd, char *mySubsystem)
 	} else {
 			// What about tilde if there's no ~condor? 
 	}
-	insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
-
+	if( host ) {
+		insert( "hostname", host, ConfigTab, TABLESIZE );
+	} else {
+		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
+	}
 
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
@@ -172,9 +187,8 @@ config(ClassAd *classAd, char *mySubsystem)
 						EXPAND_LAZY );
 	if( rval < 0 ) {
 		fprintf( stderr,
-				 "Configuration Error Line %d while processing config file %s ",
+				 "Configuration Error Line %d while reading global config file %s\n",
 				 ConfigLineNo, config_file );
-		perror( "" );
 		exit( 1 );
 	}
 	free( config_file );
@@ -182,14 +196,21 @@ config(ClassAd *classAd, char *mySubsystem)
 	
 		// Try to find and read the local config file
 	if( config_file = find_local() ) {
-		rval = Read_config( config_file, classAd, ConfigTab, 
-							TABLESIZE, EXPAND_LAZY ); 
-		if( rval < 0 ) {
-			fprintf( stderr,
-					 "Configuration Error Line %d while processing config file %s ",
-					 ConfigLineNo, config_file );
-			perror( "" );
-			exit( 1 );
+		if( access( config_file, R_OK ) != 0 ) {
+			if( !host ) {
+				fprintf( stderr, "ERROR: Can't read local config file %s\n", 
+						 config_file );
+				exit( 1 );
+			} 
+		} else {
+			rval = Read_config( config_file, classAd, ConfigTab, 
+								TABLESIZE, EXPAND_LAZY ); 
+			if( rval < 0 ) {
+				fprintf( stderr,
+				  "Configuration Error Line %d while reading local config file %s\n",
+						 ConfigLineNo, config_file );
+				exit( 1 );
+			}
 		}
 		free( config_file );
 	}
@@ -201,9 +222,8 @@ config(ClassAd *classAd, char *mySubsystem)
 							TABLESIZE, EXPAND_LAZY ); 
 		if( rval < 0 ) {
 			fprintf( stderr,
-					 "Configuration Error Line %d while processing config file %s ",
+					 "Configuration Error Line %d while reading global root config file %s\n",
 					 ConfigLineNo, config_file );
-			perror( "" );
 			exit( 1 );
 		}
 		free( config_file );
@@ -211,14 +231,21 @@ config(ClassAd *classAd, char *mySubsystem)
 
 		// Try to find and read the local root config file
 	if( config_file = find_local_root() ) {
-		rval = Read_config( config_file, classAd, ConfigTab, 
-							TABLESIZE, EXPAND_LAZY ); 
-		if( rval < 0 ) {
-			fprintf( stderr,
-					 "Configuration Error Line %d while processing config file %s ",
-					 ConfigLineNo, config_file );
-			perror( "" );
-			exit( 1 );
+		if( access( config_file, R_OK ) != 0 ) {
+			if( !host ) {
+				fprintf( stderr, "ERROR: Can't read local root config file %s\n", 
+						 config_file );
+				exit( 1 );
+			} 
+		} else {
+			rval = Read_config( config_file, classAd, ConfigTab, 
+								TABLESIZE, EXPAND_LAZY ); 
+			if( rval < 0 ) {
+				fprintf( stderr,
+				 "Configuration Error Line %d while reading local root config file %s\n",
+						 ConfigLineNo, config_file );
+				exit( 1 );
+			}
 		}
 		free( config_file );
 	}
