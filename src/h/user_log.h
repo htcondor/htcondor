@@ -89,6 +89,9 @@ typedef struct {
 	int			locked;
 } USER_LOG;
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 USER_LOG *
 	OpenUserLog( const char *own, const char *file, int c, int p, int s );
@@ -96,3 +99,7 @@ void CloseUserLog( USER_LOG * lp );
 void PutUserLog( USER_LOG *lp,  int, ... );
 void BeginUserLogBlock();
 void EndUserLogBlock();
+
+#if defined(__cplusplus)
+}
+#endif
