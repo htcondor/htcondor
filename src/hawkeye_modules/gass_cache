@@ -266,9 +266,9 @@ sub CheckOrphans()
     }
 
     # Report it all..
-    $Hash->Add( "GlobalOrphanCount", "n", $Count );
-    $Hash->Add( "GlobalOrphanBytes", "n", $TotalBytes );
-    $Hash->Add( "GlobalOrphanBlocks", "n", $TotalBlocks );
+    $Hash->Add( "GlobalOrphanCount", HawkeyePublish::TypeNumber, $Count );
+    $Hash->Add( "GlobalOrphanBytes", HawkeyePublish::TypeNumber, $TotalBytes );
+    $Hash->Add( "GlobalOrphanBlocks", HawkeyePublish::TypeNumber, $TotalBlocks );
 }
 
 
@@ -298,22 +298,22 @@ sub CacheUsage( )
     my $EmptyDirs = scalar @EmptyDirs;
 
     # Report it all..
-    $Hash->Add( "GlobalDataCount", "n", $Count );
-    $Hash->Add( "GlobalDataBytes", "n", $TotalBytes );
-    $Hash->Add( "GlobalDataBlocks", "n", $TotalBlocks );
-    $Hash->Add( "TotalInodes", "n", $TotalInodes );
-    $Hash->Add( "EmptyDirs", "n", $EmptyDirs );
+    $Hash->Add( "GlobalDataCount", HawkeyePublish::TypeNumber, $Count );
+    $Hash->Add( "GlobalDataBytes", HawkeyePublish::TypeNumber, $TotalBytes );
+    $Hash->Add( "GlobalDataBlocks", HawkeyePublish::TypeNumber, $TotalBlocks );
+    $Hash->Add( "TotalInodes", HawkeyePublish::TypeNumber, $TotalInodes );
+    $Hash->Add( "EmptyDirs", HawkeyePublish::TypeNumber, $EmptyDirs );
 
     my $MeanBytes = 0;
     $MeanBytes = sprintf "%.1f", ( $TotalBytes / $Count ) if ( $Count );
-    $Hash->Add( "GlobalDataBytesMean", "n", $MeanBytes );
-    $Hash->Add( "GlobalDataBytesMax", "n", $MaxBytes );
+    $Hash->Add( "GlobalDataBytesMean", HawkeyePublish::TypeNumber, $MeanBytes );
+    $Hash->Add( "GlobalDataBytesMax", HawkeyePublish::TypeNumber, $MaxBytes );
 
     # Tag & URL counts
     my $TagCount = keys %TagInodes;
     my $UrlCount = keys %UrlInodes;
-    $Hash->Add( "TagCount", "n", $TagCount );
-    $Hash->Add( "UrlCount", "n", $UrlCount );
+    $Hash->Add( "TagCount", HawkeyePublish::TypeNumber, $TagCount );
+    $Hash->Add( "UrlCount", HawkeyePublish::TypeNumber, $UrlCount );
 
     # Run 'du'...
     my $Cmd = "du -s global local";
@@ -335,10 +335,10 @@ sub CacheUsage( )
     my $TotalDu = 0;
     foreach my $Dir ( keys %Du )
     {
-	$Hash->Add( "Du_" . $Dir, "n", $Du{$Dir} );
+	$Hash->Add( "Du_" . $Dir, HawkeyePublish::TypeNumber, $Du{$Dir} );
 	$TotalDu += $Du{$Dir};
     }
-    $Hash->Add( "Du", "n", $TotalDu );
+    $Hash->Add( "Du", HawkeyePublish::TypeNumber, $TotalDu );
 
     # DF
     $Cmd = "df -P .";
