@@ -73,6 +73,7 @@ extern void	Init();
 
 extern "C"
 {
+	int 	RemoveLocalOrRemoteFile(const char *, const char *);
 	int		FileExists(const char *, const char *);
 	int	 	calc_virt_memory();
 	int	 	getdtablesize();
@@ -100,6 +101,7 @@ extern int		N_PrioRecs;
 extern int		grow_prio_recs(int);
 
 void	check_zombie(int, PROC_ID*);
+void	cleanup_ckpt_files(int , int , char*);
 void	send_vacate(match_rec*, int);
 void	mark_job_stopped(PROC_ID*);
 shadow_rec*     find_shadow_rec(PROC_ID*);
@@ -462,12 +464,22 @@ Scheduler::update_central_mgr(int command)
 		dprintf(D_ALWAYS, "failed to update central manager!\n");
 }
 
+
 extern "C" {
 void
 abort_job_myself(PROC_ID job_id)
 {
 	shadow_rec *srec;
+
+	// First check if there is a shadow assiciated with this process.
+	// If so, send it SIGUSR (or SIGKILL if this is a meta scheduler),
+	// but do _not_ call DestroyProc - we'll do that via the reaper
+	// after the job has exited (and reported its final status to us).
+	//
+	// If there is no shadow, then simply call DestroyProc().
+
 	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
+		// We found a shadow for this job
 		if (srec->match) {
 			dprintf( D_ALWAYS,
 					 "Found shadow record for job %d.%d, host = %s\n",
@@ -489,21 +501,71 @@ abort_job_myself(PROC_ID job_id)
 #endif
 		}
 		srec->removed = TRUE;
+	} else {
+		// We did not find a shadow for this job; just remove it.
+		DestroyProc(job_id.cluster,job_id.proc);
 	}
 }
 } /* End of extern "C" */
 
-void
+
+int
 Scheduler::abort_job(int, Stream* s)
 {
 	PROC_ID	job_id;
-	s->end_of_message();
-	s->decode();
-	if( !s->code(job_id) ) {
-		dprintf( D_ALWAYS, "abort_job() can't read job_id\n" );
-		return;
+	int nToRemove;
+
+	// First grab the number of jobs to remove
+	if ( !s->code(nToRemove) ) {
+		dprintf(D_ALWAYS,"abort_job() can't read job count\n");
+		return FALSE;
 	}
-	abort_job_myself(job_id);
+
+	if ( nToRemove > 0 ) {
+		// We are being told how many and which jobs to abort
+
+		dprintf(D_FULLDEBUG,"abort_job: asked to abort %d jobs\n",nToRemove);
+
+		while ( nToRemove > 0 ) {
+			if( !s->code(job_id) ) {
+				dprintf( D_ALWAYS, "abort_job() can't read job_id #%d\n",
+					nToRemove);
+				return FALSE;
+			}
+			abort_job_myself(job_id);
+			nToRemove--;
+		}
+		s->end_of_message();
+	} else {
+		// We are being told to scan the queue ourselves and abort
+		// any jobs which have a status = REMOVED
+		ClassAd *ad;
+		char constraint[120];
+
+		// This could take a long time if the queue is large; do the
+		// end_of_message first so condor_rm does not timeout. We do not
+		// need any more info off of the socket anyway.
+		s->end_of_message();
+
+		dprintf(D_FULLDEBUG,"abort_job: asked to abort all status REMOVED jobs\n");
+
+		sprintf(constraint,"%s == %d",ATTR_JOB_STATUS,REMOVED);
+
+		ad = GetNextJobByConstraint(constraint,1);
+		while ( ad ) {
+			if ( (ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster) == 1) &&
+				 (ad->LookupInteger(ATTR_PROC_ID,job_id.proc) == 1) ) {
+
+				 abort_job_myself(job_id);
+
+			}
+			FreeJobAd(ad);
+			ad = NULL;
+			ad = GetNextJobByConstraint(constraint,0);
+		}
+	}
+
+	return TRUE;
 }
 
 
@@ -1531,6 +1593,8 @@ Scheduler::delete_shadow_rec(int pid)
 		RemoveShadowRecFromMrec(rec);
 		shadowsByPid->remove(pid);
 		shadowsByProcID->remove(rec->job_id);
+		if ( rec->conn_fd != -1 )
+			close(rec->conn_fd);
 		delete rec;
 		numShadows -= 1;
 		display_shadow_recs();
@@ -1585,7 +1649,7 @@ mark_job_stopped(PROC_ID* job_id)
 
 	strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
 	if ( GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER, owner) < 0 )
-		owner[0] = '\0';
+		strcpy(owner,"nobody");
 
     if (FileExists(ckpt_name, owner)) {
 		status = IDLE;
@@ -2089,6 +2153,8 @@ Scheduler::kill_zombie(int pid, PROC_ID* job_id )
 ** However, if the shadow terminated abnormally, the job might still
 ** be marked as running (a zombie).  Here we check for that conditon,
 ** and mark the job with the appropriate status.
+** 1/98: And if the job is maked completed or removed, we delete it
+** from the queue.
 */
 void
 Scheduler::check_zombie(int pid, PROC_ID* job_id)
@@ -2100,7 +2166,8 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 
     if (GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
 						&status) < 0){
-        status = REMOVED;
+        dprintf(D_ALWAYS,"ERROR fetching job status in check_zombie !\n");
+		return;
     }
 
     switch( status ) {
@@ -2108,7 +2175,8 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
             kill_zombie( pid, job_id );
             break;
         case REMOVED:
-            cleanup_ckpt_files( pid, job_id );
+		case COMPLETED:
+            DestroyProc(job_id->cluster,job_id->proc);
             break;
         default:
             break;
@@ -2118,20 +2186,28 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 }
 
 void
-Scheduler::cleanup_ckpt_files(int pid, PROC_ID* job_id)
+cleanup_ckpt_files(int cluster, int proc, char *owner)
 {
     char    ckpt_name[MAXPATHLEN];
+	char	buf[_POSIX_PATH_MAX];
 
-        /* Remove any checkpoint file */
+		/* In order to remove from the checkpoint server, we need to know
+		 * the owner's name.  If not passed in, look it up now.
+  		 */
+	if ( owner == NULL ) {
+		if ( GetAttributeString(cluster,proc,ATTR_OWNER,buf) < 0 )
+			owner = "nobody";
+		else
+			owner = buf;
+	}
 
-    strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
+        /* Remove any checkpoint files */
+    strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
+	RemoveLocalOrRemoteFile(owner,ckpt_name);
 
-    (void)unlink( ckpt_name );
-
-        /* Remove any temporary checkpoint file */
-    (void)sprintf( ckpt_name, "%s/job%06d.ckpt.%d.tmp",
-                                Spool, job_id->cluster, job_id->proc  );
-    (void)unlink( ckpt_name );
+        /* Remove any temporary checkpoint files */
+    strcat( ckpt_name, ".tmp");
+	RemoveLocalOrRemoteFile(owner,ckpt_name);
 }
 
 void
