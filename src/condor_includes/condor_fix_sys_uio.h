@@ -32,7 +32,7 @@
 #endif /* LINUX && GLIBC */
 
 #if defined(OSF1) && !defined(_LIBC_POLLUTION_H_)
-#define _LIBC_POLLUTION_H_condor_fix_sys_uio.h
+#define _LIBC_POLLUTION_H_
 #define CONDOR_LIBC_POLLUTION_H_
 #endif
 
