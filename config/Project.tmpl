@@ -66,16 +66,18 @@ X11_INCLUDE =           /usr/X11R6/include
 ifdef DEBUG_BUILD
 CC =  $(DEBUG_BUILD) CCompiler
 CPlusPlus = $(DEBUG_BUILD) CPlusCompiler
+C_LINK = $(DEBUG_BUILD) CLinker
+CC_LINK = $(DEBUG_BUILD) CPlusLinker
 else
 CC = CCompiler
 CPlusPlus = CPlusCompiler
+C_LINK = CLinker
+CC_LINK = CPlusLinker
 endif
 
 LIBX = XLibPath
 LIBXEXT = XExtLibPath
-C_LINK = CLinker
 STRIP = Strip
-CC_LINK = CPlusLinker
 STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
