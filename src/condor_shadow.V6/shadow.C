@@ -72,7 +72,7 @@ int	UsePipes;
 char* mySubSystem = "SHADOW";
 
 extern "C" {
-#if defined(LINUX) && defined(GLIBC22)
+#if (defined(LINUX) && defined(GLIBC22)) || defined(HPUX11)
 	/* XXX fix declarations as well.  */
 	void reaper(int);
 	void handle_sigusr1(int);
@@ -1418,7 +1418,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
-#if defined(LINUX) && defined(GLIBC22)
+#if (defined(LINUX) && defined(GLIBC22)) || defined(HPUX11)
 void
 reaper(int unused)
 #else
@@ -1479,7 +1479,7 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if defined(LINUX) && defined(GLIBC22)
+#if (defined(LINUX) && defined(GLIBC22)) || defined(HPUX11)
 void
 handle_sigusr1( int unused )
 #else
@@ -1504,7 +1504,7 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if defined(LINUX) && defined(GLIBC22)
+#if (defined(LINUX) && defined(GLIBC22)) || defined(HPUX11)
 void
 handle_sigquit( int unused )
 #else
@@ -1539,13 +1539,14 @@ count_open_fds( const char *file, int line )
 void RemoveNewShadowDroppings(char *cluster, char *proc)
 {
 	char names[2][1024];
-	names[0][0] = '\0';
-	names[1][0] = '\0';
 	int j;
 	char *ckpt_name;
 	char *myspool;
 	struct stat buf;
 	int clusternum, procnum;
+
+	memset(&names[0], 0, 1024);
+	memset(&names[1], 0, 1024);
 
 	/* XXX I'm sorry.
 		There are some incompatibilities between the new
