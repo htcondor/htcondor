@@ -1,67 +1,113 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Flocking}Flocking}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{flocking!definition of}
+\index{flocking}
 \index{Condor!flocking}
 
-The \Condor{schedd} may be configured to submit jobs to more than one
-pool---this is known as flocking. If Condor pool A can send jobs to
-Condor pool B, then we say that A flocks to B. Flocking can be one
-way, such as A flocking to B, or it can be set up in both directions. 
+Flocking is Condor's way of allowing jobs that cannot immediately
+run (within the pool of machines where the job was
+submitted) to instead run on a different Condor pool. 
+If Condor pool A can send jobs to be run on Condor pool B,
+then we say that pool A flocks to pool B.
+Flocking can be one way,
+such as pool A flocking to pool B,
+or it can be set up to flock in both directions. 
+Configuration variables allow the
+\Condor{schedd} daemon to implement flocking.
 
 \index{configuration!for flocking}
-To configure flocking, you normally need to set just two configuration
-variables. Assume you have the situation where pool A is flocking to
-pool B. In pool A, set \Macro{FLOCK\_TO} to the host name of the
-central manager of pool B. You could set a list of host names, if you
-were flocking to multiple pools. In pool B, set \Macro{FLOCK\_FROM}
-to the names of all the hosts from pool A that might flock to pool
-B. If you don't wish to list all of the hosts, you can use a wildcard
-to allow multiple hosts. For example, you could say use
-``*.cs.wisc.edu'' to allow all hosts from the cs.wisc.edu domain. 
+The simplest flocking configuration sets
+a few configuration variables.
+If pool A is to flock to pool B, 
+then in pool A's configuration,
+set the following configuration variables:
+\begin{description}
+  \item[\Macro{FLOCK\_TO}] is a comma separated list of the central
+  manager machines of the pools that pool A may flock to.
+  \item[\Macro{FLOCK\_COLLECTOR\_HOSTS}]
+  is the list of \Condor{collector} deamons within the pools
+  that pool A may flock to.
+  In most cases, it is the same as \MacroNI{FLOCK\_TO}, and
+  it would be defined with 
+  \begin{verbatim}
+  FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
+  \end{verbatim}
+  \item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}]
+  is the list of \Condor{negotiator} deamons within the pools
+  that pool A may flock to.
+  In most cases, it is the same as \MacroNI{FLOCK\_TO}, and
+  it would be defined with 
+  \begin{verbatim}
+  FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
+  \end{verbatim}
+  \item[\Macro{HOSTALLOW\_NEGOTIATOR\_SCHEDD}]
+  provides a host-based access level and authorization list for the
+  \Condor{schedd} daemon to allow negotiation (for security
+  reasons) with the machines within the pools
+  that pool A may flock to.
+  This configuration variable will not likely need to change
+  from its default value as given in the sample configuration:
+  \footnotesize
+  \begin{verbatim}
+  ##  Now, with flocking we need to let the SCHEDD trust the other
+  ##  negotiators we are flocking with as well.  You should normally
+  ##  not have to change this either.
+  HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+  \end{verbatim}
+  \normalsize
+  See 
+  section~\ref{sec:Security-Authorization} on
+  page~\pageref{sec:Security-Authorization} for a discussion
+  of security macros and their use.
+\end{description}
 
-If you wish to also allow flocking from pool B to pool A, you can
-simply set up flocking in the other direction.
+The configuration macros that must be set in 
+pool B are ones that authorize jobs from pool A
+to flock to pool B.
 
-When you flock to another pool, you will not attempt to flock a
-particular job unless you cannot currently run it in your pool. Jobs
-that are run in another pool can only be standard universe jobs, and
-they are run as user ``nobody''.
+The host-based configuration macros are more easily
+set by introducing a list of pools where the jobs may flock from. 
+\Macro{FLOCK\_FROM} is a comma separated list of machines,
+and  it is used in the default configuration setting
+of the security macros that do host-based authorization:
+\footnotesize
+\begin{verbatim}
+HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
+HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
+HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
+HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
+\end{verbatim}
+\normalsize
 
-\MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
-section~\ref{param:HostAllow}) must also be configured to allow
-negotiators from all of the \MacroU{FLOCK\_NEGOTIATOR\_HOSTS} to
-contact the schedd.  Please make sure the \MacroUNI{NEGOTIATOR\_HOST}
-is first in the \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.  This
-is the default configuration, so it will be correct if you haven't
-modified it.
+Wildcards may be used when setting the \MacroNI{FLOCK\_FROM}
+configuration variable.
+For example, \verb@*.cs.wisc.edu@ specifies all hosts
+from the \verb@cs.wisc.edu@ domain. 
 
-% This was the old text for this section. I believe it to be pretty 
-% outdated, but I didn't want to get rid of it yet. --Alain 11-Oct-01
-% The \Condor{schedd} may be configured to submit jobs to more than one
-% pool.
-% In the default configuration, the \Condor{schedd} contacts the
-% Central Manager specified by the \Macro{CONDOR\_HOST} macro (described
-% in section~\ref{sec:Condor-wide-Config-File-Entries} on
-% page~\pageref{sec:Condor-wide-Config-File-Entries})
-% to locate execute machines
-% available to run jobs in its queue.
-% However, the
-% \Macro{FLOCK\_NEGOTIATOR\_HOSTS} and \Macro{FLOCK\_COLLECTOR\_HOSTS}
-% macros (described in
-% section~\ref{sec:Schedd-Config-File-Entries} on
-% page~\pageref{sec:Schedd-Config-File-Entries}) may 
-% be used to specify additional 
-% Central Managers for the \Condor{schedd} to contact.
-% When the local
-% pool does not satisfy all job requests, the \Condor{schedd} will try
-% the pools specified by these macros in turn until all jobs are
-% satisfied.
+The user-based configuration macros are used, then the default
+will be:
+\footnotesize
+\begin{verbatim}
+ALLOW_NEGOTIATIOR =  $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+\end{verbatim}
+\normalsize
 
-% \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
-% section~\ref{param:HostAllow}) must also be configured to allow
-% negotiators from all of the \MacroU{FLOCK\_NEGOTIATOR\_HOSTS} to contact the schedd.
-% Please make sure the \MacroUNI{NEGOTIATOR\_HOST} is first in the 
-% \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.
-% Similarly, the central managers of the remote pools must be configured
-% to listen to requests from this schedd.
+Further, if using Kerberos or GSI authentication, then the setting
+becomes:
+\footnotesize
+\begin{verbatim}
+ALLOW_NEGOTIATOR = condor@$(UID_DOMAIN)/$(NEGOTIATOR_HOST)
+\end{verbatim}
+\normalsize
+
+To enable flocking in both directions, consider each direction
+separately, following the guidelines given.
+
+A particular job will only flock to another pool
+when it cannot currently run in the current pool.
+
+% no longer true:
+%Jobs
+%that are run in another pool can only be standard universe jobs, and
+%they are run as user ``nobody''.
+
