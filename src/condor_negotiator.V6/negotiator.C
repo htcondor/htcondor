@@ -1754,9 +1754,10 @@ void create_prospective_list( int prio , CONTEXT* job_context)
 
 		/* look in the machine context to see if this is a VANILLA job, and
 		 * set appropiate preempt time -Todd */
-		if(evaluate_int("JobUniverse",&jobUniverse,ptr->machine_context,(CONTEXT *)0)<0) 
+		if(evaluate_int(ATTR_JOB_UNIVERSE,&jobUniverse,ptr->machine_context,(CONTEXT *)0)<0) 
 		{
-			dprintf(D_PREEMPT,"%s could not evaluate JobUniverse\n",ptr->name);
+			dprintf(D_PREEMPT,"%s could not evaluate %s\n",ptr->name,
+					ATTR_JOB_UNIVERSE);
 			continue;
 		}
 
