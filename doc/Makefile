@@ -114,7 +114,6 @@ release-html: ref.html $(TARGETDIR)
 	rm -rf $(MANDIR).old
 	mv -f $(MANDIR) $(MANDIR).old
 	mv -f $(TARGETDIR) $(MANDIR)
-	/p/condor/public/cgi-bin/manual/human_header_links.$(SUBDIR).pl
 	rm -f ref.html
 
 admin-man/machine-states.eps: admin-man/machine-states.fig
