@@ -1,10 +1,14 @@
 all_target(libsysapi.a)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-CFLAGS = $(STD_C_FLAGS)
+# use -O2 for the benchmark code, i.e clinpack & dhry*.c
+CFLAGS = $(STD_C_FLAGS) -O2
 LIB = $(STD_LIBS)
+LDFLAGS = KernLib
 
-OBJ = sysapi.o phys_mem.o free_fs_blocks.o
+OBJ = sysapi.o phys_mem.o free_fs_blocks.o ncpus.o clinpack.o dhry21a.o \
+		dhry21b.o timers_b.o idle_time.o reconfig.o last_x_event.o \
+		load_avg.o
 
 library_target(libsysapi.a,$(OBJ))
 
