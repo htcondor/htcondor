@@ -416,6 +416,74 @@ else
 fi
   
 
+#########################################
+# vendor compilers (for the test suites)
+#########################################
+AC_MSG_NOTICE([checking for vendor compilers (used by Condor test suites)])
+
+# we always look for g77, since we should have at least this,
+# regardless of what platform we are...
+AC_PATH_PROG([_cv_gnu_g77],[g77],[none],[$PATH])
+if test "$_cv_gnu_g77" = "none" ; then
+  _cv_has_gnu_g77="NO"
+else
+  _cv_has_gnu_g77="YES"
+fi
+
+# now, look for everything else, depending on our platform.  if it's
+# Linux, we know there are no vendor compilers to worry about, so we
+# can bail without doing any real work.  otherwise, we have to search
+# for what we might be able to use...
+if test "$os" = "Linux" ; then
+  AC_SUBST([_cv_vendor_cc],[""])
+  AC_SUBST([_cv_vendor_cplus],[""])
+  AC_SUBST([_cv_vendor_cplus_name],[""])
+  AC_SUBST([_cv_vendor_f77],[""])
+  AC_SUBST([_cv_vendor_f90],[""])
+  _cv_has_vendor_cc="NO"
+  _cv_has_vendor_cplus="NO"
+  _cv_has_vendor_f77="NO"
+  _cv_has_vendor_f90="NO"
+else
+  AC_PATH_PROG([_cv_vendor_cc],[cc],[none],[$PATH:/opt/SUNWspro/bin:/usr/ucb])
+  if test "$_cv_vendor_cc" = "none" ; then
+    _cv_has_vendor_cc="NO"
+  else
+    _cv_has_vendor_cc="YES"
+  fi
+
+  AC_PATH_PROGS([_cv_vendor_cplus],[CC cxx],[none],
+                [$PATH:/opt/SUNWspro/bin:/usr/ucb])
+  if test "$_cv_vendor_cplus" = "none" ; then
+    _cv_has_vendor_cplus="NO"
+  else
+    _cv_has_vendor_cplus="YES"
+    _cv_vendor_cplus_name=`basename $_cv_vendor_cplus`
+      AC_SUBST([_cv_vendor_cplus_name],[$_cv_vendor_cplus_name])
+  fi
+
+  AC_PATH_PROG([_cv_vendor_f77],[f77],[none],[$PATH])
+  if test "$_cv_vendor_f77" = "none" ; then
+    _cv_has_vendor_f77="NO"
+  else
+    _cv_has_vendor_f77="YES"
+  fi
+
+  AC_PATH_PROG([_cv_vendor_f90],[f90],[none],
+               [$PATH:/opt/SUNWspro/bin:/usr/ucb])
+  if test "$_cv_vendor_f90" = "none" ; then
+    _cv_has_vendor_f90="NO"
+  else
+    _cv_has_vendor_f90="YES"
+  fi
+fi
+AC_SUBST([has_gnu_g77],[$_cv_has_gnu_g77])
+AC_SUBST([has_vendor_cc],[$_cv_has_vendor_cc])
+AC_SUBST([has_vendor_cplus],[$_cv_has_vendor_cplus])
+AC_SUBST([has_vendor_f77],[$_cv_has_vendor_f77])
+AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
+
+
 #####################
 # everything else
 #####################
