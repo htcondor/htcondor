@@ -237,7 +237,7 @@ class AttrListList
       	void 	  	Insert(AttrList*);	// insert at the tail of the list
       	int			Delete(AttrList*); 	// delete a AttrList
 
-      	void  	  	fPrintAttrListList(FILE *); 	// print out the list
+      	void  	  	fPrintAttrListList(FILE *, bool use_xml = false);// print out the list
       	int 	  	MyLength() { return length; } 	// length of this list
       	ExprTree* 	BuildAgg(char*, LexemeType);	// build aggregate expr
 
