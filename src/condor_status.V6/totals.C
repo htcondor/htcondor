@@ -98,6 +98,7 @@ displayTotals (FILE *file, int keyLength)
 {
 	ClassTotal *ct;
 	MyString	key;
+	int k;
 
 	// display totals only for meaningful modes
 	switch (ppo)
@@ -122,9 +123,9 @@ displayTotals (FILE *file, int keyLength)
 	fprintf (file, "\n");
 
 	// sort the keys (insertion sort) so we display totals in sorted order
-	const char **keys = new (const char *) [allTotals.getNumElements()];
+	const char **keys = new const char* [allTotals.getNumElements()];
 	allTotals.startIterations();
-	for (int k = 0; k < allTotals.getNumElements(); k++) // for each key
+	for (k = 0; k < allTotals.getNumElements(); k++) // for each key
 	{
 		allTotals.iterate(key, ct);
 		// find the position where we want to insert the key
@@ -141,7 +142,7 @@ displayTotals (FILE *file, int keyLength)
 		keys[pos] = strdup(key.Value());
 	}
 	// now that our keys are sorted, display the totals in sort order
-	for (int k = 0; k < allTotals.getNumElements(); k++)
+	for (k = 0; k < allTotals.getNumElements(); k++)
 	{
 		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
 		allTotals.lookup(MyString(keys[k]), ct);
