@@ -934,7 +934,6 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 	OwnerUid = uid;
 	OwnerGid = gid;
 	OwnerIdsInited = TRUE;
-	return TRUE;
 
 	// find the user login name for this uid.  note we should not
 	// EXCEPT or log an error if we do not find it; it is OK for the
@@ -1353,8 +1352,8 @@ priv_identifier( priv_state s )
 		EXCEPT( "Programmer Error: priv_identifier() called for "
 				"PRIV_FILE_OWNER, on WIN32" );
 #else
-		sprintf( id, "file owner '%s' (%d.%d)", OwnerName, OwnerUid,
-				 OwnerGid );
+		sprintf( id, "file owner '%s' (%d.%d)",
+				 OwnerName ? OwnerName : "unknown", OwnerUid, OwnerGid );
 #endif
 		break;
 
@@ -1368,7 +1367,8 @@ priv_identifier( priv_state s )
 #ifdef WIN32
 		sprintf( id, "%s@%s", UserLoginName, UserDomainName );
 #else
-		sprintf( id, "User '%s' (%d.%d)", UserName, UserUid, UserGid );
+		sprintf( id, "User '%s' (%d.%d)", 
+				 UserName ? UserName : "unknown", UserUid, UserGid );
 #endif
 		break;
 
