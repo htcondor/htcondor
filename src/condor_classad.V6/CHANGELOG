@@ -1,3 +1,13 @@
+Changes for version 0.9.2:
+* Setting the view info no longer loses the view name or parent
+  view name.
+
 Changes for version 0.9.1:
 
 * Fixed usage of va_end in debug.C
+* Removed token after #endif
+* Flushing of ClassAd collection logs was accidentally turned off, and
+  is now turned back on.
+* Fixed bug in ClassAd::Copy() where the parent scope wasn't being set
+  properly. 
+
