@@ -27,6 +27,11 @@ foreach $dir (@alldirs) {
 # Finally, print out our top-level html index of all doc++ stuff. 
 open( OUT, ">index.html" ) || die "Can't open index.html: $!\n";
 
+print OUT "<html>\n";
+print OUT "<head>\n";
+print OUT "<title>Condor Doc++ Top Level</title>\n";
+print OUT "</head>\n";
+print OUT "<body bgcolor=\"#ffffff\">\n";
 print OUT "<h1>Condor Doc++ Entries</h1>\n\n";
 print OUT "<ul>\n";
 
@@ -36,6 +41,20 @@ foreach $dir ( sort(keys %html_files) ) {
 
 print OUT "</ul>\n";
 
+print OUT "If you want to know more about how this page and \n";
+print OUT "the doc++ pages have been made, check out the \n";
+print OUT "<a href=\"howto.html\">howto</a> document.<p>\n";
+
+print OUT "<a href=\"http://www.cs.wisc.edu/condor\">";
+print OUT "<img src=\"http://www.cs.wisc.edu/condor/CondorTitle.gif\"";
+print OUT " border=0 ></a><p>";
+
+print OUT "<em>This page generated automatically.</em>\n\n";
+
+print OUT "</body>\n";
+print OUT "</html>\n";
+
 # We're done, clean up.
 close OUT;
 closedir DIR;
+
