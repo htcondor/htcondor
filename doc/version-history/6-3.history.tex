@@ -4,7 +4,7 @@
 
 This is the second development release series of Condor.
 
-It contains numerous enhancements over the 6.0 stable series.
+It contains numerous enhancements over the 6.2 stable series.
 For example:
 
 \begin{itemize}
@@ -19,6 +19,44 @@ The 6.3 series has many other improvements over the 6.2 series, and
 may be available on newer platforms.  The new features, bugs fixed,
 and known bugs of each version are described below in detail.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-3-1}Version 6.3.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+
+\item
+More Condor DAGMan improvements and bug fixes:
+
+\begin{itemize}
+
+\item
+Added a new event to the Condor userlog at the completion of a POST
+script.  This allows DAGMan, during recovery, to know which POST
+scripts have finished succesfully, so it no longer has to re-run them
+all to make sure.
+
+\item
+Implemented separate \Arg{-MaxPre} and \Arg{-MaxPost} options to limit
+the number of simultaneously running PRE and POST scripts.  The
+\Arg{-MaxScripts} option is still available, and is equivalent to
+setting both \Arg{-MaxPre} and \Arg{-MaxPost} to the same value.
+
+\item
+Fixed a bug whereby DAGMan would clean up its lock file without
+creating a rescue file when killed with SIGTERM.
+
+\item
+DAGMan no longer aborts the DAG if it encounters executable error or
+job aborted events in the userlog, but rather marks the corresponding
+DAG nodes as ``failed'' so the rest of the DAG can continue.
+
+\end{itemize}
+
+\end{itemize}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-3-0}Version 6.3.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -32,8 +70,9 @@ Many Condor DAGMan improvements and bug fixes:
 
 \item
 PRE and POST scripts now run asynchronously, rather than synchronously
-as in the past.  As a result, DAGMan now supports a -MaxScripts option
-to limit the number of simultaneously running PRE and POST scripts.
+as in the past.  As a result, DAGMan now supports a \Arg{-MaxScripts}
+option to limit the number of simultaneously running PRE and POST
+scripts.
 
 \item
 Whether or not POST scripts are always executed after failed jobs is
