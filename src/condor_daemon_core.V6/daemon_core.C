@@ -4742,12 +4742,12 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 		}
 		// now open a SafeSock _on the same port_ choosen above
 		if ( !ssock->bind(rsock->get_port()) ) {
-			dprintf(D_ALWAYS, "Failed to bind SafeSock to %d\n", rsock->get_port());
 			rsock->close();
 			continue;
 		}
 		return TRUE;
 	}
+	dprintf(D_ALWAYS, "Error: BindAnyCommandPort failed!\n");
 	return FALSE;
 }
 
