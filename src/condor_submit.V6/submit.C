@@ -945,19 +945,25 @@ void SetFileOptions()
 		free(tmp);
 	}
 
+	/* If no buffer size is given, use 128 KB */
+
 	tmp = condor_param(BufferSize);
-	if(tmp) {
-		sprintf(buffer,"%s = %s",ATTR_BUFFER_SIZE,tmp);
-		InsertJobExpr(buffer);
-		free(tmp);
+	if(!tmp) {
+		tmp = strdup("131072");
 	}
+	sprintf(buffer,"%s = %s",ATTR_BUFFER_SIZE,tmp);
+	InsertJobExpr(buffer);
+	free(tmp);
+
+	/* If not buffer block size is given, use 32 KB */
 
 	tmp = condor_param(BufferBlockSize);
-	if(tmp) {
-		sprintf(buffer,"%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
-		InsertJobExpr(buffer);
-		free(tmp);
+	if(!tmp) {
+		tmp = strdup("32768");
 	}
+	sprintf(buffer,"%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
+	InsertJobExpr(buffer);
+	free(tmp);
 }
 
 
