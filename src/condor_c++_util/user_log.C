@@ -445,6 +445,7 @@ readEvent (ULogEvent *& event)
 			if (!retval1 || !retval2)
 			{
 				delete event;
+				event = NULL;  // To prevent FMR: Free memory read
 				synchronize ();
 				return ULOG_RD_ERROR;
 			}
@@ -463,6 +464,7 @@ readEvent (ULogEvent *& event)
 			}
 			clearerr (fp);
 			delete event;
+			event = NULL;  // To prevent FMR: Free memory read
 			return ULOG_NO_EVENT;
 		}
 	}
@@ -478,6 +480,7 @@ readEvent (ULogEvent *& event)
 			// got the event, but could not synchronize!!  treat as incomplete
 			// event
 			delete event;
+			event = NULL;  // To prevent FMR: Free memory read
 			clearerr (fp);
 			return ULOG_NO_EVENT;
 		}
