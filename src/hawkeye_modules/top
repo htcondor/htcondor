@@ -155,6 +155,9 @@ sub Init( )
 	    HawkeyeLib::HardConfig( "_fields" );
 	    HawkeyeLib::HardConfig( "_period" );
 	}
+	elsif ( $Arg =~ /^-d$/ ) {
+	    $Config{Debug}++;
+	}
     }
 
     # Setup the hawkeye stuff
