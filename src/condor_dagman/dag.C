@@ -141,7 +141,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
     
     bool done = false;  // Keep scaning until ULOG_NO_EVENT
     bool result = true;
-    static unsigned int log_unk_count;
+    static int log_unk_count = 0;
+	static int ulog_rd_error_count = 0;
 
     while (!done) {
         
@@ -164,9 +165,25 @@ bool Dag::ProcessLogEvents (bool recovery) {
             break;
             //----------------------------------------------------------------
           case ULOG_RD_ERROR:
-            debug_printf (DEBUG_QUIET, "  ERROR: failure to read log\n");
-            done   = true;
-            result = false;
+			if( ++ulog_rd_error_count >= 10 ) {
+				debug_printf( DEBUG_QUIET, "ERROR: repeated (%d) failures to "
+							  "read job log; exiting...\n",
+							  ulog_rd_error_count );
+				done   = true;
+				result = false;
+			}
+			else {
+				debug_printf( DEBUG_NORMAL, "ERROR: failure to read job log\n"
+							  "\tA log event may be corrupt.  DAGMan will "
+							  "skip the event and try to\n\tcontinue, but "
+							  "information may have been lost.  If DAGMan "
+							  "exits\n\tunfinished, but reports no failed "
+							  "jobs, re-submit the rescue file\n\tto complete "
+							  "the DAG.\n" );
+				// attempt to get past error and move on
+				sleep( 1 );
+				_condorLog.synchronize();
+			}
             break;
             //----------------------------------------------------------------
           case ULOG_UNK_ERROR:
