@@ -1,3 +1,15 @@
+5/16/01 V6_3-post-merge-V6_3_0-merge-2
+       The state of the V6_3-branch after merging in the
+       V6_3_0-branch as tagged at V6_3_0-merge-2.
+
+5/16/01 V6_3_0-merge-2
+        The state of the V6_3_0-branch when we again merged it into
+        the V6_3-branch for the air force. 
+
+5/16/01 V6_3-pre-merge-V6_3_0-merge-2
+       The state of the V6_3-branch before merging in the
+       V6_3_0-branch as tagged at V6_3_0-merge-2.
+
 5/3/01 V6_3-syscall-hack-branch
        New branch for doing massive hacking to the remote syscall
        infrastructure to avoid using va_args, having a giant
