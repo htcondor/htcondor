@@ -433,7 +433,7 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 #	include <sys/ioctl.h>
 #endif
 
-#if defined(Solaris) || defined(LINUX) || defined(OSF1)
+#if defined(Solaris) || defined(LINUX) || defined(OSF1) || defined(IRIX53)
 /* int
 ioctl( int fd, int request, ...) */
 #else
@@ -815,9 +815,9 @@ _sysconf(int name)
 
 #if defined(IRIX53) || defined(Solaris)
 
-#if defined(IRIX53)
+#if defined(IRIX53) && !defined(IRIX62)
 int _xstat(int ver, char *path, struct stat *buf)
-#elif defined(Solaris)
+#elif defined(Solaris) || defined(IRIX62)
 int _xstat(const int ver, const char *path, struct stat *buf)
 #endif
 {
@@ -832,9 +832,9 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(IRIX53)
+#if defined(IRIX53) && !defined(IRIX62)
 int _lxstat(int ver, char *path, struct stat *buf)
-#elif defined(Solaris)
+#elif defined(Solaris) || defined(IRIX62)
 int _lxstat(const int ver, const char *path, struct stat *buf)
 #endif
 {
@@ -849,9 +849,9 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(IRIX53)
+#if defined(IRIX53) && !defined(IRIX62)
 int _fxstat(int ver, int fd, struct stat *buf)
-#elif defined(Solaris)
+#elif defined(Solaris) || defined(IRIX62)
 int _fxstat(const int ver, int fd, struct stat *buf)
 #endif
 {
