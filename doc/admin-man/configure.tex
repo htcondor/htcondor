@@ -1671,7 +1671,7 @@ change to take effect (for example, using ``\condor{restart}
   (You should only need to change this setting if you define more than
   10 seperate virtual machine types, which would be pretty rare.)
 
-\item[\Macro{VIRUAL\_MACHINE\_TYPE\_<N>}]
+\item[\Macro{VIRTUAL\_MACHINE\_TYPE\_<N>}]
 \label{param:VirtualMachineTypeN}
   This setting defines a given virtual machine type, by specifying
   what part of each shared system resource (like RAM, swap space, etc)
@@ -1683,13 +1683,13 @@ change to take effect (for example, using ``\condor{restart}
   section~\ref{sec:SMP-Divide} on page~\pageref{sec:SMP-Divide} for
   details on the different possibilities.
 
-\item[\Macro{NUM\_VIRUAL\_MACHINES\_TYPE\_<N>}]
+\item[\Macro{NUM\_VIRTUAL\_MACHINES\_TYPE\_<N>}]
 \label{param:NumVirtualMachinesTypeN}
   This macro controls how many of a given virtual machine type
   are actually reported to Condor.
   There is no default.
 
-\item[\Macro{NUM\_VIRUAL\_MACHINES}]
+\item[\Macro{NUM\_VIRTUAL\_MACHINES}]
 \label{param:NumVirtualMachines}
   If your SMP machine is being evenly divided, and the virtual
   machine type settings described above are not being used, this
