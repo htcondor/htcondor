@@ -3,7 +3,7 @@
 ***********************************************************************/
 
 /* in the compiler subdirs, the PRE_BUILT_RELEASE is another level up */
-PRE_BUILT_RELEASE = ../$(PRE_BUILT_RELEASE)
+PRE_BUILT_RELEASE = ../../release_dir
 
 LD_DIR = -condor_ld_dir ../../condor_scripts
 LIB_DIR = -condor_lib ../../condor_syscall_lib
