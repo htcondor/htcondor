@@ -584,33 +584,35 @@ int rename( const char *from, const char *to ) {
 
 		/*
 		Things having to do with signals - we may support these
-		one day soon.
+		one day soon.  ...and now we do on some platforms -Todd 1/95 
 		*/
 	not_supported {
+#	if !defined(SUNOS41) && !defined(HPUX9)
 		int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
 		int sigpending( sigset_t *set );
 		int sigreturn( struct sigcontext *scp );
-		int setitimer( int which, struct itimerval *value,
-											struct itimerval *oval );
-		int getitimer( int which, struct itimerval *value );
 		int sigsuspend( const sigset_t *mask );
 		int sigstack( struct sigstack *instack, struct sigstack *outstack );
+#	endif
 #	if defined( AIX32)
 		int kill( pid_t pid, int sig );
 #	else
 		int kill( pid_t pid, int sig ) : extract;
 #	endif
+		int setitimer( int which, struct itimerval *value,
+											struct itimerval *oval );
+		int getitimer( int which, struct itimerval *value );
 	}
 
 		/*
-		We don't support these, but we ignore attempts to do them remotely
+		We don't support these everywhere, but we ignore attempts to do them remotely
 		for the benefit of Fortran compilers...
 		*/
 	ignored {
 #	if defined( AIX32)
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act );
-#	else
+#	elif !defined (SUNOS41) && !defined (HPUX9)
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act ) : extract;
 #	endif

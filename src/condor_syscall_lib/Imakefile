@@ -14,7 +14,7 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 #	elif IS_R6000_AIX32
 /* Don't extract anything */
 #	elif IS_HPPAR_HPUX9
-EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o  \
+EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
 		  MMAP.o PIPE.o
 #	else
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
@@ -93,7 +93,7 @@ LONGJMP = _longjmp.AIX32.o
 
 #if DOES_CHECKPOINTING
 CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(OS).o \
-			syscall_mode.o $(LONGJMP) $(HP_CKPT)
+			syscall_mode.o $(LONGJMP) $(HP_CKPT) signals_support.o
 #else
 CKPT_OBJ = syscall_mode.o
 #endif
