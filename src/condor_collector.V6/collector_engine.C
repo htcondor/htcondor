@@ -552,7 +552,7 @@ backwardCompatibility (int &command, ClassAd *&clientAd, XDR *xdrs)
 		free_context (context);
 		break;
 
-
+#if 0
 	  // these are the new commands
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_SCHEDD_AD:
@@ -576,7 +576,7 @@ backwardCompatibility (int &command, ClassAd *&clientAd, XDR *xdrs)
 			return false;
 		}
 		break;
-
+#endif
 
 	  default:
 		dprintf (D_ALWAYS, "Received illegal command %d: aborting\n", command);
