@@ -1635,7 +1635,7 @@ Scheduler::negotiate(int, Stream* s)
 					if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
 						Owners[owner_num].FlockLevel == which_negotiator) { 
 						Owners[owner_num].FlockLevel++;
-						Owners[i].NegotiationTimestamp = time(0);
+						Owners[owner_num].NegotiationTimestamp = time(0);
 						dprintf(D_ALWAYS,
 								"Increasing flock level for %s to %d.\n",
 								owner, Owners[owner_num].FlockLevel);
@@ -1688,7 +1688,7 @@ Scheduler::negotiate(int, Stream* s)
 		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
 			Owners[owner_num].FlockLevel == which_negotiator) { 
 			Owners[owner_num].FlockLevel++;
-			Owners[i].NegotiationTimestamp = time(0);
+			Owners[owner_num].NegotiationTimestamp = time(0);
 			dprintf(D_ALWAYS, "Increasing flock level for %s to %d.\n",
 					owner, Owners[owner_num].FlockLevel);
 			if (JobsStarted == 0) {
@@ -1698,7 +1698,7 @@ Scheduler::negotiate(int, Stream* s)
 	} else {
 		// We are out of jobs.  Stop flocking with less desirable pools.
 		Owners[owner_num].FlockLevel = which_negotiator;
-		Owners[i].NegotiationTimestamp = time(0);
+		Owners[owner_num].NegotiationTimestamp = time(0);
 
 		dprintf( D_ALWAYS,
 		"Out of jobs - %d jobs matched, %d jobs idle, flock level = %d\n",
