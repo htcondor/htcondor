@@ -49,6 +49,8 @@
 #include "ntsysinfo.h"
 #endif
 
+#define DEBUG_SETTABLE_ATTR_LISTS 0
+
 static const int KEEP_STREAM = 100;
 static const int MAX_SOCKS_INHERITED = 4;
 static char* EMPTY_DESCRIP = "<NULL>";
@@ -729,6 +731,21 @@ class DaemonCore : public Service
 		*/
 	priv_state Register_Priv_State( priv_state priv );
 	
+		/** Initialize our array of StringLists that we use to verify
+			if a given request to set a configuration variable with
+			condor_config_val should be allowed.
+		*/
+	void InitSettableAttrsLists( void );
+
+		/** Check the table of attributes we're willing to allow users
+			at hosts of different permission levels to change to see
+			if we should allow the given request to succeed.
+			@param config String containing the configuration request
+			@param sock The sock that we're handling this command with
+			@return true if we should allow this, false if not
+		*/
+	bool CheckConfigSecurity( const char* config, Sock* sock );
+
   private:      
 
 	ReliSock* dc_rsock;	// tcp command socket
@@ -967,6 +984,9 @@ class DaemonCore : public Service
 #endif
 
 	priv_state Default_Priv_State;
+
+	bool InitSettableAttrsList( const char* subsys, int i );
+	StringList* SettableAttrsLists[LAST_PERM];
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE
