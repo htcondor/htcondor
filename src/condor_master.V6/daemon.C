@@ -433,9 +433,10 @@ daemon::Start()
 	}
 
 		// Collector needs to listen on a well known port, as does the
-		// Negotiator.  These two daemons also don't need any root
-		// privileges at all, so we start them as the effective condor
-		// user (what's defined in CONDOR_IDS, "condor", etc)...
+		// Negotiator.  
+		// We didn't want them to use root for any reason, but b/c of
+		// evil in the security code where we're looking up host certs
+		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
 			// If we're spawning a collector, we can get the right
@@ -445,16 +446,19 @@ daemon::Start()
 			// trouble of instantiating a new DCCollector object,
 			// which duplicates some effort and is less efficient. 
 		command_port = Collector->port();
-		wants_condor_priv = true;
+			// We can't do this b/c of needing to read host certs as root 
+			// wants_condor_priv = true;
 	} else if( stricmp(name_in_config_file,"CONDOR_VIEW") == 0 ||
 			   stricmp(name_in_config_file,"VIEW_SERVER") == 0 ) {
 		Daemon d( DT_VIEW_COLLECTOR );
 		command_port = d.port();
-		wants_condor_priv = true;
+			// We can't do this b/c of needing to read host certs as root 
+			// wants_condor_priv = true;
 	} else if( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
 		Daemon d( DT_NEGOTIATOR );
 		command_port = d.port();
-		wants_condor_priv = true;
+			// We can't do this b/c of needing to read host certs as root 
+			// wants_condor_priv = true;
 	}
 
 	priv_state priv_mode = PRIV_ROOT;
