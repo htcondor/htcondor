@@ -41,7 +41,7 @@
 
 #define HAS_GLOBUS	YES
 #define HAS_GSI		YES
-#define HAS_OPENSSL YES
+#define HAS_OPENSSL 	YES
 
 #undef  HAS_PVM
 #define HAS_PVM NO
