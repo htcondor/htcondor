@@ -16,5 +16,5 @@ template class HashTable<ExprTree*, Value>;
 template class HashBucket<ExprTree*, Value>;
 template class HashTable<ExprTree*, bool>;
 template class HashBucket<ExprTree*, bool>;
-template class HashTable<ClassAd*,ClassAd*>;
-template class HashBucket<ClassAd*,ClassAd*>;
+
+template class ListIterator<ExprTree>;
