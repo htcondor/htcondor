@@ -29,9 +29,14 @@
 
 
 #include <stdio.h>
-
+#if defined(Solaris)
+#include </usr/X11R6/include/X11/Xlib.h>
+#include </usr/X11R6/include/X11/Xproto.h>
+#else
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
+#endif
+
 
 #include <netdb.h>
 #include <errno.h>
@@ -416,10 +421,14 @@ X_is_active()
 
 	dprintf( D_FULLDEBUG, "Searching process table\n" );
 
-#if defined(AIX31) || defined(AIX32) || defined(OSF1)
+#if defined(AIX31) || defined(AIX32) || defined(OSF1) 
 	if( (fp=popen("ps -ef","r")) == NULL ) {
 		EXCEPT( "popen(\"ps -ef\",\"r\")" );
 	}
+#elif defined(Solaris)
+	if( (fp=popen("/bin/ps -ef","r")) == NULL ) {
+		EXCEPT( "popen(\"/bin/ps -ef\",\"r\")" );
+	} 
 #else
 	if( (fp=popen("ps -axlwww","r")) == NULL ) {
 		EXCEPT( "popen(\"ps -axlwww\",\"r\")" );
@@ -496,7 +505,7 @@ XErrorEvent	*event;
 														sizeof(error_text) );
 	dprintf( D_ALWAYS, "\ttext = \"%s\"\n", error_text );
 
-#if !defined(OSF1) && !defined(LINUX)
+#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris)
 	if( close(d->fd) == 0 ) {
 		dprintf( D_ALWAYS, "Closed display fd (%d)\n", d->fd );
 	} else {
@@ -527,7 +536,7 @@ Display		*d;
 
 	dprintf( D_ALWAYS, "Got X I/O Error, errno = %d\n", errno );
 
-#if !defined(OSF1) && !defined(LINUX)
+#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris)
 	if( close(d->fd) == 0 ) {
 		dprintf( D_ALWAYS, "Closed display fd (%d)\n", d->fd );
 	} else {
@@ -576,11 +585,11 @@ char *
 parse_ps_line( str )
 char	*str;
 {
-	char	*answer, *end, *index();
+	char	*answer, *end, *strchr();
 
 	dprintf( D_FULLDEBUG, "%s", str );
-	answer = index( str, ':' ) + 4;
-	if( end = index(answer,'\n') ) {
+	answer = strchr( str, ':' ) + 4;
+	if( end = strchr(answer,'\n') ) {
 		*end = '\0';
 	}
 		
