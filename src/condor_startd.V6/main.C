@@ -165,8 +165,8 @@ int main(int argc, char** argv)
 
 	CondorPrefExps::Initialize(template_ClassAd);
 
-	resmgr_init();
 	init_params();
+	resmgr_init();
 	resource_init();
 	
 	event_timeout();
@@ -219,6 +219,7 @@ static void mainloop()
 	fd_set readfds;
 	int count;
 	struct timeval timer;
+	int stashed_errno;
 
 	for (;;) {
 		FD_ZERO(&readfds);
@@ -245,6 +246,7 @@ static void mainloop()
 #endif
 		count = select(FD_SETSIZE, &readfds, (fd_set *)0, (fd_set *)0,
 			       &timer);
+		stashed_errno = errno;	// reconfig will trample our errno
 
 		if (want_reconfig) {
 			dprintf( D_ALWAYS, "Re reading config file\n" );
@@ -255,7 +257,7 @@ static void mainloop()
 		}
 
 		if (count < 0) {
-			if (errno == EINTR)
+			if (stashed_errno == EINTR)
 				continue;
 			else {
 				EXCEPT("select(FD_SETSIZE,0%o,0,0,%d sec)",
