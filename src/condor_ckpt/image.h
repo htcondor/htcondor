@@ -34,7 +34,7 @@
 #include "machdep.h"
 
 #define NAME_LEN 64
-typedef long RAW_ADDR;
+typedef unsigned long RAW_ADDR;
 typedef int BOOL;
 
 #if defined(TRUE)
@@ -50,7 +50,7 @@ typedef int ssize_t; // should be included in <sys/types.h>, but some don't
 
 const int MAGIC = 0xfeafea;
 const int SEG_INCR = 25;
-const int  MAX_SEGS = 25;
+const int  MAX_SEGS = 50;
 
 class Header {
 public:
@@ -66,7 +66,7 @@ private:
 
 class SegMap {
 public:
-	void Init( const char *name, RAW_ADDR core_loc, long len );
+	void Init( const char *name, RAW_ADDR core_loc, long len, int prot );
 	ssize_t Read( int fd, ssize_t pos );
 	ssize_t Write( int fd, ssize_t pos );
 	ssize_t SetPos( ssize_t my_pos );
@@ -78,6 +78,7 @@ private:
 	off_t		file_loc;
 	RAW_ADDR	core_loc;
 	long		len;
+	int			prot;		// segment protection mode
 };
 
 typedef enum { STANDALONE, REMOTE } ExecutionMode;
@@ -96,6 +97,7 @@ public:
 	char *FindSeg( void *addr );
 	void Display();
 	void RestoreSeg( const char *seg_name );
+	void RestoreAllSegsExceptStack();
 	void SetFd( int fd );
 	void SetFileName( char *ckpt_name );
 	void SetMode( int syscall_mode );
@@ -104,7 +106,8 @@ public:
 	int				GetFd()   { return fd; }
 protected:
 	RAW_ADDR	GetStackLimit();
-	void AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end );
+	void AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end,
+			int prot );
 	void SwitchStack( char *base, size_t len );
 	char	*file_name;
 	Header	head;
@@ -126,7 +129,6 @@ extern "C" void init_image_with_file_descriptor( int ckpt_fd );
 extern "C" void _condor_prestart( int syscall_mode );
 }
 
-
 #define DUMP( leader, name, fmt ) \
 	printf( "%s%s = " #fmt "\n", leader, #name, name )
 
@@ -141,7 +143,7 @@ extern "C" {
 #endif
 }
 
-long data_start_addr();
+extern "C" long data_start_addr();
 long data_end_addr();
 long stack_start_addr();
 long stack_end_addr();
@@ -149,6 +151,13 @@ BOOL StackGrowsDown();
 int JmpBufSP_Index();
 void ExecuteOnTmpStk( void (*func)() );
 void patch_registers( void  *);
+#if defined(Solaris)
+     int find_map_for_addr(caddr_t addr);
+     int num_segments( );
+     int segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end,
+	int &prot );
+     void display_prmap();
+#endif
 
 #	define JMP_BUF_SP(env) (((long *)(env))[JmpBufSP_Index()])
 #endif
