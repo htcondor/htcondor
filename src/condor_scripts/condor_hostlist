@@ -1,0 +1,33 @@
+#! /usr/bin/env perl
+#! /usr/bin/perl -w
+use strict;
+# use warnings;
+
+# Machine info list
+my ($MachineInfo) = "/common/usr/share/Info/machineinfo";
+if ( defined( $ENV{MACHINE_INFO} ) )
+{
+    $MachineInfo = $ENV{MACHINE_INFO};
+}
+
+# Parse command line...
+if ( $#ARGV == 0 )
+{
+    $MachineInfo = $ARGV[0];
+}
+elsif ( $#ARGV > 0 )
+{
+    print STDERR "usage: $0 [machinefile]\n";
+    exit 1;
+}
+
+# Open the file...
+die "can't read '$MachineInfo'" if (! open ( IN, $MachineInfo ) );
+while ( <IN> )
+{
+    chomp;
+    next if (! /\|/ );
+    s/\s+\|/|/g;
+    my ( $Host, $Room, $User, $Sponsor, $OS, $bldging, $Arch ) = split( /\|/ );
+    print "$Host;$Room;$User;$Sponsor;$OS;$Arch\n";
+}
