@@ -32,6 +32,8 @@ stripped:: condor_##obj_name					@@\
 	cd condor_##obj_name; make stripped			@@\
 static:: condor_##obj_name					@@\
 	cd condor_##obj_name; make static			@@\
+depend:: condor_##obj_name					@@\
+	cd condor_##obj_name; make depend			@@\
 clean:: condor_##obj_name					@@\
 	cd condor_##obj_name; make clean			@@\
 docs:: condor_##obj_name					@@\
@@ -849,13 +851,53 @@ CheckPlatformType:					@@\
 
 /*
 ** Build Makefile dependencies for an object tree.
+**
+** We could just make one rule that takes a list of the source
+** files. Because we have a lot of Imakefiles, and it's a pain to 
+** list the source files, I have made a few different methods:
+** 1) A target that takes a list of source files.
+** 2) A target that takes a list of C++ objects and derives the
+**    the list of C++ files. Note that you use it like:
+**           depend_target_cplus_objects(OBJ)
+**    That is, you don't have $OBJ, just OBJ.
+** 3) A target that takes a list of C objects and derives the
+**    list of C files. It is used like number #2.
+**
+** Also note that you can only use one of these in an Imakefile. 
+** If you can't use #2 xor #3 for convenience, you have to list
+** list out the sources to use for #1. 
 */
-#ifndef depend_target
-#define depend_target( src_list )			@@\
-depend: ALWAYS						@@\
-	$(MKDEPEND) $(CFLAGS) src_list
+
+#ifndef depend_source_target
+#define depend_source_target(source_list)  @@\
+sinclude dependencies                      @@\
+                                           @@\
+depend:	ALWAYS                             @@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -MM source_list > dependencies
 #endif
 
+#ifndef depend_cplus_objects_target
+#define depend_cplus_objects_target(obj_list)   @@\
+sinclude dependencies                           @@\
+DEPEND_CPLUS_SRC := $(##obj_list##:.o=.C)       @@\
+                                                @@\
+depend:	ALWAYS				                    @@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -MM $(DEPEND_CPLUS_SRC) > dependencies
+#endif
+
+#ifndef depend_c_objects_target
+#define depend_c_objects_target(obj_list)  @@\
+sinclude dependencies                      @@\
+DEPEND_C_SRC := $(##obj_list##:.o=.c)      @@\
+                                           @@\
+depend:	ALWAYS				               @@\
+	$(CPlusPlus) $(CFLAGS) -MM $(DEPEND_C_SRC) > dependencies
+#endif
+
+/* The old definition of depend
+depend: ALWAYS						@@\
+	$(MKDEPEND) $(CFLAGS) src_list
+*/
 
 /*
 ** Build a tags file for a source directory.
