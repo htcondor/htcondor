@@ -168,6 +168,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 						 ReliSock *sock_to_use, priv_state priv ) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
+	char *dynamic_buf = NULL;
 
 	if( did_init ) {
 			// no need to except, just quietly return success
@@ -221,8 +222,11 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	// Set InputFiles to be ATTR_TRANSFER_INPUT_FILES plus 
 	// ATTR_JOB_INPUT, ATTR_JOB_CMD, and ATTR_ULOG_FILE if simple_init.
-	if (Ad->LookupString(ATTR_TRANSFER_INPUT_FILES, buf) == 1) {
-		InputFiles = new StringList(buf,",");
+	dynamic_buf = NULL;
+	if (Ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &dynamic_buf) == 1) {
+		InputFiles = new StringList(dynamic_buf,",");
+		free(dynamic_buf);
+		dynamic_buf = NULL;
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
@@ -323,8 +327,11 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	// Set OutputFiles to be ATTR_TRANSFER_OUTPUT_FILES if specified.
 	// If not specified, set it to send whatever files have changed.
 	// Also add in ATTR_JOB_OUPUT plus ATTR_JOB_ERROR.
-	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, buf) == 1) {
-		OutputFiles = new StringList(buf,",");
+	dynamic_buf = NULL;
+	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &dynamic_buf) == 1) {
+		OutputFiles = new StringList(dynamic_buf,",");
+		free(dynamic_buf);
+		dynamic_buf = NULL;
 	} else {
 		// send back new/changed files after the run
 		upload_changed_files = true;
@@ -359,6 +366,7 @@ int
 FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv ) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
+	char *dynamic_buf = NULL;
 
 	ASSERT( daemonCore );	// full Init require DaemonCore methods
 
@@ -488,20 +496,24 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 			// we know that filelist has at least one entry, so
 			// insert it as an attribute into the ClassAd which
 			// will get sent to our peer.
-			sprintf(buf,"%s=\"%s\"",
+			MyString intermediateFilesBuf;
+			intermediateFilesBuf.sprintf( "%s=\"%s\"",
 				ATTR_TRANSFER_INTERMEDIATE_FILES,filelist.Value());
-			Ad->InsertOrUpdate(buf);
+			Ad->InsertOrUpdate(intermediateFilesBuf.Value());
 			dprintf(D_FULLDEBUG,"%s\n",buf);
 		}
 	}
 	if ( IsClient() && upload_changed_files ) {
-		buf[0] = '\0';
-		Ad->LookupString(ATTR_TRANSFER_INTERMEDIATE_FILES,buf);
-		if ( buf[0] ) {
-			SpooledIntermediateFiles = strnewp(buf);
-		}
+		dynamic_buf = NULL;
+		Ad->LookupString(ATTR_TRANSFER_INTERMEDIATE_FILES,&dynamic_buf);
 		dprintf(D_FULLDEBUG,"%s=\"%s\"\n",
-				ATTR_TRANSFER_INTERMEDIATE_FILES,buf);
+				ATTR_TRANSFER_INTERMEDIATE_FILES,
+				dynamic_buf ? dynamic_buf : "(none)");
+		if ( dynamic_buf ) {
+			SpooledIntermediateFiles = strnewp(dynamic_buf);
+			free(dynamic_buf);
+			dynamic_buf = NULL;
+		}
 	}
 	
 
