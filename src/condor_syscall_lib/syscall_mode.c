@@ -5,7 +5,8 @@
 *******************************************************************/
 
 #define _POSIX_SOURCE
-#include <stdio.h>
+#include "condor_common.h"
+#include "condor_debug.h"
 #include "condor_syscall_mode.h"
 
 static int		SyscallMode = 1; /* LOCAL and UNMAPPED */
@@ -35,6 +36,16 @@ BOOL
 MappingFileDescriptors()
 {
 	return (SyscallMode & SYS_MAPPED);
+}
+
+void
+DisplaySyscallMode()
+{
+	dprintf( D_ALWAYS,
+		"Syscall Mode is: %s %s\n",
+		RemoteSysCalls() ? "REMOTE" : "LOCAL",
+		MappingFileDescriptors() ? "MAPPED" : "UNMAPPED"
+	);
 }
 
 #if defined(AIX32)	/* Just to test linking */
