@@ -1686,6 +1686,22 @@ These settings affect the \Condor{starter}.
   described above in section~\ref{param:SubsysDebug} as
   \Macro{SUBSYS\_DEBUG}.
 
+\item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} This macro
+  allows the administrator to specify a ``wrapper'' script to handle the
+  execution of all user jobs.  
+  If specified, Condor will never directly execute a job but instead will
+  invoke the program specified by this macro.
+  The command-line arguments passed to this program will include the
+  full-path to the actual user job which should be executed, followed by all
+  the command-line parameters to pass to the user job.
+  This wrapper program must ultimately replace its image with the user job;
+  in other words, it must \Term{exec()} the user job, not \Term{fork()} it.
+  For instance, if the wrapper program is a Bourne/C/Korn shell script, the
+  last line of execution should be:
+\begin{verbatim}
+        exec $*
+\end{verbatim}
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
