@@ -51,7 +51,7 @@ public class CondorJavaInfo {
 		boolean newmode=false;
 		double btime;
 
-		if( args.length==2 ) {
+		if( args.length!=2 ) {
 			System.err.println("use: CondorJavaInfo <new|old> <benchmark-time>");
 			System.exit(1);
 		}
