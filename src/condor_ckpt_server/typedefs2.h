@@ -23,13 +23,10 @@
 #ifndef SERVER_TYPEDEFS2_H
 #define SERVER_TYPEDEFS2_H
 
-
 #include "constants2.h"
 #include "network2.h"
 #include <time.h>
-
-
-
+#include "sig_install.h"
 
 #ifdef OSF1
 typedef unsigned int u_lint;
@@ -39,28 +36,11 @@ typedef unsigned long int u_lint;
 
 
 
-
-#if defined(Solaris)
-#if defined(__cplusplus)
-typedef void (*SIG_HANDLER)(...);
-#else
-typedef void (*SIG_HANDLER)();
-#endif
-#else
-typedef void (*SIG_HANDLER)(int);
-#endif
-
-
-
-
 typedef enum lock_status
 {
   UNLOCKED,
   EXCLUSIVE_LOCK
 } lock_status;
-
-
-
 
 typedef enum service_type
 {
@@ -71,8 +51,6 @@ typedef enum service_type
   SERVICE_COMMIT_REPLICATION=194,
   SERVICE_ABORT_REPLICATION=195
 } service_type;
-
-
 
 
 typedef enum file_state
