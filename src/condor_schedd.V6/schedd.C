@@ -1472,6 +1472,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			job_id->cluster, job_id->proc );
 
 	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
+
+	// make sure file is executable
+	if (chmod(a_out_name, 0755) < 0) {
+		EXCEPT("chmod(%s, 0755)", a_out_name);
+	}
+
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_INPUT,
 						   input) < 0) {
 		sprintf(input, "/dev/null");
@@ -1549,10 +1555,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 		if (close(fd) < 0) {
 			EXCEPT("close(%d)", fd);
-		}
-		// make sure file is executable
-		if (chmod(a_out_name, 0755) < 0) {
-			EXCEPT("chmod(%s, 0755)", a_out_name);
 		}
 
 		errno = 0;
