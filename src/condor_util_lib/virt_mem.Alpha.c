@@ -36,6 +36,8 @@
 
 static char *_FileName_ = __FILE__;
 
+int     executing_as_nonroot = 1;
+
 int HasSigchldHandler = 0;
 
 int parse_swapon_line( const char *line );
