@@ -119,7 +119,7 @@ private:
 	GSSComms authComms;
 	char *GSSClientname;
 	char *claimToBe;
-	authentication_state canUseFlags;
+	int canUseFlags;
 
 };
 
