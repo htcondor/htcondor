@@ -79,3 +79,7 @@ test_func()
 	fprintf( stderr, "This should be a DATA address 0x%lX\n", &i );
 	exit( 0 );
 }
+int 
+SetSyscalls( int mode )
+{
+}
