@@ -62,6 +62,7 @@
 int	UsePipes;
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+char* mySubSystem = "SHADOW";
 
 extern "C" {
 	void reaper();
@@ -256,7 +257,7 @@ main(int argc, char *argv[], char *envp[])
 	MyPid = getpid();
 	
 	config( 0 );
-	dprintf_config( "SHADOW", SHADOW_LOG );
+	dprintf_config( mySubSystem, SHADOW_LOG );
 	DebugId = whoami;
 
 	dprintf( D_ALWAYS, "********** Shadow starting up **********\n" );
