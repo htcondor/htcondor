@@ -514,7 +514,8 @@ sub RunIt( $ )
 	my $Proc = 0;
 	my %Processes;
       READPROC:
-	while ( ( $_ = shift @Buffer ) || ( $_ = <TOP> ) ) {
+	while ( ( $_ = shift @Buffer ) || ( $_ = <TOP> ) )
+	{
 	    chomp;
 
 	    last if ( $Config{TopOpt}{BlankSep} && ( /^\s*$/ ) );
@@ -524,16 +525,25 @@ sub RunIt( $ )
 	    next if ( ! /\s*\d+/ );
 	    my @Process = split;
 	    my $Pid = $Process[0];
-	    my $Stat = $TopFields{state}{offset};
 
 	    # Unfortunately, the "State" field can be space separated, so
 	    # split screws it up (bad split, bad bad).
 	    # Here, we combine, say, ("N" "R") into "N R"...
 	    # Note: This assumes that the next "valid" field cannot be a
 	    #   single non-digit
-	    while ( $Process[$Stat+1] =~ /^\D$/ ) {
-		$Process[$Stat] = $Process[$Stat] . " " . $Process[$Stat+1];
-		splice( @Process, $Stat+1, 1 );
+	    my $State = $TopFields{state}{offset};
+	    my $n = 0;
+	    while ( ( ( $State + 1 ) < $#Process ) &&
+		    ( $Process[$State+1] =~ /^(\D)$/ ) )
+	    {
+		$Process[$State] .= " $1";
+		splice( @Process, $State+1, 1 );
+		if ( ++$n > 2 )
+		{
+		    print STDERR "It looks like the NR combining got lost in\n";
+		    print STDERR "'$_'\n";
+		    last;
+		}
 	    }
 
 	    # Clean up numbers where required
