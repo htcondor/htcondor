@@ -84,10 +84,13 @@ calc_virt_memory()
 	int					limit;
 	struct tbl_swapinfo	swap;
 
-	if (table(TBL_SWAPINFO,0,(char *)&swap,sizeof(swap)) >= 0)
-		return swap.free/1024;
+	if (table(TBL_SWAPINFO,-1,(char *)&swap,1,sizeof(swap)) >= 0) {
+		return (swap.free * NBPG) / 1024;
+	}
 
 	/* if table call fails, then parse swapon output -- gross! */
+
+	dprintf( D_FULLDEBUG, "table call failed, errno = %d\n", errno );
 
 	if( (fp=popen("/sbin/swapon -s","r")) == NULL ) {
 		dprintf( D_FULLDEBUG, "popen(swapon -s): errno = %d\n", errno );
