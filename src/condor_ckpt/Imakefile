@@ -2,7 +2,16 @@
 CC = gcc
 #endif
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STATIC)
+CMNT
+CMNT Set the following if you want a PVM ready checkpointing library
+CMNT compiled.  This will require that the PVM library be linked into
+CMNT the application.
+CMNT
+
+CMNT PVM_CHECKPOINT = -DPVM_CHECKPOINTING
+
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STATIC) $(PVM_CHECKPOINT)
 
 CFLAGS = $(STD_C_FLAGS)
 
