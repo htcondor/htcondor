@@ -162,7 +162,11 @@ Unparse( string &buffer, Value &val )
 
 				// get the asctime()-like segment; but remove \n
 			localtime_r( &asecs, &tms );
+#if defined( LINUX )
+			asctime_r( &tms, ascTimeBuf );
+#else
 			asctime_r( &tms, ascTimeBuf, 31 );
+#endif
 			ascTimeBuf[24] = '\0';
 			buffer += "'";
 			buffer += ascTimeBuf;
