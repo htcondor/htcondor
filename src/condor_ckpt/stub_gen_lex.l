@@ -1,4 +1,5 @@
 %{
+#include <stdlib.h>
 #include "scanner.h"
 #include "y.tab.h"
 
