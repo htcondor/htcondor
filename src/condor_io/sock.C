@@ -153,20 +153,14 @@ int Sock::do_connect(
 	sin.sin_port = htons((u_short)port);
 
 	/* try to get a decimal notation first 			*/
-	/*
 	if ((inaddr = inet_addr(host)) != 0){
 		memcpy((char *)&sin.sin_addr, &inaddr, sizeof(inaddr));
 	}
-	*/
-	/* if doted notation fails, try host database	*/
-	/*
+	/* if dotted notation fails, try host database	*/
 	else{
-	*/
 		if ((hostp = gethostbyname(host)) == (hostent *)0) return FALSE;
 		memcpy(&sin.sin_addr, hostp->h_addr, hostp->h_length);
-	/*
 	}
-	*/
 
 	if (::connect(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0)
 		return FALSE;
