@@ -1,0 +1,8 @@
+/* Things that are specific to IRIX 6.5 */
+
+#define Platform		SGI_IRIX65
+#define ImakeOpsysFlag		-DIS_IRIX65
+#define PlatformFlags		-DIRIX65
+#define IS_SGI_IRIX65		YES
+#define IS_IRIX65		YES
+

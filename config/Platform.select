@@ -49,10 +49,16 @@
 #endif
 
 #if defined( IS_IRIX6 )
-#	define PlatformIncludeFile <SGI_IRIX62.cf>
+#	define PlatformIncludeFile <SGI_IRIX.cf>
+#	define OSVersionIncludeFile <SGI_IRIX62.cf>
 #	undef IS_IRIX6
 #endif
 
+#if defined( IS_IRIX65 )
+#	define PlatformIncludeFile <SGI_IRIX.cf>
+#	define OSVersionIncludeFile <SGI_IRIX65.cf>
+#	undef IS_IRIX65
+#endif
 
 /***************************************************************************
 ** Undefine any symbols the compiler might have defined for us since
