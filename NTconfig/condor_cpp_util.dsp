@@ -60,8 +60,8 @@ LIB32=link.exe -lib
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "../Release"
-# PROP Intermediate_Dir "../Release"
+# PROP Output_Dir "..\Release"
+# PROP Intermediate_Dir "..\Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
@@ -132,7 +132,7 @@ SOURCE="..\src\condor_c++_util\condor_common.C"
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-# PROP Intermediate_Dir "../Release"
+# PROP Intermediate_Dir "..\Release"
 # ADD CPP /Gi- /Yc"condor_common.h"
 
 !ENDIF 
