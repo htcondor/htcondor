@@ -55,6 +55,12 @@
 #include "my_hostname.h"
 #include "condor_qmgr.h"
 
+#ifdef __GNUG__
+#pragma implementation "extArray.h"
+#endif
+
+#include "extArray.h"
+
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 ClassAd job;
@@ -76,14 +82,16 @@ int		GotQueueCommand;
 char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 
 char	*MyName;
-int		Quiet;
-int     ClusterId;
-int     ProcId;
+int		Quiet = 1;
+int     ClusterId = -1;
+int     ProcId = -1;
 int     JobUniverse;
 int		Remote=0;
 int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
 char	*queue_file = NULL;
+bool	NewExecutable = false;
+bool	UserLogSpecified = false;
 
 #define PROCVARSIZE	32
 BUCKET *ProcVars[ PROCVARSIZE ];
@@ -99,6 +107,7 @@ char	*Priority		= "priority";
 char	*Notification	= "notification";
 char	*Executable		= "executable";
 char	*Arguments		= "arguments";
+char	*GetEnv			= "getenv";
 char	*Environment	= "environment";
 char	*Input			= "input";
 char	*Output			= "output";
@@ -107,11 +116,12 @@ char	*RootDir		= "rootdir";
 char	*InitialDir		= "initialdir";
 char	*Requirements	= "requirements";
 char	*Preferences	= "preferences";
+char	*Rank			= "rank";
 char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
 char    *NotifyUser     = "notify_user";
-char    *UserLogFile    = "user_log";
+char    *UserLogFile    = "log";
 char	*CoreSize		= "coresize";
 char	*KillSig		= "kill_sig";
 #if defined(WIN32)
@@ -135,7 +145,7 @@ void 	SetArguments();
 void 	SetEnvironment();
 void 	SetRootDir();
 void 	SetRequirements();
-void 	SetPreferences();
+void	SetRank();
 void 	SetIWD();
 void	SetUserLog();
 void	SetCoreSize();
@@ -144,7 +154,7 @@ void 	check_iwd( char *iwd );
 int 	read_condor_file( FILE *fp );
 char * 	condor_param( char *name );
 void 	set_condor_param( char *name, char *value );
-void 	queue();
+void 	queue(int num);
 char * 	check_requirements( char *orig );
 void 	check_open( char *name, int flags );
 void 	usage();
@@ -171,6 +181,16 @@ char *get_schedd_addr(char *);
 
 }
 
+struct SubmitRec {
+	int cluster;
+	int firstjob;
+	int lastjob;
+	char *logfile;
+};
+
+ExtArray <SubmitRec> SubmitInfo(10);
+int CurrentSubmitInfo = -1;
+
 int
 main( int argc, char *argv[] )
 {
@@ -193,8 +213,8 @@ main( int argc, char *argv[] )
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] == '-' ) {
-			if( ptr[0][1] == 'q' ) {
-				Quiet++;
+			if( ptr[0][1] == 'v' ) {
+				Quiet = 0;
 			} else 
 			if( ptr[0][1] == 'p' ) {
                // the -p option will cause condor_submit to pause for about
@@ -252,14 +272,6 @@ main( int argc, char *argv[] )
 	// in case things go awry ...
 	_EXCEPT_Cleanup = DoCleanup;
 
-	// begin to initialize the job ad
-	if ((ClusterId = NewCluster()) == -1)
-	{
-		fprintf(stderr, "Failed to create cluster\n");
-		exit(1);
-	}
-	ProcId = -1;
-
 	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
 	InsertJobExpr (buffer);
 
@@ -284,6 +296,10 @@ main( int argc, char *argv[] )
 	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
 	InsertJobExpr (buffer);
 
+	if (Quiet) {
+		fprintf(stdout, "Submitting job(s)");
+	}
+
 	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
 		fprintf(stderr, "Failed to parse command file.\n");
@@ -291,6 +307,33 @@ main( int argc, char *argv[] )
 	}
 
 	DisconnectQ(0);
+
+	if (Quiet) {
+		fprintf(stdout, "\n");
+	}
+
+	if (UserLogSpecified) {
+		log_submit();
+	}
+
+	if (Quiet) {
+		int this_cluster = -1, job_count=0;
+		for (int i=0; i <= CurrentSubmitInfo; i++) {
+			if (SubmitInfo[i].cluster != this_cluster) {
+				if (this_cluster != -1) {
+					fprintf(stdout, "%d job(s) submitted to cluster %d.\n",
+							job_count, this_cluster);
+					job_count = 0;
+				}
+				this_cluster = SubmitInfo[i].cluster;
+			}
+			job_count += SubmitInfo[i].lastjob - SubmitInfo[i].firstjob + 1;
+		}
+		if (this_cluster != -1) {
+			fprintf(stdout, "%d job(s) submitted to cluster %d.\n",
+					job_count, this_cluster);
+		}
+	}
 
 	ActiveQueueConnection = FALSE; 
 
@@ -702,6 +745,7 @@ void
 SetEnvironment()
 {
 	char *env = condor_param(Environment);
+	char *shouldgetenv = condor_param(GetEnv);
 	Environ envobject;
 	char newenv[ATTRLIST_MAX_EXPRESSION];
 	char varname[MAXVARNAME];
@@ -717,36 +761,41 @@ SetEnvironment()
 		first = false;
 	}
 
-	// grab user's environment
 	envlen = strlen(newenv);
-	for (int i=0; environ[i] && envlen < ATTRLIST_MAX_EXPRESSION; i++) {
 
-		// ignore env settings that contain ';' to avoid syntax problems
+	// grab user's environment if getenv == TRUE
+	if (shouldgetenv && (shouldgetenv[0] == 'T' || shouldgetenv[0] == 't')) {
 
-		if (strchr(environ[i], ';') == NULL) {
-			envlen += strlen(environ[i]);
-			if (envlen < ATTRLIST_MAX_EXPRESSION) {
+		for (int i=0; environ[i] && envlen < ATTRLIST_MAX_EXPRESSION; i++) {
 
-				// don't override submit file environment settings
-				// check if environment variable is set in submit file
+			// ignore env settings that contain ';' to avoid syntax problems
 
-				int j;
-				for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
-					varname[j] = environ[i][j];
-				}
-				varname[j] = '\0';
-				if (env == NULL || envobject.getenv(varname) == NULL) {
-					if (first) {
-						first = false;
-					} else {
-						strcat(newenv, ";");
+			if (strchr(environ[i], ';') == NULL) {
+				envlen += strlen(environ[i]);
+				if (envlen < ATTRLIST_MAX_EXPRESSION) {
+
+					// don't override submit file environment settings
+					// check if environment variable is set in submit file
+
+					int j;
+					for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
+						varname[j] = environ[i][j];
 					}
-					strcat(newenv, environ[i]);
-				}
+					varname[j] = '\0';
+					if (env == NULL || envobject.getenv(varname) == NULL) {
+						if (first) {
+							first = false;
+						} else {
+							strcat(newenv, ";");
+						}
+						strcat(newenv, environ[i]);
+					}
 
+				}
 			}
 		}
 	}
+
 	strcat(newenv, "\"");
 
 	InsertJobExpr (newenv);
@@ -798,16 +847,23 @@ SetRequirements()
 }
 
 void
-SetPreferences()
+SetRank()
 {
-	static char preferences[2048];
+	static char rank[ATTRLIST_MAX_EXPRESSION];
 	char *orig_pref = condor_param(Preferences);
+	char *orig_rank = condor_param(Rank);
 	char *ptr = NULL;
 
-	if( orig_pref == NULL ) {
-		preferences[0] = '\0';
+	if (orig_pref && orig_rank) {
+		fprintf(stderr, "%s and %s may not both be specified for a job\n",
+			   Preferences, Rank);
+		exit(1);
+	} else if (orig_rank) {
+		(void)strcpy(rank, orig_rank);
+	} else if (orig_pref) {
+		(void)strcpy(rank, orig_pref);
 	} else {
-		(void)strcpy( preferences, orig_pref );
+		rank[0] = '\0';
 	}
 
 	if ( JobUniverse == STANDARD ) 
@@ -820,23 +876,23 @@ SetPreferences()
 	} 
 
 	if ( ptr != NULL ) {
-		if( preferences[0] ) {
-			(void)strcat( preferences, " && (" );
+		if( rank[0] ) {
+			(void)strcat( rank, " && (" );
 		} else {
-			(void)strcpy( preferences, "(" );
+			(void)strcpy( rank, "(" );
 		}
-		(void) strcat( preferences, ptr );
-		(void) strcat( preferences,")" );
+		(void) strcat( rank, ptr );
+		(void) strcat( rank,")" );
 	}
 				
-	if( preferences[0] == '\0' ) 
+	if( rank[0] == '\0' ) 
 	{
-		(void) sprintf (buffer, "%s = TRUE", ATTR_PREFERENCES);
+		(void) sprintf (buffer, "%s = 0", ATTR_RANK);
 		InsertJobExpr (buffer);
 	} 
 	else 
 	{
-		(void) sprintf (buffer, "%s = %s", ATTR_PREFERENCES, preferences);
+		(void) sprintf (buffer, "%s = %s", ATTR_RANK, rank);
 		InsertJobExpr (buffer);
 	}
 }
@@ -907,6 +963,7 @@ SetUserLog()
 		check_path_length(ulog, UserLogFile);
 		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
 		InsertJobExpr(buffer);
+		UserLogSpecified = true;
 	}
 }
 
@@ -1013,7 +1070,7 @@ read_condor_file( FILE *fp )
 {
 	char	*name, *value;
 	char	*ptr;
-	int		force = 0;
+	int		force = 0, queue_modifier;
 
 	LineNo = 0;
 	
@@ -1041,8 +1098,11 @@ read_condor_file( FILE *fp )
 			continue;
 		}
 
-		if( stricmp(name, "queue") == 0 ) {
-			queue();
+		if( strincmp(name, "queue", strlen("queue")) == 0 ) {
+			if (sscanf(name+strlen("queue"), "%d", &queue_modifier) == EOF) {
+				queue_modifier = 1;
+			}
+			queue(queue_modifier);
 			continue;
 		}	
 		
@@ -1090,11 +1150,16 @@ read_condor_file( FILE *fp )
 
 		value = ptr;
 
+		if (name != NULL) {
+
 			/* Expand references to other parameters */
-		name = expand_macro( name, ProcVars, PROCVARSIZE );
-		if( name == NULL ) {
-			(void)fclose( fp );
-			return( -1 );
+			name = expand_macro( name, ProcVars, PROCVARSIZE );
+			if( name == NULL ) {
+				(void)fclose( fp );
+				fprintf(stderr, "failed to expand macros in: %s\n", name);
+				return( -1 );
+			}
+
 		}
 
 		/* if the user wanted to force the parameter into the classad, do it */
@@ -1110,6 +1175,10 @@ read_condor_file( FILE *fp )
 			InsertJobExpr (buffer);
 			free (exValue);
 		} 
+
+		if (strcmp(name, Executable) == 0) {
+			NewExecutable = true;
+		}
 
 		lower_case( name );
 
@@ -1135,6 +1204,11 @@ condor_param( char *name )
 
 	pval = expand_macro(pval, ProcVars, PROCVARSIZE);
 
+	if (pval == NULL) {
+		fprintf(stderr, "failed to expand macros in: %s\n", name);
+		exit(1);
+	}
+
 	return( pval );
 }
 
@@ -1147,64 +1221,102 @@ set_condor_param( char *name, char *value )
 }
 
 
-void
-queue()
+int
+strcmpnull(const char *str1, const char *str2)
 {
-	char tmp[ BUFSIZ ];
-	static int i = 0;
+	if (str1 && str2) return strcmp(str1, str2);
+	return (str1 || str2);
+}
+
+void
+queue(int num)
+{
+	char tmp[ BUFSIZ ], *ename, *logfile;
 	int		rval;
 
-	ProcId = NewProc (ClusterId);
+	/* queue num jobs */
+	for (int i=0; i < num; i++) {
 
-	/*
-	**	Insert the current idea of the cluster and
-	**	process number into the hash table.
-	*/
-	GotQueueCommand = 1;
-	(void)sprintf(tmp, "%d", ClusterId);
-	set_condor_param(Cluster, tmp);
-	(void)sprintf(tmp, "%d", ProcId);
-	set_condor_param(Process, tmp);
+		if (NewExecutable) {
+			NewExecutable = false;
+ 			if ((ClusterId = NewCluster()) == -1) {
+				fprintf(stderr, "Failed to create cluster\n");
+				exit(1);
+			}
+			ProcId = -1;
+		}
 
-	SetExecutable();
-	SetRootDir();
-	SetIWD();
-	SetPriority();
-	SetArguments();
-	SetEnvironment();
-	SetNotification();
-	SetNotifyUser();
-	SetUserLog();
-	SetCoreSize();
-	SetKillSig();
-	SetRequirements();
-	SetPreferences();
-	SetStdFile( 0 );
-	SetStdFile( 1 );
-	SetStdFile( 2 );
-	SetImageSize();
+		ProcId = NewProc (ClusterId);
+
+		/*
+		**	Insert the current idea of the cluster and
+		**	process number into the hash table.
+		*/
+		GotQueueCommand = 1;
+		(void)sprintf(tmp, "%d", ClusterId);
+		set_condor_param(Cluster, tmp);
+		(void)sprintf(tmp, "%d", ProcId);
+		set_condor_param(Process, tmp);
+
+		SetExecutable();
+		SetRootDir();
+		SetIWD();
+		SetPriority();
+		SetArguments();
+		SetEnvironment();
+		SetNotification();
+		SetNotifyUser();
+		SetUserLog();
+		SetCoreSize();
+		SetKillSig();
+		SetRequirements();
+		SetRank();
+		SetStdFile( 0 );
+		SetStdFile( 1 );
+		SetStdFile( 2 );
+		SetImageSize();
 
 
-	rval = SaveClassAd( job );
+		rval = SaveClassAd( job );
 
-	switch( rval ) {
+		switch( rval ) {
 		case 0:			/* Success */
 		case 1:
 			break;
 		default:		/* Failed for some other reason... */
 			fprintf( stderr, "Failed to queue job.\n" );
 			exit(1);
-	}
+		}
 
-	ClusterCreated = TRUE;
+		ClusterCreated = TRUE;
 	
-	if( !Quiet ) 
-	{
-		fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
-		job.fPrint (stdout);
-	}
+		if( !Quiet ) 
+			{
+				fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
+				job.fPrint (stdout);
+			}
 
-	log_submit();
+		logfile = condor_param(UserLogFile);
+
+		if (CurrentSubmitInfo == -1 ||
+			SubmitInfo[CurrentSubmitInfo].cluster != ClusterId ||
+			strcmpnull(SubmitInfo[CurrentSubmitInfo].logfile, logfile) != 0) {
+			CurrentSubmitInfo++;
+			SubmitInfo[CurrentSubmitInfo].cluster = ClusterId;
+			SubmitInfo[CurrentSubmitInfo].firstjob = ProcId;
+			if (logfile) {
+				SubmitInfo[CurrentSubmitInfo].logfile = strdup(logfile);
+			} else {
+				SubmitInfo[CurrentSubmitInfo].logfile = NULL;
+			}
+		}
+		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
+
+		if (Quiet) {
+			fprintf(stdout, ".");
+		}
+
+	}
 }
 
 char *
@@ -1321,7 +1433,7 @@ check_open( char *name, int flags )
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-q] [-r \"hostname\"] cmdfile\n", MyName );
+	fprintf( stderr, "Usage: %s [-q] [-v] [-r \"hostname\"] cmdfile\n", MyName );
 	exit( 1 );
 }
 
@@ -1464,25 +1576,36 @@ log_submit()
     UserLog usr_log;
     SubmitEvent jobSubmit;
 
-	
-	if ((simple_name=condor_param(UserLogFile)) == NULL)
-		return;
+	if (Quiet) fprintf(stdout, "Logging submit event(s)");
 
-
-    // Convert to a pathname using IWD if needed
-    if( simple_name[0] == '/' ) {
-        path = simple_name;
-    } else {
-        sprintf( tmp, "%s/%s", JobIwd, simple_name );
-        path = tmp;
-    }
-
-        // Output the information
-    strcpy (jobSubmit.submitHost, ThisHost);
 	job.LookupString (ATTR_OWNER, owner);
-    usr_log.initialize ( owner, path, ClusterId, ProcId, 0 );
-    if (!usr_log.writeEvent (&jobSubmit))
-        fprintf (stderr, "Error logging submit event.\n");
+	strcpy (jobSubmit.submitHost, ThisHost);
+
+	for (int i=0; i <= CurrentSubmitInfo; i++) {
+
+		if ((simple_name = SubmitInfo[i].logfile) != NULL) {
+
+			// Convert to a pathname using IWD if needed
+			if( simple_name[0] == '/' ) {
+				path = simple_name;
+			} else {
+				sprintf( tmp, "%s/%s", JobIwd, simple_name );
+				path = tmp;
+			}
+
+			usr_log.initialize(owner, path, 0, 0, 0);
+
+			// Output the information
+			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
+				usr_log.initialize(SubmitInfo[i].cluster, j, 0);
+				if (!usr_log.writeEvent (&jobSubmit))
+					fprintf (stderr, "Error logging submit event.\n");
+				if (Quiet) fprintf(stdout, ".");
+			}
+		}
+	}
+
+	if (Quiet) fprintf(stdout, "\n");
 }
 
 
