@@ -71,7 +71,9 @@ specified, the default value of /dev/null is used.
 \item[output = $<$pathname$>$] The \Opt{output} filename will capture
 any information the program would normally write to the screen (i.e.
 this file becomes stdout). If not specified, the default value of
-/dev/null is used. 
+/dev/null is used. More than one job should not use the same output
+file, since this will cause one job to overwrite the output of
+another.
 
 %%%%%%%%%%%%%%%%%%%
 %% error
@@ -80,7 +82,8 @@ this file becomes stdout). If not specified, the default value of
 \item[error = $<$pathname$>$] The \Opt{error} filename will capture any
 error messages the program would normally write to the screen (i.e. this
 file becomes stderr). If not specified, the default value of /dev/null
-is used. 
+is used. More than one job should not use the same error file, since
+this will cause one job to overwrite the errors of another.
 
 %%%%%%%%%%%%%%%%%%%
 %% arguments
