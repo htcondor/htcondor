@@ -148,6 +148,7 @@ const char ATTR_LAST_REJ_MATCH_REASON	 [] = "LastRejMatchReason";
 const char ATTR_LAST_PERIODIC_CHECKPOINT [] = "LastPeriodicCheckpoint";
 const char ATTR_LAST_REMOTE_HOST		 [] = "LastRemoteHost";
 const char ATTR_LAST_UPDATE				 [] = "LastUpdate";
+const char ATTR_LOCAL_FILES		[] = "LocalFiles";
 const char ATTR_LOAD_AVG                 [] = "LoadAvg";
 const char ATTR_MACHINE                  [] = "Machine";
 const char ATTR_MASTER_IP_ADDR			 [] = "MasterIpAddr";
