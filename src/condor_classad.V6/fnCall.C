@@ -559,7 +559,7 @@ sumAvg(const char *name, const ArgumentList &argList,
 	Value             listElementValue, listVal;
 	const ExprTree    *listElement;
 	Value             numElements, result;
-	ExprList          *listToSum;
+	const ExprList          *listToSum;
 	ExprListIterator  listIterator;
 	bool		      first;
 	int			      len;
@@ -643,7 +643,7 @@ minMax(const char *fn, const ArgumentList &argList,
 	Value		       listElementValue, listVal, cmp;
 	const ExprTree     *listElement;
 	Value              result;
-	ExprList           *listToBound;
+	const ExprList     *listToBound;
 	ExprListIterator   listIterator;
     bool		       first = true, b = false;
 	Operation::OpKind  comparisonOperator;
@@ -722,7 +722,7 @@ listCompare(
 	Value		       listElementValue, listVal, compareVal;
 	Value              stringValue;
 	const ExprTree     *listElement;
-	ExprList           *listToCompare;
+	const ExprList     *listToCompare;
 	ExprListIterator   listIterator;
     bool		       needAllMatch;
 	string             comparison_string;
