@@ -8,17 +8,11 @@ class Stream;
 void	cleanup_execute_dir(void);
 void	check_perms(void);
 float	compute_rank( ClassAd*, ClassAd* );
-int		wants_vacate( Resource* );
-int		wants_suspend( Resource* );
-int		eval_kill( Resource* );
-int		eval_vacate( Resource* );
-int		eval_suspend( Resource* );
-int		eval_continue( Resource* );
 int		create_port( int* );
-int		config_classad( Resource* );
 void	log_ignore( int, State );
 char*	command_to_string( int );
 int		reply( Stream*, int );
+int		caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose = 0 );
 
 // Utils from the util_lib that aren't prototyped
 extern "C" {
