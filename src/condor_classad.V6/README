@@ -1,5 +1,5 @@
 This is version 0.9 of the Condor Classad library, released on
-nn-Nov-2001. 
+27-Nov-2001. 
 
 ===== What is it? =====
 
@@ -87,7 +87,7 @@ will build on other systems.
 
 Ideally, you should be able to just type "make", and the ClassAd
 library will be built. If necessary, modify the Makefile to suit your
-needs. 
+needs, particularly the location of the installation directory.
 
 Notice that when the library builds, there is a program called
 "test_classads". This program is used to verify the ClassAd library
