@@ -45,7 +45,7 @@ static double	TmpStack[ TmpStackSize ];
 void
 ExecuteOnTmpStk( void (*func)() )
 {
-	sigjmp_buf	env;
+	jmp_buf	env;
 	SaveFunc = func;
 
 	if( SETJMP(env) == 0 ) {
