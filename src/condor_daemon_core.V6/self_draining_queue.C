@@ -151,6 +151,18 @@ SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
 }
 
 
+bool
+SelfDrainingQueue::isMember( ServiceData* data )
+{
+	if( ! compare_fn ) { 
+			// this is a programmer error!
+		EXCEPT( "SelfDrainingQueue[%s]::isMember() called without "
+				"comparison function registered", name );
+	}
+	if( ! data ) { return false; }
+	return queue.IsMember( data );
+}
+
 
 //--------------------------------------------------
 // Private methods 
