@@ -62,7 +62,7 @@ char		*MailPrg;			// what program to use to send email
 BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 BOOLEAN		RmFlag;				// true if we should remove extraneous files
-List<char>	*BadFiles;			// list of files which don't belong
+StringList	*BadFiles;			// list of files which don't belong
 
 
 // prototypes of local interest
@@ -97,11 +97,17 @@ main( int argc, char *argv[] )
 {
 	char *str;
 
+#ifndef WIN32
+		// Ignore SIGPIPE so if we cannot connect to a daemon we do
+		// not blowup with a sig 13.
+    install_sig_handler(SIGPIPE, SIG_IGN );
+#endif
+
 		// Initialize things
 	MyName = argv[0];
 	config( 0 );
 	init_params();
-	BadFiles = new List<char>;
+	BadFiles = new StringList;
 
 		// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -129,7 +135,6 @@ main( int argc, char *argv[] )
 		}
 	}
 
-
 		// Do the file checking
 	check_spool_dir();
 	check_execute_dir();
@@ -137,14 +142,11 @@ main( int argc, char *argv[] )
 
 
 		// Produce output, either on stdout or by mail
-	if( !BadFiles->IsEmpty() ) {
+	if( !BadFiles->isEmpty() ) {
 		produce_output();
 	}
 
 		// Clean up
-	for( BadFiles->Rewind(); str = BadFiles->Next(); ) {
-		delete( str );
-	}
 	delete BadFiles;
 
 #if defined(ALLOC_DEBUG)
@@ -186,7 +188,7 @@ produce_output()
 		);
 	}
 
-	for( BadFiles->Rewind(); str = BadFiles->Next(); ) {
+	for( BadFiles->rewind(); str = BadFiles->next(); ) {
 		fprintf( mailer, "%s\n", str );
 	}
 
@@ -212,14 +214,15 @@ check_spool_dir()
 {
 	const char  	*f;
 	Directory  		dir(Spool, PRIV_ROOT);
-	StringList 		well_known_list;
+	StringList 		well_known_list, bad_spool_files;
 	Qmgr_connection *qmgr;
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {
-		EXCEPT( "ConnectQ(0) failed" );
+		dprintf( D_ALWAYS, "Not cleaning spool directory.\n" );
+		return;
 	}
 
 		// Check each file in the directory
@@ -236,13 +239,25 @@ check_spool_dir()
 			continue;
 		}
 
-			// must be bad
-		bad_file( Spool, f, dir );
+			// We think it's bad.  For now, just append it to a
+			// StringList, instead of actually deleting it.  This way,
+			// if DisconnectQ() fails, we can abort and not actually
+			// delete any of these files.  -Derek Wright 3/31/99
+		bad_spool_files.append( (char*)f );
 	}
 
-		// Clean up
-	DisconnectQ (qmgr);
-
+	if( DisconnectQ(qmgr) ) {
+			// We were actually talking to a real queue the whole time
+			// and didn't have any errors.  So, it's now safe to
+			// delete the files we think we can delete.
+		bad_spool_files.rewind();
+		while( (f = bad_spool_files.next()) ) {
+			bad_file( Spool, f, dir );
+		}
+	} else {
+		dprintf( D_ALWAYS, 
+				 "Error disconnecting from job queue, not deleting spool files.\n" );
+	}
 	// print_alloc_stats( "End of check_spool_dir" );
 }
 
@@ -395,55 +410,37 @@ check_execute_dir()
 {
 	const char	*f;
 	Directory dir( Execute, PRIV_ROOT );
-	int		age;
+	bool	busy;
 	State	s = get_machine_state();
 
-
-	while( f = dir.Next() ) {
-
-			// if we know the state of the machine, we can use a simple
-			// algorithm.  If we are hosting a job - anything goes, otherwise
-			// the execute directory should be empty.
-		switch( s ) {
-		case owner_state:	
-		case unclaimed_state:
-		case matched_state:	
-			bad_file( Execute, f, dir );	// directory should be empty
-			continue;
-		case claimed_state:			// has condor job
-		case preempting_state:		// has condor job
-			good_file( Execute, f );	// let anything go here
-			continue;
-		default:
-			break; // not sure of the state, have to make some guesses...
-		}
-
-		// If we get here, get_machine_state didn't return something
-		// we exepected.  We can't make any assumptions about the
-		// state of the machine, so we fall back on some messier
-		// heruistics.
-
-			// leave subdirectories alone
-		if( dir.IsDirectory() ) {
-			good_file( Execute, f );
-			continue;
-		}
-
-			// Actual files should be checkpoints.  For jobs which
-			// havn't disabled checkpointing, they would be
-			// rewritten at every checkpoint.  If a job has asked not
-			// to be checkpointed though, it would not be re-written.
-			// In that case, we guess there is a problem if the file
-			// is over a day old.  
-
-		age = time(0) - dir.GetCreateTime();
-		if( age > MaxCkptInterval + 24 * HOUR ) {
-			bad_file( Execute, f, dir );
-		} else {
-			good_file( Execute, f );
-		}
+		// If we know the state of the machine, we can use a simple
+		// algorithm.  If we are hosting a job - anything goes,
+		// otherwise the execute directory should be empty.  If we
+		// can't find the state, just leave the execute directory
+		// alone.  -Derek Wright 4/2/99
+	switch( s ) {
+	case owner_state:	
+	case unclaimed_state:
+	case matched_state:	
+		busy = false;
+		break;
+	case claimed_state:
+	case preempting_state:
+		busy = true;
+		break;
+	default:
+		dprintf( D_ALWAYS, 
+				 "Error getting startd state, not cleaning execute directory.\n" );
+		return;
 	}
 
+	while( f = dir.Next() ) {
+		if( busy ) {
+			good_file( Execute, f );	// let anything go here
+		} else {
+			bad_file( Execute, f, dir );	// directory should be empty
+		}
+	}
 }
 
 /*
@@ -519,9 +516,8 @@ init_params()
 void
 good_file( const char *dir, const char *name )
 {
-
 	if( VerboseFlag ) {
-		printf( "\"%s/%s\" - OK\n", dir, name );
+		printf( "%s%c%s - OK\n", dir, DIR_DELIM_CHAR, name );
 	}
 }
 
@@ -536,7 +532,6 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	char	pathname [_POSIX_PATH_MAX];
 	char	buf[_POSIX_PATH_MAX + 512];
 
-
 	sprintf( pathname, "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
 
 	if( VerboseFlag ) {
@@ -544,15 +539,15 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	}
 
 	if( RmFlag ) {
-		if( dir.Remove_Current_File() ) {
-			sprintf( buf, "\"%s\" - Removed", pathname );
+		if( dir.Remove_File( pathname ) ) {
+			sprintf( buf, "%s - Removed", pathname );
 		} else {
-			sprintf( buf, "\"%s\" - Can't Remove", pathname );
+			sprintf( buf, "%s - Can't Remove", pathname );
 		}
 	} else {
-		sprintf( buf, "\"%s\" - Not Removed", pathname );
+		sprintf( buf, "%s - Not Removed", pathname );
 	}
-	BadFiles->Append( strdup(buf) );
+	BadFiles->append( buf );
 }
 
 
