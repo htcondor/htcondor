@@ -28,9 +28,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_submit - Win32 Release"
 
 OUTDIR=.\../src/condor_submit.V6
@@ -65,12 +62,45 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
  "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_submit.V6/
 CPP_SBRS=.
+
+.c{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_submit.bsc" 
 BSC32_SBRS= \
@@ -130,37 +160,13 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_submit.V6/
 CPP_SBRS=.
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_submit.bsc" 
-BSC32_SBRS= \
-	
-LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
- advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib ws2_32.lib ../src/condor_c++_util/condor_common.obj\
- ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
- /incremental:yes /pdb:"$(OUTDIR)\condor_submit.pdb" /debug /machine:I386\
- /out:"$(OUTDIR)\condor_submit.exe" /pdbtype:sept 
-LINK32_OBJS= \
-	"$(INTDIR)\submit.obj" \
-	"..\src\condor_c++_util\condor_cpp_util.lib" \
-	"..\src\condor_classad\condor_classad.lib" \
-	"..\src\condor_io\condor_io.lib" \
-	"..\src\condor_schedd.V6\condor_qmgmt.lib" \
-	"..\src\condor_util_lib\condor_util.lib"
-
-"$(OUTDIR)\condor_submit.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
-    $(LINK32) @<<
-  $(LINK32_FLAGS) $(LINK32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(CPP_OBJS)}.obj::
    $(CPP) @<<
@@ -191,6 +197,33 @@ LINK32_OBJS= \
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_submit.bsc" 
+BSC32_SBRS= \
+	
+LINK32=link.exe
+LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
+ advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
+ odbccp32.lib ws2_32.lib mswsock.lib ../src/condor_c++_util/condor_common.obj\
+ ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
+ /incremental:yes /pdb:"$(OUTDIR)\condor_submit.pdb" /debug /machine:I386\
+ /out:"$(OUTDIR)\condor_submit.exe" /pdbtype:sept 
+LINK32_OBJS= \
+	"$(INTDIR)\submit.obj" \
+	"..\src\condor_c++_util\condor_cpp_util.lib" \
+	"..\src\condor_classad\condor_classad.lib" \
+	"..\src\condor_io\condor_io.lib" \
+	"..\src\condor_schedd.V6\condor_qmgmt.lib" \
+	"..\src\condor_util_lib\condor_util.lib"
+
+"$(OUTDIR)\condor_submit.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
 
 
 !IF "$(CFG)" == "condor_submit - Win32 Release" || "$(CFG)" ==\
@@ -355,7 +388,8 @@ DEP_CPP_SUBMI=\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\mystring.h"\
+	"..\src\condor_c++_util\my_username.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\url_condor.h"\
@@ -379,12 +413,14 @@ DEP_CPP_SUBMI=\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_expressions.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_getmnt.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_parser.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
 	"..\src\condor_includes\condor_scanner.h"\
+	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -392,12 +428,14 @@ DEP_CPP_SUBMI=\
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\h\condor_types.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\files.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\sig_install.h"\
 	"..\src\h\startup.h"\
+	"..\src\h\util_lib_proto.h"\
 	
 
 "$(INTDIR)\submit.obj" : $(SOURCE) $(DEP_CPP_SUBMI) "$(INTDIR)"\

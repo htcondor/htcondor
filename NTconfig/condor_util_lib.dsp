@@ -108,6 +108,10 @@ SOURCE=..\src\condor_includes\condor_uid.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\cronos.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\dprintf.c
 # End Source File
 # Begin Source File
@@ -180,6 +184,10 @@ SOURCE=..\src\condor_util_lib\mkargv.c
 
 SOURCE=..\src\condor_util_lib\phys_mem.c
 # SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\rotate_file.c
 # End Source File
 # Begin Source File
 

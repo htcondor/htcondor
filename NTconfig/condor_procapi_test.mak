@@ -30,9 +30,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_procapi_test - Win32 Release"
 
 OUTDIR=.\..\src\condor_procapi
@@ -64,12 +61,45 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
  "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=..\src\condor_procapi/
 CPP_SBRS=.
+
+.c{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi_test.bsc" 
 BSC32_SBRS= \
@@ -123,34 +153,13 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=..\src\condor_procapi/
 CPP_SBRS=.
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi_test.bsc" 
-BSC32_SBRS= \
-	
-LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
- advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib ws2_32.lib ../src/condor_c++_util/condor_common.obj\
- ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
- /incremental:yes /pdb:"$(OUTDIR)\condor_procapi_test.pdb" /debug /machine:I386\
- /out:"$(OUTDIR)\condor_procapi_test.exe" /pdbtype:sept 
-LINK32_OBJS= \
-	"$(INTDIR)\ntsysinfo.obj" \
-	"$(INTDIR)\testprocapi.obj" \
-	"$(OUTDIR)\condor_procapi.lib"
-
-"$(OUTDIR)\condor_procapi_test.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
-    $(LINK32) @<<
-  $(LINK32_FLAGS) $(LINK32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(CPP_OBJS)}.obj::
    $(CPP) @<<
@@ -181,6 +190,30 @@ LINK32_OBJS= \
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi_test.bsc" 
+BSC32_SBRS= \
+	
+LINK32=link.exe
+LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
+ advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
+ odbccp32.lib ws2_32.lib ../src/condor_c++_util/condor_common.obj\
+ ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
+ /incremental:yes /pdb:"$(OUTDIR)\condor_procapi_test.pdb" /debug /machine:I386\
+ /out:"$(OUTDIR)\condor_procapi_test.exe" /pdbtype:sept 
+LINK32_OBJS= \
+	"$(INTDIR)\ntsysinfo.obj" \
+	"$(INTDIR)\testprocapi.obj" \
+	"$(OUTDIR)\condor_procapi.lib"
+
+"$(OUTDIR)\condor_procapi_test.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
 
 
 !IF "$(CFG)" == "condor_procapi_test - Win32 Release" || "$(CFG)" ==\
@@ -218,26 +251,31 @@ LINK32_OBJS= \
 
 SOURCE="..\src\condor_c++_util\ntsysinfo.C"
 DEP_CPP_NTSYS=\
+	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_fix_string.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_hpux_64bit_types.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_dux.h"\
+	"..\src\condor_includes\condor_sys_hpux.h"\
+	"..\src\condor_includes\condor_sys_irix.h"\
+	"..\src\condor_includes\condor_sys_linux.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_solaris.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_file_lock.h"\
-	{$(INCLUDE)}"condor_fix_assert.h"\
-	{$(INCLUDE)}"condor_fix_string.h"\
-	{$(INCLUDE)}"condor_header_features.h"\
-	{$(INCLUDE)}"condor_hpux_64bit_types.h"\
-	{$(INCLUDE)}"condor_macros.h"\
-	{$(INCLUDE)}"condor_sys_dux.h"\
-	{$(INCLUDE)}"condor_sys_hpux.h"\
-	{$(INCLUDE)}"condor_sys_irix.h"\
-	{$(INCLUDE)}"condor_sys_linux.h"\
-	{$(INCLUDE)}"condor_sys_nt.h"\
-	{$(INCLUDE)}"condor_sys_solaris.h"\
-	{$(INCLUDE)}"condor_system.h"\
 	{$(INCLUDE)}"sys\stat.h"\
 	{$(INCLUDE)}"sys\types.h"\
+	
+NODEP_CPP_NTSYS=\
+	"..\src\condor_includes\gssapi.h"\
 	
 
 "$(INTDIR)\ntsysinfo.obj" : $(SOURCE) $(DEP_CPP_NTSYS) "$(INTDIR)"\
@@ -246,8 +284,38 @@ DEP_CPP_NTSYS=\
 
 
 SOURCE=..\src\condor_procapi\testprocapi.C
+DEP_CPP_TESTP=\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_fix_string.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_hpux_64bit_types.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_dux.h"\
+	"..\src\condor_includes\condor_sys_hpux.h"\
+	"..\src\condor_includes\condor_sys_irix.h"\
+	"..\src\condor_includes\condor_sys_linux.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_solaris.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_procapi\procapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	{$(INCLUDE)}"sys\stat.h"\
+	{$(INCLUDE)}"sys\types.h"\
+	
+NODEP_CPP_TESTP=\
+	"..\src\condor_includes\gssapi.h"\
+	
 
-"$(INTDIR)\testprocapi.obj" : $(SOURCE) "$(INTDIR)"\
+"$(INTDIR)\testprocapi.obj" : $(SOURCE) $(DEP_CPP_TESTP) "$(INTDIR)"\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 

@@ -26,8 +26,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-
 !IF  "$(CFG)" == "condor_io - Win32 Release"
 
 OUTDIR=.\..\src\condor_io
@@ -47,6 +45,7 @@ ALL : "$(OUTDIR)\condor_io.lib"
 !ENDIF 
 
 CLEAN :
+	-@erase "$(INTDIR)\authentication.obj"
 	-@erase "$(INTDIR)\buffers.obj"
 	-@erase "$(INTDIR)\condor_rw.obj"
 	-@erase "$(INTDIR)\open_flags.obj"
@@ -61,12 +60,44 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
  "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=..\src\condor_io/
 CPP_SBRS=.
+
+.c{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
 BSC32_SBRS= \
@@ -74,6 +105,7 @@ BSC32_SBRS= \
 LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
 LIB32_OBJS= \
+	"$(INTDIR)\authentication.obj" \
 	"$(INTDIR)\buffers.obj" \
 	"$(INTDIR)\condor_rw.obj" \
 	"$(INTDIR)\open_flags.obj" \
@@ -107,6 +139,7 @@ ALL : "$(OUTDIR)\condor_io.lib"
 !ENDIF 
 
 CLEAN :
+	-@erase "$(INTDIR)\authentication.obj"
 	-@erase "$(INTDIR)\buffers.obj"
 	-@erase "$(INTDIR)\condor_rw.obj"
 	-@erase "$(INTDIR)\open_flags.obj"
@@ -121,34 +154,13 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=..\src\condor_io/
 CPP_SBRS=.
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\buffers.obj" \
-	"$(INTDIR)\condor_rw.obj" \
-	"$(INTDIR)\open_flags.obj" \
-	"$(INTDIR)\reli_sock.obj" \
-	"$(INTDIR)\safe_sock.obj" \
-	"$(INTDIR)\sock.obj" \
-	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj"
-
-"$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(CPP_OBJS)}.obj::
    $(CPP) @<<
@@ -180,67 +192,74 @@ LIB32_OBJS= \
    $(CPP_PROJ) $< 
 <<
 
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\authentication.obj" \
+	"$(INTDIR)\buffers.obj" \
+	"$(INTDIR)\condor_rw.obj" \
+	"$(INTDIR)\open_flags.obj" \
+	"$(INTDIR)\reli_sock.obj" \
+	"$(INTDIR)\safe_sock.obj" \
+	"$(INTDIR)\sock.obj" \
+	"$(INTDIR)\sockCache.obj" \
+	"$(INTDIR)\stream.obj"
+
+"$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
+
 
 !IF "$(CFG)" == "condor_io - Win32 Release" || "$(CFG)" ==\
  "condor_io - Win32 Debug"
+SOURCE=..\src\condor_io\authentication.C
+DEP_CPP_AUTHE=\
+	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\my_username.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_getmnt.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
+	"..\src\h\expr.h"\
+	"..\src\h\internet.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\authentication.obj" : $(SOURCE) $(DEP_CPP_AUTHE) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\stream.obj"\
+ "$(INTDIR)\sock.C"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\src\condor_io\buffers.C
 DEP_CPP_BUFFE=\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\reli_sock.h"\
-	"..\src\condor_includes\safe_sock.h"\
-	"..\src\condor_includes\sock.h"\
-	"..\src\condor_includes\sockCache.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
-	"..\src\h\startup.h"\
-	
-
-"$(INTDIR)\buffers.obj" : $(SOURCE) $(DEP_CPP_BUFFE) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_io\condor_rw.C
-DEP_CPP_CONDO=\
-	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\reli_sock.h"\
-	"..\src\condor_includes\safe_sock.h"\
-	"..\src\condor_includes\sock.h"\
-	"..\src\condor_includes\sockCache.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
-	"..\src\h\startup.h"\
-	
-
-"$(INTDIR)\condor_rw.obj" : $(SOURCE) $(DEP_CPP_CONDO) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_io\open_flags.c
-
-"$(INTDIR)\open_flags.obj" : $(SOURCE) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_io\reli_sock.C
-DEP_CPP_RELI_=\
-	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -253,7 +272,93 @@ DEP_CPP_RELI_=\
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\condor_io\condor_rw.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\buffers.obj" : $(SOURCE) $(DEP_CPP_BUFFE) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\stream.obj"\
+ "$(INTDIR)\sock.C"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_io\condor_rw.C
+DEP_CPP_CONDO=\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\condor_rw.obj" : $(SOURCE) $(DEP_CPP_CONDO) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\stream.obj"\
+ "$(INTDIR)\sock.C"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_io\open_flags.c
+DEP_CPP_OPEN_=\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
+	"..\src\h\expr.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\open_flags.obj" : $(SOURCE) $(DEP_CPP_OPEN_) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\sock.C"\
+ "$(INTDIR)\stream.obj"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_io\reli_sock.C
+DEP_CPP_RELI_=\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
 	"..\src\h\expr.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
@@ -262,13 +367,15 @@ DEP_CPP_RELI_=\
 	
 
 "$(INTDIR)\reli_sock.obj" : $(SOURCE) $(DEP_CPP_RELI_) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\stream.obj"\
+ "$(INTDIR)\sock.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\src\condor_io\safe_sock.C
 DEP_CPP_SAFE_=\
 	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -281,6 +388,8 @@ DEP_CPP_SAFE_=\
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
 	"..\src\h\expr.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
@@ -289,13 +398,15 @@ DEP_CPP_SAFE_=\
 	
 
 "$(INTDIR)\safe_sock.obj" : $(SOURCE) $(DEP_CPP_SAFE_) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\stream.obj"\
+ "$(INTDIR)\sock.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\src\condor_io\sock.C
 DEP_CPP_SOCK_=\
 	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -308,6 +419,8 @@ DEP_CPP_SOCK_=\
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
 	"..\src\h\expr.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
@@ -316,17 +429,20 @@ DEP_CPP_SOCK_=\
 	
 
 "$(INTDIR)\sock.obj" : $(SOURCE) $(DEP_CPP_SOCK_) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\stream.obj"\
+ "$(INTDIR)\sock.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\src\condor_io\sockCache.C
 DEP_CPP_SOCKC=\
 	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -334,23 +450,28 @@ DEP_CPP_SOCKC=\
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
 	
 
 "$(INTDIR)\sockCache.obj" : $(SOURCE) $(DEP_CPP_SOCKC) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\stream.obj"\
+ "$(INTDIR)\sock.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\src\condor_io\stream.C
 DEP_CPP_STREA=\
 	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -358,13 +479,16 @@ DEP_CPP_STREA=\
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_io\sock.C"\
+	"..\src\condor_io\stream.obj"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
 	
 
 "$(INTDIR)\stream.obj" : $(SOURCE) $(DEP_CPP_STREA) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
+ "..\src\condor_c++_util\condor_common.pch" "$(INTDIR)\stream.obj"\
+ "$(INTDIR)\sock.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

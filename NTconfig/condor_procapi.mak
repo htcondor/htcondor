@@ -28,8 +28,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-
 !IF  "$(CFG)" == "condor_procapi - Win32 Release"
 
 OUTDIR=.\../src/condor_procapi
@@ -63,12 +61,44 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
  "..\src\condor_procapi" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_procapi/
 CPP_SBRS=.
+
+.c{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi.bsc" 
 BSC32_SBRS= \
@@ -120,31 +150,13 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_procapi" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG"\
  /Fp"..\src\condor_c++_util\condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_procapi/
 CPP_SBRS=.
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procapi.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\procapi.obj" \
-	"$(INTDIR)\procinterface.obj" \
-	"..\src\condor_c++_util\condor_cpp_util.lib" \
-	"..\src\condor_classad\condor_classad.lib" \
-	"..\src\condor_util_lib\condor_util.lib"
-
-"$(OUTDIR)\condor_procapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(CPP_OBJS)}.obj::
    $(CPP) @<<
@@ -175,6 +187,26 @@ LIB32_OBJS= \
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
+
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procapi.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\procapi.obj" \
+	"$(INTDIR)\procinterface.obj" \
+	"..\src\condor_c++_util\condor_cpp_util.lib" \
+	"..\src\condor_classad\condor_classad.lib" \
+	"..\src\condor_util_lib\condor_util.lib"
+
+"$(OUTDIR)\condor_procapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
 
 
 !IF "$(CFG)" == "condor_procapi - Win32 Release" || "$(CFG)" ==\
@@ -272,28 +304,13 @@ LIB32_OBJS= \
 
 SOURCE=..\src\condor_procapi\procapi.C
 DEP_CPP_PROCA=\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_procapi\procapi.h"\
-	"..\src\h\file_lock.h"\
-	{$(INCLUDE)}"condor_common.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_file_lock.h"\
-	{$(INCLUDE)}"condor_fix_assert.h"\
-	{$(INCLUDE)}"condor_fix_string.h"\
-	{$(INCLUDE)}"condor_header_features.h"\
-	{$(INCLUDE)}"condor_hpux_64bit_types.h"\
-	{$(INCLUDE)}"condor_macros.h"\
-	{$(INCLUDE)}"condor_sys_dux.h"\
-	{$(INCLUDE)}"condor_sys_hpux.h"\
-	{$(INCLUDE)}"condor_sys_irix.h"\
-	{$(INCLUDE)}"condor_sys_linux.h"\
-	{$(INCLUDE)}"condor_sys_nt.h"\
-	{$(INCLUDE)}"condor_sys_solaris.h"\
-	{$(INCLUDE)}"condor_system.h"\
-	{$(INCLUDE)}"fake_flock.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"sys\stat.h"\
-	{$(INCLUDE)}"sys\types.h"\
 	
 
 "$(INTDIR)\procapi.obj" : $(SOURCE) $(DEP_CPP_PROCA) "$(INTDIR)"\
@@ -303,39 +320,25 @@ DEP_CPP_PROCA=\
 
 SOURCE=..\src\condor_procapi\procinterface.C
 DEP_CPP_PROCI=\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_classad.h"\
 	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\stream.h"\
 	"..\src\condor_procapi\procapi.h"\
 	"..\src\condor_procapi\procinterface.h"\
-	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
-	{$(INCLUDE)}"condor_ast.h"\
-	{$(INCLUDE)}"condor_astbase.h"\
-	{$(INCLUDE)}"condor_attrlist.h"\
-	{$(INCLUDE)}"condor_common.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_exprtype.h"\
-	{$(INCLUDE)}"condor_file_lock.h"\
-	{$(INCLUDE)}"condor_fix_assert.h"\
-	{$(INCLUDE)}"condor_fix_string.h"\
-	{$(INCLUDE)}"condor_header_features.h"\
-	{$(INCLUDE)}"condor_hpux_64bit_types.h"\
-	{$(INCLUDE)}"condor_macros.h"\
-	{$(INCLUDE)}"condor_sys_dux.h"\
-	{$(INCLUDE)}"condor_sys_hpux.h"\
-	{$(INCLUDE)}"condor_sys_irix.h"\
-	{$(INCLUDE)}"condor_sys_linux.h"\
-	{$(INCLUDE)}"condor_sys_nt.h"\
-	{$(INCLUDE)}"condor_sys_solaris.h"\
-	{$(INCLUDE)}"condor_system.h"\
-	{$(INCLUDE)}"fake_flock.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"stream.h"\
-	{$(INCLUDE)}"sys\stat.h"\
-	{$(INCLUDE)}"sys\types.h"\
 	
 
 "$(INTDIR)\procinterface.obj" : $(SOURCE) $(DEP_CPP_PROCI) "$(INTDIR)"\

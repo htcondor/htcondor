@@ -77,6 +77,14 @@ LIB32=link.exe -lib
 # Name "condor_io - Win32 Debug"
 # Begin Source File
 
+SOURCE=..\src\condor_io\authentication.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\authentication.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_io\buffers.C
 # End Source File
 # Begin Source File

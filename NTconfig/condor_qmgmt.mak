@@ -26,8 +26,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-
 !IF  "$(CFG)" == "condor_qmgmt - Win32 Release"
 
 OUTDIR=.\../src/condor_schedd.V6
@@ -56,12 +54,44 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
  "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_schedd.V6/
 CPP_SBRS=.
+
+.c{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_qmgmt.bsc" 
 BSC32_SBRS= \
@@ -106,29 +136,13 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_schedd.V6/
 CPP_SBRS=.
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_qmgmt.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_qmgmt.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\qmgmt_common.obj" \
-	"$(INTDIR)\qmgmt_send_stubs.obj" \
-	"$(INTDIR)\qmgr_lib_support.obj"
-
-"$(OUTDIR)\condor_qmgmt.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(CPP_OBJS)}.obj::
    $(CPP) @<<
@@ -160,35 +174,32 @@ LIB32_OBJS= \
    $(CPP_PROJ) $< 
 <<
 
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_qmgmt.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_qmgmt.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\qmgmt_common.obj" \
+	"$(INTDIR)\qmgmt_send_stubs.obj" \
+	"$(INTDIR)\qmgr_lib_support.obj"
+
+"$(OUTDIR)\condor_qmgmt.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
+
 
 !IF "$(CFG)" == "condor_qmgmt - Win32 Release" || "$(CFG)" ==\
  "condor_qmgmt - Win32 Debug"
 SOURCE=..\src\condor_schedd.V6\qmgmt_common.C
 DEP_CPP_QMGMT=\
-	"..\src\condor_c++_util\classad_hashtable.h"\
-	"..\src\condor_c++_util\daemon_types.h"\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
-	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
-	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_config.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_c++_util\list.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_includes\sock.h"\
-	"..\src\condor_schedd.V6\prio_rec.h"\
-	"..\src\condor_schedd.V6\schedd_main.C"\
-	"..\src\h\sched.h"\
-	"..\src\h\startup.h"\
-	{$(INCLUDE)}"condor_ast.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_exprtype.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"stream.h"\
+	"..\src\h\proc.h"\
 	
 
 "$(INTDIR)\qmgmt_common.obj" : $(SOURCE) $(DEP_CPP_QMGMT) "$(INTDIR)"\
@@ -198,37 +209,31 @@ DEP_CPP_QMGMT=\
 
 SOURCE=..\src\condor_schedd.V6\qmgmt_send_stubs.C
 DEP_CPP_QMGMT_=\
-	"..\src\condor_c++_util\classad_hashtable.h"\
-	"..\src\condor_c++_util\daemon_types.h"\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_c++_util\list.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\condor_attributes.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_classad.h"\
 	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_config.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
-	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\sock.h"\
-	"..\src\condor_schedd.V6\prio_rec.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
 	"..\src\condor_schedd.V6\qmgmt_constants.h"\
-	"..\src\condor_schedd.V6\schedd_main.C"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
-	{$(INCLUDE)}"condor_ast.h"\
-	{$(INCLUDE)}"condor_astbase.h"\
-	{$(INCLUDE)}"condor_attrlist.h"\
-	{$(INCLUDE)}"condor_common.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_exprtype.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"stream.h"\
 	
 
 "$(INTDIR)\qmgmt_send_stubs.obj" : $(SOURCE) $(DEP_CPP_QMGMT_) "$(INTDIR)"\
@@ -238,37 +243,35 @@ DEP_CPP_QMGMT_=\
 
 SOURCE=..\src\condor_schedd.V6\qmgr_lib_support.C
 DEP_CPP_QMGR_=\
-	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\daemon_types.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
+	"..\src\condor_c++_util\list.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_c++_util\my_username.h"\
 	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_attributes.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_classad.h"\
 	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_config.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
-	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\sock.h"\
-	"..\src\condor_schedd.V6\prio_rec.h"\
-	"..\src\condor_schedd.V6\schedd_main.C"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
-	{$(INCLUDE)}"condor_ast.h"\
-	{$(INCLUDE)}"condor_astbase.h"\
-	{$(INCLUDE)}"condor_attrlist.h"\
-	{$(INCLUDE)}"condor_common.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_exprtype.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"stream.h"\
 	
 
 "$(INTDIR)\qmgr_lib_support.obj" : $(SOURCE) $(DEP_CPP_QMGR_) "$(INTDIR)"\

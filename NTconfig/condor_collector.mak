@@ -29,9 +29,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_collector - Win32 Release"
 
 OUTDIR=.\../src/condor_collector.V6
@@ -71,12 +68,45 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
  "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_collector.V6/
 CPP_SBRS=.
+
+.c{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_OBJS)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(CPP_SBRS)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_collector.bsc" 
 BSC32_SBRS= \
@@ -146,42 +176,13 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_collector.V6/
 CPP_SBRS=.
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_collector.bsc" 
-BSC32_SBRS= \
-	
-LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
- advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib ws2_32.lib ../src/condor_c++_util/condor_common.obj\
- ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
- /incremental:yes /pdb:"$(OUTDIR)\condor_collector.pdb" /debug /machine:I386\
- /out:"$(OUTDIR)\condor_collector.exe" /pdbtype:sept 
-LINK32_OBJS= \
-	"$(INTDIR)\collector.obj" \
-	"$(INTDIR)\collector_engine.obj" \
-	"$(INTDIR)\hashkey.obj" \
-	"$(INTDIR)\main.obj" \
-	"$(INTDIR)\totals.obj" \
-	"$(INTDIR)\view_server.obj" \
-	"..\src\condor_c++_util\condor_cpp_util.lib" \
-	"..\src\condor_classad\condor_classad.lib" \
-	"..\src\condor_daemon_core.V6\condor_daemon_core.lib" \
-	"..\src\condor_io\condor_io.lib" \
-	"..\src\condor_util_lib\condor_util.lib"
-
-"$(OUTDIR)\condor_collector.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
-    $(LINK32) @<<
-  $(LINK32_FLAGS) $(LINK32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(CPP_OBJS)}.obj::
    $(CPP) @<<
@@ -212,6 +213,38 @@ LINK32_OBJS= \
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_collector.bsc" 
+BSC32_SBRS= \
+	
+LINK32=link.exe
+LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
+ advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
+ odbccp32.lib ws2_32.lib mswsock.lib ../src/condor_c++_util/condor_common.obj\
+ ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
+ /incremental:yes /pdb:"$(OUTDIR)\condor_collector.pdb" /debug /machine:I386\
+ /out:"$(OUTDIR)\condor_collector.exe" /pdbtype:sept 
+LINK32_OBJS= \
+	"$(INTDIR)\collector.obj" \
+	"$(INTDIR)\collector_engine.obj" \
+	"$(INTDIR)\hashkey.obj" \
+	"$(INTDIR)\main.obj" \
+	"$(INTDIR)\totals.obj" \
+	"$(INTDIR)\view_server.obj" \
+	"..\src\condor_c++_util\condor_cpp_util.lib" \
+	"..\src\condor_classad\condor_classad.lib" \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.lib" \
+	"..\src\condor_io\condor_io.lib" \
+	"..\src\condor_util_lib\condor_util.lib"
+
+"$(OUTDIR)\condor_collector.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
 
 
 !IF "$(CFG)" == "condor_collector - Win32 Release" || "$(CFG)" ==\
@@ -371,7 +404,7 @@ DEP_CPP_COLLE=\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\mystring.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_collector.V6\collector.h"\
@@ -422,9 +455,6 @@ DEP_CPP_COLLE=\
 
 
 SOURCE=..\src\condor_collector.V6\collector_engine.C
-
-!IF  "$(CFG)" == "condor_collector - Win32 Release"
-
 DEP_CPP_COLLEC=\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -437,6 +467,7 @@ DEP_CPP_COLLEC=\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_attributes.h"\
@@ -471,57 +502,6 @@ DEP_CPP_COLLEC=\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_collector - Win32 Debug"
-
-DEP_CPP_COLLEC=\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\list.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_collector.V6\collector_engine.h"\
-	"..\src\condor_collector.V6\hashkey.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
-	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
-	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
-	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_collector.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_config.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_email.h"\
-	"..\src\condor_includes\condor_expressions.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\condor_parser.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_includes\reli_sock.h"\
-	"..\src\condor_includes\safe_sock.h"\
-	"..\src\condor_includes\sock.h"\
-	"..\src\condor_includes\sockCache.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\h\expr.h"\
-	"..\src\h\internet.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
-	"..\src\h\startup.h"\
-	
-
-"$(INTDIR)\collector_engine.obj" : $(SOURCE) $(DEP_CPP_COLLEC) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_collector.V6\hashkey.C
 DEP_CPP_HASHK=\
@@ -537,6 +517,7 @@ DEP_CPP_HASHK=\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -553,9 +534,9 @@ DEP_CPP_MAIN_=\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
-	"..\src\condor_c++_util\mystring.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_c++_util\set.h"\
+	"..\src\condor_c++_util\Set.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_collector.V6\collector.h"\
 	"..\src\condor_collector.V6\collector_engine.h"\
@@ -565,6 +546,7 @@ DEP_CPP_MAIN_=\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_attrlist.h"\
@@ -598,7 +580,7 @@ DEP_CPP_MAIN_=\
 SOURCE=..\src\condor_status.V6\totals.C
 DEP_CPP_TOTAL=\
 	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\mystring.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_attributes.h"\
@@ -609,6 +591,7 @@ DEP_CPP_TOTAL=\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_state.h"\
+	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_status.V6\status_types.h"\
 	"..\src\condor_status.V6\totals.h"\
@@ -627,9 +610,9 @@ DEP_CPP_VIEW_=\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
-	"..\src\condor_c++_util\mystring.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_c++_util\set.h"\
+	"..\src\condor_c++_util\Set.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_collector.V6\collector.h"\
 	"..\src\condor_collector.V6\collector_engine.h"\
@@ -639,6 +622,7 @@ DEP_CPP_VIEW_=\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_attributes.h"\

@@ -177,6 +177,14 @@ SOURCE="..\src\condor_c++_util\daemon_types.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\directory.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\directory.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\disk.C"
 # End Source File
 # Begin Source File
@@ -194,6 +202,14 @@ SOURCE="..\src\condor_c++_util\extArray.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\file_lock.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\file_transfer.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\file_transfer.h"
 # End Source File
 # Begin Source File
 
@@ -218,6 +234,10 @@ SOURCE="..\src\condor_c++_util\get_daemon_addr.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\get_full_hostname.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\HashTable.h"
 # End Source File
 # Begin Source File
 
@@ -249,6 +269,10 @@ SOURCE="..\src\condor_c++_util\log_transaction.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\misc_utils.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\my_arch.C"
 # End Source File
 # Begin Source File
@@ -259,6 +283,18 @@ SOURCE="..\src\condor_c++_util\my_hostname.C"
 
 SOURCE="..\src\condor_c++_util\my_subsystem.C"
 # SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\my_username.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\my_username.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\MyString.h"
 # End Source File
 # Begin Source File
 
@@ -282,6 +318,10 @@ SOURCE="..\src\condor_c++_util\Queue.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\Set.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\simplelist.h"
 # End Source File
 # Begin Source File
@@ -291,6 +331,10 @@ SOURCE="..\src\condor_c++_util\string_list.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\string_list.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\strnewp.C"
 # End Source File
 # Begin Source File
 
