@@ -1,5 +1,5 @@
-#ifndef _UID
-#define _UID
+#ifndef _UID_H
+#define _UID_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -11,3 +11,5 @@ int set_root_euid();
 #if defined(__cplusplus)
 }
 #endif
+
+#endif /* _UID_H */

@@ -30,4 +30,11 @@ static const int	HOUR = 60 * 60;
 static const int	DAY = 24 * 60 * 60;
 #endif
 
+/*
+  This is for use with strcmp() and related functions which will return
+  0 upon a match.
+*/
+#ifndef MATCH
+static const int	MATCH = 0;
+#endif
 #endif
