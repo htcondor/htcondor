@@ -28,7 +28,7 @@ set of dedicated machines to run PVM applications; Condor can be used to dynamic
 construct PVM virtual machines out of non-dedicated desktop machines on your network
 which would have otherwise been idle.   In Condor-PVM, Condor acts as the
 resource manager for the PVM daemon.  Whenever your PVM program asks
-for nodes (machines), the request is remapped to Condor.  Condor then
+for nodes (machines), the request is re-mapped to Condor.  Condor then
 finds a machine in the Condor pool via the usual mechanisms, and adds it
 the the PVM virtual machine.  If a machine needs to leave the pool, your
 PVM program is notified of that as well via the normal PVM mechanisms.
@@ -57,7 +57,7 @@ dropped below an acceptable level, it could request for more workers
 (via \func{pvm\_addhosts()}. Or perhaps perhaps the master will request
 a replacement node every single time it is notified that a worker has
 gone away. The point is that in this paradigm, the number of workers is
-not important (although more is better!) and fluxuation in the size of
+not important (although more is better!) and changes in the size of
 the virtual machine can be handled naturally.
 
 Condor-PVM is designed to run PVM applications which follow the
@@ -74,11 +74,11 @@ master-worker PVM applications are ready to run under Condor-PVM with no
 changes at all.  Irregardless of using Condor-PVM or not, it is good
 master-worker design to handle the case of a worker node disappearing,
 and therefore many programmers have already constructed their master program
-with all the neccesary logic for fault-tolerance purposes.  
+with all the necessary logic for fault-tolerance purposes.  
 
 In fact, regular PVM and Condor-PVM are \underline{binary compatible}
 with each other.  The same binary which runs under regular PVM will run
-under Condor, and vice-versa.  There is no need to relink for Condor-PVM.
+under Condor, and vice-versa.  There is no need to re-link for Condor-PVM.
 This permits easy application development
 (develop your PVM application interactively with the regular PVM console, XPVM,
 etc) as well as binary sharing between Condor and some dedicated MPP systems.
@@ -116,7 +116,7 @@ Condor environment in the following list:
   \func{pvm\_notify()} before calling
   \func{pvm\_addhosts()}, so that when a host is added later, the user
   will be notified via Condor in the usual PVM 
-  fasion (via a PvmHostAdd notification message).
+  fashion (via a PvmHostAdd notification message).
     
 \item \func{pvm\_notify()}.  Under Condor, we added two additional 
   possible notification requests, \func{PvmHostSuspend} and
