@@ -215,8 +215,8 @@ tokenizeNumber (void)
 	enum { NONE, INTEGER, REAL };
 	int		numberType = NONE;
 	NumberFactor f;
-	int		integer;
-	double	real;
+	int		integer=0;
+	double	real=0;
 	int 	och;
 
 	och = ch;
@@ -443,8 +443,8 @@ tokenizeAbsoluteTime( char *buf, int &asecs )
 {
 	struct 	tm timeValue;
 	int		secs;
-	time_t	absTime;
-	char	*tzStr, *tzOff;
+	time_t	absTime=0;
+	char	*tzStr, *tzOff=NULL;
 	extern	time_t timezone;
 
 		// format of abstime:  `Wed Nov 11 13:11:47 1998 (CST) +6:00`

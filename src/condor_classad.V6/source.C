@@ -284,7 +284,7 @@ parseEqualityExpression(ExprTree *&tree)
     ExprTree 	*treeL = NULL, *treeR = NULL;
 	Operation	*newTree;
 	TokenType	tt;
-	OpKind 		op;
+	OpKind 		op=__NO_OP__;
 
 	if( !parseRelationalExpression(tree) ) return false;
 	tt = lexer.PeekToken();
@@ -329,7 +329,7 @@ parseRelationalExpression(ExprTree *&tree)
     ExprTree 	*treeL = NULL, *treeR = NULL;
 	Operation	*newTree;
 	TokenType	tt;
-    OpKind 		op;
+    OpKind 		op=__NO_OP__;
 
 	if( !parseShiftExpression(tree) ) return false;
 	tt = lexer.PeekToken();
@@ -492,7 +492,7 @@ parseUnaryExpression(ExprTree *&tree)
 {
     ExprTree 	*treeM = NULL;
 	Operation	*newTree;
-	OpKind		op;
+	OpKind		op=__NO_OP__;
 	TokenType	tt;
 
 	tt = lexer.PeekToken();

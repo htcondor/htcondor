@@ -69,7 +69,7 @@ ToSink( Sink &s )
 	ExprTree *tree;
 	bool 	wantIndent;
 	int		indentLength;
-	int		indentLevel;
+	int		indentLevel=0;
 	FormatOptions *p = s.GetFormatOptions( );
 
 	if( p ) {

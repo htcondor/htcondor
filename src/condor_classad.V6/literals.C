@@ -49,7 +49,7 @@ ToSink (Sink &s)
 Literal* Literal::
 MakeAbsTime( time_t now )
 {
-	Literal *lit;
+	Literal *lit=NULL;
 	if( ( now<0 && time( &now )<0 ) || ( ( lit=new Literal() )==NULL ) ) {
 		return NULL;
 	}
@@ -60,7 +60,7 @@ MakeAbsTime( time_t now )
 Literal* Literal::
 MakeRelTime( time_t t1, time_t t2 )
 {
-	Literal *lit;
+	Literal *lit=NULL;
 	if( ( t1<0 && time( &t1 )<0 ) || ( t2<0 && time( &t2 )<0 ) ||
 		( ( lit = new Literal() )==NULL ) ) {
 		return NULL;

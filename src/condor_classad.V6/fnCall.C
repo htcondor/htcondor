@@ -2,8 +2,6 @@
 #include "exprTree.h"
 #include <regex.h>
 
-static char* _FileName_ = __FILE__;
-
 BEGIN_NAMESPACE( classad )
 
 bool FunctionCall::initialized = false;

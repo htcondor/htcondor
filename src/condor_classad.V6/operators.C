@@ -1,8 +1,6 @@
 #include "condor_common.h"
 #include "operators.h"
 
-static char *_FileName_ = __FILE__;
-
 BEGIN_NAMESPACE( classad )
 
 	// the order in this array should be the same as the OpKind enumeration
@@ -105,7 +103,7 @@ ToSink( Sink &s )
 {
 	FormatOptions *p = s.GetFormatOptions( );
 	bool minimalParens = p ? p->GetMinimalParentheses( ) : false;
-	int  precLevel;
+	int  precLevel=0;
 
 		// trivial case
 	if (operation == __NO_OP__) return true;
@@ -292,7 +290,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		}
 	} else if( op == SUBSCRIPT_OP ) {
 		int			index;
-		ExprTree	*tree;
+		ExprTree	*tree=NULL;
 		ExprList	*elist;
 
 		// subscripting from a list (strict)
@@ -1073,7 +1071,7 @@ int Operation::
 doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	double r1, r2;	
-	double comp;
+	double comp=0;
 
 	// we want to prevent FPE and set the ERROR value on the result; on Unix
 	// trap sigfpe and set the ClassAdExprFPE flag to true; on NT check the 
