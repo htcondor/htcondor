@@ -136,7 +136,8 @@ void attempt_access_handler(Service *, int i, Stream *s)
   	return;
 }
 
-int attempt_access(char *filename, int mode, int uid, int gid)
+int attempt_access(char *filename, int mode, int uid, int gid, 
+	char *scheddAddress = NULL )
 {
 	int result;
 	int return_val;
@@ -145,7 +146,12 @@ int attempt_access(char *filename, int mode, int uid, int gid)
 	int cmd = ATTEMPT_ACCESS;
 
 	
-	scheddAddr = get_schedd_addr(0);
+	if ( scheddAddress ) {
+		scheddAddr = scheddAddress;
+	}
+	else {
+		scheddAddr = get_schedd_addr(0);
+	}
 	if(scheddAddr == NULL)
 	{
 		dprintf(D_ALWAYS, "Can't find address of schedd.\n");
