@@ -368,9 +368,9 @@ TimerManager::Timeout()
 		// by service*.  If we were told the handler is a c function, we call
 		// it and pass the service* as a parameter.
 		if ( timer_list->is_cpp ) {
-			(s->*handlercpp)(current_id);  // typedef int (*Eventcpp)(int)
+			(s->*handlercpp)();			// typedef int (*Eventcpp)(int)
 		} else {
-			(*handler)(s,current_id);  // typedef int (*Event)(Service*,int)
+			(*handler)(s);				// typedef int (*Event)(Service*,int)
 		}
 
 		// Make sure we didn't leak our priv state
