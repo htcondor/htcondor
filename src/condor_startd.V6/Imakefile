@@ -52,7 +52,7 @@ tags_target($(STARTD_SRC),$(LIBDIRS))
 depend_target($(STARTD_SRC))
 
 c_plus_target(condor_startd,$(STARTD_OBJ),$(LIB))
-release_target(condor_startd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+release_target(condor_startd,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 
 pure_c_plus_target(condor_startd.pure, $(STARTD_OBJ), $(LIB) )
 
