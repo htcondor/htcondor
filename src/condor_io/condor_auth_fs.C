@@ -135,7 +135,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 		}
         mySock_->encode();
         
-        retval = 0;
+        retval = -1;	// assume failure.  i am glass-half-empty man.
         if ( fd > -1 ) {
             //check file to ensure that claimant is owner
             struct stat stat_buf;
@@ -156,9 +156,16 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
                 else {
                     //need to lookup username from file and do setOwner()
                     char *tmpOwner = my_username( stat_buf.st_uid );
-                    setRemoteUser( tmpOwner );
-                    free( tmpOwner );
-                    setRemoteDomain( getLocalDomain());
+					if (!tmpOwner) {
+							// this could happen if, for instance,
+							// getpwuid() failed.
+							retval = -1;
+					} else {
+							retval = 0;	// 0 means success here. sigh.
+							setRemoteUser( tmpOwner );
+							free( tmpOwner );
+							setRemoteDomain( getLocalDomain());
+					}
                 }
             }
         } 
