@@ -1239,8 +1239,11 @@ sub configure_full_install {
 	    chop( $_ = <STDIN> );
 	    $local_dir_str = $_;
 	    if( $_ =~ s/^(.*)\/\$\(HOSTNAME\)$/$1/ ) {
-		$local_dir = $_;
-		$has_mach = 1;
+			$local_dir = $_;
+			$has_mach = 1;
+		} else {
+			$local_dir = $local_dir_str;
+			$has_mach = 0;
 	    }
 	    if( ! -d $local_dir ) {
 		mkdir($local_dir, 0777) || 
