@@ -1,3 +1,13 @@
+12/15/04 V6_6-merge-26
+   The state of the V6_6-branch for yet another merge into V6_7.  This
+   includes most (maybe all?) of the 6.6.8 bug fixes (at least the
+   ones we're going to have in time for 6.7.3).  in particular, some
+   crucial windoze fixes, the DaemonCore fix for CDF's jobs-run-twice
+   bug (GNATS PR-256), the fix to "condor_store_cred query" to verify
+   the credentials (not just check existance), the fix to submit for
+   consistently supporting "ThisStyle" and "this_style", and a few
+   other misc fixes.
+
 11/28/04 V6_6-merge-25
    The state of the V6_6-branch for yet another merge into V6_7.  This
    includes autoconf changes to remove tail/head + to find/use full
