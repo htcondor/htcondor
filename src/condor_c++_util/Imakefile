@@ -11,7 +11,7 @@ CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 #if IS_SPARC_SUNOS41
 SYSPARAM = sysparam_sun
 #endif
-#if IS_SUN4M_SOLARIS
+#if IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS551
 SYSPARAM = sysparam_solaris
 #endif
 #if IS_X86_SOLARIS
