@@ -23,6 +23,7 @@ del *.dbg
 for %%f in (master startd schedd collector negotiator shadow starter eventd) do move condor_%%f.save condor_%%f.dbg
 copy condor_rm.exe condor_hold.exe
 copy condor_rm.exe condor_release.exe
+copy condor_rm.exe condor_vacate_job.exe
 copy condor.exe condor_off.exe
 copy condor.exe condor_on.exe
 copy condor.exe condor_restart.exe
