@@ -170,10 +170,9 @@ COMMAND CmdTable[] = {
 #endif
 
 void _condor_interp_cmd_stream( int fd );
-static void scan_cmd( char *buf, int *argc, char *argv[] );
-static enum result do_cmd( int argc, char *argv[] );
-static enum command find_cmd( const char *name );
-static void display_cmd( int argc, char *argv[] );
+static void _condor_scan_cmd( char *buf, int *argc, char *argv[] );
+static enum result _condor_do_cmd( int argc, char *argv[] );
+static enum command _condor_find_cmd( const char *name );
 static BOOLEAN condor_iwd( const char *path );
 static BOOLEAN condor_fd( const char *num, const char *path, const char *open_mode );
 static BOOLEAN condor_ckpt( const char *path );
@@ -182,15 +181,16 @@ static BOOLEAN condor_migrate_to( const char *host_addr, const char *port_num );
 static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
 static int open_tcp_stream( unsigned int ip_addr, unsigned short port );
-void unblock_signals();
+void _condor_unblock_signals( void );
 void display_ip_addr( unsigned int addr );
 void open_std_file( int which );
-void set_iwd();
+void _condor_set_iwd();
 int open_file_stream( const char *local_path, int flags, size_t *len );
 int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 void get_ckpt_name();
 extern volatile int InRestart;
 extern void InitFileState();
+void _condor_setup_dprintf();
 
 int
 #if defined(HPUX)
@@ -203,170 +203,219 @@ MAIN( int argc, char *argv[], char **envp )
 	char	*cmd_name;
 	char	*extra;
 	int		scm;
-	char	*argv0;
-	char 	*argv1;
+	char	*arg;
+	int		i, warning = TRUE;
 	
+		/*
+		  These will hold the argc and argv we actually give to the
+		  user's code, with any Condor-specific flags stripped out. 
+		*/
+	int		user_argc;
+	char*	user_argv[_POSIX_ARG_MAX];
+
 #undef WAIT_FOR_DEBUGGER
 #if defined(WAIT_FOR_DEBUGGER)
 	{
-	int		do_wait = 1;
-	while( do_wait )
-		;
+		i = 1;
+		while( i );
 	}
 #endif
 
-	/* Some platforms have very picky strcmp()'s which like
-	 * to coredump (IRIX) so make certain argv[1] points to something 
-	 * by using an intermediate argv1 variable where neccesary */
-	 if ( argc < 2 ) 
-		argv1 = "\0";
-	 else
-		argv1 = argv[1];
+		/* The first arg will always be the same */
+	user_argv[0] = argv[0];
+	user_argc = 1;
 
 		/*
-		We must be started by a parent providing a command stream,
-		therefore there must be at least 3 arguments.
-		So here we check and see if we have been started properly
-		with a command stream, as a condor_starter would do.  If
-		not, we set syscalls to local, disable dprintf debug messages,
-		print out a warning, and attempt to run normally "outside"
-		of condor (with no checkpointing, remote syscalls, etc).  This
-		allows users to have one condor-linked binary which can be run
-		either inside or outside of condor.  -Todd, 5/97.
+		  Now, process our command-line args to see if there are
+		  any ones that begin with "-_condor" and deal with them. 
 		*/
-	if ( (argc < 3) ||
-		 ( (strcmp("-_condor_cmd_fd",argv1) != MATCH) &&
-		   (strcmp("-_condor_cmd_file",argv1) != MATCH) ) ) {
-				/* Run the job "normally" outside of condor */
-				SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-				DebugFlags = 0;		/* disable dprintf messages */
-				InitFileState();  /* to create a file_state table so no SEGV */
-				if ( strcmp("-_condor_nowarn",argv1) != MATCH ) {
-					fprintf(stderr,"WARNING: This binary has been linked for Condor.\nWARNING: Setting up to run outside of Condor...\n");
-				} else {
-					/* compensate argument vector for flag */
-					argv0 = argv[0];
-					argv++;
-					argc--;
-					argv[0] = argv0;
-				}
+	for( i=1; (i<argc && argv[i]); i++ ) {
+		if( (strncmp(argv[i], "-_condor_", 9) != MATCH ) ) {
+				/* Non-Condor arg so save it. */
+			user_argv[user_argc] = argv[i];
+			user_argc++;
+			continue;
+		}
 
-				/* Now start running user code and forget about condor */
+			/* 
+			   This must be a Condor arg.  Let's just deal with the 
+			   part of it that'll be unique...
+			*/
+		arg = argv[i]+9;
+
+			/* 
+			   '-_condor_cmd_fd N' is used to specify which fd our
+			   command stream from the starter is on.
+			*/
+		if( (strcmp(arg, "cmd_fd") == MATCH) ) {
+			if( ! argv[i+1] ) {
+				dprintf( D_ALWAYS, "Error in command line syntax\n" );
+				Suicide();
+			} else {
+				i++;
+				cmd_fd = strtol( argv[i], &extra, 0 );
+				if( extra[0] ) {
+					dprintf( D_ALWAYS, "Can't parse cmd stream fd (%s)\n", 
+							 argv[i] );
+					Suicide();
+				}
+			}
+			continue;
+		}
+
+
+			/* 
+			   '-_condor_cmd_file filename' is used to specify a file
+			   where we're supposed to read our command stream from.
+			   This doesn't seem to be used anymore, but I thought I'd
+			   leave it in here just in case someone does use it, or
+			   it's useful for debugging or something. -Derek 9/29/99 
+			*/
+		if( (strcmp(arg, "cmd_file") == MATCH) ) {
+			dprintf( D_FULLDEBUG, "Found -_condor_cmd_file\n" );
+			if( ! argv[i+1] ) {
+				dprintf( D_ALWAYS, "Error in command line syntax\n" );
+				Suicide();
+			} else {
+				i++;
+				cmd_fd = open( argv[i], O_RDONLY );
+				if( cmd_fd < 0 ) {
+					dprintf( D_ALWAYS, "Can't read cmd file \"%s\"\n", 
+							 argv[i] ); 
+					Suicide();
+				}
+			}
+			continue;
+		}
+
+			/*
+			  '-_condor_debug_wait' can be set to setup an infinite
+			  loop so that we can attach to the user job.  This
+			  argument can be specified in the submit file, but must
+			  be the first argument to the job.  The argv is
+			  compensated so that the job gets the vector it
+			  expected.  --RR
+			*/
+		if( (strcmp(arg, "debug_wait") == MATCH) ) {
+			i = 1;
+			while (i);
+			continue;
+		}
+
+			/* 
+			   '-_condor_nowarn' is only used when running a job
+			   linked for Condor outside of Condor to surpress the
+			   opening warning message.
+			*/
+		if( (strcmp(arg, "nowarn") == MATCH) ) {
+			warning = FALSE;
+			continue;
+		}
+
+			/*
+			  '-_condor_D_XXX' can be set to add the D_XXX
+			  (e.g. D_ALWAYS) debug level for this job's output.
+			  This is for debug messages inside our checkpointing and
+			  remote syscalls code.  This option is predominantly
+			  useful for running outside of Condor, though it can
+			  also be set in the submit file for jobs run inside of
+			  Condor.  If this is not set, regular jobs get D_ALWAYS
+			  printed into the ShadowLog on the submit machine, and
+			  jobs running outside of Condor drop all dprintf()
+			  messages.  If a user sets a given level, messages from
+			  that level either go to the ShadowLog if we're
+			  connected to a shadow, or stderr, if not.
+			  -Derek Wright 9/29/99
+			*/
+		if( (strncmp(arg, "D_", 2) == MATCH) ) {
+			_condor_set_debug_flags( arg );
+			continue;
+		}
+
+	}
+
+		/*
+		  We're done processing all the args, so copy the 
+		  user_arg* stuff back into the real argv and argc. 
+		  First, we must terminate the final element.
+		*/
+	user_argv[user_argc] = NULL;
+	argc = user_argc;
+	for( i=0; i<=argc; i++ ) {
+		argv[i] = user_argv[i];
+	}
+
+		/*
+		  We must be started by a parent providing a command stream,
+		  if we're running in Condor, which would mean cmd_fd is set.
+		  So here we check and see if we have been started properly
+		  with a command stream, as a condor_starter would do.  If
+		  not, we set syscalls to local, print out a warning, and
+		  attempt to run normally "outside" of condor (with no
+		  checkpointing, remote syscalls, etc).  This allows users to
+		  have one condor-linked binary which can be run either inside
+		  or outside of condor.  -Todd, 5/97.
+		*/
+	if( cmd_fd < 0) {
+			/* Run the job "normally" outside of condor */
+		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		InitFileState();  /* to create a file_state table so no SEGV */
+		if ( warning ) {
+			fprintf( stderr,
+					 "WARNING: This binary has been linked for Condor.\n"
+					 "WARNING: Setting up to run outside of Condor...\n" );
+		} 
+
+			/* Now start running user code and forget about condor */
 #if defined(HPUX)
-				exit(_start( argc, argv, envp ));
+		exit(_start( argc, argv, envp ));
 #else
-				exit( main( argc, argv, envp ));
+		exit( main( argc, argv, envp ));
 #endif
 	}
 
 	
-	/* now setup signal handlers, etc */
+		/* now setup signal handlers, etc */
 	_condor_prestart( SYS_REMOTE );
 
 
+		/* Initialize our sockets back to the shadow */
 #define USE_PIPES 0
-
 #if USE_PIPES
 	init_syscall_connection( TRUE );
 #else
 	init_syscall_connection( FALSE );
 #endif
 
-#if 0
-	dprintf( D_ALWAYS, "User process started\n" );
-	dprintf( D_ALWAYS, "\nOriginal\n" );
-	DumpOpenFds();
-	dprintf( D_ALWAYS, "END\n\n" );
-	delay();
-#endif
+		/* Do everything we need to get dprintf() working */
+	_condor_setup_dprintf();
 
-	set_iwd();
+		/* 
+		   Now, dprintf() our version string.  This serves many
+		   purposes: 1) it means anything linked with any Condor
+		   library, standalone or regular, will reference the
+		   CondorVersion() symbol, so our magic-ident string will
+		   always be included by the linker, 2) in standard jobs,
+		   we'll actually see (in the ShadowLog) what version of the
+		   libraries the user job is linked with, 3) b/c dprintf() is
+		   stubbed out of standalone jobs, we *won't* get the clutter
+		   there, unless people explicitly turn on debugging output. 
+		   -Derek Wright 5/26/99
 
-	if( strcmp("-_condor_cmd_fd",argv[1]) == MATCH ) {
-#if 0
-		dprintf( D_ALWAYS, "Found condor_cmd_fd\n" );
-		delay();
-#endif
-		cmd_fd = strtol( argv[2], &extra, 0 );
-		if( extra[0] ) {
-			dprintf( D_ALWAYS, "Can't parse cmd stream fd (%s)\n", argv[2]);
-			exit( 1 );
-		}
-#if 0
-		dprintf( D_ALWAYS, "fd number is %d\n", cmd_fd );
-		delay();
-#endif
-		/* scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED ); */
-		pre_open( cmd_fd, TRUE, FALSE );
+		   Moved here on 9/29/99, since we don't want the dprintf() in
+		   _condor_prestart() for standard jobs b/c that'd mean we
+		   dprintf() before we get our sockets initialized. -Derek
+		*/
+	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
 
-#if 0
-		dprintf( D_ALWAYS, "\nBefore reading commands\n" );
-		DumpOpenFds();
-		dprintf( D_ALWAYS, "END\n\n" );
-		delay();
-#endif
+	_condor_set_iwd();
 
+	pre_open( cmd_fd, TRUE, FALSE );
 
-	} else if( strcmp("-_condor_cmd_file",argv[1]) == MATCH ) {
-
-		dprintf( D_FULLDEBUG, "Found condor_cmd_file\n" );
-		/* scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED ); */
-		cmd_fd = open( argv[2], O_RDONLY);
-		if( cmd_fd < 0 ) {
-			dprintf( D_ALWAYS, "Can't read cmd file \"%s\"\n", argv[2] );
-			Suicide();
-		}
-
-		/* Some error in the command line syntax */
-	} else {
-		dprintf( D_ALWAYS, "Error in command line syntax\n" );
-		Suicide();
-	}
-
-#if 0
-	dprintf( D_ALWAYS, "\nCalling cmd stream processor\n" );
-	delay();
-#endif
 	_condor_interp_cmd_stream( cmd_fd );
-#if 0
-	dprintf( D_ALWAYS, "Done\n\n" );
-	delay();
-#endif
-	cmd_name = argv[0];
-	argv += 2;
-	argc -= 2;
 
-   /*
-   The flag '-_condor_debug_wait' can be set to setup an infinite loop so
-   that we can attach to the user job.  This argument can be specified in
-   the submit file, but must be the first argument to the job.  The argv
-   is compensated so that the job gets the vector it expected.  --RR
-   */
-   if ( (argc > 1) && (strcmp(argv[1], "-_condor_debug_wait") == MATCH) )
-   {
-       int i = 1;
-       argv ++;
-       argc --;
-       while (i);
-   }
-
-	argv[0] = cmd_name;
-
-	unblock_signals();
+	_condor_unblock_signals();
 	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
-
-#if 0
-	dprintf( D_ALWAYS, "\nBefore calling main()\n" );
-	DumpOpenFds();
-	dprintf( D_ALWAYS, "END\n\n" );
-#endif
-
-#if 0
-	DebugFd = syscall( SYS_open, "/tmp/mike", O_WRONLY | O_CREAT | O_TRUNC, 0664 );
-	syscall( SYS_dup2, DebugFd, 23 );
-	DebugFd = 23;
-	debug_msg( "Hello World!\n" );
-#endif
 
 	get_ckpt_name();
 	open_std_file( 0 );
@@ -393,8 +442,8 @@ _condor_interp_cmd_stream( int fd )
 	int		scm;
 
 	while( fgets(buf,sizeof(buf),fp) ) {
-		scan_cmd( buf, &argc, argv );
-		switch( do_cmd(argc,argv) ) {
+		_condor_scan_cmd( buf, &argc, argv );
+		switch( _condor_do_cmd(argc,argv) ) {
 		  case OK:
 			break;
 		  case NOT_OK:
@@ -409,7 +458,7 @@ _condor_interp_cmd_stream( int fd )
 }
 
 static void
-scan_cmd( char *buf, int *argc, char *argv[] )
+_condor_scan_cmd( char *buf, int *argc, char *argv[] )
 {
 	int		i;
 
@@ -426,13 +475,13 @@ scan_cmd( char *buf, int *argc, char *argv[] )
 
 
 static enum result
-do_cmd( int argc, char *argv[] )
+_condor_do_cmd( int argc, char *argv[] )
 {
 	if( argc == 0 ) {
 		return FALSE;
 	}
 
-	switch( find_cmd(argv[0]) ) {
+	switch( _condor_find_cmd(argv[0]) ) {
 	  case END_MARKER:
 		return END;
 	  case IWD:
@@ -474,7 +523,7 @@ do_cmd( int argc, char *argv[] )
 }
 
 static enum command
-find_cmd( const char *str )
+_condor_find_cmd( const char *str )
 {
 	COMMAND	*ptr;
 
@@ -641,7 +690,7 @@ _set_priv()
 }
 
 void
-unblock_signals()
+_condor_unblock_signals( void )
 {
 	sigset_t	sig_mask;
 	int			scm;
@@ -760,7 +809,7 @@ open_std_file( int which )
 }
 
 void
-set_iwd()
+_condor_set_iwd()
 {
 	char	iwd[ _POSIX_PATH_MAX ];
 	char	buf[ _POSIX_PATH_MAX + 50 ];
@@ -809,3 +858,18 @@ debug_msg( const char *msg )
 	}
 }
 #endif
+
+
+void
+_condor_setup_dprintf()
+{
+	if( ! DebugFlags ) {
+			// If it hasn't already been set, give a default, so we
+			// still get dprintf() if we're running in Condor.
+		DebugFlags = D_ALWAYS | D_NOHEADER;
+	}
+
+		// Now, initialize what FP we print to.  If we got to this
+		// function, we want to use the socket back to the shadow. 
+	_condor_dprintf_init( CLIENT_LOG );
+}
