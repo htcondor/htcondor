@@ -105,10 +105,11 @@ class RemoteResource : public Service {
 		 */ 
 	virtual bool activateClaim( int starterVersion = 2 );
 
-		/** Here we tell the remote starter to kill itself in a gentle manner.
+		/** Tell the remote starter to kill itself.
+			@param graceful Should we do a graceful or fast shutdown?
 			@return true on success, false if a problem occurred.
 		*/
-	virtual bool killStarter();
+	virtual bool killStarter( bool graceful = false );
 
 		/** Print out this representation of the remote resource.
 			@param debugLevel The dprintf debug level you wish to use 
