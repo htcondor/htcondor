@@ -11,6 +11,8 @@ library_target(libprocapi.a,$(OBJ))
 c_plus_target(procapi.tester,procapi.t.o,$(LIB))
 pure_c_plus_target(procapi.tester.pure,procapi.t.o,$(LIB))
 
+html_target( procapi.h procinterface.h )
+
 release:
 stripped:
 static: 
