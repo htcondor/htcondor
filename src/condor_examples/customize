@@ -16,6 +16,8 @@
 		       "../release_dir/etc/examples/condor_config.submit.generic" );
 &customize_config_file( "condor_config.root.generic",
 		       "../release_dir/etc/examples/condor_config.root.generic" );
+&customize_config_file( "condor_config.local.central.manager",
+	       "../release_dir/etc/examples/condor_config.local.central.manager" );
 &customize_boot_script();
 
 
@@ -25,6 +27,7 @@ sub get_platform_defaults {
     chop($os = `uname`);
     chop($rel = `uname -r`);
     $console_devs="";
+    $needs_kbd=0;
     $_ = $os;
   SWITCH: {
       if(/^Linux/) { 
@@ -68,14 +71,17 @@ sub get_platform_defaults {
       }
       if(/^IRIX6/) {
 	  $mail_path="/usr/sbin/mailx";
+	  $needs_kbd=1;
 	  last SWITCH;
       }
       if(/^IRIX5/) {
 	  $mail_path="/usr/sbin/Mail";
+	  $needs_kbd=1;
 	  last SWITCH;
       }
       if(/^OSF1/)  {
 	  $mail_path="/usr/ucb/mailx";
+	  $needs_kbd=1;
 	  last SWITCH;
       }
   }
@@ -84,30 +90,40 @@ sub get_platform_defaults {
 
 sub customize_config_file {
     local( $generic, $target ) = @_;
-
+    
     -f $target && unlink( $target );
-
+    
     open( TARGET, ">$target" ) ||
 	die "Can't open $target: $!\n";
     open( GENERIC, "<$generic" ) || 
 	die "Can't open $generic: $!\n";
-
+    
     print "Configuring $generic ... ";
-    LINE: while( <GENERIC> ) {
-      SWITCH: {
-	  if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
-	  if( /^ARCH.*$/ ) { $_ = "ARCH\t\t= $arch_name\n"; last SWITCH; }
-	  if( /^OPSYS.*$/ ) { $_ = "OPSYS\t\t= $os_name\n"; last SWITCH; }
-	  if( /^#CONSOLE_DEVICES.*$/ ) {
-	     if( $console_devs ) {
-		 print TARGET "CONSOLE_DEVICES\t= $console_devs\n";
-	     }
-	     next LINE;
-	 }
-
-      }
-	print TARGET "$_";
+  LINE: while( <GENERIC> ) {
+    SWITCH: {
+	if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
+	if( /^ARCH.*$/ ) { $_ = "ARCH\t\t= $arch_name\n"; last SWITCH; }
+	if( /^OPSYS.*$/ ) { $_ = "OPSYS\t\t= $os_name\n"; last SWITCH; }
+	if( /^#CONSOLE_DEVICES.*$/ ) {
+	   if( $console_devs ) {
+	       print TARGET "CONSOLE_DEVICES\t= $console_devs\n";
+	   } else {
+	       print TARGET $_;
+	   }
+	   next LINE;
+        }
+	if( /^DAEMON_LIST.*$/ ) {
+	    if( $needs_kbd ) {
+		chop($_);
+		print TARGET "$_, KBDD\n";
+	    } else {
+		print TARGET $_;
+	    }
+	    next LINE;
+	}
+	print TARGET $_;
     }
+  }
     print "done.\n";
     close TARGET;
     close GENERIC;
