@@ -276,6 +276,24 @@ do_REMOTE_syscall()
 		return -1;
 	}
 
+	case CONDOR_begin_execution:
+	{
+		assert( syscall_sock->end_of_message() );
+
+		errno = 0;
+		rval = pseudo_begin_execution();
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code( terrno ) );
+		}
+		assert( syscall_sock->end_of_message() );
+		return 0;
+	}
+
 	case CONDOR_open:
 	  {
 		char *  path;
