@@ -26,7 +26,10 @@
 **
 */ 
 
-#include <signal.h>
+extern "C" 
+{
+#  include <signal.h>
+}
 
 #define N_POSIX_SIGS 19
 

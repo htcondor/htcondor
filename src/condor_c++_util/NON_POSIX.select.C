@@ -28,13 +28,30 @@
 
 #define _POSIX_SOURCE
 
-#include "_condor_fix_types.h"
+/* To remove warning in HPUX about implicit decl of select() ... */
+#if defined (HPUX9)
+#include <sys/time.h>
+#endif
 
+#include "_condor_fix_types.h"
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_fix_timeval.h"
+
 #include "selector.h"
+
+/*
+   In HPUX, the select call takes (int *) params, wheras SunOS, Solaris
+   take (fd_set *) params.  We define an intermediate type to handle
+   this.    -- Rajesh
+*/
+
+#if defined (HPUX9)
+typedef int *SELECT_FDSET_PTR;
+#else
+typedef fd_set *SELECT_FDSET_PTR;
+#endif
 
 #if defined(IRIX53)
 #	include<bstring.h>
@@ -49,7 +66,6 @@ void display_fd_set( char *msg, fd_set *set, int max );
 
 Selector::Selector()
 {
-
 	state = VIRGIN;
 	timeout_wanted = FALSE;
 	max_fd = -1;
@@ -144,7 +160,11 @@ Selector::execute()
 		tp = NULL;
 	}
 
-	nfds = select( max_fd + 1, &read_fds, &write_fds, &except_fds, tp );
+	nfds = select( max_fd + 1, 
+				  (SELECT_FDSET_PTR) &read_fds, 
+				  (SELECT_FDSET_PTR) &write_fds, 
+				  (SELECT_FDSET_PTR) &except_fds, 
+				  tp );
 
 	if( nfds < 0 ) {
 		if( errno == EINTR ) {

@@ -69,6 +69,8 @@
 #include "condor_jobqueue.h"
 #include "list.h"
 
+#pragma interface
+
 class FilterObj;
 
 class ProcFilter {

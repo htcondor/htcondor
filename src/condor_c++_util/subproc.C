@@ -344,7 +344,7 @@ eat_sigchld()
 	}
 
 		// set up our own handler for SIGCHLD
-	action.sa_handler = sigchld_handler;
+	action.sa_handler = (void (*)(...)) sigchld_handler;
 	sigemptyset( &action.sa_mask );
 	action.sa_flags = 0;
 	sigaction( SIGCHLD, &action, &old_action );

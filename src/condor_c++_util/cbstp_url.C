@@ -34,6 +34,10 @@
 #include "url_condor.h"
 #include "condor_debug.h"
 
+
+extern int socket (int, int, int);
+extern int connect (int, struct sockaddr *, int);
+
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  JCP */
 
 int
@@ -76,8 +80,9 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int flags,
 	struct sockaddr_in	sin;
 	int		sock_fd;
 	int		status;
-	
-	string_to_sin(name, &sin);
+
+	// cast discards const	
+	string_to_sin((char *) name, &sin);
 	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock_fd < 0) {
 		fprintf(stderr, "socket() failed, errno = %d\n", errno);

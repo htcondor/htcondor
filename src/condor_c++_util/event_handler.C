@@ -116,7 +116,8 @@ EventHandler::install()
 	for( i=0; i<N_POSIX_SIGS; i++ ) {
 		signo = next_sig();
 		if( sigismember(&mask,signo) ) {
-			action.sa_handler = func;
+			// explicit type cast to eliminate type check warning  -- Rajesh
+			action.sa_handler = (void (*)(...)) func;
 			action.sa_mask = mask;
 			action.sa_flags = SA_NOCLDSTOP;
 			if( sigaction(signo,&action,&o_action[i]) < 0 ) {

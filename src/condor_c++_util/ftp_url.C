@@ -56,6 +56,8 @@ static char *passwd = "CondorURLFTP@localhost.edu";
 #define FTP_CONNECTED_RESP 150
 
 extern int readline(int, char *);
+extern int socket (int, int, int);
+extern int connect (int, struct sockaddr *, int);
 
 static
 char *get_ftpd_response(int sock_fd, int resp_val)

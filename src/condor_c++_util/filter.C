@@ -33,6 +33,8 @@
 
 #define _POSIX_SOURCE
 
+#pragma implementation "filter.C"
+
 /* Solaris specific change ..dhaval 6/27 */
 #if defined(Solaris)
 #include "_condor_fix_types.h"
@@ -49,7 +51,6 @@
 #pragma define_template List<FilterObj>
 #pragma define_template Item<FilterObj>
 #endif
-
 
 static const int STAR = -1;
 static int FilterError;

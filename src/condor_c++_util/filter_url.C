@@ -27,6 +27,7 @@
 */ 
 
 #include <string.h>
+#include <sys/wait.h>
 #include "condor_common.h"
 #include "condor_fix_wait.h"
 #include "url_condor.h"
@@ -98,6 +99,8 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 			return_fd = pipe_fds[READ_END];
 			close(pipe_fds[WRITE_END]);
 		}
+
+
 		waitpid(child_pid, &status, 0);
 	} else {
 		/* The child */
@@ -129,7 +132,8 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 				}
 			}
 
-			makeargv(&argc, argv, name);
+			// cast discards const
+			makeargv(&argc, argv, (char *) name);
 			execv(argv[0], argv);
 			fprintf(stderr, "execv(%s) failed!!!!\n", argv[0]);
 			exit(-1);

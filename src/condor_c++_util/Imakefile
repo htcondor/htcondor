@@ -38,6 +38,7 @@ SYSPARAM = sysparam_irix
 
 URL_SRC = url_condor.C cbstp_url.C file_url.C http_url.C filter_url.C \
 	mailto_url.C cfilter_url.C ftp_url.C include_urls.C 
+
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o 
 
@@ -70,6 +71,9 @@ c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
 c_plus_target(test_context, test_carmi_context.o, $(TEST_LIBS) ../condor_xdr_lib/xdr_lib.a)
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
+
+filter.o: filter.C filter.h
+	$(CC) $(CFLAGS) -c filter.C
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(TEST_LIBS)

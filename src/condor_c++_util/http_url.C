@@ -43,6 +43,10 @@ extern "C" {
 #define ASCII_CR ('M' - 32)
 #define ASCII_LF ('J' - 32)
 
+extern int socket (int, int, int);
+extern int connect (int, struct sockaddr *, int);
+
+
 int
 readline(int fd, char *buf)
 {
