@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
@@ -83,8 +84,9 @@ sysapi_ncpus_raw(void)
 
 	FILE        *proc;
 	char 		buf[256];
-#if defined(ALPHA)
 	char		*tmp;
+#if defined(I386) || defined(IA64)
+	int             siblings = 0;
 #endif
 	int 		num_cpus = 0;
 
@@ -138,9 +140,21 @@ bogomips        : 299.01
 	// Count how many lines begin with the string "processor".
 	while( fgets( buf, 256, proc) ) {
 #if defined(I386) || defined(IA64)
-		if( !strincmp(buf, "processor", 9) ) {
-			num_cpus++;
+	    // For hyperthreads we assume processor will appear before 
+	    // sibling.  If that fails we're screwed.
+	    if( !strincmp(buf, "processor", 9) ) {
+	        if( siblings <= 0 || param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1) ) {
+	             num_cpus++;
+	       	}
+	      	siblings--;
+	    }
+	    if( !strincmp(buf, "siblings", 8) && siblings < 0 ) {
+	        tmp = strchr( buf, ':' );
+		if( tmp ) {	  
+		    tmp++;
+		    siblings = atoi(tmp)-1;
 		}
+	    }
 #elif defined(ALPHA)
 		if( !strincmp(buf, "cpus detected", 13) ) {
 			tmp = strchr( buf, ':' );

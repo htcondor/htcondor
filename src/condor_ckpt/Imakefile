@@ -115,12 +115,13 @@ OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
 #else /* !DOES_CHECKPOINTING */
 
 #if IS_AIX5
-OBJ =	syscall_mode.o
+SHARED_OBJ =
 #else
-OBJ =	syscall_mode.o shared_utils.o
+SHARED_OBJ = shared_utils.o
 #endif
+OBJ = signals_control.o syscall_mode.o $(SHARED_OBJ)
 
-#endif
+#endif /* !DOES_CHECKPOINTING */
 
 /* Figure out what should be in the libc++support library, if anything */
 #if DOES_CHECKPOINTING

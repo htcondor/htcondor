@@ -90,7 +90,7 @@ clean::							@@\
 	libraries. */
 #ifndef program_target
 #define	program_target( program, objlist, libs )		@@\
-program: objlist libs						@@\
+program: objlist						@@\
 	$(PRELINK_C) $(PRELINK_C_FLAGS) -o __prelink__.o objlist libs @@\
 	$(C_LINK) $(CFLAGS) -o program __prelink__.o $(ALL_LDFLAGS)	@@\
 	rm -f __prelink__.o @@\
@@ -103,7 +103,7 @@ clean::								@@\
 /* everyone else gets a normal link rule */
 #ifndef program_target
 #define	program_target( program, objlist, libs )		@@\
-program: objlist libs						@@\
+program: objlist						@@\
 	$(C_LINK) $(CFLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
 clean::								@@\
 	rm -f program objlist
@@ -119,7 +119,7 @@ clean::								@@\
 
 #ifndef program_target_complex
 #define	program_target_complex( program, objlist, comflags, linkflags, libs )		@@\
-program: objlist libs						@@\
+program: objlist						@@\
 	$(PRELINK_C) $(PRELINK_C_FLAGS) comflags -o __prelink__.o \
 		objlist libs @@\
 	$(C_LINK) comflags -o program __prelink__.o linkflags	@@\
@@ -132,7 +132,7 @@ clean::								@@\
 
 #ifndef program_target_complex
 #define	program_target_complex( program, objlist, comflags, linkflags, libs )		@@\
-program: objlist libs						@@\
+program: objlist						@@\
 	$(C_LINK) comflags -o program objlist libs linkflags	@@\
 clean::								@@\
 	rm -f program objlist
@@ -148,7 +148,7 @@ clean::								@@\
 
 #ifndef c_plus_target
 #define	c_plus_target( program, objlist, libs )			@@\
-program: objlist libs						@@\
+program: objlist						@@\
 	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
 	$(CC_LINK) $(C_PLUS_FLAGS) -o program __prelink__.o \
 		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
@@ -161,7 +161,7 @@ clean::								@@\
 
 #ifndef c_plus_target
 #define	c_plus_target( program, objlist, libs )			@@\
-program: objlist libs						@@\
+program: objlist						@@\
 	$(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs \
 		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
 clean::								@@\
@@ -178,7 +178,7 @@ clean::								@@\
 
 #ifndef c_plus_target_complex
 #define	c_plus_target_complex( program, objlist, comflags, linkflags, libs )	@@\
-program: objlist libs						@@\
+program: objlist						@@\
 	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) comflags -o __prelink__.o \
 		objlist libs @@\
 	$(CC_LINK) comflags -o program __prelink__.o linkflags $(DEMANGLE)	@@\
@@ -191,7 +191,7 @@ clean::								@@\
 
 #ifndef c_plus_target_complex
 #define	c_plus_target_complex( program, objlist, comflags, linkflags, libs )	@@\
-program: objlist libs						@@\
+program: objlist						@@\
 	$(CC_LINK) comflags -o program objlist libs linkflags $(DEMANGLE)	@@\
 clean::								@@\
 	rm -f program objlist
@@ -448,7 +448,7 @@ dir##/##program: program##.static				@@\
 	cp program##.static dir##/##program			@@\
 	chmod EXECUTABLE_MODE dir##/##program			@@\
 	$(STRIP) dir##/##program				@@\
-program##.static: objlist libs					@@\
+program##.static: objlist					@@\
 	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static __prelink__.o $(ALL_LDFLAGS) $(DEMANGLE) @@\
 	rm -f __prelink__.o @@\
@@ -466,7 +466,7 @@ dir##/##program: program##.static				@@\
 	cp program##.static dir##/##program			@@\
 	chmod EXECUTABLE_MODE dir##/##program			@@\
 	$(STRIP) dir##/##program				@@\
-program##.static: objlist libs					@@\
+program##.static: objlist					@@\
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
 clean:: 							@@\
 	rm -f program##.static objlist				@@\
@@ -678,26 +678,26 @@ static_dir/##name##: static					@@\
 #if HAS_PURIFY
 
 #define	pure_c_plus_target( program, objlist, libs )	@@\
-##program: objlist libs					@@\
+##program: objlist					@@\
 	purify -g++=yes -chain-length=50 -cache-dir=$(PURE_CACHE_DIR) purecov -g++=yes $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purify_c_plus_target( program, objlist, libs )	@@\
-##program: objlist libs					@@\
+##program: objlist					@@\
 	purify -g++=yes -chain-length=50 PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purecov_c_plus_target( program, objlist, libs )	@@\
-##program: objlist libs					@@\
+##program: objlist					@@\
 	purecov -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean:: 						@@\
 	rm -f program objlist
 
 
 #define	quantify_c_plus_target( program, objlist, libs )	@@\
-##program: objlist libs						@@\
+##program: objlist						@@\
 	quantify -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)     @@\
 clean::		 						@@\
 	rm -f program objlist

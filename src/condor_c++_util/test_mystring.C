@@ -401,6 +401,16 @@ int main (int argc, char **argv)
 
     // ---- Test tokenizing functions.
 	MyString tt1("To  be or not to be; that is the question");
+
+	// Make sure that calling GetNextToken() before calling Tokenize()
+	// returns NULL...
+	if ( tt1.GetNextToken(" ;", false) == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
 	MyString tt2("    Ottavio Bottechia_");
 	tt1.Tokenize();
 	tt2.Tokenize();
@@ -431,6 +441,18 @@ int main (int argc, char **argv)
 	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
 		everythingOkay = false;
 	}
+
+	// Make sure that if we call GetNextToken() after we've hit the
+	// end things are still okay...
+	if ( tt1.GetNextToken(" ;", false) == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+
+
 
 	token = tt2.GetNextToken("_", false);
 	if ( token != NULL && !strcmp(token, "Bottechia") ) {

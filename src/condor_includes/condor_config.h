@@ -60,6 +60,7 @@ extern "C" {
 	void config( int wantsQuiet=0 );
 	void config_host( char* host=NULL );
 	void config_fill_ad( ClassAd* );
+        int  param_boolean_int( const char *name, int default_value );  
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
 	char * expand_macro ( const char *value, BUCKET *table[], int table_size,

@@ -314,31 +314,42 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
     
     // now we try to use the context to Impersonate and thereby get the login
     rc = (pf->ImpersonateSecurityContext)( &srvCtx );
+
+	char buf[256];
+	char *dom;
+	DWORD bufsiz = sizeof buf;
+
     if ( rc != SEC_E_OK ) {
         dprintf( D_ALWAYS,
-                 "sspi_server_auth(): Failed to impersonate (returns %d)!\n", rc );
+                 "sspi_server_auth(): Failed to impersonate (returns %d)!\n",
+					 rc );
     } else {
-        char buf[256];
-		char *dom;
-        DWORD bufsiz = sizeof buf;
+
+		// PLEASE READ: We're now running in the context of the
+		// client we're impersonating. This means dprintf()'ing is
+		// OFF LIMITS until we RevertSecurityContext(), since the
+		// dprintf() will likely fail because the client 
+		// probably will not have write access to the log file.
+
         GetUserName( buf, &bufsiz );
-        dprintf( D_FULLDEBUG,
-                 "sspi_server_auth(): user name is: \"%s\"\n", buf );
-        setRemoteUser(buf);
+		setRemoteUser(buf);
 		dom = my_domainname();
-        dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", 
-				 dom);
 		setRemoteDomain(dom);
-        it_worked = TRUE;
-        (pf->RevertSecurityContext)( &srvCtx );
+		it_worked = TRUE;
+	   	(pf->RevertSecurityContext)( &srvCtx );
     }
-    
+
+	// Ok, safe to dprintf() now...
+
+	dprintf( D_FULLDEBUG, "sspi_server_auth(): user name is: \"%s\"\n", buf );
+	dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", dom);
+
     (pf->FreeContextBuffer)( secPackInfo );
-    
+
     dprintf( D_FULLDEBUG,"sspi_server_auth() exiting\n" );
-    
-    // return success (1) or failure (0)
-    return it_worked;
+
+    // return success (1) or failure (0) 
+	return it_worked;
 }
 
 int

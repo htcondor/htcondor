@@ -160,10 +160,6 @@ endif
 #define HAS_INET_NTOA YES
 #endif
 
-#ifndef NEEDS_SPECIAL_STATIC_BUILD
-#define NEEDS_SPECIAL_STATIC_BUILD NO
-#endif
-
 #ifndef HAS_PURIFY
 #define HAS_PURIFY NO
 #endif
@@ -275,11 +271,29 @@ DEBUG_FLAG = DebugFlag
   MD_LIB =
 #endif
 
+
+/* This is an ugly hack to get NMI R5 released on AIX 5.1 with no lead
+time.  this should all be cleaned up ASAP!  apparently, if we don't
+manually enable static linking on the link line around these two
+libraries, they end up being dynamically linked in and the resulting
+binaries only run on the machine where they were built.  somehow, it's
+only happening to the globus libraries and only on AIX.  go figure.
+*/
+#if IS_AIX5
+  PRE_GLOBUS_LIBS = -Wl,-bstatic
+  POST_GLOBUS_LIBS = -Wl,-bdynamic
+#else
+  PRE_GLOBUS_LIBS =
+  POST_GLOBUS_LIBS =
+#endif
+
+
 #if NEEDS_GSI && HAS_GSI
   /* Make sure that USE_GLOBUS_OPENSSL is set */
   #define NEEDS_OPENSSL YES
   GSI_FLAGS = -DCONDOR_GSI $(GSI_AUTH_FLAGS)
-  GSI_LIB   = $(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
+  GSI_LIB   = $(PRE_GLOBUS_LIBS) \
+	      $(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
@@ -291,7 +305,8 @@ DEBUG_FLAG = DebugFlag
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_error_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_oldgaa_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_common_$(GlobusFlavor).a 
+	      $(GLOBUS_DIR)/lib/libglobus_common_$(GlobusFlavor).a \
+	      $(POST_GLOBUS_LIBS)
 #else
   GSI_FLAGS =
   GSI_LIB   =
@@ -300,8 +315,10 @@ DEBUG_FLAG = DebugFlag
 #if NEEDS_OPENSSL && HAS_OPENSSL
   #if USE_GLOBUS_OPENSSL
     OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor)
-    OPENSSL_LIB = $(OPENSSL_DIR)/lib/libssl_$(GlobusFlavor).a \
-		  $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a
+    OPENSSL_LIB = $(PRE_GLOBUS_LIBS) \
+		  $(OPENSSL_DIR)/lib/libssl_$(GlobusFlavor).a \
+		  $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a \
+		  $(POST_GLOBUS_LIBS)
     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto_$(GlobusFlavor).a 
   #else
     OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include

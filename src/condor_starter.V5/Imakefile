@@ -10,15 +10,16 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -fno-implicit-templates
 IMPORT_LINKS = ../../config/import_links
 import(../condor_syscall_lib,file_stream.o)
 
-REMOTE_SYSCALL_LIB = \
+REMOTE_SYSCALL_OBJ = \
 	../condor_ckpt/signals_control.o \
-	../condor_syscall_lib/senders.o \
-	../condor_syscall_lib/syscall_mode.o \
-	../condor_syscall_lib/syscall_connect.o \
+	../condor_ckpt/syscall_mode.o \
 	../condor_syscall_lib/remote_syscall.o \
+	../condor_syscall_lib/senders.o \
+	../condor_syscall_lib/syscall_connect.o \
 	../condor_syscall_lib/syscall_numbers.o \
 	../condor_syscall_lib/xfer_file.o
-LIB = $(REMOTE_SYSCALL_LIB) $(STD_LIBS)
+
+LIB = $(STD_LIBS)
 
 OS = OperatingSystem
 
@@ -29,7 +30,7 @@ PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o \
 
 NON_PORTABLE_OBJ = NON_POSIX.o analyze_core.o
 
-OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) 
+OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(REMOTE_SYSCALL_OBJ)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)
