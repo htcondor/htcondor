@@ -58,6 +58,8 @@ HashTable<MyString,MyString> forcedAttributes( 64, hashFunction );
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
+char* mySubSystem = "SUBMIT";	/* Used for SUBMIT_EXPRS */
+
 ClassAd job;
 char    buffer[_POSIX_ARG_MAX + 64];
 
@@ -346,6 +348,8 @@ main( int argc, char *argv[] )
 
 	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
 	InsertJobExpr (buffer);
+
+	config_fill_ad( &job );
 
 	if (Quiet) {
 		fprintf(stdout, "Submitting job(s)");
