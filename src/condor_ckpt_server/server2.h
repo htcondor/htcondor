@@ -24,6 +24,7 @@
 #define SERVER2_H
 
 
+#include "condor_common.h"
 #include "constants2.h"
 #include "typedefs2.h"
 #include "gen_lib.h"
@@ -32,8 +33,7 @@
 #include "xferstat2.h"
 #include "replication.h"
 #include "list.h"
-#include <sys/types.h>
-#include <fstream.h>
+#include "classad_collection.h"
 
 
 class Server
@@ -61,6 +61,7 @@ class Server
 	int            num_peers;
 	int		       replication_level;
 	int			   reclaim_interval;
+	ClassAdCollection	*CkptClassAds;
     int SetUpPort(u_short port);
 	void SetUpPeers();
 	ReplicationSchedule replication_schedule;
