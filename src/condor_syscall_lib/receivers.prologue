@@ -153,9 +153,8 @@ int		process;
 	if( !read_ok ) {
 		ASSERT( SyscallSockClosed );
 		dprintf( D_ALWAYS, 
-		"Failed to get syscall_code for job %d, proc %d, host %s removing..\n",
-				jobnum, process, 
-		JobList[jobnum].hosts[JobList[jobnum].procs[process].host_num].name );
+		"Failed to get syscall_code for job %d, proc %d removing..\n",
+				jobnum, process);
 
 		RemoveProc( jobnum, process );
 		return -1;
