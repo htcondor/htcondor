@@ -67,7 +67,7 @@ ScriptQ::Run( Script *script )
 	// if we have no script limit, or we're under the limit, run now
 	if( maxScripts == 0 || _numScriptsRunning < maxScripts ) {
 		debug_printf( DEBUG_NORMAL, "Running %s script of Job %s...\n",
-					  prefix, script->_job->GetJobName() );
+					  prefix, script->GetNodeName() );
 		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
 			_numScriptsRunning++;
 			_scriptPidTable->insert( pid, script );
@@ -78,13 +78,14 @@ ScriptQ::Run( Script *script )
 		// BackgroundRun() returned pid 0
 		debug_printf( DEBUG_NORMAL, "  error: daemonCore->Create_Process() "
 					  "failed; deferring %s script of Job %s\n", prefix,
-					  script->_job->GetJobName() );
+					  script->GetNodeName() );
 	}
-	// max scripts already running
-	debug_printf( DEBUG_VERBOSE, "Max %s scripts (%d) already running; "
-				  "deferring %s script of Job %s\n", prefix, maxScripts,
-				  prefix, script->_job->GetJobName() );
-
+	else {
+			// max scripts already running
+		debug_printf( DEBUG_VERBOSE, "Max %s scripts (%d) already running; "
+					  "deferring %s script of Job %s\n", prefix, maxScripts,
+					  prefix, script->GetNodeName() );
+	}
 	_waitingQueue->enqueue( script );
 	return 0;
 }
@@ -112,9 +113,9 @@ ScriptQ::ScriptReaper( int pid, int status )
 
 	// call appropriate DAG reaper
 	if( ! script->_post ) {
-		_dag->PreScriptReaper( script->_job, status );
+		_dag->PreScriptReaper( script->GetNodeName(), status );
 	} else {
-		_dag->PostScriptReaper( script->_job, status );
+		_dag->PostScriptReaper( script->GetNodeName(), status );
 	}
 
 	// if there's another script waiting to run, run it now
