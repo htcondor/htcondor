@@ -11,12 +11,12 @@
 ** will simplify the Makefiles.
 */
 #ifndef object_dir_target
-#define object_dir_target(dir_name)						@@\
-dir_name:												@@\
-	mkdir dir_name										@@\
-	cd dir_name; for file in `ls $(SRC_TREE)/dir_name`;	\@@\
-		do ln -s $(SRC_TREE)/dir_name/$$file .; done;	@@\
-	cd dir_name; imake IMAKE_FLAGS
+#define object_dir_target(dir_name)										@@\
+## dir_name##:															@@\
+	mkdir dir_name														@@\
+	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`;	\		@@\
+		do ln -s $(SRC_TREE)/##dir_name##/$$file .; done;				@@\
+	cd dir_name##; imake IMAKE_FLAGS
 #endif object_dir_target
 
 /*
@@ -24,7 +24,7 @@ dir_name:												@@\
 */
 #ifndef simple_dir_target
 #define simple_dir_target(dirname)						@@\
-dirname:												@@\
+## dirname##:											@@\
 	mkdir dirname
 #endif simple_dir_target
 
@@ -33,21 +33,21 @@ dirname:												@@\
 */
 #ifndef object_target
 #define object_target(obj_name)							@@\
-obj_name: condor_/**/obj_name CheckPlatformType			@@\
-	cd condor_/**/obj_name; make 						@@\
-release:: condor_/**/obj_name CheckPlatformType			@@\
-	cd condor_/**/obj_name; make release				@@\
-clean:: condor_/**/obj_name								@@\
-	cd condor_/**/obj_name; make clean					@@\
-tags:: condor_/**/obj_name								@@\
-	cd condor_/**/obj_name; make tags					@@\
-depend:: condor_/**/obj_name CheckPlatformType			@@\
-	cd condor_/**/obj_name; make depend					@@\
-makefiles:: condor_/**/obj_name/Makefile				@@\
-condor_/**/obj_name/Makefile:							@@\
-	cd condor_/**/obj_name; imake IMAKE_FLAGS			@@\
-object_dir_target(condor_/**/obj_name)
-#endif object_target
+## obj_name##: condor_##obj_name CheckPlatformType		@@\
+	cd condor_##obj_name; make 							@@\
+release:: condor_##obj_name CheckPlatformType			@@\
+	cd condor_##obj_name; make release					@@\
+clean:: condor_##obj_name								@@\
+	cd condor_##obj_name; make clean					@@\
+tags:: condor_##obj_name								@@\
+	cd condor_##obj_name; make tags						@@\
+depend:: condor_##obj_name CheckPlatformType			@@\
+	cd condor_##obj_name; make depend					@@\
+makefiles:: condor_##obj_name##/Makefile				@@\
+condor_##obj_name##/Makefile:							@@\
+	cd condor_##obj_name ; imake IMAKE_FLAGS			@@\
+object_dir_target(condor_##obj_name)
+#endif
 
 /*
 ** Build a skeleton object tree for a particular platform.
@@ -56,25 +56,25 @@ object_dir_target(condor_/**/obj_name)
 #define platform_target(platform)						@@\
 platform.init: platform ALWAYS							@@\
 	cp GENERIC/CheckPlatformType.c platform				@@\
-	cp Imakefile.platform_skel platform/Imakefile	@@\
+	cp Imakefile.platform_skel platform/Imakefile		@@\
 	cd platform ; imake IMAKE_FLAGS						@@\
 	cd platform ; make directories; make depend			@@\
 platform: 												@@\
 	mkdir platform
-#endif platform_target
+#endif
 
 /*
 ** Check to make sure we are running on the correct kind of machine
 ** and operating system to make object files for this platform.
 */
 #ifndef check_platform_target
-#define check_platform_target								@@\
-CheckPlatformType:											@@\
-	rm -f CheckPlatformType									@@\
+#define check_platform_target											@@\
+CheckPlatformType:														@@\
+	rm -f CheckPlatformType												@@\
 	cc $(CFLAGS) -o CheckPlatformType ../GENERIC/CheckPlatformType.c	@@\
-	./CheckPlatformType										@@\
+	./CheckPlatformType													@@\
 	rm -f CheckPlatformType
-#endif check_platform_target
+#endif
 
 /*
 ** Build a library from .o files.
@@ -89,7 +89,7 @@ rel:: libname										@@\
 	RANLIB_TOUCH( $(RELEASE_DIR)/lib/libname )		@@\
 clean::												@@\
 	rm -f libname objlist
-#endif library_target
+#endif
 
 
 /*
@@ -104,7 +104,7 @@ clean:: 												@@\
 rel::													@@\
 	/bin/rm -f $(RELEASE_DIR)/bin/program				@@\
 	cp program $(RELEASE_DIR)/bin
-#endif program_target
+#endif
 
 
 /*
@@ -118,22 +118,22 @@ rel::													@@\
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
 
 #if IS_ALPHA_OSF1
-#define	c_plus_target(program, objlist, libs, rel)		@@\
-program: objlist libs									@@\
+#define	c_plus_target(program, objlist, libs, rel)					@@\
+program: objlist libs												@@\
 	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) 2>&1 | demangle @@\
-clean:: 												@@\
-	rm -f program objlist								@@\
-rel::													@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/program				@@\
+clean:: 															@@\
+	rm -f program objlist											@@\
+rel::																@@\
+	/bin/rm -f $(RELEASE_DIR)/bin/program							@@\
 	cp program $(RELEASE_DIR)/bin
 #else
-#define	c_plus_target(program, objlist, libs, rel)		@@\
-program: objlist libs									@@\
+#define	c_plus_target(program, objlist, libs, rel)					@@\
+program: objlist libs												@@\
 	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)	@@\
-clean:: 												@@\
-	rm -f program objlist								@@\
-rel::													@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/program				@@\
+clean:: 															@@\
+	rm -f program objlist											@@\
+rel::																@@\
+	/bin/rm -f $(RELEASE_DIR)/bin/program							@@\
 	cp program $(RELEASE_DIR)/bin
 #endif
 
@@ -159,7 +159,7 @@ rel::													@@\
 #define setgid_target(targ)								@@\
 release:: $(RELEASE_DIR)/bin/targ						@@\
 	chmod g+s $(RELEASE_DIR)/bin/targ
-#endif setgid_target
+#endif
 
 /*
 ** Target is made by simply copying a file from one directory to another.
@@ -170,7 +170,7 @@ dst:												@@\
 	cp src dst										@@\
 clean::												@@\
 	rm -f dst
-#endif copy_target
+#endif
 
 /*
 ** Build a tags file for a source directory.
@@ -181,7 +181,7 @@ tags: ALWAYS										@@\
 	condor_ctags c_files -l libdirs					@@\
 clean::												@@\
 	rm -f tags
-#endif tags_target
+#endif
 
 /*
 ** Build Makefile dependencies for an object tree.
@@ -190,16 +190,16 @@ clean::												@@\
 #define depend_target(src_list)						@@\
 depend: ALWAYS										@@\
 	$(MKDEPEND) $(CFLAGS) src_list
-#endif depend_target
+#endif
 
 /*
 ** List everything which should be built in this object tree.
 */
 #ifndef all_target
 #define all_target(targetlist)						@@\
-all: targetlist										@@\
+## all: targetlist									@@\
 release:: all
-#endif all_target
+#endif
 
 /*
 ** Save changes via RCS.
@@ -208,7 +208,7 @@ release:: all
 #define rcs_target(sourcefile)						@@\
 sourcefile: RCS/sourcefile,v						@@\
 	co -r sourcefile
-#endif	rcs_target
+#endif
 
 /*
 ** These special object files are created by extracting a
@@ -217,11 +217,11 @@ sourcefile: RCS/sourcefile,v						@@\
 */
 #ifndef uppercase_target
 #define uppercase_target(libname,objname,newname,old_string,new_string)		@@\
-newname: libname ToUpper												@@\
+newname: libname ToUpper													@@\
 	cd $(TMP_DIR); AR_EXTRACT( libname, objname	)							@@\
-	ToUpper $(TMP_DIR)/objname newname old_string new_string			@@\
+	ToUpper $(TMP_DIR)/objname newname old_string new_string				@@\
 	rm -f $(TMP_DIR)/objname
-#endif uppercase_target
+#endif
 
 
 /*
@@ -234,7 +234,7 @@ targ:															@@\
 	@echo prev_lib must be up to date before making this_lib	@@\
 	@echo MISSING targ											@@\
 	@false
-#endif prev_library_target
+#endif
 
 /*
 ** Make a .o file from a .c when the location of the .c is not obvious
@@ -244,7 +244,7 @@ targ:															@@\
 #define C_target(src,obj)						@@\
 obj:											@@\
 	$(CC) -c $(CFLAGS) src
-#endif C_target
+#endif
 
 /*
 ** Build a fortran program from .o files and libraries.
@@ -254,7 +254,7 @@ obj:											@@\
 BuildSimple_F(program,objlist,libs)						@@\
 clean:: 												@@\
 	rm -f program objlist
-#endif simple_target_F
+#endif
 
 /*
 ** Build a C program from .o files and libraries.
@@ -264,7 +264,7 @@ clean:: 												@@\
 BuildSimple_C(program,objlist,libs)						@@\
 clean:: 												@@\
 	rm -f program objlist
-#endif simple_target_C
+#endif
 
 /*
 ** Build a checkpointing, (but not remote system call), version of a
@@ -315,17 +315,17 @@ clean::																@@\
 */
 #ifndef script_target
 #define script_target(targ,dest)											@@\
-targ: targ.generic															@@\
-	imake -I../../config -T Scripts.template -s targ.tmp -f targ.generic	@@\
-	awk -f awk.prog targ.tmp > targ											@@\
-	rm -f targ.tmp															@@\
+##targ: targ##.generic														@@\
+	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
+	awk -f awk.prog targ##.tmp > targ										@@\
+	rm -f targ##.tmp														@@\
 	chmod u+x targ															@@\
 clean:: 																	@@\
 	rm -f targ 																@@\
 release::																	@@\
-	/bin/rm -f $(RELEASE_DIR)/dest/targ										@@\
-	cp targ $(RELEASE_DIR)/dest/targ										@@\
-	chmod u+x $(RELEASE_DIR)/dest/targ
+	/bin/rm -f $(RELEASE_DIR)/##dest##/##targ								@@\
+	cp targ $(RELEASE_DIR)/##dest##/##targ									@@\
+	chmod u+x $(RELEASE_DIR)/##dest##/##targ
 #endif
 
 /*
@@ -333,13 +333,13 @@ release::																	@@\
 */
 #ifndef text_target
 #define text_target(targ,dest)												@@\
-targ: targ.generic															@@\
-	imake -I../../config -T Scripts.template -s targ.tmp -f targ.generic	@@\
-	awk -f awk.prog targ.tmp > targ											@@\
-	rm -f targ.tmp															@@\
+##targ: targ##.generic														@@\
+	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
+	awk -f awk.prog targ##.tmp > targ										@@\
+	rm -f targ##.tmp														@@\
 clean:: 																	@@\
 	rm -f targ 																@@\
 release::																	@@\
-	/bin/rm -f $(RELEASE_DIR)/dest/targ										@@\
-	cp targ $(RELEASE_DIR)/dest/targ
+	/bin/rm -f $(RELEASE_DIR)/##dest##/##targ								@@\
+	cp targ $(RELEASE_DIR)/##dest##/##targ
 #endif
