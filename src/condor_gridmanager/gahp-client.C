@@ -834,9 +834,7 @@ GahpClient::globus_gram_client_job_status(char * job_contact,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
-		if ( rc != 0 ) {
-			*failure_code = atoi(result->argv[2]);
-		}
+		*failure_code = atoi(result->argv[2]);
 		if ( rc == 0 ) {
 			*job_status = atoi(result->argv[3]);
 		}
@@ -911,9 +909,7 @@ GahpClient::globus_gram_client_job_signal(char * job_contact,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
-		if ( rc != 0 ) {
-			*failure_code = atoi(result->argv[2]);
-		}
+		*failure_code = atoi(result->argv[2]);
 		if ( rc == 0 ) {
 			*job_status = atoi(result->argv[3]);
 		}
@@ -988,9 +984,7 @@ GahpClient::globus_gram_client_job_callback_register(char * job_contact,
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
-		if ( rc != 0 ) {
-			*failure_code = atoi(result->argv[2]);
-		}
+		*failure_code = atoi(result->argv[2]);
 		if ( rc == 0 ) {
 			*job_status = atoi(result->argv[3]);
 		}
