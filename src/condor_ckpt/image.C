@@ -215,10 +215,18 @@ _condor_prestart( int syscall_mode )
 	   So, we call setnetconfig() here to do the malloc() before we are
 	   in the signal handler.  (Doing a malloc() inside a signal handler
 	   can have nasty consequences.)  -Jim B.  */
+	/* Note that the floating point code below is needed to initialize
+	   this process as a process which potentially uses floating point
+	   registers.  Otherwise, the initialization is possibly not done
+	   on restart, and we will lose floats on context switches.  -Jim B. */
 #if defined(Solaris)
 	setnetconfig();
+	float x=23, y=14, z=256;
+	if ((x+y)>z) {
+		EXCEPT( "Internal error: Solaris floating point test failed\n");
+	}
+	z=x*y;
 #endif
-
 }
 
 extern "C" void
