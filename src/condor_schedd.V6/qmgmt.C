@@ -51,8 +51,9 @@ extern  void    cleanup_ckpt_files(int, int, const char*);
 static ReliSock *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
-void	FindRunnableJob(int, int&);
-void	FindPrioJob(int&);
+void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+					 char * user);
+void	FindPrioJob(PROC_ID &);
 int		Runnable(PROC_ID*);
 int		get_job_prio(ClassAd *ad);
 
@@ -1106,35 +1107,39 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	return NULL;
 }
 
+ClassAd *
+GetNextJobByCluster(int c, int initScan)
+{
+	ClassAd	*ad;
+	HashKey key;
+	char cluster[25];
+	int len;
+
+	if ( c < 1 ) {
+		return NULL;
+	}
+
+	sprintf(cluster,"%d.",c);
+	len = strlen(cluster);
+
+	if (initScan) {
+		JobQueue->StartIterateAllClassAds();
+	}
+
+	while(JobQueue->IterateAllClassAds(ad,key)) {
+		if ( strncmp(cluster,key.value(),len) == 0 ) {
+			return ad;
+		}
+	}
+
+	return NULL;
+}
 
 void
 FreeJobAd(ClassAd *&ad)
 {
 	ad = NULL;
 }
-
-
-int GetJobList(const char *constraint, ClassAdList &list)
-{
-	int			flag = 1;
-	ClassAd		*ad=NULL, *newad;
-	HashKey key;
-
-	JobQueue->StartIterateAllClassAds();
-
-	while(JobQueue->IterateAllClassAds(ad,key)) {
-		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
-			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
-			flag = 0;
-			newad = new ClassAd(*ad);	// insert copy so list doesn't
-			list.Insert(newad);			// destroy the original ad
-		}
-	}
-	if(flag) return -1;
-	return 0;
-}
-
-
 
 
 int
@@ -1172,7 +1177,6 @@ SendSpoolFile(char *filename)
 }
 
 } /* should match the extern "C" */
-
 
 
 void
@@ -1306,36 +1310,94 @@ void mark_jobs_idle()
 }
 
 /*
- * Weiru
- * This function only look at one cluster. Find the job in the cluster with the
- * highest priority.
+ * Find the job with the highest priority that matches with my_match_ad (which
+ * is a startd ad).  We first try to find a match within the same cluster.  If
+ * a match is not found, we scan the entire queue for jobs submitted from the
+ * same owner which match.
+ * If my_match_ad is NULL, this pool has an older negotiator,
+ * so we just scan within the current cluster for the highest priority job.
  */
-void FindRunnableJob(int c, int& rp)
+void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+					 char * user)
 {
-	char				constraint[_POSIX_PATH_MAX];
-	ClassAdList			joblist;
+	char				constraintbuf[_POSIX_PATH_MAX];
+	char				*constraint = constraintbuf;
 	ClassAd				*ad;
+	char				*the_at_sign;
+	static char			nice_user_prefix[50];	// static since no need to recompute
+	static int			nice_user_prefix_len = 0;
 
-	sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, c);
+	if ( nice_user_prefix_len == 0 ) {
+		strcpy(nice_user_prefix,NiceUserName);
+		strcat(nice_user_prefix,".");
+		nice_user_prefix_len = strlen(nice_user_prefix);
+	}
+
+		// indicate failure by setting proc to -1.  do this now
+		// so if we bail out early anywhere, we say we failed.
+	jobid.proc = -1;	
 	
-	if (GetJobList(constraint, joblist) < 0) {
-		rp = -1;
+		// First, try to find a job in the same cluster
+	N_PrioRecs = 0;
+	ad = GetNextJobByCluster(jobid.cluster, 1);	// init a new scan
+	while ( ad ) {
+			// If job ad and resource ad match, put into prio rec array.
+			// If we do not have a resource ad, it is because this pool
+			// has an old negotiator -- so put it in prio rec array anyway.
+		if ( (my_match_ad && (ad == my_match_ad)) || (my_match_ad == NULL) ) 
+		{
+			get_job_prio(ad);
+		} 
+		ad = GetNextJobByCluster(jobid.cluster, 0);
+	}
+
+	if(N_PrioRecs == 0 && my_match_ad)
+	// no more jobs in this cluster can run on this resource.
+	// so if we have a my_match_ad, look for any job in any cluster in 
+	// the queue with the same owner.
+	{
+		
+		// Form a constraint.  We have been passed user, which is
+		// owner@uid.  We want just owner, place a NULL at the '@'.
+		if ( (the_at_sign = strchr(user,'@')) ) {
+			*the_at_sign = '\0';
+		}	
+		
+		// Now, deal with nice-user jobs.  If this user name has the
+		// nice-user prefix, strip it, and add it to our constraint.
+		if ( strncmp(user,nice_user_prefix,nice_user_prefix_len) == 0 ) {
+			sprintf(constraint, "(%s == TRUE) && ", ATTR_NICE_USER);
+			constraint += strlen(constraintbuf);
+			user += nice_user_prefix_len;
+		}
+
+		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, user);
+		
+		// Put the '@' back if we changed it
+		if ( the_at_sign ) {
+			*the_at_sign = '@';
+		}	
+
+		ad = GetNextJobByConstraint(constraint, 1);	// init a new scan
+		while ( ad ) {
+			// If job ad and resource ad match, put into prio rec array.
+			if ( (my_match_ad && (ad == my_match_ad)) ) 
+			{
+				get_job_prio(ad);
+			}
+			ad = GetNextJobByConstraint(constraint, 0);
+		}
+
+	}
+
+	if(N_PrioRecs == 0)
+	// no more jobs to run anywhere.  nothing more to do.  failure.
+	{
 		return;
 	}
 
-	N_PrioRecs = 0;
-	rp = -1;
-	joblist.Open();	// start at beginning of list
-	while ((ad = joblist.Next()) != NULL) {
-		get_job_prio(ad);
-	}
-	if(N_PrioRecs == 0)
-	// no more jobs to run
-	{
-		rp = -1;
-		return;
-	}
-	FindPrioJob(rp);
+
+	FindPrioJob(jobid);
 }
 
 int Runnable(PROC_ID* id)
@@ -1404,7 +1466,7 @@ int Runnable(PROC_ID* id)
 // From the priority records, find the runnable job with the highest priority
 // use the function prio_compar. By runnable I mean that its status is either
 // UNEXPANDED or IDLE.
-void FindPrioJob(int& p)
+void FindPrioJob(PROC_ID & job_id)
 {
 	int			i;								// iterator over all prio rec
 	int			flag = FALSE;
@@ -1425,7 +1487,7 @@ void FindPrioJob(int& p)
 		}
 		if(!flag)
 		{
-			p = -1;
+			job_id.proc = -1;
 			return;
 		}
 	}
@@ -1440,7 +1502,8 @@ void FindPrioJob(int& p)
 			PrioRec[0] = PrioRec[i];
 		}
 	}
-	p = PrioRec[0].id.proc;
+	job_id.proc = PrioRec[0].id.proc;
+	job_id.cluster = PrioRec[0].id.cluster;
 }
 
 // --------------------------------------------------------------------------
