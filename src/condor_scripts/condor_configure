@@ -699,8 +699,8 @@ sub set_config_values () {
 
 		  if (exists $hashref->{$key}) {
 		      my $value=$hashref->{$key};
-		      &debug ("$key=$value");
 		      if ($value) {
+			  &debug ("$key=$value");
 			  print TEMP "$key = $value\n";
 		      }
 		      delete $hashref->{$key};
@@ -716,8 +716,10 @@ sub set_config_values () {
     }
 
     while (my ($key, $value) = each %$hashref) {
-	&debug ("$key=$value");
-	print TEMP "$key = $value\n\n";
+	if ($value) {
+	    &debug ("$key=$value");
+	    print TEMP "$key = $value\n\n";
+	}
     }
     
     close TEMP;
