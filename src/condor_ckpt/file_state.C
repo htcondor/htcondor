@@ -1293,8 +1293,11 @@ int CondorFileTable::is_file_name_local( const char *incomplete_name, char *loca
 
 	int match = find_logical_name( logical_name );
 	if(match!=-1) {
+		CondorFile *file;
 		resume(match);
-		return pointers[match]->file->is_file_local();
+		file = pointers[match]->file;
+		strcpy(local_name,strchr(file->get_url(),':')+1); 
+		return file->is_file_local();
 	}
 
 	// Otherwise, resolve the url by normal methods.
