@@ -109,13 +109,8 @@
 
 */
 
-
-
-
 #ifndef STREAM_H
 #define STREAM_H
-
-
 
 #include <assert.h>
 
@@ -127,9 +122,15 @@
 #undef SUSPENDED
 #include "condor_constants.h"	/* to get BOOLEAN typedef... */
 #include "startup.h"
-#include "_condor_fix_types.h"
 #include <sys/stat.h>
-#include <sys/statfs.h>
+
+#if defined(OSF1)
+#  include <sys/mount.h>
+#elif defined(LINUX)
+#  include <sys/vfs.h>
+#else
+#  include <sys/statfs.h>
+#endif
 
 class Stream {
 
