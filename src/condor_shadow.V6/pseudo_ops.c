@@ -395,9 +395,6 @@ pseudo_get_file_stream(
 	int		rval;
 	PROC *p = (PROC *)Proc;
 	int		retry_wait = 1;
-	struct in_addr sin;
-	extern int RequestRestore(const char *, const char *, unsigned long *,
-							  struct in_addr *, unsigned short *);
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
@@ -405,7 +402,7 @@ pseudo_get_file_stream(
 	*len = 0;
 		/* open the file */
 	if (UseCkptServer)
-		rval = RequestRestore(p->owner,file,(unsigned long *)len,(struct in_addr*)ip_addr,port);
+		rval = RequestRestore(p->owner,file,len,ip_addr,port);
 	else
 		rval = -1;
 
@@ -419,14 +416,14 @@ pseudo_get_file_stream(
 			close(file_fd);
 		}
 		while (rval == 1 && retry_wait < 20) {
-			rval = RequestRestore(p->owner,file,(unsigned long *)len,&sin,port);
+			rval = RequestRestore(p->owner,file,len,&ip_addr,port);
 			if (rval == 1) {
 				sleep(retry_wait);
 				retry_wait *= 2;
 			}
 		} 
 
-		*ip_addr = ntohl( sin.s_addr );
+		*ip_addr = ntohl( *ip_addr );
 		display_ip_addr( *ip_addr );
 		*port = ntohs( *port );
 		dprintf( D_ALWAYS, "RestoreRequest returned %d using port %d\n", 
