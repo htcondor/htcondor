@@ -2999,7 +2999,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 				continue;
 			}
 
-			if( errno == ECHILD || errno == EAGAIN ) {
+			if( errno == ECHILD || errno == EAGAIN || errno == 0 ) {
 				dprintf( D_FULLDEBUG, 
 						 "DaemonCore: No more children processes to reap.\n" ); 
 			} else {
