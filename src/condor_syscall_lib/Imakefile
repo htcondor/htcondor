@@ -183,12 +183,15 @@ CPP = ansi_cpp -
 
 #if IS_I386_LINUX
 switches.c: syscall.tmpl switches.prologue stub_gen switches.linux.h
-#else
-switches.c: syscall.tmpl switches.prologue stub_gen
-#endif
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
 	stub_gen -mode switches  -p switches.prologue \
 	> switches.c
+#else
+switches.c: syscall.tmpl switches.prologue stub_gen
+	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
+	stub_gen -mode switches  -p switches.prologue \
+	> switches.c
+#endif
 
 senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
