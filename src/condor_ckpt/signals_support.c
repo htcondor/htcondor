@@ -370,7 +370,7 @@ MASK_TYPE mask;
    but instead are only in the threads libraries.  We access the old
    versions through their new names. */
 
-#if defined(Solaris251) && defined(sun4m)
+#if defined(Solaris251)
 #include <signal.h>
 
 int 
