@@ -32,6 +32,7 @@
 #include "extArray.h"
 #include "sig_install.h"
 #include "string_list.h"
+#include "condor_string.h"   // for strnewp()
 
 // global variables
 AttrListPrintMask pm;
@@ -508,9 +509,19 @@ secondPass (int argc, char *argv[])
 			}
 
 			if( !(daemonname = get_daemon_name(argv[i])) ) {
-				fprintf( stderr, "%s: unknown host %s\n",
-						 argv[0], get_host_part(argv[i]) );
-				exit(1);
+				if ( (mode==MODE_SCHEDD_SUBMITTORS) && strchr(argv[i],'@') ) {
+					// For a submittor query, it is possible that the
+					// hostname is really a UID_DOMAIN.  And there is
+					// no requirement that UID_DOMAIN actually have
+					// an inverse lookup in DNS...  so if get_daemon_name()
+					// fails with a fully qualified submittor lookup, just
+					// use what we are given and do not flag an error.
+					daemonname = strnewp(argv[i]);
+				} else {
+					fprintf( stderr, "%s: unknown host %s\n",
+								 argv[0], get_host_part(argv[i]) );
+					exit(1);
+				}
 			}
 
 			switch (mode) {
