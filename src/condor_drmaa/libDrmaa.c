@@ -26,7 +26,7 @@
 #include "drmaa_common.h"
 
 /* ------------------- private variables ------------------- */
-const char* DRMAA_ERR_MSGS [] = {
+static const char* DRMAA_ERR_MSGS [] = {
     /* ------------- these are relevant to all sections -------------- */
     "Success",
     "Internal error",
@@ -58,7 +58,7 @@ const char* DRMAA_ERR_MSGS [] = {
     "Timeout expired", 
     "No rusage or stat information could be retrieved"
 };
-const char* SIGNAL_NAMES[] = {
+static const char* SIGNAL_NAMES[] = {
     "SIGHUP",   // TODO: more in signal(7)
     "SIGINT",
     "SIGKILL",
@@ -82,9 +82,9 @@ static int is_init_lock_initialized = 0;
 static int is_init = 0;
 
 /* ------------------- private helper routines ------------------- */
-int is_lib_init();
-int condor_sig_to_drmaa(const int condor_sig);
-void unlock_is_init_lock();
+static int is_lib_init();
+//static int condor_sig_to_drmaa(const int condor_sig);
+static void unlock_is_init_lock();
 
 /* ---------- C/C++ language binding specific interfaces -------- */
 int 
@@ -1501,6 +1501,7 @@ is_lib_init()
     implementation's number.
     @return signal number or 0 if no matching signal found
 */
+/*
 int 
 condor_sig_to_drmaa(const int condor_sig)
 {
@@ -1509,7 +1510,7 @@ condor_sig_to_drmaa(const int condor_sig)
     // TODO
 
     return result;
-}
+}*/
 
 void 
 unlock_is_init_lock()
