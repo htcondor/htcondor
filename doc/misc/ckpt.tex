@@ -71,11 +71,9 @@ time.  For example, a Condor job will defer a checkpoint request if
 it is communicating with another process over the network.  When the
 network connection is closed, the checkpoint will occur.
 
-The Condor distributions include a standalone checkpointing library,
-\File{libcondorckpt.a}, which provides checkpointing for Unix
-processes without Condor's remote system call functionality.
-Standalone checkpointing is described in
-section~\ref{sec:standalone-ckpt}.
+The Condor checkpointing facility can also be used for any Unix process
+outside of the Condor batch environment. Standalone checkpointing
+is described in section~\ref{sec:standalone-ckpt}.
 
 Condor can now read and write compressed checkpoints.  This new
 functionality is provided in the \File{libcondorzsyscall.a} and
@@ -101,86 +99,91 @@ Using the Condor checkpoint library without the remote system call
 functionality and outside of the Condor system is known as standalone
 mode checkpointing.
 
-To link in standalone mode, use the \Condor{compile} utility with the
-``-condor\_standalone'' option.
-Once your program is re-linked with the Condor standalone
-checkpointing library \File{libcondorckpt.a}, your program will
-require two new command line arguments: ``\_condor\_ckpt filename''
-and ``\_condor\_restart filename''.
-
-If the command line looks like:
+To prepare a program for standalone checkpointing, simply use the
+\Condor{compile} utility as for a standard Condor job, but do not
+use \Condor{submit} -- just run your program normally from the command
+line.  The checkpointing library will print a message to let you know
+that checkpointing is enabled and to inform you where the checkpoint
+image is stored:
 
 \begin{verbatim}
-	exec_name -_condor_ckpt ckpt_filename ..
+Condor: Will checkpoint to program_name.ckpt
+Condor: Remote system calls disabled.
 \end{verbatim}
 
-then we set up to checkpoint to the given file name.
+To force the program to write a checkpoint image and stop, send it
+the SIGTSP signal or press control-Z.  To force the program to 
+write a checkpoint image and continue executing, send it the
+SIGUSR2 signal.
 
-If the command line looks like:
+To restart the program from a checkpoint, run it again with the
+option ``-\_condor\_restart'' and the name of the checkpoint
+image file.
 
-\begin{verbatim}
-	exec_name -_condor_restart ckpt_filename ...
-\end{verbatim}
-
-then we effect a restart from the given file name.
-
-Any Condor command line options are removed from the head of the
-command line before main() is called.
-
-If we aren't given instructions on the command line, by default we
-assume we are an original invocation, and that we should write any
-checkpoints to the name by which we were invoked with a
-``ckpt'' extension.
+To use a different filename for the checkpoint image, use the option
+''-\_condor\_ckpt'' and the name of the file you want checkpoints
+written to.
 
 \subsection{\label{sec:ckpt-api}Checkpoint Library Interface}
 
-To cause a program to checkpoint and exit, send it a SIGTSTP signal.  For 
-example, in C you would add the following line to your code:
+A program need not be rewritten to take advantage of checkpointing.
+However, the checkpointing library provides several C entry points
+that allow for a program to control its own checkpointing behavior
+if needed.
 
-\begin{verbatim}
-	kill( getpid(), SIGTSTP );
-\end{verbatim}
+\begin{itemize}
 
-Alternatively, you can call the C function:
+\item \verb$void ckpt()$\\
+This function causes a checkpoint image to be written to disk.
+The program will continue to execute.  This is identical to sending
+the program a SIGUSR2 signal.
 
-\begin{verbatim}
-	void ckpt_and_exit();
-\end{verbatim}
+\item \verb$void ckpt_and_exit()$\\
+This function causes a checkpoint image to be writtent to disk.
+The program will then exit.  This is identical to sending the program
+a SIGTSTP signal.
 
-Note that most Unix shells are configured to send a TSTP signal to the
-foreground process when the user enters a Ctrl-Z.  To cause a program
-to write a periodic checkpoint (i.e., checkpoint and continue
-running), sent it a SIGUSR2:
+\item \verb$void init_image_with_file_name( char *ckpt_file_name )$\\
+This function prepares the library to restart from the 
+given file name. \verb$restart()$ must be called to perform the
+actual restart.
 
-\begin{verbatim}
-	kill( getpid(), SIGUSR2 );
-\end{verbatim}
+\item \verb$void init_image_with_file_descriptor( int fd )$\\
+This function prepares the library to restart from
+the given file descriptor.  \verb$restart()$ must be called to
+perform the actual restart.
 
-Alternatively, you can call the C function:
+\item \verb$void restart()$\\
+This function causes the program to read the checkpoint
+image specified by one of the above functions, and to resume the
+program where the checkpoint left off.  This function does
+not return.
 
-\begin{verbatim}
-	void ckpt();
-\end{verbatim}
+\item \verb$void _condor_signals_disable()$\\
+This function temporarily disables checkpointing.  This can
+be handy if your program does something with is not checkpoint-safe.
+For example, if a program must not be interrupted while accessing
+a special file, call \verb$_condor_signals_disable()$, access the
+file, and then call \verb$_condor_signals_enable()$.  Some program
+actions, such as opening a socket or a pipe, implicitly cause
+checkpointing to be disabled.
 
-A C interface is also provided for restarting a program from a
-checkpoint file.  The prototypes are:
+\item \verb$void _condor_signals_enable()$\\
+This function re-enables checkpointing after a call to
+\verb$_condor_signals_disable()$.  If a checkpointing signal arrived
+while checkpointing was disabled, the checkpoint will occur when
+this function is called.  Disabling and enabling of checkpointing
+must occur in matched pairs.  \verb$_condor_signals_enable()$ must
+be called once for every time that \verb$_condor_signals_disable()$
+is called.
 
-\begin{verbatim}
-	void init_image_with_file_name( char *ckpt_name );
-	void init_image_with_file_descriptor( int fd );
-	void restart( );
-\end{verbatim}
+\item \verb$extern int condor_compress_ckpt$\\
+Setting this variable to one causes checkpoint images to be compressed.
+Setting it to zero disables compression.
 
-The init\_image\_with\_file\_name() and
-init\_image\_with\_file\_descriptor() functions are used to specify
-the location of the checkpoint file.  Only one of the two must be
-used.  The restart() function causes the process image from the
-specified file to be read and restored.
+\item \verb$extern int condor_debug_output$\\
+Setting this variable to one causes additional debugging information
+to be shown during the checkpoint process.  Setting it to zero
+disables debug messages.
 
-Also, the following external C variables may be used to configure the
-library:
-
-\begin{verbatim}
-	extern int condor_compress_ckpt; /* compression off(0) or on(1) */
-	extern int condor_debug_output;  /* debugging msgs off(0) or on(1) */
-\end{verbatim}
+\end{itemize}
