@@ -1,3 +1,4 @@
+#define HAS_EXTERNALS @has_externals@
 EXT_ROOT = @ext_root@
 EXT_TRIGGER = $(EXT_ROOT)/triggers
 EXT_INSTALL = $(EXT_ROOT)/install
@@ -13,17 +14,26 @@ EXT_PVM_VERSION = @ext_pvm_version@
 EXT_MAN_VERSION = man-current
 
 #define WANT_EXT_GLIBC @want_ext_glibc@
-#if WANT_EXT_GLIBC
+#if WANT_EXT_GLIBC && HAS_EXTERNALS
 EXT_GLIBC_VERSION = @ext_glibc_version@
 GLIBC_DIR = $(EXT_INSTALL)/$(EXT_GLIBC_VERSION)/lib
 #endif
 
+#if HAS_EXTERNALS
 MAN_DIR = $(EXT_INSTALL)/$(EXT_MAN_VERSION)/man
-
 OPENSSL_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
 GLOBUS_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
 GAHP_DIR = $(EXT_INSTALL)/$(EXT_GAHP_VERSION)/bin
-
+KERBEROS_DIR = $(EXT_INSTALL)/$(EXT_KERBEROS_VERSION)
+PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
+#else
+MAN_DIR =
+OPENSSL_DIR =
+GLOBUS_DIR =
+GAHP_DIR =
+KERBEROS_DIR =
+PVM_DIR =
+#endif
 
 #if WANT_NEST
 NEST_DIR = /p/condor/workspaces/nest
@@ -32,8 +42,7 @@ NEST_INC = $(NEST_DIR)/include
 #endif /* WANT_NEST */
 
 
-KERBEROS_DIR = $(EXT_INSTALL)/$(EXT_KERBEROS_VERSION)
-#if WANT_KERBEROS
+#if WANT_KERBEROS && HAS_EXTERNALS
 KERBEROS_INC = $(KERBEROS_DIR)/include
 /* so long as we're building it ourselves, we know it's krb5, so we
    probably don't need to keep this variable around.  however, for
@@ -56,10 +65,14 @@ KERBEROS_LIB =
 KERBEROS_INC = 
 #endif
 
-
+#if HAS_EXTERNALS
 ZLIB_DIR = $(EXT_INSTALL)/$(EXT_ZLIB_VERSION)
 ZLIB_LIB = $(ZLIB_DIR)/lib
 ZLIB_INC = $(ZLIB_DIR)/include
+#else
+ZLIB_DIR =
+ZLIB_LIB =
+ZLIB_INC =
+#endif
 
 
-PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
