@@ -1022,7 +1022,7 @@ open_std_file( int which )
 	int	answer;
 
 	answer = REMOTE_syscall( CONDOR_get_std_file_info, which, name );
-	if(!answer) {
+	if( answer < 0 ) {
 		EXCEPT("Couldn't get info about standard files!");
 	}
 
