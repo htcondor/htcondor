@@ -287,7 +287,7 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 	prio1 = mm->accountant.GetPriority(scheddName1);
 	prio2 = mm->accountant.GetPriority(scheddName2);
 	
-	return (prio1 > prio2);
+	return (prio1 < prio2);
 }
 
 
