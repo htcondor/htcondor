@@ -1,22 +1,7 @@
 #define OperatingSystem	OSF1
 #define Architecture	ALPHA
 
-#define HAS_GLOBUS	YES
-#define HAS_GSI		YES
-#define HAS_OPENSSL	YES
-#define HAS_DLOPEN  YES
-#define HAS_DAGMAN_HELPER NO
-
 #define GLOBUS_FLAVOR gcc64dbg
-
-#define Platform	ALPHA-DUX4
-#define GccArch		alpha-dec-osf4.0
-
-#define PlatformFlags	-DDUX=DUX
-
-#define IS_ALPHA_OSF1	YES
-#define IS_DUX		YES
-#define IS_DUX4		YES
 
 #define PlatformLdFlags -lmld
 #define VendorFTestFlags -assume recursive 
@@ -75,7 +60,6 @@
 #define PVM_ARCH			ALPHA
 #define USE_GCC				YES
 #define HAS_STATIC			YES
-#define NEED_SNPRINTF		YES
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
@@ -94,3 +78,16 @@
 
 #define VendorCTestFlags -std
 
+
+/**************************************************************************
+** Include OS version and Arch-specific config files
+**************************************************************************/
+
+#ifdef ArchIncludeFile
+#include ArchIncludeFile
+
+#endif
+
+#ifdef OSVersionIncludeFile
+#include OSVersionIncludeFile
+#endif
