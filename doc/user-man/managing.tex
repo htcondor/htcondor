@@ -274,45 +274,54 @@ throttle that is implemented by the \Condor{negotiator} to prevent
 thrashing.  Many of these reasons can be diagnosed by using the \Arg{-analyze}
 option of \Condor{q}.
 \index{Condor commands!condor\_q}
-For example, the following job submitted by user
-jbasney was found to have not run for several days.
-\footnotesize
-\begin{verbatim}
-% condor_q
-
--- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
- ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
-
-1 jobs; 1 idle, 0 running, 0 held
-\end{verbatim}
-\normalsize
-
+For example, a job (assigned the cluster.process value of
+331228.2359) submitted to the local pool at UW-Madison
+is not running.
 Running \Condor{q}'s analyzer provided the following information:
-
 \footnotesize
 \begin{verbatim}
-%  condor_q 125.0 -analyze
+% condor_q -pool condor -name beak -analyze 331228.2359
 
--- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
----
-125.000:  Run analysis summary.  Of 323 resource offers,
-          323 do not satisfy the request's constraints
-            0 resource offer constraints are not satisfied by this request
-            0 are serving equal or higher priority customers
-            0 are serving more preferred customers
-            0 cannot preempt because preemption has been held
-            0 are available to service your request
+Warning:  No PREEMPTION_REQUIREMENTS expression in config file --- assuming FALSE
 
-WARNING:  Be advised:
-   No resources matched request's constraints
-   Check the Requirements expression below:
 
-Requirements = Arch == "INTEL" && OpSys == "IRIX6" && 
-  Disk >= ExecutableSize && VirtualMemory >= ImageSize
+-- Schedd: beak.cs.wisc.edu : <128.105.146.14:30918>
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
+ ---
+331228.2359:  Run analysis summary.  Of 819 machines,
+    159 are rejected by your job's requirements
+    137 reject your job because of their own requirements
+    488 match, but are serving users with a better priority in the pool
+    11 match, but prefer another specific job despite its worse user-priority
+    24 match, but cannot currently preempt their existing job
+     0 are available to run your job
 \end{verbatim}
 \normalsize
 
+A second example shows a job that does not run because the job
+does not have a high enough priority to cause other running jobs
+to be preempted.
+\footnotesize
+\begin{verbatim}
+% condor_q -pool condor -name beak -analyze 207525.0
+
+Warning:  No PREEMPTION_REQUIREMENTS expression in config file --- assuming FALSE
+
+-- Schedd: beak.cs.wisc.edu : <128.105.146.14:30918>
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
+ ---
+ 207525.000:  Run analysis summary.  Of 818 machines,
+     317 are rejected by your job's requirements
+     419 reject your job because of their own requirements
+     79 match, but are serving users with a better priority in the pool
+      3 match, but prefer another specific job despite its worse user-priority
+      0 match, but cannot currently preempt their existing job
+      0 are available to run your job
+        Last successful match: Wed Jan  8 14:57:42 2003
+        Last failed match: Fri Jan 10 15:46:45 2003
+        Reason for last match failure: insufficient priority
+\end{verbatim}
+\normalsize
 %%%%%%%%%%%%%%%%%%%
 %condor_status -total lists the Arch/OS combinations in our pool:
 %
@@ -334,12 +343,6 @@ Requirements = Arch == "INTEL" && OpSys == "IRIX6" &&
 % requirements = Arch == "INTEL" && OpSys == "IRIX6"
 %
 %%%%%%%%%%%%%%%%%%%
-
-For this job,
-the \Attr{Requirements}
-\index{ClassAd attribute!requirements}
-expression specifies a platform that does not exist.
-Therefore, the expression always evaluates to false.
 
 While the analyzer can diagnose most common problems, there are some situations
 that it cannot reliably detect due to the instantaneous and local nature of the
