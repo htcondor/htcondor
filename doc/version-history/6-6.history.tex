@@ -8,6 +8,58 @@ All new features added or bugs fixed in the 6.5 series are available
 in the 6.6 series.
 The details of each version are described below.
 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-2}Version 6.6.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The setting \Macro{GRIDMANAGER\_GLOBUS\_COMMIT\_TIMEOUT} allows
+   configuring the two phase commit timeout in Globus.  This maps to the
+   two\_phase setting in the Globus RSL.
+
+\end{itemize}
+
+
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Eliminated a small chance that a grid\_monitor log file or state file
+    might be reused.  The unique identifying numbers are now unique across
+	the entire gridmanager, not each Globus resource.
+
+\end{itemize}
+
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-2}Version 6.6.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

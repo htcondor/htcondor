@@ -3264,6 +3264,10 @@ The default is 3.
 periodic syncs of streamed output to disk. The default is 5 minutes
 (300 seconds).
 
+\item[\Macro{GRIDMANAGER\_GLOBUS\_COMMIT\_TIMEOUT}]
+\label{param:GridmanagerGlobusCommitTimeout}  The duration, in seconds, of the
+two phase commit timeout to Globus.  This maps directly to the \texttt{two\_phase} setting in the Globus RSL.
+
 % configuration variable introduced into Condor due to Globus a GAHP
 % bug.  Users with Globus where this bug has been fixed should never
 % use nor even know about this configuration variable.
