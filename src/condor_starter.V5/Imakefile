@@ -7,9 +7,9 @@ CKPT_FLAG = -DNO_CKPT
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -fno-implicit-templates
 #if (IS_LINUX)
-LDFLAGS = KernLib RpcLib -lbfd -liberty
+LDFLAGS = -lbfd -liberty
 #else
-LDFLAGS = KernLib SocketLib RpcLib MldLib
+LDFLAGS = 
 #endif
 
 REMOTE_SYSCALL_LIB = \
