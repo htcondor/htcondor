@@ -26,6 +26,7 @@
 #define NO_MACHINE      (SCHED_VERS+40)
 #define GIVE_MACHINE        (SCHED_VERS+41)
 
+
 /*
 ** Datastructure used by W-Startd and W-Schedd to store pool configuration.
 */
@@ -36,6 +37,7 @@ typedef struct config_rec {
 	char		*pool_name;
 	char		in;
 	char		out;
+	int			flock_version;
 	struct in_addr	net_addr;
 	short		net_addr_type;
 } CONFIG_REC;
