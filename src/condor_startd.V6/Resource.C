@@ -149,7 +149,7 @@ Resource::kill_claim( void )
 		return change_state( owner_state );
 	default:
 			// In other states, try direct kill.  See above.
-		return r_cur->starterKillHard();
+		return (int)r_cur->starterKillHard();
 	}
 	return TRUE;
 }
@@ -196,7 +196,7 @@ int
 Resource::request_new_proc( void )
 {
 	if( state() == claimed_state && r_cur->isActive()) {
-		return r_cur->starterKill( SIGHUP );
+		return (int)r_cur->starterKill( SIGHUP );
 	} else {
 		return FALSE;
 	}

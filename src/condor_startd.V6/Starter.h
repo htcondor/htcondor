@@ -47,8 +47,8 @@ public:
 	char*	path() {return s_path;};
 	time_t	birthdate( void ) {return s_birthdate;};
 	time_t	last_snapshot( void ) {return s_last_snapshot;};
-	int		kill(int);
-	int		killpg(int);
+	bool	kill(int);
+	bool	killpg(int);
 	void	killkids(int);
 	void	exited();
 	pid_t	pid() {return s_pid;};
@@ -68,7 +68,7 @@ public:
 	
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
-	int		sigkillStarter( void );
+	bool	sigkillStarter( void );
 
 	void	publish( ClassAd* ad, amask_t mask, StringList* list );
 
@@ -89,7 +89,7 @@ public:
 private:
 
 		// methods
-	int		reallykill(int, int);
+	bool	reallykill(int, int);
 	int		execOldStarter( void );
 	int		execCODStarter( void );
 	int		execDCStarter( Stream* s );

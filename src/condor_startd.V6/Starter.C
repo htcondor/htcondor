@@ -233,14 +233,14 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 }
 
 
-int
+bool
 Starter::kill( int signo )
 {
 	return reallykill( signo, 0 );
 }
 
 
-int
+bool
 Starter::killpg( int signo )
 {
 	return reallykill( signo, 1 );
@@ -254,7 +254,7 @@ Starter::killkids( int signo )
 }
 
 
-int
+bool
 Starter::reallykill( int signo, int type )
 {
 	struct stat st;
@@ -265,7 +265,7 @@ Starter::reallykill( int signo, int type )
 
 	if ( s_pid == 0 ) {
 			// If there's no starter, just return.  We've done our task.
-		return TRUE;
+		return true;
 	}
 
 	switch( signo ) {
@@ -455,7 +455,7 @@ Starter::reallykill( int signo, int type )
 		if( is_dc() ) {		
 			ret = daemonCore->Send_Signal( (s_pid), signo );
 				// Translate Send_Signal's return code to Unix's kill()
-			if ( ret == FALSE ) {
+			if( ret == FALSE ) {
 				ret = -1;
 			} else {
 				ret = 0;
@@ -488,18 +488,19 @@ Starter::reallykill( int signo, int type )
 
 	set_priv(priv);
 
+		// Finally, figure out what bool to return...
 	if( ret < 0 ) {
 		if(errno==ESRCH) {
 			/* Aha, the starter is already dead */
-			return 0;
+			return true;
 		} else {
 			dprintf( D_ALWAYS, 
 					 "Error sending signal to starter, errno = %d (%s)\n", 
 					 errno, strerror(errno) );
-			return -1;
+			return false;
 		}
 	} else {
-		return ret;
+		return true;
 	}
 }
 
@@ -924,7 +925,7 @@ Starter::killHard( void )
 	if( ! active() ) {
 		return true;
 	}
-	if( kill( DC_SIGHARDKILL ) < 0 ) {
+	if( ! kill(DC_SIGHARDKILL) ) {
 		killpg( SIGKILL );
 		return false;
 	}
@@ -939,7 +940,7 @@ Starter::killSoft( void )
 	if( ! active() ) {
 		return true;
 	}
-	if( kill( DC_SIGSOFTKILL ) < 0 ) {
+	if( ! kill(DC_SIGSOFTKILL) ) {
 		killpg( SIGKILL );
 		return false;
 	}
@@ -953,7 +954,7 @@ Starter::suspend( void )
 	if( ! active() ) {
 		return true;
 	}
-	if( kill( DC_SIGSUSPEND ) < 0 ) {
+	if( ! kill(DC_SIGSUSPEND) ) {
 		killpg( SIGKILL );
 		return false;
 	}
@@ -967,7 +968,7 @@ Starter::resume( void )
 	if( ! active() ) {
 		return true;
 	}
-	if( kill( DC_SIGCONTINUE ) < 0 ) {
+	if( ! kill(DC_SIGCONTINUE) ) {
 		killpg( SIGKILL );
 		return false;
 	}
@@ -1013,7 +1014,7 @@ Starter::cancelKillTimer( void )
 }
 
 
-int
+bool
 Starter::sigkillStarter( void )
 {
 		// Now that the timer has gone off, clear out the tid.
@@ -1031,6 +1032,6 @@ Starter::sigkillStarter( void )
 			// Kill the starter's entire process group.
 		return killpg( SIGKILL );
 	}
-	return TRUE;
+	return true;
 }
 

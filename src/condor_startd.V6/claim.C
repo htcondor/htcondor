@@ -802,7 +802,7 @@ Claim::starterKill( int sig )
 		// don't need to work about the state, since we don't use this
 		// method to send any signals that change the claim state...
 	if( c_starter ) {
-		return (bool)c_starter->kill( sig );
+		return c_starter->kill( sig );
 	}
 		// if there's no starter, we don't need to kill anything, so
 		// it worked...  
@@ -817,7 +817,7 @@ Claim::starterKillPg( int sig )
 			// if we're using KillPg, we're trying to hard-kill the
 			// starter and all its children
 		changeState( CLAIM_KILLING );
-		return (bool)c_starter->killpg( sig );
+		return c_starter->killpg( sig );
 	}
 		// if there's no starter, we don't need to kill anything, so
 		// it worked...  
