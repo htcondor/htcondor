@@ -5,6 +5,7 @@
 #define ALLOC_FUNC		4
 #define ACTION_PARAM	5
 #define NOSUPP_FUNC		6
+#define RETURN_FUNC		7
 
 
 struct token {
