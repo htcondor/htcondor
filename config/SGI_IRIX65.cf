@@ -8,5 +8,11 @@
 #define IS_SGI_IRIX65		YES
 #define IS_IRIX65		YES
 
+#define BaseLibPath /usr/lib32
+#define IRIXABI -n32
+
 /* inet_ntoa is broken in GCC for -n32 and -64 ABIs */
 #define HAS_INET_NTOA NO
+
+/* For now, build a "clipped" version */
+#define IS_CLIPPED YES
