@@ -55,17 +55,9 @@ extern "C" {
 #undef xdr_u_short
 #undef xdr_void
 #endif /* __STDC__ || __cplusplus */
-
 #if defined(OSF1)
 #define mem_alloc(bsize)        malloc(bsize)
-
-#undef xdr_destroy
-#undef XDR_DESTROY
-#define xdr_destroy				my_xdr_destroy
-#define XDR_DESTROY				my_xdr_destroy
-extern int my_xdr_destroy(XDR *);
-#endif /* OSF1 */
-
+#endif
 
 
 
@@ -117,8 +109,26 @@ bool_t xdr_u_short();
 bool_t xdr_void();
 #endif
 
+
+/*
+	OSF1's cxx stops at non-std prototype declarations.
+	xdr_destroy is a macro to a non-std defined routine.
+	This makes things work transparently.
+*/
+
+#if defined(OSF1) && ( defined(__STDC__) || defined(__cplusplus) )
+#undef  xdr_destroy
+#define xdr_destroy				my_xdr_destroy
+#undef  XDR_DESTROY
+#define XDR_DESTROY				my_xdr_destroy
+extern int my_xdr_destroy(XDR *);
+#endif
+
+
+
 #if defined(__cplusplus)
 }
 #endif
+
 
 #endif /* _CONDOR_XDR */
