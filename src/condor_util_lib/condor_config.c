@@ -34,6 +34,7 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 #include <ctype.h>
 #include <pwd.h>
 #include <netdb.h>
@@ -53,7 +54,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #define TABLESIZE 113
 BUCKET	*ConfigTab[TABLESIZE];
 
-char	*strdup(), *strchr(), *expand_macro(), *lookup_macro(), *param();
+char	*expand_macro(), *lookup_macro(), *param();
 
 char *get_arch();
 char *get_op_sys();
@@ -109,7 +110,7 @@ CONTEXT	*context;
 		exit( 1 );
 	}
 
-	if( ptr=strchr(hostname,'.') )
+	if( ptr=(char *)strchr((const char *)hostname,'.') )
 		*ptr = '\0';
 	insert( "hostname", hostname, ConfigTab, TABLESIZE );
 
