@@ -417,7 +417,7 @@ bool GlobusJob::callback_register()
 			strcat( rsl, buffer );
 		}
 
-		rc = globus_gram_client_job_signal( rmContact,
+		rc = globus_gram_client_job_signal( jobContact,
 							GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STDIO_UPDATE,
 							rsl, &status, &failure_code );
 
@@ -692,6 +692,10 @@ bool GlobusJob::restart()
 	// to put ignore_callbacks back to False.
 	ignore_callbacks = false;
 
+	if ( newJM == false ) {
+		return false;
+	}
+
 	if ( durocRequest ) {
 		dprintf( D_FULLDEBUG, "Attempted to restart a DUROC job (%d.%d)\n",
 				 procID.cluster, procID.proc );
@@ -831,10 +835,11 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 				strcat( rsl, iwd );
 				strcat( buff2, iwd );
 			}
+
+			strcat( buff2, buff );
+			localOutput = strdup( buff2 );
 		}
 		strcat( rsl, buff );
-		strcat( buff2, buff );
-		localOutput = strdup( buff2 );
 	}
 
 	buff[0] = '\0';
@@ -848,10 +853,11 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 				strcat( rsl, iwd );
 				strcat( buff2, iwd );
 			}
+
+			strcat( buff2, buff );
+			localError = strdup( buff2 );
 		}
 		strcat( rsl, buff );
-		strcat( buff2, buff );
-		localError = strdup( buff2 );
 	}
 
 	buff[0] = '\0';
