@@ -579,6 +579,9 @@ ProcFamily::currentfamily( pid_t* & ptr  )
 {
 	pid_t* tmp;
 	int i;
+
+	ASSERT(family_size > 0);
+
 	tmp = new pid_t[ family_size ];
 	if( !tmp ) {
 		EXCEPT( "Out of memory!" );
