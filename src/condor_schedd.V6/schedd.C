@@ -4804,6 +4804,10 @@ Scheduler::child_exit(int pid, int status)
 								 (int)time(0) );
 				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 								ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
+				SetAttribute(srec->job_id.cluster, srec->job_id.proc,
+							 ATTR_ON_EXIT_BY_SIGNAL, "FALSE");
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
+								ATTR_ON_EXIT_CODE, WEXITSTATUS(status) );
 				WriteTerminateToUserLog( jobId, status );
 			} else {
 				WriteEvictToUserLog( jobId );
@@ -4822,6 +4826,10 @@ Scheduler::child_exit(int pid, int status)
 				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
 								 ATTR_ENTERED_CURRENT_STATUS,
 								 (int)time(0) );
+				SetAttribute(srec->job_id.cluster, srec->job_id.proc,
+							 ATTR_ON_EXIT_BY_SIGNAL, "TRUE");
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
+								ATTR_ON_EXIT_SIGNAL, WTERMSIG(status) );
 				WriteTerminateToUserLog( jobId, status );
 			} else {
 				WriteEvictToUserLog( jobId );
