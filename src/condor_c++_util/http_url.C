@@ -31,7 +31,9 @@
 #include "condor_common.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
+extern "C" {
 #include <netdb.h>
+}
 #include "url_condor.h"
 #include "condor_debug.h"
 
