@@ -4,9 +4,9 @@ set CondorMaster='condor_master'
 set CondorDaemons='condor_(master|startd|schedd|negotiator|collector)'
 
 #if IS_ALPHA_OSF1 || IS_HPPAR_HPUX9
-set pid=`ps -e | egrep $CondorMaster | egrep -v egrep | awk '{ print $1 }'`
+set pid=`/bin/ps -e | egrep $CondorMaster | egrep -v egrep | awk '{ print $1 }'`
 #else
-set pid=`ps PsAllFlag | egrep $CondorMaster | egrep -v egrep | awk PsAwkProg`
+set pid=`PsAllFlag | egrep $CondorMaster | egrep -v egrep | awk PsAwkProg`
 #endif
 
 echo CONDOR_MASTER PID = $pid
@@ -24,9 +24,9 @@ endif
 #	Check to make sure that we got rid of Condor
 #
 #if IS_ALPHA_OSF1 || IS_HPPAR_HPUX9
-set pid=`ps -e | egrep "$CondorDaemons" | egrep -v egrep | awk '{ print $1 }'`
+set pid=`/bin/ps -e | egrep "$CondorDaemons" | egrep -v egrep | awk '{ print $1 }'`
 #else
-set pid=`ps PsAllFlag | egrep "$CondorDaemons" | egrep -v egrep | awk PsAwkProg`
+set pid=`PsAllFlag | egrep "$CondorDaemons" | egrep -v egrep | awk PsAwkProg`
 #endif
 
 if ( $#pid > 0 ) then
