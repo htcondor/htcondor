@@ -12,7 +12,7 @@ AttrListPrintMask ()
 AttrListPrintMask::
 AttrListPrintMask (const AttrListPrintMask &pm)
 {
-	copyList (formats, (List<char> &) pm.formats);
+	copyList (formats, (List<Formatter> &) pm.formats);
 	copyList (attributes, (List<char> &) pm.attributes);
 	copyList (alternates, (List<char> &) pm.alternates);
 }
@@ -30,11 +30,57 @@ registerFormat (char *fmt, const char *attr, char *alternate)
 {
 	char *tmp;
 
-	formats.Append   (collapse_escapes(new_strdup (fmt)));
+	Formatter *newFmt = new Formatter;
+
+	newFmt->fmtKind = PRINTF_FMT;
+	newFmt->printfFmt = collapse_escapes(new_strdup(fmt));
+	formats.Append (newFmt);
+
 	attributes.Append(new_strdup (attr));
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
+void AttrListPrintMask::
+registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
+{
+	Formatter *newFmt = new Formatter;
+
+	newFmt->fmtKind = INT_CUSTOM_FMT;
+	newFmt->df = fmt;
+
+	formats.Append (newFmt);
+
+	attributes.Append(new_strdup (attr));
+	alternates.Append(new_strdup(collapse_escapes(alternate)));
+}
+
+void AttrListPrintMask::
+registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
+{
+	Formatter *newFmt = new Formatter;
+
+	newFmt->fmtKind = FLT_CUSTOM_FMT;
+	newFmt->ff = fmt;
+
+	formats.Append (newFmt);
+
+	attributes.Append(new_strdup (attr));
+	alternates.Append(new_strdup(collapse_escapes(alternate)));
+}
+
+void AttrListPrintMask::
+registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
+{
+	Formatter *newFmt = new Formatter;
+
+	newFmt->fmtKind = STR_CUSTOM_FMT;
+	newFmt->sf = fmt;
+
+	formats.Append (newFmt);
+
+	attributes.Append(new_strdup (attr));
+	alternates.Append(new_strdup(collapse_escapes(alternate)));
+}
 
 void AttrListPrintMask::
 clearFormats (void)
@@ -48,10 +94,14 @@ clearFormats (void)
 int AttrListPrintMask::
 display (FILE *file, AttrList *al)
 {
-	char *fmt, *attr, *alt;
+	Formatter *fmt;
+	char 	*attr, *alt;
 	ExprTree *tree;
 	EvalResult result;
-	int retval = 1;
+	int 	retval = 1;
+	int		intValue;
+	float 	floatValue;
+	char  	stringValue[1024];
 
 	formats.Rewind();
 	attributes.Rewind();
@@ -61,40 +111,71 @@ display (FILE *file, AttrList *al)
 	while ((fmt=formats.Next()) && (attr=attributes.Next()) &&
 				(alt=alternates.Next()))
 	{
-		// get the expression tree of the attribute
-		if (!(tree = al->Lookup (attr)))
+		switch( fmt->fmtKind )
 		{
-			if (alt) fprintf (file, "%s", alt);
-			continue;
-		}
+		  	case PRINTF_FMT:
+				// get the expression tree of the attribute
+				if (!(tree = al->Lookup (attr)))
+				{
+					if (alt) fprintf (file, "%s", alt);
+					continue;
+				}
 
-		// print the result
-		if (tree->EvalTree (al, NULL, &result))
-		{
-			switch (result.type)
-			{
-			  case LX_STRING:
-				fprintf (file, fmt, collapse_escapes(result.s));
+				// print the result
+				if (tree->EvalTree (al, NULL, &result))
+				{
+					switch (result.type)
+					{
+					case LX_STRING:
+						fprintf(file,fmt->printfFmt,collapse_escapes(result.s));
+						break;
+
+					case LX_FLOAT:
+						fprintf (file, fmt->printfFmt, result.f);
+						break;
+
+					case LX_INTEGER:
+						fprintf (file, fmt->printfFmt, result.i);
+						break;
+
+					default:
+						fputs( alt , file );
+						retval = 0;
+						continue;
+					}
+				}
 				break;
 
-			  case LX_FLOAT:
-				fprintf (file, fmt, result.f);
+		  	case INT_CUSTOM_FMT:
+				if( al->EvalInteger( attr, NULL, intValue ) ) {
+					fputs( (fmt->df)( intValue ) , file );
+				} else {
+					fputs( alt, file );
+					retval = 0;
+				}
 				break;
 
-			  case LX_INTEGER:
-				fprintf (file, fmt, result.i);
+		  	case FLT_CUSTOM_FMT:
+				if( al->EvalFloat( attr, NULL, floatValue ) ) {
+					fputs( (fmt->ff)( floatValue ) , file );
+				} else {
+					fputs( alt, file );
+					retval = 0;
+				}
 				break;
 
-			  default:
-				fprintf (file, "%s", alt);
+		  	case STR_CUSTOM_FMT:
+				if( al->EvalString( attr, NULL, stringValue ) ) {
+					fputs( (fmt->sf)( stringValue ) , file );
+				} else {
+					fputs( alt, file );
+					retval = 0;
+				}
+				break;
+	
+			default:
+				fputs( alt, file );
 				retval = 0;
-				continue;
-			}
-		}
-		else
-		{
-			fprintf (file, "(Not found)");
-			retval = 0;
 		}
 	}
 
@@ -130,6 +211,37 @@ clearList (List<char> &l)
         l.DeleteCurrent ();
     }
 }
+
+void AttrListPrintMask::
+clearList (List<Formatter> &l)
+{
+    Formatter *x;
+    l.Rewind ();
+    while (x = l.Next ())
+    {
+		if( x->fmtKind == PRINTF_FMT ) delete [] x->printfFmt;
+		delete x;
+        l.DeleteCurrent ();
+    }
+}
+
+void AttrListPrintMask::
+copyList (List<Formatter> &to, List<Formatter> &from)
+{
+	Formatter *item, *newItem;
+
+	clearList (to);
+	from.Rewind ();
+	while (item = from.Next ())
+	{
+		newItem = new Formatter;
+		*newItem = *item;
+		if( newItem->fmtKind == PRINTF_FMT )
+			newItem->printfFmt = new_strdup( item->printfFmt );
+		to.Append (newItem);
+	}
+}
+
 
 void AttrListPrintMask::
 copyList (List<char> &to, List<char> &from)

@@ -6,6 +6,23 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 
+enum FormatKind { PRINTF_FMT, INT_CUSTOM_FMT, FLT_CUSTOM_FMT, STR_CUSTOM_FMT };
+
+typedef char *(*IntCustomFmt)(int);
+typedef char *(*FloatCustomFmt)(float);
+typedef char *(*StringCustomFmt)(char*);
+
+struct Formatter
+{
+	FormatKind fmtKind;
+	union {
+		char			*printfFmt;
+		IntCustomFmt 	df;
+		FloatCustomFmt 	ff;
+		StringCustomFmt	sf;
+	};
+};
+			
 class AttrListPrintMask
 {
   public:
@@ -15,7 +32,10 @@ class AttrListPrintMask
 	~AttrListPrintMask ();
 
 	// register a format and an attribute
-	void registerFormat (char *fmt, const char *attr, char*alternate="");
+	void registerFormat (char *fmt, const char *attr, char*alt="");
+	void registerFormat (IntCustomFmt fmt, const char *attr, char *alt="");
+	void registerFormat (FloatCustomFmt fmt, const char *attr, char *alt="");
+	void registerFormat (StringCustomFmt fmt, const char *attr, char *alt="");
 	
 	// clear all formats
 	void clearFormats (void);
@@ -25,11 +45,13 @@ class AttrListPrintMask
 	int display (FILE *, AttrListList *);
 
   private:
-	List<char> formats;
-	List<char> attributes;
-	List<char> alternates;
+	List<Formatter> formats;
+	List<char> 		attributes;
+	List<char> 		alternates;
 
+	void clearList (List<Formatter> &);
 	void clearList (List<char> &);
+	void copyList  (List<Formatter> &, List<Formatter> &);
 	void copyList  (List<char> &, List<char> &);
 };
 
