@@ -56,6 +56,18 @@ Accountant::Initialize()
 }
 
 //------------------------------------------------------------------
+// Return the number of resources used
+//------------------------------------------------------------------
+
+int Accountant::GetResourcesUsed(const MyString& CustomerName) 
+{
+  CustomerRecord* Customer;
+  int ResourcesUsed=0;
+  if (Customers.lookup(CustomerName,Customer)==0) ResourcesUsed=Customer->ResourceNames.Count();
+  return ResourcesUsed;
+}
+
+//------------------------------------------------------------------
 // Return the priority of a customer
 //------------------------------------------------------------------
 
@@ -63,7 +75,8 @@ double Accountant::GetPriority(const MyString& CustomerName)
 {
   CustomerRecord* Customer;
   double Priority=0;
-  if (CustomerName==NiceUserName) return HUGE_VAL;
+  const char* CustName=CustomerName;
+  if (strncmp(CustName,NiceUserName,strlen(NiceUserName))==0) return HUGE_VAL;
   if (Customers.lookup(CustomerName,Customer)==0) Priority=Customer->Priority;
   if (Priority<MinPriority) Priority=MinPriority;
   return Priority;
