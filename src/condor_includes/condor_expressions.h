@@ -2,6 +2,10 @@
 #define EXPRESSIONS_H
 
 #define MAX_EXPR_LIST	512
+#define MAX_STRING		1024	/* Max length of a name or string */
+#define EXPR_INCR 25
+#define IN_STACK	1
+#define IN_COMING	2
 
 typedef struct {
 	int		type;
@@ -29,42 +33,44 @@ typedef struct {
 	ELEM    *data[MAX_EXPR_LIST];
 } STACK;
 
-#if !defined(__STDC__) && !defined(__cplusplus)
-#define const
-#endif
-
 	/* Element types */
-static const LT			= 1;
-static const LE			= 2;
-static const GT			= 3;
-static const GE			= 4;
-static const EQ			= 5;
-static const NE			= 6;
-static const AND		= 7;
-static const OR			= 8;
-static const NOT		= 9;
-static const PLUS		= 10;
-static const MINUS		= 11;
-static const MUL		= 12;
-static const DIV		= 13;
-static const GETS		= 14;
-static const LPAREN		= 15;
-static const RPAREN		= 16;
-static const NAME		= 17;
-static const STRING		= 18;
-static const FLOAT		= 19;
-static const INT		= 20;
-static const BOOL		= 21;
-static const ERROR		= 22;
-static const EXPRSTRING = 23;
-static const ENDMARKER	= -1;
+#define LT		1
+#define LE		2
+#define GT		3
+#define GE		4
+#define EQ		5
+#define NE		6
+#define AND		7
+#define OR		8
+#define NOT		9
+#define PLUS	10
+#define MINUS	11
+#define MUL		12
+#define DIV		13
+#define GETS	14
+#define LPAREN	15
+#define RPAREN	16
+#define NAME	17
+#define STRING	18
+#define FLOAT	19
+#define INT		20
+#define BOOL	21
+#define ERROR	22
+#define MOD		23
+#define EXPRSTRING 24
+#define ENDMARKER	-1
+
+#define f_val val.float_val
+#define i_val val.integer_val
+#define s_val val.string_val
+#define b_val val.integer_val
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 #if defined(__STDC__) || (__cplusplus)
-EXPR * scan ( const char *line );
+EXPR * scan ( char *line );
 CONTEXT * create_context ( void );
 int store_stmt ( EXPR *expr, CONTEXT *context );
 void free_elem ( ELEM *elem );
