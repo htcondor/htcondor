@@ -5,10 +5,7 @@ CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 #if IS_ALPHA_OSF1
 VIRT_MEM_SRC = virt_mem.Alpha.c
 VIRT_MEM_OBJ = virt_mem.Alpha.o
-#elif IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251 
-VIRT_MEM_SRC = virt_mem.Solaris.c
-VIRT_MEM_OBJ = virt_mem.Solaris.o
-#elif IS_X86_SOLARIS || IS_X86_SOLARIS25
+#elif IS_SOLARIS
 VIRT_MEM_SRC = virt_mem.Solaris.c
 VIRT_MEM_OBJ = virt_mem.Solaris.o
 #else
