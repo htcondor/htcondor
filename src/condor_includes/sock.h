@@ -41,6 +41,12 @@ const int _ENDPOINT_BUF_SIZE = 16;
 #endif /* not WIN32 */
 
 /*
+We want to define a callback function to be invoked when certain actions happen upon a stream.  CedarHandler is the type of a callback function.   The following notation is a little strange.  It reads: Define a new type called "CedarHandler" to be "a function returning void with single argument pointer to Stream"
+*/
+
+typedef void (CedarHandler) (Stream *s);
+
+/*
 **	B A S E    S O C K
 */
 
@@ -88,6 +94,9 @@ public:
 	}
 
 
+	/** Install this function as the asynchronous handler.  When a handler is installed, it is invoked whenever data arrives on the socket.  Setting the handler to zero disables asynchronous notification.  */
+
+	int set_async_handler( CedarHandler *handler );
 
 	//	Socket services
 	//
