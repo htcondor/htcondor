@@ -1,0 +1,37 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_signals_std.cmd';
+$testname = 'Signals Test';
+
+sub OutputTest
+{
+    my %info = @_;
+
+    # open file, skip to last line, and close
+    open( OUTPUT, "<$info{'output'}" ) || 
+	die "error opening \"$info{'output'}\": $!\n";
+    while( <OUTPUT> )
+    {
+	$line = $_;
+	chomp $line;
+    }
+    close OUTPUT;
+
+    # check to see if last line indicated success
+    unless( $line =~ /^All job_ckpt_signals_std \< 32 received$/ )
+    {
+	die "$testname: FAILURE (STDOUT doesn't match expected output)\n";
+    }
+    return 1;
+}
+
+CondorTest::RegisterExitedSuccess( $testname, \&OutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
