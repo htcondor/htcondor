@@ -87,7 +87,7 @@ cat <<EOF >Makefile.config
 DESTDIR = ${install_dir}
 EOF
 
-if [ -z ${pcre_dir} ]
+if [ -z "${pcre_dir}" ]
 then
 echo "REGEX_INCLUDE_FLAGS = -DUSE_POSIX_REGEX" >> Makefile.config
 else
@@ -95,7 +95,7 @@ echo "REGEX_INCLUDE_FLAGS = -DUSE_PCRE -I${pcre_dir}/include" >> Makefile.config
 echo "REGEX_LIB_FLAGS = -L${pcre_dir}/lib -lpcre" >> Makefile.config
 fi
 
-if [ ${enable_shlib} = 1 ]
+if [ "${enable_shlib}" = 1 ]
 then
 echo "EXTRA_LD_FLAGS = \$(REGEX_LIB_FLAGS) -Xlinker --export-dynamic -ldl" >> Makefile.config
 echo "all:: shared" >> Makefile.config
@@ -103,7 +103,7 @@ else
 echo "EXTRA_LD_FLAGS = \$(REGEX_LIB_FLAGS)" >> Makefile.config
 fi
 
-if [ ${enable_namespace} = 1 ]
+if [ "${enable_namespace}" = 1 ]
 then
 echo "EXTRA_C_PLUS_FLAGS = \$(REGEX_INCLUDE_FLAGS) -DWANT_NAMESPACES" >> Makefile.config
 else
@@ -118,7 +118,7 @@ cat >> classad_features.h <<EOF
 #define __CLASSAD_FEATURES_H
 
 EOF
-if [ ${enable_shlib} = 1 ] 
+if [ "${enable_shlib}" = 1 ] 
 then
 cat >> classad_features.h <<EOF
 #define ENABLE_SHARED_LIBRARY_FUNCTIONS
@@ -126,7 +126,7 @@ cat >> classad_features.h <<EOF
 EOF
 fi
 
-if [ ${enable_flexible_member} = 1 ]
+if [ "${enable_flexible_member}" = 1 ]
 then
 cat >> classad_features.h <<EOF
 #define FLEXIBLE_MEMBER
