@@ -32,8 +32,8 @@
 #define WANT_DAGMAN_HELPER     YES
 #define WANT_NEST	NO		/* the NeST I/O module */
 
-
 #define USE_GLOBUS_OPENSSL YES
+#define NEEDS_PRELINKER	NO
 #endif  /* BeforeVendorCF */
 
 #ifdef AfterVendorCF
