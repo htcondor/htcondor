@@ -677,7 +677,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#	if !defined(SUNOS41) && !defined(ULTRIX43) && !defined(Solaris) && !defined(LINUX)
+#	if !defined(SUNOS41) && !defined(ULTRIX43) && !defined(Solaris) && !defined(LINUX) && !defined(IRIX62) 
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 			out code_bytes_bool( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
@@ -738,7 +738,7 @@ not_supported{
 		out code_bytes_bool( grouplist, gidsetsize * GID_T_SIZE );
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
-#	if defined(SUNOS41) || defined(Solaris)
+#	if defined(SUNOS41) || defined(Solaris) || defined(IRIX62)
 		int getdents( map(int fd), char *buf, int nbytes ) {
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
@@ -752,7 +752,7 @@ not_supported{
 			alloc( basep, LONG_SIZE );
 		}
 #	endif
-#if !defined(Solaris) && !defined(LINUX)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62)
 	int table( int id, int index, char *addr, int nel, unsigned int lel ) {
 		out code_bytes_bool( addr, nel * lel );
 		alloc( addr, nel * lel );
@@ -929,14 +929,14 @@ not_supported{
 
 
 #	if !defined(AIX32)
-#if !defined(Solaris) && !defined(LINUX)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62)
 		int getaddressconf( struct addressconf *buf, size_t length ) {
 			out code_bytes_bool( buf, length );
 			alloc( buf, length );
 		}
 #endif
 		pid_t getpgid( pid_t pid );
-#if defined(Solaris) || defined(LINUX)
+#if defined(Solaris) || defined(LINUX) || defined(IRIX62)
 	not_supported { 
 		int mvalid( char * addr, size_t len, int prot ) {
 			out code_bytes_bool( addr, len );
