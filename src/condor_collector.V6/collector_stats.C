@@ -458,6 +458,17 @@ CollectorDaemonStatsList::CollectorDaemonStatsList( bool enable,
 CollectorDaemonStatsList::~CollectorDaemonStatsList( void )
 {
 	if ( hashTable ) {
+
+		// iterate through hash table
+		CollectorBaseStats *ent;
+		StatsHashKey key;
+	
+		hashTable->startIterations();
+		while ( hashTable->iterate(key, ent) ) {
+			delete ent;
+			hashTable->remove(key);
+		}
+	
 		delete hashTable;
 		hashTable = NULL;
 	}
