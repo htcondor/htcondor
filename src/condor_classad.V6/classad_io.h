@@ -285,26 +285,6 @@ class ByteStream {
 };
 
 ///
-class StringStream : public ByteStream {
-  public:
-    ///
-    StringStream () {
-        m_src = new StringSource;
-        m_snk = new StringSink;
-    }
-    ///
-    virtual ~StringStream () {}
-    ///
-    inline void InitSrc (const char *buf, int buflen = -1) {
-        ((StringSource*)m_src)->Initialize (buf,buflen);
-    }
-    ///
-    inline void InitSnk (char *buf, int maxlen) {
-        ((StringSink*)m_snk)->Initialize (buf,maxlen);
-    }
-};
-
-///
 class FileStream : public ByteStream {
   public:
     ///
