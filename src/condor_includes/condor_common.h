@@ -18,6 +18,7 @@
 #include "_condor_fix_nt.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "condor_file_lock.h"
 
 /******************************
 ** Unix specifics

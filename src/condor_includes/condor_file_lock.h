@@ -43,6 +43,11 @@
 #define CONDOR_USE_FLOCK 0
 #endif
 
+#if defined(WIN32)
+#define CONDOR_USE_FLOCK 0		// does not matter on Win32 since we use lock_file.WIN32.c
+#include "fake_flock.h"
+#endif
+
 #if !defined(CONDOR_USE_FLOCK)
 ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
 #endif
