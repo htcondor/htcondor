@@ -9,7 +9,6 @@ require 5.0;
 use Carp;
 use Condor;
 use FileHandle;
-use CondorPersonal;
 
 BEGIN
 {
