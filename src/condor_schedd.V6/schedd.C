@@ -2663,7 +2663,7 @@ Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
 
 		// First, check if we have reached our maximum # of shadows 
 	if( CurNumActiveShadows >= MaxJobsRunning ) {
-		dprintf( D_ALWAYS, "Reached MAX_JOBS_RUNNING, %d jobs matched, "
+		dprintf( D_ALWAYS, "Reached MAX_JOBS_RUNNING: no more can run, %d jobs matched, "
 				 "%d jobs idle\n", started_jobs, idle_jobs ); 
 		return false;
 	}
@@ -2675,15 +2675,17 @@ Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
 	}
 
 		// Now, see if we ran out of swap space already.
-	if( SwapSpaceExhausted ) {
-		dprintf( D_ALWAYS, "Swap Space Exhausted, %d jobs matched, "
-				 "%d jobs idle\n", started_jobs, idle_jobs ); 
+	if( SwapSpaceExhausted) {
+		dprintf( D_ALWAYS, "Swap space exhausted! No more jobs can be run!\n" );
+        dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
+        dprintf( D_ALWAYS, "    %d jobs matched, %d jobs idle\n", started_jobs, idle_jobs ); 
 		return false;
 	}
 
 	if( ShadowSizeEstimate && started_jobs >= MaxShadowsForSwap ) {
-		dprintf( D_ALWAYS, "Swap Space Estimate Reached, %d jobs "
-				 "matched, %d jobs idle\n", started_jobs, idle_jobs ); 
+		dprintf( D_ALWAYS, "Swap space estimate reached! No more jobs can be run!\n" );
+        dprintf( D_ALWAYS, "    Solution: get more swap space, or set RESERVED_SWAP = 0\n" );
+        dprintf( D_ALWAYS, "    %d jobs matched, %d jobs idle\n", started_jobs, idle_jobs ); 
 		return false;
 	}
 	
