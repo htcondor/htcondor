@@ -91,7 +91,7 @@ class Scheduler : public Service
 	void			vacate_service(int, Stream *);
 
 	// job managing
-	void			abort_job(int, Stream *);
+	int				abort_job(int, Stream *);
 	void			send_all_jobs(ReliSock*, struct sockaddr_in*);
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 	friend	int		count(ClassAd *);
@@ -184,7 +184,6 @@ class Scheduler : public Service
 	int				is_alive(int);
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
-	void			cleanup_ckpt_files(int, PROC_ID*);
 	shadow_rec*     find_shadow_rec(PROC_ID*);
 	shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 #ifdef CARMI_OPS
