@@ -51,6 +51,14 @@ bool isKeyWord (char *token) {
     return false;
 }
 
+
+bool
+isDelimiter( char c ) {
+	char* tmp = strchr( DELIMITERS, (int)c );
+	return tmp ? true : false;
+}
+
+
 //-----------------------------------------------------------------------------
 bool parse (char *filename, Dag *dag) {
 
@@ -220,8 +228,48 @@ bool parse (char *filename, Dag *dag) {
             // The rest of the line is the script and args
             //
             char * rest = jobName;
+
+				// first, skip over the token we already read...
             while (*rest != '\0') rest++;
-            if (rest < endline)   rest++;
+
+				// if we're not at the end of the line, move forward
+				// one character so we're looking at the rest of the
+				// line...
+            if( rest < endline ) {
+				rest++;
+			} else {
+					// if we're already at the end of the line, they
+					// must not have given us any path to the script,
+					// arguments, etc.  
+                debug_printf( DEBUG_QUIET, 
+							  "%s(%d): you named a %s script for node %s but "
+							  "didn't provide a script filename\n",
+							  filename, lineNumber, post ? "POST" : "PRE", 
+							  jobName );
+                exampleSyntax( example );
+                fclose( fp );
+                return false;
+			}
+
+				// quick hack to get this working for extra
+				// whitespace: make sure the "rest" of the line isn't
+				// starting with any delimiter...
+			while( rest[0] && isDelimiter(rest[0]) ) {
+				rest++;
+			}
+
+			if( ! rest[0] ) {
+					// this means we only saw whitespace after the
+					// script.  however, because of how getline()
+					// works and our comparison to endline above, we
+					// should never hit this case.
+                debug_printf( DEBUG_QUIET, 
+							  "%s(%d): Missing script specification\n",
+							  filename, lineNumber );
+                exampleSyntax( example );
+                fclose( fp );
+                return false;
+			}
 
             if( post ) {
 				job->_scriptPost =
