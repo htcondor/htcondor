@@ -1,3 +1,7 @@
+02/07/03 V6_5_0-merge-1
+    The state of the V6_5_0-branch before merging back into V6_5-branch. It
+    has a few bug fixes, and some changes from V6_4 on it. This is the first
+    time V6_5_0 has ever been merged into V6_5
 
 02/07/03 V6_5_0-post-merge-V6_4-merge-6
     The state of the V6_5_0 branch after merging in V6_4-branch as tagged 
