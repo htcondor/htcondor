@@ -1,3 +1,13 @@
+12/08/03 V6_7-core-branch
+   A new branch off of V6_7-branch for adding some custom features for
+   CORE.  These include:
+   - disconnected shadow/starter (and schedd/startd) operation, so
+     that vanilla jobs can continue to make progress even if the
+     submit machine crashes, reboots, etc.
+   - group-based accounting in the schedd + negotiator
+   Created from the V6_7-core-root tag.  We will merge this branch
+   back into V6_7-branch once we're done and sure it's stable. 
+
 12/08/03 V6_7-post_merge-V6_6-merge-2
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-2.
