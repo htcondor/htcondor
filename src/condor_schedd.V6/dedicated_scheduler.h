@@ -268,6 +268,13 @@ class DedicatedScheduler : public Service {
 		*/
 	match_rec* getMrec( ClassAd* ad, char* buf = NULL );
 
+		/** Figure out if it's possible to ever schedule this job,
+			given all of the dedicated resources we know about. 
+			@param job ClassAd of the job to schedule
+			@param max_hosts How many hosts the job is looking for
+			@return true if possible, false if not
+		*/
+	bool isPossibleToSatisfy( ClassAd* job, int max_hosts );
 
 		// // // // // // 
 		// Data members 
