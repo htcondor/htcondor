@@ -132,7 +132,7 @@ main_init(int argc, char* argv[])
 	// initialize all the modules
 	scheduler.SetClassAd(ScheddClassad);
 	scheduler.Init();
-	scheduler.Register(daemonCore);
+	scheduler.Register();
 	scheduler.SetCommandPort(daemonCore->InfoCommandPort());
 	
 	scheduler.timeout();
