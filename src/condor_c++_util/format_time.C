@@ -46,7 +46,7 @@ format_date( time_t date )
 }
 
 /*
-  Format a date expressed in "UNIX time" into "month/day hour:minute".
+  Format a date expressed in "UNIX time" into "month/day/year hour:minute".
 */
 char *
 format_date_year( time_t date )
@@ -94,6 +94,32 @@ format_time( int tot_secs )
     secs = tot_secs % MINUTE;
 
     (void)sprintf( answer, "%3d+%02d:%02d:%02d", days, hours, min, secs );
+    return answer;
+}
+
+/*
+  Same as format_time above but don't print seconds field.
+*/
+char    *
+format_time_nosecs( int tot_secs )
+{
+    int     days;
+    int     hours;
+    int     min;
+    static char answer[25];
+
+	if ( tot_secs < 0 ) {
+		sprintf(answer,"[?????]");
+		return answer;
+	}
+
+    days = tot_secs / DAY;
+    tot_secs %= DAY;
+    hours = tot_secs / HOUR;
+    tot_secs %= HOUR;
+    min = tot_secs / MINUTE;
+
+    (void)sprintf( answer, "%3d+%02d:%02d", days, hours, min );
     return answer;
 }
 
