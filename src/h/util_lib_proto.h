@@ -125,6 +125,9 @@ int seteuid ( long int euid );
 #elif defined (LINUX)
 int setegid ( short unsigned int egid );
 int seteuid ( short unsigned int euid );
+#elif defined (OSF1)
+int setegid ( unsigned int egid );
+int seteuid ( unsigned int euid );
 #else
 int setegid ( int egid );
 int seteuid ( int euid );
@@ -138,11 +141,20 @@ int setlinebuf ( FILE *fp );
 #if defined(LINUX)
 int setregid ( short unsigned int rgid, short unsigned int egid );
 int setreuid ( short unsigned int ruid, short unsigned int euid );
+#elif defined(OSF1)
+int setregid ( unsigned int rgid, unsigned int egid );
+int setreuid ( unsigned int ruid, unsigned int euid );
 #else
 int setregid ( int rgid, int egid );
 int setreuid ( int ruid, int euid );
 #endif
+
+#if defined(OSF1)
+int setrgid ( unsigned int rgid );
+#else
 int setrgid ( int rgid );
+#endif
+
 int display_status_line ( STATUS_LINE *line, FILE *fp );
 char * shorten ( char *state );
 int free_status_line ( STATUS_LINE *line );
