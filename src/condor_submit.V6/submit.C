@@ -1222,10 +1222,7 @@ SetStdFile( int which_file )
 			break;
 		}
 		strcpy( tmpbuf, GlobusArgs );
-			//if fileneeded not an absolute pathname, use "/./", Globus
-			//GASS notation for CWD
-		sprintf( GlobusArgs, "%s(%s=$(GLOBUSRUN_GASS_URL)%s%s)", tmpbuf, 
-				fileneeded, macro_value[0] == '/' ? "" : "./", macro_value );
+		sprintf( GlobusArgs, "%s(%s=%s)", tmpbuf, fileneeded, macro_value );
 
 		if ( macro_value )
 			free(macro_value);
