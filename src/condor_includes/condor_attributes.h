@@ -106,6 +106,7 @@ const char ATTR_FORCE					 [] = "Force";
 const char ATTR_GID						 [] = "Gid";
 const char ATTR_GZIP					 [] = "GZIP";
 const char ATTR_GLOBUS_CONTACT_STRING	 [] = "GlobusContactString";
+const char ATTR_GLOBUS_GRAM_VERSION		 [] = "GlobusGramVersion";
 const char ATTR_GLOBUS_RESOURCE			 [] = "GlobusResource";
 const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
 const char ATTR_GLOBUS_STATUS			 [] = "GlobusStatus";

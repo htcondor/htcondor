@@ -102,8 +102,7 @@ class GlobusJob : public Service
 	bool holdLogged;
 
 	bool stateChanged;
-	bool newJM;		// This means a jobmanager that supports restart
-					// and two-phase commit
+	int jmVersion;
 	bool restartingJM;
 	time_t restartWhen;
 

@@ -135,7 +135,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	evictLogged = false;
 	holdLogged = false;
 	stateChanged = false;
-	newJM = false;
+	jmVersion = GRAM_V_UNKNOWN;
 	restartingJM = false;
 	restartWhen = 0;
 	gmState = GM_INIT;
@@ -146,7 +146,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	enteredCurrentGlobusState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
-	// ad = NULL;
 	syncedOutputSize = 0;
 	syncedErrorSize = 0;
 	shadowBirthday = 0;
@@ -172,9 +171,15 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 	ad = classad;
 
+	ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
+
 	buff[0] = '\0';
 	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
 	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
+		if ( jmVersion == GRAM_V_UNKNOWN ) {
+			dprintf(D_ALWAYS,
+					"Non-NULL contact string and unknown gram version!\n");
+		}
 		rehashJobContact( this, jobContact, buff );
 		jobContact = strdup( buff );
 	}
@@ -303,8 +308,7 @@ int GlobusJob::doEvaluateState()
 		case GM_INIT:
 			// This is the state all jobs start in when the GlobusJob object
 			// is first created. If we think there's a running jobmanager
-			// out there, we poke it both to see if it's still alive and
-			// to find out what version it is (based on its response).
+			// out there, we try to register for callbacks (in GM_REGISTER).
 			// The one way jobs can end up back in this state is if we
 			// attempt a restart of a jobmanager only to be told that the
 			// old jobmanager process is still alive.
@@ -326,33 +330,13 @@ int GlobusJob::doEvaluateState()
 					executeLogged = true;
 				}
 
-				rc = gahp.globus_gram_client_job_signal( jobContact,
-										(globus_gram_protocol_job_signal_t)0,
-										NULL, &status, &error );
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNKNOWN_SIGNAL_TYPE ) {
-					newJM = true;
+				if ( jmVersion >= GRAM_V_1_0 ) {
 					gmState = GM_REGISTER;
-				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_JOB_QUERY ||
-							rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
-					newJM = false;
-					if ( localOutput || localError ) {
-						gmState = GM_CANCEL;
-					} else {
-						gmState = GM_REGISTER;
-					}
-				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-							rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-					globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
-					gmState = GM_RESTART;
 				} else {
-					// unhandled error
-					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(0)", rc );
-					globusError = rc;
-					gmState = GM_STOP_AND_RESTART;
+						// Bad state.
+					dprintf(D_ALWAYS,"Bad GRAM version %d in GM_INIT!\n",
+							jmVersion);
+					gmState = GM_HOLD;
 				}
 			}
 			break;
@@ -368,7 +352,8 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-				connect_failure = true;
+				globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
+				gmState = GM_RESTART;
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
@@ -380,10 +365,14 @@ int GlobusJob::doEvaluateState()
 			}
 			callbackRegistered = true;
 			UpdateGlobusState( status, error );
-			if ( newJM ) {
+			if ( jmVersion >= GRAM_V_1_5 ) {
 				gmState = GM_STDIO_UPDATE;
 			} else {
-				gmState = GM_SUBMITTED;
+				if ( localOutput || localError ) {
+					gmState = GM_CANCEL;
+				} else {
+					gmState = GM_SUBMITTED;
+				}
 			}
 			break;
 		case GM_STDIO_UPDATE:
@@ -471,14 +460,14 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				}
 				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
-					newJM = false;
+					jmVersion = GRAM_V_1_0;
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-					newJM = true;
+					jmVersion = GRAM_V_1_5;
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
@@ -513,7 +502,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				if ( !done ) {
 					break;
 				}
-				if ( newJM ) {
+				if ( jmVersion >= GRAM_V_1_5 ) {
 					gmState = GM_SUBMIT_COMMIT;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -555,7 +544,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			// jobmanager occassionally to make it's still alive.
 			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 				syncIO();
-				if ( newJM ) {
+				if ( jmVersion >= GRAM_V_1_5 ) {
 					gmState = GM_CHECK_OUTPUT;
 				} else {
 					gmState = GM_DONE_SAVE;
@@ -660,7 +649,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			break;
 		case GM_DONE_COMMIT:
 			// Tell the jobmanager it can clean up and exit.
-			if ( newJM ) {
+			if ( jmVersion >= GRAM_V_1_5 ) {
 				rc = gahp.globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
@@ -771,10 +760,8 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
-					newJM = false;
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-					newJM = true;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
@@ -913,7 +900,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 				gmState = GM_PROXY_EXPIRED;
 			} else {
-				if ( newJM ) {
+				if ( jmVersion >= GRAM_V_1_5 ) {
 					// Sending a COMMIT_END here means we no longer care
 					// about this job submission. Either we know the job
 					// isn't pending/running or the user has told us to
@@ -949,6 +936,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
 				jobContact = NULL;
+				jmVersion = GRAM_V_UNKNOWN;
 				addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING, 0 );
 
 				// TODO: Evaluate if the failure is permanent or temporary
@@ -999,6 +987,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			globusError = 0;
 			lastRestartReason = 0;
 			numRestartAttemptsThisSubmit = 0;
+			jmVersion = GRAM_V_UNKNOWN;
 			ClearCallbacks();
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );

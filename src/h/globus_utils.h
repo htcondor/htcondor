@@ -29,6 +29,11 @@ BEGIN_C_DECLS
 
 #define NULL_JOB_CONTACT	"X"
 
+#define GRAM_V_UNKNOWN		0
+#define GRAM_V_1_0			1
+#define GRAM_V_1_5			2
+#define GRAM_V_1_6			3
+
 // Keep these in synch with the values defined in the Globus header files.
 #define GLOBUS_SUCCESS 0
 typedef void (* globus_gram_client_callback_func_t)(void * user_callback_arg,

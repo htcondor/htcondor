@@ -704,7 +704,11 @@ doContactSchedd()
 								curr_job->procID.proc,
 								ATTR_GLOBUS_CONTACT_STRING,
 								curr_job->jobContact ? curr_job->jobContact :
-								    NULL_JOB_CONTACT );
+								NULL_JOB_CONTACT );
+			SetAttributeInt( curr_job->procID.cluster,
+							 curr_job->procID.proc,
+							 ATTR_GLOBUS_GRAM_VERSION,
+							 curr_job->jmVersion );
 		}
 
 		if ( curr_action->actions & UA_UPDATE_STDOUT_SIZE ) {
@@ -1229,7 +1233,7 @@ WriteGlobusSubmitEventToUserLog( GlobusJob *job )
 
 	event.rmContact =  strnewp(job->myResource->ResourceName());
 	event.jmContact = strnewp(job->jobContact);
-	event.restartableJM = job->newJM;
+	event.restartableJM = job->jmVersion >= GRAM_V_1_5;
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
