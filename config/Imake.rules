@@ -1039,13 +1039,18 @@ depend:	ALWAYS				               @@\
 /*
 ** Build rule for copying man pages into the right place
 */
-
 #ifndef man_target
+#if HAS_STATIC
 #define man_target(name)					@@\
 man_full_target(name,strip)					@@\
 man_full_target(name,static)					@@\
 man_full_target(name,release)
-#endif
+#else /* HAS_STATIC */
+#define man_target(name)					@@\
+man_full_target(name,strip)					@@\
+man_full_target(name,release)
+#endif /* HAS_STATIC */
+#endif /* ifndef man_target */
 
 #ifndef man_full_target
 #define man_full_target(name,type)				@@\
