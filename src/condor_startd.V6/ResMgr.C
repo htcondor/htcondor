@@ -33,7 +33,7 @@ ResMgr::ResMgr()
 
 	if( condor_view_host ) {
 		view_sock = new SafeSock( condor_view_host,
-								  COLLECTOR_UDP_COMM_PORT ); 
+								  CONDOR_VIEW_PORT ); 
 	} else {
 		view_sock = NULL;
 	}
