@@ -24,6 +24,7 @@
 #define __XMLLEXER_H__
 
 #include "common.h"
+#include "lexerSource.h"
 #include <map>
 
 BEGIN_NAMESPACE( classad )
@@ -85,25 +86,17 @@ class XMLLexer
 	XMLLexer ();
 	~XMLLexer ();
 
-	void SetLexText( const std::string &new_lex_buffer);
+	void SetLexerSource(LexerSource *source);
 
 	// the 'extract token' functions
 	bool PeekToken(Token* token);
 	bool ConsumeToken(Token *token);
 
-	// The buffer_offset is set to be just before where we begin,
-	// but callers may expect it to be at the character, so we adjust it.
-	void SetOffset(int offset) { buffer_offset = offset - 1; }
-	int GetOffset(void) { return buffer_offset + 1; }
-	
  private:
 	Token       current_token;
 	bool        token_is_valid;
-	const char  *buffer;
-	int         buffer_length;
-	int         buffer_offset;
+	LexerSource *lexer_source;
 
-	void Initialize(void);
 	bool GrabToken(void);
 	bool GrabTag(void);
 	void BreakdownTag(const char *complete_tag);

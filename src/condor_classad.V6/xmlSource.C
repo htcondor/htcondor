@@ -23,6 +23,7 @@
 #include "common.h"
 #include "xmlSource.h"
 #include "xmlLexer.h"
+#include "lexerSource.h"
 #include "classad.h"
 #include "source.h"
 
@@ -69,11 +70,11 @@ ClassAd *ClassAdXMLParser::
 ParseClassAd( const string &buffer, int &offset)
 {
 	ClassAd          *classad;
+	StringLexerSource lexer_source(&buffer, offset);
 
-	lexer.SetLexText(buffer);
-	lexer.SetOffset(offset);
+	lexer.SetLexerSource(&lexer_source);
 	classad = ParseClassAd();
-	offset = lexer.GetOffset();
+	offset = lexer_source.GetCurrentLocation();
 
 	return classad;
 }

@@ -134,7 +134,7 @@ DumpToken(void)
 XMLLexer::
 XMLLexer ()
 {
-	Initialize();
+	lexer_source = NULL;
 	return;
 }
 
@@ -147,24 +147,9 @@ XMLLexer::
 
 
 void XMLLexer::
-SetLexText( const string &new_buffer)
+SetLexerSource(LexerSource *source)
 {
-	Initialize();
-	buffer        = new_buffer.c_str();
-	buffer_length = new_buffer.length();
-	buffer_offset = -1;
-
-	return;
-}
-
-void XMLLexer::
-Initialize(void)
-{
-	current_token.ClearToken();
-	token_is_valid = false;
-	buffer         = NULL;
-	buffer_offset  = -1;
-	buffer_length  = -1;
+	lexer_source = source;
 
 	return;
 }
@@ -211,25 +196,35 @@ bool XMLLexer::
 GrabToken(void)
 {
 	bool have_token;
+	bool have_character;
+	int  character;
 
 	current_token.ClearToken();
 
 	// Find first non-whitespace character, to decide if we 
 	// are getting a tag or some text. If we get text, we preserve
 	// whitespace, because we keep whitespace in strings.
-	int i;
-	buffer_offset++;
-	i = buffer_offset;
-	while (i < buffer_length && isspace(buffer[i])) {
-		i++;
+	have_character = false;
+	while (!lexer_source->AtEnd()) {
+		character = lexer_source->ReadCharacter();
+		if (!isspace(character)) {
+			have_character = true;
+			break;
+		}
 	}
 	
-	if (buffer[i] == '<') {
-		buffer_offset = i;
-		have_token = GrabTag();
+	if (have_character) {
+		if (character == '<') {
+			have_token = GrabTag();
+		} else {
+			lexer_source->UnreadCharacter();
+			have_token = GrabText();
+		}
 	} else {
-		have_token = GrabText();
+		have_token = false;
 	}
+
+	//current_token.DumpToken();
 
 	return have_token;
 }
@@ -238,29 +233,33 @@ bool XMLLexer::
 GrabTag(void)
 {
 	bool    have_token;
-	int     start, count;
-	string  complete_tag; // the tag and it's attributes
+	int     character;
+	string  complete_tag; // the tag and its attributes
 
 	current_token.token_type = tokenType_Tag;
-	buffer_offset++; // skip the '<'
 	complete_tag = "";
+	character = -1;
 
 	// Skip whitespace
-	while (buffer_offset < buffer_length && isspace(buffer[buffer_offset])) {
-		buffer_offset++;
+	while (!lexer_source->AtEnd()) {
+		character = lexer_source->ReadCharacter();
+		if (!isspace(character)) {
+			complete_tag += character;
+			break;
+		}
 	}
 
-	start = buffer_offset;
-	count = 0;
-	while (buffer_offset < buffer_length && buffer[buffer_offset] != '>') {
-		//complete_tag += buffer[buffer_offset];
-		buffer_offset++;
-		count++;
+	// Read the rest of the tag, a character at a time
+	while (!lexer_source->AtEnd()) {
+		character = lexer_source->ReadCharacter();
+		if (character != '>') {
+			complete_tag += character;
+		} else {
+			break;
+		}
 	}
-	// With gcc-2.x's STL, this is faster than using a bunch of += statements.
-	complete_tag.assign(buffer+start, count);
 
-	if (buffer[buffer_offset] != '>') { 
+	if (character != '>') { 
 		// We have an unclosed tag. This will not do. 
 		have_token = false;
 	} else {
@@ -373,31 +372,65 @@ GrabText(void)
 	have_nonspace = false;
 	current_token.text = "";
 
-	while (buffer_offset < buffer_length && buffer[buffer_offset] != '<') {
-		int  inc = 1;
+	while (!lexer_source->AtEnd()) {
+		int character;
 
-		if (buffer[buffer_offset] == '&') {
-			const char *entity = buffer + buffer_offset;
-			bool replaced_entity = false;
+		character = lexer_source->ReadCharacter();
+		if (character == '<') {
+			lexer_source->UnreadCharacter();
+			break;
+		} else {
+			if (character == '&') {
 
-			for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
-				if (!strncmp(entity, entities[i].name, entities[i].length)) {
-					current_token.text += entities[i].replacement_text;
-					inc = entities[i].length;
-					replaced_entity = true;
-					break;
+				have_nonspace = true;
+
+				// Figure out if this is an entity. If it is, figure
+				// out what character should actually be put into the text;
+				// First, find the text of the entity: it's text up and including
+				// a semicolon. But finding a space or another & will stop us.
+
+				string entity_text;
+				entity_text = character;
+				while (!lexer_source->AtEnd()) {
+					int ch = lexer_source->ReadCharacter();
+					if (ch == ' ') {
+						// drop the entire text, including the space into the token
+						entity_text += ch;
+						current_token.text += entity_text;
+						break;
+					} else if (ch == '&') {
+						// drop the text before the & into the token. 
+						// put back the & to be found the next time around, so
+						// we can look for another entity
+						lexer_source->UnreadCharacter();
+						current_token.text += entity_text;
+						break;
+					} else if (ch == ';') {
+						// End of an entity, do the comparison
+						entity_text += ch;
+						bool replaced_entity = false;
+						for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
+							if (!strcmp(entity_text.c_str(), entities[i].name)) {
+								current_token.text += entities[i].replacement_text;
+								replaced_entity = true;
+								break;
+							}
+						}
+						if (!replaced_entity) {
+							current_token.text += entity_text;
+						}
+						break;
+					} else {
+						entity_text += ch;
+					}
+				}
+			} else {
+				current_token.text += character;
+				if (!isspace(character)) {
+					have_nonspace = true;
 				}
 			}
-			if (!replaced_entity) {
-				current_token.text += '&';
-			}
-		} else {
-			current_token.text += buffer[buffer_offset];
 		}
-		if (!isspace(buffer[buffer_offset])) {
-			have_nonspace = true;
-		}
-		buffer_offset += inc;
 	}
 
 	if (!have_nonspace) {
@@ -406,9 +439,6 @@ GrabText(void)
 		have_token = false;
 	} else {
 		have_token = true;
-		if (buffer[buffer_offset] == '<') {
-			buffer_offset--;
-		}
 	}
 	return have_token;
 }
