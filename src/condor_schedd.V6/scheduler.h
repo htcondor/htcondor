@@ -34,6 +34,7 @@
 
 #include "dc_collector.h"
 #include "daemon.h"
+#include "daemon_list.h"
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "proc.h"
@@ -290,9 +291,6 @@ class Scheduler : public Service
 	DCCollector*	Collector;
 	Daemon*			Negotiator;
 
-	void			updateCentralMgr( int command, ClassAd* ca, 
-									  char* host, int port ); 
-
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
 
@@ -418,7 +416,7 @@ private:
 	int				numMatches;
 	int				numShadows;
 	List <PROC_ID>	*IdleSchedUniverseJobIDs;
-	StringList		*FlockCollectors, *FlockNegotiators;
+	DaemonList		*FlockCollectors, *FlockNegotiators;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive

@@ -374,10 +374,14 @@ Scheduler::~Scheduler()
 		}
 		delete resourcesByProcID;
 	}
-	if (FlockCollectors) delete FlockCollectors;
-	if (FlockNegotiators) delete FlockNegotiators;
-	FlockCollectors = NULL;
-	FlockNegotiators = NULL;
+	if( FlockCollectors ) {
+		delete FlockCollectors;
+		FlockCollectors = NULL;
+	}
+	if( FlockNegotiators ) {
+		delete FlockNegotiators;
+		FlockNegotiators = NULL;
+	}
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
@@ -608,13 +612,15 @@ Scheduler::count_jobs()
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
-	if (FlockCollectors) {
+	if( FlockCollectors ) {
 		FlockCollectors->rewind();
-		char *host = FlockCollectors->next();
-		for (i=0; host && i < FlockLevel; i++) {
-			updateCentralMgr( UPDATE_SCHEDD_AD, ad, host,
-							  collector_port );
-			host = FlockCollectors->next();
+		Daemon* d;
+		DCCollector* col;
+		FlockCollectors->next(d);
+		for( i=0; d && i < FlockLevel; i++ ) {
+			col = (DCCollector*)d;
+			col->sendUpdate( UPDATE_SCHEDD_AD, ad );
+			FlockCollectors->next( d );
 		}
 	}
 
@@ -687,13 +693,20 @@ Scheduler::count_jobs()
 
 	// update collector of the pools with which we are flocking, if
 	// any
-	if (FlockCollectors && FlockNegotiators) {
+	Daemon* d;
+	Daemon* flock_neg;
+	DCCollector* flock_col;
+	if( FlockCollectors && FlockNegotiators ) {
 		FlockCollectors->rewind();
 		FlockNegotiators->rewind();
-		for (int flock_level = 1;
+		for( int flock_level = 1;
 			 flock_level <= MaxFlockLevel; flock_level++) {
-			char *flock_collector = FlockCollectors->next();
-			char *flock_negotiator = FlockNegotiators->next();
+			FlockNegotiators->next( flock_neg );
+			FlockCollectors->next( d );
+			flock_col = (DCCollector*)d;
+			if( ! (flock_col && flock_neg) ) { 
+				continue;
+			}
 			for (i=0; i < N_Owners; i++) {
 				Owners[i].JobsRunning = 0;
 				Owners[i].JobsFlocked = 0;
@@ -706,7 +719,7 @@ Scheduler::count_jobs()
 				int OwnerNum = insert_owner( rec->user, NULL );
 				if (at_sign) *at_sign = '@';
 				if (rec->shadowRec && rec->pool &&
-					!strcmp(rec->pool, flock_negotiator)) {
+					!strcmp(rec->pool, flock_neg->pool())) {
 					Owners[OwnerNum].JobsRunning++;
 				} else {
 						// This is a little weird.  We're sending an update
@@ -742,9 +755,7 @@ Scheduler::count_jobs()
 				sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 						UidDomain);
 				ad->InsertOrUpdate(tmp);
-				updateCentralMgr( UPDATE_SUBMITTOR_AD, ad,
-								  flock_collector,
-								  collector_port ); 
+				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
 			}
 		}
 	}
@@ -803,16 +814,14 @@ Scheduler::count_jobs()
 	  Collector->sendUpdate( UPDATE_SUBMITTOR_AD, ad ); 
 
 	  // also update all of the flock hosts
-	  char *host;
 	  int i;
-	
-	  if (FlockCollectors) {
-		 for (i=1, FlockCollectors->rewind();
-			  i <= OldOwners[i].OldFlockLevel &&
-				  (host = FlockCollectors->next()); i++) {
-			 updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, host,
-							   collector_port );
-		 }
+	  Daemon *d;
+	  if( FlockCollectors ) {
+		  for( i=1, FlockCollectors->rewind();
+			   i <= OldOwners[i].OldFlockLevel &&
+				   FlockCollectors->next(d); i++ ) {
+			  ((DCCollector*)d)->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
+		  }
 	  }
 	}
 
@@ -1089,38 +1098,6 @@ Scheduler::insert_owner(char* owner, char *x509proxy)
 	return i;
 }
 
-void
-Scheduler::updateCentralMgr( int command, ClassAd* ca, char *host,
-							 int port ) 
-{
-	// If the host we're given is NULL, just return, don't seg fault. 
-	if( !host ) {
-		return;
-	}
-	// If the ClassAd we're given is NULL, just return, don't seg fault. 
-	if( !ca ) {
-		return;
-	}
-
-    SafeSock sock;
-	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
-	sock.encode();
-	if( !sock.connect(host, port)) {
-		dprintf( D_ALWAYS, "failed to connect to central manager (%s)!\n",
-				 host );
-		return;
-	}
-
-	DCCollector d(host);
-
-	d.startCommand(command, &sock);
-
-	sock.encode();
-	if( !ca->put(sock) || !sock.end_of_message() ) {
-		dprintf( D_ALWAYS, "failed to update central manager (%s)!\n",
-				 host );
-	}
-}
 
 static int IsSchedulerUniverse(shadow_rec* srec);
 
@@ -2534,6 +2511,7 @@ Scheduler::negotiate(int, Stream* s)
 	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
 	char*	negotiator_name = NULL;	// hostname of negotiator when flocking
+	Daemon*	neg_host = NULL;	
 	int		serviced_other_commands = 0;	
 	int		owner_num;
 	int		JobsRejected = 0;
@@ -2542,6 +2520,7 @@ Scheduler::negotiate(int, Stream* s)
 	ClassAd* my_match_ad;
 	ClassAd* ad;
 	char buffer[1024];
+
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
@@ -2585,10 +2564,9 @@ Scheduler::negotiate(int, Stream* s)
 		// if it isn't our local negotiator, check the FlockNegotiators list.
 		if (!match) {
 			int n;
-			for (n=1, FlockNegotiators->rewind();
-				 !match && (host = FlockNegotiators->next());
-				 n++) {
-				hent = gethostbyname(host);
+			for( n=1, FlockNegotiators->rewind();
+				 !match && FlockNegotiators->next(neg_host); n++) {
+				hent = gethostbyname(neg_host->fullHostname());
 				if (hent && hent->h_addrtype == AF_INET) {
 					for (int a=0;
 						 !match && (addr = hent->h_addr_list[a]);
@@ -6017,13 +5995,20 @@ Scheduler::Init()
 	if (!flock_negotiator_hosts) { // backward compatibility
 		flock_negotiator_hosts = param( "FLOCK_HOSTS" );
 	}
-	if (flock_collector_hosts && flock_negotiator_hosts) {
-		if (FlockCollectors) delete FlockCollectors;
-		FlockCollectors = new StringList( flock_collector_hosts );
+	if( flock_collector_hosts && flock_negotiator_hosts ) {
+		if( FlockCollectors ) {
+			delete FlockCollectors;
+		}
+		FlockCollectors = new DaemonList();
+		FlockCollectors->init( DT_COLLECTOR, flock_collector_hosts );
 		MaxFlockLevel = FlockCollectors->number();
-		if (FlockNegotiators) delete FlockNegotiators;
-		FlockNegotiators = new StringList( flock_negotiator_hosts );
-		if (FlockCollectors->number() != FlockNegotiators->number()) {
+
+		if( FlockNegotiators ) {
+			delete FlockNegotiators;
+		}
+		FlockNegotiators = new DaemonList();
+		FlockNegotiators->init( DT_NEGOTIATOR, flock_negotiator_hosts );
+		if( FlockCollectors->number() != FlockNegotiators->number() ) {
 			dprintf(D_ALWAYS, "FLOCK_COLLECTOR_HOSTS and "
 					"FLOCK_NEGOTIATOR_HOSTS lists are not the same size."
 					"Flocking disabled.\n");
@@ -6417,7 +6402,6 @@ void
 Scheduler::invalidate_ads()
 {
 	int i;
-	char *host;
 	char line[256];
 
 		// The ClassAd we need to use is totally different from the
@@ -6440,12 +6424,12 @@ Scheduler::invalidate_ads()
 			 Name );
     ad->InsertOrUpdate( line );
 	Collector->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
-	int collector_port = param_get_collector_port();
+
+	Daemon* d;
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
-			 i <= FlockLevel && (host = FlockCollectors->next()); i++ ) {
-			updateCentralMgr( INVALIDATE_SUBMITTOR_ADS, ad, host, 
-							  collector_port );
+			 i <= FlockLevel && FlockCollectors->next(d); i++ ) {
+			((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
 		}
 	}
 }
@@ -6484,16 +6468,16 @@ Scheduler::sendReschedule( void )
 		return;
 	}
 
+	Daemon* d;
 	if( FlockNegotiators ) {
 		FlockNegotiators->rewind();
-		int port = param_get_negotiator_port();
-		char *negotiator = FlockNegotiators->next();
-		for( int i=0; negotiator && i < FlockLevel;
-			negotiator = FlockNegotiators->next(), i++ ) {
-			Daemon d( DT_NEGOTIATOR, negotiator );
-			if (!d.sendCommand(RESCHEDULE, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT)) {
-				dprintf( D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
-						 negotiator );
+		FlockNegotiators->next( d );
+		for( int i=0; d && i<FlockLevel; FlockNegotiators->next(d), i++ ) {
+			if( !d->sendCommand(RESCHEDULE, Stream::safe_sock, 
+								NEGOTIATOR_CONTACT_TIMEOUT) ) {
+				dprintf( D_ALWAYS, 
+						 "failed to send RESCHEDULE command to %s: %s\n",
+						 d->name(), d->error() );
 			}
 		}
 	}
