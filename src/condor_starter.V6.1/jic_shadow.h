@@ -240,9 +240,10 @@ private:
 		/// If the job ad says so, initialize our IO proxy
 	bool initIOProxy( void );
 
-		/** Compare our own UIDDomain vs. where the job came from.
-			We check in the given job ClassAd for ATTR_UID_DOMAIN, and
-			compare that to info we have about our remote shadow.
+		/** Compare our own UIDDomain vs. where the job came from.  We
+			check in the job ClassAd for ATTR_UID_DOMAIN and compare
+			it to info we have about the shadow and the local machine.
+			This is used to help initialize the priv-state code.
 			@return true if they match, false if not
 		*/
 	bool sameUidDomain( void );
