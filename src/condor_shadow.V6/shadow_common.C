@@ -540,6 +540,25 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 	}
 }
 
+
+void
+checkForDebugging( ClassAd* ad )
+{
+	// For debugging, see if there's a special attribute in the
+    // job ad that sends us into an infinite loop, waiting for
+    // someone to attach with a debugger
+    int shadow_should_wait = 0;
+    ad->LookupInteger( ATTR_SHADOW_WAIT_FOR_DEBUG,
+					   shadow_should_wait );
+    if( shadow_should_wait ) {
+        dprintf( D_ALWAYS, "Job requested shadow should wait for "
+            "debugger with %s=%d, going into infinite loop\n",
+            ATTR_SHADOW_WAIT_FOR_DEBUG, shadow_should_wait );
+        while( shadow_should_wait );
+    }
+}
+
+
 int
 InitJobAd(int cluster, int proc)
 {
@@ -566,6 +585,7 @@ InitJobAd(int cluster, int proc)
 		}
 		if (JobAd) {
 			// we're done
+			checkForDebugging( JobAd );
 			return 0;
 		}
 
@@ -585,7 +605,7 @@ InitJobAd(int cluster, int proc)
   if (!JobAd) {
 	EXCEPT( "failed to get job ad" );
   }
-
+  checkForDebugging( JobAd );
   return 0;
 }
 
