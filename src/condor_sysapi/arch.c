@@ -230,7 +230,7 @@ sysapi_translate_opsys( char *sysname, char *release )
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
 		if ( !strcmp(release, "2.7") //LDAP entry
-//			|| !strcmp(release, "5.7")
+			|| !strcmp(release, "5.7")
 		)
 		{
 			sprintf( tmp, "SOLARIS27" );
