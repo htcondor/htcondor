@@ -20,7 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-
+#ifndef __PRINT_WRAPPED_TEXT_H
+#define __PRINT_WRAPPED_TEXT_H
 
 /** Print some text, wrapping it properly on each line. This is
     particularly useful when you don't know how long your text
@@ -35,3 +36,5 @@ void print_wrapped_text(
     const char *text, 
 	FILE *output, 
 	int chars_per_line = 78);
+
+#endif
