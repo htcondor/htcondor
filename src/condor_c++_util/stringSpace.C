@@ -95,12 +95,12 @@ purge ()
 			{
 				case SS_DUP:
 				case SS_ADOPT_C_STRING:
-					free ( (char*) strTable[i].string);
+					free ((char *) strTable[i].string);
 					did_delete = true;
 					break;
 
 				case SS_ADOPT_CPLUS_STRING:
-					delete [] ((void *)strTable[i].string);
+					delete [] (strTable[i].string);
 					did_delete = true;
 					break;
 
@@ -153,10 +153,10 @@ getCanonical (const char *str, StringSpaceAdoptionMethod adopt)
 		switch (adopt)
         {
             case SS_ADOPT_C_STRING: 
-				free( (char*)str);  
+				free((char *) str);  
 				break;
             case SS_ADOPT_CPLUS_STRING: 
-				delete [] ((void*)str);  
+				delete [] (str);  
 				break;
             case SS_DUP:
             default:
@@ -324,14 +324,14 @@ SSString::dispose ()
         {
             case SS_DUP: 
             case SS_ADOPT_C_STRING:
-                free ( (char*) context->strTable[index].string);
+                free ((char *) context->strTable[index].string);
 				context->strTable[index].string = NULL;
 				context->strTable[index].inUse = false;
 				context->strTable[index].adoptMode = SS_INVALID;
                 break;
 
             case SS_ADOPT_CPLUS_STRING:
-                delete [] ((void*)context->strTable[index].string);
+                delete [] (context->strTable[index].string);
 				context->strTable[index].string = NULL;
 				context->strTable[index].inUse = false;
 				context->strTable[index].adoptMode = SS_INVALID;
