@@ -29,6 +29,9 @@ The details of each version are described below.
       of seconds \Condor{dagman} will sleep before submitting each
       job.
 
+\item Enabled the ``update statistics'' in the \Condor{collector} by
+      default in both the executable and in the default configuration.
+
 % commented out since i'm not sure we want to make a big deal of this
 % new config file knob. -derek 1/12/04
 % \item Added a new configuration macro
@@ -44,9 +47,9 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Fixed a bug in the standard universe where C++ code that threw an 
-exception would result in abortion of the executable instead of the delivery
-of the exception. 
-This bug affects Condor version 6.6.0 for Redhat 7.x.
+exception would result in abortion of the executable instead of the
+delivery of the exception. This bug affects Condor version 6.6.0 for
+Redhat 7.x.
 
 \item Fixed bug whereby \Condor{dagman}, if removed from the queue via
       \Condor{rm}, could fail to remove all of its submitted jobs if
@@ -116,9 +119,9 @@ be cleaned up. This bug first appeared in 6.5.0.
 Windows (such as when \verb@condor_vacate@  is called) to fail to
 complete.
 
-\item The gahp_server helper program, which provides Globus services to
+\item The gahp\_server helper program, which provides Globus services to
 Condor-G, was always dynamically linked, even in statically-linked releases. 
-The statically linked distributions of Condor now include a static gahp_server.
+The statically linked distributions of Condor now include a static gahp\_server.
 
 \end{itemize}
 
