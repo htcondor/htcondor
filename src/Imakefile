@@ -19,6 +19,8 @@
 #define SMPFiles sbin/condor_startd sbin/condor_starter \
 	sbin/condor_preen bin/condor_status
 
+#define SMPContribFiles etc/examples/condor_config.local.smp
+
 #define CondorViewServerFiles sbin/condor_collector
 
 #define CondorViewClientFiles sbin/condor_stats
@@ -51,59 +53,53 @@
 		util_lib c++_util procapi io classad daemon_core.V6 \
 		ckpt syscall_lib 
 
+#if HAS_STATIC
+#define StaticDirectories \
+	static_dir static_dir/bin static_dir/sbin static_dir/lib \
+	static_dir/etc static_dir/etc/examples \
+	static_contrib static_contrib/bin static_contrib/lib \
+	static_contrib/sbin static_contrib/etc \
+	static_contrib/etc/examples
+#else
+#define StaticDirectories
+#endif
+
 #define Directories \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
 	strip_dir/etc strip_dir/etc/examples \
-	static_dir static_dir/bin static_dir/sbin static_dir/lib \
-	static_dir/etc static_dir/etc/examples \
 	strip_contrib strip_contrib/bin strip_contrib/lib \
 	strip_contrib/sbin strip_contrib/etc \
-	strip_contrib/etc/examples \
-	static_contrib static_contrib/bin static_contrib/lib \
-	static_contrib/sbin static_contrib/etc \
-	static_contrib/etc/examples
+	strip_contrib/etc/examples StaticDirectories
 
-all: h h_all condor_includes makefiles Directories Libraries Programs examples
+all: h h_all condor_includes makefiles Directories Libraries \
+	Programs examples condor_release_all
 release:: all
 stripped:: all
 static:: all
 libs:: h h_all condor_includes makefiles Directories Libraries
 
-PUBLIC_TARGET_PATH = /p/condor/workspaces/release
-#if defined( PublicTargetName )
-  PUBLIC_TARGET_NAME = PublicTargetName
-  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V6_releases/$(PUBLIC_TARGET_NAME)
-  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V6_static_releases/$(PUBLIC_TARGET_NAME)
-#else 
-  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V6_release
-  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V6_static_release
-#endif
-
 public:: strip.tar 
-	rm -f $(PUBLIC_D_TARGET)/release.tar 
-	cp strip_dir/release.tar $(PUBLIC_D_TARGET)
 
 strip.tar: stripped
 	cd strip_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
 
 #if HAS_STATIC
 public:: static.tar
-	rm -f $(PUBLIC_S_TARGET)/release.tar 
-	cp static_dir/release.tar $(PUBLIC_S_TARGET)
 
 static.tar: static
 	cd static_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
 #endif 
 
 release_tarball( submit.tar, SubmitOnlyFiles )
-release_tarball( link.tar, LinkOnlyFiles )
-release_tarball( smp.tar, SMPFiles )
+release_tarball( link.tar, LinkOnlyFiles  )
 release_tarball( condor_view_server.tar, CondorViewServerFiles )
 
+contrib_tarball( condor_view_client.tar, CondorViewClientFiles )
 contrib_tarball( ckpt_server.tar, CkptServerFiles )
 contrib_tarball( dagman.tar, DagManFiles )
-contrib_tarball( condor_view_client.tar, CondorViewClientFiles )
+
+both_tarball( smp.tar, SMPFiles, SMPContribFiles )
 
 #if WANT_PVM && HAS_PVM
 #define PvmTar pvm.tar
@@ -112,10 +108,20 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define PvmTar 
 #endif 
 
-all_tarballs: ckpt_server.tar dagman.tar smp.tar condor_view.tar \
-	PvmTar submit.tar link.tar
+all_tarballs: ckpt_server.tar dagman.tar smp.tar submit.tar link.tar \
+	condor_view_client.tar condor_view_server.tar PvmTar
 
 public:: all_tarballs
+
+PUBLIC_TARGET_PATH = /p/condor/workspaces/release
+#if defined( PublicTargetName )
+  PUBLIC_TARGET_NAME = PublicTargetName
+  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V61_releases/$(PUBLIC_TARGET_NAME)
+  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V61_static_releases/$(PUBLIC_TARGET_NAME)
+#else 
+  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V61_release
+  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V61_static_release
+#endif
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -129,13 +135,6 @@ simple_dir_target(strip_dir/sbin)
 simple_dir_target(strip_dir/etc)
 simple_dir_target(strip_dir/etc/examples)
 
-simple_dir_target(static_dir)
-simple_dir_target(static_dir/bin)
-simple_dir_target(static_dir/lib)
-simple_dir_target(static_dir/sbin)
-simple_dir_target(static_dir/etc)
-simple_dir_target(static_dir/etc/examples)
-
 simple_dir_target(strip_contrib)
 simple_dir_target(strip_contrib/bin)
 simple_dir_target(strip_contrib/lib)
@@ -143,12 +142,21 @@ simple_dir_target(strip_contrib/sbin)
 simple_dir_target(strip_contrib/etc)
 simple_dir_target(strip_contrib/etc/examples)
 
+#if HAS_STATIC
+simple_dir_target(static_dir)
+simple_dir_target(static_dir/bin)
+simple_dir_target(static_dir/lib)
+simple_dir_target(static_dir/sbin)
+simple_dir_target(static_dir/etc)
+simple_dir_target(static_dir/etc/examples)
+
 simple_dir_target(static_contrib)
 simple_dir_target(static_contrib/bin)
 simple_dir_target(static_contrib/lib)
 simple_dir_target(static_contrib/sbin)
 simple_dir_target(static_contrib/etc)
 simple_dir_target(static_contrib/etc/examples)
+#endif /* HAS_STATIC */
 
 object_target(util_lib)
 object_target(c++_util)
@@ -190,6 +198,13 @@ object_target(scripts)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
+object_dir_target(condor_release)
+object_dir_target(condor_release/examples)
+
+condor_release_all:
+	make condor_release
+	rm -rf condor_release/examples
+	make condor_release/examples
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
