@@ -33,15 +33,8 @@
 #include <pwd.h>
 #include "proc_obj.h"
 #include "proc_obj_tmpl.h"
-/* Solaris specific change ... dhaval 6/27 */
-/* Solaris 2.5.1 specific change ... weiru */
-/*
-#if defined(Solaris) && !defined(Solaris251)
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-*/
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
+static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 /* GET THESE OUT OF HERE -- mike */
 static char *Notifications[] = {
