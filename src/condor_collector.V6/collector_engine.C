@@ -323,6 +323,11 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 
 	rval = collect(command, clientAd, from, insert, sock);
 
+	// Don't leak the ad on error!
+	if ( ! rval ) {
+		delete clientAd;
+	}
+
 	// get the end_of_message()
 	if (!sock->end_of_message())
 	{
@@ -349,6 +354,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		if (!makeStartdAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
 			retVal = 0;
 			break;
 		}
@@ -388,6 +394,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		if (!makeScheddAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
 			retVal = 0;
 			break;
 		}
@@ -402,6 +409,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		if (!makeScheddAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
 			retVal = 0;
 			break;
 		}
@@ -417,6 +425,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		if (!makeLicenseAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
 			retVal = 0;
 			break;
 		}
@@ -431,6 +440,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		if (!makeMasterAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
 			retVal = 0;
 			break;
 		}
@@ -443,6 +453,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		if (!makeCkptSrvrAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
 			retVal = 0;
 			break;
 		}
@@ -456,6 +467,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		if (!makeCollectorAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
 			retVal = 0;
 			break;
 		}
@@ -468,6 +480,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		if (!makeStorageAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
 			retVal = 0;
 			break;
 		}
