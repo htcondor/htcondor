@@ -384,9 +384,13 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-This expression is available for the vanilla and java universes.
-It is additionally available, when submitted from a Unix machine,
-for the standard universe.
+This expression is available for the vanilla and java universes.  It
+is additionally available, when submitted from a Unix machine, for the
+standard universe.  Note that the schedd, by default, only checks
+these periodic expressions once every 300 seconds.  The period of
+these evaluations can be adjusted by setting the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% on_exit_hold
@@ -429,7 +433,7 @@ for the standard universe.
 
 \item[periodic\_remove = $<$ClassAd Boolean Expression$>$]
 \index{submit commands!periodic\_remove}
-This expression is checked every 20 seconds (currently non-configurable),
+This expression is checked periodically,
 and if it becomes \Expr{True}, the job is removed from the queue.
 If unspecified, the default value is \Expr{False}.
 
@@ -446,7 +450,10 @@ if the two describe conflicting actions.
 
 This expression is available for the vanilla and java universes.
 It is additionally available, when submitted from a Unix machine,
-for the standard universe.
+for the standard universe.  Note that the schedd, by default, only checks
+periodic expressions once every 300 seconds.  The period of
+these evaluations can be adjusted by setting the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
 %%%%%%%%%%%%%%%%%%%
 %% periodic_hold
@@ -454,7 +461,7 @@ for the standard universe.
 
 \item[periodic\_hold = $<$ClassAd Boolean Expression$>$] This expression
 \index{submit commands!periodic\_hold}
-is checked every 20 seconds(currently non-configurable),
+is checked every periodically,
 and if it becomes true, the job will be placed on hold.
 If unspecified, the default value is \Expr{False}.
 
@@ -468,7 +475,10 @@ precedence over a \AdAttr{*\_remove} expressions.
 
 This expression is available for the vanilla and java universes.
 It is additionally available, when submitted from a Unix machine,
-for the standard universe.
+for the standard universe.  Note that the schedd, by default, only checks
+periodic expressions once every 300 seconds.  The period of
+these evaluations can be adjusted by setting the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
 %%%%%%%%%%%%%%%%%%%
 %% periodic_release
@@ -493,6 +503,14 @@ If the expression becomes \Expr{True}, the job will be released.
 %default) or more often as needed.
 
 % what universes (other than universe=globus) does this apply to?
+
+This expression is available for the vanilla and java universes.
+It is additionally available, when submitted from a Unix machine,
+for the standard universe.  Note that the schedd, by default, only checks
+periodic expressions once every 300 seconds.  The period of
+these evaluations can be adjusted by setting the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% priority
