@@ -65,12 +65,10 @@
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
 
-#define CCompiler gcc -m486
-#define CPlusCompiler	g++ -m486
 #define StaticFlag	-static
-#define UnixName /vmlinuz			/* pathname of the system executable */
+#define UnixName /vmlinuz		/* pathname of the system executable */
 #define syscall_lib syscall_lib
-#define PsAllFlag ps -ax				/* "Ps" flag when you want everything */
+#define PsAllFlag ps -ax		/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
 #define CompatFlags /**/
 
@@ -86,3 +84,4 @@
 #define ShadowSizeEstimate 400
 
 #define LINUX_INCLUDE_DIR /**/
+
