@@ -19,5 +19,5 @@
 #define SC_VERS SC4.2
 #endif
 
-#define PlatformFlags	-DSolaris26 -DHAS_64BIT_STRUCTS
+#define PlatformFlags	-DSolaris26
 
