@@ -1980,7 +1980,7 @@ Scheduler::mail_problem_message()
 }
 
 void
-NotifyUser(shadow_rec* srec, char* msg, int status)
+NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 {
 #if !defined(WIN32)
 	int fd, notification;
@@ -2000,11 +2000,17 @@ NotifyUser(shadow_rec* srec, char* msg, int status)
 	case NOTIFY_ALWAYS:
 		break;
 	case NOTIFY_COMPLETE:
-		break;
-	case NOTIFY_ERROR:
-		if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		if (JobStatus == COMPLETED) {
+			break;
+		} else {
 			return;
-		break;
+		}
+	case NOTIFY_ERROR:
+		if( (JobStatus == REMOVED) ) {
+			break;
+		} else {
+			return;
+		}
 	default:
 		dprintf(D_ALWAYS, "Condor Job %d.%d has a notification of %d\n",
 				srec->job_id.cluster, srec->job_id.proc, notification );
@@ -2127,14 +2133,17 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 						"exited with status %d\n", srec->job_id.cluster,
 						srec->job_id.proc, pid, WEXITSTATUS(status) );
 				NotifyUser(srec, "exited with status ",
-						   WEXITSTATUS(status) );
+						   WEXITSTATUS(status) , COMPLETED);
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, COMPLETED);
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
 			} else if(WIFSIGNALED(status)) {
 				dprintf(D_ALWAYS,
 						"scheduler universe job (%d.%d) pid %d died "
 						"with signal %d\n", srec->job_id.cluster,
 						srec->job_id.proc, pid, WTERMSIG(status));
 				NotifyUser(srec, "was killed by signal ",
-						   WTERMSIG(status));
+						   WTERMSIG(status), REMOVED);
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, REMOVED);
 			}
 			if( DestroyProc(srec->job_id.cluster, srec->job_id.proc) ) {
 				dprintf(D_ALWAYS, "DestroyProc(%d.%d) failed -- "
