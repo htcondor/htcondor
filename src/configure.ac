@@ -497,6 +497,10 @@ if test $ac_cv_c_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU CC (gcc) is required] )
 fi   
 
+AC_MSG_CHECKING([for full path to gcc])
+gcc_path=`which gcc`
+AC_MSG_RESULT([$gcc_path])
+
 # Figure out the version of gcc. 
 # This probably seems like a job for a regular expression, not a big
 # case statement.  however, in our experience, there's enough variation
@@ -664,6 +668,10 @@ AC_PROG_CXX
 if test $ac_cv_cxx_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU C++ (g++) is required] )
 fi   
+AC_MSG_CHECKING([for full path to g++])
+gpp_path=`which g++`
+AC_MSG_RESULT([$gpp_path])
+
 
 #########
 # figure out what linker flags put us in static-link mode
@@ -799,7 +807,7 @@ if test $_cv_make_is_gnu = no; then
    AC_MSG_ERROR( [GNU make is required] )
 fi
 
-AC_CHECK_PROG(ac_patch,patch,patch,no)
+AC_PATH_PROG(ac_patch,patch,no,[$PATH])
 if test $ac_patch = no; then
     AC_MSG_ERROR( [patch is required] )
 fi
@@ -823,7 +831,7 @@ _EOF
 +A TEST
  hello world
 _EOF
-  patch < conftest_patch > /dev/null 2>&1
+  $ac_patch < conftest_patch > /dev/null 2>&1
   _patch_status=$?
   if test $_patch_status -eq 0 ; then
     # patch didn't return failure, but it still might not have
@@ -846,28 +854,32 @@ AC_PROG_LEX
 if test "$LEX" = "no" ; then
     AC_MSG_ERROR( [lex is required] )
 fi
+AC_MSG_CHECKING([for full path to $LEX])
+lex_path=`which $LEX`
+AC_MSG_RESULT([$lex_path])
+
 
 
 # We don't want to do the default AC_PROG_YACC, since it selects
 # "bison -y" if it can find it, and that doesn't work for the yacc
 # input in the Condor build.  So, we just manually check for byacc as
 # our first choice, then regular old yacc...
-AC_CHECK_PROG(ac_byacc,byacc,byacc,no)
-if test $ac_byacc = "byacc"; then
-  YACC=$ac_byacc
-else
-  AC_CHECK_PROG(ac_yacc,yacc,yacc,no)
+AC_PATH_PROG([ac_byacc],[byacc],[no],[$PATH])
+if test $ac_byacc = "no"; then
+  AC_PATH_PROG([ac_yacc],[yacc],[no],[$PATH])
   if test $ac_yacc = no; then
     AC_MSG_ERROR( [byacc or yacc is required] )
   else 
     YACC=$ac_yacc
   fi
+else
+  YACC=$ac_byacc
 fi
 AC_SUBST([YACC],[$YACC])
 
 # ar is used for numerous libraries in Condor, and for extracting
 # objects from the system libc.a for the Condor syscall library.
-AC_CHECK_PROG(ac_ar,ar,ar,no)
+AC_PATH_PROG(ac_ar,ar,no,[$PATH])
 if test $ac_ar = no; then
     AC_MSG_ERROR( [ar is required] )
 fi
@@ -1052,18 +1064,18 @@ else
 fi  
 
 # gzip is required for packaging up Condor releases. 
-AC_CHECK_PROG(ac_gzip,gzip,gzip,no)
+AC_PATH_PROG(ac_gzip,gzip,no,[$PATH])
 if test $ac_gzip = no; then
     AC_MSG_ERROR( [gzip is required] )
 fi
 
 # m4 is used to build PVM
-AC_CHECK_PROG(ac_m4prog,m4,m4,no)
+AC_PATH_PROG(ac_m4prog,m4,no,[$PATH])
 if test $ac_m4prog = no; then
     AC_MSG_ERROR( [m4 is required] )
 fi
 
-AC_CHECK_PROG(ac_purify,purify,purify,no)
+AC_PATH_PROG(ac_purify,purify,no,[$PATH])
 if test "$ac_purify" = "purify"; then
    AC_MSG_CHECKING([purify cache directory ($ac_cv_purecachedir)])
    if test -d $ac_cv_purecachedir && test -w $ac_cv_purecachedir ; then
