@@ -17,6 +17,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 #ifdef __GNUG__
 #pragma implementation "HashTable.h"
+#pragma implementation "list.h"
 #endif
 
 #ifndef WIN32
@@ -48,11 +49,6 @@ extern "C"
 static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 TimerManager DaemonCore::t;
-
-// some constants for HandleSig()
-#define _DC_RAISESIGNAL 1
-#define _DC_BLOCKSIGNAL 2
-#define _DC_UNBLOCKSIGNAL 3
 
 // Hash function for pid table.
 static int compute_pid_hash(const pid_t &key, int numBuckets) 
@@ -134,8 +130,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int Reap
 	curr_regdataptr = NULL;
 #ifdef WIN32
 	dcmainThreadId = ::GetCurrentThreadId();
-
-	memset(PidWatcherTable,'\0',sizeof(PidWatcherTable));
 #endif
 }
 
@@ -442,7 +436,53 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handle
 
 int DaemonCore::Cancel_Signal( int sig )
 {
-	// stub
+	int i,j;
+	int found = -1;
+
+	// We want to allow "command" to be a negative integer, so
+	// be careful about sign when computing our simple hash value
+    if(sig < 0) {
+        i = -sig % maxSig;
+    } else {
+        i = sig % maxSig;
+    }
+
+	// find this signal in our table
+	j = i;
+	do {
+		if ( (sigTable[j].num == sig) && 
+			 ( sigTable[j].handler || sigTable[j].handlercpp ) ) {
+			found = j;
+		} else {
+			j = (j + 1) % maxSig;
+		}
+	} while ( j != i && found == -1 );
+
+	// Check if found
+	if ( found == -1 ) {
+		dprintf(D_DAEMONCORE,"Cancel_Signal: signal %d not found\n",sig);
+		return FALSE;
+	}
+
+	// Clear entry
+	sigTable[found].num = 0;
+	sigTable[found].handler = NULL;
+	sigTable[found].handlercpp = NULL;
+	free_descrip( sigTable[found].handler_descrip );
+
+	// Decrement the counter of total number of entries
+	nSig--;
+
+	// Clear any data_ptr which go to this entry we just removed
+	if ( curr_regdataptr == &(sigTable[found].data_ptr) )
+		curr_regdataptr = NULL;
+	if ( curr_dataptr == &(sigTable[found].data_ptr) )
+		curr_dataptr = NULL;
+
+	// Log a message and conditionally dump what our table now looks like
+	dprintf(D_DAEMONCORE,"Cancel_Signal: cancelled signal %d <%s>\n",sig,sigTable[found].sig_descrip);
+	free_descrip( sigTable[found].sig_descrip );
+	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
 
 	return TRUE;
 }
@@ -588,12 +628,12 @@ int DaemonCore::Register_Reaper(int rid, char* reap_descrip, ReaperHandler handl
 	reapTable[i].handlercpp = handlercpp;
 	reapTable[i].is_cpp = is_cpp;
 	reapTable[i].service = s;
-	free_descrip(reap_descrip);
+	free_descrip(reapTable[i].reap_descrip);
 	if ( reap_descrip )
 		reapTable[i].reap_descrip = strdup(reap_descrip);
 	else
 		reapTable[i].reap_descrip = EMPTY_DESCRIP;
-	free_descrip(handler_descrip);
+	free_descrip(reapTable[i].handler_descrip);
 	if ( handler_descrip )
 		reapTable[i].handler_descrip = strdup(handler_descrip);
 	else
@@ -1159,6 +1199,12 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 		}
 		is_local = pidinfo->is_local;
 		destination = pidinfo->sinful_string;
+		if ( destination[0] == '\0' ) {
+			// this child process does not have a command socket
+			dprintf(D_ALWAYS,"Send_Signal: ERROR Attempt to send signal %d to pid %d, but pid %d has no command socket\n",
+				sig,pid,pid);
+			return FALSE;
+		}
 	}
 
 	// now destination process is local, send via UDP; if remote, send via TCP
@@ -1250,11 +1296,11 @@ int DaemonCore::Create_Process(
 
 	// First do whatever error checking we can that is not platform specific
 
-	/*/ check reaper_id validity
+	// check reaper_id validity
 	if ( (reaper_id < 1) || (reaper_id > maxReap) || (reapTable[reaper_id - 1].num == 0) ) {
 		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
 		return FALSE;
-	} */
+	}
 
 	// check name validity
 	if ( !name ) {
@@ -1262,11 +1308,7 @@ int DaemonCore::Create_Process(
 		return FALSE;
 	}
 
-#ifdef WIN32
-	sprintf(inheritbuf,"%lu ",GetCurrentProcessId());
-#else
-	sprintf(inheritbuf,"%lu ",getpid());
-#endif
+	sprintf(inheritbuf,"%lu ",mypid);
 
 	strcat(inheritbuf,InfoCommandSinfulString());
 
@@ -1371,12 +1413,12 @@ int DaemonCore::Create_Process(
 		new_process_group = CREATE_NEW_CONSOLE;
 
 
-	if ( !CreateProcess(name,args,NULL,NULL,TRUE,new_process_group,env,cwd,&si,&piProcess) ) {
+	if ( !::CreateProcess(name,args,NULL,NULL,TRUE,new_process_group,env,cwd,&si,&piProcess) ) {
 		dprintf(D_ALWAYS,"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
 		return FALSE;
 	}
 
-	// take pid info out of piProcess and place in our table
+	// save pid info out of piProcess 
 	newpid = piProcess.dwProcessId;
 
 	// reset sockets that we had to inherit back to a non-inheritable permission
@@ -1392,8 +1434,12 @@ int DaemonCore::Create_Process(
 	// Now that we have a child, store the info in our pidTable
 	PidEntry *pidtmp = new PidEntry;
 	pidtmp->pid = newpid;
-	strcpy(pidtmp->sinful_string,sock_to_string(rsock->_sock));
+	if ( rsock )
+		strcpy(pidtmp->sinful_string,sock_to_string(rsock->_sock));
+	else
+		pidtmp->sinful_string[0] = '\0';
 	pidtmp->is_local = TRUE;
+	pidtmp->parent_is_local = TRUE;
 	pidtmp->reaper_id = reaper_id;
 #ifdef WIN32
 	pidtmp->hProcess = piProcess.hProcess;
@@ -1401,11 +1447,16 @@ int DaemonCore::Create_Process(
 #endif 
 	assert( pidTable->insert(newpid,pidtmp) == 0 );
 	dprintf(D_DAEMONCORE,"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
+#ifdef WIN32
+	WatchPid(pidtmp);
+#endif
 
 	// Now that child exists, we (the parent) should close up our copy of
 	// the childs command listen cedar sockets.
-	delete ssock;
-	delete rsock;
+	if (ssock)
+		delete ssock;
+	if (rsock)
+		delete rsock;
 
 	return newpid;	
 }
@@ -1454,6 +1505,7 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
 		strcpy(pidtmp->sinful_string,ptmp);
 		pidtmp->is_local = TRUE;
+		pidtmp->parent_is_local = TRUE;
 		pidtmp->reaper_id = 0;
 #ifdef WIN32
 		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE | PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , FALSE, ppid );
@@ -1461,6 +1513,9 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
 #endif
 		assert( pidTable->insert(ppid,pidtmp) == 0 );
+#ifdef WIN32
+		WatchPid(pidtmp);
+#endif
 
 		// inherit cedar socks
 		ptmp=strtok(NULL," ");
@@ -1521,11 +1576,246 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	// has terminated.  We need to reap the process, call any registered reapers,
 	// and adjust our pid table.
 }
+#endif // of NOT_YET
 
+#ifdef WIN32
+// This function runs in a seperate thread and wathces over children
+DWORD
+pidWatcherThread( void* arg )
+{
+	DaemonCore::PidWatcherEntry* entry;
+	int i;
+	unsigned int numentries;
+	DWORD result;
+	int sent_result;
+	HANDLE hKids[MAXIMUM_WAIT_OBJECTS];
+	int last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
+	unsigned int exited_pid;
+
+	entry = (DaemonCore::PidWatcherEntry *) arg;
+
+	for (;;) {
+	
+	::EnterCriticalSection(&(entry->crit_section));
+	numentries = 0;
+	for (i=0; i < entry->nEntries; i++ ) {
+		if ( i != last_pidentry_exited ) {
+			hKids[numentries] = entry->pidentries[i]->hProcess;
+			entry->pidentries[numentries] = entry->pidentries[i];
+			numentries++;
+		} 
+	}
+	hKids[numentries] = entry->event;
+	entry->nEntries = numentries;
+	::LeaveCriticalSection(&(entry->crit_section));
+
+	// if there are no more entries to watch, we're done.
+	if ( numentries == 0 )
+		return TRUE;	// this return will kill this thread
+
+	result = ::WaitForMultipleObjects(numentries + 1, hKids, FALSE, INFINITE);
+	if ( result == WAIT_FAILED ) {
+		EXCEPT("WaitForMultipleObjects Failed");
+	}
+	result = result - WAIT_OBJECT_0;
+
+	// if result = numentries, then we are being told our entry->pidentries
+	//		array has been modified by another thread, and we should re-read it.
+	// if result < numentries, then result signifies a child process which exited.
+	if ( (result < numentries) && (result >= 0) ) {
+		// notify our main thread which process exited
+		exited_pid = entry->pidentries[result]->pid;	// make it an unsigned int
+		SafeSock sock("127.0.0.1",daemonCore->InfoCommandPort());
+		sock.encode();
+		sent_result = FALSE;
+		while ( sent_result == FALSE ) {
+			if ( !sock.snd_int(DC_PROCESSEXIT,FALSE) ||
+				 !sock.code(exited_pid) ||
+				 !sock.end_of_message() ) {
+				// failed to get the notification off to the main thread.
+				// we'll log a message, wait a bit, and try again
+				dprintf(D_ALWAYS,"PidWatcher thread couldn't notify main thread\n");
+				::Sleep(500);	// sleep for a half a second (500 ms)
+			} else {
+				sent_result = TRUE;
+				last_pidentry_exited = result;
+			}
+		}
+	}
+
+	}	// end of infinite for loop
+
+}
+
+// Add this pidentry to be watched by our watcher thread(s)
 int
 DaemonCore::WatchPid(PidEntry *pidentry)
 {
+	struct PidWatcherEntry* entry = NULL;
+	int alldone = FALSE;
+
+	// First see if we can just add this entry to an existing thread
+	PidWatcherList.Rewind();
+	while ( (entry=PidWatcherList.Next()) ) {
+		
+		::EnterCriticalSection(&(entry->crit_section));
+		
+		if ( entry->nEntries == 0 ) {
+			// a watcher thread exits when nEntries drop to zero.
+			// thus, this thread no longer exists; remove it from our list
+			::DeleteCriticalSection(&(entry->crit_section));
+			::CloseHandle(entry->event);
+			::CloseHandle(entry->hThread);
+			PidWatcherList.DeleteCurrent();
+			delete entry;
+			continue;	// we continue here so we dont hit the LeaveCriticalSection below
+		} 
+		
+		if ( entry->nEntries < ( MAXIMUM_WAIT_OBJECTS - 1 ) ) {
+			// found one with space
+			entry->pidentries[entry->nEntries] = pidentry;
+			(entry->nEntries)++;
+			if ( !::SetEvent(entry->event) ) {
+				EXCEPT("SetEvent failed");
+			}
+			alldone = TRUE;
+		}
+	
+		::LeaveCriticalSection(&(entry->crit_section));
+
+		if (alldone == TRUE )
+			return TRUE;
+	}
+
+	// All watcher threads have their hands full (or there are no
+	// watcher threads!).  We need to create a new watcher thread.
+	entry = new PidWatcherEntry;
+	::InitializeCriticalSection(&(entry->crit_section));
+	entry->event = ::CreateEvent(NULL,FALSE,FALSE,NULL);	// auto-reset event
+	if ( entry->event == NULL ) {
+		EXCEPT("CreateEvent failed");
+	}
+	entry->pidentries[0] = pidentry;
+	entry->nEntries = 1;
+	DWORD threadId;
+	// should we be using _beginthread here instead of ::CreateThread to prevent 
+	//    memory leaks from the standard C lib ?
+	entry->hThread = ::CreateThread(NULL, 1024, (LPTHREAD_START_ROUTINE)pidWatcherThread,
+		entry, 0, &threadId );
+	if ( entry->hThread == NULL ) {
+		EXCEPT("CreateThread failed");
+	}
+
+	PidWatcherList.Append(entry);		
+
+	return TRUE;
+}
+#endif  // of WIN32
+
+int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
+{
+	unsigned int pid;
+
+	assert( command == DC_PROCESSEXIT );
+
+	// We have been sent a DC_PROCESSEXIT command
+
+	// read the pid from the socket
+	if (!stream->code(pid))
+		return FALSE;
+
+	// and call HandleSig to raise the signal
+	return( HandleProcessExit(pid,0) );
+}
+
+// This function gets calls with the pid of a process which just exited.
+// On Unix, the exit_status is also provided; on NT, we need to fetch
+// the exit status here.  Then we call any registered reaper for this process.
+int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
+{
+	PidEntry* pidentry;
 	int i;
 
-	for (i=0;i<
-#endif  // of NOT_YET
+	// Fetch the PidEntry for this pid from our hash table.
+	if ( pidTable->lookup(pid,pidentry) == -1 ) {
+		// we did not find this pid!1???!?
+		dprintf(D_ALWAYS,"WARNING! Unknown process exited - pid=%d\n",pid);
+		return FALSE;
+	}
+
+	// If process is Unix, we are passed the exit status.
+	// If process is NT and is remote, we are passed the exit status.
+	// If process is NT and is local, we need to fetch the exit status here.
+#ifdef WIN32
+	if ( pidentry->is_local ) {
+		DWORD winexit;
+		
+		if ( !::GetExitCodeProcess(pidentry->hProcess,&winexit) ) {
+			dprintf(D_ALWAYS,"WARNING: Cannot get exit status for pid = %d\n",pid);
+			return FALSE;
+		}
+		if ( winexit == STILL_ACTIVE ) {	// should never happen
+			EXCEPT("DaemonCore in HandleProcessExit() and process still running");
+		}
+		// TODO: deal with Exception value returns here
+		exit_status = winexit;
+	}
+#endif   // of WIN32
+
+	// If parent process is_local, simply invoke the reaper here.  If remote, call
+	// the DC_INVOKEREAPER command.  
+	if ( pidentry->parent_is_local ) {
+
+		// Set i to be the entry in the reaper table to use
+		i = pidentry->reaper_id - 1;
+
+		// Invoke the reaper handler if there is one registered
+		if ( (i >= 0) && ((reapTable[i].handler != NULL) || (reapTable[i].handlercpp != NULL)) ) {		
+			// Set curr_dataptr for Get/SetDataPtr()
+			curr_dataptr = &(reapTable[i].data_ptr);
+
+			// Log a message
+			char *hdescrip = reapTable[i].handler_descrip;
+			if ( !hdescrip )
+				hdescrip = EMPTY_DESCRIP;
+			dprintf(D_DAEMONCORE,"DaemonCore: Pid %lu exited with status %d, invoking reaper %d <%s>\n",
+				pid,exit_status,i+1,hdescrip);
+
+			if ( reapTable[i].handler )
+				// a C handler
+				(*(reapTable[i].handler))(reapTable[i].service,pid,exit_status);
+			else
+			if ( sockTable[i].handlercpp )
+				// a C++ handler
+				(reapTable[i].service->*(reapTable[i].handlercpp))(pid,exit_status);
+
+			// Clear curr_dataptr
+			curr_dataptr = NULL;
+		} else {
+			// no registered reaper
+			dprintf(D_DAEMONCORE,"DaemonCore: Pid %lu exited with status %d; no registered reaper\n",
+				pid,exit_status);
+		}
+	} else {
+		// TODO: the parent for this process is remote.  send the parent a DC_INVOKEREAPER command.
+	}
+
+	// Now remove this pid from our tables ----
+		// remove from hash table
+	pidTable->remove(pid);		
+#ifdef WIN32
+		// close WIN32 handles 
+	::CloseHandle(pidentry->hThread);
+	::CloseHandle(pidentry->hProcess);
+#endif
+	delete pidentry;
+
+	// Finally, some hard-coded logic.  If the pid that exited was our parent,
+	// then shutdown gracefully.
+	if (pid == ppid) {
+		dprintf(D_ALWAYS,"Our Parent process (pid %lu) exited; shutting down\n",pid);
+		Send_Signal(mypid,DC_SIGTERM);	// SIGTERM means shutdown graceful
+	}
+
+	return TRUE;
+}

@@ -31,9 +31,10 @@
 #include "condor_timer_manager.h"
 #include "condor_commands.h"
 #include "HashTable.h"
+#include "list.h"
 
 // enum for Daemon Core socket/command/signal permissions
-enum DCpermission { ALLOW, READ, WRITE, NEGOTIATOR };
+enum DCpermission { ALLOW, READ, WRITE, NEGOTIATOR, IMMEDIATE_FAMILY };
 
 static const int KEEP_STREAM = 100;
 static char* EMPTY_DESCRIP = "<NULL>";
@@ -51,12 +52,28 @@ typedef int		(Service::*SocketHandlercpp)(Stream*);
 typedef int		(*ReaperHandler)(Service*,int pid,int exit_status);
 typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
 
-// other typedefs
+// other typedefs and macros needed on WIN32
 #ifdef WIN32
 typedef DWORD pid_t;
+#define WIFEXITED(stat) ((int)(1))
+#define WEXITSTATUS(stat) ((int)(stat))
+#define WIFSIGNALED(stat) ((int)(0))
+#define WTERMSIG(stat) ((int)(0))
+#endif  // of ifdef WIN32
+
+// some constants for HandleSig().
+#define _DC_RAISESIGNAL 1
+#define _DC_BLOCKSIGNAL 2
+#define _DC_UNBLOCKSIGNAL 3
+
+// If WANT_DC_PM is defined, it means we want DaemonCore Process Management.
+// We _always_ want it on WinNT; on Unix, some daemons still do their own 
+// Process Management (just until we get around to changing them to use daemon core).
+#if defined(WIN32) && !defined(WANT_DC_PM)
+#define WANT_DC_PM
 #endif
 
-// defines for signals; compatibility with traditional UNIX values maintained
+// defines for signals; compatibility with traditional UNIX values maintained where possible.
 #define	DC_SIGHUP	1	/* hangup */
 #define	DC_SIGINT	2	/* interrupt (rubout) */
 #define	DC_SIGQUIT	3	/* quit (ASCII FS) */
@@ -98,19 +115,17 @@ typedef DWORD pid_t;
 #define	DC_SIGCANCEL 36	/* thread cancellation signal used by libthread */
 
 
-
-
 class DaemonCore : public Service
 {
 	friend class TimerManager;
-	
+	friend DWORD pidWatcherThread(void*);	
+	friend main( int argc, char** argv );
+
 	public:
 		DaemonCore(int PidSize = 0, int ComSize = 0, int SigSize = 0, int SocSize = 0, int ReapSize = 0);
 		~DaemonCore();
 
 		void	Driver();
-		
-
 		
 		int		Register_Command(int command, char *com_descrip, CommandHandler handler, 
 					char *handler_descrip, Service* s = NULL, DCpermission perm = ALLOW);
@@ -125,6 +140,8 @@ class DaemonCore : public Service
 		int		Register_Signal(int sig, char *sig_descript, SignalHandlercpp handlercpp, 
 					char *handler_descrip, Service* s, DCpermission perm = ALLOW);
 		int		Cancel_Signal( int sig );
+		int		Block_Signal(int sig) { return(HandleSig(_DC_BLOCKSIGNAL,sig)); }
+		int		Unblock_Signal(int sig) { return(HandleSig(_DC_UNBLOCKSIGNAL,sig)); }
 
 		int		Register_Reaper(char *reap_descrip, ReaperHandler handler, 
 					char *handler_descrip, Service* s = NULL);
@@ -181,22 +198,20 @@ class DaemonCore : public Service
 			);
 
 #ifdef FUTURE		
-		int		Block_Signal()
-		int		Unblock_Signal()
 		int		Create_Thread()
 		int		Kill_Process()
 		int		Kill_Thread()
 #endif
 
-		int		HandleSigCommand(int command, Stream* stream);
 
-		void	Inherit( ReliSock* &rsock, SafeSock* &ssock );  // called in main()
 		
 	private:
-
+		int		HandleSigCommand(int command, Stream* stream);
 		void	HandleReq(int socki);
-
 		int		HandleSig(int command, int sig);
+		void	Inherit( ReliSock* &rsock, SafeSock* &ssock );  // called in main()
+		int		HandleProcessExitCommand(int command, Stream* stream);
+		int		HandleProcessExit(pid_t pid, int exit_status);
 
 		int		Register_Command(int command, char *com_descip, CommandHandler handler, 
 					CommandHandlercpp handlercpp, char *handler_descrip, Service* s, 
@@ -292,11 +307,11 @@ class DaemonCore : public Service
 #ifdef WIN32
 			HANDLE hProcess;
 			HANDLE hThread;
-			int global_index;
-			int pidentryindex;
 #endif
 			char sinful_string[28];
+			char parent_sinful_string[28];
 			int is_local;
+			int parent_is_local;
 			int	reaper_id;
 		};
 		typedef HashTable <pid_t, PidEntry *> PidHashTable;
@@ -305,15 +320,19 @@ class DaemonCore : public Service
 		pid_t ppid;
 
 #ifdef WIN32
+		// note: as of WinNT 4.0, MAXIMUM_WAIT_OBJECTS == 64
 		struct PidWatcherEntry
 		{
-			PidEntry* pidentries[63];
+			PidEntry* pidentries[MAXIMUM_WAIT_OBJECTS - 1];
 			HANDLE event;
-			int global_index;
+			HANDLE hThread;
+			CRITICAL_SECTION crit_section;
 			int nEntries;
 		};
 
-		PidWatcherEntry* PidWatcherTable[63];
+		List<PidWatcherEntry> PidWatcherList;
+
+		int					WatchPid(PidEntry *pidentry);
 #endif
 			
 		static				TimerManager t;

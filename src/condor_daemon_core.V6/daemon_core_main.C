@@ -69,8 +69,28 @@ unix_sigchld(int)
 int
 handle_dc_sighup( Service*, int )
 {
+	char *ptmp;
+
 	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
+
+	// Reinitialize logging system; after all, LOG may have been changed.
+	dprintf_config(mySubSystem,2);
+	
+	// again, chdir to the LOG directory so that if we dump a core
+	// it will go there.  the location of LOG may have changed, so redo it here.
+	ptmp = param("LOG");
+	if ( ptmp ) {
+		if ( chdir(ptmp) < 0 ) {
+			EXCEPT("cannot chdir to dir <%s>",ptmp);
+		}
+	} else {
+		EXCEPT("No LOG directory specified in config file(s)");
+	}
+	free(ptmp);
+
+	// call this daemon's specific main_config()
 	main_config();
+
 	return TRUE;
 }
 
@@ -179,6 +199,7 @@ main( int argc, char** argv )
 	dprintf_config(mySubSystem,2);
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
+	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
 	dprintf(D_ALWAYS,"******************************************************\n");
 
 	// we want argv[] stripped of daemoncore options
@@ -266,9 +287,12 @@ main( int argc, char** argv )
 		// register the command handler to take care of signals
 		daemonCore->Register_Command(DC_RAISESIGNAL,"DC_RAISESIGNAL",
 				(CommandHandlercpp)daemonCore->HandleSigCommand,
-				"HandleSigCommand()",daemonCore,WRITE);
+				"HandleSigCommand()",daemonCore,IMMEDIATE_FAMILY);
 
-		
+		// this handler receives process exit info
+		daemonCore->Register_Command(DC_PROCESSEXIT,"DC_PROCESSEXIT",
+				(CommandHandlercpp)daemonCore->HandleProcessExitCommand,
+				"HandleProcessExitCommand()",daemonCore,IMMEDIATE_FAMILY);
 	}
 	
 		// Install DaemonCore signal handlers common to all daemons.

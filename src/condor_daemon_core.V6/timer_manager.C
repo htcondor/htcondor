@@ -280,6 +280,9 @@ int TimerManager::CancelTimer(int id)
 	// set curr_dataptr to NULL if a handler is removing itself. 
 	if ( daemonCore->curr_dataptr == &(timer_ptr->data_ptr) )
 		daemonCore->curr_dataptr = NULL;
+	if ( daemonCore->curr_regdataptr == &(timer_ptr->data_ptr) )
+		daemonCore->curr_regdataptr = NULL;
+
 
 	delete timer_ptr;
 	
