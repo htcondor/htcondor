@@ -1700,7 +1700,8 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 				GlobusJobStatusName(globusState),
 				GlobusJobStatusName(new_state));
 
-		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE &&
+		if ( ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
+			   new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ) &&
 			 condorState == IDLE ) {
 			condorState = RUNNING;
 			UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
@@ -1731,6 +1732,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			}
 		}
 		if ( (new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
+			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ||
 			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
 			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED)
 			 && !executeLogged ) {
