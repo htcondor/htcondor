@@ -256,16 +256,31 @@ int Condor_Auth_Kerberos :: init_daemon()
     int            code, rc = TRUE;
     priv_state     priv;
     krb5_keytab    keytab = 0;
-
+    const char *   daemonPrincipal = 0;
     creds_ = (krb5_creds *) malloc(sizeof(krb5_creds));
     memset(creds_, 0, sizeof(krb5_creds));
-
     keytabName_ = param(STR_CONDOR_SERVER_KEYTAB);
     
     //------------------------------------------
+    // Initialize the principal for daemon (properly :-)
+    //------------------------------------------
+    daemonPrincipal = param(STR_CONDOR_SERVER_PRINCIPAL);
+    
+    if (daemonPrincipal == NULL) {
+        daemonPrincipal = STR_DEFAULT_CONDOR_SERVICE;
+    }
+
+    if ((code = krb5_sname_to_principal(krb_context_, 
+                                        NULL, 
+                                        daemonPrincipal,
+                                        KRB5_NT_SRV_HST, 
+                                        &krb_principal_))) {
+      goto error;
+    }
+
+    //------------------------------------------
     // Copy the principal information 
     //------------------------------------------
-    krb5_copy_principal(krb_context_, server_, &krb_principal_);
     krb5_copy_principal(krb_context_, krb_principal_, &(creds_->client));
     krb5_copy_principal(krb_context_, server_, &(creds_->server));
     
