@@ -225,6 +225,7 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 				EXCEPT("Warning : you ran out of space");
 		}
     }
+	delete tree;
 
 	// Make a parse tree that contains the variable TargetType
     Parse("TargetType", tree);
