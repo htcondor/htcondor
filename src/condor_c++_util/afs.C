@@ -21,7 +21,7 @@ AFS_Info::AFS_Info()
 		has_afs = FALSE;
 		return;
 	}
-	if( tmp[0] != 't' || tmp[0] != 'T' ) {
+	if( tmp[0] == 't' || tmp[0] == 'T' ) {
 		has_afs = TRUE;
 	} else {
 		has_afs = FALSE;
