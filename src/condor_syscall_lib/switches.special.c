@@ -43,7 +43,10 @@
 int _xstat(int, const char *, struct stat *);
 int _fxstat(int, int, struct stat *);
 int _lxstat(int, const char *, struct stat *);
-#endif
+int __xstat(int, const char *, struct stat *);
+int __fxstat(int, int, struct stat *);
+int __lxstat(int, const char *, struct stat *);
+#endif /* LINUX */
 
 #include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
@@ -688,23 +691,65 @@ __lseek( int fd, off_t offset, int whence )
 
 #endif /* !defined(HPUX) */
 
-#if defined(SYS_prev_stat) && defined(LINUX)
+
+#if defined(LINUX)
+/* 
+   Whole bunch of Linux-specific evilness w/ [_fxl]*stat.  Basically,
+   we need to trap all these things and send them over the wire as
+   CONDOR_stat, CONDOR_fstat, or CONDOR_lstat as appropriate, and
+   handle them locally with whatever SYS_*stat is defined on this
+   host.  glibc and libc5 do this differently, which is why we need
+   the pre-processor junk in the local case.  -Derek Wright 3/30/99 
+*/
+
 int _xstat(int version, const char *path, struct stat *buf)
+{
+	return _condor_xstat( version, path, buf );
+}
+
+
+int __xstat(int version, const char *path, struct stat *buf)
+{
+	return _condor_xstat( version, path, buf );
+}
+
+
+int _condor_xstat(int version, const char *path, struct stat *buf)
 {
     int rval;
 
     if( LocalSysCalls() ) {
+#if defined(SYS_prev_stat)
         rval = syscall( SYS_prev_stat, path, buf );
+#elif defined(SYS_stat)
+        rval = syscall( SYS_stat, path, buf );
+#elif defined(SYS_old_stat)
+        rval = syscall( SYS_old_stat, path, buf );
+#else
+#error "No local version of SYS_*stat on this platform!"
+#endif
     } else {
         rval = REMOTE_syscall( CONDOR_stat, path, buf );
     }
 
     return rval;
 }
-#endif
 
-#if defined(SYS_prev_fstat) && defined(LINUX)
+
 int _fxstat(int version, int fd, struct stat *buf)
+{
+	return _condor_fxstat( version, fd, buf );
+}
+
+
+int __fxstat(int version, int fd, struct stat *buf)
+{
+	return _condor_fxstat( version, fd, buf );
+}
+
+
+int
+_condor_fxstat(int version, int fd, struct stat *buf)
 {
     int rval;
     int user_fd;
@@ -718,29 +763,57 @@ int _fxstat(int version, int fd, struct stat *buf)
     }
 
     if( LocalSysCalls() || use_local_access ) {
-        rval = syscall( SYS_prev_fstat, user_fd, buf );
+#if defined(SYS_prev_fstat)
+        rval = syscall( SYS_prev_fstat, fd, buf );
+#elif defined(SYS_fstat)
+        rval = syscall( SYS_fstat, fd, buf );
+#elif defined(SYS_old_fstat)
+        rval = syscall( SYS_old_fstat, fd, buf );
+#else
+#error "No local version of SYS_*fstat on this platform!"
+#endif
     } else {
         rval = REMOTE_syscall( CONDOR_fstat, user_fd, buf );
     }
 
     return rval;
 }
-#endif
 
-#if defined(SYS_prev_lstat) && defined(LINUX)
+
 int _lxstat(int version, const char *path, struct stat *buf)
+{
+	return _condor_lxstat( version, path, buf );
+}
+
+
+int __lxstat(int version, const char *path, struct stat *buf)
+{
+	return _condor_lxstat( version, path, buf );
+}
+
+
+int _condor_lxstat(int version, const char *path, struct stat *buf)
 {
     int rval;
 
     if( LocalSysCalls() ) {
+#if defined(SYS_prev_lstat)
         rval = syscall( SYS_prev_lstat, path, buf );
+#elif defined(SYS_lstat)
+        rval = syscall( SYS_lstat, path, buf );
+#elif defined(SYS_old_lstat)
+        rval = syscall( SYS_old_lstat, path, buf );
+#else
+#error "No local version of SYS_*_lstat on this platform!"
+#endif
     } else {
         rval = REMOTE_syscall( CONDOR_lstat, path, buf );
     }
 
     return rval;
 }
-#endif
+
+#endif /* LINUX */
 
 
 /* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
