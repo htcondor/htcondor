@@ -38,6 +38,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <ctype.h>
+#include <string.h>
 #include "debug.h"
 #include "except.h"
 #include "trace.h"
@@ -70,7 +71,7 @@ char	*RosterFile;
 int		SubmittorDisplay;
 int		ServerDisplay;
 int		MachineUpdateInterval;
-int		Now;
+time_t	Now;
 
 STATUS_LINE		*StatusLines[1024];
 int				N_StatusLines;
@@ -719,7 +720,7 @@ char	*name;
 	int		i;
 	char	*ptr;
 
-	if( ptr=index(name,'.') ) {
+	if( ptr=strchr(name,'.') ) {
 		*ptr = '\0';
 	}
 
