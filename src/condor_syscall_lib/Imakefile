@@ -196,7 +196,7 @@ CPP = /usr/ucb/cpp
 #elif IS_I386-LINUX
 CPP = /lib/cpp
 #else
-CPP = ansi_cpp
+CPP = ansi_cpp -
 #endif
 
 
