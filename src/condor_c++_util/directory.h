@@ -229,6 +229,22 @@ public:
 	*/
 	Directory( const char *dirpath, priv_state priv = PRIV_UNKNOWN);
 
+	/** Alternate Constructor.  Instead of passing in a pathname, 
+		the caller can instantiate by using a StatInfo object (since
+		in many cases, they've already got a copy of that object).
+		This allows them to pass in more info, and to prevent us from
+		re-doing the syscalls and other work to figure out things we'd
+		like to know about the directory.  Otherwise, this constructor
+		is just like the other, in terms of how to use the Directory
+		object once it exists, the handling of priv states, etc.
+		@param info Pointer to the StatInfo object to use for infor.
+		@param priv The priv_state used when accessing the filesystem.
+		@see Next()
+		@see priv_state
+		@see StatInfo
+	*/
+	Directory( StatInfo *info, priv_state priv = PRIV_UNKNOWN);
+
 	/// Destructor<p>
 	~Directory();
 
@@ -344,10 +360,8 @@ public:
 			NOTE: This will call Rewind(), so it is NOT safe to use
 			this during another iteration over the directory.
 			@param mode The file mode you want to set directories to
-			@param user The uid of the parent (if already known)
-			@param group The gid of the parent (if already known)
 		*/
-	bool chmodDirectories( mode_t mode, uid_t owner = 0, gid_t group = 0 );
+	bool chmodDirectories( mode_t mode );
 
 #endif /* ! WIN32 */
 
@@ -357,6 +371,7 @@ private:
 	bool want_priv_change;
 	priv_state desired_priv_state;
 	bool do_remove( const char *path, bool is_curr, dir_rempriv_t RemPriv );
+	void initialize( priv_state priv );
 #ifdef WIN32
 	long dirp;
 	struct _finddata_t filedata;

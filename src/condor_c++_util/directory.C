@@ -250,15 +250,46 @@ StatInfo::make_dirpath( const char* dir )
 
 Directory::Directory( const char *name, priv_state priv ) 
 {
+	initialize( priv );
+
+	curr_dir = strnewp(name);
+	ASSERT(curr_dir);
+
+#ifndef WIN32
+	owner_ids_inited = false;
+	if( priv == PRIV_FILE_OWNER ) {
+		EXCEPT( "Programmer error: Directory object instantiated with "
+				"PRIV_FILE_OWNER requested, but no StatInfo object!" );
+	}
+#endif
+}
+
+
+Directory::Directory( StatInfo* info, priv_state priv ) 
+{
+	initialize( priv );
+
+	curr_dir = strnewp( info->FullPath() );
+	ASSERT(curr_dir);
+
+#ifndef WIN32
+	owner_uid = info->GetOwner();
+	owner_gid = info->GetGroup();
+	owner_ids_inited = true;
+#endif
+}
+
+
+void
+Directory::initialize( priv_state priv )
+{
 	curr = NULL;
+
 #ifdef WIN32
 	dirp = -1;
 #else 
 	dirp = NULL;
-	owner_ids_inited = false;
 #endif
-	curr_dir = strnewp(name);
-	ASSERT(curr_dir);
 
 	desired_priv_state = priv;
 	if ( priv == PRIV_UNKNOWN ) {
@@ -267,6 +298,7 @@ Directory::Directory( const char *name, priv_state priv )
 		want_priv_change = true;
 	}
 }
+
 
 Directory::~Directory()
 {
@@ -449,7 +481,7 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 				dprintf( D_FULLDEBUG, "warning: %s "
 						 "still exists after trying to remove it\n",
 						 path );
-				Directory subdir( path, PRIV_FILE_OWNER );
+				Directory subdir( &info, PRIV_FILE_OWNER );
 				dprintf( D_FULLDEBUG, 
 						 "Attempting to chmod(0700) %s and all subdirs\n",
 						 path );
@@ -671,7 +703,7 @@ Directory::setOwnerPriv( const char* path, uid_t user, gid_t group )
 
 
 bool
-Directory::chmodDirectories( mode_t mode, uid_t user, gid_t group )
+Directory::chmodDirectories( mode_t mode )
 {
 	const char* thefile = NULL;	
 	int chmod_rval;
@@ -679,7 +711,7 @@ Directory::chmodDirectories( mode_t mode, uid_t user, gid_t group )
 	uid_t uid;
 	gid_t gid;
 
-	priv_state priv = setOwnerPriv( GetDirectoryPath(), user, group );
+	priv_state priv = setOwnerPriv( GetDirectoryPath() );
 	if( priv == PRIV_UNKNOWN ) {
 		dprintf( D_ALWAYS, "Directory::chmodDirectories(): "
 				 "failed to find owner of \"%s\"\n",
@@ -713,10 +745,8 @@ Directory::chmodDirectories( mode_t mode, uid_t user, gid_t group )
 	Rewind();
 	while( (thefile = Next()) ) {
 		if( IsDirectory() && !IsSymlink() ) {
-			Directory subdir( GetFullPath(), desired_priv_state );
-			uid = curr->GetOwner();
-			gid = curr->GetGroup();
-			if( ! subdir.chmodDirectories(mode, uid, gid) ) {
+			Directory subdir( curr, desired_priv_state );
+			if( ! subdir.chmodDirectories(mode) ) {
 				rval = false;
 			}
 		}
