@@ -156,9 +156,12 @@ command_to_string( int cmd )
 		return "pckpt_all_jobs";
 	case VACATE_CLAIM:
 		return "vacate_claim";
+	case VACATE_CLAIM_FAST:
+		return "vacate_claim_fast";
 	case VACATE_ALL_CLAIMS:
 		return "vacate_all_claims";
-
+	case VACATE_ALL_FAST:
+		return "vacate_all_fast";
 	default:
 		return "unknown";
 	}
