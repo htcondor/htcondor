@@ -59,8 +59,9 @@ GAHP                    = $(SBIN)/gahp_server
 MAX_GRIDMANAGER_LOG     = 64000
 GRIDMANAGER_DEBUG       = D_COMMAND
 GRIDMANAGER_LOG         = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
-GLIDEIN_SERVER_NAME     = gridftp.cs.wisc.edu
-GLIDEIN_SERVER_DIR      = /p/condor/public/binaries/glidein
+GLIDEIN_SERVER_URLS = \
+  http://www.cs.wisc.edu/condor/glidein/binaries \
+  gsiftp://gridftp.cs.wisc.edu/p/condor/public/binaries/glidein
 \end{verbatim}
 \normalsize
 

@@ -13,7 +13,7 @@ The program \Condor{glidein} is used to add a machine
 to a Condor pool.
 During the period of time when the added resource is
 part of the local pool, the resource is visible 
-to users of the pool, but the resource is only available for
+to users of the pool, but, by default, the resource is only available for
 use by the user
 that added the resource to the pool.
 
@@ -47,11 +47,9 @@ Make sure that the Condor and Globus tools are in your \Env{PATH}.
 \Condor{glidein} first contacts the Globus resource and checks for the
 presence of the necessary configuration files and Condor executables.
 If the executables are not present for the machine architecture,
-operating system version, and Condor version required, a
-server running at UW is contacted to transfer the needed executables.
-You can also set up your own server for \Condor{glidein} to contact.
-To gain access to the server or learn how to set up your own server,
-send email to \Email{condor-admin@cs.wisc.edu}.
+operating system version, and Condor version required,
+\Condor{glidein} will attempt an automatic installation.  If you
+need more control over how this works, see page~\pageref{man-condor-glidein}.
 
 When the files are correctly in place,
 Condor daemons are started.
