@@ -1,3 +1,0 @@
-# to build the makefile, do "sh bootstrap" 
-
-imake -I../../config
