@@ -17,7 +17,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
-#if !defined(LINUX)
+#if !defined(LINUX) && !defined(HPUX9)
 #include <sys/select.h>
 #endif
 
@@ -80,6 +80,7 @@ int	termlog;
 char	*MyName;
 char	*admin;
 char	*def_owner = "Owner = \"nobody\"";
+int run_benchmarks;
 
 ClassAd* template_ClassAd;
 
@@ -398,6 +399,17 @@ static void init_params()
 		capab_timeout = 120;
 	else {
 		capab_timeout = atoi(tmp);
+		free(tmp);
+	}
+	
+	tmp = param("RUN_BENCHMARKS");
+	if (!tmp)
+		run_benchmarks = 1;	  // default to True !
+	else {
+		if ( *tmp == 'T' || *tmp == 't' )
+			run_benchmarks = 1;
+		else
+			run_benchmarks = 0;
 		free(tmp);
 	}
 }
