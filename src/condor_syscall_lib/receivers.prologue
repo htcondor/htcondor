@@ -17,7 +17,10 @@
 #include <sys/stat.h>
 #include "_condor_fix_resource.h"
 #include <sys/utsname.h>
-#include "condor_fdset.h"
+
+#if defined(SUNOS41)
+#	include "condor_fdset.h"
+#endif
 
 #if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
 #	include <sys/param.h>

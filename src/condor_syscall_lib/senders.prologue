@@ -14,7 +14,10 @@
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
 #include "xdr_lib.h"
-#include "condor_fdset.h"
+
+#if defined(SUNOS41)
+#	include "condor_fdset.h"
+#endif
 
 #if defined(ULTRIX43) || defined(OSF1)
 #	include <sys/param.h>
