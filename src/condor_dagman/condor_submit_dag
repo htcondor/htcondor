@@ -301,6 +301,7 @@ sub write_submit_file {
     print SUBMIT "output\t\t= $lib_log\n";
     print SUBMIT "error\t\t= $lib_log\n";
     print SUBMIT "log\t\t= $sched_log\n";
+    print SUBMIT "remove_kill_sig\t= SIGUSR1\n";
     $args = "-f -l . -Debug $dagman_debug -Lockfile $dagfile.lock";
     $args = $args . " -Condorlog $job_log -Dag $dagfile";
     $args = $args . " -Rescue $rescue_file";

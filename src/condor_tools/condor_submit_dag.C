@@ -250,6 +250,7 @@ void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts
 	fprintf(pSubFile, "output\t\t= %s\n", opts.strLibLog.Value());
     fprintf(pSubFile, "error\t\t= %s\n", opts.strLibLog.Value());
     fprintf(pSubFile, "log\t\t= %s\n", opts.strSchedLog.Value());
+    fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 
 	MyString strArgs;
 	strArgs.reserve_at_least(256);
