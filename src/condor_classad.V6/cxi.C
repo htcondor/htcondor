@@ -289,14 +289,14 @@ main( void )
 			case NEW_TOPLEVEL: 
 				ad->Clear();
 				fgets( buffer1, 2048, stdin );
-				if( !parser.ParseClassAd( buffer1, ad, true ) ) {
+				if( !( ad = parser.ParseClassAd( buffer1, true ) ) ) {
 					printf( "Error parsing classad\n" );
 				}
 				break;
 			
 			case OUTPUT_TOPLEVEL:
 				output = "";
-				unparser.Unparse( ad, output );
+				unparser.Unparse( output, ad );
 				printf( "%s\n", output.c_str( ) );
 				fgets( buffer1, 2048, stdin );
 				break;
