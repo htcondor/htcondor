@@ -497,6 +497,10 @@ int Sock::do_connect(
 			return CEDAR_EWOULDBLOCK; 
 		}
 
+			// Note, if timeout is 0, do_connect_tryit() is either
+			// going to block until connect succeeds, or it will fail
+			// miserably, i.e., errno will *NOT* be E_INPROGRESS
+
 		if (_timeout > 0 && !connect_state.connect_failed) {
 			struct timeval	timer;
 			fd_set			writefds;
@@ -511,21 +515,23 @@ int Sock::do_connect(
 
 			nfound = ::select( nfds, 0, &writefds, &writefds, &timer );
 
-			switch(nfound) {
-			case 1:
+				// select() might return 1 or 2, depending on the
+				// platform and if select() is implemented in such a
+				// way that if our socket is set in *both* the write
+				// and the execpt sets (does select ever do that?  we
+				// don't know...) -Derek, Todd and Pete K. 1/19/01
+			if( nfound > 0 ) {
 				if ( do_connect_finish() ) {
 					return TRUE;
 				}
-				break;
-			default:
+			} else {
 				if (!connect_state.failed_once) {
 					dprintf( D_ALWAYS, "select returns %d, connect failed\n",
 							 nfound );
 					dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
 							 connect_state.timeout_interval );
 					connect_state.failed_once = true;
-				}
-				break;
+				}	
 			}
 		}
 
@@ -544,9 +550,14 @@ bool Sock::do_connect_finish()
 {
 	if (test_connection()) {
 		_state = sock_connect;
-		dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
-				 sock_to_string(_sock), _sock,
-				 sin_to_string(&_who) );
+		if( DebugFlags & D_NETWORK ) {
+			char* src = strdup(	sock_to_string(_sock) );
+			char* dst = strdup( sin_to_string(&_who) );
+			dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
+					 src, _sock, dst );
+			free( src );
+			free( dst );
+		}
 		if ( connect_state.non_blocking_flag ) {
 			timeout(connect_state.old_timeout_value);			
 		}
@@ -586,9 +597,14 @@ bool Sock::do_connect_tryit()
 {
 	if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
 		_state = sock_connect;
-		dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n", 
-						sock_to_string(_sock) , _sock ,
-						sin_to_string(&_who) );
+		if( DebugFlags & D_NETWORK ) {
+			char* src = strdup(	sock_to_string(_sock) );
+			char* dst = strdup( sin_to_string(&_who) );
+			dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
+					 src, _sock, dst );
+			free( src );
+			free( dst );
+		}
 		if ( connect_state.non_blocking_flag ) {
 			timeout(connect_state.old_timeout_value);			
 		}
@@ -608,6 +624,9 @@ bool Sock::do_connect_tryit()
 		connect_state.connect_failed = true;
 	}
 #else
+
+		// errno can only be EINPROGRESS if timeout is > 0.
+		// -Derek, Todd, Pete K. 1/19/01
 	if (errno != EINPROGRESS) {
 		if (!connect_state.failed_once) {
 			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
@@ -663,7 +682,7 @@ bool Sock::do_connect_tryit()
 		// finally, bind the socket
 		bind();
 	}
-#endif
+#endif /* end of unix code */
 
 	return false;
 }
