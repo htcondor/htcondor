@@ -43,7 +43,7 @@ In a nutshell, Condor is a specialized batch system
 \index{batch system}
 for managing compute-intensive jobs.
 Like most batch systems, Condor provides a
-queueing mechanism, scheduling policy, priority scheme, and resource
+queuing mechanism, scheduling policy, priority scheme, and resource
 classifications.  Users submit their compute jobs to Condor, Condor puts
 the jobs in a queue, runs them, and then informs the user as to the
 result.
@@ -64,7 +64,7 @@ organization is far greater than the compute power of a dedicated
 central resource.
 
 Condor has several unique capabilities at its disposal which are geared 
-towards effectively utilizing non-dedicated resources that are not owned or
+toward effectively utilizing non-dedicated resources that are not owned or
 managed by a centralized resource. These include transparent process
 checkpoint and migration, remote system calls, and ClassAds.
 Read section~\ref{sec:what-is-condor} for a general 
@@ -742,6 +742,7 @@ will be written into file \File{foo.log}.
 The 
 \AdAttr{requirements} and \AdAttr{rank} commands in the submit description file
 are powerful and flexible. 
+\index{submit commands!requirements}
 \index{requirements attribute}
 \index{rank attribute}
 \index{ClassAd attribute!requirements}
@@ -804,6 +805,7 @@ to your site's installation and policies.
 
 \index{rank attribute!examples}
 \index{ClassAd attribute!rank examples}
+\index{submit commands!rank}
 When considering the match between a job and a machine, rank is used
 to choose a match from among all machines that satisfy the job's
 requirements and are available to the user, after accounting for
@@ -939,31 +941,35 @@ shared files by using the \AdAttr{FileSystemDomain} and
 These attributes specify which machines have access to the same shared
 file systems.
 All machines that mount the same shared directories in the same
-locations are considered to belong to the same ``File System Domain''.
+locations are considered to belong to the same file system domain.
 Similarly, all machines that share the same user information (in
 particular, the same UID, which is important for file systems like
-NFS), are considered part of the same ``UID Domain''.
+NFS) are considered part of the same UID domain.
 
-However, the default configuration for Condor is that each machine is
-in its own UID and file system domain, using the full hostname of the
+The default configuration for Condor is places each machine
+in its own UID domain and file system domain, using the full hostname of the
 machine as the name of the domains.
-So, if a pool \emph{does} have access to a shared file system, the
-pool administrator \emph{must} correctly configure Condor so that all
+So, if a pool \emph{does} have access to a shared file system,
+the pool administrator \emph{must} correctly configure Condor 
+such that all
 the machines mounting the same files have the same
-\AdAttr{FileSystemDomain} setting.
+\AdAttr{FileSystemDomain} configuration.
 Similarly, all machines that share common user information must be
-configured to have the same \AdAttr{UidDomain}.
+configured to have the same \AdAttr{UidDomain} configuration.
 
-If a job is going to rely on a shared file system, Condor uses the
-\AdAttr{requirements} expression to ensure it runs on a machine in the
+When a job relies on a shared file system,
+Condor uses the
+\AdAttr{requirements} expression to ensure that the job runs
+on a machine in the
 correct \AdAttr{UidDomain} and \AdAttr{FileSystemDomain}.
 In this case, the default \AdAttr{requirements} expression specifies
 that the job must run on a machine with the same \AdAttr{UidDomain}
-and \AdAttr{FileSystemDomain} as the submitting machine.
+and \AdAttr{FileSystemDomain} as the machine from which the job
+is submitted.
 This default is almost always correct.
-However, in a pool spanning multiple \AdAttr{UidDomain} and/or
-\AdAttr{FileSystemDomain}s, the user may have to specify a different
-\AdAttr{requirements} expression to have their job run on the right
+However, in a pool spanning multiple \AdAttr{UidDomain}s and/or
+\AdAttr{FileSystemDomain}s, the user may need to specify a different
+\AdAttr{requirements} expression to have the job run on the correct
 machines.
 
 For example, imagine a pool made up of both desktop workstations and a
@@ -971,11 +977,12 @@ dedicated compute cluster.
 Most of the pool, including the compute cluster, has access to a
 shared file system, but some of the desktop machines do not.
 In this case, the administrators would probably define the
-\AdAttr{FileSystemDomain} to be ``cs.wisc.edu'' for all the machines
+\AdAttr{FileSystemDomain} to be \File{cs.wisc.edu} for all the machines
 that mounted the shared files, and to the full hostname for each
-machine that did not, for example, ``jimi.cs.wisc.edu''.
+machine that did not. An example is \File{jimi.cs.wisc.edu}.
 
-A user wants to submit vanilla universe jobs from her own desktop
+In this example,
+a user wants to submit vanilla universe jobs from her own desktop
 machine (jimi.cs.wisc.edu) which does not mount the shared file system
 (and is therefore in its own file system domain, in its own world).
 But, she wants the jobs to be able to run on more than just her own
@@ -991,11 +998,11 @@ different \AdAttr{requirements} expression than the default:
 
 \Warn If there is \emph{no} shared file system, or the Condor pool
 administrator does not configure the \AdAttr{FileSystemDomain}
-settings correctly (the default is that each machine in a pool is in
+setting correctly (the default is that each machine in a pool is in
 its own file system and UID domain), a user submits a job that cannot
 use remote system calls (for example, a vanilla universe job), and the
 user does not enable Condor's File Transfer mechanism, the job will
-\emph{only} run on the machine it was submitted from.
+\emph{only} run on the machine from which it was submitted.
 
 
 %%%%%%%%%%%% 
@@ -1005,33 +1012,35 @@ Condor's File Transfer Mechanism}
 %%%%%%%%%%%%
 \index{job!submission without a shared file system}
 \index{shared file system!submission of jobs without one}
-\index{File Transfer Mechanism}
+\index{file transfer mechanism}
 
-A shared file system is presumed for submitting jobs to Condor
-under some circumstances.
-Condor works well without a shared file system,
-but the user must enable the Condor File Transfer mechanism.
-In this case, Condor will transfer any files needed by your job into a
-temporary working directory on the remote machine, execute your job,
-and transfer back the output to your submitting machine.
-To use this feature, the user must specify which files to transfer,
-and when the output files should be copied back to your submit
-machine.
-This specification is done within the submit description file for the
-job. 
-The default behavior regarding file transfers varies across the
-different Condor universes, and between UNIX and Windows machines.
-These defaults are described below.
+Condor works well without a shared file system.
+The Condor file transfer mechanism is utilized by the user
+when the user submits jobs.
+Condor will transfer any files needed by a job from
+the machine where the job was submitted into a
+temporary working directory on the machine where the
+job is to be executed.
+Condor executes the job
+and transfers output back to the submitting machine.
+The user specifies which files to transfer,
+and at what point the output files should be copied back to the
+submitting machine.
+This specification is done within the job's submit description file.
+
+The default behavior of the file transfer mechanism
+varies across the
+different Condor universes, and it differs between UNIX and Windows machines.
 
 %%%%%%%%%%%% 
-\subsubsection{Default behavior across Condor Universes and Platforms}
+\subsubsection{Default Behavior across Condor Universes and Platforms}
 %%%%%%%%%%%%
 
-For the standard universe, the existence of a shared file system
-is not relevant.
+For jobs submitted under the standard universe,
+the existence of a shared file system is not relevant.
 Access to files (input and output) are handled through Condor's
 remote system call mechanism.
-The executable and checkpoint files are transfered automatically, if
+The executable and checkpoint files are transfered automatically, when
 needed. 
 Therefore, the user does not need to change the submit description
 file if there is no shared file system.
@@ -1040,10 +1049,11 @@ For the vanilla, Java, and MPI universes, access to files (including
 the executable) through a shared file system is presumed as a default
 on UNIX machines.
 If there is no shared file system, then Condor's file transfer
-mechanism must be explicitly enabled (see above).
-On Windows machines, Condor presumes no access to a shared file
-system, enabling the file transfer mechanism by default.
-However, Windows users still might need to specify which files to
+mechanism must be explicitly enabled.
+When submitting a job from a Windows machine,
+Condor presumes the opposite: no access to a shared file system.
+It instead enables the file transfer mechanism by default.
+Submission of a job might need to specify which files to
 transfer, and/or when to transfer the output files back.
 
 For the globus universe,
@@ -1062,17 +1072,19 @@ from the workers is usually passed back to the master via PVM
 messages, not files.
 
 For the scheduler universe,
-Condor is only using the machine from where the job is submitted,
-therefore the existence of a shared file system is not relevant.
+Condor is only using the machine from which the job is submitted.
+Therefore, the existence of a shared file system is not relevant.
 
 
 %%%%%%%%%%%% 
 \subsubsection{Specifying If and When to Transfer Files}
 %%%%%%%%%%%%
 
-To enable the file transfer feature, you must specify at least two
-settings in the job's submit description file:
+To enable the file transfer mechanism, two commands are
+placed in the job's submit description file:
 \verb@should_transfer_files@ and \verb@when_to_transfer_output@.
+\index{submit commands!should\_transfer\_files}
+\index{submit commands!when\_to\_transfer\_output}
 An example is:
 
 \begin{verbatim}
@@ -1080,24 +1092,25 @@ An example is:
   when_to_transfer_output = ON_EXIT
 \end{verbatim}
 
-The \verb@should_transfer_files@ setting determines if Condor should
-transfer input files to the remote machine where your job executes,
-and transfer the output back to your submit machine.
-There are three possible values:
+The \verb@should_transfer_files@ command specifies
+whether Condor should
+transfer input files from the submit machine to the remote machine
+where the job executes.
+It also specifies whether the output files are transferred 
+back to the submit machine.
 
+The command takes on one of three possible values:
 \begin{enumerate}
 
-\item \verb@YES@: Condor will always transfer input and output files
-for your job.
+\item \verb@YES@: Condor always transfers both input and output files.
 
-\item \verb@IF_NEEDED@: Condor will only transfer files if your job is
-matched with a machine in a different \Attr{FileSystemDomain} than the
-one your submit machine belongs to.
-If the job is matched with a machine in your local
-\Attr{FileSystemDomain}, Condor will not transfer files and will rely
-on the shared file system.
-See the section above on using Condor with a shared file system for
-more details.
+\item \verb@IF_NEEDED@: Condor transfers files if the job is
+matched with (and to be executed on) a machine in a
+different \Attr{FileSystemDomain} than the
+one the submit machine belongs to.
+If the job is matched with a machine in the local \Attr{FileSystemDomain},
+Condor will not transfer files and relies
+on a shared file system.
 
 \item \verb@NO@: Condor's file transfer mechanism is disabled. 
 
@@ -1106,39 +1119,45 @@ more details.
 The \verb@when_to_transfer_output@ command tells Condor when output
 files are to be transferred back to the submit machine after the job
 has executed on a remote machine.
-There are two possible options for this setting:
 
+The commands takes on one of two possible values:
 \begin{enumerate}
-
 \item \verb@ON_EXIT@: Condor transfers output files back to the submit
 machine only when the job exits on its own.
 
 \item \verb@ON_EXIT_OR_EVICT@: Condor will always do the transfer,
-whether the job completes on its own, was preempted by another job, or
-killed.
-This is only useful if partial runs of your job are valuable for some
-reason (for example, if your application does its own checkpointing).
-
+whether the job completes on its own, is preempted by another job, or
+is killed.
+This is only useful if partial runs of the job are valuable for some
+reason. An example of valuable partial runs is when the application
+produces its own checkpoints.
 \end{enumerate}
 
-There is no default for \verb@when_to_transfer_output@.
+There is no default value for \verb@when_to_transfer_output@.
 If you are using the file transfer mechanism, you must define this
-setting.  
+command.
 If \verb@when_to_transfer_output@ is specified in your submit
 file, but \verb@should_transfer_files@ is not, Condor assumes a
-default of \verb@YES@.
+value of \verb@YES@ for \verb@should_transfer_files@.
 
-\Note The combination of: \verb@should_transfer_files = IF_NEEDED@ and
-\verb@when_to_transfer_output = ON_EXIT_OR_EVICT@ would produce
-undefined file access semantics.
+\Note The combination of:
+\begin{verbatim}
+  should_transfer_files = IF_NEEDED
+  when_to_transfer_output = ON_EXIT_OR_EVICT
+\end{verbatim}
+would produce undefined file access semantics.
 Therefore, this combination is prohibited by \Condor{submit}.
 
-On UNIX, the file transfer mechanism is disabled by default.  If none
-of the above settings are defined, Condor assumes
-\verb@should_transfer_files = NO@
+When submitting from a UNIX platform,
+the file transfer mechanism is unused by default.
+If neither
+\verb@when_to_transfer_output@ or \verb@should_transfer_files@ 
+are defined, Condor assumes
+\verb@should_transfer_files = NO@.
 
-On Windows, Condor does not provide any way to use a shared file
-system for your jobs. 
+When submitting from a Windows platform,
+Condor does not provide any way to use a shared file
+system for jobs. 
 Therefore, if none of the above settings are defined, the file
 transfer mechanism is enabled by default with the following values:
 
@@ -1151,18 +1170,23 @@ transfer mechanism is enabled by default with the following values:
 \subsubsection{Specifying What Files to Transfer}
 %%%%%%%%%%%%
 
-If file transfer is enabled, Condor will automatically transfer the
-executable, the file defined as the standard input (if specified with
-\verb@input@), and any jar files (for Java universe),  before the job
+If the file transfer mechanism is enabled,
+Condor will transfer the following files before the job
 is run on a remote machine.
-If the job requires any other input files, the user should utilize the
+\begin{enumerate}
+  \item the executable
+  \item the input, as defined with the \verb@input@ command
+  \item any jar files (for Java universe)
+\end{enumerate}
+If the job requires any other input files,
+the submit description file should utilize the
 \verb@transfer_input_files@ command.
-This list specifies any other files you want Condor to transfer to a
+This list specifies any other files that Condor is to transfer to a
 remote site to set up the execution environment for the job before it
 is run.
-All of these files are placed in the same temporary working directory
+These files are placed in the same temporary working directory
 as the job's executable.
-At this time, directories can not be transfered in this way.
+At this time, directories can not be transferred in this way.
 For example:
 
 \begin{verbatim}
@@ -1170,11 +1194,12 @@ For example:
 \end{verbatim}
 
 By default, any files that are modified or created by the job in the
-temporary directory at the remote site are sent back.
+temporary directory at the remote site are transferred back
+to the machine from which the job was submitted.
 Most of the time, this is the best option.
-To restrict the files that are transfered, specify
-the exact list with \verb@transfer_output_files@.
-If you define this list and any of the files do not exist when the
+To restrict the files that are transferred,
+specify the exact list with \verb@transfer_output_files@.
+When this list is defined and any of the files do not exist as the
 job exits, Condor considers this an error, and re-runs the job.
 For example:
 
@@ -1191,87 +1216,89 @@ itself based upon what output the job produces.
 \subsubsection{Requirements and Rank for File Transfer}
 %%%%%%%%%%%%
 
-Depending on what you specify for the \verb@should_transfer_files@
-setting, it is important that the \Attr{requirements} expression for
-your job contains the right logic to ensure that the job is matched
-with a resource that meets your file transfer needs.
-If you do not specify a \Attr{requirements} expression in your submit
-file, or if the expression you specify does not refer to the
-attributes listed below in any way, \Condor{submit} will add an
-appropriate clause into the \Attr{requirements} expression for your
-job.
-\Condor{submit} will append these clauses with \verb@&&@, logical AND,
-to ensure that these conditions are met for your job.
-The default clauses corresponding to the different possible values of
-\verb@should_transfer_files@ are listed below:
+\index{submit commands!requirements}
+The \Attr{requirements} expression for a job must depend
+on the \verb@should_transfer_files@ command.
+The job must specify the correct logic to ensure that the job is matched
+with a resource that meets the file transfer needs.
+If no \Attr{requirements} expression is in the submit description file,
+or if the expression specified does not refer to the
+attributes listed below, \Condor{submit} adds an
+appropriate clause to the \Attr{requirements} expression for the job.
+\Condor{submit} appends these clauses with a logical AND, \verb@&&@,
+to ensure that the proper conditions are met.
+Here are the default clauses corresponding to the different values of
+\verb@should_transfer_files@:
 
 \begin{enumerate}
 
-\item \verb@YES@: \verb@(HasFileTransfer)@
-  If your job is always going to transfer files, the only requirement
-  is that it is matched with a machine that has the capability to
-  transfer files.
-  This is simply a backward compatibility issue, since all versions
+\item 
+\verb@should_transfer_files = YES@ results in the addition of
+the clause \verb@(HasFileTransfer)@.
+  If the job is always going to transfer files, it is required to 
+  match with a machine that has the capability to transfer files.
+  This is a backward compatibility issue, since all versions
   of Condor since version 6.3.3 support file transfer and have
   \Attr{HasFileTransfer} defined to \verb@TRUE@.
 
-\item \verb@NO@:
-  \verb@(TARGET.FileSystemDomain == MY.FileSystemDomain)@
-  In addition, Condor will automatically add the
-  \Attr{FileSystemDomain} attribute to your job ad, with whatever
-  string is defined for the \Condor{schedd} that you are submitting
-  your job to.
-  If your job is not using the file transfer mechanism, Condor assumes
-  you will need a shared file system, and therefore, a machine in the
-  same \Attr{FileSystemDomain} as your submit machine.
+\item 
+\verb@should_transfer_files = NO@ results in the addition of
+  \verb@(TARGET.FileSystemDomain == MY.FileSystemDomain)@.
+  In addition, Condor automatically adds the
+  \Attr{FileSystemDomain} attribute to the job ad, with whatever
+  string is defined for the \Condor{schedd} to which the job is
+  submitted.
+  If the job is not using the file transfer mechanism, Condor assumes
+  it will need a shared file system, and therefore, a machine in the
+  same \Attr{FileSystemDomain} as the submit machine.
 
-\item \verb@IF_NEEDED@: 
+\item \verb@should_transfer_files = IF_NEEDED@ results in the addition of
 \begin{verbatim}
   (HasFileTransfer || (TARGET.FileSystemDomain == MY.FileSystemDomain))
 \end{verbatim}
-  If Condor will optionally transfer files, it only has to require
-  that the machine it is \emph{either} capable of transferring files
+  If Condor will optionally transfer files, it must require
+  that the machine is \emph{either} capable of transferring files
   \emph{or} in the same file system domain.
 
 \end{enumerate}
 
 To ensure that the job is matched to a machine with enough local disk
-space to hold all the transfered files, Condor automatically adds an
-attribute to your job add, \Attr{DiskUsage} which includes the total
-size of your job's executable and all input files you have specified
-to be transfered.
-Then, Condor adds an additional clause in your \Attr{Requirements}
+space to hold all the transfered files, Condor automatically adds the
+\Attr{DiskUsage} job attribute.
+This attribute includes the total
+size of the job's executable and all input files to be transferred.
+Condor then adds an additional clause to the \Attr{Requirements}
 expression that states that the remote machine must have at least
 enough available disk space to hold all these files:
 \begin{verbatim}
   && (Disk >= DiskUsage)
 \end{verbatim}
 
-If you use \verb@should_transfer_files = IF_NEEDED@ and would prefer
-your job ran in the local file system domain and did not transfer files
+If \verb@should_transfer_files = IF_NEEDED@ and the job prefers
+to run on a machine in the local file system domain
+over transferring files,
 (but are still willing to allow the job to run remotely and transfer
-files), you should define a \Attr{rank} for your job.  For example:
+\index{submit commands!rank}
+files), the \Attr{rank} expression works well.  Use:
 
 \begin{verbatim}
 rank = (TARGET.FileSystemDomain == MY.FileSystemDomain)
 \end{verbatim}
 
-The \Attr{rank} expression is a floating point number, so if you have
-other things you want to use to rank the possible machines this job
-will run on, you should add them together, not use \verb@&&@.
-For example:
+The \Attr{rank} expression is a floating point number, so if 
+other items are considered in ranking the possible machines this job
+may run on, add the items:
 
 \begin{verbatim}
 rank = kflops + (TARGET.FileSystemDomain == MY.FileSystemDomain)
 \end{verbatim}
 
-However, given that \Attr{kflops} can vary widely among machines,
-whether or not you were in the same file system domain probably
-wouldn't effect where your job ran if you used this setting.  
-If you are mostly interested in your job running in the same file
-system domain if possible, and only care about kflops among the
-machines in the file system domain, you should give a \emph{weight} to
-the part of your rank that's matching the file system domains.
+The value of \Attr{kflops} can vary widely among machines,
+so this \Attr{rank} expression will likely not do as it intends.
+To place emphasis on the job running in the same file
+system domain,
+but still consider kflops among the machines in the file system domain,
+weight the part of the rank expression that is matching the file system domains.
 For example: 
 
 \begin{verbatim}
@@ -1283,24 +1310,24 @@ rank = kflops + (10000 * (TARGET.FileSystemDomain == MY.FileSystemDomain))
 %%%%%%%%%%%%
 
 The \verb@should_transfer_files@ and \verb@when_to_transfer_output@
-settings in the submit file result in two corresponding string
-attributes in your job classad: \Attr{ShouldTransferFiles} and
+commands in the submit description file result in two corresponding string
+attributes in the job ClassAd: \Attr{ShouldTransferFiles} and
 \Attr{WhenToTransferOutput}.
-However, these settings are only valid when the job is matched with an
-execute machine running Condor version 6.5.3 or greater.
+These attributes are only defined when the job is matched with an
+execute machine running Condor version 6.5.3 or a more recent version.
 So, for backward compatibility, \Condor{submit} also includes the old
 attribute used to control this feature: \Attr{TransferFiles}.
-If you examine your job with the \Opt{-long} option to \Condor{q}, and
+If you examine a job with the \Opt{-long} option to \Condor{q}, and
 you see \Attr{TransferFiles}, that attribute is only there for
-backward compatibility, and is ignored if matched with a machine
+backward compatibility, and it is ignored if matched with a machine
 running version 6.5.3 or greater.  
-There were a number of problems with this old attribute, since it
-wasn't flexible enough to handle the new \verb@IF_NEEDED@
-functionality, and was confusing for users.
+There were problems with this old attribute, since it
+was not flexible enough to handle the new \verb@IF_NEEDED@
+functionality, and it was confusing for users.
 Therefore, \Attr{TransferFiles} is deprecated, and we will no longer
 document its use.
-If your submit file refers to \verb@transfer_files@, you should
-consider switching it to use the settings described above.
+If your submit file refers to \verb@transfer_files@,
+consider switching it to use the settings described here.
 
 
 %%%%%%%%%%%% 
@@ -1353,7 +1380,7 @@ then a modification to the submit description file
 will allow Condor to choose an executable after an
 available machine is chosen.
 
-A special-purpose MachineAd substitution macro can be used in
+A special-purpose Machine Ad substitution macro can be used in
 the \AdAttr{executable}, \AdAttr{environment},  and \AdAttr{arguments}
 attributes in the submit description file.
 The macro has the form
@@ -1458,7 +1485,7 @@ to the \AdAttr{requirements} expression.
 The additional expression is added
 provided the user does not use
 \AdAttr{CkptArch} in the \AdAttr{requirements} expression.
-Condor will remain backwards compatible for those users who have explicitly
+Condor will remain backward compatible for those users who have explicitly
 specified \AdAttr{CkptRequirements}--implying use of \AdAttr{CkptArch},
 in their \AdAttr{requirements} expression.
 
