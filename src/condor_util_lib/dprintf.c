@@ -637,11 +637,7 @@ _condor_dprintf_exit()
 		/* Actually exit now */
 	fflush (stderr);
 
-	/* instead of just exiting, we want to drop core and hopefully get a stack trace */
-
-	*null_ptr++; // BOOM
-
-	/* exit(DPRINTF_ERROR); */
+	exit(DPRINTF_ERROR); 
 }
 
 
