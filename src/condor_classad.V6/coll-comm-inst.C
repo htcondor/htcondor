@@ -23,31 +23,15 @@
 
 #include "condor_common.h"
 #include "exprTree.h"
+#include "collection.h"
+
+#include <list>
 
 BEGIN_NAMESPACE( classad )
 
-//-------------classad templates --------------
-	// lex buffer
-template class ExtArray<char>;
-	// function table
-template class map<string, void*, CaseIgnLTStr>;
-template class map<string, void*, CaseIgnLTStr>::iterator;
-	// attribute list
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>;
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::iterator;
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::const_iterator;
-	// expr evaluation cache
-template class hash_map<const ExprTree*, Value, ExprHash >;
-template class hash_map<const ExprTree*, Value, ExprHash >::iterator;
-	// component stuff
-template class vector< pair<string, ExprTree*> >;
-template class vector<ExprTree*>;
-
-class _ClassAdInit 
-{
-	public:
-		_ClassAdInit( ) { tzset( ); }
-} __ClassAdInit;
-
+//-------------common collection templates-------------
+template class vector<string>;
+template class list< pair<string,ClassAd*> >;	// query result
 
 END_NAMESPACE
+

@@ -22,32 +22,34 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "exprTree.h"
+#include "collection.h"
+#include "collectionServer.h"
+#include "transaction.h"
 
 BEGIN_NAMESPACE( classad )
 
-//-------------classad templates --------------
-	// lex buffer
-template class ExtArray<char>;
-	// function table
-template class map<string, void*, CaseIgnLTStr>;
-template class map<string, void*, CaseIgnLTStr>::iterator;
-	// attribute list
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>;
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::iterator;
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::const_iterator;
-	// expr evaluation cache
-template class hash_map<const ExprTree*, Value, ExprHash >;
-template class hash_map<const ExprTree*, Value, ExprHash >::iterator;
-	// component stuff
-template class vector< pair<string, ExprTree*> >;
-template class vector<ExprTree*>;
-
-class _ClassAdInit 
-{
-	public:
-		_ClassAdInit( ) { tzset( ); }
-} __ClassAdInit;
-
+//-------------collection server templates-------------
+    // view content
+template class multiset<ViewMember, ViewMemberLT>;
+template class multiset<ViewMember, ViewMemberLT>::iterator;
+    // list of sub-views
+template class slist<View*>;
+    // view registry
+template class hash_map<string,View*,StringHash>;
+template class hash_map<string,View*,StringHash>::iterator;
+    // index
+template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
+    StringHash>::iterator;
+template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
+    StringHash>;
+    // main classad table
+template class hash_map<string, ClassAdProxy, StringHash>;
+template class hash_map<string, ClassAdProxy, StringHash>::iterator;
+    // transaction registry
+template class hash_map<string, ServerTransaction*, StringHash>;
+template class hash_map<string, ServerTransaction*, StringHash>::iterator;
+    // operations in transaction
+template class list<XactionRecord>;
 
 END_NAMESPACE
+
