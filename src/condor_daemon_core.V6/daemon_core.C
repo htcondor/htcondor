@@ -332,6 +332,9 @@ DaemonCore::~DaemonCore()
 		}
 	}
 
+	if( pipeTable ) {
+		delete( pipeTable );
+	}
 	t.CancelAllTimers();
 }
 
