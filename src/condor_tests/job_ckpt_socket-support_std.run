@@ -1,0 +1,32 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_socket-support_std.cmd';
+$testname = 'job_ckpt_socket-support_std test';
+
+$OutputTest = sub
+{
+    my %info = @_;
+
+    $output = $info{"output"};
+    open( OUTPUT, "<$output" ) || die "Can't open $output: $!\n";
+    while( <OUTPUT> ) {
+	$last = $_;
+    }
+    $last =~ /(.*)SUCCESS(.*)/ ||
+	die "$testname: FAILURE (bad output to STDOUT)\n";
+
+    -z $info{"error"} || 
+	die "$testname: FAILURE (STDERR contains data)\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $OutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 1) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+
