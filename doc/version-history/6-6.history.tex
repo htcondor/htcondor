@@ -73,6 +73,11 @@ The details of each version are described below.
 \item The \Condor{startd} now properly cleans up execute directories on
   root-squashed NFS mounts.
 
+\item Fixed a problem where the \Condor{starter} could crash if the
+  job it was running used Condor's file transfer mechanism and the
+  full path names to the job's files became longer than a few hundred
+  characters.
+
 \item The \Attr{image\_size} attribute of a job on Mac OS X is much
   closer to the values that \Prog{ps} returns.
   Previously it would be highly inflated.
