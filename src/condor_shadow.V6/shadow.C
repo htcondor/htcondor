@@ -180,7 +180,6 @@ int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup();
 int Termlog;
-time_t	RunTime;
 ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
 int HandleLog();
@@ -254,8 +253,6 @@ main(int argc, char *argv[], char *envp[])
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
 #endif
-
-	RunTime = time(NULL);
 
 	if( argc > 1 ) {
 		if( strcmp("-t",argv[1]) == MATCH ) {
@@ -818,9 +815,6 @@ Wrapup( )
                                 Proc->id.cluster, Proc->id.proc);
         strcpy (email_addr, Proc->owner);
     }
-	DeleteAttribute(Proc->id.cluster, Proc->id.proc, ATTR_REMOTE_HOST);
-	SetAttributeString(Proc->id.cluster, Proc->id.proc,
-					   ATTR_LAST_REMOTE_HOST, ExecutingHost);
 
 	if( sock_RSC1 ) {
 		SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
@@ -869,13 +863,6 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	//new syntax, can use filesystem to authenticate
 	ConnectQ(schedd);
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
-	GetAttributeFloat(Proc->id.cluster, Proc->id.proc,
-					ATTR_JOB_REMOTE_WALL_CLOCK, &accum_time);
-	new_time = time(NULL);
-	accum_time += (float)(new_time - RunTime);
-	RunTime = new_time;
-	SetAttributeFloat(Proc->id.cluster, Proc->id.proc,
-					ATTR_JOB_REMOTE_WALL_CLOCK, accum_time);
 
 	if( status == REMOVED ) {
 		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed "
@@ -1054,8 +1041,6 @@ start_job( char *cluster_id, char *proc_id )
 	}
 #endif
 
-	dprintf(D_ALWAYS, "Setting %s=%s\n", ATTR_REMOTE_HOST, ExecutingHost);
-	SetAttributeString(cluster_num, proc_num, ATTR_REMOTE_HOST, ExecutingHost);
 	GetAttributeFloat(cluster_num, proc_num, ATTR_BYTES_SENT, &TotalBytesSent);
 	GetAttributeFloat(cluster_num, proc_num, ATTR_BYTES_RECVD,
 					  &TotalBytesRecvd);
@@ -1156,8 +1141,9 @@ DoCleanup()
 									 ATTR_JOB_STATUS, &status);
 
 		if ( fetch_rval >= 0 && status == REMOVED ) {
-			dprintf(D_ALWAYS, "DoCleanup(): Job %d.%d has been removed by condor_rm\n",
-											Proc->id.cluster, Proc->id.proc );
+			dprintf(D_ALWAYS, 
+				"DoCleanup(): Job %d.%d has been removed by condor_rm\n",
+				Proc->id.cluster, Proc->id.proc );
 		}
 
 		if( fetch_rval < 0 || status == REMOVED ) {
@@ -1165,8 +1151,6 @@ DoCleanup()
 			return 0;
 		}
 			
-		// dprintf(D_FULLDEBUG, "Shadow: setting CurrentHosts back to 0\n");
-		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS,0);
 		Proc->image_size = ImageSize;
 		Proc->status = status;
 
@@ -1180,14 +1164,8 @@ DoCleanup()
 							   ATTR_BYTES_RECVD, TotalBytesRecvd );
 		}
 
-		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
-		//				status);
-		DeleteAttribute(Proc->id.cluster, Proc->id.proc, ATTR_REMOTE_HOST);
-		SetAttributeString(Proc->id.cluster, Proc->id.proc,
-						   ATTR_LAST_REMOTE_HOST, ExecutingHost);
 
 		DisconnectQ(0);
-		// dprintf( D_ALWAYS, "Shadow: marked job status %d\n", JobStatusNames[Proc->status] );
 	}
 
 	return 0;
