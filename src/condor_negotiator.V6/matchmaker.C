@@ -28,7 +28,6 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
-#include "condor_classad_lookup.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "dc_startd.h"
@@ -476,7 +475,7 @@ Look for an ad matching the given constraint string
 in the table given by arg.  Return a duplicate on success.
 Otherwise, return 0.
 */
-
+#if 0
 static ClassAd * lookup_global( const char *constraint, void *arg )
 {
 	ClassAdList *list = (ClassAdList*) arg;
@@ -501,6 +500,7 @@ static ClassAd * lookup_global( const char *constraint, void *arg )
 
 	return 0;
 }
+#endif
 
 int Matchmaker::
 negotiationTime ()
@@ -547,7 +547,7 @@ negotiationTime ()
 	}
 
 	// Register a lookup function that passes through the list of all ads.	
-	ClassAdLookupRegister( lookup_global, &allAds );
+	// ClassAdLookupRegister( lookup_global, &allAds );
 	
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );

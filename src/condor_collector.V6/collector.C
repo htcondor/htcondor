@@ -33,7 +33,6 @@
 #include "condor_attributes.h"
 #include "condor_parameters.h"
 #include "condor_email.h"
-#include "condor_classad_lookup.h"
 #include "condor_query.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -202,7 +201,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
 	// ClassAd evaluations use this function to resolve names
-	ClassAdLookupRegister( process_global_query, this );
+	// ClassAdLookupRegister( process_global_query, this );
 
 	forkQuery.Initialize( );
 }
@@ -599,6 +598,7 @@ a global query, returning a duplicate of the ad matched.
 On failure, it returns 0.
 */
 
+#if 0
 ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *arg )
 {
 	CondorQuery query(ANY_AD);
@@ -614,6 +614,7 @@ ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *a
 		return 0;
 	}
 }
+#endif
 
 void CollectorDaemon::process_query (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
