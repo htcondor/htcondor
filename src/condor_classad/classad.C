@@ -218,16 +218,9 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 
 ClassAd::ClassAd(const ClassAd& old) : AttrList((AttrList&) old)
 {
-	if (myType) 
-	{
-		delete myType; 
-		myType = NULL;
-	}
-	if (targetType)
-	{
-		delete targetType;
-		targetType = NULL;
-	}
+	myType = NULL;
+	targetType = NULL;
+
     if(old.myType)
     {
         this->myType = new AdType(old.myType->name);
