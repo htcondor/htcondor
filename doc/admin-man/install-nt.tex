@@ -1,33 +1,4 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:NT-Limitations}Limitations to
-Condor under Windows NT} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-This release of Condor NT has a number of limitations.  Most of these
-are currently being worked on, and should be cleared up in the future.
-
-\begin{enumerate}
-\item Condor for Windows NT requires Microsoft Windows NT 4.0, Service Pack 3
-or higher.  We recommend Service Pack 5 for Condor NT.
-
-\item This version of Condor NT requires that all files used by Condor NT
-must be stored on the local disk.  Unfortunately, there is not a clear
-and consistent way to access networked resources while users are not
-logged in (or other users are logged in).
-
-\item This version of Condor NT will only run jobs as a user that has
-generic permissions.  Condor NT will automatically create and delete a dynamic
-user that runs your job.
-
-\item Condor for Windows NT does not currently support Check pointing, so
-if jobs are vacated (killed) before they complete, they will have to be
-started over from scratch on a different machine.
-
-\item \Todo
-
-\end{enumerate}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:NT-Install}Installation of Condor on Windows NT}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -49,7 +20,7 @@ terms.
 The Condor NT executable for distribution is packaged in
 a single file such as:
 \begin{verbatim}
-  condor-6.1.8-WINNT40-x86.exe
+  condor-6.1.8_preview-WINNT40-x86.exe
 \end{verbatim}
 
 \index{Windows NT!installation!initial file size}
@@ -58,11 +29,25 @@ removed once Condor is fully installed.
 
 Before installing Condor, please consider joining the condor-world mailing
 list.  Traffic on this list is kept to an absolute minimum.  It is only
-used to announce new releases of Condor.  To subscribe, send a message
+used to announce new releases of Condor.  To subscribe, send an email
 to \Email{majordomo@cs.wisc.edu} with the body:
 \begin{verbatim}
    subscribe condor-world 
 \end{verbatim}
+
+\subsection{Installation Requirements}
+
+\begin{itemize}
+
+\item Condor NT requires Microsoft Windows NT 4.0 with Service Pack 3 or above.
+Service Pack 5 is recommended. \Note Condor NT has not yet been tested with Windows 2000.
+
+\item 30 megabytes of free disk space is recommended.  Significantly more 
+disk space could be desired to be able to run jobs with large data files.
+
+\item Condor NT will operate on either an NTFS or FAT filesystem.  However, for security purposes, NTFS is preferred.
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:NT-Preparing-to-Install}Preparing to Install
@@ -125,7 +110,7 @@ of free space.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:nt-install-procedure}
-Installation Procedure}
+Installation Procedure using the included Setpup Program}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % condor MUST be run as local system
@@ -284,7 +269,10 @@ are available.
      This step is omitted for the installation of Personal Condor.
 
      Enter the machine's accounting (or UID) domain.
-	 On this version of Condor for Windows NT, this setting only used for User priorities (see section~\ref{sec:UserPrio} on page~\pageref{sec:UserPrio}).
+	 On this version of Condor for Windows NT, this setting only used for User
+	 priorities (see section~\ref{sec:UserPrio} on
+	 page~\pageref{sec:UserPrio}) and to form a default email address for
+	 the user.
 
 \item[STEP 7: Access permissions.]
      This step is omitted for the installation of Personal Condor.
@@ -396,65 +384,19 @@ are available.
      You have the option to return to previous dialog boxes to fix entries.
 \end{description}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{nt-installed-now-what}
-Condor is installed... now what?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Windows NT!starting the Condor service|(}
-
-After the installation of Condor is completed, Condor can
-be started by hand, or you can simply reboot.  The Condor service
-will start automatically when you reboot your machine.
-
-To start condor by hand:
-\begin{enumerate}
-\item From the Start menu, choose Settings.
-\item From the Settings menu, choose Control Panel.
-\item From the Control Panel, choose Services.
-\item From Services, choose Condor, and Start.
-\end{enumerate}
-\index{Windows NT!starting the Condor service|)}
-
-\index{Windows NT!Condor daemon names}
-Run the Task Manager (Control-Shift-Escape) to check that Condor
-services are running.  The following tasks should
-be running:  
-\begin{itemize}
-\item \Condor{master.exe}
-\item \Condor{negotiator.exe}, if this machine is a central manager.
-\item \Condor{collector.exe}, if this machine is a central manager.
-\item \Condor{startd.exe}, if you indicated that this Condor node should start jobs
-\item \Condor{schedd.exe}, if you indicated that this Condor node should submit jobs
-to the Condor pool.
-\end{itemize}
-
-Also, you should now be able to open up a new cmd (DOS prompt) window, and
-the Condor bin directory should be in your path, so you can issue the normal
-Condor commands, such as \condor{q} and \condor{status}.
-
-\index{installation!Windows NT|)}
-\index{Windows NT!installation|)}
-
-\subsection{\label{nt-running-now-what}
-Condor is running... now what?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Once Condor services are running, try building
-and submitting some test jobs.  See the \File{README.TXT} file in the
-examples directory
-for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:NT-Install}Manually Installing Condor on Windows NT}
+\subsection{\label{sec:NT-Manual-Install}Manual Installation Condor on Windows NT}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Windows NT!manual install|(}
 If you are to install Condor on many different machines, you may wish
 to use some other mechanism to install Condor NT rather than running
-the installer.
+the Setup program descibed aboute.
 
-Here is a brief overview of what is required to be installed to enable
-Condor NT to operate:
+\Warn This is for advanced users only!  All others should use the Setup program described about.
+
+Here is a brief overview of how to install Condor NT manually without using the provided GUI-based setup program:
 
 \begin{description}
 \item [The Service]
@@ -512,3 +454,58 @@ path is not supported at this time.
 
 \index{manual installation!Windows NT|)}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{nt-installed-now-what}
+Condor is installed... now what?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Windows NT!starting the Condor service|(}
+
+After the installation of Condor is completed, the Condor service
+must be started.  If you used the GUI-based setup program to install
+Condor, the Condor service should already be started.  If you installed
+manually, Condor must
+be started by hand, or you can simply reboot. \Note The Condor service
+will start automatically whenever you reboot your machine.
+
+To start condor by hand:
+\begin{enumerate}
+\item From the Start menu, choose Settings.
+\item From the Settings menu, choose Control Panel.
+\item From the Control Panel, choose Services.
+\item From Services, choose Condor, and Start.
+\end{enumerate}
+
+Or, alternatively you can enter the following command from a command prompt:
+\begin{verbatim}
+         net start condor
+\end{verbatim}
+\index{Windows NT!starting the Condor service|)}
+
+\index{Windows NT!Condor daemon names}
+Run the Task Manager (Control-Shift-Escape) to check that Condor
+services are running.  The following tasks should
+be running:  
+\begin{itemize}
+\item \Condor{master.exe}
+\item \Condor{negotiator.exe}, if this machine is a central manager.
+\item \Condor{collector.exe}, if this machine is a central manager.
+\item \Condor{startd.exe}, if you indicated that this Condor node should start jobs
+\item \Condor{schedd.exe}, if you indicated that this Condor node should submit jobs
+to the Condor pool.
+\end{itemize}
+
+Also, you should now be able to open up a new cmd (DOS prompt) window, and
+the Condor bin directory should be in your path, so you can issue the normal
+Condor commands, such as \condor{q} and \condor{status}.
+
+\index{installation!Windows NT|)}
+\index{Windows NT!installation|)}
+
+\subsection{\label{nt-running-now-what}
+Condor is running... now what?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Once Condor services are running, try building
+and submitting some test jobs.  See the \File{README} file in the
+examples directory
+for details.
