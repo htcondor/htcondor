@@ -13,7 +13,7 @@ typedef int BOOL;
 const BOOL	TRUE = 1;
 const BOOL	FALSE = 0;
 
-#if defined(SUNOS41) || defined(ULTRIX42) || defined(ULTRIX43)
+#if defined(SUNOS41) || defined(ULTRIX42) || defined(ULTRIX43) || defined(IRIX4) || defined(IRIX5)
 typedef int ssize_t; // should be included in <sys/types.h>, but some don't
 #endif
 
@@ -97,8 +97,6 @@ const int SEG_INCR = 25;
 #include <setjmp.h>
 #endif
 
-#define SETJMP _setjmp
-#define LONGJMP _longjmp
 extern "C" {
 	int SETJMP( jmp_buf env );
 	void LONGJMP( jmp_buf env, int retval );
