@@ -35,7 +35,8 @@ class Env {
 	bool Put( const char *nameValueExpr );
 	bool Put( const char *var, const char *val );
 	bool Put( const MyString &, const MyString & );
-	char *getDelimitedString();
+	char *getDelimitedString(char delim='\0');
+	char *getDelimitedStringForOpSys(char const *opsys);
 	char *getNullDelimitedString();
 	char **getStringArray();
 	bool getenv(MyString const &var,MyString &val) const;

@@ -41,6 +41,7 @@
 #include "scheduler.h"	// for shadow_rec definition
 #include "condor_email.h"
 #include "globus_utils.h"
+#include "env.h"
 
 extern char *Spool;
 extern char *Name;
@@ -1964,6 +1965,65 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					"job with:\n   \"condor_release %d.%d\"\n\n",
 					cluster_id,proc_id);
 				email_close(email);
+			}
+		}
+
+
+		if ( startd_ad && job_universe != CONDOR_UNIVERSE_GLOBUS ) {
+			//Convert environment delimiters to syntax expected by target.
+			//In windows, the delimiter is '|'.  In Unix, it is ';'.
+			char* new_env = NULL;
+			char* job_env = NULL;
+			ad->LookupString( ATTR_JOB_ENVIRONMENT, &job_env );
+			Env env_obj;
+			env_obj.Merge( job_env );
+			bool has_env = (job_env != NULL && *job_env);
+			free( job_env );
+			job_env = NULL; 
+
+			if(has_env) {
+				char* opsys = NULL;
+				startd_ad->LookupString( ATTR_OPSYS, &opsys );
+				env_obj.GenerateParseMessages();
+				new_env = env_obj.getDelimitedStringForOpSys(opsys);
+				if( ! new_env ) {
+					attribute_not_found = true;
+					MyString hold_reason;
+					char const *err_msg = env_obj.GetParseMessages();
+					hold_reason.sprintf(
+					  "Failed to convert environment to target syntax"
+					  " for %s: %s\n",
+					  opsys ? opsys : "NULL",err_msg);
+
+
+					dprintf( D_ALWAYS, 
+					  "Putting job %d.%d on hold - cannot convert environment"
+					  " to target syntax for %s: %s\n",
+					  cluster_id, proc_id, opsys ? opsys : "NULL", err_msg );
+
+					// SetAttribute does security checks if Q_SOCK is
+					// not NULL.  So, set Q_SOCK to be NULL before
+					// placing the job on hold so that SetAttribute
+					// knows this request is not coming from a client.
+					// Then restore Q_SOCK back to the original value.
+
+					ReliSock* saved_sock = Q_SOCK;
+					Q_SOCK = NULL;
+					holdJob(cluster_id, proc_id, hold_reason.Value());
+					Q_SOCK = saved_sock;
+				}
+				else {
+					dprintf(D_FULLDEBUG,
+					  "Environment for target OpSys (%s): %s\n",opsys,new_env);
+					expanded_ad->Assign( ATTR_JOB_ENVIRONMENT, new_env );
+				}
+				if(new_env) {
+					delete[] new_env;
+				}
+				if(opsys) {
+					free( opsys );
+					opsys = NULL;
+				}
 			}
 		}
 

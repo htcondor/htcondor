@@ -27,11 +27,14 @@
 
 #include "env.h"
 
+// Since ';' is the PATH delimiter in Windows, we use a different
+// delimiter for environment entries.
+static const char unix_env_delim = ';';
+static const char windows_env_delim = '|';
+
 #ifndef WIN32
 static const char env_delimiter = ';';
 #else
-// Since ';' is the PATH delimiter in Windows, we use a different
-// delimiter for environment entries.
 static const char env_delimiter = '|';
 #endif
 
@@ -270,16 +273,19 @@ Env::Put( const MyString & var, const MyString & val )
 }
 
 char *
-Env::getDelimitedString()
+Env::getDelimitedString(char delim)
 {
 	MyString var, val, string;
 
 	bool emptyString = true;
+	if(!delim) {
+		delim = env_delimiter;
+	}
 	_envTable->startIterations();
 	while( _envTable->iterate( var, val ) ) {
 		// only insert the delimiter if there's already an entry...
         if( !emptyString ) {
-			string += env_delimiter;
+			string += delim;
         }
 		WriteToDelimitedString(var.Value(),string);
 		WriteToDelimitedString("=",string);
@@ -295,6 +301,25 @@ Env::getDelimitedString()
 	strcpy( s, string.Value() );
 	s[slen] = '\0';
 	return s;
+}
+
+char *
+Env::getDelimitedStringForOpSys(char const *opsys)
+{
+	char delim;
+	if(!opsys || !*opsys) {
+		if(generate_parse_messages) {
+			AddParseMessage("OpSys is not defined.");
+		}
+		return NULL;
+	}
+	if(!strncmp(opsys,"WINNT",5) || !strncmp(opsys,"WIN32",5)) {
+		delim = windows_env_delim;
+	}
+	else {
+		delim = unix_env_delim;
+	}
+	return getDelimitedString(delim);
 }
 
 char *
