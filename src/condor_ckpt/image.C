@@ -1368,16 +1368,21 @@ SegMap::Write( int fd, ssize_t pos )
 				 bytes_to_go -= rval, ptr += rval, zstr->avail_out += rval) {
 				// note: bytes_to_go <= 65536 (bufsize)
 				rval = write(fd,ptr,bytes_to_go);
+				dprintf(D_ALWAYS, "wrote %d bytes\n", rval);
 				if (rval < 0) {
 					dprintf(D_ALWAYS, "write failed with errno %d in "
 							"SegMap::Write\n", errno);
 					Suicide();
 				}
-				if (condor_slow_ckpt) {
-					// write condor_slow_ckpt KB per second
-					sleep(((old_avail_in-zstr->avail_in)/
-						   (condor_slow_ckpt*KILO))+1);
-				}
+			}
+			if (condor_slow_ckpt) {
+				// write condor_slow_ckpt KB per second
+				dprintf(D_ALWAYS, "wrote %d bytes, sleeping for %d seconds\n",
+						old_avail_in-zstr->avail_in,
+						((old_avail_in-zstr->avail_in)/
+						 (condor_slow_ckpt*KILO))+1);
+				sleep(((old_avail_in-zstr->avail_in)/
+					   (condor_slow_ckpt*KILO))+1);
 			}
 			if (zstr->avail_out != zbufsize) {
 				dprintf(D_ALWAYS, "deflate logic error, avail_out (%d) != "
@@ -1569,6 +1574,18 @@ Checkpoint( int sig, int code, void *scp )
 			}
 			RestoreFileState();
 			dprintf( D_ALWAYS, "Done restoring files state\n" );
+			int mode = get_ckpt_mode(0);
+			if (mode > 0) {
+				if (mode&CKPT_MODE_MSYNC) {
+					dprintf(D_ALWAYS,
+							"Performing an msync() on all dirty pages...\n");
+					MyImage.MSync();
+				}
+				if (mode&CKPT_MODE_ABORT) {
+					dprintf(D_ALWAYS, "Restart aborted by shadow request.\n");
+					Suicide();
+				}
+			}
 		} else {
 			patch_registers( scp );
 		}
