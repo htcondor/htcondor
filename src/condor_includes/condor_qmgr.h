@@ -73,8 +73,7 @@ void FreeJobAd(ClassAd *&ad);
 int SendSpoolFile(char *filename);		/* prepare for file xfer */
 int SendSpoolFileBytes(char *filename); /* actually do file xfer */
 
-Qmgr_connection *ConnectQ(char *qmgr_location, char *&owner = 0,
-		int canTryGSS = 0, int canTryFilesystem = 0 );
+Qmgr_connection *ConnectQ(char *qmgr_location );
 void DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
 
