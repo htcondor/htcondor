@@ -15,7 +15,7 @@ KERBEROS_OBJ = condor_cred_kerberos.o
 #endif
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
-	alarm.o alloc.o \
+	alarm.o alloc.o user_job_policy.o \
 	directory.o my_hostname.o file_lock.o \
 	email.o env.o environ.o c++_util_instantiate.o \
 	string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
