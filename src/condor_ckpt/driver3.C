@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
+#include "condor_fix_fcntl.h"
 #include "image.h"
 
 #if !defined(HPUX9)	// HPUX-9 has this in <unistd.h>
