@@ -80,7 +80,7 @@ V6_COMMON    		-a \
 			src/h \
 			src/html
 
-V6_SRC			-a \
+V6_2_SRC		-a \
 			V6_COMMON \
 			src/condor_classad \
 
@@ -182,19 +182,35 @@ UTIL	-a src/condor_c++_util \
 		src/h \
 		src/condor_includes
 
+# These probably won't need to change
 TOOLS		-a config
 DOC		-a doc
 NT_TOOLS	-a NTconfig
-V6_CODE		-a TOOLS V6_SRC
-V6_NT_CODE	-a NT_TOOLS V6_SRC
-V6_ALL		-a DOC TOOLS NT_TOOLS V6_SRC 
+V562_CODE	-a TOOLS V562_SRC
+V5_CODE		-a TOOLS V5_SRC
+V5_ALL		-a DOC V5_CODE
+V6_2_CODE	-a TOOLS V6_2_SRC
+V6_2_NT_CODE	-a NT_TOOLS V6_2_SRC
+V6_2_ALL	-a DOC TOOLS NT_TOOLS V6_2_SRC 
 V6_3_CODE	-a TOOLS V6_3_SRC
 V6_3_NT_CODE	-a NT_TOOLS V6_3_SRC
 V6_3_ALL	-a DOC TOOLS NT_TOOLS V6_3_SRC 
 V6_5_CODE	-a TOOLS V6_5_SRC
 V6_5_NT_CODE	-a NT_TOOLS V6_5_SRC
 V6_5_ALL	-a DOC TOOLS NT_TOOLS V6_5_SRC 
-V562_CODE	-a TOOLS V562_SRC
-V5_CODE		-a TOOLS V5_SRC
-V5_ALL		-a DOC V5_CODE
 
+# Set these to point to whatever "default" version V6 should be.  In
+# general, using these isn't a good idea, since they're more
+# error-prone.  However, this is what people are used to, so we'll
+# leave them in for compatibility's sake.
+
+V6_SRC		-a V6_2_SRC
+V6_CODE		-a V6_2_CODE
+V6_NT_CODE	-a V6_2_NT_CODE
+V6_ALL		-a V6_2_ALL
+
+# Point these to whatever version is living on the trunk.
+TRUNK_SRC	-a V6_5_SRC
+TRUNK_CODE	-a V6_5_CODE
+TRUNK_NT_CODE	-a V6_5_NT_CODE
+TRUNK_ALL	-a V6_5_ALL
