@@ -34,7 +34,10 @@ int Class::ClassRequired(ExprTree* requirement)
     {
 	return FALSE;
     }
-    return requirement->RequireClass(definition);
+
+	// All RequireClass code has been yanked out; just return FALSE  --Rajesh
+	// return requirement->RequireClass(definition);
+	return FALSE;
 }
 
 ClassList::~ClassList()

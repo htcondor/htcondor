@@ -76,27 +76,12 @@ class Variable : public VariableBase
     public :
   
   	Variable(char*name) : VariableBase(name) {}
+    virtual void        PrintToStr(char*);
 
-  	virtual int         EvalTree(class AttrListList*, EvalResult*);
-  	virtual int         EvalTree(class AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*, AttrList*, EvalResult*);
-//-----------------------------------------
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
+	protected:
 
-*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+  	virtual int         _EvalTree(class AttrList*, EvalResult*);
+    virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*);
 };
 
 class Integer : public IntegerBase
@@ -110,26 +95,12 @@ class Integer : public IntegerBase
 	virtual	int	    operator <(ExprTree&);
 	virtual	int	    operator <=(ExprTree&);
  
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
+    virtual void    PrintToStr(char*);
 
+	protected:
 
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+  	virtual int     _EvalTree(AttrList*, EvalResult*);
+    virtual int     _EvalTree(AttrList*,AttrList*, EvalResult*);
 };
 
 
@@ -143,27 +114,12 @@ class Float: public FloatBase
 	virtual	int	    operator >=(ExprTree&);
 	virtual	int	    operator <(ExprTree&);
 	virtual	int	    operator <=(ExprTree&);
+    virtual void    PrintToStr(char*);
 
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
+	protected:
 
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+  	virtual int     _EvalTree(AttrList*, EvalResult*);
+    virtual int     _EvalTree(AttrList*,AttrList*, EvalResult*);
 };
 
 
@@ -172,27 +128,12 @@ class String : public StringBase
     public :
 
   	String(char* s) : StringBase(s) {}
+    virtual void        PrintToStr(char*);
 
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
+	protected:
 
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+  	virtual int         _EvalTree(AttrList*, EvalResult*);
+    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
 };
 
 
@@ -201,58 +142,26 @@ class Boolean : public BooleanBase
     public :
 
   	Boolean(int b) : BooleanBase(b) {}
+    virtual void        PrintToStr(char*);
 
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
+	protected:
 
-
-
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+  	virtual int         _EvalTree(AttrList*, EvalResult*);
+    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
 };
 
-class Null : public NullBase
+
+class Undefined : public UndefinedBase
 {
     public :
 
-  	Null() : NullBase() {}
+	Undefined() : UndefinedBase() {}
+    virtual void        PrintToStr(char*);
 
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
+	protected:
 
-
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+  	virtual int         _EvalTree(AttrList*, EvalResult*);
+    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
 };
 
 class Error : public ErrorBase
@@ -260,529 +169,135 @@ class Error : public ErrorBase
     public :
 
 	Error() : ErrorBase() {}
+    virtual void        PrintToStr(char*);
 
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
+	protected:
 
-
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+  	virtual int         _EvalTree(AttrList*, EvalResult*);
+    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
 };
 
 class BinaryOp: public BinaryOpBase
 {
     public :
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
 };
 
 class AddOp: public AddOpBase
 {
     public :
-
   	AddOp(ExprTree* l, ExprTree* r) : AddOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class SubOp: public SubOpBase
 {
     public :
-
   	SubOp(ExprTree* l, ExprTree* r) : SubOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class MultOp: public MultOpBase
 {
     public :
-
   	MultOp(ExprTree* l, ExprTree* r) : MultOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class DivOp: public DivOpBase
 {
     public :
-
   	DivOp(ExprTree* l, ExprTree* r) : DivOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-
-
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
+
+class MetaEqOp: public MetaEqOpBase
+{
+    public :
+  	MetaEqOp(ExprTree* l, ExprTree* r) : MetaEqOpBase(l, r) {}
+    virtual void        PrintToStr(char*);
+};
+
+
+class MetaNeqOp: public MetaNeqOpBase
+{
+    public :
+  	MetaNeqOp(ExprTree* l, ExprTree* r) : MetaNeqOpBase(l, r) {}
+    virtual void        PrintToStr(char*);
+};
 
 class EqOp: public EqOpBase
 {
     public :
-
   	EqOp(ExprTree* l, ExprTree* r) : EqOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-    virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-	virtual int     	RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class NeqOp: public NeqOpBase
 {
     public :
-
   	NeqOp(ExprTree* l, ExprTree* r) : NeqOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-	virtual int         RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class GtOp: public GtOpBase
 {
     public :
-
   	GtOp(ExprTree* l, ExprTree* r) : GtOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-	
-	virtual int			RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class GeOp: public GeOpBase
 {
     public :
-
   	GeOp(ExprTree* l, ExprTree* r) : GeOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-	virtual int         RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class LtOp: public LtOpBase
 {
     public :
-
   	LtOp(ExprTree* l, ExprTree* r) : LtOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-	virtual int         RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class LeOp: public LeOpBase
 {
     public :
-
   	LeOp(ExprTree* l, ExprTree* r) : LeOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-	virtual int         RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 class AndOp: public AndOpBase
 {
     public :
-
   	AndOp(ExprTree* l, ExprTree* r) : AndOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-	virtual int         RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 
 class OrOp : public OrOpBase
 {
     public :
-
   	OrOp(ExprTree* l, ExprTree* r) : OrOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-	virtual int         RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
+    virtual void        PrintToStr(char*);
 };
 
 class AssignOp: public AssignOpBase
 {
     public :
-
   	AssignOp(ExprTree* l, ExprTree* r) : AssignOpBase(l, r) {}
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-	
-	virtual int     	RequireClass(ExprTree*);
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
     virtual void        PrintToStr(char*);
 
 	friend		    class AttrList;
-
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
-};
-
-class AggOp : public BinaryOp // aggregate operator
-{
-    public :
-	
-	virtual int	    DeleteChild(AssignOp*);
-
-	friend	class	    AttrList;
-
-/*
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
-};
-
-class AggAddOp: public AggOp // aggregate add operator
-{
-    public :
-
-  	AggAddOp(ExprTree*, ExprTree*);
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
-};
-
-class AggEqOp: public AggOp	// aggregate equal operator
-{
-    public :
-
-  	AggEqOp(ExprTree*, ExprTree*);
-
-  	virtual int         EvalTree(AttrListList*, EvalResult*);
-  	virtual int         EvalTree(AttrList*, EvalResult*);
-//----------tw-----------------------------
-        virtual int         EvalTree(AttrList*,AttrList*, EvalResult*);
-//-----------------------------------------
-
-
-  	virtual ExprTree*   MinTree(AttrListList*);
-  	virtual void        Diff(AttrListList*, VarTypeTable*);
-/*
-  	virtual void        AnalTree(FILE*, AttrListList*);
-  	virtual void        SumTree(FILE*, AttrListList*);
-
-	*/
-        virtual void        PrintToStr(char*);
-	/*
-
-    private :
-
-        virtual int         MyLength();
-        virtual void        Indent(char**);
-	*/
 };
 
 extern	int		Parse(const char*, ExprTree*&);

@@ -57,10 +57,10 @@ StringBase::StringBase(char* str)
     this->cardinality = 0;
 }
 
-NullBase::NullBase()
+UndefinedBase::UndefinedBase()
 {
     this->ref = 0;
-    this->type  = LX_NULL;
+    this->type  = LX_UNDEFINED;
     this->cardinality = 0;
 }
 
@@ -104,6 +104,24 @@ DivOpBase::DivOpBase(ExprTree* l, ExprTree* r)
     this->rArg = r;
     this->ref  = 0;
     this->type  = LX_DIV;
+    this->cardinality = 2;
+}
+
+MetaEqOpBase::MetaEqOpBase(ExprTree* l, ExprTree* r)
+{
+    this->lArg = l;
+    this->rArg = r;
+    this->ref  = 0;
+    this->type  = LX_META_EQ;
+    this->cardinality = 2;
+}
+
+MetaNeqOpBase::MetaNeqOpBase(ExprTree* l, ExprTree* r)
+{
+    this->lArg = l;
+    this->rArg = r;
+    this->ref  = 0;
+    this->type  = LX_META_NEQ;
     this->cardinality = 2;
 }
 
@@ -445,410 +463,6 @@ int FloatBase::operator <=(ExprTree& tree)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// This function returns TRUE if in order for a tree to be TRUE, "tree"
-// has to be true.
-//
-////////////////////////////////////////////////////////////////////////////////
-
-int ExprTree::RequireClass(ExprTree* tree)
-{
-    if(*this == *tree)
-    {
-	return TRUE;
-    }
-    return FALSE;
-}
-
-int EqOpBase::RequireClass(ExprTree* tree)
-{
-    switch(tree->MyType())
-    {
-	case LX_OR :
-
-	    if(RequireClass(tree->LArg()) || RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-	case LX_AND :
-
-	    if(RequireClass(tree->LArg()) && RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-        case LX_EQ :
-
-	    if(*this == *tree)
-	    {
-		return TRUE;
-	    }
-	    break;
-
-	default :
-
-	    break;
-    }
-    return FALSE;
-}
-
-int NeqOpBase::RequireClass(ExprTree* tree)
-{
-    switch(tree->MyType())
-    {
-	case LX_OR :
-
-	    if(RequireClass(tree->LArg()) || RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-	case LX_AND :
-
-	    if(RequireClass(tree->LArg()) && RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-        case LX_NEQ :
-
-	    if(*this == *tree)
-	    {
-		return TRUE;
-	    }
-	    break;
-
-        default :
-
-	    break;
-    }
-    return FALSE;
-}
-
-int GtOpBase::RequireClass(ExprTree* tree)
-{
-    ExprTree*	tmpTree;
-    int		tmpResult;
-
-    switch(tree->MyType())
-    {
-	case LX_OR :
-
-	    if(RequireClass(tree->LArg()) || RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-	case LX_AND :
-
-	    if(RequireClass(tree->LArg()) && RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-        case LX_GT :
-	case LX_GE :
-
-	    if(lArg->MyType() == LX_VARIABLE)
-	    {
-		if(tree->LArg()->MyType() == LX_VARIABLE)
-		{
-		    return *rArg >= *(tree->RArg());
-		}
-	    }
-	    else if(rArg->MyType() == LX_VARIABLE)
-	    {
-		lArg->Copy();
-		rArg->Copy();
-		tmpTree = new LtOpBase(rArg, lArg);
-		tmpResult = tmpTree->RequireClass(tree);
-		delete tmpTree;
-		return tmpResult;
-	    }
-	    else if(*this == *tree)
-	    {
-		return TRUE;
-	    }
-	    break;
-	
-	case LX_LT :
-	case LX_LE :
-
-	    if(tree->RArg()->MyType() == LX_VARIABLE)
-	    {
-		tree->LArg()->Copy();
-		tree->RArg()->Copy();
-		tmpTree = new GtOpBase(tree->RArg(), tree->LArg());
-		tmpResult = RequireClass(tmpTree);
-		delete tmpTree;
-		return tmpResult;
-	    }
-	    break;
-
-	default :
-
-	    break;
-    }
-    return FALSE;
-}
-
-int GeOpBase::RequireClass(ExprTree* tree)
-{
-    ExprTree*	tmpTree;
-    int		tmpResult;
-
-    switch(tree->MyType())
-    {
-	case LX_OR :
-
-	    if(RequireClass(tree->LArg()) || RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-	case LX_AND :
-
-	    if(RequireClass(tree->LArg()) && RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-        case LX_GT :
-	case LX_GE :
-
-	    if(lArg->MyType() == LX_VARIABLE)
-	    {
-		if(tree->LArg()->MyType() == LX_VARIABLE)
-		{
-		    return *rArg > *(tree->RArg());
-		}
-	    }
-	    else if(rArg->MyType() == LX_VARIABLE)
-	    {
-		lArg->Copy();
-		rArg->Copy();
-		tmpTree = new LtOpBase(rArg, lArg);
-		tmpResult = tmpTree->RequireClass(tree);
-		delete tmpTree;
-		return tmpResult;
-	    }
-	    else if(*this == *tree)
-	    {
-		return TRUE;
-	    }
-	    break;
-	
-	case LX_LT :
-	case LX_LE :
-
-	    if(tree->RArg()->MyType() == LX_VARIABLE)
-	    {
-		tree->LArg()->Copy();
-		tree->RArg()->Copy();
-		tmpTree = new GtOpBase(tree->RArg(), tree->LArg());
-		tmpResult = RequireClass(tmpTree);
-		delete tmpTree;
-		return tmpResult;
-	    }
-	    break;
-
-	default :
-	 
-	    break;
-    }
-    return FALSE;
-}
-
-int LtOpBase::RequireClass(ExprTree* tree)
-{
-    ExprTree*	tmpTree;
-    int		tmpResult;
-
-    switch(tree->MyType())
-    {
-	case LX_OR :
-
-	    if(RequireClass(tree->LArg()) || RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-	case LX_AND :
-
-	    if(RequireClass(tree->LArg()) && RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-        case LX_LT :
-	case LX_LE :
-
-	    if(lArg->MyType() == LX_VARIABLE)
-	    {
-		if(tree->LArg()->MyType() == LX_VARIABLE)
-		{
-		    return *rArg <= *(tree->RArg());
-		}
-	    }
-	    else if(rArg->MyType() == LX_VARIABLE)
-	    {
-		lArg->Copy();
-		rArg->Copy();
-		tmpTree = new LtOpBase(rArg, lArg);
-		tmpResult = tmpTree->RequireClass(tree);
-		delete tmpTree;
-		return tmpResult;
-	    }
-	    else if(*this == *tree)
-	    {
-		return TRUE;
-	    }
-	    break;
-	
-	case LX_GT :
-	case LX_GE :
-
-	    if(tree->RArg()->MyType() == LX_VARIABLE)
-	    {
-		tree->LArg()->Copy();
-		tree->RArg()->Copy();
-		tmpTree = new LtOpBase(tree->RArg(), tree->LArg());
-		tmpResult = RequireClass(tmpTree);
-		delete tmpTree;
-		return tmpResult;
-	    }
-	    break;
-
-	default :
-	 
-	    break;
-    }
-    return FALSE;
-}
-
-int LeOpBase::RequireClass(ExprTree* tree)
-{
-    ExprTree*	tmpTree;
-    int		tmpResult;
-
-    switch(tree->MyType())
-    {
-	case LX_OR :
-
-	    if(RequireClass(tree->LArg()) || RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-	case LX_AND :
-
-	    if(RequireClass(tree->LArg()) && RequireClass(tree->RArg()))
-	    {
-		return TRUE;
-	    }
-	    break;
-
-        case LX_LT :
-	case LX_LE :
-
-	    if(lArg->MyType() == LX_VARIABLE)
-	    {
-		if(tree->LArg()->MyType() == LX_VARIABLE)
-		{
-		    return *rArg < *(tree->RArg());
-		}
-	    }
-	    else if(rArg->MyType() == LX_VARIABLE)
-	    {
-		lArg->Copy();
-		rArg->Copy();
-		tmpTree = new LtOpBase(rArg, lArg);
-		tmpResult = tmpTree->RequireClass(tree);
-		delete tmpTree;
-		return tmpResult;
-	    }
-	    else if(*this == *tree)
-	    {
-		return TRUE;
-	    }
-	    break;
-	
-	case LX_GT :
-	case LX_GE :
-
-	    if(tree->RArg()->MyType() == LX_VARIABLE)
-	    {
-		tree->LArg()->Copy();
-		tree->RArg()->Copy();
-		tmpTree = new LtOpBase(tree->RArg(), tree->LArg());
-		tmpResult = RequireClass(tmpTree);
-		delete tmpTree;
-		return tmpResult;
-	    }
-	    break;
-
-	default :
-	 
-	    break;
-    }
-    return FALSE;
-}
-
-int AndOpBase::RequireClass(ExprTree* tree)
-{
-    switch(tree->MyType())
-    {
-	case LX_AND :
-
-	    return RequireClass(tree->LArg()) && RequireClass(tree->RArg());
-
-	case LX_OR :
-
-	    return RequireClass(tree->LArg()) || RequireClass(tree->RArg());
-
-	default :
-
-	    return lArg->RequireClass(tree) || rArg->RequireClass(tree);
-    }
-    return FALSE;
-}
-
-int OrOpBase::RequireClass(ExprTree* tree)
-{
-    switch(tree->MyType())
-    {
-	case LX_AND :
-
-	    return RequireClass(tree->LArg()) && RequireClass(tree->RArg());
-
-        case LX_OR :
-
-	    return RequireClass(tree->LArg()) && RequireClass(tree->RArg());
-        
-	default :
-
-	    return lArg->RequireClass(tree) && rArg->RequireClass(tree);
-    }
-    return FALSE;
-}
-
-int AssignOpBase::RequireClass(ExprTree* tree)
-{
-	return rArg->RequireClass(tree);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // Increment the reference counter of the whole tree                          //
 ////////////////////////////////////////////////////////////////////////////////
 ExprTree* ExprTree::Copy()
@@ -929,14 +543,15 @@ void BooleanBase::Display()
     dprintf(D_NOHEADER | D_ALWAYS, value ? "TRUE" : "FALSE");
 }
 
-void NullBase::Display()
+
+void UndefinedBase::Display()
 {
-    dprintf(D_NOHEADER | D_ALWAYS, "NULL");
+	dprintf(D_NOHEADER | D_ALWAYS, "UNDEFINED");
 }
 
 void ErrorBase::Display()
 {
-    if(partialTree) partialTree->Display();
+	dprintf(D_NOHEADER | D_ALWAYS, "ERROR");
 }
 
 void AddOpBase::Display()
@@ -1038,6 +653,80 @@ void DivOpBase::Display()
     if(unit == 'k')
     {
         dprintf(D_NOHEADER | D_ALWAYS, " k");
+    }
+}
+
+void MetaEqOpBase::Display()
+{
+    if(lArg)
+    {
+	switch(lArg->MyType())
+	{
+	  case LX_EQ	:
+	  case LX_NEQ :
+	  case LX_GT  :
+	  case LX_GE  :
+	  case LX_LT  :
+	  case LX_LE  : dprintf(D_NOHEADER | D_ALWAYS, "(");
+			lArg->Display();
+  			dprintf(D_NOHEADER | D_ALWAYS, ")");
+		        break;
+	  default:      lArg->Display();
+        }
+    }
+    dprintf(D_NOHEADER | D_ALWAYS, " =?= ");
+    if(rArg)
+    {
+	switch(rArg->MyType())
+	{
+	  case LX_EQ	:
+	  case LX_NEQ :
+	  case LX_GT  :
+	  case LX_GE  :
+	  case LX_LT  :
+	  case LX_LE  : dprintf(D_NOHEADER | D_ALWAYS, "(");
+			rArg->Display();
+  		        dprintf(D_NOHEADER | D_ALWAYS, ")");
+		        break;
+	  default:      rArg->Display();
+	}   
+    }
+}
+
+void MetaNeqOpBase::Display()
+{
+    if(lArg)
+    {
+	switch(lArg->MyType())
+	{
+	  case LX_EQ	:
+	  case LX_NEQ :
+	  case LX_GT  :
+	  case LX_GE  :
+	  case LX_LT  :
+	  case LX_LE  : dprintf(D_NOHEADER | D_ALWAYS, "(");
+			lArg->Display();
+  			dprintf(D_NOHEADER | D_ALWAYS, ")");
+		        break;
+	  default:      lArg->Display();
+        }
+    }
+    dprintf(D_NOHEADER | D_ALWAYS, " =!= ");
+    if(rArg)
+    {
+	switch(rArg->MyType())
+	{
+	  case LX_EQ	:
+	  case LX_NEQ :
+	  case LX_GT  :
+	  case LX_GE  :
+	  case LX_LT  :
+	  case LX_LE  : dprintf(D_NOHEADER | D_ALWAYS, "(");
+			rArg->Display();
+  		        dprintf(D_NOHEADER | D_ALWAYS, ")");
+		        break;
+	  default:      rArg->Display();
+	}   
     }
 }
 

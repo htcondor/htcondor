@@ -46,14 +46,20 @@ void Scanner(char*& s, Token& t)
 		t.length++;
     }
 
-    if(!strncmp(s, "NULL", 4) && !isalpha(*(s+4)) && *(s+4) != '_')
-    // NULL
-    {
-        s = s + 4;
-		t.length = t.length + 4;
-        t.type = LX_NULL;
+	if(!strncasecmp(s, "ERROR", 5) && !isalpha(*(s+5)) && *(s+5) != '_')
+	{
+		s = s + 5;
+		t.length = t.length + 5;
+		t.type = LX_ERROR;
 		return;
-    }
+	}
+	if(!strncasecmp(s, "UNDEFINED", 9) && !isalpha(*(s+9)) && *(s+9) != '_')
+	{
+		s = s + 9;
+		t.length = t.length + 9;
+		t.type = LX_UNDEFINED;
+		return;
+	}
     if(!strncasecmp(s, "TRUE", 4) && !isalpha(*(s+4)) && *(s+4) != '_')
     // TRUE
     {
@@ -287,6 +293,20 @@ void Scanner(char*& s, Token& t)
 				   t.type = LX_EQ;
 				   s = s + 1;
 				   t.length++;
+			   }
+			   else
+			   if (*s == '?' && *(s+1) == '=')
+			   {
+					t.type = LX_META_EQ;
+					s = s + 2;
+					t.length += 2;
+			   }
+			   else
+			   if (*s == '!' && *(s+1) == '=')
+			   {
+					t.type = LX_META_NEQ;
+					s = s + 2;
+					t.length += 2;
 			   }
 			   else
 			   {

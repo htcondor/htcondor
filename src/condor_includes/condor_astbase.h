@@ -57,6 +57,9 @@
 
 #include "condor_exprtype.h"
 
+class AttrList;
+class EvalResult;
+
 class ExprTree
 {
     public :
@@ -72,26 +75,12 @@ class ExprTree
 		int					MyRef()	 { return ref; }
 		virtual ExprTree*   LArg()   { return NULL; }
 		virtual ExprTree*   RArg()   { return NULL; }
-
-		virtual int	    	RequireClass(ExprTree*);
-
         ExprTree*           Copy();       // increment the ref counter
         virtual void        Display();    // display the expression
 		virtual void        PrintToStr(char*) {} // print the expr to a string
 
-		virtual int         EvalTree(class AttrListList*, class EvalResult*);
-		virtual int         EvalTree(class AttrList*, EvalResult*);
-
-//-----------------tw 11/16/95 --------------
-		virtual int         EvalTree(AttrList*, AttrList*, EvalResult*);
-//-------------------
-
-		virtual ExprTree*   MinTree(AttrListList*) { Copy(); return this; }
-		virtual void        Diff(AttrListList*, class VarTypeTable*) {};
-	/*
-		virtual void        AnalTree(FILE*, AttrListList*) {};
-		virtual void        SumTree(FILE*, AttrListList*) {};
-	*/
+		int         		EvalTree(AttrList*, EvalResult*);
+		int         		EvalTree(AttrList*, AttrList*, EvalResult*);
 
 		char                unit;         // unit of the expression
 
@@ -103,14 +92,19 @@ class ExprTree
 		// in the #*&@! to find!  -Todd, 7/97
 		// and now init sumFlag as well... not sure if it should be
 		// FALSE or TRUE! but it needs to be initialized -Todd, 9/10
-		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE) {};
+		// and now init evalFlag as well (to detect circular eval'n) -Rajesh
+		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE), evalFlag(FALSE) {};
+
 
     protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
 		int                 ref;          // number of ptrs to this expr
 		LexemeType	    	type;         // lexeme type of the node
 		int                 cardinality;  // number of children
 		int		    		sumFlag;      // used by the SumTree functions
+		bool				evalFlag;	  // to check for circular evaluation
 };
 
 class VariableBase : public ExprTree
@@ -127,6 +121,8 @@ class VariableBase : public ExprTree
 		friend	class	ExprTree;
 
     protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
   		char*               name;
 };
@@ -147,6 +143,8 @@ class IntegerBase : public ExprTree
 		int		    	Value();
 
     protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
   		int	 	    value;
 };
@@ -167,6 +165,8 @@ class FloatBase : public ExprTree
 	float		    Value();
 
     protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
   	float	 	    value;
 };
@@ -185,6 +185,8 @@ class StringBase : public ExprTree
 	friend	class	ExprTree;
 
     protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
    	char*           value;
 };
@@ -200,17 +202,24 @@ class BooleanBase : public ExprTree
 	int                 Value();
 
     protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
    	int                 value;
 };
 
-class NullBase : public ExprTree
+
+class UndefinedBase : public ExprTree
 {
     public :
 
-  	NullBase();
+  	UndefinedBase();
 
 	virtual void        Display();
+
+    protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 };
 
 class ErrorBase : public ExprTree
@@ -222,8 +231,8 @@ class ErrorBase : public ExprTree
 	virtual void        Display();
 
     protected :
-
-	ExprTree*	partialTree;
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 };
 
 class BinaryOpBase : public ExprTree
@@ -242,6 +251,8 @@ class BinaryOpBase : public ExprTree
 		friend	class	      AggOp;
 
     protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*);
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*);
 
 		ExprTree* 	      lArg;
         ExprTree* 	      rArg;
@@ -250,136 +261,106 @@ class BinaryOpBase : public ExprTree
 class AddOpBase : public BinaryOpBase
 {
     public :
-
   	AddOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
 };
 
 class SubOpBase : public BinaryOpBase
 {
     public :
-
   	SubOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
 };
 
 class MultOpBase : public BinaryOpBase
 {
     public :
-
   	MultOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
 };
 
 class DivOpBase : public BinaryOpBase
 {
     public :
-
   	DivOpBase(ExprTree*, ExprTree*);
+  	virtual void        Display();
+};
 
+class MetaEqOpBase : public BinaryOpBase
+{
+    public :
+  	MetaEqOpBase(ExprTree*, ExprTree*);
+  	virtual void        Display();
+};
+
+class MetaNeqOpBase : public BinaryOpBase
+{
+    public :
+  	MetaNeqOpBase(ExprTree*, ExprTree*);
   	virtual void        Display();
 };
 
 class EqOpBase : public BinaryOpBase
 {
     public :
-
   	EqOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual	int	    	RequireClass(ExprTree*);	
 };
 
 class NeqOpBase : public BinaryOpBase
 {
     public :
-
   	NeqOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual	int	    	RequireClass(ExprTree*);	
 };
 
 class GtOpBase : public BinaryOpBase
 {
     public :
-
   	GtOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual	int	    RequireClass(ExprTree*);	
 };
 
 class GeOpBase : public BinaryOpBase
 {
     public :
-
   	GeOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual	int	    RequireClass(ExprTree*);	
 };
 
 class LtOpBase : public BinaryOpBase
 {
     public :
-
   	LtOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual	int	    RequireClass(ExprTree*);	
 };
 
 class LeOpBase : public BinaryOpBase
 {
     public :
-
   	LeOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual	int	    RequireClass(ExprTree*);	
 };
 
 class AndOpBase : public BinaryOpBase
 {
     public :
-
   	AndOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual	int	    	RequireClass(ExprTree*);	
 };
 
 class OrOpBase : public BinaryOpBase
 {
     public :
-
   	OrOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual	int	    RequireClass(ExprTree*);	
 };
 
 class AssignOpBase : public BinaryOpBase
 {
     public :
-
   	AssignOpBase(ExprTree*, ExprTree*);
-
   	virtual void        Display();
-
-	virtual int	    	RequireClass(ExprTree*);
 };
 
 #endif

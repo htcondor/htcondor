@@ -737,19 +737,6 @@ int AttrList::Insert(ExprTree* expr)
     }
     tail = newNode;
 
-    // update associated aggregate expressions
-    if(inList)		// this AttrList is in only one AttrList list
-    {
-	inList->UpdateAgg(expr, AGG_INSERT);
-    }
-    else if(next)	// this AttrList is in more than one AttrList lists
-    {
-	AttrListRep* rep = (AttrListRep*)next;
-	while(rep)
-	{
-	    rep->attrList->inList->UpdateAgg(expr, AGG_INSERT);
-	}
-    }
     return TRUE;
 }
 
@@ -819,19 +806,6 @@ int AttrList::Delete(const char* name)
 				ptrName = cur->next;
 			}
 
-			// update the associated aggregate expressions
-			if(inList)	  // this AttrList is in only one AttrList list
-			{
-				inList->UpdateAgg(cur->tree, AGG_REMOVE);
-			}
-			else if(next) // this AttrList is in more than one AttrList lists
-			{
-				AttrListRep* rep = (AttrListRep*)next;
-				while(rep)
-				{
-					rep->attrList->UpdateAgg(cur->tree, AGG_REMOVE);
-				}
-			}
 			delete cur;
 			return TRUE;
 		}
@@ -1232,61 +1206,6 @@ int AttrList::fPrint(FILE* f)
     return TRUE;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Update an aggregate expression. "expr" must be an assignment expression.
-// FALSE is returned if it is not.
-////////////////////////////////////////////////////////////////////////////////
-int AttrList::UpdateAgg(ExprTree* expr, int operation)
-{
-    ExprTree*	oldExpr; // the aggregate expression before updating
-    ExprTree*	newExpr; // the new aggregate expression
-
-    if(expr->MyType() != LX_ASSIGN)
-    {
-		return FALSE;
-    }
-
-    oldExpr = Lookup(((Variable*)expr->LArg())->Name());
-
-    if(!oldExpr)
-    {
-		return FALSE;
-    }
-
-    switch(operation)
-    {
-		case AGG_INSERT :
-
-			if(oldExpr->RArg()->MyType() == LX_AGGADD)
-			{
-				expr->Copy();
-				newExpr = new AggAddOp(oldExpr->RArg(), expr);
-				((BinaryOp*)oldExpr)->rArg = newExpr;
-			}
-			if(oldExpr->RArg()->MyType() == LX_AGGEQ)
-			{
-				expr->Copy();
-				newExpr = new AggEqOp(oldExpr->RArg(), expr);
-				((BinaryOp*)oldExpr)->rArg = newExpr;
-			}
-			break;
-	
-		case AGG_REMOVE :
-
-			 newExpr = oldExpr->RArg();
-			 if(((AggOp*)newExpr)->DeleteChild((AssignOp*)expr))
-			 {
-				 if(!oldExpr->RArg()->LArg() && !oldExpr->RArg()->RArg())
-				 {
-					 Delete(((Variable*)oldExpr->LArg())->Name());
-					 delete oldExpr;
-				 }
-			 }
-			 break;
-    }
-    return TRUE;
-}
-
 
 #if 0 // don't use CONTEXTs anymore
 //////////////////////////////////////////////////////////////////////////////
@@ -1478,15 +1397,6 @@ void AttrListList::Insert(AttrList* AttrList)
     }
 
     this->length++;
-
-    // update associated aggregate expressions
-    ExprTree*	tmpExpr;
-
-    AttrList->ResetExpr();
-    while((tmpExpr = AttrList->NextExpr()))
-    {
-        UpdateAgg(tmpExpr, AGG_INSERT);
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1531,14 +1441,6 @@ int AttrListList::Delete(AttrList* attrList)
 					cur->next->prev = cur->prev;
 				}
 
-				// update aggregate AttrList
-				ExprTree*	tmpExpr;
-
-				((AttrList*)cur)->ResetExpr();
-				while((tmpExpr = ((AttrList*)cur)->NextExpr()))
-				{
-					UpdateAgg(tmpExpr, AGG_REMOVE);
-				}
 				delete cur;
 				break;
 			}
@@ -1588,14 +1490,6 @@ int AttrListList::Delete(AttrList* attrList)
 					tmpRep->nextRep = ((AttrListRep *)cur)->nextRep;
 				}
 
-                // update associated aggregate expressions
-                ExprTree*	tmpExpr;
-
-				attrList->ResetExpr();
-				while((tmpExpr = attrList->NextExpr()))
-				{
-					UpdateAgg(tmpExpr, AGG_REMOVE);
-				}
 				delete cur;
 				break;
 			}
@@ -1641,20 +1535,6 @@ ExprTree* AttrListList::Lookup(const char* name)
     return NULL;
 }
 
-void AttrListList::UpdateAgg(ExprTree* expr, int operation)
-{
-    AttrList*	tmpAttrList;	// pointer to each associated AttrList
-
-    if(associatedAttrLists)
-    {
-    	associatedAttrLists->Open();
-    	while((tmpAttrList = associatedAttrLists->Next()))
-    	{
-	    tmpAttrList->UpdateAgg(expr, operation);
-    	}
-    	associatedAttrLists->Close();
-    }
-}
 
 void AttrListList::fPrintAttrListList(FILE* f)
 {
@@ -1675,73 +1555,6 @@ void AttrListList::fPrintAttrListList(FILE* f)
     Close();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Build an aggregate expression with the name "name". If the expression i
-// empty, meaning that no expression with such name exists in any of the
-// AttrList in the list, NULL is returned. Otherwise, the aggregate expression
-// is returned.
-////////////////////////////////////////////////////////////////////////////////
-ExprTree* AttrListList::BuildAgg(char* name, LexemeType op)
-{
-    AttrList*	tmpAttrList;	// each AttrList in the list
-    ExprTree*	newTree = NULL;	// the newly built aggregate expression
-    ExprTree*	tmpTree = NULL;	// tree to be added to the aggregate expression
-
-    Open();
-    while((tmpAttrList = Next()))
-    {
-	switch(op)
-	{
-
-	    case LX_AGGADD :
-
-		if((tmpTree = tmpAttrList->Lookup(name)))
-		// a branch is found for the new aggregate expression
-		{
-		    tmpTree->Copy();
-		    if(!newTree)
-		    {
-			newTree = tmpTree;
-		    }
-		    else
-		    {
-		        newTree = (ExprTree*)new AggAddOp(newTree, tmpTree);
-		    }
-		}
-		break;
-
-	    case LX_AGGEQ :
-
-		if((tmpTree = tmpAttrList->Lookup(name)))
-		// a branch is found for the new aggregate expression
-		{
-		    tmpTree->Copy();
-		    if(!newTree)
-		    {
-			newTree = tmpTree;
-		    }
-		    else
-		    {
-		        newTree = (ExprTree*)new AggEqOp(newTree, tmpTree);
-		    }
-		}
-		break;
-
-	    default :
-		
-		return NULL;
-	}
-    }
-    Close();
-
-    if(newTree)
-    {
-	tmpTree = (ExprTree*)new Variable(name);
-	newTree = (ExprTree*)new AssignOp(tmpTree, newTree); 
-	return newTree;
-    }
-    return NULL;
-}
 
 // shipping functions for AttrList -- added by Lei Cao
 

@@ -84,6 +84,7 @@ int Match(LexemeType t, char*& s, int& count)
 int ParseFactor(char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t = LookToken(s);	// next token
+	ExprTree	*expr;
  
     switch(t->type)
     {
@@ -94,6 +95,22 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
     		count = count + t->length;
 			delete t;
             break;
+
+		case LX_UNDEFINED:
+	
+			t = ReadToken(s);
+			newTree = new Undefined();
+			count = count + t->length;
+			delete t;
+			break;
+
+		case LX_ERROR:
+	
+			t = ReadToken(s);
+			newTree = new Error();
+			count = count + t->length;
+			delete t;
+			break;
 
         case LX_INTEGER :
 
@@ -127,14 +144,6 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
 			delete t;
             break;
 
-        case LX_NULL :
-
-            t = ReadToken(s);
-            newTree = new Null;
-    		count = count + t->length;
-			delete t;
-            break;
-
         case LX_LPAREN :
 
             Match(LX_LPAREN, s, count);
@@ -154,21 +163,21 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
         case LX_SUB :	// unary minus
 
             Match(LX_SUB, s, count);
-            t = ReadToken(s);
-            if(t->type == LX_INTEGER)
+			if(ParseExpr(s, expr, count))
 			{
-				newTree = new Integer(-t->intVal);
+				newTree = new SubOp(NULL, expr);
+				return TRUE;
 			}
-			else if(t->type == LX_FLOAT)
+			else
 			{
-				newTree = new Float(-t->floatVal);
-			}
-    		count = count + t->length;
-			delete t;
+				return FALSE;
+			}	
             break;
 
         default :
 
+			// I don't know if this is correct, but this is way it was.
+			//  --Rajesh
 			newTree = new Error;
 			return FALSE;
     }
@@ -319,6 +328,34 @@ int ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 
     switch(t->type)
     {
+        case LX_META_EQ :
+
+            Match(LX_META_EQ, s, count);
+            if(ParseAddOp(s, rArg, count))
+			{
+                subTree = new MetaEqOp(lArg, rArg);
+			}
+			else
+			{
+                newTree = new MetaEqOp(lArg, rArg);
+				return FALSE;
+			}
+            break;
+
+        case LX_META_NEQ :
+
+            Match(LX_META_NEQ, s, count);
+            if(ParseAddOp(s, rArg, count))
+			{
+                subTree = new MetaNeqOp(lArg, rArg);
+			}
+			else
+			{
+                newTree = new MetaNeqOp(lArg, rArg);
+				return FALSE;
+			}
+            break;
+
         case LX_EQ :
 
             Match(LX_EQ, s, count);

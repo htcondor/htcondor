@@ -40,6 +40,8 @@ typedef enum
   LX_LPAREN,
   LX_RPAREN,
   LX_MACRO,
+  LX_META_EQ,
+  LX_META_NEQ,
   LX_EQ,
   LX_NEQ,
   LX_LT,
