@@ -70,7 +70,7 @@ WindowsFirewallHelper::init() {
     }
 	
 	if ( ! WindowsFirewallInitialize() ) {
-		dprintf(D_ALWAYS, "Warning: Error initializing firewall profile.\n");
+		dprintf(D_FULLDEBUG, "Warning: Error initializing firewall profile.\n");
 		result = false;
 	}
 
@@ -160,7 +160,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 		);
 	if (FAILED(hr))
 	{
-		dprintf(D_ALWAYS, "WinFirewall: CoCreateInstance failed: 0x%08lx\n", hr);
+		dprintf(D_FULLDEBUG, "WinFirewall: CoCreateInstance failed: 0x%08lx\n", hr);
 		return false;
 	}
 	
@@ -404,7 +404,7 @@ WindowsFirewallHelper::WindowsFirewallInitialize() {
             );
     if (FAILED(hr))
     {
-        dprintf(D_ALWAYS, 
+        dprintf(D_FULLDEBUG, 
 				"WinFirewall: CoCreateInstance failed: 0x%08lx\n", hr);
 		return false;
     }
