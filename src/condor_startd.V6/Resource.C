@@ -41,12 +41,14 @@ Resource::release_claim()
 	switch( state() ) {
 	case claimed_state:
 		return change_state( preempting_state, vacating_act );
-		break;
 	case matched_state:
 		return change_state( owner_state );
-		break;
 	default:
-		return FALSE;
+			// For good measure, try directly killing the starter if
+			// we're in any other state.  If there's no starter, this
+			// will just return without doing anything.  If there is a
+			// starter, it shouldn't be there.
+		return r_starter->kill( DC_SIGSOFTKILL );
 	}
 }
 
@@ -57,20 +59,22 @@ Resource::kill_claim()
 	switch( state() ) {
 	case claimed_state:
 		return change_state( preempting_state, killing_act );
-		break;
 	case matched_state:
 		return change_state( owner_state );
-		break;
 	default:
-		return FALSE;
+			// In other states, try direct kill.  See above.
+		return r_starter->kill( DC_SIGHARDKILL );
 	}
+	return TRUE;
 }
 
 
 int
 Resource::got_alive()
 {
-	assert( state() == claimed_state );
+	if( state() != claimed_state ) {
+		return FALSE;
+	}
 	if( !r_cur ) {
 		dprintf( D_ALWAYS, "Got keep alive with no current match object.\n" );
 		return FALSE;
@@ -92,10 +96,8 @@ Resource::periodic_checkpoint()
 		return FALSE;
 	}
 	dprintf( D_FULLDEBUG, "Performing a periodic checkpoint on %s.\n", r_name );
-	if( r_starter->active() ) {
-		if( r_starter->kill( DC_SIGPCKPT ) < 0 ) {
-			return FALSE;
-		}
+	if( r_starter->kill( DC_SIGPCKPT ) < 0 ) {
+		return FALSE;
 	}
 	sprintf( tmp, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, (int)time(NULL) );
 	r_classad->Insert(tmp);
@@ -106,17 +108,11 @@ Resource::periodic_checkpoint()
 int
 Resource::request_new_proc()
 {
-	if( state() != claimed_state ) {
+	if( state() == claimed_state ) {
+		return r_starter->kill( DC_SIGHUP );
+	} else {
 		return FALSE;
 	}
-	if( r_starter->active() ) {
-		if( r_starter->kill( DC_SIGHUP ) < 0 ) {
-			return FALSE;
-		} else {
-			return TRUE;
-		}
-	}
-	return FALSE;
 }	
 
 
@@ -124,8 +120,7 @@ int
 Resource::deactivate_claim()
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
-	if( (state() == claimed_state) &&
-		(r_starter->active()) ) {
+	if( state() == claimed_state ) {
 		return r_starter->kill( DC_SIGSOFTKILL );
 	} else {
 		return FALSE;
@@ -137,8 +132,7 @@ int
 Resource::deactivate_claim_forcibly()
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
-	if( (state() == claimed_state) &&
-		(r_starter->active()) ) {
+	if( state() == claimed_state ) {
 		return r_starter->kill( DC_SIGHARDKILL );
 	} else {
 		return FALSE;
@@ -149,10 +143,8 @@ Resource::deactivate_claim_forcibly()
 int
 Resource::hardkill_claim()
 {
-	if( state() == claimed_state && r_starter->active() ) { 
-		if( r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
-			r_starter->killpg( DC_SIGKILL );
-		}
+	if( r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
+		return r_starter->killpg( DC_SIGKILL );
 	}
 	return TRUE;
 }
@@ -701,8 +693,3 @@ Resource::send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA )
 	return TRUE;
 }
 
-
-/*
-int
-Resource::
-*/
