@@ -114,9 +114,7 @@ class GlobusJob : public Service
 
 	ClassAd *ad;
 
-	bool increment_globus_submits;
 	int wantResubmit;
-	int numGlobusSubmits;
 
  protected:
 	bool callbackRegistered;

@@ -234,9 +234,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 	wantResubmit = 0;
 	ad->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
-	increment_globus_submits = false;
-	numGlobusSubmits = 0;
-	ad->LookupInteger(	ATTR_NUM_GLOBUS_SUBMITS, numGlobusSubmits );
 
 	ad->ClearAllDirtyFlags();
 }
@@ -1380,7 +1377,14 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 				submitFailureCode = new_error_code;
 				update_actions |= UA_LOG_SUBMIT_FAILED_EVENT;
 			} else {
+					// The request was successfuly submitted. Write it to
+					// the user-log and increment the globus submits count.
+				int num_globus_submits = 0;
 				update_actions |= UA_LOG_SUBMIT_EVENT;
+				ad->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
+								   num_globus_submits );
+				num_globus_submits++;
+				UpdateJobAdInt( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
 			}
 		}
 		if ( (new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||

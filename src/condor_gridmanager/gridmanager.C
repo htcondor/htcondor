@@ -638,7 +638,6 @@ doContactSchedd()
 			 !curr_job->submitLogged ) {
 			WriteGlobusSubmitEventToUserLog( curr_job->ad );
 			curr_job->submitLogged = true;
-			curr_job->increment_globus_submits = true;
 		}
 		if ( curr_action->actions & UA_LOG_EXECUTE_EVENT &&
 			 !curr_job->executeLogged ) {
@@ -688,17 +687,6 @@ doContactSchedd()
 	while ( pendingScheddUpdates.iterate( curr_action ) != 0 ) {
 
 		curr_job = curr_action->job;
-
-		if ( curr_job->increment_globus_submits ) {
- 				// Increment the number of times we've
- 				// successfully submitted to Globus
- 			(curr_job->numGlobusSubmits)++;
- 			SetAttributeInt( curr_job->procID.cluster,
- 						curr_job->procID.proc,
- 						ATTR_NUM_GLOBUS_SUBMITS, curr_job->numGlobusSubmits );
- 			curr_job->increment_globus_submits = false;
- 		}
-			
 
 		// Check the job status on the schedd to see if the job's been
 		// held or removed. We don't want to blindly update the status.
