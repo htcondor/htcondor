@@ -440,6 +440,7 @@ command_query_ads( Service*, int, Stream* stream)
 	ClassAd queryAd;
 	ClassAd *ad;
 	ClassAdList ads;
+	MatchClassAd mad;
 	int more = 1, num_ads = 0;
    
 	dprintf( D_ALWAYS, "In command_query_ads\n" );
@@ -455,10 +456,15 @@ command_query_ads( Service*, int, Stream* stream)
 	resmgr->makeAdList( &ads );
 	
 		// Now, find the ClassAds that match.
+	mad.ReplaceRightAd( &queryAd );
+	bool match = false;
 	stream->encode();
 	ads.Open();
 	while( (ad = ads.Next()) ) {
-		if( (*ad) >= queryAd ) {
+//		if( (*ad) >= queryAd ) {
+		mad.RemoveLeftAd( );
+		mad.ReplaceLeftAd( ad );
+		if( mad.EvaluateAttrBool( "leftMatchesRight", match ) && match ) {
 			if( !stream->code(more) || !ad->put(*stream) ) {
 				dprintf (D_ALWAYS, 
 						 "Error sending query result to client -- aborting\n");
