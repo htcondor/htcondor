@@ -21,7 +21,7 @@ bool getOldClassAd( Sock& sock, ClassAd& ad )
 {
 	Source 	src;
 	int 	numExprs;
-	char 	*eq;
+	char 	*eq=NULL;
 	ExprTree *expr;
 	static  char *buffer = new char[ 10240 ];
 
@@ -118,6 +118,7 @@ void printClassAdExpr( ExprTree *tree )
 	fo.SetListIndentation( );
 	sink.SetFormatOptions( &fo );
 	tree->ToSink( sink );
+	sink.Terminate( );
 	sink.FlushSink( );
 }
 
@@ -132,6 +133,7 @@ void printClassAdValue( Value &val )
 	fo.SetListIndentation( );
 	sink.SetFormatOptions( &fo );
 	val.ToSink( sink );
+	sink.Terminate( );
 	sink.FlushSink( );
 }
 
