@@ -323,6 +323,7 @@ void
 firstPass (int argc, char *argv[])
 {
 	int had_pool_error = 0;
+	int had_direct_error = 0;
 	// Process arguments:  there are dependencies between them
 	// o -l/v and -serv are mutually exclusive
 	// o -sub, -avail and -run are mutually exclusive
@@ -372,15 +373,16 @@ firstPass (int argc, char *argv[])
 			}
 		} else
 		if (matchPrefix (argv[i], "-direct")) {
+			if( direct ) {
+				free( direct );
+				had_direct_error = 1;
+			}
 			i++;
 			if( ! argv[i] ) {
 				fprintf( stderr, "%s: -direct requires another argument\n", 
 						 myName ); 
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
 				exit( 1 );
-			}
-			if( direct ) {
-				free( direct );
 			}
 			direct = strdup( argv[i] );
 		} else
@@ -477,6 +479,11 @@ firstPass (int argc, char *argv[])
 		fprintf( stderr, 
 				 "Warning:  Multiple -pool arguments given, using \"%s\"\n",
 				 pool );
+	}
+	if( had_direct_error ) {
+		fprintf( stderr, 
+				 "Warning:  Multiple -direct arguments given, using \"%s\"\n",
+				 direct );
 	}
 }
 
