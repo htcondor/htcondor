@@ -287,7 +287,8 @@ ClassAdLog::LogState(int fd)
 	ClassAd		*ad=NULL;
 	HashKey		hashval;
 	char		key[_POSIX_PATH_MAX];
-    string      my, target;
+    string      my, target, attr_name, attr_val;
+	ClassAdUnParser unp;
 
 	table.startIterations();
 	while(table.iterate(ad) == 1) {
@@ -301,26 +302,30 @@ ClassAdLog::LogState(int fd)
 			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 		}
 		delete log;
-        /* Needs work Hao
-		ad->ResetName();
-		attr_name = ad->NextName();
-		while (attr_name) {
-			attr_val = NULL;
-			expr = ad->Lookup(attr_name);
-			if (expr) {
-				expr->RArg()->PrintToNewStr(&attr_val);
-				log = new LogSetAttribute(key, attr_name, attr_val);
+//		ad->ResetName();
+//		attr_name = ad->NextName();
+//		while (attr_name) {
+//			attr_val = NULL;
+//			expr = ad->Lookup(attr_name);
+//			if (expr) {
+//				expr->RArg()->PrintToNewStr(&attr_val);
+//				log = new LogSetAttribute(key, attr_name, attr_val );
+		ClassAd::iterator adIter;
+		for( adIter = ad->begin( ); adIter != ad->end( ); adIter++ ) {
+			if( adIter->second ) {
+				unp.Unparse( attr_val, adIter->second );
+				log = new LogSetAttribute(key, adIter->first.c_str( ),
+										  attr_val.c_str( ) );
 				if (log->Write(fd) < 0) {
 					EXCEPT("write to %s failed, errno = %d", log_filename,
 						   errno);
 				}
-				free(attr_val);
+//				free(attr_val);
 				delete log;
-				delete [] attr_name;
-				attr_name = ad->NextName();
+//				delete [] attr_name;
+//				attr_name = ad->NextName();
 			}
 		}
-        */
 	}
 	if (fsync(fd) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
@@ -347,9 +352,8 @@ LogNewClassAd::Play(void *data_structure)
 {
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	ClassAd	*ad = new ClassAd();   
-    // Needs work Hao
-	//ad->SetMyTypeName(mytype);
-	//ad->SetTargetTypeName(targettype);
+	ad->SetMyTypeName(mytype);
+	ad->SetTargetTypeName(targettype);
 	return table->insert(HashKey(key), ad);
 }
 
