@@ -1,0 +1,64 @@
+#!/bin/sh
+
+hold_arguments()
+{
+cat >/tmp/configure.rerun <<EOF
+#!/bin/sh
+$0 $@
+EOF
+chmod 755 /tmp/configure.rerun
+}
+
+save_arguments()
+{
+    echo "saving args in configure.rerun"
+    mv /tmp/configure.rerun .
+}
+
+hold_arguments "$@"
+
+project="ClassAds"
+install_dir="/usr/local"
+
+while [ $# -gt 0 ]
+do
+	case $1 in
+		--prefix)
+			shift
+			install_dir=$1
+			;;
+		-h | -help | --h | --help)
+			cat <<EOF
+Use: configure [options]
+Where options are:
+ --prefix            <dir>  The directory in which to install $project
+ --help           Show this message         
+ Use configure.rerun to rerun configure with previously saved arguments.
+EOF
+			exit 1
+			;;
+		*)
+			echo "Unknown argument $1"
+			exit 1
+			;;
+	esac
+	shift
+done
+
+save_arguments
+
+echo "Creating Makefile.config..."
+
+cat <<EOF >Makefile.config
+# Generated at `date` by `whoami`@`uname -n`
+
+INSTALL_DIR = ${install_dir}
+EOF
+
+echo ""
+echo "To build, type 'make'"
+echo "To install, type 'make install'"
+echo ""
+
+exit 0
+
