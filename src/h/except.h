@@ -35,7 +35,7 @@ extern "C" {
 */
 #define EXCEPT \
 	_EXCEPT_Line = __LINE__; \
-	_EXCEPT_File = _FileName_; \
+	_EXCEPT_File = __FILE__; \
 	_EXCEPT_Errno = errno; \
 	_EXCEPT_
 
