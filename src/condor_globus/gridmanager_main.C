@@ -21,10 +21,14 @@ char *mySubSystem = "GRIDMANAGER";	// used by Daemon Core
 
 GridManager gridmanager;
 
+// this appears at the bottom of this file
+extern "C" int display_dprintf_header(FILE *fp);
+
 void
 usage( char *name )
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] -x <x509_user_proxy>]\n",
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>]\n"
+					   "   [-x <x509_user_proxy>] [-j <JobClusterID.JobProcID>]\n",
 		basename( name ) );
 	DC_Exit( 1 );
 }
@@ -112,6 +116,8 @@ main_deactivate_globus()
 int
 main_init( int argc, char **argv )
 {
+	char *ptr1, *ptr2;
+
 	// handle specific command line args
 	int i = 1;
 	while ( i < argc ) {
@@ -134,6 +140,28 @@ main_init( int argc, char **argv )
 			gridmanager.useDefaultProxy = false;
 			i++;
 			break;
+		case 'j':
+			// Specify a specific job to manage
+			if ( argc <= i + 1 ) {
+				usage( argv[0] );
+			}
+			ptr1 = strdup( argv[i + 1] );
+			ptr2 = strchr( ptr1, '.' );
+			if ( ptr2 == NULL ) {
+				usage( argv[0] );
+			}
+			ptr2++;
+			if ( *ptr2 == '\0' ) {
+				usage( argv[0] );
+			}
+			gridmanager.m_cluster = atoi(ptr1);
+			gridmanager.m_proc = atoi(ptr2);
+			if ( gridmanager.m_cluster == 0 ) {
+				usage( argv[0] );
+			}
+			free(ptr1);		// since we strduped it above
+			i++;
+			break;
 		default:
 			usage( argv[0] );
 			break;
@@ -141,6 +169,9 @@ main_init( int argc, char **argv )
 
 		i++;
 	}
+
+	// Setup dprintf to display pid and/or job id
+	DebugId = display_dprintf_header;
 
 	// Activate Globus libraries
 	if ( main_activate_globus() == false ) {
@@ -179,4 +210,27 @@ main_shutdown_graceful()
 	main_deactivate_globus();
 	DC_Exit(0);
 	return TRUE;	// to satify c++
+}
+
+
+// This function is called by dprintf - always display our job, proc,
+// and pid in our log entries. 
+extern "C" 
+int
+display_dprintf_header(FILE *fp)
+{
+	static pid_t mypid = 0;
+
+	if (!mypid) {
+		mypid = daemonCore->getpid();
+	}
+
+	if ( gridmanager.m_cluster ) {
+		fprintf( fp, "(%d.%d) [%ld]: ", gridmanager.m_cluster,
+			gridmanager.m_proc,mypid );
+	} else {
+		fprintf( fp, "[%ld]: ", mypid );
+	}	
+
+	return TRUE;
 }

@@ -59,6 +59,8 @@ class GridManager : public Service
 	char *ScheddAddr;
 	char *X509Proxy;
 	bool useDefaultProxy;
+	int m_cluster;
+	int m_proc;
 
 	HashTable <HashKey, GlobusJob *> *JobsByContact;
 	HashTable <PROC_ID, GlobusJob *> *JobsByProcID;

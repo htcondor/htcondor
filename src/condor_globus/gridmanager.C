@@ -46,7 +46,7 @@ extern gss_cred_id_t globus_i_gram_http_credential;
 
 #define GLOBUS_POLL_INTERVAL	1
 #define JOB_PROBE_INTERVAL		300
-#define UPDATE_SCHEDD_DELAY		5
+static int UPDATE_SCHEDD_DELAY = 5;
 #define JM_RESTART_DELAY		60
 #define JOB_PROBE_LENGTH		5
 
@@ -165,6 +165,8 @@ GridManager::GridManager()
 	Owner = NULL;
 	ScheddAddr = NULL;
 	X509Proxy = NULL;
+	m_cluster = 0;
+	m_proc = 0;
 	useDefaultProxy = true;
 	checkProxy_tid = -1;
 	Proxy_Expiration_Time = 0;
@@ -243,6 +245,16 @@ GridManager::Init()
 	// know (from the command line)
 	if (X509Proxy == NULL) {
 		proxy_get_filenames(1, NULL, NULL, &X509Proxy, NULL, NULL);
+	}
+	ASSERT(X509Proxy);
+
+	dprintf(D_ALWAYS,"Managing for owner %s - Proxy at %s\n",
+		Owner, X509Proxy);
+
+	if ( m_cluster ) {
+		dprintf(D_ALWAYS,"Managing for specific job id %d.%d\n",
+			m_cluster, m_proc);
+		UPDATE_SCHEDD_DELAY = 1;
 	}
 }
 
@@ -475,8 +487,15 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	char expr_buf[_POSIX_PATH_MAX];
 	char owner_buf[_POSIX_PATH_MAX];
 	int num_ads = 0;
+	static bool got_job_already = false;
 
 	dprintf(D_FULLDEBUG,"in ADD_JOBS_signalHandler\n");
+
+	if ( m_cluster && got_job_already ) {
+		dprintf(D_FULLDEBUG,
+			"already got the job we want, leaving ADD_JOBS_signalHandler\n");
+		return TRUE;
+	}
 	
 	if(useDefaultProxy == false) {
 		sprintf(owner_buf, "%s == \"%s\" && %s =?= \"%s\" ", ATTR_OWNER, Owner,
@@ -497,6 +516,11 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 			ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
 	}
 
+	// If we are only managing one job, the above constraint is crap.
+	if  ( m_cluster ) {
+		sprintf( expr_buf,"job %d.%d\n",m_cluster,m_proc);
+	}
+
 	// Get all the new Grid job ads
 	dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
 	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
@@ -508,7 +532,12 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 		return FALSE;
 	}
 
-	next_ad = GetNextJobByConstraint( expr_buf, 1 );
+	if ( m_cluster ) {
+		next_ad = GetJobAd( m_cluster, m_proc );
+	} else {
+		next_ad = GetNextJobByConstraint( expr_buf, 1 );
+	}
+
 	while ( next_ad != NULL ) {
 		PROC_ID procID;
 		GlobusJob *old_job;
@@ -524,12 +553,17 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 			JobsByProcID->insert( new_job->procID, new_job );
 			JobsToSubmit.Append( new_job );
 			num_ads++;
+			got_job_already = true;
 
 		}
 
 		delete next_ad;
 
-		next_ad = GetNextJobByConstraint( expr_buf, 0 );
+		if ( m_cluster ) {
+			next_ad = NULL;
+		} else {
+			next_ad = GetNextJobByConstraint( expr_buf, 0 );
+		}
 	}
 
 	DisconnectQ( schedd );
@@ -667,6 +701,12 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 							new_job->procID.cluster, new_job->procID.proc,
 							new_job->errorString(), new_job->errorCode );
 						// TODO what now?  try later ?
+						// Here is what to do: Register a timer to probe jobs
+						// sooner rather than later, so we can either restart or
+						// resubmit this job.
+						daemonCore->Register_Timer( 10,
+									(TimerHandlercpp)&GridManager::jobProbe,
+									"jobProbe", (Service*)this );
 					}
 				}
 			}
@@ -702,6 +742,8 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	char expr_buf[_POSIX_PATH_MAX];
 	char owner_buf[_POSIX_PATH_MAX];
 	int num_ads = 0;
+	bool must_disconnect_from_queue = false;
+	Qmgr_connection *schedd = NULL;
 
 	dprintf(D_FULLDEBUG,"in REMOVE_JOBS_signalHandler\n");
 
@@ -717,24 +759,35 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 		owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 		ATTR_JOB_STATUS, REMOVED );
 
+
 	// Get all the new Grid job ads
-	dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
-	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
-	if ( !schedd ) {
-		dprintf( D_ALWAYS, "Failed to connect to schedd! (in REMOVE_JOBS)\n");
-		daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
+	if ( m_cluster ) {
+		next_ad = (ClassAd *)1;	// Horrible SC01 hack! But CVS friendly...
+	} else {
+		dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
+		schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+		must_disconnect_from_queue = true;
+		if ( !schedd ) {
+			dprintf( D_ALWAYS, "Failed to connect to schedd! (in REMOVE_JOBS)\n");
+			daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
 					(TimerHandlercpp)&GridManager::REMOVE_JOBS_signalHandler,
 					"REMOVE_JOBS", (Service*) &gridmanager );
-		return FALSE;
+			return FALSE;
+		}
+		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 	}
 
-	next_ad = GetNextJobByConstraint( expr_buf, 1 );
 	while ( next_ad != NULL ) {
 		PROC_ID procID;
 		GlobusJob *next_job;
 
-		next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
-		next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
+		if ( m_cluster ) {
+			procID.cluster = m_cluster;
+			procID.proc = m_proc;
+		} else {
+			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
+			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
+		}
 
 		if ( JobsByProcID->lookup( procID, next_job ) == 0 ) {
 			// Should probably skip jobs we already have marked for removal
@@ -750,15 +803,38 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 			dprintf( D_ALWAYS, 
 				"Don't know about removed job %d.%d. "
 				"Deleting it immediately\n", procID.cluster, procID.proc );
+
+			// if we are managing a specifc job, we did not connnect to the
+			// queue above, so do it now.
+			if ( m_cluster ) {
+				dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
+				schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
+				must_disconnect_from_queue = true;
+				if ( !schedd ) {
+					dprintf( D_ALWAYS, 
+						"Failed to connect to schedd! (in REMOVE_JOBS)\n");
+					daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
+						(TimerHandlercpp)&GridManager::REMOVE_JOBS_signalHandler,
+						"REMOVE_JOBS", (Service*) &gridmanager );
+					return FALSE;
+				}
+			}
+			
 			DestroyProc( procID.cluster, procID.proc );
 
 		}
 
-		delete next_ad;
-		next_ad = GetNextJobByConstraint( expr_buf, 0 );
+		if ( m_cluster ) {
+			next_ad = NULL;
+		} else {
+			delete next_ad;
+			next_ad = GetNextJobByConstraint( expr_buf, 0 );
+		}
 	}
 
-	DisconnectQ( schedd );
+	if ( must_disconnect_from_queue ) {
+		DisconnectQ( schedd );
+	}
 	dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
 
 	if ( !JobsToCancel.IsEmpty() ) {
@@ -1206,6 +1282,24 @@ GridManager::RESTART_JM_signalHandler( int signal = 0 )
 	return TRUE;
 }
 
+
+static void
+update_remote_wall_clock(int cluster, int proc, int bday)
+{
+		// update ATTR_JOB_REMOTE_WALL_CLOCK. 
+	if (bday) {
+		float accum_time = 0;
+		GetAttributeFloat(cluster, proc,
+						  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
+		accum_time += (float)( time(NULL) - bday );
+		SetAttributeFloat(cluster, proc,
+						  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
+		DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
+		SetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE, 0);
+	}
+}
+
+
 int
 GridManager::updateSchedd()
 {
@@ -1339,6 +1433,11 @@ GridManager::updateSchedd()
 					SetAttributeInt( curr_job->procID.cluster,
 									 curr_job->procID.proc,
 									 ATTR_JOB_STATUS, RUNNING );
+					int current_time = (int)time(NULL);
+					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_SHADOW_BIRTHDATE, current_time );
+					curr_job->shadow_birthday = current_time;
 				}
 				break;
 			case G_FAILED:
@@ -1384,6 +1483,17 @@ GridManager::updateSchedd()
 			}
 
 			curr_job->stateChanged = false;
+
+			// If the job is now set at anything but RUNNING, and
+			// yet we have a shadow_birthday (for reporting run_time in
+			// condor_q), we need to commit the run time.
+			if ( (curr_job->jobState != G_ACTIVE || curr_status == REMOVED)
+					&& curr_job->shadow_birthday ) 
+			{
+				update_remote_wall_clock(curr_job->procID.cluster, 
+					curr_job->procID.proc, curr_job->shadow_birthday);
+				curr_job->shadow_birthday = 0;
+			}
 
 		}
 
@@ -1439,6 +1549,9 @@ GridManager::updateSchedd()
 			// immediately, not when the transaction is committed).
 			// So, if we do not do this goofy procedure, the job ad
 			// will show up in the history file as still running, etc.
+			update_remote_wall_clock(curr_job->procID.cluster, 
+					curr_job->procID.proc, curr_job->shadow_birthday);
+			curr_job->shadow_birthday = 0;
 			CloseConnection();
 			BeginTransaction();
 			DestroyProc(curr_job->procID.cluster,
@@ -1516,7 +1629,14 @@ GridManager::updateSchedd()
 
 	}
 
-dprintf(D_FULLDEBUG,"leaving updateSchedd()\n");
+	// If we are managing a specific job, may as well bail out
+	// once it is done & gone.
+	if ( m_cluster && (JobsByProcID->getNumElements() == 0) ) {
+		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
+		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+	}
+
+	dprintf(D_FULLDEBUG,"leaving updateSchedd()\n");
 	return TRUE;
 }
 

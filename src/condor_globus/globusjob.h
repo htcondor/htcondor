@@ -50,6 +50,7 @@ class GlobusJob
 	bool restartingJM;
 	time_t restartWhen;
 	bool durocRequest;
+	int shadow_birthday;
 
  protected:
 	bool callbackRegistered;

@@ -65,6 +65,7 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 	restartingJM = copy.restartingJM;
 	restartWhen = copy.restartWhen;
 	durocRequest = copy.durocRequest;
+	shadow_birthday = copy.shadow_birthday;
 }
 
 GlobusJob::GlobusJob( ClassAd *classad )
@@ -100,6 +101,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	restartingJM = false;
 	restartWhen = 0;
 	durocRequest = false;
+	shadow_birthday = 0;
+	// classad->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_birthday);
 	// ad = NULL;
 
 	buf[0] = '\0';
