@@ -30,7 +30,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
 	uids.o metric_units.o condor_ver_info.o condor_cred_base.o \
 	$(KERBEROS_OBJ) condor_md.o condor_credential.o HashTable.o MyString.o \
-	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o
+	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o classad_merge.o
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
@@ -45,6 +45,7 @@ c_plus_target(test_stringSpace, test_stringSpace.o,$(LIB))
 c_plus_target(test_iso_dates, test_iso_dates.o,$(LIB))
 c_plus_target(test_user_job_policy, test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support, test_classad_support.o,$(LIB))
+c_plus_target(test_classad_merge, test_classad_merge.o,$(LIB))
 c_plus_target(test_mystring, test_mystring.o, $(LIB))
 
 c_plus_target(cat_url, cat_url.o, liburl.a)
