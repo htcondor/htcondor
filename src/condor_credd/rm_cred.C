@@ -4,6 +4,7 @@
 #include "X509credential.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
+#include "client_common.h"
 
 const char * MyName = "condor_rm_cred";
 
@@ -37,11 +38,9 @@ int main(int argc, char **argv)
 	exit(0);
 	break;
       case 'v':
-	if (ptr[0][2] == 'e') {
 	  // dprintf to console
 	  Termlog = 1;
 	  dprintf_config ("TOOL", 2 );
-	}
 	break;
       case 's':
 	if( !(--argc) || !(*(++ptr)) ) {
@@ -69,38 +68,20 @@ int main(int argc, char **argv)
 	exit(1);
       }
     } //fi
+    else {
+      fprintf( stderr, "%s: Unknown option %s\n",
+	       MyName, *ptr);
+      usage();
+      exit(1);
+    }
   } //rof
 
   config ();
 
-
-  // Start command
-  Daemon my_credd(DT_CREDD, server_address, NULL);
-  Sock * sock = my_credd.startCommand (CREDD_REMOVE_CRED, Stream::reli_sock, 0);
-
-  if (!sock) {
-    fprintf (stderr, "Unable to start CREDD_REMOVE_CRED command to host %s\n", server_address);
-    return 1;
+  ReliSock * sock = NULL;
+  if (!start_command_and_authenticate (server_address, CREDD_REMOVE_CRED, sock)) {
+	  return 1;
   }
-  ReliSock * reli_sock = (ReliSock*)sock;
-
-  if (!reli_sock->isAuthenticated()) { 
-    char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
-    MyString methods;
-    if (p) {
-      methods = p;
-      free (p);
-    } else {
-     methods = SecMan::getDefaultAuthenticationMethods();
-    }
-    CondorError errstack;
-    if( ! reli_sock->authenticate(methods.Value(), &errstack) ) {
-      dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
-      delete reli_sock;
-      return 1;
-    }
-  }
-
 
   sock->encode();
 

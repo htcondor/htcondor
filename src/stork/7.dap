@@ -1,0 +1,5 @@
+    [
+        dap_type = transfer;
+        src_url = "srb://srb.sdsc.edu/home/thh.caltech/NVO/DPOSS/fullPlateData/f002.fits"; 
+        dest_url = "file:/tmp/f002.fits"; 
+    ]

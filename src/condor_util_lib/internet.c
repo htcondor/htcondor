@@ -704,3 +704,26 @@ getAddrFromClaimId( const char* id )
 	free( copy );
 	return NULL;
 }
+
+char *
+hostname_to_string (const char * hostname, const int default_port) {
+	static char hostname_buff[MAXHOSTNAMELEN+10];
+	struct sockaddr_in sin;
+
+	if (!(hostname) || !(*hostname))
+		return NULL;
+
+	if (strchr(hostname, ':')) {
+ 		sprintf (hostname_buff, "<%s>", hostname);
+	} else if (default_port > 0) {
+		sprintf (hostname_buff, "<%s:%d>", hostname, default_port);
+	} else {
+		return NULL;
+	}
+
+	if (!string_to_sin (hostname_buff, &sin)) {
+		return NULL;
+	}
+
+	return sin_to_string (&sin);
+}

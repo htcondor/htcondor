@@ -2,18 +2,16 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "daemon.h"
 #include "X509credential.h"
+#include "client_common.h"
 
 int main(int argc, char **argv)
 {
   char * credd_sin = argv[1];
   char * cred_name = argv[2];
 
-  Daemon my_credd(DT_CREDD, credd_sin, NULL);
-  Sock * sock = my_credd.startCommand (CREDD_GET_CRED, Stream::reli_sock, 0);
-
-  if (!sock) {
-    fprintf (stderr, "Unable to start CREDD_GET_CRED command to host %s\n", credd_sin);
-    return 1;
+  ReliSock * sock;
+  if (!start_command_and_authenticate (credd_sin, CREDD_GET_CRED, sock)) {
+	  return 1;
   }
 
   sock->encode();

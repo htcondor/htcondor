@@ -42,4 +42,9 @@ isSuperUser( const char* user );
 void
 Init();
 
+
+int
+init_user_id_from_FQN (const char * _fqn);
+
+
 #endif

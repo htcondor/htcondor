@@ -1,11 +1,11 @@
 #include "credential.h"
 
-Credential::Credential(const ClassAd& _class_ad) {
-  attr_list = new ClassAd (_class_ad);
+Credential::Credential(const classad::ClassAd& _class_ad) {
+  attr_list = new classad::ClassAd (_class_ad);
 }
 
 Credential::Credential() {
-  attr_list = new ClassAd();
+  attr_list = new classad::ClassAd();
 }
 
 Credential::~Credential() {
@@ -27,7 +27,7 @@ Credential::SetName(const char * _name) {
   SetStringAttribute ("Name", _name);
 }
 
-const ClassAd * 
+const classad::ClassAd * 
 Credential::GetClassAd() {
   return attr_list;
 
@@ -98,15 +98,14 @@ Credential::GetType() {
 
 void
 Credential::SetStringAttribute(const char * name, const char * value) {
-  char buff[10000];
-  sprintf (buff, "%s = \"%s\"", name, value);
-  attr_list->InsertOrUpdate (buff);
+  std::string attrName(name);
+  attr_list->InsertAttr(attrName, value);
 }
 
 int
 Credential::GetIntAttribute (const char * name) {
   int value;
-  if (!attr_list->LookupInteger (name, value))
+  if (!attr_list->EvaluateAttrInt( name, value))
     return 0;
 
   return value;
@@ -115,17 +114,32 @@ Credential::GetIntAttribute (const char * name) {
 
 void
 Credential::SetIntAttribute(const char * name, int value) {
-  char buff[10000];
-  sprintf (buff, "%s = %d", name, value);
-  attr_list->InsertOrUpdate (buff);
+  std::string attrName(name);
+  attr_list->InsertAttr(attrName, value);
 }
 
 char *
 Credential::GetStringAttribute (const char * name) {
   char * value;
+#if 0
   if (!attr_list->LookupString (name, &value))
     return NULL;
 
   return value;
+#endif
 
+  // plagiarized from deprecated
+  // ClassAd::LookupString (const char *name, char **value) const
+  std::string strName(name), strVal;
+  if( !attr_list->EvaluateAttrString( strName, strVal ) ) {
+	  return NULL;
+  }
+  const char *strValCStr = strVal.c_str( );
+  value = (char *) malloc(strlen(strValCStr) + 1);
+  if (value != NULL) {
+    strcpy(value, strValCStr);
+    return value;
+  }
+  return NULL;
 }
+

@@ -1,13 +1,11 @@
 #ifndef __X509CREDENTIALWRAPPER_H__
 #define __X509CREDENTIALWRAPPER_H__
-#include "credential.h"
 #include "X509credential.h"
-#include "condor_classad.h"
 
 class X509CredentialWrapper : public X509Credential {
 public:
 
-  X509CredentialWrapper (const ClassAd&);
+  X509CredentialWrapper (const classad::ClassAd&);
   virtual ~X509CredentialWrapper();
 
   // get-delegation-invocation details

@@ -1,13 +1,12 @@
 #ifndef __X509CREDENTIAL_H__
 #define __X509CREDENTIAL_H__
 #include "credential.h"
-#include "condor_classad.h"
 
 class X509Credential : public Credential {
 public:
 
   X509Credential ();
-  X509Credential (const ClassAd&);
+  X509Credential (const classad::ClassAd&);
   X509Credential (const char * metadata);
   X509Credential (const char * metadata, const void * buff, int size);
   virtual ~X509Credential();
@@ -32,6 +31,8 @@ public:
 
   void SetMyProxyUser (const char *);
   const char * GetMyProxyUser();
+
+  virtual const char * GetTypeString() { return "X509proxy"; }
 
  protected:
   MyString storage_name;

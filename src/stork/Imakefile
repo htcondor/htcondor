@@ -1,0 +1,382 @@
+/*
+ * Stork Imakefile
+ * Specify Stork build configuration here.
+ * Uncomment to enable capability.
+ */
+
+/* Application Program Interface */
+#define STORK_API
+
+/* Globus */
+#define STORK_GLOBUS
+
+/* NeST */
+#define STORK_NEST
+
+/* SRB */
+#define STORK_SRB
+
+/* IBP */
+#define STORK_IBP
+
+/* gridftp or gsiftp */
+/* STORK_GSIFTP capability is currently not used, but maybe used in the
+ * future.
+ */
+/* #define STORK_GSIFTP */
+
+/* LBNL SRM */
+#define STORK_LBNLSRM
+
+/* FNAL SRM (obsoleted by dcache, Castor SRM */
+/* define STORK_FNALSRM */
+
+/* Disk Router */
+#define STORK_DISKROUTER
+
+/* Unitree */
+#define STORK_UNITREE
+
+/* Castor SRM */
+#define STORK_SRM_CASTOR
+
+/* dcache SRM */
+#define STORK_SRM_DCACHE
+
+/* END USER CONFIGURATION *****************************************************/
+
+XCOMM Default Build Targets
+NAME_LIST	+= stork_server
+NAME_LIST	+= stork_submit
+NAME_LIST	+= stork_status
+NAME_LIST	+= stork_q
+NAME_LIST	+= stork_rm
+NAME_LIST	+= stork_compute_md5
+NAME_LIST	+= stork_performance_monitor
+NAME_LIST	+= stork_setup
+NAME_LIST	+= DaP.transfer.file-file
+
+XCOMM Stork specific macros.
+STORK_DEFS	= -DSTORK_CORE -DSTORK_FILE
+/* The following macros are _required_ for SRB on Redhat 9, and probably a good
+ * idea for Stork on Redhat 9, in general.
+ */
+#if IS_GLIBC23
+/* FIXME: this define will be better when fixed to: #if IS_LINUX_RH9 */
+/* Stork supports large file (> 2GB) transfers. */
+STORK_DEFS	+= -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
+#endif /* IS_GLIBC23 */
+
+#ifdef STORK_GLOBUS
+NAME_LIST	+= DaP.transfer.globus-url-copy
+STORK_DEFS	+= -DSTORK_GLOBUS
+STORK_DEFS	+= -DSTORK_GRIDFTP
+STORK_DEFS	+= -DSTORK_FTP
+STORK_DEFS	+= -DSTORK_HTTP
+#endif /* STORK_GLOBUS */
+
+#ifdef STORK_NEST
+NAME_LIST	+= DaP.transfer.nest
+NAME_LIST	+= DaP.reserve.nest
+NAME_LIST	+= DaP.release.nest
+STORK_DEFS	+= -DSTORK_NEST
+#endif /* STORK_NEST */
+
+#ifdef STORK_SRB
+NAME_LIST	+= DaP.transfer.srb
+STORK_DEFS	+= -DSTORK_SRB
+#endif /* STORK_SRB */
+
+#ifdef STORK_LBNLSRM
+NAME_LIST	+= DaP.transfer.lbnlsrm
+STORK_DEFS	+= -DSTORK_LBNLSRM
+#endif /* STORK_LBNLSRM */
+
+#ifdef STORK_FNALSRM
+NAME_LIST	+= DaP.transfer.fnalsrm
+STORK_DEFS	+= -DSTORK_FNALSRM
+#endif /* STORK_FNALSRM */
+
+#ifdef STORK_DISKROUTER
+NAME_LIST	+= DaP.transfer.diskrouter
+STORK_DEFS	+= -DSTORK_DISKROUTER
+#endif /* STORK_DISKROUTER */
+
+#ifdef STORK_UNITREE
+NAME_LIST	+= DaP.transfer.unitree
+STORK_DEFS	+= -DSTORK_UNITREE
+#endif /* STORK_UNITREE */
+
+#ifdef STORK_IBP
+NAME_LIST	+= DaP.transfer.ibp
+NAME_LIST	+= DaP.reserve.ibp
+STORK_DEFS	+= -DSTORK_IBP
+#endif /* STORK_IBP */
+
+#ifdef STORK_GSIFTP
+NAME_LIST	+= DaP.transfer.gsiftp-gsiftp
+STORK_DEFS	+= -DSTORK_GSIFTP
+#endif /* STORK_GSIFTP */
+
+#ifdef STORK_SRM_DCACHE
+NAME_LIST += DaP.transfer.dcache_srm
+STORK_DEFS += -DSTORK_SRM_DCACHE
+#endif
+
+#ifdef STORK_SRM_CASTOR
+NAME_LIST += DaP.transfer.castor_srm
+STORK_DEFS += -DSTORK_SRM_CASTOR
+#endif
+
+#ifdef STORK_API
+NAME_LIST	+= libstork_client.a
+STORK_DEFS	+= -DSTORK_API
+#endif /* STORK_API */
+
+/*
+old, broken make target.  Maybe used again some day.
+NAME_LIST += stork_classad_test
+*/
+
+all_target($(NAME_LIST))
+
+STORK_INC        =
+STORK_DYNLIB=
+
+XCOMM ClassAds
+/*
+CLASSAD_ROOT = ../condor_classad.V6
+CLASSAD_INC= -I$(CLASSAD_ROOT)
+STORK_INC        += $(CLASSAD_INC)
+*/
+STORK_INC		+= -I$(NEW_CLASSADS_INC)
+STORK_DYNLIB	+= -L$(NEW_CLASSADS_LIB) -lclassad_ns
+
+#ifdef STORK_IBP
+XCOMM IBP
+XCOMM FIXME: Move IBP to a better externals location.
+XCOMM See http://loci.cs.utk.edu/ibp
+IBP_ROOT   = /p/condor/workspaces/kosart/ibp-1.3.0
+IBP_LIB    = $(IBP_ROOT)/lib
+IBP_INC    = -I$(IBP_ROOT)/include
+STORK_INC        += $(IBP_INC)
+IBP_DYNLIB = $(IBP_LIB)/libibp.a
+STORK_DYNLIB += $(IBP_DYNLIB) -lm -lnsl
+#endif /* STORK_IBP */
+
+#ifdef STORK_SRB
+XCOMM SRB
+SRB_ROOT   = $(EXT_INSTALL)/$(EXT_SRB_VERSION)
+SRB_LIB    = $(SRB_ROOT)/obj
+SRB_INC    = -I$(SRB_ROOT)/src/include -I$(SRB_ROOT)/src/catalog/include
+STORK_INC        += $(SRB_INC)
+SRB_DYNLIB = $(SRB_LIB)/libSrbClient.a
+STORK_DYNLIB += $(SRB_DYNLIB)
+#endif /* STORK_SRB */
+
+#ifdef STORK_NEST
+XCOMM NeST
+XCOMM FIXME: Per Nick this list of defines is still necessary when using the
+XCOMM NeST API.  Someday, this constraint should be eliminated.
+STORK_NEST_DEFS =	\
+	-D_REENTRANT \
+	-DDEBUG \
+	-DHAS_LIBM \
+	-DHAS_LIBNSL \
+	-DHAS_LIBREADLINE \
+	-DHAS_LIBTERMCAP \
+	-DHAS_LIBNCURSES \
+	-DHAS_SYS_QUOTA_H \
+	-DHAS_FSTAB_H \
+	-DHAS_SYS_STAT_H \
+	-DHAS_SYS_STATVFS_H \
+	-DHAS_SYS_STATFS_H \
+	-DHAS_NANOSLEEP \
+	-DHAS_SCM_RIGHTS \
+	-march=i486 \
+
+NEST_ROOT  = /unsup/nest 
+NEST_LIB   = $(NEST_ROOT)/lib
+NEST_INC = -I$(NEST_ROOT)/include $(STORK_NEST_DEFS) 
+XCOMM FIXME:  Still need to add a relative include path to find classad header
+XCOMM files.  When NeST can use the condor_classad.h on the trunk, the
+XCOMM following line can be deleted.
+/*
+NEST_INC += -I../condor_classad.V6
+*/
+STORK_INC        += $(NEST_INC)
+NEST_DYNLIB= $(NEST_LIB)/libnest-client.a
+STORK_DYNLIB += $(NEST_DYNLIB)
+#endif /* STORK_NEST */
+
+#ifdef STORK_GLOBUS
+XCOMM Globus
+XCOMM FIXME: This lib list may not be the most efficient for globus.  Use 
+XCOMM globus-makefile-header --flavor=gcc32dbg globus_ftp_client
+GLOBUS_LIB = $(GLOBUS_DIR)/lib
+GLOBUS_DYNLIB =
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libglobus_ftp_client_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libglobus_ftp_control_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libglobus_io_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libglobus_gss_assist_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libglobus_gssapi_gsi_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libglobus_openssl_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libglobus_common_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libssl_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libcrypto_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GLOBUS_LIB)/libglobus_gsi_sysconfig_$(GlobusFlavor).a
+GLOBUS_DYNLIB += $(GSI_LIB)
+GLOBUS_DYNLIB += $(OPENSSL_LIB)
+STORK_DYNLIB  += $(GLOBUS_DYNLIB)
+#endif /* STORK_GLOBUS */
+
+
+CFLAGS  = $(STD_C_FLAGS) $(STORK_INC) $(STORK_DEFS)
+/* CFLAGS += $(SRB_INC)  */
+#if 0
+XCOMM FIXME: -DPORTNAME_* is at least used in SRB client header files.
+#if IS_LINUX
+  CFLAGS += -DPORTNAME_linux
+#elif IS_SOLARIS 
+  CFLAGS += -DPORTNAME_solaris
+#else
+	#error this operating system not yet supported
+#endif
+#endif
+XCOMM FIXME: Why is this necessary?
+CFLAGS += -DMDAS_AUTH 
+
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STORK_INC) $(STORK_DEFS)
+
+#if 0
+LIB    = $(STD_LIBS)
+LIB   += $(NEST_DYNLIB) $(GLOBUS_DYNLIB) $(SRB_DYNLIB) $(IBP_DYNLIB)
+#endif
+LIB   = $(STD_LIBS) $(STORK_DYNLIB)
+#ifdef STORK_IBP
+XCOMM FIXME: Move these libs to only IBP links
+LIB   += -lm -lnsl   #required by IBP
+#endif /* STORK_IBP */
+
+SERVER_LIB = $(DAEMONCORE_LIB) $(LIB)
+
+/* -lnsl -lsocket -lelf -lxnet -lposix4  */
+
+DAP_CLASSAD_OBJ = dap_classad_reader.o dap_utility.o
+#if 0
+DAP_CLASSAD_TEST_OBJ = dap_classad_test.o
+DAP_CLIENT_AGENT_OBJ = dap_client_agent.o dap_client_interface.o $(DAP_CLASSAD_OBJ)
+#endif
+DAP_COMPUTE_MD5_OBJ = dap_compute_md5.o 
+DAP_PERFORMANCE_MONITOR_OBJ = dap_performance_monitor.o
+DAP_RM_OBJ = dap_rm.o dap_client_interface.o
+DAP_SETUP_OBJ = dap_install.o
+DAP_SERVER_OBJ= dap_server.o dap_daemon.o dap_classad_reader.o dap_logger.o dap_utility.o dap_scheduler.o
+DAP_STATUS_OBJ = dap_status.o dap_client_interface.o
+DAP_Q_OBJ = dap_q.o dap_client_interface.o
+DAP_SUBMIT_OBJ = dap_submit.o dap_client_interface.o $(DAP_CLASSAD_OBJ)
+DAP_SUBMIT_BLOCK_OBJ = dap_submit_block.o dap_client_interface.o $(DAP_CLASSAD_OBJ)
+
+
+DAP_TRANSFER_DISKROUTER_OBJ = dap_transfer_diskrouter.o $(DAP_CLASSAD_OBJ)
+DAP_TRANSFER_FILE-FILE_OBJ = dap_transfer_file-file.o dap_utility.o
+DAP_TRANSFER_FNALSRM_OBJ = dap_transfer_fnalsrm.o $(DAP_CLASSAD_OBJ)
+DAP_TRANSFER_GLOBUS-URL-COPY_OBJ = dap_transfer_globus-url-copy.o $(DAP_CLASSAD_OBJ)
+DAP_TRANSFER_GSIFTP-GSIFTP_OBJ = dap_transfer_gsiftp-gsiftp.o dap_utility.o 
+DAP_TRANSFER_IBP_OBJ = dap_transfer_ibp.o dap_c_utility.o
+DAP_TRANSFER_LBNLSRM_OBJ = dap_transfer_lbnlsrm.o $(DAP_CLASSAD_OBJ)
+DAP_TRANSFER_NEST_OBJ = dap_transfer_nest.o dap_utility.o
+DAP_TRANSFER_SRB_OBJ = dap_transfer_srb.o dap_url.o dap_srb_util.o
+/* DAP_TRANSFER_SRB_OLD_OBJ = dap_transfer_srb_old.o dap_utility.o */
+DAP_TRANSFER_UNITREE_OBJ = dap_transfer_unitree.o $(DAP_CLASSAD_OBJ)
+
+DAP_TRANSFER_DCACHE_SRM_OBJ = dap_transfer_dcache_srm.o $(DAP_CLASSAD_OBJ)
+DAP_TRANSFER_CASTOR_SRM_OBJ = dap_transfer_castor_srm.o $(DAP_CLASSAD_OBJ)
+
+
+DAP_RESERVE_IBP_OBJ = dap_reserve_ibp.o 
+DAP_RESERVE_NEST_OBJ = dap_reserve_nest.o 
+DAP_RELEASE_NEST_OBJ = dap_release_nest.o $(DAP_CLASSAD_OBJ)
+
+/* Externals needed by Stork. */
+#ifdef STORK_GLOBUS
+#	if HAS_GLOBUS
+		/* Need Globus, which depends upon GPT */
+		ext_target(EXT_GLOBUS_DATA_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
+#	else
+#		error Globus data not available on this platform
+#	endif
+#endif
+
+#ifdef STORK_SRB
+#	ifdef WANT_SRB
+	/* Need SRB, which depends upon Globus */
+	ext_target(EXT_SRB_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
+#	else
+#		error SRB not available on this platform
+#	endif
+#endif
+
+c_plus_target(DaP.transfer.dcache_srm,$(DAP_TRANSFER_DCACHE_SRM_OBJ),$(LIB))
+c_plus_target(DaP.transfer.castor_srm,$(DAP_TRANSFER_CASTOR_SRM_OBJ),$(LIB))
+
+c_plus_target(stork_server,$(DAP_SERVER_OBJ),$(SERVER_LIB))
+static_target(stork_server,$(DAP_SERVER_OBJ),$(SERVER_LIB),./sbin)
+c_plus_target(stork_submit,$(DAP_SUBMIT_OBJ),$(LIB))
+c_plus_target(stork_submit_block,$(DAP_SUBMIT_BLOCK_OBJ),$(LIB))
+c_plus_target(stork_status,$(DAP_STATUS_OBJ),$(LIB))
+c_plus_target(stork_rm,$(DAP_RM_OBJ),$(LIB))
+c_plus_target(stork_q,$(DAP_Q_OBJ),$(LIB))
+
+c_plus_target(stork_compute_md5,$(DAP_COMPUTE_MD5_OBJ),$(LIB))
+c_plus_target(stork_performance_monitor,$(DAP_PERFORMANCE_MONITOR_OBJ),$(LIB))
+c_plus_target(stork_setup,$(DAP_SETUP_OBJ),$(LIB))
+#if 0
+c_plus_target(stork_classad_test,$(DAP_CLASSAD_TEST_OBJ),$(LIB))
+#endif
+c_plus_target(DaP.transfer.nest,$(DAP_TRANSFER_NEST_OBJ),$(LIB))
+c_plus_target(DaP.transfer.gsiftp-gsiftp,$(DAP_TRANSFER_GSIFTP-GSIFTP_OBJ),$(LIB))
+c_plus_target(DaP.transfer.lbnlsrm,$(DAP_TRANSFER_LBNLSRM_OBJ),$(LIB))
+c_plus_target(DaP.transfer.fnalsrm,$(DAP_TRANSFER_FNALSRM_OBJ),$(LIB))
+c_plus_target(DaP.transfer.srb,$(DAP_TRANSFER_SRB_OBJ),$(LIB) -lpthread)
+/* c_plus_target(DaP.transfer.srb.old,$(DAP_TRANSFER_SRB_OLD_OBJ),$(LIB) -lpthread) */
+c_plus_target(DaP.transfer.diskrouter,$(DAP_TRANSFER_DISKROUTER_OBJ),$(LIB))
+c_plus_target(DaP.transfer.globus-url-copy,$(DAP_TRANSFER_GLOBUS-URL-COPY_OBJ),$(LIB))
+c_plus_target(DaP.transfer.file-file,$(DAP_TRANSFER_FILE-FILE_OBJ),$(LIB))
+c_plus_target(DaP.transfer.ibp,$(DAP_TRANSFER_IBP_OBJ),$(LIB) -lpthread)
+c_plus_target(DaP.transfer.unitree,$(DAP_TRANSFER_UNITREE_OBJ),$(LIB))
+
+c_plus_target(DaP.reserve.nest,$(DAP_RESERVE_NEST_OBJ),$(LIB))
+c_plus_target(DaP.reserve.ibp,$(DAP_RESERVE_IBP_OBJ),$(LIB) -lpthread)
+c_plus_target(DaP.release.nest,$(DAP_RELEASE_NEST_OBJ),$(LIB))
+
+
+library_target(libstork_client.a, dap_client_interface.o)
+
+test: test_url
+c_plus_target(test_url, dap_url.o test_url.o,)
+
+XCOMM FIXME: need static link targets
+XCOMM FIXME: need release targets
+
+XCOMM At the moment, this is only a synonym for make all.  FIXME: It should
+XCOMM also install release targets.
+release::all
+
+XCOMM FIXME: debug only
+debug:
+	@echo STD_C_FLAGS = $(STD_C_FLAGS)
+	@echo
+	@echo CFLAGS = $(CFLAGS)
+	@echo
+	@echo STD_C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+	@echo
+	@echo C_PLUS_FLAGS = $(C_PLUS_FLAGS)
+	@echo
+	@echo STORK_DEFS = $(STORK_DEFS)
+	@ls -rlt $(NAME_LIST)
+
+build-check:
+	@ls -l $(NAME_LIST) >/dev/null && echo all targets have been built
+

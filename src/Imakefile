@@ -55,6 +55,12 @@ TEST_SUITE_BASE = test_suite_base
 #define DrmaaLibs
 #endif
 
+#if WANT_STORK
+#define StorkProgs stork
+#else
+#define StorkProgs
+#endif
+
 #define Programs \
 		procapi sysapi accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
@@ -235,6 +241,10 @@ object_dir_target(condor_release)
 object_dir_target(html)
 object_dir_target(condor_bypass)
 object_dir_target(condor_sdk)
+#if WANT_STORK
+/* Just create the Stork directory for now. */
+object_dir_target(stork)
+#endif
 
 single_target(condor_procapi,libprocapi.a)
 single_target(condor_sysapi,libsysapi.a)
@@ -320,7 +330,9 @@ ext_target(EXT_GT3GAHP_VERSION,$(NULL))
 ext_target(EXT_PVM_VERSION,$(NULL))
 #endif
 ext_nodep_target(EXT_MAN_VERSION,$(NULL))
-
+#if WANT_NEW_CLASSADS
+ext_target(EXT_CLASSADS_VERSION, $(NULL))
+#endif
 
 clean::
 	rm -rf $(PURE_DIR)

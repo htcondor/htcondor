@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include "globus_utils.h"
 
-X509Credential::X509Credential (const ClassAd& classad) : Credential (classad) {
+X509Credential::X509Credential (const classad::ClassAd& classad) : Credential (classad) {
   SetIntAttribute ("Type", X509_CREDENTIAL_TYPE);
 }
 
@@ -118,7 +118,6 @@ X509Credential::StoreData() {
 
   close (fd);
 
-  printf ("Wrote data %d bytes\n", data_size);
   return TRUE;
 }
 */

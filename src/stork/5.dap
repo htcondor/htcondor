@@ -1,0 +1,5 @@
+    [
+        dap_type = transfer;
+        src_url = "lbnlsrm://nostos.cs.wisc.edu/test1.txt"; 
+        dest_url = "lbnlsrm://beak.cs.wisc.edu/test2.txt"; 
+    ]

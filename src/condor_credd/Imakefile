@@ -1,42 +1,43 @@
 NAME = condor_store_cred condor_get_cred condor_rm_cred condor_list_cred condor_credd
 all_target( $(NAME) )
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(STD_LIBS)
+CFLAGS = $(STD_C_FLAGS) -I$(NEW_CLASSADS_INC)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(NEW_CLASSADS_INC)
+LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
 
 
 
-c_plus_target(condor_store_cred,credential.o X509credential.o store_cred.o,$(LIB))
+c_plus_target(condor_store_cred,credential.o X509credential.o store_cred.o client_common.o,$(LIB))
 release_target(condor_store_cred,bin,EXECUTABLE_MODE)
 strip_target(condor_store_cred,bin,EXECUTABLE_MODE)
 static_target(condor_store_cred,store_cred.o credential.o X509credential.o,$(LIB),$(STATIC_DIR)/bin)
 pure_c_plus_target(condor_store_cred.pure,store_cred.o credential.o X509credential.o,$(LIB))
 
-c_plus_target(condor_rm_cred,credential.o X509credential.o rm_cred.o,$(LIB))
+c_plus_target(condor_rm_cred,credential.o X509credential.o rm_cred.o client_common.o,$(LIB))
 release_target(condor_rm_cred,bin,EXECUTABLE_MODE)
 strip_target(condor_rm_cred,bin,EXECUTABLE_MODE)
 static_target(condor_rm_cred,rm_cred.o credential.o X509credential.o,$(LIB),$(STATIC_DIR)/bin)
 pure_c_plus_target(condor_rm_cred.pure,rm_cred.o credential.o X509credential.o,$(LIB))
 
-c_plus_target(condor_get_cred,credential.o X509credential.o get_cred.o,$(LIB))
+c_plus_target(condor_get_cred,credential.o X509credential.o get_cred.o client_common.o,$(LIB))
 release_target(condor_get_cred,bin,EXECUTABLE_MODE)
 strip_target(condor_get_cred,bin,EXECUTABLE_MODE)
 static_target(condor_get_cred,store_cred.o credential.o X509credential.o,$(LIB),$(STATIC_DIR)/bin)
 pure_c_plus_target(condor_get_cred.pure,get_cred.o credential.o X509credential.o,$(LIB))
 
 
-c_plus_target(condor_list_cred,credential.o X509credential.o list_cred.o,$(LIB))
+c_plus_target(condor_list_cred,credential.o X509credential.o list_cred.o
+		client_common.o classadUtil.o,$(LIB))
 release_target(condor_list_cred,bin,EXECUTABLE_MODE)
 strip_target(condor_list_cred,bin,EXECUTABLE_MODE)
 static_target(condor_list_cred,list_cred.o credential.o X509credential.o,$(LIB),$(STATIC_DIR)/bin)
 pure_c_plus_target(condor_list_cred.pure,list_cred.o credential.o X509credential.o,$(LIB))
 
-OBJ = credd_main.o credential.o X509credential.o X509credentialWrapper.o credd.o
-c_plus_target(condor_credd,$(OBJ),$(DAEMONCORE_LIB) $(LIB))
+OBJ = credd_main.o credential.o X509credential.o X509credentialWrapper.o credd.o client_common.o classadUtil.o
+c_plus_target(condor_credd,$(OBJ), $(DAEMONCORE_LIB) $(LIB))
 release_target(condor_credd,sbin,EXECUTABLE_MODE)
 strip_target(condor_credd,sbin,EXECUTABLE_MODE)
-static_target(condor_credd,$(OBJ),$(DAEMONCORE_LIB) $(LIB),$(STATIC_DIR)/bin)
+static_target(condor_credd,$(OBJ),$(LIB),$(STATIC_DIR)/bin)
 pure_c_plus_target(condor_credd.pure,$(OBJ),$(LIB))
 
 html:

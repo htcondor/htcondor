@@ -1264,6 +1264,11 @@ if test "$_cv_opsys_vers" = "DUX4"; then
   CONDOR_EXTERNAL_VERSION([globus],[2.2.4])
 else
   CONDOR_EXTERNAL_VERSION([globus],[2.4.3.vdt.1.1.14])
+
+  AC_MSG_CHECKING([globus_data])
+  _cv_ext_globus_data_version="globus-2.4.3.data"
+  AC_MSG_RESULT([$_cv_ext_globus_data_version])
+  AC_SUBST(ext_globus_data_version,$_cv_ext_globus_data_version)
 fi
 AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
@@ -1284,6 +1289,18 @@ CONDOR_EXTERNAL_VERSION([gt3gahp],[2.0])
 CONDOR_EXTERNAL_VERSION([zlib],[1.1.3])
 
 CONDOR_EXTERNAL_VERSION([pvm],[3.4.2])
+
+# AC_MSG_CHECKING([classads])
+# _cv_ext_classads_version="classads-0.9.7"
+# AC_MSG_RESULT([$_cv_ext_classads_version])
+# AC_SUBST(ext_classads_version,$_cv_ext_classads_version)
+CONDOR_EXTERNAL_VERSION([classads],[0.9.7])
+
+# AC_MSG_CHECKING([srb])
+# _cv_ext_srb_version="srb-3.2.1"
+# AC_MSG_RESULT([$_cv_ext_srb_version])
+# AC_SUBST(ext_srb_version,$_cv_ext_srb_version)
+CONDOR_EXTERNAL_VERSION([srb],[3.2.1])
 
 else
 # if there's no externals at all, we still need to define these to

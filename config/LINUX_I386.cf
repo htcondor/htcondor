@@ -11,6 +11,13 @@
 #ifdef IS_GLIBC23
 /*#define NEEDS_64BIT_SYSCALLS            YES*/
 /*#define NEEDS_64BIT_STRUCTS             YES*/
+	/* Currently, Stork only builds on RH9. */
+#	define WANT_STORK                     YES
+#endif
+#ifdef WANT_STORK
+#	define WANT_NEW_CLASSADS              YES
+#	define WANT_SRB                       YES
+#	define WANT_GLOBUS_DATA               YES
 #endif
 
 #define WANT_PVM	YES

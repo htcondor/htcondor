@@ -5,11 +5,16 @@
 #include "credential.h"
 #include "X509credential.h"
 #include "X509credentialWrapper.h"
-#include "condor_xml_classads.h"
+#include "xmlSource.h"
+#include "xmlSink.h"
 #include "env.h"
 #include "internet.h"
 #include "condor_config.h"
 #include "directory.h"
+#include "credd_constants.h"
+#include "classadUtil.h"
+
+#define MAX_CRED_DATA_SIZE 100000
 
 template class SimpleList<Credential*>;
 
@@ -22,6 +27,7 @@ char * cred_store_dir = NULL;
 char * cred_index_file = NULL;
 
 int default_cred_expire_threshold;
+
 
 int 
 store_cred_handler(Service * service, int i, Stream *stream) {
@@ -49,15 +55,30 @@ store_cred_handler(Service * service, int i, Stream *stream) {
 
   socket->decode();
 
-  ClassAd classad;
-  if (!classad.initFromStream (*socket)) {
+  classad::ClassAdParser parser;
+  char * classad_str = NULL;
+  if (!socket->code (classad_str)) {
     dprintf (D_ALWAYS, "Error receiving credential metadata\n"); 
     return FALSE;
   }
+
+  std::string classad_cstr = classad_str;
+  free (classad_str);
+
+  classad::ClassAd * _classad = parser.ParseClassAd(classad_cstr);
+  if (!_classad) {
+	  dprintf (D_ALWAYS, "Error: invalid credential metadata %s\n", classad_str);
+	  return FALSE;
+  }
+
+  classad::ClassAd classad(*_classad);
+  delete _classad;
+  
+ 
   
   Credential * cred = NULL;
   int type;
-  if (!classad.LookupInteger ("Type", type)) {
+  if (!classad.EvaluateAttrInt ("Type", type)) {
     dprintf (D_ALWAYS, "Missing Type attribute in classad!\n");
     return FALSE;
   }
@@ -68,39 +89,72 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   if (type == X509_CREDENTIAL_TYPE) {
     cred = new X509CredentialWrapper (classad);
     dprintf (D_ALWAYS, "Name=%s Size=%d\n", cred->GetName(), cred->GetDataSize());
-    data_size = cred->GetDataSize();
-    data = malloc (data_size);
+
   } else {
-    dprintf (D_ALWAYS, "Wrong credential type %d\n", type);
+    dprintf (D_ALWAYS, "Unsupported credential type %d\n", type);
     return FALSE;
   }
 
   cred->SetOrigOwner (socket->getOwner()); // original remote uname
   cred->SetOwner (user);                   // mapped uname
 
-
   // Receive credential data
+  data_size = cred->GetDataSize();
+  if (data_size > MAX_CRED_DATA_SIZE) {
+    dprintf (D_ALWAYS, "ERROR: Credential data size %d > maximum allowed (%d)\n", data_size, MAX_CRED_DATA_SIZE);
+    return FALSE;
+  }
+
+  data = malloc (data_size);
   if (!socket->code_bytes(data,data_size)) {
     dprintf (D_ALWAYS, "Error receiving credential data\n");
     return FALSE;
   }
-
   cred->SetData (data, data_size);
+  
 
+  // Check whether credential under this name already exists
+  Credential * temp_cred = NULL;
+  bool found_cred=false;
+  credentials.Rewind();
+  while (credentials.Next(temp_cred)) {
+    if ((strcmp(cred->GetName(), temp_cred->GetName()) == 0) && 
+	(strcmp(cred->GetOwner(), temp_cred->GetOwner()) == 0)) {
+	found_cred=true;
+	break; // found it
+    }
+  }
+
+  if (found_cred) {
+    dprintf (D_ALWAYS, "Credential %s for owner %s already exists!\n", cred->GetName(), cred->GetOwner());
+    delete cred;
+    socket->encode();
+    int rc=CREDD_ERROR_CREDENTIAL_ALREADY_EXISTS;
+    socket->code(rc);
+    return FALSE;
+  }
+
+  
   // Write data to a file
   char * temp_file_name = dircat (cred_store_dir, "credXXXXXX");
   mkstemp (temp_file_name);
   cred->SetStorageName (temp_file_name);
   
-  StoreData(temp_file_name,data,data_size);
-  
+  init_user_id_from_FQN (user);
+  if (!StoreData(temp_file_name,data,data_size)) {
+    socket->encode();
+    int rc = CREDD_UNABLE_TO_STORE;
+    socket->code(rc);
+    return TRUE;
+  }
+
   // Write metadata to a file
   credentials.Append (cred);
   SaveCredentialList();
 
   // Write response to the client
   socket->encode();
-  int rc = 0;
+  int rc = CREDD_SUCCESS;
   socket->code(rc);
 
   return TRUE;
@@ -110,7 +164,7 @@ store_cred_handler(Service * service, int i, Stream *stream) {
 
 int 
 get_cred_handler(Service * service, int i, Stream *stream) {
-  char name[_POSIX_PATH_MAX];
+  char * name = NULL;
 
   ReliSock * socket = (ReliSock*)stream;
 
@@ -131,12 +185,9 @@ get_cred_handler(Service * service, int i, Stream *stream) {
     }
   }
 
-
-
   socket->decode();
 
-  char * pstr = (char*)name;
-  if (!socket->code(pstr)) {
+  if (!socket->code(name)) {
     dprintf (D_ALWAYS, "Error receiving credential name\n"); 
     return FALSE;
   }
@@ -203,7 +254,9 @@ get_cred_handler(Service * service, int i, Stream *stream) {
     
     int rc = LoadData (cred->GetStorageName(), data, data_size);
     dprintf (D_FULLDEBUG, "Credential::LoadData returned %d\n", rc);
-    return rc;
+    if (rc == 0) {
+      return FALSE;
+    }
     
     socket->code (data_size);
     socket->code_bytes (data, data_size);
@@ -211,7 +264,7 @@ get_cred_handler(Service * service, int i, Stream *stream) {
   }
   else {
     dprintf (D_ALWAYS, "Cannot find cred %s\n", name);
-    int rc = -1;
+    int rc = CREDD_CREDENTIAL_NOT_FOUND;
     socket->code (rc);
   }
 
@@ -221,11 +274,10 @@ get_cred_handler(Service * service, int i, Stream *stream) {
 
 int 
 query_cred_handler(Service * service, int i, Stream *stream) {
-  char request[_POSIX_PATH_MAX];
+  char * request = NULL;
 
   ReliSock * socket = (ReliSock*)stream;
 
-  socket->decode();
 
   if (!socket->isAuthenticated()) {
     char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "READ");
@@ -242,21 +294,17 @@ query_cred_handler(Service * service, int i, Stream *stream) {
       return FALSE;
     }
   }
+  const char * user = socket->getFullyQualifiedUser();
+  dprintf (D_ALWAYS, "Authenticated as %s\n", user);
 
 
-  char * pstr = (char*)request;
-  if (!socket->code(pstr)) {
+  socket->decode();
+  if (!socket->code(request)) {
     dprintf (D_ALWAYS, "Error receiving request\n"); 
     return FALSE;
   }
 
-
-  const char * user = socket->getFullyQualifiedUser();
-  char * owner = NULL;
-
-  dprintf (D_ALWAYS, "Authenticated as %s\n", user);
-
-  if (strcmp (request, "*") == 0) {
+  if ((request != NULL) && (strcmp (request, "*") == 0)) {
       if (!isSuperUser (user)) {
 	dprintf (D_ALWAYS, "User %s is NOT super user, request DENIED\n", user);
 	return FALSE;
@@ -264,11 +312,9 @@ query_cred_handler(Service * service, int i, Stream *stream) {
   }
 
     
+  // Find credentials for this user
   Credential * cred = NULL;
-
   SimpleList <Credential*> result_list;
-
-  bool found_cred=false;
   credentials.Rewind();
   while (credentials.Next(cred)) {
     if (cred->GetType() == X509_CREDENTIAL_TYPE) {
@@ -278,14 +324,22 @@ query_cred_handler(Service * service, int i, Stream *stream) {
     }
   }
 
+
+
   socket->encode();
   int length = result_list.Length();
+  dprintf (D_FULLDEBUG, "User has %d credentials\n", length);
   socket->code (length);
 
   result_list.Rewind();
   while (result_list.Next(cred)) {
-    ClassAd _temp (*(cred->GetClassAd()));
+	  classad::ClassAd _temp (*(cred->GetClassAd()));
+#if 0
     _temp.put (*socket);
+#else
+	putOldClassAd(socket, _temp);
+#endif
+	
   }
   
   return TRUE;
@@ -294,17 +348,9 @@ query_cred_handler(Service * service, int i, Stream *stream) {
 
 int 
 rm_cred_handler(Service * service, int i, Stream *stream) {
-  char name[_POSIX_PATH_MAX];
+  char * name = NULL;
 
   ReliSock * socket = (ReliSock*)stream;
-
-  socket->decode();
-
-  char * pstr = (char*)name;
-  if (!socket->code(pstr)) {
-    dprintf (D_ALWAYS, "Error receiving credential name\n"); 
-    return FALSE;
-  }
 
   if (!socket->isAuthenticated()) {
     char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "READ");
@@ -320,6 +366,14 @@ rm_cred_handler(Service * service, int i, Stream *stream) {
       dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
       return FALSE;
     }
+  }
+
+
+  socket->decode();
+
+  if (!socket->code(name)) {
+    dprintf (D_ALWAYS, "Error receiving credential name\n"); 
+    return FALSE;
   }
 
   const char * user = socket->getFullyQualifiedUser();
@@ -389,8 +443,9 @@ rm_cred_handler(Service * service, int i, Stream *stream) {
   free (owner);
   
   socket->encode();
+ 
 
-  int rc = (found_cred)?0:1;
+  int rc = (found_cred)?CREDD_SUCCESS:CREDD_CREDENTIAL_NOT_FOUND;
   socket->code(rc);
 
   return TRUE;
@@ -406,17 +461,18 @@ SaveCredentialList() {
     return FALSE;
   }
 
-  MyString buff;
-  ClassAdXMLUnparser unparser;
+
+  classad::ClassAdXMLUnParser unparser;
   Credential * pCred = NULL;
 
   // Clear the old list
   credentials.Rewind();
   while (credentials.Next(pCred)) {
-    const ClassAd * pclassad = pCred->GetClassAd();
-    ClassAd temp_classad(*pclassad); // lame
-    unparser.Unparse (&temp_classad, buff);
-    fprintf (fp, "%s\n", buff.Value());
+    const classad::ClassAd * pclassad = pCred->GetClassAd();
+	classad::ClassAd temp_classad(*pclassad); // lame
+    std::string buff;
+    unparser.Unparse (buff, &temp_classad);
+    fprintf (fp, "%s\n", buff.c_str());
   }
 
   fclose (fp);
@@ -440,8 +496,8 @@ LoadCredentialList () {
 
   credentials.Rewind();
   
-  ClassAdXMLParser parser;
-  char buff[10000];
+  classad::ClassAdXMLParser parser;
+  char buff[50000];
   
   priv_state priv = set_root_priv();
 
@@ -453,16 +509,15 @@ LoadCredentialList () {
     return TRUE;
   }
 
-  while (fgets(buff, 10000, fp)) {
+  while (fgets(buff, 50000, fp)) {
     if ((buff[0] == '\n') || (buff[0] == '\r')) {
       continue;
     }
     
-    printf ("Creating classad from %s\n", buff);
-    ClassAd * classad = parser.ParseClassAd (buff);
+	classad::ClassAd * classad = parser.ParseClassAd (buff);
     int type=0;
 
-    if ((!classad) || (!classad->LookupInteger("Type", type))) {
+    if ((!classad) || (!classad->EvaluateAttrInt ("Type", type))) {
       dprintf (D_ALWAYS, "Invalid classad %s\n", buff);
       set_priv (priv);
       return FALSE;
@@ -492,13 +547,16 @@ CheckCredentials () {
   time_t now = time(NULL);
 
   while (credentials.Next(pCred)) {
+    
+    init_user_id_from_FQN (pCred->GetOwner());
+    priv_state priv = set_user_priv();
+
     time_t time = pCred->GetRealExpirationTime();
     dprintf (D_FULLDEBUG, "Checking %s:%s = %d\n",
 	       pCred->GetOwner(),
                pCred->GetName(),
 	       time);
-    
-    
+
     if (time - now < 0) {
       dprintf (D_FULLDEBUG, "Credential %s:%s expired!\n",
 	       pCred->GetOwner(),
@@ -513,6 +571,7 @@ CheckCredentials () {
       }
     }
     
+    set_priv (priv); // restore old priv
   }
   
   return TRUE;
@@ -534,7 +593,7 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   if (proxy->get_delegation_pid) {
     time_t time_started = proxy->get_delegation_proc_start_time;
 
-    // If the refresh proxy is still running, kill it
+    // If the old "refresh proxy" proc is still running, kill it
     if (now - time_started > 500) {
       dprintf (D_FULLDEBUG, "Refresh process pid=%d still running, sending SIGKILL\n", 
 	       proxy->get_delegation_pid);
@@ -547,18 +606,19 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
 
   // Set up environnment for myproxy-get-delegation
   Env myEnv;
-  char buff[_POSIX_PATH_MAX];
+  MyString strBuff;
 
   if (proxy->GetMyProxyServerDN()) {
-    sprintf (buff, "MYPROXY_SERVER_DN=%s",
-	     proxy->GetMyProxyServerDN());
-    myEnv.Put (buff);
-    dprintf (D_FULLDEBUG, "%s\n", buff);
+    strBuff="MYPROXY_SERVER_DN=";
+    strBuff+= proxy->GetMyProxyServerDN();
+    myEnv.Put (strBuff.Value());
+    dprintf (D_FULLDEBUG, "%s\n", strBuff.Value());
   }
 
-  sprintf (buff,"X509_USER_PROXY=%s", proxy->GetStorageName());
-  myEnv.Put (buff);
-  dprintf (D_FULLDEBUG, "%s\n", buff);
+  strBuff="X509_USER_PROXY=";
+  strBuff+=proxy->GetStorageName();
+  myEnv.Put (strBuff.Value());
+  dprintf (D_FULLDEBUG, "%s\n", strBuff.Value());
 
 
   // Get password (this will end up in stdin for myproxy-get-delegation)
@@ -585,27 +645,42 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   int myproxy_port = getPortFromAddr (proxy->GetMyProxyServerHost());
 
   // construt arguments
-  char args[1000];
-  sprintf(args, "-v -o %s -s %s -d -t %d -S -l %s",
-	  proxy_filename,
-	  myproxy_host,
-	  6,
-	  username);
+  MyString strArgs = "";
+  strArgs += " -v";
 
+  strArgs += " -o ";
+  strArgs += proxy_filename;
+
+  strArgs += " -s ";
+  strArgs += myproxy_host;
+
+  strArgs += " -d ";
+
+  strArgs += " -t ";
+  strArgs += 6;
+
+  strArgs += " -S ";
+
+  strArgs += " -l ";
+  strArgs += username;
 
   // Optional port argument
   if (myproxy_port) {
-    sprintf (buff, " -p %d ", myproxy_port);
-    strcat (args, buff);
+    strArgs += " -p ";
+    strArgs += myproxy_port;
   }
 
   // Optional credential name
   if (proxy->GetCredentialName()) {
-    sprintf (buff, " -k %s ", proxy->GetCredentialName());
-    strcat (args, buff);
+    strArgs += " -k ";
+    strArgs += proxy->GetCredentialName();
   }
-  
+
+
   // Create temporary file to store myproxy-get-delegation's stderr
+  // The file will be owned by the "condor" user
+
+  priv_state priv = set_condor_priv();
   proxy->get_delegation_err_filename = create_temp_file();
   chmod (proxy->get_delegation_err_filename, 0600);
   proxy->get_delegation_err_fd = open (proxy->get_delegation_err_filename,O_RDWR);
@@ -613,6 +688,7 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
     dprintf (D_ALWAYS, "Error opening file %s\n",
 	     proxy->get_delegation_err_filename);
   }
+  set_priv (priv);
 
 
   int arrIO[3];
@@ -627,11 +703,11 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   }
 
 
-  dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args);
+  dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, strArgs.Value());
 
   int pid = daemonCore->Create_Process (
 					myproxy_get_delegation_pgm,
-					args,
+					strArgs.Value(),
 					PRIV_USER_FINAL,
 					myproxyGetDelegationReaperId,
 					FALSE,
@@ -798,7 +874,6 @@ Init() {
       dprintf (D_ALWAYS, "ERROR: Unable to create credential index file %s\n", cred_index_file);
       set_priv (priv);
       DC_Exit (1 );
-
     }
   } else {
     if ((stat_buff.st_mode & (S_IRWXG | S_IRWXO)) ||
@@ -818,14 +893,20 @@ StoreData (const char * file_name, const void * data, const int data_size) {
     return FALSE;
   }
 
-  priv_state priv = set_root_priv();
 
-  int fd = open (file_name, O_WRONLY);
+  priv_state priv = set_root_priv();
+  dprintf (D_FULLDEBUG, "in StoreData(), euid=%d\n", geteuid());
+
+  int fd = open (file_name, O_WRONLY | O_CREAT | O_TRUNC );
   if (fd == -1) {
     dprintf (D_ALWAYS, "Unable to store in %s\n", file_name);
     set_priv(priv);
     return FALSE;
   }
+
+  // Change to user owning the cred (assume init_user_ids() has been called)
+  fchmod (fd, S_IRUSR | S_IWUSR);
+  fchown (fd, get_user_uid(), get_user_gid());
 
   write (fd, data, data_size);
 
@@ -845,9 +926,9 @@ LoadData (const char * file_name, void *& data, int & data_size) {
     set_priv (priv);
     return FALSE;
   }
-  char buff [100000];
   
-  data_size = read (fd, buff, 100000);
+  char buff [MAX_CRED_DATA_SIZE+1];
+  data_size = read (fd, buff, MAX_CRED_DATA_SIZE);
   buff[data_size]='\0';
 
   close (fd);
@@ -865,3 +946,37 @@ LoadData (const char * file_name, void *& data, int & data_size) {
   return TRUE;
 
 }
+
+
+int
+init_user_id_from_FQN (const char * _fqn) {
+
+  char * uid = NULL;
+  char * domain = NULL;
+  char * fqn = NULL;
+  
+  if (_fqn) {
+    fqn = strdup (_fqn);
+    uid = fqn;
+
+    // Domain?
+    char * pAt = strchr (fqn, '@');
+    if (pAt) {
+      *pAt='\0';
+      domain = pAt+1;
+    }
+  }
+  
+  if (uid == NULL) {
+    uid = "nobody";
+  }
+
+  int rc = init_user_ids (uid, domain);
+  dprintf (D_FULLDEBUG, "Switching to user %s@%s, result = %d\n", uid, domain, rc);
+
+  if (fqn)
+    free (fqn);
+
+  return rc;
+}
+

@@ -8,13 +8,17 @@
 
 #include "condor_common.h"
 #include <time.h>
-#include "condor_classad.h"
+#ifndef WANT_NAMESPACES
+#define WANT_NAMESPACES
+#endif
+#include "classad_distribution.h"
+#include "MyString.h"
 
 
 class Credential {
 
 public:
-  Credential(const ClassAd&);
+  Credential(const classad::ClassAd&);
   Credential();
   virtual ~Credential();
 
@@ -25,6 +29,7 @@ public:
   void SetName(const char *);
 
   int GetType();
+  virtual const char * GetTypeString() = 0;
 
   const char * GetOwner();
   void SetOwner (const char *);
@@ -32,7 +37,7 @@ public:
   const char * GetOrigOwner();
   void SetOrigOwner(const char *);
 
-  const ClassAd * GetClassAd();
+  const classad::ClassAd * GetClassAd();
  
   virtual int GetDataSize();
   virtual void SetData(const void * pData, int size);
@@ -42,7 +47,7 @@ public:
   virtual const char * GetStorageName() = 0;
 
  protected:
-  ClassAd * attr_list;
+  classad::ClassAd * attr_list;
   void * data;
 
   void SetDataSize(int);
