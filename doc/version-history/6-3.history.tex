@@ -45,6 +45,15 @@ same section of the manual.
 In particular, see section~\ref{sec:Config-Val-Security} on
 page~\pageref{sec:Config-Val-Security}. 
 
+\item Added the \Arg{-full} option to \Condor{reconfig}.
+The \Arg{-full} option causes the Condor daemon to clear its cache of
+DNS information and some other expensive operations.
+So, the regular \Condor{reconfig} is now more light-weight, and can
+be used more frequently without undue overhead on the Condor daemons. 
+The default \Condor{reconfig} has also been changed so that it will
+work from any host with \DCPerm{WRITE} permission in your pool,
+instead of requiring \DCPerm{ADMINISTRATOR} access.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
