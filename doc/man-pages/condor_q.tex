@@ -195,7 +195,10 @@ per machine basis.
 	       locate schedds. (The default is the \Macro{COLLECTOR\_HOST}
 	       specified in the configuration file.}
 	\OptItem{\Opt{-analyze}}{Perform an approximate analysis to determine how
-		many resources are available to run the requested jobs}
+		many resources are available to run the requested jobs.  These results
+		are only meaningful for jobs using Condor's matchmaker.  This option
+		is never meaningful for Scheduler universe jobs and only meaningful
+		for Globus universe jobs doing matchmaking.}
 	\OptItem{\Opt{-run}}{Get information about running jobs.}
 	\OptItem{\Opt{-hold}}{Get information about jobs in the hold state.
 	        Also displays the time the job was placed into the hold state
