@@ -1,6 +1,10 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
+#if !defined(WIN32)
+#include <utmp.h>
+#endif
+
 int
 calc_disk()
 {
