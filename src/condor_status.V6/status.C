@@ -96,7 +96,8 @@ main (int argc, char *argv[])
 
 	  case MODE_STARTD_AVAIL:
 			  // For now, -avail shows you machines avail to anyone.
-    	sprintf (buffer, "(TARGET.%s == TRUE)", ATTR_REQUIREMENTS);
+		sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_STATE, 
+					state_to_string(unclaimed_state));
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
