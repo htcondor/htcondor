@@ -344,13 +344,11 @@ all_pty_idle_time( time_t now )
 {
 	char	*f;
 
-	/* XXX this shouldn't be static, it gets it wrong under redhat 7.1 where
-		pts entries come and go in the /dev structure as they are needed */
 	static Directory *dev = NULL;
 	static Directory *dev_pts = NULL;
+	static bool checked_dev_pts = false;
 	time_t	idle_time;
 	time_t	answer = (time_t)INT_MAX;
-	static bool checked_dev_pts = false;
 	struct stat	statbuf;
 
 	if( ! checked_dev_pts ) {
@@ -397,6 +395,32 @@ all_pty_idle_time( time_t now )
 			}
 		}
 	}	
+
+	/* Under linux kernel 2.4, the /dev directory is dynamic. This means tty 
+		entries come and go depending upon the number of users actually logged
+		in.  If we keep the Directory object static, then we will never know or
+		incorrectly check ttys that might or might not exist. 
+		Hopefully the performance might not be that bad under linux because
+		this stuff is created each and every time this function is called.
+		psilord 1/4/2002
+	*/
+#if defined(LINUX) && defined(GLIBC22)
+	if (dev != NULL)
+	{
+		delete dev;
+		dev = NULL;
+	}
+
+	if (checked_dev_pts == true)
+	{
+		if (dev_pts != NULL)
+		{
+			delete dev_pts;
+			dev_pts = NULL;
+		}
+		checked_dev_pts = false;
+	}
+#endif
 
 	return answer;
 }
