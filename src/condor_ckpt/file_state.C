@@ -2369,7 +2369,6 @@ LocalAccess( int user_fd )
 int 
 IOServerAccess( int user_fd )
 {
-  dprintf(D_ALWAYS,"Calling ioserveraccess with fd :%d (%d)\n",user_fd, FileTab->isIOServerAccess(user_fd));
   return FileTab->isIOServerAccess( user_fd );
 }
 
