@@ -117,6 +117,14 @@ accepting new transfer requests, producing a variety of errors.
       when using Kerberos authentication.
   \end{itemize}
 
+\item Fixed bugs related to network security sessions which were
+  getting cleared out.
+  If the timing was unfortunate, this could cause some jobs to fail
+  immediately after completion.
+  So, Condor no longer clears out security sessions periodically (it
+  used to happen every 8 hours) nor does it do so when a daemon
+  receives a \Condor{reconfig} command.
+
 \item Fixed a bug in the standard universe where C++ code that threw an 
 exception would result in abortion of the executable instead of the
 delivery of the exception. This bug affects Condor version 6.6.0 for
