@@ -3,8 +3,9 @@ are submitted. The basic mechanisms for monitoring a job are
 introduced, but the commands are discussed briefly.
 You are encouraged to
 look at the man pages of the commands referred to (located in
-Chapter~\ref{command-reference} beginning on
-page~\pageref{command-reference}) for more information. 
+% Karen changed this by adding sec: to both lines
+Chapter~\ref{sec:command-reference} beginning on
+page~\pageref{sec:command-reference}) for more information. 
 
 When jobs are submitted, Condor will attempt to find resources
 to run the jobs. 
@@ -14,6 +15,7 @@ may be obtained through \Condor{status}
 with the 
 \Arg{-submitters} option. 
 An example of this would yield output similar to:
+\footnotesize
 \begin{verbatim}
 %  condor_status -submitters
 
@@ -33,6 +35,7 @@ nice-user.condor@cs.                 6                504                  0
 
                Total                 7                516                  5
 \end{verbatim}
+\normalsize
 
 \subsection{Checking on the progress of jobs}
 At any time, you can check on the status of your jobs with the \Condor{q}
@@ -40,6 +43,7 @@ command.
 \index{Condor commands!condor\_q}
 This command displays the status of all queued jobs.
 An example of the output from \Condor{q} is
+\footnotesize
 \begin{verbatim}
 %  condor_q
 
@@ -52,6 +56,7 @@ An example of the output from \Condor{q} is
 3 jobs; 2 idle, 1 running, 0 held
 
 \end{verbatim} 
+\normalsize
 This output contains many columns of information about the
 queued jobs.
 \index{status!of queued jobs}
@@ -110,6 +115,7 @@ You can also find all the machines that are running your job through the
 \index{Condor commands!condor\_status}
 For example, to find all the machines that are
 running jobs submitted by ``breach@cs.wisc.edu,'' type:
+\footnotesize
 \begin{verbatim}
 %  condor_status -constraint 'RemoteUser == "breach@cs.wisc.edu"'
 
@@ -125,7 +131,9 @@ istat04.st INTEL    SOLARIS251   Claimed    Busy       0.988  64    0+00:10:00
 istat09.st INTEL    SOLARIS251   Claimed    Busy       0.301  64    0+03:45:00
 ...
 \end{verbatim}
+\normalsize
 To find all the machines that are running any job at all, type:
+\footnotesize
 \begin{verbatim}
 %  condor_status -run
 
@@ -143,6 +151,7 @@ bamba.cs.w INTEL    SOLARIS251   1.574  dmarino@cs.wisc.edu  riola.cs.wisc.e
 bardolph.c INTEL    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
 ...
 \end{verbatim}
+\normalsize
 
 \subsection{Removing a job from the queue}
 A job can be removed from the queue at any time by using the \Condor{rm}
@@ -151,6 +160,7 @@ command.  If the job that is being removed is currently running, the job
 is killed without a checkpoint, and its queue entry is removed.  
 The following example shows the queue of jobs before and after
 a job is removed.
+\footnotesize
 \begin{verbatim}
 %  condor_q
 
@@ -172,6 +182,7 @@ Job 132.0 removed.
 
 1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:job-prio}Changing the priority of jobs}
@@ -188,6 +199,7 @@ The default priority of a job is 0, but can be changed using the \Condor{prio}
 command.
 \index{Condor commands!condor\_prio}
 For example, to change the priority of a job to -15,
+\footnotesize
 \begin{verbatim}
 %  condor_q raman
 
@@ -207,6 +219,7 @@ For example, to change the priority of a job to -15,
 
 1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
+\normalsize
 
 It is important to note that these \emph{job} priorities are completely 
 different from the \emph{user} priorities assigned by Condor.  Job priorities
@@ -226,6 +239,7 @@ option of \Condor{q}.
 \index{Condor commands!condor\_q}
 For example, the following job submitted by user
 jbasney was found to have not run for several days.
+\footnotesize
 \begin{verbatim}
 % condor_q
 
@@ -235,9 +249,11 @@ jbasney was found to have not run for several days.
 
 1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
+\normalsize
 
 Running \Condor{q}'s analyzer provided the following information:
 
+\footnotesize
 \begin{verbatim}
 %  condor_q 125.0 -analyze
 
@@ -258,6 +274,7 @@ WARNING:  Be advised:
 Requirements = Arch == "INTEL" && OpSys == "IRIX6" && 
   Disk >= ExecutableSize && VirtualMemory >= ImageSize
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%
 %condor_status -total lists the Arch/OS combinations in our pool:

@@ -153,6 +153,9 @@ ClassAds about the resources available in your pool.
 Type \Condor{status} and hit enter to see a summary 
 similar to the following:
 \begin{center}
+%\small       too big
+%\tiny        too small
+\footnotesize
 \begin{verbatim}
 Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime
 
@@ -164,6 +167,7 @@ anthrax.cs INTEL    SOLARIS251   Claimed    Busy       0.285  64    0+00:00:00
 astro.cs.w INTEL    SOLARIS251   Claimed    Busy       0.949  64    0+05:30:00
 aura.cs.wi SUN4u    SOLARIS251   Owner      Idle       1.043  128   0+14:40:15
 \end{verbatim}
+\normalsize
 \Dots 
 \end{center}
 
@@ -203,7 +207,7 @@ add a physical location attribute to your machine ClassAds.
 %
 \begin{center}
 \begin{figure}
-\CondorVerySmall
+\small
 \begin{verbatim}
 MyType = "Machine"
 TargetType = "Job"
@@ -1129,6 +1133,7 @@ in their \AdAttr{requirements} expression.
 The expression added when the attribute \AdAttr{CkptArch} is not specified 
 will default to
 
+\footnotesize
 \begin{verbatim}
   # Added by Condor
   CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
@@ -1136,6 +1141,7 @@ will default to
 
   Requirements = (<user specified policy>) && $(CkptRequirements)
 \end{verbatim}
+\normalsize
 
 The behavior of the \AdAttr{CkptRequirements} expressions and its addition to
 \AdAttr{requirements} is as follows.
