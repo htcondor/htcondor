@@ -66,11 +66,6 @@ release_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 static_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 strip_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 
-release_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-static_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-strip_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
-
-
 $(GAHP_DIR)/gahp_server:
 	/bin/true
 
