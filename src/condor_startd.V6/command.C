@@ -20,6 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
@@ -622,10 +624,13 @@ if( req_classad ) 	 					\
 free( shadow_addr );					\
 return FALSE
 
-#define CLOSE \
+#ifndef WIN32
+#	define CLOSE \
 (void)close(sock_1);	\
 (void)close(sock_2);
-
+#else
+#	define CLOSE 
+#endif
 
 int
 activate_claim( Resource* rip, Stream* stream ) 
@@ -643,6 +648,12 @@ activate_claim( Resource* rip, Stream* stream )
 	start_info_t ji;	/* XXXX */
 	int universe, job_cluster, job_proc, starter;
 	char* shadow_addr = strdup( sin_to_string( stream->endpoint() ));
+
+#ifdef WIN32
+	ji.shadowCommandSock = stream;
+#else
+	ji.shadowCommandSock = NULL;
+#endif
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
@@ -747,6 +758,7 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
+#ifndef WIN32
 		// Set up the two starter ports and send them to the shadow
 	stRec.version_num = VERSION_FOR_FLOCK;
 	stRec.ports.port1 = create_port(&sock_1);
@@ -783,7 +795,6 @@ activate_claim( Resource* rip, Stream* stream )
 	/* now that we sent stRec, free stRec.server_name which we strduped */
 	free( stRec.server_name );
 
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	/* Wait for connection to port1 */
 	len = sizeof frm;
 	memset( (char *)&frm,0, sizeof frm );
@@ -823,9 +834,12 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 	CLOSE;
 
-	ji.ji_hname = rip->r_cur->client()->host();
+
 	ji.ji_sock1 = fd_1;
 	ji.ji_sock2 = fd_2;
+#endif	// of ifndef WIN32
+
+	ji.ji_hname = rip->r_cur->client()->host();
 
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in the machine ad and cur Match object
@@ -870,7 +884,6 @@ activate_claim( Resource* rip, Stream* stream )
 	rip->change_state( busy_act );
 
 	free( shadow_addr );
-#endif
 	return TRUE;
 }
 #undef ABORT
