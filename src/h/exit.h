@@ -64,6 +64,13 @@
 /* The job was kicked off without a checkpoint */
 #define JOB_NOT_CKPTED	(7 + EXIT_CODE_OFFSET)
 
+/* We define this to the same number, since we want the same behavior.
+   However, "JOB_NOT_CKPTED" doesn't mean much if we're not a standard
+   universe job.  The effect of this exit code is that we want the job
+   to be put back in the job queue and run again. 
+*/
+#define JOB_SHOULD_REQUEUE	(7 + EXIT_CODE_OFFSET)
+
 /* Can't connect to startd or request refused */
 #define JOB_NOT_STARTED	(8 + EXIT_CODE_OFFSET)
 
@@ -78,6 +85,9 @@
 
 /* The job should be put on hold */
 #define JOB_SHOULD_HOLD (12 + EXIT_CODE_OFFSET)
+
+/* The job should be removed */
+#define JOB_SHOULD_REMOVE (13 + EXIT_CODE_OFFSET)
 
 /* There is a fatal error with dprintf() */
 #define DPRINTF_ERROR 44
