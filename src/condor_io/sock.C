@@ -321,8 +321,62 @@ int Sock::bind(
 	return TRUE;
 }
 
+int Sock::set_os_buffers(int desired_size, bool set_write_buf)
+{
+	int current_size = 0;
+	int previous_size = 0;
+	int attempt_size = 0;
+	int command;
+	int ret_val;
+	int temp;
 
-int Sock::setsockopt(SOCKET level, int optname, const char* optval, int optlen)
+	if (_state == sock_virgin) assign();
+	
+	if ( set_write_buf ) {
+		command = SO_SNDBUF;
+	} else {
+		command = SO_RCVBUF;
+	}
+
+	// Log the current size since Todd is curious.  :^)
+	temp = sizeof(int);
+	::getsockopt(_sock,SOL_SOCKET,command,
+			(char*)&current_size,&temp);
+	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n",
+		current_size / 1024);
+	current_size = 0;
+
+	/* 
+		We want to set the socket buffer size to be as close
+		to the desired size as possible.  Unfortunatly, there is no
+		contant defined which states the maximum size possible.  So
+		we keep raising it up 2k at a time until (a) we got up to the
+		desired value, or (b) it is not increasing anymore.  We ignore
+		errors (-1) values from setsockopt since on some platforms this 
+		could signal a value which is to low...
+	*/
+	 
+	do {
+		attempt_size += 2000;
+		if ( attempt_size > desired_size ) {
+			attempt_size = desired_size;
+		}
+		ret_val = setsockopt(SOL_SOCKET,command,
+			(char*)&attempt_size,sizeof(int));
+		if ( ret_val < 0 )
+			continue;
+		previous_size = current_size;
+		temp = sizeof(int);
+		::getsockopt(_sock,SOL_SOCKET,command,
+			(char*)&current_size,&temp);
+	} while ( ((ret_val < 0) || (previous_size < current_size))
+				&& (attempt_size < desired_size) );
+
+	return current_size;
+}
+
+
+int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 {
 	/* if stream not assigned to a sock, do it now	*/
 	if (_state == sock_virgin) assign();

@@ -97,7 +97,10 @@ public:
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 	int bind(int =0);
-    int setsockopt(SOCKET, int, const char*, int); 
+    int setsockopt(int, int, const char*, int); 
+	
+	int set_os_buffers(int desired_size, bool set_write_buf = false);
+	
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
 	int close();
 
