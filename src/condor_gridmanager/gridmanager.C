@@ -637,25 +637,19 @@ doContactSchedd()
 										curr_job->procID.proc,
 										ATTR_RELEASE_REASON, &reason )
 				 >= 0 ) {
-				SetAttributeString( curr_job->procID.cluster,
-									curr_job->procID.proc,
-									ATTR_LAST_RELEASE_REASON, reason );
+				curr_job->UpdateJobAdString( ATTR_LAST_RELEASE_REASON,
+											 reason );
 			}
 			free( reason );
-			DeleteAttribute(curr_job->procID.cluster,
-							curr_job->procID.proc,
-							ATTR_RELEASE_REASON );
-			SetAttributeInt( curr_job->procID.cluster, 
-							 curr_job->procID.proc,
-				ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+			curr_job->UpdateJobAd( ATTR_RELEASE_REASON, "UNDEFINED" );
+			curr_job->UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS,
+									  (int)time(0) );
 			int sys_holds = 0;
 			GetAttributeInt(curr_job->procID.cluster, 
 						curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
 						&sys_holds);
 			sys_holds++;
-			SetAttributeInt(curr_job->procID.cluster, 
-						curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
-						sys_holds);
+			curr_job->UpdateJobAdInt( ATTR_NUM_SYSTEM_HOLDS, sys_holds );
 		} else {	// !UA_HOLD_JOB
 			// If we have a
 			// job marked as HELD, it's because of an earlier hold
@@ -671,9 +665,8 @@ doContactSchedd()
 					// Finally, if we are just changing from one unintersting state
 					// to another, update the ATTR_ENTERED_CURRENT_STATUS time.
 				if ( curr_job->condorState != job_status_schedd ) {
-					SetAttributeInt( curr_job->procID.cluster,
-									 curr_job->procID.proc, 
-						ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+					curr_job->UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS,
+											  (int)time(0) );
 				}
 			}
 		}
@@ -698,13 +691,21 @@ doContactSchedd()
 			GetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
 							  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
 			accum_time += (float)( time(NULL) - shadowBirthdate );
-			SetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
-							  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
-			DeleteAttribute(curr_job->procID.cluster, curr_job->procID.proc,
-							ATTR_JOB_WALL_CLOCK_CKPT);
+			curr_job->UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK,
+										accum_time );
+			curr_job->UpdateJobAd( ATTR_JOB_WALL_CLOCK_CKPT, "UNDEFINED" );
 			// ATTR_SHADOW_BIRTHDATE on the schedd will be updated below
 			curr_job->UpdateJobAdInt( ATTR_SHADOW_BIRTHDATE, 0 );
 
+		}
+
+		if ( curr_action->actions & UA_FORGET_JOB ) {
+			int dummy;
+			curr_job->UpdateJobAdBool( ATTR_JOB_MANAGED, 0 );
+			if ( curr_job->ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+				curr_job->UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
+				curr_job->UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+			}
 		}
 
 dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",curr_job->procID.cluster, curr_job->procID.proc);
@@ -726,24 +727,6 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 		}
 
 		curr_job->ad->ClearAllDirtyFlags();
-
-		if ( curr_action->actions & UA_FORGET_JOB ) {
-			int dummy;
-			SetAttribute( curr_job->procID.cluster,
-						  curr_job->procID.proc,
-						  ATTR_JOB_MANAGED,
-						  "FALSE" );
-			if ( curr_job->ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-				SetAttribute( curr_job->procID.cluster,
-							  curr_job->procID.proc,
-							  ATTR_JOB_MATCHED,
-							  "FALSE" );
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_CURRENT_HOSTS,
-								 0 );
-			}
-		}
 
 		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
 dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster, curr_job->procID.proc);
@@ -870,9 +853,8 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 											ATTR_LAST_RELEASE_REASON, reason );
 					}
 					free( reason );
-					DeleteAttribute( procID.cluster,
-									 procID.proc,
-									 ATTR_RELEASE_REASON );
+					SetAttribute( procID.cluster, procID.proc,
+								  ATTR_RELEASE_REASON, "UNDEFINED" );
 					SetAttributeString( procID.cluster,
 										procID.proc,
 										ATTR_HOLD_REASON,
