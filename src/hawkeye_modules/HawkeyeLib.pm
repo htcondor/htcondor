@@ -150,6 +150,10 @@ sub ParseUptime( $$ )
     local $_ = shift;
     my $HashRef = shift;
 
+    # Cleanup the line
+    chomp $_;
+    s/^\s+//;
+
     # Get rid of all the damn commas
     s/,//g;
 
