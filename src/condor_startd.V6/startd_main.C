@@ -53,8 +53,6 @@ static StringList *valid_cod_users = NULL;
 
 // Hosts
 DCCollector*	Collector = NULL;
-DCCollector*	View_Collector = NULL;
-char*	condor_view_host = NULL;
 char*	accountant_host = NULL;
 
 // Others
@@ -429,19 +427,6 @@ init_params( int first_time)
 			// new object.
 		Collector = new DCCollector;
 	}
-
-
-	if( condor_view_host ) {
-		free( condor_view_host );
-	}
-	condor_view_host = param( "CONDOR_VIEW_HOST" );
-    if (View_Collector) {
-        delete View_Collector;
-    }
-    if (condor_view_host) {
-        View_Collector = new DCCollector( condor_view_host, 
-										  CONDOR_VIEW_PORT );
-    }
 
 	tmp = param( "POLLING_INTERVAL" );
 	if( tmp == NULL ) {

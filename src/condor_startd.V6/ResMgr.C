@@ -1144,18 +1144,6 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 		}
 	}  
 
-		// If we have an alternate collector, send public CA there.
-	if( View_Collector ) {
-		if( View_Collector->sendUpdate(cmd, public_ad, private_ad) ) {
-			num++;
-		} else {
-			dprintf( D_FAILURE|D_ALWAYS,
-					 "Error sending update to the view collector %s: %s\n", 
-					 View_Collector->updateDestination(), 
-					 View_Collector->error() );
-		}
-	}  
-
 		// Increment the resmgr's count of updates.
 	num_updates++;
 	return num;
@@ -1203,11 +1191,6 @@ ResMgr::report_updates( void )
 				 "Sent %d update(s) to the collector (%s)\n", 
 				 num_updates, Collector->fullHostname() );
 	}  
-	if( View_Collector ) {
-		dprintf( D_FULLDEBUG, 
-				 "Sent %d update(s) to the condor_view host (%s)\n",
-				 num_updates, View_Collector->fullHostname() );
-	}
 }
 
 
