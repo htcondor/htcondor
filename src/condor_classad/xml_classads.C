@@ -713,11 +713,7 @@ ClassAdXMLUnparser::add_bool_start_tag(
 	MyString     &buffer, 
 	BooleanBase  *bool_expr)
 {
-	if (!_use_compact_spacing) {
-		buffer += "    <";
-	} else {
-		buffer += '<';
-	}
+	buffer += '<';
 	buffer += tag_names[tag_Bool].name;
 	buffer += " v=\"";
 	if (bool_expr->Value()) {
