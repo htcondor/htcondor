@@ -1,11 +1,11 @@
 #include "caseSensitivity.h"
 #include "exprTree.h"
 
-static int hashFcn( const MyString& , int numBkts );
+static int fnHashFcn( const MyString& , int numBkts );
 static char* _FileName_ = __FILE__;
 
 bool FunctionCall::initialized = false;
-FunctionCall::FuncTable FunctionCall::functionTable( 20 , &hashFcn );
+FunctionCall::FuncTable FunctionCall::functionTable( 20 , &fnHashFcn );
 
 // start up with an argument list of size 4
 FunctionCall::
@@ -197,7 +197,7 @@ _flatten( EvalState &state, EvalValue &value, ExprTree*&tree, OpKind* )
 }
 
 
-static int hashFcn( const MyString &fnName , int numBkts )
+static int fnHashFcn( const MyString &fnName , int numBkts )
 {
 	int	acc = 0;
 	int len = fnName.Length();
@@ -450,7 +450,6 @@ sumFrom (char *, ArgumentList &argList, EvalState &state, EvalValue &val)
 	while( ( ca = vl->Next() ) ) {
 		if( !ca->isClassAdValue( ad ) ) {
 			val.setErrorValue();
-			delete vl;
 			return;
 		}
 		ad->evaluate( argList[1], tmp );
@@ -463,7 +462,6 @@ sumFrom (char *, ArgumentList &argList, EvalState &state, EvalValue &val)
 		tmp.clear();
 	}
 
-	delete vl;
 	val.copyFrom( result );
 	return;
 }
@@ -496,7 +494,6 @@ avgFrom (char *, ArgumentList &argList, EvalState &state, EvalValue &val)
 	while( ( ca = vl->Next() ) ) {
 		if( !ca->isClassAdValue( ad ) ) {
 			result.setErrorValue();
-			delete vl;
 			return;
 		}
 		ad->evaluate( argList[1], tmp );
@@ -517,7 +514,6 @@ avgFrom (char *, ArgumentList &argList, EvalState &state, EvalValue &val)
 		val.setUndefinedValue();
 	}
 
-	delete vl;
 	val.copyFrom( result );
 	return;
 }
@@ -552,7 +548,6 @@ boundFrom (char *fn, ArgumentList &argList, EvalState &state, EvalValue &val)
 	while( ( ca = vl->Next() ) ) {
 		if( !ca->isClassAdValue( ad ) ) {
 			val.setErrorValue();
-			delete vl;
 			return;
 		}
 		ad->evaluate( argList[1], tmp );
@@ -567,7 +562,6 @@ boundFrom (char *fn, ArgumentList &argList, EvalState &state, EvalValue &val)
 		}
 	}
 
-	delete vl;
 	val.copyFrom( result );
 	return;
 }
