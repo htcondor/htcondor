@@ -109,16 +109,26 @@ const char HeaderKey[] = "0.0";
 
 static void AppendHistory(ClassAd*);
 
+// Create a hash table which, given a cluster id, tells how 
+// many procs are in the cluster
+static inline int compute_clustersize_hash(const int &key,int numBuckets) { 
+	return ( key % numBuckets );
+}
+typedef HashTable<int, int> ClusterSizeHashTable_t;
+static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
+
 void
 InitJobQueue(const char *job_queue_name)
 {
 	assert(!JobQueue);
 	JobQueue = new ClassAdLog(job_queue_name);
+	ClusterSizeHashTable = new ClusterSizeHashTable_t(17,compute_clustersize_hash);
 
 	/* We read/initialize the header ad in the job queue here.  Currently,
 	   this header ad just stores the next available cluster number. */
 	ClassAd *ad;
 	int 	cluster_num;
+	int 	*numOfProcs = NULL;	
 	bool	CreatedAd = false;
 	char	cluster_str[40];
 	if (JobQueue->table.lookup(HashKey(HeaderKey), ad) != 0) {
@@ -138,6 +148,13 @@ InitJobQueue(const char *job_queue_name)
 			if (ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) {
 				if (cluster_num >= next_cluster_num) {
 					next_cluster_num = cluster_num + 1;
+				}
+				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
+					// First proc we've seen in this cluster; set size to 1
+					ClusterSizeHashTable->insert(cluster_num,1);
+				} else {
+					// We've seen this cluster_num go by before; increment proc count
+					(*numOfProcs)++;
 				}
 			}
 		}
@@ -430,6 +447,7 @@ NewProc(int cluster_id)
 	int				proc_id;
 	char			key[_POSIX_PATH_MAX];
 	LogNewClassAd	*log;
+	int				*numOfProcs = NULL;
 
 	if (CheckConnection() < 0) {
 		return -1;
@@ -444,6 +462,15 @@ NewProc(int cluster_id)
 	sprintf(key, "%d.%d", cluster_id, proc_id);
 	log = new LogNewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 	JobQueue->AppendLog(log);
+
+	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) == -1 ) {
+		// First proc we've seen in this cluster; set size to 1
+		ClusterSizeHashTable->insert(cluster_id,1);
+	} else {
+		// We've seen this cluster_num go by before; increment proc count
+		(*numOfProcs)++;
+	}
+
 	return proc_id;
 }
 
@@ -456,6 +483,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	LogDestroyClassAd	*log;
 	PROC_ID				job_id;
 	int					c, p;
+	int					*numOfProcs = NULL;
 
 	if (CheckConnection() < 0) {
 		return -1;
@@ -479,24 +507,19 @@ int DestroyProc(int cluster_id, int proc_id)
 	// Remove checkpoint files
 	cleanup_ckpt_files(cluster_id,proc_id,active_owner);
 
-	/* If this is the last job in the cluster, then remove the initial
-	   checkpoint file. */
-	bool lastjob = true;
-	JobQueue->table.startIterations();
-	while(JobQueue->table.iterate(ad) == 1 && lastjob) {
-		if (ad->LookupInteger(ATTR_CLUSTER_ID, c) == 1) {
-			if (c == cluster_id) {
-				ad->LookupInteger(ATTR_PROC_ID, p);
-				if (p != proc_id) {
-					lastjob = false;
-				}
-			}
+	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
+		// We've seen this cluster_num go by before; increment proc count
+		// NOTICE that numOfProcs is a _reference_ to an int which we
+		// fetched out of the hash table via the call to lookup() above.
+		(*numOfProcs)--;
+
+		// If this is the last job in the cluster, remove the initial 
+		//    checkpoint file and the entry in the ClusterSizeHashTable.
+		if ( *numOfProcs == 0 ) {
+			ClusterSizeHashTable->remove(cluster_id);
+			ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
+			(void)unlink( ckpt_file_name );
 		}
-	}
-	if (lastjob) {
-		ckpt_file_name =
-			gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
-		(void)unlink( ckpt_file_name );
 	}
 
 	JobQueueDirty = true;
@@ -544,6 +567,8 @@ int DestroyCluster(int cluster_id)
 	ickpt_file_name =
 		gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
 	(void)unlink( ickpt_file_name );
+
+	ClusterSizeHashTable->remove(cluster_id);
 
 	JobQueueDirty = true; 
 
@@ -612,6 +637,7 @@ int DestroyClusterByConstraint(const char* constraint)
 							gen_ckpt_name( Spool, job_id.cluster, ICKPT, 0 );
 						(void)unlink( ickpt_file_name );
 						prev_cluster = job_id.cluster;
+						ClusterSizeHashTable->remove(job_id.cluster);
 					}
 				}
 			}
