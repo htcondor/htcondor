@@ -466,7 +466,7 @@ get_tilde()
 char*
 find_global()
 {
-	char	file[256];
+	char	file[_POSIX_PATH_MAX];
 	sprintf( file, "%s_config", myDistro->Get() );
 	return find_file( EnvGetName( ENV_CONFIG), file );
 }
@@ -475,7 +475,7 @@ find_global()
 char*
 find_global_root()
 {
-	char	file[256];
+	char	file[_POSIX_PATH_MAX];
 	sprintf( file, "%s_config.root", myDistro->Get() );
 	return find_file( EnvGetName( ENV_CONFIG_ROOT ), file );
 }
