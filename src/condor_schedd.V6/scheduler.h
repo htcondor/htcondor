@@ -72,7 +72,8 @@ struct OwnerData {
 
 struct match_rec
 {
-    match_rec(char*, char*, PROC_ID*);
+    match_rec(char*, char*, PROC_ID*, ClassAd*, char*);
+	~match_rec();
     char    		id[SIZE_OF_CAPABILITY_STRING];
     char    		peer[50];
     int     		cluster;
@@ -82,6 +83,8 @@ struct match_rec
 	int				alive_countdown;
 	int				num_exceptions;
     int             isMatchedMPI;
+	ClassAd*		my_match_ad;
+	char*			user;
 };
 
 enum MrecStatus {
@@ -98,6 +101,7 @@ struct contactStartdArgs {
 	char *owner;
 	char *host;
 	PROC_ID id;
+	ClassAd *my_match_ad;
 };
 
 class Scheduler : public Service
@@ -138,7 +142,7 @@ class Scheduler : public Service
 	void			display_shadow_recs();
 
 	// match managing
-    match_rec*       	AddMrec(char*, char*, PROC_ID*);
+    match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*);
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
     int         	MarkDel(char*);
@@ -250,10 +254,12 @@ class Scheduler : public Service
 			@param user The submitting "owner@uiddomain"
 			@param server The startd to contact
 			@param jobId Put in the mrec and used to get the jobAd
+			@param my_match_ad The matching startd ad - put in the mrec
 			@return 0 on failure and 1 on success
 		 */
 	int		 		contactStartd(char *capability , char *user, 
-								  char *server, PROC_ID *jobId   );
+								  char *server, PROC_ID *jobId,
+								  ClassAd *my_match_ad);
 
 		/** Registered in contactStartd, this function is called when
 			the startd replies to our request.  If it replies in the 
