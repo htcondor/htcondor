@@ -1,0 +1,34 @@
+\begin{ManPage}{\label{man-stork-q}\Stork{q}}{1}
+{remove a Stork job}
+\Synopsis \SynProg{\Stork{q}}
+\ToolArgsBase
+
+\SynProg{\Stork{q}}
+\oOpt{-debug}
+\Storkname
+
+
+\index{Condor commands!stork\_q}
+\index{Stork commands!stork\_q}
+\index{stork\_q command}
+
+\Description 
+
+\Stork{q} prints the entire queue of Stork jobs.
+Output is provided in the syntax of the ClassAd language.
+See \URL{http://www.cs.wisc.edu/condor/classad} for information
+on the ClassAd language.
+
+
+\begin{Options}
+	\ToolArgsBaseDesc
+	\OptItem{\Opt{-debug}}{Show extra debugging information.}
+	\StorknameDesc
+\end{Options}
+
+\ExitStatus
+
+\Stork{q} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

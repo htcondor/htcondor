@@ -1,0 +1,34 @@
+\begin{ManPage}{\label{man-stork-rm}\Stork{rm}}{1}
+{remove a Stork job}
+\Synopsis \SynProg{\Stork{rm}}
+\ToolArgsBase
+
+\SynProg{\Stork{rm}}
+\oOpt{-debug}
+\Storkname
+\Arg{job-id}
+
+
+\index{Condor commands!stork\_rm}
+\index{Stork commands!stork\_rm}
+\index{stork\_rm command}
+
+\Description 
+
+\Stork{rm} removes a Stork job from the queue,
+using the required command-line argument to identify the Stork job.
+
+
+\begin{Options}
+	\ToolArgsBaseDesc
+	\OptItem{\Opt{-debug}}{Show extra debugging information.}
+	\OptItem{\OptArg{-name}{server\_name}}{Name of \Stork{server}.}
+	\StorknameDesc
+\end{Options}
+
+\ExitStatus
+
+stork\_rm will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
