@@ -119,6 +119,8 @@ main_init(int argc, char *argv[])
 	// install command handlers for queries
 	daemonCore->Register_Command(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
+	daemonCore->Register_Command(QUERY_STARTD_ADS,"QUERY_STARTD_PVT__ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
