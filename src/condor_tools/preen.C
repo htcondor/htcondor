@@ -143,6 +143,7 @@ char *ValidLogFiles[] = {
 	"priorities.pag",
 	"priorities.dir",
 	"machine_status",
+	"QueueLock",
 	0
 };
 
