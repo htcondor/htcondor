@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_pre,v 1.1.4.2 2004-09-08 20:16:13 bgietzel Exp $
+# $Id: platform_pre,v 1.1.4.3 2004-09-08 21:11:12 bgietzel Exp $
 # Submit-side NMI build system infrastructure to setup platform
 # specific input for test jobs.  All we have to do is trim down the
 # architecture-dependent results.tar.gz file to remove all the
@@ -19,6 +19,10 @@ my $BaseDir = getcwd();
 
 
 my $tarball_file = "CONDOR-TARBALL-NAME";
+
+
+print "NMI_PLATFORM environment variable is $ENV{NMI_PLATFORM}\n"; 
+print "NMI_PLATFORM environment variable is $ENV{'NMI_PLATFORM'}\n"; 
 my $results = "$ENV{NMI_PLATFORM}/results.tar.gz";
 -f $results || die "$results does not exist!\n";
 
