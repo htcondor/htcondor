@@ -26,6 +26,8 @@ CONLIBAPI_OBJ = $(API_OBJ) \
 	../condor_util_lib/setsyscalls.o \
 	uids.o \
 	../condor_util_lib/chomp.o \
+	get_mysubsystem.o \
+	my_subsystem.o \
 	strnewp.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
