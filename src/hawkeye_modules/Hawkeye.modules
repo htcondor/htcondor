@@ -6,6 +6,7 @@ version: 1.0-rc2
 +condor_node
 +condor_pool
 +df
++downlist
 +gass_cache
 +gdmphb
 +grid_probe
@@ -25,6 +26,10 @@ version: 1.0-rc1
 target: condor_pool
 version: 1.0-rc2
 +condor_pool
+
+target: downlist
+version: 1.0-rc1
++downlist
 
 target: df
 version: 1.0-rc2
