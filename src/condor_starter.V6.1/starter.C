@@ -67,6 +67,7 @@ CStarter::CStarter()
 	filetrans = NULL;
 	transfer_at_vacate = false;
 	requested_exit = false;
+	wants_file_transfer = false;
 }
 
 
@@ -490,6 +491,7 @@ CStarter::BeginFileTransfer( void )
 {
 	char tmp[_POSIX_ARG_MAX];
 	int change_iwd = true;
+	wants_file_transfer = true;
 
 		/* setup value for transfer_at_vacate and also determine if 
 		   we should change our working directory */
@@ -504,6 +506,7 @@ CStarter::BeginFileTransfer( void )
 	case 'n':  /* for "Never" */
 	case 'N':
 		change_iwd = false;  // It's true otherwise...
+		wants_file_transfer = false;
 		break;
 	}
 

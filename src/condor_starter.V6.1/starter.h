@@ -118,6 +118,8 @@ public:
 		/// Start a timer for the periodic update to the shadow
 	void startUpdateTimer( void );
 
+	bool wantsFileTransfer( void ) { return wants_file_transfer; };
+
 protected:
 	List<UserProc> JobList;
 	List<UserProc> CleanedUpJobList;
@@ -234,6 +236,7 @@ private:
 		/// timer id for periodically sending info on job to Shadow
 	int shadowupdate_tid;
 
+	bool wants_file_transfer;
 };
 
 #endif
