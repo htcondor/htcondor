@@ -613,12 +613,21 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	rval = pstat_getproc( &buf, sizeof(buf), 0, pid );
 
 	if ( rval < 0 ) {
-		dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d): errno=%d\n",
-				 pid, errno );
+		int		status = -2;
+
+		// Handle "No such process" separately!
+		if ( ESRCH == errno ) {
+			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
+			status = -1;
+		} else {
+			dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d): errno=%d\n",
+					 pid, errno );
+			status = -2;
+		}
 		delete pi; 
 		pi = NULL;
 		set_priv( priv );
-		return -2;
+		return status;
 	}
 
 	if( pagesize == 0 ) {
