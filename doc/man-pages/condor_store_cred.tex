@@ -1,0 +1,51 @@
+\begin{ManPage}{\label{man-condor-store-cred}\Condor{store\_cred}}{1}
+{securely stash user's password - for Win32 only}
+\Synopsis \SynProg{\Condor{store\_cred}}
+\Optnm{add $|$ delete}
+%\oOpt{delete}
+
+\index{Condor commands!condor\_store\_cred}
+\index{condor\_store\_cred command}
+
+\Description 
+
+\Condor{store\_cred} stores the password of a user/domain pair
+securely in the Windows registry.
+Using this stored password,
+Condor is able to run jobs with the user ID of the submitting user
+when running scheduler universe jobs and DAGMan.
+The password is stored
+in the same manner as 
+the system does when
+setting or changing account passwords.
+
+When \Condor{store\_cred} is invoked,
+it contacts the \Condor{schedd} daemon to 
+carry out the requested operations on behalf of the user.
+This is necessary since registry keys
+are accessible only by the Windows SYSTEM account, not by administrators
+or other users. 
+
+The password is stashed in a persistent manner; it is maintained
+across system reboots.
+
+\begin{Options}
+
+	\OptItem{\Opt{add}}{Store the current user's password in the
+	registry.  The user is prompted to enter the password
+	twice for confirmation, and
+	characters are not echoed.
+	If there is already have a password stashed,
+	the old password will be overwritten by the new password.}
+
+	\OptItem{\Opt{delete}}{Delete the current user's
+	stashed password, if it exists.}
+
+\end{Options}
+
+\ExitStatus
+
+\Condor{store\_cred} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
