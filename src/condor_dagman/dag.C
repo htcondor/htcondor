@@ -391,6 +391,10 @@ bool Dag::ProcessLogEvents (bool recovery) {
             }
             break;
         }
+		if( e != NULL ) {
+			// event allocated earlier by _condorLog.readEvent()
+			delete e;
+		}
     }
     if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
         printf ("    -----------------------\n");
