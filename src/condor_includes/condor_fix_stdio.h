@@ -23,7 +23,15 @@
 #ifndef FIX_STDIO_H
 #define FIX_STDIO_H
 
+#if defined(LINUX) && defined(GLIBC)
+#define dprintf _hide_dprintf
+#endif
+
 #include <stdio.h>
+
+#if defined(LINUX) && defined(GLIBC)
+#undef dprintf
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
