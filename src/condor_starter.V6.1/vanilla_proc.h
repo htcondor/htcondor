@@ -28,6 +28,10 @@
 #include "killfamily.h"
 #include "file_transfer.h"
 
+
+/* forward reference */
+class SafeSock;
+
 /** The Vanilla-type job process class.  Uses procfamily to do its
 	dirty work.
  */
@@ -58,9 +62,23 @@ public:
 
 		/** Do a family->hardkill(); */
 	virtual void ShutdownFast();
+
+protected:
+	virtual int UpdateShadow();
+
 private:
 	ProcFamily *family;
 	FileTransfer *filetrans;
+
+	// timer id for periodically taking a ProcFamily snapshot
+	int snapshot_tid;
+
+	// timer id for periodically sending info on job to Shadow
+	int shadowupdate_tid;
+
+	// UDP socket back to the shadow command port
+	SafeSock *shadowsock;
+
 };
 
 #endif
