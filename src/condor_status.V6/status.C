@@ -40,7 +40,6 @@
 #include "condor_string.h"   // for strnewp()
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
-#include "condor_classad_analysis.h"	// NAC
 
 // global variables
 ClassAdPrintMask pm;
@@ -63,7 +62,7 @@ ExtArray<ExprTree*> sortLessThanExprs( 4 );
 ExtArray<ExprTree*> sortEqualExprs( 4 );
 bool            javaMode = false;
 
-ClassAdAnalyzer analyzer;	// NAC
+//ClassAdAnalyzer analyzer;	// NAC
 
 // instantiate templates
 template class ExtArray<ExprTree*>;
@@ -747,8 +746,8 @@ customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 	bool		boolValue = false;		// NAC
 	
 	MatchClassAd mad;			// NAC
-	mad.ReplaceLeftAd( analyzer.AddExplicitTargets( ad1 ) );	// NAC
-	mad.ReplaceRightAd( analyzer.AddExplicitTargets( ad2 ) );	// NAC
+	mad.ReplaceLeftAd( ad1->AddExplicitTargetRefs( ) );	// NAC
+	mad.ReplaceRightAd( ad2->AddExplicitTargetRefs( ) );	// NAC
 
 	for( int i = 0 ; i <= last ; i++ ) {
 //		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
@@ -764,7 +763,6 @@ customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 //			return 0;
 //		}
 		currentTree = sortLessThanExprs[i];			// NAC	
-		currentTree->SetParentScope( ad1 );			//  |
 		ad1->EvaluateExpr( currentTree, result ); 	//  |	
 		if( result.IsBooleanValue( boolValue ) ) {	// \|/
 			if( boolValue) {	
@@ -773,7 +771,6 @@ customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 				return 1;
 			} else {
 				currentTree = sortEqualExprs[i];
-				currentTree->SetParentScope( ad1 );
 				ad1->EvaluateExpr( currentTree, result );
 				if( result.IsBooleanValue( boolValue ) ) {
 					if( !boolValue ) {

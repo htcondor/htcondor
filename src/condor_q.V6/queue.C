@@ -1614,7 +1614,9 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	return_buff[0]='\0';
 
-	mad.ReplaceLeftAd( analyzer.AddExplicitTargets( request ) );	   	// NAC
+		// FOR BACK COMPATIBILITY
+		// Add the 'TARGET' keyword to any external references
+	mad.ReplaceLeftAd( request->AddExplicitTargetRefs( ) );	// NAC
 
 	if( !request->EvaluateAttrString( ATTR_OWNER, owner, 128 ) ) {		// NAC
 		return "Nothing here.\n";										// NAC
@@ -1653,12 +1655,14 @@ doRunAnalysisToBuffer( ClassAd *request )
 
   	startdAds.Open();
 	while( offer = startdAds.Next( ) ) {
-		offer = analyzer.AddExplicitTargets( offer );
 
 			// FOR BACK COMPATIBILITY
+			// Add the 'TARGET' keyword to any external references
+		offer = offer->AddExplicitTargetRefs( );
 			// Add conditional operators to offer Rank expression if needed
 		ExprTree* rankExpr = offer->Lookup( ATTR_RANK );
-		ExprTree* newRankExpr = analyzer.AddExplicitConditionals( rankExpr );
+		ExprTree* newRankExpr = NULL;
+		offer->AddExplicitConditionals( rankExpr, newRankExpr );
 		if( newRankExpr != NULL ) {
 			offer->Insert( ATTR_RANK, newRankExpr );
 		}
@@ -1718,7 +1722,6 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 		// 3. Is there a remote user?
 		if( !offer->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {
-			stdRankCondition->SetParentScope( offer );				// NAC
 			offer->EvaluateExpr( stdRankCondition, result );		// NAC
 			if( ( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
 				|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
@@ -1741,13 +1744,11 @@ doRunAnalysisToBuffer( ClassAd *request )
 		}
 
 		// 4. Satisfies preemption priority condition?
-		preemptPrioCondition->SetParentScope( offer );				// NAC
 		offer->EvaluateExpr( preemptPrioCondition, result );		// NAC
 		if( ( result.IsBooleanValue( boolValue ) && boolValue )		// NAC
 			|| ( result.IsNumber( intValue ) && intValue ) ) {		// NAC
 
 			// 5. Satisfies standard rank condition?
-			stdRankCondition->SetParentScope( offer );				// NAC
 			offer->EvaluateExpr( stdRankCondition, result );		// NAC
 			if( ( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
 				|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
@@ -1759,13 +1760,11 @@ doRunAnalysisToBuffer( ClassAd *request )
 			} else {
 
 				// 6.  Satisfies preemption rank condition?
-				preemptRankCondition->SetParentScope( offer );			// NAC
 				offer->EvaluateExpr( preemptRankCondition, result );	// NAC
 				if(	( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
 					|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
 
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					preemptionReq->SetParentScope( offer );				// NAC
 					offer->EvaluateExpr( preemptionReq, result );		// NAC
 					if( ( result.IsBooleanValue( boolValue ) 			// NAC
 						  && !boolValue ) ||							// NAC
