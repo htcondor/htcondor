@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_syscall_mode.h"
+#include "file_table_interf.h"
 
 extern "C" {
 
