@@ -58,9 +58,15 @@
 
 #ifdef __GNUG__
 #pragma implementation "extArray.h"
+#pragma implementation "HashTable.h"
 #endif
 
 #include "extArray.h"
+#include "HashTable.h"
+#include "MyString.h"
+
+static int hashFunction( MyString&, int );
+HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -124,6 +130,7 @@ char	*MachineCount	= "machine_count";
 char    *NotifyUser     = "notify_user";
 char    *UserLogFile    = "log";
 char	*CoreSize		= "coresize";
+char	*NiceUser		= "nice_user";
 #if !defined(WIN32)
 char	*KillSig		= "kill_sig";
 #endif
@@ -155,6 +162,7 @@ void	SetCoreSize();
 #if !defined(WIN32)
 void	SetKillSig();
 #endif
+void	SetForcedAttributes();
 void 	check_iwd( char *iwd );
 int 	read_condor_file( FILE *fp );
 char * 	condor_param( char *name );
@@ -693,6 +701,18 @@ SetPriority()
 	}
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_PRIO, prioval);
 	InsertJobExpr (buffer);
+
+	// also check if the job is "dirt user" priority (i.e., nice_user==True)
+	char *nice_user = condor_param(NiceUser);
+	if( nice_user && (*nice_user == 'T' || *nice_user == 't') )
+	{
+		sprintf( buffer, "%s = TRUE", ATTR_NICE_USER );
+		InsertJobExpr( buffer );
+	}
+	else
+	{
+		job.Delete( ATTR_NICE_USER );
+	}
 }
 
 void
@@ -1038,6 +1058,34 @@ static struct SigTable SigNameArray[] = {
 	{ -1, 0 }
 };
 
+
+void
+SetForcedAttributes()
+{
+	MyString	name;
+	MyString	value;
+	char		*exValue;
+
+	forcedAttributes.startIterations();
+	while( ( forcedAttributes.iterate( name, value ) ) )
+	{
+		// expand the value; and insert it into the job ad
+		exValue = expand_macro( (char*)value.Value(), ProcVars, PROCVARSIZE );
+		if( !exValue )
+		{
+			fprintf( stderr, "Warning:  Unable to expand macros in \"%s\"."
+							"  Ignoring.\n", value.Value() );
+			continue;
+		}
+		sprintf( buffer, "%s = %s", name.Value(), exValue );
+		InsertJobExpr( buffer );
+
+		// free memory allocated by macro expansion module
+		free( exValue );
+	}	
+}
+
+
 int
 sig_name_lookup(char sig[])
 {
@@ -1106,7 +1154,8 @@ read_condor_file( FILE *fp )
 		} else
 		if (*name == '-') {
 			name++;
-			job.Delete (name);
+			forcedAttributes.remove( name );
+			job.Delete( name );
 			continue;
 		}
 
@@ -1176,16 +1225,7 @@ read_condor_file( FILE *fp )
 
 		/* if the user wanted to force the parameter into the classad, do it */
 		if (force == 1) {
-			char	buffer[2048];
-			char 	*exValue = expand_macro (value, ProcVars, PROCVARSIZE);
-			if (exValue == NULL) {
-				fprintf (stderr, "Error in expanding %s when processing %s\n", 
-					value, name);
-				exit (1);
-			}
-			sprintf (buffer, "%s = %s", name, exValue);
-			InsertJobExpr (buffer);
-			free (exValue);
+			forcedAttributes.insert( MyString( name ), MyString( value ) );
 		} 
 
 		lower_case( name );
@@ -1294,7 +1334,7 @@ queue(int num)
 		SetStdFile( 1 );
 		SetStdFile( 2 );
 		SetImageSize();
-
+		SetForcedAttributes();
 
 		rval = SaveClassAd( job );
 
@@ -1684,3 +1724,16 @@ InsertJobExpr (char *expr)
 		EXCEPT ("Unable to insert expression: %s\n", expr);
 	}
 }
+
+static int 
+hashFunction (MyString &str, int numBuckets)
+{
+    int i = str.Length() - 1, hashVal = 0;
+    while (i >= 0) 
+    {
+        hashVal += tolower(str[i]);
+        i--;
+    }
+    return (hashVal % numBuckets);
+}
+
