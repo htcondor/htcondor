@@ -325,7 +325,7 @@ MyString::EscapeChars(const MyString& Q, const char escape) const
 }
 
 int 
-MyString::FindChar(int Char, int FirstPos=0) const 
+MyString::FindChar(int Char, int FirstPos) const 
 {
     if (FirstPos >= Len || FirstPos < 0) {
 		return -1;
