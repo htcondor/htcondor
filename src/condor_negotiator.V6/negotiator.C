@@ -211,9 +211,6 @@ main( int argc, char** argv )
 	char	**ptr;
 	fd_set	readfds;
 	struct timeval timer;
-int	i = 1;
-
-while(i);
 
 #ifdef NFSFIX
 	/* Must be condor to write to log files. */
