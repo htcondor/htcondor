@@ -290,7 +290,7 @@ StateMachine::dot_print(FILE *file)
 	fprintf(file, "digraph FSA {\n");
 
 	for( i=0; i<n_transitions; i++ ) {
-		color = (is_asynch_event(TransitionTab[i].event) ? "red" : "blue");
+		color = (char *)(is_asynch_event(TransitionTab[i].event) ? "red" : "blue");
 		TransitionTab[i].dot_print(file, color);
 	}
 	fprintf(file, "}\n");
