@@ -4,7 +4,7 @@
 //--------------------------------------------------------------------------
 
 #include "condor_classad.h"
-#include "Set.h"
+//#include "Set.h"
 #include "HashTable.h"
 #include "MyString.h"
 #include "classad_log.h"
@@ -155,7 +155,8 @@ public:
   */
   //@{
 
-  /** Create an explicit collection, as a child of another collection.
+  /*  NOT USED:
+      Create an explicit collection, as a child of another collection.
       An explicit collection can include any subset of ads which are in its parent.
       The user can actively include and exclude ads from this collection.
       @param ParentCoID The ID of the parent collection.
@@ -163,9 +164,10 @@ public:
       @param FullFlag The flag which indicates automatic insertion of class-ads from the parent.
       @return the ID of the new collection, or -1 in case of failure.
   */
-  int CreateExplicitCollection(int ParentCoID, const MyString& Rank, bool FullFlag=false);
+//  int CreateExplicitCollection(int ParentCoID, const MyString& Rank, bool FullFlag=false);
 
-  /** Create a constraint collection, as a child of another collection.
+  /*  NOT USED
+	  Create a constraint collection, as a child of another collection.
       A constraint collection always contains the subset of ads from the parent, which
       match the constraint.
       @param ParentCoID The ID of the parent collection.
@@ -173,9 +175,11 @@ public:
       @param Constraint sets the constraint expression for this collection.
       @return the ID of the new collection, or -1 in case of failure.
   */
-  int CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint);
+//  int CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint);
 
-  /** Create a partition collection, as a child of another collection.
+
+  /*  NOT USED
+      Create a partition collection, as a child of another collection.
       A partiton collection defines a partition based on a set of attributes. For
       each distinct set of values (corresponding to these attributes), a new
       child collection will be created, which will contain all the class-ads from the
@@ -187,7 +191,7 @@ public:
       @param AttrList The set of attribute names used to define the partition.
       @return the ID of the new collection, or -1 in case of failure.
   */
-  int CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList);
+//  int CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList);
 
   /** Deletes a collection and all of its descendants from the collection tree.
       @param CoID The ID of the collection to be deleted.

@@ -15,6 +15,7 @@ ClassAdCollection::ClassAdCollection(const char* filename)
   LastCoID=0;
   Collections.insert(LastCoID,new ExplicitCollection("",true));
 
+#if 0		// Todd: this code just uses cycles
   HashKey HK;
   char key[_POSIX_PATH_MAX];
   ClassAd* Ad;
@@ -23,6 +24,7 @@ ClassAdCollection::ClassAdCollection(const char* filename)
     HK.sprint(key);
     AddClassAd(0,key,Ad);
   }
+#endif
 }
 
 //----------------------------------------------------------------------------------
@@ -61,7 +63,8 @@ bool ClassAdCollection::NewClassAd(const char* key, const char* mytype, const ch
 {
   LogRecord* log=new LogNewClassAd(key,mytype,targettype);
   ClassAdLog::AppendLog(log);
-  return AddClassAd(0,key);
+  // return AddClassAd(0,key);
+  return true;
 }
 
 //----------------------------------------------------------------------------------
@@ -86,7 +89,8 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
     LogRecord* log=new LogSetAttribute(key,name,value);
     ClassAdLog::AppendLog(log);
   }
-  return AddClassAd(0,key);
+  // return AddClassAd(0,key);
+  return true;
 }
 
 //----------------------------------------------------------------------------------
@@ -102,7 +106,8 @@ bool ClassAdCollection::DestroyClassAd(const char *key)
 {
   LogRecord* log=new LogDestroyClassAd(key);
   ClassAdLog::AppendLog(log);
-  return RemoveClassAd(0,key);
+  // return RemoveClassAd(0,key);
+  return true;
 }
 
 //----------------------------------------------------------------------------------
@@ -119,7 +124,8 @@ bool ClassAdCollection::SetAttribute(const char *key, const char *name, const ch
 {
   LogRecord* log=new LogSetAttribute(key,name,value);
   ClassAdLog::AppendLog(log);
-  return ChangeClassAd(key);
+  // return ChangeClassAd(key);
+  return true;
 }
 
 //----------------------------------------------------------------------------------
@@ -135,11 +141,14 @@ bool ClassAdCollection::DeleteAttribute(const char *key, const char *name)
 {
   LogRecord* log=new LogDeleteAttribute(key,name);
   ClassAdLog::AppendLog(log);
-  return ChangeClassAd(key);
+  // return ChangeClassAd(key);
+  return true;
 }
 
+
+#if 0 // NOT USED
 //----------------------------------------------------------------------------------
-/** Create an Explicit Collection - create a new collection as a child of
+/* Create an Explicit Collection - create a new collection as a child of
 an exisiting collection. This operation, as well as other collection management
 operation is not logged.
 Input: ParentCoID - the ID of the parent collection
@@ -172,6 +181,7 @@ int ClassAdCollection::CreateExplicitCollection(int ParentCoID, const MyString& 
 
   return LastCoID;
 }
+#endif
 
 //----------------------------------------------------------------------------------
 /** Create a constraint Collection - create a new collection as a child of
@@ -184,6 +194,7 @@ Output: the new collectionID
 */
 //----------------------------------------------------------------------------------
 
+#if 0	// Todd: not used
 int ClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint)
 {
   // Lookup the parent
@@ -206,9 +217,11 @@ int ClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString
 
   return LastCoID;
 }
+#endif
 
 //----------------------------------------------------------------------------------
 
+#if 0	// Todd - not used yet
 int ClassAdCollection::CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList)
 {
   // Lookup the parent
@@ -231,6 +244,7 @@ int ClassAdCollection::CreatePartition(int ParentCoID, const MyString& Rank, Str
 
   return LastCoID;
 }
+#endif
 
 //----------------------------------------------------------------------------------
 /** Delete a collection
