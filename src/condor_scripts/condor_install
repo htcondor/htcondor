@@ -28,6 +28,7 @@ umask 0022;
 @sbin_master_names=( "master", "preen" );
 @lib_names=( "c_plus_alloc.o", "condor_rt0.o", "condor_syscall_lib.a",
 	    "libckpt.a", "ld" );
+@perl_scripts=( "sbin/condor_install", "bin/condor_submit_dag" );
 $needs_lock=0;
 $fs_domain="";
 $uid_domain="";
@@ -116,7 +117,6 @@ if( grep(/central_manager/, @install_type) ) {
     @machines = &prompt_multi_machines();
 }
 
-
 print "\nPress enter to continue. ";
 $_ = <STDIN>;
 
@@ -129,6 +129,16 @@ $release_dir = &install_release_dir();
 print "\nUsing $release_dir as the Condor release directory.\n",
 "\nPress enter to continue. ";
 $_ = <STDIN>;
+
+###  Figure out if perl is in a non-standard location, and if so where
+###  it's installed.
+$perl_path = &find_perl();
+###  Now that we have it, fix the path in our scripts.
+if( $perl_path ) {
+    foreach $script (@perl_scripts) {
+	&fix_perl_path( "$release_dir/$script" );
+    }
+}
 
 ###  Do what we need to do:
 if( grep(/submit/, @install_type) ) {
@@ -319,56 +329,59 @@ sub configure_submit_only {
 }
 
 
+# Finds where perl is installed and returns the path to it.  If it's
+# installed in /usr/bin/perl (the standard location), we just return "". 
 sub find_perl {
-    local( $perl );
-    chop($_ = `which perl`);
-    if( /^\/.*$/ ) {
-	print "\nIt looks like perl is installed in: $_\n",
-	"Is this the version of perl I should use? [yes] ";
-	$perl = $_;
-	chop( $_ = <STDIN> );
-	if( /(^[Yy].*)|^$/ ) {
-	    return $perl;
-	}
-    } else {
-	print "\nI can't find perl in your PATH.\n";
+    local( $perl, $FOO );
+    local( $install ) = "$release_dir/sbin/condor_install";
+
+    # Try some obvious defaults
+    -f "/usr/bin/perl" && -x "/usr/bin/perl" && return "/usr/bin/perl";
+    -f "/usr/local/bin/perl" && -x "/usr/local/bin/perl" && 
+	return "/usr/local/bin/perl";
+
+    # See what we've got in the condor_install script in the
+    # release directory
+    open( FOO, "<$install" ) || die "Can't open $install for reading: !$\n";
+    $_ = <FOO>;
+    close FOO;
+    if( ! /^#!\/usr\/bin\/perl\s.*$/ ) {
+       # If it's not still /usr/bin/perl, it's probably right.
+       /^#!(\S*)/;
+       -f $1 && -x $1 && return $1;
+    }
+
+    # We give up, ask the user.
+    print "\nWARNING: perl is not installed in a standard location.\n\n";
+    chop( $perl = `which perl` );
+    if( -x $perl && -f $perl ) {
+	print "$perl is in your PATH, should I use that? [yes] ";
+	$_ = <STDIN>;
+	/(^y.*)|^$/i && return $perl;
     }
     while( 1 ) {
-	print "Where is perl installed? ";
+	print "Where is perl installed? (give the full path) ";
 	chop( $_ = <STDIN> );
-	if( -x $_ ) {
-	    return $_;
+	-x $_ && -f $_ && return $_;
+	if( /^.*\/$/ ) { 
+	    # What they gave ends in "/", try appending "perl"
+	    $perl = $_ . "perl";
 	} else {
-	    print "I can't execute $_, try again.\n";
+	    # Doesn't end in "/", try appending "/perl"
+	    $perl = $_ . "/perl";
 	}
+	-x $perl && -f $perl && return $perl;
+	print "I can't execute \"$_\", try again.\n";
     }
 }
 
-
 sub customize_condor_script {
     local( *pool_ref, *conf_ref ) = @_;
-    local( $def_pool, $pool, $tool, $perl_path );
+    local( $def_pool, $pool, $tool );
     $def_pool = $pool_ref[0];
 
     print "\nCustomizing the \"condor\" script ... ";
     
-    if( ! -x "/usr/bin/perl" ) {
-	print "\n\nWARNING: perl is installed in a non-standard location ",
-	"on this machine.\nDo you want me to put the right path to perl ",
-	"in the condor script? [yes] ";
-	chop( $_ = <STDIN> );
-	if( /(^[Yy].*)|^$/ ) {
-	    $perl_path = &find_perl();
-	} else {
-	    print "\nYou're either going to have to edit the script when this ",
-	    "completes, or\nyou're going to have to invoke the script with:\n",
-	    "\"perl condor\" or something.\n";
-	    $perl_path = "";
-	}
-    } else {
-	$perl_path = "";
-    }
-
     open( GENERIC, "<$release_dir/etc/examples/condor.generic" ) || 
 	die "\nCan't open generic condor script: $release_dir/etc/examples/condor.generic\n";
     open( CONDOR, ">$path/condor" ) || die "\nCan't open condor script: $path/condor\n";
@@ -390,7 +403,7 @@ sub customize_condor_script {
 	      }
 	      last SWITCH;
 	  }
-	  if( /^\#\!\/usr\/bin\/perl.*$/ && $perl_path ) {
+	  if( $perl_path && /^\#\!\/usr\/bin\/perl.*$/ ) {
 	      print CONDOR "#!$perl_path\n";
 	      last SWITCH;
 	  }	     
@@ -399,7 +412,7 @@ sub customize_condor_script {
     }
     close CONDOR;
     close GENERIC;
-    chmod(0755, "$path/condor") || die "\nCan't chmod $path/condor: $!\n";
+    chmod( 0755, "$path/condor" ) || die "\nCan't chmod $path/condor: $!\n";
     print "\nCreated $path/condor.\n";
 
     foreach $tool ( "master", @bin_names, @tool_names ) {
@@ -410,6 +423,29 @@ sub customize_condor_script {
 	link( "$path/condor", "$path/condor_$tool" ) || 
 	    die "Can't create link: $path/condor_$tool: $!\n";
     }
+}
+
+sub fix_perl_path() {
+    local( $file ) = @_;
+    local( $tmp_name, $args );
+    -f $file || die "Error: $file doesn't exist!\n";
+    $tmp_name = "$file.tmp";
+    rename( $file, $tmp_name );
+    open( IN, "<$tmp_name" ) || die "Can't open $tmp_name for reading: $!\n";
+    open( OUT, ">$file" ) || die "Can't open $file for writing: $!\n";
+    $args = "";
+    $_ = <IN>;
+    if( /^#!\S*(.*)$/ ) {
+       $args = $1;
+    }
+    print OUT "#!$perl_path$args\n";
+    while( <IN> ) {
+	print OUT $_;
+    }
+    close IN;
+    close OUT;
+    unlink( $tmp_name ) || die "Can't unlink $tmp_name: $!\n";
+    chmod( 0755, $file ) || die "Can't chmod $file: $!\n";
 }
 
 
@@ -835,7 +871,7 @@ sub prompt_mail_settings {
 	} else {
 	    $mail_path = $_;
 	}
-	if( ! -x $mail_path ) {
+	if( ! (-x $mail_path && -f $mail_path) ) {
 	    print "I can't execute \"$mail_path\", try again.\n";
 	} else {
 	    last;
@@ -854,12 +890,12 @@ sub get_default_mail_path {
       if(/^OSF1/)  { $mail_path="/usr/ucb/mailx";  last SWITCH; }
       $mail_path="/bin/mail";
   }   
-    if( -x $mail_path ) { return $mail_path; }
+    -f $mail_path && -x $mail_path && return $mail_path;
 
     foreach $mail_path ( "/bin/mailx", "/usr/sbin/mailx",
 		        "/usr/ucb/mailx", "/usr/bin/mail",
 		        "/usr/ucb/mail", "/bin/mail" ) {
-	if( -x $mail_path ) { return $mail_path; }
+	-f $mail_path && -x $mail_path && return $mail_path;
     }
     return "";
 }
@@ -1450,7 +1486,7 @@ sub customize_init_script {
     close GENERIC;
     close INIT;
     unlink( "$init_name.old" );
-    chmod( 0777, $init_name );
+    chmod( 0755, $init_name );
 }
 
 
@@ -1672,7 +1708,7 @@ sub prompt_domain_settings {
     "(in particular, the section \"Shared Filesystem Config File Entries\")\n",
     "for a complete explaination of these (and other, related) settings.\n";
 
-    print "\nDo all of the machines in your pool from your domain " .
+    print "\nDo all of the machines in your pool from your domain ",
 	"(\"$domain\")\nshare a common filesystem? [no] ";
     chop($_ = <STDIN>);    
     if( /^y$/i ) {
@@ -1704,3 +1740,4 @@ sub prompt_domain_settings {
 	$uid_domain="\$(FULL_HOSTNAME)";
     }
 }
+

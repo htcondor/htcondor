@@ -31,9 +31,17 @@ calc_phys_memory()
 {
   int pagesize;
   struct pst_static s;
+  unsigned long ram;
+  int ret_value;	// phys mem in megabytes
   
   if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-    return( (s.physical_memory * s.page_size) >> 20 );
+		  // cast to unsigned longs to make certain the calculation
+		  // is performed as an unsigned long to prevent overflow
+		  // on machines with 2 gig or more RAM.
+	ram = ( (unsigned long)s.physical_memory * (unsigned long)s.page_size );
+		// convert to megabytes
+	ret_value =  ram >> 20;
+	return( ret_value );
   }
   else {
     return -1;
@@ -157,7 +165,7 @@ calc_phys_memory()
 {
 	MEMORYSTATUS status;
 	GlobalMemoryStatus(&status);
-	return (int)( ceil(status.dwTotalPhys/(1024*1024)+.4 ) );
+	return (int)(status.dwTotalPhys/(1024*1024));
 }
 
 #elif defined(OSF1)

@@ -60,7 +60,7 @@
 #include "HashTable.h"
 #include "MyString.h"
 
-static int hashFunction( const MyString&, int );
+static int hashFunction( MyString&, int );
 HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)	 */
@@ -77,11 +77,9 @@ char	*Flavor;
 char	*ScheddName = NULL;
 char	*ScheddAddr = NULL;
 char	*My_fs_domain;
-char    JobRequirements[2048];
-#if !defined(WIN32)
-char    JobRootdir[_POSIX_PATH_MAX];
-#endif
-char    JobIwd[_POSIX_PATH_MAX];
+char	 JobRequirements[2048];
+char	 JobRootdir[_POSIX_PATH_MAX];
+char	 JobIwd[_POSIX_PATH_MAX];
 
 int		LineNo;
 int		GotQueueCommand;
@@ -118,9 +116,7 @@ char	*Environment	= "environment";
 char	*Input			= "input";
 char	*Output			= "output";
 char	*Error			= "error";
-#if !defined(WIN32)
-char	*RootDir		= "rootdir";
-#endif
+char	*RootDir			= "rootdir";
 char	*InitialDir		= "initialdir";
 char	*Requirements	= "requirements";
 char	*Preferences	= "preferences";
@@ -155,9 +151,7 @@ void 	SetNotification();
 void 	SetNotifyUser ();
 void 	SetArguments();
 void 	SetEnvironment();
-#if !defined(WIN32)
 void 	SetRootDir();
-#endif
 void 	SetRequirements();
 void	SetRank();
 void 	SetIWD();
@@ -220,31 +214,25 @@ template class ExtArray<SubmitRec>;
 
 void TestFilePermissions()
 {
-#ifdef WIN32
-	// TODO: need to port to Win32
-	gid_t gid = 99999;
-	uid_t uid = 99999;
-#else
 	gid_t gid = getgid();
 	uid_t uid = getuid();
-#endif
-	int result, i;
+	int result;
 
-	for(i = 0; i < NumCheckFilesRead; ++i)
+	for(int i = 0; i < NumCheckFilesRead; ++i)
 	{
 		result = attempt_access(CheckFilesRead[i], ACCESS_READ, uid, gid);
 		if( result == FALSE ) {
-			fprintf(stderr, "\nWARNING: File %s is not readable by condor.\n", 
+			fprintf(stderr, "WARNING: File %s is not readable by condor.\n", 
 					CheckFilesRead[i]);
 		}
 		free (CheckFilesRead[i]);
 	}
 
-	for(i = 0; i < NumCheckFilesWrite; ++i)
+	for(int i = 0; i < NumCheckFilesWrite; ++i)
 	{
 		result = attempt_access(CheckFilesWrite[i], ACCESS_WRITE, uid, gid);
 		if( result == FALSE ) {
-			fprintf(stderr, "\nWARNING: File %s is not writeable by condor.\n", 
+			fprintf(stderr, "WARNING: File %s is not writeable by condor.\n", 
 					CheckFilesWrite[i]);
 		}
 		free (CheckFilesWrite[i]);
@@ -260,6 +248,12 @@ main( int argc, char *argv[] )
 	int dag_pause = 0;
 	char	*scheddname;
 
+	if (getuid() == 0 || getgid() == 0) {
+		fprintf(stderr, "Submitting jobs as user/group 0 (root) is not "
+				"allowed for security reasons.\n");
+		exit(1);
+	}
+	
 	setbuf( stdout, NULL );
 
 #if !defined(WIN32)	
@@ -907,7 +901,6 @@ SetEnvironment()
 	InsertJobExpr (newenv);
 }
 
-#if !defined(WIN32)
 void
 SetRootDir()
 {
@@ -931,7 +924,6 @@ SetRootDir()
 		(void) strcpy (JobRootdir, rootdir);
 	}
 }
-#endif
 
 void
 SetRequirements()
@@ -1034,7 +1026,6 @@ SetIWD()
 
 	shortname = condor_param( InitialDir );
 
-#if !defined(WIN32)
 	if( strcmp(JobRootdir,"/") != MATCH )	{	/* Rootdir specified */
 		if( shortname ) {
 			(void)strcpy( iwd, shortname );
@@ -1042,25 +1033,17 @@ SetIWD()
 			(void)strcpy( iwd, "/" );
 		}
 	} else {
-#endif
 		if( shortname  ) {
-#if defined(WIN32)
-			// if a drive letter or share is specified, we have a full pathname
-			if( shortname[1] == ':' || (shortname[0] == '\\' && shortname[1] == '\\')) {
-#else
 			if( shortname[0] == '/' ) {
-#endif
 				(void)strcpy( iwd, shortname );
 			} else {
 				(void)getcwd( cwd, sizeof cwd );
-				(void)sprintf( iwd, "%s%c%s", cwd, DIR_DELIM_CHAR, shortname );
+				(void)sprintf( iwd, "%s/%s", cwd, shortname );
 			}
 		} else {
 			(void)getcwd( iwd, sizeof iwd );
 		}
-#if !defined(WIN32)
 	}
-#endif
 
 	compress( iwd );
 	check_path_length(iwd, InitialDir);
@@ -1142,6 +1125,31 @@ SetCoreSize()
 	InsertJobExpr(buffer);
 }
 
+#if !defined(WIN32)
+struct SigTable { int v; char *n; };
+
+static struct SigTable SigNameArray[] = {
+	{ SIGABRT, "SIGABRT" },
+	{ SIGALRM, "SIGALRM" },
+	{ SIGFPE, "SIGFPE" },
+	{ SIGHUP, "SIGHUP" },
+	{ SIGILL, "SIGILL" },
+	{ SIGINT, "SIGINT" },
+	{ SIGKILL, "SIGKILL" },
+	{ SIGPIPE, "SIGPIPE" },
+	{ SIGQUIT, "SIGQUIT" },
+	{ SIGSEGV, "SIGSEGV" },
+	{ SIGTERM, "SIGTERM" },
+	{ SIGUSR1, "SIGUSR1" },
+	{ SIGUSR2, "SIGUSR2" },
+	{ SIGCHLD, "SIGCHLD" },
+	{ SIGTSTP, "SIGTSTP" },
+	{ SIGTTIN, "SIGTTIN" },
+	{ SIGTTOU, "SIGTTOU" },
+	{ -1, 0 }
+};
+
+
 void
 SetForcedAttributes()
 {
@@ -1168,30 +1176,6 @@ SetForcedAttributes()
 	}	
 }
 
-
-#if !defined(WIN32)
-struct SigTable { int v; char *n; };
-
-static struct SigTable SigNameArray[] = {
-	{ SIGABRT, "SIGABRT" },
-	{ SIGALRM, "SIGALRM" },
-	{ SIGFPE, "SIGFPE" },
-	{ SIGHUP, "SIGHUP" },
-	{ SIGILL, "SIGILL" },
-	{ SIGINT, "SIGINT" },
-	{ SIGKILL, "SIGKILL" },
-	{ SIGPIPE, "SIGPIPE" },
-	{ SIGQUIT, "SIGQUIT" },
-	{ SIGSEGV, "SIGSEGV" },
-	{ SIGTERM, "SIGTERM" },
-	{ SIGUSR1, "SIGUSR1" },
-	{ SIGUSR2, "SIGUSR2" },
-	{ SIGCHLD, "SIGCHLD" },
-	{ SIGTSTP, "SIGTSTP" },
-	{ SIGTTIN, "SIGTTIN" },
-	{ SIGTTOU, "SIGTTOU" },
-	{ -1, 0 }
-};
 
 int
 sig_name_lookup(char sig[])
@@ -1230,11 +1214,11 @@ SetKillSig()
 	(void) sprintf (buffer, "%s = %d", ATTR_KILL_SIG, signo);
 	InsertJobExpr(buffer);
 }
-#endif  // of ifndef WIN32
+#endif
 
 
 int
-read_condor_file( FILE *fp, int stopBeforeQueuing )
+read_condor_file( FILE *fp, int stopBeforeQueuing=0 )
 {
 	char	*name, *value;
 	char	*ptr;
@@ -1434,9 +1418,7 @@ queue(int num)
 		(void)sprintf(tmp, "%d", ProcId);
 		set_condor_param(Process, tmp);
 
-#if !defined(WIN32)
 		SetRootDir();
-#endif
 		SetIWD();
 		SetPriority();
 		SetArguments();
@@ -1621,19 +1603,14 @@ check_open( char *name, int flags )
 	/* No need to check for existence of the Null file. */
 	if (strcmp(name, NullFile) == MATCH) return;
 
-#if defined(WIN32)
-	strcpy(pathname, name);
-#else
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
 		(void)sprintf( pathname, "%s%s", JobRootdir, name );
 	} else {	/* relative to iwd which is relative to the root */
 		(void)sprintf( pathname, "%s/%s/%s", JobRootdir, JobIwd, name );
 	}
-#endif
 	compress( pathname );
 
 	if( (fd=open(pathname,flags,0664)) < 0 ) {
-		fprintf(stdout,"\n");
 		EXCEPT( "Can't open \"%s\"  with flags 0%o", pathname, flags );
 	}
 	(void)close( fd );
@@ -1655,7 +1632,7 @@ usage()
 {
 	fprintf( stderr, "Usage: %s [options] cmdfile\n", MyName );
 	fprintf( stderr, "	Valid options:\n" );
-	fprintf( stderr, "	-v\t\t\tverbose output\n" );
+	fprintf( stderr, "	-v\t\tverbose output\n" );
 	fprintf( stderr, "	-n schedd_name\tsubmit to the specified schedd\n" );
 	fprintf( stderr, 
 			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
@@ -1761,15 +1738,9 @@ compress( char *str )
 	src = str;
 	dst = str;
 
-#ifdef WIN32
-	if (str) {
-		*dst++ = *src++;	// don't compress WIN32 "share" path
-	}
-#endif
-
 	while( *src ) {
 		*dst++ = *src++;
-		while( (*(src - 1) == '\\' || *(src - 1) == '/') && (*src == '\\' || *src == '/') ) {
+		while( *(src - 1) == '/' && *src == '/' ) {
 			src++;
 		}
 	}
@@ -1903,7 +1874,7 @@ InsertJobExpr (char *expr)
 }
 
 static int 
-hashFunction (const MyString &str, int numBuckets)
+hashFunction (MyString &str, int numBuckets)
 {
 	 int i = str.Length() - 1, hashVal = 0;
 	 while (i >= 0) 
@@ -1923,11 +1894,9 @@ hashFunction (const MyString &str, int numBuckets)
 void
 check_umask()
 {
-#ifndef WIN32
 	if( getgid() != getegid() ) {
 		umask( 002 );
 	}
-#endif
 }
 
 int 
@@ -1970,7 +1939,7 @@ setupAuthentication( FILE * &infp )
 		if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
 			struct hostent *host;
 			char tmp[MAXHOSTNAMELEN];
-			const char *hostname;
+			char *hostname;
 	
 			if ( Remote ) {
 				hostname = get_host_part( ScheddName );

@@ -20,6 +20,7 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+/* Copyright Condor Team, 1997 */
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -36,13 +37,10 @@
 #define AuthSock ReliSock
 #endif
 
+static char *_FileName_ = __FILE__;  // used by EXCEPT 
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
-
-#ifdef WIN32
-#include "exphnd.WIN32.h"
-#endif
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -108,10 +106,6 @@ DC_Exit( int status )
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
 	clean_files();
-
-		// Log a message
-	dprintf(D_ALWAYS,"**** %s (CONDOR_%s) EXITING WITH STATUS %d\n",
-		myName,mySubSystem,status);
 
 		// Now, delete the daemonCore object, since we allocated it. 
 	delete daemonCore;
@@ -261,51 +255,22 @@ set_log_dir()
 
 // See if we should set the limits on core files.  If the parameter is
 // defined, do what it says.  Otherwise, do nothing.
-// On NT, if CREATE_CORE_FILES is False, then we will use the
-// default NT exception handler which brings up the "Abort or Debug"
-// dialog box, etc.  Otherwise, we will just write out a core file
-// "summary" in the log directory and not display the dialog.
 void
 check_core_files()
 {
+#ifndef WIN32	// no "core" files on NT
 	char* tmp;
-	int want_set_error_mode = TRUE;
-
 	if( (tmp = param("CREATE_CORE_FILES")) ) {
-#ifndef WIN32	
 		if( *tmp == 't' || *tmp == 'T' ) {
 			limit( RLIMIT_CORE, RLIM_INFINITY );
 		} else {
 			limit( RLIMIT_CORE, 0 );
 		}
-#endif
-		if( *tmp == 'f' || *tmp == 'F' ) {
-			want_set_error_mode = FALSE;
-		}
 		free( tmp );
 	}
-
-#ifdef WIN32
-		// Call SetErrorMode so that Win32 "critical errors" and such
-		// do not open up a dialog window!
-	if ( want_set_error_mode ) {
-		::SetErrorMode( 
-			SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX );
-	} else {
-		::SetErrorMode( 0 );
-	}
 #endif
-
 }
 
-
-int
-handle_reconfig( Service*, int, Stream* )
-{
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
-	return TRUE;
-}
-	
 
 int
 handle_config_val( Service*, int, Stream* stream ) 
@@ -333,7 +298,6 @@ handle_config_val( Service*, int, Stream* stream )
 		dprintf( D_FULLDEBUG, 
 				 "Got CONFIG_VAL request for unknown parameter (%s)\n", 
 				 param_name );
-		free( param_name );
 		if( ! stream->put("Not defined") ) {
 			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
 			return FALSE;
@@ -344,7 +308,6 @@ handle_config_val( Service*, int, Stream* stream )
 		}
 		return FALSE;
 	} else {
-		free( param_name );
 		if( ! stream->code(tmp) ) {
 			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
 			free( tmp );
@@ -356,56 +319,6 @@ handle_config_val( Service*, int, Stream* stream )
 			return FALSE;
 		}
 	}
-	return TRUE;
-}
-
-int
-handle_config( Service *, int cmd, Stream *stream )
-{
-	char *admin = NULL, *config = NULL;
-	int rval = 0;
-
-	stream->decode();
-
-	if ( ! stream->code(admin) ) {
-		dprintf( D_ALWAYS, "Can't read admin string\n" );
-		free( admin );
-		return FALSE;
-	}
-
-	if ( ! stream->code(config) ) {
-		dprintf( D_ALWAYS, "Can't read configuration string\n" );
-		free( admin );
-		free( config );
-		return FALSE;
-	}
-
-	switch(cmd) {
-	case DC_CONFIG_PERSIST:
-		rval = set_persistent_config(admin, config);
-		// set_persistent_config will free admin and config when appropriate
-		break;
-	case DC_CONFIG_RUNTIME:
-		rval = set_runtime_config(admin, config);
-		// set_runtime_config will free admin and config when appropriate
-		break;
-	default:
-		dprintf( D_ALWAYS, "unknown DC_CONFIG command!\n" );
-		free( admin );
-		free( config );
-		return FALSE;
-	}
-
-	stream->encode();
-	if ( ! stream->code(rval) ) {
-		dprintf (D_ALWAYS, "Failed to send rval for DC_CONFIG.\n" );
-		return FALSE;
-	}
-	if( ! stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG.\n" );
-		return FALSE;
-	}
-
 	return TRUE;
 }
 
@@ -508,7 +421,7 @@ handle_dc_sigterm( Service*, int )
 
 	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
 
-#if defined(WIN32) && 0
+#ifdef WIN32
 	if ( line_where_service_stopped != 0 ) {
 		dprintf(D_ALWAYS,"Line where service stopped = %d\n",
 			line_where_service_stopped);
@@ -568,8 +481,12 @@ int main( int argc, char** argv )
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	char	*logAppend = NULL;
 
+#ifdef WIN32
+		// Call SetErrorMode so that Win32 "critical errors" and such
+		// do not open up a dialog window!
+	::SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX );
+#else // UNIX
 
-#ifndef WIN32
 		// Set a umask value so we get reasonable permissions on the
 		// files we create.  Derek Wright <wright@cs.wisc.edu> 3/3/98
 	umask( 022 );
@@ -596,7 +513,7 @@ int main( int argc, char** argv )
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
 	install_sig_handler(SIGPIPE, SIG_IGN );
-#endif // of ifndef WIN32
+#endif // WIN32
 
 		// Figure out if we're the master or not.  The master is a
 		// special case daemon in many ways, so we want to just set a
@@ -721,7 +638,6 @@ int main( int argc, char** argv )
 			ptr++;
 			if( ptr && *ptr ) {
 				logAppend = *ptr;
-				dcargs += 2;
 			} else {
 				fprintf( stderr, 
 						 "DaemonCore: ERROR: -append needs another argument.\n" );
@@ -788,6 +704,10 @@ int main( int argc, char** argv )
 		// Set up logging
 	dprintf_config(mySubSystem,2);
 
+		// run as condor 99.9% of the time, so studies tell us.
+	set_condor_priv();
+
+		// Print out opening banner
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
@@ -800,13 +720,8 @@ int main( int argc, char** argv )
 	if ( argc < 1 )
 		argc = 1;
 
-	// run as condor 99.9% of the time, so studies tell us.
-	set_condor_priv();
-
 	// chdir to the LOG directory so that if we dump a core
 	// it will go there.
-	// and on Win32, tell our ExceptionHandler class to drop
-	// its pseudo-core file to the LOG directory as well.
 	ptmp = param("LOG");
 	if ( ptmp ) {
 		if ( chdir(ptmp) < 0 ) {
@@ -815,14 +730,6 @@ int main( int argc, char** argv )
 	} else {
 		EXCEPT("No LOG directory specified in config file(s)");
 	}
-#ifdef WIN32
-	{
-		char pseudoCoreFileName[MAX_PATH];
-		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
-			mySubSystem);
-		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
-	}
-#endif
 	free(ptmp);
 
 	// Arrange to run in the background.
@@ -862,18 +769,16 @@ int main( int argc, char** argv )
 		// print out what our pid is.
 
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
-	dprintf(D_ALWAYS,"******************************************************\n");
 
-#ifdef WIN32
-		// On NT, we need to make certain we have a console allocated,
-		// since many standard mechanisms do not work without a console
-		// attached [like popen(), stdin/out/err, GenerateConsoleEvent].
-		// There are several reasons why we may not have a console
-		// right now: a) we are running as a service, and services are 
-		// born without a console, or b) the user did not specify "-f" 
-		// or "-t", and thus we called FreeConsole() above.
-	AllocConsole();
-#endif
+		// Want to do this dprintf() here, since we can't do it w/n 
+		// the priv code itself or we get major problems. 
+		// -Derek Wright 12/21/98 
+	if( getuid() ) {
+		dprintf(D_PRIV, "** Running as non-root: No privilege switching\n");
+	} else {
+		dprintf(D_PRIV, "** Running as root: Privilege switching in effect\n");
+	}
+	dprintf(D_ALWAYS,"******************************************************\n");
 
 		// Now that we have our pid, we could dump our pidfile, if we
 		// want it. 
@@ -986,23 +891,10 @@ int main( int argc, char** argv )
 								 "HandleDC_SIGCHLD",daemonCore,IMMEDIATE_FAMILY);
 #endif
 
-		// Install DaemonCore command handlers common to all daemons.
-	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
-								  (CommandHandler)handle_reconfig,
-								  "handle_reconfig()", 0, ADMINISTRATOR );
-
+		// Install handler for the CONFIG_VAL 
 	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
 								  (CommandHandler)handle_config_val,
 								  "handle_config_val()", 0, ADMINISTRATOR );
-
-	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
-								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ADMINISTRATOR );
-
-	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
-								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ADMINISTRATOR );
-
 
 	// call daemon-core ReInit
 	daemonCore->ReInit();

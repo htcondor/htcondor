@@ -20,8 +20,6 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-
-#include "condor_common.h"
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
@@ -376,7 +374,6 @@ Resource::update()
 
 		// Set a flag to indicate that we've done an update.
 	did_update = TRUE;
-	return rval;
 }
 
 
@@ -722,7 +719,7 @@ Resource::compute_condor_load()
 	float load;
 	int numcpus = resmgr->num_cpus();
 	procInfo* pinfo = NULL;
-	static int num_called = 8;
+	static int num_called = 0;
 
 	if( r_starter->active() ) { 
 		num_called++;
@@ -734,8 +731,8 @@ Resource::compute_condor_load()
 		if( (resmgr->m_proc->
 			 getProcSetInfo(r_starter->pidfamily(), 
 							r_starter->pidfamily_size(),  
-							pinfo) < 0) ) {
-			EXCEPT( "Can't get process info for the starter and decendents" ); 
+							pinfo) < -1) ) {
+			EXCEPT( "Fatal error getting process info for the starter and decendents" ); 
 		}
 		if( !pinfo ) {
 			EXCEPT( "Out of memory!" );

@@ -73,7 +73,8 @@ ProcAPI::~ProcAPI() {
 
 // this version works for Solaris 2.5.1, IRIX, OSF/1 
 #if ( defined(Solaris251) || defined(IRIX62) || defined(OSF1) )
-int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
+int
+ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 	char path[64];
 	struct prpsinfo pri;
 	struct prstatus prs;
@@ -81,201 +82,205 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 	struct prusage pru;   // prusage doesn't exist in OSF/1
 #endif
 
-	int fd;
-	int retval;
+	int fd, rval = 0;
 	priv_state priv = set_root_priv();
 
-	initpi ( pi );
+	initpi( pi );
 
 		// if the page size has not yet been found, get it.
-	if ( pagesize == 0 )
+	if( pagesize == 0 ) {
 		pagesize = getpagesize() / 1024;  // pagesize is in k now
-  
-	sprintf ( path, "/proc/%d", pid );
-	if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) {
+	}  
+	sprintf( path, "/proc/%d", pid );
+	errno = 0;
+	if( (fd = open(path, O_RDONLY)) >= 0 ) {
 			// PIOCPSINFO gets memory sizes, pids, and age.
-		retval = ioctl ( fd, PIOCPSINFO, &pri );
-		if ( retval >= 0 ) {
+		rval = ioctl( fd, PIOCPSINFO, &pri );
+		if( rval >= 0 ) {
 			pi->imgsize = pri.pr_size * pagesize;
 			pi->rssize  = pri.pr_rssize * pagesize;
 			pi->pid     = pri.pr_pid;
 			pi->ppid    = pri.pr_ppid;
 			pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
 		} else {
-			pi->pid = pid;
-			perror ( "PIOCPSINFO Error occurred" );
+			dprintf( D_ALWAYS, 
+					 "ProcAPI: PIOCPSINFO Error occurred for pid %d\n",
+					 pid );
 			close( fd );
 			delete pi; 
 			pi = NULL;
 			set_priv( priv );
 			return -2;
 		}
-
-    long nowminf, nowmajf;
+		long nowminf, nowmajf;
 
     // PIOCUSAGE is used for page fault info
     // solaris 2.5.1 and Irix only - unsupported by osf/1
 #ifndef OSF1
-    retval = ioctl ( fd, PIOCUSAGE, &pru );
-    if ( retval >= 0 ) {
+		rval = ioctl( fd, PIOCUSAGE, &pru );
+		if( rval >= 0 ) {
 
 #ifdef Solaris251   
-      nowminf = pru.pr_minf;  
-      nowmajf = pru.pr_majf;  
+			nowminf = pru.pr_minf;  
+			nowmajf = pru.pr_majf;  
 #endif
 
 #ifdef IRIX62   // dang things named differently in irix.
-      nowminf = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
-      nowmajf = pru.pu_majf;  
+			nowminf = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
+			nowmajf = pru.pu_majf;  
 #endif
 
-	} else {
-		pi->pid = pid;
-		perror ( "PIOCUSAGE Error occurred" );
-		close( fd );
-		delete pi; 
-		pi = NULL;
-		set_priv( priv );
-		return -2;
-	}
+		} else {
+			dprintf( D_ALWAYS, 
+					 "ProcAPI: PIOCUSAGE Error occurred for pid %d\n", 
+					 pid );
+			close( fd );
+			delete pi; 
+			pi = NULL;
+			set_priv( priv );
+			return -2;
+		}
 	
 #else  //here we are in osf/1, which doesn't give this info.
-    nowminf = 0;   // let's default to zero in osf1
-    nowmajf = 0;
+		nowminf = 0;   // let's default to zero in osf1
+		nowmajf = 0;
 #endif
 
     // PIOCSTATUS gets process user & sys times
     // this following bit works for Sol 2.5.1, Irix, Osf/1
-    retval = ioctl ( fd, PIOCSTATUS, &prs );
-    if ( retval >= 0 ) {
-      pi->user_time   = prs.pr_utime.tv_sec;
-      pi->sys_time    = prs.pr_stime.tv_sec;
+		rval = ioctl( fd, PIOCSTATUS, &prs );
+		if( rval >= 0 ) {
+			pi->user_time   = prs.pr_utime.tv_sec;
+			pi->sys_time    = prs.pr_stime.tv_sec;
 
       /* here we've got to do some sampling ourself.  If the pid is not in
          the hashtable, put it there using (user+sys time) / age as %cpu.
          If it is there, use ((user+sys time) - old time) / timediff.
       */
 
-      struct timeval thistime;
-      double timediff, lasttime, oldustime, now, ustime, oldusage;
-      long oldminf, oldmajf;
+			struct timeval thistime;
+			double timediff, lasttime, oldustime, now, ustime, oldusage;
+			long oldminf, oldmajf;
 
-      gettimeofday ( &thistime, 0 );
-      now    = convertTimeval ( thistime );
-      ustime = ( prs.pr_utime.tv_sec + ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
-               ( prs.pr_stime.tv_sec + ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
+			gettimeofday( &thistime, 0 );
+			now = convertTimeval( thistime );
+			ustime = ( prs.pr_utime.tv_sec + 
+					   ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
+				( prs.pr_stime.tv_sec + ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
 
-      struct procHashNode * phn;
+			struct procHashNode * phn;
 
-      if ( procHash->lookup( pid, phn ) == 0 ) {
-        // success; pid in hash table
-        timediff = now - phn->lasttime;
-        if ( timediff < 1.0 ) {  // less than one second since last poll
-          pi->cpuusage = phn->oldusage;
-          pi->minfault = phn->oldminf;
-          pi->majfault = phn->oldmajf;
-          now = phn->lasttime;
-        }
-        else {
-          pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-          pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
-          pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
-        }
-        delete phn;
-        procHash->remove(pid);
-      }
-      else {
-        // pid not in hash table; first time.  Use age of process as guide
-          if ( pi->age == 0 ) {
-              pi->cpuusage = 0.0;
-			  // Should minfault and majfault be set to zero here, or now info?
-			  // pi->minfault = (long unsigned int)(nowminf);
-			  // pi->majfault = (long unsigned int)(nowmajf);
-              pi->minfault = 0;
-              pi->majfault = 0;
-          }
-          else {
-              pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-              pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-              pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
-          }
-      }
-      // put new vals back into hashtable
-      phn = new procHashNode; 
-      phn->lasttime = now;
-      phn->oldtime  = ustime;
-      phn->oldusage = pi->cpuusage;
-      phn->oldminf  = nowminf;
-      phn->oldmajf  = nowmajf;
-      procHash->insert( pid, phn );
-    } 
-    else {
-      pi->pid = pid;
-      perror ( "PIOCSTATUS Error occurred" );
-	  close( fd );
-	  delete pi;
-	  pi = NULL;
-	  set_priv( priv );
-      return -2;
-    }
-    // close the /proc/pid file
-    close ( fd );
-
-  }
-  else {
-    dprintf ( D_FULLDEBUG, "ProcAPI: error opening %s.\n", path );
-    pi->pid = pid;
-	delete pi;
-	pi = NULL;
+			if( procHash->lookup( pid, phn ) == 0 ) {
+					// success; pid in hash table
+				timediff = now - phn->lasttime;
+				if ( timediff < 1.0 ) {  // less than one second since last poll
+					pi->cpuusage = phn->oldusage;
+					pi->minfault = phn->oldminf;
+					pi->majfault = phn->oldmajf;
+					now = phn->lasttime;
+				} else {
+					pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
+					pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
+					pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
+				}
+				delete phn;
+				procHash->remove(pid);
+			} else {
+					// pid not in hash table; first time.  Use age of
+					// process as guide 
+				if( pi->age == 0 ) {
+					pi->cpuusage = 0.0;
+						// Should minfault and majfault be set to zero
+						// here, or now info? 
+						// pi->minfault = (long unsigned int)(nowminf);
+						// pi->majfault = (long unsigned int)(nowmajf);
+					pi->minfault = 0;
+					pi->majfault = 0;
+				} else {
+					pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+					pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
+					pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+				}
+			}
+				// put new vals back into hashtable
+			phn = new procHashNode; 
+			phn->lasttime = now;
+			phn->oldtime  = ustime;
+			phn->oldusage = pi->cpuusage;
+			phn->oldminf  = nowminf;
+			phn->oldmajf  = nowmajf;
+			procHash->insert( pid, phn );
+		} else {
+			dprintf( D_ALWAYS, 
+					 "ProcAPI: PIOCSTATUS Error occurred for pid %d\n", 
+					 pid );
+			delete pi;
+			pi = NULL;
+			rval = -2;
+		}
+			// close the /proc/pid file
+		close ( fd );
+	} else {
+		if( errno == ENOENT ) {
+				// /proc/pid doesn't exist
+			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
+			rval = -1;
+		} else { 
+			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
+					 path, errno );
+			rval = -2;
+		}
+		delete pi;
+		pi = NULL;
+	}
 	set_priv( priv );
-    return -1;
-  }
-  set_priv( priv );
-  return retval;
+	return rval;
 }
-#endif
+#endif /* defined(Solaris251) || defined(IRIX62) || defined(OSF1) */
 
 // This is the version of getProcInfo for Solaris 2.6 
 #ifdef Solaris26 
-int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
-  char path[64];
-  int fd;
-  psinfo_t psinfo;
-  pstatus_t pstatus;
-  prusage_t prusage;
-  priv_state priv = set_root_priv();
-  initpi ( pi );
+int
+ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
+	char path[64];
+	int fd, rval = 0;
+	psinfo_t psinfo;
+	pstatus_t pstatus;
+	prusage_t prusage;
+	priv_state priv = set_root_priv();
+	initpi ( pi );
 
   // pids, memory usage, and age can be found in 'psinfo':
-  sprintf( path, "/proc/%d/psinfo", pid );
-  if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) { /*solaris success! */
-    if ( read( fd, &psinfo, sizeof( psinfo_t ) ) == sizeof( psinfo_t ) ) {
-      close( fd );
-    }
-    else {
-      dprintf (D_FULLDEBUG, "Problems reading %s.\n", path );
-      pi->pid = pid;
-      close( fd );
-	  delete pi; 
-	  pi = NULL;
-	  set_priv( priv );
-	  return -2;
-    }
-  }
-  else {
-    dprintf (D_FULLDEBUG, "Problem opening %s.\n", path );
-    pi->pid = pid;
-	delete pi; 
-	pi = NULL;
-	set_priv( priv );
-    return -1;
-  }
+	sprintf( path, "/proc/%d/psinfo", pid );
+	if( (fd = open(path, O_RDONLY)) >= 0 ) { /*solaris success! */
+		if( read(fd, &psinfo, sizeof(psinfo_t)) != sizeof(psinfo_t) ) {
+			dprintf( D_ALWAYS, "ProcAPI: Problems reading %s.\n", path );
+			rval = -2;
+		}
+		close( fd );
+	} else {
+		if( errno == ENOENT ) {
+				// pid doesn't exist
+			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
+			rval = -1;
+		} else { 
+			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
+					  path, errno );
+			rval = -2;
+		}
+	} 
+	if( rval ) {
+		delete pi;
+		pi = NULL;
+		set_priv( priv );
+		return rval;
+	}
 
-  pi->imgsize = psinfo.pr_size;    // already in k!
-  pi->rssize  = psinfo.pr_rssize;  // already in k!
-  pi->pid     = psinfo.pr_pid;
-  pi->ppid    = psinfo.pr_ppid;
-  pi->age     = secsSinceEpoch() - psinfo.pr_start.tv_sec;
+	pi->imgsize	= psinfo.pr_size;    // already in k!
+	pi->rssize	= psinfo.pr_rssize;  // already in k!
+	pi->pid		= psinfo.pr_pid;
+	pi->ppid	= psinfo.pr_ppid;
+	pi->age		= secsSinceEpoch() - psinfo.pr_start.tv_sec;
 
   // I'm taking out this assignment here.  The reason is that I don't
   // know exactly how this value is determined, and it is normalized
@@ -288,236 +293,238 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   // I have never seen minor page faults return anything 
   // other than '0' in 2.6.  I have seen a value returned for 
   // major faults, but not that often.  These values are suspicious.
-  sprintf( path, "/proc/%d/usage", pid );
-  if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) { // solaris success!
-    if ( read( fd, &prusage, sizeof( prusage_t ) ) == sizeof( prusage_t ) ) {
-      close( fd );
-    }
-    else {
-      dprintf (D_FULLDEBUG, "Problems reading %s.\n", path );
-      close( fd );
-	  delete pi; 
-	  pi = NULL;
-	  set_priv( priv );
-      return -2;
-    }
-  }
-  else {
-    dprintf (D_FULLDEBUG, "Problem opening %s.\n", path );
-	delete pi; 
-	pi = NULL;
-	set_priv( priv );
-    return -1;
-  }
+	sprintf( path, "/proc/%d/usage", pid );
+	if( (fd = open(path, O_RDONLY)) >= 0 ) { // solaris success!
+		if( read(fd, &prusage, sizeof(prusage_t)) != sizeof(prusage_t) ) {
+			dprintf( D_ALWAYS, "ProcAPI: Problems reading %s.\n", path );
+			rval = -2;
+		}
+		close( fd );
+	} else {
+		if( errno == ENOENT ) {
+				// pid doesn't exist
+			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
+			rval = -1;
+		} else { 
+			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
+					  path, errno );
+			rval = -2;
+		}
+	}
+	if( rval ) {
+		delete pi;
+		pi = NULL;
+		set_priv( priv );
+		return rval;
+	}
 
-  long nowminf, nowmajf, oldminf, oldmajf;
+	long nowminf, nowmajf, oldminf, oldmajf;
 
-  nowminf = prusage.pr_minf;
-  nowmajf = prusage.pr_majf;
-  pi->user_time= prusage.pr_utime.tv_sec;
-  pi->sys_time = prusage.pr_stime.tv_sec;
+	nowminf = prusage.pr_minf;
+	nowmajf = prusage.pr_majf;
+	pi->user_time= prusage.pr_utime.tv_sec;
+	pi->sys_time = prusage.pr_stime.tv_sec;
 
   /* Now we do that sampling hashtable thing to convert page faults
      into page faults per second */
 
-  struct timeval thistime;
-  double timediff, lasttime, oldustime, now, ustime, oldusage;
+	struct timeval thistime;
+	double timediff, lasttime, oldustime, now, ustime, oldusage;
 
-  gettimeofday ( &thistime, 0 );
-  now = convertTimeval ( thistime );
-  ustime = ( prusage.pr_utime.tv_sec + (prusage.pr_utime.tv_nsec * 1.0e-9) ) +
-           ( prusage.pr_stime.tv_sec + (prusage.pr_stime.tv_nsec * 1.0e-9) );
+	gettimeofday( &thistime, 0 );
+	now = convertTimeval( thistime );
+	ustime = ( prusage.pr_utime.tv_sec + (prusage.pr_utime.tv_nsec * 1.0e-9) ) +
+		( prusage.pr_stime.tv_sec + (prusage.pr_stime.tv_nsec * 1.0e-9) );
 
-  struct procHashNode * phn;
+	struct procHashNode * phn;
   
-  if ( procHash->lookup( pid, phn ) >= 0 ) {
-    // success; pid in hash table
-    timediff = now - phn->lasttime;
-    if ( timediff < 1.0 ) {  // less than one second since last poll
-      pi->cpuusage = phn->oldusage;
-      pi->minfault = phn->oldminf;
-      pi->majfault = phn->oldmajf;
-      now = phn->lasttime;
-    }
-    else {
-      pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100; 
-      pi->minfault = (long unsigned int)((nowminf - phn->oldminf) / timediff);
-      pi->majfault = (long unsigned int)((nowmajf - phn->oldmajf) / timediff);
-    }
-    delete phn;
-    procHash->remove(pid);
-  }
-  else {
-    // pid not in hash table; first time.  Use age of process as guide
-      if ( pi->age == 0 ) {
-          pi->cpuusage = 0.0;
-          pi->minfault = 0;
-          pi->majfault = 0;
-      }
-      else {
-          pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-          pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-          pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
-      }
-  }
-  // put new vals back into hashtable
-  phn = new procHashNode;
-  phn->lasttime = now;
-  phn->oldtime  = ustime;
-  phn->oldusage = pi->cpuusage;
-  phn->oldminf  = nowminf;
-  phn->oldmajf  = nowmajf;
-  procHash->insert( pid, phn );
-  set_priv( priv );
-  return 0;
+	if( procHash->lookup(pid, phn) >= 0 ) {
+			// success; pid in hash table
+		timediff = now - phn->lasttime;
+		if( timediff < 1.0 ) {  // less than one second since last poll
+			pi->cpuusage = phn->oldusage;
+			pi->minfault = phn->oldminf;
+			pi->majfault = phn->oldmajf;
+			now = phn->lasttime;
+		} else {
+			pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100; 
+			pi->minfault = (long unsigned int)((nowminf - phn->oldminf) / timediff);
+			pi->majfault = (long unsigned int)((nowmajf - phn->oldmajf) / timediff);
+		}
+		delete phn;
+		procHash->remove(pid);
+	} else {
+			// pid not in hash table; first time.  Use age of process as guide 
+		if( pi->age == 0 ) {
+			pi->cpuusage = 0.0;
+			pi->minfault = 0;
+			pi->majfault = 0;
+		} else {
+			pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+			pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
+			pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+		}
+	}
+		// put new vals back into hashtable
+	phn = new procHashNode;
+	phn->lasttime = now;
+	phn->oldtime  = ustime;
+	phn->oldusage = pi->cpuusage;
+	phn->oldminf  = nowminf;
+	phn->oldmajf  = nowmajf;
+	procHash->insert( pid, phn );
+	set_priv( priv );
+	return 0;
 }
-#endif
+#endif /* Solaris26 */
 
 // This is the Linux version of getProcInfo.  Everything is easier and
 // actually seems to work in Linux...nice, but annoyingly different.
 #ifdef LINUX
-int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
-  char path[64];
-  FILE *fp;
+int
+ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
+	char path[64];
+	FILE *fp;
 
-  long usert, syst, start_time;
+	long usert, syst, start_time;
 
-  unsigned long vsize, rss;
-  long nowminf, nowmajf, oldminf, oldmajf;
+	unsigned long vsize, rss;
+	long nowminf, nowmajf, oldminf, oldmajf;
+	
+	int i, rval = 0;
+	unsigned u;
+	char c;
+	char s[256], junk[16];
 
-  int i;
-  unsigned u;
-  char c;
-  char s[256], junk[16];
+	priv_state priv = set_root_priv();
 
-  priv_state priv = set_root_priv();
+	initpi( pi );
 
-  initpi ( pi );
+	sprintf( path, "/proc/%d/stat", pid );
 
-  sprintf ( path, "/proc/%d/stat", pid );
+	if( (fp = fopen(path, "r")) >= 0 ) {
+		fscanf( fp, "%d %s %c %d "
+				"%d %d %d %d "
+				"%u %u %u %u %u "
+				"%ld %ld %ld %ld %d %d "
+				"%u %u %d %lu %lu %u %u %u %u %u %u "
+				"%d %d %d %d %u",
+				&pi->pid, s, &c, &pi->ppid, 
+				&i, &i, &i, &i, 
+				&u, &nowminf, &u, &nowmajf, &u, 
+				&usert, &syst, &i, &i, &i, &i, 
+				&u, &u, &start_time, &vsize, &rss, &u, &u, &u, &u, &u, &u, 
+				&i, &i, &i, &i, &u );
+		fclose( fp );
+	} else {
+		if( errno == ENOENT ) {
+				// /proc/pid doesn't exist
+			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
+			rval = -1;
+		} else { 
+			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
+					 path, errno );
+			rval = -2;
+		}
+		delete pi;
+		pi = NULL;
+		set_priv( priv );
+		return rval;
+	}
 
-  if ( ( fp = fopen( path, "r" ) ) >= 0 ) {
+		// if the page size has not yet been found, get it.
+	if( pagesize == 0 ) {
+		pagesize = getpagesize() / 1024;
+	}
+
+	pi->user_time   = usert   / 100;			// convert jiffies to sec.
+	pi->sys_time    = syst    / 100;
+	pi->imgsize		= (vsize / 1024);			// bytes to k.
+	pi->rssize		= rss * pagesize;			// pages to k.
     
-    fscanf ( fp, "%d %s %c %d "
-                 "%d %d %d %d "
-                 "%u %u %u %u %u "
-                 "%ld %ld %ld %ld %d %d "
-                 "%u %u %d %lu %lu %u %u %u %u %u %u "
-                 "%d %d %d %d %u",
-	     &pi->pid, s, &c, &pi->ppid, 
-             &i, &i, &i, &i, 
-             &u, &nowminf, &u, &nowmajf, &u, 
-             &usert, &syst, &i, &i, &i, &i, 
-             &u, &u, &start_time, &vsize, &rss, &u, &u, &u, &u, &u, &u, 
-             &i, &i, &i, &i, &u );
-
-    fclose ( fp );
-  }
-  else {
-    dprintf (D_FULLDEBUG, "Problem opening %s.", path );
-    pi->pid = pid;
-	delete pi; 
-	pi = NULL;
-	set_priv( priv );
-    return -1;
-  }
-
-  // if the page size has not yet been found, get it.
-  if ( pagesize == 0 )
-    pagesize = getpagesize() / 1024;
-
-  pi->user_time   = usert   / 100;            // convert jiffies to sec.
-  pi->sys_time    = syst    / 100;
-  pi->imgsize = (vsize / 1024);               // bytes to k.
-  pi->rssize  = rss * pagesize;               // pages to k.
-    
-  // we have start_time, which is the time after system boot that 
-  // the process started...convert jiffies to seconds.
-  start_time = start_time / 100;
+		// we have start_time, which is the time after system boot
+		// that the process started...convert jiffies to seconds.
+	start_time = start_time / 100;
   
-  // check to see if we've gotten the system boot time before, and 
-  // if not, get it:
-  if ( boottime == 0 ) {
-    if ( ( fp = fopen ( "/proc/stat", "r" ) ) >= 0 ) {
-      fgets ( s, 256, fp );
-      while ( strstr ( s, "btime" ) == NULL )
-        fgets ( s, 256, fp );
-      
-      sscanf ( s, "%s %lu", junk, &boottime );
-	  fclose( fp );
-    }
-    else {
-      dprintf (D_FULLDEBUG, "Problem opening /proc/stat for btime.\n" );
-	  delete pi; 
-	  pi = NULL;
-	  set_priv( priv );
-      return -1;
-    }
-  }
-  // now we've got the boottime, the start time, and can get current time.
-  // throw 'em all together:  (yucky)
+		// check to see if we've gotten the system boot time before,
+		// and if not, get it:
+	if( boottime == 0 ) {
+		if( (fp = fopen("/proc/stat", "r")) >= 0 ) {
+			fgets( s, 256, fp );
+			while( strstr(s, "btime") == NULL ) {
+				fgets( s, 256, fp );
+			}
+			sscanf( s, "%s %lu", junk, &boottime );
+			fclose( fp );
+		} else {
+			dprintf( D_ALWAYS, "ProcAPI: Problem opening /proc/stat for btime.\n" );
+			delete pi; 
+			pi = NULL;
+			set_priv( priv );
+			return -2;
+		}
+	}
+		// now we've got the boottime, the start time, and can get
+		// current time.  Throw 'em all together:  (yucky)
 
-  pi->age = ( secsSinceEpoch() - boottime ) - start_time;
+	pi->age = (secsSinceEpoch() - boottime) - start_time;
 
   /* here we've got to do some sampling ourself to get the cpuusage.  
      If the pid is not in the hashtable, put it there using 
      (user+sys time) / age as %cpu.   If it is there, use 
      ((user+sys time) - old time) / timediff.
   */
-  struct timeval thistime;
-  double timediff, lasttime, oldustime, now, ustime, oldusage;
+	struct timeval thistime;
+	double timediff, lasttime, oldustime, now, ustime, oldusage;
   
-  gettimeofday ( &thistime, 0 );
-  now    = convertTimeval ( thistime );
-  ustime = ( usert + syst ) / 100.0;
+	gettimeofday( &thistime, 0 );
+	now = convertTimeval( thistime );
+	ustime = (usert + syst) / 100.0;
 
-  struct procHashNode * phn;
+	struct procHashNode * phn;
   
-  if ( procHash->lookup( pid, phn ) == 0 ) {
-    // success; pid in hash table
-    timediff = now - phn->lasttime;
-    if ( timediff < 1.0 ) {  // less than one second since last poll
-      pi->cpuusage = phn->oldusage;
-      pi->minfault = phn->oldminf;
-      pi->majfault = phn->oldmajf;
-      now = phn->lasttime;
-    }
-    else {
-      pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-      pi->minfault = (unsigned long)(( nowminf - phn->oldminf ) / timediff);
-      pi->majfault = (unsigned long)(( nowmajf - phn->oldmajf ) / timediff);
-    }
-    delete phn;		
-	procHash->remove(pid);
-  }
-  else {
-    // pid not in hash table; first time.  Use age of process as guide
-      if ( pi->age == 0 ) {
-          pi->cpuusage = 0.0;
-          pi->minfault = 0;
-          pi->majfault = 0;
-      }
-      else {
-          pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-          pi->minfault = (unsigned long)(nowminf / (double) pi->age);
-          pi->majfault = (unsigned long)(nowmajf / (double) pi->age);
-      }
-  }
-  // put new vals back into hashtable
-  phn = new procHashNode;
-  phn->lasttime = now;
-  phn->oldtime  = ustime;
-  phn->oldusage = pi->cpuusage;
-  phn->oldminf  = nowminf;
-  phn->oldmajf  = nowmajf;
-  procHash->insert( pid, phn );
-
-  // done with %cpu hacking
+	if( procHash->lookup(pid, phn) == 0 ) {
+			// success; pid in hash table
+		timediff = now - phn->lasttime;
+		if( timediff < 1.0 ) {  // less than one second since last poll
+			pi->cpuusage = phn->oldusage;
+			pi->minfault = phn->oldminf;
+			pi->majfault = phn->oldmajf;
+			now = phn->lasttime;
+		} else {
+			pi->cpuusage = ((ustime - phn->oldtime) / timediff) * 100;
+			pi->minfault = (unsigned long)((nowminf - phn->oldminf) / timediff);
+			pi->majfault = (unsigned long)((nowmajf - phn->oldmajf) / timediff);
+		}
+		delete phn;		
+		procHash->remove(pid);
+	} else {
+			// pid not in hash table; first time.  Use age of process as guide 
+		if( pi->age == 0 ) {
+			pi->cpuusage = 0.0;
+			pi->minfault = 0;
+			pi->majfault = 0;
+		} else {
+			pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+			pi->minfault = (unsigned long)(nowminf / (double) pi->age);
+			pi->majfault = (unsigned long)(nowmajf / (double) pi->age);
+		}
+	}
+		// put new vals back into hashtable
+	phn = new procHashNode;
+	phn->lasttime = now;
+	phn->oldtime  = ustime;
+	phn->oldusage = pi->cpuusage;
+	phn->oldminf  = nowminf;
+	phn->oldmajf  = nowmajf;
+	procHash->insert( pid, phn );
+	
+		// done with %cpu hacking
  
-  set_priv( priv );
-  return 0;
+	set_priv( priv );
+	return 0;
 }
-#endif
+#endif /* Linux */
 
 /* Here's getProcInfo for HPUX.  Calling this a /proc interface is a lie, 
    because there IS NO /PROC for the HPUX's.  I'm using pstat_getproc().
@@ -527,114 +534,116 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
    you can get info on every process.
 */
 #ifdef HPUX
-int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
+int
+ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 
-  struct pst_status buf;
-  int retval;
-  long nowminf, nowmajf, oldminf, oldmajf;
+	struct pst_status buf;
+	int rval = 0;
+	long nowminf, nowmajf, oldminf, oldmajf;
 
-  priv_state priv = set_root_priv();
+	priv_state priv = set_root_priv();
 
-  initpi ( pi );
+	initpi( pi );
 
-  retval = pstat_getproc ( &buf, sizeof( buf ), 0, pid );
+	rval = pstat_getproc( &buf, sizeof(buf), 0, pid );
 
-  if ( retval < 0 ) {
-	delete pi; 
-	pi = NULL;
-	set_priv( priv );
-	return -1;
-  }
+	if ( rval < 0 ) {
+		dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d)\n",
+				 pid );
+		delete pi; 
+		pi = NULL;
+		set_priv( priv );
+		return -2;
+	}
 
-  if ( pagesize == 0 )
-    pagesize = getpagesize() / 1024;  // pagesize is in k now
+	if( pagesize == 0 ) {
+		pagesize = getpagesize() / 1024;  // pagesize is in k now
+	}
 
-  // I have personally seen a case where the resident set size was BIGGER 
-  // than the image size.  However, 'top' agreed with my measurements, 
-  // so I guess it's just a goofy bug/feature/whatever in HPUX.
+		// I have personally seen a case where the resident set size
+		// was BIGGER than the image size.  However, 'top' agreed with
+		// my measurements, so I guess it's just a goofy
+		// bug/feature/whatever in HPUX.
 
-  pi->imgsize   = (buf.pst_vdsize+buf.pst_vtsize+buf.pst_vssize) * pagesize;
-  pi->rssize    = buf.pst_rssize * pagesize;
+	pi->imgsize	= (buf.pst_vdsize+buf.pst_vtsize+buf.pst_vssize) * pagesize;
+	pi->rssize	= buf.pst_rssize * pagesize;
 
-  nowminf       = buf.pst_minorfaults;
-  nowmajf       = buf.pst_majorfaults;
+	nowminf		= buf.pst_minorfaults;
+	nowmajf		= buf.pst_majorfaults;
 
-  pi->user_time = buf.pst_utime;
-  pi->sys_time  = buf.pst_stime;
-  pi->age       = secsSinceEpoch() - buf.pst_start;
+	pi->user_time	= buf.pst_utime;
+	pi->sys_time	= buf.pst_stime;
+	pi->age			= secsSinceEpoch() - buf.pst_start;
 
-  // I'm taking out this assignment here.  The reason is that I don't
-  // know exactly how this value is determined, and it is normalized
-  // across all the cpus.  To be on the conservative side, I'll use the
-  // sampling method used above (Solaris251, Irix, OSF/1) to get this
-  // value.  MEY 9-23-98
-  // pi->cpuusage  = (float) buf.pst_pctcpu * 100;
+		// I'm taking out this assignment here.  The reason is that I
+		// don't know exactly how this value is determined, and it is
+		// normalized across all the cpus.  To be on the conservative
+		// side, I'll use the sampling method used above (Solaris251,
+		// Irix, OSF/1) to get this value.  MEY 9-23-98
+		// pi->cpuusage  = (float) buf.pst_pctcpu * 100;
+	pi->pid		= buf.pst_pid;
+	pi->ppid	= buf.pst_ppid;
 
-  pi->pid       = buf.pst_pid;
-  pi->ppid      = buf.pst_ppid;
+		/* Now that darned sampling thing, so that page faults gets
+		   converted to page faults per second */
 
-  /* Now that darned sampling thing, so that page faults gets converted to
-     page faults per second */
+	struct timeval thistime;
+	double timediff, lasttime, oldustime, now, ustime, oldusage;
 
-  struct timeval thistime;
-  double timediff, lasttime, oldustime, now, ustime, oldusage;
+	gettimeofday ( &thistime, 0 );
+	now = convertTimeval ( thistime );
+	ustime = buf.pst_utime + buf.pst_stime;  // is this inaccurate or what?!
+		// the above are in SECONDS.
 
-  gettimeofday ( &thistime, 0 );
-  now = convertTimeval ( thistime );
-  ustime = buf.pst_utime + buf.pst_stime;  // is this inaccurate or what?!
-  // the above are in SECONDS.
-
-  struct procHashNode * phn;  
+	struct procHashNode * phn;  
   
-  if ( procHash->lookup( pid, phn ) == 0 ) {
-    // success; pid in hash table
-    timediff = now - phn->lasttime;
-    if ( timediff < 1.0 ) {  // less than one second since last poll
-      pi->cpuusage = phn->oldusage;
-      pi->minfault = phn->oldminf;
-      pi->majfault = phn->oldmajf;
-      now = phn->lasttime;
-    }
-    else {
-      pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-      pi->minfault = (long unsigned int)((nowminf - phn->oldminf) / timediff);
-      pi->majfault = (long unsigned int)((nowmajf - phn->oldmajf) / timediff);
-    }
-    delete phn;	
-    procHash->remove(pid);
-  }
-  else {
-    // pid not in hash table; first time.  Use age of process as guide
-      if ( pi->age == 0 ) {
-          pi->cpuusage = 0.0;
-          pi->minfault = 0;
-          pi->majfault = 0;
-      }
-      else {
-          pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-          pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-          pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
-      }
-  }
-  // put new vals back into hashtable
-  phn = new procHashNode;
-  phn->lasttime = now;
-  phn->oldtime  = ustime;
-  phn->oldusage = pi->cpuusage;
-  phn->oldminf  = nowminf;
-  phn->oldmajf  = nowmajf;
-  procHash->insert( pid, phn );
+	if( procHash->lookup(pid, phn) == 0 ) {
+			// success; pid in hash table
+		timediff = now - phn->lasttime;
+		if( timediff < 1.0 ) {  // less than one second since last poll
+			pi->cpuusage = phn->oldusage;
+			pi->minfault = phn->oldminf;
+			pi->majfault = phn->oldmajf;
+			now = phn->lasttime;
+		} else {
+			pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
+			pi->minfault = (long unsigned int)((nowminf - phn->oldminf) / timediff);
+			pi->majfault = (long unsigned int)((nowmajf - phn->oldmajf) / timediff);
+		}
+		delete phn;	
+		procHash->remove( pid );
+	} else {
+			// pid not in hash table; first time.  Use age of process as guide
+		if( pi->age == 0 ) {
+			pi->cpuusage = 0.0;
+			pi->minfault = 0;
+			pi->majfault = 0;
+		} else {
+			pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+			pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
+			pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+		}
+	}
+		// put new vals back into hashtable
+	phn = new procHashNode;
+	phn->lasttime = now;
+	phn->oldtime  = ustime;
+	phn->oldusage = pi->cpuusage;
+	phn->oldminf  = nowminf;
+	phn->oldmajf  = nowmajf;
+	procHash->insert( pid, phn );
 
-  set_priv( priv );
-  return 0;
+	set_priv( priv );
+	return 0;
 }
-#endif
+#endif /* HPUX */
 
 #ifdef WIN32
 /* Danger....WIN32 code follows....
    The getProcInfo call for WIN32 actually gets *all* the information
    on all the processes, but that's not preventable. */
-int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
+int
+ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 
     DWORD dwStatus;  // return status of fn. calls
 
@@ -646,17 +655,17 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
         // I hope these numbers don't change over time... 
     dwStatus = GetSystemPerfData ( TEXT("230") );
 
-    if ( dwStatus != ERROR_SUCCESS ) {
-        dprintf( D_ALWAYS, "ProcAPI::getProcInfo failed to get performance info.\n");
+    if( dwStatus != ERROR_SUCCESS ) {
+        dprintf( D_ALWAYS, "ProcAPI: getProcInfo() failed to get performance info.\n");
 		set_priv( priv );
-        return -1;
+        return -2;
     }
 
         // somehow we don't have the process data -> panic
-    if ( pDataBlock == NULL ) {
-        dprintf ( D_ALWAYS, "ProcAPI::getProcInfo failed to make pDataBlock.\n");
+    if( pDataBlock == NULL ) {
+        dprintf( D_ALWAYS, "ProcAPI: getProcInfo() failed to make pDataBlock.\n");
 		set_priv( priv );
-        return -1;
+        return -2;
     }
     
     PPERF_OBJECT_TYPE pThisObject;
@@ -672,9 +681,9 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     sampleObjectTime = LI_to_double ( pThisObject->PerfTime );
     objectFrequency  = LI_to_double ( pThisObject->PerfFreq );
 
-    if ( !offsets )      // If we haven't yet gotten the offsets, grab 'em.
+    if( !offsets ) {      // If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
-    
+	}    
         // at this point we're all set to march through the data block to find
         // the instance with the pid we want.  
 
@@ -683,22 +692,19 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     bool found = false;
     pid_t thispid;
 
-    while ( (!found) && ( instanceNum < pThisObject->NumInstances ) ) {
-
+    while( (!found) && (instanceNum < pThisObject->NumInstances) ) {
         ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
         thispid = (long) *((long*)(ctrblk + offsets->procid));
-
-        if ( thispid == pid ) {
+        if( thispid == pid ) {
             found = true;
-        }
-        else {
+        } else {
             instanceNum++;
-            pThisInstance = nextInstance(pThisInstance);
+            pThisInstance = nextInstance( pThisInstance );
         }
     }
 
-    if ( !found ) {
-        dprintf ( D_FULLDEBUG, "ERROR: pid # %d was not found!\n", pid );
+    if( !found ) {
+        dprintf( D_FULLDEBUG, "ProcAPI: Error: pid # %d was not found!\n", pid );
         set_priv( priv );
 		return -1;
     }
@@ -729,7 +735,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     nowfault = (long) *((long*)(ctrblk + offsets->faults  ));
     nowcpu   = LI_to_double( pt );
 
-    if ( procHash->lookup ( pid, phn ) == 0 ) {
+    if( procHash->lookup ( pid, phn ) == 0 ) {
         pi->majfault = (long) ( ( nowfault - phn->oldmajf ) / 
                     ((sampleObjectTime - phn->lasttime) / objectFrequency));
         pi->cpuusage = ((nowcpu - phn->oldusage) / 
@@ -737,13 +743,11 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 
         delete phn;
         procHash->remove(pid);
-    }
-    else {  // doesn't exist in hash table or error....
-		if ( (sampleObjectTime - LI_to_double (elt)) == 0.0 ) {
+    } else {  // doesn't exist in hash table or error....
+		if( (sampleObjectTime - LI_to_double (elt)) == 0.0 ) {
 			pi->majfault = 0;
 			pi->cpuusage = 0.0;
-		}
-		else {
+		} else {
 	        pi->majfault = (long) (nowfault / 
 		          ((sampleObjectTime - LI_to_double ( elt ))  / objectFrequency));
 			pi->cpuusage = (nowcpu / 
@@ -763,7 +767,6 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 #endif  // WIN32 getProcInfo
    
 
-
 /* The next function, getMemInfo, is different for each *&^%$#@! OS.
    Each uses something quite different than other OS's use...
    A 0 is returned on success, and a -1 returned on failure.  The numbers
@@ -771,196 +774,219 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
    reported by top.  */
 
 #if ( defined(Solaris251) || defined(Solaris26)  )
-int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
-
-  if ( pagesize == 0 )
-    pagesize = getpagesize() / 1024;
-
-  totalmem = sysconf( _SC_PHYS_PAGES ) * pagesize;
-  availmem = sysconf( _SC_AVPHYS_PAGES )* pagesize;
-
-  return 0;
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
+	if( pagesize == 0 ) {
+		pagesize = getpagesize() / 1024;
+	}
+	totalmem = sysconf(_SC_PHYS_PAGES) * pagesize;
+	availmem = sysconf(_SC_AVPHYS_PAGES) * pagesize;
+	return 0;
 }
-#endif
+#endif /* Solaris251 || Solaris26 */
 
 #ifdef LINUX
-int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
   
-  FILE *fd;
-  char a[32];
+	FILE *fd;
+	char a[32];
 
-  if ( ( fd = fopen ( "/proc/meminfo", "r" ) ) >= 0 ) {
-    fscanf ( fd, "%s %s %s %s %s %s"
-                 "%s %s %s %s %s %s %s"
-                 "%s %s %s %s"
-                 "%s %d %s"
-                 "%s %d %s", 
-             a, a, a, a, a, a, 
-             a, a, a, a, a, a, a,
-             a, a, a, a,
-             a, &totalmem, a, 
-             a, &availmem, a );
-    fclose ( fd );
-  }
-  else 
-    return -1;
-  
-  return 0;
+	if( (fd = fopen("/proc/meminfo", "r")) >= 0 ) {
+		fscanf( fd, "%s %s %s %s %s %s"
+				"%s %s %s %s %s %s %s"
+				"%s %s %s %s"
+				"%s %d %s"
+				"%s %d %s", 
+				a, a, a, a, a, a, 
+				a, a, a, a, a, a, a,
+				a, a, a, a,
+				a, &totalmem, a, 
+				a, &availmem, a );
+		fclose( fd );
+	} else {
+		dprintf( D_ALWAYS, "ProcAPI: Error: Can't open /proc/meminfo.\n" );
+		return -1;
+	}
+	return 0;
 }
-#endif
+#endif /* LINUX */
 
 #ifdef OSF1
-int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 
-  struct tbl_pmemstats s;
-  if (table(TBL_PMEMSTATS, 0, (void *)&s, 1,sizeof(s) ) < 0) 
-    return -1;
+	struct tbl_pmemstats s;
+	if( table(TBL_PMEMSTATS, 0, (void *)&s, 1,sizeof(s) ) < 0 ) {
+		return -1;
+	}
+	totalmem = s.physmem / 1024;
+	if( pagesize == 0 ) {				// since we've got it right
+		pagesize = s.pagesize / 1024;	// here, record pagesize if we
+	}									// don't yet have it. 
 
-  totalmem = s.physmem / 1024;
-  if ( pagesize == 0 )                // since we've got it right here, record
-    pagesize = s.pagesize / 1024;     // pagesize if we don't yet have it.
-
-  struct tbl_vmstats v;
-  if (table(TBL_VMSTATS, 0, (void *)&v, 1, sizeof(v) ) < 0)
-    return -1;
-    
-  availmem = v.free_count * pagesize;
-
-  return 0;
+	struct tbl_vmstats v;
+	if( table(TBL_VMSTATS, 0, (void *)&v, 1, sizeof(v) ) < 0 ) {
+		return -1;
+	}    
+	availmem = v.free_count * pagesize;
+	return 0;
 }
-#endif
+#endif /* OSF1 */
 
 #ifdef IRIX62
-int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
   
-  struct rminfo rmi;
+	struct rminfo rmi;
 
-  if ( pagesize == 0 )
-    pagesize = getpagesize() / 1024;
-
-  if ( sysmp ( MP_SAGET, MPSA_RMINFO, &rmi, sizeof(rmi) ) < 0 ) {
-    perror ( "sysmp error: " );
-    return -1;
-  }
-
-  totalmem = rmi.physmem * pagesize;
-  availmem = rmi.freemem * pagesize;
-
-  return 0;
+	if( pagesize == 0 ) {
+		pagesize = getpagesize() / 1024;
+	}
+	if( sysmp(MP_SAGET, MPSA_RMINFO, &rmi, sizeof(rmi)) < 0 ) {
+		dprintf( D_ALWAYS, "ProcAPI: Error in sysmp(), errno: %d\n",
+				 errno );
+		return -1;
+	}
+	totalmem = rmi.physmem * pagesize;
+	availmem = rmi.freemem * pagesize;
+	return 0;
 }
-#endif
+#endif /* IRIX62 */
 
 #ifdef HPUX
-int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 
-  struct pst_static s;
+	struct pst_static s;
   
-  if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-    pagesize = s.page_size / 1024;   // it's right here....
-    totalmem = s.physical_memory * pagesize;
-  }
-  else {
-    perror("pstat_getstatic");
-    return -1;
-  }
-  
-  struct pst_dynamic d;
-
-  if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
-    availmem = d.psd_free * pagesize;
-  }
-  else {
-    perror("pstat_getdynamic");
-    return -1;
-  }
-
-  return 0;
+	if( pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1 ) {
+		pagesize = s.page_size / 1024;   // it's right here....
+		totalmem = s.physical_memory * pagesize;
+	} else {
+		dprintf( D_ALWAYS, 
+				 "ProcAPI: Error in pstat_getstatic(), errno: %d\n",
+				 errno );
+		return -1;
+	}
+	struct pst_dynamic d;
+	if( pstat_getdynamic(&d, sizeof(d), (size_t)1, 0) != -1 ) {
+		availmem = d.psd_free * pagesize;
+	} else {
+		dprintf( D_ALWAYS, 
+				 "ProcAPI: Error in pstat_getdynamic(), errno: %d\n",
+				 errno );
+		return -1;
+	}
+	return 0;
 }
-#endif
+#endif /* HPUX */
 
 /* This version for windows is obviously broken. :-) */
 #ifdef WIN32
-int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
     totalmem = 0;
     availmem = 0;
     return 0;
 }
-#endif
+#endif /* WIN32 */
 
 #ifndef WIN32
 /* getProcSetInfo returns the sum of the procInfo structs for a set
    of pids.  These pids are specified by an array of pids ('pids') that
    has 'numpids' elements. */
-int ProcAPI::getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi ) {
+int
+ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 
-  initpi ( pi );
-  piPTR temp = NULL;
-  int rval = 0;
-  priv_state priv = set_root_priv();
+	initpi ( pi );
+	piPTR temp = NULL;
+	int rval = 0, val = 0;
+	priv_state priv = set_root_priv();
 
-  for ( int i=0 ; i<numpids ; i++ ) {
-    if ( getProcInfo ( pids[i], temp ) >= 0 ) {
-      pi->imgsize   += temp->imgsize;
-      pi->rssize    += temp->rssize;
-      pi->minfault  += temp->minfault;
-      pi->majfault  += temp->majfault;
-      pi->user_time += temp->user_time;
-      pi->sys_time  += temp->sys_time;
-      pi->cpuusage  += temp->cpuusage;
-      if ( temp->age > pi->age )
-        pi->age = temp->age;
-    }
-    else {
-      dprintf (D_ALWAYS, "Can't get info for pid %d!\n", pids[i] );
-      rval = -1;
-    }
-  }
-  delete temp;
-  set_priv( priv );
-  return rval;
+	for( int i=0; i<numpids; i++ ) {
+		val = getProcInfo( pids[i], temp );
+		rval = MIN( rval, val );
+		switch( val ) {
+		case 0:
+			pi->imgsize   += temp->imgsize;
+			pi->rssize    += temp->rssize;
+			pi->minfault  += temp->minfault;
+			pi->majfault  += temp->majfault;
+			pi->user_time += temp->user_time;
+			pi->sys_time  += temp->sys_time;
+			pi->cpuusage  += temp->cpuusage;
+			if( temp->age > pi->age ) {
+				pi->age = temp->age;
+			}
+			break;
+		case -1:
+			dprintf( D_FULLDEBUG, 
+					 "ProcAPI::getProcSetInfo: Pid %d does not exist, ignoring.\n", 
+					 pids[i] );
+			break;
+		case -2:
+			dprintf( D_ALWAYS, 
+					 "ProcAPI::getProcSetInfo: Fatal error getting info for pid %d.\n", 
+					 pids[i] );
+			break;
+		default:
+			dprintf( D_ALWAYS, 
+					 "ProcAPI::getProcSetInfo: Unknown return value (%d) from getProcInfo(%d)",
+					 val, pids[i] );
+			rval = -2;
+			break;
+		}
+	}
+	delete temp;
+	set_priv( priv );
+	return rval;
 }
 #endif
 
 #ifdef WIN32
 // There is a much better way to do this in WIN32...we get all instances
 // of all processes at once anyway...
-int ProcAPI::getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi ) {
+int
+ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 
 	DWORD dwStatus;  // return status of fn. calls
 
         // '2' is the 'system' , '230' is 'process'  
         // I hope these numbers don't change over time... 
-    dwStatus = GetSystemPerfData ( TEXT("230") );
+    dwStatus = GetSystemPerfData( TEXT("230") );
     
-    if ( dwStatus != ERROR_SUCCESS ) {
+    if( dwStatus != ERROR_SUCCESS ) {
         dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to get performance info.\n");
         return -1;
     }
 
         // somehow we don't have the process data -> panic
-    if ( pDataBlock == NULL ) {
-        dprintf ( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
+    if( pDataBlock == NULL ) {
+        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
         return -1;
     }
     
     PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
 
-    if ( !offsets )      // If we haven't yet gotten the offsets, grab 'em.
+    if( !offsets ) {	// If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
-    
-    initpi ( pi );
+    }
+    initpi( pi );
 
         // create local copy of pids.
 	pid_t *localpids = (pid_t*) malloc ( sizeof (pid_t) * numpids );
-	for ( int i=0 ; i<numpids ; i++ )
+	for( int i=0 ; i<numpids ; i++ ) {
 		localpids[i] = pids[i];
- 
-	multiInfo ( localpids, numpids, pi );
+	}
+	multiInfo( localpids, numpids, pi );
 
 	return 0;
 }
 
-int ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi ) {
+
+int
+ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi ) {
 
     initpi ( pi );
 
@@ -981,7 +1007,7 @@ int ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi ) {
 
         // somehow we don't have the process data -> panic
     if ( pDataBlock == NULL ) {
-        dprintf ( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
+        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
         return -1;
     }
     
@@ -1008,7 +1034,8 @@ int ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi ) {
 	return 0;
 }
 
-int ProcAPI::getPidFamily( pid_t daddypid, pid_t *pidFamily ) {
+int
+ProcAPI::getPidFamily( pid_t daddypid, pid_t *pidFamily ) {
 
 	if ( daddypid == 0 ) {
 		pidFamily[0] = 0;
@@ -1018,8 +1045,8 @@ int ProcAPI::getPidFamily( pid_t daddypid, pid_t *pidFamily ) {
 	DWORD dwStatus;  // return status of fn. calls
 
 	if ( pidFamily == NULL ) {
-		dprintf (D_FULLDEBUG, 
-			"ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
+		dprintf( D_FULLDEBUG, 
+				 "ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
 		return -1;
 	}
 
@@ -1028,13 +1055,15 @@ int ProcAPI::getPidFamily( pid_t daddypid, pid_t *pidFamily ) {
     dwStatus = GetSystemPerfData ( TEXT("230") );
     
 	if ( dwStatus != ERROR_SUCCESS ) {
-        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to get performance info.\n");
+        dprintf( D_ALWAYS, 
+				 "ProcAPI::getProcSetInfo failed to get performance info.\n");
         return -1;
     }
 
         // somehow we don't have the process data -> panic
     if ( pDataBlock == NULL ) {
-        dprintf ( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
+        dprintf( D_ALWAYS, 
+				 "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
         return -1;
     }
     
@@ -1066,13 +1095,14 @@ int ProcAPI::getPidFamily( pid_t daddypid, pid_t *pidFamily ) {
 
 }
 
-void ProcAPI::makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
-			        	 pid_t* &fampids, int &famsize ) {
+void
+ProcAPI::makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
+					 pid_t* &fampids, int &famsize ) {
 
 	pid_t *parentpids = new pid_t[numpids];
 	fampids = new pid_t[numpids];  // just might include everyone...
 
-	for ( int i=0 ; i<numpids ; i++ ) {
+	for( int i=0 ; i<numpids ; i++ ) {
 		parentpids[i] = ntSysInfo.GetParentPID( allpids[i] );
 	}
 
@@ -1080,10 +1110,10 @@ void ProcAPI::makeFamily( pid_t dadpid, pid_t *allpids, int numpids,
 	fampids[0] = dadpid;
 	int numadditions = 1;
 
-	while ( numadditions > 0 ) {
+	while( numadditions > 0 ) {
 		numadditions = 0;
-		for ( int j=0 ; j<numpids ; j++ ) {
-			if ( isinfamily ( fampids, famsize, parentpids[j] ) ) {
+		for( int j=0; j<numpids; j++ ) {
+			if( isinfamily(fampids, famsize, parentpids[j]) ) {
 				fampids[famsize] = allpids[j];
 				parentpids[j] = 0;
 				allpids[j] = 0;
@@ -1096,7 +1126,8 @@ void ProcAPI::makeFamily( pid_t dadpid, pid_t *allpids, int numpids,
 }
 
 // allocate space for pids and fill in.
-void ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
+void
+ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
 
     PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
     PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
@@ -1104,7 +1135,7 @@ void ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
 	pids = new pid_t[numpids];
 	DWORD ctrblk;
 		
-	for ( int i=0 ; i<numpids ; i++ ) {
+	for( int i=0 ; i<numpids ; i++ ) {
         ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
         pids[i] = (pid_t) *((pid_t*)(ctrblk + offsets->procid));
         pThisInstance = nextInstance(pThisInstance);        
@@ -1112,10 +1143,10 @@ void ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
 }
 
 
-
 // We assume that the pDataBlock and offsets are all set up, and we have a
 // set of pids (pidslist) to get info on.  Totals returned in pi.
-int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
+int
+ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
 
     PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
     PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
@@ -1131,12 +1162,12 @@ int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
     
         // loop through each instance in data, checking to see if on list
 
-    while ( instanceNum < pThisObject->NumInstances ) {
+    while( instanceNum < pThisObject->NumInstances ) {
         
         ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
         thispid = (pid_t) *((pid_t*)(ctrblk + offsets->procid));
 
-        if ( isinlist ( thispid, pidlist, numpids ) != -1 ) {
+        if( isinlist(thispid, pidlist, numpids) != -1 ) {
 
             LARGE_INTEGER elt= (LARGE_INTEGER) 
                 *((LARGE_INTEGER*)(ctrblk + offsets->elapsed));
@@ -1165,14 +1196,13 @@ int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
 			nowfault = (long) *((long*)(ctrblk + offsets->faults  ));
 			nowcpu   = LI_to_double( pt );
             
-			if ( procHash->lookup ( thispid, phn ) == 0 ) {
+			if( procHash->lookup ( thispid, phn ) == 0 ) {
 				pi->majfault += (long) ( ( nowfault - phn->oldmajf ) / 
                      ((sampleObjectTime - phn->lasttime) / objectFrequency));
 				pi->cpuusage += ((nowcpu - phn->oldusage) / 
                                  (sampleObjectTime - phn->lasttime)) * 100;
-			}
-			else {  // doesn't exist in hash table or error....
-				if ( (sampleObjectTime - LI_to_double (elt) ) != 0.0 ) {
+			} else {  // doesn't exist in hash table or error....
+				if( (sampleObjectTime - LI_to_double (elt)) != 0.0 ) {
 					pi->majfault += (long) (nowfault / 
 		                            ((sampleObjectTime - LI_to_double ( elt )) 
 			                         / objectFrequency));
@@ -1180,7 +1210,6 @@ int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
 					        ((sampleObjectTime - LI_to_double ( elt )) )) * 100;
 				}
             }
-
             phn = new procHashNode;
             phn->lasttime = sampleObjectTime;
             phn->oldmajf  = nowfault;
@@ -1190,7 +1219,7 @@ int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
 
     // go to the next one...
 		instanceNum++;
-        pThisInstance = nextInstance(pThisInstance);        
+        pThisInstance = nextInstance( pThisInstance );        
     }    
     return 0;
 }
@@ -1204,47 +1233,49 @@ int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
      I assume is an already-allocated array.  This array will be terminated
      with a 0 for a pid at its end.  A -1 is returned on failure, 0 otherwise.
 */
-int ProcAPI::getPidFamily( pid_t pid, pid_t *pidFamily ) {
+int
+ProcAPI::getPidFamily( pid_t pid, pid_t *pidFamily ) {
   // I'm going to do this in a somewhat ugly hacked way....get all the info
   // instead of just pids...but it's a lot quicker to write.
 
-  if ( pidFamily == NULL ) {
-    dprintf (D_FULLDEBUG, 
-		"ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
-    return -1;
-  }
+	if( pidFamily == NULL ) {
+		dprintf( D_FULLDEBUG, 
+				 "ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
+		return -1;
+	}
 
 #ifndef HPUX
-  buildPidList();
+	buildPidList();
 #endif
 
-  buildProcInfoList();
+	buildProcInfoList();
 
-  if ( buildFamily ( pid ) < 0 ) {  // can't get info on elder pid
-     deallocPidList();
-	 deallocAllProcInfos();
-	 deallocProcFamily();
-     return -1;
-  }
+	if( buildFamily(pid) < 0 ) {  // can't get info on elder pid
+		deallocPidList();
+		deallocAllProcInfos();
+		deallocProcFamily();
+		return -1;
+	}
 
-  piPTR current = procFamily;  // get descendents and elder pid.
-  int i=0;
-  // we'll only return the first 511.  No self-respecting job should have
-  // more.  :-)  
-  while (( current != NULL ) && ( i<511 ) ) {
-    pidFamily[i] = current->pid;
-    i++;
-    current = current->next;
-  }
+	piPTR current = procFamily;  // get descendents and elder pid.
+	int i=0;
+		// we'll only return the first 511.  No self-respecting job
+		// should have  more.  :-)  
+	while( (current != NULL) && (i<511) ) {
+		pidFamily[i] = current->pid;
+		i++;
+		current = current->next;
+	}
   
-  pidFamily[i] = 0;
+	pidFamily[i] = 0;
 
-   // deallocate all the lists of stuff...don't leave stale info lying around.
-  deallocPidList();
-  deallocAllProcInfos();
-  deallocProcFamily();
+		// deallocate all the lists of stuff...don't leave stale info
+		// lying around. 
+	deallocPidList();
+	deallocAllProcInfos();
+	deallocProcFamily();
 
-  return 0;
+	return 0;
 }
 
 /* This is the "given a pid, return information on that pid + all of its
@@ -1259,92 +1290,96 @@ int ProcAPI::getPidFamily( pid_t pid, pid_t *pidFamily ) {
 
    Lastly, the 'procFamily' is built by scanning 'allProcInfos' repeatedly.
 */
-int ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi ) {
+int
+ProcAPI::getFamilyInfo( pid_t daddypid, piPTR& pi ) {
 
 #ifndef HPUX        // everyone except HPUX needs a pidlist built.
-  buildPidList();
+	buildPidList();
 #endif
 
-  buildProcInfoList();  // HPUX has its own version of this, too.
+	buildProcInfoList();  // HPUX has its own version of this, too.
 
-  if ( buildFamily( daddypid ) < 0 ) {  // return a -1 if we can't get info on
-    deallocPidList();
+	if( buildFamily(daddypid) < 0 ) {  // return a -1 if we can't get info on
+		deallocPidList();
+		deallocAllProcInfos();
+		deallocProcFamily();
+		return -1;                        // daddypid.
+	}
+
+		// now, procFamily points to a list of the procInfos in that
+		// family. 
+	initpi( pi );
+
+	pi->pid      = procFamily->pid;   // overall pid is this pid.
+	pi->ppid     = procFamily->ppid;  // overall parent is parent's parent
+	pi->age      = procFamily->age;   // let age simply be the age of the elder.
+
+	piPTR current = procFamily;
+
+	while( current != NULL ) {
+
+		pi->imgsize   += current->imgsize;
+		pi->rssize    += current->rssize;
+		pi->minfault  += current->minfault;
+		pi->majfault  += current->majfault;
+		pi->user_time += current->user_time;
+		pi->sys_time  += current->sys_time;
+		pi->cpuusage  += current->cpuusage;
+		current = current->next;
+	}
+
+	pi->next = NULL;
+
+		// deallocate all the lists of stuff...don't leave stale info
+		// lying around. 
+	deallocPidList();
 	deallocAllProcInfos();
-    deallocProcFamily();
-    return -1;                        // daddypid.
-  }
+	deallocProcFamily();
 
-  // now, procFamily points to a list of the procInfos in that family.
-  initpi ( pi );
-
-  pi->pid      = procFamily->pid;   // overall pid is this pid.
-  pi->ppid     = procFamily->ppid;  // overall parent is parent's parent
-  pi->age      = procFamily->age;   // let age simply be the age of the elder.
-
-  piPTR current = procFamily;
-
-  while ( current != NULL ) {
-
-    pi->imgsize   += current->imgsize;
-    pi->rssize    += current->rssize;
-    pi->minfault  += current->minfault;
-    pi->majfault  += current->majfault;
-    pi->user_time += current->user_time;
-    pi->sys_time  += current->sys_time;
-    pi->cpuusage  += current->cpuusage;
-    current = current->next;
-  }
-
-  pi->next     = NULL;
-
-  // deallocate all the lists of stuff...don't leave stale info lying around.
-  deallocPidList();
-  deallocAllProcInfos();
-  deallocProcFamily();
-
-  return 0;
+	return 0;
 }
 #endif // not defined WIN32
 
 /* initpi is a simple function that sets everything in a procInfo
    structure to a default value.  */
-void ProcAPI::initpi ( piPTR& pi ) {
-  if ( pi == NULL )
-    pi = new procInfo;
-
-  pi->imgsize  = 0;
-  pi->rssize   = 0;
-  pi->minfault = 0;
-  pi->majfault = 0;
-  pi->user_time= 0;
-  pi->sys_time = 0;
-  pi->age      = 0;
-  pi->cpuusage = 0.0;
-  pi->pid      = -1;
-  pi->ppid     = -1;
-  pi->next     = NULL;
+void
+ProcAPI::initpi ( piPTR& pi ) {
+	if( pi == NULL ) {
+		pi = new procInfo;
+	}
+	pi->imgsize  = 0;
+	pi->rssize   = 0;
+	pi->minfault = 0;
+	pi->majfault = 0;
+	pi->user_time= 0;
+	pi->sys_time = 0;
+	pi->age      = 0;
+	pi->cpuusage = 0.0;
+	pi->pid      = -1;
+	pi->ppid     = -1;
+	pi->next     = NULL;
 }
-
 
 #ifndef WIN32  // Doesn't come close to working in WIN32...sigh.
 
 /* This function returns the next pid in the pidlist.  That pid is then 
    removed from the pidList.  A -1 is returned when there are no more pids.
  */
-pid_t ProcAPI::getAndRemNextPid () {
+pid_t
+ProcAPI::getAndRemNextPid () {
 
-  pidlistPTR temp;
-  pid_t tpid;
+	pidlistPTR temp;
+	pid_t tpid;
 
-  if ( pidList == NULL )
-    return -1;
-  
-  temp = pidList;
-  tpid = pidList->pid;
-  pidList = pidList->next;
-  delete temp;
+	if( pidList == NULL ) {
+		return -1;
+	}
+	temp = pidList;
+	tpid = pidList->pid;
+	pidList = pidList->next;
+	delete temp;
 
-  return tpid;
+	return tpid;
 }
 
 /* Wonderfully enough, this works for all OS's.  This function opens
@@ -1352,44 +1387,44 @@ pid_t ProcAPI::getAndRemNextPid () {
    system.  This information is put into a list of pids that is pointed
    to by pidList, a private data member of ProcAPI.  
  */
-int ProcAPI::buildPidList() {
+int
+ProcAPI::buildPidList() {
 
-  DIR *dirp;
-  struct dirent *direntp;
-  pidlistPTR current;
-  pidlistPTR temp;
-  priv_state priv = set_root_priv();
+	DIR *dirp;
+	struct dirent *direntp;
+	pidlistPTR current;
+	pidlistPTR temp;
+	priv_state priv = set_root_priv();
 
-  // make a header node for the pidList:
-  pidList = new pidlist;
+		// make a header node for the pidList:
+	pidList = new pidlist;
 
-  current = pidList;
+	current = pidList;
 
-  if ( ( dirp = opendir( "/proc" ) ) != NULL ) {
-    while ( (direntp = readdir( dirp )) != NULL ) {
-      if ( isdigit( direntp->d_name[0] ) ) {     // check for first char digit
-        temp = new pidlist;
-        temp->pid = (pid_t) atol ( direntp->d_name );
-        temp->next = NULL;
-        current->next = temp;
-        current = temp;
-      }
-    }
-    closedir( dirp );
+	if( (dirp = opendir("/proc")) != NULL ) {
+		while( (direntp = readdir(dirp)) != NULL ) {
+			if( isdigit(direntp->d_name[0]) ) {     // check for first char digit
+				temp = new pidlist;
+				temp->pid = (pid_t) atol ( direntp->d_name );
+				temp->next = NULL;
+				current->next = temp;
+				current = temp;
+			}
+		}
+		closedir( dirp );
     
-    temp = pidList;
-    pidList = pidList->next;
-    delete temp;           // remove header node.
+		temp = pidList;
+		pidList = pidList->next;
+		delete temp;           // remove header node.
 
-	set_priv( priv );
-    return 0;
-  }
-  else {
-    delete pidList;        // remove header node.
-    pidList = NULL;
-	set_priv( priv );
-    return -1;
-  }
+		set_priv( priv );
+		return 0;
+	} else {
+		delete pidList;        // remove header node.
+		pidList = NULL;
+		set_priv( priv );
+		return -1;
+	}
 }
 
 /* Using the list of processes pointed to by pidList and returned by
@@ -1398,31 +1433,32 @@ int ProcAPI::buildPidList() {
    list.  This function is used on all OS's except for HPUX.
 */
 #ifndef HPUX
-int ProcAPI::buildProcInfoList() {
+int
+ProcAPI::buildProcInfoList() {
   
-  piPTR current;
-  piPTR temp;
-  pid_t thispid;
+	piPTR current;
+	piPTR temp;
+	pid_t thispid;
 
-  // make a header node for ease of list construction:
-  allProcInfos = new procInfo;
-  current = allProcInfos;
-  current->next = NULL;
+		// make a header node for ease of list construction:
+	allProcInfos = new procInfo;
+	current = allProcInfos;
+	current->next = NULL;
 
-  temp = NULL;
-  while ( ( thispid = getAndRemNextPid() ) >= 0 ) {
-    if ( getProcInfo ( thispid, temp ) >= 0 ) {
-      current->next = temp;
-      current = temp;
-      temp = NULL;
-    }
-  }
+	temp = NULL;
+	while( (thispid = getAndRemNextPid()) >= 0 ) {
+		if( getProcInfo(thispid, temp) >= 0 ) {
+			current->next = temp;
+			current = temp;
+			temp = NULL;
+		}
+	}
 
-  // we're done; remove header node.
-  temp = allProcInfos;
-  allProcInfos = allProcInfos->next;
-  delete temp;
-  return 0;
+		// we're done; remove header node.
+	temp = allProcInfos;
+	allProcInfos = allProcInfos->next;
+	delete temp;
+	return 0;
 }
 #else
 /* now for the HPUX version.  In a sense, it's simpler, because no
@@ -1431,71 +1467,73 @@ int ProcAPI::buildProcInfoList() {
    information about every process in the system, if asked enough
    times and in the proper manner.
 */
-int ProcAPI::buildProcInfoList() {
+int
+ProcAPI::buildProcInfoList() {
   
-  // this determines the number of process infos to grab at once.
-  // 10 seems to be a good number.
-  const int BURSTSIZE = 10;    
+		// this determines the number of process infos to grab at
+		// once.   10 seems to be a good number.
+	const int BURSTSIZE = 10;    
 
-  piPTR current;
-  piPTR temp;
-  pid_t thispid;
+	piPTR current;
+	piPTR temp;
+	pid_t thispid;
 
-  struct pst_status pst[BURSTSIZE];
-  int i, count;
-  int idx = 0;  // index within the context
+	struct pst_status pst[BURSTSIZE];
+	int i, count;
+	int idx = 0;  // index within the context
 
-  // make a header node for ease of list construction:
-  allProcInfos = new procInfo;
-  current = allProcInfos;
-  current->next = NULL;
+		// make a header node for ease of list construction:
+	allProcInfos = new procInfo;
+	current = allProcInfos;
+	current->next = NULL;
 
-  if ( pagesize == 0 )
-    pagesize = getpagesize() / 1024;  // pagesize is in k now
+	if( pagesize == 0 ) {
+		pagesize = getpagesize() / 1024;  // pagesize is in k now
+	}
 
-  // loop until count == 0, which will occur when all have been returned
-  while (( count = pstat_getproc ( pst, sizeof(pst[0]), BURSTSIZE, idx)) > 0) {
-    for ( i=0 ; i < count ; i++ ) {
-      temp = new procInfo;
+		// loop until count == 0, which will occur when all have been returned
+	while( (count = pstat_getproc(pst, sizeof(pst[0]), BURSTSIZE, idx)) > 0 ) {
+		for( i=0 ; i<count; i++ ) {
+			temp = new procInfo;
 
-      temp->imgsize   = ( pst[i].pst_vdsize + pst[i].pst_vtsize 
-                          + pst[i].pst_vssize )   * pagesize;
-      temp->rssize    = pst[i].pst_rssize * pagesize;
-      temp->minfault  = pst[i].pst_minorfaults;
-      temp->majfault  = pst[i].pst_majorfaults;
-      temp->user_time = pst[i].pst_utime;
-      temp->sys_time  = pst[i].pst_stime;
-      temp->age       = secsSinceEpoch() - pst[i].pst_start;
-      temp->cpuusage  = pst[i].pst_pctcpu * 100;
-      temp->pid       = pst[i].pst_pid;
-      temp->ppid      = pst[i].pst_ppid;
-      temp->next      = NULL;
-
-      current->next = temp;
-      current = temp;
-    }
-    
-    idx = pst[count-1].pst_idx + 1;
-  }
+			temp->imgsize   = ( pst[i].pst_vdsize + pst[i].pst_vtsize 
+								+ pst[i].pst_vssize )   * pagesize;
+			temp->rssize    = pst[i].pst_rssize * pagesize;
+			temp->minfault  = pst[i].pst_minorfaults;
+			temp->majfault  = pst[i].pst_majorfaults;
+			temp->user_time = pst[i].pst_utime;
+			temp->sys_time  = pst[i].pst_stime;
+			temp->age       = secsSinceEpoch() - pst[i].pst_start;
+			temp->cpuusage  = pst[i].pst_pctcpu * 100;
+			temp->pid       = pst[i].pst_pid;
+			temp->ppid      = pst[i].pst_ppid;
+			temp->next      = NULL;
+			
+			current->next = temp;
+			current = temp;
+		}
+		idx = pst[count-1].pst_idx + 1;
+	}
 
   // remove that header node:
-  temp = allProcInfos;
-  allProcInfos = allProcInfos->next;
-  delete temp;
+	temp = allProcInfos;
+	allProcInfos = allProcInfos->next;
+	delete temp;
 
-  if ( count == -1 )
-    perror ( "pstat_getproc()" );
-  
-  return 0;
+	if( count == -1 ) {
+		dprintf( D_ALWAYS, "ProcAPI: pstat_getproc() failed\n" );
+		return -1;
+	}
+	return 0;
 }
 #endif   // end of HPUX's buildProcInfoList()
-
 
 /* buildFamily takes a list of procInfo structs pointed to by 
    allProcInfos and an ancestor pid 'daddypid' and builds a list
    of all procInfo structs and points 'procFamily' to it.
 */
-int ProcAPI::buildFamily( pid_t daddypid ) {
+int
+ProcAPI::buildFamily( pid_t daddypid ) {
 
   // array of pids in family.  Size # pids.
   pid_t *familypids;
@@ -1587,17 +1625,15 @@ int ProcAPI::buildFamily( pid_t daddypid ) {
    points at.  It is assumed that allProcInfos points to all the 
    processes in the system ( that buildProcInfoList has been called )
 */
-int ProcAPI::getNumProcs() {
-  
-  int nump;
-  piPTR temp;
-
-  temp = allProcInfos;
-
-  for ( nump = 0 ; temp != NULL ; nump++ )
-    temp = temp->next;
-
-  return nump;
+int
+ProcAPI::getNumProcs() {
+	int nump;
+	piPTR temp;
+	temp = allProcInfos;
+	for( nump=0; temp != NULL; nump++ ) {
+		temp = temp->next;
+	}
+	return nump;
 }
 
 
@@ -1605,85 +1641,93 @@ int ProcAPI::getNumProcs() {
    epoch.  Used to find the age of a process.  It uses the 
    time() function.  (Which is suprisingly supported by everyone!)
    It was simpler than I thought it would be. :-) */
-long ProcAPI::secsSinceEpoch() {
-  return (long) time(NULL);
+long
+ProcAPI::secsSinceEpoch() {
+	return (long)time(NULL);
 }
 
 /* given a struct timeval, return that same value as a double */
-double ProcAPI::convertTimeval ( struct timeval t ) {
-  return (double) t.tv_sec + ( t.tv_usec * 1.0e-6 );
-}   
-
+double
+ProcAPI::convertTimeval ( struct timeval t ) {
+	return (double) t.tv_sec + ( t.tv_usec * 1.0e-6 );
+}
 #endif // not defined WIN32...sigh.
 
 // Hey, here are two functions that can be used by both win32 and unix....
-int ProcAPI::isinfamily ( pid_t *fam, int size, pid_t target ) {
-	for ( int i=0 ; i<size ; i++ ) {
-		if ( fam[i] == target )
+int
+ProcAPI::isinfamily( pid_t *fam, int size, pid_t target ) {
+	for( int i=0; i<size; i++ ) {
+		if( fam[i] == target ) {
 			return true;
+		}
 	}
 	return false;
 }
 
-void ProcAPI::printProcInfo ( piPTR pi ) {
+void
+ProcAPI::printProcInfo( piPTR pi ) {
 
-  if ( pi == NULL )
-    return;
-
-  printf ( "process image, rss, in k: %lu, %lu\n", pi->imgsize, pi->rssize );
-  printf ( "minor & major page faults: %lu, %lu\n", pi->minfault, 
-           pi->majfault ); 
-  printf ( "Times:  user, system, age: %ld %ld %ld\n", 
-           pi->user_time, pi->sys_time, pi->age );
-  printf ( "percent cpu usage of this process: %5.2f\n", pi->cpuusage);
-  printf ( "\n" );
+	if( pi == NULL ) {
+		return;
+	}
+	printf( "process image, rss, in k: %lu, %lu\n", pi->imgsize, pi->rssize );
+	printf( "minor & major page faults: %lu, %lu\n", pi->minfault, 
+			pi->majfault ); 
+	printf( "Times:  user, system, age: %ld %ld %ld\n", 
+			pi->user_time, pi->sys_time, pi->age );
+	printf( "percent cpu usage of this process: %5.2f\n", pi->cpuusage);
+	printf( "\n" );
 }
 
 #ifndef WIN32
  
-void ProcAPI::deallocPidList() {
-  if ( pidList != NULL ) {
-    pidlistPTR prev;
-    pidlistPTR temp = pidList;
-    while ( temp != NULL ) {
-      prev = temp;
-      temp = temp->next;
-      delete prev;
-    }
-    pidList = NULL;
-  }
+void
+ProcAPI::deallocPidList() {
+	if( pidList != NULL ) {
+		pidlistPTR prev;
+		pidlistPTR temp = pidList;
+		while( temp != NULL ) {
+			prev = temp;
+			temp = temp->next;
+			delete prev;
+		}
+		pidList = NULL;
+	}
 }
 
-void ProcAPI::deallocAllProcInfos() {
-  if ( allProcInfos != NULL ) {
-    piPTR prev;
-    piPTR temp = allProcInfos;
-    while ( temp != NULL ) {
-      prev = temp;
-      temp = temp->next;
-      delete prev;
-    }
-    allProcInfos = NULL;
-  }
+void
+ProcAPI::deallocAllProcInfos() {
+	if( allProcInfos != NULL ) {
+		piPTR prev;
+		piPTR temp = allProcInfos;
+		while( temp != NULL ) {
+			prev = temp;
+			temp = temp->next;
+			delete prev;
+		}
+		allProcInfos = NULL;
+	}
 }
 
-void ProcAPI::deallocProcFamily() {
-  if ( procFamily != NULL ) {
-    piPTR prev;
-    piPTR temp = procFamily;
-    while ( temp != NULL ) {
-      prev = temp;
-      temp = temp->next;
-      delete prev;
-    }
-    procFamily = NULL;
-  }
+void
+ProcAPI::deallocProcFamily() {
+	if( procFamily != NULL ) {
+		piPTR prev;
+		piPTR temp = procFamily;
+		while( temp != NULL ) {
+			prev = temp;
+			temp = temp->next;
+			delete prev;
+		}
+		procFamily = NULL;
+	}
 }
 
 #endif // not defined WIN32
 
-int hashFunc ( const pid_t& pid, int numbuckets ) {
-  return pid % numbuckets;   
+int
+hashFunc( const pid_t& pid, int numbuckets ) {
+	return pid % numbuckets;   
 }
 
 // Warning: WIN32 stuff below.  Not for the faint of heart.
@@ -1694,13 +1738,15 @@ int hashFunc ( const pid_t& pid, int numbuckets ) {
 */
 
 PPERF_OBJECT_TYPE ProcAPI::
-firstObject ( PPERF_DATA_BLOCK pPerfData ) {
-  return ((PPERF_OBJECT_TYPE) ((PBYTE) pPerfData + pPerfData->HeaderLength));
+firstObject( PPERF_DATA_BLOCK pPerfData ) {
+	return( (PPERF_OBJECT_TYPE) ((PBYTE)pPerfData + 
+								 pPerfData->HeaderLength) );
 }
 
 PPERF_OBJECT_TYPE ProcAPI::
-nextObject ( PPERF_OBJECT_TYPE pObject ) {
-  return ((PPERF_OBJECT_TYPE) ((PBYTE) pObject + pObject->TotalByteLength));
+nextObject( PPERF_OBJECT_TYPE pObject ) {
+	return( (PPERF_OBJECT_TYPE) ((PBYTE)pObject +
+								 pObject->TotalByteLength) );
 }
 
 PERF_COUNTER_DEFINITION * ProcAPI::
@@ -2252,7 +2298,7 @@ void ProcAPI::test6() {
 
 void ProcAPI::test_monitor ( char * jobname ) {
   pid_t child;
-  int retval;
+  int rval;
   piPTR pi = NULL;
 
   printf ( "Here's the interesting test.  This one does a fork()\n");
@@ -2264,8 +2310,8 @@ void ProcAPI::test_monitor ( char * jobname ) {
   child = fork();
   
   if ( !child ) { // in child
-    retval = execl( jobname, jobname, (char*)0 );
-    if ( retval < 0 ) {
+    rval = execl( jobname, jobname, (char*)0 );
+    if ( rval < 0 ) {
       perror ( "Exec problem:" );
       exit(0);
     }
