@@ -41,6 +41,21 @@ static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
 all_symlink_target(ld,real-ld)
 #endif /* ! IS_CLIPPED */
 
+/* WARNING. Ok, here's the deal on why this is here: glibc 2.1.3 added/renamed
+	some libc calls that broke how we trap stuff. So in order to
+	not have a release tar ball for EACH redhat release, be just
+	ship glibc 2.1.1 with it in the condor/lib directory(it will
+	automatically get used before the real libc courtesy of -L on
+	the link line). This will be the case until we hit a set of
+	header files that can't be used with glibc 2.1.1. */
+#if IS_GLIBC21
+#if ! IS_CLIPPED
+release_copy_target(/usr/lib/libc.a,$(RELEASE_DIR)/lib,libc.a,OBJECT_MODE)
+static_copy_target(/usr/lib/libc.a,$(STATIC_DIR)/lib,libc.a,OBJECT_MODE)
+strip_copy_target(/usr/lib/libc.a,$(STRIP_DIR)/lib,libc.a,OBJECT_MODE)
+#endif
+#endif
+
 #if IS_IRIX
 release_link_target($(RELEASE_DIR)/lib/ld,lib,uld)
 release_link_target($(RELEASE_DIR)/lib/ld,lib,old_ld)
