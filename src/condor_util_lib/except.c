@@ -33,13 +33,6 @@ char	*foo;
 { printf( foo ); }
 #else LINT
 
-#ifdef WIN32
-static int sys_nerr = -9999999;
-#endif
-
-extern int	condor_nerr;
-extern char	*condor_errlist[];
-
 int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
 char	*_EXCEPT_File;
@@ -57,18 +50,8 @@ _EXCEPT_(char *fmt, ...)
 
 	vsprintf( buf, fmt, pvar );
 
-	if( _EXCEPT_Errno < 0 ) {
-		_EXCEPT_Errno = -_EXCEPT_Errno;
-		dprintf( D_ALWAYS, "ERROR \"%s\" at line %d in file %s: %s\n",
-					buf, _EXCEPT_Line, _EXCEPT_File,
-					(_EXCEPT_Errno<condor_nerr) ? condor_errlist[_EXCEPT_Errno]
-												 : "Unknown CONDOR error" );
-	} else {
-		dprintf( D_ALWAYS, "ERROR \"%s\" at line %d in file %s: %s\n",
-						buf, _EXCEPT_Line, _EXCEPT_File,
-						(_EXCEPT_Errno<sys_nerr) ? sys_errlist[_EXCEPT_Errno]
-												 : "Unknown error" );
-	}
+	dprintf( D_ALWAYS, "ERROR \"%s\" at line %d in file %s: %s\n",
+			 buf, _EXCEPT_Line, _EXCEPT_File, strerror(errno) );
 
 	if( _EXCEPT_Cleanup ) {
 		(*_EXCEPT_Cleanup)( _EXCEPT_Line, _EXCEPT_Errno, buf );
