@@ -356,7 +356,7 @@ int GlobusJob::doEvaluateState()
 			} else {
 				char *job_contact;
 				rc = gahp.globus_gram_client_job_request( 
-										myResource->ResourceName(), rsl,
+										myResource->ResourceName(), RSL,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -383,6 +383,7 @@ int GlobusJob::doEvaluateState()
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+					dprintf(D_ALWAYS,"    RSL='%s'\n", RSL);
 					globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( this );
 					gmState = GM_UNSUBMITTED;
