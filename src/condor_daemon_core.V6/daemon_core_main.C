@@ -52,6 +52,21 @@ main( int argc, char** argv )
 	// instantiate a daemon core
 	daemonCore = new DaemonCore();
 
+#ifndef WIN32
+		// Handle Unix signals
+
+		// Block all signals now.  We'll unblock them right before we
+		// do the select.
+	sigset_t fullset;
+	sigfillset( &fullset );
+	sigprocmask( SIG_SETMASK, &fullset, NULL );
+
+		// TODO: Install signal handlers for SIGTERM, SIGQUIT and
+		// SIGHUP to raise the DaemonCore versions, and register
+		// handlers for those DC signals to call main_shutdown_* and
+		// main_config. 
+#endif
+
 	// set myName to be argv[0] with the path stripped off
 	if ( (ptmp=strrchr(argv[0],'/')) == NULL )			
 		ptmp=strrchr(argv[0],'\\');

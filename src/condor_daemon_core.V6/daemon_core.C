@@ -587,6 +587,11 @@ void DaemonCore::Driver()
 	int			i;
 	int			tmpErrno;
 	struct timeval	timer;
+#ifndef WIN32
+	sigset_t fullset, emptyset;
+	sigfillset( &fullset );
+	sigemptyset( &emptyset );
+#endif
 
 	for(;;)
 	{
@@ -643,6 +648,12 @@ void DaemonCore::Driver()
 
 		errno = 0;
 
+#if !defined(WIN32)
+			// Unblock all signals so that we can get them during the
+			// select. 
+		sigprocmask( SIG_SETMASK, &emptyset, NULL );
+#endif
+
 #if defined(HPUX9)
 		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, &timer);
 #else
@@ -652,6 +663,11 @@ void DaemonCore::Driver()
 
 #ifndef WIN32
 		// Unix
+
+			// Block all signals until next select so that we don't
+			// get confused. 
+		sigprocmask( SIG_SETMASK, &fullset, NULL );
+
 		if(rv < 0) {
 			if(tmpErrno != EINTR)
 			// not just interrupted by a signal...
@@ -753,7 +769,7 @@ void DaemonCore::HandleReq(int socki)
 	result = stream->code(req);
 	stream->timeout(old_timeout);
 	if(!result) {
-		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (timeout)\n");
+		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (timeout?)\n");
 		if ( is_tcp )
 			delete stream;
 		else
@@ -913,7 +929,7 @@ int DaemonCore::Send_Signal(int pid, int sig)
 	
 	if ( pid == 0 ) {
 		// send signal to ourselves
-		HandleSig(DC_RAISESIGNAL,sig);
+		HandleSig(_DC_RAISESIGNAL,sig);
 		sent_signal = TRUE;
 		return TRUE;
 	}
