@@ -19,8 +19,12 @@ public:
 	int		deactivate_claim();	
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly();
-	int		hardkill_claim();	// Just send hardkill to the starter,
-								// no state changes, vacates, etc.
+ 
+	int		hardkill_starter();	// Send DC_SIGHARDKILL to the starter
+								// and start a timer to send SIGKILL
+								// to the starter if it's not gone in
+								// killing_timeout seconds.
+	int		sigkill_starter();  // Send SIGKILL to starter + process group 
 	
 		// Resource state methods
 	int		change_state( State );
@@ -50,11 +54,15 @@ public:
 
 	int		update();				// Update the central manager.
 	int		eval_and_update();		// Evaluate state and update CM. 
+	void	final_update();			// Send a final update to the CM
+									// with Requirements = False
 
 		// Methods to control various timers 
 	int		start_update_timer();	// Timer for updating CM. 
 	int		start_poll_timer();		// Timer for polling the resource
 	void	cancel_poll_timer();	//    when it's in use by Condor. 
+	int		start_kill_timer();		// Timer for how long we're willing to 
+	void	cancel_kill_timer();	//    be in preempting/killing state. 
 
  		// Helper functions to evaluate resource expressions
 	int		wants_vacate();
@@ -83,13 +91,15 @@ private:
 		// is NULL, the class ad is not sent.  
 	send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA );
 
-	int			did_update;		// Flag set when we do an update.
+	int		up_tid;		// DaemonCore timer id for update timer.
+	int		poll_tid;	// DaemonCore timer id for polling timer.
+	int		kill_tid;	// DaemonCore timer id for kiling timer.
 
-	int			up_tid;		// DaemonCore timer id for update timer.
-	int			poll_tid;	// DaemonCore timer id for polling timer.
+	int		did_update;		// Flag set when we do an update.
+	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
 
-	Sock* 		coll_sock;		// Sock to the collector.
-	Sock*	 	alt_sock;		// Sock to the alternate collector.
+	Sock*	coll_sock;		// Sock to the collector.
+	Sock* 	alt_sock;		// Sock to the alternate collector.
 
 };
 
