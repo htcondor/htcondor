@@ -243,49 +243,21 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 					ldargs=`echo $ldargs -lc`
 				fi
               fi ;;
-     -lstdc++ )  if [ $lgcc = false ]; then
-				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lstdc++`
-				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lstdc++`
-				fi
-                lgcc=true 
-              else
-                ldargs=`echo $ldargs -lstdc++`
-              fi ;;
-     -lg++ )  if [ $lgcc = false ]; then
-				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lg++`
-				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lg++`
-				fi
-                lgcc=true 
-              else
-                ldargs=`echo $ldargs -lg++`
-              fi ;;
 
-     -lf2c )  if [ $lgcc = false ]; then
+	 # Make certain condor_syscall_lib appears on the link line before any of
+	 # the following language-helper libraries.  Note variable $brokenbase is
+	 # currently set to the library name we may match on.
+     -lstdc++ | -lg++ | -lf2c | -lg2c | -lp2c )  
+	 		if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lf2c`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl $brokenbase`
 				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lf2c`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS $brokenbase`
 				fi
                 lgcc=true 
-              else
-                ldargs=`echo $ldargs -lf2c`
-              fi ;;
-
-
-     -lp2c )  if [ $lgcc = false ]; then
-				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lp2c`
-				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lp2c`
-				fi
-                lgcc=true 
-              else
-                ldargs=`echo $ldargs -lp2c`
-              fi ;;
+            else
+                ldargs=`echo $ldargs $brokenbase`
+            fi ;;
 
 	 # Replace crt[01].o with condor_rt0
      $oscrt0 ) ldargs=`echo $ldargs $CONDOR_RT0` ;;
