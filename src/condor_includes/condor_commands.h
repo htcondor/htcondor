@@ -267,6 +267,13 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define SQUAWK 72000
 
 /*
+*** Commands used by the gridmanager daemon
+*/
+#define DCGRIDMANAGER_BASE 73000
+#define GRIDMAN_REMOVE_JOBS DC_SIGUSR1
+#define GRIDMAN_ADD_JOBS DC_SIGUSR2
+
+/*
 *** Replies used in various stages of various protocols
 */
 
