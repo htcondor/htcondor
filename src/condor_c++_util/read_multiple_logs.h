@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -40,13 +40,14 @@ class ReadMultipleUserLogs
 public:
 	ReadMultipleUserLogs();
 	explicit ReadMultipleUserLogs(StringList &listLogFileNames);
+
 	~ReadMultipleUserLogs();
 
     bool initialize(StringList &listLogFileNames);
 
-    /** Returns the "next" event from any log file.  The event pointer 
-        is set to point to a newly instatiated ULogEvent object.
-    */
+    	/** Returns the "next" event from any log file.  The event pointer 
+        	is set to point to a newly instatiated ULogEvent object.
+    	*/
     ULogEventOutcome readEvent (ULogEvent * & event);
 
 private:
@@ -63,17 +64,20 @@ private:
 	LogFileEntry *pLogFileEntries;
 };
 
-/** Gets the userlog files used by a dag
-	on success, the return value will be ""
-	on failure, it will be an appropriate error message
-*/
+	/** Gets the userlog files used by a dag
+		on success, the return value will be ""
+		on failure, it will be an appropriate error message
+	*/
 MyString getJobLogsFromSubmitFiles(StringList &listLogFilenames, 
 									const MyString &strDagFile);
 
-// some misc. self-explanatory fcns which maybe could find a better home
+	// some misc. self-explanatory fcns which maybe could find a better home
 MyString loadLogFileNameFromSubFile(const MyString &strSubFilename);
+
 MyString readFileToString(const MyString &strFilename);
+
 bool fileExists(const MyString &strFile);
+
 MyString makeString(int iValue);
 
 #endif
