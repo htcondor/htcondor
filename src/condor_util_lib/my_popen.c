@@ -64,7 +64,6 @@ my_popen( const char *cmd, const char * mode )
 {
 	int		pipe_d[2];
 	int		parent_reads;
-	struct sigaction act;
 
 		/* Use ChildPid as a simple semaphore-like lock */
 	if ( ChildPid ) {
@@ -201,7 +200,6 @@ my_spawnl( const char* cmd, int wait_for_child, ... )
 int
 my_spawnv( const char* cmd, int wait_for_child, char *const argv[] )
 {
-	struct sigaction	act;
 	int					status;
 
 		/* Use ChildPid as a simple semaphore-like lock */
