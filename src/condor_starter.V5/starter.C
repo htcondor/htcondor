@@ -1428,11 +1428,32 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 
 		// otherwise, we run the process an "nobody"
 	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
+#ifdef HPUX9
+		// the HPUX9 release does not have a default entry for nobody,
+		// so we'll help condor admins out a bit here...
+		requested_uid = 59999;
+		requested_gid = 59999;
+		return;
+#else
 		EXCEPT( "Can't find UID for \"nobody\" in passwd file" );
+#endif
 	}
 
 	requested_uid = pwd_entry->pw_uid;
 	requested_gid = pwd_entry->pw_gid;
+
+#ifdef HPUX9
+	// HPUX9 has a bug in that getpwnam("nobody") always returns
+	// a gid of 60001, no matter what the group file (or NIS) says!
+	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
+	// patch here, we will generate an EXCEPT later when we try a
+	// setgid().  -Todd Tannenbaum, 3/95
+	if ( (requested_uid > 59999) || (requested_uid < 0) )
+		requested_uid = 59999;
+	if ( (requested_gid > 59999) || (requested_gid < 0) )
+		requested_gid = 59999;
+#endif
+
 }
 
 
