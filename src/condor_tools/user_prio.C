@@ -49,7 +49,7 @@ struct LineRec {
 
 //-----------------------------------------------------------------
 
-static void Usage(char* argv[]);
+static void usage(char* name);
 static void ProcessInfo(AttrList* ad);
 static int CountElem(AttrList* ad);
 static void CollectInfo(AttrList* ad, LineRec* LR);
@@ -69,7 +69,7 @@ main(int argc, char* argv[])
 
   if (argc>1) { // set priority
     if (argc!=4 || strcmp(argv[1],"-set")!=0 ) {
-      Usage(argv);
+      usage( argv[0] );
       exit(1);
     }
     SetMode=1;
@@ -78,30 +78,32 @@ main(int argc, char* argv[])
   config( 0 );
   char* NegotiatorHost = param( "NEGOTIATOR_HOST" );
   if (!NegotiatorHost) {
-    printf( "No NegotiatorHost host specified in config file\n" );
+    fprintf( stderr, "No NegotiatorHost host specified in config file\n" );
+	exit(1);
   }
 
 
   if (SetMode) { // set priority
 
-    char* UidDomain=param("UID_DOMAIN");
-    if (!UidDomain) {
-      printf("No UID_DOMAIN specified in config file\n");
-      exit(1);
-    }
-
-    char tmp[512];
-    sprintf(tmp, "%s@%s", argv[2], UidDomain);
+    char* tmp;
+	if( ! (tmp = strchr(argv[2], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the submittor you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto update the priority of (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
     double Priority=atof(argv[3]);
 
     // send request
     ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(SET_PRIORITY) ||
-        !sock.put(tmp) ||
+        !sock.put(argv[2]) ||
         !sock.put(Priority) ||
         !sock.end_of_message()) {
-      printf("failed to send SET_PRIORITY command to negotiator\n");
+      fprintf( stderr, "failed to send SET_PRIORITY command to negotiator\n" );
       exit(1);
     }
 
@@ -114,7 +116,7 @@ main(int argc, char* argv[])
     sock.encode();
     if (!sock.put(GET_PRIORITY) ||
         !sock.end_of_message()) {
-      printf("failed to send GET_PRIORITY command to negotiator\n");
+      fprintf( stderr, "failed to send GET_PRIORITY command to negotiator\n" );
       exit(1);
     }
 
@@ -123,7 +125,7 @@ main(int argc, char* argv[])
     AttrList* ad=new AttrList();
     if (!ad->get(sock) ||
         !sock.end_of_message()) {
-      printf("failed to get classad from negotiator\n");
+      fprintf( stderr, "failed to get classad from negotiator\n" );
       exit(1);
     }
 
@@ -215,7 +217,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 
 //-----------------------------------------------------------------
 
-static void Usage(char* argv[]) {
-  printf("usage: %s [ -set user priority ]\n", argv[0]);
+static void usage(char* name) {
+  fprintf( stderr, "usage: %s [ -set user priority_value ]\n", name );
 }
 
