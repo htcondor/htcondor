@@ -14,6 +14,8 @@ AFS_Info::AFS_Info()
 {
 	char	*tmp;
 
+	my_cell_name = 0;
+
 		// find out if we're running AFS here
 	if( (tmp=param("HAS_AFS")) == NULL ) {
 		has_afs = FALSE;
@@ -179,6 +181,7 @@ get_host_cell()
 	if( !MyInfo ) {
 		MyInfo = new AFS_Info();
 	}
+
 	return MyInfo->my_cell();
 }
 
