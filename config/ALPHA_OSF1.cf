@@ -90,3 +90,6 @@
 #define MkDepend ../../GENERIC/mdepend.sh
 #endif MkDepend
 
+#define VendorCTestFlags -std
+#define VendorCPPTestFlags -std
+
