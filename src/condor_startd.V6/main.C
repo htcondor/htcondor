@@ -64,8 +64,11 @@ int		killing_timeout;	// How long you're willing to be in
 int		last_x_event = 0;	// Time of the last x event
 time_t	startd_startup;		// Time when the startd started up
 
-int		console_cpus = 0;	// # of nodes in an SMP that care about
-int		keyboard_cpus = 0;  //   console and keyboard activity
+int		console_vms = 0;	// # of nodes in an SMP that care about
+int		keyboard_vms = 0;  //   console and keyboard activity
+int		disconnected_keyboard_boost;	// # of seconds before when we
+	// started up that we advertise as the last key press for
+	// resources that aren't connected to anything.  
 
 char*	mySubSystem = "STARTD";
 
@@ -429,19 +432,39 @@ init_params( int first_time)
 		free( tmp );
 	}
 
-	tmp = param( "CONSOLE_CPUS" );
+	tmp = param( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE" );
 	if( !tmp ) {
-		console_cpus = resmgr->m_attr->num_cpus();
+		tmp = param( "CONSOLE_VMS" );
+	}
+	if( !tmp ) {
+		tmp = param( "CONSOLE_CPUS" );
+	}
+	if( !tmp ) {
+		console_vms = resmgr->m_attr->num_cpus();
 	} else {
-		console_cpus = atoi( tmp );
+		console_vms = atoi( tmp );
 		free( tmp );
 	}
 
-	tmp = param( "KEYBOARD_CPUS" );
+	tmp = param( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD" );
 	if( !tmp ) {
-		keyboard_cpus = 1;
+		tmp = param( "KEYBOARD_VMS" );
+	}
+	if( !tmp ) {
+		tmp = param( "KEYBOARD_CPUS" );
+	}
+	if( !tmp ) {
+		keyboard_vms = 1;
 	} else {
-		keyboard_cpus = atoi( tmp );
+		keyboard_vms = atoi( tmp );
+		free( tmp );
+	}
+
+	tmp = param( "DISCONNECTED_KEYBOARD_IDLE_BOOST" );
+	if( !tmp ) {
+		disconnected_keyboard_boost = 1200;
+	} else {
+		disconnected_keyboard_boost = atoi( tmp );
 		free( tmp );
 	}
 
