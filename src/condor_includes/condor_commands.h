@@ -129,6 +129,7 @@
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given VM
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
 #define START_AGENT		(SCHED_VERS+77) // have the master start an agent
+#define ACT_ON_JOBS		(SCHED_VERS+78) // have the schedd act on some jobs (rm, hold, release)
 
 /************
 *** Command ids used by the collector 
