@@ -2947,7 +2947,12 @@ Scheduler::Init()
 		daemonCore->Register_Command_Socket( (Stream*)shadowCommandssock );
 
 		char nameBuf[50];
-		sprintf(nameBuf,"<127.0.0.1:%d>",shadowCommandrsock->get_port());
+		struct in_addr addr;
+		if (get_inet_address(&addr) < 0) {
+			EXCEPT("get_inet_address failed");
+		}
+		sprintf(nameBuf,"<%s:%d>",inet_ntoa(addr),
+				shadowCommandrsock->get_port());
 		MyShadowSockName = strdup( nameBuf );
 	}
 
