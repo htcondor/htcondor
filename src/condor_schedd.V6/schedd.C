@@ -3975,8 +3975,28 @@ Scheduler::child_exit(int pid, int status)
 								REMOVED );
 				break;
 			case JOB_EXITED:
+				dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
+
 				set_job_status( srec->job_id.cluster, srec->job_id.proc,
 								COMPLETED );
+				ExtArray<match_rec*> *matches;
+                if ( storedMatches->lookup( srec->match->cluster,
+							matches ) != -1 ) {
+					int n = matches->getlast();
+					for ( int m=0 ; m <= n ; m++ ) {
+                        dprintf(D_FULLDEBUG,
+							 "Setting isMatchedMPI to falseL match %d of %d\n",
+							 m, srec->match->cluster);
+						//(*matches)[m]->isMatchedMPI = FALSE;
+						Relinquish( (*matches)[m] );
+						DelMrec( (*matches)[m] );
+					}
+				matches->fill( NULL );
+				matches->truncate(-1);
+				} else {
+					dprintf(D_FULLDEBUG, "No matches to delete!!!!\n");
+				}
+
 				break;
 			case JOB_SHOULD_HOLD:
 				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
