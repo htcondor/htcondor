@@ -3,7 +3,7 @@
 
 #include <iostream.h>
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 #include <netinet/in.h>
 #include "condor_classad.h"
 
