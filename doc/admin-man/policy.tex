@@ -3,17 +3,21 @@
 Configuring The Startd Policy}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This section describes how to configure the \Condor{startd} to
-implement the policy you choose for when remote jobs should start, be
-suspended, (possibly) resumed, vacated (with a checkpoint) or killed
-(no checkpoint).  This policy is the heart of Condor's balancing act
+\index{configuration!startd policy}
+\index{startd!configuration}
+This section describes the configuration of the \Condor{startd} to
+implement the desired policy for when remote jobs should start, be
+suspended, (possibly) resumed, vacate (with a checkpoint) or be killed
+(no checkpoint).
+This policy is the heart of Condor's balancing act
 between the needs and wishes of resource owners (machine owners) and
-resource users (people submitting their jobs to Condor).  Please read
+resource users (people submitting their jobs to Condor).
+Please read
 this section carefully if you plan to change any of the settings
-described below, as getting it wrong can have a severe impact on
-either the owners of machines in your pool (in which case they might
+described here, as getting it wrong can have a severe impact on
+either the owners of machines in your pool (they may
 ask to be removed from the pool entirely) or the users of your pool
-(in which case they might stop using Condor).
+(they may stop using Condor).
 
 Before we get into the details, there are a few things to note:
 \begin{itemize}
@@ -22,55 +26,58 @@ probably want to read through section~\ref{classad-reference} on
 ClassAd expressions before continuing with this.
 
 \item If you are familiar with the version 6.0 policy expressions and
-what they do, you might want to skip to
+what they do, you read
 section~\ref{sec:V60-Policy-diffs} on
 page~\pageref{sec:V60-Policy-diffs} which explains the differences
-between the version 6.0 policy expressions and the later versions.  
+between the version 6.0 policy expressions and later versions.  
 
 \item If you are defining the policy for an SMP (multi-CPU) machine,
-be sure to also read section~\ref{sec:Configuring-SMP} on
-``Configuring The Startd for SMP Machines''.  
+also read section~\ref{sec:Configuring-SMP} on
+Configuring The Startd for SMP Machines.  
 Each \Term{virtual machine} represented by the \condor{startd} on an
 SMP machine will have its own \Term{state} and \Term{activity}
 (described below). 
-In the future, each virtual machine will even be able to have its
+In the future, each virtual machine will be able to have its
 own policy expressions defined.
-For the rest of this section, whenever you see the word ``machine'',
-that really just means an individual virtual machine, if you're
-talking about an SMP machine that is showing up as multiple virtual
+For the rest of this section, the word ``machine''
+means an individual virtual machine, for
+an SMP machine that is showing up as multiple virtual
 machines in your pool.  
 \end{itemize}
 
-To define your policy, you basically set a number of expressions in
-the config file (see section~\ref{sec:Configuring-Condor} on
-``Configuring Condor'' for an introduction to Condor's config files).
-These expressions are evaluated in the context of the machine's ClassAd
-and the ClassAd of a potential resource request (a job that has been
-submitted to Condor).
+To define your policy, you set expressions in
+the configuration file (see section~\ref{sec:Configuring-Condor} on
+Configuring Condor for an introduction to Condor's
+configuraton files).
+The expressions are evaluated in the context of the machine's ClassAd
+and a job ClassAd.
 The expressions can therefore reference attributes from either
 ClassAd. 
-First, we'll list all the attributes that are included in the Machine's
-ClassAd.
-Then, we'll list all the attributes that are included in a job
-ClassAd. 
-Next, we'll explain the the \Expr{START} expression, which describes
-to Condor what conditions must be met for the machine to start a job.
-Then, we'll describe the \Expr{RANK} expression, which allows you to
-specify which kinds of jobs a given machine prefers to run.
-Then, we'll discuss in some detail how the \Condor{startd} works, in
-particular, the machine \Term{states} and \Term{activities}, to give
-you an idea of what is possible for your policy decisions.
-Finally, we offer two example policy settings.
+Listed in this section are
+the attributes that are included in the machine's ClassAd and
+the attributes that are included in a job ClassAd. 
+The \Expr{START} expression, which describes
+to Condor what conditions must be met for a machine to start a job
+are explained.
+The \Expr{RANK} expression is described.
+It allows the specification of
+the kinds of jobs a machine prefers to run.
+A final discussission details how the \Condor{startd} works.
+Included are
+the machine \Term{states} and \Term{activities}, to give
+an idea of what is possible in policy decisions.
+Two example policy settings are presented.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Startd-Attributes}
 Startd ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{\condor{startd}}
 The \Condor{startd} represents the machine on which it is running to
-the Condor pool.  It publishes a number of characteristics about the
-machine in its ClassAd to help in match-making with resource requests.
-The values of all these attributes can be found by using
+the Condor pool.  It publishes characteristics about the
+machine in its ClassAd to aid matchmaking with resource requests.
+The values of these attributes can be found by using
 \Prog{\condor{status} -l hostname}.
 On an SMP machine, the startd will break the machine up and advertise
 it as separate virtual machines, each with its own name and ClassAd.
@@ -87,31 +94,32 @@ Job ClassAd Attributes}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Start-Expr}
-The START expression}
+The \Expr{START} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The most important expression in the startd (and possibly in all of
 Condor) is the \Expr{START} expression.  
-This expression describes what conditions must be met for a given
-machine to service a resource request (in other words, start someone's
+This expression describes the conditions to must be met for a
+machine to service a resource request (in other words, to start a
 job). 
-This expression (like any other expression) can reference attributes
-in the machine's ClassAd (such as \Attr{KeyboardIdle}, \Attr{LoadAvg},
-etc), or attributes in a potential requester's ClassAd (such as
-\Attr{Owner}, \Attr{Imagesize}, even \Attr{Cmd}, the name of the
+This expression (like other expressions) can reference attributes
+in the machine's ClassAd (such as \Attr{KeyboardIdle} and \Attr{LoadAvg})
+or attributes in a job ClassAd (such as
+\Attr{Owner}, \Attr{Imagesize}, and even \Attr{Cmd}, the name of the
 executable the requester wants to run).
 What the \Expr{START} expression evaluates to plays a crucial role in
-determining what state and activity the machine is in.
+determining the state and activity of a machine.
 
-It is technically the \Expr{Requirements} expression that is used for
-matching with other jobs.  The startd just always defines the
+It is the \Expr{Requirements} expression that is used for
+matching with other jobs.
+The startd defines the
 \Expr{Requirements} expression as the \Expr{START} expression.
-However, in situations where the machine wants to make itself
+However, in situations where a machine wants to make itself
 unavailable for further matches, it sets its \Expr{Requirements}
-expression to False, not its \Expr{START} expression.  
-When the \Expr{START} expression \Term{locally evaluates} to true, the
-machine advertises the \Expr{Requirements} expression as ``True'' and
-doesn't even publish the \Expr{START} expression.
+expression to FALSE, not its \Expr{START} expression.  
+When the \Expr{START} expression locally evaluates to TRUE, the
+machine advertises the \Expr{Requirements} expression as TRUE and
+does not publish the \Expr{START} expression.
 
 Normally, the expressions in the machine ClassAd are evaluated against
 certain request ClassAds in the \Condor{negotiator} to see if there is
@@ -120,87 +128,102 @@ machine.  However, by locally evaluating an expression, the machine only
 evaluates the expression against its own ClassAd.  If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ad, such as \Attr{Owner} or
-\Attr{Imagesize}), the expression is (usually) undefined.  See the
-ClassAd appendix, section~\ref{classad-reference}, for specifics of
+\Attr{Imagesize}), the expression is (usually) undefined.
+See section~\ref{classad-reference} for specifics on
 how undefined terms are handled in ClassAd expression evaluation. 
 
 \Note If you have machines with lots of real memory and swap space so
-  the only scarce resource is CPU time, you could use the
+  the only scarce resource is CPU time, you could use
   \Macro{JOB\_RENICE\_INCREMENT} (see
-  section~\ref{sec:Starter-Config-File-Entries} on ``\condor{starter}
-  Config File Entries'' for details) so that Condor starts jobs on
-  your machine with low priority.  Then, you could set
-  up your machines with:
+  section~\ref{sec:Starter-Config-File-Entries} on \condor{starter}
+  Configuration File Macros for details) so that Condor starts jobs on
+  your machine with low priority.
+  Then, set up your machines with:
 \begin{verbatim}
         START : True
         SUSPEND : False
         PREEMPT : False
         KILL : False
 \end{verbatim}
-  This way, Condor jobs would always run and would never be kicked
-  off. 
+  In this way, Condor jobs always run and never be kicked off. 
   However, because they would run with ``nice priority'', interactive 
-  response on your machines would not suffer.
-  You probably wouldn't even notice Condor was running the jobs, 
-  assuming you had enough free memory for the Condor jobs so that you 
-  weren't swapping all the time.
+  response on your machines will not suffer.
+  You probably would not notice Condor was running the jobs, 
+  assuming you had enough free memory for the Condor jobs that there
+  was little swapping.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Rank-Expression}
-The RANK expression}
+The \Expr{RANK} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A machine can be configured to prefer running certain jobs over other
-jobs.  This is done via the \Expr{RANK} expression.  This is an
-expression, just like any other in the machine's ClassAd.  It can
+A machine may be configured to prefer certain jobs over others
+using the \Expr{RANK} expression.
+It is an
+expression, like any other in a machine ClassAd.
+It can
 reference any attribute found in either the machine ClassAd or a
 request ad (normally, in fact, it references things in the request
-ad).  Probably the most common use of this expression is to configure a
+ad).
+The most common use of this expression is likely to configure a
 machine to prefer to run jobs from the owner of that machine, or by
 extension, a group of machines to prefer jobs from the owners of those
-machines.  
+machines.
 
-For example, imagine you have a small research group with 4 machines:
-``tenorsax'', ``piano'', ``bass'' and ``drums''.  These machines are
-owned by 4 users: ``coltrane'', ``tyner'', ``garrison'' and ``jones'',
+For example, imagine there is a small research group with 4 machines
+called tenorsax, piano, bass, and drums.
+These machines are owned by the 4 users
+coltrane, tyner, garrison, and jones,
 respectively.  
 
-Say there's a large Condor pool in your department, but you spent a
-lot of money on really fast machines for your group.  You want to make
-sure that if anyone in your group has Condor jobs, they have priority
-on your machines.  To achieve this, all you have to do is set the Rank
-expression on your machines to refer to the \Attr{Owner} attribute and
+Assume that there is a large Condor pool in your department,
+but you spent a lot of money on really fast machines for your group.
+You want to implement a policy
+that gives priority on your machines to
+anyone in your group.
+To achieve this, set the \Expr{RANK}
+expression on your machines to refererence the \Attr{Owner} attribute and
 prefer requests where that attribute matches one of the people in your
-group:
+group as in
 \begin{verbatim}
         RANK : Owner == "coltrane" || Owner == "tyner" \
                || Owner == "garrison" || Owner == "jones"
 \end{verbatim}
 
 The \Expr{RANK} expression is evaluated as a floating point number.
-However, just like in C, boolean expressions evaluate to either 1 or 0
-depending on if they're true or false.  So, if this expression
-evaluated to 1 (because the remote job was owned by one of the blessed
-folks), that would be higher than anyone else (for whom the expression
-would evaluate to 0).
+However, like in C, boolean expressions evaluate to either 1 or 0
+depending on if they are TRUE or FALSE.
+So, if this expression
+evaluated to 1 (because the remote job was owned by one of the 
+preferred users), it would be a larger value than any other
+user (for whom the expression would evaluate to 0).
 
-If you wanted to get really fancy, you could still have the same basic
-setup, where anyone from your group has priority on your machines, but
-the actual machine owner has even more priority on their own machine.
-For example, you'd put the following entry in Jimmy Garrison's local
-config file \File{bass.local}:
+A more complex \Expr{RANK} expression
+has the same basic set up,
+where anyone from your group has priority on your machines.
+Its difference is that
+the machine owner has better priority on their own machine.
+To set this up for Jimmy Garrison,
+place the following entry in Jimmy Garrison's local
+configuration file \File{bass.local}:
 \begin{verbatim}
         RANK : (Owner == "coltrane") + (Owner == "tyner") \
                + ((Owner == "garrison") * 10) + (Owner == "jones")
 \end{verbatim}
 \Note The parentheses in this expression are important, because ``+''
-               has higher default precedence than ``==''.
-Notice, we're using ``+'' instead of ``\Bar\Bar'', since we want to be able
-to distinguish which terms matched and which ones didn't.  Now, if
-anyone who wasn't in the John Coltrane quartet was running a job on
-``bass'', the \Expr{RANK} would evaluate numerically to 0, since none
-of those boolean terms would evaluate to 1, and 0+0+0+0 is still 0.
-Now, suppose Elvin Jones submits a job.  His job would match this
+      operator has higher default precedence than ``==''.
+
+The use of ``+'' instead of ``\Bar\Bar'' allows us to 
+distinguish which terms matched and which ones didn't.
+If anyone not in the John Coltrane quartet was running a job on
+the machine called bass,
+the \Expr{RANK} would evaluate numerically to 0, since none
+of the boolean terms evaluates to 1, and 0+0+0+0 still equals 0.
+
+%editted to here
+
+Suppose Elvin Jones submits a job.
+His job would match this
 machine (assuming the \Expr{START} was true for him at that time) and
 the \Expr{RANK} would numerically evaluate to 1 (since one of the
 boolean terms would evaluate to 1), so Elvin would preempt whoever

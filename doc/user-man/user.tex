@@ -903,42 +903,47 @@ accounts would only use cycles not wanted by other users of the system.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Vacate-Explained}
-More about how Condor vacates a job}
+About How Condor Jobs Vacate Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{vacate}
-When Condor needs to vacate a job from a machine for whatever reason, it
-sends the job an asynchronous signal specified in the ``KillSig''
-attribute of the job's classad.  The value of this attribute can be specified by
+When Condor needs a job to vacate a machine for whatever reason, it
+sends the job an asynchronous signal specified in the \AdAttr{KillSig}
+attribute of the job's classad.
+The value of this attribute can be specified by
 the user at submit time by placing the \Arg{kill\_sig} command in the
 \Condor{submit} submit-description command file.  
 
 If a program wanted to do some special work each time
-Condor kicks them off a machine, all it would need to do is setup a
-signal handler for some trappable signal as a ``cleanup'' signal.  When
-submitting this job, specify this cleanup signal to use with
-\Arg{kill\_sig}.  However, whatever cleanup work the job does had better be quick
---- if the job takes too long to go away after Condor tells it to do so, Condor
+it needed to vacate a machine, it may set up a
+signal handler to use a trappable signal as an indication
+to clean up.
+When submitting this job, this clean up signal is specified to be used with
+\Arg{kill\_sig}.
+Note that whatever clean up work the job does had better be quick
+--- if the job takes too long to go away, Condor
 follows up with a SIGKILL signal which immediately terminates the
 process.
 
-A job that linked with the Condor libraries via the \Condor{compile}
+A job that is linked with the Condor libraries with the \Condor{compile}
 command
 \index{Condor commands!condor\_compile}
-and subsequently submitted into the standard universe 
-will checkpoint and exit upon receipt of a SIGTSTP signal.  Thus, SIGTSTP is
-the default value for KillSig when submitting into the Standard
-Universe.  However, the user's code can checkpoint itself at any time
+and is subsequently submitted into the standard universe, 
+will checkpoint and exit upon receipt of a SIGTSTP signal.
+Thus, SIGTSTP is
+the default value for \AdAttr{KillSig} when submitting to the standard
+universe.
+The user's code may still checkpoint itself at any time
 by calling one of the following functions exported by the Condor libraries:
 \begin{description}
-\item[ckpt()] Will perform a checkpoint and then return
-\item[ckpt\_and\_exit()] Will checkpoint and exit; Condor will then
-restart the process again later, potentially on a different machine
+\item[ckpt()] Performs a checkpoint and then returns.
+\item[ckpt\_and\_exit()] Checkpoints and exits; Condor will then
+restart the process again later, potentially on a different machine.
 \end{description}
 
-For jobs submitted into the Vanilla Universe, the default value for
-KillSig is SIGTERM, which is the usual method to nicely terminate a
-program in Unix.
+For jobs submitted into the vanilla universe, the default value for
+\AdAttr{KillSig} is SIGTERM,
+which is the usual method to nicely terminate a Unix program.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Special Environment Considerations}
@@ -949,34 +954,41 @@ program in Unix.
 \index{file system!AFS}
 \index{AFS!interaction with}
 The Condor daemons do not run authenticated to AFS; they do not possess
-an AFS token, and therefore no child process of Condor will be AFS
-authenticated either. This means that you must set file permissions so
+AFS tokens.
+Therefore, no child process of Condor will be AFS
+authenticated.
+The implication of this is
+that you must set file permissions so
 that your job can access any necessary files residing on an AFS volume
-during its run without relying on having your AFS permissions.
+without relying on having your AFS permissions.
 
-So, if a job you submit to Condor needs to access files residing in AFS,
+If a job you submit to Condor needs to access files residing in AFS,
 you have the following choices:
 \begin{enumerate}
-\item Copy the files needed off of AFS to either a local hard disk where Condor 
-can access them via remote system calls (if
-this is a Standard Universe job), or copy them to an NFS volume.
-\item If you must keep the files on AFS, then you need to set a host ACL
-(using the AFS ``fs setacl'' command) on the subdirectory which will
-serve as the current working directory for the job.  If the job is a
-Standard Universe job, then the host ACL needs to give read/write permission
-to any process on the submit machine.  If the job is a Vanilla Universe
-job, then you need to set the ACL such that any host in the pool can
-access the files without being authenticated.  If you do not know how to
-use an AFS host ACL, please ask whomever at your site is responsible for the
+\item Copy the needed files from AFS to either a local hard disk where Condor 
+can access them using remote system calls (if
+this is a standard universe job), or copy them to an NFS volume.
+\item If you must keep the files on AFS, then set a host ACL
+(using the AFS \Prog{fs setacl} command) on the subdirectory to
+serve as the current working directory for the job.
+If a standard universe job, then the host ACL needs
+to give read/write permission
+to any process on the submit machine.
+If vanilla universe job,
+then you need to set the ACL such that any host in the pool can
+access the files without being authenticated.
+If you do not know how to
+use an AFS host ACL, ask ther person at your site responsible for the
 AFS configuration.
 \end{enumerate}
 
-How Condor deals with AFS authentication is something the Condor Team
-hopes to improve in a subsequent release.
+The Condor Team hopes to improve upon
+how Condor deals with AFS authentication
+in a subsequent release.
 
-Please also see section~\ref{sec:Condor-AFS-Users} on
+Please see section~\ref{sec:Condor-AFS-Users} on
 page~\pageref{sec:Condor-AFS-Users} in the Administrators Manual for
-more discussion about this problem.
+further discussion of this problem.
 
 \subsection{NFS Automounter}
 
@@ -986,68 +998,80 @@ If your current working directory when you run \Condor{submit}
 \index{Condor commands!condor\_submit}
 is accessed via an NFS automounter, Condor may have problems if the
 automounter later decides to unmount the volume before your job has
-completed.  This is because \Condor{submit} likely has stored the
+completed.
+This is because \Condor{submit} likely has stored the
 dynamic mount point as the job's initial current working directory, and
 this mount point could become automatically unmounted by the
 automounter.
 
 There is a simple workaround: When submitting your job, use the 
-\Arg{initialdir} command in your submit-description file to point to
-the stable access point.  For example,
-say the NFS automounter is configured to mount a volume at mount point
-/a/myserver.company.com/vol1/johndoe whenever the directory /home/johndoe is
-accessed.  In this example case, simply add the following line to your \Condor{submit}
-submit-description file:
+\Arg{initialdir} command in your submit description file to point to
+the stable access point.
+For example,
+suppose the NFS automounter is configured to mount a volume at mount point
+\File{/a/myserver.company.com/vol1/johndoe}
+whenever the directory \File{/home/johndoe} is accessed.
+Adding the following line to the
+submit description file solves the problem.
 \begin{verbatim}
         initialdir = /home/johndoe
 \end{verbatim}
 
-\subsection{Condor Daemons running as Non-root}
+\subsection{Condor Daemons That Do Not Run as root}
 
+\index{UNIX daemon!running as root}
 \index{daemon!running as root}
 Condor is normally installed such that the Condor daemons have root
-permission.  This allows Condor to run the \condor{shadow} 
+permission.
+This allows Condor to run the \condor{shadow} 
 \index{Condor daemon!condor\_shadow}
 \index{remote system call!condor\_shadow}
 process and
-your job process with your UID and file access rights.  When Condor
+your job with your UID and file access rights.
+When Condor
 is started as root, your Condor jobs can access whatever files you can.
 
-However, it is possible that whomever installed Condor decided not to
-run the daemons as root, or did not have root access.  That's a shame, 
-since Condor is really designed to be run as root.  To see if Condor is
-running as root on a given machine, enter the following command:
+However, it is possible that whomever installed Condor 
+did not have root access, or
+decided not to run the daemons as root.
+That is unfortunate,
+since Condor is designed to be run as the Unix user root.
+To see if Condor is
+running as root on a specific machine, enter the command
 \begin{verbatim}
         condor_status -master -l <machine-name>
 \end{verbatim}
 
-where \Opt{machine-name} is the name of the machine you want to
-inspect.  This command will display a \condor{master} ClassAd; if the
-attribute ``RealUid'' equals zero, then the Condor daemons are indeed
-running with root access and you can skip this section.  If the
-``RealUid'' attribute is not zero, then the Condor daemons do not have
-root access, and you should read on.
+where \verb@machine-name@ is the name of the specified machine.
+This command displays a \condor{master} ClassAd; if the
+attribute \AdAttr{RealUid} equals zero,
+then the Condor daemons are indeed
+running with root access.  If the
+\AdAttr{RealUid} attribute is not zero, then the Condor daemons do not have
+root access.
 
-Please realize that using the UNIX program \Prog{ps}
+\Note The UNIX program \Prog{ps}
 is \emph{not} an effective
-method of determining if Condor is running with root access.  When
-using \Prog{ps},
+method of determining if Condor is running with root access.
+When using \Prog{ps},
 it may often appear that the daemons are
-running as the condor user instead of root.  However, note that the
-\Prog{ps},
+running as the condor user instead of root.
+However, note that the \Prog{ps},
 command shows the current \emph{effective} owner of the
 process, not the \emph{real} owner.  (See the \Cmd{getuid}{2} and
 \Cmd{geteuid}{2} Unix man pages for details.)  In Unix, a process
-running under the real uid of root may switch its effective uid.  (See
-the \Cmd{seteuid}{2} man page.)  For security reasons, the daemons
-only set effective uid to root when absolutely necessary (to perform a
-privileged operation).
+running under the real UID of root may switch its effective UID.
+(See the \Cmd{seteuid}{2} man page.)
+For security reasons, the daemons
+only set the effective uid to root when absolutely necessary
+(to perform a privileged operation).
 
 If they are not running with root access, you need to make any/all files
 and/or directories that your job will touch readable and/or writable by
-the UID (user id) specified by the RealUid attribute.  Often this may
-mean doing a ``chmod 777'' on the directory where you submit your Condor
-job.
+the UID (user id) specified by the RealUid attribute.
+Often this may
+mean using the Unix command \verb@chmod 777@
+on the directory where you submit your Condor job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Potential Problems}
@@ -1057,7 +1081,8 @@ job.
 
 \index{argv[0]!Condor use of}
 When Condor starts up your job, it renames argv[0] (which usually
-contains the name of the program) to \condor{exec}.  This is
+contains the name of the program) to \condor{exec}.
+This is
 convenient when examining a machine's processes with the UNIX
 command \Prog{ps}; the process
 is easily identified as a Condor job.  
