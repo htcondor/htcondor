@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "environ.h"  // for Environ object
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "basename.h"
 
 #include "gridmanager.h"
 #include "globusjob.h"
