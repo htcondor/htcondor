@@ -326,12 +326,12 @@ reliability when submitting jobs across the Internet and using a
 remote Checkpoint Server.
 
 \item Fixed a bug concerning \Macro{MAX\_JOBS\_RUNNING}: The parameter
-\Macro{MAX\_JOBS\_RUNNING} in the config file controls the maximum
+\MacroNI{MAX\_JOBS\_RUNNING} in the config file controls the maximum
 number of simultaneous \Condor{shadow} processes allowed on your
 submission machine.
 The bug was the number of shadow processes could, under certain
 conditions, exceed the number specified by
-\Macro{MAX\_JOBS\_RUNNING}. 
+\MacroNI{MAX\_JOBS\_RUNNING}. 
 
 \item Added new parameter \Macro{JOB\_RENICE\_INCREMENT} that can be
 specified in the config file.
