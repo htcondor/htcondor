@@ -55,6 +55,12 @@ module with a period of 0 fails to execute for some reason.  (Now, for
 continuous mode modules, a period of 0 is automatically reset to be 1, and
 a warning appears in the log.)
 
+\item Fixed a very rare potential bug when initializing a user log
+file.
+Improved the error messages generated when there are problems
+initializing the user log to include string descriptions of the
+errors, not just the error number (errno).
+
 \end{itemize}
 
 \noindent Known Bugs:
