@@ -170,7 +170,11 @@
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
+#if defined(LINUX)
+	int sync();
+#else
 	void sync();
+#endif
 
 		/*
 		These get special treatment by the shadow, but should work normally
@@ -403,10 +407,17 @@ int rename( const char *from, const char *to ) {
 		}
 #	endif
 
+#if defined(LINUX)
+	int mknod( const char *path, mode_t mode, dev_t device ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+#else
 	int mknod( const char *path, int mode, dev_t device ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
+#endif
 	int chmod( const char *path, MODE_T mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -430,12 +441,21 @@ int rename( const char *from, const char *to ) {
 		ALLOC_PATH( path1 );
 		ALLOC_PATH( path2 );
 	}
+#if defined(LINUX)
+	int readlink( const char *path, char *buf, size_t buf_size ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out xdr_bytes( &buf, buf_size, buf_size );
+		alloc( buf, buf_size );
+	}
+#else
 	int readlink( const char *path, char *buf, int buf_size ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		out xdr_bytes( &buf, buf_size, buf_size );
 		alloc( buf, buf_size );
 	}
+#endif
 	pid_t getpgrp();
 	MODE_T umask( MODE_T cmask );
 	int getpagesize();
@@ -483,7 +503,12 @@ int rename( const char *from, const char *to ) {
 	int getdtablesize();
 
 	not_supported {
+#if defined(LINUX)
+		int select(int numfds, fd_set *readfds, fd_set *writefds,
+			fd_set *exceptfds, struct timeval *timeout);
+#else
 		int select();
+#endif
 		int poll();
 	}
 
@@ -509,6 +534,16 @@ int rename( const char *from, const char *to ) {
 		ALLOC_PATH( path );
 	}
 
+#if defined(LINUX)
+	int fchmod( map(int fd), mode_t mode );
+	int setreuid( uid_t ruid, uid_t euid );
+	int setregid( uid_t rgid, uid_t egid );
+	int truncate( const char *path, size_t length ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+	int ftruncate( map(int fd), size_t length );
+#else
 	int fchmod( map(int fd), MODE_T mode );
 	int setreuid( int ruid, int euid );
 	int setregid( int rgid, int egid );
@@ -517,6 +552,7 @@ int rename( const char *from, const char *to ) {
 		ALLOC_PATH( path );
 	}
 	int ftruncate( map(int fd), off_t length );
+#endif
 	not_supported int setgid( gid_t gid );
 	int mkdir( const char *path, MODE_T mode ) {
 		SEND_PATH( path );
@@ -533,7 +569,7 @@ int rename( const char *from, const char *to ) {
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
 	int gethostid();
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(LINUX)
 	int setrlimit( int resource, const  struct rlimit *rlp ) {
 #else
 	int setrlimit( int resource, /* const */ struct rlimit *rlp ) {
@@ -548,6 +584,8 @@ int rename( const char *from, const char *to ) {
 	pid_t setsid();
 #if defined(HPUX9)
 	int statfs( char *path, struct statfs *buf ) {
+#elif defined(LINUX)
+	int statfs( const char *path, struct statfs *buf ) {
 #else
 	int statfs( char *path, struct statfs *buf, int len ) {
 #endif
@@ -597,11 +635,29 @@ int rename( const char *from, const char *to ) {
 		one day soon.  ...and now we do on some platforms -Todd 1/95 
 		*/
 	not_supported {
-#	if !defined(SAVE_SIGSTATE)
+
+#if 	!defined(SAVE_SIGSTATE)
+
+
+#if 	defined(LINUX)
+		int sigprocmask( int how, sigset_t *set, sigset_t *o_set );
+#else
 		int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
+#endif
+
 		int sigpending( sigset_t *set );
+
+#if		!defined(LINUX)
 		int sigreturn( struct sigcontext *scp );
+#endif
+
+#if		defined(LINUX)
+		int sigsuspend( sigset_t *set );
+#else
 		int sigsuspend( const sigset_t *mask );
+#endif
+
+
 		int sigstack( struct sigstack *instack, struct sigstack *outstack );
 #	if defined( AIX32)
 		int kill( pid_t pid, int sig );
@@ -609,8 +665,15 @@ int rename( const char *from, const char *to ) {
         int kill( pid_t pid, int sig ) : extract;
 #	endif
 #endif  /* of !defined(SAVE_SIGSTATE) */
+
+
+#if		defined(LINUX)
+		int setitimer( int which, const struct itimerval *value,
+				struct itimerval *oval );
+#else
 		int setitimer( int which, struct itimerval *value,
 											struct itimerval *oval );
+#endif
 		int getitimer( int which, struct itimerval *value );
 	}
 
@@ -623,8 +686,13 @@ int rename( const char *from, const char *to ) {
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act );
 #	elif !defined (SAVE_SIGSTATE)
+#if		defined(LINUX)
+		int sigaction( int sig, struct sigaction *act,
+				struct sigaction *o_act ) : extract;
+#else
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act ) : extract;
+#endif
 #	endif
 		int setsysinfo( unsigned long op, char *buffer, unsigned long nbytes,
 						char * arg, unsigned long flag );
@@ -650,17 +718,12 @@ not_supported {
 #if !defined( CLIP )
 	/* Calls intended only for the super user or system managers */
 not_supported {
-	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 	int setuid( uid_t uid );
 	int setlogin( char *name );
-	int acct( char *path );
-	void reboot( int howto );
 	int revoke( char *path );
 	int chroot( const char *path );
 	int setgroups( int gidsetsize, gid_t grouplist[] );
-	int sethostname( char *address, int address_len );
 	int plock( int op );
-	int settimeofday( struct timeval *tp, struct timezone *tzp );
 	int adjtime( struct timeval *delta, struct timeval *old_delta );
 	int sethostid( int host_id );
 	int async_daemon();
@@ -668,8 +731,24 @@ not_supported {
 		int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
 		int exportfs( int access, int *record, struct exportfsdata *exdata );
 #	endif
+#if defined(LINUX)
+	int mount( const char *spec, const char *dir, const char *fstyp,
+		unsigned long rwflag, const void *data );
+	int acct( const char *path );
+	int reboot( int magic, int magic_too, int flag );
+	int sethostname( const char *address, size_t address_len );
+	int settimeofday( const struct timeval *tp, const struct timezone *tzp );
+	int setdomainname( const char *name, size_t namelen );
+	int swapon( const char *path );
+#else
+	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
+	int acct( char *path );
+	void reboot( int howto );
+	int sethostname( char *address, int address_len );
+	int settimeofday( struct timeval *tp, struct timezone *tzp );
 	int setdomainname( char *name, int namelen );
 	int swapon( char *path, int flags, int lo_water, int hi_water );
+#endif
 }
 
 	/* Calls having to do with multiple process jobs */
@@ -726,8 +805,13 @@ not_supported {
 	current implementation
 	*/
 not_supported {
+#if defined(LINUX)
+	int profil( char *buf, int buf_size, int offset,
+				 int scale );
+#else
 	void profil( short *buf, unsigned int buf_size, unsigned int offset,
 				 unsigned int scale );
+#endif
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes,
 					int *start, char *arg );
