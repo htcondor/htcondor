@@ -21,6 +21,10 @@ struct resparam {
 	unsigned long	res_memavail;
 	unsigned long	res_diskavail;
 	int		res_idle;
+	int		res_console_idle;
+	int res_mips;
+	int res_kflops;
+	int res_consecutive_idle;   // how many consecutive startd timeouts we've been idle
 };
 
 struct jobparam {
