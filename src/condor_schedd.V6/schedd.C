@@ -2164,6 +2164,8 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 				case JOB_BAD_STATUS:
 					EXCEPT("shadow exited because job status != RUNNING");
 					break;
+				case JOB_KILLED:
+				case JOB_COREDUMPED:
 				case JOB_EXITED:
 					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, COMPLETED);
 					break;
