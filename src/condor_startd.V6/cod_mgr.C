@@ -355,24 +355,27 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	interactionLogicCODRunning();
 
 		// finally, spawn the starter and COD job itself
+
 	time_t now = time(NULL);
 	claim->setStarter( tmp_starter );	
-	claim->spawnStarter( now );
-	claim->beginActivation( now );
+	int rval = claim->spawnStarter( now );
+	if( rval ) {
+			// only want to do this if it worked...
+		claim->beginActivation( now );
+	}
+
+	MyString line;
+	line.sprintf( "%s = \"%s\"", ATTR_RESULT, 
+				  rval ? getCAResultString(CA_SUCCESS)
+				       : getCAResultString(CA_FAILURE) );
 
 	ClassAd reply;
-
-	MyString line = ATTR_RESULT;
-	line += " = \"";
-	line += getCAResultString( CA_SUCCESS );
-	line += '"';
 	reply.Insert( line.Value() );
 
 		// TODO any other info for the reply?
-
 	sendCAReply( s, "CA_ACTIVATE_CLAIM", &reply );
 
-	return TRUE;
+	return rval;
 }
 
 

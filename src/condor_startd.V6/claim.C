@@ -642,10 +642,14 @@ Claim::spawnStarter( time_t now, Stream* s )
 			// Big error!
 		dprintf( D_ALWAYS, "ERROR! Claim::spawnStarter() called "
 				 "w/o a Starter object! Returning failure\n" );
-		return 0;
+		return FALSE;
 	}
 
 	rval = c_starter->spawn( now, s );
+	if( ! rval ) {
+		resetClaim();
+		return FALSE;
+	}
 
 	changeState( CLAIM_RUNNING );
 
@@ -658,7 +662,7 @@ Claim::spawnStarter( time_t now, Stream* s )
 		c_starter->set_last_snapshot( (now + 15) -
 									  pid_snapshot_interval );
 	} 
-	return rval;
+	return TRUE;
 }
 
 
