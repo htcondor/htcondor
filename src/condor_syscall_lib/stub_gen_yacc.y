@@ -9,10 +9,12 @@
 %token OUT
 %token BOTH
 %token ALLOC
+%token NOSUPP
 
 %type <node> stub_spec param_list param simple_param map_param
 %type <node> stub_body action_func_list 
 %type <node> action_param action_param_list action_func xfer_func alloc_func
+%type <node> nosupp_func
 %type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP EXTRACT ARRAY
 %type <bool> opt_const opt_ptr opt_ptr_to_const opt_array opt_extract
 %type <bool> opt_reference
@@ -29,6 +31,7 @@ mk_func_node( char *type, char *name, struct node * p_list,
 	int is_ptr, int extract, struct node *action_func_list );
 struct node * mk_xfer_func( char *xdr_func, struct node *param_list,
 	int in, int out );
+struct node * mk_nosupp_func();
 struct node * mk_alloc_func( struct node *param_list );
 struct node * mk_param_node( char *type, char *name,
 	int is_const, int is_ptr, int is_const_ptr, int is_array,
@@ -52,6 +55,7 @@ char * abbreviate( char *type_name );
 void Trace( char *msg );
 char * find_type_name( char *param_name, struct node *param_list );
 int has_out_params( struct node *action_func_list );
+int not_supported( struct node *action_func_list );
 
 #define MATCH 0 /* for strcmp() */
 
@@ -127,6 +131,10 @@ action_func
 		{
 		$$ = $1;
 		}
+	| nosupp_func
+		{
+		$$ = $1;
+		}
 	;
 
 xfer_func
@@ -142,6 +150,14 @@ alloc_func
 		{
 		Trace( "alloc_func" );
 		$$ = mk_alloc_func( $3 );
+		}
+	;
+
+nosupp_func
+	: NOSUPP '(' ')' ';'
+		{
+		Trace( "nosupp_func" );
+		$$ = mk_nosupp_func();
 		}
 	;
 
@@ -458,6 +474,17 @@ mk_alloc_func( struct node *param_list )
 	answer = (struct node *)malloc( sizeof(struct node) );
 	answer->node_type = ALLOC_FUNC;
 	answer->param_list = param_list;
+
+	return answer;
+}
+
+struct node *
+mk_nosupp_func()
+{
+	struct node	*answer;
+
+	answer = (struct node *)malloc( sizeof(struct node) );
+	answer->node_type = NOSUPP_FUNC;
 
 	return answer;
 }
@@ -793,14 +820,18 @@ output_receiver( struct node *n )
 		/* Invoke the system call */
 	printf( "\n" );
 	printf( "\t\terrno = 0;\n" );
-	printf( "\t\trval = %s( ", n->id );
-	for( p=param_list->next; p != param_list; p = p->next ) {
-		printf( "%s%s ",
-			p->id,
-			p->next == param_list ? "" : ","
-		);
+	if( not_supported(n->action_func_list) ) {
+		printf( "\t\trval = CONDOR_NotSupported( CONDOR_%s );\n", n->id  );
+	} else {
+		printf( "\t\trval = %s( ", n->id );
+		for( p=param_list->next; p != param_list; p = p->next ) {
+			printf( "%s%s ",
+				p->id,
+				p->next == param_list ? "" : ","
+			);
+		}
+		printf( ");\n" );
 	}
-	printf( ");\n" );
 	printf( "\t\tterrno = errno;\n" );
 	printf( "\n" );
 
@@ -1109,6 +1140,19 @@ find_type_name( char *param_name, struct node *param_list )
 	assert( FALSE );
 }
 
+
+int
+not_supported( struct node *action_func_list )
+{
+	struct node	*p;
+
+	for( p=action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( p->node_type == NOSUPP_FUNC ) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
 
 int
 has_out_params( struct node *action_func_list )

@@ -77,6 +77,7 @@ in					return grab( IN );
 out					return grab( OUT );
 alloc				return grab( ALLOC );
 extract				return grab( EXTRACT );
+not_supported		return grab( NOSUPP );
 {STR}				return grab( IDENTIFIER );
 "{"					return grab( '{' );
 "}"					return grab( '}' );
@@ -158,6 +159,8 @@ display_token( int type )
 	  case BOTH:
 		fprintf( stderr, "BOTH" );
 		break;
+	  case NOSUPP:
+		fprintf( stderr, "NOSUPP" );
 	  case '(':
 		fprintf( stderr, "(" );
 		break;

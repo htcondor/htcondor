@@ -4,6 +4,7 @@
 #define XFER_FUNC		3
 #define ALLOC_FUNC		4
 #define ACTION_PARAM	5
+#define NOSUPP_FUNC		6
 
 struct token {
 	int		tok_type;

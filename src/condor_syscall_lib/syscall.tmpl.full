@@ -93,6 +93,7 @@
 	should generate code.
 */
 
+	// Switches for these implemented in "condor_ckpt/file_state.C"
 #if !defined (SWITCH)
 int open( const char *path, int flags, int mode ) {
 	in xdr_string( &path, _POSIX_PATH_MAX );
@@ -102,11 +103,29 @@ int close( int fd );
 int dup( int old_fd );
 int dup2( int old_fd, int new_fd );
 #endif
-pid_t fork() : extract;
-pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru ); 
-int link( const char *p1, const char *p2 );
-int unlink( const char *path );
-int execv( const char *path, char * const argv[] );
+
+pid_t fork() : extract {
+	not_supported();
+}
+
+pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru ) {
+	out xdr_int( &status );
+	alloc( status, INT_SIZE );
+	out xdr_rusage( &ru );
+	alloc( ru, RUSAGE_SIZE );
+	not_supported();
+}
+
+int link( const char *p1, const char *p2 ) {
+	in xdr_string( &p1, _POSIX_PATH_MAX );
+	in xdr_string( &p2, _POSIX_PATH_MAX );
+	alloc( p1, _POSIX_PATH_MAX );
+	alloc( p2, _POSIX_PATH_MAX );
+}
+int unlink( const char *path ) {
+	in xdr_string( &path, _POSIX_PATH_MAX );
+	alloc( path, _POSIX_PATH_MAX );
+}
 ssize_t read( map(int fd), void *buf, size_t len ) {
 	out xdr_bytes( &buf, &len, len );
 	alloc( buf, len );
@@ -117,11 +136,10 @@ ssize_t write( map(int fd), const void *buf, size_t len ) {
 }
 off_t lseek( map(int fd), off_t offset, int whence );
 pid_t getpid();
+
 int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 int setuid( uid_t uid );
 uid_t getuid();
-int exec_with_loader( int flags, const char *loader, const char *file,
-					  char * const argv[], char * const envp[] );
 int ptrace( long req, long int process, ulong_t *address, ulong_t data );
 int recvmsg( int socket, struct msghdr *message, int flags );
 int sendmsg( int socket, struct msghdr *message, int flags );
@@ -159,7 +177,10 @@ int revoke( char *path );
 int symlink( const char *path1, const char *path2 );
 int readlink( const char *path, char *buf, int buf_size );
 int execve( const char *path, char * const argv[], char * const envp [] );
-mode_t umask( mode_t mask );
+			mode_t umask( mode_t mask );
+int execv( const char *path, char * const argv[] );
+int exec_with_loader( int flags, const char *loader, const char *file,
+					  char * const argv[], char * const envp[] );
 int chroot( const char *path );
 pid_t getpgrp();
 int getpagesize();
