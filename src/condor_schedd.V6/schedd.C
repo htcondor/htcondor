@@ -664,7 +664,7 @@ void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 								"Can't receive host name from mgr\n" );
 						RETURN;
 					}
-					if( !s->end_of_message ) {
+					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
 								"Can't receive host name from mgr\n" );
 						RETURN;
