@@ -23,6 +23,7 @@ print "\n";
 $submit = 1;
 $force = 0;
 $max_jobs = 0;
+$max_scripts = 0;
 $notification = "";
 while( $_ = shift ) {
   SWITCH: {	    
@@ -53,13 +54,25 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
-    if( /^-m.*/ ) {
+    if( /^-maxj.*/ ) {
 	$max_jobs = shift;
 	if( ! $max_jobs ) {
 	    &usage();
 	}
 	if( !($max_jobs =~ /^\d+$/) ) {
 	    print "ERROR: Invalid argument \"$max_jobs\" to -maxjobs.\n",
+	    "You must specify a number.\n\n";
+	    &usage();
+	}
+	last SWITCH;
+    }
+    if( /^-maxs.*/ ) {
+	$max_scripts = shift;
+	if( ! $max_scripts ) {
+	    &usage();
+	}
+	if( !($max_scripts =~ /^\d+$/) ) {
+	    print "ERROR: Invalid argument \"$max_scripts\" to -maxscripts.\n",
 	    "You must specify a number.\n\n";
 	    &usage();
 	}
@@ -157,6 +170,7 @@ sub usage {
     print "    -verbose            (Verbose error messages from condor_submit_dag)\n";
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
     print "    -maxjobs number     (Maximum number of jobs ever submitted at once)\n";
+    print "    -maxscripts number  (Maximum number of PRE/POST scripts to run at once)\n";
     print "    -log filename       (Specify the log file shared by all jobs in the DAG)\n";
     print "    -notification value (Determines how much email you get from Condor\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
@@ -257,6 +271,9 @@ sub write_submit_file {
     $args = $args . " -Rescue $rescue_file";
     if( $max_jobs ) {
 	$args = $args . " -MaxJobs $max_jobs";
+    }
+    if( $max_scripts ) {
+	$args = $args . " -MaxScripts $max_scripts";
     }
     print SUBMIT "arguments\t= $args\n";
     print SUBMIT "environment\t= PATH=$path\n";
