@@ -20,12 +20,7 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* 
-** Copyright 1993 by Miron Livny, and Mike Litzkow
-** 
-** All rights reserved except as provided by specific written agreement.
-** 
-*/ 
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_fix_setjmp.h"
@@ -337,3 +332,4 @@ StateMachine::find_transition( int event )
 	);
 	return NULL;	// EXCEPT doesn't return, but the compiler doesn't know that...
 }
+
