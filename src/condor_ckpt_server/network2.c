@@ -307,7 +307,22 @@ char* getserveraddr()
 	struct hostent* h;
 	char	*server;
 	char	ckpt_server_config[30];
-	
+
+	/* First verify that USE_CKPT_SERVER is TRUE */
+	server = param("USE_CKPT_SERVER");
+	if ( server == NULL ) {
+		/* do not use ckpt server */
+		return NULL;
+	} else {
+		if ( *server != 'T' || *server != 't' ) {
+			free(server);
+			return NULL;
+		}
+		free(server);
+		server = NULL;
+	}
+
+	/* Now get the name of the CKPT_SERVER */
 	if (ckpt_server_number == -1) {
 		server = param("CKPT_SERVER_HOST");
 	} else {
