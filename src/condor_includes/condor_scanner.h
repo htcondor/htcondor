@@ -7,7 +7,7 @@
 #ifndef _SCANNER_H_
 #define _SCANNER_H_
 
-#define MAX_VAR_NAME 100
+#define MAXVARNAME 256
 
 // Lexeme abstract dataype:
 
