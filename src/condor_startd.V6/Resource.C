@@ -35,7 +35,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_reqexp = new Reqexp( this );
 	r_load_queue = new LoadQueue( size );
 
-	sprintf( tmp, "ro%d", rid );
+	sprintf( tmp, "vm%d", rid );
 	r_id = strdup( tmp );
 	
 	if( resmgr->is_smp() ) {
