@@ -723,6 +723,7 @@ Scheduler::build_context(PROC_ID* id)
  * 2. fork an agent to contact the startd
  * Returns 1 if successful (not the result of agent's negotiation), 0 if failed.
  */
+int
 Scheduler::permission(char* id, char* server, PROC_ID* jobId)
 {
 	Mrec*		mrec;						// match record pointer
@@ -1053,10 +1054,7 @@ Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
 	int				pid;
 	int				i, lim;
 	int				parent_id;
-	int				ClientUid;
 	int				shadow_fd;
-	int				new_shadow;
-	char			class_name[50];
 	char			out_buf[80];
 	char			**ptr;
 	struct shadow_rec *srp;
@@ -1176,7 +1174,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	Environ	env_obj;
 	char	**envp;
 	char	*argv[_POSIX_PATH_MAX];		// bad
-	int		i, fd, parent_id, pid, argc;
+	int		fd, parent_id, pid, argc;
 	struct passwd	*pwd;
 
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
@@ -1361,16 +1359,6 @@ Scheduler::delete_shadow_rec(int pid)
 void
 Scheduler::mark_job_running(PROC_ID* job_id)
 {
-#if DBM_QUEUE
-#if defined(NEW_PROC)
-	GENERIC_PROC	buf;
-	PROC			*proc  = (PROC *)&buf;
-#else
-	char			buf[1024];
-	PROC			*proc  = (PROC *)buf;
-#endif
-#else
-#endif
 	int status;
 	int orig_max;
 
@@ -1873,8 +1861,6 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 void
 Scheduler::kill_zombie(int pid, PROC_ID* job_id )
 {
-    char    ckpt_name[MAXPATHLEN];
-
     dprintf( D_ALWAYS,
         "Shadow %d died, and left job %d.%d marked RUNNING\n",
         pid, job_id->cluster, job_id->proc );
@@ -1892,11 +1878,7 @@ Scheduler::kill_zombie(int pid, PROC_ID* job_id )
 void
 Scheduler::check_zombie(int pid, PROC_ID* job_id)
 {
-    char    queue[MAXPATHLEN];
-
-#if DBM_QUEUE
-    PROC    proc;
-#endif
+ 
     int     status;
 
     dprintf( D_ALWAYS, "Entered check_zombie( %d, 0x%x )\n", pid, job_id );
@@ -1917,9 +1899,6 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
             break;
     }
 
-#if DBM_QUEUE
-    CLOSE_JOB_QUEUE( Q );
-#endif
     dprintf( D_ALWAYS, "Exited check_zombie( %d, 0x%x )\n", pid, job_id );
 }
 
@@ -1929,12 +1908,9 @@ Scheduler::cleanup_ckpt_files(int pid, PROC_ID* job_id)
     char    ckpt_name[MAXPATHLEN];
 
         /* Remove any checkpoint file */
-#if defined(V2)
-    (void)sprintf( ckpt_name, "%s/job%06d.ckpt.%d",
-                                Spool, job_id->cluster, job_id->proc  );
-#else
+
     strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
-#endif
+
     (void)unlink( ckpt_name );
 
         /* Remove any temporary checkpoint file */
@@ -2258,6 +2234,7 @@ Scheduler::DelMrec(char* id)
 			rec[nMrec] = NULL;
 		}
 	}
+	return 0;
 }
 
 int
@@ -2280,6 +2257,7 @@ Scheduler::DelMrec(Mrec* match)
 			rec[nMrec] = NULL;
 		}
 	}
+	return 0;
 }
 
 int
@@ -2299,6 +2277,7 @@ Scheduler::MarkDel(char* id)
 			rec[i]->status = M_DELETED; 
 		}
 	}
+	return 0;
 }
 
 void
@@ -2575,7 +2554,6 @@ job_prio(int cluster, int proc)
 void
 Scheduler::SetSockName(int sock)
 {
-	struct hostent*			host = gethostent();
 	struct sockaddr_in		addr;
 	int						addrLen; 
 	char					tmpExpr[200];
