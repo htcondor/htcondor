@@ -8,6 +8,7 @@ static char *_FileName_ = __FILE__;
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
+#include "my_hostname.h"
 
 int open_url(char *, int, int);
 extern "C" char*	get_schedd_addr(const char*); 
@@ -25,7 +26,6 @@ ConnectQ(char *qmgr_location)
 #if !defined(WIN32)
 	struct  passwd *pwd;
 #endif
-	char	hostname[256]; 
 	char*	scheddAddr = NULL;
 
 	if (connection != 0) {
@@ -41,12 +41,7 @@ ConnectQ(char *qmgr_location)
 
 	/* No schedd identified --- use local schedd */
 	if (qmgr_location == 0) {
-		if(gethostname(hostname, 256) < 0)
-		{
-			dprintf(D_ALWAYS, "Can't find host name");
-			return 0;
-		}
-		scheddAddr = get_schedd_addr(hostname); 
+		scheddAddr = get_schedd_addr( my_full_hostname() ); 
 	}
 	/* schedd identified by Name, not <xxx.xxx.xxx.xxx:xxxx> */
 	else if(qmgr_location[0] != '<')
