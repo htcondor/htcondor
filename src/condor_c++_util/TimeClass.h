@@ -26,8 +26,11 @@ public:
     return *this;
   }
 
-  int operator==(const Time& T) { return (Sec==T.Sec && MicroSec==T.MicroSec); }
-  int operator<(const Time& T) { return (Sec==T.Sec ? MicroSec<T.MicroSec : Sec<T.Sec); }
+  int operator==(const Time& T) const { return (Sec==T.Sec && MicroSec==T.MicroSec); }
+  int operator<(const Time& T) const { return (Sec==T.Sec ? MicroSec<T.MicroSec : Sec<T.Sec); }
+  int operator<=(const Time& T) const { return (Sec==T.Sec ? MicroSec<=T.MicroSec : Sec<T.Sec); }
+  int operator>(const Time& T) const { return (Sec==T.Sec ? MicroSec>T.MicroSec : Sec>T.Sec); }
+  int operator>=(const Time& T) const { return (Sec==T.Sec ? MicroSec>=T.MicroSec : Sec>T.Sec); }
   
   static Time Now() {
 #if defined(WIN32)
@@ -43,6 +46,20 @@ public:
 
   static double DiffTime(Time From, Time To) {
     return double(To.Sec-From.Sec)+double(To.MicroSec-From.MicroSec)/1000000;
+  }
+
+  friend ostream& operator<<(ostream& os, const Time& T) {
+    os << T.Sec << ' ' << T.MicroSec;
+    return os;
+  }
+
+  friend istream& operator>>(istream& is, Time& T) {
+    long l;
+    is >> l;
+    T.Sec=l;
+    is >> l;
+    T.MicroSec=l;
+    return is;
   }
 
 };

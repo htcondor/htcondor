@@ -1,4 +1,5 @@
 #include <string.h>
+#include <iostream.h>
 
 #ifndef _MyString_H_
 #define _MyString_H_
@@ -82,6 +83,19 @@ public:
   const char* Value() const { return Data; }
   operator const char*() const { return Data; }
     
+  friend ostream& operator<<(ostream& os, const MyString& S) {
+    if (S.Data) os << S.Data;
+    return os;
+  }
+
+  friend istream& operator>>(istream& is, MyString& S) {
+    char buffer[1000]; 
+    *buffer='\0';
+    is >> buffer;
+    S=buffer; 
+    return is;
+  }
+
 private:
 
   char* Data;	
