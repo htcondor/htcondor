@@ -23,8 +23,6 @@
 
 #include "condor_common.h"
 #include "startd.h"
-static char *_FileName_ = __FILE__;
-
 
 ResState::ResState( Resource* rip )
 {
@@ -151,7 +149,7 @@ ResState::eval()
 		// Recompute attributes needed at every timeout and refresh classad 
 	rip->timeout_classad();
 
-	int want_suspend, want_vacate;
+	int want_suspend;
 
 	switch( r_state ) {
 
@@ -262,7 +260,6 @@ ResState::leave_action( State s, Activity a,
 						int statechange, int ) 
 {
 	ClassAd* cp;
-	char*	tmp;
 	switch( s ) {
 
 	case preempting_state:

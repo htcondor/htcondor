@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "startd.h"
-static char *_FileName_ = __FILE__;
 
 Resource::Resource( CpuAttributes* cap, int rid )
 {
@@ -127,7 +126,6 @@ Resource::got_alive()
 int
 Resource::periodic_checkpoint()
 {
-	char tmp[80];
 	if( state() != claimed_state ) {
 		return FALSE;
 	}
@@ -316,9 +314,6 @@ Resource::leave_preempting_state()
 int
 Resource::init_classad()
 {
-	char 	tmp[1024];
-	char*	ptr;
-
 	if( r_classad )	delete(r_classad);
 	r_classad 		= new ClassAd();
 

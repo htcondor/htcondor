@@ -30,13 +30,11 @@
 
 #include "condor_common.h"
 #include "startd.h"
-static char *_FileName_ = __FILE__;
 
 Reqexp::Reqexp( Resource* rip )
 {
 	this->rip = rip;
 	char tmp[1024];
-	char* start;
 	sprintf( tmp, "%s = %s", ATTR_REQUIREMENTS, "START" );
 	origreqexp = strdup( tmp );
 	origstart = NULL;
