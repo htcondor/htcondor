@@ -164,7 +164,7 @@ rm ./ignore.me
 rm ./release.tar
 
 %postun
-rm -rf \${RPM_INSTALL_PREFIX}
+
 
 %files
 %defattr(-,root,root)
