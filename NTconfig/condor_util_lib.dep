@@ -223,6 +223,16 @@
 	"..\src\h\file_lock.h"\
 	
 
+..\src\condor_util_lib\get_exec_path.c : \
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\file_lock.h"\
+	
+
 ..\src\condor_util_lib\get_port_range.c : \
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_config.h"\

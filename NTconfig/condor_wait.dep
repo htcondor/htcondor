@@ -1,30 +1,17 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_wait.mak
 
 "..\src\condor_c++_util\dc_stub.C" : \
-	"..\..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_tools\wait.C : \
-	"..\..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -48,6 +35,7 @@
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
