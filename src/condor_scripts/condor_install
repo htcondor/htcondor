@@ -1672,7 +1672,7 @@ sub prompt_domain_settings {
     "(in particular, the section \"Shared Filesystem Config File Entries\")\n",
     "for a complete explaination of these (and other, related) settings.\n";
 
-    print "\nDo all of the machines in your pool from your domain "
+    print "\nDo all of the machines in your pool from your domain " .
 	"(\"$domain\")\nshare a common filesystem? [no] ";
     chop($_ = <STDIN>);    
     if( /^y$/i ) {
