@@ -1173,5 +1173,7 @@ extern DaemonCore* daemonCore;
 #define MAX_INHERIT_SOCKS 10
 #define _INHERITBUF_MAXSIZE 500
 
+// Prototype to get sinful string.
+char *mySinfulAddr( void );
 
 #endif /* _CONDOR_DAEMON_CORE_H_ */
