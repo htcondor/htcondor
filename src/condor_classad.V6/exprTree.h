@@ -119,7 +119,7 @@ class ExprTree
 		/// A debugging method; send expression to stdout
 		void Puke( ) const;
 
-		// ajr--made public on 4-nov-2002. Is this okay? Needed for user functions.
+		// ajr--made public on 4-nov-2002. Needed for user functions.
 		bool Evaluate( EvalState &, Value & ) const; 
 		
   	protected:
