@@ -709,7 +709,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 
 		// 2d.  get the request 
 		dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
-		if (!request.get(*sock) || !sock->end_of_message())
+		if (!request.initFromStream(*sock) || !sock->end_of_message())
 		{
 			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();
