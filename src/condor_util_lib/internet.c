@@ -399,7 +399,7 @@ char*
 string_to_ipstr( const char* addr ) 
 {
 	char *tmp;
-	static char result[16];
+	static char result[MAXHOSTNAMELEN];
 	char sinful[MAXHOSTNAMELEN];
 
 	if( ! (addr && is_valid_sinful(addr)) ) {
