@@ -39,13 +39,12 @@
 #include <pwd.h>
 #include <netdb.h>
 #include "trace.h"
-#include "expr.h"
 #include "files.h"
 #include "debug.h"
 #include "except.h"
-#include "config.h"
 #include "clib.h"
 #include "condor_sys.h"
+#include "condor_config.h"
 
 #ifndef LINT
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
@@ -75,9 +74,7 @@ init_config()
 #	define USER_NAME "condor"
 #endif
 
-config( a_out_name, context )
-char	*a_out_name;
-CONTEXT	*context;
+void config( char* a_out_name, CONTEXT* context )
 {
 	struct passwd	*pw, *getpwnam();
 	char			*ptr;
@@ -174,7 +171,7 @@ CONTEXT	*context;
 	}
 }
 
-config_from_server( a_out_name, context )
+void config_from_server( a_out_name, context )
 char    *a_out_name;
 CONTEXT *context;
 {
