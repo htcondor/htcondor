@@ -198,10 +198,6 @@ TRUNC_MASTER_LOG_ON_OPEN        = False
 ##  Daemon-wide settings:
 ######################################################################
 
-##  What names do you want to use to specify this platform?
-ARCH		= INTEL
-OPSYS		= LINUX
-
 ##  Pathnames
 LOG		= $(LOCAL_DIR)/log
 SPOOL		= $(LOCAL_DIR)/spool
@@ -418,6 +414,16 @@ PVMGS			= $(SBIN)/condor_pvmgs
 ##  none are specified in the submit file.
 DEFAULT_RANK_VANILLA	= ((Memory*1024) > Imagesize)
 DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
+
+##  If you want condor_submit to automatically append expressions to
+##  the job ClassAds it creates, you can uncomment and define the
+##  SUBMIT_EXRP setting.  It works just like the STARTD_EXPRS
+##  described above with respect to ClassAd vs. config file syntax,
+##  strings, etc.  One common use would be to have the full hostname
+##  of the machine where a job was submitted placed in the job
+##  ClassAd.  You would do this by uncommenting the following lines: 
+#MACHINE = "$(FULL_HOSTNAME)"
+#SUBMIT_EXPRS = MACHINE
 
 
 ##--------------------------------------------------------------------

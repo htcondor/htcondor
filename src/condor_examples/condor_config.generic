@@ -270,10 +270,6 @@ PERIODIC_CHECKPOINT	: ( (ImageSize < 60000) && ( $(LastCkpt) > (6 * $(HOUR)) ) )
 ##  Daemon-wide settings:
 ######################################################################
 
-##  What names do you want to use to specify this platform?
-ARCH		= INTEL
-OPSYS		= LINUX
-
 ##  Pathnames
 LOG		= $(LOCAL_DIR)/log
 SPOOL		= $(LOCAL_DIR)/spool
@@ -456,14 +452,15 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  This entry allows you to have the startd advertise arbitrary
 ##  expressions from the config file in its ClassAd.  Give the
 ##  comma-seperated list of entries from the config file you want in
-##  the startd classad.  Note: because of the different syntax of the
-##  config file and ClassAds, you might have to do a little extra work
-##  to get a given entry into the ClassAd.  In particular, ClassAds
-##  require "'s around your strings.  Numeric values can go in
-##  directly, as can boolean expressions.  For example, if you wanted
-##  the startd to advertise its list of console devices, when it's
-##  configured to run benchmarks, and how often it sends updates to
-##  the central manager, you'd have to do the following:
+##  the startd classad.  
+##  Note: because of the different syntax of the config file and
+##  ClassAds, you might have to do a little extra work to get a given
+##  entry into the ClassAd.  In particular, ClassAds require "'s
+##  around your strings.  Numeric values can go in directly, as can
+##  boolean expressions.  For example, if you wanted the startd to
+##  advertise its list of console devices, when it's configured to run
+##  benchmarks, and how often it sends updates to the central manager,
+##  you'd have to do the following:
 #MY_CONSOLE_DEVICES = "$(CONSOLE_DEVICES)"
 #STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
 
@@ -581,6 +578,16 @@ STARTER_LOCAL_LOGGING	= TRUE
 ##  none are specified in the submit file.
 DEFAULT_RANK_VANILLA	= ((Memory*1024) > Imagesize)
 DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
+
+##  If you want condor_submit to automatically append expressions to
+##  the job ClassAds it creates, you can uncomment and define the
+##  SUBMIT_EXRP setting.  It works just like the STARTD_EXPRS
+##  described above with respect to ClassAd vs. config file syntax,
+##  strings, etc.  One common use would be to have the full hostname
+##  of the machine where a job was submitted placed in the job
+##  ClassAd.  You would do this by uncommenting the following lines: 
+#MACHINE = "$(FULL_HOSTNAME)"
+#SUBMIT_EXPRS = MACHINE
 
 
 ##--------------------------------------------------------------------
