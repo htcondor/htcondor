@@ -4792,25 +4792,24 @@ DaemonCore::getAuthBitmask ( char * methods ) {
 	while ( tmp = server.next() ) {
 		if ( !stricmp( tmp, "GSS_AUTHENTICATION" ) ) {
 			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_GSS\n");
-			retval |= Authentication::CAUTH_GSS;
+			retval |= CAUTH_GSS;
 		} else if ( !stricmp( tmp, "NTSSPI" ) ) {
 			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_NTSSPI\n");
-			retval |= Authentication::CAUTH_NTSSPI;
+			retval |= CAUTH_NTSSPI;
 		} else if ( !stricmp( tmp, "FS" ) ) {
 			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_FILESYSTEM\n");
-			retval |= Authentication::CAUTH_FILESYSTEM;
+			retval |= CAUTH_FILESYSTEM;
 		} else if ( !stricmp( tmp, "FS_REMOTE" ) ) {
 			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_FILESYSTEM_REMOTE\n");
-			retval |= Authentication::CAUTH_FILESYSTEM_REMOTE;
+			retval |= CAUTH_FILESYSTEM_REMOTE;
 		} else if ( !stricmp( tmp, "KERBEROS" ) ) {
 			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_KERBEROS\n");
-			retval |= Authentication::CAUTH_KERBEROS;
+			retval |= CAUTH_KERBEROS;
 		} else if ( !stricmp( tmp, "CLAIMTOBE" ) ) {
 			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_CLAIMTOBE\n");
-			retval |= Authentication::CAUTH_CLAIMTOBE;
+			retval |= CAUTH_CLAIMTOBE;
 		}
 	}
 
 	return retval;
 }
-
