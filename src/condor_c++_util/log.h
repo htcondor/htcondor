@@ -1,10 +1,16 @@
 #if !defined(_LOG_H)
 #define _LOG_H
 
-/* This defines a base class for "logs" of operations.  These logs indicate
-   operations which have been performed on a data structure (for example
-   the job queue), and the log can be "replayed" to recreate the state of
-   the data structure.
+/* 
+   This defines a base class for "logs" of ClassAd operations.  These logs 
+   indicate operations which have been performed on a ClassAd hash table
+   (for example, the job queue), and the log can be "replayed" to recreate
+   the state of the hash table.  The logs are meant to be strictly ascii 
+   (for example, no '\0' characters).  A log entry is of the form: 
+   "op_type body\n" where op_type is the ascii decimal representation of
+   op_type and body is defined by WriteBody and ReadBody for that log entry.
+   Users are encouraged to use fflush() and fsync() to commit entries to the 
+   log.
 */
 
 #include "classad_hashtable.h"

@@ -1,6 +1,12 @@
 #if !defined(_LOG_TRANSACTION_H)
 #define _LOG_TRANSACTION_H
 
+/*
+   This defines a transaction log for ClassAd operations.  Calling Commit
+   will play the log for the given ClassAd hash table.  Destroying the
+   Transaction class aborts the transaction.
+*/
+
 #include "log.h"
 
 class LogPtrListEntry {

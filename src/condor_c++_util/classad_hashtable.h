@@ -1,6 +1,12 @@
 #if !defined(_CLASSAD_HASHTABLE_H)
 #define _CLASSAD_HASHTABLE_H
 
+/*
+   The ClassAdHashTable type is used to store collections of ClassAds in
+   memory.  It can be used with the ClassAdLog class (see classad_log.h)
+   for persistent storage.  
+*/
+
 #include "HashTable.h"
 #include "condor_classad.h"
 

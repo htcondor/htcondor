@@ -1,6 +1,28 @@
 #if !defined(_QMGMT_LOG_H)
 #define _QMGMT_LOG_H
 
+/*
+   The ClassAdLog class is used throughout Condor for persistent storage
+   of ClassAds.  ClassAds are stored in memory using the ClassAdHashTable
+   class (see classad_hashtable.h) and stored on disk in ascii format 
+   using the LogRecord class hierarchy (see log.h).  The Transaction
+   class (see log_transaction.h) is used for simple transactions on
+   the hash table.  Currently, only one transaction can be active.  When
+   no transaction is active, the log operation is immediately written
+   to disk and performed on the hash table.
+
+   Log operations are not performed on the hash table until the transaction
+   is committed.  To see updates to the table before they are committed,
+   use the LookupInTransaction method.  To provide strict transaction
+   semantics, an interface which uses the ClassAdLog should always call
+   LookupInTransaction before looking up a value in the hash table when
+   a transaction is active.
+
+   The constructor will ignore any incomplete transactions written to the
+   log.  The LogBeginTransaction and LogEndTransaction classes are used
+   internally by ClassAdLog to delimit transactions in the on-disk log.
+*/
+
 #include "log.h"
 #include "classad_hashtable.h"
 #include "log_transaction.h"
@@ -18,8 +40,8 @@ public:
 	ClassAdLog(const char *filename);
 	~ClassAdLog();
 
-	void AppendLog(LogRecord *log);
-	void TruncLog();
+	void AppendLog(LogRecord *log);	// perform a log operation
+	void TruncLog();				// clean log file on disk
 
 	void BeginTransaction();
 	void AbortTransaction();
