@@ -220,7 +220,7 @@ void setupAuthentication();
 
 char *owner = NULL;
 
-extern char **environ;
+extern DLL_IMPORT_MAGIC char **environ;
 
 
 extern "C" {

@@ -53,7 +53,7 @@ void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
 void _condor_dprintf_exit();
 
-extern	int		errno;
+extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
 
 FILE	*DebugFP = 0;

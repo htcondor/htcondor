@@ -44,7 +44,7 @@ static FILE *email_open_implementation(char *Mailer,char *final_command);
 #if defined(IRIX)
 extern char **_environ;
 #else
-extern char **environ;
+extern DLL_IMPORT_MAGIC char **environ;
 #endif
 
 extern int Termlog;
