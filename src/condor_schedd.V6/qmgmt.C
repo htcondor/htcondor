@@ -1431,6 +1431,11 @@ int Runnable(PROC_ID* id)
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
 		return FALSE;
 	}
+	if(status == REMOVED)
+	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
+		return FALSE;
+	}
 
 	if(GetAttributeInt(id->cluster, id->proc, ATTR_JOB_UNIVERSE,
 					   &universe) < 0)
