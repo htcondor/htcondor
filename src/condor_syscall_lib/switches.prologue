@@ -318,7 +318,7 @@ typedef int	bool_t;
 #	include <nfs/nfs.h>
 #endif
 
-#if	defined(HPUX9) || defined(IRIX53)
+#if	defined(HPUX9) || defined(IRIX53) || defined(Solaris)
 
 #include <sys/types.h>
 
@@ -429,3 +429,11 @@ THREE( socket, _socket, int, int, int )
 ONE( getwd, _getwd, char * )
 SIX( mmap, _mmap, char *, size_t, int, int, int, off_t )
 #endif
+
+#if defined(Solaris)
+TWO( fstat, _fstat, int, struct stat * )
+TWO( stat, _stat, const char *, struct stat * )
+TWO( lstat, _lstat, const char *, struct stat * )
+SIX( mmap, _mmap, char *, size_t, int, int, int, off_t )
+#endif
+
