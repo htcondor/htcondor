@@ -46,7 +46,7 @@ MakeSignature( const ClassAd *ad, const References &refs, string &sig )
 
     sig = "";
     for( itr=refs.begin( ); itr!= refs.end( ); itr++ ) {
-        if( ( expr = ad->Lookup( *itr ) ) && expr->GetKind( )==LITERAL_NODE ) {
+        if((expr=ad->Lookup(*itr))&&expr->GetKind()==ExprTree::LITERAL_NODE){
             unp.Unparse( sig, expr );
         } else {
             return( false );
