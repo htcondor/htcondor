@@ -826,9 +826,9 @@ NewExecutable(char* file, time_t *tsp)
 {
 	time_t cts = *tsp;
 	*tsp = GetTimeStamp(file);
-	dprintf(D_FULLDEBUG, "Time stamp of running %s is %ld\n",
+	dprintf(D_FULLDEBUG, "Time stamp of running %s: %ld\n",
 			file, cts);
-	dprintf(D_FULLDEBUG, "GetTimeStamp returned %ld\n",tsp);
+	dprintf(D_FULLDEBUG, "GetTimeStamp returned: %ld\n",*tsp);
 
 	if( *tsp == (time_t) -1 ) {
 		/*
