@@ -1,16 +1,59 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.1.2.2 2004-06-25 05:15:51 wright Exp $
+# $Id: remote_pre,v 1.1.2.3 2004-06-29 20:17:51 wright Exp $
 # script to setup the Condor build
 ######################################################################
 
 use Cwd;
+
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
+my $vers_file = "CONDOR-VERSION";
 
 # autoflush our STDOUT
 $| = 1;
+
+######################################################################
+# grab the Condor version out of the version file so we can unpack our 
+# source tarball and get everything ready for the other steps.
+######################################################################
+
+print "Finding version of Condor\n";
+open( VERS, "$vers_file" ) || die "Can't open $vers_file: $!\n";
+while( <VERS> ) {
+    chomp;
+    $vers = $_;
+}
+close( VERS );
+if( ! $vers ) {
+    die "Can't find Condor version in $vers_file!\n";
+}
+print "Condor version: $vers\n";
+$src_file = "condor-$vers.tar.gz";
+-f $src_file || die "$src_file does not exist!\n";
+
+print "**************************************************\n";
+print "Untarring Condor source tarball\n";
+print "**************************************************\n";
+open( TAR, "tar -zxvf $src_file|" ) ||
+    die "Can't open(tar -zxvf $src_file): $!\n";
+while( <TAR> ) {
+    print $_;
+}
+close( TAR );
+print "**************************************************\n";
+if( $? ) {
+    die "Tar failed with status $?\n";
+}
+print "Tar completed successfully, moving contents to base directory\n";
+
+system( "mv condor-$vers/* $BaseDir" );
+if( $? ) {
+    die "moving condor-$vers/* to $BaseDir failed with status $?\n";
+ }
+print "Move completed successfully\n";
+
 
 ######################################################################
 # run configure on the source tree
