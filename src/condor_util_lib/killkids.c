@@ -15,6 +15,7 @@
 #include <string.h>
 #include <signal.h>
 #include "condor_debug.h"
+#include "condor_uid.h"
 
 #define MAX_NUM_PIDS 2000
 
@@ -81,6 +82,7 @@ killkids(pid_t inpid, int sig)
    char line[250];
    pid_t pid, ppid;
    unsigned int parent,child,temp;
+   priv_state	priv;
 
    treei = 1;
    memset(mypstree,0,sizeof(MYPSTREE)*MAX_NUM_PIDS);
@@ -130,6 +132,8 @@ killkids(pid_t inpid, int sig)
 #else
    (void)fclose(ps);
 #endif
+   
+   priv = set_root_priv();
 
 	temp = treescan(inpid);
 	if ( mypstree[temp].child != 0 ) {
@@ -148,5 +152,5 @@ killkids(pid_t inpid, int sig)
             temp = mypstree[temp].child;
 		}
 	}
-		
+	set_priv( priv );
 }
