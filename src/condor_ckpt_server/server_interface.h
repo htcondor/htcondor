@@ -42,6 +42,9 @@ int FileOnServer(const char* owner,
 				 const char* filename);
 
 
+int RemoveLocalOrRemoteFile(const char* owner,
+							const char* filename);
+
 int RemoveRemoteFile(const char* owner,
 					 const char* filename);
 
