@@ -33,6 +33,7 @@
 * 
 *********************************************************************/
 
+#define _POSIX_SOURCE
 
 #include <stdio.h>
 #include "_condor_fix_types.h"
