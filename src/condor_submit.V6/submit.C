@@ -181,6 +181,7 @@ void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd (ClassAd &);
 void	InsertJobExpr (char *expr);
 void	check_umask();
+int setupAuthentication( FILE * &infp );
 
 extern char **environ;
 
@@ -204,6 +205,7 @@ ExtArray <char *> CheckFilesRead(4);
 ExtArray <char *> CheckFilesWrite(4);
 int NumCheckFilesRead = 0;
 int NumCheckFilesWrite = 0;
+int GSSAuthenticate = 0;
 
 // explicit template instantiations
 template class HashTable<MyString, MyString>;
@@ -353,69 +355,11 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	//this section sets up env vars needed by authentication code. //mju
-	char *CondorCertDir;
-	char tmpstring[MAXPATHLEN];
-	int useAuth = 0;
-
-	//if defined in file, set up to use condor cert dir
-	if ( CondorCertDir = condor_param( CertDir ) ) {
-		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR from submit file\n" );
-		useAuth = 1;
-	}
-	//could probably stat for dir to do minimal idiot checking of existance
-	if ( useAuth ) {
-		struct stat statbuf;
-
-		if ( stat( CondorCertDir, &statbuf ) ) {
-			useAuth = 0;
-		}
-		else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
-			useAuth = 0;
-		}
-		if ( !useAuth ) {
-			fprintf( stderr, "unable to read cert_dir %s directory\n",
-					CondorCertDir );
-		}
-	}
-
-	if ( useAuth ) {
-		//didn't bother re-putting vars which shouldn't change
-		if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
-			struct hostent *host;
-			char tmp[MAXHOSTNAMELEN];
-	
-			//this should change for remote submits to be remote machine name!
-			gethostname( tmp, MAXHOSTNAMELEN );
-			host = gethostbyname( tmp );
-			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", host->h_name );
-			putenv( strdup( tmpstring ) );
-		}
-	
-		if ( !getenv( "X509_CERT_DIR" ) ) {
-			sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
-			putenv( strdup( tmpstring ) );
-		}
-	
-		if ( !getenv( "X509_USER_CERT" ) ) {
-			sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
-			putenv( strdup( tmpstring ) );
-		}
-	
-		if ( !getenv( "X509_USER_KEY" ) ) {
-			sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CondorCertDir);
-			putenv( strdup( tmpstring ) );
-		}
-		free( CondorCertDir );
-		//end of authentication setup
-	}
-
-	// connect to the schedd
 #if defined(GSS_AUTHENTICATION)
-	if (ConnectQ(ScheddAddr, useAuth ) == 0) {
-#else
-	if (ConnectQ(ScheddAddr, 0 ) == 0) {
+	GSSAuthenticate = setupAuthentication( fp );
 #endif
+
+	if (ConnectQ(ScheddAddr, GSSAuthenticate ) == 0) {
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );
@@ -1732,7 +1676,7 @@ DoCleanup()
 char *
 get_owner()
 {
-	if (Remote) return ("nobody");
+	if (Remote && !GSSAuthenticate ) return ("nobody");
 
 #if defined(WIN32)
 	char username[UNLEN+1];
@@ -1958,4 +1902,79 @@ check_umask()
 	if( getgid() != getegid() ) {
 		umask( 002 );
 	}
+}
+
+int 
+setupAuthentication( FILE * &infp )
+{
+	//this section sets up env vars needed by authentication code. //mju
+	char *CondorCertDir;
+	char tmpstring[MAXPATHLEN];
+	int useAuth = 0;
+
+	//  Parse the file, stopping at "queue" command
+	if( read_condor_file( infp, 1 ) < 0 ) {
+		fprintf(stderr, "ERROR: Failed to parse command file.\n");
+		exit(1);
+	}
+
+	//if defined in file, set up to use condor cert dir
+	if ( CondorCertDir = condor_param( CertDir ) ) {
+		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR from submit file\n" );
+		useAuth = 1;
+	}
+
+	//could probably stat for dir to do minimal idiot checking of existance
+	if ( useAuth ) {
+		struct stat statbuf;
+
+		if ( stat( CondorCertDir, &statbuf ) ) {
+			useAuth = 0;
+		}
+		else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
+			useAuth = 0;
+		}
+		if ( !useAuth ) {
+			fprintf( stderr, "unable to read cert_dir %s directory\n",
+					CondorCertDir );
+		}
+	}
+
+	if ( useAuth ) {
+		//didn't bother re-putting vars which shouldn't change
+		if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
+			struct hostent *host;
+			char tmp[MAXHOSTNAMELEN];
+			char *hostname;
+	
+			if ( Remote ) {
+				hostname = get_host_part( ScheddName );
+			}
+			else {
+				gethostname( tmp, MAXHOSTNAMELEN );
+				host = gethostbyname( tmp );
+				hostname = host->h_name;
+			}
+			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
+			putenv( strdup( tmpstring ) );
+		}
+	
+		if ( !getenv( "X509_CERT_DIR" ) ) {
+			sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
+			putenv( strdup( tmpstring ) );
+		}
+	
+		if ( !getenv( "X509_USER_CERT" ) ) {
+			sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
+			putenv( strdup( tmpstring ) );
+		}
+	
+		if ( !getenv( "X509_USER_KEY" ) ) {
+			sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CondorCertDir);
+			putenv( strdup( tmpstring ) );
+		}
+		free( CondorCertDir );
+		//end of authentication setup
+	}
+	return( useAuth );
 }
