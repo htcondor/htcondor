@@ -238,6 +238,45 @@ HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
 HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 
 ##--------------------------------------------------------------------
+##  Security parameters for setting configuration values remotely:
+##--------------------------------------------------------------------
+##  These parameters define the list of attributes that can be set
+##  remotely with condor_config_val for the security access levels
+##  defined above (for example, WRITE, ADMINISTRATOR, CONFIG, etc).
+##  Please see the administrator's manual for futher details on these
+##  settings, what they're for, and how to use them.  There are no
+##  default values for any of these settings.  If they are not
+##  defined, no attributes can be set with condor_config_val.
+
+##  Attributes that can be set by hosts with "CONFIG" permission (as
+##  defined with HOSTALLOW_CONFIG and HOSTDENY_CONFIG above).
+##  The commented-out value here was the default behavior of Condor
+##  prior to version 6.3.2.  If you don't need this behavior, you
+##  should leave this commented out.
+#SETTABLE_ATTRS_CONFIG = *
+
+##  Attributes that can be set by hosts with "ADMINISTRATOR"
+##  permission (as defined above)
+#SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG, 
+
+##  Attributes that can be set by hosts with "OWNER" permission (as
+##  defined above) NOTE: any Condor job running on a given host will
+##  have OWNER permission on that host by default.  If you grant this
+##  kind of access, Condor jobs will be able to modify any attributes
+##  you list below on the machine where they are running.  This has
+##  obvious security implications, so only grant this kind of
+##  permission for custom attributes that you define for your own use
+##  at your pool (custom attributes about your machines that are
+##  published with the STARTD_EXPRS setting, for example).
+#SETTABLE_ATTRS_OWNER = your_custom_attribute, another_custom_attr
+
+##  You can also define daemon-specific versions of each of these
+##  settings.  For example, to define settings that can only be
+##  changed in the condor_startd's configuration by hosts with OWNER
+##  permission, you would use:
+#STARTD_SETTABLE_ATTRS_OWNER = your_custom_attribute_name
+
+##--------------------------------------------------------------------
 ##  Network filesystem parameters:
 ##--------------------------------------------------------------------
 ##  Do you want to use NFS for file access instead of remote system
