@@ -38,7 +38,6 @@ static char *_FileName_ = __FILE__;
 
 extern "C" {
 	char *calc_subnet_name();
-	int	free_fs_blocks(const char*);
 	char* getwd( char* );
 }
 
@@ -183,7 +182,7 @@ XferSummary::time_out(time_t now)
 	tmp = strchr( line, '\n' );
 	strcpy( tmp, "\"" );
 	info.Insert(line);
-	sprintf(line, "Disk = %d", free_fs_blocks(pwd) );
+	sprintf(line, "Disk = %d", sysapi_disk_space(pwd) );
 	info.Insert(line);
 	
 	// Send to collector
