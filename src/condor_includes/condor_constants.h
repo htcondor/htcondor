@@ -84,12 +84,25 @@ static const int RPL_SOCK = 17;
 #if defined(WIN32)
 static const char DIR_DELIM_CHAR = '\\';
 static const char NULL_FILE[] = "NUL";
+/* CONDOR_EXEC is name the used for the user's executable */
+static const char CONDOR_EXEC[] = "condor_exec.exe";
 #else
 static const char DIR_DELIM_CHAR = '/';
 static const char NULL_FILE[] = "/dev/null";
+static const char CONDOR_EXEC[] = "condor_exec";
 #endif
 
 /* This is the username of the NiceUser (i.e., dirt user) */
 static const char NiceUserName[] = "nice-user";
+
+/* This is a compiler-specific type-modifer to request
+ * a variable be stored as thread-local-storage.
+ */
+#ifdef WIN32
+#define THREAD_LOCAL_STORAGE __declspec( thread ) 
+#else
+#define THREAD_LOCAL_STORAGE /* Not supported on Unix */
+#endif
+
 
 #endif /* CONDOR_CONSTANTS_H */
