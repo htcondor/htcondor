@@ -180,13 +180,13 @@ email_open( const char *email_addr, const char *subject )
 }
 
 FILE *
-email_admin_open(char *subject)
+email_admin_open(const char *subject)
 {
 	return email_open(NULL,subject);
 }
 
 FILE *
-email_developers_open(char *subject)
+email_developers_open(const char *subject)
 {
 	char *tmp;
 	FILE *mailer;

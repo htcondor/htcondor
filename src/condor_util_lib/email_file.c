@@ -98,7 +98,7 @@ email_corefile_tail( FILE* output, const char * subsystem_name )
 
 
 void
-email_asciifile_tail( FILE* output, char* file, int lines )
+email_asciifile_tail( FILE* output, const char* file, int lines )
 {
 	FILE	*input;
 	int		ch, last_ch;
