@@ -1,3 +1,9 @@
+05/27/04 V6_7-soap-2-branch
+   A new branch off of V6_7-branch created from the V6_7-soap-2-root
+   tag.  This is the 2nd generation of the V6_7-soap-branch.  The
+   V6_7-branch now has LoS support and a number of other improvements
+   since the V6_7-soap-root tag.
+
 05/26/04 V6_7-credd-branch
   A new branch for the new Condor daemon - condor_credd. Created from 
 V6_7-credd-root. By ckireyev.
@@ -97,12 +103,6 @@ V6_7-credd-root. By ckireyev.
 
 04/30/04 V6_6-vdt_globus
    Changing the globus external to be 2.4.3 + VDT patches from 1.1.14
-
-04/29/04 V6_7-soap-2-branch
-   A new branch off of V6_7-branch created from the V6_7-soap-2-root
-   tag.  This is the 2nd generation of the V6_7-soap-branch.  The
-   V6_7-branch now has LoS support and a number of other improvements
-   since the V6_7-soap-root tag.
 
 04/28/04 V6_7_0
   The 6.7.0 release, which lives on the V6_7-branch
