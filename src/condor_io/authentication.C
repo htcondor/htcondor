@@ -413,7 +413,9 @@ void Authentication::setupEnv( char *hostAddr )
 }
 
 void Authentication::setAuthType( int state ) {
+#if !defined(SKIP_AUTHENTICATION)
     auth_status = state;
+#endif
 }
 
 int Authentication::handshake(int clientFlags)
