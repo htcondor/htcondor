@@ -29,7 +29,15 @@
 *******************************************************************/
 #include "condor_common.h"
 #include "syscall_sysdep.h"
+
+/* Since we've included condor_common.h, we know off64_t has been
+   defined, so we want to define this macro so the syscall_64bit.h
+   header file doesn't try to redefine off64_t.  In other places, we 
+   include syscall_64bit.h w/o condor_common.h, so it needs to define
+   off64_t in that case. -Derek W. 8/20/98 */
+#define _CONDOR_OFF64_T
 #include "syscall_64bit.h"
+#undef _CONDOR_OFF64_T
 
 #if defined(LINUX)
 int _xstat(int, const char *, struct stat *);
@@ -59,6 +67,7 @@ static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
 char	*getwd( char * );
 void    *malloc();     
+int	_condor_open( const char *path, int flags, va_list ap );
 
 /*
   The process should exit making the status value available to its parent
@@ -935,28 +944,42 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
   we just put in a definition here that deals with variable args and
   calls the real open, which we'll trap and do our magic with.
   -Derek Wright, 6/24/98
+
   We also want _open64() and __open64().  -Derek 6/25/98
+
+  We really need to use the va_list differently.  We now setup our
+  va_list in (_*)open64() and always call _condor_open() which expects
+  a va_list as its 3rd arg.  -Derek 8/20/98
 */
 
 int
 open64( const char* path, int oflag, ... ) {
 	va_list ap;
+	int rval;
 	va_start( ap, oflag );
-	return open( path, oflag, ap );
+	rval = _condor_open( path, oflag, ap );
+	va_end( ap );
+	return rval;
 }
 
 int
 _open64( const char* path, int oflag, ... ) {
 	va_list ap;
+	int rval;
 	va_start( ap, oflag );
-	return open( path, oflag, ap );
+	rval = _condor_open( path, oflag, ap );
+	va_end( ap );
+	return rval;
 }
 
 int
 __open64( const char* path, int oflag, ... ) {
 	va_list ap;
+	int rval;
 	va_start( ap, oflag );
-	return open( path, oflag, ap );
+	rval = _condor_open( path, oflag, ap );
+	va_end( ap );
+	return rval;
 }
 
 #endif /* defined( Solaris26 ) */
