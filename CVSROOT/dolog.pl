@@ -269,7 +269,7 @@ sub mail_notification {
     my ($remote,$port, $iaddr, $paddr, $proto, $line);
 
     $remote  = $mailhost;
-    $port    = 1600;
+    $port    = 25;
     if ($port =~ /\D/) { $port = getservbyname($port, 'tcp') }
     die "No port" unless $port;
     $iaddr   = inet_aton($remote)               || die "no host: $remote";
@@ -280,18 +280,18 @@ sub mail_notification {
     connect(S, $paddr)    || die "connect: $!";
     select(S); $| = 1; select(STDOUT);
 
-    #get_response_code(220);
-    #print S "EHLO $hostname\n";
-    #get_response_code(250);
-    #print S "MAIL FROM: bonsai-daemon\@$hostname\n";
-    #get_response_code(250);
-    #foreach $i (@mailto) {
-	#print S "RCPT TO: $i\n";
-	#get_response_code(250);
-    #}
-    #print S "DATA\n";
-    #get_response_code(354);
-    # Get one line starting with "354 ".
+    get_response_code(220);
+    print S "EHLO $hostname\n";
+    get_response_code(250);
+    print S "MAIL FROM: bonsai-daemon\@$hostname\n";
+    get_response_code(250);
+    foreach $i (@mailto) {
+	print S "RCPT TO: $i\n";
+	get_response_code(250);
+    }
+    print S "DATA\n";
+    get_response_code(354);
+     Get one line starting with "354 ".
     if ($flag_tagcmd) {
 	print S "Subject:  cvs tag in $repository\n";
     } else {
@@ -300,7 +300,7 @@ sub mail_notification {
     print S "\n";
     print S @outlist, "\n";
     print S ".\n";
-    #get_response_code(250);
-    #print S "QUIT\n";
+    get_response_code(250);
+    print S "QUIT\n";
     close(S);
 }
