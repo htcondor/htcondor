@@ -220,6 +220,7 @@ int open_file_stream( const char *local_path, int flags, size_t *len );
 int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 void get_ckpt_name();
 extern volatile int InRestart;
+extern void InitFileState();
 
 int
 #if defined(HPUX9)
@@ -232,6 +233,7 @@ MAIN( int argc, char *argv[], char **envp )
 	char	*cmd_name;
 	char	*extra;
 	int		scm;
+	char 	*argv1;
 	
 #undef WAIT_FOR_DEBUGGER
 #if defined(WAIT_FOR_DEBUGGER)
@@ -239,6 +241,14 @@ MAIN( int argc, char *argv[], char **envp )
 	while( do_wait )
 		;
 #endif
+
+	/* Some platforms have very picky strcmp()'s which like
+	 * to coredump (IRIX) so make certain argv[1] points to something 
+	 * by using an intermediate argv1 variable where neccesary */
+	 if ( argc < 2 ) 
+		argv1 = "\0";
+	 else
+		argv1 = argv[1];
 
 		/*
 		We must be started by a parent providing a command stream,
@@ -252,14 +262,15 @@ MAIN( int argc, char *argv[], char **envp )
 		either inside or outside of condor.  -Todd, 5/97.
 		*/
 	if ( (argc < 3) ||
-		 ( (strcmp("-_condor_cmd_fd",argv[1]) != MATCH) &&
-		   (strcmp("-_condor_cmd_file",argv[1]) != MATCH) ) ) {
+		 ( (strcmp("-_condor_cmd_fd",argv1) != MATCH) &&
+		   (strcmp("-_condor_cmd_file",argv1) != MATCH) ) ) {
 				/* Run the job "normally" outside of condor */
-				if ( strcmp("-_condor_nowarn",argv[1]) != MATCH ) {
-					fprintf(stderr,"WARNING: This binary has been linked for Condor.\nWARNING: Setting up to run outside of Condor...\n");
-				}
 				SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 				DebugFlags = 0;		/* disable dprintf messages */
+				InitFileState();  /* to create a file_state table so no SEGV */
+				if ( strcmp("-_condor_nowarn",argv1) != MATCH ) {
+					fprintf(stderr,"WARNING: This binary has been linked for Condor.\nWARNING: Setting up to run outside of Condor...\n");
+				}
 				/* Now start running user code and forget about condor */
 #if defined(HPUX9)
 				exit(_start( argc, argv, envp ));
