@@ -1004,6 +1004,9 @@ running until the central manager is restarted and begins matchmaking
 again.
 Nothing special needs to be done after the central manager is brought
 back online.
+\index{crashes|)}
+\index{recovery from crashes|)}
+
 
 \subsection{When I ssh/telnet to a machine to check particulars of how
 Condor is doing something, it is always vacating or unclaimed when I
@@ -1015,8 +1018,76 @@ or suspended on the machine. It could be the case that after you ssh
 there, Condor notices activity on the tty allocated to your connection
 and then vacates the job.
 
-\index{crashes|)}
-\index{recovery from crashes|)}
+
+\subsection{What is wrong? I get no output from \Condor{status}, but
+the Condor daemons are running.} 
+One likely error message within the collector log of the form
+\begin{verbatim}
+DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 0 (UPDATE_STARTD_AD)
+\end{verbatim}
+indicates a permissions problem.
+The \Condor{startd} daemons do not have write permission to the
+\Condor{collector} daemon.
+This could be because
+you used domain names in your \MacroNI{HOSTALLOW\_WRITE} and/or
+\MacroNI{HOSTDENY\_WRITE} configuration macros,
+but the domain name server (DNS) is not properly configured at your site.
+Without the proper configuration, Condor cannot resolve
+the IP addresses of your machines
+into fully-qualified domain names (an inverse lookup).
+If this is the problem, then the solution takes one of two forms:
+\begin{enumerate}
+\item Fix the DNS so that inverse lookups (trying to get the domain name
+   from an IP address) works for your machines.  You can
+   either fix the DNS itself,
+   or use the \MacroNI{DEFAULT\_DOMAIN\_NAME} setting in your Condor
+         configuration file.
+\item Use numeric IP addresses in the \MacroNI{HOSTALLOW\_WRITE} and/or
+   \MacroNI{HOSTDENY\_WRITE} configuration macros
+   instead of domain names.
+   As an example of this, assume your site has a machine such as
+   foo.your.domain.com, and it has two subnets, with IP addresses
+   129.131.133.10, and 129.131.132.10.
+   If the configuration macro is set as 
+
+\begin{verbatim}
+ HOSTALLOW_WRITE = *.your.domain.com
+\end{verbatim}
+
+   and this does not work, use
+
+\begin{verbatim}
+ HOSTALLOW_WRITE = 192.131.133.*, 192.131.132.*
+\end{verbatim}
+\end{enumerate}
+
+Alternatively, this permissions problem
+may be caused by being too restrictive in the setting of
+your \MacroNI{HOSTALLOW\_WRITE} and/or
+\MacroNI{HOSTDENY\_WRITE} configuration macros.
+If it is, then the solution is to change the macros,
+for example from
+\begin{verbatim}
+ HOSTALLOW_WRITE = condor.your.domain.com
+\end{verbatim}
+to
+\begin{verbatim}
+ HOSTALLOW_WRITE = *.your.domain.com
+\end{verbatim}
+or possibly
+\begin{verbatim}
+ HOSTALLOW_WRITE = condor.your.domain.com, foo.your.domain.com, \
+ bar.your.domain.com 
+\end{verbatim}
+
+
+Another likely error message within the collector log of the form
+\begin{verbatim}
+DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 5 (QUERY_STARTD_ADS)
+\end{verbatim}
+indicates a similar problem as above, but read permission
+is the problem (as opposed to write permission).
+Use the solutions given above.
 
 \section{Other questions}
 
