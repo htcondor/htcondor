@@ -65,14 +65,16 @@ cleanup_execute_dir(int pid)
 	dynuser nobody_login;
 
 	if( pid ) {
+		if ( nobody_login.reuse_accounts() == false ) {
 		// before removing subdir, remove any nobody-user account associtated
 		// with this starter pid.  this account might have been left around
 		// if the starter did not clean up completely.
 		//sprintf(buf,"condor-run-dir_%d",pid);
-		sprintf(buf,"condor-run-%d",pid);
-		if ( nobody_login.deleteuser(buf) ) {
-			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf);
-		}
+			sprintf(buf,"condor-run-%d",pid);
+			if ( nobody_login.deleteuser(buf) ) {
+				dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf);
+			}
+		} 
 
 		// now remove the subdirectory.  NOTE: we only remove the 
 		// subdirectory _after_ removing the nobody account, because the
