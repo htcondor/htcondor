@@ -112,7 +112,13 @@ MAX_JOBS_RUNNING	= 200
 ##  filesystems and file locking over the years, we HIGHLY recomend
 ##  that you put these lock files on a local partition on each
 ##  machine.  If you don't have your LOCAL_DIR on a local partition,
-##  be sure to change this entry.
+##  be sure to change this entry.  Whatever user (or group) condor is
+##  running as needs to have write access to this directory.  If
+##  you're not running as root, this is whatever user you started up
+##  the condor_master as.  If you are running as root, and there's a
+##  condor account, it's probably condor.  Otherwise, it's whatever
+##  you've set in the CONDOR_IDS environment variable.  See the Admin
+##  manual for details on this.
 LOCK		= $(LOCAL_DIR)/log
 
 ##  Should the master allow the "admin commands": on, off, restart,
