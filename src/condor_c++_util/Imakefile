@@ -19,6 +19,20 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 DH_OBJ = condor_dh.o
 #endif
 
+/* Machines that do not have the seteuid call need this particular object file
+	to allow proper linkage in libcondorapi.a */
+#if !HAS_SETEUID
+SETEUID_OBJ = ../condor_util_lib/seteuid.o
+#else
+SETEUID_OBJ = 
+#endif
+
+#if !HAS_SETEGID
+SETEGID_OBJ = ../condor_util_lib/setegid.o
+#else
+SETEGID_OBJ = 
+#endif
+
 /* Bring in the old classad library because the user log parsing code
 	(which we form the condor api archive with) now can use xml logging and
 	classad representations of the events.
@@ -75,7 +89,9 @@ CONLIBAPI_OBJ = \
 	$(CLASSAD_OBJ) \
 	$(DH_OBJ) \
 	c++_util_instantiate.o \
-	libcondorapi_stubs.o
+	libcondorapi_stubs.o \
+	$(SETEUID_OBJ) \
+	$(SETEGID_OBJ)
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o dc_collector.o daemon_list.o
