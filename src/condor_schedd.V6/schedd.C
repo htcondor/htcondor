@@ -1268,8 +1268,7 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 	// process for this job.  Just handle the operation ourselves.
 	if( mode == REMOVED ) {
 		if( !scheduler.WriteAbortToUserLog(job_id) ) {
-			dprintf( D_ALWAYS, 
-					 "Failed to write abort event to the user log\n" ); 
+			dprintf( D_ALWAYS,"Failed to write abort event to the user log\n" );
 		}
 		DestroyProc( job_id.cluster, job_id.proc );
 	}
@@ -7105,8 +7104,12 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 }
 
 /*
-Abort a job by shutting down the shadow, changing the job state,
-writing to the user log, and updating the job queue.
+Abort this job by changing the state to removed,
+telling the shadow (gridmanager) to shut down,
+and destroying the data structure itself.
+Note that in some configurations abort_job_myself
+will have already called DestroyProc, but that's ok, because
+the cluster.proc numbers are not re-used.
 Does not start or end a transaction.
 */
 
@@ -7114,20 +7117,16 @@ static bool
 abortJobRaw( int cluster, int proc, const char *reason )
 {
 	PROC_ID job_id;
+
 	job_id.cluster = cluster;
 	job_id.proc = proc;
-
-	abort_job_myself( job_id, true, true );
-
-	if(!scheduler.WriteAbortToUserLog(job_id)) {
-		dprintf(D_ALWAYS,"Couldn't write abort event to log for job %d.%d\n",cluster,proc);
-		return false;
-	}
 
 	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, REMOVED) < 0 ) {
 		dprintf(D_ALWAYS,"Couldn't change state of job %d.%d\n",cluster,proc);
 		return false;
 	}
+
+	abort_job_myself( job_id, true, true );
 
 	DestroyProc(cluster,proc);
 
