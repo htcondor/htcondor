@@ -59,6 +59,7 @@ drop_addr_file()
 
 	sprintf( addr_file, "%s_ADDRESS_FILE", mySubSystem );
 	tmp = param( addr_file );
+
 	if( tmp ) {
 		if( (ADDR_FILE = fopen(tmp, "w")) ) {
 			fprintf( ADDR_FILE, "%s\n", 
@@ -400,7 +401,7 @@ int main( int argc, char** argv )
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
-	ReliSock* rsock = NULL;	// tcp command socket
+	AuthSock* rsock = NULL;	// tcp command socket
 	SafeSock* ssock = NULL;	// udp command socket
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 
@@ -688,7 +689,7 @@ int main( int argc, char** argv )
 		// already inherit them above.
 		// If rsock/ssock are not NULL, it means we inherited them from our parent
 		if ( rsock == NULL && ssock == NULL ) {
-			rsock = new ReliSock;
+			rsock = new AuthSock;
 			ssock = new SafeSock;
 			if ( !rsock ) {
 				EXCEPT("Unable to create command Relisock");
@@ -699,7 +700,7 @@ int main( int argc, char** argv )
 			if ( command_port == -1 ) {
 				// choose any old port (dynamic port)
 				if ( !rsock->bind() ) {
-					EXCEPT("Failed to bind to command ReliSock");
+					EXCEPT("Failed to bind to command AuthSock");
 				}
 				// now open a SafeSock _on the same port_ choosen above
 				if ( !ssock->bind(rsock->get_port()) ) {
@@ -724,7 +725,7 @@ int main( int argc, char** argv )
 					}
 				}
 				if ( !rsock->listen() ) {
-					EXCEPT("Failed to post listen on command ReliSock");
+					EXCEPT("Failed to post listen on command AuthSock");
 				}
 			} else {
 				// use well-known port specified by command_port
