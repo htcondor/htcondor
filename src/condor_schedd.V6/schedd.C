@@ -521,6 +521,7 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	{
 		dprintf (D_ALWAYS, "Socket activated, but could not read command\n");
 		dprintf (D_ALWAYS, "(Negotiator probably invalidated cached socket)\n");
+		alreadyStashed = false;
 		return (!KEEP_STREAM);
 	}
 
