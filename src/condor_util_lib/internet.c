@@ -221,3 +221,37 @@ struct sockaddr_in  *from;
                                         hp->h_name, ntohs(from->sin_port) );
     }
 }
+
+char *
+calc_subnet_name()
+{
+	struct hostent	*hostp;
+	char			hostname[MAXHOSTNAMELEN];
+	char			subnetname[MAXHOSTNAMELEN];
+	char			*subnet_ptr;
+	char			*host_addr_string;
+	int				subnet_length;
+	struct in_addr	in;
+
+	if( gethostname(hostname, sizeof(hostname)) == -1 ) {
+		dprintf( D_ALWAYS, "Gethostname failed");
+		return strdup("");
+	}
+	if( (hostp = gethostbyname(hostname)) == NULL ) {
+		dprintf( D_ALWAYS, "Gethostbyname failed");
+		return strdup("");
+	}
+	memcpy((char *) &in,(char *)hostp->h_addr, hostp->h_length);
+	host_addr_string = inet_ntoa( in );
+	if( host_addr_string ) {
+		subnet_ptr = (char *) rindex(host_addr_string, '.');
+		if(subnet_ptr == NULL) {
+			return strdup("");
+		}
+		subnet_length = subnet_ptr - host_addr_string;
+		strncpy(subnetname, host_addr_string, subnet_length);
+		subnetname[subnet_length] = '\0';
+		return (strdup(subnetname));
+	}
+	return strdup("");
+}
