@@ -366,7 +366,7 @@ EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
 		if (tmp)
         {
 			delete [] realName;
-        	return (tmp->EvalTree(my_classad, req_classad, val));
+        	return (tmp->EvalTree(req_classad, my_classad, val));
 		}
 	}
 
