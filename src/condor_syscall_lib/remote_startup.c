@@ -127,43 +127,12 @@
 */
 
 
-
-#define _POSIX_SOURCE
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#endif
-
-#if defined(OSF1) && !defined(__GNUC__)
-#define __STDC__
-#endif
-
 #include "condor_common.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
-#include "condor_fix_assert.h"
-
-#include <sys/socket.h>
-
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include <signal.h>
-
 #include "condor_debug.h"
 #include "condor_file_info.h"
 static char *_FileName_ = __FILE__;
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-#ifndef MATCH
-#define MATCH 0   /* for strcmp */
-#endif
 
 enum result { NOT_OK = 0, OK = 1, END };
 
