@@ -181,7 +181,7 @@ setMode (Mode mod, int i, char *argv)
             break;
 
 		  case MODE_SCHEDD_SUBMITTORS:
-            setType ("SCHEDD", i, argv);
+            setType ("SUBMITTOR", i, argv);
             setPPstyle (PP_SCHEDD_SUBMITTORS, i, argv);
             break;
 
