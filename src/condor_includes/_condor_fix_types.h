@@ -9,6 +9,11 @@
 #define off_t _hide_off_t
 #endif
 
+#if defined(OSF1)
+/* We need to temporarily define _OSF_SOURCE so that type quad gets defined */
+#define _OSF_SOURCE
+#endif
+
 #if	defined(ULTRIX43)
 #define key_t       long
 typedef int		bool_t;
@@ -35,13 +40,11 @@ typedef int		bool_t;
 #	endif
 #endif
 
-#	include <sys/types.h>
+#include <sys/types.h>
 
 #if defined(Solaris) && defined(HOLD_POSIX_SOURCE)
 #define _POSIX_SOURCE
 #endif
-
-/* #include <sys/types.h> */
 
 #if defined(OSF1) && !defined(__GNUC__)
 #undef off_t
@@ -55,6 +58,7 @@ we should use memset().
 #if defined(OSF1)
 #undef FD_ZERO
 #define FD_ZERO(p)     memset((char *)(p), 0, sizeof(*(p)))
+#undef _OSF_SOURCE
 #endif
 
 /*
@@ -90,6 +94,7 @@ typedef long rlim_t;
 #endif
 
 #endif
+
 
 
 
