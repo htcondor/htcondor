@@ -836,6 +836,9 @@ MakeProc(ClassAd *ad, PROC *p)
 	float	utime,stime;
 	char	*s;
 	ExprTree *e;
+	ClassAdUnParser unp;
+	string bufString;
+	const char	*s2;
 	
 	p->version_num = 3;
 	ad->LookupInteger(ATTR_CLUSTER_ID, p->id.cluster);
@@ -859,7 +862,11 @@ MakeProc(ClassAd *ad, PROC *p)
 	// Note that we are using the new version of LookupString here.
 	// It allocates a new string of the correct length with malloc()
 	// and returns that string, so we no longer copy it. 
-	ad->LookupString(ATTR_JOB_ENVIRONMENT, &(p->env));
+//	ad->LookupString(ATTR_JOB_ENVIRONMENT, &(p->env));
+	ad->EvaluateAttrString( ATTR_JOB_ENVIRONMENT, bufString );
+	s2 = bufString.c_str( );
+	p->env = (char *) malloc( strlen(s2) + 1 );
+	strcpy( p->env, s2 );
 
 	p->n_cmds = 1;
 	p->cmd = (char **) malloc(p->n_cmds * sizeof(char *));
@@ -892,7 +899,10 @@ MakeProc(ClassAd *ad, PROC *p)
 	e = ad->Lookup(ATTR_REQUIREMENTS);
 	if (e) {
 		buf[0] = '\0';
-		e->PrintToStr(buf);
+			//e->PrintToStr(buf);
+		unp.Unparse( bufString, e );
+		strcpy( buf, bufString.c_str( ) );
+		bufString = "";
 		s = strchr(buf, '=');
 		if (s) {
 			s++;
@@ -907,7 +917,10 @@ MakeProc(ClassAd *ad, PROC *p)
 	e = ad->Lookup(ATTR_RANK);
 	if (e) {
 		buf[0] = '\0';
-		e->PrintToStr(buf);
+//		e->PrintToStr(buf);
+		unp.Unparse( bufString, e );
+		strcpy( buf, bufString.c_str( ) );
+		bufString = "";
 		s = strchr(buf, '=');
 		if (s) {
 			s++;
