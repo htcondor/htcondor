@@ -92,6 +92,7 @@ extern "C" void
 initializeUserLog ()
 {
 	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
+	int use_xml;
 	if (JobAd->LookupString(ATTR_ULOG_FILE, tmp) == 1) {
 		if (tmp[0] == '/') {
 			strcpy(logfilename, tmp);
@@ -100,6 +101,12 @@ initializeUserLog ()
 		}
 		ULog.initialize (Proc->owner, logfilename,
 						 Proc->id.cluster, Proc->id.proc, 0);
+		if (JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
+			&& use_xml) {
+			ULog.setUseXML(true);
+		} else {
+			ULog.setUseXML(false);
+		}
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename);
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);

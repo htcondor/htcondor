@@ -696,6 +696,7 @@ BaseShadow::shutDownEmail( int reason )
 void BaseShadow::initUserLog()
 {
 	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
+	int  use_xml;
 	if (jobAd->LookupString(ATTR_ULOG_FILE, tmp) == 1) {
 		if ( tmp[0] == '/' || tmp[0]=='\\' || (tmp[1]==':' && tmp[2]=='\\') ) {
 			strcpy(logfilename, tmp);
@@ -703,6 +704,12 @@ void BaseShadow::initUserLog()
 			sprintf(logfilename, "%s/%s", iwd, tmp);
 		}
 		uLog.initialize (owner, logfilename, cluster, proc, 0);
+		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
+			&& use_xml) {
+			uLog.setUseXML(true);
+		} else {
+			uLog.setUseXML(false);
+		}
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename);
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);

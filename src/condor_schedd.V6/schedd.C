@@ -1184,6 +1184,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	char owner[_POSIX_PATH_MAX];
 	char logfilename[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
+	int use_xml;
 
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_IWD, iwd);
 	if ( tmp[0] == '/' || tmp[0]=='\\' || (tmp[1]==':' && tmp[2]=='\\') ) {
@@ -1200,6 +1201,13 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 			 logfilename, owner );
 
 	UserLog* ULog=new UserLog();
+	if (0 <= GetAttributeBool(job_id.cluster, job_id.proc,
+							  ATTR_ULOG_USE_XML, &use_xml)
+		&& 1 == use_xml) {
+		ULog->setUseXML(true);
+	} else {
+		ULog->setUseXML(false);
+	}
 	if (ULog->initialize(owner, logfilename, job_id.cluster, job_id.proc, 0)) {
 		return ULog;
 	} else {
