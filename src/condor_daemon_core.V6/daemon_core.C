@@ -4979,7 +4979,14 @@ int DaemonCore::Create_Process(
 			MyString msg = "Just closed standard file fd(s): ";
                 // if we don't want to re-map these, close 'em.
             for ( int q=0 ; (q<openfds) && (q<3) ; q++ ) {
-                if ( close ( q ) != -1 ) {
+				bool found = FALSE;
+				for ( int k=0 ; k < numInheritSockFds ; k++ ) {
+					if ( inheritSockFds[k] == q ) {
+						found = TRUE;
+						break;
+					}
+				}
+                if ( ( ! found ) && ( close ( q ) != -1 ) ) {
 					msg += q;
 					msg += ' ';
                 }
