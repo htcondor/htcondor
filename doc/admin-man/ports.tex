@@ -3,16 +3,33 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Todo
+\index{port usage}
 
 \subsubsection{\label{sec:Ports-NonStandard}Non Standard Ports for Central Managers}
-\index{Port Usage!nonstandard ports for central managers}
+\index{port usage!nonstandard ports for central managers}
+
 
 \subsubsection{\label{sec:Ports-Firewalls}Firewalls}
-\index{Port Usage!firewalls}
+
+\index{port usage!firewalls}
+The configuration variables
+\Macro{HIGHPORT} and \Macro{LOWPORT} facilitate setting the range
+of ports that Condor will use.
+This may be useful if behind a firewall.
+By default,
+Condor uses port 9618 for the \Condor{collector},
+9614 for the \Condor{negotiator},
+and system-assigned (apparently random) ports for everything else.
+\MacroNI{HIGHPORT} and \MacroNI{LOWPORT} only affect these
+system-assigned ports, but will restrict them to the range specified here.
+
+Note that both \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} must be at least 1024.
+
 
 \subsubsection{\label{sec:Ports-MultipleCollectors}Multiple Collectors}
-\index{Port Usage!multiple collectors}
+\index{port usage!multiple collectors}
+
 
 \subsubsection{\label{sec:Ports-Conflicts}Port Conflicts}
-\index{Port Usage!conflicts}
+\index{port usage!conflicts}
 
