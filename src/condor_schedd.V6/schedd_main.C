@@ -102,6 +102,7 @@ main_init(int argc, char* argv[])
 	InitJobQueue(job_queue_name);
 	mark_jobs_idle();
 
+		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
 
 	return 0;
