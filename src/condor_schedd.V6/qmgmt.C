@@ -503,7 +503,7 @@ isQueueSuperUser( const char* user )
 
 
 // Test if this owner matches my owner, so they're allowed to update me.
-int
+bool
 OwnerCheck(ClassAd *ad, const char *test_owner)
 {
 	char	my_owner[_POSIX_PATH_MAX];
@@ -515,7 +515,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// a QMGMT command internally which is allowed.
 	if (test_owner == NULL) {
 		dprintf(D_ALWAYS,"QMGT command failed: anonymous user not permitted\n" );
-		return 0;
+		return false;
 	}
 
 	// check if the IP address of the peer has daemon core write permission
@@ -526,7 +526,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 		// this machine does not have write permission; return failure
 		dprintf(D_ALWAYS,"QMGT command failed: no WRITE permission for %s\n",
 			Q_SOCK->endpoint_ip_str() );
-		return 0;
+		return false;
 	}
 
 	// The super users are always allowed to do updates.  They are
@@ -534,7 +534,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// config file.  Defaults to root and condor.
 	if( isQueueSuperUser(test_owner) ) {
 		dprintf( D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n" );
-		return 1;
+		return true;
 	}
 
 #if !defined(WIN32) 
@@ -545,14 +545,14 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 		if( strcmp(get_real_username(), test_owner) == MATCH ) {
 			dprintf(D_FULLDEBUG, "OwnerCheck success: owner (%s) matches "
 					"my username\n", test_owner );
-			return 1;
+			return true;
 		} else {
 			errno = EACCES;
 			dprintf( D_FULLDEBUG, "OwnerCheck: reject owner: %s non-super\n",
 					 test_owner );
 			dprintf( D_FULLDEBUG, "OwnerCheck: username: %s, test_owner: %s\n",
 					 get_real_username(), test_owner );
-			return 0;
+			return false;
 		}
 	}
 #endif
@@ -561,11 +561,11 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 		// gotten this far, how can we deny service?
 	if( !ad ) {
 		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no ad\n");
-		return 1;
+		return true;
 	}
 	if( ad->LookupString(ATTR_OWNER, my_owner) == 0 ) {
 		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no owner\n");
-		return 1;
+		return true;
 	}
 
 		// Finally, compare the owner of the ad with the entity trying
@@ -576,10 +576,10 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 #endif
 		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
 				my_owner, test_owner );
-		return 0;
+		return false;
 	} 
 	else {
-		return 1;
+		return true;
 	}
 }
 
