@@ -95,6 +95,7 @@ my $PathSbin = "$TargetDir/sbin";
 	print OUT "export PATH=$PathBin:$PathSbin:\$PATH\n";
 	print OUT "$TargetDir/sbin/hawkeye_master\n";
 	close( OUT );
+	chmod( 0750, $Script);
     }
     print "A '$Script' script has been created for you\n";
 }
