@@ -296,8 +296,6 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
             //----------------------------------------------------------------
           case ULOG_NO_EVENT:     
 	    
-	    debug_printf(DEBUG_NORMAL, "* NO EVENT *\n");
- 
             done = true;
             break;
             //----------------------------------------------------------------
