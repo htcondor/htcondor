@@ -1,5 +1,5 @@
-#ifndef TIMEVAL_H
-#define TIMEVAL_H
+#if !defined(_TIMEVAL_H)
+#define _TIMEVAL_H
 
 #if defined(ULTRIX43) && !defined(_ALL_SOURCE)
 	struct timeval {
