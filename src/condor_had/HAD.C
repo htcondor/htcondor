@@ -23,7 +23,7 @@
 
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
  *
- * The Condor High Availablility Daemon (HAD) softare was developed by
+ * The Condor High Availability Daemon (HAD) software was developed by
  * by the Distributed Systems Laboratory at the Technion Israel
  * Institute of Technology, and contributed to to the Condor Project.
  *
