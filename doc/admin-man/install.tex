@@ -71,7 +71,9 @@ are:
 \end{enumerate}
 
 If you feel you already know the answers to these questions, you can
-skip to the 'Installation Procedure' section below, section~\ref{install:procedure}.
+skip to the 'Installation Procedure' section below,
+section~\ref{sec:install-procedure} on
+page~\pageref{sec:install-procedure}.
 If you are unsure about any of them, read on.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -401,7 +403,8 @@ of any machines that are submitting jobs to Condor.  See question 5
 above for details on this.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{install:procedure}Installation Procedure}
+\subsection{\label{sec:install-procedure}
+Installation Procedure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 IF YOU HAVE DECIDED TO CREATE A 'condor' USER AND GROUP, YOU SHOULD DO
@@ -553,7 +556,45 @@ what each step is for, and suggests how to answer the questions
      You should verify that the program you end up using supports
      '-s'.  The man page for that program will probably tell you.
 
-\item[STEP 5: Where should public programs be installed?]
+\item[STEP 5: Filesystem and UID domains.]
+
+     While Condor does not depend on a shared filesystem or common UID
+     space for running standard jobs, if you intend to run
+     \Term{vanilla} jobs (ones that aren't relinked with the Condor
+     libaries), you need a shared filesystem and a common UID space.  
+     Therefore, it is very important for you to correctly configure
+     Condor to tell it about a shared filesystem if you have one.
+     For complete details on what these settings do and how you
+     should answer the questions, be sure to read
+     section~\ref{sec:Shared-Filesystem-Config-File-Entries},
+     ``Shared Filesystem Config File Entries'', on
+     page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
+
+     You will be asked if you have a shared filesystem.  If so,
+     \condor{install} will configure your \Macro{FILESYSTEM\_DOMAIN} 
+     setting to be set to the domainname of the machine running
+     \condor{install}.
+     If not, \Macro{FILESYSTEM\_DOMAIN} will be set to
+     \MacroU{FULL\_HOSTNAME}, indicating that each machine is in its
+     own domain.
+
+     For the UID domain, Condor needs to know if all users across all
+     the machines in your pool have a unique UID.  
+     If so, \Macro{UID\_DOMAIN} will be set to the domainname of the
+     machine running \condor{install}. 
+     If not, \Macro{UID\_DOMAIN} will be set to
+     MacroU{FULL\_HOSTNAME}, indicating that each machine is in its 
+     own domain.
+
+     If you have a common \Macro{UID\_DOMAIN}, \condor{install} will
+     ask you if have a \Term{soft UID domain}, meaning that although
+     you have unique UIDs, not every machine in your pool has all the
+     users in their individual password files.  Please see the
+     description of \Macro{SOFT\_UID\_DOMAIN} in
+     section~\ref{param:SoftUidDomain} on
+     page~\pageref{param:SoftUidDomain} for details.  
+
+\item[STEP 6: Where should public programs be installed?]
 
      It is recommended that you install the user-level condor programs
      in the release directory, (where they go by default).  This way,
@@ -592,7 +633,7 @@ depending on what kind of installation you selected in STEP 1 above.
 
 \begin{description}
 
-\item[STEP 6: What machine will be your central manager?]
+\item[STEP 7: What machine will be your central manager?]
 
      Simply type in the full hostname of the machine you have chosen
      for your central manager.  If \Condor{install} can't find
@@ -600,7 +641,7 @@ depending on what kind of installation you selected in STEP 1 above.
      it will print out an error message and ask you to confirm.
 
 
-\item[STEP 7: Where will the 'local directory' go?]
+\item[STEP 8: Where will the 'local directory' go?]
 
      This is the directory discussed in question \#5 from the
      introduction.  \Condor{install} tries to make some educated guesses
@@ -632,7 +673,7 @@ depending on what kind of installation you selected in STEP 1 above.
      can start up Condor.
 
 
-\item[STEP 8: Where will the local (machine-specific) config files go?]
+\item[STEP 9: Where will the local (machine-specific) config files go?]
 
      As discussed in question \#6 above, there are a few different
      levels of Condor config file.  There's the global config file
@@ -650,7 +691,7 @@ depending on what kind of installation you selected in STEP 1 above.
      your pool from a centralized location.
 
 
-\item[STEP 9: How do you want Condor to find its config file?]
+\item[STEP 10: How do you want Condor to find its config file?]
 
      Since there are a few known places Condor looks to find your
      config file, we recommend that you put a soft link from one of
@@ -665,18 +706,20 @@ depending on what kind of installation you selected in STEP 1 above.
 
 \end{description}
 
-Once you have completed STEP 9, you're done.  \Condor{install} prints
+Once you have completed STEP 10, you're done.  \Condor{install} prints
 out a messages describing what to do next.  Please skip to 
 section~\ref{installed-now-what}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Submit Only}
+\subsubsection{\label{Install-Submit-Only}
+Submit Only}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Todo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{installed-now-what}Condor is installed... now what?}
+\subsection{\label{installed-now-what}
+Condor is installed... now what?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Now that Condor has been installed on your machine(s), there are a few
