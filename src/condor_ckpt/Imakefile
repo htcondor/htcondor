@@ -7,8 +7,7 @@ OS = OperatingSystem
 
 DRIVER_SRC = driver.C driver2.C driver3.C display.C gen_test.C file_test.c
 PACKAGE_SRC = \
-	image.C machdep.$(OS).C stubs.c file_state.C syscall_stubs.c \
-	condor_syscalls.c
+	image.C machdep.$(OS).C stubs.c file_state.C condor_syscalls.c
 
 #if IS_HPPAR_HPUX9
 ASSEMBLER_SRC = get_reginfo.s
