@@ -159,6 +159,7 @@ $(TARGETDIR):
 
 clean:
 	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps admin-man/machine-activities.eps admin-man/machine-states.eps *.out
+	cd makeman; make clean
 
 reallyclean: clean
 	rm -rf $(TARGETDIR)

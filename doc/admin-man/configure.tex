@@ -112,6 +112,14 @@ expanded.
 If it were not, then the definition would be impossible to
 evaluate.
 
+Recursively defined macros such as
+\begin{verbatim}
+    A = $(B)
+    B = $(A)
+\end{verbatim}
+are not allowed.
+They create definitions that Condor refuses to parse. 
+
 \Note Macros should not be incrementally defined in the
 \Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
 
@@ -124,13 +132,13 @@ in your config files, and these attributes will just be treated as
 macros.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-File-Env}
-Config File Environment References}
+\subsubsection{\label{sec:Config-File-Special}
+Special Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration file!\$ENV definition}
 \index{\$ENV!in configuration file}
-References to the Condor process's environment are also allowed in the
+References to the Condor process's environment are allowed in the
 configuration file.
 Environment references are of the form:
 \begin{verbatim}
@@ -144,6 +152,27 @@ binds \MacroNI{A} to the value of the HOME environment variable.
 Environment references are not currently used in standard Condor
 configurations.
 However, they can sometimes be useful in custom configurations.
+
+\index{RANDOM\_CHOICE() macro!use in configuration file}
+\index{\$RANDOM\_CHOICE()!in configuration}
+\index{configuration macro!RANDOM\_CHOICE() macro}
+This same syntax is used to allow a random choice of a parameter
+within a configuration file.
+These references are of the form:
+\begin{verbatim}
+        $RANDOM_CHOICE(list of parameters)
+\end{verbatim}
+This allows a random choice within the parameter list to be made
+at configuration time.  Of the list of parameters, one is
+chosen when encountered during configuration.  For example,
+if one of the integers 0-8 (inclusive) should be randomly
+chosen, the macro usage is
+\begin{verbatim}
+        $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
+\end{verbatim}
+  See section~\ref{sec:randomchoiceusage} on
+  page~\pageref{sec:randomchoiceusage}
+  for an actual use of this specialized macro.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Other-Syntax}
@@ -168,6 +197,16 @@ and
                         bigbird.cs.wisc.edu
         HOSTALLOW_ADMIN = $(ADMIN_MACHINES)
 \end{verbatim}
+
+Note that a line continuation character may currently be used within
+a comment, so the following example does \emph{not} set the
+configuration variable \MacroNI{FOO}:
+\begin{verbatim}
+	# This comment includes the following line, so FOO is NOT set \
+        FOO = BAR
+\end{verbatim}
+It is a poor idea to use this functionality, as it is likely to
+stop working in future Condor releases.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Pre-Defined-Macros}
@@ -273,6 +312,7 @@ Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
 Only do so if you know what you are doing.
   
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Condor-wide-Config-File-Entries}
 Condor-wide Configuration File Entries}
@@ -296,52 +336,66 @@ system.
   
 \item[\Macro{COLLECTOR\_HOST}] \label{param:CollectorHost} The
   hostname of the machine where the \Condor{collector} is running for
-  your pool.  Normally it is defined with the
-  \MacroUNI{CONDOR\_HOST} macro described above.
+  your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
+  macro described above.  There is no default value for this macro;
+  \Macro{COLLECTOR\_HOST} must be defined for your pool to work
+  properly.
 
 \item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} The
   hostname of the machine where the \Condor{negotiator} is running for
-  your pool.  Normally it is defined with the
-  \MacroUNI{CONDOR\_HOST} macro described above.
+  your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
+  macro described above.  There is no default value for this macro;
+  \Macro{NEGOTIATOR\_HOST} must be defined for your pool to work
+  properly.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
   hostname of the machine where the CondorView server is running.
   This service is optional, and requires additional configuration if
-  you want to enable it.
+  you want to enable it.  There is no default value for
+  \Macro{CONDOR\_VIEW\_HOST}.  If \Macro{CONDOR\_VIEW\_HOST} is not
+  defined, no CondorView server is used.
   See section~\ref{sec:Contrib-CondorView-Install} on
   page~\pageref{sec:Contrib-CondorView-Install} for more details.
 
 \item[\Macro{SCHEDD\_HOST}] \label{param:ScheddHost} The
   hostname of the machine where the \Condor{schedd} is running for
-  your pool.
+  your pool.  This is the host that queues submitted jobs.  Note that,
+  in most condor installations, there is a \Condor{schedd} running on
+  each host from which jobs are submitted.  The default value of
+  \Macro{SCHEDD\_HOST} is the current host.  For most pools, this
+  macro is not defined.
 
 \item[\Macro{RELEASE\_DIR}] \label{param:ReleaseDir} The full path to
-  the Condor release directory, which holds the \File{bin}, \File{etc},
-  \File{lib}, and \File{sbin} directories.
-  Other macros are defined relative to this one.
+  the Condor release directory, which holds the \File{bin},
+  \File{etc}, \File{lib}, and \File{sbin} directories.  Other macros
+  are defined relative to this one.  There is no default value for
+  \Macro{RELEASE\_DIR}.
 
 \item[\Macro{BIN}] \label{param:Bin} This directory points to the
-  Condor directory where user-level programs are installed.  It
-  is usually defined relative to the \MacroUNI{RELEASE\_DIR} macro.
+  Condor directory where user-level programs are installed.  It is
+  usually defined relative to the \MacroUNI{RELEASE\_DIR} macro.
+  There is no default value for \Macro{BIN}.
   
 \item[\Macro{LIB}] \label{param:Lib} This directory points to the
   Condor directory where libraries used to link jobs for Condor's
   standard universe are stored.  The \Condor{compile} program uses
-  this macro to find these libraries, so it must be defined.
-  \MacroUNI{LIB} is usually defined relative to the
-  \MacroUNI{RELEASE\_DIR} macro.
+  this macro to find these libraries, so it must be defined for
+  \Condor{compile} to function.  \MacroUNI{LIB} is usually defined
+  relative to the \MacroUNI{RELEASE\_DIR} macro, and has no default
+  value.
 
 \item[\Macro{SBIN}] \label{param:Sbin} This directory points to the
   Condor directory where Condor's system binaries (such as the
   binaries for the Condor daemons) and administrative tools are
   installed.  Whatever directory \MacroU{SBIN} points to ought
   to be in the \Env{PATH} of users acting as Condor
-  administrators.
+  administrators.  \Macro{SBIN} has no default value.
 
 \item[\Macro{LOCAL\_DIR}] \label{param:LocalDir} The location of the
   local Condor directory on each machine in your pool.  One common
   option is to use the condor user's home directory which may be
-  specified with \MacroUNI{TILDE}.  For example:
+  specified with \MacroUNI{TILDE}.  There is no default value for
+  \Macro{LOCAL\_DIR}.  For example:
 \begin{verbatim}
         LOCAL_DIR = $(tilde)
 \end{verbatim}
@@ -366,9 +420,9 @@ system.
   the \MacroUNI{LOG} macro by default.  The log directory also acts as
   the current working directory of the Condor daemons as the run, so
   if one of them should produce a core file for any reason, it would
-  be placed
-  in the directory defined by this macro.  Normally, \MacroUNI{LOG} is
-  defined in terms of \MacroUNI{LOCAL\_DIR}.
+  be placed in the directory defined by this macro.  \Macro{LOG} is
+  required to be defined.  Normally, \MacroUNI{LOG} is defined in
+  terms of \MacroUNI{LOCAL\_DIR}.
   
 \item[\Macro{SPOOL}] \label{param:Spool} The spool directory is where
   certain files used by the \Condor{schedd} are stored, such as the
@@ -380,15 +434,18 @@ system.
   directory is located on a partition with enough disk space.  If a
   given machine is only set up to execute Condor jobs and not submit
   them, it would not need a spool directory (or this macro defined).
-  Normally, \MacroUNI{SPOOL} is defined in terms of
-  \MacroUNI{LOCAL\_DIR}.
+  There is no default value for \Macro{SPOOL}, and the \Condor{schedd}
+  will not function without it \Macro{SPOOL} defined.  Normally,
+  \MacroUNI{SPOOL} is defined in terms of \MacroUNI{LOCAL\_DIR}.
   
 \item[\Macro{EXECUTE}] \label{param:Execute} This directory acts as
   the current working directory of any Condor job that is executing on
   the local machine.  If a given machine is only set up to only submit
   jobs and not execute them, it would not need an execute directory
-  (or this macro defined).  Normally, \MacroUNI{EXECUTE} is defined
-  in terms of \MacroUNI{LOCAL\_DIR}.
+  (or this macro defined).  There is no default value for
+  \Macro{EXECUTE}, and the \Condor{startd} will not function if
+  \Macro{EXECUTE} is not defined.  Normally, \MacroUNI{EXECUTE} is
+  defined in terms of \MacroUNI{LOCAL\_DIR}.
   
 \item[\Macro{LOCAL\_CONFIG\_FILE}] \label{param:LocalConfigFile} The
   location of the local, machine-specific configuration
@@ -409,19 +466,20 @@ system.
         LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
 \end{verbatim}
   
-  Beginning with Condor version 6.0.1, the \MacroUNI{LOCAL\_CONFIG\_FILE}
-  is treated as a list of files, not a single file.  You can use
-  either a comma or space separated list of files as its value.  This
-  allows you to specify multiple files as the local configuration file
-  and each one will be processed in the order given (with parameters set in
-  later files overriding values from previous files).  This allows
-  you to use one global configuration file for multiple platforms
-  in your pool,
-  define a platform-specific configuration file for each platform, and
-  use a local configuration file for each machine.  For more
-  information on this, see section~\ref{sec:Multiple-Platforms} about
-  Configuring Condor for Multiple Platforms on
-  page~\pageref{sec:Multiple-Platforms}.
+  Beginning with Condor version 6.0.1, the
+  \MacroUNI{LOCAL\_CONFIG\_FILE} is treated as a list of files, not a
+  single file.  You can use either a comma or space separated list of
+  files as its value.  This allows you to specify multiple files as
+  the local configuration file and each one will be processed in the
+  order given (with parameters set in later files overriding values
+  from previous files).  This allows you to use one global
+  configuration file for multiple platforms in your pool, define a
+  platform-specific configuration file for each platform, and use a
+  local configuration file for each machine.  If
+  \Macro{LOCAL\_CONFIG\_FILE} is not defined, no local configuration
+  files are processed.  For more information on this, see
+  section~\ref{sec:Multiple-Platforms} about Configuring Condor for
+  Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
 
 \item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}] \label{param:RequireLocalConfigFile}
   Beginning in Condor 6.5.5, it is permissiable for the files listed as the
@@ -455,7 +513,8 @@ system.
   your pool.  For example, if a daemon crashes, the \Condor{master}
   can send an \Term{obituary} to this address with the last few lines
   of that daemon's log file and a brief message that describes what
-  signal or exit status that daemon exited with.
+  signal or exit status that daemon exited with.  There is no default
+  value for \Macro{CONDOR\_ADMIN}.
   
 \item[\Macro{CONDOR\_SUPPORT\_EMAIL}] \label{param:CondorSupportEmail}
   The email address to be included at the bottom of all email Condor
@@ -467,25 +526,27 @@ system.
   specified in \MacroNI{CONDOR\_ADMIN} (described above).
 
 \item[\Macro{MAIL}] \label{param:Mail} The full path to a mail
-  sending program that uses \Opt{-s} to
-  specify a subject for the message.  On all platforms,
-  the default shipped with Condor should work.  Only if you
-  installed things in a non-standard location on your system would you
-  need to change this setting.
-  
+  sending program that uses \Opt{-s} to specify a subject for the
+  message.  On all platforms, the default shipped with Condor should
+  work.  Only if you installed things in a non-standard location on
+  your system would you need to change this setting.  There is no
+  default value for \Macro{MAIL}, and the \Condor{schedd} will not
+  function unless \Macro{MAIL} is defined.
+
 \item[\Macro{RESERVED\_SWAP}] \label{param:ReservedSwap} Determines
-  how much swap space you want to reserve for your own
-  machine.  Condor will not start up more \Condor{shadow} processes if
-  the amount of free swap space on your machine falls below this
-  level. 
+  how much swap space you want to reserve for your own machine.
+  Condor will not start up more \Condor{shadow} processes if the
+  amount of free swap space on your machine falls below this level.
+  \Macro{RESERVED\_SWAP} is specified in megabytes.  The default value
+  of \Macro{RESERVED\_SWAP} is 5 magabytes.
 
 \item[\Macro{RESERVED\_DISK}] \label{param:ReservedDisk} Determines
-  how much disk space you want to reserve for your own
-  machine.  When Condor is reporting the amount of free disk space in
-  a given partition on your machine, it will always subtract this
-  amount.  An example is the \Condor{startd}, which
-  advertises the amount of
-  free space in the \MacroUNI{EXECUTE} directory.
+  how much disk space you want to reserve for your own machine.  When
+  Condor is reporting the amount of free disk space in a given
+  partition on your machine, it will always subtract this amount.  An
+  example is the \Condor{startd}, which advertises the amount of free
+  space in the \MacroUNI{EXECUTE} directory.  The default value of
+  \Macro{RESERVED\_DISK} is zero.
   
 \item[\Macro{LOCK}] \label{param:Lock} Condor needs to create
   lock files to synchronize access to various log files.  Because of
@@ -493,7 +554,9 @@ system.
   the years, we \emph{highly} recommend that you put these lock
   files on a local partition on each machine.  If you do not have your
   \MacroUNI{LOCAL\_DIR} on a local partition, be sure to change this
-  entry.  Whatever user or group Condor is running as needs to have
+  entry.
+
+  Whatever user or group Condor is running as needs to have
   write access to this directory.  If you are not running as root, this
   is whatever user you started up the \Condor{master} as.  If you are
   running as root, and there is a condor account, it is most
@@ -504,6 +567,12 @@ system.
   environment variable, or whatever you define in the
   \Macro{CONDOR\_IDS} setting in the Condor config files.
   See section~\ref{sec:uids} on UIDs in Condor for details.
+
+  If no value for \Macro{LOCK} is provided, the value of \Macro{LOG}
+  is used.
+
+% Default value check end here: NRL 11 Dec 2003
+
 
 \item[\Macro{HISTORY}] \label{param:History} Defines the
   location of the Condor history file, which stores information about
@@ -637,6 +706,21 @@ system.
   to spawn a job, instead of making sure the submit machine's hostname
   matches the \MacroNI{UID\_DOMAIN}.
   The default is FALSE, since it is more secure to perform this test. 
+
+\item[\Macro{PASSWD\_CACHE\_REFRESH}]
+  \label{param:PasswdCacheRefresh}
+  Condor can cause NIS servers to become overwhelmed by queries for uid
+  and group information in large pools. In order to avoid this problem,
+  Condor caches uid and group information internally. This setting allows
+  pool administrators to specify (in seconds) how long Condor should wait
+  until refreshes a cache entry. The default is set to 300 seconds, or
+  5 minutes. This means that if a pool administrator updates the user
+  or group database (e.g. /etc/passwd or /etc/group), it can take up
+  to 5 minutes before Condor will have the updated information. This
+  caching feature can be disabled by setting the refresh interval to
+  0. In addition, the cache can also be flushed explicitly by running
+  the ``\condor{reconfig} -full'' command. This setting has no effect
+  on Windows.
 
 \end{description}
 
@@ -975,6 +1059,10 @@ server, shadow, and starter, none of which use DaemonCore yet).
   expressions from the configuration file in its ClassAd.  Give the
   comma-separated list of entries from the configuration file you want in the
   given daemon's ClassAd.
+  Frequently used to add attributes to machines so that the
+  machines can discriminate between other machines in a job's 
+  \Opt{rank}
+    and \Opt{requirements}.
   
   \Note The \Condor{negotiator} and \Condor{kbdd} do not send
   ClassAds now, so this entry does not affect them.  The
@@ -1076,8 +1164,7 @@ You could set \MacroU{UID\_DOMAIN}
 to ``*''. This will match all domains,
 but it is a gaping security hole. It is not recommended.
 
-You can set \MacroU{UID\_DOMAIN}
-to ``none'' or leave it undefined. This will
+You can also leave \MacroU{UID\_DOMAIN} undefined. This will
 force Condor to always run jobs as user nobody.
 Running standard universe jobs as user nobody enhances
 your security and should cause no problems, because the jobs use remote
@@ -1091,9 +1178,7 @@ When Condor sends e-mail about a job, Condor sends the e-mail to
 %% This is the wrong LaTeX  macro to use, but we don't have a correct one.
 \File{user@UID\_DOMAIN}.
 If \MacroUNI{UID\_DOMAIN}
-is set to ``none'' or it is undefined, 
-the e-mail is
-sent to \File{user@submitmachinename}.
+is undefined, the e-mail is sent to \File{user@submitmachinename}.
 
 
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain}
@@ -1107,6 +1192,24 @@ this check, because users are not in every password file, set
 this attribute to True.
 
 
+\item[\Macro{VMx\_USER}] \label{param:VMxUser}
+The name of a user for Condor to use instead of
+user nobody,
+as part of a solution that plugs a security hole whereby
+a lurker process can prey on a subsequent job run as user
+nobody. 
+\MacroNI{x} is an integer associated with virtual machines.
+On Windows, \MacroNI{VMx\_USER}
+will only work if the credential of the specified
+user is stored on the execute machine using \Condor{store\_cred}.
+See Section~\ref{sec:RunAsNobody} for more information.
+
+\item[\Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}]
+\label{param:ExecuteLoginIsDedicated}
+When set to True,
+forces Condor to use the users given by the \MacroNI{VMx\_USER}
+configuration variable.
+Defaults to False.
 
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain}
 The \MacroNI{FILESYSTEM\_DOMAIN}
@@ -1844,7 +1947,9 @@ The following macros control the \Prog{cron} capabilities of Condor.
 The \Prog{cron} mechanism is used to run executables (called
 modules) directly from the \Condor{startd} daemon.
 The output of these modules
-is incorporated into the machine ClassAd generated by the \Condor{startd}.
+is incorporated into the machine ClassAd generated by the
+\Condor{startd}.  These capabilities are used in Hawkeye, but can be
+used in other situations, as well.
 
 \begin{description}
 
@@ -1866,7 +1971,7 @@ is incorporated into the machine ClassAd generated by the \Condor{startd}.
   named HAWKEYE\_JOBS.
 
   This configuration variable is defined by
-  a tab or newline separated list of jobs (called modules) to run, of the form:
+  a whitespace or newline separated list of jobs (called modules) to run, of the form:
 \begin{verbatim}
 	modulename:prefix:executable:period[:options]
 \end{verbatim}
@@ -1935,6 +2040,32 @@ is incorporated into the machine ClassAd generated by the \Condor{startd}.
 	This is the default for noncontinuous mode.
 	
   \end{itemize}
+\Note The configuration file parsing logic will strip whitespace from
+the beginning and end of continuation lines.  Thus, a job list like
+below will be mis-interpretted:
+\begin{verbatim}
+# Hawkeye Job Definitions
+HAWKEYE_JOBS   =\
+    job1:prefix_:$(MODULES)/job1:5m:nokill\
+    job2:prefix_:$(MODULES)/job1_co:1h
+HAWKEYE_JOB1_ARGS =-foo -bar
+HAWKEYE_JOB1_ENV = xyzzy=somevalue
+HAWKEYE_JOB2_ENV = lwpi=somevalue
+\end{verbatim}
+Instead, you should write this as below:
+\begin{verbatim}
+# Hawkeye Job Definitions
+HAWKEYE_JOBS   =
+
+# Job 1
+HAWKEYE_JOBS = $(HAWKEYE_JOBS) job1:prefix_:$(MODULES)/job1:5m:nokill
+HAWKEYE_JOB1_ARGS =-foo -bar
+HAWKEYE_JOB1_ENV = xyzzy=somevalue
+
+# Job 2
+HAWKEYE_JOBS = $(HAWKEYE_JOBS) job2:prefix_:$(MODULES)/job2:1h
+HAWKEYE_JOB2_ENV = lwpi=somevalue
+\end{verbatim}
 
 
 \item[\Macro{STARTD\_CRON\_modulename\_ARGS}]
@@ -2232,11 +2363,12 @@ These macros control the \Condor{schedd}.
   started.
 
 \item[\Macro{PERIODIC\_EXPR\_INTERVAL}]
-  \label{param:PeriodicExprInterval}
-  This macro determines the period, in seconds, between evaluation
-  of periodic job control expressions, such as periodic\_hold,
-  periodic\_release, and periodic\_remove, given by the user in
-  a Condor submit file. By default, this value is sixty seconds.
+  \label{param:PeriodicExprInterval} This macro determines the period,
+  in seconds, between evaluation of periodic job control expressions,
+  such as periodic\_hold, periodic\_release, and periodic\_remove,
+  given by the user in a Condor submit file. By default, this value is
+  300 seconds (5 minutes).  A value of 0 prevents the schedd from
+  performing the periodic evaluations.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2735,9 +2867,6 @@ These macros affect the \Condor{collector}.
 These macros affect the \Condor{negotiator}.
 \begin{description}
   
-\item[\Macro{NEGOTIATOR\_PORT}] \label{param:NegotiatorPort}
-  The port that the \Condor{negotiator} uses. Defaults to 9614.
-
 \item[\Macro{NEGOTIATOR\_INTERVAL}] \label{param:NegotiatorInterval}
   Sets how often the negotiator starts a negotiation cycle.  It is defined
   in seconds and defaults to 300 (5 minutes).
@@ -2892,6 +3021,18 @@ gridmanager to continue operation. If seconds until expiration is
 less than this number, the gridmanager will shutdown and wait for
 a refreshed proxy credential. The default is 3 minutes (180 seconds).
 
+\item[\Macro{HOLD\_JOB\_IF\_CREDENTIAL\_EXPIRES}]
+\label{param:HoldJobIfCredentialExpires} True or False.
+Defaults to True.
+If True, and for globus universe jobs only,
+Condor-G will place a job on hold
+\MacroNI{GRIDMANAGER\_MINIMUM\_PROXY\_TIME} seconds
+before the proxy expires.
+If False,
+the job will stay in the last known state,
+and Condor-G will periodically check to see if the job's proxy has been
+refreshed, at which point management of the job will resume.
+
 \item[\Macro{GRIDMANAGER\_CONTACT\_SCHEDD\_DELAY}]
 \label{param:GridmanagerContactScheddDelay} The minimum number of
 seconds between connections to the schedd. The default is 5 seconds.
@@ -3005,9 +3146,119 @@ periodic syncs of streamed output to disk. The default is 5 minutes
 %more machines need to be down (or just appear to be) to trigger a restart
 %of the GAHP server.
 
+\item[\Macro{GLOBUS\_GATEKEEPER\_TIMEOUT}]
+\label{param:GlobusGatekeeperTimeout} The number of seconds after
+which if a globus
+universe job fails to ping the gatekeeper,
+the job will be put on hold.
+Defaults to 5 days (in seconds).
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:GridMonitor-Config-File-Entries}
+\Prog{grid\_monitor} Configuration File Entries}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!grid\_monitor configuration variables}
+These macros affect the \Prog{grid\_monitor}.
+\begin{description}
+
+\item[\Macro{ENABLE\_GRID\_MONITOR}] \label{param:EnableGridMonitor}
+  When set to \Expr{True} enables the \Prog{grid\_monitor} tool.  The
+  \Prog{grid\_monitor} tool is used to reduce load on Globus gatekeepers.
+  This parameter only affects globus universe jobs.
+  \MacroNI{GRID\_MONITOR} must also be correctly configured.
+  Defaults to \Expr{False}.
+  See section~\ref{sec:Condor-G-GridMonitor} on
+  page~\pageref{sec:Condor-G-GridMonitor}
+  for more information.
+
+\item[\Macro{GRID\_MONITOR}] \label{param:GridMonitor}
+  The complete pathname of the \Prog{grid\_monitor} tool used to reduce load on
+  Globus gatekeepers.  This parameter only affects globus
+  universe jobs.  This parameter is not referenced unless
+  \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True}. 
+  See section~\ref{sec:Condor-G-GridMonitor} on
+  page~\pageref{sec:Condor-G-GridMonitor}
+  for more information.
+
+\end{description}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Config-File-Entries}
+Configuration File Entries Relating to Security}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!security configuration variables}
+These macros affect the secure operation of Condor.
+\begin{description}
+
 \item[\Macro{GSI\_DAEMON\_NAME}]
 \label{param:GSIDaemonName} A comma separated list of the subject
 name(s) of the certificate(s) that the daemons use.
+
+\item[\Macro{GSI\_DAEMON\_DIRECTORY}]
+\label{param:GSIDaemonDirectory} A directory name used in the
+construction of complete paths for the configuration variables
+\MacroNI{GSI\_DAEMON\_CERT},
+\MacroNI{GSI\_DAEMON\_KEY}, and
+\MacroNI{GSI\_DAEMON\_TRUSTED\_CA\_DIR},
+for any of these configuration variables are not explicitly set.
+
+\item[\Macro{GSI\_DAEMON\_CERT}]
+\label{param:GSIDaemonCert} A complete path and file name to the
+X.509 certificate to be used in GSI authentication.
+If this configuration variable is not defined, and
+\MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+\MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the path and file name as
+\begin{verbatim}
+GSI_DAEMON_CERT  = $(GSI_DAEMON_DIRECTORY)/hostcert.pem
+\end{verbatim}
+
+\item[\Macro{GSI\_DAEMON\_KEY}]
+\label{param:GSIDaemonKey}  A complete path and file name to the
+X.509 private key to be used in GSI authentication.
+If this configuration variable is not defined, and
+\MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+\MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the path and file name as
+\begin{verbatim}
+GSI_DAEMON_KEY  = $(GSI_DAEMON_DIRECTORY)/hostkey.pem
+\end{verbatim}
+
+\item[\Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR}]
+\label{param:GSIDaemonTrustedCADir} The directory that contains the
+list of trusted certification authorities to be used in GSI authentication.
+The files in this directory are the public keys and signing policies
+of the trusted certification authorities.
+If this configuration variable is not defined, and
+\MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+\MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the directory path as
+\begin{verbatim}
+GSI_DAEMON_TRUSTED_CA_DIR  = $(GSI_DAEMON_DIRECTORY)/certificates
+\end{verbatim}
+
+\item[\Macro{GSI\_DAEMON\_PROXY}]
+\label{param:GSIDaemonProxy} A complete path and file name to the
+X.509 proxy to be used in GSI authentication.
+When this configuration variable is defined, use of this proxy
+takes precedence over use of a certificate and key.
+
+\item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
+\label{param:SessionDuration} The amount of time in seconds before
+a communication session expires.
+%Defaults to 3600 seconds (1 hour).
+Defaults to 8640000 seconds (100 days) to avoid a bug in session
+renegotiation for Condor Version 6.6.0.
+A session is a record of necessary information to do communication
+between a client and daemon, and is protected by a shared secret key.
+The session expires to reduce the window of opportunity where
+the key may be compromised by attack.
+
 \end{description}
+
 
 \input{admin-man/root-config.tex}

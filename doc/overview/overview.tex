@@ -319,17 +319,16 @@ desire the Condor source code, please contact the Condor Team in order to discus
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.6, 2.7, 8, 9 \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 \\ \hline
-Intel x86 & RedHat Linux 6.2, 7.2 \\
- & RedHat Linux 8 (clipped) \\ \hline
- & RedHat Linux 9 (clipped) \\ \hline
- & Windows NT 4.0 (clipped) \\ \hline
- & Windows NT 2000 (clipped) \\ \hline
- & Windows NT XP (clipped) \\ \hline
+Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0 \\
+ & Red Hat Linux 9 (clipped) \\ \hline
+ & Windows NT 4.0 Workstation and Server (clipped) \\ \hline
+ & Windows 2000 Professional and Server, 2003 Server (clipped) \\ \hline
+ & Windows XP Professional (clipped) \\ \hline
 ALPHA & Digital Unix 4.0 \\
- & RedHat Linux 7.2 (clipped) \\ \hline
+ & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\ \hline
  & Tru64 5.1 (clipped) \\ \hline
 PowerPC & Macintosh OS X (clipped) \\
-Itanium & RedHat Linux 7.2 (clipped) \\
+Itanium & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
 \end{tabular}
 \caption{\label{supported-platforms}Condor \VersionNotice\ supported platforms}
 \end{table}
@@ -342,6 +341,54 @@ or supported.
 For more platform-specific information about Condor's support for
 various operating systems, see Chapter~\ref{platforms} on
 page~\pageref{platforms}. 
+
+
+
+Jobs submitted to the standard universe utilize \Condor{compile}
+to relink programs with libraries provided by Condor.
+Table~\ref{supported-compile} lists supported compilers by
+platform.
+Other compilers may work, but are not supported.
+
+\index{Condor commands!condor\_compile!list of supported compilers}
+\index{condor\_compile command!list of supported compilers}
+\index{compilers!supported with condor\_compile}
+
+% condor_compile works on. . .
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|ll|l}
+\textbf{Platform} & \textbf{Compiler} & \textbf{Notes}\\ \hline \hline
+Solaris (all versions) on SPARC \\ 
+& gcc, g++, and g77 & The entire GNU compiler suite must be versions 2.95.3 or 2.95.4. \\ 
+& cc, CC & use the standard, native compiler \\ 
+& f77, f90 & use the standard, native compiler \\ 
+\hline
+Red Hat Linux, versions 7.1, 7.2, and 7.3 on Intel x86 \\ 
+& gcc, g++, and g77 & as shipped \\ 
+& pgf77 and pgf90, version 5.0 & Portland Group compilers \\ 
+& pghpf, version 5.0 & Portland Group high performace Fortran compiler \\ 
+& pgcc, version 5.0 \\ 
+\hline
+HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
+& gcc, g++, and g77; version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
+& cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
+\hline
+IRIX 6.5 on Silicon Graphics MIPS (R5000, R8000, and R10000)\\ 
+& cc, CC, and c89 \\ 
+& f77 and f90 \\ 
+& gcc, g++, and g77;  version egcs-1.1.2 for mips4 & We plan to support newer versions of the GNU compiler collection in the near future.  mips4 executables will \emph{not} run on a mips3-only architecture, but
+ a mips4 architecture will run a mips3 executable.\\ 
+\hline
+Digitial Unix 4.0 on ALPHA \\ 
+& cc, CC, cxx, and c89 \\ 
+& KCC \\ 
+& gcc, g++, and g77;  version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
+\hline
+\end{tabular}
+\caption{\label{supported-compile}Supported compilers under Condor \VersionNotice\ }
+\end{table}
+\end{center}
 
 
 \section{\label{contact-info}Contact Information}
@@ -367,5 +414,60 @@ are all welcome; just send Internet e-mail to \URL{mailto:condor-admin@cs.wisc.e
 name, organization, and telephone number in your message.  If you are having trouble with 
 Condor, please help us troubleshoot by including as much pertinent information as you can, 
 including snippets of Condor log files. 
+
+\section{\label{privacy}Privacy Notice}
+
+%
+% Note to developers:
+% If you change this text, also change
+%   http://www.cs.wisc.edu/condor/privacy.html
+%
+
+The Condor software periodically sends short messages
+to the Condor Project developers at the University of Wisconsin,
+reporting totals of machines and jobs in each running Condor system.
+An example of such a message is given below.
+
+The Condor Project uses these collected reports to publish
+summary figures and tables, such as the total of Condor systems
+worldwide, or the geographic distribution of Condor systems.
+This information helps the Condor Project to understand
+the scale and composition of Condor in the real world
+and improve the software accordingly.
+
+The Condor Project will not use these reports to publically
+identify any Condor system or user without permission.
+The Condor software does not collect or report any personal
+information about individual users.
+
+We hope that you will contribute to the development of Condor
+through this reporting feature.
+However, you are free to disable it at any time by
+changing the configuration variables \Macro{CONDOR\_DEVELOPERS}
+and \Macro{CONDOR\_DEVELOPERS\_COLLECTOR},
+both described in section \ref{param:CondorDevelopers} of this manual.
+
+Example of data reported:
+
+\begin{verbatim}
+This is an automated email from the Condor system
+on machine "your.condor.pool.com".  Do not reply.
+
+This Collector has the following IDs:
+    CondorVersion: 6.6.0 Nov 12 2003
+    CondorPlatform: INTEL-LINUX-GLIBC22
+
+                     Machines Owner Claimed Unclaimed Matched Preempting
+
+         INTEL/LINUX      810    52     716        37       0          5
+       INTEL/WINNT50      120     5     115         0       0          0
+     SUN4u/SOLARIS28      114    12      92         9       0          1
+     SUN4x/SOLARIS28        5     1       0         4       0          0
+               Total     1049    70     923        50       0          6
+
+         RunningJobs                IdleJobs
+                 920                    3868
+\end{verbatim}
+
 
 

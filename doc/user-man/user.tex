@@ -73,6 +73,7 @@ discussion of these features before reading any further.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Matchmaking with ClassAds}
+\label{sec:matchmaking-with-classads}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Before you learn about how to submit a job, it is important to
@@ -525,8 +526,13 @@ Please see section~\ref{sec:MPI} for more details.
 The Globus universe in Condor is intended to provide the standard
 Condor interface to users who wish to start Globus system jobs
 from Condor. Each job queued in the job submission file is translated
-into a Globus RSL and subsequently submitted to Globus via the GRAM
-protocol.
+into the Globus Resource Specification Language (RSL) and subsequently 
+submitted to Globus via the GRAM
+protocol. You benefit from using the Globus universe because Condor
+maintains your jobs in a queue on your submit machine and can deal
+with a wide variety of common errors you might
+experience. Section~\ref{sec:Condor-G} on page~\pageref{sec:Condor-G}
+has details on using the Globus universe.
 The manual page for \Condor{submit}
 on page~\pageref{man-condor-submit}
 has detailed descriptions of
@@ -1181,9 +1187,9 @@ is run on a remote machine.
 If the job requires any other input files,
 the submit description file should utilize the
 \verb@transfer_input_files@ command.
-This list specifies any other files that Condor is to transfer to a
-remote site to set up the execution environment for the job before it
-is run.
+This comma-separated list specifies any other files that Condor is to
+transfer to a remote site to set up the execution environment for the
+job before it is run.
 These files are placed in the same temporary working directory
 as the job's executable.
 At this time, directories can not be transferred in this way.
@@ -1193,12 +1199,14 @@ For example:
   transfer_input_files = file1,file2 
 \end{verbatim}
 
-By default, any files that are modified or created by the job in the
+As a default, for jobs other than those submitted to the globus universe,
+any files that are modified or created by the job in the
 temporary directory at the remote site are transferred back
 to the machine from which the job was submitted.
 Most of the time, this is the best option.
 To restrict the files that are transferred,
-specify the exact list with \verb@transfer_output_files@.
+specify the exact list with \Opt{transfer\_output\_files}.
+Again, filenames are delimited with a comma.
 When this list is defined and any of the files do not exist as the
 job exits, Condor considers this an error, and re-runs the job.
 For example:
@@ -1207,10 +1215,15 @@ For example:
   transfer_output_files = final-results
 \end{verbatim}
 
-\Warn Do not specify \verb@transfer_output_files@ unless there is a
+\Warn Do not specify \Opt{transfer\_output\_files} (for other than
+globus universe jobs) unless there is a
 really good reason -- it is best to let Condor figure things out by
 itself based upon what output the job produces.
 
+For globus universe jobs, files to be transferred 
+(other than standard output and standard error)
+must be specified using \Opt{transfer\_output\_files}
+in the submit description file. 
 
 %%%%%%%%%%%% 
 \subsubsection{Requirements and Rank for File Transfer}
@@ -1328,6 +1341,61 @@ Therefore, \Attr{TransferFiles} is deprecated, and we will no longer
 document its use.
 If your submit file refers to \verb@transfer_files@,
 consider switching it to use the settings described here.
+
+%%%%%%%%%%%% 
+\subsection{Environment Variables}
+%%%%%%%%%%%% 
+
+\index{environment variables}
+\index{execution environment}
+The environment under which a job executes often contains
+information that is potentially useful to the job.
+Condor allows a user to both set and reference environment
+variables for a job or job cluster.
+
+Within a submit description file, the user may define environment
+variables for the job's environment by using the 
+\Opt{environment} command.
+See the \Condor{submit} manual page at
+section~\ref{man-condor-submit} for more details about this command.
+
+The submitter's entire environment can be copied into the job
+ClassAd for the job at job submission.
+The \Opt{getenv} command within the submit description file
+does this.
+See the \Condor{submit} manual page at
+section~\ref{man-condor-submit} for more details about this command.
+
+Commands within the submit description file may reference the
+environment variables of the submitter as a job is submitted.
+Submit description file commands use \verb@$ENV(EnvironmentVariableName)@
+to reference the value of an environment variable.
+Again,
+see the \Condor{submit} manual page at
+section~\ref{man-condor-submit} for more details about this usage.
+
+Condor sets two additional environment variables for each executing
+job that may be useful for the job to reference.
+
+\begin{itemize}
+\item \Env{CONDOR\_SCRATCH\_DIR}
+\index{CONDOR\_SCRATCH\_DIR}
+\index{environment variables!CONDOR\_SCRATCH\_DIR}
+ gives the directory
+where the job may place temporary data files. 
+This directory is unique for
+every job that is run, and it's contents are deleted by Condor
+when the job stops running on a machine, no matter how the job completes.
+\item \Env{CONDOR\_VM}
+\index{CONDOR\_VM}
+\index{environment variables!CONDOR\_VM}
+gives the name of the virtual machine (for SMP machines),
+on which the job is run.
+See 
+section~\ref{sec:Configuring-SMP} for more details about SMP
+machines and their configuration.
+\end{itemize}
+
 
 
 %%%%%%%%%%%% 
@@ -1583,6 +1651,7 @@ with -20 being the worst and with +20 being the best.
 \subsection{\label{sec:user-priority-explained}User priority}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{preemption!priority}
 \index{user!priority}
 \index{priority!of a user}
 Machines are allocated to users based upon a user's priority.
@@ -1655,23 +1724,6 @@ the user priority of any specific Condor user very high.
 If done, for example, with a guest account,
 the guest could only use cycles not wanted by other users of the system.
 
-\subsection{Environment Variables}
-
-\index{environment variables}
-\index{execution environment}
-Condor provides several tidbits of information to your job that
-allow it to make sensible decisions when running in a batch mode.
-These are provided in the form of environment variables that your
-job may read in the manner provided by your language.
-
-\begin{itemize}
-\item \Env{CONDOR\_SCRATCH\_DIR} \index{CONDOR\_SCRATCH\_DIR} - This variable gives the name of a directory
-where your job may place temporary data files.  This directory is unique for
-every job that is run, and is always deleted, no matter how your job completes.
-\item \Env{CONDOR\_VM} \index{CONDOR\_VM} - This variable gives the name of the virtual machine,
-if any, on which your job is run.
-\end{itemize}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Vacate-Explained}
@@ -1679,6 +1731,7 @@ Details About How Condor Jobs Vacate Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{vacate}
+\index{preemption!vacate}
 When Condor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the \AdAttr{KillSig}
 attribute of the job's ClassAd.

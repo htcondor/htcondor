@@ -1,0 +1,333 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Condor-G-Matchmaking}Condor-G-Matchmaking}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{universe!Globus}
+\index{Globus}
+\index{matchmaking!on the Grid}
+\index{grid computing!matchmaking}
+
+In it simplest usage, Condor-G allows users to specify the single
+grid site they wish to submit their job to.
+Often this is sufficient: perhaps a user knows exactly which
+grid site they wish to use,
+or a higher-level resource broker
+(such as the European Data Grid's resource broker)
+has decided which grid site should be used.
+But when users have a variety of sites to choose from and there
+is no other resource broker to make the decision, Condor-G can use
+matchmaking to decide which grid site a job should run on. 
+
+Please note that Condor-G's matchmaking ability is relatively
+new. Work is being done to improve it and make it easier to use. For
+now, please expect some rough edges. 
+
+Condor-G uses the same matchmaking mechanism that Condor uses: the
+\Condor{collector} and \Condor{negotiator} daemons, which are described in
+Section~\ref{sec:Condor-Daemons}. 
+
+Two changes are required to use Condor-G's matchmaking.
+First,
+advertise grid sites that are available so that they are
+known and considered during the matchmaking process.
+This is accomplished by writing ClassAd attributes and
+using \Condor{advertise} to place the attributes into the
+ClassAd used in matchmaking.
+The second change is to the
+submit description file.
+This file needs to specify requirements that describe what
+type of grid site can be used, instead of identifying a specific grid site.
+
+% Karen had editted to this point.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Advertising grid sites to Condor-G}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Each grid site that is available for matching purposes needs to be
+advertised to the \Condor{collector}. Normally in Condor this is done
+with the \Condor{startd} daemon, and you do not normally need to be
+aware of the contents of this advertisement. Currently, there is no
+equivalent to the \Condor{startd} daemon for advertising grid sites,
+so you need have a deeper understanding. 
+
+To properly advertise a grid site, a ClassAd need to be sent
+periodically to the \Condor{collector}. A ClassAd is a list of
+attributes and values that describe a job, a machine, or a grid
+site. ClassAds are briefly described in
+Section~\ref{sec:matchmaking-with-classads} and some of the common
+attributes of machine ClassAds are described in
+Section~\ref{user-man-machad}.
+
+When you advertise a grid site, it looks very similar to a ClassAd for
+a machine. In fact, the \Condor{collector} will believe it is a
+machine, but with a different set of attributes. 
+
+To advertise a grid site, you first need to describe the site in a
+file. Here is a sample ClassAd that describes a grid site:
+
+\footnotesize
+\begin{verbatim}
+# This is a comment
+MyType                = "Machine"
+TargetType            = "Job"
+Name                  = "Example1_Gatekeeper"
+gatekeeper_url        = "grid.example.com/jobmanager"
+Requirements          = CurMatches < 10
+Rank                  = 0.000000
+CurrentRank           = 0.000000
+WantAdRevaluate       = True
+UpdateSequenceNumber  = 4
+CurMatches            = 0
+\end{verbatim}
+\normalsize
+
+Let's look at each line:
+
+\begin{verbatim}
+# This is a comment
+\end{verbatim}
+
+Your file can have comments that begin with the hash mark (\#). 
+
+\begin{verbatim}
+MyType                = "Machine"
+\end{verbatim}
+
+Your grid site is pretending to be a single machine, for the purpose
+of matchmaking. MyType is an attribute that the \Condor{negotiator}
+will expect to be a string. Strings must be surrounded by double-quote
+marks, as in this example. You may have surprising, unintuitive errors
+if they are not quoted. You will always want MyType to be
+``Machine''. 
+
+\begin{verbatim}
+TargetType            = "Job"
+\end{verbatim}
+
+This is an attribute that says the grid site (machine) wants to be
+matched with a job. Leave this as it is. 
+
+
+\footnotesize
+\begin{verbatim}
+Name                  = "Example1_Gatekeeper"
+\end{verbatim}
+\normalsize
+
+You will want a unique name for each grid site. Any name is fine, as long as
+it is quoted.
+
+\footnotesize
+\begin{verbatim}
+gatekeeper_url        = "grid.example.com/jobmanager"
+\end{verbatim}
+\normalsize
+
+This is the Globus gatekeeper contact string for your grid site. It is
+probably a machine name followed by a slash followed by the name of
+the jobmanager. If you have different job managers, you can only
+specify one per ClassAd. 
+
+\begin{verbatim}
+UpdateSequenceNumber  = 4
+\end{verbatim}
+
+UpdateSequenceNumber is a positive number that must increase each time
+you advertise a grid site. Normally you advertise your grid site
+every five minutes. The \Condor{collector} will discard a grid site's
+ClassAd after 15 minutes if there have been no updates. A good number
+to set this to is the current time in seconds (the epoch, as given by
+the C time() function call), but if you are worried about your clock
+running backward, you can set it to whatever you like. If ClassAds are
+received with a sequence number older than the last ClassAd, they are
+ignored. 
+
+\begin{verbatim}
+CurMatches            = 0
+\end{verbatim}
+
+This number is incremented each time a match is made for this grid
+site. Unlike a normal machine ClassAd that can only be matched against
+once, grid site advertisements can be matched against many time. 
+
+You will probably want to set this number to be the number of grid
+jobs that you have running on your site, and keep it updated each time
+you submit a new ClassAd. If you do not specify CurMatches, Condor
+will assume it is 0.
+
+Condor will increment this number every time it makes a match against
+a grid site.
+
+\footnotesize
+\begin{verbatim}
+Requirements          = CurMatches < 10
+\end{verbatim}
+\normalsize
+
+These are the requirements that the grid site insists must be trust
+before it will accept a job. These could refer to features of the
+job's ClassAd. In this case, we'll take any job, as long we have less
+than 10 matches currently. This will ensure that Condor-G will only
+run 10 jobs at your site---assuming that you keep CurMatches up to
+date when jobs finish. Of course, you can edit this statement to have
+different requirements. For example, if you want to accept all jobs,
+you can have ``Requirements = True''. 
+
+\footnotesize
+\begin{verbatim}
+Rank                  = 0.000000
+CurrentRank           = 0.000000
+\end{verbatim}
+\normalsize
+
+This is a numerical ranking that will be assigned to a job. Right now
+it is not used, but should be set to 0. 
+
+\begin{verbatim}
+WantAdRevaluate       = True
+\end{verbatim}
+
+The ``WantAdRevaluate'' attribute is what distinguishes grid site
+ClassAds from normal machine ClassAds and allows multiple matches to
+be made against a single site. It should be in your ad and should be
+true. Note that True is not in quotes, and it should not be.
+
+You can add other attributes to your ClassAd, to make it easy for a
+job to decide which grid site it wants to use. For instance, if you
+have pre-installed the Bamboozle software environment on your grid
+site, you could advertise, ``HaveBamboozle = True'' and
+``BamboozleVersion = 10''. Jobs can require a grid site that has
+Bamboozle installed by extending their requirements with
+``HaveBamboozle == True''. (Note the double equal sign in the
+requirements.) 
+
+As an aside, we recommend that jobs that need specific applications
+should bring them with them instead of relying on having them
+pre-installed at a Grid site. You will have more reliable execution if
+you do. 
+
+Once you have a file that describes your site, you need to send it to
+the \Condor{collector}. For this, you can use the \Condor{advertise}
+program. We recommend that you write a script to create the file
+containing the ClassAd, then run the script every five minutes with
+cron. The script should probably update the CurMatches variable if you
+want to restrict the number of grid jobs that can be submitted at one
+time. 
+
+For \Condor{advertise} you will need to specify UPDATE\_STARTD\_AD for
+the update command. For example, if your ClassAd is specified in a
+file named ``grid-ad'' you would do:
+
+\footnotesize
+\begin{verbatim}
+    condor_advertise UPDATE_STARTD_AD grid-ad
+\end{verbatim}
+\normalsize
+
+\Condor{advertise} usually uses UDP to transmit your ClassAd. In
+wide-area networks, this may be insufficient. You can use TCP by
+specifying the ``-tcp'' option. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Submitting Condor-G jobs that use matchmaking}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Submitting a job to Condor-G that requires matchmaking is
+straightforward. Instead of specifying a particular scheduler with
+globussheduler like this:
+
+\footnotesize
+\begin{verbatim}
+globusscheduler = grid.example.com/jobmanager
+\end{verbatim}
+\normalsize
+
+you instead specify requirements and tell Condor-G where to find the
+gatekeeper URL in the grid site ClassAd:
+
+\footnotesize
+\begin{verbatim}
+globusscheduler = $$(gatekeeper_url)
+requirements    = true
+\end{verbatim}
+\normalsize
+
+This will allow to run at any grid site, and will extract the
+gatekeeper\_url attribute from the ClassAd. There is no magic meaning
+behind gatekeeper\_url---you could use GatekeeperContactString if you
+desired, as long as it is the same in both the job description and the
+grid site ClassAd. 
+
+The requirements specified here are a bit simple. Perhaps you only
+want to run at a site that has the Bamboozle software installed, and
+the sites that have it installed specify ``HaveBamboozle = True'', as
+described above. A complete job description may look like this:
+
+\footnotesize
+\begin{verbatim}
+universe        = globus
+executable      = analyze_bamboozle_data
+output          = aaa.$(Cluster).out
+error           = aaa.$(Cluster).err
+log             = aaa.log
+globusscheduler = $$(gatekeeper_url)
+requirements    = HaveBamboozle == True
+leave_in_queue  = jobstatus == 4
+queue
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Advanced usage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+What if a job fails to run at a grid site due to an error? It will be
+returned to the queue, and Condor will attempt to match it and
+re-run it at another site. Condor isn't very clever about avoiding
+sites that may be bad, but you can give it some assistance. Let's say
+that you want to avoid running at the last grid site you ran at. You
+could add this to your job description:
+
+\footnotesize
+\begin{verbatim}
+match_list_length = 1
+Rank              = TARGET.Name != LastMatchName0
+\end{verbatim}
+\normalsize
+
+This will prefer to run at a grid site that was not just tried, but it
+will allow the job to be run there if there is no other option. 
+
+When you specify match\_list\_length, you provide an integer N, and
+Condor will keep track of the last N matches. The oldest match will be
+LastMatchName0, and next oldest will be LastMatchName1, and so on. (See
+the \Condor{submit} manual page for more details.) The Rank expression
+allows you to specify a numerical ranking for different matches. When
+combined with match\_list\_length, you can prefer to avoid sites that
+you have already run at. 
+
+In addition, \Condor{submit} has two options to help you control
+Condor-G job resubmissions and rematching.  See globus\_resubmit and
+globus\_rematch in the \Condor{submit} manual page. These options are
+independent of match\_list\_length.
+
+There are some new attributes that will be added to the Job ClassAd,
+and may be useful to you when you write your rank, requirements,
+globus\_resubmit or globus\_rematch option. Please refer to
+Section~\ref{user-man-jobad} and read about the following option:
+
+\begin{itemize}
+\item NumJobMatches
+\item NumGlobusSubmits
+\item NumSystemHolds
+\item HoldReason
+\item ReleaseReason
+\item EnteredCurrentStatus
+\item LastMatchTime
+\item LastRejMatchTime
+\item LastRejMatchReason
+\end{itemize}
+
+If you are concerned about unknown or malicious grid sites reporting
+to your \Condor{collector}, you should use Condor's security options,
+documented in Section~\ref{sec:Security}.

@@ -261,10 +261,12 @@ In both cases, the \Attr{Requirements} expression specifies the correctness
 criterion that the match must meet, and the \Attr{Rank} expression specifies
 the desirability of the match (where higher numbers mean better matches).
 For example, a job ad may contain the following expressions:
+\footnotesize
 \begin{verbatim}
 Requirements = Arch=="SUN4u" && OpSys == "SOLARIS251"
 Rank         = TARGET.Memory + TARGET.Mips
 \end{verbatim}
+\normalsize
 In this case, the customer requires an UltraSparc computer running the Solaris 
 2.5.1 operating system.  Among all such computers, the customer prefers those
 with large physical memories and high MIPS ratings.  Since the \Attr{Rank} is
@@ -275,6 +277,7 @@ while satisfying other criteria.
 
 Similarly, owners of resources may place constraints and preferences on 
 their machines.  For example,
+\footnotesize
 \begin{verbatim}
     Friend        = Owner == "tannenba" || Owner == "wright"
     ResearchGroup = Owner == "jbasney" || Owner == "raman"
@@ -283,6 +286,7 @@ their machines.  For example,
                          KeyboardIdle > 15*60 )
     Rank          = Friend + ResearchGroup*10
 \end{verbatim}
+\normalsize
 The above policy states that the computer will never run jobs owned by
 users ``rival'' and ``riffraff,'' while the computer will always run a 
 job submitted by members of the research group.  Furthermore, jobs

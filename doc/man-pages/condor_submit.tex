@@ -89,6 +89,8 @@ If not specified, the default value
 of \File{/dev/null} is used for submission to a Unix machine.
 If not specified, input is ignored
 for submission to an NT machine.
+For globus universe jobs, \Opt{input} may be a URL that the Globus
+tool \Prog{globus\_url\_copy} understands.
 
 %%%%%%%%%%%%%%%%%%%
 %% output
@@ -106,6 +108,8 @@ for submission to an NT machine.
 More than one job should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
+For globus universe jobs, \Opt{output} may be a URL that the Globus
+tool \Prog{globus\_url\_copy} understands.
 
 %%%%%%%%%%%%%%%%%%%
 %% error
@@ -122,6 +126,8 @@ If not specified, error messages are ignored
 for submission to an NT machine.
 More than one job should not use the same error file, since
 this will cause one job to overwrite the errors of another.
+For globus universe jobs, \Opt{error} may be a URL that the Globus
+tool \Prog{globus\_url\_copy} understands.
 
 %%%%%%%%%%%%%%%%%%%
 %% arguments
@@ -210,7 +216,7 @@ page~\pageref{sec:file-transfer}.
 %% transfer_input_files
 %%%%%%%%%%%%%%%%%%%
 
-\item[transfer\_input\_files = $<$ file1, file2, file... $>$] 
+\item[transfer\_input\_files = $<$ file1,file2,file... $>$] 
 \index{submit commands!transfer\_input\_files}
 Lists all the files to be transferred into the 
 working directory for the job before the job is started.
@@ -231,13 +237,14 @@ page~\pageref{sec:file-transfer}.
 %% transfer_output_files
 %%%%%%%%%%%%%%%%%%%
 
-\item[transfer\_output\_files = $<$ file1, file2, file... $>$] 
+\item[transfer\_output\_files = $<$ file1,file2,file... $>$] 
 \index{submit commands!transfer\_output\_files}
 This command forms an explicit list of output files to be transferred
 back from the temporary working directory on the execute machine to
 the submit machine.
 Most of the time, there is no need to use this command.
-If \Opt{transfer\_output\_files} is not specified,
+Other than for globus universe jobs,
+if \Opt{transfer\_output\_files} is not specified,
 Condor will automatically transfer back all files in the job's
 temporary working directory which have been
 modified or created by the job.
@@ -245,10 +252,19 @@ This is usually the desired behavior.
 Explicitly listing output files is typically only done when the job creates
 many files, and the user wants to keep a subset of
 those files. 
+If there are multiple files, they must be delimited with commas.
 \Warn Do not specify \Opt{transfer\_output\_files} in the
 submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what
 the job produces.
+
+For globus universe jobs,
+to have files other than standard output and standard error transferred
+from the execute machine back to the submit machine,
+do use \Opt{transfer\_output\_files}, listing
+all files to be transferred.
+These files are found on the execute machine in the
+working directory of the job.
 
 For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on
@@ -383,9 +399,13 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-This expression is available for the vanilla and java universes.
-It is additionally available, when submitted from a Unix machine,
-for the standard universe.
+This expression is available for the vanilla and java universes.  It
+is additionally available, when submitted from a Unix machine, for the
+standard universe.  Note that the schedd, by default, only checks
+these periodic expressions once every 300 seconds.  The period of
+these evaluations can be adjusted by setting the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% on_exit_hold
@@ -428,8 +448,10 @@ for the standard universe.
 
 \item[periodic\_remove = $<$ClassAd Boolean Expression$>$]
 \index{submit commands!periodic\_remove}
-This expression is checked every 20 seconds (currently non-configurable),
-and if it becomes \Expr{True}, the job is removed from the queue.
+This expression is checked periodically at an interval of
+the number of seconds set by
+the configuration variable \Macro{PERIODIC\_EXPR\_INTERVAL}.
+If it becomes \Expr{True}, the job is removed from the queue.
 If unspecified, the default value is \Expr{False}.
 
 See the Examples section for an example of a \AdAttr{periodic\_*}
@@ -445,16 +467,21 @@ if the two describe conflicting actions.
 
 This expression is available for the vanilla and java universes.
 It is additionally available, when submitted from a Unix machine,
-for the standard universe.
+for the standard universe.  Note that the schedd, by default, only checks
+periodic expressions once every 300 seconds.  The period of
+these evaluations can be adjusted by setting the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
 %%%%%%%%%%%%%%%%%%%
 %% periodic_hold
 %%%%%%%%%%%%%%%%%%%
 
-\item[periodic\_hold = $<$ClassAd Boolean Expression$>$] This expression
+\item[periodic\_hold = $<$ClassAd Boolean Expression$>$]
 \index{submit commands!periodic\_hold}
-is checked every 20 seconds(currently non-configurable),
-and if it becomes true, the job will be placed on hold.
+This expression is checked periodically at an interval of
+the number of seconds set by
+the configuration variable \Macro{PERIODIC\_EXPR\_INTERVAL}.
+If it becomes true, the job will be placed on hold.
 If unspecified, the default value is \Expr{False}.
 
 See the Examples section for an example of a \AdAttr{periodic\_*}
@@ -467,15 +494,20 @@ precedence over a \AdAttr{*\_remove} expressions.
 
 This expression is available for the vanilla and java universes.
 It is additionally available, when submitted from a Unix machine,
-for the standard universe.
+for the standard universe.  Note that the schedd, by default, only checks
+periodic expressions once every 300 seconds.  The period of
+these evaluations can be adjusted by setting the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
 %%%%%%%%%%%%%%%%%%%
 %% periodic_release
 %%%%%%%%%%%%%%%%%%%
 
-\item[periodic\_release = $<$ClassAd Boolean Expression$>$] This expression
+\item[periodic\_release = $<$ClassAd Boolean Expression$>$]
 \index{submit commands!periodic\_release}
-is reevaluated every 20 seconds(currently non-configurable)
+This expression is checked periodically at an interval of
+the number of seconds set by
+the configuration variable \Macro{PERIODIC\_EXPR\_INTERVAL}
 while the job is in the Hold state.
 If the expression becomes \Expr{True}, the job will be released.
 
@@ -492,6 +524,15 @@ If the expression becomes \Expr{True}, the job will be released.
 %default) or more often as needed.
 
 % what universes (other than universe=globus) does this apply to?
+
+This expression is available for the vanilla and java universes.
+It is additionally available, when submitted from a Unix machine,
+for the standard universe.  Note that the \Condor{schedd} daemon,
+by default, only checks
+periodic expressions once every 300 seconds.  The period of
+these evaluations can be adjusted by setting the
+\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% priority
@@ -559,6 +600,7 @@ will skip this step.  Defaults to \Expr{True}.
 
 \item[getenv = $<$True \Bar\ False$>$] If \Opt{getenv} is set to
 \index{submit commands!getenv}
+\index{environment variables!copying current environment}
 \Expr{True}, then \Condor{submit} will copy all of the user's current
 shell environment variables at the time of job submission into the job
 ClassAd. The job will therefore execute with the same set of environment
@@ -585,6 +627,7 @@ Defaults to false.
 
 \item[environment = $<$parameter\_list$>$] List of environment variables
 \index{submit commands!environment}
+\index{environment variables!setting, for a job}
 of the form :
 \begin{verbatim}
         <parameter>=<value>
@@ -1034,9 +1077,10 @@ Defaults to \Expr{False}.
 
 \item[match\_list\_length = $<$integer value$>$] 
 \index{submit commands!match\_list\_length}
+Defaults to the value zero (0).
 When \Opt{match\_list\_length} is defined with an integer value
 greater than zero (0),
-attributes are placed in the job ClassAd.
+attributes are inserted into the job ClassAd.
 The maximum number of attributes defined is given by the integer
 value.
 The job ClassAds introduced are given as
@@ -1055,6 +1099,11 @@ with \verb@LastMatchName1@ becoming \verb@LastMatchName2@,
 and \verb@LastMatchName0@ being set by the most recent
 value of the \Attr{Name} attribute.
 
+An intended use of 
+these job attributes is in the requirements expression.
+The requirements can allow a job to prefer a match with either the same
+or a different resource than a previous match.
+
 %%%%%%%%%%%%%%%%%%%
 %% transfer_output
 %%%%%%%%%%%%%%%%%%%
@@ -1069,6 +1118,7 @@ If \Expr{False}, no transfer takes place (from the remote machine
 to submit machine),
 and the name of the file is given
 by the \Opt{output} command.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_input
@@ -1083,6 +1133,7 @@ The name of the file that is transferred is given by the
 If \Expr{False}, then the job's input is taken from a pre-staged
 file on the remote machine, and
 the name of the file is given by the \Opt{input} command.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_error
@@ -1098,6 +1149,7 @@ If \Expr{False}, no transfer takes place (from the remote machine
 to submit machine),
 and the name of the file is given
 by the \Opt{error} command.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_executable
@@ -1112,6 +1164,7 @@ does not transfer the executable over.
 This is useful if you have already pre-staged your
 executable and wish to have Condor behave more like rsh.
 Defaults to \Expr{True}.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% remote_initialdir
@@ -1297,6 +1350,7 @@ On the machine, if the attribute \Attr{input\_file\_path} is not
 defined, then the path \File{/usr/foo} is used instead.
 
 \index{\$ENV!in submit description file}
+\index{submit commands!\$ENV macro}
 \index{environment variables!in submit description file}
 The environment macro, \$ENV, allows the evaluation of an environment
 variable to be used in setting a submit description file command.
@@ -1312,6 +1366,18 @@ log = $ENV(HOME)/jobs/logfile
 \end{verbatim}
 The environment variable is evaluated when the submit description
 file is processed.
+
+\index{\$RANDOM\_CHOICE()!in submit description file}
+\index{submit commands!\$RANDOM\_CHOICE() macro}
+\index{RANDOM\_CHOICE() macro!use in submit description file}
+The \$RANDOM\_CHOICE macro allows a random choice to be made
+from a given list of parameters at submission time.
+For an expression, if some randomness needs to be generated,
+the macro may appear as
+\begin{verbatim} 
+    $RANDOM_CHOICE(0,1,2,3,4,5,6)
+\end{verbatim}
+When evaluated, one of the parameters values will be chosen. 
 
 \item[Comments] Blank lines and lines beginning with a 
 pound sign

@@ -28,8 +28,8 @@ This section details the priorities.
 
 For accounting purposes, each user is identified by username@uid\_domain.
 Each user is assigned a priority value even if submitting jobs from
-different machines in the same domain, or even submit from multiple machines 
-in the different domains.
+different machines in the same domain, or even if submitting from multiple
+machines in the different domains.
 
 The numerical priority value assigned to a user is inversely related to the 
 \emph{goodness} of the priority.
@@ -121,15 +121,15 @@ be useful:
 
 The priority boost factors for individual users can be set with the 
 \Opt{setfactor} option of \Condor{userprio}.
-Details may be found in the \Condor{submit} manual page 
+Details may be found in the \Condor{userprio} manual page 
 on page~\pageref{man-condor-userprio}.
 
 \subsection{Priorities and Preemption}
-\index{preemption!of resources}
+\index{preemption!priority}
 Priorities are used to ensure that users get their fair share of resources.  
 The priority values are used at allocation time.
-In addition, Condor preempts machines (by performing a checkpoint and
-vacate) and reallocates them to maintain priority standing.
+In addition, Condor preempts machine claims and reallocates them when
+conditions change.
 
 To ensure that preemptions do not lead to \Term{thrashing},
 a \Macro{PREEMPTION\_REQUIREMENTS} expression is defined to specify the
@@ -138,6 +138,11 @@ It is usually defined to deny preemption if a current running job
 has been running for a relatively short period of time.
 This effectively limits the number of preemptions per resource per time
 interval.
+
+Note that \Macro{PREEMPTION\_REQUIREMENTS} only applies to preemptions
+due to user priority.  It does not have any effect if the machine rank
+expression prefers a different job, or if the startd policy expression
+causes the job to vacate due to other activity on the machine.
 
 \subsection{Priority Calculation}
 This section may be skipped if the reader so feels, but for the curious,

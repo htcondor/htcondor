@@ -182,9 +182,11 @@ version number will change.
 Complete propagation should occur in five to ten minutes.
 
 The command
+\footnotesize
 \begin{verbatim}
 condor_status -format "%s" Machine -format " %s\n" CondorVersion
 \end{verbatim}
+\normalsize
 gives a single line of information about each machine in the pool,
 containing only the machine name and version of Condor it is
 running.
@@ -257,12 +259,15 @@ One common error category are communication errors.
 Condor daemon log files report a failure to bind.
 For example:
 
+\footnotesize
 \begin{verbatim}
 (date and time) Failed to bind to command ReliSock
 \end{verbatim}
+\normalsize
 
 Or, the errors in the various log files may be of the form:
 
+\footnotesize
 \begin{verbatim}
 (date and time) Error sending update to collector(s)
 (date and time) Can't send end_of_message
@@ -272,12 +277,15 @@ Or, the errors in the various log files may be of the form:
 
 (date and time) Can't send EOM to the collector
 \end{verbatim}
+\normalsize
 
 This problem can also be observed by running \Condor{status}.
 It will give a message of the form:
+\footnotesize
 \begin{verbatim}
 Error:  Could not fetch ads --- error communication error
 \end{verbatim}
+\normalsize
 
 To solve this problem, understand that
 Condor uses the first network interface it sees on the machine.
@@ -294,6 +302,7 @@ CollectorLog file on the pool's
 your central manager right after it is started.  
 The contents will be of the form:
 
+\footnotesize
 \begin{verbatim}
 5/25 15:39:33 ******************************************************
 5/25 15:39:33 ** condor_collector (CONDOR_COLLECTOR) STARTING UP
@@ -303,6 +312,7 @@ The contents will be of the form:
 5/25 15:39:33 ******************************************************
 5/25 15:39:33 DaemonCore: Command Socket at <128.105.101.15:9618>
 \end{verbatim}
+\normalsize
 
 The last line tells the IP address and port the collector has
 bound to and is listening on.
@@ -316,7 +326,9 @@ sets which network interface Condor should use
 by adding the following parameter to the
 local Condor configuration file:
 
-\begin{verbatim}NETWORK_INTERFACE = machine-ip-address\end{verbatim}
+\begin{verbatim}
+NETWORK_INTERFACE = machine-ip-address
+\end{verbatim}
 
 Where \verb@machine-ip-address@ is the IP address of the interface you wish
 Condor to use.
@@ -362,7 +374,11 @@ To specify that a given machine should only run certain user's jobs,
 for example, you could add the following Requirements entry to the
 machine's Condor configuration file:
 
-\begin{verbatim}Requirements = (RemoteUser == "userfoo@baz.edu" || RemoteUser == "userbar@baz.edu" )\end{verbatim}
+\footnotesize
+\begin{verbatim}
+Requirements = (RemoteUser == "userfoo@baz.edu" || RemoteUser == "userbar@baz.edu")
+\end{verbatim}
+\normalsize
 
 To configure multiple machines to do so, simply create a common
 configuration file containing this requirement for them to share.
@@ -379,12 +395,18 @@ machines that have that software.
 To tell the machines to report the presence of special software, first
 add a parameter to their configuration files like so:
 
-\begin{verbatim}HAS_MY_SOFTWARE = True\end{verbatim}
+\begin{verbatim}
+HAS_MY_SOFTWARE = True
+\end{verbatim}
 
 And then, if there are already STARTD\_EXPRS defined in that file, add
 HAS\_MY\_SOFTWARE to them, or, if not, add the line:
 
-\begin{verbatim}STARTD_EXPRS = HAS_MY_SOFTWARE, $(STARTD_EXPRS)\end{verbatim}
+\footnotesize
+\begin{verbatim}
+STARTD_EXPRS = HAS_MY_SOFTWARE, $(STARTD_EXPRS)
+\end{verbatim}
+\normalsize
 
 \Note For these changes to take effect, each \Condor{startd} you update
 needs to be reconfigured with \Condor{reconfig} -startd.
@@ -392,7 +414,11 @@ needs to be reconfigured with \Condor{reconfig} -startd.
 Next, to tell your jobs to only run on machines that have this
 software, add a requirements statement to their submit files like so:
 
-\begin{verbatim}Requirements = (HAS_MY_SOFTWARE =?= True)\end{verbatim}
+\footnotesize
+\begin{verbatim}
+Requirements = (HAS_MY_SOFTWARE =?= True)
+\end{verbatim}
+\normalsize
 
 \Note Be sure to use =?= instead of == so that if a machine doesn't have
 the HAS\_MY\_SOFTWARE parameter defined, the job's Requirements
@@ -416,6 +442,41 @@ page~\pageref{sec:Policy-Examples}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure Condor such that all machines do not produce checkpoints at the same time?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:randomchoiceusage}
+\index{\$RANDOM\_CHOICE()}
+\index{RANDOM\_CHOICE() macro!use in configuration}
+If machines are configured to produce checkpoints at fixed intervals,
+a large number of jobs are queued (submitted) at the same time,
+and these jobs start on machines at about the same time,
+then all these jobs will be trying to write out their checkpoints
+at the same time.
+It is likely to cause rather poor performance during this burst of
+writing.
+
+The \MacroU{RANDOM\_CHOICE()} macro can help in this instance.
+Instead of defining \MacroNI{PERIODIC\_CHECKPOINT} to be a fixed
+interval, each machine is configured to randomly choose 
+one of a set of intervals.
+For example, to set a machine's interval for producing checkpoints
+to within the range of two to three hours, use the following
+configuration:
+\footnotesize
+\begin{verbatim}
+PERIODIC_CHECKPOINT = $(LastCkpt) > ( 2 * $(HOUR) + \
+      $RANDOM_CHOICE(0,10,20,30,40,50,60) * $(MINUTE) )
+\end{verbatim}
+\normalsize
+
+The interval used is set at configuration time.
+Each machine is randomly assigned a different interval 
+(2 hours, 2 hours and 10 minutes, 2 hours and 20 minutes, etc.)
+at which to produce checkpoints.
+Therefore, the various machines will not all attempt to
+produce checkpoints at the same time.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why will the \Condor{master} not run when a local configuration file is missing?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -425,9 +486,11 @@ but the specified file does not exist,
 the \Condor{master} will not start up, and it prints a variation
 of the following example message.
 
+\footnotesize
 \begin{verbatim}
 ERROR: Can't read config file /mnt/condor/hosts/bagel/condor_config.local
 \end{verbatim}
+\normalsize
 
 This is not a bug; it is a feature!
 Condor has always worked this way on purpose.
@@ -485,7 +548,9 @@ want to be notified every time a job successfully completes, only when
 a job experiences an error.
 To do this, include a line in your submit file like the following:
 
-\begin{verbatim}Notification = Error\end{verbatim}
+\begin{verbatim}
+Notification = Error
+\end{verbatim}
 
 See the Notification parameter in the \Condor{q} man page on
 page~\pageref{man-condor-submit-notification} of this manual for more
@@ -537,11 +602,13 @@ so it contains all the routines it needs.
 \index{job!not running, why?}
 \underline{Problems like the following} are often reported to us:
 
+\footnotesize
 \begin{verbatim}
 I have submitted 100 jobs to my pool, and only 18 appear to be
 running, but there are plenty of machines available.  What should I
 do to investigate the reason why this happens?
 \end{verbatim}
+\normalsize
 
 Start by following these steps to understand the problem:
 
@@ -575,9 +642,13 @@ with statements within the log file produced by the \Condor{schedd}
 daemon (given by \MacroU{SCHEDD\_LOG})
 that say the following:
 
+\footnotesize
 \begin{verbatim}
-Swap Space Estimate Reached, 0 jobs matched, 13 jobs idle
+2/3 17:46:53 Swap space estimate reached! No more jobs can be run!
+12/3 17:46:53     Solution: get more swap space, or set RESERVED_SWAP = 0
+12/3 17:46:53     0 jobs matched, 1 jobs idle
 \end{verbatim}
+\normalsize
 
 Condor computes the total swap space on your submit machine.
 It then tries to limit the total number of jobs it
@@ -601,9 +672,11 @@ and it will not run the submitted jobs.
 To see how much swap space Condor thinks a given machine has, use
 the output of a \Condor{status} command of the following form:
 
+\footnotesize
 \begin{verbatim}
 condor_status -schedd [hostname] -long | grep VirtualMemory
 \end{verbatim}
+\normalsize
 
 If the value listed is 0, then this is what is confusing Condor.
 There are two ways to fix the problem:
@@ -754,19 +827,23 @@ configuration file) has been true, or 0 if \MacroUNI{CpuBusy} is false.
 \MacroUNI{CpuBusy} is usually defined in terms of non-Condor load.
 These are the default settings:
 
+\footnotesize
 \begin{verbatim}
 NonCondorLoadAvg    = (LoadAvg - CondorLoadAvg)
 HighLoad            = 0.5
 CPUBusy             = ($(NonCondorLoadAvg) >= $(HighLoad))
 \end{verbatim}
+\normalsize
 
 To take advantage of \AdAttr{CpuBusyTime}, you can use it in your
 \Macro{SUSPEND}\ expression. 
 
 Here is an example:
+\footnotesize
 \begin{verbatim}
 SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
 \end{verbatim}
+\normalsize
 
 The above policy says to only suspend the job if the cpu has been busy
 with non-Condor load at least three minutes and it has been at least 90
@@ -890,9 +967,11 @@ When you submit your job, Condor creates or extends the requirements
 for your job. In particular, it adds a requirement that you job must
 run on a machine with sufficient memory:
 
+\footnotesize
 \begin{verbatim}
 Requirements = ... ((Memory * 1024) >= ImageSize) ...
 \end{verbatim}
+\normalsize
 
 (Note that memory is the execution machine's memory in kilobytes while
 ImageSize is in bytes). When your application is threaded, the
@@ -922,6 +1001,33 @@ runs on machines that have insufficient memory.
 In addition, if you have modified your machine policies to preempt
 jobs when they get big a ImageSize, you will need to change those
 policies.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does the time output from \Condor{status} appear
+as [?????] ? }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{timing information!incorrect}
+\index{clock skew}
+\index{skew in timing information}
+
+Condor collects timing information for a large variety of uses.
+Collection of the data relies on accurate times.
+Being a distributed system, clock skew among machines causes 
+errant timing calculations.
+Values can be reported too large or too small, with the possibility
+of calculating negative timing values.
+
+This problem may be seen by the user when looking at the output
+of \Condor{status}.
+If the \Opt{ActivityTime} field appears
+as [?????],
+then this calculated statistic was negative.
+\Condor{status} recognizes that a negative amount of time will
+be nonsense to report, and instead displays this string. 
+
+The solution to the problem is to synchronize the clocks on
+these machines.
+An administrator can do this using a tool such as \Prog{ntp}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -968,10 +1074,8 @@ NT or Unix machines.}
 \subsection*{What versions of Windows will Condor run on?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor does run under Windows 2000 Professional and Server and
-also under Windows XP.
-
-Personal Condor also works.
+See Section~\ref{sec:Availability}, on
+page~\pageref{sec:Availability}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1019,12 +1123,14 @@ for usage details.
 
 The error message that Condor gives if a user has not stashed a
 password is of the form:
+\footnotesize
 \begin{verbatim}
 ERROR: No credential stored for username@machinename
 
         Correct this by running:
 	        condor_store_cred add
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Jobs submitted from Unix to execute on NT do not work properly.}
@@ -1059,7 +1165,9 @@ interfaces in the Control Panel, or explicitly set which network
 interface Condor should use by adding the following parameter to your
 Condor config file:
 
-\begin{verbatim}NETWORK_INTERFACE = ip-address\end{verbatim}
+\begin{verbatim}
+NETWORK_INTERFACE = ip-address
+\end{verbatim}
 
 Where ``ip-address'' is the IP address of the interface you wish
 Condor to use.
@@ -1125,12 +1233,14 @@ with a login and password
 
 Example: you want to copy a file off of a server before running it....
 
+\footnotesize
 \begin{verbatim}
    @echo off
    net use \\myserver\someshare MYPASSWORD /USER:MYLOGIN
    copy \\myserver\someshare\my-program.exe
    my-program.exe
 \end{verbatim}
+\normalsize
 
 The idea here is to simply authenticate to the file server with a different 
 login than the temporary Condor login.  This is easy with the "net use" 
@@ -1502,6 +1612,7 @@ and Globus does not know how to locate it, when you see either of the
 following error messages.
 
 \underline{first error message}
+\footnotesize
 \begin{verbatim}
 % globus-job-run \
   globus-gate-keeper.example.com/jobmanager-condor /bin/date
@@ -1514,8 +1625,10 @@ CONDOR_CONFIG to point to a valid config file, or put a
 GRAM Job failed because the job failed when the job manager
 attempted to run it (error code 17)
 \end{verbatim}
+\normalsize
 
 \underline{second error message}
+\footnotesize
 \begin{verbatim}
 % globus-job-run \
    globus-gate-keeper.example.com/jobmanager-condor /bin/date
@@ -1524,6 +1637,7 @@ ERROR: Can't find address of local schedd GRAM Job failed
 because the job failed when the job manager attempted to run it
 (error code 17)
 \end{verbatim}
+\normalsize
 
 As described in
 section~\ref{sec:Preparing-to-Install}, 
@@ -1547,12 +1661,14 @@ replace it with a minimal shell script that sets
 \Env{CONDOR\_CONFIG} and then starts \Prog{globus-gatekeeper}.
 Something like the following should work:
 
+\footnotesize
 \begin{verbatim}
   #! /bin/sh
   CONDOR_CONFIG=/path/to/condor_config
   export CONDOR_CONFIG
   exec /path/to/globus/sbin/globus-gatekeeper "$@"
 \end{verbatim}
+\normalsize
 \item 
 If you are starting \Prog{globus-gatekeeper} using \Prog{inetd},
 \Prog{xinetd}, or a similar program,
@@ -1562,14 +1678,17 @@ to set the environment.
 This example does this;
 the example is shown on multiple lines,
 but it will be all on one line in the \Prog{inetd} configuration. 
+\footnotesize
 \begin{verbatim}
 globus-gatekeeper stream tcp nowait root /usr/bin/env
 env CONDOR_CONFIG=/path/to/condor_config
 /path/to/globus/sbin/globus-gatekeeper
 -co /path/to/globus/etc/globus-gatekeeper.conf
 \end{verbatim}
+\normalsize
 If you're using \Prog{xinetd}, add an env setting
 something like the following:
+\footnotesize
 \begin{verbatim}
 service gsigatekeeper
 {
@@ -1587,6 +1706,7 @@ service gsigatekeeper
     wait = no
 }
 \end{verbatim}
+\normalsize
 
 \end{enumerate}
 
@@ -1625,9 +1745,11 @@ and then vacates the job.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \underline{One likely error message} within the collector log of the form
+\footnotesize
 \begin{verbatim}
 DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 0 (UPDATE_STARTD_AD)
 \end{verbatim}
+\normalsize
 indicates a permissions problem.
 The \Condor{startd} daemons do not have write permission to the
 \Condor{collector} daemon.
@@ -1678,16 +1800,20 @@ to
  HOSTALLOW_WRITE = *.your.domain.com
 \end{verbatim}
 or possibly
+\footnotesize
 \begin{verbatim}
  HOSTALLOW_WRITE = condor.your.domain.com, foo.your.domain.com, \
  bar.your.domain.com 
 \end{verbatim}
+\normalsize
 
 
 \underline{Another likely error message} within the collector log of the form
+\footnotesize
 \begin{verbatim}
 DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 5 (QUERY_STARTD_ADS)
 \end{verbatim}
+\normalsize
 indicates a similar problem as above, but read permission
 is the problem (as opposed to write permission).
 Use the solutions given above.
@@ -1709,7 +1835,9 @@ versions of Condor.
 To subscribe, e-mail \Email{majordomo@cs.wisc.edu} with a message body
 of:
 
-\begin{verbatim}subscribe condor-world\end{verbatim}
+\begin{verbatim}
+subscribe condor-world
+\end{verbatim}
 
 
 

@@ -1,0 +1,84 @@
+\begin{ManPage}{\label{man-condor-fetchlog}\Condor{fetchlog}}{1}
+{Retrieve a log file that is located on another computer}
+
+\Synopsis 
+\SynProg{\Condor{fetchlog}}
+\ToolArgsBase
+
+\SynProg{\Condor{fetchlog}}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
+\ToolArgsAffect
+\Arg{machine-name}
+\Arg{log-file-name}
+
+\index{Condor commands!condor\_fetchlog}
+\index{condor\_fetchlog command}
+
+\Description 
+
+\Condor{fetchlog} contacts Condor running on the machine specified
+by \Arg{machine-name}, and asks it
+to return a log file from that machine. This simplifies the
+retrieval of log file by bypassing the need 
+to log on to the machine in order to get the log file. 
+
+For security purposes of authentication and authorization, 
+this command requires an administrator's level of access.
+See section~\ref{sec:Config-Security} 
+on page~\pageref{sec:Config-Security} for more details about Condor's
+security mechanisms.
+
+The \Arg{log-file-name} argument identifies the log file to retrieve.
+It is defined by the name
+given in the configuration file, without the "\_LOG" suffix.
+For \MacroNI{COLLECTOR\_LOG}, it is \MacroNI{COLLECTOR}.
+The complete list of log files are defined by
+\begin{verbatim}
+  MASTER
+  COLLECTOR
+  NEGOTIATOR
+  NEGOTIATOR_MATCH
+  SCHEDD
+  SHADOW
+  STARTD
+  STARTER
+\end{verbatim}
+
+\begin{Options}
+    \ToolArgsBaseDesc
+    \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {Specify a pool by giving the central manager's host name
+    and an optional port number}
+    \ToolArgsAffectDesc
+\end{Options}
+
+\Examples
+To get the \Condor{negotiator} daemon's log from a host named 
+\File{head.example.com} from within the current pool:
+\begin{verbatim}
+condor_fetchlog head.example.com NEGOTIATOR
+\end{verbatim}
+
+To get the \Condor{startd} daemon's log from a host named
+\File{execute.example.com} from within the current pool:
+\begin{verbatim}
+condor_fetchlog execute.example.com STARTD
+\end{verbatim}
+
+This command requested the \Condor{startd} daemon's log from the
+\Condor{master}.
+If the \Condor{master} has crashed or is unresponsive,
+ask another daemon
+running on that computer to return the log.
+For example, ask the \Condor{startd} daemon to return the
+\Condor{master}'s log:
+
+\begin{verbatim}
+condor_fetchlog -startd execute.example.com MASTER
+\end{verbatim}
+
+\ExitStatus
+\Condor{fetchlog} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

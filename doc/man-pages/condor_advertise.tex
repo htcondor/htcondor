@@ -4,6 +4,7 @@
 \ToolArgsBase
 \oOptArg{-pool}{centralmanagerhostname[:portname]}
 \oOpt{-debug}
+\oOpt{-tcp}
 \Arg{update-command}
 \Arg{classad-filename}
 
@@ -37,6 +38,8 @@ The \Arg{update-command} may be one of the following strings:
             giving the central manager's hostname and an optional port
 	    number.  The default is the
 	    \MacroNI{COLLECTOR\_HOST} specified in the configuration file.}
+    \OptItem{\Opt{-tcp}}{Use TCP for communication. Without this
+        option, UDP is used.}
     \OptItem{\Opt{-debug}}{Print debugging information as the command
             executes.}
 \end{Options}
