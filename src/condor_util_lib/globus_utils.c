@@ -72,6 +72,18 @@ x509_error_string()
 	return _globus_error_message;
 }
 
+/* Return the path to the X509 proxy file as determined by GSI/SSL.
+ * Returns NULL if the filename can't be determined. Otherwise, the
+ * string returned must be freed with free().
+ */
+char *
+get_x509_proxy_filename()
+{
+	char *proxy_file = NULL;
+	proxy_get_filenames(NULL, 1, NULL, NULL, &proxy_file, NULL, NULL);
+	return proxy_file;
+}
+
 /* Return the number of seconds until the supplied proxy
  * file will expire.  
  * On error, return -1.    - Todd <tannenba@cs.wisc.edu>

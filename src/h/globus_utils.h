@@ -234,6 +234,8 @@ typedef enum
 
 char *GlobusJobStatusName( int status );
 
+char *get_x509_proxy_filename();
+
 int check_x509_proxy( char *proxy_file );
 
 int x509_proxy_seconds_until_expire( char *proxy_file );
