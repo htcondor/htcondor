@@ -802,7 +802,12 @@ UserProc::send_sig( int sig )
 
 	set_condor_euid();
 
-	dprintf( D_ALWAYS, "Sent signal %s to user job %d\n", SigNames.get_name(sig), pid);
+	if (SigNames.get_name(sig) != NULL)
+		dprintf( D_ALWAYS, "Sent signal %s to user job %d\n",
+				SigNames.get_name(sig), pid);
+	else
+		dprintf( D_ALWAYS, "Unknown signum %d sent to user job %d\n",
+				sig, pid);
 }
 
 void

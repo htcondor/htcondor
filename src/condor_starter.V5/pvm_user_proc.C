@@ -307,8 +307,12 @@ void PVMUserProc::execute()
 void PVMUserProc::send_sig( int sig )
 {
 
-	dprintf( D_ALWAYS, "Sending Signal %s to PVM task t%x\n", 
-			SigNames.get_name(sig), pvm_tid );
+	if (SigNames.get_name(sig) != NULL)
+		dprintf( D_ALWAYS, "Sending Signal %s to PVM task t%x\n", 
+				SigNames.get_name(sig), pvm_tid );
+	else
+		dprintf( D_ALWAYS, "Sending unknown signal (%d) to PVM task t%x\n",
+				sig, pvm_tid );
 	pvm_sendsig( pvm_tid, sig );
 }
 
