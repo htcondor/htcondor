@@ -457,6 +457,9 @@ public:
 	virtual int end_of_message() = 0;
 //	int eom() { return end_of_message(); }
 
+	///
+	virtual void allow_one_empty_message();
+
 	/// set a timeout for an underlying socket
 	virtual int timeout(int) = 0;
 
@@ -559,6 +562,8 @@ protected:
         bool                encrypt_;        // Encryption mode
 	stream_code	    _code;
 	stream_coding	    _coding;
+
+	int allow_empty_message_flag;
 };
 
 
