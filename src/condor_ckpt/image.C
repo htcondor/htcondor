@@ -70,12 +70,12 @@ void Suicide();
 static void find_stack_location( RAW_ADDR &start, RAW_ADDR &end );
 static int SP_in_data_area();
 static size_t stack_to_save();
-extern "C" void EarlyExit();
 extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 
 Image MyImage;
 static jmp_buf Env;
 static RAW_ADDR SavedStackLoc;
+int InRestart = FALSE;
 
 
 void
@@ -157,6 +157,7 @@ _condor_prestart( int syscall_mode )
 		// Install initial signal handlers
 	_install_signal_handler( SIGTSTP, (SIG_HANDLER)Checkpoint );
 	_install_signal_handler( SIGUSR1, (SIG_HANDLER)Suicide );
+
 }
 
 extern "C" void
@@ -614,6 +615,12 @@ Checkpoint( int sig, int code, void *scp )
 {
 	int		scm;
 
+		// No sense trying to do a checkpoint in the middle of a
+		// restart, just quit leaving the current ckpt entact.
+	if( InRestart ) {
+		Suicide();
+	}
+
 	if( MyImage.GetMode() == REMOTE ) {
 		SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
 	} else {
@@ -624,6 +631,7 @@ Checkpoint( int sig, int code, void *scp )
 	dprintf( D_ALWAYS, "Got SIGTSTP\n" );
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
 		dprintf( D_ALWAYS, "About to save MyImage\n" );
+		InRestart = TRUE;	// not strictly true, but needed in our saved data
 		SaveFileState();
 		MyImage.Save();
 		MyImage.Write();
@@ -640,14 +648,10 @@ Checkpoint( int sig, int code, void *scp )
 		} else {
 			SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		}
-		syscall( SYS_write, 1, "About to restore files state\n", 29 );
 		RestoreFileState();
-		syscall( SYS_write, 1, "Done restoring files state\n", 27 );
-
-			// set up to catch SIGTSTP and do a checkpoint
-		_install_signal_handler( SIGTSTP, (SIG_HANDLER)Checkpoint );
 
 		SetSyscalls( scm );
+		InRestart = FALSE;
 		syscall( SYS_write, 1, "About to return to user code\n", 29 );
 		return;
 	}
@@ -673,9 +677,7 @@ init_image_with_file_descriptor( int fd )
 void
 restart( )
 {
-		// No sense trying to do a checkpoint in the middle of a restart,
-		// if we're interuppted, just keep the current checkpoint.
-	_install_signal_handler( SIGTSTP, (SIG_HANDLER)EarlyExit );
+	InRestart = TRUE;
 
 	MyImage.Read();
 	MyImage.Restore();
@@ -718,7 +720,6 @@ void
 terminate_with_sig( int sig )
 {
 	sigset_t	mask;
-	struct sigaction	act;
 	pid_t		my_pid;
 
 		// Make sure all system calls handled "straight through"
@@ -726,13 +727,7 @@ terminate_with_sig( int sig )
 
 		// Make sure we have the default action in place for the sig
 	if( sig != SIGKILL && sig != SIGSTOP ) {
-		act.sa_handler = (SIG_HANDLER)SIG_DFL;
-		sigemptyset( &act.sa_mask );
-		act.sa_flags = 0;
-		errno = 0;
-		if( sigaction(sig,&act,0) < 0 ) {
-			EXCEPT( "sigaction" );
-		}
+		_install_signal_handler( sig, (SIG_HANDLER)SIG_DFL );
 	}
 
 		// Send ourself the signal
@@ -826,10 +821,3 @@ _condor_save_stack_location()
 	SavedStackLoc = stack_start_addr();
 }
 }
-
-extern "C" void
-EarlyExit()
-{
-		terminate_with_sig( SIGKILL );
-}
-
