@@ -67,6 +67,7 @@
 
 #define CCompiler cc
 #define CPlusCompiler g++
+#define StaticFlag -static
 #define UnixName /hp-ux				/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd
 #define PsAllFlag -ef				/* "Ps" flag when you want everything */
