@@ -129,7 +129,7 @@ file_info_node* FileInformation::AddFileInfo(struct in_addr machine_IP,
       tail = n;
     }
   num_files++;
-  n->lock = EXCLUSIVE_LOCK;
+  n->lock = UNLOCKED;
   return n;
 }
 
