@@ -63,9 +63,9 @@
 
 #elif defined(OSF1)
 
-	extern "C" int brk( char * );
+	extern "C" int brk( void * );
 #	include <sys/types.h>
-	extern "C" void *sbrk( ssize_t );
+	extern "C" void *sbrk( int );
 	typedef void (*SIG_HANDLER)( int );
 #	define SETJMP _setjmp
 #	define LONGJMP _longjmp
