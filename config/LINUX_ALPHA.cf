@@ -25,3 +25,6 @@
 
 #undef HAS_PVM
 #define HAS_PVM NO
+
+#undef HAS_KERBEROS
+#define HAS_KERBEROS NO

@@ -20,6 +20,7 @@
 #define HAS_DYNAMIC_USER_JOBS	NO
 
 #define HAS_GLOBUS			YES
+#define KERBEROS_PATH		/usr/local
 
 #define UnixName /stand/vmunix		/* pathname of the system executable */
 

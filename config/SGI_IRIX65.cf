@@ -20,3 +20,6 @@
 
 /* For now, build a "clipped" version */
 #define IS_CLIPPED NO
+
+#undef HAS_KERBEROS
+#define HAS_KERBEROS NO
