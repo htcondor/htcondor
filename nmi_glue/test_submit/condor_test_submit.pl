@@ -121,15 +121,11 @@ sub generate_cmdfile() {
     print "++module is $module\n";
 
     my $cmdfile = "condor_cmdfile-$tag";
-    my $srcsfile = "condor_srcsfile-$tag";
     my $gluefile = "condor_test.src";
     my $runidfile = "input_build_runid.src";
 
     # generate the test glue file - may be symlinked eventually
     CondorGlue::makeFetchFile( $gluefile, $tag, "nmi_glue/test" );
-
-    # Generate the source code file
-    CondorGlue::makeFetchFile( $srcsfile, $tag, $module );
 
     # generate the runid input file
     open(RUNIDFILE, ">$runidfile") || 
