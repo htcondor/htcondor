@@ -6,9 +6,9 @@ $cmd = 'job_rsc_ftell_std.cmd';
 $testname = 'Ftell Test';
 
 @CondorTest::expected_output =
-( 'about to call job_rsc_ftell_std()', 
-  'job_rsc_ftell_std succeeds, return value = 0', 
-  'job_rsc_ftell_std succeeds, return value = 4' );
+( 'about to call ftell()', 
+  'ftell succeeds, return value = 0', 
+  'ftell succeeds, return value = 4' );
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );
