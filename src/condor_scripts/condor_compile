@@ -89,6 +89,7 @@ do
 		# Reset anything based off of the libdir by default
 		CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
 		CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
+		STATIC_ZLIB=$CONDOR_LIBDIR/libz.a
 		CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 		CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 		CONDOR_LD_DIR=$CONDOR_LIBDIR
@@ -119,9 +120,19 @@ if [ `uname` = "Linux" ]; then
 	fi
 fi
 
-if [ -r $STATIC_ZLIB -a -r $CONDOR_ZCLIB ]; then
-	CONDOR_CLIB="$CONDOR_ZCLIB $STATIC_ZLIB"
+#
+# If the compressed ckpt library is available, use it.
+#
+
+if [ -r $CONDOR_ZCLIB ]; then
+	CONDOR_CLIB="$CONDOR_ZCLIB"
 fi
+
+#
+# However, we still always need the compression library for other purposes.
+#
+
+CONDOR_CLIB="$CONDOR_CLIB $STATIC_ZLIB"
 
 if [ -r $CONDOR_SPECIAL_CLIB ]; then
 	CONDOR_CLIB="$CONDOR_SPECIAL_CLIB"
