@@ -168,6 +168,10 @@ bogomips        : 299.01
 				num_cpus = 1;
 			}
 		}
+#elif defined(CONDOR_PPC)
+                if( !strincmp(buf, "cpu", 3) ) {
+                        num_cpus++;
+                }
 #else
 #error YOU MUST CHECK THE FORMAT OF /proc/cpuinfo TO FIND N-CPUS CORRECTLY
 #endif

@@ -41,7 +41,6 @@ GetOptions (
     'notify'          => $opt_notify,
 );
 
-my $NMIDIR = "/nmi/run";
 
 #format of test_ids file
 #109 BUILD-V6_6-branch-2004-9-27 V6_6_BUILD
@@ -122,15 +121,11 @@ sub generate_cmdfile() {
     print "++module is $module\n";
 
     my $cmdfile = "condor_cmdfile-$tag";
-    my $srcsfile = "condor_srcsfile-$tag";
     my $gluefile = "condor_test.src";
     my $runidfile = "input_build_runid.src";
 
     # generate the test glue file - may be symlinked eventually
-    CondorGlue::makeFetchFile( $gluefile, $tag, "nmi_glue/test" );
-
-    # Generate the source code file
-    CondorGlue::makeFetchFile( $srcsfile, $tag, $module );
+    CondorGlue::makeFetchFile( $gluefile, "nmi_glue/test", $tag );
 
     # generate the runid input file
     open(RUNIDFILE, ">$runidfile") || 

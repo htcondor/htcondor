@@ -129,6 +129,7 @@ class _condorInMsg
 
 static const int SAFE_MSG_MAX_PACKET_SIZE = 60000;
 static const int SAFE_MSG_HEADER_SIZE = 25;      
+static const int SAFE_MSG_FRAGMENT_SIZE = 1000;
 
 static const char* const SAFE_MSG_MAGIC = "MaGic6.0";
 

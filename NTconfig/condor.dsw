@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "condor"=".\condor.dsp" - Package Owner=<4>
+Project: "condor"=.\condor.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -111,7 +111,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_acct"=".\condor_acct.dsp" - Package Owner=<4>
+Project: "condor_acct"=.\condor_acct.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -123,7 +123,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_advertise"=".\condor_advertise.dsp" - Package Owner=<4>
+Project: "condor_advertise"=.\condor_advertise.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -150,7 +150,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_birdwatcher"=".\condor_birdwatcher.dsp" - Package Owner=<4>
+Project: "condor_birdwatcher"=.\condor_birdwatcher.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -162,7 +162,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_classad"=".\condor_classad.dsp" - Package Owner=<4>
+Project: "condor_classad"=.\condor_classad.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -180,7 +180,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_classad_test"=".\condor_classad_test.dsp" - Package Owner=<4>
+Project: "condor_classad_test"=.\condor_classad_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -207,7 +207,34 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_collector"=".\condor_collector.dsp" - Package Owner=<4>
+Project: "condor_cod"=.\condor_cod.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_collector"=.\condor_collector.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -240,7 +267,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_config_val"=".\condor_config_val.dsp" - Package Owner=<4>
+Project: "condor_config_val"=.\condor_config_val.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -267,7 +294,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_cpp_util"=".\condor_cpp_util.dsp" - Package Owner=<4>
+Project: "condor_cpp_util"=.\condor_cpp_util.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -279,7 +306,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_daemon_core"=".\condor_daemon_core.dsp" - Package Owner=<4>
+Project: "condor_daemon_core"=.\condor_daemon_core.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -291,7 +318,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_dagman"=".\condor_dagman.dsp" - Package Owner=<4>
+Project: "condor_dagman"=.\condor_dagman.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -369,7 +396,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_fetchlog"=".\condor_fetchlog.dsp" - Package Owner=<4>
+Project: "condor_fetchlog"=.\condor_fetchlog.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -396,7 +423,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_findhost"=".\condor_findhost.dsp" - Package Owner=<4>
+Project: "condor_findhost"=.\condor_findhost.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -423,7 +450,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_gridmanager"=".\condor_gridmanager.dsp" - Package Owner=<4>
+Project: "condor_gridmanager"=.\condor_gridmanager.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -459,7 +486,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_history"=".\condor_history.dsp" - Package Owner=<4>
+Project: "condor_history"=.\condor_history.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -486,7 +513,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_io"=".\condor_io.dsp" - Package Owner=<4>
+Project: "condor_io"=.\condor_io.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -498,7 +525,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_kbdd_dll"=".\condor_kbdd_dll.dsp" - Package Owner=<4>
+Project: "condor_kbdd_dll"=.\condor_kbdd_dll.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -510,7 +537,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_mail"=".\condor_mail.dsp" - Package Owner=<4>
+Project: "condor_mail"=.\condor_mail.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -522,7 +549,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_master"=".\condor_master.dsp" - Package Owner=<4>
+Project: "condor_master"=.\condor_master.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -555,7 +582,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_negotiator"=".\condor_negotiator.dsp" - Package Owner=<4>
+Project: "condor_negotiator"=.\condor_negotiator.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -591,7 +618,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_preen"=".\condor_preen.dsp" - Package Owner=<4>
+Project: "condor_preen"=.\condor_preen.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -621,7 +648,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_prio"=".\condor_prio.dsp" - Package Owner=<4>
+Project: "condor_prio"=.\condor_prio.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -651,7 +678,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_procapi"=".\condor_procapi.dsp" - Package Owner=<4>
+Project: "condor_procapi"=.\condor_procapi.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -663,7 +690,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_procapi_test"=".\condor_procapi_test.dsp" - Package Owner=<4>
+Project: "condor_procapi_test"=.\condor_procapi_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -678,7 +705,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_q"=".\condor_q.dsp" - Package Owner=<4>
+Project: "condor_q"=.\condor_q.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -708,7 +735,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_qedit"=".\condor_qedit.dsp" - Package Owner=<4>
+Project: "condor_qedit"=.\condor_qedit.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -738,7 +765,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_qmgmt"=".\condor_qmgmt.dsp" - Package Owner=<4>
+Project: "condor_qmgmt"=.\condor_qmgmt.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -750,7 +777,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_rm"=".\condor_rm.dsp" - Package Owner=<4>
+Project: "condor_rm"=.\condor_rm.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -780,7 +807,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_schedd"=".\condor_schedd.dsp" - Package Owner=<4>
+Project: "condor_schedd"=.\condor_schedd.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -813,7 +840,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_shadow"=".\condor_shadow.dsp" - Package Owner=<4>
+Project: "condor_shadow"=.\condor_shadow.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -849,7 +876,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_startd"=".\condor_startd.dsp" - Package Owner=<4>
+Project: "condor_startd"=.\condor_startd.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -885,7 +912,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_starter"=".\condor_starter.dsp" - Package Owner=<4>
+Project: "condor_starter"=.\condor_starter.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -921,7 +948,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_stats"=".\condor_stats.dsp" - Package Owner=<4>
+Project: "condor_stats"=.\condor_stats.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -948,7 +975,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_status"=".\condor_status.dsp" - Package Owner=<4>
+Project: "condor_status"=.\condor_status.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -975,7 +1002,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_store_cred"=".\condor_store_cred.dsp" - Package Owner=<4>
+Project: "condor_store_cred"=.\condor_store_cred.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -1002,7 +1029,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_submit"=".\condor_submit.dsp" - Package Owner=<4>
+Project: "condor_submit"=.\condor_submit.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -1032,7 +1059,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_submit_dag"=".\condor_submit_dag.dsp" - Package Owner=<4>
+Project: "condor_submit_dag"=.\condor_submit_dag.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -1059,7 +1086,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_sysapi"=".\condor_sysapi.dsp" - Package Owner=<4>
+Project: "condor_sysapi"=.\condor_sysapi.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -1071,7 +1098,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_tool"=".\condor_tool.dsp" - Package Owner=<4>
+Project: "condor_tool"=.\condor_tool.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -1152,7 +1179,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_userprio"=".\condor_userprio.dsp" - Package Owner=<4>
+Project: "condor_userprio"=.\condor_userprio.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -1179,7 +1206,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_util_lib"=".\condor_util_lib.dsp" - Package Owner=<4>
+Project: "condor_util_lib"=.\condor_util_lib.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -1191,7 +1218,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_version"=".\condor_version.dsp" - Package Owner=<4>
+Project: "condor_version"=.\condor_version.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -1218,7 +1245,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_wait"=".\condor_wait.dsp" - Package Owner=<4>
+Project: "condor_wait"=.\condor_wait.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

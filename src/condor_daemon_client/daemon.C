@@ -1130,8 +1130,9 @@ Daemon::getCmInfo( const char* subsys )
 		tmp = get_full_hostname( host, &sin_addr );
 		if( ! tmp ) {
 				// With a hostname, this is a fatal Daemon error.
-			sprintf( buf, "unknown host %s", host );
-			newError( CA_LOCATE_FAILED, buf );
+			MyString err_msg = "unknown host ";
+			err_msg += host;
+			newError( CA_LOCATE_FAILED, err_msg.Value() );
 			free( host );
 			return false;
 		}

@@ -28,7 +28,7 @@
 #include "internet.h"
 #include "condor_md.h"       // Condor_MD_MAC
 
-#define USABLE_PACKET_SIZE SAFE_MSG_MAX_PACKET_SIZE - SAFE_MSG_HEADER_SIZE
+#define USABLE_PACKET_SIZE SAFE_MSG_FRAGMENT_SIZE - SAFE_MSG_HEADER_SIZE
 const char THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD[] = "CRAP";
 
 _condorPacket::_condorPacket()
@@ -188,6 +188,8 @@ int _condorPacket::getHeader(bool &last,
                              _condorMsgID &mID,
                              void *&dta)
 {
+    uint16_t stemp;
+    uint32_t ltemp;
     short flags = 0;
 	
     if (md_) {
@@ -206,23 +208,23 @@ int _condorPacket::getHeader(bool &last,
 
 	last = (bool)dataGram[8];
 
-	memcpy(&seq, &dataGram[9], 2);
-	seq = ntohs(seq);
+	memcpy(&stemp, &dataGram[9], 2);
+	seq = ntohs(stemp);
 
-	memcpy(&length, &dataGram[11], 2);
-	len = length = ntohs(length);
+	memcpy(&stemp, &dataGram[11], 2);
+	len = length = ntohs(stemp);
 
-	memcpy(&mID.ip_addr, &dataGram[13], 4);
-	mID.ip_addr = ntohl(mID.ip_addr);
+	memcpy(&ltemp, &dataGram[13], 4);
+	mID.ip_addr = ntohl(ltemp);
 
-	memcpy(&mID.pid, &dataGram[17], 2);
-	mID.pid = ntohs(mID.pid);
+	memcpy(&stemp, &dataGram[17], 2);
+	mID.pid = ntohs(stemp);
 
-	memcpy(&mID.time, &dataGram[19], 4);
-	mID.time = ntohl(mID.time);
+	memcpy(&ltemp, &dataGram[19], 4);
+	mID.time = ntohl(ltemp);
 
-	memcpy(&mID.msgNo, &dataGram[23], 2);
-	mID.msgNo = ntohs(mID.msgNo);
+	memcpy(&stemp, &dataGram[23], 2);
+	mID.msgNo = ntohs(stemp);
 
     dta = data = &dataGram[25];
 
@@ -233,20 +235,21 @@ int _condorPacket::getHeader(bool &last,
 
 void _condorPacket :: checkHeader(int & len, void *& dta)
 {
+    uint16_t stemp;
     short flags = 0, mdKeyIdLen = 0, encKeyIdLen = 0;
 
     if(memcmp(data, THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD, 4) == 0) {
         // We found stuff, go with 6.3 header format
         // First six bytes are MD5/encryption related
         data += 4;
-        memcpy(&flags, data, 2);
-        flags = ntohs(flags);
+        memcpy(&stemp, data, 2);
+        flags = ntohs(stemp);
         data += 2;
-        memcpy(&mdKeyIdLen, data, 2);
-        mdKeyIdLen = ntohs(mdKeyIdLen);
+        memcpy(&stemp, data, 2);
+        mdKeyIdLen = ntohs(stemp);
         data += 2;
-        memcpy(&encKeyIdLen, data, 2);
-        encKeyIdLen = ntohs(encKeyIdLen);
+        memcpy(&stemp, data, 2);
+        encKeyIdLen = ntohs(stemp);
         data += 2;
 
         length -= 10;
@@ -510,8 +513,8 @@ void _condorPacket::makeHeader(bool last, int seqNo,
                                _condorMsgID msgID, 
                                unsigned char * mac)
 {
-	unsigned short stemp;
-	long ltemp;
+    uint16_t stemp;
+    uint32_t ltemp;
 
 	memcpy(dataGram, SAFE_MSG_MAGIC, 8);
 

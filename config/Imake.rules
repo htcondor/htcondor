@@ -1213,14 +1213,13 @@ XCOMM End translation of func(BUILD)
 #define BUILD_DEP(cmplr,name,ext,dep)	@@\
 XCOMM Begin translation of func(BUILD_DEP) @@\
 DEP_SYMLINK_EXT(name,ext)		@@\
-LINK(cmplr,name,dep name.o)		@@\
+LINK(cmplr,name,name.o dep)		@@\
 XCOMM End translation of func(BUILD_DEP)
 #endif /* BUILD_DEP */
 
 #ifndef CBUILD
 #define CBUILD(cmplr,name,ext)		@@\
 XCOMM Begin translation of func(CBUILD) @@\
-name.ext:: x_fake_ckpt.h	@@\
 DEP_SYMLINK_EXT(name,ext)		@@\
 CLINK(cmplr,name,name.o)		@@\
 CLINK_NOSTD(cmplr,name,name.o)		@@\
@@ -1230,10 +1229,9 @@ XCOMM End translation of func(CBUILD)
 #ifndef CBUILD_DEP
 #define CBUILD_DEP(cmplr,name,ext,dep)	@@\
 XCOMM Begin translation of func(CBUILD_DEP) @@\
-name.ext:: x_fake_ckpt.h	@@\
 DEP_SYMLINK_EXT(name,ext)		@@\
-CLINK(cmplr,name,dep name.o)		@@\
-CLINK_NOSTD(cmplr,name,dep name.o)	@@\
+CLINK(cmplr,name,name.o dep)		@@\
+CLINK_NOSTD(cmplr,name,name.o dep)	@@\
 XCOMM End translation of func(CBUILD_DEP)
 #endif /* CBUILD_DEP */
 

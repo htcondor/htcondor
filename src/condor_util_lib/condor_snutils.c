@@ -152,7 +152,15 @@ vprintf_length(const char *format, va_list args)
 	null_output = fopen(NULL_FILE, "w");
 
 	if (NULL != null_output) {
+#ifdef va_copy
+        va_list copyargs;
+
+        va_copy(copyargs, args);
+		length = vfprintf(null_output, format, copyargs);
+        va_end(copyargs);
+#else
 		length = vfprintf(null_output, format, args);
+#endif
 		fclose(null_output);
 	} else {
 		length = -1;

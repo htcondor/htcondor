@@ -99,7 +99,8 @@ FileLock::obtain( LOCK_TYPE t )
 		lPosBeforeLock = ftell(fp); 
 	}
 	
-	int		status = lock_file( fd, t, blocking );
+	int		status = 0;
+	status = lock_file( fd, t, blocking );
 	
 	if (fp)
 	{

@@ -2,6 +2,8 @@
 #
 # 19??-???-?? originally written by stanis (?)
 # 2000-Jun-02 Total overhaul by pfc@cs.wisc.edu and wright@cs.wisc.edu
+# 2004-July-07 Add detecting $ENV(foo) in submit file parseing and fetch
+#	from the environment before saving attribute pair.
 
 # NOTE: currently works with only one cluster at a time (i.e., you can
 # submit & monitor many clusters in series, but not in parallel).
@@ -13,13 +15,16 @@ package Condor;
 
 require 5.0;
 use Carp;
+use Cwd;
 use FileHandle;
 use POSIX "sys_wait_h";
 
 BEGIN
 {
     $CONDOR_SUBMIT = 'condor_submit';
+    $CONDOR_SUBMIT_DAG = 'condor_submit_dag';
     $CONDOR_VACATE = 'condor_vacate';
+    $CONDOR_VACATE_JOB = 'condor_vacate_job';
     $CONDOR_RESCHD = 'condor_reschedule';
 
     $DEBUG = 1;
@@ -27,6 +32,10 @@ BEGIN
     $num_active_jobs = 0;
     $saw_submit = 0;
     %submit_info;
+	%machine_ads;
+
+	$submit_time = 0;
+	$TimedCallbackWait = 0;
 
 }
 
@@ -36,17 +45,28 @@ sub Reset
     $num_active_jobs = 0;
     $saw_submit = 0;
     %submit_info = {};
+    %machine_ads = {};
+
+	$submit_time = 0;
+	$TimedCallbackWait = 0;
+
     undef $SubmitCallback;
     undef $ExecuteCallback;
     undef $EvictedCallback;
     undef $EvictedWithCheckpointCallback;
+    undef $EvictedWithRequeueCallback;
     undef $EvictedWithoutCheckpointCallback;
     undef $ExitedCallback;
     undef $ExitedSuccessCallback;
     undef $ExitedFailureCallback;
     undef $ExitedAbnormalCallback;
     undef $AbortCallback;
+    undef $ShadowCallback;
+    undef $HoldCallback;
+    undef $ReleaseCallback;
     undef $JobErrCallback;
+    undef $TimedCallback;
+    undef $WantErrorCallback;
 }
 
 # submits job/s to condor, recording all variables from the submit
@@ -64,6 +84,8 @@ sub Submit
     # submit the file
     runCommand( "$CONDOR_SUBMIT $cmd_file > $cmd_file.out 2>&1" )
 	|| return 0;
+
+	$submit_time = time; # time reference for time callback
 
     # snarf the cluster id from condor_submit's output
     unless( open( SUBMIT, "<$cmd_file.out" ) )
@@ -98,10 +120,176 @@ sub Submit
     return $cluster;
 }
 
+# submits job/s to condor dagman
+#
+# - takes the name of a dag file as an argument
+# - returns 0 upon failure, or cluster id upon success
+sub SubmitDagman
+{
+    my $cmd_file = shift || croak "missing Dag file argument";
+	my $cmd_args = shift || croak "missing Dagman Args";
+
+    # reset global state
+    Reset();
+
+    # submit the file
+    runCommand( "$CONDOR_SUBMIT_DAG $cmd_args -f -notification never $cmd_file > $cmd_file.out 2>&1" )
+	|| return 0;
+
+	$submit_time = time; # time reference for time callback
+
+    # snarf the cluster id from condor_submit's output
+    unless( open( SUBMIT, "<$cmd_file.out" ) )
+    {
+	warn "error opening \"$cmd_file.out\": $!\n";
+	return 0;
+    }
+    while( <SUBMIT> )
+    {
+	if( /\d+ job\(s\) submitted to cluster (\d+)./ )
+	{
+	    $cluster = $1;
+		debug("Cluster is $cluster\n");
+	    last;
+	}
+    }
+    close SUBMIT;
+
+    # if for some reason we didn't find the cluster id 
+    unless( $cluster )
+    {
+	warn "error: couldn't find cluster id in condor_submit output\n";
+	return 0;
+    }
+    
+    # snarf info from the submit file and save for future reference
+	my $dagsubmitfile = $cmd_file  . ".condor.sub";
+    unless( ParseSubmitFile( $dagsubmitfile ) )
+    {
+	print "error: couldn't correctly parse submit file $dagsubmitfile\n";
+	return 0;
+    }
+
+    return $cluster;
+}
+
+# submits job/s to condor, recording all variables from the submit
+# file in global %submit_info
+#
+# - takes the name of a submit file as an argument
+# - returns 0 upon failure, or cluster id upon success
+sub TestSubmit
+{
+    my $cmd_file = shift || croak "missing submit file argument";
+
+    # reset global state
+    # Reset();
+	# Reset done in CondorTest.pm prior to submit
+
+    # submit the file
+    runCommand( "$CONDOR_SUBMIT $cmd_file > $cmd_file.out 2>&1" )
+	|| return 0;
+
+	$submit_time = time; # time reference for time callback
+
+    # snarf the cluster id from condor_submit's output
+    unless( open( SUBMIT, "<$cmd_file.out" ) )
+    {
+	warn "error opening \"$cmd_file.out\": $!\n";
+	return 0;
+    }
+    while( <SUBMIT> )
+    {
+	if( /\d+ job\(s\) submitted to cluster (\d+)./ )
+	{
+	    $cluster = $1;
+	    last;
+	}
+    }
+    close SUBMIT;
+
+    # if for some reason we didn't find the cluster id 
+    unless( $cluster )
+    {
+	warn "error: couldn't find cluster id in condor_submit output\n";
+	return 0;
+    }
+    
+    # snarf info from the submit file and save for future reference
+    unless( ParseSubmitFile( $cmd_file ) )
+    {
+	print "error: couldn't correctly parse submit file $cmd_file\n";
+	return 0;
+    }
+
+    return $cluster;
+}
+
+# submits job/s to condor dagman
+#
+# - takes the name of a dag file as an argument
+# - returns 0 upon failure, or cluster id upon success
+sub TestSubmitDagman
+{
+    my $cmd_file = shift || croak "missing Dag file argument";
+	my $cmd_args = shift || croak "missing Dagman Args";
+
+    # reset global state
+    # Reset();
+	# Reset done in CondorTest.pm prior to submit
+
+    # submit the file
+    runCommand( "$CONDOR_SUBMIT_DAG $cmd_args -f -notification never $cmd_file > $cmd_file.out 2>&1" )
+	|| return 0;
+
+	$submit_time = time; # time reference for time callback
+
+    # snarf the cluster id from condor_submit's output
+    unless( open( SUBMIT, "<$cmd_file.out" ) )
+    {
+	warn "error opening \"$cmd_file.out\": $!\n";
+	return 0;
+    }
+    while( <SUBMIT> )
+    {
+	if( /\d+ job\(s\) submitted to cluster (\d+)./ )
+	{
+	    $cluster = $1;
+		debug("Cluster is $cluster\n");
+	    last;
+	}
+    }
+    close SUBMIT;
+
+    # if for some reason we didn't find the cluster id 
+    unless( $cluster )
+    {
+	warn "error: couldn't find cluster id in condor_submit output\n";
+	return 0;
+    }
+    
+    # snarf info from the submit file and save for future reference
+	my $dagsubmitfile = $cmd_file  . ".condor.sub";
+    unless( ParseSubmitFile( $dagsubmitfile ) )
+    {
+	print "error: couldn't correctly parse submit file $dagsubmitfile\n";
+	return 0;
+    }
+
+    return $cluster;
+}
+
 sub Vacate
 {
     my $machine = shift || croak "missing machine argument";
     return runCommand( "$CONDOR_VACATE $machine" );
+}
+
+sub VacateJob
+{
+    #my $cluster = shift || croak "missing cluster argument";
+	print "Cluster is $cluster\n";
+    return runCommand( "$CONDOR_VACATE_JOB $cluster" );
 }
 
 sub Reschedule
@@ -124,6 +312,13 @@ sub runCommand
     if( ! safe_WIFEXITED( $retval ) )
     {
         print "error: $command died abnormally\n";
+		#call error callback
+		$info{'ErrorMessage'} = "error: $command died abnormally";
+		if (defined $WantErrorCallback )
+		{
+			#debug("Calling error callback!!!!!! at @ $WantErrorCallback\n");
+			&$WantErrorCallback( %info )
+		}
         return 0;
     }
 
@@ -132,6 +327,13 @@ sub runCommand
     {
 	$exitval = safe_WEXITSTATUS( $retval );
         print "error: $command failed (returned $exitval)\n";
+		#call error callback
+		$info{'ErrorMessage'} = "error: $command failed (returned $exitval)";
+		if (defined $WantErrorCallback )
+		{
+			#debug("Calling error callback!!!!!! at @ $WantErrorCallback\n");
+			&$WantErrorCallback( %info )
+		}
         return 0;
     }
 
@@ -160,6 +362,12 @@ sub RegisterEvictedWithCheckpoint
 {
     my $sub = shift || croak "missing argument";
     $EvictedWithCheckpointCallback = $sub;
+}
+
+sub RegisterEvictedWithRequeue
+{
+    my $sub = shift || croak "missing argument";
+    $EvictedWithRequeueCallback = $sub;
 }
 
 sub RegisterEvictedWithoutCheckpoint
@@ -196,10 +404,40 @@ sub RegisterAbort
     my $sub = shift || croak "missing argument";
     $AbortCallback = $sub;
 }
+sub RegisterShadow
+{
+    my $sub = shift || croak "missing argument";
+    $ShadowCallback = $sub;
+}
+sub RegisterHold
+{
+    my $sub = shift || croak "missing argument";
+    $HoldCallback = $sub;
+}
+sub RegisterRelease
+{
+    my $sub = shift || croak "missing argument";
+    $ReleaseCallback = $sub;
+}
 sub RegisterJobErr
 {
     my $sub = shift || croak "missing argument";
     $JobErrCallback = $sub;
+}
+
+sub RegisterWantError
+{
+    my $sub = shift || croak "missing argument";
+    $WantErrorCallback = $sub;
+}
+
+sub RegisterTimed
+{
+    my $sub = shift || croak "missing callback argument";
+    my $delta = shift || croak "missing time argument";
+
+    $TimedCallback = $sub;
+	$TimedCallbackWait = $delta;
 }
 
 sub Wait
@@ -216,6 +454,7 @@ sub Monitor
     my $linenum = 0;
     my $line;
     my %info;
+	my $timestamp = 0;
 
     debug( "Entering Monitor\n" );
 
@@ -229,16 +468,33 @@ sub Monitor
  
 #    debug( "In Monitor child\n" );
 
+	my $reallog = "";
+
     # open submit log
-    unless( open( SUBMIT_LOG, "<$submit_info{'log'}" ) )
-    {
-	warn "error opening $submit_info{'log'}: $!\n";
-	return 0;
-    }
+	if( exists $submit_info{'initialdir'} )
+	{
+		$reallog = $submit_info{'initialdir'} . "/" .  $submit_info{'log'};
+    	unless( open( SUBMIT_LOG, "<$reallog" ) )
+    	{
+			warn "error opening $reallog: $!\n";
+			print "Trying to open $reallog!!!!! Initialdir ...NOT... ignored!\n";
+			return 0;
+    	}
+	}
+	else
+	{
+    	unless( open( SUBMIT_LOG, "<$submit_info{'log'}" ) )
+    	{
+			warn "error opening $submit_info{'log'}: $!\n";
+			print "Trying to open $submit_info{'log'}!!!!! Initialdir ignored!\n";
+			return 0;
+    	}
+	}
 
   LINE:
     while( 1 )
     {
+		#print "Now $num_active_jobs is number of active jobs\n";
 	if( $saw_submit && $num_active_jobs == 0 )
 	{
 #	    debug( "num_active_jobs = $num_active_jobs -- monitor exiting\n" );
@@ -247,13 +503,24 @@ sub Monitor
 	    return 1;
 	}
 
+	# once every event or second see if we should do a timedCallback
+	%info = %submit_info; # get initial value of submit stuff in case no events come and we time out
+
+	if(defined $TimedCallback)
+	{
+		CheckTimedCallback();
+	}
+
 	# read line from log (if we're at EOF, wait and re-try)
 	$line = <SUBMIT_LOG>;
-	if( ! defined $line )
+	while( ! defined $line )
 	{
-#	    debug( "seeing nothing in $submit_info{'log'}, sleeping...\n" );
-	    sleep 1;
-	    next LINE;
+		sleep 2;
+		if(defined $TimedCallback)
+		{
+			CheckTimedCallback();
+		}
+		$line = <SUBMIT_LOG>;
 	}
 	chomp $line;
 	$linenum++;
@@ -285,8 +552,17 @@ sub Monitor
 	    # read next line to see if job was checkpointed (but first
 	    # sleep for 5 seconds to give it a chance to appear)
 	    # [this should really loop like above, not sleep like this...]
-	    sleep 5;
+	    # sleep 5;
 	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
 	    chomp $line;
 	    $linenum++;
 
@@ -304,6 +580,13 @@ sub Monitor
 		# execute callback if one is registered
 		&$EvictedWithCheckpointCallback( %info )
 		    if defined $EvictedWithCheckpointCallback;
+	    }
+	    elsif( $line =~ /^\s+\(0\) Job terminated and was requeued.*$/ )
+	    {
+		debug( "job was evicted and requeued\n" );
+		# execute callback if one is registered
+		&$EvictedWithRequeueCallback( %info )
+		    if defined $EvictedWithRequeueCallback;
 	    }
 	    else
 	    {
@@ -333,6 +616,15 @@ sub Monitor
 
 	    # read next line to see how job terminated
 	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
 	    chomp $line;
 	    $linenum++;
 
@@ -355,12 +647,23 @@ sub Monitor
 	    # abnormal termination
 	    elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
 	    {
+		debug( "Loading $1 as info{'signal'}\n" );
 		$info{'signal'} = $1;
+		print "keys:".join(" ",keys %info)."\n";
 
 		debug( "checking for core file...\n" );
 
 		# read next line to find core file
 		$line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
 		chomp $line;
 		$linenum++;
 
@@ -394,6 +697,40 @@ sub Monitor
 	    next LINE;
 	}
 
+	# 007: shadow exception
+	if( $line =~ /^007\s+\(0*(\d+)\.0*(\d+)/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw Shadow Exception\n" );
+
+	    # decrement # of queued jobs so we will know when to exit monitor
+	    #$num_active_jobs--;
+
+	    # read next line to see how job terminated
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    chomp $line;
+	    $linenum++;
+
+		$info{'shadowerror'} = $line;
+
+		# execute callback if one is registered
+		&$ShadowCallback( %info )
+		    if defined $ShadowCallback;
+
+	    next LINE;
+	}
+
 	# 001: job executing
 	elsif( $line =~ 
 	       /^001\s+\(0*(\d+)\.0*(\d+).*<(\d+\.\d+\.\d+\.\d+):(\d+)>/ )
@@ -422,6 +759,7 @@ sub Monitor
 	    $info{'sinful'} = "<$3:$4>";
 
 	    debug( "Saw job submitted\n" );
+	    $submit_info{'cluster'} = $1; # squirrel it away for TimedWait
 
 	    # mark that we've seen a submit so we can start watching # of jobs
 	    $saw_submit = 1;
@@ -435,14 +773,52 @@ sub Monitor
 	    next LINE;
 	}
 	# 009: job aborted by user
-	elsif( $line =~ /^009/ )
+	elsif( $line =~ 
+		/^009\s+\((\d+)\.(\d+).*$/ )
 	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw job abort cluster $1 job $2\n" );
+
 	    # decrement # of queued jobs so we will know when to exit monitor
 	    $num_active_jobs--;
 	    
 	    # execute callback if one is registered
 	    &$AbortCallback( %info )
 		if defined $AbortCallback;
+	}
+	# 012: job was held
+	elsif( $line =~ 
+	       /^012\s+\(0*(\d+)\.0*(\d+).*/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+	    $info{'host'} = $3;
+	    $info{'sinful'} = "<$3:$4>";
+	    
+	    debug( "Saw job held\n" );
+
+	    
+	    # execute callback if one is registered
+	    &$HoldCallback( %info )
+		if defined $HoldCallback;
+	}
+	# 013: job was released
+	elsif( $line =~ 
+	       /^013\s+\(0*(\d+)\.0*(\d+).*/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+	    $info{'host'} = $3;
+	    $info{'sinful'} = "<$3:$4>";
+	    
+	    debug( "Saw job released\n" );
+
+	    
+	    # execute callback if one is registered
+	    &$ReleaseCallback( %info )
+		if defined $ReleaseCallback;
 	}
 #	002 (171.000.000) 06/15 14:49:45 (0) Job file not executable.
 	# 002: job not executable
@@ -457,6 +833,23 @@ sub Monitor
 	}
     }
     return 1;
+}
+
+sub CheckTimedCallback
+{
+	my $diff = 0;
+	my $cluster = $info{"cluster"};
+	my $timestamp = 0;
+
+	$timestamp = time; #get current time
+	$diff = $timestamp - $submit_time;
+	if( $diff >= $TimedCallbackWait)
+	{
+		#call timed callback
+		debug("Called timed callback!!!!!!-- $cluster --\n");
+		&$TimedCallback( %info )
+			if defined $TimedCallback;
+	}
 }
 
 sub debug
@@ -507,6 +900,15 @@ sub ParseSubmitFile
 	    # $value =~ s/\s+/ /g;
 	    chomp $value;
 
+	
+		# Do proper environment substitution
+	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
+	    {
+			my $envlookup = $ENV{$2};
+	    	#debug( "Found $envlookup in environment \n");
+			$value = $1.$envlookup.$3;
+	    }
+
 	    debug( "$variable = $value\n" );
 	    
 	    # save the variable/value pair
@@ -521,10 +923,94 @@ sub ParseSubmitFile
     return 1;
 }
 
+sub ParseMachineAds
+{
+    my $machine = shift || croak "missing machine argument";
+    my $line = 0;
+
+	if( ! open(PULL, "condor_status -l $machine 2>&1 |") )
+    {
+		print "error getting Ads for \"$machine\": $!\n";
+		return 0;
+    }
+    
+    debug( "reading machine ads from $machine...\n" );
+    while( <PULL> )
+    {
+	chomp;
+#	debug("Raw AD is $_\n");
+	$line++;
+
+	# skip comments & blank lines
+	next if /^#/ || /^\s*$/;
+
+	# if this line is a variable assignment...
+	if( /^(\w+)\s*\=\s*(.*)$/ )
+	{
+	    $variable = lc $1;
+	    $value = $2;
+
+	    # if line ends with a continuation ('\')...
+	    while( $value =~ /\\\s*$/ )
+	    {
+		# remove the continuation
+		$value =~ s/\\\s*$//;
+
+		# read the next line and append it
+		<PULL> || last;
+		$value .= $_;
+	    }
+
+	    # compress whitespace and remove trailing newline for readability
+	    $value =~ s/\s+/ /g;
+	    chomp $value;
+
+	
+		# Do proper environment substitution
+	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
+	    {
+			my $envlookup = $ENV{$2};
+	    	#debug( "Found $envlookup in environment \n");
+			$value = $1.$envlookup.$3;
+	    }
+
+	    #debug( "$variable = $value\n" );
+	    
+	    # save the variable/value pair
+	    $machine_ads{$variable} = $value;
+	}
+	else
+	{
+#	    debug( "line $line of $submit_file not a variable assignment... " .
+#		   "skipping\n" );
+	}
+    }
+    return 1;
+}
+
+sub FetchMachineAds
+{
+	return %machine_ads;
+}
+
+sub FetchMachineAdValue
+{
+	my $key = shift @_;
+	if(exists $machine_ads{$key})
+	{
+		return $machine_ads{$key};
+	}
+	else
+	{
+		return undef;
+	}
+}
+
 sub DebugOn
 {
     $DEBUG = 1;
 }
+
 sub DebugOff
 {
     $DEBUG = 0;
@@ -563,3 +1049,5 @@ sub safe_WEXITSTATUS {
 		return WEXITSTATUS($status);
 	}
 }
+
+1;

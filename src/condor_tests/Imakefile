@@ -75,8 +75,8 @@ CBUILD($(CC),job_core_coredump,c)
 DESC(job_core_coredump_std,"Do we handle core files made by standard jobs?")
 DEPS(job_core_coredump_std,job_core_coredump.cndr.exe)
 RUN(job_core_coredump_std)
-#endif /* ! IS_CLIPPED */
 TESTCLASS(job_core_coredump_std,quick)
+#endif /* ! IS_CLIPPED */
 DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
 DEPS(job_core_coredump_van,job_core_coredump.exe)
 RUN(job_core_coredump_van)

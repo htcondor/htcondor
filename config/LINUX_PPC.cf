@@ -1,0 +1,12 @@
+/* Things specific to LINUX_PPC machines (all versions) */
+
+#define	ArchOptimizeFlag
+
+/* For now, try a "clipped" version */
+#define IS_CLIPPED YES
+
+#undef WANT_PVM
+#define WANT_PVM NO
+
+#undef WANT_KERBEROS
+#define WANT_KERBEROS NO

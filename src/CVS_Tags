@@ -1,4 +1,11 @@
-1/12/05 V6_7-local_univ-merge-1
+01/31/05 V6_6_8
+   The official 6.6.8 release tag. This lives on V6_6_ALL and V6_6_7_EXT.
+
+01/31/05 V6_6-merge-33
+   The state of the V6_6-branch for yet another merge into the
+   V6_7-branch.
+
+01/12/05 V6_7-local_univ-merge-1
    The state of the V6_7-local_univ-branch for the first (and last)
    merge back into V6_7-branch.
 
@@ -17,6 +24,10 @@
 01/05/05 V6_7-analyze-branch
    A new branch for nick coleman's classad analysis code.
    Created off V6_7-branch at V6_7-analyze-root.
+
+01/05/05 V6_6-tests-branch
+   A new branch for adding a bunch of tests to Condor.
+   Created off V6_6-branch at V6_6-tests-root.  
 
 01/04/05 V6_7-post_merge-V6_6-merge-32
    The state of the V6_7-branch after another merge from V6_6-branch.

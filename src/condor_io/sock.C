@@ -326,7 +326,7 @@ int Sock::bindWithin(const int low_port, const int high_port)
     (void) gettimeofday(&curTime, NULL);
 #else
 	// Win32 does not have gettimeofday, sigh.
-	curTime.tv_usec = ::GetTickCount();
+	curTime.tv_usec = ::GetTickCount() % 1000000;
 #endif
 
 	// int pid = (int) getpid();

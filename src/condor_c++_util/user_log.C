@@ -30,6 +30,7 @@
 #include <time.h>
 #include "condor_uid.h"
 #include "condor_xml_classads.h"
+#include "condor_config.h"
 
 
 static const char SynchDelimiter[] = "...\n";
@@ -168,7 +169,11 @@ initialize( const char *file, int c, int p, int s )
 	}
 
 	// prepare to lock the file
-	lock = new FileLock( fd );
+	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {
+		lock = new FileLock( fd );
+	} else {
+		lock = new FileLock( -1 );
+	}
 
 	return initialize(c, p, s);
 }
@@ -449,7 +454,12 @@ initialize (const char *filename)
 	    return FALSE;
 	}
 
-    lock = new FileLock( _fd, _fp );
+	// prepare to lock the file
+	if ( param_boolean("ENABLE_USERLOG_LOCKING",true) ) {
+    	lock = new FileLock( _fd, _fp );
+	} else {
+		lock = new FileLock( -1 );
+	}
 	if( !lock ) {
 		releaseResources();
 		return FALSE;
