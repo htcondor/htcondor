@@ -1694,6 +1694,31 @@ These settings control the \Condor{collector}.
   these updates to be sent from your pool, set this entry to
   ``NONE''. 
 
+\item[\Macro{KEEP\_POOL\_HISTORY}] \label{param:KeepPoolHistory}
+  This boolean parameter is used to decide if the collector will write
+  out statistical information about the pool to history files. The default
+  is false. The location, size and frequency of history logging is controlled
+  by the appropriate parameters (see below).
+
+\item[\Macro{POOL\_HISTORY\_DIR}] \label{param:PoolHistoryDir}
+  This parameter sets the name of the directory where the history files (if history
+  logging is enabled) will reside. The default is the SPOOL directory.
+
+\item[\Macro{POOL\_HISTORY\_MAX\_STORAGE}] \label{param:PoolHistoryMaxStorage}
+  This parameter sets the maximum combined size of the history files.
+  When the size of the history files is close to this limit, the oldest
+  information will be discarded. Thus, the larger this parameter's value
+  is, the larger the time range for which history will be available.
+  The default value is 10000000 (10 Mb).
+
+\item[\Macro{POOL\_HISTORY\_SAMPLING\_INTERVAL}] \label{param:PoolHistorySamplingInterval}
+  This parameter sets the interval, in seconds, between samples for history logging
+  purposes. When a sample is taken, the collector goes through the information it holds,
+  and summarizes it. The information is written to the history file only once in 4 samples.
+  The default (and recommended) value is 60 seconds. Setting this parameter's value too low
+  will increase the load on the collector, while setting it to high will produce less precise
+  statistical information.
+
 \item[\Macro{COLLECTOR\_DEBUG}] \label{param:CollectorDebug} This setting
   (and other settings related to debug logging in the collector) is
   described above in section~\ref{param:SubsysDebug} as
@@ -1723,6 +1748,24 @@ These settings control the \Condor{negotiator}.
   section~\ref{sec:user-priority-explained}
   on User Priorities for more details.  Defined in seconds, defaults
   to 86400 (1 day).
+
+\item[\Macro{NICE\_USER\_PRIO\_FACTOR}] \label{param:NiceUserPrioFactor} 
+  This entry sets the priority factor for nice users. See
+  section~\ref{sec:user-priority-explained}
+  on User Priorities for more details.  Defaults to 10000000.
+
+\item[\Macro{REMOTE\_PRIO\_FACTOR}] \label{param:RemotePrioFactor} 
+  This entry defines the priority factor for remote users (users who
+  who do not belong to the accountant's local domain - see
+  below). See section~\ref{sec:user-priority-explained}
+  on User Priorities for more details.  Defaults to 10000.
+
+\item[\Macro{ACCOUNTANT\_LOCAL\_DOMAIN}] \label{param:AccountantLocalDomain} 
+  This entry is used to decide if a user is local or remote. A user
+  is considered to be in the local domain, if his UID\_DOMAIN matches
+  the value of this parameter. Usually, this parameter should be set
+  to the local UID\_DOMAIN. If it is not defined, all users are considered
+  local.
 
 \item[\Macro{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}]
   \label{param:NegotiatorSocketCacheSize} This entry defines the
