@@ -32,7 +32,6 @@
 #include "basename.h"
 #include <time.h>
 #include "user_log.c++.h"
-#include "url_condor.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
