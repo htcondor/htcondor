@@ -20,6 +20,7 @@
 
 print "\n";
 # Parse command-line args
+$dagman_path = "";
 $submit = 1;
 $force = 0;
 $max_jobs = 0;
@@ -57,6 +58,13 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
+	if ( /^-dagman.*/i) {
+		$dagman_path = shift;
+		if ( ! $dagman_path ) {
+			&usage();
+		}
+		last SWITCH;
+	}
 # -->DAP
     if( /^-daplog.*/i ) {
         $dap_log = shift;
@@ -149,14 +157,17 @@ if( ! $dagfile ) {
 }
 
 
-# See if there is an executable 'condor_dagman' anywhere in our path.
-foreach $dir ( split /:/, $ENV{PATH} )
-{
-    $cur_path = "$dir/condor_dagman";
-    if( -x $cur_path ) {
-        $dagman_path = $cur_path;
-        last;
-    }
+# See if there is an executable 'condor_dagman' anywhere in our path if it
+# has not been defined on the command line
+if ( $dagman_path eq "") {
+	foreach $dir ( split /:/, $ENV{PATH} )
+	{
+    	$cur_path = "$dir/condor_dagman";
+    	if( -x $cur_path ) {
+        	$dagman_path = $cur_path;
+        	last;
+    	}
+	}
 }
 -x $dagman_path || 
     die "Can't find the condor_dagman exectuable in your PATH, aborting.\n";
