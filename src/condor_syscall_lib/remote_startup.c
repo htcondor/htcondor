@@ -615,6 +615,21 @@ report_image_size( int kbytes )
 	REMOTE_syscall( CONDOR_image_size, kbytes );
 }
 
+/*
+  After we have updated our image size and rusage, we ask the shadow
+  for a bitmask which specifies checkpointing options, defined in
+  condor_includes/condor_ckpt_mode.h.  A return of -1 or 0 signifies
+  that all default values should be used.  Thus, if the shadow does not
+  support this call, the job will checkpoint with default options.  The
+  job sends the signal which triggered the checkpoint so the shadow
+  knows if this is a periodic or vacate checkpoint.
+*/
+int
+get_ckpt_mode( int sig )
+{
+	return REMOTE_syscall( CONDOR_get_ckpt_mode, sig );
+}
+
 void
 unblock_signals()
 {
