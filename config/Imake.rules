@@ -698,6 +698,14 @@ BUILD_FILES( name, ext )			@@\
 RLINK( cmplr, name##.remote, name##.o )		@@\
 VLINK( cmplr, name##.vanilla, name##.o )
 
+#define BUILD_SPECIFIC_VANILLA(compiler, progname, objfiles, cmdfile, runfile, ext) @@\
+BUILD_FILES_SPECIFIC(progname, cmdfile, runfile, ext) @@\
+VLINK(compiler, progname##.vanilla, objfiles)
+
+#define BUILD_SPECIFIC_STANDARD(compiler, progname, objfiles, cmdfile, runfile, ext) @@\
+BUILD_FILES_SPECIFIC(progname, cmdfile, runfile, ext) @@\
+RLINK(compiler, progname##.remote, objfiles)
+
 #define RBUILD( cmplr, name, ext )		@@\
 BUILD_FILES( name, ext )			@@\
 RLINK( cmplr, name##.remote, name##.o )
@@ -712,6 +720,17 @@ name##.run:					@@\
 	ln -s ../##name##.run .			@@\
 clean::						@@\
 	rm -f name##.##ext name##.cmd name##.run
+
+#define BUILD_FILES_SPECIFIC( progname, cmdfile, runfile, ext )		@@\
+all:: progname##.##ext cmdfile##.cmd runfile##.run	@@\
+progname##.##ext##:					@@\
+	ln -s ../##progname##.##ext .		@@\
+cmdfile##.cmd:					@@\
+	ln -s ../##cmdfile##.cmd .			@@\
+runfile##.run:					@@\
+	ln -s ../##runfile##.run .			@@\
+clean::						@@\
+	rm -f progname##.##ext cmdfile##.cmd runfile##.run
 
 /***********************************************************************
 ** Doc++ rules  
