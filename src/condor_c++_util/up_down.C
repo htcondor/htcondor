@@ -1,6 +1,12 @@
 #include <iostream.h>
 #include <fcntl.h>
-#include <strings.h>
+
+#if 0
+#	include <strings.h>
+#else
+#	include <string.h>
+#endif
+
 #include "condor_updown.h"
 
 UpDown		upDown;
