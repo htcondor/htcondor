@@ -77,10 +77,6 @@ init_full_hostname()
 {
 	char *tmp;
 
-	if( full_hostname ) {
-		free( full_hostname );
-	}
-
 		// If we don't have our IP addr yet, we'll get it for free if
 		// we want it.  
 	if( ! host_ptr ) {
@@ -90,6 +86,9 @@ init_full_hostname()
 		tmp = get_full_hostname( hostname );
 	}
 
+	if( full_hostname ) {
+		free( full_hostname );
+	}
 	if( tmp ) {
 			// Found it, use it.
 		full_hostname = strdup( tmp );
@@ -105,7 +104,7 @@ init_full_hostname()
 void
 init_ipaddr()
 {
-    if( ! hostnames_initialized ) {
+    if( ! hostname ) {
 		init_hostnames();
 	}
 
