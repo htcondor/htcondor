@@ -143,6 +143,10 @@ V_TRUNK_SRC		-a \
 			src/hawkeye_modules \
 			src/mw
 
+STORK_GSI_SRC -a \
+			V_TRUNK_SRC \
+			src/condor_credd.TEMPORARY
+
 CONDOR_VIEW_SRC	-a \
 			src/condor_view_client \
 			src/condor_view_server \
