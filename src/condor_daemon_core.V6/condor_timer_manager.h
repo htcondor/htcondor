@@ -42,9 +42,14 @@
 #endif
 
 const	int		STAR = -1;
-
+/** The base class for all DC - using classes.  
+ */
 class Service {
 public:
+		/** This is virtual because the Service class requires one vitual 
+			function so that a vtable is made for this class.  If it
+			isn't, daemonCore is horribly broken.
+		*/			
 	virtual ~Service() { };
 };
 
