@@ -243,7 +243,7 @@ _condor_vfprintf_va( int fd, char* fmt, va_list args )
 #define SYS_write 4
 #endif
 #endif
-	return syscall(SYS_write, fd, out, c);
+	return SYSCALL(SYS_write, fd, out, c);
 }
 
 
