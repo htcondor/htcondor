@@ -152,7 +152,7 @@ Unparse(
 				//case '\'': buffer += "&apos;"; break;
 				default:
 					if(!isprint(*itr)) {
-						sprintf(tempBuf, "&#%d;", (int)*itr);
+						sprintf(tempBuf, "&#%d;", (unsigned char)*itr);
 						buffer += tempBuf;
 					} else {
 						buffer += *itr;
