@@ -57,7 +57,7 @@
 		tools kbdd collector.V6 PvmProgs dagman
 
 #define Libraries \
-		util_lib c++_util procapi io classad daemon_core.V6 \
+		util_lib c++_util procapi sysapi io classad daemon_core.V6 \
 		ckpt syscall_lib condor_ckpt_server/ckpt_server_api.a \
 		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a
 
@@ -195,6 +195,7 @@ simple_dir_target(static_contrib/include)
 object_target(util_lib)
 object_target(c++_util)
 object_target(procapi)
+object_target(sysapi)
 object_target(tools)
 object_target(examples)
 object_target(eventd)
