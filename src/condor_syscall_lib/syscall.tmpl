@@ -1243,6 +1243,21 @@ they should be built in the special "clipped" version.
 		GET_PATH( logical_name );
 		ALLOC_PATH( logical_name );
 	}
+	/*
+	This call transforms a logical name into a url chain, perhaps including
+	multiple stages, e.g. /tmp/file -> buffer:remote:/tmp/file
+	*/
+	int get_file_info_new( const char *logical_name, char *actual_url ): pseudo {
+		SEND_PATH( logical_name );
+		ALLOC_PATH( logical_name );
+		GET_PATH( actual_url );
+		ALLOC_PATH( actual_url );
+	}
+	/*
+	The old version of the same call performed the same mapping, but only
+	returns the basic file type, such as local: or remote:, and leaves
+	it to the syscall lib to add wrapper stages.
+	*/
 	int get_file_info( const char *logical_name, char *actual_url ): pseudo {
 		SEND_PATH( logical_name );
 		ALLOC_PATH( logical_name );
