@@ -25,25 +25,133 @@
 
 #include "condor_uid.h"
 
-#if defined (ULTRIX42) || defined(ULTRIX43)
-	/* _POSIX_SOURCE should have taken care of this,
-		but for some reason the ULTRIX version of dirent.h
-		is not POSIX conforming without it...
-	*/
-#	define __POSIX
-#endif
-
 #ifndef WIN32
 #	include <dirent.h>
 #endif
 
-#if defined(SUNOS41) && defined(_POSIX_SOURCE)
-	/* Note that function seekdir() is not required by POSIX, but the sun
-	   implementation of rewinddir() (which is required by POSIX) is
-	   a macro utilizing seekdir().  Thus we need the prototype.
+enum si_error_t { SIGood = 0, SINoFile, SIFailure };
+
+/** Class to store information when you stat a file on either Unix or
+    NT.  This class is used by the Directory class defined below.
+	@see Directory
+*/
+class StatInfo
+{
+public:
+
+	/** Constructor.  This performs the stat() (or equivalent) and
+	    sets the _error field to the appropriate value, which can be
+	    viewed eith the Error() method.
+		@param path The full path to the file to get info about.
+		@see Error()
 	*/
-	extern "C" void seekdir( DIR *dirp, long loc );
+	StatInfo( const char *path );
+
+	/** Alternate Constructor.  This does the same thing as the other
+  	    constructor, except the file is specified with a directory
+		path and a filename, instead of one big full path.  We do this
+		because we really want these seperate anyway, and if we get it
+		that way in the first place, it saves us some trouble.
+		@param dirpath The directory path to the file.
+		@param filename The filename (without the directory).
+		@see Error()
+	*/
+	StatInfo( const char *dirpath, const char *filename );
+
+#ifdef WIN32
+	/** NT's other constructor.  This just stores the given values
+	    into the object, so they can be retrieved later.  We do this
+		because in the Directory object, the Next() function uses
+		findfirst() and findnext() to get the next file in a
+		directory, and when we do, we have all the info we need about
+		the file already, so to be efficient, we just store it
+		directly with this form of the constructor.
+		@param dirpath The directory path to the file.
+		@param filename The filename (without the directory).
+		@param time_access The access time of the file.
+		@param time_create The creation time of the file.
+		@param time_modify The modification time of the file.
+		@param is_dir Is this file a directory?
+	*/
+	StatInfo( const char* dirpath, const char* filename, time_t
+			  time_access,  time_t time_create, time_t time_modify,
+			  bool is_dir );  
 #endif
+
+	/// Destructor<p>
+	~StatInfo();
+
+	/** Shows the possible error condition of this StatInfo object.
+	    If the appropriate stat() call failed when creating this
+		object, its return value is returned here.  Note, the value of
+		this enum is 0 if everything was ok, so you can treat a call
+		to Error() as a bool, with success as 0 and failure as
+		non-zero. 
+		@return An enum describing the error condition of this StatInfo object.
+	*/
+	si_error_t Error() { return si_error; };
+
+	/** This function returns the errno as set from the attempt to get
+	    information about this file.  If there was no error, this will
+		return 0.
+		@return The errno from getting info for this StatInfo object.
+	*/
+	int Errno() { return si_errno; };
+
+	/** Get the full path to the file.
+		@return A string containing the full path of this file.
+	*/
+	const char* FullPath() { return (const char*)fullpath; };
+
+	/** Get just the 'basename' for the file: its name without the
+	    directory path.
+		@return A string containing the 'basename' of this file.
+	*/
+	const char* BaseName() { return (const char*)filename; };
+
+	/** Get just the directory path for the file.
+		@return A string containing the directory path of this file.
+	*/
+	const char* DirPath() { return (const char*)dirpath; };
+
+	/** Get last access time.
+		@return time in seconds since 00:00:00 UTC, January 1, 1970
+    */
+	time_t GetAccessTime() { return access_time; }
+
+	/** Get last modification time.
+		@return time in seconds since 00:00:00 UTC, January 1, 1970
+    */
+	time_t GetModifyTime() { return modify_time; }
+
+	/** Get creation time.
+		@return time in seconds since 00:00:00 UTC, January 1, 1970
+    */
+	time_t GetCreateTime() { return create_time; }
+
+	/** Determine if the file is the name of a subdirectory,
+		or just a file.
+		@return true if the file is a subdirectory name, false if not
+	*/
+	bool IsDirectory() { return isdirectory; }
+
+private:
+	si_error_t si_error;
+	int si_errno;
+	bool isdirectory;
+	time_t access_time;
+	time_t modify_time;
+	time_t create_time;
+	char* dirpath;
+	char* filename;
+	char* fullpath;
+	int do_stat( const char *path );
+	char* make_dirpath( const char* dir );
+#ifndef WIN32
+	int unix_do_stat( const char *path, struct stat *buf );
+#endif
+};
+
 
 /** Class to iterate filenames in a subdirectory.  Given a subdirectory
 	path, this class can iterate the names of the files in the directory,
@@ -91,32 +199,39 @@ public:
 	*/
 	bool Rewind();
 
-	/** Get last access time of current file.
-		@return time in seconds since 00:00:00
-			UTC, January 1, 1970 */
-	time_t GetAccessTime() { return access_time; }
+	/** Get last access time of current file.  If there is no current
+	    file, return 0.
+		@return time in seconds since 00:00:00 UTC, January 1, 1970 */
+	time_t GetAccessTime() { return curr ? curr->GetAccessTime() : 0; };
 
-	/** Get last modification time of current file.
-		@return time in seconds since 00:00:00
-			UTC, January 1, 1970 */
-	time_t GetModifyTime() { return modify_time; }
+	/** Get last modification time of current file.  If there is no
+	    current file, return 0.
+		@return time in seconds since 00:00:00 UTC, January 1, 1970 */
+	time_t GetModifyTime() { return curr ? curr->GetModifyTime() : 0; };
 
-	/** Get creation time of current file.
-		@return time in seconds since 00:00:00
-			UTC, January 1, 1970 */
-	time_t GetCreateTime() { return create_time; }
+	/** Get creation time of current file.  If there is no current
+	    file, return 0. 
+		@return time in seconds since 00:00:00 UTC, January 1, 1970 */
+	time_t GetCreateTime() { return curr ? curr->GetCreateTime() : 0; };
 
 	/** Determine if the current file is the name of a subdirectory,
-		or just a file.
+		or just a file.  If there is no current file, return false.
 		@return true if current file is a subdirectory name, false if not
 	*/
-	bool IsDirectory() { return curr_isdirectory; }
+	bool IsDirectory() { return curr ? curr->IsDirectory() : false; };
 
 	/** Remove the current file.  If the current file is a subdirectory,
-	   then the subdirectory (and all files beneath it) are removed.
+	    then the subdirectory (and all files beneath it) are removed.
 		@return true on successful removal, otherwise false
 	*/
 	bool Remove_Current_File();
+
+	/** Remove the specified file.  If the given file is a subdirectory,
+	    then the subdirectory (and all files beneath it) are removed. 
+		@param path The full path to the file to remove
+		@return true on successful removal, otherwise false
+	*/
+	bool Remove_File( const char* path );
 
 	/** Remove the all the files and subdirectories in the directory
 		specified by the constructor.  Upon success, the subdirectory
@@ -127,22 +242,37 @@ public:
 
 private:
 	char *curr_dir;
-	char *curr_filename;
-	bool curr_isdirectory;
-	time_t access_time;
-	time_t modify_time;
-	time_t create_time;
+	StatInfo* curr;
 	bool want_priv_change;
 	priv_state desired_priv_state;
 	priv_state saved_priv;
 	inline void Directory::Set_Access_Priv();
+	bool do_remove( const char *path, bool is_curr );
 #ifdef WIN32
 	long dirp;
 	static struct _finddata_t filedata;
 #else
 	DIR *dirp;
-	int do_stat( const char *path, struct stat *buf );
 #endif
 };
+
+
+/** Determine if the given file is the name of a subdirectory,
+  or just a file.
+  @param path The full path to the file to test
+  @return true if given file is a subdirectory name, false if not
+*/
+bool IsDirectory( const char* path );
+
+/** Take two strings, a directory path, and a filename, and
+  concatenate them together.  If the directory path doesn't end with
+  the appropriate directory deliminator for this platform, this
+  function will ensure that the directory delimiter is included in the
+  resulting full path.
+  @param dirpath The directory path.
+  @param filename The filename.
+  @return A string created with new() that contains the full pathname.
+*/
+char* dircat( const char* dirpath, const char* filename );
 
 #endif

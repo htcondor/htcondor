@@ -47,9 +47,200 @@ struct _finddata_t Directory::filedata;
 // -----------------------------------------------
 
 
+StatInfo::StatInfo( const char *path )
+{
+	char *s, *last = NULL;
+	fullpath = strnewp( path );
+	dirpath = strnewp( path );
+
+		// Since we've got our own copy of the full path now sitting
+		// in dirpath, we can find the last directory delimiter, make
+		// a copy of whatever is beyond it as the filename, and put a
+		// NULL in the first character after the delim character so
+		// that the dirpath always contains the directory delim.
+	for( s = dirpath; s && *s != '\0'; s++ ) {
+        if( *s == '\\' || *s == '/' ) {
+			last = s;
+        }
+    }
+	if( last[1] ) {
+		filename = strnewp( &last[1] ); 
+		last[1] = '\0';
+	} else {
+		filename = NULL;
+	}
+	do_stat( (const char*)fullpath );
+}
+
+
+StatInfo::StatInfo( const char *dirpath, const char *filename )
+{
+	char* tmp;
+	this->filename = strnewp( filename );
+	this->dirpath = make_dirpath( dirpath );
+	fullpath = dircat( dirpath, filename );
+	do_stat( (const char*)fullpath );
+}
+
+
+#ifdef WIN32
+StatInfo::StatInfo( const char* dirpath, const char* filename, 
+					time_t time_access, time_t time_create, 
+					time_t time_modify, bool is_dir )
+{
+	this->dirpath = strnewp( dirpath );
+	this->filename = strnewp( filename );
+	fullpath = dircat( dirpath, filename );
+	si_error = SIGood;
+	si_errno = 0;
+	access_time = time_access;
+	modify_time = time_modify;
+	create_time = time_create;
+	isdirectory = is_dir;
+}
+#endif /* WIN32 */
+
+
+StatInfo::~StatInfo()
+{
+	if( filename ) {
+		delete [] filename;
+	}
+	if( dirpath ) {
+		delete [] dirpath;
+	}
+	if( fullpath ) {
+		delete [] fullpath;
+	}
+}
+
+int
+StatInfo::do_stat( const char *path )
+{
+		// Initialize
+	si_error = SIFailure;
+	access_time = 0;
+	modify_time = 0;
+	create_time = 0;
+	isdirectory = false;
+
+	struct stat statbuf;	
+
+#ifndef WIN32
+	int stat_status = unix_do_stat( path, &statbuf );
+#else
+	int stat_status = nt_do_stat( path, &statbuf );
+#endif /* WIN32 */
+
+	switch( stat_status ) {
+	case FALSE:
+		si_error = SINoFile;
+		break;
+	case TRUE:
+			// the do_stat succeeded
+		si_error = SIGood;
+		access_time = statbuf.st_atime;
+		create_time = statbuf.st_ctime;
+		modify_time = statbuf.st_mtime;
+#ifndef WIN32
+		isdirectory = S_ISDIR(statbuf.st_mode);
+#else
+		isdirectory = _S_IFDIR & statbuf.st_mode;
+#endif
+		break;
+	default:
+			// Failure
+		break;
+	}
+}
+
+
+#ifndef WIN32
+/*
+  We want to stat the given file. We may be operating as root, but root
+  == nobody across most NFS file systems, so we may have to do it as
+  condor.  If we succeed, we return TRUE, and if the file has already
+  been removed we return FALSE.  If we cannot do it as either root
+  or condor, we return -1.
+*/
+int
+StatInfo::unix_do_stat( const char *path, struct stat *buf )
+{
+	priv_state priv;
+
+	errno = 0;
+	if( stat( path, buf ) < 0 ) {
+		si_errno = errno;
+		switch( errno ) {
+		case ENOENT:	// got rm'd while we were doing this
+			return FALSE;
+		case EACCES:	// permission denied, try as condor
+			priv = set_condor_priv();
+			if( stat( path, buf ) < 0 ) {
+				si_errno = errno;
+				set_priv( priv );
+				if ( errno == ENOENT ) {
+					return FALSE;	// got rm'd while we were doing this
+				}
+				dprintf( D_ALWAYS, 
+						 "StatInfo::do_stat(%s,0x%x) failed, errno: %d\n",
+						 path, &buf, errno );
+				return -1;
+			}
+			set_priv( priv );
+		}
+	}
+	return TRUE;
+}
+#else /* WIN32 */
+/*
+  We want to stat the given file.  Since we're NT here, there's no
+  need to mess w/ priv_state stuff, (yet?).  If we succeed, we return
+  TRUE, and if the file has already been removed we return FALSE.  If
+  we failed for some other reason, we return -1.
+*/
+int
+StatInfo::nt_do_stat( const char *path, struct stat *buf )
+{
+	if( stat( path, buf ) < 0 ) {
+		si_errno = errno;
+		switch( errno ) {
+		case ENOENT:	// got rm'd while we were doing this
+			return FALSE;
+		default:
+			dprintf( D_ALWAYS, 
+					 "StatInfo::do_stat(%s,0x%x) failed, errno: %d\n",
+					 path, &buf, errno );
+			return -1;
+		}
+	}
+	return TRUE;
+}
+#endif /* WIN32 */
+
+
+char*
+StatInfo::make_dirpath( const char* dir ) 
+{
+	char* rval;
+	int dirlen = strlen(dir);
+	if( dir[dirlen - 1] == DIR_DELIM_CHAR ) {
+			// We've already got the delim, just return a copy of what
+			// we were passed in:
+		rval = new char[dirlen + 1];
+		sprintf( rval, "%s", dir );
+	} else {
+			// We need to include the delim character.
+		rval = new char[dirlen + 2];
+		sprintf( rval, "%s%c", dir, DIR_DELIM_CHAR );
+	}
+	return rval;
+}
+
+
 Directory::Directory( const char *name, priv_state priv ) 
 {
-	curr_filename = NULL;
+	curr = NULL;
 
 #ifndef WIN32
 	// Unix
@@ -57,6 +248,7 @@ Directory::Directory( const char *name, priv_state priv )
 	if( dirp == NULL ) {
 		EXCEPT( "Can't open directory \"%s\"", name );
 	}
+	rewinddir( dirp );
 #else
 	dirp = -1;
 #endif
@@ -75,6 +267,9 @@ Directory::Directory( const char *name, priv_state priv )
 Directory::~Directory()
 {
 	delete [] curr_dir;
+	if( curr ) {
+		delete curr;
+	}
 
 #ifndef WIN32
 	// Unix
@@ -116,30 +311,50 @@ Directory::Remove_Entire_Directory()
 
 
 bool 
+Directory::Remove_File( const char* path )
+{
+	return do_remove( path, false );
+}
+
+
+bool 
 Directory::Remove_Current_File()
 {
-	char buf[_POSIX_PATH_MAX];
-	bool ret_val = true;
-	priv_state priv;
-
-	if ( curr_filename == NULL ) {
-		// there is not current file; user probably did not call
+	if ( curr == NULL ) {
+		// there is no current file; user probably did not call
 		// Next() yet.
 		return false;
 	}
+	return do_remove( curr->FullPath(), true );
+} 
+
+
+bool 
+Directory::do_remove( const char* path, bool is_curr )
+{
+	char buf[_POSIX_PATH_MAX];
+	bool ret_val = true;
+	bool is_dir = false;
+	priv_state priv;
 
 	Set_Access_Priv();
 
-	if ( IsDirectory() ) {
+	if( is_curr ) {
+		is_dir = IsDirectory();
+	} else {
+		is_dir = ::IsDirectory( path );
+	}
+
+	if( is_dir ) {
 		// the current file is a directory.
 		// instead of messing with recursion, worrying about
 		// stack overflows, ACLs, etc, we'll just call upon
 		// the shell to do the dirty work.
 		// TODO: we should really look return val from system()!
 #ifdef WIN32
-		sprintf(buf,"rmdir /s /q %s\\%s",curr_dir,curr_filename);
+		sprintf( buf,"rmdir /s /q %s", path );
 #else
-		sprintf(buf,"/bin/rm -rf %s/%s",curr_dir,curr_filename);
+		sprintf( buf,"/bin/rm -rf %s", path );
 #endif
 
 #if DEBUG_DIRECTORY_CLASS
@@ -167,12 +382,12 @@ Directory::Remove_Current_File()
 		}
 	} else {
 		// the current file is not a directory, just a file	
-		sprintf(buf,"%s%c%s",curr_dir,DIR_DELIM_CHAR,curr_filename);
+
 #if DEBUG_DIRECTORY_CLASS
 		dprintf(D_ALWAYS,"Directory: about to unlink %s\n",buf);
 #else
 		errno = 0;
-		if ( unlink(buf) < 0 ) {
+		if ( unlink( path ) < 0 ) {
 			ret_val = false;
 			if( errno == EACCES ) {
 				// Try again as Condor, in case we are going
@@ -181,13 +396,13 @@ Directory::Remove_Current_File()
 				// read-only access if exists.
 #ifdef WIN32
 				// Make file read/write on NT.
-				_chmod(buf,_S_IWRITE);
+				_chmod( path ,_S_IWRITE );
 #endif
 				if ( want_priv_change && (desired_priv_state == PRIV_ROOT) ) {
 					priv = set_condor_priv(); 
 				}
 				
-				if ( unlink( buf ) < 0 ) {
+				if ( unlink( path ) < 0 ) {
 					ret_val = false;
 				} else {
 					ret_val = true;
@@ -214,7 +429,10 @@ Directory::Remove_Current_File()
 bool
 Directory::Rewind()
 {
-	curr_filename = NULL;
+	if( curr ) {
+		delete curr;
+		curr = NULL;
+	}
 
 	Set_Access_Priv();
 
@@ -235,56 +453,57 @@ Directory::Rewind()
 const char *
 Directory::Next()
 {
-	char buf[_POSIX_PATH_MAX];
-
+	char path[_POSIX_PATH_MAX];
+	bool done = false;
 	Set_Access_Priv();
-	curr_filename = NULL;
+	if( curr ) {
+		delete curr;
+		curr = NULL;
+	}
 
 #ifndef WIN32
 	// Unix
-	int stat_status;
 	struct dirent *dirent;
-	struct stat statbuf;	
-	while( dirent = readdir(dirp) ) {
+	while( ! done && (dirent = readdir(dirp)) ) {
 		if( strcmp(".",dirent->d_name) == MATCH ) {
 			continue;
 		}
 		if( strcmp("..",dirent->d_name) == MATCH ) {
 			continue;
 		}
-		curr_filename =  dirent->d_name;
-		if ( curr_filename ) {
-			sprintf(buf,"%s/%s",curr_dir,curr_filename);
-			stat_status = do_stat(buf,&statbuf);
-			if ( stat_status == FALSE ) {
-				// do_stat thinks the file disappeared; it was 
-				// probably deleted. just go on to the next file.
-				continue;
-			}
-			if ( stat_status < 0 ) {
-				// do_stat failed with an error!
-				dprintf(D_ALWAYS,"Directory:: stat() failed for file %s",buf);
-				access_time = modify_time = create_time = 0;
-				curr_filename = NULL;
-			} else {
-				// do_stat succeeded
-				access_time = statbuf.st_atime;
-				create_time = statbuf.st_ctime;
-				modify_time = statbuf.st_mtime;
-				curr_isdirectory = S_ISDIR(statbuf.st_mode);
+		if ( dirent->d_name ) {
+			sprintf( path, "%s/%s", curr_dir, dirent->d_name );
+			curr = new StatInfo( path );
+			switch( curr->Error() ) {
+			case SINoFile:
+					// This file was deleted, continue with the next file. 
+				delete curr; 
+				curr = NULL;
+				break;
+			case SIFailure:
+					// do_stat failed with an error!
+				dprintf( D_ALWAYS,
+						 "Directory:: stat() failed for file %s, errno: %d\n",
+						 path, curr->Errno() );
+				delete curr;
+				curr = NULL;
+				break;
+			default:
+					// Everything's cool, we're done.
+				done = true;
+				break;
 			}
 		}
-		break;
 	}
 #else 
 	// Win32
 	int result;
-	sprintf(buf,"%s\\*.*",curr_dir);
+	sprintf(path,"%s\\*.*",curr_dir);
 	// do findfirst/findnext until we find a file which
 	// is not "." or ".." or until there are no more files.
 	do {
 		if ( dirp == -1 ) {
-			dirp = _findfirst(buf,&filedata);
+			dirp = _findfirst(path,&filedata);
 			result = dirp;
 		} else {
 			result = _findnext(dirp,&filedata);
@@ -294,51 +513,71 @@ Directory::Next()
 		  strcmp(filedata.name,"..") == MATCH ) );
 	if ( result != -1 ) {
 		// findfirst/findnext succeeded
-		curr_filename = filedata.name;
-		access_time = filedata.time_access;
-		create_time = filedata.time_create;
-		modify_time = filedata.time_write;
-		curr_isdirectory = (filedata.attrib & _A_SUBDIR) != 0;
+		curr = new StatInfo( curr_dir, filedata.name, 
+							 filedata.time_create,
+							 filedata.time_write, 
+							 ((filedata.attrib & _A_SUBDIR) != 0) ); 
 	} else {
-		access_time = modify_time = create_time = 0;
-		curr_filename = NULL;
+		curr = NULL;
 	}
-#endif
+#endif /* WIN32 */
 
-	return_and_resetpriv( curr_filename );		
+	if( curr ) {
+		return_and_resetpriv( curr->BaseName() );		
+	} else {
+		return_and_resetpriv( NULL );
+	}
 }
 
-#ifndef WIN32
-/*
-  We want to stat the given file. We may be operating as root, but root
-  == nobody across most NFS file systems, so we may have to do it as
-  condor.  If we succeed, we return TRUE, and if the file has already
-  been removed we return FALSE.  If we cannot do it as either root
-  or condor, we return -1.
-*/
-int
-Directory::do_stat( const char *path, struct stat *buf )
+
+// The rest of the functions in this file are global functions and can
+// be used with or without a Directory or StatInfo object.
+
+bool 
+IsDirectory( const char *path )
 {
-	priv_state priv;
-
-	if( stat(path,buf) < 0 ) {
-		switch( errno ) {
-		  case ENOENT:	// got rm'd while we were doing this
-			return FALSE;
-		  case EACCES:	// permission denied, try as condor
-			priv = set_condor_priv();
-			if( stat(path,buf) < 0 ) {
-				set_priv(priv);
-				if ( errno == ENOENT ) {
-					return FALSE;	// got rm'd while we were doing this
-				}
-				dprintf(D_ALWAYS,"Directory::do_stat(%s,0x%x) failed",
-					path, &buf );
-				return -1;
-			}
-			set_priv(priv);
-		}
+	StatInfo si( path );
+	switch( si.Error() ) {
+	case SIGood:
+		return si.IsDirectory();
+		break;
+	case SINoFile:
+			// Silently return false
+		return false;
+		break;
+	case SIFailure:
+		dprintf( D_ALWAYS, "IsDirectory: Error in stat(%s), errno: %d\n", 
+				 path, si.Errno() );
+		return false;
+		break;
 	}
-	return TRUE;
 }
-#endif
+
+
+/*
+  Concatenates a given directory path and filename into a single
+  string, stored in space allocated with new().  This function makes
+  sure that if the given directory path doesn't end with the
+  appropriate directory delimiter for this platform, that the new
+  string includes that.
+*/
+char*
+dircat( const char *dirpath, const char *filename )
+{
+	bool needs_delim = true;
+	int extra = 2, dirlen = strlen(dirpath);
+	char* rval;
+	if( dirpath[dirlen - 1] == DIR_DELIM_CHAR ) {
+		needs_delim = false;
+		extra = 1;
+	}
+	rval = new char[ extra + dirlen + strlen(filename)];
+	if( needs_delim ) {
+		sprintf( rval, "%s%c%s", dirpath, DIR_DELIM_CHAR, filename );
+	} else {
+		sprintf( rval, "%s%s", dirpath, filename );
+	}
+	return rval;
+}
+
+
