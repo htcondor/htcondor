@@ -59,6 +59,7 @@
 #include "string_list.h"
 #include "which.h"
 #include "sig_name.h"
+#include "print_wrapped_text.h"
 
 #include "my_username.h"
 #include "globus_utils.h"
@@ -1124,6 +1125,8 @@ SetTransferFiles()
 	int count;
 	char *tmp;
 	bool files_specified = false;
+	bool in_files_specified = false;
+	bool out_files_specified = false;
 	char	 buffer[ATTRLIST_MAX_EXPRESSION];
 	char	 input_files[ATTRLIST_MAX_EXPRESSION];
 	char	 output_files[ATTRLIST_MAX_EXPRESSION];
@@ -1183,6 +1186,7 @@ SetTransferFiles()
 							ATTR_TRANSFER_INPUT_FILES, tmp );
 			free( tmp );
 			files_specified = true;
+			in_files_specified = true;
 		}
 	}
 
@@ -1203,6 +1207,7 @@ SetTransferFiles()
 			(void) sprintf (output_files, "%s = \"%s\"", 
 				ATTR_TRANSFER_OUTPUT_FILES, macro_value);
 			files_specified = true;
+			out_files_specified = true;
 		}
 		free(macro_value);
 	}
@@ -1216,6 +1221,29 @@ SetTransferFiles()
 			case 'n':
 			case 'N':
 				// Handle "Never"
+				if( files_specified ) {
+					MyString err_msg;
+					err_msg += "\nERROR: you specified '";
+					err_msg += TransferFiles;
+					err_msg += " = Never' but listed files you want "
+						"transfered via '";
+					if( in_files_specified ) {
+						err_msg += "transfer_input_files";
+						if( out_files_specified ) {
+							err_msg += "' and 'transfer_output_files'.";
+						} else {
+							err_msg += "'.";
+						}
+					} else {
+						ASSERT( out_files_specified );
+						err_msg += "transfer_output_files'.";
+					}
+					err_msg += "  Please remove this contradiction from "
+						"your submit file and try again.";
+					print_wrapped_text( err_msg.Value(), stderr );
+					DoCleanup(0,0,NULL);
+					exit( 1 );
+				}
 				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
 				never_transfer = true;
 				break;
@@ -1244,6 +1272,29 @@ SetTransferFiles()
 #ifdef WIN32
 		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
 #else
+		if( files_specified ) {
+			MyString err_msg;
+			err_msg += "\nERROR: you specified files you want Condor to "
+				"transfer via '";
+			if( in_files_specified ) {
+				err_msg += "transfer_input_files";
+				if( out_files_specified ) {
+					err_msg += "' and 'transfer_output_files',";
+				} else {
+					err_msg += "',";
+				}
+			} else {
+				ASSERT( out_files_specified );
+				err_msg += "transfer_output_files',";
+			}
+			err_msg += " but you did not specify *when* you want Condor to "
+				"transfer the files.  Please put either \"transfer_files "
+				"= ONEXIT\" or \"transfer_files = ALWAYS\" in your "
+				"submit file and try again.";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
 		never_transfer = true;
 #endif
