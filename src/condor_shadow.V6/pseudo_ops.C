@@ -232,7 +232,8 @@ pseudo_perm_error( const char *msg )
 int
 pseudo_getwd( char *path )
 {
-	return (int)getwd(path);
+	strncpy(path,CurrentWorkingDir,_POSIX_PATH_MAX);
+	return 0;
 }
 
 int
