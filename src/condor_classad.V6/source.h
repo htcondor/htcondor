@@ -17,11 +17,10 @@ class Source
 		~Source();
 
 		// Set the stream source for the parse
-		bool setSource (const char *, int);	// immutable strings
-        bool setSource (char *, int);  		// mutable strings
-        bool setSource (Sock &);    		// CEDAR
-        bool setSource (int);           	// file descriptor
-        bool setSource (FILE *);       		// FILE structure
+		bool setSource (char *, int);	// strings
+        bool setSource (Sock &);    	// CEDAR
+        bool setSource (int);           // file descriptor
+        bool setSource (FILE *);       	// FILE structure
 
 		// parser entry points
 		bool parseClassAd( ClassAd*, bool full=false );
