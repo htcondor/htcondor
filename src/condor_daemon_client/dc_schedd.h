@@ -27,16 +27,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_io.h"
-
-
-// ATTR_JOB_ACTION should be one of these
-typedef enum {
-	JA_ERROR,
-	JA_HOLD_JOBS,
-	JA_RELEASE_JOBS,
-	JA_REMOVE_JOBS,
-	JA_REMOVE_X_JOBS
-} job_action_t; 
+#include "enum_utils.h"
 
 
 typedef enum {
@@ -245,7 +236,7 @@ private:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* actOnJobs( job_action_t action, const char* action_str, 
+	ClassAd* actOnJobs( JobAction action, const char* action_str, 
 						const char* constraint, StringList* ids, 
 						const char* reason, const char* reason_attr,
 						action_result_type_t result_type,
@@ -323,7 +314,7 @@ public:
 
 private:
 
-	job_action_t action;
+	JobAction action;
 	action_result_type_t result_type;
 
 	ClassAd* result_ad;

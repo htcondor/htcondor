@@ -74,6 +74,17 @@ struct Translation FileTransferOutputTranslation[] = {
 };
 
 
+struct Translation JobActionTranslation[] = {
+	{ "Hold", JA_HOLD_JOBS },
+	{ "Release", JA_RELEASE_JOBS },
+	{ "Remove", JA_REMOVE_JOBS },
+	{ "Remove-Force", JA_REMOVE_X_JOBS },
+	{ "Vacate", JA_VACATE_JOBS },
+	{ "Vacate-Fast", JA_VACATE_FAST_JOBS },
+	{ "NULL", 0 }
+};
+
+
 const char*
 getClaimTypeString( ClaimType type )
 {
@@ -143,5 +154,19 @@ getFileTransferOutputNum( const char* str )
 {
 	return (FileTransferOutput_t)
 		getNumFromName( str, FileTransferOutputTranslation ); 
+}
+
+
+const char*
+getJobActionString( JobAction action )
+{
+	return getNameFromNum( (int)action, JobActionTranslation );
+}
+
+
+JobAction
+getJobActionNum( const char* str )
+{
+	return (JobAction)getNumFromName( str, JobActionTranslation );
 }
 

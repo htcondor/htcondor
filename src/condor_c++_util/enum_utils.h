@@ -80,4 +80,20 @@ typedef enum {
 const char* getFileTransferOutputString( FileTransferOutput_t type );
 FileTransferOutput_t getFileTransferOutputNum( const char* string );
 
+
+// ATTR_JOB_ACTION should be one of these
+typedef enum {
+	JA_ERROR = 0,
+	JA_HOLD_JOBS,
+	JA_RELEASE_JOBS,
+	JA_REMOVE_JOBS,
+	JA_REMOVE_X_JOBS,
+	JA_VACATE_JOBS,
+	JA_VACATE_FAST_JOBS
+} JobAction;
+
+const char* getJobActionString( JobAction action );
+JobAction getJobActionNum( const char* string );
+
+
 #endif /* _CONDOR_ENUM_UTILS_H */

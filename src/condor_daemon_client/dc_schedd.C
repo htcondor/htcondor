@@ -277,7 +277,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 
 ClassAd*
-DCSchedd::actOnJobs( job_action_t action, const char* action_str, 
+DCSchedd::actOnJobs( JobAction action, const char* action_str, 
 					 const char* constraint, StringList* ids, 
 					 const char* reason, const char* reason_attr,
 					 action_result_type_t result_type,
@@ -520,7 +520,7 @@ JobActionResults::readResults( ClassAd* ad )
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
 		case JA_RELEASE_JOBS:
-			action = (job_action_t)tmp;
+			action = (JobAction)tmp;
 			break;
 		default:
 			action = JA_ERROR;
