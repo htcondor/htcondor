@@ -278,28 +278,43 @@ class ByteStream {
     inline bool Flush () { return m_snk->Flush(); }
 
     ///
-    enum Sock {
-        /** */ Sock_STREAM,
-        /** */ Sock_DGRAM
+    enum SockTypeEnum {
+        /** */ Sock_NULL    = 0,
+        /** */ Sock_STREAM  = 1,
+        /** */ Sock_DGRAM   = 2
     };
 
     ///
-    virtual bool Connect (std::string sinful,
-                          Sock stype = Sock_STREAM) = 0;
+    bool Connect (std::string url, int socktype = Sock_STREAM) {
+        m_socktype = socktype;
+        return _Connect (url);
+    }
 
     ///
-    virtual bool Connect (std::string address, int port,
-                          Sock stype = Sock_STREAM) = 0;
+    inline int SockType () const { return m_socktype; }
 
     ///
-    virtual bool Close () = 0;
+    bool Close () {
+        m_socktype = Sock_NULL;
+        return _Close();
+    }
+
   protected:
     ///
-    ByteStream () {}
+    ByteStream () : m_socktype(Sock_NULL) {}
     ///
     ByteSource * m_src;
     ///
     ByteSink   * m_snk;
+
+    ///
+    virtual bool _Connect (std::string url) = 0;
+
+    ///
+    virtual bool _Close () = 0;
+
+    ///
+    int m_socktype;
 };
 
 ///
@@ -321,16 +336,12 @@ class FileStream : public ByteStream {
         ((FileSink*)m_snk)->Initialize(fp,maxlen);
     }
 
+  protected:
     ///
-    virtual bool Connect (std::string sinful,
-                          Sock stype = Sock_STREAM);
+    virtual bool _Connect (std::string url);
 
     ///
-    virtual bool Connect (std::string address, int port,
-                          Sock stype = Sock_STREAM);
-
-    ///
-    virtual bool Close ();
+    virtual bool _Close ();
 };
 
 ///
@@ -352,16 +363,12 @@ class FileDescStream : public ByteStream {
         ((FileDescSink*) m_snk)->Initialize (fd, maxlen);
     }
 
+  protected:
     ///
-    virtual bool Connect (std::string sinful,
-                          Sock stype = Sock_STREAM);
+    virtual bool _Connect (std::string url);
 
     ///
-    virtual bool Connect (std::string address, int port,
-                          Sock stype = Sock_STREAM);
-
-    ///
-    virtual bool Close ();
+    virtual bool _Close ();
 };
 
 END_NAMESPACE // classad
