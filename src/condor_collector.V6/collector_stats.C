@@ -44,10 +44,10 @@ CollectorBaseStats::CollectorBaseStats ( int history_size )
 {
 	// Initialize & copy...
 	historySize = history_size;
+	historyWordBits = 8 * sizeof(unsigned);
 
 	// Allocate a history buffer
 	if ( historySize ) {
-		historyWordBits = 8 * sizeof(unsigned);
 		historyWords = ( historySize + historyWordBits - 1) / historyWordBits;
 		historyMaxbit = historyWordBits * historyWords - 1;
 		historyBuffer = new unsigned[historyWords];
