@@ -27,7 +27,6 @@
 #include "condor_syscalls.h"
 #include "condor_sys.h"
 #include "condor_file_info.h"
-#include "condor_config.h"
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
@@ -42,9 +41,7 @@ static char *_FileName_ = __FILE__;
 // XXX Where is the header for this?
 extern "C" int syscall( int kind, ... );
 
-// XXX This is a hack, move MyImage to header
-extern Image MyImage;
-
+// XXX Where is the header for this?
 extern int errno;
 
 OpenFileTable *FileTab=0;
