@@ -53,7 +53,8 @@
 
 #define Libraries \
 		util_lib c++_util procapi io classad daemon_core.V6 \
-		ckpt syscall_lib 
+		ckpt syscall_lib condor_ckpt_server/ckpt_server_api.a \
+		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a
 
 #if HAS_STATIC
 #define StaticDirectories \
@@ -220,6 +221,10 @@ object_dir_target(condor_includes)
 object_dir_target(condor_release)
 object_dir_target(condor_release/examples)
 object_dir_target(condor_shadow.V6.1)
+
+single_target(condor_schedd.V6, libqmgmt.a)
+single_target(condor_accountant.V6, libacct.a)
+single_target(condor_ckpt_server, ckpt_server_api.a)
 
 condor_release_all:
 	make condor_release
