@@ -81,7 +81,29 @@ ResMgr::init_config_classad( void )
 {
 	if( config_classad ) delete config_classad;
 	config_classad = new ClassAd();
-	config( config_classad );
+
+		// First, bring in everything we know we need
+	configInsert( config_classad, "START", true );
+	configInsert( config_classad, "SUSPEND", true );
+	configInsert( config_classad, "CONTINUE", true );
+	configInsert( config_classad, "PREEMPT", true );
+	configInsert( config_classad, "KILL", true );
+	configInsert( config_classad, "WANT_SUSPEND", true );
+	configInsert( config_classad, "WANT_VACATE", true );
+
+		// Now, bring in things that we might need
+	configInsert( config_classad, "PERIODIC_CHECPOINT", false );
+	configInsert( config_classad, "RunBenchmarks", false );
+	configInsert( config_classad, "Rank", false );
+	configInsert( config_classad, "SUSPEND_VANILLA", false );
+	configInsert( config_classad, "CONTINUE_VANILLA", false );
+	configInsert( config_classad, "PREEMPT_VANILLA", false );
+	configInsert( config_classad, "KILL_VANILLA", false );
+	configInsert( config_classad, "WANT_SUSPEND_VANILLA", false );
+	configInsert( config_classad, "WANT_VACATE_VANILLA", false );
+
+		// Now, bring in anything the user has said to include
+	config_fill_ad( config_classad );
 }
 
 
