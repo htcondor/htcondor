@@ -89,9 +89,93 @@ char			*path;
 
 	/* END OSF1 version */
 
+#elif defined(AIX32)
+FILE			*setmntent();
+struct mntent	*getmntent();
+char			*strdup();
+
+getmnt( start, buf, bufsize, mode, path )
+int				*start;
+struct fs_data	buf[];
+unsigned		bufsize;
+int				mode;
+char			*path;
+{
+	int				status;
+	int				mount_table_size = 1024;
+	struct vmount   *ptr;
+	struct stat		st_buf;
+	int				i;
+	int				lim;
+
+	ptr = (struct vmount *)malloc( mount_table_size );
+	status = mntctl( MCTL_QUERY, mount_table_size, ptr );
+
+		/* If the mount table we have supplied is too small, then mntctl
+		   will return the required size in the first word and return 0.
+		*/
+	if( status == 0 ) {
+		mount_table_size = *(int *)ptr;
+		free( ptr );
+		ptr = (struct vmount *)malloc( mount_table_size );
+		status = mntctl( MCTL_QUERY, mount_table_size, ptr );
+	}
+
+	if( status < 0 ) {
+		perror( "mntctl" );
+		exit( 1 );
+	}
+
+		/* "lim" should be the number of entries we can store in the buffer
+		   supplied by the calling routine, or the number of entries
+		   in the real mount table - whichever is smaller */
+	lim = bufsize / sizeof(struct fs_data);
+	if( status < lim ) {
+		lim = status;
+	}
+
+	for( i=0; i < lim; i++ ) {
+		add( ptr, &buf[i] );
+		ptr = (struct vmount *) ( (char *)ptr + ptr->vmt_length );
+	}
+
+	return status;
+}
+
+
+#define OBJECT vmt2dataptr(vm,VMT_OBJECT)
+#define STUB vmt2dataptr(vm,VMT_STUB)
+#define HOSTNAME vmt2dataptr(vm,VMT_HOSTNAME)
+add( vm, ent )
+struct vmount	*vm;
+struct fs_data	*ent;
+{
+	char	buf[1024];
+	struct stat	st_buf;
+
+
+	if( vm->vmt_gfstype == MNT_NFS ) {
+		sprintf( buf, "%s:%s", HOSTNAME, OBJECT );
+	} else {
+		strcpy( buf, OBJECT );
+	}
+
+	if( stat(STUB,&st_buf) < 0 ) {
+		ent->fd_req.dev = 0;
+	} else {
+		if( vm->vmt_gfstype == MNT_NFS ) {
+			ent->fd_req.dev = st_buf.st_vfs;
+		} else {
+			ent->fd_req.dev = st_buf.st_dev;
+		}
+	}
+	ent->fd_req.devname = strdup(buf);
+	ent->fd_req.path = strdup( STUB );
+}
+
 #else
 
-	/* BEGIN !OSF1 and !ULTRIX version - use setmntent() and getmntent()  */
+	/* BEGIN !OSF1, !ULTRIX, !AIX  version - use setmntent() and getmntent()  */
 
 FILE			*setmntent();
 struct mntent	*getmntent();
