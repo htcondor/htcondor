@@ -2184,6 +2184,10 @@ queue(int num)
 			}
 
 		logfile = condor_param(UserLogFile);
+		// Convert to a pathname using IWD if needed
+		if ( logfile ) {
+			logfile = full_path(logfile);
+		}
 
 		if (CurrentSubmitInfo == -1 ||
 			SubmitInfo[CurrentSubmitInfo].cluster != ClusterId ||
@@ -2192,6 +2196,7 @@ queue(int num)
 			SubmitInfo[CurrentSubmitInfo].cluster = ClusterId;
 			SubmitInfo[CurrentSubmitInfo].firstjob = ProcId;
 			if (logfile) {
+				// Store the full pathname to the log file
 				SubmitInfo[CurrentSubmitInfo].logfile = strdup(logfile);
 			} else {
 				SubmitInfo[CurrentSubmitInfo].logfile = NULL;
@@ -2547,7 +2552,6 @@ void
 log_submit()
 {
 	 char	 *simple_name;
-	 char	 *path;
 	 UserLog usr_log;
 	 SubmitEvent jobSubmit;
 
@@ -2559,10 +2563,7 @@ log_submit()
 
 		if ((simple_name = SubmitInfo[i].logfile) != NULL) {
 
-			// Convert to a pathname using IWD if needed
-			path = full_path(simple_name);
-
-			usr_log.initialize(owner, path, 0, 0, 0);
+			usr_log.initialize(owner, simple_name, 0, 0, 0);
 
 			// Output the information
 			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
