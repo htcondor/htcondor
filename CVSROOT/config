@@ -3,7 +3,7 @@
 #LockDir=/p/condor/repository/CONDOR_SRC-locks
 
 # Set this to "no" if pserver shouldn't check system users/passwords
-#SystemAuth=no
+SystemAuth=no
 
 # Set `PreservePermissions' to `yes' to save file status information
 # in the repository.
