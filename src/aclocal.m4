@@ -399,3 +399,65 @@ _TESTEOF
  fi
  rm -f conftest.c conftest1
 ])
+
+
+#######################################################################
+# REQUIRE_PATH_PROG by Derek Wright <wright@cs.wisc.edu> 
+# Performs an AC_PATH_PROG, and then makes sure that we found the
+# program we were looking for.
+#
+# Arguments (just the first two you pass to AC_PATH_PROG)
+#  $1 variable name 
+#  $2 program name
+# Side Effects:
+#  Calls AC_PATH_PROG, which does a bunch of stuff for you.
+#######################################################################
+AC_DEFUN([REQUIRE_PATH_PROG],
+[AC_PATH_PROG([$1],[$2],[no],[$PATH])
+ if test "$[$1]" = "no" ; then
+   AC_MSG_ERROR([$2 is required])
+ fi
+])
+
+
+#######################################################################
+# CHECK_HEADTAIL_N by Derek Wright <wright@cs.wisc.edu> 
+# This macro is a hack, but it saves some shared code.  First, it
+# performs a REQUIRE_PATH_PROG to make sure we can find a version of
+# head or tail (whatever we're looking for).  Then, it verifies that
+# the tool supports either "-n 1" or "-1" to get 1 line of output.
+# Once it finds a valid version, it sets some variables to use if you
+# want 1 or 2 lines of output.  For example, "TAIL_1" will be set to
+# "$TAIL -n 1" or to "$TAIL -1" depending on what worked.
+#
+# Arguments (just the first two you pass to AC_PATH_PROG)
+#  $1 variable name 
+#  $2 program name
+# Side Effects:
+#  Calls REQUIRE_PATH_PROG, and sets <VAR>_1 and <VAR>_2 to be the
+#  right way to invoke VAR to get 1 or 2 lines of output
+#######################################################################
+AC_DEFUN([CHECK_HEADTAIL_N],
+[REQUIRE_PATH_PROG([$1],[$2])
+ AC_MSG_CHECKING([if $2 supports -n])
+ _test_output=`echo "hello world" | $[$1] -n 1 2>&1`
+ _test_status=$?
+ if test $_test_status -eq 0 && test "x$_test_output" = "xhello world"; then 
+   AC_MSG_RESULT([yes])
+   [$1]_1="$[$1] -n 1"
+   [$1]_2="$[$1] -n 2"
+ else
+   AC_MSG_RESULT([no])
+   AC_MSG_CHECKING([if [$2] supports -1])
+   _test_output=`echo "hello world" | $[$1] -1 2>&1`
+   _test_status=$?
+   if test $_test_status -eq 0 && test "x$_test_output" = "xhello world"; then 
+     AC_MSG_RESULT([yes])
+     [$1]_1="$[$1] -1"
+     [$1]_2="$[$1] -2"
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([can not find working version of [$2]])
+  fi
+ fi
+])
