@@ -28,6 +28,7 @@
 #include <set>
 #include "value.h"
 
+
 class KeySet {
 public:
 	KeySet( int size=32 );
@@ -63,7 +64,7 @@ private:
 	static const char   numOnBits[256];
 	static const int 	SUINT;
 	bool				universal;
-	vector<unsigned>	kset;
+	std::vector<unsigned int>	kset;
 };
 
 
@@ -111,7 +112,7 @@ public:
 
 	void Display( FILE * );
 	
-	enum { NO_ERROR, INCONSISTENT_TYPE, INCONSISTENT_VALUE };
+	enum { RECT_NO_ERROR, RECT_INCONSISTENT_TYPE, RECT_INCONSISTENT_VALUE };
 
 	bool MapRectangleID( int rId, int &portNum, int &pId, int &cId );
 	bool MapPortID( int pId, int &portNum, int &cId );
