@@ -669,6 +669,7 @@ SPOOL		= $(LOCAL_DIR)/spool
 EXECUTE		= $(LOCAL_DIR)/execute
 BIN		= $(RELEASE_DIR)/bin
 LIB		= $(RELEASE_DIR)/lib
+INCLUDE		= $(RELEASE_DIR)/include
 SBIN		= $(RELEASE_DIR)/sbin
 LIBEXEC		= $(RELEASE_DIR)/libexec
 
