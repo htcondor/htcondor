@@ -32,7 +32,15 @@
 
 class CheckEvents {
   public:
-	CheckEvents(bool allowExtraAborts = false, bool allowExtraRuns = false);
+	/** Constructor.
+	    @param Whether to allow "extra" abort events.
+		@param Whether to allow "extra" runs (Condor errors).
+		@param Whether to allow "garbage" events (submit with no
+		       corresponding terminate, vice-versa, etc.).
+	*/
+	CheckEvents(bool allowExtraAborts = false, bool allowExtraRuns = false,
+			bool allowGarbage = false);
+
 	~CheckEvents();
 
 	/** Check an event to see if it's consistent with previous events.
@@ -97,6 +105,10 @@ class CheckEvents {
 
 		// Allow more than one run for a single submit.
 	bool		allowExtraRuns;
+
+		// Allow "garbage" events (e.g., a submit with no corresponding
+		// terminated, or vice-versa).
+	bool		allowGarbage;
 
 	// For instantiation in programs that use this class.
 #define CHECK_EVENTS_HASH_INSTANCE template class \

@@ -354,6 +354,55 @@ int main(int argc, char **argv)
 
 	//-------------------------------------------------------------------------
 
+	printf("\n### Testing allowing garbage\n\n");
+
+	CheckEvents		ce7(false, false, true);
+
+	SubmitEvent		se5;
+	se4.cluster = 1000;
+	se4.proc = 0;
+	se4.subproc = 0;
+
+	printf("Testing submit... ");
+	CheckThisEvent(ce7, &se5, true, true, result);
+
+	ExecuteEvent exec3;
+	exec3.cluster = 2000; // Note different from submit event!
+	exec3.proc = 0;
+	exec3.subproc = 0;
+
+	printf("Testing execute... ");
+	CheckThisEvent(ce7, &exec3, true, false, result);
+
+	JobTerminatedEvent	te4;
+	te4.cluster = 3000;
+	te4.proc = 0;
+	te4.subproc = 0;
+
+	printf("Testing terminate... ");
+	CheckThisEvent(ce7, &te4, true, false, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce7.CheckAllJobs(errorMsg) ) {
+		printf("...succeeded\n");
+	} else {
+		printf("...FAILED (%s)\n", errorMsg.Value());
+		result = false;
+	}
+
+	printf("Testing terminate... ");
+	CheckThisEvent(ce7, &te4, false, false, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce7.CheckAllJobs(errorMsg) ) {
+		printf("...should have gotten an error (test FAILED)\n");
+		result = false;
+	} else {
+		printf("...got expected error (%s)\n", errorMsg.Value());
+	}
+
+	//-------------------------------------------------------------------------
+
 	if ( result ) {
 		printf("\nTest succeeded\n");
 		return 0;

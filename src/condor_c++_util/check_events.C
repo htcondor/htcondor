@@ -29,12 +29,14 @@
 
 //-----------------------------------------------------------------------------
 
-CheckEvents::CheckEvents(bool allowExtraAborts, bool allowExtraRuns) :
+CheckEvents::CheckEvents(bool allowExtraAborts, bool allowExtraRuns,
+		bool allowGarbage) :
 		jobHash(JOB_HASH_SIZE, ReadMultipleUserLogs::hashFuncJobID,
 		rejectDuplicateKeys)
 {
 	this->allowExtraAborts = allowExtraAborts;
 	this->allowExtraRuns = allowExtraRuns;
+	this->allowGarbage = allowGarbage;
 }
 
 //-----------------------------------------------------------------------------
@@ -103,7 +105,9 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
 			if ( info->submitCount != 1 ) {
 				errorMsg = idStr + " executing; submit count != 1 (" +
 						MyString(info->submitCount) + ")";
-				result = false;
+				if ( !allowGarbage || info->submitCount > 1 ) {
+					result = false;
+				}
 				eventIsGood = false;
 			}
 			if ( info->TotalEndCount() != 0 ) {
@@ -151,16 +155,19 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 {
 	bool		result = true;
 
-		// Allow for the case where we ran a post script after all submit attempts
-		// fail.
-	if ( info->submitCount == 0 && info->termCount == 0 && info->postScriptCount == 1 ) {
+		// Allow for the case where we ran a post script after all submit
+		// attempts fail.
+	if ( info->submitCount == 0 && info->termCount == 0 &&
+			info->postScriptCount == 1 ) {
 		return result;
 	}
 
 	if ( info->submitCount != 1 ) {
 		errorMsg = idStr + " ended; submit count != 1 (" +
 				MyString(info->submitCount) + ")";
-		result = false;
+		if ( !allowGarbage || info->submitCount > 1 ) {
+			result = false;
+		}
 		eventIsGood = false;
 	}
 
@@ -171,6 +178,8 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 				(info->abortCount == 1) && (info->termCount == 1) ) {
 			// Okay.
 		} else if ( allowExtraRuns ) {
+			// Okay.
+		} else if ( allowGarbage && info->TotalEndCount() == 0 ) {
 			// Okay.
 		} else {
 			result = false;
