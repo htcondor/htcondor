@@ -87,10 +87,9 @@ Init();
 
 	# Timing logic
 	my $CurTime = time();
-	my $TimeDiff = $CurTime - $LastTime;
-	my $MaxDiff = $LastSleepTime + 10;
+	my $TimeDiff = $CurTime - $LastTime - $LastSleepTime;
 	$LastSleepTime = 0;
-	if ( ( $LastTime > 0 ) && ( $TimeDiff < $MaxDiff ) ) {
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < 10 ) ) {
 	    print STDERR "\"top\" died after $TimeDiff seconds\n";
 	    if ( ++$FastCount > 1 ) {
 		my $SleepTime = $FastCount * 10;
@@ -323,8 +322,6 @@ sub RunIt
 	# Read the header
       READHEADER:
 	while ( <TOP> ) {
-	    last if ( eof TOP );
-
 	    # Uptime display?
 	    if ( /.*up.*load/ ) {
 		my %Uptime;
@@ -377,6 +374,7 @@ sub RunIt
 		last;
 	    }
 	}
+	last if ( eof TOP );
 
 	# Ok, summary is done...
 	$Summary->Store( "Summary_" );
@@ -387,7 +385,6 @@ sub RunIt
 	my %Processes;
       READPROC:
 	while ( <TOP> ) {
-	    last if ( eof TOP );
 
 	    # Verify that we start with a process ID type thingy, 
 	    # then parse it..
@@ -424,6 +421,8 @@ sub RunIt
 		last;
 	    }
 	}
+
+	# Ok, process the collected data now
 	ProcessData( \%Processes );
 
 	# Timing logic
