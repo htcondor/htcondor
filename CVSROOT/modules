@@ -82,6 +82,7 @@ V6_SRC		-a \
 			src/condor_classad \
 			src/condor_collector.V6 \
 			src/condor_daemon_core.V6 \
+			src/condor_examples \
 			src/condor_includes \
 			src/condor_io \
 			src/condor_kbdd \
@@ -89,6 +90,7 @@ V6_SRC		-a \
 			src/condor_negotiator.V6 \
 			src/condor_prio \
 			src/condor_q.V6 \
+			src/condor_release \
 			src/condor_rm.V6 \
 			src/condor_schedd.V6 \
 			src/condor_scripts \
