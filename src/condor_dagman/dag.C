@@ -266,7 +266,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					  break;
 				  }
 
-				  if( job->retries++ < job->retry_max ) {
+				  if( job->retries++ < job->GetRetryMax() ) {
 					  RestartNode( job, recovery );
 					  break;
 				  }
@@ -277,11 +277,11 @@ bool Dag::ProcessLogEvents (bool recovery) {
 
 				  sprintf( job->error_text, "Condor reported %s event",
 						   ULogEventNumberNames[e->eventNumber] );
-				  if( job->retry_max > 0 ) {
+				  if( job->GetRetryMax() > 0 ) {
 					  // add # of retries to error_text
 					  char *tmp = strnewp( job->error_text );
 					  sprintf( job->error_text, "%s (after %d node retries)",
-							   tmp, job->retries );
+							   tmp, job->GetRetries() );
 					  delete tmp;
 				  }
  				  if( job->_scriptPost == NULL || 
@@ -330,19 +330,19 @@ bool Dag::ProcessLogEvents (bool recovery) {
 										"signal %d.\n", job->GetJobName(),
 										termEvent->signalNumber );
 					  }
-					  if( job->retries < job->retry_max ) {
+					  if( job->GetRetries() < job->GetRetryMax() ) {
 						  RestartNode( job, recovery );
 						  break;
 					  }
 					  else {
 						  // no more retries -- job failed
 						  job->_Status = Job::STATUS_ERROR;
-						  if( job->retry_max > 0 ) {
+						  if( job->GetRetryMax() > 0 ) {
 							  // add # of retries to error_text
 							  char *tmp = strnewp( job->error_text );
 							  sprintf( job->error_text,
 									   "%s (after %d node retries)", tmp,
-									   job->retries );
+									   job->GetRetries() );
 							  delete tmp;   
 						  }
 						  if( job->_scriptPost == NULL ||
@@ -402,7 +402,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 								   "died on signal %d\n",
 								   termEvent->signalNumber );
-					if( job->retries < job->retry_max ) {
+					if( job->GetRetries() < job->GetRetryMax() ) {
 						RestartNode( job, recovery );
                     }
                     else {
@@ -422,12 +422,12 @@ bool Dag::ProcessLogEvents (bool recovery) {
 									 "POST Script died on signal %d",
 									 job->retval, termEvent->signalNumber );
 						}
-						if( job->retry_max > 0 ) {
+						if( job->GetRetryMax() > 0 ) {
 							// add # of retries to error_text
 							char *tmp = strnewp( job->error_text );
 							sprintf( job->error_text,
 									 "%s (after %d node retries)", tmp,
-									 job->retries );
+									 job->GetRetries() );
 							delete tmp;   
 						}
 					}
@@ -437,7 +437,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 								   "failed with status %d\n",
 								   termEvent->returnValue );
-					if( job->retries < job->retry_max ) {
+					if( job->GetRetries() < job->GetRetryMax() ) {
 						RestartNode( job, recovery );
 					}
 					else {
@@ -457,12 +457,12 @@ bool Dag::ProcessLogEvents (bool recovery) {
 									 "POST Script failed with status %d",
 									 job->retval, termEvent->returnValue );
 						}
-						if( job->retry_max > 0 ) {
+						if( job->GetRetryMax() > 0 ) {
 							// add # of retries to error_text
                             char *tmp = strnewp( job->error_text );
                             sprintf( job->error_text,
                                      "%s (after %d node retries)", tmp,
-                                     job->retries );
+                                     job->GetRetries() );
 							delete tmp;
 						}
 					}
@@ -735,18 +735,18 @@ Dag::PreScriptReaper( Job* job, int status )
 			sprintf( job->error_text, "PRE Script failed with status %d",
 					 WEXITSTATUS(status) );
 		}
-		if( job->retries < job->retry_max ) {
+		if( job->GetRetries() < job->GetRetryMax() ) {
 			RestartNode( job, false );
 		}
 		else {
 			job->_Status = Job::STATUS_ERROR;
 			_numJobsFailed++;
-			if( job->retry_max > 0 ) {
+			if( job->GetRetryMax() > 0 ) {
 				// add # of retries to error_text
 				char *tmp = strnewp( job->error_text );
 				sprintf( job->error_text,
 						 "%s (after %d node retries)", tmp,
-						 job->retries );
+						 job->GetRetries() );
 				delete tmp;   
 			}
 		}
@@ -908,14 +908,14 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
             fprintf (fp, "SCRIPT POST %s %s\n", job->GetJobName(),
                      job->_scriptPost->GetCmd());
         }
-		if( job->retry_max > 0 ) {
-			ASSERT( job->retries <= job->retry_max );
-			// print (job->retry_max - job->retries) so that
+		if( job->GetRetryMax() > 0 ) {
+			ASSERT( job->GetRetries() <= job->GetRetryMax() );
+			// print (job->GetRetryMax() - job->GetRetries()) so that
 			// job->retries isn't reset upon recovery
-			int retries = (job->retry_max - job->retries);
+			int retries = (job->GetRetryMax() - job->GetRetries());
 			fprintf( fp,
 					 "# %d of %d retries already performed; %d remaining\n",
-					 job->retries, job->retry_max, retries );
+					 job->GetRetries(), job->GetRetryMax(), retries );
 			fprintf( fp, "Retry %s %d\n", job->GetJobName(), retries );
 		}
 		fprintf( fp, "\n" );
