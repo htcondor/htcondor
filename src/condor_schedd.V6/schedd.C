@@ -2622,7 +2622,7 @@ Scheduler::Init()
 		}
 
 		if ( !getenv( "X509_USER_KEY" ) ) {
-			sprintf(tmpstring,"X509_USER_KEY=%s/private/newreq.pem",CondorCertDir);
+			sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CondorCertDir);
 			putenv( strdup( tmpstring ) );
 		}
 
