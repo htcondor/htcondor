@@ -70,7 +70,7 @@ open FILE, ">>$file" || die "Can't open $file: $!\n";
 print FILE "$append\n";
 close FILE;
 if( $verbose ) {
-    print "Added $append to $file\n";
+    print "safe_append.pl: added \"$append\" to $file\n";
 }
 exit 0;
 
