@@ -298,14 +298,17 @@ int GlobusJob::doEvaluateState()
 			} else if ( wantResubmit || doResubmit ) {
 				gmState = GM_CLEAN_JOBMANAGER;
 			} else {
-				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
+				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					submitLogged = true;
 				}
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					executeLogged = true;
 				}
@@ -1324,7 +1327,10 @@ bool GlobusJob::AllowTransition( int new_state, int old_state )
 		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED) ||
 		 ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING &&
 		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
-		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN) ) {
+		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN) ||
+		 ( old_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT &&
+		   new_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE &&
+		   new_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) ) {
 		return false;
 	}
 
