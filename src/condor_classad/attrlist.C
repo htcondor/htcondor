@@ -1639,6 +1639,15 @@ int AttrListList::Delete(AttrList* attrList)
 				if(tmpRep == cur)
 				{
 					((AttrListRep *)cur)->attrList->next = ((AttrListRep *)cur)->nextRep;
+					if ( ((AttrListRep *)cur)->nextRep == NULL ) {
+						// here we know this attrlist now no longer exists in any
+						// other attrlistlist.  so, since the user has now removed
+						// it from all lists, actually delete the ad itself.
+						// -Todd Tannenbaum, 9/19/2001 <tannenba@cs.wisc.edu>
+						AttrList*	adToRemove = ((AttrListRep *)cur)->attrList;
+						if ( adToRemove ) delete adToRemove;
+					}
+
 				}
 				else
 				{
