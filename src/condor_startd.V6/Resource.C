@@ -521,17 +521,22 @@ int
 Resource::wants_vacate( void )
 {
 	int want_vacate = 0;
+	bool unknown = true;
 	if( r_cur->universe() == VANILLA ) {
-		if( r_classad->EvalBool( "WANT_VACATE_VANILLA",
-								   r_cur->ad(),
-								   want_vacate ) == 0) { 
-			want_vacate = 1;
+		if( r_classad->EvalBool("WANT_VACATE_VANILLA",
+								r_cur->ad(),
+								want_vacate ) ) { 
+			unknown = false;
 		}
-	} else {
+	} 
+	if( unknown ) {
 		if( r_classad->EvalBool( "WANT_VACATE",
-								   r_cur->ad(),
-								   want_vacate ) == 0) { 
-			want_vacate = 1;
+								 r_cur->ad(),
+								 want_vacate ) == 0) { 
+				// This should never happen, since we already check 
+				// when we're constructing the internal config classad
+				// if we've got this defined. -Derek Wright 4/12/00
+			EXCEPT( "Can't find WANT_VACATE in internal ClassAd" );
 		}
 	}
 	return want_vacate;
@@ -542,17 +547,22 @@ int
 Resource::wants_suspend( void )
 {
 	int want_suspend;
+	bool unknown = true;
 	if( r_cur->universe() == VANILLA ) {
-		if( r_classad->EvalBool( "WANT_SUSPEND_VANILLA",
-								   r_cur->ad(),
-								   want_suspend ) == 0) {  
-			want_suspend = 1;
+		if( r_classad->EvalBool("WANT_SUSPEND_VANILLA",
+								r_cur->ad(),
+								want_suspend) ) {  
+			unknown = false;
 		}
-	} else {
+	}
+	if( unknown ) { 
 		if( r_classad->EvalBool( "WANT_SUSPEND",
 								   r_cur->ad(),
 								   want_suspend ) == 0) { 
-			want_suspend = 1;
+				// This should never happen, since we already check
+				// when we're constructing the internal config classad
+				// if we've got this defined. -Derek Wright 4/12/00
+			EXCEPT( "Can't find WANT_SUSPEND in internal ClassAd" );
 		}
 	}
 	return want_suspend;
