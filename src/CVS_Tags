@@ -1,11 +1,11 @@
-3/16/99 V6_3-NewAds-1-branch
-	This is a new branch for the New-Classads/egcs/STL conversion
-	process.  We created the branch, then we will merge the
-	V6_1-NewAds-branch directly into this new branch, not the
-	trunk.  Eventually, this branch will be merged into the trunk
-	once it's at 6.3.X.
+3/16/99 V6_1-NewAds-2-branch
+	This is the second branch for the New-Classads/egcs/STL
+	conversion process.  We created the new branch, then we will
+	merge the V6_1-NewAds-branch directly into this new branch,
+	not the trunk.  Eventually, this branch will be merged into
+	the trunk once it's at 6.3.X.
 
-3/16/99 co-alloc-1-branch
+3/16/99 V6_1-co-alloc-1-branch
 	Branch created for Adiel to use for his changes to the
 	negotiator to support co-allocation of licences w/ machines
 	(primarily for CORE).
