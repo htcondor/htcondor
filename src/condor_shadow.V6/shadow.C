@@ -210,7 +210,7 @@ int		InitialJobStatus = -1;
 int JobStatus;
 struct rusage JobRusage;
 int ExitReason = JOB_EXCEPTION;		/* Schedd counts on knowing exit reason */
-int check_static_policy = 1;			/* don't check if condor_rm'ed */
+volatile int check_static_policy = 1;	/* don't check if condor_rm'ed */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
@@ -554,7 +554,13 @@ main(int argc, char *argv[], char *envp[])
 		to exit. It modifies ExitReason approriately for job holding, or, get
 		this, just EXCEPTs if the jobs is supposed to go into idle state and
 		not leave. :) */
-	if (check_static_policy) {
+	/* Small change by Todd : only check the static policy if the job really
+	   exited of its own accord -- we don't want to even evaluate the static
+	   policy if the job exited because it was preempted, for instance */
+	if (check_static_policy && 
+		(ExitReason == JOB_EXITED || ExitReason == JOB_KILLED 
+		     	|| ExitReason == JOB_COREDUMPED)) 
+	{
 		static_policy();
 	}
 
