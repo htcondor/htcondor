@@ -64,18 +64,24 @@ ConnectQ(char *qmgr_location)
 		scheddAddr = get_schedd_addr(qmgr_location);
 	}
 
-	if(!scheddAddr)
+	if(scheddAddr)
+	{
+		qmgmt_sock = new ReliSock(scheddAddr, QMGR_PORT);
+		free(scheddAddr);
+	}
+	else if(qmgr_location)
 	{
 		qmgmt_sock = new ReliSock(qmgr_location, QMGR_PORT);
 	}
 	else
 	{
-		qmgmt_sock = new ReliSock(scheddAddr, QMGR_PORT);
-		free(scheddAddr);
+		dprintf(D_ALWAYS, "Can't connect to qmgr\n");
+		free(connection);
+		return 0;
 	}
 	connection->fd = qmgmt_sock->get_file_desc();
 	if (connection->fd < 0) {
-		dprintf(D_ALWAYS, "Can't connect to qmgr");
+		dprintf(D_ALWAYS, "Can't connect to qmgr\n");
 		free(connection);
 		return 0;
 	}
