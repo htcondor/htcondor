@@ -340,8 +340,14 @@ CondorCronJob::Reconfig( void )
 	}
 
 	// HUP it; if it dies it'll get the new config when it restarts
-	dprintf( D_ALWAYS, "Cron: Sending HUP to '%s' pid %d\n", name, pid );
-	return daemonCore->Send_Signal( pid, SIGHUP );
+	if ( pid )
+	{
+		dprintf( D_ALWAYS, "Cron: Sending HUP to '%s' pid %d\n", name, pid );
+		return daemonCore->Send_Signal( pid, SIGHUP );
+	}
+
+	// Otherwise, all ok
+	return 0;
 }
 
 // Schdedule the job to run
@@ -412,6 +418,7 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 		dprintf( D_ALWAYS, "Cron: WARNING: Child PID %d != Exit PID %d\n",
 				 pid, exitPid );
 	}
+	pid = 0;
 
 	// Read it's final stdout for building a ClassAd
 	MyString	*string = stdOutBuf->GetString( );
