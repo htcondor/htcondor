@@ -474,23 +474,23 @@ OpenFileTable::DoDup2( int orig_fd, int new_fd )
     return -1;
   }
   
-  dprintf(D_ALWAYS,"Just before closing %d\n",new_fd);
-  Display();
+//dprintf(D_ALWAYS,"Just before closing %d\n",new_fd);
+//Display();
   // POSIX.1 says do it this way, AIX does it differently - any
   // AIX programs which depend on that behavior are now hosed...
   if( file[new_fd].isOpen() ) {
     DoClose( new_fd );
   }
-  dprintf(D_ALWAYS,"Just after closing %d\n",new_fd);
+//dprintf(D_ALWAYS,"Just after closing %d\n",new_fd);
   
-  Display();
+//Display();
   // make new fd a duplicate of the original one
   file[new_fd] = file[orig_fd];
   file[new_fd].duplicate = TRUE;
   file[new_fd].dup_of = orig_fd;
   
-  dprintf(D_ALWAYS,"Just after duplicating %d\n",new_fd);
-  Display();
+//dprintf(D_ALWAYS,"Just after duplicating %d\n",new_fd);
+//Display();
   return new_fd;
 }
 
@@ -655,11 +655,11 @@ OpenFileTable::Save()
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if( f->isOpen() && !f->isDup() ) {
-			dprintf(D_ALWAYS,"**** Current file entry is %d\n",i);
+//			dprintf(D_ALWAYS,"**** Current file entry is %d\n",i);
 			if ( f->isIOServerAccess() ) {
 				scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED);
 				pos = ioserver_lseek( i, (off_t)0, SEEK_CUR);
-				dprintf(D_ALWAYS,">>>>> IO server seek returns %d\n",pos);
+//				dprintf(D_ALWAYS,">>>>> IO server seek returns %d\n",pos);
 				SetSyscalls( scm );
 			}
 			else if( f->isRemoteAccess() ) {
@@ -763,7 +763,7 @@ OpenFileTable::Restore()
 
 
 	chdir( cwd );
-	Display();
+//	Display();
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if ( (f->pathname) && (!strcmp(f->pathname,"/IO_Socket") ))
@@ -790,20 +790,20 @@ OpenFileTable::Restore()
 
 			    SetSyscalls(scm);
 			    
-			    dprintf(D_ALWAYS,"before duping... \n");
-			    printft();
+//			    dprintf(D_ALWAYS,"before duping... \n");
+//			    printft();
 			    
 			    file[i] = file[temp];
 			    file[i].duplicate = TRUE;
 			    file[i].dup_of = temp;
 
-			    dprintf(D_ALWAYS,"after duping... \n");
-			    printft();
+//			    dprintf(D_ALWAYS,"after duping... \n");
+//			    printft();
 
-			    dprintf(D_ALWAYS,"---  table printed done \n");
-			    FileTab->DoClose( temp );
-			    dprintf(D_ALWAYS,"---  close done \n");
-			    printft();
+//			    dprintf(D_ALWAYS,"---  table printed done \n");
+//			    FileTab->DoClose( temp );
+//			    dprintf(D_ALWAYS,"---  close done \n");
+//			    printft();
 			  }
 			
 			else
@@ -2064,15 +2064,15 @@ open( const char *path, int flags, ... )
 			fd = pipe_fd;
 			break;
 		  case IS_IOSERVER:
-			dprintf(D_ALWAYS," Calling ioserver_open.. %s, %d, %d \n", local_path, flags, creat_mode);
+//			dprintf(D_ALWAYS," Calling ioserver_open.. %s, %d, %d \n", local_path, flags, creat_mode);
 			
 			scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 			fd = ioserver_open( local_path, flags, creat_mode ) ;
 			
-			char str[10];
-			sprintf(str,"fd = %d\n",fd);
+//			char str[10];
+//			sprintf(str,"fd = %d\n",fd);
 			
-			dprintf(D_ALWAYS,str);
+//			dprintf(D_ALWAYS,str);
 			SetSyscalls( scm );
 			
 			break ;
