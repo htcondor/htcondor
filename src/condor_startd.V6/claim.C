@@ -647,7 +647,7 @@ Claim::spawnStarter( time_t now, Stream* s )
 void
 Claim::setStarter( Starter* s )
 {
-	if( c_starter ) {
+	if( s && c_starter ) {
 		EXCEPT( "Claim::setStarter() called with existing starter!" );
 	}
 	c_starter = s;
