@@ -21,35 +21,16 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "server_interface.h"
-#if 0
-#include "../server2/constants2.h"
-#include "../server2/network2.h"
-#else
 #include "constants2.h"
 #include "network2.h"
-#endif
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include "condor_fix_assert.h"
+#include "internet.h"
 #include <string.h>
-#if !defined(WIN32)
-#include <unistd.h>
-#endif
-#include <stdio.h>
 
-#if !defined(TRUE)
-#define TRUE (1)
-#endif
-
-#if !defined(FALSE)
-#define FALSE (0)
-#endif
-
-extern char* param(char*);
 static char* getserveraddr();
+
 
 void StripPrefix(const char* pathname,
 				 char        filename[MAX_CONDOR_FILENAME_LENGTH])
