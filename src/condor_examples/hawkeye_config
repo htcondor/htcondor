@@ -686,7 +686,21 @@ Hawkeye_gass_cache_directory=$(HOME)/.globus/.gass_cache
 Hawkeye_gass_cache_maxage=1d
 Hawkeye_gass_cache_maxsize=100m
 
-## Condor pool monitoring
+## Define parameters for the condor_pool module
+##  HAWKEYE_POOL_ABSENT = true/false
+##   Enable / disable absent check
+##  HAWKEYE_POOL_CLUSTER = true/false
+##   Enable / disable cluster check (only w/absent)
+##  HAWKEYE_POOL_RESERVED = true/false
+##   Enable / disable reserved check (only w/absent)
+##  HAWKEYE_POOL_SUMMARY = true/false
+##   Enable / disable summary check
+##  HAWKEYE_POOL_RUN = true/false
+##   Enable / disable run check
+##  HAWKEYE_POOL_SUBMIT = true/false
+##   Enable / disable submit check
+##  HAWKEYE_POOL_DESCRIPTION = "my pool description"
+##   Set a text description of the pool (free form)
 Hawkeye_pool_absent = true
 Hawkeye_pool_cluster = true
 Hawkeye_pool_reserved = true
@@ -694,7 +708,9 @@ Hawkeye_pool_summary = true
 Hawkeye_pool_run = true
 Hawkeye_pool_submit = true
 Hawkeye_pool_ckpt = true
-Hawkeye_pool_env=PATH=/bin:/sbin:/usr/bin:/home/hawkeye/bin:/home/condor/bin:/home/condor/scripts;CONDOR_ROSTER_DIR=/n/uscms_share/nleroy/etc
+Hawkeye_pool_description="Our super Condor pool"
+Hawkeye_pool_roster_dir="/home/condor/etc"
+Hawkeye_pool_pathadd="/home/condor/scripts:/unsup/condor/bin"
 
 
 ## #################################################################
