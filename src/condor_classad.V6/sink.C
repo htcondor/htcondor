@@ -26,6 +26,8 @@
 #include "sink.h"
 #include "util.h"
 
+#include <math.h>
+
 using namespace std;
 
 BEGIN_NAMESPACE( classad )
@@ -173,9 +175,13 @@ Unparse( string &buffer, const Value &val )
 			double real;
 			val.IsRealValue(real);
             if (real == 0.0) {
-                buffer += "0.0";
-            } else if (real == -0.0) {
-                buffer += "-0.0";
+                // It might be positive or negative and it's
+                // hard to tell. printf is good at telling though.
+                // We also want to print it with as few
+                // digits as possible, which is why we don't use the 
+                // case below.
+                sprintf(tempBuf, "%.1f", real);
+                buffer += tempBuf;
             } else if (classad_isnan(real)) {
                 buffer += "real(\"NaN\")";
             } else if (classad_isinf(real) == -1){
