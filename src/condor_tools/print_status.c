@@ -49,6 +49,8 @@ typedef struct {
 	char	*arch;
 	char	*op_sys;
 	int		idle;
+	int    bench_mips;       
+	int    kflops;    
 } SERVER_REC;
 
 SERVER_REC	Servers[1024];
@@ -220,6 +222,14 @@ MACH_REC	*mach;
 		rec->op_sys = "(?)";
 	}
 
+	if( evaluate_int("KFLOPS",&rec->kflops,context,NIL ) < 0 ) {
+		rec->kflops = 0;
+	}
+
+	if( evaluate_int("MIPS",&rec->bench_mips,context,NIL ) < 0 ) {
+		rec->bench_mips = 0;
+	}
+
 	inc_serv_sum( rec );
 
 	if( !AvailOnly || rec->idle ) {
@@ -302,13 +312,16 @@ FILE		*fp;
 	char	*format_seconds();
 
 	
-	fprintf( fp, "%-14s ", rec->name );
+	fprintf( fp, "%-14s", rec->name );
 
-	if( rec->idle ) {
+ 	if(!AvailOnly)
+	{
+	  if( rec->idle ) {
 		fprintf( fp, "%-5s ", "True" );
-	} else {
+	  } else {
 		fprintf( fp, "%-5s ", "False" );
-	}
+	  }
+   	}
 
 	if( rec->swap < 0.0 ) {
 		fprintf( fp, "%-6s ", "?" );
@@ -325,9 +338,9 @@ FILE		*fp;
 	fprintf( fp, "%-6s ", rec->state );
 
 	if( rec->load_avg < 0.0 ) {
-		fprintf( fp, "%-6s ", "?" );
+		fprintf( fp, "%-6s", "?" );
 	} else {
-		fprintf( fp, "%-6.2f ", rec->load_avg );
+		fprintf( fp, "%-6.2f", rec->load_avg );
 	}
 
 	if( rec->kbd_idle < 0 ) {
@@ -335,10 +348,23 @@ FILE		*fp;
 	} else {
 		fprintf( fp, "%12s ", format_seconds(rec->kbd_idle) );
 	}
+	
+	if(AvailOnly) {
+	  if( rec->bench_mips <= 0 ) {
+	      fprintf( fp, "%3s  ", "?" );
+	  } else {
+	      fprintf( fp, "%3d ", rec->bench_mips );
+	  }
+	  
+	  if( rec->kflops <= 0 ) {
+	       fprintf( fp, "%-5s ", "?" );
+	  } else {
+	       fprintf( fp, "%-6d ", rec->kflops );
+	  }
+	}
 
-	fprintf( fp, "%-7s ", rec->arch );
+	fprintf( fp, "%-7s", rec->arch );
 	fprintf( fp, "%-8s ", rec->op_sys );
-
 
 	fprintf( fp, "\n" );
 }
@@ -365,13 +391,20 @@ FILE	*fp;
 {
 
 	fprintf( fp, "%-14s ", "Name" );
-	fprintf( fp, "%-4s ", "Avail" );
-	fprintf( fp, "%-6s ", "Swap" );
+	if(!AvailOnly)
+	   fprintf( fp, "%-4s ", "Avail" );
+	fprintf( fp, "%-6s", "Swap" );
 	fprintf( fp, "%-6s ", "Disk" );
 	fprintf( fp, "%-6s ", "State" );
 	fprintf( fp, "%-6s ", "LdAvg" );
-	fprintf( fp, "%12s ", "Idle" );
-	fprintf( fp, "%-7s ", "Arch" );
+	fprintf( fp, "%8s ", "Idle" );
+	if(AvailOnly) {
+	  fprintf( fp, "%6s ", "MIPS" );
+	  fprintf( fp, "%6s ", "KFLOPS" );
+	  fprintf( fp, "%-7s ", "Arch" );
+	}
+	else
+	  fprintf( fp, "%-8s ", "  Arch");
 	fprintf( fp, "%-8s ", "OpSys" );
 	fprintf( fp, "\n" );
 }
