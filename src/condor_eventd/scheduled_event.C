@@ -34,7 +34,6 @@ ScheduledEvent::ScheduledEvent(const char name[], const char record[], int &i)
 	: id(NULL), daymask(0), timeofday(-1), active(false), DeactivateTid(-1)
 {
 	// copy name
-	if (id) free(id);
 	id = strdup(name);
 
 	while(isspace(record[i])) i++; // skip leading whitespace
@@ -514,7 +513,7 @@ ScheduledShutdownEvent::Timeout()
 					startd_name, startd_addr);
 			continue;
 		}
-		dprintf(D_FULLDEBUG, "Sent VACATE_CLAIM to %s.\n", startd_name);
+		dprintf(D_ALWAYS, "Sent VACATE_CLAIM to %s.\n", startd_name);
 		if (JobUniverse == 1) {
 			time_to_vacate += (int)(double(ImageSize)/128.0/bandwidth);
 		}
@@ -612,7 +611,7 @@ ScheduledShutdownEvent::EnterShutdownMode(const char startd_name[],
 		return -1;
 	}
 
-	dprintf(D_FULLDEBUG, "Placed %s in shutdown mode until %d.\n",
+	dprintf(D_ALWAYS, "Placed %s in shutdown mode until %d.\n",
 			startd_name, EndTime+SlowStartPos);
 	SlowStartPos += SlowStartInterval;
 
@@ -652,7 +651,7 @@ ScheduledShutdownEvent::CleanupShutdownModeConfig(const char startd_name[],
 		return -1;
 	}
 
-	dprintf(D_FULLDEBUG, "Cleaned up shutdown mode config on %s.\n",
+	dprintf(D_ALWAYS, "Cleaned up shutdown mode config on %s.\n",
 			startd_name);
 
 	return 0;
