@@ -53,7 +53,13 @@ static int calc_disk __P((void));
 static int calc_idle_time __P((resource_info_t *));
 static int calc_ncpus __P((void));
 static int tty_idle_time __P((char *));
+
+#if !defined(OSF1)
 static int tty_pty_idle_time __P((void));
+#else
+extern "C" time_t tty_pty_idle_time();
+#endif
+
 static float get_load_avg __P((void));
 static int kill_starter __P((int, int));
 extern "C" int event_vacate(resource_id_t, job_id_t, task_id_t);
