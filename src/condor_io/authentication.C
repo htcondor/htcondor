@@ -842,7 +842,9 @@ Authentication::authenticate_filesystem( int remote = 0 )
 		} 
 		else {
 			retval = -1;
-			dprintf(D_ALWAYS,"invalid state in authenticate_filesystem\n" );
+			dprintf(D_ALWAYS,
+					"invalid state in authenticate_filesystem (file %s)\n",
+					new_file ? new_file : "(null)" );
 		}
 
 		mySock->code( retval );
