@@ -92,7 +92,7 @@ void
 usage()
 {
 	fprintf( stderr,
-		"Usage: %s [-r host] -a | { cluster | cluster.proc | user } ... \n",
+		"Usage: %s [-r host] { -a | cluster | cluster.proc | user } ... \n",
 		MyName
 	);
 	exit( 1 );
