@@ -157,7 +157,6 @@
 #define INSUFFICIENT_BANDWIDTH              72
 #define DESIRED_FILE_NOT_FOUND              73
 #define IMDS_INDEX_ERROR                    80
-#define FILE_LOCKED                         81
 #define CANNOT_RENAME_OVER_NEWER_FILE		82
 #define EXISTS                              90
 #define DOES_NOT_EXIST                      91

@@ -52,16 +52,6 @@ class IMDS
 		       const char*    file_name);
     void DumpIndex() { Index.IndexDump(); }
     void DumpInfo() { FileStats.PrintFileInfo(); }
-    void Lock(struct in_addr machine_IP,
-	      const char*    owner_name,
-	      const char*    file_name,
-	      file_state     state);
-    void Unlock(struct in_addr machine_IP,
-		const char*    owner_name,
-		const char*    file_name);
-    int LockStatus(struct in_addr machine_IP,
-		   const char*    owner_name,
-		   const char*    file_name);
     u_lint GetNumFiles();
     void TransferFileInfo(int socket_desc);
 };

@@ -265,36 +265,6 @@ int FileIndex::Exists(struct in_addr machine_IP,
 }
 
 
-int FileIndex::LockStatus(struct in_addr machine_IP,
-			  const char*    owner_name,
-			  const char*    file_name)
-{
-  machine_node* m;
-  owner_node*   o;
-  file_node*    f;
-
-  m = FindOrAddMachine(machine_IP, 0);
-  if (m == NULL)
-    return DOES_NOT_EXIST;
-  o = FindOrAddOwner(m, owner_name, 0);
-  if (o == NULL)
-    return DOES_NOT_EXIST;
-  f = FindOrAddFile(o->file_root, file_name, 0);
-  if (f == NULL)
-    return DOES_NOT_EXIST;
-  if (f->file_data == NULL)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: IMDS index is inconsistent" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      exit(IMDS_INDEX_ERROR);
-    }
-  return f->file_data->lock;
-}
-
-
 void FileIndex::DestroyFileTree(file_node*& file_root)
 {
   if (file_root != NULL)
@@ -627,11 +597,6 @@ void FileIndex::FIDump(file_node* f_ptr)
       FIDump(f_ptr->left);
       cout << "\t\t\tFile Name: " << f_ptr->file_data->data.file_name << endl;
       cout << "\t\t\tFile Size: " << f_ptr->file_data->data.size << endl;
-      cout << "\t\t\tLock:      ";
-      if (f_ptr->file_data->lock == UNLOCKED)
-	cout << "unlocked" << endl;
-      else
-	cout << "exclusive lock" << endl;
       cout << "\t\t\tStatus:    ";
       switch (f_ptr->file_data->data.state)
 	{

@@ -68,8 +68,6 @@ void FileInformation::DeleteFileInfo()
 int FileInformation::RemoveFileInfo(file_info_node* d_ptr)
 {
 	if (d_ptr) {
-		if (d_ptr->lock != UNLOCKED)
-			return FILE_LOCKED;
 		if ((head == d_ptr) && (tail == d_ptr)) {
 			head = NULL;
 			tail = NULL;
@@ -133,7 +131,6 @@ file_info_node* FileInformation::AddFileInfo(struct in_addr machine_IP,
       tail = n;
     }
   num_files++;
-  n->lock = UNLOCKED;
   return n;
 }
 
@@ -142,11 +139,7 @@ int FileInformation::RenameFileInfo(file_info_node* r_ptr,
                                     const char*     new_file_name)
 {
 	if (r_ptr != NULL)
-		if (r_ptr->lock != UNLOCKED)
-			return FILE_LOCKED;
-		else
-			strcpy(r_ptr->data.file_name, new_file_name);
-/*	return RENAMED; */
+		strcpy(r_ptr->data.file_name, new_file_name);
 	return CKPT_OK;
 }
 

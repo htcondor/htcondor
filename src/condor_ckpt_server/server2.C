@@ -35,8 +35,6 @@
 #include "alarm2.h"
 #include "condor_uid.h"
 
-#undef DEBUG
-
 XferSummary	xfer_summary;
 
 Server server;
@@ -103,8 +101,6 @@ void Server::Init(int max_new_xfers,
 				  int max_new_restore_xfers)
 {
 	struct stat log_stat;
-	char        log_filename[100];
-	char        old_log_filename[100];
 	char		*ckpt_server_dir, *level;
 #ifdef DEBUG
 	char        log_msg[256];
@@ -119,22 +115,6 @@ void Server::Init(int max_new_xfers,
 	num_store_xfers = 0;
 	num_restore_xfers = 0;
 	num_replicate_xfers = 0;
-#if DEBUG
-	sprintf(log_filename, "%s%s", LOCAL_DRIVE_PREFIX, LOG_FILE);
-	if (stat(log_filename, &log_stat) == 0) {
-		sprintf(old_log_filename, "%s%s", LOCAL_DRIVE_PREFIX, OLD_LOG_FILE);
-		rename(log_filename, old_log_filename);
-    }
-	log_file.open(log_filename);
-	if (log_file.fail()) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: unable to open checkpoint server log file" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
-		exit(LOG_FILE_OPEN_ERROR);
-    }
-#endif
 
 	config( 0 );
 	dprintf_config( "CKPT_SERVER", 2 );
@@ -238,9 +218,6 @@ void Server::Init(int max_new_xfers,
 	sprintf(log_msg, "%s%d", "Number of restoring transfers:     ",
 			max_restore_xfers);
 	Log(log_msg);
-	log_file << endl << endl << endl;
-	log_file << "   Local Time    Request ID   Event" << endl;
-	log_file << "   ----------    ----------   -----" << endl;
 #endif
 }
 
@@ -402,9 +379,6 @@ void Server::Execute()
 	close(store_req_sd);
 	close(restore_req_sd);
 	close(replicate_req_sd);
-#if DEBUG
-	log_file.close();
-#endif
 }
 
 
@@ -586,7 +560,6 @@ void Server::ProcessServiceReq(int             req_id,
 	char               log_msg[256];
 	struct sockaddr_in server_sa;
 	int                data_conn_sd;
-	int                lock_status;
 	struct stat        chkpt_file_status;
 	char               pathname[MAX_PATHNAME_LENGTH];
 	int                num_files;
@@ -714,26 +687,18 @@ void Server::ProcessServiceReq(int             req_id,
 				service_reply.req_status = htons(BAD_REQ_PKT);
 			} else {
 				service_req.key = ntohl(service_req.key);
-				if (imds.LockStatus(shadow_IP, service_req.owner_name, 
-									service_req.file_name) == EXCLUSIVE_LOCK)
-					if (transfers.GetKey(shadow_IP, service_req.owner_name, 
+				if (transfers.GetKey(shadow_IP, service_req.owner_name, 
 								 service_req.file_name) == service_req.key) {
-						transfers.SetOverride(shadow_IP, 
-											  service_req.owner_name, 
-											  service_req.file_name);
-						imds.Unlock(shadow_IP, service_req.owner_name,
-									service_req.file_name);
-					}
-				if (imds.LockStatus(shadow_IP, service_req.owner_name, 
-								service_req.new_file_name) == EXCLUSIVE_LOCK)
-					if (transfers.GetKey(shadow_IP, service_req.owner_name, 
+					transfers.SetOverride(shadow_IP, 
+										  service_req.owner_name, 
+										  service_req.file_name);
+				}
+				if (transfers.GetKey(shadow_IP, service_req.owner_name, 
 							 service_req.new_file_name) == service_req.key) {
-						transfers.SetOverride(shadow_IP, 
-											  service_req.owner_name, 
-											  service_req.new_file_name);
-						imds.Unlock(shadow_IP, service_req.owner_name,
-									service_req.new_file_name);
-					}
+					transfers.SetOverride(shadow_IP, 
+										  service_req.owner_name, 
+										  service_req.new_file_name);
+				}
 				service_reply.req_status = 
 					htons(imds.RenameFile(shadow_IP, 
 										  service_req.owner_name, 
@@ -758,32 +723,20 @@ void Server::ProcessServiceReq(int             req_id,
 				service_reply.req_status = htons(BAD_REQ_PKT);
 			} else {
 				service_req.key = ntohl(service_req.key);
-				if (imds.LockStatus(service_req.shadow_IP,
-									service_req.owner_name, 
-									service_req.file_name) == EXCLUSIVE_LOCK)
-					if (transfers.GetKey(service_req.shadow_IP,
-										 service_req.owner_name, 
+				if (transfers.GetKey(service_req.shadow_IP,
+									 service_req.owner_name, 
 								 service_req.file_name) == service_req.key) {
-						transfers.SetOverride(service_req.shadow_IP, 
-											  service_req.owner_name, 
-											  service_req.file_name);
-						imds.Unlock(service_req.shadow_IP,
-									service_req.owner_name,
-									service_req.file_name);
-					}
-				if (imds.LockStatus(service_req.shadow_IP,
-									service_req.owner_name, 
-								service_req.new_file_name) == EXCLUSIVE_LOCK)
-					if (transfers.GetKey(service_req.shadow_IP,
-										 service_req.owner_name, 
+					transfers.SetOverride(service_req.shadow_IP, 
+										  service_req.owner_name, 
+										  service_req.file_name);
+				}
+				if (transfers.GetKey(service_req.shadow_IP,
+									 service_req.owner_name, 
 							 service_req.new_file_name) == service_req.key) {
-						transfers.SetOverride(service_req.shadow_IP, 
-											  service_req.owner_name, 
-											  service_req.new_file_name);
-						imds.Unlock(service_req.shadow_IP,
-									service_req.owner_name,
-									service_req.new_file_name);
-					}
+					transfers.SetOverride(service_req.shadow_IP, 
+										  service_req.owner_name, 
+										  service_req.new_file_name);
+				}
 				service_reply.req_status = 
 					htons(imds.RenameFile(service_req.shadow_IP, 
 										  service_req.owner_name, 
@@ -804,59 +757,10 @@ void Server::ProcessServiceReq(int             req_id,
 				(strlen(service_req.file_name) == 0))
 				service_reply.req_status = htons(BAD_REQ_PKT);
 			else {
-				lock_status = imds.LockStatus(shadow_IP, 
-											  service_req.owner_name, 
-											  service_req.file_name);
-				switch (lock_status) {
-				    case UNLOCKED:
-					    service_reply.req_status = 
-							htons(imds.RemoveFile(shadow_IP, 
-												  service_req.owner_name, 
-												  service_req.file_name));
-						break;
-					case EXCLUSIVE_LOCK:
-						service_req.key = ntohl(service_req.key);
-						if (transfers.GetKey(shadow_IP, service_req.owner_name,
-								 service_req.file_name) == service_req.key) {
-							transfers.SetOverride(shadow_IP, 
-												  service_req.owner_name,
-												  service_req.file_name);
-							imds.Unlock(shadow_IP, service_req.owner_name,
-										service_req.file_name);
-							service_reply.req_status = 
-								htons(imds.RemoveFile(shadow_IP, 
-													  service_req.owner_name, 
-													  service_req.file_name));
-						} else
-							service_reply.req_status = htons(FILE_LOCKED);
-						break;
-					case DOES_NOT_EXIST:
-						sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
-								inet_ntoa(shadow_IP), service_req.owner_name, 
-								service_req.file_name);
-						errno = 0;
-						if (stat(pathname, &chkpt_file_status) == 0) {
-							if (remove(pathname) == 0)
-								service_reply.req_status = htons(CKPT_OK);
-							else
-								service_reply.req_status = 
-									htons(CANNOT_DELETE_FILE);
-						} else if (errno == EACCES)
-							service_reply.req_status = 
-								htons(INSUFFICIENT_PERMISSIONS);
-						else
-							service_reply.req_status = htons(DOES_NOT_EXIST);
-						break;
-
-					default:
-						close(req_sd);
-						cerr << endl << "ERROR:" << endl;
-						cerr << "ERROR:" << endl;
-						cerr << "ERROR: IMDS file has ambiguous lock state" <<
-							endl;
-						cerr << "ERROR:" << endl << endl;
-						exit(IMDS_BAD_RETURN_CODE);
-					}
+				service_reply.req_status = 
+					htons(imds.RemoveFile(shadow_IP, 
+										  service_req.owner_name, 
+										  service_req.file_name));
 			}
 			break;
 
@@ -868,29 +772,13 @@ void Server::ProcessServiceReq(int             req_id,
 				(strlen(service_req.file_name) == 0))
 				service_reply.req_status = htons(BAD_REQ_PKT);
 			else {
-				lock_status = imds.LockStatus(shadow_IP, 
-											  service_req.owner_name, 
-											  service_req.file_name);
-				if (lock_status == DOES_NOT_EXIST) {
-					sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
-							inet_ntoa(shadow_IP), service_req.owner_name, 
-							service_req.file_name);
-					if (stat(pathname, &chkpt_file_status) == 0) {
-						// File exists but 
-						//   is not in 
-						//   in-memory
-						//   data structure
-						
-						imds.AddFile(shadow_IP, service_req.owner_name, 
-									 service_req.file_name, 
-									 chkpt_file_status.st_size, ON_SERVER);
-/*						service_reply.req_status = htons(EXISTS); */
+				sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
+						inet_ntoa(shadow_IP), service_req.owner_name, 
+						service_req.file_name);
+				if (stat(pathname, &chkpt_file_status) == 0) {
 						service_reply.req_status = htons(0);
-					} else
-						service_reply.req_status = htons(DOES_NOT_EXIST);
 				} else
-/*					service_reply.req_status = htons(EXISTS); */
-					service_reply.req_status = htons(0);
+					service_reply.req_status = htons(DOES_NOT_EXIST);
 			}
 			break;
 			
@@ -928,9 +816,6 @@ void Server::ProcessServiceReq(int             req_id,
 					Log(req_id, "Request for server status GRANTED");
 				} else {
 					// Child process
-#if DEBUG
-					log_file.close();
-#endif
 					close(store_req_sd);
 					close(restore_req_sd);
 					close(service_req_sd);
@@ -1175,7 +1060,7 @@ void Server::ProcessStoreReq(int            req_id,
 	char               pathname[MAX_PATHNAME_LENGTH];
 	char               log_msg[256];
 	int                err_code;
-
+	
 	store_req.ticket = ntohl(store_req.ticket);
 	if (store_req.ticket != AUTHENTICATION_TCKT) {
 		store_reply.server_name.s_addr = htonl(0);
@@ -1215,145 +1100,118 @@ void Server::ProcessStoreReq(int            req_id,
 	sprintf(log_msg, "File size: %d", ntohl(store_req.file_size));
 	Log(log_msg);
 #endif
-	ret_code = imds.LockStatus(shadow_IP, store_req.owner, store_req.filename);
 	UnblockSignals();
 	store_req.file_size = ntohl(store_req.file_size);
-	if (ret_code == EXCLUSIVE_LOCK) {
+	data_conn_sd = I_socket();
+	if (data_conn_sd == INSUFFICIENT_RESOURCES) {
 		store_reply.server_name.s_addr = htonl(0);
 		store_reply.port = htons(0);
-		store_reply.req_status = htons(ret_code);
+		store_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
 		BlockSignals();
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
-		Log("File is currently LOCKED");
-		close(req_sd);
+		Log("Insufficient buffers/ports to handle request");
 		UnblockSignals();
-    } else if ((ret_code == UNLOCKED) || (ret_code == DOES_NOT_EXIST)) {
-		data_conn_sd = I_socket();
-		if (data_conn_sd == INSUFFICIENT_RESOURCES) {
-			store_reply.server_name.s_addr = htonl(0);
-			store_reply.port = htons(0);
-			store_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
-			net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
-			BlockSignals();
-			sprintf(log_msg, "Store request from %s DENIED:", 
-					inet_ntoa(shadow_IP));
-			Log(req_id, log_msg);
-			Log("Insufficient buffers/ports to handle request");
-			UnblockSignals();
-			close(req_sd);
-			return;
-		} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
-			store_reply.server_name.s_addr = htonl(0);
-			store_reply.port = htons(0);
-			store_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
-			net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
-			BlockSignals();
-			sprintf(log_msg, "Store request from %s DENIED:", 
-					inet_ntoa(shadow_IP));
-			Log(req_id, log_msg);
-			Log("Cannot obtain a new socket from server");
-			UnblockSignals();
-			close(req_sd);
-			return;
-		}
-
-		memset((char*) &server_sa, 0, sizeof(server_sa));
-		server_sa.sin_family = AF_INET;
-		server_sa.sin_port = htons(0);
-		server_sa.sin_addr = server_addr;
-		if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
-			cerr << endl << "ERROR:" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR: I_bind() returns an error (#" << ret_code
-				<< ")" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR:" << endl << endl;
-			sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
-					err_code);
-			Log(0, log_msg);
-			exit(ret_code);
-		}
-
-		if (I_listen(data_conn_sd, 1) != CKPT_OK) {
-			cerr << endl << "ERROR:" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR: I_listen() fails to listen" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR:" << endl << endl;
-			sprintf(log_msg, "ERROR: I_listen() fails to listen");
-			Log(0, log_msg);
-			exit(LISTEN_ERROR);
-		}
-
+		close(req_sd);
+		return;
+	} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
+		store_reply.server_name.s_addr = htonl(0);
+		store_reply.port = htons(0);
+		store_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
+		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
 		BlockSignals();
-		imds.AddFile(shadow_IP, store_req.owner, store_req.filename, 
-					 store_req.file_size, NOT_PRESENT);
-		imds.Lock(shadow_IP, store_req.owner, store_req.filename, LOADING);
+		sprintf(log_msg, "Store request from %s DENIED:", 
+				inet_ntoa(shadow_IP));
+		Log(req_id, log_msg);
+		Log("Cannot obtain a new socket from server");
 		UnblockSignals();
-		store_reply.server_name = server_addr;
-      // From the I_bind() call, the port should already be in network-byte
-      //   order
-		store_reply.port = server_sa.sin_port;  
-		store_reply.req_status = htons(CKPT_OK);
-		if (net_write(req_sd, (char*) &store_reply, 
-					  sizeof(store_reply_pkt)) < 0) {
-			close(req_sd);
-			BlockSignals();
-			sprintf(log_msg, "Store request from %s DENIED:", 
-					inet_ntoa(shadow_IP));
-			Log(req_id, log_msg);
-			Log("Cannot send IP/port to shadow (socket closed)");
-			imds.RemoveFile(shadow_IP, store_req.owner, store_req.filename);
-			UnblockSignals();
-			close(data_conn_sd);
-		} else {
-			close(req_sd);
-			BlockSignals();
-
-			child_pid = fork();
-
-			if (child_pid < 0) {
-				close(data_conn_sd);
-				Log(req_id, "Unable to honor store request:");
-				Log("Cannot fork child processes");
-			} else if (child_pid != 0) {
-				// Parent (Master) process
-				close(data_conn_sd);
-				num_store_xfers++;
-				transfers.Insert(child_pid, req_id, shadow_IP, 
-								 store_req.filename, store_req.owner,
-								 store_req.file_size, store_req.key,
-								 store_req.priority, RECV);
-				Log(req_id, "Request to store checkpoint file GRANTED");
-			} else {
-				// Child process
-#if DEBUG
-				log_file.close();
-#endif
-				close(store_req_sd);
-				close(restore_req_sd);
-				close(service_req_sd);
-				sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
-						inet_ntoa(shadow_IP), store_req.owner, 
-						store_req.filename);
-				ReceiveCheckpointFile(data_conn_sd, pathname,
-									  (int) store_req.file_size);
-				exit(CHILDTERM_SUCCESS);
-			}
-			UnblockSignals();
-		}
-    } else {
 		close(req_sd);
+		return;
+	}
+
+	memset((char*) &server_sa, 0, sizeof(server_sa));
+	server_sa.sin_family = AF_INET;
+	server_sa.sin_port = htons(0);
+	server_sa.sin_addr = server_addr;
+	if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
-		cerr << "ERROR: IMDS file has an ambiguous lock state" << endl;
+		cerr << "ERROR: I_bind() returns an error (#" << ret_code
+			 << ")" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR:" << endl << endl;
-		exit(IMDS_BAD_RETURN_CODE);
-    }
+		sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
+				err_code);
+		Log(0, log_msg);
+		exit(ret_code);
+	}
+
+	if (I_listen(data_conn_sd, 1) != CKPT_OK) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: I_listen() fails to listen" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		sprintf(log_msg, "ERROR: I_listen() fails to listen");
+		Log(0, log_msg);
+		exit(LISTEN_ERROR);
+	}
+
+	BlockSignals();
+	imds.AddFile(shadow_IP, store_req.owner, store_req.filename, 
+				 store_req.file_size, NOT_PRESENT);
+	UnblockSignals();
+	store_reply.server_name = server_addr;
+	// From the I_bind() call, the port should already be in network-byte
+		   //   order
+		   store_reply.port = server_sa.sin_port;  
+	store_reply.req_status = htons(CKPT_OK);
+	if (net_write(req_sd, (char*) &store_reply, 
+				  sizeof(store_reply_pkt)) < 0) {
+		close(req_sd);
+		BlockSignals();
+		sprintf(log_msg, "Store request from %s DENIED:", 
+				inet_ntoa(shadow_IP));
+		Log(req_id, log_msg);
+		Log("Cannot send IP/port to shadow (socket closed)");
+		imds.RemoveFile(shadow_IP, store_req.owner, store_req.filename);
+		UnblockSignals();
+		close(data_conn_sd);
+	} else {
+		close(req_sd);
+		BlockSignals();
+
+		child_pid = fork();
+
+		if (child_pid < 0) {
+			close(data_conn_sd);
+			Log(req_id, "Unable to honor store request:");
+			Log("Cannot fork child processes");
+		} else if (child_pid != 0) {
+			// Parent (Master) process
+				   close(data_conn_sd);
+			num_store_xfers++;
+			transfers.Insert(child_pid, req_id, shadow_IP, 
+							 store_req.filename, store_req.owner,
+							 store_req.file_size, store_req.key,
+							 store_req.priority, RECV);
+			Log(req_id, "Request to store checkpoint file GRANTED");
+		} else {
+			// Child process
+			close(store_req_sd);
+			close(restore_req_sd);
+			close(service_req_sd);
+			sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
+					inet_ntoa(shadow_IP), store_req.owner, 
+					store_req.filename);
+			ReceiveCheckpointFile(data_conn_sd, pathname,
+								  (int) store_req.file_size);
+			exit(CHILDTERM_SUCCESS);
+		}
+		UnblockSignals();
+	}
 }
 
 
@@ -1467,26 +1325,8 @@ void Server::ProcessRestoreReq(int             req_id,
 #endif
 	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, inet_ntoa(shadow_IP),
 			restore_req.owner, restore_req.filename);
-	ret_code = imds.LockStatus(shadow_IP, restore_req.owner, 
-							   restore_req.filename);
 	UnblockSignals();
-	if (ret_code == EXCLUSIVE_LOCK) {
-		restore_reply.server_name.s_addr = htonl(0);
-		restore_reply.port = htons(0);
-		restore_reply.file_size = htonl(0);
-		restore_reply.req_status = htons(ret_code);
-		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-		BlockSignals();
-		sprintf(log_msg, "Restore request from %s DENIED:", 
-				inet_ntoa(shadow_IP));
-		Log(req_id, log_msg);
-		Log("File is currently LOCKED");
-		UnblockSignals();
-		close(req_sd);
-		return;
-    }
-	else if (((preexist=stat(pathname, &chkpt_file_status)) != 0) && 
-			 (ret_code == DOES_NOT_EXIST)) {
+	if ((preexist=stat(pathname, &chkpt_file_status)) != 0) {
 		restore_reply.server_name.s_addr = htonl(0);
 		restore_reply.port = htons(0);
 		restore_reply.file_size = htonl(0);
@@ -1500,14 +1340,12 @@ void Server::ProcessRestoreReq(int             req_id,
 		UnblockSignals();
 		close(req_sd);
 		return;
-    } else if ((ret_code == UNLOCKED) || (preexist == 0)) {
-      if (preexist == 0) {                  // File exists but is not in
-                                           //   in-memory data structure
-		  BlockSignals();
-		  imds.AddFile(shadow_IP, restore_req.owner, restore_req.filename, 
-					   chkpt_file_status.st_size, ON_SERVER);
-		  UnblockSignals();
-	  }
+    } else if (preexist == 0) {
+		BlockSignals();
+		imds.AddFile(shadow_IP, restore_req.owner, restore_req.filename, 
+					 chkpt_file_status.st_size, ON_SERVER);
+		UnblockSignals();
+	}
       data_conn_sd = I_socket();
       if (data_conn_sd == INSUFFICIENT_RESOURCES) {
 		  restore_reply.server_name.s_addr = htonl(0);
@@ -1546,7 +1384,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		  cerr << endl << "ERROR:" << endl;
 		  cerr << "ERROR:" << endl;
 		  cerr << "ERROR: I_bind() returns an error (#" << ret_code
-			  << ")" << endl;
+			   << ")" << endl;
 		  cerr << "ERROR:" << endl;
 		  cerr << "ERROR:" << endl << endl;
 		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
@@ -1564,7 +1402,6 @@ void Server::ProcessRestoreReq(int             req_id,
 		  exit(LISTEN_ERROR);
 	  }
       BlockSignals();
-      imds.Lock(shadow_IP, restore_req.owner, restore_req.filename, XMITTING);
       UnblockSignals();
       restore_reply.server_name = server_addr;
       // From the I_bind() call, the port should already be in network-byte
@@ -1600,9 +1437,6 @@ void Server::ProcessRestoreReq(int             req_id,
 			  Log(req_id, "Request to restore checkpoint file GRANTED");
 		  } else {
 			  // Child process
-#if DEBUG
-			  log_file.close();
-#endif
 			  close(store_req_sd);
 			  close(restore_req_sd);
 			  close(service_req_sd);
@@ -1612,15 +1446,6 @@ void Server::ProcessRestoreReq(int             req_id,
 		  }
 		  UnblockSignals();
 	  }
-  } else {
-      close(req_sd);
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: IMDS file has an ambiguous lock state" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(IMDS_BAD_RETURN_CODE);
-  }
 }
 
 
@@ -1727,7 +1552,6 @@ void Server::ChildComplete()
 		switch (xfer_type) {
 		    case RECV:
 			    num_store_xfers--;
-				imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
 				if (exit_code == CHILDTERM_SUCCESS)
 					Log(ptr->req_id, "File successfully received");
 				else if ((exit_code == CHILDTERM_KILLED) && 
@@ -1773,7 +1597,6 @@ void Server::ChildComplete()
 				break;
 			case XMIT:
 				num_restore_xfers--;
-				imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
 				if (exit_code == CHILDTERM_SUCCESS)
 					Log(ptr->req_id, "File successfully transmitted");
 				else if ((exit_code == CHILDTERM_KILLED) && 
@@ -1887,22 +1710,11 @@ void Server::Log(int         request,
 				 const char* event)
 {
 	dprintf(D_ALWAYS, "\t");
-#if 0
-	PrintTime(log_file);
-	log_file << setw(11) << request << "   ";
-#endif
 	if (strlen(event) > LOG_EVENT_WIDTH_1) {
 		dprintf(D_ALWAYS | D_NOHEADER, "%s\n", event);
-#if 0
-		log_file.write(event, LOG_EVENT_WIDTH_1);
-		log_file << endl;
-#endif
 		Log(event+LOG_EVENT_WIDTH_1);
     } else {
 		dprintf(D_ALWAYS | D_NOHEADER, "%s\n", event);
-#if 0
-		log_file << event << endl;
-#endif
 	}
 }
 
@@ -1913,17 +1725,6 @@ void Server::Log(const char* event)
 	int   count;
 	char* ptr;
 	
-#if 0
-	ptr = (char*) event;
-	num_lines = (strlen(event)+LOG_EVENT_WIDTH_2-1)/LOG_EVENT_WIDTH_2;
-	for (count=1; count<num_lines; count++) {
-		log_file << "\t\t\t\t";
-		log_file.write(ptr, LOG_EVENT_WIDTH_2);
-		log_file << endl;
-		ptr += LOG_EVENT_WIDTH_2;
-    }
-	log_file << "\t\t\t\t" << ptr << endl;
-#endif
 	dprintf(D_ALWAYS | D_NOHEADER, "\t\t\t%s\n", event);
 }
 

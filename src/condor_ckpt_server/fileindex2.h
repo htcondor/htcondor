@@ -87,9 +87,6 @@ class FileIndex
     int Exists(struct in_addr machine_IP,
                const char*    owner_name,
                const char*    file_name);
-    int LockStatus(struct in_addr machine_IP,
-		   const char*    owner_name,
-		   const char*    file_name);
     int AddNewFile(struct in_addr  machine_IP,
 		   const char*     owner_name,
 		   const char*     file_name,

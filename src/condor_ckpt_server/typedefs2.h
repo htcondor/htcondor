@@ -36,12 +36,6 @@ typedef unsigned long int u_lint;
 
 
 
-typedef enum lock_status
-{
-  UNLOCKED,
-  EXCLUSIVE_LOCK
-} lock_status;
-
 typedef enum service_type
 {
   CKPT_SERVER_SERVICE_STATUS=190,
@@ -106,7 +100,6 @@ typedef struct file_info
 typedef struct file_info_node
 {
   file_info       data;
-  lock_status     lock;
   struct file_info_node* prev;
   struct file_info_node* next;
 } file_info_node;
