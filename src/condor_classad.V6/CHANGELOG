@@ -1,10 +1,17 @@
 Changes for version 0.9.4: (not yet released)
+* Added user-defined functions
+
+* New parsing functions to allow input from different input types: C
+  and C++ strings, streams, and files.
+
 * Fixed some parsing bugs that could cause segfaults.
 
 * Fixed a bug in evaluating function calls that could cause sefaults.
 
-* New parsing functions to allow input from different input types: C
-  and C++ strings, streams, and files.
+* Fixed bug in XML parsing that could cause problems for parsing empty
+  strings, like <s></s>.
+
+* Fixed error in evaluating lists. 
 
 Changes for version 0.9.3: (released 1-Aug-2002)
 * Made the standalone library compile with gcc 2.95.3, 2.96, and
@@ -20,8 +27,8 @@ Changes for version 0.9.3: (released 1-Aug-2002)
   parameters, and now match the documentation: the list argument
   is now second.
 
-* bool EvaluateAttr(const string& attrName, Value &result) was defined
-  in the ClassAd class, but not defined. It now is. 
+* bool EvaluateAttr(const string& attrName, Value &result) was declared
+  in classad.h, but not defined. It now is. 
 
 * Made IsStringValue() a bit safer in value.h
 
