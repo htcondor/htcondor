@@ -3940,7 +3940,7 @@ Scheduler::reschedule_negotiator(int, Stream *)
 		// reschedule request already pending.
 	if ( !reschedule_request_pending ) {
 		dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
-		ReliSock sock;
+		SafeSock sock;
 		sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 
 		if (!sock.connect(Negotiator->addr(), 0)) {
