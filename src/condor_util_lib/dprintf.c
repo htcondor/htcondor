@@ -70,14 +70,14 @@ char	*DebugLock[D_NUMLEVELS+1] = { NULL };
 int		(*DebugId)(FILE *);
 int		SetSyscalls(int mode);
 
-#if defined(WIN32)
-HANDLE	LockHandle = INVALID_HANDLE_VALUE;
-#else
 int		LockFd = -1;
-#endif
 
 static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
+#ifdef WIN32
+static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
+#endif
+
 
 static char _FileName_[] = __FILE__;
 
@@ -153,6 +153,22 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	if( !(flags&DebugFlags) ) {
 		return;
 	}
+
+#ifdef WIN32
+	// DaemonCore Create_Thread creates a real kernel thread on Win32,
+	// and dprintf is not thread-safe.  So, until such time that dprint
+	// is made thread safe, on Win32 we restrict access to one thread at a 
+	// time via a critical section.  NOTE: we must enter the critical
+	// section _after_ we test DprintfBroken above, otherwise we could 
+	// hang forever if dprintf_exit() is called and an EXCEPT handler tries
+	// to use dprintf.
+	if ( _condor_dprintf_critsec == NULL ) {
+		_condor_dprintf_critsec = 
+			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
+		InitializeCriticalSection(_condor_dprintf_critsec);
+	}
+	EnterCriticalSection(_condor_dprintf_critsec);
+#endif
 
 	saved_errno = errno;
 
@@ -251,6 +267,11 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 	errno = saved_errno;
 	DebugFlags = saved_flags;
+
+#ifdef WIN32
+	LeaveCriticalSection(_condor_dprintf_critsec);
+#endif
+
 }
 
 
@@ -274,20 +295,6 @@ debug_lock(int debug_level)
 
 		/* Acquire the lock */
 	if( DebugLock[debug_level] ) {
-#if defined(WIN32)
-		if( LockHandle == INVALID_HANDLE_VALUE ) {
-			/* open file with exclusive access (no sharing) */
-			/* what happens when we fail to get the exclusive lock? */
-			LockHandle = CreateFile(DebugLock[debug_level], GENERIC_WRITE,
-									0, 0, OPEN_ALWAYS,
-									FILE_ATTRIBUTE_NORMAL, 0);
-			if( LockHandle == INVALID_HANDLE_VALUE ) {
-				fprintf( DebugFP, "Can't open \"%s\", errno = %d\n",
-						 DebugLock[debug_level], errno );
-				dprintf_exit();
-			}
-		}
-#else
 		if( LockFd < 0 ) {
 			LockFd = open(DebugLock[debug_level],O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
@@ -306,12 +313,16 @@ debug_lock(int debug_level)
 			}
 		}
 
-		if( flock(LockFd,LOCK_EX) < 0 ) {
+#ifdef WIN32
+		if( lock_file(LockFd,WRITE_LOCK,TRUE) < 0 ) 
+#else
+		if( flock(LockFd,LOCK_EX) < 0 ) 
+#endif
+		{
 			fprintf( stderr, "Can't get exclusive lock on \"%s\"\n",
 					 DebugLock);
 			dprintf_exit();
 		}
-#endif
 	}
 
 	if( DebugFile[debug_level] ) {
@@ -363,19 +374,16 @@ debug_unlock(int debug_level)
 	if( DebugLock[debug_level] ) {
 			/* Don't forget to unlock the file */
 #if defined(WIN32)
-		if( CloseHandle(LockHandle) == 0) {
-			fprintf( DebugFP, "Can't release lock on \"%s\", errno = %d\n",
-					 DebugLock[debug_level], GetLastError() );
-			DebugUnlockBroken = 1;
-		}
+		if ( lock_file(LockFd,UN_LOCK,TRUE) < 0 )
 #else
-		if( flock(LockFd,LOCK_UN) < 0 ) {
+		if( flock(LockFd,LOCK_UN) < 0 ) 
+#endif
+		{
 			fprintf( DebugFP,"Can't release exclusive lock on \"%s\"\n",
 					 DebugLock[debug_level] );
 			DebugUnlockBroken = 1;
 			dprintf_exit();
 		}
-#endif
 	}
 
 	if( DebugFile[debug_level] ) {
