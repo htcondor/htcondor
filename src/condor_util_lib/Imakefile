@@ -16,7 +16,6 @@ VIRT_MEM_SRC = virt_mem.c
 VIRT_MEM_OBJ = virt_mem.o
 #endif
 
-#define MALLOC_DEBUG 1
 #if MALLOC_DEBUG
 MALLOC_SRC = malloc.c
 MALLOC_OBJ = malloc.o
@@ -116,10 +115,11 @@ test: test.o util_lib.a
 	gcc $(CFLAGS) -o test test.o util_lib.a
 
 library_target(util_lib.a,ObjectFiles)
-release_library(util_lib.a,$(RELEASE_DIR)/lib)
 
 tags_target(SourceFiles,$(NULL))
 depend_target(SourceFiles)
 
 IMPORT_LINKS = ../../config/import_links
 import(../h,syscall_numbers.c)
+
+release:
