@@ -150,7 +150,6 @@ sub ReadConfig( $$ )
 	$String = $HardConfigs{$Label};
     } elsif ( $ConfigQuery ) {
 	my $Cmd = $ConfigVal . " -startd " . $StartdName . "_$ModuleName$Ext";
-	print STDERR "Running: $Cmd\n";
 	$String = `$Cmd`;
 	$String = "not defined" if ( -1 == $? );
     }
