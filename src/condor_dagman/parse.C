@@ -58,7 +58,7 @@ isKeyWord( const char *token )
 {
     static const char * keywords[] = {
         "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry", "SCRIPT",
-		"DOT", "DAP", "ABORT-DAG-ON"
+		"DOT", "DAP", "DATA", "ABORT-DAG-ON"
     };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
@@ -124,10 +124,18 @@ bool parse (Dagman &dm, char *filename, Dag *dag) {
 												   dag, filename, lineNumber );
 		}
 
-		// Handle a DaP spec
-		// Example Syntax is:  DAP j1 j1.dapsubmit [DONE]
+		// Handle a Stork job spec
+		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
-		else if (strcasecmp(token, "DAP") == 0) {
+		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
+			parsed_line_successfully = parse_node( dm, Job::TYPE_STORK, token,
+												   dag, filename, lineNumber );
+			debug_printf( DEBUG_QUIET, "%s (line %d): "
+				"Warning: the DAP token is deprecated and may be unsupported "
+				"in a future release.  Use the DATA token\n",
+				filename, lineNumber );
+		}
+		else if	(strcasecmp(token, "DATA") == 0) {
 			parsed_line_successfully = parse_node( dm, Job::TYPE_STORK, token,
 												   dag, filename, lineNumber );
 		}
@@ -174,7 +182,7 @@ bool parse (Dagman &dm, char *filename, Dag *dag) {
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Expected JOB, DAP, SCRIPT, PARENT, RETRY, ABORT-DAG-ON, "
+				"Expected JOB, DATA, SCRIPT, PARENT, RETRY, ABORT-DAG-ON, "
 				"DOT or VARS token\n", filename, lineNumber );
 			parsed_line_successfully = false;
 		}

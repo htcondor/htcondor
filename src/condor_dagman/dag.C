@@ -316,7 +316,7 @@ bool Dag::DetectDaPLogGrowth () {
 				// this can be normal before we've actually submitted
 				// any jobs and the log doesn't yet exist, but is
 				// likely a problem if it persists...
-			debug_printf( DEBUG_VERBOSE, "ERROR: failed to initialize dap "
+			debug_printf( DEBUG_VERBOSE, "ERROR: failed to initialize Stork "
 						  "job log (%s) -- ignore unless error repeats\n",
 						  _dapLogName );
 			return false;
@@ -328,7 +328,7 @@ bool Dag::DetectDaPLogGrowth () {
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
-		debug_printf( DEBUG_QUIET, "ERROR: can't stat dap log (%s): %s\n",
+		debug_printf( DEBUG_QUIET, "ERROR: can't stat Stork log (%s): %s\n",
 					  _dapLogName, strerror (errno ) );
 		return false;
     }
@@ -979,7 +979,7 @@ Dag::FindLogFiles()
 	}
 
 	if( _dapLogName ) {
-		debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
+		debug_printf( DEBUG_VERBOSE, "Stork log will be written to %s\n",
 					  _dapLogName );
 	}
 }
@@ -1395,8 +1395,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 			// like we do with Condor; this should be fixed)
 		if( job->JobType() == Job::TYPE_STORK &&
 			job->GetStatus() == Job::STATUS_SUBMITTED ) {
-			snprintf( cmd, ARG_MAX, "stork_rm %s %d",
-					dm.stork_server, job->_CondorID._cluster );
+			snprintf( cmd, ARG_MAX, "stork_rm %d", job->_CondorID._cluster );
 			debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
 			if ( util_popen( cmd ) ) {
 				debug_printf( DEBUG_VERBOSE, "Error removing Stork job\n");
@@ -1482,7 +1481,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
                      job->_Status == Job::STATUS_DONE ? "DONE" : "");
         }
         else if( job->JobType() == Job::TYPE_STORK ) {
-            fprintf (fp, "DAP %s %s %s\n", 
+            fprintf (fp, "DATA %s %s %s\n", 
                      job->GetJobName(), job->GetCmdFile(),
                      job->_Status == Job::STATUS_DONE ? "DONE" : "");
         }
