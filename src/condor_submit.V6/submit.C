@@ -206,6 +206,15 @@ main( int argc, char *argv[] )
 	
 	setbuf( stdout, NULL );
 
+#if !defined(WIN32)	
+		// Make sure root isn't trying to submit.
+	if( getuid() == 0 || getgid() == 0 ) {
+		fprintf( stderr, "Submitting jobs as user/group 0 (root) is not "
+				 "allowed for security reasons.\n" );
+		exit( 1 );
+	}
+#endif /* not WIN32 */
+
 	MyName = argv[0];
 	config( 0 );
 	init_params();
