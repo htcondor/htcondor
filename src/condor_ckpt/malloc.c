@@ -284,7 +284,7 @@ extern "C" {
 */
 
 #if DEBUG 
-#include <assert.h>
+#include "condor_fix_assert.h"
 #else
 #define assert(x) ((void)0)
 #endif
