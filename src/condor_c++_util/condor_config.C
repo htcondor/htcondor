@@ -970,10 +970,21 @@ set_toplevel_runtime_config()
 		} else {
 			tmp = param("LOG");
 			if (!tmp) {
-				dprintf( D_ALWAYS, "%s error: neither %s nor LOG is "
+				if ( strcmp(mySubSystem,"SUBMIT")==0 || 
+					 strcmp(mySubSystem,"TOOL")==0 )
+				{
+						// we are just a tool, not a daemon.
+						// thus it is not imperative that we find what we
+						// were looking for...
+					toplevel_runtime_config[0] = '\0';
+					return;
+				} else {
+						// we are a daemon.  if we fail, we must exit.
+					dprintf( D_ALWAYS, "%s error: neither %s nor LOG is "
 						 "specified in the configuration file.\n",
 						 myDistro->GetCap(), filename_parameter );
-				exit( 1 );
+					exit( 1 );
+				}
 			}
 			sprintf(toplevel_runtime_config, "%s%c.config.%s", tmp,
 					DIR_DELIM_CHAR,	mySubSystem);
