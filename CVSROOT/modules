@@ -103,6 +103,12 @@ V5_SRC		-a \
 			src/condor_xdr_lib \
 			src/h
 
+UTIL	-a src/condor_c++_util \
+		src/condor_util_lib \
+		config \
+		src/h \
+		src/condor_includes
+
 V5_CODE		-a TOOLS V5_SRC
 V5_ALL		-a DOC V5_CODE
 AIX_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_aix
@@ -111,4 +117,3 @@ ULTRIX_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_ultrix
 OSF1_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_ultrix
 SUNOS_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_bsd
 HPUX_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_bsd
-UTIL		-a src/condor_c++_util src/condor_util_lib config src/Imakefile
