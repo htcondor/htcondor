@@ -105,21 +105,9 @@ Global::~Global()
 bool
 Global::Config()
 {
-	const char* submit_delay_attr = "DAGMAN_SUBMIT_DELAY";
-	char* submit_delay_str = param( submit_delay_attr );
-	char* endptr = NULL;
-	if( submit_delay_str ) {
-		G.submit_delay = strtol( submit_delay_str, &endptr, 10 );
-		if( !endptr || *endptr != '\0' || G.submit_delay < 0 ) {
-			debug_printf( DEBUG_NORMAL, "ERROR: invalid %s: \"%s\"\n",
-						  submit_delay_attr, submit_delay_str );
-			G.submit_delay = 0;
-		}
-	}
-	debug_printf( DEBUG_NORMAL, "%s = %d (\"%s\")\n", submit_delay_attr,
-				  G.submit_delay, submit_delay_str ? submit_delay_str :
-				  "UNDEFINED" );
-	free( submit_delay_str );
+	G.submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
+	G.startup_cycle_detect =
+		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
 	return true;
 }
 
@@ -446,7 +434,7 @@ int main_init (int argc, char ** const argv) {
     }
 
 #ifndef NOT_DETECT_CYCLE
-	if (G.dag->isCycle())
+	if( G.startup_cycle_detect && G.dag->isCycle() )
 	{
 		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
 	}

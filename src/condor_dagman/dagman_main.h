@@ -40,6 +40,9 @@ class Global {
     int submit_delay;
     char *datafile;
 	StringList condorLogFiles;
+		// whether to peform expensive cycle-detection at startup
+		// (note: we perform run-time cycle-detection regardless)
+	bool startup_cycle_detect;
 
     bool Config();
 };
