@@ -599,7 +599,9 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		ALLOC_PATH( path );
 	}
 #if defined(Solaris)
-	int ftruncate( map(int fd), off_t length ) : pseudo, extract ;
+	#if (!defined (SWITCH) && !defined(CLIP))
+		int ftruncate( map(int fd), off_t length ) : extract ;
+	#endif
 #else
 	int ftruncate( map(int fd), off_t length );
 #endif
