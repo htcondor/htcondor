@@ -32,8 +32,18 @@ machines in your pool to the same version.
 \begin{itemize}
 
 \item \Condor{q} now accepts \texttt{-format} parameters like \Condor{status}
+
 \item \Condor{rm}, \Condor{hold} and \Condor{release} accept
   \texttt{-constraint} parameters like \Condor{status}
+
+\item Condor version 6.1.10 introduces ``clipped'' support for Sparc
+Solaris version 2.7.
+This version does not support checkpointing or remote system calls.
+Full support for Solaris 2.7 will be released soon.
+
+\item Introduced code to enable Linux to use the standard C library's
+I/O buffering again, instead of relying on the Condor I/O buffering
+code (which is still in beta testing).  
 
 \end{itemize}
 
@@ -41,7 +51,12 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
-\item None.
+\item The bug in checkpointing introduced in version 6.1.9 has been
+fixed.
+Checkpointing will now work on all platforms, as it always used to.  
+Any jobs linked with the 6.1.9 Condor libraries will need to be
+relinked with \Condor{compile} once version 6.1.10 has been installed
+at your site. 
 
 \end{itemize}
 
@@ -49,7 +64,12 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
-\item None.
+\item The \AdAttr{CondorLoadAvg} attribute in the \Condor{startd} has
+some problems in the way it is computed.
+The CondorLoadAvg is somewhat inaccurate for the first minute a job
+starts running, and for the first minute after it completes.
+Also, the computation of CondorLoadAvg is very wrong on NT.
+All of this will be fixed in version 6.1.10.
 
 \end{itemize}
 
@@ -219,6 +239,15 @@ The CondorLoadAvg is somewhat inaccurate for the first minute a job
 starts running, and for the first minute after it completes.
 Also, the computation of CondorLoadAvg is very wrong on NT.
 All of this will be fixed in version 6.1.10.
+
+\item There is a serious bug in checkpointing when using Condor's
+I/O buffering for ``standard'' jobs.
+By default, Linux uses Condor buffering in version 6.1.9 for all
+standard jobs.
+The bug prevents checkpointing from working more than once.
+This renders the \Condor{vacate} and \Condor{checkpoint} commands
+useless, and jobs will just be killed without a checkpoint when
+machine owners come back to their machines.
 
 \end{itemize}
 
