@@ -184,6 +184,56 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 }
 
 
+ClassAd*
+DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
+					  CondorError * errstack,
+					  action_result_type_t result_type,
+					  bool notify_scheduler )
+{
+	if( ! constraint ) {
+		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
+				 "constraint is NULL, aborting\n" );
+		return NULL;
+	}
+	JobAction cmd;
+	const char* cmd_str = NULL;
+	if( vacate_type == VACATE_FAST ) {
+		cmd = JA_VACATE_FAST_JOBS;
+		cmd_str = "vacate-fast";
+	} else {
+		cmd = JA_VACATE_JOBS;
+		cmd_str = "vacate";
+	}
+	return actOnJobs( cmd, cmd_str, constraint, NULL, NULL, NULL,
+					  result_type, notify_scheduler, errstack );
+}
+
+
+ClassAd*
+DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
+					  CondorError * errstack,
+					  action_result_type_t result_type,
+					  bool notify_scheduler )
+{
+	if( ! ids ) {
+		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
+				 "list of jobs is NULL, aborting\n" );
+		return NULL;
+	}
+	JobAction cmd;
+	const char* cmd_str = NULL;
+	if( vacate_type == VACATE_FAST ) {
+		cmd = JA_VACATE_FAST_JOBS;
+		cmd_str = "vacate-fast";
+	} else {
+		cmd = JA_VACATE_JOBS;
+		cmd_str = "vacate";
+	}
+	return actOnJobs( cmd, cmd_str, NULL, ids, NULL, NULL,
+					  result_type, notify_scheduler, errstack );
+}
+
+
 bool
 DCSchedd::reschedule()
 {
@@ -520,6 +570,8 @@ JobActionResults::readResults( ClassAd* ad )
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
 		case JA_RELEASE_JOBS:
+		case JA_VACATE_JOBS:
+		case JA_VACATE_FAST_JOBS:
 			action = (JobAction)tmp;
 			break;
 		default:
@@ -643,8 +695,12 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	case AR_SUCCESS:
 		sprintf( buf, "Job %d.%d %s", job_id.cluster, job_id.proc,
 				 (action==JA_REMOVE_JOBS)?"marked for removal":
-				 (action==JA_REMOVE_X_JOBS)?"removed locally (remote state unknown)":
-				 (action==JA_HOLD_JOBS)?"held":"released" );
+				 (action==JA_REMOVE_X_JOBS)?
+				 "removed locally (remote state unknown)":
+				 (action==JA_HOLD_JOBS)?"held":
+				 (action==JA_RELEASE_JOBS)?"released":
+				 (action==JA_VACATE_JOBS)?"vacated":
+				 (action==JA_VACATE_FAST_JOBS)?"fast-vacated":"ERROR" );
 		rval = true;
 		break;
 
@@ -662,13 +718,25 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		sprintf( buf, "Permission denied to %s job %d.%d", 
 				 (action==JA_REMOVE_JOBS)?"remove":
 				 (action==JA_REMOVE_X_JOBS)?"force removal of":
-				 (action==JA_HOLD_JOBS)?"hold":"release", 
+				 (action==JA_HOLD_JOBS)?"hold":
+				 (action==JA_RELEASE_JOBS)?"release":
+				 (action==JA_VACATE_JOBS)?"vacate":
+				 (action==JA_VACATE_FAST_JOBS)?"fast-vacate":"ERROR",
 				 job_id.cluster, job_id.proc );
 		break;
 
 	case AR_BAD_STATUS:
-		if( action == JA_RELEASE_JOBS ) {
+		if( action == JA_RELEASE_JOBS ) { 
 			sprintf( buf, "Job %d.%d not held to be released", 
+					 job_id.cluster, job_id.proc );
+		} else if( action == JA_REMOVE_X_JOBS ) {
+			sprintf( buf, "Job %d.%d not in `X' state to be forcibly removed", 
+					 job_id.cluster, job_id.proc );
+		} else if( action == JA_VACATE_JOBS ) {
+			sprintf( buf, "Job %d.%d not running to be vacated", 
+					 job_id.cluster, job_id.proc );
+		} else if( action == JA_VACATE_FAST_JOBS ) {
+			sprintf( buf, "Job %d.%d not running to be fast-vacated", 
 					 job_id.cluster, job_id.proc );
 		} else {
 				// Nothing else should use this.
@@ -692,7 +760,7 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 					 job_id.cluster, job_id.proc );
 		} else {
 				// we should have gotten AR_BAD_STATUS if we tried to
-				// release a job that wasn't held...
+				// act on a job that had already had the action done
 			sprintf( buf, "Invalid result for job %d.%d", 
 					 job_id.cluster, job_id.proc );
 		}
@@ -702,6 +770,4 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	*str = strdup( buf );
 	return rval;
 }
-
-
 

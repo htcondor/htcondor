@@ -204,6 +204,40 @@ public:
 						  action_result_type_t result_type = AR_LONG,
 						  bool notify_scheduler = true );
 
+
+		/** Vacate all jobs specified in the given StringList.  The list
+			should contain a comma-seperated list of cluster.proc job
+			ids.
+			@param ids What jobs to act on
+			@param vacate_type Graceful or fast vacate?
+			@param result_type What kind of results you want
+			@param notify_scheduler Should the schedd notify the
+ 			controlling scheduler for this job?
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* vacateJobs( StringList* ids, VacateType vacate_type,
+						 CondorError * errstack,
+						 action_result_type_t result_type = AR_LONG,
+						 bool notify_scheduler = true );
+
+		/** Vacate all jobs that match the given constraint.
+			@param constraint What jobs to act on
+			@param vacate_type Graceful or fast vacate?
+			@param result_type What kind of results you want
+			@param notify_scheduler Should the schedd notify the
+ 			controlling scheduler for this job?
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* vacateJobs( const char* constraint, VacateType vacate_type,
+						 CondorError * errstack,
+						 action_result_type_t result_type = AR_TOTALS,
+						 bool notify_scheduler = true );
+
+
 		/** Request the schedd to initiate a negoitation cycle.
 			The request is sent via a SafeSock (UDP datagram).
 			@return true on success, false on failure.
