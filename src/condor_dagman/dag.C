@@ -1047,8 +1047,34 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
 		 "# %d of %d retries already performed; %d remaining\n",
 		 job->retries, job->retry_max, retries );
 	fprintf( fp, "Retry %s %d\n", job->GetJobName(), retries );
+
       }
       fprintf( fp, "\n" );
+
+	if(!job->varNamesFromDag->IsEmpty()) {
+		fprintf(fp, "VARS %s", job->GetJobName());
+	
+		ListIterator<MyString> names(*job->varNamesFromDag);
+		ListIterator<MyString> vals(*job->varValsFromDag);
+		names.ToBeforeFirst();
+		vals.ToBeforeFirst();
+		MyString *strName, *strVal;
+		while((strName = names.Next()) && (strVal = vals.Next())) {
+			fprintf(fp, " %s=\"", strName->Value());
+			// now we print the value, but we have to re-escape certain characters
+			for(int i = 0; i < strVal->Length(); i++) {
+				char c = (*strVal)[i];
+				if(c == '\"')
+					fprintf(fp, "\\\"");
+				else if(c == '\\')
+					fprintf(fp, "\\\\");
+				else
+					fprintf(fp, "%c", c);
+			}
+			fprintf(fp, "\"");
+		}
+		fprintf(fp, "\n");
+	}
     }
 
     //
