@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_io.h"
+#include "common.h"
 #include "transaction.h"
 #include "collectionServer.h"
 
@@ -270,7 +271,6 @@ HandleClientRequest( int command, Sock *clientSock )
 	return( OperateInNetworkMode( command, rec, clientSock ) ? +1 : -1 );
 }
 
-
 bool ClassAdCollectionServer::
 OperateInNetworkMode( int opType, ClassAd *logRec, Sock *clientSock )
 {
@@ -434,7 +434,7 @@ HandleQuery( ClassAd *query, Sock *clientSock )
 	if( wantResults ) {
 			// unpack projection attributes
 		tProjAttrs = query->Lookup( "ProjectionAttrs" );
-		if( tProjAttrs && tProjAttrs->GetKind( ) == EXPR_LIST_NODE ) {
+		if( tProjAttrs && tProjAttrs->GetKind( )==ExprTree::EXPR_LIST_NODE ) {
 			ExprListIterator	itr;
 			Value				val;
 			string				attr;
