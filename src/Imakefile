@@ -31,7 +31,7 @@ ACCOUNTANT = accountant
 
 #if IS_V6
 #	define Programs \
-		$(ACCOUNTANT) ckpt_server collector.V6 $(CONFIG_SERVER) globalq \
+		$(ACCOUNTANT) ckpt_server collector.V6 $(CONFIG_SERVER) \
 		master.V6 negotiator.V6 off on schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 \
 		tools kbdd
@@ -170,9 +170,9 @@ object_target(collector)
 object_target(master.dhruba)
 object_target(q)
 object_target(rm)
+object_target(globalq)
 #endif
 
-object_target(globalq)
 object_target(prio)
 object_target(on)
 object_target(off)
