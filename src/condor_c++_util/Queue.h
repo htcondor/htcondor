@@ -26,106 +26,102 @@
 //--------------------------------------------------------------------
 // Queue template
 // Written by Adiel Yoaz (1998)
-// Rewritten by Colby O'Donnell (1998)
 //--------------------------------------------------------------------
 
-#include "list.h"
-
-/** Implements a FIFO queue, as a subclass of List.  Two basic operations,
-    Enqueue and Dequeue are supported in various overloaded forms.  Like
-    the parent List class, the Queue class takes reference objects, such
-    as pointers and references.  Refer to the List class definition for
-    further details.
- */
-template <class ObjType>
-class Queue : public List<ObjType> {
-
+template <class Value>
+class Queue {
  public:
+  Queue(int tableSize=500);
+  ~Queue();
 
-  /// Instanciates an empty queue
-  Queue() : List<ObjType>() {}
+  int enqueue(const Value& value);
+  int dequeue(Value& value);
+  int IsEmpty();
+  int IsFull();
+  int Length();   // # of elements
+  void clear();
 
-  /** Deprecated.  Used by the previous fixed-size implementation.
-   */
-  Queue (int tableSize) : List<ObjType>() {}
-
-  /** Add an object to the queue.  Puts the object at the end of the list.
-      @param obj pointer to object to be added to end of queue
-      @return true: success, false: failure (out of memory)
-  */
-  inline bool EnQueue ( ObjType * obj ) { return Append (obj); }
-
-  /** Add an object to the queue.  Puts the object at the end of the list.
-      @param obj reference to object to be added (as a pointer) to end of queue
-      @return true: success, false: failure (out of memory)
-  */
-  inline bool EnQueue ( ObjType & obj ) { return Append (obj); }
-
-  /** Remove an object from the queue.  Pulls the object from the front of the
-      list.
-      @return Pointer to object, or NULL if queue is empty
-  */
-  ObjType * DeQueue ();
-
-  /** Remove an object from the queue.  Pulls the object from the front of the
-      list.
-      @param obj Reference to 
-      @return Pointer to object, or NULL if queue is empty
-  */
-  bool DeQueue (ObjType & obj);
-
-  /** Remove an object from the queue.  Pulls the object from the front of the
-      list.
-      @return Pointer to object, or NULL if queue is empty
-  */
-  inline bool DeQueue (ObjType * & obj) { return NULL != (obj =  DeQueue()); }
-
-  /** Deprecated.
-      @return 0 for success, -1 for failure
-  */
-  inline int enqueue(ObjType & obj) { return EnQueue(obj) ? 0 : -1; }
-
-  /** Deprecated.
-      @return 0 for success, -1 for failure
-  */
-  inline int dequeue(ObjType & obj) { return DeQueue(obj) ? 0 : -1; }
-
-  /** Deprecated.
-      @return always false.  The queue is dynamic, and never is full
-  */
-  inline bool IsFull() { return false; }
-
-  /** Deprecated.
-      @return Number of objects in the queue.
-  */
-  inline int Length() const { return Number(); }
-
+ private:
+  int tableSize;  
+  Value* ht;    
+  int length;
+  int head,tail;
 };
 
-/*-------------------------------------------------------------------------
-  Implementation of the List class begins here.  This is so that every
-  file which uses the class has enough information to instantiate the
-  the specific instances it needs.  (This is the g++ way of instantiating
-  template classes.)
-*/
+//--------------------------------------------------------------------
 
-template <class ObjType>
-ObjType *
-Queue<ObjType>::DeQueue() {
-  Rewind();
-  ObjType *obj = Next();
-  if (obj != NULL) DeleteCurrent();
-  return obj;
+template <class Value>
+Queue<Value>::Queue(int tableSz)
+{
+  tableSize=tableSz;
+  ht=new Value[tableSize];
+  length = 0;
+  head=tail=0;
 }
 
-template <class ObjType>
-bool
-Queue<ObjType>::DeQueue (ObjType & obj) {
-  ObjType *front = DeQueue();
-  if (front != NULL) {
-    obj = *front;
-    return true;
-  } else return false;
+//--------------------------------------------------------------------
+
+template <class Value>
+Queue<Value>::~Queue()
+{
+  delete[] ht;
+}
+
+//--------------------------------------------------------------------
+
+template <class Value>
+int Queue<Value>::enqueue(const Value& value)
+{
+  if (IsFull()) return -1;
+  ht[head]=value;
+  head=(head+1)%tableSize;
+  length++;
+  return 0;
+}
+
+//--------------------------------------------------------------------
+
+template <class Value>
+int Queue<Value>::dequeue(Value& value)
+{
+  if (IsEmpty()) return -1;
+  value=ht[tail];
+  tail=(tail+1)%tableSize;
+  length--;
+  return 0;
+}
+
+//--------------------------------------------------------------------
+
+template <class Value>
+int Queue<Value>::IsFull()
+{
+  return (length==tableSize);
+}
+
+//--------------------------------------------------------------------
+
+template <class Value>
+int Queue<Value>::IsEmpty()
+{
+  return (length==0);
+}
+
+//--------------------------------------------------------------------
+
+template <class Value>
+int Queue<Value>::Length()
+{
+  return length;
+}
+
+//--------------------------------------------------------------------
+
+template <class Value>
+void Queue<Value>::clear()
+{
+  length = 0;
+  head=tail=0;
 }
 
 #endif
