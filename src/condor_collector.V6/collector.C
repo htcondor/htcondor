@@ -63,7 +63,7 @@ int CollectorXDR_TCPSocket;  // used for queries
 SafeSock   COMM_UDP_sock;
 
 // control and display
-int		Foreground;
+int		Foreground = 0;
 int		Termlog;
 
 // misc functions
@@ -137,7 +137,6 @@ int main (int argc, char *argv[])
 			break;
 		case 'c':
 			strcpy(config_file, *(++ptr));
-			++ptr;
 			break;
 		default:
 			usage(argv[0]);
