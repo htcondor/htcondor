@@ -96,6 +96,11 @@ support the RedHat 5.2 and 6.x distributions, and although other Linux
 distributions (especially those with similar libc versions) may work,
 they are not tested or supported.
 
+\item The schedd now periodically updates the run-time counters in the
+job queue for running jobs, so if the schedd crashes, the counters
+will remain relatively up-to-date.  This is controlled by the
+\Macro{WALL\_CLOCK\_CKPT\_INTERVAL} parameter.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -115,8 +120,10 @@ SIGTERM), so jobs should no longer leave the queue prematurely.
 In addition, on a SIGQUIT, the shadow now does a fast shutdown, just
 like the rest of the Condor daemons.
 
-\item Fixed a bug which caused restarts from a checkpoint to fail on
-some releases of Irix 6.5.
+\item Fixed a number of bugs which caused checkpoint restarts
+to fail on some releases of Irix 6.5 (for example, when migrating from
+a mips4 to a mips3 CPU or when migrating between machines with
+different pagesizes).
 
 \item Fixed a bug in the implementation of the \Syscall{stat} family
 of remote system calls on Irix 6.5 which caused file opens in Fortran
@@ -149,6 +156,11 @@ platforms.
 \item Fixed a bug in \Condor{q} where issuging a \Opt{-global} with a
 fairly restrictive \Opt{-constraint} argument would cause garbage to be
 printed to the terminal sometimes.
+
+\item Fixed a bug which caused jobs to exit without completing a
+checkpoint when preempted in the middle of a periodic checkpoint.
+Now, the jobs will complete their periodic checkpoint in this case
+before exiting.
 \end{itemize}
 
 \noindent Known Bugs:
