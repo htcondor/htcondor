@@ -22,6 +22,12 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "OrderedSet.h"
+#include "simplelist.h"
+#include "extArray.h"
 
-template class OrderedSet<int>;
+class Resource;
+class CpuAttributes;
+
+template class ExtArray<bool>;
+template class SimpleList<Resource*>;
+template class SimpleList<CpuAttributes*>;
