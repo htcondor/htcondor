@@ -37,33 +37,20 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#if DBM_QUEUE
-#include "proc_obj.h"
-#endif
 #include "filter.h"
 #include "alloc.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-#if DBM_QUEUE
-DBM		*Q;
-#else
 #include "condor_qmgr.h"
-#endif
 
 char	*param();
 char	*MyName;
-#if DBM_QUEUE
-char	*Spool;
-#endif
 
 int		PrioAdjustment;
 int		NewPriority;
 int		PrioritySet;
 int		AdjustmentSet;
-#if DBM_QUEUE
-ProcFilter	*PFilter = new ProcFilter();
-#endif
 int		InvokingUid;		// user id of person ivoking this program
 char	*InvokingUserName;	// user name of person ivoking this program
 
@@ -73,18 +60,9 @@ const int MAX_PRIO = 20;
 	// Prototypes of local interest only
 void usage();
 int compute_adj( char * );
-#if DBM_QUEUE
-void init_params();
-void do_it( ProcObj * );
-#else
 void ProcArg( const char * );
-#endif
 int calc_prio( int old_prio );
 void init_user_credentials();
-
-#if !DBM_QUEUE
-extern "C" int gethostname();
-#endif
 
 char	hostname[512];
 
@@ -100,27 +78,16 @@ usage()
 int
 main( int argc, char *argv[] )
 {
-#if DBM_QUEUE
-	char	queue_name[_POSIX_PATH_MAX];
-#endif
 	char	*arg;
 	int		prio_adj;
-#if DBM_QUEUE
-	List<ProcObj>	*proc_list;
-	ProcObj			*p;
-#else
 	char			*args[argc - 1];
 	int				nArgs = 0;
 	int				i;
 	Qmgr_connection	*q;
-#endif
 
 	MyName = argv[0];
 
 	config( 0 );
-#if DBM_QUEUE
-	init_params();
-#endif
 
 	if( argc < 2 ) {
 		usage();
@@ -143,14 +110,8 @@ main( int argc, char *argv[] )
 			argv++;
 			strcpy (hostname, *argv);
 		} else {
-#if DBM_QUEUE
-			if( !PFilter->Append(arg) ) {
-				usage();
-			}
-#else	
 			args[nArgs] = arg;
 			nArgs++;
-#endif
 		}
 	}
 
@@ -169,31 +130,6 @@ main( int argc, char *argv[] )
 	}
 
 		/* Open job queue */
-#if DBM_QUEUE
-	(void)sprintf( queue_name, "%s/job_queue", Spool );
-	if( (Q=OpenJobQueue(queue_name,O_RDWR,0)) == NULL ) {
-		EXCEPT( "OpenJobQueue(%s)", queue_name );
-	}
-
-	LockJobQueue( Q, WRITER );
-
-
-		// Create a list of all procs we're interested in
-	PFilter->Install();
-	proc_list = ProcObj::create_list( Q, ProcFilter::Func );
-
-		// Process the list
-	proc_list->Rewind();
-	while( p = proc_list->Next() ) {
-		do_it( p );
-	}
-
-		// Clean up
-	LockJobQueue( Q, UNLOCK );
-	CloseJobQueue( Q );
-	ProcObj::delete_list( proc_list );
-	delete PFilter;
-#else
 	if (hostname[0] == '\0')
 	{
 		// hostname was not set at command line; obtain from system
@@ -211,7 +147,6 @@ main( int argc, char *argv[] )
 		ProcArg(args[i]);
 	}
 	DisconnectQ(q);
-#endif	
 
 #if defined(ALLOC_DEBUG)
 	print_alloc_stats();
@@ -265,35 +200,6 @@ compute_adj( char *arg )
 
 extern "C" int SetSyscalls( int foo ) { return foo; }
 
-#if DBM_QUEUE
-void
-init_params()
-{
-	Spool = param("SPOOL");
-	if( Spool == NULL ) {
-		EXCEPT( "SPOOL not specified in config file\n" );
-	}
-}
-
-void
-do_it( ProcObj *p )
-{
-	int		old_prio;
-	int		new_prio;
-
-	if( p->perm_to_modify() ) {
-		old_prio = p->get_prio();
-		new_prio = calc_prio( old_prio );
-		p->set_prio( new_prio );
-		p->store( Q );
-	} else {
-		fprintf( stderr,
-			"%d.%d: Permission Denied\n",
-			p->get_cluster_id(), p->get_proc_id()
-		);
-	}
-}
-#else
 void UpdateJobAd(int cluster, int proc)
 {
 	int old_prio, new_prio;
@@ -380,4 +286,3 @@ void ProcArg(const char* arg)
 		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
 	}
 }
-#endif
