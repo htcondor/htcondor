@@ -150,6 +150,7 @@ class DaemonCore : public Service
 #ifdef WIN32
   friend int dc_main( int argc, char** argv );
   friend unsigned pidWatcherThread(void*);
+  friend DWORD WINAPI FindWinstaThread( LPVOID lpParam );
   friend BOOL CALLBACK DCFindWindow(HWND, LPARAM);
   friend BOOL CALLBACK DCFindWinSta(LPTSTR, LPARAM);
 #else

@@ -3631,7 +3631,14 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 		if ( hwinsta && hdesk ) {
 			// Enumerate all winsta's to find the one with the job
-			EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+			// We kick this off in a separate thread, and block until
+			// it returns.
+
+			HANDLE threadHandle;
+			DWORD threadID;
+			threadHandle = CreateThread(NULL, 0, FindWinstaThread, 
+									pidinfo, 0, &threadID);
+			WaitForSingleObject(threadHandle, INFINITE);
 
 			if ( pidinfo->hWnd == NULL ) {
 				// Did not find it.  This could happen because WinNT has a 
@@ -3639,8 +3646,9 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				// show up when you enumerate all the winstas.  Sometimes
 				// it takes a few seconds.  So lets sleep a while and try again.
 				sleep(4);
-				EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, 
-								(LPARAM)pidinfo);
+				threadHandle = CreateThread(NULL, 0, FindWinstaThread, 
+									pidinfo, 0, &threadID);
+				WaitForSingleObject(threadHandle, INFINITE);
 			}
 
 			// Set winsta and desktop back to the service desktop (or wherever)
@@ -4153,6 +4161,17 @@ int DaemonCore::SetFDInheritFlag(int fh, int flag)
 	return TRUE;
 }
 
+// This is the thread function we use to call EnumWindowStations(). We
+// found  that calling EnumWindowStations() from the main thread would 
+// later cause SetThreadDesktop() to fail, due to existing Windows or
+// hooks on the "current" desktop that were owned by the main thread.  
+// By kicking it off in its own thread, we ensure that this doesn't happen.
+DWORD WINAPI
+FindWinstaThread( LPVOID pidinfo ) {
+
+	return EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+}
+
 // Callback function for EnumWindowStationProc call to find hWnd for a pid
 BOOL CALLBACK
 DCFindWinSta(LPTSTR winsta_name, LPARAM p)
@@ -4182,10 +4201,9 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 		}
 	}
 	
-	// must try to open winsta as the user
-	priv = set_user_priv();
+	// we used to set_user_priv() here, but we found that its not 
+	// needed, and worse still, would cause the startd to EXCEPT().
 	HWINSTA hwinsta = OpenWindowStation(winsta_name, FALSE, MAXIMUM_ALLOWED);
-	set_priv(priv);
 
 	if ( hwinsta == NULL ) {
 		//dprintf(D_FULLDEBUG,"Error: Failed to open WinSta %s err=%d\n",
@@ -4205,10 +4223,9 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 		return TRUE;    
 	}
 
-	// must try to open desktop as the user
-	set_user_priv();
+	// We used to set_user_priv() here, but we found it wasn't needed.
+	// Worse still, it would cause the startd to EXCEPT(). 
 	HDESK hdesk = OpenDesktop( "default", 0, FALSE, MAXIMUM_ALLOWED );
-	set_priv(priv);
 
 	if (hdesk == NULL) {
 			// failed; so close the handle and return TRUE to continue
