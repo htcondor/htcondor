@@ -1,5 +1,11 @@
 #!/bin/sh
 
+
+if [ $# > 0 ]; then
+	imake -s Makefile $* -I../config -I../../config
+	exit 0
+fi
+
 arch=`uname -m`
 osversion=`uname -r`
 # Make sure if we get back something that begins with "IRIX" that we
