@@ -30,26 +30,17 @@
 #define _POSIX_SOURCE
 
 #include "XInterface.h"
-#include <stdio.h>
+#include "condor_config.h"
 #include <paths.h>
-#include <string.h>
-#include <pwd.h>
-#include <sys/types.h>
 #include <utmp.h>
 #include <setjmp.h>
-#include <stdlib.h>
+static char *_FileName_ = __FILE__;
 
-const char * PASSWD_FILE = "/etc/passwd";
 extern int PollActivity();
 
 bool        g_connected;
 jmp_buf     jmp;
 
-extern "C"
-{
-    extern int putenv(const char *);
-    extern struct passwd *fgetpwent(FILE *);
-}
 
 // When a window has a very short life time, we get messages
 // about it, and then we try and select the events on it.  It
@@ -86,119 +77,119 @@ int
 XInterface::NextEntry()
 {
     utmp *utmp_entry;
-    passwd *passwd_entry;
-    static char env[1024];
-    bool end = false;
-    int utsize;
-    int pwsize;
-    int size;
-    FILE *etc_passwd;
-    
+    char *tmp;
+ 
     if(!_tried_root)
     {
-	etc_passwd = fopen(PASSWD_FILE, "r");
-	passwd_entry = fgetpwent(etc_passwd);
-	sprintf(env, "HOME=%s", passwd_entry->pw_dir);
-	if(putenv(env) != 0)
-	{
-	    dprintf(D_ALWAYS, "Putenv failed!.\n");
-	    return -1;
-	}
-	dprintf(D_FULLDEBUG, "Using %s's .Xauthority: \n", 
-		passwd_entry->pw_name, env);
+	TryUser("root");
 	_tried_root = true;
-	fclose(etc_passwd);
     }
-
-    do
+    else if(!_tried_utmp)
     {
-	utmp_entry = getutent();
-	if(!utmp_entry)
+	do
 	{
-	    return -1;
-	}
-    } while(utmp_entry->ut_type != USER_PROCESS);
- 
-    utsize = strlen(utmp_entry->ut_user);
+	    utmp_entry = getutent();
+	    if(!utmp_entry)
+	    {
+		_tried_utmp = true;
+		dprintf(D_FULLDEBUG, "Tryed all utmp users, "
+			"now moving to XAUTHORITY_USERS param.\n");
+		return 0;  // Keep trying....
+	    }
+	} 
+	while(utmp_entry->ut_type != USER_PROCESS);
 
-    // Cycle through the passwd file until we find the matching
-    // passwd entry.
-    etc_passwd = fopen(PASSWD_FILE, "r");
-    do
+	TryUser(utmp_entry->ut_user);
+    }
+    else  // Try the others
     {
-	passwd_entry = fgetpwent(etc_passwd);
-	if(!passwd_entry)
+	if(_xauth_users == NULL)
 	{
-	    end = true;
-	    break;
-	}
-	pwsize = strlen(passwd_entry->pw_name);
-	if(pwsize > utsize)
-	{
-	    size = utsize;
+	    dprintf(D_FULLDEBUG, "No XAUTHORITY_USERS specified.\n");
+	    return -1; // No more entries...
 	}
 	else
 	{
-	    size = pwsize;
+	    if((tmp = _xauth_users->next()))
+	    {
+		dprintf(D_FULLDEBUG, "Will try XAUTHORITY_USER '%s'\n", 
+			tmp);
+		TryUser(tmp);
+	    }
+	    else
+	    {
+		return -1; // No more entries...
+	    }
 	}
     }
-    while( strncmp(utmp_entry->ut_user, passwd_entry->pw_name, size) );
-    fclose(etc_passwd);
-    
-    if(end == true)
-    {
-	// We couldn't find the current user in the passwd file?
-	
-	return -1;
-    }
-    else
-    {
-	
-	fflush(stdout);
-
-	sprintf(env, "HOME=%s", passwd_entry->pw_dir);
-	if(putenv(env) != 0)
-	{
-	    dprintf(D_ALWAYS, "Putenv failed!.\n");
-	    return -1;
-	}
-	dprintf(D_FULLDEBUG, "Using %s's .Xauthority: \n", 
-		passwd_entry->pw_name, env);
-    }
-    return 0;
+    return 0; 
 }
+
+void
+XInterface::TryUser(const char *user)
+{
+    static char env[1024];
+    passwd *passwd_entry;
+
+    passwd_entry = getpwnam(user);
+    if(passwd_entry == NULL) {
+	// We couldn't find the current user in the passwd file?
+	dprintf( D_FULLDEBUG, 
+		 "Current user cannot be found in passwd file.\n" );
+	return;
+    } else {
+	fflush(stdout);
+	sprintf(env, "XAUTHORITY=%s/.Xauthority", passwd_entry->pw_dir);
+	if(putenv(env) != 0) {
+	    EXCEPT("Putenv failed!.");
+	}
+	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: \n", 
+		 passwd_entry->pw_name, env);
+    }
+}
+    
 
 XInterface::XInterface(int id)
 {
-
+    char *tmp;
     _daemon_core_timer = id;
     
     // We may need access to other user's home directories, so we must run
     // as root.
     
     set_root_priv();
-
-    if(geteuid() != 0)
-    {
+    
+    if( geteuid() != 0 ) {
 	dprintf(D_FULLDEBUG, "NOTE: Daemon can't use Xauthority if not"
-		" running as root.\n");
+			" running as root.\n");
     }
     
     set_condor_priv();
 
     g_connected = false;
 
+    tmp = param( "XAUTHORITY_USERS" );
+    if(tmp != NULL) {
+		_xauth_users = new StringList();
+		_xauth_users->initializeFromString( tmp );
+		free( tmp );
+    } else {
+		_xauth_users = NULL;
+    }
     Connect();
 }
 
 XInterface::~XInterface()
 {
+    if(_xauth_users != NULL) {
+		delete _xauth_users;
+    }
 }
 
 bool
 XInterface::Connect()
 {
-    int err;
+    int rtn;
     Window root;
     int s;
 
@@ -207,11 +198,15 @@ XInterface::Connect()
     setutent(); // Reset utmp file to beginning.
 
     _tried_root = false;
+    _tried_utmp = false;
+    if(_xauth_users != NULL) {
+	_xauth_users->rewind();
+    }
 
     while(!(_display = XOpenDisplay("localhost:0.0") ))
     {
-	err = NextEntry();
-	if(err == -1)
+	rtn = NextEntry();
+	if(rtn == -1)
 	{
 	    dprintf(D_FULLDEBUG, "Exausted all possible attempts to "
 		    "connect to X server, will try again in 60 seconds.\n");
@@ -222,16 +217,14 @@ XInterface::Connect()
 	    set_condor_priv();
 	    return false;
 	}
-	
-	
     }
+
     dprintf(D_ALWAYS, "Connected to X server: localhost:0.0\n");
     g_connected = true;
 
     dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
     daemonCore->Reset_Timer( _daemon_core_timer, 5 ,5 );
     
-
     // See note above the function to see why we need to do this.
     XSetErrorHandler((XErrorHandler) CatchFalseAlarm);
     XSetIOErrorHandler((XIOErrorHandler) CatchIOFalseAlarm);

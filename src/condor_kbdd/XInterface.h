@@ -24,8 +24,8 @@
 
 #ifndef __XINTERFACE_H__
 #define __XINTERFACE_H__
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_common.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include <ctype.h>
@@ -47,6 +47,7 @@ class XInterface
     bool QueryPointer();
     bool Connect();
     int NextEntry();
+    void TryUser(const char *user);
 
     Display     *_display;
     Window      _window;
@@ -60,7 +61,10 @@ class XInterface
     int          _pointer_prev_y;
 
     bool        _tried_root;
+    bool        _tried_utmp;
     int         _daemon_core_timer;
+
+    StringList  *_xauth_users;
 };
 
 
