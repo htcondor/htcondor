@@ -37,17 +37,21 @@
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
 /* (Also allow strings of the form "<hostname>:pppp>")  */
 int
-string_to_sin(char *addr, struct sockaddr_in *sin)
+string_to_sin( const char *addr, struct sockaddr_in *sin )
 {
 	char    *cur_byte;
 	char    *end_string;
 	int 	temp=0;
-	char*	addrCpy = (char*)malloc(strlen(addr)+1);
-	char*	string = addrCpy;
+	char*	addrCpy;
+	char*	string;
 	char*   colon = 0;
 	struct  hostent *hostptr;
 
-	strcpy(addrCpy, addr);
+	if( ! addr ) {
+		return 0;
+	}
+	addrCpy = strdup(addr);
+	string = addrCpy;
 	string++;					/* skip the leading '<' */
 
 	/* allow strings of the form "<hostname:pppp>" */
@@ -235,7 +239,7 @@ same_host(const char *h1, const char *h2)
 	}
 
 	// stash h_name before our next call to gethostbyname
-	strcpy(cn1, he1->h_name);
+	strncpy(cn1, he1->h_name, MAXHOSTNAMELEN);
 
 	if ((he2 = gethostbyname(h2)) == NULL) {
 		return -1;
@@ -269,7 +273,7 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 		return FALSE;	// shortest possible IP addr is "1.*" - 3 chars
 	
 	// copy to our local buf
-	strcpy(buf,inbuf);
+	strncpy( buf, inbuf, 17 );
 
 	// on IP addresses, wildcards only permitted at the end, 
 	// i.e. 144.92.* , _not_ *.92.11
@@ -332,12 +336,26 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 
 
 int
+is_valid_sinful( const char *sinful )
+{
+	char* tmp;
+	if( !sinful ) return FALSE;
+	if( !(sinful[0] == '<') ) return FALSE;
+	if( !(tmp = strchr(sinful, ':')) ) return FALSE;
+	if( !(tmp = strrchr(sinful, '>')) ) return FALSE;
+	return TRUE;
+}
+
+
+int
 string_to_port( const char* addr )
 {
 	char *sinful, *tmp;
 	int port = 0;
 
-	if( ! addr ) return 0;
+	if( ! (addr && is_valid_sinful(addr)) ) {
+		return 0;
+	}
 
 	sinful = strdup( addr );
 	if( (tmp = strrchr(sinful, '>')) ) {
@@ -359,17 +377,18 @@ string_to_ip( const char* addr )
 	unsigned int ip = 0;
 	struct in_addr sin_addr;
 
-	if( ! addr ) return 0;
+	if( ! (addr && is_valid_sinful(addr)) ) {
+		return 0;
+	}
 
 	sinful = strdup( addr );
-	if( sinful[0] == '<' && sinful[1] ) {
-		tmp = strchr( sinful, ':' );
-		if( tmp ) {
-			*tmp = '\0';
-		} 
+	if( (tmp = strchr(sinful, ':')) ) {
+		*tmp = '\0';
 		if( is_ipaddr(&sinful[1], &sin_addr) ) {
 			ip = sin_addr.s_addr;
 		}
+	} else {
+		EXCEPT( "is_valid_sinful(\"%s\") is true, but can't find ':'" );
 	}
 	free( sinful );
 	return ip;
@@ -383,13 +402,11 @@ string_to_ipstr( const char* addr )
 	static char result[16];
 	char sinful[MAXHOSTNAMELEN];
 
-	if( ! addr ) {
+	if( ! (addr && is_valid_sinful(addr)) ) {
 		return NULL;
 	}
-	if( ! is_valid_sinful(addr) ) {
-		return NULL;
-	}
-	strcpy( sinful, addr );
+
+	strncpy( sinful, addr, MAXHOSTNAMELEN );
 	tmp = strchr( sinful, ':' );
 	if( tmp ) {
 		*tmp = '\0';
@@ -397,10 +414,31 @@ string_to_ipstr( const char* addr )
 		return NULL;
 	}
 	if( is_ipaddr(&sinful[1], NULL) ) {
-		strcpy( result, &sinful[1] );
+		strncpy( result, &sinful[1], MAXHOSTNAMELEN );
 		return result;
 	}
 	return NULL;
+}
+
+
+char*
+string_to_hostname( const char* addr ) 
+{
+	char *tmp;
+	static char result[MAXHOSTNAMELEN];
+    struct sockaddr_in sin;
+
+	if( ! (addr && is_valid_sinful(addr)) ) {
+		return NULL;
+	}
+
+    string_to_sin( addr, &sin );
+	if( (tmp = sin_to_hostname(&sin, NULL)) ) {
+		strncpy( result, tmp, MAXHOSTNAMELEN );
+	} else {
+		return NULL;
+	}
+	return result;
 }
 
 
