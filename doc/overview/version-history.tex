@@ -82,9 +82,14 @@ Call (-58) - system call not supported by Condor'' when used with the
 6.0.X \Condor{shadow}.
 This was a harmless call, but removing the call prevents the error
 message.
-In addition, the SMP startd module now includes the \Condor{vacate}
-and \Condor{checkpoint} tools, since they have been enhanced in 6.1.X
-to support SMP-specific functionality.  
+
+\item The SMP contrib module now includes the \Condor{checkpoint} and
+\Condor{vacate} programs, which allow you to vacate or checkpoint jobs
+on individual CPUs on the SMP, instead of checkpointing or vacating
+everything.  
+You can now use ``\condor{vacate} vm1@hostname'' to just vacate the
+first virtual machine, or ``\condor{vacate} hostname'' to vacate all
+virtual machines. 
 
 \item Added support for SMP Digital Unix (Alpha) machines.
 
@@ -115,11 +120,6 @@ virtual machines reported.
 This ID can be used to help write more complex policy expressions on
 SMP hosts, and to easily identify which hosts in your pool are in fact
 SMP machines.
-
-\item The SMP contrib module now includes the \Condor{checkpoint} and
-\Condor{vacate} programs, which allow you to vacate or checkpoint jobs
-on individual CPUs on the SMP, instead of checkpointing or vacating
-everything.  
 
 \item Modified the output for \Condor{q} -run for scheduler and PVM
 universe jobs.  The host where the scheduler universe job is running
