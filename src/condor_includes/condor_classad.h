@@ -48,6 +48,7 @@ void printClassAdValue( Value & );
 ClassAd* getOldClassAd( Stream* );
 bool getOldClassAd( Stream*, ClassAd& );
 bool putOldClassAd( Stream*, ClassAd& );
+bool getOldClassAdNoTypes( Stream *, ClassAd& );  // NAC
 
 static const int ATTRLIST_MAX_EXPRESSION = 10240;
 
