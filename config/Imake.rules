@@ -10,7 +10,7 @@ dir_name:												@@\
 	mkdir dir_name										@@\
 	cd dir_name; for file in `ls $(SRC_TREE)/dir_name`;	\@@\
 		do ln -s $(SRC_TREE)/dir_name/$$file .; done;	@@\
-	cd dir_name; imake -I$(CONFIG_DIR) -DTilde=$(TILDE) -s Makefile
+	cd dir_name; imake -I../../config -DTilde=$(TILDE) -s Makefile
 #endif object_dir_target
 
 /*
@@ -51,7 +51,7 @@ object_dir_target(condor_/**/obj_name)
 platform.init: platform ALWAYS							@@\
 	cp GENERIC/CheckPlatformType.c platform				@@\
 	cp Imakefile.platform_skel platform/Imakefile	@@\
-	cd platform ; imake -I$(CONFIG_DIR) -DTilde=$(TILDE) -s Makefile;	@@\
+	cd platform ; imake -I../../config -DTilde=$(TILDE) -s Makefile;	@@\
 	cd platform ; make directories; make depend			@@\
 platform: 												@@\
 	mkdir platform
@@ -300,7 +300,7 @@ clean::																@@\
 #ifndef script_target
 #define script_target(targ,dest)											@@\
 targ: targ.generic															@@\
-	imake -I$(CONFIG_DIR) -T Scripts.template -s targ.tmp -f targ.generic	@@\
+	imake -I../../config -T Scripts.template -s targ.tmp -f targ.generic	@@\
 	awk -f awk.prog targ.tmp > targ											@@\
 	rm -f targ.tmp															@@\
 	chmod u+x targ															@@\
@@ -318,7 +318,7 @@ release::																	@@\
 #ifndef text_target
 #define text_target(targ,dest)												@@\
 targ: targ.generic															@@\
-	imake -I$(CONFIG_DIR) -T Scripts.template -s targ.tmp -f targ.generic	@@\
+	imake -I../../config -T Scripts.template -s targ.tmp -f targ.generic	@@\
 	awk -f awk.prog targ.tmp > targ											@@\
 	rm -f targ.tmp															@@\
 clean:: 																	@@\
