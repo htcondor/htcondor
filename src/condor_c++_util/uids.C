@@ -259,15 +259,6 @@ static int set_root_euid();
 static int set_condor_ruid();
 static int set_condor_rgid();
 
-/* must be listed in the same order as enum priv_state in condor_uid.h */
-static char *priv_state_name[] = {
-	"PRIV_UNKNOWN",
-	"PRIV_ROOT",
-	"PRIV_CONDOR",
-	"PRIV_USER",
-	"PRIV_USER_FINAL"
-};
-
 static struct {
 	time_t		timestamp;
 	priv_state	priv;

@@ -400,7 +400,6 @@ ReliSock::put_file(const char *source)
 	if ((fd = ::open(source, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0)) < 0)
 #else
 	int nbytes, nrd;
-	char buf[65536];
 	if ((fd = ::open(source, O_RDONLY, 0)) < 0)
 #endif
 	{
