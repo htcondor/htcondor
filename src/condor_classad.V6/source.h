@@ -54,9 +54,9 @@ class ClassAdParser
 				otherwise
 		*/
 		ClassAd *ParseClassAd(const std::string &buffer, bool full=false);
-		ClassAd *ParseClassAd(const string &buffer, int *offset);
+		ClassAd *ParseClassAd(const string &buffer, int &offset);
 		ClassAd *ParseClassAd(const char *buffer, bool full=false);
-		ClassAd *ParseClassAd(const char *buffer, int *offset);
+		ClassAd *ParseClassAd(const char *buffer, int &offset);
 		ClassAd *ParseClassAd(FILE *file, bool full=false);
 		ClassAd *ParseClassAd(istream *stream, bool full=false);
 
@@ -72,9 +72,9 @@ class ClassAdParser
 			@return true on success, false on failure
 		*/
 		bool ParseClassAd(const std::string &buffer, ClassAd &ad, bool full=false);
-		bool ParseClassAd(const string &buffer, ClassAd &classad, int *offset);
+		bool ParseClassAd(const string &buffer, ClassAd &classad, int &offset);
 		bool ParseClassAd(const char *buffer, ClassAd &classad, bool full=false);
-		bool ParseClassAd(const char *buffer, ClassAd &classad, int *offset);
+		bool ParseClassAd(const char *buffer, ClassAd &classad, int &offset);
 		bool ParseClassAd(FILE *file, ClassAd &classad, bool full=false);
 		bool ParseClassAd(istream *stream, ClassAd &classad, bool full=false);
 

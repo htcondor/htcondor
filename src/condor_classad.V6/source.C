@@ -99,15 +99,13 @@ ParseClassAd(const string &buffer, ClassAd &classad, bool full)
 }
 
 bool ClassAdParser::
-ParseClassAd(const string &buffer, ClassAd &classad, int *offset)
+ParseClassAd(const string &buffer, ClassAd &classad, int &offset)
 {
 	bool              success = false;
-	StringLexerSource lexer_source(&buffer, *offset);
+	StringLexerSource lexer_source(&buffer, offset);
 
-	if (offset != NULL) {
-		success = ParseClassAd(&lexer_source, classad);
-		*offset = lexer_source.GetCurrentLocation();
-	}
+	success = ParseClassAd(&lexer_source, classad);
+	offset = lexer_source.GetCurrentLocation();
 
 	return success;
 }
@@ -122,15 +120,13 @@ bool ClassAdParser::ParseClassAd(const char *buffer, ClassAd &classad, bool full
 	return success;
 }
 
-bool ClassAdParser::ParseClassAd(const char *buffer, ClassAd &classad, int *offset)
+bool ClassAdParser::ParseClassAd(const char *buffer, ClassAd &classad, int &offset)
 {
 	bool success = false;
-	CharLexerSource lexer_source(buffer, *offset);
+	CharLexerSource lexer_source(buffer, offset);
 
-	if (offset != NULL) {
-		success = ParseClassAd(&lexer_source, classad);
-		*offset = lexer_source.GetCurrentLocation();
-	}
+	success = ParseClassAd(&lexer_source, classad);
+	offset = lexer_source.GetCurrentLocation();
 
 	return success;
 }
@@ -197,15 +193,14 @@ ParseClassAd(const string &buffer, bool full)
 }
 
 ClassAd *ClassAdParser::
-ParseClassAd(const string &buffer, int *offset)
+ParseClassAd(const string &buffer, int &offset)
 {
 	ClassAd           *ad = NULL;
-	StringLexerSource lexer_source(&buffer, *offset);
+	StringLexerSource lexer_source(&buffer, offset);
 
-	if (offset != NULL) {
-		ad = ParseClassAd(&lexer_source);
-		*offset = lexer_source.GetCurrentLocation();
-	}
+	ad = ParseClassAd(&lexer_source);
+	offset = lexer_source.GetCurrentLocation();
+
 	return ad;
 }
 
@@ -221,15 +216,13 @@ ParseClassAd(const char *buffer, bool full)
 }
 
 ClassAd *ClassAdParser::
-ParseClassAd(const char *buffer, int *offset)
+ParseClassAd(const char *buffer, int &offset)
 {
 	ClassAd          *ad = NULL;
-	CharLexerSource  lexer_source(buffer, *offset);
+	CharLexerSource  lexer_source(buffer, offset);
 
-	if (offset != NULL) {
-		ad = ParseClassAd(&lexer_source);
-		*offset = lexer_source.GetCurrentLocation();
-	}
+	ad = ParseClassAd(&lexer_source);
+	offset = lexer_source.GetCurrentLocation();
 
 	return ad;
 }
