@@ -586,6 +586,7 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 	double		candidateRank;
 	ClassAd 	*bestSoFar = NULL;	// using best match
 	double		bestRank = -(FLT_MAX);
+	double		bestOffer= -(FLT_MAX);
 	ExprTree	*requestRank;
 	ExprTree	*offerRank;
 	ExprTree 	*matchCriterion;
@@ -648,7 +649,26 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 					candidateRank = (double) temp;
 
 					// if this rank is the best so far, choose it
-					if (candidateRank > bestRank) bestSoFar = candidate;
+					if (candidateRank > bestRank) 
+					{
+						bestSoFar = candidate;
+						bestRank = candidateRank;
+					}
+					else
+					// break ties on the basis of the best offer rank
+					if (offerRank && candidateRank == bestRank)
+					{
+						float rankOfOffer;
+						if(!request.EvalFloat(ATTR_RANK,candidate,rankOfOffer))
+						{
+							if (rankOfOffer > bestOffer)
+							{
+								bestSoFar = candidate;
+								bestOffer = rankOfOffer;
+								bestRank  = candidateRank;
+							}
+						}
+					}
 				}
 			}
 		}
