@@ -86,10 +86,15 @@ MyString loadLogFileNameFromSubFile(const MyString &strSubFile);
 
 void submitDag(SubmitDagOptions &opts)
 {
+#ifdef WIN32
 	MyString strDagmanPath = which("condor_dagman.exe");
+#else
+	MyString strDagmanPath = which("condor_dagman");
+#endif
+
 	if (strDagmanPath == "")
 	{
-		printf("Can't find condor_dagman.exe in your path, aborting.\n");
+		printf("Can't find condor_dagman in your path, aborting.\n");
 		exit(2);
 	}
 		
