@@ -570,7 +570,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int setpriority( int which, int who, int priority );
 #endif
 	int getpriority( int which, int who );
-#if defined(OSF1)
+#if defined(OSF1) || defined(HPUX9)
 	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
 #else
 	int gettimeofday( struct timeval *tp, void *tzp ) {
@@ -767,7 +767,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 #endif  /* of !defined(SAVE_SIGSTATE) */
 
 
-#if		defined(LINUX) || defined(Solaris251)
+#if		defined(LINUX) || defined(Solaris251) || defined(HPUX9)
 		int setitimer( int which, const struct itimerval *value,
 				struct itimerval *oval );
 #else
