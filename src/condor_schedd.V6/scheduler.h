@@ -20,14 +20,14 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-// ///////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////
 //
 // condor_sched.h
 //
 // Define class Scheduler. This class does local scheduling and then negotiates
 // with the central manager to obtain resources for jobs.
 //
-// ///////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////
 
 #ifndef _CONDOR_SCHED_H_
 #define _CONDOR_SCHED_H_
@@ -58,6 +58,7 @@ struct shadow_rec
     int             preempted;
     int             conn_fd;
 	int				removed;
+    char*           sinfulString;  // added for V6.1 Shadow by MEY
 };
 
 struct OwnerData {
@@ -75,7 +76,6 @@ struct match_rec
     int     		cluster;
     int     		proc;
     int     		status;
-    int     		agentPid;
 	shadow_rec*		shadowRec;
 	int				alive_countdown;
 	int				num_exceptions;
@@ -137,12 +137,10 @@ class Scheduler : public Service
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
     int         	MarkDel(char*);
-    match_rec*       	FindMrecByPid(int);
 	shadow_rec*		FindSrecByPid(int);
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	int				AlreadyMatched(PROC_ID*);
-	int				Agent(char*, char*, char*, char*, int, ClassAd*);
 	void			StartJobs();
 	void			StartSchedUniverseJobs();
 	void			send_alive();
@@ -223,7 +221,7 @@ class Scheduler : public Service
 	int				count_jobs();
 	void			update_central_mgr(int command, char *host, int port);
 	int				insert_owner(char*);
-#ifndef WIN32
+#ifndef WANT_DC_PM
 	void			reaper(int);
 #endif
 	void			child_exit(int, int);
@@ -256,6 +254,7 @@ class Scheduler : public Service
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 	shadow_rec*		start_std(match_rec*, PROC_ID*);
 	shadow_rec*		start_pvm(match_rec*, PROC_ID*);
+	shadow_rec*     start_mpi(match_rec*, PROC_ID*);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	void			Relinquish(match_rec*);
 	void 			swap_space_exhausted();
@@ -284,7 +283,7 @@ class Scheduler : public Service
 	int				FlockLevel;
 	int				MaxFlockLevel;
     int         	aliveInterval;             // how often to broadcast alive
-	int				MaxExceptions;		// Max shadow exceptions before we relinquish
+	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 };
 	
 #endif
