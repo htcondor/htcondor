@@ -214,7 +214,7 @@ notify_schedd()
 	for (i=0;i<nToRemove;i++) {
 		job_id = ToRemove.Next();
 		if( !sock->code(*job_id) ) {
-			dprintf( D_ALWAYS,
+			fprintf( stderr,
 				"Warning: can't send proc_id to condor scheduler\n" );
 			delete sock;
 			return;
