@@ -1,5 +1,6 @@
 #include "CondorPrefExps.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
  
 #include<iostream.h>
 #include<stdlib.h>
@@ -26,7 +27,7 @@ void CondorPrefExps::Initialize(ClassAd* mc)
   ReqExModified = false;
 
   // store the requirements expression
-  (mc->Lookup("Requirements"))->PrintToStr(OrigReqEx);
+  (mc->Lookup(ATTR_REQUIREMENTS))->PrintToStr(OrigReqEx);
 
   dprintf(D_ALWAYS,"Searching for PREF_EXPs..\n");
   for(tTier i = 0; i<=9;i++)
@@ -76,7 +77,7 @@ CondorPrefExps::eStatus CondorPrefExps::ModifyReqEx(ClassAd* mc, ClassAd* job)
   if(PrefTier==0)
   {
     // A match at the highest tier
-    strcpy(ModReqEx,"Requirements = FALSE");
+    sprintf(ModReqEx,"%s = FALSE", ATTR_REQUIREMENTS);
   }
   else
   {
@@ -95,7 +96,7 @@ CondorPrefExps::eStatus CondorPrefExps::ModifyReqEx(ClassAd* mc, ClassAd* job)
 
     modifier->PrintToStr(modif);
 
-    (mc->Lookup("Requirements"))->PrintToStr(temp);
+    (mc->Lookup(ATTR_REQUIREMENTS))->PrintToStr(temp);
     strcat(temp," && ");
     strcat(temp,modif);
 
