@@ -920,7 +920,7 @@ int main( int argc, char** argv )
 			dcargs++;
 			break;
 		case 'v':		// display Version info and exit
-			printf( "%s\n", CondorVersion() );
+			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
 			break;
 		default:
@@ -1037,6 +1037,7 @@ int main( int argc, char** argv )
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
+	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
 
 #ifndef WIN32
@@ -1322,7 +1323,7 @@ main( int argc, char** argv)
 		case 't':		// log to Terminal (stderr)
 			break;
 		case 'v':		// display Version info and exit
-			printf( "%s\n", CondorVersion() );
+			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
 			break;
 		default:

@@ -409,6 +409,7 @@ MAIN( int argc, char *argv[], char **envp )
 		   dprintf() before we get our sockets initialized. -Derek
 		*/
 	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
+	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
 
 	_condor_set_iwd();
 

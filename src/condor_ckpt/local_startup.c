@@ -195,6 +195,7 @@ MAIN( int argc, char *argv[], char **envp )
 		   -Derek Wright 5/26/99
 		*/
 	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
+	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
 
 	if( ! ckpt_file ) {
 			/*

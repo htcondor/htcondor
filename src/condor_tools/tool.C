@@ -692,7 +692,7 @@ doCommand( char *name )
 void
 version()
 {
-	printf( "%s\n", CondorVersion() );
+	printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 	exit(0);
 }
 
