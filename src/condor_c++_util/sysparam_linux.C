@@ -13,7 +13,7 @@ static char *_FileName_ = __FILE__;
 
 class LoadVector {
 public:
-	int		Update();
+    int     Update();
     float   Short()     { return short_avg; }
     float   Medium()    { return medium_avg; }
     float   Long()      { return long_avg; }
@@ -82,7 +82,7 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		size = sizeof(float);     // we return the long average as of now
 		t    =  Float;
 		buffer = (char *)new float[1];
-		*(float *)buffer = MyLoad.Long();
+		*(float *)buffer = MyLoad.Short();
 		break;
 		}
 	
