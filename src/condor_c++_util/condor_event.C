@@ -1,3 +1,4 @@
+
 #include "condor_common.h"
 #include <string.h>
 #include <sys/errno.h>
@@ -36,11 +37,16 @@ instantiateEvent (ULogEventNumber event)
 	  case ULOG_SHADOW_EXCEPTION:
 		return new ShadowExceptionEvent;
 
+#if defined(GENERIC_EVENT)
+	case ULOG_GENERIC:
+		return new GenericEvent;
+#endif
+
 	  default:
 		return 0;
 	}
 
-	return 0;
+    return 0;
 }
 
 
@@ -163,14 +169,53 @@ writeEvent (FILE *file)
 int SubmitEvent::
 readEvent (FILE *file)
 {
-	int retval  = fscanf (file, "Job submitted from host: %s", submitHost);
-	if (retval != 1)
-	{
-		return 0;
-	}
-	return 1;
+    int retval  = fscanf (file, "Job submitted from host: %s", submitHost);
+    if (retval != 1)
+    {
+	return 0;
+    }
+    return 1;
 }
 
+
+#if defined(GENERIC_EVENT)
+// ----- the GenericEvent class
+GenericEvent::
+GenericEvent()
+{	
+	info[0] = '\0';
+	eventNumber = ULOG_GENERIC;
+}
+
+GenericEvent::
+~GenericEvent()
+{
+}
+
+int GenericEvent::
+writeEvent(FILE *file)
+{
+    int retval = fprintf(file, "%s\n", info);
+    if (retval < 0)
+    {
+	return 0;
+    }
+    
+    return 1;
+}
+
+int GenericEvent::
+readEvent(FILE *file)
+{
+    int retval = fscanf(file, "%[^\n]\n", info);
+    if (retval < 0)
+    {
+	return 0;
+    }
+    return 1;
+}
+#endif
+	
 
 // ----- the ExecuteEvent class
 ExecuteEvent::
@@ -496,7 +541,8 @@ writeEvent (FILE *file)
 int JobImageSizeEvent::
 readEvent (FILE *file)
 {
-	if (fscanf (file, "Image size of job updated: %d", &size) != 1)
+	int retval;
+	if ((retval=fscanf(file,"Image size of job updated: %d", &size)) != 1)
 		return 0;
 
 	return 1;

@@ -16,16 +16,21 @@
 #include "condor_common.h"
 #include "_condor_fix_resource.h"
 
+#define GENERIC_EVENT 1
+
 enum ULogEventNumber
 {
-	ULOG_SUBMIT,					// Job submitted
-	ULOG_EXECUTE,					// Job now running
+	ULOG_SUBMIT,				// Job submitted
+	ULOG_EXECUTE,				// Job now running
 	ULOG_EXECUTABLE_ERROR,			// Error in executable
 	ULOG_CHECKPOINTED,				// Job was checkpointed
 	ULOG_JOB_EVICTED,				// Job evicted from machine
 	ULOG_JOB_TERMINATED,			// Job terminated
 	ULOG_IMAGE_SIZE,				// Image size of job updated
 	ULOG_SHADOW_EXCEPTION			// Shadow threw an exception
+#if defined(GENERIC_EVENT)
+	,ULOG_GENERIC			        
+#endif	    
 };
 
 
@@ -56,11 +61,11 @@ class ULogEvent
   protected:
 	int readRusage (FILE *, rusage &);
 	int writeRusage (FILE *, rusage &);
-	virtual int readEvent (FILE *) = 0;		// read the event from a file
+	virtual int readEvent (FILE *) = 0;	// read the event from a file
 	virtual int writeEvent (FILE *) = 0;   	// write the event to a file
 
-	int readHeader (FILE *);		// read the event header from the file
-	int writeHeader (FILE *);		// write the wvwnt header to the file
+	int readHeader (FILE *);	// read the event header from the file
+	int writeHeader (FILE *);	// write the wvwnt header to the file
 
 };
 
@@ -80,6 +85,21 @@ class SubmitEvent : public ULogEvent
 
 	char submitHost[128];
 };
+
+#if defined(GENERIC_EVENT)
+// this is a generic event described by a single string
+class GenericEvent : public ULogEvent
+{
+  public:
+	GenericEvent();
+	~GenericEvent();
+
+	virtual int readEvent (FILE *);
+	virtual int writeEvent (FILE *);
+
+	char info[128];
+};
+#endif	    
 
 // this event occurs when a job begins running on a machine
 class ExecuteEvent : public ULogEvent
@@ -193,3 +213,4 @@ class ShadowExceptionEvent : public ULogEvent
 };
 	
 #endif // __CONDOR_EVENT_H__
+
