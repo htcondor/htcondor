@@ -34,6 +34,9 @@ const int GridUniverseLogic::job_removed_delay = 2;
 GridUniverseLogic::GmanPidTable_t * GridUniverseLogic::gman_pid_table = NULL;
 int GridUniverseLogic::rid = -1;
 
+// globals
+GridUniverseLogic* _gridlogic = NULL;
+
 
 // hash function for Owner names
 static int 
