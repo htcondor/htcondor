@@ -331,7 +331,8 @@ AttrList* Accountant::ReportState() {
     ad->Insert(tmp);
     OwnerNum++;
   }
-
+  sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
+  ad->Insert(tmp);
   return ad;
 }
 
