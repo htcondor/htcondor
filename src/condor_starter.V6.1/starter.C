@@ -517,9 +517,17 @@ CStarter::getMyVMNumber( void )
 	int vm_number = 1; // default to VM1
 			
 	if ( logappend ) {
-		tmp = strrchr(logappend, '.');
+
+		// this could break if the user has ".vm" in the 
+		// path to the starterlog, but considering it just looked
+		// for '.' until now, I think this assumption is safe-enough.
+
+		tmp = strstr(logappend, ".vm");
 		if ( tmp ) {				
-			sscanf(tmp, ".vm%d", &vm_number);
+			if ( sscanf(tmp, ".vm%d", &vm_number) < 1 ) {
+				// if we couldn't parse it, set it to 1.
+				vm_number = 1;
+			}
 		} 
 		free(logappend);
 	}
