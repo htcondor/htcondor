@@ -143,6 +143,11 @@ void init_user_nobody_loginname(const char *login)
 	NobodyLoginName = strdup(login);
 }
 
+const char *get_user_nobody_loginname()
+{
+    return NobodyLoginName;
+}
+
 int
 init_user_ids(const char username[]) 
 {

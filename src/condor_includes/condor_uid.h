@@ -72,6 +72,7 @@ typedef int uid_t;
 typedef int gid_t;
 HANDLE priv_state_get_handle();
 void init_user_nobody_loginname(const char *);
+const char *get_user_nobody_loginname();
 #endif
 
 void _condor_disable_uid_switching();
