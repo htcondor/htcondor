@@ -601,6 +601,12 @@ case "$gcc_vers" in
     CompilerMinor="3"
     CompilerPatch="2"
     ;;
+ "3.3.3" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="3"
+    CompilerPatch="3"
+    ;;
  * )
    AC_MSG_RESULT([ERROR])
    AC_MSG_ERROR([Condor will not compile with gcc version $gcc_vers])
