@@ -21,9 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
 #ifndef RELI_SOCK_H
 #define RELI_SOCK_H
 
@@ -98,14 +95,6 @@ public:
 	int get_file(const char *destination);
     ///
 	int put_file(const char *source);
-
-    ///
-	int get_port();
-    ///
-	struct sockaddr_in *endpoint();
-
-    ///
-	int get_file_desc();
 
     ///
 	float get_bytes_sent() { return _bytes_sent; }
