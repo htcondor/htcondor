@@ -466,11 +466,11 @@ such as NFS or AFS.
 %%%%%%%%%%%%%%
 
 \index{Condor!re-linking for}
-Re-linking a program with the Condor libraries (\File{rt0.o} and
-\File{syscall\_lib.a}) is a simple, one-step process with Condor
-\VersionNotice. To re-link a program,
-run \Condor{compile}. See
-the command reference page for \Condor{compile} on
+Re-linking a program with the Condor libraries (\File{condor\_rt0.o},
+\File{libcondorsyscall.a} and \File{libcondorc++support.a}) is a
+simple, one-step process with Condor \VersionNotice.
+To re-link a program, run \Condor{compile}. 
+See the command reference page for \Condor{compile} on
 page~\pageref{man-condor-compile} for details.
 
 Note that once your program is re-linked, you can still run your program
