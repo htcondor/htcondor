@@ -58,6 +58,7 @@
 #include "url_condor.h"
 #include "condor_updown.h"
 #include "condor_uid.h"
+#include "my_hostname.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -91,8 +92,7 @@ extern 	char*	my_hostname();
 extern	char*		Spool;
 extern	char*		CondorAdministrator;
 extern	Scheduler	scheduler;
-extern	char		Name[];
-extern	int			ScheddName;
+extern	char*		Name;
 
 // priority records
 extern prio_rec	*PrioRec;
@@ -149,7 +149,6 @@ Scheduler::Scheduler()
     Mail = NULL;
     filename = NULL;
 	aliveInterval = 0;
-	port = 0;
 	ExitWhenDone = FALSE;
 	matches = NULL;
 	shadowsByPid = NULL;
@@ -163,7 +162,7 @@ Scheduler::~Scheduler()
 {
     delete ad;
     if (MySockName)
-        FREE(MySockName);
+        free(MySockName);
 	if (CollectorHost)
 		free(CollectorHost);
 	if (NegotiatorHost)
@@ -1816,14 +1815,9 @@ Scheduler::mail_problem_message()
 {
 #if !defined(WIN32)
 	char	cmd[512];
-	char	hostname[512];
 	FILE	*mailer;
 
 	dprintf( D_ALWAYS, "Mailing administrator (%s)\n", CondorAdministrator );
-
-	if( gethostname(hostname,sizeof(hostname)) < 0 ) {
-		EXCEPT( "gethostname(0x%x,%d)", hostname, sizeof(hostname) );
-	}
 
 	(void)sprintf( cmd, "%s %s", Mail, CondorAdministrator );
 	if( (mailer=popen(cmd,"w")) == NULL ) {
@@ -2154,23 +2148,7 @@ void
 Scheduler::Init()
 {
 	char*					tmp;
-	char					tmpExpr[200];
-
-	// set the name of the schedd
-	if(ScheddName) {
-		sprintf(tmpExpr, "SCHEDD__%s_PORT", Name); 
-		tmp = param(tmpExpr);
-		if(tmp) {
-			port = atoi(tmp);
-			free(tmp);
-		}
-	} else {
-		tmp = param("SCHEDD_PORT");
-		if(tmp) {
-			port = atoi(tmp);
-			free(tmp);
-		}
-	} 
+	char					expr[1024];
 
 	CollectorHost = param( "COLLECTOR_HOST" );
     if( CollectorHost == NULL ) {
@@ -2269,10 +2247,13 @@ Scheduler::Init()
         free(tmp);
 	}
 
-		// Put Machine attribute into the schedd classad.
-	sprintf( tmpExpr, "%s = \"%s\"", ATTR_MACHINE, my_hostname() );
-	ad->Insert( tmpExpr );
+	MySockName = strdup( daemonCore->InfoCommandSinfulString() );
 
+	sprintf( expr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName );
+	ad->Insert(expr);
+
+	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
+	ad->Insert(expr);
 }
 
 void
@@ -2812,32 +2793,3 @@ job_prio(ClassAd *ad)
 {
 	scheduler.JobsRunning += get_job_prio(ad);
 }
-
-void
-Scheduler::SetCommandPort(int command_port)
-{
-	struct sockaddr_in		addr;
-	int						addrLen; 
-	char					tmpExpr[200];
-
-	memset((char*)&addr, 0, sizeof(addr));
-	errno = 0;
-	addrLen = sizeof(addr); 
-	
-	port = command_port;
-	dprintf(D_ALWAYS, "System assigned port %d\n", port);
-		
-	addr.sin_family = AF_INET;
-	get_inet_address(&(addr.sin_addr));
-	addr.sin_port = htons(command_port);
-	MySockName = strdup(sin_to_string(&addr));
-	dprintf(D_FULLDEBUG, "MySockName = %s\n", MySockName);
-	if (MySockName !=0){
-		sprintf(tmpExpr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName);
-		ad->Insert(tmpExpr);
-	}
-	else
-	{
-		EXCEPT("Can't get socket name");
-	} 
-}	
