@@ -78,7 +78,7 @@ extern char* Spool;
 extern char * Name;
 extern char * JobHistoryFileName;
 extern char * mySubSystem;
-extern char * CondorCertDir;
+extern char * X509CertDir;
 
 extern FILE *DebugFP;
 extern char *DebugFile;
@@ -2789,49 +2789,25 @@ Scheduler::Init()
 		EXCEPT( "No spool directory specified in config file" );
 	}
 
-#if defined( GSS_AUTHENTICATION )
-	//this section sets up three env vars needed by authentication code. //mju
-	if ( CondorCertDir ) 
-		free( CondorCertDir );
-	if( ! (CondorCertDir = param("CONDOR_CERT_DIR")) ) {
-		dprintf( D_ALWAYS, "no CONDOR_CERT_DIR, no GSS authentication\n");
+//TODO: should read order in which to try different methods!!!
+	if ( X509CertDir ) 
+		free( X509CertDir );
+	if( (X509CertDir = param("X509_CERT_DIR")) ) {
+		char tmpstring[MAXPATHLEN];
+		sprintf( tmpstring, "X509_CERT_DIR=%s/", X509CertDir );
+		putenv( strdup( tmpstring ) );
+		dprintf( D_ALWAYS, "read X509_CERT_DIR, can use GSS authentication\n");
 	}
 	else {
-		canTryGSS = 1;
-		dprintf( D_ALWAYS, "read CONDOR_CERT_DIR, can use GSS authentication\n");
-		char tmpstring[MAXPATHLEN];
-
-		//didn't bother re-putting vars which shouldn't change
-		if ( !getenv( "X509_CERT_DIR" ) ) {
-			sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
-			putenv( strdup( tmpstring ) );
-		}
-
-		if ( !getenv( "X509_USER_CERT" ) ) {
-			sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
-			putenv( strdup( tmpstring ) );
-		}
-
-		if ( !getenv( "X509_USER_KEY" ) ) {
-			sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CondorCertDir);
-			putenv( strdup( tmpstring ) );
-		}
-
-		if ( !getenv( "SSLEAY_CONF" ) ) {
-			sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CondorCertDir);
-			putenv( strdup( tmpstring ) );
-		}
-
-//		free( CondorCertDir );
+		dprintf( D_FULLDEBUG, "no X509_CERT_DIR, no GSS authentication\n");
 	}
-#endif
 
 	//for now, default to can use unless set to false, but should 
 	//change this because it's inconsistent with other methods
 	char * tryFilesystem = param( "ALLOW_FILESYSTEM_AUTHENTICATION" );
 	if ( tryFilesystem ) {
 		if ( tryFilesystem[0] == 'F' || tryFilesystem[0] == 'f' ) {
-			canTryFilesystem = 1;
+			canTryFilesystem = 0;
 		}
 		free( tryFilesystem );
 	}

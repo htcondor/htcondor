@@ -61,6 +61,7 @@ do_Q_request(ReliSock *syscall_sock)
 
 		if ( syscall_sock->authenticate() ) {
 			InitializeConnection( syscall_sock->getOwner() );
+
 			return 0;
 		}
 		return -1;

@@ -31,6 +31,7 @@ static char *_FileName_ = __FILE__;
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "my_hostname.h"
+#include "my_username.h"
 #include "get_daemon_addr.h"
 
 int open_url(char *, int, int);
@@ -41,8 +42,7 @@ ReliSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
 
 Qmgr_connection *
-ConnectQ(char *qmgr_location, char *& owner = (char *) 0, int canTryGSS = 0,
-		int canTryFilesystem = 0 )
+ConnectQ(char *qmgr_location )
 {
 	int		rval;
 	char	tmp_file[255];
@@ -120,67 +120,28 @@ ConnectQ(char *qmgr_location, char *& owner = (char *) 0, int canTryGSS = 0,
 		free(localScheddAddr);
 	}
 
+	char *username = my_username();
+
+	if ( !username ) {
+		dprintf(D_FULLDEBUG,"Failure getting my_username()\n", username );
+		return( 0 );
+	}
+
+	dprintf(D_FULLDEBUG,"Connecting to queue as user \"%s\"\n", username );
+
 	/* Get the schedd to handle Q ops. */
 	qmgmt_sock->encode();
 	cmd = QMGMT_CMD;
 	qmgmt_sock->code(cmd);
 	
-
-#if defined(WIN32)
-	char username[UNLEN+1];
-	unsigned long usernamelen = UNLEN+1;
-	username[0] = '\0';
-	if( is_local ) {
-		if (GetUserName(username, &usernamelen) < 0) {
-			free(connection);
-			return 0;
-		}
-	}
-#else
-	char *username = NULL;
-	if( is_local ) {
-		pwd = getpwuid(geteuid());
-		if (pwd == 0) {
-			free(connection);
-			return 0;
-		}
-		username = pwd->pw_name;
-	}
-#endif
-
-//	tmp_file[0] = '\0';
-	char *tmp_user;
-
-	if( username && *username ) {
-		tmp_user = username;
-	} 
-	else {
-		tmp_user = "nobody";
-	}
-
-	dprintf(D_FULLDEBUG,"Connecting to queue as user \"%s\"\n", tmp_user);
-	rval = InitializeConnection( tmp_user );
+	rval = InitializeConnection( username );
 
 	if (rval < 0) {
 		free(connection);
 		return 0;
 	}
 
-	if ( canTryGSS ) {
-		qmgmt_sock->canTryGSS();
-	}
-
-	if ( canTryFilesystem && is_local ) {
-		qmgmt_sock->canTryFilesystem();
-	}
-
 	qmgmt_sock->authenticate();
-
-	//this is a hack-around to use the owner name extracted from
-	//the certificate if authentication was GSS
-	if ( qmgmt_sock->isAuthenticated() && qmgmt_sock->getOwner() ) {
-		owner = strdup( qmgmt_sock->getOwner() );
-	}
 
 	connection->count = 1;
 	return connection;

@@ -53,7 +53,6 @@ InitializeConnection( char *owner )
 	assert( qmgmt_sock->code(CurrentSysCall) );
 
 	qmgmt_sock->setOwner( owner );
-//	return( qmgmt_sock->authenticate() );
 	return( 0 );
 }
 

@@ -69,16 +69,6 @@ void	FindPrioJob(int&);
 int		Runnable(PROC_ID*);
 int		get_job_prio(ClassAd *ad);
 
-#if 0
-enum {
-	CONNECTION_CLOSED,
-	CONNECTION_ACTIVE,
-} connection_state = CONNECTION_ACTIVE;
-
-char	*active_owner = 0;
-char	*rendevous_file = 0;
-#endif 0
-
 #if !defined(WIN32)
 uid_t	active_owner_uid = 0;
 #endif
@@ -117,7 +107,7 @@ static char *default_super_user =
 	"root";
 #endif
 
-static int allow_remote_submit = FALSE;
+//static int allow_remote_submit = FALSE;
 
 // Read out any parameters from the config file that we need and
 // initialize our internal data structures.
@@ -160,6 +150,7 @@ InitQmgmt()
 		}
 	}
 
+#if 0
 	allow_remote_submit = FALSE;
 	tmp = param( "ALLOW_REMOTE_SUBMIT" );
 	if( tmp ) {
@@ -169,6 +160,8 @@ InitQmgmt()
 		}			
 		free( tmp );
 	}
+#endif
+
 }
 
 
@@ -286,84 +279,6 @@ grow_prio_recs( int newsize )
 }
 
 
-void
-InvalidateConnection()
-{
-#if 0
-	if (active_owner != 0) {
-		free(active_owner);
-	}
-	active_owner = 0;
-	connection_state = CONNECTION_CLOSED;
-#endif 0
-	Q_SOCK->setOwner( "" );
-
-#if !defined(WIN32)
-	active_owner_uid = 0;
-#endif
-	active_cluster_num = -1;
-}
-
-/*
-   This makes the connection look active, so any local calls to manipulate
-   the queue succeed.  This is the normal state of the connection except when
-   we receive a request from the outside.
-*/
-
-//this is a VERY bad idea! there should be an owner of every connection,
-//either the (s)uid of the program, or the authenticated name, or "nobody"
-
-void
-FreeConnection()
-{
-#if 0
-	if (active_owner != 0) {
-		free(active_owner);
-	}
-	active_owner = 0;
-	connection_state = CONNECTION_ACTIVE;
-#endif
-
-	Q_SOCK->setOwner( "" );
-	Q_SOCK->setAuthType( ReliSock::CAUTH_ANY ); //generic OK type
-
-#if !defined(WIN32)
-	active_owner_uid = 0;
-#endif
-	uninit_user_ids();
-}
-
-
-int
-UnauthenticatedConnection()
-{
-	dprintf(D_FULLDEBUG,"in UnauthenticatedConnection--\n" );
-	dprintf( D_ALWAYS, "Unable to authenticate connection.  Setting active "
-			"owner to \"nobody\"\n" );
-	init_user_ids("nobody");
-#if !defined(WIN32)
-	active_owner_uid = get_user_uid();
-#endif
-
-#if 0
-	if (active_owner != 0)
-		free(active_owner);
-	dprintf(D_FULLDEBUG,"in UnauthenticatedConnection, setting active_owner "
-			"to \"nobody\"\n" );
-	active_owner = strdup( "nobody" );
-	if (rendevous_file != 0)
-		free(rendevous_file);
-	rendevous_file = 0;
-	connection_state = CONNECTION_ACTIVE;
-#endif 0
-	dprintf(D_FULLDEBUG,"in UnauthenticatedConnection, setting active_owner "
-			"to \"nobody\"\n" );
-	Q_SOCK->setOwner( "nobody" );
-	Q_SOCK->setFile( NULL );
-
-	return 0;
-}
-
 // Test if this owner matches my owner, so they're allowed to update me.
 int
 OwnerCheck(ClassAd *ad, char *test_owner)
@@ -414,14 +329,6 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 	}
 #endif
 
-	if( !allow_remote_submit && !strcmp(test_owner, "nobody") ) {
-#if !defined(WIN32)
-		errno = EACCES;
-#endif
-		dprintf( D_FULLDEBUG, "OwnerCheck: reject %s \"nobody\"\n", test_owner );
-		return 0;
-	} 
-
 		// If we don't have an Owner attribute (or classad) and we've 
 		// gotten this far, how can we deny service?
 	if( !ad ) {
@@ -453,21 +360,12 @@ int
 CheckConnection()
 {
 
-#if 0
-	if (Q_SOCK->getConnectionState() == CONNECTION_ACTIVE) {
-		return 0;
-	}
-#endif
 	if ( !Q_SOCK ) {
 		// no one connected yet, clearing out queue from previous jobs
 		return 0;
 	}
-	if ( Q_SOCK && Q_SOCK->getState() != ReliSock::CAUTH_NONE ) {
-		return 0;
-	}
 
-	if ( Q_SOCK 
-			&& Q_SOCK->isAuthenticated() ) {
+	if ( Q_SOCK->isAuthenticated() ) {
 		return 0;
 	}
 	//there was code here to ValidateRendevous if CONNECTION_CLOSED,
@@ -491,32 +389,35 @@ handle_q(Service *, int, Stream *sock)
 
 	Q_SOCK = (ReliSock *)sock;
 
-	InvalidateConnection();
+//	InvalidateConnection();
+	Q_SOCK->unAuthenticate();
+
 	if ( canTryGSS ) {
 		Q_SOCK->canTryGSS();
 	}
 	if ( canTryFilesystem ) {
 		Q_SOCK->canTryFilesystem();
 	}
+
 	do {
 		/* Probably should wrap a timer around this */
 		rval = do_Q_request( (ReliSock *)Q_SOCK );
 	} while(rval >= 0);
-	FreeConnection();
+
+//	FreeConnection();
+
+	  //this is closest I could get to simulating old behavior, but when one of 
+	  //the do_Q_req. above fails, we should unAuthenticate() & delete sock
+	Q_SOCK->setGenericAuthentication();
+
 	dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
 
 	// Abort any uncompleted transaction.  The transaction should
 	// be committed in CloseConnection().
 	JobQueue->AbortTransaction();
 
-#if 0
-	if (rendevous_file != 0) {
-		unlink(rendevous_file);
-		free(rendevous_file);
-		rendevous_file = 0;
-	}
-#endif 0
-	Q_SOCK->setFile( NULL );
+	//mju - added this because Q_SOCK is static...
+	Q_SOCK = NULL;
 	return 0;
 }
 
@@ -524,20 +425,13 @@ handle_q(Service *, int, Stream *sock)
 int
 InitializeConnection( char *owner )
 {
-//	init_user_ids( owner );
+//should I even do this? I init_user_ids in authenticate??
+	init_user_ids( owner );
 
 #if !defined(WIN32)
 	active_owner_uid = get_user_uid();
 	Q_SOCK->setOwnerUid( active_owner_uid );
-
-	if (active_owner_uid == (uid_t)-1) {
-		UnauthenticatedConnection();
-		return 0;
-	}
-#endif
-
-	Q_SOCK->setState( ReliSock::CAUTH_SERVER );
-
+#endif !WIN32
 
 	return 0;
 }
