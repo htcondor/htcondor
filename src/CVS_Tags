@@ -139,3 +139,13 @@
 
 11/1/94 V5_a4
 	Runs on HPUX, ULTRIX, AIX . Released on snakes and dec-stations.
+
+12/12/94 V5_a5
+	Runs on ULTRIX, OSF/1, and SunOS.  To be released on local Suns
+	and DecStations on 12/13.  Fixes:
+		1. Lock on job queue moved to LOG dir to avoid AFS locking problem.
+		2. IP address byte ordering fixed to allow cross platform execution.
+		3. Checkpoint time limit increased from 1 min to 5 mins.
+
+12/12/94 bp_V5_a5
+	Branch point for V5_a5
