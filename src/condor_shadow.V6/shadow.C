@@ -1152,6 +1152,8 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	static struct rusage tstartup_local, tstartup_remote;
 	static int tstartup_flag = 0;
 	int		status;
+	float utime = 0.0;
+	float stime = 0.0;
 
 	ConnectQ(schedd);
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
@@ -1168,6 +1170,10 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			(void) unlink_local_or_ckpt_server( TmpCkptName );
 		}
 	} else {
+
+		dprintf(D_FULLDEBUG,"TIME DEBUG 1 USR remotep=%lu Proc=%lu utime=%f\n",remotep->ru_utime.tv_sec, Proc->remote_usage[0].ru_utime.tv_sec, utime);
+
+		dprintf(D_FULLDEBUG,"TIME DEBUG 2 SYS remotep=%lu Proc=%lu utime=%f\n",remotep->ru_stime.tv_sec, Proc->remote_usage[0].ru_stime.tv_sec, stime);
 
 		/* Here we keep usage info on the job when the Shadow first starts in
 		 * tstartup_local/remote, so we can "reset" it back each subsequent
@@ -1198,10 +1204,21 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 						ImageSize);
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, 
 						Proc->status);
-		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_CPU, 
-						  rusage_to_float(Proc->local_usage));
-		SetAttributeFloat(Proc->id.cluster, Proc->id.proc,ATTR_JOB_REMOTE_CPU, 
-						  rusage_to_float(Proc->remote_usage[0]));
+
+		rusage_to_float( Proc->local_usage, &utime, &stime );
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_USER_CPU, 
+						  utime);
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_SYS_CPU, 
+						  stime);
+
+		rusage_to_float( Proc->remote_usage[0], &utime, &stime );
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_REMOTE_USER_CPU, 
+						  utime);
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_REMOTE_SYS_CPU, 
+						  stime);
+		dprintf(D_FULLDEBUG,"TIME DEBUG 3 USR remotep=%lu Proc=%lu utime=%f\n",remotep->ru_utime.tv_sec, Proc->remote_usage[0].ru_utime.tv_sec, utime);
+		dprintf(D_FULLDEBUG,"TIME DEBUG 4 SYS remotep=%lu Proc=%lu utime=%f\n",remotep->ru_stime.tv_sec, Proc->remote_usage[0].ru_stime.tv_sec, stime);
+
 		dprintf( D_ALWAYS, "Shadow: marked job status %d\n", Proc->status );
 
 		if( Proc->status == COMPLETED ) {

@@ -264,10 +264,16 @@ main( int argc, char *argv[] )
 	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, get_owner());
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_CPU);
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_CPU);
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_SYS_CPU);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_USER_CPU);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);

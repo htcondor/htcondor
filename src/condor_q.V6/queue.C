@@ -8,7 +8,7 @@
 #include "files.h"
 
 extern "C" SetSyscalls(){}
-extern "C" int float_to_rusage (float, struct rusage *);
+extern "C" int float_to_rusage (float, float, struct rusage *);
 void short_print (int, int, const char*, int, int, int, int, int, const char *);
 
 static void short_header (void);
@@ -138,15 +138,16 @@ static void
 displayJobShort (ClassAd *ad)
 {
 	int cluster, proc, date, status, prio, image_size;
-	float usage;
+	float utime, stime;
 	char owner[64], cmd[2048], args[2048];
 	struct rusage ru;
 
 	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
 		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
-		!ad->EvalInteger (ATTR_Q_DATE, NULL, date)					||
-		!ad->EvalFloat   (ATTR_JOB_REMOTE_CPU, NULL, usage)			||
-		!ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)				||
+		!ad->EvalInteger (ATTR_Q_DATE, NULL, date)				||
+		!ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)	||
+		!ad->EvalFloat   (ATTR_JOB_REMOTE_SYS_CPU, NULL, stime)	||
+		!ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)			||
 		!ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)				||
 		!ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)		||
 		!ad->EvalString  (ATTR_OWNER, NULL, owner)				||
@@ -156,7 +157,7 @@ displayJobShort (ClassAd *ad)
 		return;
 	}
 	
-	float_to_rusage (usage, &ru);
+	float_to_rusage (utime,stime,&ru);
 	shorten (owner, 14);
 	if (ad->EvalString ("Args", NULL, args)) strcat (cmd, args);
 	shorten (cmd, 18);

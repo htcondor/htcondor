@@ -45,8 +45,8 @@ Qmgr_connection *ConnectQ(char *qmgr_location);
 int DisconnectQ(Qmgr_connection *);
 int WalkJobQueue(scan_func);
 
-float rusage_to_float(struct rusage);
-int float_to_rusage(float, struct rusage *);
+int rusage_to_float(struct rusage, float *, float *);
+int float_to_rusage(float, float, struct rusage *);
 
 /* These are here for compatibility with old code which uses the PROC
    structure to ease porting.  Use of these functions is discouraged! */

@@ -108,6 +108,9 @@ const char ATTR_JOB_CMD					 [] = "Cmd";
 const char ATTR_JOB_EXIT_STATUS			 [] = "ExitStatus";
 const char ATTR_JOB_ROOT_DIR			 [] = "RootDir";
 const char ATTR_JOB_LOCAL_CPU			 [] = "LocalCpu";
-const char ATTR_JOB_REMOTE_CPU			 [] = "RemoteCpu";
+const char ATTR_JOB_LOCAL_USER_CPU		 [] = "LocalUserCpu";
+const char ATTR_JOB_LOCAL_SYS_CPU		 [] = "LocalSysCpu";
+const char ATTR_JOB_REMOTE_USER_CPU		 [] = "RemoteUserCpu";
+const char ATTR_JOB_REMOTE_SYS_CPU		 [] = "RemoteSysCpu";
 
 #endif

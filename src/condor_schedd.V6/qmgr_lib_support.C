@@ -180,19 +180,25 @@ WalkJobQueue(scan_func func)
 }
 
 
-float
-rusage_to_float(struct rusage ru)
+int
+rusage_to_float(struct rusage ru, float *utime, float *stime )
 {
 	float rval;
 
-	rval = (float) (ru.ru_utime.tv_sec + ru.ru_stime.tv_sec);
-	return rval;
+	if ( utime )
+		*utime = (float) ru.ru_utime.tv_sec;
+
+	if ( stime )
+		*stime = (float) ru.ru_stime.tv_sec;
+
+	return 0;
 }
 
-
-float_to_rusage(float cpu_time, struct rusage *ru)
+int
+float_to_rusage(float utime, float stime, struct rusage *ru)
 {
-	ru->ru_utime.tv_sec = (int) cpu_time;
+	ru->ru_utime.tv_sec = (int) utime;
+	ru->ru_stime.tv_sec = (int) stime;
 	return 0;
 }
 
@@ -204,6 +210,7 @@ SaveProc(PROC *p)
 	char buf[1000];
 	int cl;
 	int pr;
+	float utime, stime;
 
 	if (connection == 0) {
 		disconn_when_done = 1;
@@ -246,11 +253,13 @@ SaveProc(PROC *p)
 	}
 	SetAttributeExpr(cl, pr, ATTR_PREFERENCES, p->preferences);
 	
-	SetAttributeFloat(cl, pr, ATTR_JOB_LOCAL_CPU,
-					  rusage_to_float(p->local_usage));
-	SetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_CPU, 
-					  rusage_to_float(p->remote_usage[0]));
-	
+	rusage_to_float(p->local_usage,&utime,&stime);
+	SetAttributeFloat(cl, pr, ATTR_JOB_LOCAL_USER_CPU, utime);
+	SetAttributeFloat(cl, pr, ATTR_JOB_LOCAL_SYS_CPU, stime);
+
+	rusage_to_float(p->remote_usage[0],&utime,&stime);
+	SetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_USER_CPU, utime);
+	SetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_SYS_CPU, stime);
 
 	if (disconn_when_done) {
 		DisconnectQ(connection);
@@ -266,7 +275,7 @@ GetProc(int cl, int pr, PROC *p)
 {
 	int disconn_when_done = 0;
 	char buf[1000];
-	float	cpu_time;
+	float	utime,stime;
 	char	*s;
 
 	if (connection == 0) {
@@ -339,12 +348,15 @@ GetProc(int cl, int pr, PROC *p)
 		p->preferences = strdup(buf);
 	}
 
-	GetAttributeFloat(cl, pr, ATTR_JOB_LOCAL_CPU, &cpu_time);
-	float_to_rusage(cpu_time, &(p->local_usage));
+	GetAttributeFloat(cl, pr, ATTR_JOB_LOCAL_USER_CPU, &utime);
+	GetAttributeFloat(cl, pr, ATTR_JOB_LOCAL_SYS_CPU, &stime);
+	float_to_rusage(utime, stime, &(p->local_usage));
+
 	p->remote_usage = (struct rusage *) malloc(p->n_cmds * 
 											   sizeof(struct rusage));
-	GetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_CPU, &cpu_time);
-	float_to_rusage(cpu_time, &(p->remote_usage[0]));
+	GetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_USER_CPU, &utime);
+	GetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_SYS_CPU, &stime);
+	float_to_rusage(utime, stime, &(p->remote_usage[0]));
 	
 
 	if (disconn_when_done) {
