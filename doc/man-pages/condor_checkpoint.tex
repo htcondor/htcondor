@@ -1,26 +1,32 @@
 \begin{ManPage}{\label{man-condor-checkpoint}\Condor{checkpoint}}{1}
 {send a checkpoint command to jobs running on specified hosts}
 \Synopsis \SynProg{\Condor{checkpoint}}
-\ToolArgsBase \ToolArgsLocate
+\ToolArgsBase
+
+\SynProg{\Condor{checkpoint}}
+\ToolArgsLocate
+
+\SynProg{\Condor{checkpoint}}
+\ToolWhere
 
 \index{Condor commands!condor\_checkpoint}
 \index{condor\_checkpoint command}
 
 \Description
-\Condor{checkpoint} sends a checkpoint command to a specified
-machine or set of machines within a single pool.
-This causes the startd daemon on each of the specified hosts to take a 
-checkpoint of any running jobs. The job is temporarily
-stopped, a checkpoint is taken, and then the job continues.
-If no host is specified, then the checkpoint command
-is sent to the host that issued the
+\Condor{checkpoint} sends a checkpoint command to a set
+of machines within a single pool.
+This causes the startd daemon on each of the specified machines
+to take a checkpoint of any running job that is executing under
+the standard universe.
+The job is temporarily stopped, a checkpoint is taken,
+and then the job continues.
+If no machine is specified, then the command
+is sent to the machine that issued the
 \Condor{checkpoint} command.
 
-The command sent is a
-periodic checkpoint.
+The command sent is a periodic checkpoint.
 The job will take a checkpoint, but then the job will immediately
-continue running
-after the checkpoint is completed.
+continue running after the checkpoint is completed.
 \Condor{vacate}, on the other hand, will result in the job exiting
 (vacating) after it produces a checkpoint. 
 
@@ -31,11 +37,11 @@ If the job is running under another universe,
 or if there is currently no Condor job
 running on that host, then \Condor{checkpoint} has no effect. 
 
-There is no need for the user or administrator to explicitly
-run \Condor{checkpoint} under normal circumstances.
+There is generally no need for the user or administrator to explicitly
+run \Condor{checkpoint}.
 Taking checkpoints of running Condor jobs is
-handled automatically by Condor by following the policies
-stated in Condor's configuration files. 
+handled automatically following the policies
+stated in the configuration files. 
 
 \begin{Options}
 	\ToolArgsBaseDesc
@@ -46,5 +52,25 @@ stated in Condor's configuration files.
 
 \Condor{checkpoint} will exit with a status value of 0 (zero) upon success,
 and it will exit with the value 1 (one) upon failure.
+
+\Examples
+To send a \Condor{checkpoint} command to two named machines:
+\begin{verbatim}
+% condor_checkpoint  robin cardinal
+\end{verbatim}
+
+To send the \Condor{checkpoint} command to a machine
+within a pool of machines other than the local pool,
+use the \Opt{-pool} option.
+The argument is the name of the central manager for the pool.
+Note that one or more machines within the pool must be
+specified as the targets for the command.
+This command sends the command to
+a the single machine named \Opt{cae17} within the
+pool of machines that has \Opt{condor.cae.wisc.edu} as
+its central manager:
+\begin{verbatim}
+% condor_checkpoint -pool condor.cae.wisc.edu -name cae17
+\end{verbatim}
 
 \end{ManPage}
