@@ -89,4 +89,6 @@ class CondorQ
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);
 
+const char encode_status( int status );
+
 #endif
