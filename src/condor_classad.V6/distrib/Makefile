@@ -1,17 +1,16 @@
-GCC = g++
-FLG = -g -Wall -I../include
+GCC 	= g++
+LIB_DIR = ../lib
+INC_DIR = ../include
+LIB		= $(LIB_DIR)/libclassads.a
+FLG 	= -g -Wall -I$(INC_DIR)
 
-all: match cxi htb
+all: cxi 
 
-match: match.C
-	$(GCC) $(FLG) -o match match.C ../lib/libclassads.a
-
-cxi: cxi.C
-	$(GCC) $(FLG) -o cxi cxi.C ../lib/libclassads.a
-
-htb: htb.C
-	$(GCC) $(FLG) -o htb htb.C ../lib/libclassads.a
-
+cxi: cxi.o
+	$(GCC) $(FLG) -c cxi.C 
+	
+cxi.o: cxi.C
+	$(GCC) $(FLG) -o cxi cxi.o $(LIB)
 
 clean:
-	rm -f *.o core *~ htb cxi match *.log
+	rm -f *.o core *~ cxi 
