@@ -30,7 +30,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
-#include "classad_merge.h"
+//#include "classad_merge.h"
 
 
 Starter::Starter()
@@ -104,7 +104,8 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 {
 	int requirements = 0;
 	ClassAd* merged_ad = new ClassAd( *mach_ad );
-	MergeClassAds( merged_ad, s_ad, true );
+//	MergeClassAds( merged_ad, s_ad, true );
+	merged_ad->Update( *s_ad );
 	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
 		requirements = 0;
 	}
@@ -172,18 +173,30 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		// also in the StringList.  Attributes that begin with Java
 		// only go into the ClassAd.
 
-	ExprTree *tree, *lhs;
+//	ExprTree *tree, *lhs;
+//	ExprTree *tree;
 	char *expr_str = NULL, *lhstr = NULL;
-	s_ad->ResetExpr();
-	while( (tree = s_ad->NextExpr()) ) {
-		if( (lhs = tree->LArg()) ) {
-			lhs->PrintToNewStr( &lhstr );
+//	s_ad->ResetExpr();
+//	while( (tree = s_ad->NextExpr()) ) {
+	ClassAdUnParser unp;
+	ClassAd::iterator s;
+	string expr_string;
+	for( s = s_ad->begin( ); s != s_ad->end( ); s++ ) {
+//		if( (lhs = tree->LArg()) ) {
+//			lhs->PrintToNewStr( &lhstr );
+		lhstr = new char[s->first.length( )+1];
+		if( lhstr ) { 
+			strcpy( lhstr, s->first.c_str( ) );
 		} else {
 			dprintf( D_ALWAYS, 
 					 "ERROR parsing Starter classad attribute!\n" );
 			continue;
 		}
-		tree->PrintToNewStr( &expr_str );
+//		tree->PrintToNewStr( &expr_str );
+		expr_string = s->first + " = ";
+		unp.Unparse( expr_string, s->second );
+		expr_str = new char[expr_string.length( ) + 1];
+		strcpy( expr_str, expr_string.c_str( ) );
 		if( strincmp(lhstr, "Has", 3) == MATCH ) {
 			ad->Insert( expr_str );
 			if( list ) {
