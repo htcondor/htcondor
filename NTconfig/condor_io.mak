@@ -25,9 +25,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_io - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -42,7 +39,11 @@ ALL : "$(OUTDIR)\condor_io.lib"
 CLEAN :
 	-@erase "$(INTDIR)\authentication.obj"
 	-@erase "$(INTDIR)\buffers.obj"
+	-@erase "$(INTDIR)\condor_auth.obj"
+	-@erase "$(INTDIR)\condor_auth_claim.obj"
+	-@erase "$(INTDIR)\condor_auth_sspi.obj"
 	-@erase "$(INTDIR)\condor_rw.obj"
+	-@erase "$(INTDIR)\CryptKey.obj"
 	-@erase "$(INTDIR)\open_flags.obj"
 	-@erase "$(INTDIR)\reli_sock.obj"
 	-@erase "$(INTDIR)\safe_sock.obj"
@@ -57,83 +58,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MDd /W3 /Gm /Gi /GX /Zi /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\authentication.obj" \
-	"$(INTDIR)\buffers.obj" \
-	"$(INTDIR)\condor_rw.obj" \
-	"$(INTDIR)\open_flags.obj" \
-	"$(INTDIR)\reli_sock.obj" \
-	"$(INTDIR)\safe_sock.obj" \
-	"$(INTDIR)\sock.obj" \
-	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj" \
-	"$(INTDIR)\SafeMsg.obj"
-
-"$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ELSEIF  "$(CFG)" == "condor_io - Win32 Release"
-
-OUTDIR=.\..\Release
-INTDIR=.\..\Release
-# Begin Custom Macros
-OutDir=.\..\Release
-# End Custom Macros
-
-ALL : "$(OUTDIR)\condor_io.lib"
-
-
-CLEAN :
-	-@erase "$(INTDIR)\authentication.obj"
-	-@erase "$(INTDIR)\buffers.obj"
-	-@erase "$(INTDIR)\condor_rw.obj"
-	-@erase "$(INTDIR)\open_flags.obj"
-	-@erase "$(INTDIR)\reli_sock.obj"
-	-@erase "$(INTDIR)\safe_sock.obj"
-	-@erase "$(INTDIR)\SafeMsg.obj"
-	-@erase "$(INTDIR)\sock.obj"
-	-@erase "$(INTDIR)\sockCache.obj"
-	-@erase "$(INTDIR)\stream.obj"
-	-@erase "$(INTDIR)\vc60.idb"
-	-@erase "$(OUTDIR)\condor_io.lib"
-
-"$(OUTDIR)" :
-    if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
-
-CPP_PROJ=/nologo /MD /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\authentication.obj" \
-	"$(INTDIR)\buffers.obj" \
-	"$(INTDIR)\condor_rw.obj" \
-	"$(INTDIR)\open_flags.obj" \
-	"$(INTDIR)\reli_sock.obj" \
-	"$(INTDIR)\safe_sock.obj" \
-	"$(INTDIR)\sock.obj" \
-	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj" \
-	"$(INTDIR)\SafeMsg.obj"
-
-"$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -165,6 +91,129 @@ LIB32_OBJS= \
    $(CPP_PROJ) $< 
 <<
 
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\authentication.obj" \
+	"$(INTDIR)\buffers.obj" \
+	"$(INTDIR)\condor_auth.obj" \
+	"$(INTDIR)\condor_auth_claim.obj" \
+	"$(INTDIR)\condor_auth_sspi.obj" \
+	"$(INTDIR)\condor_rw.obj" \
+	"$(INTDIR)\CryptKey.obj" \
+	"$(INTDIR)\open_flags.obj" \
+	"$(INTDIR)\reli_sock.obj" \
+	"$(INTDIR)\safe_sock.obj" \
+	"$(INTDIR)\SafeMsg.obj" \
+	"$(INTDIR)\sock.obj" \
+	"$(INTDIR)\sockCache.obj" \
+	"$(INTDIR)\stream.obj"
+
+"$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ELSEIF  "$(CFG)" == "condor_io - Win32 Release"
+
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
+# Begin Custom Macros
+OutDir=.\..\Release
+# End Custom Macros
+
+ALL : "$(OUTDIR)\condor_io.lib"
+
+
+CLEAN :
+	-@erase "$(INTDIR)\authentication.obj"
+	-@erase "$(INTDIR)\buffers.obj"
+	-@erase "$(INTDIR)\condor_auth.obj"
+	-@erase "$(INTDIR)\condor_auth_claim.obj"
+	-@erase "$(INTDIR)\condor_auth_sspi.obj"
+	-@erase "$(INTDIR)\condor_rw.obj"
+	-@erase "$(INTDIR)\CryptKey.obj"
+	-@erase "$(INTDIR)\open_flags.obj"
+	-@erase "$(INTDIR)\reli_sock.obj"
+	-@erase "$(INTDIR)\safe_sock.obj"
+	-@erase "$(INTDIR)\SafeMsg.obj"
+	-@erase "$(INTDIR)\sock.obj"
+	-@erase "$(INTDIR)\sockCache.obj"
+	-@erase "$(INTDIR)\stream.obj"
+	-@erase "$(INTDIR)\vc60.idb"
+	-@erase "$(OUTDIR)\condor_io.lib"
+
+"$(OUTDIR)" :
+    if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
+
+CPP=cl.exe
+CPP_PROJ=/nologo /MD /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_io.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\authentication.obj" \
+	"$(INTDIR)\buffers.obj" \
+	"$(INTDIR)\condor_auth.obj" \
+	"$(INTDIR)\condor_auth_claim.obj" \
+	"$(INTDIR)\condor_auth_sspi.obj" \
+	"$(INTDIR)\condor_rw.obj" \
+	"$(INTDIR)\CryptKey.obj" \
+	"$(INTDIR)\open_flags.obj" \
+	"$(INTDIR)\reli_sock.obj" \
+	"$(INTDIR)\safe_sock.obj" \
+	"$(INTDIR)\SafeMsg.obj" \
+	"$(INTDIR)\sock.obj" \
+	"$(INTDIR)\sockCache.obj" \
+	"$(INTDIR)\stream.obj"
+
+"$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
+
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
 !IF EXISTS("condor_io.dep")
@@ -188,9 +237,33 @@ SOURCE=..\src\condor_io\buffers.C
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\src\condor_io\condor_auth.C
+
+"$(INTDIR)\condor_auth.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_io\condor_auth_claim.C
+
+"$(INTDIR)\condor_auth_claim.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_io\condor_auth_sspi.C
+
+"$(INTDIR)\condor_auth_sspi.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\src\condor_io\condor_rw.C
 
 "$(INTDIR)\condor_rw.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_io\CryptKey.C
+
+"$(INTDIR)\CryptKey.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

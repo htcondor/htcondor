@@ -102,6 +102,10 @@ SOURCE=..\src\condor_classad\classad.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_classad\classad_lookup.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_classad\classad_util.C
 # End Source File
 # Begin Source File
@@ -131,6 +135,10 @@ SOURCE=..\src\condor_includes\condor_buildtable.h
 # Begin Source File
 
 SOURCE=..\src\condor_includes\condor_classad.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_classad_lookup.h
 # End Source File
 # Begin Source File
 

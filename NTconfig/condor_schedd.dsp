@@ -88,6 +88,22 @@ LINK32=link.exe
 # Name "condor_schedd - Win32 Release"
 # Begin Source File
 
+SOURCE=..\src\condor_schedd.V6\dedicated_scheduler.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\dedicated_scheduler.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\grid_universe.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\grid_universe.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_schedd.V6\prio_rec.h
 # End Source File
 # Begin Source File

@@ -257,6 +257,10 @@ SOURCE="..\src\condor_c++_util\format_time.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\format_time.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\generic_query.C"
 # End Source File
 # Begin Source File
@@ -277,7 +281,19 @@ SOURCE="..\src\condor_c++_util\get_full_hostname.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\HashTable.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\HashTable.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\interpreter.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\interpreter.h"
 # End Source File
 # Begin Source File
 
@@ -383,6 +399,14 @@ SOURCE="..\src\condor_c++_util\string_list.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\string_list.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\stringSpace.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\stringSpace.h"
 # End Source File
 # Begin Source File
 

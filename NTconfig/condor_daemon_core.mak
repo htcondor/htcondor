@@ -25,9 +25,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_daemon_core - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -40,6 +37,7 @@ ALL : "$(OUTDIR)\condor_daemon_core.lib"
 
 
 CLEAN :
+	-@erase "$(INTDIR)\accessdesktop.WIN32.obj"
 	-@erase "$(INTDIR)\condor_ipverify.obj"
 	-@erase "$(INTDIR)\daemon_core.obj"
 	-@erase "$(INTDIR)\daemon_core_main.obj"
@@ -52,68 +50,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\condor_ipverify.obj" \
-	"$(INTDIR)\daemon_core.obj" \
-	"$(INTDIR)\daemon_core_main.obj" \
-	"$(INTDIR)\exphnd.WIN32.obj" \
-	"$(INTDIR)\timer_manager.obj"
-
-"$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ELSEIF  "$(CFG)" == "condor_daemon_core - Win32 Release"
-
-OUTDIR=.\../Release
-INTDIR=.\../Release
-# Begin Custom Macros
-OutDir=.\../Release
-# End Custom Macros
-
-ALL : "$(OUTDIR)\condor_daemon_core.lib"
-
-
-CLEAN :
-	-@erase "$(INTDIR)\condor_ipverify.obj"
-	-@erase "$(INTDIR)\daemon_core.obj"
-	-@erase "$(INTDIR)\daemon_core_main.obj"
-	-@erase "$(INTDIR)\exphnd.WIN32.obj"
-	-@erase "$(INTDIR)\timer_manager.obj"
-	-@erase "$(INTDIR)\vc60.idb"
-	-@erase "$(OUTDIR)\condor_daemon_core.lib"
-
-"$(OUTDIR)" :
-    if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
-
-CPP_PROJ=/nologo /MD /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\condor_ipverify.obj" \
-	"$(INTDIR)\daemon_core.obj" \
-	"$(INTDIR)\daemon_core_main.obj" \
-	"$(INTDIR)\exphnd.WIN32.obj" \
-	"$(INTDIR)\timer_manager.obj"
-
-"$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -145,6 +83,105 @@ LIB32_OBJS= \
    $(CPP_PROJ) $< 
 <<
 
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\accessdesktop.WIN32.obj" \
+	"$(INTDIR)\condor_ipverify.obj" \
+	"$(INTDIR)\daemon_core.obj" \
+	"$(INTDIR)\daemon_core_main.obj" \
+	"$(INTDIR)\exphnd.WIN32.obj" \
+	"$(INTDIR)\timer_manager.obj"
+
+"$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ELSEIF  "$(CFG)" == "condor_daemon_core - Win32 Release"
+
+OUTDIR=.\../Release
+INTDIR=.\../Release
+# Begin Custom Macros
+OutDir=.\../Release
+# End Custom Macros
+
+ALL : "$(OUTDIR)\condor_daemon_core.lib"
+
+
+CLEAN :
+	-@erase "$(INTDIR)\accessdesktop.WIN32.obj"
+	-@erase "$(INTDIR)\condor_ipverify.obj"
+	-@erase "$(INTDIR)\daemon_core.obj"
+	-@erase "$(INTDIR)\daemon_core_main.obj"
+	-@erase "$(INTDIR)\exphnd.WIN32.obj"
+	-@erase "$(INTDIR)\timer_manager.obj"
+	-@erase "$(INTDIR)\vc60.idb"
+	-@erase "$(OUTDIR)\condor_daemon_core.lib"
+
+"$(OUTDIR)" :
+    if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
+
+CPP=cl.exe
+CPP_PROJ=/nologo /MD /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\accessdesktop.WIN32.obj" \
+	"$(INTDIR)\condor_ipverify.obj" \
+	"$(INTDIR)\daemon_core.obj" \
+	"$(INTDIR)\daemon_core_main.obj" \
+	"$(INTDIR)\exphnd.WIN32.obj" \
+	"$(INTDIR)\timer_manager.obj"
+
+"$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
+
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
 !IF EXISTS("condor_daemon_core.dep")
@@ -156,6 +193,12 @@ LIB32_OBJS= \
 
 
 !IF "$(CFG)" == "condor_daemon_core - Win32 Debug" || "$(CFG)" == "condor_daemon_core - Win32 Release"
+SOURCE=..\src\condor_daemon_core.V6\accessdesktop.WIN32.C
+
+"$(INTDIR)\accessdesktop.WIN32.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.C
 
 "$(INTDIR)\condor_ipverify.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"

@@ -99,6 +99,30 @@ SOURCE=..\src\condor_includes\buffers.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_io\condor_auth.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_auth.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_io\condor_auth_claim.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_auth_claim.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_io\condor_auth_sspi.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_auth_sspi.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_includes\condor_io.h
 # End Source File
 # Begin Source File
@@ -108,6 +132,14 @@ SOURCE=..\src\condor_io\condor_rw.C
 # Begin Source File
 
 SOURCE=..\src\condor_io\condor_rw.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_io\CryptKey.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\CryptKey.h
 # End Source File
 # Begin Source File
 
