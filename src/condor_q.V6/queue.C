@@ -43,6 +43,7 @@
 #include "format_time.h"
 #include "daemon.h"
 #include "my_hostname.h"
+#include "basename.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -66,6 +67,7 @@ static	ClassAdList	scheddList;
 static 	bool		customFormat = false;
 static  bool		cputime = false;
 static	bool		current_run = false;
+static 	bool		globus = false;
 static  char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
@@ -420,7 +422,10 @@ processCommandLineArguments (int argc, char *argv[])
 			current_run = true;
 		}
 		else
-		{
+		if( match_prefix( arg, "globus" ) ) {
+			Q.addAND( "GlobusStatus =!= UNDEFINED" );
+			globus = true;
+		} else {
 			// assume name of owner of job
 			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
 				fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
@@ -480,7 +485,8 @@ displayJobShort (ClassAd *ad)
 {
 	int cluster, proc, date, status, prio, image_size;
 	float utime;
-	char owner[64], cmd[2048], args[2048];
+	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
+	char buffer[ATTRLIST_MAX_EXPRESSION];
 
 	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
 		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
@@ -507,13 +513,13 @@ displayJobShort (ClassAd *ad)
 
 	shorten (owner, 14);
 	if (ad->EvalString ("Args", NULL, args)) {
-		strcat(cmd, " ");
-		strcat (cmd, args);
+		sprintf( buffer, "%s %s", basename(cmd), args );
+	} else {
+		sprintf( buffer, "%s", basename(cmd) );
 	}
-	shorten (cmd, 18);
 	utime = job_time(utime,ad);
 	short_print (cluster, proc, owner, date, (int)utime, status, prio,
-					image_size, cmd); 
+					image_size, buffer); 
 
 	switch (status)
 	{
@@ -640,6 +646,78 @@ format_owner (char *owner, AttrList *ad)
 	return result;
 }
 
+
+static char *
+format_globusHostJMAndExec( char  *globusArgs, AttrList * )
+{
+	static char result[64];
+	char	host[80], jobManager[80], exec[10240];
+	char	*tmp, *jm, *ex;
+	int		i, p;
+
+	strcpy( result, "[?????] [?????]\n" );
+
+	if( ( tmp = strstr( globusArgs, "jobmanager-" ) ) == NULL ) {
+		return( result );
+	} 
+
+	jm = tmp + 11; // 11==strlen("jobmanager-")
+
+		// A.  Get the HOST part
+		// scan backwards until (')
+	while( *tmp != '\'' ) {
+			// make sure we don't overrun the beginning of the string
+		if( tmp == globusArgs ) return( result );
+		tmp--;
+	}
+	tmp++;
+	i = 0;
+	while( *tmp != ':' && i < sizeof(host)-1 ) {
+			// make sure we don't overrun the end of the string
+		if( *tmp == '\0' ) return( result );
+		host[i] = *tmp;
+		tmp++;
+		i++;
+	}
+	host[i] = '\0';
+
+		// B.  Get the JOBMANAGER part
+	i = 0;
+	while( *jm != ':' && i < sizeof(jobManager)-1 ) {
+			// make sure we don't overrun the end of the string
+		if( *jm == '\0' ) return( result );
+		jobManager[i] = *jm;
+		jm++;
+		i++;
+	}
+	jobManager[i] = '\0';
+		
+		// C.  Get the globus executable
+	if( ( tmp = strstr( globusArgs, "&(executable=" ) ) == NULL ) {
+		return( result );
+	}
+	ex = tmp + 13;	// 13==strlen("&(executable=")
+	i = 0;
+	p = 1;
+	while( p > 0 && i < sizeof(exec)-1 ) {
+			// make sure we don't overrun the end of the string
+		if( *ex == '\0' ) return( result );
+		exec[i] = *ex;
+		ex++;
+		i++;
+		if( *ex == '(' ) p++;
+		if( *ex == ')' ) p--;
+	}
+	exec[i] = '\0';
+
+		// done --- pack components into the result string and return
+	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jobManager, host, 
+		basename(exec) );
+	return( result );
+}
+
+
+
 static char *
 format_q_date (int d, AttrList *)
 {
@@ -730,6 +808,18 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			jobs.fPrintAttrListList( stdout );
 		} else if( customFormat ) {
 			summarize = false;
+			mask.display( stdout, &jobs );
+		} else if( globus ) {
+			summarize = false;
+			printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
+				"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
+			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+			mask.registerFormat ( (StringCustomFmt) format_owner,
+								  ATTR_OWNER, "[????????????] " );
+			mask.registerFormat( "%7s ", "GlobusStatus" );
+			mask.registerFormat( (StringCustomFmt) format_globusHostJMAndExec,
+									"GlobusArgs", "[?????] [?????]\n" );
 			mask.display( stdout, &jobs );
 		} else if ( run || goodput ) {
 			summarize = false;
