@@ -41,6 +41,8 @@ static int KernelLookupFailed = 0;
 
 static float kernel_load_avg();
 
+extern float lookup_load_avg_via_uptime();
+
 /*
 ** Where is FSCALE defined on IRIX ?  Apparently nowhere...
 ** The SGI folks apparently use a scaled integer, but where is the scale
@@ -81,13 +83,14 @@ kernel_load_avg(void)
 	priv_state priv;
 	long avenrun[3];
 
-	errno = 0;
 
 	/* get root access if we can */
 	priv = set_root_priv();
 
+	errno = 0;
 	if ( addr_sysmp < 0 ) {
-		if ( (addr_sysmp=sysmp(MP_KERNADDR,MPKA_AVENRUN)) < 0 ) {
+		addr_sysmp = sysmp(MP_KERNADDR,MPKA_AVENRUN);
+		if ( !addr_sysmp || errno ) {
 			dprintf(D_ALWAYS,"sysmp(MP_KERNADDR) failed, errno=%d\n",errno);
 			RETURN;
 		}
