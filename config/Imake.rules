@@ -356,6 +356,9 @@ $(STATIC_DIR)/##dir##/##dest##: src			@@\
 #define strip_full_tarball( name, files, type )		@@\
 ##name##:: strip_##type##/##name			@@\
 							@@\
+afs_##name##: strip_##type##/##name			@@\
+	cp strip_##type##/##name $(PUBLIC_D_TARGET)	@@\
+							@@\
 strip_##type##/##name##: stripped			@@\
 	/bin/rm -f strip_##type##/##name		@@\
 	cd strip_##type##; tar -cvf name files
@@ -365,6 +368,9 @@ strip_##type##/##name##: stripped			@@\
 #if HAS_STATIC
 #define static_full_tarball( name, files, type )	@@\
 ##name##:: static_##type##/##name			@@\
+							@@\
+afs_##name##: static_##type##/##name			@@\
+	cp static_##type##/##name $(PUBLIC_S_TARGET)	@@\
 							@@\
 static_##type##/##name##: static			@@\
 	/bin/rm -f static_##type##/##name		@@\
@@ -385,6 +391,9 @@ static_##type##/##name##: static			@@\
 #define strip_both_tarball( name, files, contribfiles )		@@\
 ##name##:: strip_dir/##name					@@\
 								@@\
+afs_##name##: strip_dir/##name					@@\
+	cp strip_dir/##name $(PUBLIC_D_TARGET)			@@\
+								@@\
 strip_dir/##name##: stripped					@@\
 	/bin/rm -f strip_dir/##name				@@\
 	for file in contribfiles; \				@@\
@@ -400,6 +409,9 @@ strip_dir/##name##: stripped					@@\
 #if HAS_STATIC
 #define static_both_tarball( name, files, contribfiles )	@@\
 ##name##:: static_dir/##name					@@\
+								@@\
+afs_##name##: static_dir/##name					@@\
+	cp static_dir/##name $(PUBLIC_S_TARGET)			@@\
 								@@\
 static_dir/##name##: static					@@\
 	/bin/rm -f static_dir/##name				@@\
