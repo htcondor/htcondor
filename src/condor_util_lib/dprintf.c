@@ -69,7 +69,7 @@
 #	include <signal.h>
 #endif
 
-#if defined(HPUX9) || defined(Solaris)
+#if defined(HPUX9) || defined(Solaris) || defined(OSF1)
 #	include "fake_flock.h"
 #endif
 
