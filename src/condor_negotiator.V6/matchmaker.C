@@ -602,7 +602,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	int			i;
 	int			reply;
 	int			cluster, proc;
-	int			placement_bw, preempt_bw, bw_request, want_checkpoint;
+	int			placement_bw, preempt_bw, bw_request, job_universe;
 	int			result;
 	ClassAd		request;
 	ClassAd		*offer;
@@ -746,19 +746,19 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 										placement_bw)) {
 				placement_bw = 0;
 			}
-			if (!request.LookupBool (ATTR_WANT_CHECKPOINT, want_checkpoint)) {
-				want_checkpoint = 1; // err on the safe side
+			if (!request.LookupInteger (ATTR_JOB_UNIVERSE, job_universe)) {
+				job_universe = STANDARD; // err on the safe side
 			}
-			if (want_checkpoint) {
+			if (job_universe == STANDARD) {
 				float cpu_time;
 				if (!request.LookupFloat (ATTR_JOB_REMOTE_USER_CPU,
 										  cpu_time)) {
-					cpu_time = 1.0;	// err on the safe size
+					cpu_time = 1.0;	// err on the safe side
 				}
 				if (cpu_time > 0.0) {
-					// if want_ckpt is true (checkpointing is enabled)
-					// and cpu_time > 0.0 (job has committed some
-					// work), then the job will need to read a
+					// if job_universe is STANDARD (checkpointing is
+					// enabled) and cpu_time > 0.0 (job has committed
+					// some work), then the job will need to read a
 					// checkpoint to restart, so we include image size
 					// in the placement cost
 					int image_size;
@@ -767,8 +767,16 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 					}
 				}
 			}
-			if (offer->LookupInteger (ATTR_IMAGE_SIZE, preempt_bw) == 0) {
-				preempt_bw = 0;
+			if (!offer->LookupInteger (ATTR_JOB_UNIVERSE, job_universe)) {
+				job_universe = STANDARD; // err on the safe side
+			}
+			if (job_universe == STANDARD) {
+				// if preempted job is a STANDARD universe job, it will
+				// need to write a checkpoint, so we include image size
+				// in the preemption cost
+				if (offer->LookupInteger (ATTR_IMAGE_SIZE, preempt_bw) == 0) {
+					preempt_bw = 0;
+				}
 			}
 			if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 				strcpy(startdAddr, "<0.0.0.0:0>");
