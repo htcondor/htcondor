@@ -29,8 +29,8 @@
 #include "condor_config.h"
 #include "condor_string.h"
 #include "CondorError.h"
+#include "setenv.h"
 
-extern DLL_IMPORT_MAGIC char **environ;
 const char STR_DAEMON_NAME_FORMAT[]="$$(FULL_HOST_NAME)";
 StringList * getDaemonList(ReliSock * sock);
 
@@ -267,25 +267,9 @@ void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
 }
 
 void  Condor_Auth_X509 :: erase_env()
- {
-   int i,j;
-   char *temp=NULL,*temp1=NULL;
-
-   for (i=0;environ[i] != NULL;i++)
-     {
-       
-       temp1 = (char*)strdup(environ[i]);
-       if (!temp1)
-	 return;
-       temp = (char*)strtok(temp1,"=");
-       if (temp && !strcmp(temp, "X509_USER_PROXY" ))
-	 break;
-     }
-   for (j = i;environ[j] != NULL;j++)
-     environ[j] = environ[j+1];
-
-   return;
- }
+{
+	UnsetEnv( "X509_USER_PROXY" );
+}
 
 /* these next two functions are the implementation of a globus function that
    does not exist on the windows side.
