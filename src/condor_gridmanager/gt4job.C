@@ -830,8 +830,9 @@ gmState=GM_SUBMIT;
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				if ( globusErrorString == "" ) {
+					globusErrorString = "Attempts to submit failed";
+				}
 				gmState = GM_HOLD;
 				break;
 			}
