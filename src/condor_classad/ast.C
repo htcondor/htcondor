@@ -1007,7 +1007,7 @@ int MultOp::EvalTree(AttrListList* classads, EvalResult* val)
 {
     if(!val) 
     {
-	return FALSE;
+		return FALSE;
     }
     
     EvalResult lArgVal, rArgVal;
@@ -1020,45 +1020,69 @@ int MultOp::EvalTree(AttrListList* classads, EvalResult* val)
 
     if(lArgType == LX_NULL || rArgType == LX_NULL)
     {
-	val->type = LX_NULL;
-	return TRUE;
+		val->type = LX_NULL;
+		return TRUE;
     }
     if(lArgType == LX_ERROR || rArgType == LX_ERROR)
     {
-	val->type = LX_ERROR;
-	return TRUE;
+		val->type = LX_ERROR;
+		return TRUE;
     }
+	if(lArgType == LX_BOOL)
+	{
+		lArgType = LX_INTEGER;
+		if(lArgVal.b)
+		{
+			lArgVal.i = 1;
+		}
+		else
+		{
+			lArgVal.i = 0;
+		}
+	}
+	if(rArgType == LX_BOOL)
+	{
+		rArgType = LX_INTEGER;
+		if(rArgVal.b)
+		{
+			rArgVal.i = 1;
+		}
+		else
+		{
+			rArgVal.i = 0;
+		}
+	}
     if(lArgType == LX_INTEGER && rArgType == LX_INTEGER)
     {
         val->type = LX_INTEGER;
-	if(unit == 'k')
-            val->i = (lArgVal.i * rArgVal.i) / 1024;
-	else
-            val->i = lArgVal.i * rArgVal.i;
+		if(unit == 'k')
+				val->i = (lArgVal.i * rArgVal.i) / 1024;
+		else
+				val->i = lArgVal.i * rArgVal.i;
     }
     if(lArgType == LX_FLOAT && rArgType == LX_FLOAT)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.f * rArgVal.f) / 1024;
-	else
-            val->f = lArgVal.f * rArgVal.f;
+		if(unit == 'k')
+				val->f = (lArgVal.f * rArgVal.f) / 1024;
+		else
+				val->f = lArgVal.f * rArgVal.f;
     }
     if(lArgType == LX_INTEGER && rArgType == LX_FLOAT)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.i * rArgVal.f) / 1024;
-	else
-            val->f = lArgVal.i * rArgVal.f;
+		if(unit == 'k')
+				val->f = (lArgVal.i * rArgVal.f) / 1024;
+		else
+				val->f = lArgVal.i * rArgVal.f;
     }
     if(lArgType == LX_FLOAT && rArgType == LX_INTEGER)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.f * rArgVal.i) / 1024;
-	else
-            val->f = lArgVal.f * rArgVal.i;
+		if(unit == 'k')
+				val->f = (lArgVal.f * rArgVal.i) / 1024;
+		else
+				val->f = lArgVal.f * rArgVal.i;
     }
 
     return TRUE;
@@ -1068,7 +1092,7 @@ int MultOp::EvalTree(AttrList* classad, EvalResult* val)
 {
     if(!val) 
     {
-	return FALSE;
+		return FALSE;
     }
     
     EvalResult lArgVal, rArgVal;
@@ -1081,45 +1105,68 @@ int MultOp::EvalTree(AttrList* classad, EvalResult* val)
 
     if(lArgType == LX_NULL || rArgType == LX_NULL)
     {
-	val->type = LX_NULL;
-	return TRUE;
+		val->type = LX_NULL;
+		return TRUE;
     }
     if(lArgType == LX_ERROR || rArgType == LX_ERROR)
     {
-	val->type = LX_ERROR;
-	return TRUE;
+		val->type = LX_ERROR;
+		return TRUE;
     }
+	if(lArgType == LX_BOOL)
+	{
+		lArgType = LX_INTEGER;
+		if(lArgVal.b)
+		{
+			lArgVal.i = 1;
+		}
+		else
+		{
+			lArgVal.i = 0;
+		}
+	}
+	if(rArgType == LX_BOOL)
+	{
+		rArgType = LX_INTEGER;
+		if(rArgVal.b)
+		{
+			rArgVal.i = 1;
+		}
+		else
+		{
+			rArgVal.i = 0;
+		}
     if(lArgType == LX_INTEGER && rArgType == LX_INTEGER)
     {
         val->type = LX_INTEGER;
-	if(unit == 'k')
-            val->i = (lArgVal.i * rArgVal.i) / 1024;
-	else
-            val->i = lArgVal.i * rArgVal.i;
+		if(unit == 'k')
+				val->i = (lArgVal.i * rArgVal.i) / 1024;
+		else
+				val->i = lArgVal.i * rArgVal.i;
     }
     if(lArgType == LX_FLOAT && rArgType == LX_FLOAT)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.f * rArgVal.f) / 1024;
-	else
-            val->f = lArgVal.f * rArgVal.f;
+		if(unit == 'k')
+				val->f = (lArgVal.f * rArgVal.f) / 1024;
+		else
+				val->f = lArgVal.f * rArgVal.f;
     }
     if(lArgType == LX_INTEGER && rArgType == LX_FLOAT)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.i * rArgVal.f) / 1024;
-	else
-            val->f = lArgVal.i * rArgVal.f;
+		if(unit == 'k')
+				val->f = (lArgVal.i * rArgVal.f) / 1024;
+		else
+				val->f = lArgVal.i * rArgVal.f;
     }
     if(lArgType == LX_FLOAT && rArgType == LX_INTEGER)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.f * rArgVal.i) / 1024;
-	else
-            val->f = lArgVal.f * rArgVal.i;
+		if(unit == 'k')
+				val->f = (lArgVal.f * rArgVal.i) / 1024;
+		else
+				val->f = lArgVal.f * rArgVal.i;
     }
 
     return TRUE;
@@ -1131,7 +1178,7 @@ int MultOp::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* va
 {
     if(!val) 
     {
-	return FALSE;
+		return FALSE;
     }
     
     EvalResult lArgVal, rArgVal;
@@ -1144,45 +1191,68 @@ int MultOp::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* va
 
     if(lArgType == LX_NULL || rArgType == LX_NULL)
     {
-	val->type = LX_NULL;
-	return TRUE;
+		val->type = LX_NULL;
+		return TRUE;
     }
     if(lArgType == LX_ERROR || rArgType == LX_ERROR)
     {
-	val->type = LX_ERROR;
-	return TRUE;
+		val->type = LX_ERROR;
+		return TRUE;
     }
+	if(lArgType == LX_BOOL)
+	{
+		lArgType = LX_INTEGER;
+		if(lArgVal.b)
+		{
+			lArgVal.i = 1;
+		}
+		else
+		{
+			lArgVal.i = 0;
+		}
+	}
+	if(rArgType == LX_BOOL)
+	{
+		rArgType = LX_INTEGER;
+		if(rArgVal.b)
+		{
+			rArgVal.i = 1;
+		}
+		else
+		{
+			rArgVal.i = 0;
+		}
     if(lArgType == LX_INTEGER && rArgType == LX_INTEGER)
     {
         val->type = LX_INTEGER;
-	if(unit == 'k')
-            val->i = (lArgVal.i * rArgVal.i) / 1024;
-	else
-            val->i = lArgVal.i * rArgVal.i;
+		if(unit == 'k')
+				val->i = (lArgVal.i * rArgVal.i) / 1024;
+		else
+				val->i = lArgVal.i * rArgVal.i;
     }
     if(lArgType == LX_FLOAT && rArgType == LX_FLOAT)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.f * rArgVal.f) / 1024;
-	else
-            val->f = lArgVal.f * rArgVal.f;
+		if(unit == 'k')
+				val->f = (lArgVal.f * rArgVal.f) / 1024;
+		else
+				val->f = lArgVal.f * rArgVal.f;
     }
     if(lArgType == LX_INTEGER && rArgType == LX_FLOAT)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.i * rArgVal.f) / 1024;
-	else
-            val->f = lArgVal.i * rArgVal.f;
+		if(unit == 'k')
+				val->f = (lArgVal.i * rArgVal.f) / 1024;
+		else
+				val->f = lArgVal.i * rArgVal.f;
     }
     if(lArgType == LX_FLOAT && rArgType == LX_INTEGER)
     {
         val->type = LX_FLOAT;
-	if(unit == 'k')
-            val->f = (lArgVal.f * rArgVal.i) / 1024;
-	else
-            val->f = lArgVal.f * rArgVal.i;
+		if(unit == 'k')
+				val->f = (lArgVal.f * rArgVal.i) / 1024;
+		else
+				val->f = lArgVal.f * rArgVal.i;
     }
 
     return TRUE;
@@ -2093,7 +2163,7 @@ int EqOp::EvalTree(AttrListList* classads, EvalResult* val)
 {
     if(!val) 
     {
-	return FALSE;
+		return FALSE;
     }
     
     EvalResult lArgVal;
@@ -2109,17 +2179,17 @@ int EqOp::EvalTree(AttrListList* classads, EvalResult* val)
     val->type = LX_BOOL;
     if(lArgType == LX_NULL || rArgType == LX_NULL)
     {
-	val->type = LX_NULL;
-	return TRUE;
+		val->type = LX_NULL;
+		return TRUE;
     }
     if(lArgType == LX_ERROR || rArgType == LX_ERROR)
     {
-	val->type = LX_ERROR;
-	return TRUE;
+		val->type = LX_ERROR;
+		return TRUE;
     }
     if(lArgType == LX_INTEGER && rArgType == LX_INTEGER)
     {
-	val->b = lArgVal.i == rArgVal.i;
+		val->b = lArgVal.i == rArgVal.i;
     }
     else if(lArgType == LX_FLOAT && rArgType == LX_FLOAT)
     {
@@ -2135,23 +2205,23 @@ int EqOp::EvalTree(AttrListList* classads, EvalResult* val)
     }
     else if(lArgType == LX_BOOL && rArgType == LX_BOOL)
     {
-	val->b = lArgVal.b == rArgVal.b;
+		val->b = lArgVal.b == rArgVal.b;
     }
     else if(lArgType == LX_STRING && rArgType == LX_STRING)
     {
-	if(!strcasecmp(lArgVal.s, rArgVal.s))
-	{
-	    val->b = TRUE;
-	}
-	else
-	{
-	    val->b = FALSE;
-	}
+		if(!strcasecmp(lArgVal.s, rArgVal.s))
+		{
+			val->b = TRUE;
+		}
+		else
+		{
+			val->b = FALSE;
+		}
     }
     else
     {
-	val->type = LX_UNDEFINED;
-	return TRUE;
+		val->type = LX_UNDEFINED;
+		return TRUE;
     }
 
     if(sumFlag == FALSE)
