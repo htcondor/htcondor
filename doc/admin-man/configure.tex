@@ -147,7 +147,7 @@ Other Syntax}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Other than macros and expressions, a Condor config file can contain
-comments or continuations.  A comment is any line begining with a
+comments or continuations.  A comment is any line beginning with a
 ``\#''.  A continuation is any entry (either macro or expression) that
 continues across multiples lines.  This is accomplished with the
 ``$\backslash$'' sign at the end of any line that you wish to continue onto
@@ -802,7 +802,7 @@ AFS''
   used.
   
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain} This
-  setting is used in conjuction with the \Macro{UID\_DOMAIN} setting
+  setting is used in conjunction with the \Macro{UID\_DOMAIN} setting
   described above.  If the \Macro{UID\_DOMAIN} settings match on both
   the execute and submit machines, but the uid of the user who
   submitted the job isn't in the passwd file (or password info if NIS
@@ -919,7 +919,7 @@ AFS''
   messing with the AFS cache, possibly evicting the machine owner's
   files from the cache to make room for its own.  Generally speaking,
   since we try to minimize the impact of having a Condor job run on a
-  given machine, we don't recomend using this setting.
+  given machine, we don't recommend using this setting.
 
   While sending all file operations over the network twice might sound
   really bad, unless you are operating over networks where bandwidth
@@ -992,7 +992,7 @@ These entries control whether or not Condor user a checkpoint server.
 In addition, if you are using a checkpoint server, this section
 describes the settings that the checkpoint server itself needs to have
 defined.  If you decide to use a checkpoint server, you must install
-it seperately (it is not included in the main Condor binary
+it separately (it is not included in the main Condor binary
 distribution or installation procedure).  See
 section~\ref{sec:Ckpt-Server} on ``Installing a Checkpoint Server''
 for details on installing and running a checkpoint server for your
@@ -1048,7 +1048,7 @@ These settings control the \Condor{master}.
   
 \item[\Macro{DAEMON\_LIST}] \label{param:DaemonList} This macro
   determines what daemons the \Condor{master} will start and keep its
-  watchful eyes on.  The list is a comma or space seperated list of
+  watchful eyes on.  The list is a comma or space separated list of
   subsystem names (described above in
   section~\ref{sec:Condor-Subsystem-Names}).  For example,
 \begin{verbatim}
@@ -1063,7 +1063,7 @@ These settings control the \Condor{master}.
   \Macro{DAEMON\_LIST} will also include ``KBDD'', for the
   \Condor{kbdd}, which is a special daemon that runs to monitor
   keyboard and mouse activity on the console.  It is only with this
-  special daemon that we can aquire this information on those
+  special daemon that we can acquire this information on those
   platforms. 
 
 \item[\Macro{SUBSYS}] \label{param:SUBSYS} Once you have defined which

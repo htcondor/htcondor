@@ -595,7 +595,7 @@ SPARC machines.
 
 This is easily accomplished.  You will need, or course, to create your
 executable on the same type of machine where you want your job to run ---
-Condor will not convert machine instructions hetrogeneously for you! The
+Condor will not convert machine instructions heterogeneously for you! The
 trick is simply what to specify for your \Opt{requirements} command in
 your submit-description file.  By default, \Condor{submit} inserts
 requirements that will make your job run on the same type of machine you
@@ -632,7 +632,7 @@ Job priorities allow you to assign a priority level to each of your jobs in orde
 control their order of execution.  To do this, use the \Condor{prio}
 command --- see the example in section~\ref{sec:job-prio}, or the
 command reference page on page~\pageref{man-condor-prio}.  Job
-priorities, however, do not impact user priorities in any fasion.  No matter what you
+priorities, however, do not impact user priorities in any fashion.  No matter what you
 set a job's priority to be, it will not alter your user priority in
 relation to other users.  Job priorities range from -20 to +20, with +20
 being the best and -20 the worst.  
@@ -671,7 +671,7 @@ according to user priority both when allocating machines which become
 available and by priority preemption of currently allocated machines.
 For instance, if a low priority user is utilizing all available machines
 and suddenly a higher priority user submits jobs, Condor will
-imediately checkpoint and vacate jobs belonging to the lower priority
+immediately checkpoint and vacate jobs belonging to the lower priority
 user. This will free up machines that Condor will then give over to the
 higher priority user. Condor will not starve the lower priority user; it
 will preempt only enough jobs so that the higher priority user's fair
@@ -685,7 +685,7 @@ could take up to a maximum of one hour until the higher priority user
 receives his fair share of machines. 
 
 User priorities are keyed on ``username@domain'', for example
-``johndoe@cs.wisc.edu''. (The domainname to use, if any, is also configured by
+``johndoe@cs.wisc.edu''. (The domain name to use, if any, is also configured by
 the Condor site administrator).  Thus, user priority and therefore resource
 allocation is not impacted by which machine the user submits from or
 even if the user submits jobs from multiple machines.
@@ -724,12 +724,12 @@ signal handler for some trappable signal as a ``cleanup'' signal.  When
 submitting this job, specify this cleanup signal to use with
 \Arg{kill\_sig}.  However, whatever cleanup work the job does had better be quick
 --- if the job takes too long to go away after Condor tells it to do so, Condor
-follows up with a SIGKILL signal which immediatly terminates the
+follows up with a SIGKILL signal which immediately terminates the
 process.
 
 A job that linked with the Condor libraries via the \Condor{compile}
 command and subsequently submitted into the Standard Universe 
-will checkpoint and exit upon receit of a SIGTSTP signal.  Thus, SIGTSTP is
+will checkpoint and exit upon receipt of a SIGTSTP signal.  Thus, SIGTSTP is
 the default value for KillSig when submitting into the Standard
 Universe.  However, the user's code can checkpoint itself at any time
 by calling one of the following functions exported by the Condor libraries:
@@ -850,7 +850,7 @@ job.
 
 When Condor starts up your job, it renames argv[0] (which usually
 contains the name of the program) to ``\condor{exec}''.  This is
-conveinent when examining a machine's processes with ``ps''; the process
+convenient when examining a machine's processes with ``ps''; the process
 is easily identified as a Condor job.  
 
 Unfortunately, some programs read argv[0] expecting their own program
