@@ -303,26 +303,15 @@ int Server::SetUpPort(u_short port)
 {
   struct sockaddr_in socket_addr;
   int                temp_sd;
-  char               log_msg[256];
   int                ret_code;
 
   temp_sd = I_socket();
   if (temp_sd == INSUFFICIENT_RESOURCES) {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: insufficient resources for new socket" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      Log(0, "ERROR: insufficient resources for new socket");
+      dprintf(D_ALWAYS, "ERROR: insufficient resources for new socket\n");
       exit(INSUFFICIENT_RESOURCES);
     }
   else if (temp_sd == CKPT_SERVER_SOCKET_ERROR) {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot open a server request socket" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      Log(0, "ERROR: cannot open a server request socket");
+      dprintf(D_ALWAYS, "ERROR: cannot open a server request socket\n");
       exit(CKPT_SERVER_SOCKET_ERROR);
   }
   memset((char*) &socket_addr, 0, sizeof(struct sockaddr_in));
@@ -331,31 +320,15 @@ int Server::SetUpPort(u_short port)
   memcpy((char*) &socket_addr.sin_addr, (char*) &server_addr, 
 	 sizeof(struct in_addr));
   if ((ret_code=I_bind(temp_sd, &socket_addr)) != CKPT_OK) {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: I_bind() returns an error (#" << ret_code << ")" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", ret_code);
-      Log(0, log_msg);
+      dprintf(D_ALWAYS, "ERROR: I_bind() returned an error (#%d)\n", ret_code);
       exit(ret_code);
   }
   if (I_listen(temp_sd, 5) != CKPT_OK) {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot listen on a socket" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      Log(0, "ERROR: I_listen() fails");
+      dprintf(D_ALWAYS, "ERROR: I_listen() failed\n");
       exit(LISTEN_ERROR);
   }
   if (ntohs(socket_addr.sin_port) != port) {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot use Condor well-known port " << port << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      Log(0, "ERROR: cannot use Condor well-known port");
+      dprintf(D_ALWAYS, "ERROR: cannot use Condor well-known port\n");
       exit(BIND_ERROR);
   }
   return temp_sd;
@@ -430,12 +403,9 @@ void Server::Execute()
 		}
 		if (num_sds_ready < 0)
 			if (errno != EINTR) {
-				cerr << endl << "ERROR:" << endl;
-				cerr << "ERROR:" << endl;
-				cerr << "ERROR: cannot select from request ports (errno = " 
-					<< errno << ")" << endl;
-				cerr << "ERROR:" << endl;
-				cerr << "ERROR:" << endl << endl;
+				dprintf(D_ALWAYS, 
+						"ERROR: cannot select from request ports, errno = %d\n", 
+						errno);
 				exit(SELECT_ERROR);
 			}
 		current_time = time(NULL);
@@ -490,11 +460,7 @@ void Server::HandleRequest(int req_sd,
 	shadow_sa_len = sizeof(shadow_sa);
 	if ((new_req_sd=I_accept(req_sd, &shadow_sa, &shadow_sa_len)) == 
 		ACCEPT_ERROR) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: I_accept() fails" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "I_accept failed.\n");
 		exit(ACCEPT_ERROR);
     }
 	BlockSignals();
@@ -517,12 +483,8 @@ void Server::HandleRequest(int req_sd,
 					inet_ntoa(shadow_sa.sin_addr));
 			break;
 		default:
-			cerr << endl << "ERROR:" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR: invalid request type encountered ("
-				<< (int) req << ")" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR:" << endl << endl;
+			dprintf(D_ALWAYS, "ERROR: invalid request type encountered (%d)\n", 
+					(int) req);
 			exit(BAD_REQUEST_TYPE);
 		}
 	Log(req_ID, log_msg);
@@ -732,25 +694,12 @@ void Server::ProcessServiceReq(int             req_id,
 				server_sa.sin_addr = server_addr;
 				server_sa.sin_port = htons(0);
 				if ((ret_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
-					cerr << endl << "ERROR:" << endl;
-					cerr << "ERROR:" << endl;
-					cerr << "ERROR: I_bind() returns an error (#" << ret_code
-						<< ")" << endl;
-					cerr << "ERROR:" << endl;
-					cerr << "ERROR:" << endl << endl;
-					sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
+					dprintf(D_ALWAYS, "ERROR: I_bind() returned an error (#%d)", 
 							ret_code);
-					Log(0, log_msg);
 					exit(ret_code);
 				}
 				if (I_listen(data_conn_sd, 1) != CKPT_OK) {
-					cerr << endl << "ERROR:" << endl;
-					cerr << "ERROR:" << endl;
-					cerr << "ERROR: I_listen() fails to listen" << endl;
-					cerr << "ERROR:" << endl;
-					cerr << "ERROR:" << endl << endl;
-					sprintf(log_msg, "ERROR: I_listen() fails to listen");
-					Log(0, log_msg);
+					dprintf(D_ALWAYS, "ERROR: I_listen() failed to listen");
 					exit(LISTEN_ERROR);
 				}
 				service_reply.server_addr = server_addr;
@@ -980,6 +929,8 @@ void Server::Replicate()
 		sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
 				inet_ntoa(e->ShadowIP()), e->Owner(), e->File());
 		if (stat(pathname, &chkpt_file_status) < 0) {
+			dprintf(D_ALWAYS, "ERROR: File '%s' can not be accessed.\n", 
+					pathname);
 			exit(DOES_NOT_EXIST);
 		}
 		req.file_size = htonl(chkpt_file_status.st_size);
@@ -1000,22 +951,29 @@ void Server::Replicate()
 			req.shadow_IP = e->ShadowIP();
 			file_timestamp = chkpt_file_status.st_mtime;
 			if ((server_sd = I_socket()) < 0) {
+				dprintf(D_ALWAYS, "ERROR: I_socket failed.\n");
 				exit(server_sd);
 			}
 			if( ! _condor_local_bind(server_sd) ) {
 				close( server_sd );
-				fprintf(stderr, "ERROR: unable to bind new socket to local interface\n");
+				dprintf(D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
 				exit(1);
 			}
 			ret_code = net_write(server_sd, (char *)&req, sizeof(req));
-			if (ret_code != sizeof(req))
+			if (ret_code != sizeof(req)) {
+				dprintf(D_ALWAYS, 
+						"ERROR: write failed, wrote %d bytes instead of %d bytes\n", 
+						ret_code, sizeof(req));
 				exit(CHILDTERM_CANNOT_WRITE);
+			}
 			if (connect(server_sd, (struct sockaddr*) &server_sa,
 						sizeof(server_sa)) < 0) {
+				dprintf(D_ALWAYS, "ERROR: connect failed.\n");
 				exit(CONNECT_ERROR);
 			}
 			if (net_write(server_sd, (char *) &req,
 						  sizeof(req)) != sizeof(req)) {
+				dprintf(D_ALWAYS, "ERROR: Write failed\n");
 				exit(CHILDTERM_CANNOT_WRITE);
 			}
 			while (bytes_recvd != sizeof(reply)) {
@@ -1030,11 +988,14 @@ void Server::Replicate()
 			}
 			close(server_sd);
 			if ((server_sd = I_socket()) < 0) {
+				dprintf(D_ALWAYS, "ERROR: I_socket failed (line %d)\n",
+						__LINE__);
 				exit(server_sd);
 			}
 			if( ! _condor_local_bind(server_sd) ) {
 				close( server_sd );
-				fprintf(stderr, "ERROR: unable to bind new socket to local interface\n");
+				dprintf(D_ALWAYS, 
+						"ERROR: unable to bind new socket to local interface\n");
 				exit(1);
 			}
 			memset((char*) &server_sa, 0, sizeof(server_sa));
@@ -1044,9 +1005,12 @@ void Server::Replicate()
 			server_sa.sin_port = reply.port;
 			if (connect(server_sd, (struct sockaddr*) &server_sa,
 						sizeof(server_sa)) < 0) {
+				dprintf(D_ALWAYS, "ERROR: Connect failed (line %d)\n",
+						__LINE__);
 				exit(CONNECT_ERROR);
 			}
 			if ((fd = open(pathname, O_RDONLY)) < 0) {
+				dprintf(D_ALWAYS, "ERROR: Can't open file '%s'\n", pathname);
 				exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
 			}
 			bytes_read = 1;
@@ -1071,16 +1035,20 @@ void Server::Replicate()
 			chkpt_file_status.st_mtime = 0;
 			stat(pathname, &chkpt_file_status);
 			if ((server_sd = I_socket()) < 0) {
+				dprintf(D_ALWAYS, "ERROR: I_socket failed (line %d)\n", 
+						__LINE__);
 				exit(server_sd);
 			}
 			if( ! _condor_local_bind(server_sd) ) {
 				close( server_sd );
-				fprintf(stderr, "ERROR: unable to bind new socket to local interface\n");
+				dprintf(D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
 				exit(1);
 			}
 			server_sa.sin_port = htons(CKPT_SVR_SERVICE_REQ_PORT);
 			if (connect(server_sd, (struct sockaddr*) &server_sa,
 						sizeof(server_sa)) < 0) {
+				dprintf(D_ALWAYS, "ERROR: Connect failed (line %d)\n",
+						__LINE__);
 				exit(CONNECT_ERROR);
 			}
 			service_req_pkt s_req;
@@ -1098,8 +1066,11 @@ void Server::Replicate()
 				s_req.service = htons(SERVICE_ABORT_REPLICATION);
 			}
 			ret_code = net_write(server_sd, (char *)&s_req, sizeof(s_req));
-			if (ret_code != sizeof(s_req))
+			if (ret_code != sizeof(s_req)) {
+				dprintf(D_ALWAYS, "ERROR: Write failed (%d bytes instead of %d)\n",
+						ret_code, sizeof(s_req));
 				exit(CHILDTERM_CANNOT_WRITE);
+			}
 			bytes_recvd = 0;
 			while (bytes_recvd != sizeof(s_rep)) {
 				errno = 0;
@@ -1132,11 +1103,7 @@ void Server::SendStatus(int data_conn_sd)
   if ((xfer_sd=I_accept(data_conn_sd, &chkpt_addr, &chkpt_addr_len)) ==
       ACCEPT_ERROR)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: I_accept() fails" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
+	  dprintf(D_ALWAYS, "ERROR: I_accept failed.\n");
       exit(CHILDTERM_ACCEPT_ERROR);
     }
   close(data_conn_sd);
@@ -1307,12 +1274,6 @@ void Server::ProcessStoreReq(int            req_id,
 	server_sa.sin_port = htons(0);
 	server_sa.sin_addr = server_addr;
 	if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: I_bind() returns an error (#" << ret_code
-			 << ")" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
 		sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
 				err_code);
 		Log(0, log_msg);
@@ -1320,11 +1281,6 @@ void Server::ProcessStoreReq(int            req_id,
 	}
 
 	if (I_listen(data_conn_sd, 1) != CKPT_OK) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: I_listen() fails to listen" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
 		sprintf(log_msg, "ERROR: I_listen() fails to listen");
 		Log(0, log_msg);
 		exit(LISTEN_ERROR);
@@ -1389,7 +1345,7 @@ void Server::ProcessStoreReq(int            req_id,
 					CkptClassAds->SetAttribute(key, ATTR_FILE_NAME, buf);
 				}
 				char size[40];
-				sprintf(size, "%d", store_req.file_size);
+				sprintf(size, "%d", (int) store_req.file_size);
 				CkptClassAds->SetAttribute(key, ATTR_FILE_SIZE, size);
 			}
 		} else {
@@ -1452,11 +1408,8 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 #else
 	if (xfer_sd < 0) {
 #endif
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: I_accept() fails" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "ERROR: I_accept() failed (line %d)\n",
+				__LINE__);
 		exit(CHILDTERM_ACCEPT_ERROR);
     }
 	close(data_conn_sd);
@@ -1490,7 +1443,10 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 		close(peer_info_fd);
 	}
 
-	if (incomplete_file) exit(CHILDTERM_ERROR_INCOMPLETE_FILE);
+	if (incomplete_file) {
+		dprintf(D_ALWAYS, "ERROR: Incomplete file.\n");
+		exit(CHILDTERM_ERROR_INCOMPLETE_FILE);
+	}
 }
 
 
@@ -1607,22 +1563,11 @@ void Server::ProcessRestoreReq(int             req_id,
       server_sa.sin_port = htons(0);
       server_sa.sin_addr = server_addr;
       if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
-		  cerr << endl << "ERROR:" << endl;
-		  cerr << "ERROR:" << endl;
-		  cerr << "ERROR: I_bind() returns an error (#" << ret_code
-			   << ")" << endl;
-		  cerr << "ERROR:" << endl;
-		  cerr << "ERROR:" << endl << endl;
 		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
 		  Log(0, log_msg);
 		  exit(ret_code);
 	  }
       if (I_listen(data_conn_sd, 1) != CKPT_OK) {
-		  cerr << endl << "ERROR:" << endl;
-		  cerr << "ERROR:" << endl;
-		  cerr << "ERROR: I_listen() fails to listen" << endl;
-		  cerr << "ERROR:" << endl;
-		  cerr << "ERROR:" << endl << endl;
 		  sprintf(log_msg, "ERROR: I_listen() fails to listen");
 		  Log(0, log_msg);
 		  exit(LISTEN_ERROR);
@@ -1691,16 +1636,14 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	struct sockaddr_in chkpt_addr;
 	int                chkpt_addr_len;
 	int                xfer_sd;
-	int                bytes_read;
-	int                bytes_to_read;
 	int                bytes_sent=0;
-	int                temp;
 	int				   file_fd;
 	int				   peer_info_fd;
 	char			   peer_info_filename[100];
 	
 	file_fd = open(pathname, O_RDONLY);
 	if (file_fd < 0) {
+		dprintf(D_ALWAYS, "ERROR: Can't open file '%s'\n", pathname);
 		exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
 	}
 
@@ -1716,11 +1659,7 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 #else
 	if (xfer_sd < 0) {
 #endif
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: I_accept() fails" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "I_accept() failed. (line %d)\n", __LINE__);
 		exit(CHILDTERM_ACCEPT_ERROR);
     }
 	close(data_conn_sd);
@@ -1751,6 +1690,8 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	}
 
 	if (bytes_sent != file_size) {
+		dprintf(D_ALWAYS, "ERROR: Bad file size (sent %d, expected %d)\n",
+				bytes_sent, file_size);
 		exit(CHILDTERM_BAD_FILE_SIZE);
 	}
 }
@@ -1789,21 +1730,13 @@ void Server::ChildComplete()
 		}
 		xfer_type = transfers.GetXferType(child_pid);
 		if (xfer_type == BAD_CHILD_PID) {
-			cerr << endl << "ERROR:" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR: cannot resolve child pid (#" << child_pid << ")" 
-				<< endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR:" << endl << endl;
+			dprintf(D_ALWAYS, "ERROR: Can not resolve child pid (#%d)\n",
+					child_pid);
 			exit(BAD_TRANSFER_LIST);
 		}
 		if ((ptr=transfers.Find(child_pid)) == NULL) {
-			cerr << endl << "ERROR:" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR: cannot resolve child pid (#" << child_pid << ")" 
-				<< endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR:" << endl << endl;
+			dprintf(D_ALWAYS, "ERROR: Can not resolve child pid (#%d)\n",
+					child_pid);
 			exit(BAD_TRANSFER_LIST);
 		}
 		switch (xfer_type) {
@@ -1944,11 +1877,7 @@ void Server::ChildComplete()
 				}
 				break;
 			default:
-				cerr << endl << "ERROR:" << endl;
-				cerr << "ERROR:" << endl;
-				cerr<<"ERROR: illegal transfer type used; terminating" << endl;
-				cerr << "ERROR:" << endl;
-				cerr << "ERROR:" << endl << endl;
+				dprintf(D_ALWAYS, "ERROR: illegal transfer type used; terminating\n");
 				exit(BAD_RETURN_CODE);	  
 			}
 		// Try to read the info file for this child to get the peer address.
@@ -1995,10 +1924,6 @@ void Server::Log(int         request,
 
 void Server::Log(const char* event)
 {
-	int   num_lines;
-	int   count;
-	char* ptr;
-	
 	dprintf(D_ALWAYS | D_NOHEADER, "\t\t\t%s\n", event);
 }
 
@@ -2011,67 +1936,42 @@ void InstallSigHandlers()
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
 	if (sigaction(SIGCHLD, &sig_info, NULL) < 0) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: cannot install SIGCHLD signal handler" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "ERROR: cannot install SIGCHLD signal handler\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
 	sig_info.sa_handler = (SIG_HANDLER) SigUser1Handler;
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
 	if (sigaction(SIGUSR1, &sig_info, NULL) < 0) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: cannot install SIGUSR1 signal handler" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "ERROR: cannot install SIGUSR1 signal handler\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
 	sig_info.sa_handler = (SIG_HANDLER) SigTermHandler;
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
 	if (sigaction(SIGTERM, &sig_info, NULL) < 0) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: cannot install SIGTERM signal handler" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "ERROR: cannot install SIGTERM signal handler\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
 	sig_info.sa_handler = (SIG_HANDLER) SigHupHandler;
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
 	if (sigaction(SIGHUP, &sig_info, NULL) < 0) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: cannot install SIGHUP signal handler" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "ERROR: cannot install SIGHUP signal handle\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
 	sig_info.sa_handler = (SIG_HANDLER) SIG_IGN;
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
 	if (sigaction(SIGPIPE, &sig_info, NULL) < 0) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: cannot install SIGPIPE signal handler (SIG_IGN)" << 
-			endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "ERROR: cannot install SIGPIPE signal handler (SIG_IGN)\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
 	sig_info.sa_handler = (SIG_HANDLER) SigAlarmHandler;
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
 	if (sigaction(SIGALRM, &sig_info, NULL) < 0) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: cannot install SIGALRM signal handler" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "ERROR: cannot install SIGALRM signal handler\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
 }
@@ -2124,30 +2024,18 @@ void BlockSignals()
 
   if (sigprocmask(SIG_SETMASK, NULL, &mask) != 0)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot obtain current signal mask" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
+      dprintf(D_ALWAYS, "ERROR: cannot obtain current signal mask\n");
       exit(SIGNAL_MASK_ERROR);
     }
   if ((sigaddset(&mask, SIGCHLD) + sigaddset(&mask, SIGUSR1) +
        sigaddset(&mask, SIGTERM) + sigaddset(&mask, SIGPIPE)) != 0)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot add signals to signal mask" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
+	  dprintf(D_ALWAYS, "ERROR: cannot add signals to signal mask\n");
       exit(SIGNAL_MASK_ERROR);
     }
   if (sigprocmask(SIG_SETMASK, &mask, NULL) != 0)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot set new signal mask" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
+      dprintf(D_ALWAYS, "ERROR: cannot set new signal mask\n");
       exit(SIGNAL_MASK_ERROR);
     }
 }
@@ -2159,30 +2047,18 @@ void UnblockSignals()
 
   if (sigprocmask(SIG_SETMASK, NULL, &mask) != 0)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot obtain current signal mask" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
+      dprintf(D_ALWAYS, "ERROR: cannot obtain current signal mask\n");
       exit(SIGNAL_MASK_ERROR);
     }
   if ((sigdelset(&mask, SIGCHLD) + sigdelset(&mask, SIGUSR1) +
        sigdelset(&mask, SIGTERM) + sigdelset(&mask, SIGPIPE)) != 0)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot remove signals from signal mask" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
+      dprintf(D_ALWAYS, "ERROR: cannot remove signals from signal mask\n");
       exit(SIGNAL_MASK_ERROR);
     }
   if (sigprocmask(SIG_SETMASK, &mask, NULL) != 0)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot set new signal mask" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
+      dprintf(D_ALWAYS, "ERROR: cannot set new signal mask\n");
       exit(SIGNAL_MASK_ERROR);
     }
 }
