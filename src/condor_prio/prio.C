@@ -37,7 +37,9 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#if DBM_QUEUE
 #include "proc_obj.h"
+#endif
 #include "filter.h"
 #include "alloc.h"
 
