@@ -58,6 +58,8 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_last_pckpt = -1;
 	c_rip = rip;
 	c_is_cod = is_cod;
+	c_cod_keyword = NULL;
+	c_has_job_ad = 0;
 	c_pending_cmd = -1;
 	c_wants_remove = false;
 		// to make purify happy, we want to initialize this to
@@ -95,7 +97,9 @@ Claim::~Claim()
 	if( c_starter ) {
 		delete( c_starter );
 	}
-
+	if( c_cod_keyword ) {
+		free( c_cod_keyword );
+	}
 }	
 	
 
@@ -211,13 +215,12 @@ Claim::publishCOD( ClassAd* ad )
 	}
 
 	if( c_starter ) {
-		tmp = c_starter->getCODKeyword();
-		if( tmp ) {
+		if( c_cod_keyword ) {
 			line = codId();
 			line += '_';
 			line += ATTR_JOB_KEYWORD;
 			line += "=\"";
-			line += tmp;
+			line += c_cod_keyword;
 			line += '"';
 			ad->Insert( line.Value() );
 		}
@@ -858,6 +861,63 @@ Claim::starterKillHard( void )
 }
 
 
+char* 
+Claim::makeCODStarterArgs( void )
+{
+	MyString args;
+
+		// first deal with everthing that's shared, no matter what.
+	args = "condor_starter -f -append cod ";
+	args += "-header (";
+	if( resmgr->is_smp() ) {
+		args += c_rip->r_id_str;
+		args += ':';
+	}
+	args += codId();
+	args += ") ";
+
+		// if we've got a cluster and proc for the job, append those
+	if( c_cluster >= 0 ) {
+		args += " -job_cluster ";
+		args += c_cluster;
+	} 
+	if( c_proc >= 0 ) {
+		args += " -job_proc ";
+		args += c_proc;
+	} 
+
+		// finally, specify how the job should get its ClassAd
+	if( c_cod_keyword ) { 
+		args += " -job_keyword ";
+		args += c_cod_keyword;
+	}
+
+	if( c_has_job_ad ) { 
+		args += " -job_on_stdin ";
+	}
+
+	return strdup( args.Value() );
+}
+
+
+bool
+Claim::verifyCODAttrs( ClassAd* req )
+{
+
+	if( c_cod_keyword ) {
+		EXCEPT( "Trying to activate a COD claim that has a keyword" );
+	}
+
+	req->LookupString( ATTR_JOB_KEYWORD, &c_cod_keyword );
+	req->EvalBool( ATTR_HAS_JOB_AD, NULL, c_has_job_ad );
+
+	if( c_cod_keyword || c_has_job_ad ) {
+		return true;
+	}
+	return false;
+}
+
+
 bool
 Claim::periodicCheckpoint( void )
 {
@@ -1018,6 +1078,11 @@ Claim::resetClaim( void )
 	c_proc = -1;
 	c_job_start = -1;
 	c_last_pckpt = -1;
+	if( c_cod_keyword ) {
+		free( c_cod_keyword );
+		c_cod_keyword = NULL;
+	}
+	c_has_job_ad = 0;
 }
 
 
@@ -1036,6 +1101,31 @@ Claim::changeState( ClaimState s )
 	}
 }
 
+
+bool
+Claim::writeJobAd( int fd )
+{
+	FILE* fp;
+	int rval;
+	fp = fdopen( fd, "w" );
+	if( ! fp ) { 
+		dprintf( D_ALWAYS, "Failed to open FILE* from fd %d: %s "
+				 "(errno %d)\n", fd, strerror(errno), errno );
+		return false;
+	}
+
+	rval = c_ad->fPrint( fp );
+
+		// since this is really a DC pipe that we have to close with
+		// Close_Pipe(), we can't call fclose() on it.  so, unless we
+		// call fflush(), we won't get any output. :(
+	if( fflush(fp) < 0 ) {
+		dprintf( D_ALWAYS, "writeJobAd: fflush() failed: %s (errno %d)\n", 
+				 strerror(errno), errno );
+	}  
+
+	return rval;
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // Client

@@ -169,6 +169,7 @@ public:
 	unsigned long	imageSize( void );
 	CODMgr*		getCODMgr( void );
 	bool		hasPendingCmd() {return c_pending_cmd != -1;};
+	bool		hasJobAd()		{return c_has_job_ad != 0;};
 	int  		pendingCmd()	{return c_pending_cmd;};
 	bool		wantsRemove()	{return c_wants_remove;};
 
@@ -194,6 +195,8 @@ public:
 	bool starterKillPg( int sig );
 	bool starterKillSoft( void );
 	bool starterKillHard( void );
+	char* makeCODStarterArgs( void );
+	bool verifyCODAttrs( ClassAd* req );
 
 	bool periodicCheckpoint( void );
 
@@ -210,6 +213,14 @@ public:
 	bool setPendingCmd( int cmd );
 	int	 finishPendingCmd( void );
 	void changeState( ClaimState s );
+
+
+		/** Write out the request's ClassAd to the given file
+			descriptor.  This is used in the COD world to write the
+			job ad to the starter's STDIN pipe, but might be useful
+			for other things, too.
+		*/
+	bool writeJobAd( int fd );
 
 private:
 	Resource	*c_rip;
@@ -239,6 +250,8 @@ private:
 								// release the claim.
 	int			c_aliveint;		// Alive interval for this claim
 	bool		c_is_cod;       // are we a COD claim or not?
+	char*		c_cod_keyword;	// COD keyword for this claim, if any
+	int			c_has_job_ad;	// Do we have a job ad for the COD claim?
 
 	ClaimState	c_state;		// the state of this claim
 	ClaimState	c_last_state;	// the state when a release was requested
