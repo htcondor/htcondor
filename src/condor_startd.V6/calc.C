@@ -1,10 +1,6 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
-#if !defined(WIN32)
-#include <utmp.h>
-#endif
-
 int
 calc_disk()
 {
@@ -27,15 +23,11 @@ calc_idle_time( int & user_idle, int & console_idle)
 
 #else /* !defined(WIN32) */
 
-#if defined(OSF1)
-#	define MAXINT ((1<<30)-1)
-#else
-#	define MAXINT ((1<<31)-1)
-#endif
-
 #ifndef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
+
+#include <utmp.h>
 
 #if defined(OSF1)
 static char *UtmpName = "/var/adm/utmp";
@@ -135,7 +127,6 @@ calc_idle_time( int & user_idle, int & console_idle )
 }
 
 #if !defined(OSF1) /* in tty_idle.OSF1.C for that platform */
-#include <limits.h>
 int
 tty_pty_idle_time()
 {
@@ -214,6 +205,10 @@ tty_idle_time(char* file)
 }
 #endif /* defined(WIN32) */
 
+#if defined(LINUX)
+#include <linux/smp.h>
+#endif
+
 int
 calc_ncpus()
 {
@@ -239,6 +234,8 @@ calc_ncpus()
 	SYSTEM_INFO info;
 	GetSystemInfo(&info);
 	return info.dwNumberOfProcessors;
+#elif defined(LINUX)
+	return smp_num_cpus;
 #else sequent
 	return 1;
 #endif sequent
