@@ -25,33 +25,12 @@
 
 #include "condor_common.h"
 #include "url_condor.h"
+#include "util_lib_proto.h"		// for mkargv() proto
 
 #define READ_END 0
 #define WRITE_END 1
 
-static int
-makeargv( int *argc, char *argv[], char *line )
-{
-	int		count, instring;
-	char	*ptr;
-
-	count = 0;
-	instring = 0;
-	for( ptr=line; *ptr; ptr++ ) {
-		if( isspace(*ptr) ) {
-			instring = 0;
-			*ptr = '\0';
-		}
-		else if( !instring ) {
-			argv[count++] = ptr;
-			instring = 1;
-		}
-	}
-	argv[count] = 0;
-	*argc = count;
-}
-
-/* A filer url is of the form "filter:program {|URL}" */
+/** A filer url is of the form "filter:program {|URL}" **/
 
 static
 int condor_open_filter( const char *name, int flags, size_t n_bytes )
@@ -127,7 +106,7 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 			}
 
 			// cast discards const
-			makeargv(&argc, argv, (char *) name);
+			mkargv(&argc, argv, (char *) name);
 			execv(argv[0], argv);
 			fprintf(stderr, "execv(%s) failed!!!!\n", argv[0]);
 			exit(-1);
@@ -139,7 +118,7 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 	}
 	return return_fd;
 }
-
+#endif
 
 
 
