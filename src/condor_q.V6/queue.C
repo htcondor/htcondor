@@ -409,12 +409,7 @@ processCommandLineArguments (int argc, char *argv[])
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
 			delete [] daemonname;
 
-			result = scheddQuery.addORConstraint (constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			scheddQuery.addORConstraint (constraint);
 			i++;
 			querySchedds = true;
 		} 
@@ -461,12 +456,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 
 			// insert the constraints
-			result = submittorQuery.addORConstraint (constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			submittorQuery.addORConstraint (constraint);
 
 			{
 				char *ownerName = argv[i];
@@ -520,12 +510,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 			sprintf(constraint, "%s == \"%s\"", ATTR_SCHEDD_IP_ADDR, argv[i+1]);
-			result = scheddQuery.addORConstraint(constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			scheddQuery.addORConstraint(constraint);
 			i++;
 			querySchedds = true;
 		} 
