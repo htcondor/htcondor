@@ -19,8 +19,14 @@ $target = $ARGV[0];
 		       "$target/etc/examples/condor_config.root.generic" );
 &customize_config_file( "condor_config.submit.generic",
 		       "$target/etc/examples/condor_config.submit.generic" );
+&customize_config_file( "condor_config.policy.generic",
+		       "$target/etc/examples/condor_config.policy.generic" );
+&customize_config_file( "condor_config.security.generic",
+		       "$target/etc/examples/condor_config.security.generic" );
 &customize_config_file( "condor_config.local.central.manager",
 	       "$target/etc/examples/condor_config.local.central.manager" );
+&customize_config_file( "condor_config.local.root.central.manager",
+	       "$target/etc/examples/condor_config.local.root.central.manager" );
 &customize_boot_script();
 
 
