@@ -449,7 +449,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 		// check to see if we've gotten the system boot time before,
 		// and if not, get it:
 	if( boottime == 0 ) {
-		if( (fp = fopen("/proc/stat", "r")) >= 0 ) {
+		if( (fp = fopen("/proc/stat", "r")) > 0 ) {
 			fgets( s, 256, fp );
 			while( strstr(s, "btime") == NULL ) {
 				fgets( s, 256, fp );
@@ -818,7 +818,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	FILE *fd;
 	char a[32];
 
-	if( (fd = fopen("/proc/meminfo", "r")) >= 0 ) {
+	if( (fd = fopen("/proc/meminfo", "r")) > 0 ) {
 		fscanf( fd, "%s %s %s %s %s %s"
 				"%s %s %s %s %s %s %s"
 				"%s %s %s %s"
