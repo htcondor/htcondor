@@ -24,6 +24,7 @@
 #include "exprTree.h"
 #include "source.h"
 #include "sink.h"
+#include "util.h"
 #include <regex.h>
 
 #ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
@@ -2071,13 +2072,14 @@ doIEEE754( const char*,const ArgumentList &argList,EvalState &state,
 		result.SetErrorValue( );
 		return( false );
 	} 
-	
-	union { double d; long long l; } u;
-	if (sscanf(ieeestr.c_str(), "%llx", &u.l) != 1) { // the hex string should correspond to a valid real no.
-		result.SetErrorValue( );
-		return( false );
+
+	double real;
+	if (hex_to_double(ieeestr, real)) {
+		result.SetRealValue(real);
+	} else {
+		result.SetErrorValue();
+		return false;
 	}
-	result.SetRealValue(u.d);
 	return(true);	
 }
 

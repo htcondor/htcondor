@@ -27,6 +27,7 @@
 #include "classad.h"
 #include "source.h"
 #include "lexer.h"
+#include "util.h"
 #include <assert.h>
 
 using namespace std;
@@ -295,27 +296,27 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		lexer.ConsumeToken(&token);
 		Value value;
 		if (tag_id == XMLLexer::tagID_Integer) {
-		  int number;
-		  sscanf(token.text.c_str(), "%d", &number);
-		  value.SetIntegerValue(number);
+			int number;
+			sscanf(token.text.c_str(), "%d", &number);
+			value.SetIntegerValue(number);
 		}
 		else if (tag_id == XMLLexer::tagID_Real) {
-		  union { double d; long long l; } u;
-		  if (sscanf(token.text.c_str(), "%llx", &u.l) != 1) {
-		    return NULL;
-		  }
-		  value.SetRealValue(u.d);  
+			double real;
+			if (hex_to_double(token.text, real)) {
+				value.SetRealValue(real);
+			} else {
+				return NULL;
+			}
 		} 
 		else {        // its a string
-		  bool validStr = true;
-		  token.text += " ";
-		  Lexer::convert_escapes(token.text, validStr );
-		  if(!validStr) {  // invalid string because it had /0 escape sequence
-		    return NULL;
-		  }
-		  else {
-		    value.SetStringValue(token.text);
-		  }
+			bool validStr = true;
+			token.text += " ";
+			Lexer::convert_escapes(token.text, validStr );
+			if(!validStr) {  // invalid string because it had /0 escape sequence
+				return NULL;
+			} else {
+				value.SetStringValue(token.text);
+			}
 		}
 	
 		  tree = Literal::MakeLiteral(value);

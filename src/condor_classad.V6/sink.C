@@ -23,6 +23,7 @@
 #include "common.h"
 #include "exprTree.h"
 #include "sink.h"
+#include "util.h"
 
 using namespace std;
 extern  time_t timezone;
@@ -169,9 +170,9 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::REAL_VALUE: {
-			union { double d; long long l; } u;
-			val.IsRealValue(u.d);   
-			sprintf(tempBuf, "%016llx", u.l);
+			double real;
+			val.IsRealValue(real);   
+			double_to_hex(real, tempBuf);
 			buffer += "ieee754(\"";
 			buffer += tempBuf;
 			buffer += "\")";

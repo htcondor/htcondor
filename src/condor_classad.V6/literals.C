@@ -22,6 +22,7 @@
 
 #include "common.h"
 #include "exprTree.h"
+#include "util.h"
 
 using namespace std;
 
@@ -66,14 +67,15 @@ Copy( ) const
  */
 Literal* Literal::
 MakeReal(string realstr) {
-	Value val;
-	union { double d; long long l; } u;
-	if (sscanf(realstr.c_str(), "%llx", &u.l) != 1) {// hex string doesnt correspond to valid real number
-		val.SetErrorValue( ); 
+	Value  val;
+	double real;
+
+	if (hex_to_double(realstr, real)) {
+		val.SetRealValue(real);
 	} else {
-		val.SetRealValue(u.d);   
+		val.SetErrorValue();
 	}
-	return(MakeLiteral( val ));
+	return MakeLiteral(val);
 }
 
 

@@ -25,6 +25,7 @@
 #include "xmlSink.h"
 #include "sink.h"
 #include "xmlLexer.h"
+#include "util.h"
 
 using namespace std;
 extern  time_t timezone;
@@ -160,9 +161,10 @@ Unparse(
 			break;
 		}
 		case Value::REAL_VALUE: {   
-			union { double d; long long l; } u;
-			val.IsRealValue(u.d);   
-			sprintf(tempBuf, "%016llx", u.l);
+			double real;
+
+			val.IsRealValue(real);   
+			double_to_hex(real, tempBuf);
 			add_tag(buffer, XMLLexer::tagID_Real, XMLLexer::tagType_Start);
 			buffer += tempBuf;
 			add_tag(buffer, XMLLexer::tagID_Real, XMLLexer::tagType_End);
