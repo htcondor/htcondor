@@ -1476,14 +1476,14 @@ check_requirements( char *orig )
 			(void) strcat( answer,")" );
 		}
 		for( ptr = answer; *ptr; ptr++ ) {
-			if( strincmp("FilesystemDo",ptr,12) == MATCH ) {
+			if( strincmp("FileSystemDo",ptr,12) == MATCH ) {
 				has_fsdomain = TRUE;
 				break;
 			}
 		}
 
 		if ( !has_fsdomain ) {
-			(void)strcat( answer, " && (FilesystemDomain == \"" );
+			(void)strcat( answer, " && (FileSystemDomain == \"" );
 			(void)strcat( answer, My_fs_domain );
 			(void)strcat( answer, "\")" );
 		} 
