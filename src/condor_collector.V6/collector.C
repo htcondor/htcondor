@@ -33,6 +33,8 @@
 #include "fdprintf.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
+#include "condor_adtypes.h"
+#include "my_hostname.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "../condor_status.V6/status_types.h"
@@ -54,6 +56,11 @@ char *CondorAdministrator;
 char *CondorDevelopers;
 int   ClientTimeout;
 int   QueryTimeout;
+char  *CollectorName = NULL;
+
+// variables to deal with sending out a CollectorAd 
+ClassAd *ad;
+SafeSock updateSock;
 
 // the heart of the collector ...
 CollectorEngine collector;
@@ -77,6 +84,9 @@ void process_invalidation(AdTypes, ClassAd &, Stream *);
 void process_query(AdTypes, ClassAd &, Stream *);
 int sigint_handler(Service*, int);
 int sighup_handler(Service*, int);
+void init_classad(int interval);
+int sendCollectorAd();
+
 #ifndef WIN32
 void sigpipe_handler();
 void unixsigint_handler();
@@ -141,6 +151,8 @@ main_init(int argc, char *argv[])
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
+	daemonCore->Register_Command(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,ADMINISTRATOR);
 	
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
@@ -155,6 +167,9 @@ main_init(int argc, char *argv[])
 	daemonCore->Register_Command(INVALIDATE_SUBMITTOR_ADS,
 		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,WRITE);
+	daemonCore->Register_Command(INVALIDATE_COLLECTOR_ADS,
+		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,ALLOW);
 
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -167,6 +182,8 @@ main_init(int argc, char *argv[])
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 	daemonCore->Register_Command(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+	daemonCore->Register_Command(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
 
 	// set up so that private ads from startds are collected as well
 	collector.wantStartdPrivateAds (true);
@@ -227,6 +244,11 @@ receive_query(Service* s, int command, Stream* sock)
 		whichAds = STARTD_PVT_AD;
 		break;
 
+	  case QUERY_COLLECTOR_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_COLLECTOR_ADS\n");
+		whichAds = COLLECTOR_AD;
+		break;
+
 	  default:
 		dprintf(D_ALWAYS,"Unknown command %d in process_query()\n", command);
 		whichAds = (AdTypes) -1;
@@ -285,6 +307,11 @@ receive_invalidation(Service* s, int command, Stream* sock)
 	  case INVALIDATE_CKPT_SRVR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_CKPT_SRVR_ADS\n");
 		whichAds = CKPT_SRVR_AD;	
+		break;
+
+	  case INVALIDATE_COLLECTOR_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_COLLECTOR_ADS\n");
+		whichAds = COLLECTOR_AD;
 		break;
 		
 	  default:
@@ -423,8 +450,6 @@ invalidation_scanFunc (ClassAd *ad)
 void
 process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
-	int		more;
-
 	// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
@@ -447,16 +472,13 @@ process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
 	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__);
 }	
 
-#ifndef WIN32
-static TrackTotals	*normalTotals;
-int
-reportStartdScanFunc( ClassAd *ad )
-{
-	return normalTotals->update( ad );
-}
 
 static int submittorRunningJobs;
 static int submittorIdleJobs;
+static int machinesTotal;
+static int machinesUnclaimed;
+static int machinesClaimed;
+static int machinesOwner;
 
 int
 reportSubmittorScanFunc( ClassAd *ad )
@@ -471,6 +493,37 @@ reportSubmittorScanFunc( ClassAd *ad )
 	return 1;
 }
 
+int
+reportMiniStartdScanFunc( ClassAd *ad )
+{
+	char buf[80];
+
+	if ( !ad->LookupString( ATTR_STATE, buf ) )
+		return 0;
+	machinesTotal++;
+	switch ( buf[0] ) {
+		case 'C':
+			machinesClaimed++;
+			break;
+		case 'U':
+			machinesUnclaimed++;
+			break;
+		case 'O':
+			machinesOwner++;
+			break;
+	}
+
+	return 1;
+}
+
+
+#ifndef WIN32
+static TrackTotals	*normalTotals;
+int
+reportStartdScanFunc( ClassAd *ad )
+{
+	return normalTotals->update( ad );
+}
 
 void
 reportToDevelopers (void)
@@ -520,6 +573,98 @@ reportToDevelopers (void)
 	return;
 }
 #endif  // of ifndef WIN32
+
+int
+sendCollectorAd()
+{
+	// compute submitted jobs information
+	submittorRunningJobs = 0;
+	submittorIdleJobs = 0;
+	if( !collector.walkHashTable( SUBMITTOR_AD, reportSubmittorScanFunc ) ) {
+		dprintf( D_ALWAYS, "Error making collector ad (submittor scan)\n" );
+	}
+
+	// compute machine information
+	machinesTotal = 0;
+	machinesUnclaimed = 0;
+	machinesClaimed = 0;
+	machinesOwner = 0;
+	if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
+		dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
+	}
+
+	// insert values into the ad
+	char line[100];
+	sprintf(line,"%s = %d",ATTR_RUNNING_JOBS,submittorRunningJobs);
+	ad->Insert(line);
+	sprintf(line,"%s = %d",ATTR_IDLE_JOBS,submittorIdleJobs);
+	ad->Insert(line);
+	sprintf(line,"%s = %d",ATTR_NUM_HOSTS_TOTAL,machinesTotal);
+	ad->Insert(line);
+	sprintf(line,"%s = %d",ATTR_NUM_HOSTS_CLAIMED,machinesClaimed);
+	ad->Insert(line);
+	sprintf(line,"%s = %d",ATTR_NUM_HOSTS_UNCLAIMED,machinesUnclaimed);
+	ad->Insert(line);
+	sprintf(line,"%s = %d",ATTR_NUM_HOSTS_OWNER,machinesOwner);
+	ad->Insert(line);
+
+	// send the ad
+	int		cmd = UPDATE_COLLECTOR_AD;
+
+	updateSock.encode();
+	if(!updateSock.code(cmd))
+	{
+		dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
+		return 0;
+	}
+	if(!ad->put(updateSock))
+	{
+		dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
+		return 0;
+	}
+	if(!updateSock.end_of_message())
+	{
+		dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
+		return 0;
+	}
+
+	return 1;
+}
+
+void
+init_classad(int interval)
+{
+	if( ad ) delete( ad );
+	ad = new ClassAd();
+
+	ad->SetMyTypeName(COLLECTOR_ADTYPE);
+	ad->SetTargetTypeName("");
+
+	char line[100];
+	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
+	ad->Insert(line);
+
+	if( CollectorName ) {
+		sprintf(line, "%s = \"%s\"", ATTR_NAME, CollectorName );
+	} else {
+		sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
+	}
+	ad->Insert(line);
+
+	sprintf(line, "%s = \"%s\"", ATTR_COLLECTOR_IP_ADDR,
+			daemonCore->InfoCommandSinfulString() );
+	ad->Insert(line);
+
+	if ( interval > 0 ) {
+		sprintf(line,"%s = %d",ATTR_UPDATE_INTERVAL,interval);
+		ad->Insert(line);
+	}
+
+	// In case COLLECTOR_EXPRS is set, fill in our ClassAd with those
+	// expressions. 
+	config_fill_ad( ad, mySubSystem ); 	
+}
+
 	
 // signal handlers ...
 int

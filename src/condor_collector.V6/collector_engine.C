@@ -66,7 +66,8 @@ CollectorEngine () :
 	SubmittorAds  (GREATER_TABLE_SIZE, &hashFunction),
 	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
-	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction)
+	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction),
+	CollectorAds  (LESSER_TABLE_SIZE , &hashFunction)
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
@@ -250,6 +251,10 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &SubmittorAds;
 		break;
 
+	  case COLLECTOR_AD:
+		table = &CollectorAds;
+		break;
+
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
@@ -413,6 +418,18 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 							  hashString, insert);
 		break;
 
+	  case UPDATE_COLLECTOR_AD:
+		if (!makeCollectorAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			retVal = 0;
+			break;
+		}
+		sprintf (hashString, "< %s >", hk.name);
+		retVal=updateClassAd (CollectorAds, "CollectorAd  ", clientAd, hk, 
+							  hashString, insert);
+		break;
+
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
@@ -420,12 +437,14 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case QUERY_SUBMITTOR_ADS:
 	  case QUERY_CKPT_SRVR_ADS:
 	  case QUERY_STARTD_PVT_ADS:
+	  case QUERY_COLLECTOR_ADS:
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
 	  case INVALIDATE_GATEWAY_ADS:
 	  case INVALIDATE_CKPT_SRVR_ADS:
 	  case INVALIDATE_SUBMITTOR_ADS:
+	  case INVALIDATE_COLLECTOR_ADS:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;
@@ -474,9 +493,16 @@ lookup (AdTypes adType, HashKey &hk)
 				return 0;
 			break;
 
+		case COLLECTOR_AD:
+			if (CollectorAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		case STARTD_PVT_AD:
 			if (StartdPrivateAds.lookup (hk, val) == -1)
 				return 0;
+			break;
+
 		default:
 			val = 0;
 	}
@@ -507,6 +533,9 @@ remove (AdTypes adType, HashKey &hk)
 
 		case STARTD_PVT_AD:
 			return !StartdPrivateAds.remove (hk);
+
+		case COLLECTOR_AD:
+			return !CollectorAds.remove (hk);
 
 		default:
 			return 0;
@@ -651,6 +680,9 @@ housekeeper()
 
 	dprintf (D_ALWAYS, "\tCleaning CkptServerAds ...\n");
 	cleanHashTable (CkptServerAds, now, makeCkptSrvrAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning CollectorAds ...\n");
+	cleanHashTable (CollectorAds, now, makeCollectorAdHashKey);
 
 	// add other ad types here ...
 

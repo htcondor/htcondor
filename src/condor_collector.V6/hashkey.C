@@ -230,6 +230,20 @@ makeCkptSrvrAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	return true;
 }
 
+bool
+makeCollectorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	if (!ad->LookupString ("Machine", hk.name))
+	{
+		dprintf (D_ALWAYS, "Error:  No 'Machine' attribute\n");
+		return false;
+	}
+
+	hk.ip_addr[0] = '\0';
+
+	return true;
+}
+
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
 void 
 parseIpPort (char *ip_port_pair, char *ip_addr)

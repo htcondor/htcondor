@@ -27,6 +27,7 @@
 #include "collector_engine.h"
 #include "condor_io.h"
 #include "sched.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // about self
 static char *_FileName_ = __FILE__;
@@ -42,15 +43,23 @@ extern char *CondorAdministrator;
 extern char *CondorDevelopers;
 extern int   ClientTimeout;
 extern int   QueryTimeout;
+extern char *CollectorName;
 
 extern CollectorEngine collector;
+extern SafeSock updateSock;
+extern int sendCollectorAd();
+extern void init_classad(int interval);
+
+static int UpdateTimerId = -1;
 
 void
 initializeParams()
 {
     char *tmp;
+	char *tmp1;
 	int		ClassadLifetime;
 	int		MasterCheckInterval;
+	int i;
 
 	if (CondorAdministrator) free (CondorAdministrator);
     if ((CondorAdministrator = param ("CONDOR_ADMIN")) == NULL)
@@ -95,11 +104,47 @@ initializeParams()
 	if (tmp == NULL) {
 		tmp = strdup("condor-admin@cs.wisc.edu");
 	} else
-	if (strcmp (tmp, "NONE") == 0) {
+	if (stricmp (tmp, "NONE") == 0) {
 		free (tmp);
 		tmp = NULL;
 	}
 	CondorDevelopers = tmp;
+
+
+	if (CollectorName) free (CollectorName);
+	CollectorName = param("COLLECTOR_NAME");
+
+	// handle params for Collector updates
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
+	updateSock.close();
+	tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
+	if (tmp == NULL) {
+		tmp = strdup("condor.cs.wisc.edu");
+	}
+	if (stricmp(tmp,"NONE") == 0 ) {
+		free(tmp);
+		tmp = NULL;
+	}
+	tmp1 = param("COLLECTOR_UPDATE_INTERVAL");
+	if ( tmp1 ) {
+		i = atoi(tmp1);
+	} else {
+		i = 900;		// default to 15 minutes
+	}
+	if ( tmp && i ) {
+		if ( updateSock.connect(tmp,COLLECTOR_PORT) == TRUE ) {
+			UpdateTimerId = daemonCore->Register_Timer(1,i,
+				(TimerHandler)sendCollectorAd, "sendCollectorAd");
+			init_classad(i);
+		}
+	}
+	if (tmp)
+		free(tmp);
+	if (tmp1)
+		free(tmp1);
 
 	// set the appropriate parameters in the collector engine
 	collector.setClientTimeout( ClientTimeout );

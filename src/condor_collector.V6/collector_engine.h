@@ -84,6 +84,7 @@ class CollectorEngine : public Service
 	enum {LESSER_TABLE_SIZE = 32};
 	CollectorHashTable CkptServerAds;
 	CollectorHashTable GatewayAds;
+	CollectorHashTable CollectorAds;
 
 	// relevent variables from the config file
 	int	clientTimeout; 
@@ -97,7 +98,7 @@ class CollectorEngine : public Service
 	bool pvtAds;
 
 	void checkMasterStatus (ClassAd *);
-	int masterCheck ();
+	int  masterCheck ();
 	int  masterCheckTimerID;
 	int  housekeeper ();
 	int  housekeeperTimerID;
