@@ -38,6 +38,8 @@
 #include "extArray.h"
 #include "files.h"
 
+static char *_FileName_ = __FILE__;
+
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
