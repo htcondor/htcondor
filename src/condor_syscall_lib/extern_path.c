@@ -21,46 +21,19 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-
-
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/stat.h>
-#if defined(Solaris) 
-#include </usr/ucbinclude/sys/dir.h>
-#else
-#include <sys/dir.h>
-#endif
-
-#include <limits.h>
+#include "condor_common.h"
 #include "debug.h"
 #include "condor_getmnt.h"
-
-#define TRUE 	1
-#define FALSE	0
 
 static init();
 static char * remote_part( char *mnt_pt, char *name );
 static char * xlate_link(  char *name );
 static char	* compress( char *path );
 
-extern int		errno;
-
-char	*getcwd(), *malloc();
-#if !defined(AIX32) && !defined(OSF1) &&!defined(HPUX) && !defined(ULTRIX43) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX53)
-extern char *sprintf();
-#elif defined(Solaris)
-extern int	sprintf(); /* was char *sprintf() but change required for Solaris ..dhaval 7/12 */
-#endif
-
 static struct fs_data	FS_Buf[ NMOUNT ];
 static int				N_Sys;
 static char				Hostname[512];
 static int				InitDone;
-
 
 /*
 ** Translate a name which may cross a mount point.
