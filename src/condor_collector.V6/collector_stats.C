@@ -182,6 +182,8 @@ CollectorBaseStats::getHistoryString ( char *buf )
 	int			offset = historyBitnum;	// History offset
 	int			loop;					// Loop variable
 
+	outoff = 0;
+
 	// If history's not enable, nothing to do..
 	if ( ( ! historyBuffer ) || ( ! historySize ) ) {
 		*buf = '\0';
