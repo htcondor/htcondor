@@ -25,7 +25,6 @@
 
 /* The following written by Mike Yoder */
 //@author Mike Yoder
-//@Include: procinterface.h
 
 /* Here are the necessary #includes */
 #include "condor_common.h"
