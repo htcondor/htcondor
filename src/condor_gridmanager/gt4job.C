@@ -1566,8 +1566,6 @@ MyString *GT4Job::buildSubmitRSL()
 	StringList stage_out_list;
 	bool staging_input = false;
 
-//	char * gt4_location = param ("GT4_LOCATION");
-
 	char *local_url_base = param("GRIDFTP_URL_BASE");
 	if ( local_url_base == NULL ) {
 		errorString = "GRIDFTP_URL_BASE not defined";
@@ -1632,14 +1630,6 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 	//Start off the RSL
-/*
-	rsl->sprintf( "\
-<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
-<job xmlns:gram=\"http://www.globus.org/namespaces/2004/06/job\" \
-xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" \
-xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
-%s/share/schema/gram/job_description.xsd\">", gt4_location);
-*/
 	rsl->sprintf( "<job>" );
 
 
@@ -1924,15 +1914,6 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 		attr_value = NULL;
 	}
 
-		/*
-
-		// Not sure how to deal with this in GT4:
-
-	buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
-	*rsl += buff;
-
-	*/
-	
 	if ( ad->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) ) {
 		*rsl += rsl_suffix;
 		free( rsl_suffix );
@@ -1947,7 +1928,6 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 
 	*rsl += "</job>";
 
-//	free (gt4_location);
 	free( local_url_base );
 
 	return rsl;
