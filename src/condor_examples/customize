@@ -115,10 +115,6 @@ sub customize_config_file {
 	    } 
 	    last SWITCH;
 	}
-	if( /^STARTD_DEBUG.*/ && $wants_kbd ) {
-	    $_ = "STARTD_DEBUG\t\t= ";
-	    last SWITCH;
-	}
     }
       print TARGET $_;
 
