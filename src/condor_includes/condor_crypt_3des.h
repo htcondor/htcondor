@@ -21,8 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#if defined(CONDOR_3DES_ENCRYPTION) && !defined(CONDOR_CRYPTO_3DES)
-#define CONDOR_CRYPTO_3DES
+#ifndef CONDOR_CRYPTO_3DES_H
+#define CONDOR_CRYPTO_3DES_H
 
 #include "condor_common.h"
 #include "condor_crypt.h"          // base class
@@ -66,4 +66,4 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
     int               num_;
 };
 
-#endif
+#endif /* CONDOR_CRYPTO_3DES_H */
