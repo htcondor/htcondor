@@ -11,11 +11,80 @@
 
 use Getopt::Long;
 use Cwd;
+use Config;
 
+my $Compiler = "gcc32";  #only used for ia64
+
+if ($Config{'archname'} =~ m!i386-linux!)
+{
+	$ENV{'PATH'} = ".:/usr/local/sbin:/usr/local/bin:" . $ENV{'PATH'};
+	#$ENV{PATH} = '.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb';
+	print "Adjusting component build for Linux x86\n";
+	$TargetDir = i386_rh72;
+
+	open(PULL, "gcc -v 2>&1 |") || die "gcc version info: $!\n";
+	while (<PULL>)
+	{
+		print "Compiler info....: ";
+		print $_;
+		if( $_ =~ m/2.95.2/ )
+		{
+			print "Running edg requested compiler, must be i386rh72gcc2952\n";
+			$TargetDir = i386rh72gcc2952;
+		}
+	}
+	close(PULL);
+
+	if( -e "REDHAT80" )
+	{
+		$ENV{'PATH'} = ".:/opt/gcc3/bin:/usr/local/sbin:/usr/local/bin:" . $ENV{'PATH'};
+		#$ENV{PATH} = '.:/opt/gcc3/bin:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb';
+		print "We are told it is Redhat 80, so i386_rh80\n";
+		$TargetDir = i386_rh80;
+		$IsIa32Rh80 = "yes";
+	}
+
+}
+
+
+
+if ($Config{'archname'} =~ m!ia64-linux!)
+{
+	$ENV{'PATH'} = ".:/usr/local/sbin:/usr/local/bin:" . $ENV{'PATH'};
+	#$ENV{PATH} = '.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb';
+	print "Adjusting component build for Linux ia64\n";
+	$Compiler = "gcc64";
+	if( -e "SLES8" )
+	{
+		print "We are told it is SLES 8, so ia64_sles8\n";
+		$TargetDir = ia64_sles8;
+	}
+	else
+	{
+		print "We are told it is rh 72, so ia64_rh72\n";
+		$TargetDir = ia64_rh72;
+	}
+}
+
+if ($Config{'archname'} =~ m!solaris!)
+{
+	$ENV{'PATH'} = ".:/usr/local/sbin:/usr/local/bin:" . $ENV{'PATH'};
+    #$ENV{PATH} = '.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb';
+	print "Adjusting component build for solaris\n";
+	$TargetDir = sun4x_58;
+}
+
+if ($Config{'archname'} =~ m!alpha-dec_osf!)
+{
+	$ENV{'PATH'} = ".:/usr/local/gcc296:/usr/local/gnu/bin:/usr/local/sbin:/usr/local/bin:" . $ENV{'PATH'};
+    #$ENV{PATH} = '/usr/local/gcc296:/usr/local/gnu/bin:/usr/local/bin:.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb';
+	print "Adjusting component build for osf1\n";
+	$Compiler = "-compiler=gcc64";
+	$TargetDir = alpha_osf1;
+}
 my $VERSION = " make-gpt-dist 1.0 ";
 
 my $log, $version, $method;
-my $Compiler = "gcc64";
 my $TarExec = "tar";
 my $GPT_Tarfile = "../../gpt-2.1.tar.gz";
 my $GT_Core_Tarfile = "../../globus_core-2.1.tar.gz";
