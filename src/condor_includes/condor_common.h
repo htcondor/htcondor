@@ -1,3 +1,13 @@
+#ifndef CONDOR_COMMON_H
+#define CONDOR_COMMON_H
+
+/**********************************************************************
+** System specific headers and definitions
+*********************************************************************/
+
+/******************************
+** Windoze NT specifics
+******************************/
 #if defined(WIN32)
 
 #define NOGDI
@@ -9,27 +19,59 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+/******************************
+** Unix specifics
+******************************/
 #else
 
+#define _POSIX_SOURCE
 #include "_condor_fix_types.h"
 #include "condor_fix_stdio.h"
-#include <stdlib.h>
 #include "condor_fix_unistd.h"
 #include "condor_fix_limits.h"
 #include "condor_fix_string.h"
-#include <ctype.h>
-#include <fcntl.h>
-#include <errno.h>
 #include "condor_fix_signal.h"
+#include "condor_fix_sys_ioctl.h"
+#include "condor_file_lock.h"
+#include "condor_fix_sys_stat.h"
+#include "condor_fix_sys_wait.h"
+#include "condor_fix_assert.h"
+#include <stdlib.h>
+#include <std.h>
+#include <ctype.h>
+#include <fcntl.h>	
+#include <errno.h>
+#include <netdb.h>
+#include <pwd.h>
+#include <time.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/param.h>
 
-#if defined(Solaris)
-#	define BSD_COMP
-#endif
-#include <sys/ioctl.h>
-#if defined(Solaris)
-#	undef BSD_COMP
-#endif
+#endif /* System specific stuff */
 
-#endif // else clause of  defined(WIN32)
 
+/**********************************************************************
+** Condor specific headers and definitions
+**********************************************************************/
 #include "condor_constants.h"
+
+/**********************************************************************
+** C++ specific stuff 
+**********************************************************************/
+#if defined(__cplusplus)
+
+#include <iostream.h>
+#include <iomanip.h>
+
+#endif __cplusplus
+
+#endif CONDOR_COMMON_H
+
+
+
+
+
+
