@@ -74,6 +74,7 @@ CLEAN :
 	-@erase "$(INTDIR)\strcmp_until.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
+	-@erase "$(INTDIR)\win32_posix.obj"
 	-@erase "..\src\condor_util_lib\condor_util.lib"
 	-@erase "..\src\h\syscall_numbers.h"
 
@@ -121,7 +122,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj"
+	"$(INTDIR)\strcmp_until.obj" \
+	"$(INTDIR)\win32_posix.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -173,6 +175,7 @@ CLEAN :
 	-@erase "$(INTDIR)\signames.obj"
 	-@erase "$(INTDIR)\strcmp_until.obj"
 	-@erase "$(INTDIR)\vc60.idb"
+	-@erase "$(INTDIR)\win32_posix.obj"
 	-@erase "..\src\condor_util_lib\condor_util.lib"
 	-@erase "..\src\h\syscall_numbers.h"
 
@@ -220,7 +223,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj"
+	"$(INTDIR)\strcmp_until.obj" \
+	"$(INTDIR)\win32_posix.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -591,6 +595,12 @@ InputPath=..\src\h\syscall_numbers.tmpl
 	
 
 !ENDIF 
+
+SOURCE=..\src\condor_util_lib\win32_posix.c
+
+"$(INTDIR)\win32_posix.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 
 !ENDIF 
