@@ -52,11 +52,11 @@ int
 sysapi_phys_memory_raw()
 {
 	struct rminfo rmstruct;
-	unsigned long pages, pagesz;
+	long pages, pagesz;
 	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
 	
 	if( (sysmp(MP_SAGET,MPSA_RMINFO,&rmstruct,sizeof(rmstruct)) < 0) ||
-		(pagesz <= 0) ) { 
+		(pagesz == -1) ) { 
 		return -1;
 	}
 		/* Correct what appears to be some kind of rounding error */
