@@ -299,8 +299,8 @@ MAIN( int argc, char *argv[], char **envp )
 			  expected.  --RR
 			*/
 		if( (strcmp(arg, "debug_wait") == MATCH) ) {
-			i = 1;
-			while (i);
+			int j = 1;
+			while (j);
 			continue;
 		}
 
