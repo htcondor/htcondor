@@ -1710,7 +1710,7 @@ int
 SaveClassAd (ClassAd &ad)
 {
 	ExprTree *tree, *lhs, *rhs;
-	char lhstr[128], rhstr[2048];
+	char lhstr[128], rhstr[ATTRLIST_MAX_EXPRESSION];
 	int  retval = 0;
 
 	SetAttributeInt (ClusterId, ProcId, "ClusterId", ClusterId);
