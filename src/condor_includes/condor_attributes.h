@@ -129,6 +129,7 @@ const char ATTR_OPSYS                    [] = "OpSys";
 const char ATTR_ORIG_MAX_HOSTS			 [] = "OrigMaxHosts";
 const char ATTR_OWNER                    [] = "Owner"; 
 const char ATTR_PERIODIC_CHECKPOINT      [] = "PeriodicCheckpoint";
+const char ATTR_PLATFORM                 [] = "CondorPlatform";
 const char ATTR_PREFERENCES				 [] = "Preferences";
 const char ATTR_PREV_SEND_ESTIMATE		 [] = "PrevSendEstimate";
 const char ATTR_PREV_RECV_ESTIMATE		 [] = "PrevRecvEstimate";
