@@ -6,9 +6,12 @@
 #include "qmgr.h"
 #include "condor_qmgr.h"
 #include "debug.h"
+#include "except.h"
 
 int open_url(char *, int, int);
 
+extern char*	get_schedd_addr(char*); 
+static char *_FileName_ = __FILE__;
 
 XDR *xdr_qmgmt = 0;
 static Qmgr_connection *connection = 0;
@@ -24,8 +27,9 @@ ConnectQ(char *qmgr_location)
 	int		fd;
 	int		cmd;
 	struct  passwd *pwd;
-	char*	tmp_qmgr_location = qmgr_location;
-	
+	char	hostname[256]; 
+	char*	scheddAddr = NULL;
+
 	if (connection != 0) {
 		connection->count++;
 		return connection;
@@ -38,15 +42,35 @@ ConnectQ(char *qmgr_location)
 	connection->rendevous_file = 0;
 
 	if (qmgr_location == 0) {
-		qmgr_location = "localhost";
+		if(gethostname(hostname, 256) < 0)
+		{
+			EXCEPT("Can't find host name");
+		}
+		scheddAddr = get_schedd_addr(hostname); 
+		if(!scheddAddr)
+		{
+			dprintf(D_ALWAYS, "Can't find schedd address on %s\n", hostname); 
+			return 0;
+		}
 	}
-	if(qmgr_location[0] != '<')
+	else if(qmgr_location[0] != '<')
 	{
-		qmgr_location = get_schedd_addr(qmgr_location);
+		scheddAddr = get_schedd_addr(qmgr_location);
+		if(!scheddAddr)
+		{
+			dprintf(D_ALWAYS, "Can't find schedd address on %s\n", hostname); 
+			return 0;
+		}
+	}
+	if(!scheddAddr)
+	{
+		connection->fd = do_connect(qmgr_location, "condor_schedd", QMGR_PORT);
+	}
+	else
+	{
+		connection->fd = do_connect(scheddAddr, "condor_schedd", QMGR_PORT);
+		free(scheddAddr);
 	} 
-	connection->fd = do_connect(qmgr_location, "condor_schedd", QMGR_PORT);
-	free(qmgr_location);
-	qmgr_location = tmp_qmgr_location; 
 	if (connection->fd < 0) {
 		dprintf(D_ALWAYS, "Can't connect to qmgr");
 		free(connection);

@@ -1799,7 +1799,7 @@ void FindRunnableJob(int c, int& rp)
 	int					rval;
 	int					p;
 	int					nc, np;					// next cluster and proc
-	Qmgr_connection*	con;
+//	Qmgr_connection*	con;
 
 	if(c <= 0)
 	{
@@ -1807,7 +1807,7 @@ void FindRunnableJob(int c, int& rp)
 		return;
 	}
 
-	con = ConnectQ(0);
+//	con = ConnectQ(0);
 	N_PrioRecs = 0;
 	rp = -1;
 	p = -1;
@@ -1818,7 +1818,7 @@ void FindRunnableJob(int c, int& rp)
 			if(nc != c)
 			// no more jobs in this cluster
 			{
-				DisconnectQ(con);
+//				DisconnectQ(con);
 				break;
 			}
 			get_job_prio(nc, np);
@@ -1826,7 +1826,7 @@ void FindRunnableJob(int c, int& rp)
 		}
 		else
 		{
-			DisconnectQ(con);
+//			DisconnectQ(con);
 			break;
 		}
 	} while(rval != -1);
@@ -1837,7 +1837,7 @@ void FindRunnableJob(int c, int& rp)
 		return;
 	}
 	FindPrioJob(rp);
-	DisconnectQ(con);
+//	DisconnectQ(con);
 }
 
 int Runnable(PROC_ID* id)
