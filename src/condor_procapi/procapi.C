@@ -56,141 +56,138 @@ ProcAPI::~ProcAPI() {
 // this version works for Solaris 2.5.1, IRIX, OSF/1 
 #if ( defined(Solaris251) || defined(IRIX62) || defined(OSF1) )
 int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
-  char path[64];
-  struct prpsinfo pri;
-  struct prstatus prs;
+	char path[64];
+	struct prpsinfo pri;
+	struct prstatus prs;
 #ifndef OSF1
-  struct prusage pru;   // prusage doesn't exist in OSF/1
+	struct prusage pru;   // prusage doesn't exist in OSF/1
 #endif
 
-  int fd;
-  int retval;
+	int fd;
+	int retval;
+	
+	initpi ( pi );
 
-  initpi ( pi );
+		// if the page size has not yet been found, get it.
+	if ( pagesize == 0 ) {
+		pagesize = getpagesize() / 1024;  // pagesize is in k now
+	}
+	sprintf ( path, "/proc/%d", pid );
+	if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) {
 
-  // if the page size has not yet been found, get it.
-  if ( pagesize == 0 )
-    pagesize = getpagesize() / 1024;  // pagesize is in k now
+			// PIOCPSINFO gets memory sizes, pids, and age.
+		retval = ioctl ( fd, PIOCPSINFO, &pri );
+		if ( retval >= 0 ) {
+			pi->imgsize = pri.pr_size * pagesize;
+			pi->rssize  = pri.pr_rssize * pagesize;
+			pi->pid     = pri.pr_pid;
+			pi->ppid    = pri.pr_ppid;
+			pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
+		} else {
+			pi->pid = pid;
+			perror ( "PIOCPSINFO Error occurred" );
+			return -2;
+		}
 
-  sprintf ( path, "/proc/%d", pid );
-  if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) {
+		long nowminf, nowmajf;
 
-    // PIOCPSINFO gets memory sizes, pids, and age.
-    retval = ioctl ( fd, PIOCPSINFO, &pri );
-    if ( retval >= 0 ) {
-      pi->imgsize = pri.pr_size * pagesize;
-      pi->rssize  = pri.pr_rssize * pagesize;
-      pi->pid     = pri.pr_pid;
-      pi->ppid    = pri.pr_ppid;
-      pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
-    } 
-    else {
-      pi->pid = pid;
-      perror ( "PIOCPSINFO Error occurred" );
-      return -2;
-    }
-
-    long nowminf, nowmajf;
-
-    // PIOCUSAGE is used for page fault info
-    // solaris 2.5.1 and Irix only - unsupported by osf/1
+			// PIOCUSAGE is used for page fault info
+			// solaris 2.5.1 and Irix only - unsupported by osf/1
 #ifndef OSF1
-    retval = ioctl ( fd, PIOCUSAGE, &pru );
-    if ( retval >= 0 ) {
+		retval = ioctl ( fd, PIOCUSAGE, &pru );
+		if ( retval >= 0 ) {
 
 #ifdef Solaris251   
-      nowminf = pru.pr_minf;  
-      nowmajf = pru.pr_majf;  
+			nowminf = pru.pr_minf;  
+			nowmajf = pru.pr_majf;  
 #endif
 
 #ifdef IRIX62   // dang things named differently in irix.
-      nowminf = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
-      nowmajf = pru.pu_majf;  
+			nowminf = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
+			nowmajf = pru.pu_majf;  
 #endif
-    } 
-    else {
-      pi->pid = pid;
-      perror ( "PIOCUSAGE Error occurred" );
-      return -2;
-    }
+		} else {
+			pi->pid = pid;
+			perror ( "PIOCUSAGE Error occurred" );
+			return -2;
+		}
 #else  //here we are in osf/1, which doesn't give this info.
-    nowminf = 0;   // let's default to zero in osf1
-    nowmajf = 0;
+		nowminf = 0;   // let's default to zero in osf1
+		nowmajf = 0;
 #endif
 
-    // PIOCSTATUS gets process user & sys times
-    // this following bit works for Sol 2.5.1, Irix, Osf/1
-    retval = ioctl ( fd, PIOCSTATUS, &prs );
-    if ( retval >= 0 ) {
-      pi->user_time   = prs.pr_utime.tv_sec;
-      pi->sys_time    = prs.pr_stime.tv_sec;
+			// PIOCSTATUS gets process user & sys times
+			// this following bit works for Sol 2.5.1, Irix, Osf/1
+		retval = ioctl ( fd, PIOCSTATUS, &prs );
+		if ( retval >= 0 ) {
+			pi->user_time   = prs.pr_utime.tv_sec;
+			pi->sys_time    = prs.pr_stime.tv_sec;
 
       /* here we've got to do some sampling ourself.  If the pid is not in
          the hashtable, put it there using (user+sys time) / age as %cpu.
          If it is there, use ((user+sys time) - old time) / timediff.
       */
-      struct timeval thistime;
-      double timediff, lasttime, oldustime, now, ustime, oldusage;
-      long oldminf, oldmajf;
+			struct timeval thistime;
+			double timediff, lasttime, oldustime, now, ustime, oldusage;
+			long oldminf, oldmajf;
 
-      gettimeofday ( &thistime, 0 );
-      now    = convertTimeval ( thistime );
-      ustime = ( prs.pr_utime.tv_sec + ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
-               ( prs.pr_stime.tv_sec + ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
+			gettimeofday ( &thistime, 0 );
+			now    = convertTimeval ( thistime );
+			ustime = ( prs.pr_utime.tv_sec + ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
+				( prs.pr_stime.tv_sec + ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
 
-      struct procHashNode * phn;
+			struct procHashNode * phn;
 
-      if ( procHash->lookup( pid, phn ) == 0 ) {
-        // success; pid in hash table
-        timediff = now - phn->lasttime;
-        if ( timediff < 1.0 ) {  // less than one second since last poll
-          pi->cpuusage = phn->oldusage;
-          pi->minfault = phn->oldminf;
-          pi->majfault = phn->oldmajf;
-          now = phn->lasttime;
-        }
-        else {
-          pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-          pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
-          pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
-        }
-        delete phn;
-	procHash->remove(pid);
-      }
-      else {
-        // pid not in hash table; first time.  Use age of process as guide
-        if ( pi->age == 0 )
-          pi->cpuusage = 0.0;
-        else
-          pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-        pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-        pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
-      }
-      // put new vals back into hashtable
-      phn = new procHashNode; 
-      phn->lasttime = now;
-      phn->oldtime  = ustime;
-      phn->oldusage = pi->cpuusage;
-      phn->oldminf  = nowminf;
-      phn->oldmajf  = nowmajf;
-      procHash->insert( pid, phn );
-    } 
-    else {
-      pi->pid = pid;
-      perror ( "PIOCSTATUS Error occurred" );
-      return -2;
-    }
-    // close the /proc/pid file
-    close ( fd );
+			if ( procHash->lookup( pid, phn ) == 0 ) {
+					// success; pid in hash table
+				timediff = now - phn->lasttime;
+				if ( timediff < 1.0 ) {  // less than one second since last poll
+					pi->cpuusage = phn->oldusage;
+					pi->minfault = phn->oldminf;
+					pi->majfault = phn->oldmajf;
+					now = phn->lasttime;
+				} else {
+					pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
+					pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
+					pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
+				}
+				delete phn;
+				procHash->remove(pid);
+			} else {
+					// pid not in hash table; first time.  Use age of
+					// process as guide 
+				if ( pi->age == 0 ) {
+					pi->cpuusage = 0.0;
+					pi->minfault = (long unsigned int)(nowminf);
+					pi->majfault = (long unsigned int)(nowmajf);
+				} else {
+					pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+					pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
+					pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+				}
+					// put new vals back into hashtable
+				phn = new procHashNode; 
+				phn->lasttime = now;
+				phn->oldtime  = ustime;
+				phn->oldusage = pi->cpuusage;
+				phn->oldminf  = nowminf;
+				phn->oldmajf  = nowmajf;
+				procHash->insert( pid, phn );
+			} 
+		} else {
+			pi->pid = pid;
+			perror ( "PIOCSTATUS Error occurred" );
+			return -2;
+		}
+			// close the /proc/pid file
+		close ( fd );
 
-  }
-  else {
-    //printf ( "error opening %s.\n", path );
-    pi->pid = pid;
-    return -1;
-  }
-
-  return retval;
+	} else {
+			//printf ( "error opening %s.\n", path );
+		pi->pid = pid;
+		return -1;
+	}
+	return retval;
 }
 #endif
 
@@ -665,30 +662,30 @@ int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
    has 'numpids' elements. */
 int ProcAPI::getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi ) {
 
-  initpi ( pi );
-  piPTR temp = NULL;
+	initpi ( pi );
+	piPTR temp = NULL;
 
-  for ( int i=0 ; i<numpids ; i++ ) {
-    if ( getProcInfo ( pids[i], temp ) >= 0 ) {
-      pi->imgsize   += temp->imgsize;
-      pi->rssize    += temp->rssize;
-      pi->minfault  += temp->minfault;
-      pi->majfault  += temp->majfault;
-      pi->user_time += temp->user_time;
-      pi->sys_time  += temp->sys_time;
-      pi->cpuusage  += temp->cpuusage;
-      if ( temp->age > pi->age )
-        pi->age = temp->age;
-    }
-    else {
-      dprintf (D_FULLDEBUG, "Can't get info for pid %d!\n", pids[i] );
-      return -1;
-    }
-  }
+	for ( int i=0 ; i<numpids ; i++ ) {
+		if ( getProcInfo ( pids[i], temp ) >= 0 ) {
+			pi->imgsize   += temp->imgsize;
+			pi->rssize    += temp->rssize;
+			pi->minfault  += temp->minfault;
+			pi->majfault  += temp->majfault;
+			pi->user_time += temp->user_time;
+			pi->sys_time  += temp->sys_time;
+			pi->cpuusage  += temp->cpuusage;
+			if ( temp->age > pi->age ) {
+				pi->age = temp->age;
+			}
+		} else {
+			dprintf (D_FULLDEBUG, "ProcAPI: Can't get info for pid %d!\n", pids[i] );
+			return -1;
+		}
+	}
 
-  delete temp;
-  
-  return 0;
+	delete temp;
+
+	return 0;
 }
 
 /* This function returns a list of pids that are 'descendents' of that pid.
