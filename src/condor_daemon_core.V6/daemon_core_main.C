@@ -63,11 +63,7 @@ handle_dc_sighup( Service*, int )
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
 		// nice goin', Todd).  *grin*
-	if( is_master ) {
-		config_master(NULL);
-	} else {
-		config(NULL);
-	}
+	config(NULL);
 
 	// Reinitialize logging system; after all, LOG may have been changed.
 	dprintf_config(mySubSystem,2);
@@ -249,13 +245,8 @@ int main( int argc, char** argv )
 		Foreground = 1;
 	}
 
-	// call config so we can call param.  If we're the master, call config_master
-	// which will parse in condor_config.master as well.
-	if( is_master ) {
-		config_master(NULL);
-	} else {
-		config(NULL);
-	}
+	// call config so we can call param.  
+	config(NULL);
 
 	// Set up logging
 	dprintf_config(mySubSystem,2);
