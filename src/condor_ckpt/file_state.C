@@ -703,6 +703,7 @@ dup2( int old, int new_fd )
 }
 #endif
 
+#if defined(PVM_CHECKPOINTING)
 #if defined(SYS_socket)
 int
 socket( int addr_family, int type, int protocol )
@@ -722,7 +723,8 @@ socket( int addr_family, int type, int protocol )
 
 	return rval;
 }
-#endif
+#endif /* SYS_socket */
+#endif /* PVM_CHECKPOINTING */
 
 extern "C" void DisplaySyscallMode();
 
