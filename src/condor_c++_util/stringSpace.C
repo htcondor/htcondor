@@ -10,10 +10,10 @@ template class HashTable<char *, int>;
 
 // hash function for strings
 static int 
-hashFunction (char *&str, int numBuckets)
+hashFunction (MyString &str, int numBuckets)
 {
-	int i = strlen (str), hashVal = 0;
-	while (i) 
+	int i = str.Length() - 1, hashVal = 0;
+	while (i >= 0) 
 	{
 #ifdef CLASSAD_CASE_INSENSITIVE
 		hashVal += tolower(str[i]);
@@ -88,12 +88,13 @@ int StringSpace::
 getCanonical (char *str, int adopt)
 {
 	int index;
+	MyString myStr(str);
 
 	// sanity check
 	if (!str) return -1;
 
 	// case 1:  already exists in space
-	if (stringSpace.lookup (str, index) == 0) 
+	if (stringSpace.lookup (myStr, index) == 0) 
 	{
 		switch (adopt)
         {
@@ -114,7 +115,7 @@ getCanonical (char *str, int adopt)
     current ++;
 
     // insert into hash table
-    if (stringSpace.insert (str, index) == 0) return index;
+    if (stringSpace.insert (myStr, index) == 0) return index;
 
     // some problem
 	return -1;

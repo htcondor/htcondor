@@ -45,6 +45,7 @@
 // memory management.
 
 #include "HashTable.h"
+#include "MyString.h"
 #include "extArray.h"
 
 // forward decl
@@ -86,7 +87,7 @@ class StringSpace
 	// the shared storage cell for the strings
 	struct SSStringEnt { int refCount; char *string; int adoptMode; };
 
-	HashTable<char *,int> stringSpace;	
+	HashTable<MyString,int> stringSpace;	
 	ExtArray<SSStringEnt> strTable;
 	int					  current;
 };
