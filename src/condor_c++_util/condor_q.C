@@ -110,7 +110,7 @@ addAND (char *value)
 }
 
 int CondorQ::
-fetchQueue (ClassAdList &list, ClassAd *ad)
+fetchQueue (ClassAdList &ca_list, ClassAd *ad)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -147,14 +147,14 @@ fetchQueue (ClassAdList &list, ClassAd *ad)
 	}
 
 	// get the ads and filter them
-	getAndFilterAds (filterAd, list);
+	getAndFilterAds (filterAd, ca_list);
 
 	DisconnectQ (qmgr);
 	return Q_OK;
 }
 
 int CondorQ::
-fetchQueueFromHost (ClassAdList &list, char *host)
+fetchQueueFromHost (ClassAdList &ca_list, char *host)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -182,7 +182,7 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
 	// get the ads and filter them
-	result = getAndFilterAds (filterAd, list);
+	result = getAndFilterAds (filterAd, ca_list);
 
 	DisconnectQ (qmgr);
 	return result;
@@ -294,7 +294,7 @@ getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
 
 
 int CondorQ::
-getAndFilterAds (ClassAd &queryad, ClassAdList &list)
+getAndFilterAds (ClassAd &queryad, ClassAdList &ca_list)
 {
 //	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */
 	char		constraint[10240];  // NAC
@@ -314,9 +314,9 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 	
 
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
-		list.Insert(ad);
+		ca_list.Insert(ad);
 		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
-			list.Insert(ad);
+			ca_list.Insert(ad);
 		}
 	}
 
