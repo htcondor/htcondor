@@ -1684,7 +1684,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	sprintf( return_buff,
 			 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n" 
-			 "\t%5d were rejected by the job's constraints\n",
+			 "\t%5d were rejected by the job's requirements\n",
 			 return_buff, cluster, proc, totalMachines,
 			 fReqConstraint );
 	
@@ -1712,7 +1712,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	if( fReqConstraint == totalMachines ) {
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
-		strcat( return_buff, "   No machines matched job's constraints\n");
+		strcat( return_buff, "   No machines matched job's requirements\n");
 		strcat( return_buff, "\n" ); 	// NAC
 		string buffer_string;			// NAC
 		char buffer[2048];				// NAC
@@ -1724,7 +1724,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	if( fOffConstraint == totalMachines ) {
 		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
 		sprintf( return_buff, "%s   Job %d.%d did not match any"
-			"machine's constraints\n\n", return_buff, cluster, proc);
+			"machine's requirements\n\n", return_buff, cluster, proc);
 	}
 
 	return return_buff;
