@@ -42,25 +42,24 @@ void UpdateClassAd( ClassAd * ad, const char *name, const char *value )
 		dprintf(D_FULLDEBUG, "Internal Error: UpdateClassAd called without a value\n");
 		return;
 	}
-	size_t len = strlen(name) + strlen(value) + strlen(" = ");
-	char * buff = new char[len];
-	sprintf( buff, "%s = %s", name, value );
-	ad->InsertOrUpdate( buff );
-	delete buff;
+	
+	MyString buff;
+	buff.sprintf ( "%s = %s", name, value );
+	ad->InsertOrUpdate( buff.Value() );
 }
 
 void UpdateClassAdInt( ClassAd * ad, const char *name, int value )
 {
-	char buff[32];
-	sprintf( buff, "%d", value );
-	UpdateClassAd( ad, name, buff );
+	MyString buff;
+	buff.sprintf( "%d", value );
+	UpdateClassAd( ad, name, buff.Value() );
 }
 
 void UpdateClassAdFloat( ClassAd * ad, const char *name, float value )
 {
-	char buff[32];
-	sprintf( buff, "%f", value );
-	UpdateClassAd( ad, name, buff );
+	MyString buff;
+	buff.sprintf(  "%f", value );
+	UpdateClassAd( ad, name, buff.Value() );
 }
 
 void UpdateClassAdBool( ClassAd * ad, const char *name, int value )
@@ -74,11 +73,7 @@ void UpdateClassAdBool( ClassAd * ad, const char *name, int value )
 
 void UpdateClassAdString( ClassAd * ad, const char *name, const char *value )
 {
-	size_t len = strlen(value) + strlen("\"\"");
-	char * buff = new char[len];
-	sprintf( buff, "\"%s\"", value );
-	UpdateClassAd( ad, name, buff );
-	delete buff;
-		/* TODO: What is UpdateClassAd throws an exception?
-		   Need to clean up buff.  autoptr or equiv? */
+	MyString buff;
+	buff.sprintf ("\"%s\"", value);
+	UpdateClassAd( ad, name, buff.Value() );
 }
