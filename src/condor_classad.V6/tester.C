@@ -57,6 +57,7 @@ enum Command
     cmd_Same,
     cmd_Diff,
     cmd_Set,
+    cmd_Show,
     cmd_Help,
     cmd_Quit
 };
@@ -72,10 +73,10 @@ enum PrintFormat
 class Parameters
 {
 public: 
-	bool    debug;
-    bool    verbose;
-    bool    interactive;
-	string  input_file;
+	bool      debug;
+    bool      verbose;
+    bool      interactive;
+    ifstream  *input_file;
 	
 	void ParseCommandLine(int argc, char **argv);
 };
@@ -99,6 +100,8 @@ typedef map<string, Variable *> VariableMap;
  *--------------------------------------------------------------------*/
 
 bool read_line(string &line, State &state, Parameters &parameters);
+bool read_line_stdin(string &line, State &state, Parameters &parameters);
+bool read_line_file(string &line, State &state, Parameters &parameters);
 bool replace_variables(string &line, State &state, Parameters &parameters);
 Command get_command(string &line, Parameters &parameters);
 bool get_variable_name(string &line, bool swallow_equals, string &variable_name, 
@@ -116,12 +119,14 @@ void handle_eval(string &line, State &state, Parameters &parameters);
 void handle_same(string &line, State &state, Parameters &parameters);
 void handle_diff(string &line, State &state, Parameters &parameters);
 void handle_set(string &line, State &state, Parameters &parameters);
+void handle_show(string &line, State &state, Parameters &parameters);
 void handle_print(string &line, State &state, Parameters &parameters);
 void handle_help(void);
 void print_version(void);
 void print_error_message(char *error, State &state);
 void print_error_message(string &error, State &state);
 void print_final_state(State &state);
+bool line_is_comment(string &line);
 
 /*********************************************************************
  *
@@ -138,7 +143,7 @@ void Parameters::ParseCommandLine(
 	debug       = false;
     verbose     = false;
     interactive = true;
-	input_file = "";
+	input_file  = NULL;
 
 	// Then we parse to see what the user wants. 
 	for (int arg_index = 1; arg_index < argc; arg_index++) {
@@ -149,9 +154,13 @@ void Parameters::ParseCommandLine(
                    || !strcmp(argv[arg_index], "-verbose")) {
 			verbose = true;
 		} else {
-			if (!input_file.compare("")) {
-				input_file = argv[arg_index];
+			if (input_file == NULL) {
                 interactive = false;
+				input_file = new ifstream(argv[arg_index]);
+                if (input_file->bad()) {
+                    cout << "Could not open file '" << argv[arg_index] <<"'.\n";
+                    exit(1);
+                }
 			}
 		}
 	}
@@ -274,6 +283,10 @@ int main(
     }
     print_final_state(state);
 
+    if (!parameters.interactive && parameters.input_file != NULL) {
+        parameters.input_file->close();
+    }
+
     return 0;
 }
 
@@ -290,19 +303,67 @@ bool read_line(
 {
     bool have_input;
 
+    if (parameters.interactive) {
+        have_input = read_line_stdin(line, state, parameters);
+    } else {
+        have_input = read_line_file(line, state, parameters);
+    }
+    return have_input;
+}
+
+/*********************************************************************
+ *
+ * Function: read_line_stdin
+ * Purpose:  
+ *
+ *********************************************************************/
+bool read_line_stdin(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    bool have_input;
+
     line = "";
     have_input = true;
 
     if (cin.eof()) {
         have_input = false;
     } else {
+        bool   in_continuation = false;
+        bool   done = false;
+        string line_segment;
+
         cout << "> ";
-        getline(cin, line, '\n');
-        state.line_number++;
-        if (cin.eof() && line.size() == 0) {
-            have_input = false;
-        } else {
-            have_input = true;
+
+        while (!done) {
+            getline(cin, line_segment, '\n');
+            if (line_is_comment(line_segment)) {
+                // ignore comments
+                if (in_continuation) {
+                    cout << "? ";
+                    continue;
+                } else {
+                    have_input = true;
+                    line = "";
+                    break;
+                }
+            }
+            line += line_segment;
+            state.line_number++;
+            if (cin.eof() && line.size() == 0) {
+                have_input = false;
+            } else {
+                have_input = true;
+            }
+            if (line[line.size()-1] == '\\' && !cin.eof()) {
+                in_continuation = true;
+                line = line.substr(0, line.size()-1); // chop off trailing /
+                done = false;
+                cout << "? ";
+            } else {
+                done = true;
+            }
         }
     }
 
@@ -315,6 +376,68 @@ bool read_line(
     return have_input;
 }
 
+/*********************************************************************
+ *
+ * Function: read_line_file
+ * Purpose:  
+ *
+ *********************************************************************/
+bool read_line_file(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    bool           have_input;
+    static bool    have_cached_line = false;
+    static string  cached_line = "";
+
+    // We read a line, either from our one-line cache, or the file.
+    if (!have_cached_line) {
+        getline(*parameters.input_file, cached_line, '\n');
+        state.line_number++;
+        have_cached_line = true;
+    } else {
+        // We have a cached-line, but we need to increment the line number for it.
+        // We don't increment it until we use it. 
+        state.line_number++;
+    }
+    if (parameters.input_file->eof() && cached_line.size() == 0) {
+        have_input = false;
+        have_cached_line = false;
+    } else {
+        line = cached_line;
+        have_input = true;
+        have_cached_line = false;
+    }
+
+    // If we actually have a non-comment line, we read another line
+    // from the file If it begins with a whitespace character, then we
+    // append it to the previous line, otherwise we cache it for the
+    // next time we call this function.
+    if (have_input) {
+        if (line_is_comment(line)) {
+            line = "";
+        } else {
+            bool done = false;
+            while (!done) {
+                getline(*parameters.input_file, cached_line, '\n');
+                if (line_is_comment(cached_line)) {
+                    // ignore comments
+                    state.line_number++;
+                } else if (isspace(cached_line[0])) {
+                    line += cached_line;
+                    state.line_number++;
+                } else {
+                    done = true;
+                    have_cached_line = true;
+                }
+            }
+        }
+    }
+    return have_input;
+}
+    
+    
 /*********************************************************************
  *
  * Function: replace_variables
@@ -434,6 +557,8 @@ Command get_command(
         command = cmd_Diff;
     } else if (command_name == "set") {
         command = cmd_Set;
+    } else if (command_name == "show") {
+        command = cmd_Show;
     } else if (command_name == "help") {
         command = cmd_Help;
     } else if (command_name == "quit") {
@@ -461,7 +586,7 @@ bool handle_command(
 
     switch (command) {
     case cmd_NoCommand:
-        print_error_message("* No command on line.", state);
+        // Ignore. This isn't a problem.
         break;
     case cmd_InvalidCommand:
         print_error_message("* Unknown command on line", state);
@@ -483,6 +608,9 @@ bool handle_command(
         break;
     case cmd_Set:
         handle_set(line, state, parameters);
+        break;
+    case cmd_Show:
+        handle_show(line, state, parameters);
         break;
     case cmd_Help:
         handle_help();
@@ -514,7 +642,9 @@ void handle_let(
         if (tree != NULL) {
             variable = new Variable(variable_name, tree);
             variables[variable_name] = variable;
-            print_expr(tree, state, parameters);
+            if (parameters.interactive) {
+                print_expr(tree, state, parameters);
+            }
         }
     }
     return;
@@ -544,7 +674,9 @@ void handle_eval(
             } else {
                 variable = new Variable(variable_name, value);
                 variables[variable_name] = variable;
-                cout << value << endl;
+                if (parameters.interactive) {
+                    cout << value << endl;
+                }
             }
         }
     }
@@ -653,6 +785,44 @@ void handle_set(
 
 /*********************************************************************
  *
+ * Function: handle_show
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_show(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    string  option_name;
+
+    if (get_variable_name(line, false, option_name, state, parameters)) {
+        if (option_name == "format") {
+            cout << "Format: ";
+            switch (state.format) {
+            case print_Compact:
+                cout << "Traditional Compact\n";
+                break;
+            case print_Pretty:
+                cout << "Traditional Pretty\n";
+                break;
+            case print_XML:
+                cout << "XML Compact\n";
+                break;
+            case print_XMLPretty:
+                cout << "XML Pretty\n";
+                break;
+            }
+        } else {
+            print_error_message("Unknown option. The only option currently available is format", state);
+        }
+    }
+
+    return;
+}
+
+/*********************************************************************
+ *
  * Function: handle_help
  * Purpose:  
  *
@@ -661,14 +831,22 @@ void handle_help(void)
 {
     print_version();
 
+    cout << "\n";
     cout << "Commands:\n";
     cout << "let name = expr   Set a variable to an unevaluated expression.\n";
     cout << "eval name = expr  Set a variable to an evaluated expression.\n";
     cout << "same expr1 expr2  Prints a message only if expr1 and expr2 are different.\n";
     cout << "diff expr1 expr2  Prints a message only if expr1 and expr2 are the same.\n";
+    cout << "set opt value     Sets an option to a particular value.\n";
     cout << "quit              Exit this program.\n";
     cout << "help              Print this message.\n";
-
+    cout << "\n";
+    cout << "Options (for the set command):\n";
+    cout << "format              Set the way ClassAds print.\n";
+    cout << "  compact           A compact, traditional style\n";
+    cout << "  pretty            Traditional, with more spaces\n";
+    cout << "  xml               A compact XML representation\n";
+    cout << "  xmlpretty         XML with extra spacing for readability.\n";
     return;
 }
 
@@ -759,7 +937,7 @@ ExprTree *get_expr(
     shorten_line(line, offset);
 
     if (tree == NULL) {
-        print_error_message("Missing epxression", state);
+        print_error_message("Missing expression", state);
     }
 
     return tree;
@@ -955,4 +1133,17 @@ void print_final_state(
         cout << state.number_of_errors << " errors\n";
     }
     return;
+}
+
+bool line_is_comment(
+    string &line)
+{
+    bool is_comment;
+
+    if (line.size() > 1 && line[0] == '/' && line[1] == '/') {
+        is_comment = true;
+    } else {
+        is_comment = false;
+    }
+    return is_comment;
 }
