@@ -682,7 +682,7 @@ daemon::Obituary( int status )
 	// on NT, we will now email the last entry in our pseudo-core file,
 	// since it is ascii...  note: email_corefile_tail() is a no-op on Unix
 	if ( WIFSIGNALED(status) ) {
-		email_corefile_tail( mailer );
+		email_corefile_tail( mailer, name_in_config_file );
 	}
 
 	email_close(mailer);
