@@ -101,11 +101,17 @@ extern	int		killing_timeout;  // How long you're willing to be
 extern	int		last_x_event;		// Time of the last x event
 extern  time_t	startd_startup;		// Time when the startd started up
 
-extern	int		console_cpus;	// # of CPUs in an SMP machine that
-								// care when there's console activity
-extern	int		keyboard_cpus;	// # of CPUs in an SMP machine that
-								// care when there's keyboard activity
+extern	int		console_vms;	// # of virtual machines in an SMP
+								// machine that care when there's
+								// console activity 
+extern	int		keyboard_vms;	// # of virtual machines in an SMP
+								// machine that care when there's
+								// keyboard activity  
 
-#endif _STARTD_NO_DECLARE_GLOBALS
+extern	int		disconnected_keyboard_boost;	
+    // # of seconds before when we started up that we advertise as the
+	// last key press for resources that aren't connected to anything.
 
-#endif _CONDOR_STARTD_H
+#endif /* _STARTD_NO_DECLARE_GLOBALS */
+
+#endif /* _CONDOR_STARTD_H */
