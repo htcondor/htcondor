@@ -159,17 +159,17 @@ sub RunIt {
     if ( $CondorInfo{NumStartds} )
     {
 	my %Interesting =
-	    ( Name =>			{ PerVm => 0, Type => "s", },
-	      Arch =>			{ PerVm => 0, Type => "s", },
-	      OpSys =>			{ PerVm => 0, Type => "s", },
-	      State =>			{ PerVm => 1, Type => "s", },
-	      EnteredCurrentState =>	{ PerVm => 1, Type => "n", },
-	      Activity =>		{ PerVm => 1, Type => "s", },
-	      EnteredCurrentActivity =>	{ PerVm => 1, Type => "n", },
-	      LoadAvg =>		{ PerVm => 1, Type => "n", },
-	      Memory =>			{ PerVm => 1, Type => "n", },
-	      LastHeardFrom =>		{ PerVm => 1, Type => "n", },
-	      StarterAbilityList =>	{ PerVm => 1, Type => "s", },
+	    ( Name =>			{ Required => 1, },
+	      Arch =>			{ Required => 1, },
+	      OpSys =>			{ Required => 1, },
+	      State =>			{ Required => 1, },
+	      EnteredCurrentState =>	{ Required => 1, },
+	      Activity =>		{ Required => 1, },
+	      EnteredCurrentActivity =>	{ Required => 1, },
+	      LoadAvg =>		{ Required => 1, },
+	      Memory =>			{ Required => 1, },
+	      LastHeardFrom =>		{ Required => 1, },
+	      StarterAbilityList =>	{ Required => 0, },
 	    );
 	if ( open( CSTAT, "condor_status -l -direct $ENV{HOST} |" ) )
 	{
@@ -184,9 +184,16 @@ sub RunIt {
 		if ( ! /\S+/ )
 		{
 		    # Verify that we have all the interesting stuff
+		    next if ( scalar( keys( %AdInfo ) ) == 0 );
 		    foreach my $Key ( keys %Interesting )
 		    {
-			next READLINE if ( ! exists $AdInfo{$Key} );
+			if (  ( $Interesting{$Key}{Required} ) &&
+					    ( ! exists $AdInfo{$Key} )  )
+			{
+			    print STDERR "Throwing out ad because '$Key' is missing\n";
+			    %AdInfo = ( );
+			    next READLINE;
+			}
 		    }
 
 		    # Ok, now pull  it apart..
