@@ -1484,7 +1484,8 @@ These settings affect the \Condor{shadow}
 These settings control the \Condor{shadow.pvm}, the special shadow
 that supports PVM jobs inside Condor.  See
 section~\ref{sec:Install-PVM-Condor} ``Installing PVM Support in
-Condor'' for details.
+Condor'' for details.  \Condor{shadow} settings also apply to this
+special shadow.  See section~\ref{sec:Shadow-Config-File-Entries}.
 \begin{description}
 
 \item[\Macro{PVMD}] \label{param:PvmD}  This macro holds the full path
@@ -1497,11 +1498,6 @@ Condor'' for details.
   Daemon, which is needed to support PVM groups.  This daemon is
   installed in the regular Condor release directory by default, so the
   macro is usually defined in terms of \MacroU{SBIN}.
-
-\item[\Macro{SHADOW\_DEBUG}] \label{param:ShadowDebug} This setting
-  (and other settings related to debug logging in the shadow) is
-  described above in section~\ref{param:SubsysDebug} as
-  \Macro{SUBSYS\_DEBUG}.
 
 \end{description}
 
