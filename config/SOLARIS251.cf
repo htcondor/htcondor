@@ -21,7 +21,7 @@
 #define SC_VERS SC4.2
 #endif
 
-#define PlatformFlags	-DSolaris251
+#define PlatformFlags	-DSolaris251=Solaris251
 
 /* 
    On Solaris 2.5.1, we use the GNU ld, instead of the vendor ld.  GNU

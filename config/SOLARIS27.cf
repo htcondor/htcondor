@@ -19,7 +19,7 @@
 #define SC_VERS SC4.2
 #endif
 
-#define PlatformFlags	-DSolaris27
+#define PlatformFlags	-DSolaris27=Solaris27
 
 #define IS_EGCS_BUILD	YES
 #define EgcsPath /s/egcs-1.1.2/sun4x_57/lib/gcc-lib/sparc-sun-solaris2.7/egcs-2.91.66

@@ -6,7 +6,7 @@
 #define Platform	ALPHA_DUX4
 #define GccArch		alpha-dec-osf4.0
 
-#define PlatformFlags	-DDUX
+#define PlatformFlags	-DDUX=DUX
 
 #define IS_ALPHA_OSF1	YES
 #define IS_DUX		YES

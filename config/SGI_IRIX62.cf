@@ -6,4 +6,4 @@
 #define ImakeOpsysFlag		-DIS_IRIX62
 #define IS_SGI_IRIX62		YES
 #define IS_IRIX62		YES
-#define PlatformFlags		-DIRIX62 
+#define PlatformFlags		-DIRIX62=IRIX62

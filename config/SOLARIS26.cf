@@ -19,7 +19,7 @@
 #define SC_VERS SC4.2
 #endif
 
-#define PlatformFlags	-DSolaris26
+#define PlatformFlags	-DSolaris26=Solaris26
 
 /*
 #define IS_EGCS_BUILD	YES
