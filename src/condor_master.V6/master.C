@@ -195,7 +195,7 @@ main_init( int argc, char* argv[] )
 		switch( ptr[0][1] ) {
 		case 'n':
 			ptr++;
-			if( ! *ptr ) {
+			if( !(ptr && *ptr) ) {
 				EXCEPT( "-n requires another arugment" );
 			}
 			MasterName = build_valid_daemon_name( *ptr );
