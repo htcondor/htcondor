@@ -152,6 +152,7 @@ get_file( const char *remote, const char *local, int mode )
 		if( nbytes < 0 ) {
 			dprintf( D_ALWAYS, "Can't read fd %d, errno = %d\n",
 														remote_fd, errno );
+			return -1;
 		}
 		if( write(local_fd,buf,nbytes) != nbytes ) {
 			dprintf( D_ALWAYS, "Can't write fd %d, errno = %d\n",
