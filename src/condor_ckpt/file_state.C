@@ -1708,7 +1708,7 @@ int
 _condor_fcntl( int fd, int cmd, va_list ap )
 {
 	int arg = 0;
-	int user_fd;
+	int real_fd;
 	int use_local_access = FALSE;
 	int rval;
 	struct flock *lockarg;
@@ -1719,10 +1719,10 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	if ( FileTab == NULL )
 		InitFileState();
 	
-	if ((user_fd = MapFd(fd)) < 0) {
+	if ((real_fd = MapFd(fd)) < 0) {
 		// allow fds we don't have in our table in STANDALONE mode
 		if (MyImage.GetMode() == STANDALONE) {
-			user_fd = fd;
+			real_fd = fd;
 		} else {
 			return -1;
 		}
@@ -1754,27 +1754,27 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 				// the application to use fds which we're not tracking
 				// between checkpoints.
 			if (MyImage.GetMode() == STANDALONE) {
-				rval = syscall( SYS_fcntl, user_fd, cmd, arg );
+				rval = syscall( SYS_fcntl, real_fd, cmd, arg );
 			}
 			return rval;
 		}
 
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, user_fd, cmd, arg );
+			return syscall( SYS_fcntl, real_fd, cmd, arg );
 		} else {
 				// In remote mode, we want to send a CONDOR_dup2 on
 				// the wire, not an fcntl(), so we have a prayer of
 				// heterogeneous syscalls working.  -Derek W. and Jim
 				// B. 8/18/98
-			return REMOTE_syscall( CONDOR_dup2, user_fd, arg );
+			return REMOTE_syscall( CONDOR_dup2, real_fd, arg );
 		}
 	case F_GETFD:
 	case F_GETFL:
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, user_fd, cmd, arg );
+			return syscall( SYS_fcntl, real_fd, cmd, arg );
 		} else {
 			return REMOTE_syscall( CONDOR_fcntl,
-								   user_fd, cmd, arg );
+								   real_fd, cmd, arg );
 		}
 	case F_SETFD:
 	case F_SETFL:
@@ -1784,9 +1784,9 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 		arg = va_arg( ap, int );
 #endif
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, user_fd, cmd, arg );
+			return syscall( SYS_fcntl, real_fd, cmd, arg );
 		} else {
-			return REMOTE_syscall( CONDOR_fcntl, user_fd, cmd, arg );
+			return REMOTE_syscall( CONDOR_fcntl, real_fd, cmd, arg );
 		}	
 
 	// These fcntl commands use a struct flock pointer for their
@@ -1798,7 +1798,7 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	case F_SETLKW: 
 		lockarg = va_arg ( ap, struct flock* );
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, user_fd, cmd, lockarg );
+			return syscall( SYS_fcntl, real_fd, cmd, lockarg );
 		} else {
 			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 			return -1;
@@ -1811,7 +1811,7 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	case F_SETLKW64: 
 		lock64arg = va_arg ( ap, struct flock64* );
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, user_fd, cmd, lock64arg );
+			return syscall( SYS_fcntl, real_fd, cmd, lock64arg );
 		} else {
 			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 			return -1;
@@ -1824,7 +1824,7 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 #endif
 		lockarg = va_arg ( ap, struct flock* );
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, user_fd, cmd, lockarg );
+			return syscall( SYS_fcntl, real_fd, cmd, lockarg );
 		} else {
 			if( lockarg->l_whence == 0 && 
 				lockarg->l_start == 0 &&
@@ -1832,7 +1832,7 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 					// This is the same as ftruncate(), and we'll trap
 					// ftruncate() and send that on the wire,
 					// instead.  -Derek Wright 10/14/98
-				return ftruncate( user_fd, 0 );
+				return ftruncate( fd, 0 );
 			} else {
 				dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 				return -1;
