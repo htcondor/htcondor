@@ -60,15 +60,15 @@ ResState::change( State new_state, Activity new_act )
 	}
 
 	if( statechange && !actchange ) {
-		dprintf( D_FULLDEBUG, "Changing state: %s -> %s\n",
+		dprintf( D_ALWAYS, "Changing state: %s -> %s\n",
 				 state_to_string(r_state), 
 				 state_to_string(new_state) );
 	} else if (actchange && !statechange ) {
-		dprintf( D_FULLDEBUG, "Changing activity: %s -> %s\n",
+		dprintf( D_ALWAYS, "Changing activity: %s -> %s\n",
 				 activity_to_string(r_act), 
 				 activity_to_string(new_act) );
 	} else {
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_ALWAYS, 
 				 "Changing state and activity: %s/%s -> %s/%s\n", 
 				 state_to_string(r_state), 
 				 activity_to_string(r_act), 
@@ -129,20 +129,21 @@ ResState::eval()
 		// Recompute attributes needed at every timeout and refresh classad 
 	rip->timeout_classad();
 
-	int want_suspend;
+	int want_suspend, want_vacate;
 
 	switch( r_state ) {
 
 	case claimed_state:
 		want_suspend = rip->wants_suspend();
+		want_vacate = rip->wants_vacate();
 		if( ((r_act == busy_act) && (!want_suspend)) ||
 			(r_act == suspended_act) ) {
-					// STATE TRANSITION #15 or #16 (need renumbering)
-			if( rip->eval_kill() ) {
-				return change( preempting_state, killing_act );  
-			}
-			if( rip->eval_vacate() ) {
+					// STATE TRANSITION #15 or #16
+			if( want_vacate && rip->eval_vacate() ) {
 				return change( preempting_state, vacating_act ); 
+			}
+			if( !want_vacate && rip->eval_kill() ) {
+				return change( preempting_state, killing_act );  
 			}
 		}
 		if( (r_act == busy_act) && want_suspend ) {
@@ -186,14 +187,14 @@ ResState::eval()
 
 	case owner_state:
 		if( rip->r_reqexp->eval() != 0 ) {
-			this->change( unclaimed_state );
+			change( unclaimed_state );
 		}
 		break;	
 		
 	case matched_state:
 		if( rip->r_reqexp->eval() == 0 ) {
 				// STATE TRANSITION #8
-			this->change( owner_state );
+			change( owner_state );
 		}
 		break;
 
@@ -204,7 +205,6 @@ ResState::eval()
 	dprintf( D_FULLDEBUG, "State: %s\tActivity: %s\n", 
 			 state_to_string(r_state),
 			 activity_to_string(r_act) );
-
 	return 0;
 }
 
@@ -379,7 +379,7 @@ ResState::leave_action( State s, Activity a,
 					// know about it.  Send SIGKILL to the process
 					// group and go to the owner state.
 				rip->r_starter->killpg( DC_SIGKILL );
-				return this->change( owner_state );
+				return change( owner_state );
 			}
 		}
 		if( statechange ) {
@@ -397,7 +397,6 @@ ResState::leave_action( State s, Activity a,
 int
 ResState::enter_action( State s, Activity a,
 						int statechange, int ) 
-
 {
 	switch( s ) {
 	case owner_state:
@@ -414,7 +413,7 @@ ResState::enter_action( State s, Activity a,
 			// See if we should be in owner or unclaimed state
 		if( rip->r_reqexp->eval() != 0 ) {
 				// Really want to be in unclaimed.
-			return this->change( unclaimed_state );
+			return change( unclaimed_state );
 		}
 		rip->r_reqexp->unavail();		
 		break;
@@ -428,7 +427,7 @@ ResState::enter_action( State s, Activity a,
 		if( a == suspended_act ) {
 			if( rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
 				rip->r_starter->killpg( DC_SIGKILL );
-				return this->change( owner_state );
+				return change( owner_state );
 			}
 		}
 		break;
@@ -475,7 +474,7 @@ ResState::enter_action( State s, Activity a,
 			if( rip->r_starter->active() ) {
 				if( rip->r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
 					rip->r_starter->killpg( DC_SIGKILL );
-					return this->change( owner_state );
+					return change( owner_state );
 				}
 			} else {
 				return change( idle_act );
@@ -487,7 +486,7 @@ ResState::enter_action( State s, Activity a,
 			if( rip->r_starter->active() ) {
 				if( rip->r_starter->kill( DC_SIGSOFTKILL ) < 0 ) {
 					rip->r_starter->killpg( DC_SIGKILL );
-					return this->change( owner_state );
+					return change( owner_state );
 				}
 			} else {
 				return change( idle_act );
