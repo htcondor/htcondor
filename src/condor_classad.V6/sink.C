@@ -103,6 +103,13 @@ SendToSink (void *bytes, int len)
 
 
 bool Sink::
+Terminate ()
+{
+	if( !sink ) return( false );
+	return( sink->Terminate( ) );
+}
+
+bool Sink::
 FlushSink ()
 {
 	if( !sink ) return( false );
@@ -122,6 +129,7 @@ FormatOptions( )
 	precedenceLevel = -1;
 	marginWrapCols = 79;
 	marginIndentLen = 3;
+	minimalParens = true;
 }
 
 

@@ -115,8 +115,13 @@ class Sink
 		*/
 		void SetTerminalChar( int c );
 			
+		/** Pushes the terminal character to the sink.
+		 	@return true if the character was successfully sent, false otherwise
+		 */
+		bool Terminate( );
+
 		/** Performs the cleanup protocol for the medium encapsulated  by the
-			sink object, such as terminating the representation by a '\0'.
+			sink object
 			@return false if the sink cannot accomodate the cleanup protocol,
 				true otherwise.
 		*/
