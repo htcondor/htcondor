@@ -1295,13 +1295,21 @@ ProcObj::perm_to_modify()
 		init_user_credentials();
 	}
 
+	// allow root to modify
 	if( InvokingUid == 0 )
 		return TRUE;
 
+	// allow user condor to modify (Todd, 10/95)
+	if( strcmp(InvokingUserName,"condor") == MATCH ) {
+		return TRUE;
+	}
+
+	// allow the user who owns/created this job to modify
 	if( strcmp(InvokingUserName,get_owner()) == MATCH ) {
 		return TRUE;
 	}
 
+	// anyone else is out of luck.  tough cookies, buddy.
 	return FALSE;
 }
 
