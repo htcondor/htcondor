@@ -79,7 +79,14 @@ CheckPlatformType:														@@\
 /*
 ** Build a library from .o files.
 */
-#ifndef library_target
+#if IS_ALPHA_OSF1
+#define library_target(libname, objlist)			@@\
+## libname ## :	objlist								@@\
+	rm -f libname									@@\
+	AR_REPLACE( libname, objlist )					@@\
+clean ## ::											@@\
+	rm -f libname objlist
+#else
 #define library_target(libname, objlist,rel)		@@\
 ## libname ## :	objlist								@@\
 	rm -f libname									@@\
@@ -95,7 +102,13 @@ clean ## ::											@@\
 /*
 ** Build a program from .o files and libraries.
 */
-#ifndef program_target
+#if IS_ALPHA_OSF1
+#define	program_target(program, objlist, libs)			@@\
+##program: objlist libs									@@\
+	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
+clean:: 												@@\
+	rm -f program objlist
+#else
 #define	program_target(program, objlist, libs, rel)		@@\
 ##program: objlist libs									@@\
 	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
@@ -121,14 +134,44 @@ clean:: 												@@\
 DEMANGLE = 2>&1 | demangle
 #endif
 
+
+#if IS_ALPHA_OSF1
+#define	c_plus_target(program, objlist, libs )						@@\
+##program: objlist libs												@@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
+clean:: 															@@\
+	rm -f program objlist
+#else
 #define	c_plus_target(program, objlist, libs, rel)					@@\
 ##program: objlist libs												@@\
 	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
 clean:: 															@@\
 	rm -f program objlist											@@\
-##rel::																@@\
+##rel::	$(RELEASE_DIR)/bin/##program								@@\
 	/bin/rm -f $(RELEASE_DIR)/bin/##program							@@\
 	cp program $(RELEASE_DIR)/bin
+#endif
+
+#if IS_ALPHA_OSF1
+#define SET_GID_MODE	02775
+#define EXECUTABLE_MODE	0755
+#define OBJECT_MODE		0644
+#define release_target(file, dir, mode )							@@\
+##dir##/##file##: file												@@\
+	/bin/rm -f dir##/##file											@@\
+	cp file dir														@@\
+	chmod mode dir##/##file											@@\
+##release##:: dir##/##file
+#endif
+
+#if IS_ALPHA_OSF1
+#define release_library(lib, dir )									@@\
+##dir##/##lib##: lib												@@\
+	COPY_LIBRARY( lib, dir##/##lib )								@@\
+	RANLIB_TOUCH( dir##/##lib )										@@\
+##release##:: dir##/##lib
+#endif
+
 
 #if IS_SPARC_SUNOS41
 #define	pure_cplus_targ(program, objlist, libs, rel)	@@\
@@ -188,7 +231,10 @@ depend: ALWAYS										@@\
 /*
 ** List everything which should be built in this object tree.
 */
-#ifndef all_target
+#if IS_ALPHA_OSF1
+#define all_target(targetlist)						@@\
+## all: targetlist
+#else
 #define all_target(targetlist)						@@\
 ## all: targetlist									@@\
 release:: all
@@ -307,18 +353,20 @@ clean::																@@\
 ** Generate a platform specific version of a shell script file using imake.
 */
 #if IS_ALPHA_OSF1
-#define script_target(targ,dir,dest)										@@\
+#define script_target(targ,dir,dest,mode)									@@\
 ##targ: targ##.generic														@@\
 	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
 	awk -f awk.prog targ##.tmp > targ										@@\
 	rm -f targ##.tmp														@@\
 clean:: 																	@@\
 	rm -f targ 																@@\
-release::																	@@\
+release:: $(RELEASE_DIR)/##dir##/##dest##									@@\
+																			@@\
+$(RELEASE_DIR)/##dir##/##dest##: targ										@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##targ								@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest								@@\
 	cp targ $(RELEASE_DIR)/##dir##/##dest									@@\
-	chmod u+x $(RELEASE_DIR)/##dir##/##dest
+	chmod mode $(RELEASE_DIR)/##dir##/##dest
 #else
 #define script_target(targ,dest)											@@\
 ##targ: targ##.generic														@@\
@@ -345,7 +393,9 @@ release::																	@@\
 	rm -f targ##.tmp														@@\
 clean:: 																	@@\
 	rm -f targ 																@@\
-release::																	@@\
+release:: $(RELEASE_DIR)/##dir##/##dest										@@\
+																			@@\
+$(RELEASE_DIR)/##dir##/##dest##: targ										@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##targ								@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest								@@\
 	cp targ $(RELEASE_DIR)/##dir##/##dest
