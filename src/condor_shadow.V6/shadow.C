@@ -844,10 +844,9 @@ send_job( V2_PROC *proc, char *host, char *cap)
 
 	dprintf( D_FULLDEBUG, "Shadow: Entering send_job()\n" );
 
-		/* Test starter 0 - Mike's combined pvm/vanilla starter. */
-		/* Test starter 1 - Jim's pvm starter */
-		/* Test starter 2 - Mike's V5 starter */
-	retval = part_send_job(2, host, reason, capability, schedd, proc, sd1, sd2, NULL);
+		/* starter 0 - Regular starter */
+		/* starter 1 - PVM starter */
+	retval = part_send_job(0, host, reason, capability, schedd, proc, sd1, sd2, NULL);
 	if (retval == -1) {
 		DoCleanup();
                 dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
