@@ -255,12 +255,17 @@ NEGOTIATOR_HOST	= $(CONDOR_HOST)
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
 SHUTDOWN_GRACEFUL_TIMEOUT	= 1800
 
-##  ??
-RESERVE_AFS_CACHE	= False
-
-##  ??
-##  Specified in megabytes
+##  How much disk space would you like reserved from Condor?  In
+##  places where Condor is computing the free disk space on various
+##  partitions, it subtracts the amount it really finds by this
+##  many megabytes.
 RESERVED_DISK		= 5
+
+##  If your machine is running AFS and the AFS cache lives on the same
+##  partition as the other Condor directories, and you want Condor to
+##  reserve the space that your AFS cache is configured to use, set
+##  this to true.
+RESERVE_AFS_CACHE	= False
 
 
 ######################################################################
@@ -277,6 +282,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 MASTER				= $(SBIN)/condor_master
 STARTD				= $(SBIN)/condor_startd
 SCHEDD				= $(SBIN)/condor_schedd
+KBDD				= $(SBIN)/condor_kbdd
 
 ##  When the master starts up, it can place it's address (ip and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -348,8 +354,7 @@ MASTER_RECOVER_FACTOR           = 300
 ##--------------------------------------------------------------------
 ##  Where are the various condor_starter binaries installed?
 STARTER			= $(SBIN)/condor_starter
-ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.carmi
-ALTERNATE_STARTER_2	= $(SBIN)/condor_starter
+ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
 
 ##  When the startd starts up, it can place it's address (ip and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -424,7 +429,7 @@ STARTD_JOB_EXPRS = ImageSize, JobUniverse
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_PVM		= $(SBIN)/condor_shadow.carmi
+SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 
 ##  When the schedd starts up, it can place it's address (ip and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -467,16 +472,13 @@ QUEUE_SUPER_USERS	= root, condor
 
 
 ##--------------------------------------------------------------------
-##  condor_shadow.carmi
+##  condor_shadow.pvm
 ##--------------------------------------------------------------------
 ##  Where is the condor pvm daemon installed?
 PVMD			= $(SBIN)/condor_pvmd
 
-## ??
-PROC_TIMEOUT		= 180
-
-## ??
-HOST_TIMEOUT		= 180
+##  Where is the condor pvm group server daemon installed?
+PVMGS			= $(SBIN)/condor_pvmgs
 
 
 ##--------------------------------------------------------------------
@@ -486,22 +488,6 @@ HOST_TIMEOUT		= 180
 ##  debug information back to the condor_shadow where it will end up
 ##  in the ShadowLog?
 STARTER_LOCAL_LOGGING	= TRUE
-
-
-##--------------------------------------------------------------------
-##  condor_starter.carmi
-##--------------------------------------------------------------------
-## ??
-TRANSFER_BLOCK_SIZE	= 8192
-
-## ??
-MIN_CKPT_INTERVAL	= 1800
-
-## ??
-MAX_CKPT_INTERVAL	= 7200
-
-## ??
-PVM_POLLING_FREQ	= 0
 
 
 ##--------------------------------------------------------------------
