@@ -133,6 +133,7 @@
 	int close( int fd );
 	int dup( int old_fd );
 	int dup2( int old_fd, int new_fd );
+	int socket( int addr_family, int type, int protocol );
 	int fchdir( map(int fd) );
 	int chdir( const char *path ) : pseudo {
 		SEND_PATH( path );
@@ -808,7 +809,6 @@ not_supported {
 	int accept( int socket, struct sockaddr *address, int *addr_len );
 	int getpeername( int socket, struct sockaddr *address, int *addr_len );
 	int getsockname( int socket, struct sockaddr *address, int *addr_len );
-	int socket( int addr_family, int type, int protocol );
 	int connect( int sock, ALPHA_CONST struct sockaddr *address, int 
 				addr_len );
 #if !defined(SWITCH) /* moved into separate .c file to avoid a name conflict */
