@@ -69,6 +69,7 @@ class CollectorEngine : public Service
 	CollectorHashTable StartdPrivateAds;
 	CollectorHashTable ScheddAds;
 	CollectorHashTable SubmittorAds;
+	CollectorHashTable LicenseAds;
 	CollectorHashTable MasterAds;
 
 	// the lesser tables

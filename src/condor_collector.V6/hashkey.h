@@ -57,6 +57,7 @@ typedef HashTable <HashKey, ClassAd *> CollectorHashTable;
 // functions to make the hashkeys
 bool makeStartdAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeScheddAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
+bool makeLicenseAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeMasterAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeCkptSrvrAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeCollectorAdHashKey (HashKey &, ClassAd *, sockaddr_in *);

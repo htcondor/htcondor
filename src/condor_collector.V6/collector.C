@@ -100,6 +100,8 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
+	daemonCore->Register_Command(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,ADMINISTRATOR);
 	
@@ -116,6 +118,9 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_SUBMITTOR_ADS,
 		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,WRITE);
+	daemonCore->Register_Command(INVALIDATE_LICENSE_ADS,
+		"INVALIDATE_LICENSE_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,WRITE);
 	daemonCore->Register_Command(INVALIDATE_COLLECTOR_ADS,
 		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,ALLOW);
@@ -126,6 +131,8 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 	daemonCore->Register_Command(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+	daemonCore->Register_Command(UPDATE_LICENSE_AD,"UPDATE_LICENSE_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 	daemonCore->Register_Command(UPDATE_MASTER_AD,"UPDATE_MASTER_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
@@ -173,6 +180,11 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		whichAds = SUBMITTOR_AD;
 		break;
 
+	  case QUERY_LICENSE_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_LICENSE_ADS\n");
+		whichAds = LICENSE_AD;
+		break;
+
 	  case QUERY_MASTER_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_MASTER_ADS\n");
 		whichAds = MASTER_AD;
@@ -197,7 +209,7 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		dprintf(D_ALWAYS,"Unknown command %d in process_query()\n", command);
 		whichAds = (AdTypes) -1;
     }
-   
+
     if (whichAds != (AdTypes) -1)
 		process_query (whichAds, ad, sock);
 
@@ -240,6 +252,11 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	  case INVALIDATE_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_SUBMITTOR_ADS\n");
 		whichAds = SUBMITTOR_AD;
+		break;
+
+	  case INVALIDATE_LICENSE_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_LICENSE_ADS\n");
+		whichAds = LICENSE_AD;
 		break;
 
 	  case INVALIDATE_MASTER_ADS:

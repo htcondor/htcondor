@@ -65,6 +65,7 @@ CollectorEngine () :
 	StartdPrivateAds(GREATER_TABLE_SIZE, &hashFunction),
 	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
 	SubmittorAds  (GREATER_TABLE_SIZE, &hashFunction),
+	LicenseAds    (GREATER_TABLE_SIZE, &hashFunction),
 	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
 	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction),
@@ -85,6 +86,7 @@ CollectorEngine::
 	killHashTable (StartdPrivateAds);
 	killHashTable (ScheddAds);
 	killHashTable (SubmittorAds);
+	killHashTable (LicenseAds);
 	killHashTable (MasterAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
@@ -166,6 +168,10 @@ invokeHousekeeper (AdTypes adtype)
 			cleanHashTable (SubmittorAds, now, makeScheddAdHashKey);
 			break;
 
+		case LICENSE_AD:
+			cleanHashTable (LicenseAds, now, makeLicenseAdHashKey);
+			break;
+
 		default:
 			return 0;
 	}
@@ -244,6 +250,10 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &SubmittorAds;
 		break;
 
+	  case LICENSE_AD:
+		table = &LicenseAds;
+		break;
+
 	  case COLLECTOR_AD:
 		table = &CollectorAds;
 		break;
@@ -267,6 +277,24 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 
 	return 1;
 }
+
+/*
+static bool printAdToFile(ClassAd& ad, char* JobHistoryFileName) {
+  FILE* LogFile=fopen(JobHistoryFileName,"a");
+  if ( !LogFile ) {
+    dprintf(D_ALWAYS,"ERROR saving to history file; cannot open %s\n",JobHistoryFileName);
+    return false;
+  }
+  if (!ad.fPrint(LogFile)) {
+    dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to write clas ad to log file %s\n",JobHistoryFileName);
+    fclose(LogFile);
+    return false;
+  }
+  fprintf(LogFile,"***\n");   // separator
+  fclose(LogFile);
+  return true;
+}
+*/
 
 ClassAd *CollectorEngine::
 collect (int command, Sock *sock, sockaddr_in *from, int &insert)
@@ -383,6 +411,21 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 							  hashString, insert);
 		break;
 
+	  case UPDATE_LICENSE_AD:
+		// use the same hashkey function as a schedd ad
+		if (!makeLicenseAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			retVal = 0;
+			break;
+		}
+		// since submittor ads always follow a schedd ad, and a master check is
+		// performed for schedd ads, we don't need a master check in here
+		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
+		retVal=updateClassAd (LicenseAds, "LicenseAd  ", clientAd, hk,
+							  hashString, insert);
+		break;
+
 	  case UPDATE_MASTER_AD:
 		if (!makeMasterAdHashKey (hk, clientAd, from))
 		{
@@ -473,6 +516,11 @@ lookup (AdTypes adType, HashKey &hk)
 				return 0;
 			break;
 
+		case LICENSE_AD:
+			if (LicenseAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		case MASTER_AD:
 			if (MasterAds.lookup (hk, val) == -1)
 				return 0;
@@ -514,6 +562,9 @@ remove (AdTypes adType, HashKey &hk)
 
 		case SUBMITTOR_AD:
 			return !SubmittorAds.remove (hk);
+
+		case LICENSE_AD:
+			return !LicenseAds.remove (hk);
 
 		case MASTER_AD:
 			return !MasterAds.remove (hk);
@@ -661,6 +712,9 @@ housekeeper()
 
 	dprintf (D_ALWAYS, "\tCleaning SubmittorAds ...\n");
 	cleanHashTable (SubmittorAds, now, makeScheddAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning LicenseAds ...\n");
+	cleanHashTable (LicenseAds, now, makeLicenseAdHashKey);
 
 	dprintf (D_ALWAYS, "\tCleaning MasterAds ...\n");
 	cleanHashTable (MasterAds, now, makeMasterAdHashKey);

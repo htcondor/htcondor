@@ -194,6 +194,58 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 
 bool
+makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	ExprTree *tree;
+	char buffer [30];
+	char buf2   [64];
+	int  inferred = 0;
+
+	// get the name of the startd
+	if (!(tree = ad->Lookup ("Name")))
+	{
+		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
+		// ... if name was not specified
+		tree = ad->Lookup ("Machine");
+	}
+
+	if (tree)
+	{
+		strcpy (hk.name, ((String *)tree->RArg())->Value());
+	}
+	else
+	{
+		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
+		// neither Name nor Machine specified
+		return false;
+	}
+	
+	// get the IP and port of the startd 
+	tree = ad->Lookup (ATTR_MY_IP_ADDR);
+	
+	if (tree)
+	{
+		strcpy (buffer, ((String *)tree->RArg())->Value());
+	}
+	else
+	{
+		dprintf(D_FULLDEBUG,"Warning: No MY_IP_ADDR; inferring address\n");
+		strcpy (buffer, sin_to_string (from));
+
+        // since we have done the work ...
+        sprintf (buf2, "%s = \"%s\"", ATTR_MY_IP_ADDR, buffer);
+		ad->Insert (buf2);
+		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2);
+		inferred = 1;
+	}
+
+	parseIpPort (buffer, hk.ip_addr);
+
+	return true;
+}
+
+
+bool
 makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
