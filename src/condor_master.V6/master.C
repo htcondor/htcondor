@@ -116,19 +116,30 @@ extern "C"
 #endif
 
 	/* 	char*	getwd(char* pathname); no longer needed because using getcwdnow */
+#if defined(IRIX62)
+	int	killpg(long pgrp, int sig);
+#else
 	int	killpg(int pgrp, int sig);
+#endif  /* IRIX62 */
 	int 	dprintf_config( char*, int);
 	int 	detach();
 	int	boolean(char*, char*);
 	char*	strdup(const char*);
 	void	set_machine_status(int);
 	int	SetSyscalls( int );
-#if defined(LINUX)
+
+#if defined(LINUX) || defined(HPUX9)
 	int	gethostname(char*, unsigned int);
 #else
 	int	gethostname(char*, int);
 #endif
+
+#if defined(HPUX9)
+	long sigsetmask(long);
+#else
 	int	sigsetmask(int);
+#endif
+
 	int	udp_connect(char*, int);
 	char*	get_arch();
 	char*	get_op_sys(); 

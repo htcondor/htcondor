@@ -29,6 +29,10 @@
 
 #define _POSIX_SOURCE  // FIX
 
+#if defined(IRIX62)
+#include "condor_fdset.h"
+#endif
+
 #include "condor_common.h"
 
 #if defined(Solaris251)
@@ -86,7 +90,11 @@ extern "C"
 	extern	int vfork();
 #endif
 	extern	int		event_mgr();
+#if defined(HPUX9)
+	extern	int		gethostname(char*, unsigned int);
+#else
 	extern	int		gethostname(char*, int);
+#endif
 	void	set_machine_status(int); 
 }
 
