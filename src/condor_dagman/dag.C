@@ -59,7 +59,7 @@ bool Dag::Bootstrap (bool recovery) {
 	jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
         if( job->_Status == Job::STATUS_DONE ) {
-			TerminateJob( job );
+			TerminateJob( job, true );
 		}
     }
 	debug_println( DEBUG_VERBOSE, "Number of pre-completed jobs: %d",
@@ -120,7 +120,7 @@ Job * Dag::GetJob (const JobID_t jobID) const {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::DetectLogGrowth (int checkInterval) {
+bool Dag::DetectLogGrowth () {
     if (!_condorLogInitialized) {
         _condorLog.initialize(_condorLogName);
         _condorLogInitialized = true;
@@ -196,9 +196,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
                 putchar (' ');
                 condorID.Print();
                 putchar (' ');
-            }
-            
-            if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
                 printf( "\n  Event: %s for Job ",
 						ULogEventNumberNames[e->eventNumber] );
             }
@@ -666,7 +663,6 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
         return;
     }
 
-    fprintf (fp, "### DAGMan 6.1.1\n");
     fprintf (fp, "# Rescue DAG file, created after running\n");
     fprintf (fp, "#   the %s DAG file\n", datafile);
     fprintf (fp, "#\n");
@@ -734,7 +730,9 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
 //===========================================================================
 
 //-------------------------------------------------------------------------
-void Dag::TerminateJob (Job * job) {
+void
+Dag::TerminateJob( Job* job, bool bootstrap )
+{
     assert (job != NULL);
     assert (job->_Status == Job::STATUS_DONE);
 
@@ -754,16 +752,14 @@ void Dag::TerminateJob (Job * job) {
     assert (_numJobsDone <= _jobs.Number());
 
 	// add job to the termination queue if it has any children
-	TQI* tqi = new TQI( job, qp );
-	if( !job->IsEmpty( Job::Q_CHILDREN ) ) {
+	if( !bootstrap && !job->IsEmpty( Job::Q_CHILDREN ) ) {
+		TQI* tqi = new TQI( job, qp );
 		_termQ.Append(tqi);
 	}
 }
 
 //---------------------------------------------------------------------------
 Job * Dag::GetSubmittedJob (bool recovery) {
-
-    _termQ.Rewind();
 
     Job * job_found = NULL;
 
@@ -790,14 +786,15 @@ Job * Dag::GetSubmittedJob (bool recovery) {
 
     bool found = false;  // Flag signally the discovery of a submitted child
     TQI * tqi;           // The current termination queue item being scanned
+    _termQ.Rewind();
     while (_termQ.Next(tqi)) {
         assert (!tqi->children.IsEmpty());
-        tqi->children.Rewind();
         JobID_t match_ID;  // The current Job ID being examined
         JobID_t found_ID;  // The ID of the original child found
 
         bool found_on_this_line = false;  // for debugging
 
+        tqi->children.Rewind();
         while (tqi->children.Next(match_ID)) {
             bool kill = false;  // Flag whether this child should be removed
             if (found) {
@@ -824,24 +821,16 @@ Job * Dag::GetSubmittedJob (bool recovery) {
                 tqi->children.DeleteCurrent();
                 if (tqi->children.IsEmpty()) _termQ.DeleteCurrent();
 
-				// why is this next line commented out?  it seems to
-				// me that this inner loop (which looks for
-				// unsubmitted children of a given job in the
-				// termination queue), once it has found its target
-				// (an unsubmitted child), shouldn't need to keep
-				// checking the rest of its children for duplicates
-				// (since there should never be duplicate children of
-				// the same job), but should just go ahead to check
-				// the other jobs in the termination queue... so
-				// breaking out of the inner loop should be
-				// appropriate... -pfc
-
-                //break; // There shouldn't be duplicate children for this job
+				// there shouldn't be duplicate children of the same job
+                break; 
             }
         }
     }
     if (recovery && job_found != NULL) {
         job_found->_Status = Job::STATUS_SUBMITTED;
+		_numJobsSubmitted++;
+		assert( _numJobsSubmitted == 0 || 
+				(_numJobsSubmitted <= _maxJobsSubmitted) );
     }
     return job_found;
 }
@@ -851,36 +840,33 @@ bool Dag::SubmitReadyJobs () {
 
 	// if the termination queue is empty, return
 	if( _termQ.IsEmpty() ) {
-        if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
-			printf( "SubmitReadyJobs(): termination queue is empty\n" );
-        }
+		debug_printf( DEBUG_DEBUG_1, "%s(): termination queue is empty\n",
+					  __FUNCTION__ );
         return true;
     }
 
 	// if we've already submitted max jobs, return
 	if( _maxJobsSubmitted != 0 && _numJobsSubmitted >= _maxJobsSubmitted ) {
 		assert( _numJobsSubmitted <= _maxJobsSubmitted );
-		if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
-			printf( "SubmitReadyJobs(): max scripts (%d) already running\n",
-					_maxJobsSubmitted );
-		}
+		debug_printf( DEBUG_DEBUG_1,
+					  "%s(): max scripts (%d) already running\n",
+					  __FUNCTION__, _maxJobsSubmitted );
 		return true;
 	}
-
-    _termQ.Rewind();
 
 	// look at the children of each terminated job to see if any of
 	// them are submittable, and if so, submit them
 
     TQI* tqi;
+    _termQ.Rewind();
 	while( (tqi = _termQ.Next()) ) {
 		tqi->children.Rewind();
 		JobID_t childID;
 		while( tqi->children.Next( childID ) &&
-			   ( _maxJobsSubmitted == 0 ||
-				 _numJobsSubmitted < _maxJobsSubmitted ) ) {
+			   ( (_maxJobsSubmitted == 0) ||
+				 (_numJobsSubmitted < _maxJobsSubmitted)) ) {
 			debug_printf( DEBUG_DEBUG_4,
-						  "SubmitReadyJobs() examining JobID #%d ... ",
+						  "%s() examining JobID #%d ... ", __FUNCTION__,
 						  childID );
 			Job* child = GetJob( childID );
 			assert( child != NULL );
@@ -895,8 +881,8 @@ bool Dag::SubmitReadyJobs () {
 					return false;
 				}
 			}
-			else if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-				printf( "not submittable\n" );
+			else {
+				debug_printf( DEBUG_DEBUG_4, "not submittable\n" );
 			}
 		}
 	}
