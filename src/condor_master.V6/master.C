@@ -1170,7 +1170,7 @@ void report_to_collector()
 		dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
 		return;
 	}
-	if(!sock.end_of_message());
+	if(!sock.end_of_message())
 	{
 		dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
 	}
