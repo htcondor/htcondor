@@ -761,6 +761,11 @@ GlobusResource::ReadMonitorJobStatusFile()
 	}
 
 	if ( fgets( buff, sizeof(buff), fp ) == NULL ) {
+		if( feof(fp) ) {
+			dprintf( D_FULLDEBUG, "GridMonitor job status file empty (%s), treating as partial.\n",
+					 monitorJobStatusFile );
+			return RFS_PARTIAL;
+		}
 		dprintf( D_ALWAYS, "Can't read GridMonitor job status file %s\n",
 				 monitorJobStatusFile );
 		fclose( fp );
