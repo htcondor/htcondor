@@ -456,6 +456,10 @@ All of these calls manipulate the open file table.
 	#else
 		int ftruncate( int fd, off_t length ) :
 	#endif
+		#if !defined(SWITCH)
+			/* Sender needed, even if not a true syscall */
+			no_sys_chk,
+		#endif
 		file_table, also_implements(ftruncate64);
 
 	int ftruncate64( int fd, off64_t length )
