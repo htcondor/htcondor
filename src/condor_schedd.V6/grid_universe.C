@@ -542,7 +542,14 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 				tmp.GetFullPath());
 			}
 		}	// end of while for cleanup of old scratch dirs
+
 		dprintf(D_FULLDEBUG,"Done checking for old scratch dirs\n");			
+
+		if (prefix != NULL) {
+			free(prefix);
+			prefix = NULL;
+		}
+
 	}	// end of once-per-schedd invocation block
 
 	// If gridmanager wants a tmp dir, create one and append proper
@@ -577,6 +584,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		PRIV_USER_FINAL,		// Run as the Owner
 		rid						// Reaper ID
 		);
+
+	free(gman_binary);
 
 	if ( pid <= 0 ) {
 		dprintf ( D_ALWAYS, "StartOrFindGManager: Create_Process problems!\n" );
