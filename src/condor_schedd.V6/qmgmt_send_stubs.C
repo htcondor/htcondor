@@ -32,7 +32,7 @@
 #undef assert
 #endif
 
-#define assert(x) if (!(x)) return -1
+#define assert(x) if (!(x)) { errno = ETIMEDOUT; return -1; }
 
 int CurrentSysCall;
 extern ReliSock *qmgmt_sock;
@@ -454,7 +454,7 @@ SendSpoolFile( char *filename )
 #undef assert
 #endif
 
-#define assert(x) if (!(x)) return NULL
+#define assert(x) if (!(x)) { errno = ETIMEDOUT; return NULL; }
 
 ClassAd *
 GetJobAd( int cluster_id, int proc_id )
