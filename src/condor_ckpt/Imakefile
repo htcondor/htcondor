@@ -43,7 +43,11 @@ CFLAGS = $(STD_C_FLAGS)
 
 SRC_DIR = $(SRC_TREE)/condor_ckpt
 
+#if IS_SGI_IRIX62
+OS = IRIX62
+#else
 OS = OperatingSystem
+#endif
 
 #if !HAS_FLOCK
 FLOCK_OBJ = flock.o
@@ -63,7 +67,12 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 	m4 /usr/include/sys/asdef.s $*.s | as -o $*.o
 #endif
 
-#if IS_SGI_IRIX53
+#if IS_SGI_IRIX62
+ASSEMBLER_SRC = SYSCALL.MIPS.IRIX62.s MMAP.MIPS.IRIX62.s
+ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
+.s.o:
+	gas -o $*.o $*.s
+#elif IS_SGI_IRIX53
 ASSEMBLER_SRC = SYSCALL.MIPS.IRIX53.s MMAP.MIPS.IRIX53.s
 ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX53.o MMAP.MIPS.IRIX53.o
 .s.o:

@@ -1,6 +1,5 @@
 #if !defined(_FDSET_H)
 #define _FDSET_H
-
 #include "condor_fix_timeval.h"
 
 #define NBBY 8
@@ -29,6 +28,15 @@
 #	include <sys/select.h>
 #elif defined( Solaris )
 #       include <sys/select.h>
+#elif defined( IRIX62 )
+#	undef _DEFINE_FD_SET
+#	ifdef  _BSD_TYPES 
+#	include <sys/select.h>
+#	else
+#	define _BSD_TYPES	/* need to define this to get fd_set from select.h */
+#	include <sys/select.h>	/* IRIX defines all we need here, so use it! */
+#	undef _BSD_TYPES
+#	endif
 #elif defined( IRIX53 )
 #	undef _DEFINE_FD_SET 
 #else

@@ -32,7 +32,17 @@ extern "C" {
 #endif
 
 #include <rpc/types.h>
+
+#if defined(IRIX62)
+#define time_t dont_change_to_long
+typedef long dont_change_to_long;
+#endif
+
 #include <rpc/xdr.h>
+
+#if defined(IRIX62)
+#undef time_t
+#endif
 
 /*
   Now uncover all the names

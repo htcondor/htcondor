@@ -25,6 +25,7 @@
 ** Authors:  Allan Bricker and Michael J. Litzkow,
 ** 	         University of Wisconsin, Computer Sciences Dept.
 ** 
+** 			 Todd Tannenbaum, IRIX enhancements, UW CS
 */ 
 
 
@@ -425,7 +426,7 @@ X_is_active()
 	if( (fp=popen("ps -ef","r")) == NULL ) {
 		EXCEPT( "popen(\"ps -ef\",\"r\")" );
 	}
-#elif defined(Solaris)
+#elif defined(Solaris) | defined(IRIX62)
 	if( (fp=popen("/bin/ps -ef","r")) == NULL ) {
 		EXCEPT( "popen(\"/bin/ps -ef\",\"r\")" );
 	} 
@@ -447,11 +448,15 @@ X_is_active()
 		}
 
 			/* User logged in via login box (X) */
+			/* THIS LOOKS WRONG TO ME; AN XDM CHILD DOES NOT MEAN ANYTHING
+			 * IMHO, -Todd 2/97 */
+#ifdef BULLSHIT
 		if( substr(command,"(xdm)") ) {
 			dprintf( D_ALWAYS, "Found xdm child!\n" );
 			pclose( fp );
 			return TRUE;
 		}
+#endif
 
 			/* User logged in via login box (DecWindows) */
 		if( substr(command,"dxsession") && !substr(command,"login") ) {
@@ -459,6 +464,25 @@ X_is_active()
 			pclose( fp );
 			return TRUE;
 		}
+#if defined(IRIX53) || defined(IRIX62)
+			/* The SGI visuallogin process is running, so nobody on console */
+		if( substr(command,"clogin") ) {
+			dprintf(D_ALWAYS, "Found clogin, nobody on console\n");
+			pclose(fp);
+			return FALSE;
+		}
+
+			/* User running the SGI windows manager */
+			/* this is a weak test, as the user could be running the window
+			 * manager for a remote display like an xterm, but geeez, we dont
+			 * have much choice .... */
+		if( substr(command,"4Dwm") ) {
+			dprintf(D_ALWAYS,"Found 4Dwm!\n");
+			pclose(fp);
+			return FALSE;
+		}
+#endif  /* IRIX */
+
 	}
 	pclose( fp );
 	return FALSE;
@@ -505,7 +529,7 @@ XErrorEvent	*event;
 														sizeof(error_text) );
 	dprintf( D_ALWAYS, "\ttext = \"%s\"\n", error_text );
 
-#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris)
+#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX62)
 	if( close(d->fd) == 0 ) {
 		dprintf( D_ALWAYS, "Closed display fd (%d)\n", d->fd );
 	} else {
@@ -536,7 +560,7 @@ Display		*d;
 
 	dprintf( D_ALWAYS, "Got X I/O Error, errno = %d\n", errno );
 
-#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris)
+#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX62)
 	if( close(d->fd) == 0 ) {
 		dprintf( D_ALWAYS, "Closed display fd (%d)\n", d->fd );
 	} else {

@@ -24,6 +24,12 @@ typedef pid_t		id_t;
 #	include <sys/wait.h>
 #endif
 
+#if defined(IRIX62)
+#	if defined(_NO_ANSIMODE)
+#		define _TMP_NO_ANSIMODE
+#	endif
+#endif
+
 #if defined(AIX32)
 #       undef _POSIX_SOURCE
 #       define _BSD
@@ -47,6 +53,10 @@ typedef pid_t		id_t;
 #       undef _POSIX_SOURCE
 #       define __USE_BSD
 #       include <sys/wait.h>
+#elif defined(IRIX62)
+#		undef _POSIX_SOURCE
+#		undef _NO_ANSIMODE
+#		include <sys/wait.h>
 #elif defined(IRIX53)
 #		undef _POSIX_SOURCE
 #		include <sys/wait.h>
@@ -76,6 +86,13 @@ typedef pid_t		id_t;
 #	undef _TMP_BSD
 
 #endif /* OSF1 */
+
+#if defined(IRIX62)
+#	if defined(_TMP_NO_ANSIMODE)
+#		define _NO_ANSIMODE
+#	endif
+#	undef _TMP_NO_ANSIMODE
+#endif   /* IRIX62 */
 
 #if defined(HOLD_POSIX_SOURCE)
 #define _POSIX_SOURCE

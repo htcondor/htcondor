@@ -22,6 +22,18 @@ typedef int		bool_t;
 #endif /* _POSIX_SOURCE */
 #endif /* Solaris */
 
+/* for IRIX62, we want _BSD_TYPES defined when we include sys/types.h, but
+ * then we want to set it back to how it was. -Todd, 1/31/97
+#if defined(IRIX62)
+#	ifdef _BSD_TYPES
+#		include <sys/types.h>
+#	else
+#		define _BSD_TYPES
+#		include <sys/types.h>
+#		undef _BSD_TYPES
+#	endif
+#endif
+
 #	include <sys/types.h>
 
 #if defined(Solaris) && defined(HOLD_POSIX_SOURCE)

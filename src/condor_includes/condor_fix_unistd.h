@@ -11,9 +11,15 @@
 #	define execv __hide_execv
 #endif
 
-#if defined(IRIX53)
+#if defined(IRIX53) && !defined(IRIX62)
 struct timeval;
 #endif
+
+#if defined(IRIX62)
+#if !defined(_SYS_SELECT_H)
+typedef struct fd_set fd_set;
+#endif
+#endif /* IRIX62 */
 
 #if defined(LINUX)
 #       define idle _hide_idle
