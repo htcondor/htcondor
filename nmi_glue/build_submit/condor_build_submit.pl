@@ -138,7 +138,9 @@ sub generate_cmdfile() {
     print CMDFILE "post_all = nmi_glue/build/post_all\n";
     print CMDFILE "post_all_args = $tag $module\n";
     print CMDFILE "platforms = $PLATFORMS\n";
-    print CMDFILE "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, binutils-2.15, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, coreutils-5.2.1\n";
+    print CMDFILE "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, binutils-2.15, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, coreutils-5.2.1\n";
+    print CMDFILE "prereqs_sun4u_sol_5.9 = gcc-2.95.3\n";
+    print CMDFILE "prereqs_sun4u_sol_5.8 = gcc-2.95.3\n";
     print CMDFILE "notify = $notify\n";
     print CMDFILE "priority = 1\n";
     print CMDFILE "run_type = build\n";
