@@ -1695,6 +1695,22 @@ void
 ckpt_and_exit_() {
     ckpt_and_exit();
 }
+
+/*
+** Some FORTRAN compilers expect "__" after the name!
+*/
+
+void ckpt__()
+{
+	ckpt();
+}
+
+void ckpt_and_exit__()
+{
+	ckpt_and_exit();
+}
+
+
 }   /* end of extern "C" */
 
 /*
