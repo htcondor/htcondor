@@ -64,7 +64,7 @@
 #define D_TAPENET		(1<<17)
 #define D_DAEMONCORE	(1<<18)
 #define D_COMMAND		(1<<19)
-#define D_BANDWIDTH		{1<<20)
+#define D_BANDWIDTH		(1<<20)
 #define D_NOHEADER		(1<<(D_MAXFLAGS-1))
 #define D_ALL			(~(0))
 
@@ -78,8 +78,8 @@ extern int (*DebugId)();		/* set header message */
 
 #if defined(__STDC__) || defined(__cplusplus)
 void dprintf_init ( int fd );
-void dprintf ( int flags, ... );
-void dprintf_config (char *, int );
+void dprintf ( int flags, char *fmt, ... );
+void _condor_dprintf_va ( int flags, char* fmt, va_list args );
 void _EXCEPT_ ( char *fmt, ... );
 void Suicide();
 #else
