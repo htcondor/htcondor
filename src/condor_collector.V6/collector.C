@@ -78,12 +78,6 @@ void CollectorDaemon::Init()
 	UpdateTimerId=-1;
 	Config();
 
-    // install signal handlers
-	daemonCore->Register_Signal(DC_SIGINT,"SIGINT",(SignalHandler)sigint_handler,"sigint_handler()");
-
-#ifndef WIN32
-	install_sig_handler (SIGINT, unixsigint_handler);
-#endif	// of ifndef WIN32
 
 #ifndef WIN32
     // setup routine to report to condor developers
@@ -503,24 +497,6 @@ void CollectorDaemon::reportToDevelopers (void)
 }
 #endif  // of ifndef WIN32
 	
-// signal handlers ...
-int CollectorDaemon::sigint_handler (Service *s, int sig)
-{
-    dprintf (D_ALWAYS, "Killed by SIGINT\n");
-    exit(0);
-	return FALSE;	// never will get here; just to satisfy c++
-}
-
-#ifndef WIN32
-void CollectorDaemon::unixsigint_handler ()
-{
-    dprintf (D_ALWAYS, "Killed by SIGINT\n");
-    exit(0);
-	return;	// never will get here; just to satisfy c++
-}
-
-#endif	// of ifndef WIN32
-
 void CollectorDaemon::Config()
 {
 	dprintf(D_ALWAYS, "In CollectorDaemon::Config()\n");
