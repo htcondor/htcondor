@@ -299,16 +299,6 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 		}
 		return;
 	}
-	// Another type of bad record is when cpu_usage is greater than
-	// good_time.  This should not be possible.  It may be caused if
-	// two instances of the same job are running at the same time.
-	if (cpu_usage > good_time) {
-		if (debug_mode) {
-			fprintf(stderr, "internal error: cpu usage > good time (%d > %d) "
-					"for %d.%d!\n", cpu_usage, good_time, cluster, proc);
-		}
-		return;
-	}
 
 	sprintf(hash, "%d.%d", cluster, proc);
 	HashKey jobkey(hash);
