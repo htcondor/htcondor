@@ -20,6 +20,13 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+/***********
+ * Tom's list of things to fix in the kbdd
+ * 1. Add support for X terms by grabing displays out of utmp
+ * 
+ ***********/
+
 #define _POSIX_SOURCE
 
 #include "XInterface.h"
@@ -33,6 +40,7 @@
 #include <stdlib.h>
 
 const char * PASSWD_FILE = "/etc/passwd";
+extern int PollActivity();
 
 bool        g_connected;
 jmp_buf     jmp;
@@ -160,20 +168,24 @@ XInterface::NextEntry()
     return 0;
 }
 
-XInterface::XInterface()
+XInterface::XInterface(int id)
 {
 
-
+    _daemon_core_timer = id;
     
     // We may need access to other user's home directories, so we must run
     // as root.
-    set_root_priv();
+    
     
     if(geteuid() != 0)
     {
-	dprintf(D_ALWAYS, "We should run as root.\n");
+	dprintf(D_FULLDEBUG, "NOTE: Daemon can't use Xauthority if not"
+		" running as root.\n");
     }
-
+    else
+    {
+	set_root_priv();
+    }
     _tried_root = false;
     g_connected = false;
     
@@ -203,12 +215,21 @@ XInterface::Connect()
 	if(err == -1)
 	{
 	    dprintf(D_FULLDEBUG, "Exausted all possible attempts to "
-		    "connect to X server.\n");
+		    "connect to X server, will try again in 60 seconds.\n");
+	    daemonCore->Reset_Timer( _daemon_core_timer, 60 ,60 );
+	    dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
+
+	    g_connected = false;
 	    return false;
 	}
+	
+	
     }
     dprintf(D_ALWAYS, "Connected to X server: localhost:0.0\n");
     g_connected = true;
+    dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
+    daemonCore->Reset_Timer( _daemon_core_timer, 5 ,5 );
+    
 
     // See note above the function to see why we need to do this.
     XSetErrorHandler((XErrorHandler) CatchFalseAlarm);
@@ -235,10 +256,10 @@ bool
 XInterface::CheckActivity()
 {
     setjmp(jmp);
-    while(!g_connected)
+    if(!g_connected)
     {
 	// If we can't connect, we don't know anything....
-	if( Connect() == -1 )
+	if( Connect() == false )
 	{
 	    return false;
 	}

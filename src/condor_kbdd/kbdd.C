@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "XInterface.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+
 #include "my_hostname.h"
 #include "condor_query.h"
 
@@ -57,7 +57,7 @@ update_startd()
     } 
     else 
     {
-		return -1;
+	return -1;
     }
     dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
     return 0;		
@@ -66,9 +66,12 @@ update_startd()
 int 
 PollActivity()
 {
-    if(xinter->CheckActivity())
+    if(xinter != NULL)
     {
-	update_startd();
+	if(xinter->CheckActivity())
+	{
+	    update_startd();
+	}
     }
     return TRUE;
 }
@@ -95,12 +98,21 @@ main_config()
 int
 main_init(int, char **)
 {
-    xinter = new XInterface();
+    
+    int id;
+    xinter = NULL;
 
     //Poll for X activity every second.
-    daemonCore->Register_Timer(5, 5, (Event)PollActivity, "PollActivity");
+    id = daemonCore->Register_Timer(5, 5, (Event)PollActivity, "PollActivity");
+    xinter = new XInterface(id);
     return TRUE;
 }
+
+
+
+
+
+
 
 
 

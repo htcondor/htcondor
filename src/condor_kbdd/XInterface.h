@@ -24,7 +24,7 @@
 
 #ifndef __XINTERFACE_H__
 #define __XINTERFACE_H__
-
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_uid.h"
@@ -36,7 +36,7 @@
 class XInterface
 {
   public:
-    XInterface();
+    XInterface(int id);
     ~XInterface();
 
     
@@ -60,6 +60,7 @@ class XInterface
     int          _pointer_prev_y;
 
     bool        _tried_root;
+    int         _daemon_core_timer;
 };
 
 
