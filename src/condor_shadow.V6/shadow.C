@@ -407,7 +407,6 @@ main(int argc, char *argv[] )
 	// initialize the user log
 	initializeUserLog();
 
-
 	My_Filesystem_Domain = param( "FILESYSTEM_DOMAIN" ); 
 	dprintf( D_ALWAYS, "My_Filesystem_Domain = \"%s\"\n", 
 			 My_Filesystem_Domain );
@@ -806,9 +805,6 @@ Wrapup( )
 	if( notification[0] ) {
 		NotifyUser( notification, Proc );
 	}
-    // Free up data
-    free(My_UID_Domain);
-    free(My_Filesystem_Domain);
 }
 
 /* evaluate various periodic checks during the running of the shadow and
