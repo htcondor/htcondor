@@ -95,6 +95,15 @@ ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
 ClassAdLog::~ClassAdLog()
 {
 	if (active_transaction) delete active_transaction;
+
+	// HashTable class will not delete the ClassAd pointers we have
+	// inserted, so we delete them here...
+	table.startIterations();
+	ClassAd *ad;
+	HashKey key;
+	while (table.iterate(key, ad) == 1) {
+		delete ad;
+	}
 }
 
 void
