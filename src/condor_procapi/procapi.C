@@ -86,6 +86,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 		} else {
 			pi->pid = pid;
 			perror ( "PIOCPSINFO Error occurred" );
+			close( fd );
 			return -2;
 		}
 
@@ -109,6 +110,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 		} else {
 			pi->pid = pid;
 			perror ( "PIOCUSAGE Error occurred" );
+			close( fd );
 			return -2;
 		}
 #else  //here we are in osf/1, which doesn't give this info.
@@ -177,6 +179,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 		} else {
 			pi->pid = pid;
 			perror ( "PIOCSTATUS Error occurred" );
+			close( fd );
 			return -2;
 		}
 			// close the /proc/pid file
@@ -211,6 +214,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     else {
       dprintf (D_FULLDEBUG, "Problems reading %s.\n", path );
       pi->pid = pid;
+      close( fd );
       return -2;
     }
   }
@@ -244,6 +248,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     }
     else {
       dprintf (D_FULLDEBUG, "Problems reading %s.\n", path );
+      close( fd );
       return -2;
     }
   }
@@ -377,6 +382,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
         fgets ( s, 256, fd );
       
       sscanf ( s, "%s %lu", junk, &boottime );
+	  close( fd );
     }
     else {
       dprintf (D_FULLDEBUG, "Problem opening /proc/stat for btime.\n" );
