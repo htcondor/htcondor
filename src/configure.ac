@@ -181,7 +181,7 @@ elif test $os = "Linux" ; then
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-       _cv_linux_distro="RH-UNKNOWN"
+       _cv_linux_distro="RH_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/SuSE-release" ; then
@@ -193,12 +193,12 @@ elif test $os = "Linux" ; then
      * )
        AC_MSG_WARN([Condor is not yet ported to SuSE version $_suse_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-       _cv_linux_distro="SuSE-UNKNOWN"
+       _cv_linux_distro="SuSE_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/debian_version" ; then
     _deb_vers=`cat /etc/debian_version | sed 's/\./_/g'`;
-    _cv_linux_distro="DEBIAN-`echo _deb_vers`"
+    _cv_linux_distro="DEBIAN_`echo _deb_vers`"
     AC_MSG_WARN([Condor is not yet ported to Debian Linux distributions])
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   else
@@ -209,7 +209,7 @@ elif test $os = "Linux" ; then
   # this perl 1-liner takes all space-delimited input, sticks it
   # together with '_' marks, and lower-cases the whole thing
   _cv_sysname="`echo $_cv_arch $_cv_linux_distro | perl -ane 'print lc join('_',@F)'`"
-  _cv_opsys_vers="LINUX-$_cv_linux_distro"
+  _cv_opsys_vers="LINUX_$_cv_linux_distro"
 
 elif test $os = "SunOS" ; then
   _cv_op_sys="Solaris"
@@ -277,13 +277,13 @@ elif test $os = "Darwin" ; then
   _cv_op_sys="Darwin"
   _cv_opsys="DARWIN"
   if test "$osrelease" = "6.8" ; then
-    _cv_opsys_vers="DARWIN-6_8"
+    _cv_opsys_vers="DARWIN_6_8"
     _cv_sysname="ppc_macosx"
   elif test "$osrelease" = "7.0.0" ; then
-    _cv_opsys_vers="DARWIN-7_0"
+    _cv_opsys_vers="DARWIN_7_0"
     _cv_sysname="ppc_macosx_7_0"
   else
-    _cv_opsys_vers="DARWIN-UNKNOWN"
+    _cv_opsys_vers="DARWIN_UNKNOWN"
     AC_MSG_WARN([Unrecognised MacOSX/Darwin version])
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   fi  

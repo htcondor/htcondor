@@ -35,7 +35,7 @@ OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		$(CONDOR_AUTH_OBJ) $(CONDOR_TYPE_OBJ) condor_rw.o \
 		SafeMsg.o condor_crypt.o $(CONDOR_CRYPT_OBJ) CryptKey.o \
 		condor_secman.o
-#		autoTest.o manTest.o
+/*		autoTest.o manTest.o */
 
 library_target(libcedar.a,$(OBJ))
 
@@ -49,10 +49,10 @@ release:: all
 stripped:: all
 static:: all
 
-#  reli_sock_no_auth.o: reli_sock.C
-#  $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \
-#  -c reli_sock.C -o reli_sock_no_auth.o
+/* reli_sock_no_auth.o: reli_sock.C */
+/* $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \ */
+/* -c reli_sock.C -o reli_sock_no_auth.o */
 
-#IMPORT_LINKS = ../../config/import_links
-#import(../condor_c++_util,MyString.o)
+/* IMPORT_LINKS = ../../config/import_links */
+/* import(../condor_c++_util,MyString.o) */
 

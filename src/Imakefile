@@ -259,8 +259,7 @@ really-clean:: clean-up
 
 clean-up:
 	rm -rf *.out Makefile */Makefile* release_* \
-		strip_dir strip_contrib static_dir static_contrib pure_bin \
-		g gpt gpt-2.1  BUILD binaries \
+		strip_dir strip_contrib static_dir static_contrib pure_bin
 
 reallyclean: really-clean
 

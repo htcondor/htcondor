@@ -18,6 +18,7 @@ fi
 
 IMAKE=imake
 if [ X$USE_OLD_IMAKE = X ] ; then
+
 if [ -d ../imake ] ; then
     IMAKEROOT="../imake"
 elif [ -d ../../imake ] ; then
@@ -44,22 +45,12 @@ fi
 if [ ! -x $IMAKE ] ; then
     # if it's not here yet, fatal error
     echo "Failed to build imake!"
-p   exit 1
+	exit 1
 fi
 
-# Now, find an appropriate cpp to use
-if [ ! $os = "AIX" ] ; then
-	IMAKECPP="$IMAKEROOT/imake_cpp"
-	if [ ! -x $IMAKECPP ] ; then
-    	if [ -f $IMAKECPP ] ; then
-        	rm -f $IMAKECPP
-    	fi	 
-    	echo '#!/bin/sh' > $IMAKECPP
-    	echo $Imakecppflags >> $IMAKECPP
-    	chmod 755 $IMAKECPP
-	fi
-	export IMAKECPP
-fi
+# use our supplied script to figure out which cpp to call on what architecture
+IMAKECPP="$IMAKEROOT/ansi_cpp"
+export IMAKECPP
 
 # end of USE_OLD_IMAKE
 fi

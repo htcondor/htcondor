@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# pick an appropriate vendor supplied cpp and invoke it, possibly with 
+# arguments in addition to the ones supplied to this program.
+
+os=`uname -s | sed 's/IRIX.*/IRIX/'`
+
+case "x$os" in
+	xAIX)
+		exec /lib/cpp $*
+		;;
+	xOSF1)
+		exec /lib/cpp $*
+		;;
+	xHP-UX)
+		# This could also potentially be /usr/ccs/lbin/cpp...
+		exec /lib/cpp.ansi $*
+		;;
+	xIRIX)
+		# stupid irix, this is santctioned by the X distribution.
+		exec cc -E -cckr $*
+		;;
+	xLinux)
+		exec /lib/cpp $*
+		;;
+	xDarwin)
+		# /usr/bin/cpp is funny on this OS, I can't figure out how to tell
+		# it not to perform precompilation of the headers. So I'll just use 
+		# the cpp with the installed gcc, which should be fine.
+		exec gcc -E -w -no-cpp-precomp $*
+		;;
+	xSunOS)
+		exec /usr/ccs/lib/cpp $*
+		;;
+	*)
+		echo "$0 can't figure out the right cpp to use on $os!";
+		exit 1;
+		;;
+esac
+
+exit 1;

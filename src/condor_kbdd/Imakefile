@@ -5,9 +5,9 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) 
 
-CMNT On Digital Unix 5.0, if we are linking against libX11.a, we need
-CMNT -ldnet_stub.  libX11.a has hooks to support DecNet, and we must
-CMNT link with the DecNet stub library to avoid undefined symbols. 
+XCOMM On Digital Unix 5.0, if we are linking against libX11.a, we need
+XCOMM -ldnet_stub.  libX11.a has hooks to support DecNet, and we must
+XCOMM link with the DecNet stub library to avoid undefined symbols. 
 #if IS_DUX5
 LDFLAGS = -lX11 -ldnet_stub
 #else
@@ -22,14 +22,14 @@ strip_target($(NAME),sbin,EXECUTABLE_MODE)
 
 #if IS_DUX5 && NEEDS_OPENSSL
 
-CMNT On Digital Unix 5.0, if we are using OpenSSL security, statically 
-CMNT linking against libX11.a causes additional problems.  libX11.a
-CMNT defines its own version of des_key_sched, an encryption related
-CMNT method that gives us multiply defined symbols when we link with
-CMNT the OpenSSL libcrypto.a.  To get a statically linked kbdd on this
-CMNT platform, we do the ugly hack of using ToUpper to mask the
-CMNT des_key_sched symbol from a local copy of libX11.a.  So, we
-CMNT handle statically linking for DUX5 totally seperate. 
+XCOMM On Digital Unix 5.0, if we are using OpenSSL security, statically 
+XCOMM linking against libX11.a causes additional problems.  libX11.a
+XCOMM defines its own version of des_key_sched, an encryption related
+XCOMM method that gives us multiply defined symbols when we link with
+XCOMM the OpenSSL libcrypto.a.  To get a statically linked kbdd on this
+XCOMM platform, we do the ugly hack of using ToUpper to mask the
+XCOMM des_key_sched symbol from a local copy of libX11.a.  So, we
+XCOMM handle statically linking for DUX5 totally seperate. 
 
 condor_kbdd.static: $(OBJ) $(LIB) ./libX11.a
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o condor_kbdd.static $(OBJ) $(LIB) -lm ./libX11.a -ldnet_stub $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)  $(DEMANGLE)

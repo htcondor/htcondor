@@ -105,10 +105,10 @@
 #   define LibPath	BaseLibPath
 #   define MipsFlags
 #elif ( MIPS_VERSION == 3 )
-#   define LibPath	concat(BaseLibPath,/mips3)
+#   define LibPath	Concat(BaseLibPath,/mips3)
 #   define MipsFlags -mips3
 #elif ( MIPS_VERSION == 4 )
-#   define LibPath	concat(BaseLibPath,/mips4)
+#   define LibPath	Concat(BaseLibPath,/mips4)
 #   define MipsFlags -mips4
 #else
 #error UNKNOWN MIPS_VERSION
@@ -118,8 +118,8 @@
    Now that we finally know everything, define all the things we
    actually care about.
 */
-#define LibC    	concat(LibPath,/libc.so.1)
-#define CrtN		concat(LibPath,/crtn.o)
+#define LibC    	Concat(LibPath,/libc.so.1)
+#define CrtN		Concat(LibPath,/crtn.o)
 
 /* add certain flags which will only work with gnu gcc because
 PlatformFlags is used by the vendor compiler in the test suite */

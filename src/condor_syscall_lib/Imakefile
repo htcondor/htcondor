@@ -1,8 +1,8 @@
-CMNT
-CMNT Define the features used from syscall.tmpl.
-CMNT Unlike libckpt, the syscall library uses
-CMNT all of the features.
-CMNT
+XCOMM
+XCOMM Define the features used from syscall.tmpl.
+XCOMM Unlike libckpt, the syscall library uses
+XCOMM all of the features.
+XCOMM
 
 #if DOES_REMOTE_SYSCALLS
 	REMOTE_SYSCALLS = -DREMOTE_SYSCALLS
@@ -451,8 +451,8 @@ strip_library($(COMPRESS_LIB),lib)
 static_library($(COMPRESS_LIB),lib)
 #endif
 
-CMNT If no remote syscalls & no checkpointing support, then no need
-CMNT to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
+XCOMM If no remote syscalls & no checkpointing support, then no need
+XCOMM to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
 #if (!DOES_CHECKPOINTING) && (!DOES_REMOTE_SYSCALLS)
 release:: all
 stripped:: all
