@@ -29,6 +29,7 @@
 #include "condor_query.h"
 #include "condor_q.h"
 #include "condor_io.h"
+#include "condor_string.h"
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "my_hostname.h"
@@ -50,13 +51,22 @@ static char *_FileName_ = __FILE__;
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
+extern  void short_print_to_buffer(char*,int,int,const char*,int,int,int,int,
+							int, const char *);
 static  void processCommandLineArguments(int, char *[]);
+
+static  bool process_buffer_line( ClassAd * );
 
 static 	void short_header (void);
 static 	void usage (char *);
+static 	void io_display (ClassAd *);
+static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
+static 	char * bufferJobShort (ClassAd *);
 static 	void shorten (char *, int);
-static	bool show_queue (char*, char*, char*);
+static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine);
+static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
+								  char* scheddMachine);
 
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0;
 static 	int malformed, unexpanded, running, idle, held;
@@ -66,6 +76,7 @@ static	QueryResult result;
 static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
+static  ExtArray<char*> *output_buffer;
 
 static 	bool		customFormat = false;
 static  bool		cputime = false;
@@ -84,6 +95,7 @@ static  int			findSubmittor( char * );
 static	void 		setupAnalysis();
 static 	void		fetchSubmittorPrios();
 static	void		doRunAnalysis( ClassAd* );
+static	char *		doRunAnalysisToBuffer( ClassAd* );
 struct 	PrioEntry { MyString name; float prio; };
 static 	bool		analyze	= false;
 static	bool		run = false;
@@ -98,6 +110,8 @@ static  ExtArray<PrioEntry> prioTable;
 #ifndef WIN32
 template class ExtArray<PrioEntry>;
 #endif
+	
+char return_buff[4096];
 
 extern 	"C"	int		Termlog;
 
@@ -130,7 +144,13 @@ int main (int argc, char **argv)
 			sprintf( scheddAddr, "%s", schedd.addr() );
 			sprintf( scheddName, "%s", schedd.name() );
 			sprintf( scheddMachine, "%s", schedd.fullHostname() );
-			exit( !show_queue( scheddAddr, scheddName, scheddMachine ) );
+			if ( verbose ) {
+				exit( !show_queue( scheddAddr, scheddName,
+							scheddMachine ) );
+			} else {
+				exit( !show_queue_buffered( scheddAddr, scheddName,
+							scheddMachine ) );
+			}
 		} else {
 			fprintf( stderr, "Can't display queue of local schedd\n" );
 			exit( 1 );
@@ -174,7 +194,11 @@ int main (int argc, char **argv)
 			!ad->LookupString(ATTR_MACHINE, scheddMachine))
 				continue;
 	
-		show_queue( scheddAddr, scheddName, scheddMachine );
+		if( verbose ) {
+			show_queue( scheddAddr, scheddName, scheddMachine );
+		} else {
+			show_queue_buffered( scheddAddr, scheddName, scheddMachine );
+		}
 		first = false;
 	}
 
@@ -491,7 +515,14 @@ static void io_header()
 	printf("%-8s %-8s %8s %8s %8s %10s %8s %8s\n", "ID","OWNER","READ","WRITE","SEEK","XPUT","BUFSIZE","BLOCKSIZE");
 }
 
-static void io_display(ClassAd *ad)
+static void
+io_display(ClassAd *ad)
+{
+	printf("%s", buffer_io_display( ad ) );
+}
+
+static char *
+buffer_io_display( ClassAd *ad )
 {
 	int cluster=0, proc=0;
 	int read_bytes=0, write_bytes=0, seek_count=0;
@@ -511,24 +542,39 @@ static void io_display(ClassAd *ad)
 	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
 	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
 
-	printf("%4d.%-3d %-8s ",cluster,proc,owner);
+	sprintf(return_buff, "%4d.%-3d %-8s ",cluster,proc,owner);
 
 	if(wall_clock<0) {
-		printf("          [ no i/o data collected yet ]\n");
+		strcat(return_buff, "          [ no i/o data collected yet ]\n");
 	} else {
 		if(wall_clock==0) wall_clock=1;
-		printf("%8s ",metric_units(read_bytes));
-		printf("%8s ",metric_units(write_bytes));
-		printf("%8d ",seek_count);
-		printf("%10s/s ",metric_units((int)((read_bytes+write_bytes)/wall_clock)));
-		printf("%8s ",metric_units(buffer_size));
-		printf("%8s\n",metric_units(block_size));
+		sprintf( return_buff,
+		"%s"
+		"%8s "
+		"%8s "
+		"%8d "
+		"%10s/s "
+		"%8s "
+		"%8s\n"
+		,return_buff
+		,metric_units(read_bytes)
+		,metric_units(write_bytes)
+		,seek_count
+		,metric_units((int)((read_bytes+write_bytes)/wall_clock))
+		,metric_units(buffer_size)
+		,metric_units(block_size) );
 	}
+	return ( return_buff );
 }
 
 static void
 displayJobShort (ClassAd *ad)
-{
+{ 
+	printf( "%s", bufferJobShort( ad ) );
+}
+
+static char *
+bufferJobShort( ClassAd *ad ) {
 	int cluster, proc, date, status, prio, image_size;
 	float utime;
 	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
@@ -544,17 +590,17 @@ displayJobShort (ClassAd *ad)
 		!ad->EvalString  (ATTR_OWNER, NULL, owner)				||
 		!ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
 	{
-		printf (" --- ???? --- \n");
-		return;
+		sprintf (return_buff, " --- ???? --- \n");
+		return( return_buff );
 	}
 	
 	int niceUser;
     if( ad->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
         char tmp[100];
-        strcpy(tmp,NiceUserName);
+        strncpy(tmp,NiceUserName,99);
         strcat(tmp,".");
         strcat(tmp,owner);
-        strcpy(owner,tmp);
+        strncpy(owner,tmp, 63);
     }
 
 	shorten (owner, 14);
@@ -564,8 +610,8 @@ displayJobShort (ClassAd *ad)
 		sprintf( buffer, "%s", basename(cmd) );
 	}
 	utime = job_time(utime,ad);
-	short_print (cluster, proc, owner, date, (int)utime, status, prio,
-					image_size, buffer); 
+	short_print_to_buffer (return_buff, cluster, proc, owner, date, (int)utime,
+					status, prio, image_size, buffer); 
 
 	switch (status)
 	{
@@ -574,6 +620,7 @@ displayJobShort (ClassAd *ad)
 		case RUNNING:    running++;    break;
 		case HELD:		 held++;	   break;
 	}
+	return return_buff;
 }
 
 static void 
@@ -682,7 +729,7 @@ format_owner (char *owner, AttrList *ad)
 	int niceUser;
 	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
 		char tmp[100];
-		strcpy(tmp,NiceUserName);
+		strncpy(tmp,NiceUserName,99);
 		strcat(tmp, ".");
 		strcat(tmp, owner);
 		sprintf(result, "%-14.14s", tmp);
@@ -802,6 +849,88 @@ usage (char *myName)
 			myName);
 }
 
+int
+output_sorter( char ** a, char ** b ) {
+
+	int daa, dab, dba, dbb;
+
+	if( analyze ) {
+		sscanf( *a, "---\n%d.%d", &daa, &dab );
+		sscanf( *b, "---\n%d.%d", &dba, &dbb );
+	} else {
+		sscanf( *a, "%d.%d", &daa, &dab );
+		sscanf( *b, "%d.%d", &dba, &dbb );
+	}
+
+	if (daa < dba) { return -1; }
+	if (daa > dba) { return  1; }
+	if (dab < dbb) { return -1; }
+	if (dab > dbb) { return  1; }
+	return 0;
+}
+
+static bool
+show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
+{
+	char **the_output;
+	output_buffer = new ExtArray<char*>;
+
+	// fetch queue from schedd and stash it in output_buffer.
+	if( Q.fetchQueueFromHostAndProcess( scheddAddr,
+									 process_buffer_line ) != Q_OK ) {
+		printf ("\n-- Failed to fetch ads from: %s : %s\n", 
+									scheddAddr, scheddMachine);	
+		return false;
+	}
+
+	the_output = &(*output_buffer)[0];
+	qsort(the_output, output_buffer->getlast()+1, sizeof(char*), output_sorter);
+
+	// Print the output header
+
+	short_header();
+
+	// Print the jobs
+	for (int i=0;i<=output_buffer->getlast(); i++) {
+		printf("%s",(*output_buffer)[i]);
+	}
+
+	// If we want to summarize, do that too.
+	if( summarize ) {
+		printf( "\n%d jobs; "
+				"%d idle, %d running, %d held",
+				unexpanded+idle+running+held+malformed,
+				idle,running,held);
+		if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
+		if (malformed>0) printf( ", %d malformed",malformed);
+           printf("\n");
+	}
+
+	delete output_buffer;
+
+	return true;
+}
+
+// process_buffer_line returns 1 so that the ad that is passed
+// to it should be deleted.
+
+static bool
+process_buffer_line( ClassAd *job )
+{
+	if( analyze ) {
+		(*output_buffer)[output_buffer->getlast()+1] =
+								strnewp( doRunAnalysisToBuffer( job ) );
+	} else if ( show_io ) {
+		(*output_buffer)[output_buffer->getlast()+1] =
+								strnewp( buffer_io_display( job ) );
+
+
+	} else {
+		(*output_buffer)[output_buffer->getlast()+1] =
+								strnewp( bufferJobShort( job ) );
+	}
+	return true;
+}
 
 static bool
 show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
@@ -1067,6 +1196,12 @@ fetchSubmittorPrios()
 static void
 doRunAnalysis( ClassAd *request )
 {
+	printf("%s", doRunAnalysisToBuffer( request) );
+}
+
+static char *
+doRunAnalysisToBuffer( ClassAd *request )
+{
 	char	owner[128];
 	char	remoteUser[128];
 	char	buffer[128];
@@ -1085,11 +1220,13 @@ doRunAnalysis( ClassAd *request )
 	int		available		= 0;
 	int		totalMachines	= 0;
 
-	if( !request->LookupString( ATTR_OWNER , owner ) ) return;
+	return_buff[0]='\0';
+
+	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
 	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
 
 	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
-		return;
+		return "Nothing here.\n";
 
 	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
 	request->Insert( buffer );
@@ -1098,19 +1235,22 @@ doRunAnalysis( ClassAd *request )
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
 	if( jobState == RUNNING ) {
-		printf( "---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
+		sprintf( return_buff,
+			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
 			proc );
-		return;
+		return return_buff;
 	}
 	if( jobState == HELD ) {
-		printf( "---\n%03d.%03d:  Request is held.\n\n", cluster, 
+		sprintf( return_buff,
+			"---\n%03d.%03d:  Request is held.\n\n", cluster, 
 			proc );
-		return;
+		return return_buff;
 	}
 	if( jobState == REMOVED ) {
-		printf( "---\n%03d.%03d:  Request is removed.\n\n", cluster, 
+		sprintf( return_buff,
+			"---\n%03d.%03d:  Request is removed.\n\n", cluster, 
 			proc );
-		return;
+		return return_buff;
 	}
 
 	startdAds.Open();
@@ -1119,18 +1259,19 @@ doRunAnalysis( ClassAd *request )
 		remoteUser[0] = '\0';
 		totalMachines++;
 		offer->LookupString( ATTR_NAME , buffer );
-		if( verbose ) printf( "%-15.15s ", buffer );
+		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
 		if( !( (*offer) >= (*request) ) ) {
-			if( verbose ) printf( "Failed request constraint\n" );
+			if( verbose ) sprintf( return_buff,
+				"%sFailed request constraint\n", return_buff );
 			fReqConstraint++;
 			continue;
 		} 
 
 		// 2. Offer satisfied? 
 		if( !( (*offer) <= (*request) ) ) {
-			if( verbose ) printf( "Failed offer constraint\n" );
+			if( verbose ) strcat( return_buff, "Failed offer constraint\n");
 			fOffConstraint++;
 			continue;
 		}	
@@ -1141,14 +1282,17 @@ doRunAnalysis( ClassAd *request )
 			if( stdRankCondition->EvalTree( offer, request, &result ) &&
 					result.type == LX_INTEGER && result.i == TRUE ) {
 				// both sides satisfied and no remote user
-				if( verbose ) printf( "Available\n" );
+				if( verbose ) sprintf( return_buff, "%sAvailable\n",
+					return_buff );
 				available++;
 				continue;
 			} else {
 				// no remote user, but std rank condition failed
 				fRankCond++;
 				if( verbose ) {
-					printf("Failed rank condition: MY.Rank > MY.CurrentRank\n");
+					sprintf( return_buff,
+						"%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
+						return_buff);
 				}
 				continue;
 			}
@@ -1162,7 +1306,8 @@ doRunAnalysis( ClassAd *request )
 			if( stdRankCondition->EvalTree( offer , request , &result ) &&
 				result.type == LX_INTEGER && result.i == TRUE )  
 			{
-				if( verbose ) printf( "Available\n" );
+				if( verbose )
+					sprintf( return_buff, "%sAvailable\n", return_buff );
 				available++;
 				continue;
 			} else {
@@ -1176,15 +1321,19 @@ doRunAnalysis( ClassAd *request )
 					{
 						fPreemptReqTest++;
 						if( verbose ) {
-							printf( "Can preempt %s, but failed "
+							sprintf( return_buff,
+									"%sCan preempt %s, but failed "
 									"PREEMPTION_REQUIREMENTS test\n",
+									return_buff,
 									remoteUser);
 						}
 						continue;
 					} else {
 						// not held
 						if( verbose ) {
-							printf( "Available (can preempt %s)\n", remoteUser);
+							sprintf( return_buff,
+								"%sAvailable (can preempt %s)\n",
+								return_buff, remoteUser);
 						}
 						available++;
 					}
@@ -1199,53 +1348,64 @@ doRunAnalysis( ClassAd *request )
 			// failed 4
 			fPreemptPrioCond++;
 			if( verbose ) {
-				printf( "Insufficient priority to preempt %s\n" , 
-					remoteUser );
+				sprintf( return_buff,
+					"%sInsufficient priority to preempt %s\n" , 
+					return_buff, remoteUser );
 			}
 			continue;
 		}
 	}
 	startdAds.Close();
 
-	printf( "---\n%03d.%03d:  Run analysis summary.  Of %d resource offers,\n", 
-			cluster, proc, totalMachines );
-	printf( "\t%5d do not satisfy the request's constraints\n", fReqConstraint);
-	printf( "\t%5d resource offer constraints are not satisfied by this "
-			"request\n", fOffConstraint );
-	printf( "\t%5d are serving equal or higher priority customers%s\n", 
-					fPreemptPrioCond, niceUser ? "(*)" : "" );
-	printf( "\t%5d do not prefer this job\n", fRankCond );
-	printf( "\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n",
-			fPreemptReqTest );
-	printf( "\t%5d are available to service your request\n", available );
+	sprintf( return_buff,
+		"%s---\n%03d.%03d:  Run analysis summary.  Of %d resource offers,\n" 
+		"\t%5d do not satisfy the request's constraints\n"
+		"\t%5d resource offer constraints are not satisfied by this request\n"
+		"\t%5d are serving equal or higher priority customers%s\n" 
+		"\t%5d do not prefer this job\n"
+		"\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
+		"\t%5d are available to service your request\n",
+
+		return_buff, cluster, proc, totalMachines,
+		fReqConstraint,
+		fOffConstraint,
+		fPreemptPrioCond, niceUser ? "(*)" : "",
+		fRankCond,
+		fPreemptReqTest,
+		available );
 
 	if( niceUser ) {
-		printf( "\n\t(*)  Since this is a \"nice-user\" request, this request "
+		sprintf( "%s\n\t(*)  Since this is a \"nice-user\" request, this request "
 			"has a\n\t     very low priority and is unlikely to preempt other "
-			"requests.\n" );
+			"requests.\n", return_buff );
 	}
 			
 
 	if( fReqConstraint == totalMachines ) {
 		char reqs[2048];
 		ExprTree *reqExp;
-		printf( "\nWARNING:  Be advised:\n" );
-		printf( "   No resources matched request's constraints\n" );
-		printf( "   Check the %s expression below:\n\n" , ATTR_REQUIREMENTS );
+		strcat( return_buff, "\nWARNING:  Be advised:\n");
+		strcat( return_buff, "   No resources matched request's constraints\n");
+		sprintf( return_buff, "%s   Check the %s expression below:\n\n" , 
+			return_buff, ATTR_REQUIREMENTS );
 		if( !(reqExp = request->Lookup( ATTR_REQUIREMENTS) ) ) {
-			printf( "   ERROR:  No %s expression found" , ATTR_REQUIREMENTS );
+			sprintf( return_buff, "%s   ERROR:  No %s expression found" ,
+				return_buff, ATTR_REQUIREMENTS );
 		} else {
 			reqs[0] = '\0';
 			reqExp->PrintToStr( reqs );
-			printf( "%s\n\n", reqs );
+			sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
 		}
 	}
 
 	if( fOffConstraint == totalMachines ) {
-		printf( "\nWARNING:  Be advised:" );
-		printf("   Request %d.%d did not match any resource's constraints\n\n",
-				cluster, proc);
+		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
+		sprintf( return_buff, "%s   Request %d.%d did not match any"
+			"resource's constraints\n\n", return_buff, cluster, proc);
 	}
+
+	//printf("%s",return_buff);
+	return return_buff;
 }
 
 
@@ -1280,7 +1440,7 @@ fixSubmittorName( char *name, int niceUser )
 			fprintf( stderr, "Error:  UID_DOMAIN not found in config file\n" );
 			exit( 1 );
 		}
-		strcpy( uid_domain , tmp );
+		strncpy( uid_domain , tmp , 63);
 		free( tmp );
 		initialized = true;
 	}
