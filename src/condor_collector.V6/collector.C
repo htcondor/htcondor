@@ -144,17 +144,17 @@ main_init(int argc, char *argv[])
 	
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,READ);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
 	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,READ);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
 	daemonCore->Register_Command(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,READ);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
 	daemonCore->Register_Command(INVALIDATE_CKPT_SRVR_ADS,
 		"INVALIDATE_CKPT_SRVR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,READ);
+		"receive_invalidation",NULL,WRITE);
 	daemonCore->Register_Command(INVALIDATE_SUBMITTOR_ADS,
 		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,READ);
+		"receive_invalidation",NULL,WRITE);
 
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
