@@ -23,37 +23,23 @@
 #ifndef FIX_SOCKET_H
 #define FIX_SOCKET_H
 
+
+#if defined(OSF1) && defined( _XOPEN_SOURCE_EXTENDED )
+/* If _XOPEN_SOURCE_EXTENDED is defined on dux4.0 when you include
+   sys/socket.h "accept" gets #define'd, which screws up condor_io,
+   since we have methods called "accept" in there.  -Derek 3/26/98 */
+#	define CONDOR_XOPEN_SOURCE_EXTENDED
+#	undef _XOPEN_SOURCE_EXTENDED
+#endif
+
 #if !defined(WIN32)
-#include <sys/socket.h>
+#	include <sys/socket.h>
+#endif
+
+#if defined(OSF1) && defined( CONDOR_XOPEN_SOURCE_EXTENDED )
+#	undef CONDOR_XOPEN_SOURCE_EXTENDED
+#	define _XOPEN_SOURCE_EXTENDED
 #endif
 
 
-/*
-  For some reason the g++ includes on Ultrix 4.3 fail to provide
-  these prototypes, even though the Ultrix 4.2 includes did...
-  Same goes for OSF1  JCP
-  Same goes for SUNOS - mike
-*/
-#if defined(ULTRIX43) || defined(OSF1) || defined(SUNOS41)
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-#if defined(__STDC__) || defined(__cplusplus)
-	int getpeername( int, struct sockaddr *, int * );
-	int socket( int, int, int );
-	int connect( int, const struct sockaddr *, int );
-#else
-	int getpeername();
-	int socket();
-	int connect();
-#endif
-
-#if defined(__cplusplus)
-}
-#endif
-
-#endif	/* ULTRIX43 */
-
-#endif
+#endif /* FIX_SOCKET_H */
