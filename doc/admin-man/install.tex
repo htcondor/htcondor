@@ -246,14 +246,16 @@ installed?}
 \begin{description}
 \item[Config Files] There are a number of config files that allow you
 different levels of control over how Condor is configured at each
-machine in your pool.  In general, you will have 1 global
-configuration file for each platform.  In addition, there is a local
+machine in your pool.  
+The global config file is shared by all machines in the pool.
+For ease of administration, this file should be located on a shared
+filesystem, if possible.
+In addition, there is a local
 config file for each machine, where you can override settings in the
 global file.  This allows you to have different daemons running,
 different policies for when to start and stop Condor jobs, and so on.
-Beginning with Condor version 6.0.1, you can use a single config file
-which is shared among all platforms in your pool, and have both
-platform-specific and machine-specific files.  See
+You can also have config files specific to each platform in your pool.
+See
 section~\ref{sec:Multiple-Platforms} on
 page~\pageref{sec:Multiple-Platforms} about ``Configuring Condor for
 Multiple Platforms'' for details.
@@ -279,11 +281,11 @@ error message and exit:
    \item \File{\Tilde condor/condor\_config}
 \end{enumerate}
 
-Next, Condor tries to load the machine-specific, or local config file.
-The only way to specify the local config file is in the global config
+Next, Condor tries to load the local config file(s).
+The only way to specify the local config file(s) is in the global config
 file, with the \Macro{LOCAL\_CONFIG\_FILE} macro.  If that macro isn't
-set, no local config file is used.  Beginning with Condor version
-6.0.1, this macro can be a list of files instead of a single file.
+set, no local config file is used.  This macro can be a list of files
+or a single file.
 
 The root config files come in last.  The global file is searched for
 in the following places:
@@ -292,10 +294,10 @@ in the following places:
    \item \File{\Tilde condor/condor\_config.root}
 \end{enumerate}
 
-The local root config file is found with the
+The local root config file(s) are found with the
 \Macro{LOCAL\_ROOT\_CONFIG\_FILE} macro.  If that isn't set, no local
-root config file is used.  Beginning with Condor version 6.0.1, this
-macro can also be a list of files instead of a single file.
+root config file is used.  This
+macro can be a list of files or a single file.
 
 \item[Release Directory]
 
@@ -305,7 +307,8 @@ choose to install these 4 directories we call the 'release directory'
 (specified by the 'RELEASE\_DIR' parameter in the config file).  Each
 release directory contains platform dependent binaries and libraries,
 so you will need to install a separate one for each kind of machine in
-your pool.
+your pool.  For ease of administration, these directories should be
+located on a shared filesystem, if possible.
 
 \begin{itemize}
      \item User Binaries:
