@@ -45,6 +45,8 @@
 #include "condor_ver_info.h"
 #include "string_list.h"
 #include "condor_socket_types.h"
+#include "classad_util.h"
+
 
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
@@ -1485,7 +1487,11 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 		*/
 	s->virt_pid = -1;
 
-	JobAd->LookupInteger(ATTR_KILL_SIG, s->soft_kill_sig);
+	int soft_kill = findSoftKillSig( JobAd );
+	if( soft_kill < 0 ) {
+		soft_kill = SIGTERM;
+	}
+	s->soft_kill_sig = soft_kill;
 
 	s->cmd = Strdup( p->cmd[0] );
 	s->args = Strdup( p->args[0] );
