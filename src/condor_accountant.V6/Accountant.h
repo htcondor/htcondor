@@ -49,12 +49,19 @@ private:
   typedef HashTable<MyString, ClassAd*> ResourceTable;
   ResourceTable Resources;
 
-  int DeadCustomer(CustomerRecord* Customer);
-  
-  CustomerRecord* GetCustomerRecord(const MyString& CustomerName);
-  CustomerRecord* NewCustomerRecord(const MyString& CustomerName);
+  // --------------------------------------------------------
 
   MyString GetResourceName(ClassAd* Resource);
+  ClassAd* GetResource(const MyString& ResourceName);
+  void RemoveResource(const MyString& ResourceName);
+  ClassAd* AddResource(const MyString& ResourceName, ClassAd* Resource);
+
+  // --------------------------------------------------------
+
+  void CheckDeadCustomer(const MyString& CustomerName, CustomerRecord* Customer);
+  CustomerRecord* GetCustomer(const MyString& CustomerName);
+  CustomerRecord* NewCustomer(const MyString& CustomerName);
+
 
 };
 

@@ -29,13 +29,20 @@ main()
   // Test
   //----------------------------------------------
 
+  ClassAd* AccountantClassAd=new ClassAd();
+  config(AccountantClassAd);
+
   cout<<"Start"<<endl;
   accountant.SetPriority("Arieh",10);
   accountant.SetPriority("Shlomo",20);
-  accountant.SetPriority("Arieh",0);
+  accountant.SetPriority("Arieh",7);
   cout << accountant.GetPriority("Arieh") << endl;
   cout << accountant.GetPriority("Shlomo") << endl;
   cout << accountant.GetPriority("Yoram") << endl;
+
+  //accountant.AddMatch("Arieh",AccountantClassAd);
+  cout << "OK" << endl;
+  accountant.UpdatePriorities();
 
   cout<<"End."<<endl;
   //----------------------------------------------

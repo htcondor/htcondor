@@ -12,79 +12,63 @@ extern "C"
 
 int Accountant::GetPriority(const MyString& CustomerName) 
 {
-  CustomerRecord* Customer=GetCustomerRecord(CustomerName);
+  CustomerRecord* Customer=GetCustomer(CustomerName);
   if (!Customer) return 0;
   int Priority=Customer->Priority;
-  if (DeadCustomer(Customer)) Customers.remove(CustomerName);
+  CheckDeadCustomer(CustomerName,Customer);
   return Priority;
 }
 
 void Accountant::SetPriority(const MyString& CustomerName, int Priority) 
 {
-  CustomerRecord* Customer=NewCustomerRecord(CustomerName);
+  CustomerRecord* Customer=NewCustomer(CustomerName);
   Customer->Priority=Priority;
-  if (DeadCustomer(Customer)) Customers.remove(CustomerName);
+  CheckDeadCustomer(CustomerName,Customer);
 }
 
 void Accountant::AddMatch(const MyString& CustomerName, ClassAd* Resource) 
 {
-  CustomerRecord* Customer=NewCustomerRecord(CustomerName);
+  CustomerRecord* Customer=NewCustomer(CustomerName);
   MyString ResourceName=GetResourceName(Resource);
   Customer->Resources.Add(ResourceName);
+  AddResource(ResourceName,Resource);
 }
 
 void Accountant::RemoveMatch(const MyString& CustomerName, ClassAd* Resource)
 {
-  CustomerRecord* Customer=GetCustomerRecord(CustomerName);
+  CustomerRecord* Customer=GetCustomer(CustomerName);
   if (!Customer) return;
   MyString ResourceName=GetResourceName(Resource);
   Customer->Resources.Remove(ResourceName);
-  if (DeadCustomer(Customer)) Customers.remove(CustomerName);
+  RemoveResource(ResourceName);
+  CheckDeadCustomer(CustomerName,Customer);
 }
 
 void Accountant::UpdatePriorities() 
 {
   CustomerRecord* Customer;
   MyString CustomerName;
+  int TotResources=0;
   Customers.startIterations();
-  while (Customers.iterate(CustomerName, Customer)) {
+  while (Customers.Iterate(CustomerName, Customer)) {
     int Priority=Customer->Priority;
     int ResourcesUsed=Customer->Resources.Count();
-    Priority=int(Priority*0.6)-ResourcesUsed;
+    TotResources+=ResourcesUsed;
+    Priority=int(Priority*0.6)-ResourcesUsed*10;
     Customer->Priority=Priority;
-    if (DeadCustomer(Customer)) Customers.remove(CustomerName);
+    CheckDeadCustomer(CustomerName,Customer);
   }
+#ifndef DEBUG_FLAG
+#include <iostream.h>
+  cout << "TotResources:" << TotResources << endl;
+#endif
 }
 
 //---------------------------------------------------------------
+// Resource functions
+//---------------------------------------------------------------
 
-// Returns 1 if Customer can be deleted else 0
-int Accountant::DeadCustomer(CustomerRecord* Customer) {
-  if (Customer->Priority==0 && Customer->Resources.Count()==0) return 1;
-  return 0;
-}
-
-// Get customer record, or NULL if it doesn't exist
-Accountant::CustomerRecord* Accountant::GetCustomerRecord(const MyString& CustomerName)
-{
-  CustomerRecord* Customer;
-  if (Customers.lookup(CustomerName,Customer)==-1) Customer=NULL;
-  return Customer;
-}
-
-
-
-// Check customer record, and create it if it doesn't exist
-Accountant::CustomerRecord* Accountant::NewCustomerRecord(const MyString& CustomerName)
-{
-  CustomerRecord* Customer=GetCustomerRecord(CustomerName);
-  if (Customer==NULL) {
-    Customer=new CustomerRecord();
-    Customers.insert(CustomerName,Customer);
-  }  
-  return Customer;
-}
-
+// Extract resource name from class-ad
 MyString Accountant::GetResourceName(ClassAd* Resource) 
 {
   ExprTree *tree;
@@ -109,3 +93,66 @@ MyString Accountant::GetResourceName(ClassAd* Resource)
 
   return Name;
 }
+
+//-------------------------------------------------------------
+// Resource add/remove/find functions
+//-------------------------------------------------------------
+
+// Get resource class ad
+ClassAd* Accountant::GetResource(const MyString& ResourceName)
+{
+  ClassAd* Resource;
+  if (Resources.lookup(ResourceName,Resource)==-1) Resource=NULL;
+  return Resource;
+}
+
+// Remove a resource
+void Accountant::RemoveResource(const MyString& ResourceName)
+{
+  ClassAd* Resource;
+  if (Resources.lookup(ResourceName,Resource)==0) {
+    delete Resource;
+    Resources.remove(ResourceName);
+  }
+}
+
+// Add (or replace) a resource class ad
+ClassAd* Accountant::AddResource(const MyString& ResourceName, ClassAd* Resource)
+{
+  RemoveResource(ResourceName);
+  ClassAd* Ad=new ClassAd(*Resource);
+  Resources.insert(ResourceName,Ad);
+  return Ad;
+}
+
+//-------------------------------------------------------------------
+// Customer functions
+//-------------------------------------------------------------------
+
+// Returns 1 if Customer can be deleted else 0
+void Accountant::CheckDeadCustomer(const MyString& CustomerName, CustomerRecord* Customer) {
+  if (Customer->Priority==0 && Customer->Resources.Count()==0) {
+    delete Customer;
+    Customers.remove(CustomerName);
+  }
+}
+
+// Get customer record, or NULL if it doesn't exist
+Accountant::CustomerRecord* Accountant::GetCustomer(const MyString& CustomerName)
+{
+  CustomerRecord* Customer;
+  if (Customers.lookup(CustomerName,Customer)==-1) Customer=NULL;
+  return Customer;
+}
+
+// Check customer record, and create it if it doesn't exist
+Accountant::CustomerRecord* Accountant::NewCustomer(const MyString& CustomerName)
+{
+  CustomerRecord* Customer=GetCustomer(CustomerName);
+  if (Customer==NULL) {
+    Customer=new CustomerRecord();
+    Customers.insert(CustomerName,Customer);
+  }  
+  return Customer;
+}
+
