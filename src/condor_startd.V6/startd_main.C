@@ -85,9 +85,6 @@ int main_reaper = 0;
 // Cron stuff
 StartdCronMgr	*Cronmgr;
 
-// Define static variables
-static	int old_polling_interval;
-
 /*
  * Prototypes of static functions.
  */
@@ -342,8 +339,6 @@ main_config( bool is_full )
 {
 	bool done_allocating;
 
-		// Stash old interval so we know if it's changed.
-	old_polling_interval = polling_interval;
 		// Reread config file for global settings.
 	init_params(0);
 		// Process any changes in the VM type specifications
@@ -365,9 +360,7 @@ finish_main_config( void )
 		// Reset various settings in the ResMgr.
 	resmgr->init_socks();
 	resmgr->reset_timers();
-	if( old_polling_interval != polling_interval ) {
-		resmgr->walk( &Resource::resize_load_queue );
-	}
+
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
 	Cronmgr->Reconfig( );
 	resmgr->starter_mgr.init();
