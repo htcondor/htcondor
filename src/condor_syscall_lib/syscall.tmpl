@@ -721,7 +721,7 @@ not_supported{
 	}
 	}
 #else 
-#if defined(IRIX53)
+#if defined(IRIX)
 	int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
 #else
 	int fstatfs( map(int fd), struct statfs *buf ) {
@@ -872,7 +872,7 @@ not_supported{
 #else
 	int gethostid();
 #endif
-#if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(IRIX53)
+#if defined(HPUX) || defined(LINUX) || defined(Solaris) || defined(IRIX)
 	int setrlimit( int resource, const  struct rlimit *rlp ) {
 #else
 	int setrlimit( int resource, /* const */ struct rlimit *rlp ) {
@@ -914,7 +914,7 @@ not_supported{
 	not_supported {
 		int statfs( char *path, struct statfs *buf, int len );
 	}
-#elif defined(IRIX53)
+#elif defined(IRIX)
 	int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -1040,7 +1040,7 @@ not_supported{
 	  -Derek Wright, 3/12/98 
 	*/
 not_supported {
-#	if defined(IRIX53) || defined(OSF1)
+#	if defined(IRIX) || defined(OSF1)
 	void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 	int mprotect( NEED_CONST void * addr, size_t len, int prot );
 	int madvise( INV_SYSCALL_PTR * addr, size_t len, int behav );
@@ -1109,7 +1109,7 @@ not_supported {
 #endif
 	int sethostid( int host_id );
 	int async_daemon();
-#	if !defined(SUNOS41) && !defined(IRIX53)
+#	if !defined(IRIX)
 		int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
 #	endif
 #	if !defined(SUNOS41)
