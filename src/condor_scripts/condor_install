@@ -26,7 +26,7 @@ umask 0022;
 @bin_names=( "q", "rm", "submit", "status", "prio", "userprio", 
 		"compile", "history", "config_val" );
 @full_lib_names=( "ld", "libcondorc++support.a", "condor_rt0.o",
-		  "libcondorsyscall.a", "libcondorckpt.a", );
+		  "libcondorsyscall.a" );
 @sbin_master_names=( "master", "preen" );
 @perl_scripts=( "sbin/condor_install", "bin/condor_submit_dag" );
 $needs_lock=0;
