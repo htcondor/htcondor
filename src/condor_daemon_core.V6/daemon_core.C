@@ -6147,6 +6147,8 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	return TRUE;
 }
 
+#endif  // of WIN32
+
 
 int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
 {
