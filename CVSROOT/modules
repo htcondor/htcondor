@@ -323,8 +323,11 @@ V6_7_1_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gt3gahp/2.0
 
+# Externals needed for V6_7_2 (same as V6_7_1)
+V6_7_2_EXT	-a V6_7_1_EXT
+
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_1_EXT
+V6_7_EXT	-a V6_7_2_EXT
 
 ######################################################################
 # end of externals
