@@ -2376,6 +2376,17 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 	priv_state priv = set_user_priv(); // need user's privs...
 
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
+							iwd) < 0) {
+		sprintf(iwd, "/tmp");
+	}
+
+	//change to IWD before opening files, easier than prepending 
+	//IWD if not absolute pathnames
+	char tmpCwd[_POSIX_PATH_MAX];
+	tmpCwd = getcwd( tmpCwd, _POSIX_PATH_MAX );
+	chdir(iwd);
+
 		// now open future in|out|err files
 	int inouterr[3];
 	if ((inouterr[0] = open(input, O_RDONLY, 0)) < 0) {
@@ -2393,6 +2404,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		set_priv( priv );  // back to regular privs...
 		return NULL;
 	}
+
+	//change back to whence we came
+	if ( tmpCwd ) {
+		chdir( tmpCwd );
+	}
+
 	set_priv( priv );  // back to regular privs...
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
@@ -2405,11 +2422,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		sprintf(args, "");
 	}
 	sprintf(job_args, "%s %s", a_out_name, args);
-
-	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
-							iwd) < 0) {
-		sprintf(iwd, "/tmp");
-	}
 
 	pid = daemonCore->Create_Process( a_out_name, job_args, PRIV_USER_FINAL, 
 								1, FALSE, env, iwd, FALSE, NULL, inouterr );
