@@ -45,16 +45,21 @@ X11_INCLUDE =           /usr/X11R6/include
 #define PlatformGccFlags
 #endif
 
+#if !defined(Strip)
+#define Strip strip
+#endif
 
 LIBX = XLibPath
 LIBXEXT = XExtLibPath
 CC = CCompiler
 C_LINK = CLinker
 CPlusPlus = CPlusCompiler
+STRIP = Strip
 CC_LINK = CPlusLinker
 STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
+
 
 PLATFORM_LDFLAGS = PlatformLdFlags
 
