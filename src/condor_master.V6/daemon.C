@@ -374,6 +374,8 @@ int daemon::Restart()
 int daemon::StartDaemon()
 {
 	char	*shortname;
+	int command_port = TRUE;
+	char argbuf[150];
 
 	if( (shortname = strrchr(process_name,'/')) ) {
 		shortname += 1;
@@ -394,18 +396,20 @@ int daemon::StartDaemon()
 		return 0;
 	}
 
+		// Collector needs to listen on a well known port, as does the
+		// Negotiator.
+	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
+		command_port = COLLECTOR_PORT;
+	}
+	if ( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
+		command_port = NEGOTIATOR_PORT;
+	}
+
 #ifdef WANT_DC_PM
-	{
-		int command_port = TRUE;
-		char argbuf[150];
 
-		// Collector needs to listen on a well known port
-		if ( strcmp(name_in_config_file,"COLLECTOR") == 0 )
-			command_port = COLLECTOR_PORT;
+	sprintf( argbuf, "%s -f\0", shortname );
 
-		sprintf(argbuf,"%s -f\0",shortname);
-
-		pid = daemonCore->Create_Process(
+	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
 				argbuf,			// args
 				PRIV_ROOT,		// privledge level
@@ -415,14 +419,13 @@ int daemon::StartDaemon()
 				NULL,			// current working directory
 				TRUE);			// new_process_group flag; we want a new group
 
-		if ( pid == FALSE ) {
+	if ( pid == FALSE ) {
 			// Create_Process failed!
-			dprintf(D_ALWAYS,"ERROR: Create_Process failed, trying to start %s\n",process_name);
-			pid = -1;
-			return 0;
-		}
-
+		dprintf(D_ALWAYS,"ERROR: Create_Process failed, trying to start %s\n",process_name);
+		pid = -1;
+		return 0;
 	}
+
 #else
 	if( (pid = vfork()) < 0 ) {
 		EXCEPT( "vfork()" );
@@ -434,7 +437,13 @@ int daemon::StartDaemon()
 			EXCEPT( "setsid(), errno = %d\n", errno );
 		}
 
-		(void)execl( process_name, shortname, "-f", 0 );
+		if( command_port != TRUE ) {
+			sprintf( argbuf, "%d", command_port );
+			(void)execl( process_name, shortname, "-f", "-p",
+						 argbuf, 0 );
+		} else {
+			(void)execl( process_name, shortname, "-f", 0 );
+		}
 	
 		// should never get here...
 		EXCEPT( "execl( %s, %s, -f, 0 )", process_name, shortname );
