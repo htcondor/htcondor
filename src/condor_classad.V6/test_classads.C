@@ -542,7 +542,7 @@ static void process_make_collection(const string &line,
 				 << " on line " << line_number << ".\n";
 			if (log_name.compare("")) {
 				bool success;
-				success = collection->InitializeFromLog(log_name);
+				success = collection->InitializeFromLog(log_name, "", "");
 				if (success) {
 					cout << "OK: Initialized " << collection_name << " from " 
 						 << log_name << " on line " << line_number << ".\n";
