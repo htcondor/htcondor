@@ -1,6 +1,8 @@
 #include "condor_common.h"
 #include "cedar_io.h"
 
+namespace classad {
+
 CedarSource::
 CedarSource( )
 {
@@ -65,3 +67,5 @@ _Flush( )
 {
 	return( true );
 }
+
+} // namespace classad

@@ -24,6 +24,8 @@
 #ifndef __TOKENS_H__
 #define __TOKENS_H__
 
+namespace classad {
+
 enum TokenType
 {
 	LEX_TOKEN_ERROR,
@@ -75,5 +77,7 @@ enum TokenType
 	LEX_ABSOLUTE_TIME_VALUE,
 	LEX_RELATIVE_TIME_VALUE
 };
+
+} // namespace classad
 
 #endif//__TOKENS_H__

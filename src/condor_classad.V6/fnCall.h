@@ -26,6 +26,8 @@
 
 #include "HashTable.h"
 
+namespace classad {
+
 typedef ExtArray<ExprTree*> ArgumentList;
 
 /// Node of the expression which represents a call to an inbuilt function
@@ -122,5 +124,6 @@ class FunctionCall : public ExprTree
 		static bool doMath(char*,ArgumentList&,EvalState&,Value&);
 };
 
+} // namespace classad
 
 #endif//__FN_CALL_H__

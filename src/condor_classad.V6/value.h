@@ -29,6 +29,8 @@
 #include "list.h"
 #include "sink.h"
 
+namespace classad {
+
 class Value;
 class Literal;
 
@@ -386,5 +388,7 @@ IsRelativeTimeValue( int &secs, int &usecs )
 	usecs = timeValueUSecs;
 	return( valueType == RELATIVE_TIME_VALUE );
 }
+
+} // namespace classad
 
 #endif//__VALUES_H__

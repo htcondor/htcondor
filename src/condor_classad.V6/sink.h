@@ -27,6 +27,8 @@
 #include "classad_io.h"
 #include "formatOptions.h"
 
+namespace classad {
+
 class ClassAdCollection;
 
 /**
@@ -139,5 +141,7 @@ class Sink
 		// sink types
 		ByteSink	*sink;
 };
+
+} // namespace classad
 
 #endif//__DUMPER_H__

@@ -30,6 +30,8 @@
 #include "tokens.h"
 #include "classad_io.h"
 
+namespace classad {
+
 const int MAX_TOKEN_SIZE = 4096;
 
 struct IntValue {
@@ -222,5 +224,6 @@ class Lexer
 		ByteSource	*src;
 };
 
+} // namespace classad
 
 #endif //__LEXER_H__

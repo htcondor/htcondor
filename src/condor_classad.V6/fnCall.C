@@ -5,6 +5,8 @@
 static int fnHashFcn( const MyString& , int numBkts );
 static char* _FileName_ = __FILE__;
 
+namespace classad {
+
 bool FunctionCall::initialized = false;
 FunctionCall::FuncTable FunctionCall::functionTable( 20 , &fnHashFcn );
 
@@ -1419,3 +1421,5 @@ matchPattern( char*, ArgumentList &argList, EvalState &state, Value &result )
 		return( true );
 	}
 }
+
+} // namespace classad

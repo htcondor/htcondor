@@ -27,14 +27,21 @@
 #include "common.h"
 #include "value.h"
 
+namespace classad {
+
 // forward declarations
 class ExprTree;
 class ClassAd;
 class Source;
 class Sink;
 
+} // namespace classad
+
 // structures pertaining to the classad domain
 #include "domain.h"
+
+
+namespace classad {
 
 class EvalState {
 	public:
@@ -157,6 +164,7 @@ class ExprTree
 		bool flattenFlag;
 };
 
+} // namespace classad
 
 #include "literals.h"
 #include "attrrefs.h"

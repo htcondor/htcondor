@@ -30,6 +30,7 @@
 #include "sink.h"
 #include "source.h"
 
+namespace classad {
 
 // each attribute in the classad
 class Attribute
@@ -599,6 +600,8 @@ class ClassAd : public ExprTree
 		int				last;
 };
 	
+} // namespace classad
+
 #include "classadItor.h"
 
 #endif//__CLASSAD_H__

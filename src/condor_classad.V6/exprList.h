@@ -26,6 +26,8 @@
 
 #include "list.h"
 
+namespace classad {
+
 /** 
 	Expression node which represents a list of expressions 
 */
@@ -220,5 +222,7 @@ class ExprListIterator
 		EvalState	state;
 		ListIterator<ExprTree> iter;
 };	
+
+} // namespace classad
 
 #endif//__EXPR_LIST_H__

@@ -2,6 +2,8 @@
 #include "operators.h"
 #include "value.h"
 
+namespace classad {
+
 StringSpace Value::stringSpace( 256 );
 
 Value::
@@ -425,3 +427,5 @@ WriteString( const char* s, Sink &sink )
 	}
 	return( sink.SendToSink( (void*)"\"", 1 ) );
 }
+
+} // namespace classad

@@ -7,6 +7,8 @@
 #include <ctype.h>
 #endif
 
+namespace classad {
+
 enum Commands {
 	_NO_CMD_,
 
@@ -413,3 +415,5 @@ findCommand( char *cmdStr )
 	}
 	return -1;
 }
+
+} // namespace classad

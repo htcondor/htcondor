@@ -1,6 +1,8 @@
 #include "condor_common.h"
 #include "classad_io.h"
 
+namespace classad {
+
 bool ByteSource::
 GetChar( int& chr )
 {
@@ -319,3 +321,4 @@ _PutBytes( const void *buf, int sz )
 	return( write( fd, buf, sz ) == sz );
 }
 
+} // namespace classad

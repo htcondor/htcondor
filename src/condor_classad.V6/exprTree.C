@@ -2,6 +2,8 @@
 #include "stringSpace.h"
 #include "exprTree.h"
 
+namespace classad {
+
 extern int exprHash( ExprTree* const&, int );
 
 ExprTree::
@@ -197,3 +199,5 @@ SetRootScope( )
 
 	rootAd = prevScope;
 }
+
+} // namespace classad

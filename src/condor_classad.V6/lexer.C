@@ -6,6 +6,8 @@
 // for EXCEPT in condor_debug.h
 static char _FileName_[] = __FILE__;
 
+namespace classad {
+
 // macro for recognising octal digits
 #define isodigit(x) ( (x) - '0' < 8 )
 
@@ -921,3 +923,5 @@ strLexToken (int tokenValue)
 				return "** Unknown **";
 	}
 }
+
+} // namespace classad

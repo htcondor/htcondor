@@ -24,6 +24,8 @@
 #ifndef __LITERALS_H__
 #define __LITERALS_H__
 
+namespace classad {
+
 /** Represents the literals of the ClassAd language, such as integers,
 		reals, booleans, strings, undefined and real.
 */
@@ -125,5 +127,7 @@ class Literal : public ExprTree
     	Value   		value;
 		NumberFactor	factor;
 };
+
+} // namespace classad
 
 #endif//__LITERALS_H__

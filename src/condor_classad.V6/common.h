@@ -24,6 +24,8 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
+namespace classad {
+
 enum MmMode
 {
 	MEM_NONE	= 0,
@@ -171,5 +173,7 @@ const char ATTR_WANT_LIST		[]	= "WantList";
 const char ATTR_WANT_PRELUDE	[]	= "WantPrelude";
 const char ATTR_WANT_RESULTS	[]	= "WantResults";
 const char ATTR_WANT_POSTLUDE	[]	= "WantPostlude";
+
+} // namespace classad
 
 #endif//__COMMON_H__

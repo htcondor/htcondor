@@ -24,6 +24,8 @@
 #ifndef CLASSAD_ITOR
 #define CLASSAD_ITOR
 
+namespace classad {
+
 /** An object for iterating over the attributes of a ClassAd.  Several
     iterators may be active over the same ClassAd at any time, and the same
     iterator object may be used to iterate over other ClassAds as well.
@@ -96,5 +98,7 @@ class ClassAdIterator
         int     index;
         const ClassAd   *ad;
 };
+
+} // namespace classad
 
 #endif//CLASSAD_ITOR

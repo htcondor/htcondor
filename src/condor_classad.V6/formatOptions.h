@@ -24,6 +24,8 @@
 #ifndef FORMAT_OPTS_H
 #define FORMAT_OPTS_H
 
+namespace classad {
+
 class Sink;
 
 /** Options to set formats of external representations */
@@ -115,5 +117,7 @@ class FormatOptions
         int     marginWrapCols;
         int     marginIndentLen;
 };
+
+} // namespace classad
 
 #endif//FORMAT_OPTS_H

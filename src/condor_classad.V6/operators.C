@@ -3,6 +3,8 @@
 
 static char *_FileName_ = __FILE__;
 
+namespace classad {
+
 	// the order in this array should be the same as the OpKind enumeration
 	// in common.h
 char *Operation::opString[] = 
@@ -1691,3 +1693,5 @@ PrecedenceLevel( OpKind op )
 			return( -1 );
 	}
 }
+
+} // namespace classad

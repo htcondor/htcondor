@@ -31,6 +31,8 @@
 #include "Set.h"
 #include "MyString.h"
 
+namespace classad {
+
 int partitionHashFcn( const MyString &, int );
 
 //-------------------------------------------------------------------------
@@ -492,5 +494,7 @@ public:
 private:
 	MatchClassAd 	mad;
 };
+
+} // namespace classad
 
 #endif

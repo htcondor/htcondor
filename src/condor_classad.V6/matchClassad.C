@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "matchClassad.h"
 
+namespace classad {
 
 MatchClassAd::
 MatchClassAd()
@@ -148,3 +149,5 @@ RemoveRightAd( )
 	rCtx->Remove( "ad" );
 	return( rad );
 }
+
+} // namespace classad

@@ -24,6 +24,8 @@
 #ifndef CLASSAD_IO
 #define CLASSAD_IO
 
+namespace classad {
+
 /** The ByteSource class serves as an abstract input source for classad 
 	expressions, and can be extended for custom situations.  A derived class 
 	only needs to implement the 'virtual bool _GetChar(int &)' method to
@@ -240,5 +242,7 @@ class FileDescSink : public ByteSink {
 	private:
 		int fd;
 };
+
+} // namespace classad
 
 #endif

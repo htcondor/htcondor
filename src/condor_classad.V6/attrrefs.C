@@ -3,6 +3,8 @@
 
 static char *_FileName_ = __FILE__;
 
+namespace classad {
+
 AttributeReference::
 AttributeReference()
 {
@@ -218,3 +220,5 @@ SetReference (ExprTree *tree, char *attrStr, bool absolut)
 	absolute 	= absolut;
 	attributeStr= attrStr ? strnewp(attrStr) : 0;
 }
+
+} // namespace classad

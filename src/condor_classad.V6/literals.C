@@ -2,6 +2,8 @@
 #include "exprTree.h"
 #include "domain.h"
 
+namespace classad {
+
 Literal::
 Literal ()
 {
@@ -183,3 +185,5 @@ SetRelTimeValue( int secs, int usecs )
 {
 	value.SetRelativeTimeValue( secs, usecs );
 }
+
+} // namespace classad

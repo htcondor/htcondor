@@ -26,6 +26,8 @@
 
 #include "exprTree.h"
 
+namespace classad {
+
 class Sink;
 
 /** Represents a node of the expression tree which is an operation applied to
@@ -137,5 +139,6 @@ class Operation : public ExprTree
 		ExprTree	*child3;
 };
 
+} // namespace classad
 
 #endif//__OPERATORS_H__

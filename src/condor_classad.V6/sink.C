@@ -2,6 +2,8 @@
 #include "sink.h"
 #include "formatOptions.h"
 
+namespace classad {
+
 Sink::
 Sink ()
 {
@@ -241,3 +243,5 @@ GetMarginWrap( int &cols, int &indentLen )
 	cols = marginWrapCols;
 	indentLen = marginIndentLen;
 }
+
+} // namespace classad

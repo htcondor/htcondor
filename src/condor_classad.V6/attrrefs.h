@@ -26,6 +26,8 @@
 
 #include "stringSpace.h"
 
+namespace classad {
+
 /** Represents a attribute reference node in the expression tree
 */
 class AttributeReference : public ExprTree 
@@ -77,5 +79,7 @@ class AttributeReference : public ExprTree
     	char        *attributeStr;
     	SSString    attributeName;
 };
+
+} // namespace classad
 
 #endif//__ATTRREFS_H__

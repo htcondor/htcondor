@@ -6,6 +6,8 @@
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 static bool isValidIdentifier( const char * );
 
+namespace classad {
+
 ClassAdDomainManager ClassAd::domMan;
 
 Attribute::
@@ -1075,3 +1077,4 @@ isValidIdentifier( const char *str )
 	return( *ch == '\0' );
 }
 
+} // namespace classad

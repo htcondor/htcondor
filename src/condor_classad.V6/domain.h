@@ -27,6 +27,8 @@
 #include "stringSpace.h"
 #include "extArray.h"
 
+namespace classad {
+
 class ClassAdDomainManager
 {
  	 public:
@@ -56,5 +58,7 @@ class ClassAdDomainManager
 };
 
 extern ClassAdDomainManager domMan;			// domain manager
+
+} // namespace classad
 
 #endif//__DOMAIN_H__

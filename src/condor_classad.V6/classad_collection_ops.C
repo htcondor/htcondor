@@ -27,6 +27,8 @@
 
 static char *_FileName_ = __FILE__;
 
+namespace classad {
+
 //------------------------------------------------------------------------
 // Add new class ad
 //------------------------------------------------------------------------
@@ -185,3 +187,5 @@ bool LogCollDestroyClassAd::WriteBody(FILE* fp)
   if( fprintf( fp, "%s ", key ) < 0 ) return false;
   return true;
 }
+
+} // namespace classad

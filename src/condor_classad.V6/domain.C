@@ -3,6 +3,8 @@
 
 static char _FileName_[] = __FILE__;
 
+namespace classad {
+
 ClassAdDomainManager::
 ClassAdDomainManager ()
 {
@@ -39,3 +41,5 @@ GetDomainSchema (char *domainName, int &index, StringSpace *&schema)
 		schemaArray[index] = schema;
 	}
 }
+
+} // namespace classad

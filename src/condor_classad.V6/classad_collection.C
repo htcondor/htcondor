@@ -7,6 +7,8 @@
 static char *_FileName_ = __FILE__;
 static int  hashFunction( const MyString&, int );
 
+namespace classad {
+
 //-----------------------------------------------------------------------
 // Constructor (initialization)
 //-----------------------------------------------------------------------
@@ -1567,3 +1569,5 @@ int hashFunction( const MyString& key, int numBkts )
 	}
 	return( hashVal % numBkts );
 }
+
+} // namespace classad

@@ -34,6 +34,8 @@
 #define CondorLogOp_BeginTransaction        205
 #define CondorLogOp_EndTransaction          206
 
+namespace classad {
+
 //----------------------------------------------------------
 
 class LogCollNewClassAd : public LogRecord {
@@ -103,5 +105,7 @@ class LogEndTransaction : public LogRecord {
 public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 };
+
+} // namespace classad
 
 #endif

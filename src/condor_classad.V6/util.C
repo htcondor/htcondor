@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 
+namespace classad {
 
 ClassAd* getOldClassAd( Sock& sock )
 {
@@ -76,3 +77,5 @@ void printClassAdValue( Value &val )
 	val.ToSink( sink );
 	sink.FlushSink( );
 }
+
+} // namespace classad

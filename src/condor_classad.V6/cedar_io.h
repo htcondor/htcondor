@@ -27,6 +27,8 @@
 #include "classad_io.h"
 #include "condor_io.h"
 
+namespace classad {
+
 class CedarSource : public ByteSource {
 	public:
 		CedarSource( );
@@ -52,5 +54,6 @@ class CedarSink : public ByteSink {
 		Stream *strm;
 };
 
+} // namespace classad
 
 #endif//CEDAR_IO

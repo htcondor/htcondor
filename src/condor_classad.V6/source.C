@@ -5,6 +5,8 @@
 
 static char*_FileName_ = __FILE__;
 
+namespace classad {
+
 // ctor
 Source::
 Source ()
@@ -980,3 +982,5 @@ ParseExprList( ExprList &list , bool full )
 	if( full && ( lexer.ConsumeToken() != LEX_END_OF_INPUT ) ) return false;
 	return true;
 }
+
+} // namespace classad

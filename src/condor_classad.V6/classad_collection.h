@@ -35,6 +35,8 @@
 #include "log_transaction.h"
 #include "classad_collection_types.h"
 
+namespace classad {
+
 //--------------------------------------------------------------------------
 
 typedef MyString HashKey;
@@ -400,5 +402,7 @@ private:
     Transaction *active_transaction;
 
 };
+
+} // namespace classad
 
 #endif
