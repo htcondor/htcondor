@@ -68,12 +68,13 @@ struct OwnerData {
   int JobsRunning;
   int JobsIdle;
   int JobsHeld;
+  int JobsFlocked;
   int FlockLevel;
   int OldFlockLevel;
   int GlobusJobs;
   time_t NegotiationTimestamp;
   OwnerData() { Name=NULL;
-          JobsRunning=JobsIdle=JobsHeld=FlockLevel=OldFlockLevel=GlobusJobs=0; }
+  JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=0; }
 };
 
 struct match_rec
@@ -211,6 +212,7 @@ class Scheduler : public Service
 	int				JobsIdle; 
 	int				JobsRunning;
 	int				JobsHeld;
+	int				JobsFlocked;
 	int				JobsRemoved;
 	int				SchedUniverseJobsIdle;
 	int				SchedUniverseJobsRunning;
