@@ -149,6 +149,7 @@ struct Translation DCTranslation[] = {
 	{ "SHADOW_UPDATEINFO", SHADOW_UPDATEINFO },
 	{ "TAKE_MATCH", TAKE_MATCH },
 	{ "MPI_START_COMRADE", MPI_START_COMRADE },
+	{ "FETCH_LOG", FETCH_LOG },
 	{ "NULL", 0 }
 };
 
