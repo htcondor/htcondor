@@ -9,15 +9,36 @@
 # This should be run in the top-level src directory.
 #
 
-# Grab any command-line args we were passed, just in case.
-($arch, $opsys, $glibc) = @ARGV;
+# Deal with any command-line args we are passed:
+while( $_ = shift( @ARGV ) ) {
+  SWITCH: {	
+    if( /-s.*/ ) {
+	$sys = shift(@ARGV);
+	last SWITCH;
+    }
+    if( /-v.*/ ) {
+	$versarg = shift(@ARGV);
+	last SWITCH;
+    }
+    if( /-g.*/ ) {
+	$glibc = "glibc";
+	last SWITCH;
+    }
+  }
+}
 
 # Now, grab the version of this release.
-$_=`ident strip_dir/sbin/condor_master`;
-/\$Version: (\d*)\.(\d*)\.(\d*).*/;
-$majorv = $1;
-$minorv = $2;
-$releasev = $3;
+if( $versarg ) {
+    $_ = $versarg;
+} else {
+    # If we weren't told on the command line, try to run ident
+    # directly on the condor_master binary.
+    $_=`ident strip_dir/sbin/condor_master`;
+}
+/(\$Version: )?(\d*)\.(\d*)\.(\d*).*/;
+$majorv = $2;
+$minorv = $3;
+$releasev = $4;
 $version = "$majorv.$minorv.$releasev";
 
 # Things you should probably leave alone:
@@ -28,39 +49,58 @@ BEGIN {
 require 5.002;
 use Archive::Tar;
 
-$skel="release_skeleton";
-$target="/p/condor/public/binaries/v$majorv.$minorv";
-$realskel="condor_release";
-$condor_install="condor_scripts/condor_install";
+######################################################################
+# Settings you may want to customize
+######################################################################
 
-#@modules = ( "condor", "smp" );
-@modules = (  "smp" );
+# These are the modules you actually want to build.
+@modules = ( "condor", "smp_startd", "view_server" );
 
+# List any special files, other than README, DOC, INSTALL, and
+# LICENSE.TXT (which are included in all releases) that you want in
+# the skeleton for a given module.
 %skelfiles = (
-  "condor"   => [ "README", "DOC", "INSTALL", "LICENSE.TXT", "condor_install",
-		  "examples", ],
-  "smp"      => [ "README.smp", "DOC.contrib", "INSTALL.smp", "LICENSE.TXT", ]
+  "condor"   => [ "condor_install", "examples", ],
 );
 
+# If any of the files you specify aren't found in the $realskel
+# directory you specify, put the relative path to where your file can
+# be found here.
 %filesource = (
   "condor_install" => "condor_scripts/condor_install",
 );	   
 
-%filedest = (
-  "README.smp" => "README",
-  "INSTALL.smp" => "INSTALL",
-  "DOC.contrib" => "DOC"
-);	   
-
+# If the tar file for this module has a different name than
+# "$module.tar", specify that here.
 %tarfile = (
   "condor" => "release.tar",
 );	   
+
+# English descriptions of the modules, used in the README, etc. 
+%module_descriptions = (
+  "condor"        => "Main release",
+  "smp_startd"    => "SMP-Startd contrib module",
+  "view_server"   => "CondorView server contrib module",
+  "view_client"   => "CondorView client contrib module",
+  "dagman"        => "DagMan contrib module",
+  "pvm"           => "PVM contrib module",
+);	   
+
+######################################################################
+# The rest of these settings can probably stay just like they are.
+######################################################################
+
+# Some paths of interest:
+$skel="release_skeleton";
+$realskel="condor_release";
+$target="/p/condor/public/binaries";
 
 %releaselocation = (
   "static"        => "static_dir",
   "dynamic"       => "strip_dir"
 );
 
+# Convert from AFS @sys names to our names for the tarballs.
 %opsysname = (
   "sun4x_55"      => "solaris251",
   "sun4x_56"      => "solaris26",
@@ -91,15 +131,18 @@ $condor_install="condor_scripts/condor_install";
 
 umask(022);
 
+######################################################################
 # Actual work begins...
+######################################################################
 
-# Make sure we know what platform we are:
-if( ! ($arch && $opsys) ) {
-    $mysys=`sys`;
-    chomp($mysys);
-    $arch = $archname{$mysys};
-    $opsys = $opsysname{$mysys};
-}
+# Make sure we know what platform we are... If we weren't told on the
+# command-line, run "sys" and use that.
+if( ! $sys ) {
+    $sys=`sys`;
+    chomp($sys);
+} 
+$arch = $archname{$sys};
+$opsys = $opsysname{$sys};
 if( ! $glibc ) {
     $glibc = "";
     if( $opsys =~ /linux/i && -f "/lib/libc.so.6" ) {
@@ -110,13 +153,46 @@ if( ! $glibc ) {
 `rm -rf $skel`;
 mkdir( "$skel", 0777 );
 
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
+$mon++;
+$date="$mon/$mday/$year";
+
 foreach $module ( @modules ) {
 
     $release="$module-$version";
+    if( $tarfile{$module} ) {
+	$tarfile=$tarfile{$module};
+    } else {
+	$tarfile="$module.tar";
+    }
 
 # Setup skeleton directory
     print "Setting up skeleton directory for \"$module\"... ";  $| = 1;
     mkdir( "$skel/$release", 0777 );
+
+    # You always want the same version of LICENSE.TXT in everything. 
+    `cp -r $realskel/LICENSE.TXT $skel/$release`;
+
+    # Now, you always want a README, DOC, and INSTALL
+    if( $module =~ /condor/ ) {
+	foreach $file ( "README", "INSTALL", "DOC" ) {
+	    `cp -f $realskel/$file $skel/$release/`;
+	}
+    } else {
+	# If we're contrib, we need to do some special stuff.
+	# The README and DOC files really come from .contrib versions
+	# that are customized for a given contrib module.
+	foreach $file ( "README", "DOC" ) {
+	    customize( "$realskel/$file.contrib", 
+		      "$skel/$release/$file", 
+		      $module, $tarfile );
+	}
+	# The appropriate INSTALL file is stored in CVS by the module
+	# name. 
+	`cp -f $realskel/INSTALL.$module $skel/$release/INSTALL`;
+    }
+
+    # Now, handle any special case files for a given module
     foreach $file ( @{$skelfiles{$module}} ) {
 	if( $filesource{$file} ) {
 	    $src = $filesource{$file};
@@ -130,17 +206,13 @@ foreach $module ( @modules ) {
 	}
 	`cp -r $src $skel/$release/$dest`;
     }
+
     print "done.\n";
 
     # Now, handle static and/or dynamic versions, whatever exists... 
 
     foreach $linktype ( "static", "dynamic" ) {
 	# Make sure the proper tar file exists
-	if( $tarfile{$module} ) {
-	    $tarfile=$tarfile{$module};
-	} else {
-	    $tarfile="$module.tar";
-	}
 	if( ! (-d $releaselocation{$linktype} && 
 	       -f "$releaselocation{$linktype}/$tarfile") ) {
 	    print "There's no $tarfile file for $linktype on this platform, skipping.\n";
@@ -176,22 +248,31 @@ foreach $module ( @modules ) {
 	# Delete the tar file we're now done with.
 	unlink( "$skel/$release.tar" );
 
+	# Figure out where we want put this tarball
+	if( $module =~ /condor/ ) {
+	    $targetdir = "$target/v$majorv.$minorv";
+	} else {
+	    $targetdir = "$target/contrib";
+	}
+	$targetfile = "$targetdir/$release-$platform.tar";
+
 	# Make sure there's nothing in the way where we want to put it.
-	$targetfile = "$target/$release-$platform.tar";
 	unlink( "$targetfile", "$targetfile.Z", "$targetfile.gz" );
 
 	# Compress as appropriate, and move to the final location.
 	if( $platform =~ /.*linux.*/ ) {
 	    print "gzipping $skel/$release-$platform.tar\n";
 	    system( "gzip $skel/$release-$platform.tar" );
-	    print "Moving $release-$platform.tar.gz into $target ... "; $| = 1;
-	    `mv $skel/$release-$platform.tar.gz $target`;
+	    print "Moving $release-$platform.tar.gz into $targetdir ... ";
+	    $| = 1;
+	    `mv $skel/$release-$platform.tar.gz $targetdir`;
 	    print "done.\n";
 	} else {
 	    print "compressing $skel/$release-$platform.tar\n";
 	    system( "compress $skel/$release-$platform.tar" );
-	    print "Moving $release-$platform.tar.Z into $target ... "; $| = 1;
-	    `mv $skel/$release-$platform.tar.Z $target`;
+	    print "Moving $release-$platform.tar.Z into $targetdir ... ";
+	    $| = 1;
+	    `mv $skel/$release-$platform.tar.Z $targetdir`;
 	    print "done.\n";
 	}
     }
@@ -211,3 +292,26 @@ sub fix_tar {
     $tar->write( $target );
     print "done.\n";
 }
+
+sub customize {
+    local( $source, $target, $module, $tarfile ) = @_;
+    local( $description ) = $module_descriptions{$module};
+
+    open( SRC, "<$source" ) || die "\nCan't open $source for reading.\n";
+    open( TARGET, ">$target" ) || die "\nCan't open $target for writing.\n";
+
+    while( <SRC> ) {
+	s/#module#/$module/;
+	if( length($tarfile) < 8 ) {
+	    s/#tarfile#/$tarfile\t/;
+	} else {
+	    s/#tarfile#/$tarfile/;
+	}
+	s/#description#/$description/;
+	s/#date#/$date/;
+	print TARGET $_;
+    }
+}
+    
+
+
