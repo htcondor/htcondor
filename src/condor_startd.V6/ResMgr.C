@@ -77,7 +77,7 @@ ResMgr::~ResMgr()
 
 
 void
-ResMgr::init_config_classad()
+ResMgr::init_config_classad( void )
 {
 	if( config_classad ) delete config_classad;
 	config_classad = new ClassAd();
@@ -86,7 +86,7 @@ ResMgr::init_config_classad()
 
 
 void
-ResMgr::init_resources()
+ResMgr::init_resources( void )
 {
 	int i;
 	char *tmp;
@@ -149,7 +149,7 @@ ResMgr::init_resources()
 
 
 bool
-ResMgr::reconfig_resources()
+ResMgr::reconfig_resources( void )
 {
 	int t, i, cur, num;
 	CpuAttributes** new_cpu_attrs;
@@ -654,7 +654,7 @@ ResMgr::compute_phys_mem( float share )
 
 
 void
-ResMgr::init_socks()
+ResMgr::init_socks( void )
 {
 	if( coll_sock ) {
 		delete coll_sock;
@@ -807,7 +807,7 @@ ResMgr::in_use( void )
 
 
 Resource*
-ResMgr::get_by_pid( int pid )
+ResMgr::get_by_pid( pid_t pid )
 {
 	if( ! resources ) {
 		return NULL;
@@ -877,7 +877,7 @@ ResMgr::get_by_name( char* name )
 
 
 State
-ResMgr::state()
+ResMgr::state( void )
 {
 	if( ! resources ) {
 		return owner_state;
@@ -906,7 +906,7 @@ ResMgr::state()
 
 
 void
-ResMgr::final_update()
+ResMgr::final_update( void )
 {
 	if( ! resources ) {
 		return;
@@ -916,7 +916,7 @@ ResMgr::final_update()
 
 
 int
-ResMgr::force_benchmark()
+ResMgr::force_benchmark( void )
 {
 	if( ! resources ) {
 		return 0;
@@ -958,7 +958,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 
 
 void
-ResMgr::first_eval_and_update_all()
+ResMgr::first_eval_and_update_all( void )
 {
 	num_updates = 0;
 	walk( &(Resource::eval_and_update) );
@@ -968,7 +968,7 @@ ResMgr::first_eval_and_update_all()
 
 
 void
-ResMgr::eval_and_update_all()
+ResMgr::eval_and_update_all( void )
 {
 	num_updates = 0;
 	compute( A_TIMEOUT | A_UPDATE );
@@ -979,7 +979,7 @@ ResMgr::eval_and_update_all()
 
 
 void
-ResMgr::eval_all()
+ResMgr::eval_all( void )
 {
 	num_updates = 0;
 	compute( A_TIMEOUT );
@@ -990,7 +990,7 @@ ResMgr::eval_all()
 
 
 void
-ResMgr::report_updates()
+ResMgr::report_updates( void )
 {
 	if( !num_updates ) {
 		return;
@@ -1035,7 +1035,7 @@ ResMgr::compute( amask_t how_much )
 
 
 void
-ResMgr::assign_load()
+ResMgr::assign_load( void )
 {
 	if( ! resources ) {
 		return;
@@ -1080,7 +1080,7 @@ ResMgr::assign_load()
 
 
 void
-ResMgr::assign_keyboard()
+ResMgr::assign_keyboard( void )
 {
 	if( ! resources ) {
 		return;
@@ -1117,7 +1117,7 @@ ResMgr::assign_keyboard()
 
 
 void
-ResMgr::check_polling()
+ResMgr::check_polling( void )
 {
 	if( ! resources ) {
 		return;
@@ -1132,7 +1132,7 @@ ResMgr::check_polling()
 
 
 int
-ResMgr::start_update_timer()
+ResMgr::start_update_timer( void )
 {
 	up_tid = 
 		daemonCore->Register_Timer( update_interval, update_interval,
@@ -1146,7 +1146,7 @@ ResMgr::start_update_timer()
 
 
 int
-ResMgr::start_poll_timer()
+ResMgr::start_poll_timer( void )
 {
 	if( poll_tid >= 0 ) {
 			// Timer already started.
@@ -1166,7 +1166,7 @@ ResMgr::start_poll_timer()
 
 
 void
-ResMgr::cancel_poll_timer()
+ResMgr::cancel_poll_timer( void )
 {
 	if( poll_tid != -1 ) {
 		daemonCore->Cancel_Timer( poll_tid );
@@ -1177,7 +1177,7 @@ ResMgr::cancel_poll_timer()
 
 
 void
-ResMgr::reset_timers()
+ResMgr::reset_timers( void )
 {
 	if( poll_tid != -1 ) {
 		daemonCore->Reset_Timer( poll_tid, polling_interval, 
@@ -1384,7 +1384,7 @@ IdDispenser::IdDispenser( int size, int seed ) :
 
 
 int
-IdDispenser::next()
+IdDispenser::next( void )
 {
 	int i;
 	for( i=1 ; ; i++ ) {

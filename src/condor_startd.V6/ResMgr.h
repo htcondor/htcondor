@@ -44,8 +44,8 @@ class IdDispenser
 {
 public:
 	IdDispenser( int size, int seed );
-	int	next();
-	void insert( int id );
+	int		next( void );
+	void	insert( int id );
 private:
 	ExtArray<bool> free_ids;
 };
@@ -57,33 +57,33 @@ public:
 	ResMgr();
 	~ResMgr();
 
-	void	init_socks();
-	void	init_resources();
-	bool	reconfig_resources();
+	void	init_socks( void );
+	void	init_resources( void );
+	bool	reconfig_resources( void );
 
 	void	compute( amask_t );
 	void	publish( ClassAd*, amask_t );
 
-	void	assign_load();
-	void	assign_keyboard();
+	void	assign_load( void );
+	void	assign_keyboard( void );
 
-	bool 	in_use();
-	bool	is_smp() { return( num_cpus() > 1 ); };
-	int		num_cpus() { return m_attr->num_cpus(); };
-	int		num_vms() { return nresources; };
+	bool 	in_use( void );
+	bool	is_smp( void ) { return( num_cpus() > 1 ); }
+	int		num_cpus( void ) { return m_attr->num_cpus(); }
+	int		num_vms( void ) { return nresources; }
 
 	int		send_update( int, ClassAd*, ClassAd* );
-	void	final_update();
+	void	final_update( void );
 	
 		// Evaluate the state of all resources.
-	void	eval_all();
+	void	eval_all( void );
 
 		// Evaluate and send updates for all resources.
-	void	eval_and_update_all();
+	void	eval_and_update_all( void );
 
 		// The first one is special, since we already computed
 		// everything and we don't need to recompute anything.
-	void	first_eval_and_update_all();	
+	void	first_eval_and_update_all( void );	
 
 	// These two functions walk through the array of rip pointers and
 	// call the specified function on each resource.  The first takes
@@ -112,22 +112,22 @@ public:
 	void resource_sort( ComparisonFunc );
 
 	// Methods to control various timers
-	void	check_polling();		// See if we need to poll frequently
-	int		start_update_timer();	// Timer for updating the CM(s)
-	int		start_poll_timer();		// Timer for polling the resources
-	void	cancel_poll_timer();
-	void	reset_timers();			// Reset the period on our timers,
+	void	check_polling( void );	// See if we need to poll frequently
+	int		start_update_timer(void); // Timer for updating the CM(s)
+	int		start_poll_timer( void ); // Timer for polling the resources
+	void	cancel_poll_timer( void );
+	void	reset_timers( void );	// Reset the period on our timers,
 									// in case the config has changed.
 
-	Resource*	get_by_pid(int);		// Find rip by pid of starter
-	Resource*	get_by_cur_cap(char*);	// Find rip by r_cur->capab
+	Resource*	get_by_pid( pid_t );	// Find rip by pid of starter
+	Resource*	get_by_cur_cap(char*);	// Find rip by r_cur->capab 
 	Resource*	get_by_any_cap(char*);	// Find rip by r_cur or r_pre
 	Resource*	get_by_name(char*);		// Find rip by r_name
-	State		state();				// Return the machine state
+	State		state( void );			// Return the machine state
 
-	int	force_benchmark();		// Force a resource to benchmark
+	int	force_benchmark( void ); 	// Force a resource to benchmark
 	
-	void report_updates();		// Log updates w/ dprintf()
+	void report_updates( void );	// Log updates w/ dprintf()
 
 	MachAttributes*	m_attr;		// Machine-wide attribute object
 	
@@ -136,7 +136,7 @@ public:
 	ClassAd*	totals_classad;
 	ClassAd*	config_classad;
 
-	void		init_config_classad();
+	void		init_config_classad( void );
 
 	void		deleteResource( Resource* );
 
