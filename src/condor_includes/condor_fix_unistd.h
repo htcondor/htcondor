@@ -7,11 +7,20 @@
 #	define write _hide_write
 #endif
 
+#if defined(AIX32)
+#	define execv __hide_execv
+#endif
+
 #include <unistd.h>
 
 #if defined(SUNOS41)
 #	undef read
 #	undef write
+#endif
+
+#if defined(AIX32)
+#	undef execv
+	int execv(const char *path, char *const argv[]);
 #endif
 
 
