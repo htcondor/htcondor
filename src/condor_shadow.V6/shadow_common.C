@@ -83,6 +83,7 @@ extern "C" {
 
 extern int ChildPid;
 extern int ExitReason;
+extern int JobExitStatus;
 extern char    CkptName[];
 extern char    TmpCkptName[];
 extern int             MyPid;
@@ -445,6 +446,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 			dprintf(D_ALWAYS, "Shadow: Job exited normally with status %d\n",
 				WEXITSTATUS(status) );
 			ExitReason = JOB_EXITED;
+			JobExitStatus = WEXITSTATUS(status);
 		}
 
 		proc->status = COMPLETED;

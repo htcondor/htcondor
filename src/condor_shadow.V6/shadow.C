@@ -162,6 +162,7 @@ struct rusage JobRusage;
 struct rusage AccumRusage;
 int ChildPid;
 int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
+int JobExitStatus = 0;                 /* the job's exit status */
 
 int ExceptCleanup();
 int Termlog;
@@ -802,6 +803,9 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, 
 		//				Proc->status);
 		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_EXIT_STATUS,
+						JobExitStatus);
 
 		rusage_to_float( Proc->local_usage, &utime, &stime );
 		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_USER_CPU, 
