@@ -86,7 +86,6 @@ class ExprTree
 {
     public :
 
-        void            	operator delete(void*);
 		virtual int	    	operator ==(ExprTree&);
 		virtual int	    	operator >(ExprTree&);
 		virtual int	    	operator >=(ExprTree&);
@@ -98,6 +97,7 @@ class ExprTree
 		virtual ExprTree*   LArg()   { return NULL; }
 		virtual ExprTree*   RArg()   { return NULL; }
         ExprTree*           Copy();       // increment the ref counter
+		virtual ExprTree*   DeepCopy(void) const = 0;
         virtual void        Display();    // display the expression
 		virtual void        PrintToStr(char*) {} // print the expr to a string
 
@@ -116,9 +116,10 @@ class ExprTree
 		// FALSE or TRUE! but it needs to be initialized -Todd, 9/10
 		// and now init evalFlag as well (to detect circular eval'n) -Rajesh
 		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE), evalFlag(FALSE) {};
-
+		virtual ~ExprTree();
 
     protected :
+		virtual void        CopyBaseExprTree(class ExprTree *const recipient) const;
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
