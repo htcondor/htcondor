@@ -11,13 +11,6 @@ if [ -d CVS ]; then
 fi
 
 ##################################################
-# Initialize some global script variables
-##################################################
-
-# a boolean like variable I use elsewhere
-unkown="Unknown"
-
-##################################################
 # Initialize some variables about our arch/os environment
 ##################################################
 
@@ -152,6 +145,10 @@ case "$tmp" in
 		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
 		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_3"
 		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_3_0"
+		;;
+	* )
+		echo "I didn't recognize your version of gcc, please fix condor_imake!"
+		exit 1;
 		;;
 esac	
 
@@ -365,8 +362,15 @@ fi
 # Courtesy dump the various information so people know what they got
 ##################################################
 
-# set to zero or one to print nice output
+# look around for "-v" or "-verbose" and act upon it.
 verbose_info=0
+for i in "$*"
+do
+	if [ "X$i" = "X-verbose" -o "X$i" = "X-v" ]; then
+		verbose_info=1
+		break
+	fi
+done
 
 if [ "X$verbose_info" = "X1" ]; then
 
@@ -435,7 +439,10 @@ fi
 ##################################################
 # Finally, call imake with all the flags
 ##################################################
-echo ${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $KerbFlags $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
+if [ $verbose_info = 0 ]; then
+	echo ${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $KerbFlags $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
+fi
+
 ${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $KerbFlags $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
 
 
