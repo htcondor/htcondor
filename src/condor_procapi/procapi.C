@@ -895,6 +895,8 @@ int ProcAPI::getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi ) {
 
   initpi ( pi );
   piPTR temp = NULL;
+  int rval = 0;
+  priv_state priv = set_root_priv();
 
   for ( int i=0 ; i<numpids ; i++ ) {
     if ( getProcInfo ( pids[i], temp ) >= 0 ) {
@@ -909,14 +911,13 @@ int ProcAPI::getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi ) {
         pi->age = temp->age;
     }
     else {
-      dprintf (D_FULLDEBUG, "Can't get info for pid %d!\n", pids[i] );
-      return -1;
+      dprintf (D_ALWAYS, "Can't get info for pid %d!\n", pids[i] );
+      rval = -1;
     }
   }
-
   delete temp;
-  
-  return 0;
+  set_priv( priv );
+  return rval;
 }
 #endif
 
