@@ -80,6 +80,8 @@ class TimerManager
 	  			SigalrmHandler(); 
 		void	Start();
 
+		friend	class	DaemonCore;
+
 	private:
 
 		Timer* 	timer_list;
