@@ -55,8 +55,7 @@ public:
 							 Service* service_ptr );
 
 	bool enqueue( ServiceData* data );
-
-	int timerHandler( void );
+	bool setPeriod( int new_period );
 
 private:
 	Queue<ServiceData*> queue;
@@ -68,6 +67,8 @@ private:
 	char* name;
 	char* timer_name;
 	
+	int timerHandler( void );
+
 	void registerTimer( void );
 	void cancelTimer( void );
 	void resetTimer( void );

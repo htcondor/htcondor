@@ -103,6 +103,22 @@ SelfDrainingQueue::enqueue( ServiceData* data )
 }
 
 
+bool
+SelfDrainingQueue::setPeriod( int new_period )
+{
+	if( period == new_period ) {
+		return false;
+	}
+	dprintf( D_FULLDEBUG, "Period for SelfDrainingQueue %s set to %d\n",
+			 name, new_period );
+	period = new_period; 
+	if( tid != -1 ) { 
+		resetTimer();
+	}
+	return true;
+}
+
+
 int
 SelfDrainingQueue::timerHandler( void )
 {
