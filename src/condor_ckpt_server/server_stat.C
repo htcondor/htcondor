@@ -1,13 +1,12 @@
+#include "condor_common.h"
+#include "condor_config.h"
 #include "server_stat.h"
 #include "network2.h"
 #include "constants2.h"
 #include "gen_lib.h"
 #include <iostream.h>
 #include <iomanip.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <errno.h>
 
 #if defined(OSF1)
 extern "C" { unsigned int htonl(unsigned int); }
