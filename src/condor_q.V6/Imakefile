@@ -19,4 +19,19 @@ release_link_target($(RELEASE_DIR)/bin/$(NAME),bin,condor_analyze)
 strip_link_target($(STRIP_DIR)/bin/$(NAME),bin,condor_analyze)
 static_link_target($(STATIC_DIR)/bin/$(NAME),bin,condor_analyze)
 
+
+analyze-external:: condor_q
+	cp -f condor_q ../public/analyze/condor_analyze.release
+	chmod 0755 ../public/analyze/condor_analyze.release
+	cp -f condor_q ../public/analyze/condor_analyze.strip
+	$(STRIP) ../public/analyze/condor_analyze.strip
+	chmod 0755 ../public/analyze/condor_analyze.strip
+
+#if HAS_STATIC
+analyze-external:: condor_q.static
+	cp -f condor_q.static ../public/analyze/condor_analyze.static
+	chmod 0755 ../public/analyze/condor_analyze.release
+#endif
+
+
 html:
