@@ -18,9 +18,6 @@ c_plus_target(cedar.t, cedar.t.o, $(LIB))
 pure_c_plus_target(cedar.t.pure,$(OBJ),$(LIB))
 purecov_c_plus_target(cedar.t.pc,$(OBJ),$(LIB))
 c_plus_target(buftest, buftest.o, $(LIB))
-c_plus_target(netMnger, netMnger.o, $(LIB))
-c_plus_target(netMnger.t, netMnger.t.o, $(LIB))
-c_plus_target(cedar.band.t, cedar.band.t.o, $(LIB))
 html_target( ../condor_includes/stream.h ../condor_includes/reli_sock.h ../condor_includes/safe_sock.h ../condor_includes/sock.h )
 
 release:: all

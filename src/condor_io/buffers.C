@@ -62,127 +62,89 @@ Buf::~Buf()
 }
 
 
+
 int Buf::write(
-	SOCKET	dataSock,
-	SOCKET	mngSock,
+	SOCKET	sockd,
 	int		sz,
-	int		timeout,
-    int     threshold,
-	bool	&congested,
-	bool	&ready
+	int		timeout
 	)
 {
-	int	nw, nwo, maxfd, nfound;
+	int	nw;
+	int nwo;
 	unsigned int start_time, curr_time;
-	struct timeval *timer = NULL;
-    struct timeval curr, prev;
-	fd_set wrfds, rdfds;
-    int blocked = 0;
-    int numSends = 0;
-    double elapsed;
 
 	if (sz < 0 || sz > num_untouched()) sz = num_untouched();
 
 	if ( timeout > 0 ) {
-		timer = (struct timeval *) malloc (sizeof (struct timeval));
-		if (!timer) {
-            EXCEPT("Buf::write - Memory allocation failed: %s\n", strerror(errno));
-        }
-		curr_time = start_time = time(NULL);
+		start_time = time(NULL);
+		curr_time = start_time;
 	}
 
-	for(nw=0; nw<sz; ) {
+	for(nw=0;nw < sz;) {
 		if (timeout > 0) {
+			struct timeval	timer;
+			fd_set			writefds;
+			int				nfds=0, nfound;
+
 			if ( curr_time == 0 )
 				curr_time = time(NULL);
 			if ( start_time + timeout > curr_time ) {
-				timer->tv_sec = (start_time + timeout) - curr_time;
-				timer->tv_usec = 0;
+				timer.tv_sec = (start_time + timeout) - curr_time;
 			} else {
 				dprintf(D_ALWAYS,"timeout writing in Buf::write()\n");
-				free(timer);
 				return -1;
 			}
 			curr_time = 0;	// so we call time() next time around
+			timer.tv_usec = 0;
+	#if !defined(WIN32) // nfds is ignored on WIN32
+			nfds = sockd + 1;
+	#endif
+			FD_ZERO( &writefds );
+			FD_SET( sockd, &writefds );
+
+			nfound = select( nfds, 0, &writefds, &writefds, &timer );
+
+			switch(nfound) {
+			case 0:
+				dprintf(D_ALWAYS,"select timed out in Buf::write()\n");
+				return -1;
+				break;
+			case 1:
+				break;
+			default:
+				dprintf( D_ALWAYS, "select returns %d, send failed\n",
+					nfound );
+				return -1;
+				break;
+			}
 		}
 
-	#if !defined(WIN32) // nfds is ignored on WIN32
-		maxfd = (dataSock > mngSock) ? dataSock + 1 : mngSock + 1;
-	#endif
-		FD_ZERO( &wrfds );
-		FD_SET( dataSock, &wrfds );
-		FD_ZERO( &rdfds );
-		if(mngSock > 0) FD_SET( mngSock, &rdfds );
-
-        if(threshold > 0)
-            (void)gettimeofday(&prev, NULL);
-
-		nfound = select( maxfd, &rdfds, &wrfds, 0, timer );
-        if(nfound < 0) {
-            if(errno == EINTR) continue;
-			dprintf(D_ALWAYS,"Buf::write: select failed: %s\n", strerror(errno));
-            return -1;
-        }
-
-		if(nfound == 0) {
-			dprintf(D_ALWAYS,"select timed out in Buf::write()\n");
-			if (timer) free(timer);
+		nwo = send(sockd, &_dta[num_touched()+nw], sz-nw, 0);
+		if (nwo <= 0) {
+			dprintf(D_FULLDEBUG,"Buf:Write send failed, sock=%X, err=%d, len=%d\n",
+				sockd,
+#ifdef WIN32
+				WSAGetLastError(),
+#else
+				errno,
+#endif
+				sz-nw);
 			return -1;
 		}
-		if(FD_ISSET(dataSock, &wrfds)) {
-            numSends++;
-			nwo = send(dataSock, &_dta[num_touched()+nw], sz-nw, 0);
-			if (nwo < 0) {
-			    dprintf(D_ALWAYS,"Buf:Write send failed, sock=%X, err=%d, len=%d\n",
-			    dataSock,
-#ifdef WIN32
-			    WSAGetLastError(),
-#else
-			    errno,
-#endif
-			    sz-nw);
-			    if (timer) free(timer);
-			    return -1;
-			} else if(nwo == 0) {
-                dprintf(D_ALWAYS, "Buf:write send failed: connection closed prematurely\n");
-                return -1;
-            } else if (nwo < sz-nw) {
-                blocked++;
-			}
-			nw += nwo;
 
-            if(threshold > 0) {
-                (void) gettimeofday(&curr, NULL);
-                elapsed = (double)((curr.tv_sec - prev.tv_sec)*1000000.0 + (curr.tv_usec - prev.tv_usec));
-                if(elapsed >= (double)threshold) {
-                    congested = true;
-                    //cout << "elpased: " << elapsed << "    threshold: " << threshold << endl;
-                }
-            }
-		}
-		if(mngSock > 0 && FD_ISSET(mngSock, &rdfds)) {
-			ready = true;
-		}
+		nw += nwo;
 	}
 
-	if (timer) free(timer);
 	_dta_pt += nw;
-
-    if(blocked * 10 > numSends /* more than 10% */)
-        congested = true;
 	return nw;
 }
 
 
 int Buf::flush(
 	SOCKET	sockd,
-	SOCKET	mngSock,
 	void	*hdr,
 	int		sz,
-	int		timeout,
-    int     threshold,
-	bool	&congested,
-	bool	&ready
+	int		timeout
 	)
 {
 /* DEBUG SESSION
@@ -210,7 +172,7 @@ int Buf::flush(
 */
 
 
-	sz = write(sockd, mngSock, -1, timeout, threshold, congested, ready);
+	sz = write(sockd, -1, timeout);
 	reset();
 
 	return sz;
@@ -270,7 +232,6 @@ int Buf::read(
 			case 1:
 				break;
 			default:
-                if(errno == EINTR) continue;
 				dprintf( D_ALWAYS, "select returns %d, recv failed\n",
 					nfound );
 				return -1;
@@ -278,12 +239,10 @@ int Buf::read(
 		}
 
 		nro = recv(sockd, &_dta[num_used()+nr], sz-nr, 0);
-        //cerr<< "Buf::read: " << nro << endl;
 
 		if (nro <= 0) {
 			dprintf( D_ALWAYS, "recv returned %d, errno = %d\n", 
 					 nro, errno );
-            //cerr << "Buf:read: failed to read: " << strerror(errno) << endl;
 			return -1;
 		}
 
