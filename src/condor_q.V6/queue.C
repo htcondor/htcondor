@@ -8,7 +8,7 @@
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "my_hostname.h"
-#include "get_full_hostname.h"
+#include "get_daemon_addr.h"
 #include "files.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
@@ -174,8 +174,8 @@ static void
 processCommandLineArguments (int argc, char *argv[])
 {
 	int i, cluster, proc;
-	char *arg, *at, *fullname;
-
+	char *arg, *at, *daemonname;
+	
 	for (i = 1; i < argc; i++)
 	{
 		// if the argument begins with a '-', use only the part following
@@ -209,12 +209,12 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 
-			if( !(fullname = get_full_hostname(argv[i+1])) ) {
+			if( !(daemonname = get_daemon_name(argv[i+1])) ) {
 				fprintf( stderr, "%s: unknown host %s\n",
-						 argv[0], argv[i+1] );
+						 argv[0], get_host_part(argv[1+1]) );
 				exit(1);
 			}
-			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, fullname);
+			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
 
 			result = scheddQuery.addConstraint (constraint);
 			if (result != Q_OK) {
