@@ -552,6 +552,10 @@ HandleSyscalls()
 			EXCEPT("HandleSyscalls: select: errno=%d, rsc_sock=%d, client_log=%d",errno,RSC_SOCK,CLIENT_LOG);
 		}
 
+		if( cnt < 0 && errno == EINTR ) {
+			continue;
+		}
+
 		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
 			if( HandleLog() < 0 ) {
 				EXCEPT( "Peer went away" );
