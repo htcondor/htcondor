@@ -19,14 +19,16 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	directory.o my_hostname.o file_lock.o \
 	email.o env.o environ.o c++_util_instantiate.o \
 	string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
-	user_log.o config.o condor_config.o stringSpace.o condor_state.o $(API_OBJ)\
+	user_log.o config.o condor_config.o stringSpace.o condor_state.o \
+	$(API_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o daemon_types.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
 	daemon.o uids.o metric_units.o condor_ver_info.o condor_cred_base.o \
-        $(KERBEROS_OBJ)  condor_credential.o HashTable.o MyString.o interpreter.o
+        $(KERBEROS_OBJ)  condor_credential.o HashTable.o MyString.o \
+	interpreter.o which.o parse_util.o
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
