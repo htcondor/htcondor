@@ -2092,11 +2092,13 @@ open( const char *path, int flags, ... )
 			break ;
 		  case IS_NFS:
 		  case IS_AFS:
+		  case IS_LOCAL:
 			fd = syscall( SYS_open, local_path, flags, creat_mode );
 			if( fd >= 0 ) {
 				break;
 			} // else fall through, and try by remote syscalls anyway
 		  case IS_RSC:
+		  default:
 			if( _FileStreamWanted ) {
 				fd = open_stream( local_path, flags, &_FileStreamLen );
 			} else {
