@@ -52,6 +52,9 @@ public:
   int operator>(const Time& T) const { return (Sec>T.Sec); }
   int operator>=(const Time& T) const { return (Sec>=T.Sec); }
   
+  static int Now() { return time(NULL); }
+
+/*
   static Time Now() {
 #if defined(WIN32)
 	  return Time(time(NULL));
@@ -64,6 +67,7 @@ public:
     return Time(d);
 #endif
   }
+*/
 
 /*
   friend Time operator-(const Time& T1, const Time& T2) {

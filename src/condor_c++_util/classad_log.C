@@ -299,7 +299,7 @@ ClassAdLog::LogState(int fd)
 	} 
 }
 
-LogNewClassAd::LogNewClassAd(const char *k, char *m, char *t)
+LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t)
 {
 	op_type = CondorLogOp_NewClassAd;
 	key = strdup(k);
@@ -398,7 +398,7 @@ LogDestroyClassAd::ReadBody(int fd)
 }
 
 
-LogSetAttribute::LogSetAttribute(const char *k, const char *n, char *val)
+LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val)
 {
 	op_type = CondorLogOp_SetAttribute;
 	key = strdup(k);

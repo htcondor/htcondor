@@ -88,7 +88,7 @@ private:
 
 class LogNewClassAd : public LogRecord {
 public:
-	LogNewClassAd(const char *key, char *mytype, char *targettype);
+	LogNewClassAd(const char *key, const char *mytype, const char *targettype);
 	~LogNewClassAd();
 	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
@@ -122,7 +122,7 @@ private:
 
 class LogSetAttribute : public LogRecord {
 public:
-	LogSetAttribute(const char *key, const char *name, char *value);
+	LogSetAttribute(const char *key, const char *name, const char *value);
 	~LogSetAttribute();
 	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }

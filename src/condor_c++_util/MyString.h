@@ -76,16 +76,7 @@ public:
     return 0;
   }
 
-/*
-  friend int operator==(const char* S1, const MyString& S2) { return (MyString(S1)==S2); }
-  friend int operator==(const MyString& S1, const char* S2) { return (S1==MyString(S2)); } 
-*/
-
   friend int operator!=(const MyString& S1, const MyString& S2) { return ((S1==S2) ? 0 : 1); }
-/*
-  friend int operator!=(const char* S1, const MyString& S2) { return ((S1==S2) ? 0 : 1); }
-  friend int operator!=(const MyString& S1, const char* S2) { return ((S1==S2) ? 0 : 1); } 
-*/
 
   friend int operator<(const MyString& S1, const MyString& S2) {
     if (!S1.Data && !S2.Data) return 0;
@@ -117,8 +108,8 @@ public:
   }
 
   char& operator[](int pos) {
-	static char dummy;
-	if (pos>=Len) return dummy;
+	static char dummy='\0';
+	if (pos>=Len || pos<0) return dummy;
 	return Data[pos];
   }
 
