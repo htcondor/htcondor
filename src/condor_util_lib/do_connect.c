@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "internet.h"
 #include "except.h"
 #include "debug.h"
 #include "clib.h"
@@ -29,16 +30,9 @@
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-#if defined(__STDC__)
 unsigned short find_port_num( char *service_name, unsigned short dflt_port );
 char *mk_config_name( const char *service_name );
 char *param( const char *name );
-#else
-unsigned short find_port_num();
-char *mk_config_name();
-char *param();
-#endif
-
 
 do_connect( host, service, port )
 const char 	*host, *service;
@@ -68,6 +62,9 @@ int		timeout;
 		EXCEPT( "setsockopt( SO_KEEPALIVE )" );
 	}
 
+		/* Now, bind this socket to the right interface. */
+	_condor_local_bind( fd );
+
     if (host[0]=='<'){ /* dhaval */
     	string_to_sin(host,&sin);
     } else {
@@ -82,9 +79,6 @@ int		timeout;
 			return( -1 );
 		}
 		port = find_port_num( service, port );
-	}
-
-	if (host[0]!='<'){ /* dhaval */
 		memset( (char *)&sin,0,sizeof(sin) );
 		memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
 		sin.sin_family = hostentp->h_addrtype;
@@ -132,6 +126,8 @@ u_short port;
 		exit( 1 );
 	}
 
+		/* Now, bind this socket to the right interface. */
+	_condor_local_bind( sock );
 
 	memset( (char *)&sin,0,sizeof(sin) );
 	memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
@@ -144,35 +140,6 @@ u_short port;
 	}
 
 	return sock;
-}
-
-
-
-/* create an unconnected datagram socket and bind(?) --Raghu */
-
-int
-udp_unconnect()
-{
-    int sock;
-    struct sockaddr_in cli_addr;
-
-    if( (sock=socket(AF_INET,SOCK_DGRAM,0)) < 0 ) {
-            dprintf(D_ALWAYS, "unconnected dgram socket()" );
-            EXCEPT("socket");
-        }
-
-    /* Bind */
-
-     memset( (char *)&cli_addr, 0,sizeof(cli_addr));   /* zero out */
-     cli_addr.sin_family = AF_INET;
-     cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-     cli_addr.sin_port = htonl(0);
-
-     if(bind(sock,(struct sockaddr *)&cli_addr, sizeof(cli_addr))<0) {      
-                dprintf(D_ALWAYS, " bind failed in unconnected dgram");
-                exit(1);
-     }
-     return sock;
 }
 
 
@@ -244,25 +211,6 @@ mk_config_name( const char *service_name )
 
 	return answer;
 }
-
-
-
-fill_dgram_io_handle(DGRAM_IO_HANDLE *handle, char *chost, int sock_fd, int port_num)
-{
-   struct hostent *serv_p;
-   handle->sock = sock_fd;
-
-   if((serv_p = gethostbyname(chost))== NULL) {
-         EXCEPT("gethostbyname()");
-   }
-   
-   memset((char *)&(handle->addr), 0,sizeof(handle->addr));
-   memcpy((void *) &((handle->addr).sin_addr), serv_p->h_addr, serv_p->h_length);
-   
-   (handle->addr).sin_family = AF_INET;
-   (handle->addr).sin_port = htons(port_num);
-
- }
 
 
 /*--------------------------------------------------------
@@ -414,3 +362,4 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
    
     return -1; 
 }
+
