@@ -28,3 +28,8 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_syscall_lib,receivers.o)
 import(../condor_syscall_lib,extern_path.o)
 import(../condor_util_lib,getmnt.o)
+
+DEPEND_SRC = job_report.C log_events.C ops.C pseudo_ops.C shadow.C \
+shadow_common.C
+
+depend_source_target($(DEPEND_SRC))

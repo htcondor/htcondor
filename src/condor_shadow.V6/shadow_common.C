@@ -814,7 +814,7 @@ MakeProc(ClassAd *ad, PROC *p)
 	float	utime,stime;
 	char	*s;
 	ExprTree *e;
-
+	
 	p->version_num = 3;
 	ad->LookupInteger(ATTR_CLUSTER_ID, p->id.cluster);
 	ad->LookupInteger(ATTR_PROC_ID, p->id.proc);
@@ -829,8 +829,15 @@ MakeProc(ClassAd *ad, PROC *p)
 	ad->LookupInteger(ATTR_JOB_PRIO, p->prio);
 	ad->LookupInteger(ATTR_JOB_NOTIFICATION, p->notification);
 	ad->LookupInteger(ATTR_IMAGE_SIZE, p->image_size);
-	ad->LookupString(ATTR_JOB_ENVIRONMENT, buf);
-	p->env = strdup(buf);
+	// This is the old way of getting the string, and it's bad, bad, bad.
+   	// It doesn't do well if you have strings > 10K. 
+	// ad->LookupString(ATTR_JOB_ENVIRONMENT, buf);
+	// p->env = strdup(buf);
+
+	// Note that we are using the new version of LookupString here.
+	// It allocates a new string of the correct length with malloc()
+	// and returns that string, so we no longer copy it. 
+	ad->LookupString(ATTR_JOB_ENVIRONMENT, &(p->env));
 
 	p->n_cmds = 1;
 	p->cmd = (char **) malloc(p->n_cmds * sizeof(char *));
