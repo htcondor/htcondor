@@ -50,13 +50,11 @@ Resource::init_classad()
 	char 	tmp[80];
 	int 	phys_memory = -1;
 	char*	host_cell;
-	char*	addrname;
 	char*	ptr;
 	int		needs_free = 0;
-	int 	now = (int)time(NULL);
-	
-		// Insert state and activity attributes
-	r_state->init_classad();
+
+		// Insert state and activity attributes into public ad
+	r_state->init_classad( r_classad );
 
 		// Name of this resource (needs to be in public and private ads)
 	sprintf( tmp, "%s=\"%s\"", ATTR_NAME, r_name );
@@ -160,10 +158,10 @@ Resource::update_classad()
 	r_attr->update();
 	
 		// Refresh the classad with statistics that are only needed on updates
-	sprintf( line, "%s=%d", ATTR_VIRTUAL_MEMORY, r_attr->virtmem() );
+	sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, r_attr->virtmem() );
  	cp->Insert( line ); 
 
-	sprintf( line, "%s=%d", ATTR_DISK, r_attr->disk() );
+	sprintf( line, "%s=%lu", ATTR_DISK, r_attr->disk() );
 	cp->Insert( line ); 
   
 	// KFLOPS and MIPS are only conditionally computed; thus, only
@@ -188,7 +186,7 @@ Resource::update_classad()
 	r_private_classad->Insert( line );
 
 		// Update current rank expression in classad
-	sprintf( line, "%s=%d", ATTR_CURRENT_RANK, r_cur->rank() );
+	sprintf( line, "%s=%f", ATTR_CURRENT_RANK, r_cur->rank() );
 	cp->Insert( line );
 
 	return TRUE;
@@ -242,7 +240,7 @@ Resource::update()
 
 		// If we have an alternate collector, send CA there.
 	if( alt_sock ) {
-		if( rval2 = send_classad_to_sock( alt_sock, FALSE ) ) {
+		if( (rval2 = send_classad_to_sock( alt_sock, FALSE )) ) {
 			dprintf( D_FULLDEBUG, 
 					 "Sent update to the condor_view host (%s)\n",
 					 condor_view_host );
