@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-typedef void (*SIG_HANDLER)();
+typedef void (*SIG_HANDLER)(int);
 
 void install_sig_handler( int sig, SIG_HANDLER handler );
 #ifndef WIN32
