@@ -1,7 +1,8 @@
 .SUFFIXES: .C
 CC = gcc
+CFLAGS = -g -DULTRIX42
 CPlusPlus = g++
-CPlusFlags = -g -Wall -DSUNOS41 -fwritable-strings
+CPlusFlags = -g -Wall -DULTRIX42 
 LD = /usr/psup/gcc/lib/gcc-lib/sparc-sun-sunos4.1.3/2.4.5/ld
 LDFLAGS = -dc -e start -Bstatic
 LIB_PATH = -L/usr/psup/gcc/lib/gcc-lib/sparc-sun-sunos4.1.3/2.4.5 -L/usr/psup/gcc/lib
@@ -14,7 +15,7 @@ CRT0 = /lib/crt0.o
 #	$(LD) $(LDFLAGS) -o test $(CRT0) $(LIB_PATH) $(OBJ) $(LIBS)
 
 SRC = driver.C image.C
-PACKAGE = image.o stubs.o
+PACKAGE = image.o stubs.o machdep.o
 
 .C.o:
 	$(CPlusPlus) $(CPlusFlags) -c $<
@@ -36,11 +37,17 @@ test4: driver4.o $(PACKAGE)
 display: display.o $(PACKAGE)
 	$(CPlusPlus) $(CPlusFlags) -o display display.o $(PACKAGE)
 
+test_data_off: test_data_off.o
+	$(CC) $(CFLAGS) -o test_data_off test_data_off.o
+
+test_setjmp: test_setjmp.o
+	$(CC) $(CFLAGS) -o test_setjmp test_setjmp.o
+
 process: process.o
 	cc -o process process.o
 
 foo: foo.o
 	gcc -o foo foo.o
 
-image.o: image.h
-driver.o: image.h
+image.o: image.h machdep.h
+driver.o: image.h machdep.h
