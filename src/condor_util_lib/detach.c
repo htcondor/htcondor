@@ -30,6 +30,7 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #endif LINT
 
+void
 detach()
 {
 #if !defined(HPUX) && !defined(Solaris)
