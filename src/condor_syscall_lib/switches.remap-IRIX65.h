@@ -68,6 +68,11 @@ REMAP_TWO( fchmod, _fchmod, int , int , mode_t )
 REMAP_THREE( fchown, _fchown, int , int , uid_t , gid_t )
 REMAP_ZERO( fork, _fork, pid_t )
 REMAP_FOUR( fstatfs, _fstatfs, int , int , struct statfs *, int , int )
+
+REMAP_TWO( fstat64, _fstat64, int, int, struct stat64 *)
+REMAP_TWO( lstat64, _lstat64, int, const char *, struct stat64 *)
+REMAP_TWO( stat64, _stat64, int, const char *, struct stat64 *)
+
 /*REMAP_THREE( fxstat, _fxstat, int , const int , int , struct stat *)*/
 REMAP_THREE( getdents, _getdents, int, int, struct dirent *, unsigned int )
 REMAP_THREE( getdents64, _getdents64, int , int , struct dirent64 *, size_t )
