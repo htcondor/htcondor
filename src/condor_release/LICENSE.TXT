@@ -1,6 +1,6 @@
 Copyright and Disclaimer
 
-Copyright 1990-1998 Condor Team, Computer Sciences Department,
+Copyright 1990-1999 Condor Team, Computer Sciences Department,
 University of Wisconsin-Madison, Madison, WI. All Rights Reserved. No
 use of the Condor Software Program Object Code (Condor) is authorized
 without the express consent of the Condor Team. For more information
