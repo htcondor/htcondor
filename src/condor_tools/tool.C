@@ -544,6 +544,8 @@ doCommand( char *name )
 	if( ! addr ) {
 		namePrintf( stderr, name, "Can't find address for" );
 		fprintf( stderr, "Perhaps you need to query another pool.\n" ); 
+		RESTORE;
+		return;
 	}
 
 		/* Connect to the daemon */
