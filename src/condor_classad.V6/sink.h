@@ -31,6 +31,7 @@
 BEGIN_NAMESPACE( classad )
 
 class ClassAdCollection;
+class View;
 
 /**
 	Defines an abstraction for the output sink into which expressions and 
@@ -133,6 +134,7 @@ class Sink
 		friend class ExprList;
 		friend class FormatOptions;
 		friend class ClassAdCollection;
+		friend class View;
 
 		FormatOptions *pp;
 
