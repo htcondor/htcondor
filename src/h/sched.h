@@ -43,15 +43,15 @@ typedef struct {
 } STATUS;
 
 typedef struct {
-	int		c_cmd;
-} COMMAND;
-
-typedef struct {
 	int		port1;
 	int		port2;
 } PORTS;
 
 #ifdef JUNK
+typedef struct {
+	int		c_cmd;
+} COMMAND;
+
 typedef struct
 {
 	time_t	when;
