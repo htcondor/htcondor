@@ -9,7 +9,7 @@ extern "C" {
 #	include <time.h>
 #endif
 
-#if defined(SUNOS41) || defined(HPUX9)
+#if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43)
 	typedef int rlim_t;
 #endif
 

@@ -9,6 +9,11 @@
 #define off_t _hide_off_t
 #endif
 
+#if	defined(ULTRIX43)
+#define key_t       long
+typedef int		bool_t;
+#endif
+
 #include <sys/types.h>
 
 #if defined(OSF1) && !defined(__GNUC__)

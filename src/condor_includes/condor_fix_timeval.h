@@ -10,6 +10,11 @@
 		struct  timeval it_interval;    /* timer interval */
 		struct  timeval it_value;   /* current value */
 	};
+	struct timezone {
+    	int tz_minuteswest; /* minutes west of Greenwich */
+    	int tz_dsttime; /* type of dst correction */
+	};
+
 #else
 #	include <sys/time.h>
 #endif
