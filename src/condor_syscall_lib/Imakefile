@@ -6,7 +6,8 @@ OS = OperatingSystem
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 
-#if DOES_CHECKPOINTING
+#if DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
+
 #	if IS_SPARC_SUNOS41
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
@@ -14,13 +15,18 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
 #	endif
-#else	/* DOES_CHECKPOINTING */
+
+#else	/* =============  DOES NOT DO CHECKPOINTING ============*/
+
 #	if IS_HPPAR_HPUX9
 EXTRACT = GETEUID.o GETEGID.o
-#	else /* IS_HPPAR_HPUX9 */
+#	elif IS_R6000_AIX32
+/* Don't extract anything */
+#	else 
 EXTRACT = GETEUID.o GETEGID.o GETWD.o
 #	endif
-#endif
+
+#endif	/* ===============  CHECKPOINTING CONDITIONAL ============*/
 
 STUBS = switches.o switches.special.o
 UTIL =	remote_syscall.o syscall_connect.o senders.o remote_startup.o
@@ -69,6 +75,10 @@ CKPT_OBJ = file_state.o image.o tmp_stack.o machdep.$(OS).o syscall_mode.o
 CKPT_OBJ = syscall_mode.o
 #endif
 
+#if IS_R6000_AIX32
+SYSCALL_SHR = $(RELEASE_DIR)/lib/syscall.shr.o
+#endif
+
 UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
 			condor_errlst.o
 
@@ -77,7 +87,7 @@ LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 
 SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o
 
-all_target(condor_syscall_lib.a receivers.c $(SIMPLE_OBJ))
+all_target(condor_syscall_lib.a receivers.c $(SIMPLE_OBJ) $(SYSCALL_SHR))
 stubs: switches.c senders.c receivers.c
 
 uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
@@ -145,6 +155,29 @@ lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
 
 y.tab.c: stub_gen_yacc.y scanner.h
 	yacc -d stub_gen_yacc.y
+
+
+#if IS_R6000_AIX32
+CMNT
+CMNT Provide the syscall() routine.
+CMNT Imports: all system calls from /unix
+CMNT Exports: syscall() and CondorErrno
+CMNT
+syscall.shr.o: syscall.o syscall.exp
+	ld -o syscall.shr.o \
+		-bM:SRE -T512 \
+		-bE:syscall.exp \
+		-bI:$(SYSCALLS_EXP) \
+		-H8 \
+		syscall.o
+clean::
+	rm -f syscall.shr.o syscall.o
+
+$(SYSCALL_SHR): syscall.shr.o
+	rm -f $(SYSCALL_SHR)
+	cp syscall.shr.o $(SYSCALL_SHR)
+#endif /* AIX */
+
 
 clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c receivers.c *.o
