@@ -73,10 +73,9 @@ class Dag {
     bool AddDependency (Job * parent, Job * child);
   
     /** Blocks until the Condor Log file grows.
-        @param checkInterval Number of seconds between checks
         @return true: log file grew, false: timeout or shrinkage
     */
-    bool DetectLogGrowth (int checkInterval = 2);
+    bool DetectLogGrowth();
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
@@ -175,7 +174,7 @@ class Dag {
 
     // add job to termination queue and report termination to all
     // child jobs by removing job ID from each child's waiting queue
-    void TerminateJob (Job * job);
+    void TerminateJob( Job* job, bool bootstrap = false );
   
     /*  Get the first appearing job in the termination queue marked SUBMITTED.
         This function is called by ProcessLogEvents when a SUBMIT log
