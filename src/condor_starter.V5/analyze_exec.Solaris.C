@@ -18,22 +18,19 @@ Portability:
 
 #define _ALL_SOURCE
 
-#if defined(Solaris)
-#include <sys/exechdr.h>
-#endif
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
 #include "condor_jobqueue.h"
 #include <sys/file.h>
 #include <sys/exec.h>
+#include <sys/exechdr.h>
 #include "proto.h"
 #include <nlist.h>
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
-
+#define SOLARIS_MAGIC 046106
 
 extern "C" {
 #if defined(Solaris)
@@ -69,21 +66,26 @@ int magic_check( char *a_out )
 
 	close( exec_fd );
 
-	if( header.a_magic != ZMAGIC ) {
+	if( header.a_magic != SOLARIS_MAGIC ) {
 		dprintf( D_ALWAYS, "\"%s\": BAD MAGIC NUMBER\n", a_out );
+		dprintf( D_ALWAYS, "0x%x != 0x%x\n", header.a_magic, SOLARIS_MAGIC );
+		dprintf( D_ALWAYS, "0%o != 0%o\n", header.a_magic, SOLARIS_MAGIC );
+		dprintf( D_ALWAYS, "%d != %d\n", header.a_magic, SOLARIS_MAGIC );
 		return -1;
 	}
-	if( header.a_machtype != M_SPARC ) {
+	if( header.a_machtype != 69 ) {
 		dprintf( D_ALWAYS,
 			"\"%s\": NOT COMPILED FOR SPARC ARCHITECTURE\n", a_out
 		);
+		dprintf( D_ALWAYS, "%d != %d\n", header.a_machtype, 69 );
 		return -1;
 	}
+#if (!defined Solaris)
 	if( header.a_dynamic ) {
 		dprintf( D_ALWAYS, "\"%s\": LINKED FOR DYNAMIC LOADING\n", a_out );
 		return -1;
 	}
-
+#endif
 	return 0;
 }
 
@@ -96,9 +98,12 @@ int symbol_main_check( char *name )
 	int	status;
 	struct nlist nl[2];
 
+	/* Unlike on some other architectures, we want to look for
+	   MAIN and _condor_prestart on Solaris, not _MAIN and
+	   __condor_prestart.  -Jim B. */
 
-	nl[0].n_name = "_MAIN";
-	nl[1].n_name = "__condor_prestart";
+	nl[0].n_name = "MAIN";
+	nl[1].n_name = "_condor_prestart";
 	nl[2].n_name = "";
 
 
