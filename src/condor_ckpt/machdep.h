@@ -63,7 +63,7 @@
 
 #elif defined(OSF1)
 
-	extern "C" int brk( void * );
+	extern "C" int brk( char * );
 #	include <sys/types.h>
 	extern "C" void *sbrk( ssize_t );
 	typedef void (*SIG_HANDLER)( int );
