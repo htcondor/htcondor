@@ -4,7 +4,7 @@ TARGET_SYSTEM = condor
 CFLAGS = $(STD_C_FLAGS) -g -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
 
-RESOURCE_SRC = resource.c
+RESOURCE_SRC = resource.C
 RESOURCE_OBJ = resource.o
 RESOURCE_HDR = resource.h
 
@@ -28,8 +28,8 @@ RESOURCE_HDR = resource.h
 #	define LOAD_AVG_OBJ load_avg.BSD.o
 #endif
 
-STARTD_SRC = $(RESOURCE_SRC) command.c event.c main.c resmgr.c rpc.c glue.c LOAD_G_SRC startd_classad.C
-STARTD_OBJ = $(RESOURCE_OBJ) command.o event.o main.o resmgr.o rpc.o glue.o LOAD_AVG_OBJ startd_classad.o
+STARTD_SRC = $(RESOURCE_SRC) command.C event.C main.C resmgr.C rpc.C glue.C LOAD_G_SRC startd_classad.C CondorPrefExps.C CondorPendingJobs.C
+STARTD_OBJ = $(RESOURCE_OBJ) command.o event.o main.o resmgr.o rpc.o glue.o LOAD_AVG_OBJ startd_classad.o CondorPrefExps.o CondorPendingJobs.o
 
 #if 0
 #if IS_V5
@@ -58,8 +58,8 @@ LIBDIRS= ../condor_xdr_lib ../condor_util_lib ../condor_classad
 all_target(condor_startd)
 
 $(RESOURCE_SRC):
-	@rm -f resource.c resource.h
-	ln -s resource.$(TARGET_SYSTEM).c resource.c
+	@rm -f resource.C resource.h
+	ln -s resource.$(TARGET_SYSTEM).C resource.C
 	ln -s resource.$(TARGET_SYSTEM).h resource.h
 
 tags_target($(STARTD_SRC),$(LIBDIRS))
@@ -76,4 +76,4 @@ program_target(condor_startd,$(STARTD_OBJ),$(LIB),release)
 #endif
 
 clean::
-	rm -f resource.c resource.h
+	rm -f resource.C resource.h
