@@ -822,6 +822,7 @@ extern Void_t*     sbrk();
 #define pvALLOc		condor_pvalloc
 #define mALLINFo	condor_mallinfo
 #define mALLOPt		condor_mallopt
+#define free		condor_free
 #define cfree		condor_cfree
 #define malloc_trim	condor_malloc_trim
 #define malloc_usable_size	condor_malloc_usable_size
