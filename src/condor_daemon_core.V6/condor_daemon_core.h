@@ -20,7 +20,7 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////
 //
 // This file contains the definition for class DaemonCore. This is the
 // central structure for every daemon in condor. The daemon core triggers
@@ -29,7 +29,7 @@
 // with the DaemonCore, it has to be a derived class of Service.
 //
 //
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////
 
 #ifndef _CONDOR_DAEMON_CORE_H_
 #define _CONDOR_DAEMON_CORE_H_
@@ -81,14 +81,23 @@ typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
 
 // If WANT_DC_PM is defined, it means we want DaemonCore Process Management.
 // We _always_ want it on WinNT; on Unix, some daemons still do their own 
-// Process Management (just until we get around to changing them to use daemon core).
+// Process Management (just until we get around to changing them to use 
+// daemon core).
 #if defined(WIN32) && !defined(WANT_DC_PM)
 #define WANT_DC_PM
 #endif
 
-// helper function for finding available port for both TCP and UDP command socket
+/** helper function for finding available port for both 
+	TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
 
+/** This class badly needs documentation, doesn't it? 
+	This file contains the definition for class DaemonCore. This is the
+	central structure for every daemon in condor. The daemon core triggers
+	preregistered handlers for corresponding events. class Service is the base
+	class of the classes that daemon_core can serve. In order to use a class
+	with the DaemonCore, it has to be a derived class of Service.
+*/
 class DaemonCore : public Service
 {
 	friend class TimerManager; 
@@ -143,7 +152,8 @@ class DaemonCore : public Service
 		int		Register_Socket(Stream* iosock, char *iosock_descrip, SocketHandlercpp handlercpp,
 					char *handler_descrip, Service* s, DCpermission perm = ALLOW);
 		int		Register_Command_Socket( Stream* iosock, char *descrip = NULL ) {
-					return(Register_Socket(iosock,descrip,(SocketHandler)NULL,(SocketHandlercpp)NULL,"DC Command Handler",NULL,ALLOW,0)); 
+					return(Register_Socket(iosock,descrip,(SocketHandler)NULL,
+										   (SocketHandlercpp)NULL,"DC Command Handler",NULL,ALLOW,0)); 
 				}
 		int		Cancel_Socket( Stream* );
 
@@ -166,25 +176,88 @@ class DaemonCore : public Service
 		inline	pid_t getppid() { return ppid; };
 		int		Is_Pid_Alive(pid_t pid);
 
-				// Send_Signal to daemonCore processes only
+			/** Send_Signal to daemonCore processes or non-DC process */
 		int		Send_Signal(pid_t pid, int sig);
 
-				// methods for process management.  these work
-				// on any process, not just daemon core processes.
+			/** Methods for process management.  these work
+				on any process, not just daemon core processes.
+			*/
+			//@{
+			/// Shut down fast.  Please doc++ me.
 		int		Shutdown_Fast(pid_t pid);
+			/// Shut down gracefully.  Please doc++ me.
 		int		Shutdown_Graceful(pid_t pid);
+			/// Suspend a process.  Please doc++ me.
 		int		Suspend_Process(pid_t pid);
+			/// Continue a process.  Please doc++ me.
 		int		Continue_Process(pid_t pid);
+			//@}
 
-		int		SetDataPtr( void * );
-		int		Register_DataPtr( void * );
+			/** Data pointer functions.  These functions deal with
+				associating a pointer to data with a registered callback.
+			*/
+			//@{
+			/** Set the data pointer when you're <b>inside</b> the handler
+				function.  It will not work outside.
+				@param data The desired pointer to set...
+			*/
+		int		SetDataPtr( void *data );
+
+			/** "Register" a data pointer.  You want to do this immediately
+				after you register a Command/Socket/Timer/etc.  When you enter 
+				the handler for this registered function, the pointer you 
+				specify will be magically available to (G|S)etDataPtr().
+				@param data The desired pointer to set...
+			*/
+		int		Register_DataPtr( void *data );
+
+			/** Get the data pointer when you're <b>inside</b> the handler
+				function.  It will not work outside.  You must have done a 
+				Register_DataPtr after the function was registered for this
+				to work.
+				@return The desired pointer to set...
+			*/
 		void	*GetDataPtr();
+			//@}
 
-	int SetEnv(char *key, char *value);
-		int		Create_Process(
+			/** Put the {key, value} pair into the environment */
+		int SetEnv(char *key, char *value);
+			/** Put env_var into the environment
+				@param env_var Desired string to go into environment;
+				   must be of the form 'name=value' 
+			*/
+		int SetEnv(char *env_var);
+		
+			/** Create a process.  Works for NT and Unix.  On Unix, a
+				fork and exec are done.  Read the source for ugly 
+				details - it takes care of most everything.
+				@param name The full path name of the executable.  If this 
+				   is a relative path name AND cwd is specified, then we
+				   prepend the result of getcwd() to 'name' and pass 
+				   that to exec().
+				@param args The list of args, separated by spaces.  The 
+				   first arg is argv[0], the name you want to appear in 
+				   'ps'.  If you don't specify agrs, then 'name' is 
+				   used as argv[0].
+				@param priv The priv state to change into right before
+				   the exec.  Default = no action.
+				@param reaper_id The reaper number to use.  Default = 1.
+				@param want_command_port Well, do you?  Default = TRUE
+				@param env A colon-separated list of stuff to be put into
+				   the environment of the new process
+				@param cwd Current Working Directory
+				@param new_process_group Do you want to make one?
+				   Default = FALSE
+				@param sock_inherit_list A list of socks to inherit.
+				@param std An array of three file descriptors to map
+				   to stdin, stdout, stderr respectively.  If this array
+				   is NULL, don't perform remapping.
+				@return The pid of the newly created process.
+			*/
+		int	Create_Process(
 			char		*name,
 			char		*args,
-			priv_state	condor_priv = PRIV_UNKNOWN,
+			priv_state	priv = PRIV_UNKNOWN,
 			int			reaper_id = 1,
 			int			want_commanand_port = TRUE,
 			char		*env = NULL,
@@ -372,9 +445,9 @@ class DaemonCore : public Service
 		// end of thread local storage
 		
 #ifdef WIN32
-	static char *ParseEnvArgsString(char *env, int reserve, bool sep_flag);
+	static char *ParseEnvArgsString(char *env, bool sep_flag);
 #else
-	static char **ParseEnvArgsString(char *env, int reserve, bool env);
+	static char **ParseEnvArgsString(char *env, bool env);
 #endif
 };
 

@@ -20,12 +20,12 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////
 //
 // Implementation of DaemonCore.
 //
 //
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
 
@@ -2170,11 +2170,11 @@ int DaemonCore::SetEnv(char *key, char *value)
 	// we don't leak memory.  This is just quick and dirty to get something
 	// working.
 	char *buf;
-	buf = new char[strlen(key) + strlen(value) + 1];
+	buf = new char[strlen(key) + strlen(value) + 2];
 	sprintf(buf, "%s=%s", key, value);
 	if( putenv(buf) != 0 )
 	{
-		dprintf(D_ALWAYS, "SetEnvironmentVariable failed: %s (errno=%d)\n",
+		dprintf(D_ALWAYS, "putenv failed: %s (errno=%d)\n",
 				strerror(errno), errno);
 		return FALSE;
 	}
@@ -2182,10 +2182,62 @@ int DaemonCore::SetEnv(char *key, char *value)
 	return TRUE;
 }
 
+int DaemonCore::SetEnv( char *env_var ) 
+{
+		// this function used if you've already got a name=value type
+		// of string, and want to put it into the environment.  env_var
+		// must therefore contain an '='.
+	if ( !env_var ) {
+		dprintf (D_ALWAYS, "DaemonCore::SetEnv, env_var = NULL!\n" );
+		return FALSE;
+	}
+
+		// Assume this type of string passes thru with no problem...
+	if ( env_var[0] == 0 ) {
+		return TRUE;
+	}
+
+	char *equalpos = NULL;
+
+	if ( ! (equalpos = strchr( env_var, '=' )) ) {
+		dprintf (D_ALWAYS, "DaemonCore::SetEnv, env_var has no '='\n" );
+		dprintf (D_ALWAYS, "env_var = \"%s\"\n", env_var );
+		return FALSE; 
+	}
+
+#ifdef WIN32  // will this ever be used?  Hmmm....
+		// hack up string and pass to other SetEnv version.
+	int namelen = (int) equalpos - (int) env_var;
+	int valuelen = strlen(env_var) - namelen - 1;
+
+	char *name = new char[namelen+1];
+	char *value = new char[valuelen+1];
+	strncpy ( name, env_var, namelen );
+	strncpy ( value, equalpos+1, valuelen );
+
+	int retval = SetEnv ( name, value );
+
+	delete [] name;
+	delete [] value;
+	return retval;
+#else
+		// XXX again, this is a memory-leaking quick hack; see above.
+	char *buf = new char[strlen(env_var) +1];
+	strcpy ( buf, env_var );
+	if( putenv(buf) != 0 ) {
+		dprintf(D_ALWAYS, "putenv failed: %s (errno=%d)\n",
+				strerror(errno), errno);
+		return FALSE;
+	}
+	return TRUE;
+#endif
+}
+
+
 int DaemonCore::Create_Process(
 			char		*name,
 			char		*args,
-			priv_state	condor_priv,
+			priv_state	priv,
 			int			reaper_id,
 			int			want_command_port,
 			char		*env,
@@ -2199,53 +2251,14 @@ int DaemonCore::Create_Process(
 
 
 	char inheritbuf[_INHERITBUF_MAXSIZE];
-	ReliSock rsock;	// tcp command socket for new child
-	SafeSock ssock;	// udp command socket for new child
+	ReliSock *rsock=new ReliSock;	// tcp command socket for new child
+	SafeSock *ssock=new SafeSock;	// udp command socket for new child
 	pid_t newpid;
-#ifdef WIN32
-	STARTUPINFO si;
-	PROCESS_INFORMATION piProcess;
-	SECURITY_ATTRIBUTES sa;
-	SECURITY_DESCRIPTOR sd;
+
+#ifdef WIN32  // sheesh, this shouldn't be necessary
 	BOOL inherit_handles = FALSE;
-
-	// Change semicolons into nulls.
-	env = ParseEnvArgsString(env, 1, true);
 #else
-
-	char **unix_env;
-	char **unix_args;
 	int inherit_handles;
-
-
-
-	
-	if( env == NULL )
-	{
-		dprintf(D_DAEMONCORE, "Create_Process: Env: NULL\n", env);
-		unix_env = new char*[1];
-		unix_env[0] = 0;
-	}
-	else
-	{
-		dprintf(D_DAEMONCORE, "Create_Process: Env: %s\n", env);
-		unix_env = ParseEnvArgsString(env, 1, true);
-	}
-
-	if( args == NULL )
-	{
-		dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n", args);
-		unix_args = new char*[2];
-		unix_args[0] = strdup(name);
-		unix_args[1] = 0;
-	}
-	else
-	{
-		dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", args);
-		unix_args = ParseEnvArgsString(args, 0, false);
-	}
-
-
 #endif
 
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",name);
@@ -2271,10 +2284,15 @@ int DaemonCore::Create_Process(
 
 	if ( sock_inherit_list ) {
 		inherit_handles = TRUE;
-		for (i = 0; (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS); i++) {
+		for (i = 0 ; 
+			 (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS) ; 
+			 i++) 
+		{
 			// check that this is a valid cedar socket
 			if ( !(sock_inherit_list[i]->valid()) ) {
-				dprintf(D_ALWAYS,"Create_Process: invalid inherit socket list, entry=%d\n",i);
+				dprintf( D_ALWAYS,
+						 "Create_Process: invalid inherit socket list, "
+						 "entry=%d\n",i);
 				return FALSE;
 			}
 
@@ -2311,60 +2329,71 @@ int DaemonCore::Create_Process(
 		inherit_handles = TRUE;
 		if ( want_command_port == TRUE ) {
 			// choose any old port (dynamic port)
-			if (!BindAnyCommandPort(&rsock, &ssock)) {
+			if (!BindAnyCommandPort(rsock, ssock)) {
 				// dprintf with error message already in BindAnyCommandPort
 				return FALSE;
 			}
-			if ( !rsock.listen() ) {
-				dprintf(D_ALWAYS,"Create_Process:Failed to post listen on command ReliSock\n");
+			if ( !rsock->listen() ) {
+				dprintf( D_ALWAYS, "Create_Process:Failed to post listen "
+						 "on command ReliSock\n");
 				return FALSE;
 			}
 		} else {
 			// use well-known port specified by command_port
 			int on = 1;
 	
-			// Set options on this socket, SO_REUSEADDR, so that
-			// if we are binding to a well known port, and we crash, we can be
-			// restarted and still bind ok back to this same port. -Todd T, 11/97
-			if( (!rsock.setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ||
-				(!ssock.setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ) {
+			/* Set options on this socket, SO_REUSEADDR, so that
+			   if we are binding to a well known port, and we crash, 
+			   we can be restarted and still bind ok back to 
+			   this same port. -Todd T, 11/97
+			*/
+			if( (!rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR, 
+									(char*)&on, sizeof(on)))    ||
+				(!ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR, 
+									(char*)&on, sizeof(on))) )
+		    {
 				dprintf(D_ALWAYS,"ERROR: setsockopt() SO_REUSEADDR failed\n");
 				return FALSE;
 			}
 
-			if ( (!rsock.listen( want_command_port)) ||
-				 (!ssock.bind( want_command_port)) ) {
-				dprintf(D_ALWAYS,"Create_Process:Failed to post listen on command socket(s)\n");
+			if ( (!rsock->listen( want_command_port)) ||
+				 (!ssock->bind( want_command_port)) ) {
+				dprintf(D_ALWAYS,"Create_Process:Failed to post listen "
+						"on command socket(s)\n");
 				return FALSE;
 			}
 		}
 
 		// now duplicate the underlying SOCKET to make it inheritable
-		if ( (!(rsock.set_inheritable(TRUE))) || (!(ssock.set_inheritable(TRUE))) ) {
-			dprintf(D_ALWAYS,"Create_Process:Failed to set command socks inheritable\n");
+		if ( (!(rsock->set_inheritable(TRUE))) || 
+			 (!(ssock->set_inheritable(TRUE))) ) {
+			dprintf(D_ALWAYS,"Create_Process:Failed to set command "
+					"socks inheritable\n");
 			return FALSE;
 		}
 
 		// and now add these new command sockets to the inheritbuf
 		strcat(inheritbuf," ");
-		ptmp = rsock.serialize();
+		ptmp = rsock->serialize();
 		strcat(inheritbuf,ptmp);
 		delete []ptmp;
 		strcat(inheritbuf," ");
-		ptmp = ssock.serialize();
+		ptmp = ssock->serialize();
 		strcat(inheritbuf,ptmp);
 		delete []ptmp;		 
 	}
 	strcat(inheritbuf," 0");
 	
-	// Place inheritbuf into the environment as env variable CONDOR_INHERIT
-	if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
-		dprintf(D_ALWAYS, "Create_Process: Failed to set CONDOR_INHERIT env.\n");
-		return FALSE;
-	}
-
 #ifdef WIN32
 	// START A NEW PROCESS ON WIN32
+
+	STARTUPINFO si;
+	PROCESS_INFORMATION piProcess;
+	SECURITY_ATTRIBUTES sa;
+	SECURITY_DESCRIPTOR sd;
+
+	// Change semicolons into nulls.
+	env = ParseEnvArgsString(env, 1, true);
 
 	// prepare a STARTUPINFO structure for the new process
 	ZeroMemory(&si,sizeof(si));
@@ -2422,7 +2451,8 @@ int DaemonCore::Create_Process(
 
 	// set attributes of the SECURITY_DESCRIPTOR
 	if (InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION) == 0) {
-		dprintf(D_ALWAYS, "Create_Process: InitializeSecurityDescriptor failed, errno = %d\n",GetLastError());
+		dprintf(D_ALWAYS, "Create_Process: InitializeSecurityDescriptor "
+				"failed, errno = %d\n",GetLastError());
 		return FALSE;
 	}
 
@@ -2431,6 +2461,12 @@ int DaemonCore::Create_Process(
 	else
 		new_process_group =  0;
 
+	// Place inheritbuf into the environment as env variable CONDOR_INHERIT
+	if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
+		dprintf(D_ALWAYS, "Create_Process: Failed to set "
+				"CONDOR_INHERIT env.\n");
+		return FALSE;
+	}
 
 	if ( !::CreateProcess(name,args,NULL,NULL,inherit_handles,
 			new_process_group,env,cwd,&si,&piProcess) ) {
@@ -2442,9 +2478,13 @@ int DaemonCore::Create_Process(
 	// save pid info out of piProcess 
 	newpid = piProcess.dwProcessId;
 
-	// reset sockets that we had to inherit back to a non-inheritable permission
+	// reset sockets that we had to inherit back to a 
+	// non-inheritable permission
 	if ( sock_inherit_list ) {
-		for (i = 0; (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS); i++) {
+		for (i = 0 ; 
+			 (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS) ; 
+			 i++)
+        {
 			((Sock *)sock_inherit_list[i])->set_inheritable(FALSE);
 		}
 	}
@@ -2453,20 +2493,44 @@ int DaemonCore::Create_Process(
 
 	// First, check to see that the specified executable exists.
 	struct stat stat_struct;
-	if( stat(name, &stat_struct) == -1 )
-	{
+	if( stat(name, &stat_struct) == -1 ) {
 		dprintf(D_ALWAYS, 
 				"Create_Process: Specified executable cannot be found.\n");	   
 		return FALSE;
 	}
+	dprintf (D_DAEMONCORE, "%s has mode: 0%o\n", name, stat_struct.st_mode );
 
 	newpid = fork();
 	if( newpid == 0 ) // Child Process
 	{
 
+			// make the args / env  into something we can use:
 
-		// Switch to the specified priv level for good.
+		char **unix_env;
+		char **unix_args;
+
+		if( (env == NULL) || (env[0] == 0) ) {
+			dprintf(D_DAEMONCORE, "Create_Process: Env: NULL\n", env);
+			unix_env = new char*[1];
+			unix_env[0] = 0;
+		}
+		else {
+			dprintf(D_DAEMONCORE, "Create_Process: Env: %s\n", env);
+			unix_env = ParseEnvArgsString(env, true);
+		}
 		
+		if( (args == NULL) || (args[0] == 0) ) {
+			dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n", args);
+			unix_args = new char*[2];
+			unix_args[0] = new char[strlen(name)+1];
+			strcpy ( unix_args[0], name );
+			unix_args[1] = 0;
+		}
+		else {
+			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", args);
+			unix_args = ParseEnvArgsString(args, false);
+		}
+
 		//create a new process group if we are supposed to
 		if( new_process_group == TRUE )
 		{
@@ -2478,20 +2542,130 @@ int DaemonCore::Create_Process(
 				exit(1); // Yes, we really want to exit here.
 			}
 		}
+	
+			// if we're given a relative path (in name) AND we want to cwd 
+			// here, we have to prepend stuff to name make it the full path.  
+			// Otherwise, we change directory and execv fails (and doesn't 
+			// return a #$%^&* error, it just #$%^&* dies )
 		
-		if( cwd != NULL )
-		{
-			if( chdir(cwd) == -1 )
-			{
-				dprintf(D_ALWAYS, "Create_Process: chdir() failed: %s\n",
-						strerror(errno) );
+		if( (cwd != NULL) && (cwd[0] != NULL) ) {
+
+			if ( name[0] != '/' ) {   // relative path
+				char currwd[_POSIX_PATH_MAX];
+				if ( getcwd( currwd, _POSIX_PATH_MAX ) == NULL ) {
+					dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
+					exit(1);
+				}
+
+				char nametemp[_POSIX_PATH_MAX];
+				strcpy( nametemp, name );
+				strcpy( name, currwd );
+				strcat( name, "/" );
+				strcat( name, nametemp );
+				
+				dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", name );
+			}
+			
+			dprintf ( D_DAEMONCORE, "Changing directory to %s\n", cwd );
+
+			if( chdir(cwd) == -1 ) {
+				dprintf(D_ALWAYS, "Create_Process: chdir(%s) failed: %s\n",
+						cwd, strerror(errno) );
+				exit(1); // Let's exit.
+			}
+		}
+
+
+			// Here we have to handle re-mapping of std(in|out|err)
+		if ( std ) {
+
+			dprintf ( D_DAEMONCORE, "Re-mapping std(in|out|err) in child.\n");
+
+			if ( std[0] > -1 ) {
+				if ( ( dup2 ( std[0], 0 ) ) == -1 ) {
+					dprintf( D_ALWAYS, "dup2 of std[0] failed, errno %d\n", 
+							 errno );
+				}
+				close( std[0] );  // We don't need this in the child...
+			}
+			if ( std[1] > -1 ) {
+				if ( ( dup2 ( std[1], 1 ) ) == -1 ) {
+					dprintf( D_ALWAYS, "dup2 of std[1] failed, errno %d\n", 
+							 errno );
+				}
+				close( std[1] );  // We don't need this in the child...
+			}
+			if ( std[2] > -1 ) {
+				if ( ( dup2 ( std[2], 2 ) ) == -1 ) {
+					dprintf( D_ALWAYS, "dup2 of std[2] failed, errno %d\n", 
+							 errno );
+				}
+				close( std[2] );  // We don't need this in the child...
+			}
+		}
+
+			/* here we want to put all the unix_env stuff into the 
+			   environment.  We also want to drop CONDOR_INHERIT in.
+			   Thus, the environment should consist of 
+			    - The parent's environment
+				- The stuff passed into Create_Process in env
+				- CONDOR_INHERIT
+			*/
+
+		for ( int j=0 ; (unix_env[j] && unix_env[j][0]) ; j++ ) {
+			if ( !SetEnv( unix_env[j] ) ) {
+				dprintf ( D_ALWAYS, "Create_Process: Failed to put "
+						  "\"%s\" into environment.\n", unix_env[j] );
 				exit(1); // Yes, we really want to exit here.
 			}
 		}
 
-		if( execve(name, unix_args, unix_env) == -1 )
+			// Place inheritbuf into the environment as 
+			// env variable CONDOR_INHERIT
+		if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
+			dprintf(D_ALWAYS, "Create_Process: Failed to set "
+					"CONDOR_INHERIT env.\n");
+			exit(1); // Yes, we really want to exit here.
+		}
+
+#if defined( Solaris26 ) && defined( sun4m )  // if we're blackbird...:-)
+			/* The following will allow purify to pop up windows 
+			   for all daemons created with Create_Process().  The
+			   -program-name is so purify can find the executable, the
+			   display should point to your machine!
+			*/
+		char purebuf[256];
+		sprintf ( purebuf, "-program-name=%s\0", name );
+		SetEnv( "PUREOPTIONS", purebuf );
+		SetEnv( "DISPLAY", "antipholus:0.0" ); // change to your machine!
+#endif
+
+		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", name );
+
+			// now head into the proper priv state...
+		switch ( priv ) {
+		case PRIV_CONDOR:
+			set_condor_priv();
+			break;
+		case PRIV_USER:
+			set_user_priv();
+			break;
+		case PRIV_USER_FINAL:
+			set_user_priv_final();
+			break;
+		case PRIV_ROOT:
+			set_root_priv();
+			break;
+		case PRIV_UNKNOWN:
+		default:
+			break;
+		} // switch
+
+			// and ( finally ) exec:
+		if( execv(name, unix_args) == -1 )
 		{
-			dprintf(D_ALWAYS, "Create_Process: execve() failed: %s (%d)\n",
+				// warning: I have had exec failures, but no dprintf...(MEY)
+			dprintf(D_ALWAYS, "Create_Process: execv() failed: %s (%d)\n",
 					strerror(errno), errno );
 			exit(1); // Yes, we really want to exit here.
 		}		
@@ -2502,8 +2676,8 @@ int DaemonCore::Create_Process(
 	}
 	else if( newpid < 0 )// Error condition
 	{
-		dprintf(D_ALWAYS, "Create Process: fork() failed: %s\n", 
-				strerror(errno));
+		dprintf(D_ALWAYS, "Create Process: fork() failed: %s (%d)\n", 
+				strerror(errno), errno );
 		return FALSE;
 	}
 #endif
@@ -2513,7 +2687,7 @@ int DaemonCore::Create_Process(
 	pidtmp->pid = newpid;
 	pidtmp->new_process_group = new_process_group;
 	if ( want_command_port != FALSE )
-		strcpy(pidtmp->sinful_string,sock_to_string(rsock._sock));
+		strcpy(pidtmp->sinful_string,sock_to_string(rsock->_sock));
 	else
 		pidtmp->sinful_string[0] = '\0';
 	pidtmp->is_local = TRUE;
@@ -2532,7 +2706,7 @@ int DaemonCore::Create_Process(
 	 * }
 	***********/
 #endif 
-	assert( pidTable->insert(newpid,pidtmp) == 0 );
+	assert( pidTable->insert(newpid,pidtmp) == 0 );  
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
 #ifdef WIN32
@@ -2542,6 +2716,9 @@ int DaemonCore::Create_Process(
 	// Now that child exists, we (the parent) should close up our copy of
 	// the childs command listen cedar sockets.  Since these are on
 	// the stack (rsock and ssock), they will get closed when we return.
+
+	delete rsock;
+	delete ssock;
 	
 	return newpid;	
 }
@@ -2553,20 +2730,21 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 	int numInheritedSocks = 0;
 	char *ptmp;
 
-	// Here we handle inheritance of sockets, file descriptors, and/or handles
-	// from our parent.  This is done via an environment variable "CONDOR_INHERIT".
-	// If this variable does not exist, it usually means our parent is not a daemon core
-	// process.  
-	// CONDOR_INHERIT has the following fields.  Each field seperated by a space:
-	//	*	parent pid
-	//	*	parent sinful-string
-	//  *   cedar sockets to inherit.  each will start with a 
-	//		"1" for relisock, a "2" for safesock, and a "0" when done.
-	//	*	command sockets.  first the rsock, then the ssock, then a "0".
-
+    /* Here we handle inheritance of sockets, file descriptors, and/or 
+	   handles from our parent.  This is done via an environment variable 
+	   "CONDOR_INHERIT".  If this variable does not exist, it usually 
+	   means our parent is not a daemon core process.  CONDOR_INHERIT 
+	   has the following fields.  Each field seperated by a space:
+		*	parent pid
+		*	parent sinful-string
+	    *   cedar sockets to inherit.  each will start with a 
+	 		"1" for relisock, a "2" for safesock, and a "0" when done.
+		*	command sockets.  first the rsock, then the ssock, then a "0".
+	*/
 	inheritbuf[0] = '\0';
 #ifdef WIN32
-	if (GetEnvironmentVariable("CONDOR_INHERIT",inheritbuf,_INHERITBUF_MAXSIZE) > _INHERITBUF_MAXSIZE-1) {
+	if (GetEnvironmentVariable("CONDOR_INHERIT",inheritbuf,
+							   _INHERITBUF_MAXSIZE) > _INHERITBUF_MAXSIZE-1) {
 		EXCEPT("CONDOR_INHERIT too large");
 	}
 #else
@@ -2575,8 +2753,11 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 		if ( strlen(ptmp) > _INHERITBUF_MAXSIZE-1 ) {
 			EXCEPT("CONDOR_INHERIT too large");
 		}
+		dprintf ( D_DAEMONCORE, "CONDOR_INHERIT: \"%s\"\n", ptmp );
 		strncpy(inheritbuf,ptmp,_INHERITBUF_MAXSIZE);
-	}
+	} else {
+		dprintf ( D_DAEMONCORE, "CONDOR_INHERIT: is NULL\n", ptmp );
+	}		
 #endif
 
 	if ( (ptmp=strtok(inheritbuf," ")) != NULL ) {
@@ -2953,7 +3134,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 }
 
 #ifdef WIN32
-char *DaemonCore::ParseEnvArgsString(char *incoming, int reserve, bool sep_flag)
+char *DaemonCore::ParseEnvArgsString(char *incoming, bool sep_flag)
 {
 	
 	char *answer = strdup(incoming);
@@ -2965,7 +3146,7 @@ char *DaemonCore::ParseEnvArgsString(char *incoming, int reserve, bool sep_flag)
 	return answer;
 }
 #else
-char **DaemonCore::ParseEnvArgsString(char *incomming, int reserve,bool env)
+char **DaemonCore::ParseEnvArgsString(char *incomming, bool env)
 {
 	char seperator;
 	char **argv = 0;
@@ -2987,7 +3168,7 @@ char **DaemonCore::ParseEnvArgsString(char *incomming, int reserve,bool env)
 		temp++;
 	} while( ( temp = strchr(temp, seperator) ) != NULL);
 
-	argv = new char *[num_args + reserve + 1];
+	argv = new char *[num_args + 1];
 
 	cur = incomming;
 	while( (temp = strchr(cur, seperator) ) )
@@ -3003,7 +3184,7 @@ char **DaemonCore::ParseEnvArgsString(char *incomming, int reserve,bool env)
 	argv[i] = new char[strlen(cur) + 1];
 	strcpy(argv[i], cur);
 	
-	argv[num_args + reserve] = 0;
+	argv[num_args] = 0;
 
 	return argv;
 }
