@@ -482,7 +482,7 @@ const sigset_t *set;
 		sigdelset(&my_set,SIGCONT);
 	}
 #if defined(OSF1) || defined(ULTRIX43) || defined(LINUX)
-	SIGSUSPEND(&my_set);
+	return SIGSUSPEND(&my_set);
 #else
 	return syscall(SYS_sigsuspend,&my_set);
 #endif
