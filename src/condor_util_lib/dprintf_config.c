@@ -129,6 +129,8 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 			stderr->__fileH = logfd & 0x0f;	/* High byte of fd */
 #elif defined(ULTRIX43) || defined(IRIX331)
 			((stderr)->_file) = logfd;
+#elif defined(LINUX)
+			stderr->_fileno = logfd;
 #else
 			fileno(stderr) = logfd;
 #endif
