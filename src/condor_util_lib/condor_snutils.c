@@ -46,6 +46,19 @@ snprintf(
 
 	return length;
 }
+
+
+// we also use vsnprintf() in the code, and platforms that don't have
+// snprintf() probably don't have this, either.
+int 
+vsnprintf(
+	char       *output, 
+	int        buffer_size, 
+	const char *format, 
+	va_list args )
+{
+	return condor_vsnprintf(output, buffer_size, format, args);
+}
 #endif
 
 // This is snprintf, and it works like you expect. buffer_size is the 
