@@ -95,7 +95,11 @@
 
 	/* Use 32 bits for file mode (mode_t) everywhere - hope nobody wants more */
 #if !defined(MODE_T)
-#	define MODE_T unsigned int
+#	if defined(AIX32)
+#		define MODE_T ulong_t
+#	else
+#		define MODE_T unsigned int
+#	endif
 #endif
 
 #define SEND_PATH(name) in xdr_string(&name,_POSIX_PATH_MAX)
@@ -129,14 +133,26 @@
 		ALLOC_PATH( p1 );
 		ALLOC_PATH( p2 );
 	}
-	ssize_t read( map(int fd), void *buf, size_t len ) {
-		out xdr_bytes( &buf, &len, len );
-		alloc( buf, len );
-	}
-	ssize_t write( map(int fd), const void *buf, size_t len ) {
-		in xdr_bytes( &buf, &len, len );
-		alloc( buf, len );
-	}
+
+#	if defined(AIX32) && defined(SWITCH)
+		/*
+			not syscalls in aix, so don't build the switches
+		*/
+#	else
+		/*
+			build senders and recievers for everybody, and switches for
+			everybody but AIX
+		*/
+		ssize_t write( map(int fd), const void *buf, size_t len ) {
+			in xdr_bytes( &buf, &len, len );
+			alloc( buf, len );
+		}
+		ssize_t read( map(int fd), void *buf, size_t len ) {
+			out xdr_bytes( &buf, &rval, len );
+			alloc( buf, len );
+		}
+#	endif
+
 	off_t lseek( map(int fd), off_t offset, int whence );
 	int access( const char *path, int access_mode ) {
 		SEND_PATH( path );
@@ -148,26 +164,32 @@
 		These get special treatment by the shadow, but should work normally
 		in local mode.
 		*/
-	pid_t getppid() : extract, pseudo;
+#	if defined(AIX32)
+		pid_t getppid() : pseudo;
+#	else
+		pid_t getppid() : extract, pseudo;
+		uid_t getuid()  : pseudo;
+		gid_t getgid()  : pseudo;
+#	endif
 	pid_t getpid()  : pseudo;
-	uid_t getuid()  : pseudo;
-	gid_t getgid()  : pseudo;
 #endif /* not CLIP */
 
 	/*
 	  These are used by the condor_starter, and thus get generated even in
 	  the "clipped" version.
 	*/
-uid_t geteuid() : extract, pseudo;
-gid_t getegid() : extract, pseudo;
+
+#if !defined(AIX32)
+	uid_t geteuid() : extract, pseudo;
+	gid_t getegid() : extract, pseudo;
+	char * getwd( char *path_name ) : pseudo, extract {
+		GET_PATH( path_name );
+		ALLOC_PATH( path_name );
+	}
+#endif
 int unlink( const char *path ) {
 	SEND_PATH( path );
 	ALLOC_PATH( path );
-}
-char *
-getwd( char *path_name ) : pseudo, extract {
-	GET_PATH( path_name );
-	ALLOC_PATH( path_name );
 }
 int rename( const char *from, const char *to ) {
 	SEND_PATH( from );
@@ -230,6 +252,7 @@ int rename( const char *from, const char *to ) {
 		the result is the length of the file, a hostname, and a port
 		number from which the actual bytes can be read.
 		*/
+#if 0
 	int get_file_stream(
 		const char *file, size_t *len, char *host, u_short *port_num ): pseudo {
 
@@ -245,6 +268,23 @@ int rename( const char *from, const char *to ) {
 		out xdr_u_short( port_num );
 		alloc( port_num, U_SHORT_SIZE );
 	}
+#else
+	int get_file_stream( const char *file, size_t *len, unsigned int *ip_addr,
+		u_short *port_num ): pseudo {
+
+		SEND_PATH( file );
+		ALLOC_PATH( file );
+
+		out xdr_size_t( len );
+		alloc( len, SIZE_T_SIZE );
+
+		out xdr_u_int( ip_addr );
+		alloc( ip_addr, U_INT_SIZE );
+
+		out xdr_u_short( port_num );
+		alloc( port_num, U_SHORT_SIZE );
+	}
+#endif
 
 		/*
 		This function is intended for setting up the transfer
@@ -255,6 +295,7 @@ int rename( const char *from, const char *to ) {
 		the result is a hostname and a port number to which the
 		actual bytes can be written.
 		*/
+#if 0
 	int put_file_stream(
 		const char *file, size_t len,  char *host, u_short *port_num ): pseudo {
 
@@ -267,6 +308,20 @@ int rename( const char *from, const char *to ) {
 		out xdr_u_short( port_num );
 		alloc( port_num, U_SHORT_SIZE );
 	}
+#else
+	int put_file_stream( const char *file, size_t len,
+						unsigned int *ip_addr, u_short *port_num ): pseudo {
+
+		SEND_PATH( file );
+		ALLOC_PATH( file );
+
+		out xdr_u_int( ip_addr );
+		alloc( ip_addr, U_INT_SIZE );
+
+		out xdr_u_short( port_num );
+		alloc( port_num, U_SHORT_SIZE );
+	}
+#endif
 
 #	if !defined( SENDER )
 		/*
@@ -288,22 +343,25 @@ int rename( const char *from, const char *to ) {
 
 
 #if !defined( CLIP )
-	int fstat( map(int fd), struct stat *buf ) {
-		out xdr_stat( buf );
-		alloc( buf, STAT_SIZE );
-	}
-	int stat( const char *path, struct stat *buf ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		out xdr_stat( buf );
-		alloc( buf, STAT_SIZE );
-	}
-	int lstat( const char *path, struct stat *buf ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		out xdr_stat( buf );
-		alloc( buf, STAT_SIZE );
-	}
+
+#	if !defined(AIX32)
+		int fstat( map(int fd), struct stat *buf ) {
+			out xdr_stat( buf );
+			alloc( buf, STAT_SIZE );
+		}
+		int stat( const char *path, struct stat *buf ) {
+			SEND_PATH( path );
+			ALLOC_PATH( path );
+			out xdr_stat( buf );
+			alloc( buf, STAT_SIZE );
+		}
+		int lstat( const char *path, struct stat *buf ) {
+			SEND_PATH( path );
+			ALLOC_PATH( path );
+			out xdr_stat( buf );
+			alloc( buf, STAT_SIZE );
+		}
+#	endif
 
 	int mknod( const char *path, int mode, dev_t device ) {
 		SEND_PATH( path );
@@ -313,12 +371,12 @@ int rename( const char *from, const char *to ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#if !defined(SUNOS41)
-	int getfsstat( struct statfs buf[], long bufsize, int flags ) {
-		out xdr_opaque( buf, STATFS_ARRAY_SIZE );
-		alloc( buf, bufsize );
-	}
-#endif
+#	if !defined(SUNOS41)
+		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
+			out xdr_opaque( buf, STATFS_ARRAY_SIZE );
+			alloc( buf, bufsize );
+		}
+#	endif
 	int flock( map(int fd), int op );
 	int fstatfs( map(int fd), struct statfs *buf ) {
 		out xdr_statfs( buf );
@@ -341,27 +399,34 @@ int rename( const char *from, const char *to ) {
 	pid_t getpgrp();
 	MODE_T umask( MODE_T cmask );
 	int getpagesize();
+
+#if !defined(AIX32)
+		/*
+		This is not a syscall in AIX.  The library routine will exercise the
+		kfcntl() routine which we handle.
+		*/
 	int fcntl( map(int fd), int req, int arg );
+#endif
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) {
 		out xdr_bytes( &grouplist, gidsetsize * GID_T_SIZE, gidsetsize * GID_T_SIZE );
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
 	int setpgrp( int pid, int pgrp );
-#if defined(SUNOS41)
-	int getdents( map(int fd), char *buf, int nbytes ) {
-		out xdr_bytes( &buf, &nbytes, nbytes );
-		alloc( buf, nbytes );
-	}
-#else
-	int getdirentries( map(int fd), char *buf, int nbytes, long *basep ) {
-		out xdr_bytes( &buf, &rval, rval );
-		in xdr_opaque( basep, EIGHT );
-		out xdr_opaque( basep, EIGHT );
-		alloc( buf, nbytes );
-		alloc( basep, LONG_SIZE );
-	}
-#endif
+#	if defined(SUNOS41)
+		int getdents( map(int fd), char *buf, int nbytes ) {
+			out xdr_bytes( &buf, &nbytes, nbytes );
+			alloc( buf, nbytes );
+		}
+#	else
+		int getdirentries( map(int fd), char *buf, int nbytes, long *basep ) {
+			out xdr_bytes( &buf, &rval, rval );
+			in xdr_opaque( basep, EIGHT );
+			out xdr_opaque( basep, EIGHT );
+			alloc( buf, nbytes );
+			alloc( basep, LONG_SIZE );
+		}
+#	endif
 	int table( int id, int index, char *addr, int nel, unsigned int lel ) {
 		out xdr_bytes( &addr, nel * lel, nel * lel );
 		alloc( addr, nel * lel );
@@ -373,25 +438,11 @@ int rename( const char *from, const char *to ) {
 	}
 	int getdtablesize();
 
-	int select( int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
-				struct timeval *timeout ) {
-		in xdr_bytes( &readfds,  FD_SET_SIZE, FD_SET_SIZE );
-		out xdr_bytes( &readfds,  FD_SET_SIZE, FD_SET_SIZE );
-		alloc( readfds, FD_SET_SIZE );
-		in xdr_bytes( &writefds,  FD_SET_SIZE, FD_SET_SIZE  );
-		out xdr_bytes( &writefds,  FD_SET_SIZE, FD_SET_SIZE  );
-		alloc( writefds, FD_SET_SIZE );
-		in xdr_bytes( &exceptfds,  FD_SET_SIZE, FD_SET_SIZE  );
-		out xdr_bytes( &exceptfds,  FD_SET_SIZE, FD_SET_SIZE  );
-		alloc( exceptfds, FD_SET_SIZE );
-		in xdr_timeval( &timeout );
-		alloc( timeout, TIMEVAL_SIZE );
+	not_supported {
+		int select();
+		int poll();
 	}
-	int poll( struct pollfd filedes[], unsigned int nfds, int timeout ) {
-		in xdr_bytes( &filedes, POLLFD_SIZE * nfds, POLLFD_SIZE * nfds );
-		out xdr_bytes( &filedes, POLLFD_SIZE * nfds, POLLFD_SIZE * nfds );
-		alloc( filedes, POLLFD_SIZE * nfds );
-	}
+
 	int setpriority( int which, int who, int priority );
 	int getpriority( int which, int who );
 	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
@@ -401,10 +452,12 @@ int rename( const char *from, const char *to ) {
 		alloc( tzp, TIMEZONE_SIZE );
 	}
 	int fchown( map(int fd), uid_t owner, gid_t group );
-	int lchown( const char *path, uid_t owner, gid_t group ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
+#	if !defined(AIX32)
+		int lchown( const char *path, uid_t owner, gid_t group ) {
+			SEND_PATH( path );
+			ALLOC_PATH( path );
+		}
+#	endif
 	int chown( const char *path, uid_t owner, gid_t group ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -418,7 +471,7 @@ int rename( const char *from, const char *to ) {
 		ALLOC_PATH( path );
 	}
 	int ftruncate( map(int fd), off_t length );
-	int setgid( gid_t gid );
+	not_supported int setgid( gid_t gid );
 	int mkdir( const char *path, MODE_T mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -456,30 +509,33 @@ int rename( const char *from, const char *to ) {
 	int lockf( map(int fd), int request, off_t size );
 
 
-#if 0	/*
+		/*
 		  Not implemented because our xdr_ustname() function isn't
 		  working.  This is because the sizes of the strings are
 		  defined differently on various platforms...
 		*/
-	int uname( struct utsname *name ) {
+	not_supported int uname( struct utsname *name ) {
+		/*
 		out xdr_utsname( name );
 		alloc( name, UTSNAME_SIZE );
-	}
-#endif
-
-
-	int mvalid( char * addr, size_t len, int prot ) {
-		out xdr_bytes( &addr, &len, len );
-		alloc( addr, len );
+		*/
 	}
 
-	int getaddressconf( struct addressconf *buf, size_t length ) {
-		out xdr_bytes( &buf, &length, length );
-		alloc( buf, length );
-	}
 
-	pid_t getpgid( pid_t pid );
-	int uswitch( int cmd, int value );
+#	if !defined(AIX32)
+		int mvalid( char * addr, size_t len, int prot ) {
+			out xdr_bytes( &addr, &len, len );
+			alloc( addr, len );
+		}
+
+		int getaddressconf( struct addressconf *buf, size_t length ) {
+			out xdr_bytes( &buf, &length, length );
+			alloc( buf, length );
+		}
+		pid_t getpgid( pid_t pid );
+		int uswitch( int cmd, int value );
+#	endif
+
 
 
 		/*
@@ -490,11 +546,16 @@ int rename( const char *from, const char *to ) {
 		int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
 		int sigpending( sigset_t *set );
 		int sigreturn( struct sigcontext *scp );
-		int setitimer( int which, struct itimerval *value, struct itimerval *oval );
+		int setitimer( int which, struct itimerval *value,
+											struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
 		int sigsuspend( const sigset_t *mask );
 		int sigstack( struct sigstack *instack, struct sigstack *outstack );
+#	if defined( AIX32)
+		int kill( pid_t pid, int sig );
+#	else
 		int kill( pid_t pid, int sig ) : extract;
+#	endif
 	}
 
 		/*
@@ -502,8 +563,13 @@ int rename( const char *from, const char *to ) {
 		for the benefit of Fortran compilers...
 		*/
 	ignored {
+#	if defined( AIX32)
+		int sigaction( int sig, const struct sigaction *act,
+						struct sigaction *o_act );
+#	else
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act ) : extract;
+#	endif
 		int setsysinfo( unsigned long op, char *buffer, unsigned long nbytes,
 						char * arg, unsigned long flag );
 	}
@@ -542,17 +608,23 @@ not_supported {
 	int adjtime( struct timeval *delta, struct timeval *old_delta );
 	int sethostid( int host_id );
 	int async_daemon();
-#if !defined(SUNOS41)
-	int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
-	int exportfs( int access, int *record, struct exportfsdata *exdata );
-#endif
+#	if !defined(SUNOS41)
+		int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
+		int exportfs( int access, int *record, struct exportfsdata *exdata );
+#	endif
 	int setdomainname( char *name, int namelen );
 	int swapon( char *path, int flags, int lo_water, int hi_water );
 }
 
 	/* Calls having to do with multiple process jobs */
 not_supported {
+#if defined(AIX32)
+	pid_t fork();
+	int pipe( int fd[] );
+#else
 	pid_t fork() : extract;
+	int pipe( int fd[] ) : extract;
+#endif
 	pid_t vfork();
 	int execve( const char *path, char * const argv[], char * const envp [] );
 	int execv( const char *path, char * const argv[] );
@@ -562,7 +634,6 @@ not_supported {
 	int ptrace( long req, long int process, unsigned long *address,
 						unsigned long data );
 	int setpgid( pid_t process_id, pid_t gid );
-	int pipe( int fd[] ) : extract;
 }
 
 	/* Calls relating to sockets - implies multiple communicating processes */
@@ -599,9 +670,6 @@ not_supported {
 not_supported {
 	void profil( short *buf, unsigned int buf_size, unsigned int offset,
 				 unsigned int scale );
-#if 0	/* moved to switches.special.c */
-	int ioctl( map(int fd), unsigned long request, char *argp );
-#endif
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes,
 					int *start, char *arg );
@@ -612,7 +680,9 @@ not_supported {
 	Returns a pointer to a static buffer - our generator is not
 	yet sophisticated enough to generate correct stubs for this.
 	*/
-not_supported char *getlogin();
+not_supported {
+	char *getlogin();
+}
 
 	/*
 	Stuff having to do with message queues.  Probably won't support
@@ -643,4 +713,151 @@ not_supported {
 	char * shmat( int shmid, char * shmaddr, int shmflg );
 }
 
+#endif /* not CLIP */
+
+	/* System calls unique to AIX - needed even in CLIPPED version */ 
+#if defined(AIX32)
+	uid_t getuidx( int which );
+	gid_t getgidx( int which );
+#	if !defined(SWITCH)
+		char * getwd( char *path_name ) : pseudo {
+			GET_PATH( path_name );
+			ALLOC_PATH( path_name );
+		}
+#	endif
+#endif
+
+
+	/* System calls unique to AIX - not needed in CLIPPED version */ 
+#if !defined(CLIP) && defined(AIX32)
+	int statx( char *path, struct stat *buffer, int length, int command ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out xdr_stat( buffer );
+		alloc( buffer, STAT_SIZE );
+	}
+	int fstatx( map(int fd), struct stat *buffer, int length, int command ) {
+		out xdr_stat( buffer );
+		alloc( buffer, STAT_SIZE );
+	}
+	int accessx( char *path, int mode, int who ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+	int faccessx( map(int fd), int mode, int who );
+	int chacl( char *path, struct acl *list, int size ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out xdr_bytes( &list, &size, size );
+		alloc( list, size );
+	}
+	int fchacl( map(int fd), struct acl *list, int size ) {
+		out xdr_bytes( &list, &size, size );
+		alloc( list, size );
+	}
+	int fstatacl( map(int fd), int cmd, struct acl *list, int size ) {
+		out xdr_bytes( &list, &size, size );
+		alloc( list, size );
+	}
+	int statacl( char *path, int cmd, struct acl *list, int size ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out xdr_bytes( &list, &size, size );
+		alloc( list, size );
+	}
+	int chownx( char *path, int owner, int group, int ext ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+	int fchownx( map(int fd), int owner, int group, int ext );
+	long fclear( map(int fd), unsigned long nbytes );
+	int frevoke( map(int fd) );
+	int kgetpgrp( int pid );
+	int getpri( int pid );
+	int kfcntl( map(int fd), int cmd, int arg );
+#if !defined (SWITCH)
+		/*
+		This call must interact closely with the open files table,
+		therefore its switch is implemented in "condor_ckpt/file_state.C",
+		but we still need to generate senders and receivers for it here.
+		*/
+	int openx( const char *path, int flags, int mode, int ext ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+#endif
+	int psdanger( int sig );
+	int ulimit( int cmd, int lim );
+	int usrinfo( int cmd, char *buf, int count ) {
+		in xdr_bytes( &buf, &count, count );
+		alloc( buf, count );
+	}
+	not_supported {
+		int audit();
+		int auditbin();
+		int auditevents();
+		int auditlog();
+		int auditobj();
+		int auditproc();
+		int chpriv();
+		int fchpriv();
+		int disclaim();
+		int fscntl();
+		int fstatpriv();
+		int getargs();
+		int getdirent();
+		int getevars();
+		int getpriv();
+		int getproc();
+		int getuser();
+		int kioctl();
+		int knlist();
+		int kwaitpid();
+		int load();
+		int loadbind();
+		int loadquery();
+		int mntctl();
+		int pause();
+		int privcheck();
+		int absinterval();
+		int getinterval();
+		int gettimer();
+		int gettimerid();
+		int incinterval();
+		int reltimerid();
+		int resabs();
+		int resinc();
+		int restimer();
+		int settimer();
+		int nsleep();
+		int seteuid();
+		int setgidx();
+		int setpri();
+		int setpriv();
+		int setuidx();
+		int msgxrcv();
+		int sigcleanup();
+		int statpriv();
+		int swapoff();
+		int swapqry();
+		int sysconfig();
+		int unameu();
+		int unamex();
+		int unload();
+		int ustat();
+		int uvmount();
+		int vmount();
+		int Trconflag();
+		int trchook();
+		int trchk();
+		int trchkt();
+		int trchkl();
+		int trchklt();
+		int trchkg();
+		int trchkgt();
+		int trcgen();
+		int trcgent();
+
+	}
+		
 #endif /* not CLIP */
