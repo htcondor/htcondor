@@ -37,8 +37,6 @@
 
 #include "gridmanager.h"
 
-#include "sslutils.h"	// for proxy_get_filenames
-
 #define QMGMT_TIMEOUT 5
 
 #define UPDATE_SCHEDD_DELAY		5
@@ -53,53 +51,6 @@ struct ScheddUpdateAction {
 	int actions;
 	int request_id;
 };
-
-HashTable <PROC_ID, ScheddUpdateAction *> pendingScheddUpdates( HASH_TABLE_SIZE,
-																procIDHash );
-HashTable <PROC_ID, ScheddUpdateAction *> completedScheddUpdates( HASH_TABLE_SIZE,
-																  procIDHash );
-bool addJobsSignaled = false;
-bool removeJobsSignaled = false;
-int contactScheddTid = TIMER_UNSET;
-int contactScheddDelay;
-
-List<Service *> ObjectDeleteList;
-
-char *gramCallbackContact = NULL;
-char *ScheddAddr = NULL;
-char *X509Proxy = NULL;
-bool useDefaultProxy = true;
-
-HashTable <HashKey, GlobusJob *> JobsByContact( HASH_TABLE_SIZE,
-												hashFunction );
-HashTable <PROC_ID, GlobusJob *> JobsByProcID( HASH_TABLE_SIZE,
-											   procIDHash );
-HashTable <HashKey, GlobusResource *> ResourcesByName( HASH_TABLE_SIZE,
-													   hashFunction );
-
-bool grabAllJobs = true;
-
-char *Owner = NULL;
-
-int checkProxy_tid = TIMER_UNSET;
-int checkProxy_interval;
-int minProxy_time;
-
-time_t Proxy_Expiration_Time = 0;
-
-int syncJobIO_tid = TIMER_UNSET;
-int syncJobIO_interval;
-
-GahpClient GahpMain;
-
-int RequestContactSchedd();
-int doContactSchedd();
-
-// handlers
-int ADD_JOBS_signalHandler( int );
-int REMOVE_JOBS_signalHandler( int );
-int checkProxy();
-int syncJobIO();
 
 // Stole these out of the schedd code
 int procIDHash( const PROC_ID &procID, int numBuckets )
@@ -126,8 +77,57 @@ template class List<GlobusJob>;
 template class Item<GlobusJob>;
 template class List<char *>;
 template class Item<char *>;
-template class List<Service *>;
-template class Item<Service *>;
+template class List<Service>;
+template class Item<Service>;
+
+HashTable <PROC_ID, ScheddUpdateAction *> pendingScheddUpdates( HASH_TABLE_SIZE,
+																procIDHash );
+HashTable <PROC_ID, ScheddUpdateAction *> completedScheddUpdates( HASH_TABLE_SIZE,
+																  procIDHash );
+bool addJobsSignaled = false;
+bool removeJobsSignaled = false;
+int contactScheddTid = TIMER_UNSET;
+int contactScheddDelay;
+
+List<Service> ObjectDeleteList;
+
+char *gramCallbackContact = NULL;
+char *gassServerUrl = NULL;
+
+char *ScheddAddr = NULL;
+char *X509Proxy = NULL;
+bool useDefaultProxy = true;
+
+HashTable <HashKey, GlobusJob *> JobsByContact( HASH_TABLE_SIZE,
+												hashFunction );
+HashTable <PROC_ID, GlobusJob *> JobsByProcID( HASH_TABLE_SIZE,
+											   procIDHash );
+HashTable <HashKey, GlobusResource *> ResourcesByName( HASH_TABLE_SIZE,
+													   hashFunction );
+
+bool grabAllJobs = true;
+
+char *Owner = NULL;
+
+int checkProxy_tid = TIMER_UNSET;
+int checkProxy_interval;
+int minProxy_time;
+
+time_t Proxy_Expiration_Time = 0;
+
+int syncJobIO_tid = TIMER_UNSET;
+int syncJobIO_interval;
+
+GahpClient GahpMain;
+
+void RequestContactSchedd();
+int doContactSchedd();
+
+// handlers
+int ADD_JOBS_signalHandler( int );
+int REMOVE_JOBS_signalHandler( int );
+int checkProxy();
+int syncJobIO();
 
 
 // return value of true means requested update has been committed to schedd.
@@ -206,10 +206,10 @@ rehashJobContact( GlobusJob *job, const char *old_contact,
 				  const char *new_contact )
 {
 	if ( old_contact ) {
-		gridmanager.JobsByContact->remove(HashKey(old_contact));
+		JobsByContact.remove(HashKey(old_contact));
 	}
 	if ( new_contact ) {
-		gridmanager.JobsByContact->insert(HashKey(new_contact), job);
+		JobsByContact.insert(HashKey(new_contact), job);
 	}
 }
 
@@ -217,11 +217,11 @@ void
 DeleteJob( GlobusJob *job ) {
 	removeScheddUpdateAction( job );
 	if ( job->jobContact != NULL ) {
-		gridmanager.JobsByContact->remove( HashKey( job->jobContact ) );
+		JobsByContact.remove( HashKey( job->jobContact ) );
 	}
-	gridmanager.JobsByProcID->remove( job->procID );
+	JobsByProcID.remove( job->procID );
 
-	ObjectDeleteList.Delete( (service *)job );
+	ObjectDeleteList.Delete( (Service *)job );
 	ObjectDeleteList.Append( (Service *)job );
 	daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_DELETE_OBJS );
 }
@@ -230,7 +230,7 @@ void
 DeleteResource( GlobusResource *resource ) {
 	ASSERT( resource->IsEmpty() );
 	
-	gridmanager.ResourcesByName->remove( HashKey( resource->ResourceName() ) );
+	ResourcesByName.remove( HashKey( resource->ResourceName() ) );
 
 	ObjectDeleteList.Delete( (Service *)resource );
 	ObjectDeleteList.Append( (Service *)resource );
@@ -320,7 +320,7 @@ Reconfig()
 	tmp_int = -1;
 	tmp = param("GRIDMANAGER_JOB_PROBE_INTERVAL");
 	if ( tmp ) {
-		tmp_int = aoti(tmp);
+		tmp_int = atoi(tmp);
 		free(tmp);
 	}
 	if ( tmp_int < 0 ) {
@@ -331,7 +331,7 @@ Reconfig()
 	tmp_int = -1;
 	tmp = param("GRIDMANAGER_RESOURCE_PROBE_INTERVAL");
 	if ( tmp ) {
-		tmp_int = aoti(tmp);
+		tmp_int = atoi(tmp);
 		free(tmp);
 	}
 	if ( tmp_int < 0 ) {
@@ -410,7 +410,7 @@ checkProxy()
 		// We have a refreshed proxy!
 		Proxy_Expiration_Time = current_expiration_time;
 
-		MainGahp.globus_gram_client_set_credentials( X509Proxy );
+		GahpMain.globus_gram_client_set_credentials( X509Proxy );
 	}
 
 	// Verify our proxy is longer than the minimum allowed
@@ -425,7 +425,7 @@ checkProxy()
 		char *formated_minproxy = strdup(format_time(minProxy_time));
 		dprintf(D_ALWAYS,
 			"ERROR: Condor-G proxy expiring; valid for %s - minimum allowed is %s\n",
-			X509Proxy, format_time((int)(Initial_Proxy_Expiration_Time - now) ), 
+			X509Proxy, format_time((int)(Proxy_Expiration_Time - now) ), 
 			formated_minproxy);
 		free(formated_minproxy);
 
@@ -464,9 +464,9 @@ syncJobIO()
 {
 	GlobusJob *next_job;
 
-	JobsByProcID->startIterations();
+	JobsByProcID.startIterations();
 
-	while ( JobsByProcID->iterate( next_job ) != 0 ) {
+	while ( JobsByProcID.iterate( next_job ) != 0 ) {
 		daemonCore->Register_Timer( 0, (TimerHandlercpp)&GlobusJob::syncIO,
 									"syncIO", (Service *)next_job );
 	}
@@ -495,9 +495,9 @@ ADD_JOBS_signalHandler( int signal )
 {
 	dprintf(D_FULLDEBUG,"Received ADD_JOBS signal\n");
 
-	if ( !addJobsSignalled ) {
+	if ( !addJobsSignaled ) {
 		RequestContactSchedd();
-		addJobsSignalled = true;
+		addJobsSignaled = true;
 	}
 
 	return TRUE;
@@ -508,9 +508,9 @@ REMOVE_JOBS_signalHandler( int signal )
 {
 	dprintf(D_FULLDEBUG,"Received REMOVE_JOBS signal\n");
 
-	if ( !removeJobsSignalled ) {
+	if ( !removeJobsSignaled ) {
 		RequestContactSchedd();
-		removeJobsSignalled = true;
+		removeJobsSignaled = true;
 	}
 
 	return TRUE;
@@ -524,7 +524,7 @@ doContactSchedd()
 	int proc_id;
 	char buf[1024];
 	Qmgr_connection *schedd;
-	SceddUpdateAction *curr_action;
+	ScheddUpdateAction *curr_action;
 	GlobusJob *curr_job;
 	ClassAd *next_ad;
 	char expr_buf[_POSIX_PATH_MAX];
@@ -540,32 +540,26 @@ doContactSchedd()
 
 		curr_job = curr_action->job;
 
-		if ( curr_actions->actions & UA_UPDATE_CONDOR_STATE ||
-			 curr_actions->actions & UA_UPDATE_GLOBUS_STATE ||
-			 curr_actions->actions & UA_UPDATE_CONTACT_STRING ||
-			 curr_actions->actions & UA_DELETE_FROM_SCHEDD ) {
-			contact_schedd = true;
-		}
-		if ( curr_actions->actions & UA_LOG_SUBMIT_EVENT &&
+		if ( curr_action->actions & UA_LOG_SUBMIT_EVENT &&
 			 !curr_job->submitLogged ) {
 			WriteGlobusSubmitEventToUserLog( curr_job );
 			curr_job->submitLogged = true;
 		}
-		if ( curr_actions->actions & UA_LOG_EXECUTE_EVENT &&
+		if ( curr_action->actions & UA_LOG_EXECUTE_EVENT &&
 			 !curr_job->executeLogged ) {
-			WriteGlobusExecuteEventToUserLog( curr_job );
+			WriteExecuteToUserLog( curr_job );
 			curr_job->executeLogged = true;
 		}
-		if ( curr_actions->actions & UA_LOG_SUBMIT_FAILED_EVENT ) {
-			WriteGlobusSubmitFailedToUserLog( curr_job );
+		if ( curr_action->actions & UA_LOG_SUBMIT_FAILED_EVENT ) {
+			WriteGlobusSubmitFailedEventToUserLog( curr_job );
 		}
-		if ( curr_actions->actions & UA_LOG_TERMINATE_EVENT ) {
+		if ( curr_action->actions & UA_LOG_TERMINATE_EVENT ) {
 			WriteTerminateToUserLog( curr_job );
 		}
-		if ( curr_actions->actions & UA_LOG_ABORT_EVENT ) {
+		if ( curr_action->actions & UA_LOG_ABORT_EVENT ) {
 			WriteAbortToUserLog( curr_job );
 		}
-		if ( curr_actions->actions & UA_LOG_EVICT_EVENT ) {
+		if ( curr_action->actions & UA_LOG_EVICT_EVENT ) {
 			WriteEvictToUserLog( curr_job );
 		}
 
@@ -585,7 +579,7 @@ doContactSchedd()
 
 		curr_job = curr_action->job;
 
-		if ( curr_actions->actions & UA_UPDATE_CONDOR_STATE ) {
+		if ( curr_action->actions & UA_UPDATE_CONDOR_STATE ) {
 			int curr_status;
 			GetAttributeInt( curr_job->procID.cluster,
 							 curr_job->procID.proc,
@@ -614,60 +608,62 @@ doContactSchedd()
 
 		// Adjust run time for condor_q
 		if ( curr_job->condorState == RUNNING &&
-			 curr_job->shadow_birthday == 0 ) {
+			 curr_job->shadowBirthday == 0 ) {
 
 			// The job has started a new interval of running
 			int current_time = (int)time(NULL);
 			SetAttributeInt( curr_job->procID.cluster,
 							 curr_job->procID.proc,
 							 ATTR_SHADOW_BIRTHDATE, current_time );
-			curr_job->shadow_birthday = current_time;
+			curr_job->shadowBirthday = current_time;
 
 		} else if ( curr_job->condorState != RUNNING &&
-					curr_job->shadow_birthday != 0 ) {
+					curr_job->shadowBirthday != 0 ) {
 
 			// The job has stopped an interval of running, add the current
 			// interval to the accumulated total run time
 			float accum_time = 0;
-			GetAttributeFloat(cluster, proc,
+			GetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
 							  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-			accum_time += (float)( time(NULL) - curr_job->shadow_birthday );
-			SetAttributeFloat(cluster, proc,
+			accum_time += (float)( time(NULL) - curr_job->shadowBirthday );
+			SetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
 							  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
-			DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
-			SetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE, 0);
-			curr_job->shadow_birthday = 0;
+			DeleteAttribute(curr_job->procID.cluster, curr_job->procID.proc,
+							ATTR_JOB_WALL_CLOCK_CKPT);
+			SetAttributeInt(curr_job->procID.cluster, curr_job->procID.proc,
+							ATTR_SHADOW_BIRTHDATE, 0);
+			curr_job->shadowBirthday = 0;
 
 		}
 
-		if ( curr_actions->actions & UA_UPDATE_GLOBUS_STATE ) {
+		if ( curr_action->actions & UA_UPDATE_GLOBUS_STATE ) {
 			SetAttributeInt( curr_job->procID.cluster,
 							 curr_job->procID.proc,
 							 ATTR_GLOBUS_STATUS, curr_job->globusState );
 		}
 
-		if ( curr_actions->actions & UA_UPDATE_CONTACT_STRING ) {
+		if ( curr_action->actions & UA_UPDATE_CONTACT_STRING ) {
 			SetAttributeString( curr_job->procID.cluster,
 								curr_job->procID.proc,
 								ATTR_GLOBUS_CONTACT_STRING,
 								curr_job->jobContact );
 		}
 
-		if ( curr_actions->actions & UA_UPDATE_STDOUT_SIZE ) {
-			SetAttributeString( curr_job->procID.cluster,
-								curr_job->procID.proc,
-								ATTR_JOB_OUTPUT_SIZE,
-								curr_job->syncedOutputSize );
+		if ( curr_action->actions & UA_UPDATE_STDOUT_SIZE ) {
+			SetAttributeInt( curr_job->procID.cluster,
+							 curr_job->procID.proc,
+							 ATTR_JOB_OUTPUT_SIZE,
+							 curr_job->syncedOutputSize );
 		}
 
-		if ( curr_actions->actions & UA_UPDATE_STDERR_SIZE ) {
-			SetAttributeString( curr_job->procID.cluster,
-								curr_job->procID.proc,
-								ATTR_JOB_ERROR_SIZE,
-								curr_job->syncedErrorSize );
+		if ( curr_action->actions & UA_UPDATE_STDERR_SIZE ) {
+			SetAttributeInt( curr_job->procID.cluster,
+							 curr_job->procID.proc,
+							 ATTR_JOB_ERROR_SIZE,
+							 curr_job->syncedErrorSize );
 		}
 
-		if ( curr_actions->actions & UA_DELETE_FROM_SCHEDD ) {
+		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
 			CloseConnection();
 			BeginTransaction();
 			DestroyProc(curr_job->procID.cluster,
@@ -695,12 +691,12 @@ doContactSchedd()
 		// in case we're recovering from a shutdown/meltdown.
 		if ( grabAllJobs ) {
 			sprintf( expr_buf, "%s  && %s == %d",
-					 owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
+					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS );
 		} else {
 			sprintf( expr_buf, "%s  && %s == %d && %s == %d",
-					 owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 					 ATTR_GLOBUS_STATUS,
-					 GLOBUS_GRAM_PROCOTOL_JOB_STATE_UNSUBMITTED );
+					 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
 		}
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
@@ -712,7 +708,7 @@ doContactSchedd()
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 
-			if ( JobsByProcID->lookup( procID, old_job ) != 0 ) {
+			if ( JobsByProcID.lookup( procID, old_job ) != 0 ) {
 
 				int rc;
 				char resource_name[200];
@@ -729,13 +725,13 @@ doContactSchedd()
 
 				} else {
 
-					rc = ResourcesByName->lookup( HashKey( resource name ),
+					rc = ResourcesByName.lookup( HashKey( resource_name ),
 												  resource );
 
 					if ( rc != 0 ) {
 						resource = new GlobusResource( resource_name );
 						ASSERT(resource);
-						ResourcesByName->insert( HashKey( resource_name ),
+						ResourcesByName.insert( HashKey( resource_name ),
 												 resource );
 					} else {
 						ASSERT(resource);
@@ -743,7 +739,7 @@ doContactSchedd()
 
 					GlobusJob *new_job = new GlobusJob( next_ad, resource );
 					ASSERT(new_job);
-					JobsByProcID->insert( new_job->procID, new_job );
+					JobsByProcID.insert( new_job->procID, new_job );
 					num_ads++;
 
 				}
@@ -758,17 +754,17 @@ doContactSchedd()
 		dprintf(D_FULLDEBUG,"Fetched %d new job ads from schedd\n",num_ads);
 
 		grabAllJobs = false;
-		addJobsSignalled = false;
+		addJobsSignaled = false;
 	}
 	/////////////////////////////////////////////////////
 
 	// RemoveJobs
 	/////////////////////////////////////////////////////
-	if ( removeJobsSignalled ) {
+	if ( removeJobsSignaled ) {
 		int num_ads = 0;
 
 		sprintf( expr_buf, "%s && %s == %d && (%s == %d || $s == %d)",
-				 owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+				 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 				 ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD );
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
@@ -779,7 +775,7 @@ doContactSchedd()
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 
-			if ( JobsByProcID->lookup( procID, next_job ) == 0 ) {
+			if ( JobsByProcID.lookup( procID, next_job ) == 0 ) {
 				// Should probably skip jobs we already have marked as
 				// held or removed
 
@@ -805,7 +801,7 @@ doContactSchedd()
 
 		dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
 
-		removeJobsSignalled = false;
+		removeJobsSignaled = false;
 	}
 	/////////////////////////////////////////////////////
 
@@ -829,6 +825,34 @@ doContactSchedd()
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return TRUE;
+}
+
+void
+gramCallbackHandler( void *user_arg, char *job_contact, int state,
+					 int errorcode )
+{
+	int rc;
+	int cluster_id;
+	int proc_id;
+	GlobusJob *this_job;
+
+	dprintf(D_ALWAYS,"gramCallbackHandler: job %s, state %d\n", 
+		job_contact, state);
+	// Find the right job object
+	rc = JobsByContact.lookup( HashKey( job_contact ), this_job );
+	if ( rc != 0 || this_job == NULL ) {
+		dprintf( D_ALWAYS, 
+			"Can't find record for globus job with contact %s "
+			"on globus event %d, ignoring\n", job_contact, state );
+		return;
+	}
+
+	dprintf( D_ALWAYS, "   job is %d.%d\n", this_job->procID.cluster,
+			 this_job->procID.proc );
+
+	this_job->UpdateGlobusState( state, errorcode );
+
+	dprintf(D_FULLDEBUG,"gramCallbackHandler() returning\n");
 }
 
 // Initialize a UserLog object for a given job and return a pointer to
@@ -863,10 +887,11 @@ WriteExecuteToUserLog( GlobusJob *job )
 		"Writing execute record to user logfile=%s job=%d.%d owner=%s\n",
 			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
 
-	int hostname_len = strcspn( job->rmContact, ":/" );
+	int hostname_len = strcspn( job->myResource->ResourceName(), ":/" );
 
 	ExecuteEvent event;
-	strncpy( event.executeHost, job->rmContact, hostname_len );
+	strncpy( event.executeHost, job->myResource->ResourceName(),
+			 hostname_len );
 	event.executeHost[hostname_len] = '\0';
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -1002,7 +1027,7 @@ WriteGlobusSubmitEventToUserLog( GlobusJob *job )
 
 	GlobusSubmitEvent event;
 
-	event.rmContact =  strnewp(job->rmContact);
+	event.rmContact =  strnewp(job->myResource->ResourceName());
 	event.jmContact = strnewp(job->jobContact);
 	event.restartableJM = job->newJM;
 
@@ -1062,7 +1087,7 @@ WriteGlobusResourceUpEventToUserLog( GlobusJob *job )
 
 	GlobusResourceUpEvent event;
 
-	event.rmContact =  strnewp(job->rmContact);
+	event.rmContact =  strnewp(job->myResource->ResourceName());
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -1090,7 +1115,7 @@ WriteGlobusResourceDownEventToUserLog( GlobusJob *job )
 
 	GlobusResourceDownEvent event;
 
-	event.rmContact =  strnewp(job->rmContact);
+	event.rmContact =  strnewp(job->myResource->ResourceName());
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;

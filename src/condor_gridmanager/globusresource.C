@@ -2,8 +2,10 @@
 
 #include "condor_common.h"
 
-#include "globusresource.h"
+#include "globus_gram_client.h"
 
+#include "globusresource.h"
+#include "gridmanager.h"
 
 // timer id values that indicates the timer is not registered
 #define TIMER_UNSET		-1
@@ -13,16 +15,16 @@ template class List<GlobusJob>;
 template class Item<GlobusJob>;
 
 
-GlobusResource::probeInterval = 300;	// default value
+int GlobusResource::probeInterval = 300;	// default value
 
 GlobusResource::GlobusResource( char *resource_name )
 {
 	resourceDown = false;
 	pingTimerId = daemonCore->Register_Timer( TIME_NEVER,
-								(TimerHandlercpp)&GlobusResouce::DoPing,
+								(TimerHandlercpp)&GlobusResource::DoPing,
 								"GlobusResource::DoPing", (Service*)this );
-	gahp.resetTimerOnResults( pingTimerId );
-	gahp.setMode( normal );
+	gahp.setNotificationTimerId( pingTimerId );
+	gahp.setMode( GahpClient::normal );
 	resourceName = strdup( resource_name );
 }
 
@@ -44,7 +46,7 @@ void GlobusResource::UnregisterJob( GlobusJob *job )
 	registeredJobs.Delete( job );
 	pingRequesters.Delete( job );
 
-	if ( registerdJobs.IsEmpty() ) {
+	if ( registeredJobs.IsEmpty() ) {
 		DeleteResource( this );
 	}
 }
@@ -57,7 +59,7 @@ void GlobusResource::RequestPing( GlobusJob *job )
 
 bool GlobusResource::IsEmpty()
 {
-	return registerdJobs.IsEmpty();
+	return registeredJobs.IsEmpty();
 }
 
 bool GlobusResource::IsDown()
@@ -84,7 +86,7 @@ int GlobusResource::DoPing()
 		return 0;
 	}
 
-	if ( rc == GLOBUS_GRAM_CLIENT_ERROR_CONNECTION_FAILED ) {
+	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
 		ping_failed = true;
 	}
 
@@ -113,7 +115,7 @@ int GlobusResource::DoPing()
 		}
 
 		pingRequesters.Rewind();
-		while ( pingRequesters.DeleteCurrent() ) {
+		while ( !pingRequesters.IsEmpty() ) {
 			pingRequesters.DeleteCurrent();
 		}
 	}

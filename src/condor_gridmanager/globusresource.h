@@ -3,8 +3,12 @@
 #define GLOBUSRESOURCE_H
 
 #include "condor_common.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
+#include "gahp-client.h"
 #include "globusjob.h"
+
+class GlobusJob;
 
 class GlobusResource : public Service
 {
@@ -21,17 +25,18 @@ class GlobusResource : public Service
 	bool IsDown();
 	char *ResourceName();
 
-	void setProbeInterval( int new_interval );
+	static void setProbeInterval( int new_interval )
+		{ probeInterval = new_interval; }
 
  private:
 	int DoPing();
 
-	char *resoruceName;
+	char *resourceName;
 	bool resourceDown;
 	int pingTimerId;
 	List<GlobusJob> registeredJobs;
 	List<GlobusJob> pingRequesters;
-	static probeInterval;
+	static int probeInterval;
 
 	GahpClient gahp;
 };

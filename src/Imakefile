@@ -53,7 +53,7 @@
 #endif
 
 #if WANT_CONDOR_G && HAS_GLOBUS
-#define GlobusProgs globus gridmanager
+#define GlobusProgs gridmanager
 #else
 #define GlobusProgs
 #endif
@@ -258,7 +258,7 @@ object_target(daemon_client)
 object_target(prio)
 object_target(scripts)
 #if WANT_CONDOR_G && HAS_GLOBUS
-    object_target(globus)
+    object_target(gridmanager)
 #endif
 object_target(starter.V6.1)
 object_target(shadow.V6.1)

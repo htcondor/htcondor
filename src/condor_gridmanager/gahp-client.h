@@ -48,16 +48,16 @@ typedef void (* globus_gram_client_callback_func_t)(void * user_callback_arg,
 						    int errorcode);
 typedef enum
 {
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_CANCEL   = 1,
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_SUSPEND  = 2,
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_RESUME   = 3,
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_PRIORITY = 4,
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_COMMIT   = 5,
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_COMMIT_EXTEND = 6,
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STDIO_UPDATE = 7,
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STDIO_SIZE = 8,
-    GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STOP_MANAGER = 9
-} globus_gram_client_job_signal_t;
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_CANCEL   = 1,
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_SUSPEND  = 2,
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_RESUME   = 3,
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_PRIORITY = 4,
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT   = 5,
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_EXTEND = 6,
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_UPDATE = 7,
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_SIZE = 8,
+    GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STOP_MANAGER = 9
+} globus_gram_protocol_job_signal_t;
 #endif /* ifndef GLOBUS_I_GRAM_CLIENT_INCLUDE */
 
 ///
@@ -231,7 +231,7 @@ class GahpClient : public Service {
 		///
 		int
 		globus_gram_client_job_signal(char * job_contact,
-			globus_gram_client_job_signal_t signal,
+			globus_gram_protocol_job_signal_t signal,
 			char * signal_arg,
 			int * job_status,
 			int * failure_code);

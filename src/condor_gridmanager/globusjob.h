@@ -5,9 +5,12 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "globus_utils.h"
+#include "gahp-client.h"
 #include "globusresource.h"
 
 #define JM_COMMIT_TIMEOUT	300
+
+class GlobusResource;
 
 class GlobusJob : public Service
 {
@@ -27,9 +30,10 @@ class GlobusJob : public Service
 	GlobusResource *GetResource();
 	int syncIO();
 
-	void setProbeInterval( int new_interval );
+	static int probeInterval;
 
-	static probeInterval;
+	static void setProbeInterval( int new_interval )
+		{ probeInterval = new_interval; }
 
 	// New variables
 	bool resourceDown;
@@ -46,6 +50,7 @@ class GlobusJob : public Service
 	int numSubmitAttempts;
 	int syncedOutputSize;
 	int syncedErrorSize;
+	int shadowBirthday;
 
 	GahpClient gahp;
 

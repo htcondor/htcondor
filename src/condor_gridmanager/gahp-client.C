@@ -851,7 +851,7 @@ GahpClient::globus_gram_client_job_status(char * job_contact,
 
 int
 GahpClient::globus_gram_client_job_signal(char * job_contact,
-	globus_gram_client_job_signal_t signal,
+	globus_gram_protocol_job_signal_t signal,
 	char * signal_arg,
 	int * job_status,
 	int * failure_code)
@@ -1306,7 +1306,7 @@ GahpClient::globus_gram_client_callback_allow(
 	if ( argv[0] == NULL || argv[0][0] != 'S' || argv[1] == NULL ) {
 			// Badness !
 		int ec = argv[1] ? atoi(argv[1]) : GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-		char *es = argv[2] ? argv[2] : "???";
+		const char *es = argv[2] ? argv[2] : "???";
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s error_code=%d\n",
 						es,ec);
 		return ec;

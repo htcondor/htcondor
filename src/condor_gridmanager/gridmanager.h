@@ -8,6 +8,7 @@
 #include "classad_hashtable.h"
 #include "list.h"
 
+#include "gahp-client.h"
 #include "globusresource.h"
 #include "globusjob.h"
 
@@ -32,6 +33,8 @@ extern bool useDefaultProxy;
 
 extern GahpClient GahpMain;
 
+extern char *gassServerUrl;
+
 // initialization
 void Init();
 void Register();
@@ -45,6 +48,9 @@ void rehashJobContact( GlobusJob *job, const char *old_contact,
 					   const char *new_contact );
 void DeleteJob( GlobusJob *job );
 void DeleteResource( GlobusResource *resource );
+
+void gramCallbackHandler( void *user_arg, char *job_contact, int state,
+						  int errorcode );
 
 UserLog *InitializeUserLog( GlobusJob * );
 bool WriteExecuteToUserLog( GlobusJob * );

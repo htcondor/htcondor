@@ -5,7 +5,7 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o
+OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gahp-client.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 

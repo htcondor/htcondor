@@ -9,13 +9,10 @@
 #include "globus_gram_client.h"
 #include "globus_gass_server_ez.h"
 
-#include "gm_common.h"
+#include "sslutils.h"	// for proxy_get_filenames
+
 #include "gridmanager.h"
 
-
-char *gramCallbackContact = NULL;
-char *gassServerUrl = NULL;
-globus_gass_transfer_listener_t gassServerListener;
 
 char *mySubSystem = "GRIDMANAGER";	// used by Daemon Core
 
@@ -36,7 +33,7 @@ main_activate_globus()
 	// Find the location of our proxy file, if we don't already
 	// know (from the command line)
 	if (X509Proxy == NULL) {
-		proxy_get_filenames(1, NULL, NULL, &X509Proxy, NULL, NULL);
+		proxy_get_filenames(NULL, 1, NULL, NULL, &X509Proxy, NULL, NULL);
 	}
 
 	if(first_time) {
@@ -56,15 +53,17 @@ main_activate_globus()
 	}
 */
 
-	GahpMain.setMode( blocking );
+	GahpMain.setMode( GahpClient::blocking );
 
 	err = GahpMain.globus_gram_client_callback_allow( gramCallbackHandler,
-													  &gridmanager,
+													  NULL,
 													  &gramCallbackContact );
 	if ( err != GLOBUS_SUCCESS ) {
 		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d - %s\n", 
-			err, globus_gram_client_error_string(err) );
+			err, GahpMain.globus_gram_client_error_string(err) );
+/*
 		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
+*/
 		return false;
 	}
 
@@ -76,7 +75,7 @@ main_activate_globus()
 										GLOBUS_GASS_SERVER_EZ_WRITE_ENABLE,
 										NULL );
 */
-	err = GahpMain.globus_gass_server_super_ez_init( &gassServerUrl, 0 );
+	err = GahpMain.globus_gass_server_superez_init( &gassServerUrl, 0 );
 	if ( err != GLOBUS_SUCCESS ) {
 		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
 /*
@@ -158,7 +157,7 @@ main_init( int argc, char **argv )
 }
 
 int
-main_config()
+main_config( bool is_full )
 {
 	Reconfig();
 	return TRUE;
