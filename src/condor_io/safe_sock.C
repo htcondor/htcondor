@@ -25,19 +25,36 @@
 
 /* Note: this code needs to have error handling overhauled */
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"
 
+/* 
+   NOTE: All SafeSock constructors initialize with this, so you can
+   put any shared initialization code here.  -Derek Wright 3/12/99
+*/
+void
+SafeSock::init()
+{
+	_special_state = safesock_none;
+}
+
+
+SafeSock::SafeSock() 				/* virgin safesock	*/
+	: Sock()
+{
+	init();
+}
+
+
 SafeSock::SafeSock(					/* bind on port		*/
 	int		port
 	)
 	: Sock()
 {
+	init();
 	bind(port);
 }
 
@@ -47,6 +64,7 @@ SafeSock::SafeSock(					/* bind on serv		*/
 	)
 	: Sock()
 {
+	init();
 	bind(serv);
 }
 
@@ -58,10 +76,10 @@ SafeSock::SafeSock(
 	)
 	: Sock()
 {
+	init();
 	timeout(timeout_val);
 	connect(host, port);
 }
-
 
 
 SafeSock::SafeSock(
@@ -71,17 +89,16 @@ SafeSock::SafeSock(
 	)
 	: Sock()
 {
+	init();
 	timeout(timeout_val);
 	connect(host, serv);
 }
-
 
 
 SafeSock::~SafeSock()
 {
 	close();
 }
-
 
 
 int SafeSock::handle_incoming_packet()
@@ -94,7 +111,6 @@ int SafeSock::handle_incoming_packet()
 
 	return TRUE;
 }
-
 
 
 int SafeSock::end_of_message()
@@ -123,7 +139,6 @@ int SafeSock::end_of_message()
 
 	return ret_val;
 }
-
 
 
 int SafeSock::connect(
@@ -167,6 +182,7 @@ int SafeSock::connect(
 	_state = sock_connect;
 	return TRUE;
 }
+
 
 int SafeSock::put_bytes(
 	const void	*dta,
@@ -254,6 +270,7 @@ int SafeSock::peek(
 	return rcv_msg.buf.peek(c);
 }
 
+
 int SafeSock::rcv_packet(
 	SOCKET _sock
 	)
@@ -330,7 +347,6 @@ int SafeSock::snd_packet(
 }
 
 
-
 int SafeSock::get_port()
 {
 	sockaddr_in	addr;
@@ -344,11 +360,11 @@ int SafeSock::get_port()
 }
 
 
-
 int SafeSock::get_file_desc()
 {
 	return _sock;
 }
+
 
 #ifndef WIN32
 	// interface no longer supported
@@ -364,10 +380,12 @@ int SafeSock::attach_to_file_desc(
 }
 #endif
 
+
 struct sockaddr_in *SafeSock::endpoint()
 {
 	return &_who;
 }
+
 
 char *SafeSock::endpoint_IP()
 {
@@ -389,10 +407,12 @@ char *SafeSock::endpoint_IP()
 	return buf;
 }
 
+
 int SafeSock::endpoint_port()
 {
 	return (int) ntohs(_who.sin_port);
 }
+
 
 char * SafeSock::serialize(char *buf)
 {
