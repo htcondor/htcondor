@@ -99,11 +99,16 @@ transaction.h util.C util.h value.C value.h view.C view.h xmlLexer.C xmlLexer.h 
 xmlSink.h xmlSink.C xmlSource.h xmlSource.C classad_distribution.h		\
 cclassad.C cclassad.h classad_stl.h LICENSE README CHANGELOG configure
 
+WIN32_FILES = win32/classad_dist.dep win32/classad_dist.dsp \
+	win32/classad_dist.dsw win32/classad_dist.mak win32/make.bat
+
 dist: $(DIST_FILES)
 	rm -rf $(DISTRIBUTION_DIR) *.gz
 	mkdir $(DISTRIBUTION_DIR)
+	mkdir $(DISTRIBUTION_DIR)/win32
 	cp $(DIST_FILES) $(DISTRIBUTION_DIR)
 	cp makefile-dist $(DISTRIBUTION_DIR)/Makefile
+	cp $(WIN32_FILES) $(DISTRIBUTION_DIR)/win32
 	tar cf $(DISTRIBUTION_DIR).tar $(DISTRIBUTION_DIR)
 	gzip $(DISTRIBUTION_DIR).tar
 
