@@ -51,7 +51,7 @@ int get_random_integer(void)
         srand48(seed);
         initialized = 1;
 	}
-	return (int) (lrand48() & MAXINT);
+	return (int) (lrand48() & INT_MAX);
 }
 #endif
 
