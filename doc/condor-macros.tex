@@ -13,7 +13,8 @@
 \newcommand{\Cmd}[2]{\textit{#1}(#2)}           	% Command w/ section number
 \newcommand{\Sinful}[1]{$\mathtt{<#1>}$}         	% Sinful string
 \newcommand{\Url}[1]{\htmladdnormallink{#1}{#1}}	% a URL
-\newcommand{\File}[1]{\textt{#1}}        	    	% File name
+\newcommand{\Email}[1]{\htmladdnormallink{#1}{mailto:#1}}
+\newcommand{\File}[1]{\texttt{#1}}        	    	% File name
 \newcommand{\Bs}{$\mathtt{\backslash}$}         	% Backslash
 \newcommand{\Bar}{$\mathtt{|}$}                 	% Pipe (i.e., '|')
 \newcommand{\Tilde}{$\tilde{}$}                 	% tilde
@@ -29,12 +30,12 @@
 \newcommand{\oArg}[1]{\mbox{[\Arg{#1}]}}            % optional Argument
 \newcommand{\oOpt}[1]{\mbox{[\Opt{#1}]}}            % optional Option
 \newcommand{\oOptArg}[2]{\mbox{[\OptArg{#1\ }{#2}]}}% optional Option w/ Arg
-\newcommand{\Env}[1]{\textt{#1}}		% Environment variable
-\newcommand{\DCPerm}[1]{\textt{#1}}		% DC Permission
-\newcommand{\Expr}[1]{\textt{#1}}		% Config file expression
-\newcommand{\Macro}[1]{\textt{#1}}		% Config file macro
-		% Release directory entry
-\newcommand{\Release}[1]{\textt{\Sinful{release\_dir}}/{#1}}	
+\newcommand{\Env}[1]{\texttt{#1}}					% Environment variable
+\newcommand{\DCPerm}[1]{\texttt{#1}}				% DC Permission
+\newcommand{\Expr}[1]{\texttt{#1}}					% Config file expression
+\newcommand{\Macro}[1]{\texttt{#1}}					% Config file macro
+% Release directory entry
+\newcommand{\Release}[1]{\texttt{$<$release\_dir$>$/#1}}
 
 %
 %  To help with typing in names of condor commands
