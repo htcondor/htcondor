@@ -42,7 +42,7 @@ ClassAdList(ClassAdList& oldList)
 	oldList.Open();
 	if(oldList.MyLength() > 0)
 		{
-			while( tmpClassAd = oldList.Next() )
+			while( oldList.calist.Next( tmpClassAd ) )
 				{
 					Insert( new ClassAd(*tmpClassAd) );
 				}
@@ -53,17 +53,16 @@ ClassAdList::
 ~ClassAdList()
 {
 	ClassAd ad;
-	list.Rewind();
-	while( list.Next(ad) ) {
-		list.DeleteCurrent();
+	calist.Rewind();
+	while( calist.Next(ad) ) {
+		calist.DeleteCurrent();
 	}
-//	delete list;
 }
 	
 void ClassAdList::
 Open()
 {
-	list.Rewind();
+	calist.Rewind();
 }
 
 void ClassAdList::
@@ -80,8 +79,8 @@ PrintClassAdList()
 
 	pp.SetOldClassAd( true );
 	
-  	list.Rewind();
-  	while( list.Next( tmpClassAd ) ) {
+  	calist.Rewind();
+  	while( calist.Next( tmpClassAd ) ) {
 		pp.Unparse( buffer, tmpClassAd );
 		cout << buffer << endl;
 		buffer = "";
@@ -91,31 +90,43 @@ PrintClassAdList()
 int ClassAdList::
 MyLength()
 {
-	return list.Number();
+	return calist.Number();
 }
 
 ClassAd* ClassAdList::
 Next()
 {
-	return list.Next();
+	return calist.Next();
 }
 
 void ClassAdList::
 Rewind()
 {
-	list.Rewind();
+	calist.Rewind();
 }
 
 int ClassAdList::
 Length()
 {
-	return list.Number();
+	return calist.Number();
 }
 
 void ClassAdList::
 Insert(ClassAd* ca)
 {
-	list.Insert(ca);
+	calist.Insert(ca);
+}
+
+int	ClassAdList::
+Delete(ClassAd* ca)
+{
+	ClassAd *tmpClassAd;
+	while( calist.Next( tmpClassAd ) ) {
+		if( ca == tmpClassAd ) {
+			calist.DeleteCurrent( );
+		}
+	}
+	return TRUE;
 }
 
 void ClassAdList::
@@ -123,7 +134,7 @@ Sort( SortFunctionType UserSmallerThan, void* UserInfo)
 {
 	ClassAd* ad;
 	int i = 0;
-	int len = list.Number();
+	int len = calist.Number();
 
 	if ( len < 2 ) {
 		// the list is either empty or has only one element,
@@ -137,14 +148,14 @@ Sort( SortFunctionType UserSmallerThan, void* UserInfo)
 
 	// so first create our array
 	ClassAd** array = new ClassAd*[len];
-	list.Rewind();
-	while( list.Next(ad) ) {
+	calist.Rewind();
+	while( calist.Next(ad) ) {
 		array[i] = ad;
 		i++;
 	}
-	list.Rewind();
-	while( list.Next(ad) ) {
-		list.DeleteCurrent();
+	calist.Rewind();
+	while( calist.Next(ad) ) {
+		calist.DeleteCurrent();
 	}
 
 	
@@ -157,9 +168,9 @@ Sort( SortFunctionType UserSmallerThan, void* UserInfo)
 
 	qsort(array,len,sizeof(ClassAd*),SortCompare);
 
-	list.Rewind();
+	calist.Rewind();
 	for(i=0;i<len;i++) {
-		list.Append(array[i]);
+		calist.Append(array[i]);
 	}
 
 	// and delete our array

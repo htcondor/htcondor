@@ -51,6 +51,7 @@ class ClassAdList
 	void		Rewind();
 	int			Length();
 	void		Insert(ClassAd* ca);
+	int			Delete(ClassAd* ca);
 	//int			Delete(ClassAd* ca){return AttrListList::Delete((AttrList*)ca);}
     //ClassAd*	Lookup(const char* name);
 
@@ -64,7 +65,7 @@ class ClassAdList
   private:
 	static int SortCompare(const void*, const void*);
 
-	List<ClassAd> list;
+	List<ClassAd> calist;
 
 };
 
