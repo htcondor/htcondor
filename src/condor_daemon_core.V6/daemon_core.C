@@ -3553,7 +3553,7 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 	if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
 			char check_name[_POSIX_PATH_MAX];
 			CSysinfo sysinfo;
-			sysinfo.GetProcessName(pid,check_name);
+			sysinfo.GetProcessName(pid,check_name, _POSIX_PATH_MAX);
 			dprintf(D_PROCFAMILY,
 				"Shutdown_Fast(%d):calling TerminateProcess handle=%x check_name='%s'\n",
 				pid,pidHandle,check_name);
@@ -3650,7 +3650,7 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				WaitForSingleObject(threadHandle, INFINITE);
 			}
 
-			// Set winsta and desktop back to the service desktop (or wherever)
+ 			// Set winsta and desktop back to the service desktop (or wherever)
 			SetProcessWindowStation(hwinsta);
 			SetThreadDesktop(hdesk);
 			// don't leak handles!
@@ -3671,7 +3671,7 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 			GetWindowThreadProcessId(pidinfo->hWnd, &check_pid);
 			char check_name[_POSIX_PATH_MAX];
 			CSysinfo sysinfo;
-			sysinfo.GetProcessName(check_pid,check_name);
+			sysinfo.GetProcessName(check_pid,check_name, _POSIX_PATH_MAX);
 			dprintf(D_PROCFAMILY,
 				"Sending WM_CLOSE to pid %d: hWnd=%x check_pid=%d name='%s'\n",
 				pid,pidinfo->hWnd,check_pid,check_name);
@@ -4304,7 +4304,7 @@ DCFindWindow(HWND hWnd, LPARAM p)
 		if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
 			char check_name[_POSIX_PATH_MAX];
 			CSysinfo sysinfo;
-			sysinfo.GetProcessName(pid,check_name);
+			sysinfo.GetProcessName(pid,check_name, _POSIX_PATH_MAX);
 			dprintf(D_PROCFAMILY,
 				"DCFindWindow found pid %d: hWnd=%x name='%s'\n",
 				pid,hWnd,check_name);
