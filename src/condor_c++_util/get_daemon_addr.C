@@ -28,10 +28,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
-#include "condor_query.h"
 #include "condor_config.h"
-#include "my_hostname.h"
+#include "condor_string.h"
+#include "daemon.h"
 #include "get_full_hostname.h"
+#include "my_hostname.h"
 #include "daemon_types.h"
 
 extern "C" {
@@ -61,7 +62,7 @@ char*
 get_daemon_name( const char* name )
 {
 	char *tmp, *fullname, *tmpname;
-	static char daemon_name[256];
+	char daemon_name[256];
 	daemon_name[0] = '\0';
 	tmpname= strdup( name );
 	int had_error = 0;
@@ -97,7 +98,7 @@ get_daemon_name( const char* name )
 	if( had_error ) {
 		return NULL;
 	} else {
-		return daemon_name;
+		return strnewp( daemon_name );
 	}
 }
 
@@ -106,12 +107,13 @@ get_daemon_name( const char* name )
 // hostname.  If the name contains an '@', strip off everything after
 // it and append my_full_hostname().  If there's no '@', try to
 // resolve what we have and see if it's my_full_hostname.  If so, use
-// it, otherwise, use name@my_full_hostname().
+// it, otherwise, use name@my_full_hostname().  We return the answer
+// in a newly allocated string which should be deallocated w/ delete. 
 char*
 build_valid_daemon_name( char* name ) 
 {
 	char *tmp;
-	static char daemonName[100];
+	char daemonName[100];
 
 	if( name && *name ) {
 		tmp = strchr( name, '@' );
@@ -130,162 +132,75 @@ build_valid_daemon_name( char* name )
 	} else {
 		sprintf( daemonName, "%s", my_full_hostname() );
 	}
-	return daemonName;
+	return strnewp( daemonName );
 }
 
 
-// Return a pointer to a static buffer which contains the name of the
+// Return a newly allocated string which contains the name of the
 // given daemon (specified by subsys string) as configured on the
-// local host.
+// local host.  This string should be deallocated with delete []. 
 char*
 my_daemon_name( const char* subsys )
 {
-	static char my_name[100];
-	char line [100], *tmp;
+	char line [100], *tmp, *my_name;
 	sprintf( line, "%s_NAME", subsys );
 	tmp = param( line );
 	if( tmp ) {
-		sprintf( my_name, "%s", build_valid_daemon_name(tmp) );
+		my_name = build_valid_daemon_name(tmp);
 		free( tmp );
 	} else {
-		sprintf( my_name, "%s", my_full_hostname() );
+		my_name = strnewp( my_full_hostname() );
 	}
 	return my_name;
 }
 
 
 char*
-real_get_daemon_addr( const char* constraint_attr, 
-				 const char* name, AdTypes adtype,
-				 const char* attribute, const char* subsys, 
-				 const char* pool )
-{
-
-	static char			daemonAddr[100];
-	char				constraint[500];
-	char				*fullname = NULL, *addr_file, *tmp, *my_name;
-	FILE				*addr_fp;
-	int					is_local = 0;
-
-	daemonAddr[0] = '\0';
-	my_name = my_daemon_name( subsys );
-
-		// Figure out if we want to find a local daemon or not.
-	if( name && *name ) {
-		fullname = (char*)name;
-		if( !strcmp( fullname, my_name ) ) {
-			is_local = 1;
-		}
-	} else {
-		fullname = my_name;
-		is_local = 1;
-	}
-
-	if( is_local ) {
-		sprintf( constraint, "%s_ADDRESS_FILE", subsys );
-		addr_file = param( constraint );
-		if( addr_file ) {
-			if( (addr_fp = fopen(addr_file, "r")) ) {
-					// Read out the sinful string.
-				fgets( daemonAddr, 100, addr_fp );
-					// chop off the newline
-				tmp = strchr( daemonAddr, '\n' );
-				if( tmp ) {
-					*tmp = '\0';
-				}
-				fclose( addr_fp );
-			}
-			free( addr_file );
-		} 
-		if( daemonAddr[0] == '<' ) {
-				// We found something reasonable.
-			return daemonAddr;
-		}
-	}
-
-	CondorQuery			query(adtype);
-	ClassAd*			scan;
-	ClassAdList			ads;
-
-	sprintf(constraint, "%s == \"%s\"", constraint_attr, fullname ); 
-	query.addConstraint(constraint);
-	query.fetchAds(ads, pool);
-	ads.Open();
-	scan = ads.Next();
-	if(!scan)
-	{
-		return NULL; 
-	}
-	if(scan->EvalString(attribute, NULL, daemonAddr) == FALSE)
-	{
-		return NULL; 
-	}
-	return daemonAddr;
-}
-
-
-char*
 get_schedd_addr(const char* name, const char* pool)
 {
-	return real_get_daemon_addr( ATTR_NAME, name, SCHEDD_AD, 
-								 ATTR_SCHEDD_IP_ADDR, "SCHEDD", pool );
+	static char addr[100];
+	Daemon d( DT_SCHEDD, name, pool );
+	sprintf( addr, "%s", d.addr() );
+	return addr;
 } 
 
 
 char*
 get_startd_addr(const char* name, const char* pool)
 {
-	return real_get_daemon_addr( ATTR_MACHINE, get_host_part(name), STARTD_AD, 
-								 ATTR_STARTD_IP_ADDR, "STARTD", pool );
+	static char addr[100];
+	Daemon d( DT_STARTD, name, pool );
+	sprintf( addr, "%s", d.addr() );
+	return addr;
 } 
 
 
 char*
 get_master_addr(const char* name, const char* pool)
 {
-	return real_get_daemon_addr( ATTR_NAME, name, MASTER_AD, 
-								 ATTR_MASTER_IP_ADDR, "MASTER", pool );
-} 
-
-
-char*
-get_cm_addr( const char* name, char* config_name, int port )
-{
-	static char addr[30];
-	struct hostent* hostp;
-	char* tmp = NULL;
-
-	if( name && *name ) {
-		tmp = strdup( name );
-	} else {
-		tmp = param( config_name );
-	}
-	if( ! tmp ) {
-		return NULL;
-	} 
-	hostp = gethostbyname( tmp );
-	free( tmp );
-	if( ! hostp ) {
-		return NULL;
-	}
-	sprintf( addr, "<%s:%d>",
-			 inet_ntoa( *(struct in_addr*)(hostp->h_addr_list[0]) ),
-			 port );
+	static char addr[100];
+	Daemon d( DT_MASTER, name, pool );
+	sprintf( addr, "%s", d.addr() );
 	return addr;
-}
-
+} 
 
 char*
 get_negotiator_addr(const char* name)
 {
-	return get_cm_addr( name, "NEGOTIATOR_HOST", NEGOTIATOR_PORT );
+	static char addr[100];
+	Daemon d( DT_COLLECTOR, name );
+	sprintf( addr, "%s", d.addr() );
+	return addr;
 }
 
 
 char*
 get_collector_addr(const char* name)
 {
-	return get_cm_addr( name, "COLLECTOR_HOST", COLLECTOR_PORT );
+	static char addr[100];
+	Daemon d( DT_COLLECTOR, name );
+	sprintf( addr, "%s", d.addr() );
+	return addr;
 }
 
 
