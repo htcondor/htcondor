@@ -371,33 +371,26 @@ int Stream::code(PORTS &p)
 	return TRUE;
 }
 
-int Stream::code(StartdRec &rec)
+int
+Stream::code(StartdRec &rec)
 {
-	if ( !code(rec.version_num)) return FALSE;
+	if( !code(rec.version_num) ) return FALSE;
 
-	dprintf(D_ALWAYS, "Version = %d\n", rec.version_num);
-	if ( rec.version_num >=0 )
+	if( rec.version_num >=0 )
 	{
 		/* we are talking with a startd of an old version which sends just
 		   two port numbers */
 		rec.ports.port1 = rec.version_num;
 		if ( !code(rec.ports.port2) ) return FALSE;
-		dprintf(D_ALWAYS, "Port2 = %d\n", rec.ports.port2);
 		return TRUE;
 	}
-	if ( !code(rec.ports)) return FALSE;
-	if ( !code(rec.ip_addr)) return FALSE;
-	dprintf(D_ALWAYS, "IP-addr = 0x%x\n", rec.ip_addr);
+	if( !code(rec.ports) ) return FALSE;
+	if( !code(rec.ip_addr) ) return FALSE;
 
-	if ( is_encode() ) 
-	{
-		if ( !code(rec.server_name)) return FALSE;
-		dprintf(D_ALWAYS, "Send server_name = %s\n", rec.server_name);
-	}
-	else if ( is_decode() ) 
-	{
-		if ( !code(rec.server_name)) return FALSE;
-		dprintf(D_ALWAYS, "Received server_name = %s\n", rec.server_name);
+	if( is_encode() ) {
+		if( !code(rec.server_name) ) return FALSE;
+	} else if ( is_decode() ) {
+		if( !code(rec.server_name) ) return FALSE;
 	}
 	return TRUE;
 }
