@@ -1583,9 +1583,6 @@ DaemonCore::ReInit()
 		// Reset our IpVerify object
 	ipverify.Init();
 
-		// Reset our SecMan object (clears the cached info)
-    invalidateSessionCache();
-
 		// Handle our timer.  If this is the first time, we need to
 		// register it.  Otherwise, we just reset its value to go off
 		// 8 hours from now.  The reason we don't do this as a simple
