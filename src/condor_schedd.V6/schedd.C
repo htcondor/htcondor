@@ -306,18 +306,12 @@ Scheduler::~Scheduler()
 		free(MySockName);
 	if (MyShadowSockName)
 		free(MyShadowSockName);
-	if ( shadowCommandrsock ) {
-		if( daemonCore ) {
-			daemonCore->Cancel_Socket(shadowCommandrsock);
-		}
-		delete shadowCommandrsock;
-	}
-	if ( shadowCommandssock ) {
-		if( daemonCore ) {
-			daemonCore->Cancel_Socket(shadowCommandssock);
-		}
-		delete shadowCommandssock;
-	}
+
+		// we used to cancel and delete the shadowCommand*socks here,
+		// but now that we're calling Cancel_And_Close_All_Sockets(),
+		// they're already getting cleaned up, so if we do it again,
+		// we'll seg fault.
+
 	if (Collector)
 		delete(Collector);
 	if (Negotiator)
@@ -5476,6 +5470,10 @@ Scheduler::shutdown_fast()
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
 
+	int num_closed = daemonCore->Cancel_And_Close_All_Sockets();
+	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
+			 num_closed ); 
+
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
 	DC_Exit(0);
 }
@@ -5495,6 +5493,10 @@ Scheduler::schedd_exit()
 		// Invalidate our classads at the collector, since we're now
 		// gone.  
 	invalidate_ads();
+
+	int num_closed = daemonCore->Cancel_And_Close_All_Sockets();
+	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
+			 num_closed ); 
 
 	dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 	DC_Exit(0);
