@@ -13,37 +13,122 @@ BEGIN
 use HawkeyePublish;
 use HawkeyeLib;
 
+# Prototypes
+sub Init( );
+sub RunIt( );
+sub RunAbsent( );
+sub RunTotal( $$ );
+sub RunSubmit(  );
+
+
 # Setup the hawkeye stuff
 my $Hawkeye;
 my $ConfigCluster = "";
 my $ConfigReserved = "";
+my $ConfigDoAbsent = 1;
+my $ConfigDoSummary = 1;
+my $ConfigDoRun = 1;
+my $ConfigDoSubmit = 1;
 my $Hash;
+my $ModuleName = "condor_pool";
 
 # Do it
 Init();
 RunIt();
 
-sub Init {
+sub Init()
+{
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );
-    $Hawkeye->AutoIndexSet( 1 );
+    $Hawkeye->AutoIndexSet( 0 );
+
+    # Get my name from the command line
+    $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
 
     # Read the config info..
     my $Tmp;
-    $Tmp = HawkeyeLib::ReadConfig( "condor_pool", "_cluster", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_cluster", "true" );
     $ConfigCluster = " -cluster" if ( $Tmp =~ /true/i );
 
-    $Tmp = HawkeyeLib::ReadConfig( "condor_pool", "_reserved", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_reserved", "true" );
     $ConfigReserved = " -reserved" if ( $Tmp =~ /true/i );
+
+    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_absent", "true" );
+    $ConfigDoAbsent = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_summary", "true" );
+    $ConfigDoSummary = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_run", "true" );
+    $ConfigDoRun = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_submit", "true" );
+    $ConfigDoSubmit = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    # Finally, parse the command line...
+    foreach my $Arg ( @ARGV )
+    {
+	# Cluster on/off
+	if ( $Arg =~ /-(no)?cluster/ )
+	{
+	    $ConfigCluster = defined($1) ? "" : " -cluster";
+	}
+	# Reserved on/off
+	elsif ( $Arg =~ /-(no)?reserved/ )
+	{
+	    $ConfigReserved = defined($1) ? "" : " -reserved";
+	}
+	# Reserved on/off
+	elsif ( $Arg =~ /-(no)?absent/ )
+	{
+	    $ConfigDoAbsent = defined($1) ? 0 : 1;
+	}
+	elsif ( $Arg =~ /-(no)?summary/ )
+	{
+	    $ConfigDoSummary = defined($1) ? 0 : 1;
+	}
+	elsif ( $Arg =~ /-(no)?run/ )
+	{
+	    $ConfigDoRun = defined($1) ? 0 : 1;
+	}
+	elsif ( $Arg =~ /-(no)?submit/ )
+	{
+	    $ConfigDoSubmit = defined($1) ? 0 : 1;
+	}
+	else
+	{
+	    print STDERR "Unknown option '$Arg'\n";
+	    print STDERR "Usage: condor_pool [name [options]]\n";
+	    print STDERR
+		"  [name]         \tModules logical name\n" .
+		"  [-[no]absent]  \tEnable/disable absent check\n" .
+		"  [-[no]cluster] \tEnable/disable cluster check (only w/absent)\n" .
+		"  [-[no]reserved]\tEnable/disable reserved check (only w/absent)\n" .
+		"  [-[no]summary] \tEnable/disable summary support\n" .
+		"  [-[no]run]     \tEnable/disable run check\n" .
+		"  [-[no]submit]  \tEnable/disable submit check\n";
+	    exit 1;
+	}
+    }
+    if ( 0 )
+    {
+	print "clus=$ConfigCluster; res=$ConfigReserved; dab=$ConfigDoAbsent ".
+	    "dsum=$ConfigDoSummary; drun=$ConfigDoRun dsub=$ConfigDoSubmit\n";
+	exit 0;
+    }
 }
 
 # Do the real work here...
-sub RunIt {
+sub RunIt()
+{
 
     # Start things off
     $Hash = HawkeyeHash->new( \$Hawkeye, "" );
 
-    RunAbsent();
+    RunAbsent() if ( $ConfigDoAbsent );
+    RunTotal( "", "Sum_" ) if ( $ConfigDoSummary );
+    RunTotal( "-run", "Run_" ) if ( $ConfigDoRun );
+    RunSubmit( ) if ( $ConfigDoSubmit );
 
     # Ok, summary is done...
     $Hash->Store( );
@@ -51,7 +136,8 @@ sub RunIt {
 }
 
 # Do the real work here...
-sub RunAbsent {
+sub RunAbsent()
+{
 
     # Lists
     my @ClusterDown;
@@ -59,8 +145,13 @@ sub RunAbsent {
 
     # Now, run condor_status and gather some more info...
     my $Cmd = "condor_absent -ping" . $ConfigCluster . $ConfigReserved;
-    print "$Cmd\n";
-    open( ABSENT, "$Cmd|" ) || die "Can't get absent info";
+    if ( ! open( ABSENT, "$Cmd|" ) )
+    {
+	print STDERR "Can't get absent info\n";
+	return;
+    }
+
+    # Parse the output...
     while ( <ABSENT> )
     {
 	chomp;
@@ -72,6 +163,7 @@ sub RunAbsent {
 	    if ( $1 =~ /(\d+).*roster/ )
 	    {
 		$Hash->Add( "Count", "n", $1 );
+		$Hawkeye->StoreIndex( "Count" );
 	    }
 	    # Cluster summary
 	    elsif ( $1 =~ /Cluster:\s+(.*)/ )
@@ -83,12 +175,14 @@ sub RunAbsent {
 		    my $AttrUc = uc( substr( $Attr, 0, 1 ) );
 		    substr( $Attr, 0, 1, $AttrUc );
 		    $Hash->Add( "Cluster" . $Attr, "n", $Value );
+		    $Hawkeye->StoreIndex( "Cluster" . $Attr );
 		}
 	    }
 	    # Absent summary
 	    elsif ( $1 =~ /(\d+).*absent/ )
 	    {
 		$Hash->Add( "Absent", "n", $1 );
+		$Hawkeye->StoreIndex( "Absent" );
 	    }
 	}
 
@@ -108,7 +202,105 @@ sub RunAbsent {
 
     # Cluster Down list
     $Hash->Add( "ClusterDownList", "s", join( ",", @ClusterDown ) );
+    $Hawkeye->StoreIndex( "ClusterDownList" );
 
     # Absent list
     $Hash->Add( "AbsentList", "s", join( ",", @Absent ) );
+    $Hawkeye->StoreIndex( "AbsentList" );
+}
+
+
+# Run condor_status -total -run & parse it's output..
+sub RunTotal( $$ )
+{
+    my $Parms = shift;
+    my $Prefix = shift;
+
+    # Run it..
+    my $Cmd = "condor_status -total $Parms";
+    if ( ! open( TOTAL, "$Cmd|" ) )
+    {
+	print STDERR "Can't get total info\n";
+	return;
+    }
+
+    # "Global" info..
+    my @FieldNames;
+
+    # Parse the output...
+    while ( <TOTAL> )
+    {
+	chomp;
+	s/^\s+//g;
+	next if ( $_ eq "" );
+
+	# Header line?
+	if ( /Machines/ )
+	{
+	    @FieldNames = split( /\s+/, $_ );
+	}
+	elsif ( ! /omit/i )
+	{
+	    my ( $Arch, @Values ) = split;
+	    $Hawkeye->StoreIndex( $Prefix . $Arch );
+	    foreach my $Field ( 0 .. $#Values )
+	    {
+		my $Attr = $Prefix . $Arch . "_" . $FieldNames[$Field];
+		$Hash->Add( $Attr, "n", $Values[$Field] );
+	    }
+	}
+    }
+
+    # Done
+    close( TOTAL );
+}
+
+# Run condor_status -sub & parse it's output..
+sub RunSubmit(  )
+{
+    print STDERR "RunSubmit\n";
+    # Run it..
+    my @Fields = (
+		  { Format => "%s", Type => "s", Name => "Name", },
+		  { Format => "%s", Type => "s", Name => "Machine" },
+		  { Format => "%d", Type => "n", Name => "RunningJobs" },
+		  { Format => "%d", Type => "n", Name => "IdleJobs" },
+		  { Format => "%d", Type => "n", Name => "HeldJobs" },
+		 );
+
+    my $Cmd = "condor_status -submit";
+    foreach my $Field ( @Fields )
+    {
+	$Cmd = $Cmd .
+	    " -format \"" . $Field->{Format} . " \" " . $Field->{Name};
+    }
+    my $Last = rindex( $Cmd, "\"" );
+    substr( $Cmd, $Last, 0, "\\n" );
+    if ( ! open( SUB, "$Cmd|" ) )
+    {
+	print STDERR "Can't get submit info\n";
+	return;
+    }
+
+    # Parse the output...
+    my $SubmitNo = 0;
+    while ( <SUB> )
+    {
+	chomp;
+	next if ( $_ eq "" );
+	$SubmitNo++;
+
+	# Split it up, crunch it out
+	my @Values = split;
+	warn "Wrong data size" if ( $#Values != $#Fields );
+	for my $FieldNo ( 0 .. $#Fields )
+	{
+	    my $Attr = sprintf "Submit%02d_%s", 
+		$SubmitNo, $Fields[$FieldNo]->{Name};
+	    $Hash->Add( $Attr, $Fields[$FieldNo]->{Type}, $Values[$FieldNo] );
+	}
+    }
+
+    # Done
+    close( TOTAL );
 }
