@@ -2,7 +2,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#if !defined(LINUX)
+#if !defined(LINUX) && !defined(HPUX9)
 #include <sys/select.h>
 #endif
 
