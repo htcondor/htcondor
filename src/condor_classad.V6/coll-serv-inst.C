@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "collection.h"
 #include "collectionServer.h"
 #include "transaction.h"
