@@ -21,17 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#if !defined(SUNOS41) && !defined(OSF1) && !defined(ULTRIX43) && !defined(Solaris) && !defined(IRIX53)
-#define _POSIX_SOURCE
-#endif
-
+#include "condor_common.h"
 #include "condor_debug.h"		/* for EXCEPT */
-#include <signal.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <sys/syscall.h>
 #include "condor_sys.h"
 #include "errno.h"
 #include "debug.h"
@@ -386,7 +377,7 @@ SIGACTION(int sig, const struct sigaction *act, struct sigaction *oact)
 #endif
 
 #if defined(SYS_sigaction)
-#if defined(LINUX)
+#if defined(LINUX) && !defined(GLIBC)
 int
 sigaction( int sig, struct sigaction *act, struct sigaction *oact )
 #else
