@@ -12,9 +12,9 @@ LIB = ../condor_daemon_core/daemon_core.a collector_engine.a ../condor_classad/e
 	  ../condor_util_lib/util_lib.a ../condor_io/libcondor.a \
 	  RpcLib SocketLib
 
-all_target(collector_engine.a condor_collector.V6)
-c_plus_target(condor_collector.V6,$(OBJ),$(LIB))
+all_target(collector_engine.a condor_collector)
+c_plus_target(condor_collector,$(OBJ),$(LIB))
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 library_target(collector_engine.a, $(ENGINE_OBJ))
-release_target(test,$(RELEASE_DIR)/bin,SET_GID_MODE)
+release_target(condor_collector,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
