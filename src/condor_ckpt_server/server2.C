@@ -1,20 +1,3 @@
-#include <sys/types.h>
-#include "server2.h"
-#include "gen_lib.h"
-#include "network2.h"
-#include "signal2.h"
-#include "alarm2.h"
-#include <string.h>
-#include <time.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/wait.h>
-#include <iomanip.h>
-
-
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
@@ -25,6 +8,17 @@
 #include "string_list.h"
 #include "internet.h"
 
+#include <time.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/wait.h>
+#include <iomanip.h>
+
+#include "server2.h"
+#include "gen_lib.h"
+#include "network2.h"
+#include "signal2.h"
+#include "alarm2.h"
 
 #undef DEBUG
 
