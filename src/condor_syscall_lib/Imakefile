@@ -41,7 +41,8 @@ SRC = \
 	switches.special.c \
 	syscall.tmpl \
 	syscall_connect.c \
-	syscall_numbers.c
+	syscall_numbers.c \
+	xfer_file.c
 
 #if IS_ALPHA_OSF1
 XDR_STATFS_OBJ = xdr_statfs.OSF1.o
@@ -68,12 +69,15 @@ CKPT_OBJ = file_state.o image.o tmp_stack.o machdep.$(OS).o syscall_mode.o
 CKPT_OBJ = syscall_mode.o
 #endif
 
-UTIL_OBJ = dprintf.o dprintf_config.o except.o update_rusage.o condor_errlst.o
+UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
+			condor_errlst.o
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 		$(CKPT_OBJ)
 
-all_target(condor_syscall_lib.a receivers.c condor_rt0.o extern_path.o)
+SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o
+
+all_target(condor_syscall_lib.a receivers.c $(SIMPLE_OBJ))
 stubs: switches.c senders.c receivers.c
 
 uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
