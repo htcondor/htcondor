@@ -41,6 +41,7 @@ public:
 	~HashKey() { if (key) free(key); }
 	void sprint(char *);
 	HashKey& operator= (const HashKey& from);
+	const char* value() { if (key) return key; else return "\0"; };
 	friend ostream& operator<< (ostream &out, const HashKey &); 
     friend bool operator== (const HashKey &, const HashKey &);
 	friend int hashFunction(const HashKey &key, int numBuckets);
