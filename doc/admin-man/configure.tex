@@ -768,12 +768,11 @@ AFS''
           
   If you set this macro to ``True'', then Condor will attempt to
   read/write files without redirecting them back to the submitting
-  machine if both the submitting machine and the machine running the
-  job are both accessing the same NFS servers (if they're both in the
-  same \Macro{FILESYSTEM\_DOMAIN}, as described above).  The result is
-  I/O performed by Condor Standard Universe programs is only sent over
-  the network once.  
-          
+  machine if both the submitting machine and the machine running the job
+  are both accessing the same NFS servers (\emph{if} they're both in the
+  same \Macro{FILESYSTEM\_DOMAIN} and in the same \Macro{UID\_DOMAIN},
+  as described above).  The result is I/O performed by Condor Standard
+  Universe programs is only sent over the network once.  
   While sending all file operations over the network twice might sound
   really bad, unless you are operating over networks where bandwidth
   as at a very high premium, practical experience reveals that this
@@ -799,7 +798,11 @@ AFS''
   \textbf{THEN} the job will access files via a local system call,
   without redirecting them to the submitting machine (a.k.a. with
   NFS).  Otherwise, the system call will get routed back to the
-  submitting machine via Condor's remote system call mechanism.
+  submitting machine via Condor's remote system call mechanism.  \Note
+  When submitting a VANILLA job, \Condor{submit} will by default append
+  Requirements to the Job ClassAd that specify the machine to run
+  the job must be in the same \Macro{FILESYSTEM\_DOMAIN} and the same
+  \Macro{UID\_DOMAIN}.
   
 \item[\Macro{USE\_AFS}] \label{param:UseAfs} If your machines have AFS
   and the submit and execute machines are in the same AFS cell, this
