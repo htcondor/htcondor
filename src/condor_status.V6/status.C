@@ -28,7 +28,7 @@
 #include "totals.h"
 #include "get_daemon_addr.h"
 #include "daemon.h"
-#include "get_full_hostname.h"
+#include "dc_collector.h"
 #include "extArray.h"
 #include "sig_install.h"
 #include "string_list.h"
@@ -40,7 +40,7 @@
 // global variables
 AttrListPrintMask pm;
 char		*DEFAULT= "<default>";
-char 		*pool 	= NULL;
+DCCollector* pool = NULL;
 AdTypes		type 	= (AdTypes) -1;
 ppOption	ppStyle	= PP_NOTSET;
 int			wantOnlyTotals 	= 0;
@@ -225,22 +225,22 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
-	char* addr = pool;
+	char* addr = pool ? pool->addr() : NULL;
 	if( direct ) {
 		Daemon *d = NULL;
 		switch( mode ) {
 		case MODE_MASTER_NORMAL:
-			d = new Daemon( DT_MASTER, direct, pool );
+			d = new Daemon( DT_MASTER, direct, addr );
 			break;
 		case MODE_STARTD_NORMAL:
 		case MODE_STARTD_AVAIL:
 		case MODE_STARTD_RUN:
 		case MODE_STARTD_COD:
-			d = new Daemon( DT_STARTD, direct, pool );
+			d = new Daemon( DT_STARTD, direct, addr );
 			break;
 		case MODE_SCHEDD_NORMAL: 
 		case MODE_SCHEDD_SUBMITTORS:
-			d = new Daemon( DT_SCHEDD, direct, pool );
+			d = new Daemon( DT_SCHEDD, direct, addr );
 			break;
 		case MODE_CKPT_SRVR_NORMAL:
 		case MODE_COLLECTOR_NORMAL:
@@ -359,7 +359,7 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-pool")) {
 			if( pool ) {
-				free( pool );
+				delete pool;
 				had_pool_error = 1;
 			}
 			i++;
@@ -376,9 +376,9 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
 				exit( 1 );
 			}
-			pool = get_full_hostname( (const char *)argv[i]);
-			if( !pool ) {
-				fprintf( stderr, "Error:  unknown host %s\n", argv[i] );
+			pool = new DCCollector( argv[i] );
+			if( !pool->addr() ) {
+				fprintf( stderr, "Error: %s\n", pool->error() );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: You specified a hostname for a pool "
@@ -530,7 +530,7 @@ firstPass (int argc, char *argv[])
 	if( had_pool_error ) {
 		fprintf( stderr, 
 				 "Warning:  Multiple -pool arguments given, using \"%s\"\n",
-				 pool );
+				 pool->name() );
 	}
 	if( had_direct_error ) {
 		fprintf( stderr, 

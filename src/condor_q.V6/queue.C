@@ -42,6 +42,7 @@
 #include "sig_install.h"
 #include "format_time.h"
 #include "daemon.h"
+#include "dc_collector.h"
 #include "my_hostname.h"
 #include "basename.h"
 #include "metric_units.h"
@@ -113,7 +114,7 @@ static  char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
-static	char		*pool = NULL;
+static	DCCollector* pool = NULL; 
 static	char		scheddAddr[64];	// used by format_remote_host()
 static	AttrListPrintMask 	mask;
 
@@ -227,12 +228,12 @@ int main (int argc, char **argv)
 	}
 
 	// get the list of ads from the collector
-	if( pool ) {
-		result = querySchedds ? scheddQuery.fetchAds(scheddList, pool) : 
-			submittorQuery.fetchAds(scheddList, pool);
+	if( querySchedds ) { 
+		result = scheddQuery.fetchAds( scheddList, 
+									   pool ? pool->addr() : NULL );
 	} else {
-		result = querySchedds ? scheddQuery.fetchAds(scheddList) : 
-			submittorQuery.fetchAds(scheddList);
+		result = submittorQuery.fetchAds( scheddList,
+										  pool ? pool->addr() : NULL );
 	}
 
 	switch( result ) {
@@ -240,12 +241,13 @@ int main (int argc, char **argv)
 		break;
 	case Q_COMMUNICATION_ERROR: 
 			// if we're not an expert, we want verbose output
-		printNoCollectorContact( stderr, pool, !expert );
+		printNoCollectorContact( stderr, pool ? pool->name() : NULL,
+								 !expert ); 
 		exit( 1 );
 	case Q_NO_COLLECTOR_HOST:
 		assert( pool );
 		fprintf( stderr, "Error: Can't contact condor_collector: "
-				 "invalid hostname: %s\n", pool );
+				 "invalid hostname: %s\n", pool->name() );
 		exit( 1 );
 	default:
 		fprintf( stderr, "Error fetching ads: %s\n", 
@@ -334,7 +336,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix (arg, "pool")) {
 			if( pool ) {
-				delete [] pool;
+				delete pool;
 			}
             if( ++i >= argc ) {
 				fprintf( stderr,
@@ -347,9 +349,9 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit(1);
 			}
-			pool = get_full_hostname((const char *)argv[i]);
-			if( ! pool ) {
-				fprintf( stderr, "Error: Unknown host %s\n", argv[i] );
+			pool = new DCCollector( argv[i] );
+			if( ! pool->addr() ) {
+				fprintf( stderr, "Error: %s\n", pool->error() );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: You specified a hostname for a pool "
@@ -1447,11 +1449,7 @@ setupAnalysis()
 	int			index;
 
 	// fetch startd ads
-	if( pool ) {
-		rval = query.fetchAds( startdAds , pool );
-	} else {
-		rval = query.fetchAds( startdAds );
-	}
+	rval = query.fetchAds( startdAds , pool ? pool->addr() : NULL );
 	if( rval != Q_OK ) {
 		fprintf( stderr , "Error:  Could not fetch startd ads\n" );
 		exit( 1 );
@@ -1513,7 +1511,7 @@ fetchSubmittorPrios()
 
 		// Minor hack, if we're talking to a remote pool, assume the
 		// negotiator is on the same host as the collector.
-	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
+	Daemon	negotiator( DT_NEGOTIATOR, pool ? pool->addr() : NULL, NULL );
 
 	// connect to negotiator
 	Sock* sock;

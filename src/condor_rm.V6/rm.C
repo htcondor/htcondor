@@ -38,6 +38,7 @@
 #include "string_list.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "dc_collector.h"
 #include "condor_distribution.h"
 
 
@@ -130,7 +131,7 @@ main( int argc, char *argv[] )
 	int					nArgs = 0;				// number of args 
 	int					i;
 	char*	cmd_str;
-	char* pool = NULL;
+	DCCollector* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
 
@@ -246,9 +247,13 @@ main( int argc, char *argv[] )
 					exit(1);
 				}				
 				if( pool ) {
-					free( pool );
+					delete pool;
 				}
-				pool = strdup( *argv );
+				pool = new DCCollector( *argv );
+				if( ! pool->addr() ) {
+					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
+					exit(1);
+				}
 				break;
 			case 'v':
 				version();
@@ -292,7 +297,7 @@ main( int argc, char *argv[] )
 	if( ! scheddAddr ) {
 			// This will always do the right thing, even if either or
 			// both of scheddName or pool are NULL.
-		schedd = new DCSchedd( scheddName, pool );
+		schedd = new DCSchedd( scheddName, pool ? pool->addr() : NULL );
 	} else {
 		schedd = new DCSchedd( scheddAddr );
 	}
