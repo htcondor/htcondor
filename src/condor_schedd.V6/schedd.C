@@ -3123,6 +3123,19 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, match_rec* mrec, int fd )
 	return new_rec;
 }
 
+static void
+add_shadow_birthdate(int cluster, int proc)
+{
+	int current_time = (int)time(NULL);
+	int job_start_date = 0;
+	SetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE, current_time);
+	if (GetAttributeInt(cluster, proc,
+						ATTR_JOB_START_DATE, &job_start_date) < 0) {
+		// this is the first time the job has ever run, so set JobStartDate
+		SetAttributeInt(cluster, proc, ATTR_JOB_START_DATE, current_time);
+	}
+}
+
 struct shadow_rec *
 Scheduler::add_shadow_rec( shadow_rec* new_rec )
 {
@@ -3156,15 +3169,23 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 							   ATTR_REMOTE_POOL, new_rec->match->pool);
 		}
 	}
-	int current_time = (int)time(NULL);
-	int job_start_date = 0;
-	SetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc, 
-		ATTR_SHADOW_BIRTHDATE, current_time);
-	if (GetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc,
-						ATTR_JOB_START_DATE, &job_start_date) < 0) {
-		// this is the first time the job has ever run, so set JobStartDate
-		SetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc, 
-						ATTR_JOB_START_DATE, current_time);
+	int universe = STANDARD;
+	GetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc,
+					ATTR_JOB_UNIVERSE, &universe);
+	if (universe == PVM) {
+		ClassAd *ad;
+		ad = GetNextJob(1);
+		while (ad != NULL) {
+			PROC_ID tmp_id;
+			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
+			if (tmp_id.cluster == new_rec->job_id.cluster) {
+				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
+				add_shadow_birthdate(tmp_id.cluster, tmp_id.proc);
+			}
+			ad = GetNextJob(0);
+		}
+	} else {
+		add_shadow_birthdate(new_rec->job_id.cluster, new_rec->job_id.proc);
 	}
 
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
@@ -3199,6 +3220,34 @@ CkptWallClock()
 	}
 }
 
+static void
+update_remote_wall_clock(int cluster, int proc)
+{
+		// update ATTR_JOB_REMOTE_WALL_CLOCK.  note: must do this before
+		// we call check_zombie below, since check_zombie is where the
+		// job actually gets removed from the queue if job completed or deleted
+	int bday = 0;
+	GetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE,&bday);
+	if (bday) {
+		float accum_time = 0;
+		GetAttributeFloat(cluster, proc,
+						  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
+		accum_time += (float)( time(NULL) - bday );
+			// We want to update our wall clock time and delete
+			// our wall clock checkpoint inside a transaction, so
+			// we are sure not to double-count.  The wall-clock
+			// checkpoint (see CkptWallClock above) ensures that
+			// if we crash before committing our wall clock time,
+			// we won't lose too much.
+		BeginTransaction();
+		SetAttributeFloat(cluster, proc,
+						  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
+		DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
+		CommitTransaction();
+	}
+}
+
+
 void
 Scheduler::delete_shadow_rec(int pid)
 {
@@ -3211,31 +3260,25 @@ Scheduler::delete_shadow_rec(int pid)
 				"Deleting shadow rec for PID %d, job (%d.%d)\n",
 				pid, rec->job_id.cluster, rec->job_id.proc );
 
-		// update ATTR_JOB_REMOTE_WALL_CLOCK.  note: must do this before
-		// we call check_zombie below, since check_zombie is where the
-		// job actually gets removed from the queue if job completed or deleted
-		int bday = 0;
-		GetAttributeInt(rec->job_id.cluster,rec->job_id.proc,
-			ATTR_SHADOW_BIRTHDATE,&bday);
-		if (bday) {
-			float accum_time = 0;
-			GetAttributeFloat(rec->job_id.cluster,rec->job_id.proc,
-				ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-			accum_time += (float)( time(NULL) - bday );
-				// We want to update our wall clock time and delete
-				// our wall clock checkpoint inside a transaction, so
-				// we are sure not to double-count.  The wall-clock
-				// checkpoint (see CkptWallClock above) ensures that
-				// if we crash before committing our wall clock time,
-				// we won't lose too much.
-			BeginTransaction();
-			SetAttributeFloat(rec->job_id.cluster,rec->job_id.proc,
-				ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
-			DeleteAttribute(rec->job_id.cluster,rec->job_id.proc,
-				ATTR_JOB_WALL_CLOCK_CKPT);
-			CommitTransaction();
+		int universe = STANDARD;
+		GetAttributeInt(rec->job_id.cluster, rec->job_id.proc,
+						ATTR_JOB_UNIVERSE, &universe);
+		if (universe == PVM) {
+			ClassAd *ad;
+			ad = GetNextJob(1);
+			while (ad != NULL) {
+				PROC_ID tmp_id;
+				ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
+				if (tmp_id.cluster == rec->job_id.cluster) {
+					ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
+					update_remote_wall_clock(tmp_id.cluster, tmp_id.proc);
+				}
+				ad = GetNextJob(0);
+			}
+		} else {
+			update_remote_wall_clock(rec->job_id.cluster, rec->job_id.proc);
 		}
-				
+
 		char last_host[256];
 		last_host[0] = '\0';
 		GetAttributeString(rec->job_id.cluster,rec->job_id.proc,
