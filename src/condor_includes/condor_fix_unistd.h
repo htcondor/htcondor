@@ -75,6 +75,26 @@ typedef struct fd_set fd_set;
 /**********************************************************************
 ** Clean-up
 **********************************************************************/
+
+#if defined(OSF1)
+/* Here we make certain that pipe is not defined to _Epipe().  Why?
+ * Because systems running DUX 4.0D which boot over the network will
+ * fail upon calling _Epipe() for any user except root (like condor).
+ * Yes, this was a pain in my ass to figure out.  Then we give a 
+ * prototype for pipe, since we only have one for _Epipe()... -Todd
+ */
+#	if defined(pipe)
+#		undef pipe   /* we do not want pipe defined to _Epipe() ! */
+#		if defined(__cplusplus)
+extern "C" {
+#		endif
+int pipe(int fildes[2]);
+#if 	defined(__cplusplus)
+}
+#		endif
+#	endif
+#endif
+
 #if defined(IRIX62)
 #	undef _SGIAPI
 #	define _SGIAPI _save_SGIAPI
