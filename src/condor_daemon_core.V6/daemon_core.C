@@ -4333,7 +4333,6 @@ int DaemonCore::Create_Process(
 	char *ptmp;
 	int inheritSockFds[MAX_INHERIT_SOCKS];
 	int numInheritSockFds = 0;
-	int exec_results;
 
 	//saved errno (if any) to pass back to caller
 	//Currently, only stuff that would be of interest to the user
@@ -4591,17 +4590,28 @@ int DaemonCore::Create_Process(
 	// Deal with environment.  If the user specified an environment, we 
 	// augment augment it with default system environment variables and 
 	// the CONDOR_INHERIT var.  If the user did not specify an e
-	if ( env ) {
+	if ( env || ( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) ) {
 		Env job_environ;
-		char envbuf[200];
+		char envbuf[_POSIX_PATH_MAX];
 		const char * default_vars[] = { "SystemDrive", "SystemRoot", 
 			"COMPUTERNAME", "NUMBER_OF_PROCESSORS", "OS", 
 			"PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER", 
 			"PROCESSOR_LEVEL", "PROCESSOR_REVISION", "PROGRAMFILES", "WINDIR",
 			"\0" };		// must end list with NULL string
 		
-			// first, add in env vars from user
-		job_environ.Merge(env);		
+			// add in what is likely the system default path.  we do this
+			// here, before merging the user env, because if the user 
+			// specifies a path in the job ad we want top use that instead.
+		envbuf[0]='\0';
+		GetEnvironmentVariable("PATH",envbuf,sizeof(envbuf));
+		if (envbuf[0]) {
+			job_environ.Put("PATH",envbuf);
+		}
+
+			// now add in env vars from user
+		if ( env ) {
+			job_environ.Merge(env);		
+		}
 
 			// next, add in default system env variables.  we do this after
 			// the user vars are in place, because we want the values for
@@ -4749,6 +4759,7 @@ int DaemonCore::Create_Process(
 	}
 #else
 	// START A NEW PROCESS ON UNIX
+	int exec_results;
 
 		// We have to do some checks on the executable name and the
 		// cwd before we fork.  We want to do these in priv state
