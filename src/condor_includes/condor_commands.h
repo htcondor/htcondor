@@ -81,7 +81,7 @@
 #define SET_PRIORITY		(SCHED_VERS+49)		// negotiator(priviliged) cmd 
 #define GIVE_CLASSAD		(SCHED_VERS+50)
 #define GET_PRIORITY		(SCHED_VERS+51)		// negotiator
-
+#define GIVE_REQUEST_AD		(SCHED_VERS+52)		// Starter -> Startd
 
 /************
 *** Command ids used by the collector 
