@@ -25,6 +25,7 @@ Where options are:
  --prefix  <dir>     The directory in which to install $project
  --enable-shlib      Allow user functions in shared libraries.
  --enable-namespace  Use the classad namespace
+ --allow-covariants  Allow covariant return types
  --help              Show this message         
 Use configure.rerun to rerun configure with previously saved arguments.
 EOF
@@ -37,6 +38,7 @@ project="ClassAds"
 install_dir="/usr/local"
 enable_shlib=0
 enable_namespace=0
+allow_covariants=0
 
 while [ $# -gt 0 ]
 do
@@ -50,6 +52,9 @@ do
 			;;
 		--enable-namespace)
 			enable_namespace=1
+			;;
+        --allow-covariants)
+			allow_covariants=1
 			;;
 		-h | -help | --h | --help)
 			print_usage
@@ -100,6 +105,15 @@ cat >> classad_features.h <<EOF
 
 EOF
 fi
+
+if [ ${allow_covariants} = 1 ]
+then
+cat >> classad_features.h <<EOF
+#define USE_COVARIANT_RETURN_TYPES
+
+EOF
+fi
+
 echo "#endif" >> classad_features.h
 
 
