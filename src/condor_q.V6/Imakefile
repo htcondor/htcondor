@@ -31,7 +31,8 @@ analyze-external:: condor_q
 #if HAS_STATIC
 analyze-external:: condor_q.static
 	cp -f condor_q.static $(PUB_DIR)/condor_analyze.static
-	chmod 0755 $(PUB_DIR)/condor_analyze.release
+	$(STRIP) $(PUB_DIR)/condor_analyze.static
+	chmod 0755 $(PUB_DIR)/condor_analyze.static
 #endif
 
 
