@@ -358,13 +358,35 @@ OsProc::StartJob()
 
 	Starter->jic->notifyJobPreSpawn();
 
-	// handle JOB_RENICE_INCREMENT
-	char* ptmp = param( "JOB_RENICE_INCREMENT" );
-	if ( ptmp ) {
-		nice_inc = atoi(ptmp);
-		free(ptmp);
+	// compute job's renice value by evaluating the machine's
+	// JOB_RENICE_INCREMENT in the context of the job ad...
+
+    char* ptmp = param( "JOB_RENICE_INCREMENT" );
+	if( ptmp ) {
+			// insert renice expr into our copy of the job ad
+		MyString reniceAttr = "Renice = ";
+		reniceAttr += ptmp;
+		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+			dprintf( D_ALWAYS, "ERROR: unable to update job ad!  "
+					 "Aborting OsProc::StartJob...\n" );
+			free( ptmp );
+			return 0;
+		}
+			// evaluate
+		if( JobAd->EvalInteger( "Renice", NULL, nice_inc ) ) {
+			dprintf( D_ALWAYS, "Renice expr \"%s\" evaluated to %d\n",
+					 ptmp, nice_inc );
+		} else {
+			dprintf( D_ALWAYS, "WARNING: job renice expr (\"%s\") doesn't "
+					 "eval to int!  Using default of 10...\n", ptmp );
+			nice_inc = 10;
+		}
+		ASSERT( ptmp );
+		free( ptmp );
+		ptmp = NULL;
 	} else {
-		nice_inc = 0;
+			// if JOB_RENICE_INCREMENT is undefined, default to 10
+		nice_inc = 10;
 	}
 
 		// in the below dprintfs, we want to skip past argv[0], which
