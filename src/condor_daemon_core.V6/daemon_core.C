@@ -2759,10 +2759,13 @@ int DaemonCore::HandleReq(int socki)
 		return KEEP_STREAM;	
 	}
 
-	if (only_allow_soap && stream != insock ) {
+	if (only_allow_soap) {
 		dprintf(D_ALWAYS,
 			"Received CEDAR command during SOAP transaction... queueing\n");
-		Register_Command_Socket(stream);	// register to deal with it later
+		if ( stream != insock ) {
+				// we did an accept, so we know this is TCP
+			Register_Command_Socket(stream);	// register to deal with it later
+		}
 		return KEEP_STREAM;
 	}
 
