@@ -79,6 +79,7 @@ struct match_rec
 	shadow_rec*		shadowRec;
 	int				alive_countdown;
 	int				num_exceptions;
+    int             isMatchedMPI;
 };
 
 enum MrecStatus {
@@ -288,6 +289,22 @@ class Scheduler : public Service
 	int				MaxFlockLevel;
     int         	aliveInterval;             // how often to broadcast alive
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
+
+        // Used to push matches at the mpi shadow:
+    int pushMPIMatches( char * shadow, ExtArray<match_rec*> *MpiMatches, 
+                        int procs );
+        // helper of above function
+    int countOfProc( ExtArray<match_rec*> matches, int proc );
+        // hashed on cluster, the matches stored for this MPI job...
+    HashTable <int, ExtArray<match_rec*>*> *storedMatches;
+    friend int mpiHashFunc( const int& cluster, int numbuckets );
+    static const int MPIShadowSockTimeout;
+
+		// put state into ClassAd return it.
+	int	dumpState(int, Stream *);
+	int intoAd ( ClassAd *ad, char *lhs, char *rhs );
+	int intoAd ( ClassAd *ad, char *lhs, int rhs );
+
 };
 	
 #endif

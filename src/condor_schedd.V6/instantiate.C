@@ -40,6 +40,9 @@ template class List<shadow_rec*>;
 template class Item<shadow_rec*>;
 template class List<PROC_ID>;
 template class Item<PROC_ID>;
+// for MPI use:
+template class ExtArray <match_rec*>;
+template class HashTable <int, ExtArray<match_rec*>*>;
 
 bool operator==(const PROC_ID a, const PROC_ID b)
 {

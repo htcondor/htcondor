@@ -52,6 +52,8 @@
 #define SUCCESS 1
 #define CANT_RUN 0
 
+const int Scheduler::MPIShadowSockTimeout = 60;
+
 extern char *gen_ckpt_name();
 
 #include "condor_qmgr.h"
@@ -95,7 +97,6 @@ void mark_job_stopped(PROC_ID*);
 shadow_rec * find_shadow_rec(PROC_ID*);
 shadow_rec * add_shadow_rec(int, PROC_ID*, match_rec*, int);
 
-
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
@@ -125,6 +126,10 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id)
 	shadowRec = NULL;
 	alive_countdown = 0;
 	num_exceptions = 0;
+        // this is a HACK.  True if it's MPI and matched, but can be true
+        // before the Mpi shadow starts.  Used so that we don't try to 
+        // start the mpi shadow every time through StartJob()...
+    isMatchedMPI = FALSE;
 }
 
 Scheduler::Scheduler()
@@ -177,6 +182,10 @@ Scheduler::Scheduler()
 	// on Windows NT, it appears you can open up zillions of sockets
 	MAX_STARTD_CONTACTS = 2000;
 #endif
+
+    storedMatches = new HashTable < int, ExtArray<match_rec*> *> 
+                                                  ( 5, mpiHashFunc );
+	
 }
 
 Scheduler::~Scheduler()
@@ -231,6 +240,14 @@ Scheduler::~Scheduler()
 	if (FlockHosts) {
 		delete FlockHosts;
 	}
+
+        // for the stored mpi matches
+    ExtArray<match_rec*> *foo;
+    storedMatches->startIterations();
+    while( storedMatches->iterate( foo ) )
+        delete foo;
+
+    delete storedMatches;
 }
 
 void
@@ -265,6 +282,7 @@ Scheduler::count_jobs()
 
 	 // copy owner data to old-owners table
 	 OwnerData OldOwners[MAX_NUM_OWNERS];
+
 	 int Old_N_Owners=N_Owners;
 	for ( i=0; i<N_Owners; i++) {
 		OldOwners[i].Name = Owners[i].Name;
@@ -1332,6 +1350,9 @@ Scheduler::contactStartd( char* capability, char *user,
 
 	dprintf ( D_FULLDEBUG, "In Scheduler::contactStartd.\n" );
 
+    dprintf ( D_FULLDEBUG, "%s %s %s %d.%d\n", capability, user, server, 
+              jobId->cluster, jobId->proc );
+
 	mrec = AddMrec(capability, server, jobId);
 	if(!mrec) {
         free( capability );
@@ -1474,6 +1495,8 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 		BAILOUT;
 	}
 
+	checkContactQueue();
+
 		// we want to set a timer to go off in 2 seconds that will
 		// do a StartJobs().  However, we don't want to set this
 		// *every* time we get here.  We check startJobDelayBit, if
@@ -1482,9 +1505,8 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 	if ( startJobsDelayBit == FALSE ) {
 		daemonCore->Reset_Timer(startjobsid, 2);
 		startJobsDelayBit = TRUE;
+        dprintf ( D_FULLDEBUG, "Timer set...\n" );
 	}
-
-	checkContactQueue();
 
 	return TRUE;
 }
@@ -1506,7 +1528,7 @@ Scheduler::checkContactQueue() {
 		delete args;
 	}
 	else {
-		dprintf ( D_ALWAYS, "In checkContactQueue(), empty.\n" );
+		dprintf ( D_FULLDEBUG, "In checkContactQueue(), empty.\n" );
 	}
 }
 
@@ -1569,6 +1591,9 @@ Scheduler::StartJobs()
 {
 	PROC_ID id;
 	match_rec *rec;
+    
+        /* Todd also added this; watch for conflict! */
+    startJobsDelayBit = FALSE;
 
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
 	startJobsDelayBit = FALSE;
@@ -1611,18 +1636,32 @@ Scheduler::StartJobs()
 			DelMrec(rec);
 			continue;
 		}
+
 		if(!(rec->shadowRec = StartJob(rec, &id)))
-        // Start job failed. Throw away the match. The reason being that we
-        // don't want to keep a match around and pay for it if it's not
-        // functioning and we don't know why. We might as well get another
-        // match.
+                /* We check the universe of the job.  If it's MPI, 
+                   it's ok to return null - we just haven't started
+                   the shadow yet! */
         {
-            dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
-                    rec->id);
-            Relinquish(rec);
-            DelMrec(rec);
-            continue;
-        }
+            int universe;
+            if ( GetAttributeInt ( id.cluster, id.proc, ATTR_JOB_UNIVERSE, 
+                                   &universe ) < 0 ) {
+                universe = STANDARD;
+            }
+            if ( universe != MPI ) {
+                
+		// Start job failed. Throw away the match. The reason being that we
+		// don't want to keep a match around and pay for it if it's not
+		// functioning and we don't know why. We might as well get another
+		// match.
+                dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
+						rec->id);
+                Relinquish(rec);
+                DelMrec(rec);
+                continue;
+            } else {
+                dprintf ( D_FULLDEBUG, "Match stored for mpi use\n" );
+            }
+		}
 		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",rec->id,id.cluster,
 				id.proc);
 	}
@@ -1654,7 +1693,14 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 		return start_pvm(mrec, job_id);
 	}
     else if ( universe == MPI ) {
-		return start_mpi( mrec, job_id );
+        shadow_rec *mpireturn = NULL;
+            // if we haven't tried to start this match before...
+        if ( !mrec->isMatchedMPI ) {
+            mpireturn = start_mpi( mrec, job_id );
+        } else {
+            mpireturn = NULL;
+        }
+        return mpireturn;
 	}
 	else {
 		if (rval < 0) {
@@ -1910,15 +1956,12 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s...\n",
 			job_id->cluster, job_id->proc, mrec->peer);
 	
-	if(GetAttributeInt(job_id->cluster, job_id->proc, "CurrentHosts", &c) < 0)
-	{
+	if(GetAttributeInt(job_id->cluster,job_id->proc,ATTR_CURRENT_HOSTS,&c)<0){
 		c = 1;
-	}
-	else
-	{
+	} else {
 		c++;
 	}
-	SetAttributeInt(job_id->cluster, job_id->proc, "CurrentHosts", c);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, c);
 
 	old_proc = job_id->proc;  
 	
@@ -1978,10 +2021,10 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		dprintf( D_ALWAYS, "Existing shadow connected on fd %d\n", shadow_fd);
 	}
 	
-	 dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
-			job_id->cluster, job_id->proc, srp->pid);
+    dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
+             job_id->cluster, job_id->proc, srp->pid);
 
-	 sprintf(out_buf, "%d %d %d\n", job_id->cluster, job_id->proc, 1);
+    sprintf(out_buf, "%d %d %d\n", job_id->cluster, job_id->proc, 1);
 	
 	dprintf( D_ALWAYS, "First Line: %s", out_buf );
 	write(shadow_fd, out_buf, strlen(out_buf));
@@ -1999,8 +2042,278 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 shadow_rec*
 Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
 {
-// more to come...
-    return NULL;    // just to keep compiler happy....
+	char args[128];
+	int	 pid;
+	struct shadow_rec *srec;
+    struct match_rec  *mrec;
+	int	currHosts=0;    // current hosts
+    int maxHosts=0;     // max hosts needed for a proc.
+        // a pointer to our stored matches for this cluster.
+    ExtArray<match_rec*> *MpiMatches;
+
+	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s...\n",
+			job_id->cluster, job_id->proc, matchRec->peer);
+	
+        /* We adhere to the "one mpi job per cluster number" religion.
+           We now have the not-fun task of seeing if we *need* 
+           the match given to us, incrementing the ATTR_CURRENT_HOSTS 
+           for the proper proc if it is, then determining if 
+           all the procs are in a ready to start state. */
+
+        /* The first thing we do is find our stored match list: */
+    if ( storedMatches->lookup( job_id->cluster, MpiMatches ) == -1 ) {
+        dprintf ( D_FULLDEBUG, "No stored matches; assuming new...\n" );
+        MpiMatches = new ExtArray<match_rec*>;
+        MpiMatches->fill(NULL);
+        MpiMatches->truncate(-1);
+        storedMatches->insert( job_id->cluster, MpiMatches );
+    } else {
+        dprintf ( D_FULLDEBUG, "Found stored extarray of matches...\n" );
+    }
+
+        // now we get the max and current hosts of this proc to see
+        // if we actually need this host. 
+    if ( GetAttributeInt( job_id->cluster, job_id->proc, 
+                          ATTR_MAX_HOSTS, &maxHosts ) < 0 ) {
+        maxHosts = 0;
+    }
+
+    if ( GetAttributeInt( job_id->cluster, job_id->proc, 
+                          ATTR_CURRENT_HOSTS, &currHosts ) < 0 ) {
+        currHosts = 0;
+    }
+
+    if ( currHosts < maxHosts ) {
+            // we need it; add on to the stored matches:
+        dprintf ( D_FULLDEBUG, "curr < max  (%d < %d)\n", 
+                  currHosts, maxHosts );
+            // update ad:
+        SetAttributeInt(job_id->cluster, job_id->proc, 
+                        ATTR_CURRENT_HOSTS, ++currHosts );
+        matchRec->isMatchedMPI = TRUE;
+        dprintf ( D_FULLDEBUG, "MpiMatches->getlast() = %d\n", 
+                  MpiMatches->getlast() );
+        (*MpiMatches)[MpiMatches->getlast()+1] = matchRec;
+        dprintf ( D_FULLDEBUG, "Just appended %s %s %d.%d\n", matchRec->peer, 
+                  matchRec->id, job_id->cluster, job_id->proc );
+        dprintf ( D_FULLDEBUG, "MpiMatches->getlast() = %d\n", 
+                  MpiMatches->getlast() );
+
+            // paranoia check:
+        if ( currHosts != MpiMatches->getlast()+1 ) {
+            dprintf (D_ALWAYS, "%s not == to #elem in MpiMatches! (%d!=%d)\n", 
+                     ATTR_CURRENT_HOSTS, currHosts, MpiMatches->getlast()+1 );
+        }
+    }
+    else {
+            // we don't need this match.
+        dprintf ( D_FULLDEBUG, "Don't need match!\n" );
+        Relinquish( matchRec );
+        DelMrec( matchRec );
+        return NULL;
+    }
+
+        /* Now we walk through all the procs to see if all of them
+           are ready to go.  */
+    bool startShadow = true;
+    int proc = 0;
+    maxHosts = currHosts = 0;
+    
+    while ( startShadow ) {
+        if ( GetAttributeInt( job_id->cluster, proc,
+                              ATTR_MAX_HOSTS, &maxHosts ) < 0 ) {
+            dprintf ( D_FULLDEBUG, "a\n" );
+            break;  // hit last proc
+        }
+        
+        if ( GetAttributeInt( job_id->cluster, proc, 
+                              ATTR_CURRENT_HOSTS, &currHosts ) < 0 ) {
+            dprintf ( D_FULLDEBUG, "b\n" );
+            break;  // hit last proc
+        }
+        
+        if ( maxHosts == 0 ) {
+            dprintf ( D_FULLDEBUG, "c\n" );
+            break;  // hit last proc
+        }
+        
+        if ( maxHosts == currHosts ) {
+                // cool, move to next
+            dprintf ( D_FULLDEBUG, "cool: (m==c==%d) p=%d\n", maxHosts, proc );
+            proc++;
+            maxHosts = currHosts = 0;
+        }
+        else {
+                // not cool, don't start.
+            dprintf ( D_FULLDEBUG, "no start: m:%d c:%d p:%d\n", 
+                      maxHosts, currHosts, proc );
+            startShadow = false;
+        }
+    }
+
+    // proc is now the # of procs going.
+
+    dprintf ( D_FULLDEBUG, "startShadow: %s.  # procs: %d\n", 
+              startShadow ? "TRUE":"FALSE", proc );
+
+    if ( startShadow ) {
+        
+        dprintf ( D_ALWAYS, "Starting MPI shadow, cluster #%d\n", 
+                  job_id->cluster );
+
+            // XXX todo: add rec to slowstart Q
+
+        if (Shadow) free(Shadow);
+        Shadow = param("SHADOW");
+
+        for ( int i=0 ; i<=MpiMatches->getlast() ; i++ ) {
+            dprintf ( D_FULLDEBUG, "peer: %s\n", (*MpiMatches)[i]->peer );
+        }
+        
+            // give shadow the very first match from the list:
+        mrec = (*MpiMatches)[0];
+
+		sprintf(args, "condor_shadow -f %s %s %s %d %d", MyShadowSockName, 
+				mrec->peer, mrec->id, job_id->cluster, 0 );
+
+        dprintf ( D_FULLDEBUG, "args: \"%s\"\n", args );
+
+        pid = daemonCore->Create_Process(Shadow, args);
+
+        free(Shadow);
+        Shadow = NULL;
+
+        if (pid == FALSE) {
+            dprintf( D_ALWAYS, "CreateProcess() failed!\n" );
+            for ( int i=0 ; i<=MpiMatches->getlast() ; i++ ) {
+                DelMrec( (*MpiMatches)[i] );
+            }
+            return NULL;
+        } 
+    
+		dprintf ( D_ALWAYS, "In Schedd, mpi shadow pid = %d\n", pid );        
+            // The shadow rec always has a proc of 0 now...
+        job_id->proc = 0;
+		srec = add_shadow_rec( pid, job_id, mrec, -1);
+		mark_job_running(job_id);
+
+			// We must set all the match recs to point at this srec.
+		for ( int i=0 ; i<=MpiMatches->getlast() ; i++ ) {
+			(*MpiMatches)[i]->shadowRec = srec;
+		}
+
+            // now we have to contact the Shadow and push the other 
+            // matches at it.
+        if ( !pushMPIMatches( srec->sinfulString, MpiMatches, proc ) ) {
+            dprintf( D_ALWAYS, "pushMpiMatches() failed!\n" );
+            for ( int i=0 ; i<=MpiMatches->getlast() ; i++ ) {
+                DelMrec( (*MpiMatches)[i] );
+            }
+            return NULL;
+        }
+
+        return srec;
+    }
+    
+        // this is a *good* case of NULL
+	return NULL;
+}
+
+int
+Scheduler::pushMPIMatches( char *shadow, 
+                           ExtArray<match_rec*> *MpiMatches, 
+                           int procs ) {
+/* shadow is in sinful string format */
+
+/* We're going to push the information on all the matches.  The shadow
+   actually *knows* the information for the first match from the argv, 
+   so it can ignore the first one.  The format we're sending is:
+
+   #procs (p)
+   for each proc: {
+      proc num
+      number in this proc (n)
+      for each n: {
+         host
+         cap
+      }
+   }
+*/
+
+    dprintf ( D_FULLDEBUG, "In pushMPIMatches %s, %d\n", shadow, procs );
+
+    match_rec *mrec;
+    ReliSock s;
+    s.timeout( MPIShadowSockTimeout );
+    
+    if ( !s.connect( shadow ) ) {
+        dprintf ( D_ALWAYS, "Failed to contact mpi shadow.\n" );
+        return NULL;
+    }
+    
+    int cmd = TAKE_MATCH;
+    s.encode();
+    if ( !s.code( cmd ) ||
+         !s.code( procs ) ) {
+        dprintf ( D_ALWAYS, "Failed to push cmd or procs\n" );
+        return NULL;
+    }
+    
+    dprintf ( D_PROTOCOL, "Pushed TAKE_MATCH, %d to Mpi Shadow\n", procs);
+
+    char *p = new char[64];
+    char *c = new char[64];
+    for ( int i=0, matchNum=0 ; i<procs ; i++ ) {
+        int inproc = countOfProc( *MpiMatches, i );
+        if ( !s.code( i ) ||
+             !s.code( inproc ) ) {
+            dprintf ( D_ALWAYS, "Failed to push proc num, inproc.\n" );
+            return NULL;
+        }
+        dprintf ( D_FULLDEBUG, "Pushed proc %d, num %d.\n", i, inproc );
+
+        for ( int j=0 ; j<inproc ; j++ ) {
+            mrec = (*MpiMatches)[matchNum++];
+            strncpy( p, mrec->peer, 63 );
+            strncpy( c, mrec->id, 63 );
+            if ( !s.code( p ) ||
+                 !s.code( c ) ) {
+                dprintf ( D_ALWAYS, "Failed to send host, cap to shadow\n" );
+                delete [] p;
+                delete [] c;
+                return NULL;
+            }
+            dprintf ( D_PROTOCOL, "Pushed %s %s to mpi shadow\n", p, c );
+        }
+    }
+    delete [] p;
+    delete [] c;
+    
+    if ( !s.end_of_message() ) {
+        dprintf ( D_ALWAYS, "Failure in sending eom to mpi shadow.\n" );
+        return NULL;
+    }
+    
+    if( !s.close() ) {
+        dprintf ( D_ALWAYS, "Failure to close mpi shadow sock.\n" );
+        return NULL;
+    }
+    
+    return 1;
+}
+
+int
+Scheduler::countOfProc( ExtArray<match_rec*> matches, int proc ) {
+        /* Job: count the number of matches which have proc 'proc' */
+    int last = matches.getlast();
+    int num = 0;
+    for ( int i=0 ; i<=last ; i++ ) {
+        if ( matches[i]->proc == proc ) {
+            num++;
+        }
+    }
+    dprintf ( D_FULLDEBUG, "%d elements in proc %d\n", num, proc );
+    return num;
 }
 
 shadow_rec*
@@ -2238,6 +2551,16 @@ Scheduler::delete_shadow_rec(int pid)
 			close(rec->conn_fd);
         if ( rec->sinfulString ) 
             delete [] rec->sinfulString;
+
+            // mpi stored match stuff:
+        ExtArray<match_rec*> *foo;
+        if( storedMatches->lookup( rec->job_id.cluster, foo ) == 0 ) {
+            dprintf (D_FULLDEBUG, "Deleting stored extarray for cluster %d\n", 
+                     rec->job_id.cluster );
+            storedMatches->remove( rec->job_id.cluster );
+            delete foo;
+        }
+
 		delete rec;
 		numShadows -= 1;
 		display_shadow_recs();
@@ -2765,8 +3088,25 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_NOT_CKPTED:
 			case JOB_NOT_STARTED:
 				if (!srec->removed) {
-					Relinquish(srec->match);
-					DelMrec(srec->match);
+						/* See if it's an mpi job here... */
+					if ( (srec->match) && (srec->match->isMatchedMPI) ) {
+							/* remove all in cluster */
+						ExtArray<match_rec*> *matches;
+						if ( storedMatches->lookup( srec->match->cluster, 
+													matches ) != -1 ) {
+							int n = matches->getlast();
+							for ( int m=0 ; m <= n ; m++ ) {
+								Relinquish( (*matches)[m] );
+								DelMrec( (*matches)[m] );
+							}
+							matches->fill( NULL );
+							matches->truncate(-1);
+						}
+					} else {
+							/* Otherwise it's a normal job... */
+						Relinquish(srec->match);
+						DelMrec(srec->match);
+					}
 				}
 				break;
 			case JOB_EXCEPTION:
@@ -3194,10 +3534,14 @@ Scheduler::Register()
 	 // handler for queue management commands
 	 // Note: This could either be a READ or a WRITE command.  Too bad we have 
 	// to lump both together here.
-	 daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
+	daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
 								  (CommandHandler)&handle_q, 
 								  "handle_q", NULL, READ, D_FULLDEBUG );
 
+	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE", 
+								  (CommandHandlercpp)&Scheduler::dumpState, 
+								  "dumpState", this, READ  );
+	
 	 // reaper
 #ifdef WANT_DC_PM
 	daemonCore->Register_Reaper( "reaper", 
@@ -3747,4 +4091,91 @@ Scheduler::HadException( match_rec* mrec )
 		Relinquish(mrec);
 		DelMrec(mrec);
 	}
+}
+
+int
+mpiHashFunc( const int& cluster, int numbuckets ) {
+    return cluster % numbuckets;
+}
+
+int
+Scheduler::dumpState(int, Stream* s) {
+
+	dprintf ( D_FULLDEBUG, "Dumping state for Squawk\n" );
+
+	ClassAd *ad = new ClassAd;
+	intoAd ( ad, "MySockName", MySockName );
+	intoAd ( ad, "MyShadowSockname", MyShadowSockName );
+	intoAd ( ad, "SchedDInterval", SchedDInterval );
+	intoAd ( ad, "QueueCleanInterval", QueueCleanInterval );
+	intoAd ( ad, "JobStartDelay", JobStartDelay );
+	intoAd ( ad, "MaxJobsRunning", MaxJobsRunning );
+	intoAd ( ad, "JobsStarted", JobsStarted );
+	intoAd ( ad, "SwapSpace", SwapSpace );
+	intoAd ( ad, "ShadowSizeEstimate", ShadowSizeEstimate );
+	intoAd ( ad, "SwapSpaceExhausted", SwapSpaceExhausted );
+	intoAd ( ad, "ReservedSwap", ReservedSwap );
+	intoAd ( ad, "JobsIdle", JobsIdle );
+	intoAd ( ad, "JobsRunning", JobsRunning );
+	intoAd ( ad, "SchedUniverseJobsIdle", SchedUniverseJobsIdle );
+	intoAd ( ad, "SchedUniverseJobsRunning", SchedUniverseJobsRunning );
+	intoAd ( ad, "BadCluster", BadCluster );
+	intoAd ( ad, "BadProc", BadProc );
+	intoAd ( ad, "N_Owners", N_Owners );
+	intoAd ( ad, "LastTimeout", LastTimeout  );
+	intoAd ( ad, "ExitWhenDone", ExitWhenDone );
+	intoAd ( ad, "StartJobTimer", StartJobTimer );
+	intoAd ( ad, "timeoutid", timeoutid );
+	intoAd ( ad, "startjobsid", startjobsid );
+	intoAd ( ad, "startJobsDelayBit", startJobsDelayBit );
+	intoAd ( ad, "numRegContacts", numRegContacts );
+	intoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
+	intoAd ( ad, "CondorViewHost", CondorViewHost );
+	intoAd ( ad, "Shadow", Shadow );
+	intoAd ( ad, "CondorAdministrator", CondorAdministrator );
+	intoAd ( ad, "Mail", Mail );
+	intoAd ( ad, "filename", filename );
+	intoAd ( ad, "AccountantName", AccountantName );
+	intoAd ( ad, "UidDomain", UidDomain );
+	intoAd ( ad, "FlockLevel", FlockLevel );
+	intoAd ( ad, "MaxFlockLevel", MaxFlockLevel );
+	intoAd ( ad, "aliveInterval", aliveInterval );
+	intoAd ( ad, "MaxExceptions", MaxExceptions );
+	
+	int cmd;
+	s->code( cmd );
+	s->eom();
+
+	s->encode();
+	
+	ad->put( *s );
+
+	delete ad;
+
+	return TRUE;
+}
+
+int Scheduler::intoAd( ClassAd *ad, char *lhs, char *rhs ) {
+	char tmp[16000];
+	
+	if ( !lhs || !rhs || !ad ) {
+		return FALSE;
+	}
+
+	sprintf ( tmp, "%s = \"%s\"", lhs, rhs );
+	ad->Insert( tmp );
+	
+	return TRUE;
+}
+
+int Scheduler::intoAd( ClassAd *ad, char *lhs, int rhs ) {
+	char tmp[256];
+	if ( !lhs || !ad ) {
+		return FALSE;
+	}
+
+	sprintf ( tmp, "%s = %d", lhs, rhs );
+	ad->Insert( tmp );
+
+	return TRUE;
 }
