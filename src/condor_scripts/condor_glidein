@@ -7,15 +7,7 @@ sub set_defaults() {
 
 	$CONDOR_ADMIN = 'mikeu@cs.wisc.edu'; #need single quotes for admin name
 
-	$RUN_FOR = 0;  #infinite default life for master, startd
-
 	$BASE_DIR = "condor"; #relative pathnames are from $HOME on Globus host
-
-	$SCRIPT = "./condor_glidein";
-
-	$START_EXPRESSION = "START : Owner == \"$ENV{'LOGNAME'}\"";
-
-	$INCLUDE_PVM = 1;
 }
 
 # This script uses Globus tools to extend a Condor pool to include Globus nodes 
@@ -58,16 +50,18 @@ LOOP: foreach $GLOBUSHOST ( @ARGV ) {
 		}
 
 		if ( $kill ) {
-			#called with --kill, means kill right away
-			if ( do_kill() ) {
+			gen_kill_string();
+			if ( silently( $MASTER_STRING ) ) {
 				$RESULT = 1;
 			}
 			next LOOP;
 		}
 
-			#if setonly wasn't specified, execute the Globus command to launch Condor
+			#if setuponly wasn't specified, execute the Globus command to launch 
 		if ( !$setuponly ) {
+			gen_master_string();
 			if ( silently( $MASTER_STRING ) ) {
+				$RESULT = 1;
 				print STDERR "Error executing remote glidein script on $GLOBUSHOST\n";
 				next LOOP; #do this in case someone adds code before end of foreach
 			}
@@ -88,8 +82,9 @@ sub usage() {
 	print STDERR "Usage: $NAME [options] <globus host> [<globus host>+]\n";
 	print STDERR "\tValid options:\n"
 				. "\t--scheduler <scheduler>\t\tGlobus scheduler, default=fork\n"
+				. "\t--queue <queue>\n"
 				. "\t--runfor[ mins]\n\t--setuponly|--runonly\n"
-				. "\t--savescript <prefix>\n\t--help\n\t--showdefaults\n"
+				. "\t--help\n\t--showdefaults\n"
 				. "\t--kill\t\tkill the condor daemons, overrides other options\n";
 }
 
@@ -112,6 +107,7 @@ sub silently {
 sub cmd_line_setup() {
 		#parse command line options
 	$SCHEDULER = "fork";
+	$RUN_FOR = 0;
 
 	use Getopt::Long;
 	$result = GetOptions(
@@ -119,9 +115,10 @@ sub cmd_line_setup() {
 		"runfor:i" => \$RUN_FOR,
 		"setuponly" => \$setuponly,
 		"runonly" => \$runonly,
-		"savescript=s" => \$tmpscript, 
 		"scheduler=s" => \$SCHEDULER,
+		"queue=s" => \$QUEUE,
 		"help" => \$help,
+		"pvm" => \$INCLUDE_PVM,
 		"showdefaults" => \$showdefaults );
 	if ( !$result ) {
 		usage();
@@ -134,11 +131,7 @@ sub cmd_line_setup() {
 
 	if ( $showdefaults ) {
 		print "\$CONDOR_ADMIN=$CONDOR_ADMIN\n";
-		print "\$RUN_FOR=$RUN_FOR\n";
 		print "\$BASE_DIR=$BASE_DIR\n";
-		print "\$SCRIPT=$SCRIPT\n";
-		print "\$START_EXPRESSION=$START_EXPRESSION\n";
-		print "\$INCLUDE_PVM=$INCLUDE_PVM\n";
 		$exit = 1;
 	}
 	if ( $help ) {
@@ -169,11 +162,6 @@ sub cmd_line_setup() {
 	#until startd has --runfor option, use sleep to fake, secs = mins * 60
 	$RUN_FOR *= 60;
 
-	#need to both hold onto script name AND remember not to delete it
-	if ( $tmpscript ) {
-		$SCRIPT = $tmpscript;
-	}
-
 		#if BASE_DIR is relative path, prepend remote home directory
 	if ( $BASE_DIR =~ /^[^\/]/ ) {
 		$BASE_DIR = ('$GLOBUS_HOME/' . $BASE_DIR );
@@ -186,8 +174,8 @@ sub cmd_line_setup() {
 	@TMP = grep( !/no $SUBMIT in/, <TMP> );
 	close TMP;
 	if ( @TMP ) {
-#this should really be CondorVersion, but versions before 6.1.6 say Version
-#		@TMP = grep( /CondorVersion/, `ident @TMP` );
+		#this should really be CondorVersion, but versions before 6.1.6 
+		#say Version
 		@TMP = grep( /Version/, `ident @TMP` );
 		($_, $_, $CONDOR_VERSION, $_) = split( / *[$: ]+/, $TMP[0] );
 	}
@@ -197,57 +185,27 @@ sub cmd_line_setup() {
 	}
 }
 
-sub do_kill() {
-		#generate script for gracefully killing the remote Condor daemons 
-	$KILL_FILE = "./condor_glidein.kill";
-	$MASTER_STRING = "globusrun -w -r $GLOBUSHOST-fork '&(executable="
-		. "\$(GLOBUSRUN_GASS_URL) # / # \"$KILL_FILE\")'";
-	open( MASTER, ">$KILL_FILE" );
-	print MASTER << "EOF";
-#!/bin/sh
-
-	#This is the globusrun command that is used to launch this script
-	#$MASTER_STRING
-
-	CONDOR_CONFIG=$BASE_DIR/condor_config
-	export CONDOR_CONFIG
-	$EXEC_DIR/condor_master -k $HOST_DIR/master.pid
-EOF
-	close MASTER;
-
-		#run the generated script and clean it up
-	$STATUS = silently( $MASTER_STRING );
-	unlink( $KILL_FILE );
-	return( $STATUS );
+sub gen_kill_string() {
+	$MASTER_STRING = "globusrun -w -r $GLOBUSHOST-$SCHEDULER '&(executable="
+		. "$EXEC_DIR/condor_master)"
+		. "(arguments=\"-k\" \"$HOST_DIR/master.pid\")"
+		. "(environment=(CONDOR_CONFIG $BASE_DIR/condor_config))'";
 }
 
-sub gen_master_script() {
-		#create the script which lauches Condor on the remote Globus host.
+sub gen_master_string() {
 	$MASTER_STRING = "globusrun -b -r $GLOBUSHOST-$SCHEDULER '&(executable="
-		. "\"$BASE_DIR/$SCRIPT.$GLOBUSHOST\")'";
-	open( MASTER, ">$SCRIPT.$GLOBUSHOST" );
-	print MASTER << "EOF";
-#!/bin/sh
+		. "$EXEC_DIR/condor_master)";
 
-	#This is the globusrun command that is used to launch this script
-	#$MASTER_STRING
-
-	CONDOR_CONFIG=$BASE_DIR/condor_config
-	export CONDOR_CONFIG
-	$EXEC_DIR/condor_master -pidfile $HOST_DIR/master.pid &
-EOF
+	$MASTER_STRING .= "(arguments=\"-f\" \"-pidfile\" \"$HOST_DIR/master.pid\"";
 	if ( $RUN_FOR > 0 ) {
-		##note: future versions of startd will have a --runfor option, 
-		##so when that works, add it to condor_master above and nix sleep
-	print MASTER << "EOF2"
-		/bin/sleep $RUN_FOR #wait for N sec to kill master
-		#might have been killed by other means...
-		if [ -f $HOST_DIR/master.pid ];
-			then $EXEC_DIR/condor_master -k $HOST_DIR/master.pid;
-		fi
-EOF2
+		$MASTER_STRING .= " \"-runfor\" \"$RUN_FOR\"";
 	}
-	close MASTER;
+	$MASTER_STRING .= ")";
+
+	if ( defined( $QUEUE ) ) {
+		$MASTER_STRING .= "(queue=$QUEUE)";
+	}
+	$MASTER_STRING .= "(environment=(CONDOR_CONFIG $BASE_DIR/condor_config))'"
 }
 
 sub gen_host_config() {
@@ -277,7 +235,7 @@ sub gen_main_config() {
 	UID_DOMAIN = $UID_DOMAIN
 	FILESYSTEM_DOMAIN = $UID_DOMAIN
 	HOSTALLOW_ADMINISTRATOR = \$(HOSTNAME)
-	$START_EXPRESSION
+	START : Owner == \"$ENV{'LOGNAME'}\"
 
 	$VIRTUAL_MACHINES
 
@@ -292,7 +250,7 @@ sub gen_main_config() {
 EOF
 if ( $INCLUDE_PVM ) {
 	print CONDOR_CONFIG << "EOF";
-	##NUM_VIRTUAL_MACHINES = 1 ##leave out for now
+#	NUM_VIRTUAL_MACHINES = 1 ##leave out for now
 	ALTERNATE_STARTER_1 = \$(BIN)/condor_starter.pvm
 	PVMD = \$(BIN)/condor_pvmd
 EOF
@@ -452,9 +410,6 @@ EOF3
 		push( @CONFIG, "condor_config" );
 	}
 
-	push( @CONFIG, "$SCRIPT.$GLOBUSHOST" );
-	gen_master_script();
-
 	if ( silently( "globus-rcp @CONFIG $GLOBUSHOST:$BASE_DIR" ) ) {
 		print STDERR "Error posting @CONFIG, to $GLOBUSHOST\n";
 		unlink( <@CONFIG> );
@@ -470,10 +425,6 @@ EOF3
 		}
 	}
 	unlink( <condor_config*> );
-
-	if ( !$tmpscript ) {
-		unlink( <$SCRIPT.$GLOBUSHOST> );
-	}
 
 	#figure out if any of the needed files are condor_binaries
 	if ( @BINARIES = grep( /$EXEC_DIR/, @SEND ) ) {
