@@ -292,6 +292,7 @@ char *filename;
 	struct statfs statfsbuf;
 #endif
 	unsigned long free_kbytes;
+	float kbytes_per_block;
 
 #if defined(IRIX331) || defined(IRIX53)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf, 0) < 0) {
@@ -310,7 +311,8 @@ char *filename;
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
 	/* fix the overflow problem. weiru */
-	free_kbytes = (unsigned long)statfsbuf.f_bavail * (unsigned long)statfsbuf.f_bsize / 1024;
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / (float)1024 );
+	free_kbytes = (unsigned long)statfsbuf.f_bavail * kbytes_per_block; 
 	if(free_kbytes > 0x7fffffff)
 	{
 		dprintf(D_ALWAYS, "Too much free disk space, return LOTS_OF_FREE\n");
