@@ -51,7 +51,7 @@ EnvGetName( CONDOR_ENVIRON which )
     CONDOR_ENVIRON_ELEM   *local = &CondorEnvironList[which];
 
 	// Simple case first; out of cache
-    if ( local->cached ) {
+    if ( local->cached != NULL) {
         return local->cached;
     }
 
@@ -79,6 +79,5 @@ EnvGetName( CONDOR_ENVIRON which )
 		break;
     }
 
-	// Then, return it
 	return ( local->cached = (const char * ) tmps );
 }
