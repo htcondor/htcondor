@@ -1,0 +1,12 @@
+PRINTABLE = POSTSCRIPT CAT
+
+all: distrib
+
+DOC_DIR = ../src/release_dir/doc
+
+$(DOC_DIR):
+	- mkdir $(DOC_DIR)
+
+distrib: $(DOC_DIR)
+	cp -r $(PRINTABLE) $(DOC_DIR)
+
