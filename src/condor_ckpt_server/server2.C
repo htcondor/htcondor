@@ -23,6 +23,8 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "condor_adtypes.h"
+#include "condor_attributes.h"
 #include "xfer_summary.h"
 #include "string_list.h"
 #include "internet.h"
@@ -33,8 +35,13 @@
 #include "signal2.h"
 #include "alarm2.h"
 #include "condor_uid.h"
+#include "classad_collection.h"
 
 XferSummary	xfer_summary;
+
+template class Set<RankedClassAd>;
+template class Set<int>;
+template class HashTable<int, BaseCollection *>;
 
 Server server;
 Alarm  rt_alarm;
@@ -79,6 +86,7 @@ Server::Server()
 	max_restore_xfers = 0;
 	max_replicate_xfers = 0;
 	num_peers = 0;
+	CkptClassAds = NULL;
 }
 
 
@@ -92,6 +100,7 @@ Server::~Server()
 		close(service_req_sd);
 	if (replicate_req_sd >=0)
 		close(replicate_req_sd);
+	delete CkptClassAds;
 }
 
 
@@ -100,7 +109,7 @@ void Server::Init(int max_new_xfers,
 				  int max_new_restore_xfers)
 {
 	struct stat log_stat;
-	char		*ckpt_server_dir, *level, *interval;
+	char		*ckpt_server_dir, *level, *interval, *collection_log;
 #ifdef DEBUG
 	char        log_msg[256];
 	char        hostname[100];
@@ -143,6 +152,16 @@ void Server::Init(int max_new_xfers,
 		free( interval );
 	} else {
 		reclaim_interval = RECLAIM_INTERVAL;
+	}
+
+	collection_log = param( "CKPT_SERVER_CLASSAD_FILE" );
+	if ( collection_log ) {
+		delete CkptClassAds;
+		CkptClassAds = new ClassAdCollection(collection_log);
+		free(collection_log);
+	} else {
+		delete CkptClassAds;
+		CkptClassAds = NULL;
 	}
 
 	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
@@ -766,6 +785,12 @@ void Server::ProcessServiceReq(int             req_id,
 					htons(imds.RemoveFile(shadow_IP, 
 										  service_req.owner_name, 
 										  service_req.file_name));
+				char key[_POSIX_PATH_MAX];
+				sprintf(key, "%s/%s/%s", inet_ntoa(shadow_IP), 
+						service_req.owner_name, service_req.file_name);
+				if (CkptClassAds) {
+					CkptClassAds->DestroyClassAd(key);
+				}
 			}
 			break;
 
@@ -1195,6 +1220,26 @@ void Server::ProcessStoreReq(int            req_id,
 							 store_req.file_size, store_req.key,
 							 store_req.priority, RECV);
 			Log(req_id, "Request to store checkpoint file GRANTED");
+			int len = strlen(store_req.filename);
+			if (strcmp(store_req.filename+len-4, ".tmp") == MATCH) {
+				store_req.filename[len-4] = '\0';
+			}
+			char key[_POSIX_PATH_MAX];
+			sprintf(key, "%s/%s/%s", inet_ntoa(shadow_IP), store_req.owner,
+					store_req.filename);
+			ClassAd *ad;
+			if (CkptClassAds &&
+				!CkptClassAds->LookupClassAd(key, ad)) {
+				CkptClassAds->NewClassAd(key, CKPT_FILE_ADTYPE, "");
+				CkptClassAds->SetAttribute(key, ATTR_OWNER, store_req.owner);
+				CkptClassAds->SetAttribute(key, ATTR_SHADOW_IP_ADDR,
+										   inet_ntoa(shadow_IP));
+				CkptClassAds->SetAttribute(key, ATTR_FILE_NAME,
+										   store_req.filename);
+				char size[40];
+				sprintf(size, "%d", store_req.file_size);
+				CkptClassAds->SetAttribute(key, ATTR_FILE_SIZE, size);
+			}
 		} else {
 			// Child process
 			close(store_req_sd);
@@ -1260,20 +1305,24 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	setsockopt(xfer_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size, 
 			   sizeof(buf_size));
 	bytes_recvd = stream_file_xfer(xfer_sd, file_fd, file_size);
+	// note that if file size == -1, we don't know if we got the complete 
+	// file, so we must rely on the client to commit via SERVICE_RENAME
 	if (bytes_recvd < file_size) incomplete_file = true;
-	bytes_recvd = htonl(bytes_recvd);
-	net_write(xfer_sd, (char*) &bytes_recvd, sizeof(bytes_recvd));
+	int n = htonl(bytes_recvd);
+	net_write(xfer_sd, (char*) &n, sizeof(n));
 	close(xfer_sd);
-	fsync( file_fd );
+	fsync(file_fd);
 	close(file_fd);
 
-	// Write peer address to a temporary file which is read by the
-	// parent.  The peer address is very important for logging purposes.
+	// Write peer address and bytes received to a temporary file which
+	// is read by the parent.  The peer address is very important for
+	// logging purposes.
 	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
 	peer_info_fd = open(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
 	if (peer_info_fd >= 0) {
 		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
 			  sizeof(struct in_addr));
+		write(peer_info_fd, (char *)&bytes_recvd, sizeof(bytes_recvd));
 		close(peer_info_fd);
 	}
 
@@ -1522,6 +1571,7 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	if (peer_info_fd >= 0) {
 		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
 			  sizeof(struct in_addr));
+		write(peer_info_fd, (char *)&bytes_sent, sizeof(bytes_sent));
 		close(peer_info_fd);
 	}
 
@@ -1534,7 +1584,7 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 void Server::ChildComplete()
 {
 	struct in_addr peer_addr;
-	int			  peer_info_fd;
+	int			  peer_info_fd, xfer_size;
 	char		  peer_info_filename[100];
 	int           child_pid;
 	int           exit_status;
@@ -1731,10 +1781,11 @@ void Server::ChildComplete()
 		peer_info_fd = open(peer_info_filename, O_RDONLY);
 		if (peer_info_fd >= 0) {
 			read(peer_info_fd, (char *)&peer_addr, sizeof(struct in_addr));
+			read(peer_info_fd, (char *)&xfer_size, sizeof(xfer_size));
 			close(peer_info_fd);
 			unlink(peer_info_filename);
 		}
-		transfers.Delete(child_pid, success_flag, peer_addr);
+		transfers.Delete(child_pid, success_flag, peer_addr, xfer_size);
     }
 	UnblockSignals();
 }
