@@ -2060,7 +2060,7 @@ control state or activity transitions within the
 
 \end{description}
 
-These macros only apply to the startd when it is running on an
+These macros only apply to the \Condor{startd} daemon when it is running on an
 SMP machine. 
 See section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP} on Configuring The Startd for 
@@ -2098,6 +2098,30 @@ SMP Machines for details.
   before a job starts, but you still want jobs to start right away on
   some of your SMP nodes, increase this macro's value.
 
+\item[\Macro{STARTD\_VM\_EXPRS}]
+\label{param:StartdVMExprs}
+  The list of ClassAd attribute names that should be shared across all
+  virtual machines on the same machine.
+  For each attribute in the list, the attribute's value is taken from
+  each virtual machine's machine ClassAd and placed into the machine
+  ClassAd of all the other virtual machines within the machine.
+  For example, if the configuration file for a 2-VM machine
+  contains
+\begin{verbatim}
+        STARTD_VM_EXPRS = State, Activity, EnteredCurrentActivity
+\end{verbatim}
+  then the machine ClassAd for both virtual machines will contain
+  attributes that will be of the form:
+\begin{verbatim}
+     vm1_State = "Claimed"
+     vm1_Activity = "Busy"
+     vm1_EnteredCurrentActivity = 1075249233
+     vm2_State = "Unclaimed"
+     vm2_Activity = "Idle"
+     vm2_EnteredCurrentActivity = 1075240035
+\end{verbatim}
+
+
 \end{description}
 
 The following settings control the number of virtual machines reported
@@ -2115,8 +2139,8 @@ sending a SIGHUP signal, or using the \Condor{reconfig} command).
 You cannot change the definition of the different virtual machine
 types with a reconfig.  
 If you change them, you must restart the \Condor{startd} for the
-change to take effect (for example, using ``\condor{restart}
--startd'').
+change to take effect (for example, using 
+\Code{condor\_restart -startd}).
 
 \begin{description}
 
