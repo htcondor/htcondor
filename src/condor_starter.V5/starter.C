@@ -672,6 +672,13 @@ terminate_all()
 		if( proc->is_running() || proc->is_suspended() ) {
 			return DO_WAIT;
 		}
+
+		// if the child has exited in the mean time, we want to send the
+		// core back to the shadow -- Raghu
+		if( proc->exited_abnormally() ) {
+			proc->store_core();
+			return DEFAULT;
+		}
 	}
 
 		// Cancel alarm
