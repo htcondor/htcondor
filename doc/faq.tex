@@ -45,6 +45,173 @@ you.
 
 \index{Condor!source code|)}
 
+%%%%%%%%%%%%%%%%
+\subsection{How do I upgrade the Unix machines in my pool from 6.2.x to 6.4.x?}
+\index{upgrade!version 6.2.x to version 6.4.x}
+
+This series of steps explains how to upgrade a pool of machines
+from running Condor version 6.2.x to version 6.4.x.
+Read through the entire set of directions before following
+them.
+
+Briefly, the steps are to download the new version in
+order to replace your current binaries with the new binaries.
+Condor will notice that there are new binaries, since
+it checks for this every few minutes.
+The next time it checks, the new binaries will be used.
+
+\begin{description}
+\item[Step 1:  (Optional) Place test jobs in queue]
+This optional first step safeguards jobs currently in the
+queue when you upgrade.
+By completing this extra step, you will not lose any
+partially completed jobs, even if something goes wrong with
+your upgrade.
+
+Manufacture test jobs that utilize each universe you use in
+your Condor pool.
+Submit each job, and put the job in the hold state, 
+using \Condor{hold}.
+
+\item[Step 2:  Place all jobs on hold]
+Place all jobs into the hold state while replacing binaries.
+
+
+\item[Step 3:  Download Condor \VersionNotice]
+To ensure that both new and current binaries are within
+the same volume,
+make a new directory within your current release
+directory where \VersionNotice 
+will go. 
+Unix commands will be of the form
+\begin{verbatim}
+  cd <release-dir>
+  mkdir new
+  cd new
+\end{verbatim}
+
+Locate the correct \VersionNotice
+binary, and download into this \File{new} directory.
+
+Do \emph{not} install the downloaded version.
+Do uncompress and then untar the downloaded version.
+Further untar the release directory (called \File{release.tar}).
+This will create the directories
+\begin{verbatim}
+      bin
+      etc
+      include
+      sbin
+      lib
+      man
+\end{verbatim}
+From this list of created directories, 
+\File{bin},
+\File{include},
+\File{sbin}, and
+\File{lib} will be used to replace current directories.
+
+\item[Step 4:  Configuration files]
+The downloaded \VersionNotice
+configuration file will have extra, new suggestions
+for configuration macro settings,
+to go with new features in Condor.
+These extra configuration macros
+are not be required in order to run \VersionNotice.
+
+Make a backup copy of the current configuration, to
+safeguard backing out of the upgrade, if something goes wrong.
+
+Work through the new
+\VersionNotice
+example configuration file to see if there
+is anything useful and merge with your site-specific (current)
+configuration file.
+
+\item[Step 5:  Replace release directories]
+For each of the directories that is to be replaced,
+move the current one aside, and put the new one in its place.
+The Unix commands to do this will be of the form
+\begin{verbatim}
+  cd <release-dir>
+
+  mv bin bin.v62
+  mv new/bin bin
+
+  mv include include.v62
+  mv new/include include
+
+  mv sbin sbin.v62
+  mv new/sbin sbin
+
+  mv lib lib.v62
+  mv new/lib lib
+\end{verbatim}
+
+Do this series of directory moves at one
+sitting, especially avoiding a long time lag between the moves
+relating to the \File{sbin} directory.
+Condor imposes a delay by design, but it does not idly wait for the
+new binaries to be in place.
+
+\item[Step 6:  Observe propagation of new binaries]
+
+Use \Condor{status} to observe the propagation of the upgrade
+through the pool.
+As the machines notice and use the new binaries, their
+version number will change.
+Complete propagation should occur in five to ten minutes.
+
+The command
+\begin{verbatim}
+condor_status -format "%s" Machine -format " %s\n" CondorVersion
+\end{verbatim}
+gives a single line of information about each machine in the pool,
+containing only the machine name and version of Condor it is
+running.
+
+\item[Step 7:  (Optional) Release test jobs]
+Release the test jobs that were placed into the hold state
+in Step 1.
+If these test jobs complete successfully, then the upgrade is
+successful.
+If these test jobs fail (possibly by leaving the queue before
+finishing), then the upgrade is unsuccessful.
+If unsuccessful, back out of the upgrade by
+replacing the new configuration file with the backup copy and
+moving the Version 6.2.x release directories back to their
+previous location.
+Also send e-mail to \Email{condor-admin@cs.wisc.edu},
+explaining the situation and we'll help you work through it.
+
+\item[Step 8:  Release all jobs]
+Release all jobs in the queue, but running \Condor{release}.
+
+\item[Step 9:  (Optional) Install manual pages]
+
+The \File{man} directory is new with Condor version 6.4.
+It contains manual pages.
+Note that installation of manual pages is optional;
+the manual pages are available in the manual, in
+section~\ref{sec:command-reference}.
+
+To install the manual pages, move the \File{man} directory
+from \File{<release-dir>/new} to the desired location.
+Add the path name to this directory to the
+\Env{MANPATH}.
+
+\end{description}
+
+%To be written:  what to do about contrib modules when upgrading.
+%
+%do NOT need to upgrade (mostly)
+%checkpoint server (but may need to be reconstructed, depending
+%on where it was installed)
+%pvm
+%condorview server
+
+%%%%%%%%%%%%%%%%
+
 \subsection{What is ``Personal Condor''?}
 \index{Condor!Personal|(}
 \index{Personal Condor|(}
