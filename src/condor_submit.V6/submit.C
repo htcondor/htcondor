@@ -2980,7 +2980,8 @@ void
 check_open( const char *name, int flags )
 {
 	int		fd;
-	char	*pathname, *temp;
+	MyString strPathname;
+	char *temp;
 	StringList *list;
 
 	/* No need to check for existence of the Null file. */
@@ -2988,17 +2989,13 @@ check_open( const char *name, int flags )
 		return;
 	}
 
-	pathname = full_path(name);
+	strPathname = full_path(name);
 
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
 	if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		if ( (temp = strstr( pathname, "#MpInOdE#" ) ) != NULL ) {
-			*(temp++) = '0';
-			*temp = '\0';
-			memmove ( temp, temp+8, strlen(temp+8) );
-		}
+		strPathname.replaceString("#MpInOdE#", "0");
 	}
 
 	/* If this file as marked as append-only, do not truncate it here */
@@ -3012,29 +3009,28 @@ check_open( const char *name, int flags )
 		delete list;
 	}
 
-	if( (fd=open(pathname,flags,0664)) < 0 ) {
+	if( (fd=open(strPathname.GetCStr(),flags,0664)) < 0 ) {
 		fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o\n",
-				 pathname, flags );
+				 strPathname.GetCStr(), flags );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
 	(void)close( fd );
 
 	// Queue files for testing access if not already queued
-	MyString pathname_key(pathname);
 	int crap;
 	if( flags & O_WRONLY )
 	{
-		if ( CheckFilesWrite.lookup(pathname_key,crap) < 0 ) {
+		if ( CheckFilesWrite.lookup(strPathname,crap) < 0 ) {
 			// this file not found in our list; add it
-			CheckFilesWrite.insert(pathname_key,crap);
+			CheckFilesWrite.insert(strPathname,crap);
 		}
 	}
 	else
 	{
-		if ( CheckFilesRead.lookup(pathname_key,crap) < 0 ) {
+		if ( CheckFilesRead.lookup(strPathname,crap) < 0 ) {
 			// this file not found in our list; add it
-			CheckFilesRead.insert(pathname_key,crap);
+			CheckFilesRead.insert(strPathname,crap);
 		}
 	}
 }
