@@ -474,10 +474,10 @@ init_params()
 	}
 
 	char line[100];
-	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_hostname() );
+	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
 	ad.Insert(line);
 
-	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_hostname() );
+	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
 	ad.Insert(line);
 
 	sprintf(line, "%s = \"%s\"", ATTR_MASTER_IP_ADDR,
