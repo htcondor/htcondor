@@ -13,6 +13,7 @@ c_plus_target(condor_preen,preen.o,$(LIB))
 release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_preen,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 static_target(condor_preen,preen.o,$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target(condor_preen.pure,preen.o,$(LIB))
 
 c_plus_target(condor_release,releasejob.o, $(LIB))
 release_target(condor_release,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
