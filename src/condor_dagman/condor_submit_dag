@@ -282,7 +282,7 @@ sub parse_dag_file {
 	    exit( 1 );
 	}
 	while( <FOO> ) {
-	    if( /^log\s*=\s*(.*)/i ) {
+	    if( /^\s*log\s*=\s*(.*)/i ) {
 		$log_names{$file} = $1;
 		if( ! $log_name ) { $log_name = $1; }
 	    }
