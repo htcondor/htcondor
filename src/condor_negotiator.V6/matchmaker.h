@@ -83,7 +83,7 @@ class Matchmaker : public Service
 		Accountant accountant;
 
 		// Cache of socket connections to schedds
-		SocketCache		sockCache;
+		SocketCache	*sockCache;
 
 		// DaemonCore Timer ID for periodic negotiations
 		int negotiation_timerID;
