@@ -79,7 +79,9 @@ sysapi_ncpus_raw(void)
 
 	FILE        *proc;
 	char 		buf[256];
+#if defined(ALPHA)
 	char		*tmp;
+#endif
 	int 		num_cpus = 0;
 
 	sysapi_internal_reconfig();
