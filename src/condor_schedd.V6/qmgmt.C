@@ -46,6 +46,7 @@ extern char *Spool;
 extern char* JobHistoryFileName;
 extern int canTryGSS;
 extern int canTryFilesystem;
+extern int canTryNT;
 
 extern "C" {
 /*
@@ -397,6 +398,9 @@ handle_q(Service *, int, Stream *sock)
 	}
 	if ( canTryFilesystem ) {
 		Q_SOCK->canTryFilesystem();
+	}
+	if ( canTryNT ) {
+		Q_SOCK->canTryNT();
 	}
 
 	do {

@@ -88,6 +88,7 @@ extern Scheduler scheduler;
 
 int canTryGSS = 0;  //make global so handle_q() can see it
 int canTryFilesystem = 1;  //make global so handle_q() can see it
+int canTryNT = 1;  //make global so handle_q() can see it
 
 // priority records
 extern prio_rec *PrioRec;
@@ -2800,6 +2801,16 @@ Scheduler::Init()
 	}
 	else {
 		dprintf( D_FULLDEBUG, "no X509_CERT_DIR, no GSS authentication\n");
+	}
+
+	//for now, default to can use unless set to false, but should 
+	//change this because it's inconsistent with other methods
+	char * tryNT = param( "ALLOW_NT_AUTHENTICATION" );
+	if ( tryNT ) {
+		if ( tryNT[0] == 'F' || tryNT[0] == 'f' ) {
+			canTryNT = 0;
+		}
+		free( tryNT );
 	}
 
 	//for now, default to can use unless set to false, but should 
