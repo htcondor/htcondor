@@ -33,3 +33,5 @@
 ** exec the condor job.
 */
 #define EXECFAILED 129
+
+#define SHADOW_QMGMT_TIMEOUT 300

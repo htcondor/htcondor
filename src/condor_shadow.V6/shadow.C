@@ -469,12 +469,6 @@ main(int argc, char *argv[], char *envp[])
 
 	HandleSyscalls();
 
-	/* Set CurrentHosts to 0 before we call Wrapup(), since Wrapup will
-	   delete the job from the queue if it just finished. */
-	// ConnectQ(schedd);
-	// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
-	// DisconnectQ(NULL);
-
 	Wrapup();
 
 	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
@@ -796,8 +790,7 @@ Wrapup( )
      * should go.  this info is in the classad, and must be gotten from the
      * Qmgr *before* the job status is updated (i.e., classad is dequeued).
      */
-	//new syntax, can use filesystem to authenticate
-    ConnectQ (schedd);
+    ConnectQ (schedd, SHADOW_QMGMT_TIMEOUT);
     if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
                 email_addr))
     {
@@ -859,7 +852,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	float stime = 0.0;
 
 	//new syntax, can use filesystem to authenticate
-	ConnectQ(schedd);
+	ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT);
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
 
 	if( status == REMOVED ) {
@@ -1038,8 +1031,7 @@ start_job( char *cluster_id, char *proc_id )
 	cluster_num = atoi( cluster_id );
 	proc_num = atoi( proc_id );
 
-	//new syntax, can use filesystem to authenticate
-	ConnectQ(schedd);
+	ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true);
 #ifdef CARMI_OPS
 	if (GetProc(cluster_num, proc_num, &(Proc->proc)) < 0) {
 		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
@@ -1144,8 +1136,7 @@ DoCleanup()
 	}
 
 	if( Proc->id.cluster ) {
-		//new syntax, can use filesystem to authenticate
-		ConnectQ(schedd);
+		ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT);
 		fetch_rval = GetAttributeInt(Proc->id.cluster, Proc->id.proc, 
 									 ATTR_JOB_STATUS, &status);
 

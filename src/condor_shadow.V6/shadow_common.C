@@ -561,8 +561,7 @@ part_send_job(
 
   /* Send the job info */
   if (!JobAd) {   // just get the job ad from the schedd once
-	//new syntax, can use filesystem to authenticate
-  	ConnectQ(schedd);
+  	ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true);
   	JobAd = GetJobAd( proc->id.cluster, proc->id.proc );
   	DisconnectQ(NULL);
   }
