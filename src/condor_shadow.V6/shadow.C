@@ -103,8 +103,6 @@ extern int do_REMOTE_syscall3(int);
 extern int do_REMOTE_syscall4(int);
 extern int do_REMOTE_syscall5(int);
 
-extern "C" void RequestRSCBandwidth();
-
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
 #endif
@@ -132,8 +130,14 @@ int  LastCkptTime = -1;			// time when job last completed a ckpt
 int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
 int  CommittedTime = 0;			// run-time committed in checkpoints
+
+#ifdef WANT_NETMAN
 extern bool ManageBandwidth;	// notify negotiator about network usage?
-int	 BWInterval = 0;			// how often do we request RSC bandwidth?
+extern int NetworkHorizon;		// how often do we request network bandwidth?
+extern "C" void file_stream_child_exit(pid_t pid);
+extern "C" void abort_file_stream_transfer();
+extern "C" void RequestRSCBandwidth();
+#endif
 
 extern char *Executing_Arch, *Executing_OpSys;
 
@@ -190,15 +194,12 @@ int		InitialJobStatus = -1;
 
 int JobStatus;
 struct rusage JobRusage;
-struct rusage AccumRusage;
 int ExitReason = JOB_EXCEPTION;		/* Schedd counts on knowing exit reason */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup(int,int,char*);
 extern int Termlog;
-
-time_t	RunTime;
 
 ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
@@ -396,7 +397,7 @@ main(int argc, char *argv[], char *envp[])
 	// if job specifies a checkpoint server host, this overrides
 	// the config file parameters
 	tmp = (char *)malloc(_POSIX_PATH_MAX);
-	if (JobAd->LookupString(ATTR_USE_CKPT_SERVER, tmp) == 1) {
+	if (JobAd->LookupString(ATTR_CKPT_SERVER, tmp) == 1) {
 		if (CkptServerHost) free(CkptServerHost);
 		UseCkptServer = TRUE;
 		CkptServerHost = strdup(tmp);
@@ -479,6 +480,7 @@ main(int argc, char *argv[], char *envp[])
 		SlowCkptSpeed = 0;
 	}
 
+#ifdef WANT_NETMAN
 	tmp = param("MANAGE_BANDWIDTH");
 	if (!tmp) {
 		ManageBandwidth = false;
@@ -489,14 +491,15 @@ main(int argc, char *argv[], char *envp[])
 			ManageBandwidth = false;
 		}
 		free(tmp);
-		tmp = param("RSC_BANDWIDTH_INTERVAL");
+		tmp = param("NETWORK_HORIZON");
 		if (!tmp) {
-			BWInterval = 300;	// should be equal to NETWORK_HORIZON
+			NetworkHorizon = 300;
 		} else {
-			BWInterval = atoi(tmp);
+			NetworkHorizon = atoi(tmp);
 			free(tmp);
 		}
 	}
+#endif
 
 	// Install signal handlers such that all signals are blocked when inside
 	// the handler.
@@ -536,8 +539,6 @@ HandleSyscalls()
 	register int	cnt;
 	fd_set 			readfds;
 	int 			nfds = -1;
-	priv_state		priv;
-	time_t			last_bw_update = time(0);
 
 	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
@@ -554,6 +555,11 @@ HandleSyscalls()
 	dprintf(D_SYSCALLS, "Shadow: Starting to field syscall requests\n");
 	errno = 0;
 
+#if WANT_NETMAN
+	time_t current_time = time(0);
+	time_t next_bw_update = current_time + NetworkHorizon;
+#endif
+	
 	for(;;) {	/* get a request and fulfill it */
 
 		FD_ZERO(&readfds);
@@ -561,11 +567,13 @@ HandleSyscalls()
 		FD_SET(CLIENT_LOG, &readfds);
 
 		struct timeval *ptimer = NULL, timer;
-		if (ManageBandwidth) {
-			timer.tv_sec = BWInterval;
+#if WANT_NETMAN
+		if (ManageBandwidth && next_bw_update > current_time) {
+			timer.tv_sec = next_bw_update - current_time;
 			timer.tv_usec = 0;
 			ptimer = &timer;
 		}
+#endif
 
 		unblock_signal(SIGCHLD);
 		unblock_signal(SIGUSR1);
@@ -605,13 +613,13 @@ HandleSyscalls()
 			exit(1);
 		}
 
-		if (ManageBandwidth) {
-			time_t current_time = time(0);
-			if (current_time > last_bw_update + BWInterval) {
-				RequestRSCBandwidth();
-				last_bw_update = current_time;
-			}
+#if WANT_NETMAN
+		current_time = time(0);
+		if (ManageBandwidth && current_time >= next_bw_update) {
+			RequestRSCBandwidth();
+			next_bw_update = current_time + NetworkHorizon;
 		}
+#endif
 
 #if defined(SYSCALL_DEBUG)
 		strcpy( SyscallLabel, "shadow" );
@@ -1000,6 +1008,10 @@ DoCleanup()
 		(void) unlink_local_or_ckpt_server( TmpCkptName );
 	}
 
+#if WANT_NETMAN
+	abort_file_stream_transfer(); // if we've got one
+#endif
+
 	return 0;
 }
 
@@ -1163,6 +1175,11 @@ reaper()
 				pid, WTERMSIG(status)
 			);
 		}
+#if WANT_NETMAN
+			// tell the file_stream code whenever a child exits, so it
+			// can do some cleanup with its children
+		file_stream_child_exit(pid);
+#endif
 	}
 
 #ifdef HPUX
