@@ -58,54 +58,6 @@ void Daemon::common_init() {
 	_cmd_str = NULL;
 }
 
-Daemon::Daemon( const char* addr_string, int port ) 
-{
-	common_init();
-	
-	// override the default initializion
-	_type = DT_ANY;
-	_tried_locate = true;
-
-	if( addr_string ) {
-		if ( is_valid_sinful(addr_string) ) {
-			_addr = strnewp( addr_string );
-			_port = string_to_port( addr_string );
-		} else if ( is_ipaddr(addr_string, NULL) ) {
-			// allocate the length of the IP addr plus
-			// 16 for the '<', ':', '>', and port.
-			_addr = new char[16 + strlen(addr_string)];
-			_port = port;
-			sprintf (_addr, "<%s:%d>", addr_string, port);
-		} else {
-			// well, if it isn't a sinful or an IP address,
-			// we'll treat it as a hostname.
-
-			struct in_addr sin_addr;
-
-			// resolv the hostname to an IP
-			char* tmp = get_full_hostname( addr_string, &sin_addr );
-			if( ! tmp ) {
-					// With a hostname, this is a fatal Daemon error.
-				char buf[128];
-				sprintf( buf, "unknown host %s", addr_string );
-				newError( buf );
-				_addr = NULL;
-				_port = -1;
-				return;
-			}
-			New_full_hostname( tmp );
-			// 32 bytes is more than enough for <234.678.012.456:890123456>
-			_addr = new char[32];
-			_port = port;
-			sprintf( _addr, "<%s:%d>", inet_ntoa(sin_addr), port );
-		}
-	} else {
-		_addr = NULL;
-		_port = -1;
-	}
-
-}
-
 
 Daemon::Daemon( daemon_t type, const char* name, const char* pool ) 
 {

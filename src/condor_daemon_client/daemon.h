@@ -93,14 +93,6 @@ public:
 	Daemon( daemon_t type, const char* name = NULL, 
 				const char* pool = NULL );
 
-		/** Constructor.
-		  @param addr_string This can be a sinful string.  If not, it should be an
-		    IP address or hostname and the port parameter must be set as well.
-		  @param port        The port to connect to.  This parameter is ignored if
-		    the addr_string parameter is a sinful string (i.e. already has a port).
-		*/
-	Daemon( const char* addr_string, int port = 0 );
-
 		/// Destructor.
 	virtual ~Daemon();
 
