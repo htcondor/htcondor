@@ -28,7 +28,7 @@
 #include <vector>
 #include "classad.h"
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 typedef vector<ExprTree*> ArgumentList;
 
@@ -36,17 +36,29 @@ typedef vector<ExprTree*> ArgumentList;
 class FunctionCall : public ExprTree
 {
 	public:
-		/// Constructor
-		FunctionCall ();
-
 		/// Destructor
 		~FunctionCall ();
 
+		/** Factory method to make a function call expression
+		 * 	@param fnName	The name of the function to be called
+		 * 	@param argList	A vector representing the argument list
+		 * 	@return The constructed function call expression
+		 */
 		static FunctionCall *MakeFunctionCall( const string &fnName, 
 					vector<ExprTree*> &argList );
+
+		/** Deconstructor to get the components of a function call
+		 * 	@param fnName	The name of the function being called
+		 * 	@param argList  The argument list
+		 */
 		void GetComponents( string &, vector<ExprTree*> &) const;
 
+		/// Make a deep copy of the expression
 		virtual FunctionCall* Copy( ) const;
+
+	protected:
+		/// Constructor
+		FunctionCall ();
 
 		typedef	bool(*ClassAdFunc)(const char*, const ArgumentList&, EvalState&,
 					Value&);
@@ -56,7 +68,7 @@ class FunctionCall : public ExprTree
 		virtual void _SetParentScope( const ClassAd* );
 		virtual bool _Evaluate( EvalState &, Value & ) const;
 		virtual bool _Evaluate( EvalState &, Value &, ExprTree *& ) const;
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 
 		// information common to all function calls
 		// a mapping from function names (char*) to static methods
