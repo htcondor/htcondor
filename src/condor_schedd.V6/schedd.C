@@ -1114,7 +1114,7 @@ Scheduler::StartJobs()
 	PROC_ID id;
 	match_rec *rec;
 
-	dprintf(D_ALWAYS, "-------- Begin starting jobs --------\n");
+	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
 	matches->startIterations();
 	while(matches->iterate(rec) == 1) {
 		if(rec->status == M_INACTIVE)
@@ -1147,8 +1147,6 @@ Scheduler::StartJobs()
 			DelMrec(rec);
 			continue;
 		}
-		dprintf(D_ALWAYS, "Match (%s) - running %d.%d\n",rec->id,id.cluster,
-				id.proc);
 		if(!(rec->shadowRec = StartJob(rec, &id)))
 		// Start job failed. Throw away the match. The reason being that we
 		// don't want to keep a match around and pay for it if it's not
@@ -1161,11 +1159,13 @@ Scheduler::StartJobs()
 			DelMrec(rec);
 			continue;
 		}
+		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",rec->id,id.cluster,
+				id.proc);
 	}
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
 	}
-	dprintf(D_ALWAYS, "-------- Done starting jobs --------\n");
+	dprintf(D_FULLDEBUG, "-------- Done starting jobs --------\n");
 }
 
 void
@@ -2144,7 +2144,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
     int StartJobsFlag=TRUE;
 
     if( sig == 0 ) {
-        dprintf( D_ALWAYS, "***********  Begin Extra Checking ********\n" );
+        dprintf( D_FULLDEBUG, "***********  Begin Extra Checking ********\n" );
     } else {
         dprintf( D_ALWAYS, "Entered reaper( %d, %d, 0x%x )\n", sig, code, scp );
     }
@@ -2252,7 +2252,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
         }  // big if..else if...
     } // for loop
     if( sig == 0 ) {
-        dprintf( D_ALWAYS, "***********  End Extra Checking ********\n" );
+        dprintf( D_FULLDEBUG, "***********  End Extra Checking ********\n" );
     }
 	if( ExitWhenDone && numShadows == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
