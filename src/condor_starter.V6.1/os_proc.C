@@ -135,12 +135,31 @@ OsProc::StartJob()
 		return 0;
 	}
 
-		// Support USER_JOB_WRAPPER parameter...
-
 		// First, put "condor_exec" at the front of Args, since that
 		// will become argv[0] of what we exec(), either the wrapper
 		// or the actual job.
-	strcpy( Args, CONDOR_EXEC );
+
+		// The Java universe cannot tolerate an incorrect argv[0].
+		// For Java, set it correctly.  In a future version, we
+		// may consider removing the CONDOR_EXEC feature entirely.
+
+	int universe;
+	if ( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
+		universe = CONDOR_UNIVERSE_VANILLA;
+	}
+
+	if(universe==CONDOR_UNIVERSE_JAVA) {
+		strcpy( Args, JobName );
+	} else {
+		strcpy( Args, CONDOR_EXEC );
+	}
+
+		// This variable is used to keep track of the position
+		// of the arguments immediately following argv[0].
+
+	int skip = strlen(Args)+1;
+
+		// Support USER_JOB_WRAPPER parameter...
 
 	char *wrapper = NULL;
 	if( (wrapper=param("USER_JOB_WRAPPER")) ) {
@@ -382,15 +401,17 @@ OsProc::StartJob()
 	}
 
 		// in the below dprintfs, we want to skip past argv[0], which
-		// we know will always be condor_exec, in the Args string. 
-	int skip = strlen(CONDOR_EXEC) + 1;
+		// is sometimes condor_exec, in the Args string. 
+		// We rely on the "skip" variable defined above when
+		// argv[0] was set according to the universe and job name.
+
 	if( has_wrapper ) { 
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
 		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName, 
 				 &(Args[skip]) );
 	} else {
-		if (strlen(CONDOR_EXEC) != strlen(Args)){
+		if (skip < strlen(Args)){
 			/* some arguments exist, so skip and print them out */
 			dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
 				 &(Args[skip]) );
