@@ -1394,7 +1394,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 		dprintf( D_ALWAYS, "ERROR in giveMatches: can't send num procs\n" );
 		return FALSE;
 	} else {
-		dprintf( D_ALWAYS, "giveMatches: put %d num procs on wire\n",
+		dprintf( D_FULLDEBUG, "giveMatches: put %d num procs on wire\n",
 				 alloc->num_procs ); 
 	}		
 
