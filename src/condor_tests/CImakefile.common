@@ -11,7 +11,7 @@
 DESC(job_rsc_hello_std,"Tests various RSC I/O methods")
 CBUILD($(CC),job_rsc_hello_std,c)
 RUN(job_rsc_hello_std)
-DEPS(job_rsc_hello_std,x_small.in)
+DEPS(job_rsc_hello_std,x_hello.in)
 TESTCLASS(job_rsc_hello_std,quick)
 
 DESC(job_ckpt_getrusage-loop_std,"Does getrusage() work across ckpts?")

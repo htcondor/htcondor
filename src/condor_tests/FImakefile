@@ -35,7 +35,7 @@ RUN(job_ckpt_f-areauc_std)
 DESC(job_rsc_f-direct-write_std,"Can Fortran jobs use direct access I/O?")
 CBUILD($(Fortran),job_rsc_f-direct-write_std,f)
 RUN(job_rsc_f-direct-write_std)
-DEPS(job_rsc_f-direct-write_std,x_small.in)
+DEPS(job_rsc_f-direct-write_std,x_hello.in)
 
 
 #if FORTRAN_HAS_RECURSION

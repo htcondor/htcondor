@@ -1,6 +1,6 @@
       LOGICAL EX,OP,NMD
       WRITE (*,*) ' Will open direct access file for reading'
-      OPEN(11,FILE = 'x_small.in',
+      OPEN(11,FILE = 'x_hello.in',
      *     ACCESS = 'DIRECT',
      *     STATUS = 'OLD',FORM = 'UNFORMATTED',
      *     RECL = 1024,ERR = 900)
