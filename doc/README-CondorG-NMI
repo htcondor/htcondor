@@ -1,5 +1,27 @@
 Condor-G NMI Release April 2002
 
+Overview
+--------
+
+Condor-G is a program that manages both a queue of jobs and the
+resources from one or more sites where those jobs can execute. It
+communicates with these resources and transfers files to and from these
+resources using Globus mechanisms. (In particular, Condor-G uses the GRAM      
+protocol for job submission, and runs a local GASS server for file transfers).  
+
+It may seem like Condor-G is a simple replacement for the Globus toolkit's
+"globusrun" command. However, Condor-G allows you to submit many jobs at
+once and then to monitor those jobs with a convenient interface, receive
+notification when jobs complete or fail, and maintain your Globus
+credentials which may expire while a job is running. On top of this,
+Condor-G is a fault-tolerant system--if your machine crashes, you can still
+perform all of these functions when your machine returns to life.
+
+Condor-G is derived from the Condor system, and all of the tools that have
+been built on top of Condor will work with Condor-G. For example, the Condor
+DAGMan can manage job inter-dependance and provide fault-tolerance at a
+higher level.
+
 Installation
 ------------
 This distribution is packaged using the Grid Packaging Technology
@@ -91,15 +113,6 @@ You should see something like the following output:
 
 0 jobs; 0 idle, 0 running, 0 held
 
-
-[Do we want to say anything about certificates and/or other
-bundles/packages that should be installed? At the very least, the user
-will need the GSI programs (grid-proxy-*) and CA certificates to use
-Condor-G).]
-
-Overview
---------
-[Describe Condor-G and Condor.]
 
 Examples
 --------
@@ -195,3 +208,5 @@ command
 within the submit description file identifies the executable as being
 pre-staged. In this case, the executable command gives the pathname to the
 executable on the remote machine.
+
+
