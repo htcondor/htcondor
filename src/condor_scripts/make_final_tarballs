@@ -63,7 +63,8 @@ use Archive::Tar;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "mpi" );
+#@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "mpi" );
+@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm" );
 #@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm" );
 #@modules = ( "condor" );
 
@@ -126,6 +127,7 @@ $target="/p/condor/public/binaries";
   "i386_linux3"   => "linux",
   "alpha_linux3"  => "linux",
   "alpha_dux40"   => "dux40",
+  "alpha_dux40f"  => "dux40",
   "sgi_62"        => "irix6",
   "sgi_63"        => "irix6",
   "sgi_64"        => "irix6",
@@ -145,6 +147,7 @@ $target="/p/condor/public/binaries";
   "i386_linux3"   => "x86",
   "alpha_linux3"  => "Alpha",
   "alpha_dux40"   => "Alpha",
+  "alpha_dux40f"  => "Alpha",
   "sgi_62"        => "SGI",
   "sgi_63"        => "SGI",
   "sgi_64"        => "SGI",
