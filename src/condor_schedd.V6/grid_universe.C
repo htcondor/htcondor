@@ -367,6 +367,15 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		sprintf(proxy_buf, " -j %d.%d", cluster, proc);
 		strcat(gman_final_args, proxy_buf);
 	}
+	if ( owner ) {
+		MyString full_owner_name;
+		full_owner_name.sprintf(" -o %s",owner);
+		if ( domain ) {
+			full_owner_name += "@";
+			full_owner_name += domain;
+		}
+		strcat(gman_final_args,full_owner_name.Value());
+	}
 	dprintf(D_FULLDEBUG,"Really Execing %s\n",gman_final_args);
 
 	if (!init_user_ids(owner, domain)) {
