@@ -102,10 +102,6 @@ SOURCE=..\src\condor_startd.V6\LoadQueue.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\main.C
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_startd.V6\Match.C
 # End Source File
 # Begin Source File
@@ -155,6 +151,10 @@ SOURCE=..\src\condor_startd.V6\ResState.h
 # Begin Source File
 
 SOURCE=..\src\condor_startd.V6\startd.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\startd_main.C
 # End Source File
 # Begin Source File
 

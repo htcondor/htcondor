@@ -86,10 +86,6 @@ LINK32=link.exe
 # Name "condor_starter - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\main.C
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_starter.V6.1\mpi_comrade_proc.C
 # End Source File
 # Begin Source File
@@ -127,6 +123,10 @@ SOURCE=..\src\condor_starter.V6.1\starter.C
 # Begin Source File
 
 SOURCE=..\src\condor_starter.V6.1\starter.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\starter_v61_main.C
 # End Source File
 # Begin Source File
 

@@ -94,10 +94,6 @@ SOURCE=..\src\condor_shadow.V6.1\baseshadow.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\main.C
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_shadow.V6.1\mpiresource.C
 # End Source File
 # Begin Source File
@@ -139,6 +135,10 @@ SOURCE=..\src\condor_shadow.V6.1\shadow.C
 # Begin Source File
 
 SOURCE=..\src\condor_shadow.V6.1\shadow.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_shadow.V6.1\shadow_v61_main.C
 # End Source File
 # End Target
 # End Project

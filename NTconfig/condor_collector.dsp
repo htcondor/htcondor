@@ -102,6 +102,10 @@ SOURCE=..\src\condor_collector.V6\collector_engine.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_collector.V6\collector_main.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_includes\condor_collector.h
 # End Source File
 # Begin Source File
@@ -115,10 +119,6 @@ SOURCE=..\src\condor_collector.V6\hashkey.h
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\HashTable.h"
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_collector.V6\main.C
 # End Source File
 # Begin Source File
 
