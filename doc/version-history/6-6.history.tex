@@ -33,6 +33,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Under Tru64, Condor would sometimes fail to start a job while
+	setting the resource limits on behalf of the job.
+	This error appears to be the result of a kernel issue.
+	A workaround has been implemented which will leave the limits
+	of the job unmodified and run the job when this specific error
+	situation arises.
+
 \item Fixed an important bug in the low-level code that Condor uses to
   transfer files across a network.
   There were certain temporary failure cases that were being treated
