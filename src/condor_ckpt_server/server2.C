@@ -403,10 +403,13 @@ void Server::Execute()
 		//   request comes in (change the &poll argument to NULL).  The 
 		//   philosophy is that one does not need to reclaim a child process
 		//   until another is ready to start
+		UnblockSignals();
 		while( (more) && 
 			   ((num_sds_ready=select(max_req_sd_plus1,
 									  (SELECT_FDSET_PTR)&req_sds, 
 									  NULL, NULL, &poll)) > 0)) {
+		        BlockSignals();
+	   
 			if (FD_ISSET(service_req_sd, &req_sds))
 				HandleRequest(service_req_sd, SERVICE_REQ);
 			if (FD_ISSET(store_req_sd, &req_sds))
@@ -420,7 +423,10 @@ void Server::Execute()
 			FD_SET(restore_req_sd, &req_sds);
 			FD_SET(service_req_sd, &req_sds);	  
 			FD_SET(replicate_req_sd, &req_sds);
+
+			UnblockSignals();
 		}
+		BlockSignals();
 		if (num_sds_ready < 0)
 			if (errno != EINTR) {
 				dprintf(D_ALWAYS, 
@@ -431,9 +437,7 @@ void Server::Execute()
 		current_time = time(NULL);
 		if (((unsigned int) current_time - (unsigned int) last_reclaim_time) 
 			>= reclaim_interval) {
-			BlockSignals();
 			transfers.Reclaim(current_time);
-			UnblockSignals();
 			last_reclaim_time = current_time;
 			if (replication_level)
 				Replicate();
@@ -443,11 +447,9 @@ void Server::Execute()
 		if (((unsigned int) current_time - (unsigned int) last_clean_time)
 			>= clean_interval) {
 			if (CkptClassAds) {
-				BlockSignals();
 				Log("Cleaning ClassAd log...");
 				CkptClassAds->TruncLog();
 				Log("Done cleaning ClassAd log...");
-				UnblockSignals();
 			}
 			last_clean_time = current_time;
 		}
@@ -483,7 +485,6 @@ void Server::HandleRequest(int req_sd,
 		dprintf(D_ALWAYS, "I_accept failed.\n");
 		exit(ACCEPT_ERROR);
     }
-	BlockSignals();
 	req_ID++;
 	switch (req) {
         case SERVICE_REQ:
@@ -511,16 +512,13 @@ void Server::HandleRequest(int req_sd,
 	sprintf(log_msg, "%s%d%s", "Using descriptor ", new_req_sd, 
 			" to handle request");
 	Log(log_msg);
-	UnblockSignals();
 	if ((req == STORE_REQ) || (req == RESTORE_REQ) || (req == REPLICATE_REQ)) {
-		BlockSignals();
 		if ((num_store_xfers+num_restore_xfers == max_xfers) ||
 			((req == STORE_REQ) && (num_store_xfers == max_store_xfers)) ||
 			((req == RESTORE_REQ) &&
 			 (num_restore_xfers == max_restore_xfers)) ||
 			((req == REPLICATE_REQ) &&
 			 (num_replicate_xfers == max_replicate_xfers))) {
-			UnblockSignals();
 			if (req == STORE_REQ || req == REPLICATE_REQ) {
 				store_reply.server_name.s_addr = htonl(0);
 				store_reply.port = htons(0);
@@ -530,7 +528,6 @@ void Server::HandleRequest(int req_sd,
 				sprintf(log_msg, "%s", 
 						"Request to store a file has been DENIED");
 			} else {
-				UnblockSignals();
 				restore_reply.server_name.s_addr = htonl(0);
 				restore_reply.port = htons(0);
 				restore_reply.file_size = htonl(0);
@@ -540,14 +537,11 @@ void Server::HandleRequest(int req_sd,
 				sprintf(log_msg, "%s", 
 						"Request to restore a file has been DENIED");
 			}
-			BlockSignals();
 			Log(req_ID, log_msg);
 			Log("Configured maximum number of active transfers exceeded");
-			UnblockSignals();
 			close(new_req_sd);
 			return;
-		} else
-			UnblockSignals();
+		} 
     }
 
 	switch (req) {
@@ -569,7 +563,6 @@ void Server::HandleRequest(int req_sd,
 			break;
 	}
 
-	BlockSignals();
 	rt_alarm.SetAlarm(new_req_sd, REQUEST_TIMEOUT);
 
 	while (bytes_recvd < req_len) {
@@ -579,22 +572,19 @@ void Server::HandleRequest(int req_sd,
 			if (errno != EINTR) {
 				rt_alarm.ResetAlarm();
 				close(new_req_sd);
-				BlockSignals();
 				sprintf(log_msg, "Request from %s REJECTED:", 
 						inet_ntoa(shadow_sa.sin_addr));
 				Log(req_ID, log_msg);
 				Log("Incomplete request packet");
 				sprintf(log_msg, "DEBUG: %d bytes sent; %d bytes expected", 
 						bytes_recvd, req_len);
-				Log(-1, log_msg);	     
-				UnblockSignals();
+				Log(-1, log_msg);
 				return;
 			}
 		} else
 			bytes_recvd += temp_len;
     }
 	rt_alarm.ResetAlarm();
-	UnblockSignals();
 	switch (req) {
     case SERVICE_REQ:
 		ProcessServiceReq(req_ID, new_req_sd, shadow_sa.sin_addr, service_req);
@@ -642,18 +632,15 @@ void Server::ProcessServiceReq(int             req_id,
 		service_reply.port = htons(0);
 		service_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
 		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
-		BlockSignals();
 		sprintf(log_msg, "Request for service from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Invalid authentication ticket used");
-		UnblockSignals();
 		close(req_sd);
 		return;
     }
 	service_req.service = ntohs(service_req.service);
 	service_req.key = ntohl(service_req.key);
-	BlockSignals();
 #if defined(DEBUG)
 	switch (service_req.service) {
         case CKPT_SERVER_SERVICE_STATUS:
@@ -692,7 +679,6 @@ void Server::ProcessServiceReq(int             req_id,
 							inet_ntoa(shadow_IP));
 					Log(req_id, log_msg);
 					Log("Insufficient buffers/ports to handle request");
-					UnblockSignals();
 					close(req_sd);
 					return;
 				} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
@@ -705,7 +691,6 @@ void Server::ProcessServiceReq(int             req_id,
 							inet_ntoa(shadow_IP));
 					Log(req_id, log_msg);
 					Log("Cannot obtain a new socket from server");
-					UnblockSignals();
 					close(req_sd);
 					return;
 				}
@@ -895,7 +880,6 @@ void Server::ProcessServiceReq(int             req_id,
 			Log(log_msg);
 		}
 	}
-	UnblockSignals();
 }
 
 
@@ -1225,12 +1209,10 @@ void Server::ProcessStoreReq(int            req_id,
 		store_reply.port = htons(0);
 		store_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
-		BlockSignals();
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Invalid authentication ticket used");
-		UnblockSignals();
 		close(req_sd);
 		return;
     }
@@ -1239,17 +1221,14 @@ void Server::ProcessStoreReq(int            req_id,
 		store_reply.port = htons(0);
 		store_reply.req_status = htons(BAD_REQ_PKT);
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
-		BlockSignals();
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Incomplete request packet");
-		UnblockSignals();
 		close(req_sd);
 		return;
     }
 
-	BlockSignals();
 #if defined(DEBUG)
 	sprintf(log_msg, "STORE request from %s", store_req.owner);
 	Log(req_id, log_msg);
@@ -1258,7 +1237,6 @@ void Server::ProcessStoreReq(int            req_id,
 	sprintf(log_msg, "File size: %d", ntohl(store_req.file_size));
 	Log(log_msg);
 #endif
-	UnblockSignals();
 	store_req.file_size = ntohl(store_req.file_size);
 	data_conn_sd = I_socket();
 	if (data_conn_sd == INSUFFICIENT_RESOURCES) {
@@ -1266,12 +1244,10 @@ void Server::ProcessStoreReq(int            req_id,
 		store_reply.port = htons(0);
 		store_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
-		BlockSignals();
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Insufficient buffers/ports to handle request");
-		UnblockSignals();
 		close(req_sd);
 		return;
 	} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
@@ -1279,12 +1255,10 @@ void Server::ProcessStoreReq(int            req_id,
 		store_reply.port = htons(0);
 		store_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
 		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
-		BlockSignals();
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Cannot obtain a new socket from server");
-		UnblockSignals();
 		close(req_sd);
 		return;
 	}
@@ -1306,10 +1280,8 @@ void Server::ProcessStoreReq(int            req_id,
 		exit(LISTEN_ERROR);
 	}
 
-	BlockSignals();
 	imds.AddFile(shadow_IP, store_req.owner, store_req.filename, 
 				 store_req.file_size, NOT_PRESENT);
-	UnblockSignals();
 	store_reply.server_name = server_addr;
 	// From the I_bind() call, the port should already be in network-byte
 		   //   order
@@ -1318,17 +1290,14 @@ void Server::ProcessStoreReq(int            req_id,
 	if (net_write(req_sd, (char*) &store_reply, 
 				  sizeof(store_reply_pkt)) < 0) {
 		close(req_sd);
-		BlockSignals();
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Cannot send IP/port to shadow (socket closed)");
 		imds.RemoveFile(shadow_IP, store_req.owner, store_req.filename);
-		UnblockSignals();
 		close(data_conn_sd);
 	} else {
 		close(req_sd);
-		BlockSignals();
 
 		child_pid = fork();
 
@@ -1389,7 +1358,6 @@ void Server::ProcessStoreReq(int            req_id,
 								  (int) store_req.file_size);
 			exit(CHILDTERM_SUCCESS);
 		}
-		UnblockSignals();
 	}
 }
 
@@ -1493,12 +1461,10 @@ void Server::ProcessRestoreReq(int             req_id,
 		restore_reply.file_size = htonl(0);
 		restore_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
 		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-		BlockSignals();
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Invalid authentication ticket used");
-		UnblockSignals();
 		close(req_sd);
 		return;
     }
@@ -1509,16 +1475,13 @@ void Server::ProcessRestoreReq(int             req_id,
 		restore_reply.file_size = htonl(0);
 		restore_reply.req_status = htons(BAD_REQ_PKT);
 		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-		BlockSignals();
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Incomplete request packet");
-		UnblockSignals();
 		close(req_sd);
 		return;
     }
-	BlockSignals();
 #ifdef DEBUG  
 	sprintf(log_msg, "RESTORE request from %s", restore_req.owner);
 	Log(req_id, log_msg);
@@ -1527,26 +1490,21 @@ void Server::ProcessRestoreReq(int             req_id,
 #endif
 	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, inet_ntoa(shadow_IP),
 			restore_req.owner, restore_req.filename);
-	UnblockSignals();
 	if ((preexist=stat(pathname, &chkpt_file_status)) != 0) {
 		restore_reply.server_name.s_addr = htonl(0);
 		restore_reply.port = htons(0);
 		restore_reply.file_size = htonl(0);
 		restore_reply.req_status = htons(DESIRED_FILE_NOT_FOUND);
 		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-		BlockSignals();
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(req_id, log_msg);
 		Log("Requested file does not exist on server");
-		UnblockSignals();
 		close(req_sd);
 		return;
     } else if (preexist == 0) {
-		BlockSignals();
 		imds.AddFile(shadow_IP, restore_req.owner, restore_req.filename, 
 					 chkpt_file_status.st_size, ON_SERVER);
-		UnblockSignals();
 	}
       data_conn_sd = I_socket();
       if (data_conn_sd == INSUFFICIENT_RESOURCES) {
@@ -1555,12 +1513,10 @@ void Server::ProcessRestoreReq(int             req_id,
 		  restore_reply.file_size = htonl(0);
 		  restore_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
 		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-		  BlockSignals();
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
 		  Log(req_id, log_msg);
 		  Log("Insufficient buffers/ports to handle request");
-		  UnblockSignals();
 		  close(req_sd);
 		  return;
 	  } else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
@@ -1569,12 +1525,10 @@ void Server::ProcessRestoreReq(int             req_id,
 		  restore_reply.file_size = htonl(0);
 		  restore_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
 		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-		  BlockSignals();
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
 		  Log(req_id, log_msg);
 		  Log("Cannot botain a new socket from server");
-		  UnblockSignals();
 		  close(req_sd);
 		  return;
 	  }
@@ -1592,8 +1546,6 @@ void Server::ProcessRestoreReq(int             req_id,
 		  Log(0, log_msg);
 		  exit(LISTEN_ERROR);
 	  }
-      BlockSignals();
-      UnblockSignals();
       restore_reply.server_name = server_addr;
       // From the I_bind() call, the port should already be in network-byte
       //   order
@@ -1603,16 +1555,13 @@ void Server::ProcessRestoreReq(int             req_id,
       if (net_write(req_sd, (char*) &restore_reply, 
 					sizeof(restore_reply_pkt)) < 0) {
 		  close(req_sd);
-		  BlockSignals();
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
 		  Log(req_id, log_msg);
 		  Log("Cannot send IP/port to shadow (socket closed)");
-		  UnblockSignals();
 		  close(data_conn_sd);
 	  } else {
 		  close(req_sd);
-		  BlockSignals();
 		  child_pid = fork();
 		  if (child_pid < 0) {
 			  close(data_conn_sd);
@@ -1644,7 +1593,6 @@ void Server::ProcessRestoreReq(int             req_id,
 									 chkpt_file_status.st_size);
 			  exit(CHILDTERM_SUCCESS);
 		  }
-		  UnblockSignals();
 	  }
 }
 
@@ -1734,7 +1682,6 @@ void Server::ChildComplete()
 
 	memset((char *) &peer_addr, 0, sizeof(peer_addr));
 	
-	BlockSignals();
 	while ((child_pid=waitpid(-1, &exit_status, WNOHANG)) > 0) {
 		if (WIFEXITED(exit_status)) {
 			exit_code = WEXITSTATUS(exit_status);
@@ -1911,7 +1858,6 @@ void Server::ChildComplete()
 		}
 		transfers.Delete(child_pid, success_flag, peer_addr, xfer_size);
     }
-	UnblockSignals();
 }
 
 
@@ -1994,6 +1940,8 @@ void InstallSigHandlers()
 		dprintf(D_ALWAYS, "ERROR: cannot install SIGALRM signal handler\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
+
+	BlockSignals();
 }
 
 
