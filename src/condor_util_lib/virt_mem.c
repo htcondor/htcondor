@@ -461,11 +461,8 @@ if (getuid()==0)
 	limit = lim.rlim_max / 1024;
 
 	if( limit < size ) {
-		dprintf( D_FULLDEBUG, "Returning %d\n", limit );
 		return limit;
 	} else {
-		dprintf( D_FULLDEBUG, "Returning %d\n", size );
-                /*printf("Returning size %d\n",size);*/
 		return size;
 	}
 }

@@ -185,3 +185,17 @@ sin_to_string(struct sockaddr_in *sin)
 	return buf;
 }
 
+display_from( from )
+struct sockaddr_in  *from;
+{
+    struct hostent  *hp, *gethostbyaddr();
+
+    if( (hp=gethostbyaddr((char *)&from->sin_addr,
+                sizeof(struct in_addr), from->sin_family)) == NULL ) {
+        dprintf( D_ALWAYS, "from (%s), port %d\n",
+            inet_ntoa(from->sin_addr), ntohs(from->sin_port) );
+    } else {
+        dprintf( D_ALWAYS, "from %s, port %d\n",
+                                        hp->h_name, ntohs(from->sin_port) );
+    }
+}
