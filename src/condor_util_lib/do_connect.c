@@ -24,6 +24,10 @@
 ** 
 ** Authors:  Allan Bricker and Michael J. Litzkow,
 ** 	         University of Wisconsin, Computer Sciences Dept.
+**
+** Modified by : Dhaval N. Shah
+**               University of Wisconsin, Computer Sciences Dept.
+** Uses <IP:PORT> rather than hostnames
 ** 
 */ 
 
@@ -83,19 +87,6 @@ int		timeout;
 	int					fd;
 	int					true = 1;
 
-	hostentp = gethostbyname( host );
-	if( hostentp == NULL ) {
-#if defined(vax) && !defined(ultrix)
-		herror( "gethostbyname" );
-#endif
-		dprintf( D_ALWAYS, "Can't find host \"%s\" (Nameserver down?)\n",
-							host );
-		return( -1 );
-	}
-
-	port = find_port_num( service, port );
-
-
 	if( (fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
 		EXCEPT( "socket" );
 	}
@@ -104,10 +95,30 @@ int		timeout;
 		EXCEPT( "setsockopt( SO_KEEPALIVE )" );
 	}
 
+	hostentp = gethostbyname( host );
+    /*dprintf(D_ALWAYS, "inside do_connect host is %s\n",host); */
+    if (host[0]=='<'){ /* dhaval */
+    	string_to_sin(host,&sin);
+    	/*dprintf(D_ALWAYS, "After stringtosin host is %s\n",host);*/
+    } else {
+		if( hostentp == NULL ) {
+#if defined(vax) && !defined(ultrix)
+		herror( "gethostbyname" );
+#endif
+		dprintf( D_ALWAYS, "Can't find host \"%s\" (Nameserver down?)\n",
+							host );
+		return( -1 );
+	}
+	port = find_port_num( service, port );
+}
+
+	/*dprintf(D_ALWAYS,"host is %s\n",host); */
+	if (host[0]!='<'){ /* dhaval */
 	memset( (char *)&sin,0,sizeof(sin) );
 	memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
 	sin.sin_family = hostentp->h_addrtype;
 	sin.sin_port = htons(port);
+	}
 
 	/*
 	dprintf( D_ALWAYS, "Connecting now...\n" );
