@@ -1101,7 +1101,7 @@ static int IsSchedulerUniverse(shadow_rec* srec);
 
 extern "C" {
 void
-abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
+abort_job_myself( PROC_ID job_id, bool log_hold, bool notify, bool destroy )
 {
 	shadow_rec *srec;
 	int mode;
@@ -1122,10 +1122,11 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 	// are removing the job).
 
     dprintf( D_FULLDEBUG, 
-			 "abort_job_myself: %d.%d log_hold: %s notify: %s\n", 
+			 "abort_job_myself: %d.%d log_hold:%s; notify:%s; destroy:%s\n", 
 			 job_id.cluster, job_id.proc, 
 			 log_hold ? "true" : "false",
-			 notify ? "true" : "false" );
+			 notify ? "true" : "false",
+			 destroy ? "true" : "false" );
 
 		// Note: job_ad should *NOT* be deallocated, so we don't need
 		// to worry about deleting it before every return case, etc.
@@ -1208,8 +1209,8 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 		job_id.proc = 0;		// PVM shadow is always associated with proc 0
 	} 
 
-	// If it is not a Globus Universe job (which has already been dealt with above), 
-	// then find the process/shadow managing it.
+	// If it is not a Globus Universe job (which has already been
+	// dealt with above), then find the process/shadow managing it.
 	if ((job_universe != CONDOR_UNIVERSE_GLOBUS) && 
 		(srec = scheduler.FindSrecByProcID(job_id)) != NULL) 
 	{
@@ -1300,9 +1301,14 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			srec->removed = TRUE;
 		}
 
-		return;        
-    } 
-	
+		return;
+    }
+
+	// If there's no "shadow record", and we're here to destroy,
+	// force it...
+	if (  destroy  && !srec ) {
+		mode = REMOVED;
+	}
 
 	// If we made it here, we did not find a shadow or other job manager 
 	// process for this job.  Just handle the operation ourselves.
@@ -1726,7 +1732,7 @@ Scheduler::abort_job(int, Stream* s)
 					nToRemove);
 				return FALSE;
 			}
-			abort_job_myself(job_id, false, true);
+			abort_job_myself(job_id, false, true, true );
 			nToRemove--;
 		}
 		s->end_of_message();
@@ -1764,7 +1770,7 @@ Scheduler::abort_job(int, Stream* s)
 			if ( (ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster) == 1) &&
 				 (ad->LookupInteger(ATTR_PROC_ID,job_id.proc) == 1) ) {
 
-				 abort_job_myself(job_id, false, true);
+				 abort_job_myself(job_id, false, true, true);
 
 			}
 			FreeJobAd(ad);
@@ -2529,7 +2535,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			if( i % 10 == 0 ) {
 				daemonCore->ServiceCommandSocket();
 			}
-			abort_job_myself( jobs[i], true, notify );
+			abort_job_myself( jobs[i], true, notify, true );
 		}
 	} else if( action == JA_RELEASE_JOBS ) {
 		for( i=0; i<num_matches; i++ ) {
@@ -7259,18 +7265,17 @@ abortJobRaw( ClassAd *jobAd, int cluster, int proc, const char *reason )
 		return false;
 	}
 
-	abort_job_myself( job_id, true, true );
-	dprintf( D_ALWAYS, "Job %d.%d aborted: %s\n", cluster, proc, reason );
-
-	if ( CONDOR_UNIVERSE_SCHEDULER != universe ) {
-		DestroyProc(cluster,proc);
-	} else {
+	// Add the remove reason to the job's attributes
+	if ( reason && *reason ) {
 		MyString	removeReason;
-
 		removeReason.sprintf( "%s=\"%s\"", ATTR_REMOVE_REASON, reason );
 		jobAd->Insert( removeReason.Value( ) );
 	}
-	
+
+	// Abort the job now
+	abort_job_myself( job_id, true, true, true );
+	dprintf( D_ALWAYS, "Job %d.%d aborted: %s\n", cluster, proc, reason );
+
 	return true;
 }
 
@@ -7373,7 +7378,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	dprintf( D_ALWAYS, "Job %d.%d put on hold: %s\n", cluster, proc,
 			 reason );
 
-	abort_job_myself( tmp_id, true, notify_shadow );
+	abort_job_myself( tmp_id, true, notify_shadow, false );
 
 		// finally, email anyone our caller wants us to email.
 	if( email_user || email_admin ) {
