@@ -2649,6 +2649,9 @@ Scheduler::child_exit(int pid, int status)
 		StartJobsFlag=FALSE;
 	 }  // big if..else if...
 	if( ExitWhenDone && numShadows == 0 ) {
+		// write a clean job queue on graceful shutdown so we can quickly
+		// recover on restart
+		CleanJobQueue();
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		DC_Exit(0);
 	}
@@ -3151,6 +3154,9 @@ void
 Scheduler::shutdown_graceful()
 {
 	if( numShadows == 0 ) {
+		// write a clean job queue on graceful shutdown so we can quickly
+		// recover on restart
+		CleanJobQueue();
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		DC_Exit(0);
 	} else {
