@@ -842,6 +842,7 @@ GetIds( const char *path, uid_t *owner, gid_t *group )
 	case SIGood:
 		*owner = si.GetOwner( );
 		*group = si.GetGroup( );
+		return true;
 		break;
 	case SINoFile:
 			// Silently return false
