@@ -26,14 +26,15 @@ main()
 {
   config( 0 );
   MyString LogFileName=param("SPOOL");
-  LogFileName+="/MatchStat.log";
+  LogFileName+="/job_history.log";
   FILE* LogFile=fopen(LogFileName,"r");
   if (!LogFile) {
-    cerr << "ERROR - failed to open log file " << LogFileName.Value() << endl;
+    cerr << "No jobs logged in the history file." << endl;
     exit(1);
   }
   
   int EndFlag=0;
+  short_header();
   while(!EndFlag) {
     ClassAd* ad=new ClassAd(LogFile,"***",EndFlag);
     displayJobShort(ad);
@@ -69,8 +70,8 @@ displayJobShort (ClassAd *ad)
         shorten (owner, 14);
         if (ad->EvalString ("Args", NULL, args)) strcat (cmd, args);
         shorten (cmd, 18);
-        //short_print (cluster, proc, owner, date, (int)utime, status, prio,
-        //                                image_size, cmd); 
+        short_print (cluster, proc, owner, date, (int)utime, status, prio,
+                                        image_size, cmd); 
 
 }
 
