@@ -460,7 +460,7 @@ sub Monitor
 sub debug
 {
     my $string = shift;
-    print "DEBUG ", timestamp(), ": string" if $DEBUG;
+    print( "DEBUG ", timestamp(), ": $string" ) if $DEBUG;
 }
 
 sub ParseSubmitFile
