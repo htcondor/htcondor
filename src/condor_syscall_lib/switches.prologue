@@ -36,6 +36,10 @@
 #	include <signal.h>
 #endif
 
+#if defined(AIX32)
+#	include <signal.h>
+#endif
+
 #if defined(OSF1)
 #	include <sys/poll.h>
 #	include <rpc/types.h>
@@ -48,6 +52,9 @@
 #	include <sys/mman.h>
 #	include <sys/addrconf.h>
 #	include <sys/sysinfo.h>
+#endif
+
+#if defined(OSF1) || defined(AIX32)
 #	define semctl __hide_semctl
 #	include <sys/sem.h>
 #	undef semctl
@@ -57,7 +64,7 @@
 #if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
 #	include <sys/param.h>
 #	include <sys/mount.h>
-#else
+#elif !defined(AIX32)
 #	include <sys/mount.h>
 #endif
 
@@ -67,9 +74,29 @@
 #	include <sys/vfs.h>		 /* for struct statfs */
 #endif
 
+#if defined(AIX32)
+#	include <sys/statfs.h>		 /* for struct statfs */
+#	include <sys/msg.h>		 	/* for struct msqid_ds */
+#endif
+
+#if defined(AIX32)
+#	define shmget __hide_shmget
+#	include <sys/shm.h>		 	/* for struct shmid_ds */
+#	undef shmget
+	int shmget( key_t key, unsigned int size, unsigned int flags );
+#endif
+
 #if defined(SUNOS41)
 #	define TRUE 1
 #	define FALSE 0
+#endif
+
+	/* Use 32 bits for file mode (mode_t) everywhere - hope nobody wants more */
+#undef MODE_T
+#if defined(AIX32)
+#	define MODE_T ulong_t
+#else
+#	define MODE_T unsigned int
 #endif
 
 #undef umask
