@@ -373,6 +373,7 @@ int OciSession::doProbeJobs()
 		goto doProbeJobs_error_exit;
 	}
 
+		// This sizeof() may be bogus
 	rc = OCIDefineByPos( stmt_hndl, &define3_hndl, ociErrorHndl, 3,
 						 &job_this_date, sizeof(job_this_date), SQLT_DATE,
 						 &this_date_indp, NULL, NULL, OCI_DEFAULT);
