@@ -32,6 +32,14 @@ The details of each version are described below.
   without warning the administrator that the \MacroNI{START}
   expression could not be parsed.
 
+\item The \Condor{starter} now checks to make sure that the value of
+      the \MacroNI{JOB\_RENICE\_INCREMENT} expression is within the
+      valid range of 0 to 19, and adjusts out-of-range values to the
+      closest valid value, printing a warning to the StarterLog.
+      Previously, no warnings were printed.  Also, under Windows,
+      values above 19 used to be incorrectly adjusted to 0 (i.e.,
+      normal priority) instead of 19 (i.e., idle priority class).
+
 \end{itemize}
 
 \noindent Known Bugs:
