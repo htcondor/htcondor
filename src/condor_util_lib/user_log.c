@@ -43,16 +43,10 @@
   provided to prevent scrambled output.
 */
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "file_lock.h"
-#include <pwd.h>
-#include <stdarg.h>
 #include "user_log.h"
-#include <time.h>
 
 static char *_FileName_ = __FILE__;
 

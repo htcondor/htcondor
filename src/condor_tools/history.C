@@ -34,21 +34,6 @@
 
 #pragma implementation "list.h"
 
-#define _POSIX_SOURCE
-#if 0
-#include <stdio.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include "types.h"
-#include "util_lib_proto.h"
-#include "proc_obj.h"
-#include "filter.h"
-#include "alloc.h"
-#else
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#endif
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"

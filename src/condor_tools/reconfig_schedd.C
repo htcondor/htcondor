@@ -35,7 +35,6 @@
 *********************************************************************/
 
 
-#include <stdio.h>
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"

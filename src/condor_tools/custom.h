@@ -31,9 +31,6 @@
 
 #include <stdio.h>
 
-const int TRUE = 1;
-const int FALSE = 0;
-
 int confirm( const char *prompt );
 
 

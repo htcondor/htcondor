@@ -44,20 +44,7 @@
 ************************************************************************/
 
 #include "condor_common.h"
-
-#include <stdio.h>
-#undef va_start
-#undef va_end
 #include <varargs.h>
-#include <time.h>
-#include <errno.h>
-
-#if !defined(WIN32)
-#include <sys/file.h>
-#include <sys/param.h>
-#endif
-
-#include <sys/stat.h>
 
 #include "condor_sys.h"
 #include "debug.h"
@@ -65,21 +52,7 @@
 #include "except.h"
 #include "condor_uid.h"
 
-#if defined(HPUX9) || defined(AIX32) || defined(LINUX) || defined (OSF1)
-#	include <signal.h>
-#endif
-
-#if defined(HPUX9) || defined(Solaris) || defined(OSF1)
-#	include "fake_flock.h"
-#endif
-
-#if defined(Solaris)
-#	include <sys/signal.h> 
-#	include <sys/fcntl.h> 
-#endif
-
-FILE	*debug_lock();
-
+FILE *debug_lock();
 FILE *open_debug_file( char flags[] );
 void debug_unlock();
 void preserve_log_file();
@@ -116,8 +89,8 @@ char *DebugFlagNames[] = {
 /*
 **	Initialize the DebugFP to a specific file number.
 */
-dprintf_init( fd )
-int fd;
+void
+dprintf_init( int fd )
 {
 	FILE *fp;
 	int		tmp_errno;

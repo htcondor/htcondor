@@ -36,8 +36,6 @@
 
 #include "condor_common.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <malloc.h>
 #undef va_start
 #undef va_end

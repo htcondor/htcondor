@@ -26,18 +26,8 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-
+#include "condor_common.h"
 #include "custom.h"
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-
 
 char * copy( const char *str );
 int is_empty( const char *str );

@@ -31,20 +31,9 @@
   with the user to get/confirm settings.
 */
 
-#define _POSIX_SOURCE
-
-#include <stdio.h>
-#include "condor_fix_unistd.h"		// get geteuid()
-#include <stdlib.h>		// for system() (yuck!)
-#include <limits.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <pwd.h>
-#include <grp.h>
+#include "condor_common.h"
 #include "custom.h"
-
-const int MATCH = 0;	// for strcmp()
+#include <grp.h>
 
 int check_dir( const char *path );
 int check_exec( const char *path );
