@@ -1,3 +1,9 @@
+11/19/99 V6_1_10-CAE-beta
+        A beta version of 6.1.10 that I (Derek) packaged for CAE for
+        clipped Solaris 2.7 support.  I didn't release the real 6.1.10
+        today because I ran out of time.  I just wanted to tag this in
+        case they have problems so we know what code they have.  
+	 
 11/5/99 V6_1_9
 	The 6.1.9 release tag, which lives on the trunk.
 
