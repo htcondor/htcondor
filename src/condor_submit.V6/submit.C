@@ -1604,14 +1604,28 @@ SetRank()
 	char *append_rank = NULL;
 	rank[0] = '\0';
 
-	if ( JobUniverse == STANDARD ) {
+	switch( JobUniverse ) {
+	case STANDARD:
 		default_rank = param("DEFAULT_RANK_STANDARD");
 		append_rank = param("APPEND_RANK_STANDARD");
-	}
-	if ( JobUniverse == VANILLA ) {
+		break;
+	case VANILLA:
 		default_rank = param("DEFAULT_RANK_VANILLA");
 		append_rank = param("APPEND_RANK_VANILLA");
-	} 
+		break;
+	default:
+		default_rank = NULL;
+		append_rank = NULL;
+	}
+
+		// If they're not yet defined, or they're defined but empty,
+		// try the generic, non-universe-specific versions.
+	if( ! default_rank || ! default_rank[0]  ) {
+		default_rank = param("DEFAULT_RANK");
+	}
+	if( ! append_rank || ! append_rank[0]  ) {
+		append_rank = param("APPEND_RANK");
+	}
 
 		// If any of these are defined but empty, treat them as
 		// undefined, or else, we get nasty errors.  -Derek W. 8/21/98
