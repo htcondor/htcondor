@@ -46,11 +46,26 @@
 #define PlatformIncludeFile <SPARC_CMOS.cf>
 #endif
 
+/*
+ * differing automatically between Solaris and SunOS is difficult
+ * the cpp does not predefine anything that might give us a clue that this
+ * might be Solaris
+ */
 #if defined(sun) && defined(sparc)
 #undef sun
 #undef sparc
-#define Platform SPARC_SUNOS41
-#define PlatformIncludeFile <SPARC_SUNOS41.cf>
+
+/* this works, but is pretty ugly */
+#include <limits.h>
+
+#	ifndef MB_LEN_MAX
+#		define Platform SPARC_SUNOS41
+#		define PlatformIncludeFile <SPARC_SUNOS41.cf>
+#	else
+#		define Platform SPARC_SOLARIS2
+#		define PlatformIncludeFile <SPARC_SOLARIS2.cf>
+#	endif
+
 #endif
 
 #if defined(mc68000) && defined(hp300)
