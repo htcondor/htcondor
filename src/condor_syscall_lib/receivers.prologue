@@ -211,4 +211,5 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 assert( syscall_sock->end_of_message() );;
                 return 0;
         }
-#endif
+#endif  // of ifdef PVM_RECEIVE
+

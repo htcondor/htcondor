@@ -1,3 +1,9 @@
+#ifdef LINK_PVM   
+	// only include CONDOR_work_request when compiling up the PVM
+	// starter.  It is used to send startup job info between the PVM
+	// starter and shadow.  we do not want it in the regular condor_syscall_lib
+	// because it sends Class Ads, and we do not want to force users to
+	// link their STANDARD universe jobs with the classad library. -Todd 12/97
 	case CONDOR_work_request:
 	  {
 		ClassAd *ad;
@@ -34,6 +40,7 @@
 		assert( syscall_sock->end_of_message() );
 		break;
 	}
+#endif
 
 	case CONDOR_send_file:
 	  {

@@ -97,7 +97,11 @@
 #endif
 
 #include "syscall_param_sizes.h"
+
+#ifdef LINK_PVM
+// ClassAds needed for start_work_request used by PVM starter/shadow
 #include "condor_classad.h"
+#endif
 
 typedef int open_flags_t;
 
