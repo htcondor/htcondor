@@ -32,5 +32,5 @@ public :
 	int  operator >> (UpDown & upDown);       // returns Success or Error
 };
 
-#endif __FILE_C
+#endif /* __FILE_C */
 
