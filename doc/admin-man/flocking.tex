@@ -2,12 +2,15 @@
 \subsection{\label{sec:Flocking}
 Flocking: Configuring a Schedd to Submit to Multiple Pools}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{flocking!definition of}
+\index{Condor!flocking}
 
 The \Condor{schedd} may be configured to submit jobs to more than one
 pool---this is known as flocking. If Condor pool A can send jobs to
 Condor pool B, then we say that A flocks to B. Flocking can be one
 way, such as A flocking to B, or it can be set up in both directions. 
 
+\index{configuration!for flocking}
 To configure flocking, you normally need to set just two configuration
 variables. Assume you have the situation where pool A is flocking to
 pool B. In pool A, set \Macro{FLOCK\_TO} to the host name of the
