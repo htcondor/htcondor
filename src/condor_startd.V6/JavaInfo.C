@@ -201,11 +201,11 @@ int JavaInfo::query_reaper( int pid, int status )
 			int is_eof=0, is_error=0, is_empty=0;
 			ClassAd ad(file,"***",is_eof,is_error,is_empty);
 			if(is_error) {
-				dprintf( D_FULLDEBUG, 
+				dprintf( D_FAILURE|D_FULLDEBUG, 
 						 "JavaInfo: Query result is not a valid ClassAd.\n" );
 				show_error = true;
 			} else if(is_empty) {
-				dprintf( D_FULLDEBUG, "JavaInfo: Query result is empty.\n" );
+				dprintf( D_FAILURE|D_FULLDEBUG, "JavaInfo: Query result is empty.\n" );
 				show_error = true;
 			} else {
 				has_java = true;
@@ -224,12 +224,12 @@ int JavaInfo::query_reaper( int pid, int status )
 			}
 			fclose(file);
 		} else {
-			dprintf( D_FULLDEBUG, "JavaInfo: Query process did not leave any "
+			dprintf( D_FAILURE|D_FULLDEBUG, "JavaInfo: Query process did not leave any "
 					 "output in %s\n", output_file );
 			show_error = true;
 		}		
 	} else  {
-		dprintf( D_FULLDEBUG, "JavaInfo: Java is not installed.\n" );
+		dprintf( D_FAILURE|D_FULLDEBUG, "JavaInfo: Java is not installed.\n" );
 		show_error = true;
 	}
 
