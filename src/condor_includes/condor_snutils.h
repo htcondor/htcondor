@@ -27,9 +27,6 @@
 	we need to provide it. Currently that seems only to be SOLARIS251
 	epaulson 6/18/2002 */
 
-/* do not perform this remapping under NT */
-#ifndef WIN32
-
 BEGIN_C_DECLS
 
 #ifdef NEED_SNPRINTF
@@ -44,9 +41,7 @@ int vprintf_length(const char *format, va_list args);
 
 END_C_DECLS
 
-#endif /* WIN32 */
-
-#endif /* CONDOR_FIX_ACCESS_H */
+#endif /* CONDOR_SNUTILS_H */
 
 
 
