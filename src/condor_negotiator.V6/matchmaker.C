@@ -259,7 +259,7 @@ RESCHEDULE_commandHandler (int, Stream *)
 			case MM_ERROR:
 			default:
 				dprintf( D_ALWAYS,"\tError: Ignoring schedd for this cycle\n" );
-				scheddAds.Delete( schedd );
+				// scheddAds.Delete( schedd );
 		}
 	}
 	scheddAds.Close();
