@@ -139,7 +139,7 @@ int JavaProc::ParseExceptionFile( FILE *file, char *ex_name, char *ex_type )
 
 /*
 Given a POSIX exit status and the wrapper status files,
-return exactly hoe the job exited.  Along the way, fill
+return exactly how the job exited.  Along the way, fill
 in information about exceptions into the JobAd.
 */
 
@@ -217,6 +217,20 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 }
 
 /*
+If the job exits with an exception, make it look
+similar to exiting a C program with a signal.
+Code that digs Java can look in the update ad for
+the actual ExceptionName, and code that doesn't
+dig Java still gets the general idea.
+*/
+
+#ifdef WIN32
+#define EXCEPTION_EXIT_CODE 1
+#else
+#define EXCEPTION_EXIT_CODE ( ((SIGTERM) << 8) & 0x7f )
+#endif
+
+/*
 If our job exited, then parse the output of the wrapper,
 and return a POSIX status that resembles exactly what
 happened.
@@ -232,7 +246,7 @@ int JavaProc::JobCleanup(int pid, int status)
 				/* status is unchanged */
 				break;
 			case JAVA_EXIT_EXCEPTION:
-				status = 1;
+				status = EXCEPTION_EXIT_CODE;
 				break;
 			default:
 			case JAVA_EXIT_SYSTEM_ERROR:
