@@ -44,9 +44,10 @@
 #include "except.h"
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-int		Kmem;
+static int	Kmem;
+static int	KernelLookupFailed = 0;
 
-
+float lookup_load_avg();
 
 struct nlist nl[] = {
 #if defined(IRIX331) || defined(HPUX9) || defined(IRIX53)
@@ -67,16 +68,14 @@ struct nlist64  nl64[] = {
 float
 calc_load_avg()
 {
-	static int got_k_vars = 0;
-	float lookup_load_avg();
+	float val;
+	
+	if (!KernelLookupFailed)
+		val = lookup_load_avg();
+	if (KernelLookupFailed)
+		val = lookup_load_avg_via_uptime();
 
-	/* if we have big-cheese access, open up /dev/kmem fist time thru.. */
-	if ( !got_k_vars && (getuid() == 0) ) {
-		got_k_vars = 1;
-		get_k_vars();
-	}
-		
-	return lookup_load_avg();
+	return val;
 }
 
 /*
@@ -84,12 +83,17 @@ calc_load_avg()
 */
 get_k_vars()
 {
-	set_root_euid();
+	priv_state priv;
+
+	priv = set_root_priv();
 
         /* Open kmem for reading */
     if( (Kmem=open("/dev/kmem",O_RDONLY,0)) < 0 ) {
-		set_condor_euid();
-        EXCEPT( "open(/dev/kmem,O_RDONLY,0)" );
+		set_priv(priv);
+		KernelLookupFailed = 1;
+        dprintf(D_ALWAYS, "open(/dev/kmem,O_RDONLY) failed, "
+				"getting loadavg from uptime");
+		return;
     }
 
 	/* Get the kernel's name list */
@@ -97,12 +101,16 @@ get_k_vars()
 #if defined(IRIX62)
 	/* here we assume that all IRIX 6.x kernels are compiled as a ELF binary.  If the
 	 * kernel, i.e. /unix, is indeed a COFF binary, the below will fail with an exception.
-	 * first try a 32-bit ELF binary, then a 64-bit ELF, then fail. -Todd 2/97 */
-    if ( _libelf_nlist("/unix",nl) == -1 )
-		if (_libelf_nlist64("/unix",nl64) == -1 ) {
-			EXCEPT("cannot read /unix as an ELF binary");
-		}
-	nl->n_value &= ~0x80000000;
+	 * first try a 32-bit ELF binary, then a 64-bit ELF, then fail.-Todd 2/97 */
+  if ( _libelf_nlist("/unix",nl) == -1 )
+	  if (_libelf_nlist64("/unix",nl64) == -1 ) {
+		  set_priv(priv);
+		  KernelLookupFailed = 1;
+		  dprintf(D_ALWAYS, "cannot read /unix as an ELF binary, "
+				  "getting loadavg from uptime");
+		  return;
+	  }
+  nl->n_value &= ~0x80000000;
 #elif defined(IRIX331) || defined(IRIX53)
 	(void)nlist( "/unix", nl );
 	nl->n_value &= ~0x80000000;
@@ -114,8 +122,7 @@ get_k_vars()
 	(void)nlist( "/vmunix", nl );
 #endif
 
-	set_condor_euid();
-
+	set_priv(priv);
 }
 
 
@@ -139,15 +146,15 @@ get_k_vars()
 float
 lookup_load_avg()
 {
-    off_t addr;
-	size_t result;
+    off_t 		addr;
+	priv_state	priv;
 
 #if defined(HPPAR) && defined(HPUX9)			/* HP-UX */
-    double  avenrun[3];
+    double  	avenrun[3];
 #elif defined(ULTRIX42) || defined(ULTRIX43)
-	fix		avenrun[3];
+	fix			avenrun[3];
 #elif defined(SUNOS41) || defined(IRIX331) || defined(IRIX53)
-    long avenrun[3];
+    long 		avenrun[3];
 #endif
 
 #if defined(IRIX62)
@@ -164,14 +171,23 @@ lookup_load_avg()
 	avenrun[1] = 0;
 	avenrun[2] = 0;
 
+	priv = set_root_priv();
+
     if( lseek(Kmem,addr,0) != addr ) {
+		set_priv(priv);
+		KernelLookupFailed = 1;
         dprintf( D_ALWAYS, "Can't seek to addr 0x%x in /dev/kmem\n", addr );
-        EXCEPT( "lseek" );
+		return 0.0;
     }
 
-    if( (result=read(Kmem,(char *)avenrun,sizeof avenrun)) != sizeof avenrun ) {
-        EXCEPT( "read" );
+    if( read(Kmem,(char *)avenrun,sizeof avenrun) != sizeof avenrun ) {
+		set_priv(priv);
+		KernelLookupFailed = 1;
+        dprintf( D_ALWAYS, "read loadavg from /dev/kmem failed" );
+		return 0.0;
     }
+
+	set_priv(priv);
 
         /* just give back the 1 minute average for now */
 
