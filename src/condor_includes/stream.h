@@ -481,7 +481,7 @@ public:
         //------------------------------------------
         // Encryption support below
         //------------------------------------------
-        bool set_encryption_protocol(KeyInfo * key);
+        bool set_crypto_key(KeyInfo * key);
         //------------------------------------------
         // PURPOSE: set sock to use a particular encryptio
         // REQUIRE: KeyInfo -- a wrapper for keyData, if key == NULL
@@ -489,19 +489,12 @@ public:
         // RETURNS: true -- success; false -- failure
         //------------------------------------------
 
-        bool get_encryption_protocol(KeyInfo * key);
+        //bool get_crypto_key(KeyInfo * key);
         //------------------------------------------
         // PURPOSE: return the current encryption protocol used,
         //          if any
         // REQUIRE: None
         // RETURNS: true -- key matched; false -- otherwise
-        //------------------------------------------
-
-        void set_encryption_off();
-        //------------------------------------------
-        // PURPOSE: Turn encryption off
-        // REQUIRE: None
-        // RETURNS: None
         //------------------------------------------
 
         bool get_encryption();
