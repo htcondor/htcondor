@@ -40,7 +40,9 @@ REMAP_ONE( fchdir, _fchdir, int, int )
 REMAP_TWO( fchmod, _fchmod, int , int , unsigned long )
 REMAP_THREE( fchown, _fchown, int , int , uid_t , gid_t )
 REMAP_ZERO( fork, _fork, pid_t )
+REMAP_ZERO( fork1, _fork1, pid_t )
 REMAP_TWO( fstatfs, _fstatfs, int , int , struct statfs *)
+REMAP_THREE( getdents, _getdents, int , int , char *, int )
 REMAP_ZERO( getgid, _getgid, gid_t )
 /* REMAP_TWO( getgroups, _getgroups, int , int , gid_t []) */
 REMAP_TWO( getgroups, _getgroups, int , int , gid_t *)
@@ -87,4 +89,10 @@ REMAP_ONE( unlink, _unlink, int , const char *)
 /* REMAP_TWO( utimes, _utimes, int , const char *, struct timeval []) */
 REMAP_TWO( utimes, _utimes, int , const char *, struct timeval *)
 REMAP_ZERO( vfork, _vfork, pid_t )
+REMAP_ONE( wait, _wait, pid_t , int *)
 REMAP_THREE( writev, _writev, int, int, const struct iovec *, int )
+
+
+
+
+
