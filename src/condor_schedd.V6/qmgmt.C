@@ -325,14 +325,17 @@ FreeConnection()
 int
 UnauthenticatedConnection()
 {
-	dprintf( D_ALWAYS, "Unable to authenticate connection.  Setting owner"
-			" to \"nobody\"\n" );
+	dprintf(D_FULLDEBUG,"in UnauthenticatedConnection--\n" );
+	dprintf( D_ALWAYS, "Unable to authenticate connection.  Setting active "
+			"owner to \"nobody\"\n" );
 	init_user_ids("nobody");
 #if !defined(WIN32)
 	active_owner_uid = get_user_uid();
 #endif
 	if (active_owner != 0)
 		free(active_owner);
+	dprintf(D_FULLDEBUG,"in UnauthenticatedConnection, setting active_owner "
+			"to \"nobody\"\n" );
 	active_owner = strdup( "nobody" );
 	if (rendevous_file != 0)
 		free(rendevous_file);
@@ -347,6 +350,8 @@ ValidateRendevous()
 {
 	struct stat stat_buf;
 
+	dprintf(D_FULLDEBUG,"in ValidateRendevous, active_owner is \"%s\"\n",
+			active_owner );
 	/* user "nobody" represents an unauthenticated user */
 	if (strcmp(active_owner, "nobody") == 0) {
 		return 0;
@@ -431,14 +436,15 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 		else {
 //			if ( GSSAuthenticated ) {
 			if ( Q_SOCK->isAuthenticated() ) {
-				dprintf( D_ALWAYS, "OwnerCheck authorized %s for remote submit\n",
+				dprintf( D_FULLDEBUG,"OwnerCheck authorized %s for remote submit\n",
 						test_owner );
 				return( 1 );
 			}
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
-			dprintf( D_FULLDEBUG, "OwnerCheck: reject %s non-super\n",test_owner );
+			dprintf( D_FULLDEBUG, "OwnerCheck: reject test_owner: %s non-super\n",
+					test_owner );
 			dprintf( D_FULLDEBUG,"OwnerCheck: my_uid: %d, active_owner_uid: %d\n",
 					my_uid,active_owner_uid );
 			return 0;
