@@ -4,9 +4,14 @@
 
 #define Platform		SGI-IRIX65
 #define ImakeOpsysFlag		-DIS_IRIX65
-#define PlatformFlags		-DIRIX65=IRIX65
 #define IS_SGI_IRIX65		YES
 #define IS_IRIX65		YES
+
+#if defined(IS_MIPS3)
+#define PlatformFlags		-DIRIX65=IRIX65 -mips3 -mabi=n32
+#else
+#define PlatformFlags		-DIRIX65=IRIX65
+#endif
 
 #define BaseLibPath /usr/lib32
 #define IRIXABI -n32
@@ -15,4 +20,4 @@
 #define HAS_INET_NTOA NO
 
 /* For now, build a "clipped" version */
-#define IS_CLIPPED YES
+#define IS_CLIPPED NO
