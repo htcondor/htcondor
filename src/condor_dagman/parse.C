@@ -319,8 +319,8 @@ parse_dap(
 					  job->GetJobName() );
 		return false;
 	} else {
-	  //debug_printf( DEBUG_DEBUG_3, "Added Job %s\n",
-	  //			  job->GetJobName() );
+	  debug_printf( DEBUG_DEBUG_3, "Added Job %s\n",
+	  			  job->GetJobName() );
 	}
 	return true;
 }

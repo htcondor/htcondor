@@ -303,10 +303,6 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
         Usage();
     }
-	if( dapLogName ) {
-		debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
-					  dapLogName );
-	}
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName);
     debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n", G.datafile);
@@ -350,11 +346,10 @@ int main_init (int argc, char ** const argv) {
 	MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
 				dagFileName, jobKeyword, G.condorLogFiles);
 
-
-	// the part below prevents DAGs with consisting only from DaP jobs to run.
-	// it should be corrected!
-	/*
-	if( msg != "" || G.condorLogFiles.number() == 0 ) {
+		// The "&& !dapLogName" check below is kind of a kludgey fix to allow
+		// DaP jobs that have no "regular" Condor jobs to run.  Kent Wenger
+		// (wenger@cs.wisc.edu) 2003-09-05.
+	if( (msg != "" || G.condorLogFiles.number() == 0) && !dapLogName ) {
 
 		G.condorLogFiles.rewind();
 		while( G.condorLogFiles.next() ) {
@@ -363,13 +358,17 @@ int main_init (int argc, char ** const argv) {
 
 		G.condorLogFiles.append(condorLogName);
 	 }
-	*/ 
 
 
 	if( G.condorLogFiles.number() > 0 ) {
 		G.condorLogFiles.rewind();
 		debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s, etc.\n",
 					  G.condorLogFiles.next() );
+	}
+
+	if( dapLogName ) {
+		debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
+					  dapLogName );
 	}
 
     G.dag = new Dag( G.condorLogFiles, G.maxJobs, G.maxPreScripts,
