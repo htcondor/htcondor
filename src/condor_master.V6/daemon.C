@@ -373,6 +373,21 @@ daemon::Start()
 		command_port = NEGOTIATOR_PORT;
 	}
 
+	priv_state priv_mode = PRIV_ROOT;
+	
+	sprintf(buf,"%s_USERID",name_in_config_file);
+	char * username = param( buf );
+	if(username) {
+		int result = init_user_ids(username);
+		free(username);
+		if(result) {
+			priv_mode = PRIV_USER_FINAL;
+		} else {
+			dprintf(D_ALWAYS,"couldn't switch to user %s!\n",username);
+			free(username);
+		}
+	}
+
 	sprintf( buf, "%s_ARGS", name_in_config_file );
 	tmp = param( buf );
 	if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
@@ -391,10 +406,11 @@ daemon::Start()
 			sprintf( buf, "%s -f", shortname );
 		}
 	}
+
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
 				buf,			// args
-				PRIV_ROOT,		// privledge level
+				priv_mode,		// privledge level
 				1,				// which reaper ID to use; use default reaper
 				command_port,	// port to use for command port; TRUE=choose one dynamically
 				env,			// environment
@@ -628,7 +644,18 @@ daemon::Obituary( int status )
     dprintf( D_ALWAYS, "Sending obituary for \"%s\"\n",
 			process_name);
 
-    if( (mailer=email_admin_open("Problem")) == NULL ) {
+    char buf[1000];
+
+    sprintf( buf, "%s_ADMIN_EMAIL", name_in_config_file );
+    char *address = param(buf);
+    if(address) {
+        mailer = email_open(address,"Problem");
+        free(address);
+    } else {
+        mailer = email_admin_open("Problem");
+    }
+
+    if( mailer == NULL ) {
         return;
     }
 
