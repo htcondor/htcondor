@@ -353,7 +353,7 @@ SegMap::Read( int fd, ssize_t pos )
 	if( strcmp(name,"DATA") == 0 ) {
 		brk( (char *)(core_loc + len) );
 	}
-	nbytes =  read(fd,(char *)core_loc,len);
+	nbytes =  read(fd,(void *)core_loc,(size_t)len);
 	if( nbytes < 0 ) {
 		return -1;
 	}
@@ -366,7 +366,7 @@ SegMap::Write( int fd, ssize_t pos )
 	if( pos != file_loc ) {
 		fprintf( stderr, "Checkpoint sequence error\n" );
 	}
-	return write(fd,(char *)core_loc,len);
+	return write(fd,(void *)core_loc,(size_t)len);
 }
 
 extern "C" {
@@ -375,16 +375,16 @@ void
 Checkpoint( int sig, int code, void *scp )
 {
 
-	fprintf( stderr, "Got SIGTSTP\n" );
+	printf( "Got SIGTSTP\n" );
 	if( SETJMP(Env) == 0 ) {
-		fprintf( stderr, "About to save MyImage\n" );
+		printf( "About to save MyImage\n" );
 		MyImage.Save();
 		MyImage.Write( "Ckpt.13.13" );
-		fprintf( stderr, "Ckpt exit\n" );
+		printf( "Ckpt exit\n" );
 		exit( 0 );
 	} else {
 		patch_registers( scp );
-		fprintf( stderr, "About to return to user code\n" );
+		printf( "About to return to user code\n" );
 		return;
 	}
 }
