@@ -86,6 +86,8 @@ submitted as a non-Administrator user.
 \item Fixed a bug that would cause Condor to occasionally kill processes
 that didn't belong to it during job eviction or daemon restarts.
 
+\end{itemize}
+
 \item Starting with RedHat 9, newer versions of Linux began to produce
   core files named ``core.<pid>''.
   This broke functionality in Condor that managed and transfered back
@@ -96,7 +98,6 @@ that didn't belong to it during job eviction or daemon restarts.
   This functionality works in all universes, and regardless of if
   Condor's file transfer mechanism is in use or not.
 
-\end{itemize}
 
 \item Fixed a bug that was causing \Condor{startd} to fail to start up
 with the message, "caInsert: Can't insert CpuBusy into target classad."
