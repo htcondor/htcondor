@@ -818,6 +818,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					caInsert( cap, r_cur->ad(), ptr );
 				}
 			}
+				// update ImageSize attribute from procInfo
+			if (r_pinfo.imgsize) {
+				sprintf( line, "%s = %lu", ATTR_IMAGE_SIZE, r_pinfo.imgsize );
+				cap->Insert( line );
+			}
 		}
 	}
 
@@ -900,7 +905,6 @@ Resource::compute_condor_load( void )
 	float max;
 	float load;
 	int numcpus = resmgr->num_cpus();
-	procInfo* pinfo = NULL;
 	int i;
 
 	if( r_starter->active() ) { 
@@ -918,9 +922,12 @@ Resource::compute_condor_load( void )
 			::dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 		}
 
+			// ProcAPI wants a non-const pointer reference, so we need
+			// a temporary.
+		procInfo *pinfoPTR = &r_pinfo;
 		if( (ProcAPI::getProcSetInfo( r_starter->pidfamily(), 
 									  r_starter->pidfamily_size(),  
-									  pinfo) < -1) ) {
+									  pinfoPTR) < -1) ) {
 				// If we failed, it might be b/c our pid family has
 				// stale info, so before we give up for real,
 				// recompute and try once more.
@@ -937,19 +944,15 @@ Resource::compute_condor_load( void )
 
 			if( (ProcAPI::getProcSetInfo( r_starter->pidfamily(), 
 										  r_starter->pidfamily_size(),  
-										  pinfo) < -1) ) {
+										  pinfoPTR) < -1) ) {
 				EXCEPT( "Fatal error getting process info for the starter and decendents" ); 
 			}
 		}
-		if( !pinfo ) {
-			EXCEPT( "Out of memory!" );
-		}
 		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
 			dprintf( D_FULLDEBUG, "Percent CPU usage for those pids is: %f\n", 
-					 pinfo->cpuusage );
+					 r_pinfo.cpuusage );
 		}
-		r_load_queue->push( 1, pinfo->cpuusage );
-		delete pinfo;
+		r_load_queue->push( 1, r_pinfo.cpuusage );
 	} else {
 		r_load_queue->push( 1, 0.0 );
 	}
