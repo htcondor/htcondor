@@ -636,15 +636,16 @@ doContactSchedd()
 			curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
 			curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
 		} else if ( curr_action->actions & UA_HOLD_JOB ) {
-			char buffer[256];
-			if ( GetAttributeString( curr_job->procID.cluster,
-									 curr_job->procID.proc,
-									 ATTR_RELEASE_REASON, buffer )
+			char *reason;
+			if ( GetAttributeStringNew( curr_job->procID.cluster,
+										curr_job->procID.proc,
+										ATTR_RELEASE_REASON, &reason )
 				 >= 0 ) {
 				SetAttributeString( curr_job->procID.cluster,
 									curr_job->procID.proc,
-									ATTR_LAST_RELEASE_REASON, buffer );
+									ATTR_LAST_RELEASE_REASON, reason );
 			}
+			free( reason );
 			DeleteAttribute(curr_job->procID.cluster,
 							curr_job->procID.proc,
 							ATTR_RELEASE_REASON );
@@ -783,6 +784,7 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 					const char *hold_reason =
 						"GlobusResource is not set in the job ad";	
 					char buffer[128];
+					char *reason;
 					dprintf( D_ALWAYS, "Job %d.%d has no Globus resource name!\n",
 							 procID.cluster, procID.proc );
 					// No GlobusResource, so put the job on hold
@@ -790,12 +792,13 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 									 procID.proc,
 									 ATTR_JOB_STATUS,
 									 HELD );
-					if ( GetAttributeString( procID.cluster, procID.proc,
-											 ATTR_RELEASE_REASON, buffer )
+					if ( GetAttributeStringNew( procID.cluster, procID.proc,
+												ATTR_RELEASE_REASON, &reason )
 						 >= 0 ) {
 						SetAttributeString( procID.cluster, procID.proc,
-											ATTR_LAST_RELEASE_REASON, buffer );
+											ATTR_LAST_RELEASE_REASON, reason );
 					}
+					free( reason );
 					DeleteAttribute( procID.cluster,
 									 procID.proc,
 									 ATTR_RELEASE_REASON );
@@ -890,18 +893,16 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 				// so that we can write it in the abort log event.
 				if ( curr_status == REMOVED ) {
 					int rc;
-					char remove_reason[256];
-					// GetAttributeStringNew() isn't available through the
-					// Qmgmt interface, although it is in the header file.
-					// How evil.
-					rc = GetAttributeString( procID.cluster,
-											 procID.proc,
-											 ATTR_REMOVE_REASON,
-											 remove_reason );
+					char *remove_reason;
+					rc = GetAttributeStringNew( procID.cluster,
+												procID.proc,
+												ATTR_REMOVE_REASON,
+												&remove_reason );
 					if ( rc == 0 ) {
 						next_job->UpdateJobAdString( ATTR_REMOVE_REASON,
 													 remove_reason );
 					}
+					free( remove_reason );
 				}
 
 			} else if ( curr_status == REMOVED ) {
