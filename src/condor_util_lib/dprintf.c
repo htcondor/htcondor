@@ -131,7 +131,7 @@ void
 _condor_dprintf_va( int flags, char* fmt, va_list args )
 {
 	struct tm *tm, *localtime();
-	long *clock;
+	time_t clock;
 	int scm;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
@@ -158,7 +158,13 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	saved_flags = DebugFlags;       /* Limit recursive calls */
 	DebugFlags = 0;
 
-	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
+	/*
+	When talking to the debug fd, you are talking to an fd 
+	that is not visible to the user.  It is not entered in the
+	virtual file table, and, hence, you should be in unmapped mode.
+	*/
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
 
