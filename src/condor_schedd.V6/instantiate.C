@@ -39,9 +39,10 @@ template class HashBucket<HashKey,match_rec *>;
 template class HashTable<PROC_ID, shadow_rec *>;
 template class HashBucket<PROC_ID,shadow_rec *>;
 template class Queue<shadow_rec*>;
+template class List<shadow_rec*>;
+template class Item<shadow_rec*>;
 template class List<PROC_ID>;
 template class Item<PROC_ID>;
-
 template class HashTable<int, BaseCollection*>;
 template class HashBucket<int, BaseCollection*>;
 template class Set<MyString>;
