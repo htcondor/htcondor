@@ -25,4 +25,4 @@
 #define CondorAdministrator	condor-admin
 #define YpLib
 
-#define WANT_PVM	YES
+#define WANT_PVM	NO

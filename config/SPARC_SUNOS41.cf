@@ -72,7 +72,6 @@
 #define HAS_INSQUE				YES
 #define DO_BENCHMARKING			YES
 #define HAS_PVM					YES
-#define WANT_PVM				NO
 #define PVM_ARCH			SUN4
 
 
