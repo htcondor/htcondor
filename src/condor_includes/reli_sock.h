@@ -35,16 +35,12 @@
 **	R E L I A B L E    S O C K
 */
 
-#if !defined(SKIP_AUTHENTICATION)
 class Authentication;
-#endif
 
 /** The ReliSock class implements the Sock interface with TCP. */
 
 class ReliSock : public Sock {
-#if !defined(SKIP_AUTHENTICATION)
 	friend class Authentication;
-#endif
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
@@ -166,9 +162,7 @@ protected:
 	int	ignore_next_decode_eom;
 	float _bytes_sent, _bytes_recvd;
 
-#if !defined(SKIP_AUTHENTICATION)
 	Authentication * authob;
-#endif
 	int is_client;
 	char *hostAddr;
 };

@@ -77,14 +77,15 @@ public:
 	void unAuthenticate();
 
 	void setAuthAny();
-	void setAuthType( authentication_state state );
 	int setOwner( char *owner );
 	char *getOwner();
 
+#if !defined(SKIP_AUTHENTICATION)
 private:
 	Authentication() {}; //should never be called, make private to help that!
 	int handshake();
 
+	void setAuthType( authentication_state state );
 	int authenticate_claimtobe();
 #if defined(WIN32)
 	int authenticate_nt();
@@ -116,5 +117,7 @@ private:
 	char *claimToBe;
 	authentication_state canUseFlags;
 
+#endif !SKIP_AUTHENTICATION
 };
-#endif
+
+#endif define AUTHENTICATION_H
