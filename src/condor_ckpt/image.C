@@ -36,6 +36,7 @@
 #include "condor_debug.h"
 #include "condor_ckpt_mode.h"
 #include "signals_control.h"
+#include "gtodc.h"
 
 extern int _condor_in_file_stream;
 
@@ -750,9 +751,17 @@ Image::Restore()
 	RestoreAllSegsExceptStack();
 
 		// We have just overwritten our data segment, so the image
-		// we are working with has been overwritten too.  Fortunately,
-		// the only thing that has changed is the file descriptor.
+		// we are working with has been overwritten too.... restore into the
+		// data segment the value of the fd from this stack segment.
 	fd = save_fd;
+
+		// We want the gettimeofday() cache to be reset up in terms of the
+		// submission machine time, so reinitialize the cache to default
+		// and let it lazily refill when gettimeofday() is called again.
+		// Performing this call effectively "forgets" about the checkpointed
+		// information in the cache after resumption. It will be resetup at
+		// the next gettimeofday() call.
+	_condor_gtodc_init(_condor_global_gtodc);
 
 #if defined(PVM_CHECKPOINTING)
 	memcpy(global_user_data, user_data, sizeof(user_data));
@@ -1825,7 +1834,6 @@ init_image_with_file_descriptor( int fd )
 	MyImage.SetFd( fd );
 }
 
-
 /*
   Effect a restart by reading in an "image" containing checkpointing
   information and then overwriting our process with that image.
@@ -2088,3 +2096,4 @@ void mydprintf(int foo, const char *fmt, ...)
 }
 
 } /* extern "C" */
+
