@@ -14,6 +14,7 @@ int main_init(int argc, char *argv[])
   Accountant accountant;
   accountant.Initialize();
   dprintf(D_ALWAYS,"main: After initialization\n");
+  ClassAdParser parser;
 
   // accountant.DisplayLog();
 
@@ -23,12 +24,12 @@ int main_init(int argc, char *argv[])
   // Testing
   //-------------------------------------------------
 
-  ClassAd* Ad1=new ClassAd("Name = \"1\",StartdIpAddr = \"fred\"",',');
-  ClassAd* Ad2=new ClassAd("Name = \"2\",StartdIpAddr = \"fred\"",',');
-  ClassAd* Ad3=new ClassAd("Name = \"3\",StartdIpAddr = \"fred\"",',');
-  ClassAd* Ad4=new ClassAd("Name = \"4\",StartdIpAddr = \"fred\"",',');
-  ClassAd* Ad5=new ClassAd("Name = \"5\",StartdIpAddr = \"fred\"",',');
-  ClassAd* Ad6=new ClassAd("Name = \"6\",StartdIpAddr = \"fred\"",',');
+  ClassAd* Ad1=new ClassAd( *parser.ParseClassAd( "[Name = \"1\";StartdIpAddr = \"fred\"]" ) );
+  ClassAd* Ad2=new ClassAd( *parser.ParseClassAd( "[Name = \"2\";StartdIpAddr = \"fred\"]" ) );
+  ClassAd* Ad3=new ClassAd( *parser.ParseClassAd( "[Name = \"3\";StartdIpAddr = \"fred\"]" ) );
+  ClassAd* Ad4=new ClassAd( *parser.ParseClassAd( "[Name = \"4\";StartdIpAddr = \"fred\"]" ) );
+  ClassAd* Ad5=new ClassAd( *parser.ParseClassAd( "[Name = \"5\";StartdIpAddr = \"fred\"]" ) );
+  ClassAd* Ad6=new ClassAd( *parser.ParseClassAd( "[Name = \"6\";StartdIpAddr = \"fred\"]" ) );
 
   accountant.AddMatch("Arieh",Ad1);
   accountant.AddMatch("Yuval",Ad2);
@@ -62,7 +63,7 @@ int main_init(int argc, char *argv[])
   // accountant.DisplayLog();
   // accountant.DisplayMatches();
 
-  AttrList* AL=accountant.ReportState();
+  ClassAd* AL=accountant.ReportState();
   AL->fPrint(stdout);
 
   accountant.AddMatch("Yuval",Ad5);

@@ -27,7 +27,7 @@
 
 #include "condor_classad.h"
 // #include "classad_log.h"
-
+#include "classadList.h"
 #include "MyString.h"
 
 // this is the required minimum separation between two priorities for them
@@ -65,8 +65,8 @@ public:
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
-  AttrList* ReportState();
-  AttrList* ReportState(const MyString& CustomerName);
+  ClassAd* ReportState();
+  ClassAd* ReportState(const MyString& CustomerName);
                                                 
   void DisplayLog();
   void DisplayMatches();

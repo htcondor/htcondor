@@ -528,7 +528,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-AttrList* Accountant::ReportState(const MyString& CustomerName) {
+ClassAd* Accountant::ReportState(const MyString& CustomerName) {
 
   dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
@@ -538,7 +538,7 @@ AttrList* Accountant::ReportState(const MyString& CustomerName) {
   MyString ResourceName;
   int StartTime;
 
-  AttrList* ad=new AttrList();
+  ClassAd* ad=new ClassAd();
   char tmp[512];
 
   int ResourceNum=1;
@@ -568,7 +568,7 @@ AttrList* Accountant::ReportState(const MyString& CustomerName) {
 // Report the whole list of priorities
 //------------------------------------------------------------------
 
-AttrList* Accountant::ReportState() {
+ClassAd* Accountant::ReportState() {
 
   dprintf(D_ACCOUNTANT,"Reporting State\n");
 
@@ -582,7 +582,7 @@ AttrList* Accountant::ReportState() {
   int LastUsageTime;
   int ResourcesUsed;
 
-  AttrList* ad=new AttrList();
+  ClassAd* ad=new ClassAd();
   char tmp[512];
   sprintf(tmp, "LastUpdate = %d", LastUpdateTime);
   ad->Insert(tmp);
