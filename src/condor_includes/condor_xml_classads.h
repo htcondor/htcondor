@@ -28,6 +28,7 @@
 
 enum TagName
 {
+	tag_ClassAds,
 	tag_ClassAd,
 	tag_Attribute,
 	tag_Number,
@@ -38,37 +39,102 @@ enum TagName
 	tag_Time, // invalid for old ClassAds, but we should recognize it.
 	tag_List, // invalid for old ClassAds, but we should recognize it.
 	tag_Expr,
+	tag_NoTag,
 	NUMBER_OF_TAG_NAME_ENUMS
 };
+
+class XMLSource;
+class XMLToken;
 
 class ClassAdXMLParser
 {
  public:
+    /** Constructor. Creates an object that can be used to parse ClassAds */
 	ClassAdXMLParser();
+
+    /** Destructor. */
 	~ClassAdXMLParser();
 
+	/** Parses an XML ClassAd. Only the first ClassAd in the buffer is 
+	 *  parsed.
+	 * @param buffer The string containing the XML ClassAd.
+	 * @return A pointer to a new ClassAd, which must be deleted by the caller.
+	 */
 	ClassAd *ParseClassAd(const char *buffer);
-	ClassAd *ParseClassAds(const char *buffer, int *place=0);
+
+	/** Parses an XML ClassAd from a string. Parsing begins at place-th
+	 * character of the string, and after a single ClassAd is parsed, place
+	 * is updated to indicate where parsing should resume for the next ClassAd.
+	 * @param buffer The string containing the XML ClassAd.
+	 * @param place  A pointer to an integer indicating where to start. This is
+	 *        updated upon return. 
+	 * @return A pointer to a new ClassAd, which must be deleted by the caller
+	 */
+	ClassAd *ParseClassAds(const char *buffer, int *place);
+
+	/** Parses an XML ClassAd from a file. Only the first ClassAd in the 
+	 * buffer is parsed.
+	 * @param buffer The string containing the XML ClassAd.
+	 * @return A pointer to a new ClassAd, which must be deleted by the caller.
+	 */
+	ClassAd *ParseClassAd(FILE *file);
+
+ private:
+	ClassAd *_ParseClassAd(XMLSource &source);
 };
 
 class ClassAdXMLUnparser
 {
  public:
+    /** Constructor. Creates an object that can be used to create XML
+	 * representations of ClassAds */
 	ClassAdXMLUnparser();
+
+    /** Destructor.  */
 	~ClassAdXMLUnparser();
 
+	/** Query to find if the XML uses compact names. Compact names are like
+	 * <a>, while non-compact names are like <attribute>
+	 * @return true if using compact names. */
 	bool GetUseCompactNames(void);
+
+	/** Set compact names. Compact names are like
+	 * <a>, while non-compact names are like <attribute>
+	 * @param use_compact_names A boolean indicating if compact names are desired. */
 	void SetUseCompactNames(bool use_compact_names);
 
+	/** Query to find if the XML uses compact spacing. Compact spacing 
+	 * places an entire ClassAd on one line, while non-compact places
+	 * each attribute on a separate line. 
+	 * @return true if using compact spacing. */
 	bool GetUseCompactSpacing(void);
+
+	/** Set compact spacing. Compact spacing 
+	 * places an entire ClassAd on one line, while non-compact places
+	 * each attribute on a separate line. 
+	 * @param use_compact_spacing A boolean indicating if compact spacing is desired. */
 	void SetUseCompactSpacing(bool use_compact_spacing);
 
+	/** Adds XML header to buffer. This is the information that should appear 
+	 * at the beginning of all ClassAd XML files. 
+	 * @param buffer The string to append the header to. */
 	void AddXMLFileHeader(MyString &buffer);
+
+	/** Adds XML footer to buffer. This is the information that should appear 
+	 * at the end of all ClassAd XML files. 
+	 * @param buffer The string to append the footer to. */
 	void AddXMLFileFooter(MyString &buffer);
 
+	/** Format a ClassAd in XML. Note that this obeys the previously set
+	 * parameters for compact spacing and compact names. 
+	 * @param classsad The ClassAd to represent in XML.
+	 * @param buffer The string to append the ClassAd to.
+	 * @see SetUseCompactNames().
+	 * @see SetUseCompactSpacing(). */
 	void Unparse(ClassAd *classad, MyString &buffer);
 
  private:
+	void Unparse(ExprTree *expression, MyString &buffer);
 	void add_tag(MyString &buffer, TagName which_tag, bool start_tag);
 	void add_attribute_start_tag(MyString &buffer, const char *name);
 	void add_bool_start_tag(MyString &buffer, BooleanBase *bool_expr);
