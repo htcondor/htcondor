@@ -412,7 +412,7 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 		}
 	}
 
-#if defined(OSF1) || defined(ULTRIX43) || defined(Solaris) || defined(LINUX)
+#if defined(OSF1) || defined(ULTRIX43) || defined(Solaris) || (defined(LINUX)&&defined(GLIBC))
 	return SIGACTION( sig, my_act, oact);
 #elif defined(IRIX)
 	return syscall(SYS_ksigaction, sig, my_act, oact);
