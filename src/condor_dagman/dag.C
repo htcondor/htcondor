@@ -1576,3 +1576,53 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	whynot = "n/a";
 	return true;
 }
+
+
+bool
+Dag::RemoveDependency( Job *parent, Job *child )
+{
+	MyString whynot;
+	return RemoveDependency( parent, child, whynot );
+}
+
+bool
+Dag::RemoveDependency( Job *parent, Job *child, MyString &whynot )
+{
+	if( !parent ) {
+		whynot = "parent == NULL";
+		return false;
+	}
+	if( !child ) {
+		whynot = "child == NULL";
+		return false;
+	}
+
+	if( !parent->HasChild( child ) ) {
+		whynot = "no such dependency";
+		return false;
+	}
+	ASSERT( child->HasParent( parent ) );
+
+		// remove the child from the parent's children...
+	if( !parent->RemoveChild( child, whynot ) ) {
+		return false;
+	}
+	ASSERT( parent->HasChild( child ) == false );
+
+		// remove the parent from the child's parents...
+	if( !child->RemoveParent( parent, whynot ) ) {
+			// the dependencies are now asymetric and thus the DAG
+			// state is FUBAR, so we should bail...
+		ASSERT( false );
+		return false;
+	}
+	ASSERT( child->HasParent( parent ) == false );
+
+	whynot = "n/a";
+    return true;
+}
+
+
+// NOTE: dag addnode/removenode/adddep/removedep methods don't
+// necessarily insure internal consistency...that's currently up to
+// the higher level calling them to get right...
