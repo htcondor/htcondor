@@ -43,6 +43,7 @@
 #include "util_lib_proto.h"
 #include "condor_version.h"
 #include "condor_ver_info.h"
+#include "string_list.h"
 
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
@@ -51,6 +52,9 @@ extern "C" {
 	int access_via_nfs (const char *);
 	int use_local_access (const char *);
 	int use_special_access (const char *);
+	int use_buffer( char *method, char *path );
+	int use_compress( char *method, char *path );
+	int use_fetch( char *method, char *path );
 	void HoldJob( const char* buf );
 	void log_execute(char *);
 }
@@ -1249,22 +1253,34 @@ static void complete_path( const char *short_path, char *full_path )
 }
 
 /*
-This call translates a logical path name specified by a user job
+These calls translates a logical path name specified by a user job
 into an actual url which describes how and where to fetch
 the file from.
 
-Example:
-	The user opens a file named:
-		data
-	The shadow adds on the current directory to get:
-		/usr/data
-	The shadow then determines the access method for the full path:
-		remote:/usr/data
-	The syscall lib receives this url and then opens the file appropriately.
+For example, joe/data might become buffer:remote:/usr/joe/data
+
+The "new" version of the call allows the nesting of methods.
+The "old" version of the call only returns the basic method,
+such as "local:" or "remote:" and assumes the syscall lib will
+add the necessary transformations.
 */
+
+int do_get_file_info( const char *logical_name, char *url, int allow_complex );
+
+int
+pseudo_get_file_info_new( const char *logical_name, char *actual_url )
+{
+	return do_get_file_info( logical_name, actual_url, 1 );
+}
 
 int
 pseudo_get_file_info( const char *logical_name, char *actual_url )
+{
+	return do_get_file_info( logical_name, actual_url, 0 );
+}
+
+int
+do_get_file_info( const char *logical_name, char *actual_url, int allow_complex )
 {
 	char	remap_list[ATTRLIST_MAX_EXPRESSION];
 	char	full_path[_POSIX_PATH_MAX];
@@ -1278,7 +1294,7 @@ pseudo_get_file_info( const char *logical_name, char *actual_url )
 	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list)) {
 		if(filename_remap_find(remap_list,(char*)logical_name,actual_url)) {
 			dprintf(D_SYSCALLS,"\tremapped to: %s\n",actual_url);
-			return 1;
+			return 0;
 		}
 	}
 
@@ -1304,17 +1320,82 @@ pseudo_get_file_info( const char *logical_name, char *actual_url )
 		method = "local";
 	} else if( access_via_afs(full_path) ) {
 		method = "local";
-	} else if(access_via_nfs(full_path) ) {
+	} else if( access_via_nfs(full_path) ) {
 		method = "local";
 	} else {
 		method = "remote";
 	}
 
-	sprintf(actual_url,"%s:%s",method,full_path);
+	actual_url[0] = 0;
+
+	if( allow_complex ) {
+		if( use_fetch(method,full_path) ) {
+			strcat(actual_url,"fetch:");
+		}
+		if( use_compress(method,full_path) ) {
+			strcat(actual_url,"compress:");
+		}
+		if( use_buffer(method,full_path) ) {
+			strcat(actual_url,"buffer:");
+		}
+	}
+
+	strcat(actual_url,method);
+	strcat(actual_url,":");
+	strcat(actual_url,full_path);
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
 
 	return 0;
+}
+
+int use_buffer( char *method, char *path )
+{
+	int s,bs,ps;
+
+	pseudo_get_buffer_info( &s, &bs, &ps );
+
+	if( !strcmp(method,"remote") && s  && bs ) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+int use_compress( char *method, char *path )
+{
+	static char string[ATTRLIST_MAX_EXPRESSION];
+	static StringList *list=0;
+
+	if(!list) {
+		string[0] = 0;
+		JobAd->LookupString(ATTR_COMPRESS_FILES,string);
+		list = new StringList(string);
+	}
+
+	if( list->contains_withwildcard(path) ) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+int use_fetch( char *method, char *path )
+{
+	static char string[ATTRLIST_MAX_EXPRESSION];
+	static StringList *list=0;
+
+	if(!list) {
+		string[0] = 0;
+		JobAd->LookupString(ATTR_FETCH_FILES,string);
+		list = new StringList(string);
+	}
+
+	if( list->contains_withwildcard(path) ) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 /*
