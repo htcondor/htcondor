@@ -160,29 +160,29 @@ do_REMOTE_syscall()
 
 		
 		result = ( syscall_sock->code(uiddomain) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  uiddomain = %s\n", uiddomain);
 
 		result = ( syscall_sock->code(fsdomain) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  fsdomain = %s\n", fsdomain);
 
 		result = ( syscall_sock->code(address) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  address = %s\n", address);
 
 		result = ( syscall_sock->code(fullHostname) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  fullHostname = %s\n", fullHostname );
 
 		result = ( syscall_sock->code(key) );
-		assert( result );
+		ASSERT( result );
 			// key is never used, so don't bother printing it.  we
 			// just have to read it off the wire for compatibility.
 			// newer versions of the starter don't even use this RSC,
 			// so they don't send it...
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		errno = 0;
 		rval = pseudo_register_machine_info(uiddomain, fsdomain, 
 											address, fullHostname);
@@ -191,13 +191,13 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		free(uiddomain);
 		free(fsdomain);
 		free(address);
@@ -209,9 +209,9 @@ do_REMOTE_syscall()
 	{
 		ClassAd ad;
 		result = ( ad.initFromStream(*syscall_sock) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = pseudo_register_starter_info( &ad );
@@ -220,13 +220,13 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -235,7 +235,7 @@ do_REMOTE_syscall()
 		ClassAd *ad = NULL;
 
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = pseudo_get_job_info(ad);
@@ -244,16 +244,16 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		} else {
 			result = ( ad->put(*syscall_sock) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -263,7 +263,7 @@ do_REMOTE_syscall()
 		ClassAd *ad = NULL;
 
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = pseudo_get_user_info(ad);
@@ -272,16 +272,16 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		} else {
 			result = ( ad->put(*syscall_sock) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -293,13 +293,13 @@ do_REMOTE_syscall()
 		ClassAd ad;
 
 		result = ( syscall_sock->code(status) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->code(reason) );
-		assert( result );
+		ASSERT( result );
 		result = ( ad.initFromStream(*syscall_sock) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = pseudo_job_exit(status, reason, &ad);
@@ -308,20 +308,20 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return -1;
 	}
 
 	case CONDOR_begin_execution:
 	{
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = pseudo_begin_execution();
@@ -330,13 +330,13 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -347,17 +347,17 @@ do_REMOTE_syscall()
 		int   lastarg;
 
 		result = ( syscall_sock->code(flags) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  flags = %d\n", flags );
 		result = ( syscall_sock->code(lastarg) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  lastarg = %d\n", lastarg );
 		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
 		result = ( syscall_sock->code(path) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 
 		bool access_ok;
@@ -379,14 +379,14 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -395,10 +395,10 @@ do_REMOTE_syscall()
 		int   fd;
 
 		result = ( syscall_sock->code(fd) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = close( fd);
@@ -407,13 +407,13 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 	case CONDOR_read:
@@ -423,15 +423,15 @@ do_REMOTE_syscall()
 		size_t   len;
 
 		result = ( syscall_sock->code(fd) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
 		result = ( syscall_sock->code(len) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  len = %d\n", len );
 		buf = (void *)malloc( (unsigned)len );
 		memset( buf, 0, (unsigned)len );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = read( fd , buf , len);
@@ -440,18 +440,18 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		if( rval >= 0 ) {
 			result = ( syscall_sock->code_bytes_bool(buf, rval) );
-			assert( result );
+			ASSERT( result );
 		}
 		free( (char *)buf );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -462,17 +462,17 @@ do_REMOTE_syscall()
 		size_t   len;
 
 		result = ( syscall_sock->code(fd) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
 		result = ( syscall_sock->code(len) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  len = %d\n", len );
 		buf = (void *)malloc( (unsigned)len );
 		memset( buf, 0, (unsigned)len );
 		result = ( syscall_sock->code_bytes_bool(buf, len) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = write( fd , buf , len);
@@ -481,14 +481,14 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		free( (char *)buf );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -501,16 +501,16 @@ do_REMOTE_syscall()
 		int   whence;
 
 		result = ( syscall_sock->code(fd) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
 		result = ( syscall_sock->code(offset) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  offset = %d\n", offset );
 		result = ( syscall_sock->code(whence) );
-		assert( result );
+		ASSERT( result );
 		dprintf( D_SYSCALLS, "  whence = %d\n", whence );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = lseek( fd , offset , whence);
@@ -519,13 +519,13 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -536,9 +536,9 @@ do_REMOTE_syscall()
 		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
 		result = ( syscall_sock->code(path) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		if ( write_access(path) ) {
 			errno = 0;
@@ -553,14 +553,14 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -574,11 +574,11 @@ do_REMOTE_syscall()
 		from = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		memset( from, 0, (unsigned)_POSIX_PATH_MAX );
 		result = ( syscall_sock->code(to) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->code(from) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		if ( write_access(from) && write_access(to) ) {
 			errno = 0;
@@ -593,15 +593,15 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		free( (char *)to );
 		free( (char *)from );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -609,9 +609,9 @@ do_REMOTE_syscall()
 	{
 		ClassAd ad;
 		result = ( ad.initFromStream(*syscall_sock) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = pseudo_register_mpi_master_info( &ad );
@@ -620,13 +620,13 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -638,11 +638,11 @@ do_REMOTE_syscall()
 		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
 		result = ( syscall_sock->code(path) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->code(mode) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		if ( write_access(path) ) {
 			errno = 0;
@@ -656,14 +656,14 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -674,9 +674,9 @@ do_REMOTE_syscall()
 		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
 		result = ( syscall_sock->code(path) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		if ( write_access(path) ) {
 			errno = 0;
@@ -690,14 +690,14 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -706,9 +706,9 @@ do_REMOTE_syscall()
 		int fd;
 
 		result = ( syscall_sock->code(fd) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		errno = 0;
 		rval = fsync(fd);
@@ -717,13 +717,13 @@ do_REMOTE_syscall()
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(rval) );
-		assert( result );
+		ASSERT( result );
 		if( rval < 0 ) {
 			result = ( syscall_sock->code( terrno ) );
-			assert( result );
+			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 		return 0;
 	}
 
@@ -737,8 +737,8 @@ do_REMOTE_syscall()
 		memset( actual_url, 0, (unsigned)_POSIX_PATH_MAX );
 		logical_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		memset( logical_name, 0, (unsigned)_POSIX_PATH_MAX );
-		assert( syscall_sock->code(logical_name) );
-		assert( syscall_sock->end_of_message() );;
+		ASSERT( syscall_sock->code(logical_name) );
+		ASSERT( syscall_sock->end_of_message() );;
  
 		errno = (condor_errno_t)0;
 		rval = pseudo_get_file_info_new( logical_name , actual_url);
@@ -746,16 +746,16 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
  
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		ASSERT( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			ASSERT( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->code(actual_url) );
+			ASSERT( syscall_sock->code(actual_url) );
 		}
 		free( (char *)actual_url );
 		free( (char *)logical_name );
-		assert( syscall_sock->end_of_message() );;
+		ASSERT( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -764,9 +764,9 @@ do_REMOTE_syscall()
 		ClassAd ad;
 
 		result = ( ad.initFromStream(*syscall_sock) );
-		assert( result );
+		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		assert( result );
+		ASSERT( result );
 
 		rval = pseudo_ulog(&ad);
 		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
