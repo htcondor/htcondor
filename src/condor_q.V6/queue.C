@@ -77,6 +77,7 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
 static  ExtArray<char*> *output_buffer;
+static	bool		output_buffer_empty = true;
 
 static 	bool		customFormat = false;
 static  bool		cputime = false;
@@ -880,6 +881,9 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 	char **the_output;
 	output_buffer = new ExtArray<char*>;
 
+	output_buffer->setFiller( (char *) NULL );
+
+
 	// fetch queue from schedd and stash it in output_buffer.
 	if( Q.fetchQueueFromHostAndProcess( scheddAddr,
 									 process_buffer_line ) != Q_OK ) {
@@ -901,10 +905,12 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 
 	short_header();
 
-	// Print the jobs
-	for (int i=0;i<=output_buffer->getlast(); i++) {
-		if ((*output_buffer)[i])
-			printf("%s",(*output_buffer)[i]);
+	// Print the jobs if we have any
+	if (!output_buffer_empty) {
+		for (int i=0;i<=output_buffer->getlast(); i++) {
+			if ((*output_buffer)[i])
+				printf("%s",(*output_buffer)[i]);
+		}
 	}
 
 	// If we want to summarize, do that too.
@@ -941,6 +947,9 @@ process_buffer_line( ClassAd *job )
 		(*output_buffer)[output_buffer->getlast()+1] =
 								strnewp( bufferJobShort( job ) );
 	}
+
+	output_buffer_empty = false;
+
 	return true;
 }
 
