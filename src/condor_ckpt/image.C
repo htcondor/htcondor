@@ -621,6 +621,8 @@ Image::Close()
 		abort();
 	}
 	close( fd );
+	/* The next checkpoint is going to assume the fd is -1, so set it here */
+	fd = -1;
 }
 
 ssize_t
