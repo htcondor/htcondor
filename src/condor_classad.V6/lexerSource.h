@@ -89,19 +89,17 @@ private:
 class InputStreamLexerSource : public LexerSource
 {
 public:
-	InputStreamLexerSource(istream &stream);
+	InputStreamLexerSource(std::istream &stream);
 	virtual ~InputStreamLexerSource();
 
-	virtual void SetNewSource(istream &stream);
+	virtual void SetNewSource(std::istream &stream);
 	
 	virtual int ReadCharacter(void);
 	virtual void UnreadCharacter(void);
 	virtual bool AtEnd(void) const;
 
 private:
-	istream *_stream;
-	int      _unread_character;
-	int      _last_character;
+	std::istream *_stream;
 };
 
 // This source allows input from a traditional C string.
@@ -126,10 +124,10 @@ private:
 class StringLexerSource : public LexerSource
 {
 public:
-	StringLexerSource(const string *string, int offset=0);
+	StringLexerSource(const std::string *string, int offset=0);
 	virtual ~StringLexerSource();
 
-	virtual void SetNewSource(const string *string, int offset=0);
+	virtual void SetNewSource(const std::string *string, int offset=0);
 	
 	virtual int ReadCharacter(void);
 	virtual void UnreadCharacter(void);
@@ -137,7 +135,7 @@ public:
 
 	virtual int GetCurrentLocation(void) const;
 private:
-	const string *_string;
+	const std::string *_string;
 	int           _offset;
 };
 
