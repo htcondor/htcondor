@@ -2316,67 +2316,40 @@ void *DaemonCore::GetDataPtr()
 // WinNT Helper function: given a C runtime library file descriptor,
 // set whether or not the underlying WIN32 handle should be
 // inheritable or not.  If flag = TRUE, that means inheritable,
-// else FALSE means not inheritable.  Note this is highly
-// specific to Microsoft Visual C++ v5.0.  See OSFINFO.C and
-// internal.h in the C runtime library source code.  We set all
-// these macros below to be able to parse into the open file handle table.
-// We have an ASSERT below which _should_ catch if Microsoft changes things.
-#define IOINFO_L2E          5
-#define IOINFO_ARRAY_ELTS   (1 << IOINFO_L2E)
-#define _pioinfo(i) ( __pioinfo[i >> IOINFO_L2E] + (i & (IOINFO_ARRAY_ELTS - \
-                              1)) )
-#define _osfhnd(i)  ( _pioinfo(i)->osfhnd )
-#define _osfile(i)  ( _pioinfo(i)->osfile )
-#define FOPEN 0x01
-typedef struct {
-        long osfhnd;    /* underlying OS file HANDLE */
-        char osfile;    /* attributes of file (e.g., open in text mode?) */
-        char pipech;    /* one char buffer for handles opened on pipes */
-#if defined (_MT)
-        int lockinitflag;
-        CRITICAL_SECTION lock;
-#endif  /* defined (_MT) */
-    }   ioinfo;
-extern "C"  _CRTIMP ioinfo * __pioinfo[];
-extern "C" int _nhandle;
+// else FALSE means not inheritable. 
 int DaemonCore::SetFDInheritFlag(int fh, int flag)
 {
-	HANDLE DuplicateFile;
+	long underlying_handle;
 
-	// check that fh is a valid, open file descriptor.
-	if ( !( ((unsigned)fh < (unsigned)_nhandle) && 
-		(_osfile(fh) & FOPEN) &&
-		(_osfhnd(fh) != (long)INVALID_HANDLE_VALUE) ) ) {
-		
-		// here we discovered that fh is not open; we're done
+	underlying_handle = _get_osfhandle(fh);
+
+	if ( underlying_handle == -1L ) {
+		// this handle does not exist; return ok so this is 
+		// not logged as an error
 		return TRUE;
 	}
 
-	// ASSERT that the ugly macros we have above are still
-	// valid and have not changed with a new version of 
-	// Visual C++.
-	ASSERT( _get_osfhandle(fh) == _osfhnd(fh) );
+	// Set the inheritable flag on the underlying handle
+	if (!::SetHandleInformation((HANDLE)underlying_handle,
+		HANDLE_FLAG_INHERIT, flag ? HANDLE_FLAG_INHERIT : 0) ) {
+			// failed to set flag
+			DWORD whynot = GetLastError();
 
-	// Set the inheritable flag by duplicating the underlying
-	// handle with the flags we want, then replace the original
-	// with the duplicate.
-	if (!::DuplicateHandle(GetCurrentProcess(),
-        (HANDLE)_osfhnd(fh),
-        GetCurrentProcess(),
-        (HANDLE*)&DuplicateFile,
-        0,
-        flag, // inheritable flag
-        DUPLICATE_SAME_ACCESS)) {
-			// failed to duplicate
+			if ( whynot == ERROR_INVALID_HANDLE ) {
+				// I have no idea why _get_osfhandle() sometimes gives
+				// us back an invalid handle, but apparently it does.
+				// Just return ok so this is not logged as an error.
+				return TRUE;
+			}
+
 			dprintf(D_ALWAYS,
-				"ERROR: DuplicateHandle() failed in SetFDInheritFlag(%d), error=%d\n"
-				,flag,GetLastError());			
+				"ERROR: SetHandleInformation() failed in SetFDInheritFlag(%d,%d),"
+				"err=%d\n"
+				,fh,flag,whynot);			
+
 			return FALSE;
 	}
-	// if made it here, successful duplication; replace original.
-	// remember to close the old one!
-	CloseHandle((HANDLE)_osfhnd(fh));
-	_osfhnd(fh) = (long)DuplicateFile;
+
 	return TRUE;
 }
 
@@ -2751,7 +2724,7 @@ int DaemonCore::Create_Process(
 	// we do _not_ want our child to inherit our file descriptors
 	// unless explicitly requested.  so, set the underlying handle
 	// of all files opened via the C runtime library to non-inheritable.
-	for (i = 0; i < _nhandle; i++) {
+	for (i = 0; i < 100; i++) {
 		SetFDInheritFlag(i,FALSE);
 	}
 
@@ -4079,14 +4052,14 @@ int
 BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
 	if ( !rsock->bind() ) {
-		dprintf(D_ALWAYS, "Failed to bind to command ReliSock");
+		dprintf(D_ALWAYS, "Failed to bind to command ReliSock\n");
 		return FALSE;
 	}
 	// now open a SafeSock _on the same port_ choosen above
 	if ( !ssock->bind(rsock->get_port()) ) {
 		// failed to bind on the same port -- find free UDP port first
 		if ( !ssock->bind() ) {
-			dprintf(D_ALWAYS, "Failed to bind on SafeSock");
+			dprintf(D_ALWAYS, "Failed to bind on SafeSock\n");
 			return FALSE;
 		}
 		rsock->close();
