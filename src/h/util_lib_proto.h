@@ -111,9 +111,13 @@ int display_proc_short ( PROC *proc );
 char * format_time ( float fp_secs );
 int display_proc_long ( PROC *proc );
 int display_v2_proc_long ( PROC *proc );
+#if defined(Solaris)
 int setegid ( long int egid );
-/* Solaris specific change ..dhaval 6/27 */
 int seteuid ( long int euid );
+#else
+int setegid ( int egid );
+int seteuid ( int euid );
+#endif
 /* Solaris specific change ..dhaval 6/27 */
 
 #if 0
