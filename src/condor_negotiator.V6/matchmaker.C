@@ -198,7 +198,7 @@ RESCHEDULE_commandHandler (int, Stream *)
 		dprintf (D_FULLDEBUG, "\t\tNormalFactor = %f\n", normalFactor);
 		dprintf (D_FULLDEBUG, "\t\tNumStartdAds = %d\n", numStartdAds);
 
-		scheddLimit  = (int) floor (maxPrioValue/(scheddPrio*normalFactor) *
+		scheddLimit  = (int) ceil (maxPrioValue/(scheddPrio*normalFactor) *
 									numStartdAds);
 
 		dprintf(D_ALWAYS,"\tSchedd %s's resource limit set at %d\n",
