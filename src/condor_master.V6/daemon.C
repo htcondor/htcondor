@@ -1877,41 +1877,6 @@ Daemons::UpdateCollector()
 		Collectors->sendUpdates (UPDATE_MASTER_AD, ad);
 	}
     
-#if 0
-			// This is all a big, real conflict.  i'll have to move
-			// all this code into the CollectorList itself, which is
-			// ultimately where it belongs, but is more than i want to
-			// change in the middle of a merge.  this is exactly the
-			// kind of thing "merge branches" are good for, but i'm
-			// already merging into the V6_7_3-branch, so it's not
-			// worth that much extra effort.  instead, i'm just going
-			// to comment it out of here and fix it directly on the
-			// V6_7_3-branch once i'm done with the merge itself.
-			// Derek Wright <wright@cs.wisc.edu> 2004-12-24
-
-	if( Collector->port() == 0 ) {
-			// if the master still thinks the port is 0, try
-			// destroying the collector object again and re-creating
-			// it, since the collector might have started up by now
-			// and written out an address file...
-		delete Collector;
-		Collector = new DCCollector;
-	}
-
-	if( Collector->port() ) { 
-		if( !Collector->sendUpdate(UPDATE_MASTER_AD, ad) ) {
-			dprintf( D_ALWAYS, 
-					 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
-					 Collector->updateDestination(), Collector->error() );
-			return;
-		}
-	} else {
-		dprintf( D_ALWAYS, "Collector port is still 0, can't send "
-				 "UPDATE_MASTER_AD to collector %s\n", 
-				 Collector->updateDestination() );
-	}		
-#endif // #if 0
-
 	if (secondary_collectors) {
 		secondary_collectors->rewind();
 		Daemon* d;
