@@ -101,7 +101,7 @@ bool Dag::Bootstrap (bool recovery) {
         if (!ProcessLogEvents (recovery)) return false;
     }
 
-	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
+	if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
 		PrintJobList();
 		Print_TermQ();
 	}	
@@ -173,8 +173,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
         CondorID condorID;
         if (e != NULL) condorID = CondorID (e->cluster, e->proc, e->subproc);
         
-        debug_printf (DEBUG_VERBOSE, " Log outcome: %s",
-                      ULogEventOutcomeNames[outcome]);
+        debug_printf( DEBUG_DEBUG_1, " Log outcome: %s",
+                      ULogEventOutcomeNames[outcome] );
         
         if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
 
@@ -182,7 +182,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
             
             //----------------------------------------------------------------
           case ULOG_NO_EVENT:      
-            debug_printf (DEBUG_VERBOSE, "\n");
+//            debug_printf (DEBUG_VERBOSE, "\n");
             done = true;
             break;
             //----------------------------------------------------------------
@@ -204,9 +204,9 @@ bool Dag::ProcessLogEvents (bool recovery) {
             //----------------------------------------------------------------
           case ULOG_OK:
             
-			debug_printf( DEBUG_VERBOSE, " " );
-			condorID.Print();
-			debug_printf( DEBUG_VERBOSE, "\n  Event: %s for Job ",
+//			debug_printf( DEBUG_VERBOSE, " " );
+//			condorID.Print();
+			debug_printf( DEBUG_VERBOSE, "Event: %s for Job ",
 						  ULogEventNumberNames[e->eventNumber] );
             
             switch(e->eventNumber) {
@@ -328,7 +328,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  TerminateJob( job );
 
 				  if( !recovery ) {
-					  debug_printf( DEBUG_VERBOSE, "\n" );
+//					  debug_printf( DEBUG_VERBOSE, "\n" );
 					  // submit any waiting child jobs
 					  if( SubmitReadyJobs() == false ) {
 						  // if submit fails for any reason, abort
@@ -460,12 +460,12 @@ Job * Dag::GetJob (const CondorID condorID) const {
 bool Dag::Submit (Job * job) {
     assert (job != NULL);
 
-	// if a PRE script exists, run that first -- the PRE script's
-	// reaper function will submit the actual job to Condor if/when
-	// the script exits successfully
+	// if a PRE script exists and hasn't already been run, run that
+	// first -- the PRE script's reaper function will submit the
+	// actual job to Condor if/when the script exits successfully
 
-    if (job->_scriptPre != NULL) {
-		debug_printf( DEBUG_NORMAL, "Running PRE Script of Job %s...\n",
+    if( job->_scriptPre && job->_scriptPre->_done == FALSE ) {
+		debug_printf( DEBUG_NORMAL, "Running PRE Script of Job %s ...\n",
 					  job->GetJobName() );
 		job->_Status = Job::STATUS_PRERUN;
 		_scriptQ->Run( job->_scriptPre );
@@ -501,7 +501,8 @@ Dag::SubmitCondor( Job* job )
         return true;
     }
 
-	debug_printf( DEBUG_NORMAL, "Submitting Job %s ...", job->GetJobName() );
+	debug_printf( DEBUG_VERBOSE, "Submitting Job %s ...\n",
+				  job->GetJobName() );
   
     CondorID condorID(0,0,0);
     if( ! submit_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
@@ -519,10 +520,10 @@ Dag::SubmitCondor( Job* job )
 	_numJobsSubmitted++;
 
 	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-		printf( " " );
+		printf( "\tAssigned Condor ID " );
 		condorID.Print();
+		printf( "\n" );		
 	}
-	debug_printf( DEBUG_NORMAL, "...\n" );
 
     return true;
 }
