@@ -627,10 +627,11 @@ int rename( const char *from, const char *to ) : pseudo {
 	int fstat( map(int fd), struct stat *buf ) : extract, no_sys_chk ;
 #else
 	int fstat( map(int fd), struct stat *buf ) {
-#endif
 			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
+#endif
+
 
 #if defined(LINUX)
     int stat( const char *path, struct stat *buf ) : extract, no_sys_chk ;
@@ -729,8 +730,6 @@ not_supported{
 	}
 #if	defined(HPUX9)
 	int	setpgrp();
-#elif	defined(OSF1)
-	pid_t setpgrp();
 #else
 	int setpgrp( int pid, int pgrp );
 #endif
