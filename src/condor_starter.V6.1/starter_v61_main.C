@@ -28,6 +28,7 @@
 #include "condor_version.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "basename.h"
 
 #include "starter.h"
 #include "java_detect.h"
