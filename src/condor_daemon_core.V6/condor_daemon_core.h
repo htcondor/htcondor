@@ -96,6 +96,12 @@ typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 typedef int		(*ThreadStartFunc)(void *,Stream*);
 //@}
 
+typedef enum { 
+	HANDLE_READ=1,
+	HANDLE_WRITE,
+	HANDLE_READ_WRITE
+} HandlerType;
+
 // other macros and protos needed on WIN32 for exit status
 #ifdef WIN32
 #define WEXITSTATUS(stat) ((int)(stat))
@@ -502,6 +508,7 @@ class DaemonCore : public Service
                          PipeHandler       handler,
                          char *            handler_descrip,
                          Service *         s                = NULL,
+                         HandlerType       handler_type     = HANDLE_READ,    
                          DCpermission      perm             = ALLOW);
 
     /** Not_Yet_Documented
@@ -518,6 +525,7 @@ class DaemonCore : public Service
                          PipeHandlercpp       handlercpp,
                          char *               handler_descrip,
                          Service*             s,
+                         HandlerType          handler_type = HANDLE_READ,    
                          DCpermission         perm = ALLOW);
 
 
@@ -935,7 +943,8 @@ class DaemonCore : public Service
                         PipeHandlercpp handlercpp,
                         char *handler_descrip,
                         Service* s, 
-                        DCpermission perm,
+					    HandlerType handler_type, 
+					    DCpermission perm,
                         int is_cpp);
 
     int Register_Reaper(int rid,
@@ -1024,6 +1033,7 @@ class DaemonCore : public Service
         void*           data_ptr;
 		bool			call_handler;
 		PidEntry*		pentry;
+		HandlerType		handler_type;
 		bool			in_handler;
     };
     // void              DumpPipeTable(int, const char* = NULL);

@@ -44,7 +44,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 	}
 
 	offset = 0;
-	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",(PipeHandlercpp)&StreamHandler::Handler,"Stream I/O Handler",this);
+	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",(PipeHandlercpp)&StreamHandler::Handler,"Stream I/O Handler",this,HANDLE_READ_WRITE);
 	return true;
 }
 

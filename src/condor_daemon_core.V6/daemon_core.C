@@ -433,19 +433,19 @@ int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip,
 
 int	DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip, 
 				PipeHandler handler, char* handler_descrip, 
-				Service* s, DCpermission perm) 
+				Service* s, HandlerType handler_type, DCpermission perm) 
 {
 	return( Register_Pipe(pipefd, pipefd_descrip, handler, 
 							(PipeHandlercpp)NULL, handler_descrip, s, 
-							perm, FALSE) );
+							handler_type, perm, FALSE) );
 }
 
 int	DaemonCore::Register_Pipe(int pipefd, char* piepfd_descrip, 
 				PipeHandlercpp handlercpp, char* handler_descrip, 
-				Service* s, DCpermission perm) 
+				Service* s, HandlerType handler_type, DCpermission perm) 
 {
 	return( Register_Pipe(pipefd, piepfd_descrip, NULL, handlercpp, 
-							handler_descrip, s, perm, TRUE) ); 
+							handler_descrip, s, handler_type, perm, TRUE) ); 
 }
 
 int	DaemonCore::Register_Reaper(char* reap_descrip, ReaperHandler handler, 
@@ -1003,7 +1003,8 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 
 int DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip, 
 				PipeHandler handler, PipeHandlercpp handlercpp, 
-				char *handler_descrip, Service* s, DCpermission perm, 
+				char *handler_descrip, Service* s, 
+				HandlerType handler_type, DCpermission perm, 
 				int is_cpp)
 {
     int     i;	
@@ -1071,6 +1072,7 @@ int DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip,
 	(*pipeTable)[i].in_handler = false;
 	(*pipeTable)[i].pipefd = pipefd;
 	(*pipeTable)[i].handler = handler;
+	(*pipeTable)[i].handler_type = handler_type;
 	(*pipeTable)[i].handlercpp = handlercpp;
 	(*pipeTable)[i].is_cpp = is_cpp;
 	(*pipeTable)[i].perm = perm;
@@ -1789,11 +1791,18 @@ void DaemonCore::Driver()
 		// select on.
 		for (i = 0; i < nPipe; i++) {
 			if ( (*pipeTable)[i].pipefd ) {	// if a valid entry....
-				// One end of a pipe is either readable or writeable,
-				// but not both.  Regardless of which end we were given
-				// register both read and write for a wakeup.
-				FD_SET( (*pipeTable)[i].pipefd,&readfds);
-				FD_SET( (*pipeTable)[i].pipefd,&writefds);
+				switch( (*pipeTable)[i].handler_type ) {
+				case HANDLE_READ:
+					FD_SET( (*pipeTable)[i].pipefd,&readfds);
+					break;
+				case HANDLE_WRITE:
+					FD_SET( (*pipeTable)[i].pipefd,&writefds);
+					break;
+				case HANDLE_READ_WRITE:
+					FD_SET( (*pipeTable)[i].pipefd,&readfds);
+					FD_SET( (*pipeTable)[i].pipefd,&writefds);
+					break;
+				}
 			}
         }
 
@@ -1897,7 +1906,7 @@ void DaemonCore::Driver()
 					}
 #else
 					// For Unix, check if select set the bit
-					if (FD_ISSET((*pipeTable)[i].pipefd, &readfds)) 
+					if( FD_ISSET((*pipeTable)[i].pipefd, &readfds) ) 
 					{
 						(*pipeTable)[i].call_handler = true;
 					}
