@@ -35,6 +35,9 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
   #define UPAGES 4 
   #define NBPG 0x1000   /*couldnt get this val from header files. Rough
 		        estimate from Suns header files - Raghu */
+  #undef CORE_MAGIC
+  #define CORE_MAGIC 0x7f454c46  /* at least, this is the magic for my
+									core file - Jim B. */
 #endif
 
 const int       UAREA_SIZE = UPAGES * NBPG;
@@ -79,7 +82,10 @@ core_is_valid( char *name )
 		"Core file - magic number OK\n"
 	);
 
-	total_size = header.c_len + header.c_dsize + header.c_ssize + UAREA_SIZE;
+	/* the size test is bogus on Solaris -- there is something wrong
+	   with the header information -- I'm taking it out.  -Jim B. */
+
+/*	total_size = header.c_len + header.c_dsize + header.c_ssize + UAREA_SIZE;
 
 	if( file_size != total_size ) {
 		dprintf( D_ALWAYS,
@@ -89,9 +95,9 @@ core_is_valid( char *name )
 	} else {
 		dprintf( D_ALWAYS,
 			"Core file_size of %d is correct\n", file_size
-		);
+		); */
 		return TRUE;
-	}
+/*	} */
 
 #if 0
 	dprintf( D_ALWAYS, "c_len = %d bytes\n", header.c_len );
