@@ -7,7 +7,7 @@
 #define MallocLib /**/
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
-#define SocketLib -lnsl -lsocket 
+#define SocketLib -lnsl -lsocket -lgen
 
 #ifndef Crt0
 #define Crt0 concat(CrtLibPath,/crt1.o)
