@@ -27,10 +27,6 @@ static const char *fltKeywords[] =
 	""	// add one string to avoid compiler error
 };
 
-// scan function to walk the job queue
-extern "C" getJobAdAndInsert (int, int);
-extern "C" int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
-
 // need this global variable to hold information reqd by the scan function
 static ClassAdList *__list;
 static ClassAd     *__query;
@@ -152,7 +148,7 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 {
 	char		constraint[_POSIX_PATH_MAX];	/* yuk! */
 	ExprTree	*tree;
-	ClassAd		*ad = new ClassAd;
+	ClassAd		*ad;
 
 	constraint[0] = '\0';
 	tree = queryad.Lookup(ATTR_REQUIREMENTS);
@@ -161,48 +157,20 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 	}
 	tree->RArg()->PrintToStr(constraint);
 
-	if (GetNextJobByConstraint(constraint, ad, 1) == 0) {
-		list.Insert(ad);
-		ad = new ClassAd;
-		while(GetNextJobByConstraint(constraint, ad, 0) == 0) {
-			list.Insert(ad);
-			ad = new ClassAd;
+	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
+		ClassAd *adCopy = new ClassAd(*ad);
+		list.Insert(adCopy);	// insert copy so list can't destroy original
+		FreeJobAd(ad);
+		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+			adCopy = new ClassAd(*ad);
+			list.Insert(adCopy);	// insert copy
+			FreeJobAd(ad);
 		}
 	}
-	delete ad;
 
 	return Q_OK;
 }
 
-
-#if 0 /* getJobAd is now part of qmgmt API */
-getJobAd(int cluster_id, int proc_id, ClassAd *new_ad)
-{
-    char    buf[1000];
-    char    buf2[1000];
-    int     rval;
-
-	// this code is largely Jim Pruyne's original qmgmt_test.c program  --RR
-    rval = FirstAttribute(cluster_id, proc_id, buf);
-    while( rval >= 0) {
-        rval = GetAttributeExpr(cluster_id, proc_id, buf, buf2);
-        if (rval >= 0) {
-			if (!new_ad->Insert (buf2))
-			{
-				// failed to insert expr --- abort this ad
-				return 1;
-			}
-            rval = NextAttribute(cluster_id, proc_id, buf);
-        }
-    }
-
-	// insert types for the ad  ### Use from some canonical file?  --RR
-	new_ad->SetMyTypeName (JOB_ADTYPE);
-	new_ad->SetTargetTypeName (STARTD_ADTYPE);
-
-	return 0;
-}
-#endif
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data)
 {
