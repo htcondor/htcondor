@@ -35,6 +35,21 @@
 template class HashTable<HashKey, ClassAd*>;
 template class HashBucket<HashKey,ClassAd*>;
 
+/***** Prevent calling free multiple times in this code *****/
+/* This fixes bugs where we would segfault when reading in
+ * a corrupted log file, because memory would be deallocated
+ * both in ReadBody and in the destructor. 
+ * To fix this, we make certain all calls to free() in this
+ * file reset the pointer to NULL so we know now to call
+ * it again. */
+#ifdef free
+#undef free
+#endif
+#define free(ptr) \
+if (ptr) free(ptr); \
+ptr = NULL;
+/************************************************************/
+
 ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 {
 	log_filename[0] = '\0';
