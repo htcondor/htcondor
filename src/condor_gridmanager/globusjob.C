@@ -278,7 +278,7 @@ int GlobusJob::doEvaluateState()
 		old_globus_state = globusState;
 
 		switch ( gmState ) {
-		case GM_INIT:
+		case GM_INIT: {
 			// This is the state all jobs start in when the GlobusJob object
 			// is first created. If we think there's a running jobmanager
 			// out there, we poke it both to see if it's still alive and
@@ -338,8 +338,8 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_STOP_AND_RESTART;
 				}
 			}
-			break;
-		case GM_REGISTER:
+			} break;
+		case GM_REGISTER: {
 			// Register for callbacks from an already-running jobmanager.
 			rc = gahp.globus_gram_client_job_callback_register( jobContact,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
@@ -378,8 +378,8 @@ int GlobusJob::doEvaluateState()
 			} else {
 				gmState = GM_SUBMITTED;
 			}
-			break;
-		case GM_STDIO_UPDATE:
+			} break;
+		case GM_STDIO_UPDATE: {
 			// Update an already-running jobmanager to send its I/O to us
 			// instead a previous incarnation.
 			char rsl[4096];
@@ -431,8 +431,8 @@ int GlobusJob::doEvaluateState()
 			} else {
 				gmState = GM_SUBMITTED;
 			}
-			break;
-		case GM_UNSUBMITTED:
+			} break;
+		case GM_UNSUBMITTED: {
 			// There are no outstanding gram submissions for this job (if
 			// there is one, we've given up on it).
 			if ( condorState == REMOVED ) {
@@ -444,8 +444,8 @@ int GlobusJob::doEvaluateState()
 			} else {
 				gmState = GM_SUBMIT;
 			}
-			break;
-		case GM_SUBMIT:
+			} break;
+		case GM_SUBMIT: {
 			// Start a new gram submission for this job.
 			char *job_contact;
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
@@ -512,8 +512,8 @@ int GlobusJob::doEvaluateState()
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
-			break;
-		case GM_SUBMIT_SAVE:
+			} break;
+		case GM_SUBMIT_SAVE: {
 			// Save the jobmanager's contact for a new gram submission.
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
@@ -529,8 +529,8 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_SUBMITTED;
 				}
 			}
-			break;
-		case GM_SUBMIT_COMMIT:
+			} break;
+		case GM_SUBMIT_COMMIT: {
 			// Now that we've saved the jobmanager's contact, commit the
 			// gram job submission.
 			if ( condorState == REMOVED || condorState == HELD ) {
@@ -558,8 +558,8 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_SUBMITTED;
 				}
 			}
-			break;
-		case GM_SUBMITTED:
+			} break;
+		case GM_SUBMITTED: {
 			// The job has been submitted (or is about to be by the
 			// jobmanager). Wait for completion or failure, and probe the
 			// jobmanager occassionally to make it's still alive.
@@ -616,8 +616,8 @@ int GlobusJob::doEvaluateState()
 					daemonCore->Reset_Timer( evaluateStateTid, delay );
 				}
 			}
-			break;
-		case GM_CHECK_OUTPUT:
+			} break;
+		case GM_CHECK_OUTPUT: {
 			// The job has completed. Make sure we got all the output.
 			// If we haven't, stop and restart the jobmanager to prompt
 			// sending of the rest.
@@ -659,8 +659,8 @@ int GlobusJob::doEvaluateState()
 					dprintf( D_FULLDEBUG, "Requesting jobmanager restart because of unknown error\n" );
 				}
 			}
-			break;
-		case GM_DONE_SAVE:
+			} break;
+		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
 			if ( condorState != HELD && condorState != REMOVED ) {
 				condorState = COMPLETED;
@@ -671,8 +671,8 @@ int GlobusJob::doEvaluateState()
 				}
 			}
 			gmState = GM_DONE_COMMIT;
-			break;
-		case GM_DONE_COMMIT:
+			} break;
+		case GM_DONE_COMMIT: {
 			// Tell the jobmanager it can clean up and exit.
 			if ( newJM ) {
 				rc = gahp.globus_gram_client_job_signal( jobContact,
@@ -700,8 +700,8 @@ int GlobusJob::doEvaluateState()
 			} else {
 				gmState = GM_CLEAR_REQUEST;
 			}
-			break;
-		case GM_STOP_AND_RESTART:
+			} break;
+		case GM_STOP_AND_RESTART: {
 			// Something has wrong with the jobmanager and we want to stop
 			// it and restart it to clear up the problem.
 			rc = gahp.globus_gram_client_job_signal( jobContact,
@@ -724,8 +724,8 @@ int GlobusJob::doEvaluateState()
 			} else {
 				gmState = GM_RESTART;
 			}
-			break;
-		case GM_RESTART:
+			} break;
+		case GM_RESTART: {
 			// Something has gone wrong with the jobmanager and we need to
 			// restart it.
 			now = time(NULL);
@@ -825,8 +825,8 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 				}
 			}
-			break;
-		case GM_RESTART_SAVE:
+			} break;
+		case GM_RESTART_SAVE: {
 			// Save the restarted jobmanager's contact string on the schedd.
 			done = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
 										GM_RESTART_SAVE );
@@ -834,8 +834,8 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			gmState = GM_RESTART_COMMIT;
-			break;
-		case GM_RESTART_COMMIT:
+			} break;
+		case GM_RESTART_COMMIT: {
 			// Tell the jobmanager it can proceed with the restart.
 			rc = gahp.globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
@@ -856,8 +856,8 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_STOP_AND_RESTART;
 			}
 			gmState = GM_SUBMITTED;
-			break;
-		case GM_CANCEL:
+			} break;
+		case GM_CANCEL: {
 			// We need to cancel the job submission.
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE &&
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
@@ -890,8 +890,8 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 				}
 			}
-			break;
-		case GM_CANCEL_WAIT:
+			} break;
+		case GM_CANCEL_WAIT: {
 			// A cancel has been successfully issued. Wait for the
 			// accompanying FAILED callback. Probe the jobmanager
 			// occassionally to make sure it hasn't died on us.
@@ -938,8 +938,8 @@ int GlobusJob::doEvaluateState()
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
-			break;
-		case GM_FAILED:
+			} break;
+		case GM_FAILED: {
 			// The jobmanager's job state has moved to FAILED. Send a
 			// commit if necessary and take appropriate action.
 			if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
@@ -1002,8 +1002,8 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 				}
 			}
-			break;
-		case GM_DELETE:
+			} break;
+		case GM_DELETE: {
 			// The job has completed or been removed. Delete it from the
 			// schedd.
 			schedd_actions = UA_DELETE_FROM_SCHEDD | UA_FORGET_JOB;
@@ -1014,18 +1014,18 @@ int GlobusJob::doEvaluateState()
 			}
 			addScheddUpdateAction( this, schedd_actions, GM_DELETE );
 			// This object will be deleted when the update occurs
-			break;
-		case GM_CLEAN_JOBMANAGER:
+			} break;
+		case GM_CLEAN_JOBMANAGER: {
 			// Tell the jobmanager to cleanup an un-restartable job submission
 
 			// Once RequestSubmit() is called at least once, you must
 			// CancelRequest() once you're done with the request call
-			char cleanup_rsl[1024];
+			char cleanup_rsl[4096];
 			char *dummy_job_contact;
 			if ( myResource->RequestSubmit(this) == false ) {
 				break;
 			}
-			snprintf( cleanup_rsl, sizeof(rsl), "&(cleanup=%s)", jobContact );
+			snprintf( cleanup_rsl, sizeof(cleanup_rsl), "&(cleanup=%s)", jobContact );
 			rc = gahp.globus_gram_client_job_request( 
 										myResource->ResourceName(), 
 										cleanup_rsl,
@@ -1049,15 +1049,21 @@ int GlobusJob::doEvaluateState()
 			} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 				// Jobmanager doesn't support cleanup attribute.
 				gmState = GM_CLEAR_REQUEST;
+			} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_NO_STATE_FILE ) {
+				// State file disappeared.  Could be a normal condition
+				// if we never successfully committed a submit (and
+				// thus the jobmanager removed the state file when it timed
+				// out waiting for the submit commit signal).
+				gmState = GM_CLEAR_REQUEST;
 			} else {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
-				dprintf(D_ALWAYS,"    RSL='%s'\n", rsl);
+				dprintf(D_ALWAYS,"    RSL='%s'\n", cleanup_rsl);
 				globusError = rc;
 				gmState = GM_CLEAR_REQUEST;
 			}
-			break;
-		case GM_CLEAR_REQUEST:
+			} break;
+		case GM_CLEAR_REQUEST: {
 			// Remove all knowledge of any previous or present job
 			// submission, in both the gridmanager and the schedd.
 
@@ -1139,8 +1145,8 @@ int GlobusJob::doEvaluateState()
 			abortLogged = false;
 			evictLogged = false;
 			gmState = GM_UNSUBMITTED;
-			break;
-		case GM_HOLD:
+			} break;
+		case GM_HOLD: {
 			// Put the job on hold in the schedd.
 			// TODO: what happens if we learn here that the job is removed?
 			condorState = HELD;
@@ -1171,8 +1177,8 @@ int GlobusJob::doEvaluateState()
 			}
 			addScheddUpdateAction( this, schedd_actions, GM_HOLD );
 			// This object will be deleted when the update occurs
-			break;
-		case GM_PROXY_EXPIRED:
+			} break;
+		case GM_PROXY_EXPIRED: {
 			// The jobmanager has exited because the proxy is about to
 			// expire. If we get a new proxy, try to restart the jobmanager.
 			// Otherwise, just wait for the imminent death of the
@@ -1188,7 +1194,7 @@ int GlobusJob::doEvaluateState()
 			} else {
 				// Do nothing. Our proxy is about to expire.
 			}
-			break;
+			} break;
 		default:
 			EXCEPT( "(%d.%d) Unknown gmState %d!", procID.cluster,procID.proc,
 					gmState );
