@@ -366,6 +366,10 @@ even if the node has retries specified.
 
 The value zero is not allowed as an abort exit value.
 
+When a DAG aborts, it exits with the value that caused the abort.
+This can be used for DAGs within DAGs,
+allowing an inner DAG to cause an abort of an outer DAG.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Condor Submit Description File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
