@@ -111,8 +111,6 @@ File::Init()
 	ioserversocket = -1;
 }
 
-extern "C" char *getwd( char * );
-
 void
 OpenFileTable::Init()
 {
@@ -1684,7 +1682,7 @@ OpenFileTable::FlushBuf()
 			tempBuf->next = NULL;
 			delete tempBuf;
 		    }
-		} else if( file[i].isWriteable && ! file[i].isReadable() ) {
+		} else if( file[i].isWriteable() && ! file[i].isReadable() ) {
 		    while( file[i].firstBuf ) {
 		        tempBuf = file[i].firstBuf;
 			file[i].firstBuf = tempBuf->next;
@@ -1725,7 +1723,7 @@ OpenFileTable::DisplayBuf()
 	    if( tempBuf = file[i].firstBuf ) {
 	        if( file[i].isReadable() && !file[i].isWriteable() ) {
 		    printf( "%s%d%s\n", "\nRDONLY file ", i, " : " );
-		} else if( file[i].isWriteable && ! file[i].isReadable() ) {
+		} else if( file[i].isWriteable() && ! file[i].isReadable() ) {
 		    printf( "%s%d%s\n", "\nWRONLY file ", i, " : " );
 		} else {
 		    dprintf(D_ALWAYS, "invalid case in OpenFileTable::DisplayBuf()\n");
