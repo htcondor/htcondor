@@ -298,8 +298,9 @@ Scheduler::count_jobs()
 	ad->Insert (tmp);
 
 	update_central_mgr(UPDATE_SCHEDD_AD);// Send even if no owners
-	dprintf (D_ALWAYS, "Sent HEART BEAT ad to central mgr: N_Owners=%d\n",
-				N_Owners);
+	dprintf( D_FULLDEBUG, 
+			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
+			 N_Owners );
 
 	// The per user queue ads should not have NumUsers in them --- only
 	// the schedd ad should.  In addition, they should not have TotalRunningJobs
