@@ -705,10 +705,18 @@ send_final_status( UserProc *proc )
 	);
 
 		// update shadow with it's image size
-	if( proc->ckpt_enabled() ) {
-		image_size = proc->get_image_size();
+		// Note: for now, updating the image size is commented out.
+		// condor_syscall_lib updates the image size, and someday
+		// we should add code for the starter to estimate the image size
+		// for other universe jobs and then update here, but until we
+		// add the image size estimate code, we may as well comment this
+		// out to be safe. -Todd 3/98
+#if 0
+	image_size = proc->get_image_size();
+	if ( image_size > 0 ) {
 		(void)REMOTE_syscall( CONDOR_image_size, image_size );
 	}
+#endif
 
 		// update shadow with it's resource usage and exit status
 	status = proc->bsd_exit_status();
