@@ -771,22 +771,23 @@ accept_request_claim( Resource* rip )
 
 		// Figure out the hostname of our client.
 	if( ! (tmp = sin_to_hostname(sock->endpoint(), NULL)) ) {
-		rip->dprintf( D_ALWAYS, "Can't find hostname of client machine\n");
-		ABORT;
-	} 
-	client_host = strdup( tmp );
-
-		// Try to make sure we've got a fully-qualified hostname.
-	full_client_host = get_full_hostname( (const char *) client_host );
-	if( ! full_client_host ) {
-		rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
-				 client_host );
-		rip->r_cur->client()->sethost( client_host );
+		rip->dprintf( D_FULLDEBUG,
+					  "Can't find hostname of client machine\n" );
+		rip->r_cur->client()->sethost( sin_to_string(sock->endpoint()) );
 	} else {
-		rip->r_cur->client()->sethost( full_client_host );
-		delete [] full_client_host;
+		client_host = strdup( tmp );
+			// Try to make sure we've got a fully-qualified hostname.
+		full_client_host = get_full_hostname( (const char *) client_host );
+		if( ! full_client_host ) {
+			rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
+						  client_host );
+			rip->r_cur->client()->sethost( client_host );
+		} else {
+			rip->r_cur->client()->sethost( full_client_host );
+			delete [] full_client_host;
+		}
+		free( client_host );
 	}
-	free( client_host );
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
