@@ -191,6 +191,9 @@ int Read_config(char* config_file, ClassAd* classAd,
 
 				FREE( line );
 			}
+			
+			/* insert expressions into the Configuration Table as well */
+			insert( name, value, table, table_size );
 		} else if( op == '=' ) {
 			lower_case( name );
 

@@ -57,6 +57,7 @@
 #include "condor_sys.h"
 #include "condor_config.h"
 #include "condor_string.h"
+#include "string_list.h"
 #include "condor_attributes.h"
 
 #if defined(__cplusplus)
@@ -87,17 +88,42 @@ BUCKET	*ConfigTab[TABLESIZE];
 
 // Function implementations
 void 
-config(ClassAd *classAd)
+config(ClassAd *classAd=NULL, char *mySubsystem=NULL)
 {
+	char 		buffer[1024];
+	char 		*tmp;
+	char		*expr;
+	StringList	reqdExprs;
+
 	if( real_config("CONDOR_CONFIG", "condor_config", 
-					"condor_config.local", classAd) ) {
-		fprintf( stderr, "\nNeither the environment variable CONDOR_CONFIG,\n" );
-		fprintf( stderr, "/etc/condor/, nor ~condor/ contain a condor_config file.\n" );
-		fprintf( stderr, "Either set CONDOR_CONFIG to point to a valid config file,\n" );
-		fprintf( stderr, "or put a \"condor_config\" file in %s or %s.\n", 
+					"condor_config.local", (mySubsystem ? NULL : classAd)) ) {
+		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
+		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
+				"file.\n" );
+		fprintf( stderr,"Either set CONDOR_CONFIG to point to a valid config "
+				"file,\n" );
+		fprintf( stderr,"or put a \"condor_config\" file in %s or %s.\n", 
 				 "/etc/condor", "~condor/" );
 		fprintf( stderr, "Exiting.\n\n" );
 		exit( 1 );
+	}
+
+	sprintf (buffer, "%s_EXPRS", mySubsystem);
+	tmp = param (buffer);
+	if (tmp && classAd)
+	{
+		reqdExprs.initializeFromString (tmp);	
+		free (tmp);
+
+		reqdExprs.rewind();
+		while ((tmp = reqdExprs.next()))
+		{
+			expr = param(tmp);
+			if (expr == NULL) continue;
+			sprintf (buffer, "%s = %s", tmp, expr);
+			classAd->Insert (buffer);
+			free (expr);
+		}	
 	}
 }
 
