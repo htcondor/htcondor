@@ -600,7 +600,7 @@ UserProc::execute()
 	dprintf( D_ALWAYS, "Started user job - PID = %d\n", pid );
 	if( job_class != VANILLA ) {
 			// Send the user process its startup environment conditions
-	dprintf( D_ALWAYS, "Setting condor_euid");
+	dprintf( D_ALWAYS, "Setting condor_euid\n");
 	set_condor_euid();
 		close( pipe_fds[READ_END] );
 		cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
