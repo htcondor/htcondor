@@ -56,6 +56,7 @@
 #include "HashTable.h"
 #include "MyString.h"
 #include "string_list.h"
+#include "which.h"
 
 #include "my_username.h"
 
@@ -1132,6 +1133,7 @@ SetTransferFiles()
 	char	 buffer[ATTRLIST_MAX_EXPRESSION];
 	char	 input_files[ATTRLIST_MAX_EXPRESSION];
 	char	 output_files[ATTRLIST_MAX_EXPRESSION];
+	StringList input_file_list;
 
 	never_transfer = false;
 
@@ -1139,30 +1141,57 @@ SetTransferFiles()
 
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSize = 0;
-
-	if( JobLanguage ) {
-		strcpy(buffer,condor_param(Executable));
-		if(macro_value) {
-			strcat(buffer,",");
-			strcat(buffer,macro_value);
-		}
-		macro_value = buffer;
+	if( macro_value ) {
+		input_file_list.initializeFromString( macro_value );
 	}
 
-	if( macro_value ) 
-	{
-		StringList files(macro_value,",");
-		files.rewind();
+	if( JobLanguage ) {
+		input_file_list.append( condor_param(Executable) );
+	}
+
+#if defined( WIN32 )
+	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
+			// On NT, if we're an MPI job, we need to find the
+			// mpich.dll file and automatically include that in the
+			// transfer input files
+		MyString dll_name( "mpich.dll" );
+
+			// first, check to make sure the user didn't already
+			// specify mpich.dll in transfer_input_files
+		if( ! input_file_list.contains(dll_name.GetCStr()) ) {
+				// nothing there yet, try to find it ourselves
+			MyString dll_path = which( dll_name );
+			if( dll_path.Length() == 0 ) {
+					// File not found, fatal error.
+				fprintf( stderr, "\nERROR: Condor cannot find the "
+						 "\"mpich.dll\" file it needs to run your MPI job.\n"
+						 "Please specify the full path to this file in the "
+						 "\"transfer_input_files\"\n"
+						 "setting in your submit description file.\n" );
+				exit( 1 );
+			}
+				// If we made it here, which() gave us a real path.
+				// so, now we just have to append that to our list of
+				// files. 
+			input_file_list.append( dll_path.GetCStr() );
+		}
+	}
+#endif /* WIN32 */
+
+	if( ! input_file_list.isEmpty() ) {
+		input_file_list.rewind();
 		count = 0;
-		while ( (tmp=files.next()) ) {
+		while ( (tmp=input_file_list.next()) ) {
 			count++;
 			check_path_length(tmp,TransferInputFiles);
 			check_open(tmp, O_RDONLY);
 			TransferInputSize += calc_image_size(tmp);
 		}
 		if ( count ) {
-			(void) sprintf (input_files, "%s = \"%s\"", 
-				ATTR_TRANSFER_INPUT_FILES, macro_value);
+			tmp = input_file_list.print_to_string();
+			(void) sprintf( input_files, "%s = \"%s\"", 
+							ATTR_TRANSFER_INPUT_FILES, tmp );
+			free( tmp );
 			files_specified = true;
 		}
 	}
