@@ -113,6 +113,7 @@ bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool    UseXMLInLog = false;
 ShouldTransferFiles_t should_transfer = STF_NO;
+bool    NeedsPerFileEncryption = false;
 bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
 bool HasTDP = false;
 char* tdp_cmd = NULL;
@@ -194,6 +195,11 @@ char	*TransferInput = "transfer_input";
 char	*TransferOutput = "transfer_output";
 char	*TransferError = "transfer_error";
 
+char	*EncryptInputFiles = "encrypt_input_files";
+char	*EncryptOutputFiles = "encrypt_output_files";
+char	*DontEncryptInputFiles = "dont_encrypt_input_files";
+char	*DontEncryptOutputFiles = "dont_encrypt_output_files";
+
 char	*StreamInput = "stream_input";
 char	*StreamOutput = "stream_output";
 char	*StreamError = "stream_error";
@@ -255,6 +261,7 @@ void 	SetRootDir();
 #endif
 void 	SetRequirements();
 void 	SetTransferFiles();
+void 	SetPerFileEncryption();
 bool 	SetNewTransferFiles( void );
 void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
@@ -1630,6 +1637,44 @@ SetTransferFiles()
 	}
 }
 
+
+void SetPerFileEncryption( void )
+{
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+
+	char* encrypt_input_files;
+	char* encrypt_output_files;
+	char* dont_encrypt_input_files;
+	char* dont_encrypt_output_files;
+
+	encrypt_input_files = condor_param( EncryptInputFiles, "EncryptInputFiles");
+	if (encrypt_input_files) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_ENCRYPT_INPUT_FILES,encrypt_input_files);
+		InsertJobExpr( buffer );
+		NeedsPerFileEncryption = true;
+	}
+
+	encrypt_output_files = condor_param( EncryptOutputFiles, "EncryptOutputFiles");
+	if (encrypt_output_files) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_ENCRYPT_OUTPUT_FILES,encrypt_output_files);
+		InsertJobExpr( buffer );
+		NeedsPerFileEncryption = true;
+	}
+
+	dont_encrypt_input_files = condor_param( DontEncryptInputFiles, "DontEncryptInputFiles");
+	if (dont_encrypt_input_files) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_DONT_ENCRYPT_INPUT_FILES,dont_encrypt_input_files);
+		InsertJobExpr( buffer );
+		NeedsPerFileEncryption = true;
+	}
+
+	dont_encrypt_output_files = condor_param( DontEncryptOutputFiles, "DontEncryptOutputFiles");
+	if (dont_encrypt_output_files) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_DONT_ENCRYPT_OUTPUT_FILES,dont_encrypt_output_files);
+		InsertJobExpr( buffer );
+		NeedsPerFileEncryption = true;
+	}
+}
 
 bool
 SetNewTransferFiles( void )
@@ -3806,9 +3851,10 @@ queue(int num)
 		SetAppendFiles();
 		SetLocalFiles();
 		SetTDP();			// before SetTransferFile() and SetRequirements()
-		SetTransferFiles();	 // must be called _before_ SetImageSize()
+		SetTransferFiles();	 // must be called _before_ SetImageSize() 
+		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
-		SetRequirements();	// must be called _after_ SetTransferFiles()
+		SetRequirements();	// must be called _after_ SetTransferFiles() and SetPerFileEncryption()
 		SetJobLease();		// must be called _after_ SetStdFile(0,1,2)
 		SetForcedAttributes();
 		SetPeriodicHoldCheck();
@@ -3923,6 +3969,7 @@ check_requirements( char *orig )
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
+	bool	checks_per_file_encryption = false;
 	bool	checks_pvm = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
@@ -4002,6 +4049,8 @@ check_requirements( char *orig )
 		case STF_YES:
 			checks_file_transfer = findClause( answer,
 											   ATTR_HAS_FILE_TRANSFER );
+			checks_per_file_encryption = findClause( answer,
+										   ATTR_HAS_PER_FILE_ENCRYPTION );
 			break;
 		}
 	}
@@ -4135,6 +4184,10 @@ check_requirements( char *orig )
 			if( ! checks_file_transfer ) {
 				(void)strcat( answer, "&& (");
 				(void)strcat( answer, ATTR_HAS_FILE_TRANSFER );
+				if (!checks_per_file_encryption && NeedsPerFileEncryption) {
+					(void)strcat( answer, " && ");
+					(void)strcat( answer, ATTR_HAS_PER_FILE_ENCRYPTION );
+				}
 				(void)strcat( answer, ")");
 			}
 			break;
@@ -4146,9 +4199,13 @@ check_requirements( char *orig )
 				// domain, but explictly turned on IF_NEEDED, assume
 				// they know what they're doing. 
 			if( ! checks_fsdomain ) {
-				ft_clause = "&& (";
+				ft_clause = "&& ((";
 				ft_clause += ATTR_HAS_FILE_TRANSFER;
-				ft_clause += " || (TARGET.";
+				if (NeedsPerFileEncryption) {
+					ft_clause += " && ";
+					ft_clause += ATTR_HAS_PER_FILE_ENCRYPTION;
+				}
+				ft_clause += ") || (TARGET.";
 				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
 				ft_clause += " == MY.";
 				ft_clause += ATTR_FILE_SYSTEM_DOMAIN;
@@ -4158,6 +4215,9 @@ check_requirements( char *orig )
 			break;
 		}
 	}
+
+	/* if the user specified they want this feature, add it to the requirements */
+
 	return answer;
 }
 

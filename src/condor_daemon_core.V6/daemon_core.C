@@ -2498,7 +2498,7 @@ int DaemonCore::HandleReq(int socki)
 				goto finalize;
 			}
 
-			if (!stream->set_crypto_key(session->key())) {
+			if (!stream->set_crypto_key(true, session->key())) {
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2545,7 +2545,7 @@ int DaemonCore::HandleReq(int socki)
 		if ( insock != stream )	{   // delete stream only if we did an accept
 			delete stream;		   
 		} else {
-			stream->set_crypto_key(NULL);
+			stream->set_crypto_key(false, NULL);
 			stream->set_MD_mode(MD_OFF, NULL);
 			stream->end_of_message();
 		}
@@ -2756,8 +2756,7 @@ int DaemonCore::HandleReq(int socki)
 				the_policy->InsertOrUpdate(buf);
 				
 				// handy policy vars
-				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
-				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
+				SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
 
 				if (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_NEW_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
 
@@ -2776,7 +2775,7 @@ int DaemonCore::HandleReq(int socki)
 					assert (the_sid == NULL);
 					the_sid = strdup(buf);
 
-					if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
+					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
 
 						char *crypto_method = NULL;
 						if (!the_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, &crypto_method)) {
@@ -2945,7 +2944,7 @@ int DaemonCore::HandleReq(int socki)
 
 						result = !strncmp (sockip + 1, authip, strlen(authip) );
 
-						if (!result) {
+						if (!result && !param_boolean( "DISBABLE_AUTHENTICATION_IP_CHECK", false)) {
 							dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
 							dprintf (D_ALWAYS, "DC_AUTHENTICATE: auth ip -> %s\n", authip);
 							dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
@@ -2984,6 +2983,8 @@ int DaemonCore::HandleReq(int socki)
 						zz2printf (the_key);
 #endif
 					}
+				} else {
+					sock->set_MD_mode(MD_OFF, the_key);
 				}
 
 
@@ -2996,13 +2997,15 @@ int DaemonCore::HandleReq(int socki)
 					}
 
 					sock->decode();
-					if (!sock->set_crypto_key(the_key) ) {
+					if (!sock->set_crypto_key(true, the_key) ) {
 						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
 						result = FALSE;
 						goto finalize;
 					} else {
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", the_sid);
 					}
+				} else {
+					sock->set_crypto_key(false, the_key);
 				}
 
 
@@ -3257,6 +3260,7 @@ int DaemonCore::HandleReq(int socki)
 	}
 	
 finalize:
+
 	// finalize; the handler is done with the command.  the handler will return
 	// with KEEP_STREAM if we should not touch the stream; otherwise, cleanup
 	// the stream.  On tcp, we just delete it since the stream is the one we got
@@ -3287,7 +3291,7 @@ finalize:
 
 			// we need to reset the crypto keys
 			stream->set_MD_mode(MD_OFF);
-			stream->set_crypto_key(0);
+			stream->set_crypto_key(false, NULL);
 
 			result = KEEP_STREAM;	// HACK: keep all UDP sockets for now.  The only ones
 									// in Condor so far are Initial command socks, so keep it.
@@ -3296,7 +3300,7 @@ finalize:
 		if (!is_tcp) {
 			stream->end_of_message(); 			
 			stream->set_MD_mode(MD_OFF);
-			stream->set_crypto_key(0);
+			stream->set_crypto_key(false, NULL);
 		}
 	}
 

@@ -45,9 +45,11 @@
 #ifdef WIN32
 #	define file_strcmp _stricmp
 #	define file_contains contains_anycase
+#	define file_contains_withwildcard contains_anycase_withwildcard
 #else
 #	define file_strcmp strcmp
 #	define file_contains contains
+#	define file_contains_withwildcard contains_withwildcard
 #endif
 
 TranskeyHashTable* FileTransfer::TranskeyTable = NULL;
@@ -87,9 +89,15 @@ FileTransfer::FileTransfer()
 	Iwd = NULL;
 	InputFiles = NULL;
 	OutputFiles = NULL;
+	EncryptInputFiles = NULL;
+	EncryptOutputFiles = NULL;
+	DontEncryptInputFiles = NULL;
+	DontEncryptOutputFiles = NULL;
 	IntermediateFiles = NULL;
 	SpooledIntermediateFiles = NULL;
 	FilesToSend = NULL;
+	EncryptFiles = NULL;
+	DontEncryptFiles = NULL;
 	ExecFile = NULL;
 	UserLogFile = NULL;
 	X509UserProxy = NULL;
@@ -137,6 +145,10 @@ FileTransfer::~FileTransfer()
 	if (TmpSpoolSpace) free(TmpSpoolSpace);
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
+	if (EncryptInputFiles) delete EncryptInputFiles;
+	if (EncryptOutputFiles) delete EncryptOutputFiles;
+	if (DontEncryptInputFiles) delete DontEncryptInputFiles;
+	if (DontEncryptOutputFiles) delete DontEncryptOutputFiles;
 	if (IntermediateFiles) delete IntermediateFiles;
 	if (SpooledIntermediateFiles) delete SpooledIntermediateFiles;
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
@@ -350,6 +362,34 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			} else
 				OutputFiles = new StringList(buf,",");
 		}
+	}
+
+	// Set EncryptInputFiles to be ATTR_ENCRYPT_INPUT_FILES if specified.
+	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf) == 1) {
+		EncryptInputFiles = new StringList(buf,",");
+	} else {
+		EncryptInputFiles = new StringList(NULL,",");
+	}
+
+	// Set EncryptOutputFiles to be ATTR_ENCRYPT_OUTPUT_FILES if specified.
+	if (Ad->LookupString(ATTR_ENCRYPT_OUTPUT_FILES, buf) == 1) {
+		EncryptOutputFiles = new StringList(buf,",");
+	} else {
+		EncryptOutputFiles = new StringList(NULL,",");
+	}
+
+	// Set DontEncryptInputFiles to be ATTR_DONT_ENCRYPT_INPUT_FILES if specified.
+	if (Ad->LookupString(ATTR_DONT_ENCRYPT_INPUT_FILES, buf) == 1) {
+		DontEncryptInputFiles = new StringList(buf,",");
+	} else {
+		DontEncryptInputFiles = new StringList(NULL,",");
+	}
+
+	// Set DontEncryptOutputFiles to be ATTR_DONT_ENCRYPT_OUTPUT_FILES if specified.
+	if (Ad->LookupString(ATTR_DONT_ENCRYPT_OUTPUT_FILES, buf) == 1) {
+		DontEncryptOutputFiles = new StringList(buf,",");
+	} else {
+		DontEncryptOutputFiles = new StringList(NULL,",");
 	}
 
 	did_init = true;
@@ -605,6 +645,8 @@ FileTransfer::ComputeFilesToSend()
 	if (IntermediateFiles) delete(IntermediateFiles);
 	IntermediateFiles = NULL;
 	FilesToSend = NULL;
+	EncryptFiles = NULL;
+	DontEncryptFiles = NULL;
 	
 	if ( upload_changed_files && last_download_time > 0 ) {
 		// Here we will upload only files in the Iwd which have changed
@@ -620,6 +662,8 @@ FileTransfer::ComputeFilesToSend()
 			IntermediateFiles = 
 				new StringList(SpooledIntermediateFiles,",");
 			FilesToSend = IntermediateFiles;
+			EncryptFiles = EncryptOutputFiles;
+			DontEncryptFiles = DontEncryptOutputFiles;
 		}
 	
 		Directory* dir;
@@ -653,6 +697,8 @@ FileTransfer::ComputeFilesToSend()
 					// back these files + any that have changed this time.
 					IntermediateFiles = new StringList(NULL,",");
 					FilesToSend = IntermediateFiles;
+					EncryptFiles = EncryptOutputFiles;
+					DontEncryptFiles = DontEncryptOutputFiles;
 				}
 				// now append changed file to list only if not already there 
 				if ( IntermediateFiles->file_contains(f) == FALSE ) {
@@ -696,6 +742,8 @@ FileTransfer::RemoveInputFiles(const char *sandbox_path)
 	// want anything sent back via modification date.  
 	if ( FilesToSend == NULL ) {
 		FilesToSend = OutputFiles;
+		EncryptFiles = EncryptOutputFiles;
+		DontEncryptFiles = DontEncryptOutputFiles;
 	}
 
 	// Make a new list that only contains file basenames.
@@ -778,9 +826,13 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		if ( simple_init ) {
 			// condor_submit going to the schedd
 			FilesToSend = InputFiles;
+			EncryptFiles = EncryptInputFiles;
+			DontEncryptFiles = DontEncryptInputFiles;
 		} else {
 			// starter sending back to the shadow
 			FilesToSend = OutputFiles;
+			EncryptFiles = EncryptOutputFiles;
+			DontEncryptFiles = DontEncryptOutputFiles;
 		}
 
 	}
@@ -889,6 +941,8 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 				}
 			}
 			transobject->FilesToSend = transobject->InputFiles;
+			transobject->EncryptFiles = transobject->EncryptInputFiles;
+			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
 			transobject->Upload(sock,true);		// blocking = true for now...
 			}
 			break;
@@ -1077,6 +1131,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	s->decode();
 
+	// find out if encryption is enabled by default or not on this socket
+	bool socket_default_crypto = s->get_encryption();
+
 	// find out if this is the final download.  if so, we put the files
 	// into the user's Iwd instead of our SpoolSpace.
 	if( !s->code(final_transfer) ) {
@@ -1093,9 +1150,18 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( !s->end_of_message() ) {
 			return_and_resetpriv( -1 );
 		}
+		dprintf( D_SECURITY, "FILETRANSFER: incoming file_command is %i\n", reply);
 		if( !reply ) {
 			break;
 		}
+		if (reply == 1) {
+			s->set_crypto_mode(socket_default_crypto);
+		} else if (reply == 2) {
+			s->set_crypto_mode(true);
+		} else if (reply == 3) {
+			s->set_crypto_mode(false);
+		}
+
 		if( !s->code(p_filename) ) {
 			return_and_resetpriv( -1 );
 		}
@@ -1155,6 +1221,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 		*total_bytes += bytes;
 	}
+
+	// go back to the state we were in before file transfer
+	s->set_crypto_mode(socket_default_crypto);
 
 #ifdef WIN32
 		// unsigned __int64 to float is not implemented on Win32
@@ -1336,6 +1405,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		free (tmpSpool);
 	}
 
+	// record the state it was in when we started... the "default" state
+	bool socket_default_crypto = s->get_encryption();
+
 	while ( filelist && (filename=filelist->next()) ) {
 
 		dprintf(D_FULLDEBUG,"DoUpload: send file %s\n",filename);
@@ -1356,13 +1428,54 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 		}
 
-		if( !s->snd_int(1,FALSE) ) {
+		// now we send an int to the other side to indicate the next
+		// action.  historically, we sent either 1 or 0.  zero meant
+		// we were finished and there are no more files to send.  any
+		// non-zero value means there is at least one more file.
+		//
+		// this has been expanded with two new values which indicate
+		// encryption settings per-file.  the new values are:
+		// 0 - finished
+		// 1 - use socket default (on or off) for next file
+		// 2 - force encryption on for next file.
+		// 3 - force encryption off for next file.
+
+		// default to the socket default
+		int file_command = 1;
+		
+		// find out if this file is in DontEncryptFiles
+		if ( DontEncryptFiles->file_contains_withwildcard(filename) ) {
+			// turn crypto off for this file (actually done below)
+			file_command = 3;
+		}
+
+		// now find out if this file is in EncryptFiles.  if it was
+		// also in DontEncryptFiles, that doesn't matter, this will
+		// override.
+		if ( EncryptFiles->file_contains_withwildcard(filename) ) {
+			// turn crypto on for this file (actually done below)
+			file_command = 2;
+		}
+
+		dprintf ( D_SECURITY, "FILETRANSFER: outgoing file_command is %i for %s\n",
+				file_command, filename );
+
+		if( !s->snd_int(file_command,FALSE) ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 		if( !s->end_of_message() ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
+		}
+
+		// now enable the crypto decision we made:
+		if (file_command == 1) {
+			s->set_crypto_mode(socket_default_crypto);
+		} else if (file_command == 2) {
+			s->set_crypto_mode(true);
+		} else if (file_command == 3) {
+			s->set_crypto_mode(false);
 		}
 
 		if ( ExecFile && ( file_strcmp(ExecFile,filename)==0 ) ) {
@@ -1419,6 +1532,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	// tell our peer we have nothing more to send
 	s->snd_int(0,TRUE);
+
+	// go back to the state we were in before file transfer
+	s->set_crypto_mode(socket_default_crypto);
 
 	dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 

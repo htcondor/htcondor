@@ -497,12 +497,18 @@ public:
         //------------------------------------------
         // Encryption support below
         //------------------------------------------
-        bool set_crypto_key(KeyInfo * key, const char * keyId=0);
+        bool set_crypto_key(bool enable, KeyInfo * key, const char * keyId=0);
         //------------------------------------------
-        // PURPOSE: set sock to use a particular encryptio
-        // REQUIRE: KeyInfo -- a wrapper for keyData, if key == NULL
-        //          encryption is disabled. I don't like this somehow
+        // PURPOSE: set sock to use a particular encryption key
+        // REQUIRE: KeyInfo -- a wrapper for keyData
         // RETURNS: true -- success; false -- failure
+        //------------------------------------------
+
+        void set_crypto_mode(bool enable);
+        //------------------------------------------
+        // PURPOSE: enable or disable encryption
+        // REQUIRE: bool, true -- on; false -- off
+        // RETURNS:
         //------------------------------------------
 
         bool get_encryption() const;
@@ -606,6 +612,7 @@ protected:
 	*/
 
         Condor_Crypt_Base * crypto_;         // The actual crypto
+        bool                crypto_mode_;    // true == enabled, false == disabled.
         CONDOR_MD_MODE      mdMode_;        // MAC mode
         KeyInfo           * mdKey_;
         bool                encrypt_;        // Encryption mode

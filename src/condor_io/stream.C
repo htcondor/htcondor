@@ -69,9 +69,9 @@ Stream :: Stream(stream_code c) :
 		// You put _ in the front, I put in the
 		// back, very consistent, isn't it?	
     crypto_(NULL),
+    crypto_mode_(false),
     mdMode_(MD_OFF),
     mdKey_(0),
-    encrypt_(false),
     _code(c), 
     _coding(stream_encode)
 {
@@ -2057,10 +2057,23 @@ Stream::allow_one_empty_message()
 }
 
 
+void 
+Stream::set_crypto_mode(bool enabled)
+{
+	if (crypto_ && enabled) {
+		crypto_mode_ = true;
+	} else {
+		if (enabled) {
+			dprintf ( D_SECURITY, "NOT enabling crypto - there was no key exchanged.\n");
+		}
+		crypto_mode_ = false;
+	}
+}
+
 bool 
 Stream::get_encryption() const
 {
-    return (crypto_ != 0);
+    return (crypto_mode_);
 }
 
 bool 
@@ -2103,6 +2116,7 @@ Stream::initialize_crypto(KeyInfo * key)
 {
     delete crypto_;
     crypto_ = 0;
+	crypto_mode_ = false;
 
     // Will try to do a throw/catch later on
     if (key) {
@@ -2162,7 +2176,7 @@ const KeyInfo& Stream :: get_md_key() const
 
 
 bool 
-Stream::set_crypto_key(KeyInfo * key, const char * keyId)
+Stream::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 {
     bool inited = true;
 #if defined(CONDOR_ENCRYPTION)
@@ -2175,15 +2189,19 @@ Stream::set_crypto_key(KeyInfo * key, const char * keyId)
         if (crypto_) {
             delete crypto_;
             crypto_ = 0;
+			crypto_mode_ = false;
         }
         ASSERT(keyId == 0);
+        ASSERT(enable == false);
         inited = true;
     }
 
     // More check should be done here. what if keyId is NULL?
     if (inited) {
         set_encryption_id(keyId);
+		set_crypto_mode(enable);
     }
+
     /* 
     // Now, if TCP, the first packet need to contain the key for verification purposes
     // This key is encrypted with itself (along with rest of the packet).

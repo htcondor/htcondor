@@ -130,7 +130,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: TRUE -- success; FALSE -- failure
     //------------------------------------------
     
-    int map_kerberos_name(krb5_ticket * ticket);
+    int map_kerberos_name(krb5_principal * princ);
     int map_domain_name(const char * domain);
     //------------------------------------------
     // PURPOSE: Map kerberos realm to condor uid

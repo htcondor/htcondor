@@ -1192,7 +1192,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 
 				sock->encode();
-				sock->set_crypto_key(ki, buf);
+				sock->set_crypto_key(true, ki, buf);
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
 			} // if (will_enable_enc)
@@ -1456,7 +1456,12 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 			sock->set_MD_mode(MD_ALWAYS_ON, ki);
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
-		} // if (will_enable_mac)
+		} else {
+			// we aren't going to enable MD5.  but we should still set the secret key
+			// in case we decide to turn it on later.
+			sock->encode();
+			sock->set_MD_mode(MD_OFF, ki);
+		}
 
 		if (will_enable_enc == SEC_FEAT_ACT_YES) {
 
@@ -1473,11 +1478,16 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 			}
 
 			sock->encode();
-			sock->set_crypto_key(ki);
+			sock->set_crypto_key(true, ki);
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
-		} // if (will_enable_enc)
-
+		} else {
+			// we aren't going to enable encryption for everything.  but we should
+			// still have a secret key ready to go in case someone decides to turn
+			// it on later.
+			sock->encode();
+			sock->set_crypto_key(false, ki);
+		}
 		
 		if (new_session) {
 			// receive a classAd containing info such as: well, nothing yet
@@ -1894,12 +1904,12 @@ SecMan :: invalidateExpiredCache()
 			}
 
 			KeyInfo* nullp = 0;
-			if (!sock->set_crypto_key(nullp)) {
+			if (!sock->set_crypto_key(false, nullp)) {
 				dprintf ( D_ALWAYS, "SECMAN: could not re-init crypto!\n");
 				return false;
 			}
 			if (!sock->set_MD_mode(MD_OFF, nullp)) {
-				dprintf ( D_ALWAYS, "SECMAN: could not re-init crypto!\n");
+				dprintf ( D_ALWAYS, "SECMAN: could not re-init MD5!\n");
 				return false;
 			}
 			if (!sock->connect(sin_to_string(sock->endpoint()), 0)) {

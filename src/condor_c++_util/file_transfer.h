@@ -23,6 +23,7 @@
 #ifndef _FILE_TRANSFER_H
 #define _FILE_TRANSFER_H
 
+#include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "MyString.h"
 #include "HashTable.h"
@@ -178,8 +179,14 @@ class FileTransfer {
 	char* Iwd;
 	StringList* InputFiles;
 	StringList* OutputFiles;
+	StringList* EncryptInputFiles;
+	StringList* EncryptOutputFiles;
+	StringList* DontEncryptInputFiles;
+	StringList* DontEncryptOutputFiles;
 	StringList* IntermediateFiles;
 	StringList* FilesToSend;
+	StringList* EncryptFiles;
+	StringList* DontEncryptFiles;
 	char* SpooledIntermediateFiles;
 	char* ExecFile;
 	char* UserLogFile;

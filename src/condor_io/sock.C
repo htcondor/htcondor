@@ -968,7 +968,7 @@ char * Sock::serializeCryptoInfo(char * buf)
 
         // Initialize crypto info
         KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
-        set_crypto_key(&k, 0);
+        set_crypto_key(true, &k, 0);
         free(kserial);
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one

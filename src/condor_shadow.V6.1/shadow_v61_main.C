@@ -318,6 +318,7 @@ printClassAd( void )
 {
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_MPI );
 	printf( "%s = True\n", ATTR_HAS_JAVA );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
