@@ -396,7 +396,7 @@ Transition TransTab[] = {
 { UPDATE_ALL,		DO_WAIT,			UPDATE_WAIT,	0					},
 
 { UPDATE_WAIT,		CHILD_EXIT,			UPDATE_ONE,		reaper				},
-#ifdef 0
+#if 0
 { UPDATE_WAIT,		CKPT_and_VACATE,	0,				set_quit			},
 #endif
 { UPDATE_WAIT,		SUSPEND,			0,				susp_self			},
@@ -405,7 +405,7 @@ Transition TransTab[] = {
 
 { UPDATE_ONE,		EXITED,				UPDATE_ALL,		dispose_one			},
 { UPDATE_ONE,		FAILURE,			SEND_CKPT_ALL,	0					},
-#ifdef 0
+#if 0
 { UPDATE_ONE,		CKPT_and_VACATE,	0,				set_quit			},
 #endif
 { UPDATE_ONE,		SUSPEND,			0,				susp_self			},
