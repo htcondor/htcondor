@@ -93,6 +93,11 @@ Configuration files they are using, right after the startup banner.
 \item If no \Macro{STARTD\_EXPRS} is specified, the \Condor{startd}
   now defaults to ``JobUniverse''.
 
+\item The UNIX \Condor{collector} has the ability to fork off child
+  processes to handle queries.  The \Macro{COLLECTOR\_QUERY\_WORKERS}
+  parameter is used to specify the maximum number of these worker
+  processes and defaults to zero.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
