@@ -170,7 +170,12 @@ Scheduler::Scheduler()
 
 	startJobsDelayBit = FALSE;
 	numRegContacts = 0;
+#ifndef WIN32
 	MAX_STARTD_CONTACTS = getdtablesize() - 20;  // save 20 fds...
+#else
+	// on Windows NT, it appears you can open up zillions of sockets
+	MAX_STARTD_CONTACTS = 2000;
+#endif
 }
 
 Scheduler::~Scheduler()
@@ -808,7 +813,7 @@ Scheduler::doNegotiate (int i, Stream *s)
 		// different negotiator.  Stash this request to handle it later.
 		dprintf(D_FULLDEBUG,"Received Negotiate command while negotiating; stashing for later\n");
 		daemonCore->Register_Socket(s,"<Another-Negotiator-Socket>",
-			(SocketHandlercpp)&delayedNegotiatorHandler,
+			(SocketHandlercpp)&Scheduler::delayedNegotiatorHandler,
 			"delayedNegotiatorHandler()", this, ALLOW);
 		return KEEP_STREAM;
 	}
@@ -820,9 +825,9 @@ Scheduler::doNegotiate (int i, Stream *s)
 				 "Stashing socket to negotiator for future reuse\n");
 		daemonCore->
 				Register_Socket(s, "<Negotiator Socket>", 
-								(SocketHandlercpp)&negotiatorSocketHandler,
-								"<Negotiator Command>",
-								this, ALLOW);
+				(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
+				"<Negotiator Command>",
+				this, ALLOW);
 	}
 	return rval;
 }
@@ -1310,7 +1315,6 @@ Scheduler::contactStartd( char* capability, char *user,
 						  char* server, PROC_ID* jobId)
 {
 	match_rec* mrec;   // match record pointer
-	int	reply;         // reply from the startd
 	ReliSock *sock = new ReliSock();
 
 	dprintf ( D_FULLDEBUG, "In Scheduler::contactStartd.\n" );
@@ -1460,7 +1464,7 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 		// we want to set a timer to go off in 2 seconds that will
 		// do a StartJobs().  However, we don't want to set this
 		// *every* time we get here.  We check startJobDelayBit, if
-		// it is FALSE then we don't register because we were here
+		// it is TRUE then we don't reset the timer because we were here
 		// less than 2 seconds ago.  
 	if ( startJobsDelayBit == FALSE ) {
 		daemonCore->Reset_Timer(startjobsid, 2);
@@ -1473,7 +1477,7 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 }
 #undef BAILOUT
 
-int
+void
 Scheduler::checkContactQueue() {
 	if ( !startdContactQueue.IsEmpty() ) {
 			// there's a pending registration in the queue:
@@ -1554,6 +1558,7 @@ Scheduler::StartJobs()
 	match_rec *rec;
 
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
+	startJobsDelayBit = FALSE;
 	matches->startIterations();
 	while(matches->iterate(rec) == 1) {
 		if( rec->status == M_INACTIVE ) {
@@ -2093,8 +2098,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
-
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, RUNNING);
+	// SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, RUNNING);
+	mark_job_running(job_id);
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	return add_shadow_rec(pid, job_id, NULL, -1);
 #endif /* of WANT_DC_PM code */
@@ -2152,6 +2157,14 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	numShadows++;
 	shadowsByPid->insert(new_rec->pid, new_rec);
 	shadowsByProcID->insert(new_rec->job_id, new_rec);
+
+	if ( new_rec->match && new_rec->match->peer && new_rec->match->peer[0] ) {
+		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
+			ATTR_REMOTE_HOST,new_rec->match->peer);
+	}
+	SetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc, 
+		ATTR_SHADOW_BIRTHDATE, time(NULL));
+
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			new_rec->pid, new_rec->job_id.cluster, new_rec->job_id.proc );
 	scheduler.display_shadow_recs();
@@ -2169,6 +2182,32 @@ Scheduler::delete_shadow_rec(int pid)
 		dprintf(D_FULLDEBUG,
 				"Deleting shadow rec for PID %d, job (%d.%d)\n",
 				pid, rec->job_id.cluster, rec->job_id.proc );
+
+		// update ATTR_JOB_REMOTE_WALL_CLOCK.  note: must do this before
+		// we call check_zombie below, since check_zombie is where the
+		// job actually gets removed from the queue if job completed or deleted
+		int bday = 0;
+		GetAttributeInt(rec->job_id.cluster,rec->job_id.proc,
+			ATTR_SHADOW_BIRTHDATE,&bday);
+		if (bday) {
+			float accum_time = 0;
+			GetAttributeFloat(rec->job_id.cluster,rec->job_id.proc,
+				ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
+			accum_time += (float)( time(NULL) - bday );
+			SetAttributeFloat(rec->job_id.cluster,rec->job_id.proc,
+				ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
+		}
+				
+		char last_host[256];
+		last_host[0] = '\0';
+		GetAttributeString(rec->job_id.cluster,rec->job_id.proc,
+			ATTR_REMOTE_HOST,last_host);
+		DeleteAttribute( rec->job_id.cluster,rec->job_id.proc, 
+			ATTR_REMOTE_HOST );
+		if ( last_host[0] ) {
+			SetAttributeString( rec->job_id.cluster,rec->job_id.proc, 
+							ATTR_LAST_REMOTE_HOST, last_host );
+		}
 
 		if (rec->removed) {
 			if (!WriteAbortToUserLog(rec->job_id)) {
@@ -2223,7 +2262,6 @@ mark_job_stopped(PROC_ID* job_id)
 	int		orig_max;
 	int		had_orig;
 	char	owner[_POSIX_PATH_MAX];
-	float 	cpu_time;
 
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
 								ATTR_ORIG_MAX_HOSTS, &orig_max);
@@ -2416,7 +2454,6 @@ Scheduler::shadow_prio_recs_consistent()
 	int		i;
 	struct shadow_rec	*srp;
 	int		status, universe;
-	int CurHosts, MaxHosts;
 
 	dprintf( D_ALWAYS, "Checking consistency running and runnable jobs\n" );
 	BadCluster = -1;
@@ -2669,8 +2706,9 @@ Scheduler::child_exit(int pid, int status)
 		} else if(WIFSIGNALED(status)) {
 			dprintf(D_ALWAYS,
 					"scheduler universe job (%d.%d) pid %d died "
-					"with signal %d\n", srec->job_id.cluster,
-					srec->job_id.proc, pid, WTERMSIG(status));
+					"with %s\n", srec->job_id.cluster,
+					srec->job_id.proc, pid, 
+					daemonCore->GetExceptionString(status));
 			NotifyUser(srec, "was killed by signal ",
 						WTERMSIG(status), REMOVED);
 			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
@@ -2744,8 +2782,8 @@ Scheduler::child_exit(int pid, int status)
 				break;
 			}
 	 	} else if( WIFSIGNALED(status) ) {
-			dprintf( D_ALWAYS, "Shadow pid %d died with signal %d\n",
-					 pid, WTERMSIG(status) );
+			dprintf( D_ALWAYS, "Shadow pid %d died with %s\n",
+					 pid, daemonCore->GetExceptionString(status) );
 		}
 		delete_shadow_rec( pid );
 	} else {
@@ -3120,16 +3158,19 @@ Scheduler::Register()
 {
 	 // message handlers for schedd commands
 	 daemonCore->Register_Command( NEGOTIATE, "NEGOTIATE", 
-			(CommandHandlercpp)&doNegotiate, "negotiate", this, NEGOTIATOR );
+		 (CommandHandlercpp)&Scheduler::doNegotiate, "negotiate", 
+		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
-			(CommandHandlercpp)&reschedule_negotiator, "reschedule_negotiator", 
-										 this, WRITE);
+			(CommandHandlercpp)&Scheduler::reschedule_negotiator, 
+			"reschedule_negotiator", this, WRITE);
 	 daemonCore->Register_Command( RECONFIG, "RECONFIG", 
 			(CommandHandler)&dc_reconfig, "reconfig", 0, OWNER );
 	 daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
-			(CommandHandlercpp)&vacate_service, "vacate_service", this, WRITE);
+			(CommandHandlercpp)&Scheduler::vacate_service, 
+			"vacate_service", this, WRITE);
 	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
-			(CommandHandlercpp)&abort_job, "abort_job", this, WRITE);
+			(CommandHandlercpp)&Scheduler::abort_job, 
+			"abort_job", this, WRITE);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
@@ -3179,14 +3220,12 @@ Scheduler::RegisterTimers()
 	}
 
 	 // timer handlers
-	 timeoutid = daemonCore->Register_Timer(10,(Eventcpp)&timeout,
-											"timeout",this);
+	 timeoutid = daemonCore->Register_Timer(10,
+		(Eventcpp)&Scheduler::timeout,"timeout",this);
 	startjobsid = daemonCore->Register_Timer(10,
-											 (Eventcpp)&StartJobs,"StartJobs",
-											 this);
+		(Eventcpp)&Scheduler::StartJobs,"StartJobs",this);
 	 aliveid = daemonCore->Register_Timer(aliveInterval, aliveInterval,
-										 (Eventcpp)&send_alive, 
-										 "send_alive", this);
+		(Eventcpp)&Scheduler::send_alive,"send_alive", this);
 	cleanid = daemonCore->Register_Timer(QueueCleanInterval,
 										 QueueCleanInterval,
 										 (Event)&CleanJobQueue,
