@@ -29,9 +29,6 @@ NON_PORTABLE_OBJ = NON_POSIX.o analyze_core.$(OS).o
 
 OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
 
-TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
-	alarm.o
-
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)
 strip_target($(NAME),sbin,EXECUTABLE_MODE)
@@ -39,7 +36,6 @@ static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
-c_plus_target(toy,$(TOY_OBJ),$(LIB))
 html:
 
 starter_state_diagram.dot: $(NAME)
