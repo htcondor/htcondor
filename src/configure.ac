@@ -995,7 +995,7 @@ AC_CACHE_CHECK([for GNU tar],_cv_gnu_tar,
     if test -z "$a" ; then continue ; fi ;
     if ( sh -c "$a --version" 2> /dev/null | grep GNU  2>&1 > /dev/null );
     then
-      _cv_gnu_tar=$a;
+      _cv_gnu_tar=`which $a`;
       break;
     fi
   done;
