@@ -245,7 +245,7 @@ UniShadow::emailTerminateEvent( int exitReason )
 	arch_time = q_date;
 	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
 	
-	if( exitReason == JOB_EXITED ) {
+	if( exitReason == JOB_EXITED || exitReason == JOB_COREDUMPED ) {
 		double real_time = now - q_date;
 		arch_time = now;
 		fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
