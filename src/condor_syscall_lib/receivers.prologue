@@ -20,6 +20,8 @@
 #include "condor_xdr.h"
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
+#include "condor_constants.h"
+#include "startup.h"
 #include "condor_fix_assert.h"
 
 #if defined(OSF1) && defined(__GNUC__ )
@@ -101,7 +103,7 @@ do_REMOTE_syscall()
 	ASSERT( xdr_int(xdr_syscall, &condor_sysnum) );
 
 	dprintf(D_SYSCALLS,
-		"Shadow: got request for syscall %d <%s>\n",
+		"Got request for syscall %d <%s>\n",
 		condor_sysnum, _condor_syscall_name(condor_sysnum)
 	);
 	switch( condor_sysnum ) {
