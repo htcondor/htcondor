@@ -65,6 +65,7 @@ static ClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
+static int old_cluster_num = -1;	// next_cluster_num at start of transaction
 static bool JobQueueDirty = false;
 
 class Service;
@@ -96,6 +97,56 @@ static char *default_super_user =
 #endif
 
 //static int allow_remote_submit = FALSE;
+
+static 
+char *
+IdToStr(int cluster, int proc)
+{
+	static char strbuf[35];
+
+	if ( proc == -1 ) {
+		// cluster ad key
+		sprintf(strbuf,"0%d.-1",cluster);
+	} else {
+		// proc ad key
+		sprintf(strbuf,"%d.%d",cluster,proc);
+	}
+	return strbuf;
+}
+
+static
+void
+StrToId(const char *str,int & cluster,int & proc)
+{
+	char *tmp;
+
+	// skip leading zero, if any
+	if ( *str == '0' ) 
+		str++;
+
+	if ( !(tmp = strchr(str,'.')) ) {
+		EXCEPT("Qmgmt: Malformed key - '%s'",str);
+	}
+	tmp++;
+
+	cluster = atoi(str);
+	proc = atoi(tmp);
+}
+
+static
+void
+ClusterCleanup(int cluster_id)
+{
+	// remove entry in ClusterSizeHashTable 
+	ClusterSizeHashTable->remove(cluster_id);
+
+	// delete the cluster classad
+	JobQueue->DestroyClassAd( IdToStr(cluster_id,-1) );
+
+	// blow away the initial checkpoint file from the spool dir
+	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
+	(void)unlink( ckpt_file_name );
+}
 
 // Read out any parameters from the config file that we need and
 // initialize our internal data structures.
@@ -150,11 +201,14 @@ InitJobQueue(const char *job_queue_name)
 	/* We read/initialize the header ad in the job queue here.  Currently,
 	   this header ad just stores the next available cluster number. */
 	ClassAd *ad;
+	ClassAd *clusterad;
+	HashKey key;
 	int 	cluster_num;
 	int		stored_cluster_num;
 	int 	*numOfProcs = NULL;	
 	bool	CreatedAd = false;
 	char	cluster_str[40];
+
 	if (!JobQueue->LookupClassAd(HeaderKey, ad)) {
 		// we failed to find header ad, so create one
 //		LogNewClassAd *log = new LogNewClassAd(HeaderKey, JOB_ADTYPE,
@@ -173,11 +227,23 @@ InitJobQueue(const char *job_queue_name)
 
 	next_cluster_num = 1;
 	JobQueue->StartIterateAllClassAds();
-	while (JobQueue->IterateAllClassAds(ad)) {
-		if (ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) {
+	while (JobQueue->IterateAllClassAds(ad,key)) {
+		const char *tmp = key.value();
+		if ( *tmp == '0' ) continue;	// skip cluster & header ads
+		if ( (cluster_num = atoi(tmp)) ) {
+
+			// find highest cluster, set next_cluster_num to one higher
 			if (cluster_num >= next_cluster_num) {
 				next_cluster_num = cluster_num + 1;
 			}
+
+			// link all proc ads to their cluster ad, if there is one
+			sprintf(cluster_str,"0%d.-1",cluster_num);
+			if ( JobQueue->LookupClassAd(cluster_str,clusterad) ) {
+				ad->ChainToAd(clusterad);
+			}
+
+			// count up number of procs in cluster, update ClusterSizeHashTable
 			if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
 				// First proc we've seen in this cluster; set size to 1
 				ClusterSizeHashTable->insert(cluster_num,1);
@@ -185,6 +251,7 @@ InitJobQueue(const char *job_queue_name)
 				// We've seen this cluster_num go by before; increment proc count
 				(*numOfProcs)++;
 			}
+
 		}
 	}
 
@@ -355,6 +422,10 @@ handle_q(Service *, int, Stream *sock)
 
 	JobQueue->BeginTransaction();
 
+	// store the cluster num so when we commit the transaction, we can easily
+	// see if new clusters have been submitted and thus make links to cluster ads
+	old_cluster_num = next_cluster_num;	
+
 	// initialize per-connection variables.  back in the day this
 	// was essentially InvalidateConnection().  of particular 
 	// importance is setting Q_SOCK... this tells the rest of the QMGMT
@@ -400,7 +471,7 @@ InitializeConnection( const char *owner )
 	}
 	else {
 		//this is a relic, but better than setting to NULL!
-		init_user_ids( "nobody" );
+		//    init_user_ids( "nobody" );
 		return -1;
 	}
 
@@ -429,6 +500,10 @@ NewCluster()
 //	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 //	JobQueue->AppendLog(log);
 	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
+
+	// put a new classad in the transaction log to serve as the cluster ad
+	JobQueue->NewClassAd(IdToStr(active_cluster_num,-1), JOB_ADTYPE, STARTD_ADTYPE);
+
 	return active_cluster_num;
 }
 
@@ -468,11 +543,9 @@ NewProc(int cluster_id)
 	return proc_id;
 }
 
-
 int DestroyProc(int cluster_id, int proc_id)
 {
 	char				key[_POSIX_PATH_MAX];
-	char				*ckpt_file_name;
 	ClassAd				*ad = NULL;
 //	LogDestroyClassAd	*log;
 	int					*numOfProcs = NULL;
@@ -512,9 +585,7 @@ int DestroyProc(int cluster_id, int proc_id)
 		// If this is the last job in the cluster, remove the initial 
 		//    checkpoint file and the entry in the ClusterSizeHashTable.
 		if ( *numOfProcs == 0 ) {
-			ClusterSizeHashTable->remove(cluster_id);
-			ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
-			(void)unlink( ckpt_file_name );
+			ClusterCleanup(cluster_id);
 		}
 	}
 
@@ -528,18 +599,20 @@ int DestroyCluster(int cluster_id)
 {
 	ClassAd				*ad=NULL;
 	int					c, proc_id;
-	char				key[_POSIX_PATH_MAX];
 //	LogDestroyClassAd	*log;
-	char				*ickpt_file_name;
+	HashKey				key;
+
+	// cannot destroy the header cluster(s)
+	if ( cluster_id < 1 ) {
+		return -1;
+	}
 
 	JobQueue->StartIterateAllClassAds();
 
 	// Find all jobs in this cluster and remove them.
-	while(JobQueue->IterateAllClassAds(ad)) {
-		if (ad->LookupInteger(ATTR_CLUSTER_ID, c) == 1) {
-			if (c == cluster_id) {
-				ad->LookupInteger(ATTR_PROC_ID, proc_id);
-
+	while(JobQueue->IterateAllClassAds(ad,key)) {
+		StrToId(key.value(),c,proc_id);
+		if (c == cluster_id && proc_id > -1) {
 				// Only the owner can delete a cluster
 				if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 					return -1;
@@ -548,19 +621,14 @@ int DestroyCluster(int cluster_id)
 				// Apend to history file
                 AppendHistory(ad);
 
-				sprintf(key, "%d.%d", cluster_id, proc_id);
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);
-				JobQueue->DestroyClassAd(key);
-			}
+				JobQueue->DestroyClassAd(key.value());
 		}
+
 	}
 
-	ickpt_file_name =
-		gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
-	(void)unlink( ickpt_file_name );
-
-	ClusterSizeHashTable->remove(cluster_id);
+	ClusterCleanup(cluster_id);
 
 	JobQueueDirty = true; 
 
@@ -593,6 +661,8 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 	return false;
 }
 
+// DestroyClusterByContraint not used anywhere, so it is commented out.
+#if 0
 int DestroyClusterByConstraint(const char* constraint)
 {
 	int			flag = 1;
@@ -638,6 +708,7 @@ int DestroyClusterByConstraint(const char* constraint)
 	if(flag) return -1;
 	return 0;
 }
+#endif
 
 
 int
@@ -646,13 +717,15 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name, char *at
 	ClassAd	*ad;
 	int cluster_num, proc_num;	
 	int found_one = 0, had_error = 0;
+	HashKey key;
 
 	JobQueue->StartIterateAllClassAds();
-	while(JobQueue->IterateAllClassAds(ad)) {
-		// check for CLUSTER_ID to avoid queue header ad
-		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
-			(ad->LookupInteger(ATTR_PROC_ID, proc_num) == 1) &&
-			EvalBool(ad, constraint)) {
+	while(JobQueue->IterateAllClassAds(ad,key)) {
+		// check for CLUSTER_ID>0 and proc_id >= 0 to avoid header ad/cluster ads
+		StrToId(key.value(),cluster_num,proc_num);
+		if ( (cluster_num > 0) &&
+			 (proc_num > -1) &&
+			 EvalBool(ad, constraint)) {
 			found_one = 1;
 			if( SetAttribute(cluster_num,proc_num,attr_name,attr_value) < 0 ) {
 				had_error = 1;
@@ -683,7 +756,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 		return -1;
 	}
 
-	sprintf(key, "%d.%d", cluster_id, proc_id);
+	strcpy(key, IdToStr(cluster_id,proc_id) );
+
 	if (JobQueue->LookupClassAd(key, ad)) {
 		if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 			dprintf(D_ALWAYS, "OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
@@ -754,9 +828,33 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 int
 CloseConnection()
 {
+
 	JobQueue->CommitTransaction();
 		// If this failed, the schedd will EXCEPT.  So, if we got this
 		// far, we can always return success.  -Derek Wright 4/2/99
+	
+	// Now that the transaction has been commited, we need to chain proc
+	// ads to cluster ads if any new clusters have been submitted.
+	if ( old_cluster_num != next_cluster_num ) {
+		int cluster_id;
+		int 	*numOfProcs = NULL;	
+		int i;
+		ClassAd *procad;
+		ClassAd *clusterad;
+
+		for ( cluster_id=old_cluster_num; cluster_id < next_cluster_num; cluster_id++ ) {
+			if ( (JobQueue->LookupClassAd(IdToStr(cluster_id,-1), clusterad)) &&
+			     (ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1) )
+			{
+				for ( i = 0; i < *numOfProcs; i++ ) {
+					if (JobQueue->LookupClassAd(IdToStr(cluster_id,i),procad)) {
+						procad->ChainToAd(clusterad);
+					}
+				}	// end of loop thru all proc in cluster cluster_id
+			}	
+		}	// end of loop thru clusters
+	}	// end of if a new cluster(s) submitted
+					
 	return 0;
 }
 
@@ -927,14 +1025,6 @@ GetJobAd(int cluster_id, int proc_id)
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
 	if (JobQueue->LookupClassAd(key, ad)) {
-		// insert in the current time from the server's (schedd)
-		// point of view.  this is used so condor_q can compute some
-		// time values based upon other attribute values without 
-		// worrying about the clocks being different on the condor_schedd
-		// machine -vs- the condor_q machine.
-		char buf[80];
-		sprintf(buf,"%s=%ld",ATTR_SERVER_TIME,time(NULL));
-		ad->InsertOrUpdate(buf);
 		return ad;
 	} else
 		return NULL;
@@ -945,15 +1035,12 @@ ClassAd *
 GetJobByConstraint(const char *constraint)
 {
 	ClassAd	*ad;
-	int cluster_num;	// check for cluster num to avoid header ad
+	HashKey key;
 
 	JobQueue->StartIterateAllClassAds();
-	while(JobQueue->IterateAllClassAds(ad)) {
-		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
+	while(JobQueue->IterateAllClassAds(ad,key)) {
+		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
 			EvalBool(ad, constraint)) {
-				char buf[80];
-				sprintf(buf,"%s=%ld",ATTR_SERVER_TIME,time(NULL));
-				ad->InsertOrUpdate(buf);
 				return ad;
 		}
 	}
@@ -972,18 +1059,15 @@ ClassAd *
 GetNextJobByConstraint(const char *constraint, int initScan)
 {
 	ClassAd	*ad;
-	int cluster_num;	// check for cluster num to avoid header ad
+	HashKey key;
 
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
 	}
 
-	while(JobQueue->IterateAllClassAds(ad)) {
-		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
+	while(JobQueue->IterateAllClassAds(ad,key)) {
+		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
-			char buf[80];
-			sprintf(buf,"%s=%ld",ATTR_SERVER_TIME,time(NULL));
-			ad->InsertOrUpdate(buf);
 			return ad;
 		}
 	}
@@ -1002,12 +1086,12 @@ int GetJobList(const char *constraint, ClassAdList &list)
 {
 	int			flag = 1;
 	ClassAd		*ad=NULL, *newad;
-	int			cluster_num;	// check for cluster num to avoid header ad
+	HashKey key;
 
 	JobQueue->StartIterateAllClassAds();
 
-	while(JobQueue->IterateAllClassAds(ad)) {
-		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
+	while(JobQueue->IterateAllClassAds(ad,key)) {
+		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
 			flag = 0;
 			newad = new ClassAd(*ad);	// insert copy so list doesn't
@@ -1166,13 +1250,10 @@ WalkJobQueue(scan_func func)
 {
 	ClassAd *ad;
 	int rval = 0;
-	int cluster_num;	// check for cluster num to avoid header ad
 
 	ad = GetNextJob(1);
 	while (ad != NULL && rval >= 0) {
-		if (ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) {
-			rval = func(ad);
-		}
+		rval = func(ad);
 		if (rval >= 0) {
 			FreeJobAd(ad);
 			ad = GetNextJob(0);
