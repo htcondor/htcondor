@@ -38,7 +38,7 @@ sub ForceVacate
 		  $vacates >= $MAX_VACATES );
 
     # let the job run for a few seconds and then send vacate signal
-    sleep 25;
+    sleep 60;
     Condor::Vacate( "\"$info{'sinful'}\"" );
     $vacates++;
     return 1;
