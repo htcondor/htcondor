@@ -4888,7 +4888,8 @@ int DaemonCore::Create_Process(
 				char *nametmp = (char *) malloc( namelen );
 				if ( NULL == nametmp ) {
 					dprintf( D_ALWAYS, "malloc(%d) failed!\n", namelen );
-					return FALSE;					
+					free( (void *) origname );
+					return FALSE;
 				}
 
 				// Build the new (absolute) name in nametmp2
@@ -5126,9 +5127,6 @@ int DaemonCore::Create_Process(
 	}
 #endif
 
-	// Free up the name buffer
-	free( (void *) namebuf );
-
 	// Now that we have a child, store the info in our pidTable
 	pidtmp = new PidEntry;
 	pidtmp->pid = newpid;
@@ -5163,6 +5161,9 @@ int DaemonCore::Create_Process(
 	// the stack (rsock and ssock), they will get closed when we return.
 
  wrapup:
+	// Free up the name buffer
+	free( (void *) namebuf );
+
 	errno = return_errno;
 	return newpid;	
 }
