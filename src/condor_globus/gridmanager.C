@@ -359,6 +359,13 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 		return TRUE;
 	}
 
+	if ( !JobsToCancel.IsEmpty() || !JobsToCommit.IsEmpty() ||
+		 !JMsToRestart.IsEmpty() ) {
+		dprintf(D_FULLDEBUG,"Running jobs need servicing. Delaying submit.\n");
+		daemonCore->Block_Signal( GRIDMAN_ADD_JOBS );
+		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_SUBMIT_JOB );
+	}
+
 	JobsToSubmit.Rewind();
 	JobsToSubmit.Next( new_job );
 
