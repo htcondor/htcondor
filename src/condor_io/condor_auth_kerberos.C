@@ -170,12 +170,18 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
 
     // Make the input buffer
     in_data.length = input_len;
-    in_data.data = (char *) malloc(input_len);
+    in_data.data = input;
     memcpy(in_data.data, input, input_len);
+    out_data.ciphertext.data = 0;
     
     if (code = krb5_encrypt_data(krb_context_, sessionKey_, 0, &in_data, &out_data)) {
+        output     = 0;
         output_len = 0;
-        goto error;
+        if (out_data.ciphertext.data) {    
+            free(out_data.ciphertext.data);
+        }
+        dprintf(D_ALWAYS, "%s\n", error_message(code));
+        return false;
     }
     
     output_len = sizeof(out_data.enctype) +
@@ -198,15 +204,12 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     index += sizeof(out_data.ciphertext.length);
 
     memcpy(output + index, out_data.ciphertext.data, out_data.ciphertext.length);
-    
-    if (in_data.data) {
-        free(in_data.data);
+
+    if (out_data.ciphertext.data) {    
+        free(out_data.ciphertext.data);
     }
     
     return TRUE;
- error:
-    dprintf(D_ALWAYS, "%s\n", error_message(code));
-    return FALSE;
 }
 
 int Condor_Auth_Kerberos :: unwrap(char*  input, 
@@ -214,11 +217,11 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
                                    char*& output, 
                                    int&   output_len)
 {
-    int code;
-    krb5_data     out_data;
-    krb5_enc_data enc_data;
-    
+    krb5_error_code code;
+    krb5_data       out_data;
+    krb5_enc_data   enc_data;
     int index = 0, tmp;
+    out_data.data = 0;
 
     memcpy(&tmp, input, sizeof(enc_data.enctype));
     enc_data.enctype = ntohl(tmp);
@@ -232,11 +235,7 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
     enc_data.ciphertext.length = ntohl(tmp);
     index += sizeof(enc_data.ciphertext.length);
     
-    enc_data.ciphertext.data = (char *) malloc(enc_data.ciphertext.length);
-    
-    memcpy(enc_data.ciphertext.data, input + index, enc_data.ciphertext.length);
-    
-    //fprintf(stderr, "About to decrypt %s\n", enc_data.ciphertext.data);
+    enc_data.ciphertext.data = input + index;
     
     if (code = krb5_decrypt_data(krb_context_, 
                                  sessionKey_,
@@ -244,23 +243,23 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
                                  &enc_data, 
                                  &out_data)) {
         output_len = 0;
-        goto error;
+        output = 0;
+        dprintf(D_ALWAYS, "%s\n", error_message(code));
+        if (out_data.data) {
+            free(out_data.data);
+        }
+        return false;
     }
     //fprintf(stderr, "Decrypted\n");
     
     output_len = out_data.length;
     output = (char *) malloc(output_len);
     memcpy(output, out_data.data, output_len);
-    //fprintf(stderr, "Encrypted text: %s, decrypted text: %s\n", input, output);
-    
-    if (enc_data.ciphertext.data) {
-        free(enc_data.ciphertext.data);
+
+    if (out_data.data) {
+        free(out_data.data);
     }
-    
-    return TRUE;
- error:
-    dprintf(D_ALWAYS, "%s\n", error_message(code));
-    return FALSE;
+    return true;
 }
 
 //----------------------------------------------------------------------
@@ -1005,7 +1004,11 @@ int Condor_Auth_Kerberos :: init_server_info()
     else {
         if (mySock_->isClient()) {
             setRemoteUser(name);
-            setRemoteDomain((*server)->realm.data);
+            // (*server)->realm.data is not null terminated
+            char buf[(*server)->realm.length + 1];
+            memcpy(buf, (*server)->realm.data, (*server)->realm.length);
+            buf[(*server)->realm.length]=0;
+            setRemoteDomain(buf);
         }
     }
 
