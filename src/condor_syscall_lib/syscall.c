@@ -227,32 +227,6 @@ syscall(va_alist)
 		FOUR(kioctl,int,int,int,char *)
 		THREE(knlist,struct nlist *,int,int)
 		FOUR(kreadv,int,struct iovec *,int,int)
-#ifdef NOTDEF
-		case SYS_kreadv: {
-		int				arg_1;
-		struct iovec	*arg_2;
-		int				arg_3;
-		int				arg_4;
-		int				temp_errno;
-		int				file_flags;
-		arg_1 = va_arg(ap,int);
-		arg_2 = va_arg(ap,struct iovec *);
-		arg_3 = va_arg(ap,int);
-		arg_4 = va_arg(ap,int);
-		va_end(ap);
-		rval = kreadv(arg_1,arg_2,arg_3,arg_4);
-		if( rval < 0 && errno == EAGAIN ) {
-			file_flags = -1;
-			temp_errno = errno;
-			file_flags = kfcntl( arg_1, F_GETFL, 0 );
-			abort();
-		}
-		CondorErrno = errno;
-		return rval;
-		}
-#endif NOTDEF
-
-
 		FOUR(kwaitpid,int,pid_t,int,struct rusage *)
 		FOUR(kwritev,int,struct iovec *,int,int)
 		TWO(link,char *,char *)
@@ -374,6 +348,67 @@ syscall(va_alist)
 		TWO(gethostname,char *,int)
 		ONE(sethostid,int)
 		ZERO(gethostid)
+
+/*
+  The system call read() doesn't exist in AIX, but some places in our
+  code call "syscall(SYS_read,...)", so we implement a virtual read
+  system call here using the kreadv() syscall. */
+		case SYS_read: {
+			int				fd;
+			char *			buf;
+			int				nbytes;
+			struct iovec	vec;
+
+				/* Get parameters */
+			fd = va_arg(ap,int);
+			buf = va_arg(ap,char *);
+			nbytes = va_arg(ap,int);
+			va_end(ap);
+
+				/* Set up iovector */
+			vec.iov_base = buf;
+			vec.iov_len = nbytes;
+
+				/* Issue the call - note: we're hoping the extension
+				   of 0 is the right one for "no special treatment",
+				   since this call is undocumented */
+			rval = kreadv( fd, &vec, 1, 0 );
+
+				/* finish up */
+			CondorErrno = errno;
+			return rval;
+		}
+
+/*
+  The system call write() doesn't exist in AIX, but some places in our
+  code call "syscall(SYS_write,...)", so we implement a virtual write
+  system call here using the kwritev() syscall. */
+		case SYS_write: {
+			int				fd;
+			char *			buf;
+			int				nbytes;
+			struct iovec	vec;
+
+				/* Get parameters */
+			fd = va_arg(ap,int);
+			buf = va_arg(ap,char *);
+			nbytes = va_arg(ap,int);
+			va_end(ap);
+
+				/* Set up iovector */
+			vec.iov_base = buf;
+			vec.iov_len = nbytes;
+
+				/* Issue the call - note: we're hoping the extension
+				   of 0 is the right one for "no special treatment",
+				   since this call is undocumented */
+			rval = kwritev( fd, &vec, 1, 0 );
+
+				/* finish up */
+			CondorErrno = errno;
+			return rval;
+		}
+
 /*
 ** The kernel exports these, but even Marc Auslander doesn't know
 ** what they are...
@@ -393,31 +428,3 @@ syscall(va_alist)
 			_exit( UNKNOWN_SYSCALL );
 	}
 }
-
-
-#ifdef NOTDEF
-abort()
-{
-	struct sigaction    action;
-	struct rlimit lim;
-
-		/* Set up SIGIOT to produce a full core dump. */
-	if( sigaction(SIGIOT,NULL,&action) < 0 ) {
-		_exit( 1 );
-	}
-	action.sa_flags |= SA_FULLDUMP;
-	action.sa_handler = SIG_DFL;
-	if( sigaction(SIGIOT,&action,NULL) < 0 ) {
-		_exit( 1 );
-	}
-
-		/* Make sure our core size limit allows for a full dump */
-	lim.rlim_cur = RLIM_INFINITY;
-	if( setrlimit(RLIMIT_CORE,&lim) < 0 ) {
-		_exit( 1 );
-	}
-
-		/* Send ourself the signal and wait for it */
-	kill( getpid(), SIGIOT );
-}
-#endif NOTDEF
