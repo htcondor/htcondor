@@ -192,7 +192,8 @@ main( int argc, char *argv[] )
 	ThisHost = my_hostname();
 
 	if( (fp=fopen(cmd_file,"r")) == NULL ) {
-		EXCEPT( "fopen(%s,\"r\")", argv[1] );
+		fprintf( stderr, "Failed to open command file\n");
+		exit(1);
 	}
 
 	if (ConnectQ(NULL) == 0) {
@@ -216,7 +217,8 @@ main( int argc, char *argv[] )
 
 		/* Parse the file and queue the jobs */
 	if( read_condor_file(fp) < 0 ) {
-		EXCEPT( "CONDOR description file error" );
+		fprintf(stderr, "Failed to parse command file.\n");
+		exit(1);
 	}
 
 	DisconnectQ(0);
