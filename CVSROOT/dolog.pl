@@ -291,7 +291,7 @@ sub mail_notification {
     }
     print S "DATA\n";
     get_response_code(354);
-     Get one line starting with "354 ".
+    # Get one line starting with "354 ".
     if ($flag_tagcmd) {
 	print S "Subject:  cvs tag in $repository\n";
     } else {
