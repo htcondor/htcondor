@@ -2808,13 +2808,15 @@ Scheduler::Init()
 
 	tmp = param( "FLOCK_HOSTS" );
 	if ( tmp && tmp[0] != '\0') {
-		if (FlockHosts) {
-			delete FlockHosts;
-		}
+		if (FlockHosts) delete FlockHosts;
 		FlockHosts = new StringList( tmp );
 		MaxFlockLevel = FlockHosts->number();
-		free( tmp );
+	} else if (FlockHosts) {
+		delete FlockHosts;
+		FlockHosts = NULL;
+		MaxFlockLevel = 0;
 	}
+	if (tmp) free(tmp);
 
 	tmp = param( "RESERVED_SWAP" );
     if( !tmp ) {
