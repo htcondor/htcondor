@@ -40,10 +40,4 @@ int		caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose =
 int		send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA );
 Resource* stream_to_rip( Stream* );
 
-// Utils from the util_lib that aren't prototyped
-extern "C" {
-	int		get_random_int();
-	int		set_seed( int );
-}
-
 #endif _UTIL_H
