@@ -57,10 +57,20 @@ int main ( int argc, char *argv[] ) {
 	}
 #endif
 
+	char *tmp;
     char *buf = new char[1024];
     sprintf ( buf, "%s", argv[1] );
     for ( int i=2 ; i<argc ; i++ ) {
         strcat( buf, " " );
+			// Now, we've got to check for "\-" in the argument, and
+			// if we find it, replace it with just "-", since mpich
+			// seems to have started to try to escape some of its args
+			// so it behaves nicely with the Unix shell, but that
+			// doesn't work for us... 
+			// NOTE: we've got to escape the '\' here! :)
+		while( (tmp = strstr(argv[i], "\\-")) ) {
+			*tmp = ' ';
+		}
         strcat( buf, argv[i] );
     }
 
