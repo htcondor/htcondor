@@ -27,8 +27,8 @@
 ** Compatibility routine for systems which utilize setresgid() for
 ** this purpose.
 */
-setrgid( rgid )
-int		rgid;
+int
+setrgid( int rgid )
 {
 	return setregid( rgid, -1);
 }

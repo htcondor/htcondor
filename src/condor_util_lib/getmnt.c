@@ -228,12 +228,9 @@ char			*path;
 FILE			*setmntent();
 struct mntent	*getmntent();
 
-getmnt( start, buf, bufsize, mode, path )
-int				*start;
-struct fs_data	buf[];
-unsigned		bufsize;
-int				mode;
-char			*path;
+int
+getmnt( int* start, struct fs_data buf[], unsigned int bufsize, 
+		int	mode, char* path )
 {
 	FILE			*tab;
 	struct mntent	*ent;
