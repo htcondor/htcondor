@@ -108,6 +108,8 @@ public:
 		// Called by command_activate_claim() to spawn a starter
 	int		spawn_starter( start_info_t*, time_t );
 
+	void	setStarter( Starter* s );
+
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
 		// have to do lots of funky twiddling with our match objects,
