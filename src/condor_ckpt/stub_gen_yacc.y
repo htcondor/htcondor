@@ -1,10 +1,11 @@
 %token TYPE_NAME
+%token CONST
 %token IDENTIFIER
 %token UNKNOWN
 %token MAP
 
 %type <node> stub_spec param_list param simple_param map_param
-%type <tok> TYPE_NAME IDENTIFIER UNKNOWN
+%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN
 
 %{
 #include <stdio.h>
@@ -12,7 +13,7 @@
 #include "scanner.h"
 extern int CurLineNo;
 struct node *mk_func_node( char *type_name, char *id, struct node *param_list );
-struct node *mk_param_node( char *type_name, char *id, int is_ptr );
+struct node *mk_param_node( char *type_name, char *id, int is_ptr, int is_const );
 struct node *mk_map_param( struct node * simple );
 struct node *insert_node( struct node *list, struct node *new_elem );
 void display_node( struct node * );
@@ -22,6 +23,11 @@ void output_param_decl( struct node * );
 void output_call( char *call, char *id, struct node *list );
 struct node *mk_list();
 void copy_header( FILE *in_fp, FILE *out_fp );
+
+#define IS_PTR 1
+#define NOT_PTR 0
+#define IS_CONST 1
+#define NOT_CONST 0
 %}
 
 %%
@@ -61,12 +67,21 @@ map_param
 simple_param
 	: TYPE_NAME IDENTIFIER
 			{
-			$$ = mk_param_node( $1.val, $2.val, 0 );
+			$$ = mk_param_node( $1.val, $2.val, NOT_PTR, NOT_CONST );
 			}
 
 	| TYPE_NAME '*' IDENTIFIER
 			{
-			$$ = mk_param_node( $1.val, $3.val, 1 );
+			$$ = mk_param_node( $1.val, $3.val, IS_PTR, NOT_CONST );
+			}
+	| CONST TYPE_NAME IDENTIFIER
+			{
+			$$ = mk_param_node( $2.val, $3.val, NOT_PTR, IS_CONST );
+			}
+
+	| CONST TYPE_NAME '*' IDENTIFIER
+			{
+			$$ = mk_param_node( $2.val, $4.val, IS_PTR, IS_CONST );
 			}
 	;
 %%
@@ -84,7 +99,7 @@ yyerror( char * s )
 }
 
 struct node *
-mk_param_node( char *type, char *name, int is_ptr )
+mk_param_node( char *type, char *name, int is_ptr, int is_const )
 {
 	struct node	*answer;
 
@@ -93,6 +108,7 @@ mk_param_node( char *type, char *name, int is_ptr )
 	answer->type_name = type;
 	answer->id = name;
 	answer->is_ptr = is_ptr;
+	answer->is_const = is_const;
 	answer->is_mapped = 0;
 
 	answer->next = answer;
@@ -139,6 +155,9 @@ output_param_node( struct node *n )
 {
 	assert( n->node_type == PARAM );
 
+	if( n->is_const ) {
+		printf( "const " );
+	}
 	if( n->is_ptr ) {
 		printf( "%s *%s", n->type_name, n->id );
 	} else {
@@ -153,6 +172,9 @@ display_node( struct node *n )
 		case PARAM:
 			if( n->is_mapped ) {
 				printf( "MAP(" );
+			}
+			if( n->is_const ) {
+				printf( "const " );
 			}
 			if( n->is_ptr ) {
 				printf( "%s *%s", n->type_name, n->id );

@@ -12,6 +12,7 @@ struct node {
 	char	*type_name;
 	char	*id;
 	int		is_ptr;
+	int		is_const;
 	int		is_mapped;
 	struct node	*next;
 	struct node *prev;

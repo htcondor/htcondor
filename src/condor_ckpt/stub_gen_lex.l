@@ -14,10 +14,12 @@ char * strdup( char *orig );
 
 STR [A-Za-z_][A-Za-z0-9_]*
 %%
+const		return grab( CONST );
 int			return grab( TYPE_NAME );
 long		return grab( TYPE_NAME );
 void		return grab( TYPE_NAME );
 size_t		return grab( TYPE_NAME );
+ssize_t		return grab( TYPE_NAME );
 off_t		return grab( TYPE_NAME );
 pid_t		return grab( TYPE_NAME );
 mode_t		return grab( TYPE_NAME );
