@@ -4,7 +4,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(STD_LIBS)
 
-OBJ = sysapi.o phys_mem.o
+OBJ = sysapi.o phys_mem.o free_fs_blocks.o
 
 library_target(libsysapi.a,$(OBJ))
 
