@@ -120,6 +120,16 @@ private:
 	char         *_attribute_value;
 };
 
+union RealHexUnion
+{ 
+	double     real; 
+#ifdef WIN32
+	__int64    hex;
+#else
+	long long  hex; 
+#endif
+};
+
 struct tag_name
 {
 	TagName  id; // Defined in the condor_xml_classads.h
@@ -130,9 +140,10 @@ struct tag_name
 static struct tag_name tag_names[] = 
 {
 	{tag_ClassAds,  "classads", },
-	{tag_ClassAd,   "c",  },
+	{tag_ClassAd,   "c",   },
 	{tag_Attribute, "a",   },
-	{tag_Number,    "n",   },
+	{tag_Integer,   "i",   },
+	{tag_Real,      "r",   },
 	{tag_String,    "s",   },
 	{tag_Bool,      "b",   },
 	{tag_Undefined, "un",  },
@@ -320,9 +331,21 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 					// itself. 
 					add_to_classad = false;
 					break;
-				case tag_Number:
+				case tag_Integer:
 				case tag_Expr:
 					to_insert += token_text;
+					break;
+				case tag_Real:
+					RealHexUnion  real_to_hex;
+#ifdef WIN32
+					if (sscanf(token_text.Value(), "%I64x", &real_to_hex.hex) == 1) {
+#else
+					if (sscanf(token_text.Value(), "%llx", &real_to_hex.hex) == 1) {
+#endif
+						to_insert.sprintf_cat("%lg", real_to_hex.real);
+					} else {
+						add_to_classad = false;
+					}
 					break;
 				case tag_Undefined:
 					to_insert += "UNDEFINED";
@@ -336,7 +359,6 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 					break;
 				}
 				if (add_to_classad) {
-					//printf("to_insert = %s\n", to_insert.Value());
 					classad->Insert(to_insert.Value());
 				}
 			}
@@ -353,7 +375,8 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 			continue;
 		}
 
-		switch (token->GetTag()) {
+		TagName current_tag = token->GetTag();
+		switch (current_tag) {
 		case tag_ClassAds:
 			// We just ignore it. 
 			break;
@@ -382,12 +405,6 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 					attribute_value = "";
 				}
 			}
-		case tag_Number:
-			attribute_type = tag_Number;
-			break;
-		case tag_String:
-			attribute_type = tag_String;
-			break;
 		case tag_Bool:
 			attribute_type = tag_Bool;
 			{
@@ -408,20 +425,15 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				classad->Insert(to_insert.Value());
 			}
 			break;
+		case tag_Integer:
+		case tag_Real:
+		case tag_String:
 		case tag_Undefined:
-			attribute_type = tag_Undefined;
-			break;
 		case tag_Error:
-			attribute_type = tag_Error;
-			break;
 		case tag_Time:
-			attribute_type = tag_Time;
-			break;
 		case tag_List:
-			attribute_type = tag_List;
-			break;
 		case tag_Expr:
-			attribute_type = tag_Expr;
+			attribute_type = current_tag;
 			break;
 		case tag_NoTag:
 		default:
@@ -641,7 +653,7 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
  *
  * Function: Unparse
  * Purpose:  Converts a single expression into an XML representation,
- *          and appends it to a MyString. It is used by Unparse(ClassAd *...)
+ *           and appends it to a MyString. It is used by Unparse(ClassAd *...)
  *
  **************************************************************************/
 void 
@@ -664,26 +676,35 @@ ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
 			
 			char      number_string[20];
 			char      *expr_string;
+			int       int_number;
+			RealHexUnion  real_to_hex;
 			MyString  fixed_string;
 			
 			switch (value_expr->MyType()) {
 			case LX_INTEGER:
-				sprintf(number_string, "%d", ((IntegerBase *)value_expr)->Value());
-				add_tag(buffer, tag_Number, true);
-				buffer += number_string;
+				int_number = ((IntegerBase *)value_expr)->Value();
 				if (value_expr->unit == 'k') {
-					buffer += " k";
+					int_number *= 1024;
 				}
-				add_tag(buffer, tag_Number, false);
+				sprintf(number_string, "%d", int_number);
+				add_tag(buffer, tag_Integer, true);
+				buffer += number_string;
+				add_tag(buffer, tag_Integer, false);
 				break;
 			case LX_FLOAT:
-				sprintf(number_string, "%f", ((FloatBase *)value_expr)->Value());
-				add_tag(buffer, tag_Number, true);
-				buffer += number_string;
+				real_to_hex.real = ((FloatBase *)value_expr)->Value();
 				if (value_expr->unit == 'k') {
-					buffer += " k";
+					real_to_hex.real *= 1024;
 				}
-				add_tag(buffer, tag_Number, false);
+#ifdef WIN32
+				snprintf(number_string, 17, "%016I64x", real_to_hex.hex);
+#else
+				snprintf(number_string, 17, "%016llx", real_to_hex.hex);
+#endif
+
+				add_tag(buffer, tag_Real, true);
+				buffer += number_string;
+				add_tag(buffer, tag_Real, false);
 				break;
 			case LX_STRING:
 				add_tag(buffer, tag_String, true);
@@ -1283,7 +1304,8 @@ static void debug_check(void)
 	ASSERT(NUMBER_OF_TAG_NAME_ENUMS    == NUMBER_OF_TAG_NAMES);
 	ASSERT(tag_names[tag_ClassAd].id   == tag_ClassAd);
 	ASSERT(tag_names[tag_Attribute].id == tag_Attribute);
-	ASSERT(tag_names[tag_Number].id    == tag_Number);
+	ASSERT(tag_names[tag_Integer].id   == tag_Integer);
+	ASSERT(tag_names[tag_Real].id      == tag_Real);
 	ASSERT(tag_names[tag_String].id    == tag_String);
 	ASSERT(tag_names[tag_Bool].id      == tag_Bool);
 	ASSERT(tag_names[tag_Undefined].id == tag_Undefined);
