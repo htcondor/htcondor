@@ -503,7 +503,7 @@ public:
         // RETURNS: true -- success; false -- failure
         //------------------------------------------
 
-        bool get_encryption();
+        bool get_encryption() const;
         //------------------------------------------
         // PURPOSE: Return encryption mode
         // REQUIRE: None
@@ -575,7 +575,8 @@ protected:
 
         virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId) = 0;
         virtual bool set_encryption_id(const char * keyId) = 0;
-        
+        const KeyInfo& get_crypto_key() const;
+      
         void resetCrypto();
 
 	// serialize object (save/restore object state to an ascii string)
