@@ -36,6 +36,7 @@
 #include "my_hostname.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "sig_install.h"
+#include "job_report.h"
 
 #if defined(AIX31) || defined(AIX32)
 #include "syscall.aix.h"
@@ -189,6 +190,9 @@ int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup(int,int,char*);
 int Termlog;
+
+time_t	RunTime;
+
 ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
 int HandleLog();
@@ -235,13 +239,6 @@ main(int argc, char *argv[], char *envp[])
 	/* on OSF/1 as installed currently on our machines, attempts to read from
 	   the FILE * returned by popen() fail if the underlying file descriptor
 	   is 1.  This is ugly, but we have 4K fd's so we won't miss these few */
-
-#ifdef WAIT_FOR_DEBUGGER
-	int x = 1;
-	while( x ) {
-
-	}
-#endif WAIT_FOR_DEBUGGER
 
 #if !defined(OSF1) && !defined(Solaris)
 	close( 0 );
@@ -307,6 +304,13 @@ main(int argc, char *argv[], char *envp[])
 	if( argc != 6 ) {
 		usage();
 	}
+
+#ifdef WAIT_FOR_DEBUGGER
+	int x = 1;
+	while( x ) {
+
+	}
+#endif WAIT_FOR_DEBUGGER
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
 		capability = argv[2];
@@ -723,6 +727,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT)) {
 		EXCEPT("Failed to connect to schedd!");
 	}
+	job_report_update_queue( Proc );
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
 
 	if( status == REMOVED ) {

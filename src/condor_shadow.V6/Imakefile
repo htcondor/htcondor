@@ -13,8 +13,8 @@ LIB = $(STD_LIBS)
 
 RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
 
-OBJ = $(RC_OBJ) ops.o pseudo_ops.o perm_err.o shadow.o shadow_common.o \
-	receivers.o log_events.o
+OBJ = $(RC_OBJ) ops.o pseudo_ops.o shadow.o shadow_common.o \
+	receivers.o log_events.o job_report.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)

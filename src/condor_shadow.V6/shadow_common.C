@@ -39,6 +39,7 @@
 #include "files.h"
 #include "exit.h"
 #include "shadow.h"
+#include "job_report.h"
 
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
@@ -46,7 +47,6 @@
 
 extern "C" {
 	void NotifyUser( char *buf, PROC *proc, char *email_addr );
-	void display_errors( FILE *fp );
 	char *d_format_time( double dsecs );
 	int unlink_local_or_ckpt_server( char *file );
 	void rm();
@@ -157,31 +157,31 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
            don't need this stuff...
         */
 
-        fprintf(mailer, "Your condor job\n" );
+        fprintf(mailer, "Your condor job " );
 #if defined(NEW_PROC)
 		if ( proc->args[0] )
-        	fprintf(mailer, "\t%s %s\n", proc->cmd[0], proc->args[0] );
+        	fprintf(mailer, "%s %s ", proc->cmd[0], proc->args[0] );
 		else
-        	fprintf(mailer, "\t%s\n", proc->cmd[0] );
+        	fprintf(mailer, "%s ", proc->cmd[0] );
 #else
-        fprintf(mailer, "\t%s %s\n", proc->cmd, proc->args );
+        fprintf(mailer, "%s %s ", proc->cmd, proc->args );
 #endif
 
         fprintf(mailer, "%s\n\n", buf );
 
-        display_errors( mailer );
+	job_report_display_errors( mailer );
 
-		arch_time = proc->q_date;
-        fprintf(mailer, "Submitted at:        %s", ctime(&arch_time));
+	arch_time = proc->q_date;
+	fprintf(mailer, "\nTime:\n");
+        fprintf(mailer, "\tSubmitted at:        %s", ctime(&arch_time));
 
         if( proc->completion_date ) {
                 real_time = proc->completion_date - proc->q_date;
-
-				arch_time = proc->completion_date;
-                fprintf(mailer, "Completed at:        %s\n",
+		arch_time = proc->completion_date;
+                fprintf(mailer, "\tCompleted at:        %s\n",
 						ctime(&arch_time));
 
-                fprintf(mailer, "Real Time:           %s\n", 
+                fprintf(mailer, "\tReal Time:           %s\n", 
 					d_format_time(real_time));
 
 				if (JobAd) {
@@ -189,13 +189,14 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
 				}
 				run_time += proc->completion_date - LastRestartTime;
 				
-				fprintf(mailer, "Run Time:            %s\n",
+				fprintf(mailer, "\tRun Time:            %s\n",
 						d_format_time(run_time));
 
 				if (CommittedTime > 0) {
-					fprintf(mailer, "Committed Time:      %s\n",
+					fprintf(mailer, "\tCommitted Time:      %s\n",
 							d_format_time(CommittedTime));
 				}
+
         }
         fprintf( mailer, "\n" );
 
@@ -214,17 +215,17 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
         tltime = lutime + lstime;
 
 
-        fprintf(mailer, "Remote User Time:    %s\n", d_format_time(rutime) );
-        fprintf(mailer, "Remote System Time:  %s\n", d_format_time(rstime) );
-        fprintf(mailer, "Total Remote Time:   %s\n\n", d_format_time(trtime));
-        fprintf(mailer, "Local User Time:     %s\n", d_format_time(lutime) );
-        fprintf(mailer, "Local System Time:   %s\n", d_format_time(lstime) );
-        fprintf(mailer, "Total Local Time:    %s\n\n", d_format_time(tltime));
+        fprintf(mailer, "\tRemote User Time:    %s\n", d_format_time(rutime) );
+        fprintf(mailer, "\tRemote System Time:  %s\n", d_format_time(rstime) );
+        fprintf(mailer, "\tTotal Remote Time:   %s\n\n", d_format_time(trtime));
+        fprintf(mailer, "\tLocal User Time:     %s\n", d_format_time(lutime) );
+        fprintf(mailer, "\tLocal System Time:   %s\n", d_format_time(lstime) );
+        fprintf(mailer, "\tTotal Local Time:    %s\n\n", d_format_time(tltime));
 
         if( tltime >= 1.0 ) {
-                fprintf(mailer, "Leveraging Factor:   %2.1f\n", trtime / tltime);
+                fprintf(mailer, "\tLeveraging Factor:   %2.1f\n", trtime / tltime);
         }
-        fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n", proc->image_size);
+        fprintf(mailer, "\tVirtual Image Size:  %d Kilobytes\n", proc->image_size);
 
 		if (NumCkpts > 0) {
 			fprintf(mailer, "Checkpoints written: %d\n", NumCkpts);
@@ -235,13 +236,17 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
 			// TotalBytesSent and TotalBytesRecvd are from the shadow's
 			// perspective, and we want to display the stats from the job's
 			// perspective.
-			fprintf(mailer,
-					"Network Usage:       %.0f Kilobytes read\n"
-					"                     %.0f Kilobytes written\n",
-					TotalBytesSent/1024.0, TotalBytesRecvd/1024.0);
+			fprintf(mailer,"\nNetwork:\n");
+			fprintf(mailer,"\t%s read\n",metric_units((int)TotalBytesSent));
+			fprintf(mailer,"\t%s written\n",metric_units((int)TotalBytesRecvd));
 		}
 
-		email_close(mailer);
+	job_report_display_file_info( mailer, (int) run_time );
+	job_report_display_calls( mailer );
+
+	email_close(mailer);
+
+        (void)pclose( mailer );
 }
 
 

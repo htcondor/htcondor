@@ -26,6 +26,7 @@
  
 BEGIN_C_DECLS
 
+int pseudo_get_ckpt_speed();
 int pseudo_register_arch( const char *arch );
 int pseudo_register_opsys( const char *opsys );
 int pseudo_register_ckpt_server( const char *host );
@@ -44,7 +45,8 @@ int pseudo_reallyexit( int *status, struct rusage *use_p );
 int pseudo_free_fs_blocks( const char *path );
 int pseudo_image_size( int size );
 int pseudo_send_rusage( struct rusage *use_p );
-int pseudo_perm_error( const char *msg );
+int pseudo_report_error( char *msg );
+int pseudo_report_file_info( char *kind, char *name, int open_count, int read_count, int write_count, int seek_count, int read_bytes, int write_bytes );
 int pseudo_getwd( char *path );
 int pseudo_send_file( const char *path, mode_t mode );
 int pseudo_get_file( const char *name );
@@ -58,9 +60,11 @@ int pseudo_get_file_stream(
 int pseudo_put_file_stream(
 		const char *file, size_t len, unsigned int *ip_addr, u_short *port );
 int pseudo_startup_info_request( STARTUP_INFO *s );
+int pseudo_get_std_file_info( int which, char *logical_name );
 int pseudo_std_file_info( int which, char *name, int *pipe_fd );
+int pseudo_get_file_info( const char *logical_name, char *actual_url );
 int pseudo_file_info( const char *name, int *pipe_fd, char *extern_path );
-int pseudo_get_buffer_info( int *blocks, int *block_size, int *prefetch_bytes );
+int pseudo_get_buffer_info( int *bytes, int *block_size );
 int pseudo_get_iwd( char *path );
 int pseudo_get_ckpt_name( char *path );
 int pseudo_get_a_out_name( char *path );
@@ -83,7 +87,6 @@ int pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len);
 int pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len);
 
 int CONDOR_NotSupported();
-int PERM_ERR(...);
 int SYSCALL(...);
 
 int external_name( const char*, char*, int);
