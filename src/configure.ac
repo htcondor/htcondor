@@ -176,6 +176,11 @@ elif test $os = "Linux" ; then
        _cv_linux_distro="SuSE-UNKNOWN"
        ;;
     esac
+  elif test -f "/etc/debian_version" ; then
+    _deb_vers=`cat /etc/debian_version | sed 's/\./_/g'`;
+    _cv_linux_distro="DEBIAN-`echo _deb_vers`"
+    AC_MSG_WARN([Condor is not yet ported to Debian Linux distributions])
+    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   else
     AC_MSG_WARN([Unrecognised Linux distribution])
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
