@@ -30,6 +30,7 @@
 #if defined(HPUX9)
 #include "fake_flock.h"
 #endif
+#include "proc.h"
 
 typedef struct {
 	int		p_disk_avail;
@@ -80,6 +81,21 @@ typedef struct {
 	int		job_id;
 	int		umbilical;
 } SHADOW_REC;
+
+typedef struct {
+	int		clusterId;
+	int		procId;
+	char*	host;
+	char*   owner;
+	time_t	time;
+} COMPLETED_JOB_INFO;
+
+typedef struct {
+	int		clusterID;
+	int		procID;
+	time_t	startTime;
+	char*	host;
+} RUNNING_JOB_INFO;
 
 typedef struct {        /* record sent by startd to shadow */
 	int		version_num;/* always negative */
@@ -141,13 +157,15 @@ typedef struct {        /* record sent by startd to shadow */
 #define SEND_ALL_JOBS_PRIO	(SCHED_VERS+34)
 #define REQ_NEW_PROC		(SCHED_VERS+35)
 #define PCKPT_FRGN_JOB		(SCHED_VERS+36)
+#define SEND_RUNNING_JOBS	(SCHED_VERS+37)
 
-#define SCHED_PORT			9605
-#define START_PORT			9611
+#define SCHED_PORT		9605
+#define START_PORT		9611
 #define COLLECTOR_PORT		9612
 #define COLLECTOR_UDP_PORT	9613
 #define NEGOTIATOR_PORT		9614
 #define START_UDP_PORT		9615
+#define ACCOUNTANT_PORT		9616
 
 #define XDR_BLOCKSIZ (1024*4)
 #define DEFAULT_MEMORY 3
