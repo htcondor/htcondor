@@ -15,14 +15,17 @@
 
 #define QMGMT_TIMEOUT 300
 
-#define GLOBUS_POLL_INTERVAL	5
+#define GLOBUS_POLL_INTERVAL	1
 #define JOB_PROBE_INTERVAL		300
 #define UPDATE_SCHEDD_DELAY		5
 
 #define HASH_TABLE_SIZE			500
 
 
+extern GridManager gridmanager;
+
 List<JobUpdateEvent> JobUpdateEventQueue;
+static bool updateScheddTimerSet = false;
 
 // For developmental testing
 int test_mode = 0;
@@ -48,7 +51,8 @@ template class List<JobUpdateEvent>;
 template class Item<JobUpdateEvent>;
 
 
-void addJobUpdateEvent( GlobusJob *job, int event, int subtype = 0 )
+void 
+addJobUpdateEvent( GlobusJob *job, int event, int subtype = 0 )
 {
 	JobUpdateEvent *new_event = new JobUpdateEvent;
 	new_event->job = job;
@@ -56,6 +60,21 @@ void addJobUpdateEvent( GlobusJob *job, int event, int subtype = 0 )
 	new_event->subtype = subtype;
 
 	JobUpdateEventQueue.Append( new_event );
+	setUpdate();
+}
+
+void
+setUpdate()
+{
+
+	if ( updateScheddTimerSet == false 
+			&& !JobUpdateEventQueue.IsEmpty() ) 
+	{
+		daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
+					(TimerHandlercpp)&GridManager::updateSchedd,
+					"updateSchedd", (Service*) &gridmanager );
+		updateScheddTimerSet = true;
+	}
 }
 
 
@@ -140,7 +159,7 @@ GridManager::Register()
 		(TimerHandlercpp)&GridManager::globusPoll,
 		"globusPoll", (Service*)this );
 
-	daemonCore->Register_Timer( 0, JOB_PROBE_INTERVAL,
+	daemonCore->Register_Timer( 10, JOB_PROBE_INTERVAL,
 		(TimerHandlercpp)&GridManager::jobProbe,
 		"jobProbe", (Service*)this );
 }
@@ -157,6 +176,9 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	ClassAdList new_ads;
 	ClassAd *next_ad;
 	char expr_buf[1024];
+	int num_ads = 0;
+
+	dprintf(D_FULLDEBUG,"in ADD_JOBS_signalHandler\n");
 
 	// Make sure we grab all Globus Universe jobs when we first start up
 	// in case we're recovering from a shutdown/meltdown.
@@ -170,6 +192,7 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	}
 
 	// Get all the new Grid job ads
+	dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
 	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
@@ -179,38 +202,66 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	next_ad = GetNextJobByConstraint( expr_buf, 1 );
 	while ( next_ad != NULL ) {
 		new_ads.Insert( next_ad );
+		num_ads++;
 		next_ad = GetNextJobByConstraint( expr_buf, 0 );
 	}
 
 	DisconnectQ( schedd );
+	dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
 
 	grabAllJobs = false;
 
 	// Try to submit the new jobs
+	GlobusJob *new_job;
+	PROC_ID procID;
 	new_ads.Open();
-
 	while ( ( next_ad = new_ads.Next() ) != NULL ) {
 
-		GlobusJob *new_job = new GlobusJob( next_ad );
+		next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
+		next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 
-		JobsByProcID->insert( new_job->procID, new_job );
+		new_job = NULL;
+		JobsByProcID->lookup( procID, new_job );
+		if (!new_job) {
+			// we have not seen this job before
+			new_job = new GlobusJob( next_ad );
+			ASSERT(new_job);
+			JobsByProcID->insert( new_job->procID, new_job );
+		}
+
 
 		if ( new_job->jobState == G_UNSUBMITTED ) {
+			dprintf(D_FULLDEBUG,"Attempting to submit job %d.%d\n",
+				new_job->procID.cluster,new_job->procID.proc);
 
 			if ( new_job->start() == true ) {
-
-				JobsByContact->insert( HashKey( new_job->jobContact ), new_job );
-
+				JobsByContact->insert(HashKey(new_job->jobContact), new_job);
+				dprintf(D_ALWAYS,"Submited job %d.%d\n",
+					new_job->procID.cluster,new_job->procID.proc);
+			} else {
+				dprintf(D_ALWAYS,"ERROR: Job Submit failed because %s\n",
+					new_job->errorString());
+				// TODO : we just failed to submit a job; handle it better.
 			}
-
+		} else {
+			dprintf(D_FULLDEBUG,
+				"Job %d.%d already submitted to Globus\n",
+				new_job->procID.cluster,new_job->procID.proc);
+			// No worry about inserting the same job multiple
+			// times into the JobsByContact table since all fetches from
+			// the schedd after the first one require that jobState
+			// is G_UNSUBMITTED.  So no need to do checks here.
+			//
+			// So here the job has already been submitted to Globus.
+			// We need to place the contact string into our hashtable,
+			// and setup to get async events.
+			JobsByContact->insert(HashKey(new_job->jobContact), new_job);
+			new_job->callback_register();
 		}
 
 		new_ads.Delete( next_ad );
 		FreeJobAd( next_ad );
-
 	}
-
-	setUpdate();
 
 	return TRUE;
 }
@@ -221,12 +272,16 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	ClassAdList new_ads;
 	ClassAd *next_ad;
 	char expr_buf[1024];
+	int num_ads = 0;
+
+	dprintf(D_FULLDEBUG,"in REMOVE_JOBS_signalHandler\n");
 
 	snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d && %s == %d",
 			  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
 			  ATTR_JOB_STATUS, REMOVED );
 
 	// Get all the new Grid job ads
+	dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
 	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
@@ -236,10 +291,12 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	next_ad = GetNextJobByConstraint( expr_buf, 1 );
 	while ( next_ad != NULL ) {
 		new_ads.Insert( next_ad );
+		num_ads++;
 		next_ad = GetNextJobByConstraint( expr_buf, 0 );
 	}
 
 	DisconnectQ( schedd );
+	dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
 
 	// Try to cancel the jobs
 	new_ads.Open();
@@ -262,9 +319,14 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 
 		if ( curr_job->jobContact != NULL ) {
 
+			dprintf(D_FULLDEBUG,"Attempting to remove job %d.%d\n",
+				curr_job->procID.cluster,curr_job->procID.proc);
+			
 			if ( curr_job->cancel() == false ) {
 
 				// Error
+				dprintf(D_ALWAYS,"ERROR: Job cancel failed because %s\n",
+					globus_gram_client_error_string(curr_job->errorCode));
 
 			}
 
@@ -272,8 +334,6 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 				JobsByContact->remove( HashKey( curr_job->jobContact ) );
 			JobsByProcID->remove( curr_procid );
 			addJobUpdateEvent( curr_job, JOB_REMOVED );
-			setUpdate();
-
 		}
 
 		new_ads.Delete( next_ad );
@@ -294,6 +354,32 @@ GridManager::updateSchedd()
 	Qmgr_connection *schedd;
 	JobUpdateEvent *curr_event;
 	GlobusJob *curr_job;
+
+	dprintf(D_FULLDEBUG,"in updateSchedd()\n");
+
+	JobUpdateEventQueue.Rewind();
+
+	while ( JobUpdateEventQueue.Next( curr_event ) ) {
+		curr_job = curr_event->job;
+
+		switch ( curr_event->event) {
+		case JOB_UE_ULOG_EXECUTE:
+			WriteExecuteToUserLog( curr_job );
+
+			break;
+		case JOB_UE_ULOG_TERMINATE:
+			WriteTerminateToUserLog( curr_job );
+
+			break;
+		case JOB_UE_EMAIL:
+			break;
+		case JOB_UE_CALLBACK:
+			curr_job->callback();
+
+			break;
+		}
+
+	}
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
 	if ( !schedd ) {
@@ -359,8 +445,15 @@ GridManager::updateSchedd()
 
 			break;
 		case JOB_UE_REMOVE_JOB:
-			// Send "removed" command
+			// Remove the job from the schedd queue
+			DestroyProc(curr_job->procID.cluster,
+						curr_job->procID.proc);
 
+			// Remove all knowledge we may have about this job
+			if ( curr_job->jobContact ) {
+				JobsByContact->remove(HashKey(curr_job->jobContact));
+			}
+			JobsByProcID->remove( curr_job->procID );
 			delete curr_job;
 
 			break;
@@ -369,37 +462,14 @@ GridManager::updateSchedd()
 
 			break;
 		}
+		
+		JobUpdateEventQueue.DeleteCurrent();
 	}
 
 	DisconnectQ( schedd );
 
 	updateScheddTimerSet = false;
 
-	JobUpdateEventQueue.Rewind();
-
-	while ( JobUpdateEventQueue.Next( curr_event ) ) {
-
-		curr_job = curr_event->job;
-
-		switch ( curr_event->event) {
-		case JOB_UE_ULOG_EXECUTE:
-			WriteExecuteToUserLog( curr_job );
-
-			break;
-		case JOB_UE_ULOG_TERMINATE:
-			WriteTerminateToUserLog( curr_job );
-
-			break;
-		case JOB_UE_EMAIL:
-			break;
-		case JOB_UE_CALLBACK:
-			curr_job->callback();
-
-			break;
-		}
-
-		JobUpdateEventQueue.DeleteCurrent();
-	}
 
 	return TRUE;
 }
@@ -407,7 +477,6 @@ GridManager::updateSchedd()
 int
 GridManager::globusPoll()
 {
-fprintf(stderr,"globusPoll (%d)\n", JobsByContact->getNumElements());
 	globus_poll();
 	return TRUE;
 }
@@ -415,7 +484,6 @@ fprintf(stderr,"globusPoll (%d)\n", JobsByContact->getNumElements());
 int
 GridManager::jobProbe()
 {
-fprintf(stderr,"jobProbe\n");
 	GlobusJob *next_job;
 
 	JobsByContact->startIterations();
@@ -424,12 +492,17 @@ fprintf(stderr,"jobProbe\n");
 
 		if ( next_job->jobContact != NULL ) {
 
+			dprintf(D_FULLDEBUG,"calling jobProbe for job %d.%d\n",
+						 next_job->procID.cluster, next_job->procID.proc );
+
 			if ( next_job->probe() == false ) {
-				dprintf( D_ALWAYS, "Globus jobmanager unreachable for job %d.%d\n",
+				dprintf( D_ALWAYS, 
+						"Globus jobmanager unreachable for job %d.%d\n",
 						 next_job->procID.cluster, next_job->procID.proc );
 				// job manager is unreachable
 				// resubmit or fail?
 				// bad stuff
+				// TODO: INSERT JAMIE'S RE-ATTACH TO JOBMANAGER CODE HERE
 			}
 
 		}
@@ -451,11 +524,13 @@ GridManager::gramCallbackHandler( void *user_arg, char *job_contact,
 	GlobusJob *this_job;
 	GridManager *this_ = (GridManager *)user_arg;
 
-fprintf(stderr,"callback: job %s, state %d\n", job_contact, state);
+	dprintf(D_ALWAYS,"gramCallbackHandler: job %s, state %d\n", 
+		job_contact, state);
 	// Find the right job object
 	rc = this_->JobsByContact->lookup( HashKey( job_contact ), this_job );
 	if ( rc != 0 || this_job == NULL ) {
-		dprintf( D_ALWAYS, "Can't find record for globus job with contact %s on globus event %d\n",
+		dprintf( D_ALWAYS, 
+			"Can't find record for globus job with contact %s on globus event %d\n",
 				 job_contact, state );
 		return;
 	}
@@ -463,25 +538,14 @@ fprintf(stderr,"callback: job %s, state %d\n", job_contact, state);
 	this_job->callback( state, errorcode );
 
 	if ( this_job->jobContact == NULL ) {
-		this_->JobsByContact->remove( HashKey( this_job->jobContact ) );
-	} else if ( !strcmp( this_job->jobContact, job_contact ) ) {
+		this_->JobsByContact->remove( HashKey( job_contact ) );
+	} else if ( strcmp( this_job->jobContact, job_contact ) != 0 ) {
 		this_->JobsByContact->remove( HashKey( job_contact ) );
 		this_->JobsByContact->insert( HashKey( this_job->jobContact ),
 									  this_job );
 	}
 
-fprintf(stderr,"callback returning\n");
-}
-
-void
-GridManager::setUpdate()
-{
-	if ( updateScheddTimerSet == false && !JobUpdateEventQueue.IsEmpty() ) {
-		daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
-					(TimerHandlercpp)&GridManager::updateSchedd,
-					"updateSchedd", (Service*)this );
-		updateScheddTimerSet = true;
-	}
+	dprintf(D_FULLDEBUG,"gramCallbackHandler() returning\n");
 }
 
 // Initialize a UserLog object for a given job and return a pointer to
