@@ -28,6 +28,11 @@
 */ 
 
 #define _POSIX_SOURCE
+
+#if defined(IRIX62)
+#include "condor_fdset.h"
+#endif 
+
 #include "condor_common.h"
 #include "condor_fdset.h"
 #include "condor_classad.h"
@@ -74,6 +79,7 @@
 #include <netinet/in.h>
 #include <sys/resource.h>
 
+#include "condor_fix_string.h"
 #include "sched.h"
 #include "debug.h"
 #include "except.h"
@@ -125,7 +131,7 @@ extern "C" {
 	void get_local_rusage( struct rusage *bsd_rusage );
 	int calc_virt_memory();
 	int close_kmem();
-	void NotifyUser( char *buf );
+	void NotifyUser( char *buf, char *email_addr );
 	void MvTmpCkpt();
 	void display_uids();
 	EXPR	*scan(), *create_expr();
@@ -134,7 +140,11 @@ extern "C" {
 	FILE	*fdopen();
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
+#if defined(HPUX9)
+	pid_t waitpid(pid_t pid, int *statusp, int options);
+#else
 	int waitpid(int pid, int *statusp, int options);
+#endif
 }
 
 extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
@@ -154,10 +164,6 @@ int  UseAFS;
 int  UseNFS;
 int  UseCkptServer;
 
-#if 0
-extern int	LockFd;
-#endif
-
 extern int	_Condor_SwitchUids;
 
 int		MyPid;
@@ -171,17 +177,16 @@ GENERIC_PROC GenProc;
 	V2_PROC	*Proc = (V2_PROC *)&GenProc;;
 #endif
 
+extern "C"  void initializeUserLog(PROC *);
+extern "C"  void log_termination(struct rusage *, struct rusage *);
+extern "C"  void log_execute(char *);
+extern "C"  void log_except();
+
 char	*Spool;
 char	*ExecutingHost;
 char	*MailerPgm;
 
 #include "condor_qmgr.h"
-
-#include "user_log.h"
-USER_LOG	*ULog;
-/* USER_LOG *InitUserLog( PROC *p, const char *host ); */
-extern "C" void LogRusage( USER_LOG *lp, int which,
-						   struct rusage *loc, struct rusage *rem );
 
 int		CondorGid;
 int		CondorUid;
@@ -211,7 +216,7 @@ int ChildPid;
 int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
 
 int DoCleanup();
-
+int ExceptCleanup();
 int Termlog;
 
 ReliSock	*sock_RSC1, *RSC_ShadowInit(int rscsock, int errsock);
@@ -299,7 +304,7 @@ main(int argc, char *argv[], char *envp[])
 #endif NFSFIX
 
 
-	_EXCEPT_Cleanup = DoCleanup;
+	_EXCEPT_Cleanup = ExceptCleanup;
 	MyPid = getpid();
 	
 	config( 0 );
@@ -365,9 +370,12 @@ main(int argc, char *argv[], char *envp[])
 	LockFd = -1;
 #endif
 
-#ifdef USERLOG_WORKS
-	ULog = InitUserLog(Proc->owner, ExecutingHost, Proc->id.cluster, Proc->id.proc, 0);
-#endif
+	// initialize the user log
+	initializeUserLog(Proc);
+
+	// by this time, the job has been sent and accepted to run, so
+	// log a ULOG_EXECUTE event
+	log_execute(host);
 
 	my_cell = get_host_cell();
 	if( my_cell ) {
@@ -386,7 +394,7 @@ main(int argc, char *argv[], char *envp[])
 	dprintf( D_ALWAYS, "My_Filesystem_Domain = \"%s\"\n", My_Filesystem_Domain );
 
 	my_uid_domain = param( "UID_DOMAIN" );
-	if( my_uid_domain ) {
+	if( (my_uid_domain) && (strcasecmp(my_uid_domain,"none") != 0) ) {
 		strcpy( My_UID_Domain, my_uid_domain );
 	} else {
 		get_machine_name( My_UID_Domain );
@@ -754,6 +762,11 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 		if( seteuid(0) < 0 ) {
 			EXCEPT( "seteuid(%d)", 0 );
 		}
+		/* we need to set the Uid _and_ the Gid so that we can 
+		 * log properly -Todd, 2/97 */
+		if( setegid(CondorGid) < 0 ) {
+			EXCEPT( "setegid(%d)", CondorGid );
+		}
 		if( seteuid(CondorUid) < 0 ) {
 			EXCEPT( "seteuid(%d)", CondorUid );
 		}
@@ -780,6 +793,7 @@ Wrapup( )
 {
 	struct rusage local_rusage;
 	char notification[ BUFSIZ ];
+	char email_addr[ 256 ]; 
 	int pid;
 	int	cnt;
 	int	nfds;
@@ -802,27 +816,50 @@ Wrapup( )
 #endif
 		(void)strcpy( notification, ErrBuf );
 	} else {
+		/* all event logging has been moved from handle_termination() to
+		   log_termination()	--RR */
 		handle_termination( notification );
 	}
 
-	/* fill in the Proc structure's exit_status with JobStatus, so that when
-	 * we call update_job_status the exit status gets written into the job queue,
-	 * so that the history file will have exit status information for the job.
-	 * note that JobStatus is in BSD format, and Proc->exit_status is in POSIX int
-	 * format, so we copy very carefully.  on most platforms the 2 formats are
-	 * interchangeable, so most of the time we'll get intelligent results. -Todd, 11/95
-	*/
-	memcpy(&(Proc->exit_status[0]),&JobStatus,sizeof( (Proc->exit_status[0]) ));
 	
+	/*
+	 * the job may have an email address to whom the notification message
+     * should go.  this info is in the classad, and must be gotten from the
+     * Qmgr *before* the job status is updated (i.e., classad is dequeued).
+     */
+#ifndef DBM_QUEUE
+    ConnectQ (NULL);
+    if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
+                email_addr))
+    {
+        dprintf (D_ALWAYS, "Job %d.%d did not have 'NotifyUser'\n",
+                                Proc->id.cluster, Proc->id.proc);
+        strcpy (email_addr, Proc->owner);
+    }
+    DisconnectQ (NULL);
+#else
+    strcpy (email_addr, Proc->owner);
+#endif
+
+	/* fill in the Proc structure's exit_status with JobStatus, so that when
+	 * we call update_job_status the exit status is written into the job queue,
+	 * so that the history file will have exit status information for the job.
+	 * note that JobStatus is in BSD format, and Proc->exit_status is in POSIX
+	 * int format, so we copy very carefully.  on most platforms the 2 formats
+	 * are interchangeable, so most of the time we'll get intelligent results.
+	 *    -Todd, 11/95
+	*/
+	memcpy(&(Proc->exit_status[0]),&JobStatus,sizeof((Proc->exit_status[0])));
 	get_local_rusage( &local_rusage );
 	update_job_status( &local_rusage, &JobRusage );
-	LogRusage( ULog,  THIS_RUN, &local_rusage, &JobRusage );
 
-	if( Proc->status == COMPLETED ) {
-		LogRusage( ULog, TOTAL, &Proc->local_usage, &Proc->remote_usage[0] );
-	}
+	/* log the event associated with the termination; pass local and remote
+	   rusage for the run.  The total local and remote rusages for the job are
+	   stored in the Proc --- these values were updated by update_job_status */
+	log_termination (&local_rusage, &JobRusage);
+
 	if( notification[0] ) {
-		NotifyUser( notification );
+		NotifyUser( notification, email_addr );
 	}
 }
 
@@ -833,20 +870,15 @@ handle_termination( char *notification )
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
 
 	switch( JobStatus.w_termsig ) {
+
 	 case 0: /* If core, bad executable -- otherwise a normal exit */
 		if( JobStatus.w_coredump && JobStatus.w_retcode == ENOEXEC ) {
 			(void)sprintf( notification, "is not executable." );
 			dprintf( D_ALWAYS, "Shadow: Job file not executable" );
-#ifdef USERLOG_WORKS
-			PutUserLog( ULog, NOT_EXECUTABLE );
-#endif
 			ExitReason = JOB_EXCEPTION;
 		} else if( JobStatus.w_coredump && JobStatus.w_retcode == 0 ) {
 				(void)sprintf(notification,
 "was killed because it was not properly linked for execution \nwith Version 5 Condor.\n" );
-#ifdef USERLOG_WORKS
-				PutUserLog( ULog, BAD_LINK );
-#endif
 				MainSymbolExists = FALSE;
 				ExitReason = JOB_EXCEPTION;
 		} else {
@@ -854,34 +886,28 @@ handle_termination( char *notification )
 					JobStatus.w_retcode );
 			dprintf(D_ALWAYS, "Shadow: Job exited normally with status %d\n",
 				JobStatus.w_retcode );
-#ifdef USERLOG_WORKS
-			PutUserLog( ULog, NORMAL_EXIT, JobStatus.w_retcode );
-#endif
 			ExitReason = JOB_EXITED;
 		}
 
 		Proc->status = COMPLETED;
 		Proc->completion_date = time( (time_t *)0 );
 		break;
+
 	 case SIGKILL:	/* Kicked off without a checkpoint */
 		dprintf(D_ALWAYS, "Shadow: Job was kicked off without a checkpoint\n" );
-#ifdef USERLOG_WORKS
-		PutUserLog(ULog, NOT_CHECKPOINTED );
-#endif
 		DoCleanup();
 		ExitReason = JOB_NOT_CKPTED;
 		break;
+
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
 		dprintf(D_ALWAYS, "Shadow: Job was checkpointed\n" );
-#ifdef USERLOG_WORKS
-		PutUserLog(ULog, CHECKPOINTED );
-#endif
 		if( strcmp(Proc->rootdir, "/") != 0 ) {
 			MvTmpCkpt();
 		}
 		Proc->status = IDLE;
 		ExitReason = JOB_CKPTED;
 		break;
+
 	 default:	/* Job exited abnormally */
 #if defined(Solaris)
 		getcwd(coredir,_POSIX_PATH_MAX);
@@ -894,31 +920,16 @@ handle_termination( char *notification )
 					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
 					 JobStatus.w_termsig,
 						coredir, Proc->id.cluster, Proc->id.proc);
-#ifdef USERLOG_WORKS
-				PutUserLog( ULog, ABNORMAL_EXIT, JobStatus.w_termsig);
-				PutUserLog( ULog, CORE_NAME,
-					coredir, Proc->id.cluster, Proc->id.proc
-				);
-#endif
 			} else {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
-						 JobStatus.w_termsig,
-						Proc->rootdir, coredir, Proc->id.cluster, Proc->id.proc);
-#ifdef USERLOG_WORKS
-					PutUserLog( ULog, ABNORMAL_EXIT, JobStatus.w_termsig );
-					PutUserLog( ULog, CORE_NAME,
-						Proc->rootdir, coredir, Proc->id.cluster, Proc->id.proc
-				   );
-#endif
+					 JobStatus.w_termsig,Proc->rootdir, coredir, 
+					 Proc->id.cluster, Proc->id.proc);
 			}
 			ExitReason = JOB_COREDUMPED;
 		} else {
 			(void)sprintf(notification,
 				"was killed by signal %d.", JobStatus.w_termsig);
-#ifdef USERLOG_WORKS
-			PutUserLog( ULog, ABNORMAL_EXIT, JobStatus.w_termsig );
-#endif
 			ExitReason = JOB_KILLED;
 		}
 		dprintf(D_ALWAYS, "Shadow: %s\n", notification);
@@ -959,11 +970,10 @@ d_format_time( double dsecs )
 
 
 void
-NotifyUser( char *buf )
+NotifyUser( char *buf, char *email_addr )
 {
 	FILE *mailer;
 	char cmd[ BUFSIZ ];
-	char notifyUser[256];  /* email address of user to be notified */
 	double rutime, rstime, lutime, lstime;	/* remote/local user/sys times */
 	double trtime, tltime;	/* Total remote/local time */
 	double	real_time;
@@ -1010,34 +1020,27 @@ NotifyUser( char *buf )
 		}
 	}
 
-#if 0
-	(void)sprintf(cmd, "%s %s", BIN_MAIL, Proc->owner );
-#else
-		/* the "-s" tries to set the subject line appropriately */
-	/*
-	sprintf(cmd, "%s -s \"Condor Job %d.%d\" %s\n",
-					MailerPgm, Proc->id.cluster, Proc->id.proc, Proc->owner );
-	*/
+	/* the "-s" tries to set the subject line appropriately */
 
-	/*
-		The ClassAd of the Job also contains a variable called 'NotifyUser'
-		which is the email address of the user to be mailed.  This information
-        is not in the PROC structure.  
-	*/
-
-	ConnectQ (schedd);
-	if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,
-								  "ATTR_NOTIFY_USER", notifyUser))
+	if ( strchr(email_addr,'@') == NULL ) 
 	{
-		strcpy (notifyUser, Proc->owner);
+		/* No host name specified; add uid domain */
+		/* Note that if uid domain was set by the admin to "none", then */
+		/* earlier we have already set it to be the submit machine's name */
+		sprintf(cmd, "%s -s \"Condor Job %d.%d\" %s@%s\n",
+		               MailerPgm, Proc->id.cluster, Proc->id.proc, email_addr,
+		               My_UID_Domain
+		               );
 	}
-	DisconnectQ (NULL);
+	else
+	{
+	    /* host name specified; don't add uid domain */
+	    sprintf(cmd, "%s -s \"Condor Job %d.%d\" %s\n",
+	                MailerPgm, Proc->id.cluster, Proc->id.proc, email_addr);
+	}
+	
+	dprintf( D_FULLDEBUG, "Notify user using cmd: %s",cmd);
 
-	sprintf(cmd, "%s -s \"Condor Job %d.%d\" %s@%s\n",
-					MailerPgm, Proc->id.cluster, Proc->id.proc, notifyUser,
-					My_UID_Domain
-					);
-#endif
 
 #if 0
 	mailer = execute_program( cmd, Proc->owner, "w" );
@@ -1064,10 +1067,15 @@ NotifyUser( char *buf )
 
 	fprintf(mailer, "Your condor job\n" );
 #if defined(NEW_PROC)
-	fprintf(mailer, "\t%s %s\n", Proc->cmd[0], Proc->args[0] );
+#if defined(Solaris)
+	fprintf(mailer, "\t%s\n", Proc->cmd[0] );
 #else
-	fprintf(mailer, "\t%s %s\n", Proc->cmd, Proc->args );
+	fprintf(mailer, "\t%s %s\n", Proc->cmd[0], Proc->args[0] );
 #endif
+#else
+  	fprintf(mailer, "\t%s %s\n", Proc->cmd, Proc->args );
+#endif
+
 	fprintf(mailer, "%s\n\n", buf );
 
 	display_errors( mailer );
@@ -1130,7 +1138,7 @@ unlink_local_or_ckpt_server( char *file )
 	if (rval) {
 		/* Local failed, so lets try to do it on the server, maybe we
 		   should do that anyway??? */
-		dprintf( D_ALWAYS, "Remove from ckpt server returns %d\n",
+		dprintf( D_FULLDEBUG, "Remove from ckpt server returns %d\n",
 				RemoveRemoteFile(Proc->owner, file));
 	}
 }
@@ -1162,18 +1170,24 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	} else {
 
 		/* Here we keep usage info on the job when the Shadow first starts in
-		 * tstartup_local/remote.  This way we can "reset" it back each subsequent
-		 * time we are called so that update_rusage always adds up correctly.  We
-		 * are called by pseudo calls really_exit and update_rusage, and both of
-		 * these are passing in times _since_ the remote job started, NOT since
-		 * the last time this function was called.  Thus this code here.... -Todd */
+		 * tstartup_local/remote, so we can "reset" it back each subsequent
+		 * time we are called so that update_rusage always adds up correctly.
+		 * We are called by pseudo calls really_exit and update_rusage, and 
+		 * both of these are passing in times _since_ the remote job started, 
+		 * NOT since the last time this function was called.  Thus this code 
+		 * here.... -Todd */
 		if (tstartup_flag == 0 ) {
 			tstartup_flag = 1;
 			memcpy(&tstartup_local, &Proc->local_usage, sizeof(struct rusage) );
 			memcpy(&tstartup_remote, &Proc->remote_usage[0], sizeof(struct rusage) );
 		} else {
 			memcpy(&Proc->local_usage,&tstartup_local,sizeof(struct rusage));
-			memcpy(&Proc->remote_usage[0],&tstartup_remote, sizeof(struct rusage) );
+			/* Now only copy if time in remotep > 0.  Otherwise, we'll erase the
+			 * time updates from any periodic checkpoints if the job ends up 
+			 * exiting without a checkpoint on this run.  -Todd, 6/97. 
+			*/
+			if ( remotep->ru_utime.tv_sec + remotep->ru_stime.tv_sec > 0 )
+				memcpy(&Proc->remote_usage[0],&tstartup_remote, sizeof(struct rusage) );
 		}
 
 		update_rusage( &Proc->local_usage, localp );
@@ -1561,6 +1575,13 @@ start_job( char *cluster_id, char *proc_id )
 }
 
 int
+ExceptCleanup()
+{
+  log_except();
+  return DoCleanup();
+}
+
+int
 DoCleanup()
 {
 	int		status;
@@ -1833,7 +1854,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 #define _POSIX_SOURCE
 #	if defined(OSF1)
 #		include <time.h>			/* need POSIX CLK_TCK */
-#	else
+#	elif !defined(HPUX9)
 #		define _SC_CLK_TCK	3		/* shouldn't do this */
 #	endif
 #undef _POSIX_SOURCE
