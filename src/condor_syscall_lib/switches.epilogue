@@ -6,3 +6,7 @@
 #ifdef Solaris
 #include "switches.remap-SOLARIS251.h"
 #endif
+
+#ifdef IRIX53
+#include "switches.remap-IRIX62.h"
+#endif
