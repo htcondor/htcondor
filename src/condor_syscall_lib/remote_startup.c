@@ -175,7 +175,6 @@ static BOOLEAN condor_restart( );
 static BOOLEAN condor_migrate_to( const char *host_addr, const char *port_num );
 static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
-static int open_tcp_stream( unsigned int ip_addr, unsigned short port );
 void display_ip_addr( unsigned int addr );
 void open_std_files();
 void _condor_set_iwd();
@@ -216,7 +215,6 @@ MAIN( int argc, char *argv[], char **envp )
 #endif
 {
 	int		cmd_fd = -1;
-	char	*cmd_name;
 	char	*extra;
 	int		scm;
 	char	*arg;
@@ -492,12 +490,10 @@ MAIN( int argc, char *argv[], char **envp )
 void
 _condor_interp_cmd_stream( int fd )
 {
-	BOOLEAN	at_end = FALSE;
 	FILE	*fp = fdopen( fd, "r" );
 	char	buf[1024];
 	int		argc;
 	char	*argv[256];
-	int		scm;
 
 	while( fgets(buf,sizeof(buf),fp) ) {
 		_condor_scan_cmd( buf, &argc, argv );
@@ -525,7 +521,7 @@ _condor_scan_cmd( char *buf, int *argc, char *argv[] )
 		return;
 	}
 
-	for( i = 1; argv[i] = strtok(NULL," \n"); i++ )
+	for( i = 1; (argv[i] = strtok(NULL," \n")); i++ )
 		;
 	*argc = i;
 }
@@ -622,9 +618,6 @@ condor_ckpt( const char *path )
 static BOOLEAN
 condor_restart()
 {
-	int		fd;
-	size_t	n_bytes;
-
 	dprintf( D_ALWAYS, "condor_restart:\n" );
 	get_ckpt_name();
 	restart();
@@ -689,9 +682,6 @@ condor_exit( const char *status )
 int
 open_ckpt_file( const char *name, int flags, size_t n_bytes )
 {
-	char			file_name[ _POSIX_PATH_MAX ];
-	int				status;
-
 	if( !do_remote_syscalls ) {
 		if( flags & O_WRONLY ) {
 			return open( name, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
