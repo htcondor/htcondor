@@ -137,6 +137,30 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
   could sometimes end up in a loop, continuously restarting the remote
   Globus jobmanager then putting it back to sleep.
 
+\item Fixed a discrepancy in the \Macro{SUBSYS\_ADDRESS\_FILE}
+  setting.
+  Previously, this setting did not work for SUBSYS values of
+  \verb@COLLECTOR@ or \verb@NEGOTIATOR@ (for example, defining
+  \MacroNI{COLLECTOR\_ADDRESS\_FILE} had no effect).
+  Now, if either of these settings is defined in the config file, the
+  corresponding Condor daemon will write out the address and port it
+  is using to the specified file.
+  Normally, the \Condor{collector} and \Condor{negotiator} listen on a
+  well-known, fixed port.
+  However, on single-machine ``personal Condor'' installations, these
+  address files allow all of the Condor daemons and tools to locate
+  the \Condor{collector} and \Condor{negotiator}, even if they are
+  using a dynamically assigned port.
+  For more information about the \MacroNI{SUBSYS\_ADDRESS\_FILE}
+  setting, please see the description in
+  section~\ref{param:SubsysAddressFile} on
+  page~\pageref{param:SubsysAddressFile}.
+  For more information about using non-standard ports for the
+  \Condor{collector} and \Condor{negotiator}, please see the
+  description of ``Non Standard Ports for Central Managers'' in
+  section~\ref{sec:Ports-NonStandard} on
+  page~\pageref{sec:Ports-NonStandard}.
+
 \end{itemize}
 
 \noindent Known Bugs:
