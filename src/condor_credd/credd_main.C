@@ -35,8 +35,6 @@ char *mySubSystem = "CREDD";	// used by Daemon Core
 
 char * myUserName = NULL;
 
-extern StringList super_users;
-
 // this appears at the bottom of this file
 extern "C" int display_dprintf_header(FILE *fp);
 
