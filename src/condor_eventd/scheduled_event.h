@@ -96,6 +96,8 @@ private:
 	ClassAdList *StartdList;
 	char *constraint;
 	ExprTree *rank;
+	StringList *ShutdownList;	// machines we have placed in shutdown mode
+	StringList *VacateList;		// resources which hav b een vacated
 	int TimeoutTid;
 	int DeactivateTid;
 	int SlowStartPos;

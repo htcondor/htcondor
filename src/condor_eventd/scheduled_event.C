@@ -201,7 +201,8 @@ static const char ShutdownConstraint[] =
 ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 											   const char record[], int offset)
 	: ScheduledEvent(name, record, offset), StartdList(NULL),
-	  constraint(NULL), rank(NULL), TimeoutTid(-1)
+	  constraint(NULL), rank(NULL), ShutdownList(NULL), VacateList(NULL),
+	  TimeoutTid(-1)
 {
 	type = SHUTDOWN;
 	valid = false;
@@ -350,6 +351,8 @@ ScheduledShutdownEvent::~ScheduledShutdownEvent()
 	}
 	if (constraint) free(constraint);
 	if (StartdList) delete StartdList;
+	if (ShutdownList) delete ShutdownList;
+	if (VacateList) delete VacateList;
 	if (rank) delete rank;
 }
 
@@ -357,13 +360,11 @@ int
 ScheduledShutdownEvent::TimeNeeded()
 {
 	ClassAd		*ad;
-	bool		did_cleanup = false;
 
 	if (GetStartdList() < 0) return -1;
 	time_t current_time = time(0);
 	double TotalRequiredCheckpoints = 0.0;
 	StartdList->Open();
-	StringList Machines;
 	while ((ad = StartdList->Next()) != NULL) {
 		int ImageSize = 0, JobUniverse = 1, etime = 0;
 		ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse);
@@ -371,30 +372,8 @@ ScheduledShutdownEvent::TimeNeeded()
 			ad->LookupInteger(ATTR_IMAGE_SIZE, ImageSize) == 1) {
 			TotalRequiredCheckpoints += ImageSize;
 		}
-		if (ad->LookupInteger("EndDownTime", etime) == 1) {
-			if (etime < current_time) {
-				char startd_addr[ATTRLIST_MAX_EXPRESSION];
-				char startd_machine[ATTRLIST_MAX_EXPRESSION];
-				if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
-					ad->LookupString(ATTR_MACHINE, startd_machine) != 1) {
-					dprintf(D_ALWAYS, "Malformed startd classad in "
-							"ScheduledShutdownEvent::TimeNeeded()\n");
-					continue;
-				}
-				if (!Machines.contains(startd_machine)) {
-					CleanupShutdownModeConfig(startd_machine, startd_addr);
-					Machines.append(startd_machine);
-					did_cleanup = true;
-				}
-			}
-		}
 	}
 	
-	// give startd(s) at least 2 seconds to update the collector
-	if (did_cleanup) {
-		sleep(2);
-	}
-
 	return (int)(TotalRequiredCheckpoints/128/bandwidth);
 }
 
@@ -437,9 +416,23 @@ ScheduledShutdownEvent::ActivateEvent()
 		}
 	}
 
+	// initialize our list of shutdown machines and vacated resources
+	// These lists are used to ensure that we shutdown/vacate each
+	// machine/resource at most once.  Without it, we will waste time
+	// contacting machines multiple times in a number of cases: (1)
+	// SMP machines, (2) lost collector updates, and (3) invalid
+	// permission to shutdown a given machine.  Note that ShutdownList
+	// is a list of ATTR_MACHINEs and VacateList is a list of
+	// ATTR_NAMEs, since we only need to change the config of an SMP
+	// startd once but we need to send a separate vacate to each
+	// resource the startd is managing.
+	if (ShutdownList) delete ShutdownList;
+	ShutdownList = new StringList;
+	if (VacateList) delete VacateList;
+	VacateList = new StringList;
+
 	ClassAd *ad;
 	StartdList->Open();
-	StringList Machines;
 	while ((ad = StartdList->Next()) != NULL) {
 		// if machine is not in shutdown mode already *and* we didn't
 		// just put this machine into shutdown mode (i.e., an SMP
@@ -456,15 +449,15 @@ ScheduledShutdownEvent::ActivateEvent()
 						"ScheduledShutdownEvent::Timeout()\n");
 				continue;
 			}
-			if (!Machines.contains(startd_machine)) {
-				EnterShutdownMode(startd_machine, startd_addr);
-				Machines.append(startd_machine);
+			if (!ShutdownList->contains(startd_machine)) {
+				if (EnterShutdownMode(startd_machine, startd_addr) == 0) {
+					ShutdownList->append(startd_machine);
+				}
 			}
 		}
 	}
 
-	// set timer to start shutting down the machines, making sure we give
-	// the startd at least 2 seconds to update the collector
+	// set timer to start shutting down the machines
 
 	if (TimeoutTid >= 0) {
 		dprintf(D_ALWAYS, "Warning: Timer was set for inactive "
@@ -473,7 +466,7 @@ ScheduledShutdownEvent::ActivateEvent()
 	}
 
 	TimeoutTid =
-		daemonCore->Register_Timer(2, (Eventcpp)Timeout,
+		daemonCore->Register_Timer(0, (Eventcpp)Timeout,
 								   "ScheduledShutdownEvent::Timeout()", this);
 
 	// make sure to get an updated StartdList with the new config values
@@ -511,10 +504,8 @@ ScheduledShutdownEvent::Timeout()
 
 	// vacate the first job in the list
 	int time_to_vacate = 0;
-	bool did_shutdown = false;
 	ClassAd *ad;
 	StartdList->Open();
-	StringList Machines;
 	while ((ad = StartdList->Next()) != NULL) {
 		char startd_addr[ATTRLIST_MAX_EXPRESSION];
 		char startd_name[ATTRLIST_MAX_EXPRESSION];
@@ -530,10 +521,10 @@ ScheduledShutdownEvent::Timeout()
 		// make sure all startds are in shutdown mode
 		int etime = 0;
 		if ((ad->LookupInteger("EndDownTime", etime) != 1 ||
-			 etime < EndTime) && !Machines.contains(startd_machine)) {
-			EnterShutdownMode(startd_machine, startd_addr);
-			Machines.append(startd_machine);
-			did_shutdown = true;
+			 etime < EndTime) && !ShutdownList->contains(startd_machine)) {
+			if (EnterShutdownMode(startd_machine, startd_addr) == 0) {
+				ShutdownList->append(startd_machine);
+			}
 		}
 		// we keep looping to verify that all startds are in shutdown mode
 		// but we only want to vacate one big job in this loop, so we
@@ -541,12 +532,14 @@ ScheduledShutdownEvent::Timeout()
 		if (time_to_vacate > 0) continue;
 		int ImageSize = 0, JobUniverse;
 		// only send vacates to startds that have jobs (i.e., which
-		// have ImageSize and JobUniverse defined) and which are still
-		// in the claimed state
+		// have ImageSize and JobUniverse defined), which are still in
+		// the claimed state, and to which we haven't already sent a
+		// vacate
 		if (ad->LookupString(ATTR_STATE, startd_state) != 1 ||
 			strcmp(startd_state, "Claimed") != MATCH ||
 			ad->LookupInteger(ATTR_IMAGE_SIZE, ImageSize) != 1 || 
-			ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse) != 1) {
+			ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse) != 1 ||
+			VacateList->contains(startd_name)) {
 			continue;
 		}
 		ReliSock sock;
@@ -564,6 +557,7 @@ ScheduledShutdownEvent::Timeout()
 			continue;
 		}
 		dprintf(D_ALWAYS, "Sent VACATE_CLAIM to %s.\n", startd_name);
+		VacateList->append(startd_name);
 		if (JobUniverse == 1) {
 			time_to_vacate += (int)(double(ImageSize)/128.0/bandwidth);
 		}
@@ -571,12 +565,7 @@ ScheduledShutdownEvent::Timeout()
 				"for %s.\n", time_to_vacate, startd_name);
 	}
 
-	if (time_to_vacate) {
-		// give the startd(s) at least 2 seconds to update the collector
-		if (time_to_vacate < 2) {
-			time_to_vacate = 2;
-		}
-	} else {
+	if (!time_to_vacate) {
 		// we didn't vacate anyone, so simply check every EVENTD_INTERVAL
 		// to see if there is any new work to do
 		time_to_vacate = EventInterval;
