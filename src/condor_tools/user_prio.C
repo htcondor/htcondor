@@ -194,6 +194,11 @@ main(int argc, char* argv[])
 		exit(1);
 	}
     float Factor=atof(argv[SetFactor+2]);
+	if (Factor<1) {
+		fprintf( stderr, "Priority factors must be greater than or equal to "
+				 "1.\n");
+		exit(1);
+	}
 
     // send request
     ReliSock sock;
