@@ -52,6 +52,10 @@ my $ModuleOptionsRe =
     "(" . join( ")|(", @ModuleOptions ) . ")";
 
 # "Main" Logic
+if ( ! exists $ENV{PWD} )
+{
+    $ENV{PWD} = `/bin/pwd`; chomp $ENV{PWD};
+}
 CommandLine( @ARGV );
 $#ARGV = -1;
 $| = 1;
@@ -299,8 +303,13 @@ sub InstallModules ( )
     print "Installing modules\n";
     foreach my $Module ( @{$Config{Modules}} )
     {
+	die "$Module does not exist" if ( ! -f $Module );
 	my $Cmd = "gzip -d < $Module | tar xvfp -";
-	system "$Cmd 2>&1 > /dev/null";
+	if ( system "$Cmd 2>&1 > /dev/null" )
+	{
+	    warn "Error extracting '$Module'\n";
+	    next;
+	}
 
 	opendir( DIR, $TmpDir ) || die "Can't read dir $TmpDir";
 	my @Files = grep { /^[^\.]/ } readdir( DIR );
@@ -775,8 +784,11 @@ sub ConfigureModule( $ )
 	{
 	    print "     $Param->{Name}\n";
 	    print "\t" . join( "\n\t", @{$Param->{Description}} );
-	    print "\n\tDefault: $Param->{Default}\n";
-	    print "\tWhat value would you like for $Param->{Name}? <enter for default> ";
+	    print "\n\tDefault: " .
+		( $Param->{Default} eq "" ? "<NONE>" : $Param->{Default} ) .
+		    "\n";
+	    print "\tWhat value would you like for $Param->{Name}?".
+		" <enter for default> ";
 	    $_ = <>; chomp;
 	    $Param->{Value} = ( $_ eq "" ) ? $Param->{Default} : $_;
 	}
