@@ -1,0 +1,91 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+
+$cmd_template = "job_condorc_ab_van.template";
+$testname = 'job_condorc_ab_van - Simple Condor-C A&B with Vanilla job';
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysubmitnm = "job_condorc_ab_van" . $mypid . ".cmd";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+my $configrem = CondorPersonal::DebugOn();
+# get a remote scheduler running (side b)
+my $configrem = CondorPersonal::StartCondor("x_param.condorcremote" ,"remote");
+my @remote = split /:/, $configrem;
+my $remconfig = shift @remote;
+my $remport = shift @remote;
+
+print "---Remote config is $remconfig and remote port is $remport---\n";
+
+# Edit submit file to submit to scheduler at remote (side b) schedd.
+my $line;
+open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
+open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
+while(<TPLATE>)
+{
+	chomp($_);
+	$line = $_;
+	if( $line =~ /^\s*remote_pool\s*=\s*($dummyhost):\s*(\d+)\s*$/ )
+	{
+		print "remote pool is $1 port $remport\n";
+		print CSUB "remote_pool = $currenthost:$remport\n";
+	}
+	elsif( $line =~ /^\s*(.*)$dummyhost(.*)\s*$/)
+	{
+		print "found $dummyhost and subbing $currenthost\n";
+		print CSUB "$1$currenthost$2\n";
+	}
+	elsif( $line =~ /^\s*log\s*= .*$/)
+	{
+		my $lognm = "eraseme." . $mypid . ".log";
+		print "New log name: $lognm\n"; 
+		print CSUB "log = $lognm\n";
+	}
+	else
+	{
+		print "template: $line\n";
+		print CSUB "$line\n";
+	}
+}
+close(TPLATE);
+close(CSUB);
+sleep 10;
+
+# get a local scheduler running (side a)
+my $configloc = CondorPersonal::StartCondor("x_param.condorclocal" ,"local");
+my @local = split /:/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+print "---local config is $locconfig and local port is $locport---\n";
+
+$ENV{CONDOR_CONFIG} = $locconfig;
+# submit into local schedd (side a)
+
+if( ! -e "job_condorc_xxx_van.in" )
+{
+	system("date > job_condorc_xxx_van.in");
+}
+
+my $result = system("job_condorc_ab_van.pl $mysubmitnm");
+print "Result of crafted Condor-C job is  $result\n";
+
+sleep 20;
+print "sleeping............\n";
+system("condor_off -master");
+
+$ENV{CONDOR_CONFIG} = $remconfig;
+sleep 20;
+print "sleeping............\n";
+system("condor_off -master");
+
