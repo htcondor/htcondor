@@ -48,10 +48,8 @@ static const char ATTR_PARENT_VIEW_NAME		[]	= "ParentViewName";
 static const char ATTR_PARTITION_EXPRS 		[]  = "PartitionExprs";
 static const char ATTR_PARTITIONED_VIEWS	[] 	= "PartitionedViews";
 static const char ATTR_PROJECT_THROUGH		[]	= "ProjectThrough";
-static const char ATTR_RANK					[]	= "Rank";
 static const char ATTR_RANK_HINTS			[] 	= "RankHints";
 static const char ATTR_REPLACE				[] 	= "Replace";
-static const char ATTR_REQUIREMENTS			[]	= "Requirements";
 static const char ATTR_SUBORDINATE_VIEWS	[]	= "SubordinateViews";
 static const char ATTR_UPDATES				[] 	= "Updates";
 static const char ATTR_WANT_LIST			[]	= "WantList";
@@ -61,6 +59,11 @@ static const char ATTR_WANT_POSTLUDE		[]	= "WantPostlude";
 static const char ATTR_VIEW_INFO			[]	= "ViewInfo";
 static const char ATTR_VIEW_NAME			[]	= "ViewName";
 static const char ATTR_XACTION_NAME			[]	= "XactionName";
+
+#if defined( STANDALONE )
+static const char ATTR_REQUIREMENTS			[]	= "Requirements";
+static const char ATTR_RANK					[]	= "Rank";
+#endif
 
 #if defined(__cplusplus)
 #include <string>
