@@ -21,6 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
+#include "condor_string.h"
 #include "condor_xml_classads.h"
 
 /*-------------------------------------------------------------------------
@@ -33,6 +35,91 @@
  *
  *-------------------------------------------------------------------------*/
 
+enum XMLTokenType
+{
+	XMLToken_Tag,
+	XMLToken_Text,
+	XMLToken_Invalid
+};
+
+class XMLSource
+{
+public:
+	XMLSource()
+	{
+		return;
+	}
+	virtual ~XMLSource()
+	{
+		return;
+	}
+	
+	virtual int ReadCharacter(void) = 0;
+	virtual void PushbackCharacter(void) = 0;
+	virtual bool AtEnd(void) const = 0;
+};
+
+class FileXMLSource : public XMLSource
+{
+public:
+	FileXMLSource(FILE *file);
+	virtual ~FileXMLSource();
+	
+	virtual int ReadCharacter(void);
+	virtual void PushbackCharacter(void);
+	virtual bool AtEnd(void) const;
+
+private:
+	FILE *_file;
+};
+
+class CharXMLSource : public XMLSource
+{
+public:
+	CharXMLSource(const char *string);
+	virtual ~CharXMLSource();
+	
+	virtual int ReadCharacter(void);
+	virtual void PushbackCharacter(void);
+	virtual bool AtEnd(void) const;
+
+	int GetCurrentLocation(void) const;
+private:
+	const char *_source_start;
+	const char *_current;
+};
+
+class XMLToken
+{
+public: 
+	XMLToken();
+	~XMLToken();
+
+	void         SetType(XMLTokenType type);
+	XMLTokenType GetType(void) const;
+
+	void         SetText(const char *text);
+	void         GetText(char **text) const;
+
+	void         SetTag(TagName tag);
+	TagName      GetTag(void) const;
+
+	void         SetTagIsEnd(bool is_end);
+	bool         GetTagIsEnd(void);
+
+	void         SetAttribute(const char *name, const char *value);
+	bool         GetAttribute(MyString &name, MyString &value);
+
+	void         Dump(void);
+private:
+	XMLTokenType  _type;
+	TagName       _tag;
+	bool          _is_end;
+    char         *_text;
+	char         *_attribute_name;
+	char         *_attribute_value;
+};
+
 struct tag_name
 {
 	TagName  id; // Defined in the condor_xml_classads.h
@@ -43,6 +130,7 @@ struct tag_name
 #define NUMBER_OF_TAG_NAMES (sizeof(tag_names) / sizeof(struct tag_name))
 static struct tag_name tag_names[] = 
 {
+	{tag_ClassAds,  "cs", "classads"   },
 	{tag_ClassAd,   "c",  "classad"   },
 	{tag_Attribute, "a",  "attribute" },
 	{tag_Number,    "n",  "number"    },
@@ -52,10 +140,14 @@ static struct tag_name tag_names[] =
 	{tag_Error,     "er", "error"     },
 	{tag_Time,      "t",  "time"      },
 	{tag_List,      "l",  "list"      },
-	{tag_Expr,      "e",  "expr"      }
+	{tag_Expr,      "e",  "expr"      },
+	{tag_NoTag,     "",   ""          }
 };
 
 static void debug_check(void);
+static XMLToken *ReadToken(XMLSource &source);
+static TagName interpret_tagname(const char *tag_text);
+static void fix_entities(const char *source, MyString &dest);
 
 /*-------------------------------------------------------------------------
  *
@@ -63,27 +155,255 @@ static void debug_check(void);
  *
  *-------------------------------------------------------------------------*/
 
+/**************************************************************************
+ *
+ * Function: ClassAdXMLParser Constructor
+ * Purpose:  Constructor and debug check
+ *
+ **************************************************************************/
 ClassAdXMLParser::ClassAdXMLParser()
 {
 	debug_check();
 	return;
 }
 
+/**************************************************************************
+ *
+ * Function: ClassAdXMLParser Destructor
+ * Purpose:  We don't actually have anything to destruct
+ *
+ **************************************************************************/
 ClassAdXMLParser::~ClassAdXMLParser()
 {
 	return;
 }
 
+/**************************************************************************
+ *
+ * Function: ParseClassAd
+ * Purpose:  Parse a ClassAd from a string buffer. 
+ *
+ **************************************************************************/
 ClassAd *
 ClassAdXMLParser::ParseClassAd(const char *buffer)
 {
-	return NULL;
+	CharXMLSource source(buffer);
+	
+	return _ParseClassAd(source);
 }
 
+/**************************************************************************
+ *
+ * Function: ParseClassAd
+ * Purpose:  Parse a ClassAd from a string buffer that we expect to 
+ *           contain multiple ClassAds. Because of this, we return an
+ *           integer (place) that you can pass to this function to read the
+ *           next ClassAd. 
+ *
+ **************************************************************************/
 ClassAd *
 ClassAdXMLParser::ParseClassAds(const char *buffer, int *place)
 {
-	return NULL;
+	ClassAd       *classad;
+	CharXMLSource source(buffer + *place);
+	
+	classad = _ParseClassAd(source);
+	*place = source.GetCurrentLocation();
+
+	return classad;
+}
+
+/**************************************************************************
+ *
+ * Function: ParseClassAd
+ * Purpose:  Parse a single ClassAd from a file.
+ *
+ **************************************************************************/
+ClassAd *
+ClassAdXMLParser::ParseClassAd(FILE *file)
+{
+	FileXMLSource source(file);
+
+	return _ParseClassAd(source);
+}
+
+/**************************************************************************
+ *
+ * Function: _ParseClassAd
+ * Purpose:  This parses a ClassAd from an XML source. This is a private
+ *           function used by the other ParseClassAds. It uses an XMLSource
+ *           class so that it doesn't have to know about files or strings.
+ *           Pretty much all of the parsing happens here. 
+ * See Also: ReadToken()
+ *
+ **************************************************************************/
+ClassAd *
+ClassAdXMLParser::_ParseClassAd(XMLSource &source)
+{
+	XMLToken  *token;
+	ClassAd   *classad;
+	bool      in_classad;
+	bool      in_classads;
+	bool      in_attribute;
+	TagName   attribute_type;
+	MyString  attribute_name;
+	MyString  attribute_value;
+
+	classad = new ClassAd();
+
+	in_classad = false;
+	in_classads = false;
+	in_attribute = false;
+	attribute_type = tag_NoTag;
+
+	while ((token = ReadToken(source)) != NULL) {
+		bool         is_end_tag;
+		TagName      tag_name;
+		XMLTokenType token_type;
+		
+		is_end_tag = token->GetTagIsEnd();
+		token_type = token->GetType();
+		tag_name = token->GetTag();
+
+		if (token_type == XMLToken_Text) {
+			if (in_attribute && attribute_type != tag_NoTag 
+				&& attribute_name.Length() > 0) {
+				
+				bool      add_to_classad = true;
+				MyString  to_insert(attribute_name);
+				char      *token_text_raw;
+				MyString  token_text("");
+				
+				to_insert = attribute_value;
+				to_insert += " = ";
+				
+				token->GetText(&token_text_raw);
+				fix_entities(token_text_raw, token_text);
+				delete[] token_text_raw;
+				
+				switch (attribute_type) {
+				case tag_String:
+					// Type and Target need to be added
+					// specially, because stupid old ClassAds
+					// handles them differently. *sigh*
+					if (attribute_value == "MyType") {
+						classad->SetMyTypeName(token_text.Value());
+						add_to_classad = false;
+					} else if (attribute_value == "TargetType") {
+						classad->SetTargetTypeName(token_text.Value());
+						add_to_classad = false;
+					} else {
+						if (token_text[0] != '"') {
+							to_insert += '"';
+						}
+						to_insert += token_text;
+						if (token_text[token_text.Length()-1] != '"') {
+							to_insert += '"';
+						}
+					}
+					break;
+				case tag_Bool:
+					{
+						MyString bool_attribute_name, bool_attribute_value;
+						token->GetAttribute(bool_attribute_name, bool_attribute_value);
+						if (bool_attribute_name == "value") {
+							if (bool_attribute_value == "true") {
+								to_insert += "TRUE";
+							} else {
+								to_insert += "FALSE";
+							}
+						}
+					}
+					break;
+				case tag_Number:
+				case tag_Expr:
+					to_insert += token_text;
+					break;
+				case tag_Undefined:
+					to_insert += "UNDEFINED";
+					break;
+				case tag_Error:
+					to_insert += "ERROR";
+					break;
+				case tag_List:
+				case tag_Time:
+				default:
+					add_to_classad = false;
+					break;
+				}
+				if (add_to_classad) {
+					//printf("to_insert = %s\n", to_insert.Value());
+					classad->Insert(to_insert.Value());
+				}
+			}
+		}
+
+		// We ignore stuff that is clearly wrong:
+		//   * Attributes not in a ClassAd
+		//   * Attribute values not in an attribute
+		if (!in_classad && tag_name != tag_ClassAd) {
+			continue;
+		} else if (tag_name > tag_Attribute && !in_attribute) {
+			continue;
+		}
+
+		switch (token->GetTag()) {
+		case tag_ClassAds:
+			// We just ignore it. 
+			break;
+		case tag_ClassAd:
+			if (is_end_tag) {
+				in_classad = false;
+				break;
+			} else {
+				in_classad = true;
+			}
+			break;
+		case tag_Attribute:
+			if (is_end_tag) {
+				in_attribute = false;
+				attribute_name = "";
+				break;
+			} else {
+				in_attribute = true;
+				attribute_type = tag_NoTag;
+				token->GetAttribute(attribute_name, attribute_value);
+				if (attribute_name != "name") {
+					attribute_name = "";
+					attribute_value = "";
+				}
+			}
+		case tag_Number:
+			attribute_type = tag_Number;
+			break;
+		case tag_String:
+			attribute_type = tag_String;
+			break;
+		case tag_Bool:
+			attribute_type = tag_Bool;
+			break;
+		case tag_Undefined:
+			attribute_type = tag_Undefined;
+			break;
+		case tag_Error:
+			attribute_type = tag_Error;
+			break;
+		case tag_Time:
+			attribute_type = tag_Time;
+			break;
+		case tag_List:
+			attribute_type = tag_List;
+			break;
+		case tag_Expr:
+			attribute_type = tag_Expr;
+			break;
+		case tag_NoTag:
+		default:
+			break;
+		}
+	}
+
+	return classad;
 }
 
 /*-------------------------------------------------------------------------
@@ -95,8 +415,8 @@ ClassAdXMLParser::ParseClassAds(const char *buffer, int *place)
 
 /**************************************************************************
  *
- * Function:
- * Purpose:  
+ * Function: ClassAdXMLUnparser constructor
+ * Purpose:  Set up defaults, do a debug check.
  *
  **************************************************************************/
 ClassAdXMLUnparser::ClassAdXMLUnparser()
@@ -109,8 +429,8 @@ ClassAdXMLUnparser::ClassAdXMLUnparser()
 
 /**************************************************************************
  *
- * Function:
- * Purpose:  
+ * Function: ClassAdXMLUnparser destructor
+ * Purpose:  Currently, nothing needs to happen here.
  *
  **************************************************************************/
 ClassAdXMLUnparser::~ClassAdXMLUnparser()
@@ -120,8 +440,9 @@ ClassAdXMLUnparser::~ClassAdXMLUnparser()
 
 /**************************************************************************
  *
- * Function:
- * Purpose:  
+ * Function: GetUseCompactNames
+ * Purpose:  Returns true if we are using compact names, like <a> instead
+ *           of attribute.
  *
  **************************************************************************/
 bool 
@@ -132,8 +453,9 @@ ClassAdXMLUnparser::GetUseCompactNames(void)
 
 /**************************************************************************
  *
- * Function:
- * Purpose:  
+ * Function: SetUseCompactNames
+ * Purpose:  Allow the caller to decide if compact names should be used
+ *           (like <a>) or longer names (like <attribute>). 
  *
  **************************************************************************/
 void 
@@ -145,8 +467,9 @@ ClassAdXMLUnparser::SetUseCompactNames(bool use_compact_names)
 
 /**************************************************************************
  *
- * Function:
- * Purpose:  
+ * Function: GetUseCompactSpacing
+ * Purpose:  Tells you if we print out XML compactly (one classad per line)
+ *           or not.
  *
  **************************************************************************/
 bool 
@@ -157,8 +480,10 @@ ClassAdXMLUnparser::GetUseCompactSpacing(void)
 
 /**************************************************************************
  *
- * Function:
- * Purpose:  
+ * Function: SetUseCompactSpacing
+ * Purpose:  Allows the caller to decide if we should print out one XML
+ *           classad per line (compact spacing), or print each attribute
+ *           on a separate line (not compact spacing). 
  *
  **************************************************************************/
 void 
@@ -168,6 +493,13 @@ ClassAdXMLUnparser::SetUseCompactSpacing(bool use_compact_spacing)
 	return;
 }
 
+/**************************************************************************
+ *
+ * Function: AddXMLFileHeader
+ * Purpose:  Print the stuff that should appear at the beginning of an
+ *           XML file that contains a series of ClassAds.
+ *
+ **************************************************************************/
 void ClassAdXMLUnparser::AddXMLFileHeader(MyString &buffer)
 {
 	buffer += "<?xml version=\"1.0\"?>\n";
@@ -177,10 +509,15 @@ void ClassAdXMLUnparser::AddXMLFileHeader(MyString &buffer)
 
 }
 
+/**************************************************************************
+ *
+ * Function: AddXMLFileFooter
+ * Purpose:  Print the stuff that should appear at the end of an XML file
+ *           that contains a series of ClassAds.
+ *
+ **************************************************************************/
 void ClassAdXMLUnparser::AddXMLFileFooter(MyString &buffer)
 {
-	buffer += "<?xml version=\"1.0\"?>\n";
-	buffer += "<!DOCTYPE classad SYSTEM \"classads.dtd\">\n";
 	buffer += "</classads>\n";
 	return;
 
@@ -188,102 +525,142 @@ void ClassAdXMLUnparser::AddXMLFileFooter(MyString &buffer)
 
 /**************************************************************************
  *
- * Function:
- * Purpose:  
+ * Function: Unparse
+ * Purpose:  Converts a ClassAd into an XML representation, and appends
+ *           it to a MyString. Note that the exact appearance of the
+ *           representation is governed by two attributes you can set:
+ *           compact spacing and compact names.
  *
  **************************************************************************/
 void 
 ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 {
+	ExprTree *expression;
+
 	add_tag(buffer, tag_ClassAd, true);
 	if (!_use_compact_spacing) {
 		buffer += '\n';
 	}
 	
-	// Loop through all expressions in the ClassAd
-	ExprTree *expression;
+	// First get the MyType and TargetType expressions 
+	const char *mytype, *mytarget;
 
+	mytype = classad->GetMyTypeName();
+	if (*mytype != 0) {
+		MyString  type_expr_string("MyType = \"");
+		ExprTree  *type_expr;
+
+		type_expr_string += mytype;
+		type_expr_string += '\"';
+		Parse(type_expr_string.Value(), type_expr);
+		Unparse(type_expr, buffer);
+	}
+    mytarget = classad->GetTargetTypeName();
+	if (*mytype != 0) {
+		MyString  target_expr_string("TargetType = \"");
+		ExprTree  *target_expr;
+
+		target_expr_string += mytarget;
+		target_expr_string += '\"';
+		Parse(target_expr_string.Value(), target_expr);
+		Unparse(target_expr, buffer);
+	}
+
+	// Then loop through all the other expressions in the ClassAd
 	classad->ResetExpr();
 	for (expression = classad->NextExpr(); 
 		 expression != NULL; 
 		 expression = classad->NextExpr()) {
-		 
-		// If it isn't an assignment, it's a malformed ClassAd
-		if (expression->MyType() == LX_ASSIGN) {
-			ExprTree *name_expr;
-			ExprTree *value_expr;
-
-			name_expr  = expression->LArg();
-			value_expr = expression->RArg();
-
-			// If the left-hand side of the assignment isn't a variable,
-			// it's malformed.
-			if (name_expr->MyType() == LX_VARIABLE) {
-				const char *name = ((VariableBase *)name_expr)->Name();
-
-				add_attribute_start_tag(buffer, name);
-
-				char      number_string[20];
-				char      *expr_string;
-				MyString  fixed_string;
-
-				switch (value_expr->MyType()) {
-				case LX_INTEGER:
-					sprintf(number_string, "%d", ((IntegerBase *)value_expr)->Value());
-					add_tag(buffer, tag_Number, true);
-					buffer += number_string;
-					if (value_expr->unit == 'k') {
-						buffer += " k";
-					}
-					add_tag(buffer, tag_Number, false);
-					break;
-				case LX_FLOAT:
-					sprintf(number_string, "%f", ((FloatBase *)value_expr)->Value());
-					add_tag(buffer, tag_Number, true);
-					buffer += number_string;
-					if (value_expr->unit == 'k') {
-						buffer += " k";
-					}
-					add_tag(buffer, tag_Number, false);
-					break;
-				case LX_STRING:
-					add_tag(buffer, tag_String, true);
-					fix_characters(((StringBase *)value_expr)->Value(), fixed_string);
-					buffer += fixed_string;
-					fixed_string = "";
-					add_tag(buffer, tag_String, false);
-					break;
-				case LX_BOOL:
-					add_bool_start_tag(buffer, (BooleanBase *)value_expr);
-					break;
-				case LX_UNDEFINED:
-					add_empty_tag(buffer, tag_Undefined);
-					break;
-				case LX_ERROR:
-					add_empty_tag(buffer, tag_Error);
-					break;
-				default:
-					add_tag(buffer, tag_Expr, true);
-					value_expr->PrintToNewStr(&expr_string);
-					fix_characters(expr_string, fixed_string);
-					free(expr_string);
-					buffer += fixed_string;
-					fixed_string = "";
-					add_tag(buffer, tag_Expr, false);
-					break;
-				}
-				add_tag(buffer, tag_Attribute, false);
-				if (!_use_compact_spacing) {
-					buffer += "\n";
-				}
-			}
-		}
+		Unparse(expression, buffer);
 	}
 	add_tag(buffer, tag_ClassAd, false);
 	buffer += '\n';
 	return;
 }
 
+/**************************************************************************
+ *
+ * Function: Unparse
+ * Purpose:  Converts a single expression into an XML representation,
+ *          and appends it to a MyString. It is used by Unparse(ClassAd *...)
+ *
+ **************************************************************************/
+void 
+ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
+{
+	// If it isn't an assignment, it's a malformed ClassAd
+	if (expression->MyType() == LX_ASSIGN) {
+		ExprTree *name_expr;
+		ExprTree *value_expr;
+		
+		name_expr  = expression->LArg();
+		value_expr = expression->RArg();
+		
+		// If the left-hand side of the assignment isn't a variable,
+		// it's malformed.
+		if (name_expr->MyType() == LX_VARIABLE) {
+			const char *name = ((VariableBase *)name_expr)->Name();
+			
+			add_attribute_start_tag(buffer, name);
+			
+			char      number_string[20];
+			char      *expr_string;
+			MyString  fixed_string;
+			
+			switch (value_expr->MyType()) {
+			case LX_INTEGER:
+				sprintf(number_string, "%d", ((IntegerBase *)value_expr)->Value());
+				add_tag(buffer, tag_Number, true);
+				buffer += number_string;
+				if (value_expr->unit == 'k') {
+					buffer += " k";
+				}
+				add_tag(buffer, tag_Number, false);
+				break;
+			case LX_FLOAT:
+				sprintf(number_string, "%f", ((FloatBase *)value_expr)->Value());
+				add_tag(buffer, tag_Number, true);
+				buffer += number_string;
+				if (value_expr->unit == 'k') {
+					buffer += " k";
+				}
+				add_tag(buffer, tag_Number, false);
+				break;
+			case LX_STRING:
+				add_tag(buffer, tag_String, true);
+				fix_characters(((StringBase *)value_expr)->Value(), fixed_string);
+				buffer += fixed_string;
+				fixed_string = "";
+				add_tag(buffer, tag_String, false);
+				break;
+			case LX_BOOL:
+				add_bool_start_tag(buffer, (BooleanBase *)value_expr);
+				break;
+			case LX_UNDEFINED:
+				add_empty_tag(buffer, tag_Undefined);
+				break;
+			case LX_ERROR:
+				add_empty_tag(buffer, tag_Error);
+				break;
+			default:
+				add_tag(buffer, tag_Expr, true);
+				value_expr->PrintToNewStr(&expr_string);
+				fix_characters(expr_string, fixed_string);
+				free(expr_string);
+				buffer += fixed_string;
+				fixed_string = "";
+				add_tag(buffer, tag_Expr, false);
+				break;
+			}
+			add_tag(buffer, tag_Attribute, false);
+			if (!_use_compact_spacing) {
+				buffer += "\n";
+			}
+		}
+	}
+	return;
+}
+	
 /**************************************************************************
  *
  * Function: add_tag
@@ -412,7 +789,7 @@ void ClassAdXMLUnparser::fix_characters(
 		case '<':   dest += "&lt;";    break;
 		case '>':   dest += "&gt;";    break;
 		case '"':   dest += "&quot;";  break;
-		case '\'':  dest += "&aposl";  break;
+		case '\'':  dest += "&apos;";  break;
 		default:
 			dest += *source;
 		}
@@ -420,6 +797,421 @@ void ClassAdXMLUnparser::fix_characters(
 	}
 	return;
 }
+
+/*-------------------------------------------------------------------------
+ *
+ * FileXMLSource
+ *
+ *-------------------------------------------------------------------------*/
+
+/**************************************************************************
+ *
+ * Function: FileXMLSource constructor
+ * Purpose:  
+ *
+ **************************************************************************/
+FileXMLSource::FileXMLSource(FILE *file)
+{
+	_file = file;
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: FileXMLSource desstructor
+ * Purpose:  
+ *
+ **************************************************************************/
+FileXMLSource::~FileXMLSource()
+{
+	_file = NULL;
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: ReadCharacter
+ * Purpose:  Returns a single character
+ *
+ **************************************************************************/
+int 
+FileXMLSource::ReadCharacter(void)
+{
+	return fgetc(_file);
+}
+
+/**************************************************************************
+ *
+ * Function: PushbackCharacter
+ * Purpose:  Unreads a single character, so it can be read again later.
+ *
+ **************************************************************************/
+void 
+FileXMLSource::PushbackCharacter(void)
+{
+	fseek(_file, -1, SEEK_CUR);
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: AtEnd
+ * Purpose:  Returns true if we are at the end of a file, false otherwise.
+ *
+ **************************************************************************/
+bool
+FileXMLSource::AtEnd(void) const
+{
+	bool at_end;
+	
+	at_end = (feof(_file) != 0);
+	return at_end;
+}
+
+/*-------------------------------------------------------------------------
+ *
+ * CharXMLSource
+ *
+ *-------------------------------------------------------------------------*/
+
+/**************************************************************************
+ *
+ * Function: CharXMLSource constructor
+ * Purpose:  
+ *
+ **************************************************************************/
+CharXMLSource::CharXMLSource(const char *string)
+{
+	_source_start = string;
+	_current      = string;
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: CharXMLSource destructor
+ * Purpose:  
+ *
+ **************************************************************************/
+CharXMLSource::~CharXMLSource()
+{
+	return;
+}
+	
+/**************************************************************************
+ *
+ * Function: ReadCharacter
+ * Purpose:  Reads a single character
+ *
+ **************************************************************************/
+int 
+CharXMLSource::ReadCharacter(void)
+{
+	int character;
+
+	character = *_current;
+	if (character == 0) {
+		character = -1; 
+	} else {
+		_current++;
+	}
+
+	return character;
+}
+
+/**************************************************************************
+ *
+ * Function: PushbackCharacter
+ * Purpose:  Unreads a single character, so it can be read again later.
+ *
+ **************************************************************************/
+void 
+CharXMLSource::PushbackCharacter(void)
+{
+	if (_current > _source_start) {
+		_current--;
+	}
+	return;
+}
+
+
+/**************************************************************************
+ *
+ * Function: GetCurrentLocation
+ * Purpose:  Gets the current location within an CharXMLSource. This is
+ *           used for the string version of ParseClassAd() that returns
+ *           the place in the string so that we can read the next ClassAd.
+ *
+ **************************************************************************/
+int 
+CharXMLSource::GetCurrentLocation(void) const
+{
+	return _current - _source_start;
+}
+
+/**************************************************************************
+ *
+ * Function: AtEnd
+ * Purpose:  Returns true if we are at the end of a file, false otherwise.
+ *
+ **************************************************************************/
+bool
+CharXMLSource::AtEnd(void) const
+{
+	bool at_end;
+
+	at_end = (*_current == 0);
+	return at_end;
+}
+
+/*-------------------------------------------------------------------------
+ *
+ * XMLToken 
+ *
+ *-------------------------------------------------------------------------*/
+
+/**************************************************************************
+ *
+ * Function: XMLToken constructor
+ * Purpose:  Sets up a single XML Token
+ *
+ **************************************************************************/
+XMLToken::XMLToken()
+{
+	_type            = XMLToken_Invalid;
+	_tag             = tag_NoTag;
+	_is_end          = false;
+	_text            = NULL;
+	_attribute_name  = NULL;
+	_attribute_value = NULL;
+};
+
+/**************************************************************************
+ *
+ * Function: XMLToken
+ * Purpose:  Destroys the token, freeing up the memory we allocated.
+ *
+ **************************************************************************/
+XMLToken::~XMLToken()
+{
+	_type = XMLToken_Invalid;
+	_tag  = tag_NoTag;
+	_is_end = false;
+	if (_text != NULL) {
+		delete[] _text;
+	}
+	if (_attribute_name != NULL) {
+		delete[] _attribute_name;
+	} 
+	if (_attribute_value != NULL) {
+		delete[] _attribute_value;
+	}
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: SetType
+ * Purpose:  Sets the type of the token (text, tag, or invalid)
+ *
+ **************************************************************************/
+void 
+XMLToken::SetType(XMLTokenType type)
+{
+	_type = type;
+}
+
+/**************************************************************************
+ *
+ * Function: GetType
+ * Purpose:  Gets the type of the token (text, tag, or invalid)
+ *
+ **************************************************************************/
+XMLTokenType 
+XMLToken::GetType(void) const
+{
+	return _type;
+}
+
+/**************************************************************************
+ *
+ * Function: SetText
+ * Purpose:  Sets the text of a token. This is used for tokens that
+ *           are not tags. 
+ *
+ **************************************************************************/
+void XMLToken::SetText(const char *text)
+{
+	if (_text != NULL) {
+		delete [] _text;
+	}
+	_text = strnewp(text);
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: GetText
+ * Purpose:  Gets the text of a token. This is used for tokens that
+ *           are not tags. 
+ *
+ **************************************************************************/
+void 
+XMLToken::GetText(char **text) const
+{
+	if (text != NULL && _text != NULL) {
+		*text = strnewp(_text);
+	}
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: SetTag
+ * Purpose:  Sets which tag a token is.
+ *
+ **************************************************************************/
+void
+XMLToken::SetTag(TagName tag)
+{
+	_tag = tag;
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: GetTag
+ * Purpose:  Gets which tag a token is. 
+ *
+ **************************************************************************/
+TagName 
+XMLToken::GetTag(void) const
+{
+	return _tag;
+}
+
+/**************************************************************************
+ *
+ * Function: SetTagIsEnd
+ * Purpose:  If a tag in an end tag (like </attribute> or <bool value="true"/>,
+ *           use this to indicate so. 
+ *
+ **************************************************************************/
+void
+XMLToken::SetTagIsEnd(bool is_end)
+{
+	_is_end = is_end;
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: GetTagIsEnd
+ * Purpose:  Returns true if a tag is an end tag (like </attribute> or 
+ *           <bool value="true"/>/
+ *
+ **************************************************************************/
+bool
+XMLToken::GetTagIsEnd(void)
+{
+	return _is_end;
+}
+
+
+/**************************************************************************
+ *
+ * Function: SetAttribute
+ * Purpose:  Sets an attribute name and value. Don't confuse this with 
+ *           the attribute element. <attribute name="blah"> is an element
+ *           named "attribute" with an attribute named "name". 
+ *
+ **************************************************************************/
+void 
+XMLToken::SetAttribute(const char *name, const char *value)
+{
+	// Recall that strnewp is like strdup(), but it uses
+	// the C++ new. It's defined in condor_c++_util/strnewp.C
+	if (name != NULL) {
+		if (_attribute_name != NULL) {
+			delete[] _attribute_name;
+		}
+		_attribute_name = strnewp(name);
+	}
+	if (value != NULL) {
+		if (_attribute_value != NULL) {
+			delete[] _attribute_value;
+		}
+		_attribute_value = strnewp(value);
+	}
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: GetAttribute
+ * Purpose:  See SetAttribute. 
+ *
+ **************************************************************************/
+bool
+XMLToken::GetAttribute(MyString &name, MyString &value)
+{
+	bool have_attribute = false;
+
+	if (_attribute_name == NULL || _attribute_value == NULL) {
+		name  = "";
+		value = "";
+	} else {
+		name  = _attribute_name;
+		value = _attribute_value;
+		have_attribute = true;
+	}
+
+	return have_attribute;
+}
+
+/**************************************************************************
+ *
+ * Function: Dump
+ * Purpose:  Print a token for debugging purposes.
+ *
+ **************************************************************************/
+void
+XMLToken::Dump(void)
+{
+	printf("Token (Type=");
+	switch (_type) {
+	case XMLToken_Tag:
+		printf("\"Tag\", ");
+		break;
+	case XMLToken_Text:
+		printf("\"Text\", ");
+		break;
+	case XMLToken_Invalid:
+		printf("\"Invalid\", ");
+		break;
+	default: 
+		printf("\"Unknown\", ");
+		break;
+	}
+
+	if (_type == XMLToken_Tag) {
+		printf("IsEnd = %s, Tag = %s",
+			   _is_end ? "true" : "false",
+			   tag_names[_tag].long_name);
+		if (_attribute_name && _attribute_value) {
+			printf(", %s = %s", _attribute_name, _attribute_value);
+		}
+	} else if (_type == XMLToken_Text){
+		if (_text) {
+			printf("Text = %s", _text);
+		} else {
+			printf("<empty>");
+		}
+	}
+	printf(")\n");
+	
+	return;
+};
 
 /*-------------------------------------------------------------------------
  *
@@ -447,5 +1239,194 @@ static void debug_check(void)
 	ASSERT(tag_names[tag_Time].id      == tag_Time);
 	ASSERT(tag_names[tag_List].id      == tag_List);
 	ASSERT(tag_names[tag_Expr].id      == tag_Expr);
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: ReadToken
+ * Purpose:  Reads a token from an XML source and gives it back. It returns
+ *           NULL if there are no more tokens to read. 
+ * Note:     One might argue that this should be inside the XMLToken class. 
+ *           I wrote this function just after reading a Scott Meyers article
+ *           about encapsulation, and it talks about keeping classes minimal. 
+ *           I'm not sure if I agree or not, so this is a bit of an 
+ *           experiment. 
+ *
+ **************************************************************************/
+static XMLToken *ReadToken(XMLSource &source)
+{
+	int       character;
+	XMLToken  *token;
+	MyString  text;
+
+	if (source.AtEnd()) {
+		token = NULL;
+	} else {
+		token = new XMLToken();
+		
+		// First we skip any whitespace
+		while (1) {
+			character = source.ReadCharacter();
+			if (character == EOF) {
+				break;
+			}
+			text += character;
+			if (!isspace(character)) {
+				break;
+			}
+		}
+		
+		// Now we determine if it is a tag or some text (PCDATA)
+		if (character == '<') {
+			// It's a tag. 
+			token->SetType(XMLToken_Tag);
+			text = "";
+			
+			// Skip whitespace, then pull out the complete tag.
+			// Also check for /, indicating end tag.
+			character = source.ReadCharacter();
+			if (character == '/') {
+				token->SetTagIsEnd(true);
+				character = source.ReadCharacter();
+			}
+			while (isspace(character) && character != EOF) {
+				character = source.ReadCharacter();
+			}
+			while (character != EOF && character != '>') {
+				text += character;
+				character = source.ReadCharacter();
+			}
+			
+			// Now that we have the tag, we need to:
+			// 1) Figure out if it's an ending tag.
+			// 2) find the name of the tag.
+			// 3) find the attribute in the tag. (We only allow
+			//    one attribute for now.)
+			// Note that the text contains everything except for the
+			// angle brackets. 
+			if (text[text.Length() - 1] == '/') {
+				token->SetTagIsEnd(true);
+			}
+			
+			MyString tag_name;
+			MyString attribute_name;
+			MyString attribute_value;
+			int      length;
+			length = text.Length();
+			// Get tag name
+			int i;
+			for (i = 0; i < length && !isspace(text[i]) && text[i] != '/'; i++) {
+				tag_name += text[i];
+			}
+			// Skip space
+			for ( ; i < length && isspace(text[i]); i++) {
+				;
+			}
+			// Get attribute name
+			for ( ; 
+				 i < length && !isspace(text[i]) && text[i] != '/' && text[i] != '='; 
+				 i++) {
+				attribute_name += text[i];
+			}
+			if (text[i] == '=') {
+				i++;
+			}
+			// Get attribute value
+			for ( ;
+				 i < length && !isspace(text[i]) && text[i] != '/'; 
+				 i++) {
+				if (text[i] != '"') {
+					attribute_value += text[i];
+				}
+			}
+			token->SetTag(interpret_tagname(tag_name.Value()));
+			if (attribute_name.Length() > 0 && attribute_value.Length() > 0) {
+				token->SetAttribute(attribute_name.Value(),
+									attribute_value.Value());
+			}
+		} else {
+			token->SetType(XMLToken_Text);
+			
+			// We read all of the text up to next '<', adding it to 
+			// the text we've been tracking. 
+			while (1) {
+				character = source.ReadCharacter();
+				if (character == EOF) {
+					break;
+				} else if (character == '<') {
+					source.PushbackCharacter();
+					break;
+				} else {
+					text += character;
+				}
+			}
+			token->SetText(text.Value());
+		}
+	}
+	return token;
+}
+	
+/**************************************************************************
+ *
+ * Function: interpret_tagname
+ * Purpose:  Given a tag name like "attribute", convert it to our enum 
+ *           value, like tag_Attribute.
+ *
+ **************************************************************************/
+static TagName interpret_tagname(const char *tag_text)
+{
+	int      tag_index;
+	TagName  which_tag;
+
+	which_tag = tag_NoTag;
+	for (tag_index = 0; tag_index < (int) NUMBER_OF_TAG_NAMES; tag_index++) {
+		if (   strcmp(tag_text, tag_names[tag_index].short_name) == 0
+			|| strcmp(tag_text, tag_names[tag_index].long_name) == 0) {
+			which_tag = tag_names[tag_index].id;
+			break;
+		}
+	}
+	
+	return which_tag;
+}
+
+/**************************************************************************
+ *
+ * Function: entities
+ * Purpose:  Given a string, produce a new string that changes XML entities
+ *           into their corresponding character. For example, &amp; is an
+ *           ampersand. 
+ *
+ **************************************************************************/
+static void fix_entities(const char *source, MyString &dest)
+{
+	while (*source != 0) {
+		if (*source != '&') {
+			dest += *source;
+			source++;
+		} else {
+			if (!strncmp(source, "&amp;", 5)) {
+				dest += '&';
+				source += 5;
+			} else if (!strncmp(source, "&lt;", 4)) {
+				dest += '<';
+				source += 4;
+			} else if (!strncmp(source, "&gt;", 4)) {
+				dest += '>';
+				source += 4;
+			} else if (!strncmp(source, "&quot;", 6)) {
+				dest += '"';
+				source += 6;
+			} else if (!strncmp(source, "&apos;", 6)) {
+				dest += '<';
+				source += 6;
+			} else {
+				dest += *source;
+				source++;
+			}
+		}
+	}
+
 	return;
 }
