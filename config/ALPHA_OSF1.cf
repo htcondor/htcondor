@@ -59,8 +59,15 @@
 #define HAS_SETLINEBUF			YES
 #define HAS_PVM					NO
 
-#define CCompiler cc
-#define CPlusCompiler cxx
+#define USE_GCC					YES
+#if USE_GCC
+#	define CCompiler gcc
+#	define CPlusCompiler g++
+#else
+#	define CCompiler cc
+#	define CPlusCompiler cxx
+#endif
+
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib
