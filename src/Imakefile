@@ -146,10 +146,7 @@ contrib_tarball( ckpt_server.tar, CkptServerFiles )
 contrib_tarball( eventd.tar, EventdFiles )
 /* contrib_tarball( sdk.tar, SDKFiles ) */
 
-<<<<<<< Imakefile
-=======
 both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
->>>>>>> 1.81.2.4
 
 #if WANT_PVM && HAS_PVM
 #define PvmTar pvm.tar
@@ -160,18 +157,10 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define AfsPvmTar 
 #endif 
 
-<<<<<<< Imakefile
-all_tarballs: ckpt_server.tar eventd.tar PvmTar dagman.tar
-=======
-all_tarballs: view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar
->>>>>>> 1.81.2.4
+all_tarballs: view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar dagman.tar
 
-<<<<<<< Imakefile
-afs_tarballs: afs_release.tar afs_ckpt_server.tar AfsEventdTar AfsPvmTar 
-=======
 afs_tarballs: afs_view_server.tar afs_release.tar \
-	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar afs_mpi.tar
->>>>>>> 1.81.2.4
+	afs_ckpt_server.tar AfsEventdTar AfsPvmTar afs_mpi.tar
 
 public:: all_tarballs
 
