@@ -429,6 +429,27 @@ Stream::code(open_flags_t &flags)
 	return rval;
 }
 
+extern "C" int errno_num_encode( int errno_num );
+extern "C" int errno_num_decode( int errno_num );
+
+int 
+Stream::code(condor_errno_t &errno_num)
+{
+	int real_errno_num, rval;
+	
+	if (_coding == stream_encode) {
+		real_errno_num = errno_num_encode((int)errno_num);
+	}
+
+	rval = code(real_errno_num);
+
+	if (_coding == stream_decode) {
+		errno_num = (condor_errno_t)errno_num_decode(real_errno_num);
+	}
+
+	return rval;
+}
+
 #if !defined(WIN32)
 
 /*

@@ -21,7 +21,7 @@ ENC_BASE_OBJ = condor_crypt.o
 KERB_OBJ = condor_auth_kerberos.o
 #endif
 
-CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
+CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		condor_auth.o condor_auth_claim.o condor_auth_x509.o \
