@@ -31,6 +31,24 @@
   malloc() that must be free()'ed when the caller is done with it.
 */
 
+/*
+  On OSX, our definitions of TRUE and FALSE inside condor_constants.h
+  (included by condor_common.h) conflict with some system header files
+  we have to include.  So, we define this special symbol first so that
+  condor_constants.h will not mess with TRUE and FALSE at all.  That
+  should be ok to do generally in this file, since we don't use TRUE
+  or FALSE at all in here.  NOTE: this little trick does *NOT* work
+  with the windows build system because we use pre-compiled headers.
+  Our pre-compiled version *WILL* define TRUE and FALSE for us.
+  However, that doesn't break anything, since there's no system header
+  conflicts with this file on windows.
+  Derek Wright <wright@cs.wisc.edu> 2004-05-18
+*/
+
+#define _CONDOR_NO_TRUE_FALSE 1
+#include "condor_common.h" 
+#include "condor_debug.h" 
+
 
 /*
   Each platform that supports this functionality uses a completely
@@ -39,10 +57,6 @@
 */
 
 #if defined( LINUX )
-
-#include "condor_common.h" 
-#include "condor_debug.h" 
-
 char*
 linux_getExecPath()
 {
@@ -71,10 +85,6 @@ linux_getExecPath()
 
 
 #if defined( Solaris )
-
-#include "condor_common.h" 
-#include "condor_debug.h" 
-
 char*
 solaris_getExecPath()
 {
@@ -104,11 +114,7 @@ solaris_getExecPath()
 
 
 #if defined( WIN32 )
-
-#include "condor_common.h" 
-#include "condor_debug.h" 
 #include <psapi.h>
-
 char*
 win32_getExecPath()
 {
@@ -156,7 +162,6 @@ win32_getExecPath()
 
 
 #if defined( Darwin )
-
 /* We need to include <mach-o/dyld.h> for some prototypes, but
    unfortunately, that header conflicts with our definitions of FALSE
    and TRUE. :( So, we hack around that by defining a special thing
@@ -166,11 +171,7 @@ win32_getExecPath()
    the system headers for what we're doing here for OS X.
    Derek Wright <wright@cs.wisc.edu> 2004-05-13
 */
-
 #include <mach-o/dyld.h>
-#define _CONDOR_NO_TRUE_FALSE 1
-#include "condor_common.h" 
-#include "condor_debug.h" 
 #include <crt_externs.h>
 
 typedef int (*NSGetExecutablePathProcPtr)(char *buf, size_t *bufsize);
@@ -281,7 +282,6 @@ darwin_getExecPath()
 }
 #endif /* defined(Darwin) */
 
-#include "condor_common.h" 
 
 /*
   Now, the public method that just invokes the right platform-specific

@@ -2,6 +2,21 @@
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6-merge-13.
 
+05/18/04 V6_6-merge-13
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  fixes getExecPath() on windoze which was breaking the 
+   builds.
+
+05/17/04 V6_6-imake-branch
+	This is a branch made from the V6_6-imake-root tag on the V6_6-branch.
+	I am using it to test my imake build system changes in NMI before I merge
+	it back into V6_6-branch.
+
+05/17/04 V6_6-imake-root
+	The state of the V6_6-branch for an upcomming V6_6-imake-branch to
+	be made where I'm flushing out the bugs in a rewrite of the Imakefile
+	rules.
+
 05/17/04 V6_7-post_merge-V6_6-merge-12
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-12.
