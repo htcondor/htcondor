@@ -86,8 +86,7 @@
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
 
-/* When PVM gets added to sol 2.8, this can come back in -psilord */
-/*#define HAS_PVM				YES*/
+#define HAS_PVM				YES
 
 #define HAS_STATIC			NO
 
