@@ -1,0 +1,17 @@
+\begin{ManPage}{\Condor{checkpoint\_job}}{1}{Checkpoint job running on local machine now}
+\label{man-condor-checkpoint-job}
+\Synopsis \SynProg{\Condor{checkpoint\_job}}
+
+\Description
+
+\Condor{checkpoint\_job} preforms a periodic checkpoint on a job running on
+the local machine.  This job will not be
+stopped due to this process.  In order to vacate the jobs from the machine see
+\Condor{vacate} If there are no jobs running on the local machine, or the job
+running is in the vanilla universe,
+\Condor{checkpoint\_job} has no effect. This command is a more specific version
+of the the generic \Condor{checkpoint} command.  Users and administrators
+shouldn't have to use this command in a properly working condor pool,
+since the condor daemons take care of job checkpointing automatically.
+
+\end{ManPage}
