@@ -596,7 +596,7 @@ SetExecutable()
 		strcpy( GlobusExec, "&(executable=$(GLOBUSRUN_GASS_URL)" );
 		if ( ename[0] != '/' ) {
 			//GLOBUSRUN_GASS_URL notation for CWD
-			strcat( GlobusExec, "/./" );
+			strcat( GlobusExec, "./" );
 		}
 		strcat( GlobusExec, ename );
 		strcat( GlobusExec, ")" );
@@ -966,7 +966,7 @@ SetStdFile( int which_file )
 			//if fileneeded not an absolute pathname, use "/./", Globus
 			//GASS notation for CWD
 		sprintf( GlobusArgs, "%s(%s=$(GLOBUSRUN_GASS_URL)%s%s)", tmpbuf, 
-				fileneeded, macro_value[0] == '/' ? "" : "/./", macro_value );
+				fileneeded, macro_value[0] == '/' ? "" : "./", macro_value );
 
 		if ( macro_value )
 			free(macro_value);
