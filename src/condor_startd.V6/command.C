@@ -22,7 +22,7 @@
 
 static char *_FileName_ = __FILE__;
 
-int Last_X_Event;
+int Last_X_Event = 0;
 
 extern "C" EXPR *build_expr __P((char *, ELEM *));
 //extern "C" int resource_allocate(resource_id_t rid, int njobs, int ntasks);
