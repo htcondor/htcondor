@@ -608,6 +608,10 @@ NUM_CPUS = 1
 ##+	Monitors uses logged on the system (based on the "who" program)
 ##    MODULE gdmphb:gdmp_:gdmphb:20m
 ##+	Monitors the status of GDMP for the US/CMS test bed
+##    MODULE vmstat:vmstat_:vmstat:0:continuous
+##+	Monitors the status of the Virtual Memory (VM) subsystem
+##    MODULE condor_node:Condor_:codor_node:5m
+##+	Monitors the status of an individual Condor pool node
 ##
 ##--------------------------------------------------------------------
 MODULES = $(HAWKEYE)/modules
