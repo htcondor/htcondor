@@ -184,6 +184,8 @@ float	e_factor;								// exponential factor
 int		r_factor;								// recover factor
 int		Foreground;
 int		Termlog;
+char*  	config_option = NULL;					// whether use config server
+char*	config_location;						// config file from server
 char	*CondorAdministrator;
 char	*FS_Preen;
 char	*Log;
@@ -299,6 +301,12 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 		{
 			// Check to see if this is the configuration server host. If it is,
 			// start configuration server immediately.
+			config_location = param("CONFIG_FILE_LOCATION");
+			if(!config_location)
+			{
+				config_location = pwd->pw_dir;
+			}
+			
 			if(IsSameHost(configServer))
 			{
 				StartConfigServer();
@@ -312,13 +320,15 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 			// config server come back up sometime in the future it will
 			// notify this master to get new configuration files if there are
 			// any.
-			if(GetConfig(configServer, pwd->pw_dir) < 0)
+			if(GetConfig(configServer, config_location) < 0)
 			{
 				config(MyName, (CONTEXT*)0);
 			}
 			else
 			{
-				config_from_server(pwd->pw_dir, MyName, NULL);
+				config_from_server(config_location, MyName, NULL);
+				config_option = new char[MAXPATHLEN + 3];
+				sprintf(config_option, "-c %s/%s", config_location, SERVER_CONFIG);
 			}
 		}
 	}
@@ -565,7 +575,10 @@ init_params()
 					daemon_list++;
 				if (*daemon_list) {
 					*daemon_list = '\0';
-					new_daemon = new daemon(daemon_name);
+					if(daemons.GetIndex(daemon_name) < 0)
+					{
+						new_daemon = new daemon(daemon_name);
+					}
 					daemon_list++;
 				} else {
 					new_daemon = new daemon(daemon_name);

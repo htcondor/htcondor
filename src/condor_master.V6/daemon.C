@@ -88,7 +88,8 @@ extern int 		RestartsPerHour;
 extern int 		MasterLockFD;
 extern char *		_FileName_ ;
 extern FileLock*	MasterLock;
-
+extern char*   	config_option;
+ 
 extern int     collector_runs_here();
 extern int     negotiator_runs_here();
 extern time_t  GetTimeStamp(char* file);
@@ -407,8 +408,7 @@ int daemon::StartDaemon()
 		if( setsid() == -1 ) {
 			EXCEPT( "setsid(), errno = %d\n", errno );
 		}
-		// dprintf(D_ALWAYS, "uid=%d, euid=%d, gid=%d, egid=%d\n",
-		//		getuid(), geteuid(), getgid(), getegid());
+
 		if(strcmp(name_in_config_file, "CONFIG_SERVER") == 0)
 		{
 			if(port && config_file)
@@ -430,8 +430,17 @@ int daemon::StartDaemon()
 		}
 		else
 		{
-			(void)execl( process_name, shortname, "-f", 0 );
+			if(config_option)
+			{
+				(void)execl( process_name, shortname, "-f", config_option, 0 );
+			}
+			else
+			{
+				(void)execl( process_name, shortname, "-f", 0 );
+			} 
 		}
+		
+
 		/* Must be condor to write to log files. */
 		EXCEPT( "execl( %s, %s, -f, 0 )", process_name, shortname );
 		return 0;
