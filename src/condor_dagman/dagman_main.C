@@ -245,8 +245,6 @@ int main_init (int argc, char **argv) {
     debug_println (DEBUG_VERBOSE, "Dag contains %d total jobs",
                    G.dag->NumJobs());
 
-    if (DEBUG_LEVEL(DEBUG_DEBUG_3)) G.dag->PrintJobList();
-  
     //------------------------------------------------------------------------
     // Bootstrap and Recovery
     //
@@ -341,13 +339,13 @@ void main_timer () {
     }
 
     //
-    // If no jobs are running, but the dag is not complete,
+    // If no jobs are submitted, but the dag is not complete,
     // then at least one job failed, or a cycle exists.
     // 
     if( G.dag->NumJobsSubmitted() == 0 &&
 		G.dag->NumScriptsRunning() == 0 ) {
 		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-			printf( "ERROR: some jobs failed\n" );
+			printf( "ERROR: the following job(s) failed:\n" );
 			G.dag->PrintJobList( Job::STATUS_ERROR );
 		}
 		if( G.rescue_file != NULL ) {
