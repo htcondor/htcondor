@@ -659,120 +659,6 @@ argv[1] = don't yell "blah!"
 argv[2] = +%s
 \end{verbatim}
 
-% NEW FOR 6.7
-% not yet editted, checked, or formatted!
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\subsubsection{Using Condor-G with \Prog{MyProxy}}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%Starting in Condor version 6.7 you can use instruct Condor-G to use MyProxy
-%software to automatically renew you GSI proxies for your Globus-universe
-%jobs whenever it is necessary. MyProxy is a software component developed at
-%NCSA and used widely throughout Grid community. For more information see:
-% URL is as given/updated by Jim Basney
-%http://myproxy.ncsa.uiuc.edu/
-
-%You may have situations where you have either long running Globus jobs or a
-%great number of jobs submitted, in which case some jobs may not be started
-%or completed before your proxy expires.
-
-%One solution is to generate longer proxies. This, however, presents a
-%greater security problem. Remeber that your GSI proxy is sent to the remote
-%Globus job submission site(s). Once a proxy falls into the hands of a
-%malicious user at the remote site, the user can essentially impresonate you
-%for the duration of the proxy's lifetime. The longer the proxy's lifetime,
-%the more time a malicious user has to misuse your credentials. To minimize
-%the potential malicious user's "window of opportunity" it is recommended
-%that you only generate proxies with a SHORT lifetime (on the order of
-%several hours).
-
-%MyProxy software allows you to generate proxies using credentials (user
-%certificate or a long-lived proxy) located on a secure MyProxy server. If
-%instructed to do so, Condor-G can now automatically talk to a MyProxy server
-%on your behalf and renew your proxies whenever they are about to expire.
-
-%Another advantage that using MyProxy presents is that it relieves the user
-%from having to store their GSI user certificate and private key on the
-%submit machine. This is particularly important if there is a shared Condor-G
-%submit machine, used by several users.
-
-%Typical use case scenario:
-
-%Here is a typical scenario for using Condor-G with MyProxy.
-
-%1) User creates a long-lived credential on the some secure MyProxy server
-%(using myproxy-init command). Each organization generally has their own
-%MyProxy server.
-
-%2) User creates a short-lived proxy on a local submit machine (using
-%grid-proxy-init or myproxy-get-delegation).
-
-%3) User sumbits a Condor-G job, specifying in the submit file:
- %- MyProxy server name (host:port)
- %- MyProxy credential name (optional)
- %- MyProxy passowrd
-
-%4) Whenever the short-lived proxy is about to expire, Condor-G will talk to
-%the MyProxy server to refresh the proxy
-
-
-%Typical MyProxy Submit File:
-%Executable=/usr/bin/my-executable
-%Universe=globus
-%globusscheduler=condor-unsup-7
-%MyProxyHost=beak.cs.wisc.edu:7512
-%MyProxyServerDN=/O=doesciencegrid.org/OU=People/CN=Carey Kireyev 25900
-%MyProxyPassword=password
-%MyProxyCredentialName=my_executable_run
-%Queue
-
-
-%Security tips:
-
-%Note that Condor-G keeps track of the password to MyProxy server for
-%credential renewal. Although Condor-G tries to keep the password encrypted
-%and secure, it is still possible (although highly unlikely) for it to be
-%interercepted from the Condor-G machine (more precisely the machine that the
-%SchedD that manages your Globus jobs runs on, which may be distinct from the
-%machine you run condor_submit on). In order to safeguard from that, the
-%following practices are recommended.
-
-%1) Provide time limits for your credentials on the MyProxy server. The
-%default is one week, but you may want to make it shorter.
-%(See --cred_lifetime option to myproxy-init).
-%2) Create several different MyProxy credentials (maybe as many as one for
-%each submitted job). Each MyProxy credential can have a unique name. Use the
-%optional "MyProxyCredentialName" directive in the submit file to instruct
-%Condor-G which credential to use for renewing.
-%3) When initializing the credential on the MyProxy server, use (at the
-%minimum) the following options
-%myproxy-init -s <host> -x -r <cert subject> -k <cred name>
-%"-x -r <cert subject>" essentially tells MyProxy server to require two forms
-%of authentication:
- %- A password (initially set during myproxy-init)
- %- An existing proxy (the proxy to be renewed)
-%4) If you do not want to provide the MyProxy password in the submit file,
-%you can instead use the -p option to condor_submit, for example:
-%condor_submit -p MyPassword /home/user/myjob.submit
-
-%How Condor-G talks to MyProxy:
-
-%Currently Condor-G calls the myproxy-get-delegation command-line tool,
-%passing it the necessary arguments. The location of the
-%myproxy-get-delegation executable is determined by the
-%MYPROXY_GET_DELEGATION option in the configuration file on the Condor-G
-%machine (it is read by the Condor gridmanager). If the
-%myproxy-get-delegation is a dynamically-linked executable (which you can
-%verify with "ldd myproxy-get-delegation"), you should point
-%MYPROXY_GET_DELEGATION to a wrapper shell script that sets the
-%LD_LIBRARY_PATH to the right myproxy lib (or Globus lib) directory and then
-%calls myproxy-get-delegation. Here's an example of such a wrapper script:
-
-%#!/bin/sh
-%export LD_LIBRARY_PATH=/opt/myglobus/lib
-%exec /opt/myglobus/bin/myproxy-get-delegation $@
-
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Removing Condor-G jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -785,6 +671,7 @@ or (in rare circumstances) is never removed, you can force the job to
 leave the job queue by using the -forcex option to \Condor{rm}. This
 will forcibly remove jobs that are in the X state without attempting
 to finish any cleanup at the remote resource.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Condor-G-Limits}Limitations of Condor-G}
