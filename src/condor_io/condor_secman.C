@@ -357,7 +357,8 @@ SecMan::CreateSecurityPolicyAd(const char *auth_level, bool other_side_can_negot
 
 	// if we require negotiation and we know the other side can't speak
 	// security negotiation, may as well fail now (as opposed to later)
-	if (sec_negotiation == SEC_REQ_REQUIRED && other_side_can_negotiate == FALSE) {
+	if( sec_negotiation == SEC_REQ_REQUIRED && 
+		other_side_can_negotiate == FALSE ) {
 		dprintf (D_SECURITY, "SECMAN: failure! SEC_NEGOTIATION "
 				"is REQUIRED and other daemon is pre 6.3.2.\n");
 		return NULL;
@@ -387,17 +388,22 @@ SecMan::CreateSecurityPolicyAd(const char *auth_level, bool other_side_can_negot
 			// default unix method
 			paramer = strdup("FS");
 #endif
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf ( D_SECURITY, "SECMAN: param(\"SEC_DEFAULT_AUTHENTICATION_METHODS\") == NULL, using \"%s\"\n", paramer);
+			if( DebugFlags & D_FULLDEBUG ) {
+				dprintf( D_SECURITY, "SECMAN: "
+						 "param(\"SEC_DEFAULT_AUTHENTICATION_METHODS\") "
+						 "== NULL, using \"%s\"\n", paramer );
 			}
 		} else {
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf ( D_SECURITY, "SECMAN: param(\"SEC_DEFAULT_AUTHENTICATION_METHODS\") == %s\n", paramer );
+			if( DebugFlags & D_FULLDEBUG ) {
+				dprintf( D_SECURITY, "SECMAN: "
+						 "param(\"SEC_DEFAULT_AUTHENTICATION_METHODS\") "
+						 "== %s\n", paramer );
 			}
 		}
 	} else {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == %s\n", buf, paramer );
+		if( DebugFlags & D_FULLDEBUG ) {
+			dprintf( D_SECURITY, "SECMAN: param(\"%s\") == %s\n", buf,
+					 paramer ); 
 		}
 	}
 
@@ -406,7 +412,7 @@ SecMan::CreateSecurityPolicyAd(const char *auth_level, bool other_side_can_negot
 		free(paramer);
 
 		ad->Insert(buf);
-		dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
+		dprintf( D_SECURITY, "SECMAN: %s\n", buf );
 	}
 
 
@@ -420,16 +426,20 @@ SecMan::CreateSecurityPolicyAd(const char *auth_level, bool other_side_can_negot
 		paramer = param("SEC_DEFAULT_CRYPTO_METHODS");
 		if (paramer) {
 			if (DebugFlags & D_FULLDEBUG) {
-				dprintf ( D_SECURITY, "SECMAN: param(\"SEC_DEFAULT_CRYPTO_METHODS\") == %s\n", paramer );
+				dprintf( D_SECURITY, "SECMAN: "
+						 "param(\"SEC_DEFAULT_CRYPTO_METHODS\") == %s\n",
+						 paramer );
 			}
 		} else {
 			if (DebugFlags & D_FULLDEBUG) {
-				dprintf ( D_SECURITY, "SECMAN: param(\"SEC_DEFAULT_CRYPTO_METHODS\") == NULL.\n");
+				dprintf( D_SECURITY, "SECMAN: "
+						 "param(\"SEC_DEFAULT_CRYPTO_METHODS\") == NULL\n" );
 			}
 		}
 	} else {
 		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == %s\n", buf, paramer );
+			dprintf( D_SECURITY, "SECMAN: param(\"%s\") == %s\n", buf,
+					 paramer );
 		}
 	}
 
@@ -440,10 +450,13 @@ SecMan::CreateSecurityPolicyAd(const char *auth_level, bool other_side_can_negot
 		ad->Insert(buf);
 		dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
 	} else {
-		if (sec_encryption == SEC_REQ_REQUIRED || sec_integrity == SEC_REQ_REQUIRED) {
-			dprintf ( D_SECURITY, "SECMAN: no crypto methods, but it was required! failing...\n");
+		if( sec_encryption == SEC_REQ_REQUIRED || 
+			sec_integrity == SEC_REQ_REQUIRED ) {
+			dprintf( D_SECURITY, "SECMAN: no crypto methods, "
+					 "but it was required! failing...\n" );
 		} else {
-			dprintf ( D_SECURITY, "SECMAN: no crypto methods, disabling crypto.\n");
+			dprintf( D_SECURITY, "SECMAN: no crypto methods, "
+					 "disabling crypto.\n" );
 			sec_encryption = SEC_REQ_NEVER;
 			sec_integrity = SEC_REQ_NEVER;
 		}
@@ -456,34 +469,42 @@ SecMan::CreateSecurityPolicyAd(const char *auth_level, bool other_side_can_negot
  		 sec_is_negotiable(sec_encryption) || 
  		 sec_is_negotiable(sec_integrity) ) {
 
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION, SecMan::sec_req_rev[sec_negotiation]);
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
+				 SecMan::sec_req_rev[sec_negotiation] );
 		ad->Insert(buf);
 
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION, SecMan::sec_req_rev[sec_authentication]);
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
+				 SecMan::sec_req_rev[sec_authentication] ); 
 		ad->Insert(buf);
 
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION, SecMan::sec_req_rev[sec_encryption]);
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION,
+				 SecMan::sec_req_rev[sec_encryption] ); 
 		ad->Insert(buf);
 
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY, SecMan::sec_req_rev[sec_integrity]);
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY,
+				 SecMan::sec_req_rev[sec_integrity] ); 
 		ad->Insert(buf);
 
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_ENACT, "NO");
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENACT, "NO" );
 		ad->Insert(buf);
 	} else {
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION, SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_negotiation)]);
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
+		   SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_negotiation)]);
 		ad->Insert(buf);
 
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_authentication)]);
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
+		   SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_authentication)]); 
 		ad->Insert(buf);
 
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION, SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_encryption)]);
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION,
+		   SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_encryption)]); 
 		ad->Insert(buf);
 
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY, SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_integrity)]);
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY,
+		   SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_integrity)]); 
 		ad->Insert(buf);
 		
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_ENACT, "YES");
+		sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENACT, "YES" );
 		ad->Insert(buf);
 	}
 
