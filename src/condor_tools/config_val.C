@@ -554,14 +554,23 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 
 static void PrintConfigFiles(void)
 {
+		// print descriptive lines to stderr and config file names to
+		// stdout, so that the output can be cleanly piped into
+		// something like xargs...
+
 	if (global_config_file.Length() > 0) {
-		printf("Config file: %s\n", global_config_file.Value());
+		fprintf( stderr, "Config file:\n" );
+		fflush( stderr );
+		fprintf( stdout, "\t%s\n", global_config_file.Value() );
+		fflush( stdout );
 	} else {
-		printf("Can't find the config file.\n");
+		fprintf( stderr, "Can't find the config file.\n" );
 	}
 	if (global_root_config_file.Length() > 0) {
-		printf("Root config file: %s\n", 
-			   global_root_config_file.Value());
+		fprintf( stderr, "Root config file:\n" );
+		fflush( stderr );
+		fprintf( stdout, "\t%s\n", global_root_config_file.Value() );
+		fflush( stdout );
 	}
 	if (local_config_files.Length() > 0) {
 		StringList files;
@@ -569,14 +578,18 @@ static void PrintConfigFiles(void)
 		files.initializeFromString(local_config_files.Value());
 		
 		if (files.number() < 2) {
-			printf("Local config file: %s\n",
-				   local_config_files.Value());
+			fprintf( stderr, "Local config file:\n" );
+			fflush( stderr );
+			fprintf( stdout, "\t%s\n", local_config_files.Value() );
+			fflush( stdout );
 		} else {
-			printf("Local config files:\n");
+			fprintf( stderr, "Local config files:\n" );
+			fflush( stderr );
 			files.rewind();
 			char *file;
 			while ((file = files.next()) != NULL) {
-				printf("    %s\n", file);
+				fprintf( stdout, "\t%s\n", file );
+				fflush( stdout );
 			}
 		}
 	}
