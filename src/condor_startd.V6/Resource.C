@@ -117,6 +117,10 @@ Resource::kill_claim( void )
 {
 	switch( state() ) {
 	case claimed_state:
+	case preempting_state:
+			// We might be in preempting/vacating, in which case we'd
+			// still want to do the activity change into killing...
+			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
 		return change_state( preempting_state, killing_act );
 	case matched_state:
 		return change_state( owner_state );
