@@ -238,13 +238,13 @@ OsProc::StartJob()
 	priv = set_user_priv();
 
 	fds[0] = openStdFile( SFT_IN, NULL, true, starter_stdin,
-						  "Input file", "standard input" );
+						  "Input file" );
 
 	fds[1] = openStdFile( SFT_OUT, NULL, true, starter_stdout,
-						  "Output file", "standard output" );
+						  "Output file" );
 
 	fds[2] = openStdFile( SFT_ERR, NULL, true, starter_stderr,
-						  "Error file", "standard error" );
+						  "Error file" );
 
 	/* Bail out if we couldn't open the std files correctly */
 	if( fds[0] == -1 || fds[1] == -1 || fds[2] == -1 ) {
