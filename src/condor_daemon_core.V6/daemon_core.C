@@ -730,6 +730,16 @@ int DaemonCore::Register_Reaper(int rid, char* reap_descrip, ReaperHandler handl
 	return rid;
 }
 
+int DaemonCore::Lookup_Socket( Stream *insock )
+{
+	for (int i=0; i < nSock; i++) {
+		if (sockTable[i].iosock == insock) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 int DaemonCore::Cancel_Reaper( int )
 {
 	// stub

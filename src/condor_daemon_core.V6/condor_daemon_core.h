@@ -141,6 +141,8 @@ class DaemonCore : public Service
 				}
 		int		Cancel_Socket( Stream* );
 
+		int		Lookup_Socket( Stream *iosock );
+
 		int		Register_Timer(unsigned deltawhen, Event event, char *event_descrip, 
 					Service* s = NULL);
 		int		Register_Timer(unsigned deltawhen, unsigned period, Event event, 
