@@ -984,6 +984,14 @@ output_receiver( struct node *n )
 			abbreviate(p->type_name),
 			p->id 
 		);
+		if ((strcmp(p->type_name, "int") == MATCH) ||
+			(strcmp(p->type_name, "open_flags_t") == MATCH) ||
+			(strcmp(p->type_name, "off_t") == MATCH) ||
+			(strcmp(p->type_name, "size_t") == MATCH)) {
+			printf( "\t\tdprintf( D_SYSCALLS, \"\t%s = %%d\\n\", %s );\n",
+				   p->id, p->id
+			);
+		}
 	}
 
 		/*
@@ -1020,6 +1028,12 @@ output_receiver( struct node *n )
 			);
 		}
 		printf( ") );\n" );
+		if (strcmp(p->XDR_FUNC, "xdr_string") == MATCH) {
+			q=p->param_list->next;
+			printf( "\t\tdprintf( D_SYSCALLS, \"\t%s = %%s\\n\", %s );\n",
+				   q->id, q->id
+			);
+		}
 	}
 
 		/* Invoke the system call */
