@@ -37,13 +37,24 @@ The details of each version are described below.
   Now, all parts of Condor should work correctly without permission
   problems if \MacroNI{CONDOR\_IDS} is defined in the config file.
 
+\item Under certain rare circumstances (e.g., running \Condor{rm} on a
+      \Condor{dagman} job which was running a POST script for a node
+      which had no PRE script defined), DAGMan could dereference a
+      nonexistent pointer and segfault.  This has now been fixed.
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item There is a suspected-but-not-yet-confirmed bug in DAGMan's
+      \Opt{-MaxJobs} feature that can lead to a segfault which
+      re-occurs during recovery.  Users are advised to avoid using
+      this feature until the bug is found and fixed.  \Condor{dagman}
+      jobs submitted without the \Opt{-MaxJobs} feature are not
+      affected.  Likewise, the \Opt{-MaxPre} and \Opt{-MaxPost}
+      features are not affected and can be safely used.
 
 \end{itemize}
 
