@@ -519,7 +519,7 @@ SetExecutable()
   InsertJobExpr ("MaxHosts = 1");
   InsertJobExpr ("CurrentHosts = 0");
 
-  (void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, UNEXPANDED);
+  (void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
   InsertJobExpr (buffer);
 
   SetUniverse();
