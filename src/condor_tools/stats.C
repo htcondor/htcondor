@@ -32,6 +32,7 @@
 
 #include "condor_commands.h"
 #include "condor_io.h"
+#include "daemon.h"
 
 //------------------------------------------------------------------------
 
@@ -94,7 +95,7 @@ main(int argc, char* argv[])
 
   MyString FileName;
   MyString TimeFileName;
-  MyString CondorViewHost;
+  char* pool = NULL;
 
   for(int i=1; i<argc; i++) {
 
@@ -203,7 +204,7 @@ main(int argc, char* argv[])
 	}
     else if (strcmp(argv[i],"-pool")==0) {
       if (argc-i<=1) Usage(argv[0]);
-      CondorViewHost=argv[i+1];
+	  pool=argv[i+1];
       i++;
     }
     else {
@@ -215,18 +216,9 @@ main(int argc, char* argv[])
   if (QueryType==-1 || FromDate<0 || FromDate>Now || ToDate<FromDate) Usage(argv[0]);
   // if (ToDate>Now) ToDate=Now;
 
-  if (CondorViewHost.Length()==0) {
-    config( 0 );
-    char* tmp=param("CONDOR_VIEW_HOST");
-    if (!tmp) {
-      tmp=param("COLLECTOR_HOST");
-      if (!tmp) {
-        fprintf(stderr, "No CONDOR_VIEW_HOST or COLLECTOR_HOST  specified in config file\n");
-        exit(1);
-      }
-    }
-    CondorViewHost=tmp;
-  }
+  config( 0 );
+
+  Daemon view_host( DT_VIEW_COLLECTOR, 0, pool );
 
   const int MaxLen=200;
   char Line[MaxLen+1];
@@ -247,8 +239,9 @@ main(int argc, char* argv[])
   int LineCount=0;
 
   ReliSock sock;
-  if (!sock.connect((char*) CondorViewHost.Value(), COLLECTOR_PORT)) {
-    fprintf(stderr, "failed to connect to the CondorView server\n");
+  if (!sock.connect((char*) view_host.addr(), 0)) {
+    fprintf( stderr, "failed to connect to the CondorView server (%s)\n", 
+			 view_host.fullHostname() );
     fputs("No Data.\n",outfile);
     exit(1);
   }
@@ -260,7 +253,8 @@ main(int argc, char* argv[])
       !sock.code(Options) ||
       !sock.code(LinePtr) ||
       !sock.end_of_message()) {
-    fprintf(stderr, "failed to send query to the CondorView server\n");
+    fprintf( stderr, "failed to send query to the CondorView server\n",
+			 view_host.fullHostname() );
     fputs("No Data.\n",outfile);
     exit(1);
   }
