@@ -1498,6 +1498,11 @@ static void AppendHistory(ClassAd* ad)
   if (!JobHistoryFileName) return;
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
+  // insert completion time
+  char tmp[512];
+  sprintf(tmp,"%s = %d",ATTR_COMPLETION_DATE,time(NULL));
+  ad->InsertOrUpdate(tmp);
+ 
   // save job ad to the log
   FILE* LogFile=fopen(JobHistoryFileName,"a");
   if ( !LogFile ) {
