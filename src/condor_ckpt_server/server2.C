@@ -100,7 +100,7 @@ void Server::Init(int max_new_xfers,
 				  int max_new_restore_xfers)
 {
 	struct stat log_stat;
-	char		*ckpt_server_dir, *level;
+	char		*ckpt_server_dir, *level, *interval;
 #ifdef DEBUG
 	char        log_msg[256];
 	char        hostname[100];
@@ -135,6 +135,14 @@ void Server::Init(int max_new_xfers,
 		free( level );
 	} else {
 		replication_level = 0;
+	}
+
+	interval = param( "CKPT_SERVER_INTERVAL" );
+	if( interval ) {
+		reclaim_interval = atoi(interval);
+		free( interval );
+	} else {
+		reclaim_interval = RECLAIM_INTERVAL;
 	}
 
 	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
@@ -318,7 +326,7 @@ void Server::Execute()
 	
 	start_interval_time = time(NULL);
 	while (more) {                          // Continues until SIGUSR2 signal
-		poll.tv_sec = RECLAIM_INTERVAL;
+		poll.tv_sec = reclaim_interval;
 		poll.tv_usec = 0;
 		errno = 0;
 		FD_ZERO(&req_sds);
@@ -360,7 +368,7 @@ void Server::Execute()
 			}
 		current_time = time(NULL);
 		if (((unsigned int) current_time - (unsigned int) start_interval_time) 
-			>= RECLAIM_INTERVAL) {
+			>= reclaim_interval) {
 			BlockSignals();
 			transfers.Reclaim(current_time);
 			UnblockSignals();

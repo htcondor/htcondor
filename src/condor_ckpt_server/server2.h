@@ -60,6 +60,7 @@ class Server
 	struct sockaddr_in peer_addr_list[MAX_PEERS];
 	int            num_peers;
 	int		       replication_level;
+	int			   reclaim_interval;
     int SetUpPort(u_short port);
 	void SetUpPeers();
 	ReplicationSchedule replication_schedule;

@@ -66,7 +66,7 @@
 #define MAX_NAME_LENGTH                     50
 #define MAX_PATHNAME_LENGTH                 512
 #define DATA_BUFFER_SIZE                    50000
-#define RECLAIM_INTERVAL                    60
+#define RECLAIM_INTERVAL                    60*5
 #define MAX_ALLOWED_XFER_TIME               60*60
 #define RECLAIM_BYPASS                      100
 #define STATUS_FILENAME_LENGTH              31
