@@ -33,7 +33,7 @@ int CondorErrno;
 int IndexFile::
 dump_index()
 {
-	hash_map<string,int,StringHash>::iterator m=Index.begin();
+   	hash_map<string,int,StringHash>::iterator m=Index.begin();
 	cout << "in dump index the lenght= " << Index.size() << endl;
 	while (m!=Index.end()){
 		cout << "dump index  key= " << m->first << "  offset=" << m->second << endl;
@@ -122,6 +122,7 @@ Next(string &key)
 	} 
 }
 
+string IndexFile::
 GetClassadFromFile(string key, int offset)
 {
 	if (filed != 0){
