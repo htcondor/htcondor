@@ -358,7 +358,8 @@ Print more information.
 Prints out this screen and exits.
 
 END_USAGE
-																	    }
+}
+
 
 sub find_owner {
     my $param = shift(@_);
@@ -382,18 +383,22 @@ sub find_owner {
 	}
     }
     else {
-	die "\nUnable to find the user to run Condor daemons as. Please specify it
-using the --owner option\n";
+	die "\nUnable to find the user to run Condor daemons as. Please specify it using the --owner option\n";
     }
 
     if ($uname) {
 	$uid=(getpwnam ($uname))[2];
+	if( ! $uid ) {
+	    die "\nInvalid user: getpwname(\"$uname\") failed!\n";
+	}
+    }
+    if( ! $uid ) {
+        die "\nfind_owner(): can't find a user to run as!\n";
+    }
+    if( !getpwuid($uid) ) {
+        die "\nInvalid user: getpwuid($uid) failed!\n";
     }
 
-    if ((!$uid) || (!getpwuid($uid))) {
-	die "\nInvalid user: $param\n";
-    }
-        
     return $uid;
 }
 
