@@ -25,8 +25,8 @@ while ($#argv)
 	if( ! -e ${DST} ) then			# doesn't exist - create the symlink
 		echo ln -s ${SRC} ${DST}
 		ln -s ${SRC} ${DST}
-	else if( ! -l ${DST} ) then		# does exist - make sure it is a symlink
-		echo Warning: ${DST} - not a symbolic link
+#	else if( ! -l ${DST} ) then		# does exist - make sure it is a symlink
+#		echo Warning: ${DST} - not a symbolic link
 	endif
 
 	shift
