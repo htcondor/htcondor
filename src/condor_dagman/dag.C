@@ -78,7 +78,7 @@ bool Dag::Bootstrap (bool recovery) {
 
 	jobs.ToBeforeFirst();
 	while( jobs.Next( job ) ) {
-		if( job->_Status != Job::STATUS_DONE &&
+		if( job->_Status == Job::STATUS_READY &&
 			job->IsEmpty( Job::Q_WAITING ) ) {
 			Submit( job );
 		}
@@ -252,10 +252,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
                       break;
                   }
 
-				  if( !recovery ) {
-					  _numJobsSubmitted--;
-					  assert( _numJobsSubmitted >= 0 );
-				  }
+				  _numJobsSubmitted--;
+				  assert( _numJobsSubmitted >= 0 );
 
                   JobTerminatedEvent * termEvent = (JobTerminatedEvent*) e;
 
@@ -302,7 +300,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					  job->_Status = Job::STATUS_POSTRUN;
 					  _scriptQ->Run( job->_scriptPost );
 					  SubmitReadyJobs();					  
-					  done = true;
 					  break;
 				  }
 
@@ -333,7 +330,11 @@ bool Dag::ProcessLogEvents (bool recovery) {
                     break;
 				}
 
-				if( !recovery ) {
+				if( recovery ) {
+					job->_Status = Job::STATUS_SUBMITTED;
+					_numJobsSubmitted++;
+				}
+				else {
 					// as a sanity check, compare the job from the
 					// submit event to the job we expected to see from
 					// our submit queue
@@ -368,7 +369,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				}
                 
 				PrintReadyQ( DEBUG_DEBUG_1 );
-				done = true;
                 break;
             }
             break;
@@ -430,17 +430,13 @@ bool Dag::Submit (Job * job) {
 int
 Dag::SubmitReadyJobs()
 {
-//	debug_printf( DEBUG_DEBUG_1, "%s(): %d ready job%s to submit.\n",
-//				  __FUNCTION__,
-//				  _readyQ->Number(), _readyQ->Number() == 1 ? "" : "s" );	
-
+//	PrintReadyQ( DEBUG_DEBUG_4 );
 	// no jobs ready to submit
     if( _readyQ->IsEmpty() ) {
         return 0;
     }
     // max jobs already submitted
     if( _maxJobsSubmitted && _numJobsSubmitted >= _maxJobsSubmitted ) {
-		assert( _numJobsSubmitted <= _maxJobsSubmitted );
         debug_printf( DEBUG_DEBUG_1,
                       "Max jobs (%d) already running; "
 					  "deferring submission of %d ready job%s.\n",
@@ -772,7 +768,8 @@ Dag::TerminateJob( Job* job, bool bootstrap )
         assert (child != NULL);
         child->Remove(Job::Q_WAITING, job->GetJobID());
 		// if child has no more parents in its waiting queue, submit it
-		if( child->IsEmpty( Job::Q_WAITING ) && bootstrap == FALSE ) {
+		if( child->_Status == Job::STATUS_READY &&
+			child->IsEmpty( Job::Q_WAITING ) && bootstrap == FALSE ) {
 			Submit( child );
 		}
     }
