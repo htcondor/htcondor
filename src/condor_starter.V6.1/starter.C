@@ -425,7 +425,7 @@ CStarter::StartJob()
 		// On NT, we've got to manually set the acls, too.
 	{
 		perm dirperm;
-		const char * nobody_login = get_user_nobody_loginname();
+		const char * nobody_login = get_user_loginname();
 		ASSERT(nobody_login);
 		dirperm.init(nobody_login);
 		int ret_val = dirperm.set_acls( WorkingDir );
