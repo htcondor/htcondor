@@ -95,6 +95,9 @@ extern int  StarterChoosesCkptServer;
 extern char *Spool;
 extern ClassAd *JobAd;
 
+// count of network bytes send and received outside of CEDAR RSC socket
+extern float BytesSent, BytesRecvd;
+
 const int MaxRetryWait = 3600;
 
 /*
@@ -626,12 +629,14 @@ pseudo_get_file_stream(
 			errno = ENOENT;
 			return -1;
 		} else {
+			BytesSent += *len;
 			return 0;
 		}
 	} else {
 
 		*len = file_size( file_fd );
 		dprintf( D_FULLDEBUG, "\tlen = %d\n", *len );
+		BytesSent += *len;
 
 		get_host_addr( ip_addr );
 		display_ip_addr( *ip_addr );
@@ -749,6 +754,7 @@ pseudo_put_file_stream(
 	}
 	if (!rval) {
 		/* Checkpoint server says ok */
+		BytesRecvd += len;
 		return 0;
 	}
 
@@ -775,6 +781,7 @@ pseudo_put_file_stream(
 
 	create_tcp_port( port, &connect_sock );
 	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
+	BytesRecvd += len;
 
 	switch( child_pid = fork() ) {
 	  case -1:	/* error */

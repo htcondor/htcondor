@@ -142,6 +142,12 @@ char	*ExecutingHost;
 char	*GlobalCap;
 char	*MailerPgm;
 
+// count of network bytes send and received for this job so far
+extern float	TotalBytesSent, TotalBytesRecvd;
+
+// count of network bytes send and received outside of CEDAR RSC socket
+extern float	BytesSent, BytesRecvd;
+
 #include "condor_qmgr.h"
 
 struct rusage LocalUsage;
@@ -736,6 +742,8 @@ Wrapup( )
 		handle_termination( Proc, notification, &JobStatus, NULL );
 	}
 
+	TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
+	TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
 	
 	/*
 	 * the job may have an email address to whom the notification message
@@ -761,6 +769,10 @@ Wrapup( )
 	DeleteAttribute(Proc->id.cluster, Proc->id.proc, ATTR_REMOTE_HOST);
 	SetAttributeString(Proc->id.cluster, Proc->id.proc,
 					   ATTR_LAST_REMOTE_HOST, ExecutingHost);
+	SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_BYTES_SENT,
+					  TotalBytesSent);
+	SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_BYTES_RECVD,
+					  TotalBytesRecvd);
     DisconnectQ (NULL);
 
 	/* fill in the Proc structure's exit_status with JobStatus, so that when
@@ -988,6 +1000,9 @@ start_job( char *cluster_id, char *proc_id )
 
 	dprintf(D_ALWAYS, "Setting %s=%s\n", ATTR_REMOTE_HOST, ExecutingHost);
 	SetAttributeString(cluster_num, proc_num, ATTR_REMOTE_HOST, ExecutingHost);
+	GetAttributeFloat(cluster_num, proc_num, ATTR_BYTES_SENT, &TotalBytesSent);
+	GetAttributeFloat(cluster_num, proc_num, ATTR_BYTES_RECVD,
+					  &TotalBytesRecvd);
 	DisconnectQ(0);
 
 #define TESTING
@@ -1099,11 +1114,18 @@ DoCleanup()
 		Proc->image_size = ImageSize;
 		Proc->status = status;
 
+		TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
+		TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
+	
 		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
 		//				status);
 		DeleteAttribute(Proc->id.cluster, Proc->id.proc, ATTR_REMOTE_HOST);
 		SetAttributeString(Proc->id.cluster, Proc->id.proc,
 						   ATTR_LAST_REMOTE_HOST, ExecutingHost);
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_BYTES_SENT,
+						  TotalBytesSent);
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_BYTES_RECVD,
+						  TotalBytesRecvd);
 
 		DisconnectQ(0);
 		// dprintf( D_ALWAYS, "Shadow: marked job status %d\n", JobStatusNames[Proc->status] );

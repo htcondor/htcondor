@@ -33,6 +33,8 @@
 const char ATTR_ACTIVITY				 [] = "Activity";
 const char ATTR_AFS_CELL				 [] = "AFSCell";
 const char ATTR_ARCH                     [] = "Arch";
+const char ATTR_BYTES_SENT				 [] = "BytesSent";
+const char ATTR_BYTES_RECVD				 [] = "BytesRecvd";
 const char ATTR_CAPABILITY				 [] = "Capability";
 const char ATTR_CKPT_ARCH				 [] = "CkptArch";
 const char ATTR_CKPT_LAST_READ			 [] = "CkptLastRead";
