@@ -7,7 +7,6 @@
 
 // timer id values that indicates the timer is not registered
 #define TIMER_UNSET		-1
-#define TIME_NEVER		10000000
 
 template class List<GlobusJob>;
 template class Item<GlobusJob>;
@@ -18,7 +17,7 @@ int GlobusResource::probeInterval = 300;	// default value
 GlobusResource::GlobusResource( char *resource_name )
 {
 	resourceDown = false;
-	pingTimerId = daemonCore->Register_Timer( TIME_NEVER,
+	pingTimerId = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusResource::DoPing,
 								"GlobusResource::DoPing", (Service*)this );
 	gahp.setNotificationTimerId( pingTimerId );
@@ -76,7 +75,7 @@ int GlobusResource::DoPing()
 	bool ping_failed = false;
 	GlobusJob *job;
 
-	daemonCore->Reset_Timer( pingTimerId, TIME_NEVER );
+	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
 
 	rc = gahp.globus_gram_client_ping( resourceName );
 

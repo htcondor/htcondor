@@ -34,7 +34,6 @@
 
 // timer id values that indicates the timer is not registered
 #define TIMER_UNSET		-1
-#define TIME_NEVER		10000000
 
 // GridManager job states
 #define GM_INIT					0
@@ -126,7 +125,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	syncedErrorSize = 0;
 	shadowBirthday = 0;
 
-	evaluateStateTid = daemonCore->Register_Timer( TIME_NEVER,
+	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );;
 	gahp.setNotificationTimerId( evaluateStateTid );
@@ -218,7 +217,7 @@ int GlobusJob::doEvaluateState()
 	int status;
 	int error;
 
-	daemonCore->Reset_Timer( evaluateStateTid, TIME_NEVER );
+	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
 
 	if ( jmUnreachable || resourceDown ) {
 		gahp.setMode( GahpClient::results_only );
