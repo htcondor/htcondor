@@ -982,7 +982,6 @@ abort_job_myself(PROC_ID job_id)
 {
 	shadow_rec *srec;
 	int mode;
-	char* tmp = NULL;
 
 	// First check if there is a shadow assiciated with this process.
 	// If so, send it SIGUSR,
@@ -5471,7 +5470,6 @@ bool
 sendAlive( match_rec* mrec )
 {
 	SafeSock	*sock;
-	int			alive = ALIVE;
 	char		*id = NULL;
 	
 	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",mrec->peer);
