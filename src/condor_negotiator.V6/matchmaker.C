@@ -29,8 +29,6 @@
 #include "condor_attributes.h"
 #include "condor_api.h"
 
-static char *_FileName_ = __FILE__;     // used by EXCEPT
-
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
@@ -604,7 +602,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	int			i;
 	int			reply;
 	int			cluster, proc;
-	int			placement_bw, preempt_bw, bw_request, job_status;
+	int			placement_bw, preempt_bw, bw_request, want_checkpoint;
 	int			result;
 	ClassAd		request;
 	ClassAd		*offer;
@@ -744,20 +742,29 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 
 			// Make sure this offer won't put us over our network bandwidth
 			// limit.
-			if (!request.LookupInteger (ATTR_JOB_STATUS, job_status)) {
-				job_status = IDLE; // err on the safe side
+			if (!request.LookupInteger (ATTR_EXECUTABLE_SIZE,
+										placement_bw)) {
+				placement_bw = 0;
 			}
-			if (job_status == UNEXPANDED) {
-				// We only need to transfer the executable for an
-				// unexpanded job, so ignore the ImageSize attribute
-				// in this case.
-				if (!request.LookupInteger (ATTR_EXECUTABLE_SIZE,
-											placement_bw)) {
-					placement_bw = 0;
+			if (!request.LookupBool (ATTR_WANT_CHECKPOINT, want_checkpoint)) {
+				want_checkpoint = 1; // err on the safe side
+			}
+			if (want_checkpoint) {
+				float cpu_time;
+				if (!request.LookupFloat (ATTR_JOB_REMOTE_USER_CPU,
+										  cpu_time)) {
+					cpu_time = 1.0;	// err on the safe size
 				}
-			} else {
-				if (!request.LookupInteger (ATTR_IMAGE_SIZE, placement_bw)) {
-					placement_bw = 0;
+				if (cpu_time > 0.0) {
+					// if want_ckpt is true (checkpointing is enabled)
+					// and cpu_time > 0.0 (job has committed some
+					// work), then the job will need to read a
+					// checkpoint to restart, so we include image size
+					// in the placement cost
+					int image_size;
+					if (request.LookupInteger (ATTR_IMAGE_SIZE, image_size)) {
+						placement_bw += image_size;
+					}
 				}
 			}
 			if (offer->LookupInteger (ATTR_IMAGE_SIZE, preempt_bw) == 0) {
