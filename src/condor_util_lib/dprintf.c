@@ -63,8 +63,8 @@ FILE	*fdopen();
 
 void SetCondorAccessPriv();
 void RestoreAccessPriv();
-uid_t switch_euid( uid_t new );
-uid_t get_condor_uid();
+void switch_ids( uid_t new_euid, uid_t new_egid );
+void get_condor_ids();
 int open_debug_file( int flags );
 
 extern int	errno;
@@ -77,6 +77,7 @@ char	*DebugLock;
 int		(*DebugId)();
 
 int		LockFd = -1;
+int		_Condor_SwitchUids;
 
 char *DebugFlagNames[] = {
 	"D_ALWAYS", "D_TERMLOG", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", 
@@ -222,13 +223,17 @@ FILE *
 debug_lock()
 {
 	int	length;
+	int		oumask;
 
-	SetCondorAccessPriv();
+	if( _Condor_SwitchUids ) {
+		SetCondorAccessPriv();
+	}
 
 		/* Acquire the lock */
 	if( DebugLock ) {
 		if( LockFd < 0 ) {
-			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0600);
+			oumask = umask( 0 );
+			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
 				if( errno == EMFILE ) {
 					fd_panic( __LINE__, __FILE__ );
@@ -236,6 +241,7 @@ debug_lock()
 				fprintf( DebugFP, "Can't open \"%s\"\n", DebugLock );
 				exit( errno );
 			}
+			(void) umask( oumask );
 		}
 
 		if( flock(LockFd,LOCK_EX) < 0 ) {
@@ -270,7 +276,9 @@ debug_lock()
 		}
 	}
 
-	RestoreAccessPriv();
+	if( _Condor_SwitchUids ) {
+		RestoreAccessPriv();
+	}
 	return DebugFP;
 }
 
@@ -396,60 +404,69 @@ sigset(){}
   are for switching privileges back to "condor" for this purpose.
 */
 
-uid_t Saved_euid;
+static uid_t	CondorUid;
+static uid_t	CondorGid;
+static uid_t	Saved_egid;
+static uid_t	Saved_euid;
 
 void
 SetCondorAccessPriv()
 {
 
-	Saved_euid = switch_euid( get_condor_uid() );
+	Saved_egid = getegid();
+	Saved_euid = geteuid();
+	if( !CondorUid ) {
+		get_condor_ids();
+	}
+	switch_ids( CondorUid, CondorGid );
 }
 
 void
 RestoreAccessPriv()
 {
-	switch_euid( Saved_euid );
+	switch_ids( Saved_euid, Saved_egid );
 }
 
-uid_t
-switch_euid( uid_t new )
+/*
+  Switch process's effective user and group ids as desired.
+*/
+void
+switch_ids( uid_t new_euid, uid_t new_egid )
 {
-	uid_t old;
-
-	old = geteuid();
-	if( old == new ) {
-		return old;
-	}
+		/* First set euid to root so we have privilege to do this */
 	if( seteuid(0) < 0 ) {
 		fprintf( stderr, "Can't set euid to root\n" );
 		exit( errno );
 	}
-	if( seteuid(new) < 0 ) {
-		fprintf( stderr, "Can't set euid to %d\n", new );
+
+		/* Now set the egid as desired */
+	if( setegid(new_egid) < 0 ) {
+		fprintf( stderr, "Can't set egid to %d\n", new_egid );
 		exit( errno );
 	}
 
-	return old;
+		/* Now set the euid as desired */
+	if( seteuid(new_euid) < 0 ) {
+		fprintf( stderr, "Can't set euid to %d\n", new_euid );
+		exit( errno );
+	}
 }
 
 #include <pwd.h>
-uid_t
-get_condor_uid()
+void
+get_condor_ids()
 {
 	struct passwd	*pwd;
 	static	uid_t	condor_uid;
 
-	if( !condor_uid ) {
-	}
-		
 	pwd = getpwnam("condor");
 	if( pwd == NULL ) {
 		fprintf( stderr, "Can't find password entry for user 'condor'");
 		exit( errno );
 	}
 
-	condor_uid = pwd->pw_gid;
-	return condor_uid;
+	CondorUid = pwd->pw_uid;
+	CondorGid = pwd->pw_gid;
 }
 
 int
@@ -471,4 +488,11 @@ open_debug_file( int flags)
 	(void) umask( oumask );
 
 	return fd;
+}
+
+void
+display_ids()
+{
+	fprintf( stderr, "ruid = %d, euid = %d\n", getuid(), geteuid() );
+	fprintf( stderr, "rgid = %d, egid = %d\n", getgid(), getegid() );
 }
