@@ -51,6 +51,11 @@
 	  know that geteuid() has to be handled specially in the local case,
 	  which is the meaning of "extract".
 
+  : dl_extract
+	  This is similar to extract above except it uses dlopen() and
+	  dlsym() to find the appropriate versions of the calls in
+	  /usr/lib/libc.so.
+
   in xdr_bytes( &buf, &len, len );
 	  A statement like this appears with the prototype for the
 	  write() system call.  Note that the parameter "buf" is a
@@ -204,7 +209,11 @@
 #	if defined(AIX32)
 		pid_t getppid() : pseudo;
 #	else
+#	if defined(IRIX53)
+		pid_t getppid() : dl_extract, pseudo;
+#	else
 		pid_t getppid() : extract, pseudo;
+#	endif
 		uid_t getuid()  : pseudo;
 		gid_t getgid()  : pseudo;
 #	endif
@@ -217,12 +226,21 @@
 	*/
 
 #if !defined(AIX32) && !defined(Solaris)
+#	if defined(IRIX53)
+	uid_t geteuid() : dl_extract, pseudo;
+	gid_t getegid() : dl_extract, pseudo;
+	char * getwd( char *path_name ) : pseudo, dl_extract {
+		GET_PATH( path_name );
+		ALLOC_PATH( path_name );
+	}
+#	else
 	uid_t geteuid() : extract, pseudo;
 	gid_t getegid() : extract, pseudo;
 	char * getwd( char *path_name ) : pseudo, extract {
 		GET_PATH( path_name );
 		ALLOC_PATH( path_name );
 	}
+#	endif
 #endif
 int unlink( const char *path ) {
 	SEND_PATH( path );
@@ -740,7 +758,11 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 #	if defined( AIX32)
 		int kill( pid_t pid, int sig );
 #	else
+#	if defined(IRIX53)
+        int kill( pid_t pid, int sig ) : dl_extract;
+#	else
         int kill( pid_t pid, int sig ) : extract;
+#	endif
 #	endif
 #endif  /* of !defined(SAVE_SIGSTATE) */
 
@@ -767,6 +789,9 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 #if		defined(LINUX)
 		int sigaction( int sig, struct sigaction *act,
 				struct sigaction *o_act ) : extract;
+#elif		defined(IRIX53)
+		int sigaction( int sig, const struct sigaction *act,
+						struct sigaction *o_act ) : dl_extract;
 #else
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act ) : extract;
@@ -784,8 +809,13 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	one day soon.
 	*/
 not_supported {
+#	if defined(IRIX53)
+	char * mmap( char * a, size_t l, int p, int f, map(int fd),
+														off_t o ) : dl_extract;
+#	else
 	char * mmap( char * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : extract;
+#	endif
 	int munmap( char * addr, size_t len );
 	int mprotect( char * addr, size_t len, int prot );
 	int madvise( char * addr, size_t len, int behav );
@@ -847,6 +877,9 @@ not_supported {
 #if defined(AIX32)
 	pid_t fork();
 	int pipe( int fd[] );
+#elif defined(IRIX53)
+	pid_t fork() : dl_extract;
+	int pipe( int fd[] ) : dl_extract;
 #else
 	pid_t fork() : extract;
 	int pipe( int fd[] ) : extract;
