@@ -401,10 +401,12 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
 	char buf[128];
 
-	if( job_suspended ) {
-		sprintf( buf, "%s=\"suspended\"", ATTR_JOB_STATE );
+	if( exit_status >= 0 ) {
+		sprintf( buf, "%s=\"Exited\"", ATTR_JOB_STATE );
+	} else if( job_suspended ) {
+		sprintf( buf, "%s=\"Suspended\"", ATTR_JOB_STATE );
 	} else {
-		sprintf( buf, "%s=\"running\"", ATTR_JOB_STATE );
+		sprintf( buf, "%s=\"Running\"", ATTR_JOB_STATE );
 	}
 	ad->Insert( buf );
 
