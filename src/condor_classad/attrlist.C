@@ -11,6 +11,7 @@
 # include <string.h>
 
 # include "except.h"
+# include "debug.h"
 # include "condor_astbase.h"
 # include "condor_expressions.h"
 # include "proc_obj.h"
@@ -460,117 +461,6 @@ ExprTree* AttrList::ProcToTree(char* var, LexemeType t, int i, float f, char* s)
 // Create a AttrList from a CONTEXT.
 ////////////////////////////////////////////////////////////////////////////////
 
-class Stack
-{
-	public :
-
-		Stack() { top = 0; }
-		~Stack();
-
-		ELEM*	Pop();
-		void	Push(ELEM*);
-
-	private :
-
-		int		top;
-		ELEM*	data[1000];
-};
-
-int		IsOperator(ELEM*);
-char*	Print_elem(ELEM*, char*);
-
-AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
-{
-	Stack		stack;
-	ELEM*		elem, *lElem, *rElem;
-	char*		tmpExpr;
-	char*		tmpChar;
-	int			i, j;
-	ExprTree*	tmpTree;
-
-	seq = 0;
-	associatedList = NULL;
-	tail = NULL;
-	ptrExpr = NULL;
-	ptrName = NULL;
-
-	for(i = 0; i < context->len; i++)
-    	for(j = 0; j < (context->data)[i]->len; j++)
-      		if(((context->data)[i]->data)[j]->type == ENDMARKER)
-			{
-				elem = stack.Pop();
-				Parse(elem->val.string_val, tmpTree);
-				Insert(tmpTree);
-      		}
-			else if(((context->data)[i]->data)[j]->type == NOT)
-			{
-				tmpExpr = new char[1000];
-				strcpy(tmpExpr, "");
-				rElem = stack.Pop();
-				strcat(tmpExpr, "(!");
-				tmpChar = tmpExpr + 2;
-				Print_elem(rElem, tmpChar);
-				strcat(tmpExpr, ")");
-				elem = (ELEM *)malloc(sizeof(ELEM));
-				elem->val.string_val = tmpExpr;
-				elem->type = EXPRSTRING;
-				stack.Push(elem);
-				if(rElem->type == EXPRSTRING)
-				{
-					delete rElem->val.string_val;
-					free(rElem);
-        		}
-		    }
-			else if(IsOperator(((context->data)[i]->data)[j]))
-			{
-				tmpExpr = new char[1000];
-				strcpy(tmpExpr, "");
-				rElem = stack.Pop();
-				lElem = stack.Pop();
-				if(((context->data)[i]->data)[j]->type != GETS)
-				{
-			    	strcat(tmpExpr, "(");
-					tmpChar = tmpExpr + 1;
-				}
-				else
-					tmpChar = tmpExpr;
-				tmpChar = Print_elem(lElem, tmpChar);
-				tmpChar = Print_elem(((context->data[i]->data)[j]), tmpChar);
-				Print_elem(rElem, tmpChar);
-				if(((context->data)[i]->data)[j]->type != GETS)
-				strcat(tmpExpr, ")");
-				elem = (ELEM *)malloc(sizeof(ELEM));
-				elem->val.string_val = tmpExpr;
-				elem->type = EXPRSTRING;
-				stack.Push(elem);
-				if(rElem->type == EXPRSTRING)
-				{
-					delete rElem->val.string_val;
-					free(rElem);
-       			}
-				if(lElem->type == EXPRSTRING)
-				{
-					delete lElem->val.string_val;
-					free(lElem);
-				}
-			} else
-				stack.Push(((context->data)[i]->data)[j]);
-}
-
-// Stack implementation
-Stack::~Stack()
-{
-	while(top >= 0)
-	{
-		top--;
-		if(data[top]->type == EXPRSTRING)
-		{
-			delete data[top]->val.string_val;
-		}
-		delete data[top];
-	}
-}
-
 int IsOperator(ELEM *elem)
 {
   switch(elem->type) {
@@ -591,21 +481,16 @@ int IsOperator(ELEM *elem)
   }
 }
 
-ELEM* Stack::Pop()
+ELEM* Pop(STACK* stack)
 {
-	top--;
-	if(data[top]->type == EXPRSTRING)
-	{
-		delete data[top]->val.string_val;
-	}
-	delete data[top];
-	return data[top];
+	stack->top--;
+	return stack->data[stack->top];
 }
 
-void Stack::Push(ELEM *elem)
+void Push(STACK* stack, ELEM *elem)
 {
-  data[top] = elem;
-  top++;
+  stack->data[stack->top] = elem;
+  stack->top++;
 }
 
 char *Print_elem(ELEM *elem, char *str)
@@ -657,6 +542,98 @@ char *Print_elem(ELEM *elem, char *str)
 
   for(tmpChar = str; *tmpChar != '\0'; tmpChar++);
   return tmpChar;
+}
+
+AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
+{
+	STACK		stack;
+	ELEM*		elem, *lElem, *rElem;
+	char*		tmpExpr;
+	char*		tmpChar;
+	int			i, j;
+	ExprTree*	tmpTree;
+
+	stack.top = 0;
+	seq = 0;
+	associatedList = NULL;
+	tail = NULL;
+	ptrExpr = NULL;
+	ptrName = NULL;
+	exprList = NULL;
+
+	for(i = 0; i < context->len; i++)
+	{
+    	for(j = 0; j < (context->data)[i]->len; j++)
+		{
+      		if(((context->data)[i]->data)[j]->type == ENDMARKER)
+			{
+				elem = Pop(&stack);
+				if(Parse(elem->val.string_val, tmpTree) != 0)
+				{
+					dprintf(D_EXPR, "Can't parse %s\n", elem->val.string_val);
+				}
+				else
+				{
+					Insert(tmpTree);
+				}
+				delete []elem->val.string_val;
+				delete elem;
+      		}
+			else if(((context->data)[i]->data)[j]->type == NOT)
+			{
+				tmpExpr = new char[1000];
+				strcpy(tmpExpr, "");
+				rElem = Pop(&stack);
+				strcat(tmpExpr, "(!");
+				tmpChar = tmpExpr + 2;
+				Print_elem(rElem, tmpChar);
+				strcat(tmpExpr, ")");
+				elem = (ELEM *)malloc(sizeof(ELEM));
+				elem->val.string_val = tmpExpr;
+				elem->type = EXPRSTRING;
+				Push(&stack, elem);
+				if(rElem->type == EXPRSTRING)
+				{
+					delete rElem->val.string_val;
+					delete rElem;
+        		}
+		    }
+			else if(IsOperator(((context->data)[i]->data)[j]))
+			{
+				tmpExpr = new char[1000];
+				strcpy(tmpExpr, "");
+				rElem = Pop(&stack);
+				lElem = Pop(&stack);
+				if(((context->data)[i]->data)[j]->type != GETS)
+				{
+			    	strcat(tmpExpr, "(");
+					tmpChar = tmpExpr + 1;
+				}
+				else
+					tmpChar = tmpExpr;
+				tmpChar = Print_elem(lElem, tmpChar);
+				tmpChar = Print_elem(((context->data[i]->data)[j]), tmpChar);
+				Print_elem(rElem, tmpChar);
+				if(((context->data)[i]->data)[j]->type != GETS)
+					strcat(tmpExpr, ")");
+				elem = new ELEM;
+				elem->val.string_val = tmpExpr;
+				elem->type = EXPRSTRING;
+				Push(&stack, elem);
+				if(rElem->type == EXPRSTRING)
+				{
+					delete rElem->val.string_val;
+					delete rElem;
+       			}
+				if(lElem->type == EXPRSTRING)
+				{
+					delete lElem->val.string_val;
+					delete lElem;
+				}
+			} else
+				Push(&stack, ((context->data)[i]->data)[j]);
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
