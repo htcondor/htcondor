@@ -48,7 +48,6 @@
 #include "metric_units.h"
 #include "globus_utils.h"
 #include "print_wrapped_text.h"
-#include "config_util.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -460,7 +459,7 @@ processCommandLineArguments (int argc, char *argv[])
 				*at = '\0';
 			} else {
 				// no ... add UID_DOMAIN
-				char *uid_domain = get_uid_domain();
+				char *uid_domain = param( "UID_DOMAIN" );
 				if (uid_domain == NULL)
 				{
 					EXCEPT ("No 'UID_DOMAIN' found in config file");
@@ -1785,9 +1784,9 @@ fixSubmittorName( char *name, int niceUser )
 	static	char buffer[128];
 
 	if( !initialized ) {
-		uid_domain = get_uid_domain();
+		uid_domain = param( "UID_DOMAIN" );
 		if( !uid_domain ) {
-			fprintf( stderr, "Error:  UID_DOMAIN not found in config file\n" );
+			fprintf( stderr, "Error: UID_DOMAIN not found in config file\n" );
 			exit( 1 );
 		}
 		initialized = true;

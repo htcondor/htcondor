@@ -33,7 +33,6 @@
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
-#include "config_util.h"
 #include "my_hostname.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "sig_install.h"
@@ -386,10 +385,11 @@ main(int argc, char *argv[], char *envp[])
 	initializeUserLog();
 
 
-	My_Filesystem_Domain = get_file_system_domain();
-	dprintf( D_ALWAYS, "My_Filesystem_Domain = \"%s\"\n", My_Filesystem_Domain );
+	My_Filesystem_Domain = param( "FILESYSTEM_DOMAIN" ); 
+	dprintf( D_ALWAYS, "My_Filesystem_Domain = \"%s\"\n", 
+			 My_Filesystem_Domain );
 
-	My_UID_Domain = get_uid_domain(); 
+	My_UID_Domain = param( "UID_DOMAIN" ); 
 	dprintf( D_ALWAYS, "My_UID_Domain = \"%s\"\n", My_UID_Domain );
 
 	use_afs = param( "USE_AFS" );
