@@ -31,6 +31,10 @@ now recorded in the user log.
 DAGMan could crash (with a failed assertion) when recovering from a
 rescue DAG.
 
+\item When transfer_files is being used, the path to the stdout/stderr
+files was not being respected.  After hese files have been transferred,
+they are now copied to the location specified in the submit file.
+
 \end{itemize}
 
 \noindent Known Bugs:
