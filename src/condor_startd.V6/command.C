@@ -87,7 +87,8 @@ command_activate_claim( Service*, int, Stream* stream )
 	free( cap );
 
 	State s = rip->state();
-	if( s != claimed_state ) {
+	Activity a = rip->activity();
+	if( s != claimed_state || a != idle_act ) {
 		log_ignore( ACTIVATE_CLAIM, s );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
