@@ -63,10 +63,11 @@ int CompPrio(LineRec* a, LineRec* b);
 
 //-----------------------------------------------------------------
 
-bool DetailFlag=false;
+int DetailFlag=0;
 
 main(int argc, char* argv[])
 {
+
   int ResetUsage=0;
   int SetFactor=0;
   int SetPrio=0;
@@ -92,7 +93,10 @@ main(int argc, char* argv[])
       ResetAll=true;
     }
     else if (strcmp(argv[i],"-all")==0) {
-      DetailFlag=true;
+      DetailFlag=1;
+    }
+    else if (strcmp(argv[i],"-usage")==0) {
+      DetailFlag=2;
     }
     else {
       usage(argv[0]);
@@ -258,7 +262,12 @@ static int CountElem(AttrList* ad)
 extern "C" {
 int CompPrio(LineRec* a, LineRec* b) 
 {
-  if (a->Priority>b->Priority) return 1;
+  if (DetailFlag==2) {
+    if (a->AccUsage>b->AccUsage) return 1;
+  }
+  else {
+    if (a->Priority>b->Priority) return 1;
+  }
   return -1;
 }
 }
@@ -289,7 +298,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 		!ad->LookupFloat	( attrAccUsage, AccUsage )	||
 		!ad->LookupInteger	( attrBeginUsage, BeginUsage )	||
 		!ad->LookupInteger	( attrResUsed, resUsed ) ) 
-			DetailFlag=false;
+			DetailFlag=0;
 
     LR[i-1].Name=name;
     LR[i-1].Priority=priority;
@@ -314,21 +323,55 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   time_t T=((Integer*) exp->RArg())->Value();
   printf("Last Priority Update: %s\n",format_date(T));
 
-  char* Fmt1="%-30s %14.2f\n";
-  char* Fmt2="%-30s %14s\n";
+  LineRec Totals;
+  Totals.Res=0;
+  Totals.BeginUsage=0;
+  Totals.AccUsage=0;
+  
+  char* Fmt1="%-30s %14.2f\n";  // Data line format
+  char* Fmt2="%-30s %14s\n";    // Title and separator line format
+  char* Fmt3="Number of users: %-13d %14s\n";    // Totals line format
 
-  if (DetailFlag) {
+  if (DetailFlag==1) {
     Fmt1="%-30s %14.2f %8.2f %12.2f %4d %12.2f %11s\n"; 
     Fmt2="%-30s %14s %8s %12s %4s %12s %11s\n"; 
+    Fmt3="Number of users: %-13d %14s %8s %12s %4d %12.2f %11s\n"; 
+  }
+  else if (DetailFlag==2) {
+    Fmt1="%-30s %12.2f %11s\n"; 
+    Fmt2="%-30s %12s %11s\n"; 
+    Fmt3="Number of users: %-13d %12.2f %11s\n"; 
   }
 
-  printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Accumulated","   Usage  ");
-  printf(Fmt2,"User Name","Priority ","Priority","   Factor   ","Used","Usage (hrs)","Start Time");
-  printf(Fmt2,"---------","---------","--------","------------","----","-----------","----------");
+  if (DetailFlag==2) {
+    printf(Fmt2,"         ","Accumulated","   Usage  ");
+    printf(Fmt2,"User Name","Usage (hrs)","Start Time");
+    printf(Fmt2,"------------------------------","-----------","----------");
+  }
+  else {
+    printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Accumulated","   Usage  ");
+    printf(Fmt2,"User Name","Priority ","Priority","   Factor   ","Used","Usage (hrs)","Start Time");
+    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------");
+  }
 
   for (int i=0; i<NumElem; i++) {
     if (LR[i].Name.Length()>30) LR[i].Name=LR[i].Name.Substr(0,29);
-    printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].Res,LR[i].AccUsage/3600.0,format_date(LR[i].BeginUsage));
+    if (DetailFlag==2)
+      printf(Fmt1,LR[i].Name.Value(),LR[i].AccUsage/3600.0,format_date(LR[i].BeginUsage));
+    else 
+      printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].Res,LR[i].AccUsage/3600.0,format_date(LR[i].BeginUsage));
+    Totals.Res+=LR[i].Res;
+    Totals.AccUsage+=LR[i].AccUsage;
+    if (LR[i].BeginUsage<Totals.BeginUsage || Totals.BeginUsage==0) Totals.BeginUsage=LR[i].BeginUsage;
+  }
+
+  if (DetailFlag==2) {
+    printf(Fmt2,"------------------------------","-----------","----------");
+    printf(Fmt3,NumElem,Totals.AccUsage/3600.0,format_date(Totals.BeginUsage));
+  }
+  else {
+    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------");
+    printf(Fmt3,NumElem,"","","",Totals.Res,Totals.AccUsage/3600.0,format_date(Totals.BeginUsage));
   }
 
   return;
