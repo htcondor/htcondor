@@ -821,7 +821,7 @@ _fstat( int fd, struct stat *buf )
    but instead are only in the threads libraries.  We access the old
    versions through their new names. */
 
-#if defined(Solaris251)
+#if defined(Solaris251) && defined(sun4m)
 pid_t
 FORK()
 {
