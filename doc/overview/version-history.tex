@@ -29,7 +29,7 @@ machines in your pool to the same version.
 
 Version 6.1.12 fixes a number of bugs from version 6.1.11.
 If you linked your ``standard'' jobs with version 6.1.11, you should
-upgrade to 6.1.12 and relink your jobs (using \Condor{compile}) as soon as
+upgrade to 6.1.12 and re-link your jobs (using \Condor{compile}) as soon as
 possible.
 Unless otherwise noted, all of the known bugs listed below should be fixed
 in version 6.1.13.  
@@ -53,6 +53,9 @@ Not having these functions being executed as remote system calls prevented
 a number of programs from not working, in particular Fortran programs, and
 many programs on IRIX and Solaris platforms.
 
+\item Sometimes submitted jobs report back as having no owner and have
+\Bold{-????-} in the status line for the job. This has been fixed.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -73,11 +76,35 @@ new feature added in 6.1.11), on Linux, we cannot at this time support
 The reason is that on Linux, these calls are implemented by bringing in a
 shared library that defines them, based on whether the machine is using
 DNS, NIS, or some other database method.
-Condor does not support the way in which the C library tries to explicity
+Condor does not support the way in which the C library tries to explicitly
 bring in these shared libraries and use them.
 There are a number of possible solutions to this problem, but the Condor
 developers are not yet agreed on the best one, so this limitation might not
 be resolved by 6.1.13.
+
+\item In HP-UX 10.20, Condor is currently broken with the vendor C++
+compilers. 
+However, the GNU C/C++ and the vendor C compilers work just fine.
+
+\item \Condor{q} \Opt{-io} has not yet been fixed in this release.
+
+\item When writing output to a file, \Syscall{stat}--and variant calls,
+will return zero for the size of the file if the program has not yet
+read from the file or flushed the file descriptors,
+This is a side effect of the file buffering code in Condor and will be
+corrected to the expected semantic.
+
+\item On IRIX 6.2 with the GNU C++ 2.7.2 compiler, global object constructors
+are broken when linked with \Condor{compile}.
+
+\item On Digital Unix 4.0, the threads.C test program does not behave correctly
+when compiled with the vendor C++.
+
+\item \Condor{q} \Opt{-format} does not work when querying remote
+machines with the \Opt{-n} option.
+
+\item \Condor{dagman} is currently broken but should be fixed in the next
+release.
 
 \end{itemize}
 
@@ -91,7 +118,7 @@ be resolved by 6.1.13.
 \begin{itemize}
 
 \item \Condor{status} outputs information for held jobs instead of
-MaxRunningJobs when supplied with \verb+-schedd+ or \verb+-submitter+.
+MaxRunningJobs when supplied with \Opt{-schedd} or \Opt{-submitter}.
 
 \item \Condor{userprio} now prints 4 digit years (for Y2K compiance). 
 If you give a two digit date, it also will assume that 1/1/00 is 1/1/2000
@@ -101,7 +128,7 @@ and not 1/1/1900.
 remote system calls and checkpointing.
 
 \item \Condor{q} has been fixed to be faster and much more memory
-efficient.  This is much more obvous when getting the queue from
+efficient.  This is much more obvious when getting the queue from
 \Condor{schedd}'s that have more than 1000 jobs.
 
 \item Added support for support for socket() and pipe() in standard
