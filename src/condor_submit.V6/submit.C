@@ -3056,6 +3056,7 @@ full_path(const char *name, bool use_iwd)
 	pathname[0] = '\0';
 	char *p_iwd;
 	char realcwd[_POSIX_PATH_MAX];
+	int root_len, iwd_len, name_len, real_len;
 
 	if ( use_iwd ) {
 		ASSERT(JobIwd[0]);
@@ -3072,10 +3073,29 @@ full_path(const char *name, bool use_iwd)
 		(void)sprintf( pathname, "%s\\%s", p_iwd, name );
 	}
 #else
+	root_len = strlen(JobRootdir);
+	iwd_len = strlen(p_iwd);
+	name_len = strlen(name);
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
-		(void)sprintf( pathname, "%s%s", JobRootdir, name );
+		if(root_len + name_len >= _POSIX_PATH_MAX) {
+		fprintf(stderr, "\nERROR: Value for \"%s/%s\" is too long:\n"
+                                "\tPosix limits path names to %d bytes\n",
+                                JobRootdir, name, _POSIX_PATH_MAX);
+                DoCleanup(0,0,NULL);
+                exit( 1 );
+	
+		}
+		real_len=sprintf( pathname, "%s%s", JobRootdir, name );
 	} else {	/* relative to iwd which is relative to the root */
-		(void)sprintf( pathname, "%s/%s/%s", JobRootdir, p_iwd, name );
+		if(root_len + iwd_len + name_len + 2 >= _POSIX_PATH_MAX) {
+		fprintf(stderr, "\nERROR: Value for \"%s/%s\%s\" is too long:\n"
+                                "\tPosix limits path names to %d bytes\n",
+                                JobRootdir, p_iwd,  name, _POSIX_PATH_MAX);
+                DoCleanup(0,0,NULL);
+                exit( 1 );
+	
+		}
+		real_len=sprintf( pathname, "%s/%s/%s", JobRootdir, p_iwd, name );
 	}
 #endif
 
