@@ -1,14 +1,15 @@
 all: libclassad.a test_classads sample
 
 INSTALL_DIR = install
-LIB_INSTALL = install/lib
-BIN_INSTALL = install/bin
-INCLUDE_INSTALL = install/include
+LIB_INSTALL = $(INSTALL_DIR)/lib
+BIN_INSTALL = $(INSTALL_DIR)/bin
+INCLUDE_INSTALL = $(INSTALL_DIR)/include
 
 CPlusPlus = g++
 C_PLUS_FLAGS = -Wall -g -DCLASSAD_DISTRIBUTION
 INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -w
 NO_INST_C_PLUS_FLAGS = -fno-implicit-templates $(C_PLUS_FLAGS)
+PURIFY = purify -g++=yes -chain-length=35 $(CPlusPlus)
 
 .C.o:
 	$(CPlusPlus) $(NO_INST_C_PLUS_FLAGS) -c $<
@@ -30,21 +31,22 @@ instantiations.o:   instantiations.C
 test_classads: test_classads.o libclassad.a
 	$(CPlusPlus) -o test_classads test_classads.o -L. -lclassad
 
+test_classads.pure: test_classads.o libclassad.a
+	$(PURIFY) -o test_classads.pure test_classads.o -L. -lclassad
+
 sample: sample.o libclassad.a
 	$(CPlusPlus) -o sample sample.o -L. -lclassad
 
-install: libclassad.a test_classads
-	rm -rf $(INSTALL_DIR)
-	mkdir $(INSTALL_DIR)
-	mkdir $(LIB_INSTALL)
-	mkdir $(BIN_INSTALL)
-	mkdir $(INCLUDE_INSTALL)
+install:: libclassad.a test_classads
+	mkdir -p $(LIB_INSTALL)
+	mkdir -p $(BIN_INSTALL)
+	mkdir -p $(INCLUDE_INSTALL)
 	cp libclassad.a $(LIB_INSTALL)
 	cp test_classads $(BIN_INSTALL)
 	cp $(HEADER_FILES) $(INCLUDE_INSTALL)
 
 clean: tidy
-	rm -f test_classads libclassad.a
+	rm -f test_classads test_classads.pure libclassad.a
 tidy:
 	rm -f *.o *~ *.bak
 

@@ -758,6 +758,7 @@ static void process_check_in_view(const string &line,
 			else {
 				bool have_classad;
 				string classad_key;
+
 				have_classad = false;
 				for (query.ToFirst(), query.Current(classad_key); 
 					 !query.IsAfterLast(); query.Next(classad_key)) {

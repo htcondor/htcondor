@@ -111,4 +111,5 @@ clean::
 /* The Classad eXpression Interpreter */
 c_plus_target (cxi, cxi.o, $(LIB))
 c_plus_target (test_classads, test_classads.o, $(LIB))
+pure_c_plus_target (test_classads.pure, test_classads.o, $(LIB))
 

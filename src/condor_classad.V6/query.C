@@ -63,7 +63,7 @@ Query( const string &viewName, ExprTree *expr )
 	string					key;
 	bool					match;
 
-		// get the view to query
+	// get the view to query
 	if( !collection || ( vri = collection->viewRegistry.find( viewName ) ) == 
 			collection->viewRegistry.end( ) ) {
 		return( false );
@@ -71,7 +71,7 @@ Query( const string &viewName, ExprTree *expr )
 	view = vri->second;
 
 	if( expr ) {
-			// setup evluation environment if a constraint was supplied
+		// setup evluation environment if a constraint was supplied
 		parent = expr->GetParentScope( );
 		if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr ) ) {
 			expr->SetParentScope( parent );
@@ -81,13 +81,13 @@ Query( const string &viewName, ExprTree *expr )
 	keys.clear( );
 
 
-		// iterate over the view members
+	// iterate over the view members
 	for( vmi=view->viewMembers.begin(); vmi!=view->viewMembers.end(); vmi++ ) {
-			// ... and insert keys into local list in same order
+		// ... and insert keys into local list in same order
 		vmi->GetKey( key );
 
 		if( expr ) {
-				// if a constraint was supplied, make sure its satisfied
+			// if a constraint was supplied, make sure its satisfied
 			ad = collection->GetClassAd( key );
 			mad.ReplaceRightAd( ad );
 			if( mad.EvaluateAttrBool( "RightMatchesLeft", match ) && match ) {
@@ -99,12 +99,16 @@ Query( const string &viewName, ExprTree *expr )
 		}
 	}
 
-		// initialize local iterator
+	// initialize local iterator
 	itr = keys.begin( );
 
-		// clean up and return
+	// clean up and return
 	if( expr ) {
 		expr->SetParentScope( parent );
+		ad = mad.GetLeftAd();
+		if (ad != NULL) {
+			ad->Remove(ATTR_REQUIREMENTS);
+		}
 	}
 	return( true );
 }
