@@ -385,6 +385,7 @@ const char ATTR_SEC_SESSION_DURATION     [] = "SessionDuration";
 const char ATTR_SEC_USER                 [] = "User";
 const char ATTR_SEC_NEW_SESSION          [] = "NewSession";
 const char ATTR_SEC_USE_SESSION          [] = "UseSession";
+const char ATTR_MULTIPLE_TASKS_PER_PVMD  [] = "MultipleTasksPerPvmd";
 
 const char ATTR_UPDATESTATS_TOTAL		 [] = "UpdatesTotal";
 const char ATTR_UPDATESTATS_SEQUENCED	 [] = "UpdatesSequenced";
