@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.12 2005-01-05 20:49:48 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.13 2005-01-05 21:09:57 wright Exp $
 #
 ######################################################################
 
@@ -15,7 +15,7 @@ use File::Basename;
 
 use Getopt::Long;
 use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify
-     $opt_platforms/;
+     $opt_platforms $opt_externals /;
 
 # database parameters
 my $database = "history";
@@ -31,6 +31,7 @@ my $init_cwd;
 my $workspace;
 my $notify;
 my $platforms;
+my $ext_mod;
 my %tags;
 
 
@@ -56,6 +57,7 @@ sub ProcessOptions
            'nightly'       => $opt_nightly,
            'tag=s'         => $opt_tag,
            'module=s'      => $opt_module,
+           'externals=s'   => $opt_externals,
            'notify=s'      => $opt_notify,
            'platforms=s'   => $opt_platforms,
     );
@@ -77,7 +79,7 @@ sub ProcessOptions
     }
 
     if ( defined($opt_tag) or defined($opt_module) ) {
-        print "You specified --tag=$opt_tag and --module-$opt_module\n";
+        print "You specified --tag=$opt_tag and --module=$opt_module\n";
         if ( defined ($opt_tag) and defined($opt_module) ) {
             $tags{"$opt_tag"} = $opt_module;
         } else {
@@ -91,6 +93,14 @@ sub ProcessOptions
     else {
         print "You need to have --tag with --module or --nightly\n";
         printBuildUsage( 1 );
+    }
+
+    if( defined($opt_externals) ) {
+        if( defined($opt_nightly) ) {
+            print "ERROR: You cannot use --externals with --nightly\n";
+            printBuildUsage( 1 );
+        }
+        $ext_mod = "$opt_externals";
     }
 }
 
@@ -125,9 +135,14 @@ sub generateBuildFile
 
     my $cmdfile = "condor_cmdfile-$tag";
     my $srcsfile = "condor_srcsfile-$tag";
+    my $extfile = "condor_extfile-$tag";
 
     # Generate the source code file
     makeFetchFile( $srcsfile, $module, $tag );
+
+    if( $ext_mod ) {
+        CondorGlue::makeFetchFile( $extfile, $ext_mod );
+    }
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
@@ -137,7 +152,12 @@ sub generateBuildFile
     print CMDFILE "run_type = build\n";
 
     # define inputs
-    print CMDFILE "inputs = $srcsfile\n";
+    print CMDFILE "inputs = $srcsfile";
+    if( $ext_mod ) {
+        print CMDFILE ", $extfile\n";
+    } else {
+        print CMDFILE "\n";
+    }
 
     &$custom_func_ref( *CMDFILE, $tag, $module );
 
