@@ -201,6 +201,8 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	jobContact = NULL;
 	localOutput = NULL;
 	localError = NULL;
+	spoolOutput = false;
+	spoolError = false;
 	globusStateErrorCode = 0;
 	globusStateBeforeFailure = 0;
 	callbackGlobusState = 0;
@@ -292,6 +294,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 			strcat( buff2, buff );
 			localOutput = strdup( buff2 );
+			spoolOutput = true;
 		}
 	}
 
@@ -306,6 +309,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 			strcat( buff2, buff );
 			localError = strdup( buff2 );
+			spoolError = true;
 		}
 	}
 
@@ -509,7 +513,7 @@ int GlobusJob::doEvaluateState()
 			if ( jmVersion >= GRAM_V_1_5 ) {
 				gmState = GM_STDIO_UPDATE;
 			} else {
-				if ( localOutput || localError ) {
+				if ( spoolOutput || spoolError ) {
 					gmState = GM_CANCEL;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -842,7 +846,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 				gmState = GM_DONE_COMMIT;
 			} else {
 				char size_str[128];
-				if ( localOutput == NULL && localError == NULL ) {
+				if ( spoolOutput == false && spoolError == false ) {
 					gmState = GM_DONE_SAVE;
 					break;
 				}
@@ -1446,16 +1450,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			if ( !done ) {
 				break;
 			}
-			if ( localOutput && truncate( localOutput, 0 ) < 0 ) {
-				dprintf(D_ALWAYS,
-						"(%d.%d) truncate failed for output file %s (errno=%d)\n",
-						procID.cluster, procID.proc, localOutput, errno );
-			}
-			if ( localError && truncate( localError, 0 ) < 0 ) {
-				dprintf(D_ALWAYS,
-						"(%d.%d) truncate failed for error file %s (errno=%d)\n",
-						procID.cluster, procID.proc, localError, errno );
-			}
+			DeleteOutput();
 			submitLogged = false;
 			executeLogged = false;
 			submitFailedLogged = false;
@@ -1874,7 +1869,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( localOutput != NULL ) {
+	if ( spoolOutput ) {
 		*rsl += ")(stdout=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff.Value() );
@@ -1890,7 +1885,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		}
 	}
 
-	if ( localError != NULL ) {
+	if ( spoolError ) {
 		*rsl += ")(stderr=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff.Value() );
@@ -2033,13 +2028,13 @@ MyString *GlobusJob::buildRestartRSL()
 	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))(restart=%s)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))", gassServerUrl,
 				  jobContact );
-	if ( localOutput ) {
+	if ( spoolOutput ) {
 		*rsl += "(stdout=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff.Value() );
 		*rsl += ")(stdout_position=0)";
 	}
-	if ( localError ) {
+	if ( spoolError ) {
 		*rsl += "(stderr=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff.Value() );
@@ -2058,13 +2053,13 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 	DeleteOutput();
 
 	rsl->sprintf( "&(remote_io_url=%s)", gassServerUrl );
-	if ( localOutput ) {
+	if ( spoolOutput ) {
 		*rsl += "(stdout=";
 		buff.sprintf( "%s%s", gassServerUrl, localOutput );
 		*rsl += rsl_stringify( buff.Value() );
 		*rsl += ")(stdout_position=0)";
 	}
-	if ( localError ) {
+	if ( spoolError ) {
 		*rsl += "(stderr=";
 		buff.sprintf( "%s%s", gassServerUrl, localError );
 		*rsl += rsl_stringify( buff.Value() );
@@ -2104,7 +2099,7 @@ bool GlobusJob::GetOutputSize( int& output_size, int& error_size )
 	struct stat file_status;
 	bool retval = true;
 
-	if ( localOutput ) {
+	if ( spoolOutput ) {
 		rc = stat( localOutput, &file_status );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS,
@@ -2117,7 +2112,7 @@ bool GlobusJob::GetOutputSize( int& output_size, int& error_size )
 		}
 	}
 
-	if ( localError ) {
+	if ( spoolError ) {
 		rc = stat( localError, &file_status );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS,
@@ -2137,7 +2132,7 @@ void GlobusJob::DeleteOutput()
 {
 	int rc;
 
-	if ( localOutput ) {
+	if ( spoolOutput ) {
 		rc = unlink( localOutput );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
@@ -2152,7 +2147,7 @@ void GlobusJob::DeleteOutput()
 		}
 	}
 
-	if ( localError ) {
+	if ( spoolError ) {
 		rc = unlink( localError );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
