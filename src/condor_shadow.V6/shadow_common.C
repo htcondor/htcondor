@@ -313,9 +313,11 @@ unlink_local_or_ckpt_server( char *file )
 
         dprintf( D_ALWAYS, "Trying to unlink %s\n", file);
         rval = unlink( file );
-        if (rval) {
+        if (rval && JobIsStandard()) {
                 /* Local failed, so lets try to do it on the server, maybe we
                    should do that anyway??? */
+				/* We only need to check the server for standard universe 
+				   jobs. -Jim B. */
                 dprintf( D_FULLDEBUG, "Remove from ckpt server returns %d\n",
                                 RemoveRemoteFile(Proc->owner, file));
         }
