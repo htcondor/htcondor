@@ -33,6 +33,7 @@ public:
   MyString() {
     Data=NULL;
     Len=0;
+    capacity = 0;
     return;
   }
   
@@ -41,6 +42,7 @@ public:
 	sprintf(tmp,"%d",i);
     Len=strlen(tmp);
     Data=new char[Len+1];
+    capacity = Len;
     strcpy(Data,tmp);
   };
 
@@ -51,6 +53,7 @@ public:
     Len=strlen(S);	
     if (Len==0) return;
     Data=new char[Len+1];
+    capacity = Len;
     strcpy(Data,S);
   };
 
@@ -65,6 +68,10 @@ public:
 
   int Length() const{
     return Len;
+  }
+
+  int Capacity() const {
+    return capacity;
   }
 
   // Comparison operations
@@ -92,6 +99,15 @@ public:
   // Assignment
 
   MyString& operator=(const MyString& S) {
+    if( !S.Data ) {
+	  if( Data ) Data[0] = '\0';
+      Len = 0;
+      return *this;
+    } else if( Data && S.Len < capacity ) {
+      strcpy( Data, S.Data );
+      Len = S.Len;
+      return *this;
+    }
     if (Data) delete[] Data;
     Data=NULL;
     Len=0;
@@ -103,6 +119,21 @@ public:
     return *this;
   }
 
+  bool reserve( const int sz ) {
+    char *buf = new char[ sz+1 ];
+    if( !buf ) return false;
+    buf[0] = '\0';
+    if( Data ) {
+      strncpy( buf, Data, sz ); 
+      delete [] Data;
+    }
+    Len = strlen( buf );
+    capacity = sz;
+    Data = buf;
+    return true;
+  }
+    
+    
   char operator[](int pos) const {
     if (pos>=Len) return '\0';
     return Data[pos];
@@ -115,18 +146,11 @@ public:
   }
 
   MyString& operator+=(const MyString& S) {
-    if (S.Len>0) {
-      Len+=S.Len;
-      char* tmp=new char[Len+1];
-      if (Data) {
-        strcpy(tmp,Data);
-        delete[] Data;
-        strcat(tmp,S.Data);
-      }
-      else
-      	strcpy(tmp,S.Data);
-      Data=tmp;
+    if( S.Len + Len > capacity ) {
+       reserve( Len + S.Len );
     }
+    strncat( Data, S.Data, capacity-Len );
+	Len += S.Len;
     return *this;
   }
 
@@ -177,6 +201,7 @@ private:
 
   char* Data;	
   int Len;
+  int capacity;
   
 };
 
