@@ -560,7 +560,7 @@ VLINK( compiler, vanillatarg, obj );
 */
 #define RLINK( compiler, remotetarg, obj )	@@\
 remotetarg: obj					@@\
-	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(ALL_LDFLAGS) @@\
+	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(TEST_LDFLAGS) @@\
 	$(CONDOR_ARCH_LINK) remotetarg		@@\
 clean::						@@\
 	rm -f remotetarg obj			@@\
@@ -572,7 +572,7 @@ all:: remotetarg
 */
 #define VLINK( compiler, vanillatarg, obj )			@@\
 vanillatarg: obj fake_ckpt.o					@@\
-	compiler -o vanillatarg obj fake_ckpt.o	$(ALL_LDFLAGS)	@@\
+	compiler -o vanillatarg obj fake_ckpt.o	$(TEST_LDFLAGS)	@@\
 								@@\
 clean::								@@\
 	rm -f vanillatarg obj					@@\
@@ -641,7 +641,7 @@ compiledir##/Imakefile: FImakefile				@@\
 	cd compiledir; /bin/rm -f Imakefile			@@\
 	cd compiledir; ln -s ../FImakefile Imakefile		@@\
 								@@\
-compiledir##/Makefile: compiledir				@@\
+compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
 	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
 		-DFORTRAN_HAS_RECURSION=##has_recursion \	@@\
 		-DF_COMPILER=##compiler	\			@@\
