@@ -625,14 +625,6 @@ if( req_classad ) 	 					\
 free( shadow_addr );					\
 return FALSE
 
-#ifndef WIN32
-#	define CLOSE \
-(void)close(sock_1);	\
-(void)close(sock_2);
-#else
-#	define CLOSE 
-#endif
-
 int
 activate_claim( Resource* rip, Stream* stream ) 
 {
@@ -641,6 +633,7 @@ activate_claim( Resource* rip, Stream* stream )
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
 
 	int sock_1, sock_2;
+	ReliSock rsock_1, rsock_2;
 	int fd_1, fd_2;
 	struct sockaddr_in frm;
 	int len = sizeof frm;
@@ -751,13 +744,14 @@ activate_claim( Resource* rip, Stream* stream )
 
 			// Set up the two starter ports and send them to the shadow
 		stRec.version_num = VERSION_FOR_FLOCK;
-		stRec.ports.port1 = create_port(&sock_1);
-		stRec.ports.port2 = create_port(&sock_2);
-		
+		sock_1 = create_port(&rsock_1);
+		sock_2 = create_port(&rsock_2);
+		stRec.ports.port1 = rsock_1.get_port();
+		stRec.ports.port2 = rsock_2.get_port();
+
 			/* send name of server machine: dhruba */ 
 		if (get_machine_name(official_name) == -1) {
 			rip->dprintf( D_ALWAYS, "Error in get_machine_name\n" );
-			CLOSE;
 			ABORT;
 		}
 			/* fvdl XXX fails for machines with multiple interfaces */
@@ -767,18 +761,15 @@ activate_claim( Resource* rip, Stream* stream )
 			// This is very whacky and wrong... needs fixing.
 		if( get_inet_address((in_addr*)&stRec.ip_addr) == -1) {
 			rip->dprintf( D_ALWAYS, "Error in get_machine_name\n" );
-			CLOSE;
 			ABORT;
 		}
 		
 		stream->encode();
 		if (!stream->code(stRec)) {
-			CLOSE;
 			ABORT;
 		}
 
 		if (!stream->eom()) {
-			CLOSE;
 			ABORT;
 		}
 
@@ -793,13 +784,11 @@ activate_claim( Resource* rip, Stream* stream )
 			if( fd_1 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
 				if( fd_1 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
-					CLOSE;
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_1, errno );
-					CLOSE;
 					ABORT;
 				}
 			}
@@ -813,18 +802,15 @@ activate_claim( Resource* rip, Stream* stream )
 			if( fd_2 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
 				if( fd_2 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
-					CLOSE;
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_2, errno );
-					CLOSE;
 					ABORT;
 				}
 			}
 		}
-		CLOSE;
 		ji.ji_sock1 = fd_1;
 		ji.ji_sock2 = fd_2;
 	}
@@ -878,8 +864,6 @@ activate_claim( Resource* rip, Stream* stream )
 	return TRUE;
 }
 #undef ABORT
-#undef CLOSE
-
 
 int
 match_info( Resource* rip, char* cap )
