@@ -80,8 +80,8 @@ public:
 	int setOwner( char *owner );
 	char *getOwner();
 
-#if !defined(SKIP_AUTHENTICATION)
 private:
+#if !defined(SKIP_AUTHENTICATION)
 	Authentication() {}; //should never be called, make private to help that!
 	int handshake();
 
@@ -102,7 +102,11 @@ private:
 	int authenticate_server_gss();
 	int lookup_user_gss( char *username );
 	int nameGssToLocal();
+#endif
 
+#endif !SKIP_AUTHENTICATION
+
+#if defined (GSS_AUTHENTICATION)
 	/// Personal credentials
 	static gss_cred_id_t credential_handle;
 #endif
@@ -117,7 +121,6 @@ private:
 	char *claimToBe;
 	authentication_state canUseFlags;
 
-#endif !SKIP_AUTHENTICATION
 };
 
 #endif define AUTHENTICATION_H
