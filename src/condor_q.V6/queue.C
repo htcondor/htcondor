@@ -37,6 +37,10 @@
 #include "MyString.h"
 #include "extArray.h"
 #include "files.h"
+#include "ad_printmask.h"
+#include "internet.h"
+#include "sig_install.h"
+#include "format_time.h"
 
 static char *_FileName_ = __FILE__;
 
@@ -72,6 +76,7 @@ static 	void		fetchSubmittorPrios();
 static	void		doRunAnalysis( ClassAd* );
 struct 	PrioEntry { MyString name; float prio; };
 static 	bool		analyze	= false;
+static	bool		run = false;
 static	char		*fixSubmittorName( char*, int );
 static	ClassAdList startdAds;
 static	ExprTree	*stdRankCondition;
@@ -380,6 +385,11 @@ processCommandLineArguments (int argc, char *argv[])
 			analyze = true;
 		}
 		else
+		if (match_prefix( arg, "run")) {
+			Q.add (CQ_STATUS, RUNNING);
+			run = true;
+		}
+		else
 		{
 			// assume name of owner of job
 			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
@@ -454,6 +464,45 @@ short_header (void)
     );
 }
 
+static char *
+format_remote_host (char *sinful_string, AttrList *)
+{
+	struct sockaddr_in sin;
+	if (string_to_sin(sinful_string, &sin) == 1) {
+		return sin_to_hostname(&sin, NULL);
+	}
+	return "[????????????????]";
+}
+
+static char *
+format_cpu_time (float utime, AttrList *)
+{
+	return format_time((int)utime);
+}
+
+static char *
+format_owner (char *owner, AttrList *ad)
+{
+	static char result[15];
+	int niceUser;
+	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
+		char tmp[100];
+		strcpy(tmp,NiceUserName);
+		strcat(tmp, ".");
+		strcat(tmp, owner);
+		sprintf(result, "%-14.14s", tmp);
+	} else {
+		sprintf(result, "%-14.14s", owner);
+	}
+	return result;
+}
+
+static char *
+format_q_date (int d, AttrList *)
+{
+	return format_date(d);
+}
+
 static void
 shorten (char *buff, int len)
 {
@@ -471,6 +520,7 @@ usage (char *myName)
 		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
 		"\t\t-long\t\t\tVerbose output\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
+		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
@@ -527,6 +577,27 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		
 		if( verbose ) {
 			jobs.fPrintAttrListList( stdout );
+		} else if ( run ) {
+			summarize = false;
+			AttrListPrintMask mask;
+			printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
+					"SUBMITTED", "CPU_USAGE",
+					"REMOTE HOST" );
+			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+			mask.registerFormat ( (StringCustomFmt) format_owner,
+								  ATTR_OWNER, "[????????????] " );
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat ( (IntCustomFmt) format_q_date,
+								  ATTR_Q_DATE, "[????????????]");
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
+								  ATTR_JOB_REMOTE_USER_CPU, "[??????????]");
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat ( (StringCustomFmt) format_remote_host,
+								  ATTR_REMOTE_HOST, "[????????????????]");
+			mask.registerFormat("\n", "*bogus*", "\n");  // force newline
+			mask.display(stdout, &jobs);
 		} else {
 			short_header();
 			jobs.Open();
