@@ -338,7 +338,7 @@ SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 #endif
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_copy_target(condor_rt0.o,$(RELEASE_DIR)/lib,codnor_rt0.o,OBJECT_MODE)
+release_copy_target(condor_rt0.o,$(RELEASE_DIR)/lib,condor_rt0.o,OBJECT_MODE)
 strip_copy_target(condor_rt0.o,$(STRIP_DIR)/lib,condor_rt0.o,OBJECT_MODE)
 static_copy_target(condor_rt0.o,$(STATIC_DIR)/lib,condor_rt0.o,OBJECT_MODE)
 #endif
