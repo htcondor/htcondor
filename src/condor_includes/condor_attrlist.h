@@ -180,6 +180,7 @@ class AttrList : public AttrListAbstract
         int         LookupInteger(const char *, int &) const;
         int         LookupFloat(const char *, float &) const;
         int         LookupBool(const char *, int &) const;
+        bool        LookupBool(const char *, bool &) const;
 
 		// evaluate values in classads
 		int         EvalString (const char *, class AttrList *, char *);

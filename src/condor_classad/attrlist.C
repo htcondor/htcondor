@@ -1344,6 +1344,17 @@ int AttrList::LookupBool (const char *name, int &value) const
 }   
 
 
+bool AttrList::LookupBool (const char *name, bool &value) const
+{   
+	int val;
+	if( LookupBool(name, val) ) {
+		value = (bool)val;
+		return true;
+	}
+	return false;
+}   
+
+
 int AttrList::EvalString (const char *name, AttrList *target, char *value)
 {
 	ExprTree *tree;
