@@ -994,7 +994,12 @@ ReliSock::serialize() const
 	char * outbuf = new char[50];
 	sprintf(outbuf,"*%d*%s*",_special_state,sin_to_string(&_who));
 	strcat(parent_state,outbuf);
-	
+
+    // Serialize crypto stuff
+	char * crypto = serializeCryptoInfo();
+    strcat(parent_state, crypto);
+    strcat(parent_state, "*");
+
     const char * tmp = getFullyQualifiedUser();
     if (tmp) {
         strcat(parent_state, tmp);
@@ -1004,6 +1009,7 @@ ReliSock::serialize() const
     }
 
 	delete []outbuf;
+    delete []crypto;
 	return( parent_state );
 }
 
@@ -1021,20 +1027,31 @@ ReliSock::serialize(char *buf)
     ptmp = Sock::serialize(buf);
     assert( ptmp );
     memset(fqu, 0, 256);
-    sscanf(ptmp,"%d*%s*%s",&_special_state,sinful_string, fqu);
+    sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
     string_to_sin(sinful_string, &_who);
-    if ((fqu[0] != ' ') && (fqu[0] != '\0')) {
-      if (authob && (authob->getFullyQualifiedUser() != NULL)) {
-          // odd situation!
-          dprintf(D_SECURITY, "WARNING!!!! Trying to serialize a socket for user %s but the socket is identified with another user: %s", fqu, authob->getFullyQualifiedUser());
-      }
-      else {
-          // We are cozy
-          fqu_ = strdup(fqu);
-      }
-    }
-    else {
-      fqu_ = NULL;
+
+    // Now see if we are 6.3 serialize or 6.2
+    ptmp = strchr(ptmp, '*');
+    ptmp++;
+
+    ptmp = strchr(ptmp, '*');
+    if (ptmp != NULL) {
+        // We are 6.3
+        ptmp = serializeCryptoInfo(ptmp);
+        sscanf(ptmp, "%s", fqu);
+        if ((fqu[0] != ' ') && (fqu[0] != '\0')) {
+            if (authob && (authob->getFullyQualifiedUser() != NULL)) {
+                // odd situation!
+                dprintf(D_SECURITY, "WARNING!!!! Trying to serialize a socket for user %s but the socket is identified with another user: %s", fqu, authob->getFullyQualifiedUser());
+            }
+            else {
+                // We are cozy
+                fqu_ = strdup(fqu);
+            }
+        }
+        else {
+            fqu_ = NULL;
+        }
     }
     return NULL;
 }
