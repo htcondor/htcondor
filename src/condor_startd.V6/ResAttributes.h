@@ -79,7 +79,8 @@ public:
 	float		load()			{ return m_load; };
 	float		condor_load()	{ return m_condor_load; };
 	time_t		keyboard_idle() { return m_idle; };
-	time_t		console_idle() { return m_console_idle; };
+	time_t		console_idle()	{ return m_console_idle; };
+	char*		subnet()		{ return m_subnet; };
 
 private:
 		// Dynamic info
@@ -102,6 +103,7 @@ private:
 	char*			m_opsys;
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
+	char*			m_subnet;
 #if !defined(WIN32)
 	AFS_Info*		m_afs_info;
 #endif

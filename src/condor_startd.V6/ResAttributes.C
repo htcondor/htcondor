@@ -38,6 +38,7 @@ MachAttributes::MachAttributes()
 	m_opsys = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
+	m_subnet = NULL;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -55,6 +56,7 @@ MachAttributes::~MachAttributes()
 	if( m_opsys ) free( m_opsys );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
+	if( m_subnet ) free( m_subnet );
 }
 
 
@@ -131,7 +133,16 @@ MachAttributes::compute( amask_t how_much )
 		m_filesystem_domain = param( "FILESYSTEM_DOMAIN" );
 		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_FILE_SYSTEM_DOMAIN,
 				 m_filesystem_domain );
+
+			// Subnet name
+		if( m_subnet ) {
+			free( m_subnet );
+		}
+		m_subnet = calc_subnet_name( my_full_hostname() );
+		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_SUBNET,
+				 m_subnet );
 	}
+
 
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
 		m_virt_mem = calc_virt_memory();
@@ -196,6 +207,10 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		sprintf( line, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
 				 m_filesystem_domain );
 		cp->Insert( line );
+
+		sprintf( line, "%s = \"%s\"", ATTR_SUBNET, m_subnet );
+		cp->Insert( line );
+
 	}
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
