@@ -47,7 +47,6 @@ Authentication::Authentication( ReliSock *sock )
 #if !defined(SKIP_AUTHENTICATION)
 	//credential_handle is static and set at top of this file//
 	mySock = sock;
-	//	auth_status = CAUTH_ANY;
 	auth_status = CAUTH_NONE;
 	claimToBe = NULL;
 	GSSClientname = NULL;
@@ -55,6 +54,7 @@ Authentication::Authentication( ReliSock *sock )
 	authComms.size = 0;
 	canUseFlags = CAUTH_NONE;
 	serverShouldTry = NULL;
+	RendezvousDirectory = NULL;
 #endif
 }
 
@@ -72,6 +72,11 @@ Authentication::~Authentication()
 		free( serverShouldTry );
 		serverShouldTry = NULL;
 	}
+
+	if ( RendezvousDirectory ) {
+		delete [] RendezvousDirectory;
+		RendezvousDirectory = NULL;
+	}
 #endif
 }
 
@@ -81,52 +86,68 @@ Authentication::authenticate( char *hostAddr )
 #if defined(SKIP_AUTHENTICATION)
 	return 0;
 #else
-	setupEnv( hostAddr );
 
-	int firm = handshake();
-	dprintf(D_FULLDEBUG,"authenticate, handshake returned: %d\n", firm );
+		//call setupEnv if Server or if Client doesn't know which methods to try
+	if ( !mySock->isClient() || !canUseFlags ) {
+		setupEnv( hostAddr );
+	}
 
-	switch ( firm ) {
+	auth_status = CAUTH_NONE;
+
+	while (auth_status == CAUTH_NONE ) {
+		int firm = handshake();
+		switch ( firm ) {
 #if defined(GSS_AUTHENTICATION)
-	 case CAUTH_GSS:
-		authenticate_self_gss();
-		if( authenticate_gss() ) {
-			auth_status = CAUTH_GSS;
-		}
-		break;
+		 case CAUTH_GSS:
+			authenticate_self_gss();
+			if( authenticate_gss() ) {
+				auth_status = CAUTH_GSS;
+			}
+			break;
 #endif /* GSS_AUTHENTICATION */
 
 #if defined(WIN32)
-	 case CAUTH_NTSSPI:
-		if ( authenticate_nt() ) {
-			auth_status = CAUTH_NTSSPI;
-		}
-		break;
+		 case CAUTH_NTSSPI:
+			if ( authenticate_nt() ) {
+				auth_status = CAUTH_NTSSPI;
+			}
+			break;
 #else
-	 case CAUTH_FILESYSTEM:
-		if ( authenticate_filesystem() ) {
+		 case CAUTH_FILESYSTEM:
+			if ( authenticate_filesystem() ) {
 
-			auth_status = CAUTH_FILESYSTEM;
-		}
-		break;
+				auth_status = CAUTH_FILESYSTEM;
+			}
+			break;
+		 case CAUTH_FILESYSTEM_REMOTE:
+				//use remote filesystem authentication
+			if ( authenticate_filesystem( 1 ) ) {
+
+				auth_status = CAUTH_FILESYSTEM_REMOTE;
+			}
+			break;
 #endif /* !defined(WIN32) */
-	 case CAUTH_CLAIMTOBE:
-		if( authenticate_claimtobe() ) {
-			auth_status = CAUTH_CLAIMTOBE;
+		 case CAUTH_CLAIMTOBE:
+			if( authenticate_claimtobe() ) {
+				auth_status = CAUTH_CLAIMTOBE;
+			}
+			break;
+	
+		 default:
+			dprintf(D_ALWAYS,"Authentication::authenticate-- bad handshake "
+					"FAILURE\n" );
+			return 0;
 		}
-		break;
-
-	 default:
-		dprintf(D_FULLDEBUG,"Authentication::authenticate-- bad handshake, "
-				"returning 0 (FAILURE)\n" );
-		return 0;
+			//if authentication failed, try again after removing from client tries
+		if ( auth_status == CAUTH_NONE && mySock->isClient() ) {
+			canUseFlags &= ~firm;
+		}
 	}
-	//if none of the methods succeeded, we fall thru to default "none" from above
 
-	//TRUE means success, FALSE is failure (CAUTH_NONE)
+	//if none of the methods succeeded, we fall thru to default "none" from above
 	int retval = ( auth_status != CAUTH_NONE );
-	dprintf(D_FULLDEBUG, "Authentication::auth returning %d (TRUE on success)\n",
-			retval );
+	dprintf(D_FULLDEBUG, "Authentication::authenticate %s\n", 
+			retval == 1 ? "Success" : "FAILURE" );
 	return ( retval );
 #endif /* SKIP_AUTHENTICATION */
 }
@@ -537,17 +558,51 @@ Authentication::setupEnv( char *hostAddr )
 {
 	char tmpstring[1024];
 
-	//only for client because canTryGSS/canTryFilesystem, etc. for 
-	//server should be parsed in schedd from config file.
-
 	if ( mySock->isClient() ) {
 		canUseFlags |= (int) CAUTH_CLAIMTOBE;
 #if defined(WIN32)
 		canUseFlags |= (int) CAUTH_NTSSPI;
 #else
 		canUseFlags |= (int) CAUTH_FILESYSTEM;
+
+			//RendezvousDirectory is for use by shared-filesystem filesys auth.
+		char *tmpDir = NULL;
+			//if user specfied RENDEZVOUS_DIRECTORY, extract it, else use $HOME
+		if ( !(tmpDir = getenv( "RENDEZVOUS_DIRECTORY" ) ) ) {
+			tmpDir = getenv( "HOME" );
+		}
+		if ( tmpDir ) {
+			RendezvousDirectory = strnewp( tmpDir );
+			canUseFlags |= (int) CAUTH_FILESYSTEM_REMOTE;
+		}
 #endif
 
+			//client needs to know name of the schedd, I stashed hostAddr in 
+			//applicable ReliSock::ReliSock() or ReliSock::connect(), which 
+			//should only be called by clients. 
+		sockaddr_in sin;
+		char *hostname;
+		char tmpStr[1024];
+
+		if ( hostAddr[0] != '<' ) { //not already sinful
+			if ( strchr( hostAddr, ':' ) ) { //already has port info
+				sprintf( tmpStr, "<%s>", hostAddr );
+			}
+			else {
+				//add a bogus port number (0) because we just want hostname
+				sprintf( tmpStr, "<%s:0>", hostAddr );
+			}
+		}
+		else {
+			strcpy( tmpStr, hostAddr );
+		}
+		
+		if ( string_to_sin( tmpStr, &sin ) 
+				&& ( hostname = sin_to_hostname( &sin, NULL ) ) ) 
+		{
+			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
+			putenv( strdup( tmpstring ) );
+		}
 	}
 	else {   //server
 		if ( serverShouldTry ) {
@@ -591,39 +646,6 @@ Authentication::setupEnv( char *hostAddr )
 		return;
 	}
 
-	sockaddr_in sin;
-	char *hostname;
-
-	//client needs to know name of the schedd, I stashed hostAddr in 
-	//applicable ReliSock::ReliSock() or ReliSock::connect(), which should 
-	//only be called by clients. 
-	if ( mySock->isClient() ) {
-		char tmpStr[1024];
-
-		if ( hostAddr[0] != '<' ) { //not already sinful
-			if ( strchr( hostAddr, ':' ) ) { //already has port info
-				sprintf( tmpStr, "<%s>", hostAddr );
-			}
-			else {
-				//add a bogus port number (0) because we just want hostname
-				sprintf( tmpStr, "<%s:0>", hostAddr );
-			}
-		}
-		else {
-			strcpy( tmpStr, hostAddr );
-		}
-		
-		if ( string_to_sin( tmpStr, &sin ) 
-				&& ( hostname = sin_to_hostname( &sin, NULL ) ) ) 
-		{
-			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
-			putenv( strdup( tmpstring ) );
-		}
-		else {
-			return;
-		}
-	}
-	
 	sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CertDir );
 	putenv( strdup( tmpstring ) );
 
@@ -718,8 +740,8 @@ Authentication::handshake()
 	}
 
 	dprintf(D_FULLDEBUG,
-		"handshake: canUse=%d,clientCanUse=%d,shouldUseMethod=%d\n",
-		canUse,clientCanUse,shouldUseMethod);
+		"handshake: clientCanUse=%d,shouldUseMethod=%d\n",
+		clientCanUse,shouldUseMethod);
 
 	return( shouldUseMethod );
 }
@@ -727,13 +749,20 @@ Authentication::handshake()
 
 #if !defined(WIN32)
 int
-Authentication::authenticate_filesystem()
+Authentication::authenticate_filesystem( int remote = 0 )
 {
 	char *new_file = NULL;
 	int fd = -1;
 	char *owner = NULL;
+	int retval = -1;
 
 	if ( mySock->isClient() ) {
+		if ( remote ) {
+				//send over the directory
+			mySock->encode();
+			mySock->code( RendezvousDirectory );
+			mySock->end_of_message();
+		}
 		mySock->decode();
 		mySock->code( new_file );
 		if ( new_file ) {
@@ -745,63 +774,75 @@ Authentication::authenticate_filesystem()
 		//send over fd as a success/failure indicator (-1 == failure)
 		mySock->code( fd );
 		mySock->end_of_message();
-		int rval = -1;
 		mySock->decode();
-		mySock->code( rval );
+		mySock->code( retval );
 		mySock->end_of_message();
 		if ( new_file ) {
 			unlink( new_file );
 			free( new_file );
 		}
-		return( rval == 0 );
 	}
+	else {  //server 
+		setOwner( NULL );
 
-	//else SERVER 
-
-	setOwner( NULL );
-
-	//create temp file name and send it over
-	new_file = tempnam("/tmp", "qmgr_");
-	// man page says string returned by tempnam has been malloc()'d
-	mySock->encode();
-	mySock->code( new_file );
-	mySock->end_of_message();
-	mySock->decode();
-	mySock->code( fd );
-	mySock->end_of_message();
-	mySock->encode();
-
-	int retval = 0;
-	if ( fd > -1 ) {
-		//check file to ensure that claimant is owner
-		struct stat stat_buf;
-
-		if ( lstat( new_file, &stat_buf ) < 0 ) {
-			retval = -1;  
+		if ( remote ) {
+				//get RendezvousDirectory from client
+			mySock->decode();
+			mySock->code( RendezvousDirectory );
+			mySock->end_of_message();
+			dprintf(D_FULLDEBUG,"RendezvousDirectory: %s\n", RendezvousDirectory );
+			new_file = tempnam( RendezvousDirectory, "qmgr_");
 		}
 		else {
+			new_file = tempnam("/tmp", "qmgr_");
+		}
+		//now, send over filename for client to create
+		// man page says string returned by tempnam has been malloc()'d
+		mySock->encode();
+		mySock->code( new_file );
+		mySock->end_of_message();
+		mySock->decode();
+		mySock->code( fd );
+		mySock->end_of_message();
+		mySock->encode();
+
+		retval = 0;
+		if ( fd > -1 ) {
+			//check file to ensure that claimant is owner
+			struct stat stat_buf;
+
+			if ( lstat( new_file, &stat_buf ) < 0 ) {
+				retval = -1;  
+			}
+			else {
 			// Authentication should fail if a) owner match fails, or b) the
 			// file is either a hard or soft link (no links allowed because they
 			// could spoof the owner match).  -Todd 3/98
-			if ( 
-				(stat_buf.st_nlink > 1) ||	 // check for hard link
-				(S_ISLNK(stat_buf.st_mode)) ) 
-			{
-				retval = -1;
-			} else {
-				//need to lookup username from file and do setOwner()
-				char *tmpOwner = my_username( stat_buf.st_uid );
-				setOwner( tmpOwner );
-				free( tmpOwner );
+				if ( 
+					(stat_buf.st_nlink > 1) ||	 // check for hard link
+					(S_ISLNK(stat_buf.st_mode)) ) 
+				{
+					retval = -1;
+				} 
+				else {
+					//need to lookup username from file and do setOwner()
+					char *tmpOwner = my_username( stat_buf.st_uid );
+					setOwner( tmpOwner );
+					free( tmpOwner );
+				}
 			}
+		} 
+		else {
+			retval = -1;
+			dprintf(D_ALWAYS,"invalid state in authenticate_filesystem\n" );
 		}
-	} else {
-		retval = -1;
-		dprintf( D_ALWAYS, "invalid state in authenticate_filesystem\n" );
+
+		mySock->code( retval );
+		mySock->end_of_message();
+		free( new_file );
 	}
-	mySock->code( retval );
-	mySock->end_of_message();
-	free( new_file );
+	dprintf( D_FULLDEBUG, "authentcate_filesystem%s status: %d\n", 
+			remote ? "(REMOTE)" : "()", retval == 0 );
 	return( retval == 0 );
 }
 #endif /* !defined(WIN32) */
@@ -839,6 +880,11 @@ Authentication::selectAuthenticationType( int clientCanUse )
 			retval = CAUTH_FILESYSTEM;
 			break;
 		}
+		if ( ( clientCanUse & CAUTH_FILESYSTEM_REMOTE ) 
+											&& !stricmp( tmp, "FS_REMOTE" ) ) {
+			retval = CAUTH_FILESYSTEM_REMOTE;
+			break;
+		}
 #endif
 		if ( ( clientCanUse & CAUTH_CLAIMTOBE ) && !stricmp( tmp, "CLAIMTOBE" ) )
 		{
@@ -846,7 +892,6 @@ Authentication::selectAuthenticationType( int clientCanUse )
 			break;
 		}
 	}
-	dprintf(D_FULLDEBUG,"auth handshake: selected method: %d\n", retval );
 
 	return retval;
 }
@@ -1055,7 +1100,6 @@ Authentication::authenticate_client_gss()
 	return TRUE;
 }
 
-//made major mods: took out authsock param and made everything [implied] this//
 int 
 Authentication::authenticate_server_gss()
 {
