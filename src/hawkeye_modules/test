@@ -75,14 +75,24 @@ sub RunIt()
     $Hash->Add( "ModuleName", "s", HawkeyeLib::GetModuleName() );
     foreach my $Env ( keys %ENV )
     {
-	$Hash->Add( "Env_" . $Env, "s", $ENV{$Env} );
+	$Hash->AddNew( "Env_" . $Env, HawkeyePublish::TypeAuto, $ENV{$Env} );
     }
 
     foreach my $Num ( 0 .. $#Params )
     {
-	my $Type = ( $Params[$Num] =~ /\D/ ) ? "s" : "n";
-	$Hash->Add( "Param$Num", $Type, $Params[$Num] );
+	$Hash->AddNew( "Param$Num", HawkeyePublish::TypeAuto, $Params[$Num] );
     }
+
+    # Simle test values
+    $Hash->AddNew( "zero", HawkeyePublish::TypeNumber, "0" );
+    $Hash->AddNew( "one", HawkeyePublish::TypeNumber, "1" );
+    $Hash->AddNew( "True", HawkeyePublish::TypeBool, "True" );
+    $Hash->AddNew( "False", HawkeyePublish::TypeBool, "False" );
+    $Hash->AddNew( "string", HawkeyePublish::TypeString, "string #1" );
+    $Hash->AddNew( "string2", HawkeyePublish::TypeString, "string #2" );
+    $Hash->AddNew( "pi", HawkeyePublish::TypeAuto, "3.1415926" );
+    $Hash->AddNew( "IP", HawkeyePublish::TypeAuto, "192.168.1.1" );
+    $Hash->AddNew( "three", HawkeyePublish::TypeAuto, "3" );
 
     # Ok, summary is done...
     $Hash->Store( );

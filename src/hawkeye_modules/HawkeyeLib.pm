@@ -346,6 +346,21 @@ sub Add
 
     my $NewElem = ();
     $NewElem->{Type} = $Type;
+    $NewElem->{TypeNew} = -1;
+    $NewElem->{Value} = $Value;
+    $self->{Hash}{$Name} = $NewElem;
+}
+
+sub AddNew
+{
+    my $self = shift;
+    my $Name = shift;
+    my $Type = shift;
+    my $Value = shift;
+
+    my $NewElem = ();
+    $NewElem->{Type} = "";
+    $NewElem->{TypeNew} = $Type;
     $NewElem->{Value} = $Value;
     $self->{Hash}{$Name} = $NewElem;
 }
@@ -359,14 +374,22 @@ sub Store
     {
 	my $Name = $Label . $Key;
 	my $Value = $self->{Hash}{$Key}->{Value};
+	my $TypeNew = $self->{Hash}{$Key}->{TypeNew};
 	my $Type = $self->{Hash}{$Key}->{Type};
-	if ( $self->{Hash}{$Key}->{Type} =~ /n/i )
+
+	if ( $TypeNew >= 0 )
+	{
+	    ${$self->{Hawkeye}}->StoreValue( $Name, $Value, $TypeNew );
+	}
+	elsif ( $Type =~ /^n/i )
         {
-	    ${$self->{Hawkeye}}->StoreNum( $Name, $Value );
+	    ${$self->{Hawkeye}}->StoreValue( $Name, $Value,
+					     HawkeyePublish::TypeNumber );
         }
 	else
         {
-	    ${$self->{Hawkeye}}->Store( $Name, $Value );
+	    ${$self->{Hawkeye}}->StoreValue( $Name, $Value,
+					     HawkeyePublish::TypeString );
         }
 	$Count++;
     }
