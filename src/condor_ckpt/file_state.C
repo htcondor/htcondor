@@ -2450,9 +2450,13 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	if ( FileTab == NULL )
 		InitFileState();
 	
-	// allow fds we don't have in our table in STANDALONE mode
-	if ((user_fd = MapFd(fd)) < 0 && MyImage.GetMode() != STANDALONE) {
-		return -1;
+	if ((user_fd = MapFd(fd)) < 0) {
+		// allow fds we don't have in our table in STANDALONE mode
+		if (MyImage.GetMode() == STANDALONE) {
+			user_fd = fd;
+		} else {
+			return -1;
+		}
 	}
 	
 	if ( LocalAccess(fd) || MyImage.GetMode() == STANDALONE ) {
@@ -2481,19 +2485,19 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 				// the application to use fds which we're not tracking
 				// between checkpoints.
 			if (MyImage.GetMode() == STANDALONE) {
-				rval = syscall( SYS_fcntl, fd, cmd, arg );
+				rval = syscall( SYS_fcntl, user_fd, cmd, arg );
 			}
 			return rval;
 		}
 
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, fd, cmd, arg );
+			return syscall( SYS_fcntl, user_fd, cmd, arg );
 		} else {
 				// In remote mode, we want to send a CONDOR_dup2 on
 				// the wire, not an fcntl(), so we have a prayer of
 				// heterogeneous syscalls working.  -Derek W. and Jim
 				// B. 8/18/98
-			return REMOTE_syscall( CONDOR_dup2, fd, arg );
+			return REMOTE_syscall( CONDOR_dup2, user_fd, arg );
 		}
 	case F_GETFD:
 	case F_GETFL:
@@ -2559,7 +2563,7 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 					// This is the same as ftruncate(), and we'll trap
 					// ftruncate() and send that on the wire,
 					// instead.  -Derek Wright 10/14/98
-				return ftruncate( fd, 0 );
+				return ftruncate( user_fd, 0 );
 			} else {
 				dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 				return -1;
