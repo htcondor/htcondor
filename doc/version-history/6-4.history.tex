@@ -5,33 +5,180 @@
 This is the stable release series of Condor.
 New features will be added and tested in the 6.5 development series. 
 The details of each version are described below.
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-4-0}Version 6.4.0}
+\subsection{\label{sec:New-6-4-3}Version 6.4.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \noindent New Features:
 \begin{itemize}
 
-\item 
-
-\item 
+\item Added a \Opt{-hold} and \Opt{-held} option to \Condor{q} which 
+displays the reason that the job had been held.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 \begin{itemize}
 
-\item 
+\item Fixed a bug where more than one space between arguments to a job
+in the java universe would result in it being invoked with and incorrect
+list arguments.
 
-\item 
+\item Removed renaming of the executable to \Prog{condor\_exec} in the java
+universe. This fixes a bug where the JVM was looking at its path to determine
+its installation directory.
+
+\item Fixed a bug and resulting null pointer exception in the java universe
+because under certain conditions, Condor would invoke the JVM incorrectly.
+
+\item Fixed serveral error reporting messages to be more precise.
+
+\item When the NIS environment was being used, the \Condor{starter} daemon
+would produce heavy amounts of NIS traffic. This has been fixed.
+
+\item Binary characters in the \File{StarterLog} file and a possible
+segmentation fault have been fixed.
+
+\item Fixed \Cmd{select}{2} in the standard universe on our Linux ports.
+
+\item Fixed a small bug in \Condor{q} that was displaying the wrong
+username for ``niceuser'' jobs.
+
+\item Fixed a bug where, in the standard universe, you could not open a file
+whose name had spaces in it.
+
+\item Fixed a bug in DAGMan where pre and post scripts would fail to
+run if the DAG description file had extra whitespace.
+Also, reworded the error messages DAGMan produces when it fails to
+parse the DAG description file to be more clear and helpful for
+solving the problem.
+
+\item Fixed some misleading error messages in the Condor log files
+when there were permission problems trying to execute a program. 
+
+\item Condor for Windows will now run on Windows XP.
+
+\item Condor for Windows now supports the Java Universe.
+
+\item Users logged into Windows Domain accounts rather than local accounts
+can submit jobs.
+
+\item Potential Windows registry bloating bug fixed. Condor for Windows no
+longer creates and deletes an account on the execute machine each time a
+job is run. Instead, a single account for each VM on the execute machine is
+created once and enabled or disabled as needed.
+
+\item Cross-submits from Windows to Unix and from Unix to Windows are now
+supported, provided that both platforms are running Condor 6.4 series daemons.
+
+\item Free disk space is now reported accurately on Windows.
+
+\item A rare but serious bug that could allow non-Condor processes to be added
+to the Condor process family on Windows has been fixed.
+
+\item Condor for Windows will now also run 16-bit applications.
+
+\item Fixed a minor bug where certain integer attributes in the
+\File{condor\_config} file might not have been properly parsed if they
+were defined in terms of other config file attributes, using the
+\MacroUNI{attribute} notation.  
 
 \end{itemize}
 
 \noindent Known Bugs:
 \begin{itemize}
-\item 
 
-\item 
+\item You may not open a file in the standard universe whose name contains a
+colon ``:''.
 
 \end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-4-2}Version 6.4.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\noindent New Features:
+\begin{itemize}
+
+\item. This release mirrored the Condor-G release, and has no new features.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+\begin{itemize}
+\item None.
+
+\end{itemize}
+\noindent Known Bugs:
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-4-1}Version 6.4.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\noindent New Features:
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+\begin{itemize}
+
+\item Users are now allowed to answer ``none'' when prompted by the
+installer to provide a Java JVM path. This avoids an endless loop and
+leaves the Java abilities of Condor unconfigured.
+
+\end{itemize}
+
+\noindent Known Bugs:
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-4-0}Version 6.4.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item If a job universe is not specified in a submit description file, 
+\Condor{submit}  will check the config file for \Macro{DEFAULT\_UNIVERSE}
+instead of always choosing the standard universe. 
+
+\item The \Macro{D\_SECONDS} debug flag is deprecated. Seconds are now always
+included in logfiles. 
+
+\item For each daemon listed in \Macro{DAEMON\_LIST}, you can now control the
+environment variables of the daemon with a config file setting of the form
+\Macro{DAEMONNAME\_ENVIRONMENT}, where \MacroNI{DAEMONNAME} is the name of a
+daemon listed in \Macro{DAEMON\_LIST}. For more information, see
+section~\ref{sec:Master-Config-File-Entries}.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in the new starter where if the submit file set no
+arguments, the job would receive one argument of zero length.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+

@@ -247,10 +247,17 @@ the \Condor{startd} will clean up when Condor is restarted.
 
 \subsection{Security considerations in Condor NT}
 
+% WRT the backslash character, extra spaces are added before it
+% as viewed from the html generated.
+%   Karen has tried
+%         \File{C:$\backslash$WINNT}
+%         \File{C:\Bs WINNT}
+% and neither works.
+
 On the execute machine, the user job is run using the access token of an
 account dynamically created by Condor which has bare-bones access rights and
 privileges.  For instance, if your machines are configured so that only
-Administrators have write access \File{C:\Bs WINNT}, then certainly no
+Administrators have write access to \File{C:\Bs WINNT}, then certainly no
 Condor job run on that machine would be able to write anything there.  The
 only files the job should be able to access on the execute machine are files
 accessible by group Everybody and files in the job's temporary working

@@ -469,7 +469,6 @@ complete it at a later time,
 or it can give up and restart the job \emph{from the beginning} 
 on another machine in the pool.
 
-\Notice{
 Under Unix, jobs submitted as vanilla universe jobs rely on an
 external mechanism for accessing data files,
 such as NFS or AFS.
@@ -498,7 +497,6 @@ This mechanism is not required under Windows NT.
 The vanilla universe does \emph{not} require
 a shared file system due to the Condor File Transfer mechanism. Please see
 chapter~\ref{condor-nt} for more details about Condor NT.
-}
 
 %%%%%%%%%%%%
 \subsubsection{PVM Universe}
@@ -525,8 +523,9 @@ Please see section~\ref{sec:MPI} for more details.
 The Globus universe in Condor is intended to provide the standard
 Condor interface to users who wish to start Globus system jobs
 from Condor. Each job queued in the job submission file is translated
-into a Globus RSL string and used as the arguments to the \Prog{globusrun}
-program. The manual page for \Condor{submit}
+into a Globus RSL and subsequently submitted to Globus via the GRAM
+protocol.
+The manual page for \Condor{submit}
 on page~\pageref{man-condor-submit}
 has detailed descriptions of
 the Globus-related attributes.
@@ -895,6 +894,80 @@ machine \AdStr{friend3.cs.wisc.edu},
 and all three of these machines are ranked higher than others.
 
 %%%%%%%%%%%% 
+\subsection{Submitting Jobs Without a Shared File System} 
+%%%%%%%%%%%%
+\index{job!submission without a shared file system}
+\index{shared file system!submission of jobs without one}
+
+A shared file system is presumed for submitting jobs to Condor
+under some circumstances.
+Condor works well without a shared file system,
+but the user must specify which files to transfer from the
+machine where a job is submitted to the machine where the
+job is executed.
+The specification is done within the submit description file.
+
+For the standard universe, the existence of a shared file system
+is not relevant.
+Access to files (input and output) are handled through Condor's
+remote system call mechanism.
+Therefore, the user does not need to change the submit description
+file if there is no shared file system.
+
+For both the vanilla universe and the mpi universe,
+access to files through a shared file system is presumed as
+a default.
+If there is no shared file system, then
+Condor must be explicitly told to transfer the job's input files.
+Two commands accomplish this task.
+\begin{verbatim}
+  transfer_files = ONEXIT
+  transfer_input_files = file1 file2 file3
+\end{verbatim}
+The \verb@transfer_files@ command tells Condor when files are to be
+transferred.
+When set to \verb@ONEXIT@, it transfers files from the execute machine
+back to the submit machine when the job exits (completes).
+Alternatively, it could be set to \verb@ALWAYS@, and Condor will do
+the transfer when the job exits, or when it is preempted, or when
+it is to be killed.
+The \verb@transfer_input_files@ command tells Condor which files 
+(other than the executable, and the files used in an \verb@input@
+command) to transfer.
+
+For the Java universe,
+placing no additional commands into the submit description file
+causes behavior that requires a shared file system.
+When no shared file system exists, place
+\begin{verbatim}
+  transfer_files = ONEXIT
+\end{verbatim}
+or
+\begin{verbatim}
+  transfer_files = ALWAYS
+\end{verbatim}
+into the submit description file.  
+With either of these commands, the executable and any jar files
+(listed in a \verb@jar_files@ command) will be transferred.
+
+For the globus universe,
+jobs are to be executed on remote machines, so there would never
+be a shared file system between machines.
+See section~\ref{sec:Using-Condor-G} for more details.
+
+For the PVM universe,
+file transfer other than the master's executable and files given in
+\verb@input@,
+\verb@output@, and
+\verb@error@ commands are not supported.
+This is not usually an impediment (shared file system or not), since
+PVM jobs are set up to have the master direct the workers.
+
+For the scheduler universe,
+Condor is only using the machine from where the job is submitted,
+therefore the existence of a shared file system is not relevant.
+
+%%%%%%%%%%%% 
 \subsection{Heterogeneous Submit: Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
@@ -932,7 +1005,7 @@ To list the architecture and operating systems of the machines
 in a pool, run \Condor{status}.
 
 %%%%%%%%%%%% 
-\subsection{Vanilla Universe Example for Execution on Differing Architectures} 
+\subsubsection{Vanilla Universe Example for Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
 A more complex example of a heterogeneous submission
@@ -1028,7 +1101,7 @@ executable is missing when it happens to match the
 job with a resource that requires the missing binary.
 
 %%%%%%%%%%%% 
-\subsection{Standard Universe Example for Execution on Differing Architectures} 
+\subsubsection{Standard Universe Example for Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
 Jobs submitted to the standard universe may produce checkpoints.
@@ -1064,7 +1137,6 @@ will default to
   Requirements = (<user specified policy>) && $(CkptRequirements)
 \end{verbatim}
 
-% DONE TO HERE
 The behavior of the \AdAttr{CkptRequirements} expressions and its addition to
 \AdAttr{requirements} is as follows.
 The \AdAttr{CkptRequirements} expression guarantees correct operation
@@ -1368,50 +1440,6 @@ submit description file solves the problem.
         initialdir = /home/johndoe
 \end{verbatim}
 
-\subsection{Using Globus software with Condor}
-\index{universe!Globus}
-\index{Globus!Interaction considerations}
-Use of the Globus project software \Url{http://www.globus.org} with
-Condor affects these issues:
-
-\begin{enumerate}
-\item[GSS Authentication] Is an option only in special versions of Condor,
-available by request only, due to cryptographic software export controls
-and Condor distribution policy.
-Sites running the Condor software distributed with GSS-Authentication can 
-set up their own Certification Authority (CA) by running the 
-\Prog{create\_ca} script. 
-Once the CA is set up, the \Condor{ca} script is used to generate 
-certificates for the Condor daemons (e.g., \Condor{schedd}) and to sign
-user and daemon certificates. Users can generate certificate requests
-and other needed files with the \Condor{cert} program.
-An X.509 certificate directory pointed to by the submit description file 
-variable \Arg{x509CertDir} indicates a client program which can use GSS
-authentication as a possible authentication method. Alternately, the
-environment variables \Env{X509\_CERT\_DIR}, \Env{X509\_USER\_CERT},
-\Env{X509\_USER\_KEY} can be used to override the default filenames and 
-locations.
-\Note the AUTHENTICATION\_METHOD configuration value list must contain 
-the value 'GSS' for GSS authentication to be attempted.
-
-\item[Submitting to the Globus Universe] \index{Globus!Globus universe}
-\index{universe!Globus}
-requires Globus version 1.1, as well as a valid Globus X.509 certificate. 
-The default location for the necessary files is \$HOME/.globus, but they 
-can be overridden by setting the X509\_* variables in your environment 
-or the submit description file.
-\Note AFS issues apply here, so you may have to copy your certificate,
-trusted certificates directory, private key, and proxy to a local
-file system disk.
-
-\item[\Condor{glidein}] \index {Globus!\Condor{glidein}} requires a valid 
-Globus X.509 certificate, and the PATH to the \Prog{globusrun} program 
-must be in your environment.
-\Note to allow a globus resource to join your Condor pool, your 
-administrator must add the host name(s) to the HOSTALLOW\_WRITE and
-HOSTALLOW\_READ configuration values.
-\end{enumerate}
-
 \subsection{Condor Daemons That Do Not Run as root}
 
 \index{Unix daemon!running as root}
@@ -1434,7 +1462,7 @@ since Condor is designed to be run as the Unix user root.
 To see if Condor is
 running as root on a specific machine, enter the command
 \begin{verbatim}
-        condor\_status -master -l <machine-name>
+        condor_status -master -l <machine-name>
 \end{verbatim}
 
 where \verb@machine-name@ is the name of the specified machine.

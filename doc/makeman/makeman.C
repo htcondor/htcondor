@@ -454,7 +454,7 @@ static string html_to_nroff(
 				}
 				break;
 			case tagType_ListElem:
-				if (current_list < MAX_LIST_DEPTH) {
+				if (token->tag_begin && current_list < MAX_LIST_DEPTH) {
   					if (!last_output_did_newline) {
   						*nroff_text += "\n";
   					}
@@ -622,6 +622,27 @@ static Token *extract_token(int *token_start, const string &line, bool skip_whit
 				token->tag_type = tagType_NotATag;
 			} else {
 				discover_tag_type(token);
+				if (token->tag_type == tagType_Image){
+					// Check for some special cases we know about that
+					// latex2html does.
+					if (token->text.find("ALT=\"$&lt;$\"") != -1) {
+						token->type     = tokenType_Text;
+						token->tag_type = tagType_NotATag;
+						token->text     = "<";
+					} else if (token->text.find("ALT=\"$&gt;$\"") != -1) {
+						token->type     = tokenType_Text;
+						token->tag_type = tagType_NotATag;
+						token->text     = ">";
+					} else if (token->text.find("ALT=\"$&lt;=$\"") != -1) {
+						token->type     = tokenType_Text;
+						token->tag_type = tagType_NotATag;
+						token->text     = ">=";
+					} else if (token->text.find("ALT=\"$&gt;=$\"") != -1) {
+						token->type     = tokenType_Text;
+						token->tag_type = tagType_NotATag;
+						token->text     = ">=";
+					}
+				}
 			}
 		}
 	}

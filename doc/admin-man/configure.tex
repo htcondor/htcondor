@@ -578,8 +578,9 @@ of the subsystem corresponding to the daemon.
 \item[\Macro{SUBSYS\_LOG}] \label{param:SubsysLog} The name of
   the log file for a given subsystem.  For example,
   \MacroU{STARTD\_LOG} gives the location of the log file for
-  \Condor{startd}.  The name is defined relative to the
-  \MacroU{LOG} macro described above.  The actual names of the files
+  \Condor{startd}.
+
+  The actual names of the files
   are also used in the \MacroU{VALID\_LOG\_FILES} entry used by
   \Condor{preen}.  A change to one of the
   file names with this setting requires a change to the
@@ -1074,6 +1075,11 @@ they will not be considered to have shared file systems.
   append requirements to the Job ClassAd that specify the machine to run
   the job must be in the same \MacroU{FILESYSTEM\_DOMAIN} and the same
   \MacroU{UID\_DOMAIN}.
+
+\item[\Macro{IGNORE\_NSF\_LOCK\_ERRORS}] \label{param:IgnoreNFSLockErrors}
+  When set to TRUE, all errors related to file locking errors from
+  NFS are ignored.
+  Defaults to FALSE, not ignoring errors.
   
 \item[\Macro{USE\_AFS}] \label{param:UseAfs} If your machines have AFS,
   this
@@ -1420,6 +1426,21 @@ will not want to change them for any reason.
   macro disables administrative commands, such as 
   \Condor{restart}, \Condor{on}, and \Condor{off}, to that host.
 
+\item[\Macro{MASTER\_INSTANCE\_LOCK}] \label{param:MasterInstanceLock}
+  Defines the name of a file for the \Condor{master} daemon
+  to lock in order to prevent multiple \Condor{master}s
+  from starting.
+  This is useful when using shared filesystems like NFS which do
+  not technically support locking in the case where the lock files
+  reside on a local disk.
+  If this macro is not defined, the default file name will be
+  \File{\$(LOCK)/InstanceLock}.
+  \File{\$(LOCK)} can instead be defined to
+  specify the location of all lock files, not just the 
+  \Condor{master}'s \File{InstanceLock}.
+  If \File{\$(LOCK)} is undefined, then the master log itself is locked.
+
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1573,6 +1594,14 @@ control state or activity transitions within the
   available to be used by Condor jobs.  If \Macro{RESERVED\_MEMORY} is
   defined, Condor subtracts it from the amount of memory it advertises
   as available.
+
+\item[\Macro{STARTD\_NAME}] \label{param:StartdName}
+  Used to give an alternative name in the \Condor{startd}'s
+  class ad.
+  This esoteric configuration macro might be used in the situation
+  where there are two \Condor{startd} daemons running on one machine,
+  and each reports to the same \Condor{collector}.
+  Different names will distinguish the two daemons.
 
 \end{description}
 

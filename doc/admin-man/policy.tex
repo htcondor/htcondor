@@ -455,16 +455,44 @@ Owner State}
 
 When the startd is first spawned, the machine it represents enters the
 Owner state. 
-The machine will remain in this state as long as the \Expr{START}
+The machine remains in the Owner state while the
+expression \Expr{IS\_OWNER} is TRUE.
+If the \Expr{IS\_OWNER} expression is FALSE,
+then the machine transitions to the Unclaimed state.
+The default value for the 
+\Expr{IS\_OWNER} expression is 
+\begin{verbatim}
+START =?= FALSE
+\end{verbatim}
+So,
+the machine will remain in the Owner state as long as the \Expr{START}
 expression locally evaluates to FALSE.
 If the \Expr{START} locally evaluates to TRUE or cannot be locally
-evaluated (it evaluates to UNDEFINED, transition \Bold{1}
+evaluated (it evaluates to UNDEFINED), transition \Bold{1}
 occurs and the machine enters the Unclaimed state.
 
-As long as the \Expr{START} expression evaluates locally to FALSE,
-there is no possible request in the Condor system that could match it.
-The machine is unavailable to Condor and stays in the Owner state.
-For example, if the \Expr{START} expression is
+The Owner state represents a resource that is in use by its
+interactive owner (for example, if the keyboard is being used).
+The Unclaimed state represents a resource that is neither in use by
+its interactive user, nor the Condor system.
+From Condor's point of view, there is little difference between the
+Owner and Unclaimed states.
+In both cases, the resource is not currently in use by the Condor
+system.
+However, if a job matches the resource's \Expr{START} expression, the
+resource is available to run a job, regardless of if it is in the
+Owner or Unclaimed state.
+The only differences between the two states are how the resource shows
+up in \Condor{status} and other reporting tools, and the fact that
+Condor will not run benchmarking on a resource in the Owner state.
+As long as the \Expr{IS\_OWNER} expression is TRUE, the machine is
+in the Owner State.
+When the \Expr{IS\_OWNER} expression is FALSE, the machine goes into
+the Unclaimed State.
+
+Here is an example that assumes that an \Expr{IS\_OWNER}
+expression is not present in the configuration.
+If the \Expr{START} expression is
 \begin{verbatim}
 START = KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane" 
 \end{verbatim}
@@ -515,7 +543,17 @@ if there is a job running that needs preempting.
 \subsubsection{\label{sec:Unclaimed-State}Unclaimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-While in the Unclaimed state, if the \Expr{START} expression locally
+If the \Expr{IS\_OWNER} expression becomes TRUE, then the machine returns
+to the Owner state.
+If the \Expr{IS\_OWNER} expression becomes FALSE, then the machine remains
+in the Unclaimed state.
+If the \Expr{IS\_OWNER} expression is not present in the configuration files,
+then the default value for the \Expr{IS\_OWNER} expression is 
+\begin{verbatim}
+START =?= FALSE
+\end{verbatim}
+so that
+while in the Unclaimed state, if the \Expr{START} expression locally
 evaluates to FALSE, the machine returns to the Owner state by
 transition \Bold{2}.
 
@@ -560,8 +598,8 @@ To disable benchmarks, both at startup and at any time thereafter,
 set \Expr{RunBenchmarks} to FALSE or comment it out of the
 configuration file.
 
-From the Unclaimed state, the machine can go to two other possible
-states: Matched or Claimed/Idle.
+From the Unclaimed state, the machine can go to three other possible
+states: Owner (transition \Bold{2}), Matched, or Claimed/Idle.
 Once the \Condor{negotiator} matches an Unclaimed machine with a
 requester at a given schedd, the negotiator sends a command to both
 parties, notifying them of the match.  
