@@ -1643,6 +1643,8 @@ int DaemonCore::HandleReq(int socki)
 		// as the socket IP.
 		const char* sockip = sin_to_string(sock->endpoint());
 		const char* kerbip = sock->authob->getRemoteAddress() ;
+
+		result = strcmp(sockip, kerbip);
 		result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
 
 		dprintf (D_ALWAYS, "ZKM: sock ip -> %s\n", sockip);

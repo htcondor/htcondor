@@ -27,6 +27,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_debug.h"
 #include "condor_network.h"
 #include "condor_io.h"
 #include "sched.h"
@@ -137,6 +138,11 @@ main( int argc, char *argv[] )
 	}
 
 	config();
+
+	// dprintf to console
+	Termlog = 1;
+	dprintf_config ("RM", 2 );
+
 
 	if( argc < 2 ) {
 		usage();
@@ -314,13 +320,6 @@ notify_schedd()
 	}
 
 	sock->encode();
-
-	cmd = KILL_FRGN_JOB;
-	if( !sock->code(cmd) ) {
-		fprintf( stderr,
-			"Warning: can't send KILL_JOB command to condor scheduler\n" );
-		return;
-	}
 
 	if( !sock->code(nToProcess) ) {
 		fprintf( stderr,

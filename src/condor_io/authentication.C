@@ -86,7 +86,7 @@ Authentication::Authentication( ReliSock *sock )
 	// By default, it's mySock's end point
 	isDaemon_           = FALSE;
 	t_mode              = NORMAL;
-	setRemoteAddress(sin_to_hostname(mySock->endpoint(), NULL));
+	setRemoteAddress(inet_ntoa(mySock->endpoint()->sin_addr));
         initialize();
 
 #if defined(KERBEROS_AUTHENTICATION)
