@@ -465,7 +465,7 @@ sub do_remote_setup() {
 		return( "Couldn't retrieve $arch.tar.gz from server" );
 	}
 
-	$REM_SETUP = "/tmp/remote_setup.glidein";
+	$REM_SETUP = "/tmp/remote_setup.glidein.$$";
 	open( REM_SETUP, ">$REM_SETUP" );
 	print REM_SETUP<<"EOF";
 
