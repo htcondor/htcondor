@@ -1,4 +1,13 @@
+#ifndef __CLASSAD_FEATURES_H_
+#define __CLASSAD_FEATURES_H_
+
 #define COLLECTIONS
 /*#define EXPERIMENTAL*/
+
+#ifndef CLASSAD_DISTRIBUTION
 #define CLASSAD_DEPRECATED
-#define ALLOW_CHAINING
+#endif
+
+/*#define ENABLE_SHARED_LIBRARY_FUNCTIONS*/
+
+#endif 
