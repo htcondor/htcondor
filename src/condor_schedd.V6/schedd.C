@@ -601,52 +601,55 @@ abort_job_myself(PROC_ID job_id)
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, &mode);
 
 	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
-	     // We found a shadow for this job
-	     //if (srec->match) {
 
-	     // PVM jobs may not have a match  -Bin
-	     if (! IsSchedulerUniverse(srec)) {
+		// PVM jobs may not have a match  -Bin
+		if (! IsSchedulerUniverse(srec)) {
 
-		  /* if there is a match printout the info */
-		  if (srec->match)
-		       dprintf( D_ALWAYS,
-				"Found shadow record for job %d.%d, host = %s\n",
-				job_id.cluster, job_id.proc, 
-				srec->match->peer);
-		  else 
-		       dprintf( D_ALWAYS,
-				"This job does not have a match -- It may be a PVM job.\nFound shadow record for job %d.%d\n",
-				job_id.cluster, job_id.proc);
+			/* if there is a match printout the info */
+			if (srec->match)
+				dprintf( D_ALWAYS,
+					"Found shadow record for job %d.%d, host = %s\n",
+					job_id.cluster, job_id.proc, srec->match->peer);
+			else 
+				dprintf( D_ALWAYS,
+					"This job does not have a match -- It may be a PVM job.\nFound shadow record for job %d.%d\n",
+					job_id.cluster, job_id.proc);
 		  
 #ifdef WANT_DC_PM
-		if ( daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 ) == FALSE )
+			if ( daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 ) == FALSE )
 #else
-		if ( kill( srec->pid, SIGUSR1) == -1 )
+			if ( kill( srec->pid, SIGUSR1) == -1 )
 #endif
-		       dprintf(D_ALWAYS,
-			       "Error in sending SIGUSR1 to %d errno = %d\n",
-			       srec->pid, errno);
-		  else dprintf(D_ALWAYS, "Sent SIGUSR1 to Shadow Pid %d\n",
-			       srec->pid);
-	     } else {
-		  dprintf( D_ALWAYS,
-			   "Found record for scheduler universe job %d.%d\n",
-			   job_id.cluster, job_id.proc);
-		  char owner[_POSIX_PATH_MAX];
-		  GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-		  dprintf(D_FULLDEBUG,"Sending SIGUSR1 to scheduler universe job pid=%d owner=%s\n",srec->pid,owner);
-    	  init_user_ids(owner);
-		  priv_state priv = set_user_priv();
+				dprintf(D_ALWAYS,
+					"Error in sending SIGUSR1 to %d errno = %d\n",
+					srec->pid, errno);
+			else 
+				dprintf(D_ALWAYS, "Sent SIGUSR1 to Shadow Pid %d\n",
+					srec->pid);
+
+		} else {  // Scheduler universe job
+
+			dprintf( D_ALWAYS,
+				"Found record for scheduler universe job %d.%d\n",
+				job_id.cluster, job_id.proc);
+
+			char owner[_POSIX_PATH_MAX];
+			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
+			dprintf(D_FULLDEBUG,"Sending SIGUSR1 to scheduler universe job pid=%d owner=%s\n",srec->pid,owner);
+			init_user_ids(owner);
+			priv_state priv = set_user_priv();
 #ifdef WANT_DC_PM
-		  daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 );
+			daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 );
 #else
-		  kill( srec->pid, SIGUSR1 );
+			kill( srec->pid, SIGUSR1 );
 #endif
-		  set_priv(priv);
-	     }
-		 if (mode == REMOVED) {
-			 srec->removed = TRUE;
-		 }
+			set_priv(priv);
+		}
+
+		if (mode == REMOVED) {
+			srec->removed = TRUE;
+		}
+
 	} else {
 		// We did not find a shadow for this job; just remove it.
 		if (mode == REMOVED) {
@@ -656,8 +659,8 @@ abort_job_myself(PROC_ID job_id)
 			DestroyProc(job_id.cluster,job_id.proc);
 		}
 	}
-
 }
+
 } /* End of extern "C" */
 
 
@@ -2210,11 +2213,24 @@ Scheduler::preempt(int n)
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(rec) == 1 && n > 0) {
 		if( is_alive(rec) ) {
-			if (rec->match) {	/* scheduler universe job check (?) */
+			int universe;
+			GetAttributeInt(rec->job_id.cluster, rec->job_id.proc, 
+							ATTR_JOB_UNIVERSE,&universe);
+			if (universe == PVM) {
+				if ( !rec->preempted ) {
+#ifdef WANT_DC_PM
+					daemonCore->Send_Signal( rec->pid, DC_SIGTERM );
+#else
+					kill( rec->pid, SIGTERM );
+#endif
+				}
+				rec->preempted = TRUE;
+				n--;
+			} else if (rec->match) {	/* scheduler universe job check (?) */
 				if( !rec->preempted ) {
 					send_vacate( rec->match, CKPT_FRGN_JOB );
-					rec->preempted = TRUE;
 				}
+				rec->preempted = TRUE;
 				n--;
 			} else if (preempt_all) {
 				if ( !rec->preempted ) {
@@ -2226,8 +2242,8 @@ Scheduler::preempt(int n)
 					rec->preempted = TRUE;
 				}
 				rec->preempted = TRUE;
+				n--;
 			}
-			n--;
 		}
 	}
 }
