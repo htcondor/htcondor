@@ -1,6 +1,12 @@
 @echo off
 REM Build Condor from a batch file
 REM Todd Tannenbaum <tannenba@cs.wisc.edu> Feb 2002
+
+REM This fixes the wierdness in condor_cpp_util.mak -stolley 08/2002
+awk "{ gsub(/\.\\\.\.\\Debug/, \"..\\Debug\") } { gsub(/\.\\\.\.\\Release/, \"..\\Release\") } { print }" condor_cpp_util.mak > ~temp.mak
+del condor_cpp_util.mak
+ren ~temp.mak condor_cpp_util.mak
+
 if defined INCLUDE goto :compiler_ready
 call VCVARS32.BAT
 if defined INCLUDE goto :compiler_ready
