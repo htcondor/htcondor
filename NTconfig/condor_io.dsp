@@ -88,6 +88,18 @@ SOURCE=..\src\condor_includes\condor_io.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_io\condor_rw.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_io\condor_rw.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_io\open_flags.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_io\reli_sock.C
 # End Source File
 # Begin Source File

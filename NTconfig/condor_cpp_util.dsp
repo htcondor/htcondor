@@ -41,7 +41,7 @@ CPP=cl.exe
 # PROP Intermediate_Dir "../src/condor_c++_util"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /Gi- /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -62,7 +62,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "../src/condor_c++_util"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gi- /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /FR /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -139,7 +139,20 @@ SOURCE="..\src\condor_c++_util\condor_state.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_version.C"
+# SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\config.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\daemon_types.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\daemon_types.h"
 # End Source File
 # Begin Source File
 
@@ -203,7 +216,16 @@ SOURCE="..\src\condor_c++_util\log_transaction.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\my_arch.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\my_hostname.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\my_subsystem.C"
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
@@ -232,6 +254,10 @@ SOURCE="..\src\condor_c++_util\string_list.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\up_down.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\usagemon.C"
 # End Source File
 # Begin Source File
 

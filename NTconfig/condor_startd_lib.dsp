@@ -79,6 +79,7 @@ LIB32=link.exe -lib
 # Begin Source File
 
 SOURCE=..\src\condor_startd.V6\clinpack.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
@@ -87,10 +88,12 @@ SOURCE=..\src\condor_startd.V6\dhry.h
 # Begin Source File
 
 SOURCE=..\src\condor_startd.V6\dhry21a.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_startd.V6\dhry21b.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
@@ -99,6 +102,7 @@ SOURCE=..\src\condor_startd.V6\load_avg.WIN32.c
 # Begin Source File
 
 SOURCE=..\src\condor_startd.V6\timers_b.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # End Target
 # End Project

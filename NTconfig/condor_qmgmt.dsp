@@ -80,6 +80,10 @@ SOURCE=..\src\condor_includes\condor_qmgr.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_schedd.V6\qmgmt_common.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_schedd.V6\qmgmt_constants.h
 # End Source File
 # Begin Source File

@@ -78,5 +78,9 @@ LIB32=link.exe -lib
 
 SOURCE=..\src\condor_accountant.V6\Accountant.C
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_accountant.h
+# End Source File
 # End Target
 # End Project
