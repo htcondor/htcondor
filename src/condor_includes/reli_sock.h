@@ -67,6 +67,9 @@ public:
     ///
 	ReliSock();
 
+	/// Copy ctor
+	ReliSock(const ReliSock &);
+
     ///
 	~ReliSock();
     ///
@@ -91,9 +94,9 @@ public:
     ///
 	int get_bytes_nobuffer(char *buffer, int max_length,
 							 int receive_size=1);
-    ///
+    /// returns -1 on failure, else number of bytes transferred
 	int get_file(const char *destination);
-    ///
+    /// returns -1 on failure, else number of bytes transferred
 	int put_file(const char *source);
     ///
 	float get_bytes_sent() { return _bytes_sent; }
@@ -156,8 +159,9 @@ protected:
 	/*
 	**	Methods
 	*/
-	virtual char * serialize(char *);
-	inline char * serialize() { return(serialize(NULL)); }
+	char * serialize(char *);	// restore state from buffer
+	char * serialize() const;	// save state into buffer
+
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
 
 	/*

@@ -71,6 +71,9 @@ public:
     ///
 	SafeSock();
 
+	/// Copy ctor
+	SafeSock(const SafeSock &);
+
     ///
 	~SafeSock();
 
@@ -114,7 +117,7 @@ protected:
 	**	Methods
 	*/
 	char * serialize(char *);
-	inline char * serialize() { return(serialize(NULL)); }
+	char * serialize() const;
 
 	/*
 	**	Data structures

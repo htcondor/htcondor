@@ -136,6 +136,9 @@ public:
     /// 
 	virtual ~Sock() {}
 
+	/// Copy constructor -- this also dups the underlying socket
+	Sock(const Sock &);
+
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
@@ -166,8 +169,9 @@ protected:
 	int do_connect(char *host, int port);
 
 	inline SOCKET get_socket (void) { return _sock; }
-	char * do_serialize(char *);
-	inline char * do_serialize() { return(do_serialize(NULL)); };
+	char * serialize(char *);
+	char * serialize() const;
+
 #ifdef WIN32
 	int set_inheritable( int flag );
 #else
