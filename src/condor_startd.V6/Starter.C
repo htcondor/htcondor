@@ -450,7 +450,7 @@ Starter::exec_starter( char* starter, char* hostname,
 	if ( resmgr->is_smp() ) {
 		// Note: the "-a" option is a daemon core option, so it
 		// must come first on the command line.
-		sprintf(args, "condor_starter -f -a %s %s", rip->r_id, hostname);
+		sprintf( args, "condor_starter -f -a %s %s", rip->r_id_str, hostname );
 	} else {
 		sprintf(args, "condor_starter -f %s", hostname);
 	}
@@ -512,6 +512,14 @@ Starter::exec_starter( char* starter, char* hostname,
 		dprintf(D_ALWAYS, "execl(%s, \"condor_starter\", %s, 0)\n",
 				starter, hostname);
 	} else {	/* the child */
+
+			/* 
+			   NOTE: Since we're in the child, we don't want to call
+			   EXCEPT() or weird things will try to happen, as the
+			   forked child tries to vacate starter, update the CM,
+			   etc.  So, just dprintf() and exit(), instead.
+			*/
+		
 		/*
 		 * N.B. The child is born with TSTP blocked, so he can be
 		 * sure to set up his handler before accepting it.
@@ -536,22 +544,34 @@ Starter::exec_starter( char* starter, char* hostname,
 			 * done. 
 			 */
 		if( setsid() < 0 ) {
-			EXCEPT( "setsid()" );
+			dprintf( D_ALWAYS, 
+					 "setsid() failed in child, errno: %d\n", errno );
+			exit( 4 );
 		}
 
-		if (dup2(main_sock,0) < 0) {
-			EXCEPT("dup2(%d,%d)", main_sock, 0);
+			// Now, dup the special socks to their well-known fds.
+		if( dup2(main_sock,0) < 0 ) {
+			dprintf( D_ALWAYS, "dup2(%d,0) failed in child, errno: %d\n",
+					 main_sock, errno ); 
+			exit( 4 );
 		}
-		if (dup2(main_sock,1) < 0) {
-			EXCEPT("dup2(%d,%d)", main_sock, 1);
+		if( dup2(main_sock,1) < 0 ) {
+			dprintf( D_ALWAYS, "dup2(%d,1) failed in child, errno: %d\n",
+					 main_sock, errno );
+			exit( 4 );
 		}
-		if (dup2(err_sock,2) < 0) {
-			EXCEPT("dup2(%d,%d)", err_sock, 2);
+		if( dup2(err_sock,2) < 0 ) {
+			dprintf( D_ALWAYS, "dup2(%d,2) failed in child, errno: %d\n",
+					 err_sock, errno );
+			exit( 4 );
 		}
 
+			// Close everything else to prevent fd leaks and other
+			// problems. 
 		for(i = 3; i<n_fds; i++) {
 			(void) close(i);
 		}
+
 		/*
 		 * Starter must be exec'd as root so it can change to client's
 		 * uid and gid.
@@ -560,14 +580,18 @@ Starter::exec_starter( char* starter, char* hostname,
 		if( resmgr->is_smp() ) {
 			(void)execl(starter, "condor_starter", hostname, 
 						daemonCore->InfoCommandSinfulString(), 
-						"-a", rip->r_id, 0 );
+						"-a", rip->r_id_str, 0 );
 		} else {			
 			(void)execl(starter, "condor_starter", hostname, 
 						daemonCore->InfoCommandSinfulString(), 0 );
 
 		}
-		EXCEPT( "execl(%s, condor_starter, %s, %s, 0)", starter, 
-				daemonCore->InfoCommandSinfulString(), hostname );
+			// If we got this far, there was an error in execl().
+		dprintf( D_ALWAYS, 
+				 "ERROR: execl(%s, condor_starter, %s, %s, 0) errno: %d\n", 
+				 starter, daemonCore->InfoCommandSinfulString(), hostname,
+				 errno );
+		exit( 4 );
 	}
 	if ( pid < 0 ) {
 		pid = 0;
