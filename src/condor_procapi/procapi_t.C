@@ -221,25 +221,6 @@ int run_tests(void) {
     else{
       printf("test 6 failed!\n");
     }
-    // performing the getMemInfo test//////////////
-    test_success = true;
-
-    printf("Performing test 7\n");
-    for(int i = 0; i < MEM_INFO_NUMTIMES; i++){
-      temp = getMemInfo_test(verbose);
-      
-      if(temp < 0){
-	printf("test 7 failed in trial %d\n", i);
-	success = temp;
-	test_success = false;
-      }
-    }
-    if(test_success){
-      printf("test 7 successfully completed %d trials!\n",MEM_INFO_NUMTIMES );
-    }
-    else{
-      printf("test 7 failed!\n");
-    }
     
     return success;
 	

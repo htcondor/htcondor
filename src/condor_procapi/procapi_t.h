@@ -79,16 +79,6 @@ const float SET_INFO_MAJ_MARGIN = .2f;
 const int PID_FAMILY_DEPTH = 4;
 const int PID_FAMILY_BREADTH = 1;
 
-
-//constants for meminfo_t/////////////////////////////////////////
-// the percentage of the total memory to allocate the first and second time
-// ALLOC2 must be larger the ALLOC1
-const float MEM_INFO_ALLOC1 = 0.5f;
-const float MEM_INFO_ALLOC2 = 0.75f;
-const float MEM_INFO_ERR_MARGIN = .1f;
-
-///////////////////////////////////////////////////
-
 // run_tests is called by the main function and runs each of the seven tests
 // a number of times specified above.  It returns 1 if all the tests completed
 // successfully,  -1 if at least one failed  
@@ -107,8 +97,6 @@ int getProcSetInfo_test(bool verbose);
 int getPidFamily_test(bool verbose);
 // tests cpuusage via getProcInfo
 int cpuusage_test(bool verbose);
-// tests getMemInfo
-int getMemInfo_test(bool verbose);
 
 // takes an argument of the job name you want to run and periodically prints 
 // information about it performs no checks to see if the data is correct

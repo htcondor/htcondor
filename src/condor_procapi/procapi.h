@@ -342,16 +342,6 @@ class ProcAPI {
    */
   static void printProcInfo ( piPTR pi );
 
-  /** The next function, getMemInfo, has a different implementation for 
-      each *&^%$#@! OS.  The numbers returned for total & free mem are 
-      consistent with the numbers reported by top.
-
-      @param totalmem Total system memory.
-      @param freemem  Free memory
-      @return A -1 is returned on failure, 0 otherwise.
-  */
-  static int getMemInfo ( int& totalmem, int& freemem );
-
   /** This function returns a list of pids that are 'descendents' of that pid.
       I call this a 'family' of pids.  This list is put into pidFamily, which
       I assume is an already-allocated array.  This array will be terminated

@@ -255,6 +255,8 @@ PID_ENTRY* fork_tree(int depth, int breadth, int tree_breadth_change, bool verbo
 
 void end_tree(PID_ENTRY* pids, int num_pids){
 
+  sleep(10);  /* Ensure all children must be SIGSTOPped before we SIGCONT them */
+
   for(int i = 0; i < num_pids; i++){
     kill(pids[i].pid, SIGCONT);
   }

@@ -79,7 +79,8 @@ int getFamilyInfo_test(bool verbose) {
     printf("subtree depth%d\n",pids[i].subtree_depth );
     //test the rss
     int rss = 1024 * get_approx_mem(pids[i].subtree_depth, FAMILY_INFO_BREADTH);
-    if(pi->rssize < rss){
+    if(pi->rssize != 0 &&   /* Maybe process done, entirely paged out */
+       pi->rssize < rss){
       printf("Error process %d:\n", pid);
       printf("rssize as returned by getFamilyInfo %d is less than was allocated %d\n", pi->rssize, rss);
       success = -1;

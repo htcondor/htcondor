@@ -80,7 +80,8 @@ int getProcInfo_test(bool verbose) {
 
     // test the rssize returned in pi against what was alloacted
     int rss = 1024 * get_approx_mem(1,1); //(one node)
-    if(pi->rssize < rss){
+    if(pi->rssize != 0 &&   /* Maybe process done, entirely paged out */
+       pi->rssize < rss){
       printf("Error process %d:\n", pid);
       printf("rssize as returned by getProcInfo %d is less than was allocated %d\n", pi->rssize, rss);
       success = -1;
