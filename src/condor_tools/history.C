@@ -30,16 +30,15 @@
 
 //------------------------------------------------------------------------
 
-static void displayJobShort(ClassAd *ad);
+static void displayJobShort(AttrList* ad);
 static void short_header(void);
 static void short_print(int,int,const char*,int,int,int,int,int,int,const char *);
 static void short_header (void);
-static void displayJobShort (ClassAd *);
 static void shorten (char *, int);
 static char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
-static bool EvalBool(ClassAd *ad, const char *constraint);
+static bool EvalBool(AttrList *ad, const char *constraint);
 
 //------------------------------------------------------------------------
 
@@ -108,7 +107,7 @@ main(int argc, char* argv[])
   int EndFlag=0;
   if (!LongFormat) short_header();
   while(!EndFlag) {
-    ClassAd* ad=new ClassAd(LogFile,"***",EndFlag);
+    AttrList* ad=new AttrList(LogFile,"***",EndFlag);
     if (!constraint || EvalBool(ad, constraint)) {
       if (LongFormat) { ad->fPrint(stdout); printf("\n"); }
       else displayJobShort(ad);
@@ -122,7 +121,7 @@ main(int argc, char* argv[])
 //------------------------------------------------------------------------
 
 static void
-displayJobShort (ClassAd *ad)
+displayJobShort(AttrList* ad)
 {
         int cluster, proc, date, status, prio, image_size, CompDate;
         float utime;
@@ -205,10 +204,10 @@ short_print(
                 cluster,
                 proc,
                 owner,
-                (const char*) SubmitDateStr,
+                SubmitDateStr.Value(),
                 format_time(time),
                 encode_status(status),
-                (const char*) CompDateStr,
+                CompDateStr.Value(),
                 prio,
                 image_size/1024.0,
                 cmd
@@ -292,7 +291,7 @@ encode_status( int status )
 
 //------------------------------------------------------------------------
 
-static bool EvalBool(ClassAd *ad, const char *constraint)
+static bool EvalBool(AttrList* ad, const char *constraint)
 {
     ExprTree *tree;
     EvalResult result;
