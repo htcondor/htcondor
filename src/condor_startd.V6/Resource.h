@@ -128,7 +128,8 @@ public:
 	CpuAttributes*	r_attr;		// Attributes of this resource
 	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
-	char*			r_id;		// CPU id of this resource
+	int				r_id;		// CPU id of this resource (int form)
+	char*			r_id_str;	// CPU id of this resource (string form)
 
 	int				type() { return r_attr->type(); };
 
