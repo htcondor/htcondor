@@ -273,6 +273,7 @@ sub parse_command_line() {
 		      "verbose!",
 		      "maybe-daemon-owner!",
 		      "vdt-post-install=s",
+		      "version!",
 		      "help!")) {
 	print "Unknown options found\n";
 	print_usage();
@@ -280,6 +281,11 @@ sub parse_command_line() {
     }
     if (defined ($opt_help)) {
 	print_usage();
+	exit 0;
+    }
+
+    if (defined ($opt_version)) {
+	print "condor_configure version 1.0.1\n";
 	exit 0;
     }
 
