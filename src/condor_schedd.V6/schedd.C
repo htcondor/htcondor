@@ -311,19 +311,20 @@ Scheduler::count_jobs()
 	for ( i=0; i<N_Owners; i++) {
 
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
-	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
 	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
-	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
 	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
-	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  dprintf (D_ALWAYS, "Sent owner ad to central manager\n");
 	  update_central_mgr(UPDATE_SUBMITTOR_AD);
+	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
+			   Owners[i].Name, UidDomain );
 	}
 
     // send info about deleted owners
@@ -356,7 +357,7 @@ Scheduler::count_jobs()
 		  // entry in the OldOwner table.
       if (k<N_Owners) continue;
 
-	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
 	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
@@ -525,7 +526,7 @@ abort_job_myself(PROC_ID job_id)
 		       dprintf(D_ALWAYS,
 			       "Error in sending SIGUSR1 to %d errno = %d\n",
 			       srec->pid, errno);
-		  else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
+		  else dprintf(D_ALWAYS, "Sent SIGUSR1 to Shadow Pid %d\n",
 			       srec->pid);
 #endif
 	     } else {
@@ -974,7 +975,9 @@ Scheduler::vacate_service(int, Stream *sock)
 {
 	char	*capability = NULL;
 
-	dprintf (D_ALWAYS, "Got VACATE_SERVICE\n");
+	dprintf( D_ALWAYS, "Got VACATE_SERVICE from %s\n", 
+			 sin_to_string(sock->endpoint()) );
+
 	if (!sock->code(capability)) {
 		dprintf (D_ALWAYS, "Failed to get capability\n");
 		return;
@@ -1677,7 +1680,7 @@ Scheduler::delete_shadow_rec(int pid)
 {
 	shadow_rec *rec;
 
-	dprintf( D_ALWAYS, "Entered delete_shadow_rec( %d )\n", pid );
+	dprintf( D_FULLDEBUG, "Entered delete_shadow_rec( %d )\n", pid );
 
 	if (shadowsByPid->lookup(pid, rec) == 0) {
 		dprintf(D_FULLDEBUG,
@@ -1694,7 +1697,7 @@ Scheduler::delete_shadow_rec(int pid)
 		display_shadow_recs();
 		return;
 	}
-	dprintf( D_ALWAYS, "Exited delete_shadow_rec( %d )\n", pid );
+	dprintf( D_FULLDEBUG, "Exited delete_shadow_rec( %d )\n", pid );
 }
 
 void
@@ -1873,7 +1876,7 @@ send_vacate(match_rec* match,int cmd)
 {
 	ReliSock	sock;
 
-	dprintf( D_ALWAYS, "Called send_vacate( %s, %d )\n", match->peer, cmd );
+	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
     
 	/* Connect to the specified host with 20 second timeout */
 	sock.timeout(20);
@@ -2269,11 +2272,15 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 void
 Scheduler::kill_zombie(int pid, PROC_ID* job_id )
 {
+#if 0
+		// This always happens now, no need for a dprintf() 
+		// Derek 3/13/98
     dprintf( D_ALWAYS,
         "Shadow %d died, and left job %d.%d marked RUNNING\n",
         pid, job_id->cluster, job_id->proc );
+#endif
 
-    mark_job_stopped( job_id);
+    mark_job_stopped( job_id );
 }
 
 /*
@@ -2291,7 +2298,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
  
     int     status;
 
-    dprintf( D_ALWAYS, "Entered check_zombie( %d, 0x%x )\n", pid, job_id );
+    dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%x )\n", pid, job_id );
 
     if (GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
 						&status) < 0){
@@ -2314,7 +2321,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
             break;
     }
 
-    dprintf( D_ALWAYS, "Exited check_zombie( %d, 0x%x )\n", pid, job_id );
+    dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%x )\n", pid, job_id );
 }
 
 void
@@ -2769,8 +2776,11 @@ Scheduler::DelMrec(char* id)
 		return -1;
 	}
 	if (matches->lookup(key, rec) == 0) {
-		dprintf(D_FULLDEBUG, "Match record (%s, %s, %d, %d) deleted\n",
-				rec->id, rec->peer, rec->cluster, rec->proc); 
+
+		dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
+				 rec->peer, rec->cluster, rec->proc ); 
+		dprintf( D_FULLDEBUG, "Capability of deleted match: %s\n", rec->id );
+
 		matches->remove(key);
 		// Remove this match from the associated shadowRec.
 		if (rec->shadowRec)
@@ -2870,7 +2880,7 @@ Scheduler::Agent(char* server, char* capability,
 			dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
 			exit(EXITSTATUS_NOTOK);
 		}
-		dprintf( D_ALWAYS, "alive interval %d secs\n", aliveInterval );
+		dprintf( D_FULLDEBUG, "alive interval %d secs\n", aliveInterval );
 	} else if( reply == NOT_OK ) {
 		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
 		exit(EXITSTATUS_NOTOK);
@@ -3016,7 +3026,7 @@ Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 		}
 	}
 	if (!found) {
-		dprintf(D_ALWAYS, "failed to remove shadow rec from mrec!\n");
+		dprintf(D_FULLDEBUG, "failed to remove shadow rec from mrec!\n");
 	}
 }
 
