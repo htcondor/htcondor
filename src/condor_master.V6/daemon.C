@@ -36,6 +36,7 @@
 #include "daemon_list.h"
 #include "sig_name.h"
 #include "env.h"
+#include "internet.h"
 
 
 // these are defined in master.C
