@@ -177,10 +177,17 @@ class Dag {
 
 	void PrintReadyQ( debug_level_t level ) const;
 
+	
+    /* Detects cycle within dag submitted by user
+	   @return true if there is cycle
+	*/
+	bool isCycle ();
+
 	// max number of PRE & POST scripts to run at once (0 means no limit)
     int _maxPreScripts;
     int _maxPostScripts;
-
+	
+	
   protected:
 
     /* Prepares to submit job by running its PRE Script if one exists,
@@ -214,6 +221,9 @@ class Dag {
 
 	void RestartNode( Job *node, bool recovery );
 
+	/* DFS number the jobs in the DAG in order to detect cycle*/
+	void DFSVisit (Job * job);
+	
     // name of consolidated condor log
     char        * _condorLogName;
 
@@ -252,6 +262,8 @@ class Dag {
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;
+	
+	int DFS_ORDER; 
 };
 
 #endif /* #ifndef DAG_H */

@@ -60,6 +60,7 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
 	debug_printf( DEBUG_DEBUG_4, "_maxJobsSubmitted = %d, "
 				  "_maxPreScripts = %d, _maxPostScripts = %d\n",
 				  _maxJobsSubmitted, _maxPreScripts, _maxPostScripts );
+	DFS_ORDER = 0;
 }
 
 //-------------------------------------------------------------------------
@@ -933,3 +934,79 @@ Dag::RestartNode( Job *node, bool recovery )
 		StartNode( node );
 	}
 }
+
+
+// Number the nodes according to DFS order 
+void 
+Dag::DFSVisit (Job * job)
+{
+	//Check whether job has been numbered already
+	if (job==NULL || job->_visited)
+		return;
+	
+	//Remember that the job has been numbered	
+	job->_visited = true; 
+	
+	//Get the children of current job	
+	SimpleList <JobID_t> & children = job->GetQueueRef(Job::Q_CHILDREN);
+	SimpleListIterator <JobID_t> child_itr (children); 
+	
+	JobID_t childID;
+	child_itr.ToBeforeFirst();
+	
+	while (child_itr.Next(childID))
+	{
+		Job * child = GetJob (childID);
+		DFSVisit (child);
+	}
+
+	DFS_ORDER++;
+	job->_dfsOrder = DFS_ORDER;
+}		
+
+// Detects cycle and warns user about it
+bool 
+Dag::isCycle ()
+{
+	bool cycle = false; 
+	Job * job;
+	JobID_t childID;
+	ListIterator <Job> joblist (_jobs);
+	SimpleListIterator <JobID_t> child_list;
+
+	//Start DFS numbering from zero, although not necessary
+	DFS_ORDER = 0; 
+	
+	//Visit all jobs in DAG and number them	
+	joblist.ToBeforeFirst();	
+	while (joblist.Next(job))
+	{
+  		if (!job->_visited &&
+			job->GetQueueRef(Job::Q_PARENTS).Number()==0)
+			DFSVisit (job);	
+	}	
+
+	//Detect cycle
+	joblist.ToBeforeFirst();	
+	while (joblist.Next(job))
+	{
+		child_list.Initialize(job->GetQueueRef(Job::Q_CHILDREN));
+		child_list.ToBeforeFirst();
+		while (child_list.Next(childID))
+		{
+			Job * child = GetJob (childID);
+
+			//No child's DFS order should be smaller than parent's
+			if (child->_dfsOrder >= job->_dfsOrder) {
+#ifdef REPORT_CYCLE	
+				debug_printf (DEBUG_QUIET, 
+							  "Cycle in the graph possibly involving jobs %s and %s\n",
+							  job->GetJobName(), child->GetJobName());
+#endif 			
+				cycle = true;
+			}
+		}		
+	}
+	return cycle;
+}
+

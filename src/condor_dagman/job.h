@@ -194,7 +194,12 @@ class Job {
 
     // the return code of the job
     int retval;
-  
+	
+    //Node has been visited by DFS order
+	bool _visited; 
+	
+	//DFS ordering of the node
+	int _dfsOrder; 
   private:
   
     // filename of condor submit file

@@ -70,6 +70,7 @@ Job::Job (const char *jobName, const char *cmdFile):
 
     retry_max = 0;
     retries = 0;
+	_visited = false;
 }
 
 //---------------------------------------------------------------------------

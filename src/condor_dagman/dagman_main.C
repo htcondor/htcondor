@@ -130,12 +130,16 @@ void print_status();
 //---------------------------------------------------------------------------
 int main_init (int argc, char ** const argv) {
 
-    // The DCpermission (last parm) should probably be PARENT, if it existed
+	printf ("Executing condor dagman ... \n");
+
+		
+	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal (DC_SIGUSR1, "DC_SIGUSR1",
                                  (SignalHandler) main_shutdown_remove,
                                  "main_shutdown_remove", NULL,
                                  IMMEDIATE_FAMILY);
-
+		
+	cout<<"Here   2"<<endl;
     debug_progname = basename(argv[0]);
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
@@ -145,7 +149,7 @@ int main_init (int argc, char ** const argv) {
     for (i = 0 ; i < argc ; i++) {
         debug_printf( DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i] );
     }
-  
+	cout<<"Here   3	"<<endl;	
     if (argc < 2) Usage();  //  Make sure an input file was specified
 
 	// get dagman job id from environment
@@ -153,7 +157,7 @@ int main_init (int argc, char ** const argv) {
 	if( DAGManJobId == NULL ) {
 		DAGManJobId = strdup( "unknown (requires condor_schedd >= v6.3)" );
 	}
-  
+	cout<<"Here   4"<<endl;	
     //
     // Process command-line arguments
     //
@@ -287,6 +291,7 @@ int main_init (int argc, char ** const argv) {
     // Create the DAG
     //
   
+
     G.dag = new Dag( condorLogName, G.maxJobs, G.maxPreScripts,
 					 G.maxPostScripts );
 
@@ -302,7 +307,13 @@ int main_init (int argc, char ** const argv) {
     if (!parse (G.datafile, G.dag)) {
         debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n", G.datafile);
     }
+#ifndef NOT_DETECT_CYCLE
+	if (G.dag->isCycle())
+	{
+		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
+	}
 
+#endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
                    G.dag->NumJobs());
 
