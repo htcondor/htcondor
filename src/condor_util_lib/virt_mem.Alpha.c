@@ -44,6 +44,15 @@ int parse_swapon_line( const char *line );
 int calc_virt_memory();
 int get_data_size_limit();
 
+/*
+ *  DEFAULT_SWAPSPACE
+ *
+ *  This constant is used when we can't get the available swap space through
+ *  other means.  -- Ajitk
+ */
+
+#define DEFAULT_SWAPSPACE       100000 /* ..dhaval 7/20 */
+
 #define TESTING 0
 #if TESTING
 main()
@@ -110,7 +119,7 @@ calc_virt_memory()
 		} else {
 			dprintf( D_ALWAYS, "Can't parse swapon line \"%s\"\n", buf );
 		}
-		return -1;
+		return DEFAULT_SWAPSPACE;
 	}
 
 	limit = get_data_size_limit();
