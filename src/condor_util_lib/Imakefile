@@ -102,7 +102,7 @@ GETMNT_OBJ = getmnt.o
 	$(GETWD_OBJ) $(INSQUE_OBJ) disk_req.o env_param.o ckpt_name.o \
 	lock_file.NON_POSIX.o block_condor.o my_popen.o $(GETMNT_OBJ)
 
-all_target( test util_lib.a )
+all_target( util_lib.a )
 
 test.o: test.c
 	gcc $(CFLAGS) -c test.c
