@@ -90,7 +90,7 @@ HTML files.  Open up the file "index.html" and verify things look good.
 
 6. Add the make_stats program to cron.  Running "make_stats setup" in
 step 5 should have created a "cronentries" file.  This cronentries file
-is ready to be processed by your Unix system’s crontab command.  Enter
+is ready to be processed by your Unix system's crontab command.  Enter
 "man crontab" on your system if you are not familiar with the crontab
 command and/or the cron daemon.  Take a look at the cronentries file; by
 default, it will run "make_stats hour" every 15 minutes, "make_stats
@@ -103,7 +103,7 @@ probably not run as root.  These commands can run as any user that has
 read/write access to the VIEWDIR.  To add these commands to cron, enter: 
    crontab cronentries
 
-7. That’s it!  Point your web browser at the VIEWDIR directory, and you
+7. That's it!  Point your web browser at the VIEWDIR directory, and you
 should be all set.
 
 
