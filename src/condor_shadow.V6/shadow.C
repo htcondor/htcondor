@@ -80,7 +80,6 @@ extern "C" {
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
-	void MvTmpCkpt();
 	FILE	*fdopen();
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
