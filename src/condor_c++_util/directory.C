@@ -317,7 +317,7 @@ Directory::Next()
   or condor, we return -1.
 */
 int
-do_stat( const char *path, struct stat *buf )
+Directory::do_stat( const char *path, struct stat *buf )
 {
 	priv_state priv;
 
