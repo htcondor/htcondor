@@ -1,0 +1,287 @@
+#! /usr/bin/env perl
+## ***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+## *
+## * Condor Software Copyright Notice
+## * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+## * University of Wisconsin-Madison, WI.
+## *
+## * This source code is covered by the Condor Public License, which can
+## * be found in the accompanying LICENSE.TXT file, or online at
+## * www.condorproject.org.
+## *
+## * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+## * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+## * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+## * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+## * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+## * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+## * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+## * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+## * RIGHT.
+## *
+## ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+
+## ********************************************************************
+## This is condor_periodic (or hawkeye_periodic).  The purpose of
+## condor_periodic is to run a "target" executable at a fixed periodic
+## frequency, but still under the control of the condor_master daemon.
+##
+## In general, to run it, create a symlink from the "real" executable
+## script to one named condor_periodic-<name>, where name is a logical
+## name.  This script will examine $0 (ARGV[0] in the "C" world) to
+## determine it's own logical name, and this can be overridden with
+## the "--name=<name>" command line argument.  If it is unable to
+## determine a name using either of these methods, it will default to
+## "periodic".
+##
+## condor_periodic will then use this name in forming the
+## condor_config parameters that it will query for operational
+## parameters.  In particular, it will use:
+##
+##  <NAME>_LOG: This is the file to log to.
+##
+##  MAX_<NAME>_LOG: The max log file size
+##
+##  LOG: The log directory (used if <NAME>_LOG is not defined)
+##
+##  <NAME>_PERIOD: The period (in seconds) in which to run the target
+##  program.
+##
+##  <NAME>_EXECUTABLE: The name of the target executable.
+##
+## Obviously, to make it all work, you need to add it to the
+## DAEMON_LIST: 
+##
+##  DAEMON_LIST = MASTER, STARTD, TRIGGER
+##  ...
+##  TRIGGER = $(SBIN)/condor_periodic-trigger
+##
+## ***********************************************************************
+
+use strict;
+use warnings;
+
+# Settings
+my $Reconfig = 1;
+my $Exit = 0;
+my $Name = "periodic";
+my $Distribution = "condor";
+
+my %Params =
+    (
+     LogFile	=> { Value => "", Format => "%s_LOG" },
+     LogDir	=> { Value => "", Name => "LOG" },
+     MaxLog	=> { Value => 64000, Format => "MAX_%s_LOG" },
+     Period	=> { Value => 60, Format => "%s_PERIOD" },
+     Executable	=> { Value => "", Format => "%s_EXECUTABLE" },
+    );
+
+
+# Handle HUP
+$SIG{HUP} = sub {
+    $Reconfig = 1;
+};
+
+# Handle terminate signal
+$SIG{TERM} = sub {
+    $Exit = 1;
+};
+
+# Look at $0, see what we can gleen from it...
+if ( $0 =~ /(condor|hawkeye)_periodic([\-_](\w+))$/ )
+{
+    $Distribution = $1;
+    $Name = $3 if ( defined $3 && $3 ne "" );
+}
+
+# Command line args
+foreach my $Arg ( @ARGV )
+{
+    if ( $Arg eq "-t" )
+    {
+	$Params{LogFile}{Value} = "&STDERR";
+    }
+    elsif ( $Arg eq "-f" )
+    {
+    }
+    elsif ( $Arg =~ /^--name=(\w+)$/ )
+    {
+	$Name = $1;
+    }
+    elsif ( $Arg =~ /^--(distro|distribution)=(\w+)$/ )
+    {
+	$Distribution = $2;
+    }
+    else
+    {
+	die "Unknown arg '$Arg'";
+    }
+}
+
+# Set a couple of things
+my $ConfigProg = $Distribution . "_config_val";
+foreach my $Key ( keys %Params )
+{
+    if ( exists $Params{$Key}{Format} )
+    {
+	$Params{$Key}{Name} = uc( sprintf( $Params{$Key}{Format}, $Name ) );
+    }
+}
+
+# Get the configuration value for a named parameter.
+sub Config( $ )
+{
+    my $Param = shift;
+    die "Config: No '$Param' parameter" if ( ! exists $Params{$Param} );
+
+    my $Tmp = `$ConfigProg -master $Params{$Param}{Name}`;
+
+    $Tmp = "" if ( !defined $Tmp );
+    chomp $Tmp;
+    $Tmp = "" if ( $Tmp eq "Not defined" );
+    print "'$Param':'$Params{$Param}{Name}' => '$Tmp'\n";
+    $Tmp;
+}
+
+# Set the value for a named parameter
+sub SetParam( $$ )
+{
+    my $Param = shift;
+    my $Value = shift;
+
+    die "SetParam: No '$Param' parameter" if ( ! exists $Params{$Param} );
+    $Params{$Param}{Value} = $Value;
+}
+
+# Get the value for a named parameter
+sub GetParam( $ )
+{
+    my $Param = shift;
+
+    die "GetParam: No '$Param' parameter" if ( ! exists $Params{$Param} );
+    return $Params{$Param}{Value};
+}
+
+# Determine the log directory
+if ( GetParam( "LogFile" ) eq "" )
+{
+    my $Tmp = Config( "LogDir" );
+    if ( $Tmp ne "" )
+    {
+	SetParam( "LogDir", $Tmp );
+	die "Bad log dir '$Tmp'" if ( ! -d $Tmp );
+	SetParam( "LogFile", $Tmp . "/" . ucfirst( $Name ) . "Log" );
+    }
+
+    $Tmp = Config( "LogFile" );
+    $Tmp = "" if ( ! defined $Tmp );
+    if ( $Tmp ne "" && $Tmp ne "Not defined" )
+    {
+	chomp $Tmp;
+	SetParam( "LogFile", $Tmp );
+    }
+}
+
+# Log a line
+sub Log( $ )
+{
+    my $What = shift;
+    my $LogFile = GetParam( "LogFile" );
+    my $MaxLog = GetParam( "MaxLog" );
+
+    if ( $LogFile eq "&STDERR" )
+    {
+	print STDERR "$What";
+	return 1;
+    }
+    open( LOGFILE, ">>$LogFile" ) || die "Can't write to log '$LogFile'";
+    print LOGFILE "$What";
+    close( LOGFILE );
+    my $Size = -s $LogFile;
+    if ( $Size > $MaxLog )
+    {
+	rename( $LogFile, "$LogFile.old" );
+	open( LOGFILE, ">>$LogFile" ) || die "Can't write to log '$LogFile'";
+	print LOGFILE "Log rotated to $LogFile.old\n";
+	close( LOGFILE );
+    }
+    return 1;
+}
+
+# Loop 'til we're done
+my $NextRun = 0;
+while(  ! $Exit )
+{
+    my $Now = time( );
+
+    # Reconfig?
+    if ( $Reconfig )
+    {
+	my $String = "";
+	my $New;
+
+	# New period?
+	$String = Config( "Period" );
+	$New = eval( $String);
+	if ( ( defined $New ) && ( $New =~ /^\d+$/ ) )
+	{
+	    my $Period = GetParam( "Period" );
+	    if ( $New != $Period )
+	    {
+		if ( $NextRun )
+		{
+		    $NextRun += ( $New - $Period );
+		}
+		SetParam( "Period", $New );
+	    }
+	}
+
+	# New executable?
+	$String = Config( "Executable" );
+	if ( $String ne "" )
+	{
+	    SetParam( "Executable", $String );
+	}
+
+	# New log max size?
+	$String = Config( "MaxLog" );
+	$New = eval( $String);
+	if ( ( defined $New ) && ( $New =~ /^\d+$/ ) )
+	{
+	    SetParam ( "MaxLog", $New );
+	}
+
+	# Done
+	$Reconfig = 0;
+    }
+
+    # Time to run?
+    if ( $Now < $NextRun )
+    {
+	sleep( $NextRun - $Now );
+	next;
+    }
+    $NextRun = $Now if ( $NextRun == 0 );
+    $NextRun = $NextRun + GetParam( "Period" );
+
+    # Finally, run it
+    my $Exe = GetParam( "Executable" );
+    Log( "Running '$Exe' @ " . localtime($Now) . "\n" );
+    if ( $Exe ne "" )
+    {
+	if ( ! open( OUT, "$Exe 2>&1 |" ) )
+	{
+	    Log( "Can't run $Exe: $!\n" );
+	    next;
+	}
+	while( <OUT> )
+	{
+	    Log( $_ );
+	}
+	close( OUT );
+    }
+}
+
+# Bye
+exit 0;
