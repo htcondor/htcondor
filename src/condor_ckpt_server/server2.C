@@ -14,6 +14,12 @@
 #include <sys/wait.h>
 #include <iomanip.h>
 
+#define _POSIX_SOURCE
+
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_config.h"
+
 
 #define DEBUG
 
@@ -24,59 +30,58 @@ Alarm  rt_alarm;
 
 Server::Server()
 {
-  char*          temp;
-  struct in_addr temp_addr;
-
-  more = 1;
-  req_ID = 0;
-  temp = gethostaddr();
-  if (temp == NULL)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: unable to obtain host's IP address" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(HOSTNAME_ERROR);
+	char*          temp;
+	struct in_addr temp_addr;
+	
+	more = 1;
+	req_ID = 0;
+	temp = gethostaddr();
+	if (temp == NULL) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: unable to obtain host's IP address" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(HOSTNAME_ERROR);
     }
-  memcpy((char*) &server_addr, temp, sizeof(struct in_addr));
-  memcpy((char*) &temp_addr, temp, sizeof(struct in_addr));
-  if (memcmp(&server_addr, &temp_addr, sizeof(struct in_addr)) != 0)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: checkpoint server running on illegal server" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(ILLEGAL_SERVER);
+	memcpy((char*) &server_addr, temp, sizeof(struct in_addr));
+	memcpy((char*) &temp_addr, temp, sizeof(struct in_addr));
+	if (memcmp(&server_addr, &temp_addr, sizeof(struct in_addr)) != 0) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: checkpoint server running on illegal server" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(ILLEGAL_SERVER);
     }
-  store_req_sd = -1;
-  restore_req_sd = -1;
-  service_req_sd = -1;
-  max_xfers = 0;
-  max_store_xfers = 0;
-  max_restore_xfers = 0;
+	store_req_sd = -1;
+	restore_req_sd = -1;
+	service_req_sd = -1;
+	max_xfers = 0;
+	max_store_xfers = 0;
+	max_restore_xfers = 0;
 }
 
 
 Server::~Server()
 {
-  if (store_req_sd >= 0)
-    close(store_req_sd);
-  if (restore_req_sd >=0)
-    close(restore_req_sd);
-  if (service_req_sd >=0)
-    close(service_req_sd);
+	if (store_req_sd >= 0)
+		close(store_req_sd);
+	if (restore_req_sd >=0)
+		close(restore_req_sd);
+	if (service_req_sd >=0)
+		close(service_req_sd);
 }
 
 
 void Server::Init(int max_new_xfers,
-		  int max_new_store_xfers,
-		  int max_new_restore_xfers)
+				  int max_new_store_xfers,
+				  int max_new_restore_xfers)
 {
 	struct stat log_stat;
 	char        log_filename[100];
 	char        old_log_filename[100];
+	char		*ckpt_server_dir;
 #ifdef DEBUG
 	char        log_msg[256];
 	char        hostname[100];
@@ -88,6 +93,7 @@ void Server::Init(int max_new_xfers,
 	max_restore_xfers = max_new_restore_xfers;
 	num_store_xfers = 0;
 	num_restore_xfers = 0;
+#if 0
 	sprintf(log_filename, "%s%s", LOCAL_DRIVE_PREFIX, LOG_FILE);
 	if (stat(log_filename, &log_stat) == 0) {
 		sprintf(old_log_filename, "%s%s", LOCAL_DRIVE_PREFIX, OLD_LOG_FILE);
@@ -102,6 +108,21 @@ void Server::Init(int max_new_xfers,
 		cerr << "ERROR:" << endl << endl;
 		exit(LOG_FILE_OPEN_ERROR);
     }
+#endif
+
+	config( "condor_ckpt_server", 0);
+	dprintf_config( "CKPT_SERVER", 2 );
+
+	ckpt_server_dir = param( "CKPT_SERVER_DIR" );
+	if (ckpt_server_dir) {
+		if (chdir(ckpt_server_dir) < 0) {
+			dprintf(D_ALWAYS, "Failed to chdir() to %s\n", ckpt_server_dir);
+			exit(1);
+		}
+		dprintf(D_ALWAYS, "CKPT_SERVER running in directory %s\n", 
+				ckpt_server_dir);
+	}
+
 	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
 	restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
 	service_req_sd = SetUpPort(CKPT_SVR_SERVICE_REQ_PORT);
@@ -1007,18 +1028,15 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 {
 	struct sockaddr_in chkpt_addr;
 	int                chkpt_addr_len;
-	int                bytes_read;
-	int                bytes_remaining;
-	char               buffer[DATA_BUFFER_SIZE];
 	int                xfer_sd;
-	ofstream           chkpt_file;
-	u_lint             bytes_recvd=0;
+	ssize_t            bytes_recvd=0;
 	int                buf_size=DATA_BUFFER_SIZE;
+	int				   file_fd;
 	
-	chkpt_file.open(pathname);
-	if (chkpt_file.fail())
-		exit(CHILDTERM_CANNOT_CREATE_CHKPT_FILE);
-	bytes_remaining = file_size;
+	file_fd = open(pathname, O_WRONLY|O_CREAT|O_TRUNC,0664);
+	if (file_fd < 0) {
+		exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
+	}
 	chkpt_addr_len = sizeof(struct sockaddr_in);
 	// May cause an ACCEPT_ERROR error
 	if ((xfer_sd=I_accept(data_conn_sd, &chkpt_addr, &chkpt_addr_len)) ==
@@ -1034,199 +1052,168 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	// Changing buffer size may fail
 	setsockopt(xfer_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size, 
 			   sizeof(buf_size));
-	while (bytes_remaining > 0) {
-		errno = 0;
-		bytes_read = read(xfer_sd, buffer, DATA_BUFFER_SIZE);
-		if ((bytes_read < 0) || ((errno != EINTR) && (bytes_read == 0))) {
-			close(xfer_sd);
-			chkpt_file.close();
-			exit(CHILDTERM_EXEC_KILLED_SOCKET);
-		}
-		chkpt_file.write(buffer, bytes_read);
-		if (chkpt_file.fail()) {
-			close(xfer_sd);
-			chkpt_file.close();
-			exit(CHILDTERM_ERROR_ON_CHKPT_FILE_WRITE);
-		}
-		bytes_remaining -= bytes_read;
-		bytes_recvd += bytes_read;
-		if (bytes_remaining < 0) {
-			close(xfer_sd);
-			chkpt_file.close();
-			exit(CHILDTERM_WRONG_FILE_SIZE);
-		}
-    }
+	bytes_recvd = stream_file_xfer(xfer_sd, file_fd, file_size);
 	bytes_recvd = htonl(bytes_recvd);
 	net_write(xfer_sd, (char*) &bytes_recvd, sizeof(bytes_recvd));
 	close(xfer_sd);
-	chkpt_file.close();
+	fsync( file_fd );
+	close(file_fd);
 }
 
 
 void Server::ProcessRestoreReq(int             req_id,
-			       int             req_sd,
-			       struct in_addr  shadow_IP,
-			       restore_req_pkt restore_req)
+							   int             req_sd,
+							   struct in_addr  shadow_IP,
+							   restore_req_pkt restore_req)
 {
-  struct stat        chkpt_file_status;
-  struct sockaddr_in server_sa;
-  int                ret_code;
-  restore_reply_pkt  restore_reply;
-  int                data_conn_sd;
-  int                child_pid;
-  char               pathname[MAX_PATHNAME_LENGTH];
-  int                preexist;
-  char               log_msg[256];
-  int                err_code;
-
-  restore_req.ticket = ntohl(restore_req.ticket);
-  if (restore_req.ticket != AUTHENTICATION_TCKT)
-    {
-      restore_reply.server_name.s_addr = htonl(0);
-      restore_reply.port = htons(0);
-      restore_reply.file_size = htonl(0);
-      restore_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
-      net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-      BlockSignals();
-      sprintf(log_msg, "Restore request from %s DENIED:", 
-	      inet_ntoa(shadow_IP));
-      Log(req_id, log_msg);
-      Log("Invalid authentication ticket used");
-      UnblockSignals();
-      close(req_sd);
-      return;
+	struct stat        chkpt_file_status;
+	struct sockaddr_in server_sa;
+	int                ret_code;
+	restore_reply_pkt  restore_reply;
+	int                data_conn_sd;
+	int                child_pid;
+	char               pathname[MAX_PATHNAME_LENGTH];
+	int                preexist;
+	char               log_msg[256];
+	int                err_code;
+	
+	restore_req.ticket = ntohl(restore_req.ticket);
+	if (restore_req.ticket != AUTHENTICATION_TCKT) {
+		restore_reply.server_name.s_addr = htonl(0);
+		restore_reply.port = htons(0);
+		restore_reply.file_size = htonl(0);
+		restore_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
+		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		BlockSignals();
+		sprintf(log_msg, "Restore request from %s DENIED:", 
+				inet_ntoa(shadow_IP));
+		Log(req_id, log_msg);
+		Log("Invalid authentication ticket used");
+		UnblockSignals();
+		close(req_sd);
+		return;
     }
-  if ((strlen(restore_req.filename) == 0) || (strlen(restore_req.owner) == 0))
-    {
-      restore_reply.server_name.s_addr = htonl(0);
-      restore_reply.port = htons(0);
-      restore_reply.file_size = htonl(0);
-      restore_reply.req_status = htons(BAD_REQ_PKT);
-      net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-      BlockSignals();
-      sprintf(log_msg, "Restore request from %s DENIED:", 
-	      inet_ntoa(shadow_IP));
-      Log(req_id, log_msg);
-      Log("Incomplete request packet");
-      UnblockSignals();
-      close(req_sd);
-      return;
+	if ((strlen(restore_req.filename) == 0) || 
+		(strlen(restore_req.owner) == 0)) {
+		restore_reply.server_name.s_addr = htonl(0);
+		restore_reply.port = htons(0);
+		restore_reply.file_size = htonl(0);
+		restore_reply.req_status = htons(BAD_REQ_PKT);
+		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		BlockSignals();
+		sprintf(log_msg, "Restore request from %s DENIED:", 
+				inet_ntoa(shadow_IP));
+		Log(req_id, log_msg);
+		Log("Incomplete request packet");
+		UnblockSignals();
+		close(req_sd);
+		return;
     }
-  BlockSignals();
+	BlockSignals();
 #ifdef DEBUG  
-  sprintf(log_msg, "RESTORE request from %s", restore_req.owner);
-  Log(req_id, log_msg);
-  sprintf(log_msg, "File name: %s", restore_req.filename);
-  Log(log_msg);
+	sprintf(log_msg, "RESTORE request from %s", restore_req.owner);
+	Log(req_id, log_msg);
+	sprintf(log_msg, "File name: %s", restore_req.filename);
+	Log(log_msg);
 #endif
-  sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, inet_ntoa(shadow_IP),
-	  restore_req.owner, restore_req.filename);
-  ret_code = imds.LockStatus(shadow_IP, restore_req.owner, 
-			     restore_req.filename);
-  UnblockSignals();
-  if (ret_code == EXCLUSIVE_LOCK)
-    {
-      restore_reply.server_name.s_addr = htonl(0);
-      restore_reply.port = htons(0);
-      restore_reply.file_size = htonl(0);
-      restore_reply.req_status = htons(ret_code);
-      net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-      BlockSignals();
-      sprintf(log_msg, "Restore request from %s DENIED:", 
-	      inet_ntoa(shadow_IP));
-      Log(req_id, log_msg);
-      Log("File is currently LOCKED");
-      UnblockSignals();
-      close(req_sd);
-      return;
+	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, inet_ntoa(shadow_IP),
+			restore_req.owner, restore_req.filename);
+	ret_code = imds.LockStatus(shadow_IP, restore_req.owner, 
+							   restore_req.filename);
+	UnblockSignals();
+	if (ret_code == EXCLUSIVE_LOCK) {
+		restore_reply.server_name.s_addr = htonl(0);
+		restore_reply.port = htons(0);
+		restore_reply.file_size = htonl(0);
+		restore_reply.req_status = htons(ret_code);
+		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		BlockSignals();
+		sprintf(log_msg, "Restore request from %s DENIED:", 
+				inet_ntoa(shadow_IP));
+		Log(req_id, log_msg);
+		Log("File is currently LOCKED");
+		UnblockSignals();
+		close(req_sd);
+		return;
     }
-  else if (((preexist=stat(pathname, &chkpt_file_status)) != 0) && 
-	   (ret_code == DOES_NOT_EXIST))
-    {
-      restore_reply.server_name.s_addr = htonl(0);
-      restore_reply.port = htons(0);
-      restore_reply.file_size = htonl(0);
-      restore_reply.req_status = htons(DESIRED_FILE_NOT_FOUND);
-      net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-      BlockSignals();
-      sprintf(log_msg, "Restore request from %s DENIED:", 
-	      inet_ntoa(shadow_IP));
-      Log(req_id, log_msg);
-      Log("Requested file does not exist on server");
-      UnblockSignals();
-      close(req_sd);
-      return;
-    }
-  else if ((ret_code == UNLOCKED) || (preexist == 0))
-    {
-      if (preexist == 0)                   // File exists but is not in
+	else if (((preexist=stat(pathname, &chkpt_file_status)) != 0) && 
+			 (ret_code == DOES_NOT_EXIST)) {
+		restore_reply.server_name.s_addr = htonl(0);
+		restore_reply.port = htons(0);
+		restore_reply.file_size = htonl(0);
+		restore_reply.req_status = htons(DESIRED_FILE_NOT_FOUND);
+		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		BlockSignals();
+		sprintf(log_msg, "Restore request from %s DENIED:", 
+				inet_ntoa(shadow_IP));
+		Log(req_id, log_msg);
+		Log("Requested file does not exist on server");
+		UnblockSignals();
+		close(req_sd);
+		return;
+    } else if ((ret_code == UNLOCKED) || (preexist == 0)) {
+      if (preexist == 0) {                  // File exists but is not in
                                            //   in-memory data structure
-	{
-	  BlockSignals();
-	  imds.AddFile(shadow_IP, restore_req.owner, restore_req.filename, 
-		       chkpt_file_status.st_size, ON_SERVER);
-	  UnblockSignals();
-	}
+		  BlockSignals();
+		  imds.AddFile(shadow_IP, restore_req.owner, restore_req.filename, 
+					   chkpt_file_status.st_size, ON_SERVER);
+		  UnblockSignals();
+	  }
       data_conn_sd = I_socket();
-      if (data_conn_sd == INSUFFICIENT_RESOURCES)
-	{
-	  restore_reply.server_name.s_addr = htonl(0);
-	  restore_reply.port = htons(0);
-	  restore_reply.file_size = htonl(0);
-	  restore_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
-	  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-	  BlockSignals();
-	  sprintf(log_msg, "Restore request from %s DENIED:", 
-		  inet_ntoa(shadow_IP));
-	  Log(req_id, log_msg);
-	  Log("Insufficient buffers/ports to handle request");
-	  UnblockSignals();
-	  close(req_sd);
-	  return;
-	}
-      else if (data_conn_sd == SOCKET_ERROR)
-	{
-	  restore_reply.server_name.s_addr = htonl(0);
-	  restore_reply.port = htons(0);
-	  restore_reply.file_size = htonl(0);
-	  restore_reply.req_status = htons(abs(SOCKET_ERROR));
-	  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
-	  BlockSignals();
-	  sprintf(log_msg, "Restore request from %s DENIED:", 
-		  inet_ntoa(shadow_IP));
-	  Log(req_id, log_msg);
-	  Log("Cannot botain a new socket from server");
-	  UnblockSignals();
-	  close(req_sd);
-	  return;
-	}
+      if (data_conn_sd == INSUFFICIENT_RESOURCES) {
+		  restore_reply.server_name.s_addr = htonl(0);
+		  restore_reply.port = htons(0);
+		  restore_reply.file_size = htonl(0);
+		  restore_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
+		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		  BlockSignals();
+		  sprintf(log_msg, "Restore request from %s DENIED:", 
+				  inet_ntoa(shadow_IP));
+		  Log(req_id, log_msg);
+		  Log("Insufficient buffers/ports to handle request");
+		  UnblockSignals();
+		  close(req_sd);
+		  return;
+	  } else if (data_conn_sd == SOCKET_ERROR) {
+		  restore_reply.server_name.s_addr = htonl(0);
+		  restore_reply.port = htons(0);
+		  restore_reply.file_size = htonl(0);
+		  restore_reply.req_status = htons(abs(SOCKET_ERROR));
+		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		  BlockSignals();
+		  sprintf(log_msg, "Restore request from %s DENIED:", 
+				  inet_ntoa(shadow_IP));
+		  Log(req_id, log_msg);
+		  Log("Cannot botain a new socket from server");
+		  UnblockSignals();
+		  close(req_sd);
+		  return;
+	  }
       bzero((char*) &server_sa, sizeof(server_sa));
       server_sa.sin_family = AF_INET;
       server_sa.sin_port = htons(0);
       server_sa.sin_addr = server_addr;
-      if ((err_code=I_bind(data_conn_sd, &server_sa)) != OK)
-	{
-	  cerr << endl << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR: I_bind() returns an error (#" << ret_code
-	       << ")" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl << endl;
-	  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
-	  Log(0, log_msg);
-	  exit(ret_code);
-	}
-      if (I_listen(data_conn_sd, 1) != OK)
-	{
-	  cerr << endl << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR: I_listen() fails to listen" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl << endl;
-	  sprintf(log_msg, "ERROR: I_listen() fails to listen");
-	  Log(0, log_msg);
-	  exit(LISTEN_ERROR);
-	}
+      if ((err_code=I_bind(data_conn_sd, &server_sa)) != OK) {
+		  cerr << endl << "ERROR:" << endl;
+		  cerr << "ERROR:" << endl;
+		  cerr << "ERROR: I_bind() returns an error (#" << ret_code
+			  << ")" << endl;
+		  cerr << "ERROR:" << endl;
+		  cerr << "ERROR:" << endl << endl;
+		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
+		  Log(0, log_msg);
+		  exit(ret_code);
+	  }
+      if (I_listen(data_conn_sd, 1) != OK) {
+		  cerr << endl << "ERROR:" << endl;
+		  cerr << "ERROR:" << endl;
+		  cerr << "ERROR: I_listen() fails to listen" << endl;
+		  cerr << "ERROR:" << endl;
+		  cerr << "ERROR:" << endl << endl;
+		  sprintf(log_msg, "ERROR: I_listen() fails to listen");
+		  Log(0, log_msg);
+		  exit(LISTEN_ERROR);
+	  }
       BlockSignals();
       imds.Lock(shadow_IP, restore_req.owner, restore_req.filename, XMITTING);
       UnblockSignals();
@@ -1237,53 +1224,44 @@ void Server::ProcessRestoreReq(int             req_id,
       restore_reply.file_size = htonl(chkpt_file_status.st_size);
       restore_reply.req_status = htons(OK);
       if (net_write(req_sd, (char*) &restore_reply, 
-		    sizeof(restore_reply_pkt)) < 0)
-	{
-	  close(req_sd);
-	  BlockSignals();
-	  sprintf(log_msg, "Restore request from %s DENIED:", 
-		  inet_ntoa(shadow_IP));
-	  Log(req_id, log_msg);
-	  Log("Cannot send IP/port to shadow (socket closed)");
-	  UnblockSignals();
-	  close(data_conn_sd);
-	}
-      else
-	{
-	  close(req_sd);
-	  BlockSignals();
-	  child_pid = fork();
-	  if (child_pid < 0)
-	    {
-	      close(data_conn_sd);
-	      Log(req_id, "Unable to honor restore request:");
-	      Log("Cannot fork child processes");
-	    }
-	  else if (child_pid != 0)             // Parent (Master) process
-	    {
-	      close(data_conn_sd);
-	      num_restore_xfers++;
-	      transfers.Insert(child_pid, req_id, shadow_IP, 
-			       restore_req.filename, restore_req.owner,
-			       restore_reply.file_size, restore_req.key,
-			       restore_req.priority, XMIT);
-	      Log(req_id, "Request to restore checkpoint file GRANTED");
-	    }
-	  else                                 // Child process
-	    {
-	      log_file.close();
-	      close(store_req_sd);
-	      close(restore_req_sd);
-	      close(service_req_sd);
-	      TransmitCheckpointFile(data_conn_sd, pathname,
-				     chkpt_file_status.st_size);
-	      exit(CHILDTERM_SUCCESS);
-	    }
-	  UnblockSignals();
-	}
-    }
-  else
-    {
+					sizeof(restore_reply_pkt)) < 0) {
+		  close(req_sd);
+		  BlockSignals();
+		  sprintf(log_msg, "Restore request from %s DENIED:", 
+				  inet_ntoa(shadow_IP));
+		  Log(req_id, log_msg);
+		  Log("Cannot send IP/port to shadow (socket closed)");
+		  UnblockSignals();
+		  close(data_conn_sd);
+	  } else {
+		  close(req_sd);
+		  BlockSignals();
+		  child_pid = fork();
+		  if (child_pid < 0) {
+			  close(data_conn_sd);
+			  Log(req_id, "Unable to honor restore request:");
+			  Log("Cannot fork child processes");
+		  } else if (child_pid != 0) {            // Parent (Master) process
+			  close(data_conn_sd);
+			  num_restore_xfers++;
+			  transfers.Insert(child_pid, req_id, shadow_IP, 
+							   restore_req.filename, restore_req.owner,
+							   restore_reply.file_size, restore_req.key,
+							   restore_req.priority, XMIT);
+			  Log(req_id, "Request to restore checkpoint file GRANTED");
+		  } else {
+			  // Child process
+			  log_file.close();
+			  close(store_req_sd);
+			  close(restore_req_sd);
+			  close(service_req_sd);
+			  TransmitCheckpointFile(data_conn_sd, pathname,
+									 chkpt_file_status.st_size);
+			  exit(CHILDTERM_SUCCESS);
+		  }
+		  UnblockSignals();
+	  }
+  } else {
       close(req_sd);
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
@@ -1291,282 +1269,210 @@ void Server::ProcessRestoreReq(int             req_id,
       cerr << "ERROR:" << endl;
       cerr << "ERROR:" << endl << endl;
       exit(IMDS_BAD_RETURN_CODE);
-    }
+  }
 }
 
 
 void Server::TransmitCheckpointFile(int         data_conn_sd,
-				    const char* pathname,
-				    int         file_size)
+									const char* pathname,
+									int         file_size)
 {
-  struct sockaddr_in chkpt_addr;
-  int                chkpt_addr_len;
-  int                xfer_sd;
-  ifstream           chkpt_file;
-  char               buffer[DATA_BUFFER_SIZE];
-  u_lint             bytes_recvd=0;
-  int                bytes_read;
-  int                bytes_to_read;
-  u_lint             bytes_sent=0;
-  u_lint             check;
-  int                temp;
-  int                buf_size=DATA_BUFFER_SIZE;
+	struct sockaddr_in chkpt_addr;
+	int                chkpt_addr_len;
+	int                xfer_sd;
+	u_lint             bytes_recvd=0;
+	int                bytes_read;
+	int                bytes_to_read;
+	u_lint             bytes_sent=0;
+	u_lint             check;
+	int                temp;
+	int                buf_size=DATA_BUFFER_SIZE;
+	int					file_fd;
+	
+	file_fd = open(pathname, O_RDONLY);
+	if (file_fd < 0) {
+		exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
+	}
 
-  chkpt_file.open(pathname);
-  if (chkpt_file.fail())
-    exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
-  chkpt_addr_len = sizeof(struct sockaddr_in);
-  if ((xfer_sd=I_accept(data_conn_sd, &chkpt_addr, &chkpt_addr_len)) ==
-      ACCEPT_ERROR)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: I_accept() fails" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(CHILDTERM_ACCEPT_ERROR);
+	chkpt_addr_len = sizeof(struct sockaddr_in);
+	if ((xfer_sd=I_accept(data_conn_sd, &chkpt_addr, &chkpt_addr_len)) ==
+		ACCEPT_ERROR) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: I_accept() fails" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(CHILDTERM_ACCEPT_ERROR);
     }
-  close(data_conn_sd);
-  // Changing buffer size may fail
-  setsockopt(xfer_sd, SOL_SOCKET, SO_SNDBUF, (char*) &buf_size, 
-	     sizeof(buf_size));
-  if (file_size >= DATA_BUFFER_SIZE)
-    bytes_to_read = DATA_BUFFER_SIZE;
-  else
-    bytes_to_read = file_size;
-  while (bytes_sent != file_size)
-    {
-      chkpt_file.read(buffer, bytes_to_read);
-      bytes_read = chkpt_file.gcount();
-      if (chkpt_file.fail() || (bytes_read != bytes_to_read))
-	{
-	  chkpt_file.close();
-	  close(xfer_sd);
-	  exit(CHILDTERM_ERROR_ON_CHKPT_FILE_READ);
+	close(data_conn_sd);
+
+	// Changing buffer size may fail
+	setsockopt(xfer_sd, SOL_SOCKET, SO_SNDBUF, (char*) &buf_size, 
+			   sizeof(buf_size));
+
+	bytes_sent = stream_file_xfer(file_fd, xfer_sd, file_size);
+
+	close(xfer_sd);
+	close(file_fd);
+	if (bytes_sent != file_size) {
+		exit(CHILDTERM_BAD_FILE_SIZE);
 	}
-      else if (chkpt_file.eof())
-	{
-	  chkpt_file.close();
-	  close(xfer_sd);
-	  exit(CHILDTERM_ERROR_SHORT_FILE);
-	}
-      if (net_write(xfer_sd, buffer, bytes_read) != bytes_read)
-	{
-	  chkpt_file.close();
-	  close(xfer_sd);
-	  exit(CHILDTERM_EXEC_KILLED_SOCKET);
-	}
-      bytes_sent += bytes_read;
-      if (file_size-bytes_sent < DATA_BUFFER_SIZE)
-	bytes_to_read = file_size - bytes_sent;
-    }
-  if (chkpt_file.eof())
-    {
-      chkpt_file.close();
-      close(xfer_sd);
-      exit(CHILDTERM_ERROR_SHORT_FILE);
-    }
-  if (chkpt_file.get() != EOF)
-    {
-      chkpt_file.close();
-      close(xfer_sd);
-      exit(CHILDTERM_ERROR_INCOMPLETE_FILE);
-    }
-  bytes_to_read = sizeof(u_lint);
-  bytes_recvd = 0;
-  while (bytes_recvd < bytes_to_read)
-    {
-      errno = 0;
-      temp = read(xfer_sd, (char*) &check, bytes_to_read-bytes_recvd);
-      if ((temp < 0) || ((temp == 0) && (errno != EINTR)))
-	{
-	  close(xfer_sd);
-	  chkpt_file.close();
-	  return;
-	}
-      bytes_recvd += temp;
-    }
-  check = ntohl(check);
-  if (check != bytes_sent)
-     exit(CHILDTERM_BAD_FILE_SIZE);
-  close(xfer_sd);
-  chkpt_file.close();
 }
 
 
 void Server::ChildComplete()
 {
-  int           child_pid;
-  int           exit_status;
-  int           exit_code;
-  int           xfer_type;
-  transferinfo* ptr;
-  char          pathname[MAX_PATHNAME_LENGTH];
-  char          log_msg[256];
-  int           temp;
-
-  BlockSignals();
-  while ((child_pid=waitpid(-1, &exit_status, WNOHANG)) > 0)
-    {
-      if (WIFEXITED(exit_status))
-	exit_code = WEXITSTATUS(exit_status);
-      else 
-	{
-	  // Must trap the SIGKILL signal explicitly since the reclaimation
-	  //   process may kill a process after it has completed its work.
-	  //   However, other signals will indicate some failure indicating
-	  //   abnormal termination
-	  if (WTERMSIG(exit_status) == SIGTERM)
-	    exit_code = CHILDTERM_KILLED;
-	  else
-	    exit_code = CHILDTERM_SIGNALLED;
-	}
-      xfer_type = transfers.GetXferType(child_pid);
-      if (xfer_type == BAD_CHILD_PID)
-	{
-	  cerr << endl << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR: cannot resolve child pid (#" << child_pid << ")" 
-	       << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl << endl;
-	  exit(BAD_TRANSFER_LIST);
-	}
-      if ((ptr=transfers.Find(child_pid)) == NULL)
-	{
-	  cerr << endl << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR: cannot resolve child pid (#" << child_pid << ")" 
-	       << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl << endl;
-	  exit(BAD_TRANSFER_LIST);
-	}
-      switch (xfer_type)
-	{
-	case RECV:
-	  num_store_xfers--;
-	  imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
-	  if (exit_code == CHILDTERM_SUCCESS)
-	    Log(ptr->req_id, "File successfully received");
-	  else if ((exit_code == CHILDTERM_KILLED) && 
-		   (ptr->override == OVERRIDE))
-	    {
-	      Log(ptr->req_id, "File successfully received; kill signal");
-	      Log("overridden");
-	    }
-	  else
-	    {
-	      if (exit_code == CHILDTERM_SIGNALLED)
-		{
-		  sprintf(log_msg, 
-			  "File transfer terminated due to signal #%d",
-			  WTERMSIG(exit_status));
-		  Log(ptr->req_id, log_msg);
-		  if (WTERMSIG(exit_status) == SIGKILL)
-		    Log("User killed the peer process");
+	int           child_pid;
+	int           exit_status;
+	int           exit_code;
+	int           xfer_type;
+	transferinfo* ptr;
+	char          pathname[MAX_PATHNAME_LENGTH];
+	char          log_msg[256];
+	int           temp;
+	
+	BlockSignals();
+	while ((child_pid=waitpid(-1, &exit_status, WNOHANG)) > 0) {
+		if (WIFEXITED(exit_status)) {
+			exit_code = WEXITSTATUS(exit_status);
+		} else 	{
+			// Must trap the SIGKILL signal explicitly since the reclaimation
+			//   process may kill a process after it has completed its work.
+			//   However, other signals will indicate some failure indicating
+			//   abnormal termination
+			if (WTERMSIG(exit_status) == SIGTERM)
+				exit_code = CHILDTERM_KILLED;
+			else
+				exit_code = CHILDTERM_SIGNALLED;
 		}
-	      else if (exit_code == CHILDTERM_KILLED)
-		Log(ptr->req_id, 
-		    "File reception terminated by reclamation process");
-	      else
-		{
-		  sprintf(log_msg, "File reception self-terminated; error #%d",
-			  exit_code);
-		  Log(ptr->req_id, log_msg);
-		  Log("occurred during file reception");
+		xfer_type = transfers.GetXferType(child_pid);
+		if (xfer_type == BAD_CHILD_PID) {
+			cerr << endl << "ERROR:" << endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR: cannot resolve child pid (#" << child_pid << ")" 
+				<< endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR:" << endl << endl;
+			exit(BAD_TRANSFER_LIST);
 		}
-	      sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
-		      inet_ntoa(ptr->shadow_addr), ptr->owner,
-		      ptr->filename);
-	      // Attempt to remove file
-	      if (remove(pathname) != 0)
-		Log("Unable to remove file from physical storage");
-	      else
-		Log("Partial file removed from physical storage");
-	      // Remove file information from in-memory data structure
-	      if ((temp=imds.RemoveFile(ptr->shadow_addr, ptr->owner, 
-					ptr->filename)) != REMOVED_FILE)
-		{
-                  sprintf(log_msg, "Unable to remove file from imds (%d)",
-			  temp);
-                  Log(log_msg);
+		if ((ptr=transfers.Find(child_pid)) == NULL) {
+			cerr << endl << "ERROR:" << endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR: cannot resolve child pid (#" << child_pid << ")" 
+				<< endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR:" << endl << endl;
+			exit(BAD_TRANSFER_LIST);
 		}
-	    }
-	  break;
-	case XMIT:
-	  num_restore_xfers--;
-	  imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
-	  if (exit_code == CHILDTERM_SUCCESS)
-	    Log(ptr->req_id, "File successfully transmitted");
-	  else if ((exit_code == CHILDTERM_KILLED) && 
-		   (ptr->override == OVERRIDE))
-	    {
-	      Log(ptr->req_id, "File successfully transmitted; kill signal");
-	      Log("overridden");
-	    }
-	  else if (exit_code == CHILDTERM_SIGNALLED)
-	    {
-	      sprintf(log_msg, 
-		      "File transfer terminated due to signal #%d",
-		      WTERMSIG(exit_status));
-	      Log(ptr->req_id, log_msg);
-	      if (WTERMSIG(exit_status) == SIGPIPE)
-		Log("Socket on receiving end closed");
-	      else if (WTERMSIG(exit_status) == SIGKILL)
-		Log("User killed the peer process");
-	    }
-	  else if (exit_code == CHILDTERM_KILLED)
-	    {
-	      Log(ptr->req_id, 
-		  "File transmission terminated by reclamation");
-	      Log("process");
-	    }
-	  else
-	    {
-	      sprintf(log_msg, 
-		      "File transmission self-terminated; error #%d", 
-		      exit_code);
-	      Log(ptr->req_id, log_msg);
-	      Log("occurred during file transmission");
-	    }
-	  break;
-	case FILE_STATUS:
-	  if (exit_code == CHILDTERM_SUCCESS)
-	    Log(ptr->req_id, "Server status successfully transmitted");
-	  else if (exit_code == CHILDTERM_KILLED)
-	    Log(ptr->req_id, 
-		"Server status terminated by reclamation process");
-	  else if (exit_code == CHILDTERM_SIGNALLED)
-	    {
-	      sprintf(log_msg, 
-		      "File transfer terminated due to signal #%d",
-		      WTERMSIG(exit_status));
-	      Log(ptr->req_id, log_msg);
-	      if (WTERMSIG(exit_status) == SIGPIPE)
-		Log("Socket on receiving end closed");
-	      else if (WTERMSIG(exit_status) == SIGKILL)
-		Log("User killed the peer process");
-	    }
-	  else
-	    {
-	      sprintf(log_msg, "Server status self-terminated; error #%d",
-		      exit_code);
-	      Log(ptr->req_id, log_msg);
-	      Log("occurred during status transmission");
-	    }
-	  break;
-	default:
-	  cerr << endl << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR: illegal transfer type used; terminating" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl << endl;
-	  exit(BAD_RETURN_CODE);	  
-	}
-      transfers.Delete(child_pid);
+		switch (xfer_type) {
+		case RECV:
+			num_store_xfers--;
+			imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
+			if (exit_code == CHILDTERM_SUCCESS)
+				Log(ptr->req_id, "File successfully received");
+			else if ((exit_code == CHILDTERM_KILLED) && 
+					 (ptr->override == OVERRIDE)) {
+				Log(ptr->req_id, "File successfully received; kill signal");
+				Log("overridden");
+			} else {
+				if (exit_code == CHILDTERM_SIGNALLED) {
+					sprintf(log_msg, 
+							"File transfer terminated due to signal #%d",
+							WTERMSIG(exit_status));
+					Log(ptr->req_id, log_msg);
+					if (WTERMSIG(exit_status) == SIGKILL)
+						Log("User killed the peer process");
+				}
+				else if (exit_code == CHILDTERM_KILLED) {
+					Log(ptr->req_id, 
+						"File reception terminated by reclamation process");
+				} else {
+					sprintf(log_msg, 
+							"File reception self-terminated; error #%d",
+							exit_code);
+					Log(ptr->req_id, log_msg);
+					Log("occurred during file reception");
+				}
+				sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
+						inet_ntoa(ptr->shadow_addr), ptr->owner,
+						ptr->filename);
+				// Attempt to remove file
+				if (remove(pathname) != 0)
+					Log("Unable to remove file from physical storage");
+				else
+					Log("Partial file removed from physical storage");
+				// Remove file information from in-memory data structure
+				if ((temp=imds.RemoveFile(ptr->shadow_addr, ptr->owner, 
+										  ptr->filename)) != REMOVED_FILE) {
+					sprintf(log_msg, "Unable to remove file from imds (%d)",
+							temp);
+					Log(log_msg);
+				}
+			}
+			break;
+		case XMIT:
+			num_restore_xfers--;
+			imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
+			if (exit_code == CHILDTERM_SUCCESS)
+				Log(ptr->req_id, "File successfully transmitted");
+			else if ((exit_code == CHILDTERM_KILLED) && 
+					 (ptr->override == OVERRIDE)) {
+				Log(ptr->req_id, "File successfully transmitted; kill signal");
+				Log("overridden");
+			} else if (exit_code == CHILDTERM_SIGNALLED) {
+				sprintf(log_msg, 
+						"File transfer terminated due to signal #%d",
+						WTERMSIG(exit_status));
+				Log(ptr->req_id, log_msg);
+				if (WTERMSIG(exit_status) == SIGPIPE)
+					Log("Socket on receiving end closed");
+				else if (WTERMSIG(exit_status) == SIGKILL)
+					Log("User killed the peer process");
+			} else if (exit_code == CHILDTERM_KILLED) {
+				Log(ptr->req_id, 
+					"File transmission terminated by reclamation");
+				Log("process");
+			} else {
+				sprintf(log_msg, 
+						"File transmission self-terminated; error #%d", 
+						exit_code);
+				Log(ptr->req_id, log_msg);
+				Log("occurred during file transmission");
+			}
+			break;
+		case FILE_STATUS:
+			if (exit_code == CHILDTERM_SUCCESS)
+				Log(ptr->req_id, "Server status successfully transmitted");
+			else if (exit_code == CHILDTERM_KILLED)
+				Log(ptr->req_id, 
+					"Server status terminated by reclamation process");
+			else if (exit_code == CHILDTERM_SIGNALLED) {
+				sprintf(log_msg, 
+						"File transfer terminated due to signal #%d",
+						WTERMSIG(exit_status));
+				Log(ptr->req_id, log_msg);
+				if (WTERMSIG(exit_status) == SIGPIPE)
+					Log("Socket on receiving end closed");
+				else if (WTERMSIG(exit_status) == SIGKILL)
+					Log("User killed the peer process");
+			} else {
+				sprintf(log_msg, "Server status self-terminated; error #%d",
+						exit_code);
+				Log(ptr->req_id, log_msg);
+				Log("occurred during status transmission");
+			}
+			break;
+		default:
+			cerr << endl << "ERROR:" << endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR: illegal transfer type used; terminating" << endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR:" << endl << endl;
+			exit(BAD_RETURN_CODE);	  
+		}
+		transfers.Delete(child_pid);
     }
-  UnblockSignals();
+	UnblockSignals();
 }
 
 
@@ -1585,103 +1491,109 @@ void Server::ServerDump()
 
 
 void Server::Log(int         request,
-		 const char* event)
+				 const char* event)
 {
-  PrintTime(log_file);
-  log_file << setw(11) << request << "   ";
-  if (strlen(event) > LOG_EVENT_WIDTH_1)
-    {
-      log_file.write(event, LOG_EVENT_WIDTH_1);
-      log_file << endl;
-      Log(event+LOG_EVENT_WIDTH_1);
-    }
-  else
-    log_file << event << endl;
+	dprintf(D_ALWAYS, "\t");
+#if 0
+	PrintTime(log_file);
+	log_file << setw(11) << request << "   ";
+#endif
+	if (strlen(event) > LOG_EVENT_WIDTH_1) {
+		dprintf(D_ALWAYS | D_NOHEADER, "%s\n", event);
+#if 0
+		log_file.write(event, LOG_EVENT_WIDTH_1);
+		log_file << endl;
+#endif
+		Log(event+LOG_EVENT_WIDTH_1);
+    } else {
+		dprintf(D_ALWAYS | D_NOHEADER, "%s\n", event);
+#if 0
+		log_file << event << endl;
+#endif
+	}
 }
 
 
 void Server::Log(const char* event)
 {
-  int   num_lines;
-  int   count;
-  char* ptr;
-
-  ptr = (char*) event;
-  num_lines = (strlen(event)+LOG_EVENT_WIDTH_2-1)/LOG_EVENT_WIDTH_2;
-  for (count=1; count<num_lines; count++)
-    {
-      log_file << "\t\t\t\t";
-      log_file.write(ptr, LOG_EVENT_WIDTH_2);
-      log_file << endl;
-      ptr += LOG_EVENT_WIDTH_2;
+	int   num_lines;
+	int   count;
+	char* ptr;
+	
+#if 0
+	ptr = (char*) event;
+	num_lines = (strlen(event)+LOG_EVENT_WIDTH_2-1)/LOG_EVENT_WIDTH_2;
+	for (count=1; count<num_lines; count++) {
+		log_file << "\t\t\t\t";
+		log_file.write(ptr, LOG_EVENT_WIDTH_2);
+		log_file << endl;
+		ptr += LOG_EVENT_WIDTH_2;
     }
-  log_file << "\t\t\t\t" << ptr << endl;
+	log_file << "\t\t\t\t" << ptr << endl;
+#endif
+	dprintf(D_ALWAYS | D_NOHEADER, "\t\t\t%s\n", event);
 }
 
 
 void InstallSigHandlers()
 {
-  struct sigaction sig_info;
-
-  sig_info.sa_handler = (SIG_HANDLER) SigChildHandler;
-  sigemptyset(&sig_info.sa_mask);
-  sig_info.sa_flags = 0;
-  if (sigaction(SIGCHLD, &sig_info, NULL) < 0)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot install SIGCHLD signal handler" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(SIGNAL_HANDLER_ERROR);
+	struct sigaction sig_info;
+	
+	sig_info.sa_handler = (SIG_HANDLER) SigChildHandler;
+	sigemptyset(&sig_info.sa_mask);
+	sig_info.sa_flags = 0;
+	if (sigaction(SIGCHLD, &sig_info, NULL) < 0) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: cannot install SIGCHLD signal handler" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(SIGNAL_HANDLER_ERROR);
     }
-  sig_info.sa_handler = (SIG_HANDLER) SigUser1Handler;
-  sigemptyset(&sig_info.sa_mask);
-  sig_info.sa_flags = 0;
-  if (sigaction(SIGUSR1, &sig_info, NULL) < 0)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot install SIGUSR1 signal handler" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(SIGNAL_HANDLER_ERROR);
+	sig_info.sa_handler = (SIG_HANDLER) SigUser1Handler;
+	sigemptyset(&sig_info.sa_mask);
+	sig_info.sa_flags = 0;
+	if (sigaction(SIGUSR1, &sig_info, NULL) < 0) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: cannot install SIGUSR1 signal handler" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(SIGNAL_HANDLER_ERROR);
     }
-  sig_info.sa_handler = (SIG_HANDLER) SigUser2Handler;
-  sigemptyset(&sig_info.sa_mask);
-  sig_info.sa_flags = 0;
-  if (sigaction(SIGUSR2, &sig_info, NULL) < 0)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot install SIGUSR2 signal handler" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(SIGNAL_HANDLER_ERROR);
+	sig_info.sa_handler = (SIG_HANDLER) SigUser2Handler;
+	sigemptyset(&sig_info.sa_mask);
+	sig_info.sa_flags = 0;
+	if (sigaction(SIGUSR2, &sig_info, NULL) < 0) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: cannot install SIGUSR2 signal handler" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(SIGNAL_HANDLER_ERROR);
     }
-  sig_info.sa_handler = (SIG_HANDLER) SIG_IGN;
-  sigemptyset(&sig_info.sa_mask);
-  sig_info.sa_flags = 0;
-  if (sigaction(SIGPIPE, &sig_info, NULL) < 0)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot install SIGPIPE signal handler (SIG_IGN)" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(SIGNAL_HANDLER_ERROR);
+	sig_info.sa_handler = (SIG_HANDLER) SIG_IGN;
+	sigemptyset(&sig_info.sa_mask);
+	sig_info.sa_flags = 0;
+	if (sigaction(SIGPIPE, &sig_info, NULL) < 0) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: cannot install SIGPIPE signal handler (SIG_IGN)" << 
+			endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(SIGNAL_HANDLER_ERROR);
     }
-  sig_info.sa_handler = (SIG_HANDLER) SigAlarmHandler;
-  sigemptyset(&sig_info.sa_mask);
-  sig_info.sa_flags = 0;
-  if (sigaction(SIGALRM, &sig_info, NULL) < 0)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: cannot install SIGALRM signal handler" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(SIGNAL_HANDLER_ERROR);
+	sig_info.sa_handler = (SIG_HANDLER) SigAlarmHandler;
+	sigemptyset(&sig_info.sa_mask);
+	sig_info.sa_flags = 0;
+	if (sigaction(SIGALRM, &sig_info, NULL) < 0) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: cannot install SIGALRM signal handler" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(SIGNAL_HANDLER_ERROR);
     }
 }
 
@@ -1791,61 +1703,55 @@ void UnblockSignals()
 int main(int   argc,
 	 char* argv[])
 {
-  int xfers, sends, recvs;
+	int xfers, sends, recvs;
 
-  if ((argc != 2) && (argc != 4))
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: incorrect number of parameters" << endl;
-      cerr << "\tUsage: " << argv[0] << " <MAX TRANSFERS> {<MAX RECEIVE> "
-	   << "<MAX TRANSMIT>}" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(BAD_PARAMETERS);
-    }
-  xfers = atoi(argv[1]);
-  if (xfers <= 0)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: the maximum number of transfers must be greater than " 
-	   << "zero" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(BAD_PARAMETERS);
-    }
-  if (argc == 2)
-    {
-      sends = xfers;
-      recvs = xfers;
-    }
-  else
-    {
-      recvs = atoi(argv[2]);
-      if ((recvs < 0) || (recvs > xfers))
-	{
-	  cerr << endl << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR: illegal maximum number of storing transfers" 
-	       << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl << endl;
-	  exit(BAD_PARAMETERS);
+	if ((argc != 2) && (argc != 4)) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: incorrect number of parameters" << endl;
+		cerr << "\tUsage: " << argv[0] << " <MAX TRANSFERS> {<MAX RECEIVE> "
+			<< "<MAX TRANSMIT>}" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(BAD_PARAMETERS);
 	}
-      sends = atoi(argv[3]);
-      if ((sends < 0) || (sends > xfers))
-	{
-	  cerr << endl << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR: illegal maximum number of restoring transfers" 
-	       << endl;
-	  cerr << "ERROR:" << endl;
-	  cerr << "ERROR:" << endl << endl;
-	  exit(BAD_PARAMETERS);
-	}      
-    }
-  server.Init(xfers, recvs, sends);
-  server.Execute();
-  return 0;                            // Should never execute
+	
+	xfers = atoi(argv[1]);
+	if (xfers <= 0) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: the maximum number of transfers must be greater than " 
+			<< "zero" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(BAD_PARAMETERS);
+	}
+	if (argc == 2) {
+		sends = xfers;
+		recvs = xfers;
+	} else {
+		recvs = atoi(argv[2]);
+		if ((recvs < 0) || (recvs > xfers)) {
+			cerr << endl << "ERROR:" << endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR: illegal maximum number of storing transfers" 
+				<< endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR:" << endl << endl;
+			exit(BAD_PARAMETERS);
+		}
+		sends = atoi(argv[3]);
+		if ((sends < 0) || (sends > xfers)) {
+			cerr << endl << "ERROR:" << endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR: illegal maximum number of restoring transfers" 
+				<< endl;
+			cerr << "ERROR:" << endl;
+			cerr << "ERROR:" << endl << endl;
+			exit(BAD_PARAMETERS);
+		}      
+	}
+	server.Init(xfers, recvs, sends);
+	server.Execute();
+	return 0;                            // Should never execute
 }
