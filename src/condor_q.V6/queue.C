@@ -127,9 +127,7 @@ int main (int argc, char **argv)
 			sprintf( scheddAddr, "%s", schedd.addr() );
 			sprintf( scheddName, "%s", schedd.name() );
 			sprintf( scheddMachine, "%s", schedd.fullHostname() );
-			if( show_queue(scheddAddr, scheddName, scheddMachine) ) {
-				exit( 0 );
-			}
+			exit( !show_queue( scheddAddr, scheddName, scheddMachine ) );
 		} else {
 			fprintf( stderr, "Can't display queue of local schedd\n" );
 			exit( 1 );
