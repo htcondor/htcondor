@@ -16,6 +16,14 @@ STRIP_PVM	=	../strip_pvm
 STATIC_DIR	=	../static_dir
 STATIC_PVM	=	../static_pvm
 
+SSL_DIR		=	/p/condor/workspaces/ssl
+SSL_LIB		=	$(SSL_DIR)/lib
+GLOBUS_DIR	=	/p/condor/workspaces/globus
+GLOBUS_LIB	=	$(GLOBUS_DIR)/lib
+AUTH_LIB	=	-L$(GLOBUS_LIB) -l globus_gss_assist -lglobus_gss \
+			-L$(SSL_LIB) -lssl -lcrypto \
+			-lresolv
+
 LIB_DIR =		$(RELEASE_DIR)/lib
 CONFIG_DIR =		$(TOP)/config
 SRC_TREE =		$(TOP)/src
