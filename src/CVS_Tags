@@ -1,3 +1,7 @@
+12/6/00 V6_2-merge-1
+	V6_2 branch state (just prior to 6.1.17, so not quite worthy
+        of the V6_1_17 tag) for merging into V6_3 branch
+
 9/8?/00 V6_1_16
 	6.1.16 release tag, which lives on the V6_2-branch.  config
 	was tagged on 9/12, with the code from the earlier date.
