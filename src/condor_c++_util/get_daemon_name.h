@@ -20,8 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef CONDOR_GET_DAEMON_ADDR_H
-#define CONDOR_GET_DAEMON_ADDR_H
+#ifndef CONDOR_GET_DAEMON_NAME_H
+#define CONDOR_GET_DAEMON_NAME_H
 
 #include "daemon_types.h"
 
@@ -29,13 +29,6 @@
 extern "C" {
 #endif
 
-extern char* get_daemon_addr( daemon_t dt = DT_MASTER, 
-							  const char* name = NULL, const char* pool = NULL);
-extern char* get_schedd_addr(const char* name = NULL, const char* pool = NULL);
-extern char* get_startd_addr(const char* name = NULL, const char* pool = NULL);
-extern char* get_master_addr(const char* name = NULL, const char* pool = NULL);
-extern char* get_negotiator_addr(const char* name = NULL);
-extern char* get_collector_addr(const char* name = NULL);
 extern char* get_daemon_name(const char* name);
 extern const char* get_host_part(const char* name);
 extern char* build_valid_daemon_name(char* name);
@@ -45,4 +38,4 @@ extern char* default_daemon_name( void );
 }
 #endif
 
-#endif /* CONDOR_GET_DAEMON_ADDR_H */
+#endif /* CONDOR_GET_DAEMON_NAME_H */

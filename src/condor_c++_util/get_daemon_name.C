@@ -23,19 +23,17 @@
 
  
 
-///////////////////////////////////////////////////////////////////////////////
-// Get the ip address and port number of a schedd from the collector.
-///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+// Methods to manipulate and manage daemon names
+//////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_string.h"
-#include "daemon.h"
 #include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "my_username.h"
 #include "condor_uid.h"
-#include "daemon_types.h"
 
 extern "C" {
 
@@ -203,96 +201,6 @@ default_daemon_name( void )
 	sprintf( ans, "%s@%s", name, host );
 	free(name);
 	return ans;
-}
-
-
-char*
-get_schedd_addr(const char* name, const char* pool)
-{
-	static char addr[100];
-	Daemon d( DT_SCHEDD, name, pool );
-	if( d.locate() ) {
-		strncpy( addr, d.addr(), 100 );
-		return addr;
-	} else {
-		return NULL;
-	}
-} 
-
-
-char*
-get_startd_addr(const char* name, const char* pool)
-{
-	static char addr[100];
-	Daemon d( DT_STARTD, name, pool );
-	if( d.locate() ) {
-		strncpy( addr, d.addr(), 100 );
-		return addr;
-	} else {
-		return NULL;
-	}
-} 
-
-
-char*
-get_master_addr(const char* name, const char* pool)
-{
-	static char addr[100];
-	Daemon d( DT_MASTER, name, pool );
-	if( d.locate() ) {
-		strncpy( addr, d.addr(), 100 );
-		return addr;
-	} else {
-		return NULL;
-	}
-} 
-
-char*
-get_negotiator_addr(const char* name)
-{
-	static char addr[100];
-	Daemon d( DT_NEGOTIATOR, name );
-	if( d.locate() ) {
-		strncpy( addr, d.addr(), 100 );
-		return addr;
-	} else {
-		return NULL;
-	}
-}
-
-
-char*
-get_collector_addr(const char* name)
-{
-	static char addr[100];
-	Daemon d( DT_COLLECTOR, name );
-	if( d.locate() ) {
-		strncpy( addr, d.addr(), 100 );
-		return addr;
-	} else {
-		return NULL;
-	}
-}
-
-
-char*
-get_daemon_addr( daemon_t dt, const char* name, const char* pool )
-{
-	switch( dt ) {
-	case DT_MASTER:
-		return get_master_addr( name, pool );
-	case DT_STARTD:
-		return get_startd_addr( name, pool );
-	case DT_SCHEDD:
-		return get_schedd_addr( name, pool );
-	case DT_NEGOTIATOR:
-		return get_negotiator_addr( name );
-	case DT_COLLECTOR:
-		return get_collector_addr( name );
-	default:
-		return NULL;
-	}
-	return NULL;
 }
 
 
