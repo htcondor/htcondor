@@ -46,6 +46,7 @@
 #include "condor_ckpt_name.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "generic_query.h"
+#include "directory.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
