@@ -1,5 +1,5 @@
 \documentclass[titlepage,oneside]{book}
-
+% \includeonly{overview,user}
 %
 %  For use with latex2html
 %
@@ -11,12 +11,14 @@
 \setlength{\evensidemargin}{0.5in}
 \setlength{\oddsidemargin}{0.5in}
 \setlength{\textwidth}{5.5in}
-\setlength{\topmargin}{0.0in}
+\setlength{\topmargin}{0.8in}
 \setlength{\headsep}{0.5in}
 \setlength{\topskip}{0in}
 \setlength{\marginparwidth}{1in}
 \setlength{\marginparsep}{0in}
 \setlength{\footskip}{0.75in}
+\newcommand{\ResetParaSpacing}{\setlength{\parskip}{.8em}}
+\ResetParaSpacing
 
 %
 %  Bring in Condor macros
@@ -35,7 +37,7 @@
 	\fancyhead[LE,RO]{\thepage}
 	\fancyhead[RE]{\leftmark}
 	\fancyhead[LO]{\rightmark}
-	\fancyfoot[C]{Condor \VersionNotice, Administrators' Manual}
+	\fancyfoot[C]{Condor \VersionNotice\ User and Administrator Manual}
 	\renewcommand{\headrulewidth}{0.4pt}
 	\renewcommand{\footrulewidth}{0.4pt}
 	\addtolength{\headwidth}{\oddsidemargin}
@@ -48,23 +50,40 @@
 
 \begin{document}
 
-\title{Condor \VersionNotice : Reference Manual}
+\title{Condor \VersionNotice\ User and Administrator Manual}
 \author{\AuthorNotice}
 \maketitle
 
-\tableofcontents
-\newpage
+\pagenumbering{roman}
 
-\chapter{Administrators' Manual}
-\label{admin-manual}
-\input{admin-man/admin.tex}
+\tableofcontents
+
+
+\subsubsection{About this Manual}
+Divided into multiple sections, yada, yada.
+
+\begin{small}
+\subsubsection{Copyright and Disclaimer}
+\input{copyright.tex}
+\end{small}
+
+\newpage
+\pagenumbering{arabic}
+
+\chapter{Overview}
+\label{overview}
+\input{overview/overview.tex}
 
 \chapter{Users' Manual}
 \label{user-manual}
 \input{user-man/user.tex}
 
-\chapter{Command Reference Manual}
-\label{command-reference}
-\input{man-pages/man.tex}
+\chapter{Administrators' Manual}
+\label{admin-manual}
+\input{admin-man/admin.tex}
+
+% \chapter{Command Reference Manual}
+% \label{command-reference}
+% \input{man-pages/man.tex}
 
 \end{document}
