@@ -927,13 +927,11 @@ Image::Write( int fd )
 	dprintf( D_ALWAYS, "Wrote headers OK\n" );
 
 		// Write out the SegMaps
-	for( i=0; i<head.N_Segs(); i++ ) {
-		if( (nbytes=write(fd,&map[i],sizeof(map[i]))) < 0 ) {
-			return -1;
-		}
-		pos += nbytes;
-		dprintf( D_ALWAYS, "Wrote SegMap[%d] OK\n", i );
+	if( (nbytes=write(fd,map,sizeof(SegMap)*head.N_Segs()))
+		!= sizeof(SegMap)*head.N_Segs() ) {
+		return -1;
 	}
+	pos += nbytes;
 	dprintf( D_ALWAYS, "Wrote all SegMaps OK\n" );
 
 #if defined(COMPRESS_CKPT)
@@ -1226,7 +1224,7 @@ SegMap::Read( int fd, ssize_t pos )
 #endif
 
 	while( bytes_to_go ) {
-		read_size = bytes_to_go > 4096 ? 4096 : bytes_to_go;
+		read_size = bytes_to_go > 65536 ? 65536 : bytes_to_go;
 #if defined(Solaris) || defined(IRIX53) || defined(LINUX)
 		nbytes =  SYSCALL(SYS_read, fd, (void *)ptr, read_size );
 #else
@@ -1288,7 +1286,20 @@ SegMap::Write( int fd, ssize_t pos )
 #endif
 	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%lx,len=0x%lx)\n",
 			fd, core_loc, len );
-	return write(fd,(void *)core_loc,(size_t)len);
+	int bytes_to_go = len, nbytes;
+	char *ptr = (char *)core_loc;
+	while (bytes_to_go) {
+		nbytes = write(fd,(void *)ptr,(size_t)bytes_to_go);
+		if ( nbytes < 0 ) {
+			dprintf( D_ALWAYS, "in SegMap::Write(): fd = %d, write_size=%d\n",
+					 fd, bytes_to_go );
+			dprintf( D_ALWAYS, "errno=%d, core_loc=%x\n", errno, ptr );
+			return -1;
+		}
+		bytes_to_go -= nbytes;
+		ptr += nbytes;
+	}
+	return len;
 }
 
 extern "C" {
