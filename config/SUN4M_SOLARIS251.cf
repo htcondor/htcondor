@@ -76,15 +76,15 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_SETRESGID			NO
 #define HAS_SETEGID				YES
 #define HAS_SETEUID				YES
-#define HAS_GETWD				NO
+#define HAS_GETWD				YES
 #define HAS_INSQUE				YES
 #define DO_BENCHMARKING			YES
 #define HAS_PVM					NO
 #define PVM_ARCH			SUN4SOL2
 
 
-#define CCompiler /s/gcc-2.7.2/bin/gcc /* different than SunOS */ 
-#define CPlusCompiler /s/gcc-2.7.2/bin/g++ /* different than SunOS */
+#define CCompiler gcc
+#define CPlusCompiler g++
 #define Demangler /opt/SUNWspro/bin/c++filt  /* Ajitk */
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
