@@ -147,11 +147,6 @@ Match::update( ClassAd* ad )
 		sprintf(line, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, m_last_pckpt );
 		ad->Insert( line );
 	}
-
-	if( m_universe > 0 ) {
-		sprintf( line, "%s=%d", ATTR_JOB_UNIVERSE, m_universe );
-		ad->Insert( line );
-	}
 }	
 
 
