@@ -921,8 +921,14 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 			 logfilename, owner );
 
 	UserLog* ULog=new UserLog();
-	ULog->initialize(owner, logfilename, job_id.cluster, job_id.proc, 0);
-	return ULog;
+	if (ULog->initialize(owner, logfilename, job_id.cluster, job_id.proc, 0)) {
+		return ULog;
+	} else {
+		dprintf ( D_ALWAYS,
+				"WARNING: Invalid user log file specified: %s\n", logfilename);
+		delete ULog;
+		return NULL;
+	}
 }
 
 
