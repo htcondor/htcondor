@@ -1195,9 +1195,6 @@ void Scheduler::StartJobHandler() {
 		}
 	}
 
-    long l=time(NULL);
-    // dprintf(D_ALWAYS,"Forking a shadow for job=%d.%d time=%s\n",job_id->cluster,job_id->proc,asctime(localtime(&l)));
-
 	//-------------------------------
 	// Actually fork the shadow
 	//-------------------------------
