@@ -139,9 +139,6 @@ TESTCLASS(job_core_macros-dollardollar_van,core)
 **RUN(job_core_onexitrem_sched)
 **TESTCLASS(job_core_onexitrem_sched,core)
 **
-**DESC(job_core_perremove_sched,"Scheduler: test true/false variations of periodic remove")
-**RUN(job_core_perremove_sched)
-**TESTCLASS(job_core_perremove_sched,core)
 **
 **DESC(job_core_onexithold_sched,"Scheduler: Verify true and false triggers of on_exit_hold")
 **RUN(job_core_onexithold_sched)
@@ -150,21 +147,6 @@ TESTCLASS(job_core_macros-dollardollar_van,core)
 */
 
 /* Likely either test or condor is wrong */
-
-/*
-** 
-** Leave Off for now
-**
-**DESC(job_core_args_van,"Vanilla: Did specify args from submit file reach the job?")
-**RUN(job_core_args_van)
-**TESTCLASS(job_core_args_van,core)
-**
-**DESC(job_core_args_sched,"scheduler: Did specify args from submit file reach the job?")
-**RUN(job_core_args_sched)
-**TESTCLASS(job_core_args_sched,core)
-**
-*/
-
 
 DESC(job_filexfer_basic_van,"Vanilla: send a file and get it back")
 RUN(job_filexfer_basic_van)
@@ -209,6 +191,14 @@ TESTCLASS(job_core_perhold_van,core)
 
 
 /* runable core coverage tests */
+
+DESC(job_core_args_van,"Vanilla: Did specify args from submit file reach the job?")
+RUN(job_core_args_van)
+TESTCLASS(job_core_args_van,core)
+
+DESC(job_core_args_sched,"scheduler: Did specify args from submit file reach the job?")
+RUN(job_core_args_sched)
+TESTCLASS(job_core_args_sched,core)
 
 #if ! IS_CLIPPED
 CBUILD($(CC),job_core_compressfiles,c)
@@ -312,12 +302,9 @@ DESC(job_core_output_van,"Vanilla: Verify trivially simple output from an input 
 RUN(job_core_output_van)
 TESTCLASS(job_core_output_van,core)
 
-/* manual says we do not support this for scheduler universe
-** yet it seemed to have run and worked on rh8 but fail on rh 7.2 & 9.0
 DESC(job_core_perhold_sched,"Scheduler: verify true and false triggers for periodic hold")
 RUN(job_core_perhold_sched)
 TESTCLASS(job_core_perhold_sched,core)
-*/
 
 DESC(job_core_perrelease_sched,"Scheduler: verify a policy of true/false for periodic release does the right thing")
 RUN(job_core_perrelease_sched)
@@ -330,6 +317,10 @@ TESTCLASS(job_core_perrelease_van,core)
 DESC(job_core_perremove_van,"Vanilla: test true/false variations of periodic remove")
 RUN(job_core_perremove_van)
 TESTCLASS(job_core_perremove_van,core)
+
+DESC(job_core_perremove_sched,"Scheduler: test true/false variations of periodic remove")
+RUN(job_core_perremove_sched)
+TESTCLASS(job_core_perremove_sched,core)
 
 DESC(job_core_plus_van,"Vanilla: Verify +entries go to job ad")
 RUN(job_core_plus_van)
