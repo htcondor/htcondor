@@ -13,7 +13,7 @@
 
 class GlobusResource;
 
-class GlobusJob
+class GlobusJob : public Service
 {
  public:
 
