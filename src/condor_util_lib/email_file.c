@@ -44,6 +44,63 @@ static long		delete_queue(TAIL_QUEUE* );
 static int		empty_queue(TAIL_QUEUE* );
 /*********************************************************/
 
+/* Externs to Globals */
+extern char* mySubSystem;	/* the subsys ID, such as SCHEDD, STARTD, etc. */
+
+
+void
+email_corefile_tail( FILE* output )
+{
+#ifdef WIN32
+	char *ptmp;
+	FILE *input;
+	int ch;
+	long loc = -1;
+
+	ptmp = param("LOG");
+	if ( ptmp ) {
+		char file[MAX_PATH];
+		sprintf(file,"%s\\core.%s.WIN32",ptmp,
+			mySubSystem);
+		free(ptmp);
+		if( (input=fopen(file,"r")) == NULL ) {
+			dprintf( D_FULLDEBUG, 
+				"Failed to email %s: cannot open file\n", file );
+			return;
+		}
+
+		/* This is slow, but who cares.  Basically, each "core" entry
+		** begins with a '=' character.  So we scan through the file and
+		** find the location of the last '=' ; this is the offset where 
+		** we will start to email.  Thus we send only the most recent core.
+		*/
+		while( (ch=getc(input)) != EOF ) {
+			if( ch == '=' ) {
+				loc = ftell(input);
+			}
+		}
+
+		/* Now send it */
+		if ( loc != -1 ) {
+			fprintf(output,"*** Last entry in core file %s\n\n",
+				basename(file));
+			
+			(void)fseek( input, loc, 0 );
+
+			while( (ch=getc(input)) != EOF ) {
+				(void)putc( ch, output );
+			}
+
+			fprintf(output,"*** End of file %s\n\n",
+				basename(file));
+		}
+
+		(void)fclose(input);
+	}
+#endif	// of ifdef WIN32
+}
+
+
 void
 email_asciifile_tail( FILE* output, char* file, int lines )
 {
