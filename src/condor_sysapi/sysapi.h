@@ -90,6 +90,9 @@ void sysapi_test_dump_functions(void);
 char * sysapi_translate_arch( char *machine, char *sysname );
 char *sysapi_translate_opsys( char *sysname, char *release );
 
+/* set appropriate resource limits on each platform */
+void sysapi_set_resource_limits( void );
+
 END_C_DECLS
 
 #endif
