@@ -78,6 +78,8 @@ int		pid_snapshot_interval = 50;
 
 char*	mySubSystem = "STARTD";
 
+int main_reaper = 0;
+
 // Define static variables
 static	int old_polling_interval;
 
@@ -112,7 +114,6 @@ int
 main_init( int, char* argv[] )
 {
 	int		skip_benchmarks = FALSE;
-	int		rval;
 	char*	tmp = NULL;
 	char**	ptr; 
 
@@ -298,9 +299,9 @@ main_init( int, char* argv[] )
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////
-	rval = daemonCore->Register_Reaper( "reaper_starters", 
+	main_reaper = daemonCore->Register_Reaper( "reaper_starters", 
 		(ReaperHandler)reaper, "reaper" );
-	assert(rval == 1);	// we assume reaper id 1 for now
+	assert(main_reaper != FALSE);
 
 #if defined( OSF1 ) || defined (IRIX) || defined(WIN32)
 		// Pretend we just got an X event so we think our console idle

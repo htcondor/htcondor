@@ -383,11 +383,17 @@ Starter::reallykill( int signo, int type )
 	set_priv(priv);
 
 	if( ret < 0 ) {
-		dprintf( D_ALWAYS, "Error sending signal to starter, errno = %d\n", 
-				 errno );
-		return -1;
+		if(errno==ESRCH) {
+			/* Aha, the starter is already dead */
+			return 0;
+		} else {
+			dprintf( D_ALWAYS, "Error sending signal to starter, errno = %d\n", 
+					 errno );
+			return -1;
+		}
+	} else {
+		return ret;
 	}
-	return ret;
 }
 
 
@@ -472,7 +478,7 @@ Starter::exec_starter( char* starter, char* hostname,
 
 	dprintf ( D_FULLDEBUG, "About to Create_Process \"%s\".\n", args );
 
-	s_pid = daemonCore->Create_Process( s_name, args, PRIV_ROOT, 1, TRUE, 
+	s_pid = daemonCore->Create_Process( s_name, args, PRIV_ROOT, main_reaper, TRUE, 
 										NULL, NULL, TRUE, sock_inherit_list );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");

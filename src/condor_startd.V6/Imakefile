@@ -1,5 +1,11 @@
 NAME = condor_startd
-all_target( $(NAME) )
+
+#if WANT_JAVA
+INFO_CLASS = CondorJavaInfo.class
+INFO_JAVA  = CondorJavaInfo.java
+#endif
+
+all_target( $(NAME) $(INFO_CLASS) )
 
 CFLAGS = $(STD_C_FLAGS) -Wall
 
@@ -20,7 +26,7 @@ LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = LoadQueue.o Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
-	setsyscalls.o startd_instantiate.o AvailStats.o
+	setsyscalls.o startd_instantiate.o AvailStats.o JavaInfo.o
 
 template_inst( startd_instantiate.C, startd_instantiate.o )
 
@@ -32,6 +38,13 @@ pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
+
+#if WANT_JAVA
+java_target($(INFO_CLASS),$(INFO_JAVA),.)
+release_copy_target($(INFO_CLASS),$(RELEASE_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
+strip_copy_target($(INFO_CLASS),$(STRIP_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
+static_copy_target($(INFO_CLASS),$(STATIC_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
+#endif
 
 html:
 

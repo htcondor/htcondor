@@ -130,6 +130,8 @@ extern	bool	compute_avail_stats;
 extern	int		pid_snapshot_interval;	
     // How often do we take snapshots of the pid families? 
 
+extern  int main_reaper;
+
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 #endif /* _CONDOR_STARTD_H */

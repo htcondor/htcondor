@@ -23,7 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
-#include "interpreter.h"
+#include "JavaInfo.h"
 
 MachAttributes::MachAttributes()
 {
@@ -59,6 +59,7 @@ MachAttributes::MachAttributes()
 				 );
 		EXCEPT( "Can't compute physical memory." );
 	}
+	javaInfo = new JavaInfo();
 }
 
 
@@ -69,6 +70,7 @@ MachAttributes::~MachAttributes()
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_subnet ) free( m_subnet );
+	if( javaInfo ) delete javaInfo;
 }
 
 
@@ -82,6 +84,8 @@ MachAttributes::init()
 void
 MachAttributes::compute( amask_t how_much )
 {
+	javaInfo->compute(how_much);
+
 	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
 
 			// Since we need real values for them as soon as a
@@ -195,11 +199,12 @@ MachAttributes::final_idle_dprintf()
 	}
 }
 
-
 void
 MachAttributes::publish( ClassAd* cp, amask_t how_much) 
 {
 	char line[100];
+
+	javaInfo->publish(cp,how_much);
 
 	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
 
@@ -224,7 +229,8 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		sprintf( line, "%s = \"%s\"", ATTR_SUBNET, m_subnet );
 		cp->Insert( line );
 
-		InterpreterPublish( cp );
+		sprintf( line, "%s = TRUE", ATTR_HAS_IO_PROXY );
+		cp->Insert(line);
 	}
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {

@@ -601,6 +601,17 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		if( !req_requirements ) {
 			rip->dprintf( D_ALWAYS, "Job requirements not satisfied.\n" );
 		}
+		// Possibly print out the ads we just got to the logs.
+	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
+	if( DebugFlags & D_JOB ) {
+		req_classad->dPrint( D_JOB );
+	}
+	  
+	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
+	if( DebugFlags & D_MACHINE ) {
+		mach_classad->dPrint( D_MACHINE );
+	}
+
 		refuse( stream );
 		ABORT;
 	}
