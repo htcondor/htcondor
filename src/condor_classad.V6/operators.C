@@ -109,6 +109,51 @@ CopyFrom(const Operation &op)
     return success;
 }
 
+bool Operation::
+SameAs(const ExprTree *tree) const
+{
+    bool is_same;
+    Operation *other_op;
+
+    if (tree->GetKind() != OP_NODE) {
+        is_same = false;
+    } else {
+        other_op = (Operation *) tree;
+        
+        if (   operation == other_op->operation
+            && SameChild(child1, other_op->child1)
+            && SameChild(child2, other_op->child2)
+            && SameChild(child3, other_op->child3)) {
+            is_same = true;
+        } else {
+            is_same = false;
+        }
+    }
+
+    return is_same;
+}
+
+bool operator==(const Operation &op1, const Operation &op2)
+{
+    return op1.SameAs(&op2);
+}
+
+bool Operation::
+SameChild(const ExprTree *tree1, const ExprTree *tree2) const
+{
+    bool is_same; 
+
+    if (tree1 == NULL) {
+        if (tree2 == NULL) is_same = true;
+        else               is_same = false;
+    } else if (tree2 == NULL) {
+        is_same = false;
+    } else {
+        is_same = tree1->SameAs(tree2);
+    }
+    return is_same;
+}
+
 void Operation::
 _SetParentScope( const ClassAd* parent ) 
 {

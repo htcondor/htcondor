@@ -266,6 +266,10 @@ class Value
 		*/
 		bool IsRelativeTimeValue( time_t& secs ) const;
 
+        bool SameAs(const Value &otherValue) const;
+
+        friend bool operator==(const Value &value1, const Value &value2);
+
 		friend std::ostream& operator<<(std::ostream &stream, Value &value);
 
 	private:

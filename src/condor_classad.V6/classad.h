@@ -460,6 +460,10 @@ e		*/
 
 		bool CopyFrom( const ClassAd &ad );
 
+        virtual bool SameAs(const ExprTree *tree) const;
+
+        friend bool operator==(ClassAd &list1, ClassAd &list2);
+
 		/** Flattens (a partial evaluation operation) the given expression in 
 		  		the context of the classad.
 			@param expr The expression to be flattened.

@@ -491,6 +491,29 @@ GetComponents( Value &val, Value::NumberFactor &f ) const
 	f = factor;
 }
 
+bool Literal::
+SameAs(const ExprTree *tree) const
+{
+    bool    is_same;
+
+    if (tree->GetKind() != LITERAL_NODE) {
+        is_same = false;
+    } else {
+        Literal *other_literal;
+        
+        other_literal = (Literal *) tree;
+        is_same = (   factor == other_literal->factor
+                   && value.SameAs(other_literal->value));
+    }
+    return is_same;
+}
+
+bool 
+operator==(Literal &literal1, Literal &literal2)
+{
+    return literal1.SameAs(&literal2);
+}
+
 
 bool Literal::
 _Evaluate (EvalState &, Value &val) const

@@ -67,6 +67,10 @@ class ExprList : public ExprTree
 
         bool CopyFrom(const ExprList &other_list);
 
+        virtual bool SameAs(const ExprTree *tree) const;
+
+        friend bool operator==(ExprList &list1, ExprList &list2);
+
 		// STL-like iterators and functions
 	    typedef std::vector<ExprTree*>::iterator       iterator;
     	typedef std::vector<ExprTree*>::const_iterator const_iterator;

@@ -200,6 +200,46 @@ CopyFrom(const FunctionCall &functioncall)
     return success;
 }
 
+bool FunctionCall::
+SameAs(const ExprTree *tree) const
+{
+    bool is_same;
+    FunctionCall *other_fn;
+    
+    if (this == tree) {
+        is_same = true;
+    } else if (tree->GetKind() != FN_CALL_NODE) {
+        is_same = false;
+    } else {
+        other_fn = (FunctionCall *) tree;
+        
+        if (functionName == other_fn->functionName
+            && function == other_fn->function
+            && arguments.size() == other_fn->arguments.size()) {
+            
+            is_same = true;
+            ArgumentList::const_iterator a1 = arguments.begin();
+            ArgumentList::const_iterator a2 = other_fn->arguments.begin();
+            while (a1 != arguments.end()) {
+                if (a2 == arguments.end()) {
+                    is_same = false;
+                    break;
+                } else if (!(*a1)->SameAs((*a2))) {
+                    is_same = false;
+                    break;
+                }
+            }
+        }
+    }
+
+    return is_same;
+}
+
+bool operator==(const FunctionCall &fn1, const FunctionCall &fn2)
+{
+    return fn1.SameAs(&fn2);
+}
+
 void FunctionCall::RegisterFunction(
 	string &functionName, 
 	ClassAdFunc function)

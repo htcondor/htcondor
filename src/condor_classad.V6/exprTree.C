@@ -198,4 +198,9 @@ ostream& operator<<(ostream &stream, const ExprTree &expr)
 	return stream;
 }
 
+bool operator==(const ExprTree &tree1, const ExprTree &tree2)
+{
+    return tree1.SameAs(&tree2);
+}
+
 END_NAMESPACE // classad

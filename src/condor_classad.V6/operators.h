@@ -178,11 +178,17 @@ class Operation : public ExprTree
 
         bool CopyFrom(const Operation &op);
 
+        virtual bool SameAs(const ExprTree *tree) const;
+
+        friend bool operator==(const Operation &op1, const Operation &op2);
+
 	protected:
 		/// Constructor
 		Operation ();
 
   	private:
+        bool SameChild(const ExprTree *tree1, const ExprTree *tree2) const;
+
 		virtual void _SetParentScope( const ClassAd* );
 		virtual bool _Evaluate( EvalState &, Value &) const;
 		virtual bool _Evaluate( EvalState &, Value &, ExprTree*& ) const;

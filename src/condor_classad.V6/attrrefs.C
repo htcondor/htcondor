@@ -110,6 +110,37 @@ CopyFrom(const AttributeReference &ref)
     return success;
 }
 
+bool AttributeReference::
+SameAs(const ExprTree *tree) const
+{
+    bool is_same;
+
+    if (tree->GetKind() != ATTRREF_NODE) {
+        is_same = false;
+    } else {
+        AttributeReference *other_ref = (AttributeReference *) tree;
+        
+        if (   absolute     != other_ref->absolute
+            || attributeStr != other_ref->attributeStr) {
+            is_same = false;
+        } else if (    (expr == NULL && other_ref->expr == NULL)
+                    || (expr == other_ref->expr)
+                    || (expr != NULL && other_ref->expr != NULL && expr->SameAs(other_ref->expr))) {
+            // Will this check result in infinite recursion? How do I stop it? 
+            is_same = true;
+        } else {
+            is_same = false;
+        }
+    }
+
+    return is_same;
+}
+
+bool 
+operator==(const AttributeReference &ref1, const AttributeReference &ref2)
+{
+    return ref1.SameAs(&ref2);
+}
 
 void AttributeReference::
 _SetParentScope( const ClassAd *parent ) 

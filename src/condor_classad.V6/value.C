@@ -264,6 +264,53 @@ SetAbsoluteTimeValue( abstime_t asecs )
 	absTimeValueSecs = asecs;
 }	
 
+bool Value::
+SameAs(const Value &otherValue) const
+{
+    bool is_same;
+    if (valueType != otherValue.valueType) {
+        is_same = false;
+    } else {
+        switch (valueType) {
+        case Value::NULL_VALUE:
+        case Value::ERROR_VALUE:
+        case Value::UNDEFINED_VALUE:
+            is_same = true;
+            break;
+        case Value::BOOLEAN_VALUE:
+            is_same = (booleanValue == otherValue.booleanValue);
+            break;
+        case Value::INTEGER_VALUE:
+            is_same = (integerValue == otherValue.integerValue);
+            break;
+        case Value::REAL_VALUE:
+            is_same = (realValue == otherValue.realValue);
+            break;
+        case Value::LIST_VALUE:
+            // To do!
+            break;
+        case Value::CLASSAD_VALUE:
+            // To do!
+            break;
+        case Value::RELATIVE_TIME_VALUE:
+            is_same = (relTimeValueSecs == otherValue.relTimeValueSecs);
+            break;
+        case Value::ABSOLUTE_TIME_VALUE:
+            is_same = (   absTimeValueSecs.secs   == otherValue.absTimeValueSecs.secs
+                       && absTimeValueSecs.offset == otherValue.absTimeValueSecs.offset);
+            break;
+        case Value::STRING_VALUE:
+            is_same = (strValue == otherValue.strValue);
+            break;
+        }
+    }
+    return is_same;
+}
+
+bool operator==(const Value &value1, const Value &value2)
+{
+    return value1.SameAs(value2);
+}
 
 ostream& operator<<(ostream &stream, Value &value)
 {

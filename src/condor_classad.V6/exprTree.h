@@ -128,6 +128,8 @@ class ExprTree
 		// This only works if the exprtree is within a ClassAd.
 		bool Evaluate( Value& v ) const;
 
+        virtual bool SameAs(const ExprTree *tree) const = 0;
+
   	protected:
 		ExprTree ();
 
@@ -166,6 +168,8 @@ class ExprTree
 		virtual bool _Evaluate( EvalState&, Value& ) const=0;
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const=0;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* )const=0;
+
+        friend bool operator==(const ExprTree &tree1, const ExprTree &tree2);
 };
 
 std::ostream& operator<<(std::ostream &os, const ExprTree &expr);

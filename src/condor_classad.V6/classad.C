@@ -116,6 +116,50 @@ CopyFrom( const ClassAd &ad )
 	return succeeded;
 }
 
+bool ClassAd::
+SameAs(const ExprTree *tree) const
+{
+    bool is_same;
+
+    if (this == tree) {
+        is_same = true;
+   } else if (tree->GetKind() != CLASSAD_NODE) {
+        is_same = false;
+   } else {
+       ClassAd *other_classad;
+
+       other_classad = (ClassAd *) tree;
+
+       if (attrList.size() != other_classad->attrList.size()) {
+           is_same = false;
+       } else {
+           is_same = true;
+           
+           AttrList::const_iterator	itr;
+           for (itr = attrList.begin(); itr != attrList.end(); itr++) {
+               ExprTree *this_tree;
+               ExprTree *other_tree;
+
+               this_tree = itr->second;
+               other_tree = other_classad->Lookup(itr->first);
+               if (other_tree == NULL) {
+                   is_same = false;
+                   break;
+               } else if (!this_tree->SameAs(other_tree)) {
+                   is_same = false;
+                   break;
+               }
+           }
+       }
+   }
+ 
+    return is_same;
+}
+
+bool operator==(ClassAd &list1, ClassAd &list2)
+{
+    return list1.SameAs(&list2);
+}
 
 ClassAd::
 ~ClassAd ()

@@ -117,6 +117,10 @@ class Literal : public ExprTree
 		 */
 		static int findOffset(time_t epochsecs);
 
+        virtual bool SameAs(const ExprTree *tree) const;
+
+        friend bool operator==(Literal &literal1, Literal &literal2);
+
 	protected:
 		/// Constructor
     	Literal ();

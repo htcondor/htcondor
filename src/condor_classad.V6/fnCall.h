@@ -96,6 +96,10 @@ class FunctionCall : public ExprTree
 	
     bool CopyFrom(const FunctionCall &functioncall);
 
+    virtual bool SameAs(const ExprTree *tree) const;
+
+    friend bool operator==(const FunctionCall &fn1, const FunctionCall &fn2);
+
 	static void RegisterFunction(std::string &functionName, ClassAdFunc function);
 	static void RegisterFunctions(ClassAdFunctionMapping *functions);
 

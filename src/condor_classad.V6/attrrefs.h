@@ -70,6 +70,10 @@ class AttributeReference : public ExprTree
 
         bool CopyFrom(const AttributeReference &ref);
 
+        virtual bool SameAs(const ExprTree *tree) const;
+
+        friend bool operator==(const AttributeReference &op1, const AttributeReference &op2);
+
 	protected:
 		/// Constructor
     	AttributeReference ();

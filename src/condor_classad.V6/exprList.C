@@ -119,6 +119,52 @@ CopyFrom(const ExprList &other_list)
 
 }
 
+bool ExprList::
+SameAs(const ExprTree *tree) const
+{
+    bool is_same;
+
+    if (this == tree) {
+        is_same = true;
+    } else if (tree->GetKind() != EXPR_LIST_NODE) {
+        is_same = false;
+    } else {
+        ExprList *other_list;
+
+        other_list = (ExprList *) tree;
+
+        if (exprList.size() != other_list->exprList.size()) {
+            is_same = false;
+        } else {
+            vector<ExprTree*>::const_iterator itr1, itr2;
+
+            is_same = true;
+            itr1 = exprList.begin();
+            itr2 = other_list->exprList.begin();
+            while (itr1 != exprList.end()) {
+                ExprTree *tree1, *tree2;
+
+                tree1 = (*itr1);
+                tree2 = (*itr2);
+
+                if (!tree1->SameAs(tree2)) {
+                    is_same = false;
+                    break;
+                }
+                itr1++;
+                itr2++;
+            }
+        }
+    }
+    return is_same;
+}
+
+bool operator==(ExprList &list1, ExprList &list2)
+{
+    return list1.SameAs(&list2);
+}
+
+
 void ExprList::
 _SetParentScope( const ClassAd *parent )
 {
