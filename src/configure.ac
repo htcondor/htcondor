@@ -34,6 +34,8 @@ AC_MSG_NOTICE([checking for critical tools used by configure])
 AC_PROG_AWK
 REQUIRE_PATH_PROG([GREP],[grep])
 REQUIRE_PATH_PROG([CUT],[cut])
+REQUIRE_PATH_PROG([TRUE],[true])
+AC_SUBST(TRUE,$TRUE)
 AC_PATH_PROG([WHICH],[which],[no],[$PATH])
 
 # Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
