@@ -1,3 +1,8 @@
+12/21/04 V6_6-merge-27
+   The state of the V6_6-branch for yet another merge into V6_7.  This
+   just includes the condor-g fix from jamie, and some updates to the
+   NMI build/test glue.
+
 12/21/04 V6_7-pre_merge-V6_6-merge-27
    The state of the V6_7-branch before yet another merge from V6_6-branch.
 
