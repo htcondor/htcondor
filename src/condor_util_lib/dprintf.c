@@ -77,7 +77,7 @@ char *DebugFlagNames[] = {
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
 	"D_UPDOWN", "D_AFS", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
-	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_UNDEF21",
+	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_SECONDS",
 	"D_UNDEF22", "D_UNDEF23", "D_UNDEF24", "D_UNDEF25", "D_UNDEF26",
 	"D_UNDEF27", "D_UNDEF28", "D_UNDEF29", "D_UNDEF30", "D_UNDEF31",
 };
@@ -194,8 +194,14 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 			/* Print the message with the time and a nice identifier */
 			if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
-				fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
+				if( (saved_flags|flags) & D_SECONDS ) {
+					fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
+							 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+							 tm->tm_min, tm->tm_sec );
+				} else {
+					fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
 						 tm->tm_mday, tm->tm_hour, tm->tm_min );
+				}
 
 				if( DebugId ) {
 					(*DebugId)( DebugFP );
