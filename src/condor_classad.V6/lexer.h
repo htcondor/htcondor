@@ -28,11 +28,8 @@
 #include "extArray.h"
 #include "common.h"
 #include "tokens.h"
-#include "classad_io.h"
 
 BEGIN_NAMESPACE( classad )
-
-const int MAX_TOKEN_SIZE = 4096;
 
 struct IntValue {
     int             value;
@@ -62,11 +59,9 @@ class TokenValue
     		realValue = 0.0;
 			boolValue = false;
 			secs = 0;
-			strValue = NULL;
 		}
 
 		~TokenValue( ) {
-			if( strValue ) delete [] strValue;
 		}
 
 		void SetTokenType( TokenType t ) {
@@ -87,16 +82,15 @@ class TokenValue
 			boolValue = b;
 		}
 
-		void SetStringValue( char *str ) {
-			if( strValue ) delete [] strValue;
-			strValue = strnewp( str );
+		void SetStringValue( const string &str) {
+			strValue = str;
 		}
 
-		void SetAbsTimeValue( int asecs ) {
+		void SetAbsTimeValue( time_t asecs ) {
 			secs = asecs;
 		}
 
-		void SetRelTimeValue( int rsecs ) {
+		void SetRelTimeValue( time_t rsecs ) {
 			secs = rsecs;
 		}
 
@@ -118,16 +112,15 @@ class TokenValue
 			b = boolValue;
 		}
 
-		void GetStringValue( const char *&str, bool handOver=false ) {
+		void GetStringValue( string &str ) {
 			str = strValue;	
-			if( handOver ) strValue = NULL;
 		}	
 
-		void GetAbsTimeValue( int& asecs ) {
+		void GetAbsTimeValue( time_t& asecs ) {
 			asecs = secs;
 		}
 
-		void GetRelTimeValue( int& rsecs ) {
+		void GetRelTimeValue( time_t& rsecs ) {
 			rsecs = secs;
 		}
 
@@ -138,20 +131,17 @@ class TokenValue
 			realValue = tv.realValue;
 			boolValue = tv.boolValue;
 			secs = tv.secs;
-			if( strValue ) {
-				delete [] strValue;
-			}
-			strValue = tv.strValue ? strnewp( tv.strValue ) : (char*)NULL;
+			strValue = tv.strValue;
 		}
 			
 	private:
-		TokenType tt;
-		NumberFactor factor;
-    	int intValue;
-    	double realValue;
-		bool boolValue;
-    	const char *strValue;
-		int	secs;
+		TokenType 		tt;
+		NumberFactor 	factor;
+    	int 			intValue;
+    	double 			realValue;
+		bool 			boolValue;
+    	string 			strValue;
+		time_t			secs;
 };
 
 
@@ -164,8 +154,7 @@ class Lexer
 		~Lexer ();
 
 		// initialize methods
-		bool InitializeWithSource( ByteSource *src );
-
+		bool Initialize( const string &buf );
 		bool Reinitialize( );
 
 		// cleanup function --- purges strings from string space
@@ -181,6 +170,7 @@ class Lexer
 		// miscellaneous functions
 		static char *strLexToken (int);				// string rep'n of token
 
+		// set debug flag 
 		void SetDebug( bool d ) { debug = d; }
 
 	private:
@@ -189,35 +179,34 @@ class Lexer
 
 		// internal state of lexical analyzer
 		TokenType	tokenType;             		// the integer id of the token
-		int    	markedPos;              		// index of marked character
-		char   	savedChar;          			// stores character when cut
-		int    	ch;                     		// the current character
-		int		lexBufferCount;					// current offset in lexBuffer
-		bool	inString;						// lexing a string constant
-		bool	accumulating;					// are we in a token?
-		int 	debug; 							// debug flag
+		const char  *parseBuffer;				// the buffer being parsed
+		int			offset;						// offset in parse buffer
+		int    		markedPos;              	// index of marked character
+		char   		savedChar;          		// stores character when cut
+		int    		ch;                     	// the current character
+		int			lexBufferCount;				// current offset in lexBuffer
+		bool		inString;					// lexing a string constant
+		bool		accumulating;				// are we in a token?
+		int 		debug; 						// debug flag
 
 		// cached last token
-		TokenValue yylval;						// the token itself
-		bool	tokenConsumed;					// has the token been consumed?
+		TokenValue 	yylval;						// the token itself
+		bool		tokenConsumed;				// has the token been consumed?
 
 		// internal lexing functions
-		void 	wind (void);					// consume character from source
-		void 	mark (void);					// mark()s beginning of a token
-		void 	cut (void);						// delimits token
+		void 		wind(void);					// consume character from source
+		void 		mark(void);					// mark()s beginning of a token
+		void 		cut(void);					// delimits token
 
 		// to tokenize the various tokens
-		int 	tokenizeNumber (void);			// integer or real
-		int 	tokenizeAlphaHead (void);		// identifiers/reserved strings
-		int 	tokenizeStringLiteral (void);	// string constants
-		int		tokenizeTime( void );			// time (absolute and relative)
-		int 	tokenizePunctOperator (void);	// punctuation and operators
+		int 		tokenizeNumber (void);		// integer or real
+		int 		tokenizeAlphaHead (void);	// identifiers/reserved strings
+		int 		tokenizeStringLiteral(void);// string constants
+		int			tokenizeTime( void );		// time (absolute and relative)
+		int 		tokenizePunctOperator(void);// punctuation and operators
 
-		static bool	tokenizeRelativeTime(char*,int&);// relative time
-		static bool	tokenizeAbsoluteTime(char*,int&);// absolute time
-
-		// input sources
-		ByteSource	*src;
+		static bool	tokenizeRelativeTime(char*,time_t&);// relative time
+		static bool	tokenizeAbsoluteTime(char*,time_t&);// absolute time
 };
 
 END_NAMESPACE // classad

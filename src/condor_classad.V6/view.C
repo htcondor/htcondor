@@ -1,7 +1,30 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "view.h"
-#include "collection.h"
+#include "collectionServer.h"
 
 // ----------- <implementation of ViewMember class> -----------------
 
@@ -41,7 +64,7 @@ GetKey( string &adKey ) const
 
 
 void ViewMember::
-GetRankValue( Value &rankValue )
+GetRankValue( Value &rankValue ) const
 {
 	rankValue.CopyFrom( rank );
 }
@@ -64,9 +87,17 @@ operator=( const ViewMember &vm )
 View::
 View( View *parentView )
 {
+	Value				val;
+	vector<ExprTree*>	vec;
+
+	ClassAd	*ad = evalEnviron.GetLeftAd( );
 	parent = parentView;
-	evalEnviron.DeepInsertAttr( "adcl.ad", ATTR_REQUIREMENTS, true );
-	evalEnviron.DeepInsertAttr( "adcl.ad", ATTR_RANK, 0 );
+	ad->InsertAttr( ATTR_REQUIREMENTS, true );
+	ad->Insert( ATTR_RANK, Literal::MakeLiteral( val ) );
+	ad->Insert( ATTR_PARTITION_EXPRS, ExprList::MakeExprList( vec ) );
+	if( parentView ) {
+		ad->InsertAttr( "ParentViewName", parentView->GetViewName( ) );
+	}
 }
 
 
@@ -91,44 +122,124 @@ View::
 bool View::
 SetViewName( const ViewName &name )
 {
+	ClassAd	*ad;
 	viewName = name;
-	return( evalEnviron.DeepInsertAttr( "adcl.ad", "ViewName", name.c_str() ) );
+	if( !(ad=evalEnviron.GetLeftAd( )) || !ad->InsertAttr("ViewName", name) ) {
+		CondorErrno = ERR_FAILED_SET_VIEW_NAME;
+		return( false );
+	}
+	return( true );
 }
 
 
 bool View::
 SetViewInfo( ClassAdCollectionServer *coll, ClassAd *ad )
 {
-	ExprTree	*rankExpr = ad->Remove( ATTR_RANK );
-	ExprTree	*constraintExpr = ad->Remove( ATTR_REQUIREMENTS );
-	ExprTree	*tmp = ad->Remove( "PartitionExprs" );
-	ExprList	*partitionExprs = ( tmp && tmp->GetKind( )==EXPR_LIST_NODE ) ? 
-						(ExprList*) tmp : NULL;
+	ExprTree	*rankExpr=NULL, *constraintExpr=NULL, *tmp=NULL;
+	ExprList	*partitionExprs=NULL;
 
-	if( !rankExpr || !constraintExpr || !partitionExprs || 
-			!evalEnviron.ReplaceLeftAd( ad ) ) {
-		if( rankExpr ) delete rankExpr;
-		if( constraintExpr ) delete constraintExpr;
-		if( partitionExprs ) delete partitionExprs;
+	if( !( rankExpr = ad->Remove( ATTR_RANK ) ) ) {
+		Value val;
+		val.SetUndefinedValue( );
+		rankExpr = Literal::MakeLiteral( val );
+	}
+
+	if( !( constraintExpr = ad->Remove( ATTR_REQUIREMENTS ) ) ) {
+		Value val;
+		val.SetBooleanValue( true );
+		constraintExpr = Literal::MakeLiteral( val );
+	}
+	
+	if( ( ( tmp = ad->Remove( ATTR_PARTITION_EXPRS ) ) &&
+			tmp->GetKind( ) != EXPR_LIST_NODE ) || !tmp ) {
+		vector<ExprTree*>	vec;
+		if( tmp ) delete tmp;
+		partitionExprs = ExprList::MakeExprList( vec );
+	} else {
+		partitionExprs = (ExprList*) tmp;
+	}
+
+	if( !evalEnviron.ReplaceLeftAd( ad ) ) {
+		CondorErrMsg+="; could not replace view info; failed to set view info";
 		return( false );
 	}
 
-	return( SetConstraintExpr( coll, constraintExpr ) && 
-			SetRankExpr( coll, rankExpr ) &&
-			SetPartitionExprs( coll, partitionExprs ) );
+	if( constraintExpr && !SetConstraintExpr( coll, constraintExpr ) ) {
+		CondorErrMsg += "; failed to set view info";
+		delete constraintExpr;
+		delete rankExpr;
+		delete partitionExprs;
+		return( false );
+	}
+
+	if( !SetRankExpr( coll, rankExpr ) ) {
+		CondorErrMsg += "; failed to set view info";
+		delete rankExpr;
+		delete partitionExprs;
+		return( false );
+	}
+
+	if( !SetPartitionExprs( coll, partitionExprs ) ) {
+		CondorErrMsg += "; failed to set view info";
+		delete partitionExprs;
+		return( false );
+	}
+
+	return( true );
 }
 
 
 ClassAd *View::
 GetViewInfo( )
 {
-	ClassAd	*newAd, *ad = evalEnviron.GetLeftAd( );
-	if( !ad || !( newAd = ad->Copy( ) ) ) return( NULL );
+	ClassAd				*newAd, *ad = evalEnviron.GetLeftAd( );
+	vector<ExprTree*> 	viewNames;
+	Literal				*lit;
 
-	if( parent ) {
-		newAd->InsertAttr( "ParentView", parent->GetViewName( ).c_str( ) );
+	if( !ad ) {
+		EXCEPT( "internal error: view has no view info!" );
 	}
+	
+	if( !( newAd = ad->Copy( ) ) ) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+		if( newAd ) delete newAd;
+		return( NULL );
+	}
+		// insert number of members
 	newAd->InsertAttr( "NumMembers", (int) viewMembers.size( ) );
+
+	
+		// insert names of subordinate views
+	viewNames.clear( );
+	SubordinateViews::iterator	si;
+	for( si=subordinateViews.begin(); si!=subordinateViews.end(); si++ ) {
+		Value val;
+		val.SetStringValue( (*si)->GetViewName( ) );
+		if( !( lit = Literal::MakeLiteral( val ) ) ) {
+			delete newAd;
+			return( NULL );
+		}
+		viewNames.push_back( lit );
+	}
+	newAd->Insert(ATTR_SUBORDINATE_VIEWS,ExprList::MakeExprList(viewNames));
+	
+
+		// insert names of partitioned views
+	viewNames.clear( );
+	PartitionedViews::iterator	pi;
+	for( pi = partitionedViews.begin( ); pi != partitionedViews.end( ); pi++ ) {
+		Value val;
+		val.SetStringValue( pi->second->GetViewName( ) );
+		if( !( lit = Literal::MakeLiteral( val ) ) ) {
+			delete newAd;
+			return( NULL );
+		}
+		viewNames.push_back( lit );
+	}
+	newAd->Insert(ATTR_PARTITIONED_VIEWS,ExprList::MakeExprList(viewNames));
+
+
 	return( newAd );
 }
 
@@ -136,13 +247,14 @@ GetViewInfo( )
 bool View::
 SetConstraintExpr( ClassAdCollectionServer *coll, const string &expr )
 {
-	Source		src;
-	ExprTree	*constraint;
+	ExprTree		*constraint;
 
 		// parse the expression and insert it into ad in left context
-	return( src.SetSource( expr.c_str( ) ) 	&& 
-		src.ParseExpression( constraint ) 	&&
-		SetConstraintExpr( coll, constraint ) );
+	if( !coll->parser.ParseExpression( expr, constraint ) ) {
+		CondorErrMsg += "; failed to set constraint on view";
+		return( false );
+	}
+	return( SetConstraintExpr( coll, constraint ) );
 }
 
 
@@ -151,46 +263,45 @@ SetConstraintExpr( ClassAdCollectionServer *coll, ExprTree *constraint )
 {
 	ClassAd					*ad;
 	ViewMembers::iterator	vmi;
-	bool					match, rval = true;
-	string				key;
+	bool					match;
+	string					key;
 
 		// insert expression into ad in left context
 	if( !( ad=evalEnviron.GetLeftAd() ) ||
 		!ad->Insert( ATTR_REQUIREMENTS, constraint ) ) {
+		CondorErrMsg += "; failed to set constraint on view";
 		return( false );
 	}
 
 		// check if all members still belong to the view
 	for( vmi = viewMembers.begin( ); vmi != viewMembers.end( ); vmi++ ) {
 		vmi->GetKey( key );
-		if( ( ad = coll->GetClassAd( key ) ) == NULL 	||
-			!evalEnviron.ReplaceRightAd( ad )			||
-			!evalEnviron.EvaluateAttrBool( "RightMatchesLeft", match ) ) {
-				// some error; try and finish anyway
-			rval = false;
-			evalEnviron.RemoveRightAd( );
-			continue;
+		if( ( ad = coll->GetClassAd( key ) ) == NULL ) {
+			EXCEPT( "internal error: classad in view but not in collection" );
 		}
+		evalEnviron.ReplaceRightAd( ad );
+		match = evalEnviron.EvaluateAttrBool("RightMatchesLeft",match) && match;
 		evalEnviron.RemoveRightAd( );
 			// if classad doesn't match constraint remove from view
 		if( !match ) {
-			rval = rval && ClassAdDeleted( coll, key, ad );
+			ClassAdDeleted( coll, key, ad );
 		}
 	}
 
-	return( rval );
+	return( true );
 }
 
 bool View::
 SetRankExpr( ClassAdCollectionServer *coll, const string &expr )
 {
-	Source		src;
 	ExprTree	*rank;
 
 		// parse the expression and insert it into ad in left context
-	return( src.SetSource( expr.c_str( ) ) 	&& 
-		src.ParseExpression( rank ) 		&&
-		SetRankExpr( coll, rank ) );
+	if( !coll->parser.ParseExpression( expr, rank ) ) {
+		CondorErrMsg += "; failed to set rank on view";
+		return( false );
+	}
+	return( SetRankExpr( coll, rank ) );
 }
 
 
@@ -198,15 +309,19 @@ bool View::
 SetRankExpr( ClassAdCollectionServer *coll, ExprTree *rank )
 {
 	ClassAd					*ad;
-	bool					rval = true;
 	ViewMember				vm;
 	MemberIndex::iterator	mIdxItr;
 	ViewMembers::iterator	vmi;
-	string				key;
+	string					key;
 	Value					rankValue;
 
 		// insert expression into ad in left context
-	if( !( ad=evalEnviron.GetLeftAd() ) || !ad->Insert( ATTR_RANK, rank ) ) {
+	if( !( ad=evalEnviron.GetLeftAd() ) ) {
+		EXCEPT( "internal error:  view has no view info" );
+	}
+	
+	if( !ad->Insert( ATTR_RANK, rank ) ) {
+		CondorErrMsg += "failed to set rank on view";
 		return( false );
 	}
 
@@ -219,10 +334,8 @@ SetRankExpr( ClassAdCollectionServer *coll, ExprTree *rank )
 		if( ( ad = coll->GetClassAd( key ) ) == NULL	||
 			!evalEnviron.ReplaceRightAd( ad )			||
 			!evalEnviron.EvaluateAttr( "LeftRankValue", rankValue ) ) {
-				// some error
-			rval = false;
-			evalEnviron.RemoveRightAd( );
-			continue;
+				// internal error
+			EXCEPT( "internal error:  could not determine 'Rank' value" );
 		}
 
 			// insert into member list
@@ -238,18 +351,25 @@ SetRankExpr( ClassAdCollectionServer *coll, ExprTree *rank )
 		memberIndex[key] = vmi;
 	}
 
-	return( rval );
+	return( true );
 }
+
 
 bool View::
 SetPartitionExprs( ClassAdCollectionServer *coll, const string &expr )
 {
-	Source		src;
-	ExprList	*exprList;
+	ExprTree	*exprList=NULL;
 
 		// parse the expression and insert it into ad in left context
-	return( src.SetSource( expr.c_str( ) ) 	&& 
-		src.ParseExprList( exprList ) && SetPartitionExprs( coll, exprList ) );
+	if( !coll->parser.ParseExpression( expr, exprList ) || 
+			!exprList->GetKind( ) != EXPR_LIST_NODE ) {
+		if( exprList ) delete exprList;
+		CondorErrno = ERR_BAD_PARTITION_EXPRS;
+		CondorErrMsg += "; failed to set partition expresssions";
+		return( false );
+	}
+	
+	return( SetPartitionExprs( coll, (ExprList*)exprList ) );
 }
 
 
@@ -259,34 +379,39 @@ SetPartitionExprs( ClassAdCollectionServer *coll, ExprList *el )
 		// insert expression list into view info
 	ClassAd *ad = evalEnviron.GetLeftAd( );
 	if( !el ) {
-		ad->Delete( "PartitionExprs" );
-	} else if( !ad->InsertAttr( "PartitionExprs", el ) ) {
-		delete el;
+		CondorErrno = ERR_BAD_PARTITION_EXPRS;
+		CondorErrMsg = "invalid 'PartitionExprs'; failed to partition";
+		return( false );
+	}
+	if( !( ad->Insert( ATTR_PARTITION_EXPRS, el ) ) ) {
+		CondorErrMsg += "failed to set partition expressions on view";
 		return( false );
 	}
 
 		// re-establish partition views; first delete all partition views
 	PartitionedViews::iterator  mi;
 	for( mi = partitionedViews.begin( ); mi != partitionedViews.end( ); mi++ ) {
+		mi->second->DeleteView( coll );
 		delete mi->second;
 	}
 	partitionedViews.clear( );
 
-		// if there are no partition attrs, no need to do anything more
-	if( !el ) return( true );
+		// if the partition expressions list is empty, we're done
+	vector<ExprTree*> components;
+	el->GetComponents( components );
+	if( components.size( ) == 0 ) return( true );
 	
 		// re-partition content
 	ViewMembers::iterator	vmi;
-	string				key, signature;
-	bool					rval = true;
+	string					key, signature;
 	View					*partition;
 
 	for( vmi = viewMembers.begin( ); vmi != viewMembers.end( ); vmi++ ) {
 			// get signature of this ad
 		vmi->GetKey( key );
 		if( ( ad = coll->GetClassAd( key ) ) == NULL ) {
-			rval = false;
-			continue;
+			EXCEPT( "internal error:  classad %s in view but not in collection",
+				key.c_str( ) );
 		}
 		signature = makePartitionSignature( ad );
 
@@ -294,9 +419,12 @@ SetPartitionExprs( ClassAdCollectionServer *coll, ExprList *el )
 		if( partitionedViews.find( signature ) == partitionedViews.end( ) ) {
 				// no partition ... make a new one
 			if( ( partition = new View( this ) ) == NULL ) {
+				CondorErrno = ERR_MEM_ALLOC_FAILED;
+				CondorErrMsg = "";
 				return( false );
 			}
 			if( !coll->RegisterView( viewName + ":" + signature, partition ) ) {
+				CondorErrMsg += "; could not complete partitioning";
 				return( false );
 			}
 			partition->SetViewName( viewName + ":" + signature );
@@ -307,10 +435,13 @@ SetPartitionExprs( ClassAdCollectionServer *coll, ExprList *el )
 		}
 
 			// add classad to the partition
-		rval = rval && partition->ClassAdInserted( coll, key, ad );
+		if( !partition->ClassAdInserted( coll, key, ad ) ) {
+			CondorErrMsg += "; failed to set partition expressions";
+			return( false );
+		}
 	}
 
-	return( rval );
+	return( true );
 }
 
 
@@ -319,9 +450,16 @@ GetConstraintExpr( )
 {
 	ClassAd		*lAd;
 	ExprTree	*tree;
-		// get rank expression from ad in left context
-	return( (lAd=evalEnviron.GetLeftAd( )) && 
-			(tree=lAd->Lookup( ATTR_REQUIREMENTS )) ?  tree : NULL );
+		// get requirements expression from ad in left context
+	if( !(lAd = evalEnviron.GetLeftAd( ) ) ) {
+		EXCEPT( "internal error:  no view info in view" );
+	}
+	if( !(tree = lAd->Lookup( ATTR_REQUIREMENTS ) ) ) {
+		CondorErrno = ERR_NO_REQUIREMENTS_EXPR;
+		CondorErrMsg = "no 'Requirements' expression in view info";
+		return( (ExprTree*) NULL );
+	}
+	return( tree );
 }
 
 
@@ -331,8 +469,15 @@ GetRankExpr( )
 	ClassAd		*lAd;
 	ExprTree	*tree;
 		// get rank expression from ad in left context
-	return( (lAd=evalEnviron.GetLeftAd( )) && (tree=lAd->Lookup( ATTR_RANK )) ?
-		tree : NULL );
+	if( !(lAd = evalEnviron.GetLeftAd( ) ) ) {
+		EXCEPT( "internal error:  no view info in view" );
+	}
+	if( !(tree = lAd->Lookup( ATTR_RANK ) ) ) {
+		CondorErrno = ERR_NO_RANK_EXPR;
+		CondorErrMsg = "no 'Rank' expression in view info";
+		return( (ExprTree*) NULL );
+	}
+	return( tree );
 }
 
 
@@ -345,49 +490,63 @@ IsMember( const string &key )
 
 
 bool View::
+FindPartition( ClassAd *rep, ViewName &partition )
+{
+	PartitionedViews::iterator	itr;
+	string sig = makePartitionSignature( rep );
+
+	if( sig.empty( ) || sig == "ERROR" || 
+			( itr = partitionedViews.find( sig ) ) == partitionedViews.end( ) ){
+		CondorErrno = ERR_NO_SUCH_VIEW;
+		CondorErrMsg = "no partition matching representative found";
+		return( false );
+	}
+	partition = itr->second->GetViewName( );
+	return( true );
+}
+
+
+bool View::
 InsertSubordinateView( ClassAdCollectionServer *coll, ClassAd *viewInfo )
 {
 	View					*newView = new View( this );
 	ViewMembers::iterator	vmi;
-	string				key;
+	string					key;
 	ClassAd					*ad;
-	bool					rval = true;
-	char					*name= NULL;;
+	string					name;;
 
-	if( !newView ) return( false );
-
-	if( viewInfo ) {
-		if( !( ad = viewInfo->Copy( ) ) ) {
-			return( false );
-		}
-		ad->InsertAttr( "ParentView", viewName.c_str( ) );
-		newView->evalEnviron.ReplaceLeftAd( ad );
-		ad->EvaluateAttrString( "ViewName", name );
-	} else {
-		newView->evalEnviron.DeepInsertAttr( "adcl.ad", "ParentView",
-			viewName.c_str( ) );
-	}
-
-	newView->SetViewName( ViewName( name ) );
-	if( !coll->RegisterView( ViewName( name ), newView ) ) {
-		delete newView;
-		delete [] name;
+	if( !newView ) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
 		return( false );
 	}
-	delete [] name;
+
+	if( viewInfo ) {
+		viewInfo->EvaluateAttrString( ATTR_VIEW_NAME, name );
+		newView->evalEnviron.ReplaceLeftAd( viewInfo );
+	} 
+
+	newView->SetViewName( name );
+	if( !coll->RegisterView( name, newView ) ) {
+		CondorErrMsg += "; failed to insert new view";
+		return( false );
+	}
 	subordinateViews.push_front( newView );
 
 		// insert current view content into new view
 	for( vmi = viewMembers.begin( ); vmi != viewMembers.end( ); vmi++ ) {
 		vmi->GetKey( key );
 		if( ( ad = coll->GetClassAd( key ) ) == NULL ) {
-			rval = false;
-			continue;
+			EXCEPT( "internal error:  classad %s in view but not in collection",
+				key.c_str( ) );
 		}
-		rval = rval && newView->ClassAdInserted( coll, key, ad );
+		if( !newView->ClassAdInserted( coll, key, ad ) ) {
+			CondorErrMsg += "; failed to insert content into new view";
+			return( false );
+		}
 	}
 
-	return( rval );
+	return( true );
 }
 
 
@@ -395,55 +554,62 @@ bool View::
 InsertPartitionedView( ClassAdCollectionServer *coll, ClassAd *viewInfo, 
 	ClassAd *rep )
 {
-	string	signature  = makePartitionSignature( rep );
-	View		*partition;
-	ClassAd		*ad;
-	char		*tmp=NULL;
+	string	signature;
+	View	*partition;
+	string	tmp;
+
+	signature = makePartitionSignature( rep );
+	delete rep;
 
 		// must have a partitioning
 	if( signature.empty( ) ) {
+		delete viewInfo;
+		CondorErrno = ERR_BAD_PARTITION_EXPRS;
+		CondorErrMsg = "missing or bad partition expressions; cannot add "
+			"partition";
 		return( false );
 	}
 
 		// check if a partition with the given signature already exists
 	if( partitionedViews.find( signature ) != partitionedViews.end( ) ) {
 			// partition already exists
+		delete viewInfo;
+		CondorErrno = ERR_PARTITION_EXISTS;
+		CondorErrMsg = "partition " + signature + " already exists";
 		return( false );
 	}
 		// create new partition
 	if( ( partition = new View( this ) ) == NULL ) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
 		return( false );
 	}
 
-	if( viewInfo && viewInfo->EvaluateAttrString( "ViewName", tmp ) ) {
-		partition->SetViewName( string( tmp ) );
-		if( !coll->RegisterView( string( tmp ), partition ) ) {
+	if( viewInfo && viewInfo->EvaluateAttrString( ATTR_VIEW_NAME, tmp ) ) {
+		partition->SetViewName( tmp );
+		if( !coll->RegisterView( tmp, partition ) ) {
+			delete viewInfo;
 			delete partition;
+			CondorErrMsg += "; failed to add partition " + tmp;
 			return( false );
 		}
 	} else {
 		partition->SetViewName( viewName + ":" + signature );
 		if( !coll->RegisterView( viewName + ":" + signature, partition ) ) {
+			delete viewInfo;
 			delete partition;
+			CondorErrMsg += "; failed to add partition " + tmp;
 			return( false );
 		}
 	}
-	if( tmp ) delete [] tmp;
 
 		// enter into hash_map
 	partitionedViews[signature] = partition;
 
 		// setup view info of partition
 	if( viewInfo ) {
-		if( !( ad = viewInfo->Copy( ) ) ) {
-			return( false );
-		}
-		ad->InsertAttr( "ParentView", viewName.c_str( ) );
-		partition->evalEnviron.ReplaceLeftAd( ad );
-	} else {
-		partition->evalEnviron.DeepInsertAttr( "adcl.ad", "ParentView",
-			viewName.c_str( ) );
-	}
+		partition->evalEnviron.ReplaceLeftAd( viewInfo );
+	} 
 
 		// NOTE:  since this is a partition which hasn't been created 
 		// previously, none of the classads in this view need be inserted
@@ -455,8 +621,13 @@ InsertPartitionedView( ClassAdCollectionServer *coll, ClassAd *viewInfo,
 bool View::
 DeleteChildView( ClassAdCollectionServer *coll, const ViewName &vName )
 {
-	return( DeleteSubordinateView( coll, vName ) || 
-			DeletePartitionedView( coll, vName ) );
+	if( !DeleteSubordinateView( coll, vName ) && 
+			!DeletePartitionedView( coll, vName ) ) {
+		return( false );
+	}
+	CondorErrno = ERR_OK;
+	CondorErrMsg = "";
+	return( true );
 }
 
 
@@ -473,6 +644,8 @@ DeleteSubordinateView( ClassAdCollectionServer *coll, const ViewName &vName )
 			return( true );
 		}
 	}
+	CondorErrno = ERR_NO_SUCH_VIEW;
+	CondorErrMsg = "no child view named " + vName + " in view";
 	return( false );
 }
 
@@ -484,17 +657,62 @@ DeletePartitionedView( ClassAdCollectionServer *coll, const ViewName &vName )
 
 	for( mi = partitionedViews.begin( ); mi != partitionedViews.end( ); mi++ ) {
 		if( mi->second->GetViewName( ) == vName ) {
-				// cannot delete a non-empty partition
+				// check if the partition is non-empty ...
 			if( mi->second->Size( ) != 0 ) {
-				return( false );
+					// remove all child views and reset view info
+				View						*view = mi->second;
+				SubordinateViews::iterator	svi;
+				PartitionedViews::iterator	pvi;
+
+					// delete subordinate views
+				for( svi = view->subordinateViews.begin( ); 
+						svi != view->subordinateViews.end( ); svi++ ) {
+					(*svi)->DeleteView( coll );
+					delete (*svi);
+				}
+				view->subordinateViews.clear( );
+
+					// delete partitioned views
+				for( pvi = view->partitionedViews.begin( ); 
+						pvi != view->partitionedViews.end( ); pvi++ ) {
+					pvi->second->DeleteView( coll );
+					delete pvi->second;
+				}
+				view->partitionedViews.clear( );
+
+					// reset name of view
+				coll->UnregisterView( vName );
+				coll->RegisterView( viewName + ":" + mi->first, view );
+
+					// reset other view info
+				vector<ExprTree*> vec;
+				ClassAd *ad = new ClassAd( );
+				if( !ad ) {
+					CondorErrno = ERR_MEM_ALLOC_FAILED;
+					CondorErrMsg = "";
+					return( false );
+				}
+				if( !ad->InsertAttr( ATTR_REQUIREMENTS, true )	||
+						!ad->InsertAttr( ATTR_RANK, 0 )				||
+						!ad->Insert(ATTR_PARTITION_EXPRS,
+							ExprList::MakeExprList( vec ) )	||
+						!view->SetViewInfo( coll, ad ) ) {
+					CondorErrMsg += "; failed to delete partition view " +
+						vName;
+					return( false );
+				}
+				return( true );
 			}
+
+				// empty partition ... can just delete it
 			mi->second->DeleteView( coll );
 			delete mi->second;
 			partitionedViews.erase( mi );
 			return( true );
 		}
 	}
-
+	CondorErrno = ERR_NO_SUCH_VIEW;
+	CondorErrMsg = "no partition child view named " + vName + " in view";
 	return( false );
 }
 
@@ -526,10 +744,12 @@ DeletePartitionedView( ClassAdCollectionServer *coll, ClassAd *rep )
 	string signature = makePartitionSignature( rep );
 
 	if( signature.empty( ) ) {
+		CondorErrno = ERR_NO_SUCH_VIEW;
+		CondorErrMsg = "no partition corresponds to representative";
 		return( false );
 	}
 
-	ViewName	vName = viewName + ":" + signature;
+	ViewName vName = viewName + ":" + signature;
 	return( DeletePartitionedView( coll, vName ) );
 }
 
@@ -543,19 +763,15 @@ ClassAdInserted( ClassAdCollectionServer *coll, const string &key,
 {
 	PartitionedViews::iterator	partition;
 	string						signature;
-	ViewMember						vm;
-	bool 							match, rval=true;
-	Value							rankValue;
-	View							*childView;
+	ViewMember					vm;
+	bool 						match;
+	Value						rankValue;
+	View						*childView;
 
-		// check if the ad satisfies the view's constraint
-	if( !evalEnviron.ReplaceRightAd( ad ) || 
-		!evalEnviron.EvaluateAttrBool( "RightMatchesLeft", match ) ) {
-		evalEnviron.RemoveRightAd( );
-		return( false );
-	}
-
-		// if the constraint was not satisfied, the ad can be ignored
+		// check if the ad satisfies the view's constraint; if the constraint 
+		// was not satisfied, the ad can be ignored
+	evalEnviron.ReplaceRightAd( ad );
+	match = evalEnviron.EvaluateAttrBool("RightMatchesLeft",match) && match;
 	if( !match ) {
 		evalEnviron.RemoveRightAd( );
 		return( true );
@@ -563,7 +779,8 @@ ClassAdInserted( ClassAdCollectionServer *coll, const string &key,
 
 		// obtain the rank value of the ad
 	if( !evalEnviron.EvaluateAttr( "LeftRankValue", rankValue ) ) {
-		evalEnviron.RemoveRightAd( );
+		CondorErrMsg += "; could not get 'Rank' value; failed to insert "
+			"classad " + key + "in view " + viewName;
 		return( false );
 	}
 	evalEnviron.RemoveRightAd( );
@@ -571,7 +788,9 @@ ClassAdInserted( ClassAdCollectionServer *coll, const string &key,
 		// insert into every subordinate child view
 	SubordinateViews::iterator	xi;
 	for( xi = subordinateViews.begin( ); xi != subordinateViews.end( ); xi++ ) {
-		rval = rval && (*xi)->ClassAdInserted( coll, key, ad );
+		if( !(*xi)->ClassAdInserted( coll, key, ad ) ) {
+			return( false );
+		}
 	}
 
 		// find partition to insert into
@@ -580,18 +799,28 @@ ClassAdInserted( ClassAdCollectionServer *coll, const string &key,
 		partition = partitionedViews.find( signature );
 		if( partition == partitionedViews.end( ) ) {
 				// no appropriate partition --- create one and insert
-			if( ( childView = new View( this ) ) == 0 || 
-				!coll->RegisterView( viewName + ":" + signature, childView ) ) {
-				if( childView ) delete childView;
+			if( ( childView = new View( this ) ) == 0 ) {
+				CondorErrno = ERR_MEM_ALLOC_FAILED;
+				CondorErrMsg = "";
 				return( false );
 			}
+
+			if( !coll->RegisterView( viewName + ":" + signature, childView ) ) {
+				if( childView ) delete childView;
+				CondorErrMsg += "; failed to create view; failed to insert "
+					"classad " + key + "in view";
+				return( false );
+			}
+			childView->SetViewName( viewName + ":" + signature );
 			partitionedViews[signature] = childView;
 		} else {
 			childView = partitionedViews[signature];
 		}
 
 			// update the partition
-		rval = rval && childView->ClassAdInserted( coll, key, ad );
+		if( !childView->ClassAdInserted( coll, key, ad ) ) {
+			return( false );
+		}
 	}
 
 		// insert ad into list of view members and update index
@@ -599,32 +828,29 @@ ClassAdInserted( ClassAdCollectionServer *coll, const string &key,
 	vm.SetRankValue( rankValue );
 	memberIndex[key] = viewMembers.insert( vm );
 
-	return( rval );
+	return( true );
 }
 
 
 
-bool View::
+void View::
 ClassAdPreModify( ClassAdCollectionServer *coll, ClassAd *ad )
 {
 	SubordinateViews::iterator	xi;
 	PartitionedViews::iterator	mi;
-	bool							rval = true;
 
 		// stash signature of ad
 	oldAdSignature = makePartitionSignature( ad );
 
 		// perform premodify on all subordinate children ...
 	for( xi = subordinateViews.begin( ); xi != subordinateViews.end( ); xi++ ) {
-		rval = rval && (*xi)->ClassAdPreModify( coll, ad );
+		(*xi)->ClassAdPreModify( coll, ad );
 	}
 
 		// ... and partition children
 	for( mi = partitionedViews.begin( ); mi != partitionedViews.end( ); mi++ ) {
-		rval = rval && mi->second->ClassAdPreModify( coll, ad );
+		mi->second->ClassAdPreModify( coll, ad );
 	}
-
-	return( rval );
 }
 
 
@@ -645,11 +871,10 @@ ClassAdModified( ClassAdCollectionServer *coll, const string &key,
 	}
 
 		// evaluate constraint and get new rank value
-	if( !evalEnviron.ReplaceRightAd( mad ) || 
-		!evalEnviron.EvaluateAttrBool( "RightMatchesLeft", match ) ||
-		!evalEnviron.EvaluateAttr( "LeftRankValue", rankValue ) ) {
-		evalEnviron.RemoveRightAd( );
-		return( false );
+	evalEnviron.ReplaceRightAd( mad );
+	match = evalEnviron.EvaluateAttrBool("RightMatchesLeft",match) && match;
+	if( !evalEnviron.EvaluateAttr( "LeftRankValue", rankValue ) ) {
+		rankValue.SetUndefinedValue( );
 	}
 	evalEnviron.RemoveRightAd( );
 
@@ -679,12 +904,11 @@ ClassAdModified( ClassAdCollectionServer *coll, const string &key,
 				mi = partitionedViews.find( oldAdSignature );
 				if( mi == partitionedViews.end( ) ) {
 						// partition of ad not found; some internal error
-					oldAdSignature.erase( oldAdSignature.begin( ), 
-						oldAdSignature.end( ) );
-					return( false );
+					EXCEPT( "internal error:  partition of classad with "
+						"signature %s not found", oldAdSignature.c_str( ) );
 				}
 					// delete from old partition
-				rval = mi->second->ClassAdDeleted( coll, key, mad );
+				mi->second->ClassAdDeleted( coll, key, mad );
 			}
 
 				// is there a partition with the new signature?
@@ -692,19 +916,30 @@ ClassAdModified( ClassAdCollectionServer *coll, const string &key,
 				mi = partitionedViews.find( sig );
 				if( mi != partitionedViews.end( ) ) {
 						// yes ... insert into this partition
-					rval = rval && mi->second->ClassAdInserted(coll, key, mad);
+					if( !mi->second->ClassAdInserted(coll, key, mad) ) {
+						CondorErrMsg+="; failed to relocate ad on modification";
+						return( false );
+					}
 				} else {
 						// no ... create a new partition
 					if( ( newPartition = new View( this ) ) == 0 ) {
 						oldAdSignature.erase( oldAdSignature.begin( ), 
 							oldAdSignature.end( ) );
+						CondorErrno = ERR_MEM_ALLOC_FAILED;
+						CondorErrMsg = "";
 						return( false );
 					} 
 					if( !coll->RegisterView( viewName+":"+sig, newPartition ) ){
 						delete newPartition;
+						CondorErrMsg += "; failed to create new partition for "
+							" modified ad";
 						return( false );
 					}
-					rval=rval && newPartition->ClassAdInserted(coll, key, mad);
+					newPartition->SetViewName( viewName + ":" + sig );
+					if( !newPartition->ClassAdInserted(coll, key, mad) ) {
+						CondorErrMsg+="; failed to relocate ad on modification";
+						return( false );
+					}
 					partitionedViews[sig] = newPartition;
 				}
 			}
@@ -713,34 +948,39 @@ ClassAdModified( ClassAdCollectionServer *coll, const string &key,
 			// send modification notification to all subordinate children
 		SubordinateViews::iterator xi;
 		for( xi=subordinateViews.begin( ); xi!=subordinateViews.end( ); xi++ ){
-			rval = rval && (*xi)->ClassAdModified( coll, key, mad );
+			if( !(*xi)->ClassAdModified( coll, key, mad ) ) {
+				return( false );
+			}
 		}
 	} else if( !wasMember && match ) {
 			// wasn't a member, but now is --- insert the ad
 		rval = ClassAdInserted( coll, key, mad );
 	} else if( wasMember && !match ) {
 			// was a member, but now isnt --- delete the ad
-		rval = ClassAdDeleted( coll, key, mad );
+		ClassAdDeleted( coll, key, mad );
+		rval = true;
 	} else {
 		// wasn't a member and still isn't --- nothing to do
 	}
 
 	oldAdSignature.erase( oldAdSignature.begin( ), oldAdSignature.end( ) );
+	if( !rval ) {
+		CondorErrMsg += "; failed to modify ad";
+	}
 	return( rval );
 }
 
 
-bool View::
+void View::
 ClassAdDeleted( ClassAdCollectionServer *coll, const string &key, 
 	ClassAd *ad )
 {
 	ViewMembers::iterator	vmi;
-	bool					rval = true;
 
 		// check if the classad is in the view
 	if( memberIndex.find( key ) == memberIndex.end( ) ) {
 			// not in view; nothing to do
-		return( true );
+		return;
 	}
 
 		// delete from member index and member list
@@ -751,7 +991,7 @@ ClassAdDeleted( ClassAdCollectionServer *coll, const string &key,
 		// delete from every subordinate child view
 	SubordinateViews::iterator	xi;
 	for( xi = subordinateViews.begin( ); xi != subordinateViews.end( ); xi++ ) {
-		rval = rval && (*xi)->ClassAdDeleted( coll, key, ad );
+		(*xi)->ClassAdDeleted( coll, key, ad );
 	}
 
 		// delete from partition view
@@ -760,107 +1000,60 @@ ClassAdDeleted( ClassAdCollectionServer *coll, const string &key,
 		PartitionedViews::iterator mi = partitionedViews.find( signature );
 		if( mi == partitionedViews.end( ) ) {
 				// an internal error
-			return( false );
+			EXCEPT( "classad %s doesn't have a partition", signature.c_str( ) );
 		}
 
 			// delete from the partition
-		rval = rval && mi->second->ClassAdDeleted( coll, key, ad );
+		mi->second->ClassAdDeleted( coll, key, ad );
 	}
-
-	return( rval );
 }
 
 
 string View::
 makePartitionSignature( ClassAd *ad )
 {
+	ClassAdUnParser		unparser;
 	ExprListIterator	itr;
-    Sink    	snk;
-    char    	*tmp=NULL;
-    int     	alen=0;
-    Value   	value;
-	bool		error = false;
-	ClassAd		*oad, *info;
-	ExprList	*el;
+	string				signature;
+    Value   			value;
+	ClassAd				*oad, *info;
+	ExprList			*el;
 
 		// stash the old ad from the environment and insert the new ad in
 	oad = evalEnviron.RemoveRightAd( );
 	evalEnviron.ReplaceRightAd( ad );
 	if( !( info = evalEnviron.GetLeftAd( ) ) ) {
-		evalEnviron.RemoveRightAd( );
-		return( string( "ERROR" ) );
+		EXCEPT( "internal error:  view doesn't have view info" );
 	}
-	if( !info->Lookup( "PartitionExprs" ) ) {
-			// no partitioning
+	vector<ExprTree*> exprs;
+	if( !info->EvaluateAttr( ATTR_PARTITION_EXPRS, value ) ||
+			!value.IsListValue( el ) ) {
 		evalEnviron.RemoveRightAd( );
 		return( string( "" ) );
 	}
-	if( !info->EvaluateAttr( "PartitionExprs", value ) ||
-			!value.IsListValue( el ) ) {
+	el->GetComponents( exprs );
+	if( exprs.size( ) == 0 ) {
 		evalEnviron.RemoveRightAd( );
-		return( string( "ERROR" ) );
+		return( string( "" ) );
 	}
 
 		// go through the expression list and form a value vector
-    snk.SetSink( tmp, alen, false );
-	if( !snk.SendToSink( "<|", 2 ) ) { 
-		error = true;	
-	}
+	signature = "<|";
 	itr.Initialize( el );
-	while( itr.NextValue( value ) ) {
-		if( !value.ToSink( snk ) || !snk.SendToSink( "|", 1 ) ) {
-			error = true;
-			break;
-        }
+	while( !itr.IsAfterLast( ) ) {
+		itr.CurrentValue( value );
+		unparser.Unparse( signature, value );
+		signature += "|";
+		itr.NextExpr( );
     }
-	if( !snk.SendToSink( ">",1 ) ) {
-		error = true;
-	}
-    snk.FlushSink( );
+	signature += ">";
 
 		// put the old ad back in the environmnet
 	evalEnviron.RemoveRightAd( );
 	evalEnviron.ReplaceRightAd( oad );
 
-		// if there's an error, return the null string
-	if( error ) {
-		if( tmp ) delete [] tmp;
-		return( string( "ERROR" ) );
-	} 
-
 		// return the computed signature
-   	string signature = tmp;
-   	delete [] tmp;
     return( signature );
-}
-
-
-bool View::
-extractPartitionAttrs( vector<string> &attrVec, ExprTree *attrExpr )
-{
-	ExprList		*el;
-	ExprListIterator itr;
-	Value			val;
-	char			*strVal;
-	int				i;
-
-	if( attrExpr->GetKind( ) != EXPR_LIST_NODE ) {
-		return( false );
-	}
-	el = (ExprList *) attrExpr;
-	attrVec.resize( el->Number( ) );
-
-	itr.Initialize( el );
-	i = 0;
-	while( itr.NextValue( val ) ) {
-		if( !val.IsStringValue( strVal ) ) {
-			return( false );
-		}
-		attrVec[i] = string( strVal );
-		i++;
-	}
-
-	return( true );
 }
 
 
@@ -868,36 +1061,48 @@ bool View::
 Display( FILE *file )
 {
 	ViewMembers::iterator	vmi;
-	Sink					snk;
+	ClassAdUnParser			unparser;
 	Value					val;
-	string					key;
-	FormatOptions			fo;
 	ClassAd					*viewInfo;
-
-	snk.SetSink( file );
-	fo.SetClassAdIndentation( );
-	snk.SetFormatOptions( &fo );
-	snk.SetTerminalChar( '\n' );
+	string					buf;
 
 		// display view info
-	viewInfo = GetViewInfo( );
-	if( !viewInfo || !viewInfo->ToSink( snk ) ) {
-		if( viewInfo ) delete viewInfo;
-		return( false );
-	}
-	snk.FlushSink( );
+	if( !( viewInfo = GetViewInfo( ) ) ) return( false );
+	unparser.Unparse( buf, viewInfo );
+	fprintf( file, "%s\n", buf.c_str( ) );
 	delete viewInfo;
+
 	for( vmi = viewMembers.begin( ); vmi != viewMembers.end( ); vmi++ ) {
-		vmi->GetKey( key );
+		vmi->GetKey( buf );
 		vmi->GetRankValue( val );
-		if( !val.ToSink( snk ) || !snk.SendToSink( " ", 1 ) ||
-				!snk.SendToSink( (void*)key.c_str( ), key.size( ) ) ||
-				!snk.FlushSink( ) ) {
-			return( false );
-		}
+		buf += ": ";
+		unparser.Unparse( buf, val );
+		fprintf( file, "%s\n", buf.c_str() );
 	}
 
 	return( true );
+}
+
+void View::
+GetSubordinateViewNames( vector<string>& views )
+{
+	SubordinateViews::iterator	itr;
+
+	views.clear( );
+	for( itr=subordinateViews.begin( ); itr!=subordinateViews.end( ); itr++ ) {
+		views.push_back( (*itr)->GetViewName( ) );
+	}
+}
+
+void View::
+GetPartitionedViewNames( vector<string>& views )
+{
+	PartitionedViews::iterator	itr;
+
+	views.clear( );
+	for( itr=partitionedViews.begin( ); itr!=partitionedViews.end( ); itr++ ) {
+		views.push_back( itr->second->GetViewName( ) );
+	}
 }
 
 
@@ -912,18 +1117,20 @@ operator()( const ViewMember &vm1, const ViewMember &vm2 ) const
 
 	vt1 = val1.GetType( );
 	vt2 = val2.GetType( );
-	if( vt1 < vt2 ) {
-		return( true );
-	}
 
-	if( vt1 == vt2 && vt1 != CLASSAD_VALUE && vt2 != LIST_VALUE ) {
+		// if the values are of the same scalar type, or if they are both
+		// numbers, use the builtin < comparison operator
+	if( ( vt1 == vt2 && vt1 != CLASSAD_VALUE && vt2 != LIST_VALUE ) ||
+			( vt1 == INTEGER_VALUE && vt2 == REAL_VALUE )			||
+			( vt1 == REAL_VALUE && vt2 == INTEGER_VALUE ) ) {
 		Value	result;
 		bool	lessThan;
 		Operation::Operate( LESS_THAN_OP, val1, val2, result );
 		return( result.IsBooleanValue( lessThan ) && lessThan );
 	}
 
-	return( false );
+		// otherwise, rank them by their type numbers
+	return( vt1 < vt2 );
 }
 
 

@@ -24,7 +24,7 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-#if defined( WANT_NAMESPACES )
+#if defined( WANT_NAMESPACES ) && defined(__cplusplus)
 #define BEGIN_NAMESPACE( x ) namespace x {
 #define END_NAMESPACE }
 #else
@@ -163,26 +163,158 @@ enum OpKind
 };
 
 
-const char ATTR_COLLECTION_HINTS[] 	= "CollectionHints";
-const char ATTR_CONTEXT			[] 	= "Context";
-const char ATTR_DEEP_MODS		[] 	= "DeepMods";
-const char ATTR_DELETE_AD		[] 	= "DeleteAd";
-const char ATTR_DELETES			[] 	= "Deletes";
-const char ATTR_KEY				[]	= "Key";
-const char ATTR_NEW_AD			[]	= "NewAd";
-const char ATTR_PROJECT_THROUGH	[]	= "ProjectThrough";
-const char ATTR_RANK			[]	= "Rank";
-const char ATTR_RANK_HINTS		[] 	= "RankHints";
-const char ATTR_REPLACE			[] 	= "Replace";
-const char ATTR_REQUIREMENTS	[]	= "Requirements";
-const char ATTR_UPDATES			[] 	= "Updates";
-const char ATTR_WANT_LIST		[]	= "WantList";
-const char ATTR_WANT_PRELUDE	[]	= "WantPrelude";
-const char ATTR_WANT_RESULTS	[]	= "WantResults";
-const char ATTR_WANT_POSTLUDE	[]	= "WantPostlude";
+    // collection operations
+enum {
+    ClassAdCollOp_NoOp               	= 10000,
+
+	__ClassAdCollOp_ViewOps_Begin__,
+    ClassAdCollOp_CreateSubView      	= __ClassAdCollOp_ViewOps_Begin__,
+    ClassAdCollOp_CreatePartition    	,
+    ClassAdCollOp_DeleteView         	,
+    ClassAdCollOp_SetViewInfo        	,
+	ClassAdCollOp_AckViewOp				,
+	__ClassAdCollOp_ViewOps_End__		= ClassAdCollOp_AckViewOp,
+
+	__ClassAdCollOp_ClassAdOps_Begin__,
+    ClassAdCollOp_AddClassAd         	= __ClassAdCollOp_ClassAdOps_Begin__,
+    ClassAdCollOp_UpdateClassAd      	,
+    ClassAdCollOp_ModifyClassAd      	,
+    ClassAdCollOp_RemoveClassAd      	,
+	ClassAdCollOp_AckClassAdOp			,
+	__ClassAdCollOp_ClassAdOps_End__	= ClassAdCollOp_AckClassAdOp,
+
+	__ClassAdCollOp_XactionOps_Begin__,
+    ClassAdCollOp_OpenTransaction		= __ClassAdCollOp_XactionOps_Begin__,
+	ClassAdCollOp_AckOpenTransaction	,
+	ClassAdCollOp_CommitTransaction		,
+	ClassAdCollOp_AbortTransaction		,
+	ClassAdCollOp_AckCommitTransaction	,
+    ClassAdCollOp_ForgetTransaction   	,
+	__ClassAdCollOp_XactionOps_End__	= ClassAdCollOp_ForgetTransaction,
+
+	__ClassAdCollOp_ReadOps_Begin__		,
+	ClassAdCollOp_GetClassAd			= __ClassAdCollOp_ReadOps_Begin__,
+	ClassAdCollOp_GetViewInfo			,
+	ClassAdCollOp_GetSubordinateViewNames,
+	ClassAdCollOp_GetPartitionedViewNames,
+	ClassAdCollOp_FindPartitionName		,
+	ClassAdCollOp_IsActiveTransaction	,
+	ClassAdCollOp_IsCommittedTransaction,
+	ClassAdCollOp_GetAllActiveTransactions,
+	ClassAdCollOp_GetAllCommittedTransactions,
+	ClassAdCollOp_GetServerTransactionState,
+	ClassAdCollOp_AckReadOp				,
+	__ClassAdCollOp_ReadOps_End__		= ClassAdCollOp_AckReadOp,
+
+	__ClassAdCollOp_MiscOps_Begin__		,
+	ClassAdCollOp_Connect				= __ClassAdCollOp_MiscOps_Begin__,
+	ClassAdCollOp_QueryView				,
+	ClassAdCollOp_Disconnect			,
+	__ClassAdCollOp_MiscOps_End__		= ClassAdCollOp_Disconnect
+};
+
+
+	// these should be in the same order as the coll ops
+static const char * const CollOpStrings[] = {
+	"no op",
+
+	"create sub view",
+	"create partition",
+	"delete view",
+	"set view info",
+	"ack view operation",
+
+	"add classad",
+	"update classad",
+	"modify classad",
+	"remove classad",
+	"ack classad op",
+
+	"open transaction",
+	"ack open transaction",
+	"commit transaction",
+	"abort transaction",
+	"ack commit transaction",
+	"forget transaction",
+
+	"get classad",
+	"get view info",
+	"get sub view names",
+	"get partitioned view names",
+	"find partition name",
+	"is active transaction?",
+	"is committed transaction?",
+	"get all active transactions",
+	"get all committed transactions",
+	"get server transaction state",
+	"ack read op",
+
+	"connect to server",
+	"query view",
+	"disconnect from server"
+};
+
+
+static const char ATTR_AD					[]	= "Ad";
+static const char ATTR_CONTEXT				[] 	= "Context";
+static const char ATTR_DEEP_MODS			[] 	= "DeepMods";
+static const char ATTR_DELETE_AD			[] 	= "DeleteAd";
+static const char ATTR_DELETES				[] 	= "Deletes";
+static const char ATTR_KEY					[]	= "Key";
+static const char ATTR_NEW_AD				[]	= "NewAd";
+static const char ATTR_OP_TYPE				[]	= "OpType";
+static const char ATTR_PARENT_VIEW_NAME		[]	= "ParentViewName";
+static const char ATTR_PARTITION_EXPRS 		[]  = "PartitionExprs";
+static const char ATTR_PARTITIONED_VIEWS	[] 	= "PartitionedViews";
+static const char ATTR_PROJECT_THROUGH		[]	= "ProjectThrough";
+static const char ATTR_RANK					[]	= "Rank";
+static const char ATTR_RANK_HINTS			[] 	= "RankHints";
+static const char ATTR_REPLACE				[] 	= "Replace";
+static const char ATTR_REQUIREMENTS			[]	= "Requirements";
+static const char ATTR_SUBORDINATE_VIEWS	[]	= "SubordinateViews";
+static const char ATTR_UPDATES				[] 	= "Updates";
+static const char ATTR_WANT_LIST			[]	= "WantList";
+static const char ATTR_WANT_PRELUDE			[]	= "WantPrelude";
+static const char ATTR_WANT_RESULTS			[]	= "WantResults";
+static const char ATTR_WANT_POSTLUDE		[]	= "WantPostlude";
+static const char ATTR_VIEW_INFO			[]	= "ViewInfo";
+static const char ATTR_VIEW_NAME			[]	= "ViewName";
+static const char ATTR_XACTION_NAME			[]	= "XactionName";
+
+enum AckMode { _DEFAULT_ACK_MODE, WANT_ACKS, DONT_WANT_ACKS };
+
+#if defined(__cplusplus)
+#include <string>
+struct CaseIgnLTStr {
+    bool operator( )( const string &s1, const string &s2 ) const {
+       return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
+	}
+};
+
+struct StringHash {
+	size_t operator()( const string &s ) const {
+		size_t h = 0;
+		for( int i = s.size(); i >= 0; i-- ) {
+			h = 5*h + s[i];
+		}
+		return( h );
+	}
+};
+#endif
+
 
 END_NAMESPACE // classad
 
 char* strnewp( const char* );
+
+extern int 		CondorErrno;
+
+#ifdef __cplusplus
+#include <string>
+extern string 	CondorErrMsg;
+static const string NULL_XACTION = "";
+#endif
+
+#include "classadErrno.h"
 
 #endif//__COMMON_H__

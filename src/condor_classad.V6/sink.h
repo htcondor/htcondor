@@ -25,7 +25,9 @@
 #define __DUMPER_H__
 
 #include "common.h"
-#include "classad_io.h"
+#include <vector>
+#include <utility>	// for pair template
+#include <string>
 #include "formatOptions.h"
 
 BEGIN_NAMESPACE( classad )
@@ -33,65 +35,31 @@ BEGIN_NAMESPACE( classad )
 class ClassAdCollection;
 class View;
 
-/**
-	Defines an abstraction for the output sink into which expressions and 
-	values are unparsed.  The sink may be pointed to a string, a CEDAR
-	socket, a file descriptor or a FILE *.
-*/
-class Sink
+class ClassAdUnParser
 {
 	public:
 		/// Constructor
-		Sink ();
+		ClassAdUnParser( );
 
 		/// Destructor
-		~Sink ();
+		virtual ~ClassAdUnParser( );
 
-        // Set the stream source for the parse.
-		/** Points the sink to a string buffer specified by the user.  
-				Operations which put information into the sink fail if the
-				buffer is not large enough to store the object.
-			@param buf Pointer to a buffer.
-			@param sz The size of the buffer.
-		*/
-        void SetSink (char *buf, int sz); // strings
+		void Unparse( string &buffer, Value &val );
+		void Unparse( string &buffer, ExprTree *expr );
 
-		/** Points the sink to a string buffer which will be allocated by the
-				sink object.  This method performs the necessary memory 
-				management (i.e., resizing when necessary) to ensure that the 
-				buffer is large enough to contain the representation of the 
-				object.
-			@param buf Reference to a character pointer, which will point to 
-				the buffer containing the unparsed representation of the 
-				object.  If useInitial is true, buf is assumed to point to
-				an initial buffer of size len which may be later resized.
-			@param len Reference to an integer, which contains the size of
-				the buffer buf.  If useInitial is true, this parameter should
-				contain the size of the buffer buf.
-			@param useInitial true if the initial values of buf and len are
-				to be used as an initial buffer.  Otherwise, these values are
-				discarded.
-		*/
-        void SetSink (char *&buf, int &len, bool useInitial );	// strings
+		virtual void Unparse( string &buffer, Value&, NumberFactor );	
+		virtual void Unparse( string &buffer, ExprTree *tree, const string &ref,
+					bool absolute=false );
+		virtual void Unparse( string &buffer, OpKind op, ExprTree *op1, 
+					ExprTree *op2, ExprTree *op3 );
+		virtual void Unparse(string &buffer, const string &fnName, 
+					vector<ExprTree*>& args);
+		virtual void Unparse( string &buffer, vector< pair<string, 
+					ExprTree*> >& attrlist );
+		virtual void Unparse( string &buffer, vector<ExprTree*>& exprs );
 
-		/** Points the sink to a file descriptor.
-			@param file_desc The file descriptor.
-		*/
-        void SetSink (int file_desc);         // file descriptor
-
-		/** Points the sink to a FILE *.
-			@param file_ptr Pointer to the FILE structure to which the object
-				will be dumped.
-		*/
-        void SetSink (FILE *file_ptr);      // FILE structure
-
-		/** Points the sink at a ByteSink object
-		 	@param s Pointer to a ByteSink object
-			@see ByteSink
-		*/
-		void SetSink( ByteSink *s );
-
-		ByteSink *GetSink( ) { return( sink ); }
+		// table of string representation of operators
+		static char *opString[];
 
 		/** Set the format options for the sink
 		 	@param fo Pointer to a FormatOptions object
@@ -105,27 +73,6 @@ class Sink
 		*/
 		FormatOptions *GetFormatOptions( ) { return pp; }
 
-		/** Set the terminating character which will be pushed to the sink
-		    when the flushSink() method is called.  (This character is '\0'
-			by default.)  When not '\0', this character is usually the 
-			sentinel character required by the Source that will parse this
-			Sink's output.  In the case of string sinks, the terminating 
-			character is followed with a '\0'.
-			@param c The terminal character.
-		*/
-		void SetTerminalChar( int c );
-			
-		/** Pushes the terminal character to the sink.
-		 	@return true if the character was successfully sent, false otherwise
-		 */
-		bool Terminate( );
-
-		/** Performs the cleanup protocol for the medium encapsulated  by the
-			sink object
-			@return false if the sink cannot accomodate the cleanup protocol,
-				true otherwise.
-		*/
-		bool FlushSink ();
 
     private:
 		friend class ClassAdList;
@@ -142,12 +89,6 @@ class Sink
 		friend class View;
 
 		FormatOptions *pp;
-
-		// call back from ExprTree and ClassAd to write the data to the sink
-		bool SendToSink( void *, int );
-
-		// sink types
-		ByteSink	*sink;
 };
 
 END_NAMESPACE // classad

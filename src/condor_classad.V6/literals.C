@@ -1,6 +1,28 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 #include "exprTree.h"
-#include "domain.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -19,81 +41,92 @@ Literal::
 
 
 Literal *Literal::
-Copy( )
+Copy( ) const
 {
 	Literal *newTree = new Literal;
 
-	if (newTree == 0) return 0;
+	if (newTree == 0) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+		return((Literal*)NULL);
+	}
 	newTree->value.CopyFrom( value );
 	newTree->nodeKind = nodeKind;
 	newTree->parentScope = parentScope;
+	newTree->factor	= factor;
 	return newTree;
 }
-
-bool Literal::
-ToSink (Sink &s)
-{
-	if (!value.ToSink( s )) return false;
-
-	// print out any factors --- (factors are set only if 'value' is a
-	// number value, so we don't have to check for that case
-	if ((factor == K_FACTOR && !s.SendToSink ((void*)"K", 1))	||
-		(factor == M_FACTOR && !s.SendToSink ((void*)"M", 1))	||
-		(factor == G_FACTOR && !s.SendToSink ((void*)"G", 1)))
-			return false;
-
-	return true;
-}
-
 
 Literal* Literal::
 MakeAbsTime( time_t now )
 {
-	Literal *lit=NULL;
-	if( ( now<0 && time( &now )<0 ) || ( ( lit=new Literal() )==NULL ) ) {
-		return NULL;
-	}
-	lit->SetAbsTimeValue( (int) now );
-	return( lit );
+	Value val;
+
+	if( now<0 ) time( &now );
+	val.SetAbsoluteTimeValue( now );
+	return( MakeLiteral( val ) );
 }
 
 Literal* Literal::
 MakeRelTime( time_t t1, time_t t2 )
 {
-	Literal *lit=NULL;
-	if( ( t1<0 && time( &t1 )<0 ) || ( t2<0 && time( &t2 )<0 ) ||
-		( ( lit = new Literal() )==NULL ) ) {
+	Value	val;
+
+	if( t1<0 ) time( &t1 );
+	if( t2<0 ) time( &t2 );
+	val.SetRelativeTimeValue( t1 - t2 );
+	return( MakeLiteral( val ) );
+}
+
+
+Literal* Literal::
+MakeRelTime( time_t secs )
+{
+	Value		val;
+	struct	tm 	lt;
+
+	if( secs<0 ) {
+		time(&secs );
+		localtime_r( &secs, &lt );
+	}
+	val.SetRelativeTimeValue( lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec );
+	return( MakeLiteral( val ) );
+}
+
+
+Literal* Literal::
+MakeLiteral( const Value& val, NumberFactor f ) 
+{
+	if( val.GetType( ) == CLASSAD_VALUE && val.GetType( ) == LIST_VALUE ) {
+		CondorErrno = ERR_BAD_VALUE;
+		CondorErrMsg = "list and classad values are not literals";
+		return( NULL );
+	}
+
+	Literal* lit = new Literal();
+	if( !lit ){
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
 		return NULL;
 	}
-	lit->SetRelTimeValue( t1 - t2 );
-	return( lit );
-}
-
-
-Literal* Literal::
-MakeRelTime( int secs )
-{
-	Literal *lit = new Literal( );
-	if( lit ) {
-		lit->SetRelTimeValue( secs );
-		return( lit );
-	} 
-	return( NULL );
-}
-
-Literal* Literal::
-MakeLiteral( Value& val ) 
-{
-	Literal* lit = new Literal();
-	if( !lit ) return NULL;
 	lit->value.CopyFrom( val );
+	if( !val.IsNumber( ) ) f = NO_FACTOR;
+	lit->factor = f;
 
 	return lit;
 }
 
 
+void Literal::
+GetComponents( Value &val, NumberFactor &f ) const
+{
+	val = value;
+	f = factor;
+}
+
+
 bool Literal::
-_Evaluate (EvalState &, Value &val)
+_Evaluate (EvalState &, Value &val) const
 {
 	int		i;
 	double	r;
@@ -116,7 +149,7 @@ _Evaluate (EvalState &, Value &val)
 
 
 bool Literal::
-_Evaluate( EvalState &state, Value &val, ExprTree *&tree )
+_Evaluate( EvalState &state, Value &val, ExprTree *&tree ) const
 {
 	_Evaluate( state, val );
 	return( ( tree = Copy() ) );
@@ -124,70 +157,10 @@ _Evaluate( EvalState &state, Value &val, ExprTree *&tree )
 
 
 bool Literal::
-_Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind*)
+_Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind*) const
 {
 	tree = NULL;
 	return( _Evaluate( state, val ) );
-}
-
-
-void Literal::
-SetBooleanValue( bool b )
-{
-	value.SetBooleanValue( b );
-	factor = NO_FACTOR;
-}
-
-
-void Literal::
-SetIntegerValue (int i, NumberFactor f)
-{
-	value.SetIntegerValue (i);
-	factor = f;
-}
-
-
-void Literal::
-SetRealValue (double d, NumberFactor f)
-{
-	value.SetRealValue (d);
-	factor = f;
-}
-
-
-void Literal::
-SetStringValue (const char *str )
-{
-	value.SetStringValue( str );
-	factor = NO_FACTOR;
-}
-
-
-void Literal::
-SetUndefinedValue (void)
-{
-	value.SetUndefinedValue( );
-	factor = NO_FACTOR;
-}
-
-
-void Literal::
-SetErrorValue (void)
-{
-	value.SetErrorValue( );
-	factor = NO_FACTOR;
-}
-
-void Literal::
-SetAbsTimeValue( int secs )
-{
-	value.SetAbsoluteTimeValue( secs );
-}
-
-void Literal::
-SetRelTimeValue( int secs )
-{
-	value.SetRelativeTimeValue( secs );
 }
 
 END_NAMESPACE // classad

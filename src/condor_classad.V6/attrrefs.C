@@ -1,7 +1,28 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 #include "classad.h"
-
-static char *_FileName_ = __FILE__;
 
 BEGIN_NAMESPACE( classad )
 
@@ -10,39 +31,40 @@ AttributeReference()
 {
 	nodeKind = ATTRREF_NODE;
 	expr = NULL;
-	attributeStr = NULL;
 	absolute = false;
 }
 
+
 // a private ctor for use in significant expr identification
 AttributeReference::
-AttributeReference( ExprTree *tree, char *attrname, bool absolut )
+AttributeReference( ExprTree *tree, const string &attrname, bool absolut )
 {
 	nodeKind = ATTRREF_NODE;
-	attributeStr = strnewp( attrname );
+	attributeStr = attrname;
 	expr = tree;
 	absolute = absolut;
 }
 
+
 AttributeReference::
 ~AttributeReference()
 {
-	if( attributeStr ) delete []( attributeStr );
 	if( expr ) delete expr;
 }
 
 
 AttributeReference *AttributeReference::
-Copy( )
+Copy( ) const
 {
 	AttributeReference *newTree = new AttributeReference ();
-	if (newTree == 0) return NULL;
+	if (newTree == 0) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+		return NULL;
+	}
 
-	if (attributeStr) newTree->attributeStr = strnewp( attributeStr );
-	newTree->attributeName = attributeName;
-
+	newTree->attributeStr = attributeStr;
 	if( expr && ( newTree->expr=expr->Copy( ) ) == NULL ) {
-		delete []( newTree->attributeStr );
 		delete newTree;
 		return NULL;
 	}
@@ -54,32 +76,29 @@ Copy( )
 	return newTree;
 }
 
+
 void AttributeReference::
-_SetParentScope( ClassAd *parent ) 
+_SetParentScope( const ClassAd *parent ) 
 {
 	if( expr ) expr->SetParentScope( parent );
 }
 
 
-bool AttributeReference::
-ToSink (Sink &s)
+void AttributeReference::
+GetComponents( ExprTree *&tree, string &attr, bool &abs ) const
 {
-	if( ( absolute 	&& !s.SendToSink( (void*)".", 1 ) )	 || ( expr 
-			&& ( !expr->ToSink( s ) || !s.SendToSink( (void*) ".", 1 ) ) ) ||
-		( attributeStr && 
-			!s.SendToSink((void*)attributeStr,strlen(attributeStr))))
-				return false;
-		
-	return true;
+	tree = expr;
+	attr = attributeStr;
+	abs = absolute;
 }
 
 
 bool AttributeReference::
-_Evaluate (EvalState &state, Value &val)
+_Evaluate (EvalState &state, Value &val) const
 {
-	ExprTree	*tree, *dummy;
-	ClassAd		*curAd;
-	bool		rval;
+	ExprTree		*tree, *dummy;
+	const ClassAd	*curAd;
+	bool			rval;
 
 	// find the expression and the evalstate
 	curAd = state.curAd;
@@ -111,11 +130,11 @@ _Evaluate (EvalState &state, Value &val)
 
 
 bool AttributeReference::
-_Evaluate (EvalState &state, Value &val, ExprTree *&sig )
+_Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 {
-	ExprTree	*tree, *exprSig;
-	ClassAd		*curAd;
-	bool		rval;
+	ExprTree		*tree, *exprSig;
+	const ClassAd	*curAd;
+	bool			rval;
 
 	curAd = state.curAd;
 	exprSig = NULL;
@@ -143,6 +162,10 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig )
 		default:  EXCEPT( "ClassAd:  Should not reach here" );
 	}
 	if(!rval || !(sig=new AttributeReference(exprSig,attributeStr,absolute))){
+		if( rval ) {
+			CondorErrno = ERR_MEM_ALLOC_FAILED;
+			CondorErrMsg = "";
+		}
 		delete exprSig;
 		sig = NULL;
 		return( false );
@@ -153,7 +176,7 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig )
 
 
 bool AttributeReference::
-_Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*)
+_Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*) const
 {
 	if( absolute ) {
 		ntree = Copy();
@@ -175,11 +198,11 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*)
 
 
 int AttributeReference::
-FindExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
+FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 {
-	ClassAd 	*current=NULL;
-	Value		val;
-	bool		rval;
+	const ClassAd 	*current=NULL;
+	Value			val;
+	bool			rval;
 
 	sig = NULL;
 
@@ -210,15 +233,10 @@ FindExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 }
 
 
-void AttributeReference::
-SetReference (ExprTree *tree, char *attrStr, bool absolut)
+AttributeReference *AttributeReference::
+MakeAttributeReference(ExprTree *tree, const string &attrStr, bool absolut)
 {
-	if (expr) delete expr;
-	if (attributeStr) delete [] (attributeStr);
-
-	expr 		= tree;
-	absolute 	= absolut;
-	attributeStr= attrStr ? strnewp(attrStr) : 0;
+	return( new AttributeReference( tree, attrStr, absolut ) );
 }
 
 END_NAMESPACE // classad

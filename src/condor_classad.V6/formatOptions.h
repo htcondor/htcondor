@@ -26,8 +26,6 @@
 
 BEGIN_NAMESPACE( classad )
 
-class Sink;
-
 /** Options to set formats of external representations */
 class FormatOptions
 {
@@ -101,7 +99,6 @@ class FormatOptions
 
         void SetIndentLevel( int );
         int  GetIndentLevel( );
-        bool Indent( Sink& );
 
         void SetPrecedenceLevel( int );
         int  GetPrecedenceLevel( void );

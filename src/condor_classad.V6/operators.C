@@ -1,48 +1,30 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 #include "operators.h"
 
 BEGIN_NAMESPACE( classad )
-
-	// the order in this array should be the same as the OpKind enumeration
-	// in common.h
-char *Operation::opString[] = 
-{
-	"",		// no-op
-
-	" < ",	// comparisons
-	" <= ",
-	" != ",
-	" == ",
-	" >= ",
-	" > ",
-	" is ",
-	" isnt ",
-
-	" + ",	// arithmetic
-	" - ",
-	" + ",
-	" - ",
-	" * ",
-	" / ",
-	" % ",
-
-	" !",	// logical
-	" || ",
-	" && ",
-
-	" ~",	// bitwise
-	" | ",
-	" ^ ",
-	" & ",
-	" << ",
-	" >> ",
-	" >>> ",
-
-	" () ",	//misc --- no "single token" representation
-	" [] ",
-	" ?: "
-};
-
 
 Operation::
 Operation ()
@@ -65,23 +47,29 @@ Operation::
 
 
 Operation *Operation::
-Copy( )
+Copy( ) const
 {
 	Operation *newTree = new Operation ();
 	if (newTree == 0) return NULL;
 
 	if( child1 && ( newTree->child1=child1->Copy( ) )==NULL ){
 		delete newTree;
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
 		return NULL;
 	}
 
 	if( child2 && ( newTree->child2=child2->Copy( ) )==NULL ){
 		delete newTree;
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
 		return NULL;
 	}
 
 	if( child3 && ( newTree->child3=child3->Copy( ) )==NULL ){
 		delete newTree;
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
 		return NULL;
 	}
 
@@ -91,83 +79,11 @@ Copy( )
 }
 
 void Operation::
-_SetParentScope( ClassAd* parent ) 
+_SetParentScope( const ClassAd* parent ) 
 {
 	if( child1 ) child1->SetParentScope( parent );
 	if( child2 ) child2->SetParentScope( parent );
 	if( child3 ) child3->SetParentScope( parent );
-}
-
-bool Operation::
-ToSink( Sink &s )
-{
-	FormatOptions *p = s.GetFormatOptions( );
-	bool minimalParens = p ? p->GetMinimalParentheses( ) : false;
-	int  precLevel=0;
-
-		// trivial case
-	if (operation == __NO_OP__) return true;
-
-		// parentheses (put only if minimal parens is not set)
-	if( operation == PARENTHESES_OP ) {
-		if( minimalParens ) return( child1 && child1->ToSink( s ) );
-
-		return( s.SendToSink((void*)"(", 1) && child1 && child1->ToSink(s) &&
-					s.SendToSink((void*)")", 1) );
-	}
-
-		// unary operators ( we don't care about minimal parens for unary ops)
-	switch( operation ) {
-		case UNARY_PLUS_OP: 
-		case UNARY_MINUS_OP: 
-		case LOGICAL_NOT_OP:
-		case BITWISE_NOT_OP:
-			return( s.SendToSink( (void*)opString[operation], 
-				strlen( opString[operation] ) ) &&
-				child1 && child1->ToSink( s ) );
-		default:
-			break;
-	}
-
-		// ternary and subscript (don't care about minimal parens here either)
-	if( operation == TERNARY_OP ) {
-		return( child1 && child1->ToSink(s) && s.SendToSink((void*)" ? ",3) &&
-				child2 && child2->ToSink(s) && s.SendToSink((void*)" : ",3) &&
-				child3 && child3->ToSink(s) );
-	} else if( operation == SUBSCRIPT_OP ) {
-		return( child1 && child1->ToSink(s) && s.SendToSink((void*)"[",1) &&
-				child2 && child2->ToSink(s) && s.SendToSink((void*)"]",1 ) );
-	}
-
-		// remaining operations are binary; we care about minimal parens
-		// if minimal parens have been requested, stash old precedence level
-	if( minimalParens ) {
-		precLevel = p->GetPrecedenceLevel( );
-		p->SetPrecedenceLevel( PrecedenceLevel( operation ) );
-
-			// put parens if required by minimal parens
-		if( precLevel > PrecedenceLevel( operation ) ) {
-			if( !s.SendToSink( (void*)"(",1 ) ) return false;
-		}
-	}
-
-		// send the operation to the sink
-	if( !child1 || !child1->ToSink( s ) || 
-		!s.SendToSink((void*)opString[operation],strlen(opString[operation])) ||
-		!child2 || !child2->ToSink( s ) ) {
-		return( false );
-	}
-
-		// check for minimal parens --- close up if required
-	if( minimalParens ) {
-		if( precLevel > PrecedenceLevel( operation ) && 
-			!s.SendToSink( (void*)")",1) ) {
-			return false;
-		}
-		p->SetPrecedenceLevel( precLevel );
-	}
-
-	return( true );
 }
 
 
@@ -290,7 +206,6 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		}
 	} else if( op == SUBSCRIPT_OP ) {
 		int			index;
-		ExprTree	*tree=NULL;
 		ExprList	*elist;
 
 		// subscripting from a list (strict)
@@ -303,29 +218,16 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		val2.IsIntegerValue( index );
 
 		// check bounds
-		if( elist->Number() <= index || index < 0 ) {
+		ExprListIterator itr( elist );
+		if( index < 0 || !itr.ToNth( index ) ) {
 			result.SetUndefinedValue();
 			return SIG_CHLD2;
 		}
 
-		// access the index'th element (0-based)
-		elist->Rewind();
-		index++;
-		while( index && ( tree = elist->Next() ) ) {
-			index --;
+		// get value
+		if( !itr.CurrentValue( result, es ) ) {
+			result.SetErrorValue( );
 		}
-
-		if( es ) {
-			// if an EvalState has been provided, use it
-			if( !tree->Evaluate( *es, result ) ) {
-				result.SetErrorValue( );
-				return( SIG_NONE );
-			}
-		} else {
-			// this needs to be changed
-			result.SetUndefinedValue( );
-		}
-
 		return( SIG_CHLD1 | SIG_CHLD2 );
 	}	
 	
@@ -336,7 +238,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 
 
 bool Operation::
-_Evaluate (EvalState &state, Value &result)
+_Evaluate (EvalState &state, Value &result) const
 {
 	Value	val1, val2, val3;
 	bool	valid1, valid2, valid3;
@@ -378,7 +280,7 @@ _Evaluate (EvalState &state, Value &result)
 
 
 bool Operation::
-_Evaluate( EvalState &state, Value &result, ExprTree *& tree )
+_Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 {
 	int			sig;
 	Value		val1, val2, val3;
@@ -439,7 +341,7 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 			} else {
 				// the node operated on the value; the operator is also
 				// significant
-				tree = makeOperation( operation, t1 );
+				tree = MakeOperation( operation, t1 );
 			}
 			return( true );	
 		} else {
@@ -456,7 +358,7 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 				EXCEPT( "Should not reach here" );
 			} else {
 				// the node is also significant
-				tree = makeOperation( operation, t1, t2 );
+				tree = MakeOperation( operation, t1, t2 );
 				return( true );
 			}
 		}
@@ -464,13 +366,13 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 		// non-strict operators
 		if( operation == IS_OP || operation == ISNT_OP ) {
 			// the operation is *always* significant for IS and ISNT
-			tree = makeOperation( operation, t1, t2 );
+			tree = MakeOperation( operation, t1, t2 );
 			return( true );
 		}
 		// other non-strict binary operators
 		if( operation == LOGICAL_AND_OP || operation == LOGICAL_OR_OP ) {
 			if( ( sig & SIG_CHLD1 ) && ( sig & SIG_CHLD2 ) ) {
-				tree = makeOperation( operation, t1, t2 );
+				tree = MakeOperation( operation, t1, t2 );
 				return( true );
 			} else if( sig & SIG_CHLD1 ) {
 				tree = t1;
@@ -514,7 +416,7 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 
 
 bool Operation::
-_Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr )
+_Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr ) const
 {
 	OpKind		childOp1=__NO_OP__, childOp2=__NO_OP__;
 	ExprTree	*fChild1=NULL, *fChild2=NULL;
@@ -533,13 +435,13 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr )
 				tree = NULL;
 				return true;
 			} else if( fChild1 && fChild2 ) {
-				tree = Operation::makeOperation( op, fChild1, fChild2 );
+				tree = Operation::MakeOperation( op, fChild1, fChild2 );
 				return true;
 			} else if( fChild1 ) {
-				tree = Operation::makeOperation( op, fChild1, val2 );
+				tree = Operation::MakeOperation( op, fChild1, val2 );
 				return true;
 			} else if( fChild2 ) {
-				tree = Operation::makeOperation( op, val1, fChild2 );
+				tree = Operation::MakeOperation( op, val1, fChild2 );
 				return true;
 			}
 		} else {
@@ -572,7 +474,7 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr )
 
 	// if splitting is disallowed, fold the value and tree into a tree
 	if( !opPtr && newOp != __NO_OP__ ) {
-		tree = Operation::makeOperation( newOp, val, tree );
+		tree = Operation::MakeOperation( newOp, val, tree );
 		if( !tree ) {
 			if( opPtr ) *opPtr = __NO_OP__;
 			return false;
@@ -589,7 +491,7 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr )
 bool Operation::
 combine( OpKind &op, Value &val, ExprTree *&tree,
 			OpKind op1, Value &val1, ExprTree *tree1,
-			OpKind op2, Value &val2, ExprTree *tree2 )
+			OpKind op2, Value &val2, ExprTree *tree2 ) const
 {
 	Operation 	*newOp;
 	Value		dummy; 	// undefined
@@ -624,8 +526,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		return true;
 	} else if( ( tree1 && op1 == __NO_OP__ ) && ( tree2 && op2 == __NO_OP__ ) ){
 		// left and rightsons are trees only
-		if( !( newOp = new Operation() ) ) return false;
-		newOp->SetOperation( op, tree1, tree2 );
+		if( !( newOp = MakeOperation( op, tree1, tree2 )) ) return false;
 		tree = newOp;
 		op   = __NO_OP__;
 		return true;
@@ -638,7 +539,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		ExprTree	*newOp1 = NULL, *newOp2 = NULL;
 
 		if( op1 != __NO_OP__ ) {
-			newOp1 = Operation::makeOperation( op1, val1, tree1 );
+			newOp1 = Operation::MakeOperation( op1, val1, tree1 );
 		} else if( tree1 ) {
 			newOp1 = tree1;
 		} else {
@@ -646,7 +547,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		}
 		
 		if( op2 != __NO_OP__ ) {
-			newOp2 = Operation::makeOperation( op2, val2, tree2 );
+			newOp2 = Operation::MakeOperation( op2, val2, tree2 );
 		} else if( tree2 ) {
 			newOp2 = tree2;
 		} else {
@@ -660,12 +561,11 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 			return false;
 		}
 
-		if( !( newOp = new Operation() ) ) {
+		if( !( newOp = MakeOperation( op, newOp1, newOp2 ) ) ) {
 			delete newOp1; delete newOp2;
 			tree = NULL; op = __NO_OP__;
 			return false;
 		}
-		newOp->SetOperation( op, newOp1, newOp2 );
 		op = __NO_OP__;
 		tree = newOp;
 		return true;
@@ -674,8 +574,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 	if( op == op1 && op == op2 ) {
 		// same operators on both children . since op!=NO_OP, neither are op1, 
 		// op2.  so they both make tree and value contributions
-		if( !( newOp = new Operation() ) ) return false;
-		newOp->SetOperation( op, tree1, tree2 );
+		if( !( newOp = MakeOperation( op, tree1, tree2 ) ) ) return false;
 		_doOperation( op, val1, val2, dummy, true, true, false, val );
 		tree = newOp;
 		return true;
@@ -688,12 +587,11 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 			return true;
 		} else {
 			// rightson makes a tree contribution
-			Operation *newOp = new Operation();
+			Operation *newOp = MakeOperation( op, tree1, tree2 );
 			if( !newOp ) {
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
-			newOp->SetOperation( op, tree1, tree2 );
 			val.CopyFrom( val1 );
 			return true;
 		}
@@ -706,12 +604,11 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 			return true;
 		} else {
 			// leftson makes a tree contribution
-			Operation *newOp = new Operation();
+			Operation *newOp = MakeOperation( op, tree1, tree2 );
 			if( !newOp ) {
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
-			newOp->SetOperation( op, tree1, tree2 );
 			val.CopyFrom( val2 );
 			return true;
 		}
@@ -833,6 +730,7 @@ int Operation::
 doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	int		i1, i2;
+	time_t	t1;
 	double 	r1;
 
 	// ensure the operands have arithmetic types
@@ -852,8 +750,8 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 		} else	if (v1.IsRealValue (r1)) {
 			result.SetRealValue (-r1);
 			return SIG_CHLD1;
-		} else if( v1.IsRelativeTimeValue( i1 ) ) {
-			result.SetRelativeTimeValue( -i1 );
+		} else if( v1.IsRelativeTimeValue( t1 ) ) {
+			result.SetRelativeTimeValue( -t1 );
 			return( SIG_CHLD1 );
 		} else if( v1.IsExceptional() ) {
 			// undefined or error --- same as operand
@@ -1126,7 +1024,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	int secs1=0, secs2=0;
+	time_t secs1=0, secs2=0;
 	ValueType vt1=v1.GetType( ), vt2=v2.GetType( );
 
 		// addition
@@ -1272,7 +1170,7 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 void Operation::
 compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	int asecs1, asecs2;
+	time_t asecs1, asecs2;
 	bool compResult;
 
 	v1.IsAbsoluteTimeValue( asecs1 );
@@ -1297,7 +1195,7 @@ compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
 void Operation::
 compareRelativeTimes( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	int rsecs1, rsecs2;
+	time_t rsecs1, rsecs2;
 	bool compResult;
 
 	v1.IsRelativeTimeValue( rsecs1 );
@@ -1454,94 +1352,73 @@ coerceToNumber (Value &v1, Value &v2)
 }
 
  
-void Operation::
-SetOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
+Operation *Operation::
+MakeOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 {
-	operation = op;
-	child1    = e1;
-	child2    = e2;
-	child3    = e3;
+	Operation *opnode = new Operation;
+	if( !opnode ) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+		return( NULL );
+	}
+	opnode->operation = op;
+	opnode->child1    = e1;
+	opnode->child2    = e2;
+	opnode->child3    = e3;
+	return( opnode );
+}
+
+
+void Operation::
+GetComponents( OpKind &op, ExprTree *&e1, ExprTree *&e2, ExprTree *&e3 ) const
+{
+	op = operation;
+	e1 = child1;
+	e2 = child2;
+	e3 = child3;
 }
 
 
 Operation *Operation::
-makeOperation( OpKind op, Value &val, ExprTree *tree ) 
+MakeOperation( OpKind op, Value &val, ExprTree *tree ) 
 {
 	Operation  	*newOp;
 	Literal		*lit;
 	
 	if( !tree ) return NULL;
 
-	if( !( newOp = new Operation() ) ) return NULL;
 	if( !( lit = Literal::MakeLiteral( val ) ) ) {
-		delete newOp;
 		return NULL;
 	}
-
-	newOp->SetOperation( op, lit, tree );
+	if( !( newOp = MakeOperation( op, lit, tree ) ) ) {
+		delete lit;
+		return( NULL );
+	}
 	return newOp;
 }
 	
 	
 Operation *Operation::
-makeOperation( OpKind op, ExprTree *tree, Value &val ) 
+MakeOperation( OpKind op, ExprTree *tree, Value &val ) 
 {
 	Operation  	*newOp;
 	Literal		*lit;
 
 	if( tree == NULL ) return NULL;
 
-	if( !( newOp = new Operation() ) ) return NULL;
 	if( !( lit = Literal::MakeLiteral( val ) ) ) {
-		delete newOp;
 		return NULL;
 	}
-
-	newOp->SetOperation( op, tree, lit );
-	return newOp;
-}
-
-Operation *Operation::
-makeOperation( OpKind op, ExprTree *tree1 ) 
-{
-	Operation  	*newOp;
-
-	if( !tree1 ) return NULL;
-
-	if( !( newOp = new Operation() ) ) return NULL;
-	newOp->SetOperation( op, tree1 );
-	return newOp;
-}
-
-
-Operation *Operation::
-makeOperation( OpKind op, ExprTree *tree1, ExprTree *tree2 ) 
-{
-	Operation  	*newOp;
-
-	if( !tree1 || !tree2 ) return NULL;
-
-	if( !( newOp = new Operation() ) ) return NULL;
-	newOp->SetOperation( op, tree1, tree2 );
-	return newOp;
-}
-
-
-Operation *Operation::
-makeOperation( OpKind op, ExprTree *tree1, ExprTree *tree2, ExprTree *tree3 ) 
-{
-	Operation  	*newOp;
-
-	if( !tree1 || !tree2 || !tree3) return NULL;
-
-	if( !( newOp = new Operation() ) ) return NULL;
-	newOp->SetOperation( op, tree1, tree2, tree3 );
+	if( !( newOp = MakeOperation( op, tree, lit ) ) ) {
+		delete lit;
+		return( NULL );
+	}
 	return newOp;
 }
 
 
 bool Operation::
-flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
+flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 {
 	ExprTree 	*fChild1, *fChild2, *fChild3;
 	Value		eval1, eval2, eval3, dummy;
@@ -1557,7 +1434,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 				return false;
 			} 
 			if( fChild1 ) {
-				tree = Operation::makeOperation( operation, fChild1 );
+				tree = Operation::MakeOperation( operation, fChild1 );
 				return( tree != NULL );
 			} else {
 				_doOperation( operation, eval1, dummy, dummy, true, false, 
@@ -1624,7 +1501,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 					fChild1 = child1->Copy();
 				}
 
-				tree = Operation::makeOperation( operation, fChild1, fChild2, 
+				tree = Operation::MakeOperation( operation, fChild1, fChild2, 
 						fChild3 );
 				if( !tree ) {
 					// clean up
@@ -1667,7 +1544,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 				return false;
 			}
 				
-			tree = Operation::makeOperation( operation, fChild1, fChild2 );
+			tree = Operation::MakeOperation( operation, fChild1, fChild2 );
 			if( !tree ) {
 				if( fChild1 ) delete fChild1;
 				if( fChild2 ) delete fChild2;

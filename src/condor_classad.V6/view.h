@@ -1,3 +1,26 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #if !defined( VIEW_H )
 #define VIEW_H
 
@@ -28,37 +51,26 @@ public:
 	void SetRankValue( const Value &rankValue );
 
 	void GetKey( string &key ) const;
-	void GetRankValue( Value &rankValue );
+	void GetRankValue( Value &rankValue ) const;
 
 	ViewMember	operator=( const ViewMember& );
 
 private:
 	string	key;
-	Value		rank;
+	Value	rank;
 };
 
-
-struct hash<const string &> {
-	size_t operator()( const string &s ) const { 
-		size_t h = 0;
-		for( int i = s.size(); i >= 0; i-- ) {
-			h = 5*h + s[i];
-		}
-		return( h );
-	}
-};
 
 struct ViewMemberLT {
 	bool operator()( const ViewMember &vm1, const ViewMember &vm2 ) const;
 };
 
 
-typedef string											ViewName;
-typedef multiset<ViewMember, ViewMemberLT> 					ViewMembers;
-typedef slist<View*>										SubordinateViews;
-typedef hash_map<string,View*,hash<const string &> > PartitionedViews;
-typedef hash_map<string,ViewMembers::iterator,hash<const string&> >
-	MemberIndex;
+typedef string ViewName;
+typedef multiset<ViewMember, ViewMemberLT> ViewMembers;
+typedef slist<View*> SubordinateViews;
+typedef hash_map<string,View*,StringHash> PartitionedViews;
+typedef hash_map<string,ViewMembers::iterator,StringHash> MemberIndex;
 
 
 /* View class */
@@ -89,6 +101,9 @@ public:
 	ExprList	*GetPartitionAttributes( );
 	ClassAd		*GetViewInfo( );
 	bool		IsMember( const string &key );
+	void		GetSubordinateViewNames( vector<string>& );
+	void		GetPartitionedViewNames( vector<string>& );
+	bool		FindPartition( ClassAd *rep, ViewName &partition );
 
 		// child view manipulation
 	bool InsertSubordinateView( ClassAdCollectionServer *coll, ClassAd *vInfo );
@@ -105,21 +120,22 @@ public:
 		// classad manipulation
 	bool ClassAdInserted ( ClassAdCollectionServer *coll, 
 			const string &key, ClassAd *ad );
-	bool ClassAdPreModify( ClassAdCollectionServer *coll, ClassAd *ad );
+	void ClassAdPreModify( ClassAdCollectionServer *coll, ClassAd *ad );
 	bool ClassAdModified ( ClassAdCollectionServer *coll, 
 			const string &key, ClassAd *ad );
-	bool ClassAdDeleted  ( ClassAdCollectionServer *coll, 
+	void ClassAdDeleted  ( ClassAdCollectionServer *coll, 
 			const string &key, ClassAd *ad );
 
+		// misc
 	bool Display( FILE * );
 
 private:
 	friend class ClassAdCollectionServer;
+	friend class LocalCollectionQuery;
 
 		// private helper function
-	string makePartitionSignature( ClassAd *ad );
-	bool		extractPartitionAttrs( vector<string>&, ExprTree * );
-	void		DeleteView( ClassAdCollectionServer * );
+	string 	makePartitionSignature( ClassAd *ad );
+	void	DeleteView( ClassAdCollectionServer * );
 
 	ViewName			viewName;			// name of the view
 	View				*parent;			// pointer to parent view

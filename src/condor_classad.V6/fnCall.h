@@ -24,11 +24,13 @@
 #ifndef __FN_CALL_H__
 #define __FN_CALL_H__
 
-#include "HashTable.h"
+#include <map>
+#include <vector>
+#include "classad.h"
 
 BEGIN_NAMESPACE( classad )
 
-typedef ExtArray<ExprTree*> ArgumentList;
+typedef vector<ExprTree*> ArgumentList;
 
 /// Node of the expression which represents a call to an inbuilt function
 class FunctionCall : public ExprTree
@@ -40,38 +42,21 @@ class FunctionCall : public ExprTree
 		/// Destructor
 		~FunctionCall ();
 
-        /** Sends the function call object to a Sink.
-            @param s The Sink object.
-            @return false if the expression could not be successfully
-                unparsed into the sink.
-            @see Sink 
-        */
-		virtual bool ToSink( Sink & );
+		static FunctionCall *MakeFunctionCall( const string &fnName, 
+					vector<ExprTree*> &argList );
+		void GetComponents( string &fnName, vector<ExprTree*> &argList ) const;
 
-		/** Set the name of the function call
-			@param fnName The name of the function.  The string is duplicated
-				internally.
-		*/
-		void SetFunctionName(char *fnName);
+		virtual FunctionCall* Copy( ) const;
 
-		/** Append an actual argument to the call.
-			@param arg The argument to the call.  The expression is adopted
-				by the node (i.e., does not duplicate the structure, but 
-				assumes responsibility for further storage management of the
-				expression).
-		*/
-		void AppendArgument(ExprTree *arg);
-
-		virtual FunctionCall* Copy( );
-
-		typedef	bool (*ClassAdFunc)(char*,ArgumentList&,EvalState&,Value&);
-		typedef HashTable<MyString, ClassAdFunc> FuncTable;
+		typedef	bool(*ClassAdFunc)(const char*, const ArgumentList&, EvalState&,
+					Value&);
+		typedef map<string, ClassAdFunc, CaseIgnLTStr > FuncTable;
 
 	private:
-		virtual void _SetParentScope( ClassAd* );
-		virtual bool _Evaluate( EvalState &, Value & );
-		virtual bool _Evaluate( EvalState &, Value &, ExprTree *& );
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+		virtual void _SetParentScope( const ClassAd* );
+		virtual bool _Evaluate( EvalState &, Value & ) const;
+		virtual bool _Evaluate( EvalState &, Value &, ExprTree *& ) const;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
 
 		// information common to all function calls
 		// a mapping from function names (char*) to static methods
@@ -79,50 +64,59 @@ class FunctionCall : public ExprTree
 		static bool		 initialized;
 
 		// function call specific information
-		char 	 		*functionName;
+		string			functionName;
 		ClassAdFunc		function;
 		ArgumentList	arguments;
-		int				numArgs;
 
 		// function implementations
 			 // type predicates
-		static bool isType(char*,ArgumentList&,EvalState&,Value&);
+		static bool isType(const char*,const ArgumentList&,EvalState&,Value&);
 
 			// list membership predicates
-		static bool testMember(char*,ArgumentList&,EvalState&,Value&);
+		static bool testMember(const char*,const ArgumentList&,EvalState&,
+					Value&);
 
 			// sum, average and bounds (max and min)
-		static bool sumAvgFrom(char*,ArgumentList&,EvalState&,Value&);
-		static bool boundFrom(char*,ArgumentList&,EvalState&,Value&);
+		static bool sumAvgFrom(const char*,const ArgumentList&,EvalState&,
+					Value&);
+		static bool boundFrom(const char*,const ArgumentList&,EvalState&,
+					Value&);
 
 			// time management (constructors)
-		static bool currentTime(char*,ArgumentList&,EvalState&,Value&);
-		static bool timeZoneOffset(char*,ArgumentList&,EvalState&,Value&);
-		static bool dayTime(char*,ArgumentList&,EvalState&,Value&);
-		static bool makeTime(char*,ArgumentList&,EvalState&,Value&);
-		static bool makeDate(char*,ArgumentList&,EvalState&,Value&);
+		static bool currentTime(const char*,const ArgumentList&,EvalState&,
+					Value&);
+		static bool timeZoneOffset(const char*,const ArgumentList&,EvalState&,
+					Value&);
+		static bool dayTime(const char*,const ArgumentList&,EvalState&,Value&);
+		static bool makeTime(const char*,const ArgumentList&,EvalState&,Value&);
+		static bool makeDate(const char*,const ArgumentList&,EvalState&,Value&);
 			// time management (selectors)
-		static bool getField(char*,ArgumentList&,EvalState&,Value&);
+		static bool getField(const char*,const ArgumentList&,EvalState&,Value&);
 			// time management (conversions)
-		static bool inTimeUnits(char*,ArgumentList&,EvalState&,Value&);
+		static bool inTimeUnits(const char*,const ArgumentList&,EvalState&,
+					Value&);
 
 			// string management
-		static bool strCat(char*,ArgumentList&,EvalState&,Value&);
-		static bool changeCase(char*,ArgumentList&,EvalState&,Value&);
-		static bool subString(char*,ArgumentList&,EvalState&,Value&);
+		static bool strCat(const char*,const ArgumentList&,EvalState&,Value&);
+		static bool changeCase(const char*,const ArgumentList&,EvalState&,
+					Value&);
+		static bool subString(const char*,const ArgumentList&,EvalState&,
+					Value&);
 
 			// pattern matching
-		static bool matchPattern(char*,ArgumentList&,EvalState&,Value&);
+		static bool matchPattern(const char*,const ArgumentList&,EvalState&,
+					Value&);
 
 			// type conversion
-		static bool convInt(char*,ArgumentList&,EvalState&,Value&);
-		static bool convReal(char*,ArgumentList&,EvalState&,Value&);
-		static bool convString(char*,ArgumentList&,EvalState&,Value&);
-		static bool convBool(char*,ArgumentList&,EvalState&,Value&);
-		static bool convTime(char*,ArgumentList&,EvalState&,Value&);
+		static bool convInt(const char*,const ArgumentList&,EvalState&,Value&);
+		static bool convReal(const char*,const ArgumentList&,EvalState&,Value&);
+		static bool convString(const char*,const ArgumentList&,EvalState&,
+					Value&);
+		static bool convBool(const char*,const ArgumentList&,EvalState&,Value&);
+		static bool convTime(const char*,const ArgumentList&,EvalState&,Value&);
 
 			// math (floor, ceil, round)
-		static bool doMath(char*,ArgumentList&,EvalState&,Value&);
+		static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
 };
 
 END_NAMESPACE // classad

@@ -24,9 +24,11 @@
 #ifndef __EXPR_LIST_H__
 #define __EXPR_LIST_H__
 
-#include "list.h"
+#include <vector>
 
 BEGIN_NAMESPACE( classad )
+
+class ExprListIterator;
 
 /** 
 	Expression node which represents a list of expressions 
@@ -40,46 +42,21 @@ class ExprList : public ExprTree
 		/// Destructor
 		~ExprList();
 
-        /** Sends the expression list object to a Sink.
-            @param s The Sink object.
-            @return false if the expression list could not be successfully
-                unparsed into the sink.
-            @see Sink 
-        */
-		virtual bool ToSink( Sink &s );
+		static ExprList *MakeExprList( const vector< ExprTree* > & );
+		void GetComponents( vector<ExprTree*>& ) const;
 
-		/** Appends an expression to the list
-			@param expr The expression to be appended
-		*/
-		void AppendExpression( ExprTree *expr );
-
-		/** Gets the number of expressions in the list
-			@return The number of expressions in the list
-		*/
-		int  Number();
-
-		/** Rewinds the internal iterator for the list
-		*/
-		void Rewind();
-
-		/** Winds the internal iterator
-			@return The next expression in the list, or NULL if the end of
-				list has been reached.
-		*/
-		ExprTree* Next();
-
-		virtual ExprList* Copy( );
+		virtual ExprList* Copy( ) const;
 
 	private:
 		friend class ExprListIterator;
 
-		List<ExprTree> exprList;
+		vector<ExprTree*> exprList;
 
 		void Clear (void);
-		virtual void _SetParentScope( ClassAd* p );
-		virtual bool _Evaluate (EvalState &, Value &);
-		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&);
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+		virtual void _SetParentScope( const ClassAd* p );
+		virtual bool _Evaluate (EvalState &, Value &) const;
+		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
 };
 
 
@@ -96,7 +73,7 @@ class ExprListIterator
 			@param l The list to be iterated over (i.e., the iteratee).
 			@see initialize
 		*/
-		ExprListIterator( ExprList* l );
+		ExprListIterator( const ExprList* l );
 
 		/// Destructor
 		~ExprListIterator( );
@@ -111,16 +88,14 @@ class ExprListIterator
 		*/
 	    void Initialize( const ExprList* l );
 
-		/// Positions the iterator to the "before first" position.
-    	void ToBeforeFirst( );
+		/// Positions the iterator to the first element.
+    	void ToFirst( );
 
 		/// Positions the iterator to the "after last" position
     	void ToAfterLast( );
 
 		/** Positions the iterator at the n'th expression of the list (assuming 
-				0-based index.  <em><b>WARNING:</b>  Do not use this method to 
-				``sequentially search'' the list, or your algorithm will be an
-				an n^2 search.  Use the next() and prev() methods instead.</em>
+				0-based index.  
 			@param n The index of the expression to retrieve.
 			@return true if the iterator was successfully positioned at the
 				n'th element, and false otherwise.
@@ -131,18 +106,18 @@ class ExprListIterator
 			@return The next expression in the list, or NULL if the iterator
 				has crossed the last expression in the list.
 		*/
-    	ExprTree* NextExpr( );
+    	const ExprTree* NextExpr( );
 
 		/** Gets the expression currently pointed to.
 			@return The expression currently pointed to.
 		*/
-    	ExprTree* CurrentExpr( );
+    	const ExprTree* CurrentExpr( ) const;
 
 		/** Gets the previous expression in the list.
 			@return The previous expression in the list, or NULL if the iterator
 				has crossed the first expression in the list.
 		*/
-    	ExprTree* PrevExpr( );
+    	const ExprTree* PrevExpr( );
     
 		/** Gets the value of the next expression in the list.
 			@param v The value of the expression.
@@ -161,7 +136,7 @@ class ExprListIterator
 				an internal EvalState object will be used. 
 			@return true if the operation succeeded, false otherwise.
 		*/
-    	bool CurrentValue( Value& v, EvalState *es=NULL );
+    	bool CurrentValue( Value& v, EvalState *es=NULL ) const;
 
 		/** Gets the value of the previous expression in the list.
 			@param v The value of the expression.
@@ -194,7 +169,7 @@ class ExprListIterator
 				an internal EvalState object will be used. 
 			@return true if the operation succeeded, false otherwise.
 		*/
-    	bool CurrentValue( Value& v, ExprTree*& t, EvalState *es=NULL );
+    	bool CurrentValue( Value& v, ExprTree*& t, EvalState *es=NULL ) const;
 
 		/** Gets the value of the previous expression in the list, and 
 				identifies sub-expressions that caused that value.
@@ -211,17 +186,19 @@ class ExprListIterator
 		/** Predicate to check the position of the iterator.
 			@return true iff the iterator is before the first element.
 		*/
-    	bool IsBeforeFirst( );
+    	bool IsAtFirst( ) const;
 
 		/** Predicate to check the position of the iterator.
 			@return true iff the iterator is after the last element.
 		*/
-    	bool IsAfterLast( );
+    	bool IsAfterLast( ) const;
 
 	private:
-		EvalState	state;
-		ListIterator<ExprTree> iter;
+		const ExprList				*l;
+		EvalState					state;
+		vector<ExprTree*>::const_iterator itr;
 };	
+
 
 END_NAMESPACE // classad
 

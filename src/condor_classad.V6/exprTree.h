@@ -26,19 +26,15 @@
 
 #include "common.h"
 #include "value.h"
+#include "HashTable.h"
+
 
 BEGIN_NAMESPACE( classad )
+
 // forward declarations
 class ExprTree;
 class ClassAd;
-class Source;
-class Sink;
-END_NAMESPACE
 
-// structures pertaining to the classad domain
-#include "domain.h"
-
-BEGIN_NAMESPACE( classad )
 
 class EvalState {
 	public:
@@ -46,12 +42,11 @@ class EvalState {
 		~EvalState( );
 
 		void SetRootScope( );
-		void SetScopes( ClassAd* );
+		void SetScopes( const ClassAd* );
 
-		ExtArray<const char*> strings;
-		HashTable<ExprTree*,Value> cache;
-		ClassAd	*rootAd;
-		ClassAd *curAd;
+		HashTable<const ExprTree*,Value> cache;
+		const ClassAd	*rootAd;
+		const ClassAd *curAd;
 };
 
 
@@ -66,13 +61,6 @@ class ExprTree
 		/// Virtual destructor
 		virtual ~ExprTree ();
 
-		/** Factory method to parse an expression.
-			@param s The Source object.
-			@return The expression, or NULL on parse failure.
-			@see Source
-		*/
-		static ExprTree *FromSource (Source &s);
-
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
 				references. (However, the semantic parent may be different from 
@@ -83,38 +71,30 @@ class ExprTree
 				into a ClassAd.
 			@param p The parent ClassAd.
 		*/
-		void SetParentScope( ClassAd* p );
+		void SetParentScope( const ClassAd* p );
 
 		/** Gets the parent scope of the expression.
 		 	@return The parent scope of the expression.
 		*/
-		ClassAd *GetParentScope( ) const { return( parentScope ); }
-
-		/** Sends the expression object to a Sink.
-			@param s The Sink object.
-			@return false if the expression could not be successfully
-				unparsed into the sink.
-			@see Sink 
-		*/
-		virtual bool ToSink( Sink &s ) = 0;
+		const ClassAd *GetParentScope( ) const { return( parentScope ); }
 
 		/** Makes a deep copy of the expression tree
 		 * 	@return A deep copy of the expression, or NULL on failure.
 		*/
-		virtual ExprTree *Copy( ) = 0;
+		virtual ExprTree *Copy( ) const = 0;
 
 		/** Gets the node kind of this expression node.
 			@return The node kind.
 			@see NodeKind
 		*/
-		NodeKind GetKind (void) { return nodeKind; }
+		NodeKind GetKind (void) const { return nodeKind; }
 
 
 		/** Evaluates the expression.
 			@param v The value of the expression.
 			@return true if the operation succeeded, and false otherwise.
 		*/
-		bool Evaluate( Value& v );
+		bool Evaluate( Value& v ) const ;
 
 		/** Evaluates the expression and identifies significant sub-expressions
 				that determined the value of the expression.
@@ -122,7 +102,7 @@ class ExprTree
 			@param t The expression composed of the significant sub-expressions.
 			@return true if the operation succeeded, and false otherwise.
 		*/
-		bool Evaluate( Value& v, ExprTree*& t );
+		bool Evaluate( Value& v, ExprTree*& t ) const;
 
 		/** Performs a ``partial evaluation'' of the expression.  This method 
 				evaluates as much of the expression as possible without 
@@ -142,12 +122,12 @@ class ExprTree
   	protected:
 		ExprTree ();
 
-		bool Flatten( EvalState&, Value&, ExprTree*&, OpKind* = NULL );
-		bool Evaluate( EvalState &, Value & ); 
-		bool Evaluate( EvalState &, Value &, ExprTree *& );
+		bool Flatten( EvalState&, Value&, ExprTree*&, OpKind* = NULL ) const;
+		bool Evaluate( EvalState &, Value & ) const; 
+		bool Evaluate( EvalState &, Value &, ExprTree *& ) const;
 
-		ClassAd		*parentScope;
-		NodeKind	nodeKind;
+		const ClassAd	*parentScope;
+		NodeKind		nodeKind;
 
   	private:
 		friend class Operation;
@@ -158,12 +138,10 @@ class ExprTree
 		friend class ExprListIterator;
 		friend class ClassAd; 
 
-		virtual void _SetParentScope( ClassAd* )=0;
-		virtual bool _Evaluate( EvalState&, Value& )=0;
-		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& )=0;
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* )=0;
-
-		bool flattenFlag;
+		virtual void _SetParentScope( const ClassAd* )=0;
+		virtual bool _Evaluate( EvalState&, Value& ) const=0;
+		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const=0;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* )const=0;
 };
 
 END_NAMESPACE // classad
@@ -171,8 +149,8 @@ END_NAMESPACE // classad
 #include "literals.h"
 #include "attrrefs.h"
 #include "operators.h"
-#include "fnCall.h"
 #include "exprList.h"
 #include "classad.h"
+#include "fnCall.h"
 
 #endif//__EXPR_TREE_H__

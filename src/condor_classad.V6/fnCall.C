@@ -1,88 +1,110 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 #include "exprTree.h"
 #include <regex.h>
 
 BEGIN_NAMESPACE( classad )
 
+FunctionCall::FuncTable FunctionCall::functionTable;
 bool FunctionCall::initialized = false;
-static int fnHashFcn( const MyString& , int numBkts );
-FunctionCall::FuncTable FunctionCall::functionTable( 20 , &fnHashFcn );
 
 // start up with an argument list of size 4
 FunctionCall::
-FunctionCall () : arguments( 4 )
+FunctionCall( )
 {
 	nodeKind = FN_CALL_NODE;
-	functionName = NULL;
 	function = NULL;
-	numArgs = 0;
 
 	if( !initialized ) {
 		// load up the function dispatch table
 			// type predicates
-		functionTable.insert( "isundefined", 	isType );
-		functionTable.insert( "iserror",	 	isType );
-		functionTable.insert( "isstring",	 	isType );
-		functionTable.insert( "isinteger",	 	isType );
-		functionTable.insert( "isreal",		 	isType );
-		functionTable.insert( "islist",		 	isType );
-		functionTable.insert( "isclassad",	 	isType );
-		functionTable.insert( "isboolean",	 	isType );
-		functionTable.insert( "isabstime",	 	isType );
-		functionTable.insert( "isreltime",	 	isType );
+		functionTable["isundefined"	] = isType;
+		functionTable["iserror"		] =	isType;
+		functionTable["isstring"	] =	isType;
+		functionTable["isinteger"	] =	isType;
+		functionTable["isreal"		] =	isType;
+		functionTable["islist"		] =	isType;
+		functionTable["isclassad"	] =	isType;
+		functionTable["isboolean"	] =	isType;
+		functionTable["isabstime"	] =	isType;
+		functionTable["isreltime"	] =	isType;
 
 			// list membership
-		functionTable.insert( "member",	 		testMember );
-		functionTable.insert( "ismember",		testMember );
+		functionTable["member"		] =	testMember;
+		functionTable["ismember"	] =	testMember;
 
 			// basic apply-like functions
-		functionTable.insert( "sumfrom",		sumAvgFrom );
-		functionTable.insert( "avgfrom",		sumAvgFrom );
-		functionTable.insert( "maxfrom",		boundFrom );
-		functionTable.insert( "minfrom",		boundFrom );
+		/*
+		functionTable["sumfrom"		sumAvgFrom );
+		functionTable["avgfrom"		sumAvgFrom );
+		functionTable["maxfrom"		boundFrom );
+		functionTable["minfrom"		boundFrom );
+		*/
 
 			// time management
-		functionTable.insert( "currenttime",	currentTime );
-		functionTable.insert( "timezoneoffset",	timeZoneOffset );
-		functionTable.insert( "daytime",		dayTime );
-		functionTable.insert( "makedate",		makeDate );
-		functionTable.insert( "makeabstime",	makeTime );
-		functionTable.insert( "makereltime",	makeTime );
-		functionTable.insert( "getyear",		getField );
-		functionTable.insert( "getmonth",		getField );
-		functionTable.insert( "getdayofyear",	getField );
-		functionTable.insert( "getdayofmonth",	getField );
-		functionTable.insert( "getdayofweek",	getField );
-		functionTable.insert( "getdays",		getField );
-		functionTable.insert( "gethours",		getField );
-		functionTable.insert( "getminutes",		getField );
-		functionTable.insert( "getseconds",		getField );
-		functionTable.insert( "indays",			inTimeUnits );
-		functionTable.insert( "inhours",		inTimeUnits );
-		functionTable.insert( "inminutes",		inTimeUnits );
-		functionTable.insert( "inseconds",		inTimeUnits );
+		functionTable["currenttime"	] =	currentTime;
+		functionTable["timezoneoffset"] =timeZoneOffset;
+		functionTable["daytime"		] =	dayTime;
+		functionTable["makedate"	] =	makeDate;
+		functionTable["makeabstime"	] =	makeTime;
+		functionTable["makereltime"	] =	makeTime;
+		functionTable["getyear"		] =	getField;
+		functionTable["getmonth"	] =	getField;
+		functionTable["getdayofyear"] =	getField;
+		functionTable["getdayofmonth"] =getField;
+		functionTable["getdayofweek"] =	getField;
+		functionTable["getdays"		] =	getField;
+		functionTable["gethours"	] =	getField;
+		functionTable["getminutes"	] =	getField;
+		functionTable["getseconds"	] =	getField;
+		functionTable["indays"		] =	inTimeUnits;
+		functionTable["inhours"		] =	inTimeUnits;
+		functionTable["inminutes"	] =	inTimeUnits;
+		functionTable["inseconds"	] =	inTimeUnits;
 
 			// string manipulation
-		functionTable.insert( "strcat",			strCat );
-		functionTable.insert( "toupper",		changeCase );
-		functionTable.insert( "tolower",		changeCase );
-		functionTable.insert( "substr",			subString );
+		functionTable["strcat"		] =	strCat;
+		functionTable["toupper"		] =	changeCase;
+		functionTable["tolower"		] =	changeCase;
+		functionTable["substr"		] =	subString;
 
 			// pattern matching (regular expressions) 
-		functionTable.insert( "regexp",			matchPattern );
+		functionTable["regexp"		] =	matchPattern;
 
 			// conversion functions
-		functionTable.insert( "int",			convInt );
-		functionTable.insert( "real",			convReal );
-		functionTable.insert( "string",			convString );
-		functionTable.insert( "bool",			convBool );
-		functionTable.insert( "abstime",		convTime );
-		functionTable.insert( "reltime", 		convTime );
+		functionTable["int"			] =	convInt;
+		functionTable["real"		] =	convReal;
+		functionTable["string"		] =	convString;
+		functionTable["bool"		] =	convBool;
+		functionTable["abstime"		] =	convTime;
+		functionTable["reltime"		] = convTime;
 
 			// mathematical functions
-		functionTable.insert( "floor",			doMath );
-		functionTable.insert( "ceil",			doMath );
-		functionTable.insert( "round",			doMath );
+		functionTable["floor"		] =	doMath;
+		functionTable["ceil"		] =	doMath;
+		functionTable["round"		] =	doMath;
 
 		initialized = true;
 	}
@@ -91,28 +113,29 @@ FunctionCall () : arguments( 4 )
 FunctionCall::
 ~FunctionCall ()
 {
-	if( functionName ) delete []( functionName );
-	for( int i = 0 ; i < numArgs ; i++ ) {
-		delete arguments[i];
+	for( ArgumentList::iterator i=arguments.begin(); i!=arguments.end(); i++ ) {
+		delete (*i);
 	}
 }
 
 
 FunctionCall *FunctionCall::
-Copy( )
+Copy( ) const
 {
 	FunctionCall *newTree = new FunctionCall;
 	ExprTree *newArg;
 
 	if (!newTree) return NULL;
-	if (functionName) newTree->functionName = strnewp( functionName );
+
+	newTree->functionName = functionName;
 	newTree->parentScope = parentScope;
 	newTree->function    = function;
 
-	for( int i = 0 ; i < numArgs ; i++ ) {
-		newArg = arguments[i]->Copy( );
+	for( ArgumentList::const_iterator i=arguments.begin(); i!=arguments.end();
+			i++ ) {
+		newArg = (*i)->Copy( );
 		if( newArg ) {
-			newTree->AppendArgument( newArg );
+			newTree->arguments.push_back( newArg );
 		} else {
 			delete newTree;
 			return NULL;
@@ -123,65 +146,61 @@ Copy( )
 
 
 void FunctionCall::
-_SetParentScope( ClassAd* parent )
+_SetParentScope( const ClassAd* parent )
 {
-	for( int i = 0; i < numArgs ; i++) {
-		arguments[i]->SetParentScope( parent );
+	for( ArgumentList::iterator i=arguments.begin(); i!=arguments.end(); i++ ) {
+		(*i)->SetParentScope( parent );
 	}
 }
 	
-bool FunctionCall::
-ToSink( Sink &s )
-{
-	// write function name
-	if (!functionName||!s.SendToSink((void*)functionName,strlen(functionName)))
-		return false;
 
-	// write argument list
-	if (!s.SendToSink((void*) "( ", 2)) return false;
-	
-	for( int i = 0; i < numArgs ; i++) {
-		if( !arguments[i]->ToSink(s) ) return false;
-		if( i < numArgs-1 && !s.SendToSink((void*)" , ", 3)) return false;
+FunctionCall *FunctionCall::
+MakeFunctionCall( const string &str, vector<ExprTree*> &args )
+{
+	FunctionCall *fc = new FunctionCall;
+	if( !fc ) {
+		vector<ExprTree*>::iterator i = args.begin( );
+		while( *i ) {
+			delete *i;
+			i++;
+		}
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+		return( NULL );
 	}
 
-	return (s.SendToSink((void*)" )", 2));
-}
-
-void FunctionCall::
-SetFunctionName (char *fnName)
-{
-	ClassAdFunc	fn;
-
-	if (functionName) delete [] (functionName);
-	functionName = strnewp (fnName);
-
-	// convert to lower case (Case insensitive for function names)
-	int len = strlen( fnName );
-	for( int i = 0 ; i < len ; i++ ) {
-		functionName[i] = tolower( functionName[i] );
+	FuncTable::iterator	itr = functionTable.find( str );
+	if( itr != functionTable.end( ) ) {
+		fc->function = itr->second;
+	} else {
+		fc->function = NULL;
 	}
 
-	function = (functionTable.lookup( functionName , fn )==-1) ? NULL : fn ;
+	fc->functionName = str;
 
-	// preserve the capitalization of the lexical token for external
-	// representation purposes
-	strcpy( functionName , fnName );
+	for( ArgumentList::iterator i = args.begin(); i != args.end( ); i++ ) {
+		fc->arguments.push_back( *i );
+	}
+	return( fc );
 }
 
 
 void FunctionCall::
-AppendArgument( ExprTree *tree )
+GetComponents( string &fn, vector<ExprTree*> &args ) const
 {
-	arguments[numArgs++] = tree;
+	fn = functionName;
+	for( ArgumentList::const_iterator i = arguments.begin(); 
+			i != arguments.end( ); i++ ) {
+		args.push_back( *i );
+	}
 }
 
 
 bool FunctionCall::
-_Evaluate (EvalState &state, Value &value)
+_Evaluate (EvalState &state, Value &value) const
 {
 	if( function ) {
-		return( (*function)( functionName , arguments , state , value ) );
+		return( (*function)( functionName.c_str( ), arguments, state, value ) );
 	} else {
 		value.SetErrorValue();
 		return( true );
@@ -189,22 +208,29 @@ _Evaluate (EvalState &state, Value &value)
 }
 
 bool FunctionCall::
-_Evaluate( EvalState &state, Value &value, ExprTree *& tree )
+_Evaluate( EvalState &state, Value &value, ExprTree *& tree ) const
 {
 	FunctionCall *tmpSig = new FunctionCall;
 	Value		tmpVal;
 	ExprTree	*argSig;
 	bool		rval;
 
-	if( !tmpSig || !_Evaluate( state, value ) ) {
+	if( !tmpSig ) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+		return( false );
+	}
+	
+	if( !_Evaluate( state, value ) ) {
 		return false;
 	}
 
-	tmpSig->SetFunctionName( functionName );
+	tmpSig->functionName = functionName;
 	rval = true;
-	for( int i = 0 ; rval && i < numArgs ; i++ ) {
-		rval = arguments[i]->Evaluate( state, tmpVal, argSig );
-		if( rval ) tmpSig->AppendArgument( argSig );
+	for(ArgumentList::const_iterator i=arguments.begin();i!=arguments.end();
+			i++) {
+		rval = (*i)->Evaluate( state, tmpVal, argSig );
+		if( rval ) tmpSig->arguments.push_back( argSig );
 	}
 	tree = tmpSig;
 
@@ -213,7 +239,7 @@ _Evaluate( EvalState &state, Value &value, ExprTree *& tree )
 }
 
 bool FunctionCall::
-_Flatten( EvalState &state, Value &value, ExprTree*&tree, OpKind* )
+_Flatten( EvalState &state, Value &value, ExprTree*&tree, OpKind* ) const
 {
 	FunctionCall *newCall;
 	ExprTree	*argTree;
@@ -228,21 +254,26 @@ _Flatten( EvalState &state, Value &value, ExprTree*&tree, OpKind* )
 	}
 
 	// create a residuated function call with flattened args
-	if( ( newCall = new FunctionCall() ) == NULL ) return false;
-	newCall->SetFunctionName( functionName );
+	if( ( newCall = new FunctionCall() ) == NULL ) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+		return false;
+	}
+	newCall->functionName = functionName;
 
 	// flatten the arguments
-	for( int i = 0 ; i < numArgs ; i++ ) {
-		if( arguments[i]->Flatten( state, argValue, argTree ) ) {
+	for(ArgumentList::const_iterator i=arguments.begin();i!=arguments.end();
+			i++ ) {
+		if( (*i)->Flatten( state, argValue, argTree ) ) {
 			if( argTree ) {
-				newCall->AppendArgument( argTree );
+				newCall->arguments.push_back( argTree );
 				fold = false;
 				continue;
 			} else {
-				ASSERT( argTree == NULL );
+				// Assert: argTree == NULL
 				argTree = Literal::MakeLiteral( argValue );
 				if( argTree ) {
-					newCall->AppendArgument( argTree );
+					newCall->arguments.push_back( argTree );
 					continue;
 				}
 			}
@@ -258,7 +289,9 @@ _Flatten( EvalState &state, Value &value, ExprTree*&tree, OpKind* )
 	// assume all functions are "pure" (i.e., side-affect free)
 	if( fold ) {
 			// flattened to a value
-		if(!(*function)( functionName, arguments, state, value )) return false;
+		if(!(*function)(functionName.c_str(),arguments,state,value)) {
+			return false;
+		}
 		tree = NULL;
 		delete newCall;
 	} else {
@@ -269,24 +302,14 @@ _Flatten( EvalState &state, Value &value, ExprTree*&tree, OpKind* )
 }
 
 
-static int fnHashFcn( const MyString &fnName , int numBkts )
-{
-	int	acc = 0;
-	int len = fnName.Length();
-	for( int i = 0 ; i < len ; i++ ) {
-		acc += fnName[i];			
-	}
-	return( acc % numBkts );
-}
-
-
 bool FunctionCall::
-isType (char *name, ArgumentList &argList, EvalState &state, Value &val)
+isType (const char *name, const ArgumentList &argList, EvalState &state, 
+	Value &val)
 {
     Value   arg;
 
     // need a single argument
-    if (argList.getlast() != 0) {
+    if (argList.size() != 1) {
         val.SetErrorValue ();
         return( true );
     }
@@ -326,16 +349,17 @@ isType (char *name, ArgumentList &argList, EvalState &state, Value &val)
 
 
 bool FunctionCall::
-testMember(char *name, ArgumentList &argList, EvalState &state, Value &val)
+testMember(const char *name,const ArgumentList &argList, EvalState &state, 
+	Value &val)
 {
-    Value     	arg0, arg1, cArg;
-    ExprTree  	*tree;
-	ExprList	*el;
-	bool		b;
-	bool		useIS = ( strcasecmp( "ismember", name ) == 0 );
+    Value     		arg0, arg1, cArg;
+    const ExprTree 	*tree;
+	const ExprList	*el;
+	bool			b;
+	bool			useIS = ( strcasecmp( "ismember", name ) == 0 );
 
     // need two arguments
-    if (argList.getlast() != 1) {
+    if (argList.size() != 2) {
         val.SetErrorValue();
         return( true );
     }
@@ -368,8 +392,8 @@ testMember(char *name, ArgumentList &argList, EvalState &state, Value &val)
 
     // check for membership
 	arg0.IsListValue( el );
-	el->Rewind( );
-	while( ( tree = el->Next( ) ) ) {
+	ExprListIterator itr( el );
+	while( ( tree = itr.NextExpr( ) ) ) {
 		if( !tree->Evaluate( state, cArg ) ) {
 			val.SetErrorValue( );
 			return( false );
@@ -384,8 +408,9 @@ testMember(char *name, ArgumentList &argList, EvalState &state, Value &val)
     return true;
 }
 
+/*
 bool FunctionCall::
-sumAvgFrom (char *name, ArgumentList &argList, EvalState &state, Value &val)
+sumAvgFrom (char *name, const ArgumentList &argList, EvalState &state, Value &val)
 {
 	Value		caVal, listVal;
 	ExprTree	*ca;
@@ -457,7 +482,7 @@ sumAvgFrom (char *name, ArgumentList &argList, EvalState &state, Value &val)
 
 
 bool FunctionCall::
-boundFrom (char *fn, ArgumentList &argList, EvalState &state, Value &val)
+boundFrom (char *fn, const ArgumentList &argList, EvalState &state, Value &val)
 {
 	Value		caVal, listVal, cmp;
 	ExprTree	*ca;
@@ -514,15 +539,15 @@ boundFrom (char *fn, ArgumentList &argList, EvalState &state, Value &val)
 	val.CopyFrom( result );
 	return true;
 }
-
+*/
 
 bool FunctionCall::
-currentTime (char *, ArgumentList &argList, EvalState &, Value &val)
+currentTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 {
 	time_t clock;
 
 		// no arguments
-	if( argList.getlast( ) >= 0 ) {
+	if( argList.size( ) > 0 ) {
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -538,12 +563,13 @@ currentTime (char *, ArgumentList &argList, EvalState &, Value &val)
 
 
 bool FunctionCall::
-timeZoneOffset (char *, ArgumentList &argList, EvalState &, Value &val)
+timeZoneOffset (const char *, const ArgumentList &argList, EvalState &, 
+	Value &val)
 {
 	extern long timezone;
 
 		// no arguments
-	if( argList.getlast( ) >= 0 ) {
+	if( argList.size( ) > 0 ) {
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -555,11 +581,11 @@ timeZoneOffset (char *, ArgumentList &argList, EvalState &, Value &val)
 }
 
 bool FunctionCall::
-dayTime (char *, ArgumentList &argList, EvalState &, Value &val)
+dayTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 {
 	time_t 		now;
 	struct tm 	lt;
-	if( argList.getlast( ) >= 0 ) {
+	if( argList.size( ) > 0 ) {
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -574,17 +600,18 @@ dayTime (char *, ArgumentList &argList, EvalState &, Value &val)
 }
 
 bool FunctionCall::
-makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
+makeDate( const char*, const ArgumentList &argList, EvalState &state, 
+	Value &val )
 {
 	Value 	arg0, arg1, arg2;
-	int		dd, mm, yy, tmp;
+	int		dd, mm, yy;
 	time_t	clock;
 	struct	tm	tms;
 	char	buffer[64];
-	char	month[32];
+	string	month;
 
 		// two or three arguments
-	if( argList.getlast( ) < 1 || argList.getlast( ) > 2 ) {
+	if( argList.size( ) < 2 || argList.size( ) > 3 ) {
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -604,7 +631,7 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 	gmtime_r( &clock, &tms );
 	
 		// evaluate optional third argument
-	if( argList.getlast( ) == 2 ) {
+	if( argList.size( ) == 3 ) {
 		if( !argList[2]->Evaluate( state, arg2 ) ) {
 			val.SetErrorValue( );
 			return( false );
@@ -634,9 +661,9 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 			val.SetErrorValue( );
 			return( true );
 		}
-	} else if( arg1.IsStringValue( month, 32, tmp ) ) {
-		if( sprintf( buffer, "%d %s %d", dd, month, yy ) > 63 ||
-			strptime( buffer, "%d %b %Y", &tms ) == NULL ) {
+	} else if( arg1.IsStringValue( month ) ) {
+		if( sprintf( buffer, "%d %s %d", dd, month.c_str( ), yy ) > 63 ||
+				strptime( buffer, "%d %b %Y", &tms ) == NULL ) {
 			val.SetErrorValue( );
 			return( true );
 		}
@@ -653,12 +680,13 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 
 
 bool FunctionCall::
-makeTime( char* name, ArgumentList &argList, EvalState &state, Value &val )
+makeTime( const char*name, const ArgumentList &argList, EvalState &state, 
+	Value &val )
 {
 	Value 	arg;
 	int		i;
 
-	if( argList.getlast( ) != 0 ) {
+	if( argList.size( ) != 1 ) {
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -687,14 +715,15 @@ makeTime( char* name, ArgumentList &argList, EvalState &state, Value &val )
 }
 
 bool FunctionCall::
-getField( char* name, ArgumentList &argList, EvalState &state, Value &val )
+getField(const char* name, const ArgumentList &argList, EvalState &state, 
+	Value &val )
 {
 	Value 	arg;
-	int 	secs;
+	time_t 	secs;
 	time_t	clock;
 	struct  tm tms;
 
-	if( argList.getlast( ) != 0 ) {
+	if( argList.size( ) != 1 ) {
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -765,13 +794,14 @@ getField( char* name, ArgumentList &argList, EvalState &state, Value &val )
 }
 
 bool FunctionCall::
-inTimeUnits( char* name, ArgumentList &argList, EvalState &state, Value &val )
+inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state, 
+	Value &val )
 {
 	Value 	arg;
-	int		asecs=0, rsecs=0;
+	time_t	asecs=0, rsecs=0;
 	double	secs=0.0;
 
-    if( argList.getlast( ) != 0 ) {
+    if( argList.size( ) != 1 ) {
         val.SetErrorValue( );
         return( true );
     }
@@ -813,20 +843,16 @@ inTimeUnits( char* name, ArgumentList &argList, EvalState &state, Value &val )
 
 	// concatenate all arguments (expected to be strings)
 bool FunctionCall::
-strCat( char*, ArgumentList &argList, EvalState &state, Value &result )
+strCat( const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
 {
-	Sink 		sink;
-	FormatOptions	pp;
-	char		*buf=0;
-	int			alen;
-	Value		val;
-	bool		errorFlag=false, undefFlag=false, rval=true;
+	ClassAdUnParser	unp;
+	string			buf, s;
+	Value			val;
+	bool			errorFlag=false, undefFlag=false, rval=true;
 
-	pp.SetWantQuotes( false );
-	sink.SetSink( buf, alen, false );
-	sink.SetFormatOptions( &pp );
-
-	for( int i = 0 ; i <= argList.getlast() ; i++ ) {
+	for( int i = 0 ; (unsigned)i < argList.size() ; i++ ) {
+		s = "";
 		if( !( rval = argList[i]->Evaluate( state, val ) ) ) {
 			break;
 		}
@@ -837,37 +863,42 @@ strCat( char*, ArgumentList &argList, EvalState &state, Value &result )
 			errorFlag = true;
 			break;
 		} else {
-			val.ToSink( sink );
+			if( val.IsStringValue( s ) ) {
+				buf += s;
+			} else {
+				unp.Unparse( s, val );
+				if( val.IsAbsoluteTimeValue() || val.IsRelativeTimeValue() ) {
+					buf += s.substr(1, s.size()-2 );
+				} else {
+					buf += s;
+				}
+			}
 		}
 	}
-	sink.Terminate( );
 	
 		// failed evaluating some argument
 	if( !rval ) {
 		result.SetErrorValue( );
-		if( buf ) delete [] buf;
 		return( false );
 	}
 		// type error
 	if( errorFlag ) {
 		result.SetErrorValue( );
-		if( buf ) delete [] buf;
 		return( true );
 	} 
 		// some argument was undefined
 	if( undefFlag ) {
 		result.SetUndefinedValue( );
-		if( buf ) delete [] buf;
 		return( true );
 	}
 
 	result.SetStringValue( buf );
-	
 	return( true );
 }
 
 bool FunctionCall::
-changeCase( char*name, ArgumentList &argList, EvalState &state, Value &result )
+changeCase(const char*name,const ArgumentList &argList,EvalState &state,
+	Value &result)
 {
 	Value 	val;
 	char	*str=0, *newstr;
@@ -875,7 +906,7 @@ changeCase( char*name, ArgumentList &argList, EvalState &state, Value &result )
 	int		len;
 
 		// only one argument 
-	if( argList.getlast() != 0 ) {
+	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -910,14 +941,15 @@ changeCase( char*name, ArgumentList &argList, EvalState &state, Value &result )
 }
 
 bool FunctionCall::
-subString( char*, ArgumentList &argList, EvalState &state, Value &result )
+subString( const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
 {
 	Value 	arg0, arg1, arg2;
-	char	*buf=0, *str;
+	string	buf;
 	int		offset, len=0, alen;
 
 		// two or three arguments
-	if( argList.getlast() < 1 || argList.getlast() > 2 ) {
+	if( argList.size() < 2 || argList.size() > 3 ) {
 		result.SetErrorValue( );
 		return( false );
 	}
@@ -925,28 +957,28 @@ subString( char*, ArgumentList &argList, EvalState &state, Value &result )
 		// Evaluate all arguments
 	if( !argList[0]->Evaluate( state, arg0 ) ||
 		!argList[1]->Evaluate( state, arg1 ) ||
-		( argList.getlast( ) > 1 && !argList[2]->Evaluate( state, arg2 ) ) ) {
+		( argList.size( ) > 2 && !argList[2]->Evaluate( state, arg2 ) ) ) {
 		result.SetErrorValue( );
 		return( false );
 	}
 
 		// strict on undefined
 	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) ||
-		(argList.getlast() > 1 && arg2.IsUndefinedValue( ) ) ) {
+		(argList.size() > 2 && arg2.IsUndefinedValue( ) ) ) {
 		result.SetUndefinedValue( );
 		return( false );
 	}
 
 		// arg0 must be string, arg1 must be int, arg2 (if given) must be int
 	if( !arg0.IsStringValue( buf ) || !arg1.IsIntegerValue( offset )||
-		(argList.getlast( ) > 1 && !arg2.IsIntegerValue( len ) ) ) {
+		(argList.size( ) > 2 && !arg2.IsIntegerValue( len ) ) ) {
 		result.SetErrorValue( );
 		return( false );
 	}
 
 		// perl-like substr; negative offsets and lengths count from the end
 		// of the string
-	alen = strlen( buf );
+	alen = buf.size( );
 	if( offset < 0 ) { 
 		offset = alen + offset; 
 	} else if( offset >= alen ) {
@@ -959,30 +991,28 @@ subString( char*, ArgumentList &argList, EvalState &state, Value &result )
 	}
 
 		// allocate storage for the string
-	if( ( str = new char[ len+1 ] ) == NULL ) {
-		result.SetErrorValue( );
-		return( false );
-	}
-	strncpy( str, buf+offset, len );
-	str[len] = '\0';	
+	string str;
+
+	str.assign( buf, offset, len );
 	result.SetStringValue( str );
 	return( true );
 }
 
 bool FunctionCall::
-convInt( char*, ArgumentList &argList, EvalState &state, Value &result )
+convInt( const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
 {
 	Value	arg;
-	char	buf[16];
+	string	buf;
 	char	*end;
-	int		alen;
 	int		ivalue;
+	time_t	tvalue;
 	bool	bvalue;
 	double	rvalue;
 	NumberFactor nf = NO_FACTOR;
 
 		// takes exactly one argument
-	if( argList.getlast() > 0 ) {
+	if( argList.size() > 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1003,8 +1033,8 @@ convInt( char*, ArgumentList &argList, EvalState &state, Value &result )
 			return( true );
 
 		case STRING_VALUE:
-			arg.IsStringValue( buf, 16, alen );
-			ivalue = strtol( buf, (char**) &end, 0 );
+			arg.IsStringValue( buf );
+			ivalue = strtol( buf.c_str( ), (char**) &end, 0 );
 			if( end == buf && ivalue == 0 ) {
 				// strtol() returned an error
 				result.SetErrorValue( );
@@ -1037,13 +1067,13 @@ convInt( char*, ArgumentList &argList, EvalState &state, Value &result )
 			return( true );
 
 		case ABSOLUTE_TIME_VALUE:
-			arg.IsAbsoluteTimeValue( ivalue );
-			result.SetIntegerValue( ivalue );
+			arg.IsAbsoluteTimeValue( tvalue );
+			result.SetIntegerValue( (int)tvalue );
 			return( true );
 
 		case RELATIVE_TIME_VALUE:
-			arg.IsRelativeTimeValue( ivalue );
-			result.SetIntegerValue( ivalue );
+			arg.IsRelativeTimeValue( tvalue );
+			result.SetIntegerValue( (int)tvalue );
 			return( true );
 
 		default:
@@ -1052,20 +1082,22 @@ convInt( char*, ArgumentList &argList, EvalState &state, Value &result )
 	return( false );
 }
 
+
 bool FunctionCall::
-convReal( char*, ArgumentList &argList, EvalState &state, Value &result )
+convReal( const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
 {
 	Value	arg;
-	char	buf[16];
+	string	buf;
 	char	*end;
-	int		alen;
 	int		ivalue;
+	time_t	tvalue;
 	bool	bvalue;
 	double	rvalue;
 	NumberFactor nf;
 
 		// takes exactly one argument
-	if( argList.getlast() > 0 ) {
+	if( argList.size() > 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1086,8 +1118,8 @@ convReal( char*, ArgumentList &argList, EvalState &state, Value &result )
 			return( true );
 
 		case STRING_VALUE:
-			arg.IsStringValue( buf, 16, alen );
-			rvalue = strtod( buf, (char**) &end );
+			arg.IsStringValue( buf );
+			rvalue = strtod( buf.c_str( ), (char**) &end );
 			if( end == buf && rvalue == 0.0 ) {
 				// strtod() returned an error
 				result.SetErrorValue( );
@@ -1120,13 +1152,13 @@ convReal( char*, ArgumentList &argList, EvalState &state, Value &result )
 			return( true );
 
 		case ABSOLUTE_TIME_VALUE:
-			arg.IsAbsoluteTimeValue( ivalue );
-			result.SetRealValue( ivalue );
+			arg.IsAbsoluteTimeValue( tvalue );
+			result.SetRealValue( tvalue );
 			return( true );
 
 		case RELATIVE_TIME_VALUE:
-			arg.IsRelativeTimeValue( ivalue );
-			result.SetRealValue( ivalue );
+			arg.IsRelativeTimeValue( tvalue );
+			result.SetRealValue( tvalue );
 			return( true );
 
 		default:
@@ -1136,13 +1168,13 @@ convReal( char*, ArgumentList &argList, EvalState &state, Value &result )
 }
 
 bool FunctionCall::
-convString( char*, ArgumentList &argList, EvalState &state, Value &result )
+convString(const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
 {
 	Value	arg;
-	char	*str;
 
 		// takes exactly one argument
-	if( argList.getlast() > 0 ) {
+	if( argList.size() > 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1162,27 +1194,28 @@ convString( char*, ArgumentList &argList, EvalState &state, Value &result )
 			result.SetErrorValue( );
 			return( true );
 
+		case STRING_VALUE:
+			result.CopyFrom( arg );
+			return( true );
+
 		case INTEGER_VALUE:
 		case REAL_VALUE:
 		case BOOLEAN_VALUE:
-		case STRING_VALUE:
+			{
+				ClassAdUnParser	unp;
+				string			svalue;
+				unp.Unparse( svalue, arg );
+				result.SetStringValue( svalue );
+				return( true );
+			}
+
 		case ABSOLUTE_TIME_VALUE:
 		case RELATIVE_TIME_VALUE:
 			{
-				Sink 		snk;
-				int			alen;
-				FormatOptions  p;
-
-				str = NULL;
-				p.SetWantQuotes( false );
-				snk.SetSink( str, alen, false );
-				snk.SetFormatOptions( &p );
-				if( !arg.ToSink( snk ) ) {
-					result.SetErrorValue( );
-					return( false );
-				}
-				snk.Terminate( );
-				result.SetStringValue( str );
+				ClassAdUnParser	unp;
+				string			svalue;
+				unp.Unparse( svalue, arg );
+				result.SetStringValue( svalue.substr(1,svalue.size()-2) );
 				return( true );
 			}
 
@@ -1193,12 +1226,13 @@ convString( char*, ArgumentList &argList, EvalState &state, Value &result )
 }
 
 bool FunctionCall::
-convBool( char*, ArgumentList &argList, EvalState &state, Value &result )
+convBool( const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
 {
 	Value	arg;
 
 		// takes exactly one argument
-	if( argList.getlast() > 0 ) {
+	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1241,10 +1275,9 @@ convBool( char*, ArgumentList &argList, EvalState &state, Value &result )
 
 		case STRING_VALUE:
 			{
-				char buf[10];
-				int  alen;
-				arg.IsStringValue( buf, 10, alen );
-				if( strcasecmp( "false", buf ) || strlen( buf ) == 0 ) {
+				string buf;
+				arg.IsStringValue( buf );
+				if( strcasecmp( "false", buf.c_str( ) ) || buf == "" ) {
 					result.SetBooleanValue( false );
 				} else {
 					result.SetBooleanValue( true );
@@ -1254,7 +1287,7 @@ convBool( char*, ArgumentList &argList, EvalState &state, Value &result )
 
 		case RELATIVE_TIME_VALUE:
 			{
-				int rsecs;
+				time_t rsecs;
 				arg.IsRelativeTimeValue( rsecs );
 				result.SetBooleanValue( rsecs != 0 );
 				return( true );
@@ -1268,13 +1301,14 @@ convBool( char*, ArgumentList &argList, EvalState &state, Value &result )
 
 
 bool FunctionCall::
-convTime( char* name, ArgumentList &argList, EvalState &state, Value &result )
+convTime(const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result)
 {
 	Value	arg;
 	bool	relative = ( strcasecmp( "reltime", name ) == 0 );
 
 		// takes exactly one argument
-	if( argList.getlast() > 0 ) {
+	if( argList.size() > 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1322,18 +1356,17 @@ convTime( char* name, ArgumentList &argList, EvalState &state, Value &result )
 
 		case STRING_VALUE:
 			{
-				char buf[64];
-				int	 alen;
-				int	 secs;
-				arg.IsStringValue( buf, 64, alen );
+				string 	buf;
+				time_t 	secs;
+				arg.IsStringValue( buf );
 				if( relative ) {
-					if( !Lexer::tokenizeRelativeTime( buf, secs ) ) {
+					if( !Lexer::tokenizeRelativeTime((char*)buf.c_str(),secs)) {
 						result.SetErrorValue( );
 						return( true );
 					}
 					result.SetRelativeTimeValue( secs );
 				} else {
-					if( !Lexer::tokenizeAbsoluteTime( buf, secs ) ) {
+					if( !Lexer::tokenizeAbsoluteTime((char*)buf.c_str(),secs)) {
 						result.SetErrorValue( );
 						return( true );
 					}
@@ -1344,7 +1377,7 @@ convTime( char* name, ArgumentList &argList, EvalState &state, Value &result )
 
 		case ABSOLUTE_TIME_VALUE:
 			{
-				int secs;
+				time_t secs;
 				arg.IsAbsoluteTimeValue( secs );
 				if( relative ) {
 					result.SetRelativeTimeValue( secs );
@@ -1359,7 +1392,7 @@ convTime( char* name, ArgumentList &argList, EvalState &state, Value &result )
 				if( relative ) {
 					result.CopyFrom( arg );
 				} else {
-					int secs;
+					time_t secs;
 					arg.IsRelativeTimeValue( secs );
 					result.SetAbsoluteTimeValue( secs );
 				}
@@ -1373,12 +1406,13 @@ convTime( char* name, ArgumentList &argList, EvalState &state, Value &result )
 }
 
 bool FunctionCall::
-doMath( char* name, ArgumentList &argList, EvalState &state, Value &result )
+doMath( const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result )
 {
 	Value	arg;
 
 		// takes exactly one argument
-	if( argList.getlast() > 0 ) {
+	if( argList.size() > 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1432,7 +1466,8 @@ doMath( char* name, ArgumentList &argList, EvalState &state, Value &result )
 }
 
 bool FunctionCall::
-matchPattern( char*, ArgumentList &argList, EvalState &state, Value &result )
+matchPattern( const char*,const ArgumentList &argList,EvalState &state,
+	Value &result )
 {
 	Value 	arg0, arg1;
 	char	*pattern=NULL, *target=NULL;
@@ -1440,7 +1475,7 @@ matchPattern( char*, ArgumentList &argList, EvalState &state, Value &result )
 	int		status;
 
 		// need two arguments; first is pattern, second is string
-	if( argList.getlast() != 1 ) {
+	if( argList.size() != 2 ) {
 		result.SetErrorValue( );
 		return( true );
 	}

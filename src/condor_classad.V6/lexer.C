@@ -1,10 +1,30 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 // Includes 
 #include "condor_common.h"
 #include "escapes.h"
 #include "lexer.h"
-
-// for EXCEPT in condor_debug.h
-static char _FileName_[] = __FILE__;
 
 BEGIN_NAMESPACE( classad )
 
@@ -39,11 +59,11 @@ Lexer::
 // Initialization method:  Initialize with immutable string
 //   +  Token will be accumulated in the lexBuffer
 bool Lexer::
-InitializeWithSource( ByteSource *s )
+Initialize( const string &str )
 {
-	// sanity check
-	src = s;
-	if( !src || !src->GetChar( ch ) ) return false;
+	parseBuffer = str.c_str( );
+	offset = 0;
+	ch = parseBuffer[offset];
 
 	// token state initialization
 	lexBuffer[0] = (char) ch;
@@ -59,7 +79,8 @@ InitializeWithSource( ByteSource *s )
 bool Lexer::
 Reinitialize( )
 {
-	if( !src->GetChar( ch ) ) return( false );
+	offset++;
+	ch = parseBuffer[offset];
 
 	// token state initialization
 	lexBuffer[0] = (char) ch;
@@ -107,10 +128,11 @@ cut (void)
 void Lexer::
 wind (void)
 {
-	if( !src ) { ch = EOF; return; }
-	src->GetChar( ch );
+	if(ch == '\0') return;
+	offset++;
+	ch = parseBuffer[offset];
 	++lexBufferCount;
-	if( ch == EOF ) return;
+	if( ch == '\0' ) return;
 	if( accumulating ) lexBuffer[lexBufferCount] = ch;
 }
 
@@ -394,7 +416,7 @@ tokenizeAlphaHead (void)
 int Lexer::
 tokenizeTime( )
 {
-	int secs;
+	time_t 	secs;
 
 	// mark after the quote
 	wind( );
@@ -439,10 +461,10 @@ tokenizeTime( )
 
 
 bool Lexer::
-tokenizeAbsoluteTime( char *buf, int &asecs )
+tokenizeAbsoluteTime( char *buf, time_t &asecs )
 {
 	struct 	tm timeValue;
-	int		secs;
+	time_t	secs;
 	time_t	absTime=0;
 	char	*tzStr, *tzOff=NULL;
 	extern	time_t timezone;
@@ -481,7 +503,7 @@ tokenizeAbsoluteTime( char *buf, int &asecs )
 }
 
 bool Lexer::
-tokenizeRelativeTime( char *buf, int &rsecs )
+tokenizeRelativeTime( char *buf, time_t &rsecs )
 {
 	bool negative = false;
 	int  days=0, hrs=0, mins=0, secs=0;
@@ -504,14 +526,14 @@ tokenizeRelativeTime( char *buf, int &rsecs )
 	while( *ptr && isdigit( *ptr ) ) {
 		ptr++;
 	}
-	if( *ptr == '#' ) {
+	if( tolower(*ptr) == 'd' ) {
 		*ptr = '\0';
 		days = strtol( start, &end, 10 );  // base 10
 		if( days == 0 && end == start ) {
 			return( false );
 		}
 		// wind pointers past hours field
-		*ptr = '#';
+		*ptr = 'd';
 		ptr++;
 		start = ptr;
 		while( *ptr && isdigit( *ptr ) ) {

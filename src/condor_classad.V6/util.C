@@ -1,9 +1,32 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 #include "condor_classad.h"
 
 BEGIN_NAMESPACE( classad )
 
-ClassAd* getOldClassAd( Sock& sock )
+ClassAd* getOldClassAd( Stream *sock )
 {
 	ClassAd *ad = new ClassAd( );
 	if( !ad ) { 
@@ -17,124 +40,102 @@ ClassAd* getOldClassAd( Sock& sock )
 }
 
 
-bool getOldClassAd( Sock& sock, ClassAd& ad )
+bool getOldClassAd( Stream *sock, ClassAd& ad )
 {
-	Source 	src;
-	int 	numExprs;
-	char 	*eq=NULL;
-	ExprTree *expr;
-	static  char *buffer = new char[ 10240 ];
+	ClassAdParser	parser;
+	int 			numExprs;
+	string			buffer;
+	char			*tmp;
+	ClassAd			*upd=NULL;
+	static char		*inputLine = new char[ 10240 ];
 
-	sock.decode( );
-	if( !sock.code( numExprs ) ) {
+
+	ad.Clear( );
+	sock->decode( );
+	if( !sock->code( numExprs ) ) {
 		return false;
 	}
 
+		// pack exprs into classad
+	buffer = "[";
 	for( int i = 0 ; i < numExprs ; i++ ) {
-			// get the expression and find the '=' in the expr
-		if( !sock.code( buffer ) || !( eq = strchr( buffer, '=' ) ) ) {
-			return false;
-		}
-			// split the expression at the '='
-		*eq = '\0';
+		tmp = NULL;
+		if( !sock->get( inputLine ) ) return( false );
+		buffer += string(inputLine) + ";";
+		free( tmp );
+	}
+	buffer += "]";
 
-			// set the source to the part after the '='
-		src.SetSource( eq+1 );
-
-			// parse the expression and insert it into the classad
-		if( !src.ParseExpression( expr ) || !ad.Insert( buffer, expr ) ) {
-			return false;
-		}
+		// get type info
+	if (!sock->get(inputLine)||!ad.InsertAttr("MyType",inputLine)) {
+		return false;
+	}
+	if (!sock->get(inputLine)||!ad.InsertAttr("TargetType",inputLine)) {
+		return false;
 	}
 
-	// Get my type and target type
-	if (!sock.code(buffer) || !ad.Insert("MyType",buffer)) return false;
-	if (!sock.code(buffer) || !ad.Insert("TargetType",buffer)) return false;
+		// parse ad
+	if( !( upd = parser.ParseClassAd( buffer ) ) ) {
+		return( false );
+	}
+
+		// put exprs into ad
+	ad.Update( *upd );
+	delete upd;
 
 	return true;
 }
 
-bool putOldClassAd ( Sock& sock, ClassAd& ad )
+bool putOldClassAd ( Stream *sock, ClassAd& ad )
 {
-	char* attr;
-	ExprTree* expr;
-
-	char buffer[10240];
-	char tmp[10240];
-	char* tmpPtr=tmp;
+	ClassAdUnParser	unp;
+	string			buf;
+	ExprTree		*expr;
 
 	int numExprs=0;
 	ClassAdIterator itor(ad);
-	while (itor.NextAttribute(attr, expr)) {
-		if (strcmp(attr,"MyType")==0 || strcmp(attr,"TargetType")==0) continue;
-		numExprs++;
+	while( !itor.IsAfterLast( ) ) {
+		itor.CurrentAttribute( buf, expr );
+		if( strcasecmp( "MyType", buf.c_str( ) ) != 0 && 
+				strcasecmp( "TargetType", buf.c_str( ) ) != 0 ) {
+			numExprs++;
+		}
+		itor.NextAttribute( buf, expr );
 	}
 	
-	sock.encode( );
-//printf("Sending: %d\n",numExprs);
-	if( !sock.code( numExprs ) ) {
+	sock->encode( );
+	if( !sock->code( numExprs ) ) {
 		return false;
 	}
 		
-	itor.ToBeforeFirst();
-	while (itor.NextAttribute(attr, expr)) {
-		if (strcmp(attr,"MyType")==0 || strcmp(attr,"TargetType")==0) continue;
-		memset(buffer,0,sizeof(buffer));
-		Sink s;
-		s.SetSink(buffer,sizeof(buffer));
-		expr->ToSink(s);
-		sprintf(tmp,"%s = %s",attr,buffer);
-//printf("Sending: %s\n",tmpPtr);
-		if (!sock.code(tmpPtr)) {
-			return false;
+	for( itor.ToFirst(); !itor.IsAfterLast(); itor.NextAttribute(buf,expr) ) {
+		itor.CurrentAttribute( buf, expr );
+		if( strcasecmp( "MyType", buf.c_str( ) ) == 0 || 
+				strcasecmp( "TargetType", buf.c_str( ) ) == 0 ) {
+			continue;
 		}
+		buf += " = ";
+		unp.Unparse( buf, expr );
+		if (!sock->put((char*)buf.c_str())) return false;
 	}
 
 	// Send the type
-	char* type=NULL;
-	if (!ad.EvaluateAttrString("MyType",type)) type="(unknown type)";
-//printf("Sending: %s\n",type);
-	if (!sock.code(type)) {
+	if (!ad.EvaluateAttrString("MyType",buf)) {
+		buf="(unknown type)";
+	}
+	if (!sock->put((char*)buf.c_str())) {
 		return false;
 	}
 
-	char* target_type=NULL;
-	if (!ad.EvaluateAttrString("TargetType",target_type)) target_type="(unknown type)";
-//printf("Sending: %s\n",target_type);
-	if (!sock.code(target_type)) {
+	if (!ad.EvaluateAttrString("TargetType",buf)) {
+		buf="(unknown type)";
+	}
+	if (!sock->put((char*)buf.c_str())) {
 		return false;
 	}
 
 	return true;
 }
 
-void printClassAdExpr( ExprTree *tree )
-{
-	static Sink				sink;
-	static FormatOptions	fo;
-
-	sink.SetSink( stdout );
-	fo.SetClassAdIndentation( );
-	fo.SetListIndentation( );
-	sink.SetFormatOptions( &fo );
-	tree->ToSink( sink );
-	sink.Terminate( );
-	sink.FlushSink( );
-}
-
-
-void printClassAdValue( Value &val )
-{
-	static Sink				sink;
-	static FormatOptions	fo;
-
-	sink.SetSink( stdout );
-	fo.SetClassAdIndentation( );
-	fo.SetListIndentation( );
-	sink.SetFormatOptions( &fo );
-	val.ToSink( sink );
-	sink.Terminate( );
-	sink.FlushSink( );
-}
 
 END_NAMESPACE // classad

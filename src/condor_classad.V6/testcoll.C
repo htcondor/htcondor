@@ -1,7 +1,8 @@
-#ifdef IN_CONDOR
+#if !defined( STANDALONE ) 
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "collection.h"
+#include "collectionServer.h"
 #else
 #include <ctype.h>
 #include "classad_package.h"
@@ -29,7 +30,6 @@ enum Commands {
 
 		// display
 	VIEW_CONTENT,
-	SHOW_ALL_VIEWS,
 	SHOW_CLASSAD,
 
 		// misc
@@ -60,7 +60,7 @@ char CommandWords[][32] = {
 
 	"view_content",
 	"show_all_views",
-	"show_classad",
+	"get_classad",
 
 	"sacred",
 	"help",
@@ -74,7 +74,7 @@ void help( void );
 int  findCommand( char * );
 
 
-ClassAdCollectionServer collection( "" );
+ClassAdCollectionServer collection;
 
 int main( void )
 {
@@ -89,8 +89,16 @@ int main( void )
 	snk.SetTerminalChar( '\n' );
 	snk.SetFormatOptions( &fo );
 
+	if( !collection.InitializeFromLog( "log.log" ) ) {
+		fprintf( stderr, "Failed to initialize from log; error=%d: %s\n", 
+			CondorErrno, CondorErrMsg.c_str( ) );
+		exit( 1 );
+	}
+
 	printf( "'h' for help" );
 	while( 1 ) {
+		CondorErrMsg = "";
+		CondorErrno = ERR_OK;
 		printf("\n%s: ",currentXaction.empty()?"(none)":currentXaction.c_str());
 		scanf( "%s", cmdString );
 		command = findCommand( cmdString );
@@ -101,25 +109,36 @@ int main( void )
 				scanf( "%s", buffer1 );
 				if( !collection.OpenTransaction( buffer1 ) ) {
 					fprintf(stderr,"Failed to open transaction: %s\n",buffer1 );
+					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+					CondorErrMsg = "";
 					continue;
+				} else {
+					currentXaction = buffer1;
 				}
-				currentXaction = buffer1;
 				break;
 			}
 				
 			case COMMIT_XACTION: {
-				if( !collection.CloseTransaction( currentXaction, true ) ) {
+				int	outcome;
+				if(!collection.CloseTransaction(currentXaction,true,outcome)||
+						outcome == XACTION_ABORTED ){
 					fprintf( stderr, "Failed to commit transaction: %s\n",
 						currentXaction.c_str( ) );
+					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+					CondorErrMsg = "";
 				}
 				currentXaction = "";
 				break;
 			}
 
 			case ABORT_XACTION: {
-				if( !collection.CloseTransaction( currentXaction, false ) ) {
+				int outcome;
+				if(!collection.CloseTransaction( currentXaction,false,outcome)||
+						outcome != XACTION_ABORTED ){
 					fprintf( stderr, "Failed to abort transaction: %s\n",
 						currentXaction.c_str( ) );
+					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+					CondorErrMsg = "";
 				}
 				currentXaction = "";
 				break;
@@ -128,7 +147,17 @@ int main( void )
 			case SET_XACTION: {
 				string	s;
 				scanf( "%s", buffer1 );
+				if( *buffer1 == '-' ) {
+					currentXaction = "";
+					break;
+				}
 				s = buffer1;
+				if( collection.SetCurrentTransaction( s ) ) {
+					currentXaction = s;
+				} else {
+					fprintf( stderr, "Failed to set transaction: %s\n",
+						CondorErrMsg.c_str( ) );
+				}
 				break;
 			}
 
@@ -151,34 +180,39 @@ int main( void )
 				}
 
 				if( command == ADD_CLASSAD ) {
-					if( !collection.AddClassAd( currentXaction, buffer1, ad ) ){
+					if( !collection.AddClassAd(buffer1,ad)){
 						fprintf( stderr, "Failed to add classad %s: %s\n", 
 							buffer1, buffer2 );
-						if( ad ) delete ad;
+						fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+						CondorErrMsg = "";
 						break;
 					}
 				} else if( command == UPDATE_CLASSAD ) {
-					if( !collection.UpdateClassAd(currentXaction,buffer1,ad)){
+					if(!collection.UpdateClassAd(buffer1, ad)){
 						fprintf( stderr, "Failed to update classad %s: %s\n", 
 							buffer1, buffer2 );
-						if( ad ) delete ad;
+						fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+						CondorErrMsg = "";
 						break;
 					}
 				} else if( command == MODIFY_CLASSAD ) {
-					if( !collection.ModifyClassAd(currentXaction,buffer1,ad)){
+					if( !collection.ModifyClassAd(buffer1, ad)){
 						fprintf( stderr, "Failed to modify classad %s: %s\n", 
 							buffer1, buffer2 );
-						if( ad ) delete ad;
+						fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+						CondorErrMsg = "";
 						break;
 					}
-				}
+				} 
 				break;
 			}
 
 			case REMOVE_CLASSAD: {
 				scanf( "%s", buffer1 );
-				if( !collection.RemoveClassAd( currentXaction, buffer1 ) ) {
+				if( !collection.RemoveClassAd( buffer1 ) ) {
 					fprintf( stderr, "Failed to remove classad %s\n", buffer1 );
+					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+					CondorErrMsg = "";
 				}
 				break;
 			}
@@ -198,21 +232,20 @@ int main( void )
 				char	constraint[2048], rank[2048], partitionExprs[2048];
 				scanf( "%s %s %s %s %s", buffer1, buffer2, constraint, rank, 
 					partitionExprs );
-				if( !collection.CreateSubView( currentXaction, buffer1, buffer2,
-						constraint, rank, partitionExprs ) ) {
-					fprintf( stderr, "Failed to " );
-				} else {
-					fprintf( stderr, "Did " );
-				}
-				fprintf( stderr, "create subview with:\n"
+				if( !collection.CreateSubView( buffer1, buffer2, constraint, 
+						rank, partitionExprs ) ) {
+					fprintf( stderr, "Failed to create subview with:\n"
 						"ViewName=%s, ParentViewName=%s, Constraint=%s, "
 						"Rank=%s, PartitionExprs=%s\n", buffer1, buffer2, 
 						constraint, rank, partitionExprs );
+					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+					CondorErrMsg = "";
+				}
 				break;
 			}
 				
 			case CREATE_PARVIEW: {
-				ClassAd	*ad;
+				ClassAd	*ad=NULL;
 				char constraint[2048],rank[2048],partitionExprs[2048],rep[2048];
 
 				scanf( "%s %s %s %s %s %s", buffer1, buffer2, constraint, rank, 
@@ -223,30 +256,25 @@ int main( void )
 					break;
 				}
 
-				if( !collection.CreatePartition( currentXaction,buffer1,buffer2,
-						constraint, rank, partitionExprs, ad ) ) {
-					fprintf( stderr, "Failed to " );
-				} else {
-					fprintf( stderr, "Did " );
-				}
-				fprintf( stderr, "create partition with:\n"
+				if( !collection.CreatePartition( buffer1, buffer2, constraint, 
+						rank, partitionExprs, ad ) ) {
+					fprintf( stderr, "Failed to create partition with:\n"
 						"ViewName=%s, ParentViewName=%s, Constraint=%s, "
 						"Rank=%s, PartitionExprs=%s, Rep=%s\n",buffer1,buffer2, 
 						constraint, rank, partitionExprs, rep );
-				delete ad;
+					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+					CondorErrMsg = "";
+				}
 				break;
 			}
 
 			case DELETE_VIEW: {
 				scanf( "%s", buffer1 );
-				if( !collection.DeleteView( currentXaction, buffer1 ) ) {
+				if( !collection.DeleteView( buffer1 ) ) {
 					fprintf( stderr, "Failed to delete view: %s\n" , buffer1 );
+					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+					CondorErrMsg = "";
 				}
-				break;
-			}
-
-			case SHOW_ALL_VIEWS: {
-				printf( "Not implemented\n" );
 				break;
 			}
 
@@ -255,11 +283,12 @@ int main( void )
 				scanf( "%s", buffer1 );
 				if( !( ad = collection.GetClassAd( buffer1 ) ) ) {
 					fprintf( stderr, "Failed to get classad %s\n", buffer1 );
+					fprintf( stderr, "%s\n", CondorErrMsg.c_str( ) );
+					CondorErrMsg = "";
 					break;
 				}
 				ad->ToSink( snk );
 				snk.FlushSink( );
-				delete ad;
 				break;
 			}
 
@@ -288,7 +317,7 @@ help( )
 		"current\n\n");
 	printf( "commit_xaction\n\tCommit current transaction\n\n" );
 	printf( "abort_xaction\n\tAbort current transaction\n\n" );
-	printf( "use_xaction <xtn-name>\n\t Make transaction <xtn-name> "
+	printf( "set_xaction <xtn-name>\n\t Make transaction <xtn-name> "
 		"current\n\n" );
 
 	printf( "add_classad <key><ad>\n\tAdd a new classad to the collection\n\n");
@@ -304,8 +333,7 @@ help( )
 	printf( "delete_view <viewname>\n\tDelete view <viewname>\n\n" );
 
 	printf("view_content <viewname>\n\tDisplay content of view <viewname>\n\n");
-	printf( "show_all_views\n\tShow all views\n\n" );
-	printf( "show_classad <key>\n\tShow classad <key>\n\n" );
+	printf( "get_classad <key>\n\tShow classad <key>\n\n" );
 
 	printf( "sacred\n\tShow names of 'sacred' attributes\n\n" );
 	printf( "help\n\tThis screen\n\n" );

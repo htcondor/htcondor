@@ -144,7 +144,8 @@ class MatchClassAd : public ClassAd
 		ClassAd *RemoveRightAd( );
 
 	protected:
-		ClassAd *lCtx, *rCtx, *lad, *rad, *ladParent, *radParent;
+		const ClassAd *ladParent, *radParent;
+		ClassAd *lCtx, *rCtx, *lad, *rad;
 };
 
 END_NAMESPACE // classad

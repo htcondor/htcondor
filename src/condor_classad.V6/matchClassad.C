@@ -1,3 +1,26 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 #include "matchClassad.h"
 
@@ -37,7 +60,7 @@ MakeMatchClassAd( ClassAd *adl, ClassAd *adr )
 bool MatchClassAd::
 InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 {
-	Source	src;
+	ClassAdParser parser;
 
 		// clear out old info
 	Clear( );
@@ -45,19 +68,28 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 	lCtx = rCtx = NULL;
 
 		// convenience expressions
-	Insert( "symmetricMatch", "leftMatchesRight && rightMatchesLeft" );
-	Insert( "leftMatchesRight", "adcr.ad.requirements" );
-	Insert( "rightMatchesLeft", "adcl.ad.requirements" );
-	Insert( "leftRankValue", "adcl.ad.rank" );
-	Insert( "rightRankValue", "adcr.ad.rank" );
+	ClassAd *upd;
+	if( !( upd = parser.ParseClassAd( 
+			"[symmetricMatch = leftMatchesRight && rightMatchesLeft ;"
+			"leftMatchesRight = adcd.ad.requirements ;"
+			"rightMatchesLeft = adcl.ad.requirements ;"
+			"leftRankValue = adcl.ad.rank ;"
+			"rightRankValue = adcr.ad.rank]" ) ) ) {
+		Clear( );
+		lCtx = NULL;
+		rCtx = NULL;
+		return( false );
+	}
+	Update( *upd );
+	delete upd;
 
 		// stash parent scopes
 	ladParent = adl ? adl->GetParentScope( ) : (ClassAd*)NULL;
 	radParent = adr ? adr->GetParentScope( ) : (ClassAd*)NULL;
 
 		// the left context
-	src.SetSource( "[other=.adcr.ad;my=ad;target=other;super=other;ad=[]]" );
-	if( !src.ParseClassAd( lCtx ) ) {
+	if( !( lCtx = parser.ParseClassAd( 
+			"[other=.adcr.ad;my=ad;target=other;super=other;ad=[]]" ) ) ) {
 		Clear( );
 		lCtx = NULL;
 		rCtx = NULL;
@@ -72,8 +104,8 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 	}
 
 		// the right context
-	src.SetSource( "[other=.adcl.ad;my=ad;target=other;super=other;ad=[]]" );
-	if( !src.ParseClassAd( rCtx ) ) {
+	if( !( rCtx = parser.ParseClassAd( 
+			"[other=.adcl.ad;my=ad;target=other;super=other;ad=[]]" ) ) ) {
 		delete lCtx;
 		lCtx = rCtx = NULL;
 		return( false );
@@ -102,7 +134,7 @@ ReplaceLeftAd( ClassAd *ad )
 {
 	lad = ad;
 	ladParent = lad ? lad->GetParentScope( ) : (ClassAd*)NULL;
-	return( lCtx->Insert( "ad", ad ) );
+	return( ad ? lCtx->Insert( "ad", ad ) : true );
 }
 
 
@@ -111,7 +143,7 @@ ReplaceRightAd( ClassAd *ad )
 {
 	rad = ad;
 	radParent = rad ? rad->GetParentScope( ) : (ClassAd*)NULL;
-	return( rCtx->Insert( "ad", ad ) );
+	return( ad ? rCtx->Insert( "ad", ad ) : true );
 }
 
 

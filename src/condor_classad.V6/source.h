@@ -24,6 +24,7 @@
 #ifndef __SOURCE_H__
 #define __SOURCE_H__
 
+#include <vector>
 #include "lexer.h"
 
 BEGIN_NAMESPACE( classad )
@@ -33,82 +34,26 @@ class ExprTree;
 class ExprList;
 class FunctionCall;
 
-/**
-	Defines an abstraction for the input source from which expressions
-	can be parsed.  The source may be pointed to a string, a file descriptor 
-	or a FILE *.  Additionally, the ByteSource class may be extended for
-	custom situations.
-*/
-class Source
+class ClassAdParser
 {
 	public:
 		/// Constructor
-		Source();
+		ClassAdParser();
 
 		/// Destructor
-		~Source();
+		~ClassAdParser();
 
-		// Set the stream source for the parse
-		/** Points the source at a string.
-			@param str String containing the expression
-			@param len The length of the string.  If the parameter is not
-				supplied, the source will be read until '\0' or EOF is
-				encountered.
-			@return false if the operation failed, true otherwise
-		*/
-		bool SetSource( const char *str, int len=-1 );
-
-		/** Points the source at a FILE *.
-			@param fp Pointer to the FILE structure from which the expression
-				can be read
-			@param len The length of the string.  If the parameter is not
-				supplied, the source will be read until '\0' or EOF is
-				encountered.
-			@return false if the operation failed, true otherwise
-		*/
-		bool SetSource( FILE *fp, int len=-1 );
-
-		/** Points the source at a file descriptor.
-			@param fd The file descriptor from which the expression can be read
-			@param len The length of the string.  If the parameter is not
-				supplied, the source will be read until '\0' or EOF is
-				encountered.
-			@return false if the operation failed, true otherwise
-		*/
-		bool SetSource( int fd, int len=-1 );
-
-		/** Points the source at a ByteSource object.
-			@param b Pointer to a ByteSource object.
-			@return false if the operation failed, true otherwise
-			@see ByteSource
-		*/
-		bool SetSource( ByteSource* b );
-
-		bool Reinitialize( ) { return( lexer.Reinitialize( ) ); }
-
-		ByteSource *GetSource( ) { return( src ); }
-
-		// parser entry points
 		/** Parses a ClassAd from this Source object.
-			@param ad Reference to ClassAd which will be populated with
-				the named expressions coming in from the Source.
+			@param buffer Buffer containing the string representation of the
+				classad.
 			@param full If this parameter is true, the parse is considered to
 				succeed only if the ClassAd was parsed successfully and no
 				other tokens follow the ClassAd.
-			@return true if the parse succeeded, false otherwise.
+			@return pointer to the ClassAd object if successful, or NULL 
+				otherwise
 		*/
-		bool ParseClassAd( ClassAd &ad, bool full=false );
-
-		/** Parses a ClassAd from this Source object.
-			@param ad_ptr Pointer to ClassAd which will be populated with
-				the named expressions coming in from the Source.  If this
-				pointer is NULL a ClassAd will be created.
-			@param full If this parameter is true, the parse is considered to
-				succeed only if the ClassAd was parsed successfully and no
-				other tokens follow the ClassAd.
-			@return true if the parse succeeded, false otherwise.
-		*/
-		bool ParseClassAd( ClassAd*& ad_ptr, bool full=false );
+		ClassAd *ParseClassAd( const string &buffer, bool full=false );
+		bool ParseClassAd( const string &buffer, ClassAd &ad, bool full=false );
 
 		/** Parses an expression from this Source object.
 			@param expr Reference to a ExprTree pointer, which will be pointed
@@ -119,37 +64,9 @@ class Source
 				other tokens follow the expression.
 			@return true if the parse succeeded, false otherwise.
 		*/
-		bool ParseExpression(ExprTree*& expr, bool full=false);
-
-		/** Parses an expression list from this Source object.
-			@param exprList Reference to an expression list which will be 
-				populated with the expressions coming in from the source.
-			@param full If this parameter is true, the parse is considered to
-				succeed only if the ExprList was parsed successfully and no
-				other tokens follow the ExprList.
-			@return true if the parse succeeded, false otherwise.
-		*/
-		bool ParseExprList( ExprList &exprList, bool full=false );
-
-		/** Parses an expression list from this Source object.
-			@param exprList_ptr Pointer to an expression list which will be 
-				populated with the expressions coming in from the source.  If
-				this pointer is NULL an ExprList object will be created.
-			@param full If this parameter is true, the parse is considered to
-				succeed only if the ExprList was parsed successfully and no
-				other tokens follow the ExprList.
-			@return true if the parse succeeded, false otherwise.
-		*/
-		bool ParseExprList( ExprList*& exprList_ptr, bool full=false );
-
-		/** Sets the sentinel character for the source, which is treated
-		 		like an EOF for the stream.  This feature is useful if, for
-				example, the expression is expected to be terminated by an
-				end of line character.  (Semantics of the regular EOF and '\0'
-				characters is unchanged.)
-			@param ch The sentinel character
-		*/
-		void SetSentinelChar( int ch );
+		bool ParseExpression( const string &buffer, ExprTree*& expr, 
+					bool full=false);
+		ExprTree *ParseExpression( const string &buffer, bool full=false);
 
 		void SetDebug( bool d ) { lexer.SetDebug( d ); }
 	private:
@@ -157,6 +74,9 @@ class Source
 		Lexer	lexer;
 
 		// mutually recursive parsing functions
+		bool parseExpression( ExprTree*&, bool=false);
+		bool parseClassAd( ClassAd&, bool=false);
+		bool parseExprList( ExprList*&, bool=false);
 		bool parseLogicalORExpression( ExprTree*& );
 		bool parseLogicalANDExpression( ExprTree*& );
 		bool parseInclusiveORExpression( ExprTree*& );
@@ -170,9 +90,7 @@ class Source
 		bool parseUnaryExpression( ExprTree*& );
 		bool parsePostfixExpression( ExprTree*& );
 		bool parsePrimaryExpression( ExprTree*& );
-		bool parseArgumentList( FunctionCall* );
-
-		ByteSource *src;
+		bool parseArgumentList( vector<ExprTree*>& );
 };
 
 END_NAMESPACE // classad

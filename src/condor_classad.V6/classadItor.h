@@ -34,13 +34,13 @@ class ClassAdIterator
 {
     public:
         /// Constructor
-        ClassAdIterator () { ad = NULL ; index = -1; }
+        ClassAdIterator() { ad = NULL; }
 
         /** Constructor which initializes the iterator to the given ClassAd.
             @param ca The ClassAd to iterate over.
             @see initialize
         */
-        ClassAdIterator (const ClassAd &ca) { ad = &ca; index = -1; }
+        ClassAdIterator(const ClassAd &ca) { ad=&ca; ToFirst( ); }
 
         /// Destructor
         ~ClassAdIterator(){ }
@@ -53,13 +53,13 @@ class ClassAdIterator
                 ClassAds as arguments.
             @param l The expression list to iterate over (i.e., the iteratee).
         */
-        inline void Initialize (const ClassAd &ca) { ad = &ca ; index = -1; }
+        inline void Initialize(const ClassAd &ca){ ad=&ca; ToFirst( ); }
 
         /// Positions the iterator to the "before first" position.
-        inline void ToBeforeFirst () { index = -1; }
+        inline void ToFirst () { if(ad) itr = ad->attrList.begin( ); }
 
         /// Positions the iterator to the "after last" position
-        inline void ToAfterLast ()  { index = ad->last; }
+        inline void ToAfterLast ()  { if(ad) itr = ad->attrList.end( ); }
 
         /** Gets the next attribute in the ClassAd.
             @param attr The name of the next attribute in the ClassAd.
@@ -67,14 +67,14 @@ class ClassAdIterator
             @return false if the iterator has crossed the last attribute in the
                 ClassAd, or true otherwise.
         */
-        bool NextAttribute( const char*& attr, ExprTree*& expr );
+        bool NextAttribute( string& attr, const ExprTree*& expr );
 
         /** Gets the attribute currently referred to by the iterator.
             @param attr The name of the next attribute in the ClassAd.
             @param expr The expression of the next attribute in the ClassAd.
             @return false if the operation failed, true otherwise.
         */
-        bool CurrentAttribute( const char*& attr, ExprTree*& expr );
+        bool CurrentAttribute( string& attr, const ExprTree*& expr ) const;
 
         /** Gets the previous attribute in the ClassAd.
             @param attr The name of the previous attribute in the ClassAd.
@@ -82,21 +82,25 @@ class ClassAdIterator
             @return false if the iterator has crossed the first attribute in
                 the ClassAd, or true otherwise.
         */
-        bool PreviousAttribute( const char *&attr, ExprTree *&expr );
+        bool PreviousAttribute( string& attr, const ExprTree *&expr );
 
         /** Predicate to check the position of the iterator.
             @return true iff the iterator is before the first element.
         */
-        inline bool IsBeforeFirst () { return (index == -1); }
+        inline bool IsAtFirst() const {
+			return(ad?(itr==ad->attrList.begin()):false);
+		}
 
         /** Predicate to check the position of the iterator.
             @return true iff the iterator is after the last element.
         */
-        inline bool IsAfterLast () { return (ad ? (index==ad->last) : false); }
+        inline bool IsAfterLast() const {
+			return(ad?(itr==ad->attrList.end()):false); 
+		}
 
     private:
-        int     index;
-        const ClassAd   *ad;
+		AttrList::const_iterator	itr;
+        const ClassAd   			*ad;
 };
 
 END_NAMESPACE // classad

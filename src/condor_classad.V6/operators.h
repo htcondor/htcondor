@@ -28,8 +28,6 @@
 
 BEGIN_NAMESPACE( classad )
 
-class Sink;
-
 /** Represents a node of the expression tree which is an operation applied to
 	expression operands
 */
@@ -42,25 +40,16 @@ class Operation : public ExprTree
 		/// Destructor
 		~Operation ();
 
-        /** Sends the function call object to a Sink.
-            @param s The Sink object.
-            @return false if the expression could not be successfully
-                unparsed into the sink.
-            @see Sink
-        */
-		virtual bool ToSink( Sink &s );
-
 		/** Sets the type and children of the expression node.
 			@param kind The kind of operation.
 			@param e1 The first sub-expression child of the node.
 			@param e2 The second sub-expression child of the node (if any).
 			@param e3 The third sub-expression child of the node (if any).
 		*/
-		void SetOperation (OpKind, ExprTree* = NULL, ExprTree* = NULL,
-				ExprTree* = NULL);
+		static Operation *MakeOperation(OpKind,ExprTree* =NULL,ExprTree* =NULL,
+				ExprTree* =NULL);
 
-		/// table of string representations of operators; indexed by OpKind
-		static char *opString[];
+		void GetComponents( OpKind&, ExprTree*&, ExprTree*&, ExprTree *& )const;
 
 		// public access to operation function
 		/** Convenience method which operates on binary operators.
@@ -96,24 +85,21 @@ class Operation : public ExprTree
 		 */
 		static int PrecedenceLevel( OpKind );
 
-		virtual Operation* Copy( );
+		virtual Operation* Copy( ) const;
 
   	private:
-		virtual void _SetParentScope( ClassAd* );
-		virtual bool _Evaluate( EvalState &, Value &);
-		virtual bool _Evaluate( EvalState &, Value &, ExprTree*& );
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+		virtual void _SetParentScope( const ClassAd* );
+		virtual bool _Evaluate( EvalState &, Value &) const;
+		virtual bool _Evaluate( EvalState &, Value &, ExprTree*& ) const;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
 
 		// auxillary functionms
 		bool combine( OpKind&, Value&, ExprTree*&, 
-				OpKind, Value&, ExprTree*, OpKind, Value&, ExprTree* );
-		bool flattenSpecials( EvalState &, Value &, ExprTree *& );
+				OpKind, Value&, ExprTree*, OpKind, Value&, ExprTree* ) const;
+		bool flattenSpecials( EvalState &, Value &, ExprTree *& ) const;
 
-		static Operation* makeOperation( OpKind, Value&, ExprTree* );
-		static Operation* makeOperation( OpKind, ExprTree*, Value& );
-		static Operation* makeOperation( OpKind, ExprTree*, ExprTree* );
-		static Operation* makeOperation( OpKind,ExprTree*,ExprTree*,ExprTree* );
-		static Operation* makeOperation( OpKind, ExprTree* );
+		static Operation* MakeOperation( OpKind, Value&, ExprTree* );
+		static Operation* MakeOperation( OpKind, ExprTree*, Value& );
 		static ValueType  coerceToNumber (Value&, Value &);
 
 		enum SigValues { SIG_NONE=0, SIG_CHLD1=1 , SIG_CHLD2=2 , SIG_CHLD3=4 };

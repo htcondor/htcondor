@@ -37,55 +37,6 @@ class Literal : public ExprTree
 		/// Destructor
     	~Literal ();
 
-        /** Sends the literal expression object to a Sink.
-            @param s The Sink object.
-            @return false if the expression could not be successfully
-                unparsed into the sink.
-            @see Sink
-        */
-		virtual bool ToSink( Sink &s );
-
-		/** Set this literal as a boolean.
-			@param b The boolean value.
-		*/
-		void SetBooleanValue(bool b);
-
-		/** Set this literal as an integer.
-			@param i The integer value.
-			@param f The multiplication factor.
-		*/
-    	void SetIntegerValue(int i, NumberFactor f = NO_FACTOR);
-
-		/** Set this literal as a real.
-			@param r The real value.
-			@param f The multiplication factor.
-		*/
-    	void SetRealValue(double r, NumberFactor f = NO_FACTOR);
-
-		/** Set the literal to a string value.  The string is adopted by the
-		  		object, and is assumed to have been created with new char[].
-			@param str The string value
-		*/
-    	void SetStringValue( const char *str );
-
-		/** Set the literal to an absolute time value
-			@param secs Number of seconds since the UNIX epoch
-		*/
-		void SetAbsTimeValue( int secs );
-
-		/** Set the literal to a relative time value
-			@param secs Number of seconds (could be positive or negative)
-		*/
-		void SetRelTimeValue( int secs );
-
-		/** Set the literal as an undefined value
-		*/
-    	void SetUndefinedValue(void);
-
-		/** Set the literal as an error value
-		*/
-    	void SetErrorValue(void);
-
 		/** Create an absolute time literal.
 		 * 	@param now The time in UNIX epoch.  If a value of -1 is passed in
 		 * 	the system's current time will be used.
@@ -94,10 +45,11 @@ class Literal : public ExprTree
 		static Literal* MakeAbsTime( time_t now=-1 );
 
 		/** Create a relative time literal.
-		 * @param secs The number of seconds.
+		 * @param secs The number of seconds.  If a value of -1 is passed in
+		 * the time since midnight (i.e., the daytime) is used.
 		 * @return The literal expression.
 		 */
-		static Literal* MakeRelTime( int secs );
+		static Literal* MakeRelTime( time_t secs=-1 );
 
 		/** Create a relative time interval by subtracting two absolute times.
 		 * @param t1 The end time of the interval.  If -1 is passed in, the
@@ -108,7 +60,10 @@ class Literal : public ExprTree
 		 */
 		static Literal* MakeRelTime( time_t t1=-1, time_t t2=-1 );
 
-		virtual Literal* Copy( );
+		virtual Literal* Copy( ) const;
+
+		static Literal*MakeLiteral( const Value&, NumberFactor f=NO_FACTOR );
+		void GetComponents( Value&, NumberFactor &f ) const;
 
   	private:
 		friend FunctionCall;
@@ -116,11 +71,10 @@ class Literal : public ExprTree
 		friend ExprList;
 		friend Operation;
 
-		static Literal*MakeLiteral(Value&);
-		virtual void _SetParentScope( ClassAd* ){ }
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
- 		virtual bool _Evaluate (EvalState &, Value &);
- 		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&);
+		virtual void _SetParentScope( const ClassAd* ){ }
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
+ 		virtual bool _Evaluate (EvalState &, Value &) const;
+ 		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
 
 		// literal specific information
     	Value   		value;

@@ -41,15 +41,7 @@ class AttributeReference : public ExprTree
 		*/
     	~AttributeReference ();
 
-        /** Sends the attribute reference object to a Sink.
-            @param s The Sink object.
-            @return false if the expression could not be successfully
-                unparsed into the sink.
-            @see Sink
-        */
-		virtual bool ToSink (Sink &s );
-
-		/** Set the attribute reference.
+		/** Factory method to create attribute reference nodes.
 			@param expr The expression part of the reference (i.e., in
 				case of expr.attr).  This parameter is NULL if the reference
 				is absolute (i.e., .attr) or simple (i.e., attr).
@@ -59,25 +51,24 @@ class AttributeReference : public ExprTree
 				(i.e., in case of .attr).  This parameter cannot be true if
 				expr is not NULL
 		*/
-    	void SetReference (ExprTree *expr, char *attrName, bool absolute=false);
+    	static AttributeReference *MakeAttributeReference(ExprTree *expr, 
+					const string &attrName, bool absolute=false);
+		void GetComponents( ExprTree *&, string &, bool & ) const;
 
-		virtual AttributeReference* Copy( );
+		virtual AttributeReference* Copy( ) const;
 
   	private:
 		// private ctor for internal use
-		AttributeReference( ExprTree*, char*, bool );
-
-		virtual void _SetParentScope( ClassAd* p );
-    	virtual bool _Evaluate( EvalState & , Value & );
-    	virtual bool _Evaluate( EvalState & , Value &, ExprTree*& );
-    	virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
-
-		int	FindExpr( EvalState&, ExprTree*&, ExprTree*&, bool );
+		AttributeReference( ExprTree*, const string &, bool );
+		virtual void _SetParentScope( const ClassAd* p );
+    	virtual bool _Evaluate( EvalState & , Value & ) const;
+    	virtual bool _Evaluate( EvalState & , Value &, ExprTree*& ) const;
+    	virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
+		int	FindExpr( EvalState&, ExprTree*&, ExprTree*&, bool ) const;
 
 		ExprTree	*expr;
 		bool		absolute;
-    	char        *attributeStr;
-    	SSString    attributeName;
+    	string      attributeStr;
 };
 
 END_NAMESPACE // classad

@@ -1,3 +1,26 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 #include "exprTree.h"
 
@@ -20,147 +43,100 @@ ExprList::
 void ExprList::
 Clear ()
 {
-	ExprTree *tree;
-
-	exprList.Rewind();
-	while ((tree = exprList.Next())) {
-		delete tree;
-		exprList.DeleteCurrent ();
+	vector<ExprTree*>::iterator itr;
+	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
+		delete *itr;
 	}
+	exprList.clear( );
 }
 
 	
 ExprList *ExprList::
-Copy( )
+Copy( ) const
 {
 	ExprList *newList = new ExprList;
-	ExprTree *newTree, *tree;
+	ExprTree *newTree;
 
 	if (newList == 0) return 0;
 	newList->parentScope = parentScope;
 
-	exprList.Rewind();
-	while ((tree = exprList.Next())) {
-		newTree = tree->Copy( );
-		if (newTree) {
-			newList->AppendExpression( newTree );
-		} else {
+	vector<ExprTree*>::const_iterator itr;
+	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
+		if( !( newTree = (*itr)->Copy( ) ) ) {
 			delete newList;
-			return 0;
+			CondorErrno = ERR_MEM_ALLOC_FAILED;
+			CondorErrMsg = "";
+			return((ExprList*)NULL);
 		}
+		newList->exprList.push_back( newTree );
 	}
 	return newList;
 }
 
 
 void ExprList::
-_SetParentScope( ClassAd *parent )
+_SetParentScope( const ClassAd *parent )
 {
-	ExprTree *tree;
-	exprList.Rewind( );
-	while( ( tree = exprList.Next( ) ) ) {
-		tree->SetParentScope( parent );
+	vector<ExprTree*>::iterator	itr;
+	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
+		(*itr)->SetParentScope( parent );
 	}
 }
 
-bool ExprList::
-ToSink( Sink &s )
+
+ExprList *ExprList::
+MakeExprList( const vector<ExprTree*> &exprs )
 {
-	ExprTree *tree;
-	bool 	wantIndent;
-	int		indentLength;
-	int		indentLevel=0;
-	FormatOptions *p = s.GetFormatOptions( );
-
-	if( p ) {
-		p->GetListIndentation( wantIndent, indentLength );
-		indentLevel = p->GetIndentLevel( );
-	} else {
-		wantIndent = false;
+	vector<ExprTree*>::const_iterator itr;
+	ExprList *el = new ExprList;
+	if( !el ) {
+		CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+		return( NULL );
 	}
-
-	if( wantIndent ) {
-		if( !s.SendToSink( (void*)"\n", 1 ) || !p->Indent( s ) ) return false;
+	for( itr=exprs.begin( ) ; itr!=exprs.end( ); itr++ ) {	
+		el->exprList.push_back( *itr );
 	}
-	if (!s.SendToSink ((void*)"{", 1)) return false;
-
-	if( wantIndent ) {
-		if( !s.SendToSink( (void*)"\n", 1 ) ) return false;
-		p->SetIndentLevel( indentLevel+indentLength );
-	}
-
-	exprList.Rewind();
-	while ((tree = exprList.Next())) {
-		if( wantIndent && !p->Indent( s ) ) return false;
-		if (!tree->ToSink(s)) return false;
-		if (!exprList.AtEnd()) {
-			if (!s.SendToSink ((void*)",", 1)) return false;
-			if( wantIndent && !s.SendToSink( (void*)"\n", 1 ) ) return false;
-		}
-	}
-
-	if( wantIndent ) {
-		p->SetIndentLevel( indentLevel );
-		if( !s.SendToSink( (void*)"\n", 1 ) || !p->Indent( s ) ) return false;
-	}
-
-	if (!s.SendToSink ((void*)"}", 1)) return false;
-
-	return true;
-}
-
-
-int ExprList::
-Number()
-{
-	return exprList.Number();
-}
-
-
-void ExprList::
-Rewind( )
-{
-	exprList.Rewind( );
-}
-
-ExprTree *ExprList::
-Next( )
-{
-	return( exprList.Next( ) );
+	return( el );
 }
 
 void ExprList::
-AppendExpression (ExprTree *tree)
+GetComponents( vector<ExprTree*> &exprs ) const
 {
-	exprList.Append (tree);
+	vector<ExprTree*>::const_iterator itr;
+	exprs.clear( );
+	for( itr=exprList.begin( ); itr!=exprList.end( ); itr++ ) {
+		exprs.push_back( *itr );
+	}
 }
 
 
 bool ExprList::
-_Evaluate (EvalState &, Value &val)
+_Evaluate (EvalState &, Value &val) const
 {
 	val.SetListValue (this);
 	return( true );
 }
 
 bool ExprList::
-_Evaluate( EvalState &, Value &val, ExprTree *&sig )
+_Evaluate( EvalState &, Value &val, ExprTree *&sig ) const
 {
 	val.SetListValue( this );
 	return( ( sig = Copy( ) ) );
 }
 
 bool ExprList::
-_Flatten( EvalState &state, Value &, ExprTree *&tree, OpKind* )
+_Flatten( EvalState &state, Value &, ExprTree *&tree, OpKind* ) const
 {
+	vector<ExprTree*>::const_iterator	itr;
 	ExprTree	*expr, *nexpr;
 	Value		tempVal;
 	ExprList	*newList;
 
 	if( ( newList = new ExprList( ) ) == NULL ) return false;
 
-	exprList.Rewind();
-	while( ( expr = exprList.Next() ) ) {
+	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
+		expr = *itr;
 		// flatten the constituent expression
 		if( !expr->Flatten( state, tempVal, nexpr ) ) {
 			delete newList;
@@ -172,12 +148,14 @@ _Flatten( EvalState &state, Value &, ExprTree *&tree, OpKind* )
 		if( !nexpr ) {
 			nexpr = Literal::MakeLiteral( tempVal );
 			if( !nexpr ) {
+				CondorErrno = ERR_MEM_ALLOC_FAILED;
+				CondorErrMsg = "";
 				delete newList;
 				return false;
 			}
 		}
 		// add the new expression to the flattened list
-		newList->AppendExpression( nexpr );
+		newList->exprList.push_back( nexpr );
 	}
 
 	tree = newList;
@@ -194,7 +172,7 @@ ExprListIterator( )
 
 
 ExprListIterator::
-ExprListIterator( ExprList* l )
+ExprListIterator( const ExprList* l )
 {
 	Initialize( l );
 }
@@ -207,68 +185,78 @@ ExprListIterator::
 
 
 void ExprListIterator::
-Initialize( const ExprList *l )
+Initialize( const ExprList *el )
 {
 	// initialize eval state
+	l = el;
 	state.cache.clear( );
 	state.curAd = l->parentScope;
 	state.SetRootScope( );
 
 	// initialize list iterator
-	iter.Initialize( l->exprList );
+	itr = l->exprList.begin( );
 }
 
 
 void ExprListIterator::
-ToBeforeFirst( )
+ToFirst( )
 {
-	iter.ToBeforeFirst( );
+	if( l ) itr = l->exprList.begin( );
 }
 
 
 void ExprListIterator::
 ToAfterLast( )
 {
-	iter.ToAfterLast( );
+	if( l ) itr = l->exprList.end( );
 }
 
 
 bool ExprListIterator::
 ToNth( int n ) 
 {
-	ToBeforeFirst( );
-	while( n-- ) {
-		iter.Next( );
+	if( l && n >= 0 && l->exprList.size( ) > (unsigned)n ) {
+		itr = l->exprList.begin( ) + n;
+		return( true );
 	}
-	return( iter.Next( ) != NULL );
+	itr = l->exprList.begin( );
+	return( false );
 }
 
 
-ExprTree* ExprListIterator::
+const ExprTree* ExprListIterator::
 NextExpr( )
 {
-	return( iter.Next( ) );
+	if( l && itr != l->exprList.end( ) ) {
+		itr++;
+		return( *itr );
+	}
+	return( NULL );
 }
 
 
-ExprTree* ExprListIterator::
-CurrentExpr( )
+const ExprTree* ExprListIterator::
+CurrentExpr( ) const
 {
-	return( iter.Current( ) );
+	return( l ? *itr : NULL );
 }
 
 
-ExprTree* ExprListIterator::
+const ExprTree* ExprListIterator::
 PrevExpr( )
 {
-	return( iter.Prev( ) );
+	if( l && itr != l->exprList.begin( ) ) {
+		itr++;
+		return( *itr );
+	}
+	return( NULL );
 }
 
 
 bool ExprListIterator::
 NextValue( Value& val, EvalState *es )
 {
-	ExprTree *tree = NextExpr( );
+	const ExprTree *tree = NextExpr( );
 
 	if( !tree ) return false;
 	tree->Evaluate( es?*es:state, val );
@@ -277,9 +265,9 @@ NextValue( Value& val, EvalState *es )
 
 
 bool ExprListIterator::
-CurrentValue( Value& val, EvalState *es )
+CurrentValue( Value& val, EvalState *es ) const
 {
-	ExprTree *tree = CurrentExpr( );
+	const ExprTree *tree = CurrentExpr( );
 
 	if( !tree ) return false;
 	tree->Evaluate( es?*es:state, val );
@@ -290,7 +278,7 @@ CurrentValue( Value& val, EvalState *es )
 bool ExprListIterator::
 PrevValue( Value& val, EvalState *es )
 {
-	ExprTree *tree = PrevExpr( );
+	const ExprTree *tree = PrevExpr( );
 
 	if( !tree ) return false;
 	tree->Evaluate( es?*es:state, val );
@@ -301,7 +289,7 @@ PrevValue( Value& val, EvalState *es )
 bool ExprListIterator::
 NextValue( Value& val, ExprTree*& sig, EvalState *es )
 {
-	ExprTree *tree = NextExpr( );
+	const ExprTree *tree = NextExpr( );
 
 	if( !tree ) return false;
 	tree->Evaluate( es?*es:state, val, sig );
@@ -310,9 +298,9 @@ NextValue( Value& val, ExprTree*& sig, EvalState *es )
 
 
 bool ExprListIterator::
-CurrentValue( Value& val, ExprTree*& sig, EvalState *es )
+CurrentValue( Value& val, ExprTree*& sig, EvalState *es ) const
 {
-	ExprTree *tree = CurrentExpr( );
+	const ExprTree *tree = CurrentExpr( );
 
 	if( !tree ) return false;
 	tree->Evaluate( es?*es:state, val, sig );
@@ -323,7 +311,7 @@ CurrentValue( Value& val, ExprTree*& sig, EvalState *es )
 bool ExprListIterator::
 PrevValue( Value& val, ExprTree*& sig, EvalState *es )
 {
-	ExprTree *tree = PrevExpr( );
+	const ExprTree *tree = PrevExpr( );
 
 	if( !tree ) return false;
 	tree->Evaluate( es?*es:state, val, sig );
@@ -332,16 +320,16 @@ PrevValue( Value& val, ExprTree*& sig, EvalState *es )
 
 
 bool ExprListIterator::
-IsBeforeFirst( )
+IsAtFirst( ) const
 {
-	return( iter.IsBeforeFirst( ) );
+	return( l && itr == l->exprList.begin( ) );
 }
 
 
 bool ExprListIterator::
-IsAfterLast( )
+IsAfterLast( ) const
 {
-	return( iter.IsAfterLast( ) );
+	return( l && itr == l->exprList.end( ) );
 }
 
 END_NAMESPACE // classad
