@@ -326,6 +326,9 @@ use 3 more file descriptors.
   The same error occurs when the \Condor{schedd} is not running, which
   is a far more common situation.
 
+\item Fixed a series of bugs which were causing the \Condor{collector}
+  to seg-fault under some (unusual) circumstances.
+
 \item Fixed a minor bug where Condor could get confused if a machine
   had only a fully qualified domain name in DNS, but no simple
   hostname without the domain name.
