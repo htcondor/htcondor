@@ -143,7 +143,7 @@ void Scanner(char*& s, Token& t)
         }
 		return;
     }
-    if(*s == '"' || (*s == '\\' && *(s+1) == '"'))
+    if(*s == '"')
     // token is a string
     {
         s++;
@@ -151,6 +151,11 @@ void Scanner(char*& s, Token& t)
 		t.length++;
         while(*s != '"' && *s != '\0')
 		{
+			if(*s == '\\')
+			{
+				s++;
+				t.length++; 
+			} 
 			*tmp = *s;
 			s++;
             tmp++;
