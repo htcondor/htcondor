@@ -1274,11 +1274,27 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 		case GM_FAILED: {
 			// The jobmanager's job state has moved to FAILED. Send a
 			// commit if necessary and take appropriate action.
-			if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
-				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
+			if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
 				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ) {
 				globusError = 0;
 				gmState = GM_RESTART;
+			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMITE_TIMED_OUT ) {
+				rehashJobContact( this, jobContact, NULL );
+				free( jobContact );
+				myResource->CancelSubmit( this );
+				jobContact = NULL;
+				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
+								   NULL_JOB_CONTACT );
+				jmVersion = GRAM_V_UNKNOWN;
+				UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION,
+								jmVersion );
+				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
+
+				if ( condorState == REMOVED ) {
+					gmState = GM_DELETE;
+				} else {
+					gmState = GM_CLEAR_REQUEST;
+				}
 			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 				gmState = GM_PROXY_EXPIRED;
 			} else if ( jmVersion >= GRAM_V_1_6  &&
