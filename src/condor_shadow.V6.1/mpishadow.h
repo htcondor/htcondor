@@ -143,6 +143,8 @@ class MPIShadow : public BaseShadow
 		*/
 	virtual void gracefulShutDown( void );
 
+	virtual void resourceBeganExecution( RemoteResource* rr );
+
  private:
 
         /** After the schedd claims a resource, it puts it in a queue
