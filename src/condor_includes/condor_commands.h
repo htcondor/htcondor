@@ -122,7 +122,7 @@
 #define DAEMON_OFF_FAST		(SCHED_VERS+68)		// specific daemon, subsys follows 
 #define DAEMON_ON			(SCHED_VERS+69)		// specific daemon, subsys follows 
 #define GIVE_TOTALS_CLASSAD	(SCHED_VERS+70)
-
+#define DUMP_STATE          (SCHED_VERS+71)  // drop internal vars into classad
 
 /************
 *** Command ids used by the collector 
@@ -252,5 +252,12 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 */
 #define DCSHADOW_BASE 71000
 #define SHADOW_UPDATEINFO	(DCSHADOW_BASE+0)
+#define TAKE_MATCH          (DCSHADOW_BASE+1)  // for MPI shadow
+#define MPI_START_COMRADE   (DCSHADOW_BASE+2)  // for MPI shadow
+
+/*
+*** Used only in THE TOOL to choose the condor_squawk option.
+*/
+#define SQUAWK 72000
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */
