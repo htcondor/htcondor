@@ -1,0 +1,36 @@
+#!/usr/bin/env perl
+
+######################################################################
+# $Id: pre_all,v 1.1.2.1 2004-06-26 02:42:53 wright Exp $
+# Submit-side NMI build system infrastructure to setup source
+# input for test jobs before the platform-specific stuff is called.
+# All we have to do is untar the common/results.tar.gz file so that
+# when the NMI infrastructure copies everything into each platform-
+# specific directory, "results.tar.gz" doesn't get clobbered.
+# We assume we're born inside the "common" directory...
+######################################################################
+
+# autoflush our STDOUT
+$| = 1;
+
+my $results = "results.tar.gz";
+-f $results || die "$results does not exist!\n";
+
+print "Unpacking platform independent results.tar.gz\n";
+open( UNTAR, "tar -zxvf $results|" ) || 
+    die "Can't open tar -zxvf $results: $!\n";
+while( <UNTAR> ) {
+    print;
+}
+close( UNTAR );
+if( $? ) {
+    die "'tar -zxvf $results' failed with status $?\n";
+}
+print "Untar completed successfully\n";
+
+# Now, unlink results.tar.gz so that it doesn't clobber anything
+print "Removing $results\n";
+unlink( $results ) || die "Can't unlink($results): $!\n";
+
+print "All steps completed successfully\n";
+exit 0;
