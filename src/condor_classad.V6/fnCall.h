@@ -44,7 +44,7 @@ class FunctionCall : public ExprTree
 
 		static FunctionCall *MakeFunctionCall( const string &fnName, 
 					vector<ExprTree*> &argList );
-		void GetComponents( string &fnName, vector<ExprTree*> &argList ) const;
+		void GetComponents( string &, vector<ExprTree*> &) const;
 
 		virtual FunctionCall* Copy( ) const;
 

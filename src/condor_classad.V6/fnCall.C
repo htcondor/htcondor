@@ -23,6 +23,8 @@
 
 #include "condor_common.h"
 #include "exprTree.h"
+#include "source.h"
+#include "sink.h"
 #include <regex.h>
 
 BEGIN_NAMESPACE( classad )
@@ -900,10 +902,11 @@ bool FunctionCall::
 changeCase(const char*name,const ArgumentList &argList,EvalState &state,
 	Value &result)
 {
-	Value 	val;
-	char	*str=0, *newstr;
-	bool	lower = ( strcasecmp( name, "tolower" ) == 0 );
-	int		len;
+	Value 		val;
+	const char	*str=0;
+	char		*newstr;
+	bool		lower = ( strcasecmp( name, "tolower" ) == 0 );
+	int			len;
 
 		// only one argument 
 	if( argList.size() != 1 ) {
@@ -1469,10 +1472,10 @@ bool FunctionCall::
 matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
-	Value 	arg0, arg1;
-	char	*pattern=NULL, *target=NULL;
-	regex_t	re;
-	int		status;
+	Value 		arg0, arg1;
+	const char	*pattern=NULL, *target=NULL;
+	regex_t		re;
+	int			status;
 
 		// need two arguments; first is pattern, second is string
 	if( argList.size() != 2 ) {
