@@ -719,3 +719,24 @@ ftruncate( int fd, off_t length )
 
 #endif /* defined(OSF1) */
 #endif /* !defined(HPUX9) */
+
+/* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
+   but instead are only in the threads libraries.  We access the old
+   versions through their new names. */
+
+#if defined(Solaris251)
+pid_t
+FORK()
+{
+	return _libc_FORK();
+}
+
+#include <signal.h>
+
+int 
+SIGACTION(int sig, const struct sigaction *act, struct sigaction *oact)
+{
+	return _libc_SIGACTION(sig, act, oact);
+}
+
+#endif
