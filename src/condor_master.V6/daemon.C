@@ -35,15 +35,18 @@
 
 #include "condor_common.h"
 
+#ifndef WIN32
 #if defined(Solaris251)
 #define __EXTENSIONS__
-#endif
+#endif  // of defined(Solaris251)
 #include <pwd.h>
 #include <netdb.h>
 #include <sys/stat.h>
 #include <sys/file.h>
 #include "condor_fix_timeval.h"  // FIX
 #include <sys/resource.h>
+#endif // ifndef WIN32
+
 #include <math.h>
 
 #include "condor_constants.h"
@@ -53,6 +56,7 @@
 #include "condor_uid.h"
 #include "master.h"
 #include "file_lock.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #if defined(HPUX9)
 #include "fake_flock.h"
@@ -72,6 +76,7 @@ extern char *		_FileName_ ;
 extern FileLock*	MasterLock;
 extern int		doConfigFromServer; 
 extern char*	config_location;
+extern int		master_exit(int);
 
 extern int		collector_runs_here();
 extern int		negotiator_runs_here();
@@ -83,6 +88,7 @@ extern int		DoCleanup();
 extern void		wait_all_children();
 
 int		hourly_housekeeping(void);
+
 extern "C"
 {
 #if	defined(SUNOS41) || defined(IRIX53)
@@ -91,7 +97,7 @@ extern "C"
 	extern	int		event_mgr();
 #if defined(HPUX9)
 	extern	int		gethostname(char*, unsigned int);
-#else
+#elif !defined(WIN32)
 	extern	int		gethostname(char*, int);
 #endif
 	void	set_machine_status(int); 
@@ -118,7 +124,7 @@ extern Daemons 		daemons;
 extern int			ceiling;
 extern float		e_factor;					// exponential factor
 extern int			r_factor;					// recovering factor
-extern TimerManager	tMgr;
+
 
 daemon::daemon(char *name)
 {
@@ -294,8 +300,6 @@ Daemons::RegisterDaemon(daemon *d)
 
 void Daemons::InitParams()
 {
-	char	*tmp;
-
 	for ( int i =0; i < no_daemons; i++) {
 		daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
 		if(daemon_ptr[i]->process_name == NULL && daemon_ptr[i]->daemon_name) {
@@ -333,26 +337,7 @@ void Daemons::InitParams()
 	}
 	daemon_ptr[index]->timeStamp = 
 		GetTimeStamp(daemon_ptr[index]->process_name);
-	daemon_ptr[index]->pid = getpid();
-
-#if 0
-	// if this is the world machine, then startd and startd are not run,
-	// instead w-startd and w-schedd are run.
-	index = GetIndex("W_SCHEDD");
-	if ( index == -1 ) {
-		dprintf(D_ALWAYS, " Know nothing about Condor Flock Configuration\n");
-	} else {
-		// if WORLD_RUNS_HERE has been set to TRUE
-		if ( daemon_ptr[index]->flag == TRUE ) {
-			index = GetIndex("SCHEDD");
-			if ( index != -1 ) daemon_ptr[index]->flag = FALSE;
-			index = GetIndex("STARTD");
-			if ( index != -1 ) daemon_ptr[index]->flag = FALSE;
-			index = GetIndex("KBDD");
-			if ( index != -1 ) daemon_ptr[index]->flag = FALSE;
-		}
-	}
-#endif
+	daemon_ptr[index]->pid = daemonCore->getpid();
 }
 
 int Daemons::GetIndex(const char* name)
@@ -405,6 +390,7 @@ int daemon::Restart()
 		return StartDaemon();
 	}
 	n = 9 + (int)ceil(pow(e_factor, restarts));
+
 	if(n > ceiling)
 	{
 		n = ceiling;
@@ -413,10 +399,10 @@ int daemon::Restart()
 	if(recoverTimer != -1)
 	{
 		dprintf(D_ALWAYS, "Cancelling recovering timer (%d) for %s\n", recoverTimer, process_name);
-		tMgr.CancelTimer(recoverTimer);
+		daemonCore->Cancel_Timer(recoverTimer);
 		recoverTimer = -1;
 	}
-	timer = tMgr.NewTimer(this, n, (void*)StartDaemon);
+	timer = daemonCore->Register_Timer(n,(TimerHandlercpp)daemon::StartDaemon,"daemon::StartDaemon()",this);
 	dprintf(D_ALWAYS, "restarting %s in %d seconds\n", process_name, n);
 	dprintf(D_FULLDEBUG, "Added timer (%d) for restarting %s\n", timer,
 		process_name);
@@ -426,12 +412,17 @@ int daemon::Restart()
 int daemon::StartDaemon()
 {
 	char	*shortname;
-	int		n;
 
 	if( shortname = strrchr(process_name,'/') ) {
 		shortname += 1;
 	} else {
-		shortname = process_name;
+#ifdef WIN32
+		// this is icky.  yuck.  nasty.  crappy.  can't everyone just get along?
+		if ( shortname=strrchr(process_name,'\\') )
+			shortname += 1;
+		else
+#endif
+			shortname = process_name;
 	}
 
 	if( access(process_name,X_OK) != 0 ) {
@@ -441,75 +432,65 @@ int daemon::StartDaemon()
 		return 0;
 	}
 
+#ifdef WANT_DC_PM
+	{
+		int command_port = TRUE;
+		char argbuf[150];
+
+		// Collector needs to listen on a well known port
+		if ( strcmp(name_in_config_file,"COLLECTOR") == 0 )
+			command_port = COLLECTOR_PORT;
+
+		sprintf(argbuf,"%s -f\0",shortname);
+
+		pid = daemonCore->Create_Process(
+				process_name,	// program to exec
+				argbuf,			// args
+				PRIV_ROOT,		// privledge level
+				1,				// which reaper ID to use; use default reaper
+				command_port,	// port to use for command port; TRUE=choose one dynamically
+				NULL,			// environment
+				NULL,			// current working directory
+				TRUE);			// new_process_group flag; we want a new group
+
+		if ( pid == FALSE ) {
+			// Create_Process failed!
+			dprintf(D_ALWAYS,"ERROR: Create_Process failed, trying to start %s\n",process_name);
+			pid = -1;
+			return 0;
+		}
+
+	}
+#else
 	if( (pid = vfork()) < 0 ) {
 		EXCEPT( "vfork()" );
 	}
 
 	if( pid == 0 ) {	/* The child */
-		pid = getpid();
+		pid = ::getpid();
 		if( setsid() == -1 ) {
 			EXCEPT( "setsid(), errno = %d\n", errno );
 		}
 
-		if(strcmp(name_in_config_file, "CONFIG_SERVER") == 0)
-		{
-			if(port && config_info_file)
-			{
-				(void)execl( process_name, shortname, "-f", "-l", log_name, "-p", port, "-c", config_info_file, 0 );
-			}
-			else if(port)
-			{
-				(void)execl( process_name, shortname, "-f", "-l", log_name, "-p", port, 0 );
-			}
-			else if(config_info_file)
-			{
-				(void)execl( process_name, shortname, "-f", "-l", log_name, "-c", config_info_file, 0 );
-			}
-			else
-			{
-				(void)execl( process_name, shortname, "-f", "-l", log_name, 0 );
-			}
-		}
-		else
-		{
-			if(doConfigFromServer && config_location)
-			{
-				if(daemon_name)
-				{
-					(void)execl( process_name, shortname, "-f", "-n", daemon_name, "-c", config_location, 0 );
-				}
-				else
-				{
-					(void)execl( process_name, shortname, "-f", "-c", config_location, 0 );
-				} 
-			} 
-			else
-			{
-				if(daemon_name)
-				{
-					(void)execl( process_name, shortname, "-f", "-n", daemon_name, 0); 
-				}
-				else
-				{
-					(void)execl( process_name, shortname, "-f", 0 );
-				} 
-			} 
-		}
-		
+		(void)execl( process_name, shortname, "-f", 0 );
+	
+		// should never get here...
 		EXCEPT( "execl( %s, %s, -f, 0 )", process_name, shortname );
 		return 0;
-	} else { 			/* The parent */
-		// if this is a restart, start recover process
-		if(restarts > 0)
-		{
-			recoverTimer = tMgr.NewTimer(this, r_factor, (void*)Recover);
-			dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recoverTimer);
-		}
-
-		dprintf( D_ALWAYS, "Started \"%s\", pid and pgroup = %d\n",
-			shortname, pid );
-		return pid;
 	}
+#endif
+	
+	// if this is a restart, start recover timer
+	if (restarts > 0) {
+		recoverTimer = daemonCore->Register_Timer(r_factor,(TimerHandlercpp)daemon::Recover,
+			"daemon::Recover()",this);
+		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recoverTimer);
+	}
+
+	dprintf( D_ALWAYS, "Started \"%s\", pid and pgroup = %d\n",
+		shortname, pid );
+	
+	return pid;	
 }
 
 void Daemons::Restart(int pid)
@@ -521,7 +502,11 @@ void Daemons::Restart(int pid)
 			dprintf( D_ALWAYS, "The %s (process %d ) died\n",
 						daemon_ptr[i]->name_in_config_file,pid);
 			daemon_ptr[i]->pid = 0; 
-			do_killpg( pid, SIGKILL ) ;
+#ifdef WANT_DC_PM
+			do_killpg( pid, DC_SIGKILL ) ;	// this is currently a no-op if WANT_DC_PM defined
+#else
+			do_killpg( pid, SIGKILL ) ;	
+#endif
 			// This is ok, since we're only calling Restart() when a
 			// daemon has already exited.  So, killing the process
 			// group with SIGKILL shouldn't do any harm and will clean
@@ -539,7 +524,6 @@ void Daemons::Restart(int pid)
 
 void Daemons::RestartMaster()
 {
-	int			pid;
 	int			index = GetIndex("MASTER");
 
 	if ( index == -1 ) {
@@ -548,6 +532,12 @@ void Daemons::RestartMaster()
 	}
 
 	dprintf(D_ALWAYS, "RESTARTING MASTER (new executable)\n");
+
+#ifdef WANT_DC_PM
+	dprintf(D_ALWAYS,"RESTARTING MASTER not yet supported with WANT_DC_PM\n");
+	return;
+#else
+
 	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN);
 
 		/* Send SIGTERM to all daemons (NOT process groups) and let
@@ -577,6 +567,7 @@ void Daemons::RestartMaster()
 			daemon_ptr[index]->process_name);
 	(void)execl(daemon_ptr[index]->process_name, "condor_master", 0);
 	EXCEPT("execl(%s, condor_master, 0)",daemon_ptr[index]->process_name);
+#endif
 }
 
 void Daemons::CheckForNewExecutable()
@@ -604,7 +595,11 @@ void Daemons::CheckForNewExecutable()
 			if(daemon_ptr[i]->pid > 0) {
 				dprintf(D_ALWAYS,"%s was modified.  Killing %d\n", 
 						daemon_ptr[i]->name_in_config_file, daemon_ptr[i]->pid);
+#ifdef WANT_DC_PM
+				do_kill( daemon_ptr[i]->pid, DC_SIGTERM );
+#else
 				do_kill( daemon_ptr[i]->pid, SIGTERM );
+#endif
 			} else {
 				daemon_ptr[i]->StartDaemon(); 
 			}
@@ -680,4 +675,61 @@ void daemon::Recover()
 	restarts = 0;
 	recoverTimer = -1; 
 	dprintf(D_FULLDEBUG, "%s recovered\n", name_in_config_file);
+}
+
+// This function returns the number of active child processes currently being
+// supervised by the master.
+int Daemons::NumberOfChildren()
+{
+	int result = 0;
+
+	for ( int i=0; i < no_daemons; i++)
+		if ((daemon_ptr[i]->flag == TRUE ) && ( daemon_ptr[i]->pid )
+		  && ( strcmp(daemon_ptr[i]->name_in_config_file,"MASTER") != 0))
+			result++;
+
+	dprintf(D_FULLDEBUG,"NumberOfChildren() returning %d\n",result);
+	
+	return result;
+}
+
+int
+Daemons::Wait_Reaper(int pid, int status)
+{
+		// find out which daemon died
+	for ( int i=0; i < no_daemons; i++) {
+		if (( pid == daemon_ptr[i]->pid)&&(daemon_ptr[i]->flag == TRUE)) {
+			// this is the daemon that died; mark it dead
+			dprintf( D_ALWAYS, "The %s (process %d ) died\n",
+						daemon_ptr[i]->name_in_config_file,pid);
+			daemon_ptr[i]->pid = 0; 
+
+			// check if this is the last daemon; if so, exit.
+			if ( NumberOfChildren() == 0 ) {
+				dprintf(D_ALWAYS,"All child processes have exited; Master Exiting...\n");
+				// fetch the user requested exit code
+				int* exit_code = (int *) daemonCore->GetDataPtr();
+				master_exit(*exit_code);
+			}
+
+			return TRUE;
+		}
+	}
+	
+	dprintf( D_ALWAYS, "Child %d died, but not a daemon -- Ignored\n", pid);
+	return TRUE;
+}
+
+// This function will wait for all children to exit, and then will call
+// exit with the supplied exit code.  
+void Daemons::Wait_And_Exit(int exit_code)
+{
+	int *dp;
+
+	dp = new int;
+	*dp = exit_code;
+
+	daemonCore->Reset_Reaper(1,"daemon reaper",(ReaperHandlercpp)Daemons::Wait_Reaper,
+		"Daemons::Wait_Reaper()",this);
+	daemonCore->Register_DataPtr((void *)dp);
 }

@@ -36,24 +36,23 @@
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
-#include "_condor_fix_resource.h"
 
+#ifndef WIN32
+#include "_condor_fix_resource.h"
 #include <std.h>
 #include <pwd.h>
-
 extern "C" {
 #include <netdb.h>
 }
-
 #if defined(Solaris)
 #define __EXTENSIONS__
 #endif
-
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/socket.h>
 #include <rpc/types.h>
+#endif	// of ifndef WIN32
 
 #include "condor_constants.h"
 #include "condor_debug.h"
@@ -62,14 +61,14 @@ extern "C" {
 #include "condor_uid.h"
 #include "master.h"
 #include "file_lock.h"
-#include "condor_timer_manager.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_collector.h"
 #include "files.h"
 #include "cctp_msg.h"
 #include "condor_attributes.h"
 #include "condor_network.h"
 #include "condor_adtypes.h"
-#include "dgram_io_handle.h"
+// #include "dgram_io_handle.h"
 #include "condor_io.h"
 
 #if defined(HPUX9)
@@ -80,7 +79,9 @@ extern "C" {
 #   define vfork fork
 #endif
 
+#ifndef WIN32
 #include <sys/wait.h>
+#endif
 
 #define MAX_LINES 100
 
@@ -95,8 +96,12 @@ typedef struct {
 	int		n_elem;
 } QUEUE;
 
+#ifdef WIN32
+extern void register_service();
+extern void terminate(DWORD);
+#endif
 
-extern char	*SigNames[];
+extern "C" char	*SigNames[];
 
 // prototypes of library functions
 extern "C"
@@ -104,7 +109,7 @@ extern "C"
 #if	(defined(SUNOS41) || defined(Solaris))
 	int		sigsetmask(int mask);
 	int		sigpause(int mask);
-#if !defined(Solaris251)
+#if !defined(Solaris251) 
 	pid_t		vfork();
 #endif
 #elif defined(IRIX53)
@@ -118,10 +123,10 @@ extern "C"
 		/* 	char*	getwd(char* pathname); no longer needed because using getcwdnow */
 #if defined(IRIX62)
 	int	killpg(long pgrp, int sig);
-#else
+#elif !defined(WIN32)
 	int	killpg(int pgrp, int sig);
 #endif  /* IRIX62 */
-	int 	dprintf_config( char*, int);
+
 	int 	detach();
 	int	param_in_pattern(char*, char*);
 	char*	strdup(const char*);
@@ -129,27 +134,27 @@ extern "C"
 
 #if defined(LINUX) || defined(HPUX9)
 	int	gethostname(char*, unsigned int);
-#else
+#elif !defined(WIN32)
 	int	gethostname(char*, int);
 #endif
 
 #if defined(HPUX9)
 	long sigsetmask(long);
-#else
+#elif !defined(WIN32)
 	int	sigsetmask(int);
 #endif
 
-	int	udp_connect(char*, int);
 	char*	get_arch();
 	char*	get_op_sys(); 
-	int	udp_unconnect();
-	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int); 
+//	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int); 
 	int	get_inet_address(struct in_addr*); 
 }
 
 extern	int		Parse(const char*, ExprTree*&);
 char	*param(char*) ;
-void	sigchld_handler(), sigquit_handler(),  sighup_handler();
+
+// void	sigchld_handler(), sigquit_handler(),  sighup_handler();
+
 void	RestartMaster();
 void	siggeneric_handler(int); 
 void 	sigterm_handler(), wait_all_children();
@@ -170,16 +175,16 @@ void	do_killpg(int, int);
 void	do_kill(int, int);
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
-int		daily_housekeeping(void);
-void 	dump_core();
+int		daily_housekeeping(Service*);
 void	usage(const char* );
-#if 0
-int		hourly_housekeeping(void);
-#endif
 void	report_to_collector();
 int		GetConfig(char*, char*);
 int		IsSameHost(const char*);
 void	StartConfigServer();
+int		main_shutdown_graceful();
+int		main_shutdown_fast();
+int		sigusr1_handler(Service *,int);
+int		master_reaper(Service *, int, int);
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 int	DoCleanup();
@@ -187,33 +192,30 @@ int	DoCleanup();
 #define MINUTE	60
 #define HOUR	60 * MINUTE
 
-char	*MyName;
 char	*MailerPgm;
 int		MasterLockFD;
-TimerManager	tMgr;			// The timer manager	Weiru
 int		interval;				// report to collector. Weiru
 ClassAd	ad;						// ad to central mgr. Weiru
 
 char	*CollectorHost;
-int					UdpSock;
 
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
 int		r_factor = 300;								// recover factor
-int		Foreground = 0;
-int		Termlog;
 char*	config_location;						// config file from server
 int		doConfigFromServer = FALSE; 
 char	*CondorAdministrator;
 char	*FS_Preen;
 char	*Log;
 char	*FS_CheckJobQueue;
+int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
 
 int		NotFlag;
 int		PublishObituaries;
 int		Lines;
 
 extern int ConfigLineNo;
+extern int Termlog;
 
 char	*default_daemon_list[] = {
 	"MASTER",
@@ -227,43 +229,77 @@ class Daemons daemons;
 char*			configServer;
 extern BUCKET	*ConfigTab[];
 
+// for daemonCore
+char *mySubSystem = "MASTER";
+
+
+
+int
+master_exit(int retval)
+{
+#ifdef WIN32
+	if ( NT_ServiceFlag == TRUE )
+		terminate(retval);
+#endif
+
+	exit(retval);
+	return 1;	// just to satisfy vc++
+}
 
 void
 usage( const char* name )
 {
 	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n]\n", name );
-	exit( 1 );
+	master_exit( 1 );
 }
 
 int
 DoCleanup()
 {
-	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
-	daemons.SignalAll(SIGTERM);
-	return 1;
+	static int already_excepted = FALSE;
+
+	// This function gets called as the last thing by EXCEPT().
+	// At this point, the MASTER presumably has had an unrecoverable error
+	// and is about to die.  We'll attempt to gracefully shutdown our
+	// kiddies before we fade away.  Use a static flag to prevent
+	// infinite recursion in the case that there is another EXCEPT.
+
+	if ( already_excepted == FALSE ) {
+		already_excepted = TRUE;
+		main_shutdown_graceful();  // this will exit if successful
+	}
+
+	if ( NT_ServiceFlag == FALSE ) {
+		return 1;	// this will return to the EXCEPT code, which will just exit
+	} else {
+		master_exit(1); // this does not return
+		return 1;		// just to satisfy VC++
+	}
 }
 
 int
-main( int argc, char* argv[] )
+main_init( int argc, char* argv[] )
 {
 	char			**ptr, *startem;
+	int i;
+
+	// Daemon Core will call main_init with argc -1 if need to register
+	// as a service.
+	if ( argc == -1 ) {
+		register_service();
+		return TRUE;
+	}
+
+	if ( argc > 2 ) {
+		usage( argv[0] );
+	}
 	
-	MyName = argv[0];
-
-	// run as condor.condor at all times unless root privilege is needed
-	set_condor_priv();
-
-	for( ptr=argv+1; *ptr; ptr++ ) {
+	i = 0;
+	for( ptr=argv+1; *ptr && ( i < argc - 2 ); ptr++, i++ ) {
 		if( ptr[0][0] != '-' ) {
 			usage( argv[0] );
 		}
 		switch( ptr[0][1] ) {
-		  case 'f':
-			Foreground++;
-			break;
-		  case 't':
-			Termlog++;
-			break;
 		  case 'n':
 			NotFlag++;
 			break;
@@ -273,46 +309,45 @@ main( int argc, char* argv[] )
 	}
 
 		// Put this before we fork so that if something goes wrong, we
-		// see it.
-	config_master(&ad);
+		// see it....  Unfortunately, now the daemon core will have already
+		// forked.  TODO: fix this... Todd, 11/97.
+	//config_master(&ad);
+	config_master(NULL);
 
-	if( !Foreground ) {
-		if( fork() ) {
-			exit( 0 );
-		}
-	}
 	
 	// I moved these here because I might start config server earlier than any
 	// other daemon and if the config server dies it will kill the master if
 	// a sigchld handler is not installed.
-	install_sig_handler( SIGILL, dump_core );
-	install_sig_handler( SIGCHLD, sigchld_handler );
-	install_sig_handler( SIGQUIT, sigquit_handler );
-	install_sig_handler( SIGHUP, sighup_handler );
-	install_sig_handler( SIGUSR1, RestartMaster );
-	install_sig_handler( SIGTERM, sigterm_handler );
+#ifndef WIN32
+	// install_sig_handler( SIGILL, dump_core );
 	install_sig_handler( SIGSEGV, (void(*)())siggeneric_handler );
 	install_sig_handler( SIGBUS, (void(*)())siggeneric_handler );
+	install_sig_handler( SIGUSR1, unix_sigusr1 );
+#endif
+
+#ifdef WANT_DC_PM
+	daemonCore->Register_Reaper("daemon reaper",(ReaperHandler)master_reaper,
+		"master_reaper()");
+#else
+	daemonCore->Cancel_Signal(DC_SIGCHLD);
+	daemonCore->Register_Signal(DC_SIGCHLD,"DC_SIGCHLD",
+		(SignalHandler)sigchld_handler,"sigchld_handler");
+#endif
+	
+
+	daemonCore->Register_Signal(DC_SIGUSR1,"DC_SIGUSR1",
+		(SignalHandler)sigusr1_handler,"RestartMaster");
+
 
 	init_params();
 
-	if( argc > 4 ) {
-		usage( argv[0] );
-	}
 	_EXCEPT_Cleanup = DoCleanup;
-
-	/* This is so if we dump core it'll go in the log directory */
-	if( chdir(Log) < 0 ) {
-		EXCEPT( "chdir to log directory <%s>", Log );
-	}
-
-	dprintf_config( "MASTER", 2 );
 
 	startem = param("START_DAEMONS");
 	if( !startem || *startem == 'f' || *startem == 'F' ) {
 		dprintf( D_ALWAYS, "START_DAEMONS flag was set to %s.  Exiting.\n",
 				startem?startem:"(NULL)");
-		exit( 0 );
+		master_exit( 0 );
 	}
 
 	MailerPgm = param( "MAIL" );
@@ -323,45 +358,74 @@ main( int argc, char* argv[] )
 	if( !Termlog ) {
 #if defined(HPUX9)   || defined(Solaris)
 		setsid();
-#else
+#elif !defined(WIN32)
 		detach();
 #endif
 	}
 
 	/* Make sure we are the only copy of condor_master running */
-	char*	log_file = daemons.DaemonLog(getpid());
+#ifndef WIN32
+	char*	log_file = daemons.DaemonLog( daemonCore->getpid() );
 	get_lock( log_file);  
-
-	dprintf( D_ALWAYS,"*************************************************\n" );
-	dprintf( D_ALWAYS,"***          CONDOR_MASTER STARTING UP        ***\n" );
-	dprintf( D_ALWAYS,"***               PID = %-6d                ***\n",
-			getpid() );
-	dprintf( D_ALWAYS,"*************************************************\n" );
-
-	// once a day at 3:30 a.m.
-	tMgr.NewTimer(NULL, 3600, (void*)daily_housekeeping, 3600 * 24);
-
-	/* hourly_housekeeping unnecessary with new qmgmt.  -Jim B. */
-#if 0
-	// 6:00 am and 3:30 pm so somebody is around to respond
-	tMgr.NewTimer( NULL, 7200, (void*)hourly_housekeeping, 3600 * 24 );
-	tMgr.NewTimer( NULL, 32400, (void*)hourly_housekeeping, 3600 * 24 );
 #endif
 
-	tMgr.NewTimer( &daemons, 100, (void*)(daemons.CheckForNewExecutable), 300);
-	tMgr.NewTimer(NULL, 100, (void*)report_to_collector, interval);
-
+	// once a day  (starts up PREEN)
+	daemonCore->Register_Timer(3600,24 * 3600,(TimerHandler)daily_housekeeping,
+		"daily_housekeeping()");
+	
+	daemonCore->Register_Timer(5,300,(TimerHandlercpp)Daemons::CheckForNewExecutable,
+		"Daemons::CheckForNewExecutable()",&daemons);
+	
+	daemonCore->Register_Timer(0,interval,(TimerHandler)report_to_collector,
+		"report_to_collector()");
+	
 	daemons.StartAllDaemons();
 
-	tMgr.Start();
-	
-	/* Can never get here */
-	return 0;
+	return TRUE;
 }
 
+int
+sigusr1_handler(Service *,int)
+{
+	RestartMaster();
+	return TRUE;
+}
 
+#ifndef WIN32
 void
-sigchld_handler()
+unix_sigusr1(int) 
+{
+	daemonCore->Send_Signal(daemonCore->getpid(),DC_SIGUSR1);
+}
+#endif
+
+int
+master_reaper(Service *, int pid, int status)
+{
+	if( !daemons.IsDaemon(pid) ) {
+		dprintf( D_ALWAYS, "Pid %d died with ", pid );
+		if( WIFEXITED(status) ) {
+			dprintf( D_ALWAYS | D_NOHEADER,
+					"status %d\n", WEXITSTATUS(status) );
+			return FALSE;
+		}
+		if( WIFSIGNALED(status) ) {
+			dprintf( D_ALWAYS | D_NOHEADER,
+					"signal %d\n", WTERMSIG(status) );
+		}
+		return FALSE;
+	}
+	if( PublishObituaries ) {
+		obituary( pid, status );
+	}
+	daemons.Restart( pid );
+	dprintf( D_ALWAYS | D_NOHEADER, "\n" );
+	return TRUE;
+}
+
+#if !defined(WANT_DC_PM)
+int
+sigchld_handler(Service *,int)
 {
 	int		pid = 0;
 	int	status;
@@ -382,27 +446,11 @@ sigchld_handler()
 		if( WIFSTOPPED(status) ) {
 			continue;
 		}
-		if( !daemons.IsDaemon(pid) ) {
-			dprintf( D_ALWAYS, "Pid %d died with ", pid );
-			if( WIFEXITED(status) ) {
-				dprintf( D_ALWAYS | D_NOHEADER,
-						"status %d\n", WEXITSTATUS(status) );
-				continue;
-			}
-			if( WIFSIGNALED(status) ) {
-				dprintf( D_ALWAYS | D_NOHEADER,
-						"signal %d\n", WTERMSIG(status) );
-			}
-			continue;
-		}
-		if( PublishObituaries ) {
-			obituary( pid, status );
-		}
-		daemons.Restart( pid );
-		dprintf( D_ALWAYS | D_NOHEADER, "\n" );
+		master_reaper(NULL,pid,status);
 		errno = 0;
 	}
 }
+#endif  // of !defined(WANT_DC_PM)
 
 int
 SetSyscalls( int val )
@@ -429,8 +477,6 @@ init_params()
 	if( (CollectorHost = param("COLLECTOR_HOST")) == NULL ) {
 		EXCEPT( "COLLECTOR_HOST not specified in config file" );
 	}
-	
-	UdpSock = udp_unconnect();
 	
 	if( (CondorAdministrator = param("CONDOR_ADMIN")) == NULL ) {
 		EXCEPT( "CONDOR_ADMIN not specified in config file" );
@@ -499,12 +545,6 @@ init_params()
 	ad.SetMyTypeName(MASTER_ADTYPE);
 	ad.SetTargetTypeName("");
 
-	if( param("MASTER_DEBUG") ) {
-		if( param_in_pattern("MASTER_DEBUG","Foreground") ) {
-			Foreground = 1;
-		}
-	}
-
 	FS_Preen = param( "PREEN" );
 	FS_CheckJobQueue = param( "CHECKJOBQUEUE" );
 
@@ -540,6 +580,7 @@ init_params()
 void
 obituary( int pid, int status )
 {
+#if !defined(WIN32)		// until we add email support to WIN32 port...
     char    cmd[512];
     char    hostname[512];
     FILE    *mailer;
@@ -621,6 +662,8 @@ obituary( int pid, int status )
 #else
     (void)fclose( mailer );
 #endif
+
+#endif	// of !defined(WIN32)
 }
 
 void
@@ -732,6 +775,7 @@ get_lock( char* file_name )
 void
 do_killpg( int pgrp, int sig )
 {
+#ifndef WIN32
 	priv_state	priv;
 
 	if( !pgrp ) {
@@ -743,81 +787,108 @@ do_killpg( int pgrp, int sig )
 	(void)kill(-pgrp, sig );
 
 	set_priv(priv);
+#endif	// ifndef WIN32
 }
 
 void
 do_kill( int pid, int sig )
 {
 	int 		status;
-	priv_state	priv;
 
 	if( !pid ) {
 		return;
 	}
 
-	priv = set_root_priv();
-
+#ifdef WANT_DC_PM
+	status = daemonCore->Send_Signal(pid,sig);
+	if ( status == FALSE )
+		status = -1;
+	else
+		status = 1;
+#else
+	priv_state priv = set_root_priv();
 	status = kill( pid, sig );
-
 	set_priv(priv);
+#endif
 
 	if( status < 0 ) {
-		EXCEPT( "kill(%d,%d)", pid, sig );
+		// EXCEPT( "kill(%d,%d)", pid, sig );
+		// An EXCEPT seemed to harsh here... we want our Master to _stick around_ !!!
+		// Instead, log an error message.
+		dprintf(D_ALWAYS,"ERROR: failed to send %s to pid %d\n",SigNames[sig],pid);
+	} else {
+		dprintf( D_ALWAYS, "Sent %s to process %d\n", SigNames[sig], pid );
 	}
-	dprintf( D_ALWAYS, "Sent %s to process %d\n", SigNames[sig], pid );
 }
 
 /*
  ** Re read the config file, and send all the daemons a signal telling
  ** them to do so also.
  */
-void
-sighup_handler()
+int
+main_config()
 {
-	dprintf( D_ALWAYS, "Re-reading master config file\n" );
 	config_master( &ad );
 	init_params();
-	dprintf_config( "MASTER", 2 );
 	dprintf( D_ALWAYS, "Sending all daemons a SIGHUP\n" );
+#ifdef WANT_DC_PM
+	daemons.SignalAll(DC_SIGHUP);
+#else
 	daemons.SignalAll(SIGHUP);
+#endif
 	dprintf( D_ALWAYS | D_NOHEADER, "\n" );
+	return TRUE;
 }
 
 /*
  ** Kill all daemons and go away.
  */
-void
-sigquit_handler()
+int
+main_shutdown_fast()
 {
 	dprintf( D_ALWAYS, "Killed by SIGQUIT.  Performing quick shut down.\n" );
-	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
 	dprintf( D_ALWAYS, "Sending all daemons a SIGQUIT\n" );
+
+#ifdef WANT_DC_PM
+	daemons.SignalAll(DC_SIGQUIT);
+	daemons.Wait_And_Exit( 0 );		// this will return now, but will exit after last child
+	return TRUE;
+#else
+	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
 	daemons.SignalAll(SIGQUIT);
 	wait_all_children();
 	dprintf( D_ALWAYS, "All daemons have exited.\n" );
-	exit( 0 );
+	master_exit( 0 );
+#endif
 }
 
 
 /*
  ** Cause job(s) to vacate, kill all daemons and go away.
  */
-void
-sigterm_handler()
+int
+main_shutdown_graceful()
 {
-	int pid;
 	dprintf( D_ALWAYS, "Killed by SIGTERM.  Performing graceful shut down.\n" );
-	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
 	dprintf( D_ALWAYS, "Sending all daemons a SIGTERM\n" );
+
+#ifdef WANT_DC_PM
+	daemons.SignalAll(DC_SIGTERM);
+	daemons.Wait_And_Exit( 0 );
+	return TRUE;
+#else
+	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
 	daemons.SignalAll(SIGTERM);
 	wait_all_children();
 	dprintf( D_ALWAYS, "All daemons have exited.\n" );
-	exit( 0 );
+	master_exit( 0 );
+#endif
 }
 
 void
 wait_all_children()
 {
+#ifndef WANT_DC_PM
 	int pid;
 	dprintf( D_FULLDEBUG, "Begining to wait for all children\n" );
 	for(;;) {
@@ -832,6 +903,7 @@ wait_all_children()
 		}
 	}
 	dprintf( D_FULLDEBUG, "Done waiting for all children\n" );
+#endif  // of ifndef WANT_DC_PM
 }
 
 time_t
@@ -874,7 +946,7 @@ NewExecutable(char* file, time_t* tsp)
 char	*Shell = "/bin/sh";
 
 int
-daily_housekeeping(void)
+daily_housekeeping(Service*)
 {
 	int		child_pid;
 
@@ -883,7 +955,16 @@ daily_housekeeping(void)
 		return 0;
 	}
 
-	/* Check log, spool, and execute for any junk files left lying around */
+	/* Exec Preen to check log, spool, and execute for any junk files left lying around */
+#ifdef WANT_DC_PM
+	child_pid = daemonCore->Create_Process(
+					FS_Preen,		// program to exec
+					FS_Preen,			// args
+					PRIV_CONDOR,	// privledge level
+					1,				// which reaper ID to use; use default reaper
+					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
+	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
+#else
 	dprintf( D_ALWAYS,
 			"Calling execl( \"%s\", \"sh\", \"-c\", \"%s\", 0 )\n", Shell, FS_Preen );
 
@@ -894,7 +975,7 @@ daily_housekeeping(void)
 		dprintf( D_ALWAYS, "Shell (preen) pid is %d\n", child_pid );
 		return 0;
 	}
-
+#endif
 	/*
 	   Note: can't use system() here.  That calls wait(), but the child's
 	   status will be captured our own sigchld_handler().  This would
@@ -904,63 +985,7 @@ daily_housekeeping(void)
 	   (void)system( FS_Preen );
 	   */
 	dprintf(D_FULLDEBUG, "exit daily_housekeeping\n");
-}
-
-#if 0
-int
-hourly_housekeeping(void)
-{
-	int		child_pid;
-
-	dprintf(D_FULLDEBUG, "enter hourly_housekeeping\n");
-
-	if( FS_CheckJobQueue == NULL ) {
-		dprintf(D_ALWAYS, "CheckJobQueue == NULL \n");
-		return 0;
-	}
-
-	dprintf( D_ALWAYS,
-			"Calling execl( \"%s\", \"sh\", \"-c\", \"%s\", 0 )\n",
-			Shell,
-			FS_CheckJobQueue
-			);
-
-	if( (child_pid=vfork()) == 0 ) {	/* The child */
-		execl( Shell, "sh", "-c", FS_CheckJobQueue, 0 );
-		_exit( 127 );
-	} else {				/* The parent */
-		dprintf( D_ALWAYS, "Shell (CheckJobQueue) pid is %d\n", child_pid );
-		return 0;
-	}
-	dprintf(D_FULLDEBUG, "exit hourly_housekeeping\n");
-}
-#endif
-
-void
-dump_core()
-{
-	int		my_pid;
-	char		cwd[ _POSIX_PATH_MAX ];
-
-	dprintf( D_ALWAYS, "Entered dump_core()\n" );
-
-	install_sig_handler( SIGILL, (SIGNAL_HANDLER)SIG_DFL );
-
-	my_pid = getpid();
-	sigsetmask( 0 );
-
-	dprintf( D_ALWAYS, "ruid = %d, euid = %d\n", getuid(), geteuid() );
-	dprintf( D_ALWAYS, "Directory = \"%s\"\n", getcwd(cwd,sizeof(cwd)) );
-	dprintf( D_ALWAYS, "My PID = %d\n", my_pid );
-
-	set_root_priv();
-
-	if( kill(my_pid,SIGILL) < 0 ) {
-		EXCEPT( "kill(getpid(),SIGILL)" );
-	}
-
-	/* should never get here */
-	EXCEPT( "Attempt to dump core failed" );
+	return TRUE;
 }
 
 void
@@ -970,38 +995,12 @@ RestartMaster()
 }
 
 
-typedef void (*GNU_SIGNAL_HANDLER)(...);
-typedef void (*POSIX_SIGNAL_HANDLER)();
-typedef void (*ANSI_SIGNAL_HANDLER)(int);
-
-void
-install_sig_handler( int sig, SIGNAL_HANDLER handler )
-{
-	struct sigaction act;
-
-#if defined(__GNUG__)
-	act.sa_handler = (GNU_SIGNAL_HANDLER)handler;
-#elif defined(OSF1)
-	act.sa_handler = (ANSI_SIGNAL_HANDLER)handler;
-#else
-	act.sa_handler = (POSIX_SIGNAL_HANDLER)handler;
-#endif
-
-	sigemptyset( &act.sa_mask );
-	act.sa_flags = 0;
-
-	if( sigaction(sig,&act,NULL) < 0 ) {
-		EXCEPT( "Can't install handler for signal %d\n", sig );
-	}
-}
-
 void report_to_collector()
 {
 	int		cmd = UPDATE_MASTER_AD;
-	SafeSock	sock(CollectorHost, COLLECTOR_UDP_COMM_PORT);
+	SafeSock sock(CollectorHost, COLLECTOR_UDP_COMM_PORT,2);
 
 	dprintf(D_FULLDEBUG, "enter report_to_collector\n");
-	sock.attach_to_file_desc(UdpSock);
 
 	sock.encode();
 	if(!sock.code(cmd))
@@ -1018,222 +1017,10 @@ void report_to_collector()
 	{
 		dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
 	}
+
 	dprintf(D_FULLDEBUG, "exit report_to_collector\n");
 }
 
-#if defined(USE_CONFIG_SERVER)
-////////////////////////////////////////////////////////////////////////////////
-// Get the configuration file from the config server. If for any reason the
-// operation wasn't successful, set the value of the attribute LastUpdate in
-// the master ad to negative infinity (0). Otherwise take it from the classad
-// from configuration server.
-////////////////////////////////////////////////////////////////////////////////
-const	char	DELIMITOR	=	'#';
-const	char*	DELIMITOR_STRING = "#";
-
-int GetConfig(char* config_server_name, char* condor_dir)
-{
-	char	hostname[MAXPATHLEN];
-	char	cond[100]; 
-	char*	arch;
-	char*	opSys;
-	char	*listPtr, *ptr, *listPtr1, *ptr1;
-	char	reqAd[1000];
-	char	tmp[1000];
-	int		reqNum, reqFor;
-	CCTP_Status	status;
-	char	id[30];
-	char	reason[100];
-	FILE*	conf_fp;
-	char	file_name[1024];
-	char	configList[4096];
-	time_t	timestamp;
-	int		len, len1;
-	char	macronames[200];
-	char	macroname[100];
-	char*	port;
-	int		portNum;
-	int		doFreeArch = TRUE, doFreeOpSys = TRUE;
-	char	outputName[MAXPATHLEN];
-	int		timer;
-	
-	// prepare request
-	if(gethostname(hostname, MAXHOSTNAMELEN) < 0)
-	{
-		EXCEPT("Can't find host name\n");
-	}
-	arch = param("ARCH");
-	if(!arch)
-	{
-		arch = get_arch();
-		doFreeArch = FALSE; 
-	} 
-	opSys = param("OPSYS");
-	if(!opSys)
-	{
-		opSys = get_op_sys();
-		doFreeOpSys = FALSE; 
-	}
-	
-	sprintf(reqAd, "MyType = \"machine\"%sTargetType = \"config\"%sHost = \"%s\"%sRequirement = True", DELIMITOR_STRING, DELIMITOR_STRING, hostname, DELIMITOR_STRING);
-	if(arch)
-	{
-		strcat(reqAd, DELIMITOR_STRING);
-		strcat(reqAd, "Arch = \"");
-		strcat(reqAd, arch);
-		strcat(reqAd, "\"");
-		if(doFreeArch)
-		{
-			free(arch);
-		} 
-	}
-	if(opSys)
-	{
-		strcat(reqAd, DELIMITOR_STRING);
-		strcat(reqAd, "OpSys = \"");
-		strcat(reqAd, opSys);
-		strcat(reqAd, "\"");
-		if(doFreeOpSys)
-		{
-			free(opSys);
-		}
-	} 
-
-	sprintf(tmp, "%s = 0", ATTR_LAST_UPDATE);
-
-	// connect to config server
-	port = param("CONFIG_SERVER_PORT");
-	if(!port)
-	{
-		portNum = DEFAULT_CONFIG_SERVER_PORT;
-	}
-	else
-	{
-		portNum = atoi(port);
-		free(port);
-	}
-	
-	if(!config_server_connect(config_server_name, portNum))
-	{
-		ad.Insert(tmp);
-		return -1;
-	}
-	timer = tMgr.NewTimer(NULL, 600, (void*)config_server_disconnect, 0);
-	reqNum = send_request(CONDOR_MASTER, ACTION_GET, reqAd, DELIMITOR, "", 0);
-	if(!reqNum)
-	{
-		ad.Insert(tmp);
-		return -1;
-	}
-	reqFor = get_response(id, &status, configList, DELIMITOR, reason, &timestamp);
-	tMgr.CancelTimer(timer);
-	
-	if(!reqFor)
-	{
-		ad.Insert(tmp);
-		return -1;
-	}
-	if(reqNum != reqFor)
-	{
-		config_server_disconnect();
-		ad.Insert(tmp);
-		return -1;
-	}
-	if(status != STATUS_SUCCESS)
-	{
-		config_server_disconnect();
-		ad.Insert(tmp);
-		return -1;
-	}
-	config_server_disconnect();
-
-	sprintf(tmp, "%s = %d", ATTR_LAST_UPDATE, timestamp);
-	ad.Insert(tmp);
-	// formatting the response
-    listPtr = configList;
-    do {
-        ptr = listPtr;
-        len = 0;
-        while(*ptr != ' ') {
-            ptr++;
-			len++;
-        }
-        strncpy(cond, listPtr, len);
-        cond[len] = '\0';
-        if(strcmp(cond, "COPY_TO_CONTEXT") == 0) {
-            len = 0;
-            while((*ptr == ' ') || (*ptr == '=')) { ptr++; }
-			listPtr = ptr;
-			while((*ptr != DELIMITOR) && (*ptr != '\0')) {
-				ptr++; len++;
-			}
-			strncpy(macronames, listPtr, len);
-			macronames[len] = '\0';
-			break;
-        }
-        while((*ptr != DELIMITOR) && (*ptr != '\0')) { ptr++; }
-        listPtr = ptr;
-        if(*listPtr == DELIMITOR) { listPtr++; }
-    }while(*listPtr != '\0');
-
-    listPtr1 = macronames;
-    ptr1 = listPtr1;
-    while(*listPtr1 != '\0') {
-        len1 = 0;
-        while(*ptr1 != ' ') { ptr1++; len1++; }
-        strncpy(macroname, listPtr1, len1);
-        macroname[len1] = '\0';
-        listPtr = configList;
-        do {
-			ptr = listPtr;
-			len = 0;
-			while(*ptr != ' '){
-				ptr++;
-				len++;
-			}
-			strncpy(cond, listPtr, len);
-			cond[len] = '\0';
-			if(strcmp(cond, macroname) == 0) {
-				while(*ptr == ' ') { ptr++; }
-				if(*ptr == '=') {
-					*ptr = ':';
-					break;
-				}
-			}
-			while((*ptr != DELIMITOR) && (*ptr != '\0')) { ptr++; }
-			if(*ptr == DELIMITOR) { ptr++; }
-			listPtr = ptr;
-        }while(*listPtr != '\0');
-
-        while(*ptr1 == ' ') { ptr1++; }
-        listPtr1 = ptr1;
-    }
-
-
-    /* write configs to local file */
-	sprintf(outputName, "%s/%s", condor_dir, SERVER_CONFIG); 
-    conf_fp = fopen(outputName, "w");
-    if( conf_fp == NULL) {
-		fprintf(stderr, "Cannot open %s, errno = %d\n", SERVER_CONFIG, errno);
-		ad.Insert(tmp);
-		return -1;
-    }
-
-    listPtr = configList;
-    while((*listPtr != '\0') || (*listPtr != DELIMITOR)) {
-        if(*listPtr == DELIMITOR) {
-            *listPtr = '\n';
-        }
-        else if(*listPtr == '\0') {
-            break;
-        }
-        else listPtr++;
-    }
-
-    fprintf(conf_fp, "%s", configList);
-    fclose(conf_fp);
-}
-#endif
 
 int IsSameHost(const char* host)
 {
@@ -1300,3 +1087,4 @@ void siggeneric_handler(int sig)
 {
 	EXCEPT("signal (%d) received", sig);
 }
+

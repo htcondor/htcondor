@@ -5,7 +5,7 @@
 // restart elapse time of a daemon.
 // Weiru
 
-#include "condor_timer_manager.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 class daemon : public Service
 {
@@ -57,7 +57,10 @@ private:
 	daemon **daemon_ptr;
 	int	no_daemons;
 	int daemon_list_size;
+	int Wait_Reaper(int pid, int status);
 public:
+	void Wait_And_Exit( int exit_code = 0 );
+	int NumberOfChildren();
 	Daemons();
 	void	RegisterDaemon(daemon *);
 	void 	InitParams();
