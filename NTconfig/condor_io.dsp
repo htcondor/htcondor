@@ -143,6 +143,10 @@ SOURCE=..\src\condor_includes\CryptKey.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_io\errno_num.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_io\open_flags.c
 # End Source File
 # Begin Source File
