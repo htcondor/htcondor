@@ -1,32 +1,8 @@
 /* Things specific to I386_LINUX machines (all versions) */
 
-#define Architecture		I386
-#define IS_I386			YES
-#define IS_I386_LINUX		YES
-
 #define	ArchOptimizeFlag	-m486
 
-#if defined( IS_GLIBC23 )
-#   define HAS_GLOBUS	YES
-#   define Platform		INTEL-LINUX-GLIBC23
-SYSNAME = i386_rh9
-#elif defined( IS_GLIBC22 )
-#   define HAS_GLOBUS	YES
-#   define Platform		INTEL-LINUX-GLIBC22
-SYSNAME = i386_rh80
-#elif defined( IS_GLIBC21 )
-#   define HAS_GLOBUS	YES
-#   define Platform		INTEL-LINUX-GLIBC21
-SYSNAME = i386_rh62
-#elif defined( IS_GLIBC20 )
-#   define HAS_GLOBUS   NO
-#   define Platform		INTEL-LINUX-GLIBC20
-SYSNAME = i386_linux3
-#else
-#   define HAS_GLOBUS	NO
-#   define Platform		INTEL-LINUX-LIBC5
-SYSNAME = i386_linux2
-#endif
+#define HAS_GLOBUS	YES
 
 #ifdef IS_C_COMP_MAJOR_GCC_3
 #define IS_CLIPPED YES

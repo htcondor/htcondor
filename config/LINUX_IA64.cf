@@ -1,8 +1,5 @@
 /* Things specific to IA64_LINUX machines (all versions) */
 
-#define Architecture		IA64
-#define IS_IA64			YES
-#define IS_IA64_LINUX		YES
 
 /* Under SuSE linux, this must be yacc, but under Redhat linux, it must be
 	byacc */
@@ -11,21 +8,6 @@
 
 /* XXX This is bad, bad, bad, bad, bad, bad, bad, bad, BAD! */
 #define	ArchOptimizeFlag -Wno-deprecated
-
-#if defined( IS_GLIBC22 )
-#   define Platform		IA64-LINUX-GLIBC22
-SYSNAME = ia64_linux24
-#elif defined( IS_GLIBC21 )
-#   define Platform		IA64-LINUX-GLIBC21
-/* ERROR? */
-#elif defined( IS_GLIBC20 )
-#   define Platform		IA64-LINUX-GLIBC20
-/* ERROR? */
-#else
-#   define Platform		IA64-LINUX-LIBC5
-/* ERROR? */
-#endif
-
 
 #define IS_CLIPPED YES
 
