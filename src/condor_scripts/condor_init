@@ -7,7 +7,7 @@
 
 HOSTNAME=`hostname`
 CONFIG_VAL="condor_config_val -h $HOSTNAME"
-OWNER=`condor_config_val -owner 2> /dev/null`
+OWNER=`$CONFIG_VAL -owner 2> /dev/null`
 if [ ! -n "$OWNER" ]; then
    echo "Error determining who should own the Condor-related directories."
    echo "Either create a "condor" account, or set the CONDOR_IDS environment"
@@ -64,8 +64,8 @@ if [ -n "$CONDOR_SPOOL" ]; then
 	if [ ! -d $CONDOR_SPOOL ]; then
 		echo "Creating $CONDOR_SPOOL"
 		mkdir $CONDOR_SPOOL
-		chmod 700 $CONDOR_SPOOL
-		chown $OWNER $CONDOR_EXECUTE
+		chmod 755 $CONDOR_SPOOL
+		chown $OWNER $CONDOR_SPOOL
 	else
 		echo "$CONDOR_SPOOL already exists."
 	fi
