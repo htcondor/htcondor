@@ -784,6 +784,51 @@ send_cmd_to_startd(char *sin_host, char *capability, int cmd)
   return 0;
 }
 
+/*
+  Takes sinful address of startd and sends it the given cmd, along
+  with the capability and an end_of_message.
+*/
+int
+send_udp_cmd_to_startd(char *sin_host, char *capability, int cmd)
+{
+  // create a relisock to communicate with startd
+  SafeSock sock;
+  if( sock.timeout( 20 ) < 0 ) {
+	  dprintf( D_ALWAYS, "Can't set timeout on sock.\n" );
+	  return -5;
+  }
+
+  if( !sock.connect( sin_host, 0 ) ) {
+	  dprintf( D_ALWAYS, "Can't connect to startd at %s\n", sin_host );
+	  return -1;
+  }
+
+  sock.encode();
+
+  // Send the command
+  if( !sock.code(cmd) ) {
+    dprintf( D_ALWAYS, "sock.code(%d)", cmd );
+    return -2;
+  }
+  
+  // send the capability
+  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
+  if(!sock.code(capability)){
+    dprintf( D_ALWAYS, "sock.code(%s)", capability );
+    return -3;
+  }
+
+  // send end of message
+  if( !sock.end_of_message() ) {
+    dprintf( D_ALWAYS, "end_of_message failed" );
+    return -4;
+  }
+  dprintf( D_FULLDEBUG, "Sent command %d to startd at %s with cap %s\n",
+		   cmd, sin_host, capability );
+
+  return 0;
+}
+
 /* Fill in a PROC structure given a job ClassAd.  This function replaces
    GetProc from qmgr_lib_support.C, so we just get the job classad once
    from the schedd and fill in the PROC structure directly. */
