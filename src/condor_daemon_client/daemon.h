@@ -91,16 +91,19 @@ public:
 				const char* pool = NULL );
 
 		/// Destructor.
-	~Daemon();
+	virtual ~Daemon();
 
-		/** Find all information about the daemon.  All methods for
-		  locating the information are handled through here: fully
+		/** Find all information about the daemon.  This is virtual,
+		  since the way you find info for a daemon depends on the type
+		  of daemon.  But, all the different methods you might use to
+		  find the info are supposed to be handled through here: fully
 		  resolving hostnames, address files, querying the collector,
-		  well-known addresses, DNS lookups, etc.  If this fails, you
-		  can call error() to get a string describing what went wrong.
+		  well-known addresses, DNS lookups, whatever it takes.  If
+		  this fails, you can call error() to get a string describing
+		  what went wrong.
 		  @return Success or failure of getting all the info.
-		  */
-	bool locate( void );
+		*/
+	virtual bool locate( void );
 
 		/** Return the error string.  If there's ever a problem
 		  enountered in the Daemon object, this will start returning a
@@ -290,7 +293,7 @@ public:
 		*/
 	Sock* startCommand( int cmd, Sock* sock, int sec = 0 );
 
-private:
+protected:
 	// Data members
 
 	char* _name;
