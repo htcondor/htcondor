@@ -50,7 +50,7 @@ XDR		*xdr_Init();
 usage( str )
 char	*str;
 {
-	fprintf( stderr, "Usage: %s hostname\n", str );
+	fprintf( stderr, "Usage: %s hostnames\n", str );
 	exit( 1 );
 }
 
@@ -61,26 +61,32 @@ char	*argv[];
 	int			sock = -1;
 	int			cmd;
 	XDR			xdr, *xdrs = NULL;
+	int			i;
 
-	if( argc != 2 ) {
+	if( argc < 2 ) {
 		usage( argv[0] );
 	}
 
 	config( argv[0], (CONTEXT *)0 );
 
-		/* Connect to the specified host */
-	if( (sock = do_connect(argv[1], "condor_startd", START_PORT)) < 0 ) {
-		dprintf( D_ALWAYS, "Can't connect to startd on %s\n", argv[1] );
-		exit( 1 );
+	for (i = 1; i < argc; i++) {
+
+		    /* Connect to the specified host */
+		if( (sock = do_connect(argv[i], "condor_startd", START_PORT)) < 0 ) {
+			dprintf( D_ALWAYS, "Can't connect to startd on %s\n", argv[i] );
+		}
+		xdrs = xdr_Init( &sock, &xdr );
+		xdrs->x_op = XDR_ENCODE;
+		
+		cmd = CKPT_FRGN_JOB;
+		ASSERT( xdr_int(xdrs, &cmd) );
+		ASSERT( xdrrec_endofrecord(xdrs,TRUE) );
+
+		xdr_destroy( xdrs );
+		close(sock);
+		
+		printf( "Sent CKPT_FRGN_JOB command to startd on %s\n", argv[i] );
 	}
-	xdrs = xdr_Init( &sock, &xdr );
-	xdrs->x_op = XDR_ENCODE;
-
-	cmd = CKPT_FRGN_JOB;
-	ASSERT( xdr_int(xdrs, &cmd) );
-	ASSERT( xdrrec_endofrecord(xdrs,TRUE) );
-
-	printf( "Sent CKPT_FRGN_JOB command to startd on %s\n", argv[1] );
 
 	exit( 0 );
 }
