@@ -42,10 +42,12 @@
 #include "io_proxy.h"
 #include "condor_ver_info.h"
 #include "../condor_sysapi/sysapi.h"
+#include "directory.h"
 
 extern ReliSock *syscall_sock;
 
 extern "C" int get_random_int();
+extern int main_shutdown_fast();
 
 /* CStarter class implementation */
 
@@ -58,10 +60,13 @@ CStarter::CStarter()
 	Opsys = NULL;
 	ShuttingDown = FALSE;
 	ShadowVersion = NULL;
+	shadow = NULL;
 	jobAd = NULL;
 	jobUniverse = CONDOR_UNIVERSE_VANILLA;
 	shadowupdate_tid = -1;
-	shadow = NULL;
+	filetrans = NULL;
+	transfer_at_vacate = false;
+	requested_exit = false;
 }
 
 
@@ -84,6 +89,9 @@ CStarter::~CStarter()
 	}
 	if( ShadowVersion ) {
 		delete ShadowVersion;
+	}
+	if( filetrans ) {
+		delete filetrans;
 	}
 	if( jobAd ) {
 		delete jobAd;
@@ -169,6 +177,7 @@ CStarter::ShutdownGraceful(int)
 	UserProc *job;
 
 	dprintf(D_ALWAYS, "ShutdownGraceful all jobs.\n");
+	requested_exit = true;
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
 		if ( job->ShutdownGraceful() ) {
@@ -195,7 +204,12 @@ CStarter::ShutdownFast(int)
 	bool jobRunning = false;
 	UserProc *job;
 
+		// Despite what the user wants, do not transfer back any files 
+		// on a ShutdownFast.
+   transfer_at_vacate = false;   
+
 	dprintf(D_ALWAYS, "ShutdownFast all jobs.\n");
+	requested_exit = true;
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
 		if ( job->ShutdownFast() ) {
@@ -429,9 +443,100 @@ CStarter::StartJob()
         dprintf( D_JOB, "--- End of ClassAd ---\n" );
 	}
 
-		// Now that the scratch dir is setup, we can figure out what
+		// Now that the scratch dir is setup, we can deal with
+		// transfering files (if needed).
+	if( BeginFileTransfer() ) {
+			// We started a file transfer, so we'll just have to
+			// return to DaemonCore and wait for our callback.
+		return true;
+	} else {
+			// There were no files to transfer, so we can pretend the
+			// transfer just finished and try to spawn the job now. 
+		return TransferCompleted( NULL );
+	}
+}
+
+
+bool
+CStarter::BeginFileTransfer( void )
+{
+	char tmp[_POSIX_ARG_MAX];
+	int change_iwd = true;
+
+		/* setup value for transfer_at_vacate and also determine if 
+		   we should change our working directory */
+	tmp[0] = '\0';
+	jobAd->LookupString(ATTR_TRANSFER_FILES,tmp);
+		// if set to "ALWAYS", then set transfer_at_vacate to true
+	switch ( tmp[0] ) {
+	case 'a':
+	case 'A':
+		transfer_at_vacate = true;
+		break;
+	case 'n':  /* for "Never" */
+	case 'N':
+		change_iwd = false;  // It's true otherwise...
+		break;
+	}
+
+		// for now, stash the executable in OrigJobName, and switch
+		// the ad to say the executable is condor_exec
+	OrigJobName[0] = '\0';
+	jobAd->LookupString(ATTR_JOB_CMD,OrigJobName);
+
+		// if requested in the jobad, transfer files over.  
+	if ( change_iwd ) {
+		// reset iwd of job to the starter directory
+		sprintf( tmp, "%s=\"%s\"", ATTR_JOB_IWD, GetWorkingDir() );
+		jobAd->InsertOrUpdate(tmp);		
+
+		// Only rename the executable if it is transferred.
+		int xferExec;
+		if(jobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)!=1) {
+			xferExec = 1;
+		} else {
+			xferExec = 0;
+		}
+
+		if(xferExec) {
+			sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,CONDOR_EXEC);
+			dprintf(D_FULLDEBUG, "Changing the executable\n");
+			jobAd->InsertOrUpdate(tmp);
+		}
+
+		filetrans = new FileTransfer();
+		ASSERT( filetrans->Init(jobAd, false, PRIV_USER) );
+		filetrans->RegisterCallback(
+				  (FileTransferHandler)&CStarter::TransferCompleted,this);
+		if( ! filetrans->DownloadFiles(false) ) { // do not block
+				// Error starting the non-blocking file transfer.  For
+				// now, consider this a fatal error
+			EXCEPT( "Could not initiate file transfer" );
+		}
+		return true;
+	}
+		/* no file transfer desired, thus the file transfer is "done".
+		   We assume that transfer_files == Never means that we want 
+		   to live in the submit directory, so we DON'T change the 
+		   ATTR_JOB_CMD or the ATTR_JOB_IWD.  This is important 
+		   to MPI!  -MEY 12-8-1999  */
+	return false;
+}
+
+
+int
+CStarter::TransferCompleted( FileTransfer *ftrans )
+{
+		// Now that we've got all our files, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
+
+		// Make certain the file transfer succeeded.  
+		// Until "multi-starter" has meaning, it's ok to EXCEPT here,
+		// since there's nothing else for us to do.
+	if ( ftrans &&  !((ftrans->GetInfo()).success) ) {
+		EXCEPT( "Failed to transfer files" );
+	}
 
 	dprintf( D_ALWAYS, "Starting a %s universe job.\n",
 			 CondorUniverseName(jobUniverse) );
@@ -466,11 +571,11 @@ CStarter::StartJob()
 		default:
 			dprintf( D_ALWAYS, "I don't support universe %d (%s)\n",
 					 jobUniverse, CondorUniverseName(jobUniverse) );
-			return false;
+			return FALSE;
 	} /* switch */
 
 	if (job->StartJob()) {
-		JobList.Append(job);		
+		JobList.Append(job);
 
 		// update the shadow every 20 minutes.  years of study say
 		// this is the optimal value. :^).
@@ -478,13 +583,16 @@ CStarter::StartJob()
 			(TimerHandlercpp)&CStarter::UpdateShadow,
 			"CStarter::UpdateShadow", this);
 
-		return true;
+		return TRUE;
 	} else {
 		delete job;
-		return false;
+			// Until this starter is supporting something more
+			// complex, if we failed to start the job, we're done.
+		dprintf( D_ALWAYS, "Failed to start job, exiting\n" );
+		main_shutdown_fast();
+		return FALSE;
 	}
 }
-
 
 
 bool
@@ -652,6 +760,11 @@ int
 CStarter::Suspend(int)
 {
 	dprintf(D_ALWAYS, "Suspending all jobs.\n");
+
+	// suspend any filetransfer activity
+	if ( filetrans ) {
+		filetrans->Suspend();
+	}
 	UserProc *job;
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
@@ -664,6 +777,12 @@ int
 CStarter::Continue(int)
 {
 	dprintf(D_ALWAYS, "Continuing all jobs.\n");
+
+	// resume any filetransfer activity
+	if ( filetrans ) {
+		filetrans->Continue();
+	}
+
 	UserProc *job;
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
@@ -686,21 +805,24 @@ CStarter::Reaper(int pid, int exit_status)
 	int all_jobs = 0;
 	UserProc *job;
 
-	dprintf(D_ALWAYS,"Job exited, pid=%d, status=%d\n",pid,exit_status);
+	dprintf( D_ALWAYS, "Job exited, pid=%d, status=%d\n", pid,
+			 exit_status );
+
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
 		all_jobs++;
-		if (job->GetJobPid()==pid && job->JobExit(pid, exit_status)) {
+		if( job->GetJobPid()==pid && job->JobCleanup(pid, exit_status) ) {
 			handled_jobs++;
 			JobList.DeleteCurrent();
-			delete job;
+			CleanedUpJobList.Append(job);
 		}
 	}
-	dprintf(D_FULLDEBUG,"Reaper: all=%d handled=%d ShuttingDown=%d\n",
-		all_jobs,handled_jobs,ShuttingDown);
-	if (handled_jobs == 0) {
-		dprintf(D_ALWAYS, "unhandled job exit: pid=%d, status=%d\n", pid,
-				exit_status);
+	dprintf( D_FULLDEBUG, "Reaper: all=%d handled=%d ShuttingDown=%d\n",
+			 all_jobs, handled_jobs, ShuttingDown );
+
+	if( handled_jobs == 0 ) {
+		dprintf( D_ALWAYS, "unhandled job exit: pid=%d, status=%d\n",
+				 pid, exit_status );
 	}
 	if( all_jobs - handled_jobs == 0 ) {
 			// No more jobs, we can stop updating the shadow
@@ -708,7 +830,35 @@ CStarter::Reaper(int pid, int exit_status)
 			daemonCore->Cancel_Timer(shadowupdate_tid);
 			shadowupdate_tid = -1;
 		}
+
+			// transfer output files back if requested job really
+			// finished.  may as well do this in the foreground,
+			// since we do not want to be interrupted by anything
+			// short of a hardkill. 
+		if( filetrans && 
+			((requested_exit == false) || transfer_at_vacate) ) {
+				// The user job may have created files only readable
+				// by the user, so set_user_priv here.
+				// true if job exited on its own
+			bool final_transfer = (requested_exit == false);	
+			priv_state saved_priv = set_user_priv();
+				// this will block
+			ASSERT( filetrans->UploadFiles(true, final_transfer) );	
+
+			set_priv(saved_priv);
+		}
+
+			// Now that we're done transfering files and doing all our
+			// cleanup, we can finally go through the CleanedUpJobList
+			// and call JobExit() on all the procs in there.
+		CleanedUpJobList.Rewind();
+		while( (job = CleanedUpJobList.Next()) != NULL) {
+			job->JobExit();
+			CleanedUpJobList.DeleteCurrent();
+			delete job;
+		}
 	}
+
 	if ( ShuttingDown && (all_jobs - handled_jobs == 0) ) {
 		dprintf(D_ALWAYS,"Last process exited, now Starter is exiting\n");
 		DC_Exit(0);
@@ -764,6 +914,26 @@ CStarter::SameUidDomain( void )
 }
 
 
+bool
+CStarter::PublishUpdateAd( ClassAd* ad )
+{
+	unsigned int execsz = 0;
+	char buf[200];
+
+	// if there is a filetrans object, then let's send the current
+	// size of the starter execute directory back to the shadow.  this
+	// way the ATTR_DISK_USAGE will be updated, and we won't end
+	// up on a machine without enough local disk space.
+	if ( filetrans ) {
+		Directory starter_dir( GetWorkingDir(), PRIV_USER );
+		execsz = starter_dir.GetDirectorySize();
+		sprintf( buf, "%s=%u", ATTR_DISK_USAGE, (execsz+1023)/1024 ); 
+		ad->InsertOrUpdate( buf );
+	}
+	return true;
+}
+
+
 int
 CStarter::UpdateShadow( void )
 {
@@ -771,9 +941,12 @@ CStarter::UpdateShadow( void )
 
 	dprintf( D_FULLDEBUG, "Entering CStarter::UpdateShadow()\n" );
 
-		// Publish all the info we care about into the ad.  This
-		// method is virtual, so we'll get all the goodies from
-		// derived classes, as well.
+		// First, get everything out of the CStarter class.
+	PublishUpdateAd( &ad );
+
+		// Now, iterate through all our UserProcs and have those
+		// publish, as well.  This method is virtual, so we'll get all
+		// the goodies from derived classes, as well.
 	bool found_one = false;
 	UserProc *job;
 	JobList.Rewind();
