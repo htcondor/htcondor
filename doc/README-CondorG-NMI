@@ -209,4 +209,96 @@ within the submit description file identifies the executable as being
 pre-staged. In this case, the executable command gives the pathname to the
 executable on the remote machine.
 
+Condor-G can set environment variables for your job. Save the following
+perl script as "env-test.pl", and run 'chmod 755 env-test.pl' to make it
+executable.
+
+#!/usr/bin/env perl
+
+foreach $key (sort keys(%ENV)) 
+{
+  print "$key = $ENV{$key}\n";
+}
+
+exit 0;
+
+
+Now create the following submit file:
+
+	executable = env-test.pl
+	globusscheduler = biron.cs.wisc.edu/jobmanager
+	universe = globus
+	environment = foo=bar; zot=qux
+	output = env-test.out
+	log = env-test.log
+	queue
+
+(Replace biron.cs.wisc.edu/jobmanager with a resource you're authorized to
+use)
+
+When the job has completed, env-test.out should contain something like 
+this:
+
+GLOBUS_GRAM_JOB_CONTACT = https://biron.cs.wisc.edu:36213/30905/1020633947/
+GLOBUS_GRAM_MYJOB_CONTACT = URLx-nexus://biron.cs.wisc.edu:36214/
+GLOBUS_LOCATION = /usr/local/globus
+GLOBUS_REMOTE_IO_URL = /home/epaulson/.globus/.gass_cache/globus_gass_cache_1020633948
+HOME = /home/epaulson
+LANG = en_US
+LOGNAME = epaulson
+X509_USER_PROXY = /home/epaulson/.globus/.gass_cache/globus_gass_cache_1020633951
+foo = bar
+zot = qux
+
+
+Of particular interest is the GLOBUS_REMOTE_IO_URL environment variable. 
+Condor-G automatically starts up a GASS remote I/O server on the submitting
+machine. Because of the potential for either side of the connection to
+fail, the URL for this server cannot be passed directly to the job. Instead,
+it is put into a file, and the GLOBUS_REMOTE_IO_URL environment variable points
+to this file. Remote jobs can read this file and use the URL it contains
+to access the remote GASS server running inside Condor-G. If the location
+of the GASS server changes (for example, if Condor-G restarts) Condor-G will
+contact the Globus gatekeeper and update this file on the machine where the
+job is running. It is therefore important that all accesses to the remote
+GASS server check this file for the latest location.
+
+The following perl script will use the GASS server in Condor-G to copy
+input files to execute machine. (In our case, our remote job is just going
+to count the number of lines in a file. Hopefully your job will be a bit
+more productive.)
+
+#!/usr/bin/env perl
+
+use FileHandle;
+use Cwd;
+
+STDOUT->autoflush();
+$gassUrl = `cat $ENV{GLOBUS_REMOTE_IO_URL}`;
+chomp $gassUrl;
+
+$ENV{LD_LIBRARY_PATH} = $ENV{GLOBUS_LOCATION}. "/lib";
+$urlCopy = $ENV{GLOBUS_LOCATION}."/bin/globus-url-copy";
+
+#globus-url-copy needs a full pathname
+$pwd = getcwd();
+print "$urlCopy  $gassUrl/etc/hosts file://$pwd/temporary.hosts\n\n";
+`$urlCopy  $gassUrl/etc/hosts file://$pwd/temporary.hosts`;
+
+open(file, "temporary.hosts");
+while(<file>) {
+        print $_;
+}
+
+exit 0;
+
+
+Our submit file looks like this:
+
+	executable = gass-example.pl
+	globusscheduler = biron.cs.wisc.edu/jobmanager
+	universe = globus
+	output = gass.out
+	log = gass.log
+	queue
 
