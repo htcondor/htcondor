@@ -153,6 +153,10 @@ ConsumeToken (TokenValue *lvalp)
 	// if a token has already been consumed, get another token
 	if (tokenConsumed) PeekToken (lvalp);
 
+	if (debug) {
+		printf ("Consume: %s\n", strLexToken(tokenType));
+	}
+
 	tokenConsumed = true;
 	return tokenType;
 }
@@ -228,7 +232,7 @@ PeekToken (TokenValue *lvalp)
 	}
 
 	if (debug) {
-		printf ("%s\n", strLexToken(tokenType));
+		printf ("Peek: %s\n", strLexToken(tokenType));
 	}
 
 	if (lvalp) lvalp->CopyFrom( yylval );
