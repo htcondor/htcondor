@@ -211,7 +211,7 @@ void
 Scheduler::timeout()
 {
 	block_signal(SIGCHLD);
-#ifdef 0
+#if 0
 	/* the step size in the UPDOWN algo depends on the time */
 	/* interval of sampling			                */
 	Step = ( time((time_t*)0) - LastTimeout) /ScheddScalingFactor;
@@ -345,7 +345,7 @@ count( int cluster, int proc )
 		sched->Owners[OwnerNum].JobsRunning += cur_hosts;
 		sched->Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
 
-#ifdef 0
+#if 0
 		if ( status == RUNNING ) {	/* UPDOWN */
 			upDown_UpdateUserInfo(owner,UpDownRunning);
 		} else if ( (status == IDLE)||(status == UNEXPANDED)) {
@@ -655,7 +655,7 @@ Scheduler::negotiate(int, Stream* s)
 					// match is in the form "<xxx.xxx.xxx.xxx:xxxx> xxxxxxxx#xx"
 					dprintf(D_PROTOCOL, "## 4. Received match %s\n", match);
 
-				#ifdef 0
+				#if 0
 					capability = strchr(match, '#');
 					if(capability)
 					{
@@ -2004,7 +2004,7 @@ Scheduler::Init()
         EXCEPT( "No UID_DOMAIN specified in config file\n" );
     }
 
-#ifdef 0
+#if 0
     Step                    = SchedDInterval/ScheddScalingFactor;
     ScheddHeavyUserPriority = Step * ScheddHeavyUserTime;
 
@@ -2063,7 +2063,7 @@ prio_compar(prio_rec* a, prio_rec* b)
 {
     /* compare up down priorities */
     /* lower values mean more priority */
-#ifdef 0
+#if 0
     if( a->prio > b->prio ) {
         return 1;
     }

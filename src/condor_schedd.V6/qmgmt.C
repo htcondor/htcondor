@@ -1552,7 +1552,7 @@ int get_job_prio(int cluster, int proc)
         return cur_hosts;
     }
 
-#ifdef 0
+#if 0
     prio = upDown_GetUserPriority(owner,&status); /* UPDOWN */
     if ( status  == Error )
     {
@@ -1572,7 +1572,7 @@ int get_job_prio(int cluster, int proc)
     PrioRec[N_PrioRecs].status   = job_status;
     PrioRec[N_PrioRecs].qdate    = q_date;
 
-#ifdef 0
+#if 0
     if ( DebugFlags & D_UPDOWN )
     {
 #endif
@@ -1581,7 +1581,7 @@ int get_job_prio(int cluster, int proc)
 		}
         PrioRec[N_PrioRecs].owner = strdup( owner );
 
-#ifdef 0
+#if 0
     }
 #endif
 
@@ -1617,7 +1617,7 @@ all_job_prio(int cluster, int proc)
     job_id.cluster = cluster;
     job_id.proc = proc;
 
-#ifdef 0
+#if 0
     prio = upDown_GetUserPriority(owner, &status);
     if ( status == Error ) {
         dprintf( D_ALWAYS,
