@@ -273,7 +273,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_FLAGS_TYPE unsigned int
 	#define SOCKET_COUNT_TYPE int
 	#define SOCKET_LISTEN_CONST
-#elif defined(IRIX62)
+#elif defined(IRIX)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
 	#define SOCKET_DATA_CONST const
@@ -339,11 +339,20 @@ All of these calls manipulate the open file table.
 
 	off_t lseek( int fd, off_t offset, int whence )
 		: file_table; 
-	offset_t llseek( int fd, offset_t offset, int whence )
-		: file_table_name(lseek), remote_name(lseek);
+
+	#if !defined(IRIX65)
+		offset_t llseek( int fd, offset_t offset, int whence )
+			: file_table_name(lseek), remote_name(lseek);
+	#endif
+
 	off64_t lseek64( int fd, off64_t offset, int whence )
 		: file_table_name(lseek), remote_name(lseek),
-		  local_name(llseek);
+		#if defined(IRIX65)
+			/* all seek calls under IRIX call lseek, disassemble it and see. */
+			local_name(lseek);
+		#else
+			local_name(llseek);
+		#endif
 
 	int dup( int old_fd ) : file_table;
 	int dup2( int old_fd, int new_fd ) : file_table;
@@ -433,84 +442,66 @@ version.
 #if defined(REMOTE_SYSCALLS) && !defined(CLIP)
 
 	/*
-	The stat calls have very unusual cases on Linux and Solaris.
+	The stat calls have very unusual cases on Linux and IRIX.
 	Most of the switches are special.
 	*/
 
-	#if defined(LINUX)
-		#if defined(GLIBC20) || defined(GLIBC21)
-			#if defined(RECEIVER) || defined(SENDER)
-				int fstat( map(int fd), struct stat *buf ) {
-					out code( buf );
-					alloc( buf, STAT_SIZE );
-				}
-			#endif
-		#else /* must be libc5 */
-			int fstat( map(int fd), struct stat *buf ) : extract {
-				out code( buf );
-				alloc( buf, STAT_SIZE );
-			}
-		#endif
-	#else
-		int fstat( map(int fd), struct stat *buf ) {
-			out code( buf );
-			alloc( buf, STAT_SIZE );
-		}
+	#if defined(LINUX) && (defined(GLIBC20)||defined(GLIBC21))
+		#define STAT_NEEDS_SPECIAL_SWITCH
+	#elif defined(LINUX)
+		#define STAT_NEEDS_EXTRACT
+	#elif defined(IRIX65)
+		#define STAT_NEEDS_SPECIAL_SWITCH
 	#endif
 
 
-	#if defined(LINUX)
-		#if defined(GLIBC20) || defined(GLIBC21)
-			#if defined(RECEIVER) || defined(SENDER)
-				int stat( const char *path, struct stat *buf ) {
-					SEND_PATH( path );
-					ALLOC_PATH( path );
-					out code( buf );
-					alloc( buf, STAT_SIZE );
-				}
+	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
+		int fstat( map(int fd), struct stat *buf )
+			#if defined(STAT_NEEDS_EXTRACT)
+				: extract
 			#endif
-		#else /* must be libc 5 */
-			int stat( const char *path, struct stat *buf ) : extract {
-				SEND_PATH( path );
-				ALLOC_PATH( path );
-				out code( buf );
-				alloc( buf, STAT_SIZE );
-			}
-		#endif
-	#else
-		int stat( const char *path, struct stat *buf ) {
-			SEND_PATH( path );
-			ALLOC_PATH( path );
+			#if defined(IRIX65)
+				: no_sys_chk
+			#endif
+		{
 			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
+
 	#endif
 
-	#if defined(LINUX)
-		#if defined(GLIBC21) || defined(GLIBC20)
-			#if defined(RECEIVER) || defined(SENDER)
-				int lstat( const char *path, struct stat *buf ) {
-					SEND_PATH( path );
-					ALLOC_PATH( path );
-					out code( buf );
-					alloc( buf, STAT_SIZE );
-				}
+	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
+		int stat( const char *name, struct stat *buf )
+			#if defined(STAT_NEEDS_EXTRACT)
+				: extract
 			#endif
-		#else  /* must be libc5 */
-			int lstat( const char *path, struct stat *buf ) : extract {
-				SEND_PATH( path );
-				ALLOC_PATH( path );
-				out code( buf );
-				alloc( buf, STAT_SIZE );
-			}
-		#endif
-	#else
-		int lstat( const char *path, struct stat *buf ) {
-			SEND_PATH( path );
-			ALLOC_PATH( path );
+			#if defined(IRIX65)
+				: no_sys_chk
+			#endif
+		{
+			SEND_PATH( name );
+			ALLOC_PATH( name );
 			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
+
+	#endif
+
+	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
+		int lstat( const char *name, struct stat *buf )
+			#if defined(STAT_NEEDS_EXTRACT)
+				: extract
+			#endif
+			#if defined(IRIX65)
+				: no_sys_chk
+			#endif
+		{
+			SEND_PATH( name );
+			ALLOC_PATH( name );
+			out code( buf );
+			alloc( buf, STAT_SIZE );
+		}
+
 	#endif
 
 	/*
@@ -968,7 +959,7 @@ They are not needed for remote I/O or for the condor daemons.
 	#endif
 
 	int getdomainname( char *name, int namelen ) {
-		out code( name, namelen );
+		out code_bytes_bool( name, namelen );
 		alloc( name, namelen );
 	}
 
@@ -1241,6 +1232,7 @@ they should be built in the special "clipped" version.
 	#endif	/* not SENDER */
 #endif	/* not SWITCH */
 
+
 /*
 Finally, a long list of the things we don't support
 */
@@ -1281,8 +1273,6 @@ not_supported {
 		caddr_t mmap64( caddr_t addr, size_t len, int prot, int flags, map(int fd), off64_t off);
 	#endif
 }
-
-/* System management */
 
 not_supported {
 	int setuid( uid_t uid );
@@ -1356,15 +1346,27 @@ not_supported {
 		#elif defined(HPUX10)
 			/* Need a better stub gen to trap mount */
 			int acct( char *path );
+		#elif defined (IRIX)
+			int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
+			int acct( const char *path );
 		#else
 			int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( char *path );
 		#endif
 
 		void reboot( int howto );
-		int sethostname( char *address, int address_len );
+
+		#if defined(IRIX)
+			int sethostname( const char *address, int address_len );
+		#else
+			int sethostname( char *address, int address_len );
+		#endif
+
 		#if defined(HPUX10)
 			int settimeofday( const struct timeval *tp, const struct timezone *tzp );
+			int setdomainname( const char *name, int namelen );
+		#elif defined(IRIX)
+			int settimeofday( struct timeval *tp, struct timezone *tzp );
 			int setdomainname( const char *name, int namelen );
 		#else
 			int settimeofday( struct timeval *tp, struct timezone *tzp );
@@ -1419,6 +1421,8 @@ not_supported {
 
 	#if defined(Solaris)
 		int ptrace( int req, long process, int address, int data);
+	#elif defined (IRIX)
+		int ptrace( int req, pid_t process, int address, int data);
 	#else
 		int ptrace( long req, long int process, unsigned long *address, unsigned long data );
 	#endif
@@ -1440,6 +1444,8 @@ not_supported {
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 	#elif defined(HPUX10)
 		void profil( const void *buf, size_t size, size_t offset, int scale );
+	#elif defined(IRIX)
+		int profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 	#else
 		void profil( short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 	#endif
