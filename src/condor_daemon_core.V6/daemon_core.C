@@ -6834,6 +6834,9 @@ void DaemonCore :: clearSession(pid_t pid)
 
 void DaemonCore :: invalidateSessionCache()
 {
+	/* for now, never invalidate the session cache */
+	return;
+
     if (sec_man) {
         sec_man->invalidateAllCache();
     }
