@@ -1413,6 +1413,11 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 				Shadow = param("SHADOW_PVM");
 				if (Shadow == 0) {
 					Shadow = param("SHADOW_CARMI");
+					if( !Shadow ) {
+						dprintf( D_ALWAYS, 
+								 "Neither SHADOW_PVM nor SHADOW_CARMI defined in config file" );
+						return NULL;
+					}
 				}
 				argv[1] = MySockName;
 				argv[2] = 0;
