@@ -29,7 +29,6 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-static char *_FileName_ = __FILE__;
 
 extern int	errno;
 

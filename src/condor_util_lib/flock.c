@@ -27,7 +27,6 @@
 
 #include "except.h"
 #include "debug.h"
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 extern int	errno;
 

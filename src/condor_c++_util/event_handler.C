@@ -31,7 +31,6 @@
 #include "name_tab.h"
 #include "event_handler.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 
  static NAME_VALUE SigNameArray[] = {

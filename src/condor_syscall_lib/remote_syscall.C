@@ -28,7 +28,6 @@
 #include "condor_sys.h"
 #include "condor_io.h"
 
-static char *_FileName_ = __FILE__;
 
 ReliSock *syscall_sock;
 

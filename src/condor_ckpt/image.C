@@ -39,7 +39,6 @@
 /* XXX hack! */
 /*#define dprintf mydprintf*/
 
-static char *_FileName_ = __FILE__;
 
 extern int _condor_in_file_stream;
 

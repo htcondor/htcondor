@@ -27,7 +27,6 @@
 #include "starter.h"
 #include "condor_debug.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
 extern "C" int exception_cleanup();		/* Our function called by EXCEPT */
 
 static CStarter StarterObj;

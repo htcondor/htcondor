@@ -38,7 +38,6 @@
 #include  "list.h"
 #include "sig_install.h"
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 #include "condor_qmgr.h"
 

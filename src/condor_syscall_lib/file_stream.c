@@ -28,7 +28,6 @@
 #include "syscall_numbers.h"
 #include "condor_debug.h"
 #include "condor_file_info.h"
-static char *_FileName_ = __FILE__;
 
 int open_tcp_stream( unsigned int ip_addr, unsigned short port );
 int open_file_stream( const char *file, int flags, size_t *len );

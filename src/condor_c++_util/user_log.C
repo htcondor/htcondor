@@ -30,7 +30,6 @@
 #include <time.h>
 #include "condor_uid.h"
 
-static char *_FileName_ = __FILE__;
 
 static const char SynchDelimiter[] = "...\n";
 

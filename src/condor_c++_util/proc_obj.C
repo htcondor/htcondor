@@ -26,7 +26,6 @@
 #include "proc_obj.h"
 #include "proc_obj_tmpl.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 /* GET THESE OUT OF HERE -- mike */
 static char *Notifications[] = {

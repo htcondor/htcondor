@@ -161,7 +161,6 @@ char* get_condor_username()
 #include "condor_sys.h"
 #include "condor_uid.h"
 
-char *_FileName_ = __FILE__;
 
 #ifndef FALSE
 #define FALSE 0

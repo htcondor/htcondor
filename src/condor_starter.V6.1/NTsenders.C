@@ -29,7 +29,6 @@
 #include "condor_classad.h"
 #include "condor_sys.h"
 
-static char *_FileName_ = __FILE__;
 
 int CurrentSysCall;
 

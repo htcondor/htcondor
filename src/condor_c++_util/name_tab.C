@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "name_tab.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 NameTable::NameTable( NAME_VALUE t[] )
 {

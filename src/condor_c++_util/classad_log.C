@@ -30,7 +30,6 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 
-static char *_FileName_ = __FILE__;	/* Used by EXCEPT (See condor_debug.h) */
 
 // explicitly instantiate the HashTable template
 template class HashTable<HashKey, ClassAd*>;

@@ -46,7 +46,6 @@
 
 State get_machine_state();
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 // Define this to check for memory leaks
 

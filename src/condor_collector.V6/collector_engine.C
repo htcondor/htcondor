@@ -43,7 +43,6 @@ extern "C" void event_mgr (void);
 
 #include "collector_engine.h"
 
-static char *_FileName_ = __FILE__;
 
 // pointer values for representing master states
 ClassAd* CollectorEngine::RECENTLY_DOWN  = (ClassAd *) 0x1;

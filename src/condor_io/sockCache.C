@@ -24,7 +24,6 @@
 #include "condor_debug.h"
 #include "sockCache.h"
 
-static char _FileName_[] = __FILE__;
 
 SocketCache::
 SocketCache(int size)

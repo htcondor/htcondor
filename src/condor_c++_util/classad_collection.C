@@ -4,7 +4,6 @@
 
 #include "classad_collection.h"
 
-static char *_FileName_ = __FILE__;
 
 //----------------------------------------------------------------------------------
 // Constructor (initialization)

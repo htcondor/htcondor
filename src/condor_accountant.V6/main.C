@@ -5,7 +5,6 @@
 //-------------------------------------------------------------
 
 // about self
-static char *_FileName_ = __FILE__;		// used by EXCEPT
 char* mySubSystem = "ACCOUNTANT";		// used by Daemon Core
 
 //-------------------------------------------------------------

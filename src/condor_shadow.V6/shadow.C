@@ -63,7 +63,6 @@
 
 int	UsePipes;
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 char* mySubSystem = "SHADOW";
 
 extern "C" {

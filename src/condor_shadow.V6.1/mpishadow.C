@@ -31,7 +31,6 @@
 #include "list.h"                // List class
 #include "internet.h"            // sinful->hostname stuff
 
-static char *_FileName_ = __FILE__;   /* Used by EXCEPT (see except.h) */
 
 MPIShadow::MPIShadow() {
     nextResourceToStart = 0;

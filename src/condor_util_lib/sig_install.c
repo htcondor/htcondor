@@ -25,7 +25,6 @@
 #include "sig_install.h"
 #include "condor_debug.h"
 
-static char *_FileName_ = __FILE__;
 
 #ifdef __cplusplus 
 extern "C" {

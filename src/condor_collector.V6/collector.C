@@ -29,7 +29,6 @@
 
 //----------------------------------------------------------------
 
-static char *_FileName_ = __FILE__;		// used by EXCEPT
 extern char* mySubSystem;
 
 CollectorEngine CollectorDaemon::collector;

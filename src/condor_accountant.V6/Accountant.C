@@ -22,7 +22,6 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-static char *_FileName_ = __FILE__;     // Used by EXCEPT (see condor_debug.h)
 
 #include <math.h>
 #include <iomanip.h>

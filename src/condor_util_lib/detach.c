@@ -27,7 +27,6 @@
 #include "except.h"
 
 #ifndef LINT
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #endif LINT
 
 void

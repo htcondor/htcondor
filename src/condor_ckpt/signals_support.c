@@ -27,7 +27,6 @@
 #include "errno.h"
 #include "debug.h"
 
-static char *_FileName_ = __FILE__;
 extern	char	*strerror();
 
 #if defined(HPUX)

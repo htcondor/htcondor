@@ -28,7 +28,6 @@
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_email.h"        // for email.
 
-static char *_FileName_ = __FILE__;   /* Used by EXCEPT (see except.h) */
 
 UniShadow::UniShadow() {
 		// pass RemoteResource ourself, so it knows where to go if

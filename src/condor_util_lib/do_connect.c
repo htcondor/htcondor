@@ -28,7 +28,6 @@
 #include "clib.h"
 #include "dgram_io_handle.h"
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 unsigned short find_port_num( char *service_name, unsigned short dflt_port );
 char *mk_config_name( const char *service_name );

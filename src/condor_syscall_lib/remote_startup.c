@@ -132,7 +132,6 @@
 #include "syscall_numbers.h"
 #include "condor_debug.h"
 #include "condor_file_info.h"
-static char *_FileName_ = __FILE__;
 
 enum result { NOT_OK = 0, OK = 1, END };
 

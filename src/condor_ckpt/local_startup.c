@@ -57,7 +57,6 @@
 #include <signal.h>
 
 #include "condor_debug.h"
-static char *_FileName_ = __FILE__;
 
 int main( int argc, char *argv[], char **envp );
 

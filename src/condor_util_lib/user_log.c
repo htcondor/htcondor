@@ -45,7 +45,6 @@
 #include "condor_debug.h"
 #include "user_log.h"
 
-static char *_FileName_ = __FILE__;
 
 int seteuid( uid_t );
 int setegid( gid_t );

@@ -37,7 +37,6 @@ int get_var( register char *value, register char **leftp,
 			 register char **namep, register char **rightp, char *self=NULL );
 
 	
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 int		ConfigLineNo;
 

@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT */
 
 extern "C" {
 

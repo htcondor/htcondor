@@ -31,7 +31,6 @@
 #	include<bstring.h>
 #endif
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 void display_fd_set( char *msg, fd_set *set, int max );
 

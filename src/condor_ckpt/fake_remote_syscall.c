@@ -31,7 +31,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-static char *_FileName_ = __FILE__;
 
 int
 REMOTE_syscall( int syscall_num, ... )

@@ -80,7 +80,6 @@ static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
 #endif
 
 
-static char _FileName_[] = __FILE__;
 
 char *DebugFlagNames[] = {
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", "D_LOAD",

@@ -29,7 +29,6 @@
 #include "pseudo_ops.h"
 #include "condor_sys.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
 
 extern ReliSock *syscall_sock;
 

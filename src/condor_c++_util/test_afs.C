@@ -27,7 +27,6 @@
 #include "condor_config.h"
 #include "afs.h"
 
-static char *_FileName_ = __FILE__;     // Used by EXCEPT (see condor_debug.h)
 
 
 const char *TestFile1 = "/p/condor/home";
