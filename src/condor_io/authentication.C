@@ -38,10 +38,146 @@
 #include "string_list.h"
 
 
+#if !defined(SKIP_AUTHENTICATION)
 #if defined(GSS_AUTHENTICATION)
 gss_cred_id_t Authentication::credential_handle = GSS_C_NO_CREDENTIAL;
 #endif defined(GSS_AUTHENTICATION)
+#endif !defined(SKIP_AUTHENTICATION)
 
+
+Authentication::Authentication( ReliSock *sock )
+{
+#if !defined(SKIP_AUTHENTICATION)
+	//credential_handle is static and set at top of this file//
+	mySock = sock;
+	//start off with socket authenticated, so that queue mgmt stuff works.
+	//this is insecure, but won't work without rewriting queue stuff.
+	auth_status = CAUTH_ANY;
+	claimToBe = NULL;
+	GSSClientname = NULL;
+	authComms.buffer = NULL;
+	authComms.size = 0;
+	canUseFlags = CAUTH_NONE;
+#endif
+}
+
+Authentication::~Authentication()
+{
+#if !defined(SKIP_AUTHENTICATION)
+	mySock = NULL;
+#endif
+}
+
+int
+Authentication::authenticate( char *hostAddr )
+{
+#if defined(SKIP_AUTHENTICATION)
+	return 0;
+#else
+	setupEnv( hostAddr );
+
+	int firm = handshake();
+	dprintf(D_FULLDEBUG,"authenticate, handshake returned: %d\n", firm );
+
+	switch ( firm ) {
+#if defined(GSS_AUTHENTICATION)
+	 case CAUTH_GSS:
+		authenticate_self_gss();
+		if( authenticate_gss() ) {
+			auth_status = CAUTH_GSS;
+		}
+		break;
+#endif
+
+#if defined(WIN32)
+	 case CAUTH_NTSSPI:
+		if ( authenticate_nt() ) {
+			auth_status = CAUTH_NT;
+		}
+		break;
+#else
+	 case CAUTH_FILESYSTEM:
+		if ( authenticate_filesystem() ) {
+
+			auth_status = CAUTH_FILESYSTEM;
+		}
+		break;
+#endif
+	 case CAUTH_CLAIMTOBE:
+		if( authenticate_claimtobe() ) {
+			auth_status = CAUTH_CLAIMTOBE;
+		}
+		break;
+
+	 default:
+		dprintf(D_FULLDEBUG,"Authentication::authenticate-- bad handshake, "
+				"returning 0 (FAILURE)\n" );
+		return 0;
+	}
+	//if none of the methods succeeded, we fall thru to default "none" from above
+
+	//TRUE means success, FALSE is failure (CAUTH_NONE)
+	int retval = ( auth_status != CAUTH_NONE );
+	dprintf(D_FULLDEBUG, "Authentication::auth returning %d (TRUE on success)\n",
+			retval );
+	return ( retval );
+#endif SKIP_AUTHENTICATION
+}
+
+
+int 
+Authentication::isAuthenticated() 
+{
+#if defined(SKIP_AUTHENTICATION)
+	return 0;
+#else
+	return( auth_status != CAUTH_NONE );
+#endif
+};
+
+
+void
+Authentication::setAuthAny()
+{
+#if !defined(SKIP_AUTHENTICATION)
+	canUseFlags = CAUTH_ANY;
+#endif
+}
+
+int
+Authentication::setOwner( char *owner ) 
+{
+#if defined(SKIP_AUTHENTICATION)
+	return 0;
+#else
+	if ( !this ) {
+		return 0;
+	}
+	if ( claimToBe ) {
+		delete [] claimToBe;
+		claimToBe = NULL;
+	}
+	if ( owner ) {
+		claimToBe = strnewp( owner );
+	}
+	return 1;
+#endif SKIP_AUTHENTICATION
+}
+
+char *
+Authentication::getOwner() 
+{
+#if defined(SKIP_AUTHENTICATION)
+	return NULL;
+#else
+	if ( claimToBe ) {
+		return( strnewp( claimToBe ) );
+	}
+	return( NULL );
+#endif
+}
+
+#if !defined(SKIP_AUTHENTICATION)
 
 #if defined(WIN32)
 int
@@ -152,12 +288,6 @@ Authentication::setupEnv( char *hostAddr )
 #endif
 }
 
-void
-Authentication::setAuthAny()
-{
-	canUseFlags = CAUTH_ANY;
-}
-
 int
 Authentication::authenticate_claimtobe() {
 	int retval = 0;
@@ -171,7 +301,8 @@ Authentication::authenticate_claimtobe() {
 			mySock->code( retval );
 			mySock->code( tmpOwner );
 			setOwner( tmpOwner );
-			delete [] tmpOwner;
+//			delete [] tmpOwner;
+			free( tmpOwner );
 			mySock->end_of_message();
 			mySock->decode();
 			mySock->code( retval );
@@ -205,109 +336,9 @@ Authentication::authenticate_claimtobe() {
 	return retval;
 }
 
-Authentication::Authentication( ReliSock *sock )
-{
-	//credential_handle is static and set at top of this file//
-	mySock = sock;
-	//start off with socket authenticated, so that queue mgmt stuff works.
-	//this is insecure, but won't work without rewriting queue stuff.
-	auth_status = CAUTH_ANY;
-	claimToBe = NULL;
-	GSSClientname = NULL;
-	authComms.buffer = NULL;
-	authComms.size = 0;
-	canUseFlags = CAUTH_NONE;
-}
-
-Authentication::~Authentication()
-{
-	mySock = NULL;
-}
-
-int 
-Authentication::isAuthenticated() 
-{ 
-	return( auth_status != CAUTH_NONE );
-};
-
-int
-Authentication::authenticate( char *hostAddr )
-{
-	setupEnv( hostAddr );
-
-	int firm = handshake();
-	dprintf(D_FULLDEBUG,"authenticate, handshake returned: %d\n", firm );
-
-	switch ( firm ) {
-#if defined(GSS_AUTHENTICATION)
-	 case CAUTH_GSS:
-		authenticate_self_gss();
-		if( authenticate_gss() ) {
-			auth_status = CAUTH_GSS;
-		}
-		break;
-#endif
-
-#if defined(WIN32)
-	 case CAUTH_NTSSPI:
-		if ( authenticate_nt() ) {
-			auth_status = CAUTH_NT;
-		}
-		break;
-#else
-	 case CAUTH_FILESYSTEM:
-		if ( authenticate_filesystem() ) {
-
-			auth_status = CAUTH_FILESYSTEM;
-		}
-		break;
-#endif
-	 case CAUTH_CLAIMTOBE:
-		if( authenticate_claimtobe() ) {
-			auth_status = CAUTH_CLAIMTOBE;
-		}
-		break;
-
-	 default:
-		dprintf(D_FULLDEBUG,"Authentication::authenticate-- bad handshake, "
-				"returning 0 (FAILURE)\n" );
-		return 0;
-	}
-	//if none of the methods succeeded, we fall thru to default "none" from above
-
-	//TRUE means success, FALSE is failure (CAUTH_NONE)
-	int retval = ( auth_status != CAUTH_NONE );
-	dprintf(D_FULLDEBUG, "Authentication::auth returning %d (TRUE on success)\n",
-			retval );
-	return ( retval );
-}
-
 void 
 Authentication::setAuthType( authentication_state state ) {
 	auth_status = state;
-}
-
-int
-Authentication::setOwner( char *owner ) {
-	if ( !this ) {
-		return 0;
-	}
-	if ( claimToBe ) {
-		delete [] claimToBe;
-		claimToBe = NULL;
-	}
-	if ( owner ) {
-		claimToBe = strnewp( owner );
-	}
-	return 1;
-}
-
-char *
-Authentication::getOwner() {
-	if ( claimToBe ) {
-		return( strnewp( claimToBe ) );
-	}
-	return( NULL );
 }
 
 int
@@ -344,8 +375,10 @@ Authentication::handshake()
 void
 Authentication::unAuthenticate()
 {
+#if !defined(SKIP_AUTHENTICATION)
 	auth_status = CAUTH_NONE;
 	setOwner( NULL );
+#endif
 }
 
 #if !defined(WIN32)
@@ -810,3 +843,5 @@ Authentication::authenticate_gss()
 }
 
 #endif defined(GSS_AUTHENTICATION)
+
+#endif !defined(SKIP_AUTHENTICATION)
