@@ -29,12 +29,14 @@ MachAttributes::MachAttributes()
 	m_mips = -1;
 	m_kflops = -1;
 	m_last_benchmark = 0;
+	m_last_keypress = -1;
 
 	m_arch = NULL;
 	m_opsys = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
 	m_subnet = NULL;
+	m_idle_interval = -1;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -128,6 +130,12 @@ MachAttributes::compute( amask_t how_much )
 		m_subnet = calc_subnet_name( my_full_hostname() );
 		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_SUBNET,
 				 m_subnet );
+
+		char *tmp = param( "IDLE_INTERVAL" );
+		if (tmp) {
+			m_idle_interval = atoi(tmp);
+			free(tmp);
+		}
 	}
 
 
@@ -151,6 +159,17 @@ MachAttributes::compute( amask_t how_much )
 		the_time = localtime(&my_timer);
 		m_clock_min = (the_time->tm_hour * 60) + the_time->tm_min;
 		m_clock_day = the_time->tm_wday;
+
+		if (m_last_keypress < my_timer - m_idle) {
+			if (m_last_keypress > 0 && m_idle_interval >= 0) {
+				int duration = my_timer - m_last_keypress;
+				if (duration > m_idle_interval) {
+					dprintf(D_IDLE, "end idle interval of %d sec.\n",
+							duration);
+				}
+			}
+			m_last_keypress = my_timer;
+		}
 	}
 
 	if( IS_TIMEOUT(how_much) && IS_SUMMED(how_much) ) {

@@ -90,6 +90,7 @@ private:
 	int				m_mips;
 	int				m_kflops;
 	int				m_last_benchmark;   // Last time we computed benchmarks
+	int				m_last_keypress; 	// Last time m_idle decreased
 	int				m_clock_day;
 	int				m_clock_min;
 		// Static info
@@ -100,6 +101,7 @@ private:
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	char*			m_subnet;
+	int				m_idle_interval; 	// for D_IDLE dprintf messages
 };	
 
 
