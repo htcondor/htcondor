@@ -104,38 +104,33 @@ int		timeout;
 	}
 
 	if( setsockopt(fd,SOL_SOCKET,SO_KEEPALIVE,(const char *)&true,sizeof(true)) < 0 ) {
+		close(fd);
 		EXCEPT( "setsockopt( SO_KEEPALIVE )" );
 	}
 
 	hostentp = gethostbyname( host );
-    /*dprintf(D_ALWAYS, "inside do_connect host is %s\n",host); */
     if (host[0]=='<'){ /* dhaval */
     	string_to_sin(host,&sin);
-    	/*dprintf(D_ALWAYS, "After stringtosin host is %s\n",host);*/
     } else {
 		if( hostentp == NULL ) {
-#if defined(vax) && !defined(ultrix)
-		herror( "gethostbyname" );
-#endif
-		dprintf( D_ALWAYS, "Can't find host \"%s\" (Nameserver down?)\n",
-							host );
-		return( -1 );
+		#if defined(vax) && !defined(ultrix)
+			herror( "gethostbyname" );
+		#endif
+			dprintf( D_ALWAYS, "Can't find host \"%s\" (Nameserver down?)\n",
+								host );
+			close(fd);
+			return( -1 );
+		}
+		port = find_port_num( service, port );
 	}
-	port = find_port_num( service, port );
-}
 
-	/*dprintf(D_ALWAYS,"host is %s\n",host); */
 	if (host[0]!='<'){ /* dhaval */
-	memset( (char *)&sin,0,sizeof(sin) );
-	memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
-	sin.sin_family = hostentp->h_addrtype;
-	sin.sin_port = htons(port);
+		memset( (char *)&sin,0,sizeof(sin) );
+		memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
+		sin.sin_family = hostentp->h_addrtype;
+		sin.sin_port = htons(port);
 	}
 
-	/*
-	dprintf( D_ALWAYS, "Connecting now...\n" );
-	*/
-	
 	if (timeout == 0) {
 		status = connect(fd,(struct sockaddr *)&sin,sizeof(sin));
 	} else {
@@ -146,9 +141,6 @@ int		timeout;
 	}
 
 	if( status == 0 ) {
-		/*
-		dprintf( D_ALWAYS, "Done connecting\n" );
-		*/
 		return fd;
 	} else {
 		dprintf( D_FULLDEBUG, "connect returns %d, errno = %d\n", status, errno );
