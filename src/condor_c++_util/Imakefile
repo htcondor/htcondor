@@ -33,14 +33,19 @@ library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
 
-c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
-c_plus_target(access.t, access.t.o, $(LIB) SocketLib )
-c_plus_target(killfamily.t, killfamily.t.o, $(LIB) )
-pure_c_plus_target(killfamily.t.pure, killfamily.t.o, $(LIB) )
-purecov_c_plus_target(killfamily.t.pc, killfamily.t.o, $(LIB) )
+c_plus_target(cat_url, cat_url.o, liburl.a)
+c_plus_target(access.t, access.t.o, $(LIB))
+c_plus_target(killfamily.t, killfamily.t.o, $(LIB))
+pure_c_plus_target(killfamily.t.pure, killfamily.t.o, $(LIB))
+purecov_c_plus_target(killfamily.t.pc, killfamily.t.o, $(LIB))
+
+c_plus_target(daemon.t, daemon.t.o, $(LIB))
+pure_c_plus_target(daemon.t.pure, daemon.t.o, $(LIB))
+purecov_c_plus_target(daemon.t.pc, daemon.t.o, $(LIB))
+
 html_target( documentation )
 
-all-tests: access.t killfamily.t test_locks 
+all-tests: access.t killfamily.t daemon.t test_locks 
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(LIB)
