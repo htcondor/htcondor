@@ -501,17 +501,17 @@ d_rusage( const char *name, struct rusage &val )
 
         do_indent();
         printf( 
-                "%s %s: %s\n<BR>", name, "(user)", format_time(usr_sec)
+                "%s %s: %s\n", name, "(user)", format_time(usr_sec)
         );
 
         do_indent();
         printf( 
-                "%s %s: %s\n<BR>", name, "(system)", format_time(sys_sec)
+                "%s %s: %s\n", name, "(system)", format_time(sys_sec)
         );
 
         do_indent();
         printf( 
-                "%s %s: %s\n<BR>", name, "(total)", format_time(tot_sec)
+                "%s %s: %s\n", name, "(total)", format_time(tot_sec)
         );
 }
 
