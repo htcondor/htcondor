@@ -1,3 +1,11 @@
+02/12/04 V6_6-infn-branch
+   A new branch off of V6_6-branch (post V6_6_1) that will be used for
+   various startd enhancements for the Bolonga Batch System (BBS) at
+   INFN.  These changes will be merged back into the V6_7-branch, not
+   V6_6 (since they are totally new features), but they're being given
+   to INFN from code as close to the stable 6.6.1 release as possible.
+   This branch was created from the V6_6-infn-root tag.
+
 02/11/04 V6_6_1
    The official 6.6.1 release tag!  This is a re-tagging of
    "BUILD-V6_6-branch-2004-2-5" with a few minor modifications for
