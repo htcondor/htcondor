@@ -36,8 +36,6 @@
 #define _POSIX_SOURCE
 #include "condor_common.h"
 
-#include <signal.h>
-#include <sys/signal.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <sys/stat.h>
@@ -47,7 +45,6 @@
 #include <sys/file.h>
 #include <netinet/in.h>
 #include <sys/wait.h>
-#include "condor_common.h"
 #include "condor_xdr.h"
 #include "sched.h"
 #include "condor_debug.h"
@@ -2099,7 +2096,9 @@ void Scheduler::Register(DaemonCore* core)
 	core->Register(this, SIGCHLD, (void*)reaper, SIGNAL);
 	core->Register(this, SIGINT, (void*)sigint_handler, SIGNAL);
 	core->Register(this, SIGHUP, (void*)sighup_handler, SIGNAL);
-	core->Register(this, SIGPIPE, (void*)SIG_IGN, SIGNAL);
+	// Daemon_core doesn't handle SIG_IGN, properly, just use the
+	// system for signal handling in this case. -Derek 6/27/97
+	install_sig_handler(SIGPIPE, SIG_IGN);
 
 	// these functions are called after the select call in daemon core's loop
 	core->Register(this, (void*)StartJobs);
