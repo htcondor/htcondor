@@ -85,7 +85,7 @@ char	*Architecture;
 // char	*Spool;
 char	*Flavor;
 char	*ScheddName = NULL;
-char	*ScheddAddr = NULL;
+DCSchedd* MySchedd = NULL;
 char	*My_fs_domain;
 char    JobRequirements[2048];
 #if !defined(WIN32)
@@ -560,18 +560,18 @@ main( int argc, char *argv[] )
 		free(dis_check);
 	}
 
-	if( !(ScheddAddr = get_schedd_addr(ScheddName)) ) {
+		// Instantiate our DCSchedd so we can locate and communicate
+		// with our schedd.  
+	MySchedd = new DCSchedd( ScheddName, NULL );
+	if( ! MySchedd->locate() ) {
 		if( ScheddName ) {
-			fprintf( stderr, "\nERROR: Can't find address of schedd %s\n", ScheddName );
+			fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
+					 ScheddName );
 		} else {
 			fprintf( stderr, "\nERROR: Can't find address of local schedd\n" );
 		}
 		exit(1);
 	}
-
-	// We must strdup ScheddAddr, cuz we got it from
-	// get_schedd_addr which uses a (gasp!) _static_ buffer.
-	ScheddAddr = strdup(ScheddAddr);
 
 #ifdef WIN32
 	char userdom[256];
@@ -663,18 +663,17 @@ main( int argc, char *argv[] )
 	ActiveQueueConnection = FALSE; 
 
 	if ( !DisableFileChecks ) {
-		TestFilePermissions( ScheddAddr );
+		TestFilePermissions( MySchedd->addr() );
 	}
 
 	if ( Remote && JobAdsArrayLen > 0 ) {
 		bool result;
-		DCSchedd schedd(ScheddAddr);
 			// perhaps check for proper schedd version here?
 		fprintf(stdout,"Spooling data files for %d jobs...\n",JobAdsArrayLen);
-		result = schedd.spoolJobFiles(JobAdsArrayLen,JobAdsArray.getarray());
+		result = MySchedd->spoolJobFiles( JobAdsArrayLen,
+										  JobAdsArray.getarray() );
 		if ( !result ) {
-			fprintf(stderr, 
-				"\nERROR: Failed to spool job files.\n");
+			fprintf( stderr, "\nERROR: Failed to spool job files.\n" );
 			exit(1);
 		}
 	}
@@ -703,11 +702,9 @@ main( int argc, char *argv[] )
 void
 reschedule()
 {
-	//Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
-	DCSchedd my_schedd(ScheddAddr);
-
- 	if ( ! my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0) ) {
-		fprintf(stderr, "Can't send RESCHEDULE command to condor scheduler\n" );
+ 	if ( ! MySchedd->sendCommand(RESCHEDULE, Stream::safe_sock, 0) ) {
+		fprintf( stderr,
+				 "Can't send RESCHEDULE command to condor scheduler\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
@@ -3222,7 +3219,7 @@ connect_to_the_schedd()
 
 	setupAuthentication();
 
-	if (ConnectQ(ScheddAddr) == 0) {
+	if( ConnectQ(MySchedd->addr()) == 0 ) {
 		if( ScheddName ) {
 			fprintf( stderr, 
 					"\nERROR: Failed to connect to queue manager %s\n",
@@ -3876,7 +3873,7 @@ DoCleanup(int,int,char*)
 		// DoCleanup().  This lead to infinite recursion which is bad.
 		ClusterCreated = 0;
 		if (!ActiveQueueConnection) {
-			ActiveQueueConnection = (ConnectQ(ScheddAddr) != 0);
+			ActiveQueueConnection = (ConnectQ(MySchedd->addr()) != 0);
 		}
 		if (ActiveQueueConnection) {
 			// Call DestroyCluster() now in an attempt to get the schedd
@@ -4002,7 +3999,7 @@ log_submit()
 		fprintf(stdout, "Logging submit event(s)");
 	}
 
-	strcpy (jobSubmit.submitHost, ScheddAddr);
+	strcpy (jobSubmit.submitHost, MySchedd->addr());
 
 	if( LogNotesVal ) {
 		jobSubmit.submitEventLogNotes = LogNotesVal;
