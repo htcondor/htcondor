@@ -407,3 +407,10 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 	whynot = "no such dependency";
 	return false;
 }
+
+const int
+Job::NumParents()
+{
+	int n = _queues[Q_PARENTS].Number();
+	return n;
+}
