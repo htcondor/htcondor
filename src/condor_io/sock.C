@@ -544,7 +544,10 @@ bool Sock::test_connection()
 	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
 		sleep(1);	// try once more -- sometimes it fails the first time
 		if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
-			return false;
+			sleep(1);	// try once more -- sometimes it fails the second time
+			if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes)<0) {
+				return false;
+			}
 		}
 	}
 	return true;
