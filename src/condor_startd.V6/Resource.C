@@ -769,3 +769,10 @@ Resource::resize_load_queue()
 	
 
 
+void
+Resource::log_ignore( int cmd, State s ) 
+{
+	dprintf( D_ALWAYS, "Got %s while in %s state, ignoring.\n", 
+			 command_to_string(cmd), state_to_string(s) );
+}
+

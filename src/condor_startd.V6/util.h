@@ -31,7 +31,6 @@ void	cleanup_execute_dir(int pid);
 void	check_perms(void);
 float	compute_rank( ClassAd*, ClassAd* );
 int		create_port( int* );
-void	log_ignore( int, State );
 char*	command_to_string( int );
 int		reply( Stream*, int );
 int		caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose = 0 );

@@ -68,7 +68,6 @@ public:
 	float	owner_load() {return r_attr->owner_load();};
 	void	set_owner_load( float val) {r_attr->set_owner_load(val);};
 
-
 	void	display( amask_t m ) {r_attr->display(m);}
 
 		// dprintf() functions add the CPU id to the header of each
@@ -76,6 +75,10 @@ public:
 		// header and it works just like regular dprintf())
 	void	dprintf( int, char*, ... );
 	void	dprintf_va( int, char*, va_list );
+
+		// Helper function to log that we're ignoring a command that
+		// came in while we were in an unexpected state. 
+	void	log_ignore( int cmd, State s );
 
 		// Called from the reaper to handle things for this rip
 	void	starter_exited();	
