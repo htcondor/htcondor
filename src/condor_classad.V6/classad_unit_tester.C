@@ -256,7 +256,7 @@ int main(
 {
     int         number_of_errors;
     int         number_of_tests;
-    bool        success;
+    bool        have_errors;
     string      line;
     Parameters  parameters;
 
@@ -288,16 +288,16 @@ int main(
     cout << endl;
     results.GetResults(number_of_errors, number_of_tests);
     if (number_of_errors > 0) {
-        success = false;
+        have_errors = true;
         cout << "Finished with errors: \n";
         cout << "    " << number_of_errors << " errors\n";
         cout << "    " << number_of_tests << " tests\n";
     } else {
-        success = true;
+        have_errors = false;
         cout << "Finished with no errors.\n";
         cout << "    " << number_of_tests << " tests\n";
     }
-    return success;
+    return have_errors;
 }
 
 /*********************************************************************

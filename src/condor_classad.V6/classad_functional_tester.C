@@ -302,7 +302,11 @@ int main(
         parameters.input_file->close();
     }
 
-    return 0;
+    if (state.number_of_errors == 0) {
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
 /*********************************************************************
