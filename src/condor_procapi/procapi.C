@@ -492,23 +492,71 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		// get the system boot time periodically, since it may change
 		// if the time on the machine is adjusted
 	if( boottime_expiration <= now ) {
-		if( (fp = fopen("/proc/stat", "r")) > 0 ) {
+		// There are two (sometimes conflicting) sources of boottime
+		// information.  One is the /proc/stat "btime" field, and the
+		// other is /proc/uptime.  For some unknown reason, btime
+		// has been observed to suddenly jump forward in time to
+		// the present moment, which totally messes up the process
+		// age calculation, which messes up the CPU usage estimation.
+		// Since this is not well understood, we hedge our bets
+		// and use whichever measure of boot-time is older.
+
+		unsigned long stat_boottime = 0;
+		unsigned long uptime_boottime = 0;
+
+		// get uptime_boottime
+
+		if( (fp = fopen("/proc/uptime","r")) ) {
+			double uptime=0;
+			double junk=0;
+			fgets( s, 256, fp );
+			if (sscanf( s, "%lf %lf", &uptime, &junk ) >= 1) {
+				// uptime is number of seconds since boottime
+				// convert to nearest time stamp
+				uptime_boottime = (unsigned long)(now - uptime + 0.5);
+			}
+		}
+
+		// get stat_boottime
+		if( (fp = fopen("/proc/stat", "r")) ) {
 			fgets( s, 256, fp );
 			while( strstr(s, "btime") == NULL ) {
 				fgets( s, 256, fp );
 			}
-			sscanf( s, "%s %lu", junk, &boottime );
+			sscanf( s, "%s %lu", junk, &stat_boottime );
 			fclose( fp );
-			boottime_expiration = now+60; // update once every minute
-		} else if (boottime == 0) {
+		}
+
+		if (stat_boottime == 0 && uptime_boottime == 0 && boottime == 0) {
 				// we failed to get the boottime, so we must abort
 				// unless we have an old boottime value to fall back on
 			dprintf( D_ALWAYS, "ProcAPI: Problem opening /proc/stat "
-					 "for btime.\n" );
+					 " and /proc/uptime for boottime.\n" );
 			delete pi; 
 			pi = NULL;
 			set_priv( priv );
 			return -2;
+		}
+
+		if (stat_boottime != 0 || uptime_boottime != 0) {
+			unsigned long old_boottime = boottime;
+
+			// Use the older of the two boottime estimates.
+			// If either one is missing, ignore it.
+			if (stat_boottime == 0) boottime = uptime_boottime;
+			else if (uptime_boottime == 0) boottime = stat_boottime;
+			else boottime = MIN(stat_boottime,uptime_boottime);
+
+			boottime_expiration = now+60; // update once every minute
+
+			// Since boottime is critical for correct cpu usage
+			// calculations, show how we got it.
+			dprintf( D_LOAD,
+					 "ProcAPI: new boottime = %lu; "
+					 "old_boottime = %lu; "
+					 "/proc/stat boottime = %lu; "
+					 "/proc/uptime boottime = %lu\n",
+					 boottime,old_boottime,stat_boottime,uptime_boottime);
 		}
 	}
 		// now we've got the boottime, the start time, and can get
