@@ -84,7 +84,7 @@ extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 Image MyImage;
 static jmp_buf Env;
 static RAW_ADDR SavedStackLoc;
-volatile int InRestart = FALSE;
+volatile int InRestart = TRUE;
 volatile int check_sig;		// the signal which activated the checkpoint; used
 							// by some routines to determine if this is a periodic
 							// checkpoint (USR2) or a check & vacate (TSTP).
@@ -683,6 +683,17 @@ Checkpoint( int sig, int code, void *scp )
 
 	if( MyImage.GetMode() == REMOTE ) {
 		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
+		if ( MyImage.GetFd() != -1 ) {
+			// Here we make _certain_ that fd is -1.  on remote checkpoints,
+			// the fd is always new since we open a fresh TCP socket to the
+			// shadow.  I have detected some buggy behavior where the remote
+			// job prematurely exits with a status 4, and think that it is
+			// related to the fact that fd is _not_ -1 here, so we make
+			// certain.  Hopefully the real bug will be found someday and
+			// this "patch" can go away...  -Todd 11/95
+			dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
+			MyImage.SetFd( -1 );
+		}
 	} else {
 		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
@@ -716,7 +727,14 @@ Checkpoint( int sig, int code, void *scp )
 			 * so, update the shadow with accumulated CPU time info if we
 			 * are not standalone, and then continue running. -Todd Tannenbaum */
 			if ( MyImage.GetMode() == REMOTE ) {
-				/* update shadow with CPU time info.  unfortunately, we need
+
+				// first, reset the fd to -1.  this is normally done in
+				// a call in remote_startup, but that will not get called
+				// before the next periodic checkpoint so we must clear
+				// it here.
+				MyImage.SetFd( -1 );
+
+				/* now update shadow with CPU time info.  unfortunately, we need
 				 * to convert to struct rusage here in the user code, because
 				 * clock_tick is platform dependent and we don't want CPU times
 				 * messed up if the shadow is running on a different architecture */
