@@ -43,30 +43,43 @@ REMOTE_CONDOR_register_machine_info(char *uiddomain, char *fsdomain,
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
+	int result = 0;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_register_machine_info\n" );
 
 	CurrentSysCall = CONDOR_register_machine_info;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->code(uiddomain) );
-	assert( syscall_sock->code(fsdomain) );
-	assert( syscall_sock->code(address) );
-	assert( syscall_sock->code(fullHostname) );
-	assert( syscall_sock->code(key) );
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->code(CurrentSysCall);
+	assert( result );
+	result = syscall_sock->code(uiddomain);
+	assert( result );
+	result = syscall_sock->code(fsdomain);
+	assert( result );
+	result = syscall_sock->code(address);
+	assert( result );
+	result = syscall_sock->code(fullHostname);
+	assert( result );
+	result = syscall_sock->code(key);
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	result = syscall_sock->code(rval);
+	assert( result );
+
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		result = syscall_sock->code(terrno);
+		assert( result );
+		result = syscall_sock->end_of_message();
+		assert( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->end_of_message();
+	assert( result );
 	return rval;
 }
 
@@ -76,6 +89,7 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
+	int result = 0;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_register_starter_info\n" );
 
@@ -87,20 +101,27 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 	}
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( ad->put(*syscall_sock) );
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->code(CurrentSysCall);
+	assert( result );
+	result = ad->put(*syscall_sock);
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	result =  syscall_sock->code(rval);
+	assert( result );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		result = syscall_sock->code(terrno);
+		assert( result );
+		result = syscall_sock->end_of_message();
+		assert( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->end_of_message();
+	assert( result );
 	return rval;
 }
 
@@ -108,28 +129,37 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 int
 REMOTE_CONDOR_get_job_info(ClassAd *ad)
 {
-	condor_errno_t		terrno;
-	int		rval=-1;
+	condor_errno_t terrno;
+	int		rval=-42;
+	int result = 0;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_get_job_info\n" );
 
 	CurrentSysCall = CONDOR_get_job_info;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->end_of_message() );
+	syscall_sock->code(CurrentSysCall);
+	result = syscall_sock->end_of_message();
+	assert( result );
+
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	result = syscall_sock->code(rval);
+	assert( result );
+	dprintf(D_SYSCALLS, "\trval = %d\n", rval);
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		result = syscall_sock->code(terrno);
+		assert( result );
+		result = syscall_sock->end_of_message();
+		assert( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	assert( ad->initFromStream(*syscall_sock) );
-	assert( syscall_sock->end_of_message() );
+	result = ad->initFromStream(*syscall_sock);
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
 	return rval;
 }
 
@@ -139,26 +169,34 @@ REMOTE_CONDOR_get_user_info(ClassAd *ad)
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
+	int result = 0;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_get_user_info\n" );
 
 	CurrentSysCall = CONDOR_get_user_info;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->code(CurrentSysCall);
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	result = syscall_sock->code(rval);
+	assert( result );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		result = syscall_sock->code(terrno);
+		assert( result );
+		result =syscall_sock->end_of_message();
+		assert( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	assert( ad->initFromStream(*syscall_sock) );
-	assert( syscall_sock->end_of_message() );
+	result = ad->initFromStream(*syscall_sock);
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
 	return rval;
 }
 
@@ -169,27 +207,35 @@ REMOTE_CONDOR_get_executable(char *destination)
 {
 	condor_errno_t		terrno=0;
 	int		rval=-1;
+	int result = 0;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_get_executable\n" );
 
 	CurrentSysCall = CONDOR_get_executable;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->code(CurrentSysCall);
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	result = syscall_sock->code(rval);
+	assert( result );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		result = syscall_sock->code(terrno);
+		assert( result );
+		result = syscall_sock->end_of_message();
+		assert( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
 
-	assert( syscall_sock->get_file(destination) > -1 );
-	assert( syscall_sock->end_of_message() );
+	result = ( syscall_sock->get_file(destination) > -1 );
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
 	return rval;
 }
 #endif
@@ -199,30 +245,40 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
+	int result = 0;
 	
 	dprintf ( D_SYSCALLS, "Doing CONDOR_job_exit\n" );
 
 	CurrentSysCall = CONDOR_job_exit;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->code(status) );
-	assert( syscall_sock->code(reason) );
+	result = syscall_sock->code(CurrentSysCall);
+	assert( result );
+	result = syscall_sock->code(status);
+	assert( result );
+	result = syscall_sock->code(reason);
+	assert( result );
 	if ( ad ) {
-		assert( ad->put(*syscall_sock) );
+		result = ad->put(*syscall_sock);
+		assert( result );
 	}
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->end_of_message();
+	assert( result );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	result = syscall_sock->code(rval);
+	assert( result );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		result = syscall_sock->code(terrno);
+		assert( result );
+		result = syscall_sock->end_of_message();
+		assert( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->end_of_message();
+	assert( result );
 	return rval;
 }
 
@@ -232,25 +288,32 @@ REMOTE_CONDOR_begin_execution( void )
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
-	
+	int result = 0;
+
 	dprintf ( D_SYSCALLS, "Doing CONDOR_begin_execution\n" );
 
 	CurrentSysCall = CONDOR_begin_execution;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->code(CurrentSysCall);
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	result = syscall_sock->code(rval);
+	assert( result );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		result = syscall_sock->code(terrno);
+		assert( result );
+		result = syscall_sock->end_of_message();
+		assert( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	assert( syscall_sock->end_of_message() );
+	result = syscall_sock->end_of_message();
+	assert( result );
 	return rval;
 }
 
@@ -260,25 +323,35 @@ REMOTE_CONDOR_open( char *  path , open_flags_t flags , int   lastarg)
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_open;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(flags) );
-        assert( syscall_sock->code(lastarg) );
-        assert( syscall_sock->code(path) );
-        assert( syscall_sock->end_of_message() );
+        result = syscall_sock->code(CurrentSysCall);
+		assert( result );
+        result = syscall_sock->code(flags);
+		assert( result );
+        result = syscall_sock->code(lastarg);
+		assert( result );
+        result = syscall_sock->code(path);
+		assert( result );
+        result = syscall_sock->end_of_message();
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = syscall_sock->code(rval);
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = syscall_sock->code(terrno);
+				assert( result );
+                result = syscall_sock->end_of_message();
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = syscall_sock->end_of_message();
+		assert( result );
         return rval;
 }
 
@@ -287,23 +360,31 @@ REMOTE_CONDOR_close(int   fd)
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_close;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(fd) );
-        assert( syscall_sock->end_of_message() );
+        result = syscall_sock->code(CurrentSysCall);
+		assert( result );
+        result = syscall_sock->code(fd);
+		assert( result );
+        result = syscall_sock->end_of_message();
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = syscall_sock->code(rval);
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = syscall_sock->code(terrno);
+				assert( result );
+                result = syscall_sock->end_of_message();
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = syscall_sock->end_of_message();
+		assert( result );
         return rval;
 }
 
@@ -312,25 +393,35 @@ REMOTE_CONDOR_read(int   fd , void *  buf , size_t   len)
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_read;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(fd) );
-        assert( syscall_sock->code(len) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code(CurrentSysCall) );
+		assert( result );
+        result = ( syscall_sock->code(fd) );
+		assert( result );
+        result = ( syscall_sock->code(len) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = ( syscall_sock->code(rval) );
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = ( syscall_sock->code(terrno) );
+				assert( result );
+                result = ( syscall_sock->end_of_message() );
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->code_bytes_bool(buf, rval) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code_bytes_bool(buf, rval) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
         return rval;
 }
 
@@ -339,25 +430,35 @@ REMOTE_CONDOR_write(int   fd , void *  buf , size_t   len)
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_write;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(fd) );
-        assert( syscall_sock->code(len) );
-        assert( syscall_sock->code_bytes_bool(buf, len) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code(CurrentSysCall) );
+		assert( result );
+        result = ( syscall_sock->code(fd) );
+		assert( result );
+        result = ( syscall_sock->code(len) );
+		assert( result );
+        result = ( syscall_sock->code_bytes_bool(buf, len) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = ( syscall_sock->code(rval) );
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = ( syscall_sock->code(terrno) );
+				assert( result );
+                result = ( syscall_sock->end_of_message() );
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
         return rval;
 }
 
@@ -366,25 +467,35 @@ REMOTE_CONDOR_lseek(int   fd , off_t   offset , int   whence)
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_lseek;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(fd) );
-        assert( syscall_sock->code(offset) );
-        assert( syscall_sock->code(whence) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code(CurrentSysCall) );
+		assert( result );
+        result = ( syscall_sock->code(fd) );
+		assert( result );
+        result = ( syscall_sock->code(offset) );
+		assert( result );
+        result = ( syscall_sock->code(whence) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = ( syscall_sock->code(rval) );
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = ( syscall_sock->code(terrno) );
+				assert( result );
+                result = ( syscall_sock->end_of_message() );
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
         return rval;
 }
 
@@ -393,23 +504,31 @@ REMOTE_CONDOR_unlink( char *  path )
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_unlink;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(path) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code(CurrentSysCall) );
+		assert( result );
+        result = ( syscall_sock->code(path) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = ( syscall_sock->code(rval) );
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = ( syscall_sock->code(terrno) );
+				assert( result );
+                result = ( syscall_sock->end_of_message() );
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
         return rval;
 }
 
@@ -418,24 +537,33 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_rename;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(to) );
-        assert( syscall_sock->code(from) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code(CurrentSysCall) );
+		assert( result );
+        result = ( syscall_sock->code(to) );
+		assert( result );
+        result = ( syscall_sock->code(from) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = ( syscall_sock->code(rval) );
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = ( syscall_sock->code(terrno) );
+				assert( result );
+                result = ( syscall_sock->end_of_message() );
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
         return rval;
 }
 
@@ -444,6 +572,7 @@ REMOTE_CONDOR_register_mpi_master_info( ClassAd* ad )
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
+	int result = 0;
 	
 	dprintf ( D_SYSCALLS, "Doing CONDOR_register_mpi_master_info\n" );
 
@@ -455,20 +584,27 @@ REMOTE_CONDOR_register_mpi_master_info( ClassAd* ad )
 	}
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( ad->put(*syscall_sock) );
-	assert( syscall_sock->end_of_message() );
+	result = ( syscall_sock->code(CurrentSysCall) );
+	assert( result );
+	result = ( ad->put(*syscall_sock) );
+	assert( result );
+	result = ( syscall_sock->end_of_message() );
+	assert( result );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	result = ( syscall_sock->code(rval) );
+	assert( result );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		result = ( syscall_sock->code(terrno) );
+		assert( result );
+		result = ( syscall_sock->end_of_message() );
+		assert( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	assert( syscall_sock->end_of_message() );
+	result = ( syscall_sock->end_of_message() );
+	assert( result );
 	return rval;
 }
 
@@ -477,24 +613,33 @@ REMOTE_CONDOR_mkdir( char *  path, int mode )
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_mkdir;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(path) );
-        assert( syscall_sock->code(mode) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code(CurrentSysCall) );
+		assert( result );
+        result = ( syscall_sock->code(path) );
+		assert( result );
+        result = ( syscall_sock->code(mode) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = ( syscall_sock->code(rval) );
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = ( syscall_sock->code(terrno) );
+				assert( result );
+                result = ( syscall_sock->end_of_message() );
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
         return rval;
 }
 
@@ -503,23 +648,31 @@ REMOTE_CONDOR_rmdir( char *  path )
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_rmdir;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(path) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code(CurrentSysCall) );
+		assert( result );
+        result = ( syscall_sock->code(path) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = ( syscall_sock->code(rval) );
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = ( syscall_sock->code(terrno) );
+				assert( result );
+                result = ( syscall_sock->end_of_message() );
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
         return rval;
 }
 
@@ -528,23 +681,31 @@ REMOTE_CONDOR_fsync(int   fd)
 {
         int     rval;
         condor_errno_t     terrno;
+		int result = 0;
 
         CurrentSysCall = CONDOR_fsync;
 
         syscall_sock->encode();
-        assert( syscall_sock->code(CurrentSysCall) );
-        assert( syscall_sock->code(fd) );
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->code(CurrentSysCall) );
+		assert( result );
+        result = ( syscall_sock->code(fd) );
+		assert( result );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
 
         syscall_sock->decode();
-        assert( syscall_sock->code(rval) );
+        result = ( syscall_sock->code(rval) );
+		assert( result );
         if( rval < 0 ) {
-                assert( syscall_sock->code(terrno) );
-                assert( syscall_sock->end_of_message() );
+                result = ( syscall_sock->code(terrno) );
+				assert( result );
+                result = ( syscall_sock->end_of_message() );
+				assert( result );
                 errno = terrno;
                 return rval;
         }
-        assert( syscall_sock->end_of_message() );
+        result = ( syscall_sock->end_of_message() );
+		assert( result );
         return rval;
 }
 
