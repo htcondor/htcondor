@@ -212,5 +212,9 @@ SOURCE=..\src\condor_classad\value.C
 
 SOURCE=..\src\condor_classad\value.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\xml_classads.C
+# End Source File
 # End Target
 # End Project

@@ -160,6 +160,10 @@ SOURCE="..\src\condor_c++_util\condor_event.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_md.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_q.C"
 # End Source File
 # Begin Source File
@@ -218,6 +222,10 @@ SOURCE=..\src\condor_daemon_client\dc_shadow.C
 # Begin Source File
 
 SOURCE=..\src\condor_daemon_client\dc_shadow.h
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\dc_stub.C"
 # End Source File
 # Begin Source File
 
@@ -322,6 +330,10 @@ SOURCE="..\src\condor_c++_util\java_config.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\java_config.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\KeyCache.C"
 # End Source File
 # Begin Source File
 
