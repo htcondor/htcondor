@@ -374,7 +374,6 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		{
 			dprintf (D_ALWAYS, "\t\tGot NO_MORE_JOBS;  done negotiating\n");
 			sock->end_of_message ();
-            sockCache.invalidateSock(scheddAddr);
 			return MM_DONE;
 		}
 		else
@@ -382,8 +381,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		{
 			// something goofy
 			dprintf(D_ALWAYS,"\t\tGot illegal command %d from schedd\n",reply);
-            sockCache.invalidateSock(scheddAddr);
 			sock->end_of_message ();
+            sockCache.invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 
