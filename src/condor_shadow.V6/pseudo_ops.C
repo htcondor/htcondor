@@ -61,6 +61,7 @@ extern PROC *Proc;
 extern char CkptName[];
 extern char ICkptName[];
 extern char RCkptName[];
+extern int MaxDiscardedRunTime;
 
 char	CurrentWorkingDir[ _POSIX_PATH_MAX ];
 
@@ -87,6 +88,8 @@ extern int  UseNFS;
 extern int  UseCkptServer;
 extern char *Spool;
 extern ClassAd *JobAd;
+
+const int MaxRetryWait = 3600;
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -473,7 +476,7 @@ pseudo_get_file_stream(
 #endif
 	int		rval;
 	PROC *p = (PROC *)Proc;
-	int		retry_wait = 1;
+	int		retry_wait;
 	bool	CkptFile = is_ckpt_file(file);
 	bool	ICkptFile = is_ickpt_file(file);
 	priv_state	priv;
@@ -483,10 +486,24 @@ pseudo_get_file_stream(
 
 	*len = 0;
 		/* open the file */
-	if (CkptFile && UseCkptServer)
-		rval = RequestRestore(p->owner,file,len,(struct in_addr*)ip_addr,port);
-	else
+	if (CkptFile && UseCkptServer) {
+		retry_wait = 5;
+		do {
+			rval = RequestRestore(p->owner,file,len,
+								  (struct in_addr*)ip_addr,port);
+			if (rval) { // network error, try again
+				dprintf(D_ALWAYS, "ckpt server restore failed, trying again"
+						" in %d seconds\n", retry_wait);
+				sleep(retry_wait);
+				retry_wait *= 2;
+				if (retry_wait > MaxRetryWait) {
+					retry_wait = MaxRetryWait;
+				}
+			}
+		} while (rval);
+	} else {
 		rval = -1;
+	}
 
 	// need Condor privileges to access checkpoint files
 	if (CkptFile || ICkptFile) {
@@ -503,11 +520,17 @@ pseudo_get_file_stream(
 			close(file_fd);
 		}
 		if (CkptFile || ICkptFile) set_priv(priv); // restore user privileges
-		while (rval == 1 && retry_wait < 20) {
+		retry_wait = 5;
+		while (rval == 1) {
 			rval = RequestRestore(p->owner,file,len,(struct in_addr*)ip_addr,port);
 			if (rval == 1) {
+				dprintf(D_ALWAYS, "ckpt server says file is locked, trying"
+						" again in %d seconds\n", retry_wait);
 				sleep(retry_wait);
 				retry_wait *= 2;
+				if (retry_wait > MaxRetryWait) {
+					retry_wait = MaxRetryWait;
+				}
 			}
 		} 
 
@@ -602,6 +625,7 @@ pseudo_put_file_stream(
 	PROC *p = (PROC *)Proc;
 	bool	CkptFile = is_ckpt_file(file);
 	bool	ICkptFile = is_ickpt_file(file);
+	int		retry_wait = 5;
 	priv_state	priv;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
@@ -614,7 +638,19 @@ pseudo_put_file_stream(
 
 		/* open the file */
 	if (CkptFile && UseCkptServer) {
-		rval = RequestStore(p->owner, file, len, (struct in_addr*)ip_addr, port);
+		do {
+			rval = RequestStore(p->owner, file, len,
+								(struct in_addr*)ip_addr, port);
+			if (rval) {	/* request denied or network error, try again */
+				dprintf(D_ALWAYS, "store request to ckpt server failed, "
+						"trying again in %d seconds\n", retry_wait);
+				sleep(retry_wait);
+				retry_wait *= 2;
+				if (retry_wait > MaxRetryWait) {
+					retry_wait = MaxRetryWait;
+				}
+			}
+		} while (rval);
 		display_ip_addr( *ip_addr );
 		*ip_addr = ntohl(*ip_addr);
 		*port = ntohs( *port );
@@ -627,6 +663,10 @@ pseudo_put_file_stream(
 	if (!rval) {
 		/* Checkpoint server says ok */
 		return 0;
+	}
+
+	if (UseCkptServer) {
+		return -1;
 	}
 
 	// need Condor privileges to access checkpoint files
@@ -1185,13 +1225,30 @@ access_via_nfs( const char *file )
 int
 has_ckpt_file()
 {
-	int		rval;
+	int		rval, retry_wait = 5;
 	PROC *p = (PROC *)Proc;
 	priv_state	priv;
+	long	accum_usage;
 
 	if (p->universe != STANDARD) return 0;
+	accum_usage = p->remote_usage[0].ru_utime.tv_sec +
+		p->remote_usage[0].ru_stime.tv_sec;
 	priv = set_condor_priv();
-	rval = FileExists(RCkptName, p->owner);
+	do {
+		rval = FileExists(RCkptName, p->owner);
+		if (rval == -1 && UseCkptServer && accum_usage > MaxDiscardedRunTime) {
+			dprintf(D_ALWAYS, "failed to contact ckpt server, trying again"
+					" in %d seconds\n", retry_wait);
+			sleep(retry_wait);
+			retry_wait *= 2;
+			if (retry_wait > MaxRetryWait) {
+				retry_wait = MaxRetryWait;
+			}
+		}
+	} while (rval == -1 && UseCkptServer && accum_usage > MaxDiscardedRunTime);
+	if (rval == -1) { /* not on local disk & not using ckpt server */
+		rval = FALSE;
+	}
 	set_priv(priv);
 	return rval;
 }
