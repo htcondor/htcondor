@@ -1155,6 +1155,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	// now send the actual DC_AUTHENTICATE command
 	dprintf ( D_SECURITY, "SECMAN: sending DC_AUTHENTICATE command\n");
 	int authcmd = DC_AUTHENTICATE;
+    sock->encode();
 	if (! sock->code(authcmd)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send DC_AUTHENTICATE\n");
 		return false;
