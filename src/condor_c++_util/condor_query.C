@@ -264,6 +264,41 @@ fetchAds (ClassAdList &adList, const char *poolName)
 
 
 QueryResult CondorQuery::
+getQueryAd (ClassAd &queryAd)
+{
+	QueryResult	result;
+
+	result = (QueryResult) query.makeQuery (queryAd);
+	if (result != Q_OK) return result;
+
+	// fix types
+	queryAd.SetMyTypeName (QUERY_ADTYPE);
+	switch (queryType) {
+	  case STARTD_AD:
+		queryAd.SetTargetTypeName (STARTD_ADTYPE);
+		break;
+
+	  case SCHEDD_AD:
+		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
+		break;
+
+	  case MASTER_AD:
+		queryAd.SetTargetTypeName (MASTER_ADTYPE);
+		break;
+
+	  case CKPT_SRVR_AD:
+		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
+		break;
+
+	  default:
+		return Q_INVALID_QUERY;
+	}
+
+	return Q_OK;
+}
+
+	
+QueryResult CondorQuery::
 filterAds (ClassAdList &in, ClassAdList &out)
 {
 	ClassAd queryAd, *candidate;

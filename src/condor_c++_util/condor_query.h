@@ -106,6 +106,9 @@ class CondorQuery
 	// filter list of ads; arg1 is 'in', arg2 is 'out'
 	QueryResult filterAds (ClassAdList &, ClassAdList &);
 
+	// get the query filter ad --- useful for debugging
+	QueryResult getQueryAd (ClassAd &);
+
 	// overloaded operators
 	friend ostream &operator<< (ostream &, CondorQuery &); 	// display
 	CondorQuery    &operator=  (CondorQuery &);				// assignment
