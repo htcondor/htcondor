@@ -2599,7 +2599,7 @@ cleanup_ckpt_files(int cluster, int proc, char *owner)
 	} else {
 		tmp = param("CKPT_SERVER_HOST");
 		if (tmp) {
-			SetCkptServerHost(server);
+			SetCkptServerHost(tmp);
 			free(tmp);
 		}
 	}
