@@ -80,13 +80,13 @@ VENDOR_CPLUS_NAME = @_cv_vendor_cplus_name@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 YACC = @YACC@
-
-TMP_DIR = @TMPDIR@
+STRIP = @STRIP@
 
 TAR_CMD = @TarCmd@
 
 CP_CMD = @CpCmd@
 
+TMP_DIR = @TMPDIR@
 
 #if HAS_PURIFY
 PURE_CACHE_DIR = @pure_cache_dir@
