@@ -33,6 +33,9 @@
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
+// ugly, crappy hack.  remove for v6.1.9 -Todd
+extern char* mySubSystem;
+
 ////////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.
 ////////////////////////////////////////////////////////////////////////////////
@@ -1654,18 +1657,22 @@ int AttrList::put(Stream& s)
 {
     AttrListElem*   elem;
     int             numExprs = 0;
+	bool			send_server_time = false;
 
     //get the number of expressions
     for(elem = exprList; elem; elem = elem->next)
         numExprs++;
 
 	if ( chainedAttrs ) {
-		// first add one for the ATTR_SERVER_TIME expr
-		numExprs++;
-
 		// now count up all the chained ad attrs
 		for(elem = *chainedAttrs; elem; elem = elem->next)
 			numExprs++;
+	}
+
+	if ( mySubSystem && (strcmp(mySubSystem,"SCHEDD")==0) ) {
+		// add one for the ATTR_SERVER_TIME expr
+		numExprs++;
+		send_server_time = true;
 	}
 
     s.encode();
@@ -1686,6 +1693,15 @@ int AttrList::put(Stream& s)
 				return 0;
 			}
 		}
+	}
+    for(elem = exprList; elem; elem = elem->next) {
+        line[0] = '\0';
+        elem->tree->PrintToStr(line);
+        if(!s.code(line)) {
+            return 0;
+        }
+    }
+	if ( send_server_time ) {
 		// insert in the current time from the server's (schedd)
 		// point of view.  this is used so condor_q can compute some
 		// time values based upon other attribute values without 
@@ -1696,13 +1712,6 @@ int AttrList::put(Stream& s)
 			return 0;
 		}
 	}
-    for(elem = exprList; elem; elem = elem->next) {
-        line[0] = '\0';
-        elem->tree->PrintToStr(line);
-        if(!s.code(line)) {
-            return 0;
-        }
-    }
 
     return 1;
 }
