@@ -188,6 +188,24 @@ Daemon::display( int debugflag )
 }
 
 
+void
+Daemon::display( FILE* fp ) 
+{
+	fprintf( fp, "Type: %d (%s), Name: %s, Addr: %s\n", 
+			 (int)_type, daemonString(_type), 
+			 _name ? _name : "(null)", 
+			 _addr ? _addr : "(null)" );
+	fprintf( fp, "FullHost: %s, Host: %s, Pool: %s, Port: %d\n", 
+			 _full_hostname ? _full_hostname : "(null)",
+			 _hostname ? _hostname : "(null)", 
+			 _pool ? _pool : "(null)", _port );
+	fprintf( fp, "IsLocal: %s, IdStr: %s, Error: %s\n", 
+			 _is_local ? "Y" : "N",
+			 _id_str ? _id_str : "(null)", 
+			 _error ? _error : "(null)" );
+}
+
+
 //////////////////////////////////////////////////////////////////////
 // Communication methods
 //////////////////////////////////////////////////////////////////////

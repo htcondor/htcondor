@@ -198,6 +198,10 @@ public:
 		  */
 	void display( int debugflag );
 
+		/** Dump all info about this daemon to the given FILE*
+		  */
+	void display( FILE* fp );
+
 		// //////////////////////////////////////////////////////////
 		/// Methods for communicating with the daemon.
 		// //////////////////////////////////////////////////////////
