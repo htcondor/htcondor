@@ -16,7 +16,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added full support (including standard universe jobs with
+  checkpointing and remote system calls) for Linux i386 RedHat 8.x
+  (using gcc/g++ version 3.2.x and glibc version 2.2.93). 
 
 \end{itemize}
 
@@ -45,6 +47,12 @@ The details of each version are described below.
 \item Fixed a bug on Windows that would cause ``GetCursorPos() failed''
 to appear repeatedly in the StartLog. The startd now uses a different
 function to track mouse activity that does not have a tendancy to fail.
+
+\item Fixed the bug where the \Condor{starter} would fail to transfer
+  back core files created by Vanilla, Java and MPI universe jobs.
+  This bug was introduced in Condor version 6.5.2.
+  Now, Condor correctly transfers back any core files created by
+  faulty user jobs in any job universe.
 
 \end{itemize}
 
