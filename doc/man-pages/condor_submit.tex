@@ -163,7 +163,10 @@ Used to specify the current
 working directory for the Condor job. Should be a path to a preexisting
 directory. If not specified, \Condor{submit} will automatically insert
 the user's current working directory at the time \Condor{submit} was run
-as the value for \Opt{initialdir}. 
+as the value for \Opt{initialdir}.  If \Opt{initialdir} is specified,
+and is not an absolute path, the \Opt{initialdir} value will be appended
+to the current working directory, and that will become the working
+directory for the Condor job.
 
 %%%%%%%%%%%%%%%%%%%
 %% should_transfer_files
