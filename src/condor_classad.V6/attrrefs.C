@@ -337,7 +337,6 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 				attrRef = MakeAttributeReference( currExpr->Copy( ),
 												  attributeStr,
 												  false );
-				attrRef->SetParentScope( currExpr->GetParentScope( ) );
 				val.Clear( );
 				rval = wantSig ? attrRef->Evaluate( state, val, sig )
 					: attrRef->Evaluate( state, val );
@@ -361,7 +360,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 			}
 		}
 		tree = ExprList::MakeExprList( eVector );
-		tree->SetParentScope( adList->GetParentScope( ) );
+		((ExprList*)tree)->SetShallowParentScope( adList->GetParentScope( ) );
 		return EVAL_OK;
 	}
 		// lookup with scope; this may side-affect state		
