@@ -1,5 +1,6 @@
 #include "condor_common.h"
 #include "ad_printmask.h"
+#include "escapes.h"
 
 static char *new_strdup (const char *);
 
@@ -27,9 +28,11 @@ AttrListPrintMask::
 void AttrListPrintMask::
 registerFormat (char *fmt, const char *attr, char *alternate)
 {
-	formats.Append   (new_strdup (fmt));
+	char *tmp;
+
+	formats.Append   (collapse_escapes(new_strdup (fmt)));
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(alternate));
+	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
 
@@ -71,7 +74,7 @@ display (FILE *file, AttrList *al)
 			switch (result.type)
 			{
 			  case LX_STRING:
-				fprintf (file, fmt, result.s);
+				fprintf (file, fmt, collapse_escapes(result.s));
 				break;
 
 			  case LX_FLOAT:
