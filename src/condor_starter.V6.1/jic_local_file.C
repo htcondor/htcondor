@@ -135,16 +135,16 @@ JICLocalFile::readClassAdFromFile( void )
 		needs_close = false;
 	}
 
-    char buf[1024];
-	while( fgets(buf, 1024, fp) ) {
+	MyString line;
+	while( line.readLine(fp) ) {
         read_something = true;
-		chomp( buf );
+		line.chomp();
 		if( DebugFlags & D_JOB ) {
-			dprintf( D_JOB, "FILE: %s\n", buf );
+			dprintf( D_JOB, "FILE: %s\n", line.GetCStr() );
 		} 
-        if( ! job_ad->Insert(buf) ) {
+        if( ! job_ad->Insert(line.GetCStr()) ) {
             dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
-                     "ignoring this line\n", buf );
+                     "ignoring this line\n", line.GetCStr() );
         }
     }
 	
