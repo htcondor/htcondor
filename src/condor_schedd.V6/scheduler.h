@@ -193,7 +193,6 @@ class Scheduler : public Service
 
     Mrec**      	rec;
     int         	nMrec;                     // # of match records
-    int         	aliveFrequency;            // how often to broadcast alive
     int         	aliveInterval;             // how often to broadcast alive
 };
 	
