@@ -1,3 +1,6 @@
+#if !defined(_STARTUP_H)
+#define _STARTUP_H
+
 typedef struct {
 	int		version_num;			/* version of this structure */
 	int		cluster;				/* Condor Cluster # */
@@ -24,3 +27,5 @@ Should eliminate starter knowing the a.out name.  Should go to
 shadow for instructions on how to fetch the executable - e.g. local file
 with name <name> or get it from TCP port <x> on machine <y>.
 */
+
+#endif /* _STARTUP_H */
