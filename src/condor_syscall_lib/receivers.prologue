@@ -63,17 +63,35 @@ extern "C" {
 extern "C" {
 	
 	ssize_t getdirentries(int fd, char *buf, size_t nbytes, off_t *basep);
+	ssize_t getdirentries64(int fd, char *buf, size_t nbytes, off64_t *basep);
 
 	/*
 	There is no public interface to getdents in the Linux C library.
 	So, here we provide one based on a better-known public function.
 	*/
 
+	/* It angers me that this is here because basically it creates a definition
+		for getdents when linking with the standard universe shadow.
+		-psilord */
+
 	static int getdents( int fd, struct dirent *buf, size_t nbytes ) {
 		off_t basep;
 		basep = lseek(fd,0,SEEK_CUR);
 		return getdirentries(fd,(char*)buf,nbytes,&basep);
 	}
+
+	static int getdents64( int fd, struct dirent64 *buf, size_t nbytes ) {
+		off64_t basep;
+		basep = lseek64(fd,0,SEEK_CUR);
+		return getdirentries64(fd,(char*)buf,nbytes,&basep);
+	}
+}
+#endif
+
+#if defined(Solaris) || defined(LINUX)
+/* there doesn't seem to be a correct prototype of this in the header files.. */
+extern "C" {
+int getdents64( int fd, struct dirent64 *buf, size_t nbytes );
 }
 #endif
 
