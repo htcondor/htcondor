@@ -98,7 +98,7 @@ foreach $dir ( split /:/, $ENV{PATH} )
         last;
     }
 }
-$dagman_path || 
+-x $dagman_path || 
     die "Can't find the condor_dagman exectuable in your PATH, aborting.\n";
 
 # Make sure all the files we're going to use are available, and if
