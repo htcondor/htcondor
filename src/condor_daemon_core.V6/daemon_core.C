@@ -5753,7 +5753,7 @@ pidWatcherThread( void* arg )
 			// are no longer thread safe, so we must grab our Big_fat lock.
 			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
 	        SafeSock sock;
-			Daemon d(daemonCore->InfoCommandSinfulString());
+			Daemon d( DT_ANY, daemonCore->InfoCommandSinfulString() );
 
 			bool notify_failed;
 			if ( exited_pid ) {
