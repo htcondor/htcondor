@@ -413,7 +413,7 @@ CollectorClassStatsList::publish( ClassAd *ad )
 			sprintf( line, "%s_%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY,
 					 name, tmp );
 			ad->Insert(line);
-			delete tmp;
+			delete [] tmp;
 		}
 	}
 	return 0;
