@@ -37,6 +37,9 @@
 #endif
 
 #ifndef WIN32
+
+#include "syscall_numbers.h"
+
 typedef int BOOL;
 static const int 	SYS_LOCAL = 1;
 static const int 	SYS_REMOTE = 0;
@@ -67,4 +70,4 @@ int REMOTE_syscall( int syscall_num, ... );
 }
 #endif
 
-#endif
+#endif /* _CONDOR_SYSCALLS_H */
