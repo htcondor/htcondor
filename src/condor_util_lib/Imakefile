@@ -10,20 +10,8 @@ MALLOC_OBJ = malloc.o
 FLOCK_OBJ = flock.o
 #endif
 
-#if !HAS_SETREUID
-SETREUID_OBJ = setreuid.o
-#endif
-
 #if !HAS_SETEUID
 SETEUID_OBJ = seteuid.o
-#endif
-
-#if !HAS_SETREGID
-SETREGID_OBJ = setregid.o
-#endif
-
-#if !HAS_SETRGID
-SETRGID_OBJ = setrgid.o
 #endif
 
 #if !HAS_SETEGID
@@ -62,8 +50,8 @@ INET_NTOA_OBJ = inet_ntoa.o
 	get_port_range.o \
 	ctrace.o detach.o update_rusage.o cronos.o \
 	$(FLOCK_OBJ) \
-	$(SETREUID_OBJ) email.o email_file.o \
-	$(GETDTABLESIZE_OBJ) $(SETRGID_OBJ) $(SETREGID_OBJ) $(MALLOC_OBJ)\
+	email.o email_file.o \
+	$(GETDTABLESIZE_OBJ) $(MALLOC_OBJ)\
 	$(SETEGID_OBJ) $(SETEUID_OBJ) $(GETPAGESIZE_OBJ) $(SETLINEBUF_OBJ) \
 	$(GETWD_OBJ) ckpt_name.o \
 	lock_file.NON_POSIX.o my_popen.o $(GETMNT_OBJ) $(INET_NTOA_OBJ) \
