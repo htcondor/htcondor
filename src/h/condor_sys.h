@@ -72,6 +72,8 @@ extern char *CONDOR_SyscallNames[];
 **	system calls start at 0.
 */
 
+/* #define PSEUDO_get_file_chunk	-24 */
+#define PSEUDO_suspended		-23
 #define PSEUDO_pvm_task_info	-22
 #define PSEUDO_new_connection   -21
 #define PSEUDO_pvm_info         -20
@@ -95,7 +97,7 @@ extern char *CONDOR_SyscallNames[];
 #define PSEUDO_getppid      	-2
 #define PSEUDO_wait3        	-1
 
-#define NFAKESYSCALLS    22
+#define NFAKESYSCALLS    23
 
 #define NREALSYSCALLS	 242
 #define CONDOR_SYSCALLNAME(sysnum) \
