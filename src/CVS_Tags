@@ -1,3 +1,6 @@
+03/18/05 V6_7-parallel-branch
+   A branch for the parallel universe work
+
 03/17/05 V6_7_6-merge-1
    The state of the V6_7_6-branch for a merge into V6_7-branch.  The
    only real change is the version of the gt4-gahp we're using, and a
