@@ -4977,7 +4977,11 @@ int DaemonCore::Create_Process(
 			}
 		} else {
 			MyString msg = "Just closed standard file fd(s): ";
+
                 // if we don't want to re-map these, close 'em.
+			    // However, make sure that its not in the inherit list first
+			int	num_closed = 0;
+			int	closed_fds[3];
             for ( int q=0 ; (q<openfds) && (q<3) ; q++ ) {
 				bool found = FALSE;
 				for ( int k=0 ; k < numInheritSockFds ; k++ ) {
@@ -4986,12 +4990,35 @@ int DaemonCore::Create_Process(
 						break;
 					}
 				}
+				// Now, if we didn't find it in the inherit list, close it
                 if ( ( ! found ) && ( close ( q ) != -1 ) ) {
+					closed_fds[num_closed++] = q;
 					msg += q;
 					msg += ' ';
                 }
             }
 			dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+
+			// Re-open 'em to point at /dev/null as place holders
+			if ( num_closed ) {
+				int	fd_null = open( NULL_FILE, 0 );
+				if ( fd_null < 0 ) {
+					dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
+							 strerror(errno) );
+				} else {
+					int		i;
+					for ( i=0;  i<num_closed;  i++ ) {
+						if ( ( closed_fds[i] != fd_null ) &&
+							 ( dup2( fd_null, closed_fds[i] ) < 0 ) ) {
+							dprintf( D_ALWAYS,
+									 "Error dup2()ing %s -> %d: %s\n",
+									 NULL_FILE,
+									 closed_fds[i], strerror(errno) );
+						}
+					}
+					close( fd_null );
+				}
+			}
         }
 
 			/* here we want to put all the unix_env stuff into the 

@@ -1286,7 +1286,23 @@ int main( int argc, char** argv )
 		}
 		// and close stdin, out, err if we are the MASTER.  
 		if ( is_master ) {
-			close(0); close(1); close(2);
+			int	fd_null = open( NULL_FILE, 0 );
+			if ( fd_null < 0 ) {
+				fprintf( stderr, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
+				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
+			}
+			int	fd;
+			for( fd=0;  fd<=2;  fd++ ) {
+				close( fd );
+				if ( ( fd_null >= 0 ) && ( fd_null != fd ) &&
+					 ( dup2( fd_null, fd ) < 0 )  ) {
+					dprintf( D_ALWAYS, "Error dup2()ing %s -> %d: %s\n",
+							 NULL_FILE, fd, strerror(errno) );
+				}
+			}
+			if ( fd >= 0 ) {
+				close( fd );
+			}
 		}
 		// and detach from the controlling tty
 		detach();
