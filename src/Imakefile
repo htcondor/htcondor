@@ -244,7 +244,9 @@ object_target(daemon_core.V6)
 #endif
 object_target(prio)
 object_target(scripts)
-object_target(globus)
+#if WANT_GLOBUS && HAS_GLOBUS
+    object_target(globus)
+#endif
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
 
