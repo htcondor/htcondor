@@ -58,6 +58,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_secman.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "condor_version.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #include "condor_fix_assert.h"
@@ -2694,6 +2695,10 @@ int DaemonCore::HandleReq(int socki)
 					}
 				}
 
+				// add our version to the policy to be sent over
+				sprintf (buf, "%s=\"%s\"", ATTR_SEC_VERSION, CondorVersion());
+				the_policy->InsertOrUpdate(buf);
+				
 				// handy policy vars
 				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
 				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
@@ -2799,6 +2804,38 @@ int DaemonCore::HandleReq(int socki)
 				SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
 				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
 				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
+
+
+				// protocol fix:
+				//
+				// up to and including 6.6.0, will_authenticate would be set to
+				// true if we are resuming a session that was authenticated.
+				// this is not necessary.
+				//
+				// so, as of 6.6.1, if we are resuming a session (as determined
+				// by the expression (!new_session), AND the other side is
+				// 6.6.1 or higher, we will force will_authenticate to
+				// SEC_FEAT_ACT_NO.
+
+				if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+					if ((!new_session)) {
+						char * remote_version = NULL;
+						the_policy->LookupString(ATTR_SEC_VERSION, &remote_version);
+						if(remote_version) {
+							// this attribute was added in 6.6.1.  it's mere
+							// presence means that the remote side is 6.6.1 or
+							// higher, so no need to instantiate a CondorVersionInfo.
+							dprintf( D_SECURITY, "SECMAN: other side is %s, NOT reauthenticating.\n", remote_version );
+							will_authenticate = SecMan::SEC_FEAT_ACT_NO;
+
+							free (remote_version);
+						} else {
+							dprintf( D_SECURITY, "SECMAN: other side is pre 6.6.1, reauthenticating.\n" );
+						}
+					} else {
+						dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
+					}
+				}
 
 
 
@@ -2940,6 +2977,9 @@ int DaemonCore::HandleReq(int socki)
 
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
+					// it matters if the version is empty, so we must explicitly delete it
+					the_policy->Delete( ATTR_SEC_VERSION );
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_VERSION );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );

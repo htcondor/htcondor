@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_ver_info.h"
+#include "condor_version.h"
 
 #include "authentication.h"
 #include "condor_string.h"
@@ -1017,6 +1018,22 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		}
 	}
 
+	// extract the version attribute current in the classad - it is
+	// the version of the remote side.
+	MyString remote_version;
+	char * rvtmp = NULL;
+	auth_info.LookupString ( ATTR_SEC_VERSION, &rvtmp );
+	if (rvtmp) {
+		remote_version = rvtmp;
+		free(rvtmp);
+	} else {
+		remote_version = "unknown";
+	}
+
+	// fill in our version
+	sprintf(buf, "%s=\"%s\"", ATTR_SEC_VERSION, CondorVersion());
+	auth_info.InsertOrUpdate(buf);
+	dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
 
 	// fill in return address, if we are a daemon
 	char* dcss = global_dc_sinful();
@@ -1262,6 +1279,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 				auth_response.dPrint( D_SECURITY );
 			}
 
+			// it makes a difference if the version is empty, so we must
+			// explicitly delete it before we copy it.
+			auth_info.Delete(ATTR_SEC_VERSION);
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VERSION );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENACT );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
@@ -1301,6 +1321,32 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 			errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Error: Action attribute missing");
 			return false;
+		}
+
+		// protocol fix:
+		//
+		// up to and including 6.6.0, will_authenticate would be set to true
+		// if we are resuming a session that was authenticated.  this is not
+		// necessary.
+		//
+		// so, as of 6.6.1, if we are resuming a session (as determined
+		// by the expression (!new_session), AND the other side is 6.6.1
+		// or higher, we will force will_authenticate to SEC_FEAT_ACT_NO.
+		//
+		// we can tell easily if the other side is 6.6.1 or higher by the
+		// mere presence of the version, since that is when it was added.
+
+		if ((will_authenticate == SEC_FEAT_ACT_YES)) {
+			if ((!new_session)) {
+				if (remote_version != "unknown") {
+					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", remote_version.Value() );
+					will_authenticate = SEC_FEAT_ACT_NO;
+				} else {
+					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n", remote_version.Value() );
+				}
+			} else {
+				dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
+			}
 		}
 
 		
