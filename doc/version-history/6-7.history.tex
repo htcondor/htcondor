@@ -22,6 +22,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added an \Expr{INCLUDE} config file entry that will be the location 
+	of the header files shipped with Condor that are to be used with
+	libcondorapi.a. 
+	You may find out what this value is via \Condor{config\_val}.
+
 \item A Condor pool can now support multiple Collectors. This should
   improve stability due to automatic failover. All daemons will now
   send updates to ALL of the specified collectors. All daemons/tools
@@ -52,6 +57,16 @@ tuning job start rate versus available \Condor{schedd} performance.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When supplying a -L<condor/installation/include> linker flag to
+	find the libcondorapi.a library via the -l linker flag to
+	various compilers, under linux there would be errors emitted
+	that indicated an undefined symbols problem linking with
+	libc. 
+	Condor ships a version of glibc in the same location as the
+	libcondorapi.a file, and there was a libc mismatch during linking
+	of program which only used libcondorapi.a.  
+	This has been fixed.
 
 \item When the \Condor{startd} is evaluating the state of each virtual
   machine (VM), it now refreshes any ClassAd attributes which are
