@@ -1,0 +1,48 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_f-reader_std.cmd';
+$testname = 'Fortran Reader Test';
+
+$OutputTest = sub
+{
+    my %info = @_;
+    my $output = $info{"output"};
+    my $error = $info{"error"};
+
+    $_ = `wc -l /etc/passwd`;
+    /\s*(\d+).*/;
+    $lines = $1;
+
+    -f $error || 
+	die "$testname: FAILURE ($error doesn't exist)\n";
+
+    -z $error || 
+	die "$testname: FAILURE (STDERR contains data)\n";
+
+    open( OUTPUT, "<$output" ) || die "Can't open $output: $!\n";
+    $line = 1;
+    while( <OUTPUT> ) {
+	if( /^\s*Read\s*(\d+)\s*lines/ ) {
+	    if( $lines != $1 ) {
+		die "$testname: FAILURE (Actual lines read [$1] " .
+		    "doesn't match expected [$lines] on line $line)\n";
+	    }
+	} else {
+	    die "$testname: FAILURE (Can't parse output on line $line)\n";
+	}
+	$line++;
+    }
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $OutputTest );
+CondorTest::RegisterExitedFailure( $testname, $OutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+        print "$testname: SUCCESS\n";
+        exit(0);
+} else {
+        die "$testname: CondorTest::RunTest() failed\n";
+}
+
