@@ -37,6 +37,7 @@ Job::Job (const char *jobName, const char *cmdFile):
 {
 
     _jobName = strnewp (jobName);
+	assert( _jobName != NULL );
     _cmdFile = strnewp (cmdFile);
 
     // _condorID struct initializes itself

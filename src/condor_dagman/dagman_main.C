@@ -336,6 +336,9 @@ void main_timer () {
 			debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
 			G.dag->Rescue(G.rescue_file, G.datafile);
 		}
+		else {
+			debug_println( DEBUG_NORMAL, "Rescue file not defined..." );
+		}
         G.CleanUp();
         DC_Exit(0);
     }

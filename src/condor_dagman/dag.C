@@ -97,6 +97,11 @@ bool Dag::Bootstrap (bool recovery) {
         debug_println (DEBUG_NORMAL, "Running in RECOVERY mode...");
         if (!ProcessLogEvents (recovery)) return false;
     }
+
+	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
+		Print_TermQ();
+	}	
+
     return SubmitReadyJobs();
 }
 
@@ -323,6 +328,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  // dependencies given our successful completion
 
 				  job->_Status = Job::STATUS_DONE;
+				  _numJobsRunning--;
+				  assert( _numJobsRunning >= 0 );
 				  TerminateJob( job );
 
 				  if( !recovery ) {
@@ -443,7 +450,7 @@ Dag::SubmitCondor( Job* job )
     assert( job->_Status == Job::STATUS_READY );
 
 	if( ! job->CanSubmit() ) {
-		// when would this ever happen?  --pfc (2000-12-01)
+		// when would this ever happen? why not assert()?  --pfc (2000-12-01)
 		if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
 			printf( "Warning: trying to submit unready job " );
 			job->Print( true );
@@ -570,6 +577,8 @@ Dag::PostScriptReaper( int pid, int status )
 	if( job->retval == 0 ) {
 		// update DAG dependencies given our successful completion
 		job->_Status = Job::STATUS_DONE;
+		_numJobsRunning--;
+		assert( _numJobsRunning >= 0 );
 		TerminateJob( job );
 		
 		// submit any waiting child jobs
@@ -769,8 +778,6 @@ void Dag::TerminateJob (Job * job) {
         child->Remove(Job::Q_WAITING, job->GetJobID());
     }
     _numJobsDone++;
-    _numJobsRunning--;
-    assert (_numJobsRunning >= 0);
     assert (_numJobsDone <= _jobs.Number());
 
     //
@@ -859,7 +866,12 @@ Job * Dag::GetSubmittedJob (bool recovery) {
 
 //-------------------------------------------------------------------------
 bool Dag::SubmitReadyJobs () {
-    if (_termQ.IsEmpty()) return true;
+    if( _termQ.IsEmpty() ) {
+		if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
+			Print_TermQ();
+		}
+		return true;
+	}
     assert (!_termQLock);
     _termQLock = true;
 
@@ -874,6 +886,11 @@ bool Dag::SubmitReadyJobs () {
         Job * job = GetJob(jobID);
         assert (job != NULL);
         if (job->CanSubmit()) {
+			if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
+				printf( "Submitting job " );
+				job->Print( true );
+				printf( "\n" );
+			}
             if (!Submit (job)) {
                 if (DEBUG_LEVEL(DEBUG_QUIET)) {
                     printf ("Fatal error submitting job ");
@@ -883,6 +900,10 @@ bool Dag::SubmitReadyJobs () {
                 return false;
             }
         }
+		else if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
+			printf( "job->CanSubmit() returned false\n" );
+			job->Dump();
+		}
     }
     _termQLock = false;
     return true;
