@@ -92,6 +92,7 @@ static void calc_stack_to_save();
 extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 extern "C" int get_ckpt_mode( int sig );
+extern "C" int get_ckpt_speed( );
 
 Image MyImage;
 static jmp_buf Env;
@@ -260,9 +261,26 @@ SegMap::Init( const char *n, RAW_ADDR c, long l, int p )
 void
 SegMap::MSync()
 {
-	if (msync((char *)core_loc, len, MS_ASYNC) < 0) {
-		dprintf( D_ALWAYS, "msync(%x, %d) failed with errno = %d\n",
-				 core_loc, len, errno );
+	/* We use msync() to commit our dirty pages to swap space periodically.
+	   This reduces the number of dirty pages that need to be swapped out
+	   if we are suspended, reducing the cost of a suspend operation.
+	   We would like to use MS_ASYNC, like this:
+	     if (msync((char *)core_loc, len, MS_ASYNC) < 0) {
+		   dprintf( D_ALWAYS, "msync(%x, %d) failed with errno = %d\n",
+		   core_loc, len, errno );
+		 }
+	   Unfortunately, this seems to overwhelm some systems with write
+	   requests (possibly because MS_ASYNC is rarely used, so kernel
+	   developers don't work to get it right), so instead we use MS_SYNC
+	   below to write pagesize chunks synchronously.  This may be less
+	   efficient, but it is better than hanging the machine.
+	*/
+	int pagesize = getpagesize();
+	for (int i = 0; i < len; i += pagesize) {
+		if (msync((char *)core_loc+i, pagesize, MS_SYNC) < 0) {
+			dprintf( D_ALWAYS, "msync(%x, %d) failed with errno = %d\n",
+					 core_loc+i, pagesize, errno );
+		}
 	}
 }
 
@@ -896,7 +914,13 @@ Image::Write( const char *ckpt_file )
 		int mode = get_ckpt_mode(check_sig);
 		if (mode > 0) {
 			condor_compress_ckpt = (mode&CKPT_MODE_USE_COMPRESSION) ? 1 : 0;
-			condor_slow_ckpt = (mode&CKPT_MODE_SLOW) ? 1 : 0;
+			if (mode&CKPT_MODE_SLOW) {
+				condor_slow_ckpt = get_ckpt_speed();
+				dprintf(D_ALWAYS, "Checkpointing at %d KB/s.\n",
+						condor_slow_ckpt);
+			} else {
+				condor_slow_ckpt = 0;
+			}
 			if (mode&CKPT_MODE_MSYNC) {
 				dprintf(D_ALWAYS,
 						"Performing an msync() on all dirty pages...\n");
@@ -1350,8 +1374,9 @@ SegMap::Write( int fd, ssize_t pos )
 					Suicide();
 				}
 				if (condor_slow_ckpt) {
-					// 256K per second
-					sleep(((old_avail_in-zstr->avail_in)/262144)+1);
+					// write condor_slow_ckpt KB per second
+					sleep(((old_avail_in-zstr->avail_in)/
+						   (condor_slow_ckpt*KILO))+1);
 				}
 			}
 			if (zstr->avail_out != zbufsize) {
@@ -1369,8 +1394,9 @@ SegMap::Write( int fd, ssize_t pos )
 	char *ptr = (char *)core_loc;
 	while (bytes_to_go) {
 		size_t write_size;
-		if (condor_slow_ckpt && bytes_to_go > 262144) {
-			write_size = 262144; // 256K
+		if (condor_slow_ckpt && bytes_to_go > (condor_slow_ckpt*KILO)) {
+			// write condor_slow_ckpt KB per second
+			write_size = condor_slow_ckpt*KILO;
 		} else {
 			write_size = bytes_to_go;
 		}
