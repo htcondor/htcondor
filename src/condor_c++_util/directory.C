@@ -617,7 +617,7 @@ temp_dir_path()
 		prefix = param("TEMP_DIR");
 	}
 	if (!prefix) {
-#ifndef WIN32		
+#ifndef WIN32
 		prefix = strdup("/tmp");
 #else
 			// try to get the temp dir, otherwise just use the root directory
@@ -631,7 +631,32 @@ temp_dir_path()
 			}
 		}
 #endif
-	}			
+	}
 	return prefix;
 }
 
+/*
+  Atomically creates a unique file in the temporary directory 
+  (as returned by temp_dir_path())
+  Returns the name of the new file
+  The pointer returned must be de-allocated by the caller w/ free().
+*/
+
+char * 
+create_temp_file() {
+	char * temp_dir = temp_dir_path();
+	char * filename = (char*)(malloc (500));
+	//int pid = daemonCore->getPid();
+	int timestamp = (int)time(NULL);
+	int fd=-1;
+
+	do {
+		sprintf (filename, "%s/tmp.%d", temp_dir, timestamp);
+	} while ((fd=open (filename, O_EXCL | O_CREAT)) == -1);
+
+	close (fd);
+
+	free (temp_dir);
+
+	return filename;
+}

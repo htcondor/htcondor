@@ -331,4 +331,6 @@ char* dircat( const char* dirpath, const char* filename );
 */
 char* temp_dir_path();
 
+
+char * create_temp_file();
 #endif
