@@ -176,22 +176,22 @@
 #if defined( BufferCondorIO )
 	off_t lseek( map(int fd), off_t offset, int whence ); 
 	ssize_t read( map(int fd), void *buf, size_t len ) {
-		out xdr_bytes( &buf, &rval, len );
+		out code_bytes( &buf, &rval, len );
 		alloc( buf, len );
 	}
 	
         ssize_t write( map(int fd), const void *buf, size_t len ) {
-		in xdr_bytes( &buf, &len, len );
+		in code_bytes( &buf, &len, len );
 		alloc( buf, len );
 	}
 
 	int lseekread( map(int fd), off_t offset, int whence, void *buf, size_t len ) : pseudo {
-		out xdr_bytes( &buf, &rval, len );
+		out code_bytes( &buf, &rval, len );
 		alloc( buf, len );
 	}
 
         int lseekwrite( map(int fd), off_t offset, int whence, const void *buf, size_t len ) : pseudo {
-		in xdr_bytes( &buf, &len, len );
+		in code_bytes( &buf, &len, len );
 		alloc( buf, len );
         }
 #endif
@@ -284,7 +284,7 @@
 	*/
 #if !defined(SWITCH)
 	int getlogin( char *loginbuf ) : pseudo {
-		out xdr_string( &loginbuf, _POSIX_PATH_MAX );
+		out code( loginbuf );
 		alloc ( loginbuf, _POSIX_PATH_MAX );
 	}  
 #endif  /* not SWITCH for getlogin() */
@@ -342,13 +342,13 @@ int rename( const char *from, const char *to ) : pseudo {
 	}
 	
 	int get_IOServerAddr( int *reqtype, const char *filename, char *host, int *port ) : pseudo {
-	    in xdr_int( reqtype );
+	    in code( reqtype );
 	    SEND_PATH( filename );
-	    in xdr_string( &host, MAX_STRING );
-	    in xdr_int( port );
+	    in code( host );
+	    in code( port );
 
 	    GET_PATH( host );
-	    out xdr_int( port );
+	    out code( port );
 
 	    ALLOC_PATH( host );
 	    ALLOC_PATH( filename );
