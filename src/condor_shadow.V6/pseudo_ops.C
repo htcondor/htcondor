@@ -889,6 +889,94 @@ RequestCkptBandwidth(unsigned int ip_addr)
 	sock.end_of_message();
 }
 
+/* 
+   We allocate bandwidth for RSC here.  Since we don't know how much
+   RSC I/O we will generate in the future, we must make some
+   prediction.  We use an exponential average of our past network
+   usage for RIO to predict future RIO needs.  We can track our
+   prediction error as we go.
+*/
+
+void
+RequestRSCBandwidth()
+{
+	static float prev_bytes_sent=0.0, prev_bytes_recvd=0.0;
+	static float send_estimate=0.0, recv_estimate=0.0;
+	ClassAd send_request, recv_request;
+	char buf[100], endpoint[100], owner[100], user[100], *str;
+	int nice_user = 0;
+
+	if (!syscall_sock) return;
+
+	float bytes_sent = syscall_sock->get_bytes_sent() - prev_bytes_sent;
+	float bytes_recvd = syscall_sock->get_bytes_recvd() - prev_bytes_recvd;
+
+	prev_bytes_sent = syscall_sock->get_bytes_sent();
+	prev_bytes_recvd = syscall_sock->get_bytes_recvd();
+
+	float prev_send_estimate = send_estimate;
+	float prev_recv_estimate = recv_estimate;
+
+	send_estimate = (bytes_sent + send_estimate) / 2;
+	recv_estimate = (bytes_recvd + recv_estimate) / 2;
+
+	// don't bother allocating anything under 1KB
+	if (send_estimate < 1024.0 && recv_estimate < 1024.0) return;
+
+	Daemon Negotiator(DT_NEGOTIATOR);
+	SafeSock sock;
+	sock.timeout(10);
+	if (!sock.connect(Negotiator.addr())) {
+		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
+		return;
+	}
+	sock.put(REQUEST_NETWORK);
+	sock.put(2);
+
+	// these attributes are only required in the first network req. ClassAd
+	sprintf(buf, "%s = \"RemoteSyscalls\"", ATTR_TRANSFER_TYPE);
+	send_request.Insert(buf);
+	JobAd->LookupInteger(ATTR_NICE_USER, nice_user);
+	JobAd->LookupString(ATTR_OWNER, owner);
+	sprintf(user, "%s%s@%s", (nice_user) ? "nice-user." : "", owner,
+			My_UID_Domain);
+	sprintf(buf, "%s = \"%s\"", ATTR_USER, user);
+	send_request.Insert(buf);
+	sprintf(buf, "%s = %f", ATTR_BYTES_SENT, bytes_sent);
+	send_request.Insert(buf);
+	sprintf(buf, "%s = %f", ATTR_BYTES_RECVD, bytes_recvd);
+	send_request.Insert(buf);
+	sprintf(buf, "%s = %f", ATTR_PREV_SEND_ESTIMATE, prev_send_estimate);
+	send_request.Insert(buf);
+	sprintf(buf, "%s = %f", ATTR_PREV_RECV_ESTIMATE, prev_recv_estimate);
+	send_request.Insert(buf);
+	strcpy(endpoint, ExecutingHost+1);
+	str = strchr(endpoint, ':');
+	*str = '\0';
+	sprintf(buf, "%s = \"%s\"", ATTR_REMOTE_HOST, ExecutingHost);
+	send_request.Insert(buf);
+
+	// these attributes must be defined for both network req. ClassAds
+	sprintf(buf, "%s = 1", ATTR_FORCE);
+	send_request.Insert(buf);
+	recv_request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, endpoint);
+	send_request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, inet_ntoa(*my_sin_addr()));
+	send_request.Insert(buf);
+	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY, recv_estimate);
+	send_request.Insert(buf);
+	send_request.put(sock);
+	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, endpoint);
+	recv_request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, inet_ntoa(*my_sin_addr()));
+	recv_request.Insert(buf);
+	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY, send_estimate);
+	recv_request.Insert(buf);
+	recv_request.put(sock);
+	sock.end_of_message();
+}
+
 /*
   Accept a TCP connection on the connect_sock.  Close the connect_sock,
   and return the new fd.
