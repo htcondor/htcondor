@@ -4581,7 +4581,12 @@ int DaemonCore::Create_Process(
 
     // Re-nice our child -- on WinNT, this means run it at IDLE process
 	// priority class.
-    if ( nice_inc > 0 && nice_inc < 20 ) {
+
+	// NOTE: Can't we have a more fine-grained approach than this?  I
+	// think there are other priority classes, and we should probably
+	// map them to ranges within the 0-20 Unix nice-values... --pfc
+
+    if ( nice_inc > 0 ) {
 		// or new_process_group with whatever we set above...
 		new_process_group |= IDLE_PRIORITY_CLASS;
 	}
@@ -5056,13 +5061,12 @@ int DaemonCore::Create_Process(
 		}
 
             /* Re-nice ourself */
-        if ( nice_inc > 0 && nice_inc < 20 ) {
+        if( nice_inc > 0 ) {
+			if( nice_inc > 19 ) {
+				nice_inc = 19;
+			}
             dprintf ( D_DAEMONCORE, "calling nice(%d)\n", nice_inc );
             nice( nice_inc );
-        }
-        else if ( nice_inc >= 20 ) {
-            dprintf ( D_DAEMONCORE, "calling nice(19)\n" );
-            nice( 19 );
         }
 
 #if defined( Solaris ) && defined( sun4m )
