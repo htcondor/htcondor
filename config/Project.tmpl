@@ -144,7 +144,7 @@ name: obj lib startup libc 									@@\
 #endif
 
 
-#if IS_SPARC_SUNOS41 || IS_MC68020_SUNOS41 || IS_SPARC_CMOS
+#if IS_SPARC_SUNOS41 || IS_MC68020_SUNOS41 || IS_SPARC_CMOS || IS_SPARC_SOLARIS2
 #define Build_C(program,objlist,libs,startup,libc)			@@\
 program: objlist libs startup libc							@@\
 	ld -o program -dc -e start -Bstatic startup objlist libs libc
@@ -162,7 +162,7 @@ program: objlist libs startup libc							@@\
 #define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC)
 #endif
 
-#if IS_SPARC_SUNOS41 || IS_SPARC_CMOS
+#if IS_SPARC_SUNOS41 || IS_SPARC_CMOS || IS_SPARC_SOLARIS2
 #define Build_F(program,objlist,libs,startup,libc)			@@\
 program: objlist libs startup libc							@@\
 	ld FortranLeft -o program startup FortranMiddle objlist libs FortranRight libc
