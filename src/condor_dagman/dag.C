@@ -61,6 +61,14 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
 				  "_maxPreScripts = %d, _maxPostScripts = %d\n",
 				  _maxJobsSubmitted, _maxPreScripts, _maxPostScripts );
 	DFS_ORDER = 0;
+
+	_dot_file_name         = NULL;
+	_dot_include_file_name = NULL;
+	_update_dot_file       = false;
+	_overwrite_dot_file    = true;
+	_dot_file_name_suffix  = 0;
+
+	return;
 }
 
 //-------------------------------------------------------------------------
@@ -70,6 +78,14 @@ Dag::~Dag() {
 	delete _postScriptQ;
 	delete _submitQ;
 	delete _readyQ;
+
+	if (_dot_file_name != NULL) {
+		delete _dot_file_name;
+	}
+	if (_dot_include_file_name != NULL) {
+		delete _dot_include_file_name;
+	}
+	return;
 }
 
 //-------------------------------------------------------------------------
@@ -1010,3 +1026,283 @@ Dag::isCycle ()
 	return cycle;
 }
 
+//===========================================================================
+// Methods for Dot Files, both public and private
+//===========================================================================
+
+
+//-------------------------------------------------------------------------
+// 
+// Function: SetDotFileName
+// Purpose:  Sets the base name of the dot file name. If we aren't 
+//           overwriting the file, it will have a number appended to it.
+// Scope:    Public
+//
+//-------------------------------------------------------------------------
+void 
+Dag::SetDotFileName(char *dot_file_name)
+{
+	if (_dot_file_name != NULL) {
+		delete _dot_file_name;
+	}
+
+	_dot_file_name = strnewp(dot_file_name);
+	return;
+}
+
+//-------------------------------------------------------------------------
+// 
+// Function: SetDotIncludeFileName
+// Purpose:  Sets the name of a file that we'll take the contents from and
+//           place them into the dot file. The idea is that if someone wants
+//           to set some parameters for the graph but doesn't want to manually
+//           edit the file (perhaps a higher-level program is watching the 
+//           dot file) then we'll get the parameters from here.
+// Scope:    Public
+//
+//-------------------------------------------------------------------------
+void
+Dag::SetDotIncludeFileName(char *include_file_name)
+{
+	_dot_include_file_name = strnewp(include_file_name);
+	return;
+}
+
+//-------------------------------------------------------------------------
+// 
+// Function: DumpDotFile
+// Purpose:  Called whenever the dot file should be created. 
+//           This writes to the _dot_file_name, although the name may have
+//           a numeric suffix if we're not overwriting files. 
+// Scope:    Public
+//
+//-------------------------------------------------------------------------
+void 
+Dag::DumpDotFile(void)
+{
+	if (_dot_file_name != NULL) {
+		MyString  current_dot_file_name;
+		MyString  temp_dot_file_name;
+		FILE      *temp_dot_file;
+
+		ChooseDotFileName(current_dot_file_name);
+
+		temp_dot_file_name = current_dot_file_name + ".temp";
+
+		unlink(temp_dot_file_name.Value());
+		temp_dot_file = fopen(temp_dot_file_name.Value(), "w");
+		if (temp_dot_file == NULL) {
+			debug_dprintf(D_ALWAYS, DEBUG_NORMAL,
+						  "Can't create dot file '%s'\n", 
+						  temp_dot_file_name.Value());
+		} else {
+			time_t current_time;
+			char   *time_string;
+			char   *newline;
+
+			time(&current_time);
+			time_string = ctime(&current_time);
+			newline = strchr(time_string, '\n');
+			if (newline != NULL) {
+				*newline = 0;
+			}
+			
+			fprintf(temp_dot_file, "digraph DAG {\n");
+			fprintf(temp_dot_file, "    label=\"DAGMan Job %s status at %s\";\n\n",
+					DAGManJobId, time_string);
+
+			IncludeExtraDotCommands(temp_dot_file);
+
+			// We sweep the job list twice, just to make a nice
+			// looking DOT file. 
+			// The first sweep sets the appearance of each node.
+			// The second sweep describes all of the arcs.
+
+			DumpDotFileNodes(temp_dot_file);
+			DumpDotFileArcs(temp_dot_file);
+
+			fprintf(temp_dot_file, "}\n");
+			fclose(temp_dot_file);
+			unlink(current_dot_file_name.Value());
+			rename(temp_dot_file_name.Value(), current_dot_file_name.Value());
+		}
+	}
+	return;
+}
+
+//-------------------------------------------------------------------------
+// 
+// Function: IncludeExtraDotCommands
+// Purpose:  Helper function for DumpDotFile. Reads the _dot_include_file_name 
+//           file and places everything in it into the dot file that is being 
+//           written. 
+// Scope:    Private
+//
+//-------------------------------------------------------------------------
+void
+Dag::IncludeExtraDotCommands(
+	FILE *dot_file)
+{
+	FILE *include_file;
+
+	include_file = fopen(_dot_include_file_name, "r");
+	if (include_file == NULL) {
+        debug_printf(DEBUG_NORMAL, "Can't open %s\n", _dot_include_file_name);
+	} else {
+		char line[100];
+		fprintf(dot_file, "// Beginning of commands included from %s.\n", 
+				_dot_include_file_name);
+		while (fgets(line, 100, include_file) != NULL) {
+			fputs(line, dot_file);
+		}
+		fprintf(dot_file, "// End of commands included from %s.\n\n", 
+				_dot_include_file_name);
+	}
+	return;
+}
+
+//-------------------------------------------------------------------------
+// 
+// Function: DumpDotFileNodes
+// Purpose:  Helper function for DumpDotFile. Prints one line for each 
+//           node in the graph. This line describes how the node should
+//           be drawn, and it's based on the state of the node. In particular,
+//           we draw different shapes for each node type, but also add
+//           a short description of the state, to make it easily readable by
+//           people that are familiar with Condor job states. 
+// Scope:    Private
+//
+//-------------------------------------------------------------------------
+void 
+Dag::DumpDotFileNodes(FILE *temp_dot_file)
+{
+	Job                 *node;
+	ListIterator <Job>  joblist (_jobs);
+	
+	joblist.ToBeforeFirst();	
+	while (joblist.Next(node)) {
+		const char *node_name;
+		
+		node_name = node->GetJobName();
+		switch (node->_Status) {
+		case Job::STATUS_READY:
+			fprintf(temp_dot_file, 
+				   "    %s [shape=ellipse label=\"%s (I)\"];\n",
+				   node_name, node_name);
+			break;
+		case Job::STATUS_PRERUN:
+			fprintf(temp_dot_file, 
+				   "    %s [shape=ellipse label=\"%s (Pre)\" style=dotted];\n",
+				   node_name, node_name);
+			break;
+		case Job::STATUS_SUBMITTED:
+			fprintf(temp_dot_file, 
+				   "    %s [shape=ellipse label=\"%s (R)\" peripheries=2];\n",
+				   node_name, node_name);
+			break;
+		case Job::STATUS_POSTRUN:
+			fprintf(temp_dot_file, 
+				   "    %s [shape=ellipse label=\"%s (Post)\" style=dotted];\n",
+				   node_name, node_name);
+			break;
+		case Job::STATUS_DONE:
+			fprintf(temp_dot_file, 
+				   "    %s [shape=ellipse label=\"%s (Done)\" style=bold];\n",
+				   node_name, node_name);
+			break;
+		case Job::STATUS_ERROR:
+			fprintf(temp_dot_file, 
+				   "    %s [shape=box label=\"%s (E)\"];\n",
+				   node_name, node_name);
+			break;
+		default:
+			fprintf(temp_dot_file, 
+				   "    %s [shape=ellipse label=\"%s (I)\"];\n",
+				   node_name, node_name);
+			break;
+		}
+	}
+
+	fprintf(temp_dot_file, "\n");
+
+	return;
+}
+
+//-------------------------------------------------------------------------
+// 
+// Function: DumpDotFileArcs
+// Purpose:  Helper function for DumpDotFile. This prints one line for each
+//           arc that is in the DAG.
+// Scope:    Private
+//
+//-------------------------------------------------------------------------
+void 
+Dag::DumpDotFileArcs(FILE *temp_dot_file)
+{
+	Job                          *parent;
+	ListIterator <Job>           joblist (_jobs);
+
+	joblist.ToBeforeFirst();	
+	while (joblist.Next(parent)) {
+		Job        *child;
+		JobID_t                      childID;
+		SimpleListIterator <JobID_t> child_list;
+		const char                   *parent_name;
+		const char                   *child_name;
+		
+		parent_name = parent->GetJobName();
+		
+		child_list.Initialize(parent->GetQueueRef(Job::Q_CHILDREN));
+		child_list.ToBeforeFirst();
+		while (child_list.Next(childID)) {
+			
+			child = GetJob (childID);
+			
+			child_name  = child->GetJobName();
+			if (parent_name != NULL && child_name != NULL) {
+				fprintf(temp_dot_file, "    %s -> %s;\n",
+						parent_name, child_name);
+			}
+		}
+	}
+	
+	return;
+}
+
+//-------------------------------------------------------------------------
+// 
+// Function: ChooseDotFileName
+// Purpose:  If we're overwriting the dot file, the name is exactly as
+//           the user specified it. If we're not overwriting, we need to 
+//           choose a unique name. We choose one of the form name.number, 
+//           where the number is the first unused we find. If the user 
+//           creates a bunch of dot files (foo.0-foo.100) and deletes
+//           some in the middle (foo.50), then this could confuse the user
+//           because we'll fill in the middle. We don't worry about it though.
+// Scope:    Private
+//
+//-------------------------------------------------------------------------
+void 
+Dag::ChooseDotFileName(MyString &dot_file_name)
+{
+	if (_overwrite_dot_file) {
+		dot_file_name = _dot_file_name;
+	} else {
+		bool found_unused_file = false;
+
+		while (!found_unused_file) {
+			FILE *fp;
+
+			dot_file_name.sprintf("%s.%d", _dot_file_name, _dot_file_name_suffix);
+			fp = fopen(dot_file_name.Value(), "r");
+			if (fp != NULL) {
+				fclose(fp);
+				_dot_file_name_suffix++;
+			} else {
+				found_unused_file = true;
+			}
+		}
+		_dot_file_name_suffix++;
+	}
+	return;
+}

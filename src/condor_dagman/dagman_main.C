@@ -325,6 +325,8 @@ int main_init (int argc, char ** const argv) {
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
                    G.dag->NumJobs());
 
+	G.dag->DumpDotFile();
+
     //------------------------------------------------------------------------
     // Bootstrap and Recovery
     //
@@ -431,6 +433,10 @@ void main_timer () {
         prevJobsSubmitted = G.dag->NumJobsSubmitted();
         prevJobsReady = G.dag->NumJobsReady();
         prevScriptsRunning = G.dag->NumScriptsRunning();
+		
+		if (G.dag->GetDotFileUpdate()) {
+			G.dag->DumpDotFile();
+		}
 	}
 
     assert (G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs());

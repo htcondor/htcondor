@@ -186,7 +186,13 @@ class Dag {
 	// max number of PRE & POST scripts to run at once (0 means no limit)
     int _maxPreScripts;
     int _maxPostScripts;
-	
+
+	void SetDotFileName(char *dot_file_name);
+	void SetDotIncludeFileName(char *include_file_name);
+	void SetDotFileUpdate(bool update_dot_file)       { _update_dot_file    = update_dot_file; }
+	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
+	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
+	void DumpDotFile(void);
 	
   protected:
 
@@ -264,6 +270,20 @@ class Dag {
 	ScriptQ* _postScriptQ;
 	
 	int DFS_ORDER; 
+
+	// Information for producing dot files, which can be used to visualize
+	// DAG files. Dot is part of the graphviz package, which is available from
+	// http://www.research.att.com/sw/tools/graphviz/
+	char *_dot_file_name;
+	char *_dot_include_file_name;
+	bool  _update_dot_file;
+	bool  _overwrite_dot_file;
+	int   _dot_file_name_suffix;
+
+	void IncludeExtraDotCommands(FILE *dot_file);
+	void DumpDotFileNodes(FILE *temp_dot_file);
+	void DumpDotFileArcs(FILE *temp_dot_file);
+	void ChooseDotFileName(MyString &dot_file_name);
 };
 
 #endif /* #ifndef DAG_H */
