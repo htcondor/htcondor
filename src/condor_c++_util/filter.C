@@ -177,7 +177,7 @@ IdFilter::IdFilter( const char *str )
 {
 	char	*p;
 
-	if( p=strchr(str,'.') ) {
+	if( p=(char *)strchr((const char *)str,'.') ) {
 		cluster = atoi( str );
 		proc = atoi( ++p );
 	} else {

@@ -102,7 +102,7 @@ FindURLProtocolForName(const char *name)
 	include_urls();
 
 	/* Look for ':' separating protocol name from the rest */
-	ptr = strchr(name, ':');
+	ptr = (char *)strchr((const char *)name, ':');
 	if (ptr == 0) {
 		/* Just do it the old fashioned way if this isn't a URL */
 		errno = ENOENT;
@@ -128,7 +128,7 @@ open_url( const char *name, int flags, size_t n_bytes )
 
 	this_protocol = FindURLProtocolForName(name);	
 	if (this_protocol) {
-		ptr = strchr(name, ':');
+		ptr = (char *)strchr((const char *)name, ':');
 		ptr++;
 		rval = this_protocol->call_open_func(ptr, flags, n_bytes);
 	} else {

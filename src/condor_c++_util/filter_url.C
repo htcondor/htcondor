@@ -73,7 +73,7 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 	int		argc;
 	char	*argv[20];
 
-	pipe_char = strchr(name, '|');
+	pipe_char = (char *)strchr((const char *)name, '|');
 	if (pipe_char) {
 		*pipe_char = '\0';
 		pipe_char++;

@@ -97,8 +97,8 @@ int open_http( const char *name, int flags, size_t n_bytes )
 	name++;
 	name++;
 
-	port_sep = strchr(name, ':');
-	end_of_addr = strchr(name, '/');
+	port_sep = (char *)strchr((const char *)name, ':');
+	end_of_addr = (char *)strchr((const char *)name, '/');
 	if (end_of_addr == 0) {
 		return -1;
 	}

@@ -300,7 +300,7 @@ do_exec( const char *pathname, const char *args )
 	char	*ptr;
 
 		// get simple program name
-	if( ptr = strrchr(pathname,'/') ) {
+	if( ptr = (char *)strrchr((const char *)pathname,'/') ) {
 		strcpy( shortname, ptr + 1 );
 	} else {
 		strcpy( shortname, pathname );
