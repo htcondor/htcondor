@@ -225,7 +225,7 @@ SecMan::sec_is_negotiable (sec_req r) {
 
 
 SecMan::sec_req
-SecMan::sec_param( char* pname, sec_req def = SEC_REQ_UNDEFINED ) {
+SecMan::sec_param( char* pname, sec_req def) {
 	char *paramer = param(pname);
 	if (paramer) {
 		char buf[2];
@@ -1548,7 +1548,7 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 }
 
 
-SecMan::SecMan(int nbuckets = 209) {
+SecMan::SecMan(int nbuckets) {
 	// session_cache is a static member... we only
 	// want to construct it ONCE.
 	if (session_cache == NULL) {
