@@ -2,12 +2,12 @@
 #include "exprTree.h"
 #include <regex.h>
 
-static int fnHashFcn( const MyString& , int numBkts );
 static char* _FileName_ = __FILE__;
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 bool FunctionCall::initialized = false;
+static int fnHashFcn( const MyString& , int numBkts );
 FunctionCall::FuncTable FunctionCall::functionTable( 20 , &fnHashFcn );
 
 // start up with an argument list of size 4
@@ -370,6 +370,7 @@ testMember(char *name, ArgumentList &argList, EvalState &state, Value &val)
 	}
 
     // check for membership
+	arg0.IsListValue( el );
 	el->Rewind( );
 	while( ( tree = el->Next( ) ) ) {
 		if( !tree->Evaluate( state, cArg ) ) {
@@ -478,7 +479,7 @@ boundFrom (char *fn, ArgumentList &argList, EvalState &state, Value &val)
 	if( !argList[0]->Evaluate( state, listVal ) ) {
 		val.SetErrorValue( );
 		return( false );
-	} else if( listVal.IsUndefinedValue ) {
+	} else if( listVal.IsUndefinedValue( ) ) {
 		val.SetUndefinedValue( );
 		return( true );
 	} else if( !listVal.IsListValue( el ) ) {
@@ -1422,4 +1423,4 @@ matchPattern( char*, ArgumentList &argList, EvalState &state, Value &result )
 	}
 }
 
-} // namespace classad
+END_NAMESPACE // classad
