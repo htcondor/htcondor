@@ -166,7 +166,6 @@ class DedicatedScheduler : public Service {
 
 	char* name( void ) { return ds_name; };
 	char* owner( void ) { return ds_owner; };
-	char* schedulerName( void ) { return ds_scheduler; };
 
 		/** Publish a ClassAd to the collector that says we have
 			resource requests we want to negotiate for.
@@ -289,9 +288,9 @@ class DedicatedScheduler : public Service {
 
 	ClassAd		dummy_job;		// Dummy ad used for claiming startds 
 
-	char* ds_name;		// Name of this dedicated scheduler
+	char* ds_name;		// Name of this dedicated scheduler.  Also
+		                // used for ATTR_SCHEDULER.
 	char* ds_owner;		// "Owner" to identify this dedicated scheduler 
-	char* ds_scheduler;	// ATTR_SCHEDULER for the dedicated scheduler
 
 };
 
