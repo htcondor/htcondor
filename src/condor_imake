@@ -111,13 +111,13 @@ fi
 LIBGCC=`gcc -print-libgcc-file-name`
 EgcsLib="-DLIB_GCC=$LIBGCC"
 
-if [ $os = "HP-UX" -a $osrelease = "B.10.20" ] ; then
+if [ $os = "HP-UX" -a "$osrelease" = "B.10.20" ] ; then
 	Opsys="-DIS_HPUX10"
 
-elif [ $os = "HP-UX" -a $osversion = "B.11.00" ] ; then
+elif [ $os = "HP-UX" -a "$osversion" = "B.11.00" ] ; then
 	Opsys="-DIS_HPUX11"
 
-elif [ $os = "OSF1" -a $osversion = "V4.0" ] ; then
+elif [ $os = "OSF1" -a "$osversion" = "V4.0" ] ; then
 	Opsys="-DIS_DUX4"
 
 elif [ $os = "Linux" ]; then
@@ -153,20 +153,20 @@ elif [ $os = "SunOS" ]; then
 		ArchFlag="-DIS_X86"
 	fi
 
-	if [ $osrelease = "5.5.1" ] ; then
+	if [ "$osrelease" = "5.5.1" ] ; then
 		Opsys="-DIS_SOLARIS251"
-	elif [ $osrelease = "5.6" ] ; then
+	elif [ "$osrelease" = "5.6" ] ; then
 		Opsys="-DIS_SOLARIS26"
-	elif [ $osrelease = "5.7" ] ; then
+	elif [ "$osrelease" = "5.7" ] ; then
 		Opsys="-DIS_SOLARIS27"
-	elif [ $osrelease = "5.8" ] ; then
+	elif [ "$osrelease" = "5.8" ] ; then
 		Opsys="-DIS_SOLARIS28"
-	elif [ $osrelease = "5.9" ] ; then
+	elif [ "$osrelease" = "5.9" ] ; then
 		Opsys="-DIS_SOLARIS29"
 	fi
 
 elif [ $os = "IRIX" ] ; then
-	if [ $osrelease = "6.5" ] ; then
+	if [ "$osrelease" = "6.5" ] ; then
 		Opsys="-DIS_IRIX65"
 	else
 		Opsys="-DIS_IRIX62"
@@ -174,7 +174,7 @@ elif [ $os = "IRIX" ] ; then
 
 elif [ $os = "AIX" ] ; then
 	Opsys="-DIS_AIX"
-	if [ $osversion = "5" ] ; then
+	if [ "$osversion" = "5" ] ; then
 		Other="-DIS_AIX5"
 	fi
 
