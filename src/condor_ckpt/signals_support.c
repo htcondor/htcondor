@@ -264,6 +264,7 @@ _sigvec( int sig, const struct sigvec vec, struct sigvec ovec )
 	sigvec( sig, vec, ovec );
 }
 #endif
+#endif
 
 
 #if defined(SYS_sigblock)
