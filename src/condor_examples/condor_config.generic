@@ -710,6 +710,12 @@ SHADOW_RENICE_INCREMENT	= 10
 ##  log?  (Specified in seconds, once a day is the default.)
 #QUEUE_CLEAN_INTERVAL	= 86400
 
+##  How often should the schedd commit "wall clock" run time for jobs
+##  to the queue, so run time statistics remain accurate when the
+##  schedd crashes?  (Specified in seconds, once per hour is the
+##  default.  Set to 0 to disable.)
+#WALL_CLOCK_CKPT_INTERVAL = 3600
+
 ##  Do you want to allow remote machines to be able to submit jobs to
 ##  this queue as user "nobody"?
 #ALLOW_REMOTE_SUBMIT	= False
