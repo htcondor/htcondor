@@ -5,9 +5,14 @@
 %token MAP
 %token EXTRACT
 %token ARRAY
+%token IN
+%token OUT
+%token BOTH
 
 %type <node> stub_spec param_list param simple_param map_param
 %type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP EXTRACT ARRAY
+%type <bool> opt_const opt_ptr opt_ptr_to_const opt_array opt_extract
+%type <param_mode> use_type
 
 %{
 #include <stdio.h>
@@ -15,34 +20,35 @@
 #include <assert.h>
 #include "scanner.h"
 extern int yyline;
-struct node *mk_func_node( char *type_name, char *id, struct node *param_list, int is_ptr, int extract );
-struct node *mk_param_node( char *type_name, char *id, int is_ptr, int is_const, int is_array );
-struct node *mk_map_param( struct node * simple );
+struct node *mk_func_node( char *type_name, char *id,
+	struct node *param_list, int is_ptr, int extract );
+struct node * mk_param_node( char *type, char *name,
+	int is_const, int is_ptr, int is_const_ptr, int is_array,
+	int is_in, int is_out );
+struct node *set_map_attr( struct node * simple );
 struct node *insert_node( struct node *list, struct node *new_elem );
 void display_node( struct node * );
-void output( struct node * );
+void output_switch( struct node * );
 void display_list( struct node * );
-void output_param_decl( struct node * );
+void output_switch_decl( struct node * );
 void output_local_call(  char *id, struct node *list );
 void output_remote_call(  char *id, struct node *list );
 void output_extracted_call(  char *id, struct node *list );
 void output_param_list( struct node *list );
 struct node *mk_list();
-void copy_header( FILE *in_fp, FILE *out_fp );
+void copy_file( FILE *in_fp, FILE *out_fp );
+FILE * open_file( char *name );
 char * mk_upper();
+char * abbreviate( char *type_name );
 
-#define IS_PTR 1
-#define NOT_PTR 0
-#define IS_CONST 1
-#define NOT_CONST 0
-#define DO_EXTRACT 1
-#define DONT_EXTRACT 0
-#define IS_ARRAY 1
-#define NOT_ARRAY 0
+#define MATCH 0 /* for strcmp() */
 
-#define LOCAL 1
-#define REMOTE 2
-#define EXTRACTED 3
+#define SWITCHES 1
+#define SENDERS 2
+#define RECEIVERS 3
+
+int	Mode = 0;
+
 %}
 
 %%
@@ -53,21 +59,28 @@ input
 	;
 
 stub_spec
-	: TYPE_NAME IDENTIFIER '(' param_list ')' ':' EXTRACT ';'
-			{
-			$$ = mk_func_node( $1.val, $2.val, $4, NOT_PTR, DO_EXTRACT );
-			output( $$ );
+	: TYPE_NAME opt_ptr IDENTIFIER '(' param_list ')' opt_extract ';'
+		{
+			$$ = mk_func_node( $1.val, $3.val, $5, $2, $7 );
+			switch( Mode ) {
+			  case SWITCHES:
+				output_switch( $$ );
+				break;
+			  case SENDERS:
+				output_sender( $$ );
+				break;
+			  case RECEIVERS:
+				fprintf( stderr, "Don't know how to output RECEIVERS - yet\n" );
+				exit( 1 );
 			}
-	| TYPE_NAME IDENTIFIER '(' param_list ')' ';'
-			{
-			$$ = mk_func_node( $1.val, $2.val, $4, NOT_PTR, DONT_EXTRACT );
-			output( $$ );
-			}
-	| TYPE_NAME '*' IDENTIFIER '(' param_list ')' ';'
-			{
-			$$ = mk_func_node( $1.val, $3.val, $5, IS_PTR, DONT_EXTRACT );
-			output( $$ );
-			}
+		}
+	;
+
+opt_extract
+	: ':' EXTRACT
+		{ $$ = TRUE; }
+	| /* null */
+		{ $$ = FALSE; }
 	;
 
 param_list
@@ -88,46 +101,157 @@ param
 
 map_param
 	: MAP '(' simple_param ')'
-			{ $$ = mk_map_param( $3 ); }
+			{ $$ = set_map_attr( $3 ); }
 	;
 
 simple_param
-	: TYPE_NAME IDENTIFIER
+	: use_type opt_const TYPE_NAME opt_ptr opt_ptr_to_const IDENTIFIER opt_array
 			{
-			$$ = mk_param_node( $1.val, $2.val, NOT_PTR, NOT_CONST, NOT_ARRAY );
-			}
-
-	| TYPE_NAME '*' IDENTIFIER
-			{
-			$$ = mk_param_node( $1.val, $3.val, IS_PTR, NOT_CONST, NOT_ARRAY );
-			}
-	| CONST TYPE_NAME IDENTIFIER
-			{
-			$$ = mk_param_node( $2.val, $3.val, NOT_PTR, IS_CONST, NOT_ARRAY );
-			}
-
-	| CONST TYPE_NAME '*' IDENTIFIER
-			{
-			$$ = mk_param_node( $2.val, $4.val, IS_PTR, IS_CONST, NOT_ARRAY );
-			}
-	| TYPE_NAME IDENTIFIER ARRAY
-			{
-			$$ = mk_param_node( $1.val, $2.val, NOT_PTR, NOT_CONST, IS_ARRAY );
-			}
-	| TYPE_NAME '*' IDENTIFIER ARRAY
-			{
-			$$ = mk_param_node( $1.val, $3.val, IS_PTR, NOT_CONST, IS_ARRAY );
-			}
-	| TYPE_NAME '*' CONST IDENTIFIER ARRAY
-			{
-			$$ = mk_param_node( $1.val, $4.val, IS_PTR, IS_CONST, IS_ARRAY );
+			$$ = mk_param_node(
+				$3.val,			/* TYPE_NAME */
+				$6.val,			/* IDENTIFIER */
+				$2,				/* constant */
+				$4,				/* pointer */
+				$5,				/* pointer to const */
+				$7,				/* array */
+				$1.in,			/* in parameter */
+				$1.out			/* out parameter */
+			);
 			}
 	;
+
+use_type
+	: IN
+		{
+		$$.in = TRUE;
+		$$.out = FALSE;
+		}
+	| OUT
+		{
+		$$.in = FALSE;
+		$$.out = TRUE;
+		}
+	| BOTH
+		{
+		$$.in = TRUE;
+		$$.out = TRUE;
+		}
+	| /* null */
+		{
+		$$.in = FALSE;
+		$$.out = FALSE;
+		}
+	;
+
+opt_const
+	: CONST
+		{
+		$$ = TRUE;
+		}
+	| /* null */
+		{
+		$$ = FALSE;
+		}
+	;
+
+opt_ptr_to_const
+	: CONST
+		{
+		$$ = TRUE;
+		}
+	| /* null */
+		{
+		$$ = FALSE;
+		}
+	;
+
+opt_array
+	: ARRAY
+		{
+		$$ = TRUE;
+		}
+	| /* null */
+		{
+		$$ = FALSE;
+		}
+	;
+
+opt_ptr
+	: '*'
+		{
+		$$ = TRUE;
+		}
+	| /* null */
+		{
+		$$ = FALSE;
+		}
+	;
+
 %%
-main()
+char	*Prologue;
+char	*Epilogue;
+char	*ProgName;
+
+usage()
 {
-	copy_header( stdin, stdout );
+	fprintf( stderr,
+		"%s -m {switches,senders,receivers} [-p prologue] [-e epilogue]\n",
+		ProgName
+	);
+}
+
+main( int argc, char *argv[] )
+{
+	char	*arg;
+	FILE	*fp;
+
+	ProgName = *argv;
+	for( argv++; arg = *argv; argv++ ) {
+		if( arg[0] = '-' ) {
+			switch( arg[1] ) {
+			  case 'm':
+				arg = *(++argv);
+				if( strcmp("switches",arg) == 0 ) {
+					Mode = SWITCHES;
+				} else if( strcmp("senders",arg) == 0 ) {
+					Mode = SENDERS;
+				} else if( strcmp("receivers",arg) == 0 ) {
+					Mode = RECEIVERS;
+				} else {
+					usage();
+				}
+				break;
+			  case 'p':
+				Prologue = *(++argv);
+				break;
+			  case 'e':
+				Epilogue = *(++argv);
+				break;
+			  default:
+				usage();
+			}
+		} else {
+			usage();
+		}
+	}
+
+	if( !Mode ) {
+		usage();
+	}
+
+		/* Copy the prologue */
+	if( fp = open_file(Prologue) ) {
+		copy_file( fp, stdout );
+	}
+
+		/* Process the template file */
 	yyparse();
+
+		/* Copy the epilogue */
+	if( fp = open_file(Epilogue) ) {
+		copy_file( fp, stdout );
+	}
+
 	exit( 0 );
 }
 
@@ -138,7 +262,9 @@ yyerror( char * s )
 }
 
 struct node *
-mk_param_node( char *type, char *name, int is_ptr, int is_const, int is_array )
+mk_param_node( char *type, char *name,
+	int is_const, int is_ptr, int is_const_ptr, int is_array,
+	int is_in, int is_out )
 {
 	struct node	*answer;
 
@@ -146,10 +272,15 @@ mk_param_node( char *type, char *name, int is_ptr, int is_const, int is_array )
 	answer->node_type = PARAM;
 	answer->type_name = type;
 	answer->id = name;
-	answer->is_ptr = is_ptr;
+
 	answer->is_const = is_const;
+	answer->is_const_ptr = is_const_ptr;
+	answer->is_ptr = is_ptr;
 	answer->is_array = is_array;
-	answer->is_mapped = 0;
+	answer->in_param = is_in;
+	answer->out_param = is_out;
+
+	answer->is_mapped = FALSE;	/* will set later if needed */
 
 	answer->next = answer;
 	answer->prev = answer;
@@ -158,9 +289,9 @@ mk_param_node( char *type, char *name, int is_ptr, int is_const, int is_array )
 }
 
 struct node *
-mk_map_param( struct node * simple )
+set_map_attr( struct node * simple )
 {
-	simple->is_mapped = 1;
+	simple->is_mapped = TRUE;
 	return simple;
 }
 
@@ -199,30 +330,35 @@ is_empty_list( struct node *list )
 }
 
 void
+output_vararg( struct node *n )
+{
+	assert( n->node_type == PARAM );
+	printf( "\t\t%s = va_arg( ap, %s );\n", n->id, n->type_name );
+}
+
+void
 output_param_node( struct node *n )
 {
 	assert( n->node_type == PARAM );
 
+	if( n->is_const ) {
+		printf( "const " );
+	}
+
+	printf( "%s ", n->type_name );
+
+	if( n->is_ptr ) {
+		printf( "*" );
+	}
+
+	if( n->is_const_ptr ) {
+		printf( " const " );
+	}
+
+	printf( "%s", n->id );
+
 	if( n->is_array ) {
-		if( n->is_ptr ) {
-			printf( "%s *", n->type_name );
-		} else {
-			printf( "%s", n->type_name );
-		}
-		if( n->is_const ) {
-			printf( " const %s[]", n->id );
-		} else {
-			printf( " %s[]", n->id );
-		}
-	} else {
-		if( n->is_const ) {
-			printf( "const " );
-		}
-		if( n->is_ptr ) {
-			printf( "%s *%s", n->type_name, n->id );
-		} else {
-			printf( "%s %s", n->type_name, n->id );
-		}
+		printf( "[]" );
 	}
 }
 
@@ -254,7 +390,7 @@ display_node( struct node *n )
 }
 
 void
-output_param_decl( struct node *dum )
+output_switch_decl( struct node *dum )
 {
 	struct node	*p;
 
@@ -390,10 +526,76 @@ output_mapping( char *func_type_name, struct node *list )
 }
 
 /*
-  Output code for one system call stub.
+  Output code for one system call sender.
 */
 void
-output( struct node *n )
+output_sender( struct node *n )
+{
+	struct node *param_list = n->next;
+	struct node *p;
+
+	assert( n->node_type == FUNC );
+
+	printf( "#if defined( SYS_%s )\n", n->id );
+	printf( "	case SYS_%s:\n", n->id );
+	printf( "	  {\n" );
+
+	for( p=param_list->next; p != param_list; p = p->next ) {
+
+			/* type_name **id; - '*' and '*' are optional */
+		printf( "\t\t%s %s%s%s;\n",
+			p->type_name,
+			p->is_ptr ? "*" : "",
+			p->is_array ? "*" : "",
+			p->id
+		);
+	}
+	printf( "\n" );
+
+	printf( "\t\tCurrentSysCall = CONDOR_%s;\n\n", n->id  );
+
+	for( p=param_list->next; p != param_list; p = p->next ) {
+			/* id = va_arg( ap, type_name * ); - '*' is optional */
+		printf( "\t\t%s = va_arg( ap, %s %s%s);\n",
+			p->id,
+			p->type_name,
+			p->is_ptr ? "*" : "",
+			p->is_array ? "*" : ""
+		);
+	}
+	printf( "\n" );
+
+	printf( "\t\txdr_syscall->x_op = XDR_ENCODE;\n" );
+	printf( "\t\tassert(xdr_int(xdr_syscall,&CurrentSysCall) );\n" );
+
+	for( p=param_list->next; p != param_list; p = p->next ) {
+			/* assert( xdr_<type_name>(xdr_syscall,&<id>) ); */
+		printf( "\t\tassert( xdr_%s(xdr_syscall,&%s) );\n",
+			abbreviate(p->type_name),
+			p->id 
+		);
+	}
+	printf( "\n" );
+
+	printf( "\t\txdr_syscall->x_op = XDR_DECODE;\n" );
+	printf( "\t\tassert( xdrrec_skiprecord(xdr_syscall) );\n" );
+	printf( "\t\tassert( xdr_int(xdr_syscall,&rval) );\n" );
+	printf( "\t\tif( rval < 0 ) {\n" );
+	printf( "\t\t\tassert( xdr_int(xdr_syscall,&terrno) );\n" );
+	printf( "\t\t\terrno = terrno;\n" );
+	printf( "\t\t}\n" );
+	printf( "\t\tbreak;\n" );
+
+
+	printf( "\t}\n" );
+	printf( "#endif\n\n" );
+}
+
+/*
+  Output code for one system call switch.
+*/
+void
+output_switch( struct node *n )
 {
 	assert( n->node_type == FUNC );
 
@@ -404,7 +606,7 @@ output( struct node *n )
 		printf( "%s\n", n->type_name );
 	}
 	printf( "%s", n->id );
-	output_param_decl( n->next );
+	output_switch_decl( n->next );
 	printf( "{\n" );
 	printf( "	int	rval;\n" );
 	output_mapping( n->type_name, n->next );
@@ -432,21 +634,29 @@ output( struct node *n )
 	printf( "#endif\n\n" );
 }
 
-/*
-  The header of the template file is to be copied character for character to
-  the ".c" file we are building.  The header is terminated by a line
-  containing only "%%".
-*/
+FILE *
+open_file( char *name )
+{
+	FILE	*fp;
+
+	if( name ) {
+		if( (fp = fopen(name,"r")) == NULL) {
+			perror( name );
+			exit( 1 );
+		}
+		return fp;
+	}
+	return NULL;
+}
+
 void
-copy_header( FILE *in_fp, FILE *out_fp )
+copy_file( FILE *in_fp, FILE *out_fp )
 {
 	char	buf[1024];
 
+
 	while( fgets(buf,sizeof(buf),in_fp) ) {
 		yyline += 1;
-		if( strcmp("%%\n",buf) == 0 ) {
-			return;
-		}
 		fputs(buf,out_fp);
 	}
 }
@@ -468,4 +678,20 @@ mk_upper( char *str )
 	}
 	*dst = '\0';
 	return buf;
+}
+
+char *
+abbreviate( char *type_name )
+{
+	if( strncmp("struct",type_name,6) == MATCH ) {
+		return type_name + 7;
+	} else if( strcmp("long int",type_name) == MATCH ) {
+		return "long";
+	} else if( strcmp("unsigned int",type_name) == MATCH ) {
+		return "u_int";
+	} else if( strcmp("unsigned long",type_name) == MATCH ) {
+		return "u_long";
+	} else {
+		return type_name;
+	}
 }
