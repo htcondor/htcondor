@@ -267,6 +267,12 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 			value.SetStringValue(token.text);
 		}
 		tree = Literal::MakeLiteral(value);
+	} else if (tag_id == XMLLexer::tagID_String) {
+		// We were expecting text and got none, so we had
+		// the empty string, which was skipped by the lexer.
+		Value  value;
+		value.SetStringValue("");
+		tree = Literal::MakeLiteral(value);
 	}
 
 	// Get end tag
