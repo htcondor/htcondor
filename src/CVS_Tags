@@ -14,13 +14,15 @@
    6.6.1.  The version string for all platforms (except IRIX and maybe
    windows) is: "$CondorVersion: 6.6.0 Nov 13 2003 $"
    NOTE: this is also the last tag of the source that includes all the
-   build system wisdom regarding intel solaris, solaris 2.5.1, irix
-   6.2, and pre-glibc versions of linux (everything before rh7.2, in
-   fact).  all the build system files have been modified to purge
-   these platforms since we're no longer supporting them, and they
-   were causing needless complication in various ways.  This change
-   also corresponds with moving platform detection from condor_imake
-   into the configure script under the new build system.
+   build system wisdom regarding X86 Solaris, Solaris 2.5.1, IRIX 6.2,
+   and pre-glibc versions of Linux (everything before rh7.2, in fact).
+   I modified all the build system files to purge these platforms
+   since we're no longer supporting them, and they were causing
+   needless complication in various ways.  This change also
+   corresponds with moving platform detection from condor_imake into
+   the configure script under the new build system.  Finally, i purged
+   a bunch of really old code from condor_ckpt and condor_syscall_lib,
+   such as: AIX3.2, ULTRIX, SUNOS, HPUX9, and IRIX53.
 
 11/10/03 HAWKEYE_V1_0_RC3
     Release Candidate 3 of Hawkeye 1.0.
