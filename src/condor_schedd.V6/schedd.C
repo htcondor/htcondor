@@ -90,6 +90,10 @@ extern	char*		Name;
 extern	char*		JobHistoryFileName;
 extern	char*		mySubSystem;
 
+extern FILE *DebugFP;
+extern char *DebugFile;
+extern char *DebugLock;
+
 extern	Scheduler	scheduler;
 
 // priority records
@@ -1523,8 +1527,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 	if (pid == 0) {		// the child
 
+		// set dprintf messages to stderr in case something goes wrong,
+		// since we can't access the SchedLog when running with user_priv
+
+		DebugFP = stderr;
+		DebugFile = NULL;
+		DebugLock = NULL;
+
 		init_user_ids(owner);
-		set_user_priv();
+		set_user_priv_final();
 
 		if (chdir(iwd) < 0) {
 			EXCEPT("chdir(%s)", iwd);
