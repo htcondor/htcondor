@@ -224,7 +224,7 @@ void 	SetExecutable();
 void 	SetUniverse();
 void	SetMachineCount();
 void 	SetImageSize();
-int 	calc_image_size( char *name);
+int 	calc_image_size( const char *name);
 int 	find_cmd( char *name );
 char *	get_tok();
 void 	SetStdFile( int which_file );
@@ -316,13 +316,17 @@ template class ExtArray<ClassAd*>;
 void TestFilePermissions( char *scheddAddr = NULL )
 {
 #ifdef WIN32
-	// TODO: need to port to Win32
-	gid_t gid = 99999;
-	uid_t uid = 99999;
+	// this isn't going to happen on Windows since:
+	// 1. this uid/gid crap isn't portable to windows
+	// 2. The shadow runs as the user now anyways, so there's no
+	//    need for condor to waste time finding out if SYSTEM can
+	//    write to some path. The one exception is if the user
+	//    submits from AFS, but we're documenting that as unsupported.
+	
 #else
 	gid_t gid = getgid();
 	uid_t uid = getuid();
-#endif
+
 	int result, crap;
 	MyString name;
 
@@ -345,6 +349,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 					name.Value());
 		}
 	}
+#endif
 }
 
 
@@ -703,51 +708,101 @@ reschedule()
 }
 
 
-void
-check_path_length(const char *path, char *lhs)
+
+
+/* check_path_length() has been deprecated in favor of 
+ * check_and_universalize_path(), which not only checks
+ * the length of the path string but also, on windows, it
+ * takes any network drive paths and converts them to UNC
+ * paths.
+ */
+int
+check_and_universalize_path(MyString &path, char *lhs)
 {
 
+	int retval = 0;
 #ifdef WIN32
-	/* On Win32, also make certain this path is on the local system.
-	 * Remove this code once we support networked filesystems.
+	/*
+	 * On Windows, we need to convert all drive letters (mappings) 
+	 * to their UNC equivalents, and make sure these network devices
+	 * are accessable by the submitting user (not mapped as someone
+	 * else).
 	 */
 
 	char volume[8];
+	char netname[80];
+	char *my_name, *my_domain;
+	unsigned char name_info_buf[MAX_PATH+1];
+	DWORD name_info_buf_size = MAX_PATH+1;
+	DWORD netname_size = 80;
+	DWORD result;
+	UNIVERSAL_NAME_INFO *uni;
+
+	result = 0;
 	volume[0] = '\0';
 	if ( path[0] && (path[1]==':') ) {
-		sprintf(volume,"%c:\\",path[0]);
+		sprintf(volume,"%c:",path[0]);
 	}
 
-	if ( (strncmp(path,"\\\\",2) == MATCH) ||
-		 (strncmp(path,"//",2) == MATCH) ||
-		 (strincmp(path,"\\UNC\\",5) == MATCH) ||
-		 (strincmp(path,"/UNC/",5) == MATCH) ||
-		 (volume[0] && (GetDriveType(volume)==DRIVE_REMOTE))
-		 ) 
+	if (volume[0] && (GetDriveType(volume)==DRIVE_REMOTE))
 	{
-		fprintf(stderr, "\nERROR: \"%s\" is a network drive/path.\n",path);
-		fprintf(stderr,
-				"\tThis version of Condor is a *preview* edition, and does\n"
-				"\tnot support file operations on network drives.  All files\n"
-				"\tto be accessed by this preview version of Condor must reside\n"
-				"\ton your local hard disk (not on a network volume). The \n"
-				"\tcompleted release of Condor NT will support network\n"
-				"\tdrives.  Please check the Condor Website at \n"
-				"\t\thttp://www.cs.wisc.edu/condor\n"
-				"\tto see if an updated version of Condor NT is available.\n"
-				);
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+		char my_fullname[255];
+
+			// check if the user is the submitting user.
+		
+		result = WNetGetUser(volume, netname, &netname_size);
+		my_name = my_username();
+		my_domain = my_domainname();
+		sprintf(my_fullname, "%s\\%s", my_domain, my_name);
+		free(my_name);
+		free(my_domain);
+		my_name = my_domain = NULL;
+
+		if ( result == NOERROR ) {
+			if (stricmp(my_fullname, netname) != 0 ) {
+				fprintf(stderr, "\nERROR: The path '%s' is associated with\n"
+					"\tuser %s, so Condor can not access it.\n"
+					"\tCurrently Condor only supports network drives that are \n"
+					"\tassociated with the submitting user.\n", 
+					path.Value(), netname);
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+		} else {
+			fprintf(stderr, 
+				"\nERROR: Unable to get name of user associated with \n"
+				"the following network path (err=%d):"
+				"\n\t%s\n", result, path.Value());
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+
+		result = WNetGetUniversalName(path.Value(), UNIVERSAL_NAME_INFO_LEVEL, 
+			name_info_buf, &name_info_buf_size);
+		if ( result != NO_ERROR ) {
+			fprintf(stderr, 
+				"\nERROR: Unable to get universal name for path (err=%d):"
+				"\n\t%s\n", result, path.Value());
+			DoCleanup(0,0,NULL);
+			exit( 1 );			
+		} else {
+			uni = (UNIVERSAL_NAME_INFO*)&name_info_buf;
+			path = uni->lpUniversalName;
+			printf("Universal path is: '%s'\n", path.Value());
+			retval = 1; // signal that we changed somthing
+		}
 	}
+	
 #endif
 
-	if (strlen(path) > _POSIX_PATH_MAX) {
+	if (path.Length() > _POSIX_PATH_MAX) {
 		fprintf(stderr, "\nERROR: Value for \"%s\" is too long:\n"
 				"\tPosix limits path names to %d bytes\n",
 				lhs, _POSIX_PATH_MAX);
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
+	return retval;
 }
 
 
@@ -756,9 +811,9 @@ SetExecutable()
 {
 	bool	transfer_it = true;
 	char	*ename = NULL;
-	char	*full_ename = NULL;
 	char	*copySpool = NULL;
 	char	*macro_value = NULL;
+	MyString	full_ename;
 
 	ename = condor_param( Executable, ATTR_JOB_CMD );
 	if( ename == NULL ) {
@@ -784,9 +839,9 @@ SetExecutable()
 	} else {
 		full_ename = ename;
 	}
-	check_path_length(full_ename, Executable);
+	check_and_universalize_path(full_ename, Executable);
 
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename);
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename.Value());
 	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
@@ -1174,7 +1229,7 @@ void SetFileOptions()
 ** other architecture??  Our answer is in kilobytes.
 */
 int
-calc_image_size( char *name)
+calc_image_size( const char *name)
 {
 	struct stat	buf;
 
@@ -1201,7 +1256,8 @@ SetTransferFiles()
 {
 	char *macro_value;
 	int count;
-	char *tmp;
+	MyString tmp;
+	char* tmp_ptr;
 	bool files_specified = false;
 	bool in_files_specified = false;
 	bool out_files_specified = false;
@@ -1252,17 +1308,22 @@ SetTransferFiles()
 	if( ! input_file_list.isEmpty() ) {
 		input_file_list.rewind();
 		count = 0;
-		while ( (tmp=input_file_list.next()) ) {
+		while ( (tmp_ptr=input_file_list.next()) ) {
 			count++;
-			check_path_length(tmp,TransferInputFiles);
-			check_open(tmp, O_RDONLY);
-			TransferInputSize += calc_image_size(tmp);
+			tmp = tmp_ptr;
+			if ( check_and_universalize_path(tmp,TransferInputFiles) != 0) {
+				// path was universalized, so update the string list
+				input_file_list.deleteCurrent();
+				input_file_list.insert(tmp.Value());
+			}
+			check_open(tmp.Value(), O_RDONLY);
+			TransferInputSize += calc_image_size(tmp.Value());
 		}
 		if ( count ) {
-			tmp = input_file_list.print_to_string();
+			tmp_ptr = input_file_list.print_to_string();
 			(void) sprintf( input_files, "%s = \"%s\"", 
-							ATTR_TRANSFER_INPUT_FILES, tmp );
-			free( tmp );
+							ATTR_TRANSFER_INPUT_FILES, tmp_ptr );
+			free( tmp_ptr );
 			files_specified = true;
 			in_files_specified = true;
 		}
@@ -1276,14 +1337,23 @@ SetTransferFiles()
 		StringList files(macro_value,",");
 		files.rewind();
 		count = 0;
-		while ( (tmp=files.next()) ) {
+		while ( (tmp_ptr=files.next()) ) {
 			count++;
-			check_path_length(tmp,TransferOutputFiles);
-			check_open(tmp, O_WRONLY|O_CREAT|O_TRUNC );
+			tmp = tmp_ptr;
+			if ( check_and_universalize_path(tmp,TransferOutputFiles) != 0) 
+			{
+				// we universalized the path, so update the string list
+				files.deleteCurrent();
+				files.insert(tmp.Value());
+			}
+			check_open(tmp.Value(), O_WRONLY|O_CREAT|O_TRUNC );
 		}
+		tmp_ptr = files.print_to_string();
 		if ( count ) {
 			(void) sprintf (output_files, "%s = \"%s\"", 
-				ATTR_TRANSFER_OUTPUT_FILES, macro_value);
+				ATTR_TRANSFER_OUTPUT_FILES, tmp_ptr);
+			free(tmp_ptr);
+			tmp_ptr = NULL;
 			files_specified = true;
 			out_files_specified = true;
 		}
@@ -1399,14 +1469,15 @@ SetTransferFiles()
 
 		macro_value = condor_param(Executable);
 		if(macro_value) {
-			check_path_length(macro_value,TransferInputFiles);
-			check_open(macro_value,O_RDONLY);
-			TransferInputSize += calc_image_size(macro_value);
+			MyString executable_str = macro_value;
+			check_and_universalize_path(executable_str,TransferInputFiles);
+			check_open(executable_str.Value(),O_RDONLY);
+			TransferInputSize += calc_image_size(executable_str.Value());
 			if(file_list[0]) {
 				strcat(file_list,",");
-				strcat(file_list,macro_value);
+				strcat(file_list,executable_str.Value());
 			} else {
-				strcpy(file_list,macro_value);
+				strcpy(file_list,executable_str.Value());
 			}
 			free(macro_value);
 		}
@@ -1415,15 +1486,16 @@ SetTransferFiles()
 		if(macro_value) {
 			StringList files(macro_value);
 			files.rewind();
-			while ( (tmp=files.next()) ) {
-				check_path_length(tmp,TransferInputFiles);
-				check_open(tmp, O_RDONLY);
-				TransferInputSize += calc_image_size(tmp);
+			while ( (tmp_ptr=files.next()) ) {
+				tmp = tmp_ptr;
+				check_and_universalize_path(tmp,TransferInputFiles);
+				check_open(tmp.Value(), O_RDONLY);
+				TransferInputSize += calc_image_size(tmp.Value());
 				if(file_list[0]) {
 					strcat(file_list,",");
-					strcat(file_list,tmp);
+					strcat(file_list,tmp.Value());
 				} else {
-					strcpy(file_list,tmp);
+					strcpy(file_list,tmp.Value());
 				}
 			}
 			free(macro_value);
@@ -1670,7 +1742,13 @@ SetStdFile( int which_file )
 		exit( 1 );
 	}	
 
-	check_path_length(macro_value, generic_name);
+	MyString tmp = macro_value;
+	if ( check_and_universalize_path(tmp, generic_name) != 0 ) {
+		// we changed the value, so we have to update macro_value
+		free(macro_value);
+		macro_value = strdup(tmp.Value());
+	}
+	
 
 	switch( which_file ) 
 	{
@@ -2395,7 +2473,11 @@ ComputeIWD()
 	}
 
 	compress( iwd );
-	check_path_length(iwd, InitialDir);
+	MyString iwd_str = iwd;
+	if ( check_and_universalize_path(iwd_str, InitialDir) != 0 ) {
+		// we universalized the path, so we have to update iwd
+		strcpy(iwd, iwd_str.Value());
+	}
 	check_iwd( iwd );
 	strcpy (JobIwd, iwd);
 
@@ -2443,21 +2525,21 @@ SetUserLog()
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
-		char *ulog = full_path(ulog_entry);
+		MyString ulog = full_path(ulog_entry);
 		free(ulog_entry);
 
 		// check that the log is a valid path
-		FILE* test = fopen(ulog, "a+");
+		FILE* test = fopen(ulog.Value(), "a+");
 		if (!test) {
 			fprintf(stderr,
-				"\nWARNING: Invalid log file: \"%s\"\n", ulog);
+				"\nWARNING: Invalid log file: \"%s\"\n", ulog.Value());
 			exit( 1 );
 		} else {
 			fclose(test);
 		}
 
-		check_path_length(ulog, UserLogFile);
-		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
+		check_and_universalize_path(ulog, UserLogFile);
+		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog.Value());
 		InsertJobExpr(buffer);
 		UserLogSpecified = true;
 	}
