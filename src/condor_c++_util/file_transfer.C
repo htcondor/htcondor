@@ -643,10 +643,6 @@ FileTransfer::ComputeFilesToSend()
 							
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
-			//struct stat sb; stat( f, &sb );
-			//dprintf( D_FULLDEBUG, "Time check for '%s': %ld (%ld) vs %ld\n",
-			//		 f, dir->GetModifyTime(), sb.st_mtime, last_download_time );
-
 			if ( dir->GetModifyTime() > last_download_time ) {
 				dprintf( D_FULLDEBUG, 
 						 "Sending changed file %s, mod=%ld, dow=%ld\n",	
