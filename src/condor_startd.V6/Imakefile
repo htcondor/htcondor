@@ -19,7 +19,7 @@ LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 #endif
 
 OBJ = LoadQueue.o Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
-	Resource.o Starter.o command.o main.o util.o \
+	Resource.o Starter.o command.o startd_main.o util.o \
 	setsyscalls.o startd_instantiate.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))

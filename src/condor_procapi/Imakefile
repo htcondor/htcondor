@@ -4,7 +4,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(STD_LIBS) ../condor_classad/libclassad.a ../condor_io/libcedar.a
 
-OBJ = procapi.o procinterface.o instantiate.o
+OBJ = procapi.o procinterface.o procapi_instantiate.o
 
 library_target(libprocapi.a,$(OBJ))
 

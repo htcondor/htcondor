@@ -19,9 +19,9 @@ OS = OperatingSystem
 
 # this can (and will have to) be made better, but
 # it will suffice for now:
-OBJ = main.o resource_limits.$(OS).o starter.o NTsenders.o \
+OBJ = starter_v61_main.o resource_limits.$(OS).o starter.o NTsenders.o \
 	os_proc.o vanilla_proc.o mpi_master_proc.o mpi_comrade_proc.o \
-	instantiate.o
+	starter_v61_instantiate.o
 
 RSH_OBJ = condor_rsh.o
 

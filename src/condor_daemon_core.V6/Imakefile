@@ -5,7 +5,7 @@ C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -DWANT_DC_PM
 LIB = $(STD_LIBS)
 
 OBJ = timer_manager.o daemon_core.o daemon_core_main.o \
-  instantiate.o condor_ipverify.o
+  daemon_core_instantiate.o condor_ipverify.o
 
 library_target(daemon_core.a,$(OBJ))
 c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))

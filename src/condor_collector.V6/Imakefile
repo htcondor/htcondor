@@ -6,7 +6,8 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = collector_engine.a $(DAEMONCORE_LIB) $(STD_LIBS)
 
 ENGINE_OBJ = hashkey.o collector_engine.o
-OBJ = main.o collector.o view_server.o instantiate.o totals.o
+OBJ = collector_main.o collector.o view_server.o \
+      collector_instantiate.o totals.o
 
 library_target(collector_engine.a, $(ENGINE_OBJ))
 
