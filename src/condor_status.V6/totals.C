@@ -431,6 +431,7 @@ CkptSrvrNormalTotal::
 CkptSrvrNormalTotal()
 {
 	numServers = 0;
+	disk = 0;
 }
 
 int CkptSrvrNormalTotal::
