@@ -88,7 +88,8 @@ V6_3_SRC		-a \
 			V6_COMMON \
 			src/condor_classad \
 			src/condor_netman \
-			src/mw
+			src/mw \
+			src/condor_dcskel
 
 V6_5_SRC		-a \
 			V6_COMMON \
