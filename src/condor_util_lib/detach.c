@@ -34,7 +34,8 @@
 /* Solaris specific change ..dhaval 6/24 */
 #if defined(Solaris)
 #include <sys/fcntl.h>
-#include <sys/termios.h>
+#include <unistd.h>
+#include <termios.h>
 #endif
 
 #include "debug.h"
@@ -52,12 +53,11 @@ detach()
 	(void)close( 1 );
 	(void)close( 2 );
 
-#if !defined(HPUX9)
+#if !defined(HPUX9) && !defined(Solaris)
 	if( (fd=open("/dev/tty",O_RDWR,0)) < 0 ) {
 		dprintf( D_ALWAYS, "Can't open /dev/tty\n" );
 		return;
 	}
-
 	if( ioctl(fd,TIOCNOTTY,(char *)0) < 0 ) {
 		EXCEPT( "ioctl(%d,TIOCNOTTY,(char *)0)", fd );
 	}
