@@ -34,10 +34,11 @@ void ShadowInitializer::InitJobAd(void)
 	/* I am guaranteed by daemon core that both of these will be registered
 		before either callback gets activated */
 
-	m_accept_id = daemonCore->
-		Register_Command( RECEIVE_JOBAD, "RECEIVE_JOBAD",
-			(CommandHandlercpp)&ShadowInitializer::AcceptJobAdFromSchedd,
-			"ShadowInitializer::AcceptJobAdFromSchedd", this, READ);
+	/* turn this on when it works */
+/*	m_accept_id = daemonCore->*/
+/*		Register_Command( RECEIVE_JOBAD, "RECEIVE_JOBAD",*/
+/*			(CommandHandlercpp)&ShadowInitializer::AcceptJobAdFromSchedd,*/
+/*			"ShadowInitializer::AcceptJobAdFromSchedd", this, READ);*/
 
 	/* for now, wait 1 seconds and then get the job ad manually */
 	m_acquire_id = daemonCore ->
