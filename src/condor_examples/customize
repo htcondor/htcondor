@@ -9,7 +9,6 @@
 # Written by Derek Wright <wright@cs.wisc.edu> on 2/27/98
 #
 
-
 $target = $ARGV[0];
 -d $target || die "$target is not a directory.\n";
 
@@ -25,16 +24,13 @@ $target = $ARGV[0];
 &customize_boot_script();
 
 
-
 sub get_platform_defaults {
-    local( $mach, $os, $ver );
+    local( $mach, $os );
     chop($mach = `uname -m`);
     chop($os = `uname`);
-    chomp($ver = `uname -r`);
     $console_devs="";
     $needs_kbd=0;
     $special_arch_string="";
-	$bad_utmp = "False";
 
     $_ = $os;
   SWITCH: {
@@ -56,15 +52,8 @@ sub get_platform_defaults {
 	      # Sparc
 	      $console_devs="mouse, kbd";
 	  }
-
-      # if solaris 2.8 add entry for bad utmp;
-	  if ($ver =~ m/5\.8/) {
-	  	$bad_utmp = "True";
-	  }
-
 	  last SWITCH;
       }
-
       if(/^HP-UX/) {
 	  $ps_path="/bin/ps -ef";
 	  $console_devs="ps2mouse, ps2kbd, hil1, hil2, hil3, hil4, hil5, hil6, hil7";
@@ -107,11 +96,6 @@ sub customize_config_file {
   LINE: while( <GENERIC> ) {
     SWITCH: {
 	if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
-
-	if( /^#STARTD_HAS_BAD_UTMP.*$/ ) { 
-		$_ = "STARTD_HAS_BAD_UTMP\t\t\t= $bad_utmp\n"; last SWITCH;
-	}
-
 	if( /^#CONSOLE_DEVICES.*$/ ) {
 	   if( $console_devs ) {
 	       $_ = "CONSOLE_DEVICES\t= $console_devs\n";
