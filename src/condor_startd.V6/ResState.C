@@ -187,6 +187,10 @@ ResState::eval()
 		if( (r_act == busy_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();
 		}
+		if( rip->r_reqexp->pub() ) {
+				// Our reqexp changed states, send an update
+			rip->update();
+		}
 		break;   // case claimed_state:
 
 	case preempting_state:
@@ -205,6 +209,12 @@ ResState::eval()
 		}
 			// Check to see if we should run benchmarks
 		deal_with_benchmarks( rip );
+
+		if( rip->r_reqexp->pub() ) {
+				// Our reqexp changed states, send an update
+			rip->update();
+		}
+
 		break;	
 
 	case owner_state:
