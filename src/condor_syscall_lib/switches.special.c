@@ -57,7 +57,6 @@
 
 #include "_condor_fix_types.h"
 #include "condor_fix_timeval.h"
-#include <sys/resource.h>
 #include <sys/uio.h>
 #include <errno.h>
 #include "debug.h"

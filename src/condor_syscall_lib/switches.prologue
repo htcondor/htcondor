@@ -21,7 +21,6 @@
 #define profil __hide_profil
 #define mount __hide_mount
 #include "../condor_includes/_condor_fix_types.h"
-#include </usr/ucbinclude/sys/rusage.h>
 #endif 
 
 #include "syscall_numbers.h"
@@ -59,7 +58,7 @@
 #	undef profil
 	int select();
 	int fchmod( int fd, unsigned int mode );
-	int setitimer( int which,struct itimerval *,struct itimerval * );	
+	int setitimer( int which, const struct itimerval *,struct itimerval * );	
 	int	settimeofday( struct timeval *tp, struct timezone *tzp );
 	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
 #elif defined(IRIX53)
@@ -393,14 +392,14 @@ ONE( pipe, _pipe, int *)
 TWO( execv, _execv, char *, char **)
 THREE( bind, _bind, int, void *, int )
 THREE( connect, _connect, int, void *, int )
-THREE( setitimer, _setitimer, int, struct itimerval *, struct itimerval *)
+THREE( setitimer, _setitimer, int, const struct itimerval *, struct itimerval *)
 /* ONE( sigpause, __sigpause, long ) FIX */
 TWO( stat, _stat, char *, struct stat * )
 /* ONE( sigsetmask, __sigsetmask, long ) FIX */
 /* ONE( sigblock, __sigblock, long ) FIX */
 SIX( recvfrom, _recvfrom, int, void *, int, int, void *, int * )
 TWO( dup2, _dup2, int, int )
-TWO( gettimeofday, _gettimeofday, struct timeval *, struct timezone * )
+TWO( gettimeofday, _gettimeofday, struct timeval *, void* )
 SIX( sendto, _sendto, int, void *, int, int, void *, int )
 THREE( getsockname, _getsockname, int, void *, int * )
 THREE( ioctl, _ioctl, int, int, int )
