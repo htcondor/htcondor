@@ -94,7 +94,7 @@ message_loop_thread(void *)
 		// failed to get access to the desktop!!!  Perhaps we are still
 		// at the login screen....
 		dprintf(D_ALWAYS,
-			"Failed to access the interactive desktop; will try later");
+			"Failed to access the interactive desktop; will try later\n");
 		// now sleep for 2 minutes and try again
 		sleep(120);
 	}
