@@ -551,7 +551,7 @@ static char *
 buffer_io_display( ClassAd *ad )
 {
 	int cluster=0, proc=0;
-	int read_bytes=0, write_bytes=0, seek_count=0;
+	float read_bytes=0, write_bytes=0, seek_count=0;
 	int buffer_size=0, block_size=0;
 	float wall_clock=-1;
 
@@ -561,9 +561,9 @@ buffer_io_display( ClassAd *ad )
 	ad->EvalInteger(ATTR_PROC_ID,NULL,proc);
 	ad->EvalString(ATTR_OWNER,NULL,owner);
 
-	ad->EvalInteger(ATTR_FILE_READ_BYTES,NULL,read_bytes);
-	ad->EvalInteger(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
-	ad->EvalInteger(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
+	ad->EvalFloat(ATTR_FILE_READ_BYTES,NULL,read_bytes);
+	ad->EvalFloat(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
+	ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
 	ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,wall_clock);
 	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
 	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
@@ -586,7 +586,7 @@ buffer_io_display( ClassAd *ad )
 
 		sprintf( return_buff,"%s %8s", return_buff, metric_units(read_bytes) );
 		sprintf( return_buff,"%s %8s", return_buff, metric_units(write_bytes) );
-		sprintf( return_buff,"%s %8d", return_buff, seek_count );
+		sprintf( return_buff,"%s %8.0f", return_buff, seek_count );
 		sprintf( return_buff,"%s %8s/s", return_buff, metric_units((int)((read_bytes+write_bytes)/wall_clock)) );
 		sprintf( return_buff,"%s %8s", return_buff, metric_units(buffer_size) );
 		sprintf( return_buff,"%s %8s\n", return_buff, metric_units(block_size) );
