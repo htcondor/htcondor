@@ -6,6 +6,9 @@
 .C.o:
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
 
+.f.o:
+	$(Fortran) $(FFLAGS) -c $<
+	
 #define SET_GID_MODE		02775
 #define EXECUTABLE_MODE		0755
 #define OBJECT_MODE		0644
