@@ -4316,38 +4316,20 @@ char **DaemonCore::ParseEnvArgsString(char *incomming, bool env)
 int
 BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
-	if ( !rsock->bind() ) {
-		dprintf(D_ALWAYS, "Failed to bind to command ReliSock\n");
-		return FALSE;
-	}
-	// now open a SafeSock _on the same port_ choosen above
-	if ( !ssock->bind(rsock->get_port()) ) {
-		// failed to bind on the same port -- find free UDP port first
-		if ( !ssock->bind() ) {
-			dprintf(D_ALWAYS, "Failed to bind on SafeSock\n");
+	for(int i = 0; i < 1000; i++) {
+		if ( !rsock->bind() ) {
+			dprintf(D_ALWAYS, "Failed to bind to command ReliSock\n");
 			return FALSE;
 		}
-		rsock->close();
-		if ( !rsock->bind(ssock->get_port()) ) {
-			// failed again -- keep trying
-			bool bind_succeeded = false;
-			for (int temp_port=1024; !bind_succeeded && temp_port < 4096; 
-							temp_port++) 
-			{
-				rsock->close();
-				ssock->close();
-				if ( rsock->bind(temp_port) && ssock->bind(temp_port) ) {
-					bind_succeeded = true;
-				}
-			}
-			if (!bind_succeeded) {
-				dprintf(D_ALWAYS, 
-						"Failed to find available port for command sockets");
-				return FALSE;
-			}
+		// now open a SafeSock _on the same port_ choosen above
+		if ( !ssock->bind(rsock->get_port()) ) {
+			dprintf(D_ALWAYS, "Failed to bind SafeSock to %d\n", rsock->get_port());
+			rsock->close();
+			continue;
 		}
+		return TRUE;
 	}
-	return TRUE;
+	return FALSE;
 }
 
 // Is_Pid_Alive() returns TRUE is pid lives, FALSE is that pid has exited.
