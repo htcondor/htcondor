@@ -118,8 +118,6 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 	}
 	return return_fd;
 }
-#endif
-
 
 
 void
