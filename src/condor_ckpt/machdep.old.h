@@ -1,5 +1,11 @@
 #include <setjmp.h>
+
+	// NULL gets redefined in <sys/param> on ULTRIX43 machines
+#if defined(ULTRIX43) && defined(NULL)
+#undef NULL
+#endif
 #include <sys/param.h>
+
 #include <sys/vmparam.h>
 
 /*
