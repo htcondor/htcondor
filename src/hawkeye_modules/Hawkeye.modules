@@ -1,6 +1,5 @@
 # Master Hawkeye targets data file
 directory: /local.chopin/nleroy/Hawkeye-Release/modules
-prefix: Hawkeye_modules_
 
 target: all
 version: 1.0.rc8
