@@ -1,40 +1,84 @@
-\begin{ManPage}{\Condor{status}}{1}{display the status of machines participating in a Condor pool}
+\begin{ManPage}{\Condor{status}}{1}{Display status of the Condor pool}
 \label{man-condor-status}
 \Synopsis \SynProg{\Condor{status}}
-\oOpt{-server $\mid$ -state $\mid$ -startd $\mid$ -avail $\mid$ -claimed $\mid$ -schedd $\mid$ -ckptsrvr $\mid$ -master $\mid$ -submittors}
-\oOptArg{-constraint}{const}
-\oOptArg{-format}{fmt attr}
-\oOpt{-diagnose}
-\oOpt{-total}
-\oOpt{-verbose $\mid$ -long}
-\oOptArg{-pool}{hostname}
-\oOpt{-help}
-\oArg{hostname ...}
+\oArg{help options}
+\oArg{query options}
+\oArg{display options}
+\oArg{custom options}
+\oArg{hostname $\ldots$}
 
 \Description
-\Condor{status} reports the current status of machines participating in the pool, as well summarizing the current overall pool
-usage information.
-Without any coomand-line arguments \Condor{status} will do a resource query which displays all the machines in the pool and some of their attributes, such as their architecture, operating system, load average and state. Command line options can be used to control which attributes are displayed.
-Other kind of queries are schedd queries, submittor query, master query, and checkpoint server query.
-\Condor{status} will also display summary information for each query. If one or more hostnames appear on the command line, only their attributes will be displayed.
+\Condor{status} is a versatile tool that may be used to monitor and query the 
+the Condor pool.  The \Condor{status} tool can be used to query resource 
+information, submitter information, checkpoint server information, and daemon
+master information.  The specific query sent and the resulting information 
+display is controlled by the query options supplied.  Queries and display 
+formats can also be customized.
+
+The options that may be supplied to \Condor{status} belong to five groups:
+\begin{itemize}
+	\item \textbf{Help options} provide information about the \Condor{status}
+		tool.
+	\item \textbf{Query options} control the content and presentation of status
+		information.
+	\item \textbf{Display options} control the display of the queried 
+		information.
+	\item \textbf{Custom options} allow the user to customize query and
+		display information.
+	\item \textbf{Host options} specify specific machines to be queried
+\end{itemize}
+
+At any time, only one \Arg{help option}, one \Arg{query option} and one
+\Arg{custom option} may be specified.  Any number of \Arg{custom} and \Arg{host
+options} may be specified.
 
 \begin{Options}
-    \OptItem{\Opt{-help}}{Display usage information}
-    \OptItem{\OptArg{-pool}{hostname}}{Query the specified central mananger}
-    \OptItem{\Opt{-server}}{Display important attributes of resources}
-    \OptItem{\Opt{-state}}{Display state of resources}
-    \OptItem{\Opt{-startd}}{Display resource attributes}
-    \OptItem{\Opt{-avail}}{Print information about available resources}
-    \OptItem{\Opt{-claimed}}{Print information about claimed resources}
-    \OptItem{\Opt{-schedd}}{Display attributes of schedds}
-    \OptItem{\Opt{-ckptsrvr}}{Display checkpoint server attributes}
-    \OptItem{\Opt{-master}}{Display daemon master attributes}
-    \OptItem{\Opt{-submittors}}{Display information about request submittors}
-    \OptItem{\OptArg{-constraint}{const}}{Add constraint on classads}
-    \OptItem{\OptArg{-format}{fmt attr}}{Register display format and attribute}
-    \OptItem{\Opt{-verbose $\mid$ -long}}{Display entire classads}
-    \OptItem{\Opt{-total}}{Display totals only}
-    \OptItem{\Opt{-diagnose}}{Print out query ad without performing query}
+    \OptItem{\Opt{-help}}{(Help option) Display usage information}
+    \OptItem{\Opt{-diagnose}}{(Help option) Print out query ad without 
+		performing query}
+    \OptItem{\Opt{-avail}}{(Query option) Query \Condor{startd} ads and identify
+		resources which are available}
+    \OptItem{\Opt{-claimed}}{(Query option) Query \Condor{startd} ads and print 
+		information about claimed resources}
+    \OptItem{\Opt{-ckptsrvr}}{(Query option) Query \Condor{ckpt\_server} ads
+		and display checkpoint server attributes}
+    \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ads and display
+		daemon master attributes}
+    \OptItem{\OptArg{-pool}{hostname}}{Query the specified central manager. 
+		(\Condor{status} queries \Macro{COLLECTOR\_HOST} by default)}
+    \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ads and display
+		attributes}
+    \OptItem{\Opt{-server}}{(Query option) Query \Condor{startd} ads and 
+		display resource attributes}
+    \OptItem{\Opt{-startd}}{(Query option) Query \Condor{startd} ads} 
+    \OptItem{\Opt{-state}}{(Query option) Query \Condor{startd} ads and display 
+		resource state information}
+    \OptItem{\Opt{-submitters}}{(Query option) Query ads sent by submitters and
+		display important submitter attributes}
+    \OptItem{\Opt{-verbose}}{(Display option) Display entire classads.  Implies
+		that totals will not be displayed.}
+    \OptItem{\Opt{-long}}{(Display option) Display entire classads 
+		(same as \Opt{-verbose})}
+    \OptItem{\Opt{-total}}{(Display option) Display totals only}
+    \OptItem{\OptArg{-constraint}{const}}{(Custom option) Add constraint 
+		expression}
+    \OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Register display 
+		format and attribute name.  The \Arg{fmt} string has the same format as 
+		\texttt{printf(3)}, and \Arg{attr} is the name of the attribute that 
+		should be displayed in the specified format.}
 \end{Options}
+
+\GenRem
+\begin{itemize}
+	\item The information obtained from \Condor{startds} and \Condor{schedds} 
+	may sometimes appear to be inconsistent.  This is normal since startds and 
+	schedds update the Condor manager at different rates, and since there is a
+	delay as information propagates through the network and the system.
+
+	\item Note that the \texttt{ActivityTime} in the \texttt{Idle} state is
+	\emph{not} the amount of time that the machine has been idle.  See the
+	section on \Condor{startd} states in the \emph{Administrator's Manual}
+	for more information.
+\end{itemize}
 
 \end{ManPage}

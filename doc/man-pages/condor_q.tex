@@ -1,45 +1,107 @@
 \begin{ManPage}{\Condor{q}}{1}{Display information about jobs in queue}
 \label{man-condor-q}
 \Synopsis \SynProg{\Condor{q}}
-\oOpt{-help} \oOpt{-global} \oOptArg{-submittor}{submittor}
+\oOpt{-help} 
+\oOpt{-global} 
+\oOptArg{-submitter}{submitter}
+\oOptArg{-name}{name} 
 \oOptArg{-pool}{hostname}
 \oOpt{-analyze}
-\oOptArg{-name}{name} \oOptArg{-constraint}{expression} \oOpt{-long}
-\oArg{cluster $\mid$ cluster.process $\mid$ owner}
+\oOpt{-long}
+\oOpt{-analyze}
+\oArg{\{cluster \Bar cluster.process \Bar owner \Bar
+  \OptArg{-constraint}{expression} $\ldots$ \} }
 
 \Description
-\Condor{q} displays information about jobs in the local condor job queue.
-If a \Arg{cluster} and a \Arg{process} are both specified, \Condor{q}
-displays information about the specified process. If a \Arg{cluster} is
-specified without a \Arg{process}, \Condor{q} displays information about
-all processes belonging to the specified cluster. With no arguments
-\Condor{q} displays information about all condor jobs in the local queue.
-\Condor{q} displays a one line summary of information about specified
-processes as follows:
+\Condor{q} displays information about jobs in the Condor job queue.  By
+default, \Condor{q} queries the local job queue but this behavior may be 
+modified by specifying:
+\begin{itemize}
+	\item the \Opt{-global} option, which queries all job queues in the pool
+	\item a schedd name with the \Opt{-name} option, which causes the queue of 
+		the named schedd to be queried 
+	\item a submitter with the \Opt{-submitter} option, which causes all queues
+		of the named submitter to be queried
+\end{itemize}
+
+To restrict the display to jobs of interest, a list of zero or more 
+restrictions may be supplied.  Each restriction may be one of:
+\begin{itemize}
+	\item a \Arg{cluster} and a \Arg{process} matches jobs which
+		belong to the specified cluster and have the specified process number
+	\item a \Arg{cluster} without a \Arg{process} matches all jobs belonging
+		to the specified cluster
+	\item a \Arg{owner} matches all jobs owned by the specified owner
+	\item a \OptArg{-constraint}{expression} which matches all jobs that
+		satisfy the specified ClassAd expression. (See Appendix~\ref{ClassAds}
+		for a discussion of ClassAd expressions.)
+\end{itemize}
+If no \Arg{owner} restrictions are present in the list, the job matches the 
+restriction list if it matches at least one restriction in the list.  If 
+\Arg{owner} restrictions are present, the job matches the list if it matches 
+one of the \Arg{owner} restrictions \emph{and} at least one non-owner 
+restriction.
+
+If the \Opt{-long} option is specified, \Condor{q} displays a long description 
+of the jobs in the queue.  Otherwise, a one line summary of information is
+displayed as follows:
 
 \begin{description}
 \item[ID] The cluster/process id of the condor job. 
 \item[OWNER] The owner of the job. 
-\item[SUBMITTED] The month, day, hour, and minute the job was submitted to the queue. 
-\item[CPU\_USAGE] Remote CPU time accumulated by the job to date in days, hours, minutes, and seconds.
-If the job is currently running, time accumulated during the current run is not shown. 
-\item[ST] Current status of the job. U = unexpanded (never been run), R = running, I = idle (waiting for a machine to execute
-     on), C = completed, and X = removed. 
-\item[PRI] User specified priority of the job, ranges from -20 to +20, with higher numbers corresponding to greater priority. 
+\item[SUBMITTED] The month, day, hour, and minute the job was submitted to the 
+	queue. 
+\item[CPU\_USAGE] Remote CPU time accumulated by the job to date in days, 
+	hours, minutes, and seconds.  (If the job is currently running, time 
+	accumulated during the current run is \emph{not} shown.)
+\item[ST] Current status of the job. U = unexpanded (never been run), 
+	R = running, I = idle (waiting for a machine to execute on), C = completed, 
+	and X = removed. 
+\item[PRI] User specified priority of the job, ranges from -20 to +20, with 
+	higher numbers corresponding to greater priority. 
 \item[SIZE] The virtual image size of the executable in megabytes. 
 \item[CMD] The name of the executable. 
 \end{description}
 
+The \Arg{-analyze} option may be used to determine why certain jobs are not
+running by performing an analysis on a per machine basis for each machine in 
+the pool.  The reasons may vary among failed constraints, insufficient priority,
+resource owner preferences and prevention of preemption by the 
+\Macro{PREEMPTION\_HOLD} expression.  If the \Arg{-long} option is specified 
+along with the \Arg{-analyze} option, the reason for failure is displayed on a 
+per machine basis.
+
 \begin{Options}
     \OptItem{\Opt{-help}}{Get a brief description of the supported options}
-    \OptItem{\Opt{-global}}{Get the ``global queue,'' (i.e., get the jobs of
-    all the submittors in the system)}
-	\OptItem{\OptArg{-submittor}{submittor}}{List jobs of specific submittor from all the job queues in the pool}
-	\OptItem{\OptArg{-pool}{hostname}}{Use host as the central manager to query}
-	\OptItem{\Opt{-analyze}}{Display an analysis showing how many resources are available to run the requested jobs}
+    \OptItem{\Opt{-global}}{Get queues of all the submitters in the system}
+	\OptItem{\OptArg{-submitter}{submitter}}{List jobs of specific submitter 
+		from all the queues in the pool}
+	\OptItem{\OptArg{-pool}{hostname}}{Use hostname as the central manager to 
+		locate schedds. (The default is the \Macro{COLLECTOR\_HOST} specified
+		in the configuration file.}
+	\OptItem{\Opt{-analyze}}{Perform an approximate analysis to determine how
+		many resources are available to run the requested jobs}
 	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
-	\OptItem{\OptArg{-constraint}{expression}}{Show only jobs that satisfy the constraint}
 	\OptItem{\Opt{-long}}{Display job ads in long format}
+	\OptItem{Restriction list}{The restriction list may have zero or more items,
+		each of which may be:
+		\begin{description}
+			\item[\Arg{cluster}] match all jobs belonging to cluster
+			\item[\Arg{cluster.proc}] match all jobs belonging to cluster with
+				a process number of \emph{proc}
+			\item[\OptArg{-constraint}{expression}] match all jobs which match
+				the ClassAd expression constraint
+		\end{description} 
+		A job matches the restriction list if it matches any restriction in the 
+		list  Additionally, if \Arg{owner} restrictions are supplied, the job
+		matches the list only if it also matches an \Arg{owner} restriction.}
 \end{Options}
+
+\GenRem
+Although \Arg{-analyze} provides a very good first approximation, the analyzer 
+cannot diagnose all possible situations because the analysis is based on 
+instantaneous and local information.  Therefore, there are some situations 
+(such as when several submitters are contending for resources, or if the pool 
+is rapidly changing state) which cannot be accurately diagnosed.
 
 \end{ManPage}
