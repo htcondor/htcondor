@@ -253,9 +253,15 @@ void Value::
 SetRelativeTimeValue( time_t rsecs ) 
 {
 	valueType = RELATIVE_TIME_VALUE;
-	relTimeValueSecs = rsecs;
+	relTimeValueSecs = (double) rsecs;
 }
 
+void Value::
+SetRelativeTimeValue( double rsecs ) 
+{
+	valueType = RELATIVE_TIME_VALUE;
+	relTimeValueSecs = rsecs;
+}
 
 void Value::
 SetAbsoluteTimeValue( abstime_t asecs ) 

@@ -229,40 +229,61 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::RELATIVE_TIME_VALUE: {
-			time_t	rsecs;
-			int		days, hrs, mins, secs;
+			double  rsecs;
+            double  fractional_seconds;
+			int     days, hrs, mins;
+            double  secs;
+
 			val.IsRelativeTimeValue( rsecs );
-		      
+		    
+            fractional_seconds = rsecs - trunc(rsecs);
+
 			buffer += "relTime(\"";
 			if( rsecs < 0 ) {
 				buffer += "-";
 				rsecs = -rsecs;
 			}
-			days = rsecs;
+			days = (int) rsecs;
 			hrs  = days % 86400;
 			mins = hrs  % 3600;
-			secs = mins % 60;
+			secs = (mins % 60) + fractional_seconds;
 			days = days / 86400;
 			hrs  = hrs  / 3600;
 			mins = mins / 60;
 
-			if( days ) {
-		       sprintf( tempBuf, "%d+%02d:%02d:%02d\")", days, hrs, mins, secs );
+			if (days) {
+                if (fractional_seconds == 0) {
+                    sprintf(tempBuf, "%d+%02d:%02d:%02d\")", days, hrs, mins, (int) secs);
+                } else {
+                    sprintf(tempBuf, "%d+%02d:%02d:%02g\")", days, hrs, mins, secs);
+                }
 			  buffer += tempBuf;
 			  return;
 			}
-			if(hrs) {
-		      sprintf( tempBuf, "%02d:%02d:%02d\")", hrs, mins, secs );
+			if (hrs) {
+                if (fractional_seconds == 0) {
+                    sprintf(tempBuf, "%02d:%02d:%02d\")", hrs, mins, (int) secs);
+                } else {
+                    sprintf(tempBuf, "%02d:%02d:%02g\")", hrs, mins, secs);
+                }
 			  buffer += tempBuf;
 			  return;
 			}	  
-			if(mins) {
-		      sprintf( tempBuf, "%02d:%02d\")", mins, secs );
-			  buffer += tempBuf;
-			  return;
+			if (mins) {
+                if (fractional_seconds == 0) {
+                    sprintf(tempBuf, "%02d:%02d\")", mins, (int) secs);
+                } else {
+                    sprintf(tempBuf, "%02d:%02g\")", mins, secs);
+                }
+                buffer += tempBuf;
+                return;
 			}	  
 			else {
-			  sprintf( tempBuf, "%02d\")", secs );
+                if (fractional_seconds == 0) {
+                    sprintf(tempBuf, "%02d\")", (int) secs);
+                } else {
+                    sprintf(tempBuf, "%02g\")", secs);
+                }
 			  buffer += tempBuf;
 			}
 		  

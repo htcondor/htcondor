@@ -139,6 +139,7 @@ class Value
 			@param secs Number of seconds.
 		*/
 		void SetRelativeTimeValue( time_t secs );
+		void SetRelativeTimeValue( double secs );
 
 		/** Gets the type of the value.
 			@return The value type.
@@ -264,6 +265,7 @@ class Value
 			@param secs Number of seconds
 			@return true iff the value is a relative time value
 		*/
+		bool IsRelativeTimeValue( double& secs ) const;
 		bool IsRelativeTimeValue( time_t& secs ) const;
 
         bool SameAs(const Value &otherValue) const;
@@ -286,7 +288,7 @@ class Value
 			double 			realValue;
 			const ExprList	*listValue;
 			ClassAd			*classadValue;
-			time_t			relTimeValueSecs;
+			double			relTimeValueSecs;
 			abstime_t absTimeValueSecs;
 		  
 		};
@@ -458,9 +460,15 @@ IsRelativeTimeValue( ) const
 }
 
 inline bool Value::
-IsRelativeTimeValue( time_t &secs ) const
+IsRelativeTimeValue( double &secs ) const
 {
 	secs = relTimeValueSecs;
+	return( valueType == RELATIVE_TIME_VALUE );
+}
+inline bool Value::
+IsRelativeTimeValue( time_t &secs ) const
+{
+	secs = (int) relTimeValueSecs;
 	return( valueType == RELATIVE_TIME_VALUE );
 }
 inline bool Value::

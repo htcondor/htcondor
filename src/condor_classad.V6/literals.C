@@ -143,7 +143,7 @@ MakeRelTime( time_t secs )
 		time(&secs );
 		getLocalTime( &secs, &lt );
 	}
-	val.SetRelativeTimeValue( lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec );
+	val.SetRelativeTimeValue((time_t) (lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec));
 	return( MakeLiteral( val ) );
 }
 
@@ -171,19 +171,43 @@ inline void prevNonSpaceChar(string Str, int &index)
 }
 
 
-/* Function which takes a number in string format, 
- *& reverses the order of the digits & returns the corresponding number 
+/* Function which takes a number in string format, and reverses the
+ * order of the digits & returns the corresponding number as an
+ * integer.
  */
-int revNum(string revNumStr) 
+int revInt(string revNumStr) 
 {
 	string numStr = "";
+    int number;
+
 	int len = revNumStr.length();
 	for(int i=len-1; i>=0 ; i--) {
 		numStr += revNumStr[i];
 	}
-	return(atoi(numStr.c_str()));
+
+    number = atoi(numStr.c_str());
+	return number;
 }
 
+/* Function which takes a number in string format, and reverses the
+ * order of the digits & returns the corresponding number as a double.
+ */
+double revDouble(string revNumStr) 
+{
+	string numStr = "";
+    double number;
+    const char *cNumStr;
+
+	int len = revNumStr.length();
+	for(int i=len-1; i>=0 ; i--) {
+		numStr += revNumStr[i];
+	}
+
+    cNumStr = numStr.c_str();
+    
+    number = strtod(cNumStr, NULL);
+	return number;
+}
 
 /* function which returns the timezone offset corresponding to the argument epochsecs,
  *  which is the number of seconds since the epoch 
@@ -334,10 +358,10 @@ Literal* Literal::
 MakeRelTime(string timeStr)
 {
 	Value val;  
-	time_t rsecs;
+	double rsecs;
 	
 	int len = timeStr.length();
-	int secs = 0;
+	double secs = 0;
 	int mins = 0;
 	int hrs = 0;
 	int days = 0;
@@ -361,7 +385,7 @@ MakeRelTime(string timeStr)
 				revSecStr += timeStr[i--];
 			}
 		}
-		secs = revNum(revSecStr);
+		secs = revDouble(revSecStr);
 	}
 	
 	prevNonSpaceChar(timeStr,i);
@@ -373,7 +397,7 @@ MakeRelTime(string timeStr)
 		while((i>=0) &&(isdigit(timeStr[i]))) {
 			revMinStr += timeStr[i--];
 		}
-		mins = revNum(revMinStr);
+		mins = revInt(revMinStr);
 	}
 	
 	prevNonSpaceChar(timeStr,i);
@@ -385,7 +409,7 @@ MakeRelTime(string timeStr)
 		while((i>=0) &&(isdigit(timeStr[i]))) {
 			revHrStr += timeStr[i--];
 		}
-		hrs = revNum(revHrStr);
+		hrs = revInt(revHrStr);
 	}   
 	
 	prevNonSpaceChar(timeStr,i);
@@ -397,7 +421,7 @@ MakeRelTime(string timeStr)
 		while((i>=0) &&(isdigit(timeStr[i]))) {
 			revDayStr += timeStr[i--];
 		}
-		days = revNum(revDayStr);
+		days = revInt(revDayStr);
 	}     
 	
 	prevNonSpaceChar(timeStr,i);

@@ -1139,10 +1139,10 @@ timeZoneOffset (const char *, const ArgumentList &argList, EvalState &,
 		// POSIX says that timezone is positive west of GMT;  we reverse it
 		// here to make it more intuitive
 	if(tms->tm_isdst > 0) { //check for daylight saving
-	  val.SetRelativeTimeValue( (int) (-timezone_offset()+3600) );
+	  val.SetRelativeTimeValue( (time_t) (-timezone_offset()+3600) );
 	}
 	else {
-	  val.SetRelativeTimeValue( (int) (-timezone_offset()));
+	  val.SetRelativeTimeValue( (time_t) (-timezone_offset()));
 	}
 	return( true );
 }
@@ -1164,7 +1164,7 @@ dayTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 
 	getLocalTime(&now, &lt);
 
-	val.SetRelativeTimeValue( lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec );
+	val.SetRelativeTimeValue((time_t) ( lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec) );
 	return( true );
 }
 
@@ -1353,7 +1353,7 @@ splitTime(const char* name, const ArgumentList &argList, EvalState &state,
 {
 	Value 	arg;
 	abstime_t asecs;
-	time_t rsecs;
+	double rsecs;
 	time_t	clock;
 	struct  tm tms;
     ClassAd *split;
@@ -1386,7 +1386,8 @@ splitTime(const char* name, const ArgumentList &argList, EvalState &state,
         val.SetClassAdValue(split);
 		return true;
 	} else if( arg.IsRelativeTimeValue( rsecs ) ) {
-        int		days, hrs, mins, secs;
+        int		days, hrs, mins;
+        double  secs;
         bool    is_negative;
         
         if( rsecs < 0 ) {
@@ -1395,10 +1396,10 @@ splitTime(const char* name, const ArgumentList &argList, EvalState &state,
         } else {
             is_negative = false;
         }
-        days = rsecs;
+        days = (int) rsecs;
         hrs  = days % 86400;
         mins = hrs  % 3600;
-        secs = mins % 60;
+        secs = (mins % 60) + (rsecs - trunc(rsecs));
         days = days / 86400;
         hrs  = hrs  / 3600;
         mins = mins / 60;
@@ -2010,7 +2011,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 				int ivalue;
 				arg.IsIntegerValue( ivalue );
 				if( relative ) {
-					result.SetRelativeTimeValue( ivalue );
+					result.SetRelativeTimeValue( (time_t) ivalue );
 				} else {
 				  abstime_t atvalue;
 				  atvalue.secs = ivalue;
@@ -2035,7 +2036,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 				arg.IsRealValue( rvalue );
 				if( relative ) {
-					result.SetRelativeTimeValue( (int)rvalue );
+					result.SetRelativeTimeValue( rvalue );
 				} else {
 				  	  abstime_t atvalue;
 					  atvalue.secs = (int)rvalue;

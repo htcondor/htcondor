@@ -130,7 +130,7 @@ class Lexer
 					absolute_secs = asecs;
 				}
 
-				void SetRelTimeValue( time_t rsecs ) {
+				void SetRelTimeValue( double rsecs ) {
 					relative_secs = rsecs;
 				}
 
@@ -160,7 +160,7 @@ class Lexer
 					asecs = absolute_secs;
 				}
 
-				void GetRelTimeValue( time_t& rsecs ) {
+				void GetRelTimeValue( double& rsecs ) {
 					rsecs = relative_secs;
 				}
 
@@ -182,7 +182,7 @@ class Lexer
 				double 				realValue;
 				bool 				boolValue;
 				std::string			strValue;
-				time_t				relative_secs;
+				double				relative_secs;
 				abstime_t           absolute_secs;
 		};
 

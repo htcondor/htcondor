@@ -1039,8 +1039,8 @@ parsePrimaryExpression(ExprTree *&tree)
 
 		case Lexer::LEX_RELATIVE_TIME_VALUE:
 			{
-				Value	val;
-				time_t	secs;
+				Value   val;
+				double  secs;
 
 				tv.GetRelTimeValue( secs );
 				lexer.ConsumeToken( );

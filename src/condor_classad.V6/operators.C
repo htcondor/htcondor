@@ -822,7 +822,7 @@ int Operation::
 doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	int		i1, i2;
-	time_t	t1;
+	double	t1;
 	double 	r1;
 
 	// ensure the operands have arithmetic types
@@ -1127,8 +1127,8 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
   asecs1.offset =0;
 asecs2.secs = 0;
   asecs2.offset =0;
-	time_t rsecs1=0;
-	time_t rsecs2=0;
+	double rsecs1=0;
+	double rsecs2=0;
 	Value::ValueType vt1=v1.GetType( ), vt2=v2.GetType( );
 
 		// addition
@@ -1137,7 +1137,7 @@ asecs2.secs = 0;
 				vt2==Value::RELATIVE_TIME_VALUE ) {
 			v1.IsAbsoluteTimeValue( asecs1 );
 			v2.IsRelativeTimeValue( rsecs2 );
-			asecs1.secs += rsecs2;
+			asecs1.secs += (int) rsecs2;
 			result.SetAbsoluteTimeValue( asecs1 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
@@ -1146,7 +1146,7 @@ asecs2.secs = 0;
 				vt2==Value::ABSOLUTE_TIME_VALUE ) {
 			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsAbsoluteTimeValue( asecs2 );
-			asecs2.secs += rsecs1;
+			asecs2.secs += (int) rsecs1;
 			result.SetAbsoluteTimeValue( asecs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
@@ -1173,7 +1173,7 @@ asecs2.secs = 0;
 				vt2==Value::RELATIVE_TIME_VALUE ) {
 			v1.IsAbsoluteTimeValue( asecs1 );
 			v2.IsRelativeTimeValue( rsecs2 );
-			asecs1.secs = asecs1.secs - rsecs2;
+			asecs1.secs = asecs1.secs - (int) rsecs2;
 			result.SetAbsoluteTimeValue( asecs1 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
@@ -1189,7 +1189,8 @@ asecs2.secs = 0;
 
 	if( op == MULTIPLICATION_OP || op == DIVISION_OP ) {
 		if( vt1==Value::RELATIVE_TIME_VALUE && vt2==Value::INTEGER_VALUE ) {
-			int num, msecs;
+			int     num;
+            double  msecs;
 			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsIntegerValue( num );
 			if( op == MULTIPLICATION_OP ) {
@@ -1202,14 +1203,14 @@ asecs2.secs = 0;
 		}
 
 		if( vt1==Value::RELATIVE_TIME_VALUE &&  vt2==Value::REAL_VALUE ) {
-			double 	num;
-			int		msecs;
+			double  num;
+			double  msecs;
 			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsRealValue( num );
 			if( op == MULTIPLICATION_OP ) {
-				msecs = (int) ( rsecs1 * num );
+				msecs = rsecs1 * num;
 			} else {
-				msecs = (int) ( rsecs1 / num );
+				msecs = rsecs1 / num;
 			}
 			result.SetRelativeTimeValue( msecs );
 			return( SIG_CHLD1 | SIG_CHLD2 );
@@ -1229,7 +1230,7 @@ asecs2.secs = 0;
 			double 	num;
 			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsRealValue( num );
-			result.SetRelativeTimeValue( (int) ( rsecs1 * num ) );
+			result.SetRelativeTimeValue(rsecs1 * num);
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 	}
@@ -1308,7 +1309,7 @@ compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
 void Operation::
 compareRelativeTimes( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	time_t rsecs1, rsecs2;
+	double rsecs1, rsecs2;
 	bool compResult;
 
 	v1.IsRelativeTimeValue( rsecs1 );
