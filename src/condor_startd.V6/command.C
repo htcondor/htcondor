@@ -387,6 +387,22 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		EXCEPT( "request_claim: no current match object." );
 	}
 
+		/* 
+		   Now that we've been contacted by the schedd agent, we can
+		   cancel the match timer on either the current or the
+		   preempting match, depending on what state we're in.  We
+		   want to do this right away so we don't abort this function
+		   for some reason and leave that timer in place, since we'll
+		   EXCEPT later on if it goes off and we're not in the matched
+		   state anymore (and it's the current match at that point).
+		   -Derek Wright 3/11/99 
+		*/
+	if( rip->state() == claimed_state ) {
+		rip->r_pre->cancel_match_timer();
+	} else {
+		rip->r_cur->cancel_match_timer();
+	}
+
 		// Get the classad of the request.
 	if( !req_classad->get(*stream) ) {
 		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd-agent\n" );
@@ -438,11 +454,6 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 			REFUSE;
 			ABORT;
 		}
-		
-			// Now that we're being contacted by the schedd agent, we
-			// can cancel the match timer on the preempting match.
-		rip->r_pre->cancel_match_timer();
-
 		if( rip->r_pre->cap()->matches(cap) ) {
 			rip->dprintf( D_ALWAYS, 
 						  "Preempting match has correct capability.\n" );
@@ -477,11 +488,6 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		}
 	} else {
 			// We're not claimed
-
-			// Now that we're being contacted by the schedd agent, we
-			// can cancel the match timer on the current match.
-		rip->r_cur->cancel_match_timer();
-
 		if( rip->r_cur->cap()->matches(cap) ) {
 			rip->dprintf( D_ALWAYS, "Request accepted.\n" );
 			cmd = OK;
