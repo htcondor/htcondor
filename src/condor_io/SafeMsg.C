@@ -30,7 +30,7 @@
 _condorPacket::_condorPacket()
 {
 	length = 0;
-	data = &dataGram[HEADER_SIZE];
+	data = &dataGram[SAFE_MSG_HEADER_SIZE];
 	curIndex = 0;
 	next = NULL;
 }
@@ -53,7 +53,7 @@ bool _condorPacket::getHeader(bool &last,
 					_condorMsgID &mID,
 					void *&dta)
 {
-	if(memcmp(&dataGram[0], MAGIC, 8)) {
+	if(memcmp(&dataGram[0], SAFE_MSG_MAGIC, 8)) {
 		if(len >= 0)
 			length = len;
 		dta = data = &dataGram[0];
@@ -179,8 +179,8 @@ int _condorPacket::putMax(const void* dta, const int size)
 {
 	int len = size;
 
-	if(len > MAX_PACKET_SIZE - HEADER_SIZE - curIndex)
-		len = MAX_PACKET_SIZE - HEADER_SIZE - curIndex;
+	if(len > SAFE_MSG_MAX_PACKET_SIZE - SAFE_MSG_HEADER_SIZE - curIndex)
+		len = SAFE_MSG_MAX_PACKET_SIZE - SAFE_MSG_HEADER_SIZE - curIndex;
 	memcpy(&data[curIndex], dta, len);
 	curIndex += len;
 	length = curIndex;
@@ -190,7 +190,7 @@ int _condorPacket::putMax(const void* dta, const int size)
 
 bool _condorPacket::full()
 {
-	if(curIndex == MAX_PACKET_SIZE - HEADER_SIZE)
+	if(curIndex == SAFE_MSG_MAX_PACKET_SIZE - SAFE_MSG_HEADER_SIZE)
 		return true;
 	else return false;
 }
@@ -212,7 +212,7 @@ void _condorPacket::makeHeader(bool last, int seqNo, _condorMsgID msgID)
 	int stemp;
 	long ltemp;
 
-	memcpy(dataGram, MAGIC, 8);
+	memcpy(dataGram, SAFE_MSG_MAGIC, 8);
 
 	dataGram[8] = (char) last;
 	stemp = htons((u_short)seqNo);
@@ -346,13 +346,13 @@ int _condorOutMsg::sendMsg(const int sock,
 		tempPkt->makeHeader(false, seqNo++, msgID);
 		msgLen += tempPkt->length;
 		sent = sendto(sock, tempPkt->dataGram,
-		              tempPkt->length + _condorPacket::HEADER_SIZE,
+		              tempPkt->length + SAFE_MSG_HEADER_SIZE,
 				  0, who, sizeof(struct sockaddr));
 		//printf("Packet[%d] sent\n", sent);
 		dprintf(D_NETWORK, "Packet[%d] sent\n", sent);
-		if(sent != tempPkt->length + _condorPacket::HEADER_SIZE) {
-			dprintf(D_NETWORK, "sendMsg:sendto failed.
-			                    errno: %d\n", errno);
+		if(sent != tempPkt->length + SAFE_MSG_HEADER_SIZE) {
+			dprintf(D_NETWORK, "sendMsg:sendto failed. "
+			                   "errno: %d\n", errno);
 			headPacket = tempPkt;
 			clearMsg();
 			return -1;
@@ -378,11 +378,11 @@ int _condorOutMsg::sendMsg(const int sock,
 		lastPacket->makeHeader(true, seqNo, msgID);
 		msgLen += lastPacket->length;
 		sent = sendto(sock, lastPacket->dataGram,
-		              lastPacket->length + _condorPacket::HEADER_SIZE,
+		              lastPacket->length + SAFE_MSG_HEADER_SIZE,
 		              0, who, sizeof(struct sockaddr));
 		//printf("Packet[%d] sent\n", sent);
 		dprintf(D_NETWORK, "Packet[%d] sent\n", sent);
-		if(sent != lastPacket->length + _condorPacket::HEADER_SIZE) {
+		if(sent != lastPacket->length + SAFE_MSG_HEADER_SIZE) {
 			dprintf(D_NETWORK, "sendMsg:sending last packet failed. errno: %d\n", errno);
 			headPacket->reset();
 			return -1;
@@ -444,7 +444,7 @@ int _condorOutMsg::dumpMsg(const _condorMsgID mID)
 		nextPkt = tempPkt->next;
 		tempPkt->makeHeader((nextPkt == NULL), seqNo++, mID);
 		tempPkt->dumpPacket();
-		dumped = tempPkt->length + _condorPacket::HEADER_SIZE;
+		dumped = tempPkt->length + SAFE_MSG_HEADER_SIZE;
 		total += dumped;
 		tempPkt = nextPkt;
 	}
@@ -460,7 +460,7 @@ _condorDirPage::_condorDirPage(_condorDirPage* prev, const int num)
 {
 	prevDir = prev;
 	dirNo = num;
-	for(int i=0; i< NO_OF_DIR_ENTRY; i++) {
+	for(int i=0; i< SAFE_MSG_NO_OF_DIR_ENTRY; i++) {
 		dEntry[i].dLen = 0;
 		dEntry[i].dGram = NULL;
 	}
@@ -469,7 +469,7 @@ _condorDirPage::_condorDirPage(_condorDirPage* prev, const int num)
 
 
 _condorDirPage::~_condorDirPage() {
-	for(int i=0; i< NO_OF_DIR_ENTRY; i++)
+	for(int i=0; i< SAFE_MSG_NO_OF_DIR_ENTRY; i++)
 		if(dEntry[i].dGram) {
 			free(dEntry[i].dGram);
 		}
@@ -514,7 +514,7 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 		//Danger Alert! Do we _really_ want to exit here?
 		exit(-1);
 	}
-	destDirNo = seq / _condorDirPage::NO_OF_DIR_ENTRY;
+	destDirNo = seq / SAFE_MSG_NO_OF_DIR_ENTRY;
 	while(curDir->dirNo != destDirNo) {
 		curDir->nextDir = new _condorDirPage(curDir, curDir->dirNo + 1);
 		if(!curDir->nextDir) {
@@ -526,7 +526,7 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 	}
 
 	// make a packet and add to the appropriate directory entry
-	index = seq % _condorDirPage::NO_OF_DIR_ENTRY;
+	index = seq % SAFE_MSG_NO_OF_DIR_ENTRY;
 	curDir->dEntry[index].dLen = len;
 	curDir->dEntry[index].dGram = (char *)malloc(len);
 	if(!curDir->dEntry[index].dGram) {
@@ -570,7 +570,7 @@ bool _condorInMsg::addPacket(const bool last,
 		return false;
 	}
 	// find the correct dir entry
-	destDirNo = seq / _condorDirPage::NO_OF_DIR_ENTRY;
+	destDirNo = seq / SAFE_MSG_NO_OF_DIR_ENTRY;
 	while(destDirNo != curDir->dirNo) {
 		if(destDirNo > curDir->dirNo) {// move forward, while appending new dir entries
 			if(curDir->nextDir == NULL) {
@@ -586,7 +586,7 @@ bool _condorInMsg::addPacket(const bool last,
 			curDir = curDir->prevDir;
 	} // of while(destDirNo...)
 
-	index = seq % _condorDirPage::NO_OF_DIR_ENTRY;
+	index = seq % SAFE_MSG_NO_OF_DIR_ENTRY;
 	if(curDir->dEntry[index].dLen == 0) { // new packet
 		curDir->dEntry[index].dLen = len;
 		curDir->dEntry[index].dGram = (char *)malloc(len);
@@ -645,7 +645,7 @@ int _condorInMsg::getn(char* dta, const int size)
 			free(curDir->dEntry[curPacket].dGram);
 			curDir->dEntry[curPacket].dGram = NULL;
 
-			if(++curPacket == _condorDirPage::NO_OF_DIR_ENTRY) {
+			if(++curPacket == SAFE_MSG_NO_OF_DIR_ENTRY) {
 				// was the last of the current dir
 				tempDir = headDir;
 				headDir = curDir = headDir->nextDir;
@@ -693,7 +693,7 @@ int _condorInMsg::getPtr(void *&buf, char delim)
 		if(++tempData == tempDir->dEntry[tempPkt].dLen) {
 			tempPkt++;
 			tempData = 0;
-			if(tempPkt == _condorDirPage::NO_OF_DIR_ENTRY) {
+			if(tempPkt == SAFE_MSG_NO_OF_DIR_ENTRY) {
 				if(!tempDir->nextDir) {
 					return -1;
 				}
@@ -749,7 +749,7 @@ void _condorInMsg::dumpMsg()
 	while(tempDir) {
 		printf("\tdir[%d]  pre: %d  next: %d\n",
 		        tempDir->dirNo, tempDir->prevDir, tempDir->nextDir);
-		for(i=0; i < _condorDirPage::NO_OF_DIR_ENTRY; i++) {
+		for(i=0; i < _condorDirPage::SAFE_MSG_NO_OF_DIR_ENTRY; i++) {
 			printf("\t\t[%d] ", i);
 			if(tempDir->dEntry[i].dGram) {
 				for(j=0; j < tempDir->dEntry[i].dLen; j++) {
