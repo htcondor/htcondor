@@ -795,7 +795,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	int leave_job_in_q = 0;
 	ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
 	if ( leave_job_in_q ) {
-		return -2;
+		return 1;
 	}
 
  
