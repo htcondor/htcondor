@@ -34,10 +34,11 @@
 static bool submit_try (const char *exe,
                         const char * command,
                         CondorID & condorID) {
-  
+
+  MyString  command_output("");
   FILE * fp = popen(command, "r");
   if (fp == NULL) {
-    debug_printf( DEBUG_QUIET, "%s: popen() failed!\n", command);
+    debug_printf( DEBUG_NORMAL, "%s: popen() in submit_try failed!\n", command);
     return false;
   }
   
@@ -63,15 +64,19 @@ static bool submit_try (const char *exe,
   do {
     if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
       pclose(fp);
+	  debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
+	  debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.GetCStr());
       return false;
     }
+	command_output += buffer;
   } while (strstr(buffer, "cluster") == NULL);
   
   {
     int status = pclose(fp);
     if (status == -1) {
-		debug_error( 1, DEBUG_QUIET, "%s: pclose() failed!\n", command );
-      return false;
+		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", command_output.GetCStr());
+		debug_error( 1, DEBUG_NORMAL, "%s: pclose() in submit_try failed!\n", command );
+		return false;
     }
   }
 
@@ -118,8 +123,8 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   
   success = submit_try( exe, command, condorID );
   for (int i = 1 ; i < tries && !success ; i++) {
-      debug_printf( DEBUG_NORMAL, "condor_submit try %d/%d failed, \n"
-                     "will try again in %d second%s", i, tries, wait,
+      debug_printf( DEBUG_NORMAL, "condor_submit try %d/%d failed, "
+                     "will try again in %d second%s\n", i, tries, wait,
 					 wait == 1 ? "" : "s" );
       sleep( wait );
 	  success = submit_try( exe, command, condorID );
