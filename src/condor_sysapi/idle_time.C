@@ -21,8 +21,12 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include <stdio.h>
-#include <unistd.h>
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+#include "sysapi.h"
+#include "sysapi_externs.h"
+
 #ifdef CONDOR_DARWIN
 #include <mach/mach.h>
 #include <IOKit/IOKitLib.h>
@@ -30,12 +34,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <Carbon/Carbon.h>
 #endif
-
-#include "condor_common.h"
-#include "condor_config.h"
-#include "condor_debug.h"
-#include "sysapi.h"
-#include "sysapi_externs.h"
 
 /* define some static functions */
 #if defined(WIN32)
