@@ -32,6 +32,7 @@
 #include "MyString.h"
 #include "Set.h"
 #include "condor_distribution.h"
+#include "file_transfer.h"
 
 template class List<char>; 		template class Item<char>;
 template class List<int>; 		template class Item<int>;
@@ -55,3 +56,5 @@ template class HashTable<MyString, MyString>;
 template class HashBucket<MyString, MyString>;
 template class HashTable<MyString, KeyCacheEntry*>;
 template class Queue<char *>;
+template class HashTable<int, FileTransfer *>;
+template class HashTable<MyString, FileTransfer *>;

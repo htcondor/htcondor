@@ -54,6 +54,7 @@ template class ExtArray<bool>;
 template class ExtArray<PROC_ID>;
 template class ExtArray<OwnerData>;
 template class SimpleList<Shadow*>;
+template class HashTable<int, ExtArray<PROC_ID> *>;
 
 // for condor-G
 template class HashTable<MyString,GridUniverseLogic::gman_node_t *>;

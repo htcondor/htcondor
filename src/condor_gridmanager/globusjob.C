@@ -28,6 +28,7 @@
 #include "environ.h"  // for Environ object
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
+#include "condor_ckpt_name.h"
 
 #include "gridmanager.h"
 #include "globusjob.h"
@@ -1765,7 +1766,7 @@ MyString *GlobusJob::buildSubmitRSL()
 	//First look for executable in the spool area.
 	char *spooldir = param("SPOOL");
 	if ( spooldir ) {
-		char *source = gen_ckpt_name(Spool,procID.cluster,ICKPT,0);
+		char *source = gen_ckpt_name(spooldir,procID.cluster,ICKPT,0);
 		free(spooldir);
 		if ( access(source,F_OK | X_OK) >= 0 ) {
 				// we can access an executable in the spool dir
