@@ -678,7 +678,8 @@ doContactSchedd()
 			SetAttributeString( curr_job->procID.cluster,
 								curr_job->procID.proc,
 								ATTR_GLOBUS_CONTACT_STRING,
-								curr_job->jobContact );
+								curr_job->jobContact ? curr_job->jobContact :
+								    NULL_JOB_CONTACT );
 		}
 
 		if ( curr_action->actions & UA_UPDATE_STDOUT_SIZE ) {
