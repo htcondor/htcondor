@@ -9,6 +9,7 @@
 #define COLLECTOR_UDP_PORT	9613
 #define NEGOTIATOR_PORT		9614
 #define START_UDP_PORT		9615
+#define ACCOUNTANT_PORT		9616
 
 #if defined(__cplusplus)
 extern "C" {
