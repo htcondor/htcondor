@@ -2,24 +2,34 @@
 {remove jobs from the condor queue}
 \Synopsis \SynProg{\Condor{rm}}
 \oOptArg{-n}{schedd\_name}
-\Arg{cluster \Bar cluster.process \Bar username \Bar -a}
+\oArg{job identifiers}
 
 \index{Condor commands!condor\_rm}
 \index{condor\_rm command}
 
 \Description
 
-\Condor{rm} removes one or more jobs from the condor job queue.  If a
-cluster\_id and a process\_id are both specified, \Condor{rm} attempts to
-remove the specified process from the queue. If a cluster\_id is specified
-without a process\_id, \Condor{rm} attempts to remove all processes belonging
-to the specified cluster. If a username is specified, \Condor{rm} attempts to
-remove all jobs belonging to that user. Only the owner of a job, user condor,
-or user root can remove any given job.
+\Condor{rm} removes one or more jobs from the Condor job queue.  
+If the \Opt{-n} option is specified, the named \Condor{schedd} is targeted
+for processing.  
+Otherwise, the local \Condor{schedd} is targeted.
+The jobs to be removed are identified by one or more job identifiers, as
+described below.
+For any given job, only the owner of the job or one of the queue super users
+(defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can remove the job.
 
 \begin{Options}
-    \OptItem{\OptArg{-n}{schedd\_name}}{Remove jobs in the queue of the specified schedd}
-    \OptItem{\Opt{-a}}{Remove all the jobs in the queue}
+    \OptItem{\OptArg{-n}{schedd\_name}}{Remove jobs in the queue of the 
+		specified schedd}
+	\OptItem{\Arg{cluster}}{(Job identifier.) Remove all jobs in the specified 
+		cluster}
+	\OptItem{\Arg{cluster.process}}{(Job identifier.) Remove the specific job 
+		in the cluster}
+	\OptItem{\Arg{name}}{(Job identifier.) Remove jobs belonging to specified 
+		user}
+    \OptItem{\Opt{-a}}{(Job identifier.) Remove all the jobs in the queue}
+	\OptItem{\Arg{-constraint \emph{constraint}}}{(Job identifier.) Remove 
+		jobs matching specified constraint}
 \end{Options}
 
 \end{ManPage}
