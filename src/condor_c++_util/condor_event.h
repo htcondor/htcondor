@@ -24,15 +24,15 @@
 #define __CONDOR_EVENT_H__
 
 #if defined(IRIX62)
-#	ifdef _NO_ANSIMODE
-#		define _TMP_NO_ANSIMODE
-#	endif
-#	undef _NO_ANSIMODE
-#	include <time.h>
-#	ifdef _TMP_NO_ANSIMODE
-#		define _NO_ANSIMODE
-#		undef _TMP_NO_ANSIMODE
-#	endif
+#   ifdef _NO_ANSIMODE
+#       define _TMP_NO_ANSIMODE
+#   endif
+#   undef _NO_ANSIMODE
+#   include <time.h>
+#   ifdef _TMP_NO_ANSIMODE
+#       define _NO_ANSIMODE
+#       undef _TMP_NO_ANSIMODE
+#   endif
 #endif   /* IRIX62 */
 
 #define GENERIC_EVENT 1
@@ -40,233 +40,517 @@
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 
-#include <stdio.h>				/* for FILE type */
+#include <stdio.h>              /* for FILE type */
 #if !defined(WIN32)
-#include <sys/resource.h>		/* for struct rusage */
+#include <sys/resource.h>       /* for struct rusage */
 #endif
-#include <limits.h>				/* for _POSIX_PATH_MAX */
+#include <limits.h>             /* for _POSIX_PATH_MAX */
 
-// If you modify this enum, you must also modify ULogEventNumberNames array
-enum ULogEventNumber
-{
-	ULOG_SUBMIT,				// Job submitted
-	ULOG_EXECUTE,				// Job now running
-	ULOG_EXECUTABLE_ERROR,			// Error in executable
-	ULOG_CHECKPOINTED,				// Job was checkpointed
-	ULOG_JOB_EVICTED,				// Job evicted from machine
-	ULOG_JOB_TERMINATED,			// Job terminated
-	ULOG_IMAGE_SIZE,				// Image size of job updated
-	ULOG_SHADOW_EXCEPTION			// Shadow threw an exception
+//----------------------------------------------------------------------------
+/** Enumeration of all possible events.
+    If you modify this enum, you must also modify ULogEventNumberNames array
+*/
+enum ULogEventNumber {
+    /** Job submitted             */  ULOG_SUBMIT,
+    /** Job now running           */  ULOG_EXECUTE,
+    /** Error in executable       */  ULOG_EXECUTABLE_ERROR,
+    /** Job was checkpointed      */  ULOG_CHECKPOINTED,
+    /** Job evicted from machine  */  ULOG_JOB_EVICTED,
+    /** Job terminated            */  ULOG_JOB_TERMINATED,
+    /** Image size of job updated */  ULOG_IMAGE_SIZE,
+    /** Shadow threw an exception */  ULOG_SHADOW_EXCEPTION,
 #if defined(GENERIC_EVENT)
-	,ULOG_GENERIC			        
-#endif	    
-	,ULOG_JOB_ABORTED				// Job terminated
+    /** Generic Log Event         */  ULOG_GENERIC,
+#endif      
+    /** Job Aborted               */  ULOG_JOB_ABORTED
 };
 
-/// For printing the enum value.  cout << ULogEventNumberNames[outcome];
+/// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
 extern const char * ULogEventNumberNames[];
 
-// If you modify this enum, you must also modify ULogEventOutcomeNames array
+//----------------------------------------------------------------------------
+/** Enumeration of possible outcomes after attempting to read an event.
+    If you modify this enum, you must also modify ULogEventOutcomeNames array
+*/
 enum ULogEventOutcome
 {
-	ULOG_OK,
-	ULOG_NO_EVENT,
-	ULOG_RD_ERROR,
-	ULOG_UNK_ERROR
+    /** Event is valid               */ ULOG_OK,
+    /** No event occured (like EOF)  */ ULOG_NO_EVENT,
+    /** Error reading log file       */ ULOG_RD_ERROR,
+    /** Unknown Error                */ ULOG_UNK_ERROR
 };
 
 /// For printing the enum value.  cout << ULogEventOutcomeNames[outcome];
 extern const char * ULogEventOutcomeNames[];
 
-class ULogEvent
-{
+//----------------------------------------------------------------------------
+/** Framework for a single User Log Event object.  This class is an abstract
+    base class for more specific types of event objects.  The general
+    procedure for using a ULogEvent object is first instantiate one of the
+    _derived_ classes of ULogEvent, either with with its default constructor,
+    or with the instantiateEvent() function.
+
+    If the event is being created for the purpose of writing to a log file,
+    then fill it with data by setting each of its public members, and call
+    putEvent().
+
+    If the event is being read from a log, then call getEvent and then read
+    the appropriate data members from the object.
+
+    Below is an example log entry from Condor v6.  The first line not
+    including "Job terminated" represents the log entry header, the last line
+    "..."  terminates the log entry, and the lines between are the log body.
+
+    005 (5173.000.000) 10/20 16:59:24 Job terminated.
+            (1) Normal termination (return value 0)
+                    Usr 0 00:01:21, Sys 0 00:00:00  -  Run Remote Usage
+                    Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+                    Usr 0 00:01:21, Sys 0 00:00:00  -  Total Remote Usage
+                    Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+    ...
+
+    Log Header:
+
+      "005" is the (enum ULogEventNumber) ULOG_JOB_TERMINATED.
+      (5173.000.000) is the condorID: cluster, proc, subproc
+      The next 2 fields are the date and time of day.
+
+    Log Body:
+
+      The last field on the first line is a human readable version of the
+      UlogEventNumber
+
+      The remaining lines are human readable text.
+
+*/
+class ULogEvent {
   public:
-	ULogEvent();					// ctor
-	virtual ~ULogEvent();			// dtor
+    /** Default Constructor.  Initializes this event object with
+        invalid condor ID, invalid eventNumber, 
+        and sets eventTime to the current time.
+     */
+    ULogEvent();
+    
+    /// Destructor
+    virtual ~ULogEvent();
+    
+    /** Get the next event from the log.  Gets the log header and body.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    int getEvent (FILE *file);
+    
+    /** Write the currently stored event values to the log file.
+        Writes the log header and body.
 
-	int getEvent (FILE *);			// get an event from the file
-	int putEvent (FILE *);			// put an event to the file
-	
-	ULogEventNumber	 eventNumber;   // which event
-	struct tm		 eventTime;	   	// time of occurrance
-	int 			 cluster;		// to which job
-	int				 proc;			  
-	int				 subproc;
+        @param file the non-NULL writable log file.
+        @return 0 for failure, 1 for success
+    */
+    int putEvent (FILE *file);
+    
+    /// The event last read, or to be written.
+    ULogEventNumber    eventNumber;
 
+    /// The time this event occurred
+    struct tm          eventTime;
+
+    /// The cluster field of the Condor ID for this event
+    int                cluster;
+    /// The proc    field of the Condor ID for this event
+    int                proc;            
+    /// The subproc field of the Condor ID for this event
+    int                subproc;
+    
   protected:
 #if !defined(WIN32)
-	int readRusage (FILE *, rusage &);
-	int writeRusage (FILE *, rusage &);
+    /** Read the resource usage from the log file.
+        @param file the non-NULL readable log file
+        @param usage the rusage buffer to modify
+        @return 0 for failure, 1 for success
+    */
+    int readRusage (FILE * file, rusage & usage);
+
+    /** Write the resource usage to the log file.
+        @param file the non-NULL writable log file.
+        @param usage the rusage buffer to write with (not modified)
+        @return 0 for failure, 1 for success
+    */
+    int writeRusage (FILE *, rusage &);
 #endif
-	virtual int readEvent (FILE *) = 0;	// read the event from a file
-	virtual int writeEvent (FILE *) = 0;   	// write the event to a file
 
-	int readHeader (FILE *);	// read the event header from the file
-	int writeHeader (FILE *);	// write the wvwnt header to the file
+    /** Read the body of the next event.  This virtual function will
+        be implemented differently for each specific type of event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *file) = 0;
 
+    /** Write the body of the next event.  This virtual function will
+        be implemented differently for each specific type of event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *file) = 0;
+    
+    /** Read the header from the log file
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    int readHeader (FILE *file);
+
+    /** Write the header to the log file
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    int writeHeader (FILE *file);
 };
 
+//----------------------------------------------------------------------------
+/** Instantiates an event object based on the given event number.
+    @param event The event number
+    @return a new object, subclass of ULogEvent
+*/
+ULogEvent *instantiateEvent (ULogEventNumber event);
 
-// function to instantiate an event of the given number
-ULogEvent *instantiateEvent (ULogEventNumber);
+//----------------------------------------------------------------------------
+/** Framework for a single Submit Log Event object.  Below is an example
+    Submit Log entry from Condor v6.
 
-// this event occurs when a job is submitted
+000 (172.000.000) 10/20 16:56:54 Job submitted from host: <128.105.165.12:32779>
+
+*/
 class SubmitEvent : public ULogEvent
 {
   public:
-	SubmitEvent();
-	~SubmitEvent();
+    ///
+    SubmitEvent();
+    ///
+    ~SubmitEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
 
-	char submitHost[128];
+    /** Write the body of the next Submit event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+    char submitHost[128];
 };
 
+
 #if defined(GENERIC_EVENT)
-// this is a generic event described by a single string
+
+//----------------------------------------------------------------------------
+/** Framework for a Generic User Log Event object.
+    This subclass of ULogEvent provides a application programmer with
+    the mechanism to add his/her own custom defined log entry.
+
+    All generic events are seen the same by Condor, but a specific application
+    can differentiate different subtypes of generic event by putting a special
+    string into GenericEvent::info.  GenericEvent::readEvent and
+    GenericEvent::writeEvent will simply parse the entire event body without
+    interpretation.  The application can then do something special with
+    that string if it wishes.
+*/
 class GenericEvent : public ULogEvent
 {
   public:
-	GenericEvent();
-	~GenericEvent();
+    ///
+    GenericEvent();
+    ///
+    ~GenericEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next Generic event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
 
-	char info[128];
+    /** Write the body of the next Generic event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// A string with unspecified format.
+    char info[128];
 };
-#endif	    
+#endif /* ifdef GENERIC_EVENT */
 
-// this event occurs when a job begins running on a machine
+//----------------------------------------------------------------------------
+/** This event occurs when a job begins running on a machine.
+    Below is an example Execute Log Event from Condor v6.
+
+001 (5176.000.000) 10/20 16:57:47 Job executing on host: <128.105.65.28:35247>
+...
+
+ */
 class ExecuteEvent : public ULogEvent
 {
   public:
-	ExecuteEvent();
-	~ExecuteEvent();
+    ///
+    ExecuteEvent();
+    ///
+    ~ExecuteEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next Execute event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
 
-	char executeHost[128];
+    /** Write the body of the next Execute event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+    char executeHost[128];
 };
 
-
-// this error is issued if the submitted file is:
-//  + not an executable
-//  + was not properly linked
-enum ExecErrorType
-{
-	CONDOR_EVENT_NOT_EXECUTABLE,
-	CONDOR_EVENT_BAD_LINK
+//----------------------------------------------------------------------------
+/// Enumeration of possible Errors when executing a program
+enum ExecErrorType {
+    /** Program is not an executable       */ CONDOR_EVENT_NOT_EXECUTABLE,
+    /** Executable was not properly linked */ CONDOR_EVENT_BAD_LINK
 };
 
+//----------------------------------------------------------------------------
+/// Framework for a ExecutableError Event object.
 class ExecutableErrorEvent : public ULogEvent
 {
   public:
-	ExecutableErrorEvent();
-	~ExecutableErrorEvent();
+    ///
+    ExecutableErrorEvent();
+    ///
+    ~ExecutableErrorEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next ExecutableError event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
 
-	ExecErrorType	errType;
+    /** Write the body of the next ExecutableError event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// The type of error
+    ExecErrorType   errType;
 };
-	
-// this event occurs when a job is checkpointed
+    
+//----------------------------------------------------------------------------
+/** Framework for a Checkpointed Event object. Occurs when a job
+    is checkpointed.
+*/
 class CheckpointedEvent : public ULogEvent
 {
   public:
-	CheckpointedEvent();
-	~CheckpointedEvent();
+    ///
+    CheckpointedEvent();
+    ///
+    ~CheckpointedEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next Checkpointed event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Checkpointed event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
 
 #if !defined(WIN32)
-	rusage	run_local_rusage;
-	rusage  run_remote_rusage;
+    /** Local  Usage for the run */  rusage  run_local_rusage;
+    /** Remote Usage for the run */  rusage  run_remote_rusage;
 #endif
 };
 
 
-// this event occurs when a job is removed from a machine
+//----------------------------------------------------------------------------
+/** Framework for a JobAborted Event object.  Occurs when a job
+    is aborted from the machine on which it is running.
+*/
 class JobAbortedEvent : public ULogEvent
 {
   public:
-	JobAbortedEvent();
-	~JobAbortedEvent();
+    ///
+    JobAbortedEvent();
+    ///
+    ~JobAbortedEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next JobAborted event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
 
+    /** Write the body of the next JobAborted event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
 };
 
 
-// this event occurs when a job is evicted from a machine
+//----------------------------------------------------------------------------
+/** Framework for an Evicted Event object.
+    Below is an example Evicted Log entry for Condor v6.
+
+004 (5164.000.000) 10/20 17:08:13 Job was evicted.
+        (0) Job was not checkpointed.
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+
+*/
 class JobEvictedEvent : public ULogEvent
 {
   public:
-	JobEvictedEvent();
-	~JobEvictedEvent();
+    ///
+    JobEvictedEvent();
+    ///
+    ~JobEvictedEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next Evicted event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
 
-	bool	checkpointed;	 	// was it checkpointed on eviction?
+    /** Write the body of the next Evicted event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Was the job checkpointed on eviction?
+    bool    checkpointed;
 #if !defined(WIN32)
-	rusage	run_local_rusage;	// local and remote usage for the run
-	rusage  run_remote_rusage;
+    /** Local  Usage for the run */ rusage  run_local_rusage;
+    /** Remote Usage for the run */ rusage  run_remote_rusage;
 #endif
 };
 
 
-// this event occurs when a job terminates
+//----------------------------------------------------------------------------
+/** Framework for a single Job Terminated Event Log object.
+    Below is an example Job Termination Event Log entry for Condor v6.
+
+005 (5170.000.000) 10/20 17:04:41 Job terminated.
+        (1) Normal termination (return value 0)
+                Usr 0 00:01:16, Sys 0 00:00:00  -  Run Remote Usage
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+                Usr 0 00:01:16, Sys 0 00:00:00  -  Total Remote Usage
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+...
+
+*/
 class JobTerminatedEvent : public ULogEvent
 {
   public:
-	JobTerminatedEvent();
-	~JobTerminatedEvent();
+    ///
+    JobTerminatedEvent();
+    ///
+    ~JobTerminatedEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next Terminated event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
 
-	bool	normal;	 			// did it terminate normally?
-	int		returnValue;		// return value (valid only on normal exit)
-	int		signalNumber;		// signal number (valid only on abnormal exit)
-	char    coreFile[_POSIX_PATH_MAX]; // name of core file
+    /** Write the body of the next Terminated event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+
+    /// Did the job terminate normally?
+    bool    normal;
+
+    /// Job's return value (valid only on normal exit)
+    int     returnValue;
+
+    /// The signal that terminated the job (valid only on abnormal exit)
+    int     signalNumber;
+
+    /// name of core file
+    char    coreFile[_POSIX_PATH_MAX];
 #if !defined(WIN32)
-	rusage	run_local_rusage;	// local and remote usage for the run
-	rusage  run_remote_rusage;
-	rusage	total_local_rusage;	// total local and remote rusage
-	rusage  total_remote_rusage;
+    /** Local  usage for the run */    rusage  run_local_rusage;
+    /** Remote usage for the run */    rusage  run_remote_rusage;
+    /** Total Local  rusage      */    rusage  total_local_rusage;
+    /** Total Remote rusage      */    rusage  total_remote_rusage;
 #endif
 };
 
 
-// this event occurs when the image size of a job is updated
+//----------------------------------------------------------------------------
+/** Framework for a JobImageSizeEvent object.  Occurs when the image size of a
+    job is updated.
+*/
 class JobImageSizeEvent : public ULogEvent
 {
   public:
-	JobImageSizeEvent();
-	~JobImageSizeEvent();
+    ///
+    JobImageSizeEvent();
+    ///
+    ~JobImageSizeEvent();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next ImageSize event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
 
-	int size;
+    /** Write the body of the next ImageSize event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// The new size of the image
+    int size;
 };
 
-// if the shadow throws an exception and quits, this event is logged
+//----------------------------------------------------------------------------
+/** Framework for a ShadowException event object.  Occurs if the shadow
+    throws an exception and quits, this event is logged
+*/
 class ShadowExceptionEvent : public ULogEvent
 {
   public:
-	ShadowExceptionEvent ();
-	~ShadowExceptionEvent ();
+    ///
+    ShadowExceptionEvent ();
+    ///
+    ~ShadowExceptionEvent ();
 
-	virtual int readEvent (FILE *);
-	virtual int writeEvent (FILE *);
+    /** Read the body of the next ShadowException event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next ShadowException event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
 };
-	
+    
 #endif // __CONDOR_EVENT_H__
 

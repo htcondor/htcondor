@@ -180,17 +180,6 @@ initialize( int c, int p, int s )
 	subproc = s;
 }
 
-UserLog::UserLog( )
-{
-	path = 0;
-	cluster = -1;
-	proc = -1;
-	subproc = -1;
-	in_block = FALSE;
-	fp = 0;
-	lock = 0;
-}
-
 UserLog::~UserLog()
 {
 	delete [] path;

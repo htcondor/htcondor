@@ -36,8 +36,8 @@ typedef int BOOL_T;
 #endif
 
 #if !defined(TRUE)
-#	define TRUE 1
-#	define FALSE 0
+#   define TRUE 1
+#   define FALSE 0
 #endif
 #endif
 
@@ -47,54 +47,154 @@ typedef int BOOL_T;
 #include "file_lock.h"
 #include "condor_event.h"
 
+/** API for writing a log file.  Since an API for reading a log file
+    was not originally needed, a ReadUserLog class did not exist,
+    so it was not forseen to call this class WriteUserLog.
+
+    This class was written before the ULogEvent class existed.  Therefore,
+    there are several functions and parameters, marked deprecated,
+    whose necessity is rid of with the use of ULogEvent.  Those functions
+    and parameters still exist for backward compatibility with Condor
+    code that hasn't yet been update.  New Condor code ABSOLUTELY SHOULD NOT
+    use these deprecated functions.
+
+    The typical use of this class (for example, condor_shadow) producing
+    log events for a job, will be the following:
+
+      Initialize this object with the job owner's username, the log file path,
+      and the job's condorID, which the UserLog object will fill in the
+      condorID for each event given to it in writeEvent().
+
+      Call writeEvent() for each event to be written to the log.  The condorID
+      of the event will automatically be assigned the condorID of this
+      ULogEvent object.
+
+*/
 class UserLog {
-public:
-	UserLog();
-	UserLog(const char *owner, const char *file, int clu, int proc, int subp );
-	~UserLog();
+  public:
+    ///
+    UserLog() : path(0), cluster(-1), proc(-1), subproc(-1),
+        in_block(FALSE), fp(0), lock(NULL) {}
+    
+    /** Constructor
+        @param owner Username of the person whose job is being logged
+        @param file the path name of the log file to be written (copied)
+        @param clu  condorID cluster to put into each ULogEvent
+        @param proc condorID proc    to put into each ULogEvent
+        @param subp condorID subproc to put into each ULogEvent
+    */
+    UserLog(const char *owner, const char *file, int clu, int proc, int subp);
+    
+    ///
+    ~UserLog();
+    
+    /** Initialize the log file, if not done by constructor.
+        @param file the path name of the log file to be written (copied)
+        @param c the condor ID cluster to put into each ULogEvent
+        @param p the condor ID proc    to put into each ULogEvent
+        @param s the condor ID subproc to put into each ULogEvent
+    */
+    void initialize(const char *owner, const char *file, int c, int p, int s);
+    
+    /** Initialize the log file.
+        @param file the path name of the log file to be written (copied)
+        @param c the condor ID cluster to put into each ULogEvent
+        @param p the condor ID proc    to put into each ULogEvent
+        @param s the condor ID subproc to put into each ULogEvent
+    */
+    void initialize(const char *file, int c, int p, int s);
+    
+    /** Initialize the condorID, which will fill in the condorID
+        for each ULogEvent passed to writeEvent().
 
-	// to initialize if not initialized bt ctor
-	void initialize(const char *, const char *, int, int, int);
-	void initialize(const char *, int, int, int);
-	void initialize(int, int, int);
+        @param c the condor ID cluster to put into each ULogEvent
+        @param p the condor ID proc    to put into each ULogEvent
+        @param s the condor ID subproc to put into each ULogEvent
+    */
+    void initialize(int c, int p, int s);
 
-	// use this function to access log (see condor_event.h)   --RR
-	int       writeEvent (ULogEvent *);
-	
-	// use of these functions is strongly discouraged   --RR
-	// (still here for backward compatibility)
-	void put( const char *fmt, ... );
-	void display();
-	void begin_block();
-	void end_block();
-private:
-	void		output_header();
+    /** Write an event to the log file.  Caution: if the log file is
+        not initialized, then no event will be written, and this function
+        will return a successful value.
 
-	char		*path;
-	int			cluster;
-	int			proc;
-	int			subproc;
-	FILE		*fp;
-	FileLock	*lock;
-	int			in_block;
+        @param event the event to be written
+        @return 0 for failure, 1 for success
+    */
+    int writeEvent (ULogEvent *event);
+    
+    /** Deprecated Function. */  void put( const char *fmt, ... );
+    /** Deprecated Function. */  void display();
+    /** Deprecated Function. */  void begin_block();
+    /** Deprecated Function. */  void end_block();
+  private:
+    /// Deprecated Function.  Print the header to the log.
+    void        output_header();
+    
+    /// Deprecated.  condorID cluster of the next event.
+    int         cluster;
+
+    /// Deprecated.  condorID proc of the next event.
+    int         proc;
+
+    /// Deprecated.  condorID subproc of the next event.
+    int         subproc;
+
+    /// Deprecated.  Are we currently in a block?
+    int         in_block;
+
+    /** Copy of path to the log file */  char     * path;
+    /** The log file                 */  FILE     * fp;
+    /** The log file lock            */  FileLock * lock;
 };
 
+
+/** API for reading a log file.
+
+    This class was written at the same time the ULogEvent class was written,
+    so it does not contain the old deprecated functions and parameters that
+    the UserLog class is plagued with.
+*/
 class ReadUserLog
 {
-	public:
+  public:
 
-	ReadUserLog();
-	~ReadUserLog();
+    ///
+    ReadUserLog();
 
-	int 			 initialize (const char *file);
-	ULogEventOutcome readEvent (ULogEvent *&);
-	int				 synchronize (void);
-	int              getfd() {return fd;}
+    ///
+    ~ReadUserLog();
 
-	private:
+    /** Initialize the log file.  This function will abort the program
+        (by calling EXCEPT) if it can't open the log file.
+        @param file the file to read from
+        @return 1 for success
+    */
+    int initialize (const char *file);
 
-	int   fd;
-	FILE *fp;
+    /** Read the next event from the log file.  The event pointer to
+        set to point to a newly instatiated ULogEvent object.
+        @param event pointer to be set to new object
+        @return the outcome of attempting to read the log
+    */
+    ULogEventOutcome readEvent (ULogEvent * & event);
+
+    /** Synchronize the log file if the last event read was an error.  This
+        safe guard function should be called if there is some error reading an
+        event, but there are events after it in the file.  Will skip over the
+        "bad" event (i.e., read up to and including the event separator (...))
+        so that the rest of the events can be read.
+
+        @return 0 for failure, 1 for success
+    */
+    int synchronize (void);
+
+    /// Get the log's file descriptor
+    inline int getfd() const { return fd; }
+
+    private:
+
+    /** The log's file descriptor */  int    fd;
+    /** The log's file pointer    */  FILE * fp;
 };
 
 #endif /* __cplusplus */
@@ -104,11 +204,20 @@ typedef void LP;
 #if defined(__cplusplus)
 extern "C" {
 #endif
-	LP *InitUserLog( const char *own, const char *file, int c, int p, int s );
-	void CloseUserLog( LP * lp );
-	void PutUserLog( LP *lp,  const char *fmt, ... );
-	void BeginUserLogBlock( LP *lp );
-	void EndUserLogBlock( LP *lp );
+    /// Deprecated.
+    LP *InitUserLog( const char *own, const char *file, int c, int p, int s );
+
+    /// Deprecated.
+    void CloseUserLog( LP * lp );
+
+    /// Deprecated.
+    void PutUserLog( LP *lp,  const char *fmt, ... );
+
+    /// Deprecated.
+    void BeginUserLogBlock( LP *lp );
+
+    /// Deprecated.
+    void EndUserLogBlock( LP *lp );
 #if defined(__cplusplus)
 }
 #endif
