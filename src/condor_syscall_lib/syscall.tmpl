@@ -508,6 +508,8 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	}
 #if	defined(HPUX9)
 	int	setpgrp();
+#elif	defined(OSF1)
+	pid_t setpgrp();
 #else
 	int setpgrp( int pid, int pgrp );
 #endif
@@ -577,6 +579,14 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		ALLOC_PATH( path );
 	}
 	int ftruncate( map(int fd), size_t length );
+#elif defined(OSF1)
+	int fchmod( map(int fd), MODE_T mode );
+	int setreuid( uid_t ruid, uid_t euid );
+	int setregid( gid_t rgid, gid_t egid );
+	int truncate( const char *path, off_t length ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
 #else
 	int fchmod( map(int fd), MODE_T mode );
 	int setreuid( int ruid, int euid );
