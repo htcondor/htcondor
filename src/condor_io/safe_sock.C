@@ -283,14 +283,14 @@ int SafeSock::rcv_packet(
 
 		switch(nfound) {
 		case 0:
-			return -1;
+			return FALSE;
 			break;
 		case 1:
 			break;
 		default:
 			dprintf( D_ALWAYS, "select returns %d, recv failed\n",
 				nfound );
-			return -1;
+			return FALSE;
 			break;
 		}
 	}
