@@ -70,6 +70,8 @@ ProcAPI::~ProcAPI() {
         delete phn;
     
     delete procHash;
+
+	closeFamilyHandles();
     
 #ifdef WIN32
     if ( offsets )
@@ -118,6 +120,11 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			pi->ppid    = pri.pr_ppid;
 			pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
 			pi->creation_time = pri.pr_start.tv_sec;
+		
+			// get the owner of the file in /proc, which 
+			// should be the process owner uid.
+			pi->owner = getFileOwner(fd);			
+
 		} else {
 			dprintf( D_ALWAYS, 
 					 "ProcAPI: PIOCPSINFO Error occurred for pid %d\n",
@@ -248,6 +255,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			dprintf( D_ALWAYS, "ProcAPI: Problems reading %s.\n", path );
 			rval = -2;
 		}
+		// grab the process owner uid
+		pi->owner = getFileOwner(fd);
 		close( fd );
 	} else {
 		if( errno == ENOENT ) {
@@ -373,6 +382,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				&usert, &syst, &i, &i, &i, &i, 
 				&u, &u, &jiffie_start_time, &vsize, &rss, &u, &u, &u, 
 				&u, &u, &u, &i, &i, &i, &i, &u );
+			
+			// grab the process owner uid
+			pi->owner = getFileOwner(fileno(fp));
+			
 			fclose( fp );
 			// Perform sanity check on the data we just read, as
 			// sometimes Linux screws it up.  
@@ -542,6 +555,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 	pi->pid		= buf.pst_pid;
 	pi->ppid	= buf.pst_ppid;
+
+	// get the process owner uid
+	pi->owner	= buf.pst_uid;
 
 		/* Now that darned sampling thing, so that page faults gets
 		   converted to page faults per second */
@@ -1581,6 +1597,7 @@ ProcAPI::initpi ( piPTR& pi ) {
 	pi->pid      = -1;
 	pi->ppid     = -1;
 	pi->next     = NULL;
+	pi->owner    = 0;
 }
 
 #ifndef WIN32  // Doesn't come close to working in WIN32...sigh.
@@ -1977,6 +1994,22 @@ ProcAPI::printProcInfo( piPTR pi ) {
 }
 
 #ifndef WIN32
+
+uid_t 
+ProcAPI::getFileOwner(int fd) {
+	
+	struct stat si;
+
+	if ( fstat(fd, &si) == 0 ) {
+		dprintf(D_ALWAYS, "ProcAPI: fstat failed in /proc!\n");
+		return 0; 	// 0 is probably wrong, but this should never
+					// happen (unless things are really screwed)
+	}
+
+	return si.st_uid;
+}
+
+
  
 void
 ProcAPI::deallocPidList() {
@@ -2221,6 +2254,186 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
 }
 #endif // WIN32
 
+int
+ProcAPI::getPidFamilyByLogin(const char *searchLogin, pid_t *pidFamily)
+{
+#ifndef WIN32
+
+	// first, get the Login's uid, since that's what's stored in
+	// the ProcInfo structure.
+	ASSERT(pidFamily);
+	ASSERT(searchLogin);
+	struct passwd *pwd = getpwnam(searchLogin);
+	uid_t searchUid = pwd->pw_uid;
+
+	// now iterate through allProcInfos to find processes
+	// owned by the given uid
+	piPTR cur = allProcInfos;
+	int fam_index = 0;
+
+	while ( cur != NULL ) {
+		if ( cur->owner == searchUid ) {
+			pidFamily[fam_index] = cur->pid;
+			fam_index++;
+		}
+		cur = cur->next;
+	}
+	pidFamily[fam_index] = NULL;
+	
+	return 0;
+#else
+	// Win32 version
+	ExtArray<pid_t> pids(256);
+	int num_pids;
+	int index_pidFamily = 0;
+	int index_familyHandles = 0;
+	BOOL ret;
+	HANDLE procToken;
+	HANDLE procHandle;
+	TOKEN_INFORMATION_CLASS tic;
+	VOID *tokenData;
+	DWORD sizeRqd;
+	CHAR str[80];
+	DWORD strSize;
+	CHAR str2[80];
+	DWORD str2Size;
+	SID_NAME_USE sidType;
+
+	closeFamilyHandles();
+
+	ASSERT(pidFamily);
+	ASSERT(searchLogin);
+
+	// get a list of all pids on the system
+	num_pids = sysinfo.GetPIDs(pids);
+
+	// loop through pids comparing process owner
+	for (int s=0; s<num_pids; s++) {
+
+		// find owner for pid pids[s]
+		
+	// again, this is assumed to be wrong, so I'm 
+	// nixing it for now.
+	// skip the daddy_pid, we already added it to our list
+//		  if ( pids[s] == daddy_pid ) {
+//			  continue;
+//		  }
+
+		  // get a handle for the process
+		  procHandle=OpenProcess(PROCESS_QUERY_INFORMATION,
+			FALSE, pids[s]);
+		  if (procHandle == NULL)
+		  {
+			  // Unable to open the process for query - try next pid
+			  continue;			
+		  }
+
+		  // get a handle for the access token used
+		  // by the process
+		  ret=OpenProcessToken(procHandle,
+			TOKEN_QUERY, &procToken);
+		  if (!ret)
+		  {
+			  // Unable to open the access token.
+			  CloseHandle(procHandle);
+			  continue;
+		  }
+
+		  // ----- Get user information -----
+
+		  // specify to return user info
+		  tic=TokenUser;
+
+		  // find out how much mem is needed
+		  ret=GetTokenInformation(procToken, tic, NULL, 0,
+			&sizeRqd);
+
+		  // allocate that memory
+		  tokenData=(TOKEN_USER *) GlobalAlloc(GPTR,
+			sizeRqd);
+		  if (tokenData == NULL)
+		  {
+			EXCEPT("Unable to allocate memory.");
+		  }
+
+		  // actually get the user info
+		  ret=GetTokenInformation(procToken, tic,
+			tokenData, sizeRqd, &sizeRqd);
+		  if (!ret)
+		  {
+			// Unable to get user info.
+			CloseHandle(procToken);
+			GlobalFree(tokenData);
+			CloseHandle(procHandle);
+			continue;
+		  }
+
+		  // specify size of string buffers
+		  strSize=str2Size=80;
+
+		  // convert user SID into a name and domain
+		  ret=LookupAccountSid(NULL,
+			((TOKEN_USER *)tokenData)->User.Sid,
+			str, &strSize, str2, &str2Size, &sidType);
+		  if (!ret)
+		  {
+		    // Unable to look up SID.
+			CloseHandle(procToken);
+			GlobalFree(tokenData);
+			CloseHandle(procHandle);
+			continue;
+		  }
+
+		  // release memory, handles
+		  GlobalFree(tokenData);
+		  CloseHandle(procToken);
+
+		  // user is now in variable str, domain in str2
+
+		  // see if it is the login prefix we are looking for
+		  if ( strincmp(searchLogin,str,strlen(searchLogin))==0 ) {
+			  // a match!  add to our list.   
+			  pidFamily[index_pidFamily++] = pids[s];
+			  // and add the procHandle to a list as well; we keep the
+			  // handle open so the pid is not reused by NT between now and
+			  // when the caller actually does something with this pid.
+			  familyHandles[index_familyHandles++] = procHandle;
+			  dprintf(D_PROCFAMILY,
+				  "getPidFamilyByLogin: found pid %d owned by %s\n",
+				  pids[s],str);
+		  } else {
+			  // not a match; close the handle to this process
+			  CloseHandle(procHandle);
+		  }
+
+	}	// end of for loop looping through all pids
+
+	// denote end of list with a zero entry
+	pidFamily[index_pidFamily] = 0;
+
+	if ( index_pidFamily > 0 ) {
+		// return success
+		return 0;
+	} else {
+		// return failure
+		return -1;
+	}
+#endif  // of WIN32
+}
+
+void
+ProcAPI::closeFamilyHandles()
+{
+	// This function is a no-op on Unix...
+#ifdef WIN32
+	int i;
+	for ( i=0; i < (familyHandles.getlast() + 1); i++ ) {
+		CloseHandle( familyHandles[i] );
+	}
+	familyHandles.truncate(-1);
+#endif // of Win32
+	return;
+}
 
 #ifdef WANT_STANDALONE_DEBUG
 void ProcAPI::runTests() {

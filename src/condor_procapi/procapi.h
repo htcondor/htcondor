@@ -190,6 +190,9 @@ struct procInfo {
 
   /// pointer to next procInfo, if one exists.
   struct procInfo *next;
+
+  // the owner of this process
+  uid_t owner;
 };
 
 /// piPTR is typedef'ed as a pointer to a procInfo structure.
@@ -349,6 +352,14 @@ class ProcAPI {
   */
   static int getPidFamily( pid_t pid, pid_t *pidFamily );
 
+  /* returns all pids owned by a specific user.
+   	
+	 @param pidFamily An array for holding pids in the family
+	 @param searchLogin A string specifying the owner who's pids we want
+	 @return A -1 is returned on failure, 0 otherwise.
+  */
+  static int getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily );
+
 #ifdef WANT_STANDALONE_DEBUG
   /** This is a menu driver for tests 1-7.  Please don't try and break it. */
   static void runTests();
@@ -405,6 +416,9 @@ class ProcAPI {
   static void initpi ( piPTR& );                  // initialization of pi.
   static int isinfamily ( pid_t *, int, pid_t );  // used by buildFamily & NT equiv.
 
+  static uid_t getFileOwner(int fd); // used to get process owner from /proc
+  static void closeFamilyHandles(); // closes all open handles for the family
+
   // works with the hashtable; finds cpuusage, maj/min page faults.
   static void do_usage_sampling( piPTR& pi, 
 								 double ustime, 
@@ -454,6 +468,7 @@ class ProcAPI {
   static PPERF_DATA_BLOCK pDataBlock;
   
   static struct Offset *offsets;
+  static ExtArray<HANDLE> familyHandles;
   
 #endif // WIN32 poop.
 
