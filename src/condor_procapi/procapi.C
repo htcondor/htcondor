@@ -697,7 +697,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		return -1;
 	}
 
-	task_basic_info_data_t 	ti;
+	task_basic_info 	ti;
 	unsigned int 		count;	
 	
 	count = TASK_BASIC_INFO_COUNT;	
@@ -705,9 +705,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			&count)  != KERN_SUCCESS) {
 		return -1;
 	}
+
 	initpi(pi);
-	pi->imgsize = ti.virtual_size;
-	pi->rssize = ti.resident_size;
+	pi->imgsize = (u_long)ti.virtual_size / 1024;
+	pi->rssize = ti.resident_size / 1024;
 	pi->user_time = ti.user_time.seconds;
 	pi->sys_time = ti.system_time.seconds;
 	pi->creation_time = kp->kp_proc.p_starttime.tv_sec;
