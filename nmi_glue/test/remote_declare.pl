@@ -1,86 +1,52 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.1.2.2 2004-06-24 00:58:02 wright Exp $
+# $Id: remote_declare.pl,v 1.1.2.3 2004-06-24 02:20:49 wright Exp $
 # generate list of all tests to run
 ######################################################################
 
-my $testlocation;
-my $list;
-
-######################################################################
-# set up path 
-######################################################################
+use Cwd;
 
 my $HomeDir = $ENV{HOME};
-my $MakeDir = $ENV{SRC_DIR};
-print "PATH is $ENV{PATH}\n";
+my $SrcDir = $ENV{SRC_DIR};
+
+open( TASKLIST, ">$HomeDir/tasklist.nmi" ) || 
+    die "Can't open $HomeDir/tasklist.nmi: $!\n"; 
 
 ######################################################################
 # generate makefile, compiler_list and run_list for each test group 
 ######################################################################
 
-print "GENERATE makefile, compiler_list and run_list for each test group \n"; 
+chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
 
-chdir( $MakeDir );
 my $testdirs = ();
 push (@testdirs, "condor_test_suite_C.V5");
 push (@testdirs, "condor_test_suite_F.V5");
 
-open( TASKLIST, "tasklist.nmi" ) || die "cannot open tasklist.nmi\n"; 
 foreach $testdir (@testdirs) {
-  chdir( "$MakeDir/$testdir" );
-  system( "make Makefile" );
-  system( "make compiler_list" );
-  open( "COMPILERS", "compiler_list" ) || die "cannot open compiler_list\n";
-  while (<COMPILERS>){
-    chomp($_);
-    $compiler = $_;
-    system( "make $compiler/Makefile" );
-    system( "cd $compiler" );
-    system( "make run_list" );
-    open( "RUNLIST", "run_list" ) || die "cannot open run_list\n";
-    while (<RUNLIST>) {
-      chomp($_);
-      $testname = $_;
-      print TASKLIST "$compiler/$testname";
-    }
-    close (RUNLIST);
-  } 
-  close (COMPILERS);
+    chdir( "$SrcDir" ) || die "Can't chdir($SrcDir): $!\n";
+    system( "make $testdir/Makefile" );
+    chdir( "$SrcDir/$testdir" ) || die "Can't chdir($SrcDir/$testdir): $!\n";
+    system( "make compiler_list" );
+    open( "COMPILERS", "compiler_list" ) || die "cannot open compiler_list\n";
+    while( <COMPILERS> ) {
+	chomp;
+	$compiler = $_;
+	chdir( "$SrcDir/$testdir" ) || 
+	    die "Can't chdir($SrcDir/$testdir): $!\n";
+	print "Working on $compiler\n";
+	print "cwd is: " . getcwd() . "\n";
+	system( "make $compiler/Makefile" );
+	chdir( $compiler ) || die "Can't chdir($compiler): $!\n";
+	system( "make run_list" );
+	open( "RUNLIST", "run_list" ) || die "cannot open run_list\n";
+	while( <RUNLIST> ) {
+	    chomp;
+	    $testname = $_;
+	    print TASKLIST "$compiler/$testname\n";
+	}
+	close( RUNLIST );
+    } 
+    close( COMPILERS );
 }     
-  
-close (TASKLIST);
-
-
-sub verbose_system {
-
-  my @args = @_;
-  my $rc = 0xffff & system @args;
-
-  printf "system(%s) returned %#04x: ", @args, $rc;
-
-  if ($rc == 0) {
-   print "ran with normal exit\n";
-   return $rc;
-  }
-  elsif ($rc == 0xff00) {
-   print "command failed: $!\n";
-   return $rc;
-  }
-  elsif (($rc & 0xff) == 0) {
-   $rc >>= 8;
-   print "ran with non-zero exit status $rc\n";
-   return $rc;
-  }
-  else {
-   print "ran with ";
-   if ($rc &   0x80) {
-       $rc &= ~0x80;
-       print "coredump from ";
-   return $rc;
-   }
-   print "signal $rc\n"
-  }
-}
-
+close( TASKLIST );
