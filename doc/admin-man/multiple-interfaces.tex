@@ -1,0 +1,27 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Multiple-Interfaces}Configuring Condor for
+Machines With Multiple Network Interfaces } 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Beginning with Condor version 6.1.5, Condor can run on machines with
+multiple network interfaces.
+Basically, you tell each host with multiple interfaces which ip
+address you want the host to use for ingoing and outgoing Condor
+network communication.
+You do this by setting the \Macro{NETWORK\_INTERFACE} parameter in
+the local config file for each host you need to.
+There are a few other special cases you might have to deal with,
+described below.
+
+If your Central Manager is on a machine with multiple interfaces,
+instead of defining the \Macro{COLLECTOR\_HOST} or
+\Macro{NEGOTIATOR\_HOST} parameters (which are usually both defined in
+terms of \Macro{CONDOR\_HOST}, you should set the \Macro{CM_IP_ADDR}. 
+
+If your Checkpoint Server is on a machine with multiple interfaces,
+the only way to get things to work is if your different interfaces
+have different hostnames associated with them, and you set
+\Macro{CKPT\_SERVER\_HOST} to the hostname that corresponds with the
+ip address you want to use.  
+You will still need to specify \Macro{NETWORK\_INTERFACE} in the local
+config file for your Checkpoint Server.
