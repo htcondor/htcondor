@@ -2812,7 +2812,7 @@ Scheduler::Init()
 
     tmp = param( "SCHEDD_INTERVAL" );
     if( ! tmp ) {
-        SchedDInterval = 120;
+        SchedDInterval = 300;
     } else {
         SchedDInterval = atoi( tmp );
         free( tmp );
@@ -2836,7 +2836,7 @@ Scheduler::Init()
 
 	tmp = param( "MAX_JOBS_RUNNING" );
     if( ! tmp ) {
-        MaxJobsRunning = 15;
+        MaxJobsRunning = 200;
     } else {
         MaxJobsRunning = atoi( tmp );
         free( tmp );
