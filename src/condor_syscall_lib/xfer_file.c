@@ -84,6 +84,7 @@ send_file( const char *local, const char *remote, int perm )
 	if( remote_fd < 0 ) {
 		dprintf( D_ALWAYS, "Failed to open \"%s\" remotely, errno = %d\n",
 															remote, errno );
+		return -1;
 	}
 
 		/* transfer the data */
