@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "exprTree.h"
 #include "source.h"
 #include "sink.h"
@@ -241,7 +242,7 @@ _Evaluate( EvalState &state, Value &value, ExprTree *& tree ) const
 }
 
 bool FunctionCall::
-_Flatten( EvalState &state, Value &value, ExprTree*&tree, OpKind* ) const
+_Flatten( EvalState &state, Value &value, ExprTree*&tree, int* ) const
 {
 	FunctionCall *newCall;
 	ExprTree	*argTree;
@@ -400,7 +401,8 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 			val.SetErrorValue( );
 			return( false );
 		}
-		Operation::Operate( useIS?IS_OP:EQUAL_OP, cArg, arg1, val );
+		Operation::Operate(useIS ? Operation::IS_OP : Operation::EQUAL_OP, 
+			cArg, arg1, val );
 		if( val.IsBooleanValue( b ) && b ) {
 			return true;
 		}
@@ -903,8 +905,7 @@ changeCase(const char*name,const ArgumentList &argList,EvalState &state,
 	Value &result)
 {
 	Value 		val;
-	const char	*str=0;
-	char		*newstr;
+	string		str;
 	bool		lower = ( strcasecmp( name, "tolower" ) == 0 );
 	int			len;
 
@@ -929,17 +930,12 @@ changeCase(const char*name,const ArgumentList &argList,EvalState &state,
 		return( true );
 	}
 
-	if( !str || ( ( newstr = strnewp( str ) ) == NULL ) ) {
-		result.SetErrorValue( );
-		return( false );
-	}
-
-	len = strlen( newstr );
+	len = str.size( );
 	for( int i=0; i <= len; i++ ) {
-		newstr[i] = lower ? tolower( newstr[i] ) : toupper( newstr[i] );
+		str[i] = lower ? tolower( str[i] ) : toupper( str[i] );
 	}
 
-	result.SetStringValue( newstr );
+	result.SetStringValue( str );
 	return( true );
 }
 
@@ -1012,7 +1008,7 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 	time_t	tvalue;
 	bool	bvalue;
 	double	rvalue;
-	NumberFactor nf = NO_FACTOR;
+	Value::NumberFactor nf = Value::NO_FACTOR;
 
 		// takes exactly one argument
 	if( argList.size() > 1 ) {
@@ -1025,17 +1021,17 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 	}
 
 	switch( arg.GetType( ) ) {
-		case UNDEFINED_VALUE:
+		case Value::UNDEFINED_VALUE:
 			result.SetUndefinedValue( );
 			return( true );
 
-		case ERROR_VALUE:
-		case CLASSAD_VALUE:
-		case LIST_VALUE:
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
 			result.SetErrorValue( );
 			return( true );
 
-		case STRING_VALUE:
+		case Value::STRING_VALUE:
 			arg.IsStringValue( buf );
 			ivalue = strtol( buf.c_str( ), (char**) &end, 0 );
 			if( end == buf && ivalue == 0 ) {
@@ -1044,37 +1040,41 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 				return( true );
 			}
 			switch( toupper( *end ) ) {
-				case 'K': nf = K_FACTOR; break;
-				case 'M': nf = M_FACTOR; break;
-				case 'G': nf = G_FACTOR; break;
-				case '\0': nf = NO_FACTOR; break;
+				case 'B': nf = Value::B_FACTOR; break;
+				case 'K': nf = Value::K_FACTOR; break;
+				case 'M': nf = Value::M_FACTOR; break;
+				case 'G': nf = Value::G_FACTOR; break;
+				case 'T': nf = Value::T_FACTOR; break;
+				case '\0': nf = Value::NO_FACTOR; break;
 				default:  
 					result.SetErrorValue( );
 					return( true );
 			}
-			result.SetIntegerValue( ivalue * nf );
+			if( nf != Value::NO_FACTOR ) {
+				result.SetIntegerValue(ivalue*Value::ScaleFactor[nf]);
+			}
 			return( true );
 
-		case BOOLEAN_VALUE:
+		case Value::BOOLEAN_VALUE:
 			arg.IsBooleanValue( bvalue );
 			result.SetIntegerValue( bvalue ? 1 : 0 );
 			return( true );
 
-		case INTEGER_VALUE:
+		case Value::INTEGER_VALUE:
 			result.CopyFrom( arg );
 			return( true );
 
-		case REAL_VALUE:
+		case Value::REAL_VALUE:
 			arg.IsRealValue( rvalue );
 			result.SetIntegerValue( (int) rvalue );
 			return( true );
 
-		case ABSOLUTE_TIME_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
 			arg.IsAbsoluteTimeValue( tvalue );
 			result.SetIntegerValue( (int)tvalue );
 			return( true );
 
-		case RELATIVE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
 			arg.IsRelativeTimeValue( tvalue );
 			result.SetIntegerValue( (int)tvalue );
 			return( true );
@@ -1097,7 +1097,7 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 	time_t	tvalue;
 	bool	bvalue;
 	double	rvalue;
-	NumberFactor nf;
+	Value::NumberFactor nf;
 
 		// takes exactly one argument
 	if( argList.size() > 1 ) {
@@ -1110,17 +1110,17 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 	}
 
 	switch( arg.GetType( ) ) {
-		case UNDEFINED_VALUE:
+		case Value::UNDEFINED_VALUE:
 			result.SetUndefinedValue( );
 			return( true );
 
-		case ERROR_VALUE:
-		case CLASSAD_VALUE:
-		case LIST_VALUE:
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
 			result.SetErrorValue( );
 			return( true );
 
-		case STRING_VALUE:
+		case Value::STRING_VALUE:
 			arg.IsStringValue( buf );
 			rvalue = strtod( buf.c_str( ), (char**) &end );
 			if( end == buf && rvalue == 0.0 ) {
@@ -1129,37 +1129,41 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 				return( true );
 			}
 			switch( toupper( *end ) ) {
-				case 'K': nf = K_FACTOR; break;
-				case 'M': nf = M_FACTOR; break;
-				case 'G': nf = G_FACTOR; break;
-				case '\0': nf = NO_FACTOR; break;
+				case 'B': nf = Value::B_FACTOR; break;
+				case 'K': nf = Value::K_FACTOR; break;
+				case 'M': nf = Value::M_FACTOR; break;
+				case 'G': nf = Value::G_FACTOR; break;
+				case 'T': nf = Value::T_FACTOR; break;
+				case '\0': nf = Value::NO_FACTOR; break;
 				default:
 					result.SetErrorValue( );
 					return( true );
 			}
-			result.SetRealValue( rvalue * nf );
+			if( nf != Value::NO_FACTOR ) {
+				result.SetRealValue(rvalue*Value::ScaleFactor[nf] );
+			}
 			return( true );
 
-		case BOOLEAN_VALUE:
+		case Value::BOOLEAN_VALUE:
 			arg.IsBooleanValue( bvalue );
 			result.SetRealValue( bvalue ? 1.0 : 0.0 );
 			return( true );
 
-		case INTEGER_VALUE:
+		case Value::INTEGER_VALUE:
 			arg.IsIntegerValue( ivalue );
 			result.SetRealValue( (double)ivalue );
 			return( true );
 
-		case REAL_VALUE:
+		case Value::REAL_VALUE:
 			result.CopyFrom( arg );
 			return( true );
 
-		case ABSOLUTE_TIME_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
 			arg.IsAbsoluteTimeValue( tvalue );
 			result.SetRealValue( tvalue );
 			return( true );
 
-		case RELATIVE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
 			arg.IsRelativeTimeValue( tvalue );
 			result.SetRealValue( tvalue );
 			return( true );
@@ -1187,23 +1191,23 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 	}
 
 	switch( arg.GetType( ) ) {
-		case UNDEFINED_VALUE:
+		case Value::UNDEFINED_VALUE:
 			result.SetUndefinedValue( );
 			return( true );
 
-		case ERROR_VALUE:
-		case CLASSAD_VALUE:
-		case LIST_VALUE:
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
 			result.SetErrorValue( );
 			return( true );
 
-		case STRING_VALUE:
+		case Value::STRING_VALUE:
 			result.CopyFrom( arg );
 			return( true );
 
-		case INTEGER_VALUE:
-		case REAL_VALUE:
-		case BOOLEAN_VALUE:
+		case Value::INTEGER_VALUE:
+		case Value::REAL_VALUE:
+		case Value::BOOLEAN_VALUE:
 			{
 				ClassAdUnParser	unp;
 				string			svalue;
@@ -1212,8 +1216,8 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 				return( true );
 			}
 
-		case ABSOLUTE_TIME_VALUE:
-		case RELATIVE_TIME_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
 			{
 				ClassAdUnParser	unp;
 				string			svalue;
@@ -1245,22 +1249,22 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 	}
 
 	switch( arg.GetType( ) ) {
-		case UNDEFINED_VALUE:
+		case Value::UNDEFINED_VALUE:
 			result.SetUndefinedValue( );
 			return( true );
 
-		case ERROR_VALUE:
-		case CLASSAD_VALUE:
-		case LIST_VALUE:
-		case ABSOLUTE_TIME_VALUE:
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
 			result.SetErrorValue( );
 			return( true );
 
-		case BOOLEAN_VALUE:
+		case Value::BOOLEAN_VALUE:
 			result.CopyFrom( arg );
 			return( true );
 
-		case INTEGER_VALUE:
+		case Value::INTEGER_VALUE:
 			{
 				int ival;
 				arg.IsIntegerValue( ival );
@@ -1268,7 +1272,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 				return( true );
 			}
 
-		case REAL_VALUE:
+		case Value::REAL_VALUE:
 			{
 				double rval;
 				arg.IsRealValue( rval );
@@ -1276,7 +1280,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 				return( true );
 			}
 
-		case STRING_VALUE:
+		case Value::STRING_VALUE:
 			{
 				string buf;
 				arg.IsStringValue( buf );
@@ -1288,7 +1292,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 				return( true );
 			}
 
-		case RELATIVE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
 			{
 				time_t rsecs;
 				arg.IsRelativeTimeValue( rsecs );
@@ -1321,18 +1325,18 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 	}
 
 	switch( arg.GetType( ) ) {
-		case UNDEFINED_VALUE:
+		case Value::UNDEFINED_VALUE:
 			result.SetUndefinedValue( );
 			return( true );
 
-		case ERROR_VALUE:
-		case CLASSAD_VALUE:
-		case LIST_VALUE:
-		case BOOLEAN_VALUE:
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
+		case Value::BOOLEAN_VALUE:
 			result.SetErrorValue( );
 			return( true );
 
-		case INTEGER_VALUE:
+		case Value::INTEGER_VALUE:
 			{
 				int ivalue;
 				arg.IsIntegerValue( ivalue );
@@ -1344,7 +1348,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 				return( true );
 			}
 
-		case REAL_VALUE:
+		case Value::REAL_VALUE:
 			{
 				double	rvalue;
 
@@ -1357,7 +1361,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 				return( true );
 			}
 
-		case STRING_VALUE:
+		case Value::STRING_VALUE:
 			{
 				string 	buf;
 				time_t 	secs;
@@ -1378,7 +1382,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 				return( true );
 			}
 
-		case ABSOLUTE_TIME_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
 			{
 				time_t secs;
 				arg.IsAbsoluteTimeValue( secs );
@@ -1390,7 +1394,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 				return( true );
 			}
 
-		case RELATIVE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
 			{
 				if( relative ) {
 					result.CopyFrom( arg );
@@ -1425,26 +1429,26 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
 	}
 
 	switch( arg.GetType( ) ) {
-		case UNDEFINED_VALUE:
+		case Value::UNDEFINED_VALUE:
 			result.SetUndefinedValue( );
 			return( true );
 
-		case ERROR_VALUE:
-		case CLASSAD_VALUE:
-		case LIST_VALUE:
-		case STRING_VALUE:
-		case ABSOLUTE_TIME_VALUE:
-		case RELATIVE_TIME_VALUE:
-		case BOOLEAN_VALUE:
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
+		case Value::STRING_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
+		case Value::BOOLEAN_VALUE:
 			result.SetErrorValue( );
 			return( true );
 
-		case INTEGER_VALUE:
+		case Value::INTEGER_VALUE:
 				// floor, ceil and round are identity ops for integers
 			result.CopyFrom( arg );
 			return( true );
 
-		case REAL_VALUE:
+		case Value::REAL_VALUE:
 			{
 				double rvalue;
 				arg.IsRealValue( rvalue );
