@@ -68,6 +68,7 @@ int main(int argc, char **argv)
 
 	  int i;
 	  for (i=0; i<result_size; i++) {
+		  buffer = "";	// Unparse will append to the buffer string
 		  unparser.Unparse (buffer, result[i]);
 		  fprintf (stdout, "\n%s\n", buffer.c_str());
 	  }
