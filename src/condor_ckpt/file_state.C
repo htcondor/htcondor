@@ -1072,4 +1072,82 @@ MarkOpen( const char *path, int flags, int real_fd, int is_remote )
 	return FileTab->DoOpen( path, flags, real_fd, is_remote );
 }
 
+int creat(const char *path, mode_t mode)
+{
+	return open(path, O_WRONLY | O_CREAT | O_TRUNC, mode);
+}
+
+#if defined (SYS_fcntl)
+int
+fcntl(int fd, int cmd, ...)
+{
+	int arg = 0;
+	va_list ap;
+        int user_fd;
+        int use_local_access = FALSE;
+
+        if ((user_fd = MapFd(fd)) < 0) {
+                return -1;
+        }
+	
+        if ( LocalAccess(fd) ) {
+                use_local_access = TRUE;
+        }
+	
+        switch (cmd) {
+        case F_DUPFD:
+                va_start( ap, cmd );
+// Linux uses a long as the type for the third argument.  All other
+// platforms use an int.  For Linux, we just cast the long to an int
+// for use with our remote syscall.  Derek Wright 4/11/97
+#if defined(LINUX)
+                arg = (int) va_arg( ap, long );
+#else
+                arg = va_arg( ap, int );
+#endif
+                arg = FileTab->find_avail( arg );
+                return dup2( fd, arg );
+        case F_GETFD:
+        case F_GETFL:
+                if ( LocalSysCalls() || use_local_access ) {
+                        return syscall( SYS_fcntl, fd, cmd, arg );
+		} else {
+			return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
+		}
+        case F_SETFD:
+        case F_SETFL:
+                va_start( ap, cmd );
+#if defined(LINUX)
+                arg = (int) va_arg( ap, long );
+#else
+                arg = va_arg( ap, int );
+#endif
+                if ( LocalSysCalls() || use_local_access ) {
+                        return syscall( SYS_fcntl, fd, cmd, arg );
+		} else {
+			return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
+		}
+
+	// These fcntl commands use a struct flock pointer for their
+	// 3rd arg.  Supporting these as remote calls would require a
+	// pseudo syscall for the seperate argument signature.  
+	// Currently, this is not supported.  Derek Wright 4/11/97
+	case F_GETLK:
+	case F_SETLK: 
+	case F_SETLKW: 
+		struct flock *lockarg;
+		va_list ap;
+                va_start( ap, cmd );
+		lockarg = va_arg ( ap, struct flock* );
+                if ( LocalSysCalls() || use_local_access ) {
+                        return syscall( SYS_fcntl, fd, cmd, lockarg );
+		} else {
+			EXCEPT( "Unsupported fcntl() command" );
+		}
+	default:
+		EXCEPT( "Unsupported fcntl() command" );
+	}
+}
+#endif
+
 } // end of extern "C"
