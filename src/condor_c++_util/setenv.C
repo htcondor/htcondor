@@ -169,17 +169,20 @@ const char *GetEnv( const char *env_var )
 
 #ifdef WIN32
 	DWORD rc;
+	static int value_size = 0;
 	static char *value = NULL;
 	if ( value == NULL ) {
-		value = (char *)malloc( 1024 );
+		value_size = 1024;
+		value = (char *)malloc( value_size );
 	}
-	rc = GetEnvironmentVariable( env_var, value, sizeof(value) );
+	rc = GetEnvironmentVariable( env_var, value, value_size );
 	if ( rc > sizeof(value) - 1 ) {
 			// environment variable value is too large,
 			// reallocate our string and try again
 		free( value );
-		value = (char *)malloc( rc );
-		rc = GetEnvironmentVariable( env_var, value, sizeof(value) );
+		value_size = rc;
+		value = (char *)malloc( value_size );
+		rc = GetEnvironmentVariable( env_var, value, value_size );
 	}
 	if ( rc > sizeof(value) - 1 ) {
 		dprintf( D_ALWAYS, "GetEnv(): environment variable still too large: %d\n", rc );
