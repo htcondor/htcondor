@@ -216,9 +216,6 @@ class Dag {
     //
     List<TQI>    _termQ;
 
-    // For debugging
-    bool         _termQLock;
-
     // Number of Jobs that are done (completed execution)
     int _numJobsDone;
     

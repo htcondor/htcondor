@@ -26,7 +26,6 @@ Dag::Dag(const char *condorLogName, const char *lockFileName,
     _condorLogInitialized (false),
     _condorLogSize        (0),
     _lockFileName         (NULL),
-    _termQLock            (false),
     _numJobsDone          (0),
     _numJobsFailed        (0),
     _numJobsSubmitted     (0),
@@ -55,9 +54,6 @@ bool Dag::Bootstrap (bool recovery) {
     // has the orphan jobs as its children.  The God job will have the
     // value (Job *) NULL.
 
-    assert (!_termQLock);
-    _termQLock = true;
-
     {
         TQI * god = new TQI;   // Null parent and empty children list
         ListIterator<Job> iList (_jobs);
@@ -69,8 +65,6 @@ bool Dag::Bootstrap (bool recovery) {
         _termQ.Append (god);
     }
 
-    _termQLock = false;
-    
     //--------------------------------------------------
     // Update dependencies for pre-terminated jobs
     // (jobs marked DONE in the dag input file)
@@ -769,7 +763,6 @@ void Dag::TerminateJob (Job * job) {
 
 	// add job to the termination queue if it has any children
 	TQI* tqi = new TQI( job, qp );
-	assert( !_termQLock );
 	if( !job->IsEmpty( Job::Q_CHILDREN ) ) {
 		_termQ.Append(tqi);
 	}
@@ -777,9 +770,6 @@ void Dag::TerminateJob (Job * job) {
 
 //---------------------------------------------------------------------------
 Job * Dag::GetSubmittedJob (bool recovery) {
-
-    assert (!_termQLock);
-    _termQLock = true;
 
     _termQ.Rewind();
 
@@ -858,7 +848,6 @@ Job * Dag::GetSubmittedJob (bool recovery) {
             }
         }
     }
-    _termQLock = false;
     if (recovery && job_found != NULL) {
         job_found->_Status = Job::STATUS_SUBMITTED;
     }
@@ -886,8 +875,6 @@ bool Dag::SubmitReadyJobs () {
 		return true;
 	}
 
-    assert (!_termQLock);
-    _termQLock = true;
     _termQ.Rewind();
 
 	// look at the children of each terminated job to see if any of
@@ -924,6 +911,5 @@ bool Dag::SubmitReadyJobs () {
 			}
 		}
 	}
-    _termQLock = false;
     return true;
 }
