@@ -44,35 +44,40 @@ static Qmgr_connection connection;
 Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only )
 {
-	int		rval, ok, is_local = FALSE;
-	char*	scheddAddr = get_schedd_addr(0);
-	char*	localScheddAddr = NULL;
+	int		rval, ok;
+	char*	scheddAddr = NULL;
+	char	localaddrbuf[100];
+	char*	tmp;
 
-	if( scheddAddr ) {
-		localScheddAddr = strdup( scheddAddr );
-		scheddAddr = NULL;
-	} 
+		// do we already have a connection active?
+	if( qmgmt_sock ) {
+			// yes; reject new connection (we can only handle one at a time)
+		return( NULL );
+	}
 
 		// get the address of the schedd to which we want a connection
 	if( !qmgr_location || !*qmgr_location ) {
 			/* No schedd identified --- use local schedd */
-		scheddAddr = localScheddAddr;
-		is_local = TRUE;
+		tmp = get_schedd_addr();
+		if ( tmp ) {
+				// copy out of static buffer
+			strcpy(localaddrbuf,tmp);
+			scheddAddr = localaddrbuf;
+		}
 	} else if(qmgr_location[0] != '<') {
 			/* Get schedd's IP address from collector */
-		scheddAddr = get_schedd_addr(qmgr_location);
+		tmp = get_schedd_addr(qmgr_location);
+		if ( tmp ) {
+				// copy out of static buffer
+			strcpy(localaddrbuf,tmp);
+			scheddAddr = localaddrbuf;
+		}
 	} else {
 			/* We were passed the sinful string already */
 		scheddAddr = qmgr_location;
 	}
 
 
-		// do we already have a connection active?
-	if( qmgmt_sock ) {
-			// yes; reject new connection (we can only handle one at a time)
-		if( localScheddAddr ) free( localScheddAddr );
-		return( NULL );
-	}
 
     // no connection active as of now; create a new one
 	if(scheddAddr) {
@@ -93,25 +98,11 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 	}
 
 	if( !ok ) {
-		if ( localScheddAddr ) free(localScheddAddr);
 		if( qmgmt_sock ) delete qmgmt_sock;
 		qmgmt_sock = NULL;
 		return 0;
 	}
 
-		/* Figure out if we're trying to connect to a remote queue, in
-		   which case we'll set our username to "nobody" */
-	if( localScheddAddr ) {
-		//mju replaced strcmp with new method that strcmp until char (:)
-		//so that we don't worry about the port number
-		if( ! is_local && ! strcmp_until(localScheddAddr, scheddAddr, ':' ) ) {
-			is_local = TRUE;
-		}
-		else {
-			dprintf(D_FULLDEBUG,"ConnectQ failed on check for localScheddAddr\n" );
-		}
-		free(localScheddAddr);
-	}
 
     // This could be a problem
 	char *username = my_username();
@@ -121,6 +112,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 		dprintf(D_FULLDEBUG,"Failure getting my_username()\n", username );
 		delete qmgmt_sock;
 		qmgmt_sock = NULL;
+		if (domain) free(domain);
 		return( 0 );
 	}
 
@@ -144,6 +136,15 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
         } else {
             rval = InitializeConnection( username, domain );
         }
+
+		if (username) {
+			free(username);
+			username = NULL;
+		}
+		if (domain) {
+			free(domain);
+			domain = NULL;
+		}
 
         if (rval < 0) {
             delete qmgmt_sock;
@@ -169,7 +170,8 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
         }
     }
 
-	free( username );
+	if (username) free(username);
+	if (domain) free(domain);
 
 	return &connection;
 }
