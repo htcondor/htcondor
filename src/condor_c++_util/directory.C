@@ -34,11 +34,6 @@
 // the work.  Good luck!
 #define DEBUG_DIRECTORY_CLASS 0
 
-// Declare space for static data members
-#ifdef WIN32
-struct _finddata_t Directory::filedata;
-#endif
-
 //  --- A macro to reset our priv state and return
 #define return_and_resetpriv(i) \
 	if ( want_priv_change ) 		\
@@ -75,7 +70,6 @@ StatInfo::StatInfo( const char *path )
 
 StatInfo::StatInfo( const char *dirpath, const char *filename )
 {
-	char* tmp;
 	this->filename = strnewp( filename );
 	this->dirpath = make_dirpath( dirpath );
 	fullpath = dircat( dirpath, filename );
@@ -114,7 +108,7 @@ StatInfo::~StatInfo()
 	}
 }
 
-int
+void
 StatInfo::do_stat( const char *path )
 {
 		// Initialize
@@ -145,7 +139,7 @@ StatInfo::do_stat( const char *path )
 #ifndef WIN32
 		isdirectory = S_ISDIR(statbuf.st_mode);
 #else
-		isdirectory = _S_IFDIR & statbuf.st_mode;
+		isdirectory = ((_S_IFDIR & statbuf.st_mode) != 0);
 #endif
 		break;
 	default:
@@ -514,6 +508,7 @@ Directory::Next()
 	if ( result != -1 ) {
 		// findfirst/findnext succeeded
 		curr = new StatInfo( curr_dir, filedata.name, 
+							 filedata.time_access,
 							 filedata.time_create,
 							 filedata.time_write, 
 							 ((filedata.attrib & _A_SUBDIR) != 0) ); 
@@ -551,6 +546,9 @@ IsDirectory( const char *path )
 		return false;
 		break;
 	}
+
+	EXCEPT("IsDirectory() unexpected error code"); // does not return
+	return false;
 }
 
 
