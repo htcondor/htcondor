@@ -30,8 +30,6 @@ NON_PORTABLE_OBJ = NON_POSIX.o resource_limits.$(OS).o \
 
 OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
 
-CONTRIB_OBJ = starter.contrib.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
-
 TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 	alarm.o
 
@@ -42,12 +40,6 @@ static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
-c_plus_target($(NAME).contrib,$(CONTRIB_OBJ),$(LIB))
-strip_target($(NAME).contrib,$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
-strip_link_target($(STRIP_CONTRIB)/sbin/$(NAME).contrib,$(STRIP_CONTRIB)/sbin,$(NAME))
-static_target($(NAME).contrib,$(CONTRIB_OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
-static_link_target($(STATIC_CONTRIB)/sbin/$(NAME).contrib,$(STATIC_CONTRIB)/sbin,$(NAME))
-
 c_plus_target(toy,$(TOY_OBJ),$(LIB))
 html:
 
@@ -57,6 +49,3 @@ starter_state_diagram.dot: $(NAME)
 starter_state_diagram.ps: starter_state_diagram.dot
 	dot -Tps -Gsize="10,9" -Gratio=.75 -Gorientation=landscape \
 	starter_state_diagram.dot > starter_state_diagram.ps
-
-starter.contrib.o: starter.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -DCONTRIB -c -o starter.contrib.o starter.C
