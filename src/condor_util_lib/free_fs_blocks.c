@@ -174,7 +174,6 @@ reserve_for_fs()
 		if( answer < 0 ) {
 			answer = 0;
 		}
-		dprintf( D_ALWAYS, "Reserving %d kbytes for file system\n", answer );
 	}
 	dprintf( D_FULLDEBUG, "Reserving %d kbytes for file system\n", answer );
 	return answer;
