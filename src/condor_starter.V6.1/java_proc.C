@@ -227,7 +227,7 @@ dig Java still gets the general idea.
 #ifdef WIN32
 #define EXCEPTION_EXIT_CODE 1
 #else
-#define EXCEPTION_EXIT_CODE ( ((SIGTERM) << 8) & 0x7f )
+#define EXCEPTION_EXIT_CODE (SIGTERM)
 #endif
 
 /*
