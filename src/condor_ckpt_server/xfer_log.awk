@@ -1,5 +1,6 @@
 BEGIN {
     num_hosts = 0;
+    num_subnets = 0;
     num_users = 0;
 }
 {
@@ -15,6 +16,12 @@ BEGIN {
 	    Hosts[num_hosts] = $9;
 	    num_hosts++;
 	}
+	split($9, ip_tmp, ".");
+	Subnet = sprintf("%s.%s.%s", ip_tmp[1], ip_tmp[2], ip_tmp[3]);
+	if (AttemptedSends[Subnet] == 0 && AttemptedRecvs[Subnet] == 0) {
+	    Subnets[num_subnets] = Subnet;
+	    num_subnets++;
+	}
 	split($10, user_tmp, "\@");
 	User = user_tmp[1];
 	if (AttemptedSends[User] == 0 && AttemptedRecvs[User] == 0) {
@@ -23,30 +30,41 @@ BEGIN {
 	}
 	if ($3 == "S") {
 	    AttemptedSends[$9]++;
+	    AttemptedSends[Subnet]++;
 	    AttemptedSends[User]++;
 	    if ($4 != "F") {
 		CompletedSends[$9]++;
+		CompletedSends[Subnet]++;
 		CompletedSends[User]++;
 		BytesSent[$9] += $5;
+		BytesSent[Subnet] += $5;
 		BytesSent[User] += $5;
 		TimeSending[$9] += $7;
+		TimeSending[Subnet] += $7;
 		TimeSending[User] += $7;
 	    }
 	} else {
 	    AttemptedRecvs[$9]++;
+	    AttemptedRecvs[Subnet]++;
 	    AttemptedRecvs[User]++;
 	    if ($4 != "F") {
 		CompletedRecvs[$9]++;
+		CompletedRecvs[Subnet]++;
 		CompletedRecvs[User]++;
 		BytesRecvd[$9] += $5;
+		BytesRecvd[Subnet] += $5;
 		BytesRecvd[User] += $5;
 		TimeReceiving[$9] += $7;
+		TimeReceiving[Subnet] += $7;
 		TimeReceiving[User] += $7;
 	    }
 	}
     }
 }
 END {
+    qsort(Hosts, 0, num_hosts-1);
+    qsort(Subnets, 0, num_subnets-1);
+    qsort(Users, 0, num_users-1);
     printf("\nCheckpoint Server Transfer Log Data from %s %s to %s %s\n\n",
 	   StartDate, StartTime, EndDate, EndTime);
     printf("%-16.16s %9.9s %7.7s %9.9s %7.7s %9.9s %7.7s\n",
@@ -99,6 +117,24 @@ END {
 	TotalCompletedSends += CompletedSends[Host];
 	TotalCompletedRecvs += CompletedRecvs[Host];
     }
+    printf("\n");
+    for (i=0; i < num_subnets; i++) {
+	Subnet = Subnets[i];
+	Bytes = BytesSent[Subnet] + BytesRecvd[Subnet];
+	Time = TimeSending[Subnet] + TimeReceiving[Subnet];
+	Attempted = AttemptedSends[Subnet] + AttemptedRecvs[Subnet];
+	Completed = CompletedSends[Subnet] + CompletedRecvs[Subnet];
+	if (TimeSending[Subnet] > 0 && TimeReceiving[Subnet] > 0) {
+	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n",
+		   Subnet,
+		   BytesSent[Subnet]*8/TimeSending[Subnet]/1024000,
+		   CompletedSends[Subnet]/AttemptedSends[Subnet]*100,
+		   BytesRecvd[Subnet]*8/TimeReceiving[Subnet]/1024000,
+		   CompletedRecvs[Subnet]/AttemptedRecvs[Subnet]*100,
+		   Bytes*8/Time/1024000,
+		   Completed/Attempted*100);
+	}
+    }
     TotalBytes = TotalBytesSent + TotalBytesRecvd;
     TotalTime = TotalTimeSending + TotalTimeReceiving;
     TotalAttempted = TotalAttemptedSends + TotalAttemptedRecvs;
@@ -121,4 +157,20 @@ END {
     }
     printf("\n%-16.16s %25.0f %25.0f\n",
 	   "Total", TotalBytesSent/1024000, TotalBytesRecvd/1024000);
+}
+function qsort(v, left, right) {
+  if (left >= right) return;
+  swap(v, left, int((left + right)/2));
+  last = left;
+  for (i=left+1; i <= right; i++) {
+    if (v[i] < v[left]) swap(v, ++last, i);
+  }
+  swap(v, left, last);
+  qsort(v, left, last-1);
+  qsort(v, last+1, right);
+}
+function swap(v, i, j) {
+  temp = v[i];
+  v[i] = v[j];
+  v[j] = temp;
 }
