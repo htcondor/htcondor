@@ -30,6 +30,7 @@ extern "C" {
 extern	char*	my_hostname();
 extern	char*	my_full_hostname();
 extern	unsigned int	my_ip_addr();
+extern  void	init_full_hostname();
 
 #if defined( __cplusplus )
 }

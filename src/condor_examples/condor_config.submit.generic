@@ -90,7 +90,13 @@ HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 
 ##  Read access.  Machines listed as allow (and/or not listed as deny)
 ##  can view the status of your pool, etc.
-#HOSTALLOW_READ = 
+##  NOTE: By default, without either of these entries specified, you
+##  are granting read access to the whole world.  You may want to
+##  restrict that to hosts in your domain.  If possible, please also
+##  grant read access to "*.cs.wisc.edu", so the Condor developers
+##  will be able to view the status of your pool and more easily help
+##  you install, configure or debug your Condor installation.
+#HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
 #HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
 
 ##  Write access.  Machines listed here can join your pool, submit
