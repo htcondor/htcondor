@@ -20,7 +20,7 @@ that added the resource to the pool.
 After glidein, the user may submit jobs for execution on the
 added resource the same way that all Condor jobs are submitted.
 To force a submitted job to run on the added resource, the
-submit description file contains a requirement that the job run 
+submit description file could contain a requirement that the job run 
 specifically on the added resource.
 
 
@@ -38,7 +38,15 @@ cs.wisc.edu by adding *.cs.wisc.edu to the
 Recall that you must run \Condor{reconfig} for configuration
 file changes to take effect.
 
-Make sure that the Condor and Globus tools are in your \Env{PATH}.
+If it is undesirable to modify the security settings on
+your primary Condor pool, you can simply run your own
+personal Condor pool (which may exist entirely on a single
+machine and coexist with other instances of Condor).  The glidein
+resources may then join this personal Condor pool, because
+you can set the security settings however you want.  Using
+flocking, you can still have your jobs run on the combination
+of your personal glidein pool and any other Condor pools to
+which you have access.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{What \Condor{glidein} Does}
@@ -56,20 +64,21 @@ Condor daemons are started.
 \Condor{glidein} does this by creating a submit description file for
 \Condor{submit}, which runs the \Condor{master} under the Globus
 universe.
-This implies that execution of the \Condor{master} is started on the Globus
-resource.
+Once \Condor{master} begins running, it runs \Condor{startd}, which phones
+home to your \Condor{collector} to join your pool.
 The Condor daemons exit gracefully when no jobs run on the daemons for a
 configurable period of time. The default length of time is 20 minutes.
 
-The Condor daemons on the Globus resource contact the local pool and
-attempt to join the pool.  The \Expr{START}
+By default, the \Expr{START}
 expression for the \Condor{startd} daemon requires that the username
 of the person running \Condor{glidein} matches the username of the jobs
 submitted through Condor.
 
-After a short length of time,
-the Globus resource can be seen in the local Condor pool,
-as with this example.
+Here is an example of how a glidein resource appears, similar to how
+any other machine appears in your Condor pool.  The name just has a
+slightly different form, in order to handle the possibility of
+multiple instances of glidein daemons inhabiting a multi-processor
+machine.
 
 \footnotesize
 \begin{verbatim}
@@ -98,4 +107,8 @@ in the matchmaking process.
 Condor must be told not to use the submission machine's
 attributes in those cases
 where the Globus resource's attributes
-do not match the submission machine's attributes.
+do not match the submission machine's attributes and your job
+really is capable of running on the target machine.  You
+may want to use Condor's file-transfer capabilities in order
+to copy input and output files back and forth between the submission
+and execution machine.
