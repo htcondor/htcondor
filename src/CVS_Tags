@@ -1,3 +1,12 @@
+11/04/03 V6_6_0-analyze
+   The 6.6.0 version of condor_analyze, which lives on the trunk.  The
+   condor_analyze we include in 6.6.0 is really a version of condor_q
+   from the trunk with new classads.  it was built manually on linux
+   (i386_rh72), and will be included in the 6.6.0 tarballs for that
+   platform by the build system.  The condor_analyze binaries included
+   in 6.6.0 have this version string: 
+   "$CondorVersion: 6.6.0 Nov  5 2003 CONDOR_ANALYZE-BETA $"
+
 10/22/03 V6_6-post_merge_V6_6-externals-merge-1
    The state of the V6_6-branch after merging the
    V6_6-externals-branch as tagged at V6_6-externals-merge-1.
