@@ -157,7 +157,7 @@
 #	undef readlink
 #	undef setpgrp
 	int mknod( const char *path, int mode, dev_t device );
-	int readlink( const char *path, char *buf, int buf_size );
+	int readlink( const char *path, void *buf, int buf_size );
 	int setpgrp(  );
 #elif defined(ULTRIX43)
 #	undef write
