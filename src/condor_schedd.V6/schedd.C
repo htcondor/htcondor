@@ -834,14 +834,29 @@ abort_job_myself(PROC_ID job_id)
 			char owner[_POSIX_PATH_MAX];
 			owner[0] = '\0';
 			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-			dprintf(D_FULLDEBUG,
-				"Sending SIGTERM to scheduler universe job"
-				" pid=%d owner=%s\n",srec->pid,owner);
 			init_user_ids(owner);
 			int kill_sig = DC_SIGTERM;
-			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_KILL_SIG,
-							&kill_sig);
+				// First, try ATTR_REMOVE_KILL_SIG
+			if( GetAttributeInt(job_id.cluster, job_id.proc,
+								ATTR_REMOVE_KILL_SIG, &kill_sig) < 0 ) {
+					// Fall back on the regular ATTR_KILL_SIG
+				GetAttributeInt(job_id.cluster, job_id.proc,
+								ATTR_KILL_SIG, &kill_sig);
+			}
+			dprintf( D_FULLDEBUG,
+					 "Sending remove signal (%d) to scheduler universe job"
+					 " pid=%d owner=%s\n", kill_sig, srec->pid, owner );
 			priv_state priv = set_user_priv();
+
+				// TODO!!!!
+				// This is really broken, since DC::Send_Signal()
+				// assumes you're giving it a DC_SIGXXX brand of
+				// signal number.  So, what users define in their
+				// submit files isn't what they're really going to
+				// get!  This is evil.  We need to either do the
+				// appropriate translation, store everything as
+				// strings, or come up with a better solution. 
+				// -Derek Wright 3/23/01
 			if ( daemonCore->Send_Signal( srec->pid, kill_sig ) == TRUE ) {
 				// successfully sent signal
 				srec->preempted = TRUE;
