@@ -25,7 +25,7 @@ umask 0022;
 	       "reschedule", "restart", "vacate" );
 @bin_names=( "q", "rm", "submit", "status", "prio", "userprio", 
 		"compile", "history", "config_val", "findhost", "glidein", "release",
-         "run", "userlog" );
+         "run", "userlog", "version" );
 @full_lib_names=( "ld", "libcondorc++support.a", "condor_rt0.o",
 		  "libcondorsyscall.a" );
 @sbin_master_names=( "master", "preen" );
