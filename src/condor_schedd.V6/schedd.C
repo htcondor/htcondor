@@ -1197,6 +1197,7 @@ Scheduler::negotiate(int, Stream* s)
 	char*	negotiator_name = NULL;	// hostname of negotiator when flocking
 	int		serviced_other_commands = 0;	
 	int		owner_num;
+	int		JobsRejected = 0;
 	Sock*	sock = (Sock*)s;
 	contactStartdArgs * args;
 	ClassAd* my_match_ad;
@@ -1313,11 +1314,11 @@ Scheduler::negotiate(int, Stream* s)
 		 owner_num++);
 	if (owner_num == N_Owners) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
-		N_PrioRecs = 0;
+		jobs = N_PrioRecs = 0;
 	} else if (Owners[owner_num].FlockLevel < which_negotiator) {
 		dprintf(D_FULLDEBUG,
 				"This user is no longer flocking with this negotiator.\n");
-		N_PrioRecs = 0;
+		jobs = N_PrioRecs = 0;
 	} else if (Owners[owner_num].FlockLevel == which_negotiator) {
 		Owners[owner_num].NegotiationTimestamp = time(0);
 	}
@@ -1396,6 +1397,7 @@ Scheduler::negotiate(int, Stream* s)
 				 case REJECTED:
 					 mark_cluster_rejected( cur_cluster );
 					host_cnt = max_hosts + 1;
+					JobsRejected++;
 					break;
 				case SEND_JOB_INFO: {
 					/* Really, we're trying to make sure we don't have too
@@ -1679,10 +1681,14 @@ Scheduler::negotiate(int, Stream* s)
 		break;
 	}
 
-	if( JobsStarted < jobs ) {
+		// It addition to checking to see if we started all of our
+		// jobs, check also if any jobs were rejected.  This handles
+		// the case when we requested more than one CPU for a job and
+		// failed to get all the CPUs we wanted (i.e., PVM jobs).
+	if( JobsStarted < jobs || JobsRejected > 0 ) {
 		dprintf( D_ALWAYS,
-		"Out of servers - %d jobs matched, %d jobs idle\n",
-							JobsStarted, jobs - JobsStarted );
+		"Out of servers - %d jobs matched, %d jobs idle, %d jobs rejected\n",
+							JobsStarted, jobs - JobsStarted, JobsRejected );
 
 		// We are unsatisfied in this pool.  Flock with less desirable pools.
 		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
@@ -2596,6 +2602,14 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
              job_id->cluster, job_id->proc, srp->pid);
 
     sprintf(out_buf, "%d %d %d\n", job_id->cluster, job_id->proc, 1);
+
+		// Warning: the pvm shadow may close this pipe during a
+		// graceful shutdown.  We should consider than an indication
+		// that the shadow doesn't want any more machines.  We should
+		// not kill the shadow if it closes the pipe, though, since it
+		// has some useful cleanup to do (i.e., so we can't return
+		// NULL here when the pipe is closed, since our caller will
+		// consider that a fatal error for the shadow).
 	
 	dprintf( D_ALWAYS, "First Line: %s", out_buf );
 	write(shadow_fd, out_buf, strlen(out_buf));
@@ -3308,6 +3322,14 @@ mark_job_stopped(PROC_ID* job_id)
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 
+		// Always set CurrentHosts to 0 here, because we increment
+		// CurrentHosts before we set the job status to RUNNING, so
+		// CurrentHosts may need to be reset even if job status never
+		// changed to RUNNING.  It is very important that we keep
+		// CurrentHosts accurate, because we use it to determine if we
+		// need to negotiate for more matches.
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
+
 	// if job isn't RUNNING, then our work is already done
 	if (status == RUNNING) {
 
@@ -3319,7 +3341,6 @@ mark_job_stopped(PROC_ID* job_id)
 		}
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
-		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
 		if (had_orig >= 0) {
 			SetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS,
 							orig_max);
