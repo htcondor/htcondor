@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "exprTree.h"
 #include "sink.h"
 
@@ -83,11 +84,11 @@ Unparse( string &buffer, Value &val )
 {
 	char	tempBuf[512];
 	switch( val.GetType( ) ) {
-		case NULL_VALUE: 
+		case Value::NULL_VALUE: 
 			buffer += "(null-value)";
 			break;
 
-		case STRING_VALUE: {
+		case Value::STRING_VALUE: {
 			string	s;
 			val.IsStringValue( s );
 			buffer += '"';
@@ -118,35 +119,35 @@ Unparse( string &buffer, Value &val )
 			buffer += '"';
 			return;
 		}
-		case INTEGER_VALUE: {
+		case Value::INTEGER_VALUE: {
 			int	i;
 			val.IsIntegerValue( i );
 			sprintf( tempBuf, "%d", i );
 			buffer += tempBuf;
 			return;
 		}
-		case REAL_VALUE: {
+		case Value::REAL_VALUE: {
 			double	r;
 			val.IsRealValue( r );
 			sprintf( tempBuf, "%g", r );
 			buffer += tempBuf;
 			return;
 		}
-		case BOOLEAN_VALUE: {
+		case Value::BOOLEAN_VALUE: {
 			bool b;
 			val.IsBooleanValue( b );
 			buffer += b ? "true" : "false";
 			return;
 		}
-		case UNDEFINED_VALUE: {
+		case Value::UNDEFINED_VALUE: {
 			buffer += "undefined";
 			return;
 		}
-		case ERROR_VALUE: {
+		case Value::ERROR_VALUE: {
 			buffer += "error";
 			return;
 		}
-		case ABSOLUTE_TIME_VALUE: {
+		case Value::ABSOLUTE_TIME_VALUE: {
 			struct  tm tms;
 			char    ascTimeBuf[32], timeZoneBuf[32];
 			extern  time_t timezone;
@@ -185,7 +186,7 @@ Unparse( string &buffer, Value &val )
 			buffer += relTimeBuf.substr(1,relTimeBuf.size()-2) + "'";
 			return;
 		}
-		case RELATIVE_TIME_VALUE: {
+		case Value::RELATIVE_TIME_VALUE: {
 			time_t	rsecs;
 			int		days, hrs, mins, secs;
 			val.IsRelativeTimeValue( rsecs );
@@ -217,7 +218,7 @@ Unparse( string &buffer, Value &val )
 			buffer += '\'';
 			return;
 		}
-		case CLASSAD_VALUE: {
+		case Value::CLASSAD_VALUE: {
 			ClassAd *ad;
 			vector< pair<string,ExprTree*> > attrs;
 			val.IsClassAdValue( ad );
@@ -225,7 +226,7 @@ Unparse( string &buffer, Value &val )
 			UnparseAux( buffer, attrs );
 			return;
 		}
-		case LIST_VALUE: {
+		case Value::LIST_VALUE: {
 			ExprList *el;
 			vector<ExprTree*> exprs;
 			val.IsListValue( el );
@@ -246,15 +247,15 @@ Unparse( string &buffer, ExprTree *tree )
 	}
 
 	switch( tree->GetKind( ) ) {
-		case LITERAL_NODE: {
-			Value			val;
-			NumberFactor	factor;
+		case ExprTree::LITERAL_NODE: {
+			Value				val;
+			Value::NumberFactor	factor;
 			((Literal*)tree)->GetComponents( val, factor );
 			UnparseAux( buffer, val, factor );
 			return;
 		}
 
-		case ATTRREF_NODE: {
+		case ExprTree::ATTRREF_NODE: {
 			ExprTree *expr;
 			string	ref;
 			bool	absolute;
@@ -263,15 +264,15 @@ Unparse( string &buffer, ExprTree *tree )
 			return;
 		}
 
-		case OP_NODE: {
-			OpKind		op;
-			ExprTree	*t1, *t2, *t3;
+		case ExprTree::OP_NODE: {
+			Operation::OpKind	op;
+			ExprTree			*t1, *t2, *t3;
 			((Operation*)tree)->GetComponents( op, t1, t2, t3 );
 			UnparseAux( buffer, op, t1, t2, t3 );
 			return;
 		}
 
-		case FN_CALL_NODE: {
+		case ExprTree::FN_CALL_NODE: {
 			string					fnName;
 			vector<ExprTree*> args;
 			((FunctionCall*)tree)->GetComponents( fnName, args );
@@ -279,14 +280,14 @@ Unparse( string &buffer, ExprTree *tree )
 			return;
 		}
 
-		case CLASSAD_NODE: {
+		case ExprTree::CLASSAD_NODE: {
 			vector< pair<string, ExprTree*> > attrs;
 			((ClassAd*)tree)->GetComponents( attrs );
 			UnparseAux( buffer, attrs );
 			return;
 		}
 
-		case EXPR_LIST_NODE: {
+		case ExprTree::EXPR_LIST_NODE: {
 			vector<ExprTree*> exprs;
 			((ExprList*)tree)->GetComponents( exprs );
 			UnparseAux( buffer, exprs );
@@ -304,13 +305,15 @@ Unparse( string &buffer, ExprTree *tree )
 
 
 void ClassAdUnParser::
-UnparseAux( string &buffer, Value &val, NumberFactor factor )
+UnparseAux( string &buffer, Value &val, Value::NumberFactor factor )
 {
 	Unparse( buffer, val );
-	if( val.IsNumber( ) && factor != NO_FACTOR ) {
-		buffer += (factor==K_FACTOR)?"K" : 
-					(factor==M_FACTOR)?"M":
-					(factor==G_FACTOR)?"G": 
+	if( val.IsNumber( ) && factor != Value::NO_FACTOR ) {
+		buffer += (factor==Value::B_FACTOR)?"B"  :
+					(factor==Value::K_FACTOR)?"K": 
+					(factor==Value::M_FACTOR)?"M":
+					(factor==Value::G_FACTOR)?"G": 
+					(factor==Value::T_FACTOR)?"T": 
 					"<error:bad factor>";
 	}
 	return;
@@ -329,24 +332,25 @@ UnparseAux( string &buffer, ExprTree *expr, string &attrName, bool absolute )
 }
 
 void ClassAdUnParser::
-UnparseAux(string &buffer, OpKind op, ExprTree *t1, ExprTree *t2, ExprTree *t3)
+UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2, 
+	ExprTree *t3)
 {
 		// case 0: parentheses op
-	if( op==PARENTHESES_OP ) {
+	if( op==Operation::PARENTHESES_OP ) {
 		buffer += "( ";
 		Unparse( buffer, t1 );
 		buffer += " )";
 		return;
 	}
 		// case 1: check for unary ops
-	if( op==UNARY_PLUS_OP || op==UNARY_MINUS_OP || op==LOGICAL_NOT_OP ||
-			op==BITWISE_NOT_OP ) {
+	if( op==Operation::UNARY_PLUS_OP || op==Operation::UNARY_MINUS_OP || 
+			op==Operation::LOGICAL_NOT_OP || op==Operation::BITWISE_NOT_OP ) {
 		buffer += opString[op];
 		Unparse( buffer, t1 );
 		return;
 	}
 		// case 2: check for ternary op
-	if( op==TERNARY_OP ) {
+	if( op==Operation::TERNARY_OP ) {
 		Unparse( buffer, t1 );
 		buffer += " ? ";
 		Unparse( buffer, t2 );
@@ -355,7 +359,7 @@ UnparseAux(string &buffer, OpKind op, ExprTree *t1, ExprTree *t2, ExprTree *t3)
 		return;
 	}
 		// case 3: check for subscript op
-	if( op==SUBSCRIPT_OP ) {
+	if( op==Operation::SUBSCRIPT_OP ) {
 		Unparse( buffer, t1 );
 		buffer += '[';
 		Unparse( buffer, t2 );
@@ -476,26 +480,27 @@ GetMinimalParentheses( )
 }
 
 void PrettyPrint::
-UnparseAux(string &buffer,OpKind op,ExprTree *op1,ExprTree *op2,ExprTree *op3)
+UnparseAux(string &buffer,Operation::OpKind op,ExprTree *op1,ExprTree *op2,
+	ExprTree *op3)
 {
 	if( !minimalParens ) {
 		return( ClassAdUnParser::UnparseAux( buffer, op, op1, op2, op3 ) );
 	}
 
 		// case 0: parentheses op
-	if( op==PARENTHESES_OP ) {
+	if( op==Operation::PARENTHESES_OP ) {
 		Unparse( buffer, op1 );
 		return;
 	}
 		// case 1: check for unary ops
-	if( op==UNARY_PLUS_OP || op==UNARY_MINUS_OP || op==LOGICAL_NOT_OP ||
-			op==BITWISE_NOT_OP ) {
+	if( op==Operation::UNARY_PLUS_OP || op==Operation::UNARY_MINUS_OP || 
+			op==Operation::LOGICAL_NOT_OP || op==Operation::BITWISE_NOT_OP ) {
 		buffer += opString[op];
 		Unparse( buffer, op1 );
 		return;
 	}
 		// case 2: check for ternary op
-	if( op==TERNARY_OP ) {
+	if( op==Operation::TERNARY_OP ) {
 		Unparse( buffer, op1 );
 		buffer += " ? ";
 		Unparse( buffer, op2 );
@@ -504,7 +509,7 @@ UnparseAux(string &buffer,OpKind op,ExprTree *op1,ExprTree *op2,ExprTree *op3)
 		return;
 	}
 		// case 3: check for subscript op
-	if( op==SUBSCRIPT_OP ) {
+	if( op==Operation::SUBSCRIPT_OP ) {
 		Unparse( buffer, op1 );
 		buffer += '[';
 		Unparse( buffer, op2 );
@@ -512,10 +517,10 @@ UnparseAux(string &buffer,OpKind op,ExprTree *op1,ExprTree *op2,ExprTree *op3)
 		return;
 	}
 		// all others are binary ops
-	OpKind		top;
-	ExprTree	*t1, *t2, *t3;
+	Operation::OpKind	top;
+	ExprTree			*t1, *t2, *t3;
 
-	if( op1->GetKind( ) == OP_NODE ) {
+	if( op1->GetKind( ) == ExprTree::OP_NODE ) {
 		((Operation*)op1)->GetComponents( top, t1, t2, t3 );
 		if( Operation::PrecedenceLevel(top)<Operation::PrecedenceLevel(op) ) {
 			buffer += " ( ";
@@ -526,7 +531,7 @@ UnparseAux(string &buffer,OpKind op,ExprTree *op1,ExprTree *op2,ExprTree *op3)
 		Unparse( buffer, t1 );
 	}
 	buffer += opString[op];
-	if( op2->GetKind( ) == OP_NODE ) {
+	if( op2->GetKind( ) == ExprTree::OP_NODE ) {
 		((Operation*)op2)->GetComponents( top, t1, t2, t3 );
 		if( Operation::PrecedenceLevel(top)<Operation::PrecedenceLevel(op) ) {
 			buffer += " ( ";
