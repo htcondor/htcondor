@@ -905,39 +905,31 @@ void LeOp::PrintToStr(char* str)
 void AndOp::PrintToStr(char* str)
 {
     if(lArg) {
-		switch(lArg->MyType()) {
-			case LX_OR:
-				strcat(str, "(");
-				((ExprTree*)lArg)->PrintToStr(str);
-				strcat(str, ")");
-				break;
-
-			default:
-				((ExprTree*)lArg)->PrintToStr(str);
-				break;
-		}
+	strcat(str, "(");
+	((ExprTree*)lArg)->PrintToStr(str);
+	strcat(str, ")");
 	}
     strcat(str, " && ");
     if(rArg) {
-  		switch(rArg->MyType()) {
-			case LX_OR:
-    	   		strcat(str, "(");
-	 	    	((ExprTree*)rArg)->PrintToStr(str);
-		    	strcat(str, ")");
-				break;
-
-	    	default:
-				((ExprTree*)rArg)->PrintToStr(str);
-				break;
-		}
+    	strcat(str, "(");
+	((ExprTree*)rArg)->PrintToStr(str);
+	strcat(str, ")");
   	}
 }
 
 void OrOp::PrintToStr(char* str)
 {
-    if(lArg) ((ExprTree*)lArg)->PrintToStr(str);
+    if(lArg) {
+	strcat(str, "(");
+	((ExprTree*)lArg)->PrintToStr(str);
+	strcat(str, ")");
+	}
     strcat(str, " || ");
-    if(rArg) ((ExprTree*)rArg)->PrintToStr(str);
+    if(rArg) {
+    	strcat(str, "(");
+	((ExprTree*)rArg)->PrintToStr(str);
+	strcat(str, ")");
+  	}
 }
 
 void AssignOp::PrintToStr(char* str)
