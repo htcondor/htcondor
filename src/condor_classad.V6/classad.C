@@ -1171,9 +1171,9 @@ AddRectangle( const ExprTree* tree, Rectangles &r, const string &allowed,
 			for( int i = oldRid+1 ; i <= r.rId ; i++ ) {
 					// not open and not constraint; hence (false, false)
 				if( r.AddUpperBound( *itr, val, false, false, i ) !=
-					Rectangles::NO_ERROR || 
+					Rectangles::RECT_NO_ERROR || 
 					r.AddLowerBound( *itr, val, false, false, i ) !=
-					Rectangles::NO_ERROR ) {
+					Rectangles::RECT_NO_ERROR ) {
 					return( false );
 				}
 			}
@@ -1282,26 +1282,26 @@ _MakeRectangles( const ExprTree *tree, const string &allowed, Rectangles &r,
     switch( op ) {
         case Operation::LESS_THAN_OP:
 			return( r.AddUpperBound( attrName, val, true, true ) ==
-					Rectangles::NO_ERROR); // open
+					Rectangles::RECT_NO_ERROR); // open
 
         case Operation::LESS_OR_EQUAL_OP:
 			return( r.AddUpperBound( attrName, val, false, true ) ==
-					Rectangles::NO_ERROR);//closed
+					Rectangles::RECT_NO_ERROR);//closed
 
         case Operation::EQUAL_OP:
         case Operation::IS_OP:
 			return( r.AddUpperBound( attrName, val, false, true ) ==
-						Rectangles::NO_ERROR &&//closed
+						Rectangles::RECT_NO_ERROR &&//closed
 					r.AddLowerBound( attrName, val, false, true ) ==
-						Rectangles::NO_ERROR);//closed
+						Rectangles::RECT_NO_ERROR);//closed
 
 		case Operation::GREATER_THAN_OP:
 			return( r.AddLowerBound( attrName, val, true, true ) ==
-					Rectangles::NO_ERROR); // open
+					Rectangles::RECT_NO_ERROR); // open
 
         case Operation::GREATER_OR_EQUAL_OP:
 			return( r.AddLowerBound( attrName, val, false, true ) ==
-					Rectangles::NO_ERROR);//closed
+					Rectangles::RECT_NO_ERROR);//closed
 
         default:
             return( false );
