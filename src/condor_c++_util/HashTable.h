@@ -73,6 +73,8 @@ class HashTable {
   int *chainsUsed;	// array which says which chains have items; speeds iterating
   int chainsUsedLen;	// index to end of chainsUsed array
   int numElems; // number of elements in the hashtable
+  int chainsUsedFreeList;	// head of free list of deleted items in chainsUsed
+  int endOfFreeList;
 };
 
 // Construct hash table. Allocate memory for hash table and
@@ -84,6 +86,32 @@ HashTable<Index,Value>::HashTable(int tableSz,
 					       int numBuckets)) :
 	tableSize(tableSz), hashfcn(hashF)
 {
+  int i,j,k;
+
+  // If tableSize is anything but tiny, round it up to
+  // the next prime number if a prime can be found within
+  // 35 of the specified size.  Using a prime for tableSize
+  // makes for faster lookups assuming the the hash func does
+  // a mod on tableSize.
+  if ( tableSize > 5 ) {
+	  for (i=tableSize;i<tableSize+35;i++) {
+			k = i / 2;	// should probably be square root...
+			j = 1;
+			while ( ++j < k ) {
+				// if ( (i / j)*j == i ) {
+				if ( (i % j) == 0 ) {
+					j = 0;
+					break;
+				}
+			}
+			if ( j ) {
+				// found a prime
+				tableSize = i;
+				break;
+			}
+	  }
+  }
+
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
     cerr << "Insufficient memory for hash table" << endl;
     exit(1);
@@ -92,7 +120,7 @@ HashTable<Index,Value>::HashTable(int tableSz,
     cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
     exit(1);
   }
-  for(int i = 0; i < tableSize; i++) {
+  for(i = 0; i < tableSize; i++) {
     ht[i] = NULL;
 	chainsUsed[i] = -1;
   }
@@ -100,6 +128,8 @@ HashTable<Index,Value>::HashTable(int tableSz,
   currentItem = 0;
   chainsUsedLen = 0;
   numElems = 0;
+  endOfFreeList = 0 - tableSize - 10;
+  chainsUsedFreeList = endOfFreeList;
 }
 
 // Insert entry into hash table mapping Index to Value.
@@ -108,6 +138,7 @@ HashTable<Index,Value>::HashTable(int tableSz,
 template <class Index, class Value>
 int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 {
+  int temp;
   int idx = hashfcn(index, tableSize);
 
   HashBucket<Index, Value> *bucket;
@@ -121,7 +152,13 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
   bucket->next = ht[idx];
   if ( !ht[idx] ) {
 	// this is the first item we are adding to this chain
-	chainsUsed[chainsUsedLen++] = idx;
+	if ( chainsUsedFreeList == endOfFreeList ) {
+		chainsUsed[chainsUsedLen++] = idx;
+	} else {
+		temp = chainsUsedFreeList + tableSize;
+		chainsUsedFreeList = chainsUsed[temp];
+		chainsUsed[temp] = idx;
+	}
   }
   ht[idx] = bucket;
 
@@ -271,7 +308,9 @@ int HashTable<Index,Value>::remove(const Index &index)
 				// Remove this idx from our chainsUsed array.
 				for (i=0;i<chainsUsedLen;i++) {
 					if ( chainsUsed[i] == idx ) {
-						chainsUsed[i] = chainsUsed[--chainsUsedLen];
+						// chainsUsed[i] = chainsUsed[--chainsUsedLen];
+						chainsUsed[i] = chainsUsedFreeList;
+						chainsUsedFreeList = i - tableSize;
 						break;
 					}
 				}
@@ -307,6 +346,7 @@ int HashTable<Index,Value>::clear()
   }
 
   chainsUsedLen = 0;
+  chainsUsedFreeList = endOfFreeList;
 
   return 0;
 }
@@ -315,8 +355,22 @@ template <class Index, class Value>
 void HashTable<Index,Value>::
 startIterations (void)
 {
+	int temp, temp1;
+
     currentBucket = -1;
 	currentItem = 0;
+						
+	// compress the chainsUsed list if needed
+	while ( chainsUsedFreeList != endOfFreeList ) {
+		temp = chainsUsedFreeList + tableSize;
+		chainsUsedFreeList = chainsUsed[temp];
+		temp1 = -1;
+		while ( temp < chainsUsedLen && temp1 < 0 ) {
+			temp1 = chainsUsed[--chainsUsedLen];
+		}
+		chainsUsed[temp] = temp1;
+	}
+
 }
 
 
@@ -338,9 +392,14 @@ iterate (Value &v)
     }
 
 	// try next bucket ...
-	currentBucket ++;
+	do {
+		currentBucket ++;
+	} while ( (currentBucket < chainsUsedLen) && 
+			  (chainsUsed[currentBucket] < 0) );
 
-	if (currentBucket == chainsUsedLen)
+	// must use >= here instead of == since chainsUsedLen could decrement
+	// if the user call remove()
+	if (currentBucket >= chainsUsedLen)
 	{
     	// end of hash table ... no more entries
     	currentBucket = -1;
@@ -385,9 +444,15 @@ iterate (Index &index, Value &v)
     }
 
 	// try next bucket ...
-	currentBucket ++;
+	do {
+		currentBucket ++;
+	} while ( (currentBucket < chainsUsedLen) && 
+			  (chainsUsed[currentBucket] < 0) );
 
-	if (currentBucket == chainsUsedLen)
+
+	// must use >= here instead of == since chainsUsedLen could decrement
+	// if the user call remove()
+	if (currentBucket >= chainsUsedLen)
 	{
     	// end of hash table ... no more entries
     	currentBucket = -1;
