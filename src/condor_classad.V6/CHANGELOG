@@ -1,6 +1,7 @@
 Changes for version 0.9.2:
 * Setting the view info no longer loses the view name or parent
   view name.
+* There is now a configure script to assist with building.
 
 Changes for version 0.9.1:
 
