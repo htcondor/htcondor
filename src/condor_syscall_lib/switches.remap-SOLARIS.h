@@ -96,7 +96,6 @@ REMAP_THREE( mprotect, _mprotect, int , char *, size_t , int )
      /* REMAP_TWO( munmap, _munmap, int , char *, size_t ) */
 REMAP_ONE( pipe, _pipe, int , int *)
 REMAP_ONE( plock, _plock, int , int )
-REMAP_FOUR_VOID( profil, _profil, void , unsigned short *, unsigned int , unsigned int , unsigned int )
 REMAP_THREE( readv, _readv, ssize_t, int, const struct iovec *, int )
 REMAP_TWO( rename, _rename, int, const char *, const char * )
 REMAP_ONE( rmdir, _rmdir, int , const char *)
