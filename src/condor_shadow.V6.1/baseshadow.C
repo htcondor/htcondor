@@ -265,6 +265,17 @@ BaseShadow::shutDown( int reason )
 		return;
 	}
 
+	if( reason == JOB_KILLED ) {
+			/*
+			  We're shutting down b/c of condor_rm or condor_hold.  we
+			  do *NOT* want to evaluate the user job policy exprs,
+			  send email, etc, etc, we just want to do some basic
+			  cleanup and exit.  Just call our abortJob(), which will
+			  eventually call DC_Exit() for us.
+			*/
+		abortJob(); 
+	}
+
 	if( reason == JOB_EXITED || reason == JOB_KILLED
 		|| reason == JOB_COREDUMPED ) {
 			// This will not return.  it'll take all desired actions
@@ -420,6 +431,31 @@ BaseShadow::requeueJob( const char* reason )
 
 		// does not return.
 	DC_Exit( JOB_SHOULD_REQUEUE );
+}
+
+
+void
+BaseShadow::abortJob( void )
+{
+	if( ! jobAd ) {
+		dprintf( D_ALWAYS, "In abortJob() w/ NULL JobAd!" );
+		DC_Exit( JOB_KILLED );
+	}
+
+	dprintf( D_ALWAYS, 
+			 "Job %d.%d is being aborted at the user's request\n",
+			 getCluster(), getProc() );
+
+		// cleanup this shadow (kill starters, etc)
+	cleanUp();
+
+	if( !updateJobInQueue(U_ABORT) ) {
+			// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	}
+
+		// does not return.
+	DC_Exit( JOB_KILLED );
 }
 
 
@@ -751,6 +787,9 @@ BaseShadow::updateJobInQueue( update_t type )
 		break;
 	case U_TERMINATE:
 		job_queue_attrs = terminate_job_queue_attrs;
+		break;
+	case U_ABORT:
+			// No special attributes needed...
 		break;
 	case U_PERIODIC:
 			// No special attributes needed...

@@ -36,7 +36,14 @@
 class RemoteResource;
 
 /// What kind of update to the job queue are we performing?
-enum update_t { U_PERIODIC, U_TERMINATE, U_HOLD, U_REMOVE, U_REQUEUE };
+typedef enum { 
+	U_PERIODIC,
+	U_TERMINATE,
+	U_HOLD,
+	U_REMOVE,
+	U_REQUEUE,
+	U_ABORT
+} update_t;
 
 /** This is the base class for the various incarnations of the Shadow.<p>
 
@@ -150,6 +157,13 @@ class BaseShadow : public Service
 			universe-specific code before we exit.
 		*/
 	void terminateJob( void );
+
+		/** We want to abort the job (due to condor_rm or
+			condor_hold).  This doesn't send email or write userlog
+			events, it just calls cleanUp(), updateJobQueue(), and
+			DC_Exit().
+		*/
+	void abortJob( void );
 
 		/** The total number of bytes sent over the network on
 			behalf of this job.
