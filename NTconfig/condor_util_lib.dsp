@@ -112,6 +112,10 @@ SOURCE=..\src\condor_util_lib\cronos.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\d_format_time.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\dprintf.c
 # End Source File
 # Begin Source File

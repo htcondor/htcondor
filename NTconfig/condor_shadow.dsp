@@ -141,9 +141,5 @@ SOURCE=..\src\condor_shadow.V6.1\shadow.C
 
 SOURCE=..\src\condor_shadow.V6.1\shadow.h
 # End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_shadow.V6.1\user_proc.h
-# End Source File
 # End Target
 # End Project
