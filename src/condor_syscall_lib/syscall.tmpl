@@ -791,13 +791,13 @@ not_supported {
 	int swapon( const char *path );
 #else
 
-	#if defined(Solaris)
+#if defined(Solaris)
 		int mount( const char *spec, const char *dir, int mflag, int fstyp, char *pt, int len );
 		int acct( const char *path );
 	#else
 		int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 		int acct( char *path );
-	#endif
+#endif
 
 	void reboot( int howto );
 	int sethostname( char *address, int address_len );
