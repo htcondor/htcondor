@@ -68,13 +68,7 @@
 
 #elif defined( IS_AIX )
 #  define PlatformIncludeFile <AIX.cf>
-#  if defined( IS_PPC )
-#    define ArchIncludeFile <AIX_PPC.cf>
-#  elif defined( IS_IA64 )
-#    define ArchIncludeFile <AIX_IA64.cf>
-#  else
-#    error CONDOR DOES NOT YET SUPPORT THIS PLATFORM 
-#  endif
+/* We don't have need to create a OSVersionIncludeFile file yet */
 #  if defined( IS_AIX5 )
 #    define OSVersionIncludeFile <AIX5.cf>
 #  else
