@@ -196,6 +196,8 @@ class ReadUserLog
     /// Get the log's file descriptor
     inline int getfd() const { return _fd; }
 
+	void outputFilePos(const char *pszWhereAmI);
+
     private:
 
     /** The log's file descriptor */  int    _fd;
