@@ -27,6 +27,7 @@
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
+extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 
 int
 command_handler( Service*, int cmd, Stream* stream )
