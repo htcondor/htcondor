@@ -1445,7 +1445,11 @@ check_requirements( char *orig )
 		}
 	}
  
-	(void)strcpy( answer, orig );
+	if( strlen(orig) ) {
+		(void)sprintf( answer, "(%s)", orig );
+	} else {
+		answer[0] = '\0';
+	}
 
 	if( !has_arch ) {
 		if( answer[0] ) {
