@@ -35,6 +35,8 @@ Matchmaker ()
 
 	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	Parse (buf, rankCondPreempt);
+
+	negotiation_timerID = -1;
 }
 
 
@@ -68,9 +70,11 @@ initialize ()
             (CommandHandlercpp) GET_PRIORITY_commandHandler, 
 			"GET_PRIORITY_commandHandler", this);
 
-    // ensure that we renegotiate at least once every 'NegtiatorInterval'
-    daemonCore->Register_Timer (0, NegotiatorInterval, 
+	// Set a timer to renigotiate.  This timer gets reset to 
+	// Negotiator interval after each negotiation.
+    negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
 			(TimerHandlercpp)negotiationTime, "Time to negotiate", this);
+
 }
 
 
@@ -217,13 +221,18 @@ RESCHEDULE_commandHandler (int, Stream *)
 	// ----- Sort the schedd list in decreasing priority order
 	dprintf( D_ALWAYS, "Phase 3:  Sorting schedd ads by priority ...\n" );
 	scheddAds.Sort( (lessThanFunc)comparisonFunction, this );
+	// TODO: the scheddAds should be secondarily sorted based on ATTR_NAME
+	//       because we assume in the code that follows that ads with the
+	//		 same ATTR_NAME are adjacent in the scheddAds list.  this is
+	// 		 usually the case because 95% of the time each user in the
+	// 		 system has a different priority.
 
 	int spin_pie=0;
 	do {
 		spin_pie++;
 		hit_schedd_prio_limit = FALSE;
 		can_run_niceuser = TRUE;
-		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor );
+		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor);
 		scheddsRemaining = scheddAds.MyLength();
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",spin_pie );
@@ -278,13 +287,21 @@ RESCHEDULE_commandHandler (int, Stream *)
 				// remaining schedds are also nice-user; so we can get
 				// round-robin by setting the limit to the number of
 				// machines divided by the number of nice-user schedds left.
-				scheddLimit = (int) ceil (numStartdAds/(scheddsRemaining + 1));
+				scheddLimit = (int) ceil (numStartdAds/(scheddsRemaining + 1)) -
+					scheddUsage;
 			}
 
 			dprintf(D_ALWAYS,"\tSchedd %s's resource limit set at %d\n",
 					scheddName,scheddLimit);
-			result = negotiate( scheddName, scheddAddr, scheddPrio, scheddLimit, 
+		
+			if ( scheddLimit < 1 ) {
+				// Optimization: If limit is 0, don't waste time with negotiate
+				result = MM_RESUME;
+			} else {
+				result = negotiate( scheddName, scheddAddr, scheddPrio, scheddLimit, 
 							startdAds, startdPvtAds);
+			}
+
 			switch (result)
 			{
 				case MM_RESUME:
@@ -313,6 +330,18 @@ RESCHEDULE_commandHandler (int, Stream *)
 
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
+
+	// Reset the timer forward for the next negotiation cycle.  We do this
+	// because we renegotiate not only whenever the timer goes off, but also
+	// upon request (i.e. whenver a condor_submit, condor_reschedule, or
+	// pvm_addhost happens).  We don't want a timer induced negotiation to
+	// happen right after a requested negotiation cycle...
+	// Use a periodic timer, since we return in several places above on error
+	// conditions, and this way we do not have to worry about resetting the
+	// timer whenever there is an exceptional error.
+	daemonCore->Reset_Timer(negotiation_timerID,NegotiatorInterval,
+		NegotiatorInterval);
+
 	return TRUE;
 }
 
@@ -732,6 +761,8 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 	ClassAd *ad;
 	char	scheddName[64];
 	double	prio;
+	char	old_scheddName[64];
+	int 	num_scheddAds;
 
 	// find the maximum of the priority values (i.e., lowest priority)
 	// note: ignore the "nice user" priority (HUGE_VAL)
@@ -747,15 +778,25 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 	scheddAds.Close();
 
 	// calculate the normalization factor, i.e., sum of the (max/scheddprio)
-	// again, do not enter the "nice user" into the calculation
+	// again, do not enter the "nice user" into the calculation.
+	// also, do not factor in ads with the same ATTR_NAME more than once -
+	// ads with the same ATTR_NAME signify the same user submitting from multiple
+	// machines.  count the number of ads with unique ATTR_NAME's into 
+	// the num_scheddsAds paramenter.
 	normalFactor = 0.0;
+	num_scheddAds = 0;	
+	old_scheddName[0] = '\0';
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
 	{
 		ad->LookupString (ATTR_NAME, scheddName);
-		prio = accountant.GetPriority (scheddName);
-		if ( prio != HUGE_VAL )
-			normalFactor = normalFactor + max/prio;
+		if ( strcmp(scheddName,old_scheddName) != 0) {
+			strncpy(old_scheddName,scheddName,sizeof(old_scheddName));
+			num_scheddAds++;
+			prio = accountant.GetPriority (scheddName);
+			if ( prio != HUGE_VAL )
+				normalFactor = normalFactor + max/prio;
+		}
 	}
 	scheddAds.Close();
 
