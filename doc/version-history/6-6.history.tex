@@ -36,6 +36,11 @@ The details of each version are described below.
 \item The ClassAd attribute scope resolution prefixes, \texttt{MY.} and
 \texttt{TARGET.}, are no longer case sensitive.
 
+\item \Condor{dagman} now does better checking for inconsistent events
+(such as getting multiple terminate events for a single job).  This
+checking can be disabled with the \Opt{-NoEventChecks} command-line
+option.
+
 \end{itemize}
 
 \noindent Known Bugs:
