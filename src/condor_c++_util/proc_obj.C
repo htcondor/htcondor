@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_jobqueue.h"
 #include "proc_obj.h"
 #include "proc_obj_tmpl.h"
 
