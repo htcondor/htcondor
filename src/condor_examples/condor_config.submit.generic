@@ -146,11 +146,6 @@ HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 ##  calls?
 #USE_AFS		= False
 
-##  Pathnames to various AFS tools that condor needs (must be defined
-##  if HAS_AFS is set to True).
-#FS_PATHNAME		= /usr/afsws/bin/fs
-#VOS_PATHNAME		= /usr/afsws/etc/vos
-
 ##--------------------------------------------------------------------
 ##  I/O Buffering:
 ##--------------------------------------------------------------------
