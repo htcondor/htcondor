@@ -2,6 +2,8 @@
 {release held jobs in the condor queue}
 \Synopsis \SynProg{\Condor{release}}
 \oOptArg{-n}{schedd\_name}
+\oArg{-help}
+\oArg{-verson}
 \oArg{job identifiers}
 
 \index{Condor commands!condor\_release}
@@ -20,6 +22,8 @@ For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can release the job.
 
 \begin{Options}
+    \OptItem{\Arg{-help}}{Display usage information and exit}
+    \OptItem{\Arg{-verson}}{Display version information and exit}
     \OptItem{\OptArg{-n}{schedd\_name}}{Remove jobs in the queue of the 
 		specified schedd}
 	\OptItem{\Arg{cluster}}{(Job identifier.) Remove all jobs in the specified 
