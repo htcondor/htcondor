@@ -951,7 +951,7 @@ JICShadow::sameUidDomain( void )
 	dprintf( D_FULLDEBUG, " Local UidDomain: \"%s\"\n",
 			 uid_domain );
 
-	if( strcmp(job_uid_domain, uid_domain) == MATCH ) {
+	if( stricmp(job_uid_domain, uid_domain) == MATCH ) {
 		same_domain = true;
 	}
 
