@@ -399,8 +399,8 @@ CStarter::StartJob()
 	sprintf( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 			 daemonCore->getpid() );
 	if( mkdir(WorkingDir, 0777) < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, "couldn't create dir %s: %s\n", WorkingDir,
-				 strerror(errno) );
+		dprintf( D_FAILURE|D_ALWAYS, "couldn't create dir %s: %s\n", 
+				 WorkingDir, strerror(errno) );
 		return false;
 	}
 
