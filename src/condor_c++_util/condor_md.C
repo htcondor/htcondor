@@ -76,7 +76,7 @@ unsigned char * Condor_MD_MAC::computeOnce(unsigned char * buffer, unsigned long
 
     return MD5(buffer, (unsigned long) length, md);
 #else
-    return 0;
+    return NULL;
 #endif
 }
 
@@ -98,7 +98,7 @@ unsigned char * Condor_MD_MAC::computeOnce(unsigned char * buffer,
 
     return md;
 #else
-    return 0;
+    return NULL;
 #endif
 }
 
@@ -131,7 +131,7 @@ bool Condor_MD_MAC::verifyMD(unsigned char * md,
 #endif
 }
   
-void Condor_MD_MAC::addMD(unsigned char * buffer, unsigned long length)
+void Condor_MD_MAC::addMD(const unsigned char * buffer, unsigned long length)
 {
 #if defined(CONDOR_MD)
    MD5_Update(&(context_->md5_), buffer, length); 
@@ -149,7 +149,7 @@ unsigned char * Condor_MD_MAC::computeMD()
 
     return md;
 #else 
-    return 0;
+    return NULL;
 #endif
 }
 
