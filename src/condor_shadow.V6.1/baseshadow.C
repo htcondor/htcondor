@@ -279,6 +279,7 @@ void BaseShadow::initUserLog()
 
 void BaseShadow::endingUserLog( int exitStatus, int exitReason, 
 								RemoteResource *res ) {
+#if 0
 		/* This taken from the old shadow's log_events.C */
 
 		/* Question from Mike Y: how do we use exitReason here? 
@@ -434,6 +435,7 @@ void BaseShadow::endingUserLog( int exitStatus, int exitReason,
 			}
 		} // of default:
 	} // of switch()
+#endif
 }
 
 void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )

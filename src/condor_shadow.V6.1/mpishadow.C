@@ -267,11 +267,13 @@ MPIShadow::startMaster() {
     delete [] sinful;
 
         // set permissions on the procgroup file:
+#ifndef WIN32
     if ( fchmod( fileno( pg ), 0666 ) < 0 ) {
         dprintf ( D_ALWAYS, "fchmod failed! errno %d\n", errno );
         fclose( pg );
         shutDown( JOB_NOT_STARTED, 0 );
     }
+#endif
 
     if ( fclose( pg ) == EOF ) {
         dprintf ( D_ALWAYS, "fclose failed!  errno = %d\n", errno );
@@ -438,6 +440,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 		/* With many resources, we have to figure out if all of
 		   them are done, and we have to figure out if we need
 		   to kill others.... */
+	int i;
 
 	if ( !shutDownLogic( exitReason, exitStatus ) ) {
 		return;  // leave if we're not *really* ready to shut down.
@@ -455,7 +458,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 
 		// write stuff to the user log.
 	MpiResource *rr;
-    for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
+    for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		rr = ResourceList[i];
 		endingUserLog( exitStatus, exitReason, rr );
 	}
@@ -501,7 +504,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 		fprintf( mailer, " ------------------------    -----------\n" );
 
 		int allexitsone = TRUE;
-		for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
+		for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 			(ResourceList[i])->printExit( mailer );
 			if ( WEXITSTATUS((ResourceList[i])->getExitStatus()) != 1 ) {
 				allexitsone = FALSE;
@@ -521,7 +524,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 		email_close(mailer);
 	}
     
-    for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
+    for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
         ResourceList[i]->dprintfSelf( D_FULLDEBUG );
         dprintf ( D_FULLDEBUG, "\n" );
     }	

@@ -41,7 +41,7 @@ MpiResource::MpiResource( BaseShadow *shadow,
 
 
 int 
-MpiResource::requestIt( int starterVersion = 2 )  {
+MpiResource::requestIt( int starterVersion )  {
 	int r = RemoteResource::requestIt( starterVersion );
 	if ( r == 0 ) { // success
 		setResourceState( EXECUTING );
