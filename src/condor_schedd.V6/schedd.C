@@ -3941,6 +3941,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 	char	buf[_POSIX_PATH_MAX];
 	char	server[_POSIX_PATH_MAX];
 	char	*tmp;
+	int		universe = STANDARD;
 
 		/* In order to remove from the checkpoint server, we need to know
 		 * the owner's name.  If not passed in, look it up now.
@@ -3953,17 +3954,21 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		}
 	}
 
-	if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
-							server) == 0) {
-		SetCkptServerHost(server);
-	} else {
-		tmp = param("USE_CKPT_SERVER");
-		if ( tmp && (*tmp=='T' || *tmp=='t') ) {
-			free(tmp);
-			tmp = param("CKPT_SERVER_HOST");
-			if (tmp) {
-				SetCkptServerHost(tmp);
+	// only need to contact the ckpt server for standard universe jobs
+	GetAttributeInt(cluster,proc,ATTR_JOB_UNIVERSE,&universe);
+	if (universe == STANDARD) {
+		if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
+							   server) == 0) {
+			SetCkptServerHost(server);
+		} else {
+			tmp = param("USE_CKPT_SERVER");
+			if ( tmp && (*tmp=='T' || *tmp=='t') ) {
 				free(tmp);
+				tmp = param("CKPT_SERVER_HOST");
+				if (tmp) {
+					SetCkptServerHost(tmp);
+					free(tmp);
+				}
 			}
 		}
 	}
@@ -3985,7 +3990,11 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 			}
 			rmdir(ckpt_name);
 		} else {
-			RemoveLocalOrRemoteFile(owner,ckpt_name);
+			if (universe == STANDARD) {
+				RemoveLocalOrRemoteFile(owner,ckpt_name);
+			} else {
+				unlink(ckpt_name);
+			}
 		}
 	} else
 		unlink(ckpt_name);
@@ -4004,7 +4013,11 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 			}
 			rmdir(ckpt_name);
 		} else {
-			RemoveLocalOrRemoteFile(owner,ckpt_name);
+			if (universe == STANDARD) {
+				RemoveLocalOrRemoteFile(owner,ckpt_name);
+			} else {
+				unlink(ckpt_name);
+			}
 		}
 	} else
 		unlink(ckpt_name);
