@@ -1839,14 +1839,21 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 			return syscall( SYS_fcntl, real_fd, cmd, lockarg );
 		} else {
 			if( lockarg->l_whence == 0 && 
-				lockarg->l_start == 0 &&
+				lockarg->l_start >= 0 &&
 				lockarg->l_len == 0 ) {
 					// This is the same as ftruncate(), and we'll trap
 					// ftruncate() and send that on the wire,
 					// instead.  -Derek Wright 10/14/98
-				return ftruncate( fd, 0 );
+					
+					// Hmm... if l_start is something greater or equal to zero
+					// and whence and len are zero, then I believe
+					// (see man fcntl) that it means to truncate the
+					// file to l_start bytes long. -Peter Keller 09/15/99
+				return ftruncate( fd, lockarg->l_start );
 			} else {
-				dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
+				dprintf( D_ALWAYS, "Unsupported fcntl() command(%d) "
+					"(l_whence:%d, l_start:%d, l_len:%d)\n", 
+					cmd, lockarg->l_whence, lockarg->l_start, lockarg->l_len);
 				return -1;
 			}
 		}
