@@ -33,6 +33,9 @@ instantiateEvent (ULogEventNumber event)
 	  case ULOG_IMAGE_SIZE:
 		return new JobImageSizeEvent;
 
+	  case ULOG_SHADOW_EXCEPTION:
+		return new ShadowExceptionEvent;
+
 	  default:
 		return 0;
 	}
