@@ -315,6 +315,9 @@ main( int argc, char *argv[] )
 		fprintf( stderr, "ERROR: Failed to open command file\n");
 		exit(1);
 	}
+
+//temp comment out so trunk can compile
+#if 0
 	//  Parse the file, stopping at "queue" command
 	if( read_condor_file( fp, 1 ) < 0 ) {
 		fprintf(stderr, "ERROR: Failed to parse command file.\n");
@@ -364,6 +367,9 @@ main( int argc, char *argv[] )
 
 	// connect to the schedd
 	if (ConnectQ(ScheddAddr, 1 ) == 0) { //mju
+#else
+	if (ConnectQ(ScheddAddr ) == 0) { //mju
+#endif
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );
