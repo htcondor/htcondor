@@ -437,3 +437,12 @@ TWO( lstat, _lstat, const char *, struct stat * )
 SIX( mmap, _mmap, char *, size_t, int, int, int, off_t )
 #endif
 
+/* On HPUX10, libc fork.o and pipe.o have code entry points of
+ * _pipe_sys and _fork_sys.  Wonder if these are "safe" to extract
+ * on HPUX10.  We won't worry about it today since they are currently
+ * defined to be unsupported in syscall.tmpl  -Todd 4/97 
+ */
+#if defined(HPUX10)
+#define FORK _FORK_sys
+#define PIPE _PIPE_sys
+#endif

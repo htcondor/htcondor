@@ -571,7 +571,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int setpriority( int which, int who, int priority );
 #endif
 	int getpriority( int which, int who );
-#if defined(OSF1) || defined(HPUX9) || defined(LINUX)
+#if defined(OSF1) || (defined(HPUX9) && !defined(HPUX10)) || defined(LINUX)
 	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
 #else
 	int gettimeofday( struct timeval *tp, void *tzp ) {
@@ -644,7 +644,11 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		in xdr_bytes( &times, TIMEVAL_ARRAY_SIZE, TIMEVAL_ARRAY_SIZE );
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
+#if defined(HPUX10)
+	long gethostid();
+#else
 	int gethostid();
+#endif
 #if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(IRIX53)
 	int setrlimit( int resource, const  struct rlimit *rlp ) {
 #else
@@ -838,7 +842,11 @@ not_supported {
 	int setgroups( int gidsetsize, gid_t grouplist[] );
 #endif
 	int plock( int op );
+#if defined(HPUX10)
+	int adjtime( const struct timeval *delta, struct timeval *old_delta );
+#else
 	int adjtime( struct timeval *delta, struct timeval *old_delta );
+#endif
 	int sethostid( int host_id );
 	int async_daemon();
 #	if !defined(SUNOS41) && !defined(IRIX53)
