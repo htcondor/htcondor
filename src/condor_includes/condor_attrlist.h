@@ -56,6 +56,9 @@ class AttrListElem
 				delete tree; 
 			}
 
+		bool IsDirty(void)            { return dirty;              }
+		void SetDirty(bool new_dirty) { dirty = new_dirty; return; }
+
         friend class AttrList;
         friend class ClassAd;
         friend class AttrListList;
@@ -63,9 +66,7 @@ class AttrListElem
     private :
 
         ExprTree*		tree;	// the tree pointed to by this element
-	    // The dirty flag has been removed to save memory, since
-	    // it seems that it is never used. 
-	    //int				dirty;	// has this tree been changed?
+	    bool			dirty;	// has this element been changed?
 		char*			name;	// the name of the tree
         class AttrListElem*	next;	// next element in the list
 };
@@ -136,8 +137,8 @@ class AttrList : public AttrListAbstract
         int			Delete(const char*); 	// delete the expr with the name
 
 		// to update expression trees
+		void		ClearAllDirtyFlags();
 #if 0
-		void		ResetFlags();			// reset the all the dirty flags
 		int			UpdateExpr(char*, ExprTree*);	// update an expression
 		int			UpdateExpr(ExprTree*);
 #endif
@@ -145,10 +146,12 @@ class AttrList : public AttrListAbstract
 		// for iteration through expressions
 		void		ResetExpr() { this->ptrExpr = exprList; }
 		ExprTree*	NextExpr();					// next unvisited expression
+		ExprTree*   NextDirtyExpr();
 
 		// for iteration through names (i.e., lhs of the expressions)
 		void		ResetName() { this->ptrName = exprList; }
 		char*		NextName();					// next unvisited name
+		char*       NextDirtyName();
 
 		// lookup values in classads  (for simple assignments)
 		ExprTree*   Lookup(char *) const;  		// for convenience
@@ -213,8 +216,8 @@ class AttrList : public AttrListAbstract
         AttrListElem*	exprList;		// my collection of expressions
 		AttrListList*	associatedList;	// the AttrList list I'm associated with
 		AttrListElem*	tail;			// used by Insert
-		AttrListElem*	ptrExpr;		// used by NextExpr 
-		AttrListElem*	ptrName;		// used by NextName
+		AttrListElem*	ptrExpr;		// used by NextExpr and NextDirtyExpr
+		AttrListElem*	ptrName;		// used by NextName and NextDirtyName
 		int				seq;			// sequence number
 private:
 	bool inside_insert;
