@@ -1706,7 +1706,6 @@ CONTEXT *context;
     int     i;
     char    *name;
 
-	dprintf(D_ALWAYS, "Trying to delete this expr:\n");
 	display_expr(expr);
 
     if( expr->data[0]->type != NAME ) {
