@@ -1087,10 +1087,20 @@ readEvent (FILE *file)
 		delete [] reason;
 		reason = NULL;
 	}
+
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
 	char reason_buf[BUFSIZ];
-	if( fgets(reason_buf, BUFSIZ, file) == NULL) {
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+
+		fsetpos( file, &filep );
 		return 1;	// backwards compatibility
 	}
+ 
 	chomp( reason_buf );  // strip the newline, if it's there.
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
@@ -1492,11 +1502,21 @@ JobHeldEvent::readEvent( FILE *file )
 	if( reason ) {
 		delete [] reason;
 		reason = NULL;
-	}
+	}	
+	
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
 	char reason_buf[BUFSIZ];
-	if( fgets(reason_buf, BUFSIZ, file) == NULL) {
-		return 1;		// fake it :)
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
 	}
+
 	chomp( reason_buf );  // strip the newline
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
@@ -1577,10 +1597,20 @@ JobReleasedEvent::readEvent( FILE *file )
 		delete [] reason;
 		reason = NULL;
 	}
+
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
 	char reason_buf[BUFSIZ];
-	if( fgets(reason_buf, BUFSIZ, file) == NULL) {
-		return 1;		// fake it :)
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
 	}
+
 	chomp( reason_buf );  // strip the newline
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
