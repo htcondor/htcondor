@@ -1,4 +1,16 @@
-		
+11/13/01 V6_3-security-2-branch-original
+		The V6_3-security-2-branch immediately after it was created.
+
+11/13/01 V6_3-security-2-branch
+		Created from the V6_3-branch.  The V6_3-security-branch will be
+		merged into this one via the very impressive tag
+		V6_3-security-branch-pre-merge-V6_3-security-branch-2.  Yowza!
+
+11/13/01 V6_3-security-branch-pre-merge-V6_3-security-branch-2
+		The V6_3-security-branch in its final state.  This tag is
+		merged into V6_3-security-2-branch, and the original
+		V6_3-security-branch is abandoned.
+
 11/09/01 V6_3-security-branch
 		When the V6_3-security-branch was originally made, only files in
 		src/ were tagged. (See below 10/09/01).  This branches NTconfig,
