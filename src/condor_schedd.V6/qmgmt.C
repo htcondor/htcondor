@@ -1294,26 +1294,35 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	char filename[_POSIX_PATH_MAX];
 	sprintf (filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
 
+	// Swith to root temporarily
+	priv_state old_priv = set_root_priv();
 	// Delete the file
 	struct stat stat_buff;
 	if (stat (filename, &stat_buff) == 0) {
 		// If the exists, delete it
-		if (unlink (filename))
+		if (unlink (filename)) {
+			set_priv(old_priv);
 			return -1;
+		}
 	}
 
 	// Create the file
 	int fd = open (filename, O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
+		set_priv(old_priv);
 		return -1;
 	}
 
 	char * encoded_value = simple_encode (cluster_id+proc_id, pwd);
 	int len = strlen(encoded_value);
 	if (write (fd, encoded_value, len) != len) {
+		set_priv(old_priv);
 		return -1;
 	}
 	close (fd);
+
+	// Switch back to non-priviledged user
+	set_priv(old_priv);
 
 	free (encoded_value);
 
@@ -1329,6 +1338,9 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 	filename.sprintf( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
 					  cluster_id, proc_id );
 
+  	// Swith to root temporarily
+	priv_state old_priv = set_root_priv();
+
 	// Delete the file
 	struct stat stat_buff;
 	if( stat(filename.Value(), &stat_buff) == 0 ) {
@@ -1336,22 +1348,32 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 		if( unlink( filename.Value()) < 0 ) {
 			dprintf( D_ALWAYS, "unlink(%s) failed: errno %d (%s)\n",
 					 filename.Value(), errno, strerror(errno) );
+		 	set_priv(old_priv);
 			return -1;
 
 		}
 		dprintf( D_FULLDEBUG, "Destroyed MPP %d.%d: %s\n", cluster_id, 
 				 proc_id, filename.Value() );
 	}
+
+	// Switch back to non-root
+	set_priv(old_priv);
+
 	return 0;
 }
 
 
 int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	// Create filename
+
+	// Swith to root temporarily
+	priv_state old_priv = set_root_priv();
+	
 	char filename[_POSIX_PATH_MAX];
 	sprintf (filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
 	int fd = open (filename, O_RDONLY);
 	if (fd < 0) {
+		set_priv(old_priv);
 		return -1;
 	}
 
@@ -1360,6 +1382,9 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	buff [bytes] = '\0';
 
 	close (fd);
+
+	// Switch back to non-priviledged user
+	set_priv(old_priv);
 
 	*value = simple_decode (cluster_id + proc_id, buff);
 	return 0;
