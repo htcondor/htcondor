@@ -103,13 +103,44 @@ begin-classad Machine-3
 ]
 end-classad
 
+begin-classad Misc
+[
+  Type = "Misc";
+  Self = [
+           one = "foo";
+		   two = "bar";
+           rank = Other[StrCat(one, two)];
+         ];
+  Other = [
+            one = 1;
+            two = 2;
+            foobar = 15
+          ];
+  Buddha = [
+             which = Self.which;
+           ];
+  ClassAds = { [a = 1], [a = 2], [a = 3] };
+  Set = ClassAds.a;
+  Sum = sum(Set);
+  Average = avg(Set);
+  Min = min(Set);
+  Max = max(Set);
+]
+end-classad
+
 ######################################################################
 #
 # Basic Evaluation Tests
 #
 ######################################################################
-evaluate Job-1 mytype
+evaluate Job-1 TestTernary
+evaluate Misc Self.rank
 evaluate Machine-1 memory
+evaluate Misc Set
+evaluate Misc Sum
+evaluate Misc Average
+evaluate Misc Min
+evaluate Misc Max
 
 ######################################################################
 #
@@ -126,6 +157,7 @@ test-match symmetricMatch Job-1 Machine-2 ExpectDontMatch
 # Collections
 #
 ######################################################################
+#make-collection Machines machines-log
 make-collection Machines
 add-to-collection Machines Machine-1
 add-to-collection Machines Machine-2
@@ -155,6 +187,7 @@ begin-classad Group-2
 ]
 end-classad
 
+#make-collection Groups groups-log
 make-collection Groups groups-log
 add-to-collection Groups Group-1
 add-to-collection Groups Group-2
