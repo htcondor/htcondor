@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+g%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:History-6-6}Stable Release Series 6.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -63,6 +63,11 @@ this ouput and displays it to the user in a readable format.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Jobs that make use of Condor's file transfer mechanism were not
+automatically authorized to read/write input/output files when
+flocking to machines that did not happen to be in the
+\Macro{HOST\_ALLOW\_WRITE} list.  This bug has existed since 6.3.
 
 \item Eliminated a small chance that a grid\_monitor log file or state file
     might be reused.  The unique identifying numbers are now unique across
