@@ -60,7 +60,6 @@ CLASSAD_OBJ = \
 	stringSpace.o \
 	MyString.o
 
-
 /* Construct a libcondorapi.a that includes enough stuff to read and write
 	log files. The libcondorapi_stubs.o object contains stubs for cedar, the
 	condor query object, and a few various other simple implementations for
@@ -97,7 +96,6 @@ CONLIBAPI_OBJ = \
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o
-
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o user_job_policy.o classad_support.o \
@@ -140,7 +138,8 @@ c_plus_target(test_mystring,test_mystring.o,$(LIB))
 test_libcondorapi.o: test_libcondorapi.C
 	$(CPlusPlus) -I../h -I../condor_includes -c test_libcondorapi.C
 
-c_plus_target(test_libcondorapi,test_libcondorapi.o,$(LIB))
+c_plus_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
+
 c_plus_target(test_check_events,test_check_events.o,$(LIB))
 c_plus_target(check_log_files,check_log_files.o,$(LIB))
 c_plus_target(test_multi_log,test_multi_log.o,$(LIB))
