@@ -763,6 +763,7 @@ customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 //			return 0;
 //		}
 		currentTree = sortLessThanExprs[i];			// NAC	
+		currentTree.SetParentScope( ad1 );
 		ad1->EvaluateExpr( currentTree, result ); 	//  |	
 		if( result.IsBooleanValue( boolValue ) ) {	// \|/
 			if( boolValue) {	
@@ -771,6 +772,7 @@ customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 				return 1;
 			} else {
 				currentTree = sortEqualExprs[i];
+				currentTree->SetParentScope( ad1 );
 				ad1->EvaluateExpr( currentTree, result );
 				if( result.IsBooleanValue( boolValue ) ) {
 					if( !boolValue ) {

@@ -341,6 +341,7 @@ static bool EvalBool(ClassAd* ad, ExprTree *tree)	// NAC
 {
 	Value result;
 	bool boolValue;
+	tree->SetParentScope( ad );
 	if( !ad->EvaluateExpr( tree, result ) ) {
 		delete tree;
 		return false;

@@ -139,6 +139,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		// if there is a remote user, consider preemption ....
 		if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
 				// check if we are preempting for rank or priority
+			rankCondStd->SetParentScope( candidate );
 			if( candidate->EvaluateExpr( rankCondStd, result ) &&	// NAC
 				result.IsBooleanValue( boolValue ) && 				// NAC
 				boolValue == true ) {								// NAC
@@ -152,6 +153,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 				candidatePreemptState = PRIO_PREEMPTION;
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
+				PreemptionReq->SetParentScope( candidate );
 				if( PreemptionReq &&									// NAC
 					candidate->EvaluateExpr( PreemptionReq, result ) &&	// NAC
 					result.IsBooleanValue( boolValue ) &&				// NAC
@@ -161,6 +163,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
+				rankCondPrioPreempt->SetParentScope( candidate );
 				if( candidate->EvaluateExpr( rankCondPrioPreempt, result ) &&	// NAC
 					result.IsBooleanValue( boolValue ) &&	// NAC   
 					boolValue == true ) {					// NAC
@@ -195,6 +198,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		candidatePreemptRankValue = -(FLT_MAX);
 		if( candidatePreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
+			PreemptionRank->SetParentScope( candidiate );
 			if( PreemptionRank &&									 	// NAC 
 				( !candidate->EvaluateExpr( PreemptionRank, result ) ||	// NAC
 				  !result.IsRealValue( candidatePreemptRankValue))){	// NAC
