@@ -26,6 +26,8 @@
 
 #include "setenv.h"
 
+extern DLL_IMPORT_MAGIC char **environ;
+
 int SetEnv( const char *key, char *value)
 {
 	assert(key);
