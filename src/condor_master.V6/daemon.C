@@ -449,20 +449,6 @@ int daemon::StartDaemon()
 	}
 
 	if( pid == 0 ) {	/* The child */
-		// Weiru
-		// In version 6 daemons are not started as root but as Condor
-		/* Daemons need to be started as root. */
-		if(getuid()==0) {
-#define USE_ROOT_RUID
-#ifndef USE_ROOT_RUID
-			if (getuid() == 0) {
-				set_root_euid();
-				set_condor_ruid();
-			}
-#endif
-			set_condor_euid();
-		}
-
 		pid = getpid();
 		if( setsid() == -1 ) {
 			EXCEPT( "setsid(), errno = %d\n", errno );
@@ -513,8 +499,6 @@ int daemon::StartDaemon()
 			} 
 		}
 		
-
-		/* Must be condor to write to log files. */
 		EXCEPT( "execl( %s, %s, -f, 0 )", process_name, shortname );
 		return 0;
 	} else { 			/* The parent */
@@ -599,8 +583,6 @@ void Daemons::RestartMaster()
 	dprintf( D_ALWAYS, "Doing exec( \"%s\", \"condor_master\", 0 )", 
 			daemon_ptr[index]->process_name);
 	(void)execl(daemon_ptr[index]->process_name, "condor_master", 0);
-	/* Must be condor to write to log files. */
-	set_condor_euid();
 	EXCEPT("execl(%s, condor_master, 0)",daemon_ptr[index]->process_name);
 }
 

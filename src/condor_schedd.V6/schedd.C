@@ -61,6 +61,7 @@
 #include "environ.h"
 #include "url_condor.h"
 #include "condor_updown.h"
+#include "condor_uid.h"
 
 #if defined(NDBM)
 #include <ndbm.h>
@@ -107,7 +108,6 @@ extern "C"
     void 	dprintf(int, char*...);
 	int	 	calc_virt_memory();
 	int	 	getdtablesize();
-	int	 	set_root_euid(char*, int);
 	void 	_EXCEPT_(char*...);
 	char* 	gen_ckpt_name(char*, int, int, int);
 	int	 	do_connect(const char*, const char*, u_int);
@@ -964,13 +964,6 @@ Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 			for( i=3; i<lim; i++ ) {
 				(void)close( i );
 			}
-#ifdef NFSFIX
-	/* Must be condor to write to log files. */
-			if (getuid()==0) {
-				set_root_euid(__FILE__,__LINE__); 
-			}
-
-#endif NFSFIX
 			Shadow = param("SHADOW");
 			(void)execve( Shadow, argv, environ );
 			dprintf( D_ALWAYS, "exec(%s) failed, errno = %d\n", Shadow, errno);
@@ -1157,13 +1150,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 						   owner) < 0) {
 		sprintf(owner, "nobody");
 	}
-	if ((pwd = getpwnam(owner)) == NULL) {
-		dprintf(D_ALWAYS, "can't find user %s in /etc/passwd, "
-				"aborting job %d.%d start\n", owner, job_id->cluster,
-				job_id->proc);
-		return NULL;
-	}
-	if (pwd->pw_uid == 0 || pwd->pw_gid == 0) {
+	if (strcmp(owner, "root") == MATCH) {
 		dprintf(D_ALWAYS, "aborting job %d.%d start as root\n",
 				job_id->cluster, job_id->proc);
 		return NULL;
@@ -1181,17 +1168,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 
 	if (pid == 0) {		// the child
-		if (getuid() == 0) {
-			if (set_root_euid(__FILE__,__LINE__) < 0) {
-				EXCEPT("set_root_euid()");
-			}
-			if (setgid(pwd->pw_gid) < 0) {
-				EXCEPT("setgid(%d)", pwd->pw_gid);
-			}
-			if (setuid(pwd->pw_uid) < 0) {
-				EXCEPT("setuid(%d)", pwd->pw_uid);
-			}
-		}
+
+		init_user_ids(owner);
+		set_user_priv();
+
 		if (chdir(iwd) < 0) {
 			EXCEPT("chdir(%s)", iwd);
 		}
@@ -1407,20 +1387,7 @@ Scheduler::cluster_rejected(int cluster)
 int
 Scheduler::is_alive(int pid)
 {
-#if defined(ULTRIX43)
-    int stat;				/* on ULTRIX, the schedd needs to seteuid */
-
-	if (getuid()==0) {
-		set_root_euid();      /* to root , otherwise it is unable to    */
-	}
-
-    stat = kill(pid,0);     /* send a signal to the shadow  : dhruba  */
-    set_condor_euid();
-    if ( stat == 0 ) return 1;
-    else return 0;
-#else
 	return( kill(pid,0) == 0 );
-#endif 
 }
 
 void

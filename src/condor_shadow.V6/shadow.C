@@ -133,7 +133,6 @@ extern "C" {
 	int close_kmem();
 	void NotifyUser( char *buf, char *email_addr );
 	void MvTmpCkpt();
-	void display_uids();
 	EXPR	*scan(), *create_expr();
 	ELEM	*create_elem();
 	CONTEXT	*create_context(), *build_job_context(PROC *);
@@ -164,8 +163,6 @@ int  UseAFS;
 int  UseNFS;
 int  UseCkptServer;
 
-extern int	_Condor_SwitchUids;
-
 int		MyPid;
 int		LogPipe;
 int		ImageSize;
@@ -187,11 +184,6 @@ char	*ExecutingHost;
 char	*MailerPgm;
 
 #include "condor_qmgr.h"
-
-int		CondorGid;
-int		CondorUid;
-int		ClientUid;
-int		ClientGid;
 
 struct rusage LocalUsage;
 struct rusage RemoteUsage;
@@ -295,16 +287,11 @@ main(int argc, char *argv[], char *envp[])
 		}
 	}
 
-
-	set_fatal_uid_sets( 0 );
-
-#if defined(USE_ROOT_RUID) && defined(NFSFIX)
-	/* Must be condor to write to log files. */
-	set_condor_euid(__FILE__,__LINE__);
-#endif NFSFIX
-
+	/* Start up with condor.condor privileges. */
+	set_condor_priv();
 
 	_EXCEPT_Cleanup = ExceptCleanup;
+
 	MyPid = getpid();
 	
 	config( 0 );
@@ -319,12 +306,6 @@ main(int argc, char *argv[], char *envp[])
 		reserved_swap = atoi( tmp ) * 1024;	/* Value specified in megabytes */
 	}
 
-#if defined(USE_ROOT_RUID) && defined(NFSFIX)
-	if (getuid()==0) {
-		set_root_euid(__FILE__,__LINE__);
-	}
-#endif
-
 	free_swap = calc_virt_memory();
 	close_kmem(); /* only calc virt mem once, so close unneeded fs's */
 
@@ -334,8 +315,6 @@ main(int argc, char *argv[], char *envp[])
 		dprintf( D_ALWAYS, "Not enough reserved swap space\n" );
 		exit( JOB_NO_MEM );
 	}
-
-
 
 	dprintf(D_ALWAYS, "uid=%d, euid=%d, gid=%d, egid=%d\n",
 		getuid(), geteuid(), getgid(), getegid());
@@ -456,10 +435,11 @@ main(int argc, char *argv[], char *envp[])
 void
 HandleSyscalls()
 {
-	int		fake_arg;
-	register int cnt;
-	fd_set readfds;
-	int nfds = -1;
+	int				fake_arg;
+	register int	cnt;
+	fd_set 			readfds;
+	int 			nfds = -1;
+	priv_state		priv;
 
 	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
@@ -477,61 +457,8 @@ HandleSyscalls()
 	Proc = &(ProcList->proc);
 #endif
 
-	if (getuid()==0) {
-		/* Must be root for chroot() call. */
-		set_root_euid(__FILE__,__LINE__);
-	}
-
-	dprintf(D_FULLDEBUG, 
-			"HandleSyscalls: about to chdir(%s)\n", Proc->rootdir);
-	if( chdir(Proc->rootdir) < 0 ) {
-		sprintf( ErrBuf,  "Can't access \"%s\"", Proc->rootdir );
-		HadErr = TRUE;
-		return;
-	}
-
-
-	/*
-	**	Set up group array for job owner, but include Condor's gid
-	*/
-	/*
-	**	dprintf(D_ALWAYS,"Shadow: about to initgroups(%s, %d)\n",
-	**					Proc->owner,CondorGid);
-	*/
-	if(getuid()==0)
-		if( initgroups(Proc->owner, CondorGid) < 0 ) {
-			EXCEPT("Can't initgroups(%s, %d)", Proc->owner, CondorGid);
-		}
-
-	/*
-	** dprintf(D_ALWAYS,"Shadow: about to setrgid(%d)\n", ClientGid);
-	*/
-		/* Set the rgid to job's owner - keep him out of trouble */
-#if defined(AIX31) || defined(AIX32)
-	if( setregid(ClientGid,ClientGid) < 0 ) {
-		EXCEPT( "setregid(%d,%d)", ClientGid, ClientGid);
-	}
-#endif
-
-		/* Set euid to job's owner - keep him out of trouble */
-#if defined(AIX32)
-	display_uids();
-	errno = 0;
-	if( setuidx(ID_REAL|ID_EFFECTIVE,ClientUid) < 0 ) {
-		dprintf( D_ALWAYS, "errno = %d\n", errno );
-		EXCEPT( "setuidx(ID_REAL|ID_EFFECTIVE,%d)", ClientUid );
-	}
-#else 
-	if(getuid()==0) {
-		_Condor_SwitchUids = 1;
-		if( setgid(ClientGid) < 0 ) {
-			EXCEPT( "setgid(%d), errno = %d", ClientGid, errno);
-		}
-		if( seteuid(ClientUid) < 0 ) {
-			EXCEPT( "seteuid(%d), errno = %d", ClientUid, errno );
-		}
-	}
-#endif
+	init_user_ids(Proc->owner);
+	set_user_priv();
 
 	dprintf(D_FULLDEBUG, "HandleSyscalls: about to chdir(%s)\n", Proc->iwd);
 	if( chdir(Proc->iwd) < 0 ) {
@@ -750,29 +677,7 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 #endif // CARMI_OPS
 
 		/* Take back normal condor privileges */
-#if defined(AIX32)
-	if( setuidx(ID_REAL|ID_EFFECTIVE,0) < 0 ) {
-		EXCEPT( "setuidx(ID_REAL|ID_EFFECTIVE,0)" );
-	}
-	if( setuidx(ID_REAL|ID_EFFECTIVE,CondorUid) < 0 ) {
-		EXCEPT( "setuidx(ID_REAL|ID_EFFECTIVE,%d)", CondorUid );
-	}
-#else 
-	if(getuid()==0) {
-		if( seteuid(0) < 0 ) {
-			EXCEPT( "seteuid(%d)", 0 );
-		}
-		/* we need to set the Uid _and_ the Gid so that we can 
-		 * log properly -Todd, 2/97 */
-		if( setegid(CondorGid) < 0 ) {
-			EXCEPT( "setegid(%d)", CondorGid );
-		}
-		if( seteuid(CondorUid) < 0 ) {
-			EXCEPT( "seteuid(%d)", CondorUid );
-		}
-	}
-#endif
-	_Condor_SwitchUids = 0;
+	set_condor_priv();
 
 		/* If we are debugging with named pipes as our communications medium,
 		   won't have a condor_startd running - don't try to send to it.
@@ -978,23 +883,11 @@ NotifyUser( char *buf, char *email_addr )
 	double trtime, tltime;	/* Total remote/local time */
 	double	real_time;
 
-
 	dprintf(D_FULLDEBUG, "NotifyUser() called.\n");
 
 		/* Want the letter to come from "condor" */
-#if defined(AIX32)
-	if( setuidx(ID_REAL|ID_EFFECTIVE,0) < 0 ) {
-		EXCEPT( "setuidx(ID_REAL|ID_EFFECTIVE,0)" );
-	}
-#else 
-	if(getuid()==0){
-	if( seteuid(0) < 0 ) {
-		EXCEPT( "seteuid" );
-	}
-	
-	set_condor_euid(__FILE__,__LINE__);
-}
-#endif
+	set_condor_priv();
+
 	/* If user loaded program incorrectly, always send a message. */
 	if( MainSymbolExists == TRUE ) {
 		switch( Proc->notification ) {
@@ -1020,8 +913,6 @@ NotifyUser( char *buf, char *email_addr )
 		}
 	}
 
-	/* the "-s" tries to set the subject line appropriately */
-
 	if ( strchr(email_addr,'@') == NULL ) 
 	{
 		/* No host name specified; add uid domain */
@@ -1041,12 +932,7 @@ NotifyUser( char *buf, char *email_addr )
 	
 	dprintf( D_FULLDEBUG, "Notify user using cmd: %s",cmd);
 
-
-#if 0
-	mailer = execute_program( cmd, Proc->owner, "w" );
-#else
 	mailer = popen( cmd, "w" );
-#endif
 	if( mailer == NULL ) {
 		EXCEPT(
 			"Shadow: Cannot do execute_program( %s, %s, %s )\n",
@@ -1058,12 +944,6 @@ NotifyUser( char *buf, char *email_addr )
 	   got the from line generated by setting our uid, then we
 	   don't need this stuff...
 	*/
-#if 0
-	fprintf(mailer, "From: Condor\n" );
-	fprintf(mailer, "To: %s\n", Proc->owner );
-	fprintf(mailer, "Subject: Condor Job %d.%d\n\n",
-								Proc->id.cluster, Proc->id.proc );
-#endif
 
 	fprintf(mailer, "Your condor job\n" );
 #if defined(NEW_PROC)
@@ -1396,85 +1276,6 @@ host );
 }
 
 
-get_client_ids( PROC *proc )
-{
-	struct passwd *pwd;
-	char *tmp;
-
-	tmp = gen_ckpt_name( Spool, proc->id.cluster, proc->id.proc, 0 );
-	strcpy( CkptName, tmp );
-
-	tmp = gen_ckpt_name( Spool, proc->id.cluster, ICKPT, 0 );
-	strcpy( ICkptName, tmp );
-
-	sprintf( TmpCkptName, "%s.tmp", CkptName );
-
-	strcpy( RCkptName, CkptName );
-
-	pwd = getpwnam("condor");
-	if( pwd == NULL ) {
-		EXCEPT("Can't find password entry for user 'condor'");
-	}
-
-	CondorGid = pwd->pw_gid;
-	CondorUid = pwd->pw_uid;
-
-	pwd = getpwnam(proc->owner);
-	if( pwd == NULL ) {
-		EXCEPT("Can't find password entry for '%s'", proc->owner);
-	}
-
-	ClientUid = pwd->pw_uid;
-	ClientGid = pwd->pw_gid;
-	dprintf( D_ALWAYS, "ClientUid = %d, ClientGid = %d\n",
-										ClientUid, ClientGid );
-}
-
-#if 0 /* dead code??? */
-send_job_info( ReliSock *sock, V2_PROC *proc )
-{
-	struct stat st_buf;
-	char	*return_name;
-	char	*orig_name;
-	CONTEXT *context;
-	int		soft_kill = SIGUSR1;
-
-	dprintf( D_ALWAYS, "Shadow: send_job_info( 0x%x, %d.%d, %s, %s, %s, %s )\n",
-		sock, proc->id.cluster, proc->id.proc,
-		proc->in, proc->out, proc->err, proc->args );
-	
-	dprintf(D_FULLDEBUG, "Shadow: send_job_info: RootDir = <%s>\n",
-															proc->rootdir);
-
-	if( stat(CkptName,&st_buf) == 0 ) {
-		orig_name = CkptName;
-	} else if( stat(ICkptName,&st_buf) == 0 ) {
-		orig_name = ICkptName;
-	} else {
-		EXCEPT( "Can't find checkpoint file" );
-	}
-
-	sock->encode();
-	dprintf( D_FULLDEBUG, "Shadow: Sending proc structure\n" );
-	V2_ProcObj procobj(proc);
-	ClassAd ad(&procobj);
-	ASSERT(ad.put(*sock));
-
-	return_name = RCkptName;
-	dprintf( D_FULLDEBUG, "Shadow: Sending name = '%s'\n", return_name );
-	ASSERT( sock->code(return_name) );
-
-	dprintf( D_FULLDEBUG, "Shadow: Sending orig_name = %s\n", orig_name );
-	ASSERT( sock->code(orig_name) );
-
-	dprintf( D_FULLDEBUG, "Shadow: Sending soft_kill = %d\n", soft_kill );
-	ASSERT( sock->signal(soft_kill) );
-
-	ASSERT( sock->end_of_message() );
-}
-#endif
-
-
 extern char	*SigNames[];
 
 void
@@ -1519,6 +1320,7 @@ start_job( char *cluster_id, char *proc_id )
 {
 	int		cluster_num;
 	int		proc_num;
+	char	*tmp;
 
 #ifdef CARMI_OPS
 	ProcLIST*	Proc;
@@ -1566,7 +1368,16 @@ start_job( char *cluster_id, char *proc_id )
 #endif
 	ImageSize = Proc->proc.image_size;
 
-	get_client_ids( &(Proc->proc) );
+	tmp = gen_ckpt_name( Spool, Proc->proc->id.cluster,
+						 Proc->proc->id.proc, 0 );
+	strcpy( CkptName, tmp );
+
+	tmp = gen_ckpt_name( Spool, Proc->proc->id.cluster, ICKPT, 0 );
+	strcpy( ICkptName, tmp );
+
+	sprintf( TmpCkptName, "%s.tmp", CkptName );
+
+	strcpy( RCkptName, CkptName );
 
 	strcpy( Proc->CkptName, CkptName );
 	strcpy( Proc->ICkptName, ICkptName );
@@ -1587,7 +1398,15 @@ start_job( char *cluster_id, char *proc_id )
 #endif
 	ImageSize = Proc->image_size;
 
-	get_client_ids( Proc );
+	tmp = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
+	strcpy( CkptName, tmp );
+
+	tmp = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
+	strcpy( ICkptName, tmp );
+
+	sprintf( TmpCkptName, "%s.tmp", CkptName );
+
+	strcpy( RCkptName, CkptName );
 #endif
 }
 
@@ -1658,22 +1477,11 @@ MvTmpCkpt()
 {
 	char buf[ BUFSIZ * 8 ];
 	register int tfd, rfd, rcnt, wcnt;
+	priv_state	priv;
 
-#ifdef NFSFIX
-	/* Need to be root to seteuid() to ClientUid. */
-	if(getuid()==0)
-		set_root_euid(__FILE__,__LINE__);
-#endif NFSFIX
+	/* checkpoint file is owned by user (???) */
+	priv = set_user_priv();
 
-if(getuid()==0){
-	if( setegid(CondorGid) < 0 ) {
-		EXCEPT("Cannot setegid(%d)", CondorGid);
-	}
-
-	if( seteuid(ClientUid) < 0 ) {
-		EXCEPT("Cannot seteuid(%d)", ClientUid);
-	}
-}
 	(void)sprintf( TmpCkptName, "%s/job%06d.ckpt.%d.tmp",
 			Spool, Proc->id.cluster, Proc->id.proc );
 
@@ -1712,15 +1520,12 @@ if(getuid()==0){
 		EXCEPT("rename(%s, %s)", TmpCkptName, CkptName);
 	}
 
-	(void)fchown( tfd, CondorUid, CondorGid );
+	/* (void)fchown( tfd, CondorUid, CondorGid ); */
 
 	(void)close( rfd );
 	(void)close( tfd );
 
-#ifdef NFSFIX
-	/* Go back to being condor. */
-	set_condor_euid(__FILE__,__LINE__);
-#endif NFSFIX
+	set_priv(priv);
 }
 
 extern "C" SetSyscalls(){}

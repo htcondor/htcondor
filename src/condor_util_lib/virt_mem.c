@@ -38,6 +38,7 @@ static char sccsid[] = "@(#)virt_mem.c	4.3 9/18/91";
 #include <fcntl.h>
 #include "debug.h"
 #include "except.h"
+#include "condor_uid.h"
 
 #define MATCH 0
 
@@ -221,13 +222,12 @@ calc_virt_memory()
 	struct nlist nl[2];
 	struct anoninfo a_info;
 	int result, vm_free;
+	priv_state	priv;
 	
 	
 	
 	/* Operate as root to read /dev/kmem */
-	if (getuid() == 0) {
-		set_root_euid(); 
-	}
+	priv = set_root_priv();
 	
 	/*
 	 * First time in this call, get the offset to the anon structure.
@@ -239,14 +239,14 @@ calc_virt_memory()
 		nl [1].n_name = (char *) NULL;
 		kd = kvm_open (namelist, corefile, swapfile, O_RDONLY, errstr);
 		if ( kd == (kvm_t *) NULL) {
-			set_condor_euid();
+			set_priv(priv);
 			dprintf (D_ALWAYS, "Open failure on kernel. First call\n");
 			return (-1);
 		}
 		if (kvm_nlist (kd, nl) != 0) {
 			(void)kvm_close( kd );
 			kd = (kvm_t *)NULL;
-			set_condor_euid();
+			set_priv(priv);
 			dprintf (D_ALWAYS, "kvm_nlist failed. First call.\n");
 			return (-1);
 		}
@@ -257,7 +257,7 @@ calc_virt_memory()
 	if( !kd ) {
 		kd = kvm_open (namelist, corefile, swapfile, O_RDONLY, errstr);
 		if ( kd == (kvm_t *) NULL) {
-			set_condor_euid();
+			set_priv(priv);
 			dprintf (D_ALWAYS, "Open failure on kernel.\n");
 			return (-1);
 		}
@@ -266,14 +266,14 @@ calc_virt_memory()
 	if (result != sizeof (a_info)) {
 		kvm_close( kd );
 		kd = (kvm_t *)NULL;
-		set_condor_euid();
+		set_priv(priv);
 		dprintf (D_ALWAYS, "kvm_read error.\n");
 		return (-1);
 	}
 	vm_free = (int) (a_info.ani_max - a_info.ani_resv);
 	vm_free *= page_to_k;
 	
-	set_condor_euid ();
+	set_priv(priv);
 	return (vm_free);
 }
 #endif /* SunOS4.0 and SunOS4.1 code */
@@ -300,10 +300,10 @@ calc_virt_memory()
 	static char *addr;
 	static int initialized = 0;
 	int freeswap;
+	priv_state priv;
 
 	/* Become root so we have no hassles reading /dev/kmem */
-	if (getuid()==0)
-		set_root_euid(); 
+	priv = set_root_priv();
 
 	if( !initialized ) {
 
@@ -315,7 +315,7 @@ calc_virt_memory()
 #else
         if ((nlist("/hp-ux", swapnl) < 0) || (swapnl[0].n_type == 0)) {
 #endif
-			set_condor_euid();
+			set_priv(priv);
 			return(-1);
         }
 		addr = (char *)swapnl[0].n_value;
@@ -324,7 +324,7 @@ calc_virt_memory()
          * Open kernel memory and read variables.
          */
         if( (kmem = open("/dev/kmem",O_RDONLY)) < 0 ) {
-			set_condor_euid();
+			set_priv(priv);
 			return(-1);
         }
 
@@ -332,15 +332,15 @@ calc_virt_memory()
 	}
 
 	if (-1==lseek(kmem, (long) swapnl[0].n_value, 0)){
-		set_condor_euid();
+		set_priv(priv);
 		return(-1);
 	}
 	if (read(kmem, (char *) &freeswap, sizeof(int)) < 0){
-		set_condor_euid();
+		set_priv(priv);
 		return(-1);
 	}
 
-	set_condor_euid();
+	set_priv(priv);
 	return ( 4 * freeswap );
 }
 #endif /* of the code for HPUX */
@@ -375,45 +375,37 @@ calc_virt_memory()
 close_kmem() {}
 calc_virt_memory()
 {
-	FILE	*fp, *popen();
-	char	buf[1024];
-	char	buf2[1024];
-	int		size = -1;
-	int		limit;
-	struct	rlimit lim;
-	int		read_error = 0;
-	int		configured, reserved;
+	FILE			*fp, *popen();
+	char			buf[1024];
+	char			buf2[1024];
+	int				size = -1;
+	int				limit;
+	struct rlimit	lim;
+	int				read_error = 0;
+	int				configured, reserved;
+	priv_state		priv;
 
 /*
 ** Have to be root to run pstat on some systems...
 */
-#ifdef NFSFIX
-if (getuid()==0)
-	 set_root_euid(); 
-#endif NFSFIX
+	priv = set_root_priv();
 
 	buf[0] = '\0';
 #if defined(Solaris)
     if( (fp=popen("/etc/swap -s","r")) == NULL ) {
-#ifdef NFSFIX
-		set_condor_euid();
-#endif NFSFIX
+		set_priv(priv);
 		dprintf( D_FULLDEBUG, "popen(swap -s): errno = %d\n", errno );
 		return -1;
 	}
 #else
 	if( (fp=popen("/etc/pstat -s","r")) == NULL ) {
-#ifdef NFSFIX
-		set_condor_euid();
-#endif NFSFIX
+		set_priv(priv);
 		dprintf( D_FULLDEBUG, "popen(pstat -s): errno = %d\n", errno );
 		return -1;
 	}
 #endif
 
-#ifdef NFSFIX
-	set_condor_euid();
-#endif NFSFIX
+	set_priv(priv);
 
 #if defined(ULTRIX42) || defined(ULTRIX43)
 	(void)fgets( buf, sizeof(buf), fp );

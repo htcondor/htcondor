@@ -67,6 +67,7 @@
 #include "condor_query.h"
 #include "manager.h"
 #include "condor_io.h"
+#include "condor_uid.h"
 
 #include <sys/wait.h>
 
@@ -108,7 +109,6 @@ void		sigchld_handler();
 extern "C"
 {
 	void	dprintf(int, char*...);
-	int		set_condor_euid();
 	int		config_from_server(char*, char*, CONTEXT*);
 	void	_EXCEPT_(char*...);
 	int		udp_connect(char*, int);	
@@ -212,11 +212,6 @@ main( int argc, char** argv )
 	struct timeval timer;
 	ClassAd	*NegotiatorAd;
 
-#ifdef NFSFIX
-	/* Must be condor to write to log files. */
-	set_condor_euid(__FILE__,__LINE__);
-#endif NFSFIX
-
 	if( argc > 5 ) {
 		usage( argv[0] );
 	}
@@ -237,6 +232,8 @@ main( int argc, char** argv )
 	}
 
 	MyName = *argv;
+
+	set_condor_priv();
 
 		// Evil hack: since the negotiator still uses contexts, we've
 		// got to configure with a classad, then convert it to a

@@ -560,11 +560,10 @@ do_unlink( const char *path )
 
 	status = unlink( path );
 	if( status < 0 && errno == EACCES ) {
-		set_condor_euid();			// Try again as Condor
+		priv_state priv;
+		priv = set_condor_priv(); // Try again as Condor
 		status = unlink( path );
-#if !defined(Solaris)
-		set_root_euid();
-#endif
+		set_priv(priv);
 	}
 
 	if( status == 0 || errno == ENOENT ) {
@@ -584,19 +583,19 @@ do_unlink( const char *path )
 int
 do_stat( const char *path, struct stat *buf )
 {
+	priv_state priv;
+
 		// try it as root
 	if( stat(path,buf) < 0 ) {
 		switch( errno ) {
 		  case ENOENT:	// got rm'd while we were doing this
 			return FALSE;
 		  case EACCES:	// permission denied, try as condor
-			set_condor_euid();
+			priv = set_condor_priv();
 			if( stat(path,buf) < 0 ) {
 				EXCEPT( "stat(%s,0x%x)", path, &buf );
 			}
-#if !defined(Solaris)
-			set_root_euid();
-#endif
+			set_priv(priv);
 		}
 	}
 	return TRUE;
@@ -628,11 +627,10 @@ remove_directory( const char *name )
 		// Remove now empty directory
 	status = rmdir( name );
 	if( status < 0 && errno == EACCES) {
-		set_condor_euid();			// try again as Condor
+		priv_state priv;
+		priv = set_condor_priv();			// try again as Condor
 		status = rmdir(name);
-#if !defined(Solaris)
-		set_root_euid();
-#endif
+		set_priv(priv);
 	}
 
 	if( status == 0 || errno == ENOENT ) {

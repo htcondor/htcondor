@@ -19,6 +19,7 @@
 #include "network2.h"
 #include "signal2.h"
 #include "alarm2.h"
+#include "condor_uid.h"
 
 #undef DEBUG
 
@@ -29,7 +30,6 @@ Server server;
 Alarm  rt_alarm;
 
 extern "C" {
-int set_condor_ruid ( void );
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
 long random( void );
 int srandom( unsigned seed );
@@ -2086,9 +2086,7 @@ int main(int   argc,
 		argv++;
 	}
 
-	if (getuid() == 0) {
-		set_condor_ruid();
-	}
+	set_condor_priv();
 
 	if ((argc != 1) && (argc != 2) && (argc != 4)) {
 		cerr << endl << "ERROR:" << endl;

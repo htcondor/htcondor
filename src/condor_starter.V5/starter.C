@@ -196,7 +196,7 @@ initial_bookeeping( int argc, char *argv[] )
 
 	(void) SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 
-	set_condor_euid();
+	set_condor_priv();
 	(void)umask( 0 );
 
 	init_shadow_connections();
@@ -1326,6 +1326,8 @@ get_job_info()
 	determine_user_ids( s.uid, s.gid );
 	dprintf( D_ALWAYS, "User uid set to %d\n", s.uid );
 	dprintf( D_ALWAYS, "User uid set to %d\n", s.gid );
+
+	set_user_ids( s.uid, s.gid );
 
 	switch( s.job_class ) {
 #if 0

@@ -52,6 +52,7 @@
 #include "except.h"
 #include "sched.h"
 #include "debug.h"
+#include "condor_uid.h"
 
 
 char *substr();
@@ -107,10 +108,7 @@ char	*argv[];
 	int		first_event, first_error;
 #endif X_EXTENSIONS
 
-#ifdef NFSFIX
-	/* Must be condor to write to log files. */
-	set_condor_euid(__FILE__,__LINE__);
-#endif NFSFIX
+	set_condor_priv();
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] != '-' ) {
@@ -166,21 +164,13 @@ char	*argv[];
 	setjmp( Env );
 	wait_until_X_active( PollingFrequency );
 
-#ifdef NFSFIX
 	/* X11R4 has new security features.  Need to be root here. */
-if (getuid() == 0)
-	set_root_euid(__FILE__,__LINE__);
-#endif NFSFIX
-
+	set_root_priv();
 
 		/* open the display and determine some well-known parameters */
 	dpy = open_display();
 
-
-#ifdef NFSFIX
-	set_condor_euid(__FILE__,__LINE__);
-#endif NFSFIX
-
+	set_condor_priv();
 
     screen = DefaultScreen(dpy);
     rootwindow = RootWindow(dpy, screen);

@@ -70,13 +70,9 @@ public:
 	void begin_block();
 	void end_block();
 private:
-	void		set_user_id();
-	void		restore_id();
 	void		output_header();
 
 	char		*path;
-	uid_t		user_uid, saved_uid;
-	gid_t		user_gid, saved_gid;
 	int			cluster;
 	int			proc;
 	int			subproc;

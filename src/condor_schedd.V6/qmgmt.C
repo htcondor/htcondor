@@ -50,17 +50,15 @@ static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 #include "condor_updown.h"
 #include "prio_rec.h"
 #include "condor_attributes.h"
+#include "condor_uid.h"
 
 extern char *Spool;
 
 extern "C" {
-	int get_condor_uid();
-	uid_t get_user_uid( char * );
 	char *gen_ckpt_name(char *, int, int, int);
 	int  RemoveRemoteFile(char *, char *);
 	int	 upDown_GetUserPriority(char*, int*);
 	int	FileExists(char*, char*);
-	int	set_root_euid();
 	char *sin_to_string(struct sockaddr_in *sin);
 	int get_inet_address(struct in_addr* buffer);
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -122,7 +120,8 @@ UnauthenticatedConnection()
 {
 	dprintf( D_ALWAYS, "Unable to authenticate connection.  Setting owner"
 			" to \"nobody\"\n" );
-	active_owner_uid = get_user_uid( "nobody" );
+	init_user_ids("nobody");
+	active_owner_uid = get_user_uid();
 	if (active_owner != 0)
 		free(active_owner);
 	active_owner = strdup( "nobody" );
@@ -140,7 +139,7 @@ ValidateRendevous()
 	struct stat stat_buf;
 
 	/* user "nobody" represents an unauthenticated user */
-	if (active_owner_uid == get_user_uid( "nobody" )) {
+	if (strcmp(active_owner, "nobody") == 0) {
 		return 0;
 	}
 
@@ -339,7 +338,8 @@ InitializeConnection( char *owner, char *tmp_file )
 	strcpy(tmp_file, new_file);
 	// man page says string returned by tempnam has been malloc()'d
 	free(new_file);
-	active_owner_uid = get_user_uid( owner );
+	init_user_ids( owner );
+	active_owner_uid = get_user_uid();
 	if (active_owner_uid < 0) {
 		return -1;
 	}

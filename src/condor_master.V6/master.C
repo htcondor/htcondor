@@ -247,28 +247,12 @@ DoCleanup()
 int
 main( int argc, char* argv[] )
 {
-	struct passwd		*pw;
 	char			**ptr, *startem;
 	
 	MyName = argv[0];
 
-	/* Run as group condor so we can access log files even if they
-	   are remotely mounted with NFS - needed because
-	   root = nobody on the remote file system */
-	if( (pw=getpwnam("condor")) == NULL ) {
-		EXCEPT( "condor not in passwd file" );
-	}
-	if( setgid(pw->pw_gid) < 0 ) {
-		EXCEPT( "setgid(%d)", pw->pw_gid );
-	}
-
-	/*
-	 ** A NFS bug fix prohibits root from writing to an NFS partition
-	 ** even if he has group write permission.  We need to be Condor
-	 ** most of the time.
-	 */
-
-	set_condor_euid();
+	// run as condor.condor at all times unless root privilege is needed
+	set_condor_priv();
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] != '-' ) {
@@ -794,35 +778,34 @@ get_lock( char* file_name )
 void
 do_killpg( int pgrp, int sig )
 {
-	int		status;
+	priv_state	priv;
 
 	if( !pgrp ) {
 		return;
 	}
-	if (getuid()==0)
-		set_root_euid();
+
+	priv = set_root_priv();
 
 	(void)kill(-pgrp, sig );
 
-	set_condor_euid();
-
+	set_priv(priv);
 }
 
 void
 do_kill( int pid, int sig )
 {
-	int		status;
+	int 		status;
+	priv_state	priv;
 
 	if( !pid ) {
 		return;
 	}
 
-	if (getuid()==0)
-		set_root_euid();
+	priv = set_root_priv();
 
 	status = kill( pid, sig );
 
-	set_condor_euid();
+	set_priv(priv);
 
 	if( status < 0 ) {
 		EXCEPT( "kill(%d,%d)", pid, sig );
@@ -1018,9 +1001,6 @@ dump_core()
 
 	install_sig_handler( SIGILL, (SIGNAL_HANDLER)SIG_DFL );
 
-	if (getuid()==0)
-		set_root_euid();
-
 	my_pid = getpid();
 	sigsetmask( 0 );
 
@@ -1028,6 +1008,7 @@ dump_core()
 	dprintf( D_ALWAYS, "Directory = \"%s\"\n", getcwd(cwd,sizeof(cwd)) );
 	dprintf( D_ALWAYS, "My PID = %d\n", my_pid );
 
+	set_root_priv();
 
 	if( kill(my_pid,SIGILL) < 0 ) {
 		EXCEPT( "kill(getpid(),SIGILL)" );

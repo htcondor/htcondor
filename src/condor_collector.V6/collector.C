@@ -22,6 +22,7 @@
 #include "collector_engine.h"
 #include "HashTable.h"
 #include "hashkey.h"
+#include "condor_uid.h"
 
 // about self
 char *MyName;
@@ -146,6 +147,7 @@ int main (int argc, char *argv[])
 	
     // initialize
     MyName = *argv;
+	set_condor_priv();
 	config( 0 );
 	
     initializeParams ();

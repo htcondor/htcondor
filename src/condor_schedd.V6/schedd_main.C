@@ -82,6 +82,7 @@
 #include "condor_qmgr.h"
 #include "scheduler.h"
 #include "condor_adtypes.h"
+#include "condor_uid.h"
 
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
@@ -93,7 +94,6 @@ extern "C"
 	void	_EXCEPT_(char*...);
 	void	dprintf_config(char*, int);
 	void	dprintf(int, char*...);
-	int		set_condor_euid();
 	char*	param(char*);
 	int		boolean(char*, char*);
 	int		SetSyscalls() {}
@@ -132,14 +132,10 @@ main(int argc, char* argv[])
 	struct		utsname	name;
  
 	myName = argv[0];
-	if(getuid() == 0)
-	{
-	#ifdef NFSFIX
-		// Must be condor to write to log files.
-		set_condor_euid(__FILE__,__LINE__);
-	#endif NFSFIX
-	}
-	
+
+	// run as condor.condor at all times unless root privilege is needed
+	set_condor_priv();
+
 	if(argc > 7)
 	{
 		usage(argv[0]);

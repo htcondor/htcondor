@@ -57,8 +57,6 @@ extern "C"  void log_image_size (int);
 extern "C" int access_via_afs (const char *);
 extern "C" int access_via_nfs (const char *);
 
-extern int ClientUid;
-extern int ClientGid;
 extern int JobStatus;
 extern int ImageSize;
 extern struct rusage JobRusage;
@@ -138,25 +136,25 @@ pseudo_getlogin(char *loginbuf)
 int
 pseudo_getuid()
 {
-	return ClientUid;
+	return get_user_uid();
 }
 
 int
 pseudo_geteuid()
 {
-	return ClientUid;
+	return get_user_gid();;
 }
 
 int
 pseudo_getgid()
 {
-	return ClientGid;
+	return get_user_uid();
 }
 
 int
 pseudo_getegid()
 {
-	return ClientGid;
+	return get_user_gid();
 }
 
 int pseudo_extern_name( const char *path, char *buf, int bufsize )
@@ -789,8 +787,8 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 	s->cluster = p->id.cluster;
 	s->proc = p->id.proc;
 	s->job_class = p->universe;
-	s->uid = ClientUid;
-	s->gid = ClientGid;
+	s->uid = get_user_uid();
+	s->gid = get_user_gid();
 
 		/* This is the shadow's virtual pid for the PVM task, and will
 		   need to be supplied when we get around to using the structure

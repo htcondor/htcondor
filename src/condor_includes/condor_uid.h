@@ -1,20 +1,32 @@
 #ifndef _UID_H
 #define _UID_H
 
-#include <sys/types.h>
+#include "_condor_fix_types.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-int set_fatal_uid_sets(int flag);
-uid_t get_user_uid(char *user_name);
-int init_condor_uid();
-int get_condor_uid();
-int set_condor_euid();
-int set_condor_ruid();
-int set_root_euid();
-int set_effective_uid(uid_t new_uid);
+typedef enum { PRIV_UNKNOWN,
+			   PRIV_ROOT,
+			   PRIV_CONDOR,
+			   PRIV_USER,
+			   PRIV_USER_FINAL
+} priv_state;
+
+void init_condor_ids();
+void init_user_ids(char username[]);
+void set_user_ids(uid_t uid, gid_t gid);
+priv_state set_priv(priv_state s);
+priv_state set_condor_priv();
+priv_state set_user_priv();
+void set_user_priv_final();
+priv_state set_root_priv();
+uid_t get_condor_uid();
+gid_t get_condor_gid();
+uid_t get_user_uid();
+gid_t get_user_gid();
+
 
 #if defined(__cplusplus)
 }

@@ -540,22 +540,9 @@ UserProc::execute()
 		sigprocmask( SIG_SETMASK, &sigmask, 0 );
 
 
-			// Posix says that a privileged process executing setuid()
-			// will change real, effective, and saved uid's.  Thus the
-			// child process will have only it's submitting uid, and cannot
+			// child process should have only it's submitting uid, and cannot
 			// switch back to root or some other uid.
-		if (getuid() == 0) {
-			if( set_root_euid() < 0 ) {
-				EXCEPT( "set_root_euid()" );
-			} 
-			dprintf(D_FULLDEBUG,"Setting ruid and guid\n");
-			if( setgid( gid ) < 0 ) {
-				EXCEPT( "setgid(%d)", gid );
-			} 
-			if( setuid( uid ) < 0 ) {
-				EXCEPT( "setuid(%d)", uid );
-			} 
-		}
+		set_user_priv_final();
 
 		switch( job_class ) {
 		  
@@ -606,8 +593,6 @@ UserProc::execute()
 	dprintf( D_ALWAYS, "Started user job - PID = %d\n", pid );
 	if( job_class != VANILLA ) {
 			// Send the user process its startup environment conditions
-	dprintf( D_ALWAYS, "Setting condor_euid\n");
-	set_condor_euid();
 		close( pipe_fds[READ_END] );
 		cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
 		dprintf( D_ALWAYS, "cmd_fp = 0x%x\n", cmd_fp );
@@ -755,6 +740,7 @@ UserProc::send_sig( int sig )
 {
     sigset_t    sigmask, oldmask;
     int         i;
+	priv_state	priv;
  
 	if( !pid ) {
 		dprintf( D_FULLDEBUG,
@@ -762,9 +748,7 @@ UserProc::send_sig( int sig )
 		return;
 	}
 
-	if (getuid() == 0) {
-		set_root_euid(); 
-	}
+	priv = set_root_priv();
 
 	if ( job_class == VANILLA ) {
 		// Here we call killkids() to forward the signal to all of our
@@ -786,7 +770,7 @@ UserProc::send_sig( int sig )
 			if( errno == ESRCH ) {	// User proc already exited
 				return;
 			}
-			set_condor_euid();
+			set_priv(priv);
 			perror("kill");
 			EXCEPT( "kill(%d,SIGCONT)", pid  );
 		}
@@ -796,12 +780,12 @@ UserProc::send_sig( int sig )
 		if( errno == ESRCH ) {	// User proc already exited
 			return;
 		}
-		set_condor_euid();
+		set_priv(priv);
 		perror("kill");
 		EXCEPT( "kill(%d,%d)", pid, sig );
 	}
 
-	set_condor_euid();
+	set_priv(priv);
 
 	if (SigNames.get_name(sig) != NULL)
 		dprintf( D_ALWAYS, "Sent signal %s to user job %d\n",

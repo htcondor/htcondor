@@ -32,17 +32,12 @@
 #include <stdarg.h>
 #include "user_log.c++.h"
 #include <time.h>
+#include "condor_uid.h"
 
 static char *_FileName_ = __FILE__;
 
-extern "C" {
-	int seteuid( uid_t );
-	int setegid( gid_t );
-}
-
 static const char SynchDelimiter[] = "...\n";
 
-static void switch_ids( uid_t new_euid, gid_t new_egid );
 static void display_ids();
 extern "C" char *find_env (const char *, const char *);
 extern "C" char *get_env_val (const char *);
@@ -134,6 +129,7 @@ void UserLog::
 initialize( const char *owner, const char *file, int c, int p, int s )
 {
 	struct passwd	*pwd;
+	priv_state		priv;
 
 		// Save parameter info
 	path = new char[ strlen(file) + 1 ];
@@ -143,15 +139,10 @@ initialize( const char *owner, const char *file, int c, int p, int s )
 	subproc = s;
 	in_block = FALSE;
 
-		// Look up process owner's UID and GID
-	if( (pwd = getpwnam(owner)) == NULL ) {
-		EXCEPT( "Can't find \"%s\" in passwd file", owner );
-	}
-	user_uid = pwd->pw_uid;
-	user_gid = pwd->pw_gid;
+	init_user_ids(owner);
 
-		// create the file
-	set_user_id();
+	priv = set_user_priv();
+
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
 		EXCEPT( "open(%s) failed with errno %d", path, errno );
 	}
@@ -170,7 +161,7 @@ initialize( const char *owner, const char *file, int c, int p, int s )
 	lock = new FileLock( fd );
 
 		// get back to whatever UID and GID we started with
-	restore_id();
+	set_priv(priv);
 }
 
 UserLog::UserLog( )
@@ -180,8 +171,6 @@ UserLog::UserLog( )
 	proc = -1;
 	subproc = -1;
 	in_block = FALSE;
-	user_uid = 999;
-	user_gid = 999;
 	fp = 0;
 	lock = 0;
 }
@@ -197,8 +186,6 @@ void
 UserLog::display()
 {
 	dprintf( D_ALWAYS, "Path = \"%s\"\n", path );
-	dprintf( D_ALWAYS, "user_uid = %d, saved_uid = %d\n", user_uid, saved_uid );
-	dprintf( D_ALWAYS, "user_gid = %d, saved_gid = %d\n", user_gid, saved_gid );
 	dprintf( D_ALWAYS, "Job = %d.%d.%d\n", proc, cluster, subproc );
 	dprintf( D_ALWAYS, "fp = 0x%x\n", fp );
 	dprintf( D_ALWAYS, "fd = %d\n", fd );
@@ -306,61 +293,6 @@ UserLog::output_header()
 			tm->tm_hour, tm->tm_min, tm->tm_sec
 		);
 	}
-}
-
-void
-UserLog::set_user_id()
-{
-	saved_uid = geteuid();
-	saved_gid = getegid();
-
-	if( saved_uid != user_uid || saved_gid != user_gid ) {
-		switch_ids( user_uid, user_gid );
-	}
-}
-
-void
-UserLog::restore_id()
-{
-	if( saved_uid != user_uid || saved_gid != saved_gid ) {
-		switch_ids( saved_uid, saved_gid );
-	}
-}
-
-/*
-  Switch process's effective user and group ids as desired.
-*/
-static void
-switch_ids( uid_t new_euid, gid_t new_egid )
-{
-	    /* need to be root to seteuid(0) */
-	if (getuid() == 0) {
-
-		    /* First set euid to root so we have privilege to do this */
-		if( seteuid(0) < 0 ) {
-			dprintf( D_ALWAYS, "Can't set euid to root\n" );
-			return;
-		}
-
-		    /* Now set the egid as desired */
-		if( setegid(new_egid) < 0 ) {
-			dprintf( D_ALWAYS, "Can't set egid to %d\n", new_egid );
-			return;
-		}
-
-		    /* Now set the euid as desired */
-		if( seteuid(new_euid) < 0 ) {
-			dprintf( D_ALWAYS, "Can't set euid to %d\n", new_euid );
-			return;
-		}
-	}
-}
-
-static void
-display_ids()
-{
-	dprintf( D_ALWAYS, "ruid = %d, euid = %d\n", getuid(), geteuid() );
-	dprintf( D_ALWAYS, "rgid = %d, egid = %d\n", getgid(), getegid() );
 }
 
 extern "C" LP *
