@@ -673,16 +673,11 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
 ////////////////////////////////////////////////////////////////////////////////
 AttrList::~AttrList()
 {
-    AttrListElem* tmp;
+		// Delete all of the attributes in this list
+	clear();
 
-    for(tmp = exprList; tmp; tmp = exprList)
-    {
-        exprList = exprList->next;
-        delete tmp;
-    }
-	exprList = NULL;
-	tail = NULL;
-
+		// If we're part of an AttrListList (a.k.a. ClassAdList),
+		// delete ourselves out of there, too.
     if(associatedList)
     {
 		associatedList->associatedAttrLists->Delete(this);
@@ -1785,12 +1780,34 @@ int AttrList::put(Stream& s)
 }
 
 
-int AttrList::get(Stream& s)
+void
+AttrList::clear( void )
+{
+		// First, unchain ourselves, if we're a chained classad
+	unchain();
+
+		// Now, delete all the attributes in our list
+    AttrListElem* tmp;
+    for(tmp = exprList; tmp; tmp = exprList) {
+        exprList = exprList->next;
+        delete tmp;
+    }
+	exprList = NULL;
+	tail = NULL;
+}
+
+
+int
+AttrList::initFromStream(Stream& s)
 {
     char linebuf[ATTRLIST_MAX_EXPRESSION];
 	char *line = linebuf;
     int numExprs;
 
+		// First, clear our ad so we start with a fresh ClassAd
+	clear();
+
+		// Now, read our new set of attributes off the given stream 
     s.decode();
 
     if(!s.code(numExprs)) 
@@ -1893,14 +1910,6 @@ int AttrList::get(XDR *xdrs)
 }
 #endif
 
-int AttrList::code(Stream& s)                                           
-{
-    if(s.is_encode())
-        return put(s);
-    else
-        return get(s);
-}
-
 
 void AttrList::ChainToAd(AttrList *ad)
 {
@@ -1910,3 +1919,11 @@ void AttrList::ChainToAd(AttrList *ad)
 
 	chainedAttrs = &( ad->exprList );
 }
+
+
+void
+AttrList::unchain( void )
+{
+	chainedAttrs = NULL;
+}
+
