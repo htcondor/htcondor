@@ -677,7 +677,7 @@ display_submit_summaries()
 	printTimeAndColl();
 
 	printf("------------------------------------------\n");
-	printf("ARCH/OS           machines  jobs  running |\n");
+	printf("ARCH/OS           machines  jobs exporting|\n");
 	printf("------------------------------------------|\n");
 	for( i=0; i<N_SubmitSum; i++ ) {
 		display_submit_sum( SubmitSum[i] );
