@@ -782,7 +782,6 @@ MPIShadow::emailTerminateEvent( int exitReason )
 
 	fprintf( mailer, "\nHave a nice day.\n" );
 	
-	email_close(mailer);
 }
 
 
