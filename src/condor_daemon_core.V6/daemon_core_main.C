@@ -1323,6 +1323,11 @@ int main( int argc, char** argv )
 
 					exit( 1 );
 				}
+			} else {
+					// it's not -http, so do NOT consume this arg!!
+					// in fact, we're done w/ DC args, since it's the
+					// first option we didn't recognize.
+				done = true;
 			}
 			break;
 		case 'p':		// use well-known Port for command socket, or
