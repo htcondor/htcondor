@@ -95,8 +95,6 @@ class GlobusJob : public Service
 	char *localOutput;
 	char *localError;
 	int globusError;
-	char *userLogFile;
-	int exitValue;
 	bool submitLogged;
 	bool executeLogged;
 	bool submitFailedLogged;

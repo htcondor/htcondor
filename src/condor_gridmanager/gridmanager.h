@@ -50,16 +50,17 @@ void rehashJobContact( GlobusJob *job, const char *old_contact,
 void gramCallbackHandler( void *user_arg, char *job_contact, int state,
 						  int errorcode );
 
-UserLog *InitializeUserLog( GlobusJob * );
-bool WriteExecuteEventToUserLog( GlobusJob * );
-bool WriteAbortEventToUserLog( GlobusJob * );
-bool WriteTerminateEventToUserLog( GlobusJob * );
-bool WriteEvictEventToUserLog( GlobusJob * );
-bool WriteHoldEventToUserLog( GlobusJob * );
-bool WriteGlobusSubmitEventToUserLog( GlobusJob * );
-bool WriteGlobusSubmitFailedEventToUserLog( GlobusJob * );
-bool WriteGlobusResourceUpEventToUserLog( GlobusJob * );
-bool WriteGlobusResourceDownEventToUserLog( GlobusJob * );
+UserLog *InitializeUserLog( ClassAd *job_ad );
+bool WriteExecuteEventToUserLog( ClassAd *job_ad );
+bool WriteAbortEventToUserLog( ClassAd *job_ad );
+bool WriteTerminateEventToUserLog( ClassAd *job_ad );
+bool WriteEvictEventToUserLog( ClassAd *job_ad );
+bool WriteHoldEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusSubmitEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad,
+											int failure_code );
+bool WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad );
 
 
 #endif

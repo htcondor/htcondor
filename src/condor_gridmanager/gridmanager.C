@@ -570,37 +570,38 @@ doContactSchedd()
 
 		if ( curr_action->actions & UA_LOG_SUBMIT_EVENT &&
 			 !curr_job->submitLogged ) {
-			WriteGlobusSubmitEventToUserLog( curr_job );
+			WriteGlobusSubmitEventToUserLog( curr_job->ad );
 			curr_job->submitLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_EXECUTE_EVENT &&
 			 !curr_job->executeLogged ) {
-			WriteExecuteEventToUserLog( curr_job );
+			WriteExecuteEventToUserLog( curr_job->ad );
 			curr_job->executeLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_SUBMIT_FAILED_EVENT &&
 			 !curr_job->submitFailedLogged ) {
-			WriteGlobusSubmitFailedEventToUserLog( curr_job );
+			WriteGlobusSubmitFailedEventToUserLog( curr_job->ad,
+												   curr_job->submitFailureCode );
 			curr_job->submitFailedLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_TERMINATE_EVENT &&
 			 !curr_job->terminateLogged ) {
-			WriteTerminateEventToUserLog( curr_job );
+			WriteTerminateEventToUserLog( curr_job->ad );
 			curr_job->terminateLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_ABORT_EVENT &&
 			 !curr_job->abortLogged ) {
-			WriteAbortEventToUserLog( curr_job );
+			WriteAbortEventToUserLog( curr_job->ad );
 			curr_job->abortLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_EVICT_EVENT &&
 			 !curr_job->evictLogged ) {
-			WriteEvictEventToUserLog( curr_job );
+			WriteEvictEventToUserLog( curr_job->ad );
 			curr_job->evictLogged = true;
 		}
 		if ( curr_action->actions & UA_HOLD_JOB &&
 			 !curr_job->holdLogged ) {
-			WriteHoldEventToUserLog( curr_job );
+			WriteHoldEventToUserLog( curr_job->ad );
 			curr_job->holdLogged = true;
 		}
 
@@ -1004,37 +1005,52 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 // the user didn't want a UserLog, so you must check for NULL before
 // using the pointer you get back.
 UserLog*
-InitializeUserLog( GlobusJob *job )
+InitializeUserLog( ClassAd *job_ad )
 {
-	if( job->userLogFile == NULL ) {
+	int cluster, proc;
+	char userLogFile[_POSIX_PATH_MAX];
+
+	userLogFile[0] = '\0';
+	job_ad->LookupString( ATTR_ULOG_FILE, userLogFile );
+	if ( userLogFile[0] == '\0' ) {
 		// User doesn't want a log
 		return NULL;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	UserLog *ULog = new UserLog();
-	ULog->initialize(Owner, job->userLogFile, job->procID.cluster,
-					 job->procID.proc, 0);
+	ULog->initialize(Owner, userLogFile, cluster, proc, 0);
 	return ULog;
 }
 
 bool
-WriteExecuteEventToUserLog( GlobusJob *job )
+WriteExecuteEventToUserLog( ClassAd *job_ad )
 {
-	UserLog *ulog = InitializeUserLog( job );
+	int cluster, proc;
+	char hostname[128];
+
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing execute record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
 
-	int hostname_len = strcspn( job->myResource->ResourceName(), ":/" );
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing execute record to user logfile\n",
+			 cluster, proc );
+
+	hostname[0] = '\0';
+	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, hostname,
+						  sizeof(hostname) - 1 );
+	int hostname_len = strcspn( hostname, ":/" );
 
 	ExecuteEvent event;
-	strncpy( event.executeHost, job->myResource->ResourceName(),
-			 hostname_len );
+	strncpy( event.executeHost, hostname, hostname_len );
 	event.executeHost[hostname_len] = '\0';
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -1042,7 +1058,7 @@ WriteExecuteEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_EXECUTE event\n",
-				 job->procID.cluster, job->procID.proc );
+				 cluster, proc );
 		return false;
 	}
 
@@ -1050,17 +1066,21 @@ WriteExecuteEventToUserLog( GlobusJob *job )
 }
 
 bool
-WriteAbortEventToUserLog( GlobusJob *job )
+WriteAbortEventToUserLog( ClassAd *job_ad )
 {
-	UserLog *ulog = InitializeUserLog( job );
+	int cluster, proc;
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing abort record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+			 "(%d.%d) Writing abort record to user logfile\n",
+			 cluster, proc );
 
 	JobAbortedEvent event;
 	int rc = ulog->writeEvent(&event);
@@ -1069,7 +1089,7 @@ WriteAbortEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_ABORT event\n",
-				 job->procID.cluster, job->procID.proc );
+				 cluster, proc );
 		return false;
 	}
 
@@ -1077,17 +1097,21 @@ WriteAbortEventToUserLog( GlobusJob *job )
 }
 
 bool
-WriteTerminateEventToUserLog( GlobusJob *job )
+WriteTerminateEventToUserLog( ClassAd *job_ad )
 {
-	UserLog *ulog = InitializeUserLog( job );
+	int cluster, proc;
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing terminate record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+			 "(%d.%d) Writing terminate record to user logfile\n",
+			 cluster, proc );
 
 	JobTerminatedEvent event;
 	struct rusage r;
@@ -1107,7 +1131,7 @@ WriteTerminateEventToUserLog( GlobusJob *job )
 	// Globus doesn't tell us how the job exited, so we'll just assume it
 	// exited normally.
 	event.normal = true;
-	event.returnValue = job->exitValue;
+	event.returnValue = 0;
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -1115,7 +1139,7 @@ WriteTerminateEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_JOB_TERMINATED event\n",
-				 job->procID.cluster, job->procID.proc );
+				 cluster, proc );
 		return false;
 	}
 
@@ -1123,17 +1147,21 @@ WriteTerminateEventToUserLog( GlobusJob *job )
 }
 
 bool
-WriteEvictEventToUserLog( GlobusJob *job )
+WriteEvictEventToUserLog( ClassAd *job_ad )
 {
-	UserLog *ulog = InitializeUserLog( job );
+	int cluster, proc;
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing evict record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+			 "(%d.%d) Writing evict record to user logfile\n",
+			 cluster, proc );
 
 	JobEvictedEvent event;
 	struct rusage r;
@@ -1154,7 +1182,7 @@ WriteEvictEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_JOB_EVICTED event\n",
-				 job->procID.cluster, job->procID.proc );
+				 cluster, proc );
 		return false;
 	}
 
@@ -1162,26 +1190,30 @@ WriteEvictEventToUserLog( GlobusJob *job )
 }
 
 bool
-WriteHoldEventToUserLog( GlobusJob *job )
+WriteHoldEventToUserLog( ClassAd *job_ad )
 {
-	UserLog *ulog = InitializeUserLog( job );
+	int cluster, proc;
+	char holdReason[256];
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing hold record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+			 "(%d.%d) Writing hold record to user logfile\n",
+			 cluster, proc );
 
 	JobHeldEvent event;
 
-	char *holdReason;
-	job->ad->LookupString( ATTR_HOLD_REASON, &holdReason );
+	holdReason[0] = '\0';
+	job_ad->LookupString( ATTR_HOLD_REASON, holdReason,
+						   sizeof(holdReason) - 1 );
 
 	event.setReason( holdReason );
-
-	free( holdReason );
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -1189,7 +1221,7 @@ WriteHoldEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_JOB_HELD event\n",
-				 job->procID.cluster, job->procID.proc );
+				 cluster, proc );
 		return false;
 	}
 
@@ -1197,23 +1229,39 @@ WriteHoldEventToUserLog( GlobusJob *job )
 }
 
 bool
-WriteGlobusSubmitEventToUserLog( GlobusJob *job )
+WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 {
-	UserLog *ulog = InitializeUserLog( job );
+	int cluster, proc;
+	int version;
+	char contact[256];
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus submit record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+			 "(%d.%d) Writing globus submit record to user logfile\n",
+			 cluster, proc );
 
 	GlobusSubmitEvent event;
 
-	event.rmContact =  strnewp(job->myResource->ResourceName());
-	event.jmContact = strnewp(job->jobContact);
-	event.restartableJM = job->jmVersion >= GRAM_V_1_5;
+	contact[0] = '\0';
+	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
+						   sizeof(contact) - 1 );
+	event.rmContact = strnewp(contact);
+
+	contact[0] = '\0';
+	job_ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, contact,
+						   sizeof(contact) - 1 );
+	event.jmContact = strnewp(contact);
+
+	version = 0;
+	job_ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, version );
+	event.restartableJM = version >= GRAM_V_1_5;
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -1221,7 +1269,7 @@ WriteGlobusSubmitEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT event\n",
-				 job->procID.cluster, job->procID.proc );
+				 cluster, proc );
 		return false;
 	}
 
@@ -1229,24 +1277,28 @@ WriteGlobusSubmitEventToUserLog( GlobusJob *job )
 }
 
 bool
-WriteGlobusSubmitFailedEventToUserLog( GlobusJob *job )
+WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code )
 {
+	int cluster, proc;
 	char buf[1024];
 
-	UserLog *ulog = InitializeUserLog( job );
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing submit-failed record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+			 "(%d.%d) Writing submit-failed record to user logfile\n",
+			 cluster, proc );
 
 	GlobusSubmitFailedEvent event;
 
-	snprintf( buf, 1024, "%d %s", job->submitFailureCode,
-			GahpMain.globus_gram_client_error_string(job->submitFailureCode) );
+	snprintf( buf, 1024, "%d %s", failure_code,
+			GahpMain.globus_gram_client_error_string(failure_code) );
 	event.reason =  strnewp(buf);
 
 	int rc = ulog->writeEvent(&event);
@@ -1255,7 +1307,7 @@ WriteGlobusSubmitFailedEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
-				 job->procID.cluster, job->procID.proc);
+				 cluster, proc);
 		return false;
 	}
 
@@ -1263,21 +1315,29 @@ WriteGlobusSubmitFailedEventToUserLog( GlobusJob *job )
 }
 
 bool
-WriteGlobusResourceUpEventToUserLog( GlobusJob *job )
+WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 {
-	UserLog *ulog = InitializeUserLog( job );
+	int cluster, proc;
+	char contact[256];
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus up record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+			 "(%d.%d) Writing globus up record to user logfile\n",
+			 cluster, proc );
 
 	GlobusResourceUpEvent event;
 
-	event.rmContact =  strnewp(job->myResource->ResourceName());
+	contact[0] = '\0';
+	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
+						   sizeof(contact) - 1 );
+	event.rmContact =  strnewp(contact);
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -1285,7 +1345,7 @@ WriteGlobusResourceUpEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_UP event\n",
-				 job->procID.cluster, job->procID.proc );
+				 cluster, proc );
 		return false;
 	}
 
@@ -1293,21 +1353,29 @@ WriteGlobusResourceUpEventToUserLog( GlobusJob *job )
 }
 
 bool
-WriteGlobusResourceDownEventToUserLog( GlobusJob *job )
+WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 {
-	UserLog *ulog = InitializeUserLog( job );
+	int cluster, proc;
+	char contact[256];
+	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
 		return true;
 	}
 
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
 	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus down record to user logfile=%s\n",
-			 job->procID.cluster, job->procID.proc, job->userLogFile );
+			 "(%d.%d) Writing globus down record to user logfile\n",
+			 cluster, proc );
 
 	GlobusResourceDownEvent event;
 
-	event.rmContact =  strnewp(job->myResource->ResourceName());
+	contact[0] = '\0';
+	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
+						   sizeof(contact) - 1 );
+	event.rmContact =  strnewp(contact);
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -1315,7 +1383,7 @@ WriteGlobusResourceDownEventToUserLog( GlobusJob *job )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n",
-				 job->procID.cluster, job->procID.proc );
+				 cluster, proc );
 		return false;
 	}
 

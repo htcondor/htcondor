@@ -121,12 +121,10 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	jobContact = NULL;
 	localOutput = NULL;
 	localError = NULL;
-	userLogFile = NULL;
 	globusStateErrorCode = 0;
 	globusStateBeforeFailure = 0;
 	callbackGlobusState = 0;
 	callbackGlobusStateErrorCode = 0;
-	exitValue = 0;
 	submitLogged = false;
 	executeLogged = false;
 	submitFailedLogged = false;
@@ -186,12 +184,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	ad->LookupInteger( ATTR_JOB_STATUS, condorState );
 
 	globusError = GLOBUS_SUCCESS;
-
-	buff[0] = '\0';
-	ad->LookupString( ATTR_ULOG_FILE, buff );
-	if ( buff[0] != '\0' ) {
-		userLogFile = strdup( buff );
-	}
 
 	ad->LookupInteger( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
 	ad->LookupInteger( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
@@ -253,9 +245,6 @@ GlobusJob::~GlobusJob()
 	}
 	if ( localError ) {
 		free( localError );
-	}
-	if ( userLogFile ) {
-		free( userLogFile );
 	}
 	if (daemonCore) {
 		daemonCore->Cancel_Timer( evaluateStateTid );
@@ -518,7 +507,8 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
 					dprintf(D_ALWAYS,"    RSL='%s'\n", RSL);
 					submitFailureCode = globusError = rc;
-					WriteGlobusSubmitFailedEventToUserLog( this );
+					WriteGlobusSubmitFailedEventToUserLog( ad,
+														   submitFailureCode );
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
 				}
@@ -571,7 +561,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
 					globusError = rc;
-					WriteGlobusSubmitFailedEventToUserLog( this );
+					WriteGlobusSubmitFailedEventToUserLog( ad, globusError );
 					gmState = GM_CANCEL;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -1197,7 +1187,7 @@ void GlobusJob::NotifyResourceDown()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == false ) {
-		WriteGlobusResourceDownEventToUserLog( this );
+		WriteGlobusResourceDownEventToUserLog( ad );
 	}
 	resourceDown = true;
 	jmUnreachable = false;
@@ -1208,7 +1198,7 @@ void GlobusJob::NotifyResourceUp()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == true ) {
-		WriteGlobusResourceUpEventToUserLog( this );
+		WriteGlobusResourceUpEventToUserLog( ad );
 	}
 	resourceDown = false;
 	if ( jmUnreachable ) {
