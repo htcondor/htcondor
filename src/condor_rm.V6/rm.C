@@ -320,8 +320,9 @@ void ProcArg(const char* arg)
 							c, p );
 						return;
 					}
-					if( mode != HELD ) {
-						fprintf(stderr,"Job %d.%d not held to be released\n");
+					if( status != HELD ) {
+						fprintf(stderr,"Job %d.%d not held to be released\n",
+							c, p);
 						return;
 					}
 				}
@@ -363,10 +364,10 @@ void ProcArg(const char* arg)
 		if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0)
 		{
 			fprintf( stderr, "Couldn't find/%s all of user %s's job(s).\n",
-					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
+				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",arg );
 		} else {
 			fprintf(stdout, "User %s's job(s) %s.\n", arg,
-					(mode==REMOVED)?"removed":(mode==HELD)?"held":"released",c);
+				(mode==REMOVED)?"removed":(mode==HELD)?"held":"released");
 			nToProcess = -1;
 		}
 	}
