@@ -358,6 +358,15 @@ public:
 
 #endif /* ! WIN32 */
 
+	/** Recursively walk through the directory tree and change 
+	    the owner of all files and directories to the given 
+	    username.	
+		@param username The username to that will owner.
+		@param domain The domain of the user that will be the owner (on Win32).
+	 */
+	bool Recursive_Chown(const char *username, const char *domain);
+
+
 private:
 	char *curr_dir;
 	StatInfo* curr;
@@ -413,4 +422,14 @@ char* temp_dir_path();
 
 
 char * create_temp_file();
+
+/** Actual implementation of the recursive chown function that is called
+    by the Directory::Recursive_Chown() member function. This function 
+	can be called without firing up a whole directory object, if desired.
+	@param path Path to be traversed recursively and chown'd
+	@param username Username to chown to.
+	@param domain Domain of the user to chown to.
+*/
+static bool recursive_chown(const char *path, 
+ 		const char *username, const char *domain);
 #endif
