@@ -776,7 +776,7 @@ Daemon::locate( void )
 		// trim off the domain for _hostname.
 	initHostnameFromFull();
 
-	if( _port < 0 && _addr ) {
+	if( _port <= 0 && _addr ) {
 			// If we have the sinful string and no port, fill it in
 		_port = string_to_port( _addr );
 		dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
@@ -797,8 +797,7 @@ bool
 Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 {
 	char				buf[512], tmpname[512];
-	char				*addr_file, *tmp, *my_name;
-	FILE				*addr_fp;
+	char				*tmp, *my_name;
 
 	if( _subsys ) {
 		delete [] _subsys;
@@ -889,41 +888,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		// address of the daemon in question.
 
 	if( _is_local ) {
-		sprintf( buf, "%s_ADDRESS_FILE", subsys );
-		addr_file = param( buf );
-		if( addr_file ) {
-			dprintf( D_HOSTNAME, "Finding address for local daemon, "
-					 "%s is \"%s\"\n", buf, addr_file );
-			if( (addr_fp = fopen(addr_file, "r")) ) {
-					// Read out the sinful string.
-				fgets( buf, 100, addr_fp );
-					// chop off the newline
-				chomp( buf );
-				if( is_valid_sinful(buf) ) {
-					dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
-							 "local address file\n", buf );
-					New_addr( strnewp(buf) );
-				}
-					// Let's see if this is new enough to also have a
-					// version string and platform string...
-				if( fgets(buf, 200, addr_fp) ) {
-						// chop off the newline
-					chomp( buf );
-					New_version( strnewp(buf) );
-					dprintf( D_HOSTNAME, "Found version string \"%s\" in "
-							 "local address file\n", buf );
-					if( fgets(buf, 200, addr_fp) ) {
-							// chop off the newline
-						chomp( buf );
-						New_platform( strnewp(buf) );
-						dprintf( D_HOSTNAME, "Found platform string \"%s\" "
-								 "in local address file\n", buf );
-					}
-				}
-				fclose( addr_fp );
-			}
-			free( addr_file );
-		} 
+		readAddressFile( subsys );
 	}
 
 	if ((! _addr) && (!query_collector)) {
@@ -1078,6 +1043,20 @@ Daemon::getCmInfo( const char* subsys )
 	}
 
 	if( ! host || !host[0]) {
+			// Final step before giving up: check for an address file.
+		if( readAddressFile(subsys) ) {
+				// if we got the address in the file, we still won't
+				// have a good full hostname, so use the local value.
+				// everything else (port, hostname, etc), will be
+				// initialized and set correctly by our caller based
+				// on the fullname and the address.
+			New_name( strnewp(my_full_hostname()) );
+			New_full_hostname( strnewp(my_full_hostname()) );
+			return true;
+		}
+	}
+
+	if( ! host || !host[0]) {
 		sprintf( buf, "%s address or hostname not specified in config file",
 				 subsys ); 
 		newError( CA_LOCATE_FAILED, buf );
@@ -1086,23 +1065,34 @@ Daemon::getCmInfo( const char* subsys )
 		return false;
 	} 
 
-		// Now that we finally know what we're going to use, we should
-		// store that (as is) in _name, so that we can get to it later
-		// if we need it.
-	if( ! _name ) {
-		New_name( strnewp(host) );
-	}
 	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", host ); 
 
 		// See if it's already got a port specified in it, or if we
 		// should use the default port for this kind of daemon.
 	_port = getPortFromAddr( host );
-	if( ! _port ) {
+	if( _port < 0 ) {
 		_port = getDefaultPort();
 		dprintf( D_HOSTNAME, "Port not specified, using default (%d)\n",
 				 _port ); 
 	} else {
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
+	}
+	if( _port == 0 && readAddressFile(subsys) ) {
+		dprintf( D_HOSTNAME, "Port 0 specified in name, "
+				 "IP/port found in address file\n" );
+		New_name( strnewp(my_full_hostname()) );
+		New_full_hostname( strnewp(my_full_hostname()) );
+		if( host ) {
+			free( host );
+		}
+		return true;
+	}
+
+		// If we're here, we've got a real port and there's no address
+		// file, so we should store the string we used (as is) in
+		// _name, so that we can get to it later if we need it.
+	if( ! _name ) {
+		New_name( strnewp(host) );
 	}
 
 		// Now that we've got the port, grab the hostname for the rest
@@ -1376,6 +1366,72 @@ Daemon::localName( void )
 		my_name = strnewp( my_full_hostname() );
 	}
 	return my_name;
+}
+
+
+bool
+Daemon::readAddressFile( const char* subsys )
+{
+	char* addr_file;
+	FILE* addr_fp;
+	MyString param_name;
+	MyString buf;
+	bool rval = false;
+
+	param_name.sprintf( "%s_ADDRESS_FILE", subsys );
+	addr_file = param( param_name.Value() );
+	if( ! addr_file ) {
+		return false;
+	}
+
+	dprintf( D_HOSTNAME, "Finding address for local daemon, "
+			 "%s is \"%s\"\n", param_name.Value(), addr_file );
+
+	if( ! (addr_fp = fopen(addr_file, "r")) ) {
+		dprintf( D_HOSTNAME,
+				 "Failed to open address file %s: %s (errno %d)\n",
+				 addr_file, strerror(errno), errno );
+		free( addr_file );
+		return false;
+	}
+		// now that we've got a FILE*, we should free this so we don't
+		// leak it.
+	free( addr_file );
+	addr_file = NULL;
+
+		// Read out the sinful string.
+	if( ! buf.readLine(addr_fp) ) {
+		dprintf( D_HOSTNAME, "address file contained no data\n" );
+		fclose( addr_fp );
+		return false;
+	}
+	buf.chomp();
+	if( is_valid_sinful(buf.Value()) ) {
+		dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
+				 "local address file\n", buf.Value() );
+		New_addr( strnewp(buf.Value()) );
+		rval = true;
+	}
+
+		// Let's see if this is new enough to also have a
+		// version string and platform string...
+	if( buf.readLine(addr_fp) ) {
+			// chop off the newline
+		buf.chomp();
+		New_version( strnewp(buf.Value()) );
+		dprintf( D_HOSTNAME,
+				 "Found version string \"%s\" in local address file\n",
+				 buf.Value() );
+		if( buf.readLine(addr_fp) ) {
+			buf.chomp();
+			New_platform( strnewp(buf.Value()) );
+			dprintf( D_HOSTNAME,
+					 "Found platform string \"%s\" in local address file\n",
+					 buf.Value() );
+		}
+	}
+	fclose( addr_fp );
+	return rval;
 }
 
 

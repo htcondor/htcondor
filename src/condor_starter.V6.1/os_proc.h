@@ -87,7 +87,8 @@ public:
 	virtual bool ShutdownFast();
 
 		/// rename a core file created by this process
-	bool renameCoreFile( void );
+	void checkCoreFile( void );
+	bool renameCoreFile( const char* old_name, const char* new_name );
 
 protected:
 

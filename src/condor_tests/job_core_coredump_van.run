@@ -6,9 +6,13 @@ $cmd1 = 'job_core_coredump_van.cmd';
 $handle1 = 'Create Core File';
 $wants_core{$handle1} = 1;
 
-$cmd2 = 'job_core_coredump-none_van.cmd';
-$handle2 = 'No Core File';
-$wants_core{$handle2} = 0;
+$cmd2 = 'job_core_coredump-xfer_van.cmd';
+$handle2 = 'Create Core File with file transfer';
+$wants_core{$handle2} = 1;
+
+$cmd3 = 'job_core_coredump-none_van.cmd';
+$handle3 = 'No Core File';
+$wants_core{$handle3} = 0;
 
 $core_file = 'core';
 
@@ -46,6 +50,7 @@ $CheckCoreFiles = sub {
 
 CondorTest::RegisterExitedAbnormal( $handle1, $CheckCoreFiles );
 CondorTest::RegisterExitedAbnormal( $handle2, $CheckCoreFiles );
+CondorTest::RegisterExitedAbnormal( $handle3, $CheckCoreFiles );
 
 if( CondorTest::RunTest($handle1, $cmd1, 0) ) {
     print "$handle1: SUCCESS\n";
@@ -57,6 +62,12 @@ if( CondorTest::RunTest($handle2, $cmd2, 0) ) {
     print "$handle2: SUCCESS\n";
 } else {
     die "$handle2: CondorTest::RunTest() failed\n";
+}
+
+if( CondorTest::RunTest($handle3, $cmd3, 0) ) {
+    print "$handle3: SUCCESS\n";
+} else {
+    die "$handle3: CondorTest::RunTest() failed\n";
 }
 
 exit(0);

@@ -89,7 +89,7 @@ int is_valid_network( const char *network, struct in_addr *ip, struct in_addr *m
 
 int is_valid_sinful( const char *sinful );
 
-/* returns the port integer from a given address, or 0 if there is
+/* returns the port integer from a given address, or -1 if there is
    none. */
 int getPortFromAddr( const char* addr );
 
