@@ -2,10 +2,10 @@
 <!DOCTYPE gpt_package_metadata SYSTEM "globus_package.dtd">
 
 <gpt_package_metadata Format_Version="0.01" Name="condor_dagman" >
-	<Aging_Version Age="0" Major="0" Minor="1" />
+	<Aging_Version Age="0" Major="0" Minor="2" />
 	<Description > Condor DAGMan Package </Description>
 	<Version_Stability Release="beta" />
-	<Version_Label>6.4.3</Version_Label>
+	<Version_Label>6.5.1</Version_Label>
 	<src_pkg>
 
 	<With_Flavors build="no" />	

@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE gpt_package_metadata SYSTEM "globus_package.dtd">
 
-<gpt_package_metadata Format_Version="0.01" Name="condor_base" >
-	<Aging_Version Age="0" Major="0" Minor="1" />
+<gpt_package_metadata Format_Version="0.02" Name="condor_base" >
+	<Aging_Version  Major="0" Minor="2" Age="0"/>
 	<Description > Condor Base Utility files </Description>
 	<Version_Stability Release="beta" />
 
 	<src_pkg>
 	
-	<Version_Label>6.4.3</Version_Label>
+	<Version_Label>6.5.1</Version_Label>
 
 	<With_Flavors build="no" />	
 <Source_Setup_Dependencies PkgType="pgm">
@@ -29,6 +29,7 @@
         <Build_Step>cp $DIST_DIR/sbin/condor_restart INSTALLDIR_GPTMACRO/sbin/condor_restart</Build_Step>
         <Build_Step>cp $DIST_DIR/sbin/condor_preen INSTALLDIR_GPTMACRO/sbin/condor_preen</Build_Step>
         <Build_Step>cp $DIST_DIR/bin/condor_userlog INSTALLDIR_GPTMACRO/bin/condor_userlog</Build_Step>
+        <Build_Step>cp $DIST_DIR/bin/condor_version INSTALLDIR_GPTMACRO/bin/condor_version</Build_Step>
         <Build_Step>cp $DIST_DIR/bin/condor_config_val INSTALLDIR_GPTMACRO/bin/condor_config_val</Build_Step>
         <Build_Step>cp $TOP_DIR/condor_release/LICENSE.TXT INSTALLDIR_GPTMACRO/CONDOR_LICENSE</Build_Step>
 	</Build_Instructions>
