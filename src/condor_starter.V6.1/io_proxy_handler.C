@@ -73,14 +73,17 @@ void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 
 	if(sscanf(line,"cookie %s",check_cookie)==1) {
 		if(!strcmp(check_cookie,cookie)) {
-			dprintf(D_ALWAYS,"IOProxyHandler: client presented correct cookie.\n");
+			dprintf( D_FULLDEBUG, 
+					 "IOProxyHandler: client presented correct cookie.\n" );
 			got_cookie = true;
 		} else {
-			dprintf(D_ALWAYS,"IOProxyHandler: client presented *WRONG* cookie.\n",cookie);
+			dprintf( D_ALWAYS, "IOProxyHandler: client presented "
+					 "*WRONG* cookie.\n", cookie );
 			sleep(1);
 		}
 	} else {
-		dprintf(D_ALWAYS,"IOProxyHandler: client started with '%s' instead of a cookie\n");
+		dprintf( D_ALWAYS, "IOProxyHandler: client started with "
+				 "'%s' instead of a cookie\n", line );
 	}
 
 	if(got_cookie) {
