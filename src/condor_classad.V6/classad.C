@@ -23,6 +23,7 @@
 #include "common.h"
 #include "classad.h"
 #include "classadItor.h"
+#include "source.h"
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
@@ -619,6 +620,27 @@ EvaluateAttr( const string &attr , Value &val ) const
 		default:
 			return false;
 	}
+}
+
+bool ClassAd::
+EvaluateExpr( const string& buf, Value &result ) const
+{
+	bool           successfully_evaluated;
+	ExprTree       *tree;
+	ClassAdParser  parser;
+
+	tree = NULL;
+	if (parser.ParseExpression(buf, tree)) {
+		successfully_evaluated = EvaluateExpr(tree, result);
+	} else {
+		successfully_evaluated = false;
+	}
+
+	if (NULL != tree) {
+		delete tree;
+	}
+
+	return successfully_evaluated;
 }
 
 
