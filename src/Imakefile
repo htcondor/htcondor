@@ -52,15 +52,22 @@ static:: all
 	sbin/condor_restart sbin/condor_vacate sbin/condor_master_off
 
 
-#if IS_GLIBC && IS_I386_LINUX
-  PUBLIC_D_TARGET = /p/condor/workspaces/release/V6_releases/i386_linux2-glibc
-  PUBLIC_S_TARGET = /p/condor/workspaces/release/V6_static_releases/i386_linux2-glibc
+PUBLIC_TARGET_PATH = /p/condor/workspaces/release
+#if defined( PublicTargetName )
+  PUBLIC_TARGET_NAME = PublicTargetName
+  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V6_releases/$(PUBLIC_TARGET_NAME)
+  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V6_static_releases/$(PUBLIC_TARGET_NAME)
 #else 
-  PUBLIC_D_TARGET = /p/condor/workspaces/release/V6_release
-  PUBLIC_S_TARGET = /p/condor/workspaces/release/V6_static_release
+  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V6_release
+  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V6_static_release
 #endif
 
+
+#if WantsStatic
 public_all: public public_static
+#else 
+public_all: public
+#endif
 
 public: strip.tar 
 	rm -f $(PUBLIC_D_TARGET)/release.tar 
