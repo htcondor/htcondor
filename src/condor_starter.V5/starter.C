@@ -536,6 +536,7 @@ dispose_all()
 		send_final_status( proc );
 		proc->delete_files();
 		UProcList.DeleteCurrent();
+		delete proc; // DeleteCurrent() doesn't delete it, so we do
 	}
 
 	return DEFAULT;
@@ -946,7 +947,9 @@ dispose_one()
 
 		// Delete proc from our list
 	proc->delete_files();
+	
 	UProcList.DeleteCurrent();
+	delete proc; // DeleteCurrent() doesn't delete it, so we do
 	return(0);
 }
 
@@ -1097,6 +1100,7 @@ cleanup()
 			proc->kill_forcibly();
 			proc->delete_files();
 			UProcList.DeleteCurrent();
+			delete proc; // DeleteCurrent() doesn't delete it, so we do
 		}
 	}
 	UProcList.Rewind();
@@ -1105,6 +1109,7 @@ cleanup()
 			proc->kill_forcibly();
 			proc->delete_files();
 			UProcList.DeleteCurrent();
+			delete proc; // DeleteCurrent() doesn't delete it, so we do
 		}
 	}
 	return(0);
