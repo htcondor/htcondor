@@ -241,8 +241,6 @@ int CurrentSubmitInfo = -1;
 // explicit template instantiations
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString,MyString>;
-template class HashTable<MyString, int>;
-template class HashBucket<MyString,int>;
 template class ExtArray<SubmitRec>;
 
 void TestFilePermissions( char *scheddAddr = NULL )
