@@ -1,3 +1,8 @@
+
+05/12/04 V6_6_5_NMI
+   This is the tag for NMI_R5 condor. It is identical to Condor 6.6.5, 
+   except it knows how to build the gahp server properly on AIX 5.1
+
 05/04/04 V6_6_5_WINDOWS
    The is the 6.6.5 release tag for windoze.  The version string was:
    "$CondorVersion: 6.6.5 May  4 2004 $"
