@@ -8,13 +8,17 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
  
+8/17/04 V6_7-post-merge-V6_7_0-doc-merge-4
+    The state of the doc directory in V6_7-branch after merging
+    changes from the V6_7_0-branch as tagged V6_7_0-doc-merge-4.
+
 8/17/04 V6_7_0-doc-merge-4
     The state of the doc directory in V6_7_0-branch before a merge
     into the V6_7-branch.  This merge will bring changes made in the
     V6_6-branch (from tag V6_6-doc-merge-7 to V6_6-doc-merge-8), along
     with any 6.7.0-specific changes into the V6_7-branch.
 
-8/17/04  V6_7-pre-merge-V6_7_0-doc-merge-4
+8/17/04 V6_7-pre-merge-V6_7_0-doc-merge-4
     The state of the doc directory in V6_7-branch before merging
     changes from the V6_7_0-branch as tagged V6_7_0-doc-merge-4.
 
