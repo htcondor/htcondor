@@ -75,7 +75,6 @@
 
 #if defined(IRIX53)
 #	include <dlfcn.h>	/* for dlopen and dlsym */
-#	include <sys/mman.h>	/* for mmap */
 struct statfs;
 struct exportfsdata;
 #endif
@@ -97,6 +96,8 @@ struct stat;
 #endif
 
 #include "condor_fix_sys_resource.h"
+
+#include "condor_mmap.h"
 
 #if defined(HPUX9)
 #undef _PROTOTYPES
@@ -160,7 +161,7 @@ struct stat;
 #	define kill	__hide_kill
 #endif
 
-#if defined(SUNOS41) || defined(IRIX53) || defined(Solaris)
+#if defined(SUNOS41) || defined(IRIX53) || defined(Solaris) || defined(OSF1)
 #	include <signal.h>
 #endif
 
@@ -202,6 +203,7 @@ struct stat;
 #endif /* GLIBC */
 #	define	TRUE 1
 #	define	FALSE 0
+struct module;
 #endif
 
 #if defined(OSF1) || defined(AIX32)
@@ -252,6 +254,7 @@ struct stat;
 #endif
 
 #include "condor_fix_unistd.h"
+
 #if defined(Solaris)
 #	undef profil
 #	undef mount
