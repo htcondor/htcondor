@@ -67,10 +67,12 @@ struct OwnerData {
   char* Name;
   int JobsRunning;
   int JobsIdle;
+  int JobsHeld;
   int FlockLevel;
   int OldFlockLevel;
   time_t NegotiationTimestamp;
-  OwnerData() { Name=NULL; JobsRunning=JobsIdle=FlockLevel=OldFlockLevel=0; }
+  OwnerData() { Name=NULL;
+                JobsRunning=JobsIdle=JobsHeld=FlockLevel=OldFlockLevel=0; }
 };
 
 struct match_rec
@@ -191,6 +193,8 @@ class Scheduler : public Service
 	int				ReservedSwap;		// for non-condor users
 	int				JobsIdle; 
 	int				JobsRunning;
+	int				JobsHeld;
+	int				JobsRemoved;
 	int				SchedUniverseJobsIdle;
 	int				SchedUniverseJobsRunning;
 	int				BadCluster;

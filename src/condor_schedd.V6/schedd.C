@@ -160,6 +160,8 @@ Scheduler::Scheduler()
 	JobsStarted = 0;
 	JobsIdle = 0;
 	JobsRunning = 0;
+	JobsHeld = 0;
+	JobsRemoved = 0;
 	SchedUniverseJobsIdle = 0;
 	SchedUniverseJobsRunning = 0;
 	ReservedSwap = 0;
@@ -314,6 +316,8 @@ Scheduler::count_jobs()
 	N_Owners = 0;
 	JobsRunning = 0;
 	JobsIdle = 0;
+	JobsHeld = 0;
+	JobsRemoved = 0;
 	SchedUniverseJobsIdle = 0;
 	SchedUniverseJobsRunning = 0;
 
@@ -323,6 +327,7 @@ Scheduler::count_jobs()
 		Owners[i].Name = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
+		Owners[i].JobsHeld = 0;
 		Owners[i].FlockLevel = 0;
 		Owners[i].OldFlockLevel = 0;
 		Owners[i].NegotiationTimestamp = current_time;
@@ -359,6 +364,8 @@ Scheduler::count_jobs()
 
 	dprintf( D_FULLDEBUG, "JobsRunning = %d\n", JobsRunning );
 	dprintf( D_FULLDEBUG, "JobsIdle = %d\n", JobsIdle );
+	dprintf( D_FULLDEBUG, "JobsHeld = %d\n", JobsHeld );
+	dprintf( D_FULLDEBUG, "JobsRemoved = %d\n", JobsRemoved );
 	dprintf( D_FULLDEBUG, "SchedUniverseJobsRunning = %d\n",
 			SchedUniverseJobsRunning );
 	dprintf( D_FULLDEBUG, "SchedUniverseJobsIdle = %d\n",
@@ -395,6 +402,10 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_IDLE_JOBS, JobsIdle);
 	ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
+	ad->Insert (tmp);
+	sprintf(tmp, "%s = %d", ATTR_TOTAL_HELD_JOBS, JobsHeld);
+	ad->Insert (tmp);
+	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
 	ad->Insert (tmp);
 
 		// Tell negotiator to send us the startd ad
@@ -434,6 +445,10 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
+	  ad->InsertOrUpdate(tmp);
+
+	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, Owners[i].JobsHeld);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
@@ -639,36 +654,36 @@ count( ClassAd *job )
 	}
 	
 	if (universe == SCHED_UNIVERSE) {
-		// don't count DELETED or HELD jobs
+		// don't count REMOVED or HELD jobs
 		if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
 			scheduler.SchedUniverseJobsRunning += cur_hosts;
 			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 		}
 	} else {
-		// don't count DELETED or HELD jobs
+		// calculate owner for per submittor information.
+		if (job->LookupString(ATTR_OWNER, buf) < 0) {
+			dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
+					ATTR_OWNER);
+			return 0;
+		}
+		owner = buf;
+		// With NiceUsers, the number of owners is
+		// not the same as the number of submittors.  So, we first
+		// check if this job is being submitted by a NiceUser, and
+		// if so, insert it as a new entry in the "Owner" table
+		if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
+			strcpy(buf2,NiceUserName);
+			strcat(buf2,".");
+			strcat(buf2,owner);
+			owner=buf2;		
+		}
+
+		// insert owner even if REMOVED or HELD for condor_q -{global|sub}
+		int OwnerNum = scheduler.insert_owner( owner );
+
 		if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
 			scheduler.JobsRunning += cur_hosts;
 			scheduler.JobsIdle += (max_hosts - cur_hosts);
-
-			// Per submittor information.
-			if (job->LookupString(ATTR_OWNER, buf) < 0) {
-				dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
-						ATTR_OWNER);
-				return 0;
-			}
-			owner = buf;
-			// With NiceUsers, the number of owners is
-			// not the same as the number of submittors.  So, we first
-			// check if this job is being submitted by a NiceUser, and
-			// if so, insert it as a new entry in the "Owner" table
-			if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-				strcpy(buf2,NiceUserName);
-				strcat(buf2,".");
-				strcat(buf2,owner);
-				owner=buf2;		
-			}
-
-			int OwnerNum = scheduler.insert_owner( owner );
 			scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
 
 			// We are building up totals for our local pool submitter ad,
@@ -681,6 +696,11 @@ count( ClassAd *job )
 			// We set owner pointer to NULL to be safe, so someone doesn't
 			// add new code below which uses owner.
 			owner = NULL;
+		} else if (status == HELD) {
+			scheduler.JobsHeld++;
+			scheduler.Owners[OwnerNum].JobsHeld++;
+		} else if (status == REMOVED) {
+			scheduler.JobsRemoved++;
 		}
 	}
 	return 0;
@@ -1960,7 +1980,7 @@ find_idle_sched_universe_jobs( ClassAd *job )
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
 
-	// don't count DELETED or HELD jobs
+	// don't count REMOVED or HELD jobs
 	if (max_hosts > cur_hosts &&
 		(status == IDLE || status == UNEXPANDED || status == RUNNING)) {
 		dprintf(D_FULLDEBUG,"Found idle scheduler universe job %d.%d\n",id.cluster,id.proc);
