@@ -23,12 +23,5 @@
 
 /* Dummy definition of mySubSystem string to be included in Condor
    libraries where needed. */
-#if defined(__cplusplus)
-extern "C" {
-#endif
 
 char* mySubSystem = "TOOL";
-
-#if defined(__cplusplus)
-}
-#endif
