@@ -21,21 +21,11 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
-#include <stdio.h>
-#include <ctype.h>
-#include <varargs.h>
-#include <sys/types.h>
-#include <time.h>
-#include <values.h>
+#include "condor_common.h"
 #include "except.h"
 #include "debug.h"
 #include "expr.h"
 #include "clib.h"
-
-#include <stdlib.h>
 
 #ifndef TRUE
 #define TRUE 1
@@ -52,6 +42,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 	_FileName = __FILE__; \
 	scan_error
 	
+void evaluation_error(char* fmt, ...);
 
 #define EVALUATION_ERROR  \
 	_LineNo = __LINE__; \
@@ -92,6 +83,8 @@ ELEM	*get_number(), *get_int(), *get_float(), *get_string(), *get_name(),
 		*float_arithmetic(), *unstack_elem(), *create_elem();
 EXPR	*create_expr(), *scan(), *search_expr();
 static do_op( ELEM *elem, STACK *stack );
+void	free_elem( ELEM* );
+
 
 EXPR *
 scan( line )
@@ -1641,21 +1634,17 @@ char	*foo;
 { printf( foo ); }
 #else LINT
 /* VARARGS */
-evaluation_error(va_alist)
-va_dcl
+void
+evaluation_error(char* fmt, ...)
 {
 	va_list pvar;
-	char *fmt;
 	char	buf[ BUFSIZ ];
 
 	if( Silent ) {
 		return;
 	}
 
-	va_start(pvar);
-
-	fmt = va_arg(pvar, char *);
-
+	va_start(pvar, fmt);
 
 #if vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 	{
