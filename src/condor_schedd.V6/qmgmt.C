@@ -1142,11 +1142,12 @@ all_job_prio(int cluster, int proc)
 	return 0;
 }
 
+extern void mark_job_stopped(PROC_ID* job_id);
+
 int mark_idle(ClassAd *job)
 {
-    char    ckpt_name[MAXPATHLEN];
     int     status, cluster, proc;
-    char    owner[_POSIX_PATH_MAX];
+	PROC_ID	job_id;
 
     job->LookupInteger(ATTR_JOB_STATUS, status);
 
@@ -1156,19 +1157,11 @@ int mark_idle(ClassAd *job)
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job->LookupInteger(ATTR_PROC_ID, proc);
+	job_id.cluster = cluster;
+	job_id.proc = proc;
 
-    strcpy(ckpt_name, gen_ckpt_name(Spool, cluster, proc,0) );
+	mark_job_stopped(&job_id);
 
-    job->LookupString(ATTR_OWNER, owner);
-
-    if (FileExists(ckpt_name, owner)) {
-        status = IDLE;
-    } else {
-        status = UNEXPANDED;
-    }
-
-    SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
-    SetAttributeInt(cluster, proc, ATTR_CURRENT_HOSTS, 0);
 	return 0;
 }
 

@@ -100,6 +100,7 @@ extern int		grow_prio_recs(int);
 
 void	check_zombie(int, PROC_ID*);
 void	send_vacate(match_rec*, int);
+void	mark_job_stopped(PROC_ID*);
 shadow_rec*     find_shadow_rec(PROC_ID*);
 shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 
@@ -1549,12 +1550,13 @@ Scheduler::mark_job_running(PROC_ID* job_id)
 ** Mark a job as stopped, (Idle or Unexpanded).
 */
 void
-Scheduler::mark_job_stopped(PROC_ID* job_id)
+mark_job_stopped(PROC_ID* job_id)
 {
 	int		status;
 	int		orig_max;
 	int		had_orig;
 	char	ckpt_name[MAXPATHLEN];
+	char	owner[_POSIX_PATH_MAX];
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
@@ -1564,11 +1566,15 @@ Scheduler::mark_job_stopped(PROC_ID* job_id)
 		EXCEPT( "Trying to stop job %d.%d, but not marked RUNNING!",
 			job_id->cluster, job_id->proc );
 	}
+
 	strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
-	if( access(ckpt_name,F_OK) != 0 ) {
-		status = UNEXPANDED;
-	} else {
+	if ( GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER, owner) < 0 )
+		owner[0] = '\0';
+
+    if (FileExists(ckpt_name, owner)) {
 		status = IDLE;
+	} else {
+		status = UNEXPANDED;
 	}
 
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
@@ -1690,10 +1696,16 @@ Scheduler::preempt(int n)
 void
 send_vacate(match_rec* match,int cmd)
 {
-	ReliSock	sock(match->peer, START_PORT);
+	ReliSock	sock;
 
 	dprintf( D_ALWAYS, "Called send_vacate( %s, %d )\n", match->peer, cmd );
-        /* Connect to the specified host */
+    
+	/* Connect to the specified host with 20 second timeout */
+	sock.timeout(20);
+	if (!sock.connect(match->peer,START_PORT)) {
+		dprintf(D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
+		return;
+	}
 	
 	sock.encode();
 
@@ -1702,7 +1714,7 @@ send_vacate(match_rec* match,int cmd)
 		return;
 	}
 
-    if( !sock.put(match->id) ) {
+    if( !sock.code(match->id) ) {
         dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
 		return;
 	}

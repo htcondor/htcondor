@@ -186,7 +186,6 @@ class Scheduler : public Service
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
 	void			mark_job_running(PROC_ID*);
-	void			mark_job_stopped(PROC_ID*);
 	int				is_alive(int);
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
