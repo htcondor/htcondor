@@ -67,8 +67,8 @@ char* mySubSystem = "SHADOW";
 
 extern "C" {
 	void reaper();
-	void rm();
-	void condor_rm();
+	void handle_sigusr1();
+	void handle_sigquit();
 	void unblock_signal(int sig);
 	void block_signal(int sig);
 	void display_errors( FILE *fp );
@@ -191,7 +191,6 @@ int		InitialJobStatus = -1;
 int JobStatus;
 struct rusage JobRusage;
 struct rusage AccumRusage;
-int ChildPid;
 int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
@@ -261,6 +260,17 @@ main(int argc, char *argv[], char *envp[])
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
+	
+		/*
+		  We should always ignore SIGTERM.  If the machine is shutting
+		  down, the SIGTERM should be sent to the schedd, which in
+		  turn will gracefully shutdown the shadows in an orderly,
+		  throttled progression.  If the schedd isn't around to do
+		  that, we've got much bigger problems, and should be getting
+		  sent the SIGQUIT for a fast shutdown soon enough.  
+		  -Derek Wright <wright@cs.wisc.edu> 5/12/00
+		*/
+	install_sig_handler(SIGTERM, (SIG_HANDLER)SIG_IGN );
 #endif
 
 	if( argc > 1 ) {
@@ -495,9 +505,13 @@ main(int argc, char *argv[], char *envp[])
 	sigset_t fullset;
 	sigfillset(&fullset);
 	install_sig_handler_with_mask( SIGCHLD,&fullset, reaper );
-	install_sig_handler_with_mask( SIGTERM,&fullset, rm );
-	// SIGUSR1 is sent by the schedd when a job is removed with condor_rm
-	install_sig_handler_with_mask( SIGUSR1,&fullset, condor_rm );
+
+		// SIGUSR1 is sent by the schedd when a job is removed with
+		// condor_rm.
+	install_sig_handler_with_mask( SIGUSR1, &fullset, handle_sigusr1 );
+
+		// SIGQUIT is sent for a fast shutdow.
+	install_sig_handler_with_mask( SIGQUIT, &fullset, handle_sigquit );
 
 	/* Here we block the async signals.  We do this mainly because on HPUX,
 	 * XDR wigs out if it is interrupted by a signal.  We do it on all
@@ -1023,20 +1037,22 @@ open_std_files( V2_PROC *proc )
 
 
 /*
-  Connect to the startd on the remote host and tell it we are done
-  running jobs.
+  Connect to the startd on the remote host and forcibly vacate our
+  claim. 
 */
 void
 send_quit( char *host, char *capability )
 {
-	if (send_cmd_to_startd(host, capability, KILL_FRGN_JOB) < 0) {
+	if( send_cmd_to_startd( host, capability, 
+							DEACTIVATE_CLAIM_FORCIBLY ) < 0 ) {
 		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
-						host);
+				 host );
 		DoCleanup();
 		dprintf( D_ALWAYS, "********** Shadow Parent Exiting **********\n" );
 		exit( JOB_NOT_STARTED );
 	}
 }
+
 
 void
 regular_setup( char *host, char *cluster, char *proc, char *capability )
@@ -1148,27 +1164,41 @@ display_uids()
 }
 
 
-/* 
-**                     changes for condor flocking 
-**						Dhrubajyoti Borthakur
-**							29 July, 1994
-**	When condor_rm is executed by the user, it send a command KILL_FRGN_JOB
-**	to the schedd. The schedd informs the corresponding shadow. The shadow
-**	has to send KILL_FRGN_JOB to the startd on the executing machine.
+/*
+  When we get a SIGUSR1 (which the schedd sends us on condor_rm), all
+  we have to do is send a fast vacate to the job (by sending a
+  DEACTIVATE_CLAIM_FORCIBLY command to the startd).  Then, we just
+  have to go back to service RSCs while the job cleans itself
+  up.  We don't need or want to exit with any special status, since
+  the schedd already knows this job should be removed.
+  Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-
 void
-condor_rm()
+handle_sigusr1( void )
 {
-	int retval;
-
-	dprintf(D_ALWAYS, "Shadow received rm command from Schedd \n");
-
-	retval = send_cmd_to_startd(ExecutingHost, GlobalCap, KILL_FRGN_JOB);
-
-	if (retval < 0) 
-		return;
+	dprintf( D_ALWAYS, 
+			 "Shadow received SIGUSR1 (rm command from schedd)\n" );
+	send_quit( ExecutingHost, GlobalCap );
 }
+
+
+/*
+  If we get a SIGQUIT (from shutdown, a master that's killing our
+  process group, etc), we want to behave much like we do when we get
+  an rm.  We'll even exit with the same status... the difference is
+  that the schedd doesn't have us marked as "pending removal", so when
+  we eventually exit with JOB_NOT_CKPTED, we'll stay in the queue.
+  We still want to send the DEACTIVATE_CLAIM_FORCIBLY command to the
+  startd, to force the job to quickly vacate.
+  Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
+*/
+void
+handle_sigquit( void )
+{
+	dprintf( D_ALWAYS, "Shadow recieved SIGQUIT (fast shutdown)\n" ); 
+	send_quit( ExecutingHost, GlobalCap );
+}
+
 
 int
 count_open_fds( const char *file, int line )
