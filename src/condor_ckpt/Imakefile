@@ -96,7 +96,9 @@ uppercase_target($(SIMPLE_LIBC),signal.o,SIGNAL.o,signal,SIGNAL)
 
 uppercase_target($(SIMPLE_LIBC),sigvec.o,SIGVEC.o,sigvec,SIGVEC)
 uppercase_target($(SIMPLE_LIBC),_sigvec.o,_SIGVEC.o,_sigvec,_SIGVEC)
+#if !IS_ALPHA_OSF1
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
+#endif
 uppercase_target($(SIMPLE_LIBC),sigprocmask.o,SIGPROCMASK.o,sigprocmask,SIGPROCMASK)
 uppercase_target($(SIMPLE_LIBC),_sigprocmsk.o,_SIGPROCMSK.o,_sigprocmask,_SIGPROCMASK)
 
@@ -106,6 +108,11 @@ SIGSUSPEND.o :  $(SIMPLE_LIBC)  ToUpper
 	ToUpper $(TMP_DIR)/sigsuspend.o   $(TMP_DIR)/SIGSUSPEND.o   sigsuspend   SIGSUSPEND
 	ToUpper $(TMP_DIR)/SIGSUSPEND.o SIGSUSPEND.o _SIGSUSPEND _sigsuspend
 	rm -f $(TMP_DIR)/sigsuspend.o $(TMP_DIR)/SIGSUSPEND.o
+SIGACTION.o : $(SIMPLE_LIBC) ToUpper
+	ar x $(SIMPLE_LIBC) sigaction.o; mv sigaction.o $(TMP_DIR)
+	ToUpper $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o sigaction SIGACTION
+	ToUpper $(TMP_DIR)/SIGACTION.o SIGACTION.o _sigtramp _SIGTRAMP
+	rm -f $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o
 #else
 uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 #endif
