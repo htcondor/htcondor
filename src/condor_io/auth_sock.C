@@ -1,0 +1,394 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+ 
+
+
+
+#define _POSIX_SOURCE
+
+#include "condor_common.h"
+#include "condor_constants.h"
+#include "condor_io.h"
+#include "condor_debug.h"
+#include "internet.h"
+
+#include "globus_gss_assist.h"
+#include "auth_sock.h"
+
+/*******************************************************************/
+gss_cred_id_t AuthSock::credential_handle = GSS_C_NO_CREDENTIAL;
+
+/*******************************************************************/
+
+/* CHANGE this to do SOME kind of user/server name lookup */
+int 
+AuthSock::lookup_user( char *client_name ) { 
+	/* return -1 for error */
+	return 0;
+}
+
+/*******************************************************************/
+//cannot make this an AuthSock method, since gss_assist method expects
+//three parms, methods have hidden "this" parm first. Couldn't figure out
+//a way around this, so made AuthSock have a member of type AuthComms
+//to pass in to this method to manage buffer space.  //mju
+int 
+authsock_get(void *arg, void **bufp, size_t *sizep)
+{
+	/* globus code which calls this function expects 0/-1 return vals */
+
+	//authsock must "hold onto" GSS state, pass in struct with comms stuff
+	AuthComms *comms = (AuthComms *) arg;
+	AuthSock *sock = comms->sock;
+	int stat;
+
+	sock->decode();
+
+	//read size of data to read
+	stat = sock->code( *((int *)sizep) );
+	//ensure that buffer is large enough
+	if ( stat ) {
+		//[RE]MALLOCS freed ONCE at the end of loop in 
+		// globus_gss_assist_accept_sec_context(), which calls this f(x)
+		if ( !comms->buffer ) {
+			comms->size = *((int *)sizep);
+			comms->buffer = malloc( comms->size );
+		}
+		else if ( *((int *)sizep) > comms->size ) { //need realloc for more room
+			comms->size = *((int *)sizep);
+			comms->buffer = realloc( comms->buffer, comms->size );
+		}
+		*bufp = comms->buffer;
+	}
+
+	//fail if cannot malloc enough space
+	if ( !(*bufp) )
+		stat = FALSE;
+
+	//if successfully read size and malloced, read data
+	if ( stat )
+		sock->code_bytes( *bufp, *((int *)sizep) );
+
+	//check to ensure comms were successful
+	if ( stat > 0 )
+		stat = sock->end_of_message();
+	if ( !stat ) {
+		dprintf( D_ALWAYS, "authsock_get (read from socket) failure\n" );
+		return -1;
+	}
+	return 0;
+}
+
+/*******************************************************************/
+int 
+authsock_put(void *arg,  void *buf, size_t size)
+{
+	//param is just a AS*
+	AuthSock *sock = (AuthSock *) arg;
+	int stat;
+
+	sock->encode();
+
+	//send size of data to send
+	stat = sock->code( (int &)size );
+	//if successful, send the data
+	if ( stat )
+		stat = sock->code_bytes( buf, ((int) size ));
+
+	//ensure data send was successful
+	if ( stat > 0 )
+		stat = sock->end_of_message();
+	if ( !stat ) {
+		dprintf( D_ALWAYS, "authsock_put (write to socket) failure\n" );
+		return -1;
+	}
+	return 0;
+}
+
+/*******************************************************************/
+int 
+AuthSock::authenticate_user()
+{
+	OM_uint32 major_status;
+	OM_uint32 minor_status;
+
+	if ( credential_handle != GSS_C_NO_CREDENTIAL ) { // user already auth'd 
+		dprintf( D_FULLDEBUG, "user is authenticated\n" );
+		return TRUE;
+	}
+
+	// ensure all env vars are in place, acquire cred will fail otherwise 
+	if ( !( getenv( "X509_USER_CERT" ) && getenv( "X509_USER_KEY" ) 
+			&& getenv( "X509_CERT_DIR" ) ) ) 
+	{
+		//don't log error, since this can be called before env vars are set!
+		return FALSE;
+	}
+
+	//use gss-assist to verify user (not connection)
+	//this method will prompt for password if private key is encrypted!
+	major_status = globus_gss_assist_acquire_cred(&minor_status,
+		GSS_C_BOTH, &credential_handle);
+
+	if (major_status != GSS_S_COMPLETE)
+	{
+		dprintf( D_ALWAYS, "gss-api failure initializing user credentials, "
+				"stats: 0x%x\n", major_status );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/*******************************************************************/
+int 
+AuthSock::auth_connection_client()
+{
+	OM_uint32						  major_status = 0;
+	OM_uint32						  minor_status = 0;
+	int								  token_status = 0;
+	OM_uint32						  ret_flags = 0;
+	gss_ctx_id_t					  context_handle = GSS_C_NO_CONTEXT;
+
+	if ( !authenticate_user() ) {
+		dprintf( D_ALWAYS, 
+			"failure authenticating client from auth_connection_client\n" );
+		return FALSE;
+	}
+	 
+	gateKeeper = getenv( "CONDOR_GATEKEEPER" );
+
+	if ( !gateKeeper ) {
+		dprintf( D_ALWAYS, "env var CONDOR_GATEKEEPER not set" );
+		return FALSE;
+	}
+
+	authComms.sock = this;
+	authComms.buffer = NULL;
+	authComms.size = 0;
+
+	major_status = globus_gss_assist_init_sec_context(&minor_status,
+		  credential_handle, &context_handle,
+		  gateKeeper,
+		  GSS_C_DELEG_FLAG|GSS_C_MUTUAL_FLAG,
+		  &ret_flags, &token_status,
+		  authsock_get, (void *) &authComms,
+		  authsock_put, (void *) this 
+	);
+
+
+	if (major_status != GSS_S_COMPLETE)
+	{
+		dprintf( D_ALWAYS, "failed auth connection:init security context:0x%x\n",
+								major_status );
+		return FALSE;
+	}
+
+	/* 
+	 * once connection is authenticated, don't need sec_context any more
+	 * ???might need sec_context for PROXIES???
+	 */
+	gss_delete_sec_context( &minor_status, &context_handle, GSS_C_NO_BUFFER );
+
+
+	conn_auth_state = auth_cert;
+	return TRUE;
+}
+
+/*******************************************************************/
+int 
+AuthSock::auth_connection_server( AuthSock &authsock)
+{
+	char *client_name = NULL;
+	int rc;
+	OM_uint32 major_status = 0;
+	OM_uint32 minor_status = 0;
+	int		 token_status = 0;
+	OM_uint32 ret_flags = 0;
+	gss_ctx_id_t context_handle = GSS_C_NO_CONTEXT;
+	long cuid;
+
+	if ( !authenticate_user() ) {
+		dprintf( D_ALWAYS, 
+			"failure authenticating server from auth_connection_server\n" );
+		return FALSE;
+	}
+	 
+	authComms.sock = &authsock;
+	authComms.buffer = NULL;
+	authComms.size = 0;
+
+	major_status = globus_gss_assist_accept_sec_context(&minor_status,
+				 &context_handle, credential_handle,
+				 &client_name,
+				 &ret_flags, NULL, /* don't need user_to_user */
+				 &token_status,
+				 authsock_get, (void *) &authComms,
+				 authsock_put, (void *) &authsock
+	);
+
+
+	if ( (major_status != GSS_S_COMPLETE) ||
+			( ( cuid = lookup_user( client_name ) ) < 0 ) ) 
+	{
+		if (major_status != GSS_S_COMPLETE) {
+			dprintf(D_ALWAYS, "server: GSS authentication failure, status:0x%x\n",
+					major_status );
+		}
+		else
+			dprintf( D_ALWAYS, "server: user lookup failure.\n:" );
+		if ( client_name )
+			free( client_name );
+		return FALSE;
+	}
+
+	/* 
+	 * once connection is authenticated, don't need sec_context any more
+	 * ???might need sec_context for PROXIES???
+	 */
+	gss_delete_sec_context( &minor_status, &context_handle, GSS_C_NO_BUFFER );
+
+	if ( client_name )
+		free( client_name );
+
+	/*
+	 * could return cuid if calling function needed cuid
+	 */
+	authsock.Set_conn_auth_state( auth_cert );
+	return TRUE;
+}
+
+/*******************************************************************/
+AuthSock::AuthSock():ReliSock() {
+	conn_type = auth_none;
+//	authenticate_user();
+}
+
+/*******************************************************************/
+AuthSock::AuthSock(					/* listen on port		*/
+	int		port
+	)
+	: ReliSock(port)
+{
+	conn_type = auth_server;
+//	authenticate_user();
+}
+
+/*******************************************************************/
+AuthSock::AuthSock(					/* listen on serv		*/
+	char	*serv
+	)
+	: ReliSock(serv)
+{
+	conn_type = auth_server;
+//	authenticate_user();
+}
+
+/*******************************************************************/
+AuthSock::AuthSock(
+	char	*host,
+	int		port,
+	int		timeout_val
+	)
+	: ReliSock(host,port,timeout_val) /* does connect */
+{
+	conn_type = auth_client;
+//	authenticate_user();
+}
+
+/*******************************************************************/
+AuthSock::AuthSock(
+	char	*host,
+	char	*serv,
+	int		timeout_val
+	)
+	: ReliSock(host,serv,timeout_val) /* does connect */
+{
+	conn_type = auth_client;
+//	authenticate_user();
+}
+
+/*******************************************************************/
+AuthSock::~AuthSock()
+{
+	close();
+}
+
+/*******************************************************************/
+int
+AuthSock::accept(
+	AuthSock &c
+	)
+{
+	c.Set_conn_type( auth_server );
+	return ReliSock::accept( (ReliSock&) c );
+}
+
+/*******************************************************************/
+AuthSock *AuthSock::accept()
+{
+	AuthSock *c_rs;
+	int c_sock;
+
+	conn_type = auth_server;
+
+	if (!(c_rs = new AuthSock())) return (AuthSock *)0;
+
+	if ((c_sock = accept(*c_rs)) < 0) {
+		delete c_rs;
+		return (AuthSock *)0;
+	}
+
+	return c_rs;
+}
+
+/*******************************************************************/
+int AuthSock::connect(
+	char	*host,
+	int		port
+	)
+{
+	conn_type = auth_client;
+	return ReliSock::connect(host, port);
+}
+
+/*******************************************************************/
+int AuthSock::authenticate() {
+	//don't just return TRUE if isAuthenticated() == TRUE, since 
+	//we should BALANCE calls of authenticate() on client/server side
+	//just like end_of_message() calls must balance!
+
+	if ( !authenticate_user() ) {
+		dprintf( D_ALWAYS, "authenticate: user creds not established\n" );
+		return FALSE;
+	}
+
+	switch ( conn_type ) {
+		case auth_server : return ( auth_connection_server( *this ) );
+		case auth_client : return ( auth_connection_client() );
+		default : 
+			dprintf( D_ALWAYS,"authenticate:needed to have connected/accepted\n" );
+			return FALSE;
+	}
+}
