@@ -16,6 +16,8 @@ PROGRAMS =  \
 	condor_reschedule condor_status condor_summary condor_vacate watch_status \
 	block_jobs condor_customize condor_jobqueue
 
+STATUS_OBJS = status.o status_aggregates.o status_include.o print_status.o
+
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
@@ -44,7 +46,7 @@ release_target(condor_reconfig_schedd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 program_target(condor_reschedule,reschedule.o,$(LIB))
 release_target(condor_reschedule,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
-c_plus_target(condor_status,status.o status_aggregates.o status_include.o,$(LIB))
+c_plus_target(condor_status, $(STATUS_OBJS),$(LIB))
 release_target(condor_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 program_target(condor_vacate,vacate.o,$(LIB))
