@@ -632,7 +632,7 @@ open_write_stream( const char * ckpt_file, size_t n_bytes )
 	return fd;
 }
 
-char	Hello[] = "Hello World\n";
+static char	Hello[] = "Hello World\n";
 
 int
 try_via_afs( remote, mode, perm )
