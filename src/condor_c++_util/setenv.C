@@ -88,6 +88,8 @@ int SetEnv( char *env_var )
 	char *value = new char[valuelen+1];
 	strncpy ( name, env_var, namelen );
 	strncpy ( value, equalpos+1, valuelen );
+	name[namelen] = '\0';
+	value[valuelen] = '\0';
 
 	int retval = SetEnv ( name, value );
 
