@@ -105,35 +105,6 @@ Match::vacate()
 }
 
 
-int
-Match::send_accountant( int cmd )
-{
-	if( !accountant_host ) {
-		return FALSE;
-	}
-	ReliSock sock;
-	sock.timeout( 30 );
-	if( ! sock.connect( accountant_host, ACCOUNTANT_PORT ) ) {
-		dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
-		return FALSE;
-	}
-	if( !sock.put( cmd ) ) {
-		dprintf(D_ALWAYS, "Can't send command (%d) to accountant\n", cmd ); 
-		return FALSE;
-	}
-	if( !sock.put( m_cap->capab() ) ) {
-		dprintf(D_ALWAYS, "Can't send capability to accountant\n");
-		return FALSE;
-	}
-	if( !sock.eom() ) {
-		dprintf(D_ALWAYS, "Can't send EOM to accountant\n");
-		return FALSE;
-	}
-	sock.close();
-	return TRUE;
-}
-
-
 void
 Match::publish( ClassAd* ad, amask_t how_much )
 {
