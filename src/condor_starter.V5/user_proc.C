@@ -574,7 +574,6 @@ UserProc::execute()
 			// space to start the new process.  We don't try to log
 			// anything, since we have the UID/GID of the job's owner
 			// and cannot write into the log files...
-		dprintf( D_ALWAYS, "Exec failed - errno = %d\n", errno );
 		exit( EXECFAILED );
 	}
 
