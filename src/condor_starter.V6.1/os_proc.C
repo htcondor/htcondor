@@ -283,6 +283,9 @@ OsProc::StartJob()
 		// Misc + Exec
 		// // // // // // 
 
+		// Notify the shadow we're about to exec.
+	REMOTE_CONDOR_begin_execution();
+
 	// handle JOB_RENICE_INCREMENT
 	char* ptmp = param( "JOB_RENICE_INCREMENT" );
 	if ( ptmp ) {
