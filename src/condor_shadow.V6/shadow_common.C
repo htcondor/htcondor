@@ -414,7 +414,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 {
 	int status = *jobstatus;
 	struct stat st_buf;
-	char my_coredir[4096];
+	char my_coredir[_POSIX_PATH_MAX];
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
 
 	switch( WTERMSIG(status) ) {
