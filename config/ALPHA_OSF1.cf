@@ -1,7 +1,7 @@
 #define OperatingSystem OSF1
 #define Architecture ALPHA
 
-#define Tilde /usr/home/condor
+#define Tilde /**/
 #define RpcLib /**/
 #define MldLib /usr/lib/libmld.a
 #define KernLib /**/
@@ -64,9 +64,9 @@
 
 #define USE_GCC					YES
 #if USE_GCC
-#	define CCompiler /usr/psup/gcc-2.6.0/bin/gcc 
-#	define CPlusCompiler /usr/psup/gcc-2.6.0/bin/g++
-#	define Demangler /usr/psup/gcc-2.6.0/bin/c++filt
+#	define CCompiler gcc
+#	define CPlusCompiler g++
+#	define Demangler c++filt
 #else
 #	define CCompiler cc
 #	define CPlusCompiler cxx
