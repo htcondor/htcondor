@@ -71,6 +71,7 @@ public:
     bool  check_match;
     bool  check_operator;
     bool  check_collection;
+    bool  check_utils;
 	void  ParseCommandLine(int argc, char **argv);
 };
 
@@ -101,6 +102,7 @@ static void test_classad(const Parameters &parameters, Results &results);
 static void test_exprlist(const Parameters &parameters, Results &results);
 static void test_value(const Parameters &parameters, Results &results);
 static void test_collection(const Parameters &parameters, Results &results);
+static void test_utils(const Parameters &parameters, Results &results);
 static bool check_in_view(ClassAdCollection *collection, string view_name, string classad_name);
 static void print_version(void);
 
@@ -131,6 +133,7 @@ void Parameters::ParseCommandLine(
     check_match         = false;
     check_operator      = false;
     check_collection    = false;
+    check_utils         = false;
 
 	// Then we parse to see what the user wants. 
 	for (int arg_index = 1; arg_index < argc; arg_index++) {
@@ -172,6 +175,9 @@ void Parameters::ParseCommandLine(
 		} else if (!strcasecmp(argv[arg_index], "-collection")){
             check_collection    = true;
             selected_test       = true;
+		} else if (!strcasecmp(argv[arg_index], "-utils")){
+            check_utils         = true;
+            selected_test       = true;
 		} else {
             cout << "Unknown argument: " << argv[arg_index] << endl;
             help = true;
@@ -196,6 +202,7 @@ void Parameters::ParseCommandLine(
         cout << "    -match:      test the MatchClassAd class.\n";
         cout << "    -operator:   test the Operator class.\n";
         cout << "    -collection: test the Collection class.\n";
+        cout << "    -utils:      test little utilities.\n";
         exit(1);
     }
     if (!selected_test) {
@@ -284,6 +291,9 @@ int main(
     }
     if (parameters.check_all || parameters.check_collection) {
         test_collection(parameters, results);
+    }
+    if (parameters.check_all || parameters.check_utils) {
+        test_utils(parameters, results);
     }
 
     /* ----- Report ----- */
@@ -659,7 +669,7 @@ static void test_collection(const Parameters &parameters, Results &results)
     }
     
     // We delete the log file so we start with a fresh slate.
-    // Later on we will make a different colleciton from the log file
+    // Later on we will make a different collection from the log file
     // that we create, so we can test that it does what we want.
     unlink(collection_log_file_name);
     success = collection->InitializeFromLog(collection_log_file_name);
@@ -675,11 +685,11 @@ static void test_collection(const Parameters &parameters, Results &results)
 
     /* ----- Make sure that they are in the collection ----- */
     retrieved = collection->GetClassAd("machine1");
-    TEST("machine1 in the colleciton", retrieved == machine1);
+    TEST("machine1 in the collection", retrieved == machine1);
     retrieved = collection->GetClassAd("machine2");
-    TEST("machine1 in the colleciton", retrieved == machine2);
+    TEST("machine1 in the collection", retrieved == machine2);
     retrieved = collection->GetClassAd("machine3");
-    TEST("machine1 in the colleciton", retrieved == machine3);
+    TEST("machine1 in the collection", retrieved == machine3);
 
     /* ----- Make a couple of subviews ----- */
     success = collection->CreateSubView("Linux-View", "root",
@@ -749,6 +759,71 @@ static bool check_in_view(
         }
     }
     return in_view;
+}
+
+/*********************************************************************
+ *
+ * Function: test_utils
+ * Purpose:  Test utils
+ *
+ *********************************************************************/
+static void test_utils(const Parameters &parameters, Results &results)
+{
+    cout << "Testing little utilities...\n";
+
+    TEST("1800 is not a leap year", !is_leap_year(1800));
+    TEST("1900 is not a leap year", !is_leap_year(1900));
+    TEST("2000 is a leap year", is_leap_year(2000));
+    TEST("2001 is not a leap year", !is_leap_year(2001));
+    TEST("2002 is not a leap year", !is_leap_year(2002));
+    TEST("2003 is not a leap year", !is_leap_year(2003));
+    TEST("2004 is a leap year", is_leap_year(2004));
+
+    TEST("70, 9, 24 -> 25469",      fixed_from_gregorian(70, 9, 24) == 25469);
+    TEST("135, 10, 2 -> 49217",     fixed_from_gregorian(135, 10, 2) == 49217);
+    TEST("470, 1, 8 -> 171307",     fixed_from_gregorian(470, 1, 8) == 171307);
+    TEST("576, 5, 20 -> 210155",    fixed_from_gregorian(576, 5, 20) == 210155);
+    TEST("694,  11, 10 -> 253427",  fixed_from_gregorian(694,  11, 10) == 253427);
+    TEST("1013,  4, 25 -> 369740",  fixed_from_gregorian(1013,  4, 25) == 369740);
+    TEST("1096,  5, 24 -> 400085",  fixed_from_gregorian(1096,  5, 24) == 400085);
+    TEST("1190,  3, 23 -> 434355",  fixed_from_gregorian(1190,  3, 23) == 434355);
+    TEST("1240,  3, 10 -> 452605",  fixed_from_gregorian(1240,  3, 10) == 452605);
+    TEST("1288,  4, 2 -> 470160",   fixed_from_gregorian(1288,  4, 2) == 470160);
+    TEST("1298,  4, 27 -> 473837",  fixed_from_gregorian(1298,  4, 27) == 473837);
+    TEST("1391,  6, 12 -> 507850",  fixed_from_gregorian(1391,  6, 12) == 507850);
+    TEST("1436,  2, 3 -> 524156",   fixed_from_gregorian(1436,  2, 3) == 524156);
+    TEST("1492,  4, 9 -> 544676",   fixed_from_gregorian(1492,  4, 9) == 544676);
+    TEST("1553,  9, 19 -> 567118",  fixed_from_gregorian(1553,  9, 19) == 567118);
+    TEST("1560,  3, 5 -> 569477",   fixed_from_gregorian(1560,  3, 5) == 569477);
+    TEST("1648,  6, 10 -> 601716",  fixed_from_gregorian(1648,  6, 10) == 601716);
+    TEST("1680,  6, 30 -> 613424",  fixed_from_gregorian(1680,  6, 30) == 613424);
+    TEST("1716,  7, 24 -> 626596",  fixed_from_gregorian(1716,  7, 24) == 626596);
+    TEST("1768,  6, 19 -> 645554",  fixed_from_gregorian(1768,  6, 19) == 645554);
+    TEST("1819,  8, 2 -> 664224",   fixed_from_gregorian(1819,  8, 2) == 664224);
+    TEST("1839,  3, 27 -> 671401",  fixed_from_gregorian(1839,  3, 27) == 671401);
+    TEST("1903,  4, 19 -> 694799",  fixed_from_gregorian(1903,  4, 19) == 694799);
+    TEST("1929,  8, 25 -> 704424",  fixed_from_gregorian(1929,  8, 25) == 704424);
+    TEST("1941,  9, 29 -> 708842",  fixed_from_gregorian(1941,  9, 29) == 708842);
+    TEST("1943,  4, 19 -> 709409",  fixed_from_gregorian(1943,  4, 19) == 709409);
+    TEST("1943,  10, 7 -> 709580",  fixed_from_gregorian(1943,  10, 7) == 709580);
+    TEST("1992,  3, 17 -> 727274",  fixed_from_gregorian(1992,  3, 17) == 727274);
+    TEST("1996,  2, 25 -> 728714",  fixed_from_gregorian(1996,  2, 25) == 728714);
+    TEST("2038,  11, 10 -> 744313", fixed_from_gregorian(2038,  11, 10) == 744313);
+    TEST("2094,  7, 18 -> 764652",  fixed_from_gregorian(2094,  7, 18) == 764652);
+
+    int weekday;
+    int yearday;
+    day_numbers(2005, 1, 1, weekday, yearday);
+    TEST("Jan 1, 2005->6, 0", weekday==6 && yearday==0);
+    day_numbers(2005, 1, 2, weekday, yearday);
+    TEST("Jan 2, 2005->6, 1", weekday==0 && yearday==1);
+    day_numbers(2005, 12, 30, weekday, yearday);
+    TEST("Dec 30, 2005->5, 363", weekday==5 && yearday==363);
+    day_numbers(2005, 12, 31, weekday, yearday);
+    TEST("Dec 31, 2005->6, 364", weekday==6 && yearday==364);
+    day_numbers(2004, 12, 31, weekday, yearday);
+    TEST("Dec 31, 2005->5, 365", weekday==5 && yearday==365);
+    return;
 }
 
 /*********************************************************************
