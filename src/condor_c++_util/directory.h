@@ -430,6 +430,6 @@ char * create_temp_file();
 	@param username Username to chown to.
 	@param domain Domain of the user to chown to.
 */
-static bool recursive_chown(const char *path, 
- 		const char *username, const char *domain);
+bool recursive_chown( const char *path, 
+					  const char *username, const char *domain );
 #endif
