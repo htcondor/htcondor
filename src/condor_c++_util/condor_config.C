@@ -1036,6 +1036,7 @@ reinsert_specials( char* host )
 {
 	static unsigned int reinsert_pid = 0;
 	static unsigned int reinsert_ppid = 0;
+	static bool warned_no_user = false;
 	char buf[40];
 
 	if( tilde ) {
@@ -1057,10 +1058,18 @@ reinsert_specials( char* host )
 	// we're reading in the config file, the priv state code is not
 	// initialized, so our euid will always be the same as our ruid.
 	char *myusernm = my_username();
-	insert( "username", myusernm, ConfigTab, TABLESIZE );
-	free(myusernm);
-	extra_info->AddInternalParam("username");
-
+	if( myusernm ) {
+		insert( "username", myusernm, ConfigTab, TABLESIZE );
+		free(myusernm);
+		myusernm = NULL;
+		extra_info->AddInternalParam("username");
+	} else {
+		if( ! warned_no_user ) {
+			dprintf( D_ALWAYS, "ERROR: can't find username of current user! "
+					 "BEWARE: $(USERNAME) will be undefined\n" );
+			warned_no_user = true;
+		}
+	}
 
 	// Insert values for "pid" and "ppid".  Use static values since
 	// this is expensive to re-compute on Windows.
