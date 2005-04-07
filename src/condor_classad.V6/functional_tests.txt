@@ -194,14 +194,19 @@ same splitTime($t).minutes, 3
 same splittime($t).seconds, 4.5
 eval tt = splitTime($t)
 
-eval t = absTime("1997-08-30T15:04:05-0600")
+eval t = absTime("1997-08-30T16:04:05-0500")
+eval f = formatTime($t, "%m %d %Y")
+same $f, "08 30 1997"
+eval f = formatTime($t, "%H %M %S")
+same $f, "16 04 05"
 eval f = formatTime($t, "%A %a")
-same $f, "Sunday Sun"
+same $f, "Saturday Sat"
 eval f = formatTime($t, "%B %b")
 same $f, "August Aug"
 eval f = formatTime(splitTime($t), "%H:%M:%S")
-same $f, "15:04:05"
+same $f, "16:04:05"
 eval f = formatTime($t)
+same $f, "Sat Aug 30 16:04:05 1997"
 
 same size({}), 0
 same size({1}), 1
