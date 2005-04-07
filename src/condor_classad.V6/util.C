@@ -318,6 +318,54 @@ void relTimeToString(double rsecs, string &buffer)
     return;
 }
 
+void day_numbers(int year, int month, int day, int &weekday, int &yearday)
+{
+    int fixed =       fixed_from_gregorian(year, month, day);
+    int jan1_fixed =  fixed_from_gregorian(year, 1, 1);
+    weekday = fixed % 7;
+    yearday = fixed - jan1_fixed;
+    return;
+}
+
+int fixed_from_gregorian(int year, int month, int day)
+{
+    int fixed;
+    int month_adjustment;
+
+    if (month <= 2) {
+        month_adjustment = 0;
+    } else if (is_leap_year(year)) {
+        month_adjustment = -1;
+    } else {
+        month_adjustment = -2;
+    }
+    fixed = 365 * (year -1)
+          + ((year - 1) / 4)
+          - ((year - 1) / 100)
+          + ((year - 1) / 400)
+          + ((367 * month - 362) / 12)
+          + month_adjustment
+          + day;
+    return fixed;
+}
+
+bool is_leap_year(int year)
+{
+    int  mod4;
+    int  mod400;
+    bool leap_year;
+
+    mod4   = year % 4;
+    mod400 = year % 400;
+
+    if (mod4 == 0 && mod400 != 100 && mod400 != 200 && mod400 != 300) {
+        leap_year = true;
+    } else {
+        leap_year = false;
+    }
+    return leap_year;
+}
+
 #ifdef WIN32
 int classad_isinf(double x) 
 {

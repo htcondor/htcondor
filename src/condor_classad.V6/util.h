@@ -57,6 +57,10 @@ void getGMTime(time_t *now, struct tm *localtm);
 void absTimeToString(const abstime_t &atime, std::string &buffer);
 void relTimeToString(double rtime, std::string &buffer);
 
+void day_numbers(int year, int month, int day, int &weekday, int &yearday);
+int fixed_from_gregorian(int year, int month, int day);
+bool is_leap_year(int year);
+
 int classad_isinf(double x);
 int classad_isnan(double x);
 
