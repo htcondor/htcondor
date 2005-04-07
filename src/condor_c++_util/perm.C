@@ -480,7 +480,7 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 
 perm::perm() {
 	psid =(PSID) &sidBuffer;
-	sidBufferSize = 100;
+	sidBufferSize = perm_max_sid_length;
 	domainBufferSize = 80;
 	must_freesid = false;
 	/*	These shouldn't be needed...
@@ -502,7 +502,7 @@ perm::~perm() {
 	}
 }
 
-bool perm::init( const char *accountname, char *domain ) 
+bool perm::init( const char *accountname, const char *domain ) 
 {
 	SID_NAME_USE snu;
 	char qualified_account[1024];
@@ -520,7 +520,7 @@ bool perm::init( const char *accountname, char *domain )
 	Account_name = new char[ strlen(accountname) +1 ];
 	strcpy( Account_name, accountname );
 
-	if ( domain )
+	if ( domain  && (strcmp(domain, ".") != 0) )
 	{
 		Domain_name = new char[ strlen(domain) +1 ];
 		strcpy( Domain_name, domain );
@@ -674,302 +674,293 @@ bool perm::volume_has_acls( const char *filename )
 // This is currently set to add GENERIC_ALL (otherwise known
 // in NT-land as Full) permissions.
 
-// This code is based off the book that Todd gave me.
-
-int perm::set_acls( const char *filename )
+bool
+perm::set_acls( const char *filename )
 {
-	BOOL ret;
-	LONG err;
-	SECURITY_DESCRIPTOR *sdData;
-	SECURITY_DESCRIPTOR absSD;
-	PACL pacl;
-	PACL pNewACL;
-	DWORD newACLSize;
-	BOOL byDef;
-	BOOL haveDACL;
-	DWORD sizeRqd;
-	UINT x;
-	ACL_SIZE_INFORMATION aclSize;
-	ACCESS_ALLOWED_ACE *pace,*pace2;
+	PACL newDACL, oldDACL;
+	PSECURITY_DESCRIPTOR pSD;
+	DWORD err;
+	EXPLICIT_ACCESS ea;
+	PEXPLICIT_ACCESS entryList;
+	ULONG entryCount;
+	unsigned int i;
+	
+	pSD = NULL;
+	newDACL = oldDACL = NULL;
+	
 	
 	// If this is not on an NTFS volume, we're done.  In fact, we'll
 	// likely crash if we try all the below ACL junk on a volume which
 	// does not support ACLs. Dooo!
 	if ( !volume_has_acls(filename) ) 
 	{
-		dprintf(D_FULLDEBUG, "perm::set_acls(%s): volume has no ACLS\n",filename);
-		return 1;
+		dprintf(D_FULLDEBUG, "perm::set_acls(%s): volume has no ACLS\n",
+				filename);
+		return false;
 	}
 	
 	// Make sure we have the sid.
 	
 	if ( psid == NULL ) 
 	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): do not have SID for user\n",filename);
-		return -1;
+		dprintf(D_ALWAYS, "perm::set_acls(%s): do not have SID for user\n",
+				filename);
+		return false;
 	}
-	
-	// ----- Get a copy of the SD/DACL -----
-	
-	// find out how much mem is needed
-	// to hold existing SD w/DACL
-	sizeRqd=0;
-	
-	if (GetFileSecurity( filename, DACL_SECURITY_INFORMATION, NULL, 0, &sizeRqd )) 
-	{
-		dprintf(D_ALWAYS,"perm::set_acls() Unable to get SD size.\n");
-		return -1;
+
+	// first get the file's old DACL so we can copy it into the new one.
+
+	err = GetNamedSecurityInfo((char*)filename, SE_FILE_OBJECT,
+			DACL_SECURITY_INFORMATION, NULL, NULL, &oldDACL, NULL, &pSD);
+
+	if ( ERROR_SUCCESS != err ) {
+		// this is intentionally D_FULLDEBUG, since this error often occurs
+		// if the caller doesn't have WRITE_DAC access to the path. The 
+		// remedy in that case is to call set_owner() on the path first.
+		dprintf(D_FULLDEBUG, "perm::set_acls(%s): failed to get security info. "
+				"err=%d\n", filename, err);
+		return false;
 	}
-	
-	err = GetLastError();
-	
-	
-	if ( err != ERROR_INSUFFICIENT_BUFFER ) 
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to get SD size.\n", filename);
-		return -1;
+
+	// now, check to make sure we don't already have an entry in ACL
+	// that matches the one we're about to insert.
+	err = GetExplicitEntriesFromAcl(oldDACL, &entryCount, &entryList); 
+
+	if ( ERROR_SUCCESS != err ) {
+		dprintf(D_ALWAYS, "perm::set_acls(%s): failed to get entries from ACL. "
+				"err=%d\n", filename, err);
+		LocalFree(oldDACL);
+		return false;
 	}
-	
-	// allocate that memory
-	sdData=( SECURITY_DESCRIPTOR * ) malloc( sizeRqd );
-	
-	if ( sdData == NULL ) 
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to allocate memory.\n",filename);
-		return -1;
-	}
-	
-	// actually get the SD info
-	if (!GetFileSecurity( filename, DACL_SECURITY_INFORMATION,sdData, sizeRqd, &sizeRqd )) 
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to get SD info.\n", filename);
-		free(sdData);
-		return -1;
-	}
-	
-	// ----- Create a new absolute SD and DACL -----
-	
-	// initialize absolute SD
-	ret=InitializeSecurityDescriptor(&absSD,SECURITY_DESCRIPTOR_REVISION);
-	if (!ret)
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to init new SD.\n", filename);
-		free(sdData);
-		return -1;
-	}
-	
-	// get the DACL info
-	ret=GetSecurityDescriptorDacl(sdData,&haveDACL, &pacl, &byDef);
-	if (!ret)
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to get DACL info.\n", filename);
-		free(sdData);
-		return -1;
-	}
-	
-	if (!haveDACL)
-	{
-		// compute size of new DACL
-		//
-		// Modified: 11/1/1999 J.Drews
-		// The new code requires TWO ACL's to be added to work correctly
-		//
-		newACLSize= (sizeof(ACCESS_ALLOWED_ACE) + GetLengthSid(psid) - sizeof(DWORD))*2;
-	}
-	else
-	{
-		// get size info about existing DACL
-		ret=GetAclInformation(pacl, &aclSize, sizeof(ACL_SIZE_INFORMATION), AclSizeInformation);
-		
-		// compute size of new DACL
-		//
-		// Modified: 11/1/1999 J.Drews
-		// The new code requires TWO ACL's to be added to work correctly
-		//
-		newACLSize = aclSize.AclBytesInUse + (sizeof(ACCESS_ALLOWED_ACE) +
-			GetLengthSid(psid) - sizeof(DWORD))*2;
-	}
-	
-	// allocate memory
-	//	pNewACL=(PACL) GlobalAlloc(GPTR, newACLSize);
-	pNewACL=(PACL) malloc(newACLSize);
-	if (pNewACL == NULL)
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to allocate memory.\n",filename);
-		free(sdData);
-		return -1;
-	}
-	
-	// initialize the new DACL
-	ret=InitializeAcl(pNewACL, newACLSize, ACL_REVISION);
-	if (!ret)
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to init new DACL.\n",filename);
-		free(pNewACL);
-		free(sdData);
-		return -1;
-	}
-	
-	// ----- Copy existing DACL into new DACL -----
-	
-	// BUG Notice by J.Drews
-	// Not sure what NT will do if the DACL we are going to add already
-	// exists. For condor this shouldn't happen, but it would be a good
-	// thing to check to see if any of the DACLs we are copying are for
-	// the SID we are adding. If so, don't add them. Will leave to the
-	// condor team to fix that if they desire.
-	if (haveDACL)
-	{
-		// copy ACEs from existing DACL
-		// to new DACL
-		for (x=0; x<aclSize.AceCount; x++)
-		{
-			ret=GetAce(pacl, x, (LPVOID *) &pace);
-			if (!ret)
-			{
-				dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to get ACE.\n", filename);
-				free(pNewACL);
-				free(sdData);
-				return -1;
-			}
+
+	for (i=0; i<entryCount; i++) {
+		if (	( entryList[i].grfAccessPermissions == GENERIC_ALL ) &&
+				( entryList[i].grfAccessMode == GRANT_ACCESS ) &&
+				( entryList[i].Trustee.TrusteeForm == TRUSTEE_IS_SID ) &&
+				( EqualSid(entryList[i].Trustee.ptstrName, psid) ) ) {
+
+			// MATCH - the ACE is already in the ACL,
+			// so just return success.
 			
-			ret=AddAce(pNewACL, ACL_REVISION, MAXDWORD, pace, pace->Header.AceSize);
-			if (!ret)
-			{
-				dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to add ACE.\n", filename);
-				free(pNewACL);
-				free(sdData);
-				return -1;
-			}
+			dprintf(D_FULLDEBUG, "set_acls() found a matching ACE already "
+					"in the ACL, so skipping the add\n");
+
+			LocalFree(entryList);
+			LocalFree(oldDACL);
+			return true;
 		}
 	}
 	
-	// ----- Add the new ACE to the new DACL -----
+	// didn't find the ACE in there already, so proceed to add it.
+	LocalFree(entryList);
+
+	// now set up an EXPLICIT_ACCESS structure for the new ACE
 	
-	// add access allowed ACE to new DACL
-	// Removed 11/1/1999 J.Drews, we can't use this as it doesn't set
-	// the flags correctly. Have to build the ACE by hand.
-	// ret=AddAccessAllowedAce(pNewACL, ACL_REVISION, GENERIC_ALL, psid);
-	// if (!ret)
-	// {
-	//	dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to add access allowed ACE.\n", filename);
-	//	free(pNewACL);
-	//	free(sdData);
-	//	return -1;
-	// }
+	ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+	ea.grfAccessPermissions = GENERIC_ALL;
+	ea.grfAccessMode        = GRANT_ACCESS;
+	ea.grfInheritance       = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+	ea.Trustee.pMultipleTrustee = NULL;
+	ea.Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+	ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea.Trustee.TrusteeType = TRUSTEE_IS_USER;
+	ea.Trustee.ptstrName = (char*)psid;
+
+	// create the new ACL with the new ACE
+	err = SetEntriesInAcl(1, &ea, oldDACL, &newDACL);
+
+	if ( ERROR_SUCCESS != err ) {
+		dprintf(D_ALWAYS, "perm::set_acls(%s): failed to add new ACE "
+				"(err=%d)\n", filename, err);
+
+		LocalFree(oldDACL);
+		return false;
+	}
+
+	// Attach new ACL to the file
+
+	// PROTECTED_DACL_SECURITY_INFORMATION causes the function to NOT
+	// inherit its parent's ACL. I believe this is what we want.
+	err = SetNamedSecurityInfo((char*)filename, SE_FILE_OBJECT,
+		DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
+		NULL,NULL,newDACL,NULL); 
 	
-	//
-	// Added 11/1/1999 J.Drews
-	// We have to build the ACE ourselves to get the flags and such
-	// set correctly. The old way only set the "special directory access"
-	// bits and not the "special file access" bits. This prevented condor
-	// from working as expected (could not modify any files copied over by
-	// the condor system).
-	DWORD acelen = GetLengthSid(psid) +sizeof(ACCESS_ALLOWED_ACE) -sizeof(DWORD);
-	pace = (ACCESS_ALLOWED_ACE *)  malloc(acelen);
-	
-	if (pace == NULL)
+	if ( err == ERROR_ACCESS_DENIED ) {
+		// set the SE_SECURITY_NAME privilege and try again.
+		
+		dprintf(D_FULLDEBUG, "SetFileSecurity() failed; "
+				"adding SE_SECURITY_NAME priv and trying again.\n");
+
+		HANDLE hToken = NULL;
+
+		if (!OpenProcessToken(GetCurrentProcess(), 
+			TOKEN_ADJUST_PRIVILEGES, &hToken)) {
+
+          dprintf(D_ALWAYS, "perm: OpenProcessToken failed: %u\n",
+				  GetLastError()); 
+       } else {
+
+	    	// Enable the SE_SECURITY_NAME privilege.
+    		if (!SetPrivilege(hToken, SE_SECURITY_NAME, TRUE)) {
+	   			dprintf(D_ALWAYS, "perm: can't set SE_SECURITY_NAME privs "
+					   "to set ACLs.\n");
+    		} else { 
+				err = SetNamedSecurityInfo((char*)filename, SE_FILE_OBJECT,
+				DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
+				NULL,NULL,newDACL,NULL); 
+			}
+			CloseHandle(hToken);
+		}
+	}
+
+	// clean up our memory.
+	LocalFree(oldDACL);
+	LocalFree(newDACL);
+
+	if (err != ERROR_SUCCESS)
 	{
-		dprintf(D_ALWAYS,"perm::set_acls(%s): unable to allocate memory",filename);
-		free(pNewACL);
-		free(sdData);
-		return -1;
+		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to set file ACL"
+				"(err=%d).\n", filename,GetLastError() );
+		return false;
 	}
 	
-	// Fill in ACCESS_ALLOWED_ACE structure.
-	pace->Mask = GENERIC_ALL; /* 0x10000000 */
-	pace->Header.AceType = ACCESS_ALLOWED_ACE_TYPE; 
-	pace->Header.AceFlags = INHERIT_ONLY_ACE|OBJECT_INHERIT_ACE; /*0x09*/
-	pace->Header.AceSize = (WORD) acelen; 
-	memcpy(&(pace->SidStart),psid,GetLengthSid(psid) ); 	 
-	ret = AddAce(pNewACL, ACL_REVISION, MAXDWORD, pace, pace->Header.AceSize);
-	if(!ret)
-	{
-		// Handle AddAce error.
-		dprintf(D_ALWAYS,"perm::set_acls(%s): unable to add accesses allowed ACE. (%d)\n",filename,ret);
-		free(pNewACL);
-		free(sdData);
-		free(pace);
-		return -1;
+	return true;
+}
+
+// sets the owner of the file. Unfortunately, this 
+// function will fail if you're not running with 
+// Administrator priviledges. Also, this function
+// can set the owner on a local or remote file or 
+// directory on a NTFS file system, Windows NT network 
+// sharename, registry key, semaphore, event, mutex, 
+// file mapping, or waitable timer. Phew!
+bool perm::set_owner( const char *location ) {
+	PSID owner_SID;
+	DWORD size=0, d_size=0;
+	SID_NAME_USE usage;
+	char qualified_name[1024];
+
+	domainBufferSize = 80;
+	sidBufferSize = perm_max_sid_length;
+
+	owner_SID = (PSID)sidBuffer;
+
+	if ( Domain_name ) {
+
+		if ( 0 > snprintf(qualified_name, 1023, "%s\\%s",
+		   	Domain_name, Account_name) ) {
+		
+			dprintf(D_ALWAYS, "Perm: domain\\account (%s\\%s) "
+				"string too long!\n", Domain_name, Account_name );
+			return false;
+		}
+	} else {
+		strncpy(qualified_name, Account_name, 1023);
 	}
-	
-	pace2 = (ACCESS_ALLOWED_ACE *)	malloc(acelen);
-	if (pace2 == NULL)
-	{
-		dprintf(D_ALWAYS,"perm::set_acls(%s): unable to allocate memory",filename);
-		free(pNewACL);
-		free(sdData);
-		return -1;
+
+	if ( !LookupAccountName( NULL,			// System
+		qualified_name,						// Account name
+		owner_SID, &sidBufferSize,			// Sid
+		domainBuffer, &domainBufferSize,	// Domain
+		&usage) ) {							// SID TYPE
+		dprintf(D_ALWAYS, "perm: LookupAccountName(%s, size) failed "
+				"(err=%d)\n", qualified_name, GetLastError());
+		return false;
 	}
-	
-	// Fill in ACCESS_ALLOWED_ACE structure.
-	
-	pace2->Mask = STANDARD_RIGHTS_ALL | 0x000001ff; /*0x001f01ff*/
-	/* couldn't find a define for the lower end bits - J.Drews */
-	pace2->Header.AceType = ACCESS_ALLOWED_ACE_TYPE; 
-	pace2->Header.AceFlags = CONTAINER_INHERIT_ACE; /*0x02*/
-	pace2->Header.AceSize = (WORD) acelen;
-	memcpy(&(pace2->SidStart),psid,GetLengthSid(psid) );	  
-	ret = AddAce(pNewACL, ACL_REVISION, MAXDWORD, pace2, pace2->Header.AceSize);
-	if(!ret)
-	{
-		ret = GetLastError();
-		// Handle AddAce error.
-		dprintf(D_ALWAYS,"perm::set_acls(%s): unable to add accesses allowed ACE.(%d)\n",filename,ret);
-		free(pNewACL);
-		free(sdData);
-		free(pace);
-		free(pace2);
-		return -1;
+
+	DWORD err = SetNamedSecurityInfo((char*)location,
+		SE_FILE_OBJECT,
+		OWNER_SECURITY_INFORMATION,
+		owner_SID,
+		NULL,
+		NULL,
+		NULL);
+
+	if ( err == ERROR_ACCESS_DENIED ) {
+
+		// We have to enable the SE_TAKE_OWNERSHIP_NAME priv
+		// for our access token. So do that, and try 
+		// SetNamedSecurityInfo() again.
+
+		HANDLE hToken = NULL;
+
+		if (!OpenProcessToken(GetCurrentProcess(), 
+			TOKEN_ADJUST_PRIVILEGES, &hToken)) 
+       {
+          dprintf(D_ALWAYS, "perm: OpenProcessToken failed: %u\n",
+				  GetLastError()); 
+       } else {
+
+	    	// Enable the SE_TAKE_OWNERSHIP_NAME privilege.
+    		if (!SetPrivilege(hToken, SE_TAKE_OWNERSHIP_NAME, TRUE)) {
+	   			dprintf(D_ALWAYS, "perm: lacking Administrator privs "
+					   "to set owner.\n");
+    		} else { 
+				err = SetNamedSecurityInfo((char*)location,
+				SE_FILE_OBJECT,
+				OWNER_SECURITY_INFORMATION,
+				owner_SID,
+				NULL,
+				NULL,
+				NULL);
+			}
+			CloseHandle(hToken);
+		}
 	}
-	
-	
-	// set the new DACL
-	// in the absolute SD
-	ret=SetSecurityDescriptorDacl(&absSD, TRUE, pNewACL, FALSE);
-	if (!ret)
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to install DACL.\n", filename);
-		free(pNewACL);
-		free(sdData);
-		free(pace);
-		free(pace2);
-		return -1;
+
+	if ( err != ERROR_SUCCESS ) {
+		dprintf(D_ALWAYS, "perm: SetNamedSecurityInfo(%s) failed (err=%d)\n",
+				location, err);
+		return false; 
 	}
-	
-	// check the new SD
-	ret=IsValidSecurityDescriptor(&absSD);
-	if (!ret)
+
+	dprintf(D_FULLDEBUG, "perm: successfully set owner on %s to %s\n",
+		   	location, qualified_name);
+	return true;
+}
+
+// Adapted from code in MSDN
+bool SetPrivilege(
+    HANDLE hToken,          // access token handle
+    LPCTSTR lpszPrivilege,  // name of privilege to enable/disable
+    BOOL bEnablePrivilege   // to enable or disable privilege
+    ) 
+{
+	TOKEN_PRIVILEGES tp;
+	LUID luid;
+
+	if ( !LookupPrivilegeValue( 
+		NULL,            // lookup privilege on local system
+		lpszPrivilege,   // privilege to lookup 
+		&luid ) )        // receives LUID of privilege
 	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): SD invalid.\n", filename);
-		free(pNewACL);
-		free(sdData);
-		free(pace);
-		free(pace2);
-		return -1;
+		dprintf(D_ALWAYS, "LookupPrivilegeValue error: %u\n", GetLastError() ); 
+		return false; 
 	}
-	
-	// ----- Install the new DACL -----
-	
-	// install the updated SD
-	err=SetFileSecurity( filename, DACL_SECURITY_INFORMATION, &absSD);
-	if (!err)
-	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to set file SD (err=%d).\n", filename,GetLastError() );
-		free(pNewACL);
-		free(sdData);
-		free(pace);
-		free(pace2);
-		return 0;
+
+	tp.PrivilegeCount = 1;
+	tp.Privileges[0].Luid = luid;
+	if (bEnablePrivilege) {
+	    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+	} else {
+	    tp.Privileges[0].Attributes = 0;
 	}
-	
-	// release memory
-	free(pNewACL);
-	free(sdData);
-	free(pace);
-	free(pace2);
-	
-	return 1;
+
+	// Enable the privilege or disable all privileges.
+
+	if ( !AdjustTokenPrivileges(
+		hToken, 
+		FALSE, 
+		&tp, 
+		sizeof(TOKEN_PRIVILEGES), 
+		(PTOKEN_PRIVILEGES) NULL, 
+		(PDWORD) NULL) )
+	{ 
+		dprintf(D_ALWAYS, "AdjustTokenPrivileges error: %u\n", GetLastError()); 
+		return false; 
+	} 
+
+	return true;
 }
 
 

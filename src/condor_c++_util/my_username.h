@@ -26,7 +26,7 @@
 #ifndef MY_USERNAME_H
 #define MY_USERNAME_H
 
-char *my_username( int uuid = 0 );
+char *my_username( int uuid = -1 );
 char *my_domainname( void );
 
 #ifdef WIN32

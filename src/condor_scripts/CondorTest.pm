@@ -653,4 +653,24 @@ sub FetchMachineAdValue
 	}
 }
 
+#
+# Is condor_q able to respond at this time? We'd like to get
+# a valid response for whoever is asking.
+#
+
+sub GoodCondorQ_Result
+{
+	my $qstatcluster = shift;
+	my $qstat = `condor_q $qstatcluster -format %d JobStatus`;
+	if( $qstat =~ /^(\d).*/)
+	{
+		return($1);
+	}
+	else
+	{
+		return(-1);
+	}
+}
+
+
 1;

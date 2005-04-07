@@ -1,3 +1,10 @@
+04/06/05 V6_6-merge-38
+   The state of the V6_6-branch for a merge into V6_7-branch.  This
+   includes a bunch of win32 bug fixes: the execute directory cleanup
+   code, win32 Directory::chown() implementation and dynuser bug
+   fixes.  Also includes some schedd fixes for shutdown behavior and
+   some fixes to some tests in condor_tests.
+
 03/31/05 V6_6-merge-37
    The state of the V6_6-branch for a merge into V6_7-branch.  This
    picks up some crucial post-6.6.9 bug fixes that we want in 6.7.7

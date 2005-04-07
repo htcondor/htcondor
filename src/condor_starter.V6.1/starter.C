@@ -395,8 +395,8 @@ CStarter::createTempExecuteDir( void )
 		const char * nobody_login = get_user_loginname();
 		ASSERT(nobody_login);
 		dirperm.init(nobody_login);
-		int ret_val = dirperm.set_acls( WorkingDir );
-		if ( ret_val < 0 ) {
+		bool ret_val = dirperm.set_acls( WorkingDir );
+		if ( !ret_val ) {
 			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY");
 			set_priv( priv );
 			return false;

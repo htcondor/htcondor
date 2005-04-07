@@ -34,24 +34,11 @@ $timed = sub
 {
 	my %info = @_;
 	#my $cluster = $info{"cluster"};
-	my $status = `condor_q $cluster -format %d JobStatus`;
-	sleep 2;
 
 	print "Cluster $cluster alarm wakeup\n";
 	print "wakey wakey!!!!\n";
-	print "It better be on hold...staus is $status(5 is good)";
 
-	# under all cases if we hit timeout, remove job or try
-
-	#if($status != HELD)
-	#{
-		#die "Cluster $cluster failed to go on hold\n";
-	#}
-	#else
-	#{
-		print "good\n";
-		system("condor_rm $cluster");
-	#}
+	system("condor_rm $cluster");
 	sleep 5;
 };
 
@@ -59,11 +46,17 @@ $submit = sub
 {
 	my %info = @_;
 	$cluster = $info{"cluster"};
-	my $status = `condor_q $cluster -format %d JobStatus`;
-	sleep 2;
+
+	my $qstat = CondorTest::GoodCondorQ_Result($cluster);
+	while($qstat == -1)
+	{
+		print "Job status unknown - wait a bit\n";
+		sleep 2;
+		$qstat = CondorTest::GoodCondorQ_Result($cluster);
+	}
 
 	print "It better be on hold... status is $status(5 is correct)";
-	if($status != HELD)
+	if($qstat != HELD)
 	{
 		print "Cluster $cluster failed to go on hold\n";
 		exit(1);

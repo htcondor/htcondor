@@ -439,7 +439,7 @@ void dynuser::createpass() {
 	ASSERT( password != NULL );
 		
 	for ( int i = 0; i < 14; i++ ) {
-		char c = (char) ( rand() % 256 );
+		char c = (char) ( rand() % 128 );
 
 		if ( !isprint( c ) ) { // For sanity.  This leaves many characters 
 							   // to chose from.

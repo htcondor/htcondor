@@ -29,6 +29,9 @@
 #include "status_string.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
+#include "perm.h"
+#include "my_username.h"
+
 
 // Set DEBUG_DIRECTORY_CLASS to 1 to not actually remove
 // files, but instead print out to the log file what would get
@@ -50,6 +53,10 @@
 
 #ifndef WIN32
 static bool GetIds( const char *path, uid_t *owner, gid_t *group );
+#endif
+
+#ifdef WIN32
+static bool recursive_chown_win32(const char * path, perm *po);
 #endif
 
 StatInfo::StatInfo( const char *path )
@@ -513,13 +520,32 @@ Directory::do_remove_dir( const char* path )
 	}
 
 #ifdef WIN32
-		// on windows, there's nothing else we can do, since
-		// PRIV_FILE_OWNER doesn't work, and we'd probably never
-		// get this far, anyway.
-	dprintf( D_ALWAYS, "ERROR: %s still exists after trying "
-			 "to remove it as %s\n", path, 
-			 priv_to_string(desired_priv_state) );
-	return false;
+		// on windows, we'll try to chown the directory so that
+		// the current user will have Full access. This should 
+		// enable us to delete everything.
+
+	char *usr, *dom;
+
+	usr = my_username();
+	dom = my_domainname();
+
+	Recursive_Chown(usr, dom);
+	free(usr);
+	free(dom);
+
+	rmdirAttempt( path, desired_priv_state );
+
+	StatInfo si2( path );
+
+	if( si2.Error() == SINoFile ) {
+		return true;
+	} else {
+	
+		dprintf( D_ALWAYS, "ERROR: %s still exists after trying "
+				 "to add Full control to ACLs for %s\n", path, 
+				 priv_to_string(desired_priv_state) );
+		return false;
+	}
 
 #else /* UNIX */
 
@@ -1014,8 +1040,97 @@ Directory::Next()
 }
 
 
+bool
+Directory::Recursive_Chown(const char *username, const char *domain) {
+	return recursive_chown(GetDirectoryPath(), username, domain);
+}
+
+
 // The rest of the functions in this file are global functions and can
 // be used with or without a Directory or StatInfo object.
+
+bool 
+recursive_chown(const char *path, const char *username, const char *domain) {
+#ifdef WIN32
+	// WINDOWS
+	
+	// On Windows, we really just want an ACL that gives us Full control.
+	// In the event that we can't set such an ACL because the current ACL
+	// denies us access, we will then change the owner of the file, which
+	// gives us the ability to reset the ACLs on the file as well.
+
+	perm po;
+
+	if ( ! po.init(username, domain) ) {
+
+		dprintf(D_ALWAYS, "recursive_chown() failed because the perm object "
+				"failed to initialize.\n");
+		return false;
+	}
+	
+	return recursive_chown_win32(path, &po);
+
+#else
+	// UNIX - needs implementation.
+	return false;
+#endif
+}
+
+#ifdef WIN32
+
+// actual implementation that passes a pointer to the perm object
+// instead of creating a new one with every recursive call.
+bool 
+recursive_chown_win32(const char * path, perm *po) {
+
+	bool result = true;
+
+
+	// perm::set_acls() adds the Full Control ACL
+
+	// we chown the current path first, since we could potentially
+	// be locked out of traversing deeper into the tree if we don't
+	// have access.
+
+	if ( ! po->set_acls(path) ) {
+
+		// if we can't set the ACLs, try changing the owner.
+		if ( ! po->set_owner(path) ) {
+			dprintf(D_FULLDEBUG, "perm obj failed to set ACLs and change owner"
+				   " on %s\n", path);
+			result = false;
+		} else {
+			// ok, we reset the owner, so we should be able to
+			// change the ACLs without any trouble now.
+			if ( ! po->set_acls(path) ) {
+				dprintf(D_FULLDEBUG, "perm obj failed to set ACLs on %s\n",
+					   	path);
+				result = false;
+			}
+		}
+	}
+
+
+	// even if setting the ACLs failed, let's just try to traverse
+	// anyways...
+	if( IsDirectory(path) ) {
+		Directory dir(path);
+		const char * filename = 0;
+		while( (filename = dir.Next()) ) {
+			filename = dir.GetFullPath();
+			if( ! recursive_chown_win32(filename, po) ) {
+				dprintf(D_FULLDEBUG, "recursive_chown() failed for %s; "
+						"iteration stopping.\n", path);
+				return false;
+			}
+		}
+
+	}
+
+	return result;
+}
+
+#endif
 
 bool 
 IsDirectory( const char *path )

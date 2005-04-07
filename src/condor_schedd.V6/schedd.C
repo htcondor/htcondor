@@ -6641,6 +6641,21 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	mark_job_running(job_id);
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	WriteExecuteToUserLog( *job_id );
+
+		/* this is somewhat evil.  these values are absolutely
+		   essential to have accurate when we're trying to shutdown
+		   (see Scheduler::preempt()).  however, we only set them
+		   correctly inside count_jobs(), and there's no guarantee
+		   we'll call that before we next try to shutdown.  so, we
+		   manually update them here, to keep them accurate until the
+		   next time we call count_jobs().
+		   -derek <wright@cs.wisc.edu> 2005-04-01
+		*/
+	if( SchedUniverseJobsIdle > 0 ) {
+		SchedUniverseJobsIdle--;
+	}
+	SchedUniverseJobsRunning++;
+
 	return add_shadow_rec( pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1 );
 }
 
@@ -7218,18 +7233,23 @@ Scheduler::clean_shadow_recs()
 	dprintf( D_FULLDEBUG, "============ End clean_shadow_recs =============\n" );
 }
 
+
 void
-Scheduler::preempt(int n)
+Scheduler::preempt( int n, bool force_sched_jobs )
 {
 	shadow_rec *rec;
-	bool preempt_all;
+	bool preempt_sched = force_sched_jobs;
 
-	dprintf( D_ALWAYS, "Called preempt( %d )\n", n );
+	dprintf( D_ALWAYS, "Called preempt( %d )%s\n", n, 
+			 force_sched_jobs ? " forcing scheduler univ preemptions" : "" );
+
 	if( n >= numShadows-SchedUniverseJobsRunning-LocalUniverseJobsRunning ) {
-		preempt_all = true;
-	} else {
-		preempt_all = false;
+			// we only want to start preempting scheduler/local
+			// universe jobs once all the shadows have been
+			// preempted...
+		preempt_sched = true;
 	}
+
 	shadowsByPid->startIterations();
 
 	/* Now we loop until we are out of shadows or until we've preempted
@@ -7257,11 +7277,8 @@ Scheduler::preempt(int n)
 			}
 
 				// if we got this far, it's an srec that hasn't been
-				// preempted yet.  so, mark it as preempted, decrement
-				// n so we let this count towards our goal, and based
-				// on the universe, do the right thing to preempt it.
-			rec->preempted = TRUE;
-			n--;
+				// preempted yet.  based on the universe, do the right
+				// thing to preempt it.
 			int cluster = rec->job_id.cluster;
 			int proc = rec->job_id.proc; 
 			ClassAd* job_ad;
@@ -7275,6 +7292,9 @@ Scheduler::preempt(int n)
 				break;
 
 			case CONDOR_UNIVERSE_LOCAL:
+				if( ! preempt_sched ) {
+					continue;
+				}
 				daemonCore->Send_Signal( rec->pid, DC_SIGSOFTKILL );
 				dprintf( D_ALWAYS, "Sent DC_SIGSOFTKILL to handler for "
 						 "local universe job %d.%d (pid: %d)\n", 
@@ -7282,6 +7302,9 @@ Scheduler::preempt(int n)
 				break;
 
 			case CONDOR_UNIVERSE_SCHEDULER:
+				if( ! preempt_sched ) {
+					continue;
+				}
 				job_ad = GetJobAd( rec->job_id.cluster,
 								   rec->job_id.proc );  
 				kill_sig = findSoftKillSig( job_ad );
@@ -7313,11 +7336,32 @@ Scheduler::preempt(int n)
 						   so there's no reason to send it a signal.
 						*/
 				}
-				break;
 			}
+
+				// if we're here, we really preempted it, so mark it
+				// as preempted, and decrement n so we let this count
+				// towards our goal.
+			rec->preempted = TRUE;
+			n--;
 		}
 	}
+
+		/*
+		  we've now broken out of our loop.  if n is still >0, it
+		  means we wanted to preempt more than we were able to do.
+		  this could be because of a mis-match regarding scheduler
+		  universe jobs (namely, all we have left are scheduler jobs,
+		  but we have a bogus value for SchedUniverseJobsRunning and
+		  don't think we want to preempt any of those).  so, if we
+		  weren't trying to preempt scheduler but we still have n to
+		  preempt, try again and force scheduler preemptions.
+		  derek <wright@cs.wisc.edu> 2005-04-01
+		*/ 
+	if( n > 0 && preempt_sched == false ) {
+		preempt( n, true );
+	}
 }
+
 
 void
 send_vacate(match_rec* match,int cmd)
@@ -7730,6 +7774,11 @@ Scheduler::child_exit(int pid, int status)
 			}
 		}
 		delete_shadow_rec( pid );
+			// even though this will get set correctly in
+			// count_jobs(), try to keep it accurate here, too.  
+		if( SchedUniverseJobsRunning > 0 ) {
+			SchedUniverseJobsRunning--;
+		}
 	} else if (srec) {
 		char* name = NULL;
 		if( IsLocalUniverse(srec) ) {
@@ -8689,7 +8738,7 @@ Scheduler::shutdown_graceful()
  	 */
 	MaxJobsRunning = 0;
 	ExitWhenDone = TRUE;
-	daemonCore->Register_Timer(0,JobStartDelay,
+	daemonCore->Register_Timer( 0, MAX(JobStartDelay,1), 
 					(TimerHandlercpp)&Scheduler::preempt_one_job,
 					"preempt_one_job()", this );
 }

@@ -24,9 +24,11 @@ $ExitSuccess = sub
 	$goal = "$initialdir" . "/" . "$logs";
 	if( ! -s $goal )
 	{
+		print "Expected logfile not found<$goal>\n";
 		die "Initialdir does not contain user log\n";
 	}
 	# clean up
+	print "Expected logfile found<$goal>\n";
 	system("rm -rf initd_sched");
 };
 

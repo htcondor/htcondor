@@ -47,7 +47,14 @@ $submitted = sub
 
 	print "submitted: We should never hit execute state but go to hold state\n";
 	print "It better be on hold...";
-	if(`condor_q $cluster -format %d JobStatus` != HELD) 
+	my $qstat = CondorTest::GoodCondorQ_Result($cluster);
+	while($qstat == -1)
+	{
+		print "Job status unknown - wait a bit\n";
+		sleep 2;
+		$qstat = CondorTest::GoodCondorQ_Result($cluster);
+	}
+	if($qstat != HELD) 
 	{
 		die "Cluster $cluster failed to go on hold\n";
 	} 
