@@ -1436,6 +1436,13 @@ formatTime(const char* name, const ArgumentList &argList, EvalState &state,
                 time_components.tm_year -= 1900;;
             }
 
+            // Note that we are doing our own calculations to get the weekday and year day.
+            // Why are we doing our own calculations instead of using something like gmtime or 
+            // localtime? That's because we are dealing with something that might not be in 
+            // our timezone or GM time, but some other timezone.
+            day_numbers(time_components.tm_year + 1900, time_components.tm_mon+1, time_components.tm_mday,
+                        time_components.tm_wday, time_components.tm_yday);
+
             // The second argument, if provided, must be a string
             if (number_of_args == 1) {
                 format = "%c";
@@ -1792,7 +1799,8 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 		return( false );
 	}
 
-    return convertValueToStringValue(arg, result);
+    convertValueToStringValue(arg, result);
+    return true;
 }
 
 bool FunctionCall::
