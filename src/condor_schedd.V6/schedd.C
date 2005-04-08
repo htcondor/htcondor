@@ -6512,13 +6512,13 @@ Scheduler::RegisterTimers()
 	}
 
 	 // timer handlers
-	 timeoutid = daemonCore->Register_Timer(10,
+	timeoutid = daemonCore->Register_Timer(10,
 		(Eventcpp)&Scheduler::timeout,"timeout",this);
 	startjobsid = daemonCore->Register_Timer(10,
 		(Eventcpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(alive_interval, alive_interval,
 		(Eventcpp)&Scheduler::sendAlives,"sendAlives", this);
-	cleanid = daemonCore->Register_Timer(QueueCleanInterval,
+	cleanid = daemonCore->Register_Timer(QueueCleanInterval,QueueCleanInterval,
 		(Event)&CleanJobQueue,"CleanJobQueue");
 	if (WallClockCkptInterval) {
 		wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
