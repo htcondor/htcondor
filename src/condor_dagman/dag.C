@@ -480,6 +480,13 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 			if ( doEventChecks && job ) {
 				MyString	eventError;
 				bool		eventIsGood;
+
+					// Note: the event checking has pretty much been
+					// considered "diagnostic" until now; however, it
+					// turns out that if you get the terminated/abort
+					// event combo on a node that has retries left,
+					// DAGMan will assert if the event checking is
+					// turned off.  (See Gnats PR 467.)  wenger 2005-04-08.
 				bool checkResult = _ce.CheckAnEvent(event, eventError,
 							eventIsGood);
 				if ( eventIsGood ) {
@@ -603,6 +610,14 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 
 	if ( job ) {
 
+			// Note: this code doesn't work correctly if the node has
+			// retries left, because that means the status won't be
+			// set to STATUS_ERROR.  If the event checking is turned on
+			// we're okay because we'll totally ignore the "extra" abort
+			// event, but if it's turned off we'll try to submit the
+			// node's job twice (once for the terminated event and once
+			// for the abort event) and end up asserting.  (See Gnats
+			// PR 467.)  wenger 2005-04-08.
 		if( job->_Status == Job::STATUS_ERROR ) {
 				// sometimes condor prints *both* a
 				// termination and an abort event for a job;

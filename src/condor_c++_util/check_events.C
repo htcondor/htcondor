@@ -121,8 +121,12 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
 			break;
 
 		case ULOG_EXECUTABLE_ERROR:
+				// Note: when we get an executable error, we seem to
+				// also always get an abort.
 			info->errorCount++;
-			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
+				// We could probably do some extra checking here, as with
+				// an execute event, but I'm not going to worry about it
+				// for now.  wenger 2005-04-08.
 			break;
 
 		case ULOG_JOB_ABORTED:

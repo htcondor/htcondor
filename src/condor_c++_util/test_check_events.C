@@ -158,6 +158,7 @@ int main(int argc, char **argv)
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce1.CheckAllJobs(errorMsg) ) {
 		printf("...should have gotten an error (test FAILED)\n");
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -184,6 +185,7 @@ int main(int argc, char **argv)
 	printf("Testing CheckAllJobs()... ");
 	if ( ce2.CheckAllJobs(errorMsg) ) {
 		printf("...should have gotten an error (test FAILED)\n");
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -195,7 +197,10 @@ int main(int argc, char **argv)
 	ee2.subproc = 1;
 
 	printf("Testing executable error... ");
-	CheckThisEvent(ce2, &ee2, true,true, result);
+	CheckThisEvent(ce2, &ee2, true, true, result);
+
+	printf("Testing job aborted... ");
+	CheckThisEvent(ce2, &ae2, true, true, result);
 
 	PostScriptTerminatedEvent pe1;
 		// Note that ID doesn't match anything else -- this simulates
@@ -212,6 +217,7 @@ int main(int argc, char **argv)
 		printf("...succeeded\n");
 	} else {
 		printf("...FAILED (%s)\n", errorMsg.Value());
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	}
 
@@ -261,6 +267,7 @@ int main(int argc, char **argv)
 		printf("...succeeded\n");
 	} else {
 		printf("...FAILED (%s)\n", errorMsg.Value());
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	}
 
@@ -286,6 +293,7 @@ int main(int argc, char **argv)
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce4.CheckAllJobs(errorMsg) ) {
 		printf("...should have gotten an error (test FAILED)\n");
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -316,6 +324,7 @@ int main(int argc, char **argv)
 		printf("...succeeded\n");
 	} else {
 		printf("...FAILED (%s)\n", errorMsg.Value());
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	}
 
@@ -347,6 +356,7 @@ int main(int argc, char **argv)
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce6.CheckAllJobs(errorMsg) ) {
 		printf("...should have gotten an error (test FAILED)\n");
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -387,6 +397,7 @@ int main(int argc, char **argv)
 		printf("...succeeded\n");
 	} else {
 		printf("...FAILED (%s)\n", errorMsg.Value());
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	}
 
@@ -396,6 +407,7 @@ int main(int argc, char **argv)
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce7.CheckAllJobs(errorMsg) ) {
 		printf("...should have gotten an error (test FAILED)\n");
+		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -456,6 +468,7 @@ CheckThisEvent(CheckEvents &ce, const ULogEvent *event,
 {
 	MyString		errorMsg;
 	bool			eventIsGood;
+	bool			failedHere = false;
 
 	bool	tmpResult = ce.CheckAnEvent(event, errorMsg,
 				eventIsGood);
@@ -466,11 +479,13 @@ CheckThisEvent(CheckEvents &ce, const ULogEvent *event,
 		} else {
 			printf("...FAILED (%s)\n", errorMsg.Value());
 			result = false;
+			failedHere = true;
 		}
 	} else {
 		if ( tmpResult ) {
 			printf("...should have gotten an error (test FAILED)\n");
 			result = false;
+			failedHere = true;
 		} else {
 			printf("...got expected error (%s)\n", errorMsg.Value());
 		}
@@ -482,14 +497,19 @@ CheckThisEvent(CheckEvents &ce, const ULogEvent *event,
 		} else {
 			printf("FAILED: expected good event, got bad event\n");
 			result = false;
+			failedHere = true;
 		}
 	} else {
 		if ( eventIsGood ) {
 			printf("FAILED: expected bad event, got good event\n");
 			result = false;
+			failedHere = true;
 		} else {
 			// No op.
 		}
 	}
 
+	if ( failedHere ) {
+		printf("########## TEST FAILED HERE ##########\n");
+	}
 }

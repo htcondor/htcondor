@@ -81,8 +81,7 @@ class CheckEvents {
 					postScriptCount = 0;
 		}
 
-		int TotalEndCount() const { return errorCount + abortCount +
-				termCount; }
+		int TotalEndCount() const { return abortCount + termCount; }
 	};
 
 	/** Check the status after an event that indicates the end of a job
