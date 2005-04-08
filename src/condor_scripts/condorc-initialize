@@ -1,0 +1,33 @@
+#! /usr/bin/env perl
+BEGIN { $^W = 1 }
+use strict;
+use FindBin;
+
+exit main();
+
+sub main {
+	print "Starting Condor-C Launcher\n";
+	submit('condorc-launcher');
+	print "Starting Condor-C Advertiser\n";
+	submit('condorc-advertiser');
+}
+
+sub submit {
+	my($executable) = @_;
+	my $uid = $executable;
+	my $bin_path = $FindBin::Bin;
+	$executable = "$bin_path/$executable";
+	local *OUT;
+	open(OUT, "|condor_submit")
+		or die "FATAL ERROR: unable to launch condor_submit";
+	print OUT <<END;
+executable=$executable
+universe=scheduler
+output=/tmp/$uid.$>.$$.out
+error=/tmp/$uid.$>.$$.err
+environment=PATH=\$ENV(PATH):$bin_path
+notification=never
+queue
+END
+	close OUT;
+}
