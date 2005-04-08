@@ -33,6 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause the file \File{job\_queue.log} in
+	the Condor SPOOL directory to grow unnecessarily large, thereby
+	slowing down the startup and/or shutdown times for the \Condor{schedd}
+	daemon.
+
 \item Fixed a critical bug where the console idle time for PS/2 keyboards
 	and mice was not being updated correctly.
 
