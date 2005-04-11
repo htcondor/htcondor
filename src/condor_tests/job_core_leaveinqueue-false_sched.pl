@@ -31,7 +31,7 @@ $success = sub
 
 	system("condor_q");
 	print "Good, job should be done but NOT left in the queue!!!\n";
-	my $qstat = CondorTest::GoodCondorQ_Result($cluster);
+	my $qstat = CondorTest::getJobStatus($cluster);
 	if($qstat == -1)
 	{
 		print "Job status unknown - Exactly what we want\n";
