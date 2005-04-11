@@ -385,7 +385,11 @@ int CondorJob::doEvaluateState()
 			// old jobmanager process is still alive.
 			errorString = "";
 			if ( remoteJobId.cluster == 0 ) {
-				gmState = GM_CLEAR_REQUEST;
+				if( condorState == COMPLETED ) {
+					gmState = GM_DELETE;
+				} else {
+					gmState = GM_CLEAR_REQUEST;
+				}
 			} else if ( condorState == COMPLETED ) {
 				gmState = GM_DONE_COMMIT;
 			} else {
@@ -840,6 +844,7 @@ int CondorJob::doEvaluateState()
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
+				SetRemoteJobId( NULL );
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
