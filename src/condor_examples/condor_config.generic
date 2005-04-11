@@ -816,7 +816,6 @@ SCHEDD				= $(SBIN)/condor_schedd
 KBDD				= $(SBIN)/condor_kbdd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
-GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1372,6 +1371,7 @@ JAVA_EXTRA_ARGUMENTS =
 
 GRIDMANAGER			= $(SBIN)/condor_gridmanager
 GAHP				= $(SBIN)/gahp_server
+GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:

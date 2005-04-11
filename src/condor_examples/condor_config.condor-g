@@ -455,7 +455,6 @@ MASTER				= $(SBIN)/condor_master
 SCHEDD				= $(SBIN)/condor_schedd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
-GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 
 
 ##  When the master starts up, it can place it's address (IP and port)
@@ -535,6 +534,7 @@ SHADOW				= $(SBIN)/condor_shadow
 SHADOW_PVM          = $(SBIN)/condor_shadow.pvm
 GRIDMANAGER			= $(SBIN)/condor_gridmanager
 GAHP				= $(SBIN)/gahp_server
+GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 
 
 ##  When the schedd starts up, it can place it's address (IP and port)
