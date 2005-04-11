@@ -746,5 +746,13 @@ INVALID_LOG_FILES	= core
 ##  condor_glidein settings. These are not active in NMI R1
 ##--------------------------------------------------------------------
 
-GLIDEIN_SERVER_NAME = gridftp.cs.wisc.edu
-GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
+##  Condor Glidein downloads binaries from a remote server for the
+##  machines into which you're gliding. This saves you from manually
+##  downloading and installing binaries for every architecture you
+##  might want to glidein to. The default server is one maintained at
+##  The University of Wisconsin. If you don't want to use the UW
+##  server, you can set up your own and change the following values to
+##  point to it, instead.
+GLIDEIN_SERVER_URLS = \
+  http://www.cs.wisc.edu/condor/glidein/binaries \
+  gsiftp://gridftp.cs.wisc.edu/p/condor/public/binaries/glidein
