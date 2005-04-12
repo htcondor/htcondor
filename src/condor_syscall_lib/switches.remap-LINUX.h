@@ -35,7 +35,6 @@ REMAP_ONE( fsync, __fsync, int , int )
 REMAP_TWO( ftruncate, __ftruncate, int , int , off_t )
 REMAP_THREE( poll, __libc_poll, int , struct pollfd *, unsigned long , int )
 REMAP_THREE( poll, __poll, int , struct pollfd *, unsigned long , int )
-REMAP_THREE( getdents64, __getdents64, int , int , struct dirent64 *, size_t )
 
 #if defined(GLIBC23)
 	REMAP_TWO( ftruncate64, __ftruncate64, int , int , off64_t )
