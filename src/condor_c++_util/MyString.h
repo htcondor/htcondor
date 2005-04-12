@@ -174,7 +174,7 @@ class MyString
 	//@{ 
 
 	/** Returns a new MyString that is the portion of the string from 
-	 *  pos1 to pos2 (incl pos1, excl pos2). 
+	 *  pos1 to pos2 (including both pos1 and pos2). 
 	 *  The first character in the string is position 0. 
 	 */
 	MyString Substr(int pos1, int pos2) const;
