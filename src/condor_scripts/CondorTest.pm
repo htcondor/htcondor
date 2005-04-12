@@ -658,19 +658,94 @@ sub FetchMachineAdValue
 # a valid response for whoever is asking.
 #
 
-sub GoodCondorQ_Result
+sub getJobStatus
 {
+	my @status;
 	my $qstatcluster = shift;
-	my $qstat = `condor_q $qstatcluster -format %d JobStatus`;
-	if( $qstat =~ /^(\d).*/)
+	my $cmd = "condor_q $qstatcluster -format %d JobStatus";
+	my $qstat = CondorTest::runCondorTool($cmd,\@status,3);
+	if(!$qstat)
 	{
-		return($1);
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+	    return(1)
 	}
-	else
+
+	foreach $line (@status)
 	{
-		return(-1);
+		#print "Line: $line\n";
+		if( $line =~ /^(\d).*/)
+		{
+			return($1);
+		}
+		else
+		{
+			return(-1);
+		}
 	}
 }
 
+#
+# Run a condor tool and look for exit value. Apply multiplier
+# upon failure
+#
+
+sub runCondorTool
+{
+	my $trymultiplier = 1;
+	my $start_time = time; #get start time
+	my $delta_time = 0;
+	my $status = 1;
+	my $done = 0;
+	my $cmd = shift;
+	my $arrayref = shift;
+	my $multiplier = shift;
+	my $count = 0;
+	while( !$done)
+	{
+		my @tmparray;
+		print "Try command <$cmd>\n";
+		open(PULL, "$cmd 2>&1 |");
+		while(<PULL>)
+		{
+			chomp $_;
+			print "Process: $_\n";
+			push @tmparray, $_; # push @{$arrayref}, $_;
+			$count += 1;
+		}
+		close(PULL);
+		$status = $? >> 8;
+		print "Status is $status after command\n";
+		if( $status != 0 )
+		{
+			my $current_time = time;
+			$delta_time = $current_time - $start_time;
+			print "runCondorTool: its been $delta_time since call\n";
+			if( $trymultiplier )
+			{
+				$trymultiplier = 0;
+				$ENV{_CONDOR_TOOL_TIMEOUT_MULTIPLIER} = $multiplier;
+			}
+			else
+			{
+				print "runCondorTool: $cmd timestamp $start_time failed!\n";
+				return(0);
+			}
+		}
+		else
+		{
+			foreach $value (@tmparray)
+			{
+				push @{$arrayref}, $value;
+			}
+			$done = 1;
+			my $current_time = time;
+			$delta_time = $current_time - $start_time;
+			print "runCondorTool: its been $delta_time since call\n";
+		}
+	}
+	print "runCondorTool: $cmd worked!\n";
+
+	return(1);
+}
 
 1;
