@@ -48,6 +48,20 @@ from one \condor{schedd} to another.
 
 \begin{itemize}
 
+\item Added initial support for the \Syscall{getdents},
+	\Syscall{getdents64}, \Syscall{glob}, and the family of functions
+	\Syscall{opendir}, \Syscall{readdir}, \Syscall{closedir} for the
+	standard universe.  
+
+	It is recommended that you do not directly invoke \Syscall{getdents} 
+	or \Syscall{getdents64}, but instead use the other POSIX functions
+	specifed above.
+
+	There are two caveats: these calls will not work in heterogenous
+	contexts, and you may not call \Syscall{getdents} directly when 
+	\Condor{compile}ing a 32-bit program while specifying the 64-bit
+	interfaces for the Unix API.
+
 \item In versions 6.7.4 through 6.7.6, Computing On Demand (COD)
   support was broken due to a bug in how Condor daemons parsed their
   command line arguments.
