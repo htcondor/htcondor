@@ -122,6 +122,17 @@ struct condor_kernel_dirent {
 	char            d_name[256]; 
 };
 
+/* This structure isn't needed, per se, but I put it here to record what it is
+	in case it is needed in the future. */
+struct condor_kernel_dirent64
+{
+	uint64_t			d_ino;
+	int64_t				d_off;
+	unsigned short int	d_reclen;
+	unsigned char		d_type;
+	char				d_name[256];
+};
+
 /* This is an annoying little variable that exists in glibc 2.2.4(redhat 7.1),
 	but not in glibc 2.1.3(redhat 6.2). In glibc 2.2.4, it is labeled as a C
 	linker type meaning if no other definition of this variable is found first,
@@ -154,11 +165,38 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 	if( LocalSysCalls() || do_local ) {
 		rval = syscall( SYS_getdents, fd , &kbuf , sizeof(kbuf) );
 		if(rval>0) {
-			buf->d_ino = kbuf.d_ino;
-			buf->d_off = kbuf.d_off;
-			buf->d_type = 0;
-			strcpy(buf->d_name,kbuf.d_name);
-			buf->d_reclen = sizeof(*buf) - sizeof(buf->d_name) + strlen(buf->d_name) + 1;
+			/* Woe is me. :( It turns out that if the user
+				application has _LARGEFILE64_SOURCE
+				defined to 1, and _FILE_OFFSET_BITS
+				defined to 64, at least under linux, then the struct dirent
+				member of d_ino and d_off that the
+				APPLICATION code will be using is defined
+				as 8 byte quanitites. However, this code
+				here sees them (at Condor compile time)
+				as 4 byte quantities, since we did not
+				define those #defines (and probably
+				shouldn't) at this level of the code. I
+				know of no way to detect the user's size
+				of d_ino and d_off, mostly since the
+				struct dirent array that is passed in is
+				completely opaque. So, I'm just going
+				to declare that you better not define
+				those two #defines and use getdents()
+				in a user program. Use of getdents64() is
+				fine in either case, though. -psilord */
+
+			buf[0].d_ino = kbuf.d_ino;
+			buf[0].d_off = kbuf.d_off;
+
+			buf[0].d_type = 0;
+			buf[0].d_name[0] = '\0';
+			strcpy(buf[0].d_name,kbuf.d_name);
+
+			/* Carefully compute the reclen to be cognizant of the predefine
+				space allocated to d_name, whether it be one element or 256 */
+			buf[0].d_reclen =
+							(sizeof(struct dirent) - sizeof(buf[0].d_name)) +
+								strlen(buf[0].d_name) - 1;
 
 			/*
 			If I was very clever, I would convert all of the data returned.
@@ -167,10 +205,10 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 			*/
 
 			int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-			lseek(fd,buf->d_off,SEEK_SET);
+			lseek(fd,buf[0].d_off,SEEK_SET);
 			SetSyscalls(scm);
 
-			rval = buf->d_reclen;
+			rval = buf[0].d_reclen;
 		}       
 	} else {
 		rval = REMOTE_CONDOR_getdents( fd , buf , nbytes );
@@ -181,18 +219,31 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 	return (int  ) rval;
 }
 
+/* getdents, for some unknown reason, requires a special register passing
+	convention. */
 extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
 
 extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
 	return getdents(fd,dirp,count);
 }
 
-/* XXX Implement a getdents64() entrance call! I think we are getting away
-	with it for now because it seems that no application ever calls 
-	getdirentries64() (which is what getdent64() will end up calling on
-	linux). The libc header files for this function are very screwy and
-	the dirent64 structure is oddly defined. So for now, leave it out
-	until I have more time to add it. */
+/* It looks like I don't have to specifically create a getdents64()
+	switch which does translation like above since the kernel
+	structure and user structure are the same. However, I DO have
+	to futz with the argument passing style of this function like
+	how was done with getdents(). In my inspection of the entire
+	getdents/getdents64() functionality in glibc, I've come to
+	realize that drooling monkeys designed the interface for
+	getdents/getdents64 and the implementation of it was, and is,
+	a crime against all that is rational and good. */
+
+extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
+
+extern "C" int getdents64(int, struct dirent64*, size_t);
+
+extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count ) {
+	return getdents64(fd,dirp,count);
+}
 
 #endif /* LINUX */
 
