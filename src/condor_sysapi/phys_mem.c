@@ -196,10 +196,14 @@ sysapi_phys_memory_raw(void)
 int
 sysapi_phys_memory_raw(void)
 {
-	MEMORYSTATUS status;		
+	MEMORYSTATUSEX statex;		
 	sysapi_internal_reconfig();
-	GlobalMemoryStatus(&status);
-	return (int)( ceil(status.dwTotalPhys/(1024*1024)+.4 ) );
+	
+	statex.dwLength = sizeof(statex);
+	
+	GlobalMemoryStatusEx(&statex);
+	
+	return (int)(statex.ullTotalPhys/(1024*1024));
 }
 
 #elif defined(OSF1)
