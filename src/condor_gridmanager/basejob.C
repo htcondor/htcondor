@@ -422,6 +422,13 @@ dprintf(D_FULLDEBUG,"(%d.%d) Evaluating periodic job policy expressions\n",procI
 		JobHeld( "Hold job policy expression became true" );
 		SetEvaluateState();
 		break;
+	case RELEASE_FROM_HOLD:
+			// When a job gets held and then released while the gridmanager
+			// is managing it, the gridmanager cleans up and deletes its
+			// local data for the job (canceling the remote submission if
+			// possible), then picks it up as a new job from the schedd.
+			// So ignore release-from-hold and let the schedd deal with it.
+		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalPeriodicJobExpr", 
 				action );
