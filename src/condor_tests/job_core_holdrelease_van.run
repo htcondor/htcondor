@@ -16,17 +16,25 @@ $execute = sub {
 	my $cluster = $args{"cluster"};
 
 	# avoid reentrant death
-	if($alreadydone != 0) {
+	if($alreadydone == 0) {
 		CondorTest::RegisterTimed($testname, $timed, 120);
 		print "Seeing job run and about to place on hold\n";
+		$alreadydone = 1;
 		return true;
 	} else {
 		print "Have already run once and don't expect this!\n";
-		$alreadydone = 1;
 	}
 	
 	print "Putting cluster $cluster on hold\n";
-	system("condor_hold $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_hold $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 
 };
 
@@ -41,9 +49,24 @@ $hold = sub
 
 	print "Good. Cluster $cluster is supposed to be held.....\n";
 	print "Releasing cluster $cluster\n";
-	system("condor_release $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_release $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 	# must reschedule to get released job out of Inactive and into Running
-	system("condor_reschedule");
+	$status = 1;
+	$cmd = "condor_reschedule $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 };
 
 $release = sub
@@ -52,7 +75,15 @@ $release = sub
 	my $cluster = $args{"cluster"};
 
 	print "Good hold and release both worked! removing job\n";
-	system("condor_rm $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 };
 
 $success = sub

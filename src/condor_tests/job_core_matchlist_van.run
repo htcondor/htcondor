@@ -16,7 +16,15 @@ $ExitSuccess = sub {
 	$counter -= 1;
 	if( $counter == 0 )
 	{
-		system("condor_rm $cluster");
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			return(1)
+		}
 	}
 };
 
@@ -29,7 +37,15 @@ $evicted = sub {
 	if( $counter == 0 )
 	{
 		print "Counter 0 so removing cluster\n";
-		system("condor_rm $cluster");
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			return(1)
+		}
 	}
 };
 
@@ -42,8 +58,16 @@ $execute = sub
 	my $lmn0 = "";
 	my $remote = "";
 	# get host for test via RemoteHost from job ad
-	open(AD,"condor_q -l $cluster | ") || die  "Can not get job ads $!\n";
-	while(<AD>)
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_q -l $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
+	foreach $line (@adarray)
 	{
 		my $line = "";
 		chomp($_);

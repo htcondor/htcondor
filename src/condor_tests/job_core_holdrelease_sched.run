@@ -10,6 +10,7 @@ sub HELD{5};
 sub RUNNING{2};
 
 my $alreadydone=0;
+my $stat=0;
 
 $execute = sub {
 	my %args = @_;
@@ -23,7 +24,16 @@ $execute = sub {
 	}
 	
 	print "Putting cluster $cluster on hold\n";
-	system("condor_hold $cluster");
+	CondorTest::runCondorTool("condor_hold $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_hold $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 
 };
 
@@ -38,9 +48,23 @@ $hold = sub
 
 	print "Good. Cluster $cluster is supposed to be held.....\n";
 	print "Releasing cluster $cluster\n";
-	system("condor_release $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_release $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 	# must reschedule to get released job out of Inactive and into Running
-	system("condor_reschedule");
+	$cmd = "condor_reschedule";
+	$stat = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$stat)
+	{
+		print "Test failed - could not reschedule\n";
+		exit(1);
+	}
 };
 
 $release = sub
@@ -49,7 +73,13 @@ $release = sub
 	my $cluster = $args{"cluster"};
 
 	print "Good hold and release both worked! removing job\n";
-	system("condor_rm $cluster");
+	$cmd = "condor_rm $cluster";
+	$stat = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$stat)
+	{
+		print "Test worked but runCondorTool $cmd failed\n";
+		exit(0);
+	}
 };
 
 $success = sub

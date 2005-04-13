@@ -31,7 +31,15 @@ while( $currenttestcount <= $maxjobs)
 	$currenttestcount += $incrementjobs;
 }
 
-system("condor_off -master");
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
 
 if($nostatus != 0)
 {

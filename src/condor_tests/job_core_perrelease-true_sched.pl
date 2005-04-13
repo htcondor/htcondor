@@ -36,7 +36,15 @@ $success = sub
 $release = sub
 {
 	print "Release expected.........\n";
-	system("condor_reschedule"); # get job running to completion.
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_reschedule";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);

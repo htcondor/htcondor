@@ -29,7 +29,6 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	system("condor_q");
 	print "Good, job should be done but NOT left in the queue!!!\n";
 	my $qstat = CondorTest::getJobStatus($cluster);
 	if($qstat == -1)

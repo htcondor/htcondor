@@ -127,17 +127,33 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenamelog");
 }
 
-sleep 20;
-print "sleeping............\n";
-system("condor_off -master");
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
 
 $ENV{CONDOR_CONFIG} = $remconfig;
-sleep 20;
-print "sleeping............\n";
-system("condor_off -master");
+$status = 1;
+$cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
 
 $ENV{CONDOR_CONFIG} = $midconfig;
-sleep 20;
-print "sleeping............\n";
-system("condor_off -master");
+$status = 1;
+$cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
 system("date");
