@@ -1677,107 +1677,6 @@ These macros control the \Condor{master}.
   currently includes all Condor daemons except the checkpoint server
   by default.
   
-\item[\Macro{MASTER\_HA\_LIST}] \label{param:MasterHAList} Similar to
-  \Macro{DAEMON\_LIST}, this macro defines a list of daemons that
-  the \Condor{master} starts and keeps its watchful eyes on.
-  However, the \MacroNI{MASTER\_HA\_LIST} daemons are run in a
-  \emph{High Availability} mode.
-  The list is a comma or space separated list of subsystem names
-  (as listed in section~\ref{sec:Condor-Subsystem-Names}).
-  For example,
-  \begin{verbatim}
-        MASTER_HA_LIST = SCHEDD
-  \end{verbatim}
-
-  The \emph{High Availability} feature allows for several \Condor{master}
-  daemons (most likely on separate machines) to work together to
-  insure that a particular service stays available.  These
-  \Condor{master} daemons ensure that one and only one of them will
-  have the listed daemons running.
-
-  To use this feature, the lock URL must be set with
-  \MacroNI{HA\_LOCK\_URL}.
-
-  Currently, only file URLs are supported 
-  (those with \File{file:\Dots}).
-  The default value for \MacroNI{MASTER\_HA\_LIST} is 
-  the empty string, which disables the feature.
-  
-\item[\Macro{HA\_LOCK\_URL}] \label{param:HALockURL} This macro
-  specifies the URL that the \Condor{master} processes use to
-  syncronize for the \emph{High Availability} service.
-  Currently, only file URLs are supported; for example,
-  \File{file:/share/spool}.  Note that this URL must be identical
-  for all \Condor{master} processes sharing this resource.  For
-  \Condor{schedd} sharing, we recommend setting up \MacroNI{SPOOL}
-  on an NFS share and having all \emph{High Availability}
-  \Condor{schedd} processes sharing it,
-  and setting the \MacroNI{HA\_LOCK\_URL} to point at this directory
-  as well.  For example:
-\begin{verbatim}
-        MASTER_HA_LIST = SCHEDD
-        SPOOL = /share/spool
-        HA_LOCK_URL = file:/share/spool
-\end{verbatim}
-
-  A separate lock is created for each \emph{High Availability} daemon.
-
-  There is no default value for \MacroNI{HA\_LOCK\_URL}.
-
-\item[\Macro{HA\_daemon\_LOCK\_URL}]
-  \label{param:HAdaemonLockURL} This macro controls the 
-  \emph{High Availability} lock URL for a specific \Expr{daemon}
-  as specified in the configuration variable name,
-  and it overrides the system-wide lock URL specified by
-  \MacroNI{HA\_LOCK\_URL}.  If not defined for each daemon,
-  \MacroNI{HA\_daemon\_LOCK\_URL} is ignored, and the value of
-  \MacroNI{HA\_LOCK\_URL} is used.
-
-\item[\Macro{HA\_LOCK\_HOLD\_TIME}] \label{param:HALockHoldTime}
-  This macro
-  specifies the number of seconds that the \Condor{master} will hold the
-  lock for each \emph{High Availability} daemon.
-  Upon gaining the shared lock,
-  the \Condor{master} will hold the lock for this number of seconds.
-  Additionally, the \Condor{master} will periodically renew
-  each lock as long as the \Condor{master} and the daemon is running.
-  When the daemon dies, or the \Condor{master} exists, the
-  \Condor{master} will immediately release the lock(s) it holds.
-
-  \MacroNI{HA\_LOCK\_HOLD\_TIME} defaults to 3600 seconds (one hour).
-
-\item[\Macro{HA\_daemon\_LOCK\_HOLD\_TIME}]
-  \label{param:HAdaemonLockHoldTime}
-  This macro controls the \emph{High Availability} lock
-  hold time for a specific \Expr{daemon}
-  as specified in the configuration variable name,
-  and it overrides the system wide poll period specified by
-  \MacroNI{HA\_LOCK\_HOLD\_TIME}.
-  If not defined for each daemon,
-  \MacroNI{HA\_daemon\_LOCK\_HOLD\_TIME} is ignored,
-  and the value of \MacroNI{HA\_LOCK\_HOLD\_TIME} is used.
-
-\item[\Macro{HA\_POLL\_PERIOD}] \label{param:HALockPollPeriod} 
-  This macro specifies how often the \Condor{master} polls the
-  \emph{High Availability} locks to see if any locks are either stale
-  (meaning not updated for \MacroNI{HA\_LOCK\_HOLD\_TIME} seconds),
-  or have been released by the owning \Condor{master}.
-  Additionally, the \Condor{master} renews any locks that it
-  holds during these polls.
-
-  \MacroNI{HA\_POLL\_PERIOD} defaults to 300 seconds (five minutes).
-
-\item[\Macro{HA\_daemon\_POLL\_PERIOD}]
-  \label{param:HALockPolldaemonPeriod}
-  This macro controls the \emph{High Availability} pool period
-  for a specific \Expr{daemon}
-  as specified in the configuration variable name,
-  and it overrides the system wide poll period specified by
-  \MacroNI{HA\_POLL\_PERIOD}.
-  If not defined for each daemon,
-  \MacroNI{HA\_daemon\_POLL\_PERIOD} is ignored,
-  and the value of \MacroNI{HA\_POLL\_PERIOD} is used.
-
 \item[\Macro{SUBSYS}] \label{param:SUBSYS} Once you have defined which
   subsystems you want the \Condor{master} to start, you must provide
   it with the full path to each of these binaries.  For example:
@@ -4099,8 +3998,216 @@ feature of Windows NTFS v5.
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:HA-Config-File-Entries}
+Configuration File Entries Relating to High Availability}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!high availability configuration variables}
+These macros affect the high availability operation of Condor.
+
+\begin{description}
+\item[\Macro{MASTER\_HA\_LIST}] \label{param:MasterHAList} Similar to
+  \Macro{DAEMON\_LIST}, this macro defines a list of daemons that
+  the \Condor{master} starts and keeps its watchful eyes on.
+  However, the \MacroNI{MASTER\_HA\_LIST} daemons are run in a
+  \emph{High Availability} mode.
+  The list is a comma or space separated list of subsystem names
+  (as listed in section~\ref{sec:Condor-Subsystem-Names}).
+  For example,
+  \begin{verbatim}
+        MASTER_HA_LIST = SCHEDD
+  \end{verbatim}
+
+  The \emph{High Availability} feature allows for several \Condor{master}
+  daemons (most likely on separate machines) to work together to
+  insure that a particular service stays available.  These
+  \Condor{master} daemons ensure that one and only one of them will
+  have the listed daemons running.
+
+  To use this feature, the lock URL must be set with
+  \MacroNI{HA\_LOCK\_URL}.
+
+  Currently, only file URLs are supported 
+  (those with \File{file:\Dots}).
+  The default value for \MacroNI{MASTER\_HA\_LIST} is 
+  the empty string, which disables the feature.
+  
+\item[\Macro{HA\_LOCK\_URL}] \label{param:HALockURL} This macro
+  specifies the URL that the \Condor{master} processes use to
+  syncronize for the \emph{High Availability} service.
+  Currently, only file URLs are supported; for example,
+  \File{file:/share/spool}.  Note that this URL must be identical
+  for all \Condor{master} processes sharing this resource.  For
+  \Condor{schedd} sharing, we recommend setting up \MacroNI{SPOOL}
+  on an NFS share and having all \emph{High Availability}
+  \Condor{schedd} processes sharing it,
+  and setting the \MacroNI{HA\_LOCK\_URL} to point at this directory
+  as well.  For example:
+\begin{verbatim}
+        MASTER_HA_LIST = SCHEDD
+        SPOOL = /share/spool
+        HA_LOCK_URL = file:/share/spool
+\end{verbatim}
+
+  A separate lock is created for each \emph{High Availability} daemon.
+
+  There is no default value for \MacroNI{HA\_LOCK\_URL}.
+
+\item[\Macro{HA\_daemon\_LOCK\_URL}]
+  \label{param:HAdaemonLockURL} This macro controls the 
+  \emph{High Availability} lock URL for a specific \Expr{daemon}
+  as specified in the configuration variable name,
+  and it overrides the system-wide lock URL specified by
+  \MacroNI{HA\_LOCK\_URL}.  If not defined for each daemon,
+  \MacroNI{HA\_daemon\_LOCK\_URL} is ignored, and the value of
+  \MacroNI{HA\_LOCK\_URL} is used.
+
+\item[\Macro{HA\_LOCK\_HOLD\_TIME}] \label{param:HALockHoldTime}
+  This macro
+  specifies the number of seconds that the \Condor{master} will hold the
+  lock for each \emph{High Availability} daemon.
+  Upon gaining the shared lock,
+  the \Condor{master} will hold the lock for this number of seconds.
+  Additionally, the \Condor{master} will periodically renew
+  each lock as long as the \Condor{master} and the daemon is running.
+  When the daemon dies, or the \Condor{master} exists, the
+  \Condor{master} will immediately release the lock(s) it holds.
+
+  \MacroNI{HA\_LOCK\_HOLD\_TIME} defaults to 3600 seconds (one hour).
+
+\item[\Macro{HA\_daemon\_LOCK\_HOLD\_TIME}]
+  \label{param:HAdaemonLockHoldTime}
+  This macro controls the \emph{High Availability} lock
+  hold time for a specific \Expr{daemon}
+  as specified in the configuration variable name,
+  and it overrides the system wide poll period specified by
+  \MacroNI{HA\_LOCK\_HOLD\_TIME}.
+  If not defined for each daemon,
+  \MacroNI{HA\_daemon\_LOCK\_HOLD\_TIME} is ignored,
+  and the value of \MacroNI{HA\_LOCK\_HOLD\_TIME} is used.
+
+\item[\Macro{HA\_POLL\_PERIOD}] \label{param:HALockPollPeriod} 
+  This macro specifies how often the \Condor{master} polls the
+  \emph{High Availability} locks to see if any locks are either stale
+  (meaning not updated for \MacroNI{HA\_LOCK\_HOLD\_TIME} seconds),
+  or have been released by the owning \Condor{master}.
+  Additionally, the \Condor{master} renews any locks that it
+  holds during these polls.
+
+  \MacroNI{HA\_POLL\_PERIOD} defaults to 300 seconds (five minutes).
+
+\item[\Macro{HA\_daemon\_POLL\_PERIOD}]
+  \label{param:HALockPolldaemonPeriod}
+  This macro controls the \emph{High Availability} pool period
+  for a specific \Expr{daemon}
+  as specified in the configuration variable name,
+  and it overrides the system wide poll period specified by
+  \MacroNI{HA\_POLL\_PERIOD}.
+  If not defined for each daemon,
+  \MacroNI{HA\_daemon\_POLL\_PERIOD} is ignored,
+  and the value of \MacroNI{HA\_POLL\_PERIOD} is used.
+
+
+\item[\Macro{HAD\_LIST}]
+  \label{param:HADList}
+  A comma-separated list of all \Condor{had} daemons
+  in the form \Expr{IP:port} or \Expr{hostname:port}.
+  Each central manager machine that runs the \Condor{had} daemon
+  should appear in this list.
+  If \MacroNI{HAD\_USE\_PRIMARY} is set to \Expr{True},
+  then the first machine in this list is the primary central
+  manager, and all others in the list are backups.
+
+  All central manager machines must be configured with 
+  an identical \MacroNI{HAD\_LIST}.
+  The machine addresses are identical to the addresses defined
+  in \MacroNI{COLLECTOR\_HOST}.
+
+%The following examples are all valid HAD\_LIST declarations: 
+%
+%HAD\_LIST =<132.68.37.104:10001>,<132.68.37.105:10002>,<132.68.37.106:1045>
+%
+%HAD\_LIST =132.68.37.104:10001,132.68.37.105:10002,132.68.37.106:1045
+%
+%HAD\_LIST=ds-r3.cs.technion.ac.il:10001,ds-r3.cs.technion.ac.il:10002,ds-r3.cs.technion.ac.il:1045
+%
+
+
+\item[\Macro{HAD\_USE\_PRIMARY}]
+  \label{param:HADUsePrimary}
+  Boolean value to determine if the first machine in the 
+  \MacroNI{HAD\_LIST} configuration variable is
+  a primary central manager.
+  Defaults to \Expr{False}.
+
+
+\item[\Macro{HAD\_CONNECTION\_TIMEOUT}]
+  \label{param:HADConnectionTimeout}
+  The time (in seconds) that the \Condor{had} daemon waits before giving
+  up on the establishment of a TCP connection.
+  The failure of the communication connection
+  is the detection mechanism for the failure of a central
+  manager machine.
+  For a LAN, a recommended value is 2 seconds.
+  The use of authentication (by Condor) increases the connection
+  time.
+  The default value is 5 seconds.
+  If this value is set too low,
+  \Condor{had} deamons will incorrectly assume
+  the failure of other machines.
+
+\item[\Macro{HAD\_ARGS}]
+  \label{param:HADArgs}
+  Command line arguments passed by the \Condor{master} daemon
+  as it invokes the \Condor{had} daemon.
+  To make high availability work, the \Condor{had} daemon
+  requires the port number it is to use.
+  This argument is of the form
+  \begin{verbatim}
+   -p $(HAD_PORT_NUMBER)
+  \end{verbatim}
+  where \MacroNI{HAD\_PORT\_NUMBER} is defined with the
+  desired port number.
+  Note that this port number must be the same value here as
+  used in \MacroNI{HAD\_LIST}.
+  There is no default value.
+
+
+\item[\Macro{HAD}]
+  \label{param:HAD}
+  The path to the \Condor{had} executable. Normally it is defined
+  relative to \MacroUNI{SBIN}.
+  This configuration variable has no default value.
+
+\item[\Macro{MAX\_HAD\_LOG}]
+  \label{param:MaxHADLog}
+  Controls the maximum length in bytes to which the \Condor{had}
+  daemon log will be allowed to grow. It will grow to the specified length,
+  then be saved to a file with the suffix \File{.old}. 
+  The \File{.old}  file is overwritten each time the log is saved,
+  thus the maximum space devoted to logging is twice the maximum length
+  of this log file.
+  A value of 0 specifies that this file may grow without bounds.
+  The default is 1 Mbyte.
+
+\item[\Macro{HAD\_DEBUG}]
+  \label{param:HADDebug}
+  Logging level for the \Condor{had} daemon.
+  See \MacroNI{SUBSYS\_DEBUG} for values.
+
+\item[\Macro{HAD\_LOG}]
+  \label{param:HADLog}
+  Path to the log file.
+
+\end{description}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{admin-man/root-config.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:MyProxy-Config-File-Entries}

@@ -413,7 +413,7 @@ if so desired.
    cluster identifier for a COD job.
    The default value is 1.
    The \Attr{ClusterId} can also be defined with the
-\index{COD!\Condor{cod\_activate} command} 
+\index{COD!condor\_cod\_activate command} 
    \Condor{cod\_activate} command-line tool using the \Opt{-cluster}
    option.
 
@@ -487,7 +487,7 @@ resource they are using is running as root, the user must also define
 \subsubsection{\label{sec:cod-command-line-attrs}
 Defining Attributes with the \Condor{cod} Tool} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{COD!\Condor{cod} tool} 
+\index{COD!condor\_cod tool} 
 
 COD users may define attributes dynamically (at the time they spawn a
 COD application).
@@ -589,7 +589,7 @@ The following sections describe each option in greater detail.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-request}Request}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{COD!\Condor{cod\_request} command} 
+\index{COD!condor\_cod\_request command} 
 
 A user must be granted authorization to a create COD
 claims on a specific machine.
@@ -716,7 +716,7 @@ recognize any attempts to use the previous claims.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-activate}Activate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{COD!\Condor{cod\_activate} command} 
+\index{COD!condor\_cod\_activate command} 
 
 Once a user has created a valid COD claim and has the claim ID, the
 next step is to spawn a COD job using the claim.
@@ -798,7 +798,7 @@ If not specified, the job ID defaults to \verb@1.0@.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-suspend}Suspend}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{COD!\Condor{cod\_suspend} command} 
+\index{COD!condor\_cod\_suspend command} 
 
 Once a COD application has been activated with \Condor{cod\_activate}
 and is running on a COD resource, it may be temporarily suspended
@@ -831,7 +831,7 @@ the given COD claim in the first place.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-resume}Resume}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{COD!\Condor{cod\_resume} command} 
+\index{COD!condor\_cod\_resume command} 
 
 Once a COD application has been suspended with \Condor{cod\_suspend},
 it can be resumed using \Condor{cod\_resume}.
@@ -853,7 +853,7 @@ If the user attempts to resume a COD job that is not suspended,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-deactivate}Deactivate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{COD!\Condor{cod\_deactivate} command} 
+\index{COD!condor\_cod\_deactivate command} 
 
 If a given COD application does not exit on its own and needs to be
 removed manually, invoke the \Condor{cod\_deactivate}
@@ -901,7 +901,7 @@ tool exits with an error message.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-release}Release}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{COD!\Condor{cod\_release} command} 
+\index{COD!condor\_cod\_release command} 
 
 If users no longer wish to use a given COD claim,
 they can release the claim with the \Condor{cod\_release} command.

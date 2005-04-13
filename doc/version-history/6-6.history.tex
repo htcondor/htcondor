@@ -9,35 +9,80 @@ in the 6.6 series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-6-9}Version 6.6.9}
+\subsection{\label{sec:New-6-6-10}Version 6.6.10}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% \noindent Release Notes:
-
-\noindent New Features:
+\noindent Release Notes:
 
 \begin{itemize}
 
-\item None.
+\item Most of the fixes included in this release were also included in
+  version 6.7.7.
 
 \end{itemize}
 
-\noindent Bugs Fixed:
+%\noindent New Features:
+%
+%\begin{itemize}
+%
+%\item None.
+%
+%\end{itemize}
+
+\noindent Bugs fixed that are included in version 6.7.7:
 
 \begin{itemize}
 
-\item Fixed a bug where under very pathological file permission failure
-conditions with a standard universe job, there would be a cycle of an
-execute event followed by a termination event in the user log when the
-job had not actually ran.
+\item Fixed a bug that could cause the file \File{job\_queue.log} in
+	the Condor SPOOL directory to grow unnecessarily large, thereby
+	slowing down the startup and/or shutdown times for the \Condor{schedd}
+	daemon.
 
-\item Fixed a memory management bug introduced in version 6.6.8 that could result
-in deallocated memory being referenced after a child process forked from a
-Condor daemon exits.
+\item Fixed a critical bug where the console idle time for PS/2 keyboards
+	and mice was not being updated correctly.
 
-\item Fixed a security bug in the \Condor{schedd} that could enable a
-maliciously modified \Condor{submit} tool to overwrite files in the Condor
-\Macro{SPOOL} subdirectory, including the job queue.
+\item Fixed a bug in the \Condor{collector} that could cause it to
+crash when parsing certain types of invalid ClassAds.  In particular, if
+a Machine, Schedd or License ClassAd sent to the \Condor{collector} has
+an IP address field which is empty (which should never happen), the
+\Condor{collector} will crash.
+
+\item Fixed some bugs in how the \Condor{schedd} handles a graceful
+  shutdown (either because of a \Condor{off}) or a \verb@SIGTERM@ on
+  UNIX): 
+\begin{itemize}
+  \item There was a minor bug if \Macro{JOB\_START\_DELAY} was set to
+     0 that would prevent the \Condor{schedd} from correctly cleaning
+     up during graceful shutdown.
+     Now, the \Condor{schedd} will properly shutdown, even if
+     \MacroNI{JOB\_START\_DELAY} is set to 0.
+
+  \item Fixed a bug when there are scheduler universe jobs that were
+    recently submitted to the queue.
+    Previously, the shutdown code would not evict scheduler universe
+    jobs that had been submitted since the last
+    \Macro{SCHEDD\_INTERVAL} (which defaults to 5 minutes).
+    So, if a user submitted a scheduler universe job and then someone
+    shutdown Condor on that machine, the \Condor{schedd} would wait
+    until the next \MacroNI{SCHEDD\_INTERVAL} had elapsed before
+    evicting the job.
+    Now, the schedd will always attempt to evict scheduler universe
+    jobs during a shutdown, without waiting for this interval to pass.
+\end{itemize}
+
+\item On Windows, it was possible under certain circumstances for execute
+directories to not be cleaned up properly. This has been fixed.
+
+\item On Windows, certain Asian locales would cause the \Condor{starter}
+to crash due to character translation problems. This has been fixed.
+
+\end{itemize}
+
+\noindent Bugs fixed that are NOT included in version 6.7.7:
+
+\begin{itemize}
+
+\item None
 
 \end{itemize}
 
@@ -46,6 +91,112 @@ maliciously modified \Condor{submit} tool to overwrite files in the Condor
 \begin{itemize}
 
 \item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-9}Version 6.6.9}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Most of the fixes included in this release were also included in
+  version 6.7.5.
+  However, at the end of this section, a few fixes that were added to
+  6.6.9 after 6.7.5 was released are mentioned separately.
+
+\end{itemize}
+
+%\noindent New Features:
+%
+%\begin{itemize}
+%
+%\item None.
+%
+%\end{itemize}
+
+\noindent Bugs fixed that are included in version 6.7.5:
+
+\begin{itemize}
+
+\item Fixed a security bug in the \Condor{schedd} that could enable a
+maliciously modified \Condor{submit} tool to overwrite files in the Condor
+\Macro{SPOOL} subdirectory, including the job queue.
+
+\item Fixed a bug where under very pathological file permission failure
+conditions with a standard universe job, there would be a cycle of an
+execute event followed by a termination event in the user log when the
+job had not actually ran.
+
+
+\end{itemize}
+
+\noindent Bugs fixed that are NOT included in version 6.7.5:
+
+\begin{itemize}
+
+\item Fixed a memory management bug introduced in version 6.6.8 that
+  could result in deallocated memory being referenced after a child
+  process forked from a Condor daemon exits.
+
+\item Fixed bugs in some Condor tools that failed to locate
+  \Condor{startd} daemons that contained multiple \verb&@& signs in
+  their \Attr{Name} attribute.
+  For example, a virtual machine from a multiple-CPU \Condor{startd}
+  spawned using glidein would have the name:
+  \verb&vm1@[pid]@[hostname]&.
+  All Condor tools that need to communicate with a \Condor{startd}
+  like this will now succeed.
+
+\item Removed a fixed-length buffer in the code that handled the
+  \Macro{SUBSYS\_EXPRS} config file setting.
+  Previously, if any attributes referred to were larger than
+  approximate 1000 bytes, Condor daemons would crash.
+  Now, there is no limit to the size of the attributes listed in 
+  \MacroNI{SUBSYS\_EXPRS}.
+  For more information about this setting, see
+  section~\ref{param:SubsysExprs} on page~\pageref{param:SubsysExprs}.
+
+\item Fixed a bug which would cause Condor to fail to cache user GID
+information and potentially overwhelm NIS servers.
+
+\item Fixed another bug which could cause UDP machine updates to be
+dropped by the \Condor{collector}.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item If a DAG node has both retries and a POST script, and the
+actual Condor job for the node fails, the POST script is not
+run except after the last retry of the job (or if the job
+succeeds).  (The POST script should be run each time the node
+job is run, whether the job succeeds or not.)
+
+\item Occasionally, Condor generates both a terminated event and
+an aborted event for a job that is aborted.  If this happens for a
+DAG node job, \Condor{dagman} considers this an error
+and aborts the DAG.  If you run into this problem, you can avoid
+the abort by adding the \Opt{-NoEventChecks} flag to argument list
+in the \Condor{dagman} submit file generated by \Condor{submit\_dag}
+(you have to do \Condor{submit\_dag} \Arg{-no\_submit} and hand-edit
+the resulting submit file).  However, if you get the
+double events on a node that has retries, \Condor{dagman} will assert.
+The only fix for this is to upgrade to a 6.7.5 or newer \Condor{dagman}.
+You can do this by simply installing a newer \Condor{dagman} executable,
+without any other changes to your Condor installation.  It is fine to
+run a 6.7 \Condor{dagman} on a 6.6 Condor installation.
+
+\item \item In a DAG, if a node job generates an executable error event,
+the DAG is aborted.  This can be worked around by adding the
+\Opt{-NoEventChecks} flag to argument list in the \Condor{dagman}
+submit file generated by \Condor{submit\_dag} (you have to do
+\Condor{submit\_dag} \Arg{-no\_submit} and hand-edit the resulting
+submit file).
 
 \end{itemize}
 
@@ -60,7 +211,7 @@ maliciously modified \Condor{submit} tool to overwrite files in the Condor
 
 \item Most of the fixes included in this release were also included in
   version 6.7.3.
-  However, at the end of this section, a few fixes there were added to
+  However, at the end of this section, a few fixes that were added to
   6.6.8 after 6.7.3 was released are mentioned separately.
 
 \end{itemize}
@@ -991,7 +1142,7 @@ accepting new transfer requests, producing a variety of errors.
     \item Fixed a \Condor{negotiator} bug that could, in certain rare
       circumstances, cause a \Condor{schedd} to hang for five minutes
       while trying to communicate with it.
-    \item Fixed a bug in which TCP connections would reauthenticate
+    \item Fixed a bug in which TCP connections would re-authenticate
       needlessly when Condor's strong authentication was enabled.
       This was not harmful but incurred a bit of overhead, especially
       when using Kerberos authentication.

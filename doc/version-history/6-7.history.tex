@@ -111,10 +111,10 @@ StageOut Globus job state.
 
 \begin{itemize}
 
-\item None.
+\item Version 6.7.6 contains all the bug fixes and improvements from
+  the 6.6 stable series up to and including version 6.6.9.
 
 \end{itemize}
-
 
 \noindent New Features:
 
@@ -131,6 +131,64 @@ StageOut Globus job state.
 	invocation of \Syscall(system) and this might cause problems in 
 	heterogenous submission contexts of the user is not careful.
 
+\item Added support for a web services (SOAP) interface to Condor.
+  For more information, see and section~\ref{API-WebService} on
+  page~\pageref{API-WebService}.
+
+  \Note Due to a bug in gSOAP, the SOAP support in Condor 6.7.6 does
+  not work with all SOAP toolkits.
+  Some of the responses that gSOAP generates contain unqualified tags.
+  Therefore, SOAP toolkits that are strict (such as gSOAP or .Net)
+  will not accept these poorly formed responses.
+  SOAP toolkits that are more lax in the responses they accept (such
+  as Axis, SOAP::Lite, or ZSI) will work with version 6.7.6.
+  This problem has already been fixed and the solution will be
+  released in Condor version 6.7.7.
+
+\item Added support for the GT4 grid\_type in Condor's grid universe.
+  This new grid type supports jobs submitted to grid resources
+  controlled by Globus Toolkit version 4 (GT4).
+
+  New configuration settings are required to support jobs
+  submitted for the GT4 grid type.
+  These settings have been added to the default configuration files
+  shipped with Condor, but sites that are upgrading an existing
+  installation and choosing to keep their old configuration files must
+  add these settings to allow GT4 jobs to work:
+\begin{verbatim}
+## The location of the wrapper for invoking GT4 GAHP server
+GT4_GAHP = $(SBIN)/gt4_gahp
+ 
+## The location of GT4 files. This should normally be lib/gt4
+GT4_LOCATION = $(LIB)/gt4
+
+## gt4-gahp requires gridftp server. This should be the address of gridftp
+## server to use
+GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
+\end{verbatim}
+
+\item Condor version 6.7.6 includes the Stork data movement system, 
+  the Condor Credential Daemon (\Condor{credd}), and support for using
+  MyProxy for credential management.
+  However, currently these are only supported in our release for Linux
+  using the 2.4 kernel with glibc version 2.3 (RedHat 9, etc).
+  All of these features require changes to the Condor configuration
+  files to function properly.
+  The default configuration files shipped with Condor already include
+  all the new settings, but sites upgrading an existing installation
+  must add these new settings to their Condor configuration.
+  For a list of settings and more information, see
+  section~\ref{sec:Stork-Config-File-Entries} on 
+  page~\pageref{sec:Stork-Config-File-Entries} for Stork,
+  section~\ref{sec:Credd-Config-File-Entries} on
+  page~\pageref{sec:Credd-Config-File-Entries} for \Condor{credd},
+  and section~\ref{sec:MyProxy-Config-File-Entries} on
+  page~\pageref{sec:MyProxy-Config-File-Entries} for MyProxy.
+  For more information about MyProxy, you can also see  
+  \URL{http://grid.ncsa.uiuc.edu/myproxy}
+
+\item Added preliminary support for the High Availability Daemon (HAD).
+
 \item Added a new \MacroNI{SCHED\_UNIV\_RENICE\_INCREMENT}
 configuration variable used by the \Condor{schedd} for scheduler
 universe jobs, analogous to the existing
@@ -139,24 +197,44 @@ for other job universes.  The \MacroNI{SCHED\_UNIV\_RENICE\_INCREMENT}
 variable is undefined by default, and when undefined, defaults to 0
 internally.
 
-\item \Condor{dagman} now inserts a \MacroNI{DAGParentNodeNames}
-attribute into classad of all Condor jobs it submits, containing the
-names of the job's parents in the DAG.  The list is in the form of a
-comma-delimited string.
-
 \item The relative priority of a user's own jobs in the local
 \condor{schedd} queue is no longer limited to the range -20 to +20,
 but can be any integer value.
 
-\item Added the \Condor{dagman} arguments {-noeventchecks} and
-{-allowlogerror} to \Condor{submit\_dag}.
+\item DAGMan Improvements:
 
-\item Added \Condor{glidein} options for setting up GSI authentication.
+\begin{itemize}
 
-\item Added \Condor{glidein} option {-run\_here} for direct execution
-of Glidein, instead of submitting it for remote execution.  You may also save
-a script for doing this and then run the script through whatever mechanism
-you want (like some batch system interface not supported by Condor-G).
+  \item \Condor{dagman} now inserts a \MacroNI{DAGParentNodeNames}
+  attribute into classad of all Condor jobs it submits, containing the
+  names of the job's parents in the DAG.  The list is in the form of a
+  comma-delimited string.
+
+  \item Added the \Condor{dagman} arguments \Opt{-noeventchecks} and
+  \Opt{-allowlogerror} to \Condor{submit\_dag}.
+
+\end{itemize}
+
+\item \Condor{glidein} Improvements:
+
+\begin{itemize}
+
+  \item Added \Condor{glidein} options for setting up GSI authentication.
+
+  \item Added \Condor{glidein} option {-run\_here} for direct
+  execution of Glidein, instead of submitting it for remote execution.
+  You may also save a script for doing this and then run the script
+  through whatever mechanism you want (like some batch system
+  interface not supported by Condor-G).
+
+\end{itemize}
+
+\item Added support for the \Macro{NEGOTIATOR\_CYCLE\_DELAY}
+  configuration setting, which is only intended for expert
+  administrators.
+  For more information, see section~\ref{param:NegotiatorCycleDelay}
+  on page~\pageref{param:NegotiatorCycleDelay}.
+
 
 \end{itemize}
 
@@ -169,8 +247,7 @@ you want (like some batch system interface not supported by Condor-G).
 
 \item Fixed the {-r} (remote schedd) option in \Condor{submit\_dag}.
 
-% Karen's rewrite of Derek's prose
-\item Condor versions 6.7.1 through 6.7.4 exhibit a bug in
+\item Condor versions 6.7.1 through 6.7.5 exhibit a bug in
   which the commands \Condor{off}, \Condor{restart}, and
   \Condor{vacate} did not handle the \Opt{-pool} command-line option
   correctly.
@@ -179,20 +256,6 @@ you want (like some batch system interface not supported by Condor-G).
   and to incorrectly send the command to the central manager machine.
   This bug has now been fixed, and these tools no longer send
   the command to the central manager machine.
-
-
-% Derek's prose
-%\item Starting in version 6.7.1, \Condor{off}, \Condor{restart}, and
-%  \Condor{vacate} stopped handling the \Opt{-pool} command-line option
-%  correctly.
-%  Normally, these tools will query the \Condor{collector} of the pool
-%  specified with the \Opt{-pool} argument to locate the other daemons
-%  listed on the command-line.
-%  Due to a bug, these tools would not only query the central manager
-%  of the remote pool, they would also send their command to the
-%  central manager machine.
-%  This bug has now been fixed, and these tools will no longer send
-%  their commands to the machine specified with \Opt{-pool}.
 
 \end{itemize}
 
@@ -206,9 +269,10 @@ you want (like some batch system interface not supported by Condor-G).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-4}Version 6.7.4}
+\subsection{\label{sec:New-6-7-5}Version 6.7.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%  This was 6.7.4, but we took 6.7.4 away and replaced it quickly
+%  with 6.7.5
 \noindent Release Notes:
 
 \begin{itemize}
@@ -301,6 +365,9 @@ high a value.
 
 \item Fixed a bug in \Condor{gridmanager} that caused it to crash if
 the grid\_monitor was activated.
+
+\item Fixed support for the getdents64() system call inside the
+  standard universe on Linux and Solaris.
 
 \end{itemize}
 
