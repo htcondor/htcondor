@@ -45,12 +45,12 @@ $evicted = sub
 	print "Good a requeue.....after eviction....\n";
 	my @adarray;
 	my $status = 1;
-	my $cmd = "condor_rm";
+	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		return(1)
+		exit(0)
 	}
 };
 

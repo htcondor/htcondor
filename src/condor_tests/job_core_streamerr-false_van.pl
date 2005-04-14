@@ -51,7 +51,7 @@ $execute = sub
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		return(1)
+		exit(0)
 	}
 };
 
