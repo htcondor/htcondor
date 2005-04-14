@@ -59,9 +59,9 @@ from one \condor{schedd} to another.
 
 	It is recommended that you do not directly invoke \Syscall{getdents} 
 	or \Syscall{getdents64}, but instead use the other POSIX functions
-	specifed above.
+	specified above.
 
-	There are two caveats: these calls will not work in heterogenous
+	There are two caveats: these calls will not work in heterogeneous
 	contexts, and you may not call \Syscall{getdents} directly when 
 	\Condor{compile}ing a 32-bit program while specifying the 64-bit
 	interfaces for the Unix API.
@@ -94,7 +94,7 @@ incorrectly used ``<name>=<value>'' for each variable's name.
 
 \item Improved hold reason in certain cases when a GT4 job goes on hold.
 
-\item \condor{q} -globus now works properly for GT4 jobs. Also, the resouce
+\item \condor{q} -globus now works properly for GT4 jobs. Also, the resource
 name in the user log execute event is printed properly for GT4 jobs.
 
 \item Fixed a bug that could cause Condor to not detect when a GT4 job
@@ -103,6 +103,10 @@ StageOut Globus job state.
 
 \item Fixed a bug that can cause the \condor{gridmanager} to abort if
 \Attr{PeriodicRelease} evaluates to true while it's putting a job on hold.
+
+\item Fixed a bug in \Condor{dagman} (see Gnats PR 470) that
+caused the DAG to be aborted if a job generated an executable error
+event.
 
 \end{itemize}
 
@@ -133,7 +137,7 @@ StageOut Globus job state.
 	\Attr{SHADOW\_ALLOW\_UNSAFE\_REMOTE\_EXEC} and is off by default.
 	The full environment of the user job is preserved during the
 	invocation of \Syscall(system) and this might cause problems in 
-	heterogenous submission contexts of the user is not careful.
+	heterogeneous submission contexts of the user is not careful.
 
 \item Added support for a web services (SOAP) interface to Condor.
   For more information, see and section~\ref{API-WebService} on
@@ -317,7 +321,7 @@ nodes elsewhere. See ~\ref{sec:MPI} for details.
   To enable this feature and have the \Condor{negotiator} listen on a
   dynamic port, you must comment out the \Macro{NEGOTIATOR\_HOST}
   setting in your configuration file.
-  The new example configutation files shipped with version 6.7.4 and
+  The new example configuration files shipped with version 6.7.4 and
   later will already have this setting undefined.
   However, if you upgrade your binaries and retain an older copy of
   your configuration files, you should consider commenting out 
@@ -373,6 +377,11 @@ the grid\_monitor was activated.
 \item Fixed support for the getdents64() system call inside the
   standard universe on Linux and Solaris.
 
+\item Fixed a bug in \Condor{dagman} (see Gnats PR 467) that dealt
+incorrectly with the problem of Condor sometimes writing both a
+terminated and an aborted event for the same job. The spurious
+aborted event is now ignored.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -396,7 +405,7 @@ the grid\_monitor was activated.
   series upto and including version 6.6.7, and some of the fixes that
   will be included in version 6.6.8.
   The bug fixes in version 6.6.8 that were not included in version
-  6.7.3 are listed in a seperate section of the 6.6.8 version
+  6.7.3 are listed in a separate section of the 6.6.8 version
   history. 
 
 \end{itemize}
@@ -457,7 +466,7 @@ find the proxy file.
 when aborting a DAG.
 
 \item Fixed a \Condor{dagman} bug which, if its debug level was set to
-zero (silent), could cause it to to improperly recognize persistant
+zero (silent), could cause it to to improperly recognize persistent
 \Condor{submit} failures.
 
 \item Fixed a bug in Condor's file transfer mechanism that showed up
@@ -591,7 +600,7 @@ dont\_encrypt\_input\_files, encrypt output files, and
 
 \item Added DISABLE\_AUTHENTICATION\_IP\_CHECK which will work around problems
 on dual-homed machines where the IP address is reported incorrectly to condor.
-This is particularily a problem when using Kerberos on multi-homed machines.
+This is particularly a problem when using Kerberos on multi-homed machines.
 
 \end{itemize}
 
@@ -620,7 +629,7 @@ This is particularily a problem when using Kerberos on multi-homed machines.
 \item Condor can now detect the size of memory on a Linux machine with the 2.6
 kernel.
 
-\item JAR files specificed in the submit file were not being transfered
+\item JAR files specified in the submit file were not being transfered
 along with the job unless they were also explicitly placed in the list
 of input files to transfer. Now, the JAR files are implicitly added to the
 list of input files to transfer.
@@ -728,7 +737,7 @@ timeout settings.
   Improved Condor's log messages and email notifications when MPI jobs
   run on multiple virtual machines (the messages now include the
   appropriate ``vmX'' identifier, not just the hostname).
-  Unfortuately, due to changes in MPICH between version 1.2.4 and
+  Unfortunately, due to changes in MPICH between version 1.2.4 and
   1.2.5, Condor's MPI support is not compatible with MPICH 1.2.5.
   We will be addressing this problem in a future release.
 
@@ -760,7 +769,7 @@ timeout settings.
   value.
   For example, if a user tries to print out a boolean attribute with
   \verb@condor_status -format "%d\n" HasFileTransfer@, the
-  \Condor{status} tool will evalute \Attr{HasFiletransfer} and print
+  \Condor{status} tool will evaluate \Attr{HasFiletransfer} and print
   either a 0 or a 1 (FALSE or TRUE).
   If, on the other hand, a user tries to print out a boolean attribute
   with \verb@condor_status -format "%s\n" HasFileTransfer@, the
@@ -886,9 +895,9 @@ option.
 \item Added a (configurable, defaults to off) feature to the \Condor{schedd}
    to allow backup the spool file before doing anything else.
 
-\item The "Continous" option of the \Condor{startd} ``cron'' jobs is
+\item The "Continuous" option of the \Condor{startd} ``cron'' jobs is
 being deprecated.   It's being replaced by two new options which
-control separate aspects of it's behaviour:
+control separate aspects of it's behavior:
 \begin{itemize}
 \item "WaitForExit" specifies the "exit timing" mode
 \item "ReConfig" specifies that the job can handle SIGHUPs, and it should 
