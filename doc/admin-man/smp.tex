@@ -406,4 +406,40 @@ As you can see, shared system resources are printed without the header
 (like total swap space), and VM-specific messages (like the load
 average or state of each VM) get the special header appended.  
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-exps}
+Configuring STARTD\_EXPRS on a per-VM basis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \Expr{STARTD\_EXPRS} and \Expr{STARTD\_ATTRS} settings can be configured on 
+a per-VM basis.
+The startd builds the list of things to advertise by combining
+the the lists in this order: \Expr{STARTD\_EXPRS}, \Expr{VMx\_STARTD\_EXPRS},
+\Expr{STARTD\_ATTRS}, \Expr{VMx\_STARTD\_ATTRS} 
+In the below example, the startd ad for VM1 will have the value for 
+favorite\_color, favorite\_season, and favorite\_movie, and VM2 will have 
+favorite\_color, favorite\_season, and favorite\_song.
+
+\begin{verbatim}
+STARTD_EXPRS = favorite_color, favorite_season
+VM1_STARTD_EXRS = favorite_movie
+VM2_STARTD_EXPRS = favorite_song
+\end{verbatim}
+
+Attributes themselves in the \Expr{STARTD\_EXPRS} and \Expr{STARTD\_ATTRS} list 
+can also be on a per-VM basis.  
+In the below example, the startd ads will be
+VM1 - favorite\_color = ``blue''; favorite\_season = ``spring''
+VM2 - favorite\_color = ``green''; favorite\_season = ``spring''
+VM3 - favorite\_color = ``blue''; favorite\_season = ``summer''
+
+\begin{verbatim}
+favorite_color = "blue"
+favorite_season = "spring"
+STARTD_EXPRS = favorite_color, favorite_season
+VM2_favorite_color = "green"
+VM3_favorite_season = "summer"
+\end{verbatim}
+
+
 \index{SMP machines!configuration|)}
