@@ -964,7 +964,32 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  expressions.
 ##  Then, you'd set the STARTD_EXPRS setting to this:
 #STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
+##
+## STARTD_EXRS and STARTD_ATTRS can be defined on a per-VM basis
+## The startd builds the list of things to advertise by combining
+## the the lists in this order: STARTD_EXPRS, VMx_STARTD_EXPRS, 
+## STARTD_ATTRS, VMx_STARTD_ATTRS. In the below example, the startd
+## ad for VM1 will have the value for favorite_color, favorite_season,
+## and favorite_movie, and VM2 will have favorite_color, favorite_season,
+## and favorite_song
+##
+#STARTD_EXPRS = favorite_color, favorite_season
+#VM1_STARTD_EXRS = favorite_movie
+#VM2_STARTD_EXPRS = favorite_song
+##
+## Attributes themselves in the STARTD_EXPRS and STARTD_ATTRS list can 
+## also be on a per-VM basis.  In the below example, the startd ads will be:
+## VM1 - favorite_color = "blue"; favorite_season = "spring"
+## VM2 - favorite_color = "green"; favorite_season = "spring"
+## VM3 - favorite_color = "blue"; favorite_season = "summer"
+##
+#favorite_color = "blue"
+#favorite_season = "spring"
+#STARTD_EXPRS = favorite_color, favorite_season
+#VM2_favorite_color = "green"
+#VM3_favorite_season = "summer"
 
+#
 COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)"
 STARTD_EXPRS = COLLECTOR_HOST_STRING
 
