@@ -85,7 +85,13 @@ on Windows.
 
 \begin{itemize}
 
-\item None
+\item Fixed a bug where enabling the grid\_monitor for any globus
+job handled by something other than a hard-coded list of jobmanager names
+would cause the job to stay idle forever.  The hard-coded list of
+jobmanager names was: condor, fork, lsf, pbs, and remote.  A jobmanager
+by any other name (e.g. condor\_rh9, or lcgpbs) would cause the problem.
+This bug was originally fixed in internal releases of 6.7.0, but it was
+reintroduced by mistake in all public releases.
 
 \end{itemize}
 
