@@ -1195,7 +1195,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		}
 
 			// Include everything from STARTD_EXPRS.
-		config_fill_ad( cap );
+			// And then include everything from VMx_STARTD_EXPRS
+		config_fill_ad( cap, r_id_str );
 
 			// Also, include a VM ID attribute, since it's handy for
 			// defining expressions, and other things.
