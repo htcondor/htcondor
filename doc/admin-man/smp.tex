@@ -407,18 +407,27 @@ As you can see, shared system resources are printed without the header
 average or state of each VM) get the special header appended.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:SMP-exps}
+\subsubsection{\label{sec:SMP-exprs}
 Configuring STARTD\_EXPRS on a per-VM basis}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The \Expr{STARTD\_EXPRS} and \Expr{STARTD\_ATTRS} settings can be configured on 
-a per-VM basis.
-The startd builds the list of things to advertise by combining
-the the lists in this order: \Expr{STARTD\_EXPRS}, \Expr{VMx\_STARTD\_EXPRS},
-\Expr{STARTD\_ATTRS}, \Expr{VMx\_STARTD\_ATTRS} 
-In the below example, the startd ad for VM1 will have the value for 
-favorite\_color, favorite\_season, and favorite\_movie, and VM2 will have 
-favorite\_color, favorite\_season, and favorite\_song.
+The \Expr{STARTD\_EXPRS} and \Expr{STARTD\_ATTRS} settings can be
+configured on a per-VM basis.
+The \Condor{startd} daemon builds the list of items to
+advertise by combining the the lists in this order:
+\begin{enumerate}
+\item{\Expr{STARTD\_EXPRS}}
+\item{\Expr{VMx\_STARTD\_EXPRS}}
+\item{\Expr{STARTD\_ATTRS}}
+\item{\Expr{VMx\_STARTD\_ATTRS}} 
+\end{enumerate}
+
+In this example, the \Condor{startd} ClassAd for
+VM1 will have values for 
+\Attr{favorite\_color}, \Attr{favorite\_season},
+and \Attr{favorite\_movie}.
+VM2 will have values for 
+\Attr{favorite\_color}, \Attr{favorite\_season}, and \Attr{favorite\_song}.
 
 \begin{verbatim}
 STARTD_EXPRS = favorite_color, favorite_season
@@ -426,12 +435,10 @@ VM1_STARTD_EXRS = favorite_movie
 VM2_STARTD_EXPRS = favorite_song
 \end{verbatim}
 
-Attributes themselves in the \Expr{STARTD\_EXPRS} and \Expr{STARTD\_ATTRS} list 
+Attributes themselves in the \Expr{STARTD\_EXPRS}
+and \Expr{STARTD\_ATTRS} list 
 can also be on a per-VM basis.  
-In the below example, the startd ads will be
-VM1 - favorite\_color = ``blue''; favorite\_season = ``spring''
-VM2 - favorite\_color = ``green''; favorite\_season = ``spring''
-VM3 - favorite\_color = ``blue''; favorite\_season = ``summer''
+Here is another example:
 
 \begin{verbatim}
 favorite_color = "blue"
@@ -441,5 +448,23 @@ VM2_favorite_color = "green"
 VM3_favorite_season = "summer"
 \end{verbatim}
 
+For this example, the \Condor{startd} ClassAds are
+\begin{description}
+\item{VM1}:
+\begin{verbatim}
+favorite_color = "blue"
+favorite_season = "spring"
+\end{verbatim}
+\item{VM2}:
+\begin{verbatim}
+favorite_color = "green"
+favorite_season = "spring"
+\end{verbatim}
+\item{VM3}:
+\begin{verbatim}
+favorite_color = "blue"
+favorite_season = "summer"
+\end{verbatim}
+\end{description}
 
 \index{SMP machines!configuration|)}
