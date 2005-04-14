@@ -112,46 +112,61 @@ MyString local_config_files;
 // Function implementations
 
 void
-config_fill_ad( ClassAd* ad )
+config_fill_ad( ClassAd* ad, const char *prefix )
 {
 	char 		*tmp;
 	char		*expr;
 	StringList	reqdExprs;
 	MyString 	buffer;
-	
-	if( !ad ) return;
 
+	if( !ad ) return;
+	
 	buffer.sprintf( "%s_EXPRS", mySubSystem );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
-
-		reqdExprs.rewind();
-		while ((tmp = reqdExprs.next())) {
-			expr = param(tmp);
-			if (expr == NULL) continue;
-			buffer.sprintf( "%s = %s", tmp, expr );
-			ad->Insert( buffer.Value() );
-			free( expr );
-			expr = NULL;
-		}	
 	}
-	
+
 	buffer.sprintf( "%s_ATTRS", mySubSystem );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
+	}
+	
+	if(prefix) {
+		buffer.sprintf( "%s_%s_EXPRS", prefix, mySubSystem );
+		tmp = param( buffer.Value() );
+		if( tmp ) {
+			reqdExprs.initializeFromString (tmp);	
+			free (tmp);
+		}
 
+		buffer.sprintf( "%s_%s_ATTRS", prefix, mySubSystem );
+		tmp = param( buffer.Value() );
+		if( tmp ) {
+			reqdExprs.initializeFromString (tmp);	
+			free (tmp);
+		}
+
+	}
+
+	if( !reqdExprs.isEmpty() ) {
 		reqdExprs.rewind();
 		while ((tmp = reqdExprs.next())) {
-			expr = param(tmp);
-			if (expr == NULL) continue;
+			expr = NULL;
+			if(prefix) {
+				buffer.sprintf("%s_%s", prefix, tmp);	
+				expr = param(buffer.Value());
+			}
+			if(!expr) {
+				expr = param(tmp);
+			}
+			if(expr == NULL) continue;
 			buffer.sprintf( "%s = %s", tmp, expr );
 			ad->Insert( buffer.Value() );
 			free( expr );
-			expr = NULL;
 		}	
 	}
 	
