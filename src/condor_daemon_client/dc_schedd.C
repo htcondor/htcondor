@@ -301,12 +301,14 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
 	if ( use_new_command ) {
 			// Need to use a named variable, else the wrong version of	
 			// code() is called.
-		char *my_version = CondorVersion();
+		char *my_version = strdup( CondorVersion() );
 		if ( !rsock.code(my_version) ) {
 			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 					"Can't send version string to the schedd\n");
+			free( my_version );
 			return false;
 		}
+		free( my_version );
 	}
 
 		// Send the constraint
@@ -458,12 +460,14 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 	if ( use_new_command ) {
 			// Need to use a named variable, else the wrong version of	
 			// code() is called.
-		char *my_version = CondorVersion();
+		char *my_version = strdup( CondorVersion() );
 		if ( !rsock.code(my_version) ) {
 			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 					"Can't send version string to the schedd\n");
+			free( my_version );
 			return false;
 		}
+		free( my_version );
 	}
 
 		// Send the number of jobs

@@ -69,13 +69,13 @@ static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";
 
 extern "C" {
 
-char*
+const char*
 CondorVersion( void )
 {
 	return CondorVersionString;
 }
 
-char*
+const char*
 CondorPlatform( void )
 {
 	return CondorPlatformString;

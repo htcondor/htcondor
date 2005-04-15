@@ -121,13 +121,19 @@ int condor__queryAnyAds(struct soap *s,char *constraint,
 
 int condor__getPlatformString(struct soap *soap,void *,char* &result)
 {
-	result = CondorPlatform();
+	const char *platform = CondorPlatform();
+	result = (char *) soap_malloc(soap, strlen(platform) + 1);
+	ASSERT(result);
+	strcpy(result, platform);
 	return SOAP_OK;
 }
 
 int condor__getVersionString(struct soap *soap,void *,char* &result)
 {
-	result = CondorVersion();
+	const char *version = CondorVersion();
+	result = (char *) soap_malloc(soap, strlen(version) + 1);
+	ASSERT(result);
+	strcpy(result, version);
 	return SOAP_OK;
 }
 
