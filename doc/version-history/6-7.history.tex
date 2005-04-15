@@ -104,7 +104,8 @@ StageOut Globus job state.
 \item Fixed a bug that can cause the \condor{gridmanager} to abort if
 \Attr{PeriodicRelease} evaluates to true while it's putting a job on hold.
 
-\item Fixed a bug in \Condor{dagman} (see Gnats PR 470) that
+% See Gnats PR 470
+\item Fixed a bug in \Condor{dagman} that
 caused the DAG to be aborted if a job generated an executable error
 event.
 
@@ -377,7 +378,8 @@ the grid\_monitor was activated.
 \item Fixed support for the getdents64() system call inside the
   standard universe on Linux and Solaris.
 
-\item Fixed a bug in \Condor{dagman} (see Gnats PR 467) that dealt
+% Gnats PR 467
+\item Fixed a bug in \Condor{dagman} that dealt
 incorrectly with the problem of Condor sometimes writing both a
 terminated and an aborted event for the same job. The spurious
 aborted event is now ignored.
