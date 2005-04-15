@@ -31,6 +31,7 @@
 #include "perm.h"
 #endif
 #include "condor_uid.h"
+#include "condor_ver_info.h"
 
 class FileTransfer;	// forward declatation
 
@@ -157,6 +158,12 @@ class FileTransfer {
 		*/
 	int	setClientSocketTimeout(int timeout);
 
+	void setTransferFilePermissions( bool value )
+		{ TransferFilePermissions = value; }
+
+	void setPeerVersion( const char *peer_version );
+	void setPeerVersion( CondorVersionInfo &peer_version );
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -177,6 +184,7 @@ class FileTransfer {
 
   private:
 
+	bool TransferFilePermissions;
 	char* Iwd;
 	StringList* OutputFiles;
 	StringList* EncryptInputFiles;

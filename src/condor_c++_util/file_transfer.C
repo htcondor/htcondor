@@ -38,6 +38,7 @@
 #include "daemon.h"
 #include "daemon_types.h"
 #include "nullfile.h"
+#include "condor_ver_info.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -86,6 +87,7 @@ static int compute_transthread_hash(const int &pid, int numBuckets)
 
 FileTransfer::FileTransfer()
 {
+	TransferFilePermissions = false;
 	Iwd = NULL;
 	InputFiles = NULL;
 	OutputFiles = NULL;
@@ -1160,6 +1162,7 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 int
 FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 {
+	int rc;
 	int reply;
 	filesize_t bytes;
 	char filename[_POSIX_PATH_MAX];
@@ -1259,7 +1262,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname);
-		if( s->get_file( &bytes, fullname ) < 0 ) {
+		if ( TransferFilePermissions ) {
+			rc = s->get_file_with_permissions( &bytes, fullname );
+		} else {
+			rc = s->get_file( &bytes, fullname );
+		}
+		if( rc < 0 ) {
 			return_and_resetpriv( -1 );
 		}
 		if ( want_fsync ) {
@@ -1423,6 +1431,7 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 int
 FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
+	int rc;
 	char *filename;
 	char *basefilename;
 	char fullname[_POSIX_PATH_MAX];
@@ -1574,7 +1583,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 #endif
 
-		if( s->put_file( &bytes, fullname ) < 0 ) {
+		if ( TransferFilePermissions ) {
+			rc = s->put_file_with_permissions( &bytes, fullname );
+		} else {
+			rc = s->put_file( &bytes, fullname );
+		}
+		if( rc < 0 ) {
 			/* if we fail to transfer a file, EXCEPT so the other side can */
 			/* try again. SC2000 hackery. _WARNING_ - I think Keller changed */
 			/* all of this. -epaulson 11/22/2000 */
@@ -1678,5 +1692,27 @@ FileTransfer::setClientSocketTimeout(int timeout)
 	return old_val;
 }
 
+/* This function must be called by both peers */
+void
+FileTransfer::setPeerVersion( const char *peer_version )
+{
+	CondorVersionInfo vi( peer_version );
+
+	setPeerVersion( vi );
+}
+
+/* This function must be called by both peers */
+/* peer_version should be const, but CondorVersionInfo is screwed up
+ * (its methods that should be const can modify it)
+ */
+void
+FileTransfer::setPeerVersion( CondorVersionInfo &peer_version )
+{
+	if ( peer_version.built_since_version(6,7,7) ) {
+		TransferFilePermissions = true;
+	} else {
+		TransferFilePermissions = false;
+	}
+}
 
 
