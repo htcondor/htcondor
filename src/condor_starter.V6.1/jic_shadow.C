@@ -482,6 +482,12 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		}
 		if ( value1 ) free(value1);
 		if ( value2 ) free(value2);
+
+		if ( shadow_version == NULL ) {
+			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
+		} else {
+			filetrans->setPeerVersion( *shadow_version );
+		}
 	}
 
 		// switch over to the new syscall_sock
@@ -1397,6 +1403,13 @@ JICShadow::beginFileTransfer( void )
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->RegisterCallback(
 				  (FileTransferHandler)&JICShadow::transferCompleted,this );
+
+
+		if ( shadow_version == NULL ) {
+			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
+		} else {
+			filetrans->setPeerVersion( *shadow_version );
+		}
 
 		if( ! filetrans->DownloadFiles(false) ) { // do not block
 				// Error starting the non-blocking file transfer.  For

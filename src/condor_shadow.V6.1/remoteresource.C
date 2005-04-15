@@ -629,6 +629,12 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		tmp = NULL;
 	}
 
+	if ( starter_version == NULL ) {
+		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
+	} else {
+		filetrans.setPeerVersion( starter_version );
+	}
+
 	int tmp_int;
 	if( ad->LookupBool(ATTR_HAS_RECONNECT, tmp_int) ) {
 			// Whatever the starter defines in its own classad
