@@ -1702,11 +1702,8 @@ FileTransfer::setPeerVersion( const char *peer_version )
 }
 
 /* This function must be called by both peers */
-/* peer_version should be const, but CondorVersionInfo is screwed up
- * (its methods that should be const can modify it)
- */
 void
-FileTransfer::setPeerVersion( CondorVersionInfo &peer_version )
+FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 {
 	if ( peer_version.built_since_version(6,7,7) ) {
 		TransferFilePermissions = true;

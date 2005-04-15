@@ -29,12 +29,21 @@ extern "C" char *CondorVersion(void);
 extern "C" char *CondorPlatform(void);
 
 CondorVersionInfo::CondorVersionInfo(const char *versionstring, 
-									 char *subsystem, char *platformstring)
+									 const char *subsystem,
+									 const char *platformstring)
 {
 	myversion.MajorVer = 0;
 	myversion.Arch = NULL;
 	myversion.OpSys = NULL;
 	mysubsys = NULL;
+
+	if ( versionstring == NULL ) {
+		versionstring = CondorVersion();
+	}
+	if ( platformstring == NULL ) {
+		platformstring = CondorPlatform();
+	}
+
 	string_to_VersionData(versionstring,myversion);
 	string_to_PlatformData(platformstring,myversion);
 
@@ -54,7 +63,7 @@ CondorVersionInfo::~CondorVersionInfo()
 
 	
 int
-CondorVersionInfo::compare_versions(const char* VersionString1)
+CondorVersionInfo::compare_versions(const char* VersionString1) const
 {
 	VersionData_t ver1;
 
@@ -70,7 +79,7 @@ CondorVersionInfo::compare_versions(const char* VersionString1)
 }
 
 int
-CondorVersionInfo::compare_build_dates(const char* VersionString1)
+CondorVersionInfo::compare_build_dates(const char* VersionString1) const
 {
 	VersionData_t ver1;
 
@@ -88,7 +97,7 @@ CondorVersionInfo::compare_build_dates(const char* VersionString1)
 
 bool
 CondorVersionInfo::is_compatible(const char* other_version_string, 
-								 const char* other_subsys)
+								 const char* other_subsys) const
 {
 	VersionData_t other_ver;
 
@@ -135,7 +144,7 @@ CondorVersionInfo::is_compatible(const char* other_version_string,
 
 bool
 CondorVersionInfo::built_since_version(int MajorVer, int MinorVer, 
-									   int SubMinorVer)
+									   int SubMinorVer) const
 {
 	int Scalar = MajorVer * 1000000 + MinorVer * 1000 
 					+ SubMinorVer;
@@ -144,7 +153,7 @@ CondorVersionInfo::built_since_version(int MajorVer, int MinorVer,
 }
 
 bool
-CondorVersionInfo::built_since_date(int month, int day, int year)
+CondorVersionInfo::built_since_date(int month, int day, int year) const
 {
 
 		// Make a struct tm
@@ -166,7 +175,7 @@ CondorVersionInfo::built_since_date(int month, int day, int year)
 }
 
 bool
-CondorVersionInfo::is_valid(const char* VersionString)
+CondorVersionInfo::is_valid(const char* VersionString) const
 {
 	bool ret_value;
 	VersionData_t ver1;
@@ -335,19 +344,14 @@ CondorVersionInfo::get_platform_from_file(const char* filename,
 							
 bool
 CondorVersionInfo::string_to_VersionData(const char *verstring, 
-									 VersionData_t & ver)
+										 VersionData_t & ver) const
 {
 	// verstring looks like "$CondorVersion: 6.1.10 Nov 23 1999 $"
 
 	if ( !verstring ) {
 		// Use our own version number. 
-		verstring = CondorVersion();
-
-		// If we already computed myversion, we're done.
-		if ( myversion.MajorVer ) {
-			ver = myversion;
-			return true;
-		}
+		ver = myversion;
+		return true;
 	}
 
 	if ( strncmp(verstring,"$CondorVersion: ",16) != 0 ) {
@@ -361,7 +365,7 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 
 		// Sanity check: the world starts with Condor V6 !
 	if (ver.MajorVer < 6  || ver.MinorVer > 99 || ver.SubMinorVer > 99) {
-		myversion.MajorVer = 0;
+		ver.MajorVer = 0;
 		return false;
 	}
 
@@ -372,7 +376,7 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		// right before the build date string.
 	ptr = strchr(ptr,' ');
 	if ( !ptr ) {
-		myversion.MajorVer = 0;
+		ver.MajorVer = 0;
 		return false;
 	}
 	ptr++;	// skip space after the version numbers
@@ -398,7 +402,7 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		// Sanity checks
 	if ( month < 0 || month > 11 || date < 0 || date > 31 || year < 1997 
 		|| year > 2036 ) {
-		myversion.MajorVer = 0;
+		ver.MajorVer = 0;
 		return false;
 	}
 
@@ -413,7 +417,7 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 	build_date.tm_year = year - 1900;
 
 	if ( (ver.BuildDate = mktime(&build_date)) == -1 ) {
-		myversion.MajorVer = 0;
+		ver.MajorVer = 0;
 		return false;
 	}
 
@@ -423,19 +427,14 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 							
 bool
 CondorVersionInfo::string_to_PlatformData(const char *platformstring, 
-									 VersionData_t & ver)
+										  VersionData_t & ver) const
 {
 	// platformstring looks like "$CondorPlatform: INTEL-LINUX_RH9 $"
 
 	if ( !platformstring ) {
 		// Use our own version number. 
-		platformstring = CondorPlatform();
-
-		// If we already computed myversion, we're done.
-		if ( myversion.Arch ) {
-			ver = myversion;
-			return true;
-		}
+		ver = myversion;
+		return true;
 	}
 
 	if ( strncmp(platformstring,"$CondorPlatform: ",17) != 0 ) {

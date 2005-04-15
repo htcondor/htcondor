@@ -43,7 +43,7 @@ public:
 		@param subssytem One of SHADOW, STARTER, TOOL, SCHEDD, COLLECTOR, etc.
 	*/
 	CondorVersionInfo::CondorVersionInfo(const char *versionstring = NULL, 
-		char *subsystem = NULL, char *platformstring = NULL);
+		const char *subsystem = NULL, const char *platformstring = NULL);
 
 	/// Destructor.
 	CondorVersionInfo::~CondorVersionInfo();
@@ -55,43 +55,43 @@ public:
 
 	/** Return the first number in the version ID.
 		@return -1 on error */
-	int getMajorVer() 
+	int getMajorVer() const
 		{ return myversion.MajorVer > 5 ? myversion.MajorVer : -1; }
 	/** Return the second number in the version ID (the series id).
 		@return -1 on error */
-	int getMinorVer() 
+	int getMinorVer() const
 		{ return myversion.MajorVer > 5 ? myversion.MinorVer : -1; }
 	/** Return the third number in the version ID (release id within the series).
 		@return -1 on error */
-	int getSubMinorVer() 
+	int getSubMinorVer() const
 		{ return myversion.MajorVer > 5 ? myversion.SubMinorVer : -1; }
 
  
  	/** Return the Arch this version is built for. */
- 	char *getArchVer() 
+ 	char *getArchVer() const
  		{ return myversion.Arch; }	
- 	char *getOpSysVer() 
+ 	char *getOpSysVer() const
  		{ return myversion.OpSys; }	
 	
 	/** Report if this version id represents a stable or developer series 
 		release.
 		@return true if a stable series, otherwise false. */
-	bool is_stable_series() 
+	bool is_stable_series() const
 		{ return (myversion.MinorVer % 2 == 0);  }
 
 
-	int compare_versions(const char* other_version_string);
-	int compare_build_dates(const char* other_version_string);
+	int compare_versions(const char* other_version_string) const;
+	int compare_build_dates(const char* other_version_string) const;
 	
-	bool built_since_version(int MajorVer, int MinorVer, int SubMinorVer);
+	bool built_since_version(int MajorVer, int MinorVer, int SubMinorVer) const;
 
 	// Note: for "month", 1=Jan, 2=Feb, etc, as you'd expect
-	bool built_since_date(int month, int day, int year);
+	bool built_since_date(int month, int day, int year) const;
 
 	bool is_compatible(const char* other_version_string, 
-								 const char* other_subsys = NULL);
+					   const char* other_subsys = NULL) const;
 
-	bool is_valid(const char* VersionString = NULL);
+	bool is_valid(const char* VersionString = NULL) const;
 
 	typedef struct VersionData {
 		int MajorVer;
@@ -109,8 +109,8 @@ private:
 	VersionData_t myversion;
 	char *mysubsys;
 
-	bool string_to_VersionData(const char *,VersionData_t &);
-	bool string_to_PlatformData(const char *,VersionData_t &);
+	bool string_to_VersionData(const char *,VersionData_t &) const;
+	bool string_to_PlatformData(const char *,VersionData_t &) const;
 };
 
 

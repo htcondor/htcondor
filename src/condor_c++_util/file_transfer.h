@@ -162,7 +162,7 @@ class FileTransfer {
 		{ TransferFilePermissions = value; }
 
 	void setPeerVersion( const char *peer_version );
-	void setPeerVersion( CondorVersionInfo &peer_version );
+	void setPeerVersion( const CondorVersionInfo &peer_version );
 
   protected:
 
