@@ -107,9 +107,14 @@ public:
 	int get_bytes_nobuffer(char *buffer, int max_length, int receive_size=1);
 
     /// returns -1 on failure, 0 for ok
+	int get_file_with_permissions(filesize_t *size, const char *desination,
+								  bool flush_buffers=false);
+    /// returns -1 on failure, 0 for ok
 	int get_file( filesize_t *size, const char *destination, bool flush_buffers=false);
     /// returns -1 on failure, 0 for ok
 	int get_file( filesize_t *size, int fd, bool flush_buffers=false);
+    /// returns -1 on failure, 0 for ok
+	int put_file_with_permissions( filesize_t *size, const char *source);
     /// returns -1 on failure, 0 for ok
 	int put_file( filesize_t *size, const char *source);
     /// returns -1 on failure, 0 for ok
