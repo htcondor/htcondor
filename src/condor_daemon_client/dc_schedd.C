@@ -30,6 +30,7 @@
 #include "dc_schedd.h"
 #include "proc.h"
 #include "file_transfer.h"
+#include "condor_version.h"
 
 
 // // // // //
@@ -249,6 +250,16 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
 	int i;
 	ReliSock rsock;
 	int JobAdsArrayLen;
+	bool use_new_command = true;
+
+	if ( version() ) {
+		CondorVersionInfo vi( version() );
+		if ( vi.built_since_version(6,7,7) ) {
+			use_new_command = true;
+		} else {
+			use_new_command = false;
+		}
+	}
 
 		// // // // // // // //
 		// On the wire protocol
@@ -260,10 +271,20 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
 				 "Failed to connect to schedd (%s)\n", _addr );
 		return false;
 	}
-	if( ! startCommand(TRANSFER_DATA, (Sock*)&rsock) ) {
-		dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
-				 "Failed to send command (TRANSFER_DATA) to the schedd\n" );
-		return false;
+	if ( use_new_command ) {
+		if( ! startCommand(TRANSFER_DATA_WITH_PERMS, (Sock*)&rsock) ) {
+			dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
+					 "Failed to send command (TRANSFER_DATA_WITH_PERMS) "
+					 "to the schedd\n" );
+			return false;
+		}
+	} else {
+		if( ! startCommand(TRANSFER_DATA, (Sock*)&rsock) ) {
+			dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
+					 "Failed to send command (TRANSFER_DATA) "
+					 "to the schedd\n" );
+			return false;
+		}
 	}
 
 		// First, if we're not already authenticated, force that now. 
@@ -274,8 +295,21 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
 		return false;
 	}
 
-		// Send the constraint
 	rsock.encode();
+
+		// Send our version if using the new command
+	if ( use_new_command ) {
+			// Need to use a named variable, else the wrong version of	
+			// code() is called.
+		char *my_version = CondorVersion();
+		if ( !rsock.code(my_version) ) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Can't send version string to the schedd\n");
+			return false;
+		}
+	}
+
+		// Send the constraint
 	char * nc_constraint = (char*) constraint;	// cast away const... sigh.
 	if ( !rsock.code(nc_constraint) ) {
 		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
@@ -346,6 +380,9 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
 		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
 			return false;
 		}
+		if ( use_new_command ) {
+			ftrans.setPeerVersion( version() );
+		}
 		if ( !ftrans.DownloadFiles() ) {
 			return false;
 		}
@@ -370,6 +407,16 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 	int reply;
 	int i;
 	ReliSock rsock;
+	bool use_new_command = true;
+
+	if ( version() ) {
+		CondorVersionInfo vi( version() );
+		if ( vi.built_since_version(6,7,7) ) {
+			use_new_command = true;
+		} else {
+			use_new_command = false;
+		}
+	}
 
 		// // // // // // // //
 		// On the wire protocol
@@ -381,12 +428,22 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 				 "Failed to connect to schedd (%s)\n", _addr );
 		return false;
 	}
-	if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock, 0, errstack) ) {
-		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
-				 "Failed to send command (SPOOL_JOB_FILES) to the schedd\n" );
-		return false;
+	if ( use_new_command ) {
+		if( ! startCommand(SPOOL_JOB_FILES_WITH_PERMS, (Sock*)&rsock, 0,
+						   errstack) ) {
+			dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
+					 "Failed to send command (SPOOL_JOB_FILES_WITH_PERMS) "
+					 "to the schedd\n" );
+			return false;
+		}
+	} else {
+		if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock, 0, errstack) ) {
+			dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
+					 "Failed to send command (SPOOL_JOB_FILES) "
+					 "to the schedd\n" );
+			return false;
+		}
 	}
-
 
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
@@ -395,8 +452,21 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		return false;
 	}
 
-		// Send the number of jobs
 	rsock.encode();
+
+		// Send our version if using the new command
+	if ( use_new_command ) {
+			// Need to use a named variable, else the wrong version of	
+			// code() is called.
+		char *my_version = CondorVersion();
+		if ( !rsock.code(my_version) ) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Can't send version string to the schedd\n");
+			return false;
+		}
+	}
+
+		// Send the number of jobs
 	if ( !rsock.code(JobAdsArrayLen) ) {
 		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 				"Can't send JobAdsArrayLen to the schedd\n");
@@ -428,6 +498,9 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		FileTransfer ftrans;
 		if ( !ftrans.SimpleInit(JobAdsArray[i], false, false, &rsock) ) {
 			return false;
+		}
+		if ( use_new_command ) {
+			ftrans.setPeerVersion( version() );
 		}
 		if ( !ftrans.UploadFiles(true,false) ) {
 			return false;
