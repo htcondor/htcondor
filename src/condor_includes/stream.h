@@ -42,6 +42,8 @@ const int CLEAR_HEADER     = 0;
 const int MD_IS_ON         = 1;
 const int ENCRYPTION_IS_ON = 2;
 
+const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
+
 #include "proc.h"
 #include "condor_old_shadow_types.h"
 
@@ -295,9 +297,9 @@ public:
 	int code_array(gid_t *&array, int &len);
     ///
 	int code(struct utsname &);
+#endif // !defined(WIN32)
 	///
 	int code(condor_mode_t &);
-#endif // !defined(WIN32)
 
 #if HAS_64BIT_STRUCTS
     ///

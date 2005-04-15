@@ -39,7 +39,6 @@
 #define NORMAL_HEADER_SIZE 5
 #define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
 
-#define NULL_FILE_PERMISSIONS 0
 /**************************************************************/
 
 /* 
@@ -443,11 +442,11 @@ ReliSock::get_file_with_permissions( filesize_t *size, const char *destination,
 									 bool flush_buffers)
 {
 	int result;
-	mode_t file_mode;
+	condor_mode_t file_mode;
 
 	// Read the permissions
 	this->decode();
-	if ( this->code( (condor_mode_t)file_mode ) == FALSE ||
+	if ( this->code( file_mode ) == FALSE ||
 		 this->end_of_message() == FALSE ) {
 		dprintf( D_ALWAYS,
 				 "ReliSock: get_file_with_permissions: Failed to read permissions.\n" );
@@ -477,7 +476,7 @@ ReliSock::get_file_with_permissions( filesize_t *size, const char *destination,
 
 	// chmod the file
 	errno = 0;
-	result = ::chmod( destination, file_mode );
+	result = ::chmod( destination, (mode_t)file_mode );
 	if ( result < 0 ) {
 		dprintf( D_ALWAYS,
 				 "ReliSock: get_file_with_permissions: Failed to chmod file %s, errno = %d.\n",
@@ -629,7 +628,7 @@ int
 ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 {
 	int result;
-	mode_t file_mode;
+	condor_mode_t file_mode;
 
 #ifndef WIN32
 	// Stat the file
@@ -641,7 +640,7 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 				 stat_info.Error(), stat_info.Errno() );
 		return -1;
 	}
-	file_mode = stat_info.GetMode();
+	file_mode = (condor_mode_t)stat_info.GetMode();
 #else
 		// We don't know what unix permissions a windows file should have,
 		// so tell the other side to ignore permissions from us (act like
@@ -655,7 +654,7 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 
 	// Send the permissions
 	this->encode();
-	if ( this->code( (condor_mode_t)file_mode ) == FALSE ||
+	if ( this->code( file_mode ) == FALSE ||
 		 this->end_of_message() == FALSE ) {
 		dprintf( D_ALWAYS,
 				 "ReliSock: put_file_with_permissions: Failed to send permissions.\n" );

@@ -788,10 +788,14 @@ Stream::code(struct utsname &n)
 }
 
 
+#endif // !defined(WIN32)
+
+
 int
 Stream::code(condor_mode_t &m)
 {
 	mode_t mask = 0, y = 0;
+#if !defined(WIN32)
 	mask |= (S_IRUSR|S_IWUSR|S_IXUSR|
 			 S_IRGRP|S_IWGRP|S_IXGRP|
 			 S_IROTH|S_IWOTH|S_IXOTH);
@@ -799,18 +803,24 @@ Stream::code(condor_mode_t &m)
     if( _coding == stream_encode ) {
 		y = m & mask;
 	}
+#else
+	if( _coding == stream_encode ) {
+		y = NULL_FILE_PERMISSIONS;
+	}
+#endif
 
  	STREAM_ASSERT(code(y));
 
     if( _coding == stream_decode ) {
+#if !defined(WIN32)
 		m = (condor_mode_t)(y & mask);
+#else
+		m = NULL_FILE_PERMISSIONS;
+#endif
 	}
 	
 	return TRUE;
 }
-
-
-#endif // !defined(WIN32)
 
 /*
 **	PUT ROUTINES
