@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task,v 1.1.2.7 2005-03-15 22:11:10 parag Exp $
+# $Id: remote_task,v 1.1.2.8 2005-04-15 21:54:43 bgietzel Exp $
 # Perform a given build task, and return the status of that task
 # 0 = success
 # 1 = build failed
@@ -64,7 +64,7 @@ if ($taskname eq "win_make") {
     system("make.bat");
 }
 elsif ($taskname eq "win_release") {
-    mkdir("$PublicDir") || c_die ("Can't mkdir($PublicDir): $!\n");
+    mkdir("$PublicDir", 0777) || c_die ("Can't mkdir($PublicDir): $!\n");
     chdir("$NTConfigDir") || c_die("Can't chdir($NTConfigDir): $!\n");
     system("dorelease $PublicDir");
 }
@@ -90,12 +90,12 @@ if( $taskname eq "externals" && -d "$BaseDir/externals/build" ) {
     # directory.  however, we only care if we got far enough into the
     # externals build process to have any build logs
     if( ! -d "$BaseDir/public" ) {
-        mkdir( "$BaseDir/public" ) || 
+        mkdir( "$BaseDir/public", 0777 ) || 
             c_die("Can't mkdir($BaseDir/public): $!\n");
     }
     $pub_ext_log = "$BaseDir/public/external-logs";
     if( ! -d "$pub_ext_log" ) {
-        mkdir( "$pub_ext_log" ) || 
+        mkdir( "$pub_ext_log", 0777 ) || 
             c_die("Can't mkdir($pub_ext_log): $!\n");
     }
     $ext_build = "$BaseDir/externals/build";
