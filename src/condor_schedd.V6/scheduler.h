@@ -201,7 +201,7 @@ class Scheduler : public Service
 	int				spoolJobFiles(int, Stream *);
 	static int		spoolJobFilesWorkerThread(void *, Stream *);
 	static int		transferJobFilesWorkerThread(void *, Stream *);
-	static int		generalJobFilesWorkerThread(void *, Stream *, int);
+	static int		generalJobFilesWorkerThread(void *, Stream *);
 	int				spoolJobFilesReaper(int,int);	
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( void );

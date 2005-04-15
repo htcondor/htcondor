@@ -142,6 +142,8 @@
 #define RESTART_PEACEFUL     (SCHED_VERS+85)
 #define TRANSFER_DATA		(SCHED_VERS+86) // send all job files back via filetransfer object
 #define UPDATE_GSI_CRED		(SCHED_VERS+87) // send refreshed gsi proxy file
+#define SPOOL_JOB_FILES_WITH_PERMS	(SCHED_VERS+88)	// spool all job files via filetransfer object (new version with file permissions)
+#define TRANSFER_DATA_WITH_PERMS	(SCHED_VERS+89) // send all job files back via filetransfer object (new version with file permissions)
 
 
 /*

@@ -141,6 +141,12 @@ int STARTD_CONTACT_TIMEOUT = 45;
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
+struct job_data_transfer_t {
+	int mode;
+	char *peer_version;
+	ExtArray<PROC_ID> *jobs;
+};
+
 #ifdef WIN32	 // on unix, this is in instantiate.C
 bool operator==(const PROC_ID a, const PROC_ID b)
 {
@@ -2620,14 +2626,14 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 int
 Scheduler::transferJobFilesWorkerThread(void *arg, Stream* s)
 {
-	return generalJobFilesWorkerThread(arg,s,TRANSFER_DATA);
+	return generalJobFilesWorkerThread(arg,s);
 }
 
 int
 Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 {
 	int ret_val;
-	ret_val = generalJobFilesWorkerThread(arg,s,SPOOL_JOB_FILES);
+	ret_val = generalJobFilesWorkerThread(arg,s);
 		// Now we sleep here for one second.  Why?  So we are certain
 		// to transfer back output files even if the job ran for less 
 		// than one second.
@@ -2636,13 +2642,14 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 }
 
 int
-Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s, int mode)
+Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	int JobAdsArrayLen = 0;
 	int i;
-	ExtArray<PROC_ID> **tjobs = ( ExtArray<PROC_ID> **) arg;
-	ExtArray<PROC_ID> *jobs = *tjobs;
+	ExtArray<PROC_ID> *jobs = ((job_data_transfer_t *)arg)->jobs;
+	char *peer_version = ((job_data_transfer_t *)arg)->peer_version;
+	int mode = ((job_data_transfer_t *)arg)->mode;
 	int result;
 	int old_timeout;
 	int cluster, proc;
@@ -2654,7 +2661,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s, int mode)
 
 	JobAdsArrayLen = jobs->getlast() + 1;
 //	dprintf(D_FULLDEBUG,"TODD spoolJobFilesWorkerThread: JobAdsArrayLen=%d\n",JobAdsArrayLen);
-	if ( mode == TRANSFER_DATA ) {
+	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
 		// if sending sandboxes, first tell the client how many
 		// we are about to send.
 		rsock->encode();
@@ -2692,9 +2699,12 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s, int mode)
 			s->timeout(old_timeout);
 			return FALSE;
 		}
+		if ( peer_version != NULL ) {
+			ftrans.setPeerVersion( peer_version );
+		}
 
 			// Send or receive files as needed
-		if ( mode == SPOOL_JOB_FILES ) {
+		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 			// receive sandbox into the schedd
 			result = ftrans.DownloadFiles();
 		} else {
@@ -2727,7 +2737,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s, int mode)
 	rsock->eom();
 
 	int answer;
-	if ( mode == SPOOL_JOB_FILES ) {
+	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 		rsock->encode();
 		answer = OK;
 	} else {
@@ -2742,7 +2752,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s, int mode)
 	at which we're "about to start the job".  So we just
 	hand the sandbox directory over to the end user right now.
 	*/
-	if ( mode == SPOOL_JOB_FILES ) {
+	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 		for (i=0; i<JobAdsArrayLen; i++) {
 
 			cluster = (*jobs)[i].cluster;
@@ -2762,6 +2772,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s, int mode)
 				aboutToSpawnJobHandler( cluster, proc, NULL );
 			}
 		}
+	}
+
+	if ( peer_version ) {
+		free( peer_version );
 	}
 
 	if (answer == OK ) {
@@ -2784,6 +2798,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	static int transfer_reaper_id = -1;
 	PROC_ID a_job;
 	int tid;
+	char *peer_version = NULL;
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -2818,7 +2833,20 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 
 	rsock->decode();
-	if ( mode == SPOOL_JOB_FILES ) {
+
+	if ( mode == SPOOL_JOB_FILES_WITH_PERMS || mode == TRANSFER_DATA_WITH_PERMS ) {
+		peer_version = NULL;
+		if ( !rsock->code(peer_version) ) {
+			dprintf( D_ALWAYS,
+					 "spoolJobFiles(): failed to read peer_version\n" );
+			refuse(s);
+			return FALSE;
+		}
+			// At this point, we are responsible for deallocating
+			// peer_version with free()
+	}
+
+	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 			// read the number of jobs involved
 //		if ( !rsock->code(JobAdsArrayLen) || JobAdsArrayLen <= 0 ) {
 		if ( !rsock->code(JobAdsArrayLen) ) {
@@ -2842,7 +2870,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		}
 	}
 
-	if ( mode == TRANSFER_DATA ) {
+	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
 			// read constraint string
 		if ( !rsock->code(constraint_string) || constraint_string == NULL ) {
 				dprintf( D_ALWAYS, "spoolJobFiles(): "
@@ -2859,7 +2887,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	time_t now = time(NULL);
 
-	if ( mode == SPOOL_JOB_FILES ) {
+	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 		for (i=0; i<JobAdsArrayLen; i++) {
 			rsock->code(a_job);
 				// Only add jobs to our list if the caller has permission to do so;
@@ -2872,7 +2900,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		}
 	}
 
-	if ( mode == TRANSFER_DATA ) {
+	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
 		JobAdsArrayLen = 0;
 		ClassAd * tmp_ad = GetNextJobByConstraint(constraint_string,1);
 		while (tmp_ad) {
@@ -2898,15 +2926,17 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	rsock->eom();
 
-		// We want to pass out thread a pointer to the jobs ExtArray.
-		// But daemonCore frees the thread argument when the thread exits.
-		// We cannot allow this, because we want our reaper to use it.
-		// So, malloc a buffer to hold the pointer --- daemoncore can
-		// free this buffer without causing any harm.
-	void ** thread_arg = (void **)malloc( sizeof(jobs) );
-	*thread_arg = (void *)jobs;
+		// DaemonCore will free the thread_arg for us when the thread
+		// exits, but we need to free anything pointed to by
+		// job_data_transfer_t ourselves. generalJobFilesWorkerThread()
+		// will free 'peer_version' and our reaper will free 'jobs' (the
+		// reaper needs 'jobs' for some of its work).
+	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) );
+	thread_arg->mode = mode;
+	thread_arg->peer_version = peer_version;
+	thread_arg->jobs = jobs;
 
-	if ( mode == SPOOL_JOB_FILES ) {
+	if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 		if ( spool_reaper_id == -1 ) {
 			spool_reaper_id = daemonCore->Register_Reaper(
 					"spoolJobFilesReaper",
@@ -2926,7 +2956,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				);
 	}
 
-	if ( mode == TRANSFER_DATA ) {
+	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
 		if ( transfer_reaper_id == -1 ) {
 			transfer_reaper_id = daemonCore->Register_Reaper(
 					"transferJobFilesReaper",
@@ -2947,6 +2977,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	if ( tid == FALSE ) {
 		free(thread_arg);
+		if ( peer_version ) {
+			free( peer_version );
+		}
 		delete jobs;
 		refuse(s);
 		return FALSE;
@@ -8553,6 +8586,14 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE);
 	 daemonCore->Register_Command(TRANSFER_DATA, "TRANSFER_DATA", 
+			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
+			"spoolJobFiles", this, WRITE);
+	 daemonCore->Register_Command(SPOOL_JOB_FILES_WITH_PERMS,
+			"SPOOL_JOB_FILES_WITH_PERMS", 
+			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
+			"spoolJobFiles", this, WRITE);
+	 daemonCore->Register_Command(TRANSFER_DATA_WITH_PERMS,
+			"TRANSFER_DATA_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE);
 	 daemonCore->Register_Command(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
