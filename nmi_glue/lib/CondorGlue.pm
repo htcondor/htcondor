@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.19 2005-04-16 02:21:41 bgietzel Exp $
+# $Id: CondorGlue.pm,v 1.1.2.20 2005-04-17 05:38:13 bgietzel Exp $
 #
 ######################################################################
 
@@ -191,16 +191,16 @@ sub printTestingPrereqs
 {
     my $fh = shift;
 
-    # global prereqs
-    print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4\n";
-
+    # global prereqs should be nothing (temporarily) because of hpux
+    #print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4\n";
+    
     # platform-specific prereqs
-    print $fh "prereqs_x86_rh_7.2 = binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_x86_rh_8.0 = binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_x86_rh_9 = binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_sun4u_sol_5.9 = gcc-2.95.3, binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_sun4u_sol_5.8 = gcc-2.95.3, binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_ppc_aix_5.2 = vac-6, vacpp-6, java-1.4.2_05\n";
+    print $fh "prereqs_x86_rh_7.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_x86_rh_8.0 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_x86_rh_9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_sun4u_sol_5.9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_sun4u_sol_5.8 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_ppc_aix_5.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, vac-6, vacpp-6, java-1.4.2_05\n";
     print $fh "prereqs_hppa_hpux_B.10.2 = everything-1.0.0\n";
 }
 
