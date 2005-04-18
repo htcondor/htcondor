@@ -396,7 +396,6 @@ int BaseJob::EvalPeriodicJobExpr()
 	float old_run_time;
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
-dprintf(D_FULLDEBUG,"(%d.%d) Evaluating periodic job policy expressions\n",procID.cluster,procID.proc);
 
 	user_policy.Init( ad );
 
