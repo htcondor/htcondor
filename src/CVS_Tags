@@ -1,3 +1,7 @@
+04/18/05 V6_7-quill-branch
+   A branch for the initial commit of Quill, created off
+   the V6_7-branch as tagged at V6_7-quill-root.
+
 04/06/05 V6_6-merge-38
    The state of the V6_6-branch for a merge into V6_7-branch.  This
    includes a bunch of win32 bug fixes: the execute directory cleanup
