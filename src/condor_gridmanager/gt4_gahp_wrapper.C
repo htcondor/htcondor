@@ -25,6 +25,7 @@
 #include "condor_config.h"
 #include "env.h"
 #include "directory.h"
+#include "setenv.h"
 
 /***
  * 
@@ -94,6 +95,11 @@ main( int argc, char* argv[] ) {
 	buff.sprintf ("-DX509_USER_PROXY=%s", user_proxy.Value());
 	command_line.append (buff.Value());
 
+	const char *port_range = GetEnv( "GLOBUS_TCP_PORT_RANGE" );
+	if ( port_range != NULL ) {
+		buff.sprintf( "-DGLOBUS_TCP_PORT_RANGE=%s", port_range );
+		command_line.append( buff.Value() );
+	}
   
 // Append bootstrap classpath
 	const char * jarfiles [] = {
