@@ -58,6 +58,14 @@ main( int argc, char* argv[] ) {
 		exit (1);
 	}
 
+		// Get the java extra arguments value
+	StringList java_extra_args;
+	char *tmp = param( "JAVA_EXTRA_ARGUMENTS" );
+	if ( tmp != NULL ) {
+		java_extra_args.initializeFromString( tmp );
+		free( tmp );
+	}
+
 		// Get the GT4_LOCATION
 	char * gt4location = param ("GT4_LOCATION");
 	if (gt4location == NULL) {
@@ -101,6 +109,11 @@ main( int argc, char* argv[] ) {
 		command_line.append( buff.Value() );
 	}
   
+	java_extra_args.rewind();
+	while ( (tmp = java_extra_args.next()) != NULL ) {
+		command_line.append( tmp );
+	}
+
 // Append bootstrap classpath
 	const char * jarfiles [] = {
 		"bootstrap.jar",
