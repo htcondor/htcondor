@@ -269,7 +269,7 @@ GahpServer::write_line(const char *command, int req, const char *args)
 }
 
 void
-GahpServer::Reaper(Service*,int pid,int status)
+GahpServer::Reaper(int pid,int status)
 {
 	/* This should be much better.... for now, if our Gahp Server
 	   goes away for any reason, we EXCEPT. */
