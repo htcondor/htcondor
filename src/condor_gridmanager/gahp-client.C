@@ -471,29 +471,13 @@ GahpServer::read_argv(Gahp_Args &g_args)
 				}
 			}
 
-			// check for a single "R".  This means we should check
-			// for results in gahp async mode.  
-			if ( trash_this_line==false && g_args.argc == 1 &&
-				 g_args.argv[0][0] == 'R' ) {
-				if ( skip_next_r ) {
-					// we should not poll this time --- apparently we saw
-					// this R come through via our pipe handler.
-					skip_next_r = false;
-				} else {
-					poll_real_soon();
-				}
-					// ignore anything else on this line & read again
-				trash_this_line = true;
-			}
-
-			if ( trash_this_line ) {
-				// reset all our buffers and read the next line
-				g_args.reset();
-				ibuf = 0;
-				continue;	// go back to the top of the for loop
-			}
-
 			if ( logGahpIo ) {
+					// Note: A line of unexpected text from the gahp server
+					//   that triggers a RESULTS command (whether it's the
+					//   async-mode 'R' or some extraneous un-prefixed text)
+					//   will be printed in the log after the RESULTS line
+					//   is logged. This implied reversal of causality isn't
+					//   easy to fix, so we leave it as-is.
 				static MyString debug;
 				debug = "";
 				if( g_args.argc > 0 ) {
@@ -516,9 +500,33 @@ GahpServer::read_argv(Gahp_Args &g_args)
 					debug = debug.Substr( 0, logGahpIoSize );
 					debug += "...";
 				}
-				dprintf( D_FULLDEBUG, "GAHP[%d] -> %s\n", m_gahp_pid,
+				dprintf( D_FULLDEBUG, "GAHP[%d] %s-> %s\n", m_gahp_pid,
+						 trash_this_line ? "(unprefixed) " : "",
 						 debug.Value() );
 			}
+
+			// check for a single "R".  This means we should check
+			// for results in gahp async mode.  
+			if ( trash_this_line==false && g_args.argc == 1 &&
+				 g_args.argv[0][0] == 'R' ) {
+				if ( skip_next_r ) {
+					// we should not poll this time --- apparently we saw
+					// this R come through via our pipe handler.
+					skip_next_r = false;
+				} else {
+					poll_real_soon();
+				}
+					// ignore anything else on this line & read again
+				trash_this_line = true;
+			}
+
+			if ( trash_this_line ) {
+				// reset all our buffers and read the next line
+				g_args.reset();
+				ibuf = 0;
+				continue;	// go back to the top of the for loop
+			}
+
 			return;
 		}
 
