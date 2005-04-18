@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+04/18/05 V6_7-quill-branch
+   A branch for the initial commit of Quill, created off
+   the V6_7-branch as tagged at V6_7-quill-root.
+
 4/13/05 V6_7-post-merge-V6_7_6-doc-merge-1
         V6_7-pre-merge-V6_7_6-doc-merge-1
     The state of the doc directory in V6_7-branch before and after
