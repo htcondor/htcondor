@@ -92,7 +92,12 @@ Dagman::Dagman() :
 
 Dagman::~Dagman()
 {
-	delete dag;
+	// check if dag is NULL, since we may have 
+	// already delete'd it in the dag.CleanUp() method.
+	if ( dag != NULL ) {
+		delete dag;
+		dag = NULL;
+	}
 }
 
 

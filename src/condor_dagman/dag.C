@@ -112,8 +112,8 @@ Dag::Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
 
-	delete _dagFile;
-	delete _condorLogName;
+	delete[] _dagFile;
+	delete[] _condorLogName;
 
     // NOTE: we cast this to char* because older MS compilers
     // (contrary to the ISO C++ spec) won't allow you to delete a

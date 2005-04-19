@@ -39,7 +39,12 @@ class Dagman {
   public:
 	Dagman();
 	~Dagman();
-    inline void CleanUp () { delete dag; }
+    inline void CleanUp () { 
+		if ( dag != NULL ) {
+			delete dag; 
+			dag = NULL;
+		}
+	}
     Dag * dag;
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
