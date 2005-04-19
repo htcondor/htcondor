@@ -1806,6 +1806,7 @@ MyString *GT4Job::buildSubmitRSL()
 		staging_input = true;
 
 		*rsl += "<fileStageIn>";
+		*rsl += "<maxAttempts>5</maxAttempts>";
 
 		// First upload an emtpy dummy directory
 		// This will be the job's sandbox directory
@@ -1815,7 +1816,6 @@ MyString *GT4Job::buildSubmitRSL()
 			*rsl += printXMLParam( "sourceUrl", buff.Value() );
 			buff.sprintf( "file://%s", remote_iwd.Value() );
 			*rsl += printXMLParam( "destinationUrl", buff.Value());
-			*rsl += "<attempts>5</attempts>";
 			*rsl += "</transfer>";
 		}
 
@@ -1826,7 +1826,6 @@ MyString *GT4Job::buildSubmitRSL()
 			*rsl += printXMLParam( "sourceUrl", buff.Value() );
 			buff.sprintf( "file://%s", remote_executable.Value() );
 			*rsl += printXMLParam( "destinationUrl", buff.Value());
-			*rsl += "<attempts>5</attempts>";
 			*rsl += "</transfer>";
 		}
 
@@ -1848,7 +1847,6 @@ MyString *GT4Job::buildSubmitRSL()
 							  basename (filename));
 				*rsl += printXMLParam ("destinationUrl", 
 									   buff.Value());
-				*rsl += "<attempts>5</attempts>";
 				*rsl += "</transfer>";
 
 			}
@@ -1863,6 +1861,7 @@ MyString *GT4Job::buildSubmitRSL()
 		char *filename;
 
 		*rsl += "<fileStageOut>";
+		*rsl += "<maxAttempts>5</maxAttempts>";
 
 		stage_out_list.rewind();
 		while ( (filename = stage_out_list.next()) != NULL ) {
