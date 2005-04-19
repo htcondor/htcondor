@@ -111,9 +111,9 @@ static char *GMStateNames[] = {
 
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
-		"(%d.%d) gmState %s, globusState %d: %s returned Globus error %d\n", \
+		"(%d.%d) gmState %s, globusState %d: %s %s\n", \
         procID.cluster,procID.proc,GMStateNames[gmState],globusState, \
-        func,error)
+        func,error==GAHPCLIENT_COMMAND_TIMED_OUT?"timed out":"failed")
 
 #define CHECK_PROXY \
 { \
