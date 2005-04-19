@@ -1025,7 +1025,8 @@ format_globusHostAndJM( char  *globusResource, AttrList *ad )
 		char *grid_type;
 		ad->LookupString( ATTR_JOB_GRID_TYPE, &grid_type );
 
-		if ( grid_type == NULL || !stricmp( grid_type, "gt2" ) ) {
+		if ( grid_type == NULL || !stricmp( grid_type, "gt2" ) ||
+			 !stricmp( grid_type, "globus" ) ) {
 
 			// copy the hostname
 			p = strcspn( globusResource, ":/" );
