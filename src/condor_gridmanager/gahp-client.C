@@ -2129,10 +2129,11 @@ GahpServer::poll()
 			// Check and see if this is a gt4 gram_client_callback.  If so,
 			// deal with it here and now.
 		if ( result_reqid == globus_gt4_gram_callback_reqid ) {
-			if ( result->argc == 4 ) {
+			if ( result->argc == 5 ) {
 				(*globus_gt4_gram_callback_func)( globus_gt4_gram_user_callback_arg, result->argv[1], 
 								result->argv[2], 
-								strcmp(result->argv[3],NULLSTRING) ? result->argv[3] : NULL );
+								strcmp(result->argv[3],NULLSTRING) ? result->argv[3] : NULL,
+								strcmp(result->argv[4],NULLSTRING) ? atoi(result->argv[4]) : GT4_NO_EXIT_CODE );
 			} else {
 				dprintf(D_FULLDEBUG,
 					"GAHP - Bad client_callback results line\n");
@@ -3088,7 +3089,7 @@ GahpClient::gt4_gram_client_job_destroy(const char * job_contact)
 
 int
 GahpClient::gt4_gram_client_job_status(const char * job_contact,
-	char ** job_status)
+	char ** job_status, char ** job_fault, int * exit_code)
 {
 	static const char* command = "GT4_GRAM_JOB_STATUS";
 
@@ -3121,7 +3122,7 @@ GahpClient::gt4_gram_client_job_status(const char * job_contact,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 4) {
+		if (result->argc != 6) {
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
@@ -3130,8 +3131,18 @@ GahpClient::gt4_gram_client_job_status(const char * job_contact,
 		} else {
 			*job_status = NULL;
 		}
-		if ( strcasecmp(result->argv[3], NULLSTRING) ) {
-			error_string = result->argv[3];
+		if ( strcasecmp( result->argv[3], NULLSTRING ) ) {
+			*job_fault = strdup( result->argv[3] );
+		} else {
+			*job_fault = NULL;
+		}
+		if ( strcasecmp(result->argv[4], NULLSTRING) ) {
+			*exit_code = atoi( result->argv[4] );
+		} else {
+			*exit_code = GT4_NO_EXIT_CODE;
+		}
+		if ( strcasecmp(result->argv[5], NULLSTRING) ) {
+			error_string = result->argv[5];
 		} else {
 			error_string = "";
 		}

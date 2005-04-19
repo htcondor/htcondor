@@ -59,8 +59,7 @@
 #define GM_START				18
 #define GM_GENERATE_ID			19
 #define GM_DELEGATE_PROXY		20
-#define GM_DELEGATE_PROXY_SAVE	21
-#define GM_SUBMIT_ID_SAVE		22
+#define GM_SUBMIT_ID_SAVE		21
 
 static char *GMStateNames[] = {
 	"GM_INIT",
@@ -84,7 +83,6 @@ static char *GMStateNames[] = {
 	"GM_START",
 	"GM_GENERATE_ID",
 	"GM_DELEGATE_PROXY",
-	"GM_DELEGATE_PROXY_SAVE",
 	"GM_SUBMIT_ID_SAVE"
 };
 
@@ -165,7 +163,8 @@ gt4JobId( const char *contact )
 
 void
 gt4GramCallbackHandler( void *user_arg, const char *job_contact,
-						const char *state, const char *failure )
+						const char *state, const char *fault,
+						const int exit_code )
 {
 	int rc;
 	GT4Job *this_job;
@@ -180,11 +179,11 @@ gt4GramCallbackHandler( void *user_arg, const char *job_contact,
 		return;
 	}
 
-	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %s, failure %s\n",
+	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %s, fault %s, exit code %d\n",
 			 this_job->procID.cluster, this_job->procID.proc, state,
-			 failure ? failure : "(null)" );
+			 fault ? fault : "(null)", exit_code );
 
-	this_job->GramCallback( state, failure );
+	this_job->GramCallback( state, fault, exit_code );
 }
 
 void GT4JobInit()
@@ -262,7 +261,9 @@ const char *xml_stringify( const MyString& src )
 }
 
 int Gt4JobStateToInt( const char *status ) {
-	if ( !strcmp( status, "Pending" ) ) {
+	if ( status == NULL ) {
+		return GT4_JOB_STATE_UNKNOWN;
+	} else if ( !strcmp( status, "Pending" ) ) {
 		return GT4_JOB_STATE_PENDING;
 	} else if ( !strcmp( status, "Active" ) ) {
 		return GT4_JOB_STATE_ACTIVE;
@@ -339,9 +340,9 @@ GT4Job::GT4Job( ClassAd *classad )
 	streamError = false;
 	stageOutput = false;
 	stageError = false;
-	globusStateFailureString = 0;
+	globusStateFaultString = 0;
 	callbackGlobusState = 0;
-	callbackGlobusStateFailureString = "";
+	callbackGlobusStateFaultString = "";
 	restartingJM = false;
 	restartWhen = 0;
 	gmState = GM_INIT;
@@ -443,6 +444,10 @@ GT4Job::GT4Job( ClassAd *classad )
 		submit_id = strdup ( buff );
 	}
 
+	if ( ad->LookupString( ATTR_GLOBUS_DELEGATION_URI, buff ) ) {
+		delegatedCredentialURI = strdup( buff );
+		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
+	}
 
 	useGridJobMonitor = true;
 
@@ -746,48 +751,29 @@ int GT4Job::doEvaluateState()
 				gmState = GM_DELETE;
 				break;
 			} else {
-				gmState = GM_GENERATE_ID;
+				gmState = GM_DELEGATE_PROXY;
 			}
 			} break;
  		case GM_DELEGATE_PROXY: {
-/* Don't worry about delegating for now
-			rc = gahp->gt4_gram_client_delegate_credentials (resourceManagerString,
-															 &delegatedCredentialURI);
-
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+			const char *deleg_uri;
+				// TODO What happens if Gt4Resource can't delegate proxy?
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_DELETE;
 				break;
 			}
-
-			if ( rc == 0 ) {
-				UpdateJobAdString ( ATTR_GLOBUS_DELEGATION_URI,
-									delegatedCredentialURI );
-				gmState = GM_DELEGATE_PROXY_SAVE;
-			} else {
-				dprintf(D_ALWAYS,"(%d.%d) Delegation Error (rc=%d): %s\n",
-						procID.cluster, procID.proc, rc,
-						gahp->getErrorString());
-
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to delegate credential" );
-				gmState = GM_HOLD;
+			if ( delegatedCredentialURI != NULL ) {
+				gmState = GM_GENERATE_ID;
+				break;
 			}
-*/
-gmState=GM_DELEGATE_PROXY_SAVE;
-			} break;
-		case GM_DELEGATE_PROXY_SAVE: {
-				// Save the delegation URI
-/* Don't worry about delegation for now
-			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
-			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
-					break;
-				}
-				gmState = GM_SUBMIT;
+			deleg_uri = myResource->getDelegationURI( jobProxy );
+			if ( deleg_uri == NULL ) {
+					// proxy still needs to be delegated. Wait.
+				break;
 			}
-*/
-gmState=GM_SUBMIT;
+			delegatedCredentialURI = strdup( deleg_uri );
+			gmState = GM_GENERATE_ID;
+			UpdateJobAdString ( ATTR_GLOBUS_DELEGATION_URI,
+								delegatedCredentialURI );
 		} break;
 		case GM_GENERATE_ID: {
 
@@ -820,7 +806,7 @@ gmState=GM_SUBMIT;
 				if ( !done ) {
 					break;
 				}
-				gmState = GM_DELEGATE_PROXY;
+				gmState = GM_SUBMIT;
 			}
 		} break;
 		case GM_SUBMIT: {
@@ -1008,9 +994,11 @@ gmState=GM_SUBMIT;
 				gmState = GM_CANCEL;
 			} else {
 				char *status = NULL;
+				char *fault = NULL;
+				int exit_code = -1;
 				CHECK_PROXY;
-				rc = gahp->gt4_gram_client_job_status( jobContact,
-													   &status );
+				rc = gahp->gt4_gram_client_job_status( jobContact, &status,
+													   &fault, &exit_code );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1025,10 +1013,12 @@ gmState=GM_SUBMIT;
 					}
 					break;
 				}
-				UpdateGlobusState( Gt4JobStateToInt( status ),
-								   rc ? gahp->getErrorString() : NULL );
+				UpdateGlobusState( Gt4JobStateToInt( status ), fault );
 				if ( status ) {
 					free( status );
+				}
+				if ( fault ) {
+					free( fault );
 				}
 				ClearCallbacks();
 				lastProbeTime = time(NULL);
@@ -1187,7 +1177,7 @@ gmState=GM_SUBMIT;
 				globusState = GT4_JOB_STATE_UNSUBMITTED;
 				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 			}
-			globusStateFailureString = "";
+			globusStateFaultString = "";
 			globusErrorString = "";
 			lastRestartReason = 0;
 			numRestartAttemptsThisSubmit = 0;
@@ -1279,10 +1269,10 @@ gmState=GM_SUBMIT;
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' &&
-					 !globusStateFailureString.IsEmpty() ) {
+					 !globusStateFaultString.IsEmpty() ) {
 
 					snprintf( holdReason, 1024, "Globus error: %s",
-							  globusStateFailureString.Value() );
+							  globusStateFaultString.Value() );
 				}
 				if ( holdReason[0] == '\0' && !globusErrorString.IsEmpty() ) {
 					snprintf( holdReason, 1024, "Globus error: %s",
@@ -1374,6 +1364,14 @@ gmState=GM_SUBMIT;
 
 void GT4Job::SetJobContact( const char *job_contact )
 {
+		// Clear the delegation URI whenever the job contact string
+		// is cleared
+	if ( job_contact == NULL && delegatedCredentialURI != NULL ) {
+		free( delegatedCredentialURI );
+		delegatedCredentialURI = NULL;
+		UpdateJobAd( ATTR_GLOBUS_DELEGATION_URI, "Undefined" );
+	}
+
 	if ( jobContact != NULL && job_contact != NULL &&
 		 strcmp( jobContact, job_contact ) == 0 ) {
 		return;
@@ -1445,7 +1443,7 @@ bool GT4Job::AllowTransition( int new_state, int old_state )
 }
 
 
-void GT4Job::UpdateGlobusState( int new_state, const char *new_failure )
+void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 {
 	bool allow_transition;
 
@@ -1476,7 +1474,7 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_failure )
 					//   certain errors (ones we know are submit-related)?
 				if ( !submitFailedLogged ) {
 					WriteGT4SubmitFailedEventToUserLog( ad,
-														new_failure );
+														new_fault );
 					submitFailedLogged = true;
 				}
 			} else {
@@ -1505,7 +1503,7 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_failure )
 		UpdateJobAdInt( ATTR_GLOBUS_STATUS, new_state );
 
 		globusState = new_state;
-		globusStateFailureString = new_failure;
+		globusStateFaultString = new_fault;
 		enteredCurrentGlobusState = time(NULL);
 
 		requestScheddUpdate( this );
@@ -1514,7 +1512,8 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_failure )
 	}
 }
 
-void GT4Job::GramCallback( const char *new_state, const char *new_failure )
+void GT4Job::GramCallback( const char *new_state, const char *new_fault,
+						   const int new_exit_code )
 {
 	int new_state_int = Gt4JobStateToInt( new_state );
 	if ( AllowTransition(new_state_int,
@@ -1523,7 +1522,13 @@ void GT4Job::GramCallback( const char *new_state, const char *new_failure )
 						 globusState ) ) {
 
 		callbackGlobusState = new_state_int;
-		callbackGlobusStateFailureString = new_failure ? new_failure : "";
+		callbackGlobusStateFaultString = new_fault ? new_fault : "";
+
+//		if ( new_exit_code != GT4_NO_EXIT_CODE ) {
+		if ( new_state_int == GT4_JOB_STATE_DONE ) {
+			UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
+			UpdateJobAdInt( ATTR_ON_EXIT_CODE, new_exit_code );
+		}
 
 		SetEvaluateState();
 	}
@@ -1533,7 +1538,7 @@ bool GT4Job::GetCallbacks()
 {
 	if ( callbackGlobusState != 0 ) {
 		UpdateGlobusState( callbackGlobusState,
-						   callbackGlobusStateFailureString.Value() );
+						   callbackGlobusStateFaultString.Value() );
 
 		ClearCallbacks();
 		return true;
@@ -1545,7 +1550,7 @@ bool GT4Job::GetCallbacks()
 void GT4Job::ClearCallbacks()
 {
 	callbackGlobusState = 0;
-	callbackGlobusStateFailureString = "";
+	callbackGlobusStateFaultString = "";
 }
 
 BaseResource *GT4Job::GetResource()
@@ -1582,6 +1587,20 @@ MyString *GT4Job::buildSubmitRSL()
 		errorString = "Streaming not supported";
 		return NULL;
 	}
+
+	MyString delegation_epr;
+	MyString delegation_uri = delegatedCredentialURI;
+	int pos = delegation_uri.FindChar( '?' );
+	delegation_epr.sprintf( "<ns1:Address xsi:type=\"ns1:AttributedURI\">%s</ns1:Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
+	delegation_epr.sprintf_cat( "<ns1:ReferenceProperties xsi:type=\"ns1:ReferencePropertiesType\">" );
+	delegation_epr.sprintf_cat( "<ns1:DelegationKey xmlns:ns1=\"http://www.globus.org/08/2004/delegationService\">%s</ns1:DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
+	delegation_epr.sprintf_cat( "</ns1:ReferenceProperties><ns1:ReferenceParameters xsi:type=\"ns1:ReferenceParametersType\"/>" );
+/*
+	delegation_epr.sprintf( "<Address>%s</Address>", delegation_uri.Substr( 0, pos-1 ).Value() );
+	delegation_epr.sprintf_cat( "<ReferenceProperties>" );
+	delegation_epr.sprintf_cat( "<DelegationKey>%s</DelegationKey>", delegation_uri.Substr( pos+1, delegation_uri.Length()-1 ).Value() );
+	delegation_epr.sprintf_cat( "</ReferenceProperties><ReferenceParameters/>" );
+*/
 
 		// Set our local job working directory
 	if ( ad->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
@@ -1808,6 +1827,10 @@ MyString *GT4Job::buildSubmitRSL()
 		*rsl += "<fileStageIn>";
 		*rsl += "<maxAttempts>5</maxAttempts>";
 
+		*rsl += "<transferCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
+		*rsl += delegation_epr;
+		*rsl += "</transferCredentialEndpoint>";
+
 		// First upload an emtpy dummy directory
 		// This will be the job's sandbox directory
 		if ( create_remote_iwd ) {
@@ -1863,6 +1886,10 @@ MyString *GT4Job::buildSubmitRSL()
 		*rsl += "<fileStageOut>";
 		*rsl += "<maxAttempts>5</maxAttempts>";
 
+		*rsl += "<transferCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
+		*rsl += delegation_epr;
+		*rsl += "</transferCredentialEndpoint>";
+
 		stage_out_list.rewind();
 		while ( (filename = stage_out_list.next()) != NULL ) {
 
@@ -1887,7 +1914,11 @@ MyString *GT4Job::buildSubmitRSL()
 		// Add a cleanup directive to remove the remote iwd,
 		// if we created one
 	if ( create_remote_iwd ) {
-		*rsl += "<fileCleanUp><deletion><file>file://" + remote_iwd +
+		*rsl += "<fileCleanUp>";
+		*rsl += "<transferCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
+		*rsl += delegation_epr;
+		*rsl += "</transferCredentialEndpoint>";
+		*rsl += "<deletion><file>file://" + remote_iwd +
 			"</file></deletion></fileCleanUp>";
 	}
 
@@ -1917,6 +1948,16 @@ MyString *GT4Job::buildSubmitRSL()
 		free( attr_value );
 		attr_value = NULL;
 	}
+
+	*rsl += "<jobCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
+//	*rsl += "<jobCredentialEndpoint>";
+	*rsl += delegation_epr;
+	*rsl += "</jobCredentialEndpoint>";
+
+	*rsl += "<stagingCredentialEndpoint xsi:type=\"ns1:EndpointReferenceType\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns1=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\">";
+//	*rsl += "<stagingCredentialEndpoint>";
+	*rsl += delegation_epr;
+	*rsl += "</stagingCredentialEndpoint>";
 
 	if ( ad->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) ) {
 		*rsl += rsl_suffix;

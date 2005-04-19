@@ -61,7 +61,8 @@ struct GahpProxyInfo
 typedef void (* globus_gt4_gram_callback_func_t)(void * user_callback_arg,
 												 const char * job_contact,
 												 const char * state,
-												 const char * failure);
+												 const char * fault,
+												 const int exit_code);
 
 static const char *GAHPCLIENT_DEFAULT_SERVER_ID = "DEFAULT";
 static const char *GAHPCLIENT_DEFAULT_SERVER_PATH = "DEFAULT";
@@ -76,6 +77,7 @@ static const int GAHPCLIENT_COMMAND_NOT_SUBMITTED = -102;
 ///
 static const int GAHPCLIENT_COMMAND_TIMED_OUT = -103;
 
+static const int GT4_NO_EXIT_CODE = -1;
 
 void GahpReconfig();
 
@@ -474,7 +476,7 @@ class GahpClient : public Service {
 		///
 		int
 		gt4_gram_client_job_status(const char * job_contact,
-			char ** job_status);
+			char ** job_status, char ** job_fault, int * exit_code);
 
 		///
 		int

@@ -62,8 +62,9 @@ class GT4Job : public BaseJob
 	int doEvaluateState();
 	void NotifyResourceDown();
 	void NotifyResourceUp();
-	void UpdateGlobusState( int new_state, const char *new_failure );
-	void GramCallback( const char *new_state, const char *new_failure );
+	void UpdateGlobusState( int new_state, const char *new_fault );
+	void GramCallback( const char *new_state, const char *new_fault,
+					   const int new_exit_code );
 	bool GetCallbacks();
 	void ClearCallbacks();
 	BaseResource *GetResource();
@@ -91,9 +92,9 @@ class GT4Job : public BaseJob
 	bool resourceStateKnown;
 	int gmState;
 	int globusState;
-	MyString globusStateFailureString;
+	MyString globusStateFaultString;
 	int callbackGlobusState;
-	MyString callbackGlobusStateFailureString;
+	MyString callbackGlobusStateFaultString;
 	bool resourcePingPending;
 	bool jmUnreachable;
 	bool jmDown;

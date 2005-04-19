@@ -36,6 +36,8 @@
 
 template class List<GT4Job>;
 template class Item<GT4Job>;
+template class List<ProxyDelegation>;
+template class Item<ProxyDelegation>;
 
 int GT4Resource::probeInterval = 300;	// default value
 int GT4Resource::probeDelay = 15;		// default value
@@ -49,6 +51,13 @@ template class HashBucket<HashKey, GT4Resource *>;
 HashTable <HashKey, GT4Resource *>
     GT4Resource::ResourcesByName( HASH_TABLE_SIZE,
 								  hashFunction );
+
+struct ProxyDelegation {
+	char *deleg_uri;
+	//time_t lifetime;
+	time_t proxy_expire;
+	Proxy *proxy;
+};
 
 GT4Resource *GT4Resource::FindOrCreateResource( const char *resource_name,
 												const char *proxy_subject )
@@ -92,16 +101,58 @@ GT4Resource::GT4Resource( const char *resource_name,
 								"GT4Resource::DoPing", (Service*)this );
 	lastPing = 0;
 	lastStatusChange = 0;
+	delegationTimerId = daemonCore->Register_Timer( 0,
+							(TimerHandlercpp)&GT4Resource::checkDelegation,
+							"GT4REsource::checkDelegation", (Service*)this );
+	activeDelegationCmd = NULL;
+	delegationServiceUri = NULL;
 	gahp = NULL;
+	deleg_gahp = NULL;
 	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
+
+	const char service_name[] = "/wsrf/services/DelegationFactoryService";
+	const char *name_ptr;
+	int name_len;
+	if ( strncmp( "https://", resource_name, 8 ) == 0 ) {
+		name_ptr = &resource_name[8];
+	} else {
+		name_ptr = resource_name;
+	}
+	name_len = strcspn( name_ptr, "/" );
+	delegationServiceUri = (char *)malloc( 8 +         // "https://"
+										   name_len +  // host/port
+										   sizeof( service_name ) + 
+										   1 );        // terminating \0
+	strcpy( delegationServiceUri, "https://" );
+	snprintf( delegationServiceUri + 8, name_len + 1, "%s", name_ptr );
+	strcat( delegationServiceUri, service_name );
 }
 
 GT4Resource::~GT4Resource()
 {
+dprintf(D_FULLDEBUG,"*** ~GT4Resource\n");
+	ProxyDelegation *next_deleg;
+	delegatedProxies.Rewind();
+	while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
+dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
+		delegatedProxies.DeleteCurrent();
+		free( next_deleg->deleg_uri );
+			// unacquire proxy?
+		ReleaseProxy( next_deleg->proxy );
+		delete next_deleg;
+	}
+	if ( delegationServiceUri != NULL ) {
+		free( delegationServiceUri );
+	}
+
 	daemonCore->Cancel_Timer( pingTimerId );
+	daemonCore->Cancel_Timer( delegationTimerId );
 	if ( gahp != NULL ) {
 		delete gahp;
+	}
+	if ( deleg_gahp != NULL ) {
+		delete deleg_gahp;
 	}
 	if ( proxySubject ) {
 		free( proxySubject );
@@ -124,6 +175,12 @@ bool GT4Resource::Init()
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
+
+	deleg_gahp = new GahpClient( gahp_name.Value() );
+
+	deleg_gahp->setNotificationTimerId( delegationTimerId );
+	deleg_gahp->setMode( GahpClient::normal );
+	deleg_gahp->setTimeout( gahpCallTimeout );
 
 	initialized = true;
 
@@ -259,6 +316,45 @@ void GT4Resource::UnregisterJob( GT4Job *job )
 	registeredJobs.Delete( job );
 	pingRequesters.Delete( job );
 
+	if ( job->delegatedCredentialURI != NULL ) {
+		bool delete_deleg = true;
+		GT4Job *next_job;
+		registeredJobs.Rewind();
+		while ( (next_job = registeredJobs.Next()) != NULL ) {
+			if ( strcmp( job->delegatedCredentialURI,
+						 next_job->delegatedCredentialURI ) == 0 ) {
+				delete_deleg = false;
+				break;
+			}
+		}
+		if ( delete_deleg ) {
+dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
+			bool reacquire_proxy = false;
+			Proxy *proxy_to_reacquire = job->jobProxy;
+			ProxyDelegation *next_deleg;
+			delegatedProxies.Rewind();
+			while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
+				if ( strcmp( job->delegatedCredentialURI,
+							 next_deleg->deleg_uri ) == 0 ) {
+					delegatedProxies.DeleteCurrent();
+					if ( activeDelegationCmd == next_deleg ) {
+						deleg_gahp->purgePendingRequests();
+						activeDelegationCmd = NULL;
+					}
+					free( next_deleg->deleg_uri );
+						// unacquire proxy?
+					ReleaseProxy( next_deleg->proxy );
+					delete next_deleg;
+				} else if ( next_deleg->proxy == proxy_to_reacquire ) {
+					reacquire_proxy = true;
+				}
+			}
+			if ( reacquire_proxy ) {
+				AcquireProxy( proxy_to_reacquire, delegationTimerId );
+			}
+		}
+	}
+
 	if ( IsEmpty() ) {
 		ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
 		delete this;
@@ -372,6 +468,157 @@ void GT4Resource::CancelSubmit( GT4Job *job )
 	SubmitComplete( job );
 
 	return;
+}
+
+void GT4Resource::registerDelegationURI( const char *deleg_uri,
+										 Proxy *job_proxy )
+{
+dprintf(D_FULLDEBUG,"*** registerDelegationURI(%s,%s)\n",deleg_uri,job_proxy->proxy_filename);
+	ProxyDelegation *next_deleg;
+
+	delegatedProxies.Rewind();
+
+	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
+		if ( strcmp( deleg_uri, next_deleg->deleg_uri ) == 0 ) {
+dprintf(D_FULLDEBUG,"    found ProxyDelegation\n");
+			return;
+		}
+	}
+
+dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
+	next_deleg = new ProxyDelegation;
+	next_deleg->deleg_uri = strdup( deleg_uri );
+	next_deleg->proxy_expire = 0;
+	next_deleg->proxy = job_proxy;
+		// acquire proxy?
+	AcquireProxy( job_proxy, delegationTimerId );
+	delegatedProxies.Append( next_deleg );
+
+		// TODO add smarter timer that delays a few seconds
+	daemonCore->Reset_Timer( delegationTimerId, 0 );
+}
+
+const char *GT4Resource::getDelegationURI( Proxy *job_proxy )
+{
+dprintf(D_FULLDEBUG,"*** getDelegationURI(%s)\n",job_proxy->proxy_filename);
+	ProxyDelegation *next_deleg;
+
+	delegatedProxies.Rewind();
+
+	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
+		if ( next_deleg->proxy == job_proxy ) {
+				// If the delegation hasn't happened yet, this will return
+				// NULL, which tells the caller to continue to wait.
+dprintf(D_FULLDEBUG,"    found ProxyDelegation\n");
+			return next_deleg->deleg_uri;
+		}
+	}
+
+dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
+	next_deleg = new ProxyDelegation;
+	next_deleg->deleg_uri = NULL;
+	next_deleg->proxy_expire = 0;
+	next_deleg->proxy = job_proxy;
+		// acquire proxy?
+	AcquireProxy( job_proxy, delegationTimerId );
+	delegatedProxies.Append( next_deleg );
+
+		// TODO add smarter timer that delays a few seconds
+	daemonCore->Reset_Timer( delegationTimerId, 0 );
+
+	return NULL;
+}
+
+int GT4Resource::checkDelegation()
+{
+dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
+	bool signal_jobs;
+	ProxyDelegation *next_deleg;
+
+	daemonCore->Reset_Timer( delegationTimerId, 60*60 );
+
+	delegatedProxies.Rewind();
+
+	while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
+
+		if ( activeDelegationCmd != NULL && next_deleg != activeDelegationCmd ) {
+			continue;
+		}
+		signal_jobs = false;
+
+		if ( next_deleg->deleg_uri == NULL ) {
+dprintf(D_FULLDEBUG,"    new delegation\n");
+			int rc;
+			char *delegation_uri = NULL;
+			deleg_gahp->setDelegProxy( next_deleg->proxy );
+			rc = deleg_gahp->gt4_gram_client_delegate_credentials(
+														delegationServiceUri,
+														&delegation_uri );
+			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+				activeDelegationCmd = next_deleg;
+				return 0;
+			}
+			if ( rc != 0 ) {
+					// Failure, what to do?
+				dprintf( D_ALWAYS, "delegate_credentials(%s) failed!\n",
+						 delegationServiceUri );
+				activeDelegationCmd = NULL;
+			} else {
+dprintf(D_FULLDEBUG,"      %s\n",delegation_uri);
+				activeDelegationCmd = NULL;
+					// we are assuming responsibility to free this
+				next_deleg->deleg_uri = delegation_uri;
+				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
+				signal_jobs = true;
+			}
+		}
+
+		if ( next_deleg->deleg_uri &&
+			 next_deleg->proxy_expire < next_deleg->proxy->expiration_time ) {
+dprintf(D_FULLDEBUG,"    refreshing %s\n",next_deleg->deleg_uri);
+			int rc;
+			deleg_gahp->setDelegProxy( next_deleg->proxy );
+			rc = deleg_gahp->gt4_gram_client_refresh_credentials(
+													next_deleg->deleg_uri );
+			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+				activeDelegationCmd = next_deleg;
+				return 0;
+			}
+			if ( rc != 0 ) {
+					// Failure, what to do?
+				dprintf( D_ALWAYS, "refresh_credentials(%s) failed!\n",
+						 next_deleg->deleg_uri );
+				activeDelegationCmd = NULL;
+			} else {
+dprintf(D_FULLDEBUG,"      done\n");
+				activeDelegationCmd = NULL;
+				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
+					// ??? do we want to signal jobs in this case?
+				signal_jobs = true;
+			}
+		}
+
+//		if ( next_deleg->lifetime < MinLifetime ) {
+//		}
+
+		activeDelegationCmd = NULL;
+
+		if ( signal_jobs ) {
+dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri);
+			GT4Job *next_job;
+			registeredJobs.Rewind();
+			while ( (next_job = registeredJobs.Next()) != NULL ) {
+				if ( next_job->delegatedCredentialURI != NULL ) {
+					if ( strcmp( next_job->delegatedCredentialURI,
+								 next_deleg->deleg_uri ) == 0 ) {
+						next_job->SetEvaluateState();
+					}
+				} else if ( next_job->jobProxy == next_deleg->proxy ) {
+					next_job->SetEvaluateState();
+				}
+			}
+		}
+	}
 }
 
 bool GT4Resource::IsEmpty()

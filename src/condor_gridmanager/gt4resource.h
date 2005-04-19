@@ -35,6 +35,7 @@
 
 class GT4Job;
 class GT4Resource;
+struct ProxyDelegation;
 
 ////////////from gridmanager.C
 extern HashTable <HashKey, GT4Resource *> GT4ResourcesByName;
@@ -55,6 +56,9 @@ class GT4Resource : public BaseResource
 	bool RequestSubmit( GT4Job *job );
 	void SubmitComplete( GT4Job *job );
 	void CancelSubmit( GT4Job *job );
+
+	void registerDelegationURI( const char *deleg_uri, Proxy *job_proxy );
+	const char *getDelegationURI( Proxy *job_proxy );
 
 	bool IsEmpty();
 	bool IsDown();
@@ -82,6 +86,7 @@ class GT4Resource : public BaseResource
 
  private:
 	int DoPing();
+	int checkDelegation();
 
 	bool initialized;
 
@@ -89,6 +94,9 @@ class GT4Resource : public BaseResource
 	bool resourceDown;
 	bool firstPingDone;
 	int pingTimerId;
+	int delegationTimerId;
+	ProxyDelegation *activeDelegationCmd;
+	char *delegationServiceUri;
 	time_t lastPing;
 	time_t lastStatusChange;
 	List<GT4Job> registeredJobs;
@@ -101,6 +109,7 @@ class GT4Resource : public BaseResource
 	List<GT4Job> submitsAllowed;
 	// jobs that want to submit but can't due to jobLimit
 	List<GT4Job> submitsWanted;
+	List<ProxyDelegation> delegatedProxies;
 	static int probeInterval;
 	static int probeDelay;
 	int submitLimit;		// max number of submit actions
@@ -108,6 +117,7 @@ class GT4Resource : public BaseResource
 	static int gahpCallTimeout;
 
 	GahpClient *gahp;
+	GahpClient *deleg_gahp;
 };
 
 #endif
