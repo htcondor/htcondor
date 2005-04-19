@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.4.6 2005-04-01 01:22:18 wright Exp $
+# $Id: remote_pre.pl,v 1.1.4.7 2005-04-19 21:01:32 bgietzel Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -73,8 +73,8 @@ my $configure = "$BaseDir/$version/condor_configure";
 my $reltar = "$BaseDir/$version/release.tar";
 
 print "SETTING UP PERSONAL CONDOR\n";
-mkdir( "$BaseDir/local" ) || die "Can't mkdir $BaseDir/local: $!\n";
-mkdir( "$BaseDir/condor" ) || die "Can't mkdir $BaseDir/condor: $!\n";
+mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
+mkdir( "$BaseDir/condor", 0777 ) || die "Can't mkdir $BaseDir/condor: $!\n";
 
 print "RUNNING condor_configure\n";
 
@@ -161,7 +161,7 @@ print "PERSONAL CONDOR installed!\n";
 ######################################################################
 
 chdir( "$SrcDir" ) || die "Can't chdir($SrcDir): $!\n";
-mkdir( "$SrcDir/release_dir" );  # don't die, it might already exist...
+mkdir( "$SrcDir/release_dir", 0777 );  # don't die, it might already exist...
 -d "$SrcDir/release_dir" || die "$SrcDir/release_dir does not exist!\n";
 chdir( "$SrcDir/release_dir" )
     || die "Can't chdir($SrcDir/release_dir): $!\n";

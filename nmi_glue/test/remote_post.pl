@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.1.4.1 2004-07-19 05:28:37 wright Exp $
+# $Id: remote_post.pl,v 1.1.4.2 2005-04-19 21:04:30 bgietzel Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -80,7 +80,7 @@ my $log_dir = "$BaseDir/results/log";
 if( ! -d "$BaseDir/results" ) {
     # If there's no results, and we can't even make the directory, we
     # might as well die, since there's nothing worth saving...
-    mkdir( "$BaseDir/results" ) || die "Can't mkdir($BaseDir/results): $!\n";
+    mkdir( "$BaseDir/results", 0777 ) || die "Can't mkdir($BaseDir/results): $!\n";
 }
 
 system( "cp tasklist.nmi $BaseDir/results/" );
@@ -91,7 +91,7 @@ if( $? ) {
 
 
 if( ! -d $etc_dir ) {
-    if( ! mkdir("$etc_dir") ) {
+    if( ! mkdir( "$etc_dir", 0777 ) ) {
         print "ERROR: Can't mkdir($etc_dir): $!\n";
         $exit_status = 1;
     }
@@ -111,7 +111,7 @@ if( -d $etc_dir ) {
 }
 
 if( ! -d $log_dir ) {
-    if( ! mkdir("$log_dir") ) {
+    if( ! mkdir( "$log_dir", 0777 ) ) {
         print "ERROR: Can't mkdir($log_dir): $!\n";
         $exit_status = 1;
     }
