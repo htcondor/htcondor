@@ -1333,6 +1333,8 @@ GRIDMANAGER_DEBUG	= D_COMMAND
 #GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
 GRIDMANAGER_LOG = $(LOG)/GridmanagerLog.$(USERNAME)
 
+CONDOR_JOB_POLL_INTERVAL = 20
+
 ##--------------------------------------------------------------------
 ##  Various other settings that the Condor-G can use. 
 ##--------------------------------------------------------------------
