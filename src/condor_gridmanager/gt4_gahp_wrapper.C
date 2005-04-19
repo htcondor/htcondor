@@ -66,17 +66,17 @@ main( int argc, char* argv[] ) {
 		free( tmp );
 	}
 
-		// Get the GT4_LOCATION
-	char * gt4location = param ("GT4_LOCATION");
-	if (gt4location == NULL) {
-		fprintf (stderr, "ERROR: GT4_LOCATION not defined in your Condor config file!\n");
+		// Get the LIB location (where gt4-gahp.jar lives)
+	char * liblocation = param ("LIB");
+	if (liblocation == NULL) {
+		fprintf (stderr, "ERROR: LIB not defined in your Condor config file!\n");
 		exit (1);
 	}
 
-		// Change to the gt4 directory
-		// This is cruicial believe it or not !!!!
-	if (chdir (gt4location) < 0 ) {
-		fprintf (stderr, "ERROR: Unable to cd into %s!\n", gt4location);
+		// Get the GT4_LOCATION (where the required globus files live)
+	char * gt4location = param ("GT4_LOCATION");
+	if (gt4location == NULL) {
+		fprintf (stderr, "ERROR: GT4_LOCATION not defined in your Condor config file!\n");
 		exit (1);
 	}
 
@@ -84,6 +84,13 @@ main( int argc, char* argv[] ) {
 	struct stat stat_buff;
 	if (stat (gt4location, &stat_buff) == -1) {
 		fprintf (stderr, "ERROR: Invalid GT4_LOCATION: %s\n", gt4location);
+		exit (1);
+	}
+
+		// Change to the gt4 directory
+		// This is cruicial believe it or not !!!!
+	if (chdir (gt4location) < 0 ) {
+		fprintf (stderr, "ERROR: Unable to cd into %s!\n", gt4location);
 		exit (1);
 	}
 
@@ -114,14 +121,39 @@ main( int argc, char* argv[] ) {
 		command_line.append( tmp );
 	}
 
+/*
 // Append bootstrap classpath
 	const char * jarfiles [] = {
 		"bootstrap.jar",
 		"cog-url.jar",
 		"axis-url.jar"
 	};
+*/
 
 	MyString classpath;
+
+	char classpath_seperator;
+#ifdef WIN32
+	classpath_seperator = ';';
+#else
+	classpath_seperator = ':';
+#endif
+
+	classpath += liblocation;
+	classpath += "/gt4-gahp.jar";
+
+	const char *ctmp;
+	buff.sprintf( "%s/lib", gt4location );
+	Directory dir( buff.Value() );
+	dir.Rewind();
+	while ( (ctmp = dir.Next()) ) {
+		char *match = strstr( ctmp, ".jar" );
+		if ( match && strlen( match ) == 4 ) {
+			classpath += classpath_seperator;
+			classpath += dir.GetFullPath();
+		}
+	}
+/*
 	int i; 
 	i = sizeof(jarfiles)/sizeof(char*)-1;
 	for (; i>=0; i--) {
@@ -145,6 +177,7 @@ main( int argc, char* argv[] ) {
 #endif
 		}
 	}
+*/
 
 	command_line.append ("-classpath");
 	command_line.append (classpath.Value());
@@ -155,7 +188,7 @@ main( int argc, char* argv[] ) {
 	int nparams = command_line.number();
 	char ** params = new char* [nparams+1];
 	command_line.rewind();
-	for (i=0; i<command_line.number(); i++) {
+	for (int i=0; i<command_line.number(); i++) {
 		params[i] = strdup(command_line.next());
 	}
 	params[nparams]=(char*)0;
