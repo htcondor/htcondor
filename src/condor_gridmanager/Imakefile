@@ -66,6 +66,10 @@ release_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 static_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 strip_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 
+release_copy_target($(GT4GAHP_DIR)/gt4-gahp.jar,lib,gt4-gahp.jar,TEXT_MODE)
+static_copy_target($(GT4GAHP_DIR)/gt4-gahp.jar,lib,gt4-gahp.jar,TEXT_MODE)
+strip_copy_target($(GT4GAHP_DIR)/gt4-gahp.jar,lib,gt4-gahp.jar,TEXT_MODE)
+
 release_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
 static_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
 strip_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
