@@ -52,6 +52,10 @@ from one \condor{schedd} to another.
 
 \begin{itemize}
 
+\item Fixed a throughput performance bottle neck when standard universe
+	jobs vacate when the user has specified \Attr{WantCheckpoint} equal to
+	False in the submit file.
+
 \item Added initial support for the \Syscall{getdents},
 	\Syscall{getdents64}, \Syscall{glob}, and the family of functions
 	\Syscall{opendir}, \Syscall{readdir}, \Syscall{closedir} for the
