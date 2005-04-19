@@ -1678,6 +1678,19 @@ Checkpoint( int sig, int code, void *scp )
 					dprintf(D_ALWAYS,
 							"Checkpoint aborted by shadow request.\n");
 
+					// if I'm checkpointing on a vacate when WantCheckpoint
+					// has been specified to false, then simply commit suicide
+					// since I don't want to waste the time of the checkpoint
+					// which could be significant.
+					if (check_sig == SIGTSTP) {
+						dprintf( D_ALWAYS, "Checkpoint during a vacate while "
+											"WantCheckpoint = False, aborting "
+											"the checkpoint and commiting "
+											"Suicide().\n");
+						SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+						Suicide();
+					}
+
 					// We can't just return here.  We need to cleanup
 					// anything we've done above first.
 
