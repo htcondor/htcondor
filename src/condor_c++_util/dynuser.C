@@ -169,7 +169,7 @@ bool dynuser::init_user() {
 		if ( reuse_account ) {
 	
 			logappend = param("STARTER_LOG");
-			tmp = strrchr(logappend, '.');
+			tmp = strstr(logappend, ".vm");
 			
 			if ( tmp ) {
 				
