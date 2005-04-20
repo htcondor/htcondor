@@ -26,9 +26,9 @@
    This file contains implementations of functions we need in the
    regular libcedar.a that we do NOT want to link into standard
    universe jobs with libcondorsyscall.a.  Any functions implemented
-   here need a stub added to condor_syscall_lib/cedar_no_ckpt.C that
-   calls EXCEPT() or whatever is appropriate.  This way, we can add
-   functionality to CEDAR that we need/use outside of the syscall
+   here need to be added to condor_syscall_lib/cedar_no_ckpt_stubs.C
+   that calls EXCEPT() or whatever is appropriate.  This way, we can
+   add functionality to CEDAR that we need/use outside of the syscall
    library without causing trouble inside the standard universe code.
 */
 
