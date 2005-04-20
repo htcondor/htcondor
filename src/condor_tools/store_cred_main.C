@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 				} else if ( result == SUCCESS ) {
 					fprintf(stdout, "\n\nPassword has been stored.\n");
 				} else {
-					fprintf(stdout, "\n\nFailure occured.\n");
+					fprintf(stdout, "\n\nFailure occured.\n\tMake sure your HOSTALLOW_WRITE setting includes this host.\n");
 				}
 			} else {
 				fprintf(stderr, "\nAborted.\n");
