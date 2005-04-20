@@ -548,16 +548,20 @@ get_keyboard_info(idle_t *fill_me)
 	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
 	    if (strstr(buf, "i8042") != NULL || strstr(buf, "keyboard") != NULL){
 
-		dprintf(D_FULLDEBUG, "Keyboard IRQ: %d\n", atoi(buf));
+			if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+				dprintf( D_IDLE, "Keyboard IRQ: %d\n", atoi(buf) );
+			}
 		tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
 		do {
 		    tok = strtok_r(NULL, DELIMS, &tok_loc);
 		    if (is_number(tok)) {
-			/* It is ok if this overflows */
-			fill_me->num_key_intr += strtoul(tok, NULL, 10);
-			dprintf(D_FULLDEBUG, 
-				"Add %lu keyboard interrupts.  Total: %lu\n",
-				strtoul(tok, NULL, 10), fill_me->num_key_intr);
+					/* It is ok if this overflows */
+				fill_me->num_key_intr += strtoul(tok, NULL, 10);
+				if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+					dprintf( D_FULLDEBUG, 
+							 "Add %lu keyboard interrupts.  Total: %lu\n",
+							 strtoul(tok, NULL, 10), fill_me->num_key_intr );
+				}
 		    } else {
 			break;  /* device type column */
 		    }
