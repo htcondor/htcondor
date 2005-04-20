@@ -134,9 +134,7 @@ static	void		doRunAnalysis( ClassAd* );
 static	char *		doRunAnalysisToBuffer( ClassAd* );
 struct 	PrioEntry { MyString name; float prio; };
 static 	bool		analyze	= false;
-#ifdef WANT_CLASSAD_ANALYSIS
 static  bool        better_analyze = false;
-#endif
 static	bool		run = false;
 static	bool		goodput = false;
 static	char		*fixSubmittorName( char*, int );
@@ -201,7 +199,12 @@ int main (int argc, char **argv)
 			} else {
 				sprintf( scheddMachine, "Unknown" );
 			}
-			if ( verbose ) {
+            // When we use the new analysis code, it can be really
+            // slow. Slow enough that show_queue_buffered()'s connection
+            // to the schedd time's out and the user gets nothing
+            // useful printed out. Therefore, we use show_queue,
+            // which fetches all of the ads, then analyzes them. 
+			if ( verbose || better_analyze) {
 				exit( !show_queue( scheddAddr, scheddName,
 							scheddMachine ) );
 			} else {
@@ -295,7 +298,12 @@ int main (int argc, char **argv)
 			!ad->LookupString(ATTR_MACHINE, scheddMachine))
 				continue;
 	
-		if ( verbose ) {
+        // When we use the new analysis code, it can be really
+        // slow. Slow enough that show_queue_buffered()'s connection
+        // to the schedd time's out and the user gets nothing
+        // useful printed out. Therefore, we use show_queue,
+        // which fetches all of the ads, then analyzes them. 
+		if ( verbose || better_analyze) {
 			show_queue( scheddAddr, scheddName, scheddMachine );
 		} else {
 			show_queue_buffered( scheddAddr, scheddName, scheddMachine );
