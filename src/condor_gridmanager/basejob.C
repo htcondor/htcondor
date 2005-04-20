@@ -341,6 +341,12 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 
 	new_ad->LookupInteger( ATTR_JOB_STATUS, new_condor_state );
 
+	if ( new_condor_state == condorState ) {
+			// The job state in the sched hasn't changed, so we can ignore
+			// this "update".
+		return;
+	}
+
 	if ( new_condor_state == REMOVED || new_condor_state == HELD ) {
 
 		for ( int i = 0; held_removed_update_attrs[i] != NULL; i++ ) {
