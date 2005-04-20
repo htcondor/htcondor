@@ -50,6 +50,10 @@
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
 
+#ifdef WANT_CLASSAD_ANALYSIS
+#include "../classad_analysis/analysis.h"
+#endif
+
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
@@ -76,6 +80,10 @@ static	QueryResult result;
 static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
+
+#ifdef WANT_CLASSAD_ANALYSIS
+static  ClassAdAnalyzer analyzer;
+#endif
 
 static char* format_owner( char*, AttrList* );
 
@@ -126,6 +134,9 @@ static	void		doRunAnalysis( ClassAd* );
 static	char *		doRunAnalysisToBuffer( ClassAd* );
 struct 	PrioEntry { MyString name; float prio; };
 static 	bool		analyze	= false;
+#ifdef WANT_CLASSAD_ANALYSIS
+static  bool        better_analyze = false;
+#endif
 static	bool		run = false;
 static	bool		goodput = false;
 static	char		*fixSubmittorName( char*, int );
@@ -139,9 +150,9 @@ static  ExtArray<PrioEntry> prioTable;
 template class ExtArray<PrioEntry>;
 #endif
 	
-char return_buff[4096];
-
-
+const int SHORT_BUFFER_SIZE = 8192;
+const int LONG_BUFFER_SIZE = 16384;	
+char return_buff[LONG_BUFFER_SIZE];
 
 extern 	"C"	int		Termlog;
 
@@ -158,7 +169,6 @@ int main (int argc, char **argv)
 	// load up configuration file
 	myDistro->Init( argc, argv );
 	config();
-
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
@@ -576,6 +586,17 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix( arg , "analyze")) {
 			analyze = true;
 		}
+        else
+        if (match_prefix( arg, "better-analyze")) {
+#ifdef WANT_CLASSAD_ANALYSIS
+            analyze = true;
+            better_analyze = true;
+#else
+            fprintf(stderr, "Sorry, the -better-analyze option is not available "
+                            "on this platform.\n");
+            exit(1);
+#endif
+        }
 		else
 		if (match_prefix( arg, "run")) {
 			Q.add (CQ_STATUS, RUNNING);
@@ -1100,6 +1121,9 @@ usage (char *myName)
 		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
+#ifdef WANT_CLASSAD_ANALYSIS
+        "\t\t-better-analyze\t\tImproved version of -analyze\n"
+#endif
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs placed on hold\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
@@ -1864,27 +1888,59 @@ doRunAnalysisToBuffer( ClassAd *request )
 			
 
 	if( fReqConstraint == totalMachines ) {
-		char reqs[2048];
-		ExprTree *reqExp;
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
 		strcat( return_buff, "   No resources matched request's constraints\n");
-		sprintf( return_buff, "%s   Check the %s expression below:\n\n" , 
-			return_buff, ATTR_REQUIREMENTS );
-		if( !(reqExp = request->Lookup( ATTR_REQUIREMENTS) ) ) {
-			sprintf( return_buff, "%s   ERROR:  No %s expression found" ,
-				return_buff, ATTR_REQUIREMENTS );
-		} else {
-			reqs[0] = '\0';
-			reqExp->PrintToStr( reqs );
-			sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
-		}
+#ifdef WANT_CLASSAD_ANALYSIS
+        if (!better_analyze) {
+#endif
+            char reqs[2048];
+            ExprTree *reqExp;
+            sprintf( return_buff, "%s   Check the %s expression below:\n\n" , 
+                     return_buff, ATTR_REQUIREMENTS );
+            if( !(reqExp = request->Lookup( ATTR_REQUIREMENTS) ) ) {
+                sprintf( return_buff, "%s   ERROR:  No %s expression found" ,
+                         return_buff, ATTR_REQUIREMENTS );
+            } else {
+                reqs[0] = '\0';
+                reqExp->PrintToStr( reqs );
+                sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
+            }
+#ifdef WANT_CLASSAD_ANALYSIS
+        }
+#endif
 	}
+
+#if defined( WANT_CLASSAD_ANALYSIS )
+    if (better_analyze) {
+        std::string buffer_string = "";
+        char ana_buffer[SHORT_BUFFER_SIZE];
+        
+        if( fReqConstraint > 0 ) {
+            analyzer.AnalyzeJobReqToBuffer( request, startdAds, buffer_string );
+            strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE );
+            strcat( return_buff, ana_buffer );
+        }
+    }
+#endif
 
 	if( fOffConstraint == totalMachines ) {
 		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
 		sprintf( return_buff, "%s   Request %d.%d did not match any "
 			"resource's constraints\n\n", return_buff, cluster, proc);
 	}
+
+#if defined( WANT_CLASSAD_ANALYSIS )
+    if (better_analyze) {
+        std::string buffer_string = "";
+        char ana_buffer[SHORT_BUFFER_SIZE];
+        if( fOffConstraint > 0 ) {
+            buffer_string = "";
+            analyzer.AnalyzeJobAttrsToBuffer( request, startdAds, buffer_string );
+            strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE);
+            strcat( return_buff, ana_buffer );
+        }
+    }
+#endif
 
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	switch(universe) {
