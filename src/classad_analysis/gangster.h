@@ -1,0 +1,71 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2005, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#ifndef __GANGSTER_H__
+#define __GANGSTER_H__
+
+#define WANT_NAMESPACES
+#include "classad_distribution.h"
+#include "gmr.h"
+
+class Gangster {
+public:
+	Gangster( Gangster*, int );
+	virtual ~Gangster( );
+
+	void	assign( GMR* );
+	bool	setupMatchBindings( int );
+	void	teardownMatchBindings( int );
+	bool	match( bool );
+	void	retire( bool=false );
+	void	reset( );
+	void	printKeys( );
+
+protected:
+	void	testMatch( int, classad::Value& );
+	bool 	fillDock( int, bool );
+	bool	fillDockIndexed( int, bool );
+	static  bool indexed;
+
+	struct Dock {
+		GMR::Port		*port;
+		int				lastKey;
+		Gangster		*boundGangster;
+		int				boundDock;
+		bool			satisfied;
+	};
+	typedef vector<Dock> Docks;
+
+	static int			nextContextNum;
+
+	GMR			*gmr;
+	Gangster 	*parentGangster;
+	int			parentDockNum;
+	classad::ClassAd		*context;
+	int			contextNum;
+	int			parentLinked;
+	Docks		docks;
+};
+
+
+#endif

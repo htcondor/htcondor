@@ -1,0 +1,45 @@
+C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -I$(NEW_CLASSADS_INC)
+CFLAGS = -Wall $(STD_C_FLAGS) -I$(NEW_CLASSADS_INC)
+INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) -I$(NEW_CLASSADS_INC)
+
+ANA_OBJ = analysis.o boolExpr.o condition.o multiProfile.o profile.o \
+	resourceGroup.o analysis_instantiate.o boolValue.o explain.o interval.o \
+
+CONV_OBJ = conversion.o analysis_instantiate.o
+
+GM_OBJ = portGraph.o gmr.o gangster.o gang_instantiate.o
+
+LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
+
+/* Note that this directory contains Nick's experimental
+ * gangmatching stuff, but it's not compiled by default
+ */
+all_target(libanalysis.a libconversion.a)
+library_target(libanalysis.a, $(ANA_OBJ))
+library_target(libconversion.a, $(CONV_OBJ))
+library_target(libgangmatch.a, $(GM_OBJ))
+template_inst(analysis_instantiate.C,analysis_instantiate.o)
+template_inst(gang_instantiate.C,gang_instantiate.o)
+
+release:: all
+
+/* Rule to make documentation */
+doc: html
+
+/* Also depends on several header files, but I am ignoring that for now */
+html_target(documentation)
+
+c_plus_target(conversion_test,testConversion.o,libconversion.a $(LIB))
+c_plus_target(aec_test,testAEC.o,libconversion.a $(LIB))
+c_plus_target(aet_test,testAET.o,libconversion.a $(LIB))
+c_plus_target(start_analyzer,start_analyzer.o,libanalysis.a libconversion.a $(LIB))
+c_plus_target(ggm_test,testPortGraph.o,libgangmatch.a $(LIB))
+c_plus_target(analysis_test,testAnalysis.o, libanalysis.a libconversion.a $(LIB))
+
+/*
+c_plus_target(coll_test,coll_test.o,$(LIB))
+c_plus_target(interval_test,interval_test.o,$(LIB))
+c_plus_target(boolExpr_test,boolExpr_test.o,$(LIB))
+c_plus_target(bt_test,testBoolTable.o,$(LIB))
+c_plus_target(fai_test,testFAI.o,$(LIB))
+*/

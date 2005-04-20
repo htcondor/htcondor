@@ -1,0 +1,486 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2005, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+#include "explain.h"
+
+using namespace std;
+
+// Explain methods
+
+Explain::
+Explain( )
+{
+	initialized = false;
+}
+
+Explain::
+~Explain( )
+{
+}
+
+// MultiProfileExplain methods
+
+MultiProfileExplain::
+MultiProfileExplain( )
+{
+	match = false;
+	numberOfMatches = 0;
+}
+
+MultiProfileExplain::
+~MultiProfileExplain( )
+{
+}
+
+bool MultiProfileExplain::
+Init( bool _match, int _numberOfMatches, IndexSet &_matchedClassAds,
+	  int _numberOfClassAds)
+{
+	match = _match;
+	numberOfMatches = _numberOfMatches;
+
+	matchedClassAds.Init( _matchedClassAds );
+	numberOfClassAds = _numberOfClassAds;
+	
+	initialized = true;
+	return true;
+}
+
+bool MultiProfileExplain::
+ToString( string &buffer )
+{
+	if( !initialized ) {
+		return false;
+	}
+
+	char tempBuff[512];
+
+	buffer += "[";
+	buffer += "\n";
+
+	buffer += "match = ";
+	if( match ) {
+		buffer += "true";
+	}
+	else {
+		buffer += "false";
+	}
+	buffer += ";";
+	buffer += "\n";
+
+	sprintf( tempBuff, "%d", numberOfMatches );
+	buffer += "numberOfMatches = ";
+	buffer += tempBuff;
+	buffer += ";";
+	buffer += "\n";
+
+	buffer += "matchedClassAds = ";
+	matchedClassAds.ToString( buffer );
+	buffer += ";";
+	buffer += "\n";
+
+	sprintf( tempBuff, "%d", numberOfClassAds );
+	buffer += "numberOfClassAds = ";
+	buffer += tempBuff;
+	buffer += ";";
+	buffer += "\n";
+
+	buffer += "]";
+	buffer += "\n";
+	return true;
+}
+
+
+// ProfileExplain methods
+
+ProfileExplain::
+ProfileExplain( )
+{
+	match = false;
+	numberOfMatches = 0;
+	conflicts = NULL;
+}
+
+ProfileExplain::
+~ProfileExplain( )
+{
+	if( conflicts ) {
+		conflicts->Rewind( );
+		if( !conflicts->IsEmpty( ) ) {
+			while( !conflicts->AtEnd( ) ) {
+				delete conflicts->Current( );
+				conflicts->DeleteCurrent( );
+			}
+		}
+		delete conflicts;
+	}
+}
+
+bool ProfileExplain::
+Init( bool _match, int _numberOfMatches )
+{
+	match = _match;
+	numberOfMatches = _numberOfMatches;
+	conflicts = new List< IndexSet>;
+	initialized = true;
+	return true;
+}
+
+bool ProfileExplain::
+ToString( string &buffer )
+{
+	if( !initialized ) {
+		return false;
+	}
+
+	char tempBuff[512];
+
+	buffer += "[";
+	buffer += "\n";
+
+	buffer += "match = ";
+	buffer += match;
+	buffer += ";";
+	buffer += "\n";
+
+	sprintf( tempBuff, "%d", numberOfMatches );
+	buffer += "numberOfMatches = ";
+	buffer += tempBuff;
+	buffer += ";";
+	buffer += "\n";
+
+	buffer += "]";
+	buffer += "\n";
+	return true;
+}
+
+
+// ConditionExplain methods
+
+ConditionExplain::
+ConditionExplain( )
+{
+	match = false;
+	numberOfMatches = 0;
+	suggestion = NONE;
+}
+
+ConditionExplain::
+~ConditionExplain( )
+{
+}
+
+bool ConditionExplain::
+Init( bool _match, int _numberOfMatches )
+{
+	match = _match;
+	numberOfMatches = _numberOfMatches;
+	suggestion = NONE;
+	initialized = true;
+	return true;
+}
+
+bool ConditionExplain::
+Init( bool _match, int _numberOfMatches, Suggestion _suggestion )
+{
+	match = _match;
+	numberOfMatches = _numberOfMatches;
+	suggestion = _suggestion;
+	initialized = true;
+	return true;
+}
+
+bool ConditionExplain::
+Init( bool _match, int _numberOfMatches, classad::Value &_newValue )
+{
+	match = _match;
+	numberOfMatches = _numberOfMatches;
+	suggestion = MODIFY;
+	newValue.CopyFrom( _newValue );
+	initialized = true;
+	return true;
+}
+
+bool ConditionExplain::
+ToString( string &buffer )
+{
+	if( !initialized ) {
+		return false;
+	}
+
+	char tempBuff[512];
+
+	classad::ClassAdUnParser unp;
+
+	buffer += "[";
+	buffer += "\n";
+
+	buffer += "match = ";
+	buffer += match;
+	buffer += ";";
+	buffer += "\n";
+
+	sprintf( tempBuff, "%d", numberOfMatches );
+	buffer += "numberOfMatches = ";
+	buffer += tempBuff;
+	buffer += ";";
+	buffer += "\n";
+
+	buffer += "suggestion = ";
+	switch( suggestion ) {
+	case NONE: { buffer += "\"NONE\""; break; }
+	case KEEP: { buffer += "\"KEEP\""; break; }
+	case REMOVE: { buffer += "\"REMOVE\""; break; }
+	case MODIFY: { buffer += "\"MODIFY\""; break; }
+	default: { buffer += "\"???\""; }
+	}
+	buffer += "\n";
+		
+	if( suggestion == MODIFY ) {
+		buffer += "newValue = ";
+		unp.Unparse( buffer, newValue );
+	}
+	buffer += "\n";
+
+	buffer += "]";
+	buffer += "\n";
+	return true;
+}
+
+
+// AttributeExplain methods
+
+AttributeExplain::
+AttributeExplain( )
+{
+	attribute = "";
+	suggestion = NONE;
+	isInterval = false;
+	intervalValue = NULL;
+}
+
+AttributeExplain::
+~AttributeExplain( )
+{
+	if( intervalValue ) {
+		delete intervalValue;
+	}
+}
+
+bool AttributeExplain::
+Init( string _attribute )
+{
+	attribute = _attribute;
+	suggestion = NONE;
+	initialized = true;
+	return true;
+}
+
+bool AttributeExplain::
+Init( string _attribute, classad::Value &_discreteValue )
+{
+	attribute = _attribute;
+	suggestion = MODIFY;
+	isInterval = false;
+	discreteValue.CopyFrom( _discreteValue );
+	initialized = true;
+	return true;
+}
+
+bool AttributeExplain::
+Init( string _attribute, Interval *_intervalValue )
+{
+	attribute = _attribute;
+	suggestion = MODIFY;
+	isInterval = true;
+	intervalValue = new Interval;
+	if( !( Copy( _intervalValue, intervalValue ) ) ) {
+		return false;
+	}
+	initialized = true;
+	return true;
+}
+
+bool AttributeExplain::
+ToString( string &buffer )
+{
+	if( !initialized ) {
+		return false;
+	}
+	classad::ClassAdUnParser unp;
+
+	buffer += "[";
+	buffer += "\n";
+
+	buffer += "attribute=\"";
+	buffer += attribute;
+	buffer += "\";";
+	buffer += "\n";
+
+	buffer += "suggestion=";
+	switch( suggestion ) {
+	case NONE: {
+	    buffer += "\"NONE\"";
+	    buffer += ";";
+		buffer += "\n";
+	    break;
+	}
+	case MODIFY: {
+	    buffer += "\"MODIFY\"";
+	    buffer += ";";
+		buffer += "\n";
+	    if( isInterval ) {
+			double lowerVal = 0;
+			GetLowDoubleValue( intervalValue, lowerVal );
+			if( lowerVal > -( FLT_MAX ) ) {
+				buffer += "lowValue=";
+				unp.Unparse( buffer, intervalValue->lower );
+				buffer += ";";
+				buffer += "\n";
+				
+				buffer += "lowOpen=";
+				if( intervalValue->openLower ) {
+					buffer += "true;";
+				}
+				else {
+					buffer += "false;";
+				}
+				buffer += "\n";
+			}
+
+			double upperVal = 0;
+			GetHighDoubleValue( intervalValue, upperVal );
+			if( upperVal < FLT_MAX ) {
+				buffer += "highValue=";
+				unp.Unparse( buffer, intervalValue->upper );
+				buffer += ";";
+				buffer += "\n";
+			
+				buffer += "highOpen=";
+				if( intervalValue->openUpper ) {
+					buffer += "true;";
+				}
+				else {
+					buffer += "false;";
+				}
+				buffer += "\n";
+			}
+		}
+		else {
+			buffer += "newValue=";
+			unp.Unparse( buffer, discreteValue );
+			buffer += ";";
+			buffer += "\n";
+		}
+		break;
+	}
+	default: { buffer += "\"???\""; }
+	}
+
+	buffer += "]";
+	buffer += "\n";
+	return true;
+}
+
+
+ClassAdExplain::
+ClassAdExplain( )
+{
+}
+
+ClassAdExplain::
+~ClassAdExplain( )
+{
+	string* attr = NULL;
+	undefAttrs.Rewind( );
+	while( undefAttrs.Next( attr ) ) {
+		delete attr;
+	}
+	AttributeExplain* attrExplain = NULL;
+	attrExplains.Rewind( );
+	while( attrExplains.Next( attrExplain ) ) {
+		delete attrExplain;
+	}
+}
+
+bool ClassAdExplain::
+Init( List<string> &_undefAttrs, List<AttributeExplain> &_attrExplains )
+{
+	string attr = "";
+	AttributeExplain *explain = NULL;
+	_undefAttrs.Rewind();
+	while( _undefAttrs.Next( attr ) ) {
+		if( !( undefAttrs.Append( new string( attr ) ) ) ) {
+			return false;
+		}
+	}
+	_attrExplains.Rewind();
+	while( _attrExplains.Next( explain ) ) {
+		if( !( attrExplains.Append( explain ) ) ) {
+			return false;
+		}
+	}
+	initialized = true;
+	return true;
+}
+
+bool ClassAdExplain::
+ToString( string &buffer ) {
+	if( !initialized ) {
+		return false;
+	}
+
+	string attr = "";
+	AttributeExplain *explain = NULL;
+
+	buffer += "[";
+	buffer += "\n";
+
+	buffer += "undefAttrs={";
+	undefAttrs.Rewind( );
+	while( undefAttrs.Next( attr ) ) {
+		buffer += attr;
+		if( !( undefAttrs.AtEnd( ) ) ) {
+			buffer += ",";
+		}
+	}
+	buffer += "};";
+	buffer += "\n";
+
+	buffer += "attrExplains={";
+	attrExplains.Rewind( );
+	while( attrExplains.Next( explain ) ) {
+		explain->ToString( buffer );
+		if( !( attrExplains.AtEnd( ) ) ) {
+			buffer += ",";
+		}
+	}
+	buffer += "};";
+	buffer += "\n";
+
+	buffer += "]";
+	buffer += "\n";
+	return true;
+}
+		
