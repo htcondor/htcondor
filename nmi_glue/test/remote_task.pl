@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.17 2005-04-18 22:09:02 pfc Exp $
+# $Id: remote_task.pl,v 1.1.2.18 2005-04-20 17:25:08 bgietzel Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -118,7 +118,7 @@ if( $batchteststatus != 0 ) {
 ######################################################################
 
 if( ! -d "$BaseDir/results" ) {
-    mkdir( "$BaseDir/results" ) || 
+    mkdir( "$BaseDir/results", 0777 ) || 
 	c_die("Can't mkdir($BaseDir/results): $!\n");
 }
 if( $compiler eq "." ) {
@@ -127,7 +127,7 @@ if( $compiler eq "." ) {
     $resultdir = "$BaseDir/results/$compiler";
 }
 if( ! -d "$resultdir" ) {
-    mkdir( "$resultdir" ) || c_die("Can't mkdir($resultdir): $!\n");
+    mkdir( "$resultdir", 0777 ) || c_die("Can't mkdir($resultdir): $!\n");
 }
 chdir( "$SrcDir/$testdir/$compiler" ) || 
     c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
