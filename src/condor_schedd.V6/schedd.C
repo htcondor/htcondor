@@ -1036,14 +1036,16 @@ count( ClassAd *job )
 
 		if( (universe == CONDOR_UNIVERSE_MPI ||
 			 universe == CONDOR_UNIVERSE_PARALLEL) && status == IDLE ) {
-			int cluster = 0;
-			job->LookupInteger( ATTR_CLUSTER_ID, cluster );
+			if( max_hosts > cur_hosts ) {
+				int cluster = 0;
+				job->LookupInteger( ATTR_CLUSTER_ID, cluster );
 
-			int proc = 0;
-			job->LookupInteger( ATTR_PROC_ID, proc );
-				// Don't add all the procs in the cluster, just the first
-			if( proc == 0) {
-				dedicated_scheduler.addDedicatedCluster( cluster );
+				int proc = 0;
+				job->LookupInteger( ATTR_PROC_ID, proc );
+					// Don't add all the procs in the cluster, just the first
+				if( proc == 0) {
+					dedicated_scheduler.addDedicatedCluster( cluster );
+				}
 			}
 		}
 
@@ -5746,6 +5748,16 @@ Scheduler::spawnShadow( shadow_rec* srec )
 				return;
 			}
 			break;
+		case CONDOR_UNIVERSE_MPI:
+			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_MPI );
+			if( ! shadow_obj ) {
+				dprintf( D_ALWAYS, "Trying to run a MPI job but you "
+						 "do not have a condor_shadow that will work, "
+						 "aborting.\n" );
+				noShadowForJob( srec, NO_SHADOW_MPI );
+				return;
+			}
+			break;
 		default:
 			EXCEPT( "StartJobHandler() does not support %d universe jobs",
 					universe );
@@ -5833,6 +5845,13 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		*/
 		SetAttributeInt( job_id->cluster, job_id->proc, 
 						 ATTR_LAST_JOB_LEASE_RENEWAL, (int)time(0) );
+	}
+
+		// if this is a shadow for an MPI job, we need to tell the
+		// dedicated scheduler we finally spawned it so it can update
+		// some of its own data structures, too.
+	if( universe == CONDOR_UNIVERSE_MPI ) {
+		dedicated_scheduler.shadowSpawned( srec );
 	}
 }
 
@@ -5969,10 +5988,10 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 					 "writeJobAd: fflush() failed: %s (errno %d)\n",
 					 strerror(errno), errno );
 		}
-
 			// TODO: if this is an MPI job, we should really write all
-			// the machine ads to the pipe before we close it, but
-			// let's only change one thing at a time for now...
+			// the match info (ClaimIds, sinful strings and machine
+			// ads) to the pipe before we close it, but that's just a
+			// performance optimization, not a correctness issue.
 
 			// Now that all the data is written to the pipe, we can
 			// safely close the other end, too.  

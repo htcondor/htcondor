@@ -2126,13 +2126,11 @@ DedicatedScheduler::spawnJobs( void )
 {
 	AllocationNode* allocation;
 	char* shadow;
-	char args[512];
 	match_rec* mrec;
 	shadow_rec* srec;
-	int pid, i, n, p;
+	int univ;
+	int i, p, n;
 	PROC_ID id;
-	int std_fds[3];
-	int pipe_fds[2];
 
 	if( ! allocations ) {
 			// Nothing to do
@@ -2145,14 +2143,6 @@ DedicatedScheduler::spawnJobs( void )
 		return false;
 	}
 	shadow = shadow_obj->path();
-
-		// Get shadow's nice increment:
-    char *shad_nice = param( "SHADOW_RENICE_INCREMENT" );
-    int niceness = 0;
-    if ( shad_nice ) {
-        niceness = atoi( shad_nice );
-        free( shad_nice );
-    }
 
 	allocations->startIterations();
 	while( allocations->iterate(allocation) ) {
@@ -2170,48 +2160,20 @@ DedicatedScheduler::spawnJobs( void )
 			EXCEPT( "spawnJobs(): allocation node has NULL first match!" );
 		}
 
-		// Set-up pipe for transferring job ad
-		pipe_fds[0] = -1;
-		pipe_fds[1] = -1;
-		if( ! daemonCore->Create_Pipe(pipe_fds) ) {
-			EXCEPT( "spawnJobs(): Create_Pipe failed!" );
-		} 
-			// pipe_fds[0] is the read-end of the pipe.  we want that
-			// setup as STDIN for the shadow.  we'll hold onto the
-			// write end of it so we can write the job ad there.
-		std_fds[0] = pipe_fds[0];
-		std_fds[1] = -1;
-		std_fds[2] = -1;
+		dprintf( D_FULLDEBUG, "DedicateScheduler::spawnJobs() - "
+				 "job=%d.%d on %s\n", id.cluster, id.proc, mrec->peer );
 
-		sprintf( args, "condor_shadow -f %d.0 %s -", 
-				 allocation->cluster,
-				 scheduler.shadowSockSinful() );
+		GetAttributeInt( id.cluster, id.proc, ATTR_JOB_UNIVERSE, &univ );
 
-		pid = daemonCore->
-			Create_Process( shadow, args, PRIV_ROOT, rid, TRUE, NULL,
-							NULL, FALSE, NULL, std_fds, niceness );
-
-		if( ! pid ) {
-			// TODO: handle Create_Process failure
-			dprintf( D_ALWAYS, "Failed to spawn MPI shadow for job "
-					 "%d.%d\n", id.cluster, id.proc );  
-			mark_job_stopped( &id );
-			continue;
-		}
-
-		dprintf( D_ALWAYS, 
-				 "Started shadow for MPI job %d.0 (shadow pid = %d)\n", 
-				 id.cluster, pid );
-
-		for (i = 0; i < allocation->num_procs; i++) {
-			id.proc = i;
-			mark_job_running( &id );
-		}
-
-		id.proc = 0; // GGT
-		srec = scheduler.add_shadow_rec( pid, &id, CONDOR_UNIVERSE_MPI, 
-										 mrec, -1 );
-
+			/*
+			  it's important we're setting ATTR_CURRENT_HOSTS now so
+			  that we don't consider this job idle any more, even
+			  though the status will be idle until the shadow actually
+			  starts running.  this will prevent us from trying to
+			  schedule it again, negotiate for other resources to run
+			  it on, or to make another shadow record and add it to
+			  the RunnableJobQueue, etc.
+			*/
 			// TODO: make sure we set this right for all the procs in
 			// the cluster.  perhaps we need to supliment the data
 			// we're storing in the AllocationNode so that we can do
@@ -2219,10 +2181,34 @@ DedicatedScheduler::spawnJobs( void )
         SetAttributeInt( id.cluster, id.proc, ATTR_CURRENT_HOSTS,
 						 allocation->num_resources );
 
+			// add job to run queue, though the shadow pid is still 0,
+			// since there's not really a shadow just yet.
+		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1 );
+
+			// add this shadow rec to the scheduler's queue so that
+			// it'll honor the JOB_START_DELAY, call the
+			// aboutToSpawnJobHandler() hook, and so eventually, we'll
+			// spawn the real shadow.
+		scheduler.addRunnableJob( srec );
+
+			/*
+			  now that this allocation has a shadow record, we need to
+			  do some book-keeping to keep our data structures sane.
+			  in particular, we want to mark this allocation as
+			  running (and store the claim ID for node 0 as this
+			  allocation's claim ID), we want to set all the match
+			  records to M_ACTIVE, we want to have all the match
+			  records point to this shadow record.  we do all this so
+			  that we consider all of these resources busy, even
+			  though the shadow's not running yet, since we don't want
+			  to give any of these resources out to another job while
+			  we're waiting for the JOB_START_DELAY, and/or the
+			  aboutToSpawnJobHandler() hook to complete.
+			*/
 		allocation->status = A_RUNNING;
 		allocation->setClaimId( mrec->id );
 
-		     // We must set all the match recs to point at this srec.
+			// We must set all the match recs to point at this srec.
 		for( p=0; p<allocation->num_procs; p++ ) {
 			n = ((*allocation->matches)[p])->getlast();
 			for( i=0; i<=n; i++ ) {
@@ -2230,57 +2216,37 @@ DedicatedScheduler::spawnJobs( void )
 				(*(*allocation->matches)[p])[i]->setStatus( M_ACTIVE );
 			}
 		}
-			// TODO: Deal w/ pushing matches (this is just a
-			// performance optimization, not a correctness thing). 
+	}
+	return true;
+}
 
-		// finally, now that the shadow has been spawned, we need to
-		// do some things with the pipe (if there is one):
-			// 1) close our copy of the read end of the pipe, so we
-			// don't leak it.  we have to use DC::Close_Pipe() for
-			// this, not just close(), so things work on windoze.
-		daemonCore->Close_Pipe( pipe_fds[0] );
 
-			// 2) dump out the job ad to the write end, since the
-			// shadow is now alive and can read from the pipe.  we
-			// want to use "true" for the last argument so that we
-			// expand $$ expressions within the job ad to pull things
-			// out of the startd ad before we give it to the shadow. 
-		ClassAd* ad = GetJobAd( id.cluster, id.proc, true );
-		FILE* fp = fdopen( pipe_fds[1], "w" );
-		if ( ad ) {
-			ad->fPrint( fp );
-
-			// Note that ONLY when GetJobAd() is called with
-			// expStartdAd==true do we want to delete the result.
-			delete ad;
-		} else {
-			// This should never happen
-
-			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d but that" 
-					"job is already known to exist",
-					id.cluster, id.proc );
-		}
-
-			// TODO: if this is an MPI job, we should really write all
-			// the match info (ClaimIds + sinful strings) to the pipe
-			// before we close it, but that's just a performance
-			// optimization, not a correctness issue.
-
-			// since this is probably a DC pipe that we have to close
-			// with Close_Pipe(), we can't call fclose() on it.  so,
-			// unless we call fflush(), we won't get any output. :(
-		if( fflush(fp) < 0 ) {
-			dprintf( D_ALWAYS,
-					 "writeJobAd: fflush() failed: %s (errno %d)\n",
-					 strerror(errno), errno );
-		}
-
-			// Now that all the data is written to the pipe, we can
-			// safely close the other end, too.  
-		daemonCore->Close_Pipe( pipe_fds[1] );
-		fclose( fp );
+bool
+DedicatedScheduler::shadowSpawned( shadow_rec* srec )
+{
+	if( ! srec ) {
+		return false;
 	}
 
+	int i; 
+	PROC_ID id;
+	id.cluster = srec->job_id.cluster;
+
+		// Now that we have a job id, try to find this job in our
+		// table of matches, and make sure the ClaimId is good
+	AllocationNode* allocation;
+	if( allocations->lookup(id.cluster, allocation) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::shadowSpawned(): "
+				 "can't find cluster %d in allocation table - aborting\n", 
+				 id.cluster ); 
+			// TODO: other cleanup?
+		return false;
+	}
+
+	for( i=0; i < allocation->num_procs; i++ ) {
+		id.proc = i;
+		mark_job_running( &id );
+	}
 	return true;
 }
 

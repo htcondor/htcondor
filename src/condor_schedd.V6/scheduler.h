@@ -137,6 +137,7 @@ typedef enum {
 	NO_SHADOW_DC_VANILLA,
 	NO_SHADOW_OLD_VANILLA,
 	NO_SHADOW_RECONNECT,
+	NO_SHADOW_MPI,
 } NoShadowFailure_t;
 
 

@@ -254,6 +254,11 @@ class DedicatedScheduler : public Service {
 		/// Returns true if there are idle dedicated clusters.
 	bool hasDedicatedClusters( void );
 
+		/** Called by the Scheduler class when an MPI shadow is
+			finally running (after waiting in the RunnableJobQueue).
+		*/ 
+	bool shadowSpawned( shadow_rec* srec );
+
  private:
 
 	/** Used to handle the negotiation protocol for a given
