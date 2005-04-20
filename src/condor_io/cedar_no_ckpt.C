@@ -40,8 +40,9 @@
 
 
 int
-ReliSock::get_file_with_permissions( filesize_t *size, const char *destination,
-									 bool flush_buffers)
+ReliSock::get_file_with_permissions( filesize_t *size, 
+									 const char *destination,
+									 bool flush_buffers )
 {
 	int result;
 	condor_mode_t file_mode;
@@ -50,8 +51,8 @@ ReliSock::get_file_with_permissions( filesize_t *size, const char *destination,
 	this->decode();
 	if ( this->code( file_mode ) == FALSE ||
 		 this->end_of_message() == FALSE ) {
-		dprintf( D_ALWAYS,
-				 "ReliSock: get_file_with_permissions: Failed to read permissions.\n" );
+		dprintf( D_ALWAYS, "ReliSock::get_file_with_permissions(): "
+				 "Failed to read permissions from peer\n" );
 		return -1;
 	}
 
@@ -64,25 +65,24 @@ ReliSock::get_file_with_permissions( filesize_t *size, const char *destination,
 		// If the other side told us to ignore its permissions, then we're
 		// done.
 	if ( file_mode == NULL_FILE_PERMISSIONS ) {
-		dprintf( D_FULLDEBUG,
-				 "ReliSock: get_file_with_permissions: received null permissions, not setting\n" );
+		dprintf( D_FULLDEBUG, "ReliSock::get_file_with_permissions(): "
+				 "received null permissions from peer, not setting\n" );
 		return result;
 	}
 
 		// We don't know how unix permissions translate to windows, so
 		// ignore whatever permissions we received if we're on windows.
 #ifndef WIN32
-	dprintf( D_FULLDEBUG,
-			 "ReliSock: get_file_with_permissions: going to set permissions %o\n",
-			 file_mode );
+	dprintf( D_FULLDEBUG, "ReliSock::get_file_with_permissions(): "
+			 "going to set permissions %o\n", file_mode );
 
 	// chmod the file
 	errno = 0;
 	result = ::chmod( destination, (mode_t)file_mode );
 	if ( result < 0 ) {
-		dprintf( D_ALWAYS,
-				 "ReliSock: get_file_with_permissions: Failed to chmod file %s, errno = %d.\n",
-				 destination, errno );
+		dprintf( D_ALWAYS, "ReliSock::get_file_with_permissions(): "
+				 "Failed to chmod file '%s': %s (errno: %d)\n",
+				 destination, strerror(errno), errno );
 		return -1;
 	}
 #endif
@@ -102,9 +102,10 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 	StatInfo stat_info( source );
 
 	if ( stat_info.Error() ) {
-		dprintf( D_ALWAYS,
-				 "ReliSock: put_file_with_permissions: Failed to stat file %s, si_error = %d, errno = %d.\n",
-				 stat_info.Error(), stat_info.Errno() );
+		dprintf( D_ALWAYS, "ReliSock::put_file_with_permissions(): "
+				 "Failed to stat file '%s': %s (errno: %d, si_error: %d)\n",
+				 source, strerror(stat_info.Errno()), stat_info.Errno(),
+				 stat_info.Error() );
 		return -1;
 	}
 	file_mode = (condor_mode_t)stat_info.GetMode();
@@ -115,16 +116,15 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source )
 	file_mode = NULL_FILE_PERMISSIONS;
 #endif
 
-	dprintf( D_FULLDEBUG,
-			 "ReliSock: get_file_with_permissions: going to send permissions %o\n",
-			 file_mode );
+	dprintf( D_FULLDEBUG, "ReliSock::put_file_with_permissions(): "
+			 "going to send permissions %o\n", file_mode );
 
 	// Send the permissions
 	this->encode();
 	if ( this->code( file_mode ) == FALSE ||
 		 this->end_of_message() == FALSE ) {
-		dprintf( D_ALWAYS,
-				 "ReliSock: put_file_with_permissions: Failed to send permissions.\n" );
+		dprintf( D_ALWAYS, "ReliSock:;put_file_with_permissions(): "
+				 "Failed to send permissions\n" );
 		return -1;
 	}
 
