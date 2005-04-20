@@ -39,6 +39,7 @@ ALL : "$(OUTDIR)\condor_io.lib"
 CLEAN :
 	-@erase "$(INTDIR)\authentication.obj"
 	-@erase "$(INTDIR)\buffers.obj"
+	-@erase "$(INTDIR)\cedar_no_ckpt.obj"
 	-@erase "$(INTDIR)\condor_auth.obj"
 	-@erase "$(INTDIR)\condor_auth_anonymous.obj"
 	-@erase "$(INTDIR)\condor_auth_claim.obj"
@@ -120,7 +121,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj"
+	"$(INTDIR)\stream.obj" \
+	"$(INTDIR)\cedar_no_ckpt.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -141,6 +143,7 @@ ALL : "$(OUTDIR)\condor_io.lib"
 CLEAN :
 	-@erase "$(INTDIR)\authentication.obj"
 	-@erase "$(INTDIR)\buffers.obj"
+	-@erase "$(INTDIR)\cedar_no_ckpt.obj"
 	-@erase "$(INTDIR)\condor_auth.obj"
 	-@erase "$(INTDIR)\condor_auth_anonymous.obj"
 	-@erase "$(INTDIR)\condor_auth_claim.obj"
@@ -221,7 +224,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj"
+	"$(INTDIR)\stream.obj" \
+	"$(INTDIR)\cedar_no_ckpt.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -250,6 +254,12 @@ SOURCE=..\src\condor_io\authentication.C
 SOURCE=..\src\condor_io\buffers.C
 
 "$(INTDIR)\buffers.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_io\cedar_no_ckpt.C
+
+"$(INTDIR)\cedar_no_ckpt.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
