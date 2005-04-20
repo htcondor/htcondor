@@ -1,10 +1,17 @@
 NAME = condor_q
 all_target($(NAME))
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(STD_LIBS)
+#if WANT_CLASSAD_ANALYSIS
+ANALYSIS_FLAGS = -DWANT_CLASSAD_ANALYSIS -I$(NEW_CLASSADS_INC)
+ANALYSIS_LIBS  = ../classad_analysis/libanalysis.a ../classad_analysis/libconversion.a -L$(NEW_CLASSADS_LIB) -lclassad_ns
+#else
+ANALYSIS_FLAGS = 
+ANALYSIS_LIBS  = 
+#endif
 
+CFLAGS = $(ANALYSIS_FLAGS) $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(ANALYSIS_FLAGS) $(STD_C_PLUS_FLAGS)
+LIB = $(ANALYSIS_LIBS) $(STD_LIBS)
 OBJ = queue.o queue_instantiate.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
