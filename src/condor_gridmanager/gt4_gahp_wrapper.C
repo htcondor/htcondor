@@ -59,7 +59,8 @@ main( int argc, char* argv[] ) {
 	}
 
 		// Get the java extra arguments value
-	StringList java_extra_args;
+		// Split on spaces only (not on commas)
+	StringList java_extra_args(NULL," ");
 	char *tmp = param( "JAVA_EXTRA_ARGUMENTS" );
 	if ( tmp != NULL ) {
 		java_extra_args.initializeFromString( tmp );
