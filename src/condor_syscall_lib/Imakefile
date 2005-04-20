@@ -234,7 +234,7 @@ CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_
 
 SPECIAL_IO_OBJ = authentication.o $(CONDOR_CRYPT_OBJ)
 
-SPECIAL_OBJ = special_stubs.o
+SPECIAL_OBJ = special_stubs.o cedar_no_ckpt_stubs.o
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(IO_OBJ) $(SPECIAL_IO_OBJ) \
