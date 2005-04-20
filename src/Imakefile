@@ -63,6 +63,12 @@ TEST_SUITE_BASE = test_suite_base
 #define DrmaaLibs
 #endif
 
+#if WANT_CLASSAD_ANALYSIS
+#define AnalysisLibs ClassAdAnalysis
+#else
+#define AnalysisLibs
+#endif
+
 #if WANT_STORK
 #define StorkProgs Stork
 #else
@@ -83,7 +89,7 @@ TEST_SUITE_BASE = test_suite_base
 		io condor_ckpt_server/ckpt_server_api.a			\
 		condor_schedd.V6/libqmgmt.a				\
 		condor_accountant.V6/libacct.a StdUnvLibs NetmanLibs	\
-		chirp DrmaaLibs
+		chirp DrmaaLibs AnalysisLibs
 
 #if HAS_STATIC
 #define StaticDirectories \
@@ -251,6 +257,10 @@ condor_object_target(dcskel)
 #if WANT_DRMAA
 condor_object_target(drmaa)
 #endif
+#if WANT_CLASSAD_ANALYSIS
+object_target(ClassAdAnalysis,classad_analysis)
+#endif
+
 condor_object_target(chirp)
 
 object_dir_target(h)
