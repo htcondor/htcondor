@@ -32,6 +32,7 @@
 #include "condor_distribution.h"
 #include "daemon_list.h"
 #include "dc_collector.h"
+#include "my_hostname.h"
 
 void
 usage( char *cmd )
@@ -134,6 +135,17 @@ int main( int argc, char *argv[] )
 	if(empty) {
 		fprintf(stderr,"%s is empty\n",filename);
 		return 1;
+	}
+
+	// If there's no "MyAddress", generate one..
+	ExprTree *tree = ad->Lookup( ATTR_MY_ADDRESS );
+	MyString tmp = "";
+	if ( tree ) {
+		tmp = ((MyString *)tree->RArg())->Value();
+	}
+	if ( tmp.Length() == 0 ) {
+		tmp.sprintf( "%s = \"<%s:0>\"", ATTR_MY_ADDRESS, my_ip_string() );
+		ad->Insert( tmp.GetCStr() );
 	}
 
 	CollectorList * collectors;

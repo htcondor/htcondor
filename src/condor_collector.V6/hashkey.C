@@ -74,24 +74,35 @@ int getIpAddr( const ClassAd *ad,
 			   MyString &ip )
 {
 	ExprTree	*tree;
-	MyString	buf2;
 
 	// Reset IP string
 	ip = "";
 
 	// get the IP and port of the startd 
-	tree = ad->Lookup ( attrname );
-	
-	// if not there, try to lookup the old style "STARTD_IP_ADDR" string
-	if ( ! tree && attrold) {
-		tree = ad->Lookup ( attrold );
-	}
-
-	// Extract the string from it...
-	if (tree)
-	{
+	tree = ad->Lookup( attrname );
+	if ( tree ) {
+		dprintf (D_ALWAYS, "Found %s\n", attrname );
 		ip = ((String *)tree->RArg())->Value();
 	}
+	
+	// if not there, try to lookup the old style "STARTD_IP_ADDR" string
+	if ( ! tree && attrold ) {
+		tree = ad->Lookup( attrold );
+		if ( tree ) {
+			dprintf (D_ALWAYS, "Found %s\n", attrold );
+			ip = ((String *)tree->RArg())->Value();
+		}
+	}
+	
+	// Finally, try to lookup "MyAddress"...
+	if ( ip.Length() == 0 ) {
+		tree = ad->Lookup( ATTR_MY_ADDRESS );
+		if ( tree ) {
+			dprintf (D_ALWAYS, "Found %s\n", ATTR_MY_ADDRESS );
+			ip = ((String *)tree->RArg())->Value();
+		}
+	}
+	dprintf( D_ALWAYS, "Got IP = '%s'\n", ip.GetCStr() );
 
 	// If no valid string, do our own thing..
 	if ( ip.Length() == 0 )
@@ -110,7 +121,6 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree	*tree;
 	MyString	buffer;
-	MyString	buf2;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -148,7 +158,6 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree	*tree;
 	MyString	buffer;
-	MyString	buf2;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -201,7 +210,6 @@ makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
 	MyString buffer;
-	MyString buf2;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
