@@ -123,7 +123,8 @@ void CondorJobReconfig()
 	tmp_int = param_integer( "CONDOR_JOB_POLL_INTERVAL", 5 * 60 );
 	CondorResource::setPollInterval( tmp_int );
 
-	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
+	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 8 * 60 * 60 );
+	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT_CONDOR", tmp_int );
 	CondorJob::setGahpCallTimeout( tmp_int );
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
@@ -155,7 +156,7 @@ BaseJob *CondorJobCreate( ClassAd *jobad )
 
 
 int CondorJob::submitInterval = 300;			// default value
-int CondorJob::gahpCallTimeout = 300;			// default value
+int CondorJob::gahpCallTimeout = 8*60*60;		// default value
 int CondorJob::maxConnectFailures = 3;			// default value
 
 CondorJob::CondorJob( ClassAd *classad )
