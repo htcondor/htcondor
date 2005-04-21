@@ -80,22 +80,24 @@ TESTCLASS(lib_userlog,quick)
 /*
 ** Turn off till in v6_7-branch with Condor-C
 **
-**DESC(job_condorc_ab_van,"Condor-C AB test")
-**RUN(job_condorc_ab_van)
-**TESTCLASS(job_condorc_ab_van,condorc)
-**TESTCLASS(job_condorc_ab_van,long)
-**
-**DESC(job_condorc_abc_van,"Condor-C ABC test")
-**RUN(job_condorc_abc_van)
-**TESTCLASS(job_condorc_abc_van,condorc)
-**TESTCLASS(job_condorc_abc_van,long)
-**
 **DESC(job_core_streamout,"Vanilla: test for streaming of output when both stream_output is true and false")
 **RUN(job_core_streamout_van)
 **TESTCLASS(job_core_streamout_van,core)
 **TESTCLASS(job_core_streamout_van,quick)
 **
 */
+
+DESC(job_condorc_ab_van,"Condor-C AB test")
+RUN(job_condorc_ab_van)
+TESTCLASS(job_condorc_ab_van,condorc)
+TESTCLASS(job_condorc_ab_van,quick)
+TESTCLASS(job_condorc_ab_van,btdebug)
+
+DESC(job_condorc_abc_van,"Condor-C ABC test")
+RUN(job_condorc_abc_van)
+TESTCLASS(job_condorc_abc_van,condorc)
+TESTCLASS(job_condorc_abc_van,quick)
+TESTCLASS(job_condorc_abc_van,btdebug)
 
 
 DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
