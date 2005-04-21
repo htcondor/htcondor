@@ -86,6 +86,10 @@ if( ! -e "job_condorc_xxx_van.in" )
 
 my $result = system("job_condorc_ab_van.pl $mysubmitnm");
 print "Result of crafted Condor-C job is  $result\n";
+if( $result != 0 )
+{
+	exit(1);
+}
 
 #$mysubmitnm = $corename . $mypid . ".cmd";
 #$mysubmitnmout = $corename . $mypid . ".cmd.out";
@@ -109,13 +113,9 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-sleep 20;
-print "sleeping............\n";
 system("condor_off -master");
 
 $ENV{CONDOR_CONFIG} = $remconfig;
-sleep 20;
-print "sleeping............\n";
 system("condor_off -master");
 system("date");
 
