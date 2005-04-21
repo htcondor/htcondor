@@ -49,6 +49,10 @@ from one \condor{schedd} to another.
 transferred between unix machines. File transfers that involve a windows
 machine or older version of Condor remain as before.
 
+\item \condor{advertise} now publishes a ``MyAddress'' if none is provided
+in the source ClassAd.  This will prevent the collector from throwing out
+ads with no address (see Bugs Fixed).
+
 \end{itemize}
 
 
@@ -122,6 +126,10 @@ hang or crash on exit.
 
 \item MPI universe jobs now honor the \Attr{JOB\_START\_DELAY}
 configuration setting.
+
+\item The \Condor{collector} now throws out startd, schedd, and License
+ClassAds that don't have a valid IP address (used in it's hashing).  The
+collector now correctly will fall back to ``MyAddress'' if it's provided.
 
 \end{itemize}
 
