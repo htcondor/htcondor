@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.4.8 2005-04-19 20:53:26 bgietzel Exp $
+# $Id: CondorGlue.pm,v 1.1.4.9 2005-04-21 23:05:09 pfc Exp $
 #
 ######################################################################
 
@@ -222,6 +222,7 @@ sub printIdentifiers
     print $fh "component = condor\n";
     print $fh "component_version = $vers_string\n";
     print $fh "notify = $notify\n";
+    print $fh "private_web_users = condor-team\n";
     print $fh "priority = 1\n";
 }
 
