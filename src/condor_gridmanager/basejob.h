@@ -69,7 +69,7 @@ class BaseJob
 	void UpdateJobTime( float *old_run_time, bool *old_run_time_dirty );
 	void RestoreJobTime( float old_run_time, bool old_run_time_dirty );
 
-	ClassAd *ad;
+	ClassAd *jobAd;
 	PROC_ID procID;
 
 	int condorState;

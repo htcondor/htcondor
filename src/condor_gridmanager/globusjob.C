@@ -677,14 +677,14 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_X509_USER_PROXY, buff );
+	jobAd->LookupString( ATTR_X509_USER_PROXY, buff );
 	if ( buff[0] == '\0' ) {
-		ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, buff2 );
+		jobAd->LookupString( ATTR_X509_USER_PROXY_SUBJECT, buff2 );
 		if ( buff2[0] != '\0' ) {
 			snprintf( buff, sizeof(buff), "#%s", buff2 );
 		}
@@ -698,7 +698,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		else {
 				// ckireyev: Check for MyProxy server
 
-			if (ad->LookupString (ATTR_MYPROXY_HOST_NAME, buff)) {
+			if (jobAd->LookupString (ATTR_MYPROXY_HOST_NAME, buff)) {
 
 				MyProxyEntry * myProxyEntry =new MyProxyEntry();
 
@@ -715,15 +715,15 @@ GlobusJob::GlobusJob( ClassAd *classad )
 				myProxyEntry->proc_id = procID.proc;
 
 				// Get optional MYPROXY_SERVER_DN attribute
-				if (ad->LookupString (ATTR_MYPROXY_SERVER_DN, buff)) {
+				if (jobAd->LookupString (ATTR_MYPROXY_SERVER_DN, buff)) {
 					myProxyEntry->myproxy_server_dn=strdup(buff);
 				}
 
-				if (ad->LookupString (ATTR_MYPROXY_CRED_NAME, buff)) {
+				if (jobAd->LookupString (ATTR_MYPROXY_CRED_NAME, buff)) {
 					myProxyEntry->myproxy_credential_name=strdup(buff);
 				}
 
-				if (ad->LookupInteger (ATTR_MYPROXY_REFRESH_THRESHOLD, myProxyEntry->refresh_threshold)) {
+				if (jobAd->LookupInteger (ATTR_MYPROXY_REFRESH_THRESHOLD, myProxyEntry->refresh_threshold)) {
 					//myProxyEntry->refresh_threshold=atoi(buff);	// In minutes
 					dprintf (D_FULLDEBUG, "MyProxy Refresh Threshold %d\n",myProxyEntry->refresh_threshold);
 				} else {
@@ -731,7 +731,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 					dprintf (D_FULLDEBUG, "MyProxy Refresh Threshold %d (default)\n",myProxyEntry->refresh_threshold);
 				}
 
-				if (ad->LookupInteger (ATTR_MYPROXY_NEW_PROXY_LIFETIME, myProxyEntry->new_proxy_lifetime)) {
+				if (jobAd->LookupInteger (ATTR_MYPROXY_NEW_PROXY_LIFETIME, myProxyEntry->new_proxy_lifetime)) {
 					//myProxyEntry->new_proxy_lifetime=atoi(buff); // In hours
 					dprintf (D_FULLDEBUG, "MyProxy New Proxy Lifetime %d\n",myProxyEntry->new_proxy_lifetime);
 				} else {
@@ -812,10 +812,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
+	jobAd->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GLOBUS_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
 		resourceManagerString = strdup( buff );
 	} else {
@@ -837,7 +837,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	myResource->RegisterJob( this, job_already_submitted );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
+	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
 	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
 		if ( jmVersion == GRAM_V_UNKNOWN ) {
 			dprintf(D_ALWAYS,
@@ -851,12 +851,12 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	useGridJobMonitor = true;
 
-	ad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
+	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 
 	globusError = GLOBUS_SUCCESS;
 
 	iwd[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
 		int len = strlen(iwd);
 		if ( len > 1 && iwd[len - 1] != '/' ) {
 			strcat( iwd, "/" );
@@ -867,10 +867,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	buff[0] = '\0';
 	buff2[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 
-		if ( !ad->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
+		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
 
 			if ( buff[0] != '/' ) {
@@ -881,7 +881,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 			localOutput = strdup( buff2 );
 
 			bool_value = 1;
-			ad->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
+			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
 			streamOutput = (bool_value != 0);
 			stageOutput = !streamOutput;
 		}
@@ -889,10 +889,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	buff[0] = '\0';
 	buff2[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 
-		if ( !ad->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
+		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
 
 			if ( buff[0] != '/' ) {
@@ -903,7 +903,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 			localError = strdup( buff2 );
 
 			bool_value = 1;
-			ad->LookupBool( ATTR_STREAM_ERROR, bool_value );
+			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
 			streamError = (bool_value != 0);
 			stageError = !streamError;
 		}
@@ -1296,7 +1296,7 @@ int GlobusJob::doEvaluateState()
 					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
 							procID.cluster, procID.proc,RSL->Value());
 					submitFailureCode = globusError = rc;
-					WriteGlobusSubmitFailedEventToUserLog( ad,
+					WriteGlobusSubmitFailedEventToUserLog( jobAd,
 														   submitFailureCode,
 														   gahp->globus_gram_client_error_string(submitFailureCode) );
 					gmState = GM_UNSUBMITTED;
@@ -1359,7 +1359,7 @@ int GlobusJob::doEvaluateState()
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
 					globusError = rc;
-					WriteGlobusSubmitFailedEventToUserLog( ad, globusError,
+					WriteGlobusSubmitFailedEventToUserLog( jobAd, globusError,
 														   gahp->globus_gram_client_error_string(globusError) );
 					gmState = GM_CANCEL;
 				} else {
@@ -1583,7 +1583,7 @@ int GlobusJob::doEvaluateState()
 			// Report job completion to the schedd.
 
 			if(useGridShell && !mergedGridShellOutClassad) {
-				if( ! merge_file_into_classad(outputClassadFilename.GetCStr(), ad) ) {
+				if( ! merge_file_into_classad(outputClassadFilename.GetCStr(), jobAd) ) {
 					/* TODO: put job on hold or otherwise don't let it
 					   quietly pass into the great beyond? */
 					dprintf(D_ALWAYS,"(%d.%d) Failed to add job result attributes to job's classad.  Job's history will lack run information.\n",procID.cluster,procID.proc);
@@ -2084,7 +2084,7 @@ int GlobusJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				ad->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;
@@ -2124,7 +2124,7 @@ int GlobusJob::doEvaluateState()
 			if ( submitLogged ) {
 				JobEvicted();
 				if ( !evictLogged ) {
-					WriteEvictEventToUserLog( ad );
+					WriteEvictEventToUserLog( jobAd );
 					evictLogged = true;
 				}
 			}
@@ -2136,7 +2136,7 @@ int GlobusJob::doEvaluateState()
 
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
-				if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
 					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
 				}
@@ -2190,10 +2190,10 @@ int GlobusJob::doEvaluateState()
 				int holdSubCode = 0;
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
-				ad->LookupInteger(ATTR_HOLD_REASON_CODE,holdCode);
-				ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE,holdSubCode);
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
+									 sizeof(holdReason) - 1 );
+				jobAd->LookupInteger(ATTR_HOLD_REASON_CODE,holdCode);
+				jobAd->LookupInteger(ATTR_HOLD_REASON_SUBCODE,holdSubCode);
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
@@ -2371,7 +2371,7 @@ void GlobusJob::NotifyResourceDown()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == false ) {
-		WriteGlobusResourceDownEventToUserLog( ad );
+		WriteGlobusResourceDownEventToUserLog( jobAd );
 	}
 	resourceDown = true;
 	jmUnreachable = false;
@@ -2386,7 +2386,7 @@ void GlobusJob::NotifyResourceDown()
 	int timeout = param_integer(PARAM_GLOBUS_GATEKEEPER_TIMEOUT,60*60*24*5);
 	int time_of_death = 0;
 	unsigned int now = time(NULL);
-	ad->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
+	jobAd->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
 	if ( time_of_death ) {
 		timeout = timeout - (now - time_of_death);
 	}
@@ -2414,7 +2414,7 @@ void GlobusJob::NotifyResourceUp()
 	}
 	resourceStateKnown = true;
 	if ( resourceDown == true ) {
-		WriteGlobusResourceUpEventToUserLog( ad );
+		WriteGlobusResourceUpEventToUserLog( jobAd );
 	}
 	resourceDown = false;
 	if ( jmUnreachable ) {
@@ -2424,7 +2424,7 @@ void GlobusJob::NotifyResourceUp()
 	resourcePingPending = false;
 	SetEvaluateState();
 	int time_of_death = 0;
-	ad->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
+	jobAd->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
 	if ( time_of_death ) {
 		UpdateJobAd(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,"UNDEFINED");
 		requestScheddUpdate( this );
@@ -2487,7 +2487,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 					//   certain errors (ones we know are submit-related)?
 				submitFailureCode = new_error_code;
 				if ( !submitFailedLogged ) {
-					WriteGlobusSubmitFailedEventToUserLog( ad,
+					WriteGlobusSubmitFailedEventToUserLog( jobAd,
 														   submitFailureCode,
 														   gahp->globus_gram_client_error_string(submitFailureCode) );
 					submitFailedLogged = true;
@@ -2497,11 +2497,11 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 					// the user-log and increment the globus submits count.
 				int num_globus_submits = 0;
 				if ( !submitLogged ) {
-					WriteGlobusSubmitEventToUserLog( ad );
+					WriteGlobusSubmitEventToUserLog( jobAd );
 					submitLogged = true;
 				}
-				ad->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
-								   num_globus_submits );
+				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
+									  num_globus_submits );
 				num_globus_submits++;
 				UpdateJobAdInt( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
 			}
@@ -2511,7 +2511,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
 			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED)
 			 && !executeLogged ) {
-			WriteExecuteEventToUserLog( ad );
+			WriteExecuteEventToUserLog( jobAd );
 			executeLogged = true;
 		}
 
@@ -2600,14 +2600,14 @@ MyString *GlobusJob::buildSubmitRSL()
 			procID.cluster, procID.proc );
 	}
 
-	if ( ad->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) &&
+	if ( jobAd->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
 		*rsl = rsl_suffix;
 		free( rsl_suffix );
 		return rsl;
 	}
 
-	if ( ad->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
 		iwd = attr_value;
 		int len = strlen(attr_value);
 		if ( len > 1 && attr_value[len - 1] != '/' ) {
@@ -2640,7 +2640,7 @@ MyString *GlobusJob::buildSubmitRSL()
 	if ( executable_path.IsEmpty() ) {
 			// didn't find any executable in the spool directory,
 			// so use what is explicitly stated in the job ad
-		if( ! ad->LookupString( ATTR_JOB_CMD, &attr_value ) ) {
+		if( ! jobAd->LookupString( ATTR_JOB_CMD, &attr_value ) ) {
 			attr_value = (char *)malloc(1);
 			attr_value[0] = 0;
 		}
@@ -2652,7 +2652,7 @@ MyString *GlobusJob::buildSubmitRSL()
 
 	int transfer_executable = 0;
 		// TODO JEF this looks very fishy
-	if( ! ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) ) {
+	if( ! jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) ) {
 		transfer_executable = 1;
 	}
 
@@ -2691,7 +2691,7 @@ MyString *GlobusJob::buildSubmitRSL()
 
 		}
 
-		bool bsuccess = write_classad_input_file( ad, executable_path, input_classad_filename );
+		bool bsuccess = write_classad_input_file( jobAd, executable_path, input_classad_filename );
 		if( ! bsuccess ) {
 			/* TODO XXX adesmet: Writing to file failed?  Bail. */
 			dprintf(D_ALWAYS, "(%d.%d) Attempt to write gridshell file %s failed.\n", 
@@ -2715,7 +2715,7 @@ MyString *GlobusJob::buildSubmitRSL()
 
 	*rsl += rsl_stringify( buff.Value() );
 
-	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
 		*rsl += ")(directory=";
 		*rsl += rsl_stringify( attr_value );
 
@@ -2745,7 +2745,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += " -job-output-ad ";
 		*rsl += output_classad_filename;
 		*rsl += " -job-stdin - -job-stdout - -job-stderr -";
-	} else if ( ad->LookupString(ATTR_JOB_ARGUMENTS, &attr_value)
+	} else if ( jobAd->LookupString(ATTR_JOB_ARGUMENTS, &attr_value)
 				&& *attr_value ) {
 		*rsl += ")(arguments=";
 		*rsl += attr_value;
@@ -2755,10 +2755,10 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( ad->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
+	if ( jobAd->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 		*rsl += ")(stdin=";
-		if ( !ad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
+		if ( !jobAd->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
 			buff = "$(GRIDMANAGER_GASS_URL)";
 			if ( attr_value[0] != '/' ) {
 				buff += iwd;
@@ -2782,7 +2782,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		if ( stageOutput ) {
 			*rsl += ")(stdout=$(GLOBUS_CACHED_STDOUT)";
 		} else {
-			if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) &&
+			if ( jobAd->LookupString(ATTR_JOB_OUTPUT, &attr_value) &&
 				 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
 				*rsl += ")(stdout=";
 				*rsl += rsl_stringify( attr_value );
@@ -2802,7 +2802,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		if ( stageError ) {
 			*rsl += ")(stderr=$(GLOBUS_CACHED_STDERR)";
 		} else {
-			if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) &&
+			if ( jobAd->LookupString(ATTR_JOB_ERROR, &attr_value) &&
 				 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
 				*rsl += ")(stderr=";
 				*rsl += rsl_stringify( attr_value );
@@ -2814,7 +2814,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		}
 	}
 
-	bool has_input_files = ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) && *attr_value;
+	bool has_input_files = jobAd->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) && *attr_value;
 
 	if ( ( useGridShell && transfer_executable ) || has_input_files) {
 		StringList filelist( NULL, "," );
@@ -2853,7 +2853,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
+	if ( ( jobAd->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
 		   *attr_value ) || stageOutput || stageError || useGridShell) {
 		StringList filelist( NULL, "," );
 		if( attr_value ) {
@@ -2916,7 +2916,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += "(_CONDOR_GRIDSHELL_LOG '";
 		*rsl += gridshell_log_filename.GetCStr();
 		*rsl += "')";
-	} else if ( ad->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value)
+	} else if ( jobAd->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value)
 				&& *attr_value ) {
 		Environ env_obj;
 		env_obj.add_string(attr_value);
@@ -3013,7 +3013,7 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 		*rsl += ")(stderr_position=0)";
 	}
 
-	if ( ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
+	if ( jobAd->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
 		 *attr_value ) {
 		// GRAM 1.6 won't let you change file transfer info in a
 		// stdio-update, so force it to fail, resulting in a stop-and-
@@ -3025,7 +3025,7 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 		attr_value = NULL;
 	}
 
-	if ( ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
+	if ( ( jobAd->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
 		   *attr_value ) || stageOutput || stageError ) {
 		// GRAM 1.6 won't let you change file transfer info in a
 		// stdio-update, so force it to fail, resulting in a stop-and-

@@ -55,12 +55,12 @@ BaseJob::BaseJob( ClassAd *classad )
 	deleteFromGridmanager = false;
 	deleteFromSchedd = false;
 
-	ad = classad;
+	jobAd = classad;
 
-	ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
-	ad->LookupInteger( ATTR_PROC_ID, procID.proc );
+	jobAd->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
+	jobAd->LookupInteger( ATTR_PROC_ID, procID.proc );
 
-	ad->LookupInteger( ATTR_JOB_STATUS, condorState );
+	jobAd->LookupInteger( ATTR_JOB_STATUS, condorState );
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&BaseJob::doEvaluateState,
@@ -69,9 +69,9 @@ BaseJob::BaseJob( ClassAd *classad )
 	wantRematch = 0;
 	doResubmit = 0;		// set if gridmanager wants to resubmit job
 	wantResubmit = 0;	// set if user wants to resubmit job via RESUBMIT_CHECK
-	ad->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
+	jobAd->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
 
-	ad->ClearAllDirtyFlags();
+	jobAd->ClearAllDirtyFlags();
 
 	periodicPolicyEvalTid = daemonCore->Register_Timer( 30,
 								(TimerHandlercpp)&BaseJob::EvalPeriodicJobExpr,
@@ -80,8 +80,8 @@ BaseJob::BaseJob( ClassAd *classad )
 
 BaseJob::~BaseJob()
 {
-	if ( ad ) {
-		delete ad;
+	if ( jobAd ) {
+		delete jobAd;
 	}
 	daemonCore->Cancel_Timer( periodicPolicyEvalTid );
 	daemonCore->Cancel_Timer( evaluateStateTid );
@@ -106,27 +106,27 @@ BaseResource *BaseJob::GetResource()
 
 void BaseJob::UpdateJobAd( const char *name, const char *value )
 {
-	UpdateClassAd(ad, name, value);
+	UpdateClassAd(jobAd, name, value);
 }
 
 void BaseJob::UpdateJobAdInt( const char *name, int value )
 {
-	UpdateClassAdInt(ad, name, value);
+	UpdateClassAdInt(jobAd, name, value);
 }
 
 void BaseJob::UpdateJobAdFloat( const char *name, float value )
 {
-	UpdateClassAdFloat(ad, name, value);
+	UpdateClassAdFloat(jobAd, name, value);
 }
 
 void BaseJob::UpdateJobAdBool( const char *name, int value )
 {
-	UpdateClassAdBool(ad, name, value);
+	UpdateClassAdBool(jobAd, name, value);
 }
 
 void BaseJob::UpdateJobAdString( const char *name, const char *value )
 {
-	UpdateClassAdString(ad, name, value);
+	UpdateClassAdString(jobAd, name, value);
 }
 
 void BaseJob::JobSubmitted( const char *remote_host)
@@ -145,7 +145,7 @@ void BaseJob::JobRunning()
 		UpdateRuntimeStats();
 
 		if ( writeUserLog && !executeLogged ) {
-			WriteExecuteEventToUserLog( ad );
+			WriteExecuteEventToUserLog( jobAd );
 			executeLogged = true;
 		}
 
@@ -176,7 +176,7 @@ void BaseJob::JobEvicted()
 
 		//  should we be updating job ad values here?
 	if ( writeUserLog && !evictLogged ) {
-		WriteEvictEventToUserLog( ad );
+		WriteEvictEventToUserLog( jobAd );
 		evictLogged = true;
 	}
 }
@@ -211,22 +211,22 @@ void BaseJob::DoneWithJob()
 
 	if ( condorState == COMPLETED ) {
 		if ( writeUserLog && !terminateLogged ) {
-			WriteTerminateEventToUserLog( ad );
-			EmailTerminateEvent( ad, exitStatusKnown );
+			WriteTerminateEventToUserLog( jobAd );
+			EmailTerminateEvent( jobAd, exitStatusKnown );
 			terminateLogged = true;
 		}
 		deleteFromSchedd = true;
 	}
 	if ( condorState == REMOVED ) {
 		if ( writeUserLog && !abortLogged ) {
-			WriteAbortEventToUserLog( ad );
+			WriteAbortEventToUserLog( jobAd );
 			abortLogged = true;
 		}
 		deleteFromSchedd = true;
 	}
 	if ( condorState == HELD ) {
 		if ( writeUserLog && !holdLogged ) {
-			WriteHoldEventToUserLog( ad );
+			WriteHoldEventToUserLog( jobAd );
 			holdLogged = true;
 		}
 	}
@@ -251,21 +251,21 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 		UpdateJobAdInt(ATTR_HOLD_REASON_SUBCODE, hold_sub_code);
 
 		char *release_reason;
-		if ( ad->LookupString( ATTR_RELEASE_REASON, &release_reason ) != 0 ) {
+		if ( jobAd->LookupString( ATTR_RELEASE_REASON, &release_reason ) != 0 ) {
 			UpdateJobAdString( ATTR_LAST_RELEASE_REASON, release_reason );
 			free( release_reason );
 		}
 		UpdateJobAd( ATTR_RELEASE_REASON, "UNDEFINED" );
 
 		int num_holds;
-		ad->LookupInteger( ATTR_NUM_SYSTEM_HOLDS, num_holds );
+		jobAd->LookupInteger( ATTR_NUM_SYSTEM_HOLDS, num_holds );
 		num_holds++;
 		UpdateJobAdInt( ATTR_NUM_SYSTEM_HOLDS, num_holds );
 
 		UpdateRuntimeStats();
 
 		if ( writeUserLog && !holdLogged ) {
-			WriteHoldEventToUserLog( ad );
+			WriteHoldEventToUserLog( jobAd );
 			holdLogged = true;
 		}
 
@@ -296,7 +296,7 @@ void BaseJob::UpdateRuntimeStats()
 
 	// Adjust run time for condor_q
 	int shadowBirthdate = 0;
-	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadowBirthdate );
+	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadowBirthdate );
 	if ( condorState == RUNNING && shadowBirthdate == 0 ) {
 
 		// The job has started a new interval of running
@@ -310,7 +310,7 @@ void BaseJob::UpdateRuntimeStats()
 		// The job has stopped an interval of running, add the current
 		// interval to the accumulated total run time
 		float accum_time = 0;
-		ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
+		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
 		accum_time += (float)( time(NULL) - shadowBirthdate );
 		UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
 		UpdateJobAd( ATTR_JOB_WALL_CLOCK_CKPT, "UNDEFINED" );
@@ -358,15 +358,15 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 				expr->RArg()->PrintToStr(attr_value);
 				UpdateJobAd( held_removed_update_attrs[i], attr_value );
 			} else {
-				ad->Delete( held_removed_update_attrs[i] );
+				jobAd->Delete( held_removed_update_attrs[i] );
 			}
-			ad->SetDirtyFlag( held_removed_update_attrs[i], false );
+			jobAd->SetDirtyFlag( held_removed_update_attrs[i], false );
 		}
 
 		if ( new_condor_state == HELD && writeUserLog && !holdLogged ) {
 			// TODO should this log event be delayed until gridmanager is
 			//   done dealing with the job?
-			WriteHoldEventToUserLog( ad );
+			WriteHoldEventToUserLog( jobAd );
 			holdLogged = true;
 		}
 
@@ -377,7 +377,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 			// update the schedd with the hold.
 		if ( new_condor_state == REMOVED && condorState == HELD ) {
 			bool dirty;
-			ad->GetDirtyFlag( ATTR_JOB_STATUS, NULL, &dirty );
+			jobAd->GetDirtyFlag( ATTR_JOB_STATUS, NULL, &dirty );
 			if ( dirty ) {
 				UpdateJobAdInt( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
 			}
@@ -403,7 +403,7 @@ int BaseJob::EvalPeriodicJobExpr()
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
 
-	user_policy.Init( ad );
+	user_policy.Init( jobAd );
 
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
@@ -450,14 +450,14 @@ int BaseJob::EvalOnExitJobExpr()
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
 
-	user_policy.Init( ad );
+	user_policy.Init( jobAd );
 
 	// The user policy code expects an exit value to be set
 	// If the ON_EXIT attributes haven't been set at all, fake
 	// a normal job exit.
 	int dummy;
-	if ( !ad->LookupInteger( ATTR_ON_EXIT_SIGNAL, dummy ) &&
-		 !ad->LookupInteger( ATTR_ON_EXIT_CODE, dummy ) ) {
+	if ( !jobAd->LookupInteger( ATTR_ON_EXIT_SIGNAL, dummy ) &&
+		 !jobAd->LookupInteger( ATTR_ON_EXIT_CODE, dummy ) ) {
 
 		exitStatusKnown = false;
 		UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
@@ -510,9 +510,9 @@ BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
   int shadow_bday = 0;
   time_t now = time(NULL);
 
-  ad->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);
-  ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,previous_run_time);
-  ad->GetDirtyFlag(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,old_run_time_dirty);
+  jobAd->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);
+  jobAd->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,previous_run_time);
+  jobAd->GetDirtyFlag(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,old_run_time_dirty);
 
   if (old_run_time) {
 	  *old_run_time = previous_run_time;
@@ -532,7 +532,7 @@ void
 BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty )
 {
   UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
-  ad->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
+  jobAd->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
 }
 
 // Initialize a UserLog object for a given job and return a pointer to
@@ -845,20 +845,20 @@ d_format_time( double dsecs )
 }
 
 void
-EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
+EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 {
-	if ( !jobAd ) {
+	if ( !job_ad ) {
 		dprintf(D_ALWAYS, 
 				"email_terminate_event called with invalid ClassAd\n");
 		return;
 	}
 
 	int cluster, proc;
-	jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	jobAd->LookupInteger( ATTR_PROC_ID, proc );
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
 
 	int notification = NOTIFY_COMPLETE; // default
-	jobAd->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
+	job_ad->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
 
 	switch( notification ) {
 		case NOTIFY_NEVER:    return;
@@ -875,7 +875,7 @@ EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
 
 	char subjectline[50];
 	sprintf( subjectline, "Condor Job %d.%d", cluster, proc );
-	FILE * mailer =  email_user_open( jobAd, subjectline );
+	FILE * mailer =  email_user_open( job_ad, subjectline );
 
 	if( ! mailer ) {
 		// Is message redundant?  Check email_user_open and euo's children.
@@ -888,37 +888,37 @@ EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
 		// put into the email message.
 	char JobName[_POSIX_PATH_MAX];
 	JobName[0] = '\0';
-	jobAd->LookupString( ATTR_JOB_CMD, JobName );
+	job_ad->LookupString( ATTR_JOB_CMD, JobName );
 
 	char Args[_POSIX_ARG_MAX];
 	Args[0] = '\0';
-	jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
+	job_ad->LookupString(ATTR_JOB_ARGUMENTS, Args);
 	
 	/*
 	// Not present.  Probably doesn't make sense for Globus
 	int had_core = FALSE;
-	jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
+	job_ad->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 	*/
 
 	int q_date = 0;
-	jobAd->LookupInteger(ATTR_Q_DATE,q_date);
+	job_ad->LookupInteger(ATTR_Q_DATE,q_date);
 	
 	float remote_sys_cpu = 0.0;
-	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
+	job_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
 	
 	float remote_user_cpu = 0.0;
-	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
+	job_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
 	
 	int image_size = 0;
-	jobAd->LookupInteger(ATTR_IMAGE_SIZE, image_size);
+	job_ad->LookupInteger(ATTR_IMAGE_SIZE, image_size);
 	
 	/*
 	int shadow_bday = 0;
-	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	job_ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	*/
 	
 	float previous_runs = 0;
-	jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
+	job_ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
 	
 	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
 						   archs, and this means that doing a (time_t*)
@@ -937,9 +937,9 @@ EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
 		fprintf(mailer, "has ");
 
 		int int_val;
-		if( jobAd->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
+		if( job_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
 			if( int_val ) {
-				if( jobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
+				if( job_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
 					fprintf(mailer, "exited with the signal %d.\n", int_val);
 				} else {
 					fprintf(mailer, "exited with an unknown signal.\n");
@@ -948,7 +948,7 @@ EmailTerminateEvent(ClassAd * jobAd, bool exit_status_known)
 						 ATTR_ON_EXIT_SIGNAL);
 				}
 			} else {
-				if( jobAd->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
+				if( job_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
 					fprintf(mailer, "exited normally with status %d.\n",
 						int_val);
 				} else {

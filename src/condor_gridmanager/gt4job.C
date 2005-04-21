@@ -376,12 +376,12 @@ GT4Job::GT4Job( ClassAd *classad )
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_X509_USER_PROXY, buff );
+	jobAd->LookupString( ATTR_X509_USER_PROXY, buff );
 	if ( buff[0] != '\0' ) {
 		jobProxy = AcquireProxy( buff, evaluateStateTid );
 		if ( jobProxy == NULL ) {
@@ -407,7 +407,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GLOBUS_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
 		resourceManagerString = strdup( buff );
 	} else {
@@ -429,34 +429,34 @@ GT4Job::GT4Job( ClassAd *classad )
 	myResource->RegisterJob( this, job_already_submitted );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
+	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
 	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
 		SetJobContact( buff );
-		ad->SetDirtyFlag( ATTR_GLOBUS_CONTACT_STRING, false );
+		jobAd->SetDirtyFlag( ATTR_GLOBUS_CONTACT_STRING, false );
 		job_already_submitted = true;
 	}
 
-	if (ad->LookupString ( ATTR_GLOBUS_JOBMANAGER_TYPE, buff )) {
+	if (jobAd->LookupString ( ATTR_GLOBUS_JOBMANAGER_TYPE, buff )) {
 		jobmanagerType = strdup( buff );
 	}
 
-	if (ad->LookupString ( ATTR_GLOBUS_SUBMIT_ID, buff )) {
+	if (jobAd->LookupString ( ATTR_GLOBUS_SUBMIT_ID, buff )) {
 		submit_id = strdup ( buff );
 	}
 
-	if ( ad->LookupString( ATTR_GLOBUS_DELEGATION_URI, buff ) ) {
+	if ( jobAd->LookupString( ATTR_GLOBUS_DELEGATION_URI, buff ) ) {
 		delegatedCredentialURI = strdup( buff );
 		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
 	}
 
 	useGridJobMonitor = true;
 
-	ad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
+	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 
 	globusErrorString = "";
 
 	iwd[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
 		int len = strlen(iwd);
 		if ( len > 1 && iwd[len - 1] != '/' ) {
 			strcat( iwd, "/" );
@@ -467,10 +467,10 @@ GT4Job::GT4Job( ClassAd *classad )
 
 	buff[0] = '\0';
 	buff2[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 
-		if ( !ad->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
+		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
 
 			if ( buff[0] != '/' ) {
@@ -481,7 +481,7 @@ GT4Job::GT4Job( ClassAd *classad )
 			localOutput = strdup( buff2 );
 
 			bool_value = 1;
-			ad->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
+			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
 			streamOutput = (bool_value != 0);
 			stageOutput = !streamOutput;
 		}
@@ -489,10 +489,10 @@ GT4Job::GT4Job( ClassAd *classad )
 
 	buff[0] = '\0';
 	buff2[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 
-		if ( !ad->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
+		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
 
 			if ( buff[0] != '/' ) {
@@ -503,7 +503,7 @@ GT4Job::GT4Job( ClassAd *classad )
 			localError = strdup( buff2 );
 
 			bool_value = 1;
-			ad->LookupBool( ATTR_STREAM_ERROR, bool_value );
+			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
 			streamError = (bool_value != 0);
 			stageError = !streamError;
 		}
@@ -875,7 +875,7 @@ int GT4Job::doEvaluateState()
 					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
 							procID.cluster, procID.proc,RSL->Value());
 					globusErrorString = gahp->getErrorString();
-					WriteGT4SubmitFailedEventToUserLog( ad,
+					WriteGT4SubmitFailedEventToUserLog( jobAd,
 														gahp->getErrorString() );
 					myResource->CancelSubmit( this );
 					gmState = GM_UNSUBMITTED;
@@ -919,7 +919,7 @@ int GT4Job::doEvaluateState()
 					// unhandled error
 					LOG_GLOBUS_ERROR( "gt4_gram_client_job_start()", rc );
 					globusErrorString = gahp->getErrorString();
-					WriteGT4SubmitFailedEventToUserLog( ad, gahp->getErrorString() );
+					WriteGT4SubmitFailedEventToUserLog( jobAd, gahp->getErrorString() );
 					gmState = GM_CANCEL;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -1159,7 +1159,7 @@ int GT4Job::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				ad->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;
@@ -1194,7 +1194,7 @@ int GT4Job::doEvaluateState()
 			if ( submitLogged ) {
 				JobEvicted();
 				if ( !evictLogged ) {
-					WriteEvictEventToUserLog( ad );
+					WriteEvictEventToUserLog( jobAd );
 					evictLogged = true;
 				}
 			}
@@ -1206,7 +1206,7 @@ int GT4Job::doEvaluateState()
 
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
-				if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
 					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
 				}
@@ -1262,8 +1262,8 @@ int GT4Job::doEvaluateState()
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
+									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
@@ -1394,7 +1394,7 @@ void GT4Job::NotifyResourceDown()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == false ) {
-		WriteGT4ResourceDownEventToUserLog( ad );
+		WriteGT4ResourceDownEventToUserLog( jobAd );
 	}
 	resourceDown = true;
 	jmUnreachable = false;
@@ -1407,7 +1407,7 @@ void GT4Job::NotifyResourceUp()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == true ) {
-		WriteGT4ResourceUpEventToUserLog( ad );
+		WriteGT4ResourceUpEventToUserLog( jobAd );
 	}
 	resourceDown = false;
 	if ( jmUnreachable ) {
@@ -1473,7 +1473,7 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 					// TODO: should SUBMIT_FAILED_EVENT be used only on
 					//   certain errors (ones we know are submit-related)?
 				if ( !submitFailedLogged ) {
-					WriteGT4SubmitFailedEventToUserLog( ad,
+					WriteGT4SubmitFailedEventToUserLog( jobAd,
 														new_fault );
 					submitFailedLogged = true;
 				}
@@ -1482,11 +1482,11 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 					// the user-log and increment the globus submits count.
 				int num_globus_submits = 0;
 				if ( !submitLogged ) {
-					WriteGT4SubmitEventToUserLog( ad );
+					WriteGT4SubmitEventToUserLog( jobAd );
 					submitLogged = true;
 				}
-				ad->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
-								   num_globus_submits );
+				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
+									  num_globus_submits );
 				num_globus_submits++;
 				UpdateJobAdInt( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
 			}
@@ -1496,7 +1496,7 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 			  new_state == GT4_JOB_STATE_DONE ||
 			  new_state == GT4_JOB_STATE_SUSPENDED)
 			 && !executeLogged ) {
-			WriteExecuteEventToUserLog( ad );
+			WriteExecuteEventToUserLog( jobAd );
 			executeLogged = true;
 		}
 
@@ -1603,7 +1603,7 @@ MyString *GT4Job::buildSubmitRSL()
 */
 
 		// Set our local job working directory
-	if ( ad->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
 		local_iwd = attr_value;
 		int len = strlen(attr_value);
 		if ( len > 1 && attr_value[len - 1] != '/' ) {
@@ -1618,7 +1618,7 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 		// Set our remote job working directory
-	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
 			// The user gave us a remote IWD, use it.
 		create_remote_iwd = false;
 		remote_iwd = attr_value;
@@ -1658,10 +1658,10 @@ MyString *GT4Job::buildSubmitRSL()
 
 
 	//We're assuming all job clasads have a command attribute
-	ad->LookupString( ATTR_JOB_CMD, &attr_value );
+	jobAd->LookupString( ATTR_JOB_CMD, &attr_value );
 
 	transfer_executable = true;
-	ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_executable );
+	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_executable );
 
 	if ( transfer_executable == false ) {
 			// The executable is already on the remote machine. Leave the
@@ -1703,7 +1703,7 @@ MyString *GT4Job::buildSubmitRSL()
 	*rsl += printXMLParam( "directory", remote_iwd.Value() );
 
 		// parse arguments
-	if ( ad->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
 		StringList arg_list( attr_value, " " );
 		char *arg;
 
@@ -1718,7 +1718,7 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 		// Start building the list of files to be staged in
-	if ( ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
+	if ( jobAd->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
 		 *attr_value ) {
 		stage_in_list.initializeFromString( attr_value );
 	}
@@ -1728,7 +1728,7 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 		// Start building the list of files to be staged out
-	if ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
+	if ( jobAd->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
 		 *attr_value ) {
 		stage_out_list.initializeFromString( attr_value );
 	}
@@ -1744,11 +1744,11 @@ MyString *GT4Job::buildSubmitRSL()
 		// 2886.
 
 		// standard input
-	if ( ad->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
+	if ( jobAd->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 
 		bool transfer = true;
-		ad->LookupBool( ATTR_TRANSFER_INPUT, transfer );
+		jobAd->LookupBool( ATTR_TRANSFER_INPUT, transfer );
 
 		if ( transfer == false ) {
 			if ( attr_value[0] != '/' ) {
@@ -1769,11 +1769,11 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 		// standard output
-	if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) && *attr_value &&
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 
 		bool transfer = true;
-		ad->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
+		jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
 
 		if ( transfer == false ) {
 			if ( attr_value[0] != '/' ) {
@@ -1794,11 +1794,11 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 		// standard error
-	if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) && *attr_value &&
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
 
 		bool transfer = true;
-		ad->LookupBool( ATTR_TRANSFER_ERROR, transfer );
+		jobAd->LookupBool( ATTR_TRANSFER_ERROR, transfer );
 
 		if ( transfer == false ) {
 			if ( attr_value[0] != '/' ) {
@@ -1922,7 +1922,7 @@ MyString *GT4Job::buildSubmitRSL()
 			"</file></deletion></fileCleanUp>";
 	}
 
-	if ( ad->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value) && *attr_value ) {
 		Environ env_obj;
 		env_obj.add_string(attr_value);
 		char **env_vec = env_obj.get_vector();
@@ -1959,7 +1959,7 @@ MyString *GT4Job::buildSubmitRSL()
 	*rsl += delegation_epr;
 	*rsl += "</stagingCredentialEndpoint>";
 
-	if ( ad->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) ) {
+	if ( jobAd->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) ) {
 		*rsl += rsl_suffix;
 		free( rsl_suffix );
 	}

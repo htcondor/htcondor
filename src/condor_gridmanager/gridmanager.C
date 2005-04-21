@@ -188,10 +188,10 @@ requestScheddUpdate( BaseJob *job )
 
 	// Check if there's anything that actually requires contacting the
 	// schedd. If not, just return true (i.e. update is complete)
-	job->ad->ResetExpr();
+	job->jobAd->ResetExpr();
 	if ( job->deleteFromGridmanager == false &&
 		 job->deleteFromSchedd == false &&
-		 job->ad->NextDirtyExpr() == NULL ) {
+		 job->jobAd->NextDirtyExpr() == NULL ) {
 		return true;
 	}
 
@@ -838,8 +838,8 @@ contact_schedd_next_add_job:
 		char attr_value[1024];
 		ExprTree *expr;
 		bool fake_job_in_queue = false;
-		curr_job->ad->ResetExpr();
-		while ( (expr = curr_job->ad->NextDirtyExpr()) != NULL &&
+		curr_job->jobAd->ResetExpr();
+		while ( (expr = curr_job->jobAd->NextDirtyExpr()) != NULL &&
 				fake_job_in_queue == false ) {
 			attr_name[0] = '\0';
 			attr_value[0] = '\0';
@@ -942,7 +942,7 @@ contact_schedd_next_add_job:
 
 	while ( pendingScheddUpdates.iterate( curr_job ) != 0 ) {
 
-		curr_job->ad->ClearAllDirtyFlags();
+		curr_job->jobAd->ClearAllDirtyFlags();
 
 		if ( curr_job->deleteFromGridmanager ) {
 

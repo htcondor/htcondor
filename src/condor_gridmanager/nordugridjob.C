@@ -203,12 +203,12 @@ NordugridJob::NordugridJob( ClassAd *classad )
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GLOBUS_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
 		resourceManagerString = strdup( buff );
 	} else {
@@ -220,7 +220,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
+	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
 	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
 		rehashRemoteJobId( this, remoteJobId, buff );
 		remoteJobId = strdup( buff );
@@ -555,7 +555,7 @@ int NordugridJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				ad->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;
@@ -581,7 +581,7 @@ int NordugridJob::doEvaluateState()
 			if ( submitLogged ) {
 				JobEvicted();
 				if ( !evictLogged ) {
-					WriteEvictEventToUserLog( ad );
+					WriteEvictEventToUserLog( jobAd );
 					evictLogged = true;
 				}
 			}
@@ -593,7 +593,7 @@ int NordugridJob::doEvaluateState()
 
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
-				if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
 					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
 				}
@@ -639,8 +639,8 @@ int NordugridJob::doEvaluateState()
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
+									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
@@ -866,22 +866,22 @@ int NordugridJob::doStageIn()
 		char *buf = NULL;
 		int transfer_exec = TRUE;
 
-		ad->LookupString( ATTR_TRANSFER_INPUT_FILES, &buf );
+		jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, &buf );
 		stage_list = new StringList( buf, "," );
 		if ( buf != NULL ) {
 			free( buf );
 		}
 
-		ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
+		jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
 		if ( transfer_exec ) {
-			ad->LookupString( ATTR_JOB_CMD, &buf );
+			jobAd->LookupString( ATTR_JOB_CMD, &buf );
 			if ( !stage_list->file_contains( buf ) ) {
 				stage_list->append( buf );
 			}
 			free( buf );
 		}
 
-		if ( ad->LookupString( ATTR_JOB_INPUT, &buf ) == 1) {
+		if ( jobAd->LookupString( ATTR_JOB_INPUT, &buf ) == 1) {
 			// only add to list if not NULL_FILE (i.e. /dev/null)
 			if ( ! nullFile(buf) ) {
 				if ( !stage_list->file_contains( buf ) ) {
@@ -914,7 +914,7 @@ int NordugridJob::doStageIn()
 		} else {
 			if ( curr_filename[0] != DIR_DELIM_CHAR ) {
 				char *iwd = NULL;
-				ad->LookupString( ATTR_JOB_IWD, &iwd );
+				jobAd->LookupString( ATTR_JOB_IWD, &iwd );
 				full_filename.sprintf( "%s%c%s", iwd, DIR_DELIM_CHAR,
 									   curr_filename );
 				free( iwd );
@@ -995,13 +995,13 @@ int NordugridJob::doStageOut()
 	if ( stage_list == NULL ) {
 		char *buf = NULL;
 
-		ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, &buf );
+		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, &buf );
 		stage_list = new StringList( buf, "," );
 		if ( buf != NULL ) {
 			free( buf );
 		}
 
-		if ( ad->LookupString( ATTR_JOB_OUTPUT, &buf ) == 1) {
+		if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &buf ) == 1) {
 			// only add to list if not NULL_FILE (i.e. /dev/null)
 			if ( ! nullFile(buf) ) {
 				if ( !stage_list->file_contains( buf ) ) {
@@ -1011,7 +1011,7 @@ int NordugridJob::doStageOut()
 			free( buf );
 		}
 
-		if ( ad->LookupString( ATTR_JOB_ERROR, &buf ) == 1) {
+		if ( jobAd->LookupString( ATTR_JOB_ERROR, &buf ) == 1) {
 			// only add to list if not NULL_FILE (i.e. /dev/null)
 			if ( ! nullFile(buf) ) {
 				if ( !stage_list->file_contains( buf ) ) {
@@ -1038,7 +1038,7 @@ int NordugridJob::doStageOut()
 		MyString full_filename;
 		if ( curr_filename[0] != DIR_DELIM_CHAR ) {
 			char *iwd = NULL;
-			ad->LookupString( ATTR_JOB_IWD, &iwd );
+			jobAd->LookupString( ATTR_JOB_IWD, &iwd );
 			full_filename.sprintf( "%s%c%s", iwd, DIR_DELIM_CHAR,
 								   curr_filename );
 			free( iwd );
@@ -1277,14 +1277,14 @@ MyString *NordugridJob::buildSubmitRSL()
 	char *iwd = NULL;
 	char *executable = NULL;
 
-	if ( ad->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) &&
+	if ( jobAd->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
 		*rsl = rsl_suffix;
 		free( rsl_suffix );
 		return rsl;
 	}
 
-	if ( ad->LookupString( ATTR_JOB_IWD, &iwd ) != 1 ) {
+	if ( jobAd->LookupString( ATTR_JOB_IWD, &iwd ) != 1 ) {
 		errorString = "ATTR_JOB_IWD not defined";
 		if ( rsl_suffix != NULL ) {
 			free( rsl_suffix );
@@ -1296,8 +1296,8 @@ MyString *NordugridJob::buildSubmitRSL()
 	rsl->sprintf( "&(savestate=yes)(action=request)(lrmstype=pbs)(hostname=nostos.cs.wisc.edu)(gmlog=%s)", NORDUGRID_LOG_DIR );
 
 	//We're assuming all job clasads have a command attribute
-	ad->LookupString( ATTR_JOB_CMD, &executable );
-	ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
+	jobAd->LookupString( ATTR_JOB_CMD, &executable );
+	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
 
 	*rsl += "(arguments=";
 	// If we're transferring the executable, strip off the path for the
@@ -1308,7 +1308,7 @@ MyString *NordugridJob::buildSubmitRSL()
 		*rsl += executable;
 	}
 
-	if ( ad->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
+	if ( jobAd->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
 		*rsl += " ";
 		*rsl += attr_value;
 	}
@@ -1324,14 +1324,14 @@ MyString *NordugridJob::buildSubmitRSL()
 		*rsl += basename( executable );
 	}
 
-	ad->LookupString( ATTR_TRANSFER_INPUT_FILES, &attr_value );
+	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, &attr_value );
 	if ( attr_value != NULL ) {
 		stage_in_list.initializeFromString( attr_value );
 		free( attr_value );
 		attr_value = NULL;
 	}
 
-	if ( ad->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
+	if ( jobAd->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stdin=";
@@ -1363,14 +1363,14 @@ MyString *NordugridJob::buildSubmitRSL()
 		}
 	}
 
-	ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, &attr_value );
+	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, &attr_value );
 	if ( attr_value != NULL ) {
 		stage_out_list.initializeFromString( attr_value );
 		free( attr_value );
 		attr_value = NULL;
 	}
 
-	if ( ad->LookupString( ATTR_JOB_OUTPUT, &attr_value ) == 1) {
+	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stdout=";
@@ -1383,7 +1383,7 @@ MyString *NordugridJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( ad->LookupString( ATTR_JOB_ERROR, &attr_value ) == 1) {
+	if ( jobAd->LookupString( ATTR_JOB_ERROR, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stderr=";

@@ -170,12 +170,12 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( "RemoteJobId", buff );
+	jobAd->LookupString( "RemoteJobId", buff );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( buff );
 	} else {
@@ -195,7 +195,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_X509_USER_PROXY, buff );
+	jobAd->LookupString( ATTR_X509_USER_PROXY, buff );
 	if ( buff[0] != '\0' ) {
 		jobProxy = AcquireProxy( buff, evaluateStateTid );
 		if ( jobProxy == NULL ) {
@@ -574,8 +574,8 @@ int INFNBatchJob::doEvaluateState()
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
+									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
@@ -720,11 +720,11 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		old_expr = ad->Lookup( attrs_to_copy[index] );
+		old_expr = jobAd->Lookup( attrs_to_copy[index] );
 		new_expr = remote_ad->Lookup( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			ad->Insert( new_expr->DeepCopy() );
+			jobAd->Insert( new_expr->DeepCopy() );
 		}
 	}
 
@@ -769,7 +769,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		if ( ( next_expr = ad->Lookup( attrs_to_copy[index] ) ) != NULL ) {
+		if ( ( next_expr = jobAd->Lookup( attrs_to_copy[index] ) ) != NULL ) {
 			submit_ad->Insert( next_expr->DeepCopy() );
 		}
 	}
@@ -805,8 +805,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 //				  ATTR_STAGE_IN_START, ATTR_Q_DATE, 1800 );
 //	submit_ad->Insert( expr.Value() );
 
-	ad->ResetExpr();
-	while ( (next_expr = ad->NextExpr()) != NULL ) {
+	jobAd->ResetExpr();
+	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
 		if ( strncmp( ((Variable*)next_expr->LArg())->Name(), "REMOTE_", 7 ) == 0 ) {
 			char *attr_value;
 			MyString buf;

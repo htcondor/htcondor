@@ -247,7 +247,7 @@ OracleJob::OracleJob( ClassAd *classad )
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
@@ -258,7 +258,7 @@ OracleJob::OracleJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GLOBUS_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
 		resourceManagerString = strdup( buff );
 	} else {
@@ -267,7 +267,7 @@ OracleJob::OracleJob( ClassAd *classad )
 	}
 
 	bool_val = FALSE;
-	ad->LookupBool( ATTR_ORACLE_JOB_RUN_PHASE, bool_val );
+	jobAd->LookupBool( ATTR_ORACLE_JOB_RUN_PHASE, bool_val );
 	jobRunPhase = bool_val ? true : false;
 
 	{
@@ -288,7 +288,7 @@ OracleJob::OracleJob( ClassAd *classad )
 	ociSession->RegisterJob( this );
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
+	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
 	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
 		rehashRemoteJobId( this, remoteJobId, buff );
 		remoteJobId = strdup( buff );
@@ -611,7 +611,7 @@ int OracleJob::doEvaluateState()
 			}
 			// Only allow a rematch *if* we are also going to perform a resubmit
 			if ( wantResubmit || doResubmit ) {
-				ad->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+				jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;
@@ -641,7 +641,7 @@ int OracleJob::doEvaluateState()
 			if ( submitLogged ) {
 				JobEvicted();
 				if ( !evictLogged ) {
-					WriteEvictEventToUserLog( ad );
+					WriteEvictEventToUserLog( jobAd );
 					evictLogged = true;
 				}
 			}
@@ -653,7 +653,7 @@ int OracleJob::doEvaluateState()
 
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
-				if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
 					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
 				}
@@ -700,8 +700,8 @@ int OracleJob::doEvaluateState()
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
+									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
@@ -881,7 +881,7 @@ int OracleJob::doSubmit2()
 		goto doSubmit2_error_exit;
 	}
 
-	ad->LookupString( ATTR_JOB_CMD, &exec_file );
+	jobAd->LookupString( ATTR_JOB_CMD, &exec_file );
 	if ( exec_file == NULL || *exec_file == '\0' ) {
 		dprintf( D_ALWAYS, "No executable defined!\n" );
 		goto doSubmit2_error_exit;

@@ -264,12 +264,12 @@ MirrorJob::MirrorJob( ClassAd *classad )
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_MIRROR_SCHEDD, buff );
+	jobAd->LookupString( ATTR_MIRROR_SCHEDD, buff );
 	if ( buff[0] != '\0' ) {
 		mirrorScheddName = strdup( buff );
 	} else {
@@ -278,7 +278,7 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_MIRROR_JOB_ID, buff );
+	jobAd->LookupString( ATTR_MIRROR_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( buff );
 	} else {
@@ -286,7 +286,7 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBAL_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
 		char *ptr = strchr( buff, '#' );
 		if ( ptr != NULL ) {
@@ -321,13 +321,13 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	tmp = 0;
-	ad->LookupBool( ATTR_MIRROR_ACTIVE, tmp );
+	jobAd->LookupBool( ATTR_MIRROR_ACTIVE, tmp );
 	if ( tmp != 0 ) {
 		mirrorActive = true;
 	}
 
 	tmp = 0;
-	ad->LookupBool( ATTR_MIRROR_RELEASED, tmp );
+	jobAd->LookupBool( ATTR_MIRROR_RELEASED, tmp );
 	if ( tmp != 0 ) {
 		mirrorReleased = true;
 	}
@@ -873,12 +873,12 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				}
 			}
 			if ( mirrorActive == true ||
-				 ad->LookupBool( ATTR_MIRROR_ACTIVE, tmp_bool ) == false ) {
+				 jobAd->LookupBool( ATTR_MIRROR_ACTIVE, tmp_bool ) == false ) {
 				UpdateJobAdBool( ATTR_MIRROR_ACTIVE, 0 );
 				mirrorActive = false;
 			}
 			if ( mirrorReleased == true ||
-				 ad->LookupBool( ATTR_MIRROR_RELEASED, tmp_bool ) == false ) {
+				 jobAd->LookupBool( ATTR_MIRROR_RELEASED, tmp_bool ) == false ) {
 				UpdateJobAdBool( ATTR_MIRROR_RELEASED, 0 );
 				mirrorReleased = false;
 			}
@@ -919,7 +919,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 								  sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
@@ -1103,7 +1103,7 @@ void MirrorJob::ProcessRemoteAdActive( ClassAd *remote_ad )
 	remoteState = new_remote_state;
 
 
-	diff_ad = ClassAdDiff( ad, remote_ad );
+	diff_ad = ClassAdDiff( jobAd, remote_ad );
 
 	rc = diff_ad->LookupInteger( ATTR_MIRROR_LEASE_TIME, tmp_int );
 	if ( rc ) {
@@ -1161,7 +1161,7 @@ void MirrorJob::ProcessRemoteAdActive( ClassAd *remote_ad )
 		}
 	}
 
-	ClassAdPatch( ad, diff_ad );
+	ClassAdPatch( jobAd, diff_ad );
 
 	requestScheddUpdate( this );
 
@@ -1182,7 +1182,7 @@ ClassAd *MirrorJob::buildSubmitAd()
 	ClassAd *submit_ad;
 
 		// Base the submit ad on our own job ad
-	submit_ad = new ClassAd( *ad );
+	submit_ad = new ClassAd( *jobAd );
 
 	submit_ad->Delete( ATTR_CLUSTER_ID );
 	submit_ad->Delete( ATTR_PROC_ID );
@@ -1267,7 +1267,7 @@ ClassAd *MirrorJob::buildStageInAd()
 	ClassAd *stage_in_ad;
 
 		// Base the stage in ad on our own job ad
-	stage_in_ad = new ClassAd( *ad );
+	stage_in_ad = new ClassAd( *jobAd );
 
 	stage_in_ad->Assign( ATTR_CLUSTER_ID, mirrorJobId.cluster );
 	stage_in_ad->Assign( ATTR_PROC_ID, mirrorJobId.proc );

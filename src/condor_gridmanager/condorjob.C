@@ -198,12 +198,12 @@ CondorJob::CondorJob( ClassAd *classad )
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_X509_USER_PROXY, buff );
+	jobAd->LookupString( ATTR_X509_USER_PROXY, buff );
 	if ( buff[0] != '\0' ) {
 		jobProxy = AcquireProxy( buff, evaluateStateTid );
 		if ( jobProxy == NULL ) {
@@ -213,7 +213,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_REMOTE_SCHEDD, buff );
+	jobAd->LookupString( ATTR_REMOTE_SCHEDD, buff );
 	if ( buff[0] != '\0' ) {
 		remoteScheddName = strdup( buff );
 	} else {
@@ -222,13 +222,13 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_REMOTE_POOL, buff );
+	jobAd->LookupString( ATTR_REMOTE_POOL, buff );
 	if ( buff[0] != '\0' ) {
 		remotePoolName = strdup( buff );
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_REMOTE_JOB_ID, buff );
+	jobAd->LookupString( ATTR_REMOTE_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( buff );
 	} else {
@@ -236,7 +236,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBAL_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
 		char *ptr = strchr( buff, '#' );
 		if ( ptr != NULL ) {
@@ -547,7 +547,7 @@ int CondorJob::doEvaluateState()
 							procID.cluster, procID.proc);
 						// Set ad attributes so the schedd finds a new match.
 						int dummy;
-						if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+						if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 							UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
 							UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
 						}
@@ -960,7 +960,7 @@ int CondorJob::doEvaluateState()
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 								  sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
@@ -1136,11 +1136,11 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		old_expr = ad->Lookup( attrs_to_copy[index] );
+		old_expr = jobAd->Lookup( attrs_to_copy[index] );
 		new_expr = remote_ad->Lookup( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			ad->Insert( new_expr->DeepCopy() );
+			jobAd->Insert( new_expr->DeepCopy() );
 		}
 	}
 
@@ -1192,7 +1192,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		if ( ( next_expr = ad->Lookup( attrs_to_copy[index] ) ) != NULL ) {
+		if ( ( next_expr = jobAd->Lookup( attrs_to_copy[index] ) ) != NULL ) {
 			submit_ad->Insert( next_expr->DeepCopy() );
 		}
 	}
@@ -1233,8 +1233,8 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 
-	ad->ResetExpr();
-	while ( (next_expr = ad->NextExpr()) != NULL ) {
+	jobAd->ResetExpr();
+	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
 		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(), "REMOTE_", 7 ) == 0 ) {
 			char *attr_value;
 			MyString buf;
@@ -1261,7 +1261,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	ExprTree *next_expr;
 
 		// Base the submit ad on our own job ad
-	submit_ad = new ClassAd( *ad );
+	submit_ad = new ClassAd( *jobAd );
 
 	submit_ad->Delete( ATTR_CLUSTER_ID );
 	submit_ad->Delete( ATTR_PROC_ID );
@@ -1340,8 +1340,8 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 
-	ad->ResetExpr();
-	while ( (next_expr = ad->NextExpr()) != NULL ) {
+	jobAd->ResetExpr();
+	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
 		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(), "REMOTE_", 7 ) == 0 ) {
 			char *attr_value;
 			MyString buf;
@@ -1366,7 +1366,7 @@ ClassAd *CondorJob::buildStageInAd()
 	ClassAd *stage_in_ad;
 
 		// Base the stage in ad on our own job ad
-//	stage_in_ad = new ClassAd( *ad );
+//	stage_in_ad = new ClassAd( *jobAd );
 	stage_in_ad = buildSubmitAd();
 
 	stage_in_ad->Assign( ATTR_CLUSTER_ID, remoteJobId.cluster );
