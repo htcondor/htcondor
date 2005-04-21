@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "classad_dist"=".\classad_dist.dsp" - Package Owner=<4>
+Project: "classad_functional_tester"=.\classad_functional_tester.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -11,6 +11,36 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name classad_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "classad_lib"=.\classad_lib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "classad_unit_tester"=.\classad_unit_tester.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name classad_lib
+    End Project Dependency
 }}}
 
 ###############################################################################
