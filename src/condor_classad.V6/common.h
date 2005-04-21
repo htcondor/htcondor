@@ -46,6 +46,14 @@
 #define _POSIX_C_SOURCE 199506L /* To get asctime_r */
 #endif
 
+#ifdef WIN32
+	// These must be defined before any of the
+	// other headers are pulled in.
+#define _STLP_NEW_PLATFORM_SDK
+#define _STLP_NO_OWN_IOSTREAMS 1
+
+#endif /* WIN32 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -87,8 +95,6 @@
 #pragma warning( disable : 4800 )  
 	// Disable warnings about truncated debug identifiers
 #pragma warning( disable : 4786 )
-	// use new SDK stuff in STLport
-#define _STLP_NEW_PLATFORM_SDK
 #endif // WIN32
 
 

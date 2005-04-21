@@ -27,7 +27,7 @@
 
 using namespace std;
 
-#ifndef __APPLE_CC__
+#if !defined(__APPLE_CC__) && !defined(WIN32)
 extern DLL_IMPORT_MAGIC long timezone;
 #endif
 

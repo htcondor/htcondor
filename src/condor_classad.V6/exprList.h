@@ -90,7 +90,7 @@ class ExprList : public ExprTree
 		virtual bool _Evaluate (EvalState &, Value &) const;
 		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
-        void CopyList(const vector<ExprTree*> &exprs);
+        void CopyList(const std::vector<ExprTree*> &exprs);
 };
 
 
