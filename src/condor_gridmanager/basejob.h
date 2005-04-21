@@ -107,6 +107,6 @@ bool WriteAbortEventToUserLog( ClassAd *job_ad );
 bool WriteTerminateEventToUserLog( ClassAd *job_ad );
 bool WriteEvictEventToUserLog( ClassAd *job_ad );
 bool WriteHoldEventToUserLog( ClassAd *job_ad );
-void EmailTerminateEvent( ClassAd * jobAd, bool exit_status_known );
+void EmailTerminateEvent( ClassAd * job_ad, bool exit_status_known );
 
 #endif // define BASEJOB_H
