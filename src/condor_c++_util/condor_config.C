@@ -468,8 +468,8 @@ process_file( char* file, char* name, char* host, int required )
 void
 process_locals( char* param_name, char* host )
 {
-	StringList locals;
-	char *file;
+	StringList locals, done;
+	char *file, *filelist;
 	char *tmp;
 	int local_required;
 	
@@ -482,10 +482,9 @@ process_locals( char* param_name, char* host )
 		free( tmp );
     }
 
-	file = param( param_name );
-	if( file ) {
-		locals.initializeFromString( file );
-		free( file );
+	filelist = param( param_name );
+	if( filelist ) {
+		locals.initializeFromString( filelist );
 		locals.rewind();
 		while( (file = locals.next()) ) {
 			process_file( file, "config file", host, local_required );
@@ -493,7 +492,31 @@ process_locals( char* param_name, char* host )
 				local_config_files += " ";
 			}
 			local_config_files += file;
+
+			done.append(file);
+
+			char* newfilelist = param(param_name);
+			if(newfilelist) {
+				if(strcmp(filelist, newfilelist) ) {
+				// the file we just processed altered the list of files to
+				// process
+					locals.clearAll();
+					locals.initializeFromString(newfilelist);
+
+					// remove all the ones we've finished from the old list 
+                	done.rewind();
+                	while( (file = done.next()) ) {
+						locals.remove(file);
+					}
+					locals.rewind();
+					free(filelist);
+					filelist = newfilelist;
+				} else {
+					free(newfilelist);
+				}
+			}
 		}
+		free(filelist);
 	}
 }
 
