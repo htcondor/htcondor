@@ -24,12 +24,7 @@ template_inst(gang_instantiate.C,gang_instantiate.o)
 release:: all
 static:: all
 stripped:: all
-
-/* Rule to make documentation */
-doc: html
-
-/* Also depends on several header files, but I am ignoring that for now */
-html_target(documentation)
+html:
 
 c_plus_target(conversion_test,testConversion.o,libconversion.a $(LIB))
 c_plus_target(aec_test,testAEC.o,libconversion.a $(LIB))
