@@ -1,14 +1,6 @@
 # Microsoft Developer Studio Generated Dependency File, included by classad_functional_tester.mak
 
 ..\classad_functional_tester.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\

@@ -1,14 +1,6 @@
 # Microsoft Developer Studio Generated Dependency File, included by classad_lib.mak
 
 ..\attrrefs.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -93,14 +85,6 @@
 	
 
 ..\classad.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -189,14 +173,6 @@
 	
 
 ..\collection.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -288,14 +264,6 @@
 	
 
 ..\collectionBase.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -392,14 +360,6 @@
 	
 
 ..\debug.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -456,14 +416,6 @@
 	
 
 ..\exprList.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -548,14 +500,6 @@
 	
 
 ..\exprTree.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -641,14 +585,6 @@
 	
 
 ..\fnCall.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -737,14 +673,6 @@
 	
 
 ..\indexfile.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -820,14 +748,6 @@
 	
 
 ..\lexer.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -887,14 +807,6 @@
 	
 
 ..\lexerSource.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -952,14 +864,6 @@
 	
 
 ..\literals.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1044,14 +948,6 @@
 	
 
 ..\matchClassad.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1140,14 +1036,6 @@
 	
 
 ..\operators.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1233,14 +1121,6 @@
 	
 
 ..\query.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1337,14 +1217,6 @@
 	
 
 ..\sink.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1430,14 +1302,6 @@
 	
 
 ..\source.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1525,14 +1389,6 @@
 	
 
 ..\transaction.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1629,14 +1485,6 @@
 	
 
 ..\util.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1693,14 +1541,6 @@
 	
 
 ..\value.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1786,14 +1626,6 @@
 	
 
 ..\view.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1887,14 +1719,6 @@
 	
 
 ..\xmlLexer.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -1959,14 +1783,6 @@
 	
 
 ..\xmlSink.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
@@ -2055,14 +1871,6 @@
 	
 
 ..\xmlSource.C : \
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_epilog.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_msvc_warnings_off.h"\
 	"..\..\..\..\..\..\stolley\stlport\stlport-4.6.2\stlport\config\_prolog.h"\
