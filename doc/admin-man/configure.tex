@@ -549,8 +549,12 @@ system.
   from previous files).  This allows you to use one global
   configuration file for multiple platforms in your pool, define a
   platform-specific configuration file for each platform, and use a
-  local configuration file for each machine.  If
-  \Macro{LOCAL\_CONFIG\_FILE} is not defined, no local configuration
+  local configuration file for each machine. 
+  If the list is changed in one of the included files, the new list
+  replaces the old list, but any files that have already been processed
+  remain processed and are removed from the new list if they are present
+  to prevent cycles.
+  If \Macro{LOCAL\_CONFIG\_FILE} is not defined, no local configuration
   files are processed.  For more information on this, see
   section~\ref{sec:Multiple-Platforms} about Configuring Condor for
   Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
