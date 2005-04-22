@@ -295,27 +295,34 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 				sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 
-				priv_state old_priv = set_condor_priv();
+				priv_state saved_priv = PRIV_UNKNOWN;
+				if( want_priv_change ) {
+					saved_priv = set_priv( desired_priv_state );
+				}
 
 				if( (mkdir(SpoolSpace,0777) < 0) ) {
-					// mkdir can return 17 = EEXIST (dirname exists) or 2 = ENOENT (path not found)
-					dprintf( D_FULLDEBUG, 
-							 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
-							 SpoolSpace, errno );
+					// mkdir can return 17 = EEXIST (dirname exists)
+					// or 2 = ENOENT (path not found)  
+					dprintf( D_FULLDEBUG, "FileTransfer::Init(): "
+							 "mkdir(%s) failed, %s (errno: %d)\n",
+							 SpoolSpace, strerror(errno), errno );
 				}
 				if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
-					dprintf( D_FULLDEBUG, 
-							 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
-							 TmpSpoolSpace, errno );
+					dprintf( D_FULLDEBUG, "FileTransfer::Init(): "
+							 "mkdir(%s) failed, %s (errno: %d)\n",
+							 TmpSpoolSpace, strerror(errno), errno );
 				}
 				source = gen_ckpt_name(Spool,Cluster,ICKPT,0);
 				free(Spool);
+				Spool = NULL;
 				if ( access(source,F_OK | X_OK) >= 0 ) {
 					// we can access an executable in the spool dir
 					ExecFile = strdup(source);
 				}
-				set_priv( old_priv );
-
+				if( want_priv_change ) {
+					ASSERT( saved_priv != PRIV_UNKNOWN );
+					set_priv( saved_priv );
+				}
 			}
 		}
 
@@ -550,7 +557,9 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		MyString filelist;
 		const char* current_file = NULL;
 		bool print_comma = false;
-		Directory spool_space( SpoolSpace, PRIV_CONDOR );
+			// if desired_priv_state is PRIV_UNKNOWN, the Directory
+			// object treats that just like we do: don't switch... 
+		Directory spool_space( SpoolSpace, desired_priv_state );
 		while ( (current_file=spool_space.Next()) ) {
 			if ( UserLogFile && 
 				 !file_strcmp(UserLogFile,current_file) ) 
@@ -716,14 +725,12 @@ FileTransfer::ComputeFilesToSend()
 			DontEncryptFiles = DontEncryptOutputFiles;
 		}
 	
-		Directory* dir;
-		if( want_priv_change ) {
-			dir = new Directory( Iwd, desired_priv_state );
-		} else {
-			dir = new Directory( Iwd );
-		}
+			// if desired_priv_state is PRIV_UNKNOWN, the Directory
+			// object treats that just like we do: don't switch... 
+		Directory dir( Iwd, desired_priv_state );
+
 		const char *f;
-		while ( (f=dir->Next()) ) {
+		while( (f=dir.Next()) ) {
 			// don't send back condor_exec.exe
 			if ( file_strcmp(f,CONDOR_EXEC)==MATCH )
 				continue;
@@ -732,15 +739,15 @@ FileTransfer::ComputeFilesToSend()
 
 			// for now, skip all subdirectory names until we add
 			// subdirectory support into FileTransfer.
-			if ( dir->IsDirectory() )
+			if ( dir.IsDirectory() )
 				continue;
 							
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
-			if ( dir->GetModifyTime() > last_download_time ) {
+			if ( dir.GetModifyTime() > last_download_time ) {
 				dprintf( D_FULLDEBUG, 
 						 "Sending changed file %s, mod=%ld, dow=%ld\n",	
-						 f, dir->GetModifyTime(), last_download_time );
+						 f, dir.GetModifyTime(), last_download_time );
 				if (!IntermediateFiles) {
 					// Initialize it with intermediate files
 					// which we already have spooled.  We want to send
@@ -756,10 +763,7 @@ FileTransfer::ComputeFilesToSend()
 				}
 			}
 		}
-		delete dir;
 	}
-	
-
 }
 
 void
@@ -804,28 +808,24 @@ FileTransfer::RemoveInputFiles(const char *sandbox_path)
 
 	// Now, remove all files in the sandbox_path EXCEPT
 	// for files in list do_not_remove.
-		Directory* dir;
-		if( want_priv_change ) {
-			dir = new Directory( sandbox_path, desired_priv_state );
-		} else {
-			dir = new Directory( sandbox_path );
-		}
-		while ( (f=dir->Next()) ) {
+	Directory dir( sandbox_path, desired_priv_state );
+
+	while( (f=dir.Next()) ) {
 			// for now, skip all subdirectory names until we add
 			// subdirectory support into FileTransfer.
-			if ( dir->IsDirectory() )
-				continue;
+		if( dir.IsDirectory() ) {
+			continue;
+		}
 			
 			// skip output files
-			if ( do_not_remove.file_contains(f) == TRUE ) {
-				continue;
-			}
+		if ( do_not_remove.file_contains(f) == TRUE ) {
+			continue;
+		}
 
 			// if we made it here, we are looking at an "input" file.
 			// so remove it.
-			dir->Remove_Current_File();
-		}
-		delete dir;
+		dir.Remove_Current_File();
+	}
 
 	m_final_transfer_flag = old_transfer_flag;
 	free(Iwd);
@@ -984,8 +984,8 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 			{
 			const char *currFile;
 			transobject->CommitFiles();
-			Directory spool_space( transobject->SpoolSpace,
-								   PRIV_CONDOR );
+			Directory spool_space( transobject->SpoolSpace, 
+								   transobject->getDesiredPrivState() );
 			while ( (currFile=spool_space.Next()) ) {
 				if (transobject->UserLogFile && 
 						!file_strcmp(transobject->UserLogFile,currFile)) 
@@ -1225,17 +1225,20 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 
-		// reset the priv state to the saved value (if there is one) before we
-		// overwrite it again.
-		if (saved_priv != PRIV_UNKNOWN) {
-			_set_priv(saved_priv,__FILE__,__LINE__,1);
+			/*
+			  if we want to change priv states but haven't done so
+			  yet, set it now.  we only need to do this once since
+			  we're no longer doing any hard-coded insanity with
+			  PRIV_CONDOR and everything can either be done in our
+			  existing priv state (want_priv_change == FALSE) or in
+			  the priv state we were told to use... Derek, 2005-04-21
+			*/
+		if( want_priv_change && saved_priv == PRIV_UNKNOWN ) {
+			saved_priv = set_priv( desired_priv_state );
 		}
 
 		if( final_transfer || IsClient() ) {
 			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
-			if( want_priv_change ) {
-				saved_priv = set_priv( desired_priv_state );
-			}
 #ifdef WIN32
 			// check for write permission on this file, if we are supposed to check
 			if ( perm_obj && (perm_obj->write_access(fullname) != 1) ) {
@@ -1248,8 +1251,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 #endif
 		} else {
 			sprintf(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename);
-				// We *need* to be in condor_priv for this.
-			saved_priv = set_condor_priv();
 		}
 	
 		// On WinNT and apparently, some Unix, too, even doing an
@@ -1338,9 +1339,12 @@ FileTransfer::CommitFiles()
 		return;
 	}
 
-		// We *need* to be condor_priv for all of this
-	Directory tmpspool( TmpSpoolSpace, PRIV_CONDOR );
-	priv_state saved_priv = set_condor_priv();
+	priv_state saved_priv = PRIV_UNKNOWN;
+	if( want_priv_change ) {
+		saved_priv = set_priv( desired_priv_state );
+	}
+
+	Directory tmpspool( TmpSpoolSpace, desired_priv_state );
 
 	sprintf(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
 	if ( access(buf,F_OK) >= 0 ) {
@@ -1361,7 +1365,10 @@ FileTransfer::CommitFiles()
 	// We have now commited the files in tmpspool, if we were supposed to.
 	// So now blow away tmpspool.
 	tmpspool.Remove_Entire_Directory();
-	set_priv( saved_priv );
+	if( want_priv_change ) {
+		ASSERT( saved_priv != PRIV_UNKNOWN );
+		set_priv( saved_priv );
+	}
 }
 
 int
@@ -1473,30 +1480,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	// record the state it was in when we started... the "default" state
 	bool socket_default_crypto = s->get_encryption();
 
+	if( want_priv_change && saved_priv == PRIV_UNKNOWN ) {
+		saved_priv = set_priv( desired_priv_state );
+	}
 	while ( filelist && (filename=filelist->next()) ) {
 
 		dprintf(D_FULLDEBUG,"DoUpload: send file %s\n",filename);
-
-		// okay, what we do here is undo the old priv change. then,
-		// depending on if the file is in spool or not, we switch to
-		// condor priv for a spool file or else back to desired priv.
-		if (saved_priv != PRIV_UNKNOWN) {
-        	_set_priv(saved_priv,__FILE__,__LINE__,1);
-		}
-		// look at the filename to see if it starts with the SPOOL dir
-		// but not the sandbox (SpoolSpace)
-		MyString sandbox = SpoolSpace;
-		sandbox += DIR_DELIM_CHAR;
-		if (strncmp(Spool, filename, strlen(Spool)) == 0 &&
-			( (SpoolSpace == NULL) || (strncmp(sandbox.Value(),filename,sandbox.Length()) != 0))
-			) {
-			saved_priv = set_condor_priv();
-		} else {
-			saved_priv = PRIV_UNKNOWN;
-			if( want_priv_change ) {
-				saved_priv = set_priv( desired_priv_state );
-			}
-		}
 
 		// now we send an int to the other side to indicate the next
 		// action.  historically, we sent either 1 or 0.  zero meant
