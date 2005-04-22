@@ -164,6 +164,8 @@ class FileTransfer {
 	void setPeerVersion( const char *peer_version );
 	void setPeerVersion( const CondorVersionInfo &peer_version );
 
+	priv_state getDesiredPrivState( void ) { return desired_priv_state; };
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
