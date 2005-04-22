@@ -301,16 +301,18 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				}
 
 				if( (mkdir(SpoolSpace,0777) < 0) ) {
-					// mkdir can return 17 = EEXIST (dirname exists)
-					// or 2 = ENOENT (path not found)  
-					dprintf( D_FULLDEBUG, "FileTransfer::Init(): "
-							 "mkdir(%s) failed, %s (errno: %d)\n",
-							 SpoolSpace, strerror(errno), errno );
+					if( errno != EEXIST ) {
+						dprintf( D_ALWAYS, "FileTransfer::Init(): "
+								 "mkdir(%s) failed, %s (errno: %d)\n",
+								 SpoolSpace, strerror(errno), errno );
+					}
 				}
 				if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
-					dprintf( D_FULLDEBUG, "FileTransfer::Init(): "
-							 "mkdir(%s) failed, %s (errno: %d)\n",
-							 TmpSpoolSpace, strerror(errno), errno );
+					if( errno != EEXIST ) {
+						dprintf( D_ALWAYS, "FileTransfer::Init(): "
+								 "mkdir(%s) failed, %s (errno: %d)\n",
+								 TmpSpoolSpace, strerror(errno), errno );
+					}
 				}
 				source = gen_ckpt_name(Spool,Cluster,ICKPT,0);
 				free(Spool);
