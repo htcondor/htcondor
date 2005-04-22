@@ -108,6 +108,7 @@ gid_t get_real_condor_gid();
 uid_t getuid(); /* getuid stub for WINNT */
 #endif
 
+
 int is_root( void );
 
 const char* get_real_username();
@@ -116,6 +117,11 @@ void display_priv_log();
 
 #if defined(__cplusplus)
 }
+#endif
+
+#if defined(__cplusplus)
+#include "passwd_cache.h"
+extern passwd_cache* pcache();
 #endif
 
 #endif /* _UID_H */
