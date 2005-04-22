@@ -34,6 +34,6 @@
 #define IS_CLIPPED YES
 
 #define VendorCTestFlags -Aa -Ae
-#define VendorCPPTestFlags -Aa -ext
+#define VendorCPPTestFlags -Aa -ext +eh
 
 
