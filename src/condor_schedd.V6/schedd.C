@@ -1750,28 +1750,6 @@ Scheduler::PeriodicExprHandler( void )
 }
 
 
-static bool get_user_uid_gid(const char * owner, const char * domain,
-	uid_t * uid, gid_t * gid)
-{
-#ifndef WIN32
-
-	// TODO: Definately want someone more familiar with
-	// uid management in Condor to verify that this isn't insane. 
-	if( ! init_user_ids(owner, domain) )
-	{
-		return false;
-	}
-	if(uid) { *uid = get_user_uid(); }
-	if(gid) { *gid = get_user_gid(); }
-	uninit_user_ids();
-	return true;
-#else
-	// Windows doesn't do uid/gids
-	return false;
-#endif
-}
-
-
 bool
 jobPrepNeedsThread( int cluster, int proc )
 {
@@ -1874,16 +1852,18 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 			uid_t dst_uid;
 			gid_t dst_gid;
 
-			if( get_user_uid_gid(owner.Value(), domain.Value(), &dst_uid, & dst_gid) )
-			{
-				if( ! recursive_chown(sandbox.Value(), src_uid, dst_uid, dst_gid, true) )
-				{
-					dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d.  Job may run into permissions problems when it starts.\n", cluster, proc, sandbox.Value(), src_uid, dst_uid, dst_gid);
-				}
+			passwd_cache* p_cache = pcache();
+			if( ! p_cache->get_user_ids(owner.Value(), dst_uid, dst_gid) ) {
+				dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
+						 "user %s. Cannot chown %s to user. Job may run "
+						 "into permissions problems when it starts.\n", 
+						 cluster, proc, owner.Value(), sandbox.Value() );
+				FreeJobAd( job_ad );
+				return FALSE;
 			}
-			else // Failed to get uid/gid
+			if( ! recursive_chown(sandbox.Value(), src_uid, dst_uid, dst_gid, true) )
 			{
-				dprintf( D_ALWAYS, "(%d.%d) Failed to identify associated UID and GID for user %s.  Cannot chown %s to user.  Job may run into permissions problems when it starts.\n", cluster, proc, owner.Value(), sandbox.Value());
+					dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d.  Job may run into permissions problems when it starts.\n", cluster, proc, sandbox.Value(), src_uid, dst_uid, dst_gid);
 			}
 		}
 		else 
@@ -2048,12 +2028,11 @@ jobIsFinished( int cluster, int proc, void* )
 			uid_t dst_uid = get_condor_uid();
 			gid_t dst_gid = get_condor_gid();
 
-			MyString owner, domain;
+			MyString owner;
 			job_ad->LookupString( ATTR_OWNER, owner );
-			job_ad->LookupString( ATTR_NT_DOMAIN, domain );
-			if( get_user_uid_gid(owner.Value(), domain.Value(),
-								 &src_uid, NULL) )
-			{
+
+			passwd_cache* p_cache = pcache();
+			if( p_cache->get_user_uid( owner.Value(), src_uid ) ) {
 				if( ! recursive_chown(sandbox.Value(), src_uid,
 									  dst_uid, dst_gid, true) )
 				{
@@ -2064,11 +2043,11 @@ jobIsFinished( int cluster, int proc, void* )
 							 src_uid, dst_uid, dst_gid );
 				}
 			} else {
-				dprintf( D_ALWAYS, "(%d.%d) Failed to identify associated "
-						 "UID and GID for user %s.  Cannot chown \"%s\".  "
-						 "User may run into permissions problems when "
-						 "fetching job sandbox.\n", cluster, proc,
-						 owner.Value(), sandbox.Value() );
+				dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
+						 "for user %s.  Cannot chown \"%s\".  User may "
+						 "run into permissions problems when fetching "
+						 "job sandbox.\n", cluster, proc, owner.Value(),
+						 sandbox.Value() );
 			}
 		} else {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to find sandbox for this "
