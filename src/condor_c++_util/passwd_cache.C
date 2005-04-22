@@ -260,39 +260,53 @@ passwd_cache::get_groups( const char *user, size_t groupsize, gid_t gid_list[] )
 	return true;
 }
 
+
 bool
-passwd_cache::get_user_uid( const char* user, uid_t &uid ) {
-
+passwd_cache::get_user_uid( const char* user, uid_t &uid )
+{
 	uid_entry *cache_entry;
-
-	if ( !lookup_uid( user, cache_entry) ) {
-			/* CACHE MISS */
-		if ( cache_uid(user) ) {
-			if ( !lookup_uid(user, cache_entry) ) {
-				dprintf(D_ALWAYS, "Failed to cache user info for user %s\n",
-					   	user);
-				return false;
-			}
-		} else {
-				// cache_user() failed. not much we can do there.
-			return false;
-		}
-	} 
+	if( ! lookup_uid_entry(user, cache_entry) ) {
+		return false;
+	}
 	uid = cache_entry->uid;
 	return true;
 }
 
+
 bool
-passwd_cache::get_user_gid( const char* user, gid_t &gid ) {
-
+passwd_cache::get_user_gid( const char* user, gid_t &gid )
+{
 	uid_entry *cache_entry;
+	if( ! lookup_uid_entry(user, cache_entry) ) {
+		return false;
+	}
+	gid = cache_entry->gid;
+	return true;
+}
 
-	if ( !lookup_uid( user, cache_entry) ) {
+
+bool
+passwd_cache::get_user_ids( const char* user, uid_t &uid, gid_t &gid )
+{
+	uid_entry *cache_entry;
+	if( ! lookup_uid_entry(user, cache_entry) ) {
+		return false;
+	}
+	uid = cache_entry->uid;
+	gid = cache_entry->gid;
+	return true;
+}
+
+
+bool
+passwd_cache::lookup_uid_entry( const char* user, uid_entry *&uce )
+{
+	if( !lookup_uid( user, uce) ) {
 			/* CACHE MISS */
-		if ( cache_uid(user) ) {
-			if ( !lookup_uid(user, cache_entry) ) {
-				dprintf(D_ALWAYS, "Failed to cache user info for user %s\n", 
-						user);
+		if( cache_uid(user) ) {
+			if( !lookup_uid(user, uce) ) {
+				dprintf( D_ALWAYS, "Failed to cache user info for user %s\n", 
+						 user );
 				return false;
 			}
 		} else {
@@ -300,9 +314,9 @@ passwd_cache::get_user_gid( const char* user, gid_t &gid ) {
 			return false;
 		}
 	} 
-	gid = cache_entry->gid;
 	return true;
 }
+
 
 bool
 passwd_cache::get_user_name(const uid_t uid, char *&user) {
