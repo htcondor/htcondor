@@ -131,7 +131,9 @@ shadow_rec * add_shadow_rec( int, PROC_ID*, int, match_rec*, int );
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool getSandbox( int cluster, int proc, MyString & path );
+bool sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad );
 bool jobPrepNeedsThread( int cluster, int proc );
+bool jobCleanupNeedsThread( int cluster, int proc );
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
@@ -1753,18 +1755,104 @@ Scheduler::PeriodicExprHandler( void )
 bool
 jobPrepNeedsThread( int cluster, int proc )
 {
-		// for now, all we care about is if the job has a sandbox
-	bool rval = false;
+		// first, see if the job has a sandbox at all (either
+		// explicitly or b/c of ON_EXIT_OR_EVICT)  
 	ClassAd * job_ad = GetJobAd( cluster, proc );
 	if( ! job_ad ) {
 			// job is already gone, guess we don't need a thread. ;)
 		return false;
 	}
+	if( ! jobIsSandboxed(job_ad) ) {
+		FreeJobAd( job_ad );
+		return false;
+	}
+	bool rval = false;
+	if( ! sandboxHasRightOwner(cluster, proc, job_ad) ) {
+		rval = true;
+	}
+	FreeJobAd( job_ad );
+	return rval;
+}
+
+
+bool
+jobCleanupNeedsThread( int cluster, int proc )
+{
+		// the cleanup case is different from the start-up case, since
+		// we don't want to test the "HasRightOwner" stuff at all.  we
+		// always want the cleanup code to chown() back to condor,
+		// either so the schedd can read the files out for a
+		// condor_transfer_data, or so that it can successfully blow
+		// away the spool directories as PRIV_CONDOR.
+	ClassAd * job_ad = GetJobAd( cluster, proc );
+	if( ! job_ad ) {
+			// job is already gone, guess we don't need a thread. ;)
+		return false;
+	}
+	bool rval = false;
 	if( jobIsSandboxed(job_ad) ) {
 		rval = true;
 	}
 	FreeJobAd(job_ad);
-	job_ad = NULL;
+	return rval;
+}
+
+
+// returns true if the sandbox already exists *and* is owned by the
+// right owner, false if either of those conditions isn't true. 
+bool
+sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad )
+{
+	bool rval = true;  // we'll return false if needed...
+
+	if( ! job_ad ) {
+			// job is already gone, guess we don't need a thread. ;)
+		return false;
+	}
+
+	MyString sandbox;
+	if( ! getSandbox(cluster, proc, sandbox) ) {
+		EXCEPT( "getSandbox(%d.%d) returned FALSE!", cluster, proc );
+	}
+
+	StatInfo si( sandbox.Value() );
+	if( si.Error() == SINoFile ) {
+			// sandbox doesn't yet exist, we'll need to create it
+		FreeJobAd( job_ad );
+		return false;
+	}
+	
+		// if we got this far, we know the sandbox already exists for
+		// this cluster/proc.  if we're not WIN32, check the owner.
+
+#ifndef WIN32
+		// check the owner of the sandbox vs. what's in the job ad
+	uid_t sandbox_uid = si.GetOwner();
+	passwd_cache* p_cache = pcache();
+	uid_t job_uid;
+	char* job_owner = NULL;
+	job_ad->LookupString( ATTR_OWNER, &job_owner );
+	if( ! job_owner ) {
+		EXCEPT( "No %s for job %d.%d!", ATTR_OWNER, cluster, proc );
+	}
+	if( ! p_cache->get_user_uid(job_owner, job_uid) ) {
+			// failed to find uid for this owner, badness.
+		dprintf( D_ALWAYS, "Failed to find uid for user %s (job %d.%d), "
+				 "job sandbox ownership will probably be broken\n", 
+				 job_owner, cluster, proc );
+		free( job_owner );
+		FreeJobAd( job_ad );
+		return false;
+	}
+	free( job_owner );
+	job_owner = NULL;
+
+		// now that we have the right uids, see if they match.
+	rval = (job_uid == sandbox_uid);
+	
+#endif /* WIN32 */
+
+	FreeJobAd( job_ad );
 	return rval;
 }
 
@@ -1785,6 +1873,13 @@ jobPrepNeedsThread( int cluster, int proc )
   sure we've got a real value for stage_in_start (which we do, even in
   grid universe, since the parent sets that before spawning the job
   spooling thread).  --derek 2005-03-30 
+
+  and, if the job is using file transfer, we're going to create and
+  use both the regular sandbox and the tmp sandbox, so we need to
+  handle those cases, too.  the new shadow initializes a FileTransfer
+  object no matter what the job classad says, so in fact, the only way
+  we would *not* have a transfer sandbox is if we're a standard or PVM
+  universe job...  --derek 2005-04-21
 */
 bool
 jobIsSandboxed( ClassAd * ad )
@@ -1795,7 +1890,29 @@ jobIsSandboxed( ClassAd * ad )
 	if( stage_in_start > 0 ) {
 		return true;
 	}
-	return false;
+
+	int univ = CONDOR_UNIVERSE_VANILLA;
+	ad->LookupInteger( ATTR_JOB_UNIVERSE, univ );
+	switch( univ ) {
+	case CONDOR_UNIVERSE_SCHEDULER:
+	case CONDOR_UNIVERSE_LOCAL:
+	case CONDOR_UNIVERSE_STANDARD:
+	case CONDOR_UNIVERSE_PVM:
+		return false;
+		break;
+
+	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_JAVA:
+	case CONDOR_UNIVERSE_MPI:
+		return true;
+		break;
+
+	default:
+		dprintf( D_ALWAYS,
+				 "ERROR: unknown universe (%d) in jobIsSandboxed()", univ );
+		break;
+	}
+	return true;
 }
 
 
@@ -1838,40 +1955,111 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 	// this function is called *every* time we're about to spawn a job
 	// handler.  so, this is the spot to be careful about this issue.
 
-#ifndef WIN32
 	ClassAd * job_ad = GetJobAd( cluster, proc );
-	ASSERT(job_ad); // No job ad?
-	if( jobIsSandboxed(job_ad) ) {
-		MyString sandbox;
-		if( getSandbox(cluster, proc, sandbox) ) {
-			MyString owner, domain;
-			job_ad->LookupString(ATTR_OWNER, owner);
-			job_ad->LookupString(ATTR_NT_DOMAIN, domain);
+	ASSERT( job_ad ); // No job ad?
+	if( ! jobIsSandboxed(job_ad) ) {
+			// nothing more to do...
+		FreeJobAd( job_ad );
+		return TRUE;
+	}
 
-			uid_t src_uid = get_condor_uid();
-			uid_t dst_uid;
-			gid_t dst_gid;
+	MyString sandbox;
+	if( ! getSandbox(cluster, proc, sandbox) ) {
+		dprintf( D_ALWAYS, "Failed to find sandbox for job %d.%d. "
+				 "Cannot chown sandbox to user. Job may run into "
+				 "permissions problems when it starts.\n", cluster, proc );
+		FreeJobAd( job_ad );
+		return FALSE;
+	}
 
-			passwd_cache* p_cache = pcache();
-			if( ! p_cache->get_user_ids(owner.Value(), dst_uid, dst_gid) ) {
-				dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
-						 "user %s. Cannot chown %s to user. Job may run "
-						 "into permissions problems when it starts.\n", 
-						 cluster, proc, owner.Value(), sandbox.Value() );
-				FreeJobAd( job_ad );
-				return FALSE;
-			}
-			if( ! recursive_chown(sandbox.Value(), src_uid, dst_uid, dst_gid, true) )
-			{
-					dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d.  Job may run into permissions problems when it starts.\n", cluster, proc, sandbox.Value(), src_uid, dst_uid, dst_gid);
-			}
+	MyString sandbox_tmp = sandbox.Value();
+	sandbox_tmp += ".tmp";
+
+#ifndef WIN32
+	uid_t sandbox_uid;
+	uid_t sandbox_tmp_uid;
+#endif
+
+	bool mkdir_rval = true;
+
+		// if we got this far, we know we'll need a sandbox.  if it
+		// doesn't yet exist, we have to create it as PRIV_CONDOR so
+		// that spool can still be chmod 755...
+	StatInfo si( sandbox.Value() );
+	if( si.Error() == SINoFile ) {
+		priv_state saved_priv = set_condor_priv();
+		if( (mkdir(sandbox.Value(),0777) < 0) ) {
+				// mkdir can return 17 = EEXIST (dirname exists) or 2
+				// = ENOENT (path not found)
+			dprintf( D_FULLDEBUG, "ERROR in aboutToSpawnJobHandler(): "
+					 "mkdir(%s) failed: %s (errno: %d)\n",
+					 sandbox.Value(), strerror(errno), errno );
+			mkdir_rval = false;
 		}
-		else 
-		{
-				dprintf( D_ALWAYS, "(%d.%d) Failed to find sandbox for this job  Cannot chown sandbox to user.  Job may run into permissions problems when it starts.\n", cluster, proc);
+		set_priv( saved_priv );
+	} else { 
+#ifndef WIN32
+			// sandbox already exists, check owner
+	sandbox_uid = si.GetOwner();
+#endif
+	}
 
+	StatInfo si_tmp( sandbox_tmp.Value() );
+	if( si_tmp.Error() == SINoFile ) {
+		priv_state saved_priv = set_condor_priv();
+		if( (mkdir(sandbox_tmp.Value(),0777) < 0) ) {
+				// mkdir can return 17 = EEXIST (dirname exists) or 2
+				// = ENOENT (path not found)
+			dprintf( D_FULLDEBUG, "ERROR in aboutToSpawnJobHandler(): "
+					 "mkdir(%s) failed: %s (errno: %d)\n",
+					 sandbox_tmp.Value(), strerror(errno), errno );
+			mkdir_rval = false;
 		}
+		set_priv( saved_priv );
+	} else { 
+#ifndef WIN32
+			// sandbox already exists, check owner
+	sandbox_tmp_uid = si_tmp.GetOwner();
+#endif
+	}
 
+	if( ! mkdir_rval ) {
+		return FALSE;
+	}
+
+#ifndef WIN32
+
+	MyString owner;
+	job_ad->LookupString( ATTR_OWNER, owner );
+
+	uid_t src_uid = get_condor_uid();
+	uid_t dst_uid;
+	gid_t dst_gid;
+	passwd_cache* p_cache = pcache();
+	if( ! p_cache->get_user_ids(owner.Value(), dst_uid, dst_gid) ) {
+		dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
+				 "user %s. Cannot chown %s to user. Job may run "
+				 "into permissions problems when it starts.\n", 
+				 cluster, proc, owner.Value(), sandbox.Value() );
+		FreeJobAd( job_ad );
+		return FALSE;
+	}
+
+	if( (sandbox_uid != dst_uid) && 
+		!recursive_chown(sandbox.Value(),src_uid,dst_uid,dst_gid,true) )
+	{
+		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d. "
+				 "Job may run into permissions problems when it starts.\n",
+				 cluster, proc, sandbox.Value(), src_uid, dst_uid, dst_gid );
+	}
+
+	if( (sandbox_tmp_uid != dst_uid) && 
+		!recursive_chown(sandbox_tmp.Value(),src_uid,dst_uid,dst_gid,true) )
+	{
+		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d. "
+				 "Job may run into permissions problems when it starts.\n",
+				 cluster, proc, sandbox_tmp.Value(), src_uid, dst_uid, 
+				 dst_gid );
 	}
 	FreeJobAd(job_ad);
 	job_ad = 0;
@@ -10025,8 +10213,8 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 	delete job_id;
 	job_id = NULL; 
 
-	if( jobPrepNeedsThread(cluster, proc) ) {
-		dprintf( D_FULLDEBUG, "Job prep for %d.%d will block, "
+	if( jobCleanupNeedsThread(cluster, proc) ) {
+		dprintf( D_FULLDEBUG, "Job cleanup for %d.%d will block, "
 				 "calling jobIsFinished() in a thread\n", cluster, proc );
 		Create_Thread_With_Data( jobIsFinished, jobIsFinishedDone,
 								 cluster, proc, NULL );
@@ -10034,7 +10222,7 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 			// don't need a thread, just call the blocking version
 			// (which will return right away), and the reaper (which
 			// will call DestroyProc()) 
-		dprintf( D_FULLDEBUG, "Job prep for %d.%d will not block, "
+		dprintf( D_FULLDEBUG, "Job cleanup for %d.%d will not block, "
 				 "calling jobIsFinished() directly\n", cluster, proc );
 
 		jobIsFinished( cluster, proc );
