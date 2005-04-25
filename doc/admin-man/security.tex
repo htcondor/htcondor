@@ -3,7 +3,70 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security! in Condor|(}
 
-This section describes various aspects of security within Condor.
+Security in Condor is a broad issue, with many aspects to
+consider. Because Condor's main purpose is to allow users to run
+arbitary code on large numbers of computers, it is important to try to
+limit who can access a Condor pool and what privileges they have when
+using the pool. This secdtion covers these topics in depth. 
+
+It is important to understand what kinds of attacks on your resourcess
+Condor can prevent and which ones it cannot prevent. If a user knows
+of a security exploit that can elevate their privilege to the root or
+administrator account, Condor will not prevent them from being able to
+do so. Condor does not run jobs in sandboxes (standard universe jobs
+are a partial exception to this), so it cannot prevent user jobs from
+malicious actions such as launching distributed denial of service
+attacks. Condor assumes that you can trust your users. Condor can
+prevent unauthorized access to your Condor pool to help you ensure
+that only trusted users have access to your pool. In addition, Condor
+can provide encryption and integrity checking to ensure that data
+(Condor's and users' data) has not been examined to tampered with. 
+
+Broadly speaking, there are a few important aspects to security in
+Condor: 
+
+\begin{description}
+
+\item[Users] What user is used to run the Condor daemons? What user is
+used to run jobs? The short answer to the first question is that we
+prefer that the daemons are run as root, but that there is another
+user they can switch to for most operations. This is usually the
+``condor'' user, but any user can be chosen. This topic is discussed
+in more detail in Section~\ref{sec:uids}. 
+
+\item[Authentication] When someone submits a job to Condor, how do you
+know who it is? The process by which is determine who a user is, is
+called authentication. By default, Condor's authentication simply uses
+the user id (or uid) to determine who a user is, but Condor can use a
+variety of authentication mechanisms including Kerberos and GSI to
+perform authentication more securely. 
+
+\item[Authorization] Once you have authenticated a user and you know
+who it is, what are they allowed to do? Some users are allowed to
+submit jobs, while other users are allowed Condor administration
+privileges. Condor provides facilities for deciding what different
+users are authorized to do. 
+
+\item[Privacy] Condor can encrypt data sent across the network, which
+can normally prevent other people from your data. (If someone is
+persistent enough and has sufficient computing power, they could
+decrypt it, but this is unlikely.) Condor can encrypt either the data
+that it sends for internal communication, or user data, such as files
+and executables. Note that the encryption is uesd for network
+transmissions: data is still stored on disk unencrypted.
+
+\item[Integrity] Condor can send additional cryptographic data that
+can be used to verify that network data transmissions have not been
+tampered with. This can be used to prevent so-called ``man-in-the
+middle'' attacks in which an attacker changes the data being sent
+across the network without either side being aware of the
+modifications. Note that the integrity information is only for network
+transmissions: data stored on disk does not have this integrity
+information. 
+
+\end{description}
+
+The following subsections describe these topics in more detail. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:uids}UIDs in Condor}
