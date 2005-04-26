@@ -3002,8 +3002,17 @@ Defaults to 1200 (20 minutes).
   "argument" and "one".
   For Bourne shells, the following preserves the arguments:
 \begin{verbatim}
-           exec "$@"
+        exec "$@"
 \end{verbatim}
+
+\item[\Macro{USE\_VISIBLE\_DESKTOP}] \label{param:UseVisibleDesktop} 
+  This setting is only meaningful on Windows machines.  If True, Condor will
+  allow the job to create windows on the desktop of the execute machine and
+  interact with the job.  This is particularly useful for debugging why an
+  application will not run under Condor.  If False, Condor uses the default
+  behavior of creating a new, non-visible desktop to run the job on.
+  See section~\ref{sec:platform-windows} for details on how Condor 
+  interacts with the desktop.
 
 \item[\Macro{STARTER\_JOB\_ENVIRONMENT}] \label{param:StarterJobEnvironment}
   This macro sets the default environment inherited by jobs.  The syntax is
