@@ -362,6 +362,7 @@ ext_target(EXT_CLASSADS_VERSION, $(NULL))
 #endif
 ext_target(EXT_GSOAP_VERSION,$(NULL))
 
+ext_target(EXT_POSTGRESQL_VERSION,$(NULL))
 
 clean::
 	rm -rf $(PURE_DIR)
