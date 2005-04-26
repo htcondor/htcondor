@@ -2113,6 +2113,9 @@ control state or activity transitions within the
   and each reports to the same \Condor{collector}.
   Different names will distinguish the two daemons.
 
+\item[\Macro{RunBenchmarks}] \label{param:RunBenchmarks}
+  Specifies when to run benchmarks.  When the machine is in the Unclaimed state and this expression evaluates to TRUE, benchmarks will be run.  If RunBenchmarks is specified and set to anything other than FALSE additional benchmarks will be run when the startd initially starts.  To disable startup benchmarks you must set \MacroNI{RunBenchmarks} to FALSE or comment it out of the configuration file.
+
 \end{description}
 
 These macros only apply to the \Condor{startd} daemon when it is running on an

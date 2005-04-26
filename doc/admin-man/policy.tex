@@ -593,6 +593,7 @@ evaluates to FALSE, the machine returns to the Owner state by
 transition \Bold{2}.
 
 When in the Unclaimed state,
+\index{RunBenchmarks@\Expr{RunBenchmarks} expression}
 the \Expr{RunBenchmarks} \label{param:RunBenchmarks}  
 expression is relevant.
 If \Expr{RunBenchmarks} evaluates to TRUE while the machine
@@ -626,6 +627,7 @@ So, if you want the startd to run benchmarks as soon as the machine is
 Unclaimed (if it hasn't done so already),
 include a term for \Attr{LastBenchmark} as in the example above.
 
+\index{RunBenchmarks@\Expr{RunBenchmarks} expression}
 \Note If \Expr{RunBenchmarks} is defined and set to something
 other than FALSE, the startd will automatically run one set of
 benchmarks when it first starts up.
