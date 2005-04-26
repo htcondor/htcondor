@@ -30,7 +30,7 @@ c_plus_target(conversion_test,testConversion.o,libconversion.a $(LIB))
 c_plus_target(aec_test,testAEC.o,libconversion.a $(LIB))
 c_plus_target(aet_test,testAET.o,libconversion.a $(LIB))
 c_plus_target(start_analyzer,start_analyzer.o,libanalysis.a libconversion.a $(LIB))
-c_plus_target(ggm_test,testPortGraph.o,libgangmatch.a $(LIB))
+c_plus_target(ggm_test,testPortGraph.o,libgangmatch.a libanalysis.a $(LIB))
 c_plus_target(analysis_test,testAnalysis.o, libanalysis.a libconversion.a $(LIB))
 
 /*
