@@ -413,7 +413,8 @@ V6_7_7_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/classads/0.9.8-b2 \
 		   externals/bundles/globus/2.4.3.data \
 		   externals/bundles/gsoap/2.7 \
-		   externals/bundles/srb/3.2.1
+		   externals/bundles/srb/3.2.1 \
+		   externals/bundles/postgresql/8.0.2
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_7_EXT
