@@ -47,8 +47,13 @@ while(<TPLATE>)
 	$line = $_;
 	if( $line =~ /^\s*remote_pool\s*=\s*($dummyhost):\s*(\d+)\s*$/ )
 	{
-		print "remote pool is $1 port $remport\n";
+		print "remote pool is $currenthost:$remport\n";
 		print CSUB "remote_pool = $currenthost:$remport\n";
+	}
+	elsif( $line =~ /^\s*remote_schedd\s*=.*$/ )
+	{
+		my $schedd = "schedd$mypid" . "remote\@$currenthost";
+		print CSUB "remote_schedd = $schedd\n";
 	}
 	elsif( $line =~ /^\s*(.*)$dummyhost(.*)\s*$/)
 	{
@@ -87,15 +92,14 @@ if( ! -e "job_condorc_xxx_van.in" )
 	system("date > job_condorc_xxx_van.in");
 }
 
+print "Looking for schedds at B remote point of AB - Condor-C\n";
+system("condor_status -pool $currenthost:$remport -schedd -format '%s\n' Name");
+
 my $result = system("./job_condorc_ab_van.pl $mysubmitnm");
 print "Result of crafted Condor-C job is  $result\n";
 
 system("cp -r $mypid $mysaveme");
-
-if( $result != 0 )
-{
-	exit(1);
-}
+system("cp *condorc* $mysaveme");
 
 if( -e "$mysubmitnm" )
 {
@@ -110,6 +114,11 @@ if( -e "$mysubmitnmout" )
 if( -e "$mysubmitnmlog" )
 {
 	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+if( $result != 0 )
+{
+	exit(1);
 }
 
 system("condor_off -master");
