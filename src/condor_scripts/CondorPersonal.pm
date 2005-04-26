@@ -51,6 +51,7 @@ use Sys::Hostname;
 
 my $topleveldir = getcwd();
 my $home = $topleveldir;
+my $localdir;
 my $pid = $$;
 
 BEGIN
@@ -91,8 +92,14 @@ sub StartCondor
 	$personal_config_file = $topleveldir ."/condor_config";
 
 	CondorPersonal::ParsePersonalCondorParams($paramfile);
-	CondorPersonal::InstallPersonalCondor();
-	CondorPersonal::TunePersonalCondor();
+
+	$localdir = CondorPersonal::InstallPersonalCondor();
+	if($localdir eq "")
+	{
+		return("Failed to do needed Condor Install\n");
+	}
+
+	CondorPersonal::TunePersonalCondor($localdir);
 
 	$collector_port = CondorPersonal::StartPersonalCondor();
 
@@ -288,6 +295,7 @@ sub InstallPersonalCondor
 	my $startd;
 	my $negotiator;
 	my $condorq = `which condor_q`;
+	my $sbinloc;
 
 	if( exists $control{"condor"} )
 	{
@@ -307,12 +315,11 @@ sub InstallPersonalCondor
 				die "Can not seem to find a Condor install!\n";
 			}
 			
-			my $sbinloc;
 
 			if( $binloc =~ /^(\/.*\/)bin\/\s*$/ )
 			{
 				debug( "Root path to sbin is $1\n");
-				$sbinloc = $1;	# we'll get our binaries here.
+				$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
 			}
 			else
 			{
@@ -331,9 +338,9 @@ sub InstallPersonalCondor
 
 			debug( "Sandbox started rooted here: $topleveldir\n");
 
-			system("mkdir -p $topleveldir/sbin");
-			system("mkdir -p $topleveldir/bin");
-			system("mkdir -p $topleveldir/lib");
+			#system("mkdir -p $topleveldir/sbin");
+			#system("mkdir -p $topleveldir/bin");
+			#system("mkdir -p $topleveldir/lib");
 			system("mkdir -p $topleveldir/execute");
 			system("mkdir -p $topleveldir/spool");
 			system("mkdir -p $topleveldir/log");
@@ -341,9 +348,9 @@ sub InstallPersonalCondor
 
 			# now install condor
 
-			system("cp $sbinloc/sbin/* $topleveldir/sbin");
-			system("cp $binloc/* $topleveldir/bin");
-			system("cp $sbinloc/lib/* $topleveldir/lib");
+			#system("cp $sbinloc/sbin/* $topleveldir/sbin");
+			#system("cp $binloc/* $topleveldir/bin");
+			#system("cp $sbinloc/lib/* $topleveldir/lib");
 		}
 		elsif( -e $condordistribution )
 		{
@@ -357,6 +364,7 @@ sub InstallPersonalCondor
 			system("mkdir -p $topleveldir/spool");
 			system("mkdir -p $topleveldir/log");
 			system("tar -xf $home/$condordistribution");
+			$sbinloc = $topleveldir; # local_dir is here
 			chdir "$home";
 		}
 		else
@@ -367,7 +375,10 @@ sub InstallPersonalCondor
 	else
 	{
 		debug( " no condor attribute so not installing condor \n");
+		$sbinloc = "";
 	}
+	print "InstallPersonalCondor returning $sbinloc for LOCAL_DIR setting\n";
+	return($sbinloc);
 }
 
 #################################################################
@@ -386,6 +397,9 @@ sub TunePersonalCondor
 {
 	my %control = %personal_condor_params;
 	my $condorhost = `/bin/hostname`;
+	my $localdir = shift;
+
+	print "TunePersonalCondor setting LOCAL_DIR to $localdir\n";
 
 	chomp($condorhost);
 
@@ -438,8 +452,8 @@ sub TunePersonalCondor
 		if( $line =~ /^RELEASE_DIR\s*=.*/ )
 		{
 			debug( "-----------$line-----------\n");
-			$personal_config_changes{"RELEASE_DIR"} = "RELEASE_DIR = $topleveldir\n";
-			print NEW "RELEASE_DIR = $topleveldir\n";
+			$personal_config_changes{"RELEASE_DIR"} = "RELEASE_DIR = $localdir\n";
+			print NEW "RELEASE_DIR = $localdir\n";
 		}
 		elsif( $line =~ /^LOCAL_DIR\s*=.*/ )
 		{
@@ -569,12 +583,12 @@ sub TunePersonalCondor
 sub StartPersonalCondor
 {
 	my %control = %personal_condor_params;
-	my $personalmaster = "$topleveldir/sbin/condor_master";
+	my $personalmaster = "$localdir/sbin/condor_master";
 
 	my $configfile = $control{"condorconfig"};
 	my $fullconfig = "$topleveldir/$configfile";
 	my $oldpath = $ENV{PATH};
-	my $newpath = "$topleveldir/sbin:$topleveldir/bin:" . "$oldpath";
+	my $newpath = "$localdir/sbin:$localdir/bin:" . "$oldpath";
 	$ENV{PATH} = $newpath;
 
 	debug( "Using this path: --$newpath--\n");
