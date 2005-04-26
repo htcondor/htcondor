@@ -36,6 +36,7 @@ class AttrNode;
 class ExtAttrNode;
 class PortNode;
 class MatchEdge;
+class MatchPath;
 
 typedef classad_hash_map<std::string, AttrNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr> AttrNodeMap;
 typedef classad_hash_map<std::string, ExtAttrNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr> ExtAttrNodeMap;
@@ -48,21 +49,28 @@ class ExtAttrNode
  public:
 
 		/** Default Constructor */
-	ExtAttrNode( );
+	ExtAttrNode( PortNode* _parent, std::string _attrName );
 
 		/** Destructor */
 	~ExtAttrNode( );
 
-//	MatchPath* GetFirstPath( );
-//	MatchPath* GetNextPath( );
-//	bool AtLastPath( );
+	MatchPath* GetFirstPath( );
+	MatchPath* GetNextPath( );
+	bool AtLastPath( );
+	
 
 	bool ToString( std::string& );
 
  private:
 	int eNodeNum;
 	static int nextENodeNum;
-//	std::vector<MatchEdge*> matchEdges;
+	std::string attrName;
+	PortNode* parent;
+
+	bool* visited;
+	unsigned int* currEdgeAtNode;
+	std::vector<ExtAttrNode*> nodeStack;
+	MatchPath* path;
 };
 
 class AttrNode
@@ -76,6 +84,10 @@ class AttrNode
 
 		/** Destructor */
 	~AttrNode( );
+
+		// access methods
+	ExtAttrNode* GetDep( );
+	bool IsLiteral( );
 
 		// modification methods
 	bool AddDep( ExtAttrNode* );
@@ -103,21 +115,26 @@ class PortNode
 	~PortNode( );
 
 		// access methods
-	int GetNumReqDeps( );
-//	int GetNumAttrDeps( );
 	int GetAdNum( );
 	int GetPortNum( );
-	bool GetReqDeps( ExtAttrNode**, int );
-//	bool GetAttrDeps( ExtAttrNode**, int );
+	bool GetReqDeps( unsigned int, std::set<ExtAttrNode*>& );
+	bool GetAttrDeps( std::set<ExtAttrNode*>& );
 	classad::ClassAd* GetParentAd( );
 	ExtAttrNode* GetExtAttrNode( std::string attr );
+	AttrNode* GetAttrNode( std::string attr );
+	MatchEdge* GetMatchEdge( unsigned int );
+	unsigned int GetNumMatchEdges( );
+	unsigned int GetNumClauses( );
 
 		// modification methods
 	bool AddAttrNode( std::string );
-	bool AddAttrNode( std::string, classad::Value );
+	bool AddAttrNode( std::string, classad::Value& );
 	bool AddExtAttrNode( std::string );
-	bool AddReqDep( ExtAttrNode * );
+	unsigned int AddClause( );
+	bool AddReqDep( unsigned int, ExtAttrNode * );
 	bool AddAttrDep( std::string attr, ExtAttrNode * );
+	bool AddMatchEdge( int edgeNum, PortNode* target, 
+					   std::vector<MatchPath*>& annotations );
 
 	bool ToString( std::string& );
 
@@ -125,11 +142,9 @@ class PortNode
 	classad::ClassAd* parentAd;
 	int adNum;
 	int portNum;
-	int numReqDeps;
-//	int numAttrDeps;
 	AttrNodeMap attrNodes;
 	ExtAttrNodeMap extAttrNodes;
-	std::vector<ExtAttrNode*> reqDeps;
+	std::vector<std::vector<ExtAttrNode*>*> reqDeps;
 	std::vector<MatchEdge*> matchEdges;
 };
 
@@ -141,10 +156,17 @@ class MatchEdge
 		/** Default Constructor **/
 	MatchEdge( );
 
-	MatchEdge( int _edgeNum, PortNode* _source, PortNode* _target );
+	MatchEdge( int _edgeNum, PortNode* _source, PortNode* _target,
+			   std::vector<MatchPath*>& _annotations );
 	
 		/** Destructor **/
 	~MatchEdge( );
+
+	PortNode *GetSource( );
+	PortNode *GetTarget( );
+	int GetEdgeNum( );
+	bool HasNoAnnotations( );
+	bool SameAnnotations( std::vector<MatchPath*>& );
 
 	bool ToString( std::string& );
 
@@ -152,6 +174,7 @@ private:
 	int edgeNum;
 	PortNode *source;
 	PortNode *target;
+	std::vector<MatchPath*> annotations;
 };
 
 class MatchPath
@@ -164,6 +187,14 @@ class MatchPath
 	~MatchPath( );
 
 	bool AddMatchEdge( MatchEdge* );
+
+	bool Empty( );
+	bool RemoveLastEdge( );
+	MatchPath* Copy( );
+	bool SameAs( MatchPath* );
+	unsigned int GetNumEdges( );
+	MatchEdge* GetMatchEdge( unsigned int );
+
 
 	bool ToString( std::string& );
 
@@ -183,7 +214,7 @@ class PortGraph
 	~PortGraph( );
 
 	bool Initialize( std::vector<classad::ClassAd*>& );
-//	bool Saturate( );
+	bool Saturate( );
 
 	bool ToString( std::string& );
 
@@ -191,11 +222,9 @@ class PortGraph
 	int nextMatchEdgeNum;
 	std::vector<PortNode*> portNodes;
 	int numPortNodes;
-//	bool AddMatchEdges( PortNode*, PortNode* );
-//	bool EvalReqs( PortNode*, PortNode* );
-//	bool EvalReqs( PortNode*, PortNode*, MatchPath**, int );
-//	bool AddMatchEdge( PortNode*, PortNode* );
-//	bool AddMatchEdge( PortNode*, PortNode*, MatchPath**, int );
+	bool AddMatchEdges( PortNode*, PortNode* );
+	bool EvalReqs( PortNode*, PortNode*, std::vector<MatchPath*>& );
+	bool AddMatchEdge( PortNode*, PortNode*, std::vector<MatchPath*>& );
 	
 };
 
