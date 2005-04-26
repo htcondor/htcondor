@@ -41,6 +41,8 @@ public:
 	void	reset( );
 	void	printKeys( );
 
+	void	testOneWayMatch( int, classad::Value& );
+
 protected:
 	void	testMatch( int, classad::Value& );
 	bool 	fillDock( int, bool );

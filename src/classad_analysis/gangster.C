@@ -244,6 +244,27 @@ Gangster::testMatch( int dockNum, classad::Value &val )
 								 val1, val2, val );
 }
 
+void
+Gangster::testOneWayMatch( int dockNum, classad::Value &val )
+{
+		// test dock's requirements and parent dock's requirements
+	val.SetErrorValue( );
+#if defined(DEBUG)
+	classad::PrettyPrint pp;
+	std::string buffer = "";
+	printf( "---\n" );
+	pp.Unparse( buffer, &bundle );
+	pp.Unparse( buffer, docks[dockNum].port->portAd );
+	if( parentGangster ) {
+		pp.Unparse( buffer, parentGangster->docks[parentDockNum].port->portAd);
+	}
+	cout << buffer;
+	printf( "---\n" );
+#endif 
+	if( !docks[dockNum].port->portAd->EvaluateAttr( "Requirements", val ) ) {
+		return;
+	}
+}
 
 bool
 Gangster::match( bool backtrack )
