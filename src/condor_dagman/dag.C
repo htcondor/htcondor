@@ -1053,7 +1053,6 @@ void Dag::RemoveRunningJobs () const {
 		// if node is running a PRE script, hard kill it
         else if( job->GetStatus() == Job::STATUS_PRERUN ) {
 			ASSERT( job->_scriptPre );
-			ASSERT( job->_scriptPre->_pid != 0 );
 			if (daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
 				             "WARNING: shutdown_fast() failed on pid %d: %s\n",
