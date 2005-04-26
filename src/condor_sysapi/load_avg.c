@@ -483,6 +483,7 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
 							   (int)pdhStatus); */
+			free(hCounterCpuLoad);
 			return 3;
 		}
 	}
@@ -493,6 +494,8 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhCollectQueryData returns 0x%x\n", 
 							   (int)pdhStatus); */
+			for (i=0; i<ncpus;i++) { PdhRemoveCounter(hCounterCpuLoad[i]); }
+			free(hCounterCpuLoad);
 			return 4;
 		}
 
@@ -502,6 +505,8 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
 							   (int)pdhStatus); */
+			for (i=0; i<ncpus;i++) { PdhRemoveCounter(hCounterCpuLoad[i]); }
+			free(hCounterCpuLoad);
 			return 5;
 		}
 		queuelen = counterval.longValue;
@@ -513,6 +518,8 @@ sample_load(void *thr_data)
 			if (pdhStatus != ERROR_SUCCESS) {
 				/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
 								   (int)pdhStatus); */
+				for (i=0; i<ncpus;i++) { PdhRemoveCounter(hCounterCpuLoad[i]); }
+				free(hCounterCpuLoad);
 				return 6;
 			}
 			cpuload += counterval.doubleValue/100.0;
