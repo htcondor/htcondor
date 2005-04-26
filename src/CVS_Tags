@@ -1,3 +1,11 @@
+04/26/05 V6_6-merge-39
+   The state of the V6_6-branch for a merge into V6_7-branch.  This
+   includes some more win32 bug fixes to leaking memory, dynuser,
+   firewall stuff, etc.  Also included: removed a bogus ASSERT() in
+   DAGMan, some enhancements to condor_tests, NMI glue, the
+   gridmanager_monitor_agent, the 1-time vs. periodic DC timer bug in
+   the schedd, and minor dprintf() fixes in the idle_time code.
+
 04/06/05 V6_6-merge-38
    The state of the V6_6-branch for a merge into V6_7-branch.  This
    includes a bunch of win32 bug fixes: the execute directory cleanup
