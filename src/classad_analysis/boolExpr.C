@@ -503,3 +503,9 @@ Init( classad::ExprTree * tree )
 	return true;
 }
 
+
+classad::ExprTree* BoolExpr::
+GetExpr( )
+{
+	return myTree;
+}

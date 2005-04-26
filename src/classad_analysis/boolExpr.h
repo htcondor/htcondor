@@ -105,6 +105,11 @@ class BoolExpr
 		*/ 
 	bool ToString( string &buffer );
 
+		/** Returns the ClassAd expression equivalent of the BoolExpr
+			@return the ExprTree equivalent of the BoolExpr.
+		 */
+	classad::ExprTree* GetExpr( );
+
 		/** Destructor */
 	virtual ~BoolExpr( );
  protected:
