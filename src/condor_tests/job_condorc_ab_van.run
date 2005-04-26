@@ -15,6 +15,9 @@ system("date");
 print "Dummyhost was $dummyhost and really running on $currenthost\n";
 
 $mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmout = $corename . $mypid . ".cmd.out";
 $mysubmitnmlog = $corename . $mypid . ".log";
@@ -84,19 +87,15 @@ if( ! -e "job_condorc_xxx_van.in" )
 	system("date > job_condorc_xxx_van.in");
 }
 
-my $result = system("job_condorc_ab_van.pl $mysubmitnm");
+my $result = system("./job_condorc_ab_van.pl $mysubmitnm");
 print "Result of crafted Condor-C job is  $result\n";
+
+system("cp -r $mypid $mysaveme");
+
 if( $result != 0 )
 {
 	exit(1);
 }
-
-#$mysubmitnm = $corename . $mypid . ".cmd";
-#$mysubmitnmout = $corename . $mypid . ".cmd.out";
-#$mysubmitnmlog = $corename . $mypid . ".log";
-#$mycorenm = $corename . ".cmd";
-#$mycorenmout = $corename . ".cmd.out";
-#$mycorenmlog = $corename . ".log";
 
 if( -e "$mysubmitnm" )
 {
