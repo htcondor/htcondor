@@ -51,7 +51,7 @@ foreach $name (@filestochmod)
 	system("chmod 755 $name");
 }
 
-my $queuelength = 40;
+my $queuelength = 10;
 my $submitcount = 0;
 my $donecount = 0;
 
