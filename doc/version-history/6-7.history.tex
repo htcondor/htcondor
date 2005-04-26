@@ -26,7 +26,7 @@ The details of each version are described below.
 entries on the list can also be specific to a VM. 
 See ~\ref{sec:SMP-exps} for more details.
 
-\item The \Macro{LOCAL\_CONFIG\_FILE} can now be overriden. 
+\item The \Macro{LOCAL\_CONFIG\_FILE} can now be overridden. 
 This now allows files to include other local config files. 
 See ~\ref{param:LocalConfigFile} for more info.
 
@@ -56,6 +56,10 @@ machine or older version of Condor remain as before.
 \item \condor{advertise} now publishes a ``MyAddress'' if none is provided
 in the source ClassAd.  This will prevent the collector from throwing out
 ads with no address (see Bugs Fixed).
+
+\item Added a new \Condor{dagman} parameter \MacroNI{DAGMAN\_ALLOW\_EVENTS}
+controlling which ``bad'' events are not considered fatal errors;
+the \Opt{-NoEventChecks} command-line argument is deprecated and has no effect.
 
 \end{itemize}
 
@@ -619,7 +623,7 @@ tuning job start rate given available \Condor{schedd} performance.
 \item Added a \MacroNI{LIBEXEC} directory to the install process.
 Support commands that
 the Condor system needs will be added to this directory in future releases.
-This directory should not be added to a user or systemwide path.  
+This directory should not be added to a user or system-wide path.  
 
 \item Added the ability to decide for each file that condor transfers whether
 it should be encrypted or not, using encrypt\_input\_files, 

@@ -3889,6 +3889,39 @@ in the case of that a node job runs twice
 contain the string
 "EVENT ERROR."
 
+This macro is now deprecated (because of the improved functionality
+of the \MacroNI{DAGMAN\_ALLOW\_EVENTS} macro).
+
+\item[\Macro{DAGMAN\_ALLOW\_EVENTS}]
+\label{param:DAGManAllowEvents}
+An integer that controls which "bad" events are considered
+fatal errors by \Condor{dagman}.  This macro replaces and expands
+upon the functionality of the
+\MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} macro.
+If \MacroNI{DAGMAN\_ALLOW\_EVENTS} is set, it overrides the
+setting of \MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}.
+
+The \MacroNI{DAGMAN\_ALLOW\_EVENTS} value is a bitwise-OR of the
+following values:
+\begin{description}
+\item 0 = allow no "bad" events
+\item 1 = allow all "bad" events (overrides other bits)
+\item 2 = allow terminated/aborted event combination (default)
+\item 4 = allow "job re-run after terminated event" bug
+\item 8 = allow garbage/orphan events
+\end{description}
+
+For example, a value of 6 instructs \Condor{dagman} to allow both
+the terminated/aborted event combination and the "job re-run
+after terminated event" bug.  A value of 0 means that any "bad"
+event will be considered a fatal error.
+
+This macro should almost always remain set to the default value!
+
+\item[\Macro{DAGMAN\_DEBUG}] \label{param:DAGManDebug} This macro
+is described in section~\ref{param:SubsysDebug} as
+\Macro{SUBSYS\_DEBUG}.
+
 \end{description}
 
 

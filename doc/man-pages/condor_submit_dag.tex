@@ -69,8 +69,10 @@ description.
      \Condor{submit} manual page on page~\pageref{man-condor-submit}
      for specification of \Arg{value}.
      }
-  \OptItem{\Opt{-noeventchecks}}{This optional argument turns off
-     extra checking of event consistency within \Condor{dagman}.}
+  \OptItem{\Opt{-noeventchecks}}{This argument is deprecated and
+     is now ignored.  Its functionality is now implemented by
+     the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration macro
+     (see section~\ref{param:DAGManAllowEvents}).}
   \OptItem{\Opt{-allowlogerror}}{This optional argument has
      \Condor{dagman} try to run the specified DAG, even in the case
      of detected errors in the user log specification. }
