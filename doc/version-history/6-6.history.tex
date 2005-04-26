@@ -16,6 +16,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in \Condor{dagman} which could cause it to ASSERT()
+improperly if it was removed from the queue while it had waiting PRE
+scripts throttled.
+
 \item Most of the fixes included in this release were also included in
   version 6.7.7.
 
