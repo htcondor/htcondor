@@ -53,6 +53,7 @@ my $topleveldir = getcwd();
 my $home = $topleveldir;
 my $localdir;
 my $pid = $$;
+my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
 
 BEGIN
 {
@@ -80,8 +81,9 @@ BEGIN
 sub StartCondor
 {
 	my $paramfile = shift || die "Missing parameter file!\n";
-	my $version = shift || die "Missing parameter version!\n";
 	my $config_and_port = "";
+
+	$version = shift || die "Missing parameter version!\n";
 
 	system("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/" . $pid;
@@ -501,6 +503,7 @@ sub TunePersonalCondor
 	{
 		# this variation requests a dynamic port for collector and negotiator
 		# and the location where we can look up the adresses.
+		print NEW "SCHEDD_NAME = schedd$pid$version\n";
 		print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST):0\n";
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
