@@ -29,14 +29,11 @@
 
 //-----------------------------------------------------------------------------
 
-CheckEvents::CheckEvents(bool allowExtraAborts, bool allowExtraRuns,
-		bool allowGarbage) :
+CheckEvents::CheckEvents(int allowEvents) :
 		jobHash(JOB_HASH_SIZE, ReadMultipleUserLogs::hashFuncJobID,
 		rejectDuplicateKeys)
 {
-	this->allowExtraAborts = allowExtraAborts;
-	this->allowExtraRuns = allowExtraRuns;
-	this->allowGarbage = allowGarbage;
+	this->allowEvents = allowEvents;
 }
 
 //-----------------------------------------------------------------------------
@@ -53,13 +50,20 @@ CheckEvents::~CheckEvents()
 
 //-----------------------------------------------------------------------------
 
-bool
-CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
-		bool &eventIsGood)
+CheckEvents::check_event_result_t
+CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 {
-	eventIsGood = true;
-	bool		result = true;
+	check_event_result_t	result = EVENT_OKAY;
 	errorMsg = "";
+
+		// Note: eventIsGood and notAnError are left over from when
+		// this method used to return two values; I haven't propagated
+		// the changes all the way down so far.  Yeah, having a
+		// variable called notAnError is kind of stupid, but to
+		// change it to just 'error' I'd have to make a bunch of
+		// lower-level changes.  wenger, 2005-04-14.
+	bool		eventIsGood = true;
+	bool		notAnError = true;
 
 	ReadMultipleUserLogs::JobID	id;
 	id.cluster = event->cluster;
@@ -79,24 +83,28 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
 		info = new JobInfo();
 		if ( jobHash.insert(id, info) != 0 ) {
 			errorMsg = "EVENT ERROR: hash table insert error";
-			result = false;
+			notAnError = false;
 		}
 	}
 
-	if ( result ) {
+	if ( notAnError ) {
 		switch ( event->eventNumber ) {
 		case ULOG_SUBMIT:
 			info->submitCount++;
 			if ( info->submitCount != 1 ) {
 				errorMsg = idStr + " submitted; submit count != 1 (" +
 						MyString(info->submitCount) + ")";
-				result = false;
+				if ( !AllowAll() ) {
+					notAnError = false;
+				}
 				eventIsGood = false;
 			}
 			if ( info->TotalEndCount() != 0 ) {
 				errorMsg = idStr + " submitted; total end count != 0 (" +
 						MyString(info->TotalEndCount()) + ")";
-				result = false;
+				if ( !AllowAll() ) {
+					notAnError = false;
+				}
 				eventIsGood = false;
 			}
 			break;
@@ -105,16 +113,17 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
 			if ( info->submitCount != 1 ) {
 				errorMsg = idStr + " executing; submit count != 1 (" +
 						MyString(info->submitCount) + ")";
-				if ( !allowGarbage || info->submitCount > 1 ) {
-					result = false;
+				if ( (!AllowGarbage() || info->submitCount > 1) &&
+							!AllowAll() ) {
+					notAnError = false;
 				}
 				eventIsGood = false;
 			}
 			if ( info->TotalEndCount() != 0 ) {
 				errorMsg = idStr + " executing; total end count != 0 (" +
 						MyString(info->TotalEndCount()) + ")";
-				if ( !allowExtraRuns ) {
-					result = false;
+				if ( !AllowExtraRuns() ) {
+					notAnError = false;
 				}
 				eventIsGood = false;
 			}
@@ -131,22 +140,28 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
 
 		case ULOG_JOB_ABORTED:
 			info->abortCount++;
-			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
+			notAnError = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
 			break;
 
 		case ULOG_JOB_TERMINATED:
 			info->termCount++;
-			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
+			notAnError = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
 			break;
 
 		case ULOG_POST_SCRIPT_TERMINATED:
 			info->postScriptCount++;
-			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
+			notAnError = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
 			break;
 
 		default:
 			break;
 		}
+	}
+
+	if ( !notAnError ) {
+		result = EVENT_ERROR;
+	} else if ( !eventIsGood ) {
+		result = EVENT_BAD_EVENT;
 	}
 
 	return result;
@@ -169,7 +184,7 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 	if ( info->submitCount != 1 ) {
 		errorMsg = idStr + " ended; submit count != 1 (" +
 				MyString(info->submitCount) + ")";
-		if ( !allowGarbage || info->submitCount > 1 ) {
+		if ( (!AllowGarbage() || info->submitCount > 1) && !AllowAll() ) {
 			result = false;
 		}
 		eventIsGood = false;
@@ -178,12 +193,12 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 	if ( info->TotalEndCount() != 1 ) {
 		errorMsg = idStr + " ended; total end "
 				"count != 1 (" + MyString(info->TotalEndCount()) + ")";
-		if ( allowExtraAborts &&
+		if ( AllowExtraAborts() &&
 				(info->abortCount == 1) && (info->termCount == 1) ) {
 			// Okay.
-		} else if ( allowExtraRuns ) {
+		} else if ( AllowExtraRuns() ) {
 			// Okay.
-		} else if ( allowGarbage && info->TotalEndCount() == 0 ) {
+		} else if ( AllowGarbage() && info->TotalEndCount() == 0 ) {
 			// Okay.
 		} else {
 			result = false;
@@ -196,12 +211,17 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 
 //-----------------------------------------------------------------------------
 
-bool
+CheckEvents::check_event_result_t
 CheckEvents::CheckAllJobs(MyString &errorMsg)
 {
-	bool		result = true;
+	check_event_result_t	result = EVENT_OKAY;
 	errorMsg = "";
+
+	bool		eventIsGood = true;
+	bool		notAnError = true;
+
 	const int	MAX_MSG_LEN = 1024;
+	bool		msgFull = false; // message length has hit max
 
 	ReadMultipleUserLogs::JobID	id;
 	JobInfo *info = NULL;
@@ -211,9 +231,9 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 			// Put a limit on the maximum message length so we don't
 			// have a chance of ending up with a ridiculously large
 			// MyString...
-		if ( errorMsg.Length() > MAX_MSG_LEN ) {
+		if ( !msgFull && (errorMsg.Length() > MAX_MSG_LEN) ) {
 			errorMsg += " ...";
-			break;
+			msgFull = true;
 		}
 
 		char		idBuf[128];
@@ -221,10 +241,17 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 				id.subproc);
 		MyString	idStr("JOB ERROR: job ");
 		idStr += idBuf;
-		bool		eventIsGood; // dummy
-		if ( !CheckJobEnd(idStr, info, errorMsg, eventIsGood) ) {
-			result = false;
+		MyString	tmpMsg;
+		if ( !CheckJobEnd(idStr, info, tmpMsg, eventIsGood) ) {
+			notAnError = false;
 		}
+		if ( !msgFull ) errorMsg += tmpMsg;
+	}
+
+	if ( !notAnError ) {
+		result = EVENT_ERROR;
+	} else if ( !eventIsGood ) {
+		result = EVENT_BAD_EVENT;
 	}
 
 	return result;

@@ -65,17 +65,15 @@ class Dagman {
 		// whether to peform expensive cycle-detection at startup
 		// (note: we perform run-time cycle-detection regardless)
 	bool startup_cycle_detect;
-	bool doEventChecks;
 
 		// Allow the job to execute even if we have an error determining
 		// the log files (e.g., the log file is missing from one of the
 		// node submit files).
 	bool allowLogError;
 
-		// Setting this causes DAGMan to tolerate the Condor bug of
-		// a job getting run more than once; otherwise this will be
-		// a fatal error.  (Default is false.)
-	bool allowExtraRuns;
+		// What "bad" events to treat as non-fatal (as opposed to fatal)
+		// errors; see check_events.h for values.
+	int allow_events;
 
 		// If this is true, nodes for which a submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts

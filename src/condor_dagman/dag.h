@@ -73,6 +73,8 @@ class Dag {
 		       one time
         @param maxPostScripts the maximum number of POST scripts to spawn at
 		       one time
+		@param allowEvents what "bad" events to treat as non-fatal (as
+			   opposed to fatal) errors; see check_events.h for values.
 		@param allowExtraRuns whether to tolerate the Condor "submit once,
 			   run twice" bug
 		@param dapLogName the name of the Stork (DaP) log file
@@ -82,7 +84,7 @@ class Dag {
 
     Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 bool allowExtraRuns, const char *dapLogName, bool allowLogError );
+		 int allowEvents, const char *dapLogName, bool allowLogError );
 
     ///
     ~Dag();
@@ -136,13 +138,12 @@ class Dag {
 		@param The outcome from the attempt to read the user log.
 	    @param The event.
 		@param Whether we're in recovery mode.
-		@param Whether to do event checks.
 		@param Whether we're done trying to read events (set by this
 			function).
 		@return True if the DAG should continue, false if we should abort.
 	*/
 	bool ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
-			bool recovery, bool doEventChecks, bool &done);
+			bool recovery, bool &done);
 
 	/** Print a submit event (we try to match it up with the right DAG
 			node).
@@ -435,7 +436,7 @@ class Dag {
 	void DumpDotFileArcs(FILE *temp_dot_file);
 	void ChooseDotFileName(MyString &dot_file_name);
 
-	CheckEvents	_ce;
+	CheckEvents	_checkEvents;
 
 		// The next time we're allowed to try submitting a job -- 0 means
 		// go ahead and submit right away.

@@ -84,7 +84,6 @@ Dagman::Dagman() :
 	submit_delay (0),
 	max_submit_attempts (0),
 	datafile (NULL),
-	doEventChecks (true),
 	allowLogError (false)
 {
 }
@@ -104,18 +103,64 @@ Dagman::~Dagman()
 bool
 Dagman::Config()
 {
+		// Note: debug_printfs are DEBUG_NORMAL here because when we
+		// get here we haven't processed command-line arguments yet.
+
 	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n",
+				submit_delay );
 	max_submit_attempts =
 		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 16 );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMIT_ATTEMPTS setting: %d\n",
+				max_submit_attempts );
 	startup_cycle_detect =
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %d\n",
+				startup_cycle_detect );
 	max_submits_per_interval =
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
-	allowExtraRuns = param_boolean(
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n",
+				max_submits_per_interval );
+
+		// Event checking setup...
+
+		// We want to default to allowing the terminated/aborted
+		// combination (that's what we've defaulted to in the past).
+	allow_events = CheckEvents::ALLOW_TERM_ABORT;
+
+		// If the old DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION param is set,
+		// we also allow extra runs.
+		// Note: this parameter is probably only used by CDF, and only
+		// really needed until they update all their systems to 6.7.3
+		// or later (not 6.7.3 pre-release), which fixes the "double-run"
+		// bug.
+	bool allowExtraRuns = param_boolean(
 			"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION", false );
+
+	if ( allowExtraRuns ) {
+		allow_events |= CheckEvents::ALLOW_RUN_AFTER_TERM;
+		debug_printf( DEBUG_NORMAL, "Warning: "
+				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
+				"is deprecated -- used DAGMAN_ALLOW_EVENTS instead\n" );
+	}
+
+		// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
+		// all of the previous stuff.
+	allow_events = param_integer("DAGMAN_ALLOW_EVENTS", allow_events);
+
+	debug_printf( DEBUG_NORMAL, "allow_events ("
+				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION, DAGMAN_ALLOW_EVENTS"
+				") setting: %d\n", allow_events );
+
+		// ...end of event checking setup.
+
 	retrySubmitFirst = param_boolean( "DAGMAN_RETRY_SUBMIT_FIRST", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_SUBMIT_FIRST setting: %d\n",
+				retrySubmitFirst );
 	maxJobs =
 		param_integer( "DAGMAN_MAX_JOBS_SUBMITTED", maxJobs, 0, INT_MAX );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_SUBMITTED setting: %d\n",
+				maxJobs );
 
 	return true;
 }
@@ -334,7 +379,9 @@ int main_init (int argc, char ** const argv) {
 			run_post_on_failure = FALSE;
 
         } else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
-			dagman.doEventChecks = false;
+			debug_printf( DEBUG_SILENT, "Warning: -NoEventChecks is "
+						"deprecated; please use the DAGMAN_ALLOW_EVENTS "
+						"config parameter instead\n");
 
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;
@@ -415,7 +462,7 @@ int main_init (int argc, char ** const argv) {
 
     dagman.dag = new Dag( dagman.datafile, condorLogName, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dagman.allowExtraRuns, dapLogName, //<-- DaP
+						  dagman.allow_events, dapLogName, //<-- DaP
 						  dagman.allowLogError );
 
     if( dagman.dag == NULL ) {

@@ -351,7 +351,9 @@ void writeSubmitFile(const SubmitDagOptions &opts)
     }
 	if(opts.bNoEventChecks)
 	{
-		strArgs += " -NoEventChecks";
+		// strArgs += " -NoEventChecks";
+		printf( "Warning: -NoEventChecks is deprecated; please use "
+					"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
 	}
 	if(opts.bAllowLogError)
 	{

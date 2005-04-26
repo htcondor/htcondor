@@ -51,7 +51,7 @@ void touch (const char * filename) {
 //---------------------------------------------------------------------------
 Dag::Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
-		  bool allowExtraRuns, const char* dapLogName, bool allowLogError ) :
+		  int allow_events, const char* dapLogName, bool allowLogError ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	_dagFile			  (NULL),
@@ -65,7 +65,7 @@ Dag::Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_allowLogError		  (allowLogError),
-	_ce                   (true, allowExtraRuns)
+	_checkEvents          (allow_events)
 {
 
 	_dagFile = strnewp( dagFile );
@@ -371,7 +371,7 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 		}
 
 		bool tmpResult = ProcessOneEvent( outcome, e, recovery,
-					dm.doEventChecks, done );
+					done );
 			// If ProcessOneEvent returns false, the result here must
 			// be false.
 		result = result && tmpResult;
@@ -394,7 +394,7 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 //---------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
-		bool recovery, bool doEventChecks, bool &done) {
+		bool recovery, bool &done) {
 
 	bool result = true;
 
@@ -477,9 +477,8 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 				// Note: we only check an event if we have a job object for
 				// it, so that we don't pay any attention to unrelated
 				// "garbage" events that may be in the log(s).
-			if ( doEventChecks && job ) {
+			if ( job ) {
 				MyString	eventError;
-				bool		eventIsGood;
 
 					// Note: the event checking has pretty much been
 					// considered "diagnostic" until now; however, it
@@ -487,9 +486,9 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 					// event combo on a node that has retries left,
 					// DAGMan will assert if the event checking is
 					// turned off.  (See Gnats PR 467.)  wenger 2005-04-08.
-				bool checkResult = _ce.CheckAnEvent(event, eventError,
-							eventIsGood);
-				if ( eventIsGood ) {
+				CheckEvents::check_event_result_t checkResult =
+							_checkEvents.CheckAnEvent(event, eventError);
+				if ( checkResult == CheckEvents::EVENT_OKAY ) {
 					debug_printf( DEBUG_DEBUG_1, "Event is okay\n");
 				} else {
 					debug_printf( DEBUG_VERBOSE, "%s\n", eventError.Value() );
@@ -497,16 +496,20 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 								"may indicate a serious bug in Condor "
 								"-- beware!\n");
 
-					if ( checkResult ) {
+					if ( checkResult == CheckEvents::EVENT_BAD_EVENT ) {
 						debug_printf( DEBUG_VERBOSE, "Continuing with DAG "
-									"because "
-									"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
-									"is set or the event is a spurious "
-									"extra abort\n");
-					} else {
+									"in spite of bad event (%s) because of "
+									"allow_events setting\n",
+									eventError.Value() );
+					} else if ( checkResult == CheckEvents::EVENT_ERROR ) {
 						debug_printf( DEBUG_VERBOSE, "Aborting DAG because of "
-									"bad event\n" );
+									"bad event (%s)\n", eventError.Value() );
 						result = false;
+					} else {
+						debug_printf( DEBUG_QUIET, "Illegal "
+									"CheckEvents::check_event_allow_t "
+									"value: %d\n", checkResult );
+						ASSERT( false );
 					}
 
 						// Don't do any further processing of this event,
@@ -1897,15 +1900,17 @@ Dag::DumpDotFile(void)
 void
 Dag::CheckAllJobs(const Dagman &dm)
 {
-	if ( dm.doEventChecks ) {
-		MyString	jobError;
-		if ( !_ce.CheckAllJobs(jobError) ) {
-			debug_printf( DEBUG_VERBOSE, "Error checking job events: %s\n",
-					jobError.Value() );
-			ASSERT( false );
-		} else {
-			debug_printf( DEBUG_DEBUG_1, "All job events okay\n");
-		}
+	MyString	jobError;
+	if ( _checkEvents.CheckAllJobs(jobError) == CheckEvents::EVENT_ERROR ) {
+		debug_printf( DEBUG_VERBOSE, "Error checking job events: %s\n",
+				jobError.Value() );
+		ASSERT( false );
+	} else if ( _checkEvents.CheckAllJobs(jobError) ==
+				CheckEvents::EVENT_BAD_EVENT ) {
+		debug_printf( DEBUG_VERBOSE, "Warning checking job events: %s\n",
+				jobError.Value() );
+	} else {
+		debug_printf( DEBUG_DEBUG_1, "All job events okay\n");
 	}
 }
 

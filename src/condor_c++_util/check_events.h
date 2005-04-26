@@ -31,15 +31,51 @@
 */
 
 class CheckEvents {
+
   public:
+
+		// This controls which "bad" events are not considered (fatal?)
+		// errors.
+		// ALLOW_TERM_ABORT tolerates the common Condor bug of sometimes
+		// getting both a terminated and an aborted event for an aborted
+		// job.
+		// ALLOW_RUN_AFTER_TERM tolerates the "double-run" bug
+		// (see Gnats PRs 256 and 294).
+		// ALLOW_GARBAGE tolerates getting "garbage" events mixed
+		// into the log (e.g., a terminated event without a corresponding
+		// submit).
+		// WARNING: do not change existing values for event_check_allow_t,
+		// since users may specify them in config parameters!!
+	typedef enum {
+			// All bad events are errors.
+		ALLOW_NONE				= 0,
+
+			// No events are errors.
+		ALLOW_ALL				= 1 << 0,
+
+			// Spurious aborted event after a terminated event is not
+			// an error.
+		ALLOW_TERM_ABORT		= 1 << 1,
+
+			// "Extra" re-run of job after a terminated event is written
+			// is not an error.
+		ALLOW_RUN_AFTER_TERM	= 1 << 2,
+
+			// "Garbage" (ophan) events are not errors.
+		ALLOW_GARBAGE			= 1 << 3
+	} check_event_allow_t;
+
+		// This is what the checks return.
+	typedef enum {
+		EVENT_OKAY			= 1000,	// Everything is okay.
+		EVENT_BAD_EVENT		= 1001,	// A bad event that we tolerate.
+		EVENT_ERROR			= 1002	// A bad event we don't tolerate (error).
+	} check_event_result_t;
+
 	/** Constructor.
-	    @param Whether to allow "extra" abort events.
-		@param Whether to allow "extra" runs (Condor errors).
-		@param Whether to allow "garbage" events (submit with no
-		       corresponding terminate, vice-versa, etc.).
+	    @param What "bad" events to allow.
 	*/
-	CheckEvents(bool allowExtraAborts = false, bool allowExtraRuns = false,
-			bool allowGarbage = false);
+	CheckEvents(int allowEvents = ALLOW_NONE);
 
 	~CheckEvents();
 
@@ -50,10 +86,10 @@ class CheckEvents {
 		@param A MyString to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
 		@param Whether the event is "good" (set by this method).
-		@return true on success, false on failure ("incorrect" event).
+		@return check_event_result_t, see above.
 	*/
-	bool CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
-			bool &eventIsGood);
+	check_event_result_t CheckAnEvent(const ULogEvent *event,
+			MyString &errorMsg);
 
 	/** Check all jobs when we think they're done.  Makes sure we have
 		exactly one submit event and one termanated/aborted/executable
@@ -62,9 +98,9 @@ class CheckEvents {
 				the result value is false) (note: the error message length
 				is limited, so if there are many errors they may not all
 				show up).
-		@return true on success, false on failure.
+		@return check_event_result_t, see above.
 	*/
-	bool CheckAllJobs(MyString &errorMsg);
+	check_event_result_t CheckAllJobs(MyString &errorMsg);
 
   private:
 	class JobInfo
@@ -99,15 +135,19 @@ class CheckEvents {
 
 	HashTable<ReadMultipleUserLogs::JobID, JobInfo *>	jobHash;
 
-		// Allow an abort event after a normal termination.
-	bool		allowExtraAborts;
+	inline bool		AllowAll() { return allowEvents & ALLOW_ALL; }
 
-		// Allow more than one run for a single submit.
-	bool		allowExtraRuns;
+	inline bool		AllowExtraAborts() { return (allowEvents & ALLOW_ALL) ||
+			(allowEvents & ALLOW_TERM_ABORT); }
 
-		// Allow "garbage" events (e.g., a submit with no corresponding
-		// terminated, or vice-versa).
-	bool		allowGarbage;
+	inline bool		AllowExtraRuns() { return (allowEvents & ALLOW_ALL) ||
+			(allowEvents & ALLOW_RUN_AFTER_TERM); }
+
+	inline bool		AllowGarbage() { return (allowEvents & ALLOW_ALL) ||
+			(allowEvents & ALLOW_GARBAGE); }
+
+		// Bit-mapped flag for what "bad" events to allow.
+	int		allowEvents;
 
 	// For instantiation in programs that use this class.
 #define CHECK_EVENTS_HASH_INSTANCE template class \
