@@ -102,7 +102,7 @@ GMR::MakeGMR( int key, classad::ClassAd *ad )
         citr.Initialize( *portAd );
         for( ; !citr.IsAfterLast( ) ; citr.NextAttribute( attr, expr ) ) {
             citr.CurrentAttribute( attr, expr );
-            if( !ad->GetExternalReferences( expr, port.dependencies, true ) ){
+            if( !ad->GetExternalReferences( expr, port.dependencies, false ) ){
                 printf( "Failed to get external refs for %s in port %s\n",
                     attr.c_str( ), port.label.c_str( ) );
                 delete gmr;
