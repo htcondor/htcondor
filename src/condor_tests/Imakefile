@@ -517,13 +517,11 @@ RUN(job_dagman_uncomlog)
 TESTCLASS(job_dagman_uncomlog,dagman)
 TESTCLASS(job_dagman_uncomlog,quick)
 
-/* Valid starting v6_7 branch......
 DESC(job_dagman_unlessexit,"Test that the retries can be stopped with particular exit values from node.")
 DEPS(job_dagman_unlessexit,x_read_joblog.exe)
 RUN(job_dagman_unlessexit)
 TESTCLASS(job_dagman_unlessexit,dagman)
 TESTCLASS(job_dagman_unlessexit,quick)
-*/
 
 /*
 ******************************
