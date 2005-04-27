@@ -139,6 +139,11 @@ configuration setting.
 ClassAds that don't have a valid IP address (used in it's hashing).  The
 collector now correctly will fall back to ``MyAddress'' if it's provided.
 
+% See Gnats PR 479.
+\item Fixed a bug in \Condor{dagman} that could cause \Condor{dagman}
+to fail an assertion if PRE or POST scripts are throttled with the
+\Opt{-maxpre} or \Opt{-maxpost} \Condor{submit\_dag} command line flags.
+
 \end{itemize}
 
 
