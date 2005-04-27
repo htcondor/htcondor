@@ -614,6 +614,25 @@ CRED_MIN_TIME_LEFT              = 120
 
 ##
 ## The location of the wrapper for invoking
+## Condor GAHP server
+##
+CONDOR_GAHP = $(SBIN)/condor_c-gahp
+
+##
+## The Condor GAHP server has it's own log.  Like the Gridmanager, the
+## GAHP server is run as the User, not a Condor daemon, so all users must 
+## have write permssion to the directory used for the logfile. Our 
+## suggestion is to create a directory called GridLogs in $(LOG) with 
+## UNIX permissions 1777 (just like /tmp )
+## Another option is to use /tmp as the location of the CGAHP log.
+## 
+MAX_C_GAHP_LOG	= 1000000
+
+#C_GAHP_LOG = $(LOG)/GridLogs/CGAHPLog.$(USERNAME)
+C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
+
+##
+## The location of the wrapper for invoking
 ## GT3 GAHP server
 ##
 GT3_GAHP = $(SBIN)/gt3_gahp
