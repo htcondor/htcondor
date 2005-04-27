@@ -86,6 +86,11 @@ on Windows.
 \item On Windows, the \Condor{starter} would be unable to run jobs if
 the \verb@LOG@ path had a period (.) in it. This has been fixed.
 
+% See Gnats PR 479. 
+\item Fixed a bug in \Condor{dagman} that could cause \Condor{dagman}
+to fail an assertion if PRE or POST scripts are throttled with the
+\Opt{-maxpre} or \Opt{-maxpost} \Condor{submit\_dag} command line flags.
+
 \end{itemize}
 
 \noindent Bugs fixed that are NOT included in version 6.7.7:
