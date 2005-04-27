@@ -87,6 +87,7 @@ TESTCLASS(lib_userlog,quick)
 **
 */
 
+/*
 DESC(job_condorc_ab_van,"Condor-C AB test")
 RUN(job_condorc_ab_van)
 TESTCLASS(job_condorc_ab_van,condorc)
@@ -98,7 +99,7 @@ RUN(job_condorc_abc_van)
 TESTCLASS(job_condorc_abc_van,condorc)
 TESTCLASS(job_condorc_abc_van,quick)
 TESTCLASS(job_condorc_abc_van,btdebug)
-
+*/
 
 DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
 RUN(job_core_killsignal_sched)
