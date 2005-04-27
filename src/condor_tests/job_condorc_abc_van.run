@@ -145,11 +145,33 @@ if($result != 0)
 	exit(1);
 }
 
-system("condor_off -master");
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
 
 $ENV{CONDOR_CONFIG} = $remconfig;
-system("condor_off -master");
+$status = 1;
+$cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
 
 $ENV{CONDOR_CONFIG} = $midconfig;
-system("condor_off -master");
+$status = 1;
+$cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
 system("date");

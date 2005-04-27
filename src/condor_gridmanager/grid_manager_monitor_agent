@@ -9,6 +9,7 @@ $^W = 1;
 
 # Prototypes
 sub FindStateDirs( );
+sub FindJobTypes( );
 sub ReadJobs( );
 sub RunCheck( );
 sub ParseSeconds( $$ );
@@ -144,24 +145,12 @@ print "Perl search path set to " . join( ":", @INC ) . "\n"
 use Globus::GRAM::JobDescription;
 
 # The various JobManager derived classes
-my %AvailableJobTypes;
-foreach my $JobType ( qw( condor fork lsf pbs remote ) )
-{
-    my $Module = "Globus::GRAM::JobManager::$JobType";
-    print "Trying $JobType => $Module\n" if ( $Config{Debug} > 2 );
-    eval "require $Module";
-    print "Error = $@\n" if ( $@ && $Config{Debug} > 3 );
-    next if $@;
-    print "Enabling $JobType\n" if ( $Config{Debug} > 2 );
-    import $Module;
-    $AvailableJobTypes{$JobType} = 1;
-}
+my %AvailableJobTypes = FindJobTypes( );
+print "Supported job types = " . join( ", ", sort keys %AvailableJobTypes ) . "\n"
+    if ( $Config{Debug} );
 
 # The Job State definitions
 use Globus::GRAM::JobState;
-
-print "Supported job types = " . join( ", ", keys %AvailableJobTypes ) . "\n"
-    if ( $Config{Debug} );
 
 # Quick bit of feedback...
 if ( $Config{Debug} )
@@ -267,6 +256,46 @@ sub FindStateDirs( )
 
     # Done...
     return \%Dirs;
+}
+
+# Return a hash of the available job types
+sub FindJobTypes( )
+{
+    my %TryJobTypes = ( condor => 0, fork => 0, lsf => 0, pbs => 0, remote => 0 );
+
+    # Walk through the JobManager directory, and
+    # add an entry for everything we see there...
+    {
+	my $JobManagerDir =
+	    $ENV{GLOBUS_LOCATION} . "/lib/perl/Globus/GRAM/JobManager";
+	if ( opendir( DIR, $JobManagerDir ) )
+	{
+	    foreach my $entry ( readdir( DIR ) )
+	    {
+		if ( $entry =~ /^(\S+).pm$/ )
+		{
+		    $TryJobTypes{$1} = 0;
+		}
+	    }
+	    closedir( DIR );
+	}
+    }
+
+    # Let's check which ones are valid...
+    my %JobTypes;
+    foreach my $JobType ( keys %TryJobTypes )
+    {
+	my $Module = "Globus::GRAM::JobManager::$JobType";
+	print "Trying $JobType => $Module\n" if ( $Config{Debug} > 2 );
+	eval "require $Module";
+	print "Error = $@\n" if ( $@ && $Config{Debug} > 3 );
+	next if $@;
+	print "Enabling $JobType\n" if ( $Config{Debug} > 2 );
+	import $Module;
+	$JobTypes{$JobType} = 1;
+    }
+
+    return %JobTypes;
 }
 
 # Finally, let's walk through the whole list...
@@ -415,6 +444,8 @@ sub ReadJobs( )
 	    my $JobManager = CreateJobManager( \%Job, $JobDescription );
 
 	    # And, get the current state as best we can..
+	    print "Attempting to get state of job (type = $Job{JobManagerType})\n"
+		if ( $Config{Debug} >= 5 );
 	    my $JobState = GetJobState( $JobManager );
 
 	    # Store it..

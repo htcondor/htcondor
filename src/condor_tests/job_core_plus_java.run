@@ -39,28 +39,33 @@ $execute = sub
 
 	system("condor_config_val -config");
 	print "Checking Job Ads for $cluster\n";
-	system("condor_q -l $cluster");
-	open(PULL, "condor_q -l $cluster 2>&1 |") || die "Trying for job ads: $!\n";
-	while(<PULL>)
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_q -l $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
 	{
-		chomp $_;
-
-		if( $_ =~ /^foo\s*=\s*"(.*)"\s*$/)
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
+	foreach $line (@adarray)
+	{
+		if( $line =~ /^foo\s*=\s*"(.*)"\s*$/)
 		{
 			print "************** $1 ************\n";
 			$foundcount += 1;
 		}
-		elsif( $_ =~ /^bar\s*=\s*"(.*)"\s*$/)
+		elsif( $line =~ /^bar\s*=\s*"(.*)"\s*$/)
 		{
 			print "************** $1 ************\n";
 			$foundcount += 1;
 		}
-		elsif( $_ =~ /^last\s*=\s*"(.*)"\s*$/)
+		elsif( $line =~ /^last\s*=\s*"(.*)"\s*$/)
 		{
 			print "************** $1 ************\n";
 			$foundcount += 1;
 		}
-		elsif( $_ =~ /^done\s*=\s*(.*)\s*$/)
+		elsif( $line =~ /^done\s*=\s*(.*)\s*$/)
 		{
 			print "************** $1 ************\n";
 			$foundcount += 1;

@@ -39,7 +39,15 @@ $execute = sub
 	}
 
 	print "OK remove the job!\n";
-	system("condor_rm $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 };
 
 $ExitSuccess = sub {

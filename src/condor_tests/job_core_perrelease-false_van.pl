@@ -38,7 +38,15 @@ $timed = sub
 	print "Cluster $cluster alarm wakeup\n";
 	print "wakey wakey!!!!\n";
 
-	system("condor_rm $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 	sleep 5;
 };
 
@@ -47,12 +55,12 @@ $submit = sub
 	my %info = @_;
 	$cluster = $info{"cluster"};
 
-	my $qstat = CondorTest::GoodCondorQ_Result($cluster);
+	my $qstat = CondorTest::getJobStatus($cluster);
 	while($qstat == -1)
 	{
 		print "Job status unknown - wait a bit\n";
 		sleep 2;
-		$qstat = CondorTest::GoodCondorQ_Result($cluster);
+		$qstat = CondorTest::getJobStatus($cluster);
 	}
 
 	print "It better be on hold... status is $status(5 is correct)";

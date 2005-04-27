@@ -31,12 +31,12 @@ $success = sub
 
 	sleep 10;
 	print "Good, job should be done but left in the queue!!!\n";
-	my $qstat = CondorTest::GoodCondorQ_Result($cluster);
+	my $qstat = CondorTest::getJobStatus($cluster);
 	while($qstat == -1)
 	{
 		print "Job status unknown - wait a bit\n";
 		sleep 2;
-		$qstat = CondorTest::GoodCondorQ_Result($cluster);
+		$qstat = CondorTest::getJobStatus($cluster);
 	}
 	if( $qstat != COMPLETED )
 	{
@@ -44,7 +44,15 @@ $success = sub
 	}
 	else
 	{
-		system("condor_rm $cluster");
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			return(1)
+		}
 	}
 
 };

@@ -199,22 +199,28 @@ TESTCLASS(job_filexfer_trans-nodflts_van,quick)
 **TESTCLASS(job_core_matchlist_van,long)
 **
 **
-*/
 
-DESC(job_core_holdrelease_sched,"Scheduler: Test state changes from running to hold to release.")
-RUN(job_core_holdrelease_sched)
-TESTCLASS(job_core_holdrelease_sched,core)
-TESTCLASS(job_core_holdrelease_sched,quick)
+DESC(job_core_onexitrem_van,"Vanilla: Verify true and false triggers of on_exit_remove")
+RUN(job_core_onexitrem_van)
+TESTCLASS(job_core_onexitrem_van,core)
+TESTCLASS(job_core_onexitrem_van,quick)
+
+DESC(job_core_perhold_van,"Vanilla: verify true and false triggers for periodic hold")
+RUN(job_core_perhold_van)
+TESTCLASS(job_core_perhold_van,core)
+TESTCLASS(job_core_perhold_van,quick)
+
+*/
 
 DESC(job_core_onexithold_van,"Vanilla: Verify true and false triggers of on_exit_hold")
 RUN(job_core_onexithold_van)
 TESTCLASS(job_core_onexithold_van,core)
 TESTCLASS(job_core_onexithold_van,quick)
 
-DESC(job_core_perhold_van,"Vanilla: verify true and false triggers for periodic hold")
-RUN(job_core_perhold_van)
-TESTCLASS(job_core_perhold_van,core)
-TESTCLASS(job_core_perhold_van,quick)
+DESC(job_core_holdrelease_sched,"Scheduler: Test state changes from running to hold to release.")
+RUN(job_core_holdrelease_sched)
+TESTCLASS(job_core_holdrelease_sched,core)
+TESTCLASS(job_core_holdrelease_sched,quick)
 
 
 /* runable core coverage tests */
@@ -243,6 +249,13 @@ DESC(job_core_streamerr_van,"Vanilla: test for streaming of error when both stre
 RUN(job_core_streamerr_van)
 TESTCLASS(job_core_streamerr_van,core)
 TESTCLASS(job_core_streamerr_van,quick)
+
+
+DESC(job_core_holdrelease_van,"Vanilla: Test state changes from running to hold to release.")
+RUN(job_core_holdrelease_van)
+TESTCLASS(job_core_holdrelease_van,core)
+TESTCLASS(job_core_holdrelease_van,quick)
+
 */
 
 DESC(job_core_copytospool_van,"Vanilla: test that spooled executable is same via md5 checksum of both files")
@@ -295,11 +308,6 @@ RUN(job_core_hold_van)
 TESTCLASS(job_core_hold_van,core)
 TESTCLASS(job_core_hold_van,quick)
 
-DESC(job_core_holdrelease_van,"Vanilla: Test state changes from running to hold to release.")
-RUN(job_core_holdrelease_van)
-TESTCLASS(job_core_holdrelease_van,core)
-TESTCLASS(job_core_holdrelease_van,quick)
-
 DESC(job_core_initialdir_sched,"Scheduler: We change the initialdir and assure log and stuff goes there")
 RUN(job_core_initialdir_sched)
 TESTCLASS(job_core_initialdir_sched,core)
@@ -339,11 +347,6 @@ DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before n
 RUN(job_core_niceuser_van)
 TESTCLASS(job_core_niceuser_van,core)
 TESTCLASS(job_core_niceuser_van,quick)
-
-DESC(job_core_onexitrem_van,"Vanilla: Verify true and false triggers of on_exit_remove")
-RUN(job_core_onexitrem_van)
-TESTCLASS(job_core_onexitrem_van,core)
-TESTCLASS(job_core_onexitrem_van,quick)
 
 DESC(job_core_output_sched,"Scheduler: Verify trivially simple output from an input file")
 RUN(job_core_output_sched)

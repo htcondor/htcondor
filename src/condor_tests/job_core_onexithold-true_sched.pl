@@ -39,8 +39,24 @@ $held = sub {
 	my $fulljob = "$cluster"."."."$job";
 	print "Good, good run of job - $fulljob - should be in queue on hold now\n";
 	print "Removing $fulljob\n";
-	system("condor_rm $fulljob");
-	system("condor_reschedule");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
+	my @nadarray;
+	$status = 1;
+	$cmd = "condor_reschedule";
+	$status = CondorTest::runCondorTool($cmd,\@nadarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 };
 
 $executed = sub

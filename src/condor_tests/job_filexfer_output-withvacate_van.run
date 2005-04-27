@@ -41,8 +41,16 @@ $execute = sub {
 	print "Looking for $oute, $outf, $outg ...\n";
 
 	print "Vacate $cluster Now\n";
-	sleep 4; # let output files get created
-	system("condor_vacate_job $cluster");
+	sleep 2; # let output files get created
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_vacate_job $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
 
 };
 
@@ -63,27 +71,59 @@ $evicted = sub {
 	{ 
 		die "$oute failed to arrive\n"; 
 		print "removing $cluster\n";
-		system("condor_rm $cluster");
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1)
+		}
 		exit(1)
 	};
 	if(!-f "$outf")
 	{ 
 		die "$outf failed to arrive\n"; 
 		print "removing $cluster\n";
-		system("condor_rm $cluster");
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1)
+		}
 		exit(1)
 	};
 	if(!-f "$outg")
 	{ 
 		die "$outg failed to arrive\n"; 
 		print "removing $cluster\n";
-		system("condor_rm $cluster");
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			exit(1)
+		}
 		exit(1)
 	};
 
 	# Cool getting to here means the files all arrived!
 	print "All files arrived as expected.....\n";
-	system("condor_rm $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
 };
 
 $success = sub
@@ -106,8 +146,15 @@ $shadow = sub
 	my $error = $args{"shadowerror"};
 
 	print "Shadow Error: Cluster $cluster: $error\n";
-	system("condor_rm $cluster");
-	sleep 3;
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(0)
+	}
 	print "$testname: SUCCESS\n";
 	exit(0);
 };

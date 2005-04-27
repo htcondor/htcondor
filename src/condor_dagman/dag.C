@@ -1434,7 +1434,6 @@ void Dag::RemoveRunningScripts ( const Dagman &dm ) const {
 		// if node is running a PRE script, hard kill it
         if( job->GetStatus() == Job::STATUS_PRERUN ) {
 			ASSERT( job->_scriptPre );
-			ASSERT( job->_scriptPre->_pid != 0 );
 			debug_printf( DEBUG_DEBUG_1, "Killing PRE script %d\n",
 						job->_scriptPre->_pid);
 			if (daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {

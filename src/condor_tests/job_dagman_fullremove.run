@@ -42,7 +42,15 @@ $executed = sub
 	my %info = @_;
 	my $cluster = $info{cluster};
 	sleep 2;
-	CondorTest::verbose_system("condor_rm $cluster");
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(1)
+	}
 };
 
 $submitted = sub

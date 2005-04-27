@@ -288,17 +288,45 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 		return false;
 	}
 
-	fwApps->get__NewEnum(&pUnknown);
-	fwApps->get_Count(&count);
+	hr = fwApps->get__NewEnum(&pUnknown);
+	if ( hr != S_OK ) {
+		dprintf(D_ALWAYS, "Failed to get enumerator for Authorized "
+				"Applications (err=%x)\n", hr);
+		return false;
+	}
 
-	pUnknown->QueryInterface(IID_IEnumVARIANT, (void**)&pEnum);
+	hr = fwApps->get_Count(&count);
+	if ( hr != S_OK ) {
+		dprintf(D_ALWAYS, "Failed to get count of Authorized "
+				"Applications (err=%x)\n", hr);
+		return false;
+	}
+
+	hr = pUnknown->QueryInterface(IID_IEnumVARIANT, (void**)&pEnum);
+	if ( hr != S_OK ) {
+		if ( hr == E_NOINTERFACE ) {
+			dprintf(D_ALWAYS, "Failed to QueryInterface for trusted "
+					"applications. Interface not supported.\n");
+		} else {
+			dprintf(D_ALWAYS, "Failed to QueryInterface for trusted "
+				   "applications. (err=%x)\n", hr);
+		}
+		return false;
+	}
 
 	for (i=0; i<count; i++) {
 		BSTR str = NULL;
 		int len;
 		char *tmp, *bn;
 
-		pEnum->Next(1, &v, &cnt);
+		hr = pEnum->Next(1, &v, &cnt);
+		// interesting tidbit: Microsoft says Enum->Next() function
+		// either returns S_OK or S_FALSE. Funny, on Win2k3 SP1
+		// it returns 0x80020008, or Bad Variable Type. Sigh.
+		if ( hr != S_OK ) {
+			// no more elements. stop.
+			break;
+		}
 
 		fwApp = (INetFwAuthorizedApplication*)v.byref;
 

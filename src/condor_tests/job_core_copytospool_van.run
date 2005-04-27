@@ -45,11 +45,19 @@ $submitted = sub {
 	print "spooled executable md5: $shexexemd5\n";
 
 	print "OK remove the job!\n";
-	system("condor_rm $cluster");
 
 	if( $hexexemd5 != $shexexemd5 )
 	{
 		die "Spooled executable and executable have DIFFERENT MD5 checksums!!!\n";
+	}
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
 	}
 
 };
