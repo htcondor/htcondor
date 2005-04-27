@@ -1,3 +1,7 @@
+04/26/05 V6_7_7-branch
+   A branch for the 6.7.7 release, created from V6_7_7-root on the
+   V6_7_CODE module. 
+
 04/26/05 V6_6-merge-39
    The state of the V6_6-branch for a merge into V6_7-branch.  This
    includes some more win32 bug fixes to leaking memory, dynuser,
