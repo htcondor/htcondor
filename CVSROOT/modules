@@ -391,7 +391,7 @@ V6_7_4_EXT	-a V6_7_COMMON_EXT \
 # Externals needed for V6_7_5 (same as V6_7_4)
 V6_7_5_EXT	-a V6_7_4_EXT
 
-# Externals needed for V6_7_5 (same as V6_7_5 w/ new classads and gt4-gahp)
+# Externals needed for V6_7_6 (same as V6_7_5 w/ new classads and gt4-gahp)
 V6_7_6_EXT      -a V6_7_COMMON_EXT \
                    externals/bundles/krb5/1.2.7 \
                    externals/bundles/gahp/1.0.13 \
@@ -415,8 +415,11 @@ V6_7_7_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/gsoap/2.7 \
 		   externals/bundles/srb/3.2.1
 
+# Externals needed for V6_7_8 (same as V6_7_7)
+V6_7_8_EXT	-a V6_7_7_EXT
+
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_7_EXT
+V6_7_EXT	-a V6_7_8_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
