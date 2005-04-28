@@ -3,53 +3,34 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security! in Condor|(}
 
-Security in Condor is a broad issue, with many aspects to consider.
-Because Condor's main purpose is to allow users to run
-arbitrary code on large numbers of computers,
-it is important to try to
+Security in Condor is a broad issue, with many aspects to
+consider. Because Condor's main purpose is to allow users to run
+arbitary code on large numbers of computers, it is important to try to
 limit who can access a Condor pool and what privileges they have when
-using the pool.
-This section covers these topics. 
+using the pool. This secdtion covers these topics in depth. 
 
-It is important to understand what kinds of resource attacks 
-Condor can prevent, and which attacks it cannot prevent.
-Condor will not prevent security breaches
-of users
-that can elevate their privilege to the root or
-administrator account.
-Condor does not run user jobs in sandboxes
-(standard universe jobs are a partial exception to this),
-so it cannot prevent
-malicious actions by user jobs.
-An example might be a job that launches distributed denial of service
-attacks.
-Condor assumes that that users are trustworthy.
-Condor can
-prevent unauthorized access to the Condor pool,
-to help you ensure that only trusted users have access to the pool.
-In addition,
-Condor provides encryption and integrity checking,
-to ensure that data
-(both Condor's data and user jobs' data)
-has not been examined or tampered with. 
+It is important to understand what kinds of attacks on your resourcess
+Condor can prevent and which ones it cannot prevent. If a user knows
+of a security exploit that can elevate their privilege to the root or
+administrator account, Condor will not prevent them from being able to
+do so. Condor does not run jobs in sandboxes (standard universe jobs
+are a partial exception to this), so it cannot prevent user jobs from
+malicious actions such as launching distributed denial of service
+attacks. Condor assumes that you can trust your users. Condor can
+prevent unauthorized access to your Condor pool to help you ensure
+that only trusted users have access to your pool. In addition, Condor
+can provide encryption and integrity checking to ensure that data
+(Condor's and users' data) has not been examined to tampered with. 
 
 Broadly speaking, there are a few important aspects to security in
 Condor: 
 
 \begin{description}
 
-\item[Users] As privilege or capability in an operating system
-is based on a process owner,
-which process owner (or user) a job or Condor daemon is run
-as is critical.
-%What user is used to run the Condor daemons? What user is
-%used to run jobs? 
-The Condor system 
-prefers that Condor daemons are run as the user root,
-while other common operations are to be owned by
-a separate user (named \File{condor}).
-% Karen's edit to this point in this file.
-This is usually the
+\item[Users] What user is used to run the Condor daemons? What user is
+used to run jobs? The short answer to the first question is that we
+prefer that the daemons are run as root, but that there is another
+user they can switch to for most operations. This is usually the
 ``condor'' user, but any user can be chosen. This topic is discussed
 in more detail in Section~\ref{sec:uids}. 
 
@@ -71,7 +52,7 @@ can normally prevent other people from your data. (If someone is
 persistent enough and has sufficient computing power, they could
 decrypt it, but this is unlikely.) Condor can encrypt either the data
 that it sends for internal communication, or user data, such as files
-and executables. Note that the encryption is used for network
+and executables. Note that the encryption is uesd for network
 transmissions: data is still stored on disk unencrypted.
 
 \item[Integrity] Condor can send additional cryptographic data that

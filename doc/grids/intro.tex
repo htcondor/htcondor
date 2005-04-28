@@ -2,56 +2,52 @@
 \section{\label{sec:grids-intro}An Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A goal of grid computing is to allow utilization of resources that
-span many administrative domains.
-Although a Condor pool may include
-resources owned and controlled by many different people,
-it still
-represents a certain amount of organization and cooperation.
-If researchers from different organizations are collaborating,
-it often is not feasible to combine all of their computers
-into a single, large Condor pool.
-Thus, grid computing provides ways for users to make use of
-resources outside their local Condor pool.
-Condor's history of working with non-dedicated and
-distributively-owned resources
-is a good fit for the grid computing environment.
+The goal of grid computing is to allow people to utilize resources that
+span many administrative domains. Although a Condor pool may have include
+resources owned and controlled by many different people, it still
+represents a certain amount of organization and cooperation. If 
+researchers from three different organizations are collaborating, it often
+isn't feasible to combine all of their computers into a single large pool.
+Thus, we need ways for users to make use of resources outside their local
+pool. Fortunately, Condor's history working with non-dedicated and
+distributedly-owned resources make it fit well in this environment.
 
-Condor both has its own native mechanisms for grid computing,
-and works well with other grid systems.
+Condor has its own native mechanisms for grid computing. It also works
+with several other grid systems.
 
-One native mechanism allows Condor jobs submitted within one pool
-of machines to execute on another separate Condor pool.
-Condor calls this \Term{flocking}.
-Insufficient resources to run jobs in the local Condor pool
-cause
-Condor to look for available resources in remote Condor pools.
+%Grids refer to computing resources all over the world. 
+%Condor's purpose of providing computing cycles extends naturally
+%to grids.
+%To this end, Condor has the grid universe for jobs.
+%Within this universe, jobs may be specified for a variety
+%of grids.
+
+An easy extension allows Condor jobs submitted within one pool
+of machines to execute on another (separate) Condor pool.
+Condor calls this flocking.
+If there are insufficient resources in the local pool to run its jobs,
+a Condor scheduler will start looking in remote pools for available
+resources.
+%If a machine within the pool where a job is submitted is not
+%available to run the job,
+%the job makes its way to another pool.
 This is enabled by the configuration of the pools.
 
-% Karen has partially editted to this point in this file.
 With flocking, the user's local Condor scheduler remains directly
 responsible for locating and talking with machines that will run its
-jobs. 
-
-With other mechanisms, the local scheduler delegates
-responsibility to another scheduler.
-The local scheduler is still
+jobs. With the mechanisms discussed below, the local scheduler delegates
+that responsibility to another scheduler. The local scheduler is still
 ultimately responsible for the job, but the remote scheduler is 
 temporarily responsible for scheduling the job and keeps the local
-scheduler apprised of the job's status.
-These mechanisms are
-collectively known and invoked with
-the grid universe.
-Within the grid universe, there
-are multiple \Opt{grid\_type}s. Each \Opt{grid\_type}
-represents a kind of remote
+scheduler apprised of the job's status. These mechanisms are
+collectively known as the grid universe. Within the grid universe, there
+are multiple grid\_types. Each grid\_type represents a kind of remote
 scheduling system with its own language that the local scheduler must
 speak to interact with it.
 
-The grid universe and \Expr{grid\_type = condor} 
-is called Condor-C.
-It allows the local Condor scheduler to submit a job to
-a remote Condor scheduler (usually in a different Condor pool).
+Grid\_type condor allows the local Condor scheduler to submit a job to
+a remote Condor scheduler (usually in a different Condor pool). We also
+refer to grid\_type condor as Condor-C.
 %Condor-C allows the use grid computing resources
 %wherever Condor is running and configured to allow
 %jobs.
@@ -66,30 +62,29 @@ and remote job submission (including data transfer) on Grid resources.
 Condor-G provides all of Condor's job submission features,
 but for these far-removed resources.
 
-Glidein builds on top of Condor-G.
-It uses Condor-G to start up the Condor
-execute daemons as a user job on remote machines.
-The daemons then join
-the local Condor pool, where they appear as ordinary
+GlideIn builds on top of Condor-G. It uses Condor-G to start up the Condor
+execute daemons as a user job on remote machines. The daemons then add
+themselves to your local Condor pool, where they appear as ordinary
 Condor resources that your jobs can run on.
 
 
-With all these different options for grid computing, 
-users may 
-wonder which option to use.
-The differences in the options themselves generally lead
-to a choice of Condor's grid computing solution.
+subsection: which to use
 
-% Commented out by Karen, as she has no idea what these are.
-% grid_type of batch and unicore do not exist in the manual, yet. . .
-%Some situations preclude the use of some options completely. For example,
-%if you're using the standard universe, you can't use the globus, batch, or
-%unicore grid\_types by themselves. If the remote machines are available
-%only via globus, that's your only option. But in most cases, you'll have
-%some choice to make.
+With all these different options for grid computing, many users are left
+wondering which one should they use? The answer depends on the user's
+situation and often there isn't one right answer. Here, we'll attempt to
+highlight the differences between the available options and establish in
+which broad situations some are better than others.
+
+Some situations preclude the use of some options completely. For example,
+if you're using the standard universe, you can't use the globus, batch, or
+unicore grid\_types by themselves. If the remote machines are available
+only via globus, that's your only option. But in most cases, you'll have
+some choice to make.
 
 A quick comparison of the features and limitations of the different
-mechanisms is shown in Table~\ref{grid-features}.
+mechanisms is shown in Table~\ref{grid-features}. Now, we'll briefly
+describe each feature/limitation.
 
 % grid computing feature/limitation table
 \begin{center}
@@ -101,7 +96,7 @@ mechanisms is shown in Table~\ref{grid-features}.
 Flocking & Yes & Yes & Yes & No & No & No & No \\ \hline
 Condor-C & Maybe & No & No & Yes & Yes & Maybe & Maybe \\ \hline
 Condor-G & No & No & No & Yes & Yes & Yes & Yes \\ \hline
-Glidein & Yes & Yes & Yes & No & No & Yes & No \\ \hline
+GlideIn & Yes & Yes & Yes & No & No & Yes & No \\ \hline
 Batch & No & No & No & Yes & Yes & Yes & Yes \\ \hline
 Unicore & No & No & No & Yes & Yes & Yes & Yes \\ \hline
 \end{tabular}
@@ -109,7 +104,7 @@ Unicore & No & No & No & Yes & Yes & Yes & Yes \\ \hline
 \end{table}
 \end{center}
 
-Non-Vanilla Jobs: Flocking and Glidein allow you to use all of the
+Non-Vanilla Jobs: Flocking and GlideIn allow you to use all of the
 non-grid Condor universes, allowing you to take advantage of all their
 special features. With Condor-C, it depends on what type of job the job
 becomes on the remote scheduler. If it becomes a Condor-G job, it has the
@@ -118,20 +113,20 @@ job, the remote i/o calls will be directed to the remote machine, not the
 original submit machine. The other mechanisms offer a vanilla-like for the
 job.
 
-Split Local/Remote: Flocking and Glidein allow jobs to be dynamically
+Split Local/Remote: Flocking and GlideIn allow jobs to be dynamically
 split become resources in your local pool and remote resources. The
 other mechanisms require you to declare that your jobs will be going to
 a remote scheduler, precluding them from running on machines in the local
 pool if they happen to become available.
 
-Late Binding: With Flocking and Glidein, jobs are sent directly to an
+Late Binding: With Flocking and GlideIn, jobs are sent directly to an
 execute machine when it's ready to start executing them. With the other
 mechanisms, jobs are sent to a remote scheduler where they can sit idle
 waiting for an execute machine. This can lead to load imbalances where
 jobs sit idle at one remote scheduler while another remote scheduler has
 access to available machines.
 
-Disconnect: Flocking and Glidein require relatively continuous network
+Disconnect: Flocking and GlideIn require relatively continuous network
 connectivity. While they can be configured to withstand short-lived
 disconnection (standard universe can't withstand any disconnection),
 new jobs won't be started during the disconnection and long-lived
@@ -140,10 +135,10 @@ work well with network disconnect. All jobs forwarded to a remote
 scheduler will continue to run normally.
 
 % Once GCB is supported, mention it as a work-around for private networks
-Private Network: Flocking and Glidein require that the scheduler and
+Private Network: Flocking and GlideIn require that the scheduler and
 execute machine be able to establish network connections to each other
 (in both directions). This won't work if the execute machine is on a
-private network. Firewalls can also pose problems, although it's possible
+prviate network. Firewalls can also pose problems, although it's possible
 to configure them to allow the necessary connections. The other 
 mechanisms can work with private networks, provided the remote scheduler
 can communicate with the execute machines.
@@ -154,8 +149,8 @@ though the resources can be managed by a different system that Condor
 knows how to talk to.
 
 No Config: Flocking requires the administrator of the remote pool to 
-allow your scheduler access. Glidein requires the administrator of your
-local pool to allow your Glidein daemons access. Condor-C requires you
+allow your scheduler access. GlideIn requires the administrator of your
+local pool to allow your GlideIn daemons access. Condor-C requires you
 to start a Condor scheduler on the remote machine (if there isn't one
 there already) or the administrator of the remote pool to enable a
 non-local authentication method for the remote Condor scheduler.
