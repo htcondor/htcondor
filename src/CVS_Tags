@@ -1,3 +1,9 @@
+04/27/05 V6_7_7
+   The official 6.7.7 release tag, off of the V6_7_7-branch of
+   V6_7_CODE and the trunk of V6_7_7_EXT.  Created from
+   BUILD-V6_7_7-branch-2005-4-27-2.  Version string in this release:
+   $CondorVersion: 6.7.7 Apr 27 2005 $
+
 04/26/05 V6_7_7-branch
    A branch for the 6.7.7 release, created from V6_7_7-root on the
    V6_7_CODE module. 
