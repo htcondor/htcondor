@@ -49,6 +49,9 @@ StartdCronJob( const char *mgrName, const char *jobName ) :
 		}
 		EnvStr = nameUc;
 		EnvStr += "_INTERFACE_VERSION=" INTERFACE_VERSION;
+		EnvStr += ";STARTD_CRON_NAME=";
+		EnvStr += mgrName;
+		free( nameUc );
 	}
 }
 

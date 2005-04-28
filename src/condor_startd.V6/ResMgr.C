@@ -885,8 +885,9 @@ ResMgr::adlist_delete( const char *name )
 	extra_ads.Rewind( );
 	while ( extra_ads.Next( cur ) ) {
 		if ( ! strcmp( cur->GetName( ), name ) ) {
-			dprintf( D_FULLDEBUG, "Deleting ClassAd for '%s'\n", name );	
+			dprintf( D_FULLDEBUG, "Deleting ClassAd for '%s'\n", name );
 			extra_ads.DeleteCurrent( );
+			delete cur;
 			return 0;
 		}
 	}
