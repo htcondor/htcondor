@@ -193,6 +193,10 @@ CondorCronJob::~CondorCronJob( )
 
 	// Close FDs
 	CleanAll( );
+
+	// Delete the buffers
+	delete stdOutBuf;
+	delete stdErrBuf;
 }
 
 // Initialize
