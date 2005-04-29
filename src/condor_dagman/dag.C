@@ -1306,7 +1306,6 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 	ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
 
 	PostScriptTerminatedEvent e;
-	UserLog ulog;
 
 	if( WIFSIGNALED( status ) ) {
 		e.normal = false;
@@ -1317,6 +1316,14 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		e.returnValue = WEXITSTATUS( status );
 	}
 
+		// Determine whether the job's log is XML.  (Yes, it probably
+		// would be better to just figure that out from the submit file,
+		// but this is a quick way to do it.  wenger 2005-04-29.)
+	ReadUserLog readLog( job->_logFile );
+	bool useXml = readLog.getIsXMLLog();
+
+	UserLog ulog;
+	ulog.setUseXML( useXml );
 	ulog.initialize( job->_logFile, job->_CondorID._cluster,
 					 job->_CondorID._proc, job->_CondorID._subproc );
 
