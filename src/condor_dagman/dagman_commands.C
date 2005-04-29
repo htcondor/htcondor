@@ -63,13 +63,13 @@ ResumeDag(Dagman &dm)
 }
 
 bool
-AddNode( const Dagman &dm, Job::job_type_t type, const char *name,
+AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		 const char* cmd,
 		 const char *precmd, const char *postcmd, bool done,
 		 MyString &failReason )
 {
 	MyString why;
-	if( !IsValidNodeName( dm, name, why ) ) {
+	if( !IsValidNodeName( dag, name, why ) ) {
 		failReason = why;
 		return false;
 	}
@@ -102,8 +102,8 @@ AddNode( const Dagman &dm, Job::job_type_t type, const char *name,
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}
-	ASSERT( dm.dag != NULL );
-	if( !dm.dag->Add( *node ) ) {
+	ASSERT( dag != NULL );
+	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding node to DAG";
 		delete node;
 		return false;
@@ -113,7 +113,7 @@ AddNode( const Dagman &dm, Job::job_type_t type, const char *name,
 }
 
 bool
-IsValidNodeName( const Dagman &dm, const char *name, MyString &whynot )
+IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
 {
 	if( name == NULL ) {
 		whynot = "missing node name";
@@ -127,8 +127,8 @@ IsValidNodeName( const Dagman &dm, const char *name, MyString &whynot )
 		whynot.sprintf( "invalid node name: '%s' is a DAGMan keyword", name );
 		return false;
 	}
-	ASSERT( dm.dag != NULL );
-	if( dm.dag->NodeExists( name ) ) {
+	ASSERT( dag != NULL );
+	if( dag->NodeExists( name ) ) {
 		whynot.sprintf( "node name '%s' already exists in DAG", name );
 		return false;
 	}

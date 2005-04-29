@@ -36,9 +36,9 @@ static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
 
-static bool parse_node( Dagman &dm, Job::job_type_t nodeType,
+static bool parse_node( Dag *dag, Job::job_type_t nodeType,
 						char* nodeTypeKeyword,
-						Dag* dag, char* dagFile, int lineNum );
+						char* dagFile, int lineNum );
 
 static bool parse_script(char *endline, Dag *dag, char *filename, int lineNumber);
 static bool parse_parent(Dag *dag, char *filename, int lineNumber);
@@ -78,7 +78,7 @@ isDelimiter( char c ) {
 
 
 //-----------------------------------------------------------------------------
-bool parse (Dagman &dm, char *filename, Dag *dag) {
+bool parse (Dag *dag, char *filename) {
 	ASSERT( dag != NULL );
 
 	FILE *fp = fopen(filename, "r");
@@ -120,24 +120,24 @@ bool parse (Dagman &dm, char *filename, Dag *dag) {
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-			parsed_line_successfully = parse_node( dm, Job::TYPE_CONDOR, token,
-												   dag, filename, lineNumber );
+			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR, token,
+												   filename, lineNumber );
 		}
 
 		// Handle a Stork job spec
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-			parsed_line_successfully = parse_node( dm, Job::TYPE_STORK, token,
-												   dag, filename, lineNumber );
+			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK, token,
+												   filename, lineNumber );
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"Warning: the DAP token is deprecated and may be unsupported "
 				"in a future release.  Use the DATA token\n",
 				filename, lineNumber );
 		}
 		else if	(strcasecmp(token, "DATA") == 0) {
-			parsed_line_successfully = parse_node( dm, Job::TYPE_STORK, token,
-												   dag, filename, lineNumber );
+			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK, token,
+												   filename, lineNumber );
 		}
 
 		// Handle a SCRIPT spec
@@ -197,7 +197,7 @@ bool parse (Dagman &dm, char *filename, Dag *dag) {
 
 
 static bool 
-parse_node( Dagman & dm, Job::job_type_t nodeType, char* nodeTypeKeyword, Dag* dag,
+parse_node( Dag *dag, Job::job_type_t nodeType, char* nodeTypeKeyword,
 			char* dagFile, int lineNum )
 {
 	MyString example;
@@ -234,7 +234,7 @@ parse_node( Dagman & dm, Job::job_type_t nodeType, char* nodeTypeKeyword, Dag* d
 			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 			return false;
 	}
-	if( !AddNode( dm, nodeType, nodeName, submitFile, NULL, NULL, done, whynot ) )
+	if( !AddNode( dag, nodeType, nodeName, submitFile, NULL, NULL, done, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );

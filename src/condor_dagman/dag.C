@@ -188,7 +188,7 @@ Dag::InitializeDagFiles( char *lockFileName )
 }
 
 //-------------------------------------------------------------------------
-bool Dag::Bootstrap (const Dagman &dm, bool recovery) {
+bool Dag::Bootstrap (bool recovery) {
     Job* job;
     ListIterator<Job> jobs (_jobs);
 
@@ -207,12 +207,12 @@ bool Dag::Bootstrap (const Dagman &dm, bool recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
 
 		if( _condorLogFiles.number() > 0 ) {
-			if( !ProcessLogEvents( dm, CONDORLOG, recovery ) ) {
+			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				return false;
 			}
 		}
 		if( _dapLogName ) {
-			if( !ProcessLogEvents( dm, DAPLOG, recovery ) ) {
+			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				return false;
 			}
 		}
@@ -344,7 +344,7 @@ bool Dag::DetectDaPLogGrowth () {
 
 //-------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
-bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
+bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 
 	if ( logsource == CONDORLOG ) {
 		if ( !_condorLogInitialized ) {
@@ -1147,7 +1147,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						 job->varValsFromDag );
     } else if( job->JobType() == Job::TYPE_STORK ) {
 	  job->_submitTries++;
-      submit_success = dap_submit( dm, cmd_file.Value(), condorID,
+      submit_success = dap_submit( cmd_file.Value(), condorID,
 				   job->GetJobName() );
     } else {
 	    debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", job->JobType() );
@@ -1425,7 +1425,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 }
 
 //---------------------------------------------------------------------------
-void Dag::RemoveRunningScripts ( const Dagman &dm ) const {
+void Dag::RemoveRunningScripts ( ) const {
     ListIterator<Job> iList(_jobs);
     Job * job;
     while (iList.Next(job)) {
@@ -1897,7 +1897,7 @@ Dag::DumpDotFile(void)
 //
 //-------------------------------------------------------------------------
 void
-Dag::CheckAllJobs(const Dagman &dm)
+Dag::CheckAllJobs()
 {
 	MyString	jobError;
 	if ( _checkEvents.CheckAllJobs(jobError) == CheckEvents::EVENT_ERROR ) {

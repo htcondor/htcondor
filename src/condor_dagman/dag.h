@@ -94,11 +94,10 @@ class Dag {
 	void InitializeDagFiles( char *lockFileName );
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
-		@param the appropriate Dagman object
         @param recovery specifies if this is a recovery
         @return true: successful, false: failure
     */
-    bool Bootstrap (const Dagman &dm, bool recovery);
+    bool Bootstrap (bool recovery);
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
@@ -123,14 +122,12 @@ class Dag {
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
 
-		@param the appropriate Dagman object
         @param recover Process Log in Recover Mode, from beginning to end
         @return true on success, false on failure
     */
     //    bool ProcessLogEvents (bool recover = false);
 
-    bool ProcessLogEvents (const Dagman &dm, int logsource,
-			bool recovery = false); //<--DAP
+    bool ProcessLogEvents (int logsource, bool recovery = false); //<--DAP
 
 	/** Process a single event.  Note that this is called every time
 			we attempt to read the user log, so we may or may not have
@@ -278,7 +275,7 @@ class Dag {
 	removed by the user via condor_rm.  This function <b>is not</b>
 	called when the schedd kills Dagman.
     */
-    void RemoveRunningScripts ( const Dagman & ) const;
+    void RemoveRunningScripts ( ) const;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
@@ -313,7 +310,7 @@ class Dag {
 	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
 	void DumpDotFile(void);
 
-	void CheckAllJobs(const Dagman &dm);
+	void CheckAllJobs();
 
 		/** Returns a delimited string listing the node names of all
 			of the given node's parents.

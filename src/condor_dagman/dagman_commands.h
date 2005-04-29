@@ -34,12 +34,12 @@ bool PauseDag(Dagman &dm);
 // resume DAGMan's normal event-processing
 bool ResumeDag(Dagman &dm);
 
-bool AddNode( const Dagman &dm, Job::job_type_t type, const char *name,
+bool AddNode( Dag *dag, Job::job_type_t type, const char *name,
 			  const char* cmd,
 			  const char *precmd, const char *postcmd, bool done,
 			  MyString &failReason );
 
-bool IsValidNodeName( const Dagman &dm, const char *name, MyString &whynot );
+bool IsValidNodeName( Dag *dm, const char *name, MyString &whynot );
 bool IsValidSubmitFileName( const char *name, MyString &whynot );
 
 /*

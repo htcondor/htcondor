@@ -208,7 +208,7 @@ int main_shutdown_rescue( int exitVal ) {
 		}
 		if ( dagman.dag->NumScriptsRunning() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
-			dagman.dag->RemoveRunningScripts(dagman);
+			dagman.dag->RemoveRunningScripts();
 		}
 	}
 	unlink( lockFileName ); 
@@ -474,7 +474,7 @@ int main_init (int argc, char ** const argv) {
     // takes care of adding jobs and dependencies to the DagMan
     //
     debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagman.datafile );
-    if( !parse( dagman, dagman.datafile, dagman.dag ) ) {
+    if( !parse( dagman.dag, dagman.datafile ) ) {
         debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 dagman.datafile );
     }
@@ -514,7 +514,7 @@ int main_init (int argc, char ** const argv) {
         }
 
         debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
-        if( !dagman.dag->Bootstrap( dagman, recovery ) ) {
+        if( !dagman.dag->Bootstrap( recovery ) ) {
             dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
@@ -586,7 +586,7 @@ void condor_event_timer () {
 
     // If the log has grown
     if( dagman.dag->DetectCondorLogGrowth() ) {
-		if( dagman.dag->ProcessLogEvents( dagman, CONDORLOG ) == false ) {
+		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			main_shutdown_rescue( EXIT_ERROR );
 			return;
@@ -594,7 +594,7 @@ void condor_event_timer () {
     }
 
     if( dagman.dag->DetectDaPLogGrowth() ) {
-      if( dagman.dag->ProcessLogEvents( dagman, DAPLOG ) == false ) {
+      if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
 debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
 	dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 	main_shutdown_rescue( EXIT_ERROR );
@@ -631,7 +631,7 @@ debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
     //
     if( dagman.dag->Done() ) {
         ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
-		dagman.dag->CheckAllJobs(dagman);
+		dagman.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		ExitSuccess();
 		return;

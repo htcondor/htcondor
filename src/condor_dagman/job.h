@@ -307,6 +307,7 @@ class Job {
 
 	//The log file for this job -- needed because we're now allowing
 	//each job to have its own log file.
+	// Note: this is needed only for writing a POST script terminated event.
 	char *_logFile;
 
 	// DAG definition files can now pass named variables into job submit files.

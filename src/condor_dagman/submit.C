@@ -141,7 +141,7 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 
 //-------------------------------------------------------------------------
 static bool
-do_submit( const Dagman &dm, const char *command, CondorID &condorID,
+do_submit( const char *command, CondorID &condorID,
 		Job::job_type_t jobType, const char *exe )
 {
 	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command);
@@ -240,7 +240,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	command = MyString(exe) + " " + prependLines + " " + cmdFile + " 2>&1";;
 #endif
 	
-	bool success = do_submit( dm, command.Value(), condorID,
+	bool success = do_submit( command.Value(), condorID,
 			Job::TYPE_CONDOR, exe );
 
 	return success;
@@ -248,7 +248,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 //-------------------------------------------------------------------------
 bool
-dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
+dap_submit( const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName )
 {
   MyString command;
@@ -258,7 +258,7 @@ dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
   command.sprintf("%s -lognotes \"DAG Node: %s\" %s 2>&1", 
   	   exe, DAGNodeName, cmdFile );
 
-  bool success = do_submit( dm, command.Value(), condorID, Job::TYPE_STORK,
+  bool success = do_submit( command.Value(), condorID, Job::TYPE_STORK,
   	  exe );
 
   return success;

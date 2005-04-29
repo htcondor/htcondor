@@ -49,7 +49,7 @@ bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString DAGParentNodeNames,
 					List<MyString>* names, List<MyString>* vals );
 
-bool dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
+bool dap_submit( const char* cmdFile, CondorID& condorID,
 		 const char* DAGNodeName );  //--> DAP
 
 #endif /* #ifndef CONDOR_SUBMIT_H */
