@@ -7,6 +7,13 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+4/29/05 V6_7_7-branch
+    A release branch for the 6.7.7 manual, created from the V6_7_7-root
+    tag. Any changes to the 6.7.7 manual should be done here, and the
+    V6_7-branch can be used for 6.7.8 and beyond.
+
+4/29/05 V6_7_7-root
+	The state of the V6_7-branch when the V6_7_7-branch was created.
 
 04/18/05 V6_7-quill-branch
    A branch for the initial commit of Quill, created off
