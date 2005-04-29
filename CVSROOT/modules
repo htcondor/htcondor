@@ -457,7 +457,7 @@ V6_7_QUILL_EXT -a V6_7_COMMON_EXT \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gt3gahp/2.0 \
 		   externals/bundles/gt4gahp/1.2a \
-		   externals/bundles/classads/0.9.8-b2 \
+		   externals/bundles/classads/0.9.8-b1 \
 		   externals/bundles/globus/2.4.3.data \
 		   externals/bundles/gsoap/2.7 \
 		   externals/bundles/srb/3.2.1 \
