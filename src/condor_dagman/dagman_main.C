@@ -126,7 +126,11 @@ Dagman::Config()
 
 		// We want to default to allowing the terminated/aborted
 		// combination (that's what we've defaulted to in the past).
-	allow_events = CheckEvents::ALLOW_TERM_ABORT;
+		// Okay, we also want to allow execute before submit because
+		// we've run into that, and since DAGMan doesn't really care
+		// about the execute events, it shouldn't abort the DAG.
+	allow_events = CheckEvents::ALLOW_TERM_ABORT |
+			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT;
 
 		// If the old DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION param is set,
 		// we also allow extra runs.

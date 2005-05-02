@@ -27,7 +27,7 @@
 #include "string_list.h"
 #include "check_events.h"
 
-static const char * VERSION = "0.9.1";
+static const char * VERSION = "0.9.2";
 
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
@@ -419,6 +419,13 @@ int main(int argc, char **argv)
 
 	CheckEvents		ce8(CheckEvents::ALLOW_ALL);
 
+	exec.cluster = 1234;
+	exec.proc = 0;
+	exec.subproc = 0;
+
+	printf("Testing execute... ");
+	CheckThisEvent(ce8, &exec, CheckEvents::EVENT_BAD_EVENT, result);
+
 	printf("Testing submit... ");
 	CheckThisEvent(ce8, &se1, CheckEvents::EVENT_OKAY, result);
 
@@ -438,6 +445,32 @@ int main(int argc, char **argv)
 		result = false;
 	} else {
 		printf("...got expected bad event (%s)\n", errorMsg.Value());
+	}
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing allowing execute before submit\n\n");
+
+	CheckEvents		ce9(CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT);
+
+	printf("Testing execute... ");
+	CheckThisEvent(ce9, &exec, CheckEvents::EVENT_BAD_EVENT, result);
+
+	printf("Testing submit... ");
+	CheckThisEvent(ce9, &se1, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing terminate... ");
+	CheckThisEvent(ce9, &te1, CheckEvents::EVENT_OKAY, result);
+
+		// This should return OKAY because at this point we don't
+		// remember that the execute came before the submit.
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce9.CheckAllJobs(errorMsg) == CheckEvents::EVENT_OKAY ) {
+		printf("...succeeded\n");
+	} else {
+		printf("...FAILED (%s)\n", errorMsg.Value());
+		printf("########## TEST FAILED HERE ##########\n");
+		result = false;
 	}
 
 	//-------------------------------------------------------------------------

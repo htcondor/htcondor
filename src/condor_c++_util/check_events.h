@@ -44,25 +44,30 @@ class CheckEvents {
 		// ALLOW_GARBAGE tolerates getting "garbage" events mixed
 		// into the log (e.g., a terminated event without a corresponding
 		// submit).
+		// ALLOW_EXEC_BEFORE_SUBMIT tolerates getting an execute
+		// event before the submit event for that job.
 		// WARNING: do not change existing values for event_check_allow_t,
 		// since users may specify them in config parameters!!
 	typedef enum {
 			// All bad events are errors.
-		ALLOW_NONE				= 0,
+		ALLOW_NONE					= 0,
 
 			// No events are errors.
-		ALLOW_ALL				= 1 << 0,
+		ALLOW_ALL					= 1 << 0,
 
 			// Spurious aborted event after a terminated event is not
 			// an error.
-		ALLOW_TERM_ABORT		= 1 << 1,
+		ALLOW_TERM_ABORT			= 1 << 1,
 
 			// "Extra" re-run of job after a terminated event is written
 			// is not an error.
-		ALLOW_RUN_AFTER_TERM	= 1 << 2,
+		ALLOW_RUN_AFTER_TERM		= 1 << 2,
 
 			// "Garbage" (ophan) events are not errors.
-		ALLOW_GARBAGE			= 1 << 3
+		ALLOW_GARBAGE				= 1 << 3,
+
+			// Execute before submit.
+		ALLOW_EXEC_BEFORE_SUBMIT	= 1 << 4
 	} check_event_allow_t;
 
 		// This is what the checks return.
@@ -145,6 +150,9 @@ class CheckEvents {
 
 	inline bool		AllowGarbage() { return (allowEvents & ALLOW_ALL) ||
 			(allowEvents & ALLOW_GARBAGE); }
+
+	inline bool		AllowExecSubmit() { return (allowEvents & ALLOW_ALL) ||
+			(allowEvents & ALLOW_EXEC_BEFORE_SUBMIT); }
 
 		// Bit-mapped flag for what "bad" events to allow.
 	int		allowEvents;

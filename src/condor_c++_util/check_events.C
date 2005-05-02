@@ -114,7 +114,7 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 				errorMsg = idStr + " executing; submit count != 1 (" +
 						MyString(info->submitCount) + ")";
 				if ( (!AllowGarbage() || info->submitCount > 1) &&
-							!AllowAll() ) {
+							!AllowExecSubmit() ) {
 					notAnError = false;
 				}
 				eventIsGood = false;
