@@ -26,7 +26,7 @@
 #include "condor_debug.h"
 #include <stdio.h>
 
-static const char *	VERSION = "0.9.0";
+static const char *	VERSION = "0.9.1";
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
@@ -46,7 +46,7 @@ main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("test_log_writer", 2);
+	dprintf_config("test_write_term", 2);
 	DebugFlags = D_ALWAYS;
 
 	int		result = 0;
@@ -106,7 +106,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 			status = STATUS_CANCEL;
 
 		} else if ( !strcmp(argv[index], "-version") ) {
-			printf("test_log_writer: %s, %s\n", VERSION, __DATE__);
+			printf("test_write_term: %s, %s\n", VERSION, __DATE__);
 			status = STATUS_CANCEL;
 
 		} else {
@@ -123,7 +123,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 	}
 
 	if ( status == STATUS_OK && args.cluster == -1 ) {
-		fprintf(stderr, "Cluser must be specified\n");
+		fprintf(stderr, "Cluster must be specified\n");
 		printf("%s", usage);
 		status = STATUS_ERROR;
 	}
