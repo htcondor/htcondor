@@ -3915,10 +3915,14 @@ following values:
 \begin{description}
 \item 0 = allow no "bad" events
 \item 1 = allow all "bad" events (overrides other bits)
-\item 2 = allow terminated/aborted event combination (default)
+\item 2 = allow terminated/aborted event combination
 \item 4 = allow "job re-run after terminated event" bug
 \item 8 = allow garbage/orphan events
+\item 16 = allow execute event before job's submit event
 \end{description}
+
+The default value is 18 (allow terminated/aborted event combination
+and allow execute event before job's submit event).
 
 For example, a value of 6 instructs \Condor{dagman} to allow both
 the terminated/aborted event combination and the "job re-run

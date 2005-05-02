@@ -33,6 +33,11 @@ The details of each version are described below.
 \item Fixed a bug in \Condor{dagman} that prevented POST scripts
 from being used with jobs that write XML-format logs.
 
+\item The event-checking code used by \Condor{dagman} now defaults
+to allowing an execute event before the submit event for the same
+job; if this happens, there will be a warning, but the DAG will
+continue.  See section~\ref{param:DAGManAllowEvents} for more info.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
