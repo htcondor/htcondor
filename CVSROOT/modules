@@ -124,7 +124,6 @@ V6_7_SRC		-a V6_6_SRC \
 			src/condor_had \
 			src/classad_analysis
 
-
 V_TRUNK_SRC		-a \
 			V6_COMMON \
 			src/configure.ac \
@@ -540,7 +539,13 @@ V6_6_7_KRB_1_2_7_BUILD	-a V6_6_ALL V6_6_7_KRB_1_2_7_EXT
 V6_7_KERB14_BUILD 	-a V6_7_ALL V6_7_KERB14_EXT
 
 # For 1-off builds to see if we can get Quill working, we need this:
-V6_7_QUILL_BUILD        -a V6_7_ALL V6_7_QUILL_EXT
+V6_7_QUILL_SRC		-a V6_7_SRC \
+			src/condor_quill
+V6_7_UNIX_CODE		-a TOOLS V6_7_QUILL_SRC
+V6_7_NT_CODE		-a NT_TOOLS NT_PROGRAMS V6_7_QUILL_SRC
+V6_7_CODE		-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_QUILL_SRC
+V6_7_ALL		-a DOC V6_7_QUILL_CODE
+V6_7_BUILD		-a V6_7_QUILL_ALL V6_7_QUILL_EXT
 
 # Point these to whatever version is living on the trunk.
 # For now, they're just called "TRUNK", since it's not obvious what
