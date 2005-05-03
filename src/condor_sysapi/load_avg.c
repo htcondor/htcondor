@@ -447,7 +447,7 @@ sample_load(void *thr_data)
 {
 	HQUERY hQuery = NULL;
 	HCOUNTER hCounterQueueLength, *hCounterCpuLoad;
-	int nextsample = 0, i;
+	int nextsample = 0, i, exit_status = 0;
 	PDH_STATUS pdhStatus;
 	PDH_FMT_COUNTERVALUE counterval;
 	long queuelen;
@@ -473,6 +473,7 @@ sample_load(void *thr_data)
 	if (pdhStatus != ERROR_SUCCESS) {
 		/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
 						   (int)pdhStatus); */
+		PdhCloseQuery(hQuery);
 		return 2;
 	}
 	hCounterCpuLoad = malloc(sizeof(HCOUNTER)*ncpus);
@@ -483,6 +484,7 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
 							   (int)pdhStatus); */
+			PdhCloseQuery(hQuery);
 			free(hCounterCpuLoad);
 			return 3;
 		}
@@ -494,9 +496,8 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhCollectQueryData returns 0x%x\n", 
 							   (int)pdhStatus); */
-			for (i=0; i<ncpus;i++) { PdhRemoveCounter(hCounterCpuLoad[i]); }
-			free(hCounterCpuLoad);
-			return 4;
+			exit_status = 4;
+			break;
 		}
 
 		pdhStatus = PdhGetFormattedCounterValue(hCounterQueueLength, 
@@ -505,9 +506,8 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
 							   (int)pdhStatus); */
-			for (i=0; i<ncpus;i++) { PdhRemoveCounter(hCounterCpuLoad[i]); }
-			free(hCounterCpuLoad);
-			return 5;
+			exit_status = 5;
+			break;
 		}
 		queuelen = counterval.longValue;
 		cpuload = 0.0;
@@ -518,9 +518,8 @@ sample_load(void *thr_data)
 			if (pdhStatus != ERROR_SUCCESS) {
 				/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
 								   (int)pdhStatus); */
-				for (i=0; i<ncpus;i++) { PdhRemoveCounter(hCounterCpuLoad[i]); }
-				free(hCounterCpuLoad);
-				return 6;
+				exit_status = 6;
+				break;
 			}
 			cpuload += counterval.doubleValue/100.0;
 		}
@@ -549,7 +548,12 @@ sample_load(void *thr_data)
 
 	}
 
-	return 0;	/* should never reach this point */
+	// we encountered a problem, so clean up everything and exit.
+	for (i=0; i<ncpus;i++) { PdhRemoveCounter(hCounterCpuLoad[i]); }
+	free(hCounterCpuLoad);
+	PdhCloseQuery(hQuery);
+
+	return exit_status;	
 }
 
 float
