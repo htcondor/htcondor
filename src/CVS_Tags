@@ -1,3 +1,8 @@
+05/03/05 V6_7_7-merge-1
+   The state of the V6_7_7-branch for a merge into V6_7-branch.  The
+   only changes are the last minute bug fixes to dag.C and the
+   check_log_files.C test program in the c++_util_lib.
+
 04/27/05 V6_7_7
    The official 6.7.7 release tag, off of the V6_7_7-branch of
    V6_7_CODE and the trunk of V6_7_7_EXT.  Created from
