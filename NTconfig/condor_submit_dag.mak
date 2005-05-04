@@ -98,10 +98,10 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_submit_dag.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_submit_dag.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_submit_dag.exe" /pdbtype:sept 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_submit_dag.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_submit_dag.exe" /pdbtype:sept 
 LINK32_OBJS= \
-	"$(INTDIR)\condor_submit_dag.obj" \
 	"$(INTDIR)\dc_stub.obj" \
+	"$(INTDIR)\condor_submit_dag.obj" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -184,10 +184,10 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_submit_dag.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_submit_dag.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_submit_dag.exe" 
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_submit_dag.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_submit_dag.exe" 
 LINK32_OBJS= \
-	"$(INTDIR)\condor_submit_dag.obj" \
 	"$(INTDIR)\dc_stub.obj" \
+	"$(INTDIR)\condor_submit_dag.obj" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -343,7 +343,7 @@ LINK32_OBJS= \
 
 !ENDIF 
 
-SOURCE=..\src\condor_tools\condor_submit_dag.C
+SOURCE=..\src\condor_dagman\condor_submit_dag.C
 
 "$(INTDIR)\condor_submit_dag.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
