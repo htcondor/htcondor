@@ -1909,7 +1909,7 @@ jobIsSandboxed( ClassAd * ad )
 
 	default:
 		dprintf( D_ALWAYS,
-				 "ERROR: unknown universe (%d) in jobIsSandboxed()", univ );
+				 "ERROR: unknown universe (%d) in jobIsSandboxed()\n", univ );
 		break;
 	}
 	return true;
