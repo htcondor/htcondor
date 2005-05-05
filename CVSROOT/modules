@@ -565,6 +565,7 @@ JAVA_SRC	-a \
 		src_java/README \
 		src_java/config.make \
 		src_java/byacc \
-		src_java/condor
+		src_java/condor \
+                src_java/find_java_home.sh
 
 HOFFMAN		-a hoffman
