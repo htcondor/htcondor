@@ -561,11 +561,12 @@ TRUNK_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V_TRUNK_SRC
 TRUNK_ALL	-a DOC TRUNK_CODE
 
 JAVA_SRC	-a \
+		src_java/LICENSE.TXT \
 		src_java/Makefile \
+		src_java/Makefile.distrib \
 		src_java/README \
-		src_java/config.make \
+		src_java/find_java_home.sh \
 		src_java/byacc \
-		src_java/condor \
-                src_java/find_java_home.sh
+		src_java/config.make
 
 HOFFMAN		-a hoffman
