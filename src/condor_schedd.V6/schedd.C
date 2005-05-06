@@ -1164,17 +1164,23 @@ service_this_universe(int universe, ClassAd* job)
 				if ( job_managed ) {
 					return false;
 				}			
-				// Now if not managed, if the GlobusScheduler has a "$$", then 
-				// this job is at least _matchable_, so return true, else
-				// false.
-				char resource[500];
-				resource[0] = '\0';
-				job->LookupString(ATTR_GLOBUS_RESOURCE, resource);
-				if ( strstr(resource,"$$") ) {
-					return true;
-				} else {
-					return false;
+				// Now if not managed, if the GlobusScheduler or RemoteSchedd 
+				// has a "$$", then  this job is at least _matchable_, so 
+				// return true, else false.
+				const char * ads_to_check[] = { ATTR_GLOBUS_RESOURCE,
+												 ATTR_REMOTE_SCHEDD };
+				for (unsigned int i = 0; 
+					     i < sizeof(ads_to_check)/sizeof(ads_to_check[0]);
+					     i++) {
+					char resource[500];
+					resource[0] = '\0';
+					job->LookupString(ads_to_check[i], resource);
+					if ( strstr(resource,"$$") ) {
+						return true;
+					}
 				}
+
+				return false;
 			}
 			break;
 		case CONDOR_UNIVERSE_MPI:
