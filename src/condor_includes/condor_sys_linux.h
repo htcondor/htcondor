@@ -126,7 +126,7 @@ END_C_DECLS
 #endif
 
 /* swapon and swapoff prototypes */
-#if !defined(IA64)
+#if !defined(IA64) && !defined(CONDOR_PPC)
 /* there is a bug in this header file for ia64 linux, figure out what I need
 	out of here and prototype it manually. */
 #include <linux/swap.h>
