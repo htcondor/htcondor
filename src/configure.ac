@@ -169,7 +169,7 @@ elif test $os = "Linux" ; then
     _cv_arch="ALPHA"
   elif test $arch = "ia64" ; then
     _cv_arch="IA64"
-  elif test $arch = "ppc" ; then
+  elif test $arch = "ppc" -o $arch = "ppc64" ; then
     _cv_arch="CONDOR_PPC"
   elif test $arch = "x86_64" ; then
     _cv_arch="X86_64"
@@ -229,6 +229,9 @@ elif test $os = "Linux" ; then
     case "$_suse_vers" in
      "8.1" )
        _cv_linux_distro="SLES81"
+       ;;
+     "9" )
+       _cv_linux_distro="SLES9"
        ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to SuSE version $_suse_vers])
