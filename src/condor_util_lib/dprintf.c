@@ -245,8 +245,15 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 					}
 				}
 
-				vfprintf( DebugFP, fmt, args );
+#ifdef va_copy
+				va_list copyargs;
 
+				va_copy(copyargs, args);
+					vfprintf( DebugFP, fmt, copyargs );
+				va_end(copyargs);
+#else
+				vfprintf( DebugFP, fmt, args );
+#endif
 			}
 
 			/* Close and unlock the log file */
