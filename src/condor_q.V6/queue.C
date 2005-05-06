@@ -1950,7 +1950,12 @@ doRunAnalysisToBuffer( ClassAd *request )
     }
 #endif
 
+	/* Attributes to check for grid universe matchmaking */ 
+	const char * ads_to_check[] = { ATTR_GLOBUS_RESOURCE,
+									 ATTR_REMOTE_SCHEDD };
+
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
+	bool uses_matchmaking = false;
 	switch(universe) {
 			// Known valid
 		case CONDOR_UNIVERSE_STANDARD:
@@ -1968,7 +1973,20 @@ doRunAnalysisToBuffer( ClassAd *request )
 		case CONDOR_UNIVERSE_GLOBUS:
 			/* We may be able to detect when it's valid.  Check for existance
 			 * of "$$(FOO)" style variables in the classad. */
-			sprintf( return_buff, "%s\nWARNING: Analysis is only meaningful for Globus universe jobs using matchmaking.\n", return_buff);
+			for (unsigned int i = 0;   
+				     i < sizeof(ads_to_check)/sizeof(ads_to_check[0]);
+					 i++) {
+				char resource[500];
+				resource[0] = '\0';
+				request->LookupString(ads_to_check[i], resource);
+				if ( strstr(resource,"$$") ) {
+					uses_matchmaking = true;
+					break;
+				}  
+			}
+			if (!uses_matchmaking) {
+				sprintf( return_buff, "%s\nWARNING: Analysis is only meaningful for Globus universe jobs using matchmaking.\n", return_buff);
+			}
 			break;
 
 			// Specific known bad
