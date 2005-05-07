@@ -1460,6 +1460,7 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1529,6 +1530,7 @@ GahpClient::globus_gram_client_job_request(
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1582,6 +1584,7 @@ GahpClient::globus_gram_client_job_cancel(const char * job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1641,6 +1644,7 @@ GahpClient::globus_gram_client_job_status(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1707,6 +1711,7 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1773,6 +1778,7 @@ GahpClient::globus_gram_client_job_callback_register(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1826,6 +1832,7 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -1878,6 +1885,7 @@ GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2434,6 +2442,7 @@ GahpClient::gt3_gram_client_job_create(
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2486,6 +2495,7 @@ GahpClient::gt3_gram_client_job_start(const char * job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2538,6 +2548,7 @@ GahpClient::gt3_gram_client_job_destroy(const char * job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2595,6 +2606,7 @@ GahpClient::gt3_gram_client_job_status(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2654,6 +2666,7 @@ GahpClient::gt3_gram_client_job_callback_register(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2707,6 +2720,7 @@ GahpClient::gt3_gram_client_ping(const char * resource_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2759,6 +2773,7 @@ GahpClient::gt3_gram_client_job_refresh_credentials(const char *job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2815,6 +2830,7 @@ GahpClient::gt4_generate_submit_id (char ** submit_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout( command, NULL ) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -2982,6 +2998,7 @@ GahpClient::gt4_gram_client_job_create(
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3039,6 +3056,7 @@ GahpClient::gt4_gram_client_job_start(const char * job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3096,6 +3114,7 @@ GahpClient::gt4_gram_client_job_destroy(const char * job_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3170,6 +3189,7 @@ GahpClient::gt4_gram_client_job_status(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3234,6 +3254,7 @@ GahpClient::gt4_gram_client_job_callback_register(const char * job_contact,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3292,6 +3313,7 @@ GahpClient::gt4_gram_client_ping(const char * resource_contact)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3356,6 +3378,7 @@ GahpClient::gt4_gram_client_delegate_credentials(const char *delegation_service_
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3415,6 +3438,7 @@ GahpClient::gt4_gram_client_refresh_credentials(const char *delegation_uri)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3502,6 +3526,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3590,6 +3615,7 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3673,6 +3699,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3740,6 +3767,7 @@ GahpClient::condor_job_remove(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3825,6 +3853,7 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3892,6 +3921,7 @@ GahpClient::condor_job_hold(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -3959,6 +3989,7 @@ GahpClient::condor_job_release(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4042,6 +4073,7 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4106,6 +4138,7 @@ GahpClient::condor_job_stage_out(const char *schedd_name, PROC_ID job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4173,6 +4206,7 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4243,6 +4277,7 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4307,6 +4342,7 @@ GahpClient::blah_job_status(const char *job_id, ClassAd **status_ad)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4364,6 +4400,7 @@ GahpClient::blah_job_cancel(const char *job_id)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
@@ -4425,6 +4462,7 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 
