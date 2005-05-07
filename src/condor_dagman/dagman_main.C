@@ -83,7 +83,7 @@ Dagman::Dagman() :
 	paused (false),
 	submit_delay (0),
 	max_submit_attempts (0),
-	datafile (NULL),
+	primaryDagFile (NULL),
 	allowLogError (false)
 {
 }
@@ -166,6 +166,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_SUBMITTED setting: %d\n",
 				maxJobs );
 
+	dagman.mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %d\n",
+				dagman.mungeNodeNames );
+
 	return true;
 }
 
@@ -199,7 +203,7 @@ int main_shutdown_rescue( int exitVal ) {
 	if( dagman.dag ) {
 		debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
 					  dagman.rescue_file );
-		dagman.dag->Rescue( dagman.rescue_file, dagman.datafile );
+		dagman.dag->Rescue( dagman.rescue_file, dagman.primaryDagFile );
 			// we write the rescue DAG *before* removing jobs because
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
@@ -343,7 +347,7 @@ int main_init (int argc, char ** const argv) {
                 debug_printf( DEBUG_SILENT, "No DAG specified\n" );
                 Usage();
             }
-            dagman.datafile = argv[i];
+			dagman.dagFiles.append( argv[i]);
         } else if( !strcasecmp( "-Rescue", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -399,12 +403,15 @@ int main_init (int argc, char ** const argv) {
 			Usage();
 		}
     }
+
+	dagman.dagFiles.rewind();
+	dagman.primaryDagFile = dagman.dagFiles.next();
   
     //
     // Check the arguments
     //
 
-    if( dagman.datafile == NULL ) {
+    if( dagman.primaryDagFile == NULL ) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
         Usage();
     }
@@ -431,11 +438,23 @@ int main_init (int argc, char ** const argv) {
     }
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName);
-    debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
-				  dagman.datafile );
+	if ( dagman.dagFiles.number() == 1 ) {
+    	debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
+				  	dagman.primaryDagFile );
+	} else {
+		MyString msg = "DAG Input files are ";
+		dagman.dagFiles.rewind();
+		const char *dagFile;
+		while ( (dagFile = dagman.dagFiles.next()) != NULL ) {
+			msg += dagFile;
+			msg += " ";
+		}
+		msg += "\n";
+    	debug_printf( DEBUG_VERBOSE, "%s", msg.Value() );
+	}
 
 	if( dagman.rescue_file == NULL ) {
-		MyString s = dagman.datafile;
+		MyString s = dagman.primaryDagFile;
 		s += ".rescue";
 		dagman.rescue_file = strnewp( s.Value() );
 	}
@@ -464,7 +483,7 @@ int main_init (int argc, char ** const argv) {
     // Create the DAG
     //
 
-    dagman.dag = new Dag( dagman.datafile, condorLogName, dagman.maxJobs,
+    dagman.dag = new Dag( dagman.dagFiles, condorLogName, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
 						  dagman.allow_events, dapLogName, //<-- DaP
 						  dagman.allowLogError );
@@ -472,17 +491,25 @@ int main_init (int argc, char ** const argv) {
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
     }
-    
+
     //
-    // Parse the input file.  The parse() routine
+    // Parse the input files.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-    debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagman.datafile );
-    if( !parse( dagman.dag, dagman.datafile ) ) {
-        debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
-					 dagman.datafile );
-    }
-
+	if ( dagman.dagFiles.number() < 2 ) dagman.mungeNodeNames = false;
+	parseSetDoNameMunge( dagman.mungeNodeNames );
+	dagman.dagFiles.rewind();
+	char *dagFile;
+	while ( (dagFile = dagman.dagFiles.next()) != NULL ) {
+    	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n",
+					dagFile );
+    	if( !parse( dagman.dag, dagFile ) ) {
+				// Note: debug_error calls DC_Exit().
+        	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
+					 	dagFile );
+    	}
+	}
+    
 #ifndef NOT_DETECT_CYCLE
 	if( dagman.startup_cycle_detect && dagman.dag->isCycle() )
 	{

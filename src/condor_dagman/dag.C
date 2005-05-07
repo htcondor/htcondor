@@ -33,6 +33,7 @@
 
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
+#include "string_list.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #if defined(BUILD_HELPER)
@@ -49,12 +50,12 @@ void touch (const char * filename) {
 }
 
 //---------------------------------------------------------------------------
-Dag::Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
+Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
+		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
 		  int allow_events, const char* dapLogName, bool allowLogError ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
-	_dagFile			  (NULL),
 	_condorLogName		  (NULL),
     _condorLogInitialized (false),
     _dapLogName           (NULL),
@@ -67,9 +68,7 @@ Dag::Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
 	_allowLogError		  (allowLogError),
 	_checkEvents          (allow_events)
 {
-
-	_dagFile = strnewp( dagFile );
-	ASSERT( _dagFile );
+	ASSERT( dagFiles.number() >= 1 );
 
 	_condorLogName = strnewp( condorLogName );
 	ASSERT( _condorLogName );
@@ -79,7 +78,9 @@ Dag::Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
 		ASSERT( _dapLogName );
 	}
 
-	FindLogFiles();
+	PrintDagFiles( dagFiles );
+
+	FindLogFiles( dagFiles );
 
 	ASSERT( _condorLogFiles.number() > 0 || _dapLogName );
 
@@ -112,7 +113,6 @@ Dag::Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
 
-	delete[] _dagFile;
 	delete[] _condorLogName;
 
     // NOTE: we cast this to char* because older MS compilers
@@ -951,34 +951,54 @@ Job * Dag::GetJob (const CondorID condorID) const {
 
 //-------------------------------------------------------------------------
 void
-Dag::FindLogFiles()
+Dag::PrintDagFiles( /* const */ StringList &dagFiles )
+{
+	if ( dagFiles.number() > 1 ) {
+		debug_printf( DEBUG_VERBOSE, "All DAG files:\n");
+		dagFiles.rewind();
+		char *dagFile;
+		int thisDagNum = 0;
+		while ( (dagFile = dagFiles.next()) != NULL ) {
+			debug_printf( DEBUG_VERBOSE, "  %s (DAG #%d)\n", dagFile,
+						thisDagNum++);
+		}
+	}
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::FindLogFiles( /* const */ StringList &dagFiles )
 {
 		// Attempt to get the log file name(s) from the submit files;
 		// if that doesn't work, use the value from the command-line
 		// argument.
-    
-	MyString dagFileName( _dagFile );
-	MyString jobKeyword("job");
-	MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
-				dagFileName, jobKeyword, _condorLogFiles );
-	if ( msg != "" ) {
-		debug_printf( DEBUG_VERBOSE,
-				"Possible error when parsing DAG: %s ...\n", msg.Value());
-		if ( _allowLogError ) {
+	dagFiles.rewind();
+	char *dagFile;
+	while ( (dagFile = dagFiles.next()) != NULL ) {
+		MyString dagFileName( dagFile );
+		MyString jobKeyword("job");
+		MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
+					dagFileName, jobKeyword, _condorLogFiles );
+		if ( msg != "" ) {
 			debug_printf( DEBUG_VERBOSE,
-					"...continuing anyhow because of -AllowLogError flag\n");
-		} else {
-			debug_printf( DEBUG_VERBOSE, "...exiting -- try again with "
-					"the '-AllowLogError' flag if you *really* think "
-					"this shouldn't be a fatal error\n");
-			DC_Exit( 1 );
+					"Possible error when parsing DAG: %s ...\n", msg.Value());
+			if ( _allowLogError ) {
+				debug_printf( DEBUG_VERBOSE,
+						"...continuing anyhow because of -AllowLogError "
+						"flag (beware!)\n");
+			} else {
+				debug_printf( DEBUG_VERBOSE, "...exiting -- try again with "
+						"the '-AllowLogError' flag if you *really* think "
+						"this shouldn't be a fatal error\n");
+				DC_Exit( 1 );
+			}
 		}
 	}
-
+	
 		// The "&& !_dapLogName" check below is kind of a kludgey fix to allow
 		// DaP jobs that have no "regular" Condor jobs to run.  Kent Wenger
 		// (wenger@cs.wisc.edu) 2003-09-05.
-	if ( (msg != "" || _condorLogFiles.number() == 0) && !_dapLogName ) {
+	if ( (_condorLogFiles.number() == 0) && !_dapLogName ) {
 		_condorLogFiles.rewind();
 		while( _condorLogFiles.next() ) {
 		    _condorLogFiles.deleteCurrent();

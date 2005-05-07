@@ -36,16 +36,26 @@ static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
 
+static int _thisDagNum = -1;
+static bool _mungeNames = true;
+
 static bool parse_node( Dag *dag, Job::job_type_t nodeType,
 						char* nodeTypeKeyword,
 						char* dagFile, int lineNum );
 
-static bool parse_script(char *endline, Dag *dag, char *filename, int lineNumber);
-static bool parse_parent(Dag *dag, char *filename, int lineNumber);
-static bool parse_retry(Dag *dag, char *filename, int lineNumber);
-static bool parse_abort(Dag *dag, char *filename, int lineNumber);
-static bool parse_dot(Dag *dag, char *filename, int lineNumber);
-static bool parse_vars(Dag *dag, char *filename, int lineNumber);
+static bool parse_script(char *endline, Dag *dag, 
+		char *filename, int lineNumber);
+static bool parse_parent(Dag *dag, 
+		char *filename, int lineNumber);
+static bool parse_retry(Dag *dag, 
+		char *filename, int lineNumber);
+static bool parse_abort(Dag *dag, 
+		char *filename, int lineNumber);
+static bool parse_dot(Dag *dag, 
+		char *filename, int lineNumber);
+static bool parse_vars(Dag *dag, 
+		char *filename, int lineNumber);
+static MyString munge_job_name(const char *jobName);
 
 
 void exampleSyntax (const char * example) {
@@ -76,10 +86,23 @@ isDelimiter( char c ) {
 	return tmp ? true : false;
 }
 
+//-----------------------------------------------------------------------------
+void parseSetDoNameMunge(bool doit)
+{
+	_mungeNames = doit;
+}
+
+//-----------------------------------------------------------------------------
+void parseSetThisDagNum(int num)
+{
+	_thisDagNum = num;
+}
 
 //-----------------------------------------------------------------------------
 bool parse (Dag *dag, char *filename) {
 	ASSERT( dag != NULL );
+
+	++_thisDagNum;
 
 	FILE *fp = fopen(filename, "r");
 	if(fp == NULL) {
@@ -212,7 +235,10 @@ parse_node( Dag *dag, Job::job_type_t nodeType, char* nodeTypeKeyword,
 		// strings will be error-handled correctly by AddNode()
 
 		// first token is the node name
-	char *nodeName = strtok( NULL, DELIMITERS );
+	const char *nodeName = strtok( NULL, DELIMITERS );
+	MyString tmpNodeName = munge_job_name(nodeName);
+	nodeName = tmpNodeName.Value();
+
 		// next token is the submit file name
 	char *submitFile = strtok( NULL, DELIMITERS );
 		// last (optional) token is DONE marker
@@ -234,7 +260,8 @@ parse_node( Dag *dag, Job::job_type_t nodeType, char* nodeTypeKeyword,
 			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 			return false;
 	}
-	if( !AddNode( dag, nodeType, nodeName, submitFile, NULL, NULL, done, whynot ) )
+	if( !AddNode( dag, nodeType, nodeName,
+				submitFile, NULL, NULL, done, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -283,7 +310,9 @@ parse_script(
 	//
 	// Third token is the JobName
 	//
-	char *jobName = strtok(NULL, DELIMITERS);
+	const char *jobName = strtok(NULL, DELIMITERS);
+	const char *jobNameOrig = jobName; // for error output
+	const char * rest = jobName; // For subsequent tokens
 	if (jobName == NULL) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
@@ -297,11 +326,14 @@ parse_script(
 		return false;
 	} else {
 		debug_printf(DEBUG_QUIET, "jobName: %s\n", jobName);
+		MyString tmpJobName = munge_job_name(jobName);
+		jobName = tmpJobName.Value();
+
 		job = dag->GetJob(jobName);
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobName );
+						  filename, lineNumber, jobNameOrig );
 			return false;
 		}
 	}
@@ -309,7 +341,6 @@ parse_script(
 	//
 	// The rest of the line is the script and args
 	//
-	char * rest = jobName;
 	
 	// first, skip over the token we already read...
 	while (*rest != '\0') rest++;
@@ -327,7 +358,7 @@ parse_script(
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
 					  filename, lineNumber, post ? "POST" : "PRE", 
-					  jobName );
+					  jobNameOrig );
 		exampleSyntax( example );
 		return false;
 	}
@@ -348,7 +379,7 @@ parse_script(
 					  "You named a %s script for node %s but "
 					  "didn't provide a script filename\n",
 					  filename, lineNumber, post ? "POST" : "PRE", 
-					  jobName );
+					  jobNameOrig );
 		exampleSyntax( example );
 		return false;
 	}
@@ -357,7 +388,7 @@ parse_script(
 		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  "failed to add %s script to node %s: %s\n",
 					  filename, lineNumber, post ? "POST" : "PRE",
-					  jobName, whynot.Value() );
+					  jobNameOrig, whynot.Value() );
 		return false;
 	}
 
@@ -382,15 +413,19 @@ parse_parent(
 	
 	List<Job> parents;
 	
-	char *jobName;
+	const char *jobName;
 	
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL &&
 		   strcasecmp (jobName, "CHILD") != 0) {
-		Job * job = dag->GetJob(jobName);
+		const char *jobNameOrig = jobName; // for error output
+		MyString tmpJobName = munge_job_name(jobName);
+		const char *jobName2 = tmpJobName.Value();
+
+		Job * job = dag->GetJob(jobName2);
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobName );
+						  filename, lineNumber, jobNameOrig );
 			return false;
 		}
 		parents.Append (job);
@@ -417,11 +452,15 @@ parse_parent(
 	List<Job> children;
 	
 	while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
+		const char *jobNameOrig = jobName; // for error output
+		MyString tmpJobName = munge_job_name(jobName);
+		const char *jobName = tmpJobName.Value();
+
 		Job * job = dag->GetJob(jobName);
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
 						  "%s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobName );
+						  filename, lineNumber, jobNameOrig );
 			return false;
 		}
 		children.Append (job);
@@ -447,8 +486,9 @@ parse_parent(
 		while ((child = children.Next()) != NULL) {
 			if (!dag->AddDependency (parent, child)) {
 				debug_printf( DEBUG_QUIET,
-							  "ERROR: failed to add dependency between "
+							  "ERROR: %s (line %d) failed to add dependency between "
 							  "parent node \"%s\" and child node \"%s\"\n",
+							  filename, lineNumber,
 							  parent->GetJobName(), child->GetJobName() );
 				return false;
 			}
@@ -474,7 +514,8 @@ parse_retry(
 {
 	const char *example = "Retry JobName 3 [UNLESS-EXIT 42]";
 	
-	char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobNameOrig = jobName; // for error output
 	if( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): Missing job name\n",
@@ -482,12 +523,15 @@ parse_retry(
 		exampleSyntax( example );
 		return false;
 	}
+
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
 	
 	Job *job = dag->GetJob( jobName );
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobName );
+					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
 	
@@ -559,7 +603,8 @@ parse_abort(
 {
 	const char *example = "ABORT-DAG-ON JobName 3";
 	
-	char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobNameOrig = jobName; // for error output
 	if( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): Missing job name\n",
@@ -567,12 +612,15 @@ parse_abort(
 		exampleSyntax( example );
 		return false;
 	}
+
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
 	
 	Job *job = dag->GetJob( jobName );
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Unknown Job %s\n",
-					  filename, lineNumber, jobName );
+					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
 	
@@ -677,16 +725,21 @@ static bool parse_vars(Dag *dag, char *filename, int lineNumber) {
 	char name[maxLen];
 	char value[maxLen];
 
-	char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobNameOrig = jobName; // for error output
 	if(jobName == NULL) {
 		debug_printf(DEBUG_QUIET, "%s (line %d): Missing job name\n", filename, lineNumber);
 		exampleSyntax(example);
 		return false;
 	}
 
+	MyString tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.Value();
+
 	Job *job = dag->GetJob(jobName);
 	if(job == NULL) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n", filename, lineNumber, jobName);
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig);
 		return false;
 	}
 
@@ -794,3 +847,17 @@ static bool parse_vars(Dag *dag, char *filename, int lineNumber) {
 	return true;
 }
 
+static MyString munge_job_name(const char *jobName)
+{
+		//
+		// Munge the node name if necessary.
+		//
+	MyString newName;
+	if ( _mungeNames ) {
+		newName = MyString(_thisDagNum) + "." + jobName;
+	} else {
+		newName = jobName;
+	}
+
+	return newName;
+}

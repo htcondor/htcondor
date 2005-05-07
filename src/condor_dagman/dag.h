@@ -82,7 +82,8 @@ class Dag {
 			   have an error determining the job log files
     */
 
-    Dag( char *dagFile, char *condorLogName, const int maxJobsSubmitted,
+    Dag( /* const */ StringList &dagFiles, char *condorLogName,
+		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
 		 int allowEvents, const char *dapLogName, bool allowLogError );
 
@@ -321,9 +322,15 @@ class Dag {
 	
   protected:
 
-	/** Find all Condor (not DaP) log files associated with this DAG.
+	/** Print a numbered list of the DAG files.
+	    @param The list of DAG files being run.
 	*/
-	void FindLogFiles();
+	void PrintDagFiles( /* const */ StringList &dagFiles );
+
+	/** Find all Condor (not DaP) log files associated with this DAG.
+	    @param The list of DAG files being run.
+	*/
+	void FindLogFiles( /* const */ StringList &dagFiles );
 
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()
@@ -362,9 +369,6 @@ class Dag {
 				script, POST script, or node).
 		*/
 	static void CheckForDagAbort(Job *job, int exitVal, const char *type);
-	
-		// The DAG file name.
-	char *		_dagFile;
 
 		// The log file name specified by the -Condorlog command line
 		// argument (not used for much anymore).

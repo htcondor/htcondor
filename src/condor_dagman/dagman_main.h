@@ -24,6 +24,7 @@
 #define DAGMAN_MAIN_H
 
 #include "dag.h"
+#include "string_list.h"
 
 	// Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
@@ -61,7 +62,15 @@ class Dagman {
 		// interval
     int max_submits_per_interval;
 
-    char *datafile;
+		// "Primary" DAG file -- if we have multiple DAG files this is
+		// the first one.  The lock file name, rescue DAG name, etc., 
+		// are based on this name.
+	char *primaryDagFile;
+
+		// The list of all DAG files to be run by this invocation of
+		// condor_dagman.
+	StringList dagFiles;
+
 		// whether to peform expensive cycle-detection at startup
 		// (note: we perform run-time cycle-detection regardless)
 	bool startup_cycle_detect;
@@ -79,6 +88,11 @@ class Dagman {
 		// before any other ready nodes; otherwise a submit failure puts
 		// a node at the back of the ready queue.  (Default is true.)
 	bool retrySubmitFirst;
+
+		// Whether to munge the node names for multi-DAG runs to make
+		// sure they're unique.  The default is true, but the user can
+		// turn this off if their node names are globally unique.
+	bool mungeNodeNames;
 
 		// the Condor job id of the DAGMan job
 	CondorID DAGManJobId;

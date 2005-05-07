@@ -26,7 +26,20 @@
 
 #include "dag.h"
 
+/**
+ * Set whether we should munge the node names (only applies to multi-DAG
+ * runs).
+ * @param Whether to munge the node names.
+ */
+void parseSetDoNameMunge(bool doit);
+
+/**
+ * Parse a DAG file.
+ * @param The Dag object we'll be adding nodes to.
+ * @param The name of the DAG file.
+ */
 bool parse (Dag *dag, char * filename);
+
 bool isKeyWord( const char *token );
 //void DFSVisit (Job * job);
 #endif
