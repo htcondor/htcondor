@@ -174,6 +174,7 @@ class GahpServer : public Service {
 	int m_gahp_readfd;
 	int m_gahp_writefd;
 	int m_gahp_errorfd;
+	MyString m_gahp_error_buffer;
 	char m_gahp_version[150];
 	StringList * m_commands_supported;
 	bool use_prefix;

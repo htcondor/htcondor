@@ -114,6 +114,7 @@ GahpServer::GahpServer(const char *id, const char *path, const char *args)
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
 	m_gahp_errorfd = -1;
+	m_gahp_error_buffer = "";
 	m_reference_count = 0;
 	m_commands_supported = NULL;
 	m_pollInterval = 5;
@@ -1207,19 +1208,35 @@ GahpServer::pipe_ready()
 int
 GahpServer::err_pipe_ready()
 {
-	MyString errStr;
 	int count = 0;
 
 	char buff[5001];
-	buff[1] = '\0';
+	buff[0] = '\0';
 
 	while (((count = (read(m_gahp_errorfd, &buff, 5000))))>0) {
-		buff[count]='\0';
-		errStr += buff;
-	}
 
-	dprintf (D_FULLDEBUG, "Error from GAHP[%d]:\n-----\n%s-----\n",
-			 m_gahp_pid, errStr.Value());
+		char *prev_line = buff;
+		char *newline = buff - 1;
+		buff[count]='\0';
+
+			// Search for each newline in the string we just read and
+			// print out the text between it and the previous newline 
+			// (which may include text stored in m_gahp_error_buffer).
+			// Any text left at the end of the string is added to
+			// m_gahp_error_buffer to be printed when the next newline
+			// is read.
+		while ( (newline = strchr( newline + 1, '\n' ) ) != NULL ) {
+
+			*newline = '\0';
+			dprintf( D_FULLDEBUG, "GAHP[%d] (stderr) -> %s%s\n", m_gahp_pid,
+					 m_gahp_error_buffer.Value(), prev_line );
+			prev_line = newline + 1;
+			m_gahp_error_buffer = "";
+
+		}
+
+		m_gahp_error_buffer += prev_line;
+	}
 
 	return TRUE;
 }
