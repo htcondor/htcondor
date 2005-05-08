@@ -131,6 +131,9 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	int	saved_flags;
 	priv_state	priv;
 	int debug_level;
+#ifdef va_copy
+	va_list copyargs;
+#endif
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -245,9 +248,8 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 					}
 				}
 
-#ifdef va_copy
-				va_list copyargs;
 
+#ifdef va_copy
 				va_copy(copyargs, args);
 					vfprintf( DebugFP, fmt, copyargs );
 				va_end(copyargs);
