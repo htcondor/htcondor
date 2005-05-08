@@ -1956,6 +1956,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	bool uses_matchmaking = false;
+	unsigned int i;
 	switch(universe) {
 			// Known valid
 		case CONDOR_UNIVERSE_STANDARD:
@@ -1973,7 +1974,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		case CONDOR_UNIVERSE_GLOBUS:
 			/* We may be able to detect when it's valid.  Check for existance
 			 * of "$$(FOO)" style variables in the classad. */
-			for (unsigned int i = 0;   
+			for (i = 0;   
 				     i < sizeof(ads_to_check)/sizeof(ads_to_check[0]);
 					 i++) {
 				char resource[500];
