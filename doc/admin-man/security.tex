@@ -38,7 +38,7 @@ Condor:
 
 \begin{description}
 
-\item[Users] As privilege or capability in an operating system
+\item[Users] Because privilege or capability in an operating system
 is based on a process owner,
 which process owner (or user) a job or Condor daemon is run
 as is critical.
@@ -47,10 +47,10 @@ as is critical.
 The Condor system 
 prefers that Condor daemons are run as the user root,
 while other common operations are to be owned by
-a separate user (named \File{condor}).
+a separate user.
 % Karen's edit to this point in this file.
 This is usually the
-``condor'' user, but any user can be chosen. This topic is discussed
+\File{condor} user, but any user can be chosen. This topic is discussed
 in more detail in Section~\ref{sec:uids}. 
 
 \item[Authentication] When someone submits a job to Condor, how do you
@@ -444,72 +444,83 @@ pointer to the core file, then residing in the submit side working directory
 \index{UIDs in Condor|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-Security} Security Configuration}
+\subsection{\label{sec:Config-Security}Basic Security Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor provides support for strong authentication,
-encryption, integrity assurance, as well as authorization.
-Most of these security features are not visible to the user
-(one who submits jobs).
-They are enabled by site administrators through the use of
-configuration macros.
-This section describes the authentication, encryption,
-integrity assurance, as well as authorization configuration
-macros provided by Condor.
+Condor provides support for strong authentication, encryption,
+integrity assurance, as well as authorization, as described in
+Section~{sec:Security}. However, Condor does not turn on these
+features by default, for two reasons. First, setting up strong
+authentication and authorization require extra support outside of
+Condor, such as GSI certificates or a Kerberos Key Distribution Center
+(KDC). Second, past versions of Condor did not support strong security
+so the default configuration of Condor works correctly when
+interoperating with new or old installations of Condor.
 
-Authentication provides an assurance of the identity of one of the
-communicating parties.
-Mutual authentication provides an assurance of the identities of
-both of the communicating parties.
-Encoding information such that its contents is not easily
-decipherable by outsiders is called encryption.
-The integrity of a message is assured when any form of
-tampering with the message can be detected. 
-With integrity support,
-nothing in the message can be added, deleted, or modified
-without being detected.
+The default security configuration in Condor is host-based security
+and is described in Section~{sec:figure-out}. This form of security
+limits access to Condor based on IP addresses. For example, Condor can
+be configured to allow job submissions from everyone in the
+example.com domain, but administrator commands must be run from
+command.example.com. Host-based security does not distinguish users,
+so in the example, anyone that has access to command.example.com may
+run administrator commands. It is also subject to attacks that fake IP
+addresses. Although host-based security is limited, it is acceptable
+for many small installations, particularly if they are on private
+networks. For the remainder of this section, we will not discuss
+host-based security further.
 
-When Condor is installed, default configuration settings
-use no authentication, encryption, or integrity checks,
-nor are authorization checks provided.
-This allows newer versions of Condor with
-security features to work or interact
-with previous versions without security support.
-An administrator must modify the configuration settings to
-enable the security features.
+The following sections will describe specific configuration options
+for strong security configurations. However, a number of configuration
+options are common to each of them, so they are discussed together.
 
-Inside Condor, daemons need to communicate with each other;
-furthermore, various tools provided by Condor may also
-require communication with Condor daemons.
-All these communications can be made more secure
-through the proper usage of authentication, encryption,
-and integrity checks.
-Authorization can be used to protect resources in a Condor pool.
+\subsubsection{\label{sec:client-vs-daemon}Client Versus Daemon
+Security Configuration}
+The security configuration can be broken into two parts: the client
+and the daemon. The client is the party that initiates communication,
+while the daemon is the party the responds. In some cases it is easy
+to distinguish the client and the daemon, while in other cases it is a
+bit trickier. 
 
-When a daemon receives a request,
-it uses the client's security configuration information
-together with its own configuration settings to decide upon
-the security aspects of the communication.
-This can be considered a negotiation between the client and
-the daemon.
-The daemon replies to the client with 
-a set of reconciled policies that controls the communication,
-including authentication, encryption,
-and integrity algorithms.
+Condor tools such as \condor{submit} and \condor{config\_val} are
+client tools. They communicate with daemons: the \condor{submit}
+command communicates with the \condor{schedd}, while the
+\condor{config\_val} command may communicate with any Condor daemon. 
+
+Behind the scenes, Condor daemons also communicate with each
+other. For instance, the \condor{negotiator} will act as a client and
+contact the \condor{schedd} daemon to initiate matchmaking. When a
+match has been found, the \condor{schedd} will act as a client and
+contact the \condor{startd} daemon. 
+
+\subsubsection{\label{sec:security-negotiation} Security Negotiation}
+
+When a daemon receives a request, it uses the client's security
+configuration information together with its own configuration settings
+to decide upon the security aspects of the communication.  This can be
+considered a negotiation between the client and the daemon.  The
+daemon replies to the client with a set of reconciled policies that
+controls the communication, including authentication, encryption, and
+integrity algorithms. For instance, if the client insists upon using
+GSI authentication, while the daemon considers it optional, then GSI
+authentication will be used. 
+
+Note that this process is called security negotiation. Although it has
+a similar name to the negotiation provided by the \condor{negotiator},
+it is a completely independent process.
 
 If the daemon determines that authentication is required, then the
-client must follow the chosen authentication protocol.
-After the required authentication, the client can send its
-request to the daemon. 
-The daemon identifies the access level required for the specific
-request,
-and it checks the configuration settings to determine if the client 
-has the required access level.
-If the client has the required access level,
-permission is granted, and the request is serviced. 
+client must follow the chosen authentication protocol.  After the
+required authentication, the client can send its request to the
+daemon.  The daemon identifies the access level required for the
+specific request, and it checks the configuration settings to
+determine if the client has the required access level.  If the client
+has the required access level, permission is granted, and the request
+is serviced.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-access-levels} Access Level Descriptions}
+\subsubsection{\label{sec:Security-access-levels}Access Level Descriptions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!access levels}
 Authorization is granted based on specified access levels.
@@ -522,16 +533,20 @@ by Condor.
 \item[\DCPerm{READ}] \label{sec-level-read} This access level
    access can obtain or read information about Condor.
    Examples that require only \DCPerm{READ} access are
-   viewing the status of the pool, checking the job queue(s),
-   or viewing user permissions.
+   viewing the status of the pool with \condor{status}, 
+   checking a job queue with \condor{q},
+   or viewing user priorities with \condor{userprio}.
    \DCPerm{READ} access does not allow any
    changes, and it does not allow job submission.
 
-\item[\DCPerm{WRITE}] \label{sec-level-write} This access level
-   is required to send (write) information to Condor.
-   Note that \DCPerm{WRITE} access does not include \DCPerm{READ} access.
-   They are separate access levels.
-   Job submission requires \DCPerm{WRITE} access.
+\item[\DCPerm{WRITE}] \label{sec-level-write} This access level is
+   required to send (write) information to Condor. Examples that
+   require \DCPerm{WRITE} access are job submission with
+   \condor{submit} and advertising a machine so it appears in the pool
+   (this is usually done automatically by the \condor{startd} daemon).
+   Note that \DCPerm{WRITE} access does not imply \DCPerm{READ}
+   access.  They are separate access levels and you can theoretically
+   grant a user \DCPerm{WRITE} access without \DCPerm{READ} access.
 
 \item[\DCPerm{ADMINISTRATOR}] \label{sec-level-administrator} This
    access level has additional Condor
@@ -584,12 +599,14 @@ by Condor.
 \subsubsection{\label{sec:Security-NamesValues} Security Macro Names and Values}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The configuration macro names follow a pattern.
-Each of the names starts with the string
-\MacroNI{SEC\_}.
-This string is followed by a string that describes an
-access level.
-The levels are
+There are a large number of security configuration macros. Fortunately
+you can usually deal with a small subset. In addition, most
+configuration macros follow a pattern:
+\begin{verbatim}
+    SEC_<access-level>_<type>
+\end{verbatim}
+Where the access-level is one of of the access levels defined in
+Section~\ref{sec:Security-access-levels}: 
 \begin{verbatim}
     DEFAULT
     READ
@@ -603,18 +620,15 @@ The levels are
 % commented out June 04, as it has not been implemented
 %   DAEMON
 
-Both \MacroNI{DEFAULT} and \MacroNI{CLIENT} 
-from this list are not access levels.
+Note that both \MacroNI{DEFAULT} and \MacroNI{CLIENT} 
+from this list are not actually access levels.
 The \MacroNI{DEFAULT} is used to define all levels of access
 for a specific configuration variable when individual levels
 are not specified.
 The \MacroNI{CLIENT} is used to define the client's requirements
 and preferences in a secure communication.
 
-Still within the name of a configuration macro,
-the access level is followed by another underscore
-character and then a string describing the communication type.
-The communication types are
+The type describes is one of:
 \begin{verbatim}
     AUTHENTICATION
     ENCRYPTION
@@ -678,6 +692,24 @@ work (Fail) due to a mismatch in the configuration settings.
     NEVER      OPTIONAL       No
     NEVER      NEVER          No
 \end{verbatim}
+
+Here are three examples:
+
+Example 1: If a user submits a job with \condor{submit} and has
+\verb@SEC_CLIENT_AUTHENTICATION = OPTIONAL@ and the \condor{schedd}
+has \verb@SEC_WRITE_AUTHENTICATION = REQUIRED@ then authentication
+will be required to submit job. 
+
+Example 2: If the configuration file only contains
+\verb@SEC_DEFAULT_AUTHENTICATION = REQUIRED@ then authentication will
+be used for all communication. 
+
+Example 3: If a user's configuration specifies
+\verb@SEC_DEFAULT_AUTHENTICATION = NEVER@ while the
+\condor{collector}'s configuration specifes
+\verb@SEC_READ_AUTHENTICATION = REQUIRED@, then the user will be
+unable to run the \condor{status} command.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Security-Authentication} Authentication}
@@ -1464,7 +1496,7 @@ for testing purposes only.
 \index{authentication|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Security-Authorization} Authorization}
+\subsection{\label{sec:Security-Authorization}Authorization}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!authorization}
 \index{authorization!for security}
@@ -2297,8 +2329,8 @@ example to make sense.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:security-networks}
-Using Condor w/ Firewalls, Private Networks, and NATs}
+\subsection{\label{sec:security-networks}Using 
+Condor w/ Firewalls, Private Networks, and NATs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{security!firewalls}
