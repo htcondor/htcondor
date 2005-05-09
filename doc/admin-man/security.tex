@@ -711,13 +711,57 @@ Example 3: If a user's configuration specifies
 unable to run the \condor{status} command.
 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-Authentication} Authentication}
+\subsubsection{\label{sec:Security-sample1} Example of Daemon-Side Security Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A configuration file is provided when Condor is installed.
+No security features are enabled within the configuration as
+distributed.
+Included as comments within the configuration file is an example 
+suggesting settings that enable security features.
+Here is that example of the daemon-side portion.
+
+% from Zach  (3/7/03)
+\footnotesize
+\begin{verbatim}
+SEC_DEFAULT_AUTHENTICATION         = REQUIRED
+SEC_DEFAULT_ENCRYPTION             = REQUIRED
+SEC_DEFAULT_INTEGRITY              = REQUIRED
+
+SEC_DEFAULT_AUTHENTICATION_METHODS = FS, KERBEROS
+SEC_DEFAULT_CRYPTO_METHODS         = 3DES, BLOWFISH
+\end{verbatim}
+\normalsize
+
+This set of configuration macros forces security features
+to be used at all times.
+All communication is authenticated (using Kerberos),
+and all communication is both encrypted
+(using triple DES)
+and has its
+integrity checked to make sure that messages
+are not modified or corrupted.
+Negotiation configuration variables are not included in this
+suggested configuration.
+The default (when undefined) will be to set
+\begin{verbatim}
+SEC_DEFAULT_NEGOTIATION=OPTIONAL
+\end{verbatim}
+
+
+Note that this example configuration requires that all Condor daemons be
+version 6.3.3 or later, since previous versions will not have
+the ability to do secure communication.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Authentication}Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{authentication|(}
 \index{security!authentication}
-Authentication provides an assurance of an identity.
-Through configuration macros, both the client and the daemon
-can specify whether authentication is required.
+
+\subsubsection{Configuring Authentication}
 
 The client uses one of two macros to configure authentication:
 \index{SEC\_DEFAULT\_AUTHENTICATION macro@\texttt{SEC\_DEFAULT\_AUTHENTICATION} macro}
@@ -849,267 +893,20 @@ SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, NTSSPI
 indicates that either Kerberos or Windows authentication may be used,
 but Kerberos is preferred over Windows.
 
+\subsubsection{Authentication Defaults}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-Encryption} Encryption}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{security!encryption}
-Encryption provides privacy support between two communicating parties.
-Through configuration macros, both the client and the daemon
-can specify whether encryption is required for further communication.
+By default, all of the \verb@SEC_<access-level>_AUTHENTICATION@ are
+\verb@OPTIONAL@, except for operations which modify the job queue (like
+\condor{q} and \condor{rm}) which are \verb@REQUIRED@.
 
-The client uses one of two macros to enable or disable encryption:
-\index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
-\index{SEC\_CLIENT\_ENCRYPTION macro@\texttt{SEC\_CLIENT\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_CLIENT\_ENCRYPTION}}
-\begin{verbatim}
-    SEC_DEFAULT_ENCRYPTION
-    SEC_CLIENT_ENCRYPTION
-\end{verbatim}
-
-For the daemon, there are seven macros to enable or disable encryption:
-\index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
-\index{SEC\_READ\_ENCRYPTION macro@\texttt{SEC\_READ\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_READ\_ENCRYPTION}}
-\index{SEC\_WRITE\_ENCRYPTION macro@\texttt{SEC\_WRITE\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_WRITE\_ENCRYPTION}}
-\index{SEC\_ADMINISTRATOR\_ENCRYPTION macro@\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_ENCRYPTION macro@\texttt{SEC\_DAEMON\_ENCRYPTION} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_ENCRYPTION}}
-\index{SEC\_CONFIG\_ENCRYPTION macro@\texttt{SEC\_CONFIG\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_CONFIG\_ENCRYPTION}}
-\index{SEC\_OWNER\_ENCRYPTION macro@\texttt{SEC\_OWNER\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_OWNER\_ENCRYPTION}}
-\index{SEC\_NEGOTIATOR\_ENCRYPTION macro@\texttt{SEC\_NEGOTIATOR\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_ENCRYPTION}}
-\begin{verbatim}
-    SEC_DEFAULT_ENCRYPTION
-    SEC_READ_ENCRYPTION
-    SEC_WRITE_ENCRYPTION
-    SEC_ADMINISTRATOR_ENCRYPTION
-    SEC_CONFIG_ENCRYPTION
-    SEC_OWNER_ENCRYPTION
-    SEC_NEGOTIATOR_ENCRYPTION
-\end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_ENCRYPTION
-
-As an example, the macro defined in the configuration file
-for a daemon as
-\begin{verbatim}
-SEC_CONFIG_ENCRYPTION = REQUIRED
-\end{verbatim}
-signifies that any communication that changes a daemon's configuration
-must be encrypted.
-If a daemon's configuration contains
-\begin{verbatim}
-SEC_DEFAULT_ENCRYPTION = REQUIRED
-\end{verbatim}
-and does not contain any other security configuration for
-ENCRYPTION, then this default defines the daemon's needs
-for encryption over all access levels.
-Where a specific macro is present, its value takes
-precedence over any default given.
-
-If encryption is to be done, then the communicating parties
-must find (negotiate) a mutually acceptable method of
-encryption to be used.
-A list of acceptable methods may be provided by the client, using the
-macros
-\index{SEC\_DEFAULT\_CRYPTO\_METHODS macro@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
-\index{SEC\_CLIENT\_CRYPTO\_METHODS macro@\texttt{SEC\_CLIENT\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_CLIENT\_CRYPTO\_METHODS}}
-\begin{verbatim}
-    SEC_DEFAULT_CRYPTO_METHODS
-    SEC_CLIENT_CRYPTO_METHODS
-\end{verbatim}
-A list of acceptable methods may be provided by the daemon, using the
-macros
-\index{SEC\_DEFAULT\_CRYPTO\_METHODS macro@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
-\index{SEC\_READ\_CRYPTO\_METHODS macro@\texttt{SEC\_READ\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_READ\_CRYPTO\_METHODS}}
-\index{SEC\_WRITE\_CRYPTO\_METHODS macro@\texttt{SEC\_WRITE\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
-\index{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_CRYPTO\_METHODS macro@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
-\index{SEC\_CONFIG\_CRYPTO\_METHODS macro@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_CONFIG\_CRYPTO\_METHODS}}
-\index{SEC\_OWNER\_CRYPTO\_METHODS macro@\texttt{SEC\_OWNER\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_OWNER\_CRYPTO\_METHODS}}
-\index{SEC\_NEGOTIATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS}}
-\begin{verbatim}
-    SEC_DEFAULT_CRYPTO_METHODS
-    SEC_READ_CRYPTO_METHODS
-    SEC_WRITE_CRYPTO_METHODS
-    SEC_ADMINISTRATOR_CRYPTO_METHODS
-    SEC_CONFIG_CRYPTO_METHODS
-    SEC_OWNER_CRYPTO_METHODS
-    SEC_NEGOTIATOR_CRYPTO_METHODS
-\end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_CRYPTO_METHODS
-
-The methods are
-given as a comma-separated list of acceptable values.
-These variables list the encryption methods that are available
-to be used.
-The ordering of the list gives preference;
-the first item in the list indicates the highest preference.
-Possible values are
-\begin{verbatim}
-    3DES
-    BLOWFISH
-\end{verbatim}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-Integrity} Integrity Checks}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{security!integrity}
-
-An integrity check assures that the messages between communicating parties
-have not been tampered with.
-Any change, such as addition, modification, or deletion can
-be detected.
-Through configuration macros, both the client and the daemon
-can specify whether an integrity check is required of further communication.
-
-The client uses one of two macros to enable or disable an integrity check:
-\index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
-\index{SEC\_CLIENT\_INTEGRITY macro@\texttt{SEC\_CLIENT\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_CLIENT\_INTEGRITY}}
-\begin{verbatim}
-    SEC_DEFAULT_INTEGRITY
-    SEC_CLIENT_INTEGRITY
-\end{verbatim}
-
-For the daemon, there are seven macros to enable or disable an integrity check:
-\index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
-\index{SEC\_READ\_INTEGRITY macro@\texttt{SEC\_READ\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_READ\_INTEGRITY}}
-\index{SEC\_WRITE\_INTEGRITY macro@\texttt{SEC\_WRITE\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_WRITE\_INTEGRITY}}
-\index{SEC\_ADMINISTRATOR\_INTEGRITY macro@\texttt{SEC\_ADMINISTRATOR\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_INTEGRITY}}
-% commented out June 04, as it has not been implemented
-%\index{SEC\_DAEMON\_INTEGRITY macro@\texttt{SEC\_DAEMON\_INTEGRITY} macro}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_INTEGRITY}}
-\index{SEC\_CONFIG\_INTEGRITY macro@\texttt{SEC\_CONFIG\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_CONFIG\_INTEGRITY}}
-\index{SEC\_OWNER\_INTEGRITY macro@\texttt{SEC\_OWNER\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_OWNER\_INTEGRITY}}
-\index{SEC\_NEGOTIATOR\_INTEGRITY macro@\texttt{SEC\_NEGOTIATOR\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_INTEGRITY}}
-\begin{verbatim}
-    SEC_DEFAULT_INTEGRITY
-    SEC_READ_INTEGRITY
-    SEC_WRITE_INTEGRITY
-    SEC_ADMINISTRATOR_INTEGRITY
-    SEC_CONFIG_INTEGRITY
-    SEC_OWNER_INTEGRITY
-    SEC_NEGOTIATOR_INTEGRITY
-\end{verbatim}
-% commented out June 04, as it has not been implemented
-%   SEC_DAEMON_INTEGRITY
-
-As an example, the macro defined in the configuration file
-for a daemon as
-\begin{verbatim}
-SEC_CONFIG_INTEGRITY = REQUIRED
-\end{verbatim}
-signifies that any communication that changes a daemon's configuration
-must have its integrity assured.
-If a daemon's configuration contains
-\begin{verbatim}
-SEC_DEFAULT_INTEGRITY = REQUIRED
-\end{verbatim}
-and does not contain any other security configuration for
-\verb@INTEGRITY@, then this default defines the daemon's needs
-for integrity checks over all access levels.
-Where a specific macro is present, its value takes
-precedence over any default given.
-
-There is currently only one method used for integrity checking:
-a signed MD5 checksum.
-Its use is implied whenever integrity checks occur.
-If more methods are implemented, then there will be further
-macros to allow both the client and the daemon to specify
-which methods are acceptable.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-sample1} Example of Daemon-Side Security Configuration}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-A configuration file is provided when Condor is installed.
-No security features are enabled within the configuration as
-distributed.
-Included as comments within the configuration file is an example 
-suggesting settings that enable security features.
-Here is that example of the daemon-side portion.
-
-% from Zach  (3/7/03)
-\footnotesize
-\begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION         = REQUIRED
-SEC_DEFAULT_ENCRYPTION             = REQUIRED
-SEC_DEFAULT_INTEGRITY              = REQUIRED
-
-SEC_DEFAULT_AUTHENTICATION_METHODS = FS, KERBEROS
-SEC_DEFAULT_CRYPTO_METHODS         = 3DES, BLOWFISH
-\end{verbatim}
-\normalsize
-
-This set of configuration macros forces security features
-to be used at all times.
-All communication is authenticated (using Kerberos),
-and all communication is both encrypted
-(using triple DES)
-and has its
-integrity checked to make sure that messages
-are not modified or corrupted.
-Negotiation configuration variables are not included in this
-suggested configuration.
-The default (when undefined) will be to set
-\begin{verbatim}
-SEC_DEFAULT_NEGOTIATION=OPTIONAL
-\end{verbatim}
-
-
-Note that this example configuration requires that all Condor daemons be
-version 6.3.3 or later, since previous versions will not have
-the ability to do secure communication.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Authentication}Authentication}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{authentication|(}
-\index{security!authentication}
-Authentication provides an assurance of an identity.
-Condor supports authenticated communications by using any one
-of several supported methods.
-The details of Condor's requirements for using various methods
-of authentication are given below.
-
-Where no authentication methods are specified in the configuration,
-the default is for Condor to use file system authentication,
-Kerberos authentication, or GSI authentication.
+By default on Unix, the authentication methods are ``\verb@FS@, \verb@KERBEROS@,
+\verb@GSI@'', while on Windows they are ``\verb@NTSSPI@, \verb@KERBEROS@, \verb@GSI@''. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:GSI-Authentication}GSI Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!GSI}
-The Globus GSI (Grid Security Infrastructure) protocol provides
+The GSI (Grid Security Infrastructure) protocol provides
 an avenue for Condor to do
 PKI-based (Public Key Infrastructure) authentication using X.509 certificates.
 
@@ -1185,9 +982,10 @@ configuration variables:
 \footnotesize
 \begin{verbatim}
 GSI_DAEMON_CERT           = $(GSI_DAEMON_DIR)/hostcert.pem
-GSI_DAEMON_KEY            = $(GSI_DAEMON_DIR)/hostkey.pem
-GSI_DAEMON_TRUSTED_CA_DIR = $(GSI_DAEMON_DIR)/certificates
+GSI_DAEMON_KEY            = $(GSI_DAEMON_DIR)/hostkey.pem 
+GSI_DAEMON_TRUSTED_CA_DIR = $(GSI_DAEMON_DIR)/certificates 
 \end{verbatim}
+
 \normalsize
 Note that no proxy is assumed in this case.
 \item
@@ -1500,6 +1298,7 @@ for testing purposes only.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!authorization}
 \index{authorization!for security}
+\index{security!based on user authorization}
 
 Authorization protects resource usage by granting or denying
 access requests made to the resources.
@@ -1516,11 +1315,7 @@ This IP/Host-Based security still exists, and it can be used,
 but significantly stronger and more flexible
 security can be achieved with the newer
 authorization based on fully qualified user names.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Security-UserAuthorization}User-based Authorization}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{security!based on user authorization}
+In this section, we will just discussion user-based authorization. 
 
 % format for the configuration macro index entries
 %\index{ macro@\texttt{} macro}
@@ -1775,7 +1570,205 @@ In this example the owner has a login of
 \verb@hostname@.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Host-Security}Setting Up IP/Host-Based Security in
+\subsection{\label{sec:Security-Encryption}Encryption}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{security!encryption}
+Encryption provides privacy support between two communicating parties.
+Through configuration macros, both the client and the daemon
+can specify whether encryption is required for further communication.
+
+The client uses one of two macros to enable or disable encryption:
+\index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
+\index{SEC\_CLIENT\_ENCRYPTION macro@\texttt{SEC\_CLIENT\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_CLIENT\_ENCRYPTION}}
+\begin{verbatim}
+    SEC_DEFAULT_ENCRYPTION
+    SEC_CLIENT_ENCRYPTION
+\end{verbatim}
+
+For the daemon, there are seven macros to enable or disable encryption:
+\index{SEC\_DEFAULT\_ENCRYPTION macro@\texttt{SEC\_DEFAULT\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_ENCRYPTION}}
+\index{SEC\_READ\_ENCRYPTION macro@\texttt{SEC\_READ\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_READ\_ENCRYPTION}}
+\index{SEC\_WRITE\_ENCRYPTION macro@\texttt{SEC\_WRITE\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_WRITE\_ENCRYPTION}}
+\index{SEC\_ADMINISTRATOR\_ENCRYPTION macro@\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_ENCRYPTION macro@\texttt{SEC\_DAEMON\_ENCRYPTION} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\_ENCRYPTION}}
+\index{SEC\_CONFIG\_ENCRYPTION macro@\texttt{SEC\_CONFIG\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_CONFIG\_ENCRYPTION}}
+\index{SEC\_OWNER\_ENCRYPTION macro@\texttt{SEC\_OWNER\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_OWNER\_ENCRYPTION}}
+\index{SEC\_NEGOTIATOR\_ENCRYPTION macro@\texttt{SEC\_NEGOTIATOR\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_ENCRYPTION}}
+\begin{verbatim}
+    SEC_DEFAULT_ENCRYPTION
+    SEC_READ_ENCRYPTION
+    SEC_WRITE_ENCRYPTION
+    SEC_ADMINISTRATOR_ENCRYPTION
+    SEC_CONFIG_ENCRYPTION
+    SEC_OWNER_ENCRYPTION
+    SEC_NEGOTIATOR_ENCRYPTION
+\end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_ENCRYPTION
+
+As an example, the macro defined in the configuration file
+for a daemon as
+\begin{verbatim}
+SEC_CONFIG_ENCRYPTION = REQUIRED
+\end{verbatim}
+signifies that any communication that changes a daemon's configuration
+must be encrypted.
+If a daemon's configuration contains
+\begin{verbatim}
+SEC_DEFAULT_ENCRYPTION = REQUIRED
+\end{verbatim}
+and does not contain any other security configuration for
+ENCRYPTION, then this default defines the daemon's needs
+for encryption over all access levels.
+Where a specific macro is present, its value takes
+precedence over any default given.
+
+If encryption is to be done, then the communicating parties
+must find (negotiate) a mutually acceptable method of
+encryption to be used.
+A list of acceptable methods may be provided by the client, using the
+macros
+\index{SEC\_DEFAULT\_CRYPTO\_METHODS macro@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
+\index{SEC\_CLIENT\_CRYPTO\_METHODS macro@\texttt{SEC\_CLIENT\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_CLIENT\_CRYPTO\_METHODS}}
+\begin{verbatim}
+    SEC_DEFAULT_CRYPTO_METHODS
+    SEC_CLIENT_CRYPTO_METHODS
+\end{verbatim}
+A list of acceptable methods may be provided by the daemon, using the
+macros
+\index{SEC\_DEFAULT\_CRYPTO\_METHODS macro@\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_CRYPTO\_METHODS}}
+\index{SEC\_READ\_CRYPTO\_METHODS macro@\texttt{SEC\_READ\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_READ\_CRYPTO\_METHODS}}
+\index{SEC\_WRITE\_CRYPTO\_METHODS macro@\texttt{SEC\_WRITE\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
+\index{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_CRYPTO\_METHODS macro@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
+\index{SEC\_CONFIG\_CRYPTO\_METHODS macro@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_CONFIG\_CRYPTO\_METHODS}}
+\index{SEC\_OWNER\_CRYPTO\_METHODS macro@\texttt{SEC\_OWNER\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_OWNER\_CRYPTO\_METHODS}}
+\index{SEC\_NEGOTIATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_CRYPTO\_METHODS}}
+\begin{verbatim}
+    SEC_DEFAULT_CRYPTO_METHODS
+    SEC_READ_CRYPTO_METHODS
+    SEC_WRITE_CRYPTO_METHODS
+    SEC_ADMINISTRATOR_CRYPTO_METHODS
+    SEC_CONFIG_CRYPTO_METHODS
+    SEC_OWNER_CRYPTO_METHODS
+    SEC_NEGOTIATOR_CRYPTO_METHODS
+\end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_CRYPTO_METHODS
+
+The methods are
+given as a comma-separated list of acceptable values.
+These variables list the encryption methods that are available
+to be used.
+The ordering of the list gives preference;
+the first item in the list indicates the highest preference.
+Possible values are
+\begin{verbatim}
+    3DES
+    BLOWFISH
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Integrity}Integrity}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{security!integrity}
+
+An integrity check assures that the messages between communicating parties
+have not been tampered with.
+Any change, such as addition, modification, or deletion can
+be detected.
+Through configuration macros, both the client and the daemon
+can specify whether an integrity check is required of further communication.
+
+The client uses one of two macros to enable or disable an integrity check:
+\index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
+\index{SEC\_CLIENT\_INTEGRITY macro@\texttt{SEC\_CLIENT\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_CLIENT\_INTEGRITY}}
+\begin{verbatim}
+    SEC_DEFAULT_INTEGRITY
+    SEC_CLIENT_INTEGRITY
+\end{verbatim}
+
+For the daemon, there are seven macros to enable or disable an integrity check:
+\index{SEC\_DEFAULT\_INTEGRITY macro@\texttt{SEC\_DEFAULT\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_DEFAULT\_INTEGRITY}}
+\index{SEC\_READ\_INTEGRITY macro@\texttt{SEC\_READ\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_READ\_INTEGRITY}}
+\index{SEC\_WRITE\_INTEGRITY macro@\texttt{SEC\_WRITE\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_WRITE\_INTEGRITY}}
+\index{SEC\_ADMINISTRATOR\_INTEGRITY macro@\texttt{SEC\_ADMINISTRATOR\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_INTEGRITY}}
+% commented out June 04, as it has not been implemented
+%\index{SEC\_DAEMON\_INTEGRITY macro@\texttt{SEC\_DAEMON\_INTEGRITY} macro}
+%\index{configuration macro!\texttt{SEC\_DAEMON\_INTEGRITY}}
+\index{SEC\_CONFIG\_INTEGRITY macro@\texttt{SEC\_CONFIG\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_CONFIG\_INTEGRITY}}
+\index{SEC\_OWNER\_INTEGRITY macro@\texttt{SEC\_OWNER\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_OWNER\_INTEGRITY}}
+\index{SEC\_NEGOTIATOR\_INTEGRITY macro@\texttt{SEC\_NEGOTIATOR\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_INTEGRITY}}
+\begin{verbatim}
+    SEC_DEFAULT_INTEGRITY
+    SEC_READ_INTEGRITY
+    SEC_WRITE_INTEGRITY
+    SEC_ADMINISTRATOR_INTEGRITY
+    SEC_CONFIG_INTEGRITY
+    SEC_OWNER_INTEGRITY
+    SEC_NEGOTIATOR_INTEGRITY
+\end{verbatim}
+% commented out June 04, as it has not been implemented
+%   SEC_DAEMON_INTEGRITY
+
+As an example, the macro defined in the configuration file
+for a daemon as
+\begin{verbatim}
+SEC_CONFIG_INTEGRITY = REQUIRED
+\end{verbatim}
+signifies that any communication that changes a daemon's configuration
+must have its integrity assured.
+If a daemon's configuration contains
+\begin{verbatim}
+SEC_DEFAULT_INTEGRITY = REQUIRED
+\end{verbatim}
+and does not contain any other security configuration for
+\verb@INTEGRITY@, then this default defines the daemon's needs
+for integrity checks over all access levels.
+Where a specific macro is present, its value takes
+precedence over any default given.
+
+There is currently only one method used for integrity checking:
+a signed MD5 checksum.
+Its use is implied whenever integrity checks occur.
+If more methods are implemented, then there will be further
+macros to allow both the client and the daemon to specify
+which methods are acceptable.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Host-Security}Host-Based Security in
 Condor} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!host-based}
