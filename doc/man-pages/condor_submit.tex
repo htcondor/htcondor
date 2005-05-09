@@ -104,6 +104,10 @@ for submission to a Windows machine.
 For globus universe jobs, \Opt{input} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
+Note that this command does \emph{not} refer to the command-line
+arguments of the program.  The command-line arguments are specified by
+the \Opt{arguments} command.
+
 %%%%%%%%%%%%%%%%%%%
 %% output
 %%%%%%%%%%%%%%%%%%%
@@ -117,11 +121,14 @@ If not specified, the default value of
 \File{/dev/null} is used for submission to a Unix machine.
 If not specified, output is ignored
 for submission to a Windows machine.
-More than one job should not use the same output
+Multiple jobs should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
 For globus universe jobs, \Opt{output} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
+
+Note that if your program explicitly opens and writes to a file,
+that file should \emph{not} be specified as the output file.
 
 %%%%%%%%%%%%%%%%%%%
 %% error
@@ -189,6 +196,10 @@ it is the directory on the machine from which the job is submitted
 where the job runs;
 the current working directory for file input and output with
 respect to relative path names.
+
+Note that the path to the executable is \emph{not} relative to
+\Opt{initialdir}; if it is a relative path, it is relative to the
+directory in which the \Condor{submit} command is run.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -651,7 +662,7 @@ these evaluations can be adjusted by setting the
 \index{submit commands!noop}
 If this expression is true, the job is immediately removed from the queue
 and Condor makes no attempt at running the job. The userlog will show a
-submit event and a completetion event, with exit code 0, unless 
+submit event and a completion event, with exit code 0, unless 
 the user specifies a different signal or exit code.
 
 %%%%%%%%%%%%%%%%%%%
@@ -660,7 +671,7 @@ the user specifies a different signal or exit code.
 
 \item[noop\_job\_exit\_signal = $<$signal number$>$]
 \index{submit commands!noop\_job\_exit\_signal}
-If a job has specificed it is to be a noop, this setting allows the job
+If a job has specified it is to be a noop, this setting allows the job
 to say what signal the userlog event will show the job having terminated
 with. If not present, the job will not show as having terminated with a
 signal
@@ -671,7 +682,7 @@ signal
 
 \item[noop\_job\_exit\_code = $<$return value$>$]
 \index{submit commands!noop\_job\_exit\_code}
-If a job has specificed it is to be a noop, this setting allows the job
+If a job has specified it is to be a noop, this setting allows the job
 to say what return value the userlog event will show the job having terminated
 with. If not present, the job will as having terminated with status 0. This 
 will override any setting for the noop exit signal.
@@ -1664,7 +1675,7 @@ The syntax used is
 $ENV(variable)
 \end{verbatim}
 An example submit description file command that uses this functionality
-evaluates the submitter's home directory in order to set the
+evaluates the submittor's home directory in order to set the
 path and file name of a log file:
 \begin{verbatim} 
 log = $ENV(HOME)/jobs/logfile

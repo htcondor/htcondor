@@ -1039,6 +1039,7 @@ user does not enable Condor's File Transfer mechanism, the job will
 Submitting Jobs Without a Shared File System:
 Condor's File Transfer Mechanism} 
 %%%%%%%%%%%%
+
 \index{job!submission without a shared file system}
 \index{shared file system!submission of jobs without one}
 \index{file transfer mechanism}
@@ -1068,7 +1069,7 @@ different Condor universes, and it differs between UNIX and Windows machines.
 
 For jobs submitted under the standard universe,
 the existence of a shared file system is not relevant.
-Access to files (input and output) are handled through Condor's
+Access to files (input and output) is handled through Condor's
 remote system call mechanism.
 The executable and checkpoint files are transfered automatically, when
 needed. 
@@ -1164,7 +1165,8 @@ to the directory where the job was submitted, as expected.
 For the other cases, \emph{files are transferred back at eviction time}.
 These files are placed in
 the directory defined by the configuration
-variable \MacroNI{SPOOL}, not the submittor's directory. 
+variable \MacroNI{SPOOL}, not the directory from which the
+job was submitted.
 The transferred files are named using the
 \Attr{ClusterId} and \Attr{ProcId} job ClassAd attributes. 
 The file name takes the form:
@@ -1245,8 +1247,8 @@ the submit description file should utilize the
 \verb@transfer_input_files@ command.
 This comma-separated list specifies any other files that Condor is to
 transfer to a remote site to set up the execution environment for the
-job before it is run.
-These files are placed in the same temporary working directory
+Job before it is run.
+these files are placed in the same temporary working directory
 as the job's executable.
 At this time, directories can not be transferred in this way.
 For example:
@@ -1280,6 +1282,240 @@ For globus universe jobs, files to be transferred
 (other than standard output and standard error)
 must be specified using \Opt{transfer\_output\_files}
 in the submit description file. 
+
+%%%%%%%%%%%%
+\subsubsection{File Paths for File Transfer}
+%%%%%%%%%%%%
+
+% Note: it might be nice to get the initialdir entry in
+% the index to refer to something in here.
+
+% Note: a Windows-based example would be good, too.
+
+Using file transfer is slightly complicated by the
+fact that you have to think about file paths from
+two points of view: on the submit machine and on the
+execute machine.
+
+The files you specify in the \verb@transfer_input_files@ command
+must be specified as they are accessed on the submit machine.
+On the other hand, your program must access the files as they are
+found on the execute machine.
+
+More specifically, there are three ways to specify paths
+for \verb@transfer_input_files@:
+\begin{itemize}
+\item Relative to the submit directory, if \verb@initialdir@ is not
+  specified.
+\item Relative to the initial directory, if \verb@initialdir@ is specified.
+\item Absolute.
+\end{itemize}
+
+Each of these types of input file path will be shown in examples
+below.
+
+Before executing the program, Condor copies the input files to 
+a temporary spool directory in which the program runs.  Therefore,
+the program must access the input files \emph{without} paths.
+Because all transferred files are put into a single directory,
+if you have two input files with the same name in two different
+directories, the files will collide when transferred.  If this
+happens, the last one on the list overwrites the earlier one(s).
+
+If your program creates output files, it must create them
+in its current working directory.  Attempting to transfer
+files back from another directory will fail, even if
+your program manages to create the files.  It is
+okay to create temporary files in a directory such as \verb@/tmp@
+(if you're sure it will exist on all possible submit machines)
+as long as you don't try to transfer them back.
+If you put a path in a file name specification in the
+\verb@should_transfer_files@ command, the path will refer
+to a path on the submit machine, not the execute machine.
+
+Hopefully some examples will make this clear.
+
+\begin{description}
+
+\item[Example Background]
+
+Assume we have a program called \verb@my_program@ that takes three command-line
+arguments: two input file names and an output file name.  Further,
+assume that we have a \verb@/scratch/test@ directory which is our current
+working directory; within that directory
+we have a \verb@logs@ subdirectory and a \verb@files@ subdirectory
+that contains input files \verb@in1@ and \verb@in2@.  Also assume that
+we have a \verb@logs2@ directory within the \verb@files@ directory.
+
+So our directory tree looks like this:
+\begin{verbatim}
+/scratch/test (directory)
+    files (directory)
+        logs2 (directory)
+        in1 (file)
+        in2 (file)
+    logs (directory)
+\end{verbatim}
+
+%--------------------------
+\item[Example 1]
+
+Here's a simple example.  Note that the file names
+for \verb@transfer_input_files@ contain the \verb@files@ directory,
+since the paths are relative to the current working
+directory.  Further note that the output file will
+end up in the current working directory, not in the
+\verb@files@ directory.
+
+\begin{verbatim}
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = files/in1, files/in2
+
+Arguments       = in1 in2 out1
+Queue
+\end{verbatim}
+
+%--------------------------
+\item[Example 2]
+
+Here's the same thing, except with absolute paths to
+the input files.
+
+\begin{verbatim}
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
+
+Arguments       = in1 in2 out1
+Queue
+\end{verbatim}
+
+%--------------------------
+\item[Example 3]
+
+Here we're using \verb@initialdir@.  In this case, the output file
+will end up in the \verb@files@ directory, not in the current working
+directory.  Note that we also have to have a \verb@logs2@ directory
+within the \verb@files@ directory, because the log file names are
+also relative to the initial directory.  However, the 
+executable is \emph{not} relative to the initial directory.
+
+\begin{verbatim}
+Executable      = my_program
+Universe        = vanilla
+Error           = logs2/err.$(cluster)
+Output          = logs2/out.$(cluster)
+Log             = logs2/log.$(cluster)
+
+initialdir      = files
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = in1, in2
+
+Arguments       = in1 in2 out1
+Queue
+\end{verbatim}
+
+%--------------------------
+\item[Example 4 -- Illustrates Error]
+
+Now here's an example that will fail.  Because the file
+names passed to the program have paths, the program will not be
+able to create them on the execute machine -- there will
+be no \verb@files@ directory available, since the file structure
+is flattened when input files are transferred (all input
+files are transferred to the single spool directory).
+
+\begin{verbatim}
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = files/in1, files/in2
+
+Arguments       = files/in1 files/in2 files/out1
+Queue
+\end{verbatim}
+
+This fails with the following error:
+\begin{verbatim}
+err: files/out1: No such file or directory.
+\end{verbatim}
+
+%--------------------------
+\item[Example 5 -- Illustrates Error]
+
+This example also fails, because my\_program tries
+to access the files via absolute paths.
+
+\begin{verbatim}
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
+
+Arguments       = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1
+Queue
+\end{verbatim}
+
+This fails with the following error:
+\begin{verbatim}
+err: /scratch/test/files/out1: No such file or directory.
+\end{verbatim}
+
+%--------------------------
+\item[Example 6 -- Illustrates Error]
+
+This example fails, because the program creates an
+output file in a directory other than the current
+working directory.
+
+\begin{verbatim}
+Executable      = my_program
+Universe        = vanilla
+Error           = logs/err.$(cluster)
+Output          = logs/out.$(cluster)
+Getenv          = false
+Log             = logs/log.$(cluster)
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files = files/in1, files/in2
+transfer_output_files = /tmp/out1
+
+Arguments       = in1 in2 /tmp/out1
+Queue
+\end{verbatim}
+
+Assuming that the \verb@/tmp@ directory exists on the
+execute machine, the program will actually run.  However,
+Condor will fail when attempting to transfer back the
+output file.
+
+\end{description}
 
 %%%%%%%%%%%% 
 \subsubsection{Requirements and Rank for File Transfer}
@@ -2018,7 +2254,7 @@ Forward progress on the job will be lost.
 Too large a value,
 and execute resource will be tied up waiting for the job lease to expire.
 The value 
-should be choosen based on how long is the user willing to tie up
+should be chosen based on how long is the user willing to tie up
 the execute machines, how quickly submit machines come  back up,
 and how much work would be lost if the lease expires,
 the job is killed, and the job must start over from its beginning.
