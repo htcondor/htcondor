@@ -1,3 +1,8 @@
+05/09/05 V6_7-jeff-hmm-branch
+   A branch to check in Jeff Freschl's hierarchical matchmaker.
+   created from the V6_7-jeff-hmm-root tag on the entire V6_7_CODE 
+   module
+
 05/03/05 V6_7_7-merge-1
    The state of the V6_7_7-branch for a merge into V6_7-branch.  The
    only changes are the last minute bug fixes to dag.C and the
