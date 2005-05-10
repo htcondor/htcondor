@@ -631,7 +631,8 @@ main( int argc, char *argv[] )
 		fp = stdin;
 	} else {
 		if( (fp=fopen(cmd_file,"r")) == NULL ) {
-			fprintf( stderr, "\nERROR: Failed to open command file\n");
+			fprintf( stderr, "\nERROR: Failed to open command file (%s)\n",
+						strerror(errno));
 			exit(1);
 		}
 	}
@@ -3103,7 +3104,8 @@ SetUserLog()
 		FILE* test = fopen(ulog.Value(), "a+");
 		if (!test) {
 			fprintf(stderr,
-				"\nWARNING: Invalid log file: \"%s\"\n", ulog.Value());
+				"\nWARNING: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
+				strerror(errno));
 			exit( 1 );
 		} else {
 			fclose(test);
@@ -4447,8 +4449,8 @@ check_open( const char *name, int flags )
 	}
 
 	if( (fd=open(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
-		fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o\n",
-				 strPathname.Value(), flags );
+		fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o (%s)\n",
+				 strPathname.Value(), flags, strerror( errno ) );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
