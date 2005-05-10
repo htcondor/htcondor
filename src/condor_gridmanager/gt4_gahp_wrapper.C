@@ -143,6 +143,11 @@ main( int argc, char* argv[] ) {
 	classpath += liblocation;
 	classpath += "/gt4-gahp.jar";
 
+		// Some java properties files used by Globus are kept in
+		// $GLOBUS_LOCATION, so we need to include it in the classpath
+	classpath += classpath_seperator;
+	classpath += gt4location;
+
 	const char *ctmp;
 	buff.sprintf( "%s/lib", gt4location );
 	Directory dir( buff.Value() );
