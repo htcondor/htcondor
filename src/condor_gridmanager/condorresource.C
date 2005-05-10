@@ -201,9 +201,11 @@ int CondorResource::DoScheddPoll()
 
 	if ( gahp->isStarted() == false ) {
 		if ( gahp->Startup() == false ) {
-			// TODO Don't except here, let jobs be put on hold when they
-			//   fail to start gahp
-			EXCEPT( "Failed to start gahp server" );
+				// Failed to start the gahp server. Don't do anything
+				// about it. The job objects will also fail on this call
+				// and should go on hold as a result.
+			daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
+			return 0;
 		}
 	}
 
