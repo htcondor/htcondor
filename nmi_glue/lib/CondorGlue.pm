@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.22 2005-05-11 23:33:01 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.23 2005-05-11 23:48:24 wright Exp $
 #
 ######################################################################
 
@@ -206,7 +206,7 @@ sub printPrereqs
     # HPUX 10 is (temporarily) evil, since we're not going to really
     # set it up as a full-fledged NWO platform.  instead, we're just
     # using this "everything-1.0.0" prereq hack...
-    print $fh "prereqs_hppa_hpux_B.10.2 = everything-1.0.0\n";
+    print $fh "prereqs_hppa_hpux_B.10.20 = everything-1.0.0\n";
 }
 
 
@@ -227,7 +227,7 @@ sub printTestingPrereqs
     }
 
     # HPUX 10 is evil, see above...
-    print $fh "prereqs_hppa_hpux_B.10.2 = everything-1.0.0\n";
+    print $fh "prereqs_hppa_hpux_B.10.20 = everything-1.0.0\n";
 }
 
 
