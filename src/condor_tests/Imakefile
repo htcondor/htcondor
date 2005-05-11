@@ -523,11 +523,6 @@ RUN(job_dagman_unlessexit)
 TESTCLASS(job_dagman_unlessexit,dagman)
 TESTCLASS(job_dagman_unlessexit,quick)
 
-/*
-******************************
-** Condor BUG!
-** job_dagman_xmlcomlog and job_dagman_xmluncomlog
-** are disabled until GNATS #430 has been fixed
 DESC(job_dagman_xmlcomlog,"Look at Dagmans ability to handle a common XML based log file")
 RUN(job_dagman_xmlcomlog)
 TESTCLASS(job_dagman_xmlcomlog,dagman)
@@ -537,8 +532,6 @@ DESC(job_dagman_xmluncomlog,"Look at Dagmans ability to handle uncommon XML base
 RUN(job_dagman_xmluncomlog)
 TESTCLASS(job_dagman_xmluncomlog,dagman)
 TESTCLASS(job_dagman_xmluncomlog,quick)
-******************************
-*/
 
 /* Sample performance tests */
 
