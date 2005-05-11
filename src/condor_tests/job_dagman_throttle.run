@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 use CondorTest;
 
-$cmd = 'job_dagman_throttle.dag';
+$cmd = './job_dagman_throttle.dag';
 $testname = 'Condor submit dag - throttle test - scheduler U';
 $maxjobs = 4;
 $dagman_args = "-v -maxjobs $maxjobs";
