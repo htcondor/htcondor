@@ -449,7 +449,7 @@ pointer to the core file, then residing in the submit side working directory
 
 Condor provides support for strong authentication, encryption,
 integrity assurance, as well as authorization, as described in
-Section~{sec:Security}. However, Condor does not turn on these
+Section~\ref{sec:Security}. However, Condor does not turn on these
 features by default, for two reasons. First, setting up strong
 authentication and authorization require extra support outside of
 Condor, such as GSI certificates or a Kerberos Key Distribution Center
@@ -458,7 +458,7 @@ so the default configuration of Condor works correctly when
 interoperating with new or old installations of Condor.
 
 The default security configuration in Condor is host-based security
-and is described in Section~{sec:figure-out}. This form of security
+and is described in Section~\ref{sec:Host-Security}. This form of security
 limits access to Condor based on IP addresses. For example, Condor can
 be configured to allow job submissions from everyone in the
 example.com domain, but administrator commands must be run from
@@ -533,17 +533,17 @@ by Condor.
 \item[\DCPerm{READ}] \label{sec-level-read} This access level
    access can obtain or read information about Condor.
    Examples that require only \DCPerm{READ} access are
-   viewing the status of the pool with \condor{status}, 
-   checking a job queue with \condor{q},
-   or viewing user priorities with \condor{userprio}.
+   viewing the status of the pool with \Condor{status}, 
+   checking a job queue with \Condor{q},
+   or viewing user priorities with \Condor{userprio}.
    \DCPerm{READ} access does not allow any
    changes, and it does not allow job submission.
 
 \item[\DCPerm{WRITE}] \label{sec-level-write} This access level is
    required to send (write) information to Condor. Examples that
    require \DCPerm{WRITE} access are job submission with
-   \condor{submit} and advertising a machine so it appears in the pool
-   (this is usually done automatically by the \condor{startd} daemon).
+   \Condor{submit} and advertising a machine so it appears in the pool
+   (this is usually done automatically by the \Condor{startd} daemon).
    Note that \DCPerm{WRITE} access does not imply \DCPerm{READ}
    access.  They are separate access levels and you can theoretically
    grant a user \DCPerm{WRITE} access without \DCPerm{READ} access.
@@ -620,13 +620,18 @@ Section~\ref{sec:Security-access-levels}:
 % commented out June 04, as it has not been implemented
 %   DAEMON
 
-Note that both \MacroNI{DEFAULT} and \MacroNI{CLIENT} 
+Note that both \MacroNI{CLIENT} and \MacroNI{DEFAULT} 
 from this list are not actually access levels.
-The \MacroNI{DEFAULT} is used to define all levels of access
-for a specific configuration variable when individual levels
-are not specified.
 The \MacroNI{CLIENT} is used to define the client's requirements
 and preferences in a secure communication.
+The \MacroNI{DEFAULT} is used to define all levels of access
+for a specific configuration variable when individual levels
+are not specified. 
+This can sometimes be used in place of using any of
+the other access levels, if it's okay for all of them to be the same. 
+Note that if \MacroNI{DEFAULT} is used in combination with another
+access level, then \MacroNI{DEFAULT} will apply in all cases, except
+for that access level. 
 
 The type describes is one of:
 \begin{verbatim}
@@ -730,26 +735,27 @@ SEC_DEFAULT_AUTHENTICATION         = REQUIRED
 SEC_DEFAULT_ENCRYPTION             = REQUIRED
 SEC_DEFAULT_INTEGRITY              = REQUIRED
 
-SEC_DEFAULT_AUTHENTICATION_METHODS = FS, KERBEROS
+SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, FS
 SEC_DEFAULT_CRYPTO_METHODS         = 3DES, BLOWFISH
 \end{verbatim}
 \normalsize
 
 This set of configuration macros forces security features
 to be used at all times.
-All communication is authenticated (using Kerberos),
-and all communication is both encrypted
-(using triple DES)
-and has its
-integrity checked to make sure that messages
-are not modified or corrupted.
-Negotiation configuration variables are not included in this
+All communication is authenticated with Kerberos, unless the client
+does not use Kerberos but supports filesystem authentication, in
+which case filesystem authentication is used.
+All communication is both encrypted integrity checked to make sure
+that messages are not modified or corrupted. 
+The encryption is preferably with triple DES, but Blowfish will be
+used if the client does not use Kerberos but does use Blowfish.
+
+Security negotiation configuration variables are not included in this
 suggested configuration.
 The default (when undefined) will be to set
 \begin{verbatim}
 SEC_DEFAULT_NEGOTIATION=OPTIONAL
 \end{verbatim}
-
 
 Note that this example configuration requires that all Condor daemons be
 version 6.3.3 or later, since previous versions will not have
@@ -908,7 +914,10 @@ By default on Unix, the authentication methods are ``\verb@FS@, \verb@KERBEROS@,
 \index{authentication!GSI}
 The GSI (Grid Security Infrastructure) protocol provides
 an avenue for Condor to do
-PKI-based (Public Key Infrastructure) authentication using X.509 certificates.
+PKI-based (Public Key Infrastructure) authentication using X.509
+certificates. 
+The basics of GSI are well-documented elsewhere, such as
+\URL{http://www.globus.org/}. 
 
 A simple introduction to this type of authentication
 defines Condor's use of terminology,
@@ -953,8 +962,11 @@ pre-set values of environment variables or by default locations.
 For a Condor daemon, the certificate may be a single host certificate,
 \index{host certificate}
 and all Condor daemons on the same machine may share the same certificate.
-This certificate can also be copied to other machines,
+In some cases, the certificate can also be copied to other machines,
 where local copies are necessary.
+This can only be done in cases where a single host certificate can
+match multiple host names, something that is beyond the scope of this
+manual. 
 The certificates must be protected by access rights to files,
 since the password file is not encrypted.
 
@@ -1041,13 +1053,10 @@ only specific communications.
 See section~\ref{sec:Security-Authentication} for details on the
 more specific configuration variables used for authentication.
 
-The \MacroNI{GSI} method specifies the use of
-the X.509 protocol. 
-Given that this is the only method listed, X.509 will be the only
-protocol used.
-If other methods are acceptable, then placing this method
-first within the list will cause Condor to give preference to
-this method over others.
+In this example, only the \MacroNI{GSI} method can be used. 
+If another methods is acceptable (perhaps \MacroNI{KERBEROS}, then
+placing this method first within the list will cause Condor to give
+preference to this method over GSI, or vice-versa. 
 
 The macro \MacroNI{GSI\_DAEMON\_DIRECTORY} is specified
 to give
@@ -1118,7 +1127,10 @@ Condor will also need a way to map an X.509 distinguished
 name to a Condor user id.
 This is done in an administrator-maintained file called an X.509 map file,
 mapping from X509 Distinguished Name (DN) to Condor user id.
-It is a Globus Gridmap file.
+It is similar to a Globus gridmap file except that it is only used for
+mapping to a user id, not for authorization. 
+Information about authorization can be found in
+Section~\ref{sec:Security-Authorization}. 
 Entries (lines) in the file each contain two items.
 The first item in an entry is the 
 X.509 certificate subject name, and it is enclosed in quotes
