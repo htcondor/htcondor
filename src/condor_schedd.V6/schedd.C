@@ -1925,12 +1925,7 @@ jobIsSandboxed( ClassAd * ad )
 bool
 getSandbox( int cluster, int proc, MyString & path )
 {
-	char *Spool = param("SPOOL");
-	if( ! Spool ) {
-		return false;
-	}
 	const char * sandbox = gen_ckpt_name(Spool, cluster, proc, 0);
-	free(Spool);
 	if( ! sandbox ) {
 		return false;
 	}
@@ -2684,8 +2679,6 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 
 	int i,cluster,proc,index;
-	char *Spool = param("SPOOL");
-	ASSERT(Spool);
 	char new_attr_value[500];
 	char *buf = NULL;
 	char *SpoolSpace = NULL;
@@ -2792,7 +2785,6 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 	spoolJobFileWorkers->remove(tid);
 	delete jobs;
-	if (Spool) free(Spool);
 	if (SpoolSpace) free(SpoolSpace);
 	if (buf) free(buf);
 	return TRUE;
@@ -3243,11 +3235,8 @@ Scheduler::updateGSICred(int, Stream* s)
 
 		// Make certain this job has a x509 proxy, and that this 
 		// proxy is sitting in the SPOOL directory
-	Spool = param("SPOOL");
-	ASSERT(Spool);
 	char* SpoolSpace = strdup(gen_ckpt_name(Spool,jobid.cluster,jobid.proc,0));
 	ASSERT(SpoolSpace);
-	free(Spool);
 	char *proxy_path = NULL;
 	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
 	if ( !proxy_path || strncmp(SpoolSpace,proxy_path,strlen(SpoolSpace)) ) {
