@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.23 2005-05-11 23:48:24 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.24 2005-05-12 00:06:42 wright Exp $
 #
 ######################################################################
 
@@ -183,7 +183,9 @@ my %prereqs = (
   "x86_rh_9"       => "binutils-2.15",
   "sun4u_sol_5.9"  => "gcc-2.95.3, binutils-2.15",
   "sun4u_sol_5.8"  => "gcc-2.95.3, binutils-2.15",
+  "alpha_osf_V5.1" => "gcc-2.95.3, binutils-2.15",
   "ppc_aix_5.2"    => "vac-6, vacpp-6",
+  "irix_6.5"       => "binutils-2.15"
 );
 
 
@@ -197,7 +199,8 @@ sub printPrereqs
 
     # platform-specific prereqs
     foreach $platform ( "x86_rh_7.2", "x86_rh_8.0", "x86_rh_9", 
-			"sun4u_sol_5.9", "sun4u_sol_5.8", "ppc_aix_5.2" )
+			"sun4u_sol_5.9", "sun4u_sol_5.8",
+			"ppc_aix_5.2", "alpha_osf_V5.1", "irix_6.5" )
     {
 	print $fh "prereqs_$platform = $prereqs{'global'}, "
 	    . "$prereqs{$platform}\n";
@@ -220,10 +223,19 @@ sub printTestingPrereqs
     # we include everything from the build prereqs, plus we add java
     # for the java test suite...
     foreach $platform ( "x86_rh_7.2", "x86_rh_8.0", "x86_rh_9", 
-			"sun4u_sol_5.9", "sun4u_sol_5.8", "ppc_aix_5.2" )
+			"sun4u_sol_5.9", "sun4u_sol_5.8",
+			"ppc_aix_5.2" )
     {
 	print $fh "prereqs_$platform = $prereqs{'global'}, "
 	    . "$prereqs{$platform}, java-1.4.2_05\n";
+    }
+
+    # HACK: irix_6.5 and alpha_osf_V5.1 don't have java yet, so we
+    # can't use the real loop above...
+    foreach $platform ( "irix_6.5", "alpha_osf_V5.1" )
+    {
+	print $fh "prereqs_$platform = $prereqs{'global'}, "
+	    . "$prereqs{$platform}\n";
     }
 
     # HPUX 10 is evil, see above...
