@@ -38,8 +38,8 @@ my $default_platforms =
     "x86_winnt_5.1, " .
     "hppa_hpux_B.10.20, " .
     "alpha_osf_V5.1, " .
-    "irix_6.5, " .
     "ppc_macosx";
+
 CondorGlue::ProcessOptions( $default_platforms );
 
 # will exit when finished
