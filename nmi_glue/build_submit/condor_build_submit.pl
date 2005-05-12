@@ -28,16 +28,17 @@ use CondorGlue;
 CondorGlue::Initialize("build");
 
 my $default_platforms = 
-    "x86_rh_9, " .
-    "x86_rh_8.0, " .
-    "x86_rh_7.2, " .
-    "ia64_sles_8, " .
-    "sun4u_sol_5.9, " .
-    "sun4u_sol_5.8, " .
-    "ppc_aix_5.2, " .
-    "x86_winnt_5.1, " .
     "hppa_hpux_B.10.20, " .
-    "ppc_macosx";
+    "ia64_sles_8, " .
+    "ppc_aix_5.2, " .
+    "ppc_macosx, " .
+    "sun4u_sol_5.8, " .
+    "sun4u_sol_5.9, " .
+    "x86_64_rhas_3, " .
+    "x86_rh_7.2, " .
+    "x86_rh_8.0, " .
+    "x86_rh_9, " .
+    "x86_winnt_5.1";
 
 CondorGlue::ProcessOptions( $default_platforms );
 
