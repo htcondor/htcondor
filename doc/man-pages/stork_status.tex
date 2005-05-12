@@ -15,13 +15,14 @@
 
 \Description 
 
-\Stork{status} prints information about a Stork job.
-The single, required command-line argument is the identifier
-of the Stork job (given by \Stork{submit}).
+\Stork{status} prints information about a Stork job.  Unlike output from
+\Stork{q}, \Stork{status} can print information about completed jobs.
+If the \Opt{-name} option is specified, the named \Stork{server} is targeted
+for processing.  Otherwise, the local \Stork{server} is targeted.
+The job to be removed is identified by the job id returned by  \Stork{submit}.
 The information is printed as a ClassAd.
 See \URL{http://www.cs.wisc.edu/condor/classad} for information
 on the ClassAd language.
-
 
 \begin{Options}
 	\ToolArgsBaseDesc

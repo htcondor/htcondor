@@ -17,7 +17,10 @@
 
 \Stork{rm} removes a Stork job from the queue,
 using the required command-line argument to identify the Stork job.
-
+\Stork{rm} removes a single job from the Stork job queue.  
+If the \Opt{-name} option is specified, the named \Stork{server} is targeted
+for processing.  Otherwise, the local \Stork{server} is targeted.
+The job to be removed is identified by the job id returned by  \Stork{submit}.
 
 \begin{Options}
 	\ToolArgsBaseDesc

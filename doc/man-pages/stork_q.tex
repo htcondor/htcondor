@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-stork-q}\Stork{q}}{1}
-{remove a Stork job}
+{Query active Stork data placement jobs.}
 \Synopsis \SynProg{\Stork{q}}
 \ToolArgsBase
 
@@ -14,10 +14,12 @@
 
 \Description 
 
-\Stork{q} prints the entire queue of Stork jobs.
+\Stork{q} prints the entire queue of active Stork jobs.
 Output is provided in the syntax of the ClassAd language.
 See \URL{http://www.cs.wisc.edu/condor/classad} for information
-on the ClassAd language.
+on the ClassAd language.  Completed jobs are not printed.
+If the \Opt{-name} option is specified, the named \Stork{server} is targeted
+for processing.  Otherwise, the local \Stork{server} is targeted.
 
 
 \begin{Options}
