@@ -37,7 +37,6 @@ my $default_platforms =
     "ppc_aix_5.2, " .
     "x86_winnt_5.1, " .
     "hppa_hpux_B.10.20, " .
-    "alpha_osf_V5.1, " .
     "ppc_macosx";
 
 CondorGlue::ProcessOptions( $default_platforms );
