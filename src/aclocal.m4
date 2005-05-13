@@ -3,23 +3,16 @@
 # available from the GNU Autoconf Macro Archive at:
 # http://www.gnu.org/software/ac-archive/htmldoc/check_gnu_make.html
 # This version is more generic in that it checks any given program if
-# it's GNU or not.  However, it's more specific that it assumes the
-# given program is required.  If it doesn't find it, it bails out with
-# a fatal error.  Written by Derek Wright <wright@cs.wisc.edu>
+# it's GNU or not.  Written by Derek Wright <wright@cs.wisc.edu>
 # Arguments:
-#  $1 the variable you want to store the program in (if found) 
-#  $2 is the name of the program to search for
+#  $1 is the PATH of the program to test for
+#  $2 the variable name you want to use to see if it's GNU or not
 # Side effects:
-#  Bails out if the program isn't found.
 #  Sets _cv_<progname>_is_gnu to "yes" or "no" as appropriate
 #######################################################################
 AC_DEFUN( [CHECK_PROG_IS_GNU],
-[AC_PATH_PROG($1,$2,no,[$PATH])
- if test "$[$1]" = "no"; then
-   AC_MSG_ERROR( [$2 is required] )
- fi
- AC_CACHE_CHECK( [if $2 is GNU], [_cv_$2_is_gnu],
- [if ( sh -c "$[$1] --version" 2> /dev/null | grep GNU > /dev/null 2>&1 ) ;
+[AC_CACHE_CHECK( [if $1 is GNU], [_cv_$2_is_gnu],
+ [if ( sh -c "$1 --version" 2> /dev/null | grep GNU > /dev/null 2>&1 ) ;
   then
      _cv_$2_is_gnu=yes
   else
