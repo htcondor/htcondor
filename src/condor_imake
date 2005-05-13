@@ -58,5 +58,5 @@ fi
 ##################################################
 # Finally, call imake with all the flags
 ##################################################
-${IMAKE} -s Makefile -I../config -I../../config $*
+${IMAKE} -s Makefile -I. -I.. -I../.. -I../config -I../../config $*
 
