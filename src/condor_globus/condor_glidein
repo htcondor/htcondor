@@ -239,6 +239,8 @@ Transfer_Executable = False
 GlobusRSL = ${GLOBUSRSL}
 
 GlobusScheduler = $CONTACT
+
+Notification = Never
 Queue
 
 EOF
