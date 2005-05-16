@@ -27,7 +27,7 @@ A single invocation of \Condor{submit} may cause one or
 more clusters.
 A cluster is a set of jobs
 specified in the submit description file
-between \Opt{queue} commands for which the executable is not changed.
+between \SubmitCmd{queue} commands for which the executable is not changed.
 It is advantageous to submit
 multiple jobs as a single cluster because:
 \begin{itemize}
@@ -95,18 +95,18 @@ long-running, and that the user will not wait at the terminal for their
 completion. Because of this, the standard files which normally access
 the terminal, (\File{stdin}, \File{stdout}, and \File{stderr}),
 must refer to files. Thus,
-the file name specified with \Opt{input} should contain any keyboard
+the file name specified with \SubmitCmd{input} should contain any keyboard
 input the program requires (that is, this file becomes \File{stdin}).
 If not specified, the default value
 of \File{/dev/null} is used for submission to a Unix machine.
 If not specified, input is ignored
 for submission to a Windows machine.
-For globus universe jobs, \Opt{input} may be a URL that the Globus
+For globus universe jobs, \SubmitCmd{input} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
 Note that this command does \emph{not} refer to the command-line
 arguments of the program.  The command-line arguments are specified by
-the \Opt{arguments} command.
+the \SubmitCmd{arguments} command.
 
 %%%%%%%%%%%%%%%%%%%
 %% output
@@ -114,7 +114,7 @@ the \Opt{arguments} command.
 
 \item[output = $<$pathname$>$]
 \index{submit commands!output}
-The \Opt{output} file name will capture
+The \SubmitCmd{output} file name will capture
 any information the program would normally write to the screen
 (that is, this file becomes \File{stdout}).
 If not specified, the default value of
@@ -124,7 +124,7 @@ for submission to a Windows machine.
 Multiple jobs should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
-For globus universe jobs, \Opt{output} may be a URL that the Globus
+For globus universe jobs, \SubmitCmd{output} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
 Note that if your program explicitly opens and writes to a file,
@@ -136,7 +136,7 @@ that file should \emph{not} be specified as the output file.
 
 \item[error = $<$pathname$>$]
 \index{submit commands!error}
-The \Opt{error} file name will capture any
+The \SubmitCmd{error} file name will capture any
 error messages the program would normally write to the screen
 (that is, this file becomes \File{stderr}).
 If not specified, the default value of
@@ -145,7 +145,7 @@ If not specified, error messages are ignored
 for submission to a Windows machine.
 More than one job should not use the same error file, since
 this will cause one job to overwrite the errors of another.
-For globus universe jobs, \Opt{error} may be a URL that the Globus
+For globus universe jobs, \SubmitCmd{error} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
 %%%%%%%%%%%%%%%%%%%
@@ -198,7 +198,7 @@ the current working directory for file input and output with
 respect to relative path names.
 
 Note that the path to the executable is \emph{not} relative to
-\Opt{initialdir}; if it is a relative path, it is relative to the
+\SubmitCmd{initialdir}; if it is a relative path, it is relative to the
 directory in which the \Condor{submit} command is run.
 
 
@@ -209,14 +209,14 @@ directory in which the \Condor{submit} command is run.
 \item[should\_transfer\_files = $<$YES \Bar\ NO \Bar\ IF\_NEEDED $>$] 
 \index{submit commands!should\_transfer\_files}
 \index{file transfer mechanism}
-The \Opt{should\_transfer\_files} setting is used to define if Condor
+The \SubmitCmd{should\_transfer\_files} setting is used to define if Condor
 should transfer files to and from the remote machine where your job
 runs.
 The file transfer mechanism is used to run jobs which are not in the
 standard universe (and can therefore use remote system calls for file
 access) on machines which do not have a shared file system with the
 submit machine.
-\Opt{should\_transfer\_files} equal to \Arg{YES} will cause Condor to
+\SubmitCmd{should\_transfer\_files} equal to \Arg{YES} will cause Condor to
 always transfer files for your job.
 \Arg{NO} disables Condor's file transfer mechanism.
 \Arg{IF\_NEEDED} will not transfer files for your job if it is matched
@@ -226,13 +226,13 @@ system).
 If the job is matched with a remote resource in a different 
 \Attr{FileSystemDomain}, Condor will transfer the necessary files. 
 
-If you define \Opt{should\_transfer\_files} you \emph{must} also
-define \Opt{when\_to\_transfer\_output} (described below).
+If you define \SubmitCmd{should\_transfer\_files} you \emph{must} also
+define \SubmitCmd{when\_to\_transfer\_output} (described below).
 For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on
 page~\pageref{sec:file-transfer}.
 
-Note that \Opt{should\_transfer\_files} is not supported
+Note that \SubmitCmd{should\_transfer\_files} is not supported
 for jobs submitted to the globus universe.
 
 %%%%%%%%%%%%%%%%%%%
@@ -242,7 +242,7 @@ for jobs submitted to the globus universe.
 \item[when\_to\_transfer\_output = $<$ ON\_EXIT \Bar\ ON\_EXIT\_OR\_EVICT $>$] 
 \index{submit commands!when\_to\_transfer\_output}
 
-Setting \Opt{when\_to\_transfer\_output} equal to \Arg{ON\_EXIT} will
+Setting \SubmitCmd{when\_to\_transfer\_output} equal to \Arg{ON\_EXIT} will
 cause Condor to transfer the job's output files back to the submitting
 machine only when the job completes (exits on its own).
 
@@ -272,7 +272,7 @@ Lists all the files to be transferred into the
 working directory for the job before the job is started.
 You must separate multiple file names with a comma.
 By default, the file specified in the
-\Opt{executable} command and any file specified in the \Opt{input}
+\SubmitCmd{executable} command and any file specified in the \SubmitCmd{input}
 command (for example, \File{stdin}) are transferred.
 
 Only the transfer of files is available; the transfer of
@@ -294,7 +294,7 @@ back from the temporary working directory on the execute machine to
 the submit machine.
 Most of the time, there is no need to use this command.
 Other than for globus universe jobs,
-if \Opt{transfer\_output\_files} is not specified,
+if \SubmitCmd{transfer\_output\_files} is not specified,
 Condor will automatically transfer back all files in the job's
 temporary working directory which have been
 modified or created by the job.
@@ -303,7 +303,7 @@ Explicitly listing output files is typically only done when the job creates
 many files, and the user wants to keep a subset of
 those files. 
 If there are multiple files, they must be delimited with commas.
-\Warn Do not specify \Opt{transfer\_output\_files} in the
+\Warn Do not specify \SubmitCmd{transfer\_output\_files} in the
 submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what
 the job produces.
@@ -311,7 +311,7 @@ the job produces.
 For globus universe jobs,
 to have files other than standard output and standard error transferred
 from the execute machine back to the submit machine,
-do use \Opt{transfer\_output\_files}, listing
+do use \SubmitCmd{transfer\_output\_files}, listing
 all files to be transferred.
 These files are found on the execute machine in the
 working directory of the job.
@@ -349,7 +349,7 @@ the machine running \Condor{submit}.
 	\item Disk $>=$ DiskUsage. 
 The \AdAttr{DiskUsage} attribute is initialized to the size of the
 executable plus the size of any files specified in a
-\Opt{transfer\_input\_files} command.
+\SubmitCmd{transfer\_input\_files} command.
 It exists to ensure there is enough disk space on the 
 target machine for Condor to copy over both the executable
 and needed input files.
@@ -404,20 +404,20 @@ Universe is the default (except where the configuration variable
 \Macro{DEFAULT\_UNIVERSE} defines it otherwise),
 and tells Condor that this job has been re-linked 
 via \Condor{compile} with the Condor libraries and therefore supports
-checkpointing and remote system calls.  The \Opt{vanilla} Universe is an
+checkpointing and remote system calls.  The \SubmitCmd{vanilla} Universe is an
 execution environment for jobs which have not been linked with the
-Condor libraries.  \emph{Note:} Use the \Opt{vanilla} Universe to
-submit shell scripts to Condor.  The \Opt{pvm} Universe is for a
-parallel job written with PVM 3.4. The \Opt{scheduler} is for a job that
+Condor libraries.  \emph{Note:} Use the \SubmitCmd{vanilla} Universe to
+submit shell scripts to Condor.  The \SubmitCmd{pvm} Universe is for a
+parallel job written with PVM 3.4. The \SubmitCmd{scheduler} is for a job that
 should act as a metascheduler.
-The \Opt{globus} universe by default uses the Globus
+The \SubmitCmd{globus} universe by default uses the Globus
 GRAM API to contact the Globus resource specified and requests it run the job.
-The \Opt{globus} and \Opt{grid} universes default to using Globus 2.
-Further specification of the \Opt{grid} universe is done with the
-\Opt{grid\_type} command.
-The \Arg{mpi} universe is
+The \SubmitCmd{globus} and \SubmitCmd{grid} universes default to using Globus 2.
+Further specification of the \SubmitCmd{grid} universe is done with the
+\SubmitCmd{grid\_type} command.
+The \SubmitCmd{mpi} universe is
 for running mpi jobs made with the MPICH package.
-The \Arg{java} Universe is for programs written to the Java Virtual Machine.
+The \SubmitCmd{java} Universe is for programs written to the Java Virtual Machine.
 See the Condor User's Manual for more information about using Universe.
 
 %%%%%%%%%%%%%%%%%%%
@@ -426,8 +426,8 @@ See the Condor User's Manual for more information about using Universe.
 \item[grid\_type = " $<$ gt2 \Bar\ gt3 \Bar\ oracle \Bar\ nordugrid \Bar\ condor $>$  "] A
 \index{submit commands!grid\_type}
 case insensitive string to further specify the intended type of resource
-for \Opt{grid} universe jobs.
-The default value is \Opt{"gt2"}.
+for \SubmitCmd{grid} universe jobs.
+The default value is \SubmitCmd{"gt2"}.
 The quote marks are currently optional.
 
 %%%%%%%%%%%%%%%%%%%
@@ -738,7 +738,7 @@ to :
 %% copy_to_spool 
 %%%%%%%%%%%%%%%%%%%
 
-\item[copy\_to\_spool = $<$True \Bar\ False$>$] If \Opt{copy\_to\_spool} is set to
+\item[copy\_to\_spool = $<$True \Bar\ False$>$] If \SubmitCmd{copy\_to\_spool} is set to
 \index{submit commands!copy\_to\_spool}
 \Expr{True}, then \Condor{submit} will copy the executable to the local spool 
 directory before running it on a remote host. Oftentimes this can be quite
@@ -749,7 +749,7 @@ will skip this step.  Defaults to \Expr{True}.
 %% getenv
 %%%%%%%%%%%%%%%%%%%
 
-\item[getenv = $<$True \Bar\ False$>$] If \Opt{getenv} is set to
+\item[getenv = $<$True \Bar\ False$>$] If \SubmitCmd{getenv} is set to
 \index{submit commands!getenv}
 \index{environment variables!copying current environment}
 \Expr{True}, then \Condor{submit} will copy all of the user's current
@@ -766,7 +766,7 @@ variables that the user had at submit time. Defaults to \Expr{False}.
 %% hold
 %%%%%%%%%%%%%%%%%%%
 
-\item[hold = $<$True \Bar\ False$>$] If \Opt{hold} is set to
+\item[hold = $<$True \Bar\ False$>$] If \SubmitCmd{hold} is set to
 \index{submit commands!hold}
 \Expr{True}, then the job will be submitted in the hold state.  Jobs in
 the hold state will not run until released by \Condor{release}.
@@ -798,16 +798,16 @@ Place spaces within the parameter list only if required.
 %% log
 %%%%%%%%%%%%%%%%%%%
 
-\item[log = $<$pathname$>$] Use \Opt{log} to specify a file name where
+\item[log = $<$pathname$>$] Use \SubmitCmd{log} to specify a file name where
 \index{submit commands!log}
 Condor will write a log file of what is happening with this job cluster.
 For example, Condor will log into this file when and where the job
 begins running, when the job is checkpointed and/or migrated, when the
-job completes, etc. Most users find specifying a \Opt{log} file to be very
-handy; its use is recommended. If no \Opt{log} entry is specified, 
+job completes, etc. Most users find specifying a \SubmitCmd{log} file to be very
+handy; its use is recommended. If no \SubmitCmd{log} entry is specified, 
 Condor does not create a log for this cluster.
 
-\item[log\_xml = $<$True \Bar\ False$>$] If \Opt{log\_xml} is true, 
+\item[log\_xml = $<$True \Bar\ False$>$] If \SubmitCmd{log\_xml} is true, 
 then the log file will be written in ClassAd XML. If it isn't
 specified, XML is not used. Note that it's an XML fragment, and is
 missing the file header and footer. Also note that you should never
@@ -852,7 +852,7 @@ an image size of 8 megabytes, use a \Arg{size} of 8000.
 For the PVM universe,
 both \Arg{min} and \Arg{max} or just
 \Arg{max} may be defined. 
-If \Opt{machine\_count} is
+If \SubmitCmd{machine\_count} is
 specified, Condor will not start the job until it can simultaneously
 supply the job with \Arg{min} machines.  Condor will continue to try 
 to provide up
@@ -871,8 +871,8 @@ the number of machines to be dedicated toward running the job.
 
 \item[coresize = $<$size$>$] Should the user's program abort and produce
 \index{submit commands!coresize}
-a core file, \Opt{coresize} specifies the maximum size in bytes of the
-core file which the user wishes to keep. If \Opt{coresize} is not
+a core file, \SubmitCmd{coresize} specifies the maximum size in bytes of the
+core file which the user wishes to keep. If \SubmitCmd{coresize} is not
 specified in the command file, the system's user resource limit
 \mbox{``coredumpsize''} is used.
 This limit is not used in HP-UX and DUX operating systems. 
@@ -884,7 +884,7 @@ This limit is not used in HP-UX and DUX operating systems.
 \item[nice\_user = $<$True \Bar\ False$>$] \label{man-condor-submit-nice}Normally, when a machine
 \index{submit commands!nice\_user}
 becomes available to Condor, Condor decides which job to run based upon
-user and job priorities. Setting \Opt{nice\_user} equal to \Expr{True}
+user and job priorities. Setting \SubmitCmd{nice\_user} equal to \Expr{True}
 tells Condor not to use your regular user priority, but that this job
 should have last priority among all users and all jobs. So jobs
 submitted in this fashion run only on machines which no other
@@ -893,7 +893,7 @@ handy if a user has some jobs they wish to run, but do not wish to use
 resources that could instead be used to run other people's Condor jobs. Jobs
 submitted in this fashion have ``nice-user.'' pre-appended in front of
 the owner name when viewed from \Condor{q} or \Condor{userprio}.  The
-default value is \Opt{False}.
+default value is \SubmitCmd{False}.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -903,7 +903,7 @@ default value is \Opt{False}.
 \item[kill\_sig = $<$signal-number$>$] When Condor needs to kick a job
 \index{submit commands!kill\_sig}
 off of a machine, it will send the job the signal specified by
-\Opt{signal-number}.  \Opt{signal-number} needs to be an integer which
+\SubmitCmd{signal-number}.  \SubmitCmd{signal-number} needs to be an integer which
 represents a valid signal on the execution machine.  For jobs submitted
 to the standard universe, the default value is the number for
 \verb@SIGTSTP@ which tells the Condor libraries to initiate a checkpoint
@@ -917,10 +917,10 @@ is \verb@SIGTERM@ which is the standard way to terminate a program in Unix.
 
 \item[remove\_kill\_sig = $<$signal-number$>$] For the scheduler universe only,
 \index{submit commands!remove\_kill\_sig}
-\Opt{signal-number} is the signal delivered
+\SubmitCmd{signal-number} is the signal delivered
 to the job when the job is removed
 with \Condor{rm}.
-\Opt{signal-number} may be either the platform-specific name or value
+\SubmitCmd{signal-number} may be either the platform-specific name or value
 of the signal.
 This example shows it both ways for a Linux signal:
 \begin{verbatim}
@@ -928,7 +928,7 @@ remove_kill_sig = SIGUSR1
 remove_kill_sig = 10
 \end{verbatim}
 If this command is not present,
-the value of \Opt{kill\_sig} is used. 
+the value of \SubmitCmd{kill\_sig} is used. 
 
 %%%%%%%%%%%%%%%%%%%
 %% remove_kill_sig
@@ -936,13 +936,13 @@ the value of \Opt{kill\_sig} is used.
 
 \item[hold\_kill\_sig = $<$signal-number$>$] For the scheduler universe only,
 \index{submit commands!hold\_kill\_sig}
-\Opt{signal-number} is the signal delivered
+\SubmitCmd{signal-number} is the signal delivered
 to the job when the job is put on hold
 with \Condor{hold}.
-\Opt{signal-number} may be either the platform-specific name or value
+\SubmitCmd{signal-number} may be either the platform-specific name or value
 of the signal.
 If this command is not present,
-the value of \Opt{kill\_sig} is used. 
+the value of \SubmitCmd{kill\_sig} is used. 
 
 %%%%%%%%%%%%%%%%%%%
 %% compress_files
@@ -1164,9 +1164,9 @@ it will use the environment variable X509\_USER\_CERT.
 If that variable is not present,
 it will search in the default location.
 
-\Opt{x509userproxy} is only required when
-the \Opt{universe} is \Opt{grid},
-and \Opt{grid\_type} is one of \Opt{gt2}, \Opt{gt3}, or \Opt{nordugrid}.
+\SubmitCmd{x509userproxy} is only required when
+the \SubmitCmd{universe} is \SubmitCmd{grid},
+and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2}, \SubmitCmd{gt3}, or \SubmitCmd{nordugrid}.
 
 %%%%%%%%%%%%%%%%%%%
 %% globusscheduler
@@ -1176,7 +1176,7 @@ and \Opt{grid\_type} is one of \Opt{gt2}, \Opt{gt3}, or \Opt{nordugrid}.
 \index{submit commands!globusscheduler}
 Globus resource to which the job should be submitted. More than one scheduler
 can be submitted to, simply place a \Arg{queue} command after each instance
-of \Opt{globusscheduler}.
+of \SubmitCmd{globusscheduler}.
 Each instance should be a valid Globus scheduler, using
 either the full Globus contact string or the host/scheduler format shown below:
 \begin{description}
@@ -1189,9 +1189,9 @@ queue
 \end{verbatim}
 \end{description}
 
-\Opt{globusscheduler} is only required when
-the \Opt{universe} is \Opt{grid},
-and \Opt{grid\_type} is one of \Opt{gt2} or \Opt{gt3}.
+\SubmitCmd{globusscheduler} is only required when
+the \SubmitCmd{universe} is \SubmitCmd{grid},
+and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2} or \SubmitCmd{gt3}.
 
 %%%%%%%%%%%%%%%%%%%
 %% globusrsl
@@ -1238,12 +1238,12 @@ once.  Do not treat this operation lightly.
 This expression is evaluated by the \Condor{gridmanager} whenever:
 \begin{enumerate}
 \item
-   the \Opt{globus\_resubmit} expression evaluates to \Expr{True}
+   the \SubmitCmd{globus\_resubmit} expression evaluates to \Expr{True}
 \item
    the \Condor{gridmanager} decides it needs to retry a submission
    (as when a previous submission failed to commit)
 \end{enumerate}
-If \Opt{globus\_rematch} evaluates to \Expr{True},
+If \SubmitCmd{globus\_rematch} evaluates to \Expr{True},
 then \emph{before} the job is submitted again to globus,
 the \Condor{gridmanager} will request that the \Condor{schedd}
 daemon renegotiate
@@ -1257,10 +1257,10 @@ The result is this job will be matched again.
 \item[MyProxyHost = $<$host$>$:$<$port$>$]
 \index{submit commands!MyProxyHost}
 The Internet address of the host that is the \Prog{MyProxy} server.
-The \Opt{host} may be specified by either a host name
+The \SubmitCmd{host} may be specified by either a host name
 (as in \File{head.example.com}) or an IP address
 (of the form 123.456.7.8).
-The \Opt{port} number is an integer.
+The \SubmitCmd{port} number is an integer.
 
 %%%%%%%%%%%%%%%%%%%
 %% MyProxyServerDN
@@ -1286,7 +1286,7 @@ example, when the  \Prog{MyProxy} server DN begins with a user credential.
 The password needed to refresh a credential on the \Prog{MyProxy} server.
 This password is set when the user initially stores
 credentials on the server (using \Prog{myproxy-init}).
-As an alternative to using \Opt{MyProxyPassword} in the
+As an alternative to using \SubmitCmd{MyProxyPassword} in the
 submit description file,
 the password may be specified as a command line argument to \Condor{submit}
 with the \Arg{-p} argument.
@@ -1309,7 +1309,7 @@ initially stored on the server (using \Prog{myproxy-init}).
 \index{submit commands!MyProxyRefreshThreshold}
 The time (in seconds) before the expiration of a proxy 
 that the proxy should be refreshed.
-For example, if \Opt{MyProxyRefreshThreshold} is set to the
+For example, if \SubmitCmd{MyProxyRefreshThreshold} is set to the
 value 600, the proxy will be refreshed 10 minutes before
 it expires.
 
@@ -1343,7 +1343,7 @@ Defaults to \Expr{False}.
 \item[match\_list\_length = $<$integer value$>$] 
 \index{submit commands!match\_list\_length}
 Defaults to the value zero (0).
-When \Opt{match\_list\_length} is defined with an integer value
+When \SubmitCmd{match\_list\_length} is defined with an integer value
 greater than zero (0),
 attributes are inserted into the job ClassAd.
 The maximum number of attributes defined is given by the integer
@@ -1378,15 +1378,15 @@ For jobs submitted to the globus universe only.
 If \Expr{True}, then the output (from \File{stdout}) from the job
 is transferred from the remote machine back to the submit machine.
 The name of the file after transfer is given
-by the \Opt{output} command.
+by the \SubmitCmd{output} command.
 If \Expr{False}, no transfer takes place (from the remote machine
 to submit machine),
 and the name of the file is given
-by the \Opt{output} command.
+by the \SubmitCmd{output} command.
 The default value is \Expr{True}.
 
 For transferring files other than \File{stdout},
-see \Opt{transfer\_output\_files}.
+see \SubmitCmd{transfer\_output\_files}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_input
@@ -1397,14 +1397,14 @@ For jobs submitted to the globus universe only.
 If \Expr{True}, then the job input (\File{stdin}) is transferred
 from the machine where the job was submitted to the remote machine.
 The name of the file that is transferred is given by the
-\Opt{input} command.
+\SubmitCmd{input} command.
 If \Expr{False}, then the job's input is taken from a pre-staged
 file on the remote machine, and
-the name of the file is given by the \Opt{input} command.
+the name of the file is given by the \SubmitCmd{input} command.
 The default value is \Expr{True}.
 
 For transferring files other than \File{stdin},
-see \Opt{transfer\_input\_files}.
+see \SubmitCmd{transfer\_input\_files}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_error
@@ -1415,11 +1415,11 @@ For jobs submitted to the globus universe only.
 If \Expr{True}, then the error output (from \File{stderr}) from the job
 is transferred from the remote machine back to the submit machine.
 The name of the file after transfer is given
-by the \Opt{error} command.
+by the \SubmitCmd{error} command.
 If \Expr{False}, no transfer takes place (from the remote machine
 to submit machine),
 and the name of the file is given
-by the \Opt{error} command.
+by the \SubmitCmd{error} command.
 The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1428,7 +1428,7 @@ The default value is \Expr{True}.
 
 \item[transfer\_executable = $<$True \Bar\ False$>$]
 For jobs submitted to the globus universe, as well as vanilla and MPI.
-If \Opt{transfer\_executable} is set to
+If \SubmitCmd{transfer\_executable} is set to
 \index{submit commands!transfer\_executable}
 \Expr{False}, then Condor looks for the executable on the remote machine, and
 does not transfer the executable over.
@@ -1503,7 +1503,7 @@ See section~\ref{sec:Job-Lease} for details of job leases.
 %%%%%%%%%%%%%%%%%%%
 \item[remote\_pool = $<$machine-name$>$]
 \index{submit commands!remote\_pool}
-For a \Arg{grid} universe job, with a \Opt{grid\_type} of \Arg{condor},
+For a \Arg{grid} universe job, with a \SubmitCmd{grid\_type} of \Arg{condor},
 the machine that receives a query from the submit machine.
 The query is to the \Condor{collector} daemon
 (assumed to be at a standard IP address and port),
@@ -1536,15 +1536,15 @@ The optional
 argument \Arg{number-of-procs} specifies how many times to submit the
 job to the queue, and it defaults to 1.
 If desired, any commands may be placed
-between subsequent \Opt{queue} commands, such as new \Opt{input},
-\Opt{output}, \Opt{error}, \Opt{initialdir}, \Opt{arguments}, or
-\Opt{executable} commands.
+between subsequent \SubmitCmd{queue} commands, such as new \SubmitCmd{input},
+\SubmitCmd{output}, \SubmitCmd{error}, \SubmitCmd{initialdir}, \SubmitCmd{arguments}, or
+\SubmitCmd{executable} commands.
 This is handy when submitting multiple runs into one cluster with
 one submit description file.
 Multiple clusters may be specified within a single 
 submit description file by changing the executable between
-\Opt{queue} commands.
-Each time the \Opt{executable} command is issued (between \Opt{queue} commands),
+\SubmitCmd{queue} commands.
+Each time the \SubmitCmd{executable} command is issued (between \SubmitCmd{queue} commands),
 a new cluster is defined.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1556,7 +1556,7 @@ If True, a standard universe job will execute a script
 instead of submitting the job,
 and the consistency check to see if the executable has
 been linked using \Condor{compile} is omitted.
-The \Opt{executable} command within the submit description
+The \SubmitCmd{executable} command within the submit description
 file specifies the name of the script.
 The script is used to do preprocessing before the
 job is submitted.
