@@ -1293,6 +1293,9 @@ The main difference
 is that Kerberos provides an access token that typically grants
 access to an entire network, whereas NTLM authentication only 
 verifies an identity to one machine at a time.
+NTSSPI is best-used in a way similar to file system authentication in
+Unix, and probably should not be used for authentication between two
+computers. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:CLAIM-Authentication}Claim To Be Authentication}
@@ -1784,6 +1787,86 @@ Its use is implied whenever integrity checks occur.
 If more methods are implemented, then there will be further
 macros to allow both the client and the daemon to specify
 which methods are acceptable.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Sessions}Security Sessions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{security!sessions}
+\index{sessions}
+
+To set up and configure secure communcations in Condor,
+authentication, encryption and integrity checks can be used.  
+However, these come at a cost: performing strong authentication can
+take a significant amount of time, and  generating the cryptographic
+keys for encryption and integrity checks can take a significant amount
+of CPU. 
+
+The Condor system makes a lot of network connections between different
+daemons.  
+If each one of these was to be authenticated and new keys
+were generated for each connection, Condor would not be able to scale
+well.  
+Therefore, Condor uses the concept of \emph{sessions} to cache
+relevant security information for future use and greatly speed up the
+establishment of secure communications between the different Condor
+daemons.
+
+The first time a connection is made from one daemon to another, a
+session is established.  
+This session has a lifetime, after which it expires and can no longer
+be used but a new session must be created
+But while a valid session exists, it can be re-used as many times as
+needed, thereby saving expense on future connections. 
+There is a \emph{session key} that both sides know, and this key proves the
+identity of the entity on either end of the connection because it was
+exchanged securely if you use a "strong" authentication method such as
+Kerberos or GSI. 
+Other authentication methods like \MacroNI{NTSSPI},
+\MacroNI{FS\_REMOTE},  \MacroNI{CLAIMTOBE}, and
+\MacroNI{ANONYMOUS} do not support secure key exchange, so someone
+listening on the wire may be able to impersonate the client or server
+if you are using sessions. 
+
+In order for sessions to be secure, you must have encryption or
+integrity enabled. 
+If encryption is used, the session is restarted using the session key
+as the encryption key. 
+If integrity is used, the checksum includes the session key even
+though it is not transmitted. 
+In either case, the session can be trusted. 
+If encryption or integrity is not used, then it is possible for an
+attacker to use an open session to make a connection to a daemon and
+use that connection for nefarious purposes. 
+The important rule here is: \emph{if you have authentication turned
+on, you should also turn on integrity and/or encryption}. 
+
+It is possible to disable sessions by setting
+\MacroNI{SEC\_DEFAULT\_NEGOTIATION}. This takes parameters similar to
+the other security settings, and can be required, preferred, optional,
+or never. 
+If you disable sessions and you have authentication turned
+on, then most authentication (other than commands like
+\Condor{submit}) will fail because Condor requires sessions when you
+have sessions turned on. 
+On the other hand, if you are not using strong security in Condor, but
+you are relying on the default host-based security, turning off
+sessions may be useful in rare situations, such as debugging problems
+with the security session management or slightly decreasing the memory
+consumption of the daemons, which keep track of the sessions in use. 
+
+Session lifetimes have been tuned in a default installation
+of Condor.  
+Condor tools like \Condor{q}, \Condor{status}, etc. create a
+session that expires after one minute. 
+(Theoretically they should not create a session at all because the
+session cannot be reused between program invocations, but this is
+difficult to do in the general case.)
+This allows a very small window for any possible attack, and helps
+keep the memory footprint of running daemons down because they are not
+keeping track of all of the sessions.
+You can manually tune the session durations yourself using macros in
+the configuration file, but this is not recommended.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
