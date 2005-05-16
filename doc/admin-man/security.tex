@@ -898,6 +898,11 @@ SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, NTSSPI
 \end{verbatim}
 indicates that either Kerberos or Windows authentication may be used,
 but Kerberos is preferred over Windows.
+Note that if the client and daemon agree that multiple authentication
+methods may be used, then they are tried in turn. For instance, if
+they both agree that Kerberos or NTSSPI may be used, then Kerberos
+will be tried first, and if there is a failure for any reason, then
+NTSSPI will be tried. 
 
 \subsubsection{Authentication Defaults}
 
