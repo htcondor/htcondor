@@ -392,7 +392,8 @@ see \URL{http://www.globus.org} for more information.
 The Java universe allows users to run jobs written for the
 Java Virtual Machine (JVM).
 %\index{universe!Scheduler}
-%The scheduler universe . . .
+The \Expr{scheduler} universe allows users to submit lightweight jobs
+to be spawned by the \Condor{schedd} on the submit host itself.
 %\index{universe!Local}
 %The local universe . . .
 
@@ -560,19 +561,28 @@ setting the classpath.
 \subsubsection{Scheduler Universe}
 %%%%%%%%%%%%
 
-\index{universe!Java}
-The scheduler universe allows a Condor job to be submitted and
-executed with different assumptions for the execution conditions
-of the job.
-The job does not wait to be matched with a machine.
-It instead executes right away, on the machine where the job
-is submitted.
-The job will never be preempted.
-The machine requirements are not considered for scheduler universe
-jobs.
+\index{universe!Scheduler}
 
-This universe choice is appropriate (and used) for DAGMan,
-which is itself a scheduler universe job.
+The \Expr{scheduler} universe allows users to submit lightweight jobs
+to be run immediately alongside the \Condor{schedd} on the submit host
+itself.
+
+\Expr{Scheduler} universe jobs are not matched with a remote machine,
+and will never be preempted.  They do not obey \Expr{requirements}.
+
+Originally intended for meta-schedulers like \Condor{dagman} (hence
+the name ``scheduler''), the \Expr{scheduler} universe can also be
+used to manage jobs of any sort that need to run on the submit host.
+
+However, unlike the \Expr{local} universe, the \Expr{scheduler}
+universe does not use a \Condor{starter} to manage the job, and thus
+offers limited features and policy support.  The \Expr{local} universe
+is a better choice for most jobs which must run on the submit host, as
+it offers a richer set of job-management features, and is more
+consistent with other remote universes like \Expr{vanilla}.
+
+The \Expr{scheduler} universe may be deprecated in the future, in
+favor of the newer \Expr{local} universe.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:local-universe}Local Universe}
