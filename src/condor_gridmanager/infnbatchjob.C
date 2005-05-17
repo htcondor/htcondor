@@ -345,7 +345,9 @@ int INFNBatchJob::doEvaluateState()
 				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
 					SetRemoteJobId( job_id_string );
-					remoteProxyExpireTime = jobProxy->expiration_time;
+					if(jobProxy) {
+						remoteProxyExpireTime = jobProxy->expiration_time;
+					}
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -395,7 +397,7 @@ int INFNBatchJob::doEvaluateState()
 				errorString = "Job removed from batch queue manually";
 				SetRemoteJobId( NULL );
 				gmState = GM_HOLD;
-			} else if ( remoteProxyExpireTime < jobProxy->expiration_time ) {
+			} else if ( jobProxy && remoteProxyExpireTime < jobProxy->expiration_time ) {
 					gmState = GM_REFRESH_PROXY;
 			} else {
 				now = time(NULL);
@@ -441,6 +443,12 @@ int INFNBatchJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_SUBMITTED;
 			} else {
+				// We should never end up here if we don't have a
+				// proxy already!
+				if( ! jobProxy ) {
+					EXCEPT( "(%d.%d) Requested to refresh proxy, but no proxy present. ", procID.cluster,procID.proc);
+				}
+
 				rc = gahp->blah_job_refresh_proxy( remoteJobId,
 												   jobProxy->proxy_filename );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
