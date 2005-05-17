@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.4.9 2005-04-21 23:05:09 pfc Exp $
+# $Id: CondorGlue.pm,v 1.1.4.10 2005-05-17 08:41:42 wright Exp $
 #
 ######################################################################
 
@@ -169,20 +169,46 @@ sub generateBuildFile
 }
 
 
+# Hash table to define the prereqs.  We no longer use the global
+# "prereqs" setting in the NMI description file for our jobs, since we
+# have platforms (e.g. HPUX 10) that can't share prereqs with the
+# others.  So, besides the special cases, all platforms get the value
+# in this hashtable for "global", followed by whatever is in the
+# corresponding "<platform>" entry.
+
+my %prereqs = (
+  "global"         => "perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4",
+  "x86_rh_7.2"     => "binutils-2.15",
+  "x86_rh_8.0"     => "binutils-2.15",
+  "x86_rh_9"       => "binutils-2.15",
+  "sun4u_sol_5.9"  => "gcc-2.95.3, binutils-2.15",
+  "sun4u_sol_5.8"  => "gcc-2.95.3, binutils-2.15",
+  "alpha_osf_V5.1" => "gcc-2.95.3, binutils-2.15",
+  "ppc_aix_5.2"    => "vac-6, vacpp-6",
+  "irix_6.5"       => "binutils-2.15"
+);
+
+
 sub printPrereqs
 {
     my $fh = shift;
 
-    # global prereqs should be nothign because of windows
-    #print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4\n";
+    # global prereqs should be nothign because of windows and
+    # (temporarily) HPUX
+    #print $fh "prereqs = $global_prereqs\n";
 
     # platform-specific prereqs
-    print $fh "prereqs_x86_rh_7.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15\n";
-    print $fh "prereqs_x86_rh_8.0 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15\n";
-    print $fh "prereqs_x86_rh_9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15\n";
-    print $fh "prereqs_sun4u_sol_5.9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15\n";
-    print $fh "prereqs_sun4u_sol_5.8 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15\n";
-    print $fh "prereqs_ppc_aix_5.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, vac-6, vacpp-6\n";
+    foreach $platform ( "x86_rh_7.2", "x86_rh_8.0", "x86_rh_9", 
+			"sun4u_sol_5.9", "sun4u_sol_5.8",
+			"ppc_aix_5.2", "alpha_osf_V5.1", "irix_6.5" )
+    {
+	print $fh "prereqs_$platform = $prereqs{'global'}, "
+	    . "$prereqs{$platform}\n";
+    }
+
+    # HPUX 10 is (temporarily) evil, since we're not going to really
+    # set it up as a full-fledged NWO platform.  instead, we're just
+    # using this "everything-1.0.0" prereq hack...
     print $fh "prereqs_hppa_hpux_B.10.20 = everything-1.0.0\n";
 }
 
@@ -192,16 +218,28 @@ sub printTestingPrereqs
     my $fh = shift;
 
     # global prereqs should be nothing (temporarily) because of hpux
-    #print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4\n";
     
     # platform-specific prereqs
-    print $fh "prereqs_x86_rh_7.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_x86_rh_8.0 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_x86_rh_9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_sun4u_sol_5.9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_sun4u_sol_5.8 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15, java-1.4.2_05\n";
-    print $fh "prereqs_ppc_aix_5.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, vac-6, vacpp-6, java-1.4.2_05\n";
-    print $fh "prereqs_hppa_hpux_B.10.2 = everything-1.0.0\n";
+    # we include everything from the build prereqs, plus we add java
+    # for the java test suite...
+    foreach $platform ( "x86_rh_7.2", "x86_rh_8.0", "x86_rh_9", 
+			"sun4u_sol_5.9", "sun4u_sol_5.8",
+			"ppc_aix_5.2" )
+    {
+	print $fh "prereqs_$platform = $prereqs{'global'}, "
+	    . "$prereqs{$platform}, java-1.4.2_05\n";
+    }
+
+    # HACK: irix_6.5 and alpha_osf_V5.1 don't have java yet, so we
+    # can't use the real loop above...
+    foreach $platform ( "irix_6.5", "alpha_osf_V5.1" )
+    {
+	print $fh "prereqs_$platform = $prereqs{'global'}, "
+	    . "$prereqs{$platform}\n";
+    }
+
+    # HPUX 10 is evil, see above...
+    print $fh "prereqs_hppa_hpux_B.10.20 = everything-1.0.0\n";
 }
 
 

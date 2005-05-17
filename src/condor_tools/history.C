@@ -348,6 +348,10 @@ encode_status( int status )
                 return 'C';
           case REMOVED:
                 return 'X';
+          case HELD:
+                return 'H';	
+          case SUBMISSION_ERR:
+                return 'E';	
           default:
                 return ' ';
         }

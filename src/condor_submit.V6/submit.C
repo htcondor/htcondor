@@ -48,6 +48,7 @@
 #include "store_cred.h"
 #endif
 #include "my_hostname.h"
+#include "domain_tools.h"
 #include "get_daemon_name.h"
 #include "condor_qmgr.h"
 #include "sig_install.h"
@@ -779,11 +780,10 @@ check_and_universalize_path( MyString &path, const char *lhs )
 	 */
 
 	char volume[8];
-	char netname[80];
-	char *my_name, *my_domain;
+	char netuser[80];
 	unsigned char name_info_buf[MAX_PATH+1];
 	DWORD name_info_buf_size = MAX_PATH+1;
-	DWORD netname_size = 80;
+	DWORD netuser_size = 80;
 	DWORD result;
 	UNIVERSAL_NAME_INFO *uni;
 
@@ -795,25 +795,33 @@ check_and_universalize_path( MyString &path, const char *lhs )
 
 	if (volume[0] && (GetDriveType(volume)==DRIVE_REMOTE))
 	{
-		char my_fullname[255];
+		char my_name[255];
+		char *tmp, *net_name;
 
 			// check if the user is the submitting user.
 		
-		result = WNetGetUser(volume, netname, &netname_size);
-		my_name = my_username();
-		my_domain = my_domainname();
-		sprintf(my_fullname, "%s\\%s", my_domain, my_name);
-		free(my_name);
-		free(my_domain);
-		my_name = my_domain = NULL;
+		result = WNetGetUser(volume, netuser, &netuser_size);
+		tmp = my_username();
+		strncpy(my_name, tmp, sizeof(my_name));
+		free(tmp);
+		tmp = NULL;
+		getDomainAndName(netuser, tmp, net_name);
 
 		if ( result == NOERROR ) {
-			if (stricmp(my_fullname, netname) != 0 ) {
+			// We compare only the name (and not the domain) since
+			// it's likely that the same account across different domains
+			// has the same password, and is therefore a valid path for us
+			// to use. It would be nice to check that the passwords truly
+			// are the same on both accounts too, but since that would 
+			// basically involve creating a whole separate mapping just to
+			// test it, the expense is not worth it.
+			
+			if (stricmp(my_name, net_name) != 0 ) {
 				fprintf(stderr, "\nERROR: The path '%s' is associated with\n"
-					"\tuser %s, so Condor can not access it.\n"
-					"\tCurrently Condor only supports network drives that are \n"
-					"\tassociated with the submitting user.\n", 
-					path.Value(), netname);
+				"\tuser '%s', but you're '%s', so Condor can\n"
+			    "\tnot access it. Currently Condor only supports network\n"
+			    "\tdrives that are associated with the submitting user.\n", 
+					path.Value(), net_name, my_name);
 				DoCleanup(0,0,NULL);
 				exit( 1 );
 			}
