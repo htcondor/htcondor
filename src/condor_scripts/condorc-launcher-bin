@@ -334,9 +334,10 @@ EOF
 		$env .= "_condor_SCHEDD_NAME=$schedd_name;";
 	}
 
-	$env .= "_condor_SCHEDD_ATTRS=SiteName,x509userproxysubject;";
+	$env .= "_condor_SCHEDD_ATTRS=SiteName,x509userproxysubject,CONDORC_WANTJOB;";
 	$env .= "_condor_SiteName=\"${$group}{'sitename'}\";";
 	$env .= "_condor_x509userproxysubject=\"${$group}{'proxysubject'}\";";
+	$env .= "_condor_CONDORC_WANTJOB=TRUE;";
 
 	chop $env;
 
@@ -372,6 +373,7 @@ x509userproxy = ${$group}{'proxyfile'}
 +DynamicScheddJob = True
 +SiteName = "${$group}{'sitename'}"
 notification=NEVER
+leave_in_queue=False
 queue
 EOF
 
