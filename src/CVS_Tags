@@ -1,3 +1,12 @@
+05/17/05 V6_7-gcb-2-branch
+   A new branch off V6_7 for the final (hopefully) GCB integration.
+   This is the branch that's just going to rely on the GNU ld's --wrap
+   functionality to re-map socket calls to Generic_*, instead of
+   changing all the Condor source.  we'll still have to make some
+   fixes, e.g. in my_ip_addr(), but this will be much easier to
+   maintain, and it'll also work with most of the externals, too.
+   Created from the V6_7-gcb-2-root tag on V6_7_CODE..
+
 05/17/05 V6_6-merge-40
    The state of the V6_6-branch for a merge into V6_7-branch.  This
    includes some win32 bug fixes to submit, a big memory/resource leak
