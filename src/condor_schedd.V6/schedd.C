@@ -2261,6 +2261,10 @@ jobIsFinished( int cluster, int proc, void* )
 }
 
 
+/**
+Returns 0 or positive number on success.
+negative number on failure.
+*/
 int
 jobIsFinishedDone( int cluster, int proc, void*, int )
 {

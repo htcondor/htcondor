@@ -890,12 +890,12 @@ int DestroyProc(int cluster_id, int proc_id)
 
 	strcpy(key, IdToStr(cluster_id,proc_id) );
 	if (!JobQueue->LookupClassAd(key, ad)) {
-		return -1;
+		return DESTROYPROC_ENOENT;
 	}
 
 	// Only the owner can delete a proc.
 	if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
-		return -1;
+		return DESTROYPROC_EACCES;
 	}
 
 	// Take care of ATTR_COMPLETION_DATE
@@ -918,14 +918,14 @@ int DestroyProc(int cluster_id, int proc_id)
 			// we just want to add it to our queue of job ids to call
 			// the hook on and return immediately
 		scheduler.enqueueFinishedJob( cluster_id, proc_id );
-		return 1;
+		return DESTROYPROC_SUCCESS_DELAY;
 	}
 
 		// should we leave the job in the queue?
 	int leave_job_in_q = 0;
 	ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
 	if ( leave_job_in_q ) {
-		return 1;
+		return DESTROYPROC_SUCCESS_DELAY;
 	}
 
  
@@ -951,7 +951,9 @@ int DestroyProc(int cluster_id, int proc_id)
 			// user doesn't delete only some of the procs in the PVM
 			// job cluster, since that's going to really confuse the
 			// PVM shadow.
-		return DestroyCluster(cluster_id);
+		int ret = DestroyCluster(cluster_id);
+		if(ret < 0 ) { return DESTROYPROC_ERROR; }
+		return DESTROYPROC_SUCCESS;
 	}
 
     // Append to history file
@@ -972,7 +974,7 @@ int DestroyProc(int cluster_id, int proc_id)
 
 	JobQueueDirty = true;
 
-	return 0;
+	return DESTROYPROC_SUCCESS;
 }
 
 

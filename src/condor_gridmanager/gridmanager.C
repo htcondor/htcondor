@@ -739,8 +739,9 @@ contact_schedd_next_add_job:
 						 procID.proc );
 				// Log the removal of the job from the queue
 				WriteAbortEventToUserLog( next_ad );
+				// NOENT means the job doesn't exist.  Good enough for us.
 				rc = DestroyProc( procID.cluster, procID.proc );
-				if ( rc < 0 ) {
+				if ( rc < 0 && rc != DESTROYPROC_ENOENT) {
 					failure_line_num = __LINE__;
 					delete next_ad;
 					commit_transaction = false;
@@ -899,7 +900,8 @@ contact_schedd_next_add_job:
 					curr_job->procID.cluster, curr_job->procID.proc);
 			rc = DestroyProc(curr_job->procID.cluster,
 							 curr_job->procID.proc);
-			if ( rc < 0 ) {
+				// NOENT means the job doesn't exist.  Good enough for us.
+			if ( rc < 0 && rc != DESTROYPROC_ENOENT) {
 				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
@@ -988,7 +990,7 @@ contact_schedd_next_add_job:
 	lastContactSchedd = time(NULL);
 
 	if ( schedd_deletes_complete == false ) {
-		dprintf( D_ALWAYS, "Schedd connection error! Will retry\n" );
+		dprintf( D_ALWAYS, "Problem using DestroyProc to delete jobs!  Will retry\n" );
 		RequestContactSchedd();
 	}
 
