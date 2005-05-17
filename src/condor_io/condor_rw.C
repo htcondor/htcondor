@@ -249,7 +249,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 						if( ! nro ) {
 							dprintf( D_ALWAYS, "condor_write(): "
 									 "Socket closed when trying "
-									 "to write buffer\n" );
+									 "to write buffer, fd is %d\n", fd );
 							return -1;
 						}
 
