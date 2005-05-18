@@ -77,9 +77,12 @@ cleanup_execute_dir(int pid)
 		// subdirectory _after_ removing the nobody account, because the
 		// existence of the subdirectory persistantly tells us that the
 		// account may still exist [in case the startd blows up as well].
-		sprintf( buf, "rmdir /s /q \"%.256s\\dir_%d\"",
-				 exec_path, pid );
-		system( buf );
+
+		sprintf( buf, "%.256s\\dir_%d", exec_path, pid );
+ 
+ 		Directory dir( buf );
+ 		dir.Remove_Full_Path(buf);
+
 	} else {
 		// get rid of everything in the execute directory
 		Directory dir(exec_path);
