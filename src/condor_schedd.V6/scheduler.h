@@ -231,6 +231,7 @@ class Scheduler : public Service
 	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
 	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
+	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 #ifdef WANT_NETMAN
 	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
 #endif
@@ -412,6 +413,8 @@ private:
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char*);
 	void			child_exit(int, int);
+	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
+	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, shadow_rec * srec);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
 	void			preempt_one_job();

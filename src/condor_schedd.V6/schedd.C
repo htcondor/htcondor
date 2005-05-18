@@ -1641,6 +1641,57 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 	}
 }
 
+/* Return a MyString describing the policy's FiringExpressions. */
+static MyString
+ExplainPolicyDecision(UserPolicy & policy, ClassAd * jobad)
+{
+	ASSERT(jobad);
+	const char *firing_expr = policy.FiringExpression();
+	if( ! firing_expr ) {
+		return "Unknown user policy expression";
+	}
+	MyString reason;
+
+	ExprTree *tree, *rhs = NULL;
+	tree = jobad->Lookup( firing_expr );
+
+	// Get a formatted expression string
+	char* exprString = NULL;
+	if( tree && (rhs=tree->RArg()) ) {
+		rhs->PrintToNewStr( &exprString );
+	}
+
+	// Format up the log entry
+	reason.sprintf( "The %s expression '%s' evaluated to ",
+					firing_expr,
+					exprString ? exprString : "" );
+
+	// Free up the buffer from PrintToNewStr()
+	if ( exprString ) {
+		free( exprString );
+	}
+
+	// Get a string for it's value
+	int firing_value = policy.FiringExpressionValue();
+	switch( firing_value ) {
+	case 0:
+		reason += "FALSE";
+		break;
+	case 1:
+		reason += "TRUE";
+		break;
+	case -1:
+		reason += "UNDEFINED";
+		break;
+	default:
+		EXCEPT( "Unrecognized FiringExpressionValue: %d", 
+				firing_value ); 
+		break;
+	}
+
+	return reason;
+}
+
 /*
 For a given job, evaluate any periodic expressions
 and abort, hold, or release the job as necessary.
@@ -1683,46 +1734,7 @@ PeriodicExprEval( ClassAd *jobad )
 	action = policy.AnalyzePolicy(PERIODIC_ONLY);
 
 	// Build a "reason" string for logging
-	MyString reason;
-	const char *firing_expr = policy.FiringExpression();
-	if(firing_expr) {
-		ExprTree *tree, *rhs = NULL;
-		tree = jobad->Lookup( firing_expr );
-
-		// Get a formatted expression string
-		char* exprString = NULL;
-		if( tree && (rhs=tree->RArg()) ) {
-			rhs->PrintToNewStr( &exprString );
-		}
-
-		// Format up the log entry
-		reason.sprintf( "The %s expression '%s' evaluated to ",
-						firing_expr,
-						exprString ? exprString : "" );
-
-		// Free up the buffer from PrintToNewStr()
-		if ( exprString ) {
-			free( exprString );
-		}
-
-		// Get a string for it's value
-		int firing_value = policy.FiringExpressionValue();
-		switch( firing_value ) {
-		case 0:
-			reason += "FALSE";
-			break;
-		case 1:
-			reason += "TRUE";
-			break;
-		case -1:
-			reason += "UNDEFINED";
-			break;
-		default:
-			EXCEPT( "Unrecognized FiringExpressionValue: %d", 
-					firing_value ); 
-			break;
-		}
-	}
+	MyString reason = ExplainPolicyDecision(policy,jobad);
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
@@ -2510,6 +2522,46 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 
 	if (!rval) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_TERMINATED event\n" );
+		return false;
+	}
+	return true;
+}
+
+bool
+Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason ) 
+{
+	UserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	JobEvictedEvent event;
+	struct rusage r;
+	memset( &r, 0, sizeof(struct rusage) );
+
+#if !defined(WIN32)
+	event.run_local_rusage = r;
+	event.run_remote_rusage = r;
+#endif /* LOOSE32 */
+	event.sent_bytes = 0;
+	event.recvd_bytes = 0;
+
+	if( WIFEXITED(status) ) {
+			// Normal termination
+		event.normal = true;
+		event.return_value = WEXITSTATUS(status);
+	} else {
+		event.normal = false;
+		event.signal_number = WTERMSIG(status);
+	}
+	if(reason) {
+		event.setReason(reason);
+	}
+	int rval = ULog->writeEvent(&event);
+	delete ULog;
+
+	if (!rval) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED (requeue) event\n" );
 		return false;
 	}
 	return true;
@@ -7936,61 +7988,7 @@ Scheduler::child_exit(int pid, int status)
 
 	if (IsSchedulerUniverse(srec)) {
  		// scheduler universe process 
-		if ( daemonCore->Was_Not_Responding(pid) ) {
-			// this job was killed by daemon core because it was hung.
-			// just restart the job.
-			dprintf(D_ALWAYS,
-				"Scheduler universe job pid %d killed because "
-				"it was hung - will restart\n"
-				,pid);
-			set_job_status( job_id.cluster, job_id.proc, IDLE ); 
-		} else 
-		if(WIFEXITED(status)) {
-			dprintf( D_ALWAYS,
-					 "scheduler universe job (%d.%d) pid %d "
-					 "exited with status %d\n", job_id.cluster,
-					 job_id.proc, pid, WEXITSTATUS(status) );
-			if( !srec->preempted ) {
-				set_job_status( job_id.cluster, job_id.proc, COMPLETED ); 
-				SetAttributeInt( job_id.cluster, job_id.proc, 
-								ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
-				SetAttribute( job_id.cluster, job_id.proc,
-							  ATTR_ON_EXIT_BY_SIGNAL, "FALSE" );
-				SetAttributeInt( job_id.cluster, job_id.proc,
-								 ATTR_ON_EXIT_CODE, WEXITSTATUS(status) );
-				WriteTerminateToUserLog( job_id, status );
-				NotifyUser( srec, "exited with status ",
-							WEXITSTATUS(status), COMPLETED );
-			} else {
-					// job exited b/c we removed or held it.  the
-					// job's queue status will already be correct, so
-					// we don't have to change anything else...
-				WriteEvictToUserLog( job_id );
-			}
-		} else 
-		if(WIFSIGNALED(status)) {
-			dprintf( D_ALWAYS,
-					 "scheduler universe job (%d.%d) pid %d died "
-					 "with %s\n", job_id.cluster, job_id.proc, pid, 
-					 daemonCore->GetExceptionString(status) );
-			if( !srec->preempted ) {
-					/* we didn't try to kill this job via rm or hold,
-					   so either it killed itself or was killed from
-					   the outside world.  either way, from our
-					   perspective, it is now completed.
-					*/
-				set_job_status( job_id.cluster,	job_id.proc, COMPLETED ); 
-				SetAttribute( job_id.cluster, job_id.proc,
-							  ATTR_ON_EXIT_BY_SIGNAL, "TRUE" );
-				SetAttributeInt( job_id.cluster, job_id.proc,
-								 ATTR_ON_EXIT_SIGNAL, WTERMSIG(status) );
-				WriteTerminateToUserLog( job_id, status );
-				NotifyUser( srec, "was killed by signal ",
-							WTERMSIG(status), COMPLETED );
-			} else {
-				WriteEvictToUserLog( job_id );
-			}
-		}
+		scheduler_univ_job_exit(pid,status,srec);
 		delete_shadow_rec( pid );
 			// even though this will get set correctly in
 			// count_jobs(), try to keep it accurate here, too.  
@@ -8126,6 +8124,151 @@ Scheduler::child_exit(int pid, int status)
 		// activate all our claims and start jobs on them.
 	if( ! ExitWhenDone ) {
 		if (StartJobsFlag) StartJobs();
+	}
+}
+
+void
+Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
+{
+	ASSERT(srec);
+
+	PROC_ID job_id;
+	job_id.cluster = srec->job_id.cluster;
+	job_id.proc = srec->job_id.proc;
+
+	if ( daemonCore->Was_Not_Responding(pid) ) {
+		// this job was killed by daemon core because it was hung.
+		// just restart the job.
+		dprintf(D_ALWAYS,
+			"Scheduler universe job pid %d killed because "
+			"it was hung - will restart\n"
+			,pid);
+		set_job_status( job_id.cluster, job_id.proc, IDLE ); 
+		return;
+	}
+
+	bool exited = false;
+
+	if(WIFEXITED(status)) {
+		dprintf( D_ALWAYS,
+				 "scheduler universe job (%d.%d) pid %d "
+				 "exited with status %d\n", job_id.cluster,
+				 job_id.proc, pid, WEXITSTATUS(status) );
+		exited = true;
+	} else if(WIFSIGNALED(status)) {
+		dprintf( D_ALWAYS,
+				 "scheduler universe job (%d.%d) pid %d died "
+				 "with %s\n", job_id.cluster, job_id.proc, pid, 
+				 daemonCore->GetExceptionString(status) );
+	} else {
+		dprintf( D_ALWAYS,
+				 "scheduler universe job (%d.%d) pid %d exited "
+				 "in some unknown way (0x%08x)\n", 
+				 job_id.cluster, job_id.proc, pid, status);
+	}
+
+	if(srec->preempted) {
+		// job exited b/c we removed or held it.  the
+		// job's queue status will already be correct, so
+		// we don't have to change anything else...
+		WriteEvictToUserLog( job_id );
+		return;
+	}
+
+	if(exited) {
+		SetAttributeInt( job_id.cluster, job_id.proc, 
+						ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
+		SetAttribute( job_id.cluster, job_id.proc,
+					  ATTR_ON_EXIT_BY_SIGNAL, "FALSE" );
+		SetAttributeInt( job_id.cluster, job_id.proc,
+						 ATTR_ON_EXIT_CODE, WEXITSTATUS(status) );
+	} else {
+			/* we didn't try to kill this job via rm or hold,
+			   so either it killed itself or was killed from
+			   the outside world.  either way, from our
+			   perspective, it is now completed.
+			*/
+		SetAttribute( job_id.cluster, job_id.proc,
+					  ATTR_ON_EXIT_BY_SIGNAL, "TRUE" );
+		SetAttributeInt( job_id.cluster, job_id.proc,
+						 ATTR_ON_EXIT_SIGNAL, WTERMSIG(status) );
+	}
+
+	int action;
+	MyString reason;
+	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
+	ASSERT( job_ad ); // No job ad?
+	{
+		UserPolicy policy;
+		policy.Init(job_ad);
+		action = policy.AnalyzePolicy(PERIODIC_THEN_EXIT);
+		reason = ExplainPolicyDecision(policy,job_ad);
+	}
+	FreeJobAd(job_ad);
+	job_ad = NULL;
+
+
+	switch(action) {
+		case REMOVE_FROM_QUEUE:
+			scheduler_univ_job_leave_queue(job_id, status, srec);
+			break;
+
+		case STAYS_IN_QUEUE:
+			set_job_status( job_id.cluster,	job_id.proc, IDLE ); 
+			WriteRequeueToUserLog(job_id, status, reason.Value());
+			break;
+
+		case HOLD_IN_QUEUE:
+			holdJob(job_id.cluster, job_id.proc, reason.Value(),
+				true,false,false,false,false);
+			break;
+
+		case RELEASE_FROM_HOLD:
+			dprintf(D_ALWAYS,
+				"(%d.%d) Job exited.  User policy attempted to release "
+				"job, but it wasn't on hold.  Allowing job to exit queue.\n", 
+				job_id.cluster, job_id.proc);
+			scheduler_univ_job_leave_queue(job_id, status, srec);
+			break;
+
+		case UNDEFINED_EVAL:
+			dprintf( D_ALWAYS,
+				"(%d.%d) Problem parsing user policy for job: %s.  "
+				"Putting job on hold.\n",
+				 job_id.cluster, job_id.proc, reason.Value());
+			holdJob(job_id.cluster, job_id.proc, reason.Value(),
+				true,false,false,false,true);
+			break;
+
+		default:
+			dprintf( D_ALWAYS,
+				"(%d.%d) User policy requested unknown action of %d. "
+				"Putting job on hold. (Reason: %s)\n",
+				 job_id.cluster, job_id.proc, action, reason.Value());
+			MyString reason2 = "Unknown action (";
+			reason2 += action;
+			reason2 += ") ";
+			reason2 += reason;
+			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
+				true,false,false,false,true);
+			break;
+	}
+
+}
+
+
+void
+Scheduler::scheduler_univ_job_leave_queue(PROC_ID job_id, int status, shadow_rec * srec)
+{
+	ASSERT(srec);
+	set_job_status( job_id.cluster,	job_id.proc, COMPLETED ); 
+	WriteTerminateToUserLog( job_id, status );
+	if(WIFEXITED(status)) {
+		NotifyUser( srec, "exited with status ",
+					WEXITSTATUS(status), COMPLETED );
+	} else { // signal
+		NotifyUser( srec, "was killed by signal ",
+					WTERMSIG(status), COMPLETED );
 	}
 }
 
