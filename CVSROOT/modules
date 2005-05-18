@@ -462,6 +462,19 @@ V6_7_QUILL_EXT -a V6_7_COMMON_EXT \
 		   externals/bundles/srb/3.2.1 \
 		   externals/bundles/postgresql/8.0.2
 
+# This is for the V6_7-globus4-branch, which uses globus 4.0.0 and
+# gahp 1.0.14
+# It's based on V6_7_7_EXT
+V6_7_GLOBUS4_EXT -a V6_7_COMMON_EXT \
+                   externals/bundles/krb5/1.2.7 \
+                   externals/bundles/gahp/1.0.14 \
+                   externals/bundles/globus/4.0.0 \
+                   externals/bundles/gt3gahp/2.0 \
+                   externals/bundles/gt4gahp/1.3 \
+                   externals/bundles/classads/0.9.8-b2 \
+                   externals/bundles/gsoap/2.7 \
+                   externals/bundles/srb/3.2.1
+
 
 ######################################################################
 # end of externals
@@ -546,6 +559,9 @@ V6_7_QUILL_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_7_QUILL_SRC
 V6_7_QUILL_CODE		-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_QUILL_SRC
 V6_7_QUILL_ALL		-a DOC V6_7_QUILL_CODE
 V6_7_QUILL_BUILD	-a V6_7_QUILL_ALL V6_7_QUILL_EXT
+
+# For 1-off builds to see if we can get globus 4.0.0 working, we need this:
+V6_7_GLOBUS4_BUILD 	-a V6_7_ALL V6_7_GLOBUS4_EXT
 
 # Point these to whatever version is living on the trunk.
 # For now, they're just called "TRUNK", since it's not obvious what
