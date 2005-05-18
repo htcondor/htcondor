@@ -1,3 +1,8 @@
+05/18/05 V6_7-globus4-branch
+   A branch to test updating the Globus external to 4.0.0. This will
+   hopefully be a very short-lived branch. Created from the 
+   V6_7-globus4-root tag on V6_7_CODE.
+
 05/17/05 V6_7-gcb-2-branch
    A new branch off V6_7 for the final (hopefully) GCB integration.
    This is the branch that's just going to rely on the GNU ld's --wrap
