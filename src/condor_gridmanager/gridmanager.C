@@ -741,6 +741,9 @@ contact_schedd_next_add_job:
 				WriteAbortEventToUserLog( next_ad );
 				// NOENT means the job doesn't exist.  Good enough for us.
 				rc = DestroyProc( procID.cluster, procID.proc );
+				if(rc == DESTROYPROC_ENOENT) {
+					dprintf(D_ALWAYS,"Gridmanager tried to destroy %d.%d twice.\n",procID.cluster,procID.proc);
+				}
 				if ( rc < 0 && rc != DESTROYPROC_ENOENT) {
 					failure_line_num = __LINE__;
 					delete next_ad;
