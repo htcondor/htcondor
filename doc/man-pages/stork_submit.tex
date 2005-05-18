@@ -19,20 +19,110 @@
 
 \Stork{submit} is used to submit a Stork data placement job.
 Upon job submission, an integer identifier is assigned to the
-submission, and printed to the standard output.  The returned job id is
-required for managing the job via the \Stork{status} and \Stork{rm} tools.
+submission,
+and it is printed to standard output.
+This job identifier is required by other commands
+that manage Stork jobs.
 
 The name of the Stork submit description file is the single,
-required, command-line argument.  Stork places no constraints on the submit
-description file name. See the Condor User Manual, \ref{sec:Stork}, for a
-complete description of Stork submit description file syntax and keywords.
+required, command-line argument.
+Stork places no constraints on the submit
+description file name.
+See section \ref{sec:Stork}, for a more 
+complete description of Stork.
+
+\emph{STORK SUBMIT DESCRIPTION FILE COMMANDS}
+\begin{description}
+
+%%%%%%%%%%%%%%%%%%%
+%% dap\_type
+%%%%%%%%%%%%%%%%%%%
+\item[dap\_type = $<$transfer$>$]
+% only "transfer" for now
+%\item[dap\_type = $<$reserve \Bar\ release \Bar\ transfer \Bar\ stage \Bar\ remove $>$]
+\index{Stork submit commands!dap\_type}
+Required command identifying that there will be
+a transfer from source to destination.
+
+%%%%%%%%%%%%%%%%%%%
+% src_url
+%%%%%%%%%%%%%%%%%%%
+\item[src\_url = $<$protocol-name:URL$>$]
+\index{Stork submit commands!src\_url}
+A (required) URL to identify the data source, 
+as well as the protocol to be used at the source.
+
+%%%%%%%%%%%%%%%%%%%
+% dest_url
+%%%%%%%%%%%%%%%%%%%
+\item[dest\_url = $<$protocol-name:URL$>$]
+\index{Stork submit commands!dest\_url}
+A (required) URL to identify the data destination, 
+as well as the protocol to be used at the destination.
+
+%%%%%%%%%%%%%%%%%%%
+% reserve_id
+%%%%%%%%%%%%%%%%%%%
+%\item[reserve\_id = $<$ID$>$]
+%\index{Stork submit commands!reserve\_id}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+% reserve_size
+%%%%%%%%%%%%%%%%%%%
+%\item[reserve\_size = $<$size-in-bytes$>$]
+%\index{Stork submit commands!reserve\_size}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+% x509proxy
+%%%%%%%%%%%%%%%%%%%
+\item[x509proxy = $<$path-to-proxy$>$]
+\index{Stork submit commands!x509proxy}
+The path to and file name of an X.509 proxy when needed
+for GSI authentication.
+Current implementation does not search standard or default locations,
+so the path is necessary when GSI authentication is used.
+
+%%%%%%%%%%%%%%%%%%%
+% cred_name
+%%%%%%%%%%%%%%%%%%%
+%\item[cred\_name = $<$credential-handle$>$]
+%\index{Stork submit commands!cred\_name}
+%Identification of a credential name (or handle) that the
+%\Prog{credential-manager} will use to provide a credential.
+
+%%%%%%%%%%%%%%%%%%%
+% alt_protocols
+%%%%%%%%%%%%%%%%%%%
+\item[alt\_protocols = $<$sourceprotocol-desinationprotocol, sourceprotocol-desinationprotocol, ...$>$]
+\index{Stork submit commands!alt\_protocols}
+A comma separated list of alternative protocol pairings to be used
+when a data transfer fails.
+For each pair, the protocol to use at the source of the transfer
+is followed by a \verb@-@ (dash) and the protocol to be used
+at the destination of the transfer.
+The list is used
+(together with the original \SubmitCmd{src\_url}
+and \SubmitCmd{dest\_url} protocols)
+in a round robin fashion.
+The source and destination URLs are unchanged;
+only the protocols to be used are changed.
+
+
+\end{description}
+
 
 \begin{Options}
-	\ToolArgsBaseDesc
-	\OptItem{\Opt{-debug}}{Show extra debugging information.}
-	\OptItem{\Opt{-stdin}}{Read commands from \File{stdin} instead of from a file.}
-	\StorknameDesc
-	\OptItem{\OptArg{-lognotes}{"prose"}}{The string given within the quote marks is appended to the \Arg{submit-description-file} before the job is submitted}
+  \ToolArgsBaseDesc
+  \OptItem{\Opt{-debug}}{Show extra debugging information.}
+  \OptItem{\Opt{-stdin}}{Read commands from \File{stdin} instead of from a file.}
+  \StorknameDesc
+  \OptItem{\OptArg{-lognotes}{"prose"}}{The string given within quote
+  marks is appended to the data placement ClassAd before
+  the job is submitted.}
 \end{Options}
 
 \ExitStatus
