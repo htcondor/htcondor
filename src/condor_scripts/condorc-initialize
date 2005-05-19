@@ -14,18 +14,18 @@ sub main {
 
 sub submit {
 	my($executable) = @_;
-	my $uid = $executable;
 	my $bin_path = $FindBin::Bin;
-	$executable = "$bin_path/$executable";
+	my $sbin_path = $bin_path;
+	$sbin_path =~ s|/bin/*|/sbin|;
 	local *OUT;
 	open(OUT, "|condor_submit")
 		or die "FATAL ERROR: unable to launch condor_submit";
 	print OUT <<END;
-executable=$executable
+executable=$bin_path/$executable
 universe=scheduler
-output=/tmp/$uid.$>.$$.out
-error=/tmp/$uid.$>.$$.err
-environment=PATH=\$ENV(PATH):$bin_path
+output=/tmp/$executable.$>.$$.out
+error=/tmp/$executable.$>.$$.err
+environment=PATH=\$ENV(PATH):$bin_path:$sbin_path
 notification=never
 queue
 END
