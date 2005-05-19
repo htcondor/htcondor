@@ -1842,44 +1842,49 @@ will not want to change them for any reason.
 \begin{description}
 
 \item[\Macro{MASTER\_NAME}] \label{param:MasterName}
-  A unique name given for a \Condor{master} daemon on a machine.
-  Defaults to the fully qualified hostname.
+  Defines a unique name given for a \Condor{master} daemon on a machine.
+  Defaults to the fully qualified host name.
   If more than one \Condor{master} is running on the same host (for
   example, because of multiple Personal Condor installations running
   as different users) the \MacroNI{MASTER\_NAME} for each
-  \Condor{master} should be defined to uniquely identify the seperate
+  \Condor{master} should be defined to uniquely identify the separate
   daemons. 
 
-  If the \MacroNI{MASTER\_NAME} contains more than a hostname, it must
+  If the \MacroNI{MASTER\_NAME} contains more than a host name,
+  it must
   have the form \verb$identifying-string@full.host.name$.
   If the string specified with \MacroNI{MASTER\_NAME} already includes
   an \verb$@$ sign, Condor will replace whatever follows the \verb$@$
-  sign with the fully qualified hostname of the local machine.
-  If the string doesn not include an \verb$@$ sign, Condor will append
-  one, followed by the hostname.
-  The \verb$identifying-string$ portion described above can contain any
+  sign with the fully qualified host name of the local machine.
+  If the string does not include an \verb$@$ sign,
+  Condor will append one, followed by the host name.
+  The \verb$identifying-string$ portion can contain any
   alphanumeric ASCII characters or punctuation marks except \verb$@$
-  (which is used to delimit the name from the hostname).
-  However, we recommend that the string does not contain the \verb$:$
+  (which is used to delimit the name from the host name).
+  We recommend that the string does not contain the \verb$:$
   character, since that might cause problems with certain tools.
   In the example of many Personal Condor installations on the same
-  host, the username that each \Condor{master} is executing as is the
-  usual convention for that to use as the \verb$identifying-string$.
-  This is easily done with \verb@MASTER_NAME = $(USERNAME)@ in the
+  host, the user name that each \Condor{master} is executing as
+  is, by convention,
+  the \verb$identifying-string$.
+  This is easily accomplished by setting
+  \verb@MASTER_NAME = $(USERNAME)@ in the
   configuration file.
 
   If the \MacroNI{MASTER\_NAME} setting is used, and the
-  \Condor{master} is configured to spawn a \Condor{schedd}, the name
+  \Condor{master} is configured to spawn a \Condor{schedd},
+  the name
   defined with \MacroNI{MASTER\_NAME} takes precedence over the
   \Macro{SCHEDD\_NAME} setting (see section~\ref{param:ScheddName} on
   page~\pageref{param:ScheddName}). 
-  Since Condor makes the assumption that there is usually only one
-  instance of the \Condor{startd} running on a machine, the
-  \MacroNI{MASTER\_NAME} does not automatically get propagated to the
+  Since Condor makes the assumption that there is only one
+  instance of the \Condor{startd} running on a machine,
+  the \MacroNI{MASTER\_NAME} is not automatically propagated to the
   \Condor{startd}.
   However, in situations where multiple \Condor{startd} daemons are
   running on the same host (for example, when using \Condor{glidein}),
-  the \MacroNI{STARTD\_NAME} should be set to uniquely identify them
+  the \MacroNI{STARTD\_NAME} should be set to uniquely identify 
+  the \Condor{startd} daemons
   (this is done automatically in the case of \Condor{glidein}).
 
   If a Condor daemon (master, schedd or startd) has been given a
