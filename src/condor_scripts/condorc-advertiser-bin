@@ -57,6 +57,7 @@ sub rewrite_machine_ads {
 		$ad->{Arch} = '"CondorC"';
 		$ad->{Activity} = '"Idle"';
 		$ad->{State} = '"Unclaimed"';
+		$ad->{WantAdRevaluate} = 'True';
 		if(not exists $ad->{Requirements} and not exists $ad->{REQUIREMENTS}) {
 			debug_print(4, "    Setting requirements true\n");
 			$ad->{Requirements} = 'TRUE';
