@@ -839,9 +839,12 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_update() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
-				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
-				break;
+					// TODO: Once we have pending-completed and
+					//   pending-removed states, don't just give up. We
+					//   can put the job on hold.
+				dprintf( D_ALWAYS,
+						 "(%d.%d) Failed to clean up remote job state, leaving it there.\n",
+						 procID.cluster, procID.proc );
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
