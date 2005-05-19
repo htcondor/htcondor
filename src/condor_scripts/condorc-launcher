@@ -2,4 +2,7 @@
 
 while true; do
 	condorc-launcher-bin
+	# This keeps things from going into a tight loop if the executable
+	# disappears for some reason.
+	/bin/sleep 5
 done
