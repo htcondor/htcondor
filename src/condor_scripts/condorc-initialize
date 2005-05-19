@@ -7,9 +7,33 @@ exit main();
 
 sub main {
 	print "Starting Condor-C Launcher\n";
-	submit('condorc-launcher');
+	if ( check( "condorc-launcher" ) == 0 ) {
+		print "Skipping Condor-C Launcher\n";
+	} else {
+		submit('condorc-launcher');
+	}
 	print "Starting Condor-C Advertiser\n";
-	submit('condorc-advertiser');
+	if ( check( "condorc-advertiser" ) == 0 ) {
+		print "Skipping Condor-C Advertiser\n";
+	} else {
+		submit('condorc-advertiser');
+	}
+}
+
+sub check {
+	my($executable) = @_;
+	my @jobs = `condor_q -format '\%s\n' Cmd `;
+	if ( $? != 0 ) {
+		print "condor_q failed!\n";
+		return 0;
+	}
+	foreach ( @jobs ) {
+		if ( /$executable\n/ ) {
+			print "$executable already submitted!\n";
+			return 0;
+		}
+	}
+	return 1;
 }
 
 sub submit {
