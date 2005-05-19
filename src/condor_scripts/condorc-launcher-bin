@@ -30,8 +30,8 @@ my $DYNAMIC_SCHEDD_NAMES = 1;
 
 
 # Here is the layout of the main data structure:
-# %job_groups{'sitename#proxysubject'} =
-#    { proxysubject     => "..."
+# %job_groups{'sitename#uniquename'} =
+#    { uniquename       => "..."
 #      proxyfile        => "..."
 #      sitename         => "..."
 #      sitegatekeeper   => "..."
@@ -59,8 +59,8 @@ $config_mail = "/usr/bin/mail";
 
 debug_print(4, "Startup: Scanning queue for existing schedds");
 # scan the queue for any schedd jobs already submitted
-# format: <Cluster>.<Proc> <x509proxy> <x509subject> <sitename> <sitegatekeeper> <job status>
-open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%d." ClusterId -format "%d\t" ProcId -format "%s\t" X509UserProxy -format "%s\t" X509UserProxySubject -format "%s\t" SiteName -format "%s\t" GlobusResource -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
+# format: <Cluster>.<Proc> <x509proxy> <uniquename> <sitename> <sitegatekeeper> <job status>
+open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%d." ClusterId -format "%d\t" ProcId -format "%s\t" X509UserProxy -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%s\t" GlobusResource -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
 
 while ( <CQ> ) {
 
@@ -76,7 +76,7 @@ while ( <CQ> ) {
 			print STDERR "Two schedd jobs for same site,subject!\n";
 		} else {
 			$job_groups{$key} = {
-				'proxysubject'    => "${line[2]}",
+				'uniquename'    => "${line[2]}",
 				'proxyfile'       => "${line[1]}",
 				'sitename'        => "${line[3]}",
 				'sitegatekeeper'  => "${line[4]}",
@@ -101,7 +101,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 	debug_print(4, "Scanning for grid jobs");
 	# Need to catch SIGCHLD to know if command failed
-	open( CQ, q[condor_q -const 'JobUniverse==9&&JobGridType=?="condor"' -format "%s\t" x509userproxysubject -format "%s\t" x509userproxy -format "%s\t" SiteName -format "%s" SiteGatekeeper -format "\n" ClusterId |] ) || die( "Can't run condor_q" );
+	open( CQ, q[condor_q -const 'JobUniverse==9&&JobGridType=?="condor"' -format "%s\t" daemon_unique_name -format "%s\t" x509userproxy -format "%s\t" SiteName -format "%s" SiteGatekeeper -format "\n" ClusterId |] ) || die( "Can't run condor_q" );
 
 	while ( <CQ> ) {
 
@@ -124,7 +124,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 				${$job_groups{$key}}{'proxyfile'} = "${line[1]}";
 			} else {
 				$job_groups{$key} = {
-					'proxysubject'    => "${line[0]}",
+					'uniquename'      => "${line[0]}",
 					'proxyfile'       => "${line[1]}",
 					'sitename'        => "${line[2]}",
 					'sitegatekeeper'  => "${line[3]}",
@@ -145,7 +145,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 	# Should we exclude schedd jobs in X state?
 	# Need to catch SIGCHLD to know if command failed
-	open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%s\t" x509userproxysubject -format "%s\t" SiteName -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
+	open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
 
 	while ( <CQ> ) {
 
@@ -173,7 +173,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 	debug_print(3, "Submit schedds as needed");
 	foreach $group ( values %job_groups ) {
 
-		my $key = "${$group}{sitename}#${$group}{proxysubject}";
+		my $key = "${$group}{sitename}#${$group}{uniquename}";
 
 		if ( ${$group}{'numjobs'} > 0 ) {
 			if ( !defined( ${$group}{'scheddjobid'} ) ) {
@@ -197,7 +197,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 	debug_print(5, "Upkeep");
 	foreach $group ( values %job_groups ) {
 
-		my $key = "${$group}{sitename}#${$group}{proxysubject}";
+		my $key = "${$group}{sitename}#${$group}{uniquename}";
 		my $line = join( ",", values( %{$group} ) );
 		debug_print(5, "    $line");
 
@@ -252,8 +252,9 @@ sub submit_schedd_job
 
 	# Generate an MD5 hash of the proxy subject that we can use as a
 	# schedd name.
-	$schedd_name = md5sum("$config_condor_host/".$group->{'proxysubject'});
-	$schedd_name =~ s/\s.*//;
+	$schedd_name = $group->{'uniquename'};
+#	$schedd_name = md5sum("$config_condor_host/".$group->{'proxysubject'});
+#	$schedd_name =~ s/\s.*//;
 
 	# Write the setup script that will run on the remote machine
 	open( SCRIPT, ">$setup_script" ) || die "error opening $setup_script";
@@ -334,9 +335,10 @@ EOF
 		$env .= "_condor_SCHEDD_NAME=$schedd_name;";
 	}
 
-	$env .= "_condor_SCHEDD_ATTRS=SiteName,x509userproxysubject,CONDORC_WANTJOB;";
+#	$env .= "_condor_SCHEDD_ATTRS=SiteName,daemon_unqiue_name,CONDORC_WANTJOB;";
+	$env .= "_condor_SCHEDD_ATTRS=SiteName,CONDORC_WANTJOB;";
 	$env .= "_condor_SiteName=\"${$group}{'sitename'}\";";
-	$env .= "_condor_x509userproxysubject=\"${$group}{'proxysubject'}\";";
+#	$env .= "_condor_daemon_unique_name=\"${$group}{'uniquename'}\";";
 	$env .= "_condor_CONDORC_WANTJOB=TRUE;";
 
 	chop $env;
@@ -356,8 +358,6 @@ EOF
 	# path to the condor_master in the arguments. Instead, we'll just
 	# hard-code it in this script for now.
 	open( CMD, ">$cmd_file" ) || die( "Can't open $cmd_file" );
-#???
-#x509userproxy = #${$group}{'proxysubject'}
 	print CMD <<EOF;
 # run a schedd on the remote resource
 universe = grid
