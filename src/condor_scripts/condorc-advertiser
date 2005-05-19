@@ -1,8 +1,126 @@
-#! /bin/sh
+#! /usr/bin/env perl
+BEGIN {$^W = 1;}
+use strict;
 
-while true; do
-	condorc-advertiser-bin
-	# This keeps things from going into a tight loop if the executable
-	# disappears for some reason.
-	/bin/sleep 5
-done
+	# Seconds between updates.
+my $SLEEP_TIME = 30;
+my $DEBUG_LEVEL = 10;
+
+exit main();
+
+sub main {
+	while(1) {
+		debug_print(10, "#################\n");
+		my(@ads) = get_machine_ads();
+		if(@ads == 0) {
+			debug_print(3, "No machines to advertise\n");
+		}
+		@ads = rewrite_machine_ads(@ads);
+		publish_machine_ads(@ads);
+		if(getppid() == 1) {
+	        debug_print(10, "My parent disappeared.  Assuming he exitted.  Quitting\n");
+   	    	exit(1);
+		}
+		sleep($SLEEP_TIME);
+	}
+}
+
+sub get_machine_ads {
+	local *IN;
+	if( ! open(IN, 'condor_status -const CONDORC_WANTJOB==TRUE -schedd -l |') ) {
+		print STDERR "unable to open condor_status\n";
+		return;
+	}
+	local $/ = "\n\n";
+	my(@fullads) = <IN>;
+	my @ads;
+	foreach my $ad (@fullads) {
+		if($ad =~ /^\s*$/) {
+			next;
+		}
+		my(%keyvals) = ($ad =~ /(.+?) = (.+)/g);
+		push @ads, \%keyvals;
+	}
+	return @ads;
+}
+
+sub rewrite_machine_ads {
+	my (@ads) = @_;
+	foreach my $ad (@ads) {
+		debug_print(3, "Rewriting $ad->{Name}\n");
+		$ad->{StartdIpAddr} = $ad->{ScheddIpAddr};
+		$ad->{MyType} = '"Machine"';
+		$ad->{TargetType} = '"Job"';
+		$ad->{CondorCAd} = 1;
+		$ad->{UpdateSequenceNumber} = time();
+		$ad->{OpSys} = '"CondorC"';
+		$ad->{Arch} = '"CondorC"';
+		$ad->{Activity} = '"Idle"';
+		$ad->{State} = '"Unclaimed"';
+		$ad->{WantAdRevaluate} = 'True';
+		if(not exists $ad->{Requirements} and not exists $ad->{REQUIREMENTS}) {
+			debug_print(4, "    Setting requirements true\n");
+			$ad->{Requirements} = 'TRUE';
+		}
+		if(exists $ad->{REQUIREMENTS}) {
+			$ad->{START} = $ad->{REQUIREMENTS};
+		} else {
+			$ad->{START} = $ad->{Requirements};
+		}
+		#$ad->{Rank} = '0.000000';
+		#$ad->{CurrentRank} = '0.000000';
+		#$ad->{WantAdRevalute} = 'True';
+		#$ad->{CurMatches} = '0';
+		#$ad->{MaxMatches} = '2';
+		#$ad->{Requirements} = 'CurMatches < MaxMatches';
+			#Arch OpSys 
+		my(@DELETES) = qw(
+			UpdatesHistory UpdatesLost UpdatesSequenced UpdatesTotal
+			ScheddIpAddr LastHeardFrom
+			);
+		foreach my $delete (@DELETES) {
+			delete $ad->{$delete};
+		}
+	}
+	return @ads;
+}
+
+sub publish_machine_ads {
+	my (@ads) = @_;
+	local *OUT;
+	my $tempfile = "/tmp/condorcad.tmp.$$.$>";
+	foreach my $ad (@ads) {
+		my(%ad) = %{$ad};
+
+		if( ! open OUT, ">$tempfile" ) {
+			print STDERR "Publish failed, unable to write to $tempfile.\n";
+			return;
+		}
+
+		my $name = $ad{Name};
+		print OUT "MyType = $ad{MyType}\n";
+		delete $ad{MyType};
+		print OUT "TargetType = $ad{TargetType}\n";
+		delete $ad{TargetType};
+		foreach my $key (sort keys %ad) {
+			print OUT "$key = $ad{$key}\n";
+		}
+
+		close OUT;
+		system("cat $tempfile\n");
+		my $ret = system("condor_advertise", "UPDATE_STARTD_AD", $tempfile);
+		debug_print(1,"Advertising $name\n");
+		if($ret != 0) {
+			print STDERR "condor_advertise failed!\n";
+		}
+		unlink($tempfile);
+	}
+}
+
+sub debug_print {
+	my($level) = shift;
+	if($level > $DEBUG_LEVEL) { return; }
+	print scalar localtime;
+	print " ";
+	print @_;
+}

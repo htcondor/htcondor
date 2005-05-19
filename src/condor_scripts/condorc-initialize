@@ -6,17 +6,22 @@ use FindBin;
 exit main();
 
 sub main {
+	my $bin_path = $FindBin::Bin;
+	my $sbin_path = $bin_path;
+	$sbin_path =~ s|/bin/*|/sbin|;
+	$ENV{PATH} = "$bin_path:$sbin_path:$ENV{PATH}";
+
 	print "Starting Condor-C Launcher\n";
 	if ( check( "condorc-launcher" ) == 0 ) {
 		print "Skipping Condor-C Launcher\n";
 	} else {
-		submit('condorc-launcher');
+		submit($bin_path,'condorc-launcher');
 	}
 	print "Starting Condor-C Advertiser\n";
 	if ( check( "condorc-advertiser" ) == 0 ) {
 		print "Skipping Condor-C Advertiser\n";
 	} else {
-		submit('condorc-advertiser');
+		submit($bin_path,'condorc-advertiser');
 	}
 }
 
@@ -37,20 +42,25 @@ sub check {
 }
 
 sub submit {
-	my($executable) = @_;
-	my $bin_path = $FindBin::Bin;
-	my $sbin_path = $bin_path;
-	$sbin_path =~ s|/bin/*|/sbin|;
+	my($bin_path,$executable) = @_;
+	my $fullpath = "$bin_path/$executable";
+	if( ! -e $fullpath ) {
+		print STDERR "Warning: $fullpath does not exist.\n";
+	}
+	if( ! -x $fullpath ) {
+		print STDERR "Warning: $fullpath is not executable.\n";
+	}
 	local *OUT;
 	open(OUT, "|condor_submit")
 		or die "FATAL ERROR: unable to launch condor_submit";
 	print OUT <<END;
-executable=$bin_path/$executable
+executable=$fullpath
 universe=scheduler
 output=/tmp/$executable.$>.$$.out
 error=/tmp/$executable.$>.$$.err
-environment=PATH=\$ENV(PATH):$bin_path:$sbin_path
+environment=PATH=$ENV{PATH}
 notification=never
+on_exit_remove=false
 queue
 END
 	close OUT;

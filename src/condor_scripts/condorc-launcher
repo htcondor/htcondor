@@ -1,8 +1,453 @@
+#!/usr/bin/env perl
+
+# User modifiable settings:
+
+	# Who get mail from problems on remote machines ("Machine B").  If
+	# commented out, defaults to the same user who gets mail from problems on
+	# the local Condor installations (CONDOR_ADMIN)
+my $config_condor_admin;
+#$config_condor_admin = 'prelz@mi.infn.it';
+#$config_condor_admin = 'adesmet@cs.wisc.edu';
+chomp($config_condor_admin = `condor_config_val CONDOR_ADMIN`);
+
+	# Where is your condor_collector running?  If commented out, defaults
+	# to CONDOR_HOST as set in the local condor_config.
+my $config_condor_host;
+chomp( $config_condor_host = `hostname -f` );
+if($condor_config_host eq '') {
+	chomp( $config_condor_host = `hostname` );
+}
+
+
+	# If 1, then schedds have (effectively) random names.  This is
+	# useful for doing dynamic matchmaking against schedds, but doesn't
+	# work if you're specifying the remote schedd in your submit file.
+my $DYNAMIC_SCHEDD_NAMES = 1;
+
+# End user modifiable settings.
+
+
+
+
+# Here is the layout of the main data structure:
+# %job_groups{'sitename#uniquename'} =
+#    { uniquename       => "..."
+#      proxyfile        => "..."
+#      sitename         => "..."
+#      sitegatekeeper   => "..."
+#      scheddjobid      => "..." #undefined until schedd job submitted
+#      scheddstatus     => ...
+#      numjobs          => ...
+#    }
+
+
+# Debug level. 0 is basically silent.
+my $DEBUG = 10;
+
+
+# initialize variables that will be used throughput our run
+if(not defined $config_condor_host) {
+	chomp( $config_condor_host = `condor_config_val CONDOR_HOST` );
+}
+$base_dir = "\$(HOME)/Condor_glidein";
+#$config_local_dir = "\$(HOME)/Condor_glidein/local";
+#$config_sbin = "\$(HOME)/Condor_glidein/sbin";
+if(not defined $config_condor_admin) {
+	chomp( $config_condor_admin = `condor_config_val CONDOR_ADMIN` );
+}
+$config_mail = "/usr/bin/mail";
+
+debug_print(4, "Startup: Scanning queue for existing schedds");
+# scan the queue for any schedd jobs already submitted
+# format: <Cluster>.<Proc> <x509proxy> <uniquename> <sitename> <sitegatekeeper> <job status>
+open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%d." ClusterId -format "%d\t" ProcId -format "%s\t" X509UserProxy -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%s\t" GlobusResource -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
+
+while ( <CQ> ) {
+
+	chomp;
+
+	@line = split( /\t/ );
+
+	if ( $#line == 5 ) {
+
+		my $key = "${line[3]}#${line[2]}";
+
+		if ( defined $job_groups{$key} ) {
+			print STDERR "Two schedd jobs for same site,subject!\n";
+		} else {
+			$job_groups{$key} = {
+				'uniquename'    => "${line[2]}",
+				'proxyfile'       => "${line[1]}",
+				'sitename'        => "${line[3]}",
+				'sitegatekeeper'  => "${line[4]}",
+				'scheddjobid'     => "${line[0]}",
+				'scheddstatus'    => $line[5],
+				'numjobs'         => 0
+				};
+		}
+	}
+}
+
+close( CQ );
+
+while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
+	debug_print(3, "###########################");
+
+	# check queue for user jobs
+	##########################################
+	foreach $group ( values %job_groups ) {
+		${$group}{'numjobs'} = 0;
+	}
+
+	debug_print(4, "Scanning for grid jobs");
+	# Need to catch SIGCHLD to know if command failed
+	open( CQ, q[condor_q -const 'JobUniverse==9&&JobGridType=?="condor"' -format "%s\t" daemon_unique_name -format "%s\t" x509userproxy -format "%s\t" SiteName -format "%s" SiteGatekeeper -format "\n" ClusterId |] ) || die( "Can't run condor_q" );
+
+	while ( <CQ> ) {
+
+		chomp;
+		next if /^$/;
+		debug_print(4, "    Found one ($_)");
+
+		@line = split( /\t/ );
+
+		if ( $#line == 3 ) {
+
+			my $key = "${line[2]}#${line[0]}";
+
+			if ( defined $job_groups{$key} ) {
+				${$job_groups{$key}}{'numjobs'}++;
+				# Set the proxy file here because we may not have a valid
+				# one yet: if hash for this group was created from schedd
+				# job info (first scan in startup), proxyfile is one
+				# specific to that schedd job that can disappear with it
+				${$job_groups{$key}}{'proxyfile'} = "${line[1]}";
+			} else {
+				$job_groups{$key} = {
+					'uniquename'      => "${line[0]}",
+					'proxyfile'       => "${line[1]}",
+					'sitename'        => "${line[2]}",
+					'sitegatekeeper'  => "${line[3]}",
+					'numjobs'         => 1
+					};
+			}
+		}
+
+	}
+
+	close( CQ );
+
+	# check queue for schedd jobs (see if any have disappeared)
+	##########################################
+	foreach $group ( values %job_groups ) {
+		${$group}{'scheddstatus'} = undef();
+	}
+
+	# Should we exclude schedd jobs in X state?
+	# Need to catch SIGCHLD to know if command failed
+	open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
+
+	while ( <CQ> ) {
+
+		chomp;
+
+		@line = split( /\t/ );
+
+		if ( $#line == 2 ) {
+
+			my $key = "${line[1]}#${line[0]}";
+
+			if ( defined $job_groups{$key} ) {
+				${$job_groups{$key}}{'scheddstatus'} = $line[2];
+			} else {
+				print "Unknown schedd job for group $key\n";
+			}
+		}
+
+	}
+
+	close( CQ );
+
+	# submit schedds as needed
+	##########################################
+	debug_print(3, "Submit schedds as needed");
+	foreach $group ( values %job_groups ) {
+
+		my $key = "${$group}{sitename}#${$group}{uniquename}";
+
+		if ( ${$group}{'numjobs'} > 0 ) {
+			if ( !defined( ${$group}{'scheddjobid'} ) ) {
+				debug_print(1, "    group $key has no schedd yet, starting one");
+				${$group}{'scheddjobid'} = submit_schedd_job( $group );
+			} elsif ( !defined( ${$group}{'scheddstatus'} ) ) {
+				debug_print(1, "    schedd for group $key has disappeared, starting another");
+				${$group}{'scheddjobid'} = submit_schedd_job( $group );
+			} else {
+				debug_print(4, "    Group $key already has a schedd");
+			}
+			if ( defined( ${$group}{'scheddjobid'} ) ) {
+				${$group}{'scheddsubmitted'} = 1;
+			}
+		}
+
+	}
+
+	# do upkeep on all our schedd jobs
+	##########################################
+	debug_print(5, "Upkeep");
+	foreach $group ( values %job_groups ) {
+
+		my $key = "${$group}{sitename}#${$group}{uniquename}";
+		my $line = join( ",", values( %{$group} ) );
+		debug_print(5, "    $line");
+
+		if ( ${$group}{'numjobs'} == 0 ) {
+			debug_print(5, "        Appears healthy but unused");
+			# condor_rm?
+		} elsif ( ${$group}{'scheddstatus'} == 5 ) {
+			debug_print(5, "        Is held.  Removing.");
+			print STDERR "group $key schedd is held, removing\n";
+			system( "condor_rm ${$group}{'scheddjobid'}" );
+		} else {
+			debug_print(5, "        Appears healthy and used");
+#			advertise_schedd( $group );
+			# check for held
+			# update proxy?
+		}
+	}
+
+	if(getppid() == 1) {
+		debug_print(9, "My parent disappeared.  Assuming he exitted.  Quitting\n");
+		exit(1);
+	}
+
+	sleep( 30 );
+}
+
+sub md5sum {
+	my($data) = @_;
+	my $md5_file = "/tmp/md5.$$";
+	open( FILE, ">$md5_file" );
+	print FILE $data;
+	close( FILE );
+	my($md5) = `md5sum $md5_file`;
+	chomp($md5);
+	unlink( $md5_file );
+	return $md5;
+}
+
+sub submit_schedd_job
+{
+	my( $group ) = @_;
+	my $cmd_file = "/tmp/condorc-launcher-submit.$$";
+	my $submit_out = "/tmp/condorc-launcher-submit-out.$$";
+	my $cluster;
+	my $env;
+	my $setup_script = "/tmp/condorc-launcher-starter.$$";
+	my $schedd_name;
+	my $exec;
+	my $args;
+
+	debug_print(2, "Submitting schedd to $group->{sitegatekeeper} with $group->{proxyfile}");
+
+	# Generate an MD5 hash of the proxy subject that we can use as a
+	# schedd name.
+	$schedd_name = $group->{'uniquename'};
+#	$schedd_name = md5sum("$config_condor_host/".$group->{'proxysubject'});
+#	$schedd_name =~ s/\s.*//;
+
+	# Write the setup script that will run on the remote machine
+	open( SCRIPT, ">$setup_script" ) || die "error opening $setup_script";
+
+	print SCRIPT <<EOF;
 #! /bin/sh
 
-while true; do
-	condorc-launcher-bin
-	# This keeps things from going into a tight loop if the executable
-	# disappears for some reason.
-	/bin/sleep 5
+#setup script
+# usage: setup <args to condor_master>
+
+# Stupid globus bug 1486 means we can't use variable substitution in the
+# job's arguments (if there's more than one argument). So we can't pass
+# the path to the condor_master in the arguments. Instead, we'll just
+# hard-code it in this script for now.
+#master=\$1
+#shift
+
+BASEDIR=\$1
+shift
+
+for newdir in \$BASEDIR \$_condor_LOCAL_DIR \$_condor_LOCAL_DIR/log \$_condor_LOCAL_DIR/spool; do
+   if [ ! -d \$newdir ]; then
+        /bin/mkdir -p \$newdir;
+    fi
+    if [ ! -d \$newdir ]; then
+        echo "ERROR mkdir -p \$newdir"
+        exit 1;
+    fi
 done
+
+
+my_condor_master=\$BASEDIR/sbin/condor_master
+if [ ! -x \$my_condor_master ]; then
+	my_condor_master=/opt/condor-c/sbin/condor_master
+	if [ "x\$CONDOR_MASTER_LOCATION" != "x" ]; then
+		my_condor_master=\$CONDOR_MASTER_LOCATION
+	fi
+fi
+
+if [ "x\$CONDOR_CONFIG" == "x" ]; then
+	LOCALGUESS=\$HOME/Condor_glidein/condor_config.submit
+	if [ -r \$LOCALGUESS ]; then
+		CONDOR_CONFIG=\$LOCALGUESS
+	fi
+fi
+
+if [ "x\$CONDOR_CONFIG" == "x" ]; then
+	CONDOR_CONFIG=/opt/condor-c/etc/condor_config
+fi
+
+export CONDOR_CONFIG
+echo "Using configuration file \$CONDOR_CONFIG"
+
+if [ ! -x \$my_condor_master ]; then
+	echo "ERROR finding condor_master as \$my_condor_master"
+	exit 1
+fi
+
+exec \$my_condor_master -f "\$@"
+
+EOF
+
+	close( SCRIPT );
+
+	# For now, we assume that binaries and a bare-bones config file
+	# (ala glidein) are pre-installed at the execution site
+
+	$env .= "_condor_CONDOR_HOST=$config_condor_host;";
+
+	$env .= "_condor_LOCAL_DIR=$base_dir/local.$schedd_name;";
+
+	$env .= "_condor_CONDOR_ADMIN=$config_condor_admin;";
+
+	$env .= "_condor_MAIL=$config_mail;";
+
+	if($DYNAMIC_SCHEDD_NAMES) {
+		$env .= "_condor_MASTER_NAME=$schedd_name;";
+		$env .= "_condor_SCHEDD_NAME=$schedd_name;";
+	}
+
+#	$env .= "_condor_SCHEDD_ATTRS=SiteName,daemon_unqiue_name,CONDORC_WANTJOB;";
+	$env .= "_condor_SCHEDD_ATTRS=SiteName,CONDORC_WANTJOB;";
+	$env .= "_condor_SiteName=\"${$group}{'sitename'}\";";
+#	$env .= "_condor_daemon_unique_name=\"${$group}{'uniquename'}\";";
+	$env .= "_condor_CONDORC_WANTJOB=TRUE;";
+
+	chop $env;
+
+#	$exec = "$config_sbin/condor_master";
+	$exec = $setup_script;
+
+	$args = $base_dir;
+
+	# Escape '$' in submit file entries
+	$env =~ s/\$/\$(DOLLAR)/g;
+	$args =~ s/\$/\$(DOLLAR)/g;
+	$exec =~ s/\$/\$(DOLLAR)/g;
+
+	# Stupid globus bug 1486 means we can't use variable substitution in the
+	# job's arguments (if there's more than one argument. So we can't pass the
+	# path to the condor_master in the arguments. Instead, we'll just
+	# hard-code it in this script for now.
+	open( CMD, ">$cmd_file" ) || die( "Can't open $cmd_file" );
+	print CMD <<EOF;
+# run a schedd on the remote resource
+universe = grid
+grid_type = globus
+executable = $exec
+arguments = $args
+environment = $env
+output = /tmp/condorc-launcher.out.\$(cluster).\$(process)
+error = /tmp/condorc-launcher.err.\$(cluster).\$(process)
+log = /tmp/condorc-launcher.log.\$(cluster).\$(process)
+globusscheduler = ${$group}{'sitegatekeeper'}
+x509userproxy = ${$group}{'proxyfile'}
++DynamicScheddJob = True
++SiteName = "${$group}{'sitename'}"
+notification=NEVER
+leave_in_queue=False
+queue
+EOF
+
+	close( CMD );
+
+
+	my $submit_exitcode;
+	$submit_exitcode = system( "condor_submit -s $cmd_file >$submit_out 2>&1" );
+	if ($submit_exitcode != 0) {
+		print STDERR "Error running condor_submit";
+		return undef;
+	}
+
+    # snarf the cluster id from condor_submit's output
+	unless( open( SUBMIT, "<$submit_out" ) ) {
+		print STDERR "error opening \"$submit_out\": $!\n";
+		return undef;
+	}
+	while( <SUBMIT> ) {
+		if( /\d+ job\(s\) submitted to cluster (\d+)./ ) {
+			$cluster = $1;
+			last;
+		}
+	}
+	close( SUBMIT );
+
+	# if for some reason we didn't find the cluster id 
+	unless( $cluster ) {
+		print STDERR "error: couldn't find cluster id in condor_submit output\n";
+		return undef;
+	}
+
+	# Since the schedd doesn't do a reschedule when a job's input files are
+	# spooled, give it a kick in the butt.
+	system( "condor_reschedule" );
+
+	# Turn the cluster number into a fully-qualified condor job id.
+	$cluster .= ".0";
+
+#	unlink $cmd_file, $submit_out, $setup_script;
+
+	return $cluster;
+}
+
+sub advertise_schedd
+{
+	my( $group ) = @_;
+	my $ad_file = "/tmp/ad_file.$$";
+
+	open( AD, ">$ad_file" ) || die "Failed to open file $ad_file";
+
+	print AD <<EOF;
+EOF
+
+	close( AD );
+
+	$rc = system( "condor_advertise UPDATE_STARTD_AD $ad_file" );
+	if ( $rc != 0 ) {
+		print "condor_advertise exitted with $rc\n";
+	}
+}
+
+
+sub debug_print {
+	my $level = shift;
+	if($level > $DEBUG) { return; }
+	print STDERR tersedate();
+	print STDERR " ($$) ";
+	print STDERR @_;
+	print STDERR "\n";
+}
+
+sub tersedate {
+	 ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+	 return sprintf "%04d-%02d-%02d %02d:%02d:%02d",
+	 	$year + 1900, $mon + 1, $mday, $hour, $min, $sec;
+}

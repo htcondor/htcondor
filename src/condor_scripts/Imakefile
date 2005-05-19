@@ -110,18 +110,12 @@ static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 release_copy_target(condorc-advertiser,bin,condorc-advertiser,EXECUTABLE_MODE)
 strip_copy_target(condorc-advertiser,bin,condorc-advertiser,EXECUTABLE_MODE)
 static_copy_target(condorc-advertiser,bin,condorc-advertiser,EXECUTABLE_MODE)
-release_copy_target(condorc-advertiser-bin,bin,condorc-advertiser-bin,EXECUTABLE_MODE)
-strip_copy_target(condorc-advertiser-bin,bin,condorc-advertiser-bin,EXECUTABLE_MODE)
-static_copy_target(condorc-advertiser-bin,bin,condorc-advertiser-bin,EXECUTABLE_MODE)
 release_copy_target(condorc-initialize,bin,condorc-initialize,EXECUTABLE_MODE)
 strip_copy_target(condorc-initialize,bin,condorc-initialize,EXECUTABLE_MODE)
 static_copy_target(condorc-initialize,bin,condorc-initialize,EXECUTABLE_MODE)
 release_copy_target(condorc-launcher,bin,condorc-launcher,EXECUTABLE_MODE)
 strip_copy_target(condorc-launcher,bin,condorc-launcher,EXECUTABLE_MODE)
 static_copy_target(condorc-launcher,bin,condorc-launcher,EXECUTABLE_MODE)
-release_copy_target(condorc-launcher-bin,bin,condorc-launcher-bin,EXECUTABLE_MODE)
-strip_copy_target(condorc-launcher-bin,bin,condorc-launcher-bin,EXECUTABLE_MODE)
-static_copy_target(condorc-launcher-bin,bin,condorc-launcher-bin,EXECUTABLE_MODE)
 
 clean::
 html:
