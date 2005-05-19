@@ -805,6 +805,7 @@ int condor__getFile(struct soap *soap,
 					struct condor__getFileResponse & result)
 {
 	dprintf(D_FULLDEBUG, "SOAP entering condor__getFile() \n");
+	bool destroy_job = false;
 
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
@@ -815,43 +816,67 @@ int condor__getFile(struct soap *soap,
 
 		Job *job;
 		if (getJob(clusterId, jobId, job)) {
-			result.response.status.code = UNKNOWNJOB;
-			result.response.status.message = "Unknown job.";
-		} else {
-			if (0 >= length) {
-				result.response.status.code = FAIL;
-				result.response.status.message = "LENGTH must be >= 0";
-				dprintf(D_FULLDEBUG, "length is <= 0: %d\n", length);
-			} else {
-				unsigned char * data =
-					(unsigned char *) soap_malloc(soap, length);
-				ASSERT(data);
+				// Very similar code is in condor__listSpool()
+			job = new Job(clusterId, jobId);
+			ASSERT(job);
+			CondorError errstack;
+			if (job->initialize(errstack)) {
+				result.response.status.code =
+					(condor__StatusCode) errstack.code();
+				result.response.status.message =
+					(char *) soap_malloc(soap, strlen(errstack.message()) + 1);
+				strcpy(result.response.status.message,
+					   errstack.message());
 
-				int status;
-				CondorError errstack;
-				if (0 == (status = job->get_file(MyString(name),
-												 offset,
-												 length,
-												 data,
-												 errstack))) {
-					result.response.status.code = SUCCESS;
-					result.response.status.message =
-						"I hope you can handle the truth.";
-
-					result.response.data.__ptr = data;
-					result.response.data.__size = length;
-				} else {
-					result.response.status.code =
-						(condor__StatusCode) errstack.code();
-					result.response.status.message =
-						(char *)
-						soap_malloc(soap, strlen(errstack.message()) + 1);
-					strcpy(result.response.status.message,
-						   errstack.message());
-
-					dprintf(D_FULLDEBUG, "get_file failed: %d\n", status);
+				if (job) {
+					delete job;
+					job = NULL;
 				}
+
+				return SOAP_OK;
 			}
+
+			destroy_job = true;
+		}
+
+		if (0 >= length) {
+			result.response.status.code = FAIL;
+			result.response.status.message = "LENGTH must be >= 0";
+			dprintf(D_FULLDEBUG, "length is <= 0: %d\n", length);
+		} else {
+			unsigned char * data =
+				(unsigned char *) soap_malloc(soap, length);
+			ASSERT(data);
+
+			int status;
+			CondorError errstack;
+			if (0 == (status = job->get_file(MyString(name),
+											 offset,
+											 length,
+											 data,
+											 errstack))) {
+				result.response.status.code = SUCCESS;
+				result.response.status.message =
+					"I hope you can handle the truth.";
+
+				result.response.data.__ptr = data;
+				result.response.data.__size = length;
+			} else {
+				result.response.status.code =
+					(condor__StatusCode) errstack.code();
+				result.response.status.message =
+					(char *)
+					soap_malloc(soap, strlen(errstack.message()) + 1);
+				strcpy(result.response.status.message,
+					   errstack.message());
+
+				dprintf(D_FULLDEBUG, "get_file failed: %d\n", status);
+			}
+		}
+
+		if (destroy_job && job) {
+			delete job;
+			job = NULL;
 		}
 	}
 
