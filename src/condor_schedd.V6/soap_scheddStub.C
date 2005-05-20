@@ -279,29 +279,29 @@ condor__abortTransaction(struct soap *s,
 						 struct condor__Transaction transaction,
 						 struct condor__abortTransactionResponse & result )
 {
-	if (transaction.id && transaction.id == current_trans_id) {
-		AbortTransactionAndRecomputeClusters();
-		dprintf(D_FULLDEBUG,
-				"SOAP cleared file hashtable for transaction: %d\n",
-				transaction.id);
-
-			// Let's forget about all the file associated with the transaction.
-			//jobs.clear();
-
-		current_trans_id = 0;
-		transaction.id = 0;
-		if ( trans_timer_id != -1 ) {
-			daemonCore->Cancel_Timer(trans_timer_id);
-			trans_timer_id = -1;
-		}
-		daemonCore->Only_Allow_Soap(0);
-	}
-
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
 		result.response.message = "Invalid transaction.";
 	} else {
+		if (transaction.id && transaction.id == current_trans_id) {
+			AbortTransactionAndRecomputeClusters();
+			dprintf(D_FULLDEBUG,
+					"SOAP cleared file hashtable for transaction: %d\n",
+					transaction.id);
+
+				// Let's forget about all the file associated with the
+				//transaction.  jobs.clear();
+
+			current_trans_id = 0;
+			transaction.id = 0;
+			if ( trans_timer_id != -1 ) {
+				daemonCore->Cancel_Timer(trans_timer_id);
+				trans_timer_id = -1;
+			}
+			daemonCore->Only_Allow_Soap(0);
+		}
+
 		result.response.code = SUCCESS;
 		result.response.message = "Don't cry for it.";
 	}
