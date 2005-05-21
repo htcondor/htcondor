@@ -415,6 +415,10 @@ V6_7_7_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/srb/3.2.1
 
 # Externals needed for V6_7_8 (same as V6_7_7)
+V6_7_GCB_2_EXT	-a V6_7_7_EXT \
+		   externals/bundles/gcb/1.1
+
+# Externals needed for V6_7_8 (same as V6_7_7)
 V6_7_8_EXT	-a V6_7_7_EXT
 
 # Externals needed for the head of the V6_7-branch
@@ -550,6 +554,9 @@ V6_6_7_KRB_1_2_7_BUILD	-a V6_6_ALL V6_6_7_KRB_1_2_7_EXT
 
 # For 1-off builds to see if we can get krb5-1.4 working, we need this:
 V6_7_KERB14_BUILD 	-a V6_7_ALL V6_7_KERB14_EXT
+
+# For the builds ont eh V6_7-gcb-branch, we need this:
+V6_7_GCB_2_BUILD 	-a V6_7_ALL V6_7_GCB_2_EXT
 
 # For 1-off builds to see if we can get Quill working, we need this:
 V6_7_QUILL_SRC		-a V6_7_SRC \
