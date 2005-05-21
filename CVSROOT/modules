@@ -416,7 +416,7 @@ V6_7_7_EXT	-a V6_7_COMMON_EXT \
 
 # Externals needed for V6_7_8 (same as V6_7_7)
 V6_7_GCB_2_EXT	-a V6_7_7_EXT \
-		   externals/bundles/gcb/1.1
+		   externals/bundles/gcb/1.1a
 
 # Externals needed for V6_7_8 (same as V6_7_7)
 V6_7_8_EXT	-a V6_7_7_EXT
