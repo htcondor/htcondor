@@ -1229,7 +1229,7 @@ DedicatedScheduler::startdContactConnectHandler( Stream *sock )
 
 	dprintf ( D_FULLDEBUG, "Got mrec data pointer %x\n", mrec );
 
-	if(!claimStartdConnected( dynamic_cast<Sock *>(sock), mrec, &dummy_job, true )) {
+	if(!claimStartdConnected( (Sock *)sock, mrec, &dummy_job, true )) {
 		mrec->setStatus( M_UNCLAIMED );
 		return FALSE;
 	}

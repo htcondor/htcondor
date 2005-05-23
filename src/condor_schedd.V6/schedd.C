@@ -4968,7 +4968,7 @@ Scheduler::startdContactConnectHandler( Stream *sock )
 		return FALSE;
 	}
 
-	if(!claimStartdConnected( dynamic_cast<Sock *>(sock), mrec, jobAd, false )) {
+	if(!claimStartdConnected( (Sock *)sock, mrec, jobAd, false )) {
 		DelMrec( mrec );
 		return FALSE;
 	}
