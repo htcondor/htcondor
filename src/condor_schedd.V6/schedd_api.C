@@ -193,6 +193,7 @@ Job::declare_file(const MyString &name,
                   int size,
 				  CondorError &errstack)
 {
+	JobFile *ignored;
 	JobFile jobFile;
 	jobFile.size = size;
 	jobFile.currentOffset = 0;
@@ -204,6 +205,15 @@ Job::declare_file(const MyString &name,
 			 O_WRONLY | O_CREAT | _O_BINARY,
 			 0600);
 	if (-1 != jobFile.file) {
+		if (declaredFiles.lookup(name, ignored)) {
+			errstack.pushf("SOAP",
+						   ALREADYEXISTS,
+						   "File '%s' already declared.",
+						   name.GetCStr());
+
+			return 4;
+		}
+
 		if (declaredFiles.insert(name, jobFile)) {
 			errstack.pushf("SOAP",
 						   FAIL,
