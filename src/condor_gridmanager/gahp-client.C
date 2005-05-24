@@ -3680,7 +3680,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		if (result->argc != 4 + *num_ads ) {
 			EXCEPT("Bad %s Result",command);
 		}
-		if ( num_ads > 0 ) {
+		if ( *num_ads > 0 ) {
 			*ads = (ClassAd **)malloc( *num_ads * sizeof(ClassAd*) );
 			for ( int i = 0; i < *num_ads; i++ ) {
 				if ( useXMLClassads ) {
