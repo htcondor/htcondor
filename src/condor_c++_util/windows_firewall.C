@@ -25,7 +25,7 @@
 
 #include "condor_common.h"
 #ifdef WIN32
-
+#include "condor_config.h"
 #include "windows_firewall.h"
 #include "basename.h"
 
@@ -451,16 +451,18 @@ WindowsFirewallHelper::WindowsFirewallInitialize() {
     if (FAILED(hr))
     {
 		// Sometimes, this fails at boot time. So, we 
-		// retry five times before throwing in the towel.
+		// retry a number of times before throwing in the towel.
+		// Note that if retry = 0, it retries forever.
+		int retry = param_integer("WINDOWS_FIREWALL_FAILURE_RETRY", 60);
 		int i;
-		for (i=0; i<5; i++) {
+		for (i=0; (i<retry || (retry==0)); i++) {
     		hr = fwPolicy->get_CurrentProfile(&fwProf);
     		if (SUCCEEDED(hr)) {
 				break;
 			} else {
 				dprintf(D_FULLDEBUG, "get_CurrentProfile() failed. "
 					   " Retry %d...\n", i);
-				sleep(1);
+				sleep(10);
 			}
 		}
 
