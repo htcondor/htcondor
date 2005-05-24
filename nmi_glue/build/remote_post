@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post,v 1.1.2.3 2004-07-01 23:26:42 wright Exp $
+# $Id: remote_post,v 1.1.2.4 2005-05-24 23:00:50 bgietzel Exp $
 # post script to cleanup after a Condor build, successful or not
 ######################################################################
 
@@ -15,6 +15,18 @@ $| = 1;
 if( defined $ENV{_NMI_STEP_FAILED} ) { 
     my $nmi_task_failure = "$ENV{_NMI_STEP_FAILED}";
     print "The value of _NMI_STEP_FAILED is: '$nmi_task_failure'\n";
+
+    if ($nmi_task_failure eq "remote_pre"){  
+      # Tar up anything we might need for debugging if the remote_pre
+      # step fails.
+      print "Tarring up debugging info\n";
+      system( "tar zcvf results.tar.gz src/config.log" );
+      if( $? >> 8 ) {
+        print "Can't tar zcvf results.tar.gz src/config.log\n";
+        exit 1;
+      }
+      exit 0;
+    }
 } else {
     print "The _NMI_STEP_FAILED variable is not set\n";
 }
