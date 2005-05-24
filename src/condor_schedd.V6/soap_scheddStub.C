@@ -1075,6 +1075,12 @@ condor__createJobTemplate(struct soap *soap,
 	job.SetMyTypeName(JOB_ADTYPE);
 	job.SetTargetTypeName(STARTD_ADTYPE);
 
+	attribute = MyString(ATTR_VERSION) + " = \"" + CondorVersion() + "\"";
+	job.Insert(attribute.GetCStr());
+
+	attribute = MyString(ATTR_PLATFORM) + " = \"" + CondorPlatform() + "\"";
+	job.Insert(attribute.GetCStr());
+
 	attribute = MyString(ATTR_CLUSTER_ID) + " = " + clusterId;
 	job.Insert(attribute.GetCStr());
 
