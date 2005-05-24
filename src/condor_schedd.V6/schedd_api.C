@@ -205,7 +205,7 @@ Job::declare_file(const MyString &name,
 			 O_WRONLY | O_CREAT | _O_BINARY,
 			 0600);
 	if (-1 != jobFile.file) {
-		if (declaredFiles.lookup(name, ignored)) {
+		if (0 == declaredFiles.lookup(name, ignored)) {
 			errstack.pushf("SOAP",
 						   ALREADYEXISTS,
 						   "File '%s' already declared.",
