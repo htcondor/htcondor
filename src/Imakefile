@@ -96,7 +96,7 @@ TEST_SUITE_BASE = test_suite_base
 	static_dir static_dir/bin static_dir/sbin static_dir/lib \
 	static_dir/libexec \
 	static_dir/etc static_dir/etc/examples static_dir/include \
-	static_dir/src static_dir/src/chirp \
+	static_dir/src static_dir/src/chirp static_dir/src/drmaa \
 	static_dir/man static_dir/man/man1 \
 	static_dir/lib/webservice \
 	static_contrib static_contrib/bin static_contrib/lib \
@@ -111,12 +111,13 @@ TEST_SUITE_BASE = test_suite_base
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
 	release_dir/libexec \
 	release_dir/include release_dir/src release_dir/src/chirp \
+	release_dir/src/drmaa \
 	release_dir/man release_dir/man/man1 pure_bin \
 	release_dir/lib/webservice \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
 	strip_dir/libexec \
 	strip_dir/etc strip_dir/etc/examples strip_dir/include \
-	strip_dir/src strip_dir/src/chirp \
+	strip_dir/src strip_dir/src/chirp strip_dir/src/drmaa \
 	strip_dir/man strip_dir/man/man1 \
 	strip_dir/lib/webservice \
 	strip_contrib strip_contrib/bin strip_contrib/lib \
@@ -142,6 +143,7 @@ simple_dir_target(release_dir/sbin)
 simple_dir_target(release_dir/include)
 simple_dir_target(release_dir/src)
 simple_dir_target(release_dir/src/chirp)
+simple_dir_target(release_dir/src/drmaa)
 simple_dir_target(release_dir/man)
 simple_dir_target(release_dir/man/man1)
 simple_dir_target(release_dir/lib/webservice)
@@ -158,6 +160,7 @@ simple_dir_target(strip_dir/etc/examples)
 simple_dir_target(strip_dir/include)
 simple_dir_target(strip_dir/src)
 simple_dir_target(strip_dir/src/chirp)
+simple_dir_target(strip_dir/src/drmaa)
 simple_dir_target(strip_dir/man)
 simple_dir_target(strip_dir/man/man1)
 simple_dir_target(strip_dir/lib/webservice)
@@ -182,6 +185,7 @@ simple_dir_target(static_dir/etc/examples)
 simple_dir_target(static_dir/include)
 simple_dir_target(static_dir/src)
 simple_dir_target(static_dir/src/chirp)
+simple_dir_target(static_dir/src/drmaa)
 simple_dir_target(static_dir/man)
 simple_dir_target(static_dir/man/man1)
 simple_dir_target(static_dir/lib/webservice)
