@@ -7,6 +7,41 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+
+5/25/05 V6_7-pre-merge-V6_7_7-doc-merge-1
+        V6_7-post-merge-V6_7_7-doc-merge-1
+    The state of the doc directory in V6_7-branch before and after
+    merging changes from the V6_7_7-branch as tagged V6_7_7-doc-merge-1.
+
+5/25/05 V6_7_7-doc-merge-1
+    The state of the doc directory in V6_7_7-branch before a 
+    first time merge into the V6_7-branch. 
+
+5/25/05 V6_7_7-pre-merge-V6_7_6-doc-merge-2
+        V6_7_7-post-merge-V6_7_6-doc-merge-2
+    The state of the doc directory in V6_7_7-branch before and after
+    merging changes from the V6_7_6-branch as tagged V6_7_6-doc-merge-2.
+
+5/25/05 V6_7_6-doc-merge-2
+    The state of the doc directory in V6_7_6-branch before a 
+    merge into the V6_7-branch. This merge goes into the
+    V6_7_7-branch.
+
+5/20/05 V6_7_7-pre-merge-V6_6-doc-merge-17
+        V6_7_7-post-merge-V6_6-doc-merge-17
+    The state of the doc directory in V6_7_7-branch before and after
+    merging changes from the V6_6-branch as tagged V6_6-doc-merge-17.
+
+5/20/05 V6_6-doc-merge-17
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch.  This merge goes into the
+    V6_7_7-branch.
+
+5/19/05 V6_6-post-merge-V6_6_9-doc-merge-3
+        V6_6-pre-merge-V6_6_9-doc-merge-3
+    The state of the doc directory in V6_6-branch before and after
+    merging changes from the V6_6_9-branch as tagged V6_6_9-doc-merge-3.
+
 4/29/05 V6_7_7-branch
     A release branch for the 6.7.7 manual, created from the V6_7_7-root
     tag. Any changes to the 6.7.7 manual should be done here, and the
