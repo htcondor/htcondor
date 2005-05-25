@@ -92,6 +92,8 @@ from one \condor{schedd} to another.
 transferred between unix machines. File transfers that involve a windows
 machine or older version of Condor remain as before.
 
+\item Condor-C now supports the scheduler remote universe.
+
 \item \condor{advertise} now publishes a ``MyAddress'' if none is provided
 in the source ClassAd.  This will prevent the collector from throwing out
 ads with no address (see Bugs Fixed).
@@ -148,17 +150,38 @@ was changed in such a way that Condor-G jobs submitted by a newer
 \condor{submit} reverts to the old behavior when talking to an old
 \condor{schedd}.
 
-\item Fixed a bug in handling the job's environment for GT4 jobs. Condor
-incorrectly used ``<name>=<value>'' for each variable's name.
+\item Bug-fixes and improvements to grid\_type gt4:
 
-\item Improved hold reason in certain cases when a GT4 job goes on hold.
+  \begin{itemize}
 
-\item \condor{q} -globus now works properly for GT4 jobs. Also, the resource
-name in the user log execute event is printed properly for GT4 jobs.
+  \item Condor will now delegate a single proxy to the GT4 server for
+  multiple. If the local proxy is refreshed, Condor will forward the
+  refreshed copy to the server.
 
-\item Fixed a bug that could cause Condor to not detect when a GT4 job
-completes. This was triggered by Condor not properly recognizing the
-StageOut Globus job state.
+  \item Exit codes are now recorded properly.
+
+  \item \Macro{JAVA\_EXTRA\_ARGUMENTS} now used when invoking the GT4 GAHP
+  server (which is written in java).
+
+  \item If \Macro{LOWPORT} and \Macro{HIGHPORT} are set in the config file,
+  the GT4 GAHP server will now obey the port restriction.
+
+  \item Fixed a bug that caused Condor not to notice when some GT4 jobs
+  completed.
+
+  \item Fixed a bug in handling the job's environment for GT4 jobs. Condor
+  incorrectly used ``<name>=<value>'' for each variable's name.
+
+  \item Improved hold reason in certain cases when a GT4 job goes on hold.
+
+  \item \condor{q} -globus now works properly for GT4 jobs. Also, the resource
+  name in the user log execute event is printed properly for GT4 jobs.
+
+  \item Fixed a bug that could cause Condor to not detect when a GT4 job
+  completes. This was triggered by Condor not properly recognizing the
+  StageOut Globus job state.
+
+  \end{itemize}
 
 \item Fixed a bug that can cause the \condor{gridmanager} to abort if
 \Attr{PeriodicRelease} evaluates to true while it's putting a job on hold.

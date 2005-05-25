@@ -275,22 +275,22 @@ having a value that is very large.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Configure-Dedicated-Preemption}
-Preemption with dedicated jobs}
+Preemption with Dedicated Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The dedicated scheduler can optionally preempt running MPI jobs in
 favor of higher priority MPI jobs in its queue.  Note that this is
 different from preemption in non-MPI universes, and MPI jobs cannot
-be preempted by a machine's user pressing a key or by other means.
+be preempted either by a machine's user pressing a key or by other means.
 
-By default, the dedicated schedule will never preempt running jobs.
+By default, the dedicated scheduler will never preempt running jobs.
 Two configuration file items control dedicated preemption: 
 \Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS} and \Macro{SCHEDD\_PREEMPTION\_RANK}.
 These have no default value, so if either are unset, preemption will
-never occur. \Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS} must evaluate to true
+never occur. \MacroNI{SCHEDD\_PREEMPTION\_REQUIREMENTS} must evaluate to true
 for a machine to be a candidate for preemption.  If more machines are 
 candidates for preemption than needed to satisfy a higher priority job, the
-preemptible machines are sorted by \Macro{SCHEDD\_PREEMPTION\_RANK}, and
+preemptible machines are sorted by \MacroNI{SCHEDD\_PREEMPTION\_RANK}, and
 only the highest ranked machines are taken.
 
 Note that preempting one node of a running MPI job requires killing

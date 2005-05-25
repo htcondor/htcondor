@@ -70,11 +70,31 @@ an IP address field which is empty (which should never happen), the
     jobs during a shutdown, without waiting for this interval to pass.
 \end{itemize}
 
-\item On Windows, it was possible under certain circumstances for execute
-directories to not be cleaned up properly. This has been fixed.
+\item A number of Windows-specific bugs were fixed:
+\begin{itemize}
+  \item It was possible under certain circumstances for execute
+  directories to not be cleaned up properly. This has been fixed.
 
-\item On Windows, certain Asian locales would cause the \Condor{starter}
-to crash due to character translation problems. This has been fixed.
+  \item Certain Asian locales would cause the \Condor{starter} to crash
+  due to character translation problems. This has been fixed.
+
+  \item Condor will now properly report memory sizes that exceed 2 GB.
+
+  \item The \Condor{starter} would be unable to run jobs if the \verb@LOG@
+  path had a period (.) in it. This has been fixed.
+
+  \item The \Condor{startd} would leak memory, especially on SMP
+  machines. This has been fixed.
+
+  \item The \Condor{master} would crash immediately on Windows 2003
+  Server if the firewall was enabled. This has been fixed.
+
+\end{itemize}
+
+% See Gnats PR 479. 
+\item Fixed a bug in \Condor{dagman} that could cause \Condor{dagman}
+to fail an assertion if PRE or POST scripts are throttled with the
+\Opt{-maxpre} or \Opt{-maxpost} \Condor{submit\_dag} command line flags.
 
 \end{itemize}
 
@@ -82,7 +102,13 @@ to crash due to character translation problems. This has been fixed.
 
 \begin{itemize}
 
-\item None
+\item Fixed a bug where enabling the grid\_monitor for any globus
+job handled by something other than a hard-coded list of jobmanager names
+would cause the job to stay idle forever.  The hard-coded list of
+jobmanager names was: condor, fork, lsf, pbs, and remote.  A jobmanager
+by any other name (e.g. condor\_rh9, or lcgpbs) would cause the problem.
+This bug was originally fixed in internal releases of 6.7.0, but it was
+reintroduced by mistake in all public releases.
 
 \end{itemize}
 

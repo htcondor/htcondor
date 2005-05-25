@@ -1868,11 +1868,55 @@ will not want to change them for any reason.
 \begin{description}
 
 \item[\Macro{MASTER\_NAME}] \label{param:MasterName}
-  A unique name given for a \Condor{master} daemon on a machine.
-  Defaults to username@hostname, where the username is the user name
-  under which the \Condor{master} daemon is executed.
-  If the \Condor{master} daemon is running as root, then
-  \MacroNI{MASTER\_NAME} is the host name.
+  Defines a unique name given for a \Condor{master} daemon on a machine.
+  Defaults to the fully qualified host name.
+  If more than one \Condor{master} is running on the same host (for
+  example, because of multiple Personal Condor installations running
+  as different users) the \MacroNI{MASTER\_NAME} for each
+  \Condor{master} should be defined to uniquely identify the separate
+  daemons. 
+
+  If the \MacroNI{MASTER\_NAME} contains more than a host name,
+  it must
+  have the form \verb$identifying-string@full.host.name$.
+  If the string specified with \MacroNI{MASTER\_NAME} already includes
+  an \verb$@$ sign, Condor will replace whatever follows the \verb$@$
+  sign with the fully qualified host name of the local machine.
+  If the string does not include an \verb$@$ sign,
+  Condor will append one, followed by the host name.
+  The \verb$identifying-string$ portion can contain any
+  alphanumeric ASCII characters or punctuation marks except \verb$@$
+  (which is used to delimit the name from the host name).
+  We recommend that the string does not contain the \verb$:$
+  character, since that might cause problems with certain tools.
+  In the example of many Personal Condor installations on the same
+  host, the user name that each \Condor{master} is executing as
+  is, by convention,
+  the \verb$identifying-string$.
+  This is easily accomplished by setting
+  \verb@MASTER_NAME = $(USERNAME)@ in the
+  configuration file.
+
+  If the \MacroNI{MASTER\_NAME} setting is used, and the
+  \Condor{master} is configured to spawn a \Condor{schedd},
+  the name
+  defined with \MacroNI{MASTER\_NAME} takes precedence over the
+  \Macro{SCHEDD\_NAME} setting (see section~\ref{param:ScheddName} on
+  page~\pageref{param:ScheddName}). 
+  Since Condor makes the assumption that there is only one
+  instance of the \Condor{startd} running on a machine,
+  the \MacroNI{MASTER\_NAME} is not automatically propagated to the
+  \Condor{startd}.
+  However, in situations where multiple \Condor{startd} daemons are
+  running on the same host (for example, when using \Condor{glidein}),
+  the \MacroNI{STARTD\_NAME} should be set to uniquely identify 
+  the \Condor{startd} daemons
+  (this is done automatically in the case of \Condor{glidein}).
+
+  If a Condor daemon (master, schedd or startd) has been given a
+  unique name, all Condor tools that need to contact that daemon can
+  be told what name to use via the \Opt{-name} command-line option.
+
 
 \item[\Macro{MASTER\_ATTRS}] \label{param:MasterExprs} This macro is
   described in section~\ref{param:SubsysExprs} as
@@ -2112,6 +2156,9 @@ control state or activity transitions within the
   where there are two \Condor{startd} daemons running on one machine,
   and each reports to the same \Condor{collector}.
   Different names will distinguish the two daemons.
+  See the description of \MacroNI{MASTER\_NAME} in
+  section~\ref{param:MasterName} on page~\pageref{param:MasterName}
+  for a description of valid Condor daemon names.
 
 \item[\Macro{RunBenchmarks}] \label{param:RunBenchmarks}
   Specifies when to run benchmarks.  When the machine is in the Unclaimed state and this expression evaluates to TRUE, benchmarks will be run.  If RunBenchmarks is specified and set to anything other than FALSE additional benchmarks will be run when the startd initially starts.  To disable startup benchmarks you must set \MacroNI{RunBenchmarks} to FALSE or comment it out of the configuration file.
@@ -2652,6 +2699,15 @@ These macros control the \Condor{schedd}.
   value can be any integer between 0 and 19, with a value of 19 being
   the lowest priority.  It defaults to 10.
 
+\item[\Macro{SCHED\_UNIV\_RENICE\_INCREMENT}]
+  \label{param:SchedUnivReniceIncrement} Analogous to 
+  \MacroNI{JOB\_RENICE\_INCREMENT} and
+  \MacroNI{SHADOW\_RENICE\_INCREMENT}, scheduler universe jobs can
+  be given a nice-level.
+  See  \MacroNI{JOB\_RENICE\_INCREMENT} in
+  section~\ref{param:JobReniceIncrement} for further explanation;
+  default value and range of legal values are the same.
+
 \item[\Macro{QUEUE\_CLEAN\_INTERVAL}] \label{param:QueueCleanInterval}
   The schedd maintains the job queue on a given machine.  It does so
   in a persistent way such that if the schedd crashes, it can recover
@@ -2718,12 +2774,23 @@ These macros control the \Condor{schedd}.
 
 \item[\Macro{SCHEDD\_NAME}] \label{param:ScheddName}
   A unique name given for a \Condor{schedd} daemon on a machine.
-  Defaults to username@hostname, where the username is the user name
-  under which the \Condor{schedd} daemon is executed.
-  If the \Condor{schedd} daemon is running as root, then
-  \MacroNI{SCHEDD\_NAME} is the host name.
-  This configuration macro is used to identify \Condor{schedd}
-  ClassAds.
+  Defaults to the fully qualified hostname of the machine where the
+  \Condor{schedd} is running.
+  However, this configuration macro is used to uniquely identify
+  \Condor{schedd} ClassAds if more than one \Condor{schedd} is running
+  on the same host, for example, with many Personal Condor
+  installations running as different users on the same machine.
+  In that case, the recommended form for \MacroNI{SCHEDD\_NAME} is
+  \verb$username@full.host.name$, where \verb$username$ is the
+  user that a given \Condor{schedd} is running as. 
+
+  See the description of \MacroNI{MASTER\_NAME} in
+  section~\ref{param:MasterName} on page~\pageref{param:MasterName}
+  for a description of valid Condor daemon names.
+  Also, note that if the \MacroNI{MASTER\_NAME} setting is defined for
+  the \Condor{master} that spawned a given \Condor{schedd}, that name
+  will take precedence over whatever is defined in
+  \MacroNI{SCHEDD\_NAME}. 
 
 \item[\Macro{SCHEDD\_ATTRS}] \label{param:ScheddAttrs} This macro is
   correctly used as \MacroNI{SUBMIT\_EXPRS}, as described in
@@ -2823,6 +2890,22 @@ These macros control the \Condor{schedd}.
   \MacroU{LIBEXEC} is the proper value for this 
   configuration variable, required when running MPI dedicated jobs.
 
+\item[\Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS}]
+  \label{param:ScheddPreemptionRequirements}
+  This boolean expression is
+  utilized only for machines allocated by a dedicated scheduler.
+  When \Expr{True}, a machine becomes a candidate for job preemption.
+  This configuration variable has no default;
+  when not defined, preemption will never be considered.
+
+\item[\Macro{SCHEDD\_PREEMPTION\_RANK}]
+  \label{param:ScheddPreemptionRank}
+  This floating point value is
+  utilized only for machines allocated by a dedicated scheduler.
+  It is evaluated in context of a job ClassAd,
+  and it represents a machine's preference for running a job.
+  This configuration variable has no default;
+  when not defined, preemption will never be considered.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3240,6 +3323,15 @@ These macros affect the \Condor{collector}.
   This macro is used to specify a short description of your pool.
   It should be about 20 characters long.  For example, the name of the
   UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.  
+  While this macro might seem similar to \MacroNI{MASTER\_NAME} or
+  \MacroNI{SCHEDD\_NAME}, it is totally unrelated.
+  Those settings are used to unique identify (and locate) a specific
+  set of Condor daemons if there are more than one running on the same
+  machine.
+  The \MacroNI{COLLECTOR\_NAME} setting is just used as a
+  human-readable string to describe the pool, which is included in the
+  updates set to the \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} (see
+  below). 
 
 \item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
   \label{param:CondorDevelopersCollector} By default, every pool sends

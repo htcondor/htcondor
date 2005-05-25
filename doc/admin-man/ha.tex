@@ -119,12 +119,12 @@ The availability of these daemons is critical to a Condor pool's
 functionality.
 Both daemons usually run on the same machine,
 most often known as the central manager.
-The failure of central manager prevents Condor from matching
-new jobs and allocating new resources. 
+The failure of a central manager machine prevents Condor from matching
+new jobs and allocating new resources.
 High availability of the \Condor{negotiator} and \Condor{collector} daemons
 eliminates this problem. 
 
-Configuration allows one of 
+Configuration allows one of
 multiple machines within the pool to function as the central manager.
 While there are may be many active \Condor{collector} daemons,
 only a single, active \Condor{negotiator} daemon will be running.
@@ -177,6 +177,23 @@ active central manager
 (in the case that the central manager fails)
 to stay active after the failed central manager machine
 returns.
+
+This high availability mechanism operates by monitoring
+communication between machines.
+Note that there is a significant difference in
+communications between machines when 
+\begin{enumerate}
+\item 
+a machine is down
+\item 
+a specific daemon (the \Condor{had} daemon in this case)
+is not running, yet the machine is functioning
+\end{enumerate}
+The high availability mechanism distinguishes between these two,
+and it operates based only on first
+(when a central manager machine is down).
+A lack of executing daemons does \emph{not}
+cause the protocol to choose or use a new active central manager. 
 
 %In order for all machines in the pool to take advantage of the high
 %availability capability, they all should run the version of Condor
