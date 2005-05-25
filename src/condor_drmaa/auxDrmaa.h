@@ -24,10 +24,25 @@
 #ifndef CONDOR_AUX_DRMAA_H
 #define CONDOR_AUX_DRMAA_H
 
+#if defined(CONDOR_DRMAA_STANDALONE)
+
+/* We're compiling this outside of the rest of Condor */
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/utsname.h>
+#include <errno.h>
+
+#else /*this is being built inside src/condor_drmaa */
+
 #include "condor_common.h"
 
 BEGIN_C_DECLS
-
+#endif
 #include "lib_condor_drmaa.h"
 
 #if HAS_PTHREADS
@@ -134,6 +149,7 @@ struct drmaa_job_template_s {
     job_attr_t* head;  // head of linked list of attributes
 };
 
+#if !defined(CONDOR_DRMAA_STANDALONE)
 END_C_DECLS
-
+#endif
 #endif  /** CONDOR_AUX_DRMAA_H **/

@@ -1,0 +1,22 @@
+
+# For Pthread support, use this
+#CFLAGS = -DCONDOR_DRMAA_STANDALONE -D_REENTRANT -DHAS_PTHREADS
+
+CFLAGS = -DCONDOR_DRMAA_STANDALONE
+
+#define ObjectFiles \
+#	libDrmaa.o drmaa_common.o
+
+CC = gcc
+
+libcondordrmaa.a: libDrmaa.o drmaa_common.o
+	ar vr libcondordrmaa.a libDrmaa.o drmaa_common.o
+
+libDrmaa.o: libDrmaa.c lib_condor_drmaa.h auxDrmaa.c auxDrmaa.h
+	$(CC) $(CFLAGS) -c libDrmaa.c
+
+drmaa_common.o: drmaa_common.c drmaa_common.h
+	$(CC) $(CFLAGS) -c drmaa_common.c
+
+clean:
+	rm *.o libcondordrmaa.a

@@ -25,8 +25,9 @@
 
 #include "auxDrmaa.h"
 
+#if !defined(CONDOR_DRMAA_STANDALONE)
 BEGIN_C_DECLS
-
+#endif
 char* schedd_name; 
 char* file_dir;
 
@@ -65,4 +66,6 @@ int num_info_jobs;
 condor_drmaa_job_info_t* reserved_job_list;  
 int num_reserved_jobs;
 
+#if !defined(CONDOR_DRMAA_STANDALONE)
 END_C_DECLS
+#endif
