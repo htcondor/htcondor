@@ -1520,6 +1520,32 @@ following \Arg{attribute} into the job ClasssAd with the given
 \Arg{value}. 
 
 %%%%%%%%%%%%%%%%%%%
+%% want_remote_io
+%%%%%%%%%%%%%%%%%%%
+
+\item[want\_remote\_io = $<$True \Bar\ False$>$]
+\index{submit commands!want\_remote\_io}
+This option controls how a file is opened and manipulated in a standard
+universe job.
+If this option is true, which is the default, then the \Condor{shadow}
+makes all decisions about how each and every file should be opened by
+the executing job.
+This entails a network round trip (or more) from the job to the
+\Condor{shadow} and back again for every single \Syscall{open}
+in addition to other needed information about the file.
+If set to false, then when the job queries the \Condor{shadow} for the
+first time about how to open a file, the \Condor{shadow} will inform the
+job to automatically perform all of its file manipulation on the local
+file system on the execute machine and any file remapping will be ignored.
+This means that there \Bold{must} be a shared file system (such
+as NFS or AFS) between the execute machine and the submit machine and that
+\Bold{ALL} paths that the job could open on the execute machine must be valid.
+The ability of the standard universe job to checkpoint, possibly to a
+checkpoint server, is not affected by this attribute. 
+However, when the job resumes it will be expecting the same file system
+conditions that were present when the job checkpointed.
+
+%%%%%%%%%%%%%%%%%%%
 %% queue
 %%%%%%%%%%%%%%%%%%%
 
