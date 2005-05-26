@@ -358,6 +358,8 @@ Convert a logical file name into a physical url by any and all methods available
 
 void CondorFileTable::lookup_url( char *logical_name, char *url )
 {
+	static int never_ask_shadow = FALSE;
+
 	// Special case: Requests to look up default standard files
 	// should be mapped to constant file descriptors.
  
@@ -375,19 +377,36 @@ void CondorFileTable::lookup_url( char *logical_name, char *url )
 	// If in local mode, just use local:logical_name.
 	// Otherwise, ask shadow.  If that fails, try buffer:remote:logical_name.
 
-	if( LocalSysCalls() ) {
+	if( LocalSysCalls() || (never_ask_shadow == TRUE)) {
 		sprintf(url,"local:%s",logical_name);
 	} else {
-		int result = REMOTE_CONDOR_get_file_info_new( logical_name, url );
-		if( result<0 ) {
-			sprintf(url,"buffer:remote:%s",logical_name);
-		}
+		if (never_ask_shadow == FALSE ) {
+			int result;
 
-		if(!got_buffer_info) {
-			int temp;
-			REMOTE_CONDOR_get_buffer_info( &buffer_size, &buffer_block_size, 
-				&temp );
-			got_buffer_info = 1;
+			// If <0 is returned, then an error happened.
+
+			// If 0 is returned then the shadow wanted the FileTable to work
+			// just like normal in comming back to it for each file the
+			// FileTable wants to know what to do with.
+
+			// if 1 is returned, then the shadow automatically give up 
+			// control of how the files are opened, permanently I assume,
+			// since the static variable in here is preserved across
+			// checkpoints in the memory image. 
+			result = REMOTE_CONDOR_get_file_info_new( logical_name, url );
+
+			if (result == 1) {
+				never_ask_shadow = TRUE;
+			} else if( result < 0 ) {
+				sprintf(url,"buffer:remote:%s",logical_name);
+			} 
+
+			if(!got_buffer_info) {
+				int temp;
+				REMOTE_CONDOR_get_buffer_info( &buffer_size, 
+												&buffer_block_size, &temp );
+				got_buffer_info = 1;
+			}
 		}
 	}
 }

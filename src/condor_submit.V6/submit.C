@@ -141,6 +141,7 @@ char	*Process			= "process";
 char	*Hold			= "hold";
 char	*Priority		= "priority";
 char	*Notification	= "notification";
+char	*WantRemoteIO	= "want_remote_io";
 char	*Executable		= "executable";
 char	*Arguments		= "arguments";
 char	*GetEnvironment	= "getenv";
@@ -258,6 +259,7 @@ char *	get_tok();
 void 	SetStdFile( int which_file );
 void 	SetPriority();
 void 	SetNotification();
+void	SetWantRemoteIO(void);
 void 	SetNotifyUser ();
 void	SetRemoteInitialDir();
 void	SetExitRequirements();
@@ -2512,6 +2514,24 @@ SetNoopJobExitCode(void)
 }
 
 void
+SetWantRemoteIO(void)
+{
+	char *how = condor_param( WantRemoteIO, ATTR_WANT_REMOTE_IO );
+
+	if (how == NULL) {
+		(void) sprintf (buffer, "%s = TRUE", 
+						ATTR_WANT_REMOTE_IO);
+	} else {
+		(void) sprintf ( buffer, "%s = %s", ATTR_WANT_REMOTE_IO, 
+						isTrue(how)?"TRUE":"FALSE" );
+	}
+
+	InsertJobExpr (buffer);
+
+	free(how);
+}
+
+void
 SetNotification()
 {
 	char *how = condor_param( Notification, ATTR_JOB_NOTIFICATION );
@@ -3971,6 +3991,7 @@ queue(int num)
 		SetMaxJobRetirementTime();
 		SetEnvironment();
 		SetNotification();
+		SetWantRemoteIO();
 		SetNotifyUser();
 		SetRemoteInitialDir();
 		SetExitRequirements();

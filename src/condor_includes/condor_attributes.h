@@ -388,6 +388,7 @@ const char ATTR_WANT_CLAIMING			 [] = "WantClaiming";
 const char ATTR_WANT_IO_PROXY		[] = "WantIOProxy";
 const char ATTR_WANT_MATCH_DIAGNOSTICS	 [] = "WantMatchDiagnostics";
 const char ATTR_WANT_REMOTE_SYSCALLS 	 [] = "WantRemoteSyscalls";
+const char ATTR_WANT_REMOTE_IO 			 [] = "WantRemoteIO";
 const char ATTR_WANT_SUBMIT_NET_STATS	 [] = "WantSubmitNetStats";
 const char ATTR_WANT_LAST_CKPT_SERVER_NET_STATS[] = "WantLastCkptServerNetStats";
 const char ATTR_WANT_CKPT_SERVER_NET_STATS[] = "WantCkptServerNetStats";

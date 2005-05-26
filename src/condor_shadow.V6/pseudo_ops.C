@@ -1670,8 +1670,31 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 	char	full_path[_POSIX_PATH_MAX];
 	char	remap[_POSIX_PATH_MAX];
 	char	*method;
+	int		want_remote_io;
+	static int		warned_once = FALSE;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
+
+	/* if this attribute is not present, then default to TRUE */
+	if ( ! JobAd->LookupInteger( ATTR_WANT_REMOTE_IO, want_remote_io ) ) {
+		want_remote_io = TRUE;
+	} 
+
+	/* output some debugging info on the first call to this RPC */
+	if (warned_once == FALSE) {
+
+		warned_once = TRUE;
+
+		if (want_remote_io == TRUE) {
+			dprintf( D_SYSCALLS, 
+				"\tshadow process always deciding location of url\n" );
+		} else {
+			dprintf( D_SYSCALLS, 
+				"\tshadow process permanently gives up deciding location of "
+				"url and informs job to default all urls to 'local:' "
+				"(except [i]ckpt).\n");
+		}
+	}
 
 	/* The incoming logical name might be a simple, relative, or complete path */
 	/* We need to examine both the full path and the simple name. */
@@ -1694,6 +1717,9 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 		if(strchr(remap,':')) {
 			dprintf(D_SYSCALLS,"\tremap is complete url\n");
 			strcpy(actual_url,remap);
+			if (want_remote_io == FALSE) {
+				return 1;
+			}
 			return 0;
 		} else {
 			dprintf(D_SYSCALLS,"\tremap is simple file\n");
@@ -1719,6 +1745,8 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 		method = "remote";
 	} else if( use_special_access(full_path) ) {
 		method = "special";
+	} else if ( want_remote_io == FALSE ) {
+		method = "local";
 	} else if( use_local_access(full_path) ) {
 		method = "local";
 	} else if( access_via_afs(full_path) ) {
@@ -1751,6 +1779,13 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 	strcat(actual_url,full_path);
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
+
+	/* This return value will make the caller in the user job never call
+		the shadow ever again to see what to do about a job. Instead the
+		FileTable will assume ALL files are local. */
+	if (want_remote_io == FALSE) {
+		return 1;
+	}
 
 	return 0;
 }
