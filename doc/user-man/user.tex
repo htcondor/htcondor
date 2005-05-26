@@ -1097,7 +1097,7 @@ It instead enables the file transfer mechanism by default.
 Submission of a job might need to specify which files to
 transfer, and/or when to transfer the output files back.
 
-For the globus universe,
+For the grid universe,
 jobs are to be executed on remote machines, so there would never
 be a shared file system between machines.
 See section~\ref{sec:Using-Condor-G} for more details.
@@ -1198,8 +1198,9 @@ produces its own checkpoints.
 There is no default value for \verb@when_to_transfer_output@.
 If using the file transfer mechanism, 
 this command must be defined.
-If \verb@when_to_transfer_output@ is specified in your submit
-file, but \verb@should_transfer_files@ is not, Condor assumes a
+If \verb@when_to_transfer_output@ is specified in the submit
+description file,
+but \verb@should_transfer_files@ is not, Condor assumes a
 value of \verb@YES@ for \verb@should_transfer_files@.
 
 \Note The combination of:
@@ -1212,15 +1213,16 @@ Therefore, this combination is prohibited by \Condor{submit}.
 
 When submitting from a UNIX platform,
 the file transfer mechanism is unused by default.
-If neither
-\verb@when_to_transfer_output@ or \verb@should_transfer_files@ 
+If neither \verb@when_to_transfer_output@ or \verb@should_transfer_files@ 
 are defined, Condor assumes
 \verb@should_transfer_files = NO@.
 
 When submitting from a Windows platform,
 Condor does not provide any way to use a shared file
 system for jobs. 
-Therefore, if none of the above settings are defined, the file
+Therefore, if 
+neither \verb@when_to_transfer_output@ or \verb@should_transfer_files@
+are defined, the file
 transfer mechanism is enabled by default with the following values:
 
 \begin{verbatim}
@@ -1229,13 +1231,13 @@ transfer mechanism is enabled by default with the following values:
 \end{verbatim}
 
 \Note Prior to Condor version 6.5.2, different attributes were used to
-control when and if files should be transfered.
+control when and if files should be transferred.
 Previously, a single attribute was used to control both things, and
 the \verb@IF_NEEDED@ value was not supported.
 This older attribute is still allowed in newer versions of Condor but
 it is now deprecated.
-The settings described above, \verb@when_to_transfer_output@ and
-\verb@should_transfer_files@, should be used instead.
+\verb@when_to_transfer_output@ and
+\verb@should_transfer_files@ should be used instead.
 However, beware that these settings will not work with Condor versions
 older than 6.5.2. 
 
@@ -1250,15 +1252,15 @@ is run on a remote machine.
 \begin{enumerate}
   \item the executable
   \item the input, as defined with the \verb@input@ command
-  \item any jar files (for Java universe)
+  \item any jar files (for the Java universe)
 \end{enumerate}
 If the job requires any other input files,
 the submit description file should utilize the
 \verb@transfer_input_files@ command.
 This comma-separated list specifies any other files that Condor is to
 transfer to a remote site to set up the execution environment for the
-Job before it is run.
-these files are placed in the same temporary working directory
+job before it is run.
+These files are placed in the same temporary working directory
 as the job's executable.
 At this time, directories can not be transferred in this way.
 For example:
@@ -1267,15 +1269,15 @@ For example:
   transfer_input_files = file1,file2 
 \end{verbatim}
 
-As a default, for jobs other than those submitted to the globus universe,
+As a default, for jobs other than those submitted to the grid universe,
 any files that are modified or created by the job in the
 temporary directory at the remote site are transferred back
 to the machine from which the job was submitted.
 Most of the time, this is the best option.
 To restrict the files that are transferred,
-specify the exact list with \Opt{transfer\_output\_files}.
-Again, filenames are delimited with a comma.
-When this list is defined and any of the files do not exist as the
+specify the exact list with  \Opt{transfer\_output\_files}.
+Again, file names are delimited with a comma.
+When this list is defined, and any of the files do not exist as the
 job exits, Condor considers this an error, and re-runs the job.
 For example:
 
@@ -1284,11 +1286,11 @@ For example:
 \end{verbatim}
 
 \Warn Do not specify \Opt{transfer\_output\_files} (for other than
-globus universe jobs) unless there is a
+grid universe jobs) unless there is a
 really good reason -- it is best to let Condor figure things out by
 itself based upon what output the job produces.
 
-For globus universe jobs, files to be transferred 
+For grid universe jobs, files to be transferred 
 (other than standard output and standard error)
 must be specified using \Opt{transfer\_output\_files}
 in the submit description file. 
@@ -1314,12 +1316,12 @@ found on the execute machine.
 
 More specifically, there are three ways to specify paths
 for \verb@transfer_input_files@:
-\begin{itemize}
+\begin{enumerate}
 \item Relative to the submit directory, if \verb@initialdir@ is not
   specified.
 \item Relative to the initial directory, if \verb@initialdir@ is specified.
 \item Absolute.
-\end{itemize}
+\end{enumerate}
 
 Each of these types of input file path will be shown in examples
 below.
@@ -1336,11 +1338,11 @@ If your program creates output files, it must create them
 in its current working directory.  Attempting to transfer
 files back from another directory will fail, even if
 your program manages to create the files.  It is
-okay to create temporary files in a directory such as \verb@/tmp@
-(if you're sure it will exist on all possible submit machines)
-as long as you don't try to transfer them back.
+okay to create temporary files in a directory such as \File{/tmp}
+(if you are sure it will exist on all possible execute machines)
+as long as you do not try to transfer them back.
 If you put a path in a file name specification in the
-\verb@should_transfer_files@ command, the path will refer
+\verb@transfer_output_files@ command, the path will refer
 to a path on the submit machine, not the execute machine.
 
 Hopefully some examples will make this clear.
@@ -1360,6 +1362,8 @@ we have a \verb@logs2@ directory within the \verb@files@ directory.
 So our directory tree looks like this:
 \begin{verbatim}
 /scratch/test (directory)
+    submit.condor (the submit description file)
+    my_program (the executable)
     files (directory)
         logs2 (directory)
         in1 (file)
@@ -1370,7 +1374,7 @@ So our directory tree looks like this:
 %--------------------------
 \item[Example 1]
 
-Here's a simple example.  Note that the file names
+Here is a simple example.  Note that the file names
 for \verb@transfer_input_files@ contain the \verb@files@ directory,
 since the paths are relative to the current working
 directory.  Further note that the output file will
@@ -1395,7 +1399,7 @@ Queue
 %--------------------------
 \item[Example 2]
 
-Here's the same thing, except with absolute paths to
+Here is the same thing, except with absolute paths to
 the input files.
 
 \begin{verbatim}
@@ -1416,7 +1420,7 @@ Queue
 %--------------------------
 \item[Example 3]
 
-Here we're using \verb@initialdir@.  In this case, the output file
+Here we are using \verb@initialdir@.  In this case, the output file
 will end up in the \verb@files@ directory, not in the current working
 directory.  Note that we also have to have a \verb@logs2@ directory
 within the \verb@files@ directory, because the log file names are
@@ -1443,7 +1447,7 @@ Queue
 %--------------------------
 \item[Example 4 -- Illustrates Error]
 
-Now here's an example that will fail.  Because the file
+Now here is an example that will fail.  Because the file
 names passed to the program have paths, the program will not be
 able to create them on the execute machine -- there will
 be no \verb@files@ directory available, since the file structure
@@ -1508,7 +1512,6 @@ Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
 Output          = logs/out.$(cluster)
-Getenv          = false
 Log             = logs/log.$(cluster)
 
 should_transfer_files = YES
