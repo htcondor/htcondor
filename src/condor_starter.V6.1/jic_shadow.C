@@ -1138,7 +1138,7 @@ char*
 JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 {
 	char* tmp = NULL;
-	char* base = NULL;
+	const char* base = NULL;
 	MyString filename;
 
 	if(streamStdFile(attr_name)) {
@@ -1159,7 +1159,7 @@ JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 	}
 	if ( !nullFile(tmp) ) {
 		if( wants_file_transfer ) {
-			base = basename( tmp );
+			base = condor_basename( tmp );
 		} else {
 			base = tmp;
 		}

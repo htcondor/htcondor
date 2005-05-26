@@ -79,6 +79,9 @@ test_spawn: test_spawn.o my_popen.o
 test_exit_utils: test_exit_utils.o
 	$(CC) $(CFLAGS) -o test_exit_utils test_exit_utils.o util_lib.a
 
+test_basename: test_basename.o
+	$(CC) $(CFLAGS) -o test_basename test_basename.o basename.o
+
 clean::
 	rm -f test_spawn.o
 

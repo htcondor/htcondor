@@ -39,7 +39,7 @@ struct StoreCredOptions {
 	char username[MAX_PASSWORD_LENGTH];
 };
 
-char *MyName;
+const char *MyName;
 void usage(void);
 void parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]);
 void badOption(const char* option);
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
 	int result;
 	
-	MyName = basename(argv[0]);
+	MyName = condor_basename(argv[0]);
 	
 	// load up configuration file
 	myDistro->Init( argc, argv );

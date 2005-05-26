@@ -452,7 +452,7 @@ daemon::Start()
 // we've acquired the lock
 int daemon::RealStart( )
 {
-	char	*shortname;
+	const char	*shortname;
 	int 	command_port = isDC ? TRUE : FALSE;
 	char	buf[512];
 
@@ -465,7 +465,7 @@ int daemon::RealStart( )
 		return TRUE;
 	}
 
-	shortname = basename( process_name );
+	shortname = condor_basename( process_name );
 
 	if( access(process_name,X_OK) != 0 ) {
 		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );

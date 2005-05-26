@@ -29,15 +29,48 @@ extern "C" {
 #endif
 
 /*
+  NOTE: The semantics of condor_basename() and condor_pathname()
+  are slightly different tha the semantics of the default basename()
+  and pathname().  For example, if the path is "foo/bar/",
+  condor_basename() and condor_dirname() return "" and "foo/bar", while
+  the default basename() and dirname() return "bar" and "foo".
+  (See test_basename.c for examples of how things work.)
+*/
+
+/*
   A basename() function that is happy on both Unix and NT.
   It returns a pointer to the last element of the path it was given,
   or the whole string, if there are no directory delimiters.  There's
   no memory allocated, overwritten or changed in anyway.
 */
-char* basename( const char* path );
-
+const char* condor_basename( const char* path );
 
 /*
+  A dirname() function that is happy on both Unix and NT.
+  This allocates space for a new string that holds the path of the
+  parent directory of the path it was given.  If the given path has no
+  directory delimiters, or is NULL, we just return ".".  In all
+  cases, the string we return is new space, and must be deallocated
+  with free().
+*/
+char* condor_dirname( const char* path );
+
+/*
+  DEPRECATED: because of non-const return value.
+
+  A basename() function that is happy on both Unix and NT.
+  It returns a pointer to the last element of the path it was given,
+  or the whole string, if there are no directory delimiters.  There's
+  no memory allocated, overwritten or changed in anyway.
+  PLEASE treat the return value as a _const_ char *!!!  It's only
+  declared char * to avoid conflict with the system basename() declaration.
+*/
+/* const*/ char* basename( const char* path );
+
+/*
+  DEPRECATED: just in case we need changes along the lines of
+  condor_basename() some time in the future.
+
   A dirname() function that is happy on both Unix and NT.
   This allocates space for a new string that holds the path of the
   parent directory of the path it was given.  If the given path has no

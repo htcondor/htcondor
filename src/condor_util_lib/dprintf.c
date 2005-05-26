@@ -310,7 +310,7 @@ _condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
 				   we created it as root, we need to try to
 				   chown() it to condor.
 				*/ 
-			dirpath = dirname( DebugLock );
+			dirpath = condor_dirname( DebugLock );
 			errno = 0;
 			if( mkdir(dirpath, 0777) < 0 ) {
 				if( errno == EACCES ) {

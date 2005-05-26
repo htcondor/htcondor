@@ -101,7 +101,7 @@ int		GotQueueCommand;
 char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 
 unsigned int TransferInputSize;	/* total size of files transfered to exec machine */
-char	*MyName;
+const char	*MyName;
 int		Quiet = 1;
 int		DisableFileChecks = 0;
 int	  ClusterId = -1;
@@ -501,7 +501,7 @@ main( int argc, char *argv[] )
 		owner = strdup("unknown");
 	}
 
-	MyName = basename(argv[0]);
+	MyName = condor_basename(argv[0]);
 	myDistro->Init( argc, argv );
 	config();
 
@@ -1598,7 +1598,7 @@ SetTransferFiles()
 		job->LookupString(ATTR_JOB_OUTPUT,output,sizeof(output));
 		job->LookupString(ATTR_JOB_ERROR,error,sizeof(error));
 
-		if(*output && basename(output) != output && 
+		if(*output && condor_basename(output) != output && 
 		   strcmp(output,"/dev/null") != 0)
 		{
 			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_OUTPUT_ORIG,output);
@@ -1610,7 +1610,7 @@ SetTransferFiles()
 			InsertJobExpr(buffer);
 		}
 
-		if(*error && basename(error) != error && 
+		if(*error && condor_basename(error) != error && 
 		   strcmp(error,"/dev/null") != 0)
 		{
 			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_ERROR_ORIG,error);

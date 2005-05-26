@@ -25,29 +25,31 @@
 
 #include "condor_common.h"
 
-
 /*
   A basename() function that is happy on both Unix and NT.
   It returns a pointer to the last element of the path it was given,
   or the whole string, if there are no directory delimiters.  There's
   no memory allocated, overwritten or changed in anyway.
 */
-char *
-basename(const char *path)
+const char *
+condor_basename(const char *path)
 {
-	char *s, *name;
+	const char *s, *name;
+
+	if( ! path ) {
+		return "";
+	}
 
     /* We need to initialize to make sure we return something real
 	   even if the path we're passed in has no directory delimiters. */
-	name = (char*)path;	
+	name = path;	
 
-	for (s = (char*)path; s && *s != '\0'; s++) {
+	for (s = path; s && *s != '\0'; s++) {
 		if (*s == '\\' || *s == '/') {
 			name = s+1;
 		}
 	}
-	if ( name == NULL )
-		name = (char*)path;
+
 	return name;
 }
 
@@ -61,10 +63,10 @@ basename(const char *path)
   with free().   Derek Wright 9/23/99
 */
 char *
-dirname(const char *path)
+condor_dirname(const char *path)
 {
-	char *s, *parent, *first = NULL, *end = NULL;
-	char buf[2];
+	char *s, *parent;
+	char *lastDelim = NULL;
 
 	if( ! path ) {
 		return strdup( "." );
@@ -73,34 +75,53 @@ dirname(const char *path)
 	parent = strdup( path );
 	for (s = parent; s && *s != '\0'; s++) {
 		if (*s == '\\' || *s == '/') {
-			if( ! first ) {
-				first = s;
-			} else if ( *(s+1) == '\0' ) {
-					/* We're at the end */
-				continue;
-			} else {
-				end = s;
-			}
+			lastDelim = s;
 		}
 	}
-	if( first && !end ) {
-			/* 
-			   There's a single directory delimiter at the front, but
-			   nothing else, so just return the delimiter (the root).
-			   We try to be NT-friendly here by returning what we were
-			   given, instead of assuming we want "/".
-			*/
-		sprintf( buf, "%c", parent[0] );
-		free( parent );
-		parent = strdup( buf );
+
+	if ( lastDelim ) {
+		if ( lastDelim != parent ) {
+			*lastDelim = '\0';
+		} else {
+				// Last delimiter is first char of path.
+			*(lastDelim+1) = '\0';
+		}
 		return parent;
+	} else {
+		return strdup( "." );
 	}
-	if( first && end ) {
-		*end = '\0';
-		return parent;
-	}
-	free( parent );
-	return strdup( "." );
+}
+
+/*
+  DEPRECATED: because of non-const return value.
+
+  A basename() function that is happy on both Unix and NT.
+  It returns a pointer to the last element of the path it was given,
+  or the whole string, if there are no directory delimiters.  There's
+  no memory allocated, overwritten or changed in anyway.
+  PLEASE treat the return value as a _const_ char *!!!  It's only
+  declared char * to avoid conflict with the system basename() declaration.
+*/
+/* const*/ char*
+ basename( const char* path ) {
+    return (char *)condor_basename( path ); 
+}
+
+/*
+  DEPRECATED: just in case we need changes along the lines of
+  condor_basename() some time in the future.
+
+  A dirname() function that is happy on both Unix and NT. 
+  This allocates space for a new string that holds the path of the
+  parent directory of the path it was given.  If the given path has no
+  directory delimiters, or is NULL, we just return ".".  In all  
+  cases, the string we return is new space, and must be deallocated
+  with free(). 
+*/
+char*
+dirname( const char* path )
+{
+	return condor_dirname( path );
 }
 
 

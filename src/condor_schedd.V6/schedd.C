@@ -2797,10 +2797,10 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			old_paths.rewind();
 			char *old_path_buf;
 			bool changed = false;
-			char *base = NULL;
+			const char *base = NULL;
 			char new_path_buf[_POSIX_PATH_MAX];
 			while ( (old_path_buf=old_paths.next()) ) {
-				base = basename(old_path_buf);
+				base = condor_basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
 					snprintf(new_path_buf,_POSIX_PATH_MAX,
 						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);

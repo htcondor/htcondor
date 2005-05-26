@@ -795,9 +795,9 @@ bufferJobShort( ClassAd *ad ) {
 	}
 	
 	if (ad->EvalString ("Args", NULL, args)) {
-		sprintf( buffer, "%s %s", basename(cmd), args );
+		sprintf( buffer, "%s %s", condor_basename(cmd), args );
 	} else {
-		sprintf( buffer, "%s", basename(cmd) );
+		sprintf( buffer, "%s", condor_basename(cmd) );
 	}
 	utime = job_time(utime,ad);
 

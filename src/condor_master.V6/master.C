@@ -1014,14 +1014,15 @@ int
 run_preen(Service*)
 {
 	int		child_pid, size;
-	char	*preen_args, *tmp, *preen_base;
+	char	*preen_args, *tmp;
+	const char	*preen_base;
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 
 	if( FS_Preen == NULL ) {
 		return 0;
 	}
-	preen_base = basename( FS_Preen );
+	preen_base = condor_basename( FS_Preen );
 	if( (tmp = param("PREEN_ARGS")) ) {
 		size = strlen(tmp) + strlen(preen_base) + 2;
 		preen_args = new char[size];

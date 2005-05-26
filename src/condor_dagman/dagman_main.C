@@ -290,7 +290,7 @@ int main_init (int argc, char ** const argv) {
                                  "main_testing_stub", NULL,
                                  IMMEDIATE_FAMILY );
 ****** FOR TESTING ********/
-    debug_progname = basename(argv[0]);
+    debug_progname = condor_basename(argv[0]);
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
     char *condorLogName  = NULL;

@@ -28,7 +28,6 @@
 #include "environ.h"  // for Environ object
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "basename.h"
 #include "condor_ckpt_name.h"
 #include "daemon.h"
 #include "dc_schedd.h"

@@ -722,7 +722,7 @@ find_file(const char *env_name, const char *file_name)
 					NETRESOURCE nr;
 					nr.dwType = RESOURCETYPE_DISK;
 					nr.lpLocalName = NULL;
-					nr.lpRemoteName = dirname(config_file);
+					nr.lpRemoteName = condor_dirname(config_file);
 					nr.lpProvider = NULL;
 					
 					if ( NO_ERROR != WNetAddConnection2(

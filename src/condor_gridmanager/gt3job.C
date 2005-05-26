@@ -1606,7 +1606,7 @@ MyString *GT3Job::buildSubmitRSL()
 				*rsl += rsl_stringify( buff );
 				*rsl += ' ';
 				buff = riwd;
-				buff += basename( filename );
+				buff += condor_basename( filename );
 				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
@@ -1643,7 +1643,7 @@ MyString *GT3Job::buildSubmitRSL()
 				// append file pairs to rsl
 				*rsl += '(';
 				buff = riwd;
-				buff += basename( filename );
+				buff += condor_basename( filename );
 				*rsl += rsl_stringify( buff );
 				*rsl += ' ';
 				buff = "$(GRIDMANAGER_GASS_URL)";

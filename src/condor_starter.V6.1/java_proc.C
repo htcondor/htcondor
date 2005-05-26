@@ -74,7 +74,7 @@ int JavaProc::StartJob()
 		jarfiles = NULL;
 
 		char * jarfile_name;
-		char * base_name;
+		const char * base_name;
 		struct stat stat_buff;
 		if( Starter->jic->iwdIsChanged() ) {
 				// If the job's IWD has been changed (because we're
@@ -84,7 +84,7 @@ int JavaProc::StartJob()
 			jarfiles_orig_list.rewind();
 			while( (jarfile_name = jarfiles_orig_list.next()) ) {
 					// Construct the local name
-				base_name = basename( jarfile_name );
+				base_name = condor_basename( jarfile_name );
 				MyString local_name = execute_dir;
 				local_name += DIR_DELIM_CHAR;
 				local_name += base_name; 

@@ -99,7 +99,7 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 			// being used), we want to just stick it in the local iwd
 			// for the job, instead.
 		if( jic->iwdIsChanged() ) {
-			char* base = basename(tmp);
+			const char* base = condor_basename(tmp);
 			sprintf(logfilename, "%s/%s", iwd, base);
 		} else {			
 			strcpy(logfilename, tmp);

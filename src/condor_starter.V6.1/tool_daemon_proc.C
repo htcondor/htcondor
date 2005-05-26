@@ -90,8 +90,8 @@ ToolDaemonProc::StartJob()
 	const char* job_iwd = Starter->jic->jobIWD();
 	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
-	char* base = NULL;
-	base = basename( tmp );
+	const char* base = NULL;
+	base = condor_basename( tmp );
 	if( Starter->jic->iwdIsChanged() ) {
 		DaemonNameStr.sprintf( "%s%c%s", Starter->GetWorkingDir(),
 							   DIR_DELIM_CHAR, base );

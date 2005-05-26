@@ -35,7 +35,7 @@
 #include "MyString.h"
 
 
-char	*MyName = NULL;
+const char	*MyName = NULL;
 MyString global_constraint;
 bool had_error = false;
 DCSchedd* schedd = NULL;
@@ -174,7 +174,7 @@ main(int argc, char *argv[])
 	char* scheddAddr = NULL;
 
 	myDistro->Init( argc, argv );
-	MyName = basename(argv[0]);
+	MyName = condor_basename(argv[0]);
 	config();
 
 #if !defined(WIN32)

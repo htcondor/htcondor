@@ -347,7 +347,7 @@ getCommandFromArgv( int argc, char* argv[] )
 {
 	char* cmd_str = NULL;
 	int size, baselen;
-	char* base = strdup( basename(argv[0]) ); 
+	char* base = strdup( condor_basename(argv[0]) ); 
 
 		// See if there's an '-' in our name, if not, append argv[1].
 	cmd_str = strrchr( base, '_');

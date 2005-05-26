@@ -1671,7 +1671,7 @@ MyString *GT4Job::buildSubmitRSL()
 			// The executable needs to be transferred. Construct the
 			// pathname of the transferred file.
 		remote_executable = remote_iwd;
-		remote_executable += basename( attr_value );
+		remote_executable += condor_basename( attr_value );
 
 			// Figure out where the local copy of the executable is
 		char *spooldir = param("SPOOL");
@@ -1758,7 +1758,8 @@ MyString *GT4Job::buildSubmitRSL()
 			}
 			*rsl += printXMLParam( "stdin", buff.Value() );
 		} else {
-			buff.sprintf( "%s/%s", remote_iwd.Value(), basename(attr_value) );
+			buff.sprintf( "%s/%s", remote_iwd.Value(),
+						condor_basename(attr_value) );
 			*rsl += printXMLParam( "stdin", buff.Value() );
 			stage_in_list.append( attr_value );
 		}
@@ -1783,7 +1784,8 @@ MyString *GT4Job::buildSubmitRSL()
 			}
 			*rsl += printXMLParam( "stdout", buff.Value() );
 		} else {
-			buff.sprintf( "%s/%s", remote_iwd.Value(), basename(attr_value) );
+			buff.sprintf( "%s/%s", remote_iwd.Value(),
+						condor_basename(attr_value) );
 			*rsl += printXMLParam( "stdout", buff.Value() );
 			stage_out_list.append( attr_value );
 		}
@@ -1808,7 +1810,8 @@ MyString *GT4Job::buildSubmitRSL()
 			}
 			*rsl += printXMLParam( "stderr", buff.Value() );
 		} else {
-			buff.sprintf( "%s/%s", remote_iwd.Value(), basename(attr_value) );
+			buff.sprintf( "%s/%s", remote_iwd.Value(),
+						condor_basename(attr_value) );
 			*rsl += printXMLParam( "stderr", buff.Value() );
 			stage_out_list.append( attr_value );
 		}
@@ -1867,7 +1870,7 @@ MyString *GT4Job::buildSubmitRSL()
 									   buff.Value());
 				buff.sprintf ("file://%s%s",
 							  remote_iwd.Value(),
-							  basename (filename));
+							  condor_basename (filename));
 				*rsl += printXMLParam ("destinationUrl", 
 									   buff.Value());
 				*rsl += "</transfer>";
@@ -1896,7 +1899,7 @@ MyString *GT4Job::buildSubmitRSL()
 			*rsl += "<transfer>";
 			buff.sprintf ("file://%s%s",
 						  remote_iwd.Value(),
-						  basename (filename));
+						  condor_basename (filename));
 			*rsl += printXMLParam ("sourceUrl", 
 								   buff.Value());
 			buff.sprintf( "%s%s%s", local_url_base,

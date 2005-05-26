@@ -48,7 +48,7 @@ usage( char *name )
 {
 	dprintf( D_ALWAYS,
 		"Usage: condor_gahp -s <schedd name>\n",
-		basename( name ) );
+		condor_basename( name ) );
 	DC_Exit( 1 );
 }
 

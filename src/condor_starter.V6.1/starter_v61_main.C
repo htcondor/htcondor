@@ -135,7 +135,7 @@ main_pre_dc_init( int argc, char* argv[] )
 {	
 		// figure out what mySubSystem should be based on argv[0], or
 		// if we see "-gridshell" anywhere on the command-line
-	char* base = basename(argv[0]);
+	const char* base = condor_basename(argv[0]);
 	char* tmp;
 	tmp = strrchr(base, '_' );
 	if( tmp && strincmp(tmp, "_gridshell", 10) == MATCH ) {

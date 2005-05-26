@@ -1,7 +1,6 @@
 #include "condor_common.h"
 #include "condor_string.h"
 #include "condor_debug.h"
-#include "basename.h"
 #include "condor_md.h"
 #include "dap_constants.h"
 

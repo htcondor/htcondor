@@ -253,7 +253,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf) == 1 ) {
-		UserLogFile = strdup(basename(buf));
+		UserLogFile = strdup(condor_basename(buf));
 			// add to input files if sending from submit to the schedd
 		if ( (simple_init) && (!nullFile(buf)) ) {			
 			if ( !InputFiles->file_contains(buf) )

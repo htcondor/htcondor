@@ -423,7 +423,7 @@ findSubmittor( char *name )
 }
 
 void
-usage(char *name)
+usage(const char *name)
 {
 	printf("\nUsage: %s [-m] -[n number] [-c c_expr] [-r r_expr] [-p pool] \n", name);
 	printf(" -m: Return entire machine, not virtual machines\n");
@@ -468,21 +468,21 @@ main(int argc, char *argv[])
 			case 'n':	// want specific number of machines
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -n requires another argument\n", 
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}					
 				NumMachinesWanted = atoi(*ptr);
 				if ( NumMachinesWanted < 1 ) {
 					fprintf( stderr, "%s: -n requires another argument "
 							 "which is an integer greater than 0\n",
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}
 				break;
 			case 'p':	// pool							
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -p requires another argument\n", 
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}
 				pool = *ptr;
@@ -490,7 +490,7 @@ main(int argc, char *argv[])
 			case 'c':	// constraint						
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -c requires another argument\n", 
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}
 				constraint = *ptr;
@@ -498,13 +498,13 @@ main(int argc, char *argv[])
 			case 'r':	// rank
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -r requires another argument\n", 
-							 basename(argv[0]) );
+							 condor_basename(argv[0]) );
 					exit(1);
 				}
 				rank = *ptr;
 				break;
 			default:
-				usage(basename(argv[0]));
+				usage(condor_basename(argv[0]));
 			}		
 		}
 	}

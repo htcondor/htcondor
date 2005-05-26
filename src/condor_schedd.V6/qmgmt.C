@@ -2303,7 +2303,7 @@ SendSpoolFile(char *filename)
 		   filename parameter completely. -Todd Tannenbaum, 2/2005
 		*/
 	strcpy(path,gen_ckpt_name(Spool,active_cluster_num,ICKPT,0));
-	if ( filename && strcmp(filename,basename(path)) ) {
+	if ( filename && strcmp(filename, condor_basename(path)) ) {
 		dprintf(D_ALWAYS, 
 				"ERROR SendSpoolFile aborted due to suspicious path (%s)!\n",
 				filename);

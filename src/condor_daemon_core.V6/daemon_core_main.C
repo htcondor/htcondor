@@ -61,7 +61,7 @@ void dc_config_auth();       // Configuring GSI (and maybe other) authentication
 
 // Globals
 int		Foreground = 0;		// run in background by default
-static char*	myName;			// set to basename(argv[0])
+static const char*	myName;			// set to basename(argv[0])
 static char*	myFullName;		// set to the full path to ourselves
 DaemonCore*	daemonCore;
 static int is_master = 0;
@@ -1174,7 +1174,7 @@ int main( int argc, char** argv )
 #endif // of ifndef WIN32
 
 	// set myName to be argv[0] with the path stripped off
-	myName = basename(argv[0]);
+	myName = condor_basename(argv[0]);
 	myFullName = getExecPath();
 	if( ! myFullName ) {
 			// if getExecPath() didn't work, the best we can do is try

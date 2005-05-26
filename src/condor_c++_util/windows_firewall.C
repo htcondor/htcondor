@@ -145,7 +145,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 	// condor daemon with a different path. We only do this for "condor_" 
 	// executables as a safety to keep us from removing trusted applications
 	// that have nothing to do with condor.
-	app_basename = basename(app_path);
+	app_basename = condor_basename(app_path);
 
 	if ( _strnicmp(app_basename, "condor_", strlen("condor_")) == 0 ) {
 		
@@ -338,7 +338,7 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 
 		sprintf(tmp, "%S", str);
 
-		bn = basename(tmp);
+		bn = condor_basename(tmp);
 
 		if ( 0 == stricmp(bn, name) ) {
 			

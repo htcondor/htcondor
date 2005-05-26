@@ -51,7 +51,7 @@ usage( char *name )
 {
 	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>]\n"
 					   "   [-x <x509_user_proxy>] [-j <JobClusterID.JobProcID>]\n",
-		basename( name ) );
+		condor_basename( name ) );
 	DC_Exit( 1 );
 }
 

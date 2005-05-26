@@ -358,7 +358,7 @@ static bool write_classad_input_file( ClassAd *classad,
 	MyString CmdExpr;
 	CmdExpr = ATTR_JOB_CMD;
 	CmdExpr += "=\"";
-	CmdExpr += basename( executable_path.GetCStr() );
+	CmdExpr += condor_basename( executable_path.GetCStr() );
 	CmdExpr += '"';
 	// TODO: Store old Cmd as OrigCmd?
 	tmpclassad.InsertOrUpdate(CmdExpr.GetCStr());
@@ -2842,7 +2842,7 @@ MyString *GlobusJob::buildSubmitRSL()
 				*rsl += rsl_stringify( buff );
 				*rsl += ' ';
 				buff = riwd;
-				buff += basename( filename );
+				buff += condor_basename( filename );
 				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
@@ -2891,7 +2891,7 @@ MyString *GlobusJob::buildSubmitRSL()
 				// append file pairs to rsl
 				*rsl += '(';
 				buff = riwd;
-				buff += basename( filename );
+				buff += condor_basename( filename );
 				*rsl += rsl_stringify( buff );
 				*rsl += ' ';
 				buff = "$(GRIDMANAGER_GASS_URL)";

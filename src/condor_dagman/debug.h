@@ -95,7 +95,7 @@ extern debug_level_t debug_level;
 
 /** The name of the current executable.  basename (argv[0]) from main().
  */
-extern char *        debug_progname;
+extern const char *        debug_progname;
 
 /** Debug wrapper for the printf() function.  Your message will be printed
     only if the debug_level of the program is equal or greater than
