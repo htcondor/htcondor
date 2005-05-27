@@ -1211,7 +1211,7 @@ value of \verb@YES@ for \SubmitCmd{should\_transfer\_files}.
 would produce undefined file access semantics.
 Therefore, this combination is prohibited by \Condor{submit}.
 
-When submitting from a UNIX platform,
+When submitting from a Unix platform,
 the file transfer mechanism is unused by default.
 If neither \SubmitCmd{when\_to\_transfer\_output} or \SubmitCmd{should\_transfer\_files} 
 are defined, Condor assumes
@@ -1275,15 +1275,10 @@ temporary directory at the remote site are transferred back
 to the machine from which the job was submitted.
 Most of the time, this is the best option.
 To restrict the files that are transferred,
-specify the exact list with  \SubmitCmd{transfer\_output\_files}.
-Again, file names are delimited with a comma.
+specify the exact list of files with  \SubmitCmd{transfer\_output\_files}.
+Delimite these file names with a comma.
 When this list is defined, and any of the files do not exist as the
 job exits, Condor considers this an error, and re-runs the job.
-For example:
-
-\begin{verbatim}
-  transfer_output_files = final-results
-\end{verbatim}
 
 \Warn Do not specify \SubmitCmd{transfer\_output\_files} (for other than
 grid universe jobs) unless there is a
@@ -1304,84 +1299,101 @@ in the submit description file.
 
 % Note: a Windows-based example would be good, too.
 
-Using file transfer is slightly complicated by the
-fact that you have to think about file paths from
-two points of view: on the submit machine and on the
-execute machine.
+The file transfer mechanism specifies file names and/or paths on
+both the file system of the submit machine and on the
+file system of the execute machine.
+Care must be taken to know which machine (submit or execute)
+is utilizing the file name and/or path. 
 
-The files you specify in the \SubmitCmd{transfer\_input\_files} command
-must be specified as they are accessed on the submit machine.
-On the other hand, your program must access the files as they are
+Files in the \SubmitCmd{transfer\_input\_files} command
+are specified as they are accessed on the submit machine.
+The program (as it executes) accesses files as they are
 found on the execute machine.
 
-More specifically, there are three ways to specify paths
+There are three ways to specify files and paths
 for \SubmitCmd{transfer\_input\_files}:
 \begin{enumerate}
-\item Relative to the submit directory, if \SubmitCmd{initialdir} is not
-  specified.
-\item Relative to the initial directory, if \SubmitCmd{initialdir} is specified.
+\item Relative to the submit directory, if the submit command
+\SubmitCmd{initialdir} is not specified.
+\item Relative to the initial directory, if the submit command 
+\SubmitCmd{initialdir} is specified.
 \item Absolute.
 \end{enumerate}
 
-Each of these types of input file path will be shown in examples
-below.
+Before executing the program, Condor copies the
+executable, an input file as specified
+by the submit command \SubmitCmd{input},
+along with any input files specified 
+by \SubmitCmd{transfer\_input\_files}.
+All these files are placed into
+a temporary directory (on the execute machine)
+in which the program runs.
+Therefore,
+the executing program must access input files \emph{without} paths.
+Because all transferred files are placed into a single,
+flat directory,
+input files must be uniquely named to
+avoid collision when transferred.
+A collision causes the last file in the list to
+overwrite the earlier one.
 
-Before executing the program, Condor copies the input files to 
-a temporary spool directory in which the program runs.  Therefore,
-the program must access the input files \emph{without} paths.
-Because all transferred files are put into a single directory,
-if you have two input files with the same name in two different
-directories, the files will collide when transferred.  If this
-happens, the last one on the list overwrites the earlier one(s).
+If the program creates output files during execution,
+it must create them within the temporary working directory.
+Condor transfers back all files within the temporary
+working directory that have been modified or created.
+To transfer back only a subset of these files,
+the submit command
+\SubmitCmd{transfer\_output\_files}
+is defined.
+Transfer of files that exist,
+but are not within the temporary working directory is not supported.
+Condor's behavior in this instance is undefined.
 
-If your program creates output files, it must create them
-in its current working directory.  Attempting to transfer
-files back from another directory will fail, even if
-your program manages to create the files.  It is
-okay to create temporary files in a directory such as \File{/tmp}
-(if you are sure it will exist on all possible execute machines)
-as long as you do not try to transfer them back.
-If you put a path in a file name specification in the
-\verb@transfer_output_files@ command, the path will refer
-to a path on the submit machine, not the execute machine.
+It is
+okay to create files outside the temporary working directory
+on the file system of the execute machine,
+(in a directory such as \File{/tmp})
+if this directory is guaranteed to exist and be
+accessible on all possible execute machines.
+However,
+transferring such a file back after execution completes
+may not be done.
 
-Hopefully some examples will make this clear.
+Here are several examples to illustrate the use of file transfer.
+The program executable is called \Prog{my\_program},
+and it uses three command-line arguments as it executes: 
+two input file names and an output file name.
+The program executable and the submit description file 
+for this job are located in directory
+\File{/scratch/test}. 
 
-\begin{description}
-
-\item[Example Background]
-
-Assume we have a program called \verb@my_program@ that takes three command-line
-arguments: two input file names and an output file name.  Further,
-assume that we have a \verb@/scratch/test@ directory which is our current
-working directory; within that directory
-we have a \verb@logs@ subdirectory and a \verb@files@ subdirectory
-that contains input files \verb@in1@ and \verb@in2@.  Also assume that
-we have a \verb@logs2@ directory within the \verb@files@ directory.
-
-So our directory tree looks like this:
+The directory tree for all these examples:
 \begin{verbatim}
 /scratch/test (directory)
-    submit.condor (the submit description file)
-    my_program (the executable)
-    files (directory)
-        logs2 (directory)
-        in1 (file)
-        in2 (file)
-    logs (directory)
+      my_program.condor (the submit description file)
+      my_program (the executable)
+      files (directory)
+          logs2 (directory)
+          in1 (file)
+          in2 (file)
+      logs (directory)
 \end{verbatim}
 
 %--------------------------
+\begin{description}
 \item[Example 1]
 
-Here is a simple example.  Note that the file names
-for \SubmitCmd{transfer\_input\_files} contain the \verb@files@ directory,
-since the paths are relative to the current working
-directory.  Further note that the output file will
-end up in the current working directory, not in the
-\verb@files@ directory.
+This simple example explicitly transfers input files.
+These input files to be transferred
+are specified relative to the directory where the job is submitted.
+The single output file, \File{out1}, created when the job is executed
+will be transferred back into the directory
+\File{/scratch/test}, \emph{not} the \File{files} directory. 
 
+\footnotesize
 \begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -1395,14 +1407,19 @@ transfer_input_files = files/in1, files/in2
 Arguments       = in1 in2 out1
 Queue
 \end{verbatim}
+\normalsize
 
 %--------------------------
 \item[Example 2]
 
-Here is the same thing, except with absolute paths to
-the input files.
+This second example is identical to Example 1,
+except that absolute paths to the input files are specified,
+instead of relative paths to the input files.
 
+\footnotesize
 \begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -1416,18 +1433,33 @@ transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
 Arguments       = in1 in2 out1
 Queue
 \end{verbatim}
+\normalsize
 
 %--------------------------
 \item[Example 3]
 
-Here we are using \SubmitCmd{initialdir}.  In this case, the output file
-will end up in the \verb@files@ directory, not in the current working
-directory.  Note that we also have to have a \verb@logs2@ directory
-within the \verb@files@ directory, because the log file names are
-also relative to the initial directory.  However, the 
-executable is \emph{not} relative to the initial directory.
+This third example illustrates the use of the 
+submit command \SubmitCmd{initialdir}, and its effect
+on the paths used for the various files.
+The expected location of the 
+executable is not affected by the 
+\SubmitCmd{initialdir} command.
+All other files
+(specified by \SubmitCmd{input},
+\SubmitCmd{output},
+\SubmitCmd{transfer\_input\_files},
+as well as files modified or created by the job
+and automatically transferred back)
+are located relative to the specified \SubmitCmd{initialdir}.
+Therefore, the output file, \File{out1},
+will be placed in the \verb@files@ directory.
+Note that the \File{logs2} directory
+exists to make this example work correctly.
 
+\footnotesize
 \begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs2/err.$(cluster)
@@ -1443,18 +1475,31 @@ transfer_input_files = in1, in2
 Arguments       = in1 in2 out1
 Queue
 \end{verbatim}
+\normalsize
 
 %--------------------------
-\item[Example 4 -- Illustrates Error]
+\item[Example 4 -- Illustrates an Error]
 
-Now here is an example that will fail.  Because the file
-names passed to the program have paths, the program will not be
-able to create them on the execute machine -- there will
-be no \verb@files@ directory available, since the file structure
-is flattened when input files are transferred (all input
-files are transferred to the single spool directory).
+This example illustrates a job that will fail.
+The files specified using the
+\SubmitCmd{transfer\_input\_files} command work
+correctly (see Example 1).
+However,
+relative paths to files in the
+\SubmitCmd{arguments} command
+cause the executing program to fail.
+The file system on the submission side may utilize
+relative paths to files,
+however those files are placed into a single,
+flat, temporary directory on the execute machine.
 
+Note that this specification and submission will cause the
+job to fail and reexecute.
+
+\footnotesize
 \begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -1468,19 +1513,27 @@ transfer_input_files = files/in1, files/in2
 Arguments       = files/in1 files/in2 files/out1
 Queue
 \end{verbatim}
+\normalsize
 
-This fails with the following error:
+This example fails with the following error:
+\footnotesize
 \begin{verbatim}
 err: files/out1: No such file or directory.
 \end{verbatim}
+\normalsize
 
 %--------------------------
-\item[Example 5 -- Illustrates Error]
+\item[Example 5 -- Illustrates an Error]
 
-This example also fails, because my\_program tries
-to access the files via absolute paths.
+As with Example 4,
+this example illustrates a job that will fail.
+The executing program's use of 
+absolute paths cannot work.
 
+\footnotesize
 \begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -1491,23 +1544,40 @@ should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
 
-Arguments       = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1
+Arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1
 Queue
 \end{verbatim}
+\normalsize
 
-This fails with the following error:
+The job fails with the following error:
+\footnotesize
 \begin{verbatim}
 err: /scratch/test/files/out1: No such file or directory.
 \end{verbatim}
+\normalsize
+
+% Karen has editted to this point in the file transfer sections.
 
 %--------------------------
-\item[Example 6 -- Illustrates Error]
+\item[Example 6 -- Illustrates an Error]
 
-This example fails, because the program creates an
-output file in a directory other than the current
-working directory.
+This example illustrates a failure case
+where the executing program creates an output file in a directory
+other than within the single, flat, temporary directory that the 
+program executes within.
+The file creation may or may not cause an error,
+depending on the existence and permissions
+of the directories on the remote file system.
 
+Further incorrect usage is seen during
+the attempt to transfer the output file back 
+using the \SubmitCmd{transfer\_output\_files} command.
+The behavior of Condor for this case is undefined.
+
+\footnotesize
 \begin{verbatim}
+# file name:  my_program.condor
+# Condor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -1522,11 +1592,7 @@ transfer_output_files = /tmp/out1
 Arguments       = in1 in2 /tmp/out1
 Queue
 \end{verbatim}
-
-Assuming that the \verb@/tmp@ directory exists on the
-execute machine, the program will actually run.  However,
-Condor will fail when attempting to transfer back the
-output file.
+\normalsize
 
 \end{description}
 
