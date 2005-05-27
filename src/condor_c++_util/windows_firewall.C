@@ -317,7 +317,8 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 	for (i=0; i<count; i++) {
 		BSTR str = NULL;
 		int len;
-		char *tmp, *bn;
+		char *tmp;
+	    const char *bn;
 
 		hr = pEnum->Next(1, &v, &cnt);
 		// interesting tidbit: Microsoft says Enum->Next() function
