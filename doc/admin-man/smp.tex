@@ -38,7 +38,22 @@ All shared system resources (like RAM, disk space, swap space, etc.)
 can either be divided evenly among all the virtual machines, with each
 CPU getting its own virtual machine, or you can define your own
 \Term{virtual machine types}, so that resources can be unevenly
-partitioned.
+partitioned.  Regardless of the partioning scheme used, is important
+to remember the goal is to create a representative virtual machine
+ClassAd, to be used for matchmaking with jobs.  Condor does not
+directly enforce virtual machine shared resource allocations, and jobs
+are free to oversubscribe to shared resources.
+
+Consider an example where two VMs are each defined with 50\Percent of
+available RAM.  The resultant ClassAd for each VM will advertise one
+half the available RAM.  Users may submit jobs with RAM requirements
+that match these VMs.  However, jobs run on either VM are free to
+consume more than 50\Percent of available RAM.  Condor will not
+directly enforce a RAM utilization limit on either VM.  If a shared
+resource enforcement capability is needed, it is possible to write a
+Startd policy that will evict a job that oversubscribes to shared
+resources, see section \ref{sec:Config-SMP-Policy}.
+
 The following section gives details on how to configure Condor to
 divide the resources on an SMP machine into separate virtual machines.
 
