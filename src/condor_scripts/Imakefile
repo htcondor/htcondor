@@ -107,15 +107,15 @@ static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
    them there for the time being, until they can more easily
    change their packaging/deployment scripts - Todd 04/05 
    */
-release_copy_target(condorc-advertiser,etc/glite,condorc-advertiser,EXECUTABLE_MODE)
-strip_copy_target(condorc-advertiser,etc/glite,condorc-advertiser,EXECUTABLE_MODE)
-static_copy_target(condorc-advertiser,etc/glite,condorc-advertiser,EXECUTABLE_MODE)
-release_copy_target(condorc-initialize,etc/glite,condorc-initialize,EXECUTABLE_MODE)
-strip_copy_target(condorc-initialize,etc/glite,condorc-initialize,EXECUTABLE_MODE)
-static_copy_target(condorc-initialize,etc/glite,condorc-initialize,EXECUTABLE_MODE)
-release_copy_target(condorc-launcher,etc/glite,condorc-launcher,EXECUTABLE_MODE)
-strip_copy_target(condorc-launcher,etc/glite,condorc-launcher,EXECUTABLE_MODE)
-static_copy_target(condorc-launcher,etc/glite,condorc-launcher,EXECUTABLE_MODE)
+release_copy_target(condorc-advertiser,libexec/glite,condorc-advertiser,EXECUTABLE_MODE)
+strip_copy_target(condorc-advertiser,libexec/glite,condorc-advertiser,EXECUTABLE_MODE)
+static_copy_target(condorc-advertiser,libexec/glite,condorc-advertiser,EXECUTABLE_MODE)
+release_copy_target(condorc-initialize,libexec/glite,condorc-initialize,EXECUTABLE_MODE)
+strip_copy_target(condorc-initialize,libexec/glite,condorc-initialize,EXECUTABLE_MODE)
+static_copy_target(condorc-initialize,libexec/glite,condorc-initialize,EXECUTABLE_MODE)
+release_copy_target(condorc-launcher,libexec/glite,condorc-launcher,EXECUTABLE_MODE)
+strip_copy_target(condorc-launcher,libexec/glite,condorc-launcher,EXECUTABLE_MODE)
+static_copy_target(condorc-launcher,libexec/glite,condorc-launcher,EXECUTABLE_MODE)
 
 clean::
 html:

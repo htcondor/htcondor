@@ -7,6 +7,7 @@ exit main();
 
 sub main {
 	my $bin_path = $FindBin::Bin;
+	$bin_path =~ s|/libexec/glite/*|/bin|;
 	my $sbin_path = $bin_path;
 	$sbin_path =~ s|/bin/*|/sbin|;
 	$ENV{PATH} = "$bin_path:$sbin_path:$ENV{PATH}";
