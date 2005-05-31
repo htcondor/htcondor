@@ -1977,18 +1977,68 @@ will not want to change them for any reason.
 \index{configuration!condor\_startd configuration variables}
 \Note If you are running Condor on a multi-CPU machine, be sure
 to also read section~\ref{sec:Configuring-SMP} on
-page~\pageref{sec:Configuring-SMP} which describes how to setup and
+page~\pageref{sec:Configuring-SMP} which describes how to set up and
 configure Condor on SMP machines.
 
 These settings control general operation of the \Condor{startd}.
-Information on how to configure the \Condor{startd} to start, suspend,
-resume, vacate and kill remote Condor jobs is found in
+Examples using these configuation macros,
+as well as further explanation is found in
 section~\ref{sec:Configuring-Policy} on
-Configuring The Startd Policy.  In that section is
-information on the startd's \Term{states} and \Term{activities}.
-Macros in the configuration file not described here are ones that
-control state or activity transitions within the
-\Condor{startd}.
+Configuring The Startd Policy.
+\begin{description}
+
+\item[\Macro{START}] \label{param:Start}  A boolean expression
+  that, when \Expr{True}, indicates that the machine is willing
+  to start running a Condor job.
+
+\item[\Macro{SUSPEND}] \label{param:Suspend}  A boolean expression
+   that, when \Expr{True}, causes Condor to suspend running
+   a Condor job.
+   The machine may still be claimed, but the job makes no further
+   progress, and Condor does not generate a load on the machine.
+
+\item[\Macro{PREEMPT}] \label{param:Preempt}   A boolean expression
+   that, when \Expr{True}, causes Condor to not continue
+   running a currently suspended job in favor of running a different one 
+   (with higher priority or better rank).
+
+\item[\Macro{CONTINUE}] \label{param:Continue}  A boolean expression
+   that, when \Expr{True}, causes Condor to continue the execution
+   of a suspended job.
+
+\item[\Macro{KILL}] \label{param:Kill}  A boolean expression
+   that, when \Expr{True}, causes Condor to immediately stop the
+   execution of a currently running job, without delay, and
+   without taking the time to produce a checkpoint (for a standard
+   universe job).
+
+\item[\Macro{RANK}] \label{param:Rank}  A floating point value
+   that Condor uses to compare potential jobs.
+   A larger value for a specific job ranks that job above
+   others with lower values for \MacroNI{RANK}.
+
+\item[\Macro{WANT\_SUSPEND}] \label{param:WantSuspend}  A boolean expression
+   that, when \Expr{True}, defines that a currently running
+   Condor job is to be suspended, instead of killed.
+
+\item[\Macro{WANT\_VACATE}] \label{param:WantVacate}  A boolean expression
+   that, when \Expr{True}, defines that a currently running
+   Condor job is to be killed, instead of suspended.
+
+\item[\Macro{IS\_OWNER}] \label{param:IsOwner}  A boolean expression that
+   defaults to being defined as
+\begin{verbatim}
+        IS_OWNER = (START =?= FALSE)
+\end{verbatim}
+   Used to describe the state of the machine with respect to its use
+   by its owner.
+   Job ClassAd attributes are not used in defining \MacroNI{IS\_OWNER},
+   as they would be \Expr{Undefined}.
+\end{description}
+
+
+
+
 \begin{description}
 
 \item[\Macro{STARTER}] \label{param:Starter}  This macro holds the
