@@ -642,7 +642,8 @@ UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
 ##  and the owner of the idle job has a better priority than the owner
 ##  of the running job.  This expression defaults to true.
-UWCS_PREEMPTION_REQUIREMENTS = $(StateTimer) > (1 * $(HOUR)) && RemoteUserPrio > SubmittorPrio * 1.2
+UWCS_PREEMPTION_REQUIREMENTS = ( $(StateTimer) > (1 * $(HOUR)) && \
+	RemoteUserPrio > SubmittorPrio * 1.2 ) || (MY.NiceUser == True)
 
 ##  The PREEMPTION_RANK expression is used in a case where preemption
 ##  is the only option and all other negotiation ranks are equal.  For
