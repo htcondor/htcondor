@@ -21,6 +21,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Controlling whether or not a standard universe job asks the
+\Condor{shadow} about how/where to open every single file can be better
+controlled with the \Attr{want\_remote\_io} attribute in the submit
+description file.
+This attribute can be set to true or false and it is true be default.
+If set to false, then this attribute forces a standard universe job in 
+Condor to always look to the local filesystem when opening files and not
+to contact the shadow. 
+This increases performance of user jobs where the jobs open a very large
+amount of files in a small space of time.
+However, the user jobs must be matched to machines that have the same
+UID\_DOMAIN and FILESYSTEM\_DOMAIN, as per vanilla universe jobs with a 
+homogeneous file system.
+
 \item \Condor{dagman} now has the capability to run more than one
 indepedent DAG in a single \Condor{dagman} process.
 
