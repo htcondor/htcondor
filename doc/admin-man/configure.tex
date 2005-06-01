@@ -4061,10 +4061,13 @@ following values:
 \item 4 = allow "job re-run after terminated event" bug
 \item 8 = allow garbage/orphan events
 \item 16 = allow execute event before job's submit event
+\item 32 = allow two terminated events per job (sometimes seen
+with grid jobs)
 \end{description}
 
-The default value is 18 (allow terminated/aborted event combination
-and allow execute event before job's submit event).
+The default value is 50 (allow terminated/aborted event combination,
+allow execute event before job's submit event, and allow double terminated
+events).
 
 For example, a value of 6 instructs \Condor{dagman} to allow both
 the terminated/aborted event combination and the "job re-run
