@@ -196,6 +196,8 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 		if ( AllowExtraAborts() &&
 				(info->abortCount == 1) && (info->termCount == 1) ) {
 			// Okay.
+		} else if ( AllowDoubleTerm() && (info->termCount == 2) ) {
+			// Okay.
 		} else if ( AllowExtraRuns() ) {
 			// Okay.
 		} else if ( AllowGarbage() && info->TotalEndCount() == 0 ) {

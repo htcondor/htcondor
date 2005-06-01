@@ -129,8 +129,12 @@ Dagman::Config()
 		// Okay, we also want to allow execute before submit because
 		// we've run into that, and since DAGMan doesn't really care
 		// about the execute events, it shouldn't abort the DAG.
+		// And we further want to allow two terminated events for a
+		// single job because people are seeing that with Globus
+		// jobs!!
 	allow_events = CheckEvents::ALLOW_TERM_ABORT |
-			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT;
+			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT |
+			CheckEvents::ALLOW_DOUBLE_TERMINATE;
 
 		// If the old DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION param is set,
 		// we also allow extra runs.

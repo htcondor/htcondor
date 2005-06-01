@@ -46,6 +46,9 @@ class CheckEvents {
 		// submit).
 		// ALLOW_EXEC_BEFORE_SUBMIT tolerates getting an execute
 		// event before the submit event for that job.
+		// ALLOW_DOUBLE_TERMINATE tlerates getting two terminated events
+		// for the same job (but does not tolerate getting an execute
+		// after a terminated event).
 		// WARNING: do not change existing values for event_check_allow_t,
 		// since users may specify them in config parameters!!
 	typedef enum {
@@ -67,7 +70,11 @@ class CheckEvents {
 		ALLOW_GARBAGE				= 1 << 3,
 
 			// Execute before submit.
-		ALLOW_EXEC_BEFORE_SUBMIT	= 1 << 4
+		ALLOW_EXEC_BEFORE_SUBMIT	= 1 << 4,
+
+			// Double terminated event for a single run, sometimes seen
+			// for Globus jobs.
+		ALLOW_DOUBLE_TERMINATE		= 1 << 5
 	} check_event_allow_t;
 
 		// This is what the checks return.
@@ -85,8 +92,6 @@ class CheckEvents {
 	~CheckEvents();
 
 	/** Check an event to see if it's consistent with previous events.
-		Note that if we have set things up to tolerate certain "bad"
-		events, the return value can be true, but eventIsGood is false.
 		@param The event to check.
 		@param A MyString to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
@@ -153,6 +158,9 @@ class CheckEvents {
 
 	inline bool		AllowExecSubmit() { return (allowEvents & ALLOW_ALL) ||
 			(allowEvents & ALLOW_EXEC_BEFORE_SUBMIT); }
+
+	inline bool		AllowDoubleTerm() { return (allowEvents & ALLOW_ALL) ||
+			(allowEvents & ALLOW_DOUBLE_TERMINATE); }
 
 		// Bit-mapped flag for what "bad" events to allow.
 	int		allowEvents;

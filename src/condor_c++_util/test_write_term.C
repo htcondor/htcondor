@@ -26,20 +26,24 @@
 #include "condor_debug.h"
 #include <stdio.h>
 
-static const char *	VERSION = "0.9.1";
+static const char *	VERSION = "0.9.2";
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
 struct Arguments {
 	const char *	logFile;
 	int				cluster;
+	bool			writeExec;
 };
 
 Status
 CheckArgs(int argc, char **argv, Arguments &args);
 
 int // 0 == okay, 1 == error
-WriteEvent(Arguments &args);
+WriteTermEvent(Arguments &args);
+
+int // 0 == okay, 1 == error
+WriteExecEvent(Arguments &args);
 
 int
 main(int argc, char **argv)
@@ -56,9 +60,13 @@ main(int argc, char **argv)
 	Status tmpStatus = CheckArgs(argc, argv, args);
 
 	if ( tmpStatus == STATUS_OK ) {
-		result = WriteEvent(args);
+		result = WriteTermEvent(args);
 	} else if ( tmpStatus == STATUS_ERROR ) {
 		result = 1;
+	}
+
+	if ( args.writeExec && (tmpStatus == STATUS_OK) && (result == 0) ) {
+		result = WriteExecEvent(args);
 	}
 
 	if ( result != 0 ) {
@@ -76,11 +84,13 @@ CheckArgs(int argc, char **argv, Arguments &args)
 	const char *	usage = "Usage: test_write_term [options]\n"
 			"  -logfile <filename>: the log file to write\n"
 			"  -cluster <number>: the cluster part of the job ID\n"
+			"  -exec: write execute event after terminated event\n"
 			"  -usage: print this message and exit\n"
 			"  -version: print the version number and compile date\n";
 
 	args.logFile = NULL;
 	args.cluster = -1;
+	args.writeExec = false;
 
 	for ( int index = 1; index < argc; ++index ) {
 		if ( !strcmp(argv[index], "-cluster") ) {
@@ -100,6 +110,9 @@ CheckArgs(int argc, char **argv, Arguments &args)
 			} else {
 				args.logFile = argv[index];
 			}
+
+		} else if ( !strcmp(argv[index], "-exec") ) {
+			args.writeExec = true;
 
 		} else if ( !strcmp(argv[index], "-usage") ) {
 			printf("%s", usage);
@@ -132,7 +145,7 @@ CheckArgs(int argc, char **argv, Arguments &args)
 }
 
 int
-WriteEvent(Arguments &args)
+WriteTermEvent(Arguments &args)
 {
 	int		result = 0;
 
@@ -155,6 +168,31 @@ WriteEvent(Arguments &args)
 	terminated.total_recvd_bytes = 7000;
 
 	if ( !log.writeEvent(&terminated) ) {
+		fprintf(stderr, "Error writing log event\n");
+		result = 1;
+	}
+
+	return result;
+}
+
+int
+WriteExecEvent(Arguments &args)
+{
+	int		result = 0;
+
+	UserLog	log("owner", args.logFile, args.cluster, 0, 0, false);
+
+	sleep(10);
+
+		//
+		// Write the execute event.
+		//
+	printf("Writing execute event\n");
+
+	ExecuteEvent	execute;
+	strcpy( execute.executeHost, "<fake.host.for.test:1234>" );
+
+	if ( !log.writeEvent(&execute) ) {
 		fprintf(stderr, "Error writing log event\n");
 		result = 1;
 	}

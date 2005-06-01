@@ -419,12 +419,13 @@ int main(int argc, char **argv)
 
 	CheckEvents		ce8(CheckEvents::ALLOW_ALL);
 
-	exec.cluster = 1234;
-	exec.proc = 0;
-	exec.subproc = 0;
+	ExecuteEvent ee8;
+	ee8.cluster = 1234;
+	ee8.proc = 0;
+	ee8.subproc = 0;
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce8, &exec, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(ce8, &ee8, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("Testing submit... ");
 	CheckThisEvent(ce8, &se1, CheckEvents::EVENT_OKAY, result);
@@ -454,7 +455,11 @@ int main(int argc, char **argv)
 	CheckEvents		ce9(CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT);
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce9, &exec, CheckEvents::EVENT_BAD_EVENT, result);
+	ExecuteEvent ee9;
+	ee9.cluster = 1234;
+	ee9.proc = 0;
+	ee9.subproc = 0;
+	CheckThisEvent(ce9, &ee9, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("Testing submit... ");
 	CheckThisEvent(ce9, &se1, CheckEvents::EVENT_OKAY, result);
@@ -471,6 +476,62 @@ int main(int argc, char **argv)
 		printf("...FAILED (%s)\n", errorMsg.Value());
 		printf("########## TEST FAILED HERE ##########\n");
 		result = false;
+	}
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing allowing double-terminate\n\n");
+
+	CheckEvents		ce10(CheckEvents::ALLOW_DOUBLE_TERMINATE);
+
+	printf("Testing submit... ");
+	CheckThisEvent(ce10, &se1, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing execute... ");
+	ExecuteEvent ee10;
+	ee10.cluster = 1234;
+	ee10.proc = 0;
+	ee10.subproc = 0;
+	CheckThisEvent(ce10, &ee10, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing terminate... ");
+	CheckThisEvent(ce10, &te1, CheckEvents::EVENT_OKAY, result);
+	printf("Testing terminate... ");
+	CheckThisEvent(ce10, &te1, CheckEvents::EVENT_BAD_EVENT, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce10.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
+		printf("...should have gotten a bad event (test FAILED)\n");
+		printf("########## TEST FAILED HERE ##########\n");
+		result = false;
+	} else {
+		printf("...got expected bad event (%s)\n", errorMsg.Value());
+	}
+
+	printf("Testing submit... ");
+	CheckThisEvent(ce10, &se2, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing execute... ");
+	ee10.subproc = 1;
+	CheckThisEvent(ce10, &ee10, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing terminate... ");
+	CheckThisEvent(ce10, &te2, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing execute... ");
+	CheckThisEvent(ce10, &ee10, CheckEvents::EVENT_ERROR, result);
+
+	printf("Testing terminate... ");
+	CheckThisEvent(ce10, &te2, CheckEvents::EVENT_BAD_EVENT, result);
+
+		// We get bad event here instead of error because we don't
+		// "remember" that an execute event came after a terminated event.
+	if ( ce10.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
+		printf("...should have gotten a bad event (test FAILED)\n");
+		printf("########## TEST FAILED HERE ##########\n");
+		result = false;
+	} else {
+		printf("...got expected bad event (%s)\n", errorMsg.Value());
 	}
 
 	//-------------------------------------------------------------------------
