@@ -1267,6 +1267,8 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Delete( ATTR_CLUSTER_ID );
 	submit_ad->Delete( ATTR_PROC_ID );
+	submit_ad->Delete( ATTR_USER );
+	submit_ad->Delete( ATTR_OWNER );
 	submit_ad->Delete( ATTR_REMOTE_SCHEDD );
 	submit_ad->Delete( ATTR_REMOTE_POOL );
 	submit_ad->Delete( ATTR_JOB_MATCHED );
@@ -1330,6 +1332,9 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
+
+	expr.sprintf( "%s = Undefined", ATTR_OWNER );
+	submit_ad->Insert( expr.Value() );
 
 	expr.sprintf( "%s = (%s > 0) =!= True && CurrentTime > %s + %d",
 				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
