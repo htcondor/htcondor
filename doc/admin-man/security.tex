@@ -45,12 +45,12 @@ as is critical.
 %What user is used to run the Condor daemons? What user is
 %used to run jobs? 
 The Condor system 
-prefers that Condor daemons are run as the user root,
+prefers that Condor daemons are run as the user \Login{root},
 while other common operations are to be owned by
 a separate user.
 % Karen's edit to this point in this file.
 This is usually the
-\File{condor} user, but any user can be chosen. This topic is discussed
+\Login{condor} user, but any user can be chosen. This topic is discussed
 in more detail in Section~\ref{sec:uids}. 
 
 \item[Authentication] When someone submits a job to Condor, how do you
@@ -103,8 +103,8 @@ This is also called the real UID.
 A common situation has one user executing the program owned
 by another user.
 Many system commands work this way, with a user (corresponding
-to a person) executing a program belonging to (owned by) root.
-Since the program may require privileges that root has which
+to a person) executing a program belonging to (owned by) \Login{root}.
+Since the program may require privileges that \Login{root} has which
 the user does not have, a special bit in the program's
 protection specification (a setuid bit) allows the program
 to run with the UID of the program's owner, instead of the
@@ -113,19 +113,19 @@ This UID of the program's owner is called an effective UID.
 \index{UID!effective}
 
 %GID (group identification)
-Condor works most smoothly when its daemons run as root.
+Condor works most smoothly when its daemons run as \Login{root}.
 The daemons then have the ability to switch their 
 effective UIDs at will.
-When the daemons run as root,
+When the daemons run as \Login{root},
 they normally leave their effective UID and GID (Group IDentification)
-to be those of user and group \verb@condor@.
+to be those of user and group \Login{condor}.
 This allows access to the log files without
 changing the ownership of the log files.
 It also allows access to these files when
-the user condor's home directory resides on an NFS server.
-root can not normally access NFS files.
+the user \Login{condor}'s home directory resides on an NFS server.
+\Login{root} can not normally access NFS files.
 
-If there is no \verb@condor@ user and group on the system, an
+If there is no \Login{condor} user and group on the system, an
 administrator can specify which UID and GID the Condor daemons should
 use when they do not need root privileges in two ways, 
 either with the \Env{CONDOR\_IDS} environment variable or the
@@ -133,20 +133,20 @@ either with the \Env{CONDOR\_IDS} environment variable or the
 In either case, the value should be the UID integer, followed by a
 period, followed by the GID integer.
 For example, if a Condor administrator does not want to create a
-\verb@condor@ user, and instead wants their Condor daemons to run as
-the \verb@daemon@ user (a common non-root user for system daemons to
-execute as), the \verb@daemon@ user's UID was 2, and group
-\verb@daemon@ had a GID of 2, the corresponding setting in the Condor
-configuration file would be \verb@CONDOR_IDS = 2.2@.
+\Login{condor} user, and instead wants their Condor daemons to run as
+the \Login{daemon} user (a common non-root user for system daemons to
+execute as), the \Login{daemon} user's UID was 2, and group
+\Login{daemon} had a GID of 2, the corresponding setting in the Condor
+configuration file would be \Expr{CONDOR\_IDS = 2.2}.
 
 On a machine where a job is submitted,
 the \Condor{schedd} daemon
-changes its effective UID to root
+changes its effective UID to \Login{root}
 such that it has the capability to start up a \Condor{shadow} daemon
 for the job.
 Before a \Condor{shadow} daemon is created,
 the \Condor{schedd} daemon
-switches back to root,
+switches back to \Login{root},
 so that it can start up the \Condor{shadow} daemon with the (real) UID
 of the user who submitted the job.
 Since the \Condor{shadow} runs as the owner of the job,
@@ -157,7 +157,7 @@ it can access only files that its owner could access if the job
 were running locally, without Condor.
 
 On the machine where the job executes, the 
-job runs either as the submitting user or as user nobody,
+job runs either as the submitting user or as user \Login{nobody},
 to help ensure that the job cannot access local resources or do harm.  
 If the \Macro{UID\_DOMAIN} matches,
 and the user exists as the same UID in password files
@@ -170,19 +170,20 @@ execute machine.
 If \MacroNI{SOFT\_UID\_DOMAIN} is False,
 and \MacroNI{UID\_DOMAIN} matches,
 and the user is not in the execute machine's password file,
-then the job will run as user nobody.
+then the job will run as user \Login{nobody}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Non-Root}Running Condor as Non-Root}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-While we strongly recommend starting up the Condor daemons as root, we
-understand that it is not always possible to do so.  The main problems
-appear if you have one Condor installation shared by many users on a
-single machine, or if you are setting up machines to only execute
-Condor jobs.  If you are setting up a submit-only installation for a
-single user, then there is no need for (or benefit from) running as
-root.
+While we strongly recommend starting up the Condor daemons as \Login{root},
+we understand that it is not always possible to do so.
+The main problems
+appear when one Condor installation is shared by many users on a
+single machine, or if machines are set up to only execute
+Condor jobs.  With a submit-only installation for a
+single user, there is no need for (or benefit from) running as
+\Login{root}.
 
 What follows are the effects on the various parts of Condor of running
 both with and without root access.
@@ -318,8 +319,8 @@ only to run Condor jobs.
 \index{security!running jobs as user nobody}
 
 Under Unix, Condor runs jobs either as the user that submitted the jobs,
-or as the user called nobody.
-Condor uses user nobody if the value of the \MacroNI{UID\_DOMAIN}
+or as the user called \Login{nobody}.
+Condor uses user \Login{nobody} if the value of the \MacroNI{UID\_DOMAIN}
 configuration variable of the
 submitting and executing machines are different.
 
@@ -328,21 +329,21 @@ Condor does the best that it can by
 deleting all of the processes started by the job.
 Unfortunately, it is possible to fool Condor,
 and leave processes behind after Condor has cleaned up.
-If the job is running as user nobody,
+If the job is running as user \Login{nobody},
 it is possible for it to leave a lurker process lying in wait
-for the next job run as nobody.
-The lurker process may prey maliciously on the next nobody user job,
+for the next job run as \Login{nobody}.
+The lurker process may prey maliciously on the next \Login{nobody} user job,
 wreaking havoc.
 
 Condor could prevent this problem by simply killing all processes run by
-the nobody user, but this would annoy many system administrators.
-The nobody user is often used for non-Condor system processes.
+the \Login{nobody} user, but this would annoy many system administrators.
+The \Login{nobody} user is often used for non-Condor system processes.
 
 Condor provides a two-part solution to this difficulty.
 First, create user accounts specifically for Condor to use instead
-of user nobody.
+of user \Login{nobody}.
 These can be low-privilege accounts,
-as the nobody user is.
+as the \Login{nobody} user is.
 Create one of these accounts for each
 virtual machine per computer,
 so that distinct users can be used for concurrent processes.
@@ -351,7 +352,7 @@ processes running on distinct virtual machines.
 Section ~\ref{sec:Configuring-SMP} details virtual machines.
 For a sample machine with two virtual machines,
 create two users that are intended only to be used by Condor.
-As an example, call them nobody1 and nobody2.
+As an example, call them \Login{nobody1} and \Login{nobody2}.
 Tell Condor about these users
 with the \Macro{VMx\_USER} configuration variables,
 where x is replaced with the
@@ -363,7 +364,7 @@ virtual machine number. In this example:
 \end{verbatim}
 
 Reconfigure Condor, so that Condor will make use of these users
-instead of the nobody user.
+instead of the \Login{nobody} user.
 One more change is required to prevent lurker processes:
 tell Condor that these accounts are intended only to be used by Condor,
 so Condor can kill all the processes belonging to these users upon
