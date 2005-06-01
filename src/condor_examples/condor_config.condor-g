@@ -294,7 +294,7 @@ LOCK		= $(LOG)
 ##--------------------------------------------------------------------
 
 MAX_SCHEDD_LOG		= 1000000
-SCHEDD_DEBUG		= D_COMMAND
+SCHEDD_DEBUG		= D_COMMAND D_PID
 
 MAX_GRIDMANAGER_LOG	= 1000000
 GRIDMANAGER_DEBUG	= D_COMMAND
