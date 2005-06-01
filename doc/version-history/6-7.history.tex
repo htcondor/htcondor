@@ -41,6 +41,11 @@ indepedent DAG in a single \Condor{dagman} process.
 \item User policy expressions (on\_exit\_remove and on\_exit\_hold)
 now work for scheduler universe jobs.
 
+\item \Condor{dagman} now tolerates the "two terminated events for
+a single job" bug by default.  There is a new bit in
+\MacroNI{DAGMAN\_ALLOW\_EVENTS} to control whether this bug is considered
+a fatal error in a \Condor{dagman} run.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
