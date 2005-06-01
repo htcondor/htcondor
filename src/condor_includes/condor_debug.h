@@ -69,10 +69,15 @@
 #define D_MATCH			(1<<25)
 #define D_ACCOUNTANT	(1<<26)
 #define D_FAILURE	(1<<27)
-#define D_FDS           (1<<(D_MAXFLAGS-3))
-#define D_SECONDS		(1<<(D_MAXFLAGS-2))
-#define D_NOHEADER		(1<<(D_MAXFLAGS-1))
-#define D_ALL			(~(0) & (~(D_NOHEADER)))
+/* 
+   the rest of these aren't debug levels, but are format-modifying
+   flags to change the appearance of the dprintf line
+*/ 
+#define D_PID           (1<<28)
+#define D_FDS           (1<<29)
+#define D_SECONDS       (1<<30)
+#define D_NOHEADER      (1<<31)
+#define D_ALL           (~(0) & (~(D_NOHEADER)))
 
 #if defined(__cplusplus)
 extern "C" {

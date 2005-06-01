@@ -131,6 +131,7 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	int	saved_flags;
 	priv_state	priv;
 	int debug_level;
+	int my_pid;
 #ifdef va_copy
 	va_list copyargs;
 #endif
@@ -241,6 +242,15 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 					if ( (saved_flags|flags) & D_FDS ) {
 						fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
+					}
+
+					if( (saved_flags|flags) & D_PID ) {
+#ifdef WIN32
+						my_pid = (int) GetCurrentProcessId();
+#else
+						my_pid = (int) getpid();
+#endif
+						fprintf( DebugFP, "(pid:%d) ", my_pid );
 					}
 
 					if( DebugId ) {
