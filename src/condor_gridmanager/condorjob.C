@@ -874,9 +874,16 @@ int CondorJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-					// TODO what about error "Already done"? We should
-					//   recognize it and act accordingly
-				if ( rc != GLOBUS_SUCCESS ) {
+					// If the job has already been marked for removal or
+					// is no longer in the queue, treat it as a success.
+					// TODO parsing error strings meant for human consumption
+					//   is a poor way to distinguish specific types of
+					//   errors. We should have something more formalized
+					//   in the GAHP protocol.
+				if ( rc != GLOBUS_SUCCESS &&
+					 strcmp( gahp->getErrorString(), "Job not found" ) != 0 &&
+					 strcmp( gahp->getErrorString(), "Already done" ) != 0 ) {
+
 					// unhandled error
 					// Should we retry the remove instead of instantly
 					// giving up?
