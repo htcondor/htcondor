@@ -417,7 +417,7 @@ int CondorJob::doEvaluateState()
 						 "(%d.%d) condor_job_status_constrained() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 				break;
 			}
 			if ( num_ads != 1 ) {
@@ -626,7 +626,7 @@ int CondorJob::doEvaluateState()
 						 "(%d.%d) condor_job_stage_in() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 			}
 			} break;
 		case GM_SUBMITTED: {
@@ -722,7 +722,7 @@ int CondorJob::doEvaluateState()
 						 "(%d.%d) condor_job_hold() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 				break;
 			}
 			gmState = GM_POLL_ACTIVE;
@@ -740,7 +740,7 @@ int CondorJob::doEvaluateState()
 						 "(%d.%d) condor_job_release() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 				break;
 			}
 			gmState = GM_POLL_ACTIVE;
@@ -765,7 +765,7 @@ int CondorJob::doEvaluateState()
 						 "(%d.%d) condor_job_status_constrained() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 				break;
 			}
 			if ( num_ads != 1 ) {
@@ -805,7 +805,7 @@ int CondorJob::doEvaluateState()
 						 "(%d.%d) condor_job_stage_out() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 			}
 			} break;
 		case GM_DONE_SAVE: {
