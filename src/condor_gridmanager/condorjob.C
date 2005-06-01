@@ -420,7 +420,12 @@ int CondorJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			if ( num_ads != 1 ) {
+			if ( num_ads == 0 ) {
+					// The job isn't there. Assume it timed out before we
+					// could stage in the data files.
+				SetRemoteJobId( NULL );
+				gmState = GM_CLEAR_REQUEST;
+			} else if ( num_ads != 1 ) {
 					// Didn't get the number of ads we expected. Abort!
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_status_constrained() returned %d ads\n",
