@@ -4,13 +4,13 @@
 \index{grid computing!Grid Monitor}
 \index{scalability!using the Grid Monitor}
 
-Condor-G's Grid Monitor is designed to improve the scalability of
-machines running Globus gatekeepers.
-Normally, a Globus gatekeeper runs a jobmanager process for 
+Condor's Grid Monitor is designed to improve the scalability of
+machines running Globus GT2 gatekeepers.
+Normally, a Globus GT2 gatekeeper runs a jobmanager process for 
 every job submitted to the gatekeeper.
 This includes both currently running jobs and jobs waiting in the queue.
 Each jobmanager runs a Perl script at
-frequent intervals to poll the state of its job in the local batch system.
+frequent intervals (every 10 seconds) to poll the state of its job in the local batch system.
 For example, with 400 jobs submitted to a gatekeeper,
 there will be 400 jobmanagers running,
 each regularly starting a Perl script.
@@ -20,14 +20,14 @@ this frequent polling can heavily load the gatekeeper.
 When the gatekeeper is under heavy load,
 the system can become non-responsive and a variety of problems can occur.
 
-Condor-G's Grid Monitor temporarily replaces these jobmanagers.
+Condor's Grid Monitor temporarily replaces these jobmanagers.
 It is named the Grid Monitor, because it replaces the monitoring
 (polling) duties previously done by jobmanagers.
 When the Grid Monitor is enabled,
-Condor-G attempts to start a single
+Condor attempts to start a single
 process to poll all of a user's jobs at a given gatekeeper.
 While the job is waiting in the queue, but not yet running,
-Condor-G shuts down the associated jobmanager and instead
+Condor shuts down the associated jobmanager and instead
 relies on the Grid Monitor to report changes in status.
 The jobmanager will have been started to add the job to the remote
 batch system queue, then be shut down.

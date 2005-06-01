@@ -1,12 +1,14 @@
+% We should change this label name, but we need to ensure all references
+% to it are updated as well.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-G-Matchmaking}Condor-G-Matchmaking}
+\subsection{\label{sec:Condor-G-Matchmaking}Matchmaking in the Grid Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{universe!Globus}
 \index{Globus}
 \index{matchmaking!on the Grid}
 \index{grid computing!matchmaking}
 
-In it simplest usage, Condor-G allows users to specify the single
+In it simplest usage, the grid universe allows users to specify the single
 grid site they wish to submit their job to.
 Often this is sufficient: perhaps a user knows exactly which
 grid site they wish to use,
@@ -14,18 +16,20 @@ or a higher-level resource broker
 (such as the European Data Grid's resource broker)
 has decided which grid site should be used.
 But when users have a variety of sites to choose from and there
-is no other resource broker to make the decision, Condor-G can use
+is no other resource broker to make the decision, the grid universe can use
 matchmaking to decide which grid site a job should run on. 
 
-Please note that Condor-G's matchmaking ability is relatively
+Please note that the grid universe's matchmaking ability is relatively
 new. Work is being done to improve it and make it easier to use. For
 now, please expect some rough edges. 
 
-Condor-G uses the same matchmaking mechanism that Condor uses: the
+The grid universe uses the same matchmaking mechanism that the other
+Condor universes use: the
 \Condor{collector} and \Condor{negotiator} daemons, which are described in
 Section~\ref{sec:Condor-Daemons}. 
 
-Two changes are required to use Condor-G's matchmaking.
+There are two differences in how matchmaking is done in the grid
+universe, versus the other universes.
 First,
 advertise grid sites that are available so that they are
 known and considered during the matchmaking process.
@@ -39,8 +43,13 @@ type of grid site can be used, instead of identifying a specific grid site.
 
 % Karen had editted to this point.
 
+In the following sections, examples are given for a GT2 grid-type job and
+resource. A couple minor changes may be required for other grid-types.
+Primarily, an attribute other than \AdAttr{globusscheduler} may have to be
+used.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Advertising grid sites to Condor-G}
+\subsubsection{Advertising grid sites to Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Each grid site that is available for matching purposes needs to be
@@ -48,9 +57,9 @@ advertised to the \Condor{collector}. Normally in Condor this is done
 with the \Condor{startd} daemon, and you do not normally need to be
 aware of the contents of this advertisement. Currently, there is no
 equivalent to the \Condor{startd} daemon for advertising grid sites,
-so you need have a deeper understanding. 
+so you need have a deeper understanding.
 
-To properly advertise a grid site, a ClassAd need to be sent
+To properly advertise a grid site, a ClassAd needs to be sent
 periodically to the \Condor{collector}. A ClassAd is a list of
 attributes and values that describe a job, a machine, or a grid
 site. ClassAds are briefly described in
@@ -72,7 +81,7 @@ MyType                = "Machine"
 TargetType            = "Job"
 Name                  = "Example1_Gatekeeper"
 gatekeeper_url        = "grid.example.com/jobmanager"
-Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9)
+Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= ``gt2'')
 Rank                  = 0.000000
 CurrentRank           = 0.000000
 WantAdRevaluate       = True
@@ -161,15 +170,16 @@ a grid site.
 
 \footnotesize
 \begin{verbatim}
-Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9)
+Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= ``gt2'')
 \end{verbatim}
 \normalsize
 
 These are the requirements that the grid site insists must be true
 before it will accept a job. These could refer to features of the
-job's ClassAd. In this case, we will take any globus-universe job, as
+job's ClassAd. In this case, we will take any grid universe job that's
+of grid-type gt2, as
 long we have less than 10 matches currently. This will ensure that
-Condor-G will only run 10 jobs at your site---assuming that you keep
+Condor will only run 10 jobs at your site---assuming that you keep
 CurMatches up to date when jobs finish. Of course, you can edit this
 statement to have different requirements. For example, if you want to
 accept all jobs, you can have \ShortExpr{Requirements = True}.
@@ -231,10 +241,10 @@ wide-area networks, this may be insufficient. You can use TCP by
 specifying the \Opt{-tcp} option. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Submitting Condor-G jobs that use matchmaking}
+\subsubsection{Submitting grid universe jobs that use matchmaking}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Submitting a job to Condor-G that requires matchmaking is
+Submitting a grid universe job that requires matchmaking is
 straightforward. Instead of specifying a particular scheduler with
 globussheduler like this:
 
@@ -244,7 +254,7 @@ globusscheduler = grid.example.com/jobmanager
 \end{verbatim}
 \normalsize
 
-you instead specify requirements and tell Condor-G where to find the
+you instead specify requirements and tell Condor where to find the
 gatekeeper URL in the grid site ClassAd:
 
 \footnotesize
@@ -267,7 +277,8 @@ described above. A complete job description may look like this:
 
 \footnotesize
 \begin{verbatim}
-universe        = globus
+universe        = grid
+grid_typd       = gt2
 executable      = analyze_bamboozle_data
 output          = aaa.$(Cluster).out
 error           = aaa.$(Cluster).err
@@ -309,7 +320,7 @@ combined with \Opt{match\_list\_length}, you can prefer to avoid sites that
 you have already run at. 
 
 In addition, \Condor{submit} has two options to help you control
-Condor-G job resubmissions and rematching.  See \Opt{globus\_resubmit} and
+grid universe job resubmissions and rematching.  See \Opt{globus\_resubmit} and
 \Opt{globus\_rematch} in the \Condor{submit} manual page.
 These options are independent of \Opt{match\_list\_length}.
 

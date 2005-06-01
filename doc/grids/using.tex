@@ -18,181 +18,7 @@ semantics.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-G-Setup}Set Up of Condor-G}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-Install}Condor-G Installation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor-G!installation}
-Condor-G is included in the standard Condor distribution.
-Once Condor is obtained via download, installed, and configured,
-(see
-section~\ref{sec:install} on page~\pageref{sec:install})
-there are two steps necessary before a globus universe job
-can be submitted:
-
-\begin{enumerate}
-
-\item{Install Globus tools.}
-Three ways are listed for obtaining the Globus tools:
-   \begin{enumerate}
-   \item{Globus}.
-   From the web page at \URL{http://www.globus.org/}, follow links to the
-   globus toolkit to get the resource management client bundle.
-   \item{NMI}.
-   From the web page at \URL{http://www.nsf-middleware.org/}, follow links
-   to the NMI Release, and then to the Components, and finally to the
-   Globus Toolkit. 
-   \item{VDT}.
-   From the web page at \URL{http://www.griphyn.org/vdt},
-   follow the link to installing and setting up the Virtual Data Toolkit.
-   \end{enumerate}
-
-\item{Configure for Condor-G.}
-If you installed Condor using the submit-only option, you will
-need to add the following entries to your configuration file:
-\footnotesize
-\begin{verbatim}
-GRIDMANAGER             = $(SBIN)/condor_gridmanager
-GAHP                    = $(SBIN)/gahp_server
-MAX_GRIDMANAGER_LOG     = 64000
-GRIDMANAGER_DEBUG       = D_COMMAND
-GRIDMANAGER_LOG         = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
-GLIDEIN_SERVER_URLS = \
-  http://www.cs.wisc.edu/condor/glidein/binaries \
-  gsiftp://gridftp.cs.wisc.edu/p/condor/public/binaries/glidein
-\end{verbatim}
-\normalsize
-
-If Condor-G is installed as root, the file
-set by the configuration variable
-\Macro{GRIDMANAGER\_LOG} must have world-write permission.
-All of the parent directories for this file must
-also have world-execute permission.
-The Gridmanager runs as the user who submitted the job,
-so the Gridmanager may not be able to write to the ordinary 
-\MacroUNI{log} directory.
-%The example configuration file sets the log file to be 
-%\begin{verbatim}
-%GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME) 
-%\end{verbatim}
-Use of the definition of \MacroNI{GRIDMANAGER\_LOG}
-shown above will likely require the creation of
-the directory \verb@$(LOG)/GridLogs@.
-Permissions on this directory should be set
-by running \Prog{chmod} using the value 1777. 
-
-Another option is to locate the Gridmanager log files
-somewhere else, like so:
-\begin{verbatim}
-GRIDMANAGER_LOG  = /tmp/GridmanagerLog.$(USERNAME)
-\end{verbatim}
-
-If you make any changes to the configuration file while
-Condor is running, you will need to issue a \Condor{reconfigure}
-command.
-
-Two additional configuration variables may be useful, 
-in the case that a user submits many jobs at one time.
-The configuration variable
-\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}
-limits the number of jobs
-that a \Condor{gridmanager} daemon will submit to a resource.
-It is useful for controlling the number of \Prog{jobmanager}
-processes running on the front-end node of a cluster.
-As an example,
-consider the case where
-\MacroNI{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}
-is set to 100.
-A user submits 1000 jobs to Condor-G, all intended to run
-on the same resource.
-Condor-G will start by only submitting 100 jobs to that resource.
-As each submitted job completes,
-Condor-G will submit another job from the remaining 900.
-Without the throttle provided by this configuration variable,
-Condor-G would submit all 1000 jobs together,
-and the front-end node of the resource would be brought to its knees
-by the corresponding
-1000 Globus \Prog{jobmanager} processes.
-
-
-A second useful configuration variable is
-\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE},
-the maximum number of jobs
-that can be in the process of being submitted at any time (that is,
-how many \Procedure{globus\_gram\_client\_job\_request} calls are pending).
-It is useful for controlling the number of new
-connections/processes created at a given time.
-It exists because of a problem
-when Condor-G tried to submit 100 jobs at one time,
-and \Prog{inetd} on the remote host thought it was the
-start of a denial-of-service attack (and therefore
-disabled the gatekeeper service for a short period).
-
-\MacroNI{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}
-limits the total number of jobs that Condor-G will have submitted
-to a remote resource at any given time.
-\MacroNI{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE} limits
-how fast Condor-G will submit jobs to a remote resource.
-As an example, the configuration
-\begin{verbatim}
-GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=100
-GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE=20
-\end{verbatim}
-will have Condor-G submit jobs in sets of 20 until a total of 100 have
-been submitted.
-
-See section~\ref{sec:Configuring-Condor} on
-page~\pageref{sec:Configuring-Condor} for
-more information about configuration file entries.
-See section~\ref{sec:Gridmanager-Config-File-Entries} on
-page~\pageref{sec:Gridmanager-Config-File-Entries} for information
-about  configuration file entries specific to the Condor-G
-gridmanager.
-
-\end{enumerate}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-Credentials}Configuration for Credential Management}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%(Reword this section to talk more about credential management and less
-%about specific config values. Also, probably move it out of the setup
-%section.)
-
-Condor-G periodically checks for an updated proxy at
-\index{Condor-G!proxy}
-\index{proxy}
-an interval given by the configuration variable
-\AdAttr{GRIDMANAGER\_CHECKPROXY\_INTERVAL}.
-The value is defined in terms of seconds.
-For example, if you create a 12-hour proxy, and then
-6 hours later re-run \Prog{grid-proxy-init},
-Condor-G will check the proxy within
-this time interval, and use the new proxy it finds there.
-The default interval is 10 minutes.
-
-Condor-G also knows when the proxy of each job will expire,
-and if the proxy is not refreshed before
-\AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
-seconds before the proxy expires,
-the Condor-G grid manager daemon exits.
-Since the grid manager daemon keeps track of all jobs
-associated with a proxy, its tasks
-(such as authentication, file transfer, job log maintenance)
-will not occur.
-So, if
-\AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
-is 180, and the proxy is 3 minutes away from
-expiring, Condor-G will attempt to safely shut down,
-instead of simply losing
-contact with the remote job because Condor-G is unable to
-authenticate the remote job.
-The default setting is 3 minutes (180 seconds).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Grid-using}Using the Grid Universe}
+\subsection{\label{sec:Grid-using}Using the Globus Grid-Types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{grid universe}
 \index{universe!grid}
@@ -259,11 +85,13 @@ The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
 \index{Condor-G!GASS}
 \index{GASS (Global Access to Secondary Storage)}
 mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
-Condor-G uses GASS to transfer the executable, 
-\File{stdin}, 
-\File{stdout}, and 
-\File{stderr}
-between the machine where a job is submitted and the remote resource.
+GASS is used in the gt2 and gt3 grid-types to transfer the job's files
+between the machine where the job is submitted and the remote resource.
+\item[GridFTP]
+GridFTP is an extension of FTP that provides strong security and 
+high-performance options for large data transfers. It is used in the gt4
+grid-type to transfer the job's files between the machine where the job
+is submitted and the remote resource.
 \item[RSL]
 RSL is the language GRAM accepts to specify job information.
 \end{description}
@@ -275,15 +103,32 @@ RSL is the language GRAM accepts to specify job information.
 \caption{\label{fig:condorg}Remote Execution by Condor-G on Globus-managed resources}
 \end{figure}
 
-Figure~\ref{fig:condorg} shows how Condor-G interacts with Globus protocols.
-Condor-G contains a GASS server, used to transfer the executable,
+Figure~\ref{fig:condorg} shows how Condor interacts with Globus protocols.
+Condor contains a GASS server, used to transfer the executable,
 \File{stdin}, \File{stdout}, and \File{stderr} to and from
 the remote job execution site.
-Condor-G uses the GRAM protocol to contact the remote Globus Gatekeeper
+Condor uses the GRAM protocol to contact the remote Globus Gatekeeper
 and request that a new job manager be started.
 GRAM is also used to monitor the job's progress.
-Condor-G detects and intelligently handles cases
+Condor detects and intelligently handles cases
 such as if the remote Globus resource crashes.
+
+There are now three different versions of GRAM in use. Since these versions
+are incompatible with each other, Condor's grid universe uses three different
+grid-types to distinguish them.
+\begin{description}
+\item[gt2]
+This is the original GRAM protocol, used in Globus Toolkit versions 1 and 2.
+It is still used by most production systems. It is included in Globus
+Toolkit versions 3 and 4, oftened labelled as pre-web services GRAM.
+\item[gt3]
+This GRAM protocol was introduced in Globus Toolkit version 3 as part of
+Globus' shift to web services-based protocols. It has been replaced in the
+latest version of the Globus Toolkit and should be considered deprecated.
+\item[gt4]
+The GRAM protocol was introduced in Globus Toolkit version 4 as a more
+standards-complient version of the GT3 web services-based GRAM.
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Using-gt2}Grid Universe Jobs with grid\_type gt2}
@@ -634,8 +479,8 @@ running web services from GT 3.2.
 Please note that this is \emph{not} compatible with GT 3.0.
 
 See
-\URL{http://www-unix.globus.org/toolkit/docs/3.0/index.html}
-for more information about Globus Toolkit 3.0.
+\URL{http://www-unix.globus.org/toolkit/docs/3.2/index.html}
+for more information about Globus Toolkit 3.2.
 
 In order to submit \AdAttr{grid\_type} \AdAttr{GT3} jobs,
 the following items must be defined in the user's
@@ -668,15 +513,57 @@ have Java 1.4 or higher installed on the submitting machine,
 and it must be referenced by the 
 \Macro{JAVA} configuration macro.
 
-In order to debug submission of GT3 jobs,
-the user may utilize the optional configuration variable
-\Macro{GT3\_GAHP\_LOG} to point at a
-file where the debug information from GT3 GAHP (the component that
-interfaces between Condor and GT3) will be sent.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Using-gt4}Grid Universe Jobs with grid\_type gt4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{universe!grid, grid\_type gt4}
+
+Condor-G version 6.7.6 allows the user to submit jobs
+to Globus Toolkit 4.0 (gt4) gatekeepers,
+in a manner similar to the submission of
+jobs to Globus 2.x gatekeepers.
+Condor-G version 6.7.6 supports submission of jobs to gatekeepers
+running web services from GT 4.0.
+Please note that this is \emph{not} compatible with GT 3.0 or GT 3.2.
+
+See
+\URL{http://www-unix.globus.org/toolkit/docs/4.0/index.html}
+for more information about Globus Toolkit 4.0.
+
+In order to submit \AdAttr{grid\_type} \AdAttr{GT4} jobs,
+the following items must be defined in the user's
+submit description file:
+\footnotesize
+\begin{verbatim}
+universe = grid
+grid_type = gt4
+Executable = /bin/foo
+Globusscheduler = https://foo.bar.edu/wsrf/services/ManagedJobFactoryService
+jobmanager_type = Fork
+\end{verbatim}
+\normalsize
+
+as well as other useful parameters such as
+\AdAttr{log} and \AdAttr{transfer\_executable}.
+%The value for \AdAttr{globusscheduler} is placed on two lines for
+%formatting purposes, but will all be on a single line within
+%a submit description file.
+Its value is the URL of the appropriate GT4 job factory service.
+It is the same, for example,
+as the URL provided to the \Prog{globusrun-ws} tool in GT4.
+
+If the user wants to use any form of file transfer, they must install a
+gridftp server on the submitting machine. Condor installs all other
+necessary GT4 components under \File{\MacroUNI{LIB}/lib/gt4}.
+The user is required to
+have Java 1.4.2 or higher installed on the submitting machine,
+and it must be referenced by the 
+\Macro{JAVA} configuration macro.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:CondorG-Submit-Args}Arguments to a Grid Universe Job}
+\subsubsection{\label{sec:CondorG-Submit-Args}Arguments to gt2 and gt3 Grid-Types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-G!job arguments}
 
@@ -692,7 +579,7 @@ argv[2] = argument2
 argv[3] = argument3
 \end{verbatim}
 
-With Condor-G, arguments are passed through using RSL.
+With grid-types gt2 and gt3, arguments are passed through using RSL.
 Therefore, arguments are parsed in a way that allows space characters
 to be delimiters or to be parts of arguments.
 The single quote character delimits some or all arguments such that
@@ -912,20 +799,6 @@ exec /opt/myglobus/bin/myproxy-get-delegation $@
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Removing Condor-G jobs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-When you remove a job with \Condor{rm}, you may find that the job
-enters the ``X'' state for a very long time. This is normal: Condor-G
-is attempting to communicate with the remote Globus resource and
-ensure that the job has been properly cleaned up. If it takes too long
-or (in rare circumstances) is never removed, you can force the job to
-leave the job queue by using the -forcex option to \Condor{rm}. This
-will forcibly remove jobs that are in the X state without attempting
-to finish any cleanup at the remote resource.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Condor-G-Limits}Limitations of Condor-G}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This subsubsection used to reside in the file limitations.tex.
@@ -937,7 +810,7 @@ The following is a list of known limitations:
 \begin{enumerate}
 \item{No checkpoints.}
 \item{No job exit codes.}
-Job exit codes are not available.
+Job exit codes are not available (they are available for grid\_type gt4).
 \item{Limited platform availability.}
 Condor-G is only available on Linux, Solaris,
 Digital UNIX, and IRIX.

@@ -1,0 +1,24 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:GridUniverse}The Grid Universe}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+This section contains information relevant to all grid-types. The 
+following sections contain information specific to particular grid-types.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Removing Grid Universe jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+When you remove a job with \Condor{rm}, you may find that the job
+enters the ``X'' state for a very long time. This is normal: Condor
+is attempting to communicate with the remote scheduling system and
+ensure that the job has been properly cleaned up. If it takes too long
+or (in rare circumstances) is never removed, you can force the job to
+leave the job queue by using the -forcex option to \Condor{rm}. This
+will forcibly remove jobs that are in the X state without attempting
+to finish any cleanup at the remote scheduler.
+
+
+%subsection on matchmaking in the grid universe
+\input{grids/grid-matchmaking.tex}
