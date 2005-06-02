@@ -1497,6 +1497,9 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
         return;
     }
 
+	bool reset_retries_upon_rescue =
+		param_boolean( "DAGMAN_RESET_RETRIES_UPON_RESCUE", true );
+
     fprintf (fp, "# Rescue DAG file, created after running\n");
     fprintf (fp, "#   the %s DAG file\n", datafile);
     fprintf (fp, "#\n");
@@ -1541,7 +1544,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
                      job->GetJobName(), job->_scriptPost->GetCmd());
         }
         if( job->retry_max > 0 ) {
-            int retries = (job->retry_max - job->retries);
+            int retriesLeft = (job->retry_max - job->retries);
 
             if (   job->_Status == Job::STATUS_ERROR
                 && job->retries < job->retry_max 
@@ -1551,15 +1554,19 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
                         "aborted after node returned %d\n", 
                         job->retries, job->retry_max, job->retval );
             } else {
-                fprintf( fp,
-                         "# %d of %d retries already performed; %d remaining\n",
-                         job->retries, job->retry_max, retries );
+				if( !reset_retries_upon_rescue ) {
+					fprintf( fp,
+							 "# %d of %d retries already performed; %d remaining\n",
+							 job->retries, job->retry_max, retriesLeft );
+				}
             }
             
             ASSERT( job->retries <= job->retry_max );
-            // print (job->retry_max - job->retries) so that
-            // job->retries isn't reset upon recovery
-            fprintf( fp, "RETRY %s %d", job->GetJobName(), retries );
+			if( !reset_retries_upon_rescue ) {
+				fprintf( fp, "RETRY %s %d", job->GetJobName(), retriesLeft );
+			} else {
+				fprintf( fp, "RETRY %s %d", job->GetJobName(), job->retry_max );
+			}
             if( job->have_retry_abort_val ) {
                 fprintf( fp, " UNLESS-EXIT %d", job->retry_abort_val );
             }
