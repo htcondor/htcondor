@@ -5572,12 +5572,11 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	dprintf( D_FULLDEBUG, "\tNotify user with subject: %s\n",subject);
 
 	FILE* mailer = email_open(owner, subject);
-	if (mailer == NULL) {
-		EXCEPT("Could not open mail to user!");
+	if( mailer ) {
+		fprintf( mailer, "Your condor job %s%d.\n\n", msg, status );
+		fprintf( mailer, "Job: %s %s\n", cmd, args );
+		email_close( mailer );
 	}
-	fprintf(mailer, "Your condor job %s%d.\n\n", msg, status);
-	fprintf(mailer, "Job: %s %s\n", cmd, args);
-	email_close(mailer);
 
 /*
 	sprintf(url, "mailto:%s", owner);
