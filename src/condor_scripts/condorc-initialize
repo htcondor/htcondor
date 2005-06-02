@@ -25,6 +25,12 @@ sub main {
 	} else {
 		submit($glite_path,'condorc-advertiser');
 	}
+	print "Starting Condor-C Authorizer\n";
+	if ( check( "condorc-authorizer" ) == 0 ) {
+		print "Skipping Condor-C Authorizer\n";
+	} else {
+		submit($glite_path,'condorc-authorizer');
+	}
 }
 
 sub check {

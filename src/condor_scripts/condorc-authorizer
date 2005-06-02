@@ -1,0 +1,83 @@
+#!/usr/bin/env perl
+BEGIN {$^W = 1;}
+use strict;
+
+	# Seconds between updates.
+my $SLEEP_TIME = 300;
+my $DEBUG_LEVEL = 10;
+
+my $gridmap_file;
+my $config_file;
+my $temp_file;
+
+exit main();
+
+sub main {
+	my $mod_time = 0;
+	# TODO determine this dynamically
+	$gridmap_file = "/etc/grid-security/grid-mapfile";
+	$config_file = "/var/local/condor/condor_config.local";
+	$temp_file = "/var/local/condor/condor_config.local.tmp";
+	while(1) {
+		debug_print(10, "#################\n");
+
+		my $new_mod_time = (stat($gridmap_file))[9];
+		if ( $new_mod_time > $mod_time ) {
+			debug_print(10, "grid-mapfile has changed, updating config file\n");
+
+			update_config();
+			$mod_time = $new_mod_time;
+		} else {
+			debug_print(10, "No change in grid-mapfile\n");
+		}
+
+		sleep($SLEEP_TIME);
+	}
+}
+
+sub update_config {
+	my $subject;
+
+	open( IN, "<$config_file" ) || die( "Can't open $config_file" );
+	open( OUT, ">$temp_file" ) || die( "Can't open $temp_file" );
+	open( GMF, "<$gridmap_file" ) || die( "Can't open $gridmap_file" );
+
+	while( <IN> ) {
+		if ( /GSI_DAEMON_NAME/ ) {
+			# just skip it
+		} else {
+			print OUT $_;
+		}
+	}
+	close( IN );
+
+	print OUT "GSI_DAEMON_NAME =\n";
+
+	while( <GMF> ) {
+		chomp( $subject = $_ );
+		#$subject =~ s/\"\([^\"]\)\".*/\1/g;
+		$subject =~ s/"//;
+		$subject =~ s/".*//;
+		if ( $subject =~ /.+/ ) {
+			print OUT "GSI_DAEMON_NAME = \$(GSI_DAEMON_NAME),$subject\n";
+		}
+		#print "Subject = $subject\n";
+	}
+
+	close( GMF );
+	close( OUT );
+
+	`mv $temp_file $config_file`;
+
+	`condor_reconfig`;
+
+}
+
+sub debug_print {
+	my($level) = shift;
+	if($level > $DEBUG_LEVEL) { return; }
+	print scalar localtime;
+	print " ";
+	print @_;
+}
+
