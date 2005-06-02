@@ -19,6 +19,14 @@ The details of each version are described below.
 \item Most of the fixes included in this release were also included in
   version 6.7.7.
 
+\item The \MacroNI{QUEUE\_CLEAN\_INTERVAL} timer is reset during a 
+\Condor{schedd} reconfig only if this timer value has been changed.
+Previously, the timer was reset during all \Condor{schedd} reconfigs, which
+could prevent the \File{job\_queue.log} file from being cleaned.  Note that
+this timer is always reset upon a \Condor{schedd} startup.  See the
+related change for truncating the \File{job\_queue.log} below, for this same
+release.
+
 \end{itemize}
 
 %\noindent New Features:
