@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.1.4.2 2005-04-01 01:22:16 wright Exp $
+# $Id: remote_pre,v 1.1.4.3 2005-06-02 22:56:36 jfrey Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -13,6 +13,15 @@ my $vers_file = "CONDOR-VERSION";
 
 # autoflush our STDOUT
 $| = 1;
+
+print "------------------------- ENV DUMP ------------------------\n";
+if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+    system("set");
+}
+else {
+    system("env");
+}
+print "------------------------- ENV DUMP ------------------------\n";
 
 ######################################################################
 # grab the Condor version out of the version file so we can unpack our 

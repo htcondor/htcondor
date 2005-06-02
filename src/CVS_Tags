@@ -1,3 +1,9 @@
+06/02/05 V6_6-merge-41
+   The state of the V6_6-branch for a merge into V6_7-branch. This includes
+   a win32 firewall fix, preventing the schedd from panicing when
+   SMTP_SERVER is undefined, and fixing a problem where the schedd would
+   never clean the job queue if it got reconfiged frequently.
+
 06/02/05 V6_7_8-branch
    A branch for the 6.7.8 release, created from V6_7_8-root on the
    V6_7_ALL module.

@@ -7883,12 +7883,11 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	dprintf( D_FULLDEBUG, "\tNotify user with subject: %s\n",subject);
 
 	FILE* mailer = email_open(owner, subject);
-	if (mailer == NULL) {
-		EXCEPT("Could not open mail to user!");
+	if( mailer ) {
+		fprintf( mailer, "Your condor job %s%d.\n\n", msg, status );
+		fprintf( mailer, "Job: %s %s\n", cmd, args );
+		email_close( mailer );
 	}
-	fprintf(mailer, "Your condor job %s%d.\n\n", msg, status);
-	fprintf(mailer, "Job: %s %s\n", cmd, args);
-	email_close(mailer);
 
 /*
 	sprintf(url, "mailto:%s", owner);
@@ -8977,6 +8976,7 @@ Scheduler::RegisterTimers()
 {
 	static int cleanid = -1, wallclocktid = -1, periodicid=-1;
 	// Note: aliveid is a data member of the Scheduler class
+	static int oldQueueCleanInterval = -1;
 
 	// clear previous timers
 	if (timeoutid >= 0) {
@@ -8987,9 +8987,6 @@ Scheduler::RegisterTimers()
 	}
 	if (aliveid >= 0) {
 		daemonCore->Cancel_Timer(aliveid);
-	}
-	if (cleanid >= 0) {
-		daemonCore->Cancel_Timer(cleanid);
 	}
 	if (periodicid>=0) {
 		daemonCore->Cancel_Timer(periodicid);
@@ -9002,8 +8999,20 @@ Scheduler::RegisterTimers()
 		(Eventcpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
 		(Eventcpp)&Scheduler::sendAlives,"sendAlives", this);
-	cleanid = daemonCore->Register_Timer(QueueCleanInterval,QueueCleanInterval,
-		(Event)&CleanJobQueue,"CleanJobQueue");
+    // Preset the job queue clean timer only upon cold start, or if the timer
+    // value has been changed.  If the timer period has not changed, leave the
+    // timer alone.  This will avoid undesirable behavior whereby timer is
+    // preset upon every reconfig, and job queue is not cleaned often enough.
+    if  (  QueueCleanInterval != oldQueueCleanInterval) {
+        if (cleanid >= 0) {
+            daemonCore->Cancel_Timer(cleanid);
+        }
+        cleanid =
+            daemonCore->Register_Timer(QueueCleanInterval,QueueCleanInterval,
+            (Event)&CleanJobQueue,"CleanJobQueue");
+    }
+    oldQueueCleanInterval = QueueCleanInterval;
+
 	if (WallClockCkptInterval) {
 		wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
 												  WallClockCkptInterval,
