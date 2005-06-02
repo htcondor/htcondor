@@ -224,18 +224,6 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 	sleep( 30 );
 }
 
-sub md5sum {
-	my($data) = @_;
-	my $md5_file = "/tmp/md5.$$";
-	open( FILE, ">$md5_file" );
-	print FILE $data;
-	close( FILE );
-	my($md5) = `md5sum $md5_file`;
-	chomp($md5);
-	unlink( $md5_file );
-	return $md5;
-}
-
 sub submit_schedd_job
 {
 	my( $group ) = @_;
@@ -250,11 +238,10 @@ sub submit_schedd_job
 
 	debug_print(2, "Submitting schedd to $group->{sitegatekeeper} with $group->{proxyfile}");
 
-	# Generate an MD5 hash of the proxy subject that we can use as a
-	# schedd name.
+	# Use the daemon_unique_name we found in the job ad to use as a
+	# schedd name. All jobs with the same uniquename go to the same
+	# dynamically-started schedd.
 	$schedd_name = $group->{'uniquename'};
-#	$schedd_name = md5sum("$config_condor_host/".$group->{'proxysubject'});
-#	$schedd_name =~ s/\s.*//;
 
 	# Write the setup script that will run on the remote machine
 	open( SCRIPT, ">$setup_script" ) || die "error opening $setup_script";
@@ -335,10 +322,9 @@ EOF
 		$env .= "_condor_SCHEDD_NAME=$schedd_name;";
 	}
 
-#	$env .= "_condor_SCHEDD_ATTRS=SiteName,daemon_unqiue_name,CONDORC_WANTJOB;";
-	$env .= "_condor_SCHEDD_ATTRS=SiteName,CONDORC_WANTJOB;";
+	$env .= "_condor_SCHEDD_ATTRS=SiteName,daemon_unqiue_name,CONDORC_WANTJOB;";
 	$env .= "_condor_SiteName=\"${$group}{'sitename'}\";";
-#	$env .= "_condor_daemon_unique_name=\"${$group}{'uniquename'}\";";
+	$env .= "_condor_daemon_unique_name=\"${$group}{'uniquename'}\";";
 	$env .= "_condor_CONDORC_WANTJOB=TRUE;";
 
 	chop $env;
@@ -372,6 +358,7 @@ globusscheduler = ${$group}{'sitegatekeeper'}
 x509userproxy = ${$group}{'proxyfile'}
 +DynamicScheddJob = True
 +SiteName = "${$group}{'sitename'}"
++daemon_unique_name = "${$group}{'uniquename'}"
 notification=NEVER
 leave_in_queue=False
 queue
