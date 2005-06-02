@@ -56,6 +56,12 @@ a fatal error in a \Condor{dagman} run.
   The default \Macro{SCHEDD\_DEBUG} in the sample configuration files
   shipped with Condor now includes this flag.
 
+\item When \Condor{dagman} writes rescue files, each node is now
+specified with the same number of retries as was specified in the
+original DAG, rather than with only the ``remaining'' number of
+retries based on the failed run.  The latter behavior can be restored
+by setting \Macro{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE} to false.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
