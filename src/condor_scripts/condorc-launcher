@@ -232,9 +232,25 @@ sub submit_schedd_job
 	my $cluster;
 	my $env;
 	my $setup_script = "/tmp/condorc-launcher-starter.$$";
+	my $mapfile = "condorc-launcher-mapfile.$$";
+	my $mapfile_path = "/tmp/$mapfile";
 	my $schedd_name;
 	my $exec;
 	my $args;
+	my $job_x509_subject;
+	my $my_x509_cert;
+	my $my_x509_subject;
+	my $my_username;
+
+	chomp( $job_x509_subject = `openssl x509 -in $group->{proxyfile} -subject -noout` );
+	$job_x509_subject =~ s/^subject *= *//;
+	$job_x509_subject =~ s|/CN=proxy||g;
+
+	chomp( $my_x509_cert = `condor_config_val GSI_DAEMON_CERT` );
+	chomp( $my_x509_subject = `openssl x509 -in $my_x509_cert -subject -noout` );
+	$my_x509_subject =~ s/^subject *= *//;
+
+	chomp( $my_username = `/usr/bin/whoami` );
 
 	debug_print(2, "Submitting schedd to $group->{sitegatekeeper} with $group->{proxyfile}");
 
@@ -300,11 +316,35 @@ if [ ! -x \$my_condor_master ]; then
 	exit 1
 fi
 
-exec \$my_condor_master -f "\$@"
+# This assumes globus-user-env.sh and grid-proxy-info are set up correctly
+# on the remote headnode.
+. \$GLOBUS_LOCATION/etc/globus-user-env.sh
+proxytime=`\$GLOBUS_LOCATION/bin/grid-proxy-info -timeleft`
+runfor=`/usr/bin/expr \$proxytime / 60 - 1`
+
+# We need to duplicate X509_USER_PROXY because Condor's daemon-core clears
+# it from the environment before param()ing to see what file it should
+# use for it's X509 credentials.
+X509_DUPLICATE_USER_PROXY=\$X509_USER_PROXY
+export X509_DUPLICATE_USER_PROXY 
+
+_condor_GRIDMAP=`pwd`/$mapfile
+export _condor_GRIDMAP
+
+exec \$my_condor_master -f -r \$runfor "\$@"
 
 EOF
 
 	close( SCRIPT );
+
+        # Write the grid-mapfile that will be used on the remote machine
+        open( MAPFILE, ">$mapfile_path" ) || die "error opening $mapfile_path";
+
+        print MAPFILE <<EOF;
+"$job_x509_subject" $my_username
+"$my_x509_subject" $my_username
+EOF
+	close( MAPFILE );
 
 	# For now, we assume that binaries and a bare-bones config file
 	# (ala glidein) are pre-installed at the execution site
@@ -317,12 +357,16 @@ EOF
 
 	$env .= "_condor_MAIL=$config_mail;";
 
+	$env .= "_condor_QUEUE_SUPER_USERS=$my_username;";
+
+	$env .= "_condor_GSI_DAEMON_NAME=$my_x509_subject;";
+
 	if($DYNAMIC_SCHEDD_NAMES) {
 		$env .= "_condor_MASTER_NAME=$schedd_name;";
 		$env .= "_condor_SCHEDD_NAME=$schedd_name;";
 	}
 
-	$env .= "_condor_SCHEDD_ATTRS=SiteName,daemon_unqiue_name,CONDORC_WANTJOB;";
+	$env .= "_condor_SCHEDD_ATTRS=SiteName,daemon_unique_name,CONDORC_WANTJOB;";
 	$env .= "_condor_SiteName=\"${$group}{'sitename'}\";";
 	$env .= "_condor_daemon_unique_name=\"${$group}{'uniquename'}\";";
 	$env .= "_condor_CONDORC_WANTJOB=TRUE;";
@@ -356,6 +400,9 @@ error = /tmp/condorc-launcher.err.\$(cluster).\$(process)
 log = /tmp/condorc-launcher.log.\$(cluster).\$(process)
 globusscheduler = ${$group}{'sitegatekeeper'}
 x509userproxy = ${$group}{'proxyfile'}
+should_transfer_files=YES
+when_to_transfer_output=ON_EXIT
+transfer_input_files=$mapfile_path
 +DynamicScheddJob = True
 +SiteName = "${$group}{'sitename'}"
 +daemon_unique_name = "${$group}{'uniquename'}"
