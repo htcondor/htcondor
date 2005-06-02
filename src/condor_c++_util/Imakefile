@@ -81,6 +81,7 @@ CONLIBAPI_OBJ = \
 	file_lock.o \
 	../condor_util_lib/dprintf_common.o \
 	../condor_util_lib/dprintf.o \
+	../condor_util_lib/basename.o \
 	../condor_util_lib/mkargv.o \
 	../condor_util_lib/except.o \
 	../condor_util_lib/strupr.o \
