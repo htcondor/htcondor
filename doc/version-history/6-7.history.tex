@@ -46,6 +46,16 @@ a single job" bug by default.  There is a new bit in
 \MacroNI{DAGMAN\_ALLOW\_EVENTS} to control whether this bug is considered
 a fatal error in a \Condor{dagman} run.
 
+\item Added a new debug formatting flag, \Dflag{PID}, that prints out
+  the process id (PID) of the process writing a given entry to a log
+  file.
+  This is useful in Condor daemons (such as the \Condor{schedd}) where 
+  the daemon can fork() multiple processes to perform various tasks
+  and it is helpful to see what log messages are coming from forked
+  process versus the main thread of execution.
+  The default \Macro{SCHEDD\_DEBUG} in the sample configuration files
+  shipped with Condor now includes this flag.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
