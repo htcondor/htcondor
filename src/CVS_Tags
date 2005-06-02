@@ -1,3 +1,7 @@
+06/02/05 V6_7_8-branch
+   A branch for the 6.7.8 release, created from V6_7_8-root on the
+   V6_7_ALL module.
+
 05/18/05 V6_7-globus4-branch
    A branch to test updating the Globus external to 4.0.0. This will
    hopefully be a very short-lived branch. Created from the 
