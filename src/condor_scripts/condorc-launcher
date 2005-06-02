@@ -366,7 +366,7 @@ EOF
 		$env .= "_condor_SCHEDD_NAME=$schedd_name;";
 	}
 
-	$env .= "_condor_SCHEDD_ATTRS=SiteName,daemon_unique_name,CONDORC_WANTJOB;";
+	$env .= "_condor_SCHEDD_ATTRS=SiteName,daemon_unique_name,CONDORC_WANTJOB,GLITE_ENV;";
 	$env .= "_condor_SiteName=\"${$group}{'sitename'}\";";
 	$env .= "_condor_daemon_unique_name=\"${$group}{'uniquename'}\";";
 	$env .= "_condor_CONDORC_WANTJOB=TRUE;";
