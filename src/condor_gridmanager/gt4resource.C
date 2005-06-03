@@ -54,7 +54,7 @@ HashTable <HashKey, GT4Resource *>
 
 struct ProxyDelegation {
 	char *deleg_uri;
-	//time_t lifetime;
+	time_t lifetime;
 	time_t proxy_expire;
 	Proxy *proxy;
 };
@@ -489,6 +489,7 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 	next_deleg = new ProxyDelegation;
 	next_deleg->deleg_uri = strdup( deleg_uri );
 	next_deleg->proxy_expire = 0;
+	next_deleg->lifetime = 0;
 	next_deleg->proxy = job_proxy;
 		// acquire proxy?
 	AcquireProxy( job_proxy, delegationTimerId );
@@ -518,6 +519,7 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 	next_deleg = new ProxyDelegation;
 	next_deleg->deleg_uri = NULL;
 	next_deleg->proxy_expire = 0;
+	next_deleg->lifetime = 0;
 	next_deleg->proxy = job_proxy;
 		// acquire proxy?
 	AcquireProxy( job_proxy, delegationTimerId );
@@ -569,6 +571,7 @@ dprintf(D_FULLDEBUG,"      %s\n",delegation_uri);
 					// we are assuming responsibility to free this
 				next_deleg->deleg_uri = delegation_uri;
 				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
+				next_deleg->lifetime = time(NULL) + 12*60*60;
 				signal_jobs = true;
 			}
 		}
@@ -598,8 +601,30 @@ dprintf(D_FULLDEBUG,"      done\n");
 			}
 		}
 
-//		if ( next_deleg->lifetime < MinLifetime ) {
-//		}
+		if ( next_deleg->deleg_uri &&
+			 next_deleg->lifetime < time(NULL) + 11*60*60 ) {
+dprintf(D_FULLDEBUG,"    extending %s\n",next_deleg->deleg_uri);
+			int rc;
+			time_t new_lifetime = 12*60*60;
+			rc = deleg_gahp->gt4_set_termination_time( next_deleg->deleg_uri,
+													   new_lifetime );
+			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+				activeDelegationCmd = next_deleg;
+				return 0;
+			}
+			if ( rc != 0 ) {
+					// Failure, what to do?
+				dprintf( D_ALWAYS, "refresh_credentials(%s) failed!\n",
+						 next_deleg->deleg_uri );
+				activeDelegationCmd = NULL;
+			} else {
+dprintf(D_FULLDEBUG,"      done\n");
+				activeDelegationCmd = NULL;
+				next_deleg->lifetime = new_lifetime;
+					// ??? do we want to signal jobs in this case?
+				signal_jobs = false;
+			}
+		}
 
 		activeDelegationCmd = NULL;
 
@@ -619,6 +644,7 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri);
 			}
 		}
 	}
+	return 0;
 }
 
 bool GT4Resource::IsEmpty()
