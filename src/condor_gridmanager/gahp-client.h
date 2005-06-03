@@ -497,6 +497,11 @@ class GahpClient : public Service {
 		int
 		gt4_gram_client_refresh_credentials(const char *delegation_uri);
 
+		///
+		int
+		gt4_set_termination_time(const char *resource_uri,
+								 time_t &new_termination_time);
+
 
 
 		int

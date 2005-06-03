@@ -3446,6 +3446,67 @@ GahpClient::gt4_gram_client_refresh_credentials(const char *delegation_uri)
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+int 
+GahpClient::gt4_set_termination_time(const char *resource_uri,
+									 time_t &new_termination_time)
+{
+	static const char* command = "GT4_SET_TERMINATION_TIME";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!resource_uri) resource_uri=NULLSTRING;
+	MyString reqline;
+	bool x = reqline.sprintf("%s %d",escapeGahpString(resource_uri),
+							 new_termination_time);
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,normal_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 4) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		if ( strcasecmp(result->argv[3], NULLSTRING) ) {
+			error_string = result->argv[3];
+		} else {
+			error_string = "";
+		}
+		new_termination_time = atoi(result->argv[2]);
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
 int
 GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 							  char **job_id)
