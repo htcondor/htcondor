@@ -13,7 +13,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Add stuff here...
+\item This release contains all of the bug fixes and improvements from
+  the 6.6 stable series up to and including version 6.6.9.
 
 \end{itemize}
 
@@ -78,6 +79,16 @@ from being used with jobs that write XML-format logs.
 to allowing an execute event before the submit event for the same
 job; if this happens, there will be a warning, but the DAG will
 continue.  See section~\ref{param:DAGManAllowEvents} for more info.
+
+\item Fixed a bug the prevented SOAP clients from being able to access
+a job's spooled data files if the \Condor{schedd} restarted.
+
+\item Fixed a bug that caused the \Condor{gridmanager} to panic when
+trying to retire a job from the queue that was already gone. This
+could cause multiple terminate events to be logged for some jobs.
+
+\item Fixed a bug that caused match-making to not work for Condor-C
+jobs.
 
 \end{itemize}
 
