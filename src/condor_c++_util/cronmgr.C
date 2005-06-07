@@ -111,14 +111,16 @@ bool JobListParser::nextJob( void )
 
 		// Debug info...
 		curJobStart = curJobPointer;
-		dprintf( D_FULLDEBUG, "CronMgr: Trying to find a job in '%s'\n", curJobPointer );
+		dprintf( D_FULLDEBUG, "CronMgr: Trying to find a job in '%s'\n",
+				 curJobPointer );
 
 		// Now, try to parse it...
 
 		// Name: must exist, non-zero length
 		name = nextField( );
 		if (  ( NULL == name ) || ( '\0' == *name )  ){
-			dprintf( D_ALWAYS, "CronMgr: Job parse error: Can't find a name\n" );
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job parse error: Can't find a name\n" );
 			skipJob( );
 			continue;
 		}
@@ -137,7 +139,9 @@ bool JobListParser::nextJob( void )
 			tmp++;
 		}
 		if ( NULL == prefix ) {
-			dprintf( D_ALWAYS, "CronMgr: '%s': parse error: Can't find a prefix\n", name );
+			dprintf( D_ALWAYS,
+					 "CronMgr: '%s': parse error: Can't find a prefix\n",
+					 name );
 			skipJob( );
 			continue;
 		}
@@ -145,7 +149,8 @@ bool JobListParser::nextJob( void )
 		// Path: must exist, non-zero length
 		path = nextField( );
 		if (  ( NULL == path ) || ( '\0' == *path )  ){
-			dprintf( D_ALWAYS, "Cron: '%s': parse error: Can't find a path\n", name );
+			dprintf( D_ALWAYS,
+					 "Cron: '%s': parse error: Can't find a path\n", name );
 			skipJob( );
 			continue;
 		}
@@ -230,14 +235,14 @@ const char *JobListParser::nextField( void )
 				// Whitespace: new job
 				else if ( isspace( next ) ) {
 					*cur = '\0';			// Terminate the string
-					nextJobStart = cur + 2;	// Point at char *after* the separator
+					nextJobStart = cur + 2;	// Point at char *after* separator
 					curJobPointer = NULL;
 					return start;
 				}
 				// Colon: Next field
 				else if ( ':' ==  next ) {
 					*cur = '\0';			// Terminate the string
-					curJobPointer = cur + 2;	// Point at char *after* the separator
+					curJobPointer = cur + 2; // Point at char *after* separator
 					return start;
 				}
 				// If next is not a space or :, badness 10000
@@ -277,7 +282,7 @@ const char *JobListParser::nextField( void )
 }
 
 // Basic constructor
-CondorCronMgr::CondorCronMgr( const char *name )
+CronMgrBase::CronMgrBase( const char *name )
 {
 	dprintf( D_FULLDEBUG, "CronMgr: Constructing '%s'\n", name );
 
@@ -290,7 +295,7 @@ CondorCronMgr::CondorCronMgr( const char *name )
 }
 
 // Basic destructor
-CondorCronMgr::~CondorCronMgr( )
+CronMgrBase::~CronMgrBase( )
 {
 	// Kill all running jobs
 	Cron.DeleteAll( );
@@ -309,14 +314,14 @@ CondorCronMgr::~CondorCronMgr( )
 
 // Handle initialization
 int
-CondorCronMgr::Initialize( void )
+CronMgrBase::Initialize( void )
 {
 	return DoConfig( true );
 }
 
 // Set new name..
 int
-CondorCronMgr::SetName( const char *newName, 
+CronMgrBase::SetName( const char *newName, 
 						const char *newParamBase,
 						const char *newParamExt )
 {
@@ -344,7 +349,7 @@ CondorCronMgr::SetName( const char *newName,
 }
 
 // Set new name..
-int CondorCronMgr::SetParamBase( const char *newParamBase,
+int CronMgrBase::SetParamBase( const char *newParamBase,
 								 const char *newParamExt )
 {
 	dprintf( D_FULLDEBUG, "CronMgr: Setting parameter base to '%s'\n",
@@ -380,7 +385,7 @@ int CondorCronMgr::SetParamBase( const char *newParamBase,
 
 // Kill all running jobs
 int
-CondorCronMgr::KillAll( bool force)
+CronMgrBase::KillAll( bool force)
 {
 	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: Killing all jobs\n" );
@@ -391,7 +396,7 @@ CondorCronMgr::KillAll( bool force)
 
 // Check: Are we ready to shutdown?
 bool
-CondorCronMgr::IsAllIdle( void )
+CronMgrBase::IsAllIdle( void )
 {
 	int		AliveJobs = Cron.NumAliveJobs( );
 
@@ -401,14 +406,14 @@ CondorCronMgr::IsAllIdle( void )
 
 // Handle Reconfig
 int
-CondorCronMgr::Reconfig( void )
+CronMgrBase::Reconfig( void )
 {
 	return DoConfig( false );
 }
 
 // Handle configuration
 int
-CondorCronMgr::DoConfig( bool initial )
+CronMgrBase::DoConfig( bool initial )
 {
 	char *paramBuf = GetParam( "JOBS" );
 
@@ -431,7 +436,7 @@ CondorCronMgr::DoConfig( bool initial )
 
 // Read a parameter
 char *
-CondorCronMgr::GetParam( const char *paramName, 
+CronMgrBase::GetParam( const char *paramName, 
 						 const char	*paramName2 )
 {
 
@@ -465,7 +470,7 @@ CondorCronMgr::GetParam( const char *paramName,
 
 // Parse the "Job List"
 int
-CondorCronMgr::ParseJobList( const char *jobString )
+CronMgrBase::ParseJobList( const char *jobString )
 {
 	// Debug
 	dprintf( D_JOB, "CronMgr: Job string is '%s'\n", jobString );
@@ -602,7 +607,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		}
 
 		// Create the job & add it to the list (if it's new)
-		CondorCronJob *job = Cron.FindJob( jobName );
+		CronJobBase *job = Cron.FindJob( jobName );
 		if ( NULL == job ) {
 			job = NewJob( jobName );
 			if ( NULL == job ) {
@@ -680,19 +685,10 @@ CondorCronMgr::ParseJobList( const char *jobString )
 	return 0;
 }
 
-// Create a new job
-CondorCronJob *
-CondorCronMgr::NewJob( const char *name )
-{
-	dprintf( D_FULLDEBUG, "*** Creating a Condor job '%s' ***\n", name );
-	CondorCronJob *job = new CondorCronJob( GetName(), name );
-	return job;
-}
-
 // Parse the next tokenized 'chunk', sorta like strtok()
 // Returns pointer to the next one..
 char *
-CondorCronMgr::NextTok( char *cur, const char *tok )
+CronMgrBase::NextTok( char *cur, const char *tok )
 {
 	// Look for the _next_ occurance
 	char	*tmp = strstr( cur, tok );
@@ -706,13 +702,3 @@ CondorCronMgr::NextTok( char *cur, const char *tok )
 	// Done
 	return tmp;
 }
-
-// Handles the death of a child (does nothing for now)
-#if 0
-int
-CondorCronMgr::JobDied( CondorCronJob *DeadJob )
-{
-	(void) DeadJob;
-	return 0;
-}
-#endif

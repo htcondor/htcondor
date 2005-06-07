@@ -23,23 +23,16 @@
 #ifndef _STARTD_CRONJOB_H
 #define _STARTD_CRONJOB_H
 
-#include "condor_cronjob.h"
+#include "condor_cronjob_classad.h"
 
-// Define a Condor 'Cron' job
-class StartdCronJob : public CondorCronJob
+class StartdCronJob: public ClassAdCronJob
 {
   public:
 	StartdCronJob( const char *mgrName, const char *jobName );
 	virtual ~StartdCronJob( );
-	int Initialize( void );
 
   private:
-	virtual int ProcessOutput( const char *line );
-
-	ClassAd		*OutputAd;
-	int			OutputAdCount;
-
-	MyString	EnvStr;			// My environment string
+	int Publish( const char *name, ClassAd *ad );
 };
 
 #endif /* _STARTD_CRONJOB_H */

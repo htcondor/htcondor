@@ -32,7 +32,7 @@
 class CronJobOut : public LineBuffer
 {
   public:
-	CronJobOut( class CondorCronJob *job );
+	CronJobOut( class CronJobBase *job );
 	virtual ~CronJobOut( void ) {};
 	virtual int Output( const char *buf, int len );
 	int GetQueueSize( void );
@@ -40,18 +40,18 @@ class CronJobOut : public LineBuffer
 	int FlushQueue( void );
   private:
 	Queue<char *>		lineq;
-	class CondorCronJob	*job;
+	class CronJobBase	*job;
 };
 
 // Cron's StdErr Line Buffer
 class CronJobErr : public LineBuffer
 {
   public:
-	CronJobErr( class CondorCronJob *job );
+	CronJobErr( class CronJobBase *job );
 	virtual ~CronJobErr( void ) {};
 	virtual int Output( const char *buf, int len );
   private:
-	class CondorCronJob	*job;
+	class CronJobBase	*job;
 };
 
 // Job's state
@@ -80,15 +80,18 @@ typedef enum {
 } CondorCronEvent;
 
 // Cronjob event
-class CondorCronJob;
-typedef int     (Service::*CronEventHandler)(CondorCronJob*,CondorCronEvent);
+class CronJobBase;
+typedef int     (Service::*CronEventHandler)(CronJobBase*,CondorCronEvent);
+
+// Enable pipe I/O debugging
+#define CRONJOB_PIPEIO_DEBUG	0
 
 // Define a Condor 'Cron' job
-class CondorCronJob : public Service
+class CronJobBase : public Service
 {
   public:
-	CondorCronJob( const char *mgrName, const char *jobName );
-	virtual ~CondorCronJob( );
+	CronJobBase( const char *mgrName, const char *jobName );
+	virtual ~CronJobBase( );
 
 	// Finish initialization
 	virtual int Initialize( void );
@@ -136,7 +139,7 @@ class CondorCronJob : public Service
 	bool IsMarked( void ) { return marked; };
 
 	int ProcessOutputQueue( void );
-	virtual int ProcessOutput( const char *line );
+	virtual int ProcessOutput( const char *line ) = 0;
 
 	int SetEventHandler( CronEventHandler handler, Service *s );
 
@@ -193,8 +196,8 @@ class CondorCronJob : public Service
 	int SetTimer( unsigned first, unsigned seconds );
 	int KillTimer( unsigned seconds );
 
-	// Debug / TODO
-# if 0
+	// Debugging
+# if CRONJOB_PIPEIO_DEBUG
 	char	*TodoBuffer;
 	int		TodoBufSize;
 	int		TodoBufWrap;

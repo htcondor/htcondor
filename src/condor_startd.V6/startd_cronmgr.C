@@ -29,7 +29,7 @@
 
 // Basic constructor
 StartdCronMgr::StartdCronMgr( void ) :
-		CondorCronMgr( "startd" )
+		CronMgrBase( "startd" )
 {
 	char *NewName = param( "STARTD_CRON_NAME" );
 	if ( NULL != NewName ) {
@@ -67,10 +67,10 @@ StartdCronMgr::ShutdownOk( void )
 }
 
 // Create a new job
-CondorCronJob *
+CronJobBase *
 StartdCronMgr::NewJob( const char *jobname )
 {
-	dprintf( D_FULLDEBUG, "*** Creating a Startd job '%s'***\n", jobname );
+	dprintf( D_FULLDEBUG, "*** Creating Startd Cron job '%s'***\n", jobname );
 	StartdCronJob *job = new StartdCronJob( GetName(), jobname );
 
 	// Register our death handler...
@@ -78,12 +78,12 @@ StartdCronMgr::NewJob( const char *jobname )
 	e = (CronEventHandler) &StartdCronMgr::JobEvent;
 	job->SetEventHandler( e, this );
 
-	return (CondorCronJob *) job;
+	return (CronJobBase *) job;
 }
 
 // Notified when a job dies
 void
-StartdCronMgr::JobEvent( CondorCronJob *Job, CondorCronEvent Event )
+StartdCronMgr::JobEvent( CronJobBase *Job, CondorCronEvent Event )
 {
 	(void) Job;
 

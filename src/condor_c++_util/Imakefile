@@ -118,8 +118,9 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
-	classad_helpers.o classad_merge.o \
-	linebuffer.o cron.o cronmgr.o cronjob.o distribution.o \
+	classad_helpers.o classad_merge.o classad_namedlist.o \
+	linebuffer.o cron.o cronmgr.o cronjob.o cronjob_classad.o \
+	distribution.o \
 	condor_attributes.o condor_environ.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o killfamily.o access.o get_mysubsystem.o \

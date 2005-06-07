@@ -30,7 +30,7 @@
 #include "condor_cron.h"
 
 // Instantiate the list of Cron Jobs
-template class SimpleList<CondorCronJob*>;
+template class SimpleList<CronJobBase*>;
 
 // Basic constructor
 CondorCron::CondorCron( )
@@ -48,7 +48,7 @@ CondorCron::~CondorCron( )
 int
 CondorCron::DeleteAll( )
 {
-	CondorCronJob	*curJob;
+	CronJobBase	*curJob;
 
 	// Kill 'em all
 	KillAll( true );
@@ -68,7 +68,7 @@ CondorCron::DeleteAll( )
 int
 CondorCron::KillAll( bool force )
 {
-	CondorCronJob	*curJob;
+	CronJobBase	*curJob;
 
 	// Walk through the list
 	dprintf( D_JOB, "Cron: Killing all jobs\n" );
@@ -84,7 +84,7 @@ int
 CondorCron::NumAliveJobs( void )
 {
 	int				NumAlive = 0;
-	CondorCronJob	*curJob;
+	CronJobBase	*curJob;
 
 	// Walk through the list
 	JobList.Rewind( );
@@ -101,7 +101,7 @@ CondorCron::NumAliveJobs( void )
 int
 CondorCron::Reconfig( )
 {
-	CondorCronJob	*curJob;
+	CronJobBase	*curJob;
 
 	// Walk through the list
 	JobList.Rewind( );
@@ -115,7 +115,7 @@ CondorCron::Reconfig( )
 void
 CondorCron::ClearAllMarks( )
 {
-	CondorCronJob	*curJob;
+	CronJobBase	*curJob;
 
 	// Walk through the list
 	JobList.Rewind( );
@@ -128,7 +128,7 @@ CondorCron::ClearAllMarks( )
 void
 CondorCron::DeleteUnmarked( )
 {
-	CondorCronJob	*curJob;
+	CronJobBase	*curJob;
 
 	// Walk through the list, delete all that didn't get marked
 	JobList.Rewind( );
@@ -145,7 +145,7 @@ CondorCron::DeleteUnmarked( )
 }
 
 int
-CondorCron::AddJob( const char *name, CondorCronJob *newJob )
+CondorCron::AddJob( const char *name, CronJobBase *newJob )
 {
 	// Do we already have a job by this name?
 	if ( NULL != FindJob( name ) ) {
@@ -166,7 +166,7 @@ int
 CondorCron::DeleteJob( const char *jobName )
 {
 	// Does the job exist?
-	const CondorCronJob *Job = FindJob( jobName );
+	const CronJobBase *Job = FindJob( jobName );
 	if ( NULL == Job ) {
 		dprintf( D_ALWAYS, "Cron: Not deleting non-existent job '%s'\n",
 				 jobName );
@@ -185,10 +185,10 @@ CondorCron::DeleteJob( const char *jobName )
 }
 
 // Find a job from the list
-CondorCronJob *
+CronJobBase *
 CondorCron::FindJob( const char *jobName )
 {
-	CondorCronJob	*curJob;
+	CronJobBase	*curJob;
 
 	// Walk through the list
 	JobList.Rewind( );

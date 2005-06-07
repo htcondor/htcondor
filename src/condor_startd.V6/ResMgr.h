@@ -35,6 +35,7 @@
 #include "Resource.h"
 #include "claim.h"
 #include "starter_mgr.h"
+#include "condor_classad_namedlist.h"
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
@@ -51,20 +52,6 @@ public:
 	void	insert( int id );
 private:
 	ExtArray<bool> free_ids;
-};
-
-// A name / ClassAd pair to manage together
-class NamedClassAd
-{
-  public:
-	NamedClassAd( const char *name, ClassAd *ad = NULL );
-	~NamedClassAd( void );
-	char *GetName( void ) { return myName; };
-	ClassAd *GetAd( void ) { return myClassAd; };
-	void ReplaceAd( ClassAd *newAd );
-  private:
-	char	*myName;
-	ClassAd	*myClassAd;
 };
 
 class ResMgr : public Service
@@ -204,7 +191,7 @@ private:
 	SimpleList<Resource*>			destroy_list;
 
 	// List of Supplemental ClassAds to publish
-	SimpleList<NamedClassAd*>		extra_ads;
+	NamedClassAdList				extra_ads;
 
 		// Builds a CpuAttributes object to represent the virtual
 		// machine described by the given machine type.

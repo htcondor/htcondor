@@ -26,7 +26,7 @@
 #include "condor_cronmgr.h"
 
 // Define a simple class to run child tasks periodically.
-class StartdCronMgr : public CondorCronMgr
+class StartdCronMgr : public CronMgrBase
 {
   public:
 	StartdCronMgr( void );
@@ -35,11 +35,11 @@ class StartdCronMgr : public CondorCronMgr
 	bool ShutdownOk( void );
 
   protected:
-	virtual CondorCronJob *NewJob( const char *name );
+	virtual CronJobBase *NewJob( const char *name );
 
   private:
 	bool ShuttingDown;
-	void JobEvent( CondorCronJob *job, CondorCronEvent event );
+	void JobEvent( CronJobBase *job, CondorCronEvent event );
 	
 };
 

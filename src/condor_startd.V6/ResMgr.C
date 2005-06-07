@@ -23,11 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
-#include "classad_merge.h"
-
-// Instantiate the Named Class Ad list
-template class SimpleList<NamedClassAd*>;
-
+#include "condor_classad_namedlist.h"
 
 ResMgr::ResMgr()
 {
@@ -825,100 +821,30 @@ ResMgr::resource_sort( ComparisonFunc compar )
 int
 ResMgr::adlist_register( const char *name )
 {
-	NamedClassAd	*cur;
-
-	// Walk through the list
-	extra_ads.Rewind( );
-	while ( extra_ads.Current( cur ) ) {
-		if ( ! strcmp( cur->GetName( ), name ) ) {
-			// Do nothing
-			return 0;
-		}
-		extra_ads.Next( cur );
-	}
-
-	// No match found; insert it into the list
-	dprintf( D_JOB, "Adding '%s' to the Supplimental ClassAd list\n", name );
-	if (  ( cur = new NamedClassAd( name, NULL ) ) != NULL ) {
-		extra_ads.Append( cur );
-		return 0;
-	}
-
-	// new failed; bad
-	return -1;
+	return extra_ads.Register( name );
 }
 
 int
 ResMgr::adlist_replace( const char *name, ClassAd *newAd )
 {
-	NamedClassAd	*cur;
-
-	// Walk through the list
-	extra_ads.Rewind( );
-	while ( extra_ads.Next( cur ) ) {
-		if ( ! strcmp( cur->GetName( ), name ) ) {	
-			dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", name );
-			cur->ReplaceAd( newAd );
-			return 0;
-		}
-	}
-
-	// No match found; insert it into the list
-	if (  ( cur = new NamedClassAd( name, newAd ) ) != NULL ) {
-		dprintf( D_FULLDEBUG,
-				 "Adding '%s' to the 'extra' ClassAd list\n", name );
-		extra_ads.Append( cur );
-		return 0;
-	}
-
-	// new failed; bad
-	delete newAd;		// The caller expects us to always free the memory
-	return -1;
+	return extra_ads.Replace( name, newAd );
 }
 
 int
 ResMgr::adlist_delete( const char *name )
 {
-	NamedClassAd	*cur;
-
-	// Walk through the list
-	extra_ads.Rewind( );
-	while ( extra_ads.Next( cur ) ) {
-		if ( ! strcmp( cur->GetName( ), name ) ) {
-			dprintf( D_FULLDEBUG, "Deleting ClassAd for '%s'\n", name );
-			extra_ads.DeleteCurrent( );
-			delete cur;
-			return 0;
-		}
-	}
-
-	// No match found; done
-	return 0;
+	return extra_ads.Delete( name );
 }
 
 int
 ResMgr::adlist_publish( ClassAd *resAd, amask_t mask )
 {
-	NamedClassAd	*cur;
-
 	// Check the mask
 	if (  ( mask & ( A_PUBLIC | A_UPDATE ) ) != ( A_PUBLIC | A_UPDATE )  ) {
 		return 0;
 	}
 
-	// Walk through the list
-	extra_ads.Rewind( );
-	while ( extra_ads.Next( cur ) ) {
-		ClassAd	*ad = cur->GetAd( );
-		if ( NULL != ad ) {
-			dprintf( D_FULLDEBUG,
-					 "Publishing ClassAd for '%s'\n", cur->GetName() );
-			MergeClassAds( resAd, ad, true );
-		}
-	}
-
-	// Done
-	return 0;
+	return extra_ads.Publish( resAd );
 }
 
 
@@ -1789,29 +1715,4 @@ IdDispenser::insert( int id )
 		EXCEPT( "IdDispenser::insert: %d is already free", id );
 	}
 	free_ids[id] = true;
-}
-
-// Named classAds
-NamedClassAd::NamedClassAd( const char *name, ClassAd *ad )
-{
-	myName = strdup( name );
-	myClassAd = ad;
-}
-
-// Destructor
-NamedClassAd::~NamedClassAd( )
-{
-	free( myName );
-	delete myClassAd;
-}
-
-// Replace existing ad
-void
-NamedClassAd::ReplaceAd( ClassAd *newAd )
-{
-	if ( NULL != myClassAd ) {
-		delete myClassAd;
-		myClassAd = NULL;
-	}
-	myClassAd = newAd;
 }

@@ -20,43 +20,27 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _CONDOR_CRON_H
-#define _CONDOR_CRON_H
+#ifndef _CONDOR_CRONJOB_CLASSAD_H
+#define _CONDOR_CRONJOB_CLASSAD_H
 
-#include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "simplelist.h"
 #include "condor_cronjob.h"
 
-// Pre-define the cronjob
-//class CronJobBase;
-
-// Define a simple class to run child tasks periodically.
-class CondorCron : public Service
+// Define a "ClassAd" 'Cron' job
+class ClassAdCronJob : public CronJobBase
 {
   public:
-	CondorCron( );
-	~CondorCron( );
-
-	// Methods to manipulate the job list
-	int Reconfig( void );
-	int DeleteAll( void );
-	int KillAll( bool force );
-	int NumAliveJobs( void );
-	int AddJob( 
-		const char *	jobName,
-		CronJobBase	*job
-		);
-	int DeleteJob( 
-		const char *	jobName 
-		);
-	CronJobBase *FindJob( const char *name );
-	void ClearAllMarks( void );
-	void DeleteUnmarked( void );
+	ClassAdCronJob( const char *mgrName, const char *jobName );
+	virtual ~ClassAdCronJob( );
+	int Initialize( void );
 
   private:
-	SimpleList<CronJobBase *>	JobList;
+	virtual int ProcessOutput( const char *line );
+	virtual int Publish( const char *name, ClassAd *ad ) = 0;
 
+	ClassAd		*OutputAd;
+	int			OutputAdCount;
+
+	MyString	EnvStr;			// My environment string
 };
 
-#endif /* _CONDOR_CRON_H */
+#endif /* _CONDOR_CRONJOB_CLASSAD_H */

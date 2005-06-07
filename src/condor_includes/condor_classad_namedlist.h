@@ -20,43 +20,42 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _CONDOR_CRON_H
-#define _CONDOR_CRON_H
+#ifndef CONDOR_CLASSAD_NAMEDLIST_H
+#define CONDOR_CLASSAD_NAMEDLIST_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_classad.h"
 #include "simplelist.h"
-#include "condor_cronjob.h"
 
-// Pre-define the cronjob
-//class CronJobBase;
-
-// Define a simple class to run child tasks periodically.
-class CondorCron : public Service
+// A name / ClassAd pair to manage together
+class NamedClassAd
 {
   public:
-	CondorCron( );
-	~CondorCron( );
-
-	// Methods to manipulate the job list
-	int Reconfig( void );
-	int DeleteAll( void );
-	int KillAll( bool force );
-	int NumAliveJobs( void );
-	int AddJob( 
-		const char *	jobName,
-		CronJobBase	*job
-		);
-	int DeleteJob( 
-		const char *	jobName 
-		);
-	CronJobBase *FindJob( const char *name );
-	void ClearAllMarks( void );
-	void DeleteUnmarked( void );
+	NamedClassAd( const char *name, ClassAd *ad = NULL );
+	~NamedClassAd( void );
+	char *GetName( void ) { return myName; };
+	ClassAd *GetAd( void ) { return myClassAd; };
+	void ReplaceAd( ClassAd *newAd );
 
   private:
-	SimpleList<CronJobBase *>	JobList;
+	char	*myName;
+	ClassAd	*myClassAd;
+};
+
+class NamedClassAdList
+{
+  public:
+	NamedClassAdList( void );
+	~NamedClassAdList( void );
+
+	int Register( const char *name );
+	int	Replace( const char *name, ClassAd *ad );
+	int	Delete( const char *name );
+	int	Publish( ClassAd *ad );
+
+  private:
+	SimpleList<NamedClassAd*>		ads;
 
 };
 
-#endif /* _CONDOR_CRON_H */
+#endif
