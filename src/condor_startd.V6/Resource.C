@@ -1156,6 +1156,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					dprintf( D_ALWAYS, "Failed to generate MDS file '%s'\n",
 							 fname );
 				}
+				free(fname);
 			}
 		}
 		free(tmp);
