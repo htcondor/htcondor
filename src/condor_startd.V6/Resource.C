@@ -1279,9 +1279,16 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		// Put in max job retirement time expression
 	ptr = param(ATTR_MAX_JOB_RETIREMENT_TIME);
-	if(!ptr || !*ptr) ptr = "0";
+	if(!ptr) {
+		ptr = strdup("0");
+	} else if ( !*ptr ) {
+		free(ptr);
+		ptr = strdup("0");
+	}
 	my_line.sprintf("%s=%s",ATTR_MAX_JOB_RETIREMENT_TIME,ptr);
 	cap->Insert(my_line.Value());
+
+	free(ptr);
 
 		// Update info from the current Claim object, if it exists.
 	if( r_cur ) {
