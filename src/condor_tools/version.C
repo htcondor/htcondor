@@ -30,11 +30,24 @@
 #include "condor_distribution.h"
 
 void
-usage(char name[])
+usage( char name[], int rval )
 {
-	fprintf(stderr, "Usage: %s [-syscall] [-arch] -[opsys]\n", name);
-	exit(1);
+	fprintf( stderr, "Usage: %s [options]\n", name );
+    fprintf( stderr, "   If no options are specified, print the "
+			 "version and platform strings\n   where the tool was built." );
+    fprintf( stderr, "  Valid options are:\n" );
+    fprintf( stderr, "   -help\t(this message)\n" );
+    fprintf( stderr, 
+			 "   -arch\t(print the ARCH string)\n" );
+    fprintf( stderr, 
+			 "   -opsys\t(print the OPSYS string)\n" );
+    fprintf( stderr, "   -syscall\t(get info from the libcondorsyscall.a "
+			 "this Condor pool is\n        \t configured to use, not the "
+			 "values where the tool was built)\n" );
+
+	exit( rval );
 }
+
 
 int
 main(int argc, char *argv[])
@@ -42,42 +55,84 @@ main(int argc, char *argv[])
 
 	myDistro->Init( argc, argv );
 	CondorVersionInfo *version;
-	if (argc < 2) {
-		printf("%s\n%s\n", CondorVersion(), CondorPlatform());
-		exit(0);
+
+	bool use_syscall_lib = false;
+	bool print_arch = false;
+	bool print_opsys = false;
+	bool opsys_first = false;		// stupid flag for maintaining the
+									// order we saw the args in...
+
+	for(int i = 1; i < argc; i++ ) {
+		if( argv[i][0] != '-' ) {
+			fprintf( stderr, "ERROR: invalid argument: '%s'\n", argv[i] );
+			usage( argv[0], 1 );
+		}
+		switch( argv[i][1] ) {
+		case 's':
+			use_syscall_lib = true;
+			break;
+		case 'a':
+			print_arch = true;
+			break;
+		case 'o':
+			print_opsys = true;
+			if( ! print_arch ) {
+				opsys_first = true;
+			}
+			break;
+		case 'h':
+			usage( argv[0], 0 );
+			break;
+		default:
+			fprintf( stderr, "ERROR: unrecognized argument: '%s'\n", argv[i] );
+			usage( argv[0], 1 );
+		}
 	}
 
-	version = new CondorVersionInfo;
-	for(int i = 1; i < argc; i++ ) {
-
-		if (argv[i][0] == '-' && argv[i][1] == 's') {
-			char *path, *fullpath, *vername, *platform;
-			config();
-			path = param("LIB");
-			if(path != NULL) {
-				fullpath = (char *)malloc(strlen(path) + 24);
-				strcpy(fullpath, path);
-				strcat(fullpath, "/libcondorsyscall.a");
+	char *path, *fullpath, *vername, *platform;
+	if( use_syscall_lib ) {
+		config();
+		path = param( "LIB" );
+		if( path == NULL ) {
+			fprintf( stderr, "ERROR: -syscall_lib specified but 'LIB' not "
+					 "defined in configuration!\n" );
+			usage( argv[0], 1 );
+		}
+		fullpath = (char *)malloc(strlen(path) + 24);
+		strcpy(fullpath, path);
+		strcat(fullpath, "/libcondorsyscall.a");
 				
-				vername = NULL;
-				vername = version->get_version_from_file(fullpath, vername);
-				platform = NULL;
-				platform = version->get_platform_from_file(fullpath, platform);
+		vername = NULL;
+		vername = version->get_version_from_file(fullpath, vername);
+		platform = NULL;
+		platform = version->get_platform_from_file(fullpath, platform);
 
-				delete version;
-				version = new CondorVersionInfo(vername, NULL, platform);
-				free(path);
-				free(fullpath);
-			}
+		version = new CondorVersionInfo(vername, NULL, platform);
+		free(path);
+		free(fullpath);
+	} else {
+		version = new CondorVersionInfo;
+	}
 
-		}
-		if (argv[i][0] == '-' && argv[i][1] == 'a') {
-			printf("%s\n", version->getArchVer() );
-		}
+	if( opsys_first ) {
+		assert( print_opsys );
+		printf("%s\n", version->getOpSysVer() );
+	}
+	if( print_arch ) {
+		printf("%s\n", version->getArchVer() );
+	}
+	if( ! opsys_first && print_opsys ) {
+		printf("%s\n", version->getOpSysVer() );
+	}
 
-		if (argv[i][0] == '-' && argv[i][1] == 'o') {
-			printf("%s\n", version->getOpSysVer() );
-		}
+	if( print_arch || print_opsys ) {
+		return 0;
+	}
+
+	if( use_syscall_lib ) {
+		printf( "%s\n%s\n", vername, platform );
+	} else { 
+		printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 	}
 	return 0;
 }
