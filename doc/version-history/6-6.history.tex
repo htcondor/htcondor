@@ -126,6 +126,9 @@ reintroduced by mistake in all public releases.
   (there were a number of problems and inconsistencies) and added a
   \Opt{-help} option and usage message.
 
+\item Fixed some memory leaks in the \Condor{startd} that would be
+induced by calling \Condor{reconfig} or \Condor{status} \Opt{-d}.
+
 \end{itemize}
 
 \noindent Known Bugs:
