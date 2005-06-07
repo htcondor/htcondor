@@ -1158,6 +1158,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 				}
 			}
 		}
+		free(tmp);
 	}
 
 }

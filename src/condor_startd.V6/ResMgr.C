@@ -391,6 +391,7 @@ ResMgr::initTypes( bool except )
 					 "Can't define %s in the config file, ignoring\n",
 					 buf ); 
 		}
+		free(tmp);
 	}
 
 	if( ! type_strings[0] ) {
@@ -437,6 +438,7 @@ ResMgr::countTypes( int** array_ptr, bool except )
 					 "Can't define %s in the config file, ignoring\n",
 					 buf ); 
 		}
+		free(tmp);
 	}
 
 	for( i=1; i<max_types; i++ ) {
