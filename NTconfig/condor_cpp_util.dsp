@@ -159,6 +159,10 @@ SOURCE="..\src\condor_c++_util\classad_merge.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\classad_namedlist.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\command_strings.C"
 # End Source File
 # Begin Source File
@@ -294,6 +298,10 @@ SOURCE="..\src\condor_c++_util\cron.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\cronjob.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\cronjob_classad.C"
 # End Source File
 # Begin Source File
 

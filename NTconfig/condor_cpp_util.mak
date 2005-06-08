@@ -50,6 +50,7 @@ CLEAN :
 	-@erase "$(INTDIR)\classad_helpers.obj"
 	-@erase "$(INTDIR)\classad_log.obj"
 	-@erase "$(INTDIR)\classad_merge.obj"
+	-@erase "$(INTDIR)\classad_namedlist.obj"
 	-@erase "$(INTDIR)\command_strings.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
@@ -67,6 +68,7 @@ CLEAN :
 	-@erase "$(INTDIR)\config.obj"
 	-@erase "$(INTDIR)\cron.obj"
 	-@erase "$(INTDIR)\cronjob.obj"
+	-@erase "$(INTDIR)\cronjob_classad.obj"
 	-@erase "$(INTDIR)\cronmgr.obj"
 	-@erase "$(INTDIR)\daemon.obj"
 	-@erase "$(INTDIR)\daemon_list.obj"
@@ -164,6 +166,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_config.obj" \
 	"$(INTDIR)\condor_environ.obj" \
 	"$(INTDIR)\condor_event.obj" \
+	"$(INTDIR)\condor_id.obj" \
 	"$(INTDIR)\condor_md.obj" \
 	"$(INTDIR)\condor_parameters.obj" \
 	"$(INTDIR)\condor_q.obj" \
@@ -239,7 +242,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\condor_id.obj"
+	"$(INTDIR)\cronjob_classad.obj" \
+	"$(INTDIR)\classad_namedlist.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -268,6 +272,7 @@ CLEAN :
 	-@erase "$(INTDIR)\classad_helpers.obj"
 	-@erase "$(INTDIR)\classad_log.obj"
 	-@erase "$(INTDIR)\classad_merge.obj"
+	-@erase "$(INTDIR)\classad_namedlist.obj"
 	-@erase "$(INTDIR)\command_strings.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
@@ -285,6 +290,7 @@ CLEAN :
 	-@erase "$(INTDIR)\config.obj"
 	-@erase "$(INTDIR)\cron.obj"
 	-@erase "$(INTDIR)\cronjob.obj"
+	-@erase "$(INTDIR)\cronjob_classad.obj"
 	-@erase "$(INTDIR)\cronmgr.obj"
 	-@erase "$(INTDIR)\daemon.obj"
 	-@erase "$(INTDIR)\daemon_list.obj"
@@ -381,6 +387,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_config.obj" \
 	"$(INTDIR)\condor_environ.obj" \
 	"$(INTDIR)\condor_event.obj" \
+	"$(INTDIR)\condor_id.obj" \
 	"$(INTDIR)\condor_md.obj" \
 	"$(INTDIR)\condor_parameters.obj" \
 	"$(INTDIR)\condor_q.obj" \
@@ -456,7 +463,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\condor_id.obj"
+	"$(INTDIR)\cronjob_classad.obj" \
+	"$(INTDIR)\classad_namedlist.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -563,6 +571,12 @@ SOURCE="..\src\condor_c++_util\classad_log.C"
 SOURCE="..\src\condor_c++_util\classad_merge.C"
 
 "$(INTDIR)\classad_merge.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\classad_namedlist.C"
+
+"$(INTDIR)\classad_namedlist.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -707,6 +721,12 @@ SOURCE="..\src\condor_c++_util\cron.C"
 SOURCE="..\src\condor_c++_util\cronjob.C"
 
 "$(INTDIR)\cronjob.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\cronjob_classad.C"
+
+"$(INTDIR)\cronjob_classad.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
