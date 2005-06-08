@@ -113,6 +113,12 @@ HashTable<Index,Value>::HashTable( int tableSz,
 {
   int i,j,k;
 
+
+  // You MUST specify a hash function.
+  // Try hashFuncInt (int), hashFuncUInt (uint), hashFuncJobIdStr (string of "cluster.proc"),
+  // or MyStringHash (MyString)
+  ASSERT(hashfcn != 0);
+
   // Do not allow tableSize=0 since that is likely to
   // result in a divide by zero in many hash functions.
   // If the user specifies an illegal table size, use
