@@ -158,6 +158,7 @@ main_shutdown_fast()
 	dedicated_scheduler.shutdown_fast();
 	GridUniverseLogic::shutdown_fast();
 	scheduler.shutdown_fast();
+
 	return 0;
 }
 
@@ -168,6 +169,7 @@ main_shutdown_graceful()
 	dedicated_scheduler.shutdown_graceful();
 	GridUniverseLogic::shutdown_graceful();
 	scheduler.shutdown_graceful();
+
 	return 0;
 }
 

@@ -70,6 +70,8 @@
 #include "util_lib_proto.h"
 #include "status_string.h"
 #include "condor_id.h"
+#include "condor_classad_namedlist.h"
+#include "schedd_cronmgr.h"
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -329,6 +331,8 @@ Scheduler::Scheduler() :
 	RejectedClusters.setFiller(0);
 	RejectedClusters.resize(MAX_REJECTED_CLUSTERS);
 	_gridlogic = NULL;
+
+	CronMgr = NULL;
 }
 
 
@@ -341,6 +345,11 @@ Scheduler::~Scheduler()
 		free(MyShadowSockName);
 	if( LocalUnivExecuteDir ) {
 		free( LocalUnivExecuteDir );
+	}
+
+	if ( CronMgr ) {
+		delete CronMgr;
+		CronMgr = NULL;
 	}
 
 		// we used to cancel and delete the shadowCommand*socks here,
@@ -644,6 +653,7 @@ Scheduler::count_jobs()
 	ad->Insert (tmp);
 
     daemonCore->monitor_data.ExportData(ad);
+	extra_ads.Publish( ad );
     
 	if ( param_boolean("ENABLE_SOAP", false) ) {
 			// If we can support the SOAP API let's let the world know!
@@ -7286,7 +7296,7 @@ Scheduler::delete_shadow_rec(int pid)
 		delete rec;
 		numShadows -= 1;
 		if( ExitWhenDone && numShadows == 0 ) {
-			schedd_exit();
+			return;
 		}
 		display_shadow_recs();
 		return;
@@ -8885,6 +8895,12 @@ Scheduler::Init()
 		// initialize our ShadowMgr, too.
 	shadow_mgr.init();
 
+		// Startup the cron logic (only do it once, though)
+	if ( ! CronMgr ) {
+		CronMgr = new ScheddCronMgr( );
+		CronMgr->Initialize( );
+	}
+
 	first_time_in_init = false;
 }
 
@@ -9090,16 +9106,27 @@ Scheduler::reconfig()
 
 // This function is called by a timer when we are shutting down
 void
-Scheduler::preempt_one_job()
+Scheduler::attempt_shutdown()
 {
-	preempt(1);
+	if ( numShadows ) {
+		preempt(1);
+		return;
+	}
+
+	if ( CronMgr && ( ! CronMgr->ShutdownOk() ) ) {
+		return;
+	}
+
+	schedd_exit( );
 }
 
 // Perform graceful shutdown.
 void
 Scheduler::shutdown_graceful()
 {
-	if( numShadows == 0 ) {
+	// If there's nothing to do, shutdown
+	if(  ( numShadows == 0 ) &&
+		 ( CronMgr && ( CronMgr->ShutdownOk() ) )  ) {
 		schedd_exit();
 	}
 
@@ -9117,8 +9144,14 @@ Scheduler::shutdown_graceful()
 	MaxJobsRunning = 0;
 	ExitWhenDone = TRUE;
 	daemonCore->Register_Timer( 0, MAX(JobStartDelay,1), 
-					(TimerHandlercpp)&Scheduler::preempt_one_job,
-					"preempt_one_job()", this );
+					(TimerHandlercpp)&Scheduler::attempt_shutdown,
+					"attempt_shutdown()", this );
+
+	// Shut down the cron logic
+	if( CronMgr ) {
+		CronMgr->Shutdown( false );
+	}
+
 }
 
 // Perform fast shutdown.
@@ -9136,6 +9169,11 @@ Scheduler::shutdown_fast()
 		}
 		daemonCore->Send_Signal( rec->pid, sig );
 		rec->preempted = TRUE;
+	}
+
+	// Shut down the cron logic
+	if( CronMgr ) {
+		CronMgr->Shutdown( true );
 	}
 
 		// Since this is just sending a bunch of UDP updates, we can
@@ -9158,6 +9196,14 @@ Scheduler::shutdown_fast()
 void
 Scheduler::schedd_exit()
 {
+		// Shut down the cron logic
+	if( CronMgr ) {
+		dprintf( D_ALWAYS, "Deleting CronMgr\n" );
+		CronMgr->Shutdown( true );
+		delete CronMgr;
+		CronMgr = NULL;
+	}
+
 		// write a clean job queue on graceful shutdown so we can
 		// quickly recover on restart
 	CleanJobQueue();
@@ -10397,4 +10443,29 @@ Scheduler::enqueueFinishedJob( int cluster, int proc )
 	}
 	dprintf( D_FULLDEBUG, "Job %d.%d is finished\n", cluster, proc );
 	return job_is_finished_queue.enqueue( id );
+}
+
+// Methods to manipulate the supplemental ClassAd list
+int
+Scheduler::adlist_register( const char *name )
+{
+	return extra_ads.Register( name );
+}
+
+int
+Scheduler::adlist_replace( const char *name, ClassAd *newAd )
+{
+	return extra_ads.Replace( name, newAd );
+}
+
+int
+Scheduler::adlist_delete( const char *name )
+{
+	return extra_ads.Delete( name );
+}
+
+int
+Scheduler::adlist_publish( ClassAd *resAd )
+{
+	return extra_ads.Publish( resAd );
 }

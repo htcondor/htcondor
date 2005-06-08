@@ -49,6 +49,8 @@
 #include "shadow_mgr.h"
 #include "enum_utils.h"
 #include "self_draining_queue.h"
+#include "schedd_cronmgr.h"
+#include "condor_classad_namedlist.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 extern  int         STARTD_CONTACT_TIMEOUT;
@@ -296,6 +298,11 @@ class Scheduler : public Service
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			HadException( match_rec* );
 
+		// Used to manipulate the "extra ads" (read:Hawkeye)
+	int adlist_register( const char *name );
+	int adlist_replace( const char *name, ClassAd *newAd );
+	int adlist_delete( const char *name );
+	int adlist_publish( ClassAd *resAd );
 
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
@@ -327,7 +334,11 @@ private:
 	char*			MyShadowSockName;
 	ReliSock*		shadowCommandrsock;
 	SafeSock*		shadowCommandssock;
-	
+
+	// The "Cron" manager (Hawkeye) & it's classads
+	ScheddCronMgr	*CronMgr;
+	NamedClassAdList extra_ads;
+
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
 	int				SchedDMinInterval;
@@ -417,7 +428,7 @@ private:
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, shadow_rec * srec);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
-	void			preempt_one_job();
+	void			attempt_shutdown();
 	static void		refuse( Stream* s );
 	void			tryNextJob( void );
 	int				jobThrottle( void );

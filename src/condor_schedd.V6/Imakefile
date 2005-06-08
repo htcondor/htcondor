@@ -13,6 +13,7 @@ QMGMT_LIB_OBJ = qmgmt_send_stubs.o qmgr_lib_support.o qmgmt_common.o \
 soapobjs(schedd)
 
 OBJ = schedd.o schedd_main.o $(QMGMT_OBJ) schedd_instantiate.o \
+	schedd_cronmgr.o schedd_cronjob.o \
 	dedicated_scheduler.o grid_universe.o shadow_mgr.o autocluster.o \
 	loose_file_transfer.o schedd_api.o $(SOAP_OBJS)
 
