@@ -41,6 +41,7 @@
 #include "classad_command_util.h"
 #include "condor_random_num.h"
 #include "../condor_sysapi/sysapi.h"
+#include "build_job_env.h"
 
 #include "perm.h"
 #include "filename_tools.h"
@@ -838,6 +839,18 @@ CStarter::PublishToEnv( Env* proc_env )
 		uproc->PublishToEnv( proc_env );
 	}
 
+	ClassAd* jobAd = jic->jobClassAd();
+	if( jobAd ) {
+		StringMap classenv = build_job_env(*jobAd);
+		classenv.startIterations();
+		MyString key,value;
+		while(classenv.iterate(key,value)) {
+			proc_env->Put(key.Value(),value.Value());
+		}
+	} else {
+		dprintf(D_ALWAYS, "Unable to find job ad for job.  Environment may be incorrect\n");
+	}
+
 		// now, stuff the starter knows about, instead of individual
 		// procs under its control
 	MyString base;
@@ -859,6 +872,8 @@ CStarter::PublishToEnv( Env* proc_env )
 	env_name = base.GetCStr();
 	env_name += "SCRATCH_DIR";
 	proc_env->Put( env_name.GetCStr(), GetWorkingDir() );
+
+	
 
 		// port regulation stuff
 	char* low = param( "LOWPORT" );
