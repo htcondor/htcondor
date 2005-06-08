@@ -40,7 +40,7 @@ This should eventually include:
 This might, but may not eventually include:
 - Contents of the ATTR_JOB_ENVIRONMENT
 
-Typical use might look something like this (taken from condor_starter.V6.1/user_proc.C)
+Typical use might look something like this (taken from condor_starter.V6.1/starter.C)
 		Env * proc_env; // Comes from outside
 		StringMap classenv = build_job_env(JobAd);
 		sm.startIterations();
