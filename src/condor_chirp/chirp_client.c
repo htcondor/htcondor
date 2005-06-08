@@ -225,6 +225,8 @@ chirp_client_connect( const char *host, int port )
 		return 0;
 	}
 
+	setbuf(c->stream, NULL);
+
 	return c;
 }
 
