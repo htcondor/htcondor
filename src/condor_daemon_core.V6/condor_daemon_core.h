@@ -435,7 +435,7 @@ class DaemonCore : public Service
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
         @param perm             Not_Yet_Documented
-        @return Not_Yet_Documented
+        @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*           iosock,
                          char *            iosock_descrip,
@@ -451,7 +451,7 @@ class DaemonCore : public Service
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
         @param perm             Not_Yet_Documented
-        @return Not_Yet_Documented
+        @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*              iosock,
                          char *               iosock_descrip,
@@ -463,7 +463,7 @@ class DaemonCore : public Service
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
         @param descrip          Not_Yet_Documented
-        @return Not_Yet_Documented
+        @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Command_Socket (Stream*      iosock,
                                  char *       descrip = NULL ) {
