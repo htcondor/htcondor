@@ -822,6 +822,7 @@ CStarter::publishPostScriptUpdateAd( ClassAd* ad )
 void
 CStarter::PublishToEnv( Env* proc_env )
 {
+	ASSERT(proc_env);
 	if( pre_script ) {
 		pre_script->PublishToEnv( proc_env );
 	}
@@ -839,13 +840,19 @@ CStarter::PublishToEnv( Env* proc_env )
 		uproc->PublishToEnv( proc_env );
 	}
 
+	ASSERT(jic);
 	ClassAd* jobAd = jic->jobClassAd();
 	if( jobAd ) {
 		StringMap classenv = build_job_env(*jobAd);
 		classenv.startIterations();
 		MyString key,value;
 		while(classenv.iterate(key,value)) {
-			proc_env->Put(key.Value(),value.Value());
+			MyString dummy;
+			if( ! proc_env->getenv(key,dummy) ) {
+				// Only set the variable if it wasn't already
+				// set (let user settings override).
+				proc_env->Put(key.Value(),value.Value());
+			}
 		}
 	} else {
 		dprintf(D_ALWAYS, "Unable to find job ad for job.  Environment may be incorrect\n");
