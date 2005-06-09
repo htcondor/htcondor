@@ -58,7 +58,7 @@ static char* CondorVersionString = "$CondorVersion: 6.6.10 " __DATE__ " $";
 */
 
 #if defined(WIN32)
-#define PLATFORM INTEL-WINNT40
+#define PLATFORM INTEL-WINNT50
 #endif
 
 #define xstr(s) str(s)
