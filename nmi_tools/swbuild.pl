@@ -2,7 +2,7 @@
 
 # This script initiates an NMI build of a given software product from
 # a tar.gz tarball. It is assumed that the build procedure is:
-# untar + configure + make. Will be generalized as needed but
+# gunzip + untar + configure + make. Will be generalized as needed but
 # I don't want to overengineer the script too early.   --Tolya
 
 use warnings;
@@ -31,13 +31,11 @@ if (defined $main::opt_help) {
 die $usage unless @ARGV == 1;
 
 my $tarball_path = File::Spec->rel2abs($ARGV[0]);
-print "DEBUG: tarball_path = $tarball_path\n";
 
 -f $tarball_path or die "No such file: $tarball_path";
 -r $tarball_path or die "File $tarball_path is not readable.";
 
 my $tarball = basename($tarball_path);
-print "DEBUG: tarball = $tarball\n";
 
 die "$tarball must really be a tar.gz file!" unless $tarball =~ m/^(.+)\.tar\.gz$/;
 my $swname = $1;
@@ -49,8 +47,9 @@ my $password = "nmi-nwo-nmi";
 my $DB_CONNECT_STR = "DBI:mysql:database=$database;host=localhost";
 my $RUN_TABLE = "Run";
 
+# Note: windows not included.
 my @all_platforms = qw(x86_rh_9 x86_rh_8.0 x86_rh_7.2 ia64_sles_8 sun4u_sol_5.9 sun4u_sol_5.8
-		       ppc_aix_5.2 x86_winnt_5.1 hppa_hpux_B.10.20 ppc_macosx);
+		       ppc_aix_5.2 hppa_hpux_B.10.20 ppc_macosx);
 my $platforms = (defined $main::opt_platforms)? $main::opt_platforms : join ',', @all_platforms;
 my $whoami = `whoami`;
 chomp $whoami;
@@ -124,7 +123,8 @@ recursive = true
 END
 make_file($glue_input_file, $str);
 
-# Create an NMI submit file.
+# Create an NMI submit file. NOTE: for now hard-coded the stupid per-platform
+# prereq requirements but the impression is a bit ugly.
 $str = << "END";
 description = $swname build
 project = $swname
@@ -143,6 +143,13 @@ remote_task = $remote_task
 remote_post = $remote_post
 
 platforms = $platforms
+
+prereqs_sun4u_sol_5.9 = perl-5.8.5, tar-1.14, make-3.80, gcc-2.95.3
+prereqs_sun4u_sol_5.8 = perl-5.8.5, tar-1.14, make-3.80, gcc-2.95.3
+prereqs_ppc_aix_5.2 = perl-5.8.5, tar-1.14, make-3.80, vac-6, vacpp-6
+prereqs_alpha_osf_V5.1 = perl-5.8.5, tar-1.14, make-3.80, gcc-2.95.3
+prereqs_irix_6.5 = perl-5.8.5, tar-1.14, make-3.80, usr_freeware-1.0
+prereqs_hppa_hpux_B.10.20 = everything-1.0.0
 
 run_type = build
 END
