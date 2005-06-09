@@ -278,14 +278,14 @@ writeEvent (ULogEvent *event)
 
 	if ( fflush(fp) != 0 ) {
 		dprintf( D_ALWAYS, "fflush() failed in UserLog::writeEvent - "
-				"errno %d (%s)", errno, strerror(errno) );
+				"errno %d (%s)\n", errno, strerror(errno) );
 		// Note:  should we set success to false here?
 	}
 	// Now that we have flushed the stdio stream, sync to disk
 	// *before* we release our write lock!
 	if ( fsync( fileno( fp ) ) != 0 ) {
 		dprintf( D_ALWAYS, "fsync() failed in UserLog::writeEvent - "
-				"errno %d (%s)", errno, strerror(errno) );
+				"errno %d (%s)\n", errno, strerror(errno) );
 		// Note:  should we set success to false here?
 	}
 	lock->release ();
