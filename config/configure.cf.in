@@ -48,6 +48,7 @@ GCC_LIBC = @gcc_libc@
 CRT_BEGIN = @crt_begin@
 GCC_STATIC_LD_FLAG = @gcc_static_ld_flag@
 GCC_STATIC_LIBS = $(GCC_STATIC_LD_FLAG) -lstdc++ -lgcc
+GCC_RDYNAMIC_FLAG = @gcc_rdynamic_flag@
 
 /* Used for DRMAA */
 #define HAS_PTHREADS @has_pthreads@

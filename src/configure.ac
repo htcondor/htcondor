@@ -764,7 +764,24 @@ else
     AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
   fi
 fi
-  
+
+#########
+# determine of gcc has -rdynamic
+#########
+AC_MSG_CHECKING([if gcc supports -rdynamic])
+
+echo "int main(void ) { return 0; }" > rdynamic_test.c
+_test_output=`gcc -rdynamic rdynamic_test.c -o rdynamic_test 2>&1`
+_test_status=$?
+if test $_test_status -eq 0 && test "x$_test_output" = "x"; then 
+  gcc_rdynamic_flag="-rdynamic"
+  AC_MSG_RESULT([yes])
+else
+  gcc_rdynamic_flag=""
+  AC_MSG_RESULT([no])
+fi
+rm -f rdynamic_test.c rdynamic_test
+AC_SUBST([gcc_rdynamic_flag],[$gcc_rdynamic_flag])
 
 #########################################
 # vendor compilers (for the test suites)

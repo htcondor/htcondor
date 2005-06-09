@@ -473,9 +473,16 @@ SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
-ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
-TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
-PURIFY_LDFLAGS = -lm $(LDFLAGS) $(PURIFY_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
+/* common ld flags which should be first in the list */
+COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) -lm $(LDFLAGS)
+
+/* common ld flags which should be last in the list */
+COM_LDFLAGS_L = $(SITE_LDFLAGS)
+
+/* The various lists of needed ldflags for differing contexts */
+ALL_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
+TEST_LDFLAGS = $(COM_LDFLAGS_F) $(TEST_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
+PURIFY_LDFLAGS = $(COM_LDFLAGS_F) $(PURIFY_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
 
 STD_LIBS = \
   $(CUTIL_LIB) \
