@@ -30,6 +30,9 @@
 typedef HashTable<MyString,MyString> StringMap;
 /** Given a job's classad, return environment variables job should get.
 
+Note that anything set should be overridable by the user (notably using the
+"env=" option in the submit file).
+
 This includes:
 - X509_USER_PROXY
 
