@@ -129,7 +129,7 @@ all: h h_all externals condor_includes makefiles Directories Libraries \
 release:: all
 stripped:: all
 static:: all
-libs:: h h_all condor_includes makefiles Directories Libraries
+libs:: h h_all externals condor_includes makefiles Directories Libraries
 
 ALL_TEST_SUITE = $(TEST_SUITE_C) $(TEST_SUITE_F) $(TEST_SUITE_JAVA) $(TEST_SUITE_BASE)
 
