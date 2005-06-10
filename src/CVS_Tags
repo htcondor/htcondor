@@ -1,3 +1,9 @@
+06/10/05 V6_7_8
+   The official 6.7.8 release tag, off of the V6_7_8-branch of
+   V6_7_ALL and the trunk of V6_7_8_EXT.  Created from
+   BUILD-V6_7_8-branch-2005-6-9.  Version string in this release:
+   $CondorVersion: 6.7.8 Jun  9 2005 $
+
 06/02/05 V6_6-merge-41
    The state of the V6_6-branch for a merge into V6_7-branch. This includes
    a win32 firewall fix, preventing the schedd from panicing when
