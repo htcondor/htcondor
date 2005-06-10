@@ -25,7 +25,7 @@
 #include "condor_classad.h"
 #include "condor_string.h"
 #include "condor_attributes.h"
-#include "condor_auth_x509.h"
+#include "sslutils.h"
 #include "basename.h"
 #include "directory.h"
 #include "build_job_env.h"
@@ -49,7 +49,7 @@ StringMap build_job_env(const ClassAd & ad) {
 			delete [] newpath; // dircat returnned newed memory.
 
 		}
-		results.insert(STR_GSI_USER_PROXY, X509Path.Value());
+		results.insert(X509_USER_PROXY, X509Path.Value());
 	}
 
 	return results;
