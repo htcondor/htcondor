@@ -62,6 +62,11 @@ original DAG, rather than with only the ``remaining'' number of
 retries based on the failed run.  The latter behavior can be restored
 by setting \Macro{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE} to false.
 
+\item Added ``Hawkeye'' capabilities to \Condor{schedd}.  It's
+configured identically to that of \Condor{startd}, but using 
+``SCHEDD'' in place of ``STARTD'', in particular for the
+``SCHEDD\_CRON\_NAME'' macro.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
