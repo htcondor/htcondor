@@ -11,7 +11,14 @@ sub main {
 	$bin_path =~ s|/libexec/glite/*|/bin|;
 	my $sbin_path = $bin_path;
 	$sbin_path =~ s|/bin/*|/sbin|;
-	$ENV{PATH} = "$bin_path:$sbin_path:$ENV{PATH}";
+
+	my $globus_path = $ENV{GLOBUS_LOCATION};
+	if ( $globus_path eq "" ) {
+		$globus_path = "/opt/globus";
+	}
+	-r "$globus_path/bin/openssl" || die("Can't find openssl");
+	
+	$ENV{PATH} = "$bin_path:$sbin_path:$globus_path/bin:$ENV{PATH}";
 
 	print "Starting Condor-C Launcher\n";
 	if ( check( "condorc-launcher" ) == 0 ) {
