@@ -31,7 +31,6 @@ my $default_platforms =
     "alpha_osf_V5.1, " .
     "hppa_hpux_B.10.20, " .
     "ia64_sles_8, " .
-    "irix_6.5, " .
     "ppc_aix_5.2, " .
     "ppc_macosx, " .
     "sun4u_sol_5.8, " .
