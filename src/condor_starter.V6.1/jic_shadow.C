@@ -1273,6 +1273,12 @@ JICShadow::sameFSDomain( void )
 	return same_domain;
 }
 
+bool
+JICShadow::usingFileTransfer( void )
+{
+	return wants_file_transfer;
+}
+
 
 bool
 JICShadow::publishUpdateAd( ClassAd* ad )

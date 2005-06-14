@@ -232,6 +232,16 @@ public:
 		/// Has user_priv been initialized yet?
 	bool userPrivInitialized( void ); 
 
+		/** Are we currently using file transfer? 
+		    Used elsewhere to determine if we need to potentially
+			rewrite some paths from submit machine paths to
+			execute directory paths.
+
+			The default implementation always returns false.
+			jic_shadow actually comes up with a plausible answer. 
+		*/
+	virtual bool usingFileTransfer( void );
+
 
 protected:
 

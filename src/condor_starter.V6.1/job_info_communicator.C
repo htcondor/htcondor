@@ -327,6 +327,12 @@ JobInfoCommunicator::userPrivInitialized( void )
 	return user_priv_is_initialized;
 }
 
+bool
+JobInfoCommunicator::usingFileTransfer( void )
+{
+	return false;
+}
+
 
 bool
 JobInfoCommunicator::initUserPrivNoOwner( void ) 

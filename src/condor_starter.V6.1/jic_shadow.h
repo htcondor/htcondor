@@ -348,6 +348,9 @@ private:
 		*/
 	bool sameFSDomain( void );
 
+		// Are we using file transfer.  Overridden from parent classes version.
+	bool usingFileTransfer( void );
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //

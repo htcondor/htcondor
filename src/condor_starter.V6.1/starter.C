@@ -843,7 +843,10 @@ CStarter::PublishToEnv( Env* proc_env )
 	ASSERT(jic);
 	ClassAd* jobAd = jic->jobClassAd();
 	if( jobAd ) {
-		StringMap classenv = build_job_env(*jobAd);
+		// Probing this (file transfer) ourselves is complicated.  The JIC
+		// already does it.  Steal his answer.
+		bool using_file_transfer = jic->usingFileTransfer();
+		StringMap classenv = build_job_env(*jobAd, using_file_transfer);
 		classenv.startIterations();
 		MyString key,value;
 		while(classenv.iterate(key,value)) {

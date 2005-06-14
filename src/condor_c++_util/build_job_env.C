@@ -21,6 +21,8 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "build_job_env.h"
+
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_string.h"
@@ -28,9 +30,10 @@
 #include "sslutils.h"
 #include "basename.h"
 #include "directory.h"
-#include "build_job_env.h"
+#include "basename.h"
 
-StringMap build_job_env(const ClassAd & ad) {
+StringMap build_job_env(const ClassAd & ad, bool using_file_transfer)
+{
 	StringMap results(1,MyStringHash,updateDuplicateKeys);// rejectDuplicateKeys?
 
 	MyString Iwd;
@@ -42,6 +45,14 @@ StringMap build_job_env(const ClassAd & ad) {
 
 	MyString X509Path;
 	if(ad.LookupString(ATTR_X509_USER_PROXY, X509Path)) {
+		if(using_file_transfer) {
+			// The X509 proxy was put into the IWD, effectively flattening
+			// any relative or absolute paths it might have.  So chomp it down.
+			// (Don't try to do this in one line; the old string might be deleted
+			// before the copy.)
+			MyString tmp = condor_basename(X509Path.Value());
+			X509Path = tmp; 
+		}
 		if( ! fullpath(X509Path.Value()) ) {
 			// It's not a full path, so glob on the IWD onto the front
 			char * newpath = dircat(Iwd.Value(), X509Path.Value());
@@ -55,13 +66,13 @@ StringMap build_job_env(const ClassAd & ad) {
 	return results;
 }
 
-int Insert(ClassAd & ad, const char * lhs, const char * rhs) {
+#if 0
+static int Insert(ClassAd & ad, const char * lhs, const char * rhs) {
 	MyString s;
 	s.sprintf("%s=\"%s\"",lhs,rhs);
 	return ad.Insert(s.Value());
 }
 
-#if 0
 int main() {
 	ClassAd ad;
 	Insert(ad,ATTR_JOB_IWD,"/path/to/iwd");
