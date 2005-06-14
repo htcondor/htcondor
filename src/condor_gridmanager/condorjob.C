@@ -891,7 +891,7 @@ int CondorJob::doEvaluateState()
 							 "(%d.%d) condor_job_remove() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
 					errorString = gahp->getErrorString();
-					gmState = GM_CLEAR_REQUEST;
+					gmState = GM_HOLD;
 					break;
 				}
 				SetRemoteJobId( NULL );
