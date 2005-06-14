@@ -110,6 +110,7 @@ class GT4Job : public BaseJob
 	int numRestartAttempts;
 	int numRestartAttemptsThisSubmit;
 	time_t jmProxyExpireTime;
+	time_t jmLifetime;
 	time_t outputWaitLastGrowth;
 	int outputWaitOutputSize;
 	int outputWaitErrorSize;

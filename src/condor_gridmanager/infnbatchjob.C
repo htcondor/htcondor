@@ -770,6 +770,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 //		ATTR_MIN_HOSTS,
 //		ATTR_JOB_PRIO,
 		ATTR_JOB_IWD,
+		ATTR_X509_USER_PROXY,
 		NULL };		// list must end with a NULL
 
 	submit_ad = new ClassAd;

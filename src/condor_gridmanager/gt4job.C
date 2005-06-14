@@ -54,7 +54,7 @@
 #define GM_CLEAR_REQUEST		13
 #define GM_HOLD					14
 #define GM_PROXY_EXPIRED		15
-#define GM_REFRESH_PROXY		16
+#define GM_EXTEND_LIFETIME		16
 #define GM_PROBE_JOBMANAGER		17
 #define GM_START				18
 #define GM_GENERATE_ID			19
@@ -78,7 +78,7 @@ static char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROXY_EXPIRED",
-	"GM_REFRESH_PROXY",
+	"GM_EXTEND_LIFETIME",
 	"GM_PROBE_JOBMANAGER",
 	"GM_START",
 	"GM_GENERATE_ID",
@@ -361,6 +361,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	numRestartAttempts = 0;
 	numRestartAttemptsThisSubmit = 0;
 	jmProxyExpireTime = 0;
+	jmLifetime = 0;
 	connect_failure_counter = 0;
 	outputWaitLastGrowth = 0;
 	// HACK!
@@ -865,6 +866,7 @@ int GT4Job::doEvaluateState()
 				numSubmitAttempts++;
 				jmProxyExpireTime = jobProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
+					jmLifetime = time(NULL) + 12*60*60;
 					callbackRegistered = true;
 					SetJobContact( job_contact );
 					free( job_contact );
@@ -922,6 +924,10 @@ int GT4Job::doEvaluateState()
 					WriteGT4SubmitFailedEventToUserLog( jobAd, gahp->getErrorString() );
 					gmState = GM_CANCEL;
 				} else {
+						// We don't want an old or zeroed lastProbeTime
+						// make us do a probe immediately after submitting
+						// the job, so set it to now
+					lastProbeTime = time(NULL);
 					gmState = GM_SUBMITTED;
 				}
 			}
@@ -941,16 +947,11 @@ int GT4Job::doEvaluateState()
 					reevaluate_state = true;
 					break;
 				}
-/* Don't worry about delegation for now
-				if ( jmProxyExpireTime < jobProxy->expiration_time ) {
-					gmState = GM_REFRESH_PROXY;
+				if ( jmLifetime < time(NULL) + 11*60*60 ) {
+					gmState = GM_EXTEND_LIFETIME;
 					break;
 				}
-*/
 				now = time(NULL);
-				if ( lastProbeTime < enteredCurrentGmState ) {
-					lastProbeTime = enteredCurrentGmState;
-				}
 				if ( probeNow ) {
 					lastProbeTime = 0;
 					probeNow = false;
@@ -966,13 +967,14 @@ int GT4Job::doEvaluateState()
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
 			} break;
-		case GM_REFRESH_PROXY: {
+		case GM_EXTEND_LIFETIME: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
 				CHECK_PROXY;
-				rc = gahp->gt4_gram_client_refresh_credentials(
-																jobContact );
+				time_t new_lifetime = 12*60*60;
+				rc = gahp->gt4_set_termination_time( jobContact,
+													 new_lifetime );
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -985,7 +987,7 @@ int GT4Job::doEvaluateState()
 					gmState = GM_CANCEL;
 					break;
 				}
-				jmProxyExpireTime = jobProxy->expiration_time;
+				jmLifetime = new_lifetime;
 				gmState = GM_SUBMITTED;
 			}
 			} break;

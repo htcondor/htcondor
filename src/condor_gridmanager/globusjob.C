@@ -1834,6 +1834,9 @@ int GlobusJob::doEvaluateState()
 					enteredCurrentGlobusState = time(NULL);
 					requestScheddUpdate( this );
 				}
+				// Do an active status call after the restart.
+				// This is part of a workaround for Globus bug 3411
+				probeNow = true;
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -3185,6 +3188,11 @@ bool GlobusJob::FailureNeedsCommit( int error_code )
 bool
 GlobusJob::JmShouldSleep()
 {
+	// Don't put the jobmanager to sleep if we want to do a status call.
+	// This is part of a workaround for Globus bug 3411.
+	if ( probeNow == true ) {
+		return false;
+	}
 	if ( jmProxyExpireTime < jobProxy->expiration_time ) {
 		return false;
 	}
