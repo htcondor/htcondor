@@ -346,6 +346,17 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 		return;
 	}
 
+	if ( new_condor_state == REMOVED && condorState == HELD ) {
+		int release_status = IDLE;
+		jobAd->LookupInteger( ATTR_JOB_STATUS_ON_RELEASE, release_status );
+		if ( release_status == REMOVED ) {
+				// We already know about this REMOVED state and have
+				// decided to go on hold afterwards, so ignore this
+				// "update".
+			return;
+		}
+	}
+
 	if ( new_condor_state == REMOVED || new_condor_state == HELD ) {
 
 		for ( int i = 0; held_removed_update_attrs[i] != NULL; i++ ) {
