@@ -73,7 +73,7 @@ while ( <CQ> ) {
 		my $key = "${line[3]}#${line[2]}";
 
 		if ( defined $job_groups{$key} ) {
-			print STDERR "Two schedd jobs for same site,subject!\n";
+			debug_print(5, "Two schedd jobs for same site,subject!");
 		} else {
 			$job_groups{$key} = {
 				'uniquename'    => "${line[2]}",
@@ -206,8 +206,15 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 			# condor_rm?
 		} elsif ( ${$group}{'scheddstatus'} == 5 ) {
 			debug_print(5, "        Is held.  Removing.");
-			print STDERR "group $key schedd is held, removing\n";
 			system( "condor_rm ${$group}{'scheddjobid'}" );
+			my $reason;
+			chomp( $reason = `condor_q ${$group}{'scheddjobid'} -format "%d " HoldReasonCode -format "%d\n" HoldReasonSubCode` );
+			if ( $reason == "2 131" ) {
+				debug_print(5,"        Proxy expiring, force removing.");
+				system( "condor_rm -f ${$group}{'scheddjobid'}" );
+			}
+		} elsif ( ${$group}{'scheddstatus'} == 3 ) {
+			debug_print(5, "        Is removed. Ignoring.");
 		} else {
 			debug_print(5, "        Appears healthy and used");
 #			advertise_schedd( $group );
@@ -320,7 +327,7 @@ fi
 # on the remote headnode.
 . \$GLOBUS_LOCATION/etc/globus-user-env.sh
 proxytime=`\$GLOBUS_LOCATION/bin/grid-proxy-info -timeleft`
-runfor=`/usr/bin/expr \$proxytime / 60 - 1`
+runfor=`/usr/bin/expr \$proxytime / 60 - 5`
 
 # We need to duplicate X509_USER_PROXY because Condor's daemon-core clears
 # it from the environment before param()ing to see what file it should
