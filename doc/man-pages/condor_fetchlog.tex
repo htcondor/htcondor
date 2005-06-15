@@ -9,18 +9,20 @@
 \oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \ToolArgsAffect
 \Arg{machine-name}
-\Arg{log-file-name}
+\Arg{subsystem[.extension]}
 
 \index{Condor commands!condor\_fetchlog}
 \index{condor\_fetchlog command}
 
 \Description 
 
-\Condor{fetchlog} contacts Condor running on the machine specified
-by \Arg{machine-name}, and asks it
-to return a log file from that machine. This simplifies the
-retrieval of log file by bypassing the need 
-to log on to the machine in order to get the log file. 
+\Condor{fetchlog} contacts Condor running on the machine specified by
+\Arg{machine-name}, and asks it to return a log file from that
+machine.  The log file is determined by combining the log file name
+for the specified subsystem (e.g. STARTER) with the optional extension
+(e.g. ``.vm2'').  This simplifies the retrieval of log file by
+bypassing the need to log on to the machine in order to get the log
+file.
 
 For security purposes of authentication and authorization, 
 this command requires an administrator's level of access.
@@ -28,9 +30,10 @@ See section~\ref{sec:Config-Security}
 on page~\pageref{sec:Config-Security} for more details about Condor's
 security mechanisms.
 
-The \Arg{log-file-name} argument identifies the log file to retrieve.
-It is defined by the name
-given in the configuration file, without the "\_LOG" suffix.
+The \Arg{subsystem[.extension]} argument identifies the log file to retrieve.
+It is defined by the \Arg{subsystem}\_LOG entry
+given in the configuration file.  The optional extension is appended
+to this file name (e.g. ``STARTER.vm1'' becomes ``StarterLog.vm1'').
 For \MacroNI{COLLECTOR\_LOG}, it is \MacroNI{COLLECTOR}.
 The complete list of log files are defined by
 \begin{verbatim}
@@ -42,6 +45,7 @@ The complete list of log files are defined by
   SHADOW
   STARTD
   STARTER
+  KBDD
 \end{verbatim}
 
 \begin{Options}
