@@ -85,6 +85,8 @@ main(int argc, char* argv[])
   char* pool = NULL;
 
   myDistro->Init( argc, argv );
+  config();
+
   MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day
 
   for (int i=1; i<argc; i++) {
@@ -148,12 +150,6 @@ main(int argc, char* argv[])
   }
       
   //----------------------------------------------------------
-
-  if( ! pool ) {
-		  // If we haven't been told our pool, we're going to need to
-		  // param() to find the local negotiator...
-	  config();
-  }
 
 	  // Get info on our negotiator
   Daemon negotiator( DT_NEGOTIATOR, NULL, pool );
