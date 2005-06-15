@@ -27,10 +27,11 @@
 #include "condor_classad.h"
 #include "condor_string.h"
 #include "condor_attributes.h"
-#include "sslutils.h"
 #include "basename.h"
 #include "directory.h"
 #include "basename.h"
+
+#define X509_USER_PROXY "X509_USER_PROXY"
 
 StringMap build_job_env(const ClassAd & ad, bool using_file_transfer)
 {
