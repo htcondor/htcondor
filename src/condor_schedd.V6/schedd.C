@@ -1092,7 +1092,9 @@ count( ClassAd *job )
 			job->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
 								sizeof(contact_string));
 			if ( strncmp(contact_string,NULL_JOB_CONTACT,
-							sizeof(contact_string)-1) )
+							sizeof(contact_string)-1) ||
+				 job->LookupString(ATTR_REMOTE_JOB_ID,contact_string,
+								   sizeof(contact_string)-1) != 0 )
 			{
 				// looks like the job's globus contact string is still valid,
 				// so there is still a job submitted remotely somewhere.
@@ -1357,7 +1359,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			job_ad->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
 								sizeof(contact_string));
 			if ( strncmp(contact_string,NULL_JOB_CONTACT,
-							sizeof(contact_string)-1) )
+							sizeof(contact_string)-1) ||
+				 job_ad->LookupString(ATTR_REMOTE_JOB_ID,contact_string,
+								   sizeof(contact_string)-1) != 0 )
 			{
 				// looks like the job's globus contact string is still valid,
 				// so there is still a job submitted remotely somewhere.

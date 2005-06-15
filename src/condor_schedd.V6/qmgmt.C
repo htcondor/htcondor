@@ -2535,7 +2535,9 @@ int mark_idle(ClassAd *job)
 			job->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
 								sizeof(contact_string));
 			if ( strncmp(contact_string,NULL_JOB_CONTACT,
-							sizeof(contact_string)-1) )
+							sizeof(contact_string)-1) ||
+				 job->LookupString(ATTR_REMOTE_JOB_ID,contact_string,
+								   sizeof(contact_string)-1) != 0 )
 			{
 				// looks like the job's globus contact string is still valid,
 				// so there is still a job submitted remotely somewhere.
