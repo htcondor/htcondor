@@ -433,8 +433,11 @@ V6_7_8_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/gsoap/2.7 \
 		   externals/bundles/srb/3.2.1
 
+# Externals needed for V6_7_9 (same as V6_7_8)
+V6_7_9_EXT	-a V6_7_8_EXT
+
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_8_EXT
+V6_7_EXT	-a V6_7_9_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
