@@ -1,3 +1,8 @@
+06/14/05 V6_7-cgahp_win-branch
+   The work on making Condor-C (in particular the C-GAHP) portable to 
+   Windows. Also fixing some bugs noticed by Francesco/G-Lite people.
+   Author: ckireyev
+
 06/14/05 V6_7_8-merge-1
    The state of the V6_7_8-branch for a merge into V6_7-branch. The only
    changes are last-minute check-ins for GT4 and workarounds for problems
