@@ -634,7 +634,20 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 	}
 
 	char *pname = (char*)malloc (strlen(name) + 5);
-	strcpy (pname, name);
+	char *ext = strchr(name,'.');
+
+	//If there is a dot in the name, it is of the form "<SUBSYS>.<ext>"
+	//Otherwise, it is "<SUBSYS>".  The file extension is used to
+	//handle such things as "StarterLog.vm1" and "StarterLog.cod"
+
+	if(ext) {
+		strncpy(pname, name, ext-name);
+		pname[ext-name] = '\0';
+	}
+	else {
+		strcpy(pname, name);
+	}
+
 	strcat (pname, "_LOG");
 
 	char *filename = param(pname);
@@ -648,9 +661,14 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 		return FALSE;
 	}
 
-	int fd = open(filename,O_RDONLY);
+	MyString full_filename = filename;
+	if(ext) {
+		full_filename += ext;
+	}
+
+	int fd = open(full_filename.Value(),O_RDONLY);
 	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",filename);
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		stream->code(result);
 		stream->end_of_message();

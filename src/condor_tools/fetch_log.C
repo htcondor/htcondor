@@ -35,13 +35,13 @@
 void
 usage( char *cmd )
 {
-	fprintf(stderr,"Usage: %s [options] <machine-name> <log-name>\n",cmd);
+	fprintf(stderr,"Usage: %s [options] <machine-name> <subsystem>[.ext]\n",cmd);
 	fprintf(stderr,"Where options are:\n");
 	fprintf(stderr,"    -help             Display options\n");
 	fprintf(stderr,"    -version          Display Condor version\n");
 	fprintf(stderr,"    -pool <hostname>  Use this central manager\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
-	fprintf(stderr,"To select a particular daemon, use:\n");
+	fprintf(stderr,"To select a particular daemon to talk to (does NOT select log file), use:\n");
 	fprintf(stderr,"    -master\n");
 	fprintf(stderr,"    -schedd\n");
 	fprintf(stderr,"    -startd\n");
@@ -50,7 +50,20 @@ usage( char *cmd )
 	fprintf(stderr,"    -kbdd\n");
 	fprintf(stderr,"    -dagman\n"); 
 	fprintf(stderr,"    -view_collector\n");
-	fprintf(stderr,"\nExample: %s -debug coral STARTD\n\n",cmd);
+	fprintf(stderr,"The subsystem name plus optional extension specifies the log file.\n");
+	fprintf(stderr,"Possible subsystem names (anything with an entry XXX_LOG in remote config file):\n");
+
+	fprintf(stderr,"    MASTER\n");
+	fprintf(stderr,"    COLLECTOR\n");
+	fprintf(stderr,"    NEGOTIATOR\n");
+	fprintf(stderr,"    NEGOTIATOR_MATCH\n");
+	fprintf(stderr,"    SCHEDD\n");
+	fprintf(stderr,"    SHADOW\n");
+	fprintf(stderr,"    STARTD\n");
+	fprintf(stderr,"    STARTER\n");
+	fprintf(stderr,"    KBDD\n");
+	fprintf(stderr,"\nExample 1: %s -debug coral STARTD\n",cmd);
+	fprintf(stderr,"\nExample 2: %s -debug coral STARTER.vm2\n\n",cmd);
 }
 
 void
