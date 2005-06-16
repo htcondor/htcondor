@@ -1028,7 +1028,21 @@ condor__discoverJobRequirements(struct soap *soap,
 
 	convert_adStruct_to_ad(soap, &ad, jobAd);
 
-	fileTransfer.SimpleInit(&ad, false, false);
+		// SimpleInit will bail out if ATTR_JOB_IWD is not set...
+	MyString attribute = MyString(ATTR_JOB_IWD) + " = \"/tmp\"";
+	if (!ad.Insert(attribute.GetCStr())) {
+		result.response.status.code = FAIL;
+		result.response.status.message = "Failed to setup temporary Iwd attribute.";
+
+		return SOAP_OK;
+	}
+
+	if (!fileTransfer.SimpleInit(&ad, false, false)) {
+		result.response.status.code = FAIL;
+		result.response.status.message = "Checking for requirements failed.";
+
+		return SOAP_OK;
+	}
 
 	fileTransfer.getInputFiles(inputFiles);
 
