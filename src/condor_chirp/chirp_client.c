@@ -54,7 +54,8 @@ static char const *read_url_param(char const *url,char *buffer,size_t length);
 
 
 struct chirp_client {
-	FILE *stream;
+	FILE *rstream;
+	FILE *wstream;
 };
 
 /*
@@ -216,8 +217,8 @@ chirp_client_connect( const char *host, int port )
 		return 0;
 	}
 
-	c->stream = fdopen(fd,"w+");
-	if(!c->stream) {
+	c->rstream = fdopen(fd,"r");
+	if(!c->rstream) {
 		save_errno = errno;
 		close(fd);
 		free(c);
@@ -225,7 +226,17 @@ chirp_client_connect( const char *host, int port )
 		return 0;
 	}
 
-	setbuf(c->stream, NULL);
+	c->wstream = fdopen(fd,"w");
+	if(!c->wstream) {
+		save_errno = errno;
+		fclose(c->rstream);
+		free(c);
+		errno = save_errno;
+		return 0;
+	}
+
+	setbuf(c->rstream, NULL);
+	setbuf(c->wstream, NULL);
 
 	return c;
 }
@@ -233,7 +244,8 @@ chirp_client_connect( const char *host, int port )
 void
 chirp_client_disconnect( struct chirp_client *c )
 {
-	fclose(c->stream);
+	fclose(c->rstream);
+	fclose(c->wstream);
 	free(c);
 }
 
@@ -259,7 +271,7 @@ chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **ur
 	if(result>0) {
 		*url = malloc(result);
 		if(*url) {
-			actual = fread(*url,1,result,c->stream);
+			actual = fread(*url,1,result,c->rstream);
 			if(actual!=result) chirp_fatal_request("lookup");
 		} else {
 			chirp_fatal_request("lookup");
@@ -284,7 +296,7 @@ chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr
 	if(result>0) {
 		*expr = malloc(result);
 		if(*expr) {
-			actual = fread(*expr,1,result,c->stream);
+			actual = fread(*expr,1,result,c->rstream);
 			if(actual!=result) chirp_fatal_request("get_job_attr");
 		} else {
 			chirp_fatal_request("get_job_attr");
@@ -321,7 +333,7 @@ chirp_client_read( struct chirp_client *c, int fd, void *buffer, int length )
 	result = simple_command(c,"read %d %d\n",fd,length);
 
 	if( result>0 ) {
-		actual = fread(buffer,1,result,c->stream);
+		actual = fread(buffer,1,result,c->rstream);
 		if(actual!=result) chirp_fatal_request("read");
 	}
 
@@ -334,16 +346,16 @@ chirp_client_write( struct chirp_client *c, int fd, const void *buffer, int leng
 	int actual;
 	int result;
 
-	result = fprintf(c->stream,"write %d %d\n",fd,length);
+	result = fprintf(c->wstream,"write %d %d\n",fd,length);
 	if(result<0) chirp_fatal_request("write");
 
-	result = fflush(c->stream);
+	result = fflush(c->wstream);
 	if(result<0) chirp_fatal_request("write");
 
-	actual = fwrite(buffer,1,length,c->stream);
+	actual = fwrite(buffer,1,length,c->wstream);
 	if(actual!=length) chirp_fatal_request("write");
 
-	return convert_result(get_result(c->stream));
+	return convert_result(get_result(c->rstream));
 }
 
 int
@@ -562,16 +574,16 @@ simple_command(struct chirp_client *c,char const *fmt,...)
 	fprintf(stderr,"chirp sending: %s",command);
 #endif
 
-	result = fputs(command,c->stream);
+	result = fputs(command,c->wstream);
 
 
 
 	if(result < 0) chirp_fatal_request(fmt);
 
-	result = fflush(c->stream);
+	result = fflush(c->wstream);
 	if(result < 0) chirp_fatal_request(fmt);
 
-	return convert_result(get_result(c->stream));
+	return convert_result(get_result(c->rstream));
 }
 
 char const *
