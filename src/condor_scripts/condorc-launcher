@@ -141,11 +141,12 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 	##########################################
 	foreach $group ( values %job_groups ) {
 		${$group}{'scheddstatus'} = undef();
+		${$group}{'scheddjobid'} = undef();
 	}
 
 	# Should we exclude schedd jobs in X state?
 	# Need to catch SIGCHLD to know if command failed
-	open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
+	open( CQ, 'condor_q -const "DynamicScheddJob=?=True" -format "%d." ClusterId -format "%d\t" ProcId -format "%s\t" daemon_unique_name -format "%s\t" SiteName -format "%d" JobStatus -format "\n" ClusterId |' ) || die( "Can't run condor_q" );
 
 	while ( <CQ> ) {
 
@@ -153,12 +154,13 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 		@line = split( /\t/ );
 
-		if ( $#line == 2 ) {
+		if ( $#line == 3 ) {
 
-			my $key = "${line[1]}#${line[0]}";
+			my $key = "${line[2]}#${line[1]}";
 
 			if ( defined $job_groups{$key} ) {
-				${$job_groups{$key}}{'scheddstatus'} = $line[2];
+				${$job_groups{$key}}{'scheddstatus'} = $line[3];
+				${$job_groups{$key}}{'scheddjobid'} = $line[0];
 			} else {
 				print "Unknown schedd job for group $key\n";
 			}
@@ -177,10 +179,7 @@ while ( 1 ) { # or until no user jobs left <-- Is this still true?  I think not.
 
 		if ( ${$group}{'numjobs'} > 0 ) {
 			if ( !defined( ${$group}{'scheddjobid'} ) ) {
-				debug_print(1, "    group $key has no schedd yet, starting one");
-				${$group}{'scheddjobid'} = submit_schedd_job( $group );
-			} elsif ( !defined( ${$group}{'scheddstatus'} ) ) {
-				debug_print(1, "    schedd for group $key has disappeared, starting another");
+				debug_print(1, "    group $key has no schedd, starting one");
 				${$group}{'scheddjobid'} = submit_schedd_job( $group );
 			} else {
 				debug_print(4, "    Group $key already has a schedd");
