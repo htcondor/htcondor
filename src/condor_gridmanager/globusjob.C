@@ -684,6 +684,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_X509_USER_PROXY, buff );
 	if ( buff[0] == '\0' ) {
+		buff2[0] = '\0';
 		jobAd->LookupString( ATTR_X509_USER_PROXY_SUBJECT, buff2 );
 		if ( buff2[0] != '\0' ) {
 			snprintf( buff, sizeof(buff), "#%s", buff2 );
@@ -803,6 +804,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	} else {
 		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
 				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
+		error_string = "x509userproxy is not set in the job ad";
+		goto error_exit;
 	}
 
 	snprintf( buff, sizeof(buff), "GLOBUS/%s",
@@ -984,14 +987,16 @@ int GlobusJob::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, globusState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],globusState);
 
+	if ( gahp ) {
 		// We don't include jmDown here because we don't want it to block
 		// connections to the gatekeeper (particularly restarts) and any
 		// state that contacts to the jobmanager should be jumping to
 		// GM_RESTART instead.
-	if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
-		gahp->setMode( GahpClient::results_only );
-	} else {
-		gahp->setMode( GahpClient::normal );
+		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
+			gahp->setMode( GahpClient::results_only );
+		} else {
+			gahp->setMode( GahpClient::normal );
+		}
 	}
 
 	do {
@@ -2317,7 +2322,9 @@ int GlobusJob::doEvaluateState()
 			enteredCurrentGmState = time(NULL);
 			// If we were waiting for a pending globus call, we're not
 			// anymore so purge it.
-			gahp->purgePendingRequests();
+			if ( gahp ) {
+				gahp->purgePendingRequests();
+			}
 			// If we were calling a globus call that used RSL, we're done
 			// with it now, so free it.
 			if ( RSL ) {
