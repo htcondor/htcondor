@@ -4718,7 +4718,11 @@ SaveClassAd ()
 		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
 	} else {
 		myprocid = -1;		// means this is a cluster ad
-		SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId);
+		if( SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId) == -1 ) {
+			fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n", 
+					ATTR_CLUSTER_ID, ClusterId, ClusterId, ProcId, errno);
+			return -1;
+		}
 	}
 
 	
@@ -4731,16 +4735,23 @@ SaveClassAd ()
 		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
 		if( !lhs || !rhs || !lhstr || !rhstr) { retval = -1; }
 		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
-			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d\n", 
-					 lhstr, rhstr, ClusterId, ProcId );
+			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
+					 lhstr, rhstr, ClusterId, ProcId, errno );
 			retval = -1;
 		}
 		free(lhstr);
 		free(rhstr);
+		if(retval == -1) {
+			return -1;
+		}
 	}
 
 	if ( ProcId == 0 ) {
-		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
+		if( SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId) == -1 ) {
+			fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n", 
+					 ATTR_PROC_ID, ProcId, ClusterId, ProcId, errno );
+			return -1;
+		}
 	}
 
 	// If spooling entire job "sandbox" to the schedd, then we need to keep
