@@ -257,6 +257,11 @@ int CondorResource::DoScheddPoll()
 				MyString job_id_string;
 				CondorJob *job;
 
+				if( status_ads[i] == NULL ) {
+					dprintf(D_ALWAYS, "DoScheddPoll was given null pointer for classad #%d\n", i);
+					continue;
+				}
+
 				status_ads[i]->LookupInteger( ATTR_CLUSTER_ID, cluster );
 				status_ads[i]->LookupInteger( ATTR_PROC_ID, proc );
 

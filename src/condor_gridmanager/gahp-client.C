@@ -3751,6 +3751,11 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 					NewClassAdParser parser;
 					(*ads)[i] = parser.ParseClassAd( result->argv[4 + i] );
 				}
+				if( (*ads)[i] == NULL) {
+					dprintf(D_ALWAYS, "Condor-C GAHP return entry unparsable classad: (#%d) %s\n",
+						i, result->argv[4+i]);
+				}
+
 			}
 		}
 		delete result;
