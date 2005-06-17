@@ -1087,7 +1087,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
-	if( job->NumParents() > 0 && dm.submit_delay == 0 ) {
+	if( job->NumParents() > 0 && dm.submit_delay == 0 &&
+				_condorLogFiles.number() > 1 ) {
 			// if we don't already have a submit_delay, sleep for one
 			// second here, so we can be sure that this job's submit
 			// event will be unambiguously later than the termination
@@ -1100,6 +1101,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// TODO: as an optimization, check if, for all parents,
 			// the logfile is the same as the child -- if yes, we can
 			// skip the sleep...
+		debug_printf( DEBUG_VERBOSE,
+					"Sleeping for one second for log file consistency\n" );
 		sleep( 1 );
 	}
 
