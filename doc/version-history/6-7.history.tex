@@ -32,6 +32,13 @@ This currently works in the local, java, and vanilla universes.
 \item \Condor{submit} generates more precise error messages in 
 some failure cases.
 
+\item \Condor{dagman} no longer does a one-second sleep before each
+submit if all node jobs have the same log file.  (The sleep is still
+needed if there are multiple log files, for unambiguous ordering of
+events during bootstrapping.)  Note that if \MacroNI{DAGMAN\_SUBMIT\_DELAY}
+is specified, the specified delay takes effect whether or not all
+jobs have the same log file.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
