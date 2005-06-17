@@ -1666,6 +1666,9 @@ getCmHostFromConfig( const char * subsys )
 		if( host[0] ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.Value(), 
 					 host ); 
+			if(host[0] == ':') {
+				dprintf( D_ALWAYS, "Warning: Configuration file sets '%s=%s'.  This does not look like a valid host name with optional port.\n", buf.Value(), host);
+			}
 			return host;
 		} else {
 			free( host );
