@@ -235,6 +235,11 @@ same_host(const char *h1, const char *h2)
 	struct hostent *he1, *he2;
 	char cn1[MAXHOSTNAMELEN];
 
+	if( h1 == NULL || h2 == NULL) {
+		dprintf( D_ALWAYS, "Warning: attempting to compare null hostnames in same_host.\n");
+		return FALSE;
+	}
+
 	if (strcmp(h1, h2) == MATCH) {
 		return TRUE;
 	}
