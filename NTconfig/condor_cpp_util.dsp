@@ -99,6 +99,14 @@ SOURCE="..\src\condor_c++_util\ad_printmask.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\build_job_env.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\build_job_env.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\check_events.C"
 # End Source File
 # Begin Source File
