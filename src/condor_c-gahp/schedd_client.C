@@ -1179,7 +1179,7 @@ enqueue_result (int req_id, const char ** results, const int argc) {
 char *
 escape_string (const char * string) {
 	MyString my_string (string);
-	MyString escape_this (" \t\n\r");
+	MyString escape_this (" \t\n\r\\");
 
 	MyString result = my_string.EscapeChars(escape_this, '\\');
 
