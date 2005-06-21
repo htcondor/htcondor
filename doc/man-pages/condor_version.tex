@@ -1,6 +1,13 @@
 \begin{ManPage}{\label{man-condor-version}\Condor{version}}{1}
 {print Condor version and platform information}
-\Synopsis \SynProg{\Condor{version}}
+\Synopsis 
+\SynProg{\Condor{version}}
+\oOpt{-help}
+
+\SynProg{\Condor{version}}
+\oOpt{-arch}
+\oOpt{-opsys}
+\oOpt{-syscall}
 
 \index{Condor commands!condor\_version}
 \index{condor\_version command}
@@ -9,6 +16,14 @@
 
 With no arguments, \Condor{version} prints the
 currently installed Condor version number and platform information.
+
+\begin{Options}
+\OptItem{\Opt{help}}{Print usage information}
+\OptItem{\Opt{arch}}{Print this machine's ClassAd value for \AdAttr{Arch}}
+\OptItem{\Opt{opsys}}{Print this machine's ClassAd value for \AdAttr{OpSys}}
+\OptItem{\Opt{syscall}}{Get version information from
+   the \File{libcondorsyscall.a} that this Condor pool is configured to use}
+\end{Options}
 
 \ExitStatus
 
