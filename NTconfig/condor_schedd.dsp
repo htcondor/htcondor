@@ -156,6 +156,22 @@ SOURCE=..\src\condor_schedd.V6\schedd_api.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_schedd.V6\schedd_cronjob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\schedd_cronjob.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\schedd_cronmgr.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\schedd_cronmgr.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_schedd.V6\schedd_main.C
 # End Source File
 # Begin Source File
