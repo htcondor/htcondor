@@ -23,7 +23,6 @@
 #ifndef _build_job_env_H_
 #define _build_job_env_H_
 
-#include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_string.h"
 
