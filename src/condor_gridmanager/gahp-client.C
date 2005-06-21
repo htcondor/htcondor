@@ -402,13 +402,10 @@ GahpServer::read_argv(Gahp_Args &g_args)
 
 	ibuf = 0;
 
-	MyString alandebug = "";
-
 	for (;;) {
 
 		ASSERT(ibuf < buf_size);
 		result = read(m_gahp_readfd, &(buf[ibuf]), 1 );
-		alandebug += buf[ibuf];
 
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
@@ -504,8 +501,6 @@ GahpServer::read_argv(Gahp_Args &g_args)
 					debug = debug.Substr( 0, logGahpIoSize );
 					debug += "...";
 				}
-				dprintf(D_FULLDEBUG, "GAHP[%d] (actual bytes from %d) -> %s\n", m_gahp_pid, 
-						(int)m_gahp_readfd, alandebug.Value());
 				dprintf( D_FULLDEBUG, "GAHP[%d] %s-> %s\n", m_gahp_pid,
 						 trash_this_line ? "(unprefixed) " : "",
 						 debug.Value() );
