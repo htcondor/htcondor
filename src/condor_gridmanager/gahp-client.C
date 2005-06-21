@@ -402,10 +402,13 @@ GahpServer::read_argv(Gahp_Args &g_args)
 
 	ibuf = 0;
 
+	MyString alandebug = "";
+
 	for (;;) {
 
 		ASSERT(ibuf < buf_size);
 		result = read(m_gahp_readfd, &(buf[ibuf]), 1 );
+		alandebug += buf[ibuf];
 
 		/* Check return value from read() */
 		if ( result < 0 ) {		/* Error - try reading again */
@@ -501,6 +504,8 @@ GahpServer::read_argv(Gahp_Args &g_args)
 					debug = debug.Substr( 0, logGahpIoSize );
 					debug += "...";
 				}
+				dprintf(D_FULLDEBUG, "GAHP[%d] (actual bytes from %d) -> %s\n", m_gahp_pid, 
+						(int)m_gahp_readfd, alandebug.Value());
 				dprintf( D_FULLDEBUG, "GAHP[%d] %s-> %s\n", m_gahp_pid,
 						 trash_this_line ? "(unprefixed) " : "",
 						 debug.Value() );
@@ -3743,19 +3748,22 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		}
 		if ( *num_ads > 0 ) {
 			*ads = (ClassAd **)malloc( *num_ads * sizeof(ClassAd*) );
-			for ( int i = 0; i < *num_ads; i++ ) {
+			int idst = 0;
+			for ( int i = 0; i < *num_ads; i++,idst++ ) {
 				if ( useXMLClassads ) {
 					ClassAdXMLParser parser;
-					(*ads)[i] = parser.ParseClassAd( result->argv[4 + i] );
+					(*ads)[idst] = parser.ParseClassAd( result->argv[4 + i] );
 				} else {
 					NewClassAdParser parser;
-					(*ads)[i] = parser.ParseClassAd( result->argv[4 + i] );
+					(*ads)[idst] = parser.ParseClassAd( result->argv[4 + i] );
 				}
-				if( (*ads)[i] == NULL) {
-					dprintf(D_ALWAYS, "Condor-C GAHP return entry unparsable classad: (#%d) %s\n",
-						i, result->argv[4+i]);
+				if( (*ads)[idst] == NULL) {
+					dprintf(D_ALWAYS, "ERROR: Condor-C GAHP returned "
+						"unparsable classad: (#%d) %s\n", i, result->argv[4+i]);
+					// just skip the bogus ad and try to move on.
+					idst--;
+					(*num_ads)--;
 				}
-
 			}
 		}
 		delete result;
