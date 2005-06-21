@@ -21,7 +21,6 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "build_job_env.h"
 
 #include "condor_common.h"
 #include "condor_classad.h"
@@ -30,6 +29,7 @@
 #include "basename.h"
 #include "directory.h"
 #include "basename.h"
+#include "build_job_env.h"
 
 #define X509_USER_PROXY "X509_USER_PROXY"
 
