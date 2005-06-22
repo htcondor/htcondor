@@ -508,7 +508,7 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 // condor_submit_dag diamond.dag
 int printUsage() 
 {
-    printf("Usage: condor_submit_dag [options] dag_file1 [dag_file2] ...\n");
+    printf("Usage: condor_submit_dag [options] dag_file [dag_file_2 ... dag_file_n]\n");
     printf("  where dag_file1, etc., is the name of a DAG input file\n");
     printf("  and where [options] is one or more of:\n");
 	printf("    -dagman             (Full path to an alternate condor_dagman executable)\n");

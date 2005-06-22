@@ -170,9 +170,9 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_SUBMITTED setting: %d\n",
 				maxJobs );
 
-	dagman.mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES", true );
+	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES", true );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %d\n",
-				dagman.mungeNodeNames );
+				mungeNodeNames );
 
 	return true;
 }
