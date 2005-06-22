@@ -720,6 +720,8 @@ class DaemonCore : public Service
                defined above, and always begin with "DCJOBOPT".  In
                addition, each bit should also define a macro to test a
                mask if a given bit is set ("HAS_DCJOBOPT_...")
+		@param fd_inherit_list An array of fds which you want the child to
+		       inherit. The last element must be 0.
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
     int Create_Process (
@@ -734,7 +736,8 @@ class DaemonCore : public Service
         Stream      *sock_inherit_list[] = NULL,
         int         std[]                = NULL,
         int         nice_inc             = 0,
-        int         job_opt_mask         = 0
+        int         job_opt_mask         = 0,
+		int			fd_inherit_list[]	 = NULL
         );
 
     //@}

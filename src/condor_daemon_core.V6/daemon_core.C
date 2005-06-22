@@ -1075,7 +1075,10 @@ int DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip,
 	// Since FD_ISSET only allows us to probe, we do not bother using a
 	// hash table for pipes.  We simply store them in an array.
 
-    if ( pipefd < 1 ) {
+	// ckireyev: this used to be:
+	// if (pipefd < 1)
+    //	 why? what about stdin(0)?
+    if ( pipefd < 0 ) {
 		dprintf(D_DAEMONCORE, "Register_Pipe: invalid pipefd \n");
 		return -1;
     }
@@ -4720,7 +4723,8 @@ int DaemonCore::Create_Process(
 			Stream		*sock_inherit_list[],
 			int			std[],
             int         nice_inc,
-			int			job_opt_mask
+			int			job_opt_mask,
+			int			fd_inherit_list[]
             )
 {
 	int i;
@@ -4916,6 +4920,13 @@ int DaemonCore::Create_Process(
 	// of all files opened via the C runtime library to non-inheritable.
 	for (i = 0; i < 100; i++) {
 		SetFDInheritFlag(i,FALSE);
+	}
+
+	// Now make inhertiable the fds that we specified in fd_inherit_list[]
+	if (fd_inherit_list) {
+		for (i=0; fd_inherit_list[i] != 0; i++) {
+			SetFDInheritFlag (fd_inherit_list[i], TRUE);
+		}
 	}
 
 	// handle re-mapping of stdout,in,err if desired.  note we just
@@ -5620,6 +5631,7 @@ int DaemonCore::Create_Process(
 		bool found;
 		for ( int j=3 ; j < openfds ; j++ ) {
 			if ( j == errorpipe[1] ) continue; // don't close our errorpipe!
+
 			found = FALSE;
 			for ( int k=0 ; k < numInheritSockFds ; k++ ) {
                 if ( inheritSockFds[k] == j ) {
@@ -5627,6 +5639,17 @@ int DaemonCore::Create_Process(
 					break;
 				}
 			}
+
+			if (fd_inherit_list) {
+				for ( int k=0 ; fd_inherit_list[k] > 0; k++ ) {
+					if ( fd_inherit_list[k] == j ) {
+						found = TRUE;
+						break;
+					}
+				}
+			}
+
+
 			if( !found ) {
 				close( j );
             }
