@@ -1,3 +1,9 @@
+06/22/05 V6_7-pre_merge-V6_7-cgahp_win-merge-1
+   The state of V6_7-branch before the merge from V6_7-cgahp_win-branch
+
+06/22/05 V6_7-cgahp_win-merge-1
+   The state of V6_7-cgahp_win-branch before the first merge into V6_7-branch
+
 06/14/05 V6_7-cgahp_win-branch
    The work on making Condor-C (in particular the C-GAHP) portable to 
    Windows. Also fixing some bugs noticed by Francesco/G-Lite people.
