@@ -2060,9 +2060,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 		strcpy(startdAddr, "<0.0.0.0:0>");
 	}
-	dprintf(D_MATCH, "      Matched %d.%d %s %s preempting %s %s\n",
+	dprintf(D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s\n",
 			cluster, proc, scheddName, scheddAddr, remoteUser,
-			startdAddr);
+			startdAddr, startdName);
 
 #if WANT_NETMAN
 	// match was successful; commit our network bandwidth allocation
