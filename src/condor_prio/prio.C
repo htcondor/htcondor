@@ -45,8 +45,6 @@ int		AdjustmentSet;
 int		InvokingUid;		// user id of person ivoking this program
 char	*InvokingUserName;	// user name of person ivoking this program
 
-const int MIN_PRIO = -20;
-const int MAX_PRIO = 20;
 
 	// Prototypes of local interest only
 void usage();
@@ -125,13 +123,6 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	if( PrioritySet && (NewPriority < MIN_PRIO || NewPriority > MAX_PRIO) ) {
-		fprintf( stderr, 
-			"Invalid priority specified.  Must be between %d and %d.\n", 
-			MIN_PRIO, MAX_PRIO );
-		exit(1);
-	}
-
 		// Open job queue
 	q = ConnectQ(DaemonName);
 	if( !q ) {
@@ -167,10 +158,6 @@ calc_prio( int old_prio )
 
 	if( AdjustmentSet == TRUE && PrioritySet == FALSE ) {
 		answer = old_prio + PrioAdjustment;
-		if( answer > MAX_PRIO )
-			answer = MAX_PRIO;
-		else if( answer < MIN_PRIO )
-			answer = MIN_PRIO;
 	} else {
 		answer = NewPriority;
 	}
