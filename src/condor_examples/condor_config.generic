@@ -1474,6 +1474,7 @@ MAX_C_GAHP_LOG	= 1000000
 
 #C_GAHP_LOG = $(LOG)/GridLogs/CGAHPLog.$(USERNAME)
 C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOG = /tmp/CGAHPWorkerLog.$(USERNAME)
 
 ##
 ## The location of the wrapper for invoking
