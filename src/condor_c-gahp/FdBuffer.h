@@ -32,7 +32,8 @@
  *
  * This class encapsulates a fd and provides buffering,
  * i.e. it allows you to hold a result read out of the pipe until
- * a full line is read.
+ * a full line is read. This is useful for non-blocking reads
+ *
  *
  **/
 class FdBuffer;
@@ -44,12 +45,13 @@ public:
 
 	MyString * GetNextLine();
 
-	static int Select (FdBuffer** wait_on, int count, int timeout, int * result);
-
 	int getFd() { return fd; }
 	void setFd(const int _fd) { fd = _fd; }
 	const char * getBuffer() { return buffer.Value(); }
 
+	int Write (const char * toWrite = NULL);
+
+	int IsEmpty();
 	int IsError() { return error; }
 
 protected:
@@ -58,6 +60,7 @@ protected:
 
 	int newlineCount;
 	int error;
+	bool last_char_was_escape;
 
 	MyString * ReadNextLineFromBuffer();
 	int HasNextLineInBuffer();

@@ -66,9 +66,11 @@ SimpleList <SchedDRequest*> command_queue;
 // Buffer for reading requests from the IO thread
 FdBuffer request_buffer;
 
+
+template class SimpleList <MyString*>;
+
 int RESULT_OUTBOX = -1;
 int REQUEST_INBOX = -1;
-int REQUEST_ACK_OUTBOX = -1;
 
 int checkRequestPipeTid = TIMER_UNSET;
 int contactScheddTid = TIMER_UNSET;
@@ -81,89 +83,40 @@ extern char *myUserName;
 extern int main_shutdown_graceful();
 
 int
-schedd_thread (void * arg, Stream * sock) {
+request_pipe_handler() {
 
-   	inter_thread_io_t * inter_thread_io = (inter_thread_io_t*)arg;
-	RESULT_OUTBOX = inter_thread_io->result_pipe[1];
-	REQUEST_INBOX = inter_thread_io->request_pipe[0];
-	REQUEST_ACK_OUTBOX = inter_thread_io->request_ack_pipe[1];
-
-	request_buffer.setFd( REQUEST_INBOX );
-
-    // Just set up timers....
-    contactScheddTid = daemonCore->Register_Timer( contact_schedd_interval,
-										(TimerHandler)&doContactSchedd,
-										"doContactSchedD", NULL );
-
-	checkRequestPipeTid = daemonCore->Register_Timer( check_requests_interval,
-										(TimerHandler)&checkRequestPipe,
-										"checkRequestPipe", NULL );
-
-
-	write (REQUEST_ACK_OUTBOX, "R", 1); // Signal that we're ready for the first request
-
-	return TRUE;
-}
-
-/**
- * Check whether the IO thread has sent us any new requests
- * If so, read them, parse them and add them to the queue
- */
-int
-checkRequestPipe () {
-
-	dprintf (D_FULLDEBUG, "In checkRequestPipe\n");
-
-	time_t time1 = time (NULL);
+	time_t _time;
 
 	MyString * next_line = NULL;
 
-	FdBuffer * wait_on [] = { &request_buffer };
-	int is_ready = FALSE;
-	int select_result = 0;
+	if (request_buffer.IsError()) {
+		dprintf (D_ALWAYS, "Request pipe, closed. Exiting...\n");
+		main_shutdown_graceful();
+	}
 
-	do {
-		if (request_buffer.IsError()) {
-			dprintf (D_ALWAYS, "Request pipe, closed. Exiting...\n");
-			main_shutdown_graceful();
-		}
+	if ( ((next_line = request_buffer.GetNextLine()) != NULL)) {
+		dprintf (D_FULLDEBUG, "got work request: %s\n", next_line->Value());
 
-		select_result =
-			FdBuffer::Select (wait_on, 1, 3, &is_ready);
-
-		if ( (select_result > 0) && (is_ready) && ((next_line = request_buffer.GetNextLine()) != NULL)) {
-			dprintf (D_FULLDEBUG, "got work request: %s\n", next_line->Value());
-
-			char ** argv;
-			int argc;
+		char ** argv;
+		int argc;
 
 			// Parse the command...
-			if (!(parse_gahp_command (next_line->Value(), &argv, &argc) && handle_gahp_command (argv, argc))) {
-				dprintf (D_ALWAYS, "ERROR processing %s\n", next_line->Value());
-			}
+		if (!(parse_gahp_command (next_line->Value(), &argv, &argc) && handle_gahp_command (argv, argc))) {
+			dprintf (D_ALWAYS, "ERROR processing %s\n", next_line->Value());
+		}
 
 			// Clean up...
-			delete  next_line;
-			while ((--argc) >= 0)
-				free (argv[argc]);
-			free( argv );
+		delete  next_line;
+		while ((--argc) >= 0)
+			free (argv[argc]);
+		free( argv );
 
-			write (REQUEST_ACK_OUTBOX, "R", 1); // Signal that we're ready again
-		}
-	} while (select_result > 0); // Keep selecting while there's stuff to read
-
-	time_t time2 = time (NULL);
-
-	// Come back soon....
-	int next_contact_interval = check_requests_interval - (time2 - time1);
-	if (next_contact_interval < 0)
-		next_contact_interval = 1;
-	daemonCore->Reset_Timer ( checkRequestPipeTid, next_contact_interval);
+	}
 
 	return TRUE;
 }
 
-template class SimpleList <MyString*>;
+
 
 int
 doContactSchedd()
@@ -1171,9 +1124,10 @@ enqueue_result (int req_id, const char ** results, const int argc) {
 		free (escaped);
 	}
 
+	buffer += "\n";
+
 	// Now flush:
 	write (RESULT_OUTBOX, buffer.Value(), buffer.Length());
-	write (RESULT_OUTBOX, "\n", 1);
 }
 
 char *

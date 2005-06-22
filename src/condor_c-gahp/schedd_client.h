@@ -73,14 +73,10 @@ int enqueue_command (SchedDRequest *);
 char * escape_string (const char *);
 
 int doContactSchedd();
-int checkRequestPipe ();
+int request_pipe_handler();
 
 int handle_gahp_command(char ** argv, int argc);
 int parse_gahp_command (const char *, char ***, int *);
-int schedd_thread (void * arg, Stream * sock);
-
-int io_loop_reaper (Service*, int pid, int exit_status);
-
 
 
 #endif

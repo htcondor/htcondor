@@ -29,12 +29,14 @@ FdBuffer::FdBuffer (int _fd) {
  	buffer.reserve (5000);
 	error = FALSE;
 	newlineCount=0;
+	last_char_was_escape = false;
 }
 
 FdBuffer::FdBuffer() {
 	fd = -1;
  	buffer.reserve (5000);
  	newlineCount=0;
+	last_char_was_escape = false;
 }
 
 
@@ -85,6 +87,7 @@ FdBuffer::HasNextLineInBuffer() {
 MyString *
 FdBuffer::GetNextLine () {
 
+
 	// First try buffer
 	// We should always check the buffer first, b/c otherwise
 	// the select() on the underlying fd might keep blocking
@@ -93,33 +96,27 @@ FdBuffer::GetNextLine () {
 
 
 	if (result == NULL) {
-		// Read another chunk from fd
+		// Read another byte from fd
+		// we only read one at a time to avoid blocking
 
-		char buff[5001];
-		ssize_t num_read = 0;
+		char buff;
 
-		if ((num_read = read (this->fd, buff, 5000)) > 0) {
-
-			buff[num_read]='\0';
-			dprintf (D_FULLDEBUG, "reading %d  bytes, from buffer %d\n", num_read, this->fd);
-
-			// Count the number of newlines in the newly-read chunk
-			int i=0;
-			if ((buffer.Length() > 0) && buffer[buffer.Length()-1] == '\\')
-				i++;
-			for (; i<num_read; i++) {
-				if (buff[i] == '\\') {
-					i++;	// skip the next char, since it was escaped
-					continue;
-				}
-				if (buff[i] == '\n')
-					newlineCount++;
-			}
+		if (read (this->fd, &buff, 1) > 0) {
 
 			buffer += buff;
 
-			// Try the buffer again
-			result = ReadNextLineFromBuffer();
+			if (buff == '\\') {
+				last_char_was_escape = !last_char_was_escape;
+			}
+			else {
+				last_char_was_escape = false;
+
+				if (buff == '\n' && !last_char_was_escape) {
+						// We got a completed line!
+					newlineCount++;
+					result = ReadNextLineFromBuffer();
+				}
+			} 
 		} else {
 			dprintf (D_ALWAYS, "Read 0 bytes from fd %d ==> fd must be closed\n", this->fd);
 			// If the select (supposedly) triggered BUT we can't read anything
@@ -132,59 +129,30 @@ FdBuffer::GetNextLine () {
 }
 
 int
-FdBuffer::Select (FdBuffer** wait_on, int count, int timeout, int * result) {
+FdBuffer::Write (const char * towrite) {
+	
+	if (towrite)
+		buffer += towrite;
 
-	// Check the caches first
-	int found = 0;
-	for (int i=0; i<count; i++ ) {
-		if (wait_on[i]->HasNextLineInBuffer()) {
-			result[i] = TRUE;
-			found ++;
-		} else {
-			result[i] = FALSE;
-		}
+	int len = buffer.Length();
+	if (len == 0)
+		return 0;
+
+	int numwritten = write (fd, buffer.Value(), len);
+	if (numwritten > 0) {
+			// shorten the buffer
+		buffer = buffer.Substr (numwritten, len);
+		return numwritten;
+	} else if ( numwritten == 0 ) {
+		return 0;
+	} else {
+		dprintf (D_ALWAYS, "Error %d writing to fd %d\n", numwritten, fd);
+		error = TRUE;
+		return 0;
 	}
-
-	if (found > 0) {
-		return found;
-	}
-
-	// Otherwise do a plain old select()
-	fd_set my_fds;
-	FD_ZERO(&my_fds);
-	int max_fd = 0;
-	for (int i=0; i<count; i++ ) {
-		FD_SET (wait_on[i]->fd, &my_fds);
-		if (max_fd < wait_on[i]->fd)
-			max_fd = wait_on[i]->fd;
-	}
-
-	struct timeval wait_time;
-	wait_time.tv_sec = timeout;
-	wait_time.tv_usec = 0;
-
-	int select_result = select (max_fd + 1,
-				      &my_fds,
-				      NULL,
-				      NULL,
-				      &wait_time);
-
-	if (select_result == -1) {
-		// Something is wrong, return -1
-		dprintf (D_ALWAYS, "Error errno=%d from select()\n", errno);
-		return -1;
-	}
-
-	for (int i=0; i<count; i++ ) {
-		if (FD_ISSET (wait_on[i]->fd, &my_fds)) {
-			result[i] = TRUE;
-			found ++;
-		} else {
-			result[i] = FALSE;
-		}
-
-	}
-
-	return found;
 }
 
+int
+FdBuffer::IsEmpty() {
+	return (buffer.Length() == 0);
+}
