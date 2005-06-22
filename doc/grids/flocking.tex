@@ -30,7 +30,7 @@ set the following configuration variables:
   \item[\Macro{FLOCK\_TO}] is a comma separated list of the central
   manager machines of the pools that jobs from machine A may flock to.
   \item[\Macro{FLOCK\_COLLECTOR\_HOSTS}]
-  is the list of \Condor{collector} deamons within the pools
+  is the list of \Condor{collector} daemons within the pools
   that jobs from machine A may flock to.
   In most cases, it is the same as \MacroNI{FLOCK\_TO}, and
   it would be defined with 
@@ -38,7 +38,7 @@ set the following configuration variables:
   FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
   \end{verbatim}
   \item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}]
-  is the list of \Condor{negotiator} deamons within the pools
+  is the list of \Condor{negotiator} daemons within the pools
   that jobs from machine A may flock to.
   In most cases, it is the same as \MacroNI{FLOCK\_TO}, and
   it would be defined with 
@@ -84,7 +84,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 \end{verbatim}
 \normalsize
 
-Wildcards may be used when setting the \MacroNI{FLOCK\_FROM}
+Wild cards may be used when setting the \MacroNI{FLOCK\_FROM}
 configuration variable.
 For example, \verb@*.cs.wisc.edu@ specifies all hosts
 from the \verb@cs.wisc.edu@ domain. 
@@ -93,7 +93,7 @@ If the user-based configuration macros for security are used,
 then the default will be:
 \footnotesize
 \begin{verbatim}
-ALLOW_NEGOTIATIOR =  $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_NEGOTIATOR =  $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 \end{verbatim}
 \normalsize
 

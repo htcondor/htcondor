@@ -1768,6 +1768,35 @@ Nothing special needs to be done after the central manager is brought
 back on line.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why did the \Condor{schedd} daemon die and restart?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{condor\_schedd daemon!receiving signal 25}
+
+The \Condor{schedd} daemon receives signal 25,
+dies, and is restarted when the
+history file reaches a 2 Gbyte size limit.
+Until a larger history file size or the rotation of the history
+file is supported in Condor,
+try one of these work arounds:
+
+\begin{enumerate}
+\item When the history file becomes large, remove it.
+Note that this causes a loss of the information in the history file,
+but the \Condor{schedd} daemon will not die.
+\item When the history file becomes large, move it.
+\item Stop keeping the history.
+Only \Condor{history} accesses the history file, 
+so this particular functionality will be gone.
+To stop keeping the history, place
+\begin{verbatim}
+HISTORY=
+\end{verbatim}
+in the configuration,
+followed by a \Condor{reconfig} command to recognize the change in
+currently executing daemons.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{When I ssh/telnet to a machine to check particulars of how
 Condor is doing something, it is always vacating or unclaimed when I
 know a job had been running there!}
