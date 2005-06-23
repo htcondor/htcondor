@@ -1337,6 +1337,8 @@ CONDOR_EXTERNAL_VERSION([srb],[3.2.1])
 
 CONDOR_EXTERNAL_VERSION([gsoap],[2.7])
 
+CONDOR_EXTERNAL_VERSION([pcre],[5.0])
+
 else
 # if there's no externals at all, we still need to define these to
 # avoid imake troubles...

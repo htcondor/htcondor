@@ -368,6 +368,7 @@ ext_nodep_target(EXT_MAN_VERSION,$(NULL))
 ext_target(EXT_CLASSADS_VERSION, $(NULL))
 #endif
 ext_target(EXT_GSOAP_VERSION,$(NULL))
+ext_target(EXT_PCRE_VERSION,$(NULL))
 
 
 clean::
