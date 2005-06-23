@@ -900,8 +900,12 @@ GlobusResource::ReadMonitorJobStatusFile()
 				if ( status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					status=GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT;
 				}
-				dprintf(D_FULLDEBUG,"Sending callback of %d to %d.%d (%s)\n",status,job->procID.cluster,job->procID.proc, resourceName);
-				job->GramCallback( status, 0 );
+					// Don't flood the GlobusJob objects and the log file
+					// with a long stream of identical job status updates.
+				if ( status != job->globusState ) {
+					dprintf(D_FULLDEBUG,"Sending callback of %d to %d.%d (%s)\n",status,job->procID.cluster,job->procID.proc, resourceName);
+					job->GramCallback( status, 0 );
+				}
 			}
 		}
 	}
