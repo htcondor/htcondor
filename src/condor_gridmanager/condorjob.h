@@ -59,6 +59,7 @@ class CondorJob : public BaseJob
 	BaseResource *GetResource();
 
 	static int submitInterval;
+	static int removeInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 
@@ -75,6 +76,7 @@ class CondorJob : public BaseJob
 	time_t enteredCurrentGmState;
 	time_t enteredCurrentRemoteState;
 	time_t lastSubmitAttempt;
+	time_t lastRemoveAttempt;
 	int numSubmitAttempts;
 	int submitFailureCode;
 	char *remoteScheddName;

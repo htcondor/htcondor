@@ -155,6 +155,7 @@ BaseJob *CondorJobCreate( ClassAd *jobad )
 
 
 int CondorJob::submitInterval = 300;			// default value
+int CondorJob::removeInterval = 30;			// default value
 int CondorJob::gahpCallTimeout = 8*60*60;		// default value
 int CondorJob::maxConnectFailures = 3;			// default value
 
@@ -173,6 +174,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	enteredCurrentGmState = time(NULL);
 	enteredCurrentRemoteState = time(NULL);
 	lastSubmitAttempt = 0;
+	lastRemoveAttempt = 0;
 	numSubmitAttempts = 0;
 	submitFailureCode = 0;
 	remoteScheddName = NULL;
@@ -864,38 +866,43 @@ int CondorJob::doEvaluateState()
 		case GM_CANCEL: {
 			// We need to cancel the job submission.
 
-			// Should this if-stmt be here? Even if the job is completed,
-			// we may still want to remove it (say if we have trouble
-			// fetching the output files).
-			if ( remoteState != COMPLETED ) {
-				rc = gahp->condor_job_remove( remoteScheddName, remoteJobId,
-											  "by gridmanager" );
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-					// If the job has already been marked for removal or
-					// is no longer in the queue, treat it as a success.
-					// TODO parsing error strings meant for human consumption
-					//   is a poor way to distinguish specific types of
-					//   errors. We should have something more formalized
-					//   in the GAHP protocol.
-				if ( rc != GLOBUS_SUCCESS &&
-					 strcmp( gahp->getErrorString(), "Job not found" ) != 0 &&
-					 strcmp( gahp->getErrorString(), "Already done" ) != 0 ) {
+			// If a remove attempt fails here, we keep retrying, waiting
+			// removeInterval seconds between attempts.
+			if ( lastRemoveAttempt + removeInterval > now ) {
+				daemonCore->Reset_Timer( evaluateStateTid,
+								(lastRemoveAttempt + removeInterval) - now );
+				break;
+			}
+
+			rc = gahp->condor_job_remove( remoteScheddName, remoteJobId,
+										  "by gridmanager" );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			lastRemoveAttempt = now;
+				// If the job has already been marked for removal or
+				// is no longer in the queue, treat it as a success.
+				// TODO parsing error strings meant for human consumption
+				//   is a poor way to distinguish specific types of
+				//   errors. We should have something more formalized
+				//   in the GAHP protocol.
+			if ( rc != GLOBUS_SUCCESS &&
+				 strcmp( gahp->getErrorString(), "Job not found" ) != 0 &&
+				 strcmp( gahp->getErrorString(), "Already done" ) != 0 ) {
 
 					// unhandled error
-					// Should we retry the remove instead of instantly
-					// giving up?
-					dprintf( D_ALWAYS,
-							 "(%d.%d) condor_job_remove() failed: %s\n",
-							 procID.cluster, procID.proc, gahp->getErrorString() );
-					errorString = gahp->getErrorString();
-					gmState = GM_HOLD;
-					break;
-				}
-				SetRemoteJobId( NULL );
+					// Keep retrying. Once we have leases, we can give up
+					// once the lease expires.
+				dprintf( D_ALWAYS,
+						 "(%d.%d) condor_job_remove() failed (will retry): %s\n",
+						 procID.cluster, procID.proc, gahp->getErrorString() );
+				daemonCore->Reset_Timer( evaluateStateTid,
+										 now + lastRemoveAttempt );
+				break;
 			}
+			SetRemoteJobId( NULL );
+
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
