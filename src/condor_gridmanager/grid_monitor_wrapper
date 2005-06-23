@@ -187,7 +187,7 @@ if(not exists $ENV{GLOBUS_LOCATION}) {
 
 my $username = (getpwuid($>))[0];
 
-my $STATUS_FILE = "$ENV{GLOBUS_LOCATION}/tmp/${GRID_AGENT_NAME}_log.$>";
+my $STATUS_FILE = "$ENV{GLOBUS_LOCATION}/tmp/gram_job_state/${GRID_AGENT_NAME}_log.$>";
 
 # Have encountered situations where LD_LIBRARY_PATH isn't set.
 # This shouldn't happen, but it's been seen.

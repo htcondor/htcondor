@@ -120,7 +120,7 @@ die "GLOBUS_LOCATION=$ENV{GLOBUSLOCATION} is invalid"
     if ( ! -d $ENV{GLOBUS_LOCATION} );
 
 # Set the default ouptut file if none specified
-$Config{OutputFile} = "$ENV{GLOBUS_LOCATION}/tmp/$OutputName"
+$Config{OutputFile} = "$ENV{GLOBUS_LOCATION}/tmp/gram_job_state/$OutputName"
     if ( $Config{OutputFile} eq "" );
 
 # Setup the lock file..
@@ -321,6 +321,7 @@ sub ReadJobs( )
 	    next if ( $File =~ /\.lock$/ );
 	    next if ( $File eq "." || $File eq ".." );
 	    next if ( $File =~ /^gram_condor_log/ );
+	    next if ( $File !~ /^job\./ );
 
 	    # And, stuff it in the list
 	    push @StateFiles, $File
