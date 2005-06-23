@@ -434,7 +434,8 @@ V6_7_8_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/srb/3.2.1
 
 # Externals needed for V6_7_9 (same as V6_7_8)
-V6_7_9_EXT	-a V6_7_8_EXT
+V6_7_9_EXT	-a V6_7_8_EXT \
+		   externals/bundles/pcre/5.0
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_9_EXT
