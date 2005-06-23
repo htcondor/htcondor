@@ -514,6 +514,7 @@ sub TunePersonalCondor
 		print NEW "# Condor-C things\n";
 		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
 		print NEW "C_GAHP_LOG = \$(LOG)/CondorCgahp.\$(USERNAME)\n";
+		print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CondorCgahpWThread.\$(USERNAME)\n";
 	}
 	elsif( $portchanges eq "standard" )
 	{
@@ -527,6 +528,7 @@ sub TunePersonalCondor
 		print NEW "# Condor-C things\n";
 		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
 		print NEW "C_GAHP_LOG = \$(LOG)/CondorCgahp.\$(USERNAME)\n";
+		print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CondorCgahpWThread.\$(USERNAME)\n";
 	}
 	else
 	{
