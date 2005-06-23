@@ -978,7 +978,11 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		ReliSock tcp_auth_sock;
 
 		// the timeout
-		const int TCP_SOCK_TIMEOUT = 20;
+		int TCP_SOCK_TIMEOUT = param_integer("SEC_TCP_SESSION_TIMEOUT", 20);
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf ( D_SECURITY, "SECMAN: setting timeout to %i seconds.\n", TCP_SOCK_TIMEOUT);
+		}
+		tcp_auth_sock.timeout(TCP_SOCK_TIMEOUT);
 
 		// we already know the address - condor uses the same TCP port as it does UDP port.
 		sprintf (buf, sin_to_string(sock->endpoint()));
@@ -988,11 +992,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 					"TCP connection to %s failed\n", buf);
 			return false;
 		}
-
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: setting timout to %i seconds.\n", TCP_SOCK_TIMEOUT);
-		}
-		tcp_auth_sock.timeout(TCP_SOCK_TIMEOUT);
 
 		bool succ = startCommand ( DC_AUTHENTICATE, &tcp_auth_sock, can_negotiate, errstack, cmd);
 
