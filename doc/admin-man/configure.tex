@@ -1297,9 +1297,9 @@ server, shadow, and starter, none of which use DaemonCore yet).
   \Opt{rank}
     and \Opt{requirements}.
 
-  These settings are synonyms; you can use them interchangably or use both.
+  These settings are synonyms; you can use them interchangeably or use both.
   For example, \MacroNI{STARTD\_ATTRS} and
-  \MacroNI{STARTD\_EXPRS} are interchangable.
+  \MacroNI{STARTD\_EXPRS} are interchangeable.
   
   \Note The \Condor{kbdd} does not send
   ClassAds now, so this entry does not affect it.  The
@@ -1993,7 +1993,7 @@ page~\pageref{sec:Configuring-SMP} which describes how to set up and
 configure Condor on SMP machines.
 
 These settings control general operation of the \Condor{startd}.
-Examples using these configuation macros,
+Examples using these configuration macros,
 as well as further explanation is found in
 section~\ref{sec:Configuring-Policy} on
 Configuring The Startd Policy.
@@ -2727,7 +2727,7 @@ These macros control the \Condor{schedd}.
   alive message to any startd it has claimed.
   When the schedd claims a startd, it tells the startd how often it is
   going to send these messages.
-  If the startd does not recieve any of these keep alive messages
+  If the startd does not receive any of these keep alive messages
   during a certain period of time (defined via
   \Macro{MAX\_CLAIM\_ALIVES\_MISSED}, described on
   page~\pageref{param:MaxClaimAlivesMissed})
@@ -3559,7 +3559,7 @@ These macros affect the \Condor{negotiator}.
   in seconds and defaults to 300 (5 minutes).
   
 \item[\Macro{NEGOTIATOR\_CYCLE\_DELAY}] \label{param:NegotiatorCycleDelay}
-  An integer value that represents the mininum number of seconds
+  An integer value that represents the minimum number of seconds
   that must pass before a new negotiation cycle may start.
   The default value is 20.
   \MacroNI{NEGOTIATOR\_CYCLE\_DELAY} is intended only for use by
@@ -4015,10 +4015,32 @@ A boolean value that controls whether a failed submit is retried first
 submitted).  If this value is set to \Expr{True}, when a job submit
 fails, the job is placed at the head of the queue of ready jobs, so
 that it will be submitted again before any other jobs are submitted
-(this has been the behavior of DAGMan up to this point).
+(this has been the behavior of \Condor{dagman} up to this point).
 If this value is set to \Expr{False}, when a job submit fails, the job
 is placed at the tail of the queue of ready jobs.
 If undefined, it defaults to \Expr{True}.
+
+\item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
+\label{param:DAGManMaxJobsSubmitted}
+An integer value that controls the maximum number of node jobs within the
+DAG that will  be submitted to Condor at one time.  Note that this
+parameter is the same as the \OptArg{-maxjobs} command-line flag
+to condor\_submit\_dag.  If both the command-line flag and the
+configuration parameter are specified, the command-line flag overrides
+the configuration parameter.  The default is that there is no limit
+on the maximum number of jobs run at one time.
+
+\item[\Macro{DAGMAN\_MUNGE\_NODE\_NAMES}]
+\label{param:DAGManMungeNodeNames}
+A boolean value that controls whether \Condor{dagman} automatically
+renames nodes when running multiple DAGs (the renaming is done to
+avoid possible name conflicts).  If this value is set to \Expr{True},
+all node names have the "DAG number" prepended to them.  For example,
+the first DAG specified on the condor\_submit\_dag command line is
+considered DAG number 0, the second is DAG number 1, etc.  So if
+DAG number 2 has a node B, that node will internally be renamed
+to "2.B".
+If undefined, \Macro{DAGMAN\_MUNGE\_NODE\_NAMES} defaults to \Expr{True}.
 
 % \item[\Macro{STORK\_SERVER}]
 % \label{param:StorkServer}
@@ -4364,7 +4386,7 @@ These macros affect the high availability operation of Condor.
   time.
   The default value is 5 seconds.
   If this value is set too low,
-  \Condor{had} deamons will incorrectly assume
+  \Condor{had} daemons will incorrectly assume
   the failure of other machines.
 
 \item[\Macro{HAD\_ARGS}]
@@ -4499,7 +4521,7 @@ Default value = 10.
 \item[\Macro{STORK\_MAX\_RETRY}]
 \label{param:StorkMaxRetry}
 Limits the number attempts for a data placement.  For data transfers,
-this includes transfer attemps on the primary protocol and all
+this includes transfer attempts on the primary protocol and all
 alternate protocols, and all retries.
 Default value = 10.
 
@@ -4507,7 +4529,7 @@ Default value = 10.
 \label{param:StorkMaxDelayInMinutes}
 Limits the run time for a data placement job, after which the
 placement is considered failed.
-Units = minutes, default value = 10, minumum value = 1.
+Units = minutes, default value = 10, minimum value = 1.
 
 \item[\Macro{STORK\_TMP\_CRED\_DIR}]
 \label{param:StorkTmpCredDir}

@@ -1532,6 +1532,18 @@ REM Run the actual job now
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\Condor{store\_cred} is failing, and I'm sure I'm typing my password correctly.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+First, make sure the \Condor{schedd} is running.
+
+Next, check the SchedLog. It will contain more detailed information
+about the failure. Frequently, the error is a result of 
+\verb@PERMISSION DENIED@ errors. You can read more about properly configuring 
+security settings on page~\pageref{sec:Host-Security}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{My submit machine cannot have more than 120 jobs running concurrently. Why?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1758,6 +1770,35 @@ running until the central manager is restarted and begins matchmaking
 again.
 Nothing special needs to be done after the central manager is brought
 back on line.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why did the \Condor{schedd} daemon die and restart?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{condor\_schedd daemon!receiving signal 25}
+
+The \Condor{schedd} daemon receives signal 25,
+dies, and is restarted when the
+history file reaches a 2 Gbyte size limit.
+Until a larger history file size or the rotation of the history
+file is supported in Condor,
+try one of these work arounds:
+
+\begin{enumerate}
+\item When the history file becomes large, remove it.
+Note that this causes a loss of the information in the history file,
+but the \Condor{schedd} daemon will not die.
+\item When the history file becomes large, move it.
+\item Stop keeping the history.
+Only \Condor{history} accesses the history file, 
+so this particular functionality will be gone.
+To stop keeping the history, place
+\begin{verbatim}
+HISTORY=
+\end{verbatim}
+in the configuration,
+followed by a \Condor{reconfig} command to recognize the change in
+currently executing daemons.
+\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{When I ssh/telnet to a machine to check particulars of how

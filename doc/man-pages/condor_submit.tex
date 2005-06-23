@@ -101,7 +101,7 @@ If not specified, the default value
 of \File{/dev/null} is used for submission to a Unix machine.
 If not specified, input is ignored
 for submission to a Windows machine.
-For globus universe jobs, \SubmitCmd{input} may be a URL that the Globus
+For grid universe jobs, \SubmitCmd{input} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
 Note that this command does \emph{not} refer to the command-line
@@ -124,7 +124,7 @@ for submission to a Windows machine.
 Multiple jobs should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
-For globus universe jobs, \SubmitCmd{output} may be a URL that the Globus
+For grid universe jobs, \SubmitCmd{output} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
 Note that if your program explicitly opens and writes to a file,
@@ -145,7 +145,7 @@ If not specified, error messages are ignored
 for submission to a Windows machine.
 More than one job should not use the same error file, since
 this will cause one job to overwrite the errors of another.
-For globus universe jobs, \SubmitCmd{error} may be a URL that the Globus
+For grid universe jobs, \SubmitCmd{error} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
 %%%%%%%%%%%%%%%%%%%
@@ -158,7 +158,7 @@ List of arguments to be supplied
 to the program on the command line.   In the Java Universe, the first
 argument must be the name of the class containing \Code{main}.
 Arguments are delimited (separated) by space characters.
-Jobs submitted for the globus universe will parse arguments
+Jobs submitted for the grid universe will parse arguments
 differently 
 due to the differences between the ClassAd representation in Condor and 
 the Resource Specification Language (RSL) used in Globus.
@@ -179,7 +179,7 @@ For vanilla or MPI universe jobs where there is a shared file system,
 it is the current working directory on the machine where the
 job is executed.
 
-For vanilla, globus, or MPI universe jobs where file transfer mechanisms are
+For vanilla, grid, or MPI universe jobs where file transfer mechanisms are
 utilized (there is \emph{not} a shared file system),
 it is the directory on the machine from which the job is submitted
 where the input files come from, and where the job's output
@@ -233,7 +233,7 @@ transferring files, see section~\ref{sec:file-transfer} on
 page~\pageref{sec:file-transfer}.
 
 Note that \SubmitCmd{should\_transfer\_files} is not supported
-for jobs submitted to the globus universe.
+for jobs submitted to the grid universe.
 
 %%%%%%%%%%%%%%%%%%%
 %% when_to_transfer_output
@@ -293,7 +293,7 @@ This command forms an explicit list of output files to be transferred
 back from the temporary working directory on the execute machine to
 the submit machine.
 Most of the time, there is no need to use this command.
-Other than for globus universe jobs,
+Other than for grid universe jobs,
 if \SubmitCmd{transfer\_output\_files} is not specified,
 Condor will automatically transfer back all files in the job's
 temporary working directory which have been
@@ -308,7 +308,7 @@ submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what
 the job produces.
 
-For globus universe jobs,
+For grid universe jobs,
 to have files other than standard output and standard error transferred
 from the execute machine back to the submit machine,
 do use \SubmitCmd{transfer\_output\_files}, listing
@@ -1374,7 +1374,7 @@ or a different resource than a previous match.
 %%%%%%%%%%%%%%%%%%%
 \item[transfer\_output = $<$True \Bar\ False$>$]
 \index{submit commands!transfer\_output}
-For jobs submitted to the globus universe only.
+For jobs submitted to the grid universe only.
 If \Expr{True}, then the output (from \File{stdout}) from the job
 is transferred from the remote machine back to the submit machine.
 The name of the file after transfer is given
@@ -1393,7 +1393,7 @@ see \SubmitCmd{transfer\_output\_files}.
 %%%%%%%%%%%%%%%%%%%
 \item[transfer\_input = $<$True \Bar\ False$>$]
 \index{submit commands!transfer\_input}
-For jobs submitted to the globus universe only.
+For jobs submitted to the grid universe only.
 If \Expr{True}, then the job input (\File{stdin}) is transferred
 from the machine where the job was submitted to the remote machine.
 The name of the file that is transferred is given by the
@@ -1411,7 +1411,7 @@ see \SubmitCmd{transfer\_input\_files}.
 %%%%%%%%%%%%%%%%%%%
 \item[transfer\_error = $<$True \Bar\ False$>$]
 \index{submit commands!transfer\_error}
-For jobs submitted to the globus universe only.
+For jobs submitted to the grid universe only.
 If \Expr{True}, then the error output (from \File{stderr}) from the job
 is transferred from the remote machine back to the submit machine.
 The name of the file after transfer is given
@@ -1427,7 +1427,7 @@ The default value is \Expr{True}.
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_executable = $<$True \Bar\ False$>$]
-For jobs submitted to the globus universe, as well as vanilla and MPI.
+For jobs submitted to the grid universe, as well as vanilla and MPI.
 If \SubmitCmd{transfer\_executable} is set to
 \index{submit commands!transfer\_executable}
 \Expr{False}, then Condor looks for the executable on the remote machine, and
@@ -1442,7 +1442,7 @@ The default value is \Expr{True}.
 %%%%%%%%%%%%%%%%%%%
 \item[remote\_initialdir = $<$directory-path$>$] 
 \index{submit commands!remote\_initialdir}
-For jobs submitted to the globus universe only,
+For jobs submitted to the grid universe only,
 the path specifies the directory in which the job is to be
 executed on the remote machine.
 
@@ -1509,6 +1509,17 @@ The query is to the \Condor{collector} daemon
 (assumed to be at a standard IP address and port),
 and it is for the location (IP address and port) of the
 \Condor{schedd} daemon.
+
+%%%%%%%%%%%%%%%%%%%
+%% remote_schedd
+%%%%%%%%%%%%%%%%%%%
+\item[remote\_schedd = $<$machine-name$>$]
+\index{submit commands!remote\_schedd}
+A required command for a \Arg{grid} universe job with a
+\SubmitCmd{grid\_type} of \Arg{condor}.
+It is the machine with the job queue in the remote pool.
+The value ought to be the same as the \AdAttr{Name} ClassAd attribute
+of the \Condor{schedd} daemon in the remote pool.
 
 %%%%%%%%%%%%%%%%%%%
 % +

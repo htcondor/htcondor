@@ -1,7 +1,7 @@
 \index{Condor-G|(}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Condor-G}Condor-G}
+\subsection{\label{sec:Condor-G}Condor-G, the gt2, gt3, and gt4 grid\_types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor-G is a ``window to the grid.''
@@ -49,11 +49,36 @@ and it runs a local GASS server for file transfers).
 for Condor-G \VersionNotice, but other usage information has not
 yet been updated.
 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{grids/using.tex}
 \input{grids/grid-monitor.tex}
-\input{grids/glidein.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%\input{grids/glossary.tex}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Condor-G-Limits}Limitations of Condor-G}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This subsubsection used to reside in the file limitations.tex.
+\index{Condor-G!limitations}
+Submitting jobs to run under the globus universe has not yet
+been perfected.
+The following is a list of known limitations:
+
+\begin{enumerate}
+\item{No checkpoints.}
+\item{No job exit codes.}
+Job exit codes are not available (they are available for grid\_type gt4).
+\item{Limited platform availability.}
+Condor-G is only available on Linux, Solaris,
+Digital UNIX, and IRIX.
+HP-UX support will hopefully be available later.
+\end{enumerate}
 
 \index{Condor-G|)}
 

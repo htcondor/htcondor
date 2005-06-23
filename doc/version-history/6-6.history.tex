@@ -17,7 +17,19 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Most of the fixes included in this release were also included in
-  version 6.7.7.
+  version 6.7.7 (see below).
+
+\item The \MacroNI{QUEUE\_CLEAN\_INTERVAL} timer is reset during a 
+\Condor{schedd} reconfig only if this timer value has been changed.
+Previously, the timer was reset during all \Condor{schedd} reconfigs, which
+could prevent the \File{job\_queue.log} file from being cleaned.  Note that
+this timer is always reset upon a \Condor{schedd} startup.  See the
+related change for truncating the \File{job\_queue.log} below, for this same
+release.
+
+\item Previously, the \Condor{schedd} would over-react and exit if it
+tried to send a user email and \MacroNI{SMTP\_SERVER} was undefined;
+now it simply prints an error in the SchedLog and moves on.
 
 \end{itemize}
 
@@ -109,6 +121,13 @@ jobmanager names was: condor, fork, lsf, pbs, and remote.  A jobmanager
 by any other name (e.g. condor\_rh9, or lcgpbs) would cause the problem.
 This bug was originally fixed in internal releases of 6.7.0, but it was
 reintroduced by mistake in all public releases.
+
+\item Fix the way \Condor{version} handles command line arguments
+  (there were a number of problems and inconsistencies) and added a
+  \Opt{-help} option and usage message.
+
+\item Fixed some memory leaks in the \Condor{startd} that would be
+induced by calling \Condor{reconfig} or \Condor{status} \Opt{-d}.
 
 \end{itemize}
 

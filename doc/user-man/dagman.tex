@@ -359,7 +359,7 @@ To use a double quote inside \verb@string@,
 escape it with the backslash character (\verb@\@).
 To add the backslash character itself, use two backslashes (\verb@\\@).
 
-% for version 6.5.3, the VARS are not propogated into rescue dags.
+% for version 6.5.3, the VARS are not propagated into rescue dags.
 
 \subsubsection{ABORT-DAG-ON}
 
@@ -487,7 +487,7 @@ In the case where the submit description file for each node
 varies only in file naming, the use of a substitution macro
 within the submit description file allows the use of 
 a single submit description file.
-Note that the userlog file for a job currently cannot be specified
+Note that the user log file for a job currently cannot be specified
 using a macro passed from the DAG.
 
 The example uses a single submit description file in the DAG input
@@ -841,6 +841,86 @@ DAGMan either needs a completely flat directory structure
 (\emph{all} files for outer and inner DAGs within the same directory)
 or
 it needs full pathnames to all log files.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!Single submission of multiple, independent DAGs}
+
+A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
+Each independent DAG has its own DAG input file.
+These DAG input files are command-line arguments to
+\Condor{submit\_dag}
+(see the \Condor{submit\_dag} manual page at ~\ref{man-condor-submit-dag}).
+
+Internally, all of the independent DAGs are combined
+into a single, larger DAG, with no dependencies between
+the original independent DAGs.
+As a result,
+any generated rescue DAG file represents a single DAG.
+The file name of this rescue DAG is based on the DAG input file
+listed first within the command-line arguments to
+\Condor{submit\_dag}.
+Other files such
+as \File{dagman.out} and the lock file also have names based on this
+first DAG input file.
+By default, DAGMan internally renames the nodes to avoid node name collisions.  
+If all node names are unique, 
+the renaming of nodes may be disabled by
+setting the configuration variable \Macro{DAGMAN\_MUNGE\_NODE\_NAMES}
+to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
+
+% Karen has editted to this point.
+DAGMan currently assumes that all necessary files
+(DAG input files and job submit description files)
+are located in the same (flat) directory.
+Further, this directory is also the current working
+directory as \Condor{submit\_dag} is executed.
+Locating the multiple, independent DAGs in separate directories 
+is not yet supported.
+Yet, separate directories will work correctly,
+if \emph{all} file names are absolute paths.
+
+Relative paths as file names work only for a specific case.
+This case assumes that all file names are given relative to
+the current working directory as \Condor{submit\_dag} is executed.
+For example,
+assume that a directory called \File{parent}
+contains two subdirectories called \File{dag1} and
+\File{dag2}.
+The goal is to submit the two, independent DAGs located within
+\File{dag1} and \File{dag2} while the current working directory
+is \File{parent} with
+\footnotesize
+\begin{verbatim}
+condor_submit_dag dag1/one.dag dag2/two.dag
+\end{verbatim}
+\normalsize
+To make relative paths work in this example,
+the DAG input file \File{one.dag} will need to give the
+location of a Condor submit description file for a 
+node (within dag1) as
+\begin{verbatim}
+Job A  dag1/A.submit
+\end{verbatim}
+and the submit description file (file \File{A.submit})
+also needs relative path names such as
+\begin{verbatim}
+# File name: A.submit, in directory dag1
+executable = dag1/A.out
+output     = dag1/A.output
+error      = dag1/A.error
+log        = dag1/dag1.log
+universe   = vanilla
+queue
+\end{verbatim}
+Note that these paths are relative to the current working directory
+as \Condor{submit\_dag} is executed.
+Further note that these relative path names no longer allow the
+independent DAG to be submitted on its own when
+the  current working directory is the directory containing
+the DAG's files (\File{dag1} for this example).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGConfig}Configuration}

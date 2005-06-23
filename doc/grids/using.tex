@@ -18,12 +18,6 @@ semantics.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Grid-using}Using the Globus Grid-Types}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{grid universe}
-\index{universe!grid}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Globus-Protocols}Globus and Its Protocols}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The Globus software provides a well-defined set of protocols
@@ -131,7 +125,7 @@ standards-complient version of the GT3 web services-based GRAM.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Using-gt2}Grid Universe Jobs with grid\_type gt2}
+\subsubsection{\label{sec:Using-gt2}The gt2 grid\_type}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{universe!globus}
@@ -466,7 +460,7 @@ This example's attribute name for the additional RSL is
 \AdAttr{project}, and the value assigned is \AdAttr{Test\_Project}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Using-gt3}Grid Universe Jobs with grid\_type gt3}
+\subsubsection{\label{sec:Using-gt3}The gt3 grid\_type}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{universe!grid, grid\_type gt3}
 
@@ -515,7 +509,7 @@ and it must be referenced by the
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Using-gt4}Grid Universe Jobs with grid\_type gt4}
+\subsubsection{\label{sec:Using-gt4}The gt4 grid\_type}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{universe!grid, grid\_type gt4}
 
@@ -563,7 +557,7 @@ and it must be referenced by the
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:CondorG-Submit-Args}Arguments to gt2 and gt3 Grid-Types}
+\subsubsection{\label{sec:CondorG-Submit-Args}Arguments}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-G!job arguments}
 
@@ -797,22 +791,3 @@ exec /opt/myglobus/bin/myproxy-get-delegation $@
 \end{verbatim}
 \normalsize
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-Limits}Limitations of Condor-G}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% This subsubsection used to reside in the file limitations.tex.
-\index{Condor-G!limitations}
-Submitting jobs to run under the globus universe has not yet
-been perfected.
-The following is a list of known limitations:
-
-\begin{enumerate}
-\item{No checkpoints.}
-\item{No job exit codes.}
-Job exit codes are not available (they are available for grid\_type gt4).
-\item{Limited platform availability.}
-Condor-G is only available on Linux, Solaris,
-Digital UNIX, and IRIX.
-HP-UX support will hopefully be available later.
-\end{enumerate}

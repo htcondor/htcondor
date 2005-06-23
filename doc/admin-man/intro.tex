@@ -146,7 +146,7 @@ be started under Condor and what they do:
 \item[\Condor{master}] This daemon
 \index{Condor daemon!condor\_master@\Condor{master}}
 \index{daemon!condor\_master@\Condor{master}}
-\index{condor\_master}
+\index{condor\_master daemon}
 is responsible for keeping all the
 rest of the Condor daemons running on each machine in your pool.  It
 spawns the other daemons, and periodically checks to see if there are
@@ -162,7 +162,7 @@ performing.
 \item[\Condor{startd}] This daemon
 \index{Condor daemon!condor\_startd@\Condor{startd}}
 \index{daemon!condor\_startd@\Condor{startd}}
-\index{condor\_startd}
+\index{condor\_startd daemon}
 represents a given resource
 (namely, a machine capable of running jobs) to the Condor pool.  It
 advertises certain attributes about that resource that are used to
@@ -176,7 +176,7 @@ execute a Condor job, it spawns the \Condor{starter}, described below.
 \item[\Condor{starter}] This program
 \index{Condor daemon!condor\_starter@\Condor{starter}}
 \index{daemon!condor\_starter@\Condor{starter}}
-\index{condor\_starter}
+\index{condor\_starter daemon}
 is the entity that actually
 spawns the remote Condor job on a given machine.  It sets up the
 execution environment and monitors the job once it is running.  When a
@@ -186,7 +186,7 @@ information to the submitting machine, and exits.
 \item[\Condor{schedd}] This daemon
 \index{Condor daemon!condor\_schedd@\Condor{schedd}}
 \index{daemon!condor\_schedd@\Condor{schedd}}
-\index{condor\_schedd}
+\index{condor\_schedd daemon}
 represents resources requests to
 the Condor pool.  Any machine that you wish to allow users to submit
 jobs from needs to have a \Condor{schedd} running.  When users submit
@@ -205,7 +205,7 @@ particular request.
 \item[\Condor{shadow}] This program
 \index{Condor daemon!condor\_shadow@\Condor{shadow}}
 \index{daemon!condor\_shadow@\Condor{shadow}}
-\index{condor\_shadow}
+\index{condor\_shadow daemon}
 runs on the machine where a given
 request was submitted and acts as the resource manager for the
 request.  Jobs that are linked for Condor's standard universe, which
@@ -221,7 +221,7 @@ accessed, etc).
 \item[\Condor{collector}] This daemon
 \index{Condor daemon!condor\_collector@\Condor{collector}}
 \index{daemon!condor\_collector@\Condor{collector}}
-\index{condor\_collector}
+\index{condor\_collector daemon}
 is responsible for collecting
 all the information about the status of a Condor pool.  All other
 daemons (except the negotiator) periodically send ClassAd updates to
@@ -237,7 +237,7 @@ commands to a remote machine.
 \item[\Condor{negotiator}] This daemon
 \index{Condor daemon!condor\_negotiator@\Condor{negotiator}}
 \index{daemon!condor\_negotiator@\Condor{negotiator}}
-\index{condor\_negotiator}
+\index{condor\_negotiator daemon}
 is responsible for all the
 match-making within the Condor system.  Periodically, the negotiator
 begins a \Term{negotiation cycle}, where it queries the collector for
@@ -259,7 +259,7 @@ worse as this number grows.
 \item[\Condor{kbdd}] This daemon
 \index{Condor daemon!condor\_kbdd@\Condor{kbdd}}
 \index{daemon!condor\_kbdd@\Condor{kbdd}}
-\index{condor\_kbdd}
+\index{condor\_kbdd daemon}
 is only needed on Digital Unix and
 IRIX.  On these platforms, the \Condor{startd} cannot determine
 console (keyboard or mouse) activity directly from the system.  The
@@ -272,7 +272,7 @@ necessary, given the policy it has been configured to enforce.
 \item[\Condor{ckpt\_server}] This is the checkpoint server.
 \index{Condor daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
 \index{daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
-\index{condor\_ckpt\_server}
+\index{condor\_ckpt\_server daemon}
 It services requests to store and retrieve checkpoint files.  If your
 pool is configured to use a checkpoint server but that machine (or the
 server itself is down) Condor will revert to sending the checkpoint

@@ -361,7 +361,7 @@ may assist in tracking down the problem.  If the cause is still unclear, please
 contact your system administrator.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-log-events}In the Log file}
+\subsection{\label{sec:job-log-events}In the log file}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{job!log events}
 \index{log files!event descriptions}
@@ -387,42 +387,142 @@ The fourth field is a string that briefly describes the event.
 Fields that follow the fourth field give further information for the specific
 event type.
 
-Table~\ref{job-event-table} lists all event types.
+These are all of the events that can show up in a job log file:
 
-\begin{center}
-\begin{table}[hbt]
-\begin{tabular}{|lll|} \hline
-\Bold{Event Number} & \Bold{Event Description} & \Bold{Notes} \\ \hline \hline
-000 & Job submitted             \\ \hline
-001 & Job now running           \\ \hline
-002 & Error in executable       \\ \hline
-003 & Job was checkpointed      \\ \hline
-004 & Job evicted from machine  \\ \hline
-005 & Job terminated            \\ \hline
-006 & Image size of job updated \\ \hline
-007 & Shadow threw an exception \\ \hline
-008 & Generic Log Event         \\ \hline
-009 & Job Aborted               \\ \hline
-010 & Job was suspended         \\ \hline
-011 & Job was unsuspended       \\ \hline
-012 & Job was held              \\ \hline
-013 & Job was released          \\ \hline
-014 & Parallel Node executed    \\ \hline
-015 & Parallel Node terminated  \\ \hline
-016 & POST script terminated    \\ \hline
-017 & Job Submitted to Globus   \\ \hline
-018 & Globus Submit failed      \\ \hline
-019 & Globus Resource Up        \\ \hline
-020 & Globus Resource Down      \\ \hline
-021 & Remote Error              \\ \hline
-022 & RSC socket lost           \\ \hline
-023 & RSC socket reestablished  \\ \hline
-024 & RSC reconnect failure     \\ \hline
-\end{tabular}
-\caption{\label{job-event-table}Events within Log files}
-\end{table}
-\end{center}
+\noindent\Bold{Event Number:} 000 \\
+\Bold{Event Name:} Job submitted \\
+\Bold{Event Description:} This event occurs when a user submits a job.
+It is the first event you will see for a job, and it should only occur
+once. 
 
+\noindent\Bold{Event Number:} 001 \\
+\Bold{Event Name:} Job executing \\
+\Bold{Event Description:} This shows up when a job is running.
+It might occur more than once.
+
+\noindent\Bold{Event Number:} 002 \\
+\Bold{Event Name:} Error in executable \\
+\Bold{Event Description:} The job couldn't be run because the
+executable was bad.
+
+\noindent\Bold{Event Number:} 003 \\
+\Bold{Event Name:} Job was checkpointed \\
+\Bold{Event Description:} The job's complete state was written to a checkpoint
+file.  
+This might happen without the job being removed from a machine,
+because the checkpointing can happen periodically. 
+
+\noindent\Bold{Event Number:} 004 \\
+\Bold{Event Name:} Job evicted from machine \\
+\Bold{Event Description:} A job was removed from a machine before it finished,
+usually for a policy reason: perhaps an interactive user has claimed
+the computer, or perhaps another job is higher priority.
+
+\noindent\Bold{Event Number:} 005 \\
+\Bold{Event Name:} Job terminated \\
+\Bold{Event Description:} The job has completed.
+
+\noindent\Bold{Event Number:} 006 \\
+\Bold{Event Name:} Image size of job updated \\
+\Bold{Event Description:} This is informational. 
+It is referring to the memory that the job is using while running. It
+does not reflect the state of the job.
+
+\noindent\Bold{Event Number:} 007 \\
+\Bold{Event Name:} Shadow exception \\
+\Bold{Event Description:} 
+The \Condor{shadow}, the a program on the submit computer that watches
+over the job and performs some services for the job, failed for some
+catastrophic reason. The job will leave the machine and go back into
+the queue.
+
+\noindent\Bold{Event Number:} 008 \\
+\Bold{Event Name:} Generic log event \\
+\Bold{Event Description:} Not used.
+
+\noindent\Bold{Event Number:} 009 \\
+\Bold{Event Name:} Job aborted \\
+\Bold{Event Description:} The user cancelled the job.
+
+\noindent\Bold{Event Number:} 010 \\
+\Bold{Event Name:} Job was suspended \\
+\Bold{Event Description:} The job is still on the computer, but it is no longer
+executing. 
+This is usually for a policy reason, like an interactive user using
+the computer. 
+
+\noindent\Bold{Event Number:} 011 \\
+\Bold{Event Name:} Job was unsuspended \\
+\Bold{Event Description:} The job has resumed execution, after being
+suspended earlier. 
+
+\noindent\Bold{Event Number:} 012 \\
+\Bold{Event Name:} Job was held \\
+\Bold{Event Description:} The user has paused the job, perhaps with
+the \Condor{hold} command.
+It was stopped, and will go back into the queue again until it is
+aborted or released. 
+
+\noindent\Bold{Event Number:} 013 \\
+\Bold{Event Name:} Job was released \\
+\Bold{Event Description:} The user is requesting that a job on hold be re-run.
+
+\noindent\Bold{Event Number:} 014 \\
+\Bold{Event Name:} Parallel node executed \\
+\Bold{Event Description:} A parallel (MPI) program is running on a node.
+
+\noindent\Bold{Event Number:} 015 \\
+\Bold{Event Name:} Parallel node terminated \\
+\Bold{Event Description:} A parallel (MPI) program has completed on a node.
+
+\noindent\Bold{Event Number:} 016 \\
+\Bold{Event Name:} POST script terminated \\
+\Bold{Event Description:} A node in a DAGMan workflow has a script
+that should be run after a job. 
+The script is run on the submit host. 
+This event signals that the post script has completed.
+
+\noindent\Bold{Event Number:} 017 \\
+\Bold{Event Name:} Job submitted to Globus \\
+\Bold{Event Description:} A grid job has been delegated to Globus
+(version 2, 3, or 4).
+
+\noindent\Bold{Event Number:} 018 \\
+\Bold{Event Name:} Globus submit failed \\
+\Bold{Event Description:} The attempt to delegate a job to Globus
+failed. 
+
+\noindent\Bold{Event Number:} 019 \\
+\Bold{Event Name:} Globus resource up \\
+\Bold{Event Description:} The Globus resource that a job wants to run
+on was unavailable, but is now available.
+
+\noindent\Bold{Event Number:} 020 \\
+\Bold{Event Name:} Globus resource down \\
+\Bold{Event Description:} The Globus resource that a job wants to run
+on has become unavailable. 
+
+\noindent\Bold{Event Number:} 021 \\
+\Bold{Event Name:} Remote error \\
+\Bold{Event Description:} The \Condor{starter} (which monitors the job
+on the execution machine) has failed.
+
+\noindent\Bold{Event Number:} 022 \\
+\Bold{Event Name:} Remote system call socket lost \\
+\Bold{Event Description:} The \Condor{shadow} and \Condor{starter}
+(which communicate while the job runs) have lost contact.
+
+\noindent\Bold{Event Number:} 023 \\
+\Bold{Event Name:} Remote system call socket reestablished \\
+\Bold{Event Description:} The \Condor{shadow} and \Condor{starter}
+(which communicate while the job runs) have been able to resume
+contact before the job lease expired.
+
+\noindent\Bold{Event Number:} 024 \\
+\Bold{Event Name:} Remote system call reconnect failure \\
+\Bold{Event Description:} The \Condor{shadow} and \Condor{starter}
+(which communicate while the job runs) were unable to resume
+contact before the job lease expired.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
 \subsection{\label{sec:job-completion}Job Completion}

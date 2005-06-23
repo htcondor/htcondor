@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-dagman}\Condor{dagman}}{3}
-{metascheduler of the jobs submitted as the nodes of a DAG}
+{meta scheduler of the jobs submitted as the nodes of a DAG or DAGs}
 \Synopsis \SynProg{\Condor{dagman}}
 \oOptArg{-debug}{level}
 \oOptArg{-rescue}{filename}
@@ -11,14 +11,15 @@
 \oOpt{-allowlogerror}
 (\OptArg{-condorlog}{filename} \Bar \OptArg{-storklog}{filename})
 \OptArg{-lockfile}{filename}
-\OptArg{-dag}{filename}
+\OptArg{-dag}{dag\_file}
+\oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
 \index{Condor commands!condor\_dagman}
 \index{condor\_dagman command}
 
 \Description
-\Condor{dagman} is a metascheduler for the Condor jobs within
-a DAG (directed acyclic graph).
+\Condor{dagman} is a meta scheduler for the Condor jobs within
+a DAG (directed acyclic graph) (or multiple DAGs).
 In typical usage,
 a submitter of jobs that are organized into a DAG submits the
 DAG using \Condor{submit\_dag}.
@@ -38,6 +39,11 @@ or they are specified as command-line arguments to \Condor{submit\_dag}
 and passed on to \Condor{dagman}.
 The method by which the arguments are set is
 given in their description below.
+
+\Condor{dagman} can run multiple, independent DAGs.  This is done
+by specifying multiple \OptArg{-dag} arguments.
+Pass multiple
+DAG input files as command-line arguments to \Condor{submit\_dag}.
 
 
 \begin{Options}

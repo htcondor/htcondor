@@ -1,7 +1,7 @@
 \index{Condor-C|(}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Condor-C}Condor-C}
+\subsection{\label{sec:Condor-C}Condor-C, the condor grid\_type }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{grid computing!Condor-C}
@@ -28,7 +28,7 @@ without regard to the number
 of jobs queued or running.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-C-Config}Condor-C Configuration}
+\subsubsection{\label{sec:Condor-C-Config}Condor-C Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-C!configuration}
 There are two aspects to configuration to enable the
@@ -101,15 +101,15 @@ SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-C-Submit}Condor-C Job Submission}
+\subsubsection{\label{sec:Condor-C-Submit}Condor-C Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-C!job submission}
 \index{universe!grid}
 Job submission of Condor-C jobs is the same as for any Condor job.
-The \Opt{universe} is \Expr{grid},
-and the \Opt{grid\_type} is \Expr{condor}. 
-The remote machine is specified in
-the submit description file with the command \Opt{remote\_schedd}.
+The \SubmitCmd{universe} is \SubmitCmd{grid},
+and the \SubmitCmd{grid\_type} is \SubmitCmd{condor}. 
+The remote pool's job queue is defined and located by
+the submit description file command \SubmitCmd{remote\_schedd}.
 The value assigned for this command is the same as
 the \Condor{schedd} ClassAd attribute
 \Attr{Name} on the remote machine.
@@ -130,21 +130,25 @@ a job.
    remote_schedd = joe@remotemachine.example.com
    +remote_jobuniverse = 5
    +remote_requirements = True
+   +remote_ShouldTransferFiles = "YES"
+   +remote_WhenToTransferOutput = "ON_EXIT"
    queue
 \end{verbatim}
 \normalsize
 
 The remote machine needs to understand the attributes of the job.
 These are specified in the submit description file using the '+'
-syntax, followed by the string \AdStr{remote\_}.
-At a minimum, this will be the job's \Opt{universe} and the job's
-\Opt{requirements}.
+syntax, followed by the string \SubmitCmd{remote\_}.
+At a minimum, this will be the job's \SubmitCmd{universe} and the job's
+\SubmitCmd{requirements}.
+It is likely that other attributes specific to the
+job's \SubmitCmd{universe} (on the remote pool) will also be necessary.
 Note that attributes set with '+' are inserted directly into
 the job's ClassAd.  
 Specify attributes as they 
 must appear in the job's ClassAd, not the submit description file. 
 For example,
-the \Opt{universe} is specified using an integer assigned for
+the \SubmitCmd{universe} is specified using an integer assigned for
 a job ClassAd \Attr{JobUniverse}.
 Similarly, place quotation marks around string 
 expressions.
@@ -157,9 +161,32 @@ when_to_transfer_output = ON_EXIT
 This must appear in the Condor-C job submit description file as
 \footnotesize
 \begin{verbatim}
-+Remote_WhenToTransferOutput="ON_EXIT"
++remote_WhenToTransferOutput = "ON_EXIT"
 \end{verbatim}
 \normalsize
+
+% why we need +remote_ShouldTransferFiles, etc.
+For this particular example,
+the job is to be run as a \SubmitCmd{vanilla} 
+\SubmitCmd{universe} job at the remote pool.
+The (remote pool's) \Condor{schedd} daemon is likely to
+place its job queue data on a local disk 
+and execute the job on another machine within the pool of machines.
+This implies that the file systems for the resulting submit machine
+(the machine specified by \SubmitCmd{remote\_schedd}) and
+the execute machine (the machine that runs the job) will
+\emph{not} be shared.
+Thus,
+the two inserted ClassAds
+\footnotesize
+\begin{verbatim}
++remote_ShouldTransferFiles = "YES"
++remote_WhenToTransferOutput = "ON_EXIT"
+\end{verbatim}
+\normalsize
+are used to invoke Condor's file transfer mechanism. 
+
+
 
 As Condor-C is a recent addition to Condor,
 the universes, associated integer assignments,
@@ -193,19 +220,14 @@ local & 12 & works well \\ \hline
 \end{table}
 \end{center}
 
-File transfer of a job's executable, \File{stdin}, \File{stdout}, and
-\File{stderr} are automatic.
-%If other files are needed,
-%then . . .
-% FINISH THIS PARAGRAPH!
-
 For communication between \Condor{schedd} daemons on the submit
 and remote machines,
 a location of the remote \Condor{schedd} daemon is needed.
 By default, the submit machine queries its \Condor{collector}
 daemon for the needed information.
-However, a newly defined command for use within the submit
-description file can override the default.
+The \SubmitCmd{remote\_pool}
+command within the submit
+description file overrides the default.
 An example of this submit command is
 \footnotesize
 \begin{verbatim}
@@ -218,8 +240,23 @@ it defines a different \Condor{collector} daemon
 (assumed to be listening at a standard IP address and port)
 to ask for location information about the remote machine.
 
+File transfer of a job's executable, \File{stdin}, \File{stdout}, and
+\File{stderr} are automatic.
+When other files need to be transferred using Condor's file transfer
+mechanism
+(see section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}),
+the mechanism is applied based on the resulting job universe on the
+remote machine.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-C-Limits}Current Limitations in Condor-C}
+%\subsubsection{\label{sec:Condor-C-Hops}Multiple Hops for Condor-C Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% \Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Condor-C-Limits}Current Limitations in Condor-C}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-C!limitations}
 Submitting jobs to run under the grid universe has not yet
@@ -227,11 +264,6 @@ been perfected.
 The following is a list of known limitations with Condor-C:
 
 \begin{enumerate}
-  \item{Condor-C currently does not work as root.
-  The \Condor{schedd} daemon running on the remote machine can not be
-  executed as root.
-  A permissions problem prevents it from working correctly.  }
-
   \item{Authentication methods other than
   \Expr{CLAIMTOBE}, such as \Expr{GSI} and \Expr{KERBEROS}, are 
   untested, and may not yet work.}

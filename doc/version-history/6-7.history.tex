@@ -58,7 +58,8 @@ a hostname no longer causes the \Condor{master} to crash.
 
 \begin{itemize}
 
-\item Add stuff here...
+\item This release contains all of the bug fixes and improvements from
+  the 6.6 stable series up to and including version 6.6.9.
 
 \end{itemize}
 
@@ -85,6 +86,8 @@ indepedent DAG in a single \Condor{dagman} process.
 
 \item User policy expressions (on\_exit\_remove and on\_exit\_hold)
 now work for scheduler universe jobs.
+
+\item TotalCpus and TotalMemory are now set in machine ads.
 
 \item \Condor{dagman} now tolerates the "two terminated events for
 a single job" bug by default.  There is a new bit in
@@ -129,6 +132,23 @@ continue.  See section~\ref{param:DAGManAllowEvents} for more info.
 
 \item \Condor{userprio} option \Opt{-pool} was failing with ``Can't
 find address for negotiator'' since version 6.7.5.
+
+\item Fixed a bug the prevented SOAP clients from being able to access
+a job's spooled data files if the \Condor{schedd} restarted.
+
+\item Fixed a bug that caused the \Condor{gridmanager} to panic when
+trying to retire a job from the queue that was already gone. This
+could cause multiple terminate events to be logged for some jobs.
+
+\item Fixed a bug that caused match-making to not work for Condor-C
+jobs.
+
+\item Added workaround for a Globus bug that can cause re-execution of
+a completed GT2 job in the correct failure case (Globus bugzilla ticket
+3411).
+
+\item Properly extend the lifetime of GT4 jobs and credentials on the
+remote server.
 
 \end{itemize}
 

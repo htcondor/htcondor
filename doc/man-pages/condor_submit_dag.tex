@@ -15,7 +15,9 @@
 \oOpt{-allowlogerror}
 \oOptArg{-r}{schedd\_name}
 \oOptArg{-debug}{level}
-\Arg{DAGInputFile}
+\Arg{DAGInputFile1}
+\oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
+
 
 \index{Condor commands!condor\_submit\_dag}
 \index{condor\_submit\_dag command}
@@ -25,8 +27,8 @@
 \Condor{submit\_dag} is the program for submitting a DAG (directed
 acyclic graph) of jobs for execution under Condor.
 The program enforces the job dependencies defined
-in the \Arg{DAGInputFile}.
-The \Arg{DAGInputFile} contains commands
+in one or more \Arg{DAGInputFile}s.
+Each \Arg{DAGInputFile} contains commands
 to direct the submission of jobs implied by the nodes
 of a DAG to Condor.
 See the Condor User Manual, section~\ref{sec:DAGMan} for a complete
