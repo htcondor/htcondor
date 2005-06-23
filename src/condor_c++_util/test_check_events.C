@@ -202,15 +202,15 @@ int main(int argc, char **argv)
 	printf("Testing job aborted... ");
 	CheckThisEvent(ce2, &ae2, CheckEvents::EVENT_OKAY, result);
 
-	PostScriptTerminatedEvent pe1;
+	PostScriptTerminatedEvent pt1;
 		// Note that ID doesn't match anything else -- this simulates
 		// running a post script where node submit failed.
-	pe1.cluster = 998866;
-	pe1.proc = 0;
-	pe1.subproc = 0;
+	pt1.cluster = 998866;
+	pt1.proc = 0;
+	pt1.subproc = 0;
 
 	printf("Testing post script terminated...");
-	CheckThisEvent(ce2, &pe1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(ce2, &pt1, CheckEvents::EVENT_OKAY, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce2.CheckAllJobs(errorMsg) == CheckEvents::EVENT_OKAY ) {
@@ -351,7 +351,7 @@ int main(int argc, char **argv)
 	CheckThisEvent(ce6, &te3, CheckEvents::EVENT_ERROR, result);
 
 	printf("Testing post script terminated...");
-	CheckThisEvent(ce6, &pe1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(ce6, &pt1, CheckEvents::EVENT_OKAY, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce6.CheckAllJobs(errorMsg) != CheckEvents::EVENT_ERROR ) {
@@ -532,6 +532,71 @@ int main(int argc, char **argv)
 		result = false;
 	} else {
 		printf("...got expected bad event (%s)\n", errorMsg.Value());
+	}
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing running POST scripts after submit failures\n\n");
+
+	CheckEvents		ce11;
+
+	PostScriptTerminatedEvent pt2;
+		// ID of POST script terminated event is -1.-1.-1 if all submit
+		// attempts of the node job failed.
+	pt2.cluster = -1;
+	pt2.proc = -1;
+	pt2.subproc = -1;
+
+	printf("Testing post script terminated...");
+	CheckThisEvent(ce11, &pt2, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing post script terminated...");
+	CheckThisEvent(ce11, &pt2, CheckEvents::EVENT_OKAY, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce11.CheckAllJobs(errorMsg) == CheckEvents::EVENT_OKAY ) {
+		printf("...succeeded\n");
+	} else {
+		printf("...FAILED (%s)\n", errorMsg.Value());
+		printf("########## TEST FAILED HERE ##########\n");
+		result = false;
+	}
+
+		// Make sure we flag multiple post script terminates for a *real*
+		// job as errors...
+	SubmitEvent		se11;
+	se11.cluster = 1234;
+	se11.proc = 0;
+	se11.subproc = 0;
+
+	printf("Testing submit... ");
+	CheckThisEvent(ce11, &se11, CheckEvents::EVENT_OKAY, result);
+
+	JobTerminatedEvent	te11;
+	te11.cluster = 1234;
+	te11.proc = 0;
+	te11.subproc = 0;
+
+	printf("Testing terminate... ");
+	CheckThisEvent(ce11, &te11, CheckEvents::EVENT_OKAY, result);
+
+	pt2.cluster = 1234;
+	pt2.proc = 0;
+	pt2.subproc = 0;
+
+	printf("Testing post script terminated...");
+	CheckThisEvent(ce11, &pt2, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing post script terminated...");
+	CheckThisEvent(ce11, &pt2, CheckEvents::EVENT_ERROR, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce11.CheckAllJobs(errorMsg) != CheckEvents::EVENT_ERROR) {
+		printf("...should have gotten an error (test FAILED)\n");
+		printf("########## TEST FAILED HERE ##########\n");
+		result = false;
+	} else {
+		printf("...got expected error (%s)\n", errorMsg.Value());
 	}
 
 	//-------------------------------------------------------------------------

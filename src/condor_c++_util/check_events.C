@@ -175,9 +175,10 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 	bool		result = true;
 
 		// Allow for the case where we ran a post script after all submit
-		// attempts fail.
+		// attempts fail.  (Should we check for the special ID -1.-1.-1
+		// here?)
 	if ( info->submitCount == 0 && info->termCount == 0 &&
-			info->postScriptCount == 1 ) {
+			info->postScriptCount >= 1 ) {
 		return result;
 	}
 
@@ -203,6 +204,15 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 		} else if ( AllowGarbage() && info->TotalEndCount() == 0 ) {
 			// Okay.
 		} else {
+			result = false;
+		}
+		eventIsGood = false;
+	}
+
+	if ( info->postScriptCount > 1 ) {
+		errorMsg = idStr + " ended; post script "
+				"count != 1 (" + MyString(info->postScriptCount) + ")";
+		if ( !AllowGarbage() ) {
 			result = false;
 		}
 		eventIsGood = false;
