@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.4.10 2005-05-17 08:41:42 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.4.11 2005-06-24 16:34:55 nmueller Exp $
 #
 ######################################################################
 
@@ -185,7 +185,7 @@ my %prereqs = (
   "sun4u_sol_5.8"  => "gcc-2.95.3, binutils-2.15",
   "alpha_osf_V5.1" => "gcc-2.95.3, binutils-2.15",
   "ppc_aix_5.2"    => "vac-6, vacpp-6",
-  "irix_6.5"       => "binutils-2.15"
+  "irix_6.5"       => "gcc-3.3, binutils-2.15"
 );
 
 

@@ -6150,6 +6150,7 @@ DaemonCore::Inherit( void )
 		pidtmp->was_not_responding = FALSE;
 #ifdef WIN32
 		pidtmp->deallocate = 0L;
+		pidtmp->hPipe = 0;
 
 		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE |
 				PROCESS_QUERY_INFORMATION, FALSE, ppid );

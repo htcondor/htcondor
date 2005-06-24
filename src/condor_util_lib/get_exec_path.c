@@ -29,6 +29,21 @@
   NULL.  On platforms where it is possible to collect this
   information, the full path is stored in a string allocated with
   malloc() that must be free()'ed when the caller is done with it.
+
+  Written by Derek Wright <wright@cs.wisc.edu> 2004-05-13
+
+  WARNING: This code was lifted directly from the Condor source tree,
+  slightly modified to use the autoconf-way instead of including
+  condor_common.h, converted to use GCB's error logging interface
+  (ERROR()) instead of Condor's logging interface (dprintf()), and
+  checked into GCB's source tree.  Yes, this isn't ideal, but the real
+  solution for sharing an exact copy of the source between the two
+  projects would be a totally seperate utility library that both GCB
+  and Condor used as an external.  That's overkill for this 1 file,
+  and I don't have time to do that right now.  So, for now, just know
+  that if you modify the copy here, you should fix GCB's copy in
+  gcb/src/common/get_exec_path.c.
+
 */
 
 /*

@@ -1,3 +1,7 @@
+06/24/05 V6_6-merge-42
+   The state of the V6_6-branch for a merge into V6_7-branch. This includes
+   more bug fixes.
+
 06/22/05 V6_7-pre_merge-V6_7-cgahp_win-merge-1
    The state of V6_7-branch before the merge from V6_7-cgahp_win-branch
 
@@ -13,6 +17,12 @@
    The state of the V6_7_8-branch for a merge into V6_7-branch. The only
    changes are last-minute check-ins for GT4 and workarounds for problems
    in GT2 and blahp.
+
+06/14/05 V6_6_10
+   The official 6.6.10 release tag. This lives on V6_6_ALL and
+   V6_6_10_EXT. The official release version string for 6.6.10 is
+   $CondorVersion: 6.6.10 Jun 13 2005 $
+   OWO Build# 1169, NWO Build# 7644
 
 06/10/05 V6_7_8
    The official 6.7.8 release tag, off of the V6_7_8-branch of
