@@ -26,7 +26,12 @@
 #include "condor_debug.h"
 #include "condor_socket_types.h"
 
-
+/*
+ * FYI: This code is used by the old shadow/starter and by the syscall lib
+ * lib linked inside the job. The other daemons use the do_connect in
+ * condor_io/sock.C
+ *
+ */
 unsigned short find_port_num( const char *service_name, 
 							  unsigned short dflt_port );
 char *mk_config_name( const char *service_name );
