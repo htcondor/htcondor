@@ -701,9 +701,48 @@ char * DaemonCore::InfoCommandSinfulString(int pid)
 	}
 }
 
-int DaemonCore::Register_Signal(int sig, char* sig_descrip,
-				SignalHandler handler, SignalHandlercpp handlercpp,
-				char* handler_descrip, Service* s,	DCpermission perm,
+// Lookup the environment id set for a particular pid, or if -1 then the
+// getpid() in question.  Returns penvid or NULL of can't be found.
+PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
+{
+	extern char **environ;
+
+	if (penvid == NULL) {
+		return NULL;
+	}
+
+	/* just in case... */
+	pidenvid_init(penvid);
+
+	/* handle the base case of my own pid */
+	if ( pid == -1 ) {
+
+		if (pidenvid_filter_and_insert(penvid, environ) == 
+			PIDENVID_OVERSIZED)
+		{
+			EXCEPT( "DaemonCore::InfoEnvironmentID: Programmer error. "
+				"Tried to overstuff a PidEntryID array.\n" );
+		}
+
+	} else {
+
+		// If someone else was asked for, give them the info for that pid.
+		PidEntry *pidinfo = NULL;
+		if ((pidTable->lookup(pid, pidinfo) < 0)) {
+			// we have no information on this pid
+			return NULL;
+		}
+
+		// copy over the information to the passed in array
+		pidenvid_copy(penvid, &pidinfo->penvid);
+	}
+
+	return penvid;
+}
+
+int DaemonCore::Register_Signal(int sig, char* sig_descrip, 
+				SignalHandler handler, SignalHandlercpp handlercpp, 
+				char* handler_descrip, Service* s,	DCpermission perm, 
 				int is_cpp)
 {
     int     i;		// hash value
@@ -4731,6 +4770,7 @@ int DaemonCore::Create_Process(
 	char *ptmp;
 	int inheritSockFds[MAX_INHERIT_SOCKS];
 	int numInheritSockFds = 0;
+	extern char **environ;
 
 	//saved errno (if any) to pass back to caller
 	//Currently, only stuff that would be of interest to the user
@@ -4901,6 +4941,15 @@ int DaemonCore::Create_Process(
         inheritSockFds[numInheritSockFds++] = ssock.get_file_desc();
 	}
 	inheritbuf += " 0";
+	
+	/* this will be the pidfamily ancestor identification information */
+	time_t time_of_fork;
+	unsigned int mii;
+	pid_t forker_pid;
+
+	/* this stuff ends up in the child's environment to help processes
+		identify children/grandchildren/great-grandchildren/etc. */
+	create_id(&time_of_fork, &mii);
 
 #ifdef WIN32
 	// START A NEW PROCESS ON WIN32
@@ -4914,6 +4963,9 @@ int DaemonCore::Create_Process(
 	// prepare a STARTUPINFO structure for the new process
 	ZeroMemory(&si,sizeof(si));
 	si.cb = sizeof(si);
+
+	// process id for the environment ancestor history info
+	forker_pid = ::GetCurrentProcessId();
 
 	// we do _not_ want our child to inherit our file descriptors
 	// unless explicitly requested.  so, set the underlying handle
@@ -5062,8 +5114,9 @@ int DaemonCore::Create_Process(
 					EnvGetName( ENV_INHERIT ) );
 			goto wrapup;
 		}
+	}	
 
-	}	// end of dealing with the environment....
+	// end of dealing with the environment....
 
 	// Check if it's a 16-bit application
 	bIs16Bit = false;
@@ -5307,6 +5360,9 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
+	// process id for the environment ancestor history info
+	forker_pid = ::getpid();
+
 	newpid = fork();
 	if( newpid == 0 ) // Child Process
 	{
@@ -5362,24 +5418,137 @@ int DaemonCore::Create_Process(
 			// table, so it's safe to continue and eventually do the
 			// exec() in this process...
 
-
-			// make the args / env  into something we can use:
-
+		/////////////////////////////////////////////////////////////////
+		// figure out what stays and goes in the child's environment
+		/////////////////////////////////////////////////////////////////
 		char **unix_env;
+		Env envobject;
+
+		// We may determine to seed the child's environment with the parent's.
+		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) ) {
+			envobject.Merge((const char**)environ);
+		}
+
+		// Put the caller's env requests into the job's environment, potentially
+		// adding/overriding things in the current env if the job was allowed to
+		// inherit the parent's environment.
+		envobject.Merge(env);
+
+		// if I have brought in the parent's environment, then ensure that
+		// after the caller's changes have been enacted, this overrides them.
+		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) ) {
+
+			// add/override the inherit variable with the correct value
+			// for this process.
+			envobject.Put( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+
+			// Make sure PURIFY can open windows for the daemons when
+			// they start. This functionality appears to only exist when we've
+			// decided to inherit the parent's environment. I'm not sure
+			// what the ramifications are if we include it all the time so here
+			// it stays for now.
+        	char *display;
+        	display = param ( "PURIFY_DISPLAY" );
+        	if ( display ) {
+            	envobject.Put( "DISPLAY", display );
+            	free ( display );
+            	char *purebuf;
+				purebuf = (char*)malloc(sizeof(char) * 
+								(strlen("-program-name=") + strlen(namebuf) + 
+								1));
+				if (purebuf == NULL) {
+					EXCEPT("Create_Process: PUREOPTIONS is out of memory!");
+				}
+            	sprintf ( purebuf, "-program-name=%s", namebuf );
+            	envobject.Put( "PUREOPTIONS", purebuf );
+				free(purebuf);
+        	}
+		}
+
+		// Now we add/override  things that must ALWAYS be in the child's 
+		// environment regardless of what is already in the child's environment.
+
+		// BEGIN pid family environment id propogation 
+		// Place the pidfamily accounting entries into our 
+		// environment if we can and hope any children.
+		// This will help ancestors track their children a little better.
+		// We should be automatically propogating the pidfamily specifying
+		// env vars in the forker process as well.
+		char envid[PIDENVID_ENVID_SIZE];
+		PidEnvID penvid;
+
+		pidenvid_init(&penvid);
+
+		// if we weren't inheriting the parent's environment, then grab out
+		// the parent's pidfamily history... and jam it into the child's 
+		// environment
+		if ( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
+			int i;
+			// The parent process could not have been exec'ed if there were 
+			// too many ancestor markers in its environment, so this check
+			// is more of an assertion.
+			if (pidenvid_filter_and_insert(&penvid, environ) ==
+					PIDENVID_OVERSIZED)
+			{
+				dprintf ( D_ALWAYS, "Create_Process: Failed to filter ancestor "
+				  	"history from parent's environment because there are more "
+					"than PIDENVID_MAX(%d) of them! Programmer Error.\n",
+					PIDENVID_MAX );
+				// before we exit, make sure our parent knows something
+				// went wrong before the exec...
+				write(errorpipe[1], &errno, sizeof(errno));
+				exit(errno); // Yes, we really want to exit here.
+			}
+
+			// Propogate the ancestor history to the child's environment
+			for (i = 0; i < PIDENVID_MAX; i++) {
+				if (penvid.ancestors[i].active == TRUE) { 
+					envobject.Put( penvid.ancestors[i].envid );
+				} else {
+					// After the first FALSE entry, there will never be
+					// true entries.
+					break;
+				}
+			}
+		}
+
+		// create the new ancestor entry for the child's environment
+		if (pidenvid_format_to_envid(envid, PIDENVID_ENVID_SIZE, 
+				forker_pid, pid, time_of_fork, mii) == PIDENVID_BAD_FORMAT) 
+		{
+			dprintf ( D_ALWAYS, "Create_Process: Failed to create envid "
+				  	"\"%s\" due to bad format. !\n", envid );
+				// before we exit, make sure our parent knows something
+				// went wrong before the exec...
+			write(errorpipe[1], &errno, sizeof(errno));
+			exit(errno); // Yes, we really want to exit here.
+		}
+
+		// if the new entry fits into the penvid, then add it to the 
+		// environment, else EXCEPT cause it is programmer's error 
+		if (pidenvid_append(&penvid, envid) == PIDENVID_OK) {
+			envobject.Put( envid );
+		} else {
+			dprintf ( D_ALWAYS, "Create_Process: Failed to insert envid "
+				  	"\"%s\" because its insertion would mean more than "
+					"PIDENVID_MAX entries in a process! Programmer "
+					"Error.\n", envid );
+				// before we exit, make sure our parent knows something
+				// went wrong before the exec...
+			write(errorpipe[1], &errno, sizeof(errno));
+			exit(errno); // Yes, we really want to exit here.
+		}
+		// END pid family environment id propogation 
+
+		// The child's environment:
+		unix_env = envobject.getStringArray();
+
+		/////////////////////////////////////////////////////////////////
+		// figure out what stays and goes in the job's arguments
+		/////////////////////////////////////////////////////////////////
 		char **unix_args;
-
-		if( (env == NULL) || (env[0] == 0) ) {
-			dprintf(D_DAEMONCORE, "Create_Process: Env: NULL\n", env);
-			unix_env = new char*[1];
-			unix_env[0] = 0;
-		}
-		else {
-			Env envobject;
-			dprintf(D_DAEMONCORE, "Create_Process: Env: %s\n", env);
-			envobject.Merge(env);
-			unix_env = envobject.getStringArray();
-		}
-
+		
+		// set up the args to the process
 		if( (args == NULL) || (args[0] == 0) ) {
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
 			unix_args = new char*[2];
@@ -5577,24 +5746,6 @@ int DaemonCore::Create_Process(
             dprintf ( D_DAEMONCORE, "calling nice(%d)\n", nice_inc );
             nice( nice_inc );
         }
-
-#if defined( HAS_PURIFY )
-			/* The following will allow purify to pop up windows
-			   for all daemons created with Create_Process().  The
-			   -program-name is so purify can find the executable.
-               Note the super-secret PURIFY_DISPLAY param.
-			*/
-
-        char *display;
-        display = param ( "PURIFY_DISPLAY" );
-        if ( display ) {
-            SetEnv( "DISPLAY", display );
-            free ( display );
-            char purebuf[256];
-            sprintf ( purebuf, "-program-name=%s", namebuf );
-            SetEnv( "PUREOPTIONS", purebuf );
-        }
-#endif
 
 		MyString msg = "Printing fds to inherit: ";
         for ( int a=0 ; a<numInheritSockFds ; a++ ) {
@@ -5849,11 +6000,30 @@ int DaemonCore::Create_Process(
 	pidtmp->hPipe = 0;
 	pidtmp->pipeReady = 0;
 	pidtmp->deallocate = 0;
-#endif
+#endif 
+	/* remember the family history of the new pid */
+	pidenvid_init(&pidtmp->penvid);
+	if (pidenvid_filter_and_insert(&pidtmp->penvid, environ) !=
+		PIDENVID_OK)
+	{
+		EXCEPT( "Create_Process: More ancestor environment IDs found than "
+				"PIDENVID_MAX which is currently %d. Programmer Error.\n", 
+				PIDENVID_MAX );
+	}
+	if (pidenvid_append_direct(&pidtmp->penvid, 
+			forker_pid, newpid, time_of_fork, mii) == PIDENVID_OVERSIZED)
+	{
+		EXCEPT( "Create_Process: Cannot add child pid to PidEnvID table "
+				"because there aren't enough entries. PIDENVID_MAX is "
+				"currently %d! Programmer Error.\n", PIDENVID_MAX );
+	}
+
+	/* add it to the pid table */
 	{
 	   int insert_result = pidTable->insert(newpid,pidtmp);
 	   assert( insert_result == 0);
 	}
+
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
 #ifdef WIN32
@@ -7260,8 +7430,6 @@ DaemonCore::Register_Priv_State( priv_state priv )
 	Default_Priv_State = priv;
 	return old_priv;
 }
-
-
 
 bool
 DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )

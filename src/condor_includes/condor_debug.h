@@ -87,7 +87,12 @@ extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int (*DebugId)(FILE *);		/* set header message */
 
-void dprintf ( int flags, char *fmt, ... );
+void dprintf ( int flags, char *fmt, ... )
+#ifdef __GNUC__
+__attribute__((__format__(__printf__, 2, 3)))
+#endif
+;
+
 void dprintf_config( char *subsys, int logfd );
 void _condor_dprintf_va ( int flags, char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);

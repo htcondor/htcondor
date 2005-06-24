@@ -26,13 +26,15 @@
 #include "extArray.h"
 #include "condor_uid.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_pidenvid.h"
 
 class ProcAPI; 	// forward reference
 
 class ProcFamily : public Service {
 public:
 	
-	ProcFamily( pid_t pid, priv_state priv, int test_only = 0 );
+	ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv,
+					int test_only = 0 );
 
 	~ProcFamily();
 
@@ -110,6 +112,8 @@ private:
 	long alive_cpu_sys_time;
 
 	unsigned long max_image_size;
+
+	PidEnvID m_penvid;
 
 	char *searchLogin;
 };

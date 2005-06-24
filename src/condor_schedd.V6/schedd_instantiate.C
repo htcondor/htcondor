@@ -72,7 +72,7 @@ template class HashTable<int,AllocationNode*>;
 template class HashBucket<int,AllocationNode*>;
 template class List<ClassAd>;
 template class Item<ClassAd>;
-template class Queue<ClassAd*>;
+template class Queue<PROC_ID>;
 // You'd think we'd need to instantiate a HashTable and HashBucket for
 // <HashKey, ClassAd*> here, but those are already instantiated in
 // classad_log.C in the c++_util_lib (not in c++_util_instantiate.C

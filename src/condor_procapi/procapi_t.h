@@ -24,7 +24,7 @@
 #define  PROCAPI_T_H
 #include "condor_common.h"
 #include "procapi.h"
-#include <stdio.h>
+#include "condor_pidenvid.h"
 
 // This is the Procapi Tester 
 // currently there are seven different tests.  Five of them test the five 

@@ -106,7 +106,9 @@ MPIMasterProc::StartJob()
 		// can spawn the rest of the workers.  If the port file isn't
 		// yet ready, this function will set a timer so we keep
 		// checking until we find it.
-	checkPortFile();
+		
+		
+//checkPortFile();
 #endif 
 
 	return rval;

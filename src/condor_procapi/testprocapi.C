@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi.h"
 #include <stdio.h>
 
@@ -35,6 +36,10 @@ int main()
 { 
 	piPTR pi = NULL;
 	pid_t pids[3];
+	int status;
+	PidEnvID penvid;
+
+	pidenvid_init(&penvid);
 
 // Use this for getProcSetInfo()...
 //	printf ( "Feed me three pids\n" );
@@ -46,9 +51,9 @@ int main()
 
 	while (1) {
 			
-		ProcAPI::getProcInfo( pids[0], pi );
-//		ProcAPI::getFamilyInfo( pids[0], pi );
-//		ProcAPI::getProcSetInfo( pids, 3, pi );
+		ProcAPI::getProcInfo( pids[0], pi, status );
+//		ProcAPI::getFamilyInfo( pids[0], pi, &penvid, status );
+//		ProcAPI::getProcSetInfo( pids, 3, pi, status );
 
 		ProcAPI::printProcInfo ( pi );
 		printf ( "\n" );

@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi.h"
 #include "killfamily.h"
 #include <sys/types.h>
@@ -31,6 +33,11 @@ main () {
 	ProcFamily simpsons(getpid(), (priv_state) 1, &p);
 	piPTR pi = NULL;
 	pid_t fam[128];
+	PidEnvID penvid;
+	int fam_status;
+	int info_status;
+
+	pidnevid_init(&penvid);
 	
 	for ( int i=0 ; i < 1 ; i++ ) {
 
@@ -51,12 +58,12 @@ main () {
 		}
 		sleep ( 10 );
 
-		p.getPidFamily( getpid(), fam );
+		p.getPidFamily( getpid(), &penvid, fam, fam_status );
 		simpsons.takesnapshot();
 
 		printf ( "Run %d: ", i );
 		for ( int k=0 ; fam[k] != 0 ; k++ ) {
-			p.getProcInfo ( fam[k], pi );
+			p.getProcInfo ( fam[k], pi, info_status );
 			printf ( "%d ", fam[k] );
 		}
 		printf ( "\n" );

@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi_t.h"
 
 /////////////////////////////test5/////////////////////////////////////////////
@@ -27,8 +29,12 @@
 int getPidFamily_test(bool verbose) {
  
   int success = 1;
+  int status;
+  PidEnvID penvid;
  
   piPTR pi = NULL;
+
+  pidenvid_init(&penvid);
 
   if(verbose){
   printf ( "\n..................................\n" );
@@ -45,7 +51,7 @@ int getPidFamily_test(bool verbose) {
   PID_ENTRY* pids = fork_tree(PID_FAMILY_DEPTH, PID_FAMILY_BREADTH, 0, verbose);
      
   pid_t *pidf = new pid_t[512];
-  ProcAPI::getPidFamily( pids[0].pid, pidf );
+  ProcAPI::getPidFamily( pids[0].pid, &penvid, pidf, status );
   
   if(verbose){
     printf ( "Result of getPidFamily...the descendants are:\n" );

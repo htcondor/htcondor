@@ -29,6 +29,7 @@ extern "C" {
 
 int set_seed(int seed);
 int get_random_int();
+unsigned int get_random_uint();
 float get_random_float();
 
 #if defined(__cplusplus)

@@ -52,6 +52,8 @@ class AllocationNode {
 	ExtArray< ClassAd* >* jobs;		// Both arrays are indexed by proc
 	ExtArray< MRecArray* >* matches;
 	int num_resources;		// How many total resources have been allocated
+
+	bool is_reconnect;
 };		
 
 // These aren't used anymore, but should we care about
@@ -109,11 +111,16 @@ class ResList : public CAList {
 		*/
 
 	bool satisfyJobs( CAList* jobs,
-					  CAList* candidates, CAList *candidates_jobs );
+					  CAList* candidates, CAList *candidates_jobs, bool rank = false );
 
 	void display( int level );
 
+	void sortByRank( ClassAd *rankAd);
+
 	int num_matches;
+	
+	static int machineSortByRank(const void *lhs, const void *rhs);
+
 };
 
 class CandidateList : public CAList {
@@ -232,6 +239,8 @@ class DedicatedScheduler : public Service {
 
 	void generateRequest( ClassAd* job );
 
+	ClassAd *makeGenericAdFromJobAd(ClassAd *job);
+
 		/** Clear out all existing resource requests.  Used at the
 			begining of computeSchedule(), since, if there are still
 			resource requests from the last schedule that we haven't
@@ -259,6 +268,14 @@ class DedicatedScheduler : public Service {
 		*/ 
 	bool shadowSpawned( shadow_rec* srec );
 
+		// the qmgmt code calls this method at startup with
+		// each job that can be reconnect to running startds
+	bool enqueueReconnectJob(PROC_ID id);
+
+	void			checkReconnectQueue( void );
+
+	int		rid;			// DC reaper id
+
  private:
 
 	/** Used to handle the negotiation protocol for a given
@@ -284,11 +301,18 @@ class DedicatedScheduler : public Service {
 	bool computeSchedule( void );
 
 		// This creates resource allocations from a matched job
-	void createAllocations( CAList *idle_candidates, CAList *idle_candidates_jobs, int cluster, int nprocs);
+	void createAllocations( CAList *idle_candidates, CAList *idle_candidates_jobs, 
+							int cluster, int nprocs, bool is_reconnect);
 
 		// This does the work of acting on a schedule, once that's
 		// been decided.  
 	bool spawnJobs( void );
+
+		// We need to stick all the claimids and remote-hosts
+		// into the job ad, so we can find them at reconnect-time
+	void addReconnectAttributes(AllocationNode *node);
+
+    char *matchToHost(match_rec *mrec, int cluster, int proc);
 
 		// Do through our list of pending resource requests, and
 		// publish a ClassAd to the CM to ask for them.
@@ -314,7 +338,7 @@ class DedicatedScheduler : public Service {
     int giveMPIMatches( Service*, int cmd, Stream* stream );
 
 		// Deactivate the claim on all resources used by this shadow
-	void shutdownMpiJob( shadow_rec* srec );
+	void shutdownMpiJob( shadow_rec* srec , bool kill = false);
 
 		/** Update internal data structures to remove the allocation  
 			associated with this shadow.
@@ -367,7 +391,6 @@ class DedicatedScheduler : public Service {
 		// Stuff for interacting w/ DaemonCore
 	int		hdjt_tid;		// DC timer id for handleDedicatedJobTimer()
 	int		sanity_tid;		// DC timer id for sanityCheck()
-	int		rid;			// DC reaper id
 
 		// data structures for managing dedicated jobs and resources. 
 	ExtArray<int>*		idle_clusters;	// Idle cluster ids
@@ -422,7 +445,7 @@ class DedicatedScheduler : public Service {
 	HashTable <HashKey, match_rec*>* all_matches_by_id;
 
 		// Queue for resource requests we need to negotiate for. 
-	Queue<ClassAd*>* resource_requests;
+	Queue<PROC_ID>* resource_requests;
 
 	int		num_matches;	// Total number of matches in all_matches 
 
@@ -440,6 +463,9 @@ class DedicatedScheduler : public Service {
 	Shadow* shadow_obj;
 
 	friend class CandidateList;
+
+	SimpleList<PROC_ID> jobsToReconnect;
+	int				checkReconnectQueue_tid;
 };
 
 

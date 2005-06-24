@@ -130,10 +130,10 @@ universeCanReconnect( int universe )
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_GLOBUS:
-	case CONDOR_UNIVERSE_PARALLEL:
 		return FALSE;
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
+	case CONDOR_UNIVERSE_PARALLEL:
 		return TRUE;
 	default:
 		EXCEPT( "Unknown universe (%d) in universeCanReconnect()", universe );

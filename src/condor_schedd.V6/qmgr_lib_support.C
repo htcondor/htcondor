@@ -92,7 +92,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only, CondorError* errstack
 	char *domain = my_domainname();
 
 	if ( !username ) {
-		dprintf(D_FULLDEBUG,"Failure getting my_username()\n", username );
+		dprintf(D_FULLDEBUG,"Failure getting my_username()\n");
 		delete qmgmt_sock;
 		qmgmt_sock = NULL;
 		if (domain) free(domain);

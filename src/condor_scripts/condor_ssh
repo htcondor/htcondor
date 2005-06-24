@@ -1,0 +1,120 @@
+#!/bin/sh
+
+# condor_ssh wrapper
+# This script assumes the existance of a contact file
+# and uses it to map a hostname into 
+# the correct hostname/port of a listening sshd
+
+# format of contact file is
+# node hostname port cwd username
+
+if [ $# -lt 2 ]
+then
+	echo "Usage: condor_ssh hostname command arg1 arg2"
+fi
+
+
+doneParsing=false
+
+while [ $doneParsing == "false" ]
+do
+
+doneParsing=true
+
+if [ "$1" == "-x" ]
+then
+	shift
+	hasx="-x"
+	doneParsing="false"
+fi
+
+if [ "$1" == "-l" ]
+then
+	shift
+	shift
+	doneParsing="false"
+fi
+
+if [ "$1" == "-n" ]
+then
+	shift
+	hasn="-n"
+	doneParsing="false"
+fi
+done
+
+host=$1
+shift 
+
+# The option can also appear _after_ the host
+doneParsing=false
+
+while [ $doneParsing == "false" ]
+do
+
+doneParsing=true
+
+if [ "$1" == "-x" ]
+then
+	shift
+	hasx="-x"
+	doneParsing="false"
+fi
+
+if [ "$1" == "-l" ]
+then
+	shift
+	shift
+	doneParsing="false"
+fi
+
+if [ "$1" == "-n" ]
+then
+	shift
+	hasn="-n"
+	doneParsing="false"
+fi
+done
+
+contact=$_CONDOR_SCRATCH_DIR/contact
+
+if [ ! -f $contact ]
+then
+	echo "error: contact file $contact can't be found"
+	exit 1
+fi
+
+
+# Note that the spaces in the grep are significant
+line=`grep "^[0-9]* $host " $contact`
+
+if [ $? -ne 0 ]
+then
+	echo Host $host is not in contact file $contact
+	exit 1
+fi
+
+proc=`echo $line | awk '{print $1}'`
+port=`echo $line | awk '{print $3}'`
+username=`echo $line | awk '{print $4}'`
+dir=`echo $line | awk '{print $5}'`
+
+key=$_CONDOR_SCRATCH_DIR/tmp/$proc.key
+
+# MPICH assumes that you always have a shared filesystem, and
+# sticks the pwd in front of all relative executable pathnames
+# This is no good.
+
+# So, if the program name begins with the pwd, remove it
+
+prog=$1
+shift
+p=`/bin/pwd`
+prog=${prog##$p/}
+
+# with cd 
+/usr/bin/ssh -q $hasn -oStrictHostKeyChecking=no -oUserKnownHostsFile=.ssh_host_rsa_key.$cluster -i $key -l $username -p $port $host cd "$dir" \; $prog "$@"
+
+# this one without
+#/usr/bin/ssh -q -oStrictHostKeyChecking=no -oUserKnownHostsFile=.ssh_host_rsa_key.$cluster -i $key -l $username -p $port $host $prog "$@"
+

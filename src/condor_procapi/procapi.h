@@ -31,6 +31,7 @@
 #include "condor_uid.h"
 #include "HashTable.h"
 #include "extArray.h"
+#include "condor_pidenvid.h"
 
 #ifndef WIN32 // all the below is for UNIX
 
@@ -130,6 +131,44 @@ struct Offset {       // There will be one instance of this structure in
 
 #endif // WIN32
 
+// return values of different procapi calls
+enum {
+	// general success
+	PROCAPI_SUCCESS,
+
+	// general failure
+	PROCAPI_FAILURE
+
+};
+
+// status about various calls to procapi.
+enum {
+	// for when everything worked as desired
+	PROCAPI_OK,
+
+	// when you ask procapi for a pid family, and absolutely nothing is found
+	PROCAPI_FAMILY_NONE,
+	
+	// when the daddy pid is included in the returned family
+	PROCAPI_FAMILY_ALL,
+
+	// when the daddy pid is NOT found, but others known to be its child are.
+	PROCAPI_FAMILY_SOME,
+
+	// failure due to nonexistance of pid
+	PROCAPI_NOPID,
+
+	// failure due to permissions
+	PROCAPI_PERM,
+
+	// sometimes a kernel simply screws up and gives us back garbage
+	PROCAPI_GARBLED,
+
+	// an error happened, but we didn't specify exactly what it was
+	PROCAPI_UNSPECIFIED
+};
+
+
 /** This is the structure that is returned from the getProcInfo() 
     member of ProcAPI.  It is returned all at once so that multiple
     calls don't have to be made.  All OS's support the given information,
@@ -204,6 +243,11 @@ struct procInfo {
 
   // the owner of this process
   uid_t owner;
+
+  // Any ancestor process identification environment variables.
+  // This is always initialzed to something, but might not be filled
+  // in due to complexities with the OS.
+  PidEnvID penvid;
 };
 
 /// piPTR is typedef'ed as a pointer to a procInfo structure.
@@ -306,10 +350,11 @@ class ProcAPI {
 
       @param pid The pid of the process you want info on.
       @param pi  A pointer to a procInfo structure.
+	  @param status An indicator of the reason why a success or failure happened
       @return A 0 on success, and number less than 0 on failure.
       @see procInfo
   */
-  static int getProcInfo ( pid_t pid, piPTR& pi );
+  static int getProcInfo ( pid_t pid, piPTR& pi, int &status );
 
   /** getProcSetInfo gets information on a set of pids.  These pids are 
       specified by an array of pids that has 'numpids' elements.  The
@@ -321,7 +366,7 @@ class ProcAPI {
       @return A -1 is returned if a pid's info can't be returned, 0 otherwise.
       @see procInfo
   */
-  static int getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi );
+  static int getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi, int &status );
 
   /** getFamilyInfo returns a procInfo struct for a process and all
       processes which are descended from that process ( children, children
@@ -329,10 +374,12 @@ class ProcAPI {
 
       @param pid The pid of the 'elder' process you want info on.
       @param pi  A pointer to a procInfo structure.
+      @param status  A variable detailing how well the operation went.
       @return A -1 is returned on failure, 0 otherwise.
       @see procInfo
   */
-  static int getFamilyInfo ( pid_t pid, piPTR& pi );
+  static int getFamilyInfo ( pid_t pid, piPTR& pi, PidEnvID *penvid, 
+  		int &status );
 
   /** Feed this function a procInfo struct and it'll print it out for you. 
 
@@ -351,7 +398,8 @@ class ProcAPI {
       @param pidFamily An array for holding pids in the family
       @return A -1 is returned on failure, 0 otherwise.
   */
-  static int getPidFamily( pid_t pid, pid_t *pidFamily );
+  static int getPidFamily( pid_t pid, PidEnvID *penvid, pid_t *pidFamily,
+  			int &status );
 
   /* returns all pids owned by a specific user.
    	
@@ -415,7 +463,8 @@ class ProcAPI {
   ProcAPI() {};		
 
   static void initpi ( piPTR& );                  // initialization of pi.
-  static int isinfamily ( pid_t *, int, pid_t );  // used by buildFamily & NT equiv.
+  static int isinfamily ( pid_t *, int, PidEnvID*, piPTR ); 
+  // used by buildFamily & NT equiv.
 
   static uid_t getFileOwner(int fd); // used to get process owner from /proc
   static void closeFamilyHandles(); // closes all open handles for the family
@@ -433,7 +482,7 @@ class ProcAPI {
 #ifndef WIN32
   static int buildPidList();                      // just what it says
   static int buildProcInfoList();                 // ditto.
-  static int buildFamily( pid_t );                // builds + sums procInfo list
+  static int buildFamily( pid_t, PidEnvID *, int & ); // builds + sums procInfo list
   static int getNumProcs();                       // guess.
   static long secsSinceEpoch();                   // used for wall clock age
   static double convertTimeval ( struct timeval );// convert timeval to double
@@ -450,8 +499,8 @@ class ProcAPI {
 
 #ifdef WIN32 // some windoze-specific thingies:
 
-  static void makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
-						  pid_t* &fampids, int &famsize );
+  static void makeFamily( pid_t dadpid,  PidEnvID *penvid, pid_t *allpids,
+		  int numpids, pid_t* &fampids, int &famsize );
   static void getAllPids( pid_t* &pids, int &numpids );
   static int multiInfo ( pid_t *pidlist, int numpids, piPTR &pi );
   static int isinlist( pid_t pid, pid_t *pidlist, int numpids ); 

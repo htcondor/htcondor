@@ -72,7 +72,7 @@ class ProcAd {
       @param fatherpid The elder pid in the family
       @see ProcAPI::getFamilyInfo
   */
-  ClassAd * getFamilyAd ( pid_t fatherpid );
+  ClassAd * getFamilyAd ( pid_t fatherpid, PidEnvID *penvid );
 
  private:
 

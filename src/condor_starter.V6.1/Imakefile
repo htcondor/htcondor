@@ -27,7 +27,7 @@ soapobjs(starter)
 # it will suffice for now:
 OBJ = starter_v61_main.o starter.o NTsenders.o user_proc.o \
 	os_proc.o vanilla_proc.o mpi_master_proc.o mpi_comrade_proc.o \
-	script_proc.o \
+	script_proc.o parallel_proc.o \
 	starter_v61_instantiate.o io_proxy.o io_proxy_handler.o \
 	java_proc.o java_detect.o tool_daemon_proc.o local_user_log.o \
 	job_info_communicator.o jic_shadow.o jic_local.o \

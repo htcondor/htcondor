@@ -401,6 +401,8 @@ private:
 	RemoteResource( const RemoteResource& );
 	RemoteResource& operator = ( const RemoteResource& );
 
+	int lease_duration;
+
 	bool already_killed_graceful;
 	bool already_killed_fast;
 };

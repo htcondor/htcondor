@@ -6,6 +6,9 @@ release_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
 release_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
 release_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
 release_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
+release_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
+release_copy_target(sshd.sh,libexec,sshd.sh,EXECUTABLE_MODE)
+
 #if IS_CLIPPED
 release_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
@@ -19,6 +22,9 @@ strip_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
 strip_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
 strip_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
 strip_copy_target(condor_clean_checkpoints,$(STRIP_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
+strip_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
+strip_copy_target(sshd.sh,libexec,sshd.sh,EXECUTABLE_MODE)
+
 #if IS_CLIPPED
 strip_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
@@ -32,6 +38,8 @@ static_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
 static_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
 static_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
 static_copy_target(condor_clean_checkpoints,$(STATIC_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
+static_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
+static_copy_target(sshd.sh,libexec,sshd.sh,EXECUTABLE_MODE)
 #if IS_CLIPPED
 static_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 

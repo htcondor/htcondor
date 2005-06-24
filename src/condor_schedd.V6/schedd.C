@@ -1385,7 +1385,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		}
 	}
 
-	if( (job_universe == CONDOR_UNIVERSE_PVM) || (job_universe == CONDOR_UNIVERSE_MPI) ) {
+	if( (job_universe == CONDOR_UNIVERSE_PVM) || 
+		(job_universe == CONDOR_UNIVERSE_MPI) || 
+		(job_universe == CONDOR_UNIVERSE_PARALLEL) ) {
 		job_id.proc = 0;		// PVM and MPI shadow is always associated with proc 0
 	} 
 
@@ -1936,6 +1938,7 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_MPI:
+	case CONDOR_UNIVERSE_PARALLEL:
 		return true;
 		break;
 
@@ -4972,7 +4975,7 @@ Scheduler::startdContactConnectHandler( Stream *sock )
 		return FALSE;
 	}
 
-	dprintf ( D_FULLDEBUG, "Got mrec data pointer %x\n", mrec );
+	dprintf ( D_FULLDEBUG, "Got mrec data pointer %p\n", mrec );
 
 	ClassAd *jobAd = GetJobAd( mrec->cluster, mrec->proc );
 	if( ! jobAd ) {
@@ -5035,7 +5038,7 @@ Scheduler::startdContactSockHandler( Stream *sock )
 		return FALSE;
 	}
 	
-	dprintf ( D_FULLDEBUG, "Got mrec data pointer %x\n", mrec );
+	dprintf ( D_FULLDEBUG, "Got mrec data pointer %p\n", mrec );
 
 	mrec->setStatus( M_CLAIMED ); // we assume things will work out.
 
@@ -5136,7 +5139,7 @@ Scheduler::checkContactQueue()
 			// there's a pending registration in the queue:
 
 		startdContactQueue.dequeue ( args );
-		dprintf( D_FULLDEBUG, "In checkContactQueue(), args = %x, "
+		dprintf( D_FULLDEBUG, "In checkContactQueue(), args = %p, "
 				 "host=%s\n", args, args->sinful() ); 
 		contactStartd( args );
 		delete args;
@@ -5981,6 +5984,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			}
 			break;
 		case CONDOR_UNIVERSE_MPI:
+		case CONDOR_UNIVERSE_PARALLEL:
 			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_MPI );
 			if( ! shadow_obj ) {
 				dprintf( D_ALWAYS, "Trying to run a MPI job but you "
@@ -6082,7 +6086,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		// if this is a shadow for an MPI job, we need to tell the
 		// dedicated scheduler we finally spawned it so it can update
 		// some of its own data structures, too.
-	if( universe == CONDOR_UNIVERSE_MPI ) {
+	if( (universe == CONDOR_UNIVERSE_MPI ) ||
+	    (universe == CONDOR_UNIVERSE_PARALLEL) ){
 		dedicated_scheduler.shadowSpawned( srec );
 	}
 }
@@ -6155,12 +6160,18 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
         nice_config = NULL;
     }
 
+	int rid = 1;
+	if( ( srec->universe == CONDOR_UNIVERSE_MPI) ||
+		( srec->universe == CONDOR_UNIVERSE_PARALLEL)) {
+		rid = dedicated_scheduler.rid;
+		}
+	
 	/* For now, we should create the handler as PRIV_ROOT so it can do
 	   priv switching between PRIV_USER (for handling syscalls, moving
 	   files, etc), and PRIV_CONDOR (for writing to log files).
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
-	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, 1, 
+	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
 									  is_dc, env, NULL, FALSE, NULL, 
 									  std_fds_p, niceness );
 
@@ -7438,7 +7449,9 @@ mark_job_stopped(PROC_ID* job_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
-	if( (universe == CONDOR_UNIVERSE_PVM) || (universe == CONDOR_UNIVERSE_MPI) ){
+	if( (universe == CONDOR_UNIVERSE_PVM) || 
+        (universe == CONDOR_UNIVERSE_MPI) ||
+		(universe == CONDOR_UNIVERSE_PARALLEL)){
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -7794,8 +7807,9 @@ Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
 
 		int universe = -1;
 		GetAttributeInt(p.cluster, p.proc, ATTR_JOB_UNIVERSE, &universe);
-		if (universe != CONDOR_UNIVERSE_MPI)
+		if ((universe != CONDOR_UNIVERSE_MPI) && (universe != CONDOR_UNIVERSE_PARALLEL))
 			continue;
+		
 		
 		int proc_index = 0;
 		while( (GetJobAd(p.cluster, proc_index, false) )) {
@@ -7960,7 +7974,9 @@ set_job_status(int cluster, int proc, int status)
 {
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
-	if( (universe == CONDOR_UNIVERSE_PVM) || ( universe == CONDOR_UNIVERSE_MPI)) {
+	if( ( universe == CONDOR_UNIVERSE_PVM) || 
+		( universe == CONDOR_UNIVERSE_MPI) ||
+		( universe == CONDOR_UNIVERSE_PARALLEL) ) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -8320,7 +8336,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		return;
 	}
 
-	dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%x, st=%d )\n", 
+	dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%p, st=%d )\n", 
 			 pid, job_id, status );
 
 	// set cur-hosts to zero
@@ -8355,7 +8371,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	default:
 		break;
 	}
-	dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%x )\n", pid,
+	dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%p )\n", pid,
 			 job_id );
 }
 
@@ -8601,9 +8617,14 @@ Scheduler::Init()
 		// its own.)  
 		// Only put in in the env if it is not already there, so 
 		// we don't leak memory without reason.		
-	if ( NameInEnv == NULL || strcmp(NameInEnv,Name) ) {
-		NameInEnv = (char *)malloc(strlen("SCHEDD_NAME=")+strlen(Name)+1);
-		sprintf(NameInEnv, "SCHEDD_NAME=%s", Name);
+
+#define SCHEDD_NAME_LHS "SCHEDD_NAME="
+	
+	int lhs_length = strlen(SCHEDD_NAME_LHS);
+
+	if ( NameInEnv == NULL || strcmp(&NameInEnv[lhs_length],Name) ) {
+		NameInEnv = (char *)malloc(lhs_length +strlen(Name)+1);
+		sprintf(NameInEnv, SCHEDD_NAME_LHS "%s", Name);
 		if (putenv(NameInEnv) < 0) {
 			dprintf(D_ALWAYS, "putenv(\"%s\") failed!\n", NameInEnv);
 		}

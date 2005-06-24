@@ -61,7 +61,7 @@ int get_random_int()
 #endif
 }
 
-/* returns a random floating point number between 0.0 and 1.0, trying
+/* returns a random floating point number in this range: [0.0, 1.0), trying
    to use best random number generator available on each platform */
 float get_random_float()
 {
@@ -70,8 +70,28 @@ float get_random_float()
 	}
 
 #if defined(WIN32)
-	return (float)rand()/(float)RAND_MAX;
+	return (float)rand()/((float)RAND_MAX + 1);
 #else
 	return (float) drand48();
 #endif
 }
+
+/* returns a random unsigned integer, trying to use best random number
+   generator available on each platform */
+unsigned int get_random_uint()
+{
+	if (!initialized) {
+		set_seed(0);
+	}
+
+	/* since get_random_float returns [0.0, 1.0), add one to UINT_MAX
+		to ensure the probability fencepost error doesn't
+		happen and I actually can get ALL the numbers from 0 up to and
+		including UINT_MAX */
+	return get_random_float() * (((double)UINT_MAX)+1);
+}
+
+
+
+
+

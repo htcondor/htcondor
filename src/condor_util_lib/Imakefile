@@ -62,7 +62,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	condor_universe.o condor_perms.o proc_id.o access_euid.o \
 	condor_snutils.o printf_format.o nullfile.o copy_file.o \
 	get_exec_path.o exit_utils.o condor_blkng_full_disk_io.o \
-	condor_full_io.o
+	condor_full_io.o condor_pidenvid.o condor_create_id.o
 
 test: test.o util_lib.a
 	$(CC) $(CFLAGS) -o test test.o util_lib.a

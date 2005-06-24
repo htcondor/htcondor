@@ -411,7 +411,9 @@ DCStartd::releaseClaim( VacateType type, ClassAd* reply,
 
 
 bool
-DCStartd::locateStarter( const char* global_job_id, ClassAd* reply,
+DCStartd::locateStarter( const char* global_job_id, 
+						 const char *claim_id,
+						 ClassAd* reply,
 						 int timeout )
 {
 	setCmdStr( "locateStarter" );
@@ -431,6 +433,13 @@ DCStartd::locateStarter( const char* global_job_id, ClassAd* reply,
 	line += global_job_id;
 	line += '"';
 	req.Insert( line.Value() );
+
+	line = ATTR_CLAIM_ID;
+	line += "=\"";
+	line += claim_id;
+	line += '"';
+	req.Insert( line.Value() );
+
 
 	return sendCACmd( &req, reply, false, timeout );
 }

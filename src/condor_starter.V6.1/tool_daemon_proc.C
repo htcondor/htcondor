@@ -274,7 +274,13 @@ ToolDaemonProc::StartJob()
 		job_start_time.getTime();
 
 		// success!  create a ProcFamily
-		family = new ProcFamily(JobPid,PRIV_USER);
+		PidEnvID penvid;
+
+		pidenvid_init(&penvid);
+
+		daemonCore->InfoEnvironmentID(&penvid, JobPid);
+
+		family = new ProcFamily(JobPid, &penvid, PRIV_USER);
 		ASSERT(family);
 
 #ifdef WIN32

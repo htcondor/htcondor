@@ -242,6 +242,11 @@ void test_monitor ( char * jobname ) {
   int rval;
   piPTR pi = NULL;
   int i;
+  int status;
+  PidEnvID penvid;
+
+  pidenvid_init(&penvid);
+
   printf ( "Here's the interesting test.  This one does a fork()\n");
   printf ( "and then an exec() of the name of the program passed to\n");
   printf ( "it.  In this case, that's %s.\n", jobname );
@@ -260,7 +265,9 @@ void test_monitor ( char * jobname ) {
 
   for(i = 0; i < 9; i++) {
     sleep ( 10  );
-    if ( ProcAPI::getFamilyInfo( child, pi ) < 0 ) {
+    if ( ProcAPI::getFamilyInfo( child, pi, &penvid, status ) 
+								== PROCAPI_FAILURE) 
+	{
       printf ( "Problem getting information.  Exiting.\n");
       exit(1);
     }

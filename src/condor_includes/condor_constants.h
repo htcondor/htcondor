@@ -23,10 +23,6 @@
 #ifndef CONDOR_CONSTANTS_H
 #define CONDOR_CONSTANTS_H
 
-#if !defined(__STDC__) && !defined(__cplusplus)
-#define const
-#endif
-
 /*
 	Set up a boolean variable type.  Since this definition could conflict
 	with other reasonable definition of BOOLEAN, i.e. using an enumeration,
@@ -48,8 +44,7 @@ typedef int BOOL_T;
 #	undef TRUE
 #	undef FALSE
 #endif
-static const int	TRUE = 1;
-static const int	FALSE = 0;
+enum { FALSE=0, TRUE=1 };
 #endif /* ifndef(_CONDOR_NO_TRUE_FALSE) */
 
 /*

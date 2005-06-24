@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi_t.h"
 
 /////////////////////////////test2/////////////////////////////////////////////
@@ -29,6 +31,11 @@ int getFamilyInfo_test(bool verbose) {
   int success = 1;
   piPTR pi = NULL;
   pid_t child;
+  int status;
+
+  PidEnvID penvid;
+
+  pidenvid_init(&penvid);
 
   if(verbose){
   printf ( "\n....................................\n" );
@@ -52,7 +59,7 @@ int getFamilyInfo_test(bool verbose) {
     piPTR pi = NULL;
     piPTR ppi = NULL;
 
-    if(ProcAPI::getFamilyInfo( pid, pi) < 0){
+    if(ProcAPI::getFamilyInfo( pid, pi, &penvid, status) == PROCAPI_FAILURE) {
       printf("Error process %d:\n", pid);
       printf("unable to retrieve process %d information with getFamilyInfo\n", pid);
       success = -1;
@@ -100,7 +107,7 @@ int getFamilyInfo_test(bool verbose) {
     
 
     // now get the parents info and do some more checks
-    if(ProcAPI::getFamilyInfo(ppid, ppi) < 0){
+    if(ProcAPI::getFamilyInfo(ppid, ppi, &penvid, status) == PROCAPI_FAILURE) {
       printf("Error process %d:\n", pid);
       printf("Unable to retrieve parent process %d information with getFamilyInfo\n", ppid);
       success = -1;

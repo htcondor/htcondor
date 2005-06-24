@@ -509,8 +509,14 @@ Starter::spawn( time_t now, Stream* s )
 	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 	} else {
+
+		PidEnvID penvid;
+
+		// if there isn't any ancestor information for this pid, that is ok.
+		daemonCore->InfoEnvironmentID(&penvid, s_pid);
+		
 		s_birthdate = now;
-		s_procfam = new ProcFamily( s_pid, PRIV_ROOT );
+		s_procfam = new ProcFamily( s_pid, &penvid, PRIV_ROOT );
 
 		dprintf( D_PROCFAMILY, 
 				 "Created new ProcFamily w/ pid %d as the parent.\n",
@@ -817,6 +823,8 @@ Starter::dprintf( int flags, char* fmt, ... )
 float
 Starter::percentCpuUsage( void )
 {
+	int status;
+
 	time_t now = time(NULL);
 	if( now - s_last_snapshot >= pid_snapshot_interval ) { 
 		recomputePidFamily( now );
@@ -831,7 +839,12 @@ Starter::percentCpuUsage( void )
 		// a temporary.
 	procInfo *pinfoPTR = &s_pinfo;
 	if( (ProcAPI::getProcSetInfo(s_pidfamily, s_family_size,
-								 pinfoPTR) < -1) ) {
+								 pinfoPTR, status) == PROCAPI_FAILURE) ) {
+
+		if (status == PROCAPI_NOPID) {
+			EXCEPT( "Starter::percentCpuUsage(): A Starter should be running, "
+					"but isn't!" );
+		}
 			// If we failed, it might be b/c our pid family has stale
 			// info, so before we give up for real, recompute and try
 			// once more.
@@ -842,7 +855,7 @@ Starter::percentCpuUsage( void )
 		}
 
 		if( (ProcAPI::getProcSetInfo( s_pidfamily, s_family_size, 
-									  pinfoPTR) < -1) ) {
+									  pinfoPTR, status) == PROCAPI_FAILURE) ) {
 			EXCEPT( "Fatal error getting process info for the starter "
 					"and decendents" ); 
 		}

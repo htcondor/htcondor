@@ -46,6 +46,14 @@ class MPIComradeProc : public VanillaProc
 			work. */
     virtual int StartJob();
 
+		/** Add environment variables
+			CONDOR_NPROCS
+			CONDOR_PROCNO
+		  
+			to the environment of each job
+		*/
+	virtual int addEnvVars();
+
 		/** We don't need to do anything special, but because C++ is
 			lame, we need to define this.  MPIMasterProc wants to
 			implement its own version, and everyone just wants to call

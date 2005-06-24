@@ -26,6 +26,7 @@
 #include "baseshadow.h"
 #include "shadow.h"
 #include "mpishadow.h"
+#include "parallelshadow.h"
 #include "exit.h"
 #include "condor_debug.h"
 #include "condor_version.h"
@@ -211,6 +212,9 @@ initShadow( ClassAd* ad )
 			 CondorUniverseName(universe), cluster, proc );
 
 	switch ( universe ) {
+	case CONDOR_UNIVERSE_PARALLEL:
+		Shadow = new ParallelShadow();
+		break;
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 		Shadow = new UniShadow();
@@ -341,4 +345,3 @@ void
 main_pre_command_sock_init( )
 {
 }
-

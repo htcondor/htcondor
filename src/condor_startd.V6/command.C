@@ -1299,27 +1299,29 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 int
 caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 {
-	char* global_job_id = NULL;
-	Claim* claim = NULL;
+		char* global_job_id = NULL;
+		char* claimid = NULL;
+		Claim* claim = NULL;
 
-	if( ! req_ad->LookupString(ATTR_GLOBAL_JOB_ID, &global_job_id) ) {
-		dprintf( D_ALWAYS, "Failed to read %s from ClassAd "
-				 "for cmd %s, aborting\n", ATTR_GLOBAL_JOB_ID, cmd_str );
-		MyString err_msg = ATTR_GLOBAL_JOB_ID;
-		err_msg += " not found in request ad";
-		sendErrorReply( s, cmd_str, CA_INVALID_REQUEST, err_msg.Value() );
-		return FALSE;
-	}
-	claim = resmgr->getClaimByGlobalJobId( global_job_id );
+	req_ad->LookupString(ATTR_CLAIM_ID, &claimid);
+	req_ad->LookupString(ATTR_GLOBAL_JOB_ID, &global_job_id);
+	claim = resmgr->getClaimByGlobalJobIdAndId(global_job_id, claimid);
+
 	if( ! claim ) {
-		MyString err_msg = ATTR_GLOBAL_JOB_ID;
+		MyString err_msg = ATTR_CLAIM_ID;
 		err_msg += " (";
+		err_msg += claimid;
+		err_msg += ") and ";
+		err_msg += ATTR_GLOBAL_JOB_ID;
+		err_msg += " ( ";
 		err_msg += global_job_id;
-		err_msg += ") not found";
+		err_msg += " ) not found";
+
 		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
 		free( global_job_id );
 		return FALSE;
 	}
+
 	ClassAd reply;
 	if( ! claim->publishStarterAd(&reply) ) {
 		MyString err_msg = "No starter found for ";

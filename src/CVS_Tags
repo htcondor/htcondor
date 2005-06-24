@@ -1,3 +1,7 @@
+06/24/05 V6_7-parallel-3-merge-1
+   This is the point from the parallel-3 branch we merge into
+   V6_7-branch
+
 06/24/05 V6_6-merge-42
    The state of the V6_6-branch for a merge into V6_7-branch. This includes
    more bug fixes.

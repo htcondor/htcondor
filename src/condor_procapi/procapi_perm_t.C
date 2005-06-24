@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi_t.h"
 
 // this test is not 100% complete it should check for each different os 
@@ -30,6 +32,11 @@
 /////////////////////////////////////////////////////////////////////////////
 int permission_test(bool verbose) {
 
+	int status;
+	PidEnvID penvid;
+
+	pidenvid_init(&penvid);
+
   piPTR pi = NULL;
 
   if(verbose){
@@ -39,10 +46,8 @@ int permission_test(bool verbose) {
   printf ( "processes in the system ( parent=1 ) then you can.\n\n" );
   }
 
-  if ( ProcAPI::getFamilyInfo( 1, pi ) < 0 ){
-    //if(verbose){
+  if ( ProcAPI::getFamilyInfo( 1, pi, &penvid, status ) == PROCAPI_FAILURE ){
       printf ( "Unable to get info on process 1 (init)\n");
-      //}
   }
   else{
    

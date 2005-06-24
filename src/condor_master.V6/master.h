@@ -27,6 +27,7 @@
 #include "../condor_daemon_core.V6/condor_lock.h"
 #include "dc_collector.h"
 #include "killfamily.h"
+#include "condor_pidenvid.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
@@ -77,7 +78,7 @@ public:
 	void	Kill( int );
 	void	KillFamily( void );
 	void	Reconfig();
-	void	InitProcFam( int pid );
+	void	InitProcFam( int pid, PidEnvID *penvid );
 	void	DeleteProcFam( void );
 
 private:

@@ -21,6 +21,7 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procinterface.h"
 
 
@@ -41,7 +42,9 @@ ClassAd * ProcAd::getProcAd ( pid_t pid ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  ProcAPI::getProcInfo ( pid, pi );
+  int status; 
+
+  ProcAPI::getProcInfo ( pid, pi, status );
 
   ad = dumpToAd ( pi );
   delete pi;
@@ -56,7 +59,9 @@ ClassAd * ProcAd::getProcSetAd ( pid_t *pids, int numpids ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  ProcAPI::getProcSetInfo( pids, numpids, pi );
+  int status;
+
+  ProcAPI::getProcSetInfo( pids, numpids, pi, status );
 
   ad = dumpToAd ( pi );
   delete pi;
@@ -67,11 +72,13 @@ ClassAd * ProcAd::getProcSetAd ( pid_t *pids, int numpids ) {
   /* getFamilyAd returns a ClassAd containing the sums of the monitored
      values of a 'family' of processes descended from one pid.  By 
      'family', I mean that pid and all children, children's children, etc. */
-ClassAd * ProcAd::getFamilyAd ( pid_t fatherpid ) {
+ClassAd * ProcAd::getFamilyAd ( pid_t fatherpid, PidEnvID *penvid ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  ProcAPI::getFamilyInfo( fatherpid, pi );
+  int status;
+
+  ProcAPI::getFamilyInfo( fatherpid, pi, penvid, status );
 
   ad = dumpToAd ( pi );
   delete pi;

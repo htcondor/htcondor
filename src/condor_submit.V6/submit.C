@@ -83,7 +83,7 @@ char	 buffer[_POSIX_ARG_MAX + 64];
 
 char	*OperatingSystem;
 char	*Architecture;
-// char	*Spool;
+char	*Spool;
 char	*Flavor;
 char	*ScheddName = NULL;
 DCSchedd* MySchedd = NULL;
@@ -952,6 +952,10 @@ SetExecutable()
 	// generate initial checkpoint file
 	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
 
+	(void) sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, Spool, DIR_DELIM_CHAR, 
+					gen_ckpt_name(0, ClusterId, 0, 0));
+	InsertJobExpr (buffer);
+	
 	// spool executable only if no $$(arch).$$(opsys) specified
 
 	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' &&
@@ -4580,14 +4584,12 @@ init_params()
 		exit( 1 );
 	}
 
-#if 0
 	Spool = param( "SPOOL" );
 	if( Spool == NULL ) {
 		fprintf(stderr,"SPOOL not specified in config file\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
-#endif
 
 	Flavor = param( "FLAVOR" );
 	if( Flavor == NULL ) {

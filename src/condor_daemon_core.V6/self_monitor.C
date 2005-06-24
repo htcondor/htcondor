@@ -74,6 +74,8 @@ void SelfMonitorData::DisableMonitoring(void)
 
 void SelfMonitorData::CollectData(void)
 {
+	int status; 
+
     // Record what time we are collecting this info
     last_sample_time = time(NULL);
     
@@ -81,7 +83,8 @@ void SelfMonitorData::CollectData(void)
     piPTR my_process_info = NULL;
 
     dprintf(D_FULLDEBUG, "Getting monitoring info for pid %d\n", getpid());
-    ProcAPI::getProcInfo(getpid(), my_process_info);
+
+    ProcAPI::getProcInfo(getpid(), my_process_info, status);
 
     if (my_process_info != NULL) {
         cpu_usage  = my_process_info->cpuusage;

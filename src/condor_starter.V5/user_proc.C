@@ -440,6 +440,7 @@ UserProc::execute()
 	FILE	*cmd_fp;
 	char	buf[128];
 	ReliSock	*new_reli = NULL;
+	extern char **environ;
 
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
@@ -669,8 +670,21 @@ UserProc::execute()
 		delete new_reli;
 	}
 
+	/* No daemoncore, so create a PidEnvID class based off of what
+		ancestor variables this process has which the child should have
+		a superset of. */
+	PidEnvID penvid;
+
+	pidenvid_init(&penvid);
+	if (pidenvid_filter_and_insert(&penvid, environ) == 
+			PIDENVID_OVERSIZED)
+	{
+		EXCEPT("UserProc::execute(): Too many ancestor variables! Programmer "
+				"Error!\n");
+	}
+
 	if ( job_class == CONDOR_UNIVERSE_VANILLA ) {
-		family = new ProcFamily(pid,PRIV_USER);
+		family = new ProcFamily(pid, &penvid, PRIV_USER);
 		family->takesnapshot();
 	}
 }

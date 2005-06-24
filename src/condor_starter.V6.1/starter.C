@@ -34,6 +34,7 @@
 #include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
 #include "mpi_comrade_proc.h"
+#include "parallel_proc.h"
 #include "my_hostname.h"
 #include "internet.h"
 #include "condor_string.h"  // for strnewp
@@ -550,6 +551,9 @@ CStarter::SpawnJob( void )
 		case CONDOR_UNIVERSE_JAVA:
 			job = new JavaProc( jobAd, WorkingDir );
 			break;
+	    case CONDOR_UNIVERSE_PARALLEL:
+			job = new ParallelProc( jobAd );
+			break;
 		case CONDOR_UNIVERSE_MPI: {
 			int is_master = FALSE;
 			if ( jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master ) < 1 ) {
@@ -876,14 +880,15 @@ CStarter::PublishToEnv( Env* proc_env )
 		env_name = base.GetCStr();
 		env_name += "OUTPUT_CLASSAD";
 		proc_env->Put( env_name.GetCStr(), output_ad );
-}
+	}
 	
 		// job scratch space
 	env_name = base.GetCStr();
 	env_name += "SCRATCH_DIR";
 	proc_env->Put( env_name.GetCStr(), GetWorkingDir() );
 
-	
+		// pass through the pidfamily ancestor env vars this process
+		// currently has to the job.
 
 		// port regulation stuff
 	char* low = param( "LOWPORT" );

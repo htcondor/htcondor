@@ -133,6 +133,9 @@ public:
 	Claim*		getClaimByPid( pid_t );	// Find Claim by pid of starter
 	Claim*		getClaimById( const char* id );	// Find Claim by ClaimId
 	Claim*		getClaimByGlobalJobId( const char* id );
+	Claim*		getClaimByGlobalJobIdAndId( const char *claimId,
+											const char *job_id);
+
 	Resource*	findRipForNewCOD( ClassAd* ad );
 	Resource*	get_by_cur_id(char*);	// Find rip by ClaimId of r_cur
 	Resource*	get_by_any_id(char*);	// Find rip by r_cur or r_pre

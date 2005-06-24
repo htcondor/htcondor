@@ -20,6 +20,7 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
 #include "procapi_t.h"
 
 /////////////////////////////test6/////////////////////////////////////////////
@@ -27,6 +28,7 @@
 int cpuusage_test(bool verbose) {
 
 
+	int status;
   int success = 1;
 
   piPTR pi_s = NULL;
@@ -59,7 +61,7 @@ int cpuusage_test(bool verbose) {
   }
   
   
-  if (ProcAPI::getProcInfo ( child, pi_s ) < 0){
+  if (ProcAPI::getProcInfo ( child, pi_s, status ) == PROCAPI_FAILURE){
     printf("Error:\n");
     printf("Unable to getProcInfo for process %d\n", child);
     success = -1;
@@ -76,7 +78,7 @@ int cpuusage_test(bool verbose) {
     
     // get the proc info after 5 seconds of running
     sleep(5);
-    if (ProcAPI::getProcInfo ( child, pi_r ) < 0){
+    if (ProcAPI::getProcInfo ( child, pi_r, status ) == PROCAPI_FAILURE){
       printf("Error:\n");
       printf("Unable to getProcInfo for process %d\n", child);
       success = -1;
@@ -103,7 +105,7 @@ int cpuusage_test(bool verbose) {
     }
     //get the proc info after five seconds of being stopped
     sleep(5);
-    if (ProcAPI::getProcInfo ( child, pi_s ) < 0){
+    if (ProcAPI::getProcInfo ( child, pi_s, status ) == PROCAPI_FAILURE) {
       printf("Error:\n");
       printf("Unable to getProcInfo for process %d\n", child);
       success = -1;

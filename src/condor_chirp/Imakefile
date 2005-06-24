@@ -2,13 +2,23 @@ NAME=Chirp.jar
 LIBNAME = libchirp_client.a
 LIBOBJ = chirp_client.o
 
-all:: $(LIBNAME)
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+
+CONDOR_CHIRP_NAME=condor_chirp
+CONDOR_CHIRP_OBJ=condor_chirp.o
+
+all:: $(LIBNAME) $(CONDOR_CHIRP_NAME)
 
 clean::
 
 release_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
 strip_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
 static_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
+
+release_copy_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_NAME),EXECUTABLE_MODE)
+strip_copy_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_NAME),EXECUTABLE_MODE)
+static_copy_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_NAME),EXECUTABLE_MODE)
 
 release_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
 strip_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
@@ -27,3 +37,10 @@ strip_library($(LIBNAME),lib)
 static_library($(LIBNAME),lib)
 
 html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )
+
+c_plus_target($(CONDOR_CHIRP_NAME),$(CONDOR_CHIRP_OBJ),$(LIBNAME))
+
+release_target($(CONDOR_CHIRP_NAME),libexec,EXECUTABLE_MODE)
+strip_target($(CONDOR_CHIRP_NAME),libexec,EXECUTABLE_MODE)
+
+

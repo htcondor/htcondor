@@ -136,7 +136,14 @@ VanillaProc::StartJob()
 	if (OsProc::StartJob()) {
 		
 		// success!  create a ProcFamily
-		family = new ProcFamily(JobPid,PRIV_USER);
+		PidEnvID penvid;
+
+		pidenvid_init(&penvid);
+
+		// if there is no information on this pid, that's ok
+		daemonCore->InfoEnvironmentID(&penvid, JobPid);
+
+		family = new ProcFamily(JobPid, &penvid, PRIV_USER);
 		ASSERT(family);
 
 		const char* run_jobs_as = NULL;

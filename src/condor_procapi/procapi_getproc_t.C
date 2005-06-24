@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi_t.h"
 
 /////////////////////////////test1/////////////////////////////////////////////
@@ -28,6 +30,7 @@ int getProcInfo_test(bool verbose) {
 
   int success = 1;
   unsigned long approx_mem;
+  int status;
   
   
   
@@ -54,7 +57,7 @@ int getProcInfo_test(bool verbose) {
     int ppid = pids[i].ppid;
 
     // check some of the data in the structure
-    if(ProcAPI::getProcInfo( pid, pi) < 0){
+    if(ProcAPI::getProcInfo( pid, pi, status) == PROCAPI_FAILURE){
       printf("Error process %d:\n", pid);
       printf("unable to retrieve process %d information with getProcInfo\n", pid);
       success = -1;
@@ -107,7 +110,7 @@ int getProcInfo_test(bool verbose) {
     }
     
     // now get the parents info and do some more checks
-    if(ProcAPI::getProcInfo(ppid, ppi) < 0){
+    if(ProcAPI::getProcInfo(ppid, ppi, status) == PROCAPI_FAILURE){
       printf("Error process %d:\n", pid);
       printf("Unable to retrieve parent process %d information with getProcInfo\n", ppid);
       success = -1;

@@ -439,6 +439,7 @@ int IOProxyHandler::convert( int result, int unix_errno )
 		case EINTR:
 			return CHIRP_ERROR_TRY_AGAIN;
 		default:
+			dprintf(D_ALWAYS, "Starter ioproxy server got unknown unix errno:%d\n", unix_errno);
 			return CHIRP_ERROR_UNKNOWN;
 	}
 }

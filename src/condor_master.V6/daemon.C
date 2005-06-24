@@ -692,8 +692,15 @@ int daemon::RealStart( )
 		daemons.UpdateCollector();
 	}
 
-		// Create a ProcFamily object for this daemon.
-	InitProcFam( pid );
+	PidEnvID penvid;
+
+	pidenvid_init(&penvid);
+
+	// If there isn't any ancestor information, that is ok.
+	daemonCore->InfoEnvironmentID(&penvid, pid);
+
+	// Create a ProcFamily object for this daemon.
+	InitProcFam( pid, &penvid );
 
 	return pid;	
 }
@@ -1059,12 +1066,12 @@ daemon::Reconfig()
 
 
 void
-daemon::InitProcFam( int pid )
+daemon::InitProcFam( int pid, PidEnvID *penvid )
 {
 		// If there's one there already, kill it.
 	DeleteProcFam();
 
-	procfam = new ProcFamily( pid, PRIV_ROOT );
+	procfam = new ProcFamily( pid, penvid, PRIV_ROOT );
 	if( ! procfam ) {
 		EXCEPT( "Out of memory!" );
 	}

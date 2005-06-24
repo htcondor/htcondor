@@ -80,6 +80,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	next_reconnect_tid = -1;
 	reconnect_attempts = 0;
 
+	lease_duration = -1;
 	already_killed_graceful = false;
 	already_killed_fast = false;
 }
@@ -1182,7 +1183,6 @@ RemoteResource::supportsReconnect( void )
 void
 RemoteResource::reconnect( void )
 {
-	static int lease_duration = -1;
 	const char* gjid = shadow->getGlobalJobId();
 	if( ! gjid ) {
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
@@ -1286,8 +1286,12 @@ RemoteResource::locateReconnectStarter( void )
 {
 	dprintf( D_ALWAYS, "Attempting to locate disconnected starter\n" );
 	const char* gjid = shadow->getGlobalJobId();
+	char *claimid = NULL;
+	getClaimId(claimid);
+
+	dprintf( D_FULLDEBUG, "gjid is %s claimid is %s\n", gjid, claimid);
 	ClassAd reply;
-	if( dc_startd->locateStarter(gjid, &reply, 20) ) {
+	if( dc_startd->locateStarter(gjid, claimid, &reply, 20) ) {
 			// it worked, save the results and return success.
 		char* tmp = NULL;
 		if( reply.LookupString(ATTR_STARTER_IP_ADDR, &tmp) ) {

@@ -54,6 +54,8 @@
 #endif
 #include "self_monitor.h"
 #include "stdsoap2.h"
+#include "condor_pidenvid.h"
+
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
@@ -128,6 +130,7 @@ const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);
 
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
+#define HAS_DCJOBOPT_ENV_INHERIT(mask)  (!(HAS_DCJOBOPT_NO_ENV_INHERIT(mask)))
 
 
 /** helper function for finding available port for both 
@@ -254,6 +257,18 @@ class DaemonCore : public Service
                    the calling process
         @return A pointer into a <b>static buffer</b>, or NULL on error */
     char* InfoCommandSinfulString (int pid = -1);
+
+	/** Returns a pointer to the penvid passed in if successful
+		in determining the environment id for the pid, or NULL if unable
+		to determine.
+        @param pid The pid to ask about.  -1 (Default) means
+                   the calling process
+		@param penvid Address of a structure to be filled in with the 
+			environment id of the pid. Left in undefined state after function
+			call.
+	*/
+	PidEnvID* InfoEnvironmentID(PidEnvID *penvid, int pid = -1);
+
 
     /** Not_Yet_Documented
         @return Not_Yet_Documented
@@ -887,7 +902,7 @@ class DaemonCore : public Service
 	bool get_cookie( int &len, unsigned char* &data );
 	bool cookie_is_valid( unsigned char* data );
 
-	/* The peaceful shutdown toggle controls whether graceful shutdown
+	/** The peaceful shutdown toggle controls whether graceful shutdown
 	   avoids any hard killing.
 	*/
 	bool GetPeacefulShutdown();
@@ -897,12 +912,13 @@ class DaemonCore : public Service
 		processing of SOAP calls.
 		@param seconds The number of seconds to only permit SOAP callbacks
 	*/
-	void Only_Allow_Soap(int duration);
 
+	void Only_Allow_Soap(int duration);
+	
     SelfMonitorData monitor_data;
 
   private:      
-
+  	
 	ReliSock* dc_rsock;	// tcp command socket
 	SafeSock* dc_ssock;	// udp command socket
 
@@ -1092,7 +1108,12 @@ class DaemonCore : public Service
         int reaper_id;
         int hung_tid;   // Timer to detect hung processes
         int was_not_responding;
+
+		/* the environment variables which allow me the track the pidfamily
+			of this pid (where applicable) */
+		PidEnvID penvid;
     };
+
     typedef HashTable <pid_t, PidEntry *> PidHashTable;
     PidHashTable* pidTable;
     pid_t mypid;

@@ -20,6 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include "condor_pidenvid.h"
 #include "procapi_t.h"
 
 /////////////////////////////test4/////////////////////////////////////////////
@@ -32,6 +34,7 @@
 int getProcSetInfo_test(bool verbose) {
   
   int success = 1;
+  int status;
   
   // get the pid of the process to be used as the head node this process
   pid_t head_pid =  getpid();
@@ -42,7 +45,10 @@ int getProcSetInfo_test(bool verbose) {
   
   pid_t *pids;
 
- 
+  PidEnvID penvid;
+
+  pidenvid_init(&penvid);
+
   if(verbose){
   printf( "\n..................................\n" );
   printf( "This is a test of getProcSetInfo(). \n");
@@ -62,13 +68,17 @@ int getProcSetInfo_test(bool verbose) {
   }
   
 
-  if(ProcAPI::getProcSetInfo ( pids, num_nodes, pi_s ) < 0){
+  if(ProcAPI::getProcSetInfo ( pids, num_nodes, pi_s, status ) 
+ 							 	== PROCAPI_FAILURE)
+  {
     printf("Error:\n");
     printf("Unable to getProcSetInfo\n");
     success = -1;
   }
 
-  if(ProcAPI::getFamilyInfo( pid_ents[0].pid, pi_f ) < 0){
+  if(ProcAPI::getFamilyInfo( pid_ents[0].pid, pi_f, &penvid, status ) 
+ 					 			== PROCAPI_FAILURE)
+  {
     printf("Error:\n");
     printf("Unable to getFamilyInfo\n");
     success = -1;

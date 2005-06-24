@@ -40,6 +40,7 @@
 #include "condor_adtypes.h"
 #include "condor_ckpt_name.h"
 #include "scheduler.h"	// for shadow_rec definition
+#include "dedicated_scheduler.h"
 #include "condor_email.h"
 #include "condor_universe.h"
 #include "globus_utils.h"
@@ -49,6 +50,7 @@ extern char *Spool;
 extern char *Name;
 extern char* JobHistoryFileName;
 extern Scheduler scheduler;
+extern DedicatedScheduler dedicated_scheduler;
 extern bool	operator==( PROC_ID, PROC_ID );
 
 extern "C" {
@@ -2562,7 +2564,11 @@ int mark_idle(ClassAd *job)
 		{
 			dprintf( D_FULLDEBUG, "Job %d.%d might still be alive, "
 					 "spawning shadow to reconnect\n", cluster, proc );
-			scheduler.enqueueReconnectJob( job_id );
+			if (universe == CONDOR_UNIVERSE_PARALLEL) {
+				dedicated_scheduler.enqueueReconnectJob( job_id);	
+			} else {
+				scheduler.enqueueReconnectJob( job_id );
+			}
 		} else {
 			mark_job_stopped(&job_id);
 		}
