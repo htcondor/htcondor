@@ -816,8 +816,7 @@ ClassAd::clear( void )
 int
 ClassAd::initFromStream(Stream& s)
 {
-    char           namebuf[CLASSAD_MAX_ADTYPE];
-	char *name = namebuf;
+	char *name  = NULL;
 
 		// First, initialize ourselves from the stream.  This will
 		// delete any existing attributes in the list...
@@ -831,11 +830,19 @@ ClassAd::initFromStream(Stream& s)
         return 0;
     }
     SetMyTypeName(name);
+	if ( name != NULL ) {
+		free(name);
+		name = NULL;
+	}
 
     if(!s.code(name)) {
         return 0;
     }
     SetTargetTypeName(name);
+	if ( name != NULL ) {
+		free(name);
+		name = NULL;
+	}
 
     return 1; 
 }
