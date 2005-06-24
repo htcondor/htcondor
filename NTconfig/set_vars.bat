@@ -28,7 +28,7 @@ REM like awk, gunzip, tar, bison, yacc...
 set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;C:\Perl\bin;"C:\Program Files\Microsoft Visual Studio\VC98\bin";"C:\Program Files\Microsoft Platform SDK for Windows XP SP2";
 call vcvars32.bat
 if not defined INCLUDE ( echo . && echo *** Failed to run VCVARS32.BAT! Is Microsoft Visual Studio 6.0 installed? && exit /B 1 )
-call setenv.bat /2000 /RETAIL
+call setenv /2000 /RETAIL
 if not defined MSSDK ( echo . && echo *** Failed to run SETENV.BAT! Is Microsoft Platform SDK installed? && exit /B 1 )
 
 REM Set up some stuff for BISON
