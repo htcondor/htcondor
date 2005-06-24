@@ -21,8 +21,12 @@ currently installed Condor version number and platform information.
 \OptItem{\Opt{help}}{Print usage information}
 \OptItem{\Opt{arch}}{Print this machine's ClassAd value for \AdAttr{Arch}}
 \OptItem{\Opt{opsys}}{Print this machine's ClassAd value for \AdAttr{OpSys}}
-\OptItem{\Opt{syscall}}{Get version information from
-   the \File{libcondorsyscall.a} that this Condor pool is configured to use}
+\OptItem{\Opt{syscall}}{Get any requested version and/or platform
+   information from the \File{libcondorsyscall.a} that this Condor pool
+   is configured to use, instead of using the values that are compiled
+   into the tool itself.
+   This option may be used in combination with any
+   other options to modify where the information is coming from.}
 \end{Options}
 
 \ExitStatus
