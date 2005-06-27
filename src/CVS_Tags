@@ -1,3 +1,9 @@
+6/27/05 V6_7-dag_subdir-branch
+    A branch for the DAGMan subdirectory support feature (run multiple
+    DAGs in separate directories), created from the V6_7-branch.  
+    Hopefully this branch will only last a few days, but the complexity 
+    of changes for this feature was getting pretty high...
+
 06/27/05 V6_7_9-branch
    A branch for the 6.7.9 release, created from V6_7_9-root on the
    V6_7_ALL module.
