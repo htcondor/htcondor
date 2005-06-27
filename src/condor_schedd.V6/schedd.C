@@ -5050,7 +5050,7 @@ Scheduler::startdContactSockHandler( Stream *sock )
 	sock->timeout(1);
 
  	if( !sock->rcv_int(reply, TRUE) ) {
-		dprintf( D_ALWAYS, "Response problem from startd.\n" );	
+		dprintf( D_ALWAYS, "Response problem from startd on %s (match %s).\n", mrec->peer, mrec->id );	
 		BAILOUT;
 	}
 
