@@ -8,6 +8,12 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+6/27/05 V6_7-dag_subdir-branch
+    A branch for the DAGMan subdirectory support feature (run multiple
+    DAGs in separate directories), created from the V6_7-branch.
+    Hopefully this branch will only last a few days, but the complexity
+    of changes for this feature was getting pretty high...
+
 6/27/05 V6_7_9-branch
     A release branch for the 6.7.9 manual, created from the V6_7_9-root
     tag. Any changes to the 6.7.9 manual should be done here, and the
