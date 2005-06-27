@@ -368,7 +368,7 @@ system.
   reason they were not run on the same machine,
   \MacroUNI{CONDOR\_HOST} would not be needed.  Some
   of the host-based security macros use \MacroUNI{CONDOR\_HOST} by
-  default.  See section~\ref{sec:Host-Security}, Setting up
+  default.  See section~\ref{sec:Host-Security}, on Setting up
   IP/host-based security in Condor for details.
   
 \item[\Macro{COLLECTOR\_HOST}] \label{param:CollectorHost} The
@@ -4118,7 +4118,7 @@ is described in section~\ref{param:SubsysDebug} as
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Security-Config-File-Entries}
+\subsection{\label{sec:Config-Security}
 Configuration File Entries Relating to Security}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -4227,6 +4227,14 @@ encrypted by setting this configuration variable to \Expr{True}.
 Defaults to \Expr{False}.
 The method of encryption uses the EFS (Encrypted File System)
 feature of Windows NTFS v5.
+
+\item[\Macro{SEC\_TCP\_SESSION\_TIMEOUT}]
+\label{param:SecTCPSessionTimeout}
+The length of time in seconds until the timeout on
+obtaining a TCP connection used for the set up of a security session.
+The default value is 20 seconds.
+Scalability issues with a large pool would be the only basis
+for a change from the default value.
 
 \end{description}
 
