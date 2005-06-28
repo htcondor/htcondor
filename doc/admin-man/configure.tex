@@ -3359,7 +3359,9 @@ These macros affect the \Condor{negotiator}.
   connection establishment for each negotiation cycle.  The default is
   currently 16.  To be effective, this parameter should be set to a
   value greater than the number of schedds submitting jobs to the
-  negotiator at any time.
+  negotiator at any time.  If you lower this number, you must run
+  \Condor{restart} and not just \Condor{reconfig} for the change to
+  take effect.
 
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} The negotiator will not preempt
