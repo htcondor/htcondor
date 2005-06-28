@@ -3181,6 +3181,8 @@ These macros affect the \Condor{collector}.
   If you do not enable a socket cache, TCP updates will be refused by
   the collector.
   The default value for this setting is 0, with no cache enabled.   
+  If you lower this number, you must run \Condor{restart} and not just
+  \Condor{reconfig} for the change to take effect.
 
 \item[\Macro{KEEP\_POOL\_HISTORY}] \label{param:KeepPoolHistory}
   This boolean macro is used to decide if the collector will write
