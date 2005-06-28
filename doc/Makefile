@@ -112,6 +112,7 @@ local.html: clean
 
 release-html: ref.html $(TARGETDIR)
 	rm -rf $(MANDIR).old
+	touch $(MANDIR)
 	mv -f $(MANDIR) $(MANDIR).old
 	mv -f $(TARGETDIR) $(MANDIR)
 	rm -f ref.html
