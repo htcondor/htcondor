@@ -340,6 +340,9 @@ main(int argc, char* argv[])
 static void ProcessInfo(AttrList* ad)
 {
   int NumElem=CountElem(ad);
+  if ( NumElem <= 0 ) {
+	  return;
+  }
   LineRec* LR=new LineRec[NumElem];
   CollectInfo(NumElem,ad,LR);
   qsort(LR,NumElem,sizeof(LineRec),CompPrio);  
