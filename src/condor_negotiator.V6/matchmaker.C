@@ -152,15 +152,21 @@ reinitialize ()
 		NegotiatorTimeout = 30;
 	}
 
-	delete sockCache;
+	// deal with a possibly resized socket cache.
+	// 
+	// we call the resize method which:
+	// - does nothing if the size is the same
+	// - preserves the old sockets if the size has grown 
+	// - does nothing (except dprintf into the log) if the size has shrunk.
+	//
+	// the user must call condor_restart to actually shrink the sockCache.
+
 	tmp = param("NEGOTIATOR_SOCKET_CACHE_SIZE");
 	if (tmp) {
 		int size = atoi(tmp);
 		dprintf (D_ALWAYS,"NEGOTIATOR_SOCKET_CACHE_SIZE = %d\n", size);
-		sockCache = new SocketCache(size);
+		sockCache->resize(size);
 		free(tmp);
-	} else {
-		sockCache = new SocketCache;
 	}
 
 	// get PreemptionReq expression
