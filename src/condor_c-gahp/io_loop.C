@@ -21,8 +21,9 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "io_loop.h"
+
 #include "condor_common.h"
+#include "io_loop.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -63,6 +64,9 @@ StringList pending_request_list;
 // this appears at the bottom of this file
 extern "C" int display_dprintf_header(FILE *fp);
 
+#ifdef WIN32
+int STDIN_FILENO = fileno(stdin);
+#endif
 
 
 void
@@ -77,6 +81,7 @@ usage( char *name )
 int
 main_init( int argc, char ** const argv )
 {
+
 
 	dprintf(D_FULLDEBUG, "C-GAHP IO thread\n");
 
