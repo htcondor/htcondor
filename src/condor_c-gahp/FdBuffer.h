@@ -24,8 +24,7 @@
 #ifndef FD_BUFFER_H
 #define FD_BUFFER_H
 
-#include "condor_common.h"
-#include "../condor_c++_util/MyString.h"
+#include "MyString.h"
 
 
 /**

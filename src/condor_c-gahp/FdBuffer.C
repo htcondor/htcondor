@@ -20,9 +20,10 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include "FdBuffer.h"
+
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "FdBuffer.h"
 
 FdBuffer::FdBuffer (int _fd) {
 	fd = _fd;
