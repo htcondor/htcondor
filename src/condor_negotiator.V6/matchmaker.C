@@ -152,7 +152,8 @@ reinitialize ()
 		NegotiatorTimeout = 30;
 	}
 
-	// deal with a possibly resized socket cache.
+	// deal with a possibly resized socket cache, or create the socket
+	// cache if this is the first time we got here.
 	// 
 	// we call the resize method which:
 	// - does nothing if the size is the same
@@ -165,8 +166,16 @@ reinitialize ()
 	if (tmp) {
 		int size = atoi(tmp);
 		dprintf (D_ALWAYS,"NEGOTIATOR_SOCKET_CACHE_SIZE = %d\n", size);
-		sockCache->resize(size);
+		if (sockCache) {
+			sockCache->resize(size);
+		} else {
+			sockCache = new SocketCache(size);
+		}
 		free(tmp);
+	} else {
+		if (!sockCache) {
+			sockCache = new SocketCache();
+		}
 	}
 
 	// get PreemptionReq expression
