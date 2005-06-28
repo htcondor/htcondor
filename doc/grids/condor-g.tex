@@ -4,51 +4,72 @@
 \subsection{\label{sec:Condor-G}Condor-G, the gt2, gt3, and gt4 grid\_types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor-G is a ``window to the grid.''
-The function of Condor-G becomes clear
-with a brief overview of the software that forms a Condor pool.
-For this discussion, the software of a Condor pool is divided
-into two parts.
-The first part does job management.
-It keeps track of a user's jobs.
-You can ask the job management part of Condor to show
-you the job queue, to submit new jobs to the system,
-to put jobs on hold,
-and to request information about jobs that have completed.
-The other part of the Condor software
-does resource management.
-It keeps track of which machines are available to run jobs,
-how the available machines should be utilized given all the users
-who want to run jobs on them,
-and when a machine is no longer available.
-Condor-G works with grid resources, allowing users to
-effectively submit jobs, manage jobs, and have jobs execute
-on widely distributed machines.
+Condor-G is the name given to Condor when \SubmitCmd{grid}
+\SubmitCmd{universe} jobs are sent to grid resources utilizing
+Globus software for job execution.
+The Globus Toolkit provides a framework for building grid systems
+and applications.
+See the Globus Alliance web page at
+\URL{http://www.globus.org}
+for descriptions and details of the Globus software.
 
-A machine with the job management part installed
-is called a submit machine.
-A machine with the resource management part installed 
-is called an execute machine.
-Each machine may have one part or both.
-Condor-G is the job management part of Condor.
-\index{Condor-G!functionality}
-Condor-G lets you submit jobs into a queue,
-have a log detailing the life cycle of your jobs,
-manage your input and output files,
-along with everything else you expect from a job queuing system.
+Condor provides the same job management capabilities for these
+jobs.
+From Condor, a user may effectively submit jobs, manage jobs,
+and have jobs execute on widely distributed machines.
 
-Condor-G is a program that manages both a queue of jobs
-and the resources from one or more sites where those jobs can execute. 
-For some of these jobs,
-it communicates with these resources and transfers files
-to and from these resources using Globus mechanisms.
-(In particular, Condor-G uses the GRAM protocol for job submission,
-and it runs a local GASS server for file transfers).
+% Condor-G is a ``window to the grid.''
+% The function of Condor-G becomes clear
+% with a brief overview of the software that forms a Condor pool.
+% For this discussion, the software of a Condor pool is divided
+% into two parts.
+% The first part does job management.
+% It keeps track of a user's jobs.
+% You can ask the job management part of Condor to show
+% you the job queue, to submit new jobs to the system,
+% to put jobs on hold,
+% and to request information about jobs that have completed.
+% The other part of the Condor software
+% does resource management.
+% It keeps track of which machines are available to run jobs,
+% how the available machines should be utilized given all the users
+% who want to run jobs on them,
+% and when a machine is no longer available.
+% Condor-G works with grid resources, allowing users to
+% effectively submit jobs, manage jobs, and have jobs execute
+% on widely distributed machines.
 
-\Note This version of the manual has correct installation instructions
-for Condor-G \VersionNotice, but other usage information has not
-yet been updated.
+% A machine with the job management part installed
+% is called a submit machine.
+% A machine with the resource management part installed 
+% is called an execute machine.
+% Each machine may have one part or both.
+% Condor-G is the job management part of Condor.
+% \index{Condor-G!functionality}
+% Condor-G lets you submit jobs into a queue,
+% have a log detailing the life cycle of your jobs,
+% manage your input and output files,
+% along with everything else you expect from a job queuing system.
 
+% Condor-G is a program that manages both a queue of jobs
+% and the resources from one or more sites where those jobs can execute. 
+% For some of these jobs,
+% it communicates with these resources and transfers files
+% to and from these resources using Globus mechanisms.
+% (In particular, Condor-G uses the GRAM protocol for job submission,
+% and it runs a local GASS server for file transfers).
+
+It may appear that Condor-G is a simple replacement
+for the Globus Toolkit's \Prog{globusrun} command.
+However, Condor-G does much more.
+It allows the submission of many jobs at once
+along with the monitoring of those jobs with a convenient interface.
+There is notification when jobs complete or fail
+and maintenance Globus credentials
+that may expire while a job is running.
+On top of this, Condor-G is a fault-tolerant system;
+if your machine crashes,
+you can still perform all of these functions when your machine returns to life.
 
 
 
@@ -73,11 +94,14 @@ The following is a list of known limitations:
 \begin{enumerate}
 \item{No checkpoints.}
 \item{No job exit codes.}
-Job exit codes are not available (they are available for grid\_type gt4).
+Job exit codes are not available (when using \SubmitCmd{grid\_type}s
+\SubmitCmd{gt2} and \SubmitCmd{gt3}).
 \item{Limited platform availability.}
-Condor-G is only available on Linux, Solaris,
-Digital UNIX, and IRIX.
-HP-UX support will hopefully be available later.
+Windows support is not yet available.
+%Condor-G is only available on Linux, Solaris,
+%Digital UNIX, and IRIX.
+% Karen's note:  HPUX is no longer in our list of available platforms.
+% HP-UX support will hopefully be available later.
 \end{enumerate}
 
 \index{Condor-G|)}

@@ -1,52 +1,12 @@
-Condor-G allows the user to treat the Grid as a local resource,
-and the same command-line tools perform basic job management such as:
-\begin{itemize}
-\item Submit a job, indicating an executable, input and output files,
-and arguments
-\item Query a job's status
-\item Cancel a job
-\item Be informed when events happen,
-such as normal job termination or errors
-\item Obtain access to detailed logs that provide a complete history of a job
-\end{itemize}
-
-These are features that Condor has provided for many years.
-Condor-G extends this to the grid,
-providing resource management 
-while still providing fault tolerance and exactly-once execution 
-semantics. 
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Globus-Protocols}Globus and Its Protocols}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The Globus software provides a well-defined set of protocols
-that allow authentication, data transfer, and remote job submission.
+that allow authentication, data transfer, and remote job execution.
 Authentication is a mechanism by which an identity is verified.
 Given proper authentication, authorization to use a resource
 is required.
 Authorization is a policy that determines who is allowed to do what. 
-
-Starting with Condor Version 6.7.0, the \AdAttr{grid} universe
-replaces the \AdAttr{globus} universe.
-Further specification of a \AdAttr{grid} universe job is done
-within the \AdAttr{grid\_type} command in a submit description file.
-Older submit description files specifying the \AdAttr{globus} 
-universe will become \AdAttr{grid} universe jobs using the
-Globus \AdAttr{gt2} protocol.
-
-It may appear that Condor-G is a simple replacement
-for the Globus toolkit's \Prog{globusrun} command.
-However, Condor-G does much more.
-It allows the submission of many jobs at once
-along with the monitoring of those jobs with a convenient interface.
-There is notification when jobs complete or fail
-and maintenance Globus credentials
-that may expire while a job is running.
-On top of this, Condor-G is a fault-tolerant system;
-if your machine crashes,
-you can still perform all of these functions when your machine returns to life.
-
 
 Condor uses the following Globus protocols.
 These protocols allow Condor to utilize grid machines for
@@ -121,7 +81,7 @@ Globus' shift to web services-based protocols. It has been replaced in the
 latest version of the Globus Toolkit and should be considered deprecated.
 \item[gt4]
 The GRAM protocol was introduced in Globus Toolkit version 4 as a more
-standards-complient version of the GT3 web services-based GRAM.
+standards-compliant version of the GT3 web services-based GRAM.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
