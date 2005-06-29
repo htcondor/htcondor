@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Globus-Protocols}Globus and Its Protocols}
+\subsubsection{\label{sec:Globus-Protocols}Globus Protocols and Terminology}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The Globus software provides a well-defined set of protocols
 that allow authentication, data transfer, and remote job execution.
@@ -8,15 +8,15 @@ Given proper authentication, authorization to use a resource
 is required.
 Authorization is a policy that determines who is allowed to do what. 
 
-Condor uses the following Globus protocols.
-These protocols allow Condor to utilize grid machines for
-the execution of jobs.
+Condor (and Globus) utilize the following protocols and terminology.
+The protocols allow Condor to interact with grid machines toward
+the end result of executing jobs.
 \begin{description}
 \item[GSI]
 \index{GSI (Grid Security Infrastructure)}
 The Globus Toolkit's Grid Security Infrastructure (GSI) provides essential
 \index{Condor-G!GSI}
-building blocks for other Grid protocols and Condor-G.
+building blocks for other grid protocols and Condor-G.
 This authentication and authorization system
 makes it possible to authenticate a user just once,
 using public key infrastructure (PKI) mechanisms to verify
@@ -28,10 +28,9 @@ apply at each site.
 The Grid Resource Allocation and Management (GRAM) protocol supports remote
 \index{Condor-G!GRAM}
 \index{GRAM (Grid Resource Allocation and Management)}
-submission of a computational request (for example, to run program P)
+submission of a computational request (for example, to run a program)
 to a remote computational resource,
-and it supports subsequent monitoring and control of the resulting
-computation. 
+and it supports subsequent monitoring and control of the computation. 
 GRAM is the Globus protocol that Condor-G uses to talk to remote Globus
   jobmanagers.
 \item[GASS]
@@ -39,22 +38,39 @@ The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
 \index{Condor-G!GASS}
 \index{GASS (Global Access to Secondary Storage)}
 mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
-GASS is used in the gt2 and gt3 grid-types to transfer the job's files
-between the machine where the job is submitted and the remote resource.
+GASS is used by Condor for the 
+\SubmitCmd{gt2} and \SubmitCmd{gt3} \SubmitCmd{grid\_type}s
+to transfer a job's files
+to and from the machine where the job is submitted and the remote resource.
 \item[GridFTP]
 GridFTP is an extension of FTP that provides strong security and 
-high-performance options for large data transfers. It is used in the gt4
-grid-type to transfer the job's files between the machine where the job
+high-performance options for large data transfers.
+It is used with the \SubmitCmd{gt4} \SubmitCmd{grid\_type}
+to transfer the job's files between the machine where the job
 is submitted and the remote resource.
 \item[RSL]
 RSL is the language GRAM accepts to specify job information.
+\item[gatekeeper]
+A gatekeeper is a software daemon executing on a remote machine on
+the grid.
+It is relevant only to the \SubmitCmd{gt2} \SubmitCmd{grid\_type},
+and this daemon handles the initial communication between
+Condor and a remote resource.
+\item[jobmanager]
+A jobmanager is
+the Globus service that is initiated at a remote resource to submit,
+keep track of, and manage grid I/O for jobs running on 
+an underlying batch system.
+There is a specific jobmanager for each type of
+batch system supported by Globus (examples are Condor, LSF, and PBS).
+
 \end{description}
 
 
 \begin{figure}[hbt]
 \centering
 \includegraphics{grids/gfig1.eps}
-\caption{\label{fig:condorg}Remote Execution by Condor-G on Globus-managed resources}
+\caption{\label{fig:condorg}Condor-G interaction with Globus-managed resources}
 \end{figure}
 
 Figure~\ref{fig:condorg} shows how Condor interacts with Globus protocols.
