@@ -82,7 +82,7 @@ class Matchmaker : public Service
 						int send_ad_to_schedd);
 		void calculateNormalizationFactor (ClassAdList &, double &, double &,
 										   double &, double &);
-		char *getCapability (char *, char *, ClassAdList &);
+		char *getCapability (const char *, const char *, ClassAdList &);
 		void addRemoteUserPrios( ClassAdList& );
 		void reeval( ClassAd *ad );
 		static int HashFunc(const MyString &Key, int TableSize);
