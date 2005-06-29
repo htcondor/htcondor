@@ -1,3 +1,9 @@
+06/29/05 V6_6-merge-43
+   The state of the V6_6-branch for a merge into V6_7-branch. This
+   includes more bug fixes, including the schedd crash on reconfig
+   during a negotiation cycle, static buffers in the negotiator, and a
+   few other minor changes.
+
 06/24/05 V6_6-merge-42
    The state of the V6_6-branch for a merge into V6_7-branch. This includes
    more bug fixes.
