@@ -283,7 +283,7 @@ ProcFamily::takesnapshot()
 	}
 
 	if ( ret_val == PROCAPI_FAILURE ) {
-		// daddy_pid AND any family must be gone!
+		// daddy_pid AND any detectable family must be gone from the set!
 		dprintf( D_PROCFAMILY, 
 				 "ProcFamily::takesnapshot: getPidFamily(%d) failed. "
 				 "Could not find the pid or any family members.\n", 
@@ -332,32 +332,27 @@ ProcFamily::takesnapshot()
 					// family anyway, check against the old pids but don't 
 					// consider the daddy pid to even be alive.
 
-					if ( (fam_status == PROCAPI_FAMILY_ALL ) ||
-							( ( fam_status == PROCAPI_FAMILY_SOME) && 
-						 	( currpid != daddy_pid ) ) )
+					if ( ProcAPI::getProcInfo(currpid,pinfo,info_status) 
+							== PROCAPI_SUCCESS ) 
 					{
-						if ( ProcAPI::getProcInfo(currpid,pinfo,info_status) 
-								== PROCAPI_SUCCESS ) 
-						{
-							// compare birthdays; allow 2 seconds "slack"
-							birth = (time(NULL) - pinfo->age) - 
-										(*old_pids)[i].birthday;
-							if ( -2 < birth && birth < 2 ) {
-								// birthdays match up; add currpid
-								// to our list and also get currpid's decendants
-								pidfamily[j] = currpid;
-								pidfamily[j+1] = 0;
-								// if we got the pid family via login name,
-								// we alrady have the decendants.
-								if ( !searchLogin ) {  
-									ProcAPI::getPidFamily(currpid,&m_penvid,&(pidfamily[j+1]),ignore_status);
-								}
-								// and this pid most certainly did not exit, so
-								// set our flag accordingly.
-								currpid_exited = false;
-							} 
-						}  
-					}
+						// compare birthdays; allow 2 seconds "slack"
+						birth = (time(NULL) - pinfo->age) - 
+									(*old_pids)[i].birthday;
+						if ( -2 < birth && birth < 2 ) {
+							// birthdays match up; add currpid
+							// to our list and also get currpid's decendants
+							pidfamily[j] = currpid;
+							pidfamily[j+1] = 0;
+							// if we got the pid family via login name,
+							// we alrady have the decendants.
+							if ( !searchLogin ) {  
+								ProcAPI::getPidFamily(currpid,&m_penvid,&(pidfamily[j+1]),ignore_status);
+							}
+							// and this pid most certainly did not exit, so
+							// set our flag accordingly.
+							currpid_exited = false;
+						} 
+					}  
 
 					// break out of our for loop, since we have hit the end
 					break;
