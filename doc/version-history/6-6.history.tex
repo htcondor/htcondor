@@ -35,6 +35,9 @@ The details of each version are described below.
 \item Fixed a bug where the \Condor{negotiator} might dump core if it was
 reconfiged in the middle of a negotiation cycle.
 
+\item Fixed a bug where the \Condor{negotiator} might dump core if a startd
+had a name longer than 63 bytes. 
+
 \item Fixed a bug that could cause \Condor{userprio} to crash if the
 data it gets back from the \Condor{negotiator} is invalid.
 
