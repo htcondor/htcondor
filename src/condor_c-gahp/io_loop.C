@@ -32,7 +32,7 @@
 #include "globus_utils.h"
 
 
-const char * version = "$GahpVersion 2.0.0 Jan 21 2004 Condor\\ GAHP $";
+const char * version = "$GahpVersion 2.0.1 Jun 27 2005 Condor\\ GAHP $";
 
 
 char *mySubSystem = "C_GAHP";	// used by Daemon Core

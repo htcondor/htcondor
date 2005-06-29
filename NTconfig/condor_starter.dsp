@@ -204,6 +204,14 @@ SOURCE=..\src\condor_starter.V6.1\os_proc.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\parallel_proc.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\parallel_proc.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\script_proc.C
 # End Source File
 # Begin Source File

@@ -1,3 +1,7 @@
+06/29/05 V6_7_9-merge-1
+   The state of the V6_7_9-branch before being merged into V6_7 and
+   abandoned.  We'll need a new V6_7_9-2-branch for the real 6.7.9. 
+
 6/27/05 V6_7-dag_subdir-branch
     A branch for the DAGMan subdirectory support feature (run multiple
     DAGs in separate directories), created from the V6_7-branch.  

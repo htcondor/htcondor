@@ -108,6 +108,10 @@ SOURCE=..\src\condor_util_lib\condor_common_c.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\condor_create_id.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_includes\condor_email.h
 # End Source File
 # Begin Source File
@@ -121,6 +125,10 @@ SOURCE=..\src\condor_util_lib\condor_perms.c
 # Begin Source File
 
 SOURCE=..\src\condor_includes\condor_perms.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\condor_pidenvid.c
 # End Source File
 # Begin Source File
 
@@ -282,7 +290,7 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build
-InputDir=..\src\h
+InputDir=\condor\workspaces\v679\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -295,7 +303,7 @@ InputPath=..\src\h\syscall_numbers.tmpl
 # PROP BASE Ignore_Default_Tool 1
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build
-InputDir=..\src\h
+InputDir=\condor\workspaces\v679\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"

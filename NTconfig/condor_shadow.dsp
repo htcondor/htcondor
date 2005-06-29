@@ -116,6 +116,14 @@ SOURCE=..\src\condor_shadow.V6.1\NTreceivers.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_shadow.V6.1\parallelshadow.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_shadow.V6.1\parallelshadow.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.C
 # End Source File
 # Begin Source File

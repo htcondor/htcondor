@@ -44,8 +44,10 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_blkng_full_disk_io.obj"
 	-@erase "$(INTDIR)\condor_common_c.obj"
 	-@erase "$(INTDIR)\condor_common_c.pch"
+	-@erase "$(INTDIR)\condor_create_id.obj"
 	-@erase "$(INTDIR)\condor_full_io.obj"
 	-@erase "$(INTDIR)\condor_perms.obj"
+	-@erase "$(INTDIR)\condor_pidenvid.obj"
 	-@erase "$(INTDIR)\condor_snutils.obj"
 	-@erase "$(INTDIR)\condor_universe.obj"
 	-@erase "$(INTDIR)\copy_file.obj"
@@ -99,7 +101,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\blankline.obj" \
 	"$(INTDIR)\chomp.obj" \
 	"$(INTDIR)\ckpt_name.obj" \
+	"$(INTDIR)\condor_blkng_full_disk_io.obj" \
 	"$(INTDIR)\condor_common_c.obj" \
+	"$(INTDIR)\condor_full_io.obj" \
 	"$(INTDIR)\condor_perms.obj" \
 	"$(INTDIR)\condor_snutils.obj" \
 	"$(INTDIR)\condor_universe.obj" \
@@ -134,8 +138,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
 	"$(INTDIR)\win32_posix.obj" \
-	"$(INTDIR)\condor_full_io.obj" \
-	"$(INTDIR)\condor_blkng_full_disk_io.obj"
+	"$(INTDIR)\condor_pidenvid.obj" \
+	"$(INTDIR)\condor_create_id.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -158,8 +162,10 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_blkng_full_disk_io.obj"
 	-@erase "$(INTDIR)\condor_common_c.obj"
 	-@erase "$(INTDIR)\condor_common_c.pch"
+	-@erase "$(INTDIR)\condor_create_id.obj"
 	-@erase "$(INTDIR)\condor_full_io.obj"
 	-@erase "$(INTDIR)\condor_perms.obj"
+	-@erase "$(INTDIR)\condor_pidenvid.obj"
 	-@erase "$(INTDIR)\condor_snutils.obj"
 	-@erase "$(INTDIR)\condor_universe.obj"
 	-@erase "$(INTDIR)\copy_file.obj"
@@ -212,7 +218,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\blankline.obj" \
 	"$(INTDIR)\chomp.obj" \
 	"$(INTDIR)\ckpt_name.obj" \
+	"$(INTDIR)\condor_blkng_full_disk_io.obj" \
 	"$(INTDIR)\condor_common_c.obj" \
+	"$(INTDIR)\condor_full_io.obj" \
 	"$(INTDIR)\condor_perms.obj" \
 	"$(INTDIR)\condor_snutils.obj" \
 	"$(INTDIR)\condor_universe.obj" \
@@ -247,8 +255,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
 	"$(INTDIR)\win32_posix.obj" \
-	"$(INTDIR)\condor_full_io.obj" \
-	"$(INTDIR)\condor_blkng_full_disk_io.obj"
+	"$(INTDIR)\condor_pidenvid.obj" \
+	"$(INTDIR)\condor_create_id.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -352,6 +360,12 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fp"$(INTDIR)\co
 
 !ENDIF 
 
+SOURCE=..\src\condor_util_lib\condor_create_id.c
+
+"$(INTDIR)\condor_create_id.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\src\condor_util_lib\condor_full_io.c
 
 "$(INTDIR)\condor_full_io.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
@@ -361,6 +375,12 @@ SOURCE=..\src\condor_util_lib\condor_full_io.c
 SOURCE=..\src\condor_util_lib\condor_perms.c
 
 "$(INTDIR)\condor_perms.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_util_lib\condor_pidenvid.c
+
+"$(INTDIR)\condor_pidenvid.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -632,7 +652,7 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-InputDir=..\src\h
+InputDir=\condor\workspaces\v679\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -644,7 +664,7 @@ InputPath=..\src\h\syscall_numbers.tmpl
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-InputDir=..\src\h
+InputDir=\condor\workspaces\v679\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
