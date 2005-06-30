@@ -1333,13 +1333,6 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 		// Handle Globus Universe
 	if (job_universe == CONDOR_UNIVERSE_GLOBUS) {
-		if( ! notify ) {
-				// caller explicitly does not the gridmanager notified??
-				// buyer had better beware, but we will honor what
-				// we are told.  
-				// nothing to do
-			return;
-		}
 		int job_managed = 0;
 		job_ad->LookupBool(ATTR_JOB_MANAGED, job_managed);
 			// If job_managed is true, then notify the gridmanager and return.
@@ -1370,6 +1363,13 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			}
 		}
 		if ( job_managed  ) {
+			if( ! notify ) {
+					// caller explicitly does not the gridmanager notified??
+					// buyer had better beware, but we will honor what
+					// we are told.  
+					// nothing to do
+				return;
+			}
 			char owner[_POSIX_PATH_MAX];
 			char domain[_POSIX_PATH_MAX];
 			owner[0] = '\0';
