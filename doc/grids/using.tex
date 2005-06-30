@@ -87,22 +87,26 @@ such as if the remote resource crashes.
 
 There are now three different versions of the GRAM protocol.
 Condor supports all three.
-These versions are incompatible with each other.
 Condor's grid universe uses the \SubmitCmd{grid\_type} command within
 a submit description file to distinguish among them.
 \begin{description}
 \item[gt2]
 This initial GRAM protocol is used in Globus Toolkit versions 1 and 2.
-It is still used by many production systems. It is included in Globus
-Toolkit versions 3 and 4, oftened labelled as pre-web services GRAM.
+It is still used by many production systems.
+Where available in the other, more recent versions of the protocol,
+\SubmitCmd{gt2} is referred to as the pre-web services GRAM.
 \item[gt3]
 The \SubmitCmd{gt3} \SubmitCmd{grid\_type} corresponds to
 Globus Toolkit version 3 as part of
 Globus' shift to web services-based protocols.
 It is replaced by  the Globus Toolkit version 4.
+An installation of the Globus Toolkit version 3 may also
+include the the pre-web services GRAM.
 \item[gt4]
 The GRAM protocol was introduced in Globus Toolkit version 4 as a more
 standards-compliant version of the GT3 web services-based GRAM.
+An installation of the Globus Toolkit version 4 may also
+include the the pre-web services GRAM.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,14 +116,15 @@ standards-compliant version of the GT3 web services-based GRAM.
 \index{universe!globus}
 \index{universe!grid, grid\_type gt2}
 This section contains what users need to know to 
-run and manage jobs under the \AdAttr{grid} universe, using the Globus \AdAttr{gt2} protocol.
-Older submit description files specifying a \AdAttr{globus} universe job
+run and manage jobs under the \SubmitCmd{grid} universe, using the Globus \SubmitCmd{gt2} protocol.
+Older submit description files specifying a \SubmitCmd{globus} universe job
 will default to this.
 
 \index{Condor-G!job submission}
 \index{Condor-G!proxy}
 \index{proxy}
-Under Condor, successful job submission to the \AdAttr{grid} universe with \AdAttr{gt2}
+Under Condor, successful job submission to the \SubmitCmd{grid} 
+\SubmitCmd{universe} with \SubmitCmd{gt2}
 requires credentials.
 \index{Condor-G!X.509 certificate}
 An X.509 certificate is used to create a proxy,
@@ -160,6 +165,7 @@ files specified by an \SubmitCmd{input} command.
 Note that the executable must be compiled for the correct
 intended platform.
 
+\index{submit commands!globusscheduler}
 The command \SubmitCmd{globusscheduler} is a required command
 for Condor-G jobs.
 It specifies the scheduling software to be used on the remote resource.
@@ -459,48 +465,79 @@ This example's attribute name for the additional RSL is
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{universe!grid, grid\_type gt3}
 
-Condor-G version 6.7.1 allows the user to submit jobs
-to Globus Toolkit 3.2 (gt3) gatekeepers,
-in a manner similar to the submission of
-jobs to Globus 2.x gatekeepers.
-Condor-G version 6.7.1 supports submission of jobs to gatekeepers
-running web services from GT 3.2.
-Please note that this is \emph{not} compatible with GT 3.0.
-
+% sincd version 6.7.1
+Condor-G supports submitting jobs to remote resources running
+the Globus Toolkit version 3.2.
+Please note that this Globus Toolkit version
+is \emph{not} compatible with the Globus Toolkit version 3.0.
 See
 \URL{http://www-unix.globus.org/toolkit/docs/3.2/index.html}
-for more information about Globus Toolkit 3.2.
+for more information about the Globus Toolkit version 3.2.
 
-In order to submit \AdAttr{grid\_type} \AdAttr{GT3} jobs,
-the following items must be defined in the user's
-submit description file:
+For \SubmitCmd{grid\_type} \SubmitCmd{gt3} jobs,
+the submit description file is much the same as for
+\SubmitCmd{grid\_type} \SubmitCmd{gt2} jobs.
+The \SubmitCmd{globusscheduler} command is still required,
+but the format changes from \SubmitCmd{gt2}
+to one that is a URL. 
+The syntax follows the form:
 \footnotesize
 \begin{verbatim}
-universe = grid
-grid_type = gt3
-Executable = /bin/foo
-Globusscheduler = http://198.51.254.40:8080/ogsa/services/base/gram/ForkMa
-nagedJobFactoryService
+globusscheduler = http://hostname[:port]/ogsa/services/base/gram/
+XXXManagedJobFactoryService
 \end{verbatim}
 \normalsize
 
-as well as other useful parameters such as
-\AdAttr{log} and \AdAttr{transfer\_executable}.
-The value for \AdAttr{globusscheduler} is placed on two lines for
-formatting purposes, but will all be on a single line within
-a submit description file.
-Its value is the URL of the appropriate GT3 job factory service.
-It is the same, for example,
-as the URL provided to the \Prog{managed-job-globusrun} tool in GT3.
+or
+\footnotesize
+\begin{verbatim}
+globusscheduler = http://IPaddress[:port]/ogsa/services/base/gram/
+XXXManagedJobFactoryService
+\end{verbatim}
+\normalsize
 
-The user is not required to have any GT3 components installed on the
-submitting machine.
-Condor installs all the necessary GT3 client framework under 
+This value is placed on two lines for
+formatting purposes, but is all on a single line within
+a submit description file.
+The portion of this syntax specification enclosed within
+square brackets (\Lbr and \Rbr) is optional.
+The substring \verb@XXX@ within the last part of the value
+is replaced by one of five strings that (like for 
+\SubmitCmd{gt2}) identifies and selects the correct service to perform.
+The five strings that replace \verb@XXX@ are
+\begin{verbatim}
+Fork
+Condor
+PBS
+LSF
+SGE
+\end{verbatim}
+
+
+An example, given on two lines (again, for formatting reasons) is 
+\footnotesize
+\begin{verbatim}
+globusscheduler = http://198.51.254.40:8080/ogsa/services/base/gram/
+ForkManagedJobFactoryService
+\end{verbatim}
+\normalsize
+
+%Its value is the URL of the appropriate GT3 job factory service.
+%It is the same, for example,
+%as the URL provided to the \Prog{managed-job-globusrun} tool in GT3.
+
+On the machine where the job is submitted,
+there is no requirement for any Globus Toolkit 3.2 components.
+Condor itself installs all necessary framework within the directory 
 \File{\MacroUNI{LIB}/lib/gt3}.
-The user is, however, required to
-have Java 1.4 or higher installed on the submitting machine,
-and it must be referenced by the 
-\Macro{JAVA} configuration macro.
+The machine where the job is submitted
+is required to
+have Java 1.4 or a higher version installed.
+The configuration variable \Macro{JAVA}
+must identify the location of the installation.
+See page~\pageref{param:Java} within
+section~\ref{sec:Configuring-Condor}
+for the complete description of the configuration variable \MacroNI{JAVA}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
