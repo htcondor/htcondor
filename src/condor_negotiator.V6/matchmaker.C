@@ -1939,7 +1939,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char remoteUser[512];
 	char accountingGroup[256];
 	char remoteOwner[256];
-	char *startdName_raw;
+    MyString startdName;
 	char *capability;
 	SafeSock startdSock;
 	bool send_failed;
@@ -1947,6 +1947,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	ExprTree *savedRequirements;
 	int length;
 	char *tmp;
+
 
 	// these will succeed
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
@@ -1961,7 +1962,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// these should too, but may not
 	if (!offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)		||
-		!offer->LookupString (ATTR_NAME, &startdName_raw))
+		!offer->LookupString (ATTR_NAME, startdName))
 	{
 		// fatal error if we need claiming
 		if ( want_claiming ) {
@@ -1970,15 +1971,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 			return MM_BAD_MATCH;
 		}
 	}
-
-    // These lines were added in 6.6, which doesn't let us do a
-    // LookupString that returns a MyString.  We immediately free the
-    // C-style string and use a MyString because otherwise we have to
-    // put the free in many place. MyString will nicely deallocate
-    // itself when the function completes.
-    MyString startdName(startdName_raw);
-    free(startdName_raw);
-    startdName_raw = NULL;
 
 	// find the startd's capability from the private ad
 	if ( want_claiming ) {
