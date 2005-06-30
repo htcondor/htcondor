@@ -2026,6 +2026,9 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 					 sandbox.Value(), strerror(errno), errno );
 			mkdir_rval = false;
 		}
+#ifndef WIN32
+		sandbox_uid = get_condor_uid();
+#endif
 		set_priv( saved_priv );
 	} else { 
 #ifndef WIN32
