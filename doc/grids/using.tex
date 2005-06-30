@@ -73,28 +73,33 @@ batch system supported by Globus (examples are Condor, LSF, and PBS).
 \caption{\label{fig:condorg}Condor-G interaction with Globus-managed resources}
 \end{figure}
 
-Figure~\ref{fig:condorg} shows how Condor interacts with Globus protocols.
+Figure~\ref{fig:condorg} shows how Condor interacts with Globus software
+towards running jobs.
+The diagram is specific to the \SubmitCmd{gt2} \SubmitCmd{grid\_type}.
 Condor contains a GASS server, used to transfer the executable,
 \File{stdin}, \File{stdout}, and \File{stderr} to and from
 the remote job execution site.
-Condor uses the GRAM protocol to contact the remote Globus Gatekeeper
-and request that a new job manager be started.
-GRAM is also used to monitor the job's progress.
+Condor uses the GRAM protocol to contact the remote gatekeeper
+and request that a new jobmanager be started.
+The GRAM protocol is also used to when monitoring the job's progress.
 Condor detects and intelligently handles cases
-such as if the remote Globus resource crashes.
+such as if the remote resource crashes.
 
-There are now three different versions of GRAM in use. Since these versions
-are incompatible with each other, Condor's grid universe uses three different
-grid-types to distinguish them.
+There are now three different versions of the GRAM protocol.
+Condor supports all three.
+These versions are incompatible with each other.
+Condor's grid universe uses the \SubmitCmd{grid\_type} command within
+a submit description file to distinguish among them.
 \begin{description}
 \item[gt2]
-This is the original GRAM protocol, used in Globus Toolkit versions 1 and 2.
-It is still used by most production systems. It is included in Globus
+This initial GRAM protocol is used in Globus Toolkit versions 1 and 2.
+It is still used by many production systems. It is included in Globus
 Toolkit versions 3 and 4, oftened labelled as pre-web services GRAM.
 \item[gt3]
-This GRAM protocol was introduced in Globus Toolkit version 3 as part of
-Globus' shift to web services-based protocols. It has been replaced in the
-latest version of the Globus Toolkit and should be considered deprecated.
+The \SubmitCmd{gt3} \SubmitCmd{grid\_type} corresponds to
+Globus Toolkit version 3 as part of
+Globus' shift to web services-based protocols.
+It is replaced by  the Globus Toolkit version 4.
 \item[gt4]
 The GRAM protocol was introduced in Globus Toolkit version 4 as a more
 standards-compliant version of the GT3 web services-based GRAM.
@@ -125,17 +130,15 @@ please consult the Alliance PKI pages at
 
 \URL{http://archive.ncsa.uiuc.edu/SCD/Alliance/GridSecurity/}
 
-Before submitting a job to Condor under the \AdAttr{grid} universe,
-make sure you have your Grid 
-credentials and have used \Prog{grid-proxy-init} to create a proxy.
+Before submitting a job to Condor under the \SubmitCmd{grid} universe,
+use \Prog{grid-proxy-init} to create a proxy.
 
-A job is submitted for execution to Condor using the
+A job is submitted for execution using the
 \Condor{submit} command.
-\index{Condor commands!condor\_submit}
 \Condor{submit} takes as an argument
 the name of a file called a submit description file.
 \index{submit description file!grid universe}
-The following sample submit description file runs a job on
+The following example submit description file runs a job on
 the Origin2000 at NCSA.
 
 \begin{verbatim}
@@ -149,28 +152,44 @@ queue
 \end{verbatim} 
 
 The 
-\AdAttr{executable}
+\SubmitCmd{executable}
 for this example is
 transferred from the local machine to the remote machine.
 By default, Condor transfers the executable, as well as any
-files specified by the \AdAttr{input} command.
-Note that this executable must be compiled for the correct
+files specified by an \SubmitCmd{input} command.
+Note that the executable must be compiled for the correct
 intended platform.
 
-The \AdAttr{globusscheduler} command is dependent on the
-scheduling software available on remote resource.
-This required command will change based on the Grid resource
-intended for execution of the job.
-A jobmanager is the Globus service that is spawned at a remote site to
-submit, keep track of, and manage Grid I/O for jobs running on the local
-batch system there.
+The command \SubmitCmd{globusscheduler} is a required command
+for Condor-G jobs.
+It specifies the scheduling software to be used on the remote resource.
 There is a specific jobmanager for each type of
-batch system supported by Globus (examples are Condor, LSF, and PBS).
+batch system supported by Globus.
+The full syntax for this command line appears as
+\footnotesize
+\begin{verbatim}
+globusscheduler = machinename[:port]/jobmanagername[:X.509 distinguished name]
+\end{verbatim}
+\normalsize
+The portions of this syntax specification enclosed within
+square brackets (\Lbr and \Rbr) are optional.
+On a machine where the jobmanager is listening on a nonstandard port,
+include the port number.
+The \verb@jobmanagername@
+is one of five strings:
+\begin{verbatim}
+jobmanager
+jobmanager-condor
+jobmanager-pbs
+jobmanager-lsf
+jobmanager-sge
+\end{verbatim}
+The Globus software running on the remote resource
+uses the specific string to identify and select the correct service
+to perform.
+Other \verb@jobmanagername@ strings may be used,
+where additional services are defined and implemented.
 
-All Condor-G jobs 
-submitted to the \AdAttr{globus} universe
-are identical to those submitted to the \AdAttr{grid} universe,
-with \AdAttr{grid\_type} set to \AdAttr{gt2}.
 
 No input file is specified for this example job.
 Any output (file specified by the \AdAttr{output})
