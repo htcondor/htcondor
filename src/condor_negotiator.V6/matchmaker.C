@@ -203,15 +203,30 @@ reinitialize ()
 		NegotiatorTimeout = 30;
 	}
 
-	delete sockCache;
+	// deal with a possibly resized socket cache, or create the socket
+	// cache if this is the first time we got here.
+	// 
+	// we call the resize method which:
+	// - does nothing if the size is the same
+	// - preserves the old sockets if the size has grown 
+	// - does nothing (except dprintf into the log) if the size has shrunk.
+	//
+	// the user must call condor_restart to actually shrink the sockCache.
+
 	tmp = param("NEGOTIATOR_SOCKET_CACHE_SIZE");
 	if (tmp) {
 		int size = atoi(tmp);
 		dprintf (D_ALWAYS,"NEGOTIATOR_SOCKET_CACHE_SIZE = %d\n", size);
-		sockCache = new SocketCache(size);
+		if (sockCache) {
+			sockCache->resize(size);
+		} else {
+			sockCache = new SocketCache(size);
+		}
 		free(tmp);
 	} else {
-		sockCache = new SocketCache;
+		if (!sockCache) {
+			sockCache = new SocketCache();
+		}
 	}
 
 	// get PreemptionReq expression
@@ -1067,7 +1082,7 @@ obtainAdsFromCollector (
 	ClassAd *ad, *oldAd;
 	MapEntry *oldAdEntry;
 	int newSequence, oldSequence, reevaluate_ad;
-	char    remoteHost[MAXHOSTNAMELEN];
+	char    *remoteHost = NULL;
 
 	if ( want_simple_matching ) {
 		CondorQuery publicQuery(STARTD_AD);
@@ -1122,18 +1137,17 @@ obtainAdsFromCollector (
 		// got something for this one.		
 		if(!strcmp(ad->GetMyTypeName(),STARTD_ADTYPE)) {
 
-			if(!ad->LookupString(ATTR_NAME, remoteHost)) {
-				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.");
-				continue;
-			}
-
-
 			// first, let's make sure that will want to actually use this
 			// ad, and if we can use it (old startds had no seq. number)
 			reevaluate_ad = false; 
 			ad->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
 			newSequence = -1;	
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
+
+			if(!ad->LookupString(ATTR_NAME, &remoteHost)) {
+				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.");
+				continue;
+			}
 
 			// Next, let's transform the ad. The first thing we might
 			// do is replace the Requirements attribute with whatever
@@ -1178,7 +1192,7 @@ obtainAdsFromCollector (
 				free(newReqs);
 				free(subReqs);
 				
-				}
+			}
 
 			if( reevaluate_ad && newSequence != -1 ) {
 				oldAd = NULL;
@@ -1225,6 +1239,8 @@ obtainAdsFromCollector (
 		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
 			scheddAds.Insert(ad);
 		}
+        free(remoteHost);
+        remoteHost = NULL;
 	}
 	allAds.Close();
 
@@ -1473,13 +1489,13 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				continue;
 			}
 
-			char	remoteHost[MAXHOSTNAMELEN];
-			double	remotePriority;
-
 			if ((offer->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)==1) ||
 			    (offer->LookupString(ATTR_REMOTE_USER, remoteUser)==1))
 			{
-				offer->LookupString(ATTR_NAME, remoteHost);
+                char	*remoteHost = NULL;
+                double	remotePriority;
+
+				offer->LookupString(ATTR_NAME, &remoteHost);
 				remotePriority = accountant.GetPriority (remoteUser);
 
 				// got a candidate preemption --- print a helpful message
@@ -1487,6 +1503,8 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 						 "for %s (prio=%.2f)\n", remoteUser,
 						 remotePriority, remoteHost, scheddName,
 						 priority );
+                free(remoteHost);
+                remoteHost = NULL;
 			} else {
 				strcpy(remoteUser, "none");
 			}
@@ -1918,10 +1936,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 {
 	int  cluster, proc;
 	char startdAddr[32];
-	char startdName[64];
 	char remoteUser[512];
 	char accountingGroup[256];
 	char remoteOwner[256];
+	char *startdName_raw;
 	char *capability;
 	SafeSock startdSock;
 	bool send_failed;
@@ -1929,10 +1947,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	ExprTree *savedRequirements;
 	int length;
 	char *tmp;
-
-	strcpy(startdAddr, "<0.0.0.0:0>");
-	strcpy(startdName,"unknown");
-	offer->LookupString (ATTR_NAME, startdName);
 
 	// these will succeed
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
@@ -1947,7 +1961,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// these should too, but may not
 	if (!offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)		||
-		!offer->LookupString (ATTR_NAME, startdName))
+		!offer->LookupString (ATTR_NAME, &startdName_raw))
 	{
 		// fatal error if we need claiming
 		if ( want_claiming ) {
@@ -1957,11 +1971,20 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		}
 	}
 
+    // These lines were added in 6.6, which doesn't let us do a
+    // LookupString that returns a MyString.  We immediately free the
+    // C-style string and use a MyString because otherwise we have to
+    // put the free in many place. MyString will nicely deallocate
+    // itself when the function completes.
+    MyString startdName(startdName_raw);
+    free(startdName_raw);
+    startdName_raw = NULL;
+
 	// find the startd's capability from the private ad
 	if ( want_claiming ) {
-		if (!(capability = getCapability (startdName, startdAddr, startdPvtAds)))
+		if (!(capability = getCapability (startdName.Value(), startdAddr, startdPvtAds)))
 		{
-			dprintf(D_ALWAYS,"      %s has no capability\n", startdName);
+			dprintf(D_ALWAYS,"      %s has no capability\n", startdName.Value());
 			return MM_BAD_MATCH;
 		}
 	} else {
@@ -1993,7 +2016,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// 1.  contact the startd 
 	if ( want_claiming ) {
 		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
-					startdName, startdAddr); 
+					startdName.Value(), startdAddr); 
 
 		startdSock.timeout (NegotiatorTimeout);
 		if (!startdSock.connect (startdAddr, 0))
@@ -2012,7 +2035,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		if ( !startdSock.put (capability) || !startdSock.end_of_message())
 		{
 			dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
-						startdName );
+						startdName.Value() );
 			dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
 			return MM_BAD_MATCH;
 		}
@@ -2062,7 +2085,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 	dprintf(D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s\n",
 			cluster, proc, scheddName, scheddAddr, remoteUser,
-			startdAddr, startdName);
+			startdAddr, startdName.Value() );
 
 #if WANT_NETMAN
 	// match was successful; commit our network bandwidth allocation
@@ -2075,7 +2098,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	accountant.AddMatch(scheddName, offer);
 
 	// done
-	dprintf (D_ALWAYS, "      Successfully matched with %s\n", startdName);
+	dprintf (D_ALWAYS, "      Successfully matched with %s\n", startdName.Value());
 	return MM_GOOD_MATCH;
 }
 
@@ -2130,25 +2153,27 @@ calculateNormalizationFactor (ClassAdList &scheddAds,
 
 
 char *Matchmaker::
-getCapability (char *startdName, char *startdAddr, ClassAdList &startdPvtAds)
+getCapability (const char *startdName, const char *startdAddr, ClassAdList &startdPvtAds)
 {
 	ClassAd *pvtAd;
 	static char	capability[80];
-	char	name[64];
+	char	*name;
 	char	addr[64];
 
 	startdPvtAds.Open();
 	while ((pvtAd = startdPvtAds.Next()))
 	{
-		if (pvtAd->LookupString (ATTR_NAME, name)			&&
+		if (pvtAd->LookupString (ATTR_NAME, &name)			&&
 			strcmp (name, startdName) == 0					&&
 			pvtAd->LookupString (ATTR_STARTD_IP_ADDR, addr)	&&
 			strcmp (addr, startdAddr) == 0					&&
 			pvtAd->LookupString (ATTR_CAPABILITY, capability))
 		{
+            free(name);
 			startdPvtAds.Close ();
 			return capability;
 		}
+        free(name);
 	}
 	startdPvtAds.Close();
 	return NULL;
@@ -2197,13 +2222,13 @@ reeval(ClassAd *ad)
 {
 	int cur_matches;
 	MapEntry *oldAdEntry = NULL;
-	char    remoteHost[MAXHOSTNAMELEN];	
+	char    *remoteHost = NULL;
 	char    buffer[255];
 	
 	cur_matches = 0;
 	ad->EvalInteger("CurMatches", NULL, cur_matches);
 
-	ad->LookupString(ATTR_NAME, remoteHost);
+	ad->LookupString(ATTR_NAME, &remoteHost);
 	MyString rhost(remoteHost);
 	stashedAds->lookup( rhost, oldAdEntry);
 		
@@ -2214,6 +2239,7 @@ reeval(ClassAd *ad)
 		delete(oldAdEntry->oldAd);
 		oldAdEntry->oldAd = new ClassAd(*ad);
 	}
+    free(remoteHost);
 }
 
 int Matchmaker::HashFunc(const MyString &Key, int TableSize) {
