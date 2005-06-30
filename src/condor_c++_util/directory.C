@@ -623,7 +623,7 @@ Directory::do_remove_dir( const char* path )
 bool 
 Directory::do_remove_file( const char* path )
 {
-	bool ret_val;
+    bool ret_val = true;    // we'll set this to false if we fail
 	Set_Access_Priv();
 
 #if DEBUG_DIRECTORY_CLASS
