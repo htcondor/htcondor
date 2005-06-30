@@ -98,9 +98,13 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 			FD_ZERO( &readfds );
 			FD_SET( fd, &readfds );
 
-			dprintf(D_FULLDEBUG, "condor_read(): nfds=%d\n", nfds);
+			if( DebugFlags & D_FULLDEBUG && DebugFlags & D_NETWORK ) {
+				dprintf(D_FULLDEBUG, "condor_read(): nfds=%d\n", nfds);
+			}
 			nfound = select( nfds, &readfds, 0, 0, &timer );
-			dprintf(D_FULLDEBUG, "condor_read(): nfound=%d\n", nfound);
+			if( DebugFlags & D_FULLDEBUG && DebugFlags & D_NETWORK ) {
+				dprintf(D_FULLDEBUG, "condor_read(): nfound=%d\n", nfound);
+			}
 
 			switch(nfound) {
 			case 0:
