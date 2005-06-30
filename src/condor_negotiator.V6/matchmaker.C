@@ -1395,7 +1395,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 {
 	int  cluster, proc;
 	char startdAddr[32];
-	char *startdName_raw;
+	char *startdName_raw = NULL;
 	char remoteUser[128];
 	char *capability;
 	SafeSock startdSock;
