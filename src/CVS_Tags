@@ -1,3 +1,10 @@
+06/30/05 V6_7_9-2-branch
+   A new branch for the 6.7.9 release, created from V6_7_9-2-root on
+   the V6_7_CODE module (doc will remain with the V6_7_9-branch).
+   There were too many changes and merges that had to happen, and it
+   was easier (and will be cleaner in the long run) to just make a new
+   release branch than to do everything in the old V6_7_9-branch.
+
 06/29/05 V6_6-merge-43
    The state of the V6_6-branch for a merge into V6_7-branch. This
    includes more bug fixes, including the schedd crash on reconfig
