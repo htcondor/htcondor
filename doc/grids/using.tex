@@ -545,47 +545,68 @@ for the complete description of the configuration variable \MacroNI{JAVA}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{universe!grid, grid\_type gt4}
 
-Condor-G version 6.7.6 allows the user to submit jobs
-to Globus Toolkit 4.0 (gt4) gatekeepers,
-in a manner similar to the submission of
-jobs to Globus 2.x gatekeepers.
-Condor-G version 6.7.6 supports submission of jobs to gatekeepers
-running web services from GT 4.0.
-Please note that this is \emph{not} compatible with GT 3.0 or GT 3.2.
-
+% since version 6.7.6
+Condor-G supports submitting jobs to remote resources running
+the Globus Toolkit version 4.0.
+Please note that this Globus Toolkit version
+is \emph{not} compatible with the Globus Toolkit version 3.0 or 3.2.
 See
 \URL{http://www-unix.globus.org/toolkit/docs/4.0/index.html}
-for more information about Globus Toolkit 4.0.
+for more information about the Globus Toolkit version 4.0.
 
-In order to submit \AdAttr{grid\_type} \AdAttr{GT4} jobs,
-the following items must be defined in the user's
-submit description file:
+For \SubmitCmd{grid\_type} \SubmitCmd{gt4} jobs,
+the submit description file is much the same as for
+\SubmitCmd{grid\_type} \SubmitCmd{gt2} or \SubmitCmd{gt3} jobs.
+The \SubmitCmd{globusscheduler} command is still required,
+and is given in the form of a URL; the syntax follows the form:
 \footnotesize
 \begin{verbatim}
-universe = grid
-grid_type = gt4
-Executable = /bin/foo
-Globusscheduler = https://foo.bar.edu/wsrf/services/ManagedJobFactoryService
-jobmanager_type = Fork
+globusscheduler = https://hostname[:port]/wsrf/services/ManagedJobFactoryService
 \end{verbatim}
 \normalsize
 
-as well as other useful parameters such as
-\AdAttr{log} and \AdAttr{transfer\_executable}.
-%The value for \AdAttr{globusscheduler} is placed on two lines for
-%formatting purposes, but will all be on a single line within
-%a submit description file.
-Its value is the URL of the appropriate GT4 job factory service.
-It is the same, for example,
-as the URL provided to the \Prog{globusrun-ws} tool in GT4.
+or
+\footnotesize
+\begin{verbatim}
+globusscheduler = https://IPaddress[:port]/wsrf/services/ManagedJobFactoryService
+\end{verbatim}
+\normalsize
+The portion of this syntax specification enclosed within
+square brackets (\Lbr and \Rbr) is optional.
 
-If the user wants to use any form of file transfer, they must install a
-gridftp server on the submitting machine. Condor installs all other
-necessary GT4 components under \File{\MacroUNI{LIB}/lib/gt4}.
-The user is required to
-have Java 1.4.2 or higher installed on the submitting machine,
-and it must be referenced by the 
-\Macro{JAVA} configuration macro.
+A new submit command called \SubmitCmd{jobmanager\_type}
+distinguishes the correct service to perform.
+The value of \SubmitCmd{jobmanager\_type} is one of five
+strings:
+\begin{verbatim}
+Fork
+Condor
+PBS
+LSF
+SGE
+\end{verbatim}
+
+%Its value is the URL of the appropriate GT4 job factory service.
+%It is the same, for example,
+%as the URL provided to the \Prog{globusrun-ws} tool in GT4.
+
+File transfer occurs as expected for a Condor job 
+(for the executable, \File{input}, and \File{output}).
+However, the underlying transfer mechanism requires access
+to a \Prog{GridFTP} server from the machine where the job
+is submitted.
+On this machine,
+there is no requirement for any Globus Toolkit 4.0 components.
+Condor itself installs all necessary framework within the directory 
+\File{\MacroUNI{LIB}/lib/gt4}.
+The machine where the job is submitted
+is also required to
+have Java 1.4.2 or a higher version installed.
+The configuration variable \Macro{JAVA}
+must identify the location of the installation.
+See page~\pageref{param:Java} within
+section~\ref{sec:Configuring-Condor}
+for the complete description of the configuration variable \MacroNI{JAVA}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
