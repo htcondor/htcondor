@@ -477,7 +477,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 		this->Insert(array[i].machineAd);
 	}
 
-	delete array;
+	delete [] array;
 }
 
 /* static */ int
@@ -3141,9 +3141,7 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 		for( m=0 ; m <= n ; m++ ) {
 			if (kill) {
 				dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
-					// Hidemoto added the following line, but I don't think it is correct...
-					//releaseClaim( (*matches)[m], true );
-				deactivateClaim( (*matches)[m] );
+				releaseClaim( (*matches)[m], true );
 			} else {
 				deactivateClaim( (*matches)[m] );
 			}
