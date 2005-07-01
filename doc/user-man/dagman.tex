@@ -19,11 +19,13 @@ jobs.
 DAGMan submits jobs to Condor in an order represented by
 a DAG and processes the results.
 An input file defined prior to submission describes the DAG, and
-a Condor submit description file for each program in the DAG
+a submit description file for each program in the DAG
 is used by Condor.
 
-Each node (program) in the DAG specifies a Condor submit description file.
-As DAGMan submits jobs to Condor, it monitors the Condor log file(s) to 
+Each node (job) in the DAG specifies
+either a Condor job or a Stork data placement job.
+Each job has a submit description file.
+As DAGMan submits jobs, it monitors the Condor log file(s) to 
 to enforce the ordering required for the DAG.
 
 The DAG itself is defined by the contents of a DAGMan input file.
@@ -37,11 +39,15 @@ The following sections specify the use of DAGMan.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!input file example}
-The input file used by DAGMan specifies six items:
+The input file used by DAGMan specifies seven items:
 \begin{enumerate}
 \item
 A list of the programs in the DAG. This serves to name each program
 and specify each program's Condor submit description file.
+\item
+A list of any data placement jobs in the DAG.
+This serves to name each of these jobs and
+specify each program's Stork submit description file.
 \item
 Processing that takes place before submission of
 any program in the DAG to Condor or after Condor has completed execution
@@ -63,25 +69,27 @@ Comments do not span lines.
 
 An example input file for DAGMan is
 
+\footnotesize
 \begin{verbatim}
-	# Filename: diamond.dag
-	#
-	JOB  A  A.condor 
-	JOB  B  B.condor 
-	JOB  C  C.condor	
-	JOB  D  D.condor
-	Script PRE  A top_pre.csh
-	Script PRE  B mid_pre.perl  $JOB
-	Script POST B mid_post.perl $JOB $RETURN
-	Script PRE  C mid_pre.perl  $JOB
-	Script POST C mid_post.perl $JOB $RETURN
-	Script PRE  D bot_pre.csh
-	PARENT A CHILD B C
-	PARENT B C CHILD D
-	Retry  C 3
-	VARS A state="Wisconsin"
-	ABORT-DAG-ON C 10
+    # Filename: diamond.dag
+    #
+    JOB  A  A.condor 
+    JOB  B  B.condor 
+    JOB  C  C.condor	
+    JOB  D  D.condor
+    Script PRE  A top_pre.csh
+    Script PRE  B mid_pre.perl  $JOB
+    Script POST B mid_post.perl $JOB $RETURN
+    Script PRE  C mid_pre.perl  $JOB
+    Script POST C mid_post.perl $JOB $RETURN
+    Script PRE  D bot_pre.csh
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+    Retry  C 3
+    VARS A state="Wisconsin"
+    ABORT-DAG-ON C 10
 \end{verbatim}
+\normalsize
 
 This input file describes the DAG shown in 
 Figure~\ref{fig:dagman-diamond}.
@@ -100,6 +108,7 @@ or \Term{job} will indicate a generic job, of any type.
 
 Each DAG file keyword is described below.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:JOB}JOB}
 
 \index{DAGMan!Job Entry (names node of DAG)}
@@ -107,7 +116,7 @@ The first section of the input file lists
 all the programs that appear in the DAG.
 Each program to be managed by Condor is described by a single line
 called a \Arg{JOB} Entry.
-The syntax used for each Condor \Arg{JOB} Entry is
+The syntax used for each \Arg{JOB} Entry is
 
 \Arg{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
 
@@ -131,38 +140,43 @@ DAGMan generates a Rescue DAG, a DAGMan input file that can be
 used to restart and complete a DAG without re-executing
 completed programs.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:DATA}DATA}
 
 The \Arg{DATA} keyword specifies a job to be managed by the Stork data
 placement server.  
-The syntax used for each Condor \Arg{DATA} Entry is
+The syntax used for each \Arg{DATA} Entry is
 
 \Arg{DATA} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
 
 A \Arg{DATA} Entry maps a \Arg{JobName} to a Stork submit description file.
 In all other respects, the \Arg{DATA} keyword is identical to the
-\Arg{JOB} keyword, in section~\ref{dagman:JOB}.
+\Arg{JOB} keyword.
 
-Here's an example of a simple DAG that stages in data via Stork,
-processes the data via Condor, and stages the processed data out via
-Stork.  Depending upon the implementation, multiple data stage in jobs
-may be run in parallel, and data stage out jobs may be run in
-parallel:
+Here is an example of a simple DAG that stages in data using Stork,
+processes the data using Condor, 
+and stages the processed data out using Stork.
+Depending upon the implementation, multiple data jobs to stage in data
+or to stage out data
+may be run in parallel.
 
+\footnotesize
 \begin{verbatim}
-	DATA    STAGE_IN1  stage_in1.stork
-	DATA    STAGE_IN2  stage_in2.stork
-	JOB     PROCESS    process.condor 
-	DATA    STAGE_OUT1 stage_out1.stork
-	DATA    STAGE_OUT2 stage_out2.stork
-	PARENT  STAGE_IN1 STAGE_IN2  CHILD  PROCESS
-	PARENT  PROCESS    CHILD  STAGE_OUT1 STAGE_OUT2
+    DATA    STAGE_IN1  stage_in1.stork
+    DATA    STAGE_IN2  stage_in2.stork
+    JOB     PROCESS    process.condor 
+    DATA    STAGE_OUT1 stage_out1.stork
+    DATA    STAGE_OUT2 stage_out2.stork
+    PARENT  STAGE_IN1 STAGE_IN2 CHILD PROCESS
+    PARENT  PROCESS CHILD STAGE_OUT1 STAGE_OUT2
 \end{verbatim}
+\normalsize
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{SCRIPT}
 
 \index{DAGMan!PRE and POST scripts}
-The second type of item in a DAGMan input file enumerates
+The third type of item in a DAGMan input file enumerates
 processing that is done either before a program within
 the DAG is submitted to Condor for execution
 or after
@@ -252,25 +266,28 @@ As an example, suppose the \Arg{PRE} script expands a compressed file named
 \File{\Arg{JobName}.gz}.
 The \Arg{SCRIPT} entry for jobs A, B, and C are
 
+\footnotesize
 \begin{verbatim}
-	SCRIPT PRE  A  pre.csh $JOB .gz
-	SCRIPT PRE  B  pre.csh $JOB .gz
-	SCRIPT PRE  C  pre.csh $JOB .gz
+    SCRIPT PRE  A  pre.csh $JOB .gz
+    SCRIPT PRE  B  pre.csh $JOB .gz
+    SCRIPT PRE  C  pre.csh $JOB .gz
 \end{verbatim}
+\normalsize
 
 The script \File{pre.csh} may use these arguments
 
 \begin{verbatim}
-	#!/bin/csh
-	gunzip $argv[1]$argv[2]
+    #!/bin/csh
+    gunzip $argv[1]$argv[2]
 \end{verbatim}
 
 % $ % this comment just has a dollar sign so that emacs will not think
 %	  we're inside of a math section and will draw things more nicely
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:ParentChild}PARENT..CHILD}
 
-The third type of item in the DAG input file describes the
+The fourth type of item in the DAG input file describes the
 dependencies within the DAG.
 \index{DAGMan!describing dependencies}
 Nodes are parents and/or children within the DAG.
@@ -302,10 +319,11 @@ produces four dependencies:
 \item{\verb@p2@ to \verb@c2@}
 \end{enumerate}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{RETRY}
 
 \index{DAGMan!RETRY of failed nodes}
-The fourth type of item in the DAG input file provides a
+The fifth type of item in the DAG input file provides a
 way (optional) to retry failed nodes.
 The syntax for retry is
 
@@ -335,11 +353,12 @@ the PRE script.
 Failure of the node is then determined by the return value of
 the program, the existence and return value of a POST script.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{VARS}
 
 \index{DAGMan!VARS (macro for submit file)}
 \index{VARS}
-The fifth type of item in the DAG input file provides a
+The sixth type of item in the DAG input file provides a
 method of defining a macro to be placed into the submit description
 file.
 These macros are defined on a per-node basis, using the
@@ -361,10 +380,11 @@ To add the backslash character itself, use two backslashes (\verb@\\@).
 
 % for version 6.5.3, the VARS are not propagated into rescue dags.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{ABORT-DAG-ON}
 
 \index{DAGMan!ABORT-DAG-ON}
-The sixth type of item in the DAG input file provides a way
+The seventh type of item in the DAG input file provides a way
 to abort the entire DAG if a given node returns a specific exit
 code.  The syntax for ABORT-DAG-ON:
 
@@ -438,14 +458,14 @@ Here is a simple input file for a
 modified version of diamond-shaped DAG example.
 
 \begin{verbatim}
-	# Filename: diamond.dag
-	#
-	JOB  A  diamond_job.condor 
-	JOB  B  diamond_job.condor 
-	JOB  C  diamond_job.condor	
-	JOB  D  diamond_job.condor
-	PARENT A CHILD B C
-	PARENT B C CHILD D
+    # Filename: diamond.dag
+    #
+    JOB  A  diamond_job.condor 
+    JOB  B  diamond_job.condor 
+    JOB  C  diamond_job.condor	
+    JOB  D  diamond_job.condor
+    PARENT A CHILD B C
+    PARENT B C CHILD D
 \end{verbatim}
 
 A single Condor submit description file goes with all the nodes
@@ -453,15 +473,15 @@ in this DAG:
 
 \index{DAGMan!example submit description file}
 \begin{verbatim}
-	# Filename: diamond_job.condor
-	#
-	executable   = /path/diamond.exe
-	output       = diamond.out.$(cluster)
-	error        = diamond.err.$(cluster)
-	log          = diamond_condor.log
-	universe     = vanilla
-	notification = NEVER
-	queue
+    # Filename: diamond_job.condor
+    #
+    executable   = /path/diamond.exe
+    output       = diamond.out.$(cluster)
+    error        = diamond.err.$(cluster)
+    log          = diamond_condor.log
+    universe     = vanilla
+    notification = NEVER
+    queue
 \end{verbatim}
 
 This example uses the same Condor submit description file
@@ -493,14 +513,16 @@ using a macro passed from the DAG.
 The example uses a single submit description file in the DAG input
 file, and uses the \Arg{Vars} entry to name output files.
 
+\footnotesize
 \begin{verbatim}
-	# submit description file called:  theonefile.sub
-	executable   = progX
-	output       = $(outfilename)
-	error        = error.$(outfilename)
-	universe     = standard
-	queue
+    # submit description file called:  theonefile.sub
+    executable   = progX
+    output       = $(outfilename)
+    error        = error.$(outfilename)
+    universe     = standard
+    queue
 \end{verbatim}
+\normalsize
 
 The relevant portion of the DAG input file appears as 
 \begin{verbatim}
@@ -704,7 +726,7 @@ The line appears as
 %file that shows the state of your DAG before any jobs are running, add
 %the following line:
 \begin{verbatim}
-	DOT dag.dot
+    DOT dag.dot
 \end{verbatim}
 
 This creates a file called \File{dag.dot}.
@@ -741,7 +763,7 @@ To create file names,
 DAGMan uses the name of the file concatenated a period and an
 integer. For example, the DAGMan input file line
 \begin{verbatim}
-	DOT dag.dot DONT-OVERWRITE
+    DOT dag.dot DONT-OVERWRITE
 \end{verbatim}
 causes files
 \File{dag.dot.0},
@@ -797,13 +819,13 @@ Work on the inner DAG first.
 The goal is to generate a Condor submit description file for this inner DAG.
 Here is a very simple DAG input file used as an example of the inner DAG.
 \begin{verbatim}
-	# Filename: inner.dag
-	#
-	JOB  X  X.submit
-	JOB  Y  Y.submit
-	JOB  Z  Z.submit
-	PARENT X CHILD Y
-	PARENT Y CHILD Z
+    # Filename: inner.dag
+    #
+    JOB  X  X.submit
+    JOB  Y  Y.submit
+    JOB  Z  Z.submit
+    PARENT X CHILD Y
+    PARENT Y CHILD Z
 \end{verbatim}
 
 Use \Condor{submit\_dag} to create a submit description file for this
@@ -818,14 +840,14 @@ The naming of the file is the name of the DAG input file
 
 A simple example of a DAG input file for the outer DAG is
 \begin{verbatim}
-	# Filename: diamond.dag
-	#
-	JOB  A  A.submit 
-	JOB  B  inner.dag.condor.sub
-	JOB  C  C.submit	
-	JOB  D  D.submit
-	PARENT A CHILD B C
-	PARENT B C CHILD D
+# Filename: diamond.dag
+#
+    JOB  A  A.submit 
+    JOB  B  inner.dag.condor.sub
+    JOB  C  C.submit	
+    JOB  D  D.submit
+    PARENT A CHILD B C
+    PARENT B C CHILD D
 \end{verbatim}
 
 The outer DAG is then submitted as before, with
@@ -905,15 +927,17 @@ Job A  dag1/A.submit
 \end{verbatim}
 and the submit description file (file \File{A.submit})
 also needs relative path names such as
+\footnotesize
 \begin{verbatim}
-# File name: A.submit, in directory dag1
-executable = dag1/A.out
-output     = dag1/A.output
-error      = dag1/A.error
-log        = dag1/dag1.log
-universe   = vanilla
-queue
+    # File name: A.submit, in directory dag1
+    executable = dag1/A.out
+    output     = dag1/A.output
+    error      = dag1/A.error
+    log        = dag1/dag1.log
+    universe   = vanilla
+    queue
 \end{verbatim}
+\normalsize
 Note that these paths are relative to the current working directory
 as \Condor{submit\_dag} is executed.
 Further note that these relative path names no longer allow the
