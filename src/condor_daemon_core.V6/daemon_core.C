@@ -5724,7 +5724,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
                 // the child and return FALSE.
             int child_status;
             waitpid(tid, &child_status, 0);
-			if( errno != ERRNO_PID_COLLISION ) {
+			if( child_errno != ERRNO_PID_COLLISION ) {
 				EXCEPT( "Impossible: Create_Thread child_errno (%d) is not "
 						"ERRNO_PID_COLLISION!", (int)tid );
 			}
