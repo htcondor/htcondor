@@ -18,6 +18,7 @@ EXT_GT4GAHP_VERSION = @ext_gt4gahp_version@
 EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
 EXT_GSOAP_VERSION = @ext_gsoap_version@
+EXT_PCRE_VERSION = @ext_pcre_version@
 
 
 #define WANT_EXT_GLIBC @want_ext_glibc@
@@ -112,4 +113,8 @@ GSOAP_DIR = $(EXT_INSTALL)/$(EXT_GSOAP_VERSION)
 SOAPCPP2 = $(GSOAP_DIR)/bin/soapcpp2
 GSOAP_LIB = $(GSOAP_DIR)/lib
 GSOAP_INC = $(GSOAP_DIR)/include
+
+PCRE_DIR = $(EXT_INSTALL)/$(EXT_PCRE_VERSION)
+PCRE_LIB = $(PCRE_DIR)/lib
+PCRE_INC = $(PCRE_DIR)/include
 

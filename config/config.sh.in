@@ -28,3 +28,5 @@ EXT_CLASSADS_VERSION=@ext_classads_version@
 EXT_SRB_VERSION=@ext_srb_version@
 
 EXT_GSOAP_VERSION=@ext_gsoap_version@
+
+EXT_PCRE_VERSION=@ext_pcre_version@
