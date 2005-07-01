@@ -438,7 +438,7 @@ vanilla, or DAGMan.
 
 One key limitation:
 each Condor submit description file must submit only one job.
-There may not be multiple \verb@queue@ commands, or DAGMan will fail.
+There may not be multiple \SubmitCmd{queue} commands, or DAGMan will fail.
 This requirement exists to enforce the requirements of a well-defined DAG.
 If each node of the DAG could cause the submission of multiple
 Condor jobs, then it would violate the definition of a DAG.
@@ -945,6 +945,13 @@ independent DAG to be submitted on its own when
 the  current working directory is the directory containing
 the DAG's files (\File{dag1} for this example).
 
+The success or failure of the independent DAGs is well defined.
+When multiple, independent DAGs are submitted with a single
+command,
+success of the composite DAG is defined as the logical AND
+of the success of each independent DAG.
+This implies that failure is defined as the logical OR
+of the failure of any of the independent DAGs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGConfig}Configuration}
