@@ -49,7 +49,8 @@ It is used with the \SubmitCmd{gt4} \SubmitCmd{grid\_type}
 to transfer the job's files between the machine where the job
 is submitted and the remote resource.
 \item[RSL]
-RSL is the language GRAM accepts to specify job information.
+RSL (Resource Specification Language)  is the language GRAM 
+accepts to specify job information.
 \item[gatekeeper]
 A gatekeeper is a software daemon executing on a remote machine on
 the grid.
@@ -613,30 +614,103 @@ for the complete description of the configuration variable \MacroNI{JAVA}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:CondorG-Submit-Args}Arguments}
+\subsubsection{\label{sec:CondorG-Submit-Args}Delimiting Arguments}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-G!job arguments}
 
-Condor requires space characters to delimit the arguments
-in an submit description file such as
+The delimiting of arguments passed to a Condor-G 
+job varies based on the \SubmitCmd{grid\_type} of the job.
+For the \SubmitCmd{gt2} and \SubmitCmd{gt3} \SubmitCmd{grid\_type}s,
+there are two languages involved, 
+leading to two sets of parsing rules that must work together.
+\SubmitCmd{gt4} \SubmitCmd{grid\_type} jobs
+are less complex with respect to the delimiting of arguments,
+as Condor encapsulates one set of parsing rules,
+thereby isolating the user from needing to understand or use them.
+
+For all Condor-G jobs,
+the arguments to a job are kept in the job ClassAd attribute
+\Attr{Args}.
+This attribute is a string, and therefore enclosed within
+double quote marks.
+Condor uses space characters to delimit the listed
+arguments.
+Here is an \SubmitCmd{arguments} command from a submit
+description file with spaces to delimit the arguments.
+\footnotesize
 \begin{verbatim}
 arguments = 13 argument2 argument3
 \end{verbatim}
-This example results in the 3 arguments:
+\normalsize
+The \Attr{Args} ClassAd attribute becomes
+\footnotesize
+\begin{verbatim}
+Args = "13 argument2 argument3"
+\end{verbatim}
+\normalsize
+All further parsing of the arguments uses the \Attr{Args}
+attribute as a starting point.
+A query upon this attribute, such as to give the arguments,
+results in the 3 arguments
 \begin{verbatim}
 argv[1] = 13
 argv[2] = argument2
 argv[3] = argument3
 \end{verbatim}
 
-With grid-types gt2 and gt3, arguments are passed through using RSL.
-Therefore, arguments are parsed in a way that allows space characters
-to be delimiters or to be parts of arguments.
-The single quote character delimits some or all arguments such that
+Since the double quote mark character (\verb@"@) marks the
+beginning and end of a string (in the ClassAd language),
+an escaped double quote mark (\verb@\"@) is utilized to have
+a double quote mark within the string.
+For example,
+the submit description file \SubmitCmd{arguments} command
+\footnotesize
+\begin{verbatim}
+arguments = 13 argument2 \"string3\"
+\end{verbatim}
+\normalsize
+gives the ClassAd attribute
+\footnotesize
+\begin{verbatim}
+Args = "13 argument2 \"string3\""
+\end{verbatim}
+\normalsize
+Again, all further parsing of the arguments uses the \Attr{Args}
+attribute as a starting point.
+A query upon this attribute, such as to give the arguments,
+results in
+\begin{verbatim}
+argv[1] = 13
+argv[2] = argument2
+argv[3] = "string3"
+\end{verbatim}
+
+For the
+\SubmitCmd{gt2} and \SubmitCmd{gt3} \SubmitCmd{grid\_type}s,
+the jobmanager on the remote resource
+must receive information about job arguments
+in RSL (Resource Specification Language).
+This language has its own way of delimiting arguments.
+Therefore, the \SubmitCmd{arguments} command in the
+submit description file (and the associated ClassAd
+attribute) must take both languages into account.
+
+Delimiters in RSL are spaces,
+the single quote mark,
+and the double quote mark.
+In addition,
+the characters \verb@+@, \verb@&@, \verb@%@, \verb@(@, and \verb@)@
+have special meaning in RSL, so must be delimited,
+to include them in an argument.
+Placing a space character into an argument is accomplished
+by delimiting with one of the quote marks.
+As an example, the submit description file command
+\footnotesize
 \begin{verbatim}
 arguments = '%s' 'argument with spaces' '+%d'
 \end{verbatim}
-results in
+\normalsize
+results in the Condor-G job receiving the arguments
 \begin{verbatim}
 argv[1] = %s
 argv[2] = argument with spaces
@@ -644,8 +718,12 @@ argv[3] = +%d
 \end{verbatim}
 
 Should the arguments themselves contain the single quote character,
-an escaped double quote character may be used.
-The example
+an argument may be delimited with a double quote mark.
+Note that because the ClassAd attribute \Attr{Args}
+represents the information,
+the double quote marks must be escaped in the submit description
+file command.
+The submit description file command 
 % % what it is supposed to appear as:
 % % arguments = \"don't\" \"mess with\" \"quoting rules\"
 \footnotesize
@@ -653,7 +731,7 @@ The example
 arguments = \"don't\" \"mess with\" \"quoting rules\"
 \end{verbatim}
 \normalsize
-results in 
+results in the RSL arguments
 \begin{verbatim}
 argv[1] = don't
 argv[2] = mess with
@@ -661,19 +739,29 @@ argv[3] = quoting rules
 \end{verbatim}
 
 And, if the job arguments have both single and double quotes,
-the appearance of the quote character twice in a
-row is converted to a single instance of the character and the literal
+the appearance of a quote character twice in a
+row is converted (in RSL) to a single instance of the character and the literal
 continues until the next solo quote character.
-For example
+The submit description file command 
+\footnotesize
 \begin{verbatim}
-arguments = 'don''t yell \"blah!\"' '+%s'
+arguments = 'don''t yell \"No!\"' '+%s'
 \end{verbatim}
-results in
+\normalsize
+results in the RSL arguments
 \begin{verbatim}
-argv[1] = don't yell "blah!"
+argv[1] = don't yell "No!"
 argv[2] = +%s
 \end{verbatim}
 
+For \SubmitCmd{gt4} \SubmitCmd{grid\_type} jobs,
+follow Condor's ClassAd language rules for delimiting arguments.
+Spaces delimit arguments,
+and the double quote mark character must be escaped to be included
+in an argument.
+Condor itself will modify the arguments to be expressed correctly
+in RSL.
+Note that the space character cannot be a part of an argument.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:My-Proxy}Credential Management with \Prog{MyProxy}}
