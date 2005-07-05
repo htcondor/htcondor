@@ -477,6 +477,7 @@ for more information about the Globus Toolkit version 3.2.
 For \SubmitCmd{grid\_type} \SubmitCmd{gt3} jobs,
 the submit description file is much the same as for
 \SubmitCmd{grid\_type} \SubmitCmd{gt2} jobs.
+\index{submit commands!globusscheduler}
 The \SubmitCmd{globusscheduler} command is still required,
 but the format changes from \SubmitCmd{gt2}
 to one that is a URL. 
@@ -557,6 +558,7 @@ for more information about the Globus Toolkit version 4.0.
 For \SubmitCmd{grid\_type} \SubmitCmd{gt4} jobs,
 the submit description file is much the same as for
 \SubmitCmd{grid\_type} \SubmitCmd{gt2} or \SubmitCmd{gt3} jobs.
+\index{submit commands!globusscheduler}
 The \SubmitCmd{globusscheduler} command is still required,
 and is given in the form of a URL; the syntax follows the form:
 \footnotesize
@@ -574,6 +576,7 @@ globusscheduler = https://IPaddress[:port]/wsrf/services/ManagedJobFactoryServic
 The portion of this syntax specification enclosed within
 square brackets (\Lbr and \Rbr) is optional.
 
+\index{submit commands!jobmanager\_type}
 A new submit command called \SubmitCmd{jobmanager\_type}
 distinguishes the correct service to perform.
 The value of \SubmitCmd{jobmanager\_type} is one of five
