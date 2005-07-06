@@ -21,7 +21,7 @@ SOAPCPP = soapcpp2.exe
 SOAPCPPFLAGS = -I $(SRCDIR)\condor_daemon_core.V6
 
 DAEMONS = collector dagman gridmanager master negotiator \
-		schedd shadow startd starter
+		schedd shadow startd starter cgahp cgahp_worker
 
 all : $(DAEMONS)
 
@@ -133,6 +133,32 @@ master : $(SRCDIR)\condor_$@.V6\soap_$@Stub.C \
 			$(SRCDIR)\condor_$@.V6\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@.V6
+	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\condor$@.nsmap    .
+	copy /Y $(TEMPDIR)\soap_$@H.h        .
+	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
+	copy /Y $(TEMPDIR)\condor$@.wsdl     .
+	rd /q /s $(TEMPDIR) > NUL 2>&1
+
+cgahp : $(SRCDIR)\condor_$@\soap_$@Stub.C \
+			$(SRCDIR)\condor_$@\gsoap_$@.h
+	-2mkdir $(TEMPDIR)
+	cd $(SRCDIR)\condor_$@
+	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\condor$@.nsmap    .
+	copy /Y $(TEMPDIR)\soap_$@H.h        .
+	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
+	copy /Y $(TEMPDIR)\condor$@.wsdl     .
+	rd /q /s $(TEMPDIR) > NUL 2>&1
+
+cgahp_worker : $(SRCDIR)\condor_cgahp\soap_$@Stub.C \
+			$(SRCDIR)\condor_cgahp\gsoap_$@.h
+	-2mkdir $(TEMPDIR)
+	cd $(SRCDIR)\condor_cgahp
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
 	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
 	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
