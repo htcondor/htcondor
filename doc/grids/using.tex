@@ -764,24 +764,23 @@ Note that the space character cannot be a part of an argument.
 \index{proxy!renewal with \Prog{MyProxy}}
 Condor-G can use \Prog{MyProxy}
 software to automatically renew GSI proxies for
-\AdAttr{globus} or
-\AdAttr{grid}
-universe jobs with a
-\AdAttr{grid\_type} of either
-\AdStr{gt2}
+\SubmitCmd{grid}
+\SubmitCmd{universe} jobs with \SubmitCmd{grid\_type}s
+\SubmitCmd{gt2},
+\SubmitCmd{gt3},
 or
-\AdStr{gt3}.
-
+\SubmitCmd{gt4}.
 \Prog{MyProxy} is a software component developed at
 NCSA and used widely throughout the grid community.
 For more information see:
 \URL{http://myproxy.ncsa.uiuc.edu/}
 
-Difficulties with proxies occur
-when jobs are long running or a
-great number of jobs submitted,
-in which case some jobs may not be started
-or completed before the proxy expires.
+Difficulties with proxy expiration occur in two cases.
+The first case are long running jobs, which do not complete
+before the proxy expires.
+The second case occurs when great numbers of jobs are submitted.
+Some of the jobs may not yet be started
+or not yet completed before the proxy expires.
 One proposed solution to these difficulties is to generate
 longer-lived proxies.
 This, however, presents a greater security problem.
@@ -791,15 +790,17 @@ the malicious user can impersonate the proxy owner
 for the duration of the proxy's lifetime.
 The longer the proxy's lifetime,
 the more time a malicious user has to misuse the owner's credentials.
-To minimize the malicious user's window of opportunity,
+To minimize the
+window of opportunity of a
+malicious user, 
 it is recommended that proxies have a short lifetime
 (on the order of several hours).
 
 The \Prog{MyProxy} software generates proxies using credentials
 (a user certificate or a long-lived proxy) located on a secure
 \Prog{MyProxy} server.
-Condor-G can talk to a MyProxy server,
-renewing a proxy whenever it is about to expire.
+Condor-G talks to the MyProxy server,
+renewing a proxy as it is about to expire.
 Another advantage that this presents is it relieves the user
 from having to store a GSI user certificate and private key
 on the machine where jobs are submitted.
@@ -809,19 +810,19 @@ submit machine is used by several users.
 In the a typical case, the following steps occur:
 
 \begin{enumerate}
-\item{User creates a long-lived credential}
+\item{The user creates a long-lived credential}
 on a secure \Prog{MyProxy} server, using the
 \Prog{myproxy-init} command.
 Each organization generally has their own \Prog{MyProxy} server.
 
-\item{User creates a short-lived proxy}
+\item{The user creates a short-lived proxy}
 on a local submit machine,
 using
 \Prog{grid-proxy-init} or \Prog{myproxy-get-delegation}.
 
-\item{User submits}
+\item{The user submits}
 a Condor-G job,
-specifying in the submit file:
+specifying:
 \begin{description}
 \item{\Prog{MyProxy} server name (host:port)}
 \item{\Prog{MyProxy} credential name (optional)}
@@ -834,21 +835,6 @@ the \Prog{MyProxy} server to refresh the proxy.
 
 \end{enumerate}
 
-A typical submit description file that uses \Prog{MyProxy} will
-contain commands of the form:
-\footnotesize
-\begin{verbatim}
-executable      = /usr/bin/my-executable
-universe        = grid
-grid_type       = "gt3"
-globusscheduler = condor-unsup-7
-MyProxyHost     = beak.cs.wisc.edu:7512
-MyProxyServerDN = /O=doesciencegrid.org/OU=People/CN=Jane Doe 25900
-MyProxyPassword = password
-MyProxyCredentialName = my_executable_run
-queue
-\end{verbatim}
-\normalsize
 
 Condor-G keeps track of the password to the \Prog{MyProxy} server
 for credential renewal.
@@ -898,6 +884,24 @@ The submit command appears as
 condor_submit -p mypassword /home/user/myjob.submit
 \end{verbatim}
 \normalsize
+
+A submit description file may include the password.
+An example contains commands of the form:
+\footnotesize
+\begin{verbatim}
+executable      = /usr/bin/my-executable
+universe        = grid
+grid_type       = gt3
+globusscheduler = condor-unsup-7
+MyProxyHost     = example.cs.wisc.edu:7512
+MyProxyServerDN = /O=doesciencegrid.org/OU=People/CN=Jane Doe 25900
+MyProxyPassword = password
+MyProxyCredentialName = my_executable_run
+queue
+\end{verbatim}
+\normalsize
+Note that storing this submit file reduces security, as it
+contains the password.
 
 \end{enumerate}
 
