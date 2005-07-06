@@ -64,7 +64,8 @@ ResumeDag(Dagman &dm)
 
 bool
 AddNode( Dag *dag, Job::job_type_t type, const char *name,
-		 const char* cmd,
+		 const char* directory,
+		 const char* submitFile,
 		 const char *precmd, const char *postcmd, bool done,
 		 MyString &failReason )
 {
@@ -73,11 +74,11 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		failReason = why;
 		return false;
 	}
-	if( !IsValidSubmitFileName( cmd, why ) ) {
+	if( !IsValidSubmitFileName( submitFile, why ) ) {
 		failReason = why;
 		return false;
 	}
-	Job* node = new Job( type, name, cmd );
+	Job* node = new Job( type, name, directory, submitFile );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in

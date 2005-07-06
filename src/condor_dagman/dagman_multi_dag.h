@@ -20,33 +20,25 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef DAGMAN_COMMANDS_H
-#define DAGMAN_COMMANDS_H
 
-/*
-#include "condor_common.h"
-#include "debug.h"
-#include "script.h"
-*/
+// Functions for multi-DAG support.
 
-// pause DAGMan's event-processing so changes can be made safely
-bool PauseDag(Dagman &dm);
-// resume DAGMan's normal event-processing
-bool ResumeDag(Dagman &dm);
+// Note that this is used by both condor_submit_dag and condor_dagman
+// itself.
 
-bool AddNode( Dag *dag, Job::job_type_t type, const char *name,
-			  const char* directory,
-			  const char* submitFile,
-			  const char *precmd, const char *postcmd, bool done,
-			  MyString &failReason );
+#ifndef DAGMAN_MULTI_DAG_H
+#define DAGMAN_MULTI_DAG_H
 
-bool IsValidNodeName( Dag *dm, const char *name, MyString &whynot );
-bool IsValidSubmitFileName( const char *name, MyString &whynot );
+/** Get the log files from an entire set of DAGs, dealing with
+    DAG paths if necessary.
+	@param dagFiles: all of the DAG files we're using.
+	@param useDagDir: run DAGs in directories from DAG file paths 
+               if true
+	@param logFiles: a StringList to recieve the log file names.
+	@param errMsg: a MyString to receive any error message.
+	@return true if successful, false otherwise
+*/ 
+bool GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
+			StringList &logFiles, MyString &errMsg);
 
-/*
-bool RemoveNode( const char *name );
-bool AddDependency( const char *parentName, const *childName );
-bool RemoveDependency( const char *parentName, const *childName );
-*/
-
-#endif	// ifndef DAGMAN_COMMANDS_H
+#endif /* #ifndef DAGMAN_MULTI_DAG_H */

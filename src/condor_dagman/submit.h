@@ -36,20 +36,24 @@
     Parsing the condor_submit output successfully depends on the current
     version of Condor, and how it's condor_submit outputs results on the
     command line.
-    
+   
+	@param dm the appropriate Dagman object
     @param cmdFile the job's Condor command file.
     @param condorID will hold the ID for the submitted job (if successful)
     @param DAGNodeName the name of the job's DAG node
 	@param DAGParentNodeNames a delimited string listing the node's parents
-    @param DAGManJobId the Condor jobID of the master DAGMan job
+	@param names the names of any parameters for this node
+	@param vals the values of any parameters for this node
+    @param directory the directory in which to run this job
     @return true on success, false on failure
 */
 
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString DAGParentNodeNames,
-					List<MyString>* names, List<MyString>* vals );
+					List<MyString>* names, List<MyString>* vals,
+					const char* directory);
 
 bool dap_submit( const char* cmdFile, CondorID& condorID,
-		 const char* DAGNodeName );  //--> DAP
+		 const char* DAGNodeName, const char* directory );  //--> DAP
 
 #endif /* #ifndef CONDOR_SUBMIT_H */

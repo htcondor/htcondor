@@ -32,6 +32,7 @@
 #include "submit.h"
 #include "util.h"
 #include "debug.h"
+#include "tmp_dir.h"
 
 
 static bool
@@ -163,8 +164,19 @@ do_submit( const char *command, CondorID &condorID,
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
-			   List<MyString>* names, List<MyString>* vals )
+			   List<MyString>* names, List<MyString>* vals,
+			   const char* directory )
 {
+	TmpDir		tmpDir;
+	MyString	errMsg;
+        // NOTE: we will automatically cd back again in tmpDir's destructor
+	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to DAG directory %s: %s\n",
+				directory, errMsg.Value() );
+		return false;
+	}
+
 	const char * exe = "condor_submit";
 	MyString prependLines;
 	MyString command;
@@ -249,8 +261,18 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 //-------------------------------------------------------------------------
 bool
 dap_submit( const char* cmdFile, CondorID& condorID,
-			   const char* DAGNodeName )
+			   const char* DAGNodeName, const char* directory )
 {
+	TmpDir		tmpDir;
+	MyString	errMsg;
+        // NOTE: we will automatically cd back again in tmpDir's destructor
+	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to DAG directory %s: %s\n",
+				directory, errMsg.Value() );
+		return false;
+	}
+
   MyString command;
   const char * exe = "stork_submit";
 

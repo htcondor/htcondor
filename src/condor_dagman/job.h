@@ -140,17 +140,17 @@ class Job {
     /** Constructor
         @param jobType Type of job in dag file.
         @param jobName Name of job in dag file.  String is deep copied.
+		@param directory Directory to run the node in, "" if current
+		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
     */
-    Job( const job_type_t jobType, const char* jobName, const char* cmdFile );
-		// alternate (old) constructor defaults to Condor job type
-    Job( const char* jobName, const char* cmdFile );
+    Job( const job_type_t jobType, const char* jobName,
+				const char* directory, const char* cmdFile );
   
     ~Job();
 
-	void Init( const char* jobName, const char* cmdFile );
-  
 	inline const char* GetJobName() const { return _jobName; }
+	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
 	inline const JobID_t GetJobID() const { return _jobID; }
 	inline const int GetRetryMax() const { return retry_max; }
@@ -320,6 +320,11 @@ class Job {
 	List<MyString> *varValsFromDag;
 
 private:
+
+		// Note: Init moved to private section because calling int more than
+		// once will cause a memory leak.  wenger 2005-06-24.
+	void Init( const char* jobName, const char *directory,
+				const char* cmdFile );
   
 	bool AddDependency( Job* parent, Job* child );
 
@@ -328,6 +333,10 @@ private:
 
 		// type of job (e.g., Condor, Stork, etc.)
 	job_type_t _jobType;
+
+		// Directory to cd to before running the job or the PRE and POST
+		// scripts.
+	char * _directory;
 
     // filename of condor submit file
     char * _cmdFile;

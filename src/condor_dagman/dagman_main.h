@@ -80,6 +80,10 @@ class Dagman {
 		// node submit files).
 	bool allowLogError;
 
+		// Whether to treat the dirname portion of any DAG file paths
+		// as a directory that the DAG should effectively be run from.
+	bool useDagDir;
+
 		// What "bad" events to treat as non-fatal (as opposed to fatal)
 		// errors; see check_events.h for values.
 	int allow_events;

@@ -64,6 +64,7 @@ static void Usage() {
             "\t\t[-WaitForDebug]\n\n"
             "\t\t[-NoEventChecks]\n\n"
             "\t\t[-AllowLogError]\n\n"
+            "\t\t[-UseDagDir]\n\n"
             "\twherei NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -84,7 +85,8 @@ Dagman::Dagman() :
 	submit_delay (0),
 	max_submit_attempts (0),
 	primaryDagFile (NULL),
-	allowLogError (false)
+	allowLogError (false),
+	useDagDir (false)
 {
 }
 
@@ -207,7 +209,8 @@ int main_shutdown_rescue( int exitVal ) {
 	if( dagman.dag ) {
 		debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
 					  dagman.rescue_file );
-		dagman.dag->Rescue( dagman.rescue_file, dagman.primaryDagFile );
+		dagman.dag->Rescue( dagman.rescue_file, dagman.primaryDagFile,
+					dagman.useDagDir );
 			// we write the rescue DAG *before* removing jobs because
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
@@ -401,6 +404,9 @@ int main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
 
+        } else if( !strcasecmp( "-UseDagDir", argv[i] ) ) {
+			dagman.useDagDir = true;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -490,7 +496,7 @@ int main_init (int argc, char ** const argv) {
     dagman.dag = new Dag( dagman.dagFiles, condorLogName, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
 						  dagman.allow_events, dapLogName, //<-- DaP
-						  dagman.allowLogError );
+						  dagman.allowLogError, dagman.useDagDir );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -507,7 +513,7 @@ int main_init (int argc, char ** const argv) {
 	while ( (dagFile = dagman.dagFiles.next()) != NULL ) {
     	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n",
 					dagFile );
-    	if( !parse( dagman.dag, dagFile ) ) {
+    	if( !parse( dagman.dag, dagFile, dagman.useDagDir ) ) {
 				// Note: debug_error calls DC_Exit().
         	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 	dagFile );

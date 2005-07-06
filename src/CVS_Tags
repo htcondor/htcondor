@@ -1,3 +1,7 @@
+07/06/05 V6_7-dag_subdir-branch-merge-1
+   The point on the V6_7-dag_subdir-branch from which we do the first
+   (and only) merge to the V6_7-branch.
+
 06/30/05 V6_7_9-2-branch
    A new branch for the 6.7.9 release, created from V6_7_9-2-root on
    the V6_7_CODE module (doc will remain with the V6_7_9-branch).

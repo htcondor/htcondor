@@ -57,6 +57,7 @@ const char* Job::_job_type_names[] = {
 
 //---------------------------------------------------------------------------
 Job::~Job() {
+	delete [] _directory;
 	delete [] _cmdFile;
     // NOTE: we cast this to char* because older MS compilers
     // (contrary to the ISO C++ spec) won't allow you to delete a
@@ -70,23 +71,16 @@ Job::~Job() {
 }
 
 Job::
-Job( const char* jobName, const char* cmdFile ) :
-	_jobType( TYPE_CONDOR )
-{
-	Init( jobName, cmdFile );
-}
-
-
-Job::
-Job( const job_type_t jobType, const char* jobName, const char* cmdFile ) :
+Job( const job_type_t jobType, const char* jobName, const char *directory,
+			const char* cmdFile ) :
 	_jobType( jobType )
 {
-	Init( jobName, cmdFile );
+	Init( jobName, directory, cmdFile );
 }
 
 
 void Job::
-Init( const char* jobName, const char* cmdFile )
+Init( const char* jobName, const char* directory, const char* cmdFile )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -98,6 +92,7 @@ Init( const char* jobName, const char* cmdFile )
 	_waitingCount = 0;
 
     _jobName = strnewp (jobName);
+	_directory = strnewp (directory);
     _cmdFile = strnewp (cmdFile);
 
     // _condorID struct initializes itself
@@ -113,7 +108,12 @@ Init( const char* jobName, const char* cmdFile )
     have_abort_dag_val = false;
 	_visited = false;
 
-    MyString logFile = ReadMultipleUserLogs::loadLogFileNameFromSubFile(_cmdFile);
+		// Note: we use "" for the directory here because when this method
+		// is called we should *already* be in the directory from which
+		// this job is to be run.
+    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile(_cmdFile, "");
+		// Note: _logFile is needed only for POST script events (as of
+		// 2005-06-23).
     _logFile = strnewp (logFile.Value());
 
 	varNamesFromDag = new List<MyString>;

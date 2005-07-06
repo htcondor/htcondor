@@ -37,8 +37,9 @@ void parseSetDoNameMunge(bool doit);
  * Parse a DAG file.
  * @param The Dag object we'll be adding nodes to.
  * @param The name of the DAG file.
+ * @param Run DAGs in directories from DAG file paths if true
  */
-bool parse (Dag *dag, char * filename);
+bool parse (Dag *dag, const char * filename, bool useDagDir);
 
 bool isKeyWord( const char *token );
 //void DFSVisit (Job * job);

@@ -25,8 +25,9 @@
 #include "condor_debug.h"
 #include "read_multiple_logs.h"
 #include "condor_string.h" // for strnewp()
+#include "tmp_dir.h"
 
-#define LOG_HASH_SIZE 37
+#define LOG_HASH_SIZE 37 // prime
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -202,16 +203,16 @@ ReadMultipleUserLogs::detectLogGrowth()
 ///////////////////////////////////////////////////////////////////////////////
 
 void
-ReadMultipleUserLogs::DeleteLogs(StringList &logFileNames)
+MultiLogFiles::DeleteLogs(StringList &logFileNames)
 {
     logFileNames.rewind();
 	char *filename;
 	while ( (filename = logFileNames.next()) ) {
         if ( access( filename, F_OK) == 0 ) {
-		    dprintf( D_ALWAYS, "ReadMultipleUserLogs: deleting older "
+		    dprintf( D_ALWAYS, "MultiLogFiles: deleting older "
 						"version of %s\n", filename);
 		    if (remove (filename) == -1) {
-		        dprintf( D_ALWAYS, "ReadMultipleUserLogs error: can't "
+		        dprintf( D_ALWAYS, "MultiLogFiles error: can't "
 							"remove %s\n", filename );
 		    }
 		}
@@ -322,25 +323,25 @@ ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-ReadMultipleUserLogs::readFileToString(const MyString &strFilename)
+MultiLogFiles::readFileToString(const MyString &strFilename)
 {
 	FILE *pFile = fopen(strFilename.Value(), "r");
 	if (!pFile) {
-		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
 				"fopen(%s) failed with errno %d (%s)\n", strFilename.Value(),
 				errno, strerror(errno) );
 		return "";
 	}
 
 	if ( fseek(pFile, 0, SEEK_END) != 0 ) {
-		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
 				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
 				errno, strerror(errno) );
 		return "";
 	}
 	int iLength = ftell(pFile);
 	if ( iLength == -1 ) {
-		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
 				"ftell(%s) failed with errno %d (%s)\n", strFilename.Value(),
 				errno, strerror(errno) );
 		fclose(pFile);
@@ -364,8 +365,18 @@ ReadMultipleUserLogs::readFileToString(const MyString &strFilename)
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
+MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
+		const MyString &directory)
 {
+	TmpDir		td;
+	if ( directory != "" ) {
+		MyString	errMsg;
+		if ( !td.Cd2TmpDir(directory.Value(), errMsg) ) {
+			dprintf(D_ALWAYS, "Error from Cd2TmpDir: %s\n", errMsg.Value());
+			return "";
+		}
+	}
+
 	MyString	currentDir;
 	char	tmpCwd[PATH_MAX];
 	if ( getcwd(tmpCwd, PATH_MAX) ) {
@@ -415,7 +426,7 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 		//
 	if ( logFileName != "" ) {
 		if ( strchr(logFileName.Value(), '$') ) {
-			dprintf(D_ALWAYS, "ReadMultipleUserLogs: macros not allowed "
+			dprintf(D_ALWAYS, "MultiLogFiles: macros not allowed "
 						"in log file name in DAG node submit files\n");
 			logFileName = "";
 		}
@@ -424,19 +435,19 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 	if ( logFileName != "" ) {
 			// Prepend initialdir to log file name if log file name is not
 			// an absolute path.
-		if ( initialDir != "" && logFileName[0] != '/' ) {
-			logFileName = initialDir + "/" + logFileName;
+		if ( initialDir != "" && logFileName[0] != DIR_DELIM_CHAR ) {
+			logFileName = initialDir + DIR_DELIM_STRING + logFileName;
 		}
 
 			// We do this in case the same log file is specified with a
 			// relative and an absolute path.  
 			// Note: we now do further checking that doesn't rely on
 			// comparing paths to the log files.  wenger 2004-05-27.
-		if ( logFileName[0] != '/' ) {
+		if ( logFileName[0] != DIR_DELIM_CHAR ) {
 			if ( currentDir != "" ) {
-				logFileName = currentDir + "/" + logFileName;
+				logFileName = currentDir + DIR_DELIM_STRING + logFileName;
 			} else {
-				dprintf(D_ALWAYS, "ReadMultipleUserLogs: unable to get "
+				dprintf(D_ALWAYS, "MultiLogFiles: unable to get "
 							"current directory\n");
 				logFileName = "";
 			}
@@ -449,13 +460,14 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
-            const MyString &jobKeyword, StringList &listLogFilenames)
+MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
+            const MyString &jobKeyword, const MyString &dirKeyword,
+			StringList &listLogFilenames)
 {
 	MyString strDagFileContents = readFileToString(strDagFileName);
 	if (strDagFileContents == "") {
 		MyString result = "Unable to read DAG file";
-		dprintf(D_ALWAYS, "ReadMultipleUserLogs: %s\n", result.Value());
+		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
 		return result;
 	}
 
@@ -490,18 +502,33 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 				if( !submitFile ) {
 					MyString result = "Improperly-formatted DAG file: "
 								"submit file missing from job line";
-					dprintf(D_ALWAYS, "ReadMultipleUserLogs: %s\n",
+					dprintf(D_ALWAYS, "MultiLogFiles error: %s\n",
 								result.Value());
 			    	return result;
 				}
 				MyString strSubFile(submitFile);
+				const char *directory = "";
+				const char *nextTok = tokens.next();
+				if ( nextTok ) {
+					if ( !stricmp(nextTok, dirKeyword.Value()) ) {
+						directory = tokens.next();
+						if ( !directory ) {
+							MyString result = "No directory specified "
+									"after DIR keyword";
+							dprintf(D_ALWAYS, "MultiLogFiles error: %s\n",
+									result.Value());
+							return result;
+						}
+					}
+				}
 
 					// get the log = value from the sub file
-				MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile);
+				MyString strLogFilename = loadLogFileNameFromSubFile(
+						strSubFile, directory);
 				if (strLogFilename == "") {
 					MyString result = "No 'log =' value found in submit file "
 								+ strSubFile;
-					dprintf(D_ALWAYS, "ReadMultipleUserLogs: %s\n",
+					dprintf(D_ALWAYS, "MultiLogFiles: %s\n",
 								result.Value());
 					return result;
 				}
@@ -532,7 +559,7 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-ReadMultipleUserLogs::getParamFromSubmitLine(MyString &submitLine,
+MultiLogFiles::getParamFromSubmitLine(MyString &submitLine,
 		const char *paramName)
 {
 	MyString	paramValue("");
@@ -559,7 +586,7 @@ ReadMultipleUserLogs::getParamFromSubmitLine(MyString &submitLine,
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-ReadMultipleUserLogs::CombineLines(StringList &listIn, char continuation,
+MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 		StringList &listOut)
 {
 	listIn.rewind();
@@ -584,7 +611,7 @@ ReadMultipleUserLogs::CombineLines(StringList &listIn, char continuation,
 			} else {
 				MyString result = "Improper DAG file: continuation character "
 							"with no trailing line!";
-				dprintf(D_ALWAYS, "ReadMultipleUserLogs: %s\n", result.Value());
+				dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
 				return result;
 			}
 		}

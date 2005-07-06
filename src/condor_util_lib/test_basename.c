@@ -98,6 +98,9 @@ main(int argc, char **argv)
 	result |= TestAPath(".foo/.bar.txt", ".foo", ".bar.txt");
 	result |= TestAPath(".foo\\.bar.txt", ".foo", ".bar.txt");
 
+	result |= TestAPath("//foo/bar/zap.txt", "//foo/bar", "zap.txt");
+	result |= TestAPath("\\\\foo\\bar\\zap.txt", "\\\\foo\\bar", "zap.txt");
+
 	if ( result == 0 ) {
 		printf("\nTest OK\n");
 	} else {

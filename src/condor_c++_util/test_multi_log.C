@@ -145,8 +145,9 @@ GetGoodLogFiles(StringList &logFiles)
 
 	printf("Getting log files...\n");
 	MyString		errorMsg;
-	errorMsg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
-			"test_multi_log1.dag", "job", logFiles);
+	MultiLogFiles	mlf;
+	errorMsg = mlf.getJobLogsFromSubmitFiles(
+			"test_multi_log1.dag", "job", "dir", logFiles);
 	if ( errorMsg != "" ) {
 		printf("...error getting log files: %s", errorMsg.Value());
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
@@ -195,8 +196,9 @@ GetBadLogFiles()
 
 	printf("Getting log files...\n");
 	MyString		errorMsg;
-	errorMsg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
-			"test_multi_log2.dag", "job", logFiles);
+	MultiLogFiles	mlf;
+	errorMsg = mlf.getJobLogsFromSubmitFiles(
+			"test_multi_log2.dag", "job", "dir", logFiles);
 	if ( errorMsg != "" ) {
 		printf("...got expected error (%s)\n", errorMsg.Value());
 	} else {
@@ -211,8 +213,8 @@ GetBadLogFiles()
 	}
 
 	printf("Getting log files...\n");
-	errorMsg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
-			"test_multi_log3.dag", "job", logFiles);
+	errorMsg = mlf.getJobLogsFromSubmitFiles(
+			"test_multi_log3.dag", "job", "dir", logFiles);
 	if ( errorMsg != "" ) {
 		printf("...got expected error (%s)\n", errorMsg.Value());
 	} else {
@@ -261,7 +263,7 @@ ReadEvents(StringList &logFiles)
 {
 	bool	isOkay = true;
 
-	ReadMultipleUserLogs::DeleteLogs(logFiles);
+	MultiLogFiles::DeleteLogs(logFiles);
 
 	// Note: return value of false is okay here because log files are
 	// empty.

@@ -36,6 +36,58 @@
 #include "string_list.h"
 #include "HashTable.h"
 
+class MultiLogFiles
+{
+public:
+	    /** Gets the userlog files used by a dag
+		    on success, the return value will be ""
+		    on failure, it will be an appropriate error message
+	    */
+    static MyString getJobLogsFromSubmitFiles(const MyString &strDagFileName,
+			const MyString &jobKeyword, const MyString &dirKeyword,
+			StringList &listLogFilenames);
+
+	    /** Gets the log file from a Condor submit file.
+		    on success, the return value will be the log file name
+		    on failure, it will be ""
+		 */
+    static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
+			const MyString &directory);
+
+	    /** Deletes the given log files.
+		 */
+	static void DeleteLogs(StringList &logFileNames);
+
+private:
+	    /** Read the entire contents of the given file into a MyString.
+		 * @param The name of the file.
+		 * @return The contents of the file.
+		 */
+    static MyString readFileToString(const MyString &strFilename);
+
+		/**
+		 * Get the given parameter if it is defined in the given submit file
+		 * line.
+		 * @param The submit file line.
+		 * @param The name of the parameter to get.
+		 * @return The parameter value defined in that line, or "" if the
+		 *   parameter is not defined.
+		 */
+	static MyString getParamFromSubmitLine(MyString &submitLine,
+			const char *paramName);
+
+		/**
+		 * Combine input ("physical") lines that end with the given
+		 * continuation character into "logical" lines.
+		 * @param Input string list of "physical" lines.
+		 * @param Continuation character.
+		 * @param Output string list of "logical" lines.
+		 * @return "" if okay, or else an error message.
+		 */
+	static MyString CombineLines(StringList &listIn, char continuation,
+			StringList &listOut);
+};
+
 class ReadMultipleUserLogs
 {
 public:
@@ -58,23 +110,6 @@ public:
 		    the last time this method was called.
 		 */
 	bool detectLogGrowth();
-
-	    /** Deletes the given log files.
-		 */
-	static void DeleteLogs(StringList &logFileNames);
-
-	    /** Gets the userlog files used by a dag
-		    on success, the return value will be ""
-		    on failure, it will be an appropriate error message
-	    */
-    static MyString getJobLogsFromSubmitFiles(const MyString &strDagFileName,
-			const MyString &jobKeyword, StringList &listLogFilenames);
-
-	    /** Gets the log file from a Condor submit file.
-		    on success, the return value will be the log file name
-		    on failure, it will be ""
-		 */
-    static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename);
 
 protected:
 	friend class CheckEvents;
@@ -150,34 +185,6 @@ private:
 		 * @return The outcome of trying to read an event.
 		 */
 	ULogEventOutcome readEventFromLog(LogFileEntry &log);
-
-	    /** Read the entire contents of the given file into a MyString.
-		 * @param The name of the file.
-		 * @return The contents of the file.
-		 */
-    static MyString readFileToString(const MyString &strFilename);
-
-		/**
-		 * Get the given parameter if it is defined in the given submit file
-		 * line.
-		 * @param The submit file line.
-		 * @param The name of the parameter to get.
-		 * @return The parameter value defined in that line, or "" if the
-		 *   parameter is not defined.
-		 */
-	static MyString getParamFromSubmitLine(MyString &submitLine,
-			const char *paramName);
-
-		/**
-		 * Combine input ("physical") lines that end with the given
-		 * continuation character into "logical" lines.
-		 * @param Input string list of "physical" lines.
-		 * @param Continuation character.
-		 * @param Output string list of "logical" lines.
-		 * @return "" if okay, or else an error message.
-		 */
-	static MyString CombineLines(StringList &listIn, char continuation,
-			StringList &listOut);
 
 		/**
 		 * Determine whether a log object exists that is a logical duplicate

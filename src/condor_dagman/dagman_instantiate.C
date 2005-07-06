@@ -39,5 +39,4 @@ template class HashTable<int, Script*>;
 template class Queue<Script*>;
 template class Queue<Job*>;
 template class SimpleList<Job*>;
-MULTI_LOG_HASH_INSTANCE;
 CHECK_EVENTS_HASH_INSTANCE;
