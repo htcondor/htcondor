@@ -12,7 +12,7 @@ into a single, large Condor pool.
 Condor shines in grid computing,
 continuing to evolve with the field.
 
-Because of the field's evolution, Condor has its own native mechanisms
+Due to the field's rapid evolution, Condor has its own native mechanisms
 for grid computing as well as developing interactions 
 with other grid systems.
 
@@ -80,3 +80,10 @@ The remote resource appears to have joined the local Condor pool.
 A user submitting a job may then explicitly specify the
 remote resource as the execution site of a job.
 
+Starting with Condor Version 6.7.0, the \SubmitCmd{grid} universe
+replaces the \SubmitCmd{globus} universe.
+Further specification of a \SubmitCmd{grid} universe job is done
+within the \SubmitCmd{grid\_type} command in a submit description file.
+Older submit description files specifying the \SubmitCmd{globus}
+universe will become \SubmitCmd{grid} universe jobs using the
+Globus \SubmitCmd{gt2} protocol.

@@ -1172,26 +1172,32 @@ and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2}, \SubmitCmd{gt3}, or \Submi
 %% globusscheduler
 %%%%%%%%%%%%%%%%%%%
 
-\item[globusscheduler = $<$scheduler-name$>$] Used to specify the 
+\item[globusscheduler = $<$scheduler-name$>$]
 \index{submit commands!globusscheduler}
-Globus resource to which the job should be submitted. More than one scheduler
-can be submitted to, simply place a \Arg{queue} command after each instance
-of \SubmitCmd{globusscheduler}.
-Each instance should be a valid Globus scheduler, using
-either the full Globus contact string or the host/scheduler format shown below:
-\begin{description}
-\item[Example:]
-To submit to the LSF scheduler of the Globus gatekeeper on lego at 
-Boston University:
-\begin{verbatim}
-GlobusScheduler = lego.bu.edu/jobmanager-lsf
-queue
-\end{verbatim}
-\end{description}
+Identifies a resource and jobmanager service needed for the
+job.
+The various \SubmitCmd{grid\_type}s use different syntax for
+this command.
+See section~\ref{sec:Condor-G} with details on the Condor-G
+\SubmitCmd{grid\_type}s for the syntax associated with each.
 
-\SubmitCmd{globusscheduler} is only required when
+More than one \SubmitCmd{queue} command allows job submission to 
+separate resources.
+
+The \SubmitCmd{globusscheduler} command is required when
 the \SubmitCmd{universe} is \SubmitCmd{grid},
-and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2} or \SubmitCmd{gt3}.
+and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
+or \SubmitCmd{gt4}.
+
+%%%%%%%%%%%%%%%%%%%
+%% jobmanager_type
+%%%%%%%%%%%%%%%%%%%
+
+\item[jobmanager\_type = $<$Fork \Bar\ Condor \Bar\ PBS \Bar\ LSF \Bar\ SGE$>$] 
+\index{submit commands!jobmanager\_type}
+Used only with \SubmitCmd{grid\_type} \SubmitCmd{gt4} to
+specify the correct service for the jobmanager to perform.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% globusrsl
