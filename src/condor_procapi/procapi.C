@@ -1474,7 +1474,7 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status )
 							in the array. So, we'll warn on it, but it won't
 							be a fatal error. */
 
-						dprintf( D_ALWAYS, 
+						dprintf( D_FULLDEBUG, 
 								"ProcAPI::getProcSetInfo(): Suspicious "
 								"permission error getting info for pid %lu.\n",
 								(unsigned long)pids[i] );
