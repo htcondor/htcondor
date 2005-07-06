@@ -85,8 +85,6 @@ extern int main_shutdown_graceful();
 int
 request_pipe_handler() {
 
-	time_t _time;
-
 	MyString * next_line = NULL;
 
 	if (request_buffer.IsError()) {
@@ -230,18 +228,21 @@ doContactSchedd()
 		// Perform the appropriate command on the current batch
 		ClassAd * result_ad= NULL;
 		if (current_command->command == SchedDRequest::SDC_REMOVE_JOB)  {
+			errstack.clear();
 			result_ad=
 				dc_schedd.removeJobs (
 					&id_list,
 					this_reason,
 					&errstack);
 		} else if (current_command->command == SchedDRequest::SDC_HOLD_JOB) {
+			errstack.clear();
 			result_ad=
 				dc_schedd.holdJobs (
 					&id_list,
 					this_reason,
 			 		&errstack);
 		} else if (current_command->command == SchedDRequest::SDC_RELEASE_JOB)  {
+			errstack.clear();
 			result_ad=
 				dc_schedd.releaseJobs (
 					&id_list,
@@ -365,7 +366,7 @@ doContactSchedd()
 		}
 
 		error = FALSE;
-
+		errstack.clear();
 		if (!dc_schedd.spoolJobFiles( stage_in_batch.Number(),
 									  array,
 									  &errstack )) {
@@ -425,7 +426,7 @@ doContactSchedd()
 		constraint += "False";
 
 		error = FALSE;
-
+		errstack.clear();
 		if (!dc_schedd.receiveJobSandbox( constraint.Value(),
 										  &errstack )) {
 			error = TRUE;
@@ -466,7 +467,7 @@ doContactSchedd()
 			continue;
 
 		bool result;
-
+		errstack.clear();
 		result = dc_schedd.updateGSIcredential (current_command->cluster_id,
 												current_command->proc_id,
 												current_command->proxy_file,
