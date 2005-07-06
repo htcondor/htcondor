@@ -5,12 +5,13 @@
 \index{scalability!using the Grid Monitor}
 
 Condor's Grid Monitor is designed to improve the scalability of
-machines running Globus GT2 gatekeepers.
-Normally, a Globus GT2 gatekeeper runs a jobmanager process for 
+machines running Globus Toolkit 2 gatekeepers.
+Normally, this gatekeeper runs a jobmanager process for 
 every job submitted to the gatekeeper.
 This includes both currently running jobs and jobs waiting in the queue.
 Each jobmanager runs a Perl script at
-frequent intervals (every 10 seconds) to poll the state of its job in the local batch system.
+frequent intervals (every 10 seconds) to poll the state of
+its job in the local batch system.
 For example, with 400 jobs submitted to a gatekeeper,
 there will be 400 jobmanagers running,
 each regularly starting a Perl script.
@@ -18,32 +19,30 @@ When a large number of jobs
 have been submitted to a single gatekeeper,
 this frequent polling can heavily load the gatekeeper.
 When the gatekeeper is under heavy load,
-the system can become non-responsive and a variety of problems can occur.
+the system can become non-responsive, and a variety of problems can occur.
 
 Condor's Grid Monitor temporarily replaces these jobmanagers.
 It is named the Grid Monitor, because it replaces the monitoring
 (polling) duties previously done by jobmanagers.
-When the Grid Monitor is enabled,
+When the Grid Monitor runs,
 Condor attempts to start a single
 process to poll all of a user's jobs at a given gatekeeper.
-While the job is waiting in the queue, but not yet running,
-Condor shuts down the associated jobmanager and instead
-relies on the Grid Monitor to report changes in status.
-The jobmanager will have been started to add the job to the remote
-batch system queue, then be shut down.
-The jobmanager will restart when the job begins running.
+While a job is waiting in the queue, but not yet running,
+Condor shuts down the associated jobmanager,
+and instead relies on the Grid Monitor to report changes in status.
+The jobmanager started to add the job to the remote
+batch system queue is shut down.
+The jobmanager restarts when the job begins running.
 
 By default, standard output and standard error are streamed back
-to the submitter while the job is running.
-To support this, the jobmanager must be running.
+to the submitting machine while the job is running.
+Streamed I/O requires the jobmanager.
 As a result, the Grid Monitor cannot
-replace the jobmanager for running jobs that use streaming.
-If you disable streaming for your job,
-the Grid Monitor can be used while the job is running.
-If you do not need file streaming, this setting is strongly recommended.
-File streaming is enabled or disabled on a job-by-job basis.
-To disable file streaming for a given job, place the
-following lines in the job's submit description file:
+replace the jobmanager for jobs that use streaming.
+If possible,
+disable streaming for all jobs;
+this is accomplished by placing the
+following lines in each job's submit description file:
 
 \begin{verbatim}
 stream_output = False
