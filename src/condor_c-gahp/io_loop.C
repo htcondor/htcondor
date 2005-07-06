@@ -576,6 +576,8 @@ flush_next_request() {
 
 			dprintf (D_FULLDEBUG, "Sending to worker: %s\n", command);
 			request_buffer.Write (command);
+			if (request_buffer.IsError())
+				break;
 
 			pending_request_list.deleteCurrent();
 
@@ -585,6 +587,12 @@ flush_next_request() {
 	}
 	else if (!request_buffer.IsEmpty()) {
 		request_buffer.Write();
+	}
+
+	if (request_buffer.IsError()) {
+		dprintf (D_ALWAYS, "Error writing to request buffer, exiting\n");
+		DC_Exit ( 1 );
+		return FALSE;
 	}
 	
 	return TRUE;

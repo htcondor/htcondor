@@ -149,7 +149,7 @@ FdBuffer::Write (const char * towrite) {
 	} else {
 		dprintf (D_ALWAYS, "Error %d writing to fd %d\n", numwritten, fd);
 		error = TRUE;
-		return 0;
+		return -1;
 	}
 }
 
