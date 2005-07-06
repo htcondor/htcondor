@@ -434,11 +434,11 @@ V6_7_8_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/srb/3.2.1
 
 # Externals needed for V6_7_9 (same as V6_7_8)
-V6_7_9_EXT	-a V6_7_8_EXT \
-		   externals/bundles/pcre/6.1
+V6_7_9_EXT	-a V6_7_8_EXT
 
-# Externals needed for V6_7_10 (same as V6_7_9)
-V6_7_10_EXT	-a V6_7_9_EXT
+# Externals needed for V6_7_10 (same as V6_7_9, but with PCRE)
+V6_7_10_EXT	-a V6_7_9_EXT \
+		   externals/bundles/pcre/5.0
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_10_EXT
@@ -557,6 +557,7 @@ V6_7_4_BUILD    -a V6_7_ALL V6_7_4_EXT
 V6_7_6_BUILD    -a V6_7_ALL V6_7_6_EXT
 V6_7_7_BUILD    -a V6_7_ALL V6_7_7_EXT
 V6_7_8_BUILD    -a V6_7_ALL V6_7_8_EXT
+V6_7_9_BUILD    -a V6_7_ALL V6_7_9_EXT
 
 # The V6_7-mirror-branch has condor_c-gahp, so we need to use
 # different modules for it
