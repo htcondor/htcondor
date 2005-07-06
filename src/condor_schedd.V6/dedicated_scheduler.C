@@ -477,7 +477,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 		this->Insert(array[i].machineAd);
 	}
 
-	delete array;
+	delete [] array;
 }
 
 /* static */ int
@@ -1184,10 +1184,21 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				break;
 			}
 
-			// Next, insert this match_rec into our hashtables
-			all_matches->insert( HashKey(machine_name), mrec );
-			all_matches_by_id->insert( HashKey(mrec->id), mrec );
-			num_matches++;
+			bool mrecExists;
+			match_rec *dummy;
+
+			mrecExists = false;
+			if( all_matches->lookup(HashKey(machine_name), dummy) == 0) {
+					// Already have this match
+				dprintf(D_ALWAYS, "DedicatedScheduler::negotiate sent match for %s, but we've already got it\n", machine_name);
+				mrecExists = true;
+			}
+
+			if (!mrecExists) {
+					// Next, insert this match_rec into our hashtables
+				all_matches->insert( HashKey(machine_name), mrec );
+				all_matches_by_id->insert( HashKey(mrec->id), mrec );
+				num_matches++;
 
 				/* 
 				   Here we don't want to call contactStartd directly
@@ -1200,7 +1211,9 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				   made from the startdContactSockHandler)
 				*/
 
-			args = new ContactStartdArgs( claim_id, sinful, true );
+				args = new ContactStartdArgs( claim_id, sinful, true );
+
+			}
 
 				// Now that the info is stored in the above
 				// object, we can deallocate all of our strings
@@ -1217,22 +1230,23 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 			free(machine_name);
 			machine_name = NULL;
 				
-			if( scheduler.enqueueStartdContact(args) ) {
-				perm_rval = 1;	// happiness
-			} else {
-				perm_rval = 0;	// failure
-				delete( args );
-			}
+			if( !mrecExists) {
+				if( scheduler.enqueueStartdContact(args) ) {
+					perm_rval = 1;	// happiness
+				} else {
+					perm_rval = 0;	// failure
+					delete( args );
+				}
 				
-			reqs_matched += perm_rval;
+				reqs_matched += perm_rval;
 #if 0 
 				// Once we've got all this buisness w/ "are we
 				// spawning a new shadow?" worked out, we'll need to
 				// do this so our MAX_JOBS_RUNNING check still works. 
-			scheduler.addActiveShadows( perm_rval *
+				scheduler.addActiveShadows( perm_rval *
 										shadow_num_increment );  
 #endif
-
+			}
 				// We're done, return success
 			return NR_MATCHED;
 			break;
@@ -1662,7 +1676,8 @@ DedicatedScheduler::reaper( int pid, int status )
 				// exceptions 
 			if( !srec->removed ) {
 				shutdownMpiJob( srec );
-				scheduler.HadException( srec->match );
+					// GGT  -- I think release_claim will fix this
+					//scheduler.HadException( srec->match );
 			}
 			break;
 		}
@@ -2356,6 +2371,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 
 				char *hosts = matchToHost( (*(*allocation->matches)[p])[i], allocation->cluster, p);
 				remoteHosts.append(hosts);
+				free(hosts);
 			}
 			char *claims_str = claims.print_to_string();
 			SetAttributeString(allocation->cluster, p, "ClaimIds", claims_str);
@@ -3141,9 +3157,7 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 		for( m=0 ; m <= n ; m++ ) {
 			if (kill) {
 				dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
-					// Hidemoto added the following line, but I don't think it is correct...
-					//releaseClaim( (*matches)[m], true );
-				deactivateClaim( (*matches)[m] );
+				releaseClaim( (*matches)[m], true );
 			} else {
 				deactivateClaim( (*matches)[m] );
 			}
@@ -3185,8 +3199,10 @@ DedicatedScheduler::DelMrec( char* id )
 				 "match not deleted\n", id );
 		return false;
 	}
-	all_matches_by_id->remove(key);
 
+	if (all_matches_by_id->remove(key) < 0) {
+		dprintf(D_ALWAYS, "DelMrec::all_matches_by_id->remove < 0\n");	
+	}
 		// Now that we have the mrec again, we have to see if this
 		// match record is stored in our table of allocation nodes,
 		// and if so, we need to remove it from there, so we don't
@@ -3654,7 +3670,7 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 		return( (int)time(0) - mrec->entered_current_status );
 		break;
 	default:
-		EXCEPT( "Unknown status in match rec (%d)", mrec->status );
+		EXCEPT( "Unknown status in match rec %p (%d)", mrec, mrec->status );
 	}
 	return 0;
 }
@@ -4075,7 +4091,7 @@ findAvailTime( match_rec* mrec )
 			// determine when we're available.
 		break;
 	default:
-		EXCEPT( "Unknown status in match rec (%d)", mrec->status );
+		EXCEPT( "Unknown status in match rec %p (%d)", mrec, mrec->status );
 	}
 
 	resource->LookupString( ATTR_STATE, state );
