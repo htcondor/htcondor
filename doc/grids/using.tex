@@ -116,8 +116,13 @@ include the the pre-web services GRAM.
 
 \index{universe!globus}
 \index{universe!grid, grid\_type gt2}
-This section contains what users need to know to 
-run and manage jobs under the \SubmitCmd{grid} universe, using the Globus \SubmitCmd{gt2} protocol.
+Condor-G supports submitting jobs to remote resources running
+the Globus Toolkit versions 1 and 2, also called the pre-web
+services GRAM.
+These Condor-G jobs are submitted the same as any other Condor job.
+The \SubmitCmd{universe} is \SubmitCmd{grid},
+and the pre-web services GRAM protocol is specified by
+setting the submit command \SubmitCmd{grid\_type} to \SubmitCmd{gt2}.
 Older submit description files specifying a \SubmitCmd{globus} universe job
 will default to this.
 
@@ -139,13 +144,10 @@ please consult the Alliance PKI pages at
 Before submitting a job to Condor under the \SubmitCmd{grid} universe,
 use \Prog{grid-proxy-init} to create a proxy.
 
-A job is submitted for execution using the
-\Condor{submit} command.
-\Condor{submit} takes as an argument
-the name of a file called a submit description file.
+Here is a simple submit description file.
 \index{submit description file!grid universe}
-The following example submit description file runs a job on
-the Origin2000 at NCSA.
+The example specifies a \SubmitCmd{gt2} job to be run on
+an NCSA machine.
 
 \begin{verbatim}
 executable = test
@@ -163,8 +165,7 @@ for this example is
 transferred from the local machine to the remote machine.
 By default, Condor transfers the executable, as well as any
 files specified by an \SubmitCmd{input} command.
-Note that the executable must be compiled for the correct
-intended platform.
+Note that the executable must be compiled for its intended platform.
 
 \index{submit commands!globusscheduler}
 The command \SubmitCmd{globusscheduler} is a required command
@@ -192,15 +193,15 @@ jobmanager-lsf
 jobmanager-sge
 \end{verbatim}
 The Globus software running on the remote resource
-uses the specific string to identify and select the correct service
+uses this string to identify and select the correct service
 to perform.
 Other \verb@jobmanagername@ strings may be used,
 where additional services are defined and implemented.
 
 
 No input file is specified for this example job.
-Any output (file specified by the \AdAttr{output})
-or error (file specified by the \AdAttr{error})
+Any output (file specified by an \SubmitCmd{output} command)
+or error (file specified by an \SubmitCmd{error} command)
 is transferred 
 from the remote machine to the local machine as it is produced.
 This implies that these files may be incomplete in the case
@@ -217,13 +218,6 @@ only after the job completes.
 
 The job log file is maintained on the submit machine.
 
-To submit this job to Condor-G for execution on the
-remote machine, use
-\begin{verbatim}
-condor_submit test.submit
-\end{verbatim}
-where \File{test.submit} is the name of the submit description file.
-
 Example output from 
 \Condor{q} for this submission looks like:
 \footnotesize
@@ -234,7 +228,7 @@ Example output from
 -- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
 
  ID      OWNER         SUBMITTED     RUN_TIME ST PRI SIZE CMD
-   7.0   epaulson     3/26 14:08   0+00:00:00 I  0   0.0  test
+   7.0   smith        3/26 14:08   0+00:00:00 I  0   0.0  test
 
 1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
@@ -251,7 +245,7 @@ Again running \Condor{q} will now result in
 -- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
 
  ID      OWNER         SUBMITTED     RUN_TIME ST PRI SIZE CMD
-   7.0   epaulson     3/26 14:08   0+00:01:15 R  0   0.0  test
+   7.0   smith        3/26 14:08   0+00:01:15 R  0   0.0  test
 
 1 jobs; 0 idle, 1 running, 0 held
 \end{verbatim}
@@ -280,7 +274,7 @@ program on a different Globus resource.
 \footnotesize
 \begin{verbatim}
 executable = /bin/ls
-Transfer_Executable = false
+transfer_executable = false
 globusscheduler = vulture.cs.wisc.edu/jobmanager
 universe = grid
 grid_type = gt2
@@ -294,16 +288,16 @@ In this example, the executable (the binary) has been pre-staged.
 The executable is on the remote machine, and it is not to
 be transferred before execution.
 Note that the required 
-\AdAttr{globusscheduler} and \AdAttr{universe}
+\SubmitCmd{globusscheduler} and \SubmitCmd{universe}
 commands are present.
 The command
 \begin{verbatim}
-Transfer_Executable = false
+transfer_executable = false
 \end{verbatim}
 within the submit description file identifies the executable
 as being pre-staged.
 In this case, the 
-\AdAttr{executable}
+\SubmitCmd{executable}
 command gives the path to the executable on the remote machine.
 
 A third example submits a Perl script to be run as a submitted
@@ -330,14 +324,14 @@ chmod 755 env-test.pl
 \end{verbatim}
 to make the Perl script executable.
 
-Now create the following submit description file
-(Replace \File{biron.cs.wisc.edu/jobmanager} with a resource
-you are authorized to use.):
+Now create the following submit description file.
+Replace \File{example.cs.wisc.edu/jobmanager} with a resource
+you are authorized to use.
 
 \footnotesize
 \begin{verbatim}
 executable = env-test.pl
-globusscheduler = biron.cs.wisc.edu/jobmanager
+globusscheduler = example.cs.wisc.edu/jobmanager
 universe = grid
 grid_type = gt2
 environment = foo=bar; zot=qux
@@ -347,32 +341,33 @@ queue
 \end{verbatim}
 \normalsize
 
-When the job has completed, the output file \File{env-test.out}
+When the job has completed, the output file, \File{env-test.out},
 should contain something like this:
 
 \footnotesize
 \begin{verbatim}
-GLOBUS_GRAM_JOB_CONTACT = https://biron.cs.wisc.edu:36213/30905/1020633947/
-GLOBUS_GRAM_MYJOB_CONTACT = URLx-nexus://biron.cs.wisc.edu:36214
+GLOBUS_GRAM_JOB_CONTACT = https://example.cs.wisc.edu:36213/30905/1020633947/
+GLOBUS_GRAM_MYJOB_CONTACT = URLx-nexus://example.cs.wisc.edu:36214
 GLOBUS_LOCATION = /usr/local/globus
-GLOBUS_REMOTE_IO_URL = /home/epaulson/.globus/.gass_cache/globus_gass_cache_1020633948
-HOME = /home/epaulson
+GLOBUS_REMOTE_IO_URL = /home/smith/.globus/.gass_cache/globus_gass_cache_1020633948
+HOME = /home/smith
 LANG = en_US
-LOGNAME = epaulson
-X509_USER_PROXY = /home/epaulson/.globus/.gass_cache/globus_gass_cache_1020633951
+LOGNAME = smith
+X509_USER_PROXY = /home/smith/.globus/.gass_cache/globus_gass_cache_1020633951
 foo = bar
 zot = qux
 \end{verbatim}
 \normalsize
 
 
-Of particular interest is the GLOBUS\_REMOTE\_IO\_URL environment variable.
+Of particular interest is the \Env{GLOBUS\_REMOTE\_IO\_URL}
+environment variable.
 Condor-G automatically starts up a GASS remote I/O
-server on the submitting machine.
+server on the submit machine.
 Because of the potential for either side of the connection to fail,
 the URL for the server cannot be passed directly to the job.
-Instead, it is put into a file, and the GLOBUS\_REMOTE\_IO\_URL
-environment variable points to this file. 
+Instead, it is placed into a file, and the \Env{GLOBUS\_REMOTE\_IO\_URL}
+environment variable points to this file.
 Remote jobs can read this file and use the URL it contains
 to access the remote GASS server running inside Condor-G.
 If the location
@@ -420,7 +415,7 @@ a Condor job appears as:
 \footnotesize
 \begin{verbatim}
 executable = gass-example.pl
-globusscheduler = biron.cs.wisc.edu/jobmanager
+globusscheduler = example.cs.wisc.edu/jobmanager
 universe = grid
 grid_type = gt2
 output = gass.out
@@ -431,9 +426,9 @@ queue
 
 There are two optional submit description file commands
 of note:
-\AdAttr{x509userproxy} and
-\AdAttr{globusrsl}.
-The \AdAttr{x509userproxy} command specifies the path to
+\SubmitCmd{x509userproxy} and
+\SubmitCmd{globusrsl}.
+The \SubmitCmd{x509userproxy} command specifies the path to
 an X.509 proxy.
 The command is of the form:
 \begin{verbatim}
@@ -444,13 +439,13 @@ then Condor-G checks the value of the environment variable
 \Env{X509\_USER\_PROXY} for the location of the proxy.
 If this environment variable is not present, then Condor-G
 looks for the proxy in the file
-\File{/tmp/x509up\_u0000},
-where the trailing zeros in this file name are
+\File{/tmp/x509up\_uXXXX},
+where the characters \verb@XXXX@ in this file name are
 replaced with the Unix user id.
 
-The \AdAttr{globusrsl} command is used to add additional
+The \SubmitCmd{globusrsl} command is used to add additional
 attribute settings to a job's RSL string.
-The format of the \AdAttr{globusrsl} command is
+The format of the \SubmitCmd{globusrsl} command is
 \begin{verbatim}
 globusrsl = (name=value)(name=value)
 \end{verbatim}
