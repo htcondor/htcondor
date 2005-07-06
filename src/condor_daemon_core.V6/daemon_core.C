@@ -3839,7 +3839,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	}
 
 	if (!sock) {
-		dprintf(D_ALWAYS,"Send_Signal: ERROR Connect to %s failed.",
+		dprintf(D_ALWAYS,"Send_Signal: ERROR Connect to %s failed.\n",
 				destination);
 		return FALSE;
 	}
@@ -4014,7 +4014,7 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	// Now, if we know the window handle, send it a WM_CLOSE message
 	if ( pidinfo->hWnd ) {
 		if ( pidinfo->hWnd == HWND_BROADCAST ) {
-			dprintf(D_PROCFAMILY,"PostMessage to HWND_BROADCAST!");
+			dprintf(D_PROCFAMILY,"PostMessage to HWND_BROADCAST!\n");
 			EXCEPT("About to send WM_CLOSE to HWND_BROADCAST!");
 		}
 		if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
