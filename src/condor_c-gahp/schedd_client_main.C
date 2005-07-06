@@ -159,6 +159,7 @@ init_pipes() {
 
 
 	dprintf (D_FULLDEBUG, "Request pipe initialized\n");
+	return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -194,8 +195,10 @@ main_config( bool is_full )
 int
 main_shutdown_fast()
 {
+#ifndef WIN32
 	if (io_loop_pid != -1)
 		kill(io_loop_pid, SIGKILL);
+#endif
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
@@ -203,8 +206,10 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
+#ifndef WIN32
 	if (io_loop_pid != -1)
 		kill(io_loop_pid, SIGTERM);
+#endif
 	DC_Exit(0);
 	return TRUE;	// to satify c++
 }
