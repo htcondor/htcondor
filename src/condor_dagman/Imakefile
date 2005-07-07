@@ -29,7 +29,7 @@ pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 c_plus_target(condor_submit_dag,condor_submit_dag.o dagman_multi_dag.o,$(TOOL_LIB))
 release_target(condor_submit_dag,bin,EXECUTABLE_MODE)
 strip_target(condor_submit_dag,bin,EXECUTABLE_MODE)
-static_target(condor_submit_dag,condor_submit_dag.o,$(TOOL_LIB),$(STATIC_DIR)/bin)
+static_target(condor_submit_dag,condor_submit_dag.o dagman_multi_dag.o,$(TOOL_LIB),$(STATIC_DIR)/bin)
 
 html_target( documentation )
 
