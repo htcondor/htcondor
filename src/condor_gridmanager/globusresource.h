@@ -45,19 +45,8 @@ class GlobusResource : public BaseResource
  public:
 	bool Init();
 	void Reconfig();
-	void RegisterJob( GlobusJob *job, bool already_submitted );
-	void UnregisterJob( GlobusJob *job );
-	void RequestPing( GlobusJob *job );
-	bool RequestSubmit( GlobusJob *job );
-	void SubmitComplete( GlobusJob *job );
-	void CancelSubmit( GlobusJob *job );
 
 	bool GridJobMonitorActive() { return monitorActive; }
-
-	bool IsEmpty();
-	bool IsDown();
-
-	time_t getLastStatusChangeTime() { return lastStatusChange; }
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
@@ -65,12 +54,6 @@ class GlobusResource : public BaseResource
 
 	static GlobusResource *FindOrCreateResource( const char *resource_name,
 												 const char *proxy_subject );
-
-	static void setProbeInterval( int new_interval )
-		{ probeInterval = new_interval; }
-
-	static void setProbeDelay( int new_delay )
-		{ probeDelay = new_delay; }
 
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
@@ -82,7 +65,8 @@ class GlobusResource : public BaseResource
 	static HashTable <HashKey, GlobusResource *> ResourcesByName;
 
  private:
-	int DoPing();
+	void DoPing( time_t& ping_delay, bool& ping_complete,
+				 bool& ping_succeeded  );
 	int CheckMonitor();
 	void StopMonitor();
 	bool SubmitMonitorJob();
@@ -96,25 +80,6 @@ class GlobusResource : public BaseResource
 	bool initialized;
 
 	char *proxySubject;
-	bool resourceDown;
-	bool firstPingDone;
-	int pingTimerId;
-	time_t lastPing;
-	time_t lastStatusChange;
-	List<GlobusJob> registeredJobs;
-	List<GlobusJob> pingRequesters;
-	// jobs that are currently executing a submit
-	List<GlobusJob> submitsInProgress;
-	// jobs that want to submit but can't due to submitLimit
-	List<GlobusJob> submitsQueued;
-	// jobs allowed to submit under jobLimit
-	List<GlobusJob> submitsAllowed;
-	// jobs that want to submit but can't due to jobLimit
-	List<GlobusJob> submitsWanted;
-	static int probeInterval;
-	static int probeDelay;
-	int submitLimit;		// max number of submit actions
-	int jobLimit;			// max number of submitted jobs
 	static int gahpCallTimeout;
 
 	static bool enableGridMonitor;

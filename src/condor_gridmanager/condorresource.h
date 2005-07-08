@@ -46,11 +46,8 @@ class CondorResource : public BaseResource
 					const char *proxy_subject );
 	~CondorResource();
 
-	bool IsEmpty();
-
 	void Reconfig();
 	void RegisterJob( CondorJob *job, const char *submitter_id );
-	void UnregisterJob( CondorJob *job );
 
 	int DoScheddPoll();
 
@@ -76,7 +73,6 @@ class CondorResource : public BaseResource
  private:
 	static HashTable <HashKey, CondorResource *> ResourcesByName;
 
-	List<CondorJob> *registeredJobs;
 	GahpClient *gahp;
 };
 

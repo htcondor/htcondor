@@ -45,11 +45,8 @@ class MirrorResource : public BaseResource
 	MirrorResource( const char *resource_name );
 	~MirrorResource();
 
-	bool IsEmpty();
-
 	void Reconfig();
 	void RegisterJob( MirrorJob *job, const char *submitter_id );
-	void UnregisterJob( MirrorJob *job );
 
 	int DoScheddPoll();
 
@@ -69,7 +66,6 @@ class MirrorResource : public BaseResource
  private:
 	static HashTable <HashKey, MirrorResource *> ResourcesByName;
 
-	List<MirrorJob> *registeredJobs;
 	GahpClient *gahp;
 };
 

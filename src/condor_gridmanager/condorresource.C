@@ -29,8 +29,6 @@
 #include "condorresource.h"
 #include "gridmanager.h"
 
-template class List<CondorJob>;
-template class Item<CondorJob>;
 template class HashTable<HashKey, CondorResource *>;
 template class HashBucket<HashKey, CondorResource *>;
 
@@ -92,7 +90,6 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 		proxySubject = 0;
 	}
 	scheddPollTid = TIMER_UNSET;
-	registeredJobs = new List<CondorJob>;
 	scheddName = strdup( resource_name );
 	gahp = NULL;
 	scheddStatusActive = false;
@@ -132,14 +129,14 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 
 CondorResource::~CondorResource()
 {
+	ResourcesByName.remove( HashKey( HashName( resourceName,
+											   poolName,
+											   proxySubject ) ) );
 	if ( proxySubject != NULL ) {
 		free( proxySubject );
 	}
 	if ( scheddPollTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( scheddPollTid );
-	}
-	if ( registeredJobs != NULL ) {
-		delete registeredJobs;
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -149,11 +146,6 @@ CondorResource::~CondorResource()
 	}
 }
 
-bool CondorResource::IsEmpty()
-{
-	return registeredJobs->IsEmpty();
-}
-
 void CondorResource::Reconfig()
 {
 	BaseResource::Reconfig();
@@ -161,7 +153,7 @@ void CondorResource::Reconfig()
 
 void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 {
-	registeredJobs->Append( job );
+	BaseResource::RegisterJob( job );
 
 	if ( submitter_ids.contains( submitter_id ) == false ) {
 		submitter_ids.append( submitter_id );
@@ -177,23 +169,11 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 	}
 }
 
-void CondorResource::UnregisterJob( CondorJob *job )
-{
-	registeredJobs->Delete( job );
-
-	if ( IsEmpty() ) {
-		ResourcesByName.remove( HashKey( HashName( resourceName,
-												   poolName,
-												   proxySubject ) ) );
-		delete this;
-	}
-}
-
 int CondorResource::DoScheddPoll()
 {
 	int rc;
 
-	if ( registeredJobs->IsEmpty() && scheddStatusActive == false ) {
+	if ( registeredJobs.IsEmpty() && scheddStatusActive == false ) {
 			// No jobs, so nothing to poll/update
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
 		return 0;

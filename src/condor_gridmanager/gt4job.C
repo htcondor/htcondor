@@ -427,7 +427,10 @@ GT4Job::GT4Job( ClassAd *classad )
 	resourceDown = false;
 	resourceStateKnown = false;
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
-	myResource->RegisterJob( this, job_already_submitted );
+	myResource->RegisterJob( this );
+	if ( job_already_submitted ) {
+		myResource->AlreadySubmitted( this );
+	}
 
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );

@@ -45,17 +45,6 @@ class GT3Resource : public BaseResource
  public:
 	bool Init();
 	void Reconfig();
-	void RegisterJob( GT3Job *job, bool already_submitted );
-	void UnregisterJob( GT3Job *job );
-	void RequestPing( GT3Job *job );
-	bool RequestSubmit( GT3Job *job );
-	void SubmitComplete( GT3Job *job );
-	void CancelSubmit( GT3Job *job );
-
-	bool IsEmpty();
-	bool IsDown();
-
-	time_t getLastStatusChangeTime() { return lastStatusChange; }
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
@@ -64,12 +53,6 @@ class GT3Resource : public BaseResource
 	static GT3Resource *FindOrCreateResource( const char *resource_name,
 											  const char *proxy_subject );
 
-	static void setProbeInterval( int new_interval )
-		{ probeInterval = new_interval; }
-
-	static void setProbeDelay( int new_delay )
-		{ probeDelay = new_delay; }
-
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
@@ -77,30 +60,12 @@ class GT3Resource : public BaseResource
 	static HashTable <HashKey, GT3Resource *> ResourcesByName;
 
  private:
-	int DoPing();
+	void DoPing( time_t& ping_delay, bool& ping_complete,
+				 bool& ping_succeeded );
 
 	bool initialized;
 
 	char *proxySubject;
-	bool resourceDown;
-	bool firstPingDone;
-	int pingTimerId;
-	time_t lastPing;
-	time_t lastStatusChange;
-	List<GT3Job> registeredJobs;
-	List<GT3Job> pingRequesters;
-	// jobs that are currently executing a submit
-	List<GT3Job> submitsInProgress;
-	// jobs that want to submit but can't due to submitLimit
-	List<GT3Job> submitsQueued;
-	// jobs allowed to submit under jobLimit
-	List<GT3Job> submitsAllowed;
-	// jobs that want to submit but can't due to jobLimit
-	List<GT3Job> submitsWanted;
-	static int probeInterval;
-	static int probeDelay;
-	int submitLimit;		// max number of submit actions
-	int jobLimit;			// max number of submitted jobs
 	static int gahpCallTimeout;
 
 	GahpClient *gahp;

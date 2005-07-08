@@ -69,6 +69,9 @@ class BaseJob
 	void UpdateJobTime( float *old_run_time, bool *old_run_time_dirty );
 	void RestoreJobTime( float old_run_time, bool old_run_time_dirty );
 
+	virtual void NotifyResourceDown() {}
+	virtual void NotifyResourceUp() {}
+
 	ClassAd *jobAd;
 	PROC_ID procID;
 

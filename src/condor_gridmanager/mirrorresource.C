@@ -29,8 +29,6 @@
 #include "mirrorresource.h"
 #include "gridmanager.h"
 
-template class List<MirrorJob>;
-template class Item<MirrorJob>;
 template class HashTable<HashKey, MirrorResource *>;
 template class HashBucket<HashKey, MirrorResource *>;
 
@@ -63,7 +61,6 @@ MirrorResource::MirrorResource( const char *resource_name )
 	: BaseResource( resource_name )
 {
 	scheddPollTid = TIMER_UNSET;
-	registeredJobs = new List<MirrorJob>;
 	mirrorScheddName = strdup( resource_name );
 	gahp = NULL;
 	scheddUpdateActive = false;
@@ -97,11 +94,9 @@ MirrorResource::MirrorResource( const char *resource_name )
 
 MirrorResource::~MirrorResource()
 {
+	ResourcesByName.remove( HashKey( resourceName ) );
 	if ( scheddPollTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( scheddPollTid );
-	}
-	if ( registeredJobs != NULL ) {
-		delete registeredJobs;
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -111,11 +106,6 @@ MirrorResource::~MirrorResource()
 	}
 }
 
-bool MirrorResource::IsEmpty()
-{
-	return registeredJobs->IsEmpty();
-}
-
 void MirrorResource::Reconfig()
 {
 	BaseResource::Reconfig();
@@ -123,7 +113,7 @@ void MirrorResource::Reconfig()
 
 void MirrorResource::RegisterJob( MirrorJob *job, const char *submitter_id )
 {
-	registeredJobs->Append( job );
+	BaseResource::RegisterJob( job );
 
 	if ( submitter_ids.contains( submitter_id ) == false ) {
 		submitter_ids.append( submitter_id );
@@ -139,19 +129,11 @@ void MirrorResource::RegisterJob( MirrorJob *job, const char *submitter_id )
 	}
 }
 
-void MirrorResource::UnregisterJob( MirrorJob *job )
-{
-	registeredJobs->Delete( job );
-
-		// TODO: if this is last job, arrange to delete
-		//   this object
-}
-
 int MirrorResource::DoScheddPoll()
 {
 	int rc;
 
-	if ( registeredJobs->IsEmpty() && scheddUpdateActive == false &&
+	if ( registeredJobs.IsEmpty() && scheddUpdateActive == false &&
 		 scheddStatusActive == false ) {
 			// No jobs, so nothing to poll/update
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );

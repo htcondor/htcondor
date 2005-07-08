@@ -291,9 +291,6 @@ void GlobusJobReconfig()
 	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
 	GlobusJob::setProbeInterval( tmp_int );
 
-	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
-	GlobusResource::setProbeInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	GlobusJob::setGahpCallTimeout( tmp_int );
 	GlobusResource::setGahpCallTimeout( tmp_int );
@@ -837,7 +834,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	resourceDown = false;
 	resourceStateKnown = false;
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
-	myResource->RegisterJob( this, job_already_submitted );
+	myResource->RegisterJob( this );
+	if ( job_already_submitted ) {
+		myResource->AlreadySubmitted( this );
+	}
 
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );

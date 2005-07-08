@@ -34,13 +34,9 @@
 
 #define LOG_FILE_TIMEOUT		300
 
-template class List<GT4Job>;
-template class Item<GT4Job>;
 template class List<ProxyDelegation>;
 template class Item<ProxyDelegation>;
 
-int GT4Resource::probeInterval = 300;	// default value
-int GT4Resource::probeDelay = 15;		// default value
 int GT4Resource::gahpCallTimeout = 300;	// default value
 
 #define HASH_TABLE_SIZE			500
@@ -94,13 +90,6 @@ GT4Resource::GT4Resource( const char *resource_name,
 {
 	initialized = false;
 	proxySubject = strdup( proxy_subject );
-	resourceDown = false;
-	firstPingDone = false;
-	pingTimerId = daemonCore->Register_Timer( 0,
-								(TimerHandlercpp)&GT4Resource::DoPing,
-								"GT4Resource::DoPing", (Service*)this );
-	lastPing = 0;
-	lastStatusChange = 0;
 	delegationTimerId = daemonCore->Register_Timer( 0,
 							(TimerHandlercpp)&GT4Resource::checkDelegation,
 							"GT4REsource::checkDelegation", (Service*)this );
@@ -146,7 +135,8 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 		free( delegationServiceUri );
 	}
 
-	daemonCore->Cancel_Timer( pingTimerId );
+	ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
+
 	daemonCore->Cancel_Timer( delegationTimerId );
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -191,77 +181,9 @@ bool GT4Resource::Init()
 
 void GT4Resource::Reconfig()
 {
-	char *param_value;
-
 	BaseResource::Reconfig();
 
 	gahp->setTimeout( gahpCallTimeout );
-
-	submitLimit = -1;
-	param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE" );
-	if ( param_value == NULL ) {
-		// Check old parameter name
-		param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS" );
-	}
-	if ( param_value != NULL ) {
-		char *tmp1;
-		char *tmp2;
-		StringList limits( param_value );
-		limits.rewind();
-		if ( limits.number() > 0 ) {
-			submitLimit = atoi( limits.next() );
-			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
-				if ( strcmp( tmp1, resourceName ) == 0 ) {
-					submitLimit = atoi( tmp2 );
-				}
-			}
-		}
-		free( param_value );
-	}
-	if ( submitLimit <= 0 ) {
-		submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
-	}
-
-	jobLimit = -1;
-	param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
-	if ( param_value != NULL ) {
-		char *tmp1;
-		char *tmp2;
-		StringList limits( param_value );
-		limits.rewind();
-		if ( limits.number() > 0 ) {
-			jobLimit = atoi( limits.next() );
-			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
-				if ( strcmp( tmp1, resourceName ) == 0 ) {
-					jobLimit = atoi( tmp2 );
-				}
-			}
-		}
-		free( param_value );
-	}
-	if ( jobLimit <= 0 ) {
-		jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
-	}
-
-	// If the jobLimit was widened, move jobs from Wanted to Allowed and
-	// add them to Queued
-	while ( submitsAllowed.Length() < jobLimit &&
-			submitsWanted.Length() > 0 ) {
-		GT4Job *wanted_job = submitsWanted.Head();
-		submitsWanted.Delete( wanted_job );
-		submitsAllowed.Append( wanted_job );
-//		submitsQueued.Append( wanted_job );
-		wanted_job->SetEvaluateState();
-	}
-
-	// If the submitLimit was widened, move jobs from Queued to In-Progress
-	while ( submitsInProgress.Length() < submitLimit &&
-			submitsQueued.Length() > 0 ) {
-		GT4Job *queued_job = submitsQueued.Head();
-		submitsQueued.Delete( queued_job );
-		submitsInProgress.Append( queued_job );
-		queued_job->SetEvaluateState();
-	}
 }
 
 const char *GT4Resource::CanonicalName( const char *name )
@@ -293,34 +215,13 @@ const char *GT4Resource::HashName( const char *resource_name,
 	return hash_name.Value();
 }
 
-void GT4Resource::RegisterJob( GT4Job *job, bool already_submitted )
-{
-	registeredJobs.Append( job );
-
-	if ( already_submitted ) {
-		submitsAllowed.Append( job );
-	}
-
-	if ( firstPingDone == true ) {
-		if ( resourceDown ) {
-			job->NotifyResourceDown();
-		} else {
-			job->NotifyResourceUp();
-		}
-	}
-}
-
 void GT4Resource::UnregisterJob( GT4Job *job )
 {
-	CancelSubmit( job );
-	registeredJobs.Delete( job );
-	pingRequesters.Delete( job );
-
 	if ( job->delegatedCredentialURI != NULL ) {
 		bool delete_deleg = true;
 		GT4Job *next_job;
 		registeredJobs.Rewind();
-		while ( (next_job = registeredJobs.Next()) != NULL ) {
+		while ( (next_job = (GT4Job*)registeredJobs.Next()) != NULL ) {
 			if ( strcmp( job->delegatedCredentialURI,
 						 next_job->delegatedCredentialURI ) == 0 ) {
 				delete_deleg = false;
@@ -355,119 +256,8 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 		}
 	}
 
-	if ( IsEmpty() ) {
-		ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
-		delete this;
-	}
-}
-
-void GT4Resource::RequestPing( GT4Job *job )
-{
-	pingRequesters.Append( job );
-
-	daemonCore->Reset_Timer( pingTimerId, 0 );
-}
-
-bool GT4Resource::RequestSubmit( GT4Job *job )
-{
-	bool already_allowed = false;
-	GT4Job *jobptr;
-
-	submitsQueued.Rewind();
-	while ( submitsQueued.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			return false;
-		}
-	}
-
-	submitsInProgress.Rewind();
-	while ( submitsInProgress.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			return true;
-		}
-	}
-
-	submitsWanted.Rewind();
-	while ( submitsWanted.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			return false;
-		}
-	}
-
-	submitsAllowed.Rewind();
-	while ( submitsAllowed.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			already_allowed = true;
-			break;
-		}
-	}
-
-	if ( already_allowed == false ) {
-		if ( submitsAllowed.Length() < jobLimit &&
-			 submitsWanted.Length() > 0 ) {
-			EXCEPT("In GT4Resource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full\n",resourceName);
-		}
-		if ( submitsAllowed.Length() < jobLimit ) {
-			submitsAllowed.Append( job );
-			// proceed to see if submitLimit applies
-		} else {
-			submitsWanted.Append( job );
-			return false;
-		}
-	}
-
-	if ( submitsInProgress.Length() < submitLimit &&
-		 submitsQueued.Length() > 0 ) {
-		EXCEPT("In GT4Resource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n",resourceName);
-	}
-	if ( submitsInProgress.Length() < submitLimit ) {
-		submitsInProgress.Append( job );
-		return true;
-	} else {
-		submitsQueued.Append( job );
-		return false;
-	}
-}
-
-void GT4Resource::SubmitComplete( GT4Job *job )
-{
-	if ( submitsInProgress.Delete( job ) ) {
-		if ( submitsInProgress.Length() < submitLimit &&
-			 submitsQueued.Length() > 0 ) {
-			GT4Job *queued_job = submitsQueued.Head();
-			submitsQueued.Delete( queued_job );
-			submitsInProgress.Append( queued_job );
-			queued_job->SetEvaluateState();
-		}
-	} else {
-		// We only have to check submitsQueued if the job wasn't in
-		// submitsInProgress.
-		submitsQueued.Delete( job );
-	}
-
-	return;
-}
-
-void GT4Resource::CancelSubmit( GT4Job *job )
-{
-	if ( submitsAllowed.Delete( job ) ) {
-		if ( submitsAllowed.Length() < jobLimit &&
-			 submitsWanted.Length() > 0 ) {
-			GT4Job *wanted_job = submitsWanted.Head();
-			submitsWanted.Delete( wanted_job );
-			submitsAllowed.Append( wanted_job );
-//			submitsQueued.Append( wanted_job );
-			wanted_job->SetEvaluateState();
-		}
-	} else {
-		// We only have to check submitsWanted if the job wasn't in
-		// submitsAllowed.
-		submitsWanted.Delete( job );
-	}
-
-	SubmitComplete( job );
-
-	return;
+	BaseResource::UnregisterJob( job );
+		// This object may be deleted now. Don't do anything below here!
 }
 
 void GT4Resource::registerDelegationURI( const char *deleg_uri,
@@ -632,7 +422,7 @@ dprintf(D_FULLDEBUG,"      done\n");
 dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri);
 			GT4Job *next_job;
 			registeredJobs.Rewind();
-			while ( (next_job = registeredJobs.Next()) != NULL ) {
+			while ( (next_job = (GT4Job*)registeredJobs.Next()) != NULL ) {
 				if ( next_job->delegatedCredentialURI != NULL ) {
 					if ( strcmp( next_job->delegatedCredentialURI,
 								 next_deleg->deleg_uri ) == 0 ) {
@@ -647,110 +437,34 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri);
 	return 0;
 }
 
-bool GT4Resource::IsEmpty()
-{
-	return registeredJobs.IsEmpty();
-}
-
-bool GT4Resource::IsDown()
-{
-	return resourceDown;
-}
-
-int GT4Resource::DoPing()
+void GT4Resource::DoPing( time_t& ping_delay, bool& ping_complete,
+						  bool& ping_succeeded )
 {
 	int rc;
-	bool ping_failed = false;
-	GT4Job *job;
-
-	// Don't perform a ping if we have no requesters and the resource is up
-	if ( pingRequesters.IsEmpty() && resourceDown == false &&
-		 firstPingDone == true ) {
-		daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
-		return TRUE;
-	}
-
-	// Don't start a new ping too soon after the previous one. If the
-	// resource is up, the minimum time between pings is probeDelay. If the
-	// resource is down, the minimum time between pings is probeInterval.
-	int delay;
-	if ( resourceDown == false ) {
-		delay = (lastPing + probeDelay) - time(NULL);
-	} else {
-		delay = (lastPing + probeInterval) - time(NULL);
-	}
-	if ( delay > 0 ) {
-		daemonCore->Reset_Timer( pingTimerId, delay );
-		return TRUE;
-	}
-
-	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
 
 	if ( gahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
-		daemonCore->Reset_Timer( pingTimerId, 5 );
-		return TRUE;
+		ping_delay = 5;
+		return;
 	}
 	gahp->setNormalProxy( gahp->getMasterProxy() );
 	if ( PROXY_NEAR_EXPIRED( gahp->getMasterProxy() ) ) {
 		dprintf( D_ALWAYS,"proxy near expiration or invalid, delaying ping\n" );
-		return TRUE;
+		ping_delay = TIMER_NEVER;
+		return;
 	}
+
+	ping_delay = 0;
 
 	rc = gahp->gt4_gram_client_ping( resourceName );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
-		return 0;
-	}
-
-	lastPing = time(NULL);
-
-	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
-		ping_failed = true;
-	}
-
-	if ( ping_failed == resourceDown && firstPingDone == true ) {
-		// State of resource hasn't changed. Notify ping requesters only.
-		dprintf(D_ALWAYS,"resource %s is still %s\n",resourceName,
-				ping_failed?"down":"up");
-
-		pingRequesters.Rewind();
-		while ( pingRequesters.Next( job ) ) {
-			pingRequesters.DeleteCurrent();
-			if ( resourceDown ) {
-				job->NotifyResourceDown();
-			} else {
-				job->NotifyResourceUp();
-			}
-		}
+		ping_complete = false;
+	} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+		ping_complete = true;
+		ping_succeeded = false;
 	} else {
-		// State of resource has changed. Notify every job.
-		dprintf(D_ALWAYS,"resource %s is now %s\n",resourceName,
-				ping_failed?"down":"up");
-
-		resourceDown = ping_failed;
-		lastStatusChange = lastPing;
-
-		firstPingDone = true;
-
-		registeredJobs.Rewind();
-		while ( registeredJobs.Next( job ) ) {
-			if ( resourceDown ) {
-				job->NotifyResourceDown();
-			} else {
-				job->NotifyResourceUp();
-			}
-		}
-
-		pingRequesters.Rewind();
-		while ( pingRequesters.Next( job ) ) {
-			pingRequesters.DeleteCurrent();
-		}
+		ping_complete = true;
+		ping_succeeded = true;
 	}
-
-	if ( resourceDown ) {
-		daemonCore->Reset_Timer( pingTimerId, probeInterval );
-	}
-
-	return 0;
 }
