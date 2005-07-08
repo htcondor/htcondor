@@ -142,10 +142,10 @@ master : $(SRCDIR)\condor_$@.V6\soap_$@Stub.C \
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-cgahp : $(SRCDIR)\condor_$@\soap_$@Stub.C \
-			$(SRCDIR)\condor_$@\gsoap_$@.h
+cgahp : $(SRCDIR)\condor_c-gahp\soap_$@Stub.C \
+			$(SRCDIR)\condor_c-gahp\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
-	cd $(SRCDIR)\condor_$@
+	cd $(SRCDIR)\condor_c-gahp
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
 	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
 	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
@@ -155,10 +155,10 @@ cgahp : $(SRCDIR)\condor_$@\soap_$@Stub.C \
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-cgahp_worker : $(SRCDIR)\condor_cgahp\soap_$@Stub.C \
-			$(SRCDIR)\condor_cgahp\gsoap_$@.h
+cgahp_worker : $(SRCDIR)\condor_c-gahp\soap_$@Stub.C \
+			$(SRCDIR)\condor_c-gahp\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
-	cd $(SRCDIR)\condor_cgahp
+	cd $(SRCDIR)\condor_c-gahp
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
 	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
 	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
