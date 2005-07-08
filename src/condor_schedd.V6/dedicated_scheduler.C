@@ -1741,7 +1741,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 			// No match, abort
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::giveMatches: "
 				 "incorrect ClaimId (%s) given for cluster %d "
-				 "- aborting\n", id, cluster );
+				 "- aborting (expecting: %s)\n", id, cluster, alloc->claim_id );
 			// TODO: other cleanup?
 		free( id );
 		return FALSE;
@@ -1915,6 +1915,14 @@ DedicatedScheduler::sortJobs( void )
 		if( status != IDLE ) {
 			dprintf( D_FULLDEBUG, "Job %d.0 has non idle status (%d).  "
 					 "Ignoring\n", cluster, status );
+			continue;
+		}
+
+		int hosts = 0;
+		job->LookupInteger(ATTR_CURRENT_HOSTS, hosts);
+		if (hosts > 0) {
+			dprintf(D_FULLDEBUG, " job %d is in process of starting, though marked idle, skipping\n",
+					cluster);
 			continue;
 		}
 
