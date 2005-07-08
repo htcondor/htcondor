@@ -744,7 +744,21 @@ int CondorFileTable::close( int fd )
 	// but do not adjust the table.
 
 	if(f && count_file_uses(f)==1) {
-		i->report();
+
+		/* Commented out this next line to prevent eager updates
+			to the shadow of file statistics on a file
+			close. This is to make WantRemoteIO function
+			better when you say False. At checkpoint
+			boundaries and the end of the job will this
+			information get sent (by other parts of the
+			codebase), so it isn't lost. AFAICT, this
+			commenting out doesn't hurt anything, but I'll
+			leave the line of code in in case we ever want
+			to restore eager reporting and or make it do
+			something better when remote io is turned off
+			for a job inside of Condor. */
+/*		i->report(); */
+
 		int result = f->close();
 		if( result!=0 ) {
 			return result;
