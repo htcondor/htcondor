@@ -2298,7 +2298,7 @@ GahpClient::globus_gram_client_callback_allow(
 		int ec = result.argc >= 2 ? atoi(result.argv[1]) : GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 		const char *es = result.argc >= 3 ? result.argv[2] : "???";
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s error_code=%d\n",
-						es,ec);
+				command, es,ec);
 		return ec;
 	} 
 
@@ -2365,7 +2365,7 @@ GahpClient::gt3_gram_client_callback_allow(
 			// Badness !
 		const char *es = result.argc >= 3 ? result.argv[2] : "???";
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",
-						es);
+				command, es);
 		return 1;
 	} 
 
