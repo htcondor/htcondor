@@ -181,21 +181,22 @@ main_init( int argc, char ** const argv )
 	exec_name.sprintf ("%s_worker_thread", c_gahp_name);
 	free (c_gahp_name);
 
-	MyString args;
-	args += exec_name;
-	args += " -f";
-
-	if (ScheddAddr.Length()) {
-		args += " -s ";
-		args += ScheddAddr;
-	}
-
-	if (ScheddPool.Length()) {
-		args += " -P ";
-		args += ScheddPool;
-	}
-
 	for (int i=0; i<NUMBER_WORKERS; i++) {
+		MyString args;
+		args += exec_name;
+		args += " -f";
+
+		if (ScheddAddr.Length()) {
+			args += " -s ";
+			args += ScheddAddr;
+		}
+
+		if (ScheddPool.Length()) {
+			args += " -P ";
+			args += ScheddPool;
+		}
+	
+
 		MyString _fds;
 		_fds.sprintf (" -I %d -O %d",
 					  workers[i].request_pipe[0],
