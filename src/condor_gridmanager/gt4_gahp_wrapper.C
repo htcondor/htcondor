@@ -21,6 +21,7 @@
  *
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
+#include <errno.h>
 #include "condor_parameters.h"
 #include "condor_config.h"
 #include "env.h"
@@ -204,6 +205,7 @@ main( int argc, char* argv[] ) {
 	fflush (stdout);
 	int rc = execv ( java, params );  
 
+	fprintf( stderr, "gt4_gahp_wrapper: execv failed, errno=%d\n", errno );
 
 	for (int i=0; i<nparams; i++) {
 		free (params[i]);
