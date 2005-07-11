@@ -29,9 +29,6 @@
 #include "condorresource.h"
 #include "gridmanager.h"
 
-template class HashTable<HashKey, CondorResource *>;
-template class HashBucket<HashKey, CondorResource *>;
-
 #define HASH_TABLE_SIZE			500
 
 HashTable <HashKey, CondorResource *>

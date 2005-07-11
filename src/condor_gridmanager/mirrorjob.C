@@ -112,9 +112,6 @@ static char *GMStateNames[] = {
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, MirrorJob *>;
-template class HashBucket<HashKey, MirrorJob *>;
-
 HashTable <HashKey, MirrorJob *> MirrorJobsById( HASH_TABLE_SIZE,
 												 hashFunction );
 

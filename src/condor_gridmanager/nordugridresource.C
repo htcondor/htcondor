@@ -29,11 +29,6 @@
 #include "nordugridresource.h"
 #include "gridmanager.h"
 
-template class List<NordugridJob>;
-template class Item<NordugridJob>;
-template class HashTable<HashKey, NordugridResource *>;
-template class HashBucket<HashKey, NordugridResource *>;
-
 #define HASH_TABLE_SIZE			500
 
 HashTable <HashKey, NordugridResource *>

@@ -32,14 +32,10 @@
 #define MIN_PROBE_JOBS_INTERVAL		2
 #define MAX_PROBE_JOBS_INTERVAL		10
 
-template class List<OracleJob>;
-template class Item<OracleJob>;
 template class List<OciSession>;
 template class Item<OciSession>;
 template class HashTable<HashKey, OciSession *>;
 template class HashBucket<HashKey, OciSession *>;
-template class HashTable<HashKey, OracleJob *>;
-template class HashBucket<HashKey, OracleJob *>;
 
 #define HASH_TABLE_SIZE			500
 

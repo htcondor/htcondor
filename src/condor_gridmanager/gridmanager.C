@@ -73,12 +73,14 @@ struct JobType
 List<JobType> jobTypes;
 
 // Stole these out of the schedd code
+static
 int procIDHash( const PROC_ID &procID, int numBuckets )
 {
 	//dprintf(D_ALWAYS,"procIDHash: cluster=%d proc=%d numBuck=%d\n",procID.cluster,procID.proc,numBuckets);
 	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
 }
 
+static
 bool operator==( const PROC_ID a, const PROC_ID b)
 {
 	return a.cluster == b.cluster && a.proc == b.proc;
@@ -104,14 +106,10 @@ HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( HASH_TABLE_SIZE,
 HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
 														  procIDHash );
 
-template class HashTable<PROC_ID, BaseJob *>;
-template class HashBucket<PROC_ID, BaseJob *>;
 template class HashTable<PROC_ID, VacateRequest>;
 template class HashBucket<PROC_ID, VacateRequest>;
 template class HashTable<PROC_ID, JobStatusRequest>;
 template class HashBucket<PROC_ID, JobStatusRequest>;
-template class List<BaseJob>;
-template class Item<BaseJob>;
 template class List<JobType>;
 template class Item<JobType>;
 

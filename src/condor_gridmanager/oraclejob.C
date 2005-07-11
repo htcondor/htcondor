@@ -81,9 +81,6 @@ static char *GMStateNames[] = {
 
 #define ATTR_ORACLE_JOB_RUN_PHASE "OracleJobRunPhase"
 
-template class HashTable<HashKey, OracleJob *>;
-template class HashBucket<HashKey, OracleJob *>;
-
 HashTable <HashKey, OracleJob *> JobsByRemoteId( HASH_TABLE_SIZE,
 												 hashFunction );
 

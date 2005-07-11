@@ -29,9 +29,6 @@
 #include "mirrorresource.h"
 #include "gridmanager.h"
 
-template class HashTable<HashKey, MirrorResource *>;
-template class HashBucket<HashKey, MirrorResource *>;
-
 #define HASH_TABLE_SIZE			500
 
 HashTable <HashKey, MirrorResource *>

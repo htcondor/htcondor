@@ -113,9 +113,6 @@ static bool WriteGT3SubmitFailedEventToUserLog( ClassAd *job_ad,
 static bool WriteGT3ResourceUpEventToUserLog( ClassAd *job_ad );
 static bool WriteGT3ResourceDownEventToUserLog( ClassAd *job_ad );
 
-template class HashTable<HashKey, GT3Job *>;
-template class HashBucket<HashKey, GT3Job *>;
-
 HashTable <HashKey, GT3Job *> GT3JobsByContact( HASH_TABLE_SIZE,
 												hashFunction );
 

@@ -104,9 +104,6 @@ static char *GMStateNames[] = {
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, CondorJob *>;
-template class HashBucket<HashKey, CondorJob *>;
-
 HashTable <HashKey, CondorJob *> CondorJobsById( HASH_TABLE_SIZE,
 												 hashFunction );
 

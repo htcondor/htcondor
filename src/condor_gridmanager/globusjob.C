@@ -164,8 +164,6 @@ struct OrphanCallback_t {
 	int errorcode;
 };
 
-template class HashTable<HashKey, GlobusJob *>;
-template class HashBucket<HashKey, GlobusJob *>;
 template class List<OrphanCallback_t>;
 template class Item<OrphanCallback_t>;
 

@@ -43,16 +43,6 @@
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, Proxy *>;
-template class HashBucket<HashKey, Proxy *>;
-template class HashTable<HashKey, ProxySubject *>;
-template class HashBucket<HashKey, ProxySubject *>;
-template class List<Proxy>;
-template class Item<Proxy>;
-
-
-template class SimpleList<MyProxyEntry*>;
-
 
 //template class HashTable<HashKey, MyProxyManager *>;
 //template class HashBucket<HashKey, MyProxyManager *>;

@@ -42,9 +42,6 @@ bool GlobusResource::enableGridMonitor = false;
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, GlobusResource *>;
-template class HashBucket<HashKey, GlobusResource *>;
-
 HashTable <HashKey, GlobusResource *>
     GlobusResource::ResourcesByName( HASH_TABLE_SIZE,
 									 hashFunction );

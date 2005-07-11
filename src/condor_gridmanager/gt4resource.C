@@ -41,9 +41,6 @@ int GT4Resource::gahpCallTimeout = 300;	// default value
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, GT4Resource *>;
-template class HashBucket<HashKey, GT4Resource *>;
-
 HashTable <HashKey, GT4Resource *>
     GT4Resource::ResourcesByName( HASH_TABLE_SIZE,
 								  hashFunction );

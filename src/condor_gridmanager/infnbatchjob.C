@@ -94,9 +94,6 @@ static char *GMStateNames[] = {
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, INFNBatchJob *>;
-template class HashBucket<HashKey, INFNBatchJob *>;
-
 HashTable <HashKey, INFNBatchJob *> INFNBatchJobsById( HASH_TABLE_SIZE,
 													   hashFunction );
 

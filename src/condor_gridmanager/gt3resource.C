@@ -34,9 +34,6 @@
 
 #define LOG_FILE_TIMEOUT		300
 
-template class HashTable<HashKey, GT3Resource *>;
-template class HashBucket<HashKey, GT3Resource *>;
-
 int GT3Resource::gahpCallTimeout = 300;	// default value
 
 #define HASH_TABLE_SIZE			500

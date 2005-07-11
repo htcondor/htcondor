@@ -129,9 +129,6 @@ static bool WriteGT4SubmitFailedEventToUserLog( ClassAd *job_ad,
 static bool WriteGT4ResourceUpEventToUserLog( ClassAd *job_ad );
 static bool WriteGT4ResourceDownEventToUserLog( ClassAd *job_ad );
 
-template class HashTable<HashKey, GT4Job *>;
-template class HashBucket<HashKey, GT4Job *>;
-
 #define HASH_TABLE_SIZE			500
 
 HashTable <HashKey, GT4Job *> GT4JobsByContact( HASH_TABLE_SIZE,

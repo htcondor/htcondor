@@ -109,9 +109,6 @@ static char *GMStateNames[] = {
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, NordugridJob *>;
-template class HashBucket<HashKey, NordugridJob *>;
-
 HashTable <HashKey, NordugridJob *> JobsByRemoteId( HASH_TABLE_SIZE,
 													hashFunction );
 

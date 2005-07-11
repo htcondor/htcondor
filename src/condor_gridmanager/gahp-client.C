@@ -36,17 +36,6 @@
 #include "gridmanager.h"
 
 
-#ifndef WIN32
-	// Explicit template instantiation.  Sigh.
-	template class HashTable<int,GahpClient*>;
-	template class ExtArray<Gahp_Args*>;
-	template class Queue<int>;
-template class HashTable<HashKey, GahpServer *>;
-template class HashBucket<HashKey, GahpServer *>;
-template class HashTable<HashKey, GahpProxyInfo *>;
-template class HashBucket<HashKey, GahpProxyInfo *>;
-#endif	
-
 #define NULLSTRING "NULL"
 #define GAHP_PREFIX "GAHP:"
 #define GAHP_PREFIX_LEN 5
