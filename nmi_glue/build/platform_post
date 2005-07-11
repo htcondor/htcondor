@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.6 2005-03-01 17:56:37 parag Exp $
+# $Id: platform_post,v 1.1.2.7 2005-07-11 21:28:08 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -12,6 +12,16 @@
 # permissions, we'll have to use this hack. :(
 
 system("chmod a+r *");
+
+# until we do a big day of reckoning for condor_tests and win32, we
+# know all the current test infrastructure will fail on that
+# platform.  so, for now, just exit success without submitting a test
+# job on win32...
+if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+    print "NOT submitting tests for windows\n";
+    exit 0;
+}
+
 
 my $tag = $ENV{NMI_tag};
 my $module = $ENV{NMI_module};
