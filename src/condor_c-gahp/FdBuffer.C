@@ -42,68 +42,23 @@ FdBuffer::FdBuffer() {
 
 
 MyString *
-FdBuffer::ReadNextLineFromBuffer () {
-	if (!HasNextLineInBuffer())
-		return NULL;
-
-    const int len = buffer.Length();
-	const char * chars = buffer.Value();
-	int i=0;
-
-	for (i=0; i<len; i++) {
-		if (chars[i] == '\\') {
-			i++;	// skip the next char, since it was escaped
-			continue;
-		}
-
-		if (buffer[i] == '\n') {
-			int end_char = i-1;
-			if (i != 0 && buffer[i-1] == '\r')		// if command is terminated w '\r\n'
-				end_char--;
-
-			// "Pop" the line
-			MyString * result = new MyString ((MyString)buffer.Substr (0,end_char));
-
-			// Shorten the buffer
-            buffer=buffer.Substr (i+1, len);
-
-			newlineCount--;
-
-			return result;
-		}
-	}
-
-	// Haven't found \n yet...
-	return NULL;
-}
-
-int
-FdBuffer::HasNextLineInBuffer() {
-	if (newlineCount > 0)
-		return TRUE;
-
-	return FALSE;
-}
-
-MyString *
 FdBuffer::GetNextLine () {
-
-
-	// First try buffer
-	// We should always check the buffer first, b/c otherwise
-	// the select() on the underlying fd might keep blocking
-	// even though there are commands in the buffer
-	MyString * result = ReadNextLineFromBuffer();
-
-
-	if (result == NULL) {
+	MyString * result = NULL;
+	
 		// Read another byte from fd
 		// we only read one at a time to avoid blocking
 
-		char buff;
+	char buff;
+	if (read (this->fd, &buff, 1) > 0) {
 
-		if (read (this->fd, &buff, 1) > 0) {
-
+		if (buff == '\n' && !last_char_was_escape) {
+					// We got a completed line!
+			newlineCount++;
+			result = new MyString(buffer);
+			buffer = "";
+		} else if (buff == '\r' && !last_char_was_escape) {
+				// Ignore \r
+		} else {
 			buffer += buff;
 
 			if (buff == '\\') {
@@ -111,19 +66,15 @@ FdBuffer::GetNextLine () {
 			}
 			else {
 				last_char_was_escape = false;
-
-				if (buff == '\n' && !last_char_was_escape) {
-						// We got a completed line!
-					newlineCount++;
-					result = ReadNextLineFromBuffer();
-				}
-			} 
-		} else {
-			dprintf (D_ALWAYS, "Read 0 bytes from fd %d ==> fd must be closed\n", this->fd);
+			}
+		} 
+	} else {
+		dprintf (D_ALWAYS, 
+				 "Read 0 bytes from fd %d ==> fd must be closed\n", 
+				 this->fd);
 			// If the select (supposedly) triggered BUT we can't read anything
 			// the stream must have been closed
-			error = TRUE;
-		}
+		error = TRUE;
 	}
 
 	return result;

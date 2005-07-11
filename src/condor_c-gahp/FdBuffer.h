@@ -61,8 +61,6 @@ protected:
 	int error;
 	bool last_char_was_escape;
 
-	MyString * ReadNextLineFromBuffer();
-	int HasNextLineInBuffer();
 
 };
 #endif
