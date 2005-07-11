@@ -771,16 +771,11 @@ All of the commands in the submit description file are case insensitive,
 \emph{except} for the ClassAd attribute string values.
 ClassAds attribute names are
 case insensitive, but ClassAd string
-values are always \emph{case sensitive}.
-The correct specification for an architecture is
-\begin{verbatim}
-        requirements = arch == "ALPHA"
-\end{verbatim}
-so an accidental specification of
-\begin{verbatim}
-        requirements = arch == "alpha"
-\end{verbatim}
-will not work due to the incorrect case.
+values are \emph{case preserving}.
+
+Note that the comparison operators (<, >, <=, >=, ==) compare strings
+case insensitively.  The special comparison operators =?= and =!= compare
+strings case sensitively.
 
 The allowed
 ClassAd attributes are those 

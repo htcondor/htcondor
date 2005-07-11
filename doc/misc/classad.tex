@@ -221,6 +221,11 @@ if either of their operands have these exceptional values.
 		\item The comparison operators \verb@==@, \verb@!=@, \verb@<=@, 
 		\verb@<@, \verb@>=@ and \verb@>@ operate on integers, reals and strings.
 
+		\item String comparisons are case insensitive for most operators.  The only
+		exceptions are the operators \verb@=?=@ and \verb@=!=@, which do case sensitive
+		comparisons assuming both sides are strings.
+
+
 		\item Comparisons are carried out in the same type as both operands,
 		and type promotions from integers to reals are performed if one operand
 		is a real, and the other an integer.  Strings may not be converted to
