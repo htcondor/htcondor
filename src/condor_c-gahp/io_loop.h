@@ -26,6 +26,7 @@
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h" // For Stream decl
+#include "FdBuffer.h"
 
 #define GAHP_COMMAND_JOB_SUBMIT "CONDOR_JOB_SUBMIT"
 #define GAHP_COMMAND_JOB_REMOVE "CONDOR_JOB_REMOVE"
@@ -52,6 +53,7 @@
 #define GAHP_RESULT_ERROR "E"
 #define GAHP_RESULT_FAILURE "F"
 
+
 struct inter_thread_io_t {
   int request_pipe[2];
   int result_pipe[2];
@@ -77,10 +79,29 @@ int verify_class_ad (const char *);
 int verify_constraint (const char * s);
 int verify_number_args (const int, const int);
 
-void queue_request (const char * request);
-int flush_next_request();
+void flush_request (int worker_id, const char * request);
+int flush_pending_requests();
 
 int worker_thread_reaper (Service*, int pid, int exit_status);
 
+class Worker : public Service {
+ public:
+	void Init (int _id) { id = _id; }
+
+	int result_handler (int) {
+		return result_pipe_handler(id);
+	}
+				   
+	FdBuffer request_buffer;
+	FdBuffer result_buffer;
+
+	int result_pipe[2];
+	int request_pipe[2];
+
+    int flush_request_tid;
+	int pid;
+
+	int id;
+};
 
 #endif

@@ -32,12 +32,11 @@
 #include "globus_utils.h"
 
 
+
 const char * version = "$GahpVersion 2.0.1 Jun 27 2005 Condor\\ GAHP $";
 
 
 char *mySubSystem = "C_GAHP";	// used by Daemon Core
-int result_pipe_in_fd = 0;
-int request_pipe_out_fd = 0;
 
 
 int async_mode = 0;
@@ -50,16 +49,19 @@ StringList result_list;
 
 // pipe buffers
 FdBuffer stdin_buffer; 
-FdBuffer result_buffer;
 
-FdBuffer request_buffer;
-
-// true iff worker thread is ready to receive more requests
-bool worker_thread_ready = false;
-
-// Queue for pending commands to worker thread
-//template class SimpleList<char *>;
-StringList pending_request_list;
+// Each of these represent a thread that does the
+// actual work of communicating with the SchedD
+//
+// Currently workers[1] handles STAGE_IN requests,
+// workers[0] does everything else
+//
+// This is done so that the GAHP is not tied up
+// while doing file staging. The SchedD also
+// forks a file transfer thread, so it's not tied
+// up either.
+#define NUMBER_WORKERS 2
+Worker workers[NUMBER_WORKERS];
 
 // this appears at the bottom of this file
 extern "C" int display_dprintf_header(FILE *fp);
@@ -121,52 +123,57 @@ main_init( int argc, char ** const argv )
 	Register();
 	Reconfig();
 
-		// Create inter-process pipes
-	int request_pipe[2];
-	int result_pipe[2];
-
-		// The IO (this) process cannot block, otherwise it's poosible
-		// to create deadlock between these two pipes
-	if (daemonCore->Create_Pipe (request_pipe, true, true) == FALSE ||
-		daemonCore->Create_Pipe (result_pipe, true) == FALSE) {
-		return -1;
-	}
-
-	request_pipe_out_fd = request_pipe[1];
-	result_pipe_in_fd = result_pipe[0];
-
-	request_buffer.setFd (request_pipe_out_fd);
 	stdin_buffer.setFd (dup(STDIN_FILENO));
-	result_buffer.setFd (result_pipe_in_fd);
 
-		// Register pipes
 	(void)daemonCore->Register_Pipe (stdin_buffer.getFd(),
 									 "stdin pipe",
 									 (PipeHandler)&stdin_pipe_handler,
 									 "stdin_pipe_handler");
 
-	(void)daemonCore->Register_Pipe (result_buffer.getFd(),
-									 "result pipe",
-									 (PipeHandler)&result_pipe_handler,
-									 "result_pipe_handler");
+
+	for (int i=0; i<NUMBER_WORKERS; i++) {
+
+		workers[i].Init(i);
+
+			// The IO (this) process cannot block, otherwise it's poosible
+			// to create deadlock between these two pipes
+		if (daemonCore->Create_Pipe (workers[i].request_pipe, true, true) == FALSE ||
+			daemonCore->Create_Pipe (workers[i].result_pipe, true) == FALSE) {
+			return -1;
+		}
+
+		workers[i].request_buffer.setFd (workers[i].request_pipe[1]);
+		workers[i].result_buffer.setFd (workers[i].result_pipe[0]);
+
+		(void)daemonCore->Register_Pipe (workers[i].result_buffer.getFd(),
+										 "result pipe",
+										 (PipeHandlercpp)&Worker::result_handler,
+										 "Worker::result_handler",
+										 (Service*)&workers[i]);
+
+
+	}
+
+	// Create child process
+	// Register the reaper for the child process
+	int reaper_id =
+		daemonCore->Register_Reaper(
+							"worker_thread_reaper",
+							(ReaperHandler)&worker_thread_reaper,
+							"worker_thread_reaper",
+							NULL);
+
 
 
 	flush_request_tid = 
 		daemonCore->Register_Timer (1,
 									1,
-									(TimerHandler)&flush_next_request,
-									"flush_next_request",
+									(TimerHandler)&flush_pending_requests,
+									"flush_pending_requests",
 									NULL);
 									
 									  
 
-		// Create child process
-		// Register the reaper for the child process
-	int reaper_id =
-		daemonCore->Register_Reaper(
-				"worker_thread_reaper",
-				(ReaperHandler)worker_thread_reaper,
-				"worker_thread_reaper");
 
 	char * c_gahp_name = param ("CONDOR_GAHP");
 	ASSERT (c_gahp_name);
@@ -188,45 +195,47 @@ main_init( int argc, char ** const argv )
 		args += ScheddPool;
 	}
 
-	MyString _fds;
-	_fds.sprintf (" -I %d -O %d",
-				  request_pipe[0],
-				  result_pipe[1]);
+	for (int i=0; i<NUMBER_WORKERS; i++) {
+		MyString _fds;
+		_fds.sprintf (" -I %d -O %d",
+					  workers[i].request_pipe[0],
+					  workers[i].result_pipe[1]);
 
-	args += _fds;
+		args += _fds;
 
-	dprintf (D_FULLDEBUG, "Staring worker: %s\n", args.Value());
+		dprintf (D_FULLDEBUG, "Staring worker # %d: %s\n", i, args.Value());
 
-	// We want IO thread to inherit these ends of pipes
-	int inherit_fds[3];
-	inherit_fds[0] = request_pipe[0];
-	inherit_fds[1] = result_pipe[1];
-	inherit_fds[2] = 0;
+			// We want IO thread to inherit these ends of pipes
+		int inherit_fds[3];
+		inherit_fds[0] = workers[i].request_pipe[0];
+		inherit_fds[1] = workers[i].result_pipe[1];
+		inherit_fds[2] = 0;
 
-	int child_pid = 
-		daemonCore->Create_Process (
-								exec_name.Value(),
-								args.Value(),
-								PRIV_UNKNOWN,
-								reaper_id,
-								FALSE,			// no command port
-								NULL,
-								NULL,
-								FALSE,
-								NULL,
-								NULL,
-								0,				// nice inc
-								0,				// job opt mask
-								inherit_fds);
+		workers[i].pid = 
+			daemonCore->Create_Process (
+										exec_name.Value(),
+										args.Value(),
+										PRIV_UNKNOWN,
+										reaper_id,
+										FALSE,			// no command port
+										NULL,
+										NULL,
+										FALSE,
+										NULL,
+										NULL,
+										0,				// nice inc
+										0,				// job opt mask
+										inherit_fds);
 
-	if (child_pid > 0) {
-		close (STDIN_FILENO);
-		close (request_pipe[0]);
-		close (result_pipe[1]);
+
+		if (workers[i].pid > 0) {
+			close (workers[i].request_pipe[0]);
+			close (workers[i].result_pipe[1]);
+		}
 	}
+	
+	close(STDIN_FILENO);
 			
-	worker_thread_ready = false;
-
 	// Setup dprintf to display pid
 	DebugId = display_dprintf_header;
 
@@ -319,11 +328,14 @@ stdin_pipe_handler(int pipe) {
 					// INITIALIZE_FROM_FILE (since our worker reads from
 					// the file on every use.
 				gahp_output_return_success();
+			} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
+				flush_request (1, 	// worker for stage in requests
+							   command);
+				gahp_output_return_success(); 
 			} else {
-					// Pass it on to the worker thread
-					// Actually buffer it, until the worker says it's ready
-				gahp_output_return_success();
-				queue_request (command);
+				flush_request (0,	// general worker 
+							   command);
+				gahp_output_return_success(); 
 			}
 			
 			delete [] argv;
@@ -332,18 +344,21 @@ stdin_pipe_handler(int pipe) {
 		}
 		delete line;
 
+	} else if (stdin_buffer.IsError()) {
+		dprintf (D_ALWAYS, "Problem with stdin buffer, exiting\n");
+		DC_Exit (1);
 	}
 
 	return TRUE;
 }
 
 int 
-result_pipe_handler(int pipe) {
+result_pipe_handler(int id) {
 	MyString * line = NULL;
 
 		// Check that we get a full line
 		// if not, intermediate results will be stored in buffer
-	if ((line = result_buffer.GetNextLine()) != NULL) {
+	if ((line = workers[id].result_buffer.GetNextLine()) != NULL) {
 
 		dprintf (D_FULLDEBUG, "Master received:\"%s\"\n", line->Value());
 
@@ -361,7 +376,7 @@ result_pipe_handler(int pipe) {
 		delete line;
 	}
 
-	if (result_buffer.IsError()) {
+	if (workers[id].result_buffer.IsError()) {
 		DC_Exit(1);
 	}
 
@@ -549,89 +564,33 @@ verify_job_id (const char * s) {
 
 
 void
-queue_request (const char * request) {
+flush_request (int worker_id, const char * request) {
+
+	dprintf (D_FULLDEBUG, "Sending %s to worker %d\n", 
+			 request,
+			 worker_id);
+
 	MyString strRequest = request;
 	strRequest += "\n";
 
-	pending_request_list.append (strRequest.Value());
+	workers[worker_id].request_buffer.Write(strRequest.Value());
+
 	daemonCore->Reset_Timer (flush_request_tid, 0, 1);
 }
 
 
-int 
-flush_next_request() {
-	if (request_buffer.IsEmpty() &&
-		pending_request_list.isEmpty()) {
-		return TRUE; //nothing to do
+int flush_pending_requests() {
+	for (int i=0; i<NUMBER_WORKERS; i++) {
+		workers[i].request_buffer.Write();
+
+		if (workers[i].request_buffer.IsError()) {
+			dprintf (D_ALWAYS, "Worker %d request buffer error, exiting...\n", i);
+			DC_Exit (1);
+		}
 	}
 
-	dprintf (D_FULLDEBUG, "flush_next_request()\n");
-
-	int wrote = 0;
-
-	if (!pending_request_list.isEmpty()) {
-		char * command;
-		pending_request_list.rewind();
-		while ((command = pending_request_list.next ())) {
-
-			dprintf (D_FULLDEBUG, "Sending to worker: %s\n", command);
-			request_buffer.Write (command);
-			if (request_buffer.IsError())
-				break;
-
-			pending_request_list.deleteCurrent();
-
-			if (!request_buffer.IsEmpty())
-				break;
-		} 
-	}
-	else if (!request_buffer.IsEmpty()) {
-		request_buffer.Write();
-	}
-
-	if (request_buffer.IsError()) {
-		dprintf (D_ALWAYS, "Error writing to request buffer, exiting\n");
-		DC_Exit ( 1 );
-		return FALSE;
-	}
-	
 	return TRUE;
 }
-
-/*
-int
-flush_next_request(int fd) {
-	
-	if (!request_buffer.IsEmpty()) {
-		request_buffer.Write();
-		return TRUE;
-	}
-
-	pending_request_list.Rewind();
-	char * _command;
-	if (pending_request_list.Next(_command)) {
-		dprintf (D_FULLDEBUG, "Sending %s to worker\n", _command);
-		MyString command = _command;
-		command += "\n";
-
-		int len = strlen(_command)+1;
-		int numwritten = 
-			write (  fd, command.Value(), strlen (_command)+1);
-		
-		if (len != numwritten) {
-			dprintf (D_ALWAYS, "Warning! Wrote only %d out of %d\n",
-					 numwritten,
-					 len);
-		}
-
-		pending_request_list.DeleteCurrent();
-		free (_command);
-		return TRUE;
-	}
-
-	return FALSE;
-}
-*/
 void
 gahp_output_return (const char ** results, const int count) {
 	int i=0;
@@ -677,14 +636,19 @@ main_config( bool is_full )
 int
 main_shutdown_fast()
 {
-	DC_Exit(0);
+
 	return TRUE;	// to satisfy c++
 }
 
 int
 main_shutdown_graceful()
 {
-	DC_Exit(0);
+	daemonCore->Cancel_And_Close_All_Pipes();
+
+	for (int i=0; i<NUMBER_WORKERS; i++) {
+		daemonCore->Send_Signal (SIGKILL, workers[i].pid);
+	}
+
 	return TRUE;	// to satify c++
 }
 
