@@ -475,7 +475,8 @@ CronJobBase::KillHandler( void )
 
 	// If we're idle, we shouldn't be here.
 	if ( CRON_IDLE == state ) {
-		dprintf( D_ALWAYS, "Cron: Job '%'s already idle '%s'!\n", GetName() );
+		dprintf( D_ALWAYS, "Cron: Job '%s' already idle (%s)!\n", 
+			GetName(), GetPath() );
 		return -1;
 	}
 
