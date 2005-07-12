@@ -28,7 +28,7 @@ BEGIN {
 use lib "$LIBDIR";
 use CondorGlue;
 
-use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify/;
+use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify $opt_remote_declare_args/;
 
 $ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
              . $ENV{PATH};
@@ -43,6 +43,7 @@ GetOptions (
     'buildid=s'       => $opt_buildid,
     'test-src=s'      => $opt_test_src,
     'nmi-glue=s'      => $opt_nmi_glue,
+    'remote_declare_args=s'   => $opt_remote_declare_args,
 );
 
 
@@ -56,6 +57,7 @@ my $RUN_TABLE = "Run";
 my $TASK_TABLE = "Task";
 
 my $notify;
+my $remote_declare_args;
 my %ids;
 my @platforms;
 my $gid;
@@ -74,7 +76,15 @@ if ( defined($opt_notify) ) {
 }
 else {
     $notify = "condor-build\@cs.wisc.edu";
-    #$notify = "bgietzel\@cs.wisc.edu";
+}
+
+# use input remote_declare_args value for the list of tests to run, or default 
+# to quick (all tests complete in 5 minutes or less).
+if ( defined($opt_remote_declare_args) ) {
+    $remote_declare_args = "$opt_remote_declare_args";
+}
+else {
+    $remote_declare_args = "quick";
 }
 
 my $cwd = &getcwd();
@@ -189,7 +199,7 @@ sub generate_cmdfile() {
     print CMDFILE "remote_declare = nmi_glue/test/remote_declare\n";
     # select scope of testsuite run 
     # all takes 30 minutes
-    print CMDFILE "remote_declare_args = quick\n";
+    print CMDFILE "remote_declare_args =  $remote_declare_args\n";
     print CMDFILE "remote_pre = nmi_glue/test/remote_pre\n";
     print CMDFILE "remote_task = nmi_glue/test/remote_task\n";
     print CMDFILE "remote_post = nmi_glue/test/remote_post\n";
@@ -314,6 +324,9 @@ List of users to be notified about the results
 Source to test against
 
 --nmi_glue=<nmi_glue directory for condor containing customised glue>
+
+--remote_declare_args
+List of Condor testsuite tests to run. Defaults to "quick" (all tests run in 5 minutes or less) 
 
 END_USAGE
 }
