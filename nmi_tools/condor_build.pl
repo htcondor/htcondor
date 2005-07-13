@@ -8,6 +8,13 @@ use strict;
 # Currently [5/05] works on grandcentral only but will be extended for more
 # general cases.
 
+# XXX - Example usage: 
+# /home/akarp/projects/workspaces/nmi_submit/condor_build.pl 
+#  --workspace=/home/akarp/projects/workspaces/v67 --platforms=x86_rh_9
+
+# /home/akarp/condor_build.pl 
+#  --workspace=/home/akarp/projects/workspaces/v67 --platforms=x86_rh_9
+
 use Getopt::Long;
 use Cwd;
 use DBI;
@@ -76,6 +83,7 @@ END
 # Generate the cmdfile.
 my $cmdfile = 'condor_cmdfile';
 my $inputs = join ',', @inputs;
+my $platform_post_args = "$user_ws/nmi_glue";
 open CMD, ">$cmdfile" or die "Can't open $cmdfile for writing: $!\n";
 print CMD <<"END";
 project = condor
@@ -91,7 +99,8 @@ remote_declare = nmi_glue/build/remote_declare
 remote_pre = nmi_glue/build/remote_pre
 remote_task = nmi_glue/build/remote_task
 remote_post = nmi_glue/build/remote_post
-platform_post = nmi_glue/build/platform_post
+platform_post = nmi_glue/build/platform_post_new
+platform_post_args=$platform_post_args
 prereqs_x86_rh_7.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15
 prereqs_x86_rh_8.0 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15
 prereqs_x86_rh_9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15
