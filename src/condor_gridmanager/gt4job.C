@@ -327,6 +327,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	char iwd[_POSIX_PATH_MAX];
 	bool job_already_submitted = false;
 	char *error_string = NULL;
+	char *gahp_path = NULL;
 
 	RSL = NULL;
 	callbackRegistered = false;
@@ -385,13 +386,15 @@ GT4Job::GT4Job( ClassAd *classad )
 		if ( jobProxy == NULL ) {
 			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
 					 procID.cluster, procID.proc );
+			error_string = "Failed to acquire proxy";
+			goto error_exit;
 		}
 	} else {
 		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
 				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
 	}
 
-	char *gahp_path = param("GT4_GAHP");
+	gahp_path = param("GT4_GAHP");
 	if ( gahp_path == NULL ) {
 		error_string = "GT4_GAHP not defined";
 		goto error_exit;

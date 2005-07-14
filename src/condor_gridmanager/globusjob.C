@@ -690,6 +690,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		if ( jobProxy == NULL ) {
 			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
 					 procID.cluster, procID.proc );
+			error_string = "Failed to acquire proxy";
+			goto error_exit;
 		}
 		else {
 				// ckireyev: Check for MyProxy server
