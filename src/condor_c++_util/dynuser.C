@@ -310,7 +310,7 @@ bool dynuser::logon_user(){
 			LOGON32_PROVIDER_DEFAULT,	// Logon provider
 			&logon_token)				// And the token to stuff it in.
 			) {
-				dprintf(D_ALWAYS,"LogonUser(%s, ... ) failed with status %d",
+				dprintf(D_ALWAYS,"LogonUser(%s, ... ) failed with status %d\n",
 					accountname,GetLastError());
 				return false;
 		}		
@@ -587,7 +587,7 @@ void dynuser::createaccount() {
 		dprintf(D_ALWAYS, "Account %s already exists!\n",accountname);
 //		EXCEPT("createaccount: User %s already exists",accountname);
 	} else {
-		dprintf(D_ALWAYS, "Account %s creation failed! (err=%d)",accountname,nerr);
+		dprintf(D_ALWAYS, "Account %s creation failed! (err=%d)\n",accountname,nerr);
 	}
 
 }
