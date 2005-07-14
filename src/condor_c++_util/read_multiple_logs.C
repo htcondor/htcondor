@@ -325,6 +325,9 @@ ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
 MyString
 MultiLogFiles::readFileToString(const MyString &strFilename)
 {
+	dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
+				strFilename.Value() );
+
 	FILE *pFile = fopen(strFilename.Value(), "r");
 	if (!pFile) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
@@ -368,6 +371,9 @@ MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		const MyString &directory)
 {
+	dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
+				strSubFilename.Value(), directory.Value() );
+
 	TmpDir		td;
 	if ( directory != "" ) {
 		MyString	errMsg;
@@ -392,7 +398,8 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 
 		// Combine lines with continuation characters.
 	StringList	logicalLines;
-	MyString	combineResult = CombineLines(physicalLines, '\\', logicalLines);
+	MyString	combineResult = CombineLines(physicalLines, '\\',
+				strSubFilename, logicalLines);
 	if ( combineResult != "" ) {
 		return combineResult;
 	}
@@ -464,6 +471,9 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
             const MyString &jobKeyword, const MyString &dirKeyword,
 			StringList &listLogFilenames)
 {
+	dprintf( D_FULLDEBUG, "MultiLogFiles::getJobLogsFromSubmitFiles(%s)\n",
+				strDagFileName.Value() );
+
 	MyString strDagFileContents = readFileToString(strDagFileName);
 	if (strDagFileContents == "") {
 		MyString result = "Unable to read DAG file";
@@ -478,7 +488,8 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 
 		// Combine lines with continuation characters.
 	StringList	logicalLines;
-	MyString	combineResult = CombineLines(physicalLines, '\\', logicalLines);
+	MyString	combineResult = CombineLines(physicalLines, '\\',
+				strDagFileName, logicalLines);
 	if ( combineResult != "" ) {
 		return combineResult;
 	}
@@ -497,7 +508,7 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 			if ( !stricmp(tokens.next(), jobKeyword.Value()) ) {
 
 					// Get the node submit file name.
-				tokens.next(); // Skip <name>
+				const char *nodeName = tokens.next();
 				const char *submitFile = tokens.next();
 				if( !submitFile ) {
 					MyString result = "Improperly-formatted DAG file: "
@@ -527,7 +538,7 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 						strSubFile, directory);
 				if (strLogFilename == "") {
 					MyString result = "No 'log =' value found in submit file "
-								+ strSubFile;
+								+ strSubFile + " for node " + nodeName;
 					dprintf(D_ALWAYS, "MultiLogFiles: %s\n",
 								result.Value());
 					return result;
@@ -587,8 +598,11 @@ MultiLogFiles::getParamFromSubmitLine(MyString &submitLine,
 
 MyString
 MultiLogFiles::CombineLines(StringList &listIn, char continuation,
-		StringList &listOut)
+		const MyString &filename, StringList &listOut)
 {
+	dprintf( D_FULLDEBUG, "MultiLogFiles::CombineLines(%s, %c)\n",
+				filename.Value(), continuation );
+
 	listIn.rewind();
 
 		// Physical line is one line in the file.
@@ -609,8 +623,9 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 			if ( physicalLine ) {
 				logicalLine += physicalLine;
 			} else {
-				MyString result = "Improper DAG file: continuation character "
-							"with no trailing line!";
+				MyString result = MyString("Improper file syntax: ") +
+							"continuation character with no trailing line! (" +
+							logicalLine + ") in file " + filename;
 				dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
 				return result;
 			}

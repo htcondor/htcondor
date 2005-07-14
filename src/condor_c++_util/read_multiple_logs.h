@@ -81,11 +81,12 @@ private:
 		 * continuation character into "logical" lines.
 		 * @param Input string list of "physical" lines.
 		 * @param Continuation character.
+		 * @param Filename (for error messages).
 		 * @param Output string list of "logical" lines.
 		 * @return "" if okay, or else an error message.
 		 */
 	static MyString CombineLines(StringList &listIn, char continuation,
-			StringList &listOut);
+			const MyString &filename, StringList &listOut);
 };
 
 class ReadMultipleUserLogs
