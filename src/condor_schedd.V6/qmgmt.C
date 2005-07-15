@@ -943,7 +943,9 @@ int DestroyProc(int cluster_id, int proc_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 
-	if( (universe == CONDOR_UNIVERSE_PVM) || (universe == CONDOR_UNIVERSE_MPI) ) {
+	if( (universe == CONDOR_UNIVERSE_PVM) || 
+		(universe == CONDOR_UNIVERSE_MPI) ||
+		(universe == CONDOR_UNIVERSE_PARALLEL) ) {
 			// PVM jobs take up a whole cluster.  If we've been ask to
 			// destroy any of the procs in a PVM job cluster, we
 			// should destroy the entire cluster.  This hack lets the
