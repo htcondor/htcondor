@@ -2726,7 +2726,7 @@ SetEnvironment()
 									   "AllowStartupScript" );
 	Env envobject;
 	MyString newenv;
-	char varname[MAXVARNAME];
+    MyString varname;
 	int envlen;
 
 	envobject.GenerateParseMessages();
@@ -2764,10 +2764,10 @@ SetEnvironment()
 			// don't override submit file environment settings
 			// check if environment variable is set in submit file
 			int j;
+            varname = "";
 			for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
-				varname[j] = environ[i][j];
+				varname += environ[i][j];
 			}
-			varname[j] = '\0';
 			MyString existing_val;
 			if (!envobject.getenv(varname,existing_val)) {
 				envobject.Put(environ[i]);
