@@ -29,15 +29,16 @@ package CondorPersonal;
 #
 #	Parameter		Use								Default						Variable stored in
 #	----------------------------------------------------------------------------------------------
-#	condortemplate	Core config file				condor_config_template		$personal_template
-#	condordaemon	daemon list to start			contents of config template $personal_daemons
-#	condorconfig	Name for condor config file		condor_config				$personal_config
-#	condorlocal		Name for condor local config 	condor_config.local			$personal_local
-#	condor			"install" or path to tarball 								$condordistribution
-#	collector	 	Used to define CONDOR_HOST									$condorhost
-#	ports			Select dynamic or normal ports	dynamic						$portchanges	
-#   vms				sets NUM_CPUS NUM_VMS			none
-#	encryption		turns on encryption				none						comma list
+#	condortemplate	Core config file					condor_config_template		$personal_template
+#	condorlocalsrc	Name for condor local config src 								$personal_local_src
+#	condordaemon	daemon list to start				contents of config template $personal_daemons
+#	condorconfig	Name for condor config file			condor_config				$personal_config
+#	condorlocal		Name for condor local config 		condor_config.local			$personal_local
+#	condor			"install" or path to tarball 									$condordistribution
+#	collector	 	Used to define CONDOR_HOST										$condorhost
+#	ports			Select dynamic or normal ports		dynamic						$portchanges	
+#   vms				sets NUM_CPUS NUM_VMS				none
+#	encryption		turns on encryption					none						comma list
 #
 #
 
@@ -63,6 +64,7 @@ BEGIN
 	$personal_template = "condor_config_template";
 	$personal_daemons = "";
 	$personal_local = "condor_config.local";
+	$personal_local_src = "";
 	$portchanges = "dynamic";
 	$DEBUG = 0;
 	$collector_port = "0";
@@ -142,6 +144,7 @@ sub Reset
 	$personal_template = "condor_config_template";
 	$personal_daemons = "";
 	$personal_local = "condor_config.local";
+	$personal_local_src = "";
 
 	$topleveldir = getcwd();
 	$home = $topleveldir;
@@ -298,6 +301,8 @@ sub InstallPersonalCondor
 	my $negotiator;
 	my $condorq = `which condor_q`;
 	my $sbinloc;
+	my $configline = "";
+	my @configfiles;
 
 	if( exists $control{"condor"} )
 	{
@@ -305,7 +310,20 @@ sub InstallPersonalCondor
 		debug( "Install this condor --$condordistribution--\n");
 		if( $condordistribution eq "install" )
 		{
-			debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n");
+			# where is the hosting condor_config file? The one assumed to be based
+			# on a setup with condor_configure.
+			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+			while(<CONFIG>)
+			{
+				chomp;
+				$configline = $_;
+				push @configfiles, $configline;
+			}
+			close(CONFIG);
+			$personal_condor_params{"condortemplate"} = shift @configfiles;
+			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+			#
+			#debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n");
 
 			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
 			{
@@ -356,6 +374,13 @@ sub InstallPersonalCondor
 		}
 		elsif( -e $condordistribution )
 		{
+			# in this option we ought to run condor_configure
+			# to get a current config files but we'll do this
+			# after getting the current condor_config from
+			# the environment we are in as it is supposed to
+			# have been generated this way in the nightly tests
+			# run in the NWO.
+
 			my $res = chdir "$topleveldir";
 			if(! $res)
 			{
@@ -429,13 +454,19 @@ sub TunePersonalCondor
 		$personal_daemons = $control{"condordaemons"};
 	}
 
-	# was a special config file called out?
+	# was a special local config file name called out?
 	if( exists $control{"condorlocal"} )
 	{
 		$personal_local = $control{"condorlocal"};
 	}
 
-	debug( "Proto file is --$personal_template--\n");
+	# was a special local config file src called out?
+	if( exists $control{"condorlocalsrc"} )
+	{
+		$personal_local_src = $control{"condorlocalsrc"};
+	}
+
+	#debug( "Proto file is --$personal_template--\n");
 
 	$personalmaster = "$topleveldir/sbin/condor_master";
 
@@ -444,6 +475,7 @@ sub TunePersonalCondor
 
 	my $line;
 	#system("ls;pwd");
+	#print "***************** opening $personal_template as config file template *****************\n";
 	open(TEMPLATE,"<$personal_template")  || die "Can not open template: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n");
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file: $!\n";
@@ -453,19 +485,19 @@ sub TunePersonalCondor
 		chomp($line);
 		if( $line =~ /^RELEASE_DIR\s*=.*/ )
 		{
-			debug( "-----------$line-----------\n");
+			#debug( "-----------$line-----------\n");
 			$personal_config_changes{"RELEASE_DIR"} = "RELEASE_DIR = $localdir\n";
 			print NEW "RELEASE_DIR = $localdir\n";
 		}
 		elsif( $line =~ /^LOCAL_DIR\s*=.*/ )
 		{
-			debug( "-----------$line-----------\n");
+			#debug( "-----------$line-----------\n");
 			$personal_config_changes{"LOCAL_DIR"} = "LOCAL_DIR = $topleveldir\n";
 			print NEW "LOCAL_DIR = $topleveldir\n";
 		}
 		elsif( $line =~ /^LOCAL_CONFIG_FILE\s*=.*/ )
 		{
-			debug( "-----------$line-----------\n");
+			#debug( "-----------$line-----------\n");
 			$personal_config_changes{"LOCAL_DIR"} = "LOCAL_DIR = $topleveldir\n";
 			print NEW "LOCAL_CONFIG_FILE = $topleveldir/$personal_local\n";
 		}
@@ -491,6 +523,23 @@ sub TunePersonalCondor
 	}
 
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
+	if($personal_local_src ne "")
+	{
+		#print "******************** Must seed condor_config.local <<$personal_local_src>> ************************\n";
+		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
+		while(<LOCSRC>)
+		{
+			chomp;
+			$line = $_;
+			print NEW "$line\n";
+		}
+		# now make sure we have the local dir we want after the generic .local file is seeded in
+		$line = $personal_config_changes{"LOCAL_DIR"};
+		print NEW "$line\n";
+		# and a lock file we like
+		print NEW "LOCK = \$(LOG)/main_lock\n";
+		close(LOCSRC);
+	}
 
 	if($personal_daemons ne "")
 	{
@@ -510,6 +559,8 @@ sub TunePersonalCondor
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
 		print NEW "CONDOR_HOST = $condorhost\n";
 		print NEW "START = TRUE\n";
+		print NEW "SCHEDD_INTERVAL = 30\n";
+		print NEW "UPDATE_INTERVAL = 30\n";
 
 		print NEW "# Condor-C things\n";
 		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
@@ -524,6 +575,8 @@ sub TunePersonalCondor
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST)\n";
 		print NEW "CONDOR_HOST = $condorhost\n";
 		print NEW "START = TRUE\n";
+		print NEW "SCHEDD_INTERVAL = 30\n";
+		print NEW "UPDATE_INTERVAL = 30\n";
 
 		print NEW "# Condor-C things\n";
 		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
@@ -598,7 +651,7 @@ sub StartPersonalCondor
 
 	debug( "Using this path: --$newpath--\n");
 
-	debug( "Want $configfile for config file\n");
+	#debug( "Want $configfile for config file\n");
 
 	#set up to use the existing generated configfile
 	$ENV{CONDOR_CONFIG} = $fullconfig;
