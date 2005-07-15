@@ -33,6 +33,10 @@ The details of each version are described below.
 gt4 grid job had a proxy that couldn't be read properly. Now the job gets
 put on hold.
 
+\item Fixed rare bug that could cause \Condor{submit} to crash when
+  both getenv=true and environment=... were in a submit file and when
+  very large variable names were in the environment. 
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
