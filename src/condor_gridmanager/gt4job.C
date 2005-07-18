@@ -1058,6 +1058,7 @@ int GT4Job::doEvaluateState()
 			}
 			myResource->CancelSubmit( this );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
+				SetJobContact( NULL );
 				gmState = GM_DELETE;
 			} else {
 				// Clear the contact string here because it may not get
