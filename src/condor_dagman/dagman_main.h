@@ -53,7 +53,9 @@ class Dagman {
 	bool paused;
 
 	char* condorSubmitExe;
+	char* condorRmExe;
 	char* storkSubmitExe;
+	char* storkRmExe;
 
 	// number of seconds to wait before consecutive calls to
 	// condor_submit (or dap_submit, etc.)

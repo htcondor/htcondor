@@ -1410,7 +1410,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 	}
 
 	if ( haveCondorJob ) {
-		snprintf( cmd, ARG_MAX, "condor_rm -const \'%s == \"%d\"\'",
+		snprintf( cmd, ARG_MAX, "%s -const \'%s == \"%d\"\'", dm.condorRmExe,
 			  	DAGManJobIdAttrName, dm.DAGManJobId._cluster );
 		debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
 		if ( util_popen( cmd ) ) {
@@ -1429,7 +1429,8 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 			// like we do with Condor; this should be fixed)
 		if( job->JobType() == Job::TYPE_STORK &&
 			job->GetStatus() == Job::STATUS_SUBMITTED ) {
-			snprintf( cmd, ARG_MAX, "stork_rm %d", job->_CondorID._cluster );
+			snprintf( cmd, ARG_MAX, "%s %d", dm.storkRmExe,
+					  job->_CondorID._cluster );
 			debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
 			if ( util_popen( cmd ) ) {
 				debug_printf( DEBUG_VERBOSE, "Error removing Stork job\n");

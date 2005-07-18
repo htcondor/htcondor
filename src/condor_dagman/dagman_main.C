@@ -83,7 +83,9 @@ Dagman::Dagman() :
 	rescue_file (NULL),
 	paused (false),
 	condorSubmitExe (NULL),
+	condorRmExe (NULL),
 	storkSubmitExe (NULL),
+	storkRmExe (NULL),
 	submit_delay (0),
 	max_submit_attempts (0),
 	primaryDagFile (NULL),
@@ -184,11 +186,23 @@ Dagman::Config()
 		condorSubmitExe = strdup( "condor_submit" );
 		ASSERT( condorSubmitExe );
 	}
+	free( condorRmExe );
+	condorRmExe = param( "DAGMAN_CONDOR_RM_EXE" );
+	if( !condorRmExe ) {
+		condorRmExe = strdup( "condor_rm" );
+		ASSERT( condorRmExe );
+	}
 	free( storkSubmitExe );
 	storkSubmitExe = param( "DAGMAN_STORK_SUBMIT_EXE" );
 	if( !storkSubmitExe ) {
 		storkSubmitExe = strdup( "stork_submit" );
 		ASSERT( storkSubmitExe );
+	}
+	free( storkRmExe );
+	storkRmExe = param( "DAGMAN_STORK_RM_EXE" );
+	if( !storkRmExe ) {
+		storkRmExe = strdup( "stork_submit" );
+		ASSERT( storkRmExe );
 	}
 	return true;
 }
