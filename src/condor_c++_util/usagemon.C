@@ -63,7 +63,7 @@ UsageMonitor::Request(double units)
 		time_t forward_time = current_time +
 			(int)(((units/max_units)-1)*interval);
 		dprintf(D_FULLDEBUG, "usagemon: request for %.0f forwarded dated by "
-				"%d seconds\n",	forward_time - current_time);
+				"%ld seconds\n",	units, (long)(forward_time - current_time));
 		// add new history record (list is empty!)
 		rec = new UsageRec(units, forward_time);
 		first = last = rec;
