@@ -33,7 +33,6 @@ enum exit_value {
 	EXIT_ABORT = 2, // condor_rm'ed or hit special abort DAG exit code
 };
 
-
 int main_shutdown_rescue( int exitVal );
 
 class Dagman {
@@ -52,6 +51,10 @@ class Dagman {
     int maxPostScripts;  // max. number of POST scripts to run at once
     char *rescue_file;
 	bool paused;
+
+	char* condorSubmitExe;
+	char* storkSubmitExe;
+
 	// number of seconds to wait before consecutive calls to
 	// condor_submit (or dap_submit, etc.)
     int submit_delay;

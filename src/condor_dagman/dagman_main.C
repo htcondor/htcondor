@@ -82,6 +82,8 @@ Dagman::Dagman() :
 	maxPostScripts (0),
 	rescue_file (NULL),
 	paused (false),
+	condorSubmitExe (NULL),
+	storkSubmitExe (NULL),
 	submit_delay (0),
 	max_submit_attempts (0),
 	primaryDagFile (NULL),
@@ -176,6 +178,18 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %d\n",
 				mungeNodeNames );
 
+	free( condorSubmitExe );
+	condorSubmitExe = param( "DAGMAN_CONDOR_SUBMIT_EXE" );
+	if( !condorSubmitExe ) {
+		condorSubmitExe = strdup( "condor_submit" );
+		ASSERT( condorSubmitExe );
+	}
+	free( storkSubmitExe );
+	storkSubmitExe = param( "DAGMAN_STORK_SUBMIT_EXE" );
+	if( !storkSubmitExe ) {
+		storkSubmitExe = strdup( "stork_submit" );
+		ASSERT( storkSubmitExe );
+	}
 	return true;
 }
 

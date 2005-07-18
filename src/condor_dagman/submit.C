@@ -50,27 +50,14 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
   }
   
   //----------------------------------------------------------------------
-  // Parse Condor's return message for Condor ID or the DAP server's
-  // return message for dap_id.  This desperately needs to be replaced by
-  // a Condor Submit API and a DAP submit API.
+  // Parse submit command output for a Condor/Stork job ID.  This
+  // desperately needs to be replaced by Condor/Stork submit APIs.
   //
   // Typical condor_submit output for Condor v6 looks like:
   //
   //   Submitting job(s).
   //   Logging submit event(s).
   //   1 job(s) submitted to cluster 2267.
-  //
-  // Typical stork_submit output looks like:
-  //
-  // skywalker(6)% stork_submit skywalker 1.dap
-  // connected to skywalker..
-  // sending request:
-  //     [
-  //         dap_type = "transfer";
-  //         src_url = "nest://db16.cs.wisc.edu/test4.txt";
-  //         dest_url = "nest://db18.cs.wisc.edu/test8.txt";
-  //     ]
-  // request accepted by the server and assigned a dap_id: 1
   //----------------------------------------------------------------------
 
   char buffer[UTIL_MAX_LINE_LENGTH];
@@ -80,28 +67,22 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 	// which type of job we have.
   const char *marker = NULL;
   const char *scanfStr = NULL;
-  const char *submitExec = NULL;
 
   if ( type == Job::TYPE_CONDOR ) {
     marker = "cluster";
     scanfStr = "1 job(s) submitted to cluster %d";
-	submitExec = "condor_submit";
-
   } else if ( type == Job::TYPE_STORK ) {
     marker = "assigned id";
-    //scanfStr = "Requests accepted by the server and assigned a dap_id: %d";
     scanfStr = "Request assigned id: %d";
-	submitExec = "stork_submit";
-
   } else {
 	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", type );
 	ASSERT(false);
   }
   
-  // Look for the line containing the word "cluster" (Condor) or "dap_id"
-  // (DAP).  If we get an EOF, then something went wrong with condor_submit
-  // or stork_submit, so  we return false.  The caller of this function can
-  // retry the submit by repeatedly calling this function.
+  // Look for the line containing the word "cluster" (Condor) or
+  // "assigned id" (Stork).  If we get an EOF, then something went
+  // wrong with the submit, so we return false.  The caller of this
+  // function can retry the submit by repeatedly calling this function.
 
   do {
     if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
@@ -125,8 +106,7 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
   }
 
   if ( 1 != sscanf( buffer, scanfStr, &condorID._cluster) ) {
-	  debug_printf( DEBUG_QUIET, "ERROR: %s failed:\n\t%s\n",
-					submitExec, buffer );
+	  debug_printf( DEBUG_QUIET, "ERROR: submit failed:\n\t%s\n", buffer );
 	  return false;
   }
 
@@ -142,8 +122,7 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 
 //-------------------------------------------------------------------------
 static bool
-do_submit( const char *command, CondorID &condorID,
-		Job::job_type_t jobType, const char *exe )
+do_submit( const char *command, CondorID &condorID, Job::job_type_t jobType )
 {
 	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command);
   
@@ -152,9 +131,8 @@ do_submit( const char *command, CondorID &condorID,
 	success = submit_try( command, condorID, jobType );
 
 	if( !success ) {
-	    debug_printf( DEBUG_QUIET, "%s try failed\n", exe );
-		debug_printf( DEBUG_QUIET, "submit command was: %s\n",
-			      command );
+	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
+		debug_printf( DEBUG_QUIET, "submit command was: %s\n", command );
 	}
 
 	return success;
@@ -177,7 +155,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		return false;
 	}
 
-	const char * exe = "condor_submit";
 	MyString prependLines;
 	MyString command;
 
@@ -233,7 +210,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// how big is the DAGParentNodeNames string
 	int DAGParentNodeNamesLen = DAGParentNodeNamesStr.Length();
 		// how many additional chars must we still add to command line
-	int reserveNeeded = strlen( exe ) + strlen( cmdFile ) + 10;
+	int reserveNeeded = strlen( dm.condorSubmitExe ) + strlen( cmdFile ) + 10;
 	int maxCmdLine = _POSIX_ARG_MAX;
 
 		// if we don't have room for DAGParentNodeNames, leave it unset
@@ -246,21 +223,22 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	}
 
 #ifdef WIN32
-	command = MyString(exe) + " " + prependLines + " " + cmdFile;
+	command = MyString( dm.condorSubmitExe ) + " " + prependLines + " " +
+		cmdFile;
 #else
 	// we use 2>&1 to make sure we get both stdout and stderr from command
-	command = MyString(exe) + " " + prependLines + " " + cmdFile + " 2>&1";;
+	command = MyString( dm.condorSubmitExe ) + " " + prependLines + " " +
+		cmdFile + " 2>&1";
 #endif
 	
-	bool success = do_submit( command.Value(), condorID,
-			Job::TYPE_CONDOR, exe );
+	bool success = do_submit( command.Value(), condorID, Job::TYPE_CONDOR );
 
 	return success;
 }
 
 //-------------------------------------------------------------------------
 bool
-dap_submit( const char* cmdFile, CondorID& condorID,
+stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, const char* directory )
 {
 	TmpDir		tmpDir;
@@ -274,14 +252,12 @@ dap_submit( const char* cmdFile, CondorID& condorID,
 	}
 
   MyString command;
-  const char * exe = "stork_submit";
 
   // we use 2>&1 to make sure we get both stdout and stderr from command
   command.sprintf("%s -lognotes \"DAG Node: %s\" %s 2>&1", 
-  	   exe, DAGNodeName, cmdFile );
+				  dm.storkSubmitExe, DAGNodeName, cmdFile );
 
-  bool success = do_submit( command.Value(), condorID, Job::TYPE_STORK,
-  	  exe );
+  bool success = do_submit( command.Value(), condorID, Job::TYPE_STORK );
 
   return success;
 }

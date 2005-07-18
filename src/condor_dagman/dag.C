@@ -1156,7 +1156,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						 job->varValsFromDag, job->GetDirectory() );
     } else if( job->JobType() == Job::TYPE_STORK ) {
 	  job->_submitTries++;
-      submit_success = dap_submit( cmd_file.Value(), condorID,
+      submit_success = stork_submit( dm, cmd_file.Value(), condorID,
 				   job->GetJobName(), job->GetDirectory() );
     } else {
 	    debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", job->JobType() );
