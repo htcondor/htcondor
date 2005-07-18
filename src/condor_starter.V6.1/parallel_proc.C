@@ -105,9 +105,9 @@ ParallelProc::addEnvVars()
 
 		// And put the total number of nodes into CONDOR_NPROC
 	int machine_count;
-	if ( JobAd->LookupInteger( ATTR_MAX_HOSTS, machine_count ) !=  1 ) {
+	if ( JobAd->LookupInteger( ATTR_CURRENT_HOSTS, machine_count ) !=  1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
-				 ATTR_MAX_HOSTS);
+				 ATTR_CURRENT_HOSTS);
 		return 0;
 	}
 
