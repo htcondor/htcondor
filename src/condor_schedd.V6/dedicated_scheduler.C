@@ -2295,12 +2295,18 @@ DedicatedScheduler::spawnJobs( void )
 			  it on, or to make another shadow record and add it to
 			  the RunnableJobQueue, etc.
 			*/
-			// TODO: make sure we set this right for all the procs in
-			// the cluster.  perhaps we need to supliment the data
-			// we're storing in the AllocationNode so that we can do
-			// this...
-        SetAttributeInt( id.cluster, id.proc, ATTR_CURRENT_HOSTS,
-						 allocation->num_resources );
+
+		int total_nodes = 0;
+		for( int procIndex = 0; procIndex < allocation->num_procs; procIndex++) {
+			total_nodes += ((*allocation->matches)[procIndex])->getlast() + 1;
+		}
+
+			// In each proc's classad, set CurrentHosts to be the
+			// total number of nodes for all procs.
+		for( int procIndex = 0; procIndex < allocation->num_procs; procIndex++) {
+			SetAttributeInt( id.cluster, procIndex, ATTR_CURRENT_HOSTS,
+							 total_nodes );
+		}
 
 			// add job to run queue, though the shadow pid is still 0,
 			// since there's not really a shadow just yet.
