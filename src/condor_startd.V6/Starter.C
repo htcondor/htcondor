@@ -841,28 +841,28 @@ Starter::percentCpuUsage( void )
 	if( (ProcAPI::getProcSetInfo(s_pidfamily, s_family_size,
 								 pinfoPTR, status) == PROCAPI_FAILURE) ) {
 
-		if (status == PROCAPI_NOPID) {
-			EXCEPT( "Starter::percentCpuUsage(): A Starter should be running, "
-					"but isn't!" );
-		}
 			// If we failed, it might be b/c our pid family has stale
 			// info, so before we give up for real, recompute and try
 			// once more.
+		printPidFamily(D_FULLDEBUG, 
+			"Starter::percentCpuUsage(): Failed trying to get cpu usage "
+			"with this family: ");  
+
 		recomputePidFamily();
 
-		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-			printPidFamily(D_FULLDEBUG, "Failed once, now using pids: ");  
-		}
+		printPidFamily(D_FULLDEBUG, 
+			"Starter::percentCpuUsage(): Maybe that family was stale, "
+			"attempting recomputed family: ");  
 
 		if( (ProcAPI::getProcSetInfo( s_pidfamily, s_family_size, 
 									  pinfoPTR, status) == PROCAPI_FAILURE) ) {
-			EXCEPT( "Fatal error getting process info for the starter "
-					"and decendents" ); 
+			EXCEPT( "Starter::percentCpuUsage(): Fatal error getting process "
+					"info for the starter and decendents" ); 
 		}
 	}
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		dprintf( D_FULLDEBUG, "Percent CPU usage for those pids is: %f\n", 
-				 s_pinfo.cpuusage );
+		dprintf( D_FULLDEBUG, "Starter::percentCpuUsage(): Percent CPU usage "
+								"for those pids is: %f\n", s_pinfo.cpuusage );
 	}
 	return s_pinfo.cpuusage;
 }

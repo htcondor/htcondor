@@ -115,7 +115,7 @@ ScriptProc::StartJob()
 	attr = name;
 	attr += ATTR_JOB_ARGUMENTS;
 	if( ! JobAd->LookupString(attr.GetCStr(), &tmp) ) {
-		dprintf( D_FULLDEBUG, "%s not found in JobAd\n" );
+		dprintf( D_FULLDEBUG, "%s not found in JobAd\n", attr.GetCStr() );
 	}
 
 	MyString args;

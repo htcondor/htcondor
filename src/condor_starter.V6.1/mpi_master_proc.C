@@ -108,7 +108,7 @@ MPIMasterProc::StartJob()
 		// checking until we find it.
 		
 		
-//checkPortFile();
+	checkPortFile();
 #endif 
 
 	return rval;

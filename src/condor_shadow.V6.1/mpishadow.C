@@ -439,8 +439,6 @@ MPIShadow::startMaster()
 
     dprintf ( D_PROTOCOL, "#3 - Just requested Master resource.\n" );
 
-		//spawnAllComrades();
-
 }
 
 #if (MPI_USES_RSH) 
@@ -793,13 +791,9 @@ MPIShadow::shutDown( int exitReason )
 		/* With many resources, we have to figure out if all of
 		   them are done, and we have to figure out if we need
 		   to kill others.... */
-/* ggt
 	if( !shutDownLogic( exitReason ) ) {
 		return;  // leave if we're not *really* ready to shut down.
 	}
-
-	For now, if any of the nodes exits, we'll shut everyone down
-*/
 
 		/* if we're still here, we can call BaseShadow::shutDown() to
 		   do the real work, which is shared among all kinds of

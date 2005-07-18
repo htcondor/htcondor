@@ -1410,7 +1410,7 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status )
 	int val = 0;
 	priv_state priv;
 	int info_status;
-	int failed = FALSE;
+	int fatal_failure = FALSE;
 
 	// This *could* allocate memory and make pi point to it if 
 	// pi == NULL. It is up to the caller to get rid of it.
@@ -1445,34 +1445,57 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status )
 				if( temp->age > pi->age ) {
 					pi->age = temp->age;
 				}
+
 				break;
 
 			case PROCAPI_FAILURE:
 
-				failed = TRUE;
-
-				switch(status) {
+				switch(info_status) {
 
 					case PROCAPI_NOPID:
+						/* We warn about this error, but ignore it since if 
+							this pid isn't around, we don't compute any
+							usage information for it. */
+
 						dprintf( D_FULLDEBUG, 	
-								"ProcAPI::getProcSetInfo: Pid %d does "
+								"ProcAPI::getProcSetInfo(): Pid %d does "
 					 			"not exist, ignoring.\n", pids[i] );
+
 						break;
 
 					case PROCAPI_PERM:
+						/* The known methods why can happen are that 
+							getPidFamily() returned something bogus, or
+							a race condition is hit that signifies a
+							situation between when a pid was alive in the 
+							pidfamily array when this function was entered,
+							but exited and was replaced by another pid owned
+							by someone else before this for loop got to it
+							in the array. So, we'll warn on it, but it won't
+							be a fatal error. */
+
 						dprintf( D_FULLDEBUG, 
-								"ProcAPI::getProcSetInfo: Permission error "
-					 			"getting info for pid %d.\n", pids[i] );
+								"ProcAPI::getProcSetInfo(): Suspicious "
+								"permission error getting info for pid %lu.\n",
+								(unsigned long)pids[i] );
 						break;
 
 					default:
 						dprintf( D_ALWAYS, 
-							"ProcAPI::getProcSetInfo: Unspecified return "
-					 		"status (%d) from a failed getProcInfo(%d)\n", 
-							info_status, pids[i] );
+							"ProcAPI::getProcSetInfo(): Unspecified return "
+					 		"status (%d) from a failed getProcInfo(%lu)\n", 
+							info_status, (unsigned long)pids[i] );
+
+						fatal_failure = TRUE;
+
 					break;
 				}
 			break;
+
+			default:
+				EXCEPT("ProcAPI::getProcSetInfo(): Invalid return code. "
+						"Programmer error!");
+				break;
 		}
 	}
 
@@ -1482,7 +1505,7 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status )
 
 	set_priv( priv );
 
-	if (failed == TRUE) {
+	if (fatal_failure == TRUE) {
 		// Don't really know how to group the various failures of the above code
 		status = PROCAPI_UNSPECIFIED;
 		return PROCAPI_FAILURE;
