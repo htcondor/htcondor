@@ -241,7 +241,7 @@ LocalUserLog::logJobExit( ClassAd* ad, int exit_reason )
 		return logEvict( ad, false );
         break;
     default:
-		dprintf( D_ALWAYS, "Job exited with unknown reason (%d)!\n" ); 
+		dprintf( D_ALWAYS, "Job exited with unknown reason (%d)!\n",exit_reason); 
     }
 	return false;
 }
