@@ -41,6 +41,10 @@ had a name longer than 63 bytes.
 \item Fixed a bug that could cause \Condor{userprio} to crash if the
 data it gets back from the \Condor{negotiator} is invalid.
 
+\item Fixed a bug where
+\Macro{DEFAULT\_PRIO\_FACTOR} was ignored if 
+\Macro{ACCOUNTANT\_LOCAL\_DOMAIN} was not defined.
+
 \end{itemize}
 
 \noindent Known Bugs:
