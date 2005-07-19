@@ -131,7 +131,7 @@ main_init( int argc, char ** const argv )
 									 "stdin_pipe_handler");
 
 
-	for (int i=0; i<NUMBER_WORKERS; i++) {
+	for (i=0; i<NUMBER_WORKERS; i++) {
 
 		workers[i].Init(i);
 
@@ -181,7 +181,7 @@ main_init( int argc, char ** const argv )
 	exec_name.sprintf ("%s_worker_thread", c_gahp_name);
 	free (c_gahp_name);
 
-	for (int i=0; i<NUMBER_WORKERS; i++) {
+	for (i=0; i<NUMBER_WORKERS; i++) {
 		MyString args;
 		args += exec_name;
 		args += " -f";
