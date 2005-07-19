@@ -90,6 +90,10 @@ SOURCE=..\src\condor_dagman\condor_submit_dag.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_dagman\dagman_multi_dag.C
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\dc_stub.C"
 # End Source File
 # End Target

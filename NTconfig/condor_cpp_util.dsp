@@ -730,6 +730,14 @@ SOURCE="..\src\condor_c++_util\strnewp.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\tmp_dir.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\tmp_dir.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\token_cache.C"
 # End Source File
 # Begin Source File

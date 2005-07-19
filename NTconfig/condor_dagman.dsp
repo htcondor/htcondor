@@ -112,6 +112,14 @@ SOURCE=..\src\condor_dagman\dagman_main.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_dagman\dagman_multi_dag.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_dagman\dagman_multi_dag.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_dagman\dagman_submit.C
 # End Source File
 # Begin Source File

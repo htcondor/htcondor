@@ -88,66 +88,67 @@ LINK32=link.exe
 # Name "condor_cgahp_worker - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\cgahp_common.C
+SOURCE="..\src\condor_c-gahp\cgahp_common.C"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\cgahp_common.h
+SOURCE="..\src\condor_c-gahp\cgahp_common.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\FdBuffer.C
+SOURCE="..\src\condor_c-gahp\FdBuffer.C"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\FdBuffer.h
+SOURCE="..\src\condor_c-gahp\FdBuffer.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\gsoap_cgahp_worker.h
+SOURCE="..\src\condor_c-gahp\gsoap_cgahp_worker.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\schedd_client.C
+SOURCE="..\src\condor_c-gahp\schedd_client.C"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\schedd_client.h
+SOURCE="..\src\condor_c-gahp\schedd_client.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\schedd_client_main.C
+SOURCE="..\src\condor_c-gahp\schedd_client_main.C"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\SchedDCommands.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_c-gahp\SchedDCommands.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_c-gahp\soap_cgahp_workerC.C
+SOURCE="..\src\condor_c-gahp\SchedDCommands.C"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\soap_cgahp_workerH.h
+SOURCE="..\src\condor_c-gahp\SchedDCommands.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\soap_cgahp_workerServer.C
+SOURCE="..\src\condor_c-gahp\soap_cgahp_workerC.C"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\soap_cgahp_workerStub.C
+SOURCE="..\src\condor_c-gahp\soap_cgahp_workerH.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c-gahp\soap_cgahp_workerServer.C"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_c-gahp\soap_cgahp_workerStub.h
+SOURCE="..\src\condor_c-gahp\soap_cgahp_workerStub.C"
+# SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c-gahp\soap_cgahp_workerStub.h"
 # End Source File
 # End Target
 # End Project
