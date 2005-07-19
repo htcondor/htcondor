@@ -5117,8 +5117,8 @@ int DaemonCore::Create_Process(
 		if( (pidTable->lookup(pid, pidinfo) >= 0) ) {
 				// we've already got this pid in our table! we've got
 				// to bail out immediately so our parent can retry.
-			errno = ERRNO_PID_COLLISION;
-			write(errorpipe[1], &errno, sizeof(errno));
+			int child_errno = ERRNO_PID_COLLISION;
+			write(errorpipe[1], &child_errno, sizeof(child_errno));
 			exit(4);
 		}
 			// If we made it here, we didn't find the PID in our
@@ -5412,8 +5412,8 @@ int DaemonCore::Create_Process(
 		if ( priv != PRIV_ROOT ) {
 				// Final check to make sure we're not root anymore.
 			if( getuid() == 0 ) {
-				errno = ERRNO_EXEC_AS_ROOT;
-				write(errorpipe[1], &errno, sizeof(errno));
+				int priv_errno = ERRNO_EXEC_AS_ROOT;
+				write(errorpipe[1], &priv_errno, sizeof(priv_errno));
 				exit(4);
 			}
 		}
@@ -5678,7 +5678,6 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		// we do in the Create_Process() case (see comments there).
 	static int num_pid_collisions = 0;
 	int max_pid_retry = 0;
-	bool had_child_error = false;
 	int errorpipe[2];
     if (pipe(errorpipe) < 0) {
         dprintf( D_ALWAYS,
@@ -5699,8 +5698,8 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
         if( (pidTable->lookup(pid, pidinfo) >= 0) ) {
                 // we've already got this pid in our table! we've got
                 // to bail out immediately so our parent can retry.
-            errno = ERRNO_PID_COLLISION;
-            write(errorpipe[1], &errno, sizeof(errno));
+            int child_errno = ERRNO_PID_COLLISION;
+            write(errorpipe[1], &child_errno, sizeof(child_errno));
 			close( errorpipe[1] );
             exit(4);
         }
@@ -5712,6 +5711,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 			// close the write end of our error pipe
         close( errorpipe[1] );
             // check our error pipe for any problems before the exec
+        bool had_child_error = false;
         int child_errno = 0;
         if( read(errorpipe[0], &child_errno, sizeof(int)) == sizeof(int) ) {
 			had_child_error = true;
@@ -5726,11 +5726,11 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
             waitpid(tid, &child_status, 0);
 			if( child_errno != ERRNO_PID_COLLISION ) {
 				EXCEPT( "Impossible: Create_Thread child_errno (%d) is not "
-						"ERRNO_PID_COLLISION!", (int)tid );
+						"ERRNO_PID_COLLISION!", child_errno );
 			}
 			dprintf( D_ALWAYS, "Create_Thread: child failed because "
 					 "PID %d is still in use by DaemonCore\n",
-					 (int)tid );
+					 tid );
 			num_pid_collisions++;
 			max_pid_retry = param_integer( "MAX_PID_COLLISION_RETRY", 
 										   DEFAULT_MAX_PID_COLLISIONS );
