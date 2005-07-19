@@ -1,0 +1,276 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+
+# This script accepts a user workspace containing Condor sources and externals,
+# and initiates an NMI build job (with subsequent tests).
+
+# Usage: condor_workspace_build <workspace> [--help] [--notify=<address>] [--platforms=<list>]
+
+# Arguments: <workspace> is a (possibly relative) path to the
+# top-level directory containing Condor source (so its immediate
+# children must include config, doc, externals, imake, nmi_glue,
+# NTconfig and src).
+#
+#            [platforms] is a comma-separated list of NMI platforms (default is all platforms)
+#            [list]      show the list of valid platforms and exit
+#            [notify]    is an email address to send notifications to (defaults to the user
+#                                                                      running the script)
+
+# The script currently only works on grandcentral.
+
+# Example usage:
+# condor_workspace_build /home/akarp/projects/workspaces/v67 --platforms=x86_rh_9
+
+# TODO: remove ugly hard-coded prereqs.
+# TODO: refine discover of "all" platforms.
+
+use Getopt::Long;
+use Cwd;
+use DBI;
+use File::Spec;
+
+use vars qw/$opt_platforms $opt_list $opt_notify $opt_help/;
+
+# Database parameters.
+my $database = "history";
+my $username = "nmi";
+my $password = "nmi-nwo-nmi";
+my $DB_CONNECT_STR = "DBI:mysql:database=$database;host=localhost";
+my $RUN_TABLE = "Run";
+my $TASK_TABLE = "Task";
+
+my $usage = "Usage: $0 <workspace> [--help] [--notify=<address>] [--platforms=<list>]\n";
+
+GetOptions('platforms=s' => $opt_platforms,
+	   'notify=s' => $opt_notify,
+	   'list' => $opt_list,
+	   'help' => $opt_help);
+
+if (defined $opt_help) {
+  print $usage;
+  exit 0;
+}
+
+if (defined $opt_list) {
+  print join "\n", get_platforms(), '';
+  exit 0;
+}
+
+if (@ARGV == 0) {
+  print "You must specify a workspace (top-level dir for Condor source)). Exiting...\n";
+  print $usage;
+  exit 1;
+}
+
+my $src_path = $ARGV[0];
+
+my $platforms;
+if (defined $opt_platforms) {
+  $platforms = $opt_platforms;
+} else {
+  $platforms = join ',', get_platforms();
+}
+
+my $whoami = `whoami`;
+chomp $whoami;
+my $notify = (defined $opt_notify)? $opt_notify : $whoami . '@cs.wisc.edu';
+
+my $init_cwd = getcwd;
+my $user_ws = File::Spec->rel2abs($src_path);    # removes trailing slash as needed, sweet!
+die "Invalid directory: $user_ws" unless -d $user_ws;
+
+my $type = 'build';
+$ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:" . $ENV{PATH};
+
+my $workspace = "/tmp/condor_$type." . "$$";
+mkdir $workspace or die "Can't create workspace $workspace: $!\n";
+chdir $workspace or die "Can't chdir($workspace): $!\n";
+
+# Prepare directories to be copied.
+my @inputs;
+opendir D, $user_ws or die "Could not opendir $user_ws: $!";
+while (defined (my $dir = readdir D)) {
+  next if $dir eq '.' or $dir eq '..';
+  next unless -d "$user_ws/$dir";
+  my $input_file = "$dir.scp";
+  open F, ">$input_file" or die "Could not open $input_file: $!";
+  print F <<"END";
+method = scp
+scp_file = $user_ws/$dir
+recursive = true
+END
+  close F or die "Could not close $input_file: $!";
+  push @inputs, $input_file;
+}
+
+# Prepare a customized glue file. Talk about metaprogramming.
+my $suffix = 'nmi_glue/build/.platform_post';
+my $custom = "$user_ws/$suffix";
+open CUSTOM, ">$custom" or die "Can't open $custom for writing: $!\n";
+print CUSTOM <<'END';
+#!/usr/bin/env perl
+
+# we just want to chmod everything in the local directory (the
+# per-platform directory on the submit side, after everything was
+# transfered back) to be world-readable so that other folks can see
+# the results.  until Condor's file transfer mechanism preserves
+# permissions, we'll have to use this hack. :(
+
+my $glue = $ARGV[0];
+
+system("chmod a+r *");
+
+my $tag = $ENV{NMI_tag};
+my $module = $ENV{NMI_module};
+print "From the environment: tag = $tag\n";
+print "From the environment: module = $module\n";
+my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
+chomp $runid;
+
+system("nmi_glue/test_submit/condor_test_submit.pl " .
+       "--buildid=$runid --platform=$ENV{NMI_PLATFORM} " . 
+       " --nmi-glue=$glue --workspace");
+
+my $status = $?;
+if( $status ) {
+    die "condor_test_submit.pl failed with status $status\n";
+}
+
+exit 0;
+END
+
+# Generate the cmdfile.
+my $cmdfile = 'condor_cmdfile';
+my $inputs = join ',', @inputs;
+my $platform_post_args = "$user_ws/nmi_glue";
+open CMD, ">$cmdfile" or die "Can't open $cmdfile for writing: $!\n";
+print CMD <<"END";
+project = condor
+component = condor
+notify = $notify
+private_web_users = condor-team
+priority = 1
+inputs = $inputs
+run_type = build
+platforms = $platforms
+pre_all = nmi_glue/build/pre_all
+remote_declare = nmi_glue/build/remote_declare
+remote_pre = nmi_glue/build/remote_pre
+remote_task = nmi_glue/build/remote_task
+remote_post = nmi_glue/build/remote_post
+platform_post = $suffix
+platform_post_args=$platform_post_args
+prereqs_x86_rh_7.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15
+prereqs_x86_rh_8.0 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15
+prereqs_x86_rh_9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15
+prereqs_sun4u_sol_5.9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15
+prereqs_sun4u_sol_5.8 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15
+prereqs_ppc_aix_5.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, vac-6, vacpp-6
+prereqs_hppa_hpux_B.10.2 = everything-1.0.0
+END
+close CMD;
+
+print "Submitting condor build.\n";
+my $output_str=`/nmi/bin/nmi_submit $cmdfile`;
+my $status = $?;
+if( not $status ) {
+  # Sleep for some time till the records are available in db.
+  sleep 30;
+  my @lines = split("\n", $output_str);
+  my $nmirundir = $lines[15];
+
+  my @toks = split '/', $nmirundir;
+  my $gid = $toks[3];
+
+  my $runid = getRunid($gid);
+  print "I have guessed that the runid = $runid should be tested\n";
+
+  my $BUILD_INFO_FILE = "$nmirundir/userdir/common/test_ids";
+  print "BUILD_INFO_FILE = $BUILD_INFO_FILE\n";
+  if ($runid) {
+    open INFO_FILE, ">>$BUILD_INFO_FILE" or
+      die "Unable to open $BUILD_INFO_FILE for writing: $!\n";
+    print INFO_FILE "$runid\n";
+    close INFO_FILE;
+  }
+} else {
+  print "nmi_submit failed\n";
+}
+
+chdir( $init_cwd );
+run( "rm -rf $workspace", 0 );
+exit 0;
+
+sub getRunid {
+  my ($gid) = @_;
+  my $runid = "";
+
+  my $db = DBI->connect("$DB_CONNECT_STR","$username","$password") or
+    die "Could not connect to database: $!\n";
+  my $cmd_str = qq/SELECT runid from $RUN_TABLE WHERE gid='$gid'/;
+  print "$cmd_str\n";
+
+  my $handle = $db->prepare("$cmd_str");
+  $handle->execute();
+  while ( my $row = $handle->fetchrow_hashref() ) {
+    $runid = $row->{'runid'};
+    last;
+  }
+  $handle->finish();
+  $db->disconnect;
+
+  return $runid;
+}
+
+sub run {
+  my ($cmd, $fatal) = @_;
+  my $ret;
+  my $output = '';
+
+  # if not specified, the command is fatal.
+  if (!defined($fatal) or ($fatal != 0 and $fatal != 1)) {
+    $fatal = 1;
+  }
+
+  print "\n";
+  print "#  $cmd\n";
+
+  # Run the command.
+  system("($cmd)  </dev/null 2>&1");
+  $ret = $? / 256;
+
+  # Should we die here?
+  if ($fatal && $ret != 0) {
+    print "\n";
+    print "FAILED COMMAND: $cmd\n";
+    print "RETURN VALUE:  $ret\n";
+    print "\n";
+    exit(1);
+  }
+
+  # Return the command's return value.
+  return $ret;
+}
+
+# This sub returns the list of all historical platforms. This is probably
+# not *exactly* the right thing to do when the user wants to build Condor
+# on "all" platforms. TODO: refine this.
+sub get_platforms {
+    my @platforms = ();
+    my $db = DBI->connect("$DB_CONNECT_STR","$username","$password") ||
+             die "Could not connect to database: $!\n";
+    my $cmd_str = qq/SELECT DISTINCT platform from $TASK_TABLE/;
+
+    my $handle = $db->prepare("$cmd_str");
+    $handle->execute();
+    while ( my $row = $handle->fetchrow_hashref() ) {
+        my $platform = $row->{'platform'};
+	next if $platform eq '' or $platform eq 'local' or $platform =~ m/^_/;
+        push(@platforms, $platform);
+    }
+    $handle->finish();
+    $db->disconnect;
+
+    return @platforms;
+}
