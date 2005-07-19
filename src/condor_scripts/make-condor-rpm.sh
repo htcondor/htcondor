@@ -175,7 +175,16 @@ EOF
 
 # Build RPM
 echo "*** Building the RPM..."
-rpmbuild --define "_topdir rpmbuild" -bb condor.spec
+
+if [ -f /etc/SuSE-release ]; then
+	# SuSE doesn't have rpmbuild, so this should work instead.
+	RPMBUILD_CMD="rpm"
+else
+	RPMBUILD_CMD="rpmbuild"
+fi
+
+$RPMBUILD_CMD --define "_topdir rpmbuild" -bb condor.spec
+
 if [ $? != 0 ]; then
 	echo "Couldn't build rpm!"
 	exit 7
