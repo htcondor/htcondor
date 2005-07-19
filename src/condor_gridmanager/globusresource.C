@@ -237,7 +237,7 @@ GlobusResource::CheckMonitor()
 		if ( SubmitMonitorJob() == true ) {
 			// signal all jobs
 			registeredJobs.Rewind();
-			while ( registeredJobs.Next( (BaseJob*)job ) ) {
+			while ( registeredJobs.Next( (BaseJob*&) job) ) {
 				job->SetEvaluateState();
 			}
 			daemonCore->Reset_Timer( checkMonitorTid, 30 );
@@ -391,7 +391,7 @@ GlobusResource::StopMonitor()
 
 	monitorActive = false;
 	registeredJobs.Rewind();
-	while ( registeredJobs.Next( (BaseJob*)job ) ) {
+	while ( registeredJobs.Next( (BaseJob*&)job ) ) {
 		job->SetEvaluateState();
 	}
 	StopMonitorJob();
