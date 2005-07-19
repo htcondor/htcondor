@@ -270,12 +270,15 @@ float Accountant::GetPriorityFactor(const MyString& CustomerName)
   float PriorityFactor=0;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
   if (PriorityFactor<1) {
-    if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0)
+    if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0) {
       PriorityFactor=NiceUserPriorityFactor;
-    else if (AccountantLocalDomain!=GetDomain(CustomerName))
+	} else if	(	! AccountantLocalDomain.IsEmpty() && 
+					AccountantLocalDomain!=GetDomain(CustomerName) ) {
+      // if AccountantLocalDomain is empty, all users are considered local
       PriorityFactor=RemoteUserPriorityFactor;
-    else
+	} else {
       PriorityFactor=DefaultPriorityFactor;
+	}
     SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
   }
   return PriorityFactor;
