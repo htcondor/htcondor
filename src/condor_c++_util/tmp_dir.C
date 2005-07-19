@@ -22,7 +22,11 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include <unistd.h> // for getcwd()
+
+#ifndef WIN32
+	#include <unistd.h> // for getcwd()
+#endif
+
 #include "basename.h"
 #include "condor_debug.h"
 #include "tmp_dir.h"
