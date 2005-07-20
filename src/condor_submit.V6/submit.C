@@ -2532,7 +2532,9 @@ SetWantRemoteIO(void)
 
 	InsertJobExpr (buffer);
 
-	free(how);
+	if (how != NULL) {
+		free(how);
+	}
 }
 
 void
