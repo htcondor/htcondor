@@ -2318,13 +2318,14 @@ DedicatedScheduler::spawnJobs( void )
 			*/
 
 		int total_nodes = 0;
-		for( int procIndex = 0; procIndex < allocation->num_procs; procIndex++) {
+		int procIndex = 0;
+		for( procIndex = 0; procIndex < allocation->num_procs; procIndex++) {
 			total_nodes += ((*allocation->matches)[procIndex])->getlast() + 1;
 		}
 
 			// In each proc's classad, set CurrentHosts to be the
 			// total number of nodes for all procs.
-		for( int procIndex = 0; procIndex < allocation->num_procs; procIndex++) {
+		for( procIndex = 0; procIndex < allocation->num_procs; procIndex++) {
 			SetAttributeInt( id.cluster, procIndex, ATTR_CURRENT_HOSTS,
 							 total_nodes );
 		}
