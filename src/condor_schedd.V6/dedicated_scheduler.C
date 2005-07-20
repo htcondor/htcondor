@@ -1737,6 +1737,12 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 		return FALSE;
 	}
 	
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::giveMatches: "
+				 "can't read end_of_message - aborting\n" );
+			// TODO: other cleanup?
+		return FALSE;
+	}
 		// Now that we have a job id, try to find this job in our
 		// table of matches, and make sure the ClaimId is good
 	AllocationNode* alloc;
