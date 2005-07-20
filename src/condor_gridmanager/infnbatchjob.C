@@ -167,7 +167,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	buff[0] = '\0';
@@ -207,7 +207,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -270,7 +270,7 @@ int INFNBatchJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
 						 procID.cluster, procID.proc );
 
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -315,8 +315,8 @@ int INFNBatchJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -641,12 +641,12 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 		INFNBatchJobsById.remove( HashKey( remoteJobId ) );
 		free( remoteJobId );
 		remoteJobId = NULL;
-		UpdateJobAd("RemoteJobId", "UNDEFINED" );
+		jobAd->AssignExpr("RemoteJobId", "Undefined" );
 	}
 	if ( job_id != NULL ) {
 		remoteJobId = strdup( job_id );
 		INFNBatchJobsById.insert( HashKey( remoteJobId ), this );
-		UpdateJobAdString( "RemoteJobId", job_id );
+		jobAd->Assign( "RemoteJobId", job_id );
 	}
 	requestScheddUpdate( this );
 }

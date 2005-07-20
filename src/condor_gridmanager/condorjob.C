@@ -197,7 +197,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	buff[0] = '\0';
@@ -280,7 +280,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -358,7 +358,7 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
 						 procID.cluster, procID.proc );
 
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -366,8 +366,8 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
 
-				UpdateJobAdString( ATTR_HOLD_REASON,
-								   "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -551,8 +551,8 @@ int CondorJob::doEvaluateState()
 						// Set ad attributes so the schedd finds a new match.
 						int dummy;
 						if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-							UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-							UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+							jobAd->Assign( ATTR_JOB_MATCHED, false );
+							jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
 						}
 						// We are rematching,  so forget about this job 
 						// cuz we wanna pull a fresh new job ad, with 
@@ -826,10 +826,8 @@ int CondorJob::doEvaluateState()
 		case GM_DONE_COMMIT: {
 			// Tell the remote schedd it can remove the job from the queue.
 			if ( gahpAd == NULL ) {
-				MyString expr;
 				gahpAd = new ClassAd;
-				expr.sprintf( "%s = False", ATTR_JOB_LEAVE_IN_QUEUE );
-				gahpAd->Insert( expr.Value() );
+				gahpAd->Assign( ATTR_JOB_LEAVE_IN_QUEUE, false );
 			}
 			rc = gahp->condor_job_update( remoteScheddName, remoteJobId,
 										  gahpAd );
@@ -1042,7 +1040,7 @@ void CondorJob::SetRemoteJobId( const char *job_id )
 		free( remoteJobIdString );
 		remoteJobIdString = NULL;
 		remoteJobId.cluster = 0;
-		UpdateJobAd( ATTR_REMOTE_JOB_ID, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_REMOTE_JOB_ID, "Undefined" );
 	}
 	if ( job_id != NULL ) {
 		MyString id_string;
@@ -1051,7 +1049,7 @@ void CondorJob::SetRemoteJobId( const char *job_id )
 						   remoteJobId.proc );
 		remoteJobIdString = strdup( id_string.Value() );
 		CondorJobsById.insert( HashKey( remoteJobIdString ), this );
-		UpdateJobAdString( ATTR_REMOTE_JOB_ID, job_id );
+		jobAd->Assign( ATTR_REMOTE_JOB_ID, job_id );
 	}
 	requestScheddUpdate( this );
 }

@@ -363,7 +363,7 @@ GT3Job::GT3Job( ClassAd *classad )
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	buff[0] = '\0';
@@ -494,7 +494,7 @@ GT3Job::GT3Job( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -589,7 +589,7 @@ int GT3Job::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
 				
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -605,7 +605,7 @@ int GT3Job::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) Error enabling GRAM callback, err=%d\n", 
 						 procID.cluster, procID.proc, err );
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -614,7 +614,7 @@ int GT3Job::doEvaluateState()
 			if ( err != GLOBUS_SUCCESS ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error enabling GASS server, err=%d\n",
 						 procID.cluster, procID.proc, err );
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -745,8 +745,8 @@ int GT3Job::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -785,8 +785,8 @@ int GT3Job::doEvaluateState()
 						// job_contact was strdup()ed for us. Now we take
 						// responsibility for free()ing it.
 					jobContact = job_contact;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_contact );
+					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+								   job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -966,8 +966,8 @@ rc=0;
 					free( jobContact );
 					myResource->CancelSubmit( this );
 					jobContact = NULL;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   NULL_JOB_CONTACT );
+					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+								   NULL_JOB_CONTACT );
 					requestScheddUpdate( this );
 					jmDown = false;
 				}
@@ -1025,8 +1025,8 @@ rc=0;
 			myResource->CancelSubmit( this );
 			jobContact = NULL;
 			jmDown = false;
-			UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
+			jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+						   NULL_JOB_CONTACT );
 			requestScheddUpdate( this );
 
 			if ( condorState == REMOVED ) {
@@ -1081,7 +1081,7 @@ rc=0;
 			}
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			}
 			globusStateErrorCode = 0;
 			globusError = 0;
@@ -1097,8 +1097,8 @@ rc=0;
 				myResource->CancelSubmit( this );
 				jobContact = NULL;
 				jmDown = false;
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
+				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+							   NULL_JOB_CONTACT );
 			}
 			JobIdle();
 			if ( submitLogged ) {
@@ -1117,8 +1117,8 @@ rc=0;
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+					jobAd->Assign( ATTR_JOB_MATCHED, false );
+					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
 				}
 
 				// If we are rematching, we need to forget about this job
@@ -1156,7 +1156,7 @@ rc=0;
 			if ( jobContact &&
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
 			}
 			// If the condor state is already HELD, then someone already
@@ -1366,7 +1366,7 @@ void GT3Job::UpdateGlobusState( int new_state, int new_error_code )
 				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
 									  num_globus_submits );
 				num_globus_submits++;
-				UpdateJobAdInt( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
+				jobAd->Assign( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
 			}
 		}
 		if ( (new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
@@ -1381,7 +1381,7 @@ void GT3Job::UpdateGlobusState( int new_state, int new_error_code )
 		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 			globusStateBeforeFailure = globusState;
 		} else {
-			UpdateJobAdInt( ATTR_GLOBUS_STATUS, new_state );
+			jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
 		}
 
 		globusState = new_state;

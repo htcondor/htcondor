@@ -103,31 +103,6 @@ BaseResource *BaseJob::GetResource()
 	return NULL;
 }
 
-void BaseJob::UpdateJobAd( const char *name, const char *value )
-{
-	UpdateClassAd(jobAd, name, value);
-}
-
-void BaseJob::UpdateJobAdInt( const char *name, int value )
-{
-	UpdateClassAdInt(jobAd, name, value);
-}
-
-void BaseJob::UpdateJobAdFloat( const char *name, float value )
-{
-	UpdateClassAdFloat(jobAd, name, value);
-}
-
-void BaseJob::UpdateJobAdBool( const char *name, int value )
-{
-	UpdateClassAdBool(jobAd, name, value);
-}
-
-void BaseJob::UpdateJobAdString( const char *name, const char *value )
-{
-	UpdateClassAdString(jobAd, name, value);
-}
-
 void BaseJob::JobSubmitted( const char *remote_host)
 {
 }
@@ -138,8 +113,8 @@ void BaseJob::JobRunning()
 		 condorState != REMOVED ) {
 
 		condorState = RUNNING;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
 		UpdateRuntimeStats();
 
@@ -158,8 +133,8 @@ void BaseJob::JobIdle()
 		 condorState != REMOVED ) {
 
 		condorState = IDLE;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
 		UpdateRuntimeStats();
 
@@ -194,8 +169,8 @@ void BaseJob::JobCompleted()
 		 condorState != REMOVED ) {
 
 		condorState = COMPLETED;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
 		UpdateRuntimeStats();
 
@@ -206,7 +181,7 @@ void BaseJob::JobCompleted()
 void BaseJob::DoneWithJob()
 {
 	deleteFromGridmanager = true;
-	UpdateJobAdBool( ATTR_JOB_MANAGED, 0 );
+	jobAd->Assign( ATTR_JOB_MANAGED, false );
 
 	if ( condorState == COMPLETED ) {
 		if ( writeUserLog && !terminateLogged ) {
@@ -239,27 +214,27 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 			// if the job was in REMOVED state, make certain we return
 			// to the removed state when it is released.
 		if ( condorState == REMOVED ) {
-			UpdateJobAdInt( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
+			jobAd->Assign( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
 		}
 		condorState = HELD;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
-		UpdateJobAdString( ATTR_HOLD_REASON, hold_reason );
-		UpdateJobAdInt(ATTR_HOLD_REASON_CODE, hold_code);
-		UpdateJobAdInt(ATTR_HOLD_REASON_SUBCODE, hold_sub_code);
+		jobAd->Assign( ATTR_HOLD_REASON, hold_reason );
+		jobAd->Assign(ATTR_HOLD_REASON_CODE, hold_code);
+		jobAd->Assign(ATTR_HOLD_REASON_SUBCODE, hold_sub_code);
 
 		char *release_reason;
 		if ( jobAd->LookupString( ATTR_RELEASE_REASON, &release_reason ) != 0 ) {
-			UpdateJobAdString( ATTR_LAST_RELEASE_REASON, release_reason );
+			jobAd->Assign( ATTR_LAST_RELEASE_REASON, release_reason );
 			free( release_reason );
 		}
-		UpdateJobAd( ATTR_RELEASE_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_RELEASE_REASON, "Undefined" );
 
 		int num_holds;
 		jobAd->LookupInteger( ATTR_NUM_SYSTEM_HOLDS, num_holds );
 		num_holds++;
-		UpdateJobAdInt( ATTR_NUM_SYSTEM_HOLDS, num_holds );
+		jobAd->Assign( ATTR_NUM_SYSTEM_HOLDS, num_holds );
 
 		UpdateRuntimeStats();
 
@@ -276,10 +251,10 @@ void BaseJob::JobRemoved( const char *remove_reason )
 {
 	if ( condorState != REMOVED ) {
 		condorState = REMOVED;
-		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
-		UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS, time(NULL) );
+		jobAd->Assign( ATTR_JOB_STATUS, condorState );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 
-		UpdateJobAdString( ATTR_REMOVE_REASON, remove_reason );
+		jobAd->Assign( ATTR_REMOVE_REASON, remove_reason );
 
 		UpdateRuntimeStats();
 
@@ -300,7 +275,7 @@ void BaseJob::UpdateRuntimeStats()
 
 		// The job has started a new interval of running
 		int current_time = (int)time(NULL);
-		UpdateJobAdInt( ATTR_SHADOW_BIRTHDATE, current_time );
+		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, current_time );
 
 		requestScheddUpdate( this );
 
@@ -311,9 +286,9 @@ void BaseJob::UpdateRuntimeStats()
 		float accum_time = 0;
 		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
 		accum_time += (float)( time(NULL) - shadowBirthdate );
-		UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
-		UpdateJobAd( ATTR_JOB_WALL_CLOCK_CKPT, "UNDEFINED" );
-		UpdateJobAdInt( ATTR_SHADOW_BIRTHDATE, 0 );
+		jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
+		jobAd->Assign( ATTR_JOB_WALL_CLOCK_CKPT,(char *)NULL );
+		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, 0 );
 
 		requestScheddUpdate( this );
 
@@ -366,7 +341,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 			if ( (expr = new_ad->Lookup( held_removed_update_attrs[i] )) != NULL ) {
 				attr_value[0] = '\0';
 				expr->RArg()->PrintToStr(attr_value);
-				UpdateJobAd( held_removed_update_attrs[i], attr_value );
+				jobAd->AssignExpr( held_removed_update_attrs[i], attr_value );
 			} else {
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}
@@ -389,7 +364,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 			bool dirty;
 			jobAd->GetDirtyFlag( ATTR_JOB_STATUS, NULL, &dirty );
 			if ( dirty ) {
-				UpdateJobAdInt( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
+				jobAd->Assign( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
 			}
 		}
 
@@ -470,8 +445,8 @@ int BaseJob::EvalOnExitJobExpr()
 		 !jobAd->LookupInteger( ATTR_ON_EXIT_CODE, dummy ) ) {
 
 		exitStatusKnown = false;
-		UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
-		UpdateJobAdInt( ATTR_ON_EXIT_CODE, 0 );
+		jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+		jobAd->Assign( ATTR_ON_EXIT_CODE, 0 );
 	} else {
 		exitStatusKnown = true;
 	}
@@ -484,9 +459,9 @@ int BaseJob::EvalOnExitJobExpr()
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
 	if ( action != REMOVE_FROM_QUEUE ) {
-		UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
-		UpdateJobAd( ATTR_ON_EXIT_CODE, "UNDEFINED" );
-		UpdateJobAd( ATTR_ON_EXIT_SIGNAL, "UNDEFINED" );
+		jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+		jobAd->AssignExpr( ATTR_ON_EXIT_CODE, "Undefined" );
+		jobAd->AssignExpr( ATTR_ON_EXIT_SIGNAL, "Undefined" );
 	}
 
 	switch( action ) {
@@ -532,7 +507,7 @@ BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
 	  total_run_time += (now - shadow_bday);
   }
 
-  UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, total_run_time );
+  jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, total_run_time );
 }
 
 /*After evaluating user policy expressions, this is
@@ -541,7 +516,7 @@ BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
 void
 BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty )
 {
-  UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
+  jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
   jobAd->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
 }
 

@@ -201,7 +201,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	buff[0] = '\0';
@@ -228,7 +228,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
  error_exit:
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -313,8 +313,8 @@ int NordugridJob::doEvaluateState()
 			} break;
 		case GM_SUBMIT: {
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-//				UpdateJobAdString( ATTR_HOLD_REASON,
-//									"Attempts to submit failed" );
+//				jobAd->Assign( ATTR_HOLD_REASON,
+//							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -338,8 +338,8 @@ int NordugridJob::doEvaluateState()
 					ASSERT( job_id != NULL );
 					rehashRemoteJobId( this, remoteJobId, job_id );
 					remoteJobId = job_id;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_id );
+					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+								   job_id );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s\n",
@@ -453,11 +453,11 @@ int NordugridJob::doEvaluateState()
 		case GM_DONE_SAVE: {
 			if ( condorState != HELD && condorState != REMOVED ) {
 				if ( normalExit ) {
-					UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
-					UpdateJobAdInt( ATTR_ON_EXIT_CODE, exitCode );
+					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+					jobAd->Assign( ATTR_ON_EXIT_CODE, exitCode );
 				} else {
-					UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 1 );
-					UpdateJobAdInt( ATTR_ON_EXIT_SIGNAL, exitCode );
+					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
+					jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exitCode );
 				}
 				JobTerminated();
 				if ( condorState == COMPLETED ) {
@@ -488,8 +488,8 @@ int NordugridJob::doEvaluateState()
 					rehashRemoteJobId( this, remoteJobId, NULL );
 					free( remoteJobId );
 					remoteJobId = NULL;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   NULL_JOB_CONTACT );
+					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+								   NULL_JOB_CONTACT );
 					requestScheddUpdate( this );
 				}
 				gmState = GM_CLEAR_REQUEST;
@@ -512,8 +512,8 @@ int NordugridJob::doEvaluateState()
 			rehashRemoteJobId( this, remoteJobId, NULL );
 			free( remoteJobId );
 			remoteJobId = NULL;
-			UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
+			jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+						   NULL_JOB_CONTACT );
 			requestScheddUpdate( this );
 
 			if ( condorState == REMOVED ) {
@@ -571,8 +571,8 @@ int NordugridJob::doEvaluateState()
 				rehashRemoteJobId( this, remoteJobId, NULL );
 				free( remoteJobId );
 				remoteJobId = NULL;
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
+				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+							   NULL_JOB_CONTACT );
 			}
 			JobIdle();
 			if ( submitLogged ) {
@@ -591,8 +591,8 @@ int NordugridJob::doEvaluateState()
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+					jobAd->Assign( ATTR_JOB_MATCHED, false );
+					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
 				}
 
 				// If we are rematching, we need to forget about this job

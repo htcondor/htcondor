@@ -261,7 +261,7 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	buff[0] = '\0';
@@ -335,7 +335,7 @@ MirrorJob::MirrorJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -407,7 +407,7 @@ int MirrorJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
 						 procID.cluster, procID.proc );
 
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -454,8 +454,8 @@ int MirrorJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -626,7 +626,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				gmState = GM_CANCEL_1;
 			} else {
 				mirrorActive = true;
-				UpdateJobAdBool( ATTR_MIRROR_ACTIVE, 1 );
+				jobAd->Assign( ATTR_MIRROR_ACTIVE, true );
 				requestScheddUpdate( this );
 				gmState = GM_SUBMITTED_MIRROR_ACTIVE;
 			}
@@ -870,12 +870,12 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 			}
 			if ( mirrorActive == true ||
 				 jobAd->LookupBool( ATTR_MIRROR_ACTIVE, tmp_bool ) == false ) {
-				UpdateJobAdBool( ATTR_MIRROR_ACTIVE, 0 );
+				jobAd->Assign( ATTR_MIRROR_ACTIVE, false );
 				mirrorActive = false;
 			}
 			if ( mirrorReleased == true ||
 				 jobAd->LookupBool( ATTR_MIRROR_RELEASED, tmp_bool ) == false ) {
-				UpdateJobAdBool( ATTR_MIRROR_RELEASED, 0 );
+				jobAd->Assign( ATTR_MIRROR_RELEASED, false );
 				mirrorReleased = false;
 			}
 			writeUserLog = false;
@@ -979,7 +979,7 @@ void MirrorJob::SetRemoteJobId( const char *job_id )
 		free( remoteJobIdString );
 		remoteJobIdString = NULL;
 		mirrorJobId.cluster = 0;
-		UpdateJobAd( ATTR_MIRROR_JOB_ID, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_MIRROR_JOB_ID, "Undefined" );
 	}
 	if ( job_id != NULL ) {
 		MyString id_string;
@@ -988,7 +988,7 @@ void MirrorJob::SetRemoteJobId( const char *job_id )
 						   mirrorJobId.proc );
 		remoteJobIdString = strdup( id_string.Value() );
 		MirrorJobsById.insert( HashKey( remoteJobIdString ), this );
-		UpdateJobAdString( ATTR_MIRROR_JOB_ID, job_id );
+		jobAd->Assign( ATTR_MIRROR_JOB_ID, job_id );
 	}
 	requestScheddUpdate( this );
 }
@@ -1033,7 +1033,7 @@ void MirrorJob::ProcessRemoteAdInactive( ClassAd *remote_ad )
 	remote_ad->LookupInteger( ATTR_JOB_STATUS, tmp_int );
 
 	if ( tmp_int != HELD ) {
-		UpdateJobAdBool( ATTR_MIRROR_RELEASED, 1 );
+		jobAd->Assign( ATTR_MIRROR_RELEASED, true );
 		mirrorReleased = true;
 	}
 	remoteState = tmp_int;
@@ -1041,9 +1041,9 @@ void MirrorJob::ProcessRemoteAdInactive( ClassAd *remote_ad )
 	rc = remote_ad->LookupInteger( ATTR_MIRROR_LEASE_TIME,
 								   tmp_int );
 	if ( rc ) {
-		UpdateJobAdInt( ATTR_MIRROR_REMOTE_LEASE_TIME, tmp_int );
+		jobAd->Assign( ATTR_MIRROR_REMOTE_LEASE_TIME, tmp_int );
 	} else {
-		UpdateJobAd( ATTR_MIRROR_REMOTE_LEASE_TIME, "Undefined" );
+		jobAd->AssignExpr( ATTR_MIRROR_REMOTE_LEASE_TIME, "Undefined" );
 	}
 
 	requestScheddUpdate( this );

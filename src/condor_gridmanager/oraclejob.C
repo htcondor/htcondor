@@ -245,7 +245,7 @@ OracleJob::OracleJob( ClassAd *classad )
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 		// Ensure that OCI has been initialized successfully
@@ -302,7 +302,7 @@ OracleJob::OracleJob( ClassAd *classad )
  error_exit:
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -391,8 +391,8 @@ int OracleJob::doEvaluateState()
 			} break;
 		case GM_SUBMIT_1: {
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-								   "Attempts to submit failed" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -411,8 +411,8 @@ int OracleJob::doEvaluateState()
 				if ( job_id != NULL ) {
 					rehashRemoteJobId( this, remoteJobId, job_id );
 					remoteJobId = strdup( job_id );
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_id );
+					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+								   job_id );
 					gmState = GM_SUBMIT_1_SAVE;
 				} else {
 					dprintf(D_ALWAYS,"(%d.%d) job submit 1 failed!\n",
@@ -460,7 +460,7 @@ int OracleJob::doEvaluateState()
 			} else {
 				if ( jobRunPhase == false ) {
 					jobRunPhase = true;
-					UpdateJobAdBool( ATTR_ORACLE_JOB_RUN_PHASE, TRUE );
+					jobAd->Assign( ATTR_ORACLE_JOB_RUN_PHASE, true );
 				}
 				done = requestScheddUpdate( this );
 				if ( !done ) {
@@ -546,8 +546,8 @@ int OracleJob::doEvaluateState()
 					rehashRemoteJobId( this, remoteJobId, NULL );
 					free( remoteJobId );
 					remoteJobId = NULL;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   NULL_JOB_CONTACT );
+					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+								   NULL_JOB_CONTACT );
 					requestScheddUpdate( this );
 				}
 				gmState = GM_CLEAR_REQUEST;
@@ -568,8 +568,8 @@ int OracleJob::doEvaluateState()
 			rehashRemoteJobId( this, remoteJobId, NULL );
 			free( remoteJobId );
 			remoteJobId = NULL;
-			UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
+			jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+						   NULL_JOB_CONTACT );
 			requestScheddUpdate( this );
 
 			if ( condorState == REMOVED ) {
@@ -627,12 +627,12 @@ int OracleJob::doEvaluateState()
 				rehashRemoteJobId( this, remoteJobId, NULL );
 				free( remoteJobId );
 				remoteJobId = NULL;
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
+				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+							   NULL_JOB_CONTACT );
 			}
 			if ( jobRunPhase == true ) {
 				jobRunPhase = false;
-				UpdateJobAdBool( ATTR_ORACLE_JOB_RUN_PHASE, FALSE );
+				jobAd->Assign( ATTR_ORACLE_JOB_RUN_PHASE, false );
 			}
 			JobIdle();
 			if ( submitLogged ) {
@@ -651,8 +651,8 @@ int OracleJob::doEvaluateState()
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+					jobAd->Assign( ATTR_JOB_MATCHED, false );
+					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
 				}
 
 				// If we are rematching, we need to forget about this job

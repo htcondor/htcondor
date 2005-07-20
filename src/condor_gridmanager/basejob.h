@@ -44,12 +44,6 @@ class BaseJob
 	virtual int doEvaluateState();
 	virtual BaseResource *GetResource();
 
-	void UpdateJobAd( const char *name, const char *value );
-	void UpdateJobAdInt( const char *name, int value );
-	void UpdateJobAdFloat( const char *name, float value );
-	void UpdateJobAdBool( const char *name, int value );
-	void UpdateJobAdString( const char *name, const char *value );
-
 	void JobSubmitted( const char *remote_host);
 	void JobRunning();
 	void JobIdle();

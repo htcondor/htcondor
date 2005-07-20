@@ -673,7 +673,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	buff[0] = '\0';
@@ -917,7 +917,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
  error_exit:
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -1024,11 +1024,11 @@ int GlobusJob::doEvaluateState()
 			}
 
 			if ( !jobProxy ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-								   "Proxy file missing or corrupted" );
-				UpdateJobAdInt(ATTR_HOLD_REASON_CODE,
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Proxy file missing or corrupted" );
+				jobAd->Assign(ATTR_HOLD_REASON_CODE,
 							   CONDOR_HOLD_CODE_CorruptedCredential);
-				UpdateJobAdInt(ATTR_HOLD_REASON_SUBCODE, 0);
+				jobAd->Assign(ATTR_HOLD_REASON_SUBCODE, 0);
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1042,7 +1042,7 @@ int GlobusJob::doEvaluateState()
 			if ( gahp->Initialize( jobProxy ) == false ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1058,7 +1058,7 @@ int GlobusJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error enabling GRAM callback, err=%d - %s\n", 
 						 procID.cluster, procID.proc, err,
 						 gahp->globus_gram_client_error_string(err) );
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1067,7 +1067,7 @@ int GlobusJob::doEvaluateState()
 			if ( err != GLOBUS_SUCCESS ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error enabling GASS server, err=%d\n",
 						 procID.cluster, procID.proc, err );
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1224,7 +1224,7 @@ int GlobusJob::doEvaluateState()
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
 				// Don't set HOLD_REASON here --- that way, the reason will get set
 				// to the globus error that caused the submission failure.
-				// UpdateJobAdString( ATTR_HOLD_REASON,"Attempts to submit failed" );
+				// jobAd->Assign( ATTR_HOLD_REASON,"Attempts to submit failed" );
 
 				gmState = GM_HOLD;
 				break;
@@ -1277,13 +1277,13 @@ int GlobusJob::doEvaluateState()
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					if ( jmVersion == GRAM_V_UNKNOWN ) {
 						jmVersion = GRAM_V_1_6;
-						UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_6 );
+						jobAd->Assign( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_6 );
 					}
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
 					SetJobContact(job_contact);
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_contact );
+					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+								   job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_RSL_EVALUATION_FAILED &&
@@ -1641,8 +1641,8 @@ int GlobusJob::doEvaluateState()
 				rehashJobContact( this, jobContact, NULL );
 				myResource->CancelSubmit( this );
 				SetJobContact(NULL);
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
+				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+							   NULL_JOB_CONTACT );
 				requestScheddUpdate( this );
 				jmDown = false;
 			}
@@ -1778,8 +1778,8 @@ int GlobusJob::doEvaluateState()
 					jmDown = false;
 					rehashJobContact( this, jobContact, job_contact );
 					SetJobContact(job_contact);
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_contact );
+					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+								   job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 						globusState = globusStateBeforeFailure;
@@ -1835,7 +1835,7 @@ int GlobusJob::doEvaluateState()
 					dprintf(D_FULLDEBUG,"(%d.%d) jobmanager's job state went from DONE to %s across a restart, do the same here",
 							procID.cluster, procID.proc, GlobusJobStatusName(status) );
 					globusState = status;
-					UpdateJobAdInt( ATTR_GLOBUS_STATUS, status );
+					jobAd->Assign( ATTR_GLOBUS_STATUS, status );
 					enteredCurrentGlobusState = time(NULL);
 					requestScheddUpdate( this );
 				}
@@ -1996,10 +1996,10 @@ int GlobusJob::doEvaluateState()
 				myResource->CancelSubmit( this );
 				jmDown = false;
 				SetJobContact(NULL);
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
+				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+							   NULL_JOB_CONTACT );
 				jmVersion = GRAM_V_UNKNOWN;
-				UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION,
+				jobAd->Assign( ATTR_GLOBUS_GRAM_VERSION,
 								jmVersion );
 				requestScheddUpdate( this );
 
@@ -2108,7 +2108,7 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			}
 			globusStateErrorCode = 0;
 			globusError = 0;
@@ -2125,8 +2125,8 @@ int GlobusJob::doEvaluateState()
 				myResource->CancelSubmit( this );
 				SetJobContact(NULL);
 				jmDown = false;
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
+				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
+							   NULL_JOB_CONTACT );
 			}
 			JobIdle();
 			if ( submitLogged ) {
@@ -2145,8 +2145,8 @@ int GlobusJob::doEvaluateState()
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+					jobAd->Assign( ATTR_JOB_MATCHED, false );
+					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
 				}
 
 				// If we are rematching, we need to forget about this job
@@ -2184,7 +2184,7 @@ int GlobusJob::doEvaluateState()
 			if ( jobContact &&
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
 			}
 			// If the condor state is already HELD, then someone already
@@ -2411,7 +2411,7 @@ void GlobusJob::NotifyResourceDown()
 	}
 
 	if (!time_of_death) {
-		UpdateJobAdInt(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,now);
+		jobAd->Assign(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,(int)now);
 		requestScheddUpdate( this );
 	}
 }
@@ -2436,7 +2436,7 @@ void GlobusJob::NotifyResourceUp()
 	int time_of_death = 0;
 	jobAd->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
 	if ( time_of_death ) {
-		UpdateJobAd(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,"UNDEFINED");
+		jobAd->AssignExpr(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,"Undefined");
 		requestScheddUpdate( this );
 	}
 }
@@ -2513,7 +2513,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
 									  num_globus_submits );
 				num_globus_submits++;
-				UpdateJobAdInt( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
+				jobAd->Assign( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
 			}
 		}
 		if ( (new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
@@ -2528,7 +2528,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 			globusStateBeforeFailure = globusState;
 		} else {
-			UpdateJobAdInt( ATTR_GLOBUS_STATUS, new_state );
+			jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
 		}
 
 		globusState = new_state;

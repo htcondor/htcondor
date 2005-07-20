@@ -376,7 +376,7 @@ GT4Job::GT4Job( ClassAd *classad )
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	buff[0] = '\0';
@@ -520,7 +520,7 @@ GT4Job::GT4Job( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -620,7 +620,7 @@ int GT4Job::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
 				
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -636,7 +636,7 @@ int GT4Job::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) Error enabling GRAM callback, err=%d\n", 
 						 procID.cluster, procID.proc, err );
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -776,8 +776,8 @@ int GT4Job::doEvaluateState()
 			}
 			delegatedCredentialURI = strdup( deleg_uri );
 			gmState = GM_GENERATE_ID;
-			UpdateJobAdString ( ATTR_GLOBUS_DELEGATION_URI,
-								delegatedCredentialURI );
+			jobAd->Assign( ATTR_GLOBUS_DELEGATION_URI,
+						   delegatedCredentialURI );
 		} break;
 		case GM_GENERATE_ID: {
 
@@ -798,7 +798,7 @@ int GT4Job::doEvaluateState()
 				errorString = "Failed to generate submit id";
 				gmState = GM_HOLD;
 			} else {
-				UpdateJobAdString( ATTR_GLOBUS_SUBMIT_ID, submit_id );
+				jobAd->Assign( ATTR_GLOBUS_SUBMIT_ID, submit_id );
 				gmState = GM_SUBMIT_ID_SAVE;
 			}
 		} break;
@@ -1066,7 +1066,7 @@ int GT4Job::doEvaluateState()
 				if ( jobContact != NULL ) {
 					SetJobContact( NULL );
 					globusState = GT4_JOB_STATE_UNSUBMITTED;
-					UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+					jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 					requestScheddUpdate( this );
 					jmDown = false;
 				}
@@ -1125,7 +1125,7 @@ int GT4Job::doEvaluateState()
 			myResource->CancelSubmit( this );
 			jmDown = false;
 			globusState = GT4_JOB_STATE_UNSUBMITTED;
-			UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+			jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			requestScheddUpdate( this );
 
 			if ( condorState == REMOVED ) {
@@ -1181,7 +1181,7 @@ int GT4Job::doEvaluateState()
 			}
 			if ( globusState != GT4_JOB_STATE_UNSUBMITTED ) {
 				globusState = GT4_JOB_STATE_UNSUBMITTED;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			}
 			globusStateFaultString = "";
 			globusErrorString = "";
@@ -1213,8 +1213,8 @@ int GT4Job::doEvaluateState()
 				// Set ad attributes so the schedd finds a new match.
 				int dummy;
 				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+					jobAd->Assign( ATTR_JOB_MATCHED, false );
+					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
 				}
 
 				// If we are rematching, we need to forget about this job
@@ -1252,12 +1252,12 @@ int GT4Job::doEvaluateState()
 			if ( jobContact &&
 				 globusState != GT4_JOB_STATE_UNKNOWN ) {
 				globusState = GT4_JOB_STATE_UNKNOWN;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 				//UpdateGlobusState( GT4_JOB_STATE_UNKNOWN, NULL );
 			} else if ( !jobContact &&
 						globusState != GT4_JOB_STATE_UNSUBMITTED ) {
 				globusState = GT4_JOB_STATE_UNSUBMITTED;
-				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			}
 			// If the condor state is already HELD, then someone already
 			// HELD it, so don't update anything else.
@@ -1375,7 +1375,7 @@ void GT4Job::SetJobContact( const char *job_contact )
 	if ( job_contact == NULL && delegatedCredentialURI != NULL ) {
 		free( delegatedCredentialURI );
 		delegatedCredentialURI = NULL;
-		UpdateJobAd( ATTR_GLOBUS_DELEGATION_URI, "Undefined" );
+		jobAd->AssignExpr( ATTR_GLOBUS_DELEGATION_URI, "Undefined" );
 	}
 
 	if ( jobContact != NULL && job_contact != NULL &&
@@ -1386,12 +1386,12 @@ void GT4Job::SetJobContact( const char *job_contact )
 		GT4JobsByContact.remove( HashKey( gt4JobId(jobContact) ) );
 		free( jobContact );
 		jobContact = NULL;
-		UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING, NULL_JOB_CONTACT );
+		jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING, NULL_JOB_CONTACT );
 	}
 	if ( job_contact != NULL ) {
 		jobContact = strdup( job_contact );
 		GT4JobsByContact.insert( HashKey( gt4JobId(jobContact) ), this );
-		UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING, jobContact );
+		jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING, jobContact );
 	}
 	requestScheddUpdate( this );
 }
@@ -1494,7 +1494,7 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
 									  num_globus_submits );
 				num_globus_submits++;
-				UpdateJobAdInt( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
+				jobAd->Assign( ATTR_NUM_GLOBUS_SUBMITS, num_globus_submits );
 			}
 		}
 		if ( (new_state == GT4_JOB_STATE_ACTIVE ||
@@ -1506,7 +1506,7 @@ void GT4Job::UpdateGlobusState( int new_state, const char *new_fault )
 			executeLogged = true;
 		}
 
-		UpdateJobAdInt( ATTR_GLOBUS_STATUS, new_state );
+		jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
 
 		globusState = new_state;
 		globusStateFaultString = new_fault;
@@ -1532,8 +1532,8 @@ void GT4Job::GramCallback( const char *new_state, const char *new_fault,
 
 //		if ( new_exit_code != GT4_NO_EXIT_CODE ) {
 		if ( new_state_int == GT4_JOB_STATE_DONE ) {
-			UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
-			UpdateJobAdInt( ATTR_ON_EXIT_CODE, new_exit_code );
+			jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+			jobAd->Assign( ATTR_ON_EXIT_CODE, new_exit_code );
 		}
 
 		SetEvaluateState();
