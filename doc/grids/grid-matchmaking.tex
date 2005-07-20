@@ -80,6 +80,7 @@ file. Here is a sample ClassAd that describes a grid site:
 MyType                = "Machine"
 TargetType            = "Job"
 Name                  = "Example1_Gatekeeper"
+Machine               = "Example1_Gatekeeper"
 gatekeeper_url        = "grid.example.com/jobmanager"
 Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9) && (TARGET.JobGridType =?= ``gt2'')
 Rank                  = 0.000000
@@ -126,6 +127,16 @@ Name                  = "Example1_Gatekeeper"
 
 You will want a unique name for each grid site. Any name is fine, as long as
 it is quoted.
+
+\footnotesize
+\begin{verbatim}
+Machine               = "Example1_Gatekeeper"
+\end{verbatim}
+\normalsize
+
+Machine is just like Name. Normally in Condor, the Machine and Name
+may be slightly different if you have multiple CPUs. For grid
+matchmaking, they should probably be the same.
 
 \footnotesize
 \begin{verbatim}
