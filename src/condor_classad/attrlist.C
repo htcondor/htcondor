@@ -2500,6 +2500,22 @@ void AttrList::RestoreChain(void* old_value)
 }
 
 int AttrList::
+AssignExpr(char const *variable,char const *value)
+{
+	MyString buf;
+
+	buf += variable;
+
+	if(!value) {
+		buf += " = UNDEFINED";
+	} else {
+		buf += " = ";
+		buf += value;
+	}
+
+	return Insert(buf.GetCStr());
+}
+int AttrList::
 Assign(char const *variable,char const *value)
 {
 	MyString buf;

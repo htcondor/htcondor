@@ -143,6 +143,9 @@ class AttrList : public AttrListAbstract
 		// The Assign() functions are equivalent to Insert("variable = value"),
 		// with string values getting wrapped in quotes.  Strings that happen
 		// to contain quotes are handled correctly, as an added plus.
+		// AssignExpr() is equivalent to Insert("variable = value") without
+		// the value being wrapped in quotes.
+		int AssignExpr(char const *variable,char const *value);
 		int Assign(char const *variable,char const *value);
 		int Assign(char const *variable,int value);
 		int Assign(char const *variable,float value);
