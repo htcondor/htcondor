@@ -201,7 +201,7 @@ Dagman::Config()
 	free( storkRmExe );
 	storkRmExe = param( "DAGMAN_STORK_RM_EXE" );
 	if( !storkRmExe ) {
-		storkRmExe = strdup( "stork_submit" );
+		storkRmExe = strdup( "stork_rm" );
 		ASSERT( storkRmExe );
 	}
 	return true;
