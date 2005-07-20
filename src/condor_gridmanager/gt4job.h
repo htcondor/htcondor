@@ -71,17 +71,13 @@ class GT4Job : public BaseJob
 
 	static int probeInterval;
 	static int submitInterval;
-	static int restartInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
-	static int outputWaitGrowthTimeout;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
-	static void setRestartInterval( int new_interval )
-		{ restartInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 	static void setConnectFailureRetry( int count )
@@ -96,8 +92,6 @@ class GT4Job : public BaseJob
 	int callbackGlobusState;
 	MyString callbackGlobusStateFaultString;
 	bool resourcePingPending;
-	bool jmUnreachable;
-	bool jmDown;
 	GT4Resource *myResource;
 	time_t lastProbeTime;
 	bool probeNow;
@@ -105,19 +99,9 @@ class GT4Job : public BaseJob
 	time_t enteredCurrentGlobusState;
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
-	int lastRestartReason;
-	time_t lastRestartAttempt;
-	int numRestartAttempts;
-	int numRestartAttemptsThisSubmit;
 	time_t jmProxyExpireTime;
 	time_t jmLifetime;
-	time_t outputWaitLastGrowth;
-	int outputWaitOutputSize;
-	int outputWaitErrorSize;
-	// HACK!
-	bool retryStdioSize;
 	char *resourceManagerString;
-	bool useGridJobMonitor;
 	char * submit_id;
 	char * jobmanagerType;
 	
@@ -147,9 +131,6 @@ class GT4Job : public BaseJob
 	bool stageOutput;
 	bool stageError;
 	MyString globusErrorString;
-
-	bool restartingJM;
-	time_t restartWhen;
 
 	int numGlobusSubmits;
 

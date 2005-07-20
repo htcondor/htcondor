@@ -301,10 +301,8 @@ const char *rsl_stringify( const char *string )
 
 int GT3Job::probeInterval = 300;			// default value
 int GT3Job::submitInterval = 300;			// default value
-int GT3Job::restartInterval = 60;			// default value
 int GT3Job::gahpCallTimeout = 300;			// default value
 int GT3Job::maxConnectFailures = 3;			// default value
-int GT3Job::outputWaitGrowthTimeout = 15;	// default value
 
 GT3Job::GT3Job( ClassAd *classad )
 	: BaseJob( classad )
@@ -330,13 +328,9 @@ GT3Job::GT3Job( ClassAd *classad )
 	globusStateBeforeFailure = 0;
 	callbackGlobusState = 0;
 	callbackGlobusStateErrorCode = 0;
-	restartingJM = false;
-	restartWhen = 0;
 	gmState = GM_INIT;
 	globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 	resourcePingPending = false;
-	jmUnreachable = false;
-	jmDown = false;
 	lastProbeTime = 0;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
@@ -344,15 +338,8 @@ GT3Job::GT3Job( ClassAd *classad )
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
 	submitFailureCode = 0;
-	lastRestartReason = 0;
-	lastRestartAttempt = 0;
-	numRestartAttempts = 0;
-	numRestartAttemptsThisSubmit = 0;
 	jmProxyExpireTime = 0;
 	connect_failure_counter = 0;
-	outputWaitLastGrowth = 0;
-	// HACK!
-	retryStdioSize = true;
 	resourceManagerString = NULL;
 	myResource = NULL;
 	jobProxy = NULL;
@@ -426,8 +413,6 @@ GT3Job::GT3Job( ClassAd *classad )
 		jobContact = strdup( buff );
 		job_already_submitted = true;
 	}
-
-	useGridJobMonitor = true;
 
 	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 
@@ -542,8 +527,7 @@ void GT3Job::Reconfig()
 
 int GT3Job::doEvaluateState()
 {
-	bool connect_failure_jobmanager = false;
-	bool connect_failure_gatekeeper = false;
+	bool connect_failure = false;
 	int old_gm_state;
 	int old_globus_state;
 	bool reevaluate_state = true;
@@ -561,10 +545,6 @@ int GT3Job::doEvaluateState()
 			procID.cluster,procID.proc,GMStateNames[gmState],globusState);
 
 	if ( gahp ) {
-		// We don't include jmDown here because we don't want it to block
-		// connections to the gatekeeper (particularly restarts) and any
-		// state that contacts to the jobmanager should be jumping to
-		// GM_RESTART instead.
 		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
 			gahp->setMode( GahpClient::results_only );
 		} else {
@@ -628,9 +608,6 @@ int GT3Job::doEvaluateState()
 			// one-time initialization has been taken care of.
 			// If we think there's a running jobmanager
 			// out there, we try to register for callbacks (in GM_REGISTER).
-			// The one way jobs can end up back in this state is if we
-			// attempt a restart of a jobmanager only to be told that the
-			// old jobmanager process is still alive.
 			errorString = "";
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
@@ -696,7 +673,7 @@ int GT3Job::doEvaluateState()
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
 				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-				connect_failure_jobmanager = true;
+				connect_failure = true;
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
@@ -969,7 +946,6 @@ rc=0;
 					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
 								   NULL_JOB_CONTACT );
 					requestScheddUpdate( this );
-					jmDown = false;
 				}
 				gmState = GM_CLEAR_REQUEST;
 			}
@@ -1024,7 +1000,6 @@ rc=0;
 			free( jobContact );
 			myResource->CancelSubmit( this );
 			jobContact = NULL;
-			jmDown = false;
 			jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
 						   NULL_JOB_CONTACT );
 			requestScheddUpdate( this );
@@ -1085,18 +1060,13 @@ rc=0;
 			}
 			globusStateErrorCode = 0;
 			globusError = 0;
-			lastRestartReason = 0;
-			numRestartAttemptsThisSubmit = 0;
 			errorString = "";
 			ClearCallbacks();
-			// HACK!
-			retryStdioSize = true;
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
 				myResource->CancelSubmit( this );
 				jobContact = NULL;
-				jmDown = false;
 				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
 							   NULL_JOB_CONTACT );
 			}
@@ -1239,8 +1209,7 @@ rc=0;
 
 	} while ( reevaluate_state );
 
-	if ( ( connect_failure_jobmanager || connect_failure_gatekeeper ) && 
-		 !resourceDown ) {
+	if ( connect_failure && !resourceDown ) {
 		if ( connect_failure_counter < maxConnectFailures ) {
 				// We are seeing a lot of failures to connect
 				// with Globus 2.2 libraries, often due to GSI not able 
@@ -1256,9 +1225,6 @@ rc=0;
 			dprintf(D_FULLDEBUG,
 				"(%d.%d) Connection failure, requesting a ping of the resource\n",
 				procID.cluster,procID.proc);
-			if ( connect_failure_jobmanager ) {
-				jmUnreachable = true;
-			}
 			resourcePingPending = true;
 			myResource->RequestPing( this );
 		}
@@ -1274,7 +1240,6 @@ void GT3Job::NotifyResourceDown()
 		WriteGT3ResourceDownEventToUserLog( jobAd );
 	}
 	resourceDown = true;
-	jmUnreachable = false;
 	resourcePingPending = false;
 	// set downtime timestamp?
 	SetEvaluateState();
@@ -1287,10 +1252,6 @@ void GT3Job::NotifyResourceUp()
 		WriteGT3ResourceUpEventToUserLog( jobAd );
 	}
 	resourceDown = false;
-	if ( jmUnreachable ) {
-		jmDown = true;
-	}
-	jmUnreachable = false;
 	resourcePingPending = false;
 	SetEvaluateState();
 }

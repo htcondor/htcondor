@@ -74,7 +74,6 @@ class GT3Job : public BaseJob
 
 	static int probeInterval;
 	static int submitInterval;
-	static int restartInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 	static int outputWaitGrowthTimeout;
@@ -83,8 +82,6 @@ class GT3Job : public BaseJob
 		{ probeInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
-	static void setRestartInterval( int new_interval )
-		{ restartInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 	static void setConnectFailureRetry( int count )
@@ -100,8 +97,6 @@ class GT3Job : public BaseJob
 	int callbackGlobusState;
 	int callbackGlobusStateErrorCode;
 	bool resourcePingPending;
-	bool jmUnreachable;
-	bool jmDown;
 	GT3Resource *myResource;
 	time_t lastProbeTime;
 	bool probeNow;
@@ -110,18 +105,8 @@ class GT3Job : public BaseJob
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 	int submitFailureCode;
-	int lastRestartReason;
-	time_t lastRestartAttempt;
-	int numRestartAttempts;
-	int numRestartAttemptsThisSubmit;
 	time_t jmProxyExpireTime;
-	time_t outputWaitLastGrowth;
-	int outputWaitOutputSize;
-	int outputWaitErrorSize;
-	// HACK!
-	bool retryStdioSize;
 	char *resourceManagerString;
-	bool useGridJobMonitor;
 
 		// TODO should query these from GahpClient when needed
 	char *gassServerUrl;
@@ -148,9 +133,6 @@ class GT3Job : public BaseJob
 	bool stageOutput;
 	bool stageError;
 	int globusError;
-
-	bool restartingJM;
-	time_t restartWhen;
 
 	int numGlobusSubmits;
 

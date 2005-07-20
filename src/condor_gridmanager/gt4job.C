@@ -313,10 +313,8 @@ const char *Gt4JobStateToString( int status )
 
 int GT4Job::probeInterval = 300;			// default value
 int GT4Job::submitInterval = 300;			// default value
-int GT4Job::restartInterval = 60;			// default value
 int GT4Job::gahpCallTimeout = 300;			// default value
 int GT4Job::maxConnectFailures = 3;			// default value
-int GT4Job::outputWaitGrowthTimeout = 15;	// default value
 
 GT4Job::GT4Job( ClassAd *classad )
 	: BaseJob( classad )
@@ -341,29 +339,18 @@ GT4Job::GT4Job( ClassAd *classad )
 	globusStateFaultString = 0;
 	callbackGlobusState = 0;
 	callbackGlobusStateFaultString = "";
-	restartingJM = false;
-	restartWhen = 0;
 	gmState = GM_INIT;
 	globusState = GT4_JOB_STATE_UNSUBMITTED;
 	resourcePingPending = false;
-	jmUnreachable = false;
-	jmDown = false;
 	lastProbeTime = 0;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
 	enteredCurrentGlobusState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
-	lastRestartReason = 0;
-	lastRestartAttempt = 0;
-	numRestartAttempts = 0;
-	numRestartAttemptsThisSubmit = 0;
 	jmProxyExpireTime = 0;
 	jmLifetime = 0;
 	connect_failure_counter = 0;
-	outputWaitLastGrowth = 0;
-	// HACK!
-	retryStdioSize = true;
 	resourceManagerString = NULL;
 	jobmanagerType = NULL;
 	myResource = NULL;
@@ -452,8 +439,6 @@ GT4Job::GT4Job( ClassAd *classad )
 		delegatedCredentialURI = strdup( buff );
 		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
 	}
-
-	useGridJobMonitor = true;
 
 	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 
@@ -575,8 +560,7 @@ void GT4Job::Reconfig()
 
 int GT4Job::doEvaluateState()
 {
-	bool connect_failure_jobmanager = false;
-	bool connect_failure_gatekeeper = false;
+	bool connect_failure = false;
 	int old_gm_state;
 	int old_globus_state;
 	bool reevaluate_state = true;
@@ -592,10 +576,6 @@ int GT4Job::doEvaluateState()
 			procID.cluster,procID.proc,GMStateNames[gmState],globusState);
 
 	if ( gahp ) {
-		// We don't include jmDown here because we don't want it to block
-		// connections to the gatekeeper (particularly restarts) and any
-		// state that contacts to the jobmanager should be jumping to
-		// GM_RESTART instead.
 		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
 			gahp->setMode( GahpClient::results_only );
 		} else {
@@ -718,7 +698,7 @@ int GT4Job::doEvaluateState()
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
 				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-				connect_failure_jobmanager = true;
+				connect_failure = true;
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
@@ -1068,7 +1048,6 @@ int GT4Job::doEvaluateState()
 					globusState = GT4_JOB_STATE_UNSUBMITTED;
 					jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 					requestScheddUpdate( this );
-					jmDown = false;
 				}
 				gmState = GM_CLEAR_REQUEST;
 			}
@@ -1123,7 +1102,6 @@ int GT4Job::doEvaluateState()
 
 			SetJobContact( NULL );
 			myResource->CancelSubmit( this );
-			jmDown = false;
 			globusState = GT4_JOB_STATE_UNSUBMITTED;
 			jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 			requestScheddUpdate( this );
@@ -1185,16 +1163,11 @@ int GT4Job::doEvaluateState()
 			}
 			globusStateFaultString = "";
 			globusErrorString = "";
-			lastRestartReason = 0;
-			numRestartAttemptsThisSubmit = 0;
 			errorString = "";
 			ClearCallbacks();
-			// HACK!
-			retryStdioSize = true;
 			myResource->CancelSubmit( this );
 			if ( jobContact != NULL ) {
 				SetJobContact( NULL );
-				jmDown = false;
 			}
 			JobIdle();
 			if ( submitLogged ) {
@@ -1340,8 +1313,7 @@ int GT4Job::doEvaluateState()
 
 	} while ( reevaluate_state );
 
-	if ( ( connect_failure_jobmanager || connect_failure_gatekeeper ) && 
-		 !resourceDown ) {
+	if ( connect_failure && !resourceDown ) {
 		if ( connect_failure_counter < maxConnectFailures ) {
 				// We are seeing a lot of failures to connect
 				// with Globus 2.2 libraries, often due to GSI not able 
@@ -1357,9 +1329,6 @@ int GT4Job::doEvaluateState()
 			dprintf(D_FULLDEBUG,
 				"(%d.%d) Connection failure, requesting a ping of the resource\n",
 				procID.cluster,procID.proc);
-			if ( connect_failure_jobmanager ) {
-				jmUnreachable = true;
-			}
 			resourcePingPending = true;
 			myResource->RequestPing( this );
 		}
@@ -1403,7 +1372,6 @@ void GT4Job::NotifyResourceDown()
 		WriteGT4ResourceDownEventToUserLog( jobAd );
 	}
 	resourceDown = true;
-	jmUnreachable = false;
 	resourcePingPending = false;
 	// set downtime timestamp?
 	SetEvaluateState();
@@ -1416,10 +1384,6 @@ void GT4Job::NotifyResourceUp()
 		WriteGT4ResourceUpEventToUserLog( jobAd );
 	}
 	resourceDown = false;
-	if ( jmUnreachable ) {
-		jmDown = true;
-	}
-	jmUnreachable = false;
 	resourcePingPending = false;
 	SetEvaluateState();
 }
