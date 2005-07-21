@@ -60,8 +60,6 @@ class GT4Job : public BaseJob
 
 	void Reconfig();
 	int doEvaluateState();
-	void NotifyResourceDown();
-	void NotifyResourceUp();
 	void UpdateGlobusState( int new_state, const char *new_fault );
 	void GramCallback( const char *new_state, const char *new_fault,
 					   const int new_exit_code );
@@ -84,14 +82,11 @@ class GT4Job : public BaseJob
 		{ maxConnectFailures = count; }
 
 	// New variables
-	bool resourceDown;
-	bool resourceStateKnown;
 	int gmState;
 	int globusState;
 	MyString globusStateFaultString;
 	int callbackGlobusState;
 	MyString callbackGlobusStateFaultString;
-	bool resourcePingPending;
 	GT4Resource *myResource;
 	time_t lastProbeTime;
 	bool probeNow;

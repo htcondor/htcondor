@@ -106,15 +106,12 @@ class GlobusJob : public BaseJob
 		{ maxConnectFailures = count; }
 
 	// New variables
-	bool resourceDown;
-	bool resourceStateKnown;
 	int gmState;
 	int globusState;
 	int globusStateErrorCode;
 	int globusStateBeforeFailure;
 	int callbackGlobusState;
 	int callbackGlobusStateErrorCode;
-	bool resourcePingPending;
 	bool jmUnreachable;
 	bool jmDown;
 	GlobusResource *myResource;
@@ -197,8 +194,6 @@ bool WriteGlobusSubmitEventToUserLog( ClassAd *job_ad );
 bool WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad,
 											int failure_code,
 											const char *failure_mesg);
-bool WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad );
-bool WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad );
 
 #endif
 

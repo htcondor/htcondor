@@ -64,8 +64,6 @@ class GT3Job : public BaseJob
 
 	void Reconfig();
 	int doEvaluateState();
-	void NotifyResourceDown();
-	void NotifyResourceUp();
 	void UpdateGlobusState( int new_state, int new_error_code );
 	void GramCallback( int new_state, int new_error_code );
 	bool GetCallbacks();
@@ -88,15 +86,12 @@ class GT3Job : public BaseJob
 		{ maxConnectFailures = count; }
 
 	// New variables
-	bool resourceDown;
-	bool resourceStateKnown;
 	int gmState;
 	int globusState;
 	int globusStateErrorCode;
 	int globusStateBeforeFailure;
 	int callbackGlobusState;
 	int callbackGlobusStateErrorCode;
-	bool resourcePingPending;
 	GT3Resource *myResource;
 	time_t lastProbeTime;
 	bool probeNow;

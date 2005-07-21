@@ -633,7 +633,6 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	restartWhen = 0;
 	gmState = GM_INIT;
 	globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-	resourcePingPending = false;
 	jmUnreachable = false;
 	jmDown = false;
 	lastProbeTime = 0;
@@ -831,8 +830,6 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	resourceDown = false;
-	resourceStateKnown = false;
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
 	myResource->RegisterJob( this );
 	if ( job_already_submitted ) {
@@ -2379,14 +2376,9 @@ int GlobusJob::CommunicationTimeout()
 
 void GlobusJob::NotifyResourceDown()
 {
-	resourceStateKnown = true;
-	if ( resourceDown == false ) {
-		WriteGlobusResourceDownEventToUserLog( jobAd );
-	}
-	resourceDown = true;
+	BaseJob::NotifyResourceDown();
+
 	jmUnreachable = false;
-	resourcePingPending = false;
-	SetEvaluateState();
 	// set a timeout timer, so we don't wait forever for this
 	// resource to reappear.
 	if ( communicationTimeoutTid != -1 ) {
@@ -2418,21 +2410,16 @@ void GlobusJob::NotifyResourceDown()
 
 void GlobusJob::NotifyResourceUp()
 {
+	BaseJob::NotifyResourceUp();
+
 	if ( communicationTimeoutTid != -1 ) {
 		daemonCore->Cancel_Timer(communicationTimeoutTid);
 		communicationTimeoutTid = -1;
 	}
-	resourceStateKnown = true;
-	if ( resourceDown == true ) {
-		WriteGlobusResourceUpEventToUserLog( jobAd );
-	}
-	resourceDown = false;
 	if ( jmUnreachable ) {
 		jmDown = true;
 	}
 	jmUnreachable = false;
-	resourcePingPending = false;
-	SetEvaluateState();
 	int time_of_death = 0;
 	jobAd->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
 	if ( time_of_death ) {
@@ -3309,82 +3296,6 @@ WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
 				 cluster, proc);
-		return false;
-	}
-
-	return true;
-}
-
-bool
-WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus up record to user logfile\n",
-			 cluster, proc );
-
-	GlobusResourceUpEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact =  strnewp(contact);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_UP event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-bool
-WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus down record to user logfile\n",
-			 cluster, proc );
-
-	GlobusResourceDownEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact =  strnewp(contact);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n",
-				 cluster, proc );
 		return false;
 	}
 

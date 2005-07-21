@@ -63,8 +63,8 @@ class BaseJob
 	void UpdateJobTime( float *old_run_time, bool *old_run_time_dirty );
 	void RestoreJobTime( float old_run_time, bool old_run_time_dirty );
 
-	virtual void NotifyResourceDown() {}
-	virtual void NotifyResourceUp() {}
+	virtual void NotifyResourceDown();
+	virtual void NotifyResourceUp();
 
 	ClassAd *jobAd;
 	PROC_ID procID;
@@ -91,6 +91,10 @@ class BaseJob
 	int doResubmit;
 	int wantRematch;
 
+	bool resourceDown;
+	bool resourceStateKnown;
+	bool resourcePingPending;
+
  protected:
 	void UpdateRuntimeStats();
 
@@ -104,6 +108,8 @@ bool WriteAbortEventToUserLog( ClassAd *job_ad );
 bool WriteTerminateEventToUserLog( ClassAd *job_ad );
 bool WriteEvictEventToUserLog( ClassAd *job_ad );
 bool WriteHoldEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad );
 void EmailTerminateEvent( ClassAd * job_ad, bool exit_status_known );
 
 #endif // define BASEJOB_H

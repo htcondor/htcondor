@@ -126,8 +126,6 @@ static char *GMStateNames[] = {
 static bool WriteGT4SubmitEventToUserLog( ClassAd *job_ad );
 static bool WriteGT4SubmitFailedEventToUserLog( ClassAd *job_ad,
 												const char *failure_string );
-static bool WriteGT4ResourceUpEventToUserLog( ClassAd *job_ad );
-static bool WriteGT4ResourceDownEventToUserLog( ClassAd *job_ad );
 
 #define HASH_TABLE_SIZE			500
 
@@ -341,7 +339,6 @@ GT4Job::GT4Job( ClassAd *classad )
 	callbackGlobusStateFaultString = "";
 	gmState = GM_INIT;
 	globusState = GT4_JOB_STATE_UNSUBMITTED;
-	resourcePingPending = false;
 	lastProbeTime = 0;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
@@ -411,8 +408,6 @@ GT4Job::GT4Job( ClassAd *classad )
 		goto error_exit;
 	}
 
-	resourceDown = false;
-	resourceStateKnown = false;
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
 	myResource->RegisterJob( this );
 	if ( job_already_submitted ) {
@@ -1365,29 +1360,6 @@ void GT4Job::SetJobContact( const char *job_contact )
 	requestScheddUpdate( this );
 }
 
-void GT4Job::NotifyResourceDown()
-{
-	resourceStateKnown = true;
-	if ( resourceDown == false ) {
-		WriteGT4ResourceDownEventToUserLog( jobAd );
-	}
-	resourceDown = true;
-	resourcePingPending = false;
-	// set downtime timestamp?
-	SetEvaluateState();
-}
-
-void GT4Job::NotifyResourceUp()
-{
-	resourceStateKnown = true;
-	if ( resourceDown == true ) {
-		WriteGT4ResourceUpEventToUserLog( jobAd );
-	}
-	resourceDown = false;
-	resourcePingPending = false;
-	SetEvaluateState();
-}
-
 bool GT4Job::AllowTransition( int new_state, int old_state )
 {
 
@@ -2092,83 +2064,6 @@ WriteGT4SubmitFailedEventToUserLog( ClassAd *job_ad,
 
 	return true;
 }
-
-static bool
-WriteGT4ResourceUpEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus up record to user logfile\n",
-			 cluster, proc );
-
-	GlobusResourceUpEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact =  strnewp(contact);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_UP event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-static bool
-WriteGT4ResourceDownEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus down record to user logfile\n",
-			 cluster, proc );
-
-	GlobusResourceDownEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact =  strnewp(contact);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
 
 const char * 
 GT4Job::printXMLParam (const char * name, const char * value) {

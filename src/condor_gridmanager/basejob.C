@@ -26,6 +26,7 @@
 #include "condor_attributes.h"
 #include "condor_debug.h"
 #include "environ.h"  // for Environ object
+#include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_ckpt_name.h"
 
@@ -75,6 +76,10 @@ BaseJob::BaseJob( ClassAd *classad )
 	periodicPolicyEvalTid = daemonCore->Register_Timer( 30,
 								(TimerHandlercpp)&BaseJob::EvalPeriodicJobExpr,
 								"EvalPeriodicJobExpr", (Service*) this );
+
+	resourceStateKnown = false;
+	resourceDown = false;
+	resourcePingPending = false;
 }
 
 BaseJob::~BaseJob()
@@ -520,6 +525,30 @@ BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty )
   jobAd->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
 }
 
+void BaseJob::NotifyResourceDown()
+{
+	resourceStateKnown = true;
+	if ( resourceDown == false ) {
+			// TODO add a generic resource-down event
+		WriteGlobusResourceDownEventToUserLog( jobAd );
+	}
+	resourceDown = true;
+	resourcePingPending = false;
+	SetEvaluateState();
+}
+
+void BaseJob::NotifyResourceUp()
+{
+	resourceStateKnown = true;
+	if ( resourceDown == true ) {
+			// TODO add a generic resource-up event
+		WriteGlobusResourceUpEventToUserLog( jobAd );
+	}
+	resourceDown = false;
+	resourcePingPending = false;
+	SetEvaluateState();
+}
+
 // Initialize a UserLog object for a given job and return a pointer to
 // the UserLog object created.  This object can then be used to write
 // events and must be deleted when you're done.  This returns NULL if
@@ -793,6 +822,90 @@ WriteHoldEventToUserLog( ClassAd *job_ad )
 	if (!rc) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_JOB_HELD event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	char contact[256];
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing globus up record to user logfile\n",
+			 cluster, proc );
+
+	GlobusResourceUpEvent event;
+
+	contact[0] = '\0';
+	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
+						   sizeof(contact) - 1 );
+	if ( contact[0] == '\0' ) {
+			// Not a Globus job, don't log the event
+		return true;
+	}
+	event.rmContact =  strnewp(contact);
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_UP event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	char contact[256];
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing globus down record to user logfile\n",
+			 cluster, proc );
+
+	GlobusResourceDownEvent event;
+
+	contact[0] = '\0';
+	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
+						   sizeof(contact) - 1 );
+	if ( contact[0] == '\0' ) {
+			// Not a Globus job, don't log the event
+		return true;
+	}
+	event.rmContact =  strnewp(contact);
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n",
 				 cluster, proc );
 		return false;
 	}
