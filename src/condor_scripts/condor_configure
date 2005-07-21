@@ -131,6 +131,7 @@ sub find_local_config_file();
 sub find_local_dir();
 sub install($);
 sub find_release_dir($);
+sub safe_mkdir($$);
 sub condor_init($);
 sub check_release_dir($);
 sub set_mail_settings();
@@ -719,31 +720,27 @@ sub find_release_dir($) {
 Please specify it with --install-dir=<dir>\n";
 }
 
+sub safe_mkdir($$) {
+    my ($name,$mode) = @_;
+    return if -d $name;
+    my $prev_umask = umask(0);
+    mkdir($name, $mode)
+        or die "\nCan't create \"$name\"\n\n";
+    umask($prev_umask);
+}
+
 sub condor_init($) {
     my $local_dir = shift(@_);
 
-    (-d "$local_dir") || mkdir("$local_dir", 0777) || 
-	die "\nCan't create \"$local_dir\"\n\n";
+    # Make required local directories
+    safe_mkdir( "$local_dir",               0755);
+    safe_mkdir( "$local_dir/log",           0755);
+    #safe_mkdir( "$local_dir/log/GridLogs,   01777); #world writeable local dir!
+    safe_mkdir( "$local_dir/spool",         0755);
+    safe_mkdir( "$local_dir/execute",       01777); #world writeable local dir!
+    safe_mkdir( "$local_dir/ViewHist",      0755);
 
-#    chomp ($local_dir=`pushd $local_dir >> /dev/null && pwd && popd >> /dev/null`);
-    
-    unless (-d "$local_dir/log") { 
-	mkdir ("$local_dir/log", 0755) || die "\nCan't create \"$local_dir/log\"\n\n"; 
-    }
-    unless (-d "$local_dir/spool") {
-	mkdir ("$local_dir/spool", 0755) || die "\nCan't create \"$local_dir/spool\"\n\n";
-    }
-    unless (-d "$local_dir/execute") {
- 	mkdir ("$local_dir/execute", 1777) || die "\nCan't create \"$local_dir/execute\"\n\n";
-    }
-
-    # I know this is redundant but I've had trouble with Perl's mkdir    
-    system ("chmod 755 $local_dir/log");
-    system ("chmod 755 $local_dir/spool");
-    system ("chmod 1777 $local_dir/execute");
-
-    system ("chown -R $owner $local_dir");
-
+    system ("chown -R $owner $local_dir");  # wish Perl could do this natively
     return $local_dir;
 }
 
