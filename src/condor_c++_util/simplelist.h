@@ -53,6 +53,8 @@ class SimpleList
     inline bool IsEmpty() const { return (size == 0); }
 	inline int Number(void) { return size; }
 	inline int Length(void) { return Number(); }
+	inline void Clear(void) { size = 0; Rewind(); }
+	
 
     // Scans
     inline void    Rewind() { current = -1; }
