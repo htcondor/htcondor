@@ -10,16 +10,16 @@
 
 all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes -I$(PCRE_INC)
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
-LIB = $(STD_LIBS)
+LIB = $(STD_LIBS) -L$(PCRE_LIB) -lpcre
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
 #endif 
 
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
-	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o
+	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o strnewp.o \
@@ -129,7 +129,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	condor_md.o condor_credential.o \
 	HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
-	RegExer.o my_distribution.o error_utils.o $(DH_OBJ) \
+	RegExer.o Regex.o my_distribution.o error_utils.o $(DH_OBJ) \
 	translation_utils.o command_strings.o enum_utils.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
 	domain_tools.o CondorError.o utc_time.o status_string.o \
@@ -139,6 +139,7 @@ library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
 library_target( libcondorapi.a,$(CONLIBAPI_OBJ) )
 
+c_plus_target(test_mapfile,test_mapfile.o,$(LIB))
 c_plus_target(test_locks,test_locks.o,$(LIB))
 c_plus_target(test_stringSpace,test_stringSpace.o,$(LIB))
 c_plus_target(test_iso_dates,test_iso_dates.o,$(LIB))
@@ -215,4 +216,3 @@ test.o: user_log.h
 
 condor_version.o: condor_version.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.C
-
