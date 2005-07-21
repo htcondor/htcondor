@@ -342,59 +342,68 @@ doContactSchedd()
 	
 
 	// JOB_STAGE_IN
+	int MAX_BATCH_SIZE=1; // This should be a config param
+
 	SimpleList <SchedDRequest*> stage_in_batch;
+	do {
+		stage_in_batch.Clear();
 
-	command_queue.Rewind();
-	while (command_queue.Next(current_command)) {
+		command_queue.Rewind();
+		while (command_queue.Next(current_command)) {
 
-		if (current_command->status != SchedDRequest::SDCS_NEW)
-			continue;
+			if (current_command->status != SchedDRequest::SDCS_NEW)
+				continue;
 
-		if (current_command->command != SchedDRequest::SDC_JOB_STAGE_IN)
-			continue;
+			if (current_command->command != SchedDRequest::SDC_JOB_STAGE_IN)
+				continue;
 
+			dprintf (D_ALWAYS, "Adding %d.%d to STAGE_IN batch\n", 
+					 current_command->cluster_id,
+					 current_command->proc_id);
 
-		stage_in_batch.Append (current_command);
-	}
-
-	if (stage_in_batch.Number() > 0) {
-		ClassAd ** array = new ClassAd*[stage_in_batch.Number()];
-		i=0;
-		stage_in_batch.Rewind();
-		while (stage_in_batch.Next(current_command)) {
-			array[i++] = current_command->classad;
+			stage_in_batch.Append (current_command);
+			if (stage_in_batch.Number() >= MAX_BATCH_SIZE)
+				break;
 		}
 
-		error = FALSE;
-		errstack.clear();
-		if (!dc_schedd.spoolJobFiles( stage_in_batch.Number(),
-									  array,
-									  &errstack )) {
-			error = TRUE;
-			sprintf (error_msg, "Error connecting to schedd %s: %s", ScheddAddr, errstack.getFullText());
-			dprintf (D_ALWAYS, "%s\n", error_msg);
-		}
-		delete [] array;
-  
-		stage_in_batch.Rewind();
-		while (stage_in_batch.Next(current_command)) {
-			current_command->status = SchedDRequest::SDCS_COMPLETED;
-
-			if (error) {
-				const char * result[] = {
-								GAHP_RESULT_FAILURE,
-								error_msg };
-				enqueue_result (current_command->request_id, result, 2);
-
-			} else {
-				const char * result[] = {
-										GAHP_RESULT_SUCCESS,
-										NULL };
-				enqueue_result (current_command->request_id, result, 2);
+		if (stage_in_batch.Number() > 0) {
+			ClassAd ** array = new ClassAd*[stage_in_batch.Number()];
+			i=0;
+			stage_in_batch.Rewind();
+			while (stage_in_batch.Next(current_command)) {
+				array[i++] = current_command->classad;
 			}
-		} // elihw (command_queue)
-	} // fi has STAGE_IN requests
 
+			error = FALSE;
+			errstack.clear();
+			if (!dc_schedd.spoolJobFiles( stage_in_batch.Number(),
+										  array,
+										  &errstack )) {
+				error = TRUE;
+				sprintf (error_msg, "Error connecting to schedd %s: %s", ScheddAddr, errstack.getFullText());
+				dprintf (D_ALWAYS, "%s\n", error_msg);
+			}
+			delete [] array;
+  
+			stage_in_batch.Rewind();
+			while (stage_in_batch.Next(current_command)) {
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+
+				if (error) {
+					const char * result[] = {
+						GAHP_RESULT_FAILURE,
+						error_msg };
+					enqueue_result (current_command->request_id, result, 2);
+
+				} else {
+					const char * result[] = {
+						GAHP_RESULT_SUCCESS,
+						NULL };
+					enqueue_result (current_command->request_id, result, 2);
+				}
+			} // elihw (command_queue)
+		} // fi has STAGE_IN requests
+	} while (stage_in_batch.Number() > 0);
 
 	dprintf (D_FULLDEBUG, "Processing JOB_STAGE_OUT requests\n");
 	
