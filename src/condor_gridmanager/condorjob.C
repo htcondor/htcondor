@@ -1350,9 +1350,10 @@ ClassAd *CondorJob::buildSubmitAd()
 	expr.sprintf( "%s = Undefined", ATTR_OWNER );
 	submit_ad->Insert( expr.Value() );
 
+	const int STAGE_IN_TIME_LIMIT  = 60 * 60 * 8; // 8 hours in seconds.
 	expr.sprintf( "%s = (%s > 0) =!= True && CurrentTime > %s + %d",
 				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
-				  ATTR_Q_DATE, 1800 );
+				  ATTR_Q_DATE, STAGE_IN_TIME_LIMIT );
 	submit_ad->Insert( expr.Value() );
 
 	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
