@@ -71,9 +71,13 @@ class CondorResource : public BaseResource
 	char *proxySubject;
 
  private:
+	void DoPing( time_t& ping_delay, bool& ping_complete,
+				 bool& ping_succeeded  );
+
 	static HashTable <HashKey, CondorResource *> ResourcesByName;
 
 	GahpClient *gahp;
+	GahpClient *ping_gahp;
 };
 
 #endif

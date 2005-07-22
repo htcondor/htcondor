@@ -89,6 +89,7 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 	scheddPollTid = TIMER_UNSET;
 	scheddName = strdup( resource_name );
 	gahp = NULL;
+	ping_gahp = NULL;
 	scheddStatusActive = false;
 	submitter_constraint = "";
 
@@ -116,10 +117,17 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 		if ( poolName != NULL ) {
 			buff2.sprintf_cat( " -P %s", poolName );
 		}
+
 		gahp = new GahpClient( buff.Value(), gahp_path, buff2.Value() );
 		gahp->setNotificationTimerId( scheddPollTid );
 		gahp->setMode( GahpClient::normal );
 		gahp->setTimeout( CondorJob::gahpCallTimeout );
+
+		ping_gahp = new GahpClient( buff.Value(), gahp_path, buff2.Value() );
+		ping_gahp->setNotificationTimerId( pingTimerId );
+		ping_gahp->setMode( GahpClient::normal );
+		ping_gahp->setTimeout( CondorJob::gahpCallTimeout );
+
 		free( gahp_path );
 	}
 }
@@ -137,6 +145,9 @@ CondorResource::~CondorResource()
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
+	}
+	if ( ping_gahp != NULL ) {
+		delete ping_gahp;
 	}
 	if ( scheddName != NULL ) {
 		free( scheddName );
@@ -267,4 +278,38 @@ int CondorResource::DoScheddPoll()
 	}
 
 	return 0;
+}
+
+void CondorResource::DoPing( time_t& ping_delay, bool& ping_complete,
+							 bool& ping_succeeded )
+{
+	int rc;
+	int num_status_ads = 0;
+	ClassAd **status_ads = NULL;
+
+dprintf(D_ALWAYS,"*** DoPing called\n");
+	if ( ping_gahp->isStarted() == false ) {
+		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
+		ping_delay = 5;
+		return;
+	}
+
+	ping_delay = 0;
+
+	rc = ping_gahp->condor_job_status_constrained( scheddName, "False",
+												   &num_status_ads,
+												   &status_ads );
+	ASSERT( num_status_ads == 0 );
+	ASSERT( status_ads == NULL );
+
+	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+		ping_complete = false;
+	} else if ( rc != 0 ) 
+	{
+		ping_complete = true;
+		ping_succeeded = false;
+	} else {
+		ping_complete = true;
+		ping_succeeded = true;
+	}
 }

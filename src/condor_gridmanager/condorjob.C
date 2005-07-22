@@ -178,6 +178,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	remotePoolName = NULL;
 	remoteJobIdString = NULL;
 	submitterId = NULL;
+	connectFailureCount = 0;
 	jobProxy = NULL;
 	remoteProxyExpireTime = 0;
 	lastProxyRefreshAttempt = 0;
@@ -325,6 +326,7 @@ void CondorJob::Reconfig()
 
 int CondorJob::doEvaluateState()
 {
+	bool connect_failure = false;
 	int old_gm_state;
 	int old_remote_state;
 	bool reevaluate_state = true;
@@ -340,7 +342,11 @@ int CondorJob::doEvaluateState()
 			procID.cluster,procID.proc,GMStateNames[gmState],remoteState);
 
 	if ( gahp ) {
-		gahp->setMode( GahpClient::normal );
+		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
+			gahp->setMode( GahpClient::results_only );
+		} else {
+			gahp->setMode( GahpClient::normal );
+		}
 	}
 
 	do {
@@ -415,6 +421,10 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_status_constrained() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
+				if ( !resourcePingComplete /* && connect failure */ ) {
+					connect_failure = true;
+					break;
+				}
 				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 				break;
@@ -560,6 +570,11 @@ int CondorJob::doEvaluateState()
 						gmState = GM_DELETE;
 					} else {
 						// unhandled error
+						if ( !resourcePingComplete /* && connect failure */ ) {
+							numSubmitAttempts--;
+							connect_failure = true;
+							break;
+						}
 						gmState = GM_UNSUBMITTED;
 						reevaluate_state = true;
 					}
@@ -629,6 +644,10 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_stage_in() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
+				if ( !resourcePingComplete /* && connect failure */ ) {
+					connect_failure = true;
+					break;
+				}
 				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 			}
@@ -693,6 +712,10 @@ int CondorJob::doEvaluateState()
 					dprintf( D_ALWAYS,
 							 "(%d.%d) condor_job_refresh_proxy() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
+					if ( !resourcePingComplete /* && connect failure */ ) {
+						connect_failure = true;
+						break;
+					}
 					errorString = gahp->getErrorString();
 
 					if ( ( remoteProxyExpireTime != 0 &&
@@ -725,6 +748,10 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_hold() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
+				if ( !resourcePingComplete /* && connect failure */ ) {
+					connect_failure = true;
+					break;
+				}
 				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 				break;
@@ -743,6 +770,10 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_release() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
+				if ( !resourcePingComplete /* && connect failure */ ) {
+					connect_failure = true;
+					break;
+				}
 				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 				break;
@@ -768,6 +799,10 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_status_constrained() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
+				if ( !resourcePingComplete /* && connect failure */ ) {
+					connect_failure = true;
+					break;
+				}
 				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 				break;
@@ -808,6 +843,10 @@ int CondorJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_stage_out() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
+				if ( !resourcePingComplete /* && connect failure */ ) {
+					connect_failure = true;
+					break;
+				}
 				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 			}
@@ -843,6 +882,7 @@ int CondorJob::doEvaluateState()
 					// TODO: Once we have pending-completed and
 					//   pending-removed states, don't just give up. We
 					//   can put the job on hold.
+					// Should we request a ping here?
 				dprintf( D_ALWAYS,
 						 "(%d.%d) Failed to clean up remote job state, leaving it there.\n",
 						 procID.cluster, procID.proc );
@@ -889,6 +929,7 @@ int CondorJob::doEvaluateState()
 					// unhandled error
 					// Keep retrying. Once we have leases, we can give up
 					// once the lease expires.
+					// Should we request a ping here?
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_remove() failed (will retry): %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
@@ -1022,9 +1063,28 @@ int CondorJob::doEvaluateState()
 				delete gahpAd;
 				gahpAd = NULL;
 			}
+			connectFailureCount = 0;
+			resourcePingComplete = false;
 		}
 
 	} while ( reevaluate_state );
+
+	if ( connect_failure && !resourceDown ) {
+		if ( connectFailureCount < maxConnectFailures ) {
+			connectFailureCount++;
+			int retry_secs = param_integer(
+				"GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL",5);
+			dprintf(D_FULLDEBUG,
+				"(%d.%d) Connection failure (try #%d), retrying in %d secs\n",
+				procID.cluster,procID.proc,connectFailureCount,retry_secs);
+			daemonCore->Reset_Timer( evaluateStateTid, retry_secs );
+		} else {
+			dprintf(D_FULLDEBUG,
+				"(%d.%d) Connection failure, requesting a ping of the resource\n",
+				procID.cluster,procID.proc);
+			RequestPing();
+		}
+	}
 
 	return TRUE;
 }
@@ -1167,7 +1227,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 BaseResource *CondorJob::GetResource()
 {
-	return (BaseResource *)NULL;
+	return (BaseResource *)myResource;
 }
 
 #if 0

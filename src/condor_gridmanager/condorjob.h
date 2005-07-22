@@ -84,6 +84,7 @@ class CondorJob : public BaseJob
 	PROC_ID remoteJobId;
 	char *remoteJobIdString;
 	char *submitterId;
+	int connectFailureCount;
 
 	Proxy *jobProxy;
 	time_t remoteProxyExpireTime;
