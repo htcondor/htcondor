@@ -1050,6 +1050,8 @@ int DestroyCluster(int cluster_id, const char* reason)
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);
 
+				cleanup_ckpt_files(cluster_id,proc_id, NULL );
+
 				JobQueue->DestroyClassAd(key.value());
 
 					// remove any match (startd) ad stored w/ this job

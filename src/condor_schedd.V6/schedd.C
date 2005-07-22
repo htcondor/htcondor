@@ -2194,6 +2194,16 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		return true;
 		break;
 		
+	case CONDOR_UNIVERSE_MPI:
+	case CONDOR_UNIVERSE_PARALLEL:
+			// There's only one shadow, for all the procs, and it
+			// is associated with procid 0.  Assume that if we are
+			// passed procid > 0, we've already spawned the one
+			// shadow this whole cluster needs
+		if (proc > 0) {
+			return true;
+		}
+			break;
 	default:
 		break;
 	}
@@ -5805,6 +5815,24 @@ Scheduler::StartJobHandler()
 			// if we got this far, we're definitely starting the job,
 			// so deal with the aboutToSpawnJobHandler hook...
 		callAboutToSpawnJobHandler( cluster, proc, srec );
+
+		int universe = srec->universe;
+		if( (universe == CONDOR_UNIVERSE_MPI) || 
+			(universe == CONDOR_UNIVERSE_PARALLEL)) {
+			
+			if (proc != 0) {
+				dprintf( D_ALWAYS, "StartJobHandler called for MPI or Parallel job, with "
+					   "non-zero procid for job (%d.%d)\n", cluster, proc);
+			}
+			
+				// We've just called callAboutToSpawnJobHandler on procid 0,
+				// now call it on the rest of them
+			proc = 1;
+			while( GetJobAd( cluster, proc, false)) {
+				callAboutToSpawnJobHandler( cluster, proc, srec);
+				proc++;
+			}
+		}
 
 			// we're done trying to spawn a job at this time.  call
 			// tryNextJob() to let our timer logic handle the rest.
