@@ -7848,8 +7848,8 @@ int http_get_handler(struct soap *soap)
   // if (!strncmp(soap->path, "/calc?", 6))
   //  return calc(soap);
   /* Check requestor's authentication: */
-  if (check_authentication(soap))
-    return 401;
+  //if (check_authentication(soap))
+  //  return 401;
   /* Return Web server status */
   //if (!strcmp(soap->path, "/"))
   //   return info(soap);
