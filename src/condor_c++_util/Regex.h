@@ -3,7 +3,7 @@
 
 #include "condor_common.h"
 #include "MyString.h"
-#include "ExtArray.h"
+#include "extArray.h"
 #include "pcre.h"
 
 

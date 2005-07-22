@@ -3,7 +3,7 @@
 
 #include "condor_common.h"
 #include "Regex.h"
-#include "ExtArray.h"
+#include "extArray.h"
 #include "MyString.h"
 
 
