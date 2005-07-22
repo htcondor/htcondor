@@ -2009,9 +2009,19 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 
 				if (!value) {
 					if(fallback) {
-						char *rebuild = (char *) malloc(  strlen(name) + 3 
-														+ strlen(fallback) + 1);
-						sprintf(rebuild,"%s = %s",name,fallback);
+						char *rebuild = (char *) malloc(  strlen(name)
+							+ 3  // " = "
+							+ 1  // optional '"'
+							+ strlen(fallback)
+							+ 1  // optional '"'
+							+ 1); // null terminator
+						if(strlen(fallback) == 0) {
+							// fallback is nothing?  That confuses all sorts of
+							// things.  How about a nothing string instead?
+							sprintf(rebuild,"%s = \"%s\"",name,fallback);
+						} else {
+							sprintf(rebuild,"%s = %s",name,fallback);
+						}
 						value = rebuild;
 					}
 					if(!fallback || !value) {
