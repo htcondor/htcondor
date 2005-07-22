@@ -80,6 +80,7 @@ BaseJob::BaseJob( ClassAd *classad )
 	resourceStateKnown = false;
 	resourceDown = false;
 	resourcePingPending = false;
+	resourcePingComplete = false;
 }
 
 BaseJob::~BaseJob()
@@ -525,6 +526,20 @@ BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty )
   jobAd->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
 }
 
+void BaseJob::RequestPing()
+{
+	BaseResource *resource = this->GetResource();
+	if ( resource != NULL ) {
+		resourcePingPending = true;
+		resourcePingComplete = false;
+		resource->RequestPing( this );
+	} else {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) RequestPing(): GetResource returned NULL\n",
+				 procID.cluster, procID.proc );
+	}
+}
+
 void BaseJob::NotifyResourceDown()
 {
 	resourceStateKnown = true;
@@ -533,7 +548,10 @@ void BaseJob::NotifyResourceDown()
 		WriteGlobusResourceDownEventToUserLog( jobAd );
 	}
 	resourceDown = true;
-	resourcePingPending = false;
+	if ( resourcePingPending ) {
+		resourcePingPending = false;
+		resourcePingComplete = true;
+	}
 	SetEvaluateState();
 }
 
@@ -545,7 +563,10 @@ void BaseJob::NotifyResourceUp()
 		WriteGlobusResourceUpEventToUserLog( jobAd );
 	}
 	resourceDown = false;
-	resourcePingPending = false;
+	if ( resourcePingPending ) {
+		resourcePingPending = false;
+		resourcePingComplete = true;
+	}
 	SetEvaluateState();
 }
 

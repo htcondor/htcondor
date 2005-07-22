@@ -63,6 +63,7 @@ class BaseJob
 	void UpdateJobTime( float *old_run_time, bool *old_run_time_dirty );
 	void RestoreJobTime( float old_run_time, bool old_run_time_dirty );
 
+	virtual void RequestPing();
 	virtual void NotifyResourceDown();
 	virtual void NotifyResourceUp();
 
@@ -94,6 +95,7 @@ class BaseJob
 	bool resourceDown;
 	bool resourceStateKnown;
 	bool resourcePingPending;
+	bool resourcePingComplete;
 
  protected:
 	void UpdateRuntimeStats();

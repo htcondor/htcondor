@@ -1324,8 +1324,7 @@ int GT4Job::doEvaluateState()
 			dprintf(D_FULLDEBUG,
 				"(%d.%d) Connection failure, requesting a ping of the resource\n",
 				procID.cluster,procID.proc);
-			resourcePingPending = true;
-			myResource->RequestPing( this );
+			RequestPing();
 		}
 	}
 

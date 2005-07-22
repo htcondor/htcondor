@@ -2353,8 +2353,7 @@ int GlobusJob::doEvaluateState()
 			if ( connect_failure_jobmanager ) {
 				jmUnreachable = true;
 			}
-			resourcePingPending = true;
-			myResource->RequestPing( this );
+			RequestPing();
 		}
 	}
 
