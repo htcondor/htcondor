@@ -451,11 +451,21 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 		{
 			ASSERT( event != NULL );
 
-			CondorID condorID;
-			if (event != NULL) condorID = CondorID( event->cluster,
-						event->proc, event->subproc );
+			CondorID condorID( event->cluster, event->proc, event->subproc );
 			Job *job = GetJob( condorID );
 			const char *eventName = ULogEventNumberNames[event->eventNumber];
+
+			if( event->eventNumber == ULOG_POST_SCRIPT_TERMINATED &&
+				event->cluster == -1 ) {
+					// if a post script terminated event's job ID is
+					// -1, that means this node's job submission
+					// attempts failed, and there *is* no job ID -- so
+					// we need to look up the node object using the
+					// node name from the event body...
+                PostScriptTerminatedEvent* pst_event =
+                    (PostScriptTerminatedEvent*)event;
+                job = GetJob( pst_event->dagNodeName );
+			}
 
 				// submit events are printed specially, since we
 				// want to match them with their DAG nodes first...
@@ -464,6 +474,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 				// same place -- it would be too confusing if you bailed
 				// out because of a bad event, but hadn't printed it yet.
 				// wenger 2004-11-01.
+
 			if ( event->eventNumber != ULOG_SUBMIT ) {
 				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
 			} else {
@@ -1185,6 +1196,9 @@ Dag::SubmitReadyJobs(const Dagman &dm)
         sprintf( job->error_text, "Job submit failed" );
 
         // NOTE: this failure short-circuits the "retry" feature
+		// because it's already exhausted a number of retries
+		// (maybe we should make sure dm.max_submit_attempts >
+		// job->retries before assuming this is a good idea...)
         job->retries = job->GetRetryMax();
 
         if( job->_scriptPost && run_post_on_failure ) {
@@ -1192,6 +1206,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	      job->_Status = Job::STATUS_POSTRUN;
 	      // there's no easy way to represent condor_submit errors as
 	      // return values or signals, so just say SIGUSR1
+		  // NOTE: actually, we do have unique return-code space
+		  // *below* -32 which we could use for this (e.g., -35)...
 	      job->_scriptPost->_retValJob = -10;
 	      _postScriptQ->Run( job->_scriptPost );
         } else {
@@ -1315,6 +1331,8 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 	ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
 
 	PostScriptTerminatedEvent e;
+	
+	e.dagNodeName = strnewp( nodeName );
 
 	if( WIFSIGNALED( status ) ) {
 		e.normal = false;

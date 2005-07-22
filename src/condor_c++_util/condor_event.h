@@ -913,6 +913,15 @@ class PostScriptTerminatedEvent : public ULogEvent
 
     /// terminating signal (valid only on abnormal exit)
     int signalNumber;
+
+		// DAG node name
+	char* dagNodeName;
+
+		// text label printed before DAG node name
+	const char* const dagNodeNameLabel;
+
+		// classad attribute name for DAG node name string
+	const char* const dagNodeNameAttr;
 };
 
 

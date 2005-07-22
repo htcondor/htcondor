@@ -3154,18 +3154,24 @@ initFromClassAd(ClassAd* ad)
 // ----- PostScriptTerminatedEvent class
 
 PostScriptTerminatedEvent::
-PostScriptTerminatedEvent()
+PostScriptTerminatedEvent() :
+	dagNodeNameLabel ("DAG Node: "),
+	dagNodeNameAttr ("DAGNodeName")
 {
 	eventNumber = ULOG_POST_SCRIPT_TERMINATED;
 	normal = false;
 	returnValue = -1;
 	signalNumber = -1;
+	dagNodeName = NULL;
 }
 
 
 PostScriptTerminatedEvent::
 ~PostScriptTerminatedEvent()
 {
+	if( dagNodeName ) {
+		delete[] dagNodeName;
+	}
 }
 
 
@@ -3187,6 +3193,14 @@ writeEvent( FILE* file )
             return 0;
         }
     }
+
+    if( dagNodeName ) {
+        if( fprintf( file, "    %s%.8191s\n",
+					 dagNodeNameLabel, dagNodeName ) < 0 ) {
+            return 0;
+        }
+    }
+
     return 1;
 }
 
@@ -3195,6 +3209,15 @@ int PostScriptTerminatedEvent::
 readEvent( FILE* file )
 {
 	int tmp;
+	char buf[8192];
+	buf[0] = '\0';
+
+		// first clear any existing DAG node name
+	if( dagNodeName ) {
+		delete[] dagNodeName;
+	}
+    dagNodeName = NULL;
+	
 	if( fscanf( file, "POST Script terminated.\n\t(%d) ", &tmp ) != 1 ) {
 		return 0;
 	}
@@ -3204,16 +3227,36 @@ readEvent( FILE* file )
 		normal = false;
 	}
     if( normal ) {
-        if( fscanf( file, "Normal termination (return value %d)",
+        if( fscanf( file, "Normal termination (return value %d)\n",
 					&returnValue ) != 1 ) {
             return 0;
 		}
     } else {
-        if( fscanf( file, "Abnormal termination (signal %d)",
+        if( fscanf( file, "Abnormal termination (signal %d)\n",
 					&signalNumber ) != 1 ) {
             return 0;
 		}
     }
+
+	// see if the next line contains an optional DAG node name string,
+	// and, if not, rewind, because that means we slurped in the next
+	// event delimiter looking for it...
+ 
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
+	if( !fgets( buf, 8192, file ) || strcmp( buf, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+
+	// remove trailing newline
+	buf[ strlen( buf ) - 1 ] = '\0';
+
+		// skip "DAG Node: " label to find start of actual node name
+	int label_len = strlen( dagNodeNameLabel );
+	dagNodeName = strnewp( buf + label_len );
+
     return 1;
 }
 
@@ -3237,6 +3280,13 @@ toClassAd()
 		buf0[511] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
+	if( dagNodeName && dagNodeName[0] ) {
+		MyString buf1;
+		buf1.sprintf( "%s = \"%s\"", dagNodeNameAttr, dagNodeName );
+		if( !myad->Insert( buf1.Value() ) ) {
+			return NULL;
+		}
+	}
 
 	return myad;
 }
@@ -3255,6 +3305,18 @@ initFromClassAd(ClassAd* ad)
 
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
+
+	if( dagNodeName ) {
+		delete[] dagNodeName;
+		dagNodeName = NULL;
+	}
+	char* mallocstr = NULL;
+	ad->LookupString( dagNodeNameAttr, &mallocstr );
+	if( mallocstr ) {
+		dagNodeName = strnewp( mallocstr );
+		free( mallocstr );
+		mallocstr = NULL;
+	}
 }
 
 
