@@ -51,8 +51,8 @@ class SimpleList
     bool Append (const ObjType &);
 	bool Prepend (const ObjType &);
     inline bool IsEmpty() const { return (size == 0); }
-	inline int Number(void) { return size; }
-	inline int Length(void) { return Number(); }
+	inline int Number(void) const { return size; }
+	inline int Length(void) const { return Number(); }
 	inline void Clear(void) { size = 0; Rewind(); }
 	
 
