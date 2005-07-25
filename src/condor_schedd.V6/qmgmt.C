@@ -1248,7 +1248,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
-			dprintf(D_ALWAYS,"Interting new ad into non-active cluster cid=%d acid=%d\n",cluster_id,active_cluster_num);
+			dprintf(D_ALWAYS,"Inserting new attribute %s into non-active cluster cid=%d acid=%d\n", 
+					attr_name, cluster_id,active_cluster_num);
 			return -1;
 		}
 	}
