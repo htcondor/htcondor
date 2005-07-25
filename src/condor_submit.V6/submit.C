@@ -619,7 +619,7 @@ main( int argc, char *argv[] )
 #ifdef WIN32
 	char userdom[256];
 	sprintf(userdom, "%s@%s", my_username(), my_domainname());
-	if ( queryCredential(userdom) != SUCCESS ) {
+	if ( store_cred(userdom, NULL, QUERY_MODE, MySchedd) != SUCCESS ) {
 		fprintf( stderr, "\nERROR: No credential stored for %s\n"
 				"\n\tCorrect this by running:\n"
 				"\tcondor_store_cred add\n", userdom );
