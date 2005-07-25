@@ -1121,7 +1121,7 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 	if (result.type == LX_INTEGER) {
 		return (bool)result.i;
 	}
-	dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n",
+	dprintf(D_ALWAYS, "constraint (%s) does not evaluate to bool\n",
 		constraint);
 	return false;
 }
