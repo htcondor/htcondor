@@ -129,6 +129,8 @@ HashTable <PROC_ID, BaseJob *> JobsByProcID( HASH_TABLE_SIZE,
 											 procIDHash );
 
 bool firstScheddContact = true;
+int scheddFailureCount = 0;
+int maxScheddFailures = 10;	// Years of careful research...
 
 char *Owner = NULL;
 
@@ -470,6 +472,7 @@ doContactSchedd()
 	bool commit_transaction = true;
 	int failure_line_num = 0;
 	bool send_reschedule = false;
+	MyString error_str = "";
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
@@ -499,11 +502,9 @@ doContactSchedd()
 
 		rval = ScheddObj->vacateJobs( &job_ids, VACATE_FAST, &errstack );
 		if ( rval == NULL ) {
-			dprintf( D_FULLDEBUG, "vacateJobs returned NULL, CondorError: %s\n",
-					 errstack.getFullText() );
-			lastContactSchedd = time(NULL);
-			RequestContactSchedd();
-			return TRUE;
+			error_str.sprintf( "vacateJobs returned NULL, CondorError: %s!",
+							   errstack.getFullText() );
+			goto contact_schedd_failure;
 		} else {
 			pendingScheddVacates.startIterations();
 			while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
@@ -530,11 +531,8 @@ doContactSchedd()
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
 	if ( !schedd ) {
-		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
-		// Should we be retrying infinitely?
-		lastContactSchedd = time(NULL);
-		RequestContactSchedd();
-		return TRUE;
+		error_str.sprintf( "Failed to connect to schedd!" );
+		goto contact_schedd_failure;
 	}
 
 
@@ -927,16 +925,13 @@ contact_schedd_next_add_job:
 		firstScheddContact = false;
 		addJobsSignaled = false;
 	} else {
-		dprintf( D_ALWAYS, "Schedd connection error during Add/RemoveJobs at line %d! Will retry\n", failure_line_num );
-		RequestContactSchedd();
-		return TRUE;
+		error_str.sprintf( "Schedd connection error during Add/RemoveJobs at line %d!", failure_line_num );
+		goto contact_schedd_failure;
 	}
 
 	if ( schedd_updates_complete == false ) {
-		dprintf( D_ALWAYS, "Schedd connection error during updates at line %d! Will retry\n", failure_line_num );
-		lastContactSchedd = time(NULL);
-		RequestContactSchedd();
-		return TRUE;
+		error_str.sprintf( "Schedd connection error during updates at line %d!", failure_line_num );
+		goto contact_schedd_failure;
 	}
 
 	// Wake up jobs that had schedd updates pending and delete job
@@ -991,11 +986,27 @@ contact_schedd_next_add_job:
 	lastContactSchedd = time(NULL);
 
 	if ( schedd_deletes_complete == false ) {
-		dprintf( D_ALWAYS, "Problem using DestroyProc to delete jobs!  Will retry\n" );
-		RequestContactSchedd();
+		error_str.sprintf( "Problem using DestroyProc to delete jobs!" );
+		goto contact_schedd_failure;
 	}
 
+	scheddFailureCount = 0;
+
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
+	return TRUE;
+
+ contact_schedd_failure:
+	scheddFailureCount++;
+	if ( error_str == "" ) {
+		error_str = "Failure in doContactSchedd";
+	}
+	if ( scheddFailureCount >= maxScheddFailures ) {
+		dprintf( D_ALWAYS, "%s\n", error_str.Value() );
+		EXCEPT( "Too many failures connecting to schedd!" );
+	}
+	dprintf( D_ALWAYS, "%s Will retry\n", error_str.Value() );
+	lastContactSchedd = time(NULL);
+	RequestContactSchedd();
 	return TRUE;
 }
 
