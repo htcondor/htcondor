@@ -259,6 +259,11 @@ stdin_pipe_handler(int pipe) {
 	char ** argv;
 	int argc;
 
+	if (stdin_buffer.IsError()) {
+		dprintf (D_ALWAYS, "Problem with stdin buffer, exiting\n");
+		DC_Exit (1);
+	}
+
 	if ((line = stdin_buffer.GetNextLine()) != NULL) {
 		const char * command = line->Value();
 
@@ -345,10 +350,7 @@ stdin_pipe_handler(int pipe) {
 		}
 		delete line;
 
-	} else if (stdin_buffer.IsError()) {
-		dprintf (D_ALWAYS, "Problem with stdin buffer, exiting\n");
-		DC_Exit (1);
-	}
+	} 
 
 	return TRUE;
 }
