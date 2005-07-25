@@ -98,7 +98,10 @@ FdBuffer::Write (const char * towrite) {
 	} else if ( numwritten == 0 ) {
 		return 0;
 	} else {
-		dprintf (D_ALWAYS, "Error %d writing to fd %d\n", numwritten, fd);
+		if (errno == EAGAIN)
+			return 0;
+
+		dprintf (D_ALWAYS, "Error %d writing to fd %d\n", errno, fd);
 		error = TRUE;
 		return -1;
 	}
