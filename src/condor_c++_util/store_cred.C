@@ -201,8 +201,8 @@ void store_cred_handler(void *, int i, Stream *s) {
 }	
 
 
-int store_cred(char* user, char* pw, int mode)
-{
+int 
+store_cred(char* user, char* pw, int mode, Daemon* d) {
 //----For debugging purposes-----
 //	DebugFP = stdout;
 //	DebugFlags = D_ALL;
@@ -213,9 +213,13 @@ int store_cred(char* user, char* pw, int mode)
 	Sock* sock;
 	int cmd = STORE_CRED;
 	
-	Daemon my_schedd(DT_SCHEDD, NULL, NULL);
+	if ( d == NULL ) {
+		Daemon my_schedd(DT_SCHEDD, NULL, NULL);
+		sock = my_schedd.startCommand(cmd, Stream::reli_sock, 0);
+	} else {
+		sock = d->startCommand(cmd, Stream::reli_sock, 0);
+	}
 
-	sock = my_schedd.startCommand(cmd, Stream::reli_sock, 0);
 	if( !sock ) {
 		dprintf(D_ALWAYS, 
 			"STORE_CRED: Failed to start command.\n");

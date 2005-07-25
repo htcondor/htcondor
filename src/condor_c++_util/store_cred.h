@@ -48,7 +48,7 @@ const char CONFIG_CREDENTIAL[] = "config";
 #define MAX_PASSWORD_LENGTH 255
 
 void store_cred_handler(void *, int i, Stream *s);
-int store_cred(char *user, char* pw, int mode );
+int store_cred(char *user, char* pw, int mode, Daemon *d = NULL );
 
 bool read_no_echo(char* buf, int maxlength);
 char* get_password(void);
