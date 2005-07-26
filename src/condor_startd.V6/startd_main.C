@@ -626,6 +626,17 @@ startd_exit()
 		if ( resmgr->m_attr ) {
 			resmgr->m_attr->final_idle_dprintf();
 		}
+		
+			// clean-up stale claim-id files
+		int i;
+		char* filename;
+		for( i = 0; i <= resmgr->num_vms(); i++ ) { 
+			filename = startdClaimIdFile( i );
+			unlink( filename );
+			free( filename );
+			filename = NULL;
+		}
+
 		delete resmgr;
 		resmgr = NULL;
 	}
