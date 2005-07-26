@@ -44,11 +44,7 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_client = new Client;
 	c_id = new ClaimId( is_cod );
 	if( ! is_cod ) {
-		int vm_id = 0; 
-		if( resmgr->is_smp() ) {
-			vm_id = rip->r_id;
-		}
-		c_id->dropFile( vm_id );
+		c_id->dropFile( rip->r_id );
 	}
 	c_ad = NULL;
 	c_starter = NULL;
