@@ -30,6 +30,12 @@ Resource::Resource( CpuAttributes* cap, int rid )
 {
 	char tmp[256];
 	char* tmpName;
+
+		// we need this before we instantiate any Claim objects... 
+	r_id = rid;
+	sprintf( tmp, "vm%d", rid );
+	r_id_str = strdup( tmp );
+	
 	r_classad = NULL;
 	r_state = new ResState( this );
 	r_cur = new Claim( this );
@@ -38,10 +44,6 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_reqexp = new Reqexp( this );
 	r_load_queue = new LoadQueue( 60 );
 
-	r_id = rid;
-	sprintf( tmp, "vm%d", rid );
-	r_id_str = strdup( tmp );
-	
 	if( Name ) {
 		tmpName = Name;
 	} else {
