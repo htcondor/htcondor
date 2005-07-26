@@ -450,87 +450,18 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 	case ULOG_OK:
 		{
 			ASSERT( event != NULL );
-
-			CondorID condorID( event->cluster, event->proc, event->subproc );
-			Job *job = GetJob( condorID );
-			const char *eventName = ULogEventNumberNames[event->eventNumber];
-
-			if( event->eventNumber == ULOG_POST_SCRIPT_TERMINATED &&
-				event->cluster == -1 ) {
-					// if a post script terminated event's job ID is
-					// -1, that means this node's job submission
-					// attempts failed, and there *is* no job ID -- so
-					// we need to look up the node object using the
-					// node name from the event body...
-                PostScriptTerminatedEvent* pst_event =
-                    (PostScriptTerminatedEvent*)event;
-                job = GetJob( pst_event->dagNodeName );
+			Job *job = LogEventNodeLookup( event, recovery );
+			PrintEvent( DEBUG_VERBOSE, event, job );
+			if( !job ) {
+					// event is for a job outside this DAG; ignore it
+				break;
 			}
-
-				// submit events are printed specially, since we
-				// want to match them with their DAG nodes first...
-				// Note: I made the new PrintSubmitEvent function because
-				// I *really* wanted to do all of the event printing in the
-				// same place -- it would be too confusing if you bailed
-				// out because of a bad event, but hadn't printed it yet.
-				// wenger 2004-11-01.
-
-			if ( event->eventNumber != ULOG_SUBMIT ) {
-				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
-			} else {
-				PrintSubmitEvent(event, eventName, job, condorID, recovery);
-			}
-
-				// Check whether this is a "good" event ("bad" events
-				// include Condor sometimes writing a terminated/aborted
-				// pair instead of just aborted, and the "submit once,
-				// run twice" bug).  Extra abort events we just ignore;
-				// other bad events will abort the DAG unless configured
-				// to continue.
-				// Note: we only check an event if we have a job object for
-				// it, so that we don't pay any attention to unrelated
-				// "garbage" events that may be in the log(s).
-			if ( job ) {
-				MyString	eventError;
-
-					// Note: the event checking has pretty much been
-					// considered "diagnostic" until now; however, it
-					// turns out that if you get the terminated/abort
-					// event combo on a node that has retries left,
-					// DAGMan will assert if the event checking is
-					// turned off.  (See Gnats PR 467.)  wenger 2005-04-08.
-				CheckEvents::check_event_result_t checkResult =
-							_checkEvents.CheckAnEvent(event, eventError);
-				if ( checkResult == CheckEvents::EVENT_OKAY ) {
-					debug_printf( DEBUG_DEBUG_1, "Event is okay\n");
-				} else {
-					debug_printf( DEBUG_VERBOSE, "%s\n", eventError.Value() );
-					debug_printf( DEBUG_VERBOSE, "WARNING: bad event here "
-								"may indicate a serious bug in Condor "
-								"-- beware!\n");
-
-					if ( checkResult == CheckEvents::EVENT_BAD_EVENT ) {
-						debug_printf( DEBUG_VERBOSE, "Continuing with DAG "
-									"in spite of bad event (%s) because of "
-									"allow_events setting\n",
-									eventError.Value() );
-					} else if ( checkResult == CheckEvents::EVENT_ERROR ) {
-						debug_printf( DEBUG_VERBOSE, "Aborting DAG because of "
-									"bad event (%s)\n", eventError.Value() );
-						result = false;
-					} else {
-						debug_printf( DEBUG_QUIET, "Illegal "
-									"CheckEvents::check_event_allow_t "
-									"value: %d\n", checkResult );
-						ASSERT( false );
-					}
-
-						// Don't do any further processing of this event,
-						// because it can goof us up (e.g., decrement count
-						// of running jobs when we shouldn't).
-					break;
-				}
-			}
+			if( !EventSanityCheck( event, job, &result ) ) {
+					// this event is "impossible"; we will either
+					// abort the DAG (if result was set to false) or
+					// ignore it and hope for the best...
+				break;
+			} 
 
 			switch(event->eventNumber) {
 
@@ -548,7 +479,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 				break;
 
 			case ULOG_SUBMIT:
-				ProcessSubmitEvent(event, eventName, job, condorID, recovery);
+				ProcessSubmitEvent(event, job, recovery);
 				break;
 
 			case ULOG_CHECKPOINTED:
@@ -578,48 +509,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 	return result;
 }
 
-//---------------------------------------------------------------------------
-void
-Dag::PrintSubmitEvent(const ULogEvent *event, const char *eventName,
-		Job *&job, const CondorID &condorID, bool recovery) {
 
-	SubmitEvent* submit_event = (SubmitEvent*) event;
-	if ( submit_event->submitEventLogNotes ) {
-		char job_name[1024] = "";
-		if ( sscanf( submit_event->submitEventLogNotes,
-					"DAG Node: %1023s", job_name ) == 1 ) {
-			job = GetJob( job_name );	// from submit cmd
-			if ( job ) {
-				if ( !recovery ) {
-						// as a sanity-check, compare the
-						// job ID in the userlog with the
-						// one that appeared earlier in
-						// the submit command's stdout
-					if ( condorID.Compare( job->_CondorID ) != 0 ) {
-						debug_printf( DEBUG_QUIET,
-								"ERROR: job %s: job ID in userlog submit "
-								"event (%d.%d) doesn't match ID reported "
-								"earlier by submit command (%d.%d)!  "
-								"Trusting the userlog for now., but this "
-								"is scary!\n",
-								job_name,
-									// userlog job id
-								condorID._cluster,
-								condorID._proc,
-									// submit cmd job id
-								job->_CondorID._cluster,
-								job->_CondorID._proc );
-					}
-				}
-				job->_CondorID = condorID;
-			}
-		}
-	}
-
-	PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
-}
-
-//---------------------------------------------------------------------------
 void
 Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
@@ -869,8 +759,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessSubmitEvent(const ULogEvent *event, const char *eventName,
-		Job *job, const CondorID &condorID, bool recovery) {
+Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
 
 	if ( !job ) {
 		return;
@@ -1683,17 +1572,18 @@ Dag::TerminateJob( Job* job, bool recovery )
 }
 
 void Dag::
-PrintEvent( debug_level_t level, const char* eventName, Job* job,
-			CondorID condorID )
+PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
 {
-	if( job ) {
-	    debug_printf( level, "Event: %s for %s Job %s (%d.%d)\n", eventName,
-					  job->JobTypeString(), job->GetJobName(),
-					  job->_CondorID._cluster, job->_CondorID._proc );
+	ASSERT( event );
+	if( node ) {
+	    debug_printf( level, "Event: %s for %s Job %s (%d.%d)\n",
+					  event->eventName(), node->JobTypeString(),
+					  node->GetJobName(), node->_CondorID._cluster,
+					  node->_CondorID._proc );
 	} else {
         debug_printf( level, "Event: %s for Unknown Job (%d.%d): "
-					  "ignoring...\n", eventName, condorID._cluster,
-					  condorID._proc );
+					  "ignoring...\n", event->eventName(),
+					  event->cluster, event->proc );
 	}
 	return;
 }
@@ -2272,7 +2162,7 @@ Dag::RemoveDependency( Job *parent, Job *child, MyString &whynot )
 
 		// remove the child from the parent's children...
 	if( !parent->RemoveChild( child, whynot ) ) {
-		return false;
+	return false;
 	}
 	ASSERT( parent->HasChild( child ) == false );
 
@@ -2287,6 +2177,156 @@ Dag::RemoveDependency( Job *parent, Job *child, MyString &whynot )
 
 	whynot = "n/a";
     return true;
+}
+
+
+Job*
+Dag::LogEventNodeLookup( const ULogEvent* event, bool recovery )
+{
+	ASSERT( event );
+	Job *node = NULL;
+
+		// if this is a job those submit event we've already seen, we
+		// can simply use the job ID to look up the corresponding DAG
+		// node, and we're done...
+
+	CondorID condorID( event->cluster, event->proc, event->subproc );
+	node = GetJob( condorID );
+	if( node ) {
+		return node;
+	}
+
+		// if the job ID wasn't familiar and we didn't find a node
+		// above, there are three possibilites:
+		//	
+		// 1) it's the submit event for a node we just submitted, and
+		// we don't yet know the job ID; in this case, we look up the
+		// node name in the event body and establish the initial job
+		// ID <-> node association.
+		//
+		// 2) it's the POST script terminated event for a job whose
+		// submission attempts all failed, leaving it with no valid
+		// job ID at all (-1.-1.-1).  Here we also look up the node
+		// name in the event body.
+		//
+		// 3) it's a job submitted by someone outside than this
+		// DAGMan, and can/should be ignored (we return NULL).
+
+	if( event->eventNumber != ULOG_SUBMIT ) {
+		const SubmitEvent* submit_event = (const SubmitEvent*)event;
+		if ( submit_event->submitEventLogNotes ) {
+			char nodeName[1024] = "";
+			if ( sscanf( submit_event->submitEventLogNotes,
+						 "DAG Node: %1023s", nodeName ) == 1 ) {
+				node = GetJob( nodeName );
+				if( node ) {
+					SanityCheckSubmitEvent( condorID, node, recovery );
+					node->_CondorID = condorID;
+				}
+			}
+		}
+		return node;
+	}
+
+	if( event->eventNumber == ULOG_POST_SCRIPT_TERMINATED &&
+		event->cluster == -1 ) {
+		const PostScriptTerminatedEvent* pst_event =
+			(const PostScriptTerminatedEvent*)event;
+		node = GetJob( pst_event->dagNodeName );
+		return node;
+	}
+
+	return node;
+}
+
+
+// Checks whether this is a "good" event ("bad" events include Condor
+// sometimes writing a terminated/aborted pair instead of just
+// aborted, and the "submit once, run twice" bug).  Extra abort events
+// we just ignore; other bad events will abort the DAG unless
+// configured to continue.
+//
+// Note: we only check an event if we have a job object for it, so
+// that we don't pay any attention to unrelated "garbage" events that
+// may be in the log(s).
+//
+// Note: the event checking has pretty much been considered
+// "diagnostic" until now; however, it turns out that if you get the
+// terminated/abort event combo on a node that has retries left,
+// DAGMan will assert if the event checking is turned off.  (See Gnats
+// PR 467.)  wenger 2005-04-08.
+//
+// returns true if the event is sane and false if it is "impossible";
+// (additionally sets *result=false if DAG should be aborted)
+
+bool
+Dag::EventSanityCheck( const ULogEvent* event, const Job* node, bool* result )
+{
+	ASSERT( event );
+	ASSERT( node );
+
+	MyString eventError;
+	CheckEvents::check_event_result_t checkResult =
+		_checkEvents.CheckAnEvent( event, eventError );
+
+	if( checkResult == CheckEvents::EVENT_OKAY ) {
+		debug_printf( DEBUG_DEBUG_1, "Event is okay\n" );
+		return true;
+	}
+
+	debug_printf( DEBUG_NORMAL, "%s\n", eventError.Value() );
+	debug_printf( DEBUG_NORMAL, "WARNING: bad event here may indicate a "
+				  "serious bug in Condor -- beware!\n" );
+
+	if( checkResult == CheckEvents::EVENT_BAD_EVENT ) {
+		debug_printf( DEBUG_NORMAL, "Continuing with DAG in spite of bad "
+					  "event (%s) because of allow_events setting\n",
+					  eventError.Value() );
+	
+			// Don't do any further processing of this event,
+			// because it can goof us up (e.g., decrement count
+			// of running jobs when we shouldn't).
+
+		return false;
+	}
+
+	if( checkResult == CheckEvents::EVENT_ERROR ) {
+		debug_printf( DEBUG_QUIET, "Aborting DAG because of bad event "
+					  "(%s)\n", eventError.Value() );
+			// set *result to indicate we should abort the DAG
+		*result = false;
+		return false;
+	}
+
+	debug_printf( DEBUG_QUIET, "Illegal CheckEvents::check_event_allow_t "
+				  "value: %d\n", checkResult );
+	return false;
+}
+
+
+// compares a submit event's job ID with the one that appeared earlier
+// in the submit command's stdout (which we stashed in the Job object)
+
+bool
+Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node,
+							 const bool recovery )
+{
+	if( recovery ) {
+			// we no longer have the submit command stdout to check against
+		return true;
+	}
+	if( condorID.Compare( node->_CondorID ) == 0 ) {
+			// everything matches up as expected
+		return true;
+	}
+	debug_printf( DEBUG_QUIET,
+				  "ERROR: node %s: job ID in userlog submit event (%d.%d) "
+				  "doesn't match ID reported earlier by submit command "
+				  "(%d.%d)!  Trusting the userlog for now, but this is "
+				  "scary!\n",
+				  node->GetJobName(), condorID._cluster, condorID._proc,
+				  node->_CondorID._cluster, node->_CondorID._proc );
+	return false;
 }
 
 

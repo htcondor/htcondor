@@ -146,18 +146,6 @@ class Dag {
 	bool ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 			bool recovery, bool &done);
 
-	/** Print a submit event (we try to match it up with the right DAG
-			node).
-	    @param The event.
-		@param The name of the event.
-		@param The job corresponding to this event (NOTE: may be changed
-				by the function!).
-		@param	The job ID of the event.
-		@param Whether we're in recovery mode.
-	*/
-	void PrintSubmitEvent(const ULogEvent *event, const char *eventName,
-			Job *&job, const CondorID &condorID, bool recovery);
-
 	/** Process an abort or executable error event.
 	    @param The event.
 		@param The job corresponding to this event.
@@ -189,8 +177,7 @@ class Dag {
 		@param The Condor ID corresponding to this event.
 		@param Whether we're in recovery mode.
 	*/
-	void ProcessSubmitEvent(const ULogEvent *event, const char *eventName,
-			Job *job, const CondorID &condorID, bool recovery);
+	void ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -361,8 +348,8 @@ class Dag {
     */
     Job * GetSubmittedJob (bool recovery);
 
-	void PrintEvent( debug_level_t level, const char* eventName, Job* job,
-					 CondorID condorID );
+	void PrintEvent( debug_level_t level, const ULogEvent* event,
+					 Job* node );
 
 	void RestartNode( Job *node, bool recovery );
 
@@ -377,6 +364,21 @@ class Dag {
 				script, POST script, or node).
 		*/
 	static void CheckForDagAbort(Job *job, int exitVal, const char *type);
+
+		// takes a userlog event and returns the corresponding node
+	Job* LogEventNodeLookup( const ULogEvent* event, bool recovery );
+
+		// check whether a userlog event is sane, or "impossible"
+
+	bool EventSanityCheck( const ULogEvent* event, const Job* node,
+						   bool* result );
+
+		// compares a submit event's job ID with the one that appeared
+		// earlier in the submit command's stdout (which we stashed in
+		// the Job object)
+
+	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node,
+								 const bool recovery );
 
 		// The log file name specified by the -Condorlog command line
 		// argument (not used for much anymore).
