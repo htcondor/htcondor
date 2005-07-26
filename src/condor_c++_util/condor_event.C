@@ -219,6 +219,17 @@ putEvent (FILE *file)
 	return (writeHeader (file) && writeEvent (file));
 }
 
+
+const char* ULogEvent::
+eventName() const
+{
+	if( eventNumber == (ULogEventNumber)-1 ) {
+		return NULL;
+	}
+	return ULogEventNumberNames[eventNumber];
+}
+
+
 // This function reads in the header of an event from the UserLog and fills
 // the fields of the event object.  It does *not* read the event number.  The 
 // caller is supposed to read the event number, instantiate the appropriate 

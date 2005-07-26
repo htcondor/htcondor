@@ -171,6 +171,9 @@ class ULogEvent {
     */
     int putEvent (FILE *file);
 
+		// returns a pointer to the current event name char[], or NULL
+	const char* eventName() const;
+
 	/** Return a ClassAd representation of this ULogEvent. This is implemented
 		differently in each of the known (by John Bethencourt as of 6/5/02)
 		subclasses of ULogEvent. Each implementation also calls
