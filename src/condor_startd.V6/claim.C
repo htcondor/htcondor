@@ -43,6 +43,13 @@ Claim::Claim( Resource* rip, bool is_cod )
 {
 	c_client = new Client;
 	c_id = new ClaimId( is_cod );
+	if( ! is_cod ) {
+		int vm_id = 0; 
+		if( resmgr->is_smp() ) {
+			vm_id = rip->r_id;
+		}
+		c_id->dropFile( vm_id );
+	}
 	c_ad = NULL;
 	c_starter = NULL;
 	c_rank = 0;
@@ -1547,3 +1554,38 @@ ClaimId::matches( const char* id )
 	return( strcmp(id, c_id) == 0 );
 }
 
+
+void
+ClaimId::dropFile( int vm_id )
+{
+	if( ! param_boolean("STARTD_SHOULD_WRITE_CLAIM_ID_FILE", true) ) {
+		return;
+	}
+	char* filename = startdClaimIdFile( vm_id );  
+	if( ! filename ) {
+		dprintf( D_ALWAYS, "Error getting claim id filename, not writing\n" );
+		return;
+	}
+
+	MyString filename_old = filename;
+	MyString filename_new = filename;
+	free( filename );
+	filename = NULL;
+
+	filename_new += ".new";
+
+	FILE* NEW_FILE = fopen( filename_new.Value(), "w" );
+	if( ! NEW_FILE ) {
+		dprintf( D_ALWAYS,
+				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",
+				 filename_new.Value(), strerror(errno), errno );
+ 		return;
+	}
+	fprintf( NEW_FILE, "%s\n", c_id );
+	fclose( NEW_FILE );
+	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
+				 filename_new.Value() );
+		unlink( filename_new.Value() );
+	}
+}

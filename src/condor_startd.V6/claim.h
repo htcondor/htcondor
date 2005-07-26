@@ -67,6 +67,7 @@ public:
 	char*	id() {return c_id;};
 	char*	codId() {return c_cod_id;};
 	bool	matches( const char* id );
+	void	dropFile( int vm_id );
 
 private:
     char*   c_id;       // ClaimId string
