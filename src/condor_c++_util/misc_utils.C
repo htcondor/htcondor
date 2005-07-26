@@ -22,6 +22,8 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "MyString.h"
+#include "condor_config.h"
 
 extern "C" {
 
@@ -65,5 +67,40 @@ num_string( int num )
 	}
 	return "";
 }
+
+
+char*
+startdClaimIdFile( int vm_id )
+{
+	MyString filename;
+
+	char* tmp;
+	tmp = param( "STARTD_CLAIM_ID_FILE" );
+	if( tmp ) {
+		filename = tmp;
+		free( tmp );
+		tmp = NULL;
+	} else {
+			// otherwise, we must create our own default version...
+		tmp = param( "LOG" );
+		if( ! tmp ) {
+			dprintf( D_ALWAYS,
+					 "ERROR: startdClaimIdFile: LOG is not defined!\n" );
+			return NULL;
+		}
+		filename = tmp;
+		free( tmp );
+		tmp = NULL;
+		filename += DIR_DELIM_CHAR;
+		filename += ".startd_claim_id";
+	}
+
+	if( vm_id ) {
+		filename += ".vm";
+		filename += vm_id;
+	}			
+	return strdup( filename.Value() );
+}
+
 
 } // extern "C"

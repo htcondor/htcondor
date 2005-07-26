@@ -27,8 +27,19 @@
 extern "C" {
 #endif
 
+
 /* Converts an int to a string w/ "st", "nd", "rd, or "th" added on. */
 char*	num_string( int );  
+
+
+/* Returns the name of the local file the startd uses to write its
+   current claim id into.  If the given vm_id is 0, we assume a
+   non-SMP startd and use a generic name.  Otherwise, we append ".vmX"
+   to the filename we create.  The memory returned is allocated with
+   malloc() and must be deallocated with free().
+*/
+char* startdClaimIdFile( int vm_id );  
+
 
 #if defined( __cplusplus )
 }
