@@ -1789,7 +1789,20 @@ Scheduler::PeriodicExprHandler( void )
 bool
 jobPrepNeedsThread( int cluster, int proc )
 {
-		// first, see if the job has a sandbox at all (either
+		/*
+		  make sure we can switch uids.  if not, we're not going to be
+		  able to chown() the sandbox, nor switch to a dynamic user,
+		  so there's no sense forking.
+
+		  WARNING: if we ever add anything to the job prep code
+		  (aboutToSpawnJobHandler()) that doesn't require root/admin
+		  privledges, we need to change this!
+		*/
+	if( ! can_switch_ids() ) {
+		return false;
+	}
+
+		// then, see if the job has a sandbox at all (either
 		// explicitly or b/c of ON_EXIT_OR_EVICT)  
 	ClassAd * job_ad = GetJobAd( cluster, proc );
 	if( ! job_ad ) {
@@ -1812,6 +1825,18 @@ jobPrepNeedsThread( int cluster, int proc )
 bool
 jobCleanupNeedsThread( int cluster, int proc )
 {
+		/*
+		  make sure we can switch uids.  if not, we're not going to be
+		  able to chown() the sandbox, so there's no sense forking.
+
+		  WARNING: if we ever add anything to the job cleanup code
+		  (jobIsFinished()) that doesn't require root/admin
+		  privledges, we need to change this!
+		*/
+	if( ! can_switch_ids() ) {
+		return false;
+	}
+
 		// the cleanup case is different from the start-up case, since
 		// we don't want to test the "HasRightOwner" stuff at all.  we
 		// always want the cleanup code to chown() back to condor,
@@ -1979,6 +2004,19 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
+
+		/*
+		  make sure we can switch uids.  if not, there's nothing to
+		  do, so we should exit right away.
+
+		  WARNING: if we ever add anything to this function that
+		  doesn't require root/admin privledges, we'll also need to
+		  change jobPrepNeedsThread()!
+		*/
+	if( ! can_switch_ids() ) {
+		return TRUE;
+	}
+
 
 	// claim dynamic accounts here
 	// NOTE: we only want to claim a dynamic account once, however,
@@ -2234,6 +2272,19 @@ jobIsFinished( int cluster, int proc, void* )
 		// job state (REMOVED or COMPLETED) and the job handler has
 		// finally exited.  this is where we should do any clean-up we
 		// want now that the job is never going to leave this state...
+
+		/*
+		  make sure we can switch uids.  if not, there's nothing to
+		  do, so we should exit right away.
+
+		  WARNING: if we ever add anything to this function that
+		  doesn't require root/admin privledges, we'll also need to
+		  change jobCleanupNeedsThread()!
+		*/
+	if( ! can_switch_ids() ) {
+		return 0;
+	}
+
 
 	ASSERT( cluster > 0 );
 	ASSERT( proc >= 0 );
