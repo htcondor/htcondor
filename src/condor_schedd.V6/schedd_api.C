@@ -396,12 +396,15 @@ Job::put_file(const MyString &name,
 
 			return 2;
 		}
-		if (data_length != full_write(jobFile.file, data, data_length)) {
+		int result;
+		if (data_length !=
+			(result = full_write(jobFile.file, data, data_length))) {
 			errstack.pushf("SOAP",
 						   FAIL,
-						   "Failed to write to file '%s', reason: %s",
+						   "Failed to write to from file '%s', wanted to write %d bytes but was only able to write %d",
 						   name.GetCStr(),
-						   strerror(errno));
+						   data_length,
+						   result);
 
 			return 3;
 		}
@@ -439,12 +442,15 @@ Job::get_file(const MyString &name,
 
 			return 2;
 		}
-		if (length != full_read(file, data, sizeof(unsigned char) * length)) {
+		int result;
+		if (length != 
+			(result = full_read(file, data, sizeof(unsigned char) * length))) {
 			errstack.pushf("SOAP",
 						   FAIL,
-						   "Failed to read from file '%s', reason: %s",
+						   "Failed to read from file '%s', wanted to read %d bytes but received %d",
 						   name.GetCStr(),
-						   strerror(errno));
+						   length,
+						   result);
 
 			return 3;
 		}
