@@ -97,6 +97,7 @@ Matchmaker ()
 	update_collector_tid = -1;
 
 	update_interval = 5*MINUTE; 
+    DynQuotaMachConstraint = NULL;
 }
 
 
@@ -122,6 +123,7 @@ Matchmaker::
 
 	if (NegotiatorName) free (NegotiatorName);
 	if (publicAd) delete publicAd;
+    if ( DynQuotaMachConstraint) delete DynQuotaMachConstraint;
 }
 
 
@@ -305,6 +307,23 @@ reinitialize ()
 	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",false);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
+
+	if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
+	DynQuotaMachConstraint = NULL;
+	tmp = param("GROUP_DYNAMIC_MACH_CONSTRAINT");
+	if( tmp ) {
+        dprintf(D_FULLDEBUG, "%s = %s\n", "GROUP_DYNAMIC_MACH_CONSTRAINT",
+                tmp);
+		if( Parse(tmp, DynQuotaMachConstraint) ) {
+			dprintf(
+                D_ALWAYS, 
+                "Error parsing GROUP_DYNAMIC_MACH_CONSTRAINT expression: %s",
+					tmp
+            );
+            DynQuotaMachConstraint = NULL;
+		}
+        free (tmp);
+	}
 
 	if( first_time ) {
 		first_time = false;
@@ -569,7 +588,7 @@ negotiationTime ()
 		reset GotRescheduledCmd to false to prevent postponing a new 
 		cycle indefinitely.
 	**/
-	unsigned int elapsed = time(NULL) - completedLastCycleTime;
+	int elapsed = time(NULL) - completedLastCycleTime;
 	int cycle_delay = param_integer("NEGOTIATOR_CYCLE_DELAY",20,0);
 	if ( elapsed < cycle_delay ) {
 		daemonCore->Reset_Timer(negotiation_timerID,
@@ -603,6 +622,8 @@ negotiationTime ()
 		// should send email here
 		return FALSE;
 	}
+    // Get number of available VMs in any state.
+    int numDynGroupVms = startdAds.MyLength();
 
 	// Register a lookup function that passes through the list of all ads.	
 	// ClassAdLookupRegister( lookup_global, &allAds );
@@ -640,19 +661,65 @@ negotiationTime ()
 		groupArray = new SimpleGroupEntry[ groupList.number() ];
 		ASSERT(groupArray);
 
+        // Restrict number of VMs available for dynamic quotas.
+        if ( numDynGroupVms && DynQuotaMachConstraint ) {
+            int matchedVms = startdAds.Count( DynQuotaMachConstraint );
+            if ( matchedVms ) {
+                dprintf(D_FULLDEBUG,
+                    "GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
+                    "count from %d to %d\n", numDynGroupVms, matchedVms);
+                numDynGroupVms = matchedVms;
+            } else {
+                dprintf(D_ALWAYS, "warning: 0 out of %d machines match "
+                        "GROUP_DYNAMIC_MACH_CONSTRAINT for dynamic quotas\n",
+                        numDynGroupVms);
+                numDynGroupVms = 0;
+            }
+        }
+
 		MyString tmpstr;
 		i = 0;
 		groupList.rewind();
 		while ((groups = groupList.next ()))
 		{
 			tmpstr.sprintf("GROUP_QUOTA_%s",groups);
-			int quota = param_integer(tmpstr.Value(),0);
-			if ( !quota ) {
-				dprintf(D_ALWAYS,
-					"ERROR - no quota specified for group %s, ignoring\n",
-					groups);
-				continue;
-			}
+			int quota = param_integer(tmpstr.Value(), -1 );
+			if ( quota >= 0 ) {
+                // Static groups quotas take priority over any dynamic quota
+                dprintf(D_FULLDEBUG, "group %s static quota = %d\n",
+                        groups, quota);
+            } else {
+                // Next look for a floating point dynamic quota.
+                tmpstr.sprintf("GROUP_QUOTA_DYNAMIC_%s", groups);
+                float quota_fraction =
+                    param_float(
+                        tmpstr.Value(),     // name
+                        0.0,                // default value
+                        0.0,                // min value
+                        1.0                 // max value
+                    );
+                if (quota_fraction != 0.0) {
+                    // use specified dynamic quota
+                    quota = (int)(quota_fraction * numDynGroupVms);
+                    dprintf(D_FULLDEBUG,
+                        "group %s dynamic quota for %d VMs = %d\n",
+                            groups, numDynGroupVms, quota);
+                } else {
+                    // neither a static nor dynamic quota was defined
+                    dprintf(D_ALWAYS,
+                        "ERROR - no quota specified for group %s, ignoring\n",
+                        groups);
+                    continue;
+                }
+            }
+            if ( quota <= 0 ) {
+                // Quota for group may have been set to zero by admin.
+                dprintf(D_ALWAYS,
+                    "zero quota for group %s, ignoring\n",
+                    groups);
+                continue;
+            }
+
 			int usage  = accountant.GetResourcesUsed(groups);
 			groupArray[i].groupName = groups;  // don't free this! (in groupList)
 			groupArray[i].maxAllowed = quota;
@@ -1909,7 +1976,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		MatchList->sort();
 		dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
 		// compare
-		ClassAd *bestCached = MatchList->pop_candidate();
+		//ClassAd *bestCached = MatchList->pop_candidate();
 		// TODO - do bestCached and bestSoFar refer to the same
 		// machine preference? (sanity check)
 	}
@@ -2192,7 +2259,7 @@ addRemoteUserPrios( ClassAdList &cal )
 		}
 		if( ad->LookupInteger( ATTR_TOTAL_VIRTUAL_MACHINES, totalVMs) ) {
 			for(i = 1; i <= totalVMs; i++) {
-				int result = snprintf( vm_prefix, 16, "vm%d_", i);
+				//int result = snprintf( vm_prefix, 16, "vm%d_", i);
 				strcpy(buffer, vm_prefix);
 				strcat(buffer, ATTR_REMOTE_USER);
 				if( ad->LookupString( buffer , remoteUser ) ) {

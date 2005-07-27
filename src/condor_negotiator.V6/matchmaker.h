@@ -148,6 +148,9 @@ class Matchmaker : public Service
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
+        ExprTree *DynQuotaMachConstraint;   // Filter machineAds by this
+                                            // constraint before calculating
+                                            // dynamic quotas.  Added for CDF.
 
 		CollectorList* Collectors;
 
