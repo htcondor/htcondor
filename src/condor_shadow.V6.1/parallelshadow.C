@@ -80,7 +80,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr )
 
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
-		// GGT remove this?
+
     sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
     if( !temp->Insert(buf) ) {
         dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
@@ -433,9 +433,12 @@ ParallelShadow::shutDown( int exitReason )
 		   them are done, and we have to figure out if we need
 		   to kill others.... */
 
+/*
 	if( !shutDownLogic( exitReason ) ) {
 		return;  // leave if we're not *really* ready to shut down.
 	}
+*/
+	handleJobRemoval(0);
 
 		/* if we're still here, we can call BaseShadow::shutDown() to
 		   do the real work, which is shared among all kinds of
