@@ -47,6 +47,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 	job_output_name = NULL;
 	job_error_name = NULL;
 	job_iwd = NULL;
+	job_remote_iwd = NULL;
 	job_output_ad_file = NULL;
 	job_output_ad_is_stdout = false;
 	requested_exit = false;
@@ -79,6 +80,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 	}
 	if( job_iwd ) {
 		free( job_iwd);
+	}
+	if( job_remote_iwd ) {
+		free( job_remote_iwd );
 	}
 	if( job_output_ad_file ) {
 		free( job_output_ad_file );
@@ -173,6 +177,13 @@ const char*
 JobInfoCommunicator::jobIWD( void )
 {
 	return (const char*) job_iwd;
+}
+
+const char*
+JobInfoCommunicator::jobRemoteIWD( void )
+{
+	if(!job_remote_iwd) return jobIWD();
+	return (const char*) job_remote_iwd;
 }
 
 

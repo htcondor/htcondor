@@ -215,7 +215,7 @@ OsProc::StartJob()
 		// Standard Files
 		// // // // // // 
 
-	const char* job_iwd = Starter->jic->jobIWD();
+	const char* job_iwd = Starter->jic->jobRemoteIWD();
 	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
 	// handle stdin, stdout, and stderr redirection

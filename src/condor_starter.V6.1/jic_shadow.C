@@ -960,6 +960,8 @@ JICShadow::initJobInfo( void )
 		return false;
 	}
 
+	job_ad->LookupString( ATTR_JOB_REMOTE_IWD, &job_remote_iwd );
+
 		// everything else is related to if we're transfering files or
 		// not. that can get a little complicated, so it all lives in
 		// its own set of functions.

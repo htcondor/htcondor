@@ -107,6 +107,12 @@ public:
 		*/
 	virtual const char* jobIWD( void );
 
+		/** Returns a pointer to the job's remote initial working dir.
+			This is the same as jobIWD() unless the job ad contains
+			REMOTE_IWD.
+		*/
+	virtual const char* jobRemoteIWD( void );
+
 		/** true if the starter is using a different iwd than the one
 			in the job ad, false if not.
 		*/
@@ -318,6 +324,8 @@ protected:
 	char* job_error_name;
 
 	char* job_iwd;
+
+	char* job_remote_iwd;
 
 	char* job_output_ad_file;
 	bool job_output_ad_is_stdout;
