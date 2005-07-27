@@ -1,0 +1,35 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_remote-initialdir_van.cmd';
+$testname = 'condor_submit remote-initialdir works - vanilla U';
+
+
+$ExitSuccess = sub 
+{
+	my %info = @_;
+
+	my $outfile   = $info{"output"};
+	print "Examining $outfile\n";
+	open( output_fd, "<$outfile" );
+	my $output;
+	$output = <output_fd>;
+	close( output_fd );
+	chomp($output);
+
+	print "Output from pwd: $output\n";
+	if( $output ne "/tmp" ) {
+		die "Expected remote initialdir to be /tmp\n";
+	}
+};
+
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
