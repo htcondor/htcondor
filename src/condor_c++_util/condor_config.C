@@ -957,6 +957,50 @@ param_integer( const char *name, int default_value,
 }
 
 /*
+ * Return the [single precision] floating point value associated with the named
+ * parameter.  If the value is not defined or not a valid float, then return
+ * the default_value argument.  The min_value and max_value arguments are
+ * optional and default to FLT_MIN and FLT_MAX.
+ */
+
+float
+param_float( const char *name, float default_value,
+			   float min_value, float max_value )
+{
+	float result;
+	int fields;
+	char *string;
+
+	ASSERT( name );
+	string = param( name );
+	if( ! string ) {
+		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %f\n",
+				 name, default_value );
+		return default_value;
+	}
+
+	fields = sscanf( string, "%f", &result );
+
+	if( fields != 1 ) {
+		dprintf( D_ALWAYS, "WARNING: %s not an float (\"%s\"), using "
+				 "default value of %f\n", name, string, default_value );
+		result = default_value;
+	}
+	else if( result < min_value ) {
+		dprintf( D_FULLDEBUG, "WARNING: %s too low (%f), using minimum "
+				 "value of %f\n", name, result, min_value );
+		result = min_value;
+	}
+	else if( result > max_value ) {
+		dprintf( D_FULLDEBUG, "WARNING: %s too high (%f), using maximum "
+				 "value of %f\n", name, result, max_value );
+		result = max_value;
+	}
+	free( string );
+	return result;
+}
+
+/*
 ** Return the boolean value associated with the named paramter.
 ** The parameter value is expected to be set to the string
 ** "TRUE" or "FALSE" (no quotes, case insensitive).

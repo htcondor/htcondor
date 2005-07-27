@@ -49,6 +49,8 @@ typedef struct bucket {
 
     int param_integer( const char *name, int default_value,
 					   int min_value = INT_MIN, int max_value = INT_MAX );
+    float param_float( const char *name, float default_value,
+					   float min_value = FLT_MIN, float max_value = FLT_MAX );
 	bool param_boolean( const char *name, const bool default_value );
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
