@@ -1789,6 +1789,12 @@ Scheduler::PeriodicExprHandler( void )
 bool
 jobPrepNeedsThread( int cluster, int proc )
 {
+#ifdef WIN32
+	// we never want to run in a thread on Win32, since
+	// some of the stuff we do in the JobPrep thread
+	// is NOT thread safe!!
+	return false;
+#endif 
 		/*
 		  make sure we can switch uids.  if not, we're not going to be
 		  able to chown() the sandbox, nor switch to a dynamic user,
@@ -1804,6 +1810,7 @@ jobPrepNeedsThread( int cluster, int proc )
 
 		// then, see if the job has a sandbox at all (either
 		// explicitly or b/c of ON_EXIT_OR_EVICT)  
+
 	ClassAd * job_ad = GetJobAd( cluster, proc );
 	if( ! job_ad ) {
 			// job is already gone, guess we don't need a thread. ;)
@@ -1825,6 +1832,12 @@ jobPrepNeedsThread( int cluster, int proc )
 bool
 jobCleanupNeedsThread( int cluster, int proc )
 {
+
+#ifdef WIN32
+	// we never want to run this in a thread on Win32, 
+	// since much of what we do in here is NOT thread safe.
+	return false;
+#endif
 		/*
 		  make sure we can switch uids.  if not, we're not going to be
 		  able to chown() the sandbox, so there's no sense forking.
