@@ -47,7 +47,6 @@ struct SubmitDagOptions
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
-	bool bNoPostFail;
 	MyString strRemoteSchedd;
 	bool bNoEventChecks;
 	bool bAllowLogError;
@@ -75,7 +74,6 @@ struct SubmitDagOptions
 		iMaxJobs = 0;
 		iMaxPre = 0;
 		iMaxPost = 0;
-		bNoPostFail = false;
 		strRemoteSchedd = "";
 		bNoEventChecks = false;
 		bAllowLogError = false;
@@ -407,10 +405,6 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	{
 		strArgs += " -MaxPost " + makeString(opts.iMaxPost);
     }
-    if(opts.bNoPostFail) 
-	{
-		strArgs += " -NoPostFail";
-    }
     if(opts.strStorkLog != "") 
 	{
 		strArgs += " -Storklog " + opts.strStorkLog;
@@ -510,10 +504,6 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			{
 				opts.iMaxPost = atoi(argv[++iArg]);
 			}
-			else if (strArg.find("-nopo") != -1) // -nopostfail
-			{
-				opts.bNoPostFail = true;
-			}
 			else if (strArg.find("-r") != -1) // submit to remote schedd
 			{
 				opts.strRemoteSchedd = MyString("-r ") + argv[++iArg];
@@ -571,7 +561,6 @@ int printUsage()
     printf("    -maxjobs number     (Maximum number of jobs ever submitted at once)\n");
     printf("    -MaxPre number      (Maximum number of PRE scripts to run at once)\n");
     printf("    -MaxPost number     (Maximum number of POST scripts to run at once)\n");
-    printf("    -NoPostFail         (Don't run POST scripts after failed jobs)\n");
     printf("    -log filename       (Deprecated -- don't use)\n");
 // -->STORK
     printf("    -storklog filename  (Specify the Stork log file shared by all DaP jobs\n");

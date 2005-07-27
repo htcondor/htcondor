@@ -555,8 +555,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 					tmp, job->GetRetries() );
 			delete tmp;
 		}
-		if( job->_scriptPost == NULL || 
-			run_post_on_failure == FALSE ) {
+		if( job->_scriptPost == NULL ) {
 			_numJobsFailed++;
 			return;
 		}
@@ -603,8 +602,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 
 			job->_Status = Job::STATUS_ERROR;
 
-			if( job->_scriptPost == NULL ||
-					run_post_on_failure == FALSE ) {
+			if( job->_scriptPost == NULL ) {
 				CheckForDagAbort(job, job->retval, "node");
 			}
 
@@ -622,8 +620,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 					delete tmp;   
 				}
 
-				if( job->_scriptPost == NULL ||
-					run_post_on_failure == FALSE ) {
+				if( job->_scriptPost == NULL ) {
 					_numJobsFailed++;
 					return;
 				}
@@ -1023,7 +1020,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	// NOTE: this failure short-circuits the "retry" feature
 	job->retries = job->GetRetryMax();
 
-	if( job->_scriptPost && run_post_on_failure ) {
+	if( job->_scriptPost ) {
 	  // a POST script is specified for the job, so run it
 	  job->_Status = Job::STATUS_POSTRUN;
 	  // there's no easy way to represent helper errors as
@@ -1090,7 +1087,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		// job->retries before assuming this is a good idea...)
         job->retries = job->GetRetryMax();
 
-        if( job->_scriptPost && run_post_on_failure ) {
+        if( job->_scriptPost ) {
 	      // a POST script is specified for the job, so run it
 	      job->_Status = Job::STATUS_POSTRUN;
 	      // there's no easy way to represent condor_submit errors as

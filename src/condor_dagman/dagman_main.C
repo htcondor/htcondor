@@ -42,8 +42,6 @@ char* mySubSystem = "DAGMAN";         // used by Daemon Core
 // the name of the attr we insert in job ads, recording DAGMan's job id
 const char* DAGManJobIdAttrName = "DAGManJobID";
 
-bool run_post_on_failure = TRUE;
-
 static char* lockFileName = NULL;
 
 static Dagman dagman;
@@ -60,7 +58,6 @@ static void Usage() {
             "\t\t[-MaxJobs] <int N>\n\n"
             "\t\t[-MaxPre] <int N>\n\n"
             "\t\t[-MaxPost] <int N>\n\n"
-            "\t\t[-NoPostFail]\n\n"
             "\t\t[-WaitForDebug]\n\n"
             "\t\t[-NoEventChecks]\n\n"
             "\t\t[-AllowLogError]\n\n"
@@ -418,9 +415,6 @@ int main_init (int argc, char ** const argv) {
                 Usage();
             }
             dagman.maxPostScripts = atoi( argv[i] );
-        } else if( !strcasecmp( "-NoPostFail", argv[i] ) ) {
-			run_post_on_failure = FALSE;
-
         } else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
 			debug_printf( DEBUG_SILENT, "Warning: -NoEventChecks is "
 						"deprecated; please use the DAGMAN_ALLOW_EVENTS "
