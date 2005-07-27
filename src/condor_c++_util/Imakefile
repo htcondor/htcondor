@@ -56,7 +56,6 @@ CLASSAD_OBJ = \
 	../condor_classad/buildtable.o \
 	../condor_classad/classad.o \
 	../condor_classad/classad_instantiate.o \
-	../condor_classad/classad_util.o  \
 	../condor_classad/classifiedjobs.o \
 	../condor_classad/environment.o \
 	../condor_classad/evaluateOperators.o \

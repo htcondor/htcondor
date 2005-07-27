@@ -143,6 +143,9 @@ class ClassAdList : public AttrListList
 	// NOTE: Sort() is _not_ thread safe!
 	void   Sort(SortFunctionType,void* =NULL);
 
+	// Count ads in list that meet constraint.
+	int         Count( ExprTree *constraint );
+
   private:
 	void	Sort(SortFunctionType,void*,AttrListAbstract*&);
 	static int SortCompare(const void*, const void*);

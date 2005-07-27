@@ -10,9 +10,9 @@ LIB = $(STD_LIBS)
 
 
 OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
-	  attrlist.o classad.o classifiedjobs.o classad_util.o environment.o \
+	  attrlist.o classad.o classifiedjobs.o environment.o \
 	  value.o operators.o evaluateOperators.o classad_instantiate.o \
-	  xml_classads.o new_classads.o
+	  xml_classads.o new_classads.o classad_list.o
 
 depend_cplus_objects_target(OBJ)
 
