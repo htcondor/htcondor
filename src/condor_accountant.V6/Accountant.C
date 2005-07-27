@@ -35,6 +35,8 @@
 #include "classad_log.h"
 #include "string_list.h"
 
+#define MIN_PRIORITY_FACTOR (1.0)
+
 MyString Accountant::AcctRecord="Accountant.";
 MyString Accountant::CustomerRecord="Customer.";
 MyString Accountant::ResourceRecord="Resource.";
@@ -278,12 +280,15 @@ int Accountant::GetResourcesUsed(const MyString& CustomerName)
 
 float Accountant::GetPriority(const MyString& CustomerName) 
 {
+    // Warning!  This function has a side effect of a writing the
+    // PriorityFactor.
   float PriorityFactor=GetPriorityFactor(CustomerName);
   float Priority=MinPriority;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
   if (Priority<MinPriority) {
     Priority=MinPriority;
-    SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
+    // Warning!  This read function has a side effect of a write.
+    SetPriority(CustomerName,Priority);// write and dprintf()
   }
   return Priority*PriorityFactor;
 }
@@ -292,18 +297,56 @@ float Accountant::GetPriority(const MyString& CustomerName)
 // Return the priority factor of a customer
 //------------------------------------------------------------------
 
+// Get group priority local helper function.
+static float getGroupPriorityFactor(const MyString& CustomerName) 
+{
+	float priorityFactor = 0.0;	// "error" value
+
+	// Group names contain a '.' character.
+	// To do:  This is a weak test.  Improve the group test by also checking
+	// the GROUP_NAMES config macro value.
+	int pos = CustomerName.FindChar('.');
+	if ( pos == 0 ) return priorityFactor;
+
+	// Group separator character found: Accounting groups
+	MyString GroupName = CustomerName;
+	GroupName.setChar(pos,'\0');
+	MyString groupPrioFactorConfig;
+	groupPrioFactorConfig.sprintf("GROUP_PRIO_FACTOR_%s",
+			GroupName.Value() );
+#define ERR_CONVERT_DEFPRIOFACTOR   (-1.0)
+	float tmpPriorityFactor = param_float(groupPrioFactorConfig.Value(),
+			   ERR_CONVERT_DEFPRIOFACTOR);
+	if (tmpPriorityFactor != ERR_CONVERT_DEFPRIOFACTOR) {
+		priorityFactor = tmpPriorityFactor;
+	}
+	return priorityFactor;
+}
+
 float Accountant::GetPriorityFactor(const MyString& CustomerName) 
 {
   float PriorityFactor=0;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
-  if (PriorityFactor<1) {
-    if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0)
-      PriorityFactor=NiceUserPriorityFactor;
-    else if (AccountantLocalDomain!=GetDomain(CustomerName))
-      PriorityFactor=RemoteUserPriorityFactor;
-    else
-      PriorityFactor=DefaultPriorityFactor;
-    SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
+  if (PriorityFactor < MIN_PRIORITY_FACTOR) {
+    PriorityFactor=DefaultPriorityFactor;
+	float groupPriorityFactor = 0.0;
+
+	if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0) {
+		// Nice user
+		PriorityFactor=NiceUserPriorityFactor;
+    }
+	else if ( (groupPriorityFactor = getGroupPriorityFactor(CustomerName) )
+				!= 0.0) {
+		// Groups user
+		PriorityFactor=groupPriorityFactor;
+	} else if (   ! AccountantLocalDomain.IsEmpty() &&
+           AccountantLocalDomain!=GetDomain(CustomerName) ) {
+		// Remote user
+		PriorityFactor=RemoteUserPriorityFactor;
+	}
+
+    // Warning!  This read function has a side effect of a write.
+    SetPriorityFactor(CustomerName, PriorityFactor); // write and dprintf()
   }
   return PriorityFactor;
 }
@@ -363,6 +406,11 @@ void Accountant::DeleteRecord(const MyString& CustomerName)
 
 void Accountant::SetPriorityFactor(const MyString& CustomerName, float PriorityFactor) 
 {
+  if ( PriorityFactor < MIN_PRIORITY_FACTOR) {
+      dprintf(D_ALWAYS, "Error: invalid priority factor: %f, using %f\n",
+              PriorityFactor, MIN_PRIORITY_FACTOR);
+      PriorityFactor = MIN_PRIORITY_FACTOR;
+  }
   dprintf(D_ACCOUNTANT,"Accountant::SetPriorityFactor - CustomerName=%s, PriorityFactor=%8.3f\n",CustomerName.Value(),PriorityFactor);
   SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
 }
@@ -653,8 +701,8 @@ void Accountant::UpdatePriorities()
   } else if( statbuf.st_size > MaxAcctLogSize ) {
 	  AcctLog->TruncLog();
 	  dprintf( D_ACCOUNTANT, "Accountant::UpdatePriorities - "
-			   "truncating database (prev size=%d)\n", 
-			   statbuf.st_size ); 
+			   "truncating database (prev size=%lu)\n", 
+			   (unsigned long)statbuf.st_size ); 
 		  // Now that we truncated, check the size, and allow it to
 		  // grow to at least double in size before truncating again.
 	  if( stat(LogFileName.Value(),&statbuf) ) {
