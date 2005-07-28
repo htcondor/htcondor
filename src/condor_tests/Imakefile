@@ -320,7 +320,7 @@ TESTCLASS(job_core_initialdir_van,core)
 TESTCLASS(job_core_initialdir_van,quick)
 
 DESC(job_core_remote-initialdir_van,"Vanilla: We change the remote_initialdir and assure the job runs there")
-RUN(job_core_temote-initialdir_van)
+RUN(job_core_remote-initialdir_van)
 TESTCLASS(job_core_remote-initialdir_van,core)
 TESTCLASS(job_core_remote-initialdir_van,quick)
 
