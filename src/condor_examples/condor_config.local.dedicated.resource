@@ -111,6 +111,16 @@ DedicatedScheduler = "DedicatedScheduler@full.host.name"
 ##  and does NOT work for interactive use.  Do not use it directly!
 MPI_CONDOR_RSH_PATH = $(LIBEXEC)
 
+##  Path to OpenSSH server binary
+##  Condor uses this to establish a private SSH connection between execute
+##  machines. It is usually in /usr/sbin, but may be in /usr/local/sbin
+CONDOR_SSHD = /usr/sbin/sshd
+
+##  Path to OpenSSH keypair generator.
+##  Condor uses this to establish a private SSH connection between execute
+##  machines. It is usually in /usr/bin, but may be in /usr/local/bin
+CONDOR_SSH_KEYGEN = /usr/bin/ssh-keygen
+
 ##  This setting puts the DedicatedScheduler attribute, defined above,
 ##  into your machine's classad.  This way, the dedicated scheduler
 ##  (and you) can identify which machines are configured as dedicated
