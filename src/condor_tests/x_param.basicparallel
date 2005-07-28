@@ -1,0 +1,18 @@
+startjobs = 10
+incrementjobs = 10
+maxjobs = 30
+duration = 20
+
+universe = parallel
+type = jobs
+
+ports = dynamic
+condor = install
+condorconfig = condor_config
+condorlocal = condor_config.local
+condortemplate = x_condor_config_template
+condordaemons = master,schedd,collector,negotiator,startd
+condordomain = cs.wisc.edu
+vms	= 8
+#encryption = 3DES,BLOWFISH
+#authentication = GSI

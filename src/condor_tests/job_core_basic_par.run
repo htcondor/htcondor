@@ -1,0 +1,125 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+
+$cmd_template = "job_core_basic_par.template";
+$testname = 'job_core_basic_par - Simple parallel job';
+$cmd = "job_core_basic_par.cmd";
+$corename = "job_core_basic_par";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmerr = $corename . $mypid . ".err";
+$mysubmitnmout = $corename . $mypid . ".out";
+$mycorenm = $corename . ".cmd";
+$mycorenmcmdout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+$mycorenmerr = $corename . ".err";
+$mycorenmout = $corename . ".out";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+my $configrem = CondorPersonal::DebugOn();
+# get a remote scheduler running (side b)
+my $configrem = CondorPersonal::StartCondor("x_param.basicparallel" ,"parallel");
+my @parallel = split /:/, $configrem;
+my $parallelconfig = shift @parallel;
+my $parallelport = shift @parallel;
+
+print "---Parallel config is $parallelconfig and remote port is $parallelport---\n";
+
+$ENV{CONDOR_CONFIG} = $parallelconfig;
+
+print "Set config to $parallelconfig\n";
+
+print "Looking for schedd for Basic Parallel Test\n";
+system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Name");
+
+# Edit submit file to submit to scheduler at remote (side b) schedd.
+my $line;
+open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
+open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
+while(<TPLATE>)
+{
+	chomp($_);
+	$line = $_;
+	if( $line =~ /^\s*log\s*= .*$/)
+	{
+		my $lognm = $mysubmitnmlog;
+		print "New log name: $lognm\n";
+		print CSUB "log = $lognm\n";
+	}
+	elsif( $line =~ /^\s*output\s*= .*$/)
+	{
+		my $outputnm = $mysubmitnmout;
+		print "New out name: $outputnm\n";
+		print CSUB "output = $outputnm\n";
+	}
+	elsif( $line =~ /^\s*error\s*= .*$/)
+	{
+		my $errornm = $mysubmitnmerr;
+		print "New error name: $errornm\n";
+		print CSUB "error = $errornm\n";
+	}
+	else
+	{
+		print "template: $line\n";
+		print CSUB "$line\n";
+	}
+}
+close(TPLATE);
+close(CSUB);
+
+my $result = system("./job_core_basic_par.pl $mysubmitnm");
+print "Result of basic paarallel  job is  $result\n";
+
+
+system("cp -r $mypid $mysaveme");
+system("cp *job_core_basic_par* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
+
+system("date");
+

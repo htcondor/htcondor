@@ -1,0 +1,10 @@
+universe   = parallel
+executable = /bin/sleep
+output = job_core_basic_par.out
+error = job_core_basic_par.err
+log = job_core_basic_par.log
+arguments = 30
+Notification = NEVER
+machine_count = 4
+queue
+
