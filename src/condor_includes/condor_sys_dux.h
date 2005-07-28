@@ -158,6 +158,9 @@ END_C_DECLS
 /* Needed for PIOCPSINFO */
 #include <sys/procfs.h>
 
+/* Needed for various constants */
+#include <float.h>
+
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
