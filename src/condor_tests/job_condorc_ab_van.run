@@ -21,6 +21,7 @@ system("mkdir $mysaveme");
 $mysubmitnm = $corename . $mypid . ".cmd";
 $mysubmitnmout = $corename . $mypid . ".cmd.out";
 $mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".log";
 $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
