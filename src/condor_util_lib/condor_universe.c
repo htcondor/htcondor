@@ -104,7 +104,11 @@ CondorUniverseNumber( const char* univ )
 	if( stricmp(univ,"mpi") == MATCH ) {
 		return CONDOR_UNIVERSE_MPI;
 	}
+		// grid replaces globus, but keeping globus for backwards compat
 	if( stricmp(univ,"globus") == MATCH ) {
+		return CONDOR_UNIVERSE_GLOBUS;
+	}
+	if( stricmp(univ,"grid") == MATCH ) {
 		return CONDOR_UNIVERSE_GLOBUS;
 	}
 	if( stricmp(univ,"java") == MATCH ) {
