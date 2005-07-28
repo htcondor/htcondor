@@ -1,0 +1,148 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd      = 'cmd_core_condorq-hold.cmd';
+$testname = 'Jobs properly hold and release - vanilla U';
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $alreadydone=0;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	# avoid reentrant death
+	#if($alreadydone == 0) {
+		#CondorTest::RegisterTimed($testname, $timed, 120);
+		#print "Seeing job run and about to place on hold\n";
+		#$alreadydone = 1;
+		#return true;
+	#} else {
+		#print "Have already run once and don't expect this!\n";
+	#}
+	
+	print "Putting cluster $cluster on hold\n";
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_hold $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
+
+};
+
+$abort = sub {
+	print "Job is gone now, cool.\n";
+};
+
+$hold = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $header = 0;
+	my $reason = 0;
+
+	print "Good. Cluster $cluster is supposed to be held.....\n";
+	print "Releasing cluster $cluster\n";
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_q -hold $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
+	foreach my $line (@adarray)
+	{
+		print "$line\n";
+		if( $line =~ /.*HOLD_REASON.*/ )
+		{
+			print "Got HOLD_REASON header line.......\n";
+			$header = 1;
+		}
+		if( $line =~ /.*condor_hold.*/ )
+		{
+			print "Yup reason is condor_hold.......\n";
+			$reason = 1;
+		}
+	}
+
+	if( $reason == 1 & $header == 1 )
+	{
+		print "Good. Cluster $cluster needs to be released.....\n";
+		print "Releasing cluster $cluster\n";
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_release $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			return(1)
+		}
+	}
+	else
+	{
+		print "Test failed because HOLD header and expected reason were not found\n";
+		exit(1);
+	}
+
+	# must reschedule to get released job out of Inactive and into Running
+	#$status = 1;
+	#$cmd = "condor_reschedule $cluster";
+	#$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	#if(!$status)
+	#{
+		#print "Test failure due to Condor Tool Failure<$cmd>\n";
+		#return(1)
+	#}
+};
+
+$release = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "Good hold and release both worked! removing job\n";
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		return(1)
+	}
+};
+
+$success = sub
+{
+	die "Hold/Release/Remove/Abort is expected event trail!\n";
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. Hold/Realease broken!\n";
+};
+
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterAbort($testname, $abort);
+CondorTest::RegisterHold($testname, $hold);
+CondorTest::RegisterRelease($testname, $release);
+CondorTest::RegisterExitedSuccess($testname, $success);
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
