@@ -1976,7 +1976,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		MatchList->sort();
 		dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
 		// compare
-		//ClassAd *bestCached = MatchList->pop_candidate();
+		ClassAd *bestCached = MatchList->pop_candidate();
 		// TODO - do bestCached and bestSoFar refer to the same
 		// machine preference? (sanity check)
 	}
@@ -2259,7 +2259,7 @@ addRemoteUserPrios( ClassAdList &cal )
 		}
 		if( ad->LookupInteger( ATTR_TOTAL_VIRTUAL_MACHINES, totalVMs) ) {
 			for(i = 1; i <= totalVMs; i++) {
-				//int result = snprintf( vm_prefix, 16, "vm%d_", i);
+				int result = snprintf( vm_prefix, 16, "vm%d_", i);
 				strcpy(buffer, vm_prefix);
 				strcat(buffer, ATTR_REMOTE_USER);
 				if( ad->LookupString( buffer , remoteUser ) ) {
