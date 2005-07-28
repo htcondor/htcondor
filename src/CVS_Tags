@@ -1,3 +1,8 @@
+07/28/05 V6_6-merge-44
+   The state of the V6_6-branch for a merge into V6_7-branch. This
+   includes daemoncore and accountant bug fixes.  this should be the
+   last V6_6 -> V6_7 merge before the 6.7.10 release.
+
 07/18/05 V6_7_9-2-merge-1
    This is the end of the V6_7_9-2-branch, which we are
    merging into V6_7-branch

@@ -344,6 +344,7 @@ float Accountant::GetPriorityFactor(const MyString& CustomerName)
 		// Remote user
 		PriorityFactor=RemoteUserPriorityFactor;
 	}
+		// if AccountantLocalDomain is empty, all users are considered local
 
     // Warning!  This read function has a side effect of a write.
     SetPriorityFactor(CustomerName, PriorityFactor); // write and dprintf()
