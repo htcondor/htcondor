@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.25 2005-06-13 23:11:28 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.26 2005-07-29 22:25:37 bgietzel Exp $
 #
 ######################################################################
 
@@ -184,6 +184,7 @@ my %prereqs = (
   "sun4u_sol_5.9"  => "gcc-2.95.3, binutils-2.15",
   "sun4u_sol_5.8"  => "gcc-2.95.3, binutils-2.15",
   "alpha_osf_V5.1" => "gcc-2.95.3, binutils-2.15",
+  "alpha_rh_7.2"   => "gcc-2.96",
   "ppc_aix_5.2"    => "vac-6, vacpp-6",
   "irix_6.5"       => "gcc-3.3, binutils-2.15"
 );
@@ -200,7 +201,7 @@ sub printPrereqs
     # platform-specific prereqs
     foreach $platform ( "x86_rh_7.2", "x86_rh_8.0", "x86_rh_9", 
 			"sun4u_sol_5.9", "sun4u_sol_5.8",
-			"ppc_aix_5.2", "alpha_osf_V5.1", "irix_6.5" )
+			"ppc_aix_5.2", "alpha_osf_V5.1", "alpha_rh_7.2", "irix_6.5" )
     {
 	print $fh "prereqs_$platform = $prereqs{'global'}, "
 	    . "$prereqs{$platform}\n";
