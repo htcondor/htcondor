@@ -8951,7 +8951,7 @@ Scheduler::Init()
 	}
 
 
-	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 1, 0 );
+	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 0, 0 );
 	job_is_finished_queue.setPeriod( int_val );	
 
 
