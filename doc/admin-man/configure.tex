@@ -2721,6 +2721,13 @@ These macros control the \Condor{schedd}.
   It is defined in terms of seconds and defaults to 2.  
   Setting this macro to a lower value is not advised,
   as it can overwhelm the \Condor{schedd} daemon.
+
+\item[\Macro{JOB\_IS\_FINISHED\_INTERVAL}] \label{param:JobIsFinishedInterval}
+  The \Condor{schedd} maintains a list of jobs that are ready to permanently
+  leave the job queue, e.g. they have completed or been removed.  This
+  integer-valued macro specifies a delay in seconds to place between the
+  taking jobs permanently out of the queue.  The default value is 0, which
+  tells the schedd to not impose any delay.  
   
 \item[\Macro{ALIVE\_INTERVAL}] \label{param:AliveInterval} This
   macro determines how often the \Condor{schedd} should send a keep
