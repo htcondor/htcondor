@@ -116,8 +116,10 @@ int main(int argc, char *argv[])
 					errno, strerror(errno) );
 			return 1;
 		}
-		opts.strDebugLog = currentDir;
-		opts.strDebugLog += DIR_DELIM_STRING;
+		if ( opts.useDagDir ) {
+			opts.strDebugLog = currentDir;
+			opts.strDebugLog += DIR_DELIM_STRING;
+		}
 	}
 	opts.strDebugLog += opts.primaryDagFile + ".dagman.out";
 

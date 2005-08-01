@@ -36,7 +36,6 @@
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
-static const int    MAX_LENGTH = 255;
 
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
