@@ -38,6 +38,15 @@ put on hold.
   both getenv=true and environment=... were in a submit file and when
   very large variable names were in the environment. 
 
+\item Fixed bugs on the Win32 platform in the \Condor{schedd} that could
+cause jobs to never complete when the \Condor{schedd} is busy with many jobs
+running at once.
+
+\item Significantly speeded up the removal of large groups of jobs by
+changing the default value of \MacroNI{JOB\_IS\_FINISHED\_INTERVAL} from 1
+to 0 (see section~\ref{param:JobIsFinishedInterval} for details on this
+setting).
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
