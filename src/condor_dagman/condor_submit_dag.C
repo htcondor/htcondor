@@ -44,6 +44,7 @@ struct SubmitDagOptions
 	MyString strNotification;
 	MyString strJobLog;
 	MyString strStorkLog;
+	int iMaxIdle;
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
@@ -71,6 +72,7 @@ struct SubmitDagOptions
 		bForce = false;
 		strNotification = "";
 		strJobLog = "";
+		iMaxIdle = 0;
 		iMaxJobs = 0;
 		iMaxPre = 0;
 		iMaxPost = 0;
@@ -395,6 +397,10 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	}
 
     strArgs += " -Rescue " + opts.strRescueFile;
+    if(opts.iMaxIdle) 
+	{
+		strArgs += " -MaxIdle " + makeString(opts.iMaxIdle);
+    }
     if(opts.iMaxJobs) 
 	{
 		strArgs += " -MaxJobs " + makeString(opts.iMaxJobs);
@@ -494,6 +500,10 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			{
 				opts.strJobLog = argv[++iArg];
 			}
+			else if (strArg.find("-maxi") != -1) // -maxidle
+			{
+				opts.iMaxIdle = atoi(argv[++iArg]);
+			}
 			else if (strArg.find("-maxj") != -1) // -maxjobs
 			{
 				opts.iMaxJobs = atoi(argv[++iArg]);
@@ -560,6 +570,7 @@ int printUsage()
     printf("    -verbose            (Verbose error messages from condor_submit_dag)\n");
     printf("    -force              (Overwrite files condor_submit_dag uses if they exist)\n");
     printf("    -r schedd_name      (Submit to the specified remote schedd)\n");
+	printf("    -maxidle number     (Maximum number of idle nodes to allow)\n");
     printf("    -maxjobs number     (Maximum number of jobs ever submitted at once)\n");
     printf("    -MaxPre number      (Maximum number of PRE scripts to run at once)\n");
     printf("    -MaxPost number     (Maximum number of POST scripts to run at once)\n");

@@ -55,7 +55,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
 		  int allow_events, const char* dapLogName, bool allowLogError,
-		  bool useDagDir) :
+		  bool useDagDir, int maxIdleNodes) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	_condorLogName		  (NULL),
@@ -67,6 +67,8 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
     _numJobsFailed        (0),
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
+	_numIdleNodes		  (0),
+	_maxIdleNodes		  (maxIdleNodes),
 	_allowLogError		  (allowLogError),
 	_checkEvents          (allow_events)
 {
@@ -468,10 +470,14 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 			case ULOG_EXECUTABLE_ERROR:
 			case ULOG_JOB_ABORTED:
 				ProcessAbortEvent(event, job, recovery);
+					// Make sure we don't count finished jobs as idle.
+				ProcessNotIdleEvent(event, job);
 				break;
               
 			case ULOG_JOB_TERMINATED:
 				ProcessTerminatedEvent(event, job, recovery);
+					// Make sure we don't count finished jobs as idle.
+				ProcessNotIdleEvent(event, job);
 				break;
 
 			case ULOG_POST_SCRIPT_TERMINATED:
@@ -480,20 +486,27 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 
 			case ULOG_SUBMIT:
 				ProcessSubmitEvent(event, job, recovery);
+				ProcessIsIdleEvent(event, job);
 				break;
 
-			case ULOG_CHECKPOINTED:
 			case ULOG_JOB_EVICTED:
-			case ULOG_IMAGE_SIZE:
 			case ULOG_JOB_SUSPENDED:
-			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_JOB_HELD:
+				ProcessIsIdleEvent(event, job);
+				break;
+
+			case ULOG_EXECUTE:
+				ProcessNotIdleEvent(event, job);
+				break;
+
+			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_JOB_RELEASED:
+			case ULOG_CHECKPOINTED:
+			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:
 			case ULOG_NODE_TERMINATED:
 			case ULOG_SHADOW_EXCEPTION:
 			case ULOG_GENERIC:
-			case ULOG_EXECUTE:
 			default:
 				break;
 			}
@@ -807,6 +820,42 @@ Dag::ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery) {
 }
 
 //---------------------------------------------------------------------------
+void
+Dag::ProcessIsIdleEvent(const ULogEvent *event, Job *job) {
+
+	if ( !job ) {
+		return;
+	}
+
+	if ( !job->GetIsIdle() ) {
+		job->SetIsIdle(true);
+		_numIdleNodes++;
+	}
+
+	// Do some consistency checks here?
+
+	debug_printf( DEBUG_VERBOSE, "Number of idle nodes: %d\n", _numIdleNodes);
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessNotIdleEvent(const ULogEvent *event, Job *job) {
+
+	if ( !job ) {
+		return;
+	}
+
+	if ( job->GetIsIdle() ) {
+		job->SetIsIdle(false);
+		_numIdleNodes--;
+	}
+
+	// Do some consistency checks here?
+
+	debug_printf( DEBUG_VERBOSE, "Number of idle nodes: %d\n", _numIdleNodes);
+}
+
+//---------------------------------------------------------------------------
 Job * Dag::GetJob (const char * jobName) const {
 	if( !jobName ) {
 		return NULL;
@@ -953,14 +1002,22 @@ Dag::SubmitReadyJobs(const Dagman &dm)
     }
 
     // max jobs already submitted
-    if( _maxJobsSubmitted && _numJobsSubmitted >= _maxJobsSubmitted ) {
-        debug_printf( DEBUG_DEBUG_1,
+    if( _maxJobsSubmitted && (_numJobsSubmitted >= _maxJobsSubmitted) ) {
+        debug_printf( DEBUG_VERBOSE,
                       "Max jobs (%d) already running; "
 					  "deferring submission of %d ready job%s.\n",
                       _maxJobsSubmitted, _readyQ->Number(),
 					  _readyQ->Number() == 1 ? "" : "s" );
         return numSubmitsThisCycle;
     }
+	if ( _maxIdleNodes && (_numIdleNodes >= _maxIdleNodes) ) {
+        debug_printf( DEBUG_VERBOSE,
+					  "Hit max number of idle DAG nodes (%d); "
+					  "deferring submission of %d ready job%s.\n",
+					  _maxIdleNodes, _readyQ->Number(),
+					  _readyQ->Number() == 1 ? "" : "s" );
+        return numSubmitsThisCycle;
+	}
 
 	// remove & submit first job from ready queue
 	Job* job;

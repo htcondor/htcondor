@@ -46,6 +46,7 @@ class Dagman {
 		}
 	}
     Dag * dag;
+    int maxIdle;  // Maximum number of idle DAG nodes
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
     int maxPostScripts;  // max. number of POST scripts to run at once

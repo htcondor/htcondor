@@ -218,6 +218,16 @@ class Job {
     */
 	bool SetStatus( status_t newStatus );
 
+		/** Get whether this job is idle.
+		    @return true if job is idle, false otherwise.
+		*/
+	bool GetIsIdle() const { return _isIdle; }
+
+		/** Set whether this job is idle.
+		    @param true if job is idle, false otherwise.
+		*/
+	void SetIsIdle(bool isIdle) { _isIdle = isIdle; }
+
 		/** Is the specified node a child of this node?
 			@param child Pointer to the node to check for childhood.
 			@return true: specified node is our child, false: otherwise
@@ -365,6 +375,10 @@ private:
 		// the number of my parents that have yet to complete
 		// successfully
 	int _waitingCount;
+
+		// True if the node job has been submitted and is idle.
+	bool _isIdle;
+
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

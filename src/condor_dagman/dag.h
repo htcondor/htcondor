@@ -79,13 +79,15 @@ class Dag {
 			   have an error determining the job log files
 		@param useDagDir run DAGs in directories from DAG file paths
 		       if true
+		@param maxIdleNodes the maximum number of idle nodes to allow
+		       at one time (0 means unlimited)
     */
 
     Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
 		 int allowEvents, const char *dapLogName, bool allowLogError,
-		 bool useDagDir);
+		 bool useDagDir, int maxIdleNodes);
 
     ///
     ~Dag();
@@ -175,6 +177,24 @@ class Dag {
 		@param Whether we're in recovery mode.
 	*/
 	void ProcessSubmitEvent(const ULogEvent *event, Job *job, bool recovery);
+
+	/** Process an event indicating that a job is in an idle state.
+	    Note that this method only does processing relating to keeping
+		the count of idle jobs -- any other processing should be done in
+		a different method.
+	    @param The event.
+		@param The job corresponding to this event.
+	*/
+	void ProcessIsIdleEvent(const ULogEvent *event, Job *job);
+
+	/** Process an event that indicates that a job is NOT in an idle state.
+	    Note that this method only does processing relating to keeping
+		the count of idle jobs -- any other processing should be done in
+		a different method.
+	    @param The event.
+		@param The job corresponding to this event.
+	*/
+	void ProcessNotIdleEvent(const ULogEvent *event, Job *job);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -309,6 +329,8 @@ class Dag {
 		*/
 	const MyString ParentListString( Job *node, const char delim = ',' ) const;
 
+	int NumIdleNodes() { return _numIdleNodes; }
+
 	
   protected:
 
@@ -413,6 +435,14 @@ class Dag {
         unlimited
     */
     const int _maxJobsSubmitted;
+
+		// Number of DAG nodes currently idle.
+	int _numIdleNodes;
+
+    	// Maximum number of idle nodes to allow (stop submitting if the
+		// number of idle nodes hits this limit).  Non-negative.  Zero
+		// means unlimited.
+    const int _maxIdleNodes;
 
 		// Whether to allow the DAG to run even if we have an error
 		// determining the job log files.

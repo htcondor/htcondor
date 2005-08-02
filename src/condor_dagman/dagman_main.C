@@ -55,6 +55,7 @@ static void Usage() {
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-Rescue <Rescue.dag>\n"
+            "\t\t[-MaxIdle] <int N>\n\n"
             "\t\t[-MaxJobs] <int N>\n\n"
             "\t\t[-MaxPre] <int N>\n\n"
             "\t\t[-MaxPost] <int N>\n\n"
@@ -74,6 +75,7 @@ static void Usage() {
 
 Dagman::Dagman() :
 	dag (NULL),
+	maxIdle (0),
 	maxJobs (0),
 	maxPreScripts (0),
 	maxPostScripts (0),
@@ -168,6 +170,12 @@ Dagman::Config()
 	retrySubmitFirst = param_boolean( "DAGMAN_RETRY_SUBMIT_FIRST", true );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_SUBMIT_FIRST setting: %d\n",
 				retrySubmitFirst );
+
+	maxIdle =
+		param_integer( "DAGMAN_MAX_JOBS_IDLE", maxIdle, 0, INT_MAX );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_IDLE setting: %d\n",
+				maxIdle );
+
 	maxJobs =
 		param_integer( "DAGMAN_MAX_JOBS_SUBMITTED", maxJobs, 0, INT_MAX );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_SUBMITTED setting: %d\n",
@@ -387,6 +395,14 @@ int main_init (int argc, char ** const argv) {
                 Usage();
             }
             dagman.rescue_file = argv[i];
+        } else if( !strcasecmp( "-MaxIdle", argv[i] ) ) {
+            i++;
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
+                debug_printf( DEBUG_SILENT,
+							  "Integer missing after -MaxIdle\n" );
+                Usage();
+            }
+            dagman.maxIdle = atoi( argv[i] );
         } else if( !strcasecmp( "-MaxJobs", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -518,7 +534,8 @@ int main_init (int argc, char ** const argv) {
     dagman.dag = new Dag( dagman.dagFiles, condorLogName, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
 						  dagman.allow_events, dapLogName, //<-- DaP
-						  dagman.allowLogError, dagman.useDagDir );
+						  dagman.allowLogError, dagman.useDagDir,
+						  dagman.maxIdle );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -696,6 +713,11 @@ debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
         ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
 		dagman.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
+		if ( dagman.dag->NumIdleNodes() != 0 ) {
+			debug_printf( DEBUG_NORMAL, "Warning:  DAGMan thinks there "
+						"are %d idle nodes, even though the DAG is "
+						"completed!\n", dagman.dag->NumIdleNodes() );
+		}
 		ExitSuccess();
 		return;
     }

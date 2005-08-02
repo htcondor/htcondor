@@ -88,6 +88,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile )
     _scriptPre = NULL;
     _scriptPost = NULL;
     _Status = STATUS_READY;
+	_isIdle = false;
 	countedAsDone = false;
 	_waitingCount = 0;
 
