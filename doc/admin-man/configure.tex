@@ -964,6 +964,15 @@ of the subsystem corresponding to the daemon.
   reason, you decide to change this setting, be sure to change the
   \MacroUNI{VALID\_LOG\_FILES} entry that \Condor{preen} uses as well.
 
+\item[\Macro{FILE\_LOCK\_VIA\_MUTEX}] \label{param:FileLockViaMutex} 
+  This macro setting only works on Win32 -- it is ignored on Unix.  If set
+  to be \Expr{True}, then log locking is implemented via a kernel mutex
+  instead of via file locking.  On Win32, mutex access is FIFO, while
+  obtaining a file lock is non-deterministic.  Thus setting to \Expr{True}
+  fixes problems on Win32 where processes (usually shadows) could starve
+  waiting for a lock on a log file.  Defaults to \Expr{True} on Win32, and is
+  always \Expr{False} on Unix.
+
 \item[\Macro{ENABLE\_USERLOG\_LOCKING}] \label{param:EnableUserlogLocking}
   When \Expr{True} (the default value),
   a user's job log (as specified in a submit description file)
