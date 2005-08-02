@@ -445,7 +445,7 @@ V6_7_EXT	-a V6_7_10_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
-                   externals/bundles/gsoap/2.7
+                   externals/bundles/gsoap/2.7 \
                    externals/bundles/openssl/0.9.8
 
 # Externals needed for V6_7 with kerberos 1.4
