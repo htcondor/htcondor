@@ -2182,15 +2182,17 @@ Dag::LogEventNodeLookup( const ULogEvent* event, bool recovery )
 {
 	ASSERT( event );
 	Job *node = NULL;
+	CondorID condorID( event->cluster, event->proc, event->subproc );
 
 		// if this is a job those submit event we've already seen, we
 		// can simply use the job ID to look up the corresponding DAG
 		// node, and we're done...
 
-	CondorID condorID( event->cluster, event->proc, event->subproc );
-	node = GetJob( condorID );
-	if( node ) {
-		return node;
+	if( event->eventNumber != ULOG_SUBMIT ) {
+	  node = GetJob( condorID );
+	  if( node ) {
+	    return node;
+	  }
 	}
 
 		// if the job ID wasn't familiar and we didn't find a node
@@ -2198,8 +2200,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event, bool recovery )
 		//	
 		// 1) it's the submit event for a node we just submitted, and
 		// we don't yet know the job ID; in this case, we look up the
-		// node name in the event body and establish the initial job
-		// ID <-> node association.
+		// node name in the event body.
 		//
 		// 2) it's the POST script terminated event for a job whose
 		// submission attempts all failed, leaving it with no valid
@@ -2209,7 +2210,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event, bool recovery )
 		// 3) it's a job submitted by someone outside than this
 		// DAGMan, and can/should be ignored (we return NULL).
 
-	if( event->eventNumber != ULOG_SUBMIT ) {
+	if( event->eventNumber == ULOG_SUBMIT ) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
 		if ( submit_event->submitEventLogNotes ) {
 			char nodeName[1024] = "";
