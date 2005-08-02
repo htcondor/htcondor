@@ -1060,7 +1060,7 @@ macro_expand( const char *str )
 ** If the value is not defined or not a valid, then
 ** return the default_value argument.
 */
-int
+extern "C" int
 param_boolean_int( const char *name, int default_value )
 {
     bool default_bool;
