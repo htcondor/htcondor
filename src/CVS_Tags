@@ -1,5 +1,7 @@
 08/02/05 V6_7-workspace_svc-root
-   The state of V6_7-branch at the time of creation of V6_7-worksapce_cvs-branch
+   The state of V6_7-branch at the time of creation of
+   V6_7-worksapce_cvs-branch
+
 8/02/05 V6_7_10-branch
    A branch for the 6.7.10 release, created from V6_7_10-root on the
    V6_7_CODE module.  The "doc" directory hasn't yet been branched.
