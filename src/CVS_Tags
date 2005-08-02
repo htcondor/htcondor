@@ -1,3 +1,7 @@
+8/02/05 V6_7_10-branch
+   A branch for the 6.7.10 release, created from V6_7_10-root on the
+   V6_7_CODE module.  The "doc" directory hasn't yet been branched.
+
 07/28/05 V6_7-lease-branch
    A branch for adding the new job lease code. This branch should last
    a couple month at most. Created from the V6_7-lease-root tag on 
