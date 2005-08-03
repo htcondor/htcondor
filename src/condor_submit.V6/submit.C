@@ -905,6 +905,10 @@ SetExecutable()
 	if ( JobUniverse != CONDOR_UNIVERSE_MPI && JobUniverse != CONDOR_UNIVERSE_PVM ) {
 		InsertJobExpr ("MinHosts = 1");
 		InsertJobExpr ("MaxHosts = 1");
+	} 
+
+	if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
+		InsertJobExpr ("WantIOProxy = TRUE");
 	}
 
 	InsertJobExpr ("CurrentHosts = 0");
@@ -1097,6 +1101,8 @@ SetUniverse()
 		return;
 	};
 
+#endif  // of !defined(WIN32)
+
 	if( univ && stricmp(univ,"parallel") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_PARALLEL;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL);
@@ -1105,8 +1111,6 @@ SetUniverse()
 		free(univ);
 		return;
 	}
-
-#endif  // of !defined(WIN32)
 
 	if( univ && stricmp(univ,"vanilla") == MATCH ) {
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
