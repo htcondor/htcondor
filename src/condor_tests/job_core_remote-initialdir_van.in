@@ -6,8 +6,7 @@ for inode in `ls -i -d /tmp/.`; do
   tmp_inode=$inode
   break
 done
-wd=`pwd`
-for inode in `ls -i -d $wd/.`; do
+for inode in `ls -i -d .`; do
   pwd_inode=$inode
   break
 done
