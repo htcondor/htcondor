@@ -207,6 +207,9 @@ sysapi_phys_memory_raw(void)
 	return (int)(s.physmem/(1024*1024));
 }
 
+// This will fail on machines that are more than two gigs
+// See GNATS 529. I may fix it later, but it's not likely I'd be able to
+// test it well, so I note it there.
 #elif defined(Darwin)
 #include <sys/sysctl.h>
 int
