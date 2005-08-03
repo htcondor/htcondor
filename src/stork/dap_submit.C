@@ -7,6 +7,8 @@
 #include "daemon.h"
 #include "internet.h"
 #include "condor_config.h"
+#include "condor_config.h"
+#include "globus_utils.h"
 
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
@@ -217,24 +219,68 @@ int main(int argc, char **argv)
     int proxy_size = 0;
     if (currentAd->EvaluateAttrString ("x509proxy",proxy_file_name )) {
 
+        if ( proxy_file_name == "default" ) {
+            char *defproxy = get_x509_proxy_filename();
+            if (defproxy) {
+                printf("using default proxy: %s\n", defproxy);
+                proxy_file_name = defproxy;
+                free(defproxy);
+            } else {
+                fprintf(stderr, "ERROR: %s\n", x509_error_string() );
+                return 1;
+            }
+        }
+
 		struct stat stat_buff;
 		if (stat (proxy_file_name.c_str(), &stat_buff) == 0) {
 			proxy_size = stat_buff.st_size;
-		}
+		} else {
+                fprintf(stderr, "ERROR: proxy %s: %s\n",
+                        proxy_file_name.c_str(),
+                        strerror(errno) );
+                return 1;
+        }
+
+        // Do a quick check on the proxy.
+        if ( x509_proxy_try_import( proxy_file_name.c_str() ) != 0 ) {
+            fprintf(stderr, "ERROR: check credential %s: %s\n",
+                    proxy_file_name.c_str(),
+                    x509_error_string() );
+            return 1;
+        }
+        int remaining =
+            x509_proxy_seconds_until_expire( proxy_file_name.c_str() );
+        if (remaining < 0) {
+            fprintf(stderr, "ERROR: check credential %s expiration: %s\n",
+                    proxy_file_name.c_str(),
+                    x509_error_string() );
+            return 1;
+        }
+        if (remaining == 0) {
+            fprintf(stderr, "ERROR: credential %s has expired\n",
+                    proxy_file_name.c_str() );
+            return 1;
+        }
 
 		FILE * fp = fopen (proxy_file_name.c_str(), "r");
 		if (fp) {
 			proxy = (char*)malloc ((proxy_size+1)*sizeof(char));
-			fread (proxy, proxy_size, 1, fp);
+            ASSERT(proxy);
+			if (fread (proxy, proxy_size, 1, fp) != 1) {
+                fprintf(stderr, "ERROR: Unable to read proxy %s: %s\n",
+                        proxy_file_name.c_str(),
+                        strerror(errno) );
+                return 1;
+            }
 			fclose (fp);
-		}
-
-		if (proxy == NULL) {
-			fprintf(stderr, "ERROR: Unable to read proxy %s\n", proxy_file_name.c_str());
+		} else {
+			fprintf(stderr, "ERROR: Unable to open proxy %s: %s\n",
+                    proxy_file_name.c_str(),
+                    strerror(errno) );
 			return 1;
-		}
+        }
     }
-    
+
     //if input is valid, then send the request:
     classad::PrettyPrint unparser;
 	std::string adbuffer = "";

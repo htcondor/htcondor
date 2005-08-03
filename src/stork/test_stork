@@ -554,7 +554,7 @@ EOF
 	return $status
 }
 
-# test gsiftp:// to gsiftp:// transfer, with credential specified in submit file
+# test gsiftp:// to gsiftp:// transfer, using GSI credential search path
 stork_submit_gsiftp_gsiftp () {
 	name="$1"; shift;
 	test_announce "$name"
@@ -565,7 +565,7 @@ stork_submit_gsiftp_gsiftp () {
 	cat <<EOF >$SUBMIT_FILE
 	[
 		dap_type = transfer;
-		x509proxy = "$X509PROXY";
+		x509proxy = "default";
 		src_url = "gsiftp://${GRIDFTPSERVER}$COMPARE_FILE";
 		dest_url = "gsiftp://${GRIDFTPSERVER}$DEST_FILE";
 	]
