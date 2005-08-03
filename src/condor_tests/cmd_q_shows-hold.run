@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 use CondorTest;
 
-$cmd      = 'cmd_core_condorq-hold.cmd';
+$cmd      = 'cmd_q_shows-hold.cmd';
 $testname = 'Jobs properly hold and release - vanilla U';
 
 # truly const variables in perl
