@@ -15,6 +15,7 @@
 \oOpt{-allowlogerror}
 \oOptArg{-r}{schedd\_name}
 \oOptArg{-debug}{level}
+\oOpt{-usedagdir}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -89,6 +90,11 @@ description.
      0-7 inclusive, where 7 is the most verbose output.
      A default value of 3 is passed to \Condor{dagman} when not
      specified with this option.
+     }
+  \OptItem{\Opt{-usedagdir}}{This optional argument has causes
+     \Condor{dagman} to run each specified DAG as if \Condor{submit\_dag}
+     had been run in the directory containing that DAG file.  This option
+     is most useful when running multiple DAGs in a single \Condor{dagman}.
      }
   \end{Options}
 

@@ -879,79 +879,123 @@ Internally, all of the independent DAGs are combined
 into a single, larger DAG, with no dependencies between
 the original independent DAGs.
 As a result,
-any generated rescue DAG file represents a single DAG.
+any generated rescue DAG file represents all of the input DAGs
+as a single DAG.
 The file name of this rescue DAG is based on the DAG input file
 listed first within the command-line arguments to
 \Condor{submit\_dag}.
 Other files such
 as \File{dagman.out} and the lock file also have names based on this
 first DAG input file.
+
+The success or failure of the independent DAGs is well defined.
+When multiple, independent DAGs are submitted with a single
+command, the
+success of the composite DAG is defined as the logical AND
+of the success of each independent DAG.
+This implies that failure is defined as the logical OR
+of the failure of any of the independent DAGs.
+
 By default, DAGMan internally renames the nodes to avoid node name collisions.  
 If all node names are unique, 
 the renaming of nodes may be disabled by
 setting the configuration variable \Macro{DAGMAN\_MUNGE\_NODE\_NAMES}
 to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
+% Karen has edited to this point.
 
-% Karen has editted to this point.
-DAGMan currently assumes that all necessary files
-(DAG input files and job submit description files)
-are located in the same (flat) directory.
-Further, this directory is also the current working
-directory as \Condor{submit\_dag} is executed.
-Locating the multiple, independent DAGs in separate directories 
-is not yet supported.
-Yet, separate directories will work correctly,
-if \emph{all} file names are absolute paths.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGPaths}File Paths in DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!File Paths in DAGs}
 
-Relative paths as file names work only for a specific case.
-This case assumes that all file names are given relative to
-the current working directory as \Condor{submit\_dag} is executed.
-For example,
-assume that a directory called \File{parent}
+By default, \Condor{dagman} assumes that all relative paths in a
+DAG file and the associated submit files are relative to the current
+working directory when \Condor{submit\_dag} is run.  (Note that 
+relative paths in submit files can be modified by the submit command
+\SubmitCmd{initialdir}; see the \Condor{submit} manual page at
+~\ref{man-condor-submit} for more details.  The rest of this discussion
+ignores \SubmitCmd{initialdir}.)
+
+In most cases, this is what you want.  However, if you are running
+multiple DAGs with a single \Condor{dagman}, and each DAG is in its
+own directory, this will cause problems.  In this case, you
+should use the \Arg{-usedagdir} command-line argument to
+\Condor{submit\_dag} (see the \Condor{submit\_dag} manual page at
+~\ref{man-condor-submit-dag} for more details).
+This tells \Condor{dagman} to run each DAG
+as if \Condor{submit\_dag} had been run in the directory in which
+the relevant DAG file exists.
+
+For example, assume that a directory called \File{parent}
 contains two subdirectories called \File{dag1} and
-\File{dag2}.
-The goal is to submit the two, independent DAGs located within
-\File{dag1} and \File{dag2} while the current working directory
-is \File{parent} with
-\footnotesize
+\File{dag2}, and that \File{dag1} contains the file \File{one.dag}
+and \File{dag2} contains the file \File{two.dag}.
+Further, assume that each DAG is set up to be run
+from its own directory (i.e, the following command:
 \begin{verbatim}
-condor_submit_dag dag1/one.dag dag2/two.dag
+cd dag1; condor_submit_dag one.dag
 \end{verbatim}
-\normalsize
-To make relative paths work in this example,
-the DAG input file \File{one.dag} will need to give the
-location of a Condor submit description file for a 
-node (within dag1) as
-\begin{verbatim}
-Job A  dag1/A.submit
-\end{verbatim}
-and the submit description file (file \File{A.submit})
-also needs relative path names such as
-\footnotesize
-\begin{verbatim}
-    # File name: A.submit, in directory dag1
-    executable = dag1/A.out
-    output     = dag1/A.output
-    error      = dag1/A.error
-    log        = dag1/dag1.log
-    universe   = vanilla
-    queue
-\end{verbatim}
-\normalsize
-Note that these paths are relative to the current working directory
-as \Condor{submit\_dag} is executed.
-Further note that these relative path names no longer allow the
-independent DAG to be submitted on its own when
-the  current working directory is the directory containing
-the DAG's files (\File{dag1} for this example).
+will correctly run \File{one.dag}).
 
-The success or failure of the independent DAGs is well defined.
-When multiple, independent DAGs are submitted with a single
-command,
-success of the composite DAG is defined as the logical AND
-of the success of each independent DAG.
-This implies that failure is defined as the logical OR
-of the failure of any of the independent DAGs.
+The goal is to run the two, independent DAGs located within
+\File{dag1} and \File{dag2} while the current working directory
+is \File{parent}.  To do so, run the following command:
+\begin{verbatim}
+condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
+\end{verbatim}
+
+Of course, if all paths in your DAG file(s) and the relevant submit
+files are absolute, you don't need the \Arg{-usedagdir} argument;
+however, using absolute paths is NOT generally a good idea.
+
+If you \emph{don't} use \Arg{-usedagdir}, relative paths can still work
+for multiple DAGs, if
+all file paths are given relative to
+the current working directory as \Condor{submit\_dag} is executed.
+However, this means that, if the DAGs are in separate directories, they
+cannot be submitted from their own directories, only from the parent
+directory the paths are set up for.
+
+%I'm not sure whether or not it's a good idea to include the following
+% information any more.  wenger 2005-08-03.
+%For example,
+%assume that a directory called \File{parent}
+%contains two subdirectories called \File{dag1} and
+%\File{dag2}.
+%The goal is to submit the two, independent DAGs located within
+%\File{dag1} and \File{dag2} while the current working directory
+%is \File{parent} with
+%\footnotesize
+%\begin{verbatim}
+%condor_submit_dag dag1/one.dag dag2/two.dag
+%\end{verbatim}
+%\normalsize
+%To make relative paths work in this example,
+%the DAG input file \File{one.dag} will need to give the
+%location of a Condor submit description file for a 
+%node (within dag1) as
+%\begin{verbatim}
+%Job A  dag1/A.submit
+%\end{verbatim}
+%and the submit description file (file \File{A.submit})
+%also needs relative path names such as
+%\footnotesize
+%\begin{verbatim}
+%    # File name: A.submit, in directory dag1
+%    executable = dag1/A.out
+%    output     = dag1/A.output
+%    error      = dag1/A.error
+%    log        = dag1/dag1.log
+%    universe   = vanilla
+%    queue
+%\end{verbatim}
+%\normalsize
+%Note that these paths are relative to the current working directory
+%as \Condor{submit\_dag} is executed.
+%Further note that these relative path names no longer allow the
+%independent DAG to be submitted on its own when
+%the  current working directory is the directory containing
+%the DAG's files (\File{dag1} for this example).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGConfig}Configuration}
