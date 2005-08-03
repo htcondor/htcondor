@@ -250,6 +250,8 @@ char* x509_proxy_identity_name( const char *proxy_file );
 
 int x509_proxy_seconds_until_expire( const char *proxy_file );
 
+int x509_proxy_try_import( const char *proxy_file );
+
 const char* x509_error_string();
 
 int have_condor_g();
