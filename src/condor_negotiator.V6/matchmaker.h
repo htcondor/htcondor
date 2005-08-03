@@ -109,7 +109,8 @@ class Matchmaker : public Service
 		   double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd, bool ignore_schedd_limit);
+		   int send_ad_to_schedd, bool ignore_schedd_limit,
+		   time_t startTime);
 
 		int negotiateWithGroup ( ClassAdList& startdAds, 
 			ClassAdList& startdPvtAds, ClassAdList& scheddAds, 
@@ -127,6 +128,7 @@ class Matchmaker : public Service
 		char *getCapability (const char *, const char *, ClassAdList &);
 		void addRemoteUserPrios( ClassAdList& );
 		void reeval( ClassAd *ad );
+		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		static int HashFunc(const MyString &Key, int TableSize);
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
@@ -142,6 +144,8 @@ class Matchmaker : public Service
 		char *AccountantHost;		// who (if at all) is the accountant?
 		int  NegotiatorInterval;	// interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
+		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
+		int  MaxTimePerSpin;        // How long per pie spin
 		ExprTree *PreemptionReq;	// only preempt if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank

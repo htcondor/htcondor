@@ -205,6 +205,22 @@ reinitialize ()
 		NegotiatorTimeout = 30;
 	}
 
+ 	tmp = param("NEGOTIATOR_MAX_TIME_PER_SUBMITTER");
+	if( tmp ) {
+		MaxTimePerSubmitter = atoi(tmp);
+		free( tmp );
+	} else {
+		MaxTimePerSubmitter = 31536000; // up to 1 year per submitter
+	}
+
+ 	tmp = param("NEGOTIATOR_MAX_TIME_PER_PIESPIN");
+	if( tmp ) {
+		MaxTimePerSpin = atoi(tmp);
+		free( tmp );
+	} else {
+		MaxTimePerSpin = 31536000; // up to 1 year per spin
+	}
+
 	// deal with a possibly resized socket cache, or create the socket
 	// cache if this is the first time we got here.
 	// 
@@ -246,6 +262,8 @@ reinitialize ()
 			AccountantHost : "None (local)");
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
+	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
+	dprintf (D_ALWAYS,"MAX_TIME_PER_PIESPIN = %d sec\n",MaxTimePerSpin);
 	dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", (tmp?tmp:"None"));
 
 	if( tmp ) free( tmp );
@@ -861,12 +879,14 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 	double		scheddAbsShare;
 	int			scheddLimit;
 	int			scheddUsage;
+	int			totalTime;
 	int			MaxscheddLimit;
 	int			hit_schedd_prio_limit;
 	int			hit_network_prio_limit;
 	int 		send_ad_to_schedd;	
 	bool ignore_schedd_limit;
 	int			num_idle_jobs;
+	time_t		startTime;
 
 	// ----- Sort the schedd list in decreasing priority order
 	dprintf( D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n" );
@@ -924,9 +944,16 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 				num_idle_jobs = 0;
 			}
 
-			if ( num_idle_jobs > 0 ) {
-				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,
-					scheddAddr);
+			totalTime = 0;
+			schedd->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE,totalTime);
+			if ( totalTime < 0 ) {
+				totalTime = 0;
+			}
+
+			if (( num_idle_jobs > 0 ) && (totalTime < MaxTimePerSubmitter) ) {
+				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",
+					 scheddName, scheddAddr);
+				 dprintf(D_ALWAYS, "%d seconds so far\n", totalTime);
 			}
 
 			// should we send the startd ad to this schedd?
@@ -1000,6 +1027,14 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 					"  Negotiating with %s skipped because no idle jobs\n",
 					scheddName);
 				result = MM_DONE;
+			} else if (totalTime > MaxTimePerSubmitter) {
+				dprintf(D_ALWAYS,
+					"  Negotiation with %s skipped because of time limits:\n",
+					scheddName);
+				dprintf(D_ALWAYS,
+					"  %d seconds spent, max allowed %d\n ",
+					totalTime, MaxTimePerSubmitter);
+				result = MM_DONE;
 			} else {
 				if ( scheddLimit < 1 && spin_pie > 1 ) {
 					result = MM_RESUME;
@@ -1009,10 +1044,13 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 					} else {
 						ignore_schedd_limit = false;
 					}
+					startTime = time(NULL);
 					result=negotiate( scheddName,scheddAddr,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, startdPvtAds, 
-								  send_ad_to_schedd,ignore_schedd_limit);
+								  send_ad_to_schedd,ignore_schedd_limit,
+								  startTime);
+					updateNegCycleEndTime(startTime, schedd);
 				}
 			}
 
@@ -1150,6 +1188,7 @@ obtainAdsFromCollector (
 	MapEntry *oldAdEntry;
 	int newSequence, oldSequence, reevaluate_ad;
 	char    *remoteHost = NULL;
+	MyString buffer;
 
 	if ( want_simple_matching ) {
 		CondorQuery publicQuery(STARTD_AD);
@@ -1304,6 +1343,7 @@ obtainAdsFromCollector (
 			}
 			startdAds.Insert(ad);
 		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
+    		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
 			scheddAds.Insert(ad);
 		}
         free(remoteHost);
@@ -1332,19 +1372,21 @@ int Matchmaker::
 negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd, bool ignore_schedd_limit)
+		   int send_ad_to_schedd, bool ignore_schedd_limit, time_t startTime)
 {
 	ReliSock	*sock;
 	int			i;
 	int			reply;
 	int			cluster, proc;
 	int			result;
+	time_t		currentTime;
 	ClassAd		request;
 	ClassAd		*offer;
 	bool		only_consider_startd_rank;
 	bool		display_overlimit = true;
 	char		prioExpr[128], remoteUser[128];
 
+	
 	// 0.  connect to the schedd --- ask the cache for a connection
 	sock = sockCache->findReliSock( scheddAddr );
 	if( ! sock ) {
@@ -1409,6 +1451,16 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		// any reschedule requests queued up on our command socket, so
 		// we do not negotiate over & over unnecesarily.
 		daemonCore->ServiceCommandSocket();
+	
+		currentTime = time(NULL);
+
+		if( (currentTime - startTime) > MaxTimePerSpin) {
+			dprintf (D_ALWAYS, 	
+			"    Reached max time per spin: %d ... stopping\n", 
+				MaxTimePerSpin);
+			break;	// get out of the infinite for loop & stop negotiating
+		}
+
 
 		// Handle the case if we are over the scheddLimit
 		if ( i >= scheddLimit ) {
@@ -1623,6 +1675,19 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 	// ... and continue negotiating with others
 	return MM_RESUME;
+}
+
+void Matchmaker::
+updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
+	MyString buffer;
+	time_t endTime;
+	int oldTotalTime;
+
+	endTime = time(NULL);
+	submitter->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE, oldTotalTime);
+	buffer.sprintf("%s = %d", ATTR_TOTAL_TIME_IN_CYCLE, (oldTotalTime + 
+					(endTime - startTime)) );
+	submitter->InsertOrUpdate(buffer.Value());
 }
 
 float Matchmaker::
