@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.27 2005-08-02 23:20:29 bgietzel Exp $
+# $Id: CondorGlue.pm,v 1.1.2.28 2005-08-03 20:57:27 bgietzel Exp $
 #
 ######################################################################
 
@@ -231,9 +231,9 @@ sub printTestingPrereqs
 	    . "$prereqs{$platform}, java-1.4.2_05\n";
     }
 
-    # HACK: irix_6.5 and alpha_osf_V5.1 don't have java yet, so we
+    # HACK: irix_6.5 and alpha platforms don't have java yet, so we
     # can't use the real loop above...
-    foreach $platform ( "irix_6.5", "alpha_osf_V5.1" )
+    foreach $platform ( "irix_6.5", "alpha_osf_V5.1", "alpha_rh_7.2" )
     {
 	print $fh "prereqs_$platform = $prereqs{'global'}, "
 	    . "$prereqs{$platform}\n";
