@@ -133,7 +133,7 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 	If any of the above attributes are not present, then they will
 	be assigned defaults and inserted into the classad.
-	The defaults are: False, False, False, True, respectively.
+	The defaults are: False, False, False, False, True, respectively.
 
 	Now, if you are using mode PERIODIC_ONLY in AnalyzePolicy(),
 	then this is all that you need in the classad _plus_ any other
