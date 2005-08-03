@@ -1,3 +1,9 @@
+08/02/05 V6_7-workspace_svc-branch
+   The branch for work on dynamic account management using Globus 
+   Workspace Management service into the SchedD/Shadow. Will
+   be needed until we either incorporate the said functionality
+   into a release series or decide we no longer need it.
+
 08/02/05 V6_7-workspace_svc-root
    The state of V6_7-branch at the time of creation of
    V6_7-worksapce_cvs-branch
