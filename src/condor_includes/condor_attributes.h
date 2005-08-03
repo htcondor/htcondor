@@ -370,6 +370,7 @@ const char ATTR_TOTAL_JOB_SUSPEND_TIME   [] = "TotalJobSuspendTime";
 const char ATTR_TOTAL_LOAD_AVG			 [] = "TotalLoadAvg";
 const char ATTR_TOTAL_MEMORY			 [] = "TotalMemory";
 const char ATTR_TOTAL_RUNNING_JOBS		 [] = "TotalRunningJobs";
+const char ATTR_TOTAL_TIME_IN_CYCLE		 [] = "TotalTimeInCycle";	
 const char ATTR_TOTAL_VIRTUAL_MACHINES	 [] = "TotalVirtualMachines";
 const char ATTR_TOTAL_VIRTUAL_MEMORY	 [] = "TotalVirtualMemory";
 const char ATTR_UID						 [] = "Uid";
