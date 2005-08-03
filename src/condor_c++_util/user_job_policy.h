@@ -156,12 +156,14 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	and ATTR_ON_EXIT_CODE is not, then AnalyzePolicy() will EXCEPT.
 
 	If PERIODIC_ONLY is used with AnalyzePolicy(), then only 
-	ATTR_PERIODIC_HOLD_CHECK and ATTR_PERIODIC_REMOVE_CHECK will be
+	ATTR_PERIODIC_HOLD_CHECK, ATTR_PERIODIC_RELEASE_CHECK, and
+	ATTR_PERIODIC_REMOVE_CHECK will be
 	evaluated(in that order) to determine if anything should happen with
 	the job.
 
 	If PERIODIC_THEN_EXIT is used with AnalyzePolicy(), then
-	ATTR_PERIODIC_HOLD_CHECK, ATTR_PERIODIC_REMOVE_CHECK,
+	ATTR_PERIODIC_HOLD_CHECK, ATTR_PERIODIC_RELEASE_CHECK,
+	ATTR_PERIODIC_REMOVE_CHECK,
 	ATTR_ON_EXIT_HOLD_CHECK, and ATTR_ON_EXIT_REMOVE_CHECK will be
 	evaluated(in that order) to determine if anything should happen
 	with the job.
@@ -175,8 +177,8 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	the job.  You can also call FiringExpressionValue() to find out
 	what the firing expression evaluated to which casued the action.
 
-	If you do a periodic evaluation and neither periodic check
-	expression became true, the action you get is STAYS_IN_QUEUE and
+	If you do a periodic evaluation and none of the periodic check
+	expressions became true, the action you get is STAYS_IN_QUEUE and
 	the FiringExpression() will be NULL.  However, when you do an on
 	exit evaluation, if you get STAYS_IN_QUEUE, that's because an
 	expression fired (ON_EXIT_REMOVE_CHECK) and became false.  In this
