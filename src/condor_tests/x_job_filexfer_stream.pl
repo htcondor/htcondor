@@ -2,40 +2,21 @@
 
 my $target = $ARGV[0];
 my $count = $ARGV[1];
+my $sleep = $ARGV[2];
 
-if( $target eq "stderr" )
+for(;$count >= 0;$count -= 1)
 {
-	while( $count > 0 )
+	if( $target eq "stderr" )
 	{
-		if( ($count % 1000) == 0 )
-		{
-			sleep 2;
-		}
-		print STDERR "$target\n";
-		$count -= 1;
+		print STDERR "1234****$target****4321\n";
+	}
+	elsif( $target eq "stdout" )
+	{
+		print STDOUT "123456789abcdef****$target****fedcba987654321\n";
+	}
+	else
+	{
+		print STDERR "1234****$target****4321\n";
 	}
 }
-elsif( $target eq "stdout" )
-{
-	while( $count > 0 )
-	{
-		if( ($count % 1000) == 0 )
-		{
-			sleep 2;
-		}
-		print STDOUT "$target\n";
-		$count -= 1;
-	}
-}
-else
-{
-	while( $count > 0 )
-	{
-		if( ($count % 1000) == 0 )
-		{
-			sleep 2;
-		}
-		print STDERR "$target\n";
-		$count -= 1;
-	}
-}
+sleep($sleep);
