@@ -177,6 +177,18 @@ reintroduced by mistake in all public releases.
 \item Fixed some memory leaks in the \Condor{startd} that would be
 induced by calling \Condor{reconfig} or \Condor{status} \Opt{-d}.
 
+\item By design, Condor daemons will exit if their parent process
+exits. On Windows, a bug introduced in v6.5.x series broke this
+behavior. This is now fixed.
+
+\item On Windows, users would often observe the \Condor{master} failing to
+add exceptions for the Condor daemons to the Windows Firewall on Windows
+XP SP2 or Windows 2003 Server SP1. The \Condor{master} will
+now retry for a longer period of time to add these exceptions,
+and the number of retries has now been made configurable. See
+section~\ref{param:WindowsFirewallFailureRetry} on
+page~\pageref{param:WindowsFirewallFailureRetry} for more information.
+
 \end{itemize}
 
 \noindent Known Bugs:
