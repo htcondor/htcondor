@@ -9,6 +9,54 @@ in the 6.6 series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-11}Version 6.6.11}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Contains only a couple bug fixes.
+
+\end{itemize}
+
+%\noindent New Features:
+%
+%\begin{itemize}
+%
+%\item None.
+%
+%\end{itemize}
+
+\noindent Bugs fixed that are included in version 6.7.9:
+
+\begin{itemize}
+
+\item Fixed a bug where the \Condor{negotiator} might dump core if it was
+reconfiged in the middle of a negotiation cycle.
+
+\item Fixed a bug where the \Condor{negotiator} might dump core if a startd
+had a name longer than 63 bytes. 
+
+\item Fixed a bug that could cause \Condor{userprio} to crash if the
+data it gets back from the \Condor{negotiator} is invalid.
+
+\item Fixed a bug where
+\Macro{DEFAULT\_PRIO\_FACTOR} was ignored if 
+\Macro{ACCOUNTANT\_LOCAL\_DOMAIN} was not defined.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-10}Version 6.6.10}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -128,6 +176,18 @@ reintroduced by mistake in all public releases.
 
 \item Fixed some memory leaks in the \Condor{startd} that would be
 induced by calling \Condor{reconfig} or \Condor{status} \Opt{-d}.
+
+\item By design, Condor daemons will exit if their parent process
+exits. On Windows, a bug introduced in v6.5.x series broke this
+behavior. This is now fixed.
+
+\item On Windows, users would often observe the \Condor{master} failing to
+add exceptions for the Condor daemons to the Windows Firewall on Windows
+XP SP2 or Windows 2003 Server SP1. The \Condor{master} will
+now retry for a longer period of time to add these exceptions,
+and the number of retries has now been made configurable. See
+section~\ref{param:WindowsFirewallFailureRetry} on
+page~\pageref{param:WindowsFirewallFailureRetry} for more information.
 
 \end{itemize}
 

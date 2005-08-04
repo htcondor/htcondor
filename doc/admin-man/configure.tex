@@ -1981,12 +1981,28 @@ will not want to change them for any reason.
   If \File{\$(LOCK)} is undefined, then the master log itself is locked.
 
 \item[\Macro{ADD\_WINDOWS\_FIREWALL\_EXCEPTION}]
-  \label{param:AddWindowsFirewallException} If set to false, the
+  \label{param:AddWindowsFirewallException} When set to \Expr{False}, the
   \Condor{master} will not automatically add Condor to the Windows
   Firewall list of trusted applications. Such trusted applications can
   accept incoming connections without interference from the firewall. This
   only affects machines running Windows XP SP2 or higher. The default
-  is True.
+  is \Expr{True}.
+
+\item[\Macro{WINDOWS\_FIREWALL\_FAILURE\_RETRY}]
+  \label{param:WindowsFirewallFailureRetry} 
+  An integer value (default value is 60) that represents
+  the number of times the \Condor{master} will retry to add
+  firewall exceptions.
+  When a Windows machine boots
+  up, Condor starts up by default as well. Under certain conditions, the
+  \Condor{master} may have difficulty adding exceptions to the Windows
+  Firewall because of a delay in other services starting up.
+  Examples of services that may possibly be slow are the 
+  SharedAccess service, the Netman service, or the Workstation service.
+  This configuration variable allows administrators to set the number of
+  times (once every 10 seconds) that the \Condor{master} will retry
+  to add firewall exceptions. A value of 0 means that Condor will
+  retry indefinitely.
 
 \end{description}
 
@@ -3448,6 +3464,8 @@ These macros affect the \Condor{collector}.
   If you do not enable a socket cache, TCP updates will be refused by
   the collector.
   The default value for this setting is 0, with no cache enabled.   
+  If you lower this number, you must run \Condor{restart} and not just
+  \Condor{reconfig} for the change to take effect.
 
 \item[\Macro{KEEP\_POOL\_HISTORY}] \label{param:KeepPoolHistory}
   This boolean macro is used to decide if the collector will write
@@ -3638,7 +3656,9 @@ These macros affect the \Condor{negotiator}.
   connection establishment for each negotiation cycle.  The default is
   currently 16.  To be effective, this parameter should be set to a
   value greater than the number of schedds submitting jobs to the
-  negotiator at any time.
+  negotiator at any time.  If you lower this number, you must run
+  \Condor{restart} and not just \Condor{reconfig} for the change to
+  take effect.
 
 \item[\Macro{NEGOTIATOR\_PRE\_JOB\_RANK}]
   \label{param:NegotiatorPreJobRank} Resources that match a request
