@@ -1,0 +1,73 @@
+#! /usr/bin/env perl
+use CondorTest;
+use Cwd;
+use Sys::Hostname;
+
+Condor::DebugOff();
+
+$cmd = 'job_schedd_job-tracking_van.cmd';
+$testname = ' Is Schedd Loosing jobs - scheduler U';
+
+
+my $pid = $$;
+system("mkdir $pid");
+my $curcwd = getcwd();
+print "current directory is $curcwd\n";
+
+$ExitSuccessBase = sub {
+	my %info = @_;
+
+};
+
+my @lines;
+
+
+$success = sub
+{
+    my %args = @_;
+	my $cluster = $args{"cluster"};
+	$donecount += 1;
+	if( $donecount == $submitcount )
+	{
+		system("date");
+		print "All jobs done now!\n";
+	}
+	else
+	{
+		my $left = $submitcount - $donecount;
+		my $res = $left % 20;
+		if( $res == 0 )
+		{
+			print "$donecount of $submitcount have completed\n";
+		}
+	}
+};
+
+$submit = sub
+{
+    my %args = @_;
+	my $cluster = $args{"cluster"};
+	$submitcount += 1;
+};
+
+$timed = sub
+{
+	my $left = $submitcount - $donecount;
+	system("date");
+	print "Not all kids found in time!!!!!!!!!!!!< $left left >!!!!!!!!!!!!!!!!!!\n";
+	exit(1);
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterSubmit( $testname, $submit );
+CondorTest::RegisterTimed($testname, $timed, 60);
+
+
+system("date");
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
