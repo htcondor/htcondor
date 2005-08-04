@@ -1,0 +1,79 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_filexfer_streamout_van.cmd';
+$out = 'job_filexfer_streamout_van.out';
+$testname = 'Environment is preserved - vanilla U';
+
+$submitted = sub
+{
+	my %info = @_;
+	my $name = $info{"output"};
+	system("rm $name");
+};
+
+$aborted = sub 
+{
+	my %info = @_;
+	my $done;
+	print "Abort event expected as we clear job\n";
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. file streaming output file broken!\n";
+};
+
+$execute = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $name = $info{"output"};
+	CondorTest::RegisterTimed($testname, $timed, 120);
+	sleep(60);
+	if( -f $name )
+	{
+		print "YEAH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+	}
+	print "OK remove the job!\n";
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		exit(0)
+	}
+};
+
+$ExitSuccess = sub {
+	my %info = @_;
+};
+
+
+# before the test let's throw some weird crap into the environment
+
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+#empty local environment and add only a few things that way......
+my $path = $ENV{"PATH"};
+
+$condor_config = $ENV{CONDOR_CONFIG};
+%ENV = ();
+$ENV{CONDOR_CONFIG} = $condor_config;
+$ENV{PATH} = $path;
+$ENV{UNIVERSE} = "vanilla";
+
+print "join(` `,keys %ENV)";
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
