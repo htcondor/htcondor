@@ -12,9 +12,9 @@ Condor dedicates machines for running the programs,
 and it does so using the same interface used when submitting
 non-MPI jobs.
 
-Condor currently supports MPICH versions 1.2.2, 1.2.3, and 1.2.4
-using the ch\_p4 device. 
-Condor does not support MPICH version 1.2.5.
+The MPI universe in Condor currently supports MPICH versions 1.2.2, 1.2.3, 
+and 1.2.4 using the ch\_p4 device. 
+The MPI universe does not support MPICH version 1.2.5.
 These supported implementations are
 offered by Argonne National Labs
 without charge by download.
@@ -26,6 +26,9 @@ been compiled using \Prog{mpicc}.
 No further compilation or linking is necessary to run jobs
 under Condor.
 
+The Parallel universe~\ref{sec:Parallel} is now the preferred
+way to run MPI jobs. 
+Support for the MPI universe will be removed from Condor at a future date.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:MPI-setup}MPI Details of Set Up}
 

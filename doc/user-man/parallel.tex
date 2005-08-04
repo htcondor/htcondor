@@ -1,0 +1,253 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Parallel}Parallel Applications}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Parallel|(}
+
+Condor's Parallel universe is a mechanism to support a wide variety of
+parallel programming environments, including most implementations of
+MPI.  This universe also supports jobs which need to be co-scheduled,
+that is, jobs where more than one process must be running at the same
+time to be correct.  It supersedes the older MPI universe, which
+eventually will be removed.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:parallel-setup}Prerequisites to running parallel jobs}
+
+Condor must be configured such that resources (machines) running
+parallel jobs are dedicated.  \index{scheduling!dedicated} Note that
+``dedicated'' has a very specific meaning in Condor: Dedicated
+machines never vacate their running condor jobs should the machine's
+interactive owner return.  Once the dedicated scheduler claims a
+dedicated machine for use, it will try to use that machine to satisfy
+the requirements of the queue of parallel universe or MPI universe
+jobs.  If the dedicated scheduler cannot use a machine for a
+configurable amount of time, it will release its claim on the machine,
+making it available again for the opportunistic scheduler.
+
+Since Condor does not ordinarily run this way, (Condor usually uses
+opportunistic scheduling), dedicated machines must be specially
+configured.  Section~\ref{sec:Config-Dedicated-Jobs} of
+Administrator's Manual describes the necessary configuration and
+provides detailed examples.
+
+To simplify the dedicated scheduling of resources, a single machine
+becomes the scheduler of dedicated resources.  This leads to a further
+restriction that jobs submitted to execute under the parallel universe
+must be submitted from the machine running as the dedicated scheduler.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:parallel-submit}Parallel Job Submission}
+
+Once Condor resources are correctly configured, jobs may be submitted.
+Each Condor job requires a submit description file.  Here is a simple
+submit description file for a parallel job.
+
+\begin{verbatim}
+#############################################
+##   submit description file for parallel program
+#############################################
+universe = parallel
+executable = /bin/sleep
+arguments = 30
+machine_count = 8
+queue 
+\end{verbatim}
+
+This job specifies the \Attr{universe} as \Attr{parallel}, letting
+Condor know that dedicated resources are required.  The
+\Attr{machine\_count} command identifies the number of machines
+required by the job. 
+
+When this job is submitted, the dedicated scheduler allocates eight
+machines with the same architecture and operating system as the submit
+machine.  It waits until all eight machines are available before
+starting the job.  When all the machines are ready, it runs the
+/bin/sleep command, with the argument 30 on all eight machines
+simultaneously (more or less).  The first machine selected is treated
+specially -- when that job exits, Condor shuts down all the other
+nodes, even if they haven't finished running yet.
+
+This simple example does not specify an input or output,
+meaning that the computation completed is useless,
+since both input comes from and the output goes to \File{/dev/null}.
+A more complex example of a submit description file
+utilizes other features.
+\begin{verbatim}
+######################################
+## Parallel example submit description file
+######################################
+universe = parallel
+executable = /bin/cat
+log = logfile
+input = infile.$(NODE)
+output = outfile.$(NODE)
+error = errfile.$(NODE)
+machine_count = 4
+queue
+\end{verbatim}
+
+The specification of the input, output, and error files utilize a
+predefined macro \index{macro!predefined} See the \Condor{submit}
+manual page on page~\pageref{man-condor-submit} for further
+description of predefined macros.  The \MacroU{NODE} macro is given a
+unique value as programs are assigned to machines.  The
+\MacroUNI{NODE} value is fixed for the entire length of the job.  It
+can therefore be used to identify individual aspects of the
+computation.  In this example, it is used to give unique names to
+input and output files.
+
+If your site does NOT have a shared file system across all the nodes
+where your parallel computation will execute, you can use Condor's
+file transfer mechanism.  You can find out more details about these
+settings by reading the \Condor{submit} man page or
+section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}.
+Assuming your job only reads input from STDIN, here is an example
+submit file for a site without a shared file system:
+
+\begin{verbatim}
+######################################
+## Parallel example submit description file
+## without using a shared file system
+######################################
+universe = parallel
+executable = /bin/cat
+log = logfile
+input = infile.$(NODE)
+output = outfile.$(NODE)
+error = errfile.$(NODE)
+machine_count = 4
+should_transfer_files = yes
+when_to_transfer_output = on_exit
+queue
+\end{verbatim}
+
+The submission to Condor requires exactly four machines,
+and queues four programs.
+Each of these programs requires an input file (correctly
+named) and produces an output file.
+
+\subsection{\label{sec:parallel-mpi-submit}Submitting MPI jobs with the parallel universe}
+
+The above examples simplistically show how to co-schedule otherwise
+sequential executables in parallel.  To run MPI jobs in the parallel
+universe, a bit more framework is needed.  Condor provides this
+framework in the form of user visible and modifiable scripts, to allow
+flexibility for the different kinds of parallel systems it can
+support.  The Condor parallel universe works somewhat like a SIMD
+(Single Instruction, Multiple Data) machine -- there is one named
+executable which is run on all the machines in parallel, but this one
+machine may have different inputs and outputs.  If different
+executables are needed to run on different nodes, the submit file
+should contain a script, which knows which node it is running on, and
+forks an appropriate executable.
+
+Most MPI implementations require two system-wide prerequisites.
+First, the ability to run a command on a remote machine without being
+prompted for a password.  Usually, ssh is used for this, but the
+specific command used is configurable.  Second, an ASCII file with the
+list of machines that can be ssh'd to, as per above.
+
+So, to run MPI application in the parallel universe, we run a script
+on each node we submit to.  This script generates ssh keys, to enable
+password-less remote execution, start an sshd daemon, and send the
+names and rank (node number) back to the submit directory.  Thus, for
+each Condor job submitted, the scripts set up an ad-hoc MPI
+environment, which is torn down at the end of the job run.  This ssh
+script is a common requirement for running MPI jobs, so we have
+factored it out into a common script, which is called from each of the
+MPI-specific scripts.  After the ssh script has been started, the
+MPI-specific script runs, starts the rest of the MPI job by looking at
+its arguments, and waits for the MPI job to finish.  Condor provides
+the ssh script, and example MPI scripts for both LAM and MPICH.  The
+former is named ``lamscript'', and the latter ``mp1script''.  The
+first argument to each script is the name of the real MPI executable,
+and any subsequent arguments are arguments to that executable.  Other
+implementations should be easy to add, by modifying the given
+examples.  Note that because the actual MPI executable (i.e. the
+output of mpicc) is not the named executable in the submit script, it
+must be accessible either via a network file system, or by condor file
+transfer.
+
+The sshd.sh script requires several configuration file settings.
+\Macro{CONDOR\_SSHD} should be an absolute path to an implementation of
+sshd.  sshd.sh has been tested with openssh version 3.9, but should
+work with more recent versions.  \Macro{CONDOR\_SSH\_KEYGEN} should
+point to the corresponding ssh-keygen executable.
+
+The LAM and MPICH scripts each have their own idiosyncrasies.  In the
+mp1script, the PATH to the mpich installation must be set.  Look
+for the shell variable MPDIR, and set it to the proper value.  This
+directory should contain the mpich mpirun command.
+
+For LAM, there is a similar path setting, but called LAMDIR in the
+lamscript shell script.  In addition, this path must be part of the
+path set in the user's .cshrc script.  (As of this writing, lam doesn't
+work if the user's login shell is the Bourne or compatible shell).
+
+\begin{verbatim}
+######################################
+## Example submit description file
+## for MPICH 1 MPI
+## works with MPICH 1.2.4, 1.2.5 and 1.2.6
+######################################
+universe = parallel
+executable = mp1script
+arguments = my_mpich_linked_executable arg1 arg2
+machine_count = 4
+queue
+\end{verbatim}
+
+\begin{verbatim}
+######################################
+## Example submit description file
+## for LAM MPI
+######################################
+universe = parallel
+executable = lamscript
+arguments = my_lam_linked_executable arg1 arg2
+machine_count = 4
+queue
+\end{verbatim}
+
+\subsection{\label{sec:parallel-multi-proc}Submitting parallel jobs with multiple requirements}
+Different nodes for a parallel job can have different machine
+requirements.  For example, often the first node, sometimes called the
+head node, needs to run on a specific machine.  This can be also
+useful for debugging.  Condor accommodates this by supporting multiple
+\Attr{queue} statements in the submit file, much like with the other
+universes.  For example:
+
+\begin{verbatim}
+######################################
+## Example submit description file
+## with multiple procs
+######################################
+universe = parallel
+executable = example
+machine_count = 1
+requirements = ( machine == "machine1")
+queue
+
+requirements = ( machine =!= "machine1")
+machine_count = 3
+queue
+\end{verbatim}
+
+The dedicated scheduler will allocate four machines (nodes) total across
+two procs for this job.  The first proc has one node,
+ and will run on the machine named machine1.  The 
+other three nodes, in the second proc, will run on other machines.  
+Like in the other condor universes, the second requirements command 
+overwrites the first, but the other commands are inherited from the 
+first proc.
+
+When submitting jobs with multiple requirements, it is
+best to write the requirements to be mutually exclusive,
+or to have the most selective requirement first in the submit file.
+This is because the scheduler tries to match jobs to machine in
+submit file order.  If the requirements are not mutually exclusive,
+it can happen that the scheduler may unable to schedule the job, even
+if all needed resources are available.
+
+\index{Parallel|)}

@@ -361,6 +361,7 @@ universes for user jobs:
 	\item Java
 	\item Scheduler
 	\item Local
+ 	\item Parallel
 \end{itemize}
 
 The \AdAttr{Universe} attribute is specified in the submit description file.
@@ -377,7 +378,8 @@ The \Expr{PVM} universe is for programs written to the Parallel Virtual
 Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
 \index{universe!MPI}
 The \Expr{MPI} universe is for programs written to the MPICH interface.
-See section~\ref{sec:MPI} for more about MPI and Condor.
+See section~\ref{sec:MPI} for more about MPI and Condor. The MPI Universe
+has be superseded by the~\Expr{Parallel} universe.
 \index{universe!Globus}
 \index{universe!Grid}
 The Globus or Grid universe allows users to submit 
@@ -394,6 +396,10 @@ Java Virtual Machine (JVM).
 %\index{universe!Scheduler}
 The \Expr{scheduler} universe allows users to submit lightweight jobs
 to be spawned by the \Condor{schedd} on the submit host itself.
+\index{universe!Parallel}
+The \Expr{Parallel} universe is for programs that require multiple machines
+for one job.
+See section~\ref{sec:Parallel} for more about the Parallel universe
 %\index{universe!Local}
 %The local universe . . .
 
@@ -583,6 +589,15 @@ consistent with other remote universes like \Expr{vanilla}.
 
 The \Expr{scheduler} universe may be deprecated in the future, in
 favor of the newer \Expr{local} universe.
+
+%%%%%%%%%%%%
+\subsubsection{Parallel Universe}
+%%%%%%%%%%%%
+\index{universe!Parallel}
+The Parallel universe allows parallel programs, such as MPI jobs.
+interface to be used within the opportunistic Condor environment.
+Please see section~\ref{sec:Parallel} for more details.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:local-universe}Local Universe}
@@ -956,7 +971,7 @@ Submitting Jobs Using a Shared File System}
 \index{job!submission using a shared file system}
 \index{shared file system!submission of jobs}
 
-If vanilla, Java or MPI
+If vanilla, Java, Parallel or MPI
 jobs are submitted without using the File Transfer mechanism, 
 Condor must use a shared file system to access input and output
 files. 
@@ -1081,7 +1096,7 @@ needed.
 Therefore, the user does not need to change the submit description
 file if there is no shared file system.
 
-For the vanilla, Java, and MPI universes, access to files (including
+For the vanilla, Java, MPI, and Parallel universes, access to files (including
 the executable) through a shared file system is presumed as a default
 on UNIX machines.
 If there is no shared file system, then Condor's file transfer
@@ -2156,6 +2171,10 @@ the usual method to nicely terminate a Unix program.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/mpi.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/parallel.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

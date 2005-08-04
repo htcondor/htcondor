@@ -60,13 +60,16 @@ setting).
 
 \begin{itemize}
 
-\item Add stuff here...
+\item This release contains all of the bug fixes and improvements from
+  the 6.6 stable series up to and including version 6.6.10.
 
 \end{itemize}
 
 \noindent New Features:
 
 \begin{itemize}
+
+\item The Parallel Universe has been added.
 
 \item 
 \index{environment variables!X509\_USER\_PROXY}
@@ -78,6 +81,10 @@ This currently works in the local, java, and vanilla universes.
 
 \item \Condor{submit} generates more precise error messages in 
 some failure cases.
+
+\item \Condor{hold}, \Condor{release} and \Condor{rm} now allow the user
+to change the HoldReason, ReleaseReason or RemoveReason with the -reason
+flag.
 
 \item \Condor{dagman} no longer does a one-second sleep before each
 submit if all node jobs have the same log file.  (The sleep is still
@@ -94,11 +101,16 @@ jobs have the same log file.
 
 \begin{itemize}
 
+\item Many crashes related to running the Dedicated Scheduler have
+been fixed.
+
 \item Setting COLLECTOR\_HOST or NEGOTIATOR\_HOST with a port but without
 a hostname no longer causes the \Condor{master} to crash.
 
 \item The Condor-G Grid Monitor now works with Globus 4.0 pre-Web Services
 GRAM.
+
+\item Several deadlocks in the Condor-C GAHP server have been fixed.
 
 \end{itemize}
 
@@ -125,7 +137,7 @@ controlled with the \Attr{want\_remote\_io} attribute in the submit
 description file.
 This attribute can be set to true or false and it is true be default.
 If set to false, then this attribute forces a standard universe job in 
-Condor to always look to the local filesystem when opening files and not
+Condor to always look to the local file system when opening files and not
 to contact the shadow. 
 This increases performance of user jobs where the jobs open a very large
 amount of files in a small space of time.
@@ -134,7 +146,7 @@ UID\_DOMAIN and FILESYSTEM\_DOMAIN, as per vanilla universe jobs with a
 homogeneous file system.
 
 \item \Condor{dagman} now has the capability to run more than one
-indepedent DAG in a single \Condor{dagman} process.
+independent DAG in a single \Condor{dagman} process.
 
 \item User policy expressions (on\_exit\_remove and on\_exit\_hold)
 now work for scheduler universe jobs.
@@ -664,7 +676,7 @@ aborted event is now ignored.
 \begin{itemize}
 
 \item This release contains all the bug fixes from the 6.6 stable
-  series upto and including version 6.6.7, and some of the fixes that
+  series up to and including version 6.6.7, and some of the fixes that
   will be included in version 6.6.8.
   The bug fixes in version 6.6.8 that were not included in version
   6.7.3 are listed in a separate section of the 6.6.8 version
