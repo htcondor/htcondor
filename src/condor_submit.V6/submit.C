@@ -242,12 +242,15 @@ char    *ParallelScriptStarter = "parallel_script_starter";
 
 char    *MaxJobRetirementTime = "max_job_retirement_time";
 
+const char * REMOTE_PREFIX="Remote_";
+
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 char	*RmKillSig			= "remove_kill_sig";
 char	*HoldKillSig		= "hold_kill_sig";
 #endif
 
+void	SetRemoteAttrs();
 void 	reschedule();
 void 	SetExecutable();
 void 	SetUniverse();
@@ -306,6 +309,8 @@ void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
 void	InsertJobExpr (const char *expr, bool clustercheck = true);
+void	InsertJobExprInt(const char * name, int val, bool clustercheck = true);
+void	InsertJobExprString(const char * name, const char * val, bool clustercheck = true);
 void	check_umask();
 void setupAuthentication();
 void	SetPeriodicHoldCheck(void);
@@ -358,6 +363,41 @@ int JobAdsArrayLen = 0;
 // explicit template instantiations
 template class ExtArray<SubmitRec>;
 template class ExtArray<ClassAd*>;
+
+MyString 
+condor_param_mystring( const char * name, const char * alt_name )
+{
+	char * result = condor_param(name, alt_name);
+	MyString ret = result;
+	free(result);
+	return ret;
+}
+
+
+/** Given a universe in string form, return the number
+
+Passing a universe in as a null terminated string in univ.  This can be
+a case-insensitive word ("standard", "java"), or the associated number (1, 7).
+Returns the integer of the universe.  In the event a given universe is not
+understood, returns 0.
+
+(The "Ex"tra functionality over CondorUniverseNumber is that it will
+handle a string of "1".  This is primarily included for backward compatility
+with the old icky way of specifying a Remote_Universe.
+*/
+static int CondorUniverseNumberEx(const char * univ)
+{
+	if( univ == 0 ) {
+		return 0;
+	}
+
+	if( atoi(univ) != 0) {
+		return atoi(univ);
+	}
+
+	return CondorUniverseNumber(univ);
+}
+
 
 void TestFilePermissions( char *scheddAddr = NULL )
 {
@@ -739,6 +779,113 @@ main( int argc, char *argv[] )
 	}
 
 	return 0;
+}
+
+/*
+	Walk the list of submit commands (as stored in the
+	insert() table) looking for a handful of Remote_FOO
+	attributes we want to special case.  Translate them (if necessary)
+	and stuff them into the ClassAd.
+*/
+void
+SetRemoteAttrs()
+{
+	const int REMOTE_PREFIX_LEN = strlen(REMOTE_PREFIX);
+
+	struct ExprItem {
+		const char * submit_expr;
+		const char * special_expr;
+		const char * job_expr;
+	};
+
+	ExprItem tostringize[] = {
+		{ Grid_Type, 0, ATTR_JOB_GRID_TYPE },
+		{ RemoteSchedd, 0, ATTR_REMOTE_SCHEDD },
+		{ RemotePool, 0, ATTR_REMOTE_POOL },
+		{ GlobusScheduler, "globus_scheduler", ATTR_GLOBUS_RESOURCE },
+		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
+	};
+	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
+
+
+	HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
+
+		char * key = hash_iter_key(it);
+		int remote_depth = 0;
+		while(strincmp(key, REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
+			remote_depth++;
+			key += REMOTE_PREFIX_LEN;
+		}
+
+		if(remote_depth == 0) {
+			continue;
+		}
+
+		// remote_schedd and remote_pool have remote_ in front of them. :-/
+		// Special case to detect them. 
+		char * possible_key = key - REMOTE_PREFIX_LEN;
+		if(stricmp(possible_key, RemoteSchedd) == 0 ||
+			stricmp(possible_key, RemotePool) == 0) {
+			remote_depth--;
+			key = possible_key;
+		}
+
+		if(remote_depth == 0) {
+			continue;
+		}
+
+		MyString preremote = "";
+		for(int i = 0; i < remote_depth; ++i) {
+			preremote += REMOTE_PREFIX;
+		}
+
+		if(stricmp(key, Universe) == 0 || stricmp(key, ATTR_JOB_UNIVERSE) == 0) {
+			MyString Univ1 = preremote + Universe;
+			MyString Univ2 = preremote + ATTR_JOB_UNIVERSE;
+			MyString val = condor_param_mystring(Univ1.Value(), Univ2.Value());
+			int univ = CondorUniverseNumberEx(val.Value());
+			if(univ == 0) {
+				fprintf(stderr, "ERROR: Unknown universe of '%s' specified\n", val.Value());
+				exit(1);
+			}
+			MyString attr = preremote + ATTR_JOB_UNIVERSE;
+			fprintf(stderr, "Adding %s = %d\n", attr.Value(), univ);
+			InsertJobExprInt(attr.Value(), univ);
+
+		} else {
+
+			for(int i = 0; i < tostringizesz; ++i) {
+				ExprItem & item = tostringize[i];
+
+				if(	stricmp(key, item.submit_expr) &&
+					(item.special_expr == NULL || stricmp(key, item.special_expr)) &&
+					stricmp(key, item.job_expr)) {
+					continue;
+				}
+				MyString key1 = preremote + item.submit_expr;
+				MyString key2 = preremote + item.special_expr;
+				MyString key3 = preremote + item.job_expr;
+				const char * ckey1 = key1.Value();
+				const char * ckey2 = key2.Value();
+				if(item.special_expr == NULL) { ckey2 = NULL; }
+				const char * ckey3 = key3.Value();
+				char * val = condor_param(ckey1, ckey2);
+				if( val == NULL ) {
+					val = condor_param(ckey3);
+				}
+				ASSERT(val); // Shouldn't have gotten here if it's missing.
+				fprintf(stderr, "Adding %s = %s\n", ckey3, val);
+				InsertJobExprString(ckey3, val);
+				free(val);
+				break;
+			}
+		}
+		
+
+
+	}
+	hash_iter_delete(&it);
 }
 
 
@@ -4026,7 +4173,11 @@ queue(int num)
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetRequirements();	// must be called _after_ SetTransferFiles() and SetPerFileEncryption()
 		SetJobLease();		// must be called _after_ SetStdFile(0,1,2)
+
+		SetRemoteAttrs();
+
 		SetForcedAttributes();
+
 		SetPeriodicHoldCheck();
 		SetPeriodicRemoveCheck();
 		SetExitHoldCheck();
@@ -4849,6 +5000,25 @@ InsertJobExpr (const char *expr, bool clustercheck)
 	}
 
 	delete tree;
+}
+
+void 
+InsertJobExprInt(const char * name, int val, bool clustercheck /*= true*/)
+{
+	ASSERT(name);
+	MyString buf;
+	buf.sprintf("%s = %d", name, val);
+	InsertJobExpr(buf.Value(), clustercheck);
+}
+
+void 
+InsertJobExprString(const char * name, const char * val, bool clustercheck /*= true*/)
+{
+	ASSERT(name);
+	ASSERT(val);
+	MyString buf;
+	buf.sprintf("%s = \"%s\"", name, val);
+	InsertJobExpr(buf.Value(), clustercheck);
 }
 
 static int 
