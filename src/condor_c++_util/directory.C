@@ -1274,13 +1274,28 @@ char *
 create_temp_file() {
 	char * temp_dir = temp_dir_path();
 	char * filename = (char*)(malloc (500));
-	//int pid = daemonCore->getPid();
+	int mypid;
+
+#ifdef WIN32
+	mypid = GetCurrentProcessId();
+#else
+	mypid = getpid();
+#endif
+
+		//int pid = daemonCore->getPid();
 	int timestamp = (int)time(NULL);
 	int fd=-1;
 
+	int retry_count = 10;
+
 	do {
-		sprintf (filename, "%s/tmp.%d", temp_dir, timestamp);
-	} while ((fd=open (filename, O_EXCL | O_CREAT)) == -1);
+		sprintf (filename, "%s/tmp.%d.%d", temp_dir, mypid, timestamp++);
+	} while ((--retry_count > 0) && 
+			 ((fd=open (filename, O_EXCL | O_CREAT, S_IRUSR | S_IWUSR)) == -1));
+
+	if (fd == -1) {
+		return NULL;
+	}
 
 	close (fd);
 
