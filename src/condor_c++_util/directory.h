@@ -445,6 +445,24 @@ private:
 #endif
 };
 
+// A handy utility class that deletes the underlying file
+// when the class instance is deleted
+class TempFile {
+ public:
+	TempFile (const char * _name) {
+		filename = _name?strdup(_name):NULL;
+	}
+
+	~TempFile () {
+		if (filename) {
+			unlink(filename);
+			free (filename);
+		}
+	}
+ protected:
+	char * filename;
+};
+
 
 /** Determine if the given file is the name of a subdirectory,
   or just a file.
