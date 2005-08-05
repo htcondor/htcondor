@@ -1500,7 +1500,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv(-1);
 		}
 
-		if (!create_delegated_proxy (
+		if (!delegate_x509_proxy (
 									 X509UserProxy,
 									 delegated_proxy_filename,
 									 FALSE,
