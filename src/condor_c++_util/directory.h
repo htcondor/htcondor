@@ -447,13 +447,13 @@ private:
 
 // A handy utility class that deletes the underlying file
 // when the class instance is deleted
-class TempFile {
+class DeleteFileLater {
  public:
-	TempFile (const char * _name) {
+	DeleteFileLater (const char * _name) {
 		filename = _name?strdup(_name):NULL;
 	}
 
-	~TempFile () {
+	~DeleteFileLater () {
 		if (filename) {
 			unlink(filename);
 			free (filename);

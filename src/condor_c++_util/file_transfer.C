@@ -1514,7 +1514,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 	}
 
-	TempFile temp_file (delegated_proxy_filename);
+	DeleteFileLater temp_file(delegated_proxy_filename);
 
 	while ( filelist && (filename=filelist->next()) ) {
 		bool is_the_x509_proxy = false;
