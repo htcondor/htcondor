@@ -474,6 +474,50 @@ doContactSchedd()
 	bool send_reschedule = false;
 	MyString error_str = "";
 
+	const char * expr_false = "FALSE";
+	const char * expr_true = "TRUE";
+	const char * expr_undefined = "UNDEFINED";
+
+	MyString expr_not_matched;
+	expr_not_matched.sprintf("(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
+
+	MyString expr_managed;
+	expr_managed.sprintf("(%s =?= %s)", ATTR_JOB_MANAGED, expr_true);
+
+	MyString expr_not_managed;
+	expr_not_managed.sprintf("(%s =!= %s)", ATTR_JOB_MANAGED, expr_true);
+
+	MyString expr_not_held;
+	expr_not_held.sprintf("(%s != %d)", ATTR_JOB_STATUS, HELD);
+
+	MyString expr_schedd_job_constraint;
+	expr_schedd_job_constraint.sprintf("(%s)", ScheddJobConstraint);
+
+	MyString expr_completed;
+	expr_completed.sprintf("(%s == %d)", ATTR_JOB_STATUS, COMPLETED);
+
+	MyString expr_completion_date_defined;
+	expr_completion_date_defined.sprintf("(%s =!= %s)", ATTR_COMPLETION_DATE, expr_undefined);
+
+	MyString expr_positive_completion_date;
+	expr_positive_completion_date.sprintf("(%s && (%s > %d))", 
+		expr_completion_date_defined.Value(),
+		ATTR_COMPLETION_DATE, 0);
+
+	MyString expr_completely_done;
+	// The gridmanager never wants to see this job again.
+	// It should be in the process of leaving the queue.
+	expr_completely_done.sprintf("(%s && %s)",
+		expr_completed.Value(),
+		expr_positive_completion_date.Value()
+		);
+
+	MyString expr_not_completely_done;
+	// The gridmanager never wants to see this job again.
+	// It should be in the process of leaving the queue.
+	expr_not_completely_done.sprintf("(%s == %s)", expr_completely_done.Value(), expr_false);
+
+
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
 	contactScheddTid = TIMER_UNSET;
@@ -565,15 +609,23 @@ doContactSchedd()
 			// "&& Managed =!= TRUE" from the new jobs expression becomes
 			// superfluous (by boolean logic), so we drop it.
 			sprintf( expr_buf,
-					 "(%s) && ((%s =!= FALSE && %s != %d) || %s =?= TRUE)",
-					 ScheddJobConstraint, ATTR_JOB_MATCHED,
-					 ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
+					 "%s && %s && ((%s && %s) || %s)",
+					 expr_schedd_job_constraint.Value(), 
+					 expr_not_completely_done.Value(),
+					 expr_not_matched.Value(),
+					 expr_not_held.Value(),
+					 expr_managed.Value()
+					 );
 		} else {
 			// Grab new jobs for us to manage
 			sprintf( expr_buf,
-					 "(%s) && %s =!= FALSE && %s =!= TRUE && %s != %d",
-					 ScheddJobConstraint, ATTR_JOB_MATCHED, ATTR_JOB_MANAGED,
-					 ATTR_JOB_STATUS, HELD );
+					 "%s && %s && %s && %s && %s",
+					 expr_schedd_job_constraint.Value(), 
+					 expr_not_completely_done.Value(),
+					 expr_not_matched.Value(),
+					 expr_not_held.Value(),
+					 expr_not_managed.Value()
+					 );
 		}
 		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
