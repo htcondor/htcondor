@@ -6784,7 +6784,7 @@ pidWatcherThread( void* arg )
 		// set the exited_pid to be zero.
 		if ( entry->pidentries[result]->hPipe ) {
 			exited_pid = 0;
-			if (InterlockedExchange(&(entry->pidentries[result]->deallocate),0L)) {
+			if (entry->pidentries[result]->deallocate) {
 				// this entry should be deallocated.  set things up so
 				// it will be done at the top of the loop; no need to send
 				// the UDP message to break out of select in the main thread.
