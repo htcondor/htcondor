@@ -4,6 +4,7 @@
 \oOpt{-no\_submit}
 \oOpt{-verbose}
 \oOpt{-force}
+\oOptArg{-maxidle}{NumberOfJobs}
 \oOptArg{-maxjobs}{NumberOfJobs}
 \oOptArg{-dagman}{DagmanExecutable}
 \oOptArg{-maxpre}{NumberOfPREscripts}
@@ -42,6 +43,11 @@ description.
      to give verbose error messages.}
   \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
      the files that it produces, if the files already exist.}
+  \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
+     jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
+     idle jobs start to run, \Condor{dagman} will resume submitting jobs.
+     \Arg{NumberOfJobs} is a positive integer. If the option is
+          omitted, the number of idle jobs is unlimited.}
   \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
      within the DAG that will be submitted to Condor at one time.
      \Arg{NumberOfJobs} is a positive integer. If the option is

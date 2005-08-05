@@ -603,6 +603,16 @@ scripts that may be running at one time,
 while the optional \Arg{-maxpost} argument limits the number of POST
 scripts that may be running at one time.
 
+An optional argument to \Condor{submit\_dag}, \Arg{-maxidle}, 
+is used to limit the number of idle jobs within a given DAG.
+When the number of idle node jobs in the DAG reaches the specified
+value, \Condor{dagman} will stop submitting jobs, even if there
+are ready nodes in the DAG.  Once some of the idle jobs start to
+run, \Condor{dagman} will resume submitting jobs.  Note that this
+parameter only limits the number of idle jobs submitted by a
+given \Condor{dagman} -- idle jobs submitted by other sources
+(including other \Condor{dagman} runs) are ignored.
+
 DAGs that submit jobs to Stork using the \Arg{DATA} keyword must also
 specify the Stork user log file, using the \Arg{-storklog} argument.
 

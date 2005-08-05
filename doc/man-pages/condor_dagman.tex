@@ -3,7 +3,8 @@
 \Synopsis \SynProg{\Condor{dagman}}
 \oOptArg{-debug}{level}
 \oOptArg{-rescue}{filename}
-\oOptArg{-maxjobs}{numberofjobs}
+\oOptArg{-maxidle}{numberOfJobs}
+\oOptArg{-maxjobs}{numberOfJobs}
 \oOptArg{-maxpre}{NumberOfPREscripts}
 \oOptArg{-maxpost}{NumberOfPOSTscripts}
 \oOpt{-nopostfail}
@@ -60,9 +61,16 @@ DAG input files as command-line arguments to \Condor{submit\_dag}.
        As passed by \Condor{submit\_dag}, the name of the file
        will be the name of the DAG input file concatenated with
        the string \File{.rescue}. }
-    \OptItem{\OptArg{-maxjobs}{numberofjobs}}{Sets the maximum number of jobs
+    \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
+       jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
+       idle jobs start to run, \Condor{dagman} will resume submitting jobs.
+       \Arg{NumberOfJobs} is a positive integer.
+       This command-line option to \Condor{submit\_dag} is passed to
+       \Condor{dagman}.
+       If not specified, the number of idle jobs is unlimited.  }
+    \OptItem{\OptArg{-maxjobs}{numberOfJobs}}{Sets the maximum number of jobs
        within the DAG that will be submitted to Condor at one time.
-       \Arg{numberofjobs} is a positive integer.
+       \Arg{numberOfJobs} is a positive integer.
        This command-line option to \Condor{submit\_dag} is passed to
        \Condor{dagman}.
        If not specified, the default number of jobs is unlimited.  }
