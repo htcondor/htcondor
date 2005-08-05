@@ -32,6 +32,7 @@
 #     include "globus_gsi_system_config.h"
 #     include "globus_gsi_system_config_constants.h"
 #     include "gssapi.h"
+#     include "globus_gsi_proxy.h"
 #endif
 
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
@@ -105,10 +106,18 @@ activate_globus_gsi()
 		return -1;
 	}
 
+
 	if ( globus_module_activate(GLOBUS_GSI_GSSAPI_MODULE) ) {
 		_globus_error_message = "couldn't activate globus gsi gssapi module";
 		return -1;
 	}
+
+
+	if ( globus_module_activate(GLOBUS_GSI_PROXY_MODULE) ) {
+		_globus_error_message = "couldn't activate globus gsi proxy module";
+		return -1;
+	}
+
 
 	globus_gsi_activated = 1;
 	return 0;
@@ -208,6 +217,367 @@ x509_proxy_subject_name( const char *proxy_file )
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
+
+int
+delegate_x509_proxy (const char * in_file,
+						const char * out_file,
+						int limited,
+						int old_skool) 
+{ 
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return FALSE;
+#else
+
+#endif 
+
+    globus_gsi_proxy_handle_t           proxy_handle = NULL;
+    globus_gsi_proxy_handle_attrs_t     proxy_handle_attrs = NULL;
+    globus_gsi_callback_data_t          callback_data = NULL;
+    globus_gsi_cred_handle_attrs_t      cred_handle_attrs = NULL;
+    globus_gsi_cred_handle_t            cred_handle = NULL;
+    globus_gsi_cred_handle_t            proxy_cred_handle = NULL;
+
+	const char * user_cert_filename = in_file;
+	const char * user_key_filename = in_file;
+	const char * proxy_out_filename = out_file;
+	globus_gsi_cert_utils_cert_type_t   cert_type;
+	if (limited) {
+		if (old_skool)
+			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_LIMITED_PROXY;
+		else
+			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_LIMITED_PROXY;
+	} else {
+		if (old_skool)
+			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_PROXY;
+		else
+			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_IMPERSONATION_PROXY;
+	}
+
+	int key_bits = 512;
+	int valid = 12*60;
+	int quiet = 0;
+	int debug = 0;
+
+	char * ca_cert_dir = NULL;
+	int verify = 0;
+
+	time_t lifetime, goodtill;
+	int return_value = 0;
+
+	globus_result_t result  = GLOBUS_SUCCESS;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return FALSE;
+	}
+
+
+    result = globus_gsi_proxy_handle_attrs_init(&proxy_handle_attrs);
+    
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: Couldn't initialize "
+								"the proxy handle attributes.\n");
+			return FALSE;
+		}
+
+		/* set the key bits for the proxy cert in the proxy handle
+		 * attributes
+		 */
+    result = globus_gsi_proxy_handle_attrs_set_keybits(
+													   proxy_handle_attrs, key_bits);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS,
+								"ERROR: Couldn't set the key bits for "
+								"the private key of the proxy certificate\n");
+			return FALSE;
+		}
+    
+
+    result = globus_gsi_proxy_handle_init(&proxy_handle, proxy_handle_attrs);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: Couldn't initialize the proxy handle\n");
+			return FALSE;
+		}
+
+    result = globus_gsi_proxy_handle_attrs_destroy(proxy_handle_attrs);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: Couldn't destroy proxy "
+								"handle attributes.\n");
+			return FALSE;
+		}
+    
+		/* set the time valid in the proxy handle
+		 * used to be hours - now the time valid needs to be set in minutes 
+		 */
+    result = globus_gsi_proxy_handle_set_time_valid(proxy_handle, 
+													valid);
+
+    if(result != GLOBUS_SUCCESS)
+		{
+		dprintf (D_ALWAYS, "ERROR: Couldn't set the validity time "
+								"of the proxy cert to %d minutes.\n", valid);
+		return FALSE;
+		}
+
+		/* set the type of proxy to be generated
+		 */
+    result = globus_gsi_proxy_handle_set_type(proxy_handle, cert_type);
+
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: Couldn't set the type"
+								"of the proxy cert\n");
+			return FALSE;
+		}
+    
+/*    if(!ca_cert_dir && verify)
+		{
+			result = GLOBUS_GSI_SYSCONFIG_GET_CERT_DIR(&ca_cert_dir);
+			if(result != GLOBUS_SUCCESS)
+				{
+					dprintf (D_ALWAYS, "ERROR: Couldn't find a valid trusted certificate directory\n");
+					return FALSE;
+				}
+				}*/
+
+
+
+        /* verify that the directory path of proxy_out_filename
+         * exists and is writeable
+         */
+	globus_gsi_statcheck_t          file_status;
+	char *                          proxy_absolute_path = NULL;
+	char *                          temp_filename = NULL;
+	char *                          temp_dir = NULL;
+
+
+
+        /* first, make absolute path */
+	result = GLOBUS_GSI_SYSCONFIG_MAKE_ABSOLUTE_PATH_FOR_FILENAME(
+																  proxy_out_filename,
+																  &proxy_absolute_path);
+	if(result != GLOBUS_SUCCESS)
+        {
+			dprintf (D_ALWAYS, "ERROR: Can't create the absolute path "
+								"of the proxy filename: %s",
+								proxy_out_filename);
+            return FALSE;
+        }
+
+        
+	proxy_out_filename = proxy_absolute_path;
+
+        /* then split */
+	result = GLOBUS_GSI_SYSCONFIG_SPLIT_DIR_AND_FILENAME(
+														 proxy_absolute_path,
+														 &temp_dir,
+														 &temp_filename);
+	if(result != GLOBUS_SUCCESS)
+        {
+            dprintf (D_ALWAYS, "ERROR: Can't split the full path into "
+								"directory and filename. The full path is: %s", 
+								proxy_absolute_path);
+            if(proxy_absolute_path)
+				{
+					free(proxy_absolute_path);
+					proxy_absolute_path = NULL;
+				}
+            return FALSE;
+        }
+                
+	result = GLOBUS_GSI_SYSCONFIG_FILE_EXISTS(temp_dir, &file_status);
+	if(result != GLOBUS_SUCCESS ||
+	   file_status != GLOBUS_FILE_DIR)
+        {
+			dprintf (D_ALWAYS,
+					 "%s is not a valid directory for writing the "
+								"proxy certificate\n\n",
+								temp_dir);
+
+            if(temp_dir)
+				{
+					free(temp_dir);
+					temp_dir = NULL;
+				}
+            
+            if(temp_filename)
+				{
+					free(temp_filename);
+					temp_filename = NULL;
+				}
+
+        }
+
+	if(temp_dir)
+        {
+            free(temp_dir);
+            temp_dir = NULL;
+        }
+        
+	if(temp_filename)
+        {
+            free(temp_filename);
+            temp_filename = NULL;
+        }
+
+
+
+    result = globus_gsi_cred_handle_attrs_init(&cred_handle_attrs);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "Couldn't initialize credential "
+								"handle attributes\n");
+			return FALSE;
+		}
+    
+    result = globus_gsi_cred_handle_init(&cred_handle, cred_handle_attrs);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "Couldn't initialize credential "
+								"handle\n");
+			return FALSE;
+		}
+
+    result = globus_gsi_cred_handle_attrs_destroy(cred_handle_attrs);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: Couldn't destroy credential "
+								"handle attributes.\n");
+			return FALSE;
+		}
+
+    if(strstr(user_cert_filename, ".p12"))
+		{
+				/* we have a pkcs12 credential */
+			result = globus_gsi_cred_read_pkcs12(
+												 cred_handle,
+												 user_cert_filename);
+			if(result != GLOBUS_SUCCESS)
+				{
+					dprintf (D_ALWAYS, "ERROR: Couldn't read in PKCS12 credential "
+										"from file: %s\n", user_cert_filename);
+					return FALSE;
+				}
+
+		}
+    else
+		{
+			result = globus_gsi_cred_read_cert(
+											   cred_handle,
+											   user_cert_filename);
+			if(result != GLOBUS_SUCCESS)
+				{
+					dprintf (D_ALWAYS,"ERROR: Couldn't read user certificate\n"
+										"cert file location: %s\n\n", 
+										user_cert_filename);
+					return FALSE;
+				}
+        
+			result = globus_gsi_cred_read_key(
+											  cred_handle,
+											  user_key_filename,
+											  NULL);
+
+			if(result != GLOBUS_SUCCESS)
+				{
+					globus_object_t *           error;
+
+					error = globus_error_get(result);
+
+					if(globus_error_match_openssl_error(error,
+														ERR_LIB_PEM,
+														PEM_F_PEM_DO_HEADER,
+														PEM_R_BAD_DECRYPT)
+					   == GLOBUS_TRUE)
+						{ 
+							dprintf (D_ALWAYS, "ERROR: Couldn't read user key: Bad passphrase\n"
+												"key file location: %s\n\n",
+												user_key_filename);
+						}
+					else
+						{
+							dprintf (D_ALWAYS, "ERROR: Couldn't read user key.\n"
+												"key file location: %s\n\n",
+												user_key_filename);
+						}
+					return FALSE;
+				}
+		}
+    
+
+    result = globus_gsi_proxy_create_signed(
+											proxy_handle,
+											cred_handle,
+											&proxy_cred_handle);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: Couldn't create proxy certificate\n");
+			return FALSE;
+		}
+
+
+    if(ca_cert_dir)
+		{
+			free(ca_cert_dir);
+			ca_cert_dir = NULL;
+		}
+
+    result = globus_gsi_cred_write_proxy(proxy_cred_handle,
+                                         proxy_out_filename);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: The proxy credential could not be "
+								"written to the output file.\n");
+			return FALSE;
+		}
+
+    if(proxy_out_filename)
+		{
+			free(proxy_out_filename);
+			proxy_out_filename = NULL;
+		}
+
+    result = globus_gsi_cred_get_lifetime(
+										  cred_handle,
+										  &lifetime);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: Can't get the lifetime of the proxy "
+								"credential.\n");
+			return FALSE;
+		}
+
+    result = globus_gsi_cred_get_goodtill(
+										  proxy_cred_handle,
+										  &goodtill);
+    if(result != GLOBUS_SUCCESS)
+		{
+			dprintf (D_ALWAYS, "ERROR: Can't get the expiration date of the "
+								"proxy credential.\n");
+			return FALSE;
+		}
+
+    if(lifetime < 0)
+		{
+			dprintf (D_ALWAYS, "ERROR: Your certificate has expired: %s\n\n", 
+								asctime(localtime(&goodtill)));
+			return FALSE;
+		}
+
+		//BIO_free(pem_proxy_bio);
+
+    globus_gsi_proxy_handle_destroy(proxy_handle);
+    globus_gsi_cred_handle_destroy(cred_handle);
+    globus_gsi_cred_handle_destroy(proxy_cred_handle);
+    globus_gsi_callback_data_destroy(callback_data);
+
+    return TRUE;
+}
+
 
 /* Return the identity name of a given X509 cert. For proxy certs, this
   will return the identity that the proxy can act on behalf of, rather than
