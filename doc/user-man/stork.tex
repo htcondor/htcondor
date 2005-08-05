@@ -121,11 +121,8 @@ a Stork submit description file:
     \item[x509proxy] Specifies the location of the
     X.509 proxy file for protocols
     that use GSI authentication, such as \SubmitCmd{gsiftp://}.
-    Future versions of
-    Stork may no longer require this keyword (for GSI authentication),
-    and will look for the proxy in default locations.
-    Until then, this keyword is still needed.
-    The default value is null.
+    The special value of \emph{"default"} (quotes are required) invokes
+    GSI libraries to search for the user credential in the standard locations.
 
     \item[alt\_protocols] A comma separated list of
     alternative protocol pairs (for source and destination protocols),
