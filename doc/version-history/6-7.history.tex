@@ -29,6 +29,9 @@ of idle jobs in the DAG.
 \item \Stork{submit} is now able to search for X.509 credentials in the
 standard locations.
 
+\item The \Condor{negotiator} can now limit how long it negotiates with a 
+single submitter before moving on to the next one. 
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -68,8 +71,6 @@ standard locations.
 \item \SubmitCmd{remote\_initialdir} is now supported in all universes except
 for standard universe.  Previously, it was only supported in the grid universe.
 
-%\item The \Condor{negotiator} can now limit how long it negotiates with a 
-%single submitter before moving on to the next one. 
 
 \end{itemize}
 
