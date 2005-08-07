@@ -21,6 +21,14 @@ MapFile::ParseField(MyString & line, int offset, MyString & field)
 {
 	ASSERT(offset >= 0 && offset < line.Length());
 
+		// We consume the leading white space
+	while (offset < line.Length() &&
+		   (' ' == line[offset] ||
+			'\t' == line[offset] ||
+			'\n' == line[offset])) {
+		offset++;
+	}
+
 	bool multiword = '"' == line[offset];
 
 		// Consume initial " (quote)
@@ -57,9 +65,10 @@ MapFile::ParseField(MyString & line, int offset, MyString & field)
 				// This field is not multiple words, so we're done
 				// when we see a space
 			if (' ' == line[offset] ||
-				'\n' == line[offset]) { // XXX: Not all possible white space
-					// We consume the trailing white space
-				offset++;
+				'\t' == line[offset] ||
+				'\n' == line[offset]) {
+					// We don't consume the tailing white space. We
+					// consume leading white space
 				break;
 			} else {
 				field += line[offset];
