@@ -5,11 +5,17 @@
 #include <iostream>
 
 
+/*
+ * argv[1] = certificate mapfile
+ * argv[2] = user mapfile
+ * argv[3] = method
+ * argv[4] = test string to map
+ */
 int
 main(int argc, char **argv)
 {
-	MyString canonical_filename = "ctest.map";
-	MyString user_filename = "utest.map";
+	MyString canonical_filename = argv[1];
+	MyString user_filename = argv[2];
 	MapFile map;
 	int line;
 
@@ -23,13 +29,13 @@ main(int argc, char **argv)
 		cout << "Error parsing line " << line << " of " << user_filename << "." << endl;
 	}
 
-	for (int index = 1; index < argc; index++) {
+	for (int index = 4; index < argc; index++) {
 		MyString canonicalization;
 		MyString user;
 
 		cout << argv[index] << " -> ";
 
-		if (map.GetCanonicalization("Z", argv[index], canonicalization)) {
+		if (map.GetCanonicalization(argv[3], argv[index], canonicalization)) {
 			canonicalization = "(NO MATCH)";
 		}
 
