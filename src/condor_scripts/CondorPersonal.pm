@@ -33,11 +33,13 @@ package CondorPersonal;
 #	condorlocalsrc	Name for condor local config src 								$personal_local_src
 #	condordaemon	daemon list to start				contents of config template $personal_daemons
 #	condorconfig	Name for condor config file			condor_config				$personal_config
+#	condordomain	Name for domain						cs.wisc.edu					$condordomain
 #	condorlocal		Name for condor local config 		condor_config.local			$personal_local
 #	condor			"install" or path to tarball 									$condordistribution
 #	collector	 	Used to define CONDOR_HOST										$condorhost
 #	ports			Select dynamic or normal ports		dynamic						$portchanges	
 #   vms				sets NUM_CPUS NUM_VMS				none
+#   universe		parallel configuration of schedd	none						$personal_universe
 #	encryption		turns on encryption					none						comma list
 #
 #
@@ -65,10 +67,12 @@ BEGIN
 	$personal_daemons = "";
 	$personal_local = "condor_config.local";
 	$personal_local_src = "";
+	$personal_universe = "";
 	$portchanges = "dynamic";
 	$DEBUG = 0;
 	$collector_port = "0";
 	$personal_config_file = "";
+	$condordomain = "cs.wisc.edu";
 }
 
 #################################################################
@@ -145,12 +149,14 @@ sub Reset
 	$personal_daemons = "";
 	$personal_local = "condor_config.local";
 	$personal_local_src = "";
+	$personal_universe = "";
 
 	$topleveldir = getcwd();
 	$home = $topleveldir;
 	$portchanges = "dynamic";
 	$collector_port = "0";
 	$personal_config_file = "";
+	$condordomain = "cs.wisc.edu";
 }
 
 #################################################################
@@ -423,18 +429,42 @@ sub InstallPersonalCondor
 sub TunePersonalCondor
 {
 	my %control = %personal_condor_params;
-	my $condorhost = `/bin/hostname`;
+	my $myhost = `/bin/hostname`;
+	chomp($myhost);
+	my @domainparts = split /\./, $myhost;
+	my $condorhost = "";
 	my $localdir = shift;
 
 	print "TunePersonalCondor setting LOCAL_DIR to $localdir\n";
+	print "domain parts follow:";
+	foreach my $part (@domainparts)
+	{
+		print " $part";
+	}
+	print "\n";
 
-	chomp($condorhost);
+	$myhost = @domainparts[0];
+
+	print "My basic name is $myhost\n";
+
 
 	# was a special collector called out?
 	if( exists $control{"collector"} )
 	{
+		#print "DEFINING 'collector' will break things needs for parallel and Condor-C tests!\n";
 		$condorhost = $control{"collector"};
 	}
+
+
+	# was a special domain called out?
+	if( exists $control{"condordomain"} )
+	{
+		$condordomain = $control{"condordomain"};
+	}
+
+	$condorhost = $myhost . "." . $condordomain;
+
+	print "Fully qualified domain name is ************************ $condorhost ********************\n";
 
 	# was a special template called out?
 	if( exists $control{"condortemplate"} )
@@ -465,6 +495,14 @@ sub TunePersonalCondor
 	{
 		$personal_local_src = $control{"condorlocalsrc"};
 	}
+
+	# is this for a specific universe like parallel?
+	if( exists $control{"universe"} )
+	{
+		$personal_universe = $control{"universe"};
+		print "HMMMMMMMMMMM universe request is $personal_universe\n";
+	}
+
 
 	#debug( "Proto file is --$personal_template--\n");
 
@@ -548,6 +586,15 @@ sub TunePersonalCondor
 		print NEW "DAEMON_LIST = $personal_daemons\n";
 	}
 
+	if($personal_universe eq "parallel")
+	{
+		# set up dedicated scheduler
+		print "************************ Adding Dedicated Scheduler $personal_universe ***************************\n";
+		print NEW "DedicatedScheduler = \"DedicatedScheduler\@schedd$pid$version\@$condorhost\"\n";
+		print NEW "STARTD_EXPRS = \$(STARTD_EXPRS), DedicatedScheduler\n";
+		print NEW "SCHEDD_DEBUG = D_FULLDEBUG\n";
+	}
+
 	if( $portchanges eq "dynamic")
 	{
 		# this variation requests a dynamic port for collector and negotiator
@@ -619,7 +666,7 @@ sub TunePersonalCondor
 			print NEW "SEC_DEFAULT_AUTHENTICATION_METHODS = $myauthentication\n";
 			print NEW "GSI_DAEMON_DIRECTORY = /etc/grid-security\n";
 			print NEW "#Subjecct must be in slash form and associate with condor entry in grid-mapfile\n";
-			print NEW "GSI_DAEMON_NAME = /C=US/ST=Wisconsin/L=Madison/O=University of Wisconsin -- Madison/O=Computer Sciences Department/OU=Condor Project/CN=nmi-test-5.cs.wisc.edu/Email=bgietzel@cs.wisc.edu\n";
+			print NEW "GSI_DAEMON_NAME = /C=US/ST=Wisconsin/L=Madison/O=University of Wisconsin -- Madison/O=Computer Sciences Department/OU=Condor Project/CN=nmi-test-5.cs.wisc.edu/Email=bgietzel\@cs.wisc.edu\n";
 			$gendatafile = $gendatafile . "_" . $myauthenication;
 		}
 		else
