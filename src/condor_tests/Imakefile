@@ -84,12 +84,55 @@ TESTCLASS(lib_userlog,quick)
 /*
 ** Turn off till in v6_7-branch with Condor-C
 **
-**DESC(job_core_streamout,"Vanilla: test for streaming of output when both stream_output is true and false")
-**RUN(job_core_streamout_van)
-**TESTCLASS(job_core_streamout_van,core)
-**TESTCLASS(job_core_streamout_van,quick)
-**
 */
+
+/*
+****************** Tests being readied for prime time **********************
+
+DESC(job_schedd_job-tracking_van,"Scheduler: test for schedd loosing track of jobs")
+RUN(job_schedd_job-tracking_van)
+TESTCLASS(job_schedd_job-tracking_van,core)
+TESTCLASS(job_schedd_job-tracking_van,quick)
+TESTCLASS(job_schedd_job-tracking_van,btdebug)
+
+DESC(job_core_basic_par,"Basic Parallel Universe")
+RUN(job_core_basic_par)
+TESTCLASS(job_core_basic_par,core)
+TESTCLASS(job_core_basic_par,quick)
+TESTCLASS(job_core_basic_par,btdebug)
+
+DESC(job_core_basic-security_par,"Basic Parallel Universe w/security on")
+RUN(job_core_basic-security_par)
+TESTCLASS(job_core_basic-security_par,core)
+TESTCLASS(job_core_basic-security_par,quick)
+TESTCLASS(job_core_basic-security_par,btdebug)
+
+DESC(lib_chirpio_van,"Exercise the chirp I/O library using the C client library")
+BUILD_DEP_LIB($(CC),lib_chirpio,c,,../release_dir/lib/libchirp_client.a)
+DEPS(lib_chirpio_van,lib_chirpio.exe)
+RUN(lib_chirpio_van)
+TESTCLASS(lib_chirpio_van,lib)
+TESTCLASS(lib_chirpio_van,quick)
+TESTCLASS(lib_chirpio_van,btdebug)
+
+****************** Tests being readied for prime time **********************
+*/
+
+DESC(job_filexfer_streamout_van,"Vanilla: test for streaming of output when both stream_output is true and false")
+RUN(job_filexfer_streamout_van)
+TESTCLASS(job_filexfer_streamout_van,core)
+TESTCLASS(job_filexfer_streamout_van,quick)
+
+DESC(job_filexfer_streamerr_van,"Vanilla: test for streaming of error when both stream_error is true and false")
+RUN(job_filexfer_streamerr_van)
+TESTCLASS(job_filexfer_streamerr_van,core)
+TESTCLASS(job_filexfer_streamerr_van,quick)
+
+
+DESC(cmd_q_shows-hold,"Condor_q shows hold")
+RUN(cmd_q_shows-hold)
+TESTCLASS(cmd_q_shows-hold,core)
+TESTCLASS(cmd_q_shows-hold,quick)
 
 DESC(job_condorc_ab_van,"Condor-C AB test")
 RUN(job_condorc_ab_van)
@@ -245,13 +288,8 @@ TESTCLASS(job_core_compressfiles_std,core)
 TESTCLASS(job_core_compressfiles_std,quick)
 #endif /* ! IS_CLIPPED */
 
-/* Test can hang now - offline for work 3/1/05
-DESC(job_core_streamerr_van,"Vanilla: test for streaming of error when both stream_error is true and false")
-RUN(job_core_streamerr_van)
-TESTCLASS(job_core_streamerr_van,core)
-TESTCLASS(job_core_streamerr_van,quick)
 
-
+/* Hold for now
 DESC(job_core_holdrelease_van,"Vanilla: Test state changes from running to hold to release.")
 RUN(job_core_holdrelease_van)
 TESTCLASS(job_core_holdrelease_van,core)
