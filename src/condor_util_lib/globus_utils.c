@@ -229,7 +229,7 @@ delegate_x509_proxy (const char * in_file,
 	return FALSE;
 #else
 
-#endif 
+
 
     globus_gsi_proxy_handle_t           proxy_handle = NULL;
     globus_gsi_proxy_handle_attrs_t     proxy_handle_attrs = NULL;
@@ -576,6 +576,7 @@ delegate_x509_proxy (const char * in_file,
     globus_gsi_callback_data_destroy(callback_data);
 
     return TRUE;
+#endif 
 }
 
 
