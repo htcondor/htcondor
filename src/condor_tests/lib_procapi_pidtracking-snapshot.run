@@ -1,0 +1,161 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+Condor::DebugOff();
+
+$cmd = 'lib_procapi_pidtracking-snapshot.cmd';
+$testname = 'We cleanup correctly after our kids. - vanilla U';
+$datafile = "lib_procapi_pidtracking-snapshot.data";
+$kiddatafile = "lib_procapi_pidtracking-snapshot.data.kids";
+$worked = "yes";
+
+$execute = sub
+{
+	Condor::debug( "Goood, job is running so we'll start the timer....\n");
+	CondorTest::RegisterTimed($testname, $timed, 300); # give it 5 minutes
+};
+
+$timed = sub
+{
+        system("date");
+        print "lib_procapi_pidtracking-snapshot HUNG !!!!!!!!!!!!!!!!!!\n";
+        exit(1);
+};
+
+$ExitSuccess = sub {
+	my %info = @_;
+	my $line;
+	my $pidline;
+	my @pids;
+	my @kidpids;
+
+	open(PIN, "<$datafile") or die "Could not open data file '$datafile': $?";
+	while(<PIN>)
+	{
+		chomp();
+		$line = $_;
+		if( $line =~ /\s*Relationship:\s*(\d+)\s*created\s*(\d+).*$/ )
+		{
+			Condor::debug( "Process $1 created $2\n");
+			push @pids, $2;
+		}
+		Condor::debug( "$line\n");
+	}
+	close(PIN);
+	open(PIN, "<$kiddatafile") or die "Could not open data file '$kiddatafile': $?";
+	while(<PIN>)
+	{
+		chomp();
+		$line = $_;
+		if( $line =~ /\s*Relationship:\s*(\d+)\s*child\s+created\s*(\d+).*$/ )
+		{
+			Condor::debug( "Process $1 created $2\n");
+			push @kidpids, $2;
+		}
+		Condor::debug( "$line\n");
+	}
+	close(PIN);
+	my $pscmd = "ps -ef";
+	system("which ps");
+	open(PULL, "$pscmd | wc -l 2>&1 |") || die "ps -eo pid failed: $!\n";
+	while(<PULL>)
+	{
+		my $outputlines;
+		chomp();
+		$outputlines = $_;
+		my $linesoftext = 0;
+		$linesoftext = $outputlines;
+		if($linesoftext == 0)
+		{
+			print "Wrong ps options!\n";
+			$pscmd = "ps -ax";
+		}
+		else
+		{
+			print "Ps delivered $linesoftext too check!\n";
+		}
+	}
+
+	open(PULL, "$pscmd 2>&1 |") || die "$pscmd failed: $!\n";
+	while(<PULL>)
+	{
+		my $thispid;
+		chomp();
+		$pidline = $_;
+		if( $pscmd eq "ps -ax") # with pid first
+		{
+			if($pidline =~ /\s*(\d+)\s*.*$/ )
+			{
+				$thispid = $1;
+				print "Checking againt list of removed pids --$thispid--\n";
+				foreach my $pidcheck (@pids)
+				{
+					if($thispid eq $pidcheck)
+					{
+						print "Test fails because pid $pidcheck should have been removed\n";
+						$worked = "no";
+						system("kill -9 $pidcheck");
+					}
+				}
+				foreach my $pidcheck (@kidpids)
+				{
+					if($thispid eq $pidcheck)
+					{
+						print "Test fails because pid $pidcheck should have been removed\n";
+						$worked = "no";
+						system("kill -9 $pidcheck");
+					}
+				}
+			}
+		}
+		else # ps -ef with uid first
+		{
+			if($pidline =~ /\s*[A-Za-z]+\s*(\d+).*$/ )
+			{
+				$thispid = $1;
+				print "Checking againt list of removed pids --$thispid--\n";
+				foreach my $pidcheck (@pids)
+				{
+					if($thispid eq $pidcheck)
+					{
+						print "Test fails because pid $pidcheck should have been removed\n";
+						$worked = "no";
+						system("kill -9 $pidcheck");
+					}
+				}
+				foreach my $pidcheck (@kidpids)
+				{
+					if($thispid eq $pidcheck)
+					{
+						print "Test fails because pid $pidcheck should have been removed\n";
+						$worked = "no";
+						system("kill -9 $pidcheck");
+					}
+				}
+			}
+		}
+		#print "$pidline\n";
+	}
+	close(PULL);
+	if($worked eq "no")
+	{
+		print "$testname: FAILED\n";
+		exit(1);
+	}
+};
+
+
+# before the test let's throw some weird crap into the environment
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+CondorTest::RegisterExecute($testname, $execute);
+
+#empty local environment and add only a few things that way......
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
