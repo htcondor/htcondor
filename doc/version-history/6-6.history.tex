@@ -32,6 +32,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where the \Condor{startd} would erroneously compute the 
+console idle time utilizing a file called /proc/interrupts on unix machines
+that were not linux. 
+
 \item Fixed a bug where the \Condor{negotiator} might dump core if it was
 reconfiged in the middle of a negotiation cycle.
 
