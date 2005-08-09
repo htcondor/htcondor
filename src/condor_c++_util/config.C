@@ -453,6 +453,89 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 	return( tmp );
 }
 
+// Local helper only.  If iter's current pointer is
+// null, move along to the beginning of the next non-empty 
+// bucket.  If there are no more non-empty buckets, leave
+// it set to null and advance iter's index past the end (to
+// make it clear we're done)
+static void
+hash_iter_scoot_to_next_bucket(HASHITER p)
+{
+	while(p->current == NULL) {
+		(p->index)++;
+		if(p->index >= p->table_size) {
+			// The hash table is empty
+			return;
+		}
+		p->current = p->table[p->index];
+	}
+}
+
+HASHITER 
+hash_iter_begin(BUCKET ** table, int table_size)
+{
+	ASSERT(table != NULL);
+	ASSERT(table_size > 0);
+	hash_iter * p = (hash_iter *)MALLOC(sizeof(hash_iter));
+	p->table = table;
+	p->table_size = table_size;
+	p->index = 0;
+	p->current = p->table[p->index];
+	hash_iter_scoot_to_next_bucket(p);
+	return p;
+}
+
+int
+hash_iter_done(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	return iter->current == NULL;
+}
+
+int 
+hash_iter_next(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	if(hash_iter_done(iter)) {
+		return 0;
+	}
+	iter->current = iter->current->next;
+	hash_iter_scoot_to_next_bucket(iter);
+	return (iter->current) ? 1 : 0;
+}
+
+char * 
+hash_iter_key(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	ASSERT( ! hash_iter_done(iter) );
+	return iter->current->name;
+}
+
+char * 
+hash_iter_value(HASHITER iter)
+{
+	ASSERT(iter);
+	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
+	ASSERT( ! hash_iter_done(iter) );
+	return iter->current->value;
+}
+
+void 
+hash_iter_delete(HASHITER * iter)
+{
+	ASSERT(iter);
+	ASSERT(iter[0]);
+	ASSERT(iter[0]->table); // Probably trying to use a iter already hash_iter_delete()d
+	iter[0]->table = NULL;
+	free(*iter);
+	*iter = 0;
+}
+
+
 /*
 ** Same as get_var() below, but finds special references like $ENV().
 */

@@ -35,6 +35,7 @@ typedef struct bucket {
 	struct bucket	*next;
 } BUCKET;
 
+
 /*
 **  Types of macro expansion
 */
@@ -84,6 +85,68 @@ extern "C" {
 	*/
 	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
 						  char *self=NULL );
+
+	// Iterator for the hash array managed by insert() and expand_macro().  See
+	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),
+	// and hash_iter_delete() for details.
+	struct hash_iter {
+		BUCKET ** table;
+		int table_size;
+		int index;
+		bucket * current;
+	};
+	typedef hash_iter * HASHITER;
+
+	/** Begin iteration over the table table with size table_size.
+
+	Returns an opaque object for iterating over all entries in a hash (of the
+	sort managed by insert() and expand_macro().  Use hash_iter_key() and
+	hash_iter_value() to retrieve keys (names) and values for the current item.
+	Use hash_iter_next() to move through the entries.  After hash_iter_begin()
+	the "current" entry is set to the first entry; it is not necessary to call
+	hash_iter_next() immediately.  When done be sure to call hash_iter_delete
+	to free any storage that has been allocated.
+
+	The iterator remains valid if entries are inserted into the hash, but the
+	iterator may overlook them.  The iterator becomes undefined if entries are
+	deleted from the hash.  If an entry is deleted, the only safe thing to
+	do is call hash_iter_delete.
+	*/
+	HASHITER hash_iter_begin(BUCKET ** table, int table_size);
+
+
+	/** Return true if we're out of entries in the hash table */
+	int hash_iter_done(HASHITER iter);
+
+	/** Move to the next entry in the hash table
+
+	Returns false when trying to advance from the last item in the
+	hash table.  Once this has returned false, the only safe things
+	you can do is call hash_iter_done or hash_iter_delete.
+	*/
+	int hash_iter_next(HASHITER iter);
+
+	/** Return key(name) for the current entry in the hash table
+
+	Do no modify or free the returned value.
+	*/
+	char * hash_iter_key(HASHITER iter);
+
+	/** Return value for the current entry in the hash table
+
+	Do no modify or free the returned value.
+	*/
+	char * hash_iter_value(HASHITER iter);
+
+	/** Destroy iterator and reclaim memory.
+	You must pass in a pointer to the hash iterator.
+	After calling the HASHITER is no longer valid.
+	*/
+	void hash_iter_delete(HASHITER * iter);
+
+
+
+
 	int get_var( register char *value, register char **leftp,
 	      register char **namep, register char **rightp, char *self=NULL,
 		  bool getdollardollar=false);
