@@ -738,7 +738,7 @@ sub condor_init($) {
     #safe_mkdir( "$local_dir/log/GridLogs,   01777); #world writeable local dir!
     safe_mkdir( "$local_dir/spool",         0755);
     safe_mkdir( "$local_dir/execute",       01777); #world writeable local dir!
-    safe_mkdir( "$local_dir/ViewHist",      0755);
+    #safe_mkdir( "$local_dir/ViewHist",      0755);
 
     system ("chown -R $owner $local_dir");  # wish Perl could do this natively
     return $local_dir;
