@@ -564,7 +564,8 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 
 	if ( total < filesize ) {
 		dprintf( D_ALWAYS,
-				 "get_file(): ERROR: received %d bytes, expected %d!\n",
+				 "get_file(): ERROR: received " FILESIZE_T_FORMAT " bytes, "
+				 "expected " FILESIZE_T_FORMAT "!\n",
 				 total, filesize);
 		return -1;
 	}
