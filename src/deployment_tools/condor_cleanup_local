@@ -1,0 +1,147 @@
+#! /usr/bin/perl -w
+
+##*******************************************************************
+## Cleans up and possibly archives a local directory structure
+## for a Condor installation. 
+##
+## Author: Joe Meehean
+## Date: 7/28/05
+##*******************************************************************
+
+#***
+# Uses
+#***
+use strict;
+use Getopt::Long;
+use File::Spec;
+use File::Path;
+use File::Copy;
+use File::Basename;
+
+#***
+# Constant Static Variables
+#***
+my $USAGE = "Usage: condor_cleanup_local <-localdir local_dir>\n".
+    "[-archiveonly]\n".
+    "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
+    "[-execarchive exec_archive]\n".
+    "[-help]\n";
+
+my $TAR_PROG = 'tar';
+my $GZIP_PROG = 'gzip';
+
+#***
+# Non-Constant Static Variables
+#***
+my $local_dir = 0;
+my $archive_only = 0;
+my $log_archive = 0;
+my $spool_archive = 0;
+my $exec_archive = 0;
+my $help = 0;
+
+#***
+# Main Function
+#***
+GetOptions('localdir=s'=>\$local_dir,
+	   'archiveonly'=>\$archive_only,
+	   'logarchive=s'=>\$log_archive,
+	   'spoolarchive=s'=>\$spool_archive,
+	   'execarchive=s'=>\$exec_archive,
+	   'help'=>\$help,
+	   );
+
+# Check the usage
+die $USAGE if( !$local_dir || $help );
+
+# Convert to absolute paths
+# Because we are moving to the local_dir we need 
+# absolute paths for the other files specified
+&ConvertToAbPath();
+
+#Move to the local directory
+chdir $local_dir
+    or die "FAILED: Cannot chdir to $local_dir:$!";
+
+# Archive the directories if required
+&ArchiveDir('log', $log_archive) if( $log_archive );
+&ArchiveDir('spool', $spool_archive) if( $spool_archive );
+&ArchiveDir('execute', $exec_archive) if( $exec_archive );
+
+# Cleanup the directories if required
+if( !$archive_only ){
+    rmtree('log', 0, 0);
+    rmtree('spool', 0, 0);
+    rmtree('execute', 0, 0);
+}
+
+#*********************************************************************
+# We cannot be sure that the user will pass absolute file paths.  
+# Therefore, we must convert arbitrary relative paths into absolute
+# paths.
+#*********************************************************************
+sub ConvertToAbPath(){
+    my @tempList = (\$local_dir, \$log_archive, 
+		    \$spool_archive, \$exec_archive);
+
+    
+    # foreach global reference in the list
+    foreach(@tempList){
+	
+	if( $$_ ){
+
+	    # Convert to absolute paths
+	    $$_ = File::Spec->rel2abs($$_);
+
+	    # Ensure the coversion was a success
+	    File::Spec->file_name_is_absolute($$_)
+		or warn "Could not convert $$_ to an absolute".
+		" path (possibly because it is in a different volume".
+		" that the current working directory";
+	}
+
+    }
+}
+
+#*********************************************************************
+# Archives the given directory (tar and gzip) and moves it to
+# the given archive name.
+#*********************************************************************
+sub ArchiveDir(){
+    my ($dir_name, $archive_path) = @_;  #Name the parameters
+    
+    #0. Ensure the directory actually exists
+    die "FAILED: $dir_name doesn't exist" if( !-e $dir_name );
+    die "FAILED: $dir_name is not a directory" if( !-d $dir_name );
+
+    #1. Tar it locally
+
+    # Create a name for the tar
+    my $tar_name = $dir_name.'.tar';
+
+    # Create the tar arguments
+    my @tar_args = ('cf', $tar_name, $dir_name);
+
+    # tar cf temp.tar dir_path
+    !system $TAR_PROG, @tar_args
+	or die "FAILED: Failed to tar $dir_name";
+
+    #2.  Gzip it locally
+    
+    # Create a name for the gzip
+    my $gzip_name = $tar_name.'.gz';
+
+    # Create the gzip arguments
+    my @gzip_args = ('-n', $tar_name);
+    
+    # gzip -n temp.tar
+    !system $GZIP_PROG, @gzip_args
+	or die "FAILED: Failed to gzip $tar_name";
+
+    #3. Move it to the required spot
+    # mv temp.tar.gz $archive_path
+    #rename $gzip_name, $archive_path
+    move($gzip_name, $archive_path)
+	or die "FAILED: Failed to move $gzip_name to $archive_path: $!";
+
+}

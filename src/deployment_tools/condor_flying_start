@@ -1,0 +1,22 @@
+#! /usr/bin/perl -w
+
+##*****************************************************************
+## Creates a vanilla condor job that starts a condor installation
+## on a remote host.
+## Author: Joe Meehean
+## Date: 7/21/05
+##*****************************************************************
+
+#***
+# Uses
+#***
+use strict;
+use Getopt::Long;
+
+#***
+# Constant Static Variables
+#***
+my $USAGE = "Usage: condor_flying_start\n".
+    "<condor_config_file1> <condor_config_file2>\n".
+    "[condor_config_file3 condor_config_file4 ...]\n".
+    "[-help]\n";

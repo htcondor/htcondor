@@ -1,0 +1,352 @@
+#! /usr/bin/perl -w
+
+##*****************************************************************
+## Stops a master and the schedd it controls. 
+## Author: Joe Meehean
+## Date: 6/13/05 
+##*****************************************************************
+
+#***
+# Uses
+#***
+use strict;
+use FindBin;
+use lib ($FindBin::Bin, "$FindBin::Bin/lib");
+use Execute;
+use Getopt::Long;
+use File::Temp qw/ tempfile /;
+
+#***
+# Constant Static Variables
+#***
+my $USAGE = "Usage: condor_local_stop [-f] <condor_config_file> <release_dir>".
+    " [-localconfig config_file] [-help]\n";
+
+my $CONDOR_Q = 'condor_q';
+my $CONDOR_OFF = 'condor_off';
+my $CONDOR_CONFIG_VAL = 'condor_config_val';
+my $CONDOR_CONFIG_BIND = 'condor_config_bind';
+my $BINDING_CONFIG_NAME = 'condor_config.binding';
+my $BINDING_COMMENT = 
+    "## This file was created by schedd_start to bind a user-defined \n".
+    "## local configuration file into a global configuration\n";
+
+my %JOB_STATUS_HASH = ( 1 => 'Idle',
+			2 => 'Running',
+			3 => 'Removed',
+			4 => 'Completed',
+			5 => 'Held',);
+
+#  environment variable names
+my $GLOBAL_CONFIG_ENV = 'CONDOR_CONFIG';
+my $SCHEDD_NAME_ENV = '_CONDOR_SCHEDD_NAME';
+
+#  condor_config attributes
+my $LOCAL_CONFIG_FILE_ATTR = 'LOCAL_CONFIG_FILE';
+my $MASTER_NAME_ATTR = 'MASTER_NAME';
+
+#***
+# Non-constant Static Variables
+#***
+my $force = 0;
+my $release_dir = 0;
+my $global_config_file = 0;
+my $local_config_file = 0;
+my $help = 0;
+
+my $condor_off_cmd = 0;
+my @condor_off_params = ('-graceful', '-master');
+my $condor_q_cmd = 0;
+my @condor_q_params = ('-format', '%d\n', 'JobStatus');
+my $condor_config_val_cmd = 0;
+
+
+#***
+# Main function
+#***
+
+# set the location of the release_dir
+GetOptions('f'=>\$force,
+	   'localconfig=s'=>\$local_config_file,
+	   'help'=>\$help);
+
+# Process command-line arguments
+die "$USAGE" if( @ARGV != 2 || $help );
+$global_config_file = $ARGV[0];
+$release_dir = $ARGV[1];
+
+#Convert all the relative file paths to absolute file paths
+&ConvertToAbPaths();
+
+# Find the required binaries
+$condor_q_cmd = &FindBinary($CONDOR_Q);
+$condor_off_cmd = &FindBinary($CONDOR_OFF);
+$condor_config_val_cmd = &FindBinary($CONDOR_CONFIG_VAL);
+
+# Setup the environment
+&SetupEnvironment();
+
+# If the user hasn't specified 'forceful' ensure it is safe to shutdown
+if( !$force ){
+    &SafeToShutdown();
+}
+
+# Shutdown this installation
+&StopMaster();
+
+# Perform any Cleanup that needs to occur
+&Cleanup();
+
+#*********************************************************************
+# We cannot be sure that the user will pass absolute file paths.  
+# Therefore, we must convert arbitrary relative paths into absolute
+# paths.
+#*********************************************************************
+sub ConvertToAbPaths(){
+    my @tempList = (\$global_config_file, \$release_dir, \$local_config_file);
+
+    
+    # foreach global reference in the list
+    foreach(@tempList){
+	
+	if( $$_ ){
+
+	    # Convert to absolute paths
+	    $$_ = File::Spec->rel2abs($$_);
+
+	    # Ensure the coversion was a success
+	    File::Spec->file_name_is_absolute($$_)
+		or warn "Could not convert $$_ to an absolute".
+		" path (possibly because it is in a different volume".
+		" that the current working directory";
+	}
+
+    }
+}
+
+
+#*********************************************************************
+# Searches for the given binary name under the release directory.
+# Currently it only searches in the release_dir or in release_dir/bin,
+# but eventually it should perform a more stringent search.
+#*********************************************************************
+sub FindBinary(){
+    my $binaryName = shift @_;  #Name the parameter
+    my $binaryPath = 0;
+
+    # set up the 2 possible paths
+    my $flat_path = $release_dir.'/'.$binaryName;
+    my $bin_path = $release_dir.'/bin/'.$binaryName;
+    my $sbin_path = $release_dir.'/sbin/'.$binaryName;
+    
+    # determine which to use
+    if( -e $flat_path ){
+	$binaryPath = $flat_path;
+    } elsif( -e $bin_path ){
+	$binaryPath = $bin_path;
+    } elsif( -e $sbin_path ){
+	$binaryPath = $sbin_path;
+    } else{
+	die "Failed to locate $binaryName in either $flat_path OR $bin_path";
+    }
+}
+
+
+#*********************************************************************
+# Setup the running environment for the schedd.  This includes the 
+# location of binaries, the location of the global configuration, the 
+# location of the local directory,  and the set of local 
+# configuration files.
+#*********************************************************************
+sub SetupEnvironment(){
+    
+    # set the configuration file
+    $ENV{$GLOBAL_CONFIG_ENV} = $global_config_file;
+        
+    # Append the given local configuration file to the list already in 
+    # the global config
+    if( $local_config_file ){
+	&CreateBindingConfig();
+    }
+
+    # Ensure we can query the schedd
+    # Workaround for a bug in condor_q
+    #  If MASTER_NAME is set it overrides the SCHEDD_NAME
+    #  but condor_q looks up the schedd by SCHEDD_NAME or
+    #  the default and completely ignores the MASTER_NAME
+    # To fix this we simply set SCHEDD_NAME = MASTER_NAME
+    # if MASTER_NAME is set
+    my $result = &QueryCondorConfig($MASTER_NAME_ATTR);
+    if( $result ){
+	$ENV{$SCHEDD_NAME_ENV} = $result;
+    }
+}
+
+#*********************************************************************
+# This function kills the program if it is not safe to shutdown.
+# Don't call it unless you are OK with the program dying.
+# 2 Things:
+# 1. This function only checks to see whether it is safe to shutdown
+#    the schedd. Maybe it should be expanded to check other daemons
+#    (startd)
+# 2. There is a race condition for this program based on this 
+#    function.  If this function returns and then a user submits a
+#    job to the schedd before it is shutdown, the schedd will not 
+#    technically be safe to be shutdown and the job may be lost.
+#    This can be prevented by writing a program that tells the schedd
+#    not to accept anymore jobs.  This program can be  based on the 
+#    soon to come feature that allows the schedd to deny submissions
+#    based on a class ad attribute.
+#*********************************************************************
+sub SafeToShutdown(){
+    
+    # Determine if there are jobs in the queue
+    my %JobHash = &JobsInQ();
+    
+    # if yes
+    if( %JobHash ){
+
+	# perform any neccessary cleanup
+	&Cleanup();
+
+	# create an error message
+	my $errorMsg = "FAILED to shutdown because:\n";
+	while( my($key, $value) = each %JobHash ){
+	    $errorMsg = $errorMsg."There are $value job(s) in the $JOB_STATUS_HASH{$key} status\n";
+	}
+	
+	# and die
+	die $errorMsg;
+    }
+    
+}
+
+#*********************************************************************
+# Returns a hash of the jobs in the Q based on the job status.  
+#
+# Note: When determining whether the schedd has jobs we want to avoid
+# the collector to prevent getting stale data.  But I would like the
+# full classad for the schedd, unfortunately 'condor_status -direct
+# your.hostname' doesn't work for schedds.  Therefore this function
+# uses 'condor_q -format' to get the job ads instead.
+#*********************************************************************
+sub JobsInQ(){
+    
+    # JobStatus: 1 = Idle, 2 = Running, 3 = Removed, 4 = Completed, and 5 = Held
+    my %JobHash;
+
+    # Query the schedd to determine if it has any jobs
+    # condor_q -format "%d\n" JobStatus
+    my $returnHashRef = ExecuteAndCapture($condor_q_cmd, @condor_q_params);
+    
+    # Ensure an error did not occur
+    if( $returnHashRef->{EXIT_VALUE} ){
+	# die and print error messages
+	die @{$returnHashRef->{ERRORS}};
+    }
+
+    # Get the output from condor_q
+    my @statuses = @{$returnHashRef->{OUTPUT}};
+
+    # If there are remaining jobs 
+    # die with the number in each group
+    if( @statuses ){
+	
+	foreach(@statuses){
+
+	    # If there has been no previous value for this key
+	    # insert one
+	    if( !exists $JobHash{$_} ){
+		$JobHash{$_} = 1;
+	    } else{
+		# otherwise, increment the value
+		$JobHash{$_} = $JobHash{$_} + 1;
+	    }
+	}
+    }
+
+    return %JobHash;
+}
+
+#*********************************************************************
+# Binds a local configuration file into the global configuration
+# with modifying the global configuration file.  Essentially, it
+# adds another level of configuration above the global and 
+# user-defined local configuration.  Both of these files are local
+# configs to this "higher" binding configuration.  The global config
+# is first in the list so the user-defined config can override its
+# values.
+#*********************************************************************
+sub CreateBindingConfig(){
+
+    # Create a dynamically named temporary binding file
+    my ($binding_config_fh, $binding_config_file) = 
+	tempfile( "$BINDING_CONFIG_NAME.XXXX", DIR => '.', UNLINK => 1);
+
+    # close the given file handle
+    close $binding_config_fh;
+
+    # Execute condor_config_bind to bind the config_files
+    my $config_bind_path = File::Spec->catpath(0, $FindBin::Bin, $CONDOR_CONFIG_BIND);
+    !system $config_bind_path, '-o', $binding_config_file, 
+    $global_config_file, $local_config_file
+	or die "FAILED: $config_bind_path failed to create the binding file: $!";
+
+    # Reset the environment variable to the new binding config
+    $ENV{$GLOBAL_CONFIG_ENV} = $binding_config_file;
+
+}
+
+#*********************************************************************
+# Queries the condor configuration with the given parameters.
+#*********************************************************************
+sub QueryCondorConfig(){
+
+    # If we haven't found condor_config_val, look it up now
+    if( !$condor_config_val_cmd ){
+	&FindCondorConfigVal();
+    }
+
+    my $returnHash = ExecuteAndCapture($condor_config_val_cmd, @_);
+    
+    if( $returnHash->{EXIT_VALUE} ){
+	#error return undef
+	return;
+    }
+    
+    # Check to see if the result is more than one element
+    if( @{$returnHash->{OUTPUT}} > 1 ){
+	warn "WARNING: compressing results of condor config_val";
+    }
+
+    # compress the results into a single element
+    my $result = '';
+    for( @{$returnHash->{OUTPUT}} ){
+	$result = $result.$_."\n";
+    }
+
+    #remove the last endline
+    chomp($result);
+
+    #return the result
+    return $result;
+}
+
+
+#*********************************************************************
+# Shuts down the local condor installation
+#*********************************************************************
+sub StopMaster(){
+
+    !system $condor_off_cmd, @condor_off_params
+	or die "Failed to shutdown condor";
+
+}
+
+#*********************************************************************
+#  Perform any cleanup
+#*********************************************************************
+sub Cleanup(){
+    # Nothing needed yet
+    # Bind file is auto-removed by the File::Temp library
+}

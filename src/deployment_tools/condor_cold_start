@@ -1,0 +1,255 @@
+#! /usr/bin/perl -w
+
+##*****************************************************************
+## Starts condor from pre-packaged installation
+##
+## Author: Joe Meehean
+## Date: 6/21/05
+##*****************************************************************
+
+#*****************************************************************
+# TEMPORARILY DISABLED
+# Note1: The option -setuplocalconfigs is a setup option used to 
+# indicate the location of local config files that should be 
+# installed alongside the global configuration file.  These files
+# must be explicitly referenced in the global configuration file.
+# The natural followup question is: "How can the global 
+# configuration explicitly reference the local configuration files
+# if it cannot know where they will be installed?"  The 'basedir'
+# where the global and setup local configuration files will be 
+# installed is dynamically assigned to LB_RELEASE_DIR 
+# configuration file.  Therefore the global configuration file
+# can reference the local configuration files relative to 
+# LB_RELEASE_DIR.  For example: 
+# LOCAL_CONFIGURATION = $(LB_RELEASE_DIR)/condor_config.security,\
+#                       $(LB_RELEASE_DIR)/condor_config.logging
+# 
+# On the otherhand the -runlocalconfig is run option used to 
+# indicate that the current run (and only the current run) should 
+# use the given local configuration file.  In this case binding
+# into global configuration is handled dynamically by the program.
+# The user is responsible for ensuring that the config file 
+# specified is accessible (i.e., in the locally mounted 
+# filesystem).
+#******************************************************************
+
+#***
+# Uses
+#***
+use strict;
+use FindBin;
+use lib ($FindBin::Bin, "$FindBin::Bin/lib");
+use Execute;
+use File::Spec::Functions;
+use File::Basename;
+use Getopt::Long;
+
+#***
+# Constant Static Variables
+#***
+
+#my $USAGE = 
+#    "Usage: condor_cold_start <-basedir base_dir> <-configfile config_file>\n".
+#    "[-f]\n".
+#    "[-setuponly || -runonly]\n".
+#    "[-arch architecture_string][-site install_repository_site]\n".
+#    "[-localdir local_dir][-setuplocalconfigs config_file1, config_file2, ...]\n".
+#    "[-runlocalconfig local_config_file]\n".
+#    "[-help]\n";
+
+my $USAGE = 
+    "Usage: condor_cold_start [-basedir base_dir] <-configfile config_file>\n".
+    "[-f] [-dyn]\n".
+    "[-fg]\n".
+    "[-setuponly || -runonly]\n".
+    "[-arch architecture_string][-site install_repository_site]\n".
+    "[-localdir local_dir] [-runlocalconfig local_config_file]\n".
+    "[-help]\n";
+
+
+my $SETUP_SITE_ERROR =
+    "Installation repository site is required to setup a condor installation";
+
+my $LATEST_VERSION = 'latest';
+my $INSTALL_PACKAGE_SUFFIX = '.tar.gz';
+
+my $UNAME_CMD = 'uname';
+my @UNAME_ARGS = ('-srm');
+
+#  installation program and options
+my $INSTALL_PROGRAM = 'install_release';
+my $BASE_DIR_OPT = '-basedir';
+my $OTHER_FILES_OPT = '-o';
+my $FORCE_OPT = '-f';
+
+#  startup program and options
+my $CONDOR_LOCAL_START = 'condor_local_start';
+my $LOCAL_DIR_OPT = '-localdir';
+my $LOCAL_CONFIG_OPT = '-localconfig';
+my $DYN_OPT = '-dyn';
+my $FG_OPT = '-fg';
+
+#***
+# Non-constant Static Variables
+#***
+my $base_dir = '.';
+my $local_dir = '.';
+my $force = 0;
+my $dynamic_naming = 0;
+my $foreground = 0;
+my $setup_only = 0;
+my $run_only = 0;
+my $run_flag = 0;
+my $setup_flag = 0;
+my $arch_str = 0;
+my $site = 0;
+my $global_config_file = 0;
+my $binding_config_file = 0;
+my $run_local_config_file = 0;
+my $help = 0;
+#my $setup_configs_flag = 0;
+#my @setup_config_files = ();
+
+#***
+# Main Function
+#***
+
+# Parse the command line options
+GetOptions('basedir=s'=>\$base_dir,
+	   'localdir=s'=>\$local_dir,
+	   'f'=>\$force,
+	   'dyn'=>\$dynamic_naming,
+	   'fg'=>\$foreground,
+	   'setuponly'=>\$setup_only,
+	   'runonly'=>\$run_only,
+	   'arch=s'=>\$arch_str,
+	   'site=s'=>\$site,
+	   'configfile=s'=>\$global_config_file,
+	   #'setuplocalconfigs'=>\$setup_configs_flag,
+	   'runlocalconfig=s'=>\$run_local_config_file,
+	   'help'=>\$help,
+	   );
+	   
+# Process the command line arguments
+#@setup_config_files = ($global_config_file, @ARGV);
+
+# Help or Misused localconfig flag
+#my $misused_localconfig = $setup_configs_flag && (@setup_config_files < 2);
+# Required Arguments
+my $missing_required_args = !$global_config_file;
+# Cannot setup AND run only
+my $misused_only_flags = $setup_only && $run_only;
+die $USAGE if( $help || 
+	       #$misused_localconfig ||
+	       $missing_required_args ||
+	       $misused_only_flags );
+
+
+# Determine whether we are setting up or running or both
+$run_flag = $run_only;
+$setup_flag = $setup_only;
+if( !$run_flag && !$setup_flag ){
+    $run_flag = 1;
+    $setup_flag = 1;
+}
+
+# Perform the setup
+if( $setup_flag ){
+    # Ensure that we have the installation package repository
+    die $SETUP_SITE_ERROR if( !$site );
+    &Setup();
+}
+
+# Perform the startup
+if( $run_flag ){
+    &Startup();
+}
+
+#*********************************************************************
+# Performs the basic setup required to run condor. Mostly determining
+# what needs to be installed and then installing it.
+#*********************************************************************
+sub Setup(){
+    # Determine the architecture of the installation
+    # if not provided
+    if( !$arch_str ){
+	my $arch_hash = &GetLocalArchitecture();
+	$arch_str = $LATEST_VERSION.'-'.
+	    $arch_hash->{HARDWARE}.'-'.
+	    $arch_hash->{OS_NAME}.'-'.
+	    $arch_hash->{OS_RELEASE};
+    }
+
+    # Determine the path to the particular installation 
+    # required in the installation repository
+    my $binary_tar = $arch_str.$INSTALL_PACKAGE_SUFFIX;
+    my $binary_tar_path = $site.'/'.$binary_tar;
+
+    # Construct the program arguments
+    my $install_program_path = File::Spec->catpath(0, $FindBin::Bin, $INSTALL_PROGRAM);
+    my @args = ($binary_tar_path, 
+		$BASE_DIR_OPT, $base_dir, 
+		#$OTHER_FILES_OPT, @setup_config_files);
+		$OTHER_FILES_OPT, $global_config_file);
+    # add the force option if neccessary
+    push @args, $FORCE_OPT if( $force );
+
+    # Execute the installation program
+    !system $install_program_path, @args
+	or die "FAILED: Failed to install condor, see install.log";
+}
+
+
+#*********************************************************************
+# Constructs a hash containing information about this system.
+# Uses 'ps'
+#*********************************************************************
+sub GetLocalArchitecture(){
+    
+    # Use the uname command to get info about this machine
+    # uname -srm
+    my $returnHash = ExecuteAndCapture($UNAME_CMD, @UNAME_ARGS);
+    if( $returnHash->{EXIT_VALUE} ){
+	die "Uname failed with exit value [$returnHash->{EXIT_VALUE}]\n".
+	    "and error messages: $returnHash->{ERRORS}";
+    }
+
+    # parse the output string
+    my $output = shift @{$returnHash->{OUTPUT}};
+    my($os_name, $os_release, $hardware) = split(/\s+/, $output);
+    
+    #Build the return value
+    my %retVal = (
+	OS_NAME => $os_name,
+	OS_RELEASE => $os_release,
+	HARDWARE => $hardware,
+	);
+	
+    return \%retVal;    
+}
+
+#*********************************************************************
+# Starts condor from the installation
+#*********************************************************************
+sub Startup(){
+    # construct the global config file path
+    my $global_config_name = basename $global_config_file;
+    my $global_config_path = File::Spec->catpath(0, $base_dir, $global_config_name);
+    
+    # construct the arguments for the local start program
+    my $local_start_path = File::Spec->catpath(0, $FindBin::Bin, $CONDOR_LOCAL_START);
+    my @args = ($global_config_path, $base_dir, 
+		$LOCAL_DIR_OPT, $local_dir);
+
+    if( $run_local_config_file ){
+	push @args, ($LOCAL_CONFIG_OPT, $run_local_config_file);    
+    }
+    push @args, $DYN_OPT if( $dynamic_naming );
+    push @args, $FG_OPT if( $foreground );
+
+	
+    # Execute the startup program
+    #!system $local_start_path, @args
+    exec $local_start_path, @args
+	or die "FAILED: Failed to start condor: $!";
+}

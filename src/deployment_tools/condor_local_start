@@ -1,0 +1,467 @@
+#! /usr/bin/perl -w
+
+##*****************************************************************
+## Start a dynamic schedd on a pre-installed, pre-configured 
+## machine.  This schedd is sort of like a paper plate, incredibly 
+## useful for one-time only.  The disposable schedd.
+## Author: Joe Meehean
+## Date: 6/7/05
+##*****************************************************************
+
+##*****************************************************************
+## Note1: If the user wants to bind the configuration to the
+## binaries at startup time.  The configuration attributes that
+## detail the location of the binaries (MASTER, SCHEDD, etc...)
+## should be defined relative the the attribute LB_RELEASE_DIR,
+## which stands for late-binding release directory.  This attribute
+## is set to the given release directory immediately prior to 
+## startup.
+##*****************************************************************
+
+##*****************************************************************
+## Note2: condor_config_val must be located either in release_dir
+## or in bin/ under release_dir
+##*****************************************************************
+
+#***
+# Uses
+#***
+use strict;
+use FindBin;
+use lib ($FindBin::Bin, "$FindBin::Bin/lib");
+use Execute;
+use Getopt::Long;
+use File::Find;
+use File::Spec;
+use Cwd;
+use English;
+use Sys::Hostname;
+use Socket;
+
+#***
+# Constant Static Variables
+#***
+my $USAGE = "Usage: condor_local_start <condor_config_file> <release_dir>\n".
+    "[-localdir local_install_dir] [-localconfig local_config_file]\n".
+    "[-dyn] [-fg] [-help]\n";
+
+my $FG_OPT = '-f';
+
+my $CONDOR_CONFIG_VAL = 'condor_config_val';
+
+my $CONDOR_CONFIG_BIND = 'condor_config_bind';
+my $BINDING_CONFIG_NAME = 'condor_config.binding';
+
+my $CONDOR_INSTALL_LOCAL = 'condor_install_local';
+my $LOCALDIR_OPT = '-localdir';
+my $CONFIGNAME_OPT = '-configname';
+my $CONDOR_INSTALL_CONFIG = 'condor_config.local_install';
+
+#  environment variable names
+my $GLOBAL_CONFIG_ENV = 'CONDOR_CONFIG';
+my $LOCAL_CONFIG_FILE_ENV = '_CONDOR_LOCAL_CONFIG_FILE';
+my $LB_RELEASE_DIR_ENV = '_CONDOR_LB_RELEASE_DIR';
+my $LB_LOCAL_DIR_ENV = '_CONDOR_LB_LOCAL_DIR';
+my $EXECUTE_DIR_ENV = '_CONDOR_EXECUTE';
+my $LOG_DIR_ENV = '_CONDOR_LOG';
+my $SPOOL_DIR_ENV = '_CONDOR_SPOOL';
+
+
+#  condor_config attributes
+my $MASTER_ATTR = 'MASTER';
+my @REQUIRED_EXEC_ATTRS = ('MASTER',
+			   'SCHEDD',
+			   'PREEN',
+			   'STARTER',
+			   'STARTER_PVM',
+			   'STARTER_STANDARD',
+			   'SHADOW',
+			   'SHADOW_PVM',
+			   'SHADOW_STANDARD',
+			   'GRIDMANAGER',
+			   'GAHP',
+			   'CONDOR_GAHP',);
+
+my @REQUIRED_DIR_ATTRS = ();
+
+my @RECOMMENDED_EXEC_ATTRS = ('CREDD');
+
+my @RECOMMENDED_DIR_ATTRS = ('LIB',
+			     'LIBEXEC');
+
+#***
+# Non-constant Static Variables
+#***
+my $condor_config_file = 0;
+my $release_dir = 0;
+my $local_install_dir = '.';  #Defaults to the working directory
+my $local_config_file = 0;
+my $help = 0;
+my $condor_config_val_cmd = 0;
+my $dynamic_naming = 0;
+my $foreground,
+my @master_params = ();
+my $local_install_config = 0;
+
+#***
+# Main Function
+#***
+GetOptions('localdir=s'=>\$local_install_dir,
+	   'localconfig=s'=>\$local_config_file,
+	   'dyn'=>\$dynamic_naming,
+	   'fg'=>\$foreground,
+	   'help'=>\$help);
+
+# Process command-line arguments
+die "$USAGE" if( @ARGV !=2 || $help );
+
+$condor_config_file = $ARGV[0];
+$release_dir = $ARGV[1];
+
+# Ensure the arguments are valid
+if (!-e $condor_config_file){
+    die "$condor_config_file does not exist";
+}
+
+if(!-e $release_dir || !-d $release_dir){
+    die "$release_dir does not exist or is not a directory";
+}
+
+if(!-e $local_install_dir || !-d $local_install_dir ){
+    die "$local_install_dir does not exist or is not a directory";
+}
+
+if( $local_config_file && !-e $local_config_file ){
+    die "$local_config_file does not exist";
+}
+
+# Process arguments
+if( $dynamic_naming ){
+    push(@master_params, '-dyn');
+}
+
+# Convert all relative file paths to absolute file paths
+&ConvertToAbPaths();
+
+# Perform any setup required of the local directory
+if( $dynamic_naming ){
+    &SetupLocalDirDyn();
+} else{
+    $local_install_config = &SetupLocalDir();
+}
+
+# Setup the environment
+&SetupEnvironment();
+
+# Make sure everything we need is ready
+&PreStartDiagnostic();
+
+# Start the master
+&StartMaster();
+
+# Success
+print "Successfully Started\n";
+
+
+#*********************************************************************
+# We cannot be sure that the user will pass absolute file paths.  
+# Therefore, we must convert arbitrary relative paths into absolute
+# paths.
+#*********************************************************************
+sub ConvertToAbPaths(){
+
+    my @tempList = (\$condor_config_file, \$release_dir, 
+		    \$local_install_dir, \$local_config_file);
+
+    
+    # foreach global reference in the list
+    foreach(@tempList){
+	
+	if( $$_ ){
+
+	    # Convert to absolute paths
+	    $$_ = File::Spec->rel2abs($$_);
+
+	    # Ensure the coversion was a success
+	    File::Spec->file_name_is_absolute($$_)
+		or warn "Could not convert $$_ to an absolute".
+		" path (possibly because it is in a different volume".
+		" that the current working directory";
+	}
+
+    }
+}
+
+#*********************************************************************
+# Performs any prepartion of the local install directory required.
+# This includes creating /log, /spool, and /execute if they don't 
+# exist.
+#*********************************************************************
+sub SetupLocalDir(){
+    
+
+    # Create the arguments for install_local
+    my $install_config_path = File::Spec->catpath(0, 
+						  $local_install_dir, 
+						  $CONDOR_INSTALL_CONFIG);
+						  
+    my @args = ($LOCALDIR_OPT, $local_install_dir,
+		$CONFIGNAME_OPT, $install_config_path,
+		);
+
+    # Find condor_install_local
+    my $install_local_path = File::Spec->catpath(0, 
+						 $FindBin::Bin, 
+						 $CONDOR_INSTALL_LOCAL);
+    
+    # condor_install_local -localdir $local_install_dir 
+    #                      -configname condor_config.local_install
+    !system $install_local_path, @args
+	or die "FAILED: Failed to create a local directory structure\n";
+
+    # Return the name of the local install config file
+    return $install_config_path;
+}
+
+#*********************************************************************
+# Performs any prepartion of the local install directory required
+# when dynamic naming is required.
+#*********************************************************************
+sub SetupLocalDirDyn(){
+    # The master creates the needed local directory structure
+    # when we are using dynamic naming
+    # This is only needed to guide the master towards where
+    # these directories should be located
+    $ENV{$EXECUTE_DIR_ENV} = File::Spec->catdir($local_install_dir, 'execute');
+    $ENV{$LOG_DIR_ENV} = File::Spec->catdir($local_install_dir, 'log');
+    $ENV{$SPOOL_DIR_ENV} = File::Spec->catdir($local_install_dir, 'spool');
+}
+
+#*********************************************************************
+# Setup the running environment for the schedd.  This includes the 
+# location of binaries, the location of the global configuration, the 
+# location of the local directory,  and the set of local 
+# configuration files.  Dynamically binds the runtime local config,
+# the config created from making the local directory, and the global
+# config together if neccessary.
+#*********************************************************************
+sub SetupEnvironment(){
+    
+    # Default the global config to the one passed in
+    my $global_config = $condor_config_file;
+    
+    # Determine if we need a binding config
+    if( $local_config_file || $local_install_config ){
+	
+	# Determine which configs need to be bound
+	my @configs = ($condor_config_file);
+	push @configs, $local_config_file if( $local_config_file );
+	push @configs, $local_install_config if( $local_install_config );
+
+	# Set the global config to be the binding config
+	$global_config = &CreateBindingConfig(@configs);
+    }
+    
+    # set the configuration file
+    $ENV{$GLOBAL_CONFIG_ENV} = $global_config;
+
+    # set the location of the late-binding 
+    # release_dir and local dir
+    $ENV{$LB_RELEASE_DIR_ENV} = $release_dir;
+    $ENV{$LB_LOCAL_DIR_ENV} = $local_install_dir;
+}
+
+#*********************************************************************
+# Binds a local configuration file into the global configuration
+# without modifying the global configuration file.  Essentially, it
+# adds another level of configuration above the global and 
+# user-defined local configuration.  Both of these files are local
+# configs to this "higher" binding configuration.  The global config
+# is first in the list so the user-defined config can override its
+# values.
+#*********************************************************************
+sub CreateBindingConfig(){
+
+    my @configs = @_;  #Name the parameters
+
+    # Manufacture a name for the binding configuration file
+    # The binding config is local to this installation so 
+    # it should be in the local dir
+    my $binding_config_file = $BINDING_CONFIG_NAME;
+    if( $dynamic_naming ){
+	$binding_config_file = &AddDynamicPostFix($BINDING_CONFIG_NAME);
+    } 
+
+    # put the file in the local install dir
+    $binding_config_file = File::Spec->catfile($local_install_dir, $binding_config_file);
+
+    # See if it exists
+    if( -e $binding_config_file ){
+	warn "WARNING: Binding configuration file $binding_config_file".
+	    " already exists, attempting to clobber";
+    }
+
+    # Construct the arguments to condor_config_bind
+    my @args = ('-o', $binding_config_file, @configs);
+
+    # execute condor_config_bind
+    my $config_bind_path = File::Spec->catpath(0, $FindBin::Bin, $CONDOR_CONFIG_BIND);
+    !system $config_bind_path, @args
+	or die "FAILED: $CONDOR_CONFIG_BIND failed to create a binding config: $!";
+
+    # Return the binding config file name
+    return $binding_config_file;
+}
+
+#*********************************************************************
+# Currently this function just ensures that all of the binaries we 
+# will need exist.  Later incarnations of this function can perform
+# any number of pre-start sanity checks.
+#*********************************************************************
+sub PreStartDiagnostic(){
+    
+    my $queryResult = 0;
+
+    # Check the required executables
+    my $attr;
+    foreach $attr(@REQUIRED_EXEC_ATTRS){
+	$queryResult = &QueryCondorConfig($attr);
+	if( !$queryResult ){
+	    die "Pre-Start Diagnostic Failed: ".
+		"$attr is not defined";
+	} elsif( !-e $queryResult || !-x $queryResult ){
+	    die "Pre-Start Diagnostic Failed: ".
+		"$queryResult does not exist or is not executable by this user";
+	}
+    }
+
+    # Check the required directories
+    foreach my $attr(@REQUIRED_DIR_ATTRS){
+	$queryResult = &QueryCondorConfig($attr);
+	if( !$queryResult ){
+	    die "Pre-Start Diagnostic Failed: ".
+		"$attr is not defined";
+	} elsif( !-e $queryResult || !-d $queryResult ){
+	    die "Pre-Start Diagnostic Failed: ".
+		"$queryResult does not exist or is not a directory";
+	}
+    }
+
+    # Check the recommended executables
+    foreach $attr(@RECOMMENDED_EXEC_ATTRS){
+	$queryResult = &QueryCondorConfig($attr);
+	if( !$queryResult ){
+	    warn "Pre-Start Diagnostic WARNING: ".
+		"$attr is not defined";
+	} elsif( !-e $queryResult || !-e $queryResult ){
+	    warn "Pre-Start Diagnostic WARNING: ".
+		"$queryResult does not exist or is not executable by this user";
+	}
+    }
+
+    # Check the recommened directories
+    foreach $attr(@RECOMMENDED_DIR_ATTRS){
+	$queryResult = &QueryCondorConfig($attr);
+	if( !$queryResult ){
+	    die "Pre-Start Diagnostic WARNING: ".
+		"$attr is not defined";
+	} elsif( !-e $queryResult || !-d $queryResult ){
+	    warn "Pre-Start Diagnostic WARNING: ".
+		"$queryResult does not exist or is not a directory";
+	}
+    }
+    
+}
+
+#*********************************************************************
+# Locates and starts the condor_master with dynamic directories.
+#*********************************************************************
+sub StartMaster(){
+    #Construct the arguments
+    push @master_params, $FG_OPT if( $foreground );
+
+    my $master_cmd = QueryCondorConfig($MASTER_ATTR);
+    #!system $master_cmd, @master_params
+    exec $master_cmd, @master_params
+	or die "Failed to start $master_cmd: $!";
+}
+
+#*********************************************************************
+# Queries the condor configuration with the given parameters.
+#*********************************************************************
+sub QueryCondorConfig(){
+
+    # If we haven't found condor_config_val, look it up now
+    if( !$condor_config_val_cmd ){
+	&FindCondorConfigVal();
+    }
+
+    my $returnHash = ExecuteAndCapture($condor_config_val_cmd, @_);
+    
+    if( $returnHash->{EXIT_VALUE} ){
+	#error return undef
+	return;
+    }
+    
+    # Check to see if the result is more than one element
+    if( @{$returnHash->{OUTPUT}} > 1 ){
+	warn "WARNING: compressing results of condor config_val";
+    }
+
+    # compress the results into a single element
+    my $result = '';
+    for( @{$returnHash->{OUTPUT}} ){
+	$result = $result.$_."\n";
+    }
+
+    #remove the last endline
+    chomp($result);
+
+    #return the result
+    return $result;
+}
+
+#*********************************************************************
+# Sets the global variable condor_config_val_cmd to point to the 
+# location of the condor_config_val command.
+#
+# For right now condor_config_val must be either directly in the 
+# release_dir or in a /bin dir under release. This should eventually 
+# search (File::Find) under release_dir for condor_config_val. It 
+# should also eventually use a 'which' style command to see if
+# the binary is already in the path of this program.
+#*********************************************************************
+sub FindCondorConfigVal(){
+    # set up the 2 possible paths
+    my $flat_path = $release_dir.'/'.$CONDOR_CONFIG_VAL;
+    my $bin_path = $release_dir.'/bin/'.$CONDOR_CONFIG_VAL;
+    
+    # determine which to use
+    if( -e $flat_path ){
+	$condor_config_val_cmd = $flat_path;
+    } 
+    elsif( -e $bin_path ){
+	$condor_config_val_cmd = $bin_path;
+    } 
+    else{
+	die "Failed to locate condor_config_val in either $flat_path OR $bin_path";
+    }
+
+}
+
+#*********************************************************************
+# Creates a dynamic name by appending the IP address and Pid
+# of this process to the given name.
+#*********************************************************************
+sub AddDynamicPostFix(){
+    my ($name) = @_;  #name the parameters
+
+    # get the IP Address
+    my $hostname = hostname();
+    my $IpAddr = gethostbyname( $hostname );
+    $IpAddr = inet_ntoa $IpAddr;
+    # append the ip address and pid to the name 
+    my $dynamic_name = $name.'.'.$IpAddr.'-'.$PID;
+
+    return $dynamic_name;
+}
