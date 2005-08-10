@@ -122,7 +122,8 @@ V6_7_SRC		-a V6_6_SRC \
 			src/condor_credd \
 			src/stork \
 			src/condor_had \
-			src/classad_analysis
+			src/classad_analysis \
+			src/deployment_tools
 
 V_TRUNK_SRC		-a \
 			V6_COMMON \
