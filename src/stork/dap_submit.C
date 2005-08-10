@@ -200,10 +200,10 @@ int main(int argc, char **argv)
 
     //add lognotes to the submit classad 
     if (lognotes){
-      classad::ExprTree *expr = NULL;
-      if ( !parser.ParseExpression(lognotes, expr) )
-	fprintf(stderr,"Parse error in lognotes\n");
-      currentAd->Insert("LogNotes", expr);
+        if (! currentAd->InsertAttr("LogNotes", lognotes) ) {
+            fprintf(stderr, "error inserting lognotes '%s' into job ad\n",
+                    lognotes);
+        }
     }
     
     //check format of the submit classad
