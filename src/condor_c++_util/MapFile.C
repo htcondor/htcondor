@@ -116,8 +116,9 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		offset = ParseField(input_line, offset, principal);
 		offset = ParseField(input_line, offset, canonicalization);
 
+		method.lower_case();
 		dprintf(D_FULLDEBUG,
-				"MapFile read: method='%s' principal='%s' canonicalization='%s'\n",
+				"MapFile: Canonicalization File: method='%s' principal='%s' canonicalization='%s'\n",
 				method.GetCStr(),
 				principal.GetCStr(),
 				canonicalization.GetCStr());
@@ -192,6 +193,11 @@ MapFile::ParseUsermapFile(const MyString filename)
 		offset = ParseField(input_line, offset, canonicalization);
 		offset = ParseField(input_line, offset, user);
 
+		dprintf(D_FULLDEBUG,
+				"MapFile: Usermap File: canonicalization='%s' user='%s'\n",
+				canonicalization.GetCStr(),
+				user.GetCStr());
+
 		if (canonicalization.IsEmpty() ||
 			user.IsEmpty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
@@ -234,11 +240,18 @@ MapFile::GetCanonicalization(const MyString method,
 		 !match_found && entry < canonical_entries.getlast() + 1;
 		 entry++) {
 
+//		printf("comparing: %s == %s => %d\n",
+//			   method.GetCStr(),
+//			   canonical_entries[entry].method.GetCStr(),
+//			   method == canonical_entries[entry].method);
+		method.lower_case();
 		if (method == canonical_entries[entry].method) {
 			match_found = PerformMapping(canonical_entries[entry].regex,
 										 principal,
 										 canonical_entries[entry].canonicalization,
 										 canonicalization);
+
+			if (match_found) break;
 		}
 	}
 
