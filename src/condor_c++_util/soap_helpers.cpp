@@ -126,9 +126,9 @@ convert_ad_to_adStruct(struct soap *s,
 	// ad. What we really really want is to not have to add any special
 	// attribute at all, but that will not happen until we are using
 	// new ClassAds.
-	if (0 = strcmp(((Variable*)tree->LArg())->Name(), ATTR_MY_TYPE) ||
-		0 = strcmp(((Variable*)tree->LArg())->Name(), ATTR_TARGET_TYPE) ||
-		0 = strcmp(((Variable*)tree->LArg())->Name(), ATTR_SERVER_TIME)) {
+	if (0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_MY_TYPE) ||
+		0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_TARGET_TYPE) ||
+		0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_SERVER_TIME)) {
 		continue;
 	}
 
