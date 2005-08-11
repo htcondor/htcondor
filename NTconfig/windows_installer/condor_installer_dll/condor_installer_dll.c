@@ -7,67 +7,136 @@
 
 /* This is a utility DLL for the Condor installer. It's basically a
  * collection of handy functions we call up from the MSI installer as
- * Custom Actions. If you add a function, be sure to add it to the
- * .def file so its exported.
+ * Custom Actions. If you add a function that you want to call from a 
+ * Custom Action, be sure to add it to the .def file so its exported.
  */
+
+/* These are utility functions for getting and setting installer properties */
+char *get_string_property(MSIHANDLE hInstall, const char* prop);
+int get_integer_property(MSIHANDLE hInstall, const char* prop, int default_val);
+
+BOOL set_string_property(MSIHANDLE hInstall, const char *prop, const char *val);
+BOOL set_integer_property(MSIHANDLE hInstall, const char *prop, const int val);
+
 
 BOOL get_hostname(char *buf, int sz);
 
+BOOL 
+set_string_property(MSIHANDLE hInstall, const char *prop, const char *val) {
 
-BOOL __stdcall set_daemon_list(LPTSTR buf, int submit_jobs, int run_jobs, int new_pool){
-
-	int offset, bufsiz;
-
-	bufsiz = strlen(buf);
-
-	offset = _snprintf(buf, bufsiz, "MASTER");
+	UINT uiStat;
 	
-	if ( new_pool > 0 ) {
+	uiStat =  MsiSetProperty(hInstall, prop, val);
+
+	return (uiStat == ERROR_SUCCESS);
+}
+
+BOOL
+set_integer_property(MSIHANDLE hInstall, const char *prop, const int val) {
+	
+	char buf[1024];
+
+	sprintf(buf, "%d", val);
+
+	return set_string_property(hInstall, prop, buf);
+}
+
+int
+get_integer_property(MSIHANDLE hInstall, const char* prop, int default_val) {
+	
+	char *ptr;
+	int val;
+
+	ptr = get_string_property(hInstall, prop);
+
+	if ( ptr != NULL ) {
+		val = atoi(ptr);
+		free(ptr);
+
+	} else {
+		val = default_val;
+	}
+
+	return val;
+}
+
+char *
+get_string_property(MSIHANDLE hInstall, const char* prop) {
+	
+	TCHAR* szValueBuf = NULL;
+    DWORD cchValueBuf = 0;
+    
+	UINT uiStat;
+	
+	uiStat =  MsiGetProperty(hInstall, prop, TEXT(""), &cchValueBuf);
+    
+	if (ERROR_MORE_DATA == uiStat)
+    {
+        ++cchValueBuf; // on output does not include terminating null, so add 1
+        szValueBuf = malloc(sizeof(TCHAR)*cchValueBuf);
+        if (szValueBuf)
+        {
+            uiStat = MsiGetProperty(hInstall, prop, szValueBuf, &cchValueBuf);
+        }
+    }
+    
+	if (ERROR_SUCCESS != uiStat)
+    {
+        return NULL;
+    }
+
+
+    return szValueBuf;
+}
+
+
+BOOL __stdcall set_daemon_list(MSIHANDLE hInstall) {
+
+	int offset, bufsiz = 1024;
+	char buf[1024];
+
+
+	/* always run the master */
+	offset = _snprintf(buf, bufsiz, "MASTER");
+
+	if ( get_integer_property(hInstall, "NEW_POOL", 0) > 0 ) {
+
 		offset += _snprintf(buf+offset, (bufsiz-offset), " COLLECTOR");
 		offset += _snprintf(buf+offset, (bufsiz-offset), " NEGOTIATOR");
 	}
 
-	if ( submit_jobs > 0 ) {
+	if ( get_integer_property(hInstall, "SUBMIT_JOBS", 0) > 0 ) {
 		offset += _snprintf(buf+offset, (bufsiz-offset), " SCHEDD");
 	}
 
-	if ( run_jobs > 0 ) {
+	if ( get_integer_property(hInstall, "RUN_JOBS", 0) > 0 ) {
 		offset += _snprintf(buf+offset, (bufsiz-offset), " STARTD");
 	}
 
-	return TRUE;
+	return set_string_property(hInstall, TEXT("DAEMON_LIST"), buf);
 }
 
-#define MAXHOSTNAMELEN 64
+
+#define MAXHOSTNAMELEN 1024
 UINT __stdcall 
-get_full_hostname(LPTSTR input) {
+get_full_hostname(MSIHANDLE hInstall) {
+	
 	char buf[MAXHOSTNAMELEN];
-	int len;
 
 	if ( get_hostname(buf, MAXHOSTNAMELEN) ) {
 		
-		// we don't want to trample memory, so we 
-		// only write as many characters as there are
-		// in the string we were passed.
-		
-		len = strlen(input);
-
-		strncpy(input, buf, len);
-		return TRUE;
+		return set_string_property(hInstall, TEXT("CONDOR_HOST"), buf);
+	} else {
+		return FALSE;
 	}
-	
-	// set input string to the empty string.
-	input[0] = '\0';
-	return FALSE;
 }
 
 
 	/* tell us the DNS domain for this machine. */
 BOOL __stdcall 
-get_domain(LPTSTR input) {
+get_domain(MSIHANDLE hInstall) {
 
 	char buf[MAXHOSTNAMELEN];
-	int len;
 
 	if ( get_hostname(buf, MAXHOSTNAMELEN) ) {
 		char* ptr;
@@ -77,21 +146,12 @@ get_domain(LPTSTR input) {
 		if ( ptr ) {
 			ptr++;
 
-			// make sure when you call this the input string is really long 
-			// so we don't wind up trampling memory.
-			len = strlen(input);
-
-			strncpy(input, ptr, len);
-			return TRUE;
-		} else {
-			len = strlen(input);
-			strncpy(input, "your.domain.here", len);
-		}
+			return set_string_property(hInstall, TEXT("UID_DOMAIN"), ptr);
+		} 
 	}
-
-	// set input string to the empty string.
-	input[0] = '\0';
-	return FALSE;	
+	
+	return set_string_property(hInstall, TEXT("UID_DOMAIN"), "your.domain.here");
+	
 }
 
 	/* opens up a file and appends the given string */
@@ -103,8 +163,12 @@ append_to_file( LPTSTR file, LPTSTR str ) {
 
 	/* takes a string. If it ends with '\', we snip it off */
 UINT __stdcall 
-chomp_backslash ( LPTSTR input) {
-	int a;
+chomp_backslash ( MSIHANDLE hInstall, LPTSTR property ) {
+	int a, rv;
+	char *input;
+
+	rv = 0;
+	input = get_string_property(hInstall, property);
 	
 	if ( input != NULL ) {
 		a = strlen(input);
@@ -114,9 +178,12 @@ chomp_backslash ( LPTSTR input) {
 				input[a-1] = '\0';
 			}
 		}
+
+		rv = set_string_property(hInstall, property, input);
+		free(input);
 	}
 
-	return 0;
+	return rv;
 }
 
 

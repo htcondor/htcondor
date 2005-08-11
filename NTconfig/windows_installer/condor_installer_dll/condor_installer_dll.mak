@@ -87,7 +87,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_installer_dll.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib /nologo /dll /incremental:no /pdb:"$(OUTDIR)\condor_installer_dll.pdb" /machine:I386 /def:".\condor_installer_dll.def" /out:"$(OUTDIR)\condor_installer_dll.dll" /implib:"$(OUTDIR)\condor_installer_dll.lib" 
+LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib msi.lib /nologo /dll /incremental:no /pdb:"$(OUTDIR)\condor_installer_dll.pdb" /machine:I386 /def:".\condor_installer_dll.def" /out:"$(OUTDIR)\condor_installer_dll.dll" /implib:"$(OUTDIR)\condor_installer_dll.lib" 
 DEF_FILE= \
 	".\condor_installer_dll.def"
 LINK32_OBJS= \
@@ -163,7 +163,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_installer_dll.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib /nologo /dll /incremental:yes /pdb:"$(OUTDIR)\condor_installer_dll.pdb" /debug /machine:I386 /def:".\condor_installer_dll.def" /out:"$(OUTDIR)\condor_installer_dll.dll" /implib:"$(OUTDIR)\condor_installer_dll.lib" /pdbtype:sept 
+LINK32_FLAGS=msi.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib /nologo /dll /incremental:yes /pdb:"$(OUTDIR)\condor_installer_dll.pdb" /debug /machine:I386 /def:".\condor_installer_dll.def" /out:"$(OUTDIR)\condor_installer_dll.dll" /implib:"$(OUTDIR)\condor_installer_dll.lib" /pdbtype:sept 
 DEF_FILE= \
 	".\condor_installer_dll.def"
 LINK32_OBJS= \
