@@ -117,47 +117,47 @@ Claim::vacate()
 void
 Claim::publish( ClassAd* ad, amask_t how_much )
 {
-	char line[256];
+	MyString line;
 	char* tmp;
 
 	if( IS_PRIVATE(how_much) ) {
 		return;
 	}
 
-	sprintf( line, "%s = %f", ATTR_CURRENT_RANK, c_rank );
-	ad->Insert( line );
+	line.sprintf( "%s = %f", ATTR_CURRENT_RANK, c_rank );
+	ad->Insert( line.Value() );
 
 	if( c_client ) {
 		tmp = c_client->user();
 		if( tmp ) {
-			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_USER, tmp );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_USER, tmp );
+			ad->Insert( line.Value() );
 		}
 		tmp = c_client->owner();
 		if( tmp ) {
-			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
+			ad->Insert( line.Value() );
 		}
 		tmp = c_client->host();
 		if( tmp ) {
-			sprintf( line, "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
+			ad->Insert( line.Value() );
 		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
-		sprintf( line, "%s=\"%d.%d\"", ATTR_JOB_ID, c_cluster, c_proc );
-		ad->Insert( line );
+		line.sprintf( "%s=\"%d.%d\"", ATTR_JOB_ID, c_cluster, c_proc );
+		ad->Insert( line.Value() );
 	}
 
 	if( c_job_start > 0 ) {
-		sprintf(line, "%s=%d", ATTR_JOB_START, c_job_start );
-		ad->Insert( line );
+		line.sprintf( "%s=%d", ATTR_JOB_START, c_job_start );
+		ad->Insert( line.Value() );
 	}
 
 	if( c_last_pckpt > 0 ) {
-		sprintf(line, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
-		ad->Insert( line );
+		line.sprintf( "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
+		ad->Insert( line.Value() );
 	}
 }
 
