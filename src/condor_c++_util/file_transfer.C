@@ -1581,7 +1581,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			basefilename = basename(filename);
 		}
 
-		if (strcmp (filename, X509UserProxy) == 0) {
+		if ( X509UserProxy && (strcmp (filename, X509UserProxy) == 0) ) {
 			is_the_x509_proxy = true;
 			filename = delegated_proxy_filename;
 		}
