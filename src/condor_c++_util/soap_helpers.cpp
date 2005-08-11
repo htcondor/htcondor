@@ -121,6 +121,17 @@ convert_ad_to_adStruct(struct soap *s,
     // ad_struct->__ptr[attr_index].valueFloat = NULL;
     // ad_struct->__ptr[attr_index].valueBool = NULL;
     // ad_struct->__ptr[attr_index].valueExpr = NULL;
+
+	// We want to ignore old ServerTime attributes that might be in the
+	// ad. What we really really want is to not have to add any special
+	// attribute at all, but that will not happen until we are using
+	// new ClassAds.
+	if (0 = strcmp(((Variable*)tree->LArg())->Name(), ATTR_MY_TYPE) ||
+		0 = strcmp(((Variable*)tree->LArg())->Name(), ATTR_TARGET_TYPE) ||
+		0 = strcmp(((Variable*)tree->LArg())->Name(), ATTR_SERVER_TIME)) {
+		continue;
+	}
+
     skip_attr = false;
     switch ( rhs->MyType() ) {
     case LX_STRING:
