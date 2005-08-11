@@ -479,6 +479,15 @@ const char ATTR_UPDATESTATS_LOST			 [] = "UpdatesLost";
 const char ATTR_UPDATESTATS_HISTORY		 [] = "UpdatesHistory";
 
 
+// Valid settings for ATTR_JOB_MANAGED.
+	// Managed by an external process (gridmanager)
+const char MANAGED_EXTERNAL				 [] = "External";
+	// Schedd should manage as normal
+const char MANAGED_SCHEDD				 [] = "Schedd";
+	// Schedd should manage as normal.  External process doesn't want back.
+const char MANAGED_DONE				 [] = "ScheddDone";
+
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {
