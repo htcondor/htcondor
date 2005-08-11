@@ -42,6 +42,10 @@ single submitter before moving on to the next one.
 transfer, Condor would print the wrong expected filesize in the error message
 on some platforms.
 
+\item Fixed bug where \Stork{submit} was corrupting log notes passed from the
+command line.  This bug also had the effect of disabling Stork jobs running
+from DAGMan versions v6.7.9, and later.
+
 \end{itemize}
 
 \noindent Changes:
