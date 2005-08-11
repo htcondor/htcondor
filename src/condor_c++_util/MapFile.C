@@ -244,8 +244,9 @@ MapFile::GetCanonicalization(const MyString method,
 //			   method.GetCStr(),
 //			   canonical_entries[entry].method.GetCStr(),
 //			   method == canonical_entries[entry].method);
-		method.lower_case();
-		if (method == canonical_entries[entry].method) {
+		MyString lowerMethod = method;
+		lowerMethod.lower_case();
+		if (lowerMethod == canonical_entries[entry].method) {
 			match_found = PerformMapping(canonical_entries[entry].regex,
 										 principal,
 										 canonical_entries[entry].canonicalization,
