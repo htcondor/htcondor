@@ -242,17 +242,6 @@ delegate_x509_proxy (const char * in_file,
 	const char * user_key_filename = in_file;
 	const char * proxy_out_filename = out_file;
 	globus_gsi_cert_utils_cert_type_t   cert_type;
-	if (limited) {
-		if (old_skool)
-			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_LIMITED_PROXY;
-		else
-			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_LIMITED_PROXY;
-	} else {
-		if (old_skool)
-			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_PROXY;
-		else
-			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_IMPERSONATION_PROXY;
-	}
 
 	int key_bits = 512;
 	int valid = 12*60;
@@ -266,6 +255,26 @@ delegate_x509_proxy (const char * in_file,
 	int return_value = 0;
 
 	globus_result_t result  = GLOBUS_SUCCESS;
+
+	globus_gsi_statcheck_t          file_status;
+	char *                          proxy_absolute_path = NULL;
+	char *                          temp_filename = NULL;
+	char *                          temp_dir = NULL;
+
+	globus_object_t *           error;
+
+	if (limited) {
+		if (old_skool)
+			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_LIMITED_PROXY;
+		else
+			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_LIMITED_PROXY;
+	} else {
+		if (old_skool)
+			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_PROXY;
+		else
+			cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_IMPERSONATION_PROXY;
+	}
+
 
 	if ( activate_globus_gsi() != 0 ) {
 		return FALSE;
@@ -349,10 +358,6 @@ delegate_x509_proxy (const char * in_file,
         /* verify that the directory path of proxy_out_filename
          * exists and is writeable
          */
-	globus_gsi_statcheck_t          file_status;
-	char *                          proxy_absolute_path = NULL;
-	char *                          temp_filename = NULL;
-	char *                          temp_dir = NULL;
 
 
 
@@ -484,7 +489,7 @@ delegate_x509_proxy (const char * in_file,
 
 			if(result != GLOBUS_SUCCESS)
 				{
-					globus_object_t *           error;
+
 
 					error = globus_error_get(result);
 
