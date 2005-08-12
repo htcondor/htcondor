@@ -33,7 +33,7 @@ my $default_platforms =
     "hppa_hpux_B.10.20, " .
     "ia64_sles_8, " .
     "ppc_aix_5.2, " .
-    "ppc_macosx, " .
+    "ppc_macos_10.3, " .
     "sun4u_sol_5.8, " .
     "sun4u_sol_5.9, " .
     "x86_64_rhas_3, " .
