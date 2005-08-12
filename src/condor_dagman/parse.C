@@ -256,7 +256,16 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	expectedSyntax.sprintf( "Expected syntax: %s nodename submitfile "
 				"[DIR directory] [DONE]", nodeTypeKeyword );
 
-	TmpDir nodeDir;
+		// If this is a DAP/DATA node, make sure we have a Stork log
+		// file specified.
+	if ( nodeType == Job::TYPE_STORK ) {
+		if ( !dag->GetDapLog() ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): DAP/DATA node, "
+						"but no Stork log file is specified (-Storklog "
+						"command-line argument)\n", dagFile, lineNum);
+			return false;
+		}
+	}
 
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
@@ -289,6 +298,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 		}
 
 		MyString errMsg;
+		TmpDir nodeDir;
 		if ( !nodeDir.Cd2TmpDir(directory, errMsg) ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: can't change to directory %s: %s\n",

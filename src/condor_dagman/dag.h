@@ -331,6 +331,12 @@ class Dag {
 
 	int NumIdleNodes() { return _numIdleNodes; }
 
+		/** Get the name of the Stork (nee DaP) log file.
+			@return The name of the log file, or NULL if no Stork log
+			        file was specified.
+		*/
+	const char *GetDapLog() { return _dapLogName; }
+
 	
   protected:
 
