@@ -193,6 +193,9 @@ sub generate_cmdfile() {
     print CMDFILE "remote_pre = nmi_glue/test/remote_pre\n";
     print CMDFILE "remote_task = nmi_glue/test/remote_task\n";
     print CMDFILE "remote_post = nmi_glue/test/remote_post\n";
+    print CMDFILE "\n";
+    print CMDFILE "remote_task_timeout = 20\n";
+    print CMDFILE "\n";
 
     print CMDFILE "platforms = ";
     foreach $platform (@platforms) { 
