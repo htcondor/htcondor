@@ -442,7 +442,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 	if ( logFileName != "" ) {
 			// Prepend initialdir to log file name if log file name is not
 			// an absolute path.
-		if ( initialDir != "" && logFileName[0] != DIR_DELIM_CHAR ) {
+		if ( initialDir != "" && !fullpath(logFileName.Value()) ) {
 			logFileName = initialDir + DIR_DELIM_STRING + logFileName;
 		}
 
@@ -450,7 +450,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			// relative and an absolute path.  
 			// Note: we now do further checking that doesn't rely on
 			// comparing paths to the log files.  wenger 2004-05-27.
-		if ( logFileName[0] != DIR_DELIM_CHAR ) {
+		if ( !fullpath(logFileName.Value()) ) {
 			if ( currentDir != "" ) {
 				logFileName = currentDir + DIR_DELIM_STRING + logFileName;
 			} else {
