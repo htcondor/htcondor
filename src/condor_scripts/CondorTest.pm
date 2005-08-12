@@ -300,7 +300,7 @@ sub CheckTimedRegistrations
 
     if( defined $test{$handle}{"RegisterTimed"} )
     {
-		print "Found a timer to regsiter.......\n";
+		Condor::debug( "Found a timer to regsiter.......\n");
 		Condor::RegisterTimed( $test{$handle}{"RegisterTimed"} , $test{$handle}{"RegisterTimedWait"});
     }
 }
@@ -703,18 +703,18 @@ sub runCondorTool
 	while( !$done)
 	{
 		my @tmparray;
-		print "Try command <$cmd>\n";
+		Condor::debug( "Try command <$cmd>\n");
 		open(PULL, "$cmd 2>&1 |");
 		while(<PULL>)
 		{
 			chomp $_;
-			print "Process: $_\n";
+			Condor::debug( "Process: $_\n");
 			push @tmparray, $_; # push @{$arrayref}, $_;
 			$count += 1;
 		}
 		close(PULL);
 		$status = $? >> 8;
-		print "Status is $status after command\n";
+		Condor::debug("Status is $status after command\n");
 		if( $status != 0 )
 		{
 			my $current_time = time;
@@ -740,10 +740,10 @@ sub runCondorTool
 			$done = 1;
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
-			print "runCondorTool: its been $delta_time since call\n";
+			Condor::debug("runCondorTool: its been $delta_time since call\n");
 		}
 	}
-	print "runCondorTool: $cmd worked!\n";
+	Condor::debug( "runCondorTool: $cmd worked!\n");
 
 	return(1);
 }
