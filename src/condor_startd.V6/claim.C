@@ -121,8 +121,21 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 	char* tmp;
 
 	if( IS_PRIVATE(how_much) ) {
+			// None of this belongs in private ads
 		return;
 	}
+
+		/*
+		  NOTE: currently, we publish all of the following regardless
+		  of the mask (e.g. UPDATE vs. TIMEOUT).  Given the bug with
+		  ImageSize being recomputed but not used due to UPDATE
+		  vs. TIMEOUT confusion when publishing it, I'm inclined to
+		  ignore the performance cost of publishing the same stuff
+		  every timeout.  If, for some crazy reason, this becomes a
+		  problem, we can always seperate these into UPDATE + TIMEOUT
+		  attributes and only publish accordingly...  
+		  Derek <wright@cs.wisc.edu> 2005-08-11
+		*/
 
 	line.sprintf( "%s = %f", ATTR_CURRENT_RANK, c_rank );
 	ad->Insert( line.Value() );
@@ -159,6 +172,15 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 		line.sprintf( "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
 		ad->Insert( line.Value() );
 	}
+
+		// update ImageSize attribute from procInfo (this is
+		// only for the opportunistic job, not COD)
+	if( isActive() ) {
+		unsigned long imgsize = imageSize();
+		line.sprintf( "%s = %lu", ATTR_IMAGE_SIZE, imgsize );
+		ad->Insert( line.Value() );
+	}
+
 }
 
 

@@ -1075,13 +1075,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					caInsert( cap, r_cur->ad(), ptr );
 				}
 			}
-				// update ImageSize attribute from procInfo (this is
-				// only for the opportunistic job, not COD)
-			if( r_cur && r_cur->isActive() ) {
-				unsigned long imgsize = r_cur->imageSize();
-				sprintf( line, "%s = %lu", ATTR_IMAGE_SIZE, imgsize );
-				cap->Insert( line );
-			}
 		}
 	}
 
