@@ -743,7 +743,7 @@ contact_schedd_next_add_job:
 	// RemoveJobs
 	/////////////////////////////////////////////////////
 
-	// We also want to perform this check. Otherwise, we may overwrite a
+	// We always want to perform this check. Otherwise, we may overwrite a
 	// REMOVED/HELD/COMPLETED status with something else below.
 	{
 		int num_ads = 0;
