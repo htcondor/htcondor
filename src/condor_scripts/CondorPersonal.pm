@@ -410,7 +410,7 @@ sub InstallPersonalCondor
 		debug( " no condor attribute so not installing condor \n");
 		$sbinloc = "";
 	}
-	print "InstallPersonalCondor returning $sbinloc for LOCAL_DIR setting\n";
+	debug( "InstallPersonalCondor returning $sbinloc for LOCAL_DIR setting\n");
 	return($sbinloc);
 }
 
@@ -435,17 +435,17 @@ sub TunePersonalCondor
 	my $condorhost = "";
 	my $localdir = shift;
 
-	print "TunePersonalCondor setting LOCAL_DIR to $localdir\n";
-	print "domain parts follow:";
-	foreach my $part (@domainparts)
-	{
-		print " $part";
-	}
-	print "\n";
+	debug( "TunePersonalCondor setting LOCAL_DIR to $localdir\n");
+	#print "domain parts follow:";
+	#foreach my $part (@domainparts)
+	#{
+		#print " $part";
+	#}
+	#print "\n";
 
 	$myhost = @domainparts[0];
 
-	print "My basic name is $myhost\n";
+	debug( "My basic name is $myhost\n");
 
 
 	# was a special collector called out?
@@ -464,7 +464,7 @@ sub TunePersonalCondor
 
 	$condorhost = $myhost . "." . $condordomain;
 
-	print "Fully qualified domain name is ************************ $condorhost ********************\n";
+	debug( "Fully qualified domain name is ************************ $condorhost ********************\n");
 
 	# was a special template called out?
 	if( exists $control{"condortemplate"} )
@@ -500,7 +500,7 @@ sub TunePersonalCondor
 	if( exists $control{"universe"} )
 	{
 		$personal_universe = $control{"universe"};
-		print "HMMMMMMMMMMM universe request is $personal_universe\n";
+		debug( "HMMMMMMMMMMM universe request is $personal_universe\n");
 	}
 
 
@@ -589,7 +589,7 @@ sub TunePersonalCondor
 	if($personal_universe eq "parallel")
 	{
 		# set up dedicated scheduler
-		print "************************ Adding Dedicated Scheduler $personal_universe ***************************\n";
+		print "************************ Adding Dedicated Scheduler $personal_universe Universe ***************************\n";
 		print NEW "DedicatedScheduler = \"DedicatedScheduler\@schedd$pid$version\@$condorhost\"\n";
 		print NEW "STARTD_EXPRS = \$(STARTD_EXPRS), DedicatedScheduler\n";
 		print NEW "SCHEDD_DEBUG = D_FULLDEBUG\n";
