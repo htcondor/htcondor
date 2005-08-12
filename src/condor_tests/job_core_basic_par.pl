@@ -1,11 +1,13 @@
 #! /usr/bin/env perl
 use CondorTest;
 
+Condor::DebugOff();
+
 $cmd = $ARGV[0];
 
 print "Submit file for this test is $cmd\n";
-print "looking at env for condor config\n";
-system("printenv | grep CONDOR_CONFIG");
+#print "looking at env for condor config\n";
+#system("printenv | grep CONDOR_CONFIG");
 
 $testname = 'Basic Parallel - Parallel U';
 
@@ -27,6 +29,7 @@ $executed = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
+	CondorTest::RegisterTimed($testname, $timed, 600);
 	print "Parallel job executed\n";
 };
 
@@ -40,23 +43,8 @@ $success = sub
 	print "Success: Parallel Test ok\n";
 };
 
-$release = sub
-{
-	print "Release expected.........\n";
-	my @adarray;
-	my $status = 1;
-	my $cmd = "condor_reschedule";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status)
-	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-		return(1)
-	}
-};
-
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
-CondorTest::RegisterTimed($testname, $timed, 600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";

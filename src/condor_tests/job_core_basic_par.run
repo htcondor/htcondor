@@ -2,6 +2,9 @@
 use CondorTest;
 use CondorPersonal;
 
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
 $cmd_template = "job_core_basic_par.template";
 $testname = 'job_core_basic_par - Simple parallel job';
 $cmd = "job_core_basic_par.cmd";
@@ -30,10 +33,10 @@ $mycorenmlog = $corename . ".log";
 $mycorenmerr = $corename . ".err";
 $mycorenmout = $corename . ".out";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+#print "Master PID is $mypid\n";
+#print "Master PID submit file is $mysubmitnm\n";
 
-my $configrem = CondorPersonal::DebugOn();
+# my $configrem = CondorPersonal::DebugOn();
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.basicparallel" ,"parallel");
 my @parallel = split /:/, $configrem;
@@ -46,7 +49,7 @@ $ENV{CONDOR_CONFIG} = $parallelconfig;
 
 print "Set config to $parallelconfig\n";
 
-print "Looking for schedd for Basic Parallel Test\n";
+#print "Looking for schedd for Basic Parallel Test\n";
 system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Name");
 
 # Edit submit file to submit to scheduler at remote (side b) schedd.
@@ -60,24 +63,24 @@ while(<TPLATE>)
 	if( $line =~ /^\s*log\s*= .*$/)
 	{
 		my $lognm = $mysubmitnmlog;
-		print "New log name: $lognm\n";
+		#print "New log name: $lognm\n";
 		print CSUB "log = $lognm\n";
 	}
 	elsif( $line =~ /^\s*output\s*= .*$/)
 	{
 		my $outputnm = $mysubmitnmout;
-		print "New out name: $outputnm\n";
+		#print "New out name: $outputnm\n";
 		print CSUB "output = $outputnm\n";
 	}
 	elsif( $line =~ /^\s*error\s*= .*$/)
 	{
 		my $errornm = $mysubmitnmerr;
-		print "New error name: $errornm\n";
+		#print "New error name: $errornm\n";
 		print CSUB "error = $errornm\n";
 	}
 	else
 	{
-		print "template: $line\n";
+		#print "template: $line\n";
 		print CSUB "$line\n";
 	}
 }
