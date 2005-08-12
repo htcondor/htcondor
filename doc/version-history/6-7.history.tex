@@ -38,6 +38,11 @@ single submitter before moving on to the next one.
 
 \begin{itemize}
 
+% Gnats PR 534.
+\item Fixed a bug in \Condor{dagman} that caused it to fail on Windows
+for DAGs with nodes having absolute paths to their log files.  (This bug
+was introduced in version 6.7.10.)
+
 \item Fixed a bug in a debug message.  If an error occured during file
 transfer, Condor would print the wrong expected filesize in the error message
 on some platforms.
