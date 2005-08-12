@@ -28,7 +28,7 @@ BEGIN
     $CONDOR_RESCHD = 'condor_reschedule';
     $CONDOR_RM = 'condor_rm';
 
-    $DEBUG = 1;
+    $DEBUG = 0;
     $cluster = 0;
     $num_active_jobs = 0;
     $saw_submit = 0;
