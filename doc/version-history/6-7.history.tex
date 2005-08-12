@@ -46,6 +46,13 @@ on some platforms.
 command line.  This bug also had the effect of disabling Stork jobs running
 from DAGMan versions v6.7.10, and later.
 
+% Gnats PR 525.
+\item If you have DATA nodes in your DAG but no Stork log specified
+(with the \Opt{-Storklog} argument),
+\Condor{dagman} now fails with an explanatory message when parsing
+the DAG file(s). (Previously, it would just wait forever for the Stork
+jobs to finish, because it wouldn't see the relevant events.)
+
 \item In \Condor{dagman}, argument quoting for \Stork{submit} now matches
 argument quoting for \Condor{submit}.
 
