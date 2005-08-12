@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 	opts.strLibLog = opts.primaryDagFile + ".lib.out";
 
 		// if the DAG input filename was not already specified as an
-		// absolute PATH, use thw cwd to make it into one so that
+		// absolute PATH, use the cwd to make it into one so that
 		// dprintf still works inside condor_dagman when it cds to
 		// other directories.
 	if ( !fullpath( opts.primaryDagFile.Value() ) ) {

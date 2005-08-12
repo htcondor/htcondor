@@ -35,6 +35,21 @@
 #include "tmp_dir.h"
 
 
+		// argQuote: the characters we should use to quote
+		// command-line arguments when specifying shell commands
+
+		// innerQuote: the characters we should use to represent a
+		// double-quote character *within* a quoted command-line
+		// argument
+
+#ifdef WIN32
+	static const char* argQuote = "\"";
+	static const char* innerQuote = "\\\"";
+#else
+	static const char* argQuote = "\'";
+	static const char* innerQuote = "\"";
+#endif
+
 static bool
 submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 {
@@ -158,21 +173,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	MyString prependLines;
 	MyString command;
 
-		// argQuote: the characters we should use to quote
-		// command-line arguments when specifying shell commands
-
-		// innerQuote: the characters we should use to represent a
-		// double-quote character *within* a quoted command-line
-		// argument
-
-#ifdef WIN32
-	const char* argQuote = "\"";
-	const char* innerQuote = "\\\"";
-#else
-	const char* argQuote = "\'";
-	const char* innerQuote = "\"";
-#endif
-
 	// construct arguments to condor_submit to add attributes to the
 	// job classad which identify the job's node name in the DAG, the
 	// node names of its parents in the DAG, and the job ID of DAGMan
@@ -254,8 +254,9 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
   MyString command;
 
   // we use 2>&1 to make sure we get both stdout and stderr from command
-  command.sprintf("%s -lognotes \"DAG Node: %s\" %s 2>&1", 
-				  dm.storkSubmitExe, DAGNodeName, cmdFile );
+  command.sprintf("%s -lognotes %sDAG Node: %s%s %s 2>&1", 
+				  dm.storkSubmitExe, argQuote, DAGNodeName, argQuote,
+				  cmdFile );
 
   bool success = do_submit( command.Value(), condorID, Job::TYPE_STORK );
 
