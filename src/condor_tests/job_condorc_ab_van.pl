@@ -1,6 +1,8 @@
 #! /usr/bin/env perl
 use CondorTest;
 
+Condor::DebugOff();
+
 #$cmd = 'job_condorc_ab_van.cmd';
 $cmd = $ARGV[0];
 
@@ -29,7 +31,8 @@ $executed = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Periodic Hold should see and execute, followed by a release and then we reschedule the job\n";
+	print "Start test timer from execution time\n";
+	CondorTest::RegisterTimed($testname, $timed, 1800);
 };
 
 $timed = sub
@@ -60,7 +63,6 @@ CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterRelease( $testname, $release );
 CondorTest::RegisterHold( $testname, $held );
-CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";

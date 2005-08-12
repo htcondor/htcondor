@@ -2,6 +2,9 @@
 use CondorTest;
 use CondorPersonal;
 
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
 $cmd_template = "job_condorc_abc_van.template";
 $testname = 'job_condorc_abc_van - Chained Condor-C A&B&C with Vanilla job';
 $corename = "job_condorc_abc_van";

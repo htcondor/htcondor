@@ -2,6 +2,9 @@
 use CondorTest;
 use CondorPersonal;
 
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
 $cmd_template = "job_condorc_ab_van.template";
 $testname = 'job_condorc_ab_van - Simple Condor-C A&B with Vanilla job';
 $corename = "job_condorc_ab_van";
@@ -29,7 +32,7 @@ $mycorenmlog = $corename . ".log";
 print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
 
-my $configrem = CondorPersonal::DebugOn();
+# my $configrem = CondorPersonal::DebugOn();
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.condorcremote" ,"remote");
 my @remote = split /:/, $configrem;
