@@ -9,9 +9,9 @@
 	the opteron. gpt 3.2 will compile, though. It looks like gt4 will
 	compile on the opteron, but it isn't officially in Condor's externals
 	yet. */
-#define HAS_GLOBUS      NO
-#define HAS_GSI         NO
-#define HAS_OPENSSL     NO
+#define HAS_GLOBUS      YES
+#define HAS_GSI         YES
+#define HAS_OPENSSL     YES
 
 /* pvm was never ported (cause it is old and dead) to this architecture */
 #undef WANT_PVM

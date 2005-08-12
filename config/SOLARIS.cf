@@ -85,9 +85,9 @@
     define this here to specify the flags we want to give to the
     linker when we're building the Condor Daemons under purify.
 */ 
-#define PurifyPlatformLdFlags -ldl -lkstat -lelf -lnsl -lsocket -lresolv
+#define PurifyPlatformLdFlags -lkstat -lelf -lnsl -lsocket -lresolv
 
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
+#define PlatformLdFlags -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
 $(GCC_STATIC_LIBS)
 
 /**************************************************************************

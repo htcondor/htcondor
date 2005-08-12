@@ -112,7 +112,9 @@ GLOBUS_LIBS = \
 	$(GLOBUS_LIB)/libglobus_ftp_client_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_ftp_control_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_io_$(GlobusFlavor).a \
+	$(GLOBUS_LIB)/libglobus_xio_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_gss_assist_$(GlobusFlavor).a \
+	$(GLOBUS_LIB)/libgssapi_error_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_gssapi_gsi_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_openssl_$(GlobusFlavor).a \
 	$(GLOBUS_LIB)/libglobus_common_$(GlobusFlavor).a \
@@ -125,8 +127,8 @@ GLOBUS_COPY = $(MODULE)transfer.globus-url-copy
 #if HAS_GLOBUS
 /* The Globus data package external is only needed for this Stork contrib module
  */
-ext_target(EXT_GLOBUS_DATA_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
-contrib:: $(EXT_TRIGGER)/$(EXT_GLOBUS_DATA_VERSION)
+ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
+contrib:: $(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION)
 #else
 #	error Globus data not available on this platform
 #endif

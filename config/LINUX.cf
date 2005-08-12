@@ -25,7 +25,7 @@
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
-#define PlatformLdFlags		-lresolv -ldl
+#define PlatformLdFlags		-lresolv
 
 #if IS_CLIPPED
 /* This is sort of odd, since we never use this defined when in clipped mode,

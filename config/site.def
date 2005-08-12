@@ -44,7 +44,7 @@
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /full/path/to/your/source/workspace
+#define Top /scratch/jfrey/merge/arena
 
 #if MALLOC_DEBUG
 #define CFlags -DMALLOC_DEBUG

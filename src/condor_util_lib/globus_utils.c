@@ -256,7 +256,6 @@ delegate_x509_proxy (const char * in_file,
 
 	globus_result_t result  = GLOBUS_SUCCESS;
 
-	globus_gsi_statcheck_t          file_status;
 	char *                          proxy_absolute_path = NULL;
 	char *                          temp_filename = NULL;
 	char *                          temp_dir = NULL;
@@ -394,9 +393,8 @@ delegate_x509_proxy (const char * in_file,
             return FALSE;
         }
                 
-	result = GLOBUS_GSI_SYSCONFIG_FILE_EXISTS(temp_dir, &file_status);
-	if(result != GLOBUS_SUCCESS ||
-	   file_status != GLOBUS_FILE_DIR)
+	result = GLOBUS_GSI_SYSCONFIG_DIR_EXISTS(temp_dir);
+	if(result != GLOBUS_SUCCESS)
         {
 			dprintf (D_ALWAYS,
 					 "%s is not a valid directory for writing the "

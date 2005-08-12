@@ -222,7 +222,15 @@ IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) co
 
 OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
 	buffer.o stack.o err.o lhash.o mem.o rand_win.o mem_dbg.o b_print.o \
-	bio_lib.o bss_file.o ex_data.o mem_clr.o
+	bio_lib.o bss_file.o ex_data.o mem_clr.o eng_init.o tb_rand.o \
+	digest.o m_sha1.o rand_unix.o eng_lib.o eng_table.o eng_list.o \
+	tb_digest.o rsa_sign.o rand_egd.o obj_dat.o x_sig.o rsa_lib.o \
+	a_object.o obj_lib.o asn1_lib.o tasn_dec.o x_algor.o tasn_typ.o \
+	rsa_eay.o tb_rsa.o bn_lib.o bn_blind.o bn_ctx.o tasn_enc.o \
+	tasn_new.o tasn_fre.o bn_rand.o bn_gcd.o tasn_utl.o a_type.o \
+	a_bitstr.o a_int.o bn_mod.o bn_mont.o bn_div.o bn_word.o bn_shift.o \
+	bn_add.o bn_asm.o bn_sqr.o bn_exp.o rsa_none.o rsa_pk1.o rsa_oaep.o \
+	rsa_ssl.o a_dup.o bn_recp.o bn_mul.o
 
 #if defined(CONDOR_ENCRYPTION) || defined(CONDOR_MD)
 CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \

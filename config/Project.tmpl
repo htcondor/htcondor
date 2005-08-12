@@ -377,7 +377,9 @@ only happening to the globus libraries and only on AIX.  go figure.
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_error_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_oldgaa_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_callout_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_common_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libltdl_$(GlobusFlavor).a \
 	      $(POST_GLOBUS_LIBS)
 #else
   GSI_FLAGS =
@@ -474,10 +476,10 @@ ACCT_LIB    = ../condor_accountant.V6/libacct.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
 /* common ld flags which should be first in the list */
-COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) -lm $(LDFLAGS)
+COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
 
 /* common ld flags which should be last in the list */
-COM_LDFLAGS_L = $(SITE_LDFLAGS)
+COM_LDFLAGS_L = 
 
 /* The various lists of needed ldflags for differing contexts */
 ALL_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)

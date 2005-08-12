@@ -1,3 +1,8 @@
+08/12/05 V6_7-globus4-merge-1
+   The state of the V6_7-globus4-branch for a merge into V6_7-branch. This
+   branches moves the Globus version we link Condor with from 2.4.3 to
+   4.0.1.
+
 08/11/05 V6_7-cgahp_win-2-branch
    A branch for work on porting Gridmanager/C-GAHP to Windows. 
 
