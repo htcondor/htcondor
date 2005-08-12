@@ -182,7 +182,10 @@ WriteEvents(Arguments &args)
 	}
 	SubmitEvent	submit;
 	strcpy(submit.submitHost, "<128.105.165.12:32779>");
-	submit.submitEventLogNotes = strdup("DAGMan info");
+		// Note: the line below is designed specifically to work with
+		// Kent's dummy stork_submit script for testing DAGs with
+		// DATA nodes.
+	submit.submitEventLogNotes = strdup("DAG Node: B");
 	submit.submitEventUserNotes = strdup("User info");
 
 	if ( !log.writeEvent(&submit) ) {
