@@ -452,7 +452,7 @@ V6_7_10_EXT	-a V6_7_9_EXT \
 # Externals needed for V6_7_11 (same as V6_7_10, but with globus 4.0.1 and no previous versions)
 V6_7_11_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/krb5/1.2.7 \
-		   externals/bundles/gahp/1.0.13 \
+		   externals/bundles/gahp/1.0.14 \
 		   externals/bundles/globus/4.0.1 \
 		   externals/bundles/gt3gahp/2.0 \
 		   externals/bundles/gt4gahp/1.4 \
