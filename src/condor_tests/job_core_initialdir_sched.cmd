@@ -4,7 +4,7 @@ initialdir = initd_sched
 log = job_core_initialdir_sched.log
 output = job_core_initialdir_sched.out
 error = job_core_initialdir_sched.err
-arguements = 5
+arguments = 5
 getenv=true
 Notification = NEVER
 queue

@@ -4,7 +4,7 @@ initialdir = initd_van
 log = job_core_initialdir_van.log
 output = job_core_initialdir_van.out
 error = job_core_initialdir_van.err
-arguements = 5
+arguments = 5
 getenv=true
 Notification = NEVER
 queue
