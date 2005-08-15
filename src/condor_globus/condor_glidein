@@ -284,8 +284,17 @@ sub gather_info() {
 	}
 
 	chomp( $CONDOR_HOST = `$CONFIGVAL CONDOR_HOST` );
-	chomp( $NEGOTIATOR_HOST = `$CONFIGVAL NEGOTIATOR_HOST` );
 	chomp( $COLLECTOR_HOST = `$CONFIGVAL COLLECTOR_HOST` );
+
+	#NEGOTIATOR_HOST is not defined in modern config files (circa 6.7.10)
+	#so if it is not defined, skip it.
+	chomp( $NEGOTIATOR_HOST = `$CONFIGVAL NEGOTIATOR_HOST 2>/dev/null` );
+	if ( $NEGOTIATOR_HOST eq "" ) {
+	    $NEGOTIATOR_SETTING = ""
+	}
+	else {
+	    $NEGOTIATOR_SETTING = "NEGOTIATOR_HOST = $NEGOTIATOR_HOST"
+	}
 
 	#set CONDOR_VERSION
 	$TMP = `$condor_wait -version | grep CondorVersion`;
@@ -578,7 +587,7 @@ PVMD = \$(SBIN)/condor_pvmd
 
 USE_NFS = False
 USE_CKPT_SERVER = False
-NEGOTIATOR_HOST	= $NEGOTIATOR_HOST
+$NEGOTIATOR_SETTING
 COLLECTOR_HOST = $COLLECTOR_HOST
 
 LOCK = \$(LOG)
