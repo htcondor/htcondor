@@ -61,6 +61,11 @@ jobs to finish, because it wouldn't see the relevant events.)
 \item In \Condor{dagman}, argument quoting for \Stork{submit} now matches
 argument quoting for \Condor{submit}.
 
+\item Corrected how \Condor{submit} handles attributes forced into the
+job ad with '+'. Now, the attribute names are case-insensitive, they 
+are not treated as normal submit attributes, and they always over-ride 
+normal submit attributes.
+
 \item \Condor{glidein} now correctly handles extracting necessary
 information from modern Condor configurations where
 \MacroNI{NEGOTIATOR\_HOST} is not defined.
