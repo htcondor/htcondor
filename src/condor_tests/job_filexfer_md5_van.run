@@ -8,7 +8,7 @@ $testname = 'Do file transfers with md5 - vanilla U';
 
 $success = sub {
 	print "Transfer job worked..... need to chack data file.\n";
-	$stats = CondorTest::verbose_system("job_filexfer_md5-testdata.pl -m=200");
+	$stats = CondorTest::verbose_system("./job_filexfer_md5-testdata.pl -m=200");
 	if($stats != 0)
 	{
 		die "Test of MD5 data failed\n";
@@ -18,7 +18,7 @@ $success = sub {
 if( ! -e "data")
 {
 	print "Making data file\n";
-	$stats = CondorTest::verbose_system("job_filexfer_md5-createdata.pl -m=200");
+	$stats = CondorTest::verbose_system("./job_filexfer_md5-createdata.pl -m=200");
 }
 else
 {

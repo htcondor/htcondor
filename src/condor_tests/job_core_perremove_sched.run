@@ -3,8 +3,8 @@ use CondorTest;
 
 $testname = 'Condor PERIODIC_REMOVE policy test - scheduler U';
 
-my $nostatus = CondorTest::verbose_system("job_core_perremove-false_sched.pl");
-my $willstatus = CondorTest::verbose_system("job_core_perremove-true_sched.pl");
+my $nostatus = CondorTest::verbose_system("./job_core_perremove-false_sched.pl");
+my $willstatus = CondorTest::verbose_system("./job_core_perremove-true_sched.pl");
 
 if($nostatus != 0)
 {

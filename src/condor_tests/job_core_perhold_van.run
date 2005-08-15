@@ -3,8 +3,8 @@ use CondorTest;
 
 $testname = 'Condor PERIODIC_HOLD policy test - vanilla U';
 
-my $nostatus = CondorTest::verbose_system("job_core_perhold-false_van.pl");
-my $willstatus = CondorTest::verbose_system("job_core_perhold-true_van.pl");
+my $nostatus = CondorTest::verbose_system("./job_core_perhold-false_van.pl");
+my $willstatus = CondorTest::verbose_system("./job_core_perhold-true_van.pl");
 
 my %listoftests;
 $listoftests{"corename"} = "job_core_perhold";

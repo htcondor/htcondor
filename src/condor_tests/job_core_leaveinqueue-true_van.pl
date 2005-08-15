@@ -46,7 +46,7 @@ $success = sub
 	{
 		my @adarray;
 		my $status = 1;
-		my $cmd = "condor_rm $cluster";
+		my $cmd = "condor_rm -forcex $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{

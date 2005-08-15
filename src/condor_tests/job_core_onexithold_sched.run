@@ -3,8 +3,8 @@ use CondorTest;
 
 $testname = 'Condor ON_EXIT_HOLD policy test - scheduler U';
 
-my $nostatus = CondorTest::verbose_system("job_core_onexithold-false_sched.pl");
-my $willstatus = CondorTest::verbose_system("job_core_onexithold-true_sched.pl");
+my $nostatus = CondorTest::verbose_system("./job_core_onexithold-false_sched.pl");
+my $willstatus = CondorTest::verbose_system("./job_core_onexithold-true_sched.pl");
 
 if($nostatus != 0)
 {
