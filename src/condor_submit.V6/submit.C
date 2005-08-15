@@ -3760,6 +3760,7 @@ read_condor_file( FILE *fp )
 		} 
 		else if (*name == '-') {
 			name++;
+			strlwr( name );
 			forcedAttributes.remove( MyString( name ) );
 			job->Delete( name );
 			continue;
@@ -3855,6 +3856,8 @@ read_condor_file( FILE *fp )
 			}
 		}
 
+		strlwr( name );
+
 		/* if the user wanted to force the parameter into the classad, do it 
 		   We want to remove it first, so we get the new value if it's
 		   already in there. -Derek Wright 7/13/98 */
@@ -3862,8 +3865,6 @@ read_condor_file( FILE *fp )
 			forcedAttributes.remove( MyString( name ) );
 			forcedAttributes.insert( MyString( name ), MyString( value ) );
 		} 
-
-		strlwr( name );
 
 		if( strcmp(name, Executable) == 0 ) {
 			NewExecutable = true;
@@ -3874,8 +3875,12 @@ read_condor_file( FILE *fp )
 			NewExecutable = true;
 		}
 
-		/* Put the value in the Configuration Table */
-		insert( name, value, ProcVars, PROCVARSIZE );
+		/* Put the value in the Configuration Table, but only if it
+		 *  wasn't forced into the ad with a '+'
+		 */
+		if ( force == 0 ) {
+			insert( name, value, ProcVars, PROCVARSIZE );
+		}
 
 		free( name );
 	}
@@ -4176,8 +4181,6 @@ queue(int num)
 
 		SetRemoteAttrs();
 
-		SetForcedAttributes();
-
 		SetPeriodicHoldCheck();
 		SetPeriodicRemoveCheck();
 		SetExitHoldCheck();
@@ -4195,6 +4198,10 @@ queue(int num)
 		SetJarFiles();
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
+
+			// SetForcedAttributes should be last so that it trumps values
+			// set by normal submit attributes
+		SetForcedAttributes();
 
 		rval = SaveClassAd();
 
