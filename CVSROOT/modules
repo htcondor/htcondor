@@ -583,6 +583,8 @@ V6_7_6_BUILD    -a V6_7_ALL V6_7_6_EXT
 V6_7_7_BUILD    -a V6_7_ALL V6_7_7_EXT
 V6_7_8_BUILD    -a V6_7_ALL V6_7_8_EXT
 V6_7_9_BUILD    -a V6_7_ALL V6_7_9_EXT
+V6_7_10_BUILD   -a V6_7_ALL V6_7_10_EXT
+V6_7_11_BUILD   -a V6_7_ALL V6_7_11_EXT
 
 # The V6_7-mirror-branch has condor_c-gahp, so we need to use
 # different modules for it
