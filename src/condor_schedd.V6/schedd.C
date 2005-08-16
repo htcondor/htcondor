@@ -136,6 +136,7 @@ bool getSandbox( int cluster, int proc, MyString & path );
 bool sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad );
 bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
+bool jobExternallyManaged(ClassAd * ad);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
@@ -1000,8 +1001,7 @@ count( ClassAd *job )
 	job->LookupString(ATTR_MIRROR_SCHEDD,&mirror_schedd_name);
 	if ( mirror_schedd_name ) {
 			// We have a mirrored job
-		int job_managed = 0;
-		job->LookupBool(ATTR_JOB_MANAGED, job_managed);
+		int job_managed = jobExternallyManaged(job);
 		bool needs_management = true;
 			// if job is held or completed and not managaged, don't worry about it.
 		if ( ( status==HELD || status==COMPLETED || status==REMOVED ) &&
@@ -1071,10 +1071,9 @@ count( ClassAd *job )
 		// later we make certain there is a grid manager daemon
 		// per owner.
 		int needs_management = 0;
-		int job_managed = 0;
 		int real_status = status;
 		bool want_service = service_this_universe(universe,job);
-		job->LookupBool(ATTR_JOB_MANAGED, job_managed);
+		int job_managed = jobExternallyManaged(job);
 		// if job is not already being managed : if we want matchmaking 
 		// for this job, but we have not found a 
 		// match yet, consider it "held" for purposes of the logic here.  we
@@ -1103,7 +1102,7 @@ count( ClassAd *job )
 			}
 		}
 
-		// Don't count HELD jobs that have ATTR_JOB_MANAGED set to false.
+		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		if ( status != HELD || job_managed != 0 ) 
 		{
 			needs_management = 1;
@@ -1171,8 +1170,7 @@ service_this_universe(int universe, ClassAd* job)
 			{
 				// If this Globus job is already being managed, then the schedd
 				// should leave it alone... the gridmanager is dealing with it.
-				int job_managed = 0;
-				job->LookupBool(ATTR_JOB_MANAGED, job_managed);
+				int job_managed = jobExternallyManaged(job);
 				if ( job_managed ) {
 					return false;
 				}			
@@ -1239,8 +1237,7 @@ handle_mirror_job_notification(ClassAd *job_ad, int mode, PROC_ID & job_id)
 	job_ad->LookupString(ATTR_MIRROR_SCHEDD,&mirror_schedd_name);
 	if ( mirror_schedd_name ) {
 			// We have a mirrored job
-		int job_managed = 0;
-		job_ad->LookupBool(ATTR_JOB_MANAGED, job_managed);
+		int job_managed = jobExternallyManaged(job_ad);
 			// If job_managed is true, then notify the gridmanager.
 			// Special case: if job_managed is false, but the job is being removed
 			// still has a mirror job id,
@@ -1333,8 +1330,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 		// Handle Globus Universe
 	if (job_universe == CONDOR_UNIVERSE_GLOBUS) {
-		int job_managed = 0;
-		job_ad->LookupBool(ATTR_JOB_MANAGED, job_managed);
+		int job_managed = jobExternallyManaged(job_ad);
 			// If job_managed is true, then notify the gridmanager and return.
 			// If job_managed is false, we will fall through the code at the
 			// bottom of this function will handle the operation.
@@ -1615,12 +1611,11 @@ static int
 ResponsibleForPeriodicExprs( ClassAd *jobad )
 {
 	int status=-1, univ=-1;
-	bool managed=false;
 	PROC_ID jobid;
 
 	jobad->LookupInteger(ATTR_JOB_STATUS,status);
 	jobad->LookupInteger(ATTR_JOB_UNIVERSE,univ);
-	jobad->LookupBool(ATTR_JOB_MANAGED,managed);
+	bool managed = jobExternallyManaged(jobad);
 
 	if( univ==CONDOR_UNIVERSE_SCHEDULER || univ==CONDOR_UNIVERSE_LOCAL ) {
 		return 1;
@@ -10591,4 +10586,14 @@ int
 Scheduler::adlist_publish( ClassAd *resAd )
 {
 	return extra_ads.Publish( resAd );
+}
+
+bool jobExternallyManaged(ClassAd * ad)
+{
+	ASSERT(ad);
+	MyString job_managed;
+	if( ! ad->LookupString(ATTR_JOB_MANAGED, job_managed) ) {
+		return false;
+	}
+	return job_managed == MANAGED_EXTERNAL;
 }

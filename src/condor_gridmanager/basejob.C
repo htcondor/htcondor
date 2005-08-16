@@ -187,29 +187,50 @@ void BaseJob::JobCompleted()
 void BaseJob::DoneWithJob()
 {
 	deleteFromGridmanager = true;
-	jobAd->Assign( ATTR_JOB_MANAGED, false );
 
-	if ( condorState == COMPLETED ) {
-		if ( writeUserLog && !terminateLogged ) {
-			WriteTerminateEventToUserLog( jobAd );
-			EmailTerminateEvent( jobAd, exitStatusKnown );
-			terminateLogged = true;
+	switch(condorState) {
+		case COMPLETED:
+		{
+			// I never want to see this job again.
+			jobAd->Assign( ATTR_JOB_MANAGED, MANAGED_DONE );
+			if ( writeUserLog && !terminateLogged ) {
+				WriteTerminateEventToUserLog( jobAd );
+				EmailTerminateEvent( jobAd, exitStatusKnown );
+				terminateLogged = true;
+			}
+			deleteFromSchedd = true;
 		}
-		deleteFromSchedd = true;
-	}
-	if ( condorState == REMOVED ) {
-		if ( writeUserLog && !abortLogged ) {
-			WriteAbortEventToUserLog( jobAd );
-			abortLogged = true;
+		break;
+
+		case REMOVED:
+		{
+			// I never want to see this job again.
+			jobAd->Assign( ATTR_JOB_MANAGED, MANAGED_DONE );
+			if ( writeUserLog && !abortLogged ) {
+				WriteAbortEventToUserLog( jobAd );
+				abortLogged = true;
+			}
+			deleteFromSchedd = true;
 		}
-		deleteFromSchedd = true;
-	}
-	if ( condorState == HELD ) {
-		if ( writeUserLog && !holdLogged ) {
-			WriteHoldEventToUserLog( jobAd );
-			holdLogged = true;
+		break;
+
+		case HELD:
+		{
+			jobAd->Assign( ATTR_JOB_MANAGED, MANAGED_SCHEDD );
+			if ( writeUserLog && !holdLogged ) {
+				WriteHoldEventToUserLog( jobAd );
+				holdLogged = true;
+			}
 		}
+		break;
+
+		default:
+		{
+			EXCEPT("BaseJob::DoneWithJob called with unexpected state %s (%d)\n", getJobStatusString(condorState), condorState);
+		}
+		break;
 	}
+
 	requestScheddUpdate( this );
 }
 

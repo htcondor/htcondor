@@ -142,6 +142,28 @@ int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
 
 
+static bool jobExternallyManaged(ClassAd * ad)
+{
+	ASSERT(ad);
+	MyString job_managed;
+	if( ! ad->LookupString(ATTR_JOB_MANAGED, job_managed) ) {
+		return false;
+	}
+	return job_managed == MANAGED_EXTERNAL;
+}
+
+/**
+TODO: Should use the version in qmgmt_common.C.  It's not
+exposed as a remote call.  Perhaps link it in directly? 
+*/
+static int tSetAttributeString(int cluster, int proc, 
+	const char * attr_name, const char * attr_value)
+{
+	MyString tmp;
+	tmp.sprintf("\"%s\"", attr_value);
+	return SetAttribute( cluster, proc, attr_name, tmp.Value());
+}
+
 bool JobMatchesConstraint( const ClassAd *jobad, const char *constraint )
 {
 	ExprTree *tree;
@@ -458,6 +480,53 @@ REMOVE_JOBS_signalHandler( int signal )
 	return TRUE;
 }
 
+// Call initJobExprs before using any of the expr_*
+// variables.  It is safe to repeatedly call
+// initJobExprs.
+static const char * expr_false = "FALSE";
+static const char * expr_true = "TRUE";
+static const char * expr_undefined = "UNDEFINED";
+	// The job is matched, or in unknown match state.
+	// definately unmatched
+static MyString expr_matched_or_undef;
+	// Job is being managed by an external process
+	// (probably this gridmanager process)
+static MyString expr_managed;
+	// The job is not being managed by an external
+	// process.  The schedd should be managing it.
+	// It may be done.
+static MyString expr_not_managed;
+	// The job is not HELD
+static MyString expr_not_held;
+	// The constraint passed into the gridmanager
+	// to filter all jobs by
+static MyString expr_schedd_job_constraint;
+	// The job is marked as completely done by
+	// the gridmanager.  The gridmanager should
+	// never try to manage the job again
+static MyString expr_completely_done;
+	// Opposite of expr_completely_done
+static MyString expr_not_completely_done;
+
+static void 
+initJobExprs()
+{
+	static bool done = false;
+	if(done) { return; }
+
+	expr_matched_or_undef.sprintf("(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
+	expr_managed.sprintf("(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+	expr_not_managed.sprintf("(%s != %s)", expr_managed.Value(), expr_true);
+	expr_not_held.sprintf("(%s != %d)", ATTR_JOB_STATUS, HELD);
+	expr_schedd_job_constraint.sprintf("(%s)", ScheddJobConstraint);
+	// The gridmanager never wants to see this job again.
+	// It should be in the process of leaving the queue.
+	expr_completely_done.sprintf("(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
+	expr_not_completely_done.sprintf("(%s == %s)", expr_completely_done.Value(), expr_false);
+
+	done = true;
+}
+
 int
 doContactSchedd()
 {
@@ -474,51 +543,9 @@ doContactSchedd()
 	bool send_reschedule = false;
 	MyString error_str = "";
 
-	const char * expr_false = "FALSE";
-	const char * expr_true = "TRUE";
-	const char * expr_undefined = "UNDEFINED";
-
-	MyString expr_not_matched;
-	expr_not_matched.sprintf("(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
-
-	MyString expr_managed;
-	expr_managed.sprintf("(%s =?= %s)", ATTR_JOB_MANAGED, expr_true);
-
-	MyString expr_not_managed;
-	expr_not_managed.sprintf("(%s =!= %s)", ATTR_JOB_MANAGED, expr_true);
-
-	MyString expr_not_held;
-	expr_not_held.sprintf("(%s != %d)", ATTR_JOB_STATUS, HELD);
-
-	MyString expr_schedd_job_constraint;
-	expr_schedd_job_constraint.sprintf("(%s)", ScheddJobConstraint);
-
-	MyString expr_completed;
-	expr_completed.sprintf("(%s == %d)", ATTR_JOB_STATUS, COMPLETED);
-
-	MyString expr_completion_date_defined;
-	expr_completion_date_defined.sprintf("(%s =!= %s)", ATTR_COMPLETION_DATE, expr_undefined);
-
-	MyString expr_positive_completion_date;
-	expr_positive_completion_date.sprintf("(%s && (%s > %d))", 
-		expr_completion_date_defined.Value(),
-		ATTR_COMPLETION_DATE, 0);
-
-	MyString expr_completely_done;
-	// The gridmanager never wants to see this job again.
-	// It should be in the process of leaving the queue.
-	expr_completely_done.sprintf("(%s && %s)",
-		expr_completed.Value(),
-		expr_positive_completion_date.Value()
-		);
-
-	MyString expr_not_completely_done;
-	// The gridmanager never wants to see this job again.
-	// It should be in the process of leaving the queue.
-	expr_not_completely_done.sprintf("(%s == %s)", expr_completely_done.Value(), expr_false);
-
-
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
+
+	initJobExprs();
 
 	contactScheddTid = TIMER_UNSET;
 
@@ -612,7 +639,7 @@ doContactSchedd()
 					 "%s && %s && ((%s && %s) || %s)",
 					 expr_schedd_job_constraint.Value(), 
 					 expr_not_completely_done.Value(),
-					 expr_not_matched.Value(),
+					 expr_matched_or_undef.Value(),
 					 expr_not_held.Value(),
 					 expr_managed.Value()
 					 );
@@ -622,7 +649,7 @@ doContactSchedd()
 					 "%s && %s && %s && %s && %s",
 					 expr_schedd_job_constraint.Value(), 
 					 expr_not_completely_done.Value(),
-					 expr_not_matched.Value(),
+					 expr_matched_or_undef.Value(),
 					 expr_not_held.Value(),
 					 expr_not_managed.Value()
 					 );
@@ -632,12 +659,11 @@ doContactSchedd()
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
 			BaseJob *old_job;
-			int job_is_managed = 0;		// default to false if not in ClassAd
 			int job_is_matched = 1;		// default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
-			next_ad->LookupBool(ATTR_JOB_MANAGED,job_is_managed);
+			bool job_is_managed = jobExternallyManaged(next_ad);
 			next_ad->LookupBool(ATTR_JOB_MATCHED,job_is_matched);
 
 			if ( JobsByProcID.lookup( procID, old_job ) != 0 ) {
@@ -700,10 +726,10 @@ doContactSchedd()
 				num_ads++;
 
 				if ( !job_is_managed ) {
-					rc = SetAttribute( new_job->procID.cluster,
+					rc = tSetAttributeString( new_job->procID.cluster,
 									   new_job->procID.proc,
 									   ATTR_JOB_MANAGED,
-									   "TRUE" );
+									   MANAGED_EXTERNAL);
 					if ( rc < 0 ) {
 						failure_line_num = __LINE__;
 						commit_transaction = false;
@@ -717,8 +743,8 @@ doContactSchedd()
 				// But also set Managed=true on the schedd so that it won't
 				// keep signalling us about it
 				delete next_ad;
-				rc = SetAttribute( procID.cluster, procID.proc,
-								   ATTR_JOB_MANAGED, "TRUE" );
+				rc = tSetAttributeString( procID.cluster, procID.proc,
+								   ATTR_JOB_MANAGED, MANAGED_EXTERNAL );
 				if ( rc < 0 ) {
 					failure_line_num = __LINE__;
 					commit_transaction = false;
@@ -753,10 +779,10 @@ contact_schedd_next_add_job:
 		// Grab jobs marked as REMOVED or marked as HELD that we haven't
 		// previously indicated that we're done with (by setting JobManaged
 		// to FALSE. If JobManaged is undefined, equate it with false.
-		sprintf( expr_buf, "(%s) && (%s == %d || %s == %d || (%s == %d && %s =?= TRUE))",
+		sprintf( expr_buf, "(%s) && (%s == %d || %s == %d || (%s == %d && %s =?= \"%s\"))",
 				 ScheddJobConstraint, ATTR_JOB_STATUS, REMOVED,
 				 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, HELD,
-				 ATTR_JOB_MANAGED );
+				 ATTR_JOB_MANAGED, MANAGED_EXTERNAL );
 
 		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );

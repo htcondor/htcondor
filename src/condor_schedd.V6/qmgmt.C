@@ -340,6 +340,16 @@ InitJobQueue(const char *job_queue_name)
 				ad->ChainToAd(clusterad);
 			}
 
+			int ntmp;
+			if( ad->LookupBool(ATTR_JOB_MANAGED, ntmp) ) {
+				// "Managed" is no longer a bool.  It's a string state.
+				if(ntmp) {
+					ad->Assign(ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+				} else {
+					ad->Assign(ATTR_JOB_MANAGED, MANAGED_SCHEDD);
+				}
+			}
+
 			if (!ad->LookupString(ATTR_OWNER, owner)) {
 				dprintf(D_ALWAYS,
 						"Job %s has no %s attribute.  Removing....\n",
@@ -2515,9 +2525,9 @@ int mark_idle(ClassAd *job)
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
 	if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
-		job_managed = 0;
-		job->LookupBool(ATTR_JOB_MANAGED, job_managed);
-		if ( job_managed ) {
+		MyString managed_status;
+		job->LookupString(ATTR_JOB_MANAGED, managed_status);
+		if ( managed_status == MANAGED_EXTERNAL ) {
 			// if a Globus Universe job is currently managed,
 			// don't touch a damn thing!!!  the gridmanager is
 			// in control.  stay out of its way!  -Todd 9/13/02

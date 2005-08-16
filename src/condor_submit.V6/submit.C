@@ -2551,7 +2551,7 @@ SetLeaveInQueue()
 		InsertJobExpr( buffer );
 
 			// set default LeaveInQueue for mirrored jobs (erc is used below)
-		sprintf(buffer,"%s =?= True",ATTR_JOB_MANAGED);
+		sprintf(buffer,"%s =?= \"%s\"",ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
 		erc = strdup(buffer);
 	}
 
