@@ -73,6 +73,16 @@ is executed more than once.
 information from modern Condor configurations where
 \MacroNI{NEGOTIATOR\_HOST} is not defined.
 
+% Programmer explaination:
+% MANAGED is no longer boolean in the job ad, it's
+% a string of complex state.  This enables the gridmanager
+% to no longer erroneously take control of jobs that are
+% done but haven't left the queue.
+\item Refinements in how grid universe components track jobs.  Grid universe
+jobs are less likely to generate multiple terminate events in the job's user
+log.  There will also be slight performance improvements are redundant work 
+is no longer done.
+
 \end{itemize}
 
 \noindent Changes:
