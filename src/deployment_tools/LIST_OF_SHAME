@@ -1,0 +1,51 @@
+LIST OF SHAME
+==============
+1. condor_local_stop needs to query the collector to shut off the
+   master in the dynamic case
+   - normally condor_off uses the config to find the masters address
+   file, which is usually stored in log/
+   - if -dyn is used then the location of log/ cannot be computed from
+   the config files.  Therefore condor_off lookups up the IP for the
+   master from the collector
+   - Possible Solution: Tree of collectors
+     + a collector for each machine, with its port listed in config
+     + the machine collector aggregates info for the machine and sends
+       it to its parent collector
+
+2. condor_cold_start does not allow the setup process to install local
+   configs
+   - this requires configMD to bind the local config files into the
+     global config (the global config can't know the location of the
+     local configs until after they are installed, environment variables
+     won't work for this)
+   - Adding ConfigMD will move functionality out of local_start,
+     namely LB_RELEASE_DIR
+
+3. condor_install_release does not work with GSI
+   + globus_url_copy REQUIRES a cert
+   + write a program that binds wget and globus_url_copy
+     - use wget for http and ftp
+     - use globus_url_copy for gsiftp://
+
+5. Warnings: Warnings are kind of glommed together.  Its like endlines
+   don't work.
+   - Maybe just write directly to stderr and use endlines
+
+6. cold_stop: If a specified configuration files installed version is
+   not in the expected location, cold stop uses the original version
+   (specified as a file path or a url).  If the path is specified as a
+   url, this will fail strangely.
+
+7. condor_local_start's prediagnosis is very specific for schedd.  We
+   may want to use config variables or something else to make this
+   work for non-scheduler installs
+
+8. condor_local_stop is also very schedd specific.  It will not
+   shutdown if the schedd still has jobs.
+
+9. condor_install_local will not handle arbitrarily named log, exec,
+   spool directories with its install from archive option
+
+10. condor_cleanup_local doesn't work with dynamically named local
+    dirs 
+
