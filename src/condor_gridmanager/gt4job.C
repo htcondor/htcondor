@@ -1356,6 +1356,11 @@ void GT4Job::SetJobContact( const char *job_contact )
 		GT4JobsByContact.insert( HashKey( gt4JobId(jobContact) ), this );
 		jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING, jobContact );
 	}
+	if ( jobContact == NULL && submit_id != NULL ) {
+		free( submit_id );
+		submit_id = NULL;
+		jobAd->AssignExpr( ATTR_GLOBUS_SUBMIT_ID, "Undefined" );
+	}
 	requestScheddUpdate( this );
 }
 
