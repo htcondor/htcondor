@@ -20,7 +20,17 @@ $ExitSuccessBase = sub {
 };
 
 my @lines;
+my $doonce = 0;
 
+$execute = sub
+{
+	if($doonce == 0)
+	{
+		Condor::debug( "Good it is running and we'll start the timer....\n");
+		CondorTest::RegisterTimed($testname, $timed, 240);
+		$doonce = 1;
+	}
+};
 
 $success = sub
 {
@@ -35,7 +45,7 @@ $success = sub
 	else
 	{
 		my $left = $submitcount - $donecount;
-		my $res = $left % 20;
+		my $res = $left % 50;
 		if( $res == 0 )
 		{
 			print "$donecount of $submitcount have completed\n";
@@ -59,8 +69,8 @@ $timed = sub
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterSubmit( $testname, $submit );
-CondorTest::RegisterTimed($testname, $timed, 60);
 
 
 system("date");
