@@ -46,6 +46,12 @@ GB, the history file can now be larger than 2 GB.
 for DAGs with nodes having absolute paths to their log files.  (This bug
 was introduced in version 6.7.10.)
 
+% Gnats PR 492.
+\item Fixed a bug whereby \Condor{dagman} could crash after executing
+the POST script of a node whose Condor job had never been successfully
+submitted due to repeated \Condor{submit} failures.  (This bug was
+introduced in 6.7.7 or earlier.)
+
 \item Fixed a bug in a debug message.  If an error occured during file
 transfer, Condor would print the wrong expected filesize in the error message
 on some platforms.
