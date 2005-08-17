@@ -1,6 +1,8 @@
 #! /usr/bin/env perl
 use CondorTest;
 
+#Condor::DebugOn();
+
 $cmd      = 'job_core_holdrelease_van.cmd';
 $testname = 'Jobs properly hold and release - vanilla U';
 
@@ -17,14 +19,13 @@ $execute = sub {
 
 	# avoid reentrant death
 	if($alreadydone == 0) {
-		CondorTest::RegisterTimed($testname, $timed, 120);
+		CondorTest::RegisterTimed($testname, $timed, 180);
 		print "Seeing job run and about to place on hold\n";
 		$alreadydone = 1;
-		return true;
 	} else {
 		print "Have already run once and don't expect this!\n";
 	}
-	
+
 	print "Putting cluster $cluster on hold\n";
 	my @adarray;
 	my $status = 1;
