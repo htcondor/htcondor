@@ -1,6 +1,6 @@
 #! /usr/bin/env perl
 
-use strict;
+#use strict;
 use Cwd;
 
 my $pid;
@@ -25,73 +25,80 @@ my $innercount = 0;
 my $innerpid = 0;
 
 # parent shouldn't wait for any children
-$SIG{'CHLD'} = "IGNORE";
+#$SIG{'CHLD'} = "IGNORE";
 
-open(POUT, "> $testname.data") or die "Could not open file '$testname.data': $?";
-print POUT "Parent's pid is $$\n\n";
 
 system("rm -rf $testname.data.kids");
 
 $count = 0;
-while ($count < 10) 
+while ($count < 3) 
 {
+	print "Main loop counter at $count\n";
 	$pid = fork();
 	$innercount = 0;
 	if ($pid == 0)
 	{
 		# child code....
 
-		open(GCPOUT, ">> $testname.data.kids") or die "Could not open file '$testname.data.kids': $?";
 		# child waits until a signal shows up
-		$SIG{'INT'} = \&handler;
-		$SIG{'HUP'} = \&handler;
-		$SIG{'TERM'} = \&handler;
+		#$SIG{'INT'} = \&handler;
+		#$SIG{'HUP'} = \&handler;
+		#$SIG{'TERM'} = \&handler;
 
 		while ($innercount < 1) 
 		{
-
+			print "Innerloop counter at $innercount\n";
 			$innerpid = fork();
 			if ($innerpid == 0)
 			{
 				# child code....
 		
 				# child waits until a signal shows up
-				$SIG{'INT'} = \&handler;
-				$SIG{'HUP'} = \&handler;
-				$SIG{'TERM'} = \&handler;
+				#$SIG{'INT'} = \&handler;
+				#$SIG{'HUP'} = \&handler;
+				#$SIG{'TERM'} = \&handler;
 	
 				while (1) { sleep 1; }
 	
 				exit 1;
 			}
-
-			# parent code...
+			else
+			{
+#
+				# parent code...
 	
-			if (!defined($innerpid)) {
-				print GCPOUT "Grand kid fork failed!!!!!!!!!!!!!!!!!!!\n";
-				die "some problem forking. Oh well.\n";
+				open(GCPOUT, ">> $testname.data.kids") or die "Could not open file '$testname.data.kids': $?";
+				if (!defined($innerpid)) {
+					print GCPOUT "Grand kid fork failed!!!!!!!!!!!!!!!!!!!\n";
+					die "some problem forking. Oh well.\n";
+				}
+
+				print GCPOUT "Relationship: $$ child created $innerpid\n";
+				close(GCPOUT);
+	
+				$innercount++;
 			}
-
-			print GCPOUT "Relationship: $$ child created $innerpid\n";
-			close(GCPOUT);
-	
-			$innercount++;
 		}
 
 		while (1) { sleep 1; }
 
 		exit 1;
 	}
+	else
+	{
 
-	# parent code...
+		# parent code...
 
-	if (!defined($pid)) {
-		die "some problem forking. Oh well.\n";
+		if (!defined($pid)) {
+			die "some problem forking. Oh well.\n";
+		}
+	
+		open(POUT, "> $testname.data") or die "Could not open file '$testname.data': $?";
+		print POUT "Parent's pid is $$\n\n";
+		print POUT "Relationship: $$ created $pid\n";
+
+		$count++;
 	}
-
-	print POUT "Relationship: $$ created $pid\n";
-
-	$count++;
 }
 
 #print POUT "Parent's environment is:\n";
