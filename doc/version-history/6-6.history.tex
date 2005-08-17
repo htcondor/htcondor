@@ -16,7 +16,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Contains only a couple bug fixes.
+\item Fixed a bug where the \Condor{starter} would follow symbolic links to
+directories, when calculating job disk usage.  This could cause an incorrect
+job disk usage calculation, or hang the starter upon encountering an infinite
+directory loop.  This bug only affected Unix platforms.
 
 \end{itemize}
 
