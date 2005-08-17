@@ -16,10 +16,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug where the \Condor{starter} would follow symbolic links to
-directories, when calculating job disk usage.  This could cause an incorrect
-job disk usage calculation, or hang the starter upon encountering an infinite
-directory loop.  This bug only affected Unix platforms.
+\item Contains only a couple bug fixes.
 
 \end{itemize}
 
@@ -30,6 +27,20 @@ directory loop.  This bug only affected Unix platforms.
 %\item None.
 %
 %\end{itemize}
+
+\noindent Bugs fixed that are included in version 6.7.11:
+
+\begin{itemize}
+
+\item Fixed a bug where the \Condor{starter} would follow symbolic links to
+directories, when calculating job disk usage.  This could cause an incorrect
+job disk usage calculation, or hang the starter upon encountering an infinite
+directory loop.  This bug only affected Unix platforms.
+
+\item For Globus jobs, the Rematch expression is now evaluated when a
+submit fails (in addition to when a submit commit times out).
+
+\end{itemize}
 
 \noindent Bugs fixed that are included in version 6.7.9:
 
