@@ -971,7 +971,10 @@ int GlobusJob::doEvaluateState()
 					submitFailureCode = globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( ad,
 														   submitFailureCode );
-					gmState = GM_UNSUBMITTED;
+						// We go to CLEAR_REQUEST here so that wantRematch
+						// will be evaluated
+					doResubmit = 1;
+					gmState = GM_CLEAR_REQUEST;
 					reevaluate_state = true;
 				}
 			} else if ( condorState == REMOVED || condorState == HELD ) {
