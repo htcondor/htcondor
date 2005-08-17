@@ -113,7 +113,19 @@ DEPS(lib_chirpio_van,lib_chirpio.exe)
 RUN(lib_chirpio_van)
 TESTCLASS(lib_chirpio_van,lib)
 TESTCLASS(lib_chirpio_van,quick)
+
 TESTCLASS(lib_chirpio_van,btdebug)
+DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
+RUN(lib_procapi_pidtracking-snapshot)
+TESTCLASS(lib_procapi_pidtracking-snapshot,core)
+TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
+TESTCLASS(lib_procapi_pidtracking-snapshot,btdebug)
+
+DESC(lib_procapi_pidtracking-byenv,"Slow Termination Child Cleanup Test")
+RUN(lib_procapi_pidtracking-byenv)
+TESTCLASS(lib_procapi_pidtracking-byenv,core)
+TESTCLASS(lib_procapi_pidtracking-byenv,quick)
+TESTCLASS(lib_procapi_pidtracking-byenv,btdebug)
 
 ****************** Tests being readied for prime time **********************
 */
@@ -138,11 +150,13 @@ DESC(job_condorc_ab_van,"Condor-C AB test")
 RUN(job_condorc_ab_van)
 TESTCLASS(job_condorc_ab_van,condorc)
 TESTCLASS(job_condorc_ab_van,quick)
+TESTCLASS(job_condorc_ab_van,btdebug)
 
 DESC(job_condorc_abc_van,"Condor-C ABC test")
 RUN(job_condorc_abc_van)
 TESTCLASS(job_condorc_abc_van,condorc)
 TESTCLASS(job_condorc_abc_van,quick)
+TESTCLASS(job_condorc_abc_van,btdebug)
 
 DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
 RUN(job_core_killsignal_sched)
