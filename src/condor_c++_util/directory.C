@@ -155,7 +155,6 @@ StatInfo::do_stat( const char *path )
 		// On Unix, if any execute bit is set (user, group, other), we
 		// consider it to be executable.
 		isexecutable = ((statbuf.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
-		issymlink = S_ISLNK(statbuf.st_mode);
 		owner = statbuf.st_uid;
 		group = statbuf.st_gid;
 #else
@@ -182,29 +181,57 @@ int
 StatInfo::unix_do_stat( const char *path, struct stat *buf )
 {
 	priv_state priv;
+	struct stat lstatBuf;
+	int statRtn = -1;
+	int lstatRtn = -1;
 
-	errno = 0;
-	if( stat( path, buf ) < 0 ) {
+	statRtn = stat( path, buf );
+	if (statRtn == 0) {
+		lstatRtn = lstat( path, &lstatBuf );
+	}
+	if( (statRtn != 0) || (lstatRtn != 0) ) {
 		si_errno = errno;
-		switch( errno ) {
-		case ENOENT:	// got rm'd while we were doing this
+		switch( si_errno ) {
+		case ENOENT:
 			return FALSE;
 		case EACCES:	// permission denied, try as condor
 			priv = set_condor_priv();
-			if( stat( path, buf ) < 0 ) {
-				si_errno = errno;
-				set_priv( priv );
-				if ( errno == ENOENT ) {
+
+			statRtn = -1;
+			lstatRtn = -1;
+			statRtn = stat( path, buf );
+			if (statRtn == 0) {
+				lstatRtn = lstat( path, &lstatBuf );
+			}
+			si_errno = errno;
+			set_priv( priv );
+
+			if( (statRtn != 0) || (statRtn != 0) ) {
+				if ( si_errno == ENOENT ) {
 					return FALSE;	// got rm'd while we were doing this
 				}
 				dprintf( D_ALWAYS, 
-						 "StatInfo::do_stat(%s,0x%x) failed, errno: %d\n",
-						 path, &buf, errno );
+				"StatInfo::unix_do_stat(%s,0x%x), condor priv failed: %s\n",
+						 path, &buf, strerror(si_errno) );
 				return -1;
 			}
-			set_priv( priv );
+		default:
+			dprintf( D_ALWAYS, 
+					 "StatInfo::unix_do_stat(%s,0x%x) failed: %s\n",
+					 path, &buf, strerror(si_errno) );
+			return -1;
 		}
 	}
+
+	// Only lstat() can determine if a path is a symlink.
+	if (lstatRtn == 0) {
+		if (S_ISLNK(lstatBuf.st_mode) ) {
+			issymlink = true;
+		} else {
+			issymlink = false;
+		}
+	}
+
 	return TRUE;
 }
 #else /* WIN32 */
