@@ -870,7 +870,7 @@ Job * Dag::GetJob (const char * jobName) const {
     return NULL;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Dag::NodeExists( const char* nodeName ) const
 {
@@ -890,6 +890,9 @@ Dag::NodeExists( const char* nodeName ) const
 
 //---------------------------------------------------------------------------
 Job * Dag::GetJob (const CondorID condorID) const {
+	if ( condorID == CondorID(-1, -1, -1) ) {
+		return NULL;
+	}
     ListIterator<Job> iList (_jobs);
     Job * job;
     while ((job = iList.Next())) if (job->_CondorID == condorID) return job;
