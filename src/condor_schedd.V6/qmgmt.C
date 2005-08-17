@@ -2910,21 +2910,35 @@ static void AppendHistory(ClassAd* ad)
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
   // save job ad to the log
-  FILE* LogFile=fopen(JobHistoryFileName,"a");
-  if ( !LogFile ) {
-	dprintf(D_ALWAYS,"ERROR saving to history file; cannot open %s\n",JobHistoryFileName);
-	failed = true;
+  // Note that we are passing O_LARGEFILE, which lets us deal with files
+  // that are larger than 2GB. On systems where O_LARGEFILE isn't defined, 
+  // the Condor source defines it to be 0 which has no effect. So we'll take
+  // advantage of large files where we can, but not where we can't.
+  int fd = open(JobHistoryFileName,
+                O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE,
+                0644);
+  if (fd < 0) {
+	dprintf(D_ALWAYS,"ERROR saving to history file (%s): %s\n",
+			JobHistoryFileName, strerror(errno));
+    failed = true;
   } else {
-	  if (!ad->fPrint(LogFile)) {
-		dprintf(D_ALWAYS, 
-			"ERROR: failed to write job class ad to history file %s\n",
-			JobHistoryFileName);
-		if (LogFile) fclose(LogFile);
-		failed = true;
-	  } else {
-		fprintf(LogFile,"***\n");   // separator
-		fclose(LogFile);
-	  }
+	  FILE *LogFile=fdopen(fd, "a");
+      if (!LogFile) {
+          dprintf(D_ALWAYS,"ERROR saving to history file (%s): %s\n",
+                  JobHistoryFileName, strerror(errno));
+          failed = true;
+      } else {
+          if (!ad->fPrint(LogFile)) {
+              dprintf(D_ALWAYS, 
+                      "ERROR: failed to write job class ad to history file %s\n",
+                      JobHistoryFileName);
+              fclose(LogFile);
+              failed = true;
+          } else {
+              fprintf(LogFile,"***\n");   // separator
+              fclose(LogFile);
+          }
+      }
   }
 
   if ( failed ) {
