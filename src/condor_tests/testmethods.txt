@@ -3,19 +3,6 @@ Failure Analysis: 2005 6.7.3
 ==============================================================================================
 
 
-A. job_core_args_* 
-
-DEBUG Mon Jan  3 12:33:00 2005: arguments = a \"& >/dev/null |echo -a ----- `foo` \n !@#$%^&*()><-_+=|
-anaysis = Argument \"& was mangled into "&
-
-B. job_core_streamout*
-
-Not implemented in 6.6.x according to derek.
-
-C. 2 Dagman tests fail
-
-Both xml log options cause they should
-
 D. Scheduler Policy failures
 
 job_core_onexitrem-true_sched.pl
@@ -42,29 +29,12 @@ job_core_holdrelease_van
 job_core_perhold_van.run
 job_core_rmkillsig_sched
 
-I. New failures to 6.7.3
-
-job_core_plus_sched inconsistent
-
 ==============================================================================================
 
 Failure Analysis: 2005 6.6.7
 
 ==============================================================================================
 
-
-A. job_core_args_* 
-
-DEBUG Mon Jan  3 12:33:00 2005: arguments = a \"& >/dev/null |echo -a ----- `foo` \n !@#$%^&*()><-_+=|
-anaysis = Argument \"& was mangled into "&
-
-B. job_core_streamout*
-
-Not implemented in 6.6.x according to derek.
-
-C. 3 Dagman tests fail
-
-Both xml log options and unlessexit cause they should
 
 D. Scheduler Policy failures
 
@@ -92,6 +62,20 @@ job_core_args_java.run*
 	Description: 
 	Method: 
 	Expects:
+
+lib_chirpio_van.run*
+	Description: A program linked into the chirp library is run to
+		test a series of system calls.
+	Method: The chirp library is used to write and read a file with
+		particular data written to verifiable positions.
+	Expects: to find things where left behind.....
+
+lib_userlog.run*
+	Description: Our userlog library is being tested in a read/write sequence.
+	Method: A program linked to our userlog library write a predefined series
+		of userlog events. Then a job is run which reads this logfile.
+	Expects: Compares the result of the user log read to match a predefined
+		output stored in the test.
 
 job_core_matchlist_van.run*
 	Description: Vanilla test that match_list_length is storing and rotating matches
@@ -126,17 +110,16 @@ job_core_niceuser_van.run*
 		server and client and a shared data file? Or perhaps I should scrap the log file?
 	Expects: Jobs to not run at the same timee.
 
-job_core_streamerr_van.run*
-	Description: Vanilla test for streaming of error when both stream_error is true and false.
-	Method: Two tests are fire such that we run with a case where streaming is on and off. In both cases
-		we watch once the excution event is seen for either file growth or file stability.
-	Expects: Master scripts expects both scripts(true and false case) to pass.
-
-job_core_streamout_van.run*
-	Description: Vanilla test for streaming of output when both stream_output is true and false.
-	Method: Two tests are fire such that we run with a case where streaming is on and off. In both cases
-		we watch once the excution event is seen for either file growth or file stability.
-	Expects: Master scripts expects both scripts(true and false case) to pass.
+job_filexfer_streamout_van.run*
+job_filexfer_streamerr_van.run*
+	Description: Vanilla test for streaming of error.
+	Method: A job is fired which is supposed to stream. A job is run which
+			determines if we are testing stdout or stderr. It currently writes
+			out 100 lines to whichever place and then sleeps 5 minutes. The
+			test allows currently 1 minute after the execute state for the
+			file to show up knowing that the job is still running. It has a 2
+			minute timeout currently. After one minute we look for the file.
+	Expects: Master scripts expects file to be found.
 
 job_core_args_sched.run*
 	Description: Scheduler: Did specify args from submit file reach the job?
@@ -365,9 +348,12 @@ job_core_leaveinqueue_van.run*
 	Expects: returns from both tests to be zero.
 
 job_core_macros-dollardollar_van.run*
-	Description: 
-	Method: 
-	Expects:
+	Description: Test $$macros
+	Method: Pass $$memory, $$mchine and a nonsense macro via both
+		argument passing and environment passing. A simple perl script
+		dumps the args and environment values to stdout. The test then
+		examines the stdout file for the test.
+	Expects: To find the $$macros.
 
 job_core_macros_java.run*
 	Description: 
