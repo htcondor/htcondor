@@ -14,7 +14,7 @@ $ExitSuccess = sub {
 
 
 # make test data
-system("x_chirpio_mkdata.pl --message='Testing message'");
+system("./x_chirpio_mkdata.pl --message='Testing message'");
 # before the test let's throw some weird crap into the environment
 
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
