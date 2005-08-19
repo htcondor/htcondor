@@ -35,9 +35,6 @@
 // How often we contact the schedd (secs)
 extern int contact_schedd_interval;
 
-// How often we check results in the pipe (secs)
-extern int check_requests_interval;
-
 
 char *mySubSystem = "C_GAHP_WORKER_THREAD";	// used by Daemon Core
 
@@ -169,9 +166,6 @@ void
 Init() {
 	contact_schedd_interval = 
 		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
-	check_requests_interval = 
-		param_integer ("C_GAHP_CHECK_NEW_REQUESTS_DELAY", 5);
-
 }
 
 void

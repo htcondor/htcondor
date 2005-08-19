@@ -50,9 +50,6 @@
 int contact_schedd_interval = 20;
 
 
-// How often we check results in the pipe (secs)
-int check_requests_interval = 5;
-
 // Do we use XML-formatted classads when talking to our invoker
 bool useXMLClassads = false;
 
