@@ -805,6 +805,20 @@ int CondorJob::doEvaluateState()
 				gmState = GM_CANCEL;
 				break;
 			}
+				// If we just finished staging input files, it's possible
+				// to see the job still on hold (it can take the schedd a
+				// few seconds to release the job). In this case, simply
+				// retry the poll until the job is no longer on hold to
+				// spool input files. Not the best solution, but it should
+				// work.
+			MyString hold_reason = "";
+			status_ads[0]->LookupString( ATTR_HOLD_REASON, hold_reason );
+			if ( hold_reason == "Spooling input data files" ) {
+				dprintf( D_FULLDEBUG, "(%d.%d) Job not yet released from stage-in hold, retrying poll\n",
+						 procID.cluster, procID.proc );
+				reevaluate_state = true;
+				break;
+			}
 			ProcessRemoteAd( status_ads[0] );
 			int server_time;
 			if ( status_ads[0]->LookupInteger( ATTR_SERVER_TIME,
