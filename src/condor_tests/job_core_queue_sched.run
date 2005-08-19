@@ -91,7 +91,8 @@ $success = sub
 	if( $donecount == $submitcount )
 	{
 		# kill server
-		system("x_general_client.pl $newsocketname quit");
+		#print "x_general_client.pl $newsocketname quit\n";
+		system("./x_general_client.pl $newsocketname quit");
 		# test for correct number of hellos from jobs in jog
 		open(FLOW,"./x_readqueuelog.pl $flowlog HELLO $queuelength | ") || die "Can not open flowlog: $!\n";
 		while(<FLOW>)
