@@ -606,7 +606,6 @@ int CondorJob::doEvaluateState()
 			} break;
 		case GM_STAGE_IN: {
 			// Now stage files to the remote schedd
-#if 1
 			if ( gahpAd == NULL ) {
 				gahpAd = buildStageInAd();
 			}
@@ -616,15 +615,6 @@ int CondorJob::doEvaluateState()
 				break;
 			}
 			rc = gahp->condor_job_stage_in( remoteScheddName, gahpAd );
-#else
-			if ( gahpAd == NULL ) {
-				gahpAd = new ClassAd;
-				gahpAd->Assign( ATTR_STAGE_IN_START, (int)time(NULL) );
-				gahpAd->Assign( ATTR_STAGE_IN_FINISH, (int)time(NULL) );
-			}
-			rc = gahp->condor_job_update( remoteScheddName, remoteJobId,
-										  gahpAd );
-#endif
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -1230,104 +1220,6 @@ BaseResource *CondorJob::GetResource()
 	return (BaseResource *)myResource;
 }
 
-#if 0
-// Old white-list version
-ClassAd *CondorJob::buildSubmitAd()
-{
-	int now = time(NULL);
-	MyString expr;
-	ClassAd *submit_ad;
-	ExprTree *next_expr;
-
-	int index;
-	const char *attrs_to_copy[] = {
-		ATTR_JOB_CMD,
-		ATTR_JOB_ARGUMENTS,
-		ATTR_JOB_ENVIRONMENT,
-		ATTR_JOB_INPUT,
-		ATTR_JOB_OUTPUT,
-		ATTR_JOB_ERROR,
-		ATTR_REQUIREMENTS,
-		ATTR_RANK,
-		ATTR_OWNER,
-		ATTR_DISK_USAGE,
-		ATTR_IMAGE_SIZE,
-		ATTR_EXECUTABLE_SIZE,
-		ATTR_MAX_HOSTS,
-		ATTR_MIN_HOSTS,
-		ATTR_JOB_PRIO,
-		ATTR_JOB_IWD,
-		ATTR_SHOULD_TRANSFER_FILES,
-		ATTR_WHEN_TO_TRANSFER_OUTPUT,
-		ATTR_TRANSFER_INPUT_FILES,
-		ATTR_TRANSFER_OUTPUT_FILES,
-		ATTR_NICE_USER,
-		NULL };		// list must end with a NULL
-
-	submit_ad = new ClassAd;
-
-	index = -1;
-	while ( attrs_to_copy[++index] != NULL ) {
-		if ( ( next_expr = jobAd->Lookup( attrs_to_copy[index] ) ) != NULL ) {
-			submit_ad->Insert( next_expr->DeepCopy() );
-		}
-	}
-
-	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
-	submit_ad->Assign( ATTR_HOLD_REASON, "Spooling input data files" );
-	submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
-
-	submit_ad->Assign( ATTR_Q_DATE, now );
-	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
-	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
-	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
-	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
-	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
-	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
-	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
-	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
-	submit_ad->Assign( ATTR_NUM_CKPTS, 0 );
-	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
-	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
-	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
-	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
-	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
-	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
-	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
-	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
-	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
-	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
-
-	expr.sprintf( "%s = (%s > 0) =!= True && CurrentTime > %s + %d",
-				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
-				  ATTR_Q_DATE, 1800 );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
-				  COMPLETED );
-	submit_ad->Insert( expr.Value() );
-
-	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
-
-	jobAd->ResetExpr();
-	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
-		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(), "REMOTE_", 7 ) == 0 ) {
-			char *attr_value;
-			MyString buf;
-			next_expr->RArg()->PrintToNewStr(&attr_value);
-			buf.sprintf( "%s = %s", &((Variable*)next_expr->LArg())->Name()[7],
-						 attr_value );
-			submit_ad->Insert( buf.Value() );
-			free(attr_value);
-		}
-	}
-
-
-		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
-
-	return submit_ad;
-}
-#else
 // New black-list version
 ClassAd *CondorJob::buildSubmitAd()
 {
@@ -1440,7 +1332,6 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	return submit_ad;
 }
-#endif
 
 ClassAd *CondorJob::buildStageInAd()
 {
