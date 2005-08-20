@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.7 2005-07-11 21:28:08 wright Exp $
+# $Id: platform_post,v 1.1.2.8 2005-08-20 23:58:08 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -33,7 +33,7 @@ chomp $runid;
 if ( $tag and $module and $runid ) {
     print "This is without using the test_ids file\n";
     print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
-    system( "nmi_glue/test_submit/condor_test_submit.pl " .
+    system( "/nmi/bin/condor_test_submit.pl " .
             "--buildid=$runid --platform=$ENV{NMI_PLATFORM} " .
             "--tag=$tag --module=$module" );
     my $status = $?;
@@ -43,8 +43,8 @@ if ( $tag and $module and $runid ) {
 }
 elsif ( -f "test_ids" ) {
     print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
-    system( "nmi_glue/test_submit/condor_test_submit.pl ".
-            "--nightly --platform=$ENV{NMI_PLATFORM}" );
+    system( "/nmi/bin/condor_test_submit.pl --nightly ".
+            "--platform=$ENV{NMI_PLATFORM}" );
     my $status = $?;
     if( $status ) {
         die "condor_test_submit.pl failed with status $status\n";
