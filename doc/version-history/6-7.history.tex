@@ -92,6 +92,9 @@ jobs are less likely to generate multiple terminate events in the job's user
 log.  There will also be slight performance improvements are redundant work 
 is no longer done.
 
+\item Fixed a bug in \Condor{dagman} that caused it to core dump on
+a 'job reconnected' event from a node job.
+
 \end{itemize}
 
 \noindent Changes:
