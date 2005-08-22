@@ -200,7 +200,9 @@ class MyString
 	int find(const char *pszToFind, int iStartPos = 0) const;
 
 	/** Replaces a substring with another substring. It's okay for the
-     *  new string to be empty, so you end up deleting a substring. */
+     *  new string to be empty, so you end up deleting a substring.
+	 *  Returns true iff it found any instances of the pszToReplace
+	 *  substring. */
 	bool replaceString(const char *pszToReplace, 
 					   const char *pszReplaceWith, 
 					   int iStartFromPos=0);

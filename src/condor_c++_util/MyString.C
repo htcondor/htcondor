@@ -460,6 +460,7 @@ MyString::replaceString(
 		   Len - iPreviousEnd + 1);
 	delete [] Data;
 	Data = pNewData;
+	capacity = iNewLen;
 	Len = iNewLen;
 	
 	return true;
