@@ -523,6 +523,20 @@ V6_7_GLOBUS4_EXT -a V6_7_COMMON_EXT \
                    externals/bundles/gsoap/2.7 \
                    externals/bundles/srb/3.2.1
 
+# This is for the V6_7-unicore-3-branch, which uses a new unicoregahp
+# 1.0.0 external
+# It's based on V6_7_3_EXT
+V6_7_UNICORE_EXT	-a V6_7_COMMON_EXT \
+		   externals/bundles/globus/2.2.4 \
+		   externals/bundles/krb5/1.2.7 \
+		   externals/bundles/gahp/1.0.12 \
+		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
+		   externals/bundles/gt3gahp/2.0 \
+		   externals/bundles/classads/0.9.7 \
+		   externals/bundles/globus/2.4.3.data \
+		   externals/bundles/srb/3.2.1 \
+		   externals/bundles/unicoregahp/1.0.0
+
 
 ######################################################################
 # end of externals
@@ -618,6 +632,9 @@ V6_7_QUILL_BUILD	-a V6_7_QUILL_ALL V6_7_QUILL_EXT
 
 # For 1-off builds to see if we can get globus 4.0.0 working, we need this:
 V6_7_GLOBUS4_BUILD 	-a V6_7_ALL V6_7_GLOBUS4_EXT
+
+# For 1-off builds to see if the unicore branch works, we need this:
+V6_7_UNICORE_BUILD 	-a V6_7_ALL V6_7_UNICORE_EXT
 
 # Point these to whatever version is living on the trunk.
 # For now, they're just called "TRUNK", since it's not obvious what
