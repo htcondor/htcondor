@@ -69,11 +69,15 @@ static 	char * bufferJobShort (ClassAd *);
 static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine);
 static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
+static bool read_classad_file(const char *filename, ClassAdList &classads);
 
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
 static  bool expert = false;
 static 	int malformed, unexpanded, running, idle, held;
+
+static  char *jobads_file = NULL;
+static  char *machineads_file = NULL;
 
 static	CondorQ 	Q;
 static	QueryResult result;
@@ -204,7 +208,7 @@ int main (int argc, char **argv)
             // to the schedd time's out and the user gets nothing
             // useful printed out. Therefore, we use show_queue,
             // which fetches all of the ads, then analyzes them. 
-			if ( verbose || better_analyze) {
+			if ( verbose || better_analyze || jobads_file) {
 				exit( !show_queue( scheddAddr, scheddName,
 							scheddMachine ) );
 			} else {
@@ -655,6 +659,24 @@ processCommandLineArguments (int argc, char *argv[])
 		else if (match_prefix(arg, "expert")) {
 			expert = true;
 		}
+        else if (match_prefix(arg, "jobads")) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -jobads require filename\n");
+				exit(1);
+			} else {
+                i++;
+                jobads_file = strdup(argv[i]);
+            }
+        }
+        else if (match_prefix(arg, "machineads")) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -machineads require filename\n");
+				exit(1);
+			} else {
+                i++;
+                machineads_file = strdup(argv[i]);
+            }
+        }
 		else {
 			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
 			usage(argv[0]);
@@ -1133,19 +1155,21 @@ usage (char *myName)
         "\t\t-better-analyze\t\tImproved version of -analyze\n"
 #endif
 		"\t\t-run\t\t\tGet information about running jobs\n"
-		"\t\t-hold\t\t\tGet information about jobs placed on hold\n"
+		"\t\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
 		"\t\t-io\t\t\tShow information regarding I/O\n"
 		"\t\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
 		"\t\t-expert\t\t\tDisplay shorter error messages\n"
+		"\t\t-constraint <expr>\tAdd constraint on classads\n"
+		"\t\t-jobads <file>\t\tFile of job ads to display\n"
+		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
 		"\t\t<cluster>.<proc>\tGet information about specific job\n"
-		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
-		"\t\t-constraint <expr>\tAdd constraint on classads\n",
+		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n",
 			myName);
 }
 
@@ -1407,13 +1431,19 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 	ClassAd		*job;
 	static bool	setup_mask = false;
 
+    if (jobads_file != NULL) {
+        if (!read_classad_file(jobads_file, jobs)) {
+            return false;
+        }
+    } else {
 		// fetch queue from schedd	
-	CondorError errstack;
-	if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
-		printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
-				scheddAddr, scheddMachine, errstack.getFullText(true) );
-		return false;
-	}
+        CondorError errstack;
+        if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
+            printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
+                    scheddAddr, scheddMachine, errstack.getFullText(true) );
+            return false;
+        }
+    }
 
 		// sort jobs by (cluster.proc)
 	jobs.Sort( (SortFunctionType)JobSort );
@@ -1579,11 +1609,17 @@ setupAnalysis()
 	int			index;
 
 	// fetch startd ads
-	rval = Collectors->query (query, startdAds);
-	if( rval != Q_OK ) {
-		fprintf( stderr , "Error:  Could not fetch startd ads\n" );
-		exit( 1 );
-	}
+    if (machineads_file != NULL) {
+        if (!read_classad_file(machineads_file, startdAds)) {
+            exit ( 1 );
+        }
+    } else {
+        rval = Collectors->query (query, startdAds);
+        if( rval != Q_OK ) {
+            fprintf( stderr , "Error:  Could not fetch startd ads\n" );
+            exit( 1 );
+        }
+    }
 
 	// fetch submittor prios
 	fetchSubmittorPrios();
@@ -2072,3 +2108,29 @@ fixSubmittorName( char *name, int niceUser )
 	return NULL;
 }
 
+static bool read_classad_file(const char *filename, ClassAdList &classads)
+{
+    int is_eof, is_error, is_empty;
+    bool success;
+    ClassAd *classad;
+    FILE *file;
+
+    file = fopen(filename, "r");
+    if (file == NULL) {
+        fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+        success = false;
+    } else {
+        do {
+            classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
+            if (!is_error && !is_empty) {
+                classads.Insert(classad);
+            }
+        } while (!is_eof && !is_error);
+        if (is_error) {
+            success = false;
+        } else {
+            success = true;
+        }
+    }
+    return success;
+}
