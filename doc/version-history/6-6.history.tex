@@ -40,6 +40,10 @@ directory loop.  This bug only affected Unix platforms.
 \item For Globus jobs, the Rematch expression is now evaluated when a
 submit fails (in addition to when a submit commit times out).
 
+\item Fixed a bug that caused the \Condor{gridmanager} to go into an
+infinite loop if an entry in the job's environment string was missing
+an equals sign.
+
 \end{itemize}
 
 \noindent Bugs fixed that are included in version 6.7.9:
