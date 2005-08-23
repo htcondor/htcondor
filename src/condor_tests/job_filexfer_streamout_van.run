@@ -3,7 +3,7 @@ use CondorTest;
 
 $cmd = 'job_filexfer_streamout_van.cmd';
 $out = 'job_filexfer_streamout_van.out';
-$testname = 'Environment is preserved - vanilla U';
+$testname = 'Stream output works - vanilla U';
 
 $submitted = sub
 {
@@ -27,19 +27,33 @@ $timed = sub
 $execute = sub
 {
 	my %info = @_;
+	my $job = "good";
 	my $cluster = $info{"cluster"};
 	my $name = $info{"output"};
 	CondorTest::RegisterTimed($testname, $timed, 120);
+
+	#job sleeps forever and will be there for removal
 	sleep(60);
 	if( -f $name )
 	{
 		print "YEAH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
 	}
+	else
+	{
+		$job = "bad";
+	}
+
 	print "OK remove the job!\n";
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+
+	if($job eq "bad")
+	{
+		die "Test failed to stream output!\n";
+	}
+
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
@@ -61,14 +75,6 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 
 #empty local environment and add only a few things that way......
 my $path = $ENV{"PATH"};
-
-$condor_config = $ENV{CONDOR_CONFIG};
-%ENV = ();
-$ENV{CONDOR_CONFIG} = $condor_config;
-$ENV{PATH} = $path;
-$ENV{UNIVERSE} = "vanilla";
-
-print "join(` `,keys %ENV)";
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";

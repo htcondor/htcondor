@@ -19,4 +19,12 @@ for(;$count >= 0;$count -= 1)
 		print STDERR "1234****$target****4321\n";
 	}
 }
-sleep($sleep);
+
+if ( $sleep eq "0" )
+{
+	while(1) { sleep 1 }
+}
+else
+{
+	sleep $sleep ;
+}
