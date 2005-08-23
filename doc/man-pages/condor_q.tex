@@ -19,6 +19,8 @@
 \oOptArg{-format} {fmt attr}
 \oOpt{-cputime}
 \oOpt{-currentrun}
+\oOptArg{-jobads}{file} 
+\oOptArg{-machineads}{file} 
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
   \OptArg{-constraint}{expression} \Dots \} }
 
@@ -252,6 +254,14 @@ per machine basis.
 		accumulated during the current run plus all previous runs.  If this
 		option is specified, RUN\_TIME only displays the time accumulated so
 		far on this current run.}
+	\OptItem{\OptArg{-jobads}{file}}{Display jobs from a list of
+        ClassAds from a file instead of the real ads from the
+        schedd. This is mostly useful for debugging purposes. The ads
+        look as if you used \Condor{q} \Opt{-l} and stripped out the header.}
+	\OptItem{\OptArg{-machineads}{file}}{When doing analysis, use the
+        machine ads from the file instead of the ones from the
+        collector. This is mostly useful for debugging purposes. The
+        ads look as if you used \Condor{status} \Opt{-l}.}
 	\OptItem{Restriction list}{The restriction list may have zero or more items,
 		each of which may be:
 		\begin{description}
