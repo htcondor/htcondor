@@ -24,6 +24,7 @@ $held = sub {
 	my $cluster = $info{"cluster"};
 
 	print "Held event not expected.....\n";
+	return(1);
 };
 
 $executed = sub

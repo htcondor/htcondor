@@ -120,11 +120,6 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-if( $result != 0 )
-{
-	exit(1);
-}
-
 my @adarray;
 my $status = 1;
 my $cmd = "condor_off -master";
@@ -145,4 +140,10 @@ if(!$status)
 	return(1)
 }
 system("date");
+
+if( $result != 0 )
+{
+	# actual test failed but we allowed cleanup
+	exit(1);
+}
 
