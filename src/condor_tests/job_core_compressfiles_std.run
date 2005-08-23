@@ -14,15 +14,6 @@ system("rm -f $gzinput $gzinputgz $gzoutput $output");
 system("cp $input $gzinput");
 system("gzip $gzinput");
 
-@CondorTest::expected_output =
-(
-'first',
-'second',
-'third',
-'fourth',
-);
-
-
 
 $ExitSuccess = sub {
 	my %info = @_;
@@ -51,7 +42,6 @@ $ExitSuccess = sub {
 };
 
 
-#CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
