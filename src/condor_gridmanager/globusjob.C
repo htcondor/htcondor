@@ -2587,7 +2587,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		if ( env_vec[0] ) {
 			*rsl += ")(environment=";
 		}
-		while (env_vec[i]) {
+		for ( i = 0; env_vec[i]; i++ ) {
 			char *equals = strchr(env_vec[i],'=');
 			if ( !equals ) {
 				// this environment entry has no equals sign!?!?
@@ -2597,7 +2597,6 @@ MyString *GlobusJob::buildSubmitRSL()
 			buff.sprintf( "(%s %s)", env_vec[i],
 							 rsl_stringify(equals + 1) );
 			*rsl += buff;
-			i++;
 		}
 	}
 	if ( attr_value ) {
