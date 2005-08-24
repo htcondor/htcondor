@@ -1647,7 +1647,11 @@ int remove_requests_from_queue(ReliSock * sock)
 
 		if (dap_queue.get_pid(pid, dap_id) == DAP_SUCCESS){
 			dprintf(D_ALWAYS, "Killing process: %d for job: %s\n", pid, dap_id);
-			kill(pid, SIGKILL);
+			if ( kill(pid, SIGKILL) != 0 ) {
+				dprintf(D_ALWAYS,
+					"kill process %d for job %s error: %s\n",
+					pid, dap_id, strerror(errno) );
+			}
 		}
 		else{
 			dprintf(D_ALWAYS, "Corresponding process for job: %s not found\n", dap_id);
