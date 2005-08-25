@@ -415,12 +415,20 @@ CronMgrBase::Reconfig( void )
 int
 CronMgrBase::DoConfig( bool initial )
 {
-	char *paramBuf = GetParam( "JOBS" );
+	char *paramBuf;
 
-	// Find our environment variable, if it exits..
-	dprintf( D_FULLDEBUG, "CronMgr: Doing config (%s)\n",
-			 initial ? "initial" : "reconfig" );
-	ParseJobList( paramBuf );
+	paramBuf = GetParam( "JOBLIST" );
+	if ( paramBuf != NULL ) {
+		ParseJobList( paramBuf );
+	} else {
+		paramBuf = GetParam( "JOBS" );
+
+		// Find our environment variable, if it exits..
+		dprintf( D_FULLDEBUG, "CronMgr: Doing config (%s)\n",
+				 initial ? "initial" : "reconfig" );
+		ParseOldJobList( paramBuf );
+	}
+
 	if( paramBuf ) {
 		free( paramBuf );
 	}
@@ -470,10 +478,243 @@ CronMgrBase::GetParam( const char *paramName,
 
 // Parse the "Job List"
 int
-CronMgrBase::ParseJobList( const char *jobString )
+CronMgrBase::ParseJobList( const char *jobListString )
 {
 	// Debug
-	dprintf( D_JOB, "CronMgr: Job string is '%s'\n", jobString );
+	dprintf( D_JOB, "CronMgr: Job string is '%s'\n", jobListString );
+
+	// Clear all marks
+	Cron.ClearAllMarks( );
+
+	// Break it into a string list
+	StringList	jobList( jobListString );
+	jobList.rewind( );
+
+	// Parse out the job names
+	const char *jobName;
+	while( ( jobName = jobList.next()) != NULL ) {
+		dprintf( D_JOB, "CronMgr: Job name is '%s'\n", jobName );
+
+		// Parse out the prefix
+		MyString paramPrefix     = GetParam( jobName, "_PREFIX" );
+		MyString paramExecutable = GetParam( jobName, "_EXECUTABLE" );
+		MyString paramPeriod     = GetParam( jobName, "_PERIOD" );
+		MyString paramMode       = GetParam( jobName, "_MODE" );
+		MyString paramReconfig   = GetParam( jobName, "_RECONFIG" );
+		MyString paramKill       = GetParam( jobName, "_KILL" );
+		MyString paramOptions    = GetParam( jobName, "_OPTIONS" );
+		MyString paramArgs       = GetParam( jobName, "_ARGS" );
+		MyString paramEnv        = GetParam( jobName, "_ENV" );
+		MyString paramCwd        = GetParam( jobName, "_CWD" );
+		bool jobOk = true;
+
+		// Some quick sanity checks
+		if ( paramExecutable.IsEmpty() ) {
+			dprintf( D_ALWAYS, 
+					 "CronMgr: No path found for job '%s'; skipping\n",
+					 jobName );
+			jobOk = false;
+		}
+
+		// Pull out the period
+		unsigned	jobPeriod = 0;
+		if ( paramPeriod.IsEmpty() ) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: No job period found for job '%s': skipping\n",
+					 jobName );
+			jobOk = false;
+		} else {
+			char	modifier;
+			int		num = sscanf( paramPeriod.Value(), "%d%c",
+								  &jobPeriod, &modifier );
+			if ( num < 1 ) {
+				dprintf( D_ALWAYS,
+						 "CronMgr: Invalid job period found "
+						 "for job '%s' (%s): skipping\n",
+						 jobName, paramPeriod.Value() );
+				jobOk = false;
+			} else {
+				// Check the modifier
+				modifier = toupper( modifier );
+				if ( ( 0 == modifier ) || ( 'S' == modifier ) ) {	// Seconds
+					// Do nothing
+				} else if ( 'M' == modifier ) {
+					jobPeriod *= 60;
+				} else if ( 'H' == modifier ) {
+					jobPeriod *= ( 60 * 60 );
+				} else {
+					dprintf( D_ALWAYS,
+							 "CronMgr: Invalid period modifier "
+							 "'%c' for job %s (%s)\n",
+							 modifier, jobName, paramPeriod.Value() );
+					jobOk = false;
+				}
+			}
+		}
+
+		// Options
+		CronJobMode	jobMode = CRON_PERIODIC;
+		bool		jobReconfig = false;
+		bool		jobKillMode = false;
+
+		// Parse the job mode
+		if ( ! paramMode.IsEmpty() ) {
+			if ( ! strcasecmp( paramMode.Value(), "Periodic" ) ) {
+				jobMode =  CRON_PERIODIC;
+			} else if ( ! strcasecmp( paramMode.Value(), "WaitForExit" ) ) {
+				jobMode = CRON_WAIT_FOR_EXIT;
+			} else if ( ! strcasecmp( paramMode.Value(), "Continuous" ) ) {
+				jobReconfig = true;
+				jobMode = CRON_WAIT_FOR_EXIT;
+			} else {
+				dprintf( D_ALWAYS,
+						 "CronMgr: Unknown job mode for '%s'\n",
+						 jobName );
+			}
+		}
+		if ( ! paramReconfig.IsEmpty() ) {
+			if ( ! strcasecmp( paramReconfig.Value(), "True" ) ) {
+				jobReconfig = true;
+			} else {
+				jobReconfig = false;
+			}
+		}
+		if ( ! paramKill.IsEmpty() ) {
+			if ( ! strcasecmp( paramKill.Value(), "True" ) ) {
+				jobKillMode = true;
+			} else {
+				jobKillMode = false;
+			}
+		}
+
+		// Parse the option string
+		if ( ! paramOptions.IsEmpty() ) {
+			StringList	list( paramOptions.Value(), " :," );
+			list.rewind( );
+
+			const char *option;
+			while( ( option = list.next()) != NULL ) {
+
+				// And, parse it
+				if ( !strcasecmp( option, "kill" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': Kill option ok\n",
+							 jobName );
+					jobKillMode = true;
+				} else if ( !strcasecmp( option, "nokill" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': NoKill option ok\n",
+							 jobName );
+					jobKillMode = false;
+				} else if ( !strcasecmp( option, "reconfig" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': Reconfig option ok\n",
+							 jobName );
+					jobReconfig = true;
+				} else if ( !strcasecmp( option, "noreconfig" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': NoReconfig option ok\n",
+							 jobName );
+					jobReconfig = false;
+				} else if ( !strcasecmp( option, "WaitForExit" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': WaitForExit option ok\n",
+							 jobName );
+					jobMode = CRON_WAIT_FOR_EXIT;
+				} else if ( !strcasecmp( option, "continuous" ) ) {
+					dprintf( D_FULLDEBUG,
+							 "CronMgr: '%s': Continuous option ok\n",
+							 jobName );
+					jobMode = CRON_WAIT_FOR_EXIT;
+					jobReconfig = true;
+				} else {
+					dprintf( D_ALWAYS,
+							 "CronMgr: Job '%s': "
+							 "Ignoring unknown option '%s'\n",
+							 jobName, option );
+				}
+			}
+		}
+
+		// Are there arguments for it?
+		// Force the first arg to be the "Job Name"..
+		MyString	jobArgs( jobName );
+		if ( ! paramArgs.IsEmpty() ) {
+			jobArgs += " ";
+			jobArgs += paramArgs;
+		}
+
+		// Create the job & add it to the list (if it's new)
+		CronJobBase *job = NULL;
+		if ( jobOk ) {
+			job = Cron.FindJob( jobName );
+			if ( NULL == job ) {
+				job = NewJob( jobName );
+
+				// Ok?
+				if ( NULL == job ) {
+					dprintf( D_ALWAYS,
+							 "Cron: Failed to allocate job object for '%s'\n",
+							 jobName );
+				}
+			}
+
+			// Put the job in the list
+			if ( NULL != job ) {
+				if ( Cron.AddJob( jobName, job ) < 0 ) {
+					dprintf( D_ALWAYS,
+							 "CronMgr: Error creating job '%s'\n", 
+							 jobName );
+					delete job;
+					job = NULL;
+				}
+			}
+		}
+
+		// Now fill in the job details
+		if ( NULL == job ) {
+			dprintf( D_ALWAYS,
+					 "Cron: Can't create job for '%s'\n",
+					 jobName );
+		} else {
+			job->SetKill( jobKillMode );
+			job->SetReconfig( jobReconfig );
+
+			// And, set it's characteristics
+			job->SetPath( paramExecutable.Value() );
+			job->SetPrefix( paramPrefix.Value() );
+			job->SetArgs( jobArgs.GetCStr() );
+			job->SetEnv( paramEnv.Value() );
+			job->SetCwd( paramCwd.Value() );
+			job->SetPeriod( jobMode, jobPeriod );
+
+			// Mark the job so that it doesn't get deleted (below)
+			job->Mark( );
+		}
+
+		// Debug info
+		dprintf( D_FULLDEBUG,
+				 "CronMgr: Done processing job '%s'\n", jobName );
+
+		// Finally, have the job finish it's initialization
+		if ( job ) {
+			job->Initialize( );
+		}
+	}
+
+	// Delete all jobs that didn't get marked
+	Cron.DeleteUnmarked( );
+
+	// All ok
+	return 0;
+}
+
+// Parse the "Job List": Old format
+int
+CronMgrBase::ParseOldJobList( const char *jobString )
+{
+	// Debug
+	dprintf( D_JOB, "CronMgr: Old job string is '%s'\n", jobString );
 
 	// Clear all marks
 	Cron.ClearAllMarks( );

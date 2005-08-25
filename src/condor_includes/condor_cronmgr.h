@@ -54,6 +54,7 @@ class CronMgrBase : public Service
 	// Private member functions
 	int DoConfig( bool initial = false );
 	int ParseJobList( const char *JobListString );
+	int ParseOldJobList( const char *JobListString );
 	char *NextTok( char *cur, const char *tok );
 	char *GetParam( const char *paramName, 
 					const char *paramName2 = NULL );
