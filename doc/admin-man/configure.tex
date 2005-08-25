@@ -2396,10 +2396,225 @@ used in other situations, as well.
   This example allows Condor to refer to other related macros
   with the string ``HAWKEYE'' in their name.
 
+\item[\Macro{STARTD\_CRON\_JOBLIST}]
+\label{param:StartdCronJobList}
+
+  This configuration variable is defined by a whitespace separated
+  list of job names (called modules) to run.
+  Each of these is the logical name of the module.  This name
+  must be unique (no two modules may have the same name).
+
+  If \MacroNI{STARTD\_CRON\_NAME}
+  is defined, then this configuration macro name is changed from
+  \MacroNI{STARTD\_CRON\_JOBLIST} to
+  \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_JOBLIST}.
+
+
+\item[\Macro{STARTD\_CRON\_<ModuleName>\_PREFIX}]
+\label{param:StartdCronModulePrefix}
+    Specifies a string which is prepended by
+    Condor to all attribute names that the module generates.  For
+    example, if a prefix is ``xyz\_'', and an individual attribute is
+    named ``abc'', the resulting attribute would be ``xyz\_abc''.
+    Although it can be quoted, the prefix can contain only
+    alpha-numeric characters.
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_PREFIX} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_PREFIX}.
+
+\item[\Macro{STARTD\_CRON\_<ModuleName>\_EXECUTABLE}]
+\label{param:StartdCronModuleExecutable}
+    Used to specify the full path to the
+    executable to run for this module.  Note that multiple modules may
+    specify the same executable (although they need to have different
+    names).
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_EXECUTABLE} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_EXECUTABLE}.
+
+\item[\Macro{STARTD\_CRON\_<ModuleName>\_PERIOD}]
+\label{param:StartdCronModulePeriod}
+    The period specifies time intervals at
+    which the module should be run.
+    For periodic modules, this
+    is the time interval that passes between starting the execution
+    of the module.
+    The value may be specified in seconds (append value with the
+    character 's'), in minutes (append value with the character 'm'),
+    or in hours (append value with the character 'h').
+    As an example, 5m starts the execution of the module every five minutes.
+    If no character is appended to the value, seconds are used as a default.
+    For ``Wait For Exit'' mode, the value has a different meaning; in
+    this case 
+    the period specifies the length of time after the module ceases execution
+    before it is restarted.
+    The minimum valid value of the period is 1 second.
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_PERIOD} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_PERIOD}.
+
+
+\item[\Macro{STARTD\_CRON\_<ModuleName>\_MODE}]
+\label{param:StartdCronModuleMode}
+    Used to specify the ``Mode'' in which the module operates.
+    Legal values are ``WaitForExit'' and ``Periodic'' (the
+    default).  
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_MODE} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_MODE}.
+
+    The default ``Periodic'' mode is used for most modules.  In
+    this mode, the module is expected to be started by the
+    \Condor{startd} daemon, gather and publish it's data, and then
+    exit.
+
+    The ``WaitForExit'' mode is used to specify a module
+    which runs in the ``Wait For Exit'' mode.
+    In this mode, the \Condor{startd} daemon
+    interprets the ``period'' differently.  In this case, it
+    refers to the amount of time to wait after the module exits
+    before restarting it.  With a value of 1, the module is kept
+    running nearly continuously.
+
+    In general, ``Wait For Exit'' mode is for modules that produce
+    a periodic stream of updated data, but it can be used for other
+    purposes, as well.
+
+
+\item[\Macro{STARTD\_CRON\_<ModuleName>\_RECONFIG}]
+\label{param:StartdCronModuleReconfig}
+    The ``ReConfig'' macro is used to specify whether a module
+    can handle HUP signals, and should be sent a HUP signal when
+    the \Condor{startd} daemon is reconfigured.  The module is
+    expected to reread it's configuration at that time.  A value
+    of ``True'' enables this setting, and ``False'' disables it.
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_RECONFIG} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_RECONFIG}.
+
+\item[\Macro{STARTD\_CRON\_<ModuleName>\_KILL}]
+\label{param:StartdCronModuleKill}
+    The ``Kill'' macro is applicable on for modules running in the
+    ``Periodic'' mode.  Possible values are ``True'' and ``False'' (the
+    default).
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_KILL} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_KILL}.
+
+    This macro controls the behaviour of the \Condor{startd} when it
+    detects that the module's executable is still running when it is time
+    to start the module for a run. 	If enabled, the
+    \Condor{startd} will kill and restart the process in this
+    condition.  If not enabled, the existing process is allowed to
+    continue running. 
+
+\item[\Macro{STARTD\_CRON\_<ModuleName>\_ARGS}]
+\label{param:StartdCronModuleArgs}
+    The command line arguments to pass to the module to be executed. 
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_ARGS} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_ARGS}.
+
+\item[\Macro{STARTD\_CRON\_<ModuleName>\_ENV}]
+\label{param:StartdCronModuleEnv}
+    The environment string to pass to the module.
+    The syntax is the same as that of 
+    \MacroNI{DAEMONNAME\_ENVIRONMENT} in ~\ref{param:DaemonNameEnvironment}.
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_ENV} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_ENV}.
+
+\item[\Macro{STARTD\_CRON\_modulename\_CWD}]
+\label{param:StartdCronModuleCwd}
+    The working directory in which to start the module.
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_CWD} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_CWD}.
+
+\item[\Macro{STARTD\_CRON\_modulename\_OPTIONS}]
+\label{param:StartdCronModuleOptions}
+    \item Several options are available. Using more than one
+    of these options for one module does not make sense.  If this happens,
+    the last one in the list is followed.  This is a colon separated
+    list of options.
+
+    If \MacroNI{STARTD\_CRON\_NAME}
+    is defined, then this configuration macro name is changed from
+    \MacroNI{STARTD\_CRON\_<ModuleName>\_OPTIONS} to
+    \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_OPTIONS}.
+
+   \begin{itemize}
+
+	\item The ``WaitForExit'' option enables the ``Wait For Exit''
+	mode (see above).
+
+	\item The ``ReConfig'' option enables the ``Reconfig'' setting
+	(see above).
+
+	\item The ``NoReConfig'' option disables the ``Reconfig'' setting
+	(see above).
+
+	\item The ``Kill'' option enables the ``Kill'' setting (see
+	above).
+
+	\item The ``NoKill'' option disables the ``Kill'' setting (see
+	above).
+
+    \end{itemize}
+
+\Note This new syntax is hopefully less confusing.  Here's an example
+use of it:
+\begin{verbatim}
+# Hawkeye Job Definitions
+HAWKEYE_JOBLIST   =
+
+# Job 1
+HAWKEYE_JOBLIST = $(HAWKEYE_JOBLIST) job1
+HAKWEYE_job1_PREFX = prefix_
+HAKWEYE_job1_EXECUTABLE = $(MODULES)/job1
+HAKWEYE_job1_PERIOD = 5m
+HAKWEYE_job1_MODE = WaitForExit
+HAKWEYE_job1_KILL = false
+HAWKEYE_job1_ARGS =-foo -bar
+HAWKEYE_job1_ENV = xyzzy=somevalue
+
+# Job 2
+HAWKEYE_JOBLIST = $(HAWKEYE_JOBLIST) job2
+HAWKEYE_job2_PREFIX = prefix_
+HAWKEYE_job2_EXECUTABLE = :$(MODULES)/job2
+HAWKEYE_job2_PERIOD = 1h
+HAWKEYE_job2_ENV = lwpi=somevalue
+\end{verbatim}
+
+
 \item[\Macro{STARTD\_CRON\_JOBS}]
 \label{param:StartdCronJobs}
   The list of the modules to execute.  In Hawkeye, this is usually
   named HAWKEYE\_JOBS.
+
+  Note: This syntax is now depricated, and replaced by the new
+  \MacroNI{STARTD\_CRON\_JOBLIST} syntax (see above).
+  For more information on the Cron logic, read the above discussion.
+  If \MacroNI{STARTD\_CRON\_JOBLIST} is defined,
+  \MacroNI{STARTD\_CRON\_JOBS} is ignored.
 
   This configuration variable is defined by
   a whitespace or newline separated list of jobs (called modules) to run, of the form:
@@ -2413,40 +2628,23 @@ used in other situations, as well.
   \begin{verbatim}foo:foo_:''c:/some dir/foo.exe'':10m\end{verbatim}
   These individual fields are described below: \begin{itemize}
 
-    \item \MacroNI{modulename} The logical name of the module.  This name
-    must be unique (no two modules may have the same name).
+    \item \MacroNI{modulename} The logical name of the module.  This 
+    must be unique (no two modules may have the same name).  See 
+    \MacroNI{STARTD\_CRON\_JOBLIST}
 
-    \item \MacroNI{prefix} Specifies a string which is prepended by
-    Condor to all attribute names that the module generates.  For
-    example, if a prefix is ``xyz\_'', and an individual attribute is
-    named ``abc'', the resulting attribute would be ``xyz\_abc''.
-    Although it can be quoted, the prefix can contain only
-    alpha-numeric characters.
+    \item \MacroNI{prefix}
+    See \MacroNI{STARTD\_CRON\_<ModuleName>\_PREFIX}
 
-    \item \MacroNI{executable} Used to specify the full path to the
-    executable to run for this module.  Note that multiple modules may
-    specify the same executable (although they need to have different
-    names).  As noted above, the executable name can be quoted,
-    allowing for names with spaces and/or colons(:).
+    \item \MacroNI{executable}
+    See \MacroNI{STARTD\_CRON\_<ModuleName>\_EXECUTABLE}
 
-    \item \MacroNI{period} The period specifies time intervals at
-    which the module should be run.
-    For periodic modules, this
-    is the time interval that passes between starting the execution
-    of the module.
-    The value may be specified in seconds (append value with the character 's'),
-    in minutes (append value with the character 'm'),
-    or in hours (append value with the character 'h').
-    As an example, 5m starts the execution of the module every five minutes.
-    If no character is appended to the value, seconds are used as a default.
-    For ``Wait For Exit'' mode, the value has a different meaning; in this case
-    the period specifies the length of time after the module ceases execution
-    before it is restarted.
-    The minimum valid value of the period is 1 second.
+    \item \MacroNI{period}
+    See \MacroNI{STARTD\_CRON\_<ModuleName>\_PERIOD}
 
    \item Several options are available. Using more than one
    of these options for one module does not make sense.  If this happens,
-   the last one in the list is followed.
+   the last one in the list is followed. 
+   See \MacroNI{STARTD\_CRON\_<ModuleName>\_OPTIONS}
 
 	\begin{itemize}
 	\item The ``Continuous'' option is used to specify a module
@@ -2459,46 +2657,31 @@ used in other situations, as well.
 	which together implement the capabilities of ``Continuous''.
 	This option will be removed from a future version of Condor.
 
-	\item The ``WaitForExit'' option is used to specify a module
-	which runs in the ``Wait For Exit'' mode (as described above).
-	In ``Wait For Exit'' mode, the \Condor{startd} daemon
-	interprets the ``period'' differently.  In this case, it
-	refers to the amount of time to wait after the module exits
-	before restarting it.  With a value of 1, the module is kept
-	running nearly continuously.
+	\item The ``WaitForExit'' option
 
-	In general, ``Wait For Exit'' mode is for modules that produce
-	a periodic stream of updated data, but it can be used for other
-	purposes, as well.
+	See the discussion of ``WaitForExit'' in
+	\MacroNI{STARTD\_CRON\_<ModuleName>\_OPTIONS} above.
 
-	\item The ``ReConfig'' option is used to specify that a module
-	can handle HUP signals, and should be sent a HUP signal when
-	the \Condor{startd} daemon is reconfigured.  The module is
-	expected to reread it's configuration at that time.
+	\item The ``ReConfig'' option
 
-	Note that the HUP signal will never be delivered to a module
-	until it produces it's first block of ``publishable'' data
-	(i.e. the module exits or produces a ``-'' alone on a line).
+	See the discussion of ``ReConfig in
+	\MacroNI{STARTD\_CRON\_<ModuleName>\_OPTIONS} above.
 
-	\item The ``NoReConfig'' option is used turn off the
-	``reconfig'' option.  This is the default (except for modules
-	using the deprecated ``continuous'' mode). 
+	\item The `NoReConfig'' option
 
-	\item The ``Kill'' option is for
-	for a periodic mode of module execution,
-	the module may still be running when the period is up
-	and it is time to start the module again.
-	This option causes the module to be killed and restarted.
-	This option has no effect on ``Continuous'' or ``WaitForExit'' jobs.
+	See the discussion of ``NoReConfig in
+	\MacroNI{STARTD\_CRON\_<ModuleName>\_OPTIONS} above.
 
-	\item The ``NoKill'' option is
-	for a periodic mode of module execution,
-	the module may still be running when the period is up
-	and it is time to start the module again.
-	This option allows the module to continue execution.
-	This is the default for noncontinuous mode.
-	This option has no effect on ``Continuous'' or ``WaitForExit''
-	jobs.
+	\item The ``Kill'' option
+
+	See the discussion of ``Kill'' in
+	\MacroNI{STARTD\_CRON\_<ModuleName>\_OPTIONS} above.
+
+	\item The ``NoKill'' option
+
+	See the discussion of ``NoKill'' in
+	\MacroNI{STARTD\_CRON\_<ModuleName>\_OPTIONS} above.
+
     \end{itemize}
 	
   \end{itemize}
@@ -2529,33 +2712,6 @@ HAWKEYE_JOBS = $(HAWKEYE_JOBS) job2:prefix_:$(MODULES)/job2:1h
 HAWKEYE_JOB2_ENV = lwpi=somevalue
 \end{verbatim}
 
-
-\item[\Macro{STARTD\_CRON\_modulename\_ARGS}]
-\label{param:StartdCronModuleArgs}
-  The command line arguments to pass to the module to be executed. 
-  If \MacroNI{STARTD\_CRON\_NAME}
-  is defined, then this configuration macro name is changed from
-  \MacroNI{STARTD\_CRON\_modulename\_ARGS} to
-  \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_modulename\_ARGS}.
-
-
-\item[\Macro{STARTD\_CRON\_modulename\_ENV}]
-\label{param:StartdCronModuleEnv}
-  The environment string to pass to the module.
-  The syntax is the same as that of 
-  \MacroNI{DAEMONNAME\_ENVIRONMENT} in ~\ref{param:DaemonNameEnvironment}.
-  If \MacroNI{STARTD\_CRON\_NAME}
-  is defined, then this configuration macro name is changed from
-  \MacroNI{STARTD\_CRON\_modulename\_ENV} to
-  \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_modulename\_ENV}.
-
-\item[\Macro{STARTD\_CRON\_modulename\_CWD}]
-\label{param:StartdCronModuleCwd}
-  The working directory in which to start the module.
-  If \MacroNI{STARTD\_CRON\_NAME}
-  is defined, then this configuration macro name is changed from
-  \MacroNI{STARTD\_CRON\_modulename\_CWD} to
-  \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_modulename\_CWD}.
 
 
 \end{description}
