@@ -1,6 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Configuring-Condor}
-Configuration}
+\section{\label{sec:Configuring-Condor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Condor!configuration}
@@ -3338,6 +3337,10 @@ Defaults to 1200 (20 minutes).
         exec "$@"
 \end{verbatim}
 
+  For Windows machines, the wrapper will either be
+  a batch script (with a file extension of \File{.bat} or \File{.cmd})
+  or an executable (with a file extension of \File{.exe} or \File{.com}).
+
 \item[\Macro{USE\_VISIBLE\_DESKTOP}] \label{param:UseVisibleDesktop} 
   This setting is only meaningful on Windows machines.  If True, Condor will
   allow the job to create windows on the desktop of the execute machine and
@@ -3352,10 +3355,6 @@ Defaults to 1200 (20 minutes).
   the same as the syntax for environment settings in the job submit file.
   If the same environment variable is assigned by this macro and by the user
   in the submit file, the user's setting takes precedence.
-
-  For Windows machines, the wrapper will either be
-  a batch script (with a file extension of \File{.bat} or \File{.cmd})
-  or an executable (with a file extension of \File{.exe} or \File{.com}).
 
 \end{description}
 
