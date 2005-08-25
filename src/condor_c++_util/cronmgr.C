@@ -563,9 +563,6 @@ CronMgrBase::ParseJobList( const char *jobListString )
 				jobMode =  CRON_PERIODIC;
 			} else if ( ! strcasecmp( paramMode.Value(), "WaitForExit" ) ) {
 				jobMode = CRON_WAIT_FOR_EXIT;
-			} else if ( ! strcasecmp( paramMode.Value(), "Continuous" ) ) {
-				jobReconfig = true;
-				jobMode = CRON_WAIT_FOR_EXIT;
 			} else {
 				dprintf( D_ALWAYS,
 						 "CronMgr: Unknown job mode for '%s'\n",
@@ -621,12 +618,6 @@ CronMgrBase::ParseJobList( const char *jobListString )
 							 "CronMgr: '%s': WaitForExit option ok\n",
 							 jobName );
 					jobMode = CRON_WAIT_FOR_EXIT;
-				} else if ( !strcasecmp( option, "continuous" ) ) {
-					dprintf( D_FULLDEBUG,
-							 "CronMgr: '%s': Continuous option ok\n",
-							 jobName );
-					jobMode = CRON_WAIT_FOR_EXIT;
-					jobReconfig = true;
 				} else {
 					dprintf( D_ALWAYS,
 							 "CronMgr: Job '%s': "
