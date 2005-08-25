@@ -8,30 +8,6 @@ Condor::DebugOff();
 $cmd = 'job_schedd_job-tracking_van.cmd';
 $testname = ' Is Schedd Loosing jobs - scheduler U';
 
-
-my $pid = $$;
-system("mkdir $pid");
-my $curcwd = getcwd();
-print "current directory is $curcwd\n";
-
-$ExitSuccessBase = sub {
-	my %info = @_;
-
-};
-
-my @lines;
-my $doonce = 0;
-
-$execute = sub
-{
-	if($doonce == 0)
-	{
-		Condor::debug( "Good it is running and we'll start the timer....\n");
-		CondorTest::RegisterTimed($testname, $timed, 240);
-		$doonce = 1;
-	}
-};
-
 $success = sub
 {
     my %args = @_;
@@ -53,11 +29,23 @@ $success = sub
 	}
 };
 
+#
+#	Use the fact we know we are queueing 400 jobs to hold off setting the timer 
+# 	till all jobs are submitted.
+#
+
 $submit = sub
 {
     my %args = @_;
 	my $cluster = $args{"cluster"};
 	$submitcount += 1;
+
+	if( $submitcount == 400 )
+	{
+		system("date");
+		Condor::debug( "Good it is all submitted and we'll start the timer....\n");
+		CondorTest::RegisterTimed($testname, $timed, 240);
+	}
 };
 
 $timed = sub
@@ -69,7 +57,6 @@ $timed = sub
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success );
-CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterSubmit( $testname, $submit );
 
 
