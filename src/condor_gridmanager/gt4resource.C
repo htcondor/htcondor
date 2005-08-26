@@ -324,6 +324,12 @@ dprintf(D_FULLDEBUG,"*** checkDelegation()\n");
 	bool signal_jobs;
 	ProxyDelegation *next_deleg;
 
+	if ( deleg_gahp->isInitialized() == false ) {
+		dprintf( D_ALWAYS,"gahp server not up yet, delaying checkDelegation\n" );
+		daemonCore->Reset_Timer( delegationTimerId, 5 );
+		return 0;
+	}
+
 	daemonCore->Reset_Timer( delegationTimerId, 60*60 );
 
 	delegatedProxies.Rewind();
