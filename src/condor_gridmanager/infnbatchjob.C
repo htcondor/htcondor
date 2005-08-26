@@ -351,6 +351,7 @@ int INFNBatchJob::doEvaluateState()
 							 "(%d.%d) blah_job_submit() failed: %s\n",
 							 procID.cluster, procID.proc,
 							 gahp->getErrorString() );
+					errorString = gahp->getErrorString();
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
 				}
@@ -427,6 +428,7 @@ int INFNBatchJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) blah_job_status() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
+				errorString = gahp->getErrorString();
 				gmState = GM_CANCEL;
 				break;
 			}
@@ -506,6 +508,7 @@ int INFNBatchJob::doEvaluateState()
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_cancel() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
+					errorString = gahp->getErrorString();
 					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
