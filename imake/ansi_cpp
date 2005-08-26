@@ -23,6 +23,9 @@ case "x$os" in
 	xLinux)
 		exec /lib/cpp $*
 		;;
+	xFreeBSD)
+		exec /usr/bin/gcc -E $*
+		;;
 	xDarwin)
 		# /usr/bin/cpp is funny on this OS, I can't figure out how to tell
 		# it not to perform precompilation of the headers. So I'll just use 
