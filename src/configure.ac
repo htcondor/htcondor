@@ -328,6 +328,13 @@ elif test $os = "Darwin" ; then
   fi
   _cv_sysname="ppc_macosx"
 
+elif test $os = "FreeBSD" ; then
+  _cv_arch="I386"
+  _cv_op_sys="FreeBSD"
+  _cv_opsys="CONDOR_FREEBSD"
+  _cv_opsys_vers="5_3"
+  _cv_sysname="i386_freebsd"
+
 else
   AC_MSG_ERROR([Condor has not been ported to this platform])
 fi
@@ -630,6 +637,12 @@ case "$gcc_vers" in
     CompilerMinor="3"
     CompilerPatch="3"
     ;;
+ "3.4.2" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="4"
+    CompilerPatch="2"
+    ;;
  * )
    AC_MSG_RESULT([ERROR])
    AC_MSG_ERROR([Condor will not compile with gcc version $gcc_vers])
@@ -860,6 +873,7 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 # everything else
 #####################
 
+AC_PATH_PROG(MAKE,gmake,no,[$PATH])
 AC_PATH_PROG(MAKE,make,no,[$PATH])
 CHECK_PROG_IS_GNU([$MAKE], make)
 if test $_cv_make_is_gnu = no; then
@@ -1233,6 +1247,9 @@ case "$os" in
     _cv_has_static=no
     ;;
   "Darwin" )
+    _cv_has_static=no
+    ;;
+  "FreeBSD" )
     _cv_has_static=no
     ;;
   "AIX" )

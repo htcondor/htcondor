@@ -309,16 +309,16 @@ h/Makefile: h h/Imakefile
 	cd h; ../condor_imake
 
 h/syscall_numbers.h: h/syscall_numbers.tmpl h/Makefile
-	cd h; make syscall_numbers.h
+	cd h; $(MAKE) syscall_numbers.h
 
 h/syscall_numbers.o: h/syscall_numbers.tmpl h/Makefile
-	cd h; make syscall_numbers.o
+	cd h; $(MAKE) syscall_numbers.o
 
 check_platform_target
 
 clean:: 
-	cd h; make clean
-	make clean-up
+	cd h; $(MAKE) clean
+	$(MAKE) clean-up
 
 really-clean:: clean-up
 
@@ -375,7 +375,7 @@ clean::
 
 today:
 	/bin/rm -f condor_c++_util/condor_version.o
-	cd condor_c++_util; make
+	cd condor_c++_util; $(MAKE)
 
 
 #if HAS_STATIC
