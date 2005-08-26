@@ -14,4 +14,10 @@
 #define HAS_INSQUE			YES
 #define NEEDS_FAKE_GETMNT		YES
 
+#if defined (IS_DARWIN)
+#include <DARWIN.cf>
+#endif
 
+#if defined ( IS_CONDOR_FREEBSD )
+#include <FREEBSD.cf>
+#endif

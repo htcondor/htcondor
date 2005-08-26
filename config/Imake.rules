@@ -67,19 +67,19 @@ DEMANGLE = 2>&1 | Demangler
 #define object_target(_name,obj_name)					@@\
 XCOMM Begin translation of func(object_target) @@\
 _name: obj_name					@@\
-	cd obj_name; make $(SMP_FLAGS)			@@\
+	cd obj_name; $(MAKE) $(SMP_FLAGS)			@@\
 release:: obj_name					@@\
-	cd obj_name; make release			@@\
+	cd obj_name; $(MAKE) release			@@\
 stripped:: obj_name					@@\
-	cd obj_name; make stripped			@@\
+	cd obj_name; $(MAKE) stripped			@@\
 static:: obj_name					@@\
-	cd obj_name; make static			@@\
+	cd obj_name; $(MAKE) static			@@\
 depend:: obj_name					@@\
-	cd obj_name; make depend			@@\
+	cd obj_name; $(MAKE) depend			@@\
 clean:: obj_name					@@\
-	cd obj_name; make clean			@@\
+	cd obj_name; $(MAKE) clean			@@\
 docs:: obj_name					@@\
-	cd obj_name; make html				@@\
+	cd obj_name; $(MAKE) html				@@\
 makefiles:: obj_name obj_name/Makefile	@@\
 obj_name/Makefile:					@@\
 	cd obj_name; ../condor_imake 	@@\
@@ -96,19 +96,19 @@ XCOMM End translation of func(object_target)
 #define condor_object_target(obj_name)					@@\
 XCOMM Begin translation of func(condor_object_target) @@\
 obj_name: precon(obj_name)					@@\
-	cd precon(obj_name); make $(SMP_FLAGS)			@@\
+	cd precon(obj_name); $(MAKE) $(SMP_FLAGS)			@@\
 release:: precon(obj_name)					@@\
-	cd precon(obj_name); make release			@@\
+	cd precon(obj_name); $(MAKE) release			@@\
 stripped:: precon(obj_name)					@@\
-	cd precon(obj_name); make stripped			@@\
+	cd precon(obj_name); $(MAKE) stripped			@@\
 static:: precon(obj_name)					@@\
-	cd precon(obj_name); make static			@@\
+	cd precon(obj_name); $(MAKE) static			@@\
 depend:: precon(obj_name)					@@\
-	cd precon(obj_name); make depend			@@\
+	cd precon(obj_name); $(MAKE) depend			@@\
 clean:: precon(obj_name)					@@\
-	cd precon(obj_name); make clean			@@\
+	cd precon(obj_name); $(MAKE) clean			@@\
 docs:: precon(obj_name)					@@\
-	cd precon(obj_name); make html				@@\
+	cd precon(obj_name); $(MAKE) html				@@\
 makefiles:: precon(obj_name) precon(obj_name)/Makefile	@@\
 precon(obj_name)/Makefile:					@@\
 	cd precon(obj_name); ../condor_imake 	@@\
@@ -1007,7 +1007,7 @@ XCOMM Begin translation of func(pure_target)	@@\
 $(PURE_DIR)/program: $(PURE_DIR) dir/program		@@\
 	cp dir/program $(PURE_DIR)/program		@@\
 dir/program: dir						@@\
-	cd dir; make program					@@\
+	cd dir; $(MAKE) program					@@\
 pure:: $(PURE_DIR)/program				@@\
 XCOMM End translation of func(pure_target)
 #endif /* pure_target */
@@ -1441,8 +1441,8 @@ XCOMM Begin translation of func(TESTCLASS_DECL)	@@\
 TESTCLASS_DECL_BASE(classname)			@@\
 classname:: compiler_list			@@\
 	for X in `cat compiler_list` ; do \	@@\
-	    make $$X/Makefile; \		@@\
-	     cd $$X; make classname; cd ..; \	@@\
+	    $(MAKE) $$X/Makefile; \		@@\
+	     cd $$X; $(MAKE) classname; cd ..; \	@@\
 	done					@@\
 XCOMM End translation of func(TESTCLASS_DECL)
 #endif /* FLAGS_MACRO_NAME */
@@ -1744,7 +1744,7 @@ platform.init: platform ALWAYS				@@\
 	cp GENERIC/CheckPlatformType.c platform		@@\
 	cp Imakefile.platform_skel platform/Imakefile	@@\
 	cd platform; ../condor_imake 		@@\
-	cd platform; make directories; make depend	@@\
+	cd platform; $(MAKE) directories; $(MAKE) depend	@@\
 platform: 						@@\
 	mkdir platform				@@\
 XCOMM End translation of func(platform_target)

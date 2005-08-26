@@ -10,6 +10,3 @@
 #define HAS_GSI                 YES
 #define	WANT_KERBEROS           NO
 
-/* Otherwise, this can use all the shared BSD-specific settings... */
-#include <BSD.cf>
-
