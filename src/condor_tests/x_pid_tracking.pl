@@ -74,6 +74,7 @@ while ($count < 3)
 				}
 
 				print GCPOUT "Relationship: $$ child created $innerpid\n";
+				sleep 1;
 				close(GCPOUT);
 	
 				$innercount++;

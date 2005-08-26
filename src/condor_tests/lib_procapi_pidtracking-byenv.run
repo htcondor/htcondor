@@ -12,16 +12,16 @@ $worked = "yes";
 # the following operating system will be passed because they
 # are still expected to be broken
 
-my %broken = 
-(
-	"AIX52" => "broken",
-	"HPUX10" => "broken",
-	"IRIX65" => "broken",
-	"OSF1" => "broken",
-	"OSX_UNK" => "broken",
-	"SOLARIS28" => "broken",
-	"SOLARIS29" => "broken",
-);
+#my %broken = 
+#(
+	#"AIX52" => "broken",
+	#"HPUX10" => "broken",
+	#"IRIX65" => "broken",
+	#"OSF1" => "broken",
+	#"OSX_UNK" => "broken",
+	#"SOLARIS28" => "broken",
+	#"SOLARIS29" => "broken",
+#);
 
 $execute = sub
 {
@@ -101,7 +101,7 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*(\d+)\s*.*$/ )
 			{
 				$thispid = $1;
-				print "Checking againt list of removed pids --$thispid--\n";
+				Condor::debug( "Checking againt list of removed pids --$thispid--\n");
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
@@ -127,7 +127,7 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*[A-Za-z]+\s*(\d+).*$/ )
 			{
 				$thispid = $1;
-				print "Checking againt list of removed pids --$thispid--\n";
+				Condor::debug( "Checking againt list of removed pids --$thispid--\n");
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
@@ -151,24 +151,36 @@ $ExitSuccess = sub {
 		#print "$pidline\n";
 	}
 	close(PULL);
+
 	if($worked eq "no")
 	{
-		# lets get the operating system as some are expected to fail still
-		open(PULL, "condor_config_val opsys 2>&1 |") || die "condor_config_val opsys failed: $!\n";
-		while(<PULL>)
-		{
-			chomp();
-			my $line = $_;
-			if(exists $broken{"$line"})
-			{
-				print "Operating System($line) expected to have forked process cleanup problems: PASS\n";;
-				exit(0);
-			}
-		}
-
-		print "$testname: FAILED\n";
+		print "Test failed......\n";
 		exit(1);
 	}
+	else
+	{
+		print "Test Worked......\n";
+	}
+
+
+	#if($worked eq "no")
+	#{
+		## lets get the operating system as some are expected to fail still
+		#open(PULL, "condor_config_val opsys 2>&1 |") || die "condor_config_val opsys failed: $!\n";
+		#while(<PULL>)
+		#{
+			#chomp();
+			#my $line = $_;
+			#if(exists $broken{"$line"})
+			#{
+				#print "Operating System($line) expected to have forked process cleanup problems: PASS\n";;
+				#exit(0);
+			#}
+		#}
+
+		#print "$testname: FAILED\n";
+		#exit(1);
+	#}
 };
 
 

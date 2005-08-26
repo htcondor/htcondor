@@ -55,6 +55,9 @@ $ExitSuccess = sub {
 		Condor::debug( "$line\n");
 	}
 	close(PIN);
+
+	# determine correct ps by expecting a certain number of lines of text
+
 	my $pscmd = "ps -ef";
 	system("which ps");
 	open(PULL, "$pscmd | wc -l 2>&1 |") || die "ps -eo pid failed: $!\n";
@@ -76,6 +79,8 @@ $ExitSuccess = sub {
 		}
 	}
 
+	# move ahead with a valid ps command to parse output from
+
 	open(PULL, "$pscmd 2>&1 |") || die "$pscmd failed: $!\n";
 	while(<PULL>)
 	{
@@ -87,7 +92,7 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*(\d+)\s*.*$/ )
 			{
 				$thispid = $1;
-				print "Checking againt list of removed pids --$thispid--\n";
+				Condor::debug("Checking againt list of removed pids --$thispid--\n");
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
@@ -113,7 +118,7 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*[A-Za-z]+\s*(\d+).*$/ )
 			{
 				$thispid = $1;
-				print "Checking againt list of removed pids --$thispid--\n";
+				Condor::debug("Checking againt list of removed pids --$thispid--\n");
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
@@ -144,13 +149,8 @@ $ExitSuccess = sub {
 	}
 };
 
-
-# before the test let's throw some weird crap into the environment
-
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 CondorTest::RegisterExecute($testname, $execute);
-
-#empty local environment and add only a few things that way......
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";
