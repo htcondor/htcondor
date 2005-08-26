@@ -89,6 +89,10 @@ normal submit attributes.
 \item Fixed a bug that could cause duplicated output when a gt4 grid job 
 is executed more than once.
 
+\item Fixed a bug that could cause the \Condor{gridmanager} to assert if 
+it tried to delegate credentials for gt4 grid jobs before the gahp server 
+was started.
+
 \item \Condor{glidein} now correctly handles extracting necessary
 information from modern Condor configurations where
 \MacroNI{NEGOTIATOR\_HOST} is not defined.
