@@ -63,6 +63,78 @@ job_core_args_java.run*
 	Method: 
 	Expects:
 
+lib_procapi_pidtracking-snapshot.run*
+	Description: Run a job which forks children which fork children
+		and check for proper clean up of jobs. This version relies on the
+		job running long enough for the starter to get a "snapshot".
+	Method: Child processes( 2 generations ) are created and documented
+		by pids. After the job completes, the test looks for all of those
+		processes being properly cleaned up. These child processes run
+		forever if not cleaned up. An all inclusive PS is processed
+		for processes still running. The job waits around 60 seconds to
+		allow a snapshot to be captured.
+	Expects: The list of processes are all cleaned up.
+
+lib_procapi_pidtracking-byenv.run*
+	Description: Run a job which forks children which fork children
+		and check for proper clean up of jobs. This version relies on 
+		environment tracking of child processes".
+	Method: Child processes( 2 generations ) are created and documented
+		by pids. After the job completes, the test looks for all of those
+		processes being properly cleaned up. These child processes run
+		forever if not cleaned up. An all inclusive PS is processed
+		for processes still running. The job waits around 0 seconds to
+		check for removal of child processes prior to a "snapshot".
+	Expects: The list of processes are all cleaned up.
+
+job_schedd_job-tracking.run*
+	Description: Set loose a flock of jobs and make sure all get 
+		accounted for.
+	Method: We queue up 400 jobs and count them as they complete 
+		with a timer running from when the last of the 400 has
+		been submitted.
+	Expects: 400 jobs should complete successfully.
+
+job_core_basic_par.run*
+	Description: Fundemental test oof the parallel universe.
+	Method: A personal condor is set up to support a paralllel universe job
+		on a preset number of machines(currently 4) and a simple sleep job
+		is used.
+	Expects: The job is expected to complete.
+
+job_core_basic-security_par.run*
+	Description: Fundemental test oof the parallel universe.
+	Method: A personal condor is set up to support a paralllel universe job
+		on a preset number of machines(currently 4) and a simple sleep job
+		is used. this variation of "job_core_basic_par.run" has encryption
+		enabled in the personal condor for the test.
+	Expects: The job is expected to complete.
+
+job_core_condorc_ab_van.run*
+	Description: This test verifies a basic condor-c job
+		can be submitted to A and run on B and complete.
+	Method: Two condor pools are set up with dynamic address and
+		predefined locations to read the port. Then the one configured
+		as the A sends the job off to the B side.
+	Expects:  job completion on the A side
+
+job_core_condorc_abc_van.run*
+	Description: This test verifies a basic condor-c job
+		can be submitted to A through B run on C and complete.
+	Method: Three condor pools are set up with dynamic addresses and
+		predefined locations to read the port. Then the one configured
+		as the A sends the job off to the B side which send to C.
+	Expects:  job completion on the A side
+
+cmd_q_shows-hold.run*
+	Description: We want to verify we can place a job on hold and
+		that condor_q will show it to us with the hold option.
+	Method: A job which sleeps forever is placed on hold when
+		it starts to execute. We then verify correctness of 
+		of condor_q -hold by parsing the output of the command.
+	Expects: Hold to work, release to work and that it finds correct
+		output when it parses the results of condor_q -hold.
+
 lib_chirpio_van.run*
 	Description: A program linked into the chirp library is run to
 		test a series of system calls.
@@ -153,6 +225,14 @@ job_core_bigenv_van.run*
 	Description: 
 	Method: 
 	Expects:
+
+job_core_compressfiles_std.run*
+	Description: Verifies that compressed files in std universe
+		are accessed and created cmpressed.
+	Method:  The test verifies that the input file and output file are the
+		same. The input file iz zipped up and the output file is unzip....
+		both files are checked to see they match.
+	Expects: input file contents = output file contents.
 
 job_core_coredump_std.run*
 	Description: 
@@ -272,6 +352,14 @@ job_core_holdrelease_van.run*
 		and when we see the hold event we issue a condor_release and when we see the release
 		event we do a condor_rm.
 	Expects: Events Hold/Release/Abort are what is expected.
+
+job_core_remote-initialdir_van.run*
+	Description: Verify we can set remote-initialdir correctly.
+	Method: job does a ls to determine the inode for the current
+		directory and for /tmp. If they match /tmp is placed in
+		.out file for test. If not, some other directory is placed
+		in the .out file.
+	Expects: /tmp in the .out file.
 
 job_core_initialdir_java.run*
 	Description: 
