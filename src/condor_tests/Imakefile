@@ -50,7 +50,7 @@ BUILD($(CC),x_trapsig,c)
 /* Library tests */
 
 /* Chirp */
-#if !defined( IS_LINUX_ALPHA)
+#if !defined( IS_ALPHA_LINUX)
 /* 
    Gnats 546 Linux rh 7.2 on alph chip Needs MD5 perl module
 */
@@ -98,12 +98,6 @@ TESTCLASS(job_core_basic-security_par,btdebug)
 ****************** Tests being readied for prime time **********************
 */
 
-DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
-RUN(lib_procapi_pidtracking-snapshot)
-TESTCLASS(lib_procapi_pidtracking-snapshot,core)
-TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
-TESTCLASS(lib_procapi_pidtracking-snapshot,btdebug)
-
 #if !defined( IS_DARWIN )
 /* 
    Gnats 545 this procapi test of pid tracking not working MacOsX
@@ -131,13 +125,7 @@ RUN(job_filexfer_streamerr_van)
 TESTCLASS(job_filexfer_streamerr_van,core)
 TESTCLASS(job_filexfer_streamerr_van,quick)
 
-
-DESC(cmd_q_shows-hold,"Condor_q shows hold")
-RUN(cmd_q_shows-hold)
-TESTCLASS(cmd_q_shows-hold,core)
-TESTCLASS(cmd_q_shows-hold,quick)
-
-#if !defined( IS_LINUX_ALPHA)
+#if !defined( IS_ALPHA_LINUX)
 /* 
    Gnats 544 Linux rh 7.2 on alph chip is broken
 */
