@@ -50,9 +50,9 @@ BUILD($(CC),x_trapsig,c)
 /* Library tests */
 
 /* Chirp */
-#if 0
-/* Chirp is known to fail in the V6_6-branch, and it's already been
-   fixed in the V6_7-branch.  So, disable this test in V6_6...
+#if !defined( IS_LINUX_ALPHA)
+/* 
+   Gnats 546 Linux rh 7.2 on alph chip Needs MD5 perl module
 */
 DESC(lib_chirpio_van,"Exercise the chirp I/O library using the C client library")
 BUILD_DEP_LIB($(CC),lib_chirpio,c,,../release_dir/lib/libchirp_client.a)
@@ -60,7 +60,7 @@ DEPS(lib_chirpio_van,lib_chirpio.exe)
 RUN(lib_chirpio_van)
 TESTCLASS(lib_chirpio_van,lib)
 TESTCLASS(lib_chirpio_van,quick)
-#endif /* 0 */
+#endif 
 
 /* User log and log reader used by dagman tests */
 
@@ -80,20 +80,8 @@ DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 TESTCLASS(lib_userlog,quick)
 
-/* Condor-C Tests */
-/*
-** Turn off till in v6_7-branch with Condor-C
-**
-*/
-
 /*
 ****************** Tests being readied for prime time **********************
-
-DESC(job_schedd_job-tracking_van,"Scheduler: test for schedd loosing track of jobs")
-RUN(job_schedd_job-tracking_van)
-TESTCLASS(job_schedd_job-tracking_van,core)
-TESTCLASS(job_schedd_job-tracking_van,quick)
-TESTCLASS(job_schedd_job-tracking_van,btdebug)
 
 DESC(job_core_basic_par,"Basic Parallel Universe")
 RUN(job_core_basic_par)
@@ -107,28 +95,31 @@ TESTCLASS(job_core_basic-security_par,core)
 TESTCLASS(job_core_basic-security_par,quick)
 TESTCLASS(job_core_basic-security_par,btdebug)
 
-DESC(lib_chirpio_van,"Exercise the chirp I/O library using the C client library")
-BUILD_DEP_LIB($(CC),lib_chirpio,c,,../release_dir/lib/libchirp_client.a)
-DEPS(lib_chirpio_van,lib_chirpio.exe)
-RUN(lib_chirpio_van)
-TESTCLASS(lib_chirpio_van,lib)
-TESTCLASS(lib_chirpio_van,quick)
+****************** Tests being readied for prime time **********************
+*/
 
-TESTCLASS(lib_chirpio_van,btdebug)
 DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-snapshot)
 TESTCLASS(lib_procapi_pidtracking-snapshot,core)
 TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
 TESTCLASS(lib_procapi_pidtracking-snapshot,btdebug)
 
+#if !defined( IS_DARWIN )
+/* 
+   Gnats 545 this procapi test of pid tracking not working MacOsX
+*/
 DESC(lib_procapi_pidtracking-byenv,"Slow Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-byenv)
 TESTCLASS(lib_procapi_pidtracking-byenv,core)
 TESTCLASS(lib_procapi_pidtracking-byenv,quick)
 TESTCLASS(lib_procapi_pidtracking-byenv,btdebug)
+#endif
 
-****************** Tests being readied for prime time **********************
-*/
+DESC(job_schedd_job-tracking_van,"Scheduler: test for schedd loosing track of jobs")
+RUN(job_schedd_job-tracking_van)
+TESTCLASS(job_schedd_job-tracking_van,core)
+TESTCLASS(job_schedd_job-tracking_van,quick)
+TESTCLASS(job_schedd_job-tracking_van,btdebug)
 
 DESC(job_filexfer_streamout_van,"Vanilla: test for streaming of output when both stream_output is true and false")
 RUN(job_filexfer_streamout_van)
@@ -146,6 +137,10 @@ RUN(cmd_q_shows-hold)
 TESTCLASS(cmd_q_shows-hold,core)
 TESTCLASS(cmd_q_shows-hold,quick)
 
+#if !defined( IS_LINUX_ALPHA)
+/* 
+   Gnats 544 Linux rh 7.2 on alph chip is broken
+*/
 DESC(job_condorc_ab_van,"Condor-C AB test")
 RUN(job_condorc_ab_van)
 TESTCLASS(job_condorc_ab_van,condorc)
@@ -157,6 +152,7 @@ RUN(job_condorc_abc_van)
 TESTCLASS(job_condorc_abc_van,condorc)
 TESTCLASS(job_condorc_abc_van,quick)
 TESTCLASS(job_condorc_abc_van,btdebug)
+#endif
 
 DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
 RUN(job_core_killsignal_sched)
