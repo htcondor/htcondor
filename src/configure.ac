@@ -873,8 +873,7 @@ AC_SUBST([has_vendor_f90],[$_cv_has_vendor_f90])
 # everything else
 #####################
 
-AC_PATH_PROG(MAKE,gmake,no,[$PATH])
-AC_PATH_PROG(MAKE,make,no,[$PATH])
+AC_PATH_PROGS(MAKE,gmake make,no,[$PATH])
 CHECK_PROG_IS_GNU([$MAKE], make)
 if test $_cv_make_is_gnu = no; then
    AC_MSG_ERROR( [GNU make is required] )
