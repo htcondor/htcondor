@@ -1140,6 +1140,16 @@ fi
 AC_SUBST(HAVE_JAVAC,$_cv_have_javac)
 AC_SUBST(JAVAC,$ac_javac)
 
+AC_PATH_PROG(ac_jar,jar,no,[$PATH])
+if test $ac_jar = "no"; then
+  AC_MSG_WARN( [jar not found] )
+  _cv_have_jar="NO"
+else
+  _cv_have_jar="YES"
+fi
+AC_SUBST(HAVE_JAR,$_cv_have_jar)
+AC_SUBST(JAR,$ac_jar)
+
 
 # checks for libraries
 
