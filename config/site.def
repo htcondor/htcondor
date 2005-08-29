@@ -5,9 +5,6 @@
 #define PreProcessCmd	CCompiler -E -x c-header
 #define Demangler	c++filt
 
-#define JavaCompiler    javac
-#define JarTool         jar
-
 #define DocCompiler     /unsup/doc++-3.4.8/bin/doc++
 
 
