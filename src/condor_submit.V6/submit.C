@@ -901,7 +901,6 @@ reschedule()
 			fprintf( stderr,
 					 "Can't send RESCHEDULE command to condor scheduler\n" );
 			DoCleanup(0,0,NULL);
-			exit( 1 );
 		}
 	}
 }
