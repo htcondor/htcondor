@@ -110,6 +110,8 @@ is no longer done.
 \item Fixed a bug in \Condor{dagman} that caused it to core dump on
 a 'job reconnected' event from a node job.
 
+\item \Condor{submit} will now exit zero as long as the submission succeeds.  Debugging output will still be printed if the internal reschedule fails.
+
 \end{itemize}
 
 \noindent Changes:
