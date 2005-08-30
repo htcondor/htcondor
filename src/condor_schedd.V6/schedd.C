@@ -440,6 +440,10 @@ Scheduler::timeout()
 	if ( right_now < next_timeout ) {
 		if (!min_interval_timer_set) {
 			daemonCore->Reset_Timer(timeoutid,next_timeout - right_now,1);
+				// The line below fixes the "scheduler universe five-
+				// minute delay" bug (Gnats PR 532).  wenger 2005-08-30.
+			daemonCore->Reset_Timer(startjobsid,
+						next_timeout - right_now + 1, 1);
 			min_interval_timer_set = true;
 		}
 		return;
