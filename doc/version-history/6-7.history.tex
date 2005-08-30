@@ -107,10 +107,15 @@ jobs are less likely to generate multiple terminate events in the job's user
 log.  There will also be slight performance improvements are redundant work 
 is no longer done.
 
+% Gnats PR 542
 \item Fixed a bug in \Condor{dagman} that caused it to core dump on
 a 'job reconnected' event from a node job.
 
 \item \Condor{submit} will now exit zero as long as the submission succeeds.  Debugging output will still be printed if the internal reschedule fails.
+
+% Gnats PR 532
+\item Fixed a bug that caused scheduler universe jobs to often wait five
+minutes (or whatever \MacroNI{SCHEDD\_INTERVAL} is set to) before running.
 
 \end{itemize}
 
