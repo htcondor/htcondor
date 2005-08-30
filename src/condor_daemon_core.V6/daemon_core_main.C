@@ -1639,10 +1639,11 @@ int main( int argc, char** argv )
 	daemonCore->Register_Signal( SIGTERM, "SIGTERM", 
 								 (SignalHandler)handle_dc_sigterm,
 								 "handle_dc_sigterm()" );
-#ifndef WIN32
+
 	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
 								(SignalHandlercpp)&DaemonCore::HandleDC_SERVICEWAITPIDS,
 								"HandleDC_SERVICEWAITPIDS()",daemonCore,IMMEDIATE_FAMILY);
+#ifndef WIN32
 	daemonCore->Register_Signal( SIGCHLD, "SIGCHLD",
 								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
 								 "HandleDC_SIGCHLD()",daemonCore,IMMEDIATE_FAMILY);

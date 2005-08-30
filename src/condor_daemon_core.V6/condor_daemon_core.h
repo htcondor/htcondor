@@ -1163,6 +1163,8 @@ class DaemonCore : public Service
 #ifndef WIN32
     int async_pipe[2];  // 0 for reading, 1 for writing
     volatile int async_sigs_unblocked;
+#endif
+	volatile bool async_pipe_empty;
 
 	// Data memebers for queuing up waitpid() events
 	struct WaitpidEntry_s
@@ -1179,8 +1181,6 @@ class DaemonCore : public Service
 	};
 	typedef struct WaitpidEntry_s WaitpidEntry;
 	Queue<WaitpidEntry> WaitpidQueue;
-
-#endif
 
     Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
 

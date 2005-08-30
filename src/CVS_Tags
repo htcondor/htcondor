@@ -1,3 +1,16 @@
+08/30/05 V6_7-post_merge-V6_7_10-merge-1
+   The state of the V6_7-branch after merging in the V6_7_10-branch
+   as it stood at tag V6_7_10-merge-1.  Note: V6_7_10-branch is
+   now abandoned.
+
+08/30/05 V6_7-pre_merge-V6_7_10-merge-1
+   The state of the V6_7-branch before merging in the V6_7_10-branch
+   as it stood at tag V6_7_10-merge-1. 
+
+08/18/05 V6_7_10-merge-1
+   Abandoning V6_7_10-branch, merging into the V6_7-branch.
+   This is the merge-from tag on V6_7_10-branch.
+
 08/12/05 V6_7-globus4-merge-1
    The state of the V6_7-globus4-branch for a merge into V6_7-branch. This
    branches moves the Globus version we link Condor with from 2.4.3 to
@@ -8,6 +21,16 @@
 
 08/04/05 V6_7-db_logs_nonblocking-2-branch
    A branch for the "quill++" work.
+
+08/03/05 V6_7_10
+   The official 6.7.10 release.  The packages for most platforms came
+   from NWO build #9645, except irix-6.5 came from OWO build 1315, and
+   windows was built by hand.  This is almost exactly the same source
+   as BUILD-V6_7_10-branch-2005-8-3, however, there were 3 minor
+   changes to files in NTconfig that were necessary.  Since that
+   didn't touch the source at all, it wasn't worth a whole other
+   build.  The version string for this release is:
+   $CondorVersion: 6.7.10 Aug  3 2005 $
 
 08/02/05 V6_7-workspace_svc-branch
    The branch for work on dynamic account management using Globus 

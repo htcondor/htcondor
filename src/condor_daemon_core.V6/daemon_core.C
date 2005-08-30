@@ -291,6 +291,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #ifndef WIN32
 	async_sigs_unblocked = FALSE;
 #endif
+	async_pipe_empty = TRUE;
 
 	dc_rsock = NULL;
 	dc_ssock = NULL;
@@ -1871,6 +1872,7 @@ void DaemonCore::Driver()
 		// non-blocking mode via fcntl, so the read below will not block.
 		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
 #endif
+		async_pipe_empty = TRUE;
 
 		// Prepare to enter main select()
 
@@ -6680,6 +6682,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 
 	return TRUE;
 }
+#endif // of ifndef WIN32
 
 int
 DaemonCore::HandleDC_SERVICEWAITPIDS(int sig)
@@ -6703,7 +6706,7 @@ DaemonCore::HandleDC_SERVICEWAITPIDS(int sig)
 
 	return TRUE;
 }
-#endif // of ifndef WIN32
+
 
 
 #ifdef WIN32
@@ -6714,13 +6717,13 @@ pidWatcherThread( void* arg )
 	DaemonCore::PidWatcherEntry* entry;
 	int i;
 	unsigned int numentries;
-	DWORD result;
-	int sent_result;
+	bool must_send_signal = false;
 	HANDLE hKids[MAXIMUM_WAIT_OBJECTS];
 	int last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 	unsigned int exited_pid;
-
-
+	DWORD result;
+	Queue<DaemonCore::WaitpidEntry> MyExitedQueue;
+	DaemonCore::WaitpidEntry wait_entry;
 
 	entry = (DaemonCore::PidWatcherEntry *) arg;
 
@@ -6763,63 +6766,47 @@ pidWatcherThread( void* arg )
 	if ( numentries == 0 )
 		return TRUE;	// this return will kill this thread
 
-	result = ::WaitForMultipleObjects(numentries + 1, hKids, FALSE, INFINITE);
-	if ( result == WAIT_FAILED ) {
-		EXCEPT("WaitForMultipleObjects Failed");
-	}
-	result = result - WAIT_OBJECT_0;
+	/*	The idea here is we call WaitForMultipleObjects in poll mode (zero timeout).
+		If we timeout, then call again waiting INFINITE time for something 
+		to happen.	Once we do have an event, however, we continue
+		to loop, calling WaitForMultipleObjects in poll mode (timeout=0)
+		and queing results until nothing is left for us to reap.  We do this
+		so we reap children in some sort of deterministic order, since
+		WaitForMultipleObjects does not return handles in FIFO order.  This
+		is important to prevent DaemonCore from "starving" some child 
+		process/thread from being reaped when many new processes are being
+		continuously created.
+	*/
+	result = ::WaitForMultipleObjects(numentries + 1, hKids, FALSE, 0);
+	if ( result == WAIT_TIMEOUT ) {
+			// our poll saw nothing.  so if need to wake up the main thread
+			// out of select, do so now before we block waiting for another event.
+			// if must_send_signal flag is set, that means we must wake up the
+			// main thread.
+		
+		bool notify_failed;
+		while ( must_send_signal ) {
+			// Eventually, we should just call SendSignal for this.
+			// But for now, handle it all here.
 
-	// if result = numentries, then we are being told our entry->pidentries
-	// array has been modified by another thread, and we should re-read it.
-	// if result < numentries, then result signifies a child process
-	// which exited.
-	if ( (result < numentries) && (result >= 0) ) {
-
-		sent_result = FALSE;
-		last_pidentry_exited = result;
-
-		// notify our main thread which process exited
-		// note: if it was a thread which exited, the entry's
-		// pid contains the tid.  if we are talking about a pipe,
-		// set the exited_pid to be zero.
-		if ( entry->pidentries[result]->hPipe ) {
-			exited_pid = 0;
-			if (entry->pidentries[result]->deallocate) {
-				// this entry should be deallocated.  set things up so
-				// it will be done at the top of the loop; no need to send
-				// the UDP message to break out of select in the main thread.
-				sent_result = TRUE;
-				last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
-			} else {
-				// pipe is ready and has not been deallocated.
-				InterlockedExchange(&(entry->pidentries[result]->pipeReady),1L);
-			}
-		} else {
-			exited_pid = entry->pidentries[result]->pid;
-		}
-
-		while ( sent_result == FALSE ) {
-			// Can no longer use localhost (127.0.0.1) here because we may
-			// only have our command socket bound to a specific address. -Todd
-			// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());
-			// Also - in the post v6.4.x world, SafeSock and startCommand
-			// are no longer thread safe, so we must grab our Big_fat lock.
+			// In the post v6.4.x world, SafeSock and startCommand
+			// are no longer thread safe, so we must grab our Big_fat lock.			
 			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
 	        SafeSock sock;
 			Daemon d( DT_ANY, daemonCore->InfoCommandSinfulString() );
-
-			bool notify_failed;
-			if ( exited_pid ) {
-				// a process exited; send DC_PROCESSEXIT command w/ pid
-				notify_failed = !sock.connect(daemonCore->InfoCommandSinfulString()) ||
-				 !d.startCommand(DC_PROCESSEXIT, &sock, 1) ||
-				 !sock.code(exited_pid) ||
-				 !sock.end_of_message();
-			} else {
-				// a pipe is ready; send a NOP command to wake up select()
-				notify_failed =
+				// send a NOP command to wake up select()
+			notify_failed =
 					!sock.connect(daemonCore->InfoCommandSinfulString()) ||
 					!d.sendCommand(DC_NOP, &sock, 1);
+				// while we have the Big_fat_mutex, copy any exited pids
+				// out of our thread local MyExitedQueue and into our main
+				// thread's WaitpidQueue (of course, we must have the mutex
+				// to go changing anything in WaitpidQueue).
+			if ( !MyExitedQueue.IsEmpty() ) {
+				daemonCore->HandleSig(_DC_RAISESIGNAL,DC_SERVICEWAITPIDS);
+			}
+			while (MyExitedQueue.dequeue(wait_entry)==0) {
+				daemonCore->WaitpidQueue.enqueue( wait_entry );
 			}
 			::LeaveCriticalSection(&Big_fat_mutex); // leave big fat mutex
 
@@ -6833,19 +6820,66 @@ pidWatcherThread( void* arg )
 
 				::Sleep(500);	// sleep for a half a second (500 ms)
 			} else {
-				sent_result = TRUE;
+				must_send_signal = false;
 			}
+		}		
+		// now just wait for something to happen instead of busy looping.
+		result = ::WaitForMultipleObjects(numentries + 1, hKids, FALSE, INFINITE);
+	}
+
+
+	if ( result == WAIT_FAILED ) {
+		EXCEPT("WaitForMultipleObjects Failed");
+	}
+
+	result = result - WAIT_OBJECT_0;
+
+	// if result = numentries, then we are being told our entry->pidentries
+	// array has been modified by another thread, and we should re-read it.
+	// if result < numentries, then result signifies a child process
+	// which exited.
+	if ( (result < numentries) && (result >= 0) ) {
+
+		last_pidentry_exited = result;
+
+		// notify our main thread which process exited
+		// note: if it was a thread which exited, the entry's
+		// pid contains the tid.  if we are talking about a pipe,
+		// set the exited_pid to be zero.
+		if ( entry->pidentries[result]->hPipe ) {
+			exited_pid = 0;
+			if (entry->pidentries[result]->deallocate) {
+				// this entry should be deallocated.  set things up so
+				// it will be done at the top of the loop; no need to send
+				// a signal to break out of select in the main thread, so we
+				// explicitly do NOT set the must_send_signal flag here.
+				last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
+			} else {
+				// pipe is ready and has not been deallocated.
+				InterlockedExchange(&(entry->pidentries[result]->pipeReady),1L);
+				must_send_signal = true;
+			}
+		} else {
+			exited_pid = entry->pidentries[result]->pid;
+		}
+
+		if ( exited_pid ) {
+			// a pid exited.  add it to MyExitedQueue, which is a queue of
+			// exited pids local to our thread that are waiting to be 
+			// added to the main thread WaitpidQueue.
+			wait_entry.child_pid = exited_pid;
+			wait_entry.exit_status = 0;  // we'll get the status later
+			MyExitedQueue.enqueue(wait_entry);
+			must_send_signal = true;
 		}
 	} else {
-		// no pid exited, we were signaled because our
+		// no pid/thread/pipe was signaled; we were signaled because our
 		// pidentries array was modified.
-		// we must clear last_pidentry_exited.
+		// we must clear last_pidentry_exited before we loop back.
 		last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 	}
 
 	}	// end of infinite for loop
-
-
 
 }
 
