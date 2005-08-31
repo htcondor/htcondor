@@ -165,6 +165,49 @@ This must appear in the Condor-C job submit description file as
 \end{verbatim}
 \normalsize
 
+For convenience, the specific entries of 
+\SubmitCmd{universe}, 
+\SubmitCmd{remote\_schedd}, 
+\SubmitCmd{remote\_pool}, 
+\SubmitCmd{globus\_rsl}, and
+\SubmitCmd{globus\_scheduler}
+can be specified as \SubmitCmd{remote\_} commands
+using the standard submit file syntax and without the
+leading '+'.  So instead of 
+\footnotesize
+\begin{verbatim}
++remote_universe = 5
+\end{verbatim}
+\normalsize
+you can say
+\footnotesize
+\begin{verbatim}
+remote_universe = vanilla
+\end{verbatim}
+\normalsize
+.
+Similarlly, instead of
+\footnotesize
+\begin{verbatim}
++remote_remote_schedd = "schedd.example.com"
+\end{verbatim}
+\normalsize
+you can write
+\footnotesize
+\begin{verbatim}
+remote_remote_schedd = schedd.example.com
+\end{verbatim}
+\normalsize
+.
+This behavior only works for the specific entries 
+\SubmitCmd{universe}, 
+\SubmitCmd{remote\_schedd}, 
+\SubmitCmd{remote\_pool}, 
+\SubmitCmd{globus\_rsl}, and
+\SubmitCmd{globus\_scheduler}.
+For all other entries, you will need to use the '+' syntax,
+remembering to place strings in quotation marks.
+
 % why we need +remote_ShouldTransferFiles, etc.
 For this particular example,
 the job is to be run as a \SubmitCmd{vanilla} 
