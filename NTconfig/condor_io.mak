@@ -43,8 +43,11 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_auth.obj"
 	-@erase "$(INTDIR)\condor_auth_anonymous.obj"
 	-@erase "$(INTDIR)\condor_auth_claim.obj"
+	-@erase "$(INTDIR)\condor_auth_kerberos.obj"
 	-@erase "$(INTDIR)\condor_auth_sspi.obj"
 	-@erase "$(INTDIR)\condor_crypt.obj"
+	-@erase "$(INTDIR)\condor_crypt_3des.obj"
+	-@erase "$(INTDIR)\condor_crypt_blowfish.obj"
 	-@erase "$(INTDIR)\condor_rw.obj"
 	-@erase "$(INTDIR)\condor_secman.obj"
 	-@erase "$(INTDIR)\CryptKey.obj"
@@ -64,7 +67,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -106,11 +109,15 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\authentication.obj" \
 	"$(INTDIR)\buffers.obj" \
+	"$(INTDIR)\cedar_no_ckpt.obj" \
 	"$(INTDIR)\condor_auth.obj" \
 	"$(INTDIR)\condor_auth_anonymous.obj" \
 	"$(INTDIR)\condor_auth_claim.obj" \
+	"$(INTDIR)\condor_auth_kerberos.obj" \
 	"$(INTDIR)\condor_auth_sspi.obj" \
 	"$(INTDIR)\condor_crypt.obj" \
+	"$(INTDIR)\condor_crypt_3des.obj" \
+	"$(INTDIR)\condor_crypt_blowfish.obj" \
 	"$(INTDIR)\condor_rw.obj" \
 	"$(INTDIR)\condor_secman.obj" \
 	"$(INTDIR)\CryptKey.obj" \
@@ -121,8 +128,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj" \
-	"$(INTDIR)\cedar_no_ckpt.obj"
+	"$(INTDIR)\stream.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -147,8 +153,11 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_auth.obj"
 	-@erase "$(INTDIR)\condor_auth_anonymous.obj"
 	-@erase "$(INTDIR)\condor_auth_claim.obj"
+	-@erase "$(INTDIR)\condor_auth_kerberos.obj"
 	-@erase "$(INTDIR)\condor_auth_sspi.obj"
 	-@erase "$(INTDIR)\condor_crypt.obj"
+	-@erase "$(INTDIR)\condor_crypt_3des.obj"
+	-@erase "$(INTDIR)\condor_crypt_blowfish.obj"
 	-@erase "$(INTDIR)\condor_rw.obj"
 	-@erase "$(INTDIR)\condor_secman.obj"
 	-@erase "$(INTDIR)\CryptKey.obj"
@@ -167,7 +176,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -209,11 +218,15 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_io.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\authentication.obj" \
 	"$(INTDIR)\buffers.obj" \
+	"$(INTDIR)\cedar_no_ckpt.obj" \
 	"$(INTDIR)\condor_auth.obj" \
 	"$(INTDIR)\condor_auth_anonymous.obj" \
 	"$(INTDIR)\condor_auth_claim.obj" \
+	"$(INTDIR)\condor_auth_kerberos.obj" \
 	"$(INTDIR)\condor_auth_sspi.obj" \
 	"$(INTDIR)\condor_crypt.obj" \
+	"$(INTDIR)\condor_crypt_3des.obj" \
+	"$(INTDIR)\condor_crypt_blowfish.obj" \
 	"$(INTDIR)\condor_rw.obj" \
 	"$(INTDIR)\condor_secman.obj" \
 	"$(INTDIR)\CryptKey.obj" \
@@ -224,8 +237,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\SafeMsg.obj" \
 	"$(INTDIR)\sock.obj" \
 	"$(INTDIR)\sockCache.obj" \
-	"$(INTDIR)\stream.obj" \
-	"$(INTDIR)\cedar_no_ckpt.obj"
+	"$(INTDIR)\stream.obj"
 
 "$(OUTDIR)\condor_io.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -281,6 +293,30 @@ SOURCE=..\src\condor_io\condor_auth_claim.C
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\src\condor_io\condor_auth_kerberos.C
+
+!IF  "$(CFG)" == "condor_io - Win32 Debug"
+
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+
+"$(INTDIR)\condor_auth_kerberos.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_io - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+
+"$(INTDIR)\condor_auth_kerberos.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_io\condor_auth_sspi.C
 
 "$(INTDIR)\condor_auth_sspi.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -292,6 +328,54 @@ SOURCE=..\src\condor_io\condor_crypt.C
 "$(INTDIR)\condor_crypt.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
+
+SOURCE=..\src\condor_io\condor_crypt_3des.C
+
+!IF  "$(CFG)" == "condor_io - Win32 Debug"
+
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+
+"$(INTDIR)\condor_crypt_3des.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_io - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+
+"$(INTDIR)\condor_crypt_3des.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
+
+SOURCE=..\src\condor_io\condor_crypt_blowfish.C
+
+!IF  "$(CFG)" == "condor_io - Win32 Debug"
+
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+
+"$(INTDIR)\condor_crypt_blowfish.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_io - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+
+"$(INTDIR)\condor_crypt_blowfish.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
 
 SOURCE=..\src\condor_io\condor_rw.C
 

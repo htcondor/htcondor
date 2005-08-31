@@ -53,7 +53,7 @@ CLEAN :
 	-@erase "$(INTDIR)\attrlist.obj"
 	-@erase "$(INTDIR)\buildtable.obj"
 	-@erase "$(INTDIR)\classad.obj"
-	-@erase "$(INTDIR)\classad_util.obj"
+	-@erase "$(INTDIR)\classad_list.obj"
 	-@erase "$(INTDIR)\classifiedjobs.obj"
 	-@erase "$(INTDIR)\environment.obj"
 	-@erase "$(INTDIR)\evaluateOperators.obj"
@@ -72,7 +72,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -117,7 +117,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\attrlist.obj" \
 	"$(INTDIR)\buildtable.obj" \
 	"$(INTDIR)\classad.obj" \
-	"$(INTDIR)\classad_util.obj" \
+	"$(INTDIR)\classad_list.obj" \
 	"$(INTDIR)\classifiedjobs.obj" \
 	"$(INTDIR)\environment.obj" \
 	"$(INTDIR)\evaluateOperators.obj" \
@@ -164,7 +164,7 @@ CLEAN :
 	-@erase "$(INTDIR)\attrlist.obj"
 	-@erase "$(INTDIR)\buildtable.obj"
 	-@erase "$(INTDIR)\classad.obj"
-	-@erase "$(INTDIR)\classad_util.obj"
+	-@erase "$(INTDIR)\classad_list.obj"
 	-@erase "$(INTDIR)\classifiedjobs.obj"
 	-@erase "$(INTDIR)\environment.obj"
 	-@erase "$(INTDIR)\evaluateOperators.obj"
@@ -182,7 +182,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -227,7 +227,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\attrlist.obj" \
 	"$(INTDIR)\buildtable.obj" \
 	"$(INTDIR)\classad.obj" \
-	"$(INTDIR)\classad_util.obj" \
+	"$(INTDIR)\classad_list.obj" \
 	"$(INTDIR)\classifiedjobs.obj" \
 	"$(INTDIR)\environment.obj" \
 	"$(INTDIR)\evaluateOperators.obj" \
@@ -342,9 +342,9 @@ SOURCE=..\src\condor_classad\classad.C
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_classad\classad_util.C
+SOURCE=..\src\condor_classad\classad_list.C
 
-"$(INTDIR)\classad_util.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\classad_list.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

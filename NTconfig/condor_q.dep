@@ -1,2 +1,14 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_q.mak
 
+..\src\condor_q.V6\queue.C : \
+	"..\src\classad_analysis\analysis.h"\
+	"..\src\classad_analysis\boolExpr.h"\
+	"..\src\classad_analysis\boolValue.h"\
+	"..\src\classad_analysis\condition.h"\
+	"..\src\classad_analysis\conversion.h"\
+	"..\src\classad_analysis\explain.h"\
+	"..\src\classad_analysis\interval.h"\
+	"..\src\classad_analysis\multiProfile.h"\
+	"..\src\classad_analysis\profile.h"\
+	"..\src\classad_analysis\resourceGroup.h"\
+	

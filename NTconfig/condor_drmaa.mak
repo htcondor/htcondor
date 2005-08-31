@@ -235,7 +235,7 @@ SOURCE=..\src\condor_drmaa\libDrmaa.c
 
 CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-"$(INTDIR)\libDrmaa.obj" : $(SOURCE) "$(INTDIR)" "..\src\condor_drmaa\auxDrmaa.c"
+"$(INTDIR)\libDrmaa.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<
@@ -245,7 +245,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condo
 
 CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-"$(INTDIR)\libDrmaa.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\libDrmaa.obj" : $(SOURCE) "$(INTDIR)" "..\src\condor_drmaa\auxDrmaa.c"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<

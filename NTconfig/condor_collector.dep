@@ -85,6 +85,7 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_daemon_core.V6\soap_daemon_core.cpp"\
 	"..\src\condor_status.V6\status_types.h"\
 	"..\src\condor_status.V6\totals.h"\
 	

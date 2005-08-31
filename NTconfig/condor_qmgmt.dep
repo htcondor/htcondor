@@ -9,6 +9,7 @@
 	"..\src\condor_schedd.V6\dedicated_scheduler.h"\
 	"..\src\condor_schedd.V6\prio_rec.h"\
 	"..\src\condor_schedd.V6\qmgmt.h"\
+	"..\src\condor_schedd.V6\schedd_cronmgr.h"\
 	"..\src\condor_schedd.V6\scheduler.h"\
 	"..\src\condor_schedd.V6\shadow_mgr.h"\
 	
