@@ -113,6 +113,13 @@ a 'job reconnected' event from a node job.
 
 \item \Condor{submit} will now exit zero as long as the submission succeeds.  Debugging output will still be printed if the internal reschedule fails.
 
+% RUST condor-support #1402
+\item On Windows, exited child processes of the Condor services
+will be handled in order of termination.  This fixes the problem where jobs
+submitted from a Windows machine appear to run much longer than normal
+because the \Condor{schedd} fails to notice that a \Condor{shadow} exits
+when the system is very busy.
+
 % Gnats PR 532
 \item Fixed a bug that caused scheduler universe jobs to often wait five
 minutes (or whatever \MacroNI{SCHEDD\_INTERVAL} is set to) before running.
