@@ -1146,6 +1146,18 @@ The \Condor{startd} keeps track
   \Condor{collector}) so the log file will clearly show which thread
   of execution is generating each log message.
 	
+\item[\Dflag{FDS}] \label{dflag:fds}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_FDS@\texttt{D\_FDS}}
+  This flag is different from the other types of flags because it is
+  used to change the formatting of all log messages that are printed,
+  as opposed to specifying what kinds of messages should be printed.
+  If \Dflag{FDS} is set, Condor will always print out file descriptor
+  that the open of the log file was allocated by the operating system.
+  This can be helpful in debugging Condor's use of system file
+  descriptors as it will generally track the number of file descriptors
+  that Condor has open.
+
+	
 \end{description}
 
 \item[\Macro{ALL\_DEBUG}] \label{param:AllDebug} To make all subsystems
