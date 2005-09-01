@@ -407,6 +407,46 @@ are available.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:nt-unattended-install-procedure}
+Unattended Installation Procedure using the included Set Up Program}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{Windows!installation!unattended install}
+This section details how to run the Condor for Windows installer in an
+unattended batch mode, i.e. completely from the command prompt without the
+GUI interface.
+
+Currently, the Condor for Windows installer is based upon InstallShield's
+Package for the Web (PFTW) technology.  So say you download the
+\index{Windows!installation!InstallShield} \index{PFTW}
+self-extracting \File{.exe} file from the Condor web site, for example
+\File{condor-6.7.10-winnt50-x86.exe}.
+
+Then, to automate the installation of a PFTW package, you
+would first perform one installation as administrator ``by hand" via the GUI
+to create an answer file:
+\index{Windows!installation!answer file}
+
+\begin{verbatim}
+  condor-6.7.10-winnt50-x86.exe /a /r /f1c:\temp\foo.iss
+\end{verbatim}
+
+In this example, the answer file is \verb@c:\temp\foo.iss@.  You can
+provide whatever file name you want, but notice there is no space between
+the \Opt{/f1} option and the file name.
+
+Next, to install the package completely silently using the same answers you
+provided above, you would run as administrator:
+
+\begin{verbatim}
+  start /wait condor-6.7.10-winnt50-x86.exe /s /a /s /sms /f1c:\temp\foo.iss
+\end{verbatim}
+
+The first \Opt{/s} is only needed for a completely silent installation. If
+you leave it off, the PFTW package will show you a status bar as it extracts
+the InstallShield tree to the temporary directory.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:NT-Manual-Install}Manual Installation Condor on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
