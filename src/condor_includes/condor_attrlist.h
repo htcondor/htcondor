@@ -55,7 +55,10 @@ class AttrListElem
         AttrListElem(AttrListElem&);		// copy constructor
         ~AttrListElem() 
 			{
-				delete tree; 
+				if (tree != NULL) {
+				   	delete tree; 
+					tree = NULL
+				}
 			}
 
 		bool IsDirty(void)            { return dirty;              }
