@@ -96,6 +96,9 @@ is executed more than once.
 it tried to delegate credentials for gt4 grid jobs before the gahp server 
 was started.
 
+\item Fixed a race condition that could cause condor grid-type jobs to be
+held with hold reason ``Spooling input data files''.
+
 \item \Condor{glidein} now correctly handles extracting necessary
 information from modern Condor configurations where
 \MacroNI{NEGOTIATOR\_HOST} is not defined.
