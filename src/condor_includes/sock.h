@@ -269,6 +269,8 @@ protected:
 
     ///
 	bool test_connection();
+	///
+	int move_descriptor_up();
 
 	/*
 	**	Data structures
