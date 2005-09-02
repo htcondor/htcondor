@@ -433,11 +433,20 @@ ParallelShadow::shutDown( int exitReason )
 		   them are done, and we have to figure out if we need
 		   to kill others.... */
 
+		// This code waits for all nodes to shut down before 
+		// we exit.  We may want an option for user jobs to
+		// specify which shutdown policy they want
 /*
 	if( !shutDownLogic( exitReason ) ) {
 		return;  // leave if we're not *really* ready to shut down.
 	}
 */
+
+		// If node0 is still running, don't really shut down
+	RemoteResource *r =  ResourceList[0];
+	if (r->getResourceState() == RR_EXECUTING) {
+		return;
+	}
 	handleJobRemoval(0);
 
 		/* if we're still here, we can call BaseShadow::shutDown() to
