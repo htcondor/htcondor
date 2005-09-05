@@ -57,7 +57,7 @@ class AttrListElem
 			{
 				if (tree != NULL) {
 				   	delete tree; 
-					tree = NULL
+					tree = NULL;
 				}
 			}
 
