@@ -26,6 +26,7 @@
 
 enum AdTypes
 {
+	QUILL_AD,
 	STARTD_AD,
 	SCHEDD_AD,
 	MASTER_AD,

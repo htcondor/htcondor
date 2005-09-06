@@ -777,6 +777,9 @@ Daemon::locate( void )
 			// "COLLECTOR".
 		rval = getCmInfo( "COLLECTOR" ); 
 		break;
+	case DT_QUILL:
+		rval = getDaemonInfo( "QUILL", SCHEDD_AD );
+		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
 	}

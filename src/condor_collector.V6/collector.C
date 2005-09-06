@@ -130,6 +130,11 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
+#if WANT_QUILL
+	daemonCore->Register_Command(QUERY_QUILL_ADS,"QUERY_QUILL_ADS",
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+#endif /* WANT_QUILL */
+
 	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
@@ -158,6 +163,12 @@ void CollectorDaemon::Init()
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
+
+#if WANT_QUILL
+	daemonCore->Register_Command(INVALIDATE_QUILL_ADS,"INVALIDATE_QUILL_ADS",
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
+#endif /* WANT_QUILL */
+
 	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
@@ -188,6 +199,12 @@ void CollectorDaemon::Init()
 		// // // // // // // // // // // // // // // // // // // // //
 
 	// install command handlers for updates
+
+#if WANT_QUILL
+	daemonCore->Register_Command(UPDATE_QUILL_AD,"UPDATE_QUILL_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+#endif /* WANT_QUILL */
+
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
@@ -304,6 +321,13 @@ CollectorDaemon::receive_query_public( int command )
 		dprintf (D_ALWAYS, "Got QUERY_SCHEDD_ADS\n");
 		whichAds = SCHEDD_AD;
 		break;
+
+#if WANT_QUILL
+	  case QUERY_QUILL_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_QUILL_ADS\n");
+		whichAds = QUILL_AD;
+		break;
+#endif /* WANT_QUILL */
 		
 	  case QUERY_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_SUBMITTOR_ADS\n");
@@ -393,6 +417,13 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		dprintf (D_ALWAYS, "Got INVALIDATE_SCHEDD_ADS\n");
 		whichAds = SCHEDD_AD;
 		break;
+
+#if WANT_QUILL
+	  case INVALIDATE_QUILL_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_QUILL_ADS\n");
+		whichAds = QUILL_AD;
+		break;
+#endif /* WANT_QUILL */
 		
 	  case INVALIDATE_SUBMITTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_SUBMITTOR_ADS\n");
@@ -578,6 +609,9 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	}
 
 	switch( cmd ) {
+#if WANT_QUILL
+	case UPDATE_QUILL_AD:
+#endif /* WANT_QUILL */
 	case UPDATE_STARTD_AD:
 	case UPDATE_SCHEDD_AD:
 	case UPDATE_MASTER_AD:
@@ -591,6 +625,9 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 		return receive_update( NULL, cmd, sock );
 		break;
 
+#if WANT_QUILL
+	case INVALIDATE_QUILL_ADS:
+#endif /* WANT_QUILL */
 	case INVALIDATE_STARTD_ADS:
 	case INVALIDATE_SCHEDD_ADS:
 	case INVALIDATE_MASTER_ADS:

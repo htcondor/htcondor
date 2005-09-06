@@ -58,6 +58,7 @@ typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
 
 // functions to make the hashkeys
 bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeQuillAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeScheddAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeLicenseAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);

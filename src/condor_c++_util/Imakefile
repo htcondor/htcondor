@@ -10,7 +10,7 @@
 
 all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes -I$(PCRE_INC)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes -D_POSTGRESQL_DBMS_ -I$(POSTGRESQL_INC) -I$(PCRE_INC)
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS) -L$(PCRE_LIB) -lpcre
 
@@ -41,6 +41,12 @@ SETEUID_OBJ =
 SETEGID_OBJ = ../condor_util_lib/setegid.o
 #else
 SETEGID_OBJ = 
+#endif
+
+#if WANT_QUILL
+QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o
+#else
+QUILL_OBJS =
 #endif
 
 /* Bring in the old classad library because the user log parsing code
@@ -132,6 +138,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	translation_utils.o command_strings.o enum_utils.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
 	domain_tools.o CondorError.o utc_time.o status_string.o \
+	$(QUILL_OBJS) \
 	New_classads_obj setenv.o condor_id.o build_job_env.o
 
 library_target( cplus_lib.a,$(OBJ))

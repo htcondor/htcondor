@@ -19,7 +19,7 @@ EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
 EXT_GSOAP_VERSION = @ext_gsoap_version@
 EXT_PCRE_VERSION = @ext_pcre_version@
-
+EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
 
 #define WANT_EXT_GLIBC @want_ext_glibc@
 #if WANT_EXT_GLIBC && HAS_EXTERNALS
@@ -102,6 +102,10 @@ SRB_DIR =
 SRB_LIB =
 SRB_INC =
 #endif
+
+POSTGRESQL_DIR = $(EXT_INSTALL)/$(EXT_POSTGRESQL_VERSION)
+POSTGRESQL_LIB = $(POSTGRESQL_DIR)/lib
+POSTGRESQL_INC = $(POSTGRESQL_DIR)/include
 
 PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
 

@@ -26,355 +26,468 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_distribution.h"
-
+#include "dc_collector.h"
+#include "get_daemon_name.h"
+#include "internet.h"
+#include "print_wrapped_text.h"
 #include "MyString.h"
 
-//------------------------------------------------------------------------
+#include "history_utils.h"
 
-static void displayJobShort(AttrList* ad);
-static void short_header(void);
-static void short_print(int,int,const char*,int,int,int,int,int,int,const char *);
-static void short_header (void);
-static void shorten (char *, int);
-static char* format_date( time_t date );
-static char* format_time( int tot_secs );
-static char encode_status( int status );
-static bool EvalBool(AttrList *ad, ExprTree *tree);
+#if WANT_QUILL
+#include "sqlquery.h"
+#include "historysnapshot.h"
+#endif /* WANT_QUILL */
 
+#define NUM_PARAMETERS 3
 
-//------------------------------------------------------------------------
 
 static void Usage(char* name) 
 {
+#if WANT_QUILL
+  printf("Usage: %s [-l] [-f history-filename] [-name quill-name] [-constraint expr | cluster_id | cluster_id.proc_id | owner | -completedsince date/time]\n",name);
+#else 
   printf("Usage: %s [-l] [-f history-filename] [-constraint expr | cluster_id | cluster_id.proc_id | owner]\n",name);
+#endif /* WANT_QUILL */
+
   exit(1);
 }
 
+#if WANT_QUILL
+static char * getDBConnStr(char *&quillName, char *&databaseIp, char *&databaseName, char *&queryPassword);
+static bool checkDBconfig();
+#endif /* WANT_QUILL */
+
 //------------------------------------------------------------------------
 
+static CollectorList * Collectors = NULL;
+static	QueryResult result;
+static	CondorQuery	quillQuery(QUILL_AD);
+static	ClassAdList	quillList;
 
 int
 main(int argc, char* argv[])
 {
+  Collectors = NULL;
+
+#ifdef WANT_QUILL
+  HistorySnapshot *historySnapshot;
+  SQLQuery queryhor;
+  SQLQuery queryver;
+  QuillErrCode st;
+#endif /* WANT_QUILL */
+
+  void **parameters;
+  char *dbconn=NULL;
+  int cluster=-1, proc=-1;
+  char *completedsince = NULL;
+  char *owner=NULL;
+  bool readfromfile = false,remotequill=false;
+
   char* JobHistoryFileName=NULL;
-  int LongFormat=FALSE;
+  char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL,*quillName=NULL;
+
+
+  bool longformat=false;
   char* constraint=NULL;
   ExprTree *constraintExpr=NULL;
-  int cluster, proc;
-  char tmp[512];
-  int i;
-  myDistro->Init( argc, argv );
-
-  for(i=1; i<argc; i++) {
-    if (strcmp(argv[i],"-l")==0) {
-      LongFormat=TRUE;   
-    }
-    else if (strcmp(argv[i],"-f")==0) {
-      if (i+1==argc || JobHistoryFileName) break;
-      i++;
-	  JobHistoryFileName=argv[i];
-    }
-    else if (strcmp(argv[i],"-help")==0) {
-	  Usage(argv[0]);
-    }
-    else if (strcmp(argv[i],"-constraint")==0) {
-      if (i+1==argc || constraint) break;
-      sprintf(tmp,"(%s)",argv[i+1]);
-      constraint=tmp;
-      i++;
-    }
-    else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
-      if (constraint) break;
-      sprintf (tmp, "((%s == %d) && (%s == %d))", 
-               ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
-      constraint=tmp;
-    }
-    else if (sscanf (argv[i], "%d", &cluster) == 1) {
-      if (constraint) break;
-      sprintf (tmp, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
-      constraint=tmp;
-    }
-    else {
-      if (constraint) break;
-      sprintf(tmp, "(%s == \"%s\")", ATTR_OWNER, argv[i]);
-      constraint=tmp;
-    }
-  }
-  if (i<argc) Usage(argv[0]);
-
-if (constraint) puts(constraint);
-
-  config();
-  if (!JobHistoryFileName) {
-    JobHistoryFileName=param("HISTORY");
-  }
-
-  FILE* LogFile=fopen(JobHistoryFileName,"r");
-  if (!LogFile) {
-    fprintf(stderr,"History file not found or empty.\n");
-    exit(1);
-  }
-
-  // printf("HistroyFile=%s\nLongFormat=%d\n",JobHistoryFileName,LongFormat);
-  // if (constraint) printf("constraint=%s\n",constraint);
-
-  if( constraint && Parse( constraint, constraintExpr ) ) {
-     fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
-     exit( 1 );
-  }
 
   int EndFlag=0;
   int ErrorFlag=0;
   int EmptyFlag=0;
   AttrList *ad=0;
-  if (!LongFormat) short_header();
-  while(!EndFlag) {
-    if( !( ad=new AttrList(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
-      fprintf( stderr, "Error:  Out of memory\n" );
-      exit( 1 );
-    } 
-    if( ErrorFlag ) {
-      printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
-      ErrorFlag=0;
-      delete ad;
-      continue;
-    } 
-	if( EmptyFlag ) {
-      EmptyFlag=0;
-      delete ad;
-      continue;
+
+  int flag = 1;
+
+  char tmp[512];
+
+  int i;
+  parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
+  myDistro->Init( argc, argv );
+
+#if WANT_QUILL
+  queryhor.setQuery(HISTORY_ALL_HOR, NULL);
+  queryver.setQuery(HISTORY_ALL_VER, NULL);
+#endif /* WANT_QUILL */
+
+#if WANT_QUILL
+  readfromfile = checkDBconfig();
+#else 
+  readfromfile = TRUE;
+#endif /* WANT_QUILL */
+
+  for(i=1; i<argc; i++) {
+    if (strcmp(argv[i],"-l")==0) {
+      longformat=TRUE;   
     }
-    if (!constraint || EvalBool(ad, constraintExpr)) {
-      if (LongFormat) { 
-	    ad->fPrint(stdout); printf("\n"); 
-	  } else {
-        displayJobShort(ad);
-	  }
+
+#if WANT_QUILL
+    else if(strcmp(argv[i], "-name")==0) {
+		i++;
+		if (argc <= i) {
+			fprintf( stderr,
+					 "Error: Argument -name requires the name of a quilld as a parameter\n" );
+			exit(1);
+		}
+		
+		if( !(quillName = get_daemon_name(argv[i])) ) {
+			fprintf( stderr, "Error: unknown host %s\n",
+					 get_host_part(argv[i]) );
+			printf("\n");
+			print_wrapped_text("Extra Info: The name given with the -name "
+							   "should be the name of a condor_quilld process. "
+							   "Normally it is either a hostname, or "
+							   "\"name@hostname\". "
+							   "In either case, the hostname should be the "
+							   "Internet host name, but it appears that it "
+							   "wasn't.",
+							   stderr);
+			exit(1);
+		}
+		sprintf (tmp, "%s == \"%s\"", ATTR_NAME, quillName);      		
+		quillQuery.addORConstraint (tmp);
+
+                sprintf (tmp, "%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
+                quillQuery.addORConstraint (tmp);
+
+		remotequill = true;
+		readfromfile = false;
     }
-    delete ad;
+#endif /* WANT_QUILL */
+    else if (strcmp(argv[i],"-f")==0) {
+		if (i+1==argc || JobHistoryFileName) break;
+		i++;
+		JobHistoryFileName=argv[i];
+		readfromfile = true;
+    }
+    else if (strcmp(argv[i],"-help")==0) {
+		Usage(argv[0]);
+    }
+    else if (strcmp(argv[i],"-constraint")==0) {
+		if (i+1==argc || constraint) break;
+		sprintf(tmp,"(%s)",argv[i+1]);
+		constraint=tmp;
+		i++;
+		readfromfile = true;
+    }
+#if WANT_QUILL
+    else if (strcmp(argv[i],"-completedsince")==0) {
+		i++;
+		if (argc <= i) {
+			fprintf(stderr,
+					"Error: Argument -completedsince requires a date and "
+					"optional timestamp as a parameter.\n");
+			fprintf(stderr,
+					"\t\te.g. condor_history -completedsince \"2004-10-19 10:23:54\"\n");
+			exit(1);
+		}
+		
+		if (constraint) break;
+		constraint = completedsince;
+		completedsince = strdup(argv[i]);
+		parameters[0] = completedsince;
+		queryhor.setQuery(HISTORY_COMPLETEDSINCE_HOR,parameters);
+		queryver.setQuery(HISTORY_COMPLETEDSINCE_VER,parameters);
+    }
+#endif /* WANT_QUILL */
+
+    else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
+		if (constraint) break;
+		sprintf (tmp, "((%s == %d) && (%s == %d))", 
+				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
+		constraint=tmp;
+		parameters[0] = &cluster;
+		parameters[1] = &proc;
+#if WANT_QUILL
+		queryhor.setQuery(HISTORY_CLUSTER_PROC_HOR, parameters);
+		queryver.setQuery(HISTORY_CLUSTER_PROC_VER, parameters);
+#endif /* WANT_QUILL */
+    }
+    else if (sscanf (argv[i], "%d", &cluster) == 1) {
+		if (constraint) break;
+		sprintf (tmp, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
+		constraint=tmp;
+		parameters[0] = &cluster;
+#if WANT_QUILL
+		queryhor.setQuery(HISTORY_CLUSTER_HOR, parameters);
+		queryver.setQuery(HISTORY_CLUSTER_VER, parameters);
+#endif /* WANT_QUILL */
+    }
+    else {
+		if (constraint) break;
+		owner = (char *) malloc(512 * sizeof(char));
+		sscanf(argv[i], "%s", owner);	
+		sprintf(tmp, "(%s == \"%s\")", ATTR_OWNER, owner);
+		constraint=tmp;
+		parameters[0] = owner;
+#if WANT_QUILL
+		queryhor.setQuery(HISTORY_OWNER_HOR, parameters);
+		queryver.setQuery(HISTORY_OWNER_VER, parameters);
+#endif /* WANT_QUILL */
+    }
   }
- 
-  fclose(LogFile);
+  if (i<argc) Usage(argv[0]);
+  
+  if (constraint) puts(constraint);
+  
+  config();
+  
+  if( constraint && Parse( constraint, constraintExpr ) ) {
+	  fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
+	  exit( 1 );
+  }
+  
+  
+  if(!readfromfile) {
+#if WANT_QUILL
+	  if(remotequill) {
+		  if (Collectors == NULL) {
+			  Collectors = CollectorList::create();
+			  if(Collectors == NULL ) {
+				  printf("Error: Unable to get list of known collectors\n");
+				  exit(1);
+			  }
+		  }
+		  result = Collectors->query ( quillQuery, quillList );
+		  if(result != Q_OK) {
+			  printf("Fatal Error querying collectors\n");
+			  exit(1);
+		  }
+
+		  if(quillList.MyLength() == 0) {
+			  printf("Error: Unknown quill server %s\n", quillName);
+			  exit(1);
+		  }
+		  
+		  quillList.Open();
+		  while ((ad = quillList.Next())) {
+				  // get the address of the database
+			  dbIpAddr = dbName = queryPassword = NULL;
+			  if (!ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) ||
+				  !ad->LookupString(ATTR_QUILL_DB_NAME, &dbName) ||
+				  !ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, &queryPassword) || 
+				  (ad->LookupInteger(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) && !flag)) {
+				  printf("Error: The quill daemon \"%s\" is not set up "
+						 "for database queries\n", 
+						 quillName);
+				  exit(1);
+			  }
+		  }
+	  }
+	  dbconn = getDBConnStr(quillName,dbIpAddr,dbName,queryPassword);
+	  historySnapshot = new HistorySnapshot(dbconn);
+	  printf ("\n\n-- Quill: %s : %s : %s\n", quillName, 
+			  dbIpAddr, dbName);
+	  
+	  st = historySnapshot->sendQuery(&queryhor, &queryver, longformat);
+		  //if there's a failure here and if we're not posing a query on a 
+		  //remote quill daemon, we should instead query the local file
+	  if(st == FAILURE) {
+	        printf( "-- Database at %s not reachable\n", dbIpAddr);
+		if(!remotequill) {
+		  char *tmp = param("HISTORY");
+		  printf( "--Failing over to the history file at %s instead --\n",tmp);
+		  if(!tmp) {
+			free(tmp);
+		  }
+		  readfromfile = TRUE;
+	  	}
+	  }
+		  // query history table
+	  if (st == HISTORY_EMPTY) {
+		  printf("No historical jobs in the database match your query\n");
+	  }
+	  historySnapshot->release();
+	  delete(historySnapshot);
+#endif /* WANT_QUILL */
+  }
+  
+  if(readfromfile) {
+	  if (!JobHistoryFileName) {
+		  JobHistoryFileName=param("HISTORY");
+	  }
+	  FILE* LogFile=fopen(JobHistoryFileName,"r");
+	  if (!LogFile) {
+		  fprintf(stderr,"History file not found or empty.\n");
+		  exit(1);
+	  }
+	  
+	  if(!longformat) {
+		  short_header();
+	  }
+
+	  while(!EndFlag) {
+		  if( !( ad=new AttrList(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
+			  fprintf( stderr, "Error:  Out of memory\n" );
+			  exit( 1 );
+		  } 
+		  if( ErrorFlag ) {
+			  printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
+			  ErrorFlag=0;
+			  if(ad) {
+				  delete ad;
+				  ad = NULL;
+			  }
+			  continue;
+		  } 
+		  if( EmptyFlag ) {
+			  EmptyFlag=0;
+			  if(ad) {
+				  delete ad;
+				  ad = NULL;
+			  }
+			  continue;
+		  }
+		  if (!constraint || EvalBool(ad, constraintExpr)) {
+			  if (longformat) { 
+				  ad->fPrint(stdout); printf("\n"); 
+			  } else {
+				  displayJobShort(ad);
+			  }
+		  }
+		  if(ad) {
+			  delete ad;
+			  ad = NULL;
+		  }
+	  }
+	  fclose(LogFile);
+  }
+  
+  
+  if(owner) free(owner);
+  if(completedsince) free(completedsince);
+  if(parameters) free(parameters);
+  if(dbIpAddr) free(dbIpAddr);
+  if(dbName) free(dbName);
+  if(queryPassword) free(queryPassword);
+  if(quillName) free(quillName);
+  if(dbconn) free(dbconn);
   return 0;
 }
 
+
 //------------------------------------------------------------------------
 
-static void
-displayJobShort(AttrList* ad)
-{
-    int cluster, proc, date, status, prio, image_size, CompDate;
-    float utime;
-    char *owner, *cmd, *args;
+#if WANT_QUILL
 
-    owner = NULL;
-    cmd   = NULL;
-    args  = NULL;
+/* this function for checking whether database can be used for 
+   querying in local machine */
+static bool checkDBconfig() {
+	char *str1, *str2, *str3, *str4;
 
-	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
-		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
-			utime = 0;
-		}
+	str1 = param("QUILL_NAME");
+	str2 = param("QUILL_DB_IP_ADDR");
+	str3 = param("QUILL_DB_NAME");
+	str4 = param("QUILL_DB_QUERY_PASSWORD");
+
+	if(!str1) {
+		return FALSE;
 	}
+	
+	free(str1);
 
-        if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)           ||
-                !ad->EvalInteger (ATTR_PROC_ID, NULL, proc)             ||
-                !ad->EvalInteger (ATTR_Q_DATE, NULL, date)              ||
-                !ad->EvalInteger (ATTR_COMPLETION_DATE, NULL, CompDate)	||
-                !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)        ||
-                !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)            ||
-                !ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)    ||
-                !ad->EvalString  (ATTR_OWNER, NULL, &owner)             ||
-                !ad->EvalString  (ATTR_JOB_CMD, NULL, &cmd) )
-        {
-                printf (" --- ???? --- \n");
-                return;
-        }
-        
-        shorten (owner, 14);
-        if (ad->EvalString ("Args", NULL, &args)) {
-            int cmd_len = strlen(cmd);
-            int extra_len = 14 - cmd_len;
-            if (extra_len > 0) {
-                cmd = (char *) realloc(cmd, 16);
-                strcat(cmd, " ");
-                strncat(cmd, args, extra_len);
-            }
-        }
-        shorten (cmd, 15);
-        short_print (cluster, proc, owner, date, CompDate, (int)utime, status, 
-               prio, image_size, cmd); 
+	if(!str2) {
+		return FALSE;
+	}
+	
+	free(str2);
 
+	if(!str3) {
+		return FALSE;
+	}
+	
+	free(str3);
 
-        if (owner) free(owner);
-        if (cmd)   free(cmd);
-        if (args)  free(args);
-        return;
-}
+	if(!str4) {
+		return FALSE;
+	}
+	
+	free(str4);
 
-//------------------------------------------------------------------------
-
-static void
-short_header (void)
-{
-    printf( " %-7s %-14s %11s %12s %-2s %11s %-15s\n",
-        "ID",
-        "OWNER",
-        "SUBMITTED",
-        "RUN_TIME",
-        "ST",
-		"COMPLETED",
-        "CMD"
-    );
-}
-
-//------------------------------------------------------------------------
-
-static void
-shorten (char *buff, int len)
-{
-    if ((unsigned int)strlen (buff) > (unsigned int)len) buff[len] = '\0';
-}
-
-//------------------------------------------------------------------------
-
-/*
-  Print a line of data for the "short" display of a PROC structure.  The
-  "short" display is the one used by "condor_q".  N.B. the columns used
-  by this routine must match those defined by the short_header routine
-  defined above.
-*/
-
-static void
-short_print(
-        int cluster,
-        int proc,
-        const char *owner,
-        int date,
-		int CompDate,
-        int time,
-        int status,
-        int prio,
-        int image_size,
-        const char *cmd
-        ) {
-		MyString SubmitDateStr=format_date(date);
-		MyString CompDateStr=format_date(CompDate);
-        printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-11s %-15s\n",
-                cluster,
-                proc,
-                owner,
-                SubmitDateStr.Value(),
-                format_time(time),
-                encode_status(status),
-                CompDateStr.Value(),
-                cmd
-        );
+	return TRUE;
 }
 
 
-//------------------------------------------------------------------------
+static char * getDBConnStr(char *&quillName, 
+						   char *&databaseIp, 
+						   char *&databaseName, 
+						   char *&queryPassword) {
+  char            *host, *port, *dbconn, *ptr_colon;
+  char            *tmpquillname, *tmpdatabaseip, *tmpdatabasename, *tmpquerypassword;
+  int             len, tmp1, tmp2, tmp3;
 
-/*
-  Format a date expressed in "UNIX time" into "month/day hour:minute".
-*/
+  if((!quillName && !(tmpquillname = param("QUILL_NAME"))) ||
+     (!databaseIp && !(tmpdatabaseip = param("QUILL_DB_IP_ADDR"))) ||
+     (!databaseName && !(tmpdatabasename = param("QUILL_DB_NAME"))) ||
+     (!queryPassword && !(tmpquerypassword = param("QUILL_DB_QUERY_PASSWORD")))) {
+    fprintf( stderr, "Error: Could not find database related parameter\n");
+    fprintf(stderr, "\n");
+    print_wrapped_text("Extra Info: " 
+                       "The most likely cause for this error "
+                       "is that you have not defined "
+					   "QUILL_NAME/QUILL_DB_IP_ADDR/"
+					   "QUILL_DB_NAME/QUILL_DB_QUERY_PASSWORD "
+                       "in the condor_config file.  You must "
+                       "define this variable in the config file", stderr);
+ 
+    exit( 1 );    
+  }
+  
+  if(!quillName) {
+	  quillName = tmpquillname;
+  }
+  if(!databaseIp) {
+	  if(tmpdatabaseip[0] != '<') {
+			  //2 for the two brackets and 1 for the null terminator
+		  databaseIp = (char *) malloc(strlen(tmpdatabaseip)+3);
+		  sprintf(databaseIp, "<%s>", tmpdatabaseip);
+		  free(tmpdatabaseip);
+	  }
+	  else {
+		  databaseIp = tmpdatabaseip;
+	  }
+  }
+  if(!databaseName) {
+	  databaseName = tmpdatabasename;
+  }
+  if(!queryPassword) {
+	  queryPassword = tmpquerypassword;
+  }
+  
+  tmp1 = strlen(databaseName);
+  tmp2 = strlen(queryPassword);
+  len = strlen(databaseIp);
 
-static char* format_date( time_t date )
-{
-        static char     buf[ 12 ];
-        struct tm       *tm;
+	  //the 6 is for the string "host= " or "port= "
+	  //the rest is a subset of databaseIp so a size of
+	  //databaseIp is more than enough 
+  host = (char *) malloc((len+6) * sizeof(char));
+  port = (char *) malloc((len+6) * sizeof(char));
+  
+	  //here we break up the ipaddress:port string and assign the  
+	  //individual parts to separate string variables host and port
+  ptr_colon = strchr(databaseIp, ':');
+  strcpy(host, "host= ");
+  strncat(host,
+          databaseIp+1,
+          ptr_colon - databaseIp-1);
+  strcpy(port, "port= ");
+  strcat(port, ptr_colon+1);
+  port[strlen(port)-1] = '\0';
+  
+	  //tmp3 is the size of dbconn - its size is estimated to be
+	  //(2 * len) for the host/port part, tmp1 + tmp2 for the 
+	  //password and dbname part and 1024 as a cautiously 
+	  //overestimated sized buffer
+  tmp3 = (2 * len) + tmp1 + tmp2 + 1024;
+  dbconn = (char *) malloc(tmp3 * sizeof(char));
+  sprintf(dbconn, "%s %s user=quillreader password=%s dbname=%s", 
+		  host, port, queryPassword, databaseName);
 
-		if (date==0) return " ??? ";
-
-        tm = localtime( &date );
-        sprintf( buf, "%2d/%-2d %02d:%02d",
-                (tm->tm_mon)+1, tm->tm_mday, tm->tm_hour, tm->tm_min
-        );
-        return buf;
+  free(host);
+  free(port);
+  return dbconn;
 }
 
-//------------------------------------------------------------------------
-
-/*
-  Format a time value which is encoded as seconds since the UNIX
-  "epoch".  We return a string in the format dd+hh:mm:ss, indicating
-  days, hours, minutes, and seconds.  The string is in static data
-  space, and will be overwritten by the next call to this function.
-*/
-
-static char     *
-format_time( int tot_secs )
-{
-        int             days;
-        int             hours;
-        int             min;
-        int             secs;
-        static char     answer[25];
-
-		if ( tot_secs < 0 ) {
-			sprintf(answer,"[?????]");
-			return answer;
-		}
-
-        days = tot_secs / DAY;
-        tot_secs %= DAY;
-        hours = tot_secs / HOUR;
-        tot_secs %= HOUR;
-        min = tot_secs / MINUTE;
-        secs = tot_secs % MINUTE;
-
-        (void)sprintf( answer, "%3d+%02d:%02d:%02d", days, hours, min, secs );
-        return answer;
-}
-
-//------------------------------------------------------------------------
-
-/*
-  Encode a status from a PROC structure as a single letter suited for
-  printing.
-*/
-
-static char
-encode_status( int status )
-{
-        switch( status ) {
-          case UNEXPANDED:
-                return 'U';
-          case IDLE:
-                return 'I';
-          case RUNNING:
-                return 'R';
-          case COMPLETED:
-                return 'C';
-          case REMOVED:
-                return 'X';
-          case HELD:
-                return 'H';	
-          case SUBMISSION_ERR:
-                return 'E';	
-          default:
-                return ' ';
-        }
-}
-
-//------------------------------------------------------------------------
-
-static bool EvalBool(AttrList* ad, ExprTree *tree)
-{
-	EvalResult result;
-
-    // Evaluate constraint with ad in the target scope so that constraints
-    // have the same semantics as the collector queries.  --RR
-    if (!tree->EvalTree(NULL, ad, &result)) {
-        // dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
-        delete tree;
-        return false;
-    }
-    
-    if (result.type == LX_INTEGER) {
-        return (bool)result.i;
-    }
-
-    return false;
-}
+#endif /* WANT_QUILL */
 

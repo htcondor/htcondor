@@ -29,6 +29,16 @@
 #include "format_time.h"
 #include "condor_config.h"
 #include "CondorError.h"
+#include "condor_classad_util.h"
+
+#if WANT_QUILL
+
+#include "jobqueuesnapshot.h"
+
+static ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot  *jqSnapshot);
+static int execQuery(PGconn *connection, const char* sql, PGresult*& result);
+
+#endif /* WANT_QUILL */
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
@@ -69,6 +79,9 @@ CondorQ ()
 	query.setIntegerKwList ((char **) intKeywords);
 	query.setStringKwList ((char **) strKeywords);
 	query.setFloatKwList ((char **) fltKeywords);
+	cluster = -1;
+	proc = -1;
+	owner[0] = '\0';
 }
 
 
@@ -89,6 +102,19 @@ init()
 int CondorQ::
 add (CondorQIntCategories cat, int value)
 {
+
+		// remember the cluster and proc values so that they can be pushed down to DB query
+	switch (cat) {
+	case CQ_CLUSTER_ID:
+		cluster = value;
+		break;
+	case CQ_PROC_ID:
+		proc = value;
+		break;
+	default:
+		break;
+	}
+
 	return query.addInteger (cat, value);
 }
 
@@ -96,6 +122,14 @@ add (CondorQIntCategories cat, int value)
 int CondorQ::
 add (CondorQStrCategories cat, char *value)
 {  
+	switch (cat) {
+	case CQ_OWNER:
+		strncpy(owner, value, MAXOWNERLEN);
+		break;
+	default:
+		break;
+	}
+
 	return query.addString (cat, value);
 }
 
@@ -196,6 +230,64 @@ fetchQueueFromHost (ClassAdList &list, char *host, CondorError* errstack)
 }
 
 int CondorQ::
+fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError* errstack)
+{
+#if WANT_QUILL
+	ClassAd 		filterAd;
+	int     		result;
+	JobQueueSnapshot	*jqSnapshot;
+	char            constraint[ATTRLIST_MAX_EXPRESSION];
+	ClassAd        *ad;
+	QuillErrCode   rv;
+
+	jqSnapshot = new JobQueueSnapshot(dbconn);
+
+	rv = jqSnapshot->startIterateAllClassAds(cluster,
+											 proc,
+											 owner,
+											 FALSE);
+
+	if (rv == FAILURE) {
+		delete jqSnapshot;
+		return Q_COMMUNICATION_ERROR;
+	} else if (rv == JOB_QUEUE_EMPTY) {
+		delete jqSnapshot;
+		return Q_OK;
+	}
+
+	// make the query ad
+	if ((result = query.makeQuery (filterAd)) != Q_OK) {
+		delete jqSnapshot;
+		return result;
+	}
+
+	// insert types into the query ad   ###
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
+
+	ExprTree *tree;
+	tree = filterAd.Lookup(ATTR_REQUIREMENTS);
+	if (!tree) {
+		delete jqSnapshot;
+	  return Q_INVALID_QUERY;
+	}
+
+	constraint[0] = '\0';
+	tree->RArg()->PrintToStr(constraint);
+
+	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
+
+	while (ad != (ClassAd *) 0) {
+		list.Insert(ad);
+		ad = getDBNextJobByConstraint(constraint, jqSnapshot);
+	}	
+
+	delete jqSnapshot;
+#endif /* WANT_QUILL */
+	return Q_OK;
+}
+
+int CondorQ::
 fetchQueueFromHostAndProcess ( char *host, process_function process_func, CondorError* errstack )
 {
 	Qmgr_connection *qmgr;
@@ -226,6 +318,129 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func, Condor
 
 	DisconnectQ (qmgr);
 	return result;
+}
+
+int CondorQ::
+fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, CondorError* errstack )
+{
+#if WANT_QUILL
+	ClassAd 		filterAd;
+	int     		result;
+	JobQueueSnapshot	*jqSnapshot;
+	char            constraint[ATTRLIST_MAX_EXPRESSION] = "";
+	ClassAd        *ad;
+	QuillErrCode             rv;
+
+	ASSERT(process_func);
+
+	jqSnapshot = new JobQueueSnapshot(dbconn);
+
+	rv = jqSnapshot->startIterateAllClassAds(cluster,
+											 proc,
+											 owner,
+											 FALSE);
+
+	if (rv == FAILURE) {
+		delete jqSnapshot;
+		return Q_COMMUNICATION_ERROR;
+	}
+	else if (rv == JOB_QUEUE_EMPTY) {
+		delete jqSnapshot;
+		return Q_OK;
+	}	
+
+	// make the query ad
+	if ((result = query.makeQuery (filterAd)) != Q_OK) {
+		delete jqSnapshot;
+		return result;
+	}
+
+	// insert types into the query ad   ###
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
+
+	ExprTree *tree;
+	tree = filterAd.Lookup(ATTR_REQUIREMENTS);
+	if (!tree) {
+		delete jqSnapshot;
+	  return Q_INVALID_QUERY;
+	}
+
+	constraint[0] = '\0';
+	tree->RArg()->PrintToStr(constraint);
+
+	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
+	
+	while (ad != (ClassAd *) 0) {
+			// Process the data and insert it into the list
+		if ((*process_func) (ad) ) {
+			ad->clear();
+			delete ad;
+		}
+		
+		ad = getDBNextJobByConstraint(constraint, jqSnapshot);
+	}	
+
+	if(ad) {
+		ad->clear();
+		delete ad;
+	}
+	delete jqSnapshot;
+#endif /* WANT_QUILL */
+
+	return Q_OK;
+}
+
+void CondorQ::rawDBQuery(char *dbconn, CondorQQueryType qType) {
+#if WANT_QUILL
+
+	PGconn        *connection;
+	char          *rowvalue;
+	PGresult	  *resultset;
+	int           ntuples;
+	SQLQuery      sqlquery;
+
+	if ((connection = PQconnectdb(dbconn)) == NULL)
+	{
+		fprintf(stderr, "\n-- Failed to connect to the database\n");
+		return;
+	}
+
+	switch (qType) {
+	case AVG_TIME_IN_QUEUE:
+
+		sqlquery.setQuery(QUEUE_AVG_TIME, NULL);
+
+	   	ntuples = execQuery(connection, sqlquery.getQuery(), resultset);
+
+			/* we expect exact one row out of the query */
+		if (ntuples != 1) {
+			fprintf(stderr, "\n-- Failed to execute the query\n");
+			return;
+		}
+		
+		rowvalue = PQgetvalue(resultset, 0, 0);
+		if(strcmp(rowvalue,"") == 0) {
+			printf("\nJob queue is curently empty\n");
+		} else {
+			printf("\nAverage time in queue for uncompleted jobs (in hh:mm:ss)\n");
+			printf("%s\n", rowvalue);		 
+		}
+		
+		break;
+	default:
+		fprintf(stderr, "Error: type of query not supported\n");
+		return;
+		break;
+	}
+
+	if(resultset) {
+		PQclear(resultset);
+	}
+	if(connection) {
+		PQfinish(connection);
+	}
+#endif /* WANT_QUILL */
 }
 
 int CondorQ::
@@ -371,3 +586,44 @@ short_print(
 		cmd
 	);
 }
+
+#if WANT_QUILL
+
+ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot	*jqSnapshot)
+{
+	ClassAd *ad;
+	
+	while(jqSnapshot->iterateAllClassAds(ad) != DONE_JOBS_CURSOR) {
+		if ((!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			return ad;		      
+		}
+		
+		if (ad != (ClassAd *) 0) {
+			ad->clear();
+			delete ad;
+			ad = (ClassAd *) 0;
+		}
+	}
+
+	return (ClassAd *) 0;
+}
+
+/* When the query is successfully executed, result is set and return value
+   is >= 0, otherwise return value is -1
+*/
+static int execQuery(PGconn *connection, const char* sql, PGresult*& result)
+{
+	if ((result = PQexec(connection, sql)) == NULL) {
+		return -1; 
+	}
+	
+	else if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+		PQclear(result);
+		result = NULL;
+		return -1;
+	}
+
+	return PQntuples(result);			
+}
+
+#endif /* WANT_QUILL */

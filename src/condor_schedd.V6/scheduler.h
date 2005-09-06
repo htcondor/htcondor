@@ -495,6 +495,15 @@ private:
 		// about a shadow not starting.
 	int sent_shadow_failure_email;
 
+	// some stuff about Quill that should go into the ad
+#if WANT_QUILL
+	int quill_is_remotely_queryable;
+	char *quill_name;
+	char *quill_db_name;
+	char *quill_db_ip_addr;
+	char *quill_db_query_password;
+#endif
+
 };
 
 

@@ -10,8 +10,15 @@ ANALYSIS_LIBS  =
 #endif
 
 CFLAGS = $(ANALYSIS_FLAGS) $(STD_C_FLAGS)
+LDFLAGS = $(STD_LDFLAGS) $(LIBCRYPT)
 C_PLUS_FLAGS = $(ANALYSIS_FLAGS) $(STD_C_PLUS_FLAGS)
-LIB = $(ANALYSIS_LIBS) $(STD_LIBS)
+
+#if WANT_QUILL
+LIB = $(ANALYSIS_LIBS) $(STD_LIBS) $(POSTGRESQL_LIB)/libpq.a
+#else
+LIB = $(ANALYSIS_LIBS) $(STD_LIBS) 
+#endif
+
 OBJ = queue.o queue_instantiate.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))

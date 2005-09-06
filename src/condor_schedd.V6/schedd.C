@@ -306,6 +306,14 @@ Scheduler::Scheduler() :
 	timeoutid = -1;
 	startjobsid = -1;
 
+#if WANT_QUILL
+	quill_is_remotely_queryable = 0; //false
+	quill_name = NULL;
+	quill_db_name = NULL;
+	quill_db_ip_addr = NULL;
+	quill_db_query_password = NULL;
+#endif
+
 	startJobsDelayBit = FALSE;
 	num_reg_contacts = 0;
 #ifndef WIN32
@@ -8949,6 +8957,73 @@ Scheduler::Init()
 		tmp = NULL;
 	}
 
+#if WANT_QUILL
+	/* set up whether or not the quill daemon is remotely queryable */
+	tmp = param("QUILL_IS_REMOTELY_QUERYABLE");
+	if (!tmp) {
+		quill_is_remotely_queryable = FALSE;
+	} else {
+		if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
+			quill_is_remotely_queryable = FALSE;
+		} else {
+			quill_is_remotely_queryable = TRUE;
+		}
+		free(tmp);
+		tmp = NULL;
+	}
+
+	/* set up a required quill_name */
+	tmp = param("QUILL_NAME");
+	if (!tmp) {
+		EXCEPT( "No QUILL_NAME specified in config file" );
+	}
+	if (quill_name != NULL) {
+		free(quill_name);
+		quill_name = NULL;
+	}
+	quill_name = strdup(tmp);
+	free(tmp);
+	tmp = NULL;
+
+	/* set up a required database ip address quill needs to use */
+	tmp = param("QUILL_DB_IP_ADDR");
+	if (!tmp) {
+		EXCEPT( "No QUILL_DB_IP_ADDR specified in config file" );
+	}
+	if (quill_db_ip_addr != NULL) {
+		free(quill_db_ip_addr);
+		quill_db_ip_addr = NULL;
+	}
+	quill_db_ip_addr = strdup(tmp);
+	free(tmp);
+	tmp = NULL;
+
+	/* Set up the name of the required database ip address */
+	tmp = param("QUILL_DB_NAME");
+	if (!tmp) {
+		EXCEPT( "No QUILL_DB_NAME specified in config file" );
+	}
+	if (quill_db_name != NULL) {
+		free(quill_db_name);
+		quill_db_name = NULL;
+	}
+	quill_db_name = strdup(tmp);
+	free(tmp);
+	tmp = NULL;
+
+	/* learn the required password field to access the database */
+	tmp = param("QUILL_DB_QUERY_PASSWORD");
+	if (!tmp) {
+		EXCEPT( "No QUILL_DB_QUERY_PASSWORD specified in config file" );
+	}
+	if (quill_db_query_password != NULL) {
+		free(quill_db_query_password);
+		quill_db_query_password = NULL;
+	}
+	quill_db_query_password = strdup(tmp);
+	free(tmp);
+	tmp = NULL;
+#endif
 
 	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 0, 0 );
 	job_is_finished_queue.setPeriod( int_val );	
@@ -8978,6 +9053,27 @@ Scheduler::Init()
 
 	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
 	ad->Insert(expr);
+		
+#if WANT_QUILL
+		// Put the quill stuff into the add as well
+	sprintf( expr, "%s = \"%s\"", ATTR_QUILL_NAME, quill_name ); 
+	ad->Insert(expr);
+
+	sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_NAME, quill_db_name ); 
+	ad->Insert(expr);
+
+	sprintf( expr, "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR, 
+		quill_db_ip_addr ); 
+	ad->Insert(expr);
+
+	sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_QUERY_PASSWORD, 
+		quill_db_query_password); 
+	ad->Insert(expr);
+
+	sprintf( expr, "%s = %d", ATTR_QUILL_IS_REMOTELY_QUERYABLE, 
+		quill_is_remotely_queryable ); 
+	ad->Insert(expr);
+#endif
 
 		// Put in our sinful string.  Note, this is never going to
 		// change, so we only need to initialize it once.

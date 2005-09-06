@@ -38,6 +38,11 @@ static int stashed_now = 0;
 
 void printStartdNormal 	(ClassAd *);
 void printScheddNormal 	(ClassAd *);
+
+#if WANT_QUILL
+void printQuillNormal 	(ClassAd *);
+#endif /* WANT_QUILL */
+
 void printScheddSubmittors(ClassAd *);
 void printMasterNormal 	(ClassAd *);
 void printCollectorNormal (ClassAd *);
@@ -88,6 +93,12 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 			  case PP_STARTD_STATE:
 				printState( ad );
 				break;
+
+#if WANT_QUILL
+			  case PP_QUILL_NORMAL:
+				printQuillNormal (ad);
+				break;
+#endif /* WANT_QUILL */
 
 			  case PP_SCHEDD_NORMAL:
 				printScheddNormal (ad);
@@ -403,6 +414,36 @@ printCOD (ClassAd *ad)
 	}
 }
 
+#if WANT_QUILL
+void
+printQuillNormal (ClassAd *ad) {
+	static bool first = true;
+	static AttrListPrintMask pm; 
+
+	if (ad)
+	{
+		// print header if necessary
+		if (first)
+		{
+			printf ("\n%-20.20s %-10.10s %-16.16s %-18.18s\n\n",
+				ATTR_NAME, ATTR_MACHINE, ATTR_QUILL_SQL_TOTAL, 
+				ATTR_QUILL_SQL_LAST_BATCH);
+		
+			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+													"[??????????????????] ");
+			pm.registerFormat("%-10.10s ", ATTR_MACHINE, 
+													"[????????] ");
+			pm.registerFormat("%16d ",ATTR_QUILL_SQL_TOTAL,
+													"[??????????????] ");
+			pm.registerFormat("%18d\n",ATTR_QUILL_SQL_LAST_BATCH, 
+													"[???????????]\n");
+			first = false;
+		}
+
+		pm.display (stdout, ad);
+	}
+}
+#endif /* WANT_QUILL */
 
 void
 printScheddNormal (ClassAd *ad)

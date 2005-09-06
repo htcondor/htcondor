@@ -109,6 +109,12 @@ main (int argc, char *argv[])
 	// can override it
 	switch (type)
 	{
+#if WANT_QUILL 
+	  case QUILL_AD:
+		setPPstyle(PP_QUILL_NORMAL, 0, DEFAULT);
+		break;
+#endif /* WANT_QUILL */
+
 	  case STARTD_AD:
 		setPPstyle(PP_STARTD_NORMAL, 0, DEFAULT);
 		break;
@@ -147,6 +153,10 @@ main (int argc, char *argv[])
 
 	// set the constraints implied by the mode
 	switch (mode) {
+#if WANT_QUILL 
+	  case MODE_QUILL_NORMAL:
+#endif /* WANT_QUILL */
+
 	  case MODE_STARTD_NORMAL:
 	  case MODE_MASTER_NORMAL:
 	  case MODE_CKPT_SRVR_NORMAL:
@@ -243,6 +253,13 @@ main (int argc, char *argv[])
 		case MODE_STARTD_COD:
 			d = new Daemon( DT_STARTD, direct, addr );
 			break;
+
+#if WANT_QUILL 
+		case MODE_QUILL_NORMAL: 
+			d = new Daemon( DT_QUILL, direct, addr );
+			break;
+#endif /* WANT_QUILL */
+
 		case MODE_SCHEDD_NORMAL: 
 		case MODE_SCHEDD_SUBMITTORS:
 			d = new Daemon( DT_SCHEDD, direct, addr );
@@ -342,6 +359,9 @@ usage ()
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
+#if WANT_QUILL 
+		"\t-quill\t\t\tDisplay attributes of quills\n"
+#endif /* WANT_QUILL */
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
@@ -486,6 +506,11 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-schedd")) {
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 		} else
+#if WANT_QUILL 
+		if (matchPrefix (argv[i], "-quill")) {
+			setMode (MODE_QUILL_NORMAL, i, argv[i]);
+		} else
+#endif /* WANT_QUILL */
 		if (matchPrefix (argv[i], "-license")) {
 			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
 		} else
@@ -618,6 +643,9 @@ secondPass (int argc, char *argv[])
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
 			  case MODE_STARTD_COD:
+#if WANT_QUILL 
+			  case MODE_QUILL_NORMAL:
+#endif /* WANT_QUILL */
 			  case MODE_SCHEDD_NORMAL:
 			  case MODE_SCHEDD_SUBMITTORS:
 			  case MODE_MASTER_NORMAL:

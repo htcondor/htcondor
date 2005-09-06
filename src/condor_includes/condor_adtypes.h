@@ -26,6 +26,7 @@
 #ifndef __CONDOR_ADTYPES__
 #define __CONDOR_ADTYPES__
 
+#define QUILL_ADTYPE		"Database"
 #define STARTD_ADTYPE		"Machine"
 #define SCHEDD_ADTYPE		"Scheduler"
 #define MASTER_ADTYPE		"DaemonMaster"

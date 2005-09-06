@@ -109,6 +109,11 @@ displayTotals (FILE *file, int keyLength)
     	case PP_STARTD_RUN:
 		case PP_STARTD_STATE:
     	case PP_STARTD_COD:
+
+#if WANT_QUILL
+    	case PP_QUILL_NORMAL:
+#endif /* WANT_QUILL */
+
     	case PP_SCHEDD_NORMAL:
     	case PP_SCHEDD_SUBMITTORS:   
     	case PP_CKPT_SRVR_NORMAL:
@@ -438,6 +443,49 @@ displayInfo( FILE *file, int )
 			 running, suspended, vacating, killing );
 }
 
+QuillNormalTotal::
+QuillNormalTotal()
+{
+	numSqlTotal = 0;
+	numSqlLastBatch = 0;
+}
+
+int QuillNormalTotal::
+update (ClassAd *ad)
+{
+	int attrSqlTotal, attrSqlLastBatch;
+	bool badAd = false;
+
+	if (ad->LookupInteger(ATTR_QUILL_SQL_TOTAL, attrSqlTotal)) {
+		 numSqlTotal += attrSqlTotal;
+	} else {
+		badAd = true;
+	}
+
+	if( ad->LookupInteger(ATTR_QUILL_SQL_LAST_BATCH, 
+						  attrSqlLastBatch) ) {
+		numSqlLastBatch += attrSqlLastBatch;
+	} else {
+		badAd = true;
+	}
+
+	return !badAd;
+}
+
+
+void QuillNormalTotal::
+displayHeader(FILE *file)
+{
+	fprintf (file, "%18s %18s\n", "NumSqlTotal", "NumSqlLastBatch");
+}
+
+
+void QuillNormalTotal::
+displayInfo (FILE *file, int tl)
+{
+	if (tl) fprintf(file,"%18d %18d\n", numSqlTotal, numSqlLastBatch);
+}
+
 
 ScheddNormalTotal::
 ScheddNormalTotal()
@@ -599,6 +647,11 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_STATE:		ct = new StartdStateTotal;	break;
 		case PP_STARTD_COD:			ct = new StartdCODTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
+
+#if WANT_QUILL
+		case PP_QUILL_NORMAL:		ct = new QuillNormalTotal; break;
+#endif /* WANT_QUILL */
+
 		case PP_SCHEDD_SUBMITTORS:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
 
@@ -642,6 +695,13 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 
 		// all ads in the following categories hash to the same key for totals
 		case PP_CKPT_SRVR_NORMAL:
+
+		//here we might want a separate case for QUILL_NORMAL 
+		//but we keep it here for now
+#if WANT_QUILL
+		case PP_QUILL_NORMAL:
+#endif /* WANT_QUILL */
+
 		case PP_SCHEDD_NORMAL:
 			key = " ";
 			return 1;

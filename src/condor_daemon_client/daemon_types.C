@@ -39,7 +39,8 @@ static const char* daemon_names[] = {
 	"shadow",
 	"starter",
 	"credd",
-	"stork"
+	"stork",
+	"quill"
 };
 
 extern "C" {

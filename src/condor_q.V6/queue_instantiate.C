@@ -23,6 +23,8 @@
 
 #include "condor_common.h"
 #include "extArray.h"
+#include "MyString.h"
+#include "condor_classad.h"
 
 typedef struct {
 	int cluster;
@@ -31,4 +33,5 @@ typedef struct {
 } clusterProcString;
 
 template class ExtArray <clusterProcString *>;
-
+template class HashTable<MyString, ClassAd*>;
+template class HashBucket<MyString, ClassAd*>;

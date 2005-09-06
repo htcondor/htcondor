@@ -45,6 +45,7 @@
 #include "condor_universe.h"
 #include "globus_utils.h"
 #include "env.h"
+#include "condor_classad_util.h"
 
 extern char *Spool;
 extern char *Name;
@@ -1088,52 +1089,6 @@ int DestroyCluster(int cluster_id, const char* reason)
 	JobQueueDirty = true;
 
 	return 0;
-}
-
-
-static bool EvalBool(ClassAd *ad, const char *constraint)
-{
-	static ExprTree *tree = NULL;
-	static char * saved_constraint = NULL;
-	EvalResult result;
-	bool constraint_changed = true;
-
-	if ( saved_constraint ) {
-		if ( strcmp(saved_constraint,constraint) == 0 ) {
-			constraint_changed = false;
-		}
-	}
-
-	if ( constraint_changed ) {
-		// constraint has changed, or saved_constraint is NULL
-		if ( saved_constraint ) {
-			free(saved_constraint);
-			saved_constraint = NULL;
-		}
-		if ( tree ) {
-			delete tree;
-			tree = NULL;
-		}
-		if (Parse(constraint, tree) != 0) {
-			dprintf(D_ALWAYS, 
-				"can't parse constraint: %s\n", constraint);
-			return false;
-		}
-		saved_constraint = strdup(constraint);
-	}
-
-	// Evaluate constraint with ad in the target scope so that constraints
-	// have the same semantics as the collector queries.  --RR
-	if (!tree->EvalTree(NULL, ad, &result)) {
-		dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
-		return false;
-	}
-	if (result.type == LX_INTEGER) {
-		return (bool)result.i;
-	}
-	dprintf(D_ALWAYS, "constraint (%s) does not evaluate to bool\n",
-		constraint);
-	return false;
 }
 
 // DestroyClusterByContraint not used anywhere, so it is commented out.

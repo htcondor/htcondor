@@ -152,6 +152,44 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 	return true;
 }
 
+#if WANT_QUILL
+bool
+makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from) {
+	ExprTree	*tree;
+	MyString	buffer;
+	MyString	buf2;
+
+	// get the name of the quill daemon
+	if (!(tree = ad->Lookup ("Name")))
+	{
+		dprintf(D_FULLDEBUG,"Warning: No 'Name' attribute; trying 'Machine'\n");
+		// ... if name was not specified
+		tree = ad->Lookup ("Machine");
+	}
+
+	if (tree)
+	{
+		hk.name = ((String *)tree->RArg())->Value();
+	}
+	else
+	{
+		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
+		// neither Name nor Machine specified
+		return false;
+	}
+	
+	// as in the case of submittor ads (see makeScheddAdHashKey), we also use the 
+	// schedd name to construct the hash key for a quill ad.  this 
+	// solves the problem of multiple quill daemons on the same name on the same 
+	// machine submitting to the same pool
+	// -Ameet Kini <akini@cs.wisc.edu> 8/2005
+	if ( (tree = ad->Lookup(ATTR_SCHEDD_NAME)) ) {
+		hk.name += (((String *)tree->RArg())->Value());
+	}
+
+	return true;
+}
+#endif /* WANT_QUILL */
 
 bool
 makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)

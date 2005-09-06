@@ -136,6 +136,13 @@ setType (char *dtype, int i, char *argv)
         if (matchPrefix (dtype, "LICENSE")) {
             type = LICENSE_AD;
         } else
+
+#if WANT_QUILL
+        if (matchPrefix (dtype, "QUILL")) {
+            type = QUILL_AD;
+        } else
+#endif /* WANT_QUILL */
+
         if (matchPrefix (dtype, "SCHEDD")) {
             type = SCHEDD_AD;
         } else
@@ -185,6 +192,10 @@ getModeStr()
 		case MODE_STARTD_AVAIL:			return "Available (Startd)";
 		case MODE_STARTD_RUN:			return "Run (Startd)";
 		case MODE_STARTD_COD:			return "COD (Startd)";
+#if WANT_QUILL
+		case MODE_QUILL_NORMAL:		return "Normal (Quill)";
+#endif /* WANT_QUILL */
+
 		case MODE_SCHEDD_NORMAL:		return "Normal (Schedd)";
 		case MODE_SCHEDD_SUBMITTORS:	return "Submittors (Schedd)";
 		case MODE_MASTER_NORMAL:		return "Normal (Master)";
@@ -238,6 +249,13 @@ setMode (Mode mod, int i, char *argv)
             setType ("SCHEDD", i, argv);
             setPPstyle (PP_SCHEDD_NORMAL, i, argv);
             break;
+
+#if WANT_QUILL
+		  case MODE_QUILL_NORMAL:
+            setType ("QUILL", i, argv);
+            setPPstyle (PP_QUILL_NORMAL, i, argv);
+            break;
+#endif /* WANT_QUILL */
 
 		  case MODE_LICENSE_NORMAL:
             setType ("LICENSE", i, argv);

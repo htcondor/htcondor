@@ -162,6 +162,20 @@ protected:
 };
 
 
+// quill totals
+class QuillNormalTotal : public ClassTotal
+{
+	public:
+		QuillNormalTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader(FILE*);
+		virtual void displayInfo(FILE*,int);
+
+	protected:
+		int numSqlTotal;
+		int numSqlLastBatch;
+};
+
 // schedd totals
 class ScheddNormalTotal : public ClassTotal
 {

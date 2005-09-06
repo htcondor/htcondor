@@ -1219,6 +1219,27 @@ AC_CHECK_FUNCS([stat64])
 AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
 
 
+##############################################################################
+AC_CHECK_LIB(c,crypt,ac_has_crypt=1,ac_has_crypt=0)
+
+if test "$ac_has_crypt" = "1" ; then
+    _cv_crypt_lib=""
+    AC_MSG_RESULT([-lc])
+else
+    AC_CHECK_LIB(crypt,crypt,ac_has_crypt=1,ac_has_crypt=0)
+
+    if test "$ac_has_crypt" = "1" ; then
+        _cv_crypt_lib="-lcrypt"
+    else
+        AC_MSG_ERROR([You need to find a crypt definition])
+    fi
+fi
+AC_SUBST([crypt_lib],$_cv_crypt_lib)
+
+##############################################################################
+
+
+
 # checks for system services
 
 # checks for platform-specific settings we don't yet auto-detect
@@ -1346,6 +1367,8 @@ CONDOR_EXTERNAL_VERSION([srb],[3.2.1])
 CONDOR_EXTERNAL_VERSION([gsoap],[2.7])
 
 CONDOR_EXTERNAL_VERSION([pcre],[5.0])
+
+CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
 
 else
 # if there's no externals at all, we still need to define these to

@@ -53,10 +53,19 @@ release_target(condor_findhost,bin,EXECUTABLE_MODE)
 strip_target(condor_findhost,bin,EXECUTABLE_MODE)
 static_target(condor_findhost,give_interactive.o,$(LIB),$(STATIC_DIR)/bin)
 
-c_plus_target(condor_history,history.o,$(LIB))
+/* These rules aren't specified as well as they could be, especially the 
+	static_target() rule since it isn't as flexible as 
+	c_plus_target_complex() */
+#if WANT_QUILL
+DBLIB = $(POSTGRESQL_LIB)/libpq.a
+#else
+DBLIB = 
+#endif /* WANT_QUILL */
+
+c_plus_target_complex(condor_history,history.o,$(C_PLUS_FLAGS),$(LIBCRYPT) $(ALL_LDFLAGS),$(LIB) $(DBLIB))
 release_target(condor_history,bin,EXECUTABLE_MODE)
 strip_target(condor_history,bin,EXECUTABLE_MODE)
-static_target(condor_history,history.o,$(LIB),$(STATIC_DIR)/bin)
+static_target(condor_history,history.o,$(LIB) $(DBLIB) $(LIBCRYPT),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_qedit,qedit.o,$(LIB))
 release_target(condor_qedit,bin,EXECUTABLE_MODE)

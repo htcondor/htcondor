@@ -60,6 +60,11 @@ char	*strStatus (ClassAd *);
 CollectorEngine::CollectorEngine (CollectorStats *stats ) : 
 	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
+
+#if WANT_QUILL
+	QuillAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
+#endif /* WANT_QUILL */
+
 	ScheddAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	SubmittorAds  (GREATER_TABLE_SIZE, &adNameHashFunction),
 	LicenseAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
@@ -83,6 +88,10 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 CollectorEngine::
 ~CollectorEngine ()
 {
+#if WANT_QUILL
+	killHashTable (QuillAds);
+#endif /* WANT_QUILL */
+
 	killHashTable (StartdAds);
 	killHashTable (StartdPrivateAds);
 	killHashTable (ScheddAds);
@@ -155,6 +164,12 @@ invokeHousekeeper (AdTypes adtype)
 		case STARTD_AD: 
 			cleanHashTable (StartdAds, now, makeStartdAdHashKey);
 			break;
+
+#if WANT_QUILL
+		case QUILL_AD: 
+			cleanHashTable (QuillAds, now, makeQuillAdHashKey);
+			break;
+#endif /* WANT_QUILL */
 
 		case SCHEDD_AD:
 			cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
@@ -245,6 +260,12 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	  case SCHEDD_AD:
 		table = &ScheddAds;
 		break;
+
+#if WANT_QUILL
+	  case QUILL_AD:
+		table = &QuillAds;
+		break;
+#endif /* WANT_QUILL */
 
 	  case MASTER_AD:
 		table = &MasterAds;
@@ -438,6 +459,22 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		break;
 
+#if WANT_QUILL
+	  case UPDATE_QUILL_AD:
+		if (!makeQuillAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		checkMasterStatus (clientAd);
+		hashString.Build( hk );
+		retVal=updateClassAd (QuillAds, "QuillAd     ", "Quill",
+							  clientAd, hk, hashString, insert, from );
+		break;
+#endif /* WANT_QUILL */
+
 	  case UPDATE_SCHEDD_AD:
 		if (!makeScheddAdHashKey (hk, clientAd, from))
 		{
@@ -599,6 +636,13 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 				return 0;
 			break;
 
+#if WANT_QUILL
+		case QUILL_AD:
+			if (QuillAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+#endif /* WANT_QUILL */
+
 		case SCHEDD_AD:
 			if (ScheddAds.lookup (hk, val) == -1)
 				return 0;
@@ -659,6 +703,11 @@ remove (AdTypes adType, AdNameHashKey &hk)
 	{
 		case STARTD_AD:
 			return !StartdAds.remove (hk);
+
+#if WANT_QUILL
+		case QUILL_AD:
+			return !QuillAds.remove (hk);
+#endif /* WANT_QUILL */
 
 		case SCHEDD_AD:
 			return !ScheddAds.remove (hk);
@@ -823,6 +872,11 @@ housekeeper()
 
 	dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
 	cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
+
+#if WANT_QUILL
+	dprintf (D_ALWAYS, "\tCleaning QuillAds ...\n");
+	cleanHashTable (QuillAds, now, makeQuillAdHashKey);
+#endif /* WANT_QUILL */
 
 	dprintf (D_ALWAYS, "\tCleaning ScheddAds ...\n");
 	cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
