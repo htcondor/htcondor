@@ -696,7 +696,9 @@ perm::set_acls( const char *filename )
 	{
 		dprintf(D_FULLDEBUG, "perm::set_acls(%s): volume has no ACLS\n",
 				filename);
-		return false;
+		// return true (success) here, so upper layers do not consider
+		// this a fatal error --- thus allowing us to run on FAT32.
+		return true;
 	}
 	
 	// Make sure we have the sid.
