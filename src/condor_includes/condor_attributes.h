@@ -478,6 +478,7 @@ const char ATTR_UPDATESTATS_SEQUENCED	 [] = "UpdatesSequenced";
 const char ATTR_UPDATESTATS_LOST			 [] = "UpdatesLost";
 const char ATTR_UPDATESTATS_HISTORY		 [] = "UpdatesHistory";
 
+const char ATTR_QUILL_USE_QUILL		[] = "QuillUseQuill";
 const char ATTR_QUILL_NAME		[] = "QuillName";
 const char ATTR_QUILL_IS_REMOTELY_QUERYABLE	[] = "QuillIsRemotelyQueryable";
 const char ATTR_QUILL_DB_IP_ADDR	[] = "QuillDatabaseIpAddr";

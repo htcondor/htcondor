@@ -110,12 +110,6 @@ main(int argc, char* argv[])
   queryver.setQuery(HISTORY_ALL_VER, NULL);
 #endif /* WANT_QUILL */
 
-#if WANT_QUILL
-  readfromfile = checkDBconfig();
-#else 
-  readfromfile = TRUE;
-#endif /* WANT_QUILL */
-
   for(i=1; i<argc; i++) {
     if (strcmp(argv[i],"-l")==0) {
       longformat=TRUE;   
@@ -236,9 +230,21 @@ main(int argc, char* argv[])
 	  fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
 	  exit( 1 );
   }
+
+#if WANT_QUILL
+	/* This call must happen AFTER config() is called */
+  if (checkDBconfig() == true) {
+  	readfromfile = false;
+  } else {
+  	readfromfile = true;
+  }
+#else 
+  readfromfile = true;
+#endif /* WANT_QUILL */
+
+printf("readfromfile is %d\n", readfromfile);
   
-  
-  if(!readfromfile) {
+  if(readfromfile == false) {
 #if WANT_QUILL
 	  if(remotequill) {
 		  if (Collectors == NULL) {
@@ -290,7 +296,7 @@ main(int argc, char* argv[])
 		  if(!tmp) {
 			free(tmp);
 		  }
-		  readfromfile = TRUE;
+		  readfromfile = true;
 	  	}
 	  }
 		  // query history table
@@ -302,7 +308,7 @@ main(int argc, char* argv[])
 #endif /* WANT_QUILL */
   }
   
-  if(readfromfile) {
+  if(readfromfile == true) {
 	  if (!JobHistoryFileName) {
 		  JobHistoryFileName=param("HISTORY");
 	  }
@@ -373,38 +379,37 @@ main(int argc, char* argv[])
 /* this function for checking whether database can be used for 
    querying in local machine */
 static bool checkDBconfig() {
-	char *str1, *str2, *str3, *str4;
+	char *str0, *str1, *str2, *str3, *str4;
 
+	str0 = param("QUILL_USE_QUILL");
 	str1 = param("QUILL_NAME");
 	str2 = param("QUILL_DB_IP_ADDR");
 	str3 = param("QUILL_DB_NAME");
 	str4 = param("QUILL_DB_QUERY_PASSWORD");
 
-	if(!str1) {
-		return FALSE;
+	if (str0 == NULL) {
+		/* DB is not available */
+		return false;
 	}
-	
-	free(str1);
 
-	if(!str2) {
-		return FALSE;
+	if (str0[0] == 'f' || str0[0] == 'F') {
+		/* DB is not available */
+		free(str0);
+		return false;
 	}
-	
-	free(str2);
 
-	if(!str3) {
-		return FALSE;
+	/* See if everything I need exists */
+	if (str1 && str2 && str3 && str4) { 
+		free(str0);
+		free(str1);
+		free(str2);
+		free(str3);
+		free(str4);
+
+		return true;
 	}
-	
-	free(str3);
 
-	if(!str4) {
-		return FALSE;
-	}
-	
-	free(str4);
-
-	return TRUE;
+	return false;
 }
 
 

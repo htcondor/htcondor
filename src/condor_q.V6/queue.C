@@ -221,16 +221,25 @@ static void freeConnectionStrings() {
 #if WANT_QUILL
 /* this function for checking whether database can be used for querying in local machine */
 static bool checkDBconfig() {
-	char *str1, *str2, *str3, *str4;
+	char *str0, *str1, *str2, *str3, *str4;
+
+	str0 = param("QUILL_USE_QUILL");
+
+	if (!str0 || str0[0] == 'f' || str0[0] == 'F') {
+		return FALSE;
+	}
+
 	str1 = param("QUILL_NAME");
 
 	if (!str1) {
+		free(str0);
 		return FALSE;
 	}
 
 	str2 = param("QUILL_DB_IP_ADDR");
 
 	if (!str2) {
+		free(str0);
 		free(str1);
 		return FALSE;
 	}
@@ -251,6 +260,7 @@ static bool checkDBconfig() {
 		return FALSE;
 	}
 
+	free(str0);
 	free(str1); 
 	free(str2);
 	free(str3);
