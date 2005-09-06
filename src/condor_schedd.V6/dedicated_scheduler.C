@@ -4034,6 +4034,14 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			if (machine == NULL) {
 					// Uh oh...
 				dprintf( D_ALWAYS, "Dedicated Scheduler:: couldn't find machine %s to reconnect to\n", host);
+				machinesToAllocate.Rewind();
+				while( machinesToAllocate.Next() ) {
+					machinesToAllocate.DeleteCurrent();
+				}
+				jobsToAllocate.Rewind();
+				while( jobsToAllocate.Next() ) {
+					jobsToAllocate.DeleteCurrent();
+				}
 				continue;
 			}
 
@@ -4057,12 +4065,15 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		}
 	}
 
-		// Last time through, create the last bit of allocations
-	dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.%d)\n", id.cluster, id.proc);
-	createAllocations(&machinesToAllocate, &jobsToAllocate, 
+		// Last time through, create the last bit of allocations, if there are any
+	if (machinesToAllocate.Number() > 0) {
+		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.%d)\n", id.cluster, id.proc);
+		createAllocations(&machinesToAllocate, &jobsToAllocate, 
 					  id.cluster, nprocs, true);
 		
+	}
 	spawnJobs();
+
 }	
 
 
