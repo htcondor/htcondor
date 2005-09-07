@@ -1623,3 +1623,61 @@ STORK_ARGS = -p $(STORK_PORT) -f -Serverlog $(STORK_LOG_BASE)
 ## Directory containing Stork modules.
 #STORK_MODULE_DIR = $(LIBEXEC)
 
+##
+##--------------------------------------------------------------------
+##  Quill Job Queue Mirroring Server
+##--------------------------------------------------------------------
+##  Where is the Quill binary installed and what arguments should be passed?
+QUILL = $(SBIN)/condor_quill
+QUILL_ARGS = -f
+
+# Where is the log file for the quill daemon?
+QUILL_LOG = $(LOG)/QuillLog
+
+# The identification and location of the quill daemon for local clients.
+QUILL_ADDRESS_FILE = $(LOG)/.quill_address
+
+# If this is set to true, then the rest of the QUILL arguments must be defined
+# for quill to function. If it is Fase or left undefined, then quill will not
+# be consulted by either the scheduler or the tools, but in the case of a 
+# remote quill query where the local client has quill turned off, but the
+# remote client has quill turned on, things will still function normally.
+#QUILL_ENABLED = TRUE
+
+# This will be the name of a quill daemon using this config file. This name
+# should not conflict with any other quill name--or schedd name. 
+#QUILL_NAME = quill@postgresql-server.machine.com
+
+# The Postgreql server requires usernames that can manipulate tables. This will
+# be the username associated with this instance of the quill daemon mirroring
+# a schedd's job queue. Each quill daemon must have a unique username 
+# associated with it otherwise multiple quill daemons will corrupt the data
+# held under an indentical user name.
+#QUILL_DB_NAME = name_of_db
+
+# The required password for the DB user which quill will use to read 
+# information from the database about the queue.
+#QUILL_DB_QUERY_PASSWORD = foobar
+
+# The machine and port of the postgres server.
+#QUILL_DB_IP_ADDR = machine.domain.com:5432
+
+# Polling period, in seconds, for when quill reads transactions out of the
+# schedd's job queue log file and puts them into the database.
+#QUILL_POLLING_PERIOD = 10
+
+# Number of days that historical information about previous jobs will be kept.
+# It defaults to 180 days
+#QUILL_HISTORY_DURATION  = 180
+
+# Number of hours between scans of QUILL_HISTORY_DURATION.
+#QUILL_HISTORY_CLEANING_INTERVAL = 24
+
+# Allows or disallows a remote query to the quill daemon and database
+# which is reading this log file. Defaults to true.
+#QUILL_IS_REMOTELY_QUERYABLE = TRUE
+
+# Add debugging flags to here if you need to debug quill for some reason.
+#QUILL_DEBUG = D_FULLDEBUG
+
+
