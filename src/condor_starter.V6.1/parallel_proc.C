@@ -201,6 +201,11 @@ ParallelProc::Continue() {
 
 
 bool
+ParallelProc::ShutdownFast() {
+	VanillaProc::ShutdownGraceful();
+}
+
+bool
 ParallelProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "In ParallelProc::PublishUpdateAd()\n" );

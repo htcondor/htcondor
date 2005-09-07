@@ -69,6 +69,8 @@ class ParallelProc : public VanillaProc
 		/** Publish our Node. */
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
+
+	virtual bool ShutdownFast();
  protected:
 	int Node;
 
