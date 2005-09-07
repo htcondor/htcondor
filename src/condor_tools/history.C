@@ -242,8 +242,6 @@ main(int argc, char* argv[])
   readfromfile = true;
 #endif /* WANT_QUILL */
 
-printf("readfromfile is %d\n", readfromfile);
-  
   if(readfromfile == false) {
 #if WANT_QUILL
 	  if(remotequill) {
@@ -272,7 +270,7 @@ printf("readfromfile is %d\n", readfromfile);
 			  if (!ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) ||
 				  !ad->LookupString(ATTR_QUILL_DB_NAME, &dbName) ||
 				  !ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, &queryPassword) || 
-				  (ad->LookupInteger(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) && !flag)) {
+				  (ad->LookupBool(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) && !flag)) {
 				  printf("Error: The quill daemon \"%s\" is not set up "
 						 "for database queries\n", 
 						 quillName);
@@ -379,37 +377,37 @@ printf("readfromfile is %d\n", readfromfile);
 /* this function for checking whether database can be used for 
    querying in local machine */
 static bool checkDBconfig() {
-	char *str0, *str1, *str2, *str3, *str4;
+	char *tmp;
 
-	str0 = param("QUILL_USE_QUILL");
-	str1 = param("QUILL_NAME");
-	str2 = param("QUILL_DB_IP_ADDR");
-	str3 = param("QUILL_DB_NAME");
-	str4 = param("QUILL_DB_QUERY_PASSWORD");
+	if (param_boolean("QUILL_ENABLED", false) == false) {
+		return false;
+	};
 
-	if (str0 == NULL) {
-		/* DB is not available */
+	tmp = param("QUILL_NAME");
+	if (!tmp) {
 		return false;
 	}
+	free(tmp);
 
-	if (str0[0] == 'f' || str0[0] == 'F') {
-		/* DB is not available */
-		free(str0);
+	tmp = param("QUILL_DB_IP_ADDR");
+	if (!tmp) {
 		return false;
 	}
+	free(tmp);
 
-	/* See if everything I need exists */
-	if (str1 && str2 && str3 && str4) { 
-		free(str0);
-		free(str1);
-		free(str2);
-		free(str3);
-		free(str4);
-
-		return true;
+	tmp = param("QUILL_DB_NAME");
+	if (!tmp) {
+		return false;
 	}
+	free(tmp);
 
-	return false;
+	tmp = param("QUILL_DB_QUERY_PASSWORD");
+	if (!tmp) {
+		return false;
+	}
+	free(tmp);
+
+	return true;
 }
 
 

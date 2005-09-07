@@ -119,6 +119,13 @@ JobQueueDBManager::config(bool reconfig)
 	char *host, *port, *ptr_colon;
 	int len, tmp1, tmp2, tmp3;
 
+	if (param_boolean("QUILL_ENABLED", false) == false) {
+		EXCEPT("Quill is currently disabled. Please set QUILL_ENABLED to "
+				"TRUE if you want this functionality and read the manual about "
+				"this feature since it requires other attributes to be set "
+				"properly.");
+	}
+
 		//bail out if no SPOOL variable is defined since its used to 
 		//figure out the location of the job_queue.log file
 	char *spool = param("SPOOL");
@@ -2227,13 +2234,11 @@ void JobQueueDBManager::createQuillAd(void) {
 		EXCEPT("Cannot find variable QUILL_NAME in config file\n");
 	}
 
-	char *is_remotely_queryable = param("QUILL_IS_REMOTELY_QUERYABLE");
-	if(!is_remotely_queryable) {
-		is_remotely_queryable = strdup("1");
+	if (param_boolean("QUILL_IS_REMOTELY_QUERYABLE", true) == true) {
+		sprintf( expr, "%s = TRUE", ATTR_QUILL_IS_REMOTELY_QUERYABLE);
+	} else {
+		sprintf( expr, "%s = FALSE", ATTR_QUILL_IS_REMOTELY_QUERYABLE);
 	}
-  
-	sprintf( expr, "%s = %s", ATTR_QUILL_IS_REMOTELY_QUERYABLE, 
-			 is_remotely_queryable );
 	ad->Insert(expr);
 
 	sprintf( expr, "%s = %d", "QuillPollingPeriod", pollingPeriod );
@@ -2279,7 +2284,6 @@ void JobQueueDBManager::createQuillAd(void) {
 	collectors = CollectorList::create();
   
 	if(tmp) free(tmp);
-	if(is_remotely_queryable) free(is_remotely_queryable);
 	if(quill_query_passwd) free(quill_query_passwd);
 	if(quill_name) free(quill_name);
 	if(mysockname) free(mysockname);

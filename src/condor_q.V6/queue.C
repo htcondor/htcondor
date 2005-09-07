@@ -221,51 +221,37 @@ static void freeConnectionStrings() {
 #if WANT_QUILL
 /* this function for checking whether database can be used for querying in local machine */
 static bool checkDBconfig() {
-	char *str0, *str1, *str2, *str3, *str4;
+	char *tmp;
 
-	str0 = param("QUILL_USE_QUILL");
+	if (param_boolean("QUILL_ENABLED", false) == false) {
+		return false;
+	};
 
-	if (!str0 || str0[0] == 'f' || str0[0] == 'F') {
-		return FALSE;
+	tmp = param("QUILL_NAME");
+	if (!tmp) {
+		return false;
 	}
+	free(tmp);
 
-	str1 = param("QUILL_NAME");
-
-	if (!str1) {
-		free(str0);
-		return FALSE;
+	tmp = param("QUILL_DB_IP_ADDR");
+	if (!tmp) {
+		return false;
 	}
+	free(tmp);
 
-	str2 = param("QUILL_DB_IP_ADDR");
-
-	if (!str2) {
-		free(str0);
-		free(str1);
-		return FALSE;
+	tmp = param("QUILL_DB_NAME");
+	if (!tmp) {
+		return false;
 	}
+	free(tmp);
 
-	str3 = param("QUILL_DB_NAME");
-	
-	if (!str3) {
-		free(str1); 
-		free(str2);
-		return FALSE;
+	tmp = param("QUILL_DB_QUERY_PASSWORD");
+	if (!tmp) {
+		return false;
 	}
+	free(tmp);
 
-	str4 = param("QUILL_DB_QUERY_PASSWORD");
-	if (!str4) {
-		free(str1); 
-		free(str2);
-		free(str3);		
-		return FALSE;
-	}
-
-	free(str0);
-	free(str1); 
-	free(str2);
-	free(str3);
-	free(str4);
-	return TRUE;
+	return true;
 }
 #endif /* WANT_QUILL */
 
@@ -548,6 +534,7 @@ int main (int argc, char **argv)
 	scheddList.Open();	
 	while ((ad = scheddList.Next()))
 	{
+		/* default to true for remotely queryable */
 		int flag=1;
 
 		freeConnectionStrings();
@@ -558,7 +545,7 @@ int main (int argc, char **argv)
 			ad->LookupString(ATTR_QUILL_NAME, &quillName) &&
 			ad->LookupString(ATTR_QUILL_DB_NAME, &dbName) && 
 			ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, &queryPassword) &&
-			(!ad->LookupInteger(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) || flag)) {
+			(!ad->LookupBool(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) || flag)) {
 
 			useDB = TRUE;
 

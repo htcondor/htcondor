@@ -307,7 +307,7 @@ Scheduler::Scheduler() :
 	startjobsid = -1;
 
 #if WANT_QUILL
-	quill_use_quill = FALSE;
+	quill_enabled = FALSE;
 	quill_is_remotely_queryable = 0; //false
 	quill_name = NULL;
 	quill_db_name = NULL;
@@ -8961,34 +8961,20 @@ Scheduler::Init()
 #if WANT_QUILL
 
 	/* See if QUILL is configured for this schedd */
-	tmp = param("QUILL_USE_QUILL");
-	if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
-		quill_use_quill = FALSE;
+	if (param_boolean("QUILL_ENABLED", false) == false) {
+		quill_enabled = FALSE;
 	} else {
-		if (tmp[0] == 't' || tmp[0] == 'T') {
-			quill_use_quill = TRUE;
-		} else {
-			quill_use_quill = FALSE;
-		}
-		free(tmp);
-		tmp = NULL;
+		quill_enabled = TRUE;
 	}
 
 	/* only force definition of these attributes if I have to */
-	if (quill_use_quill == TRUE) {
+	if (quill_enabled == TRUE) {
 
 		/* set up whether or not the quill daemon is remotely queryable */
-		tmp = param("QUILL_IS_REMOTELY_QUERYABLE");
-		if (!tmp) {
-			quill_is_remotely_queryable = FALSE;
+		if (param_boolean("QUILL_IS_REMOTELY_QUERYABLE", true) == true) {
+			quill_is_remotely_queryable = TRUE;
 		} else {
-			if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
-				quill_is_remotely_queryable = FALSE;
-			} else {
-				quill_is_remotely_queryable = TRUE;
-			}
-			free(tmp);
-			tmp = NULL;
+			quill_is_remotely_queryable = FALSE;
 		}
 
 		/* set up a required quill_name */
@@ -9076,8 +9062,8 @@ Scheduler::Init()
 		
 #if WANT_QUILL
 	// Put the quill stuff into the add as well
-	if (quill_use_quill == TRUE) {
-		sprintf( expr, "%s = TRUE", ATTR_QUILL_USE_QUILL ); 
+	if (quill_enabled == TRUE) {
+		sprintf( expr, "%s = TRUE", ATTR_QUILL_ENABLED ); 
 		ad->Insert(expr);
 
 		sprintf( expr, "%s = \"%s\"", ATTR_QUILL_NAME, quill_name ); 
@@ -9094,13 +9080,16 @@ Scheduler::Init()
 			quill_db_query_password); 
 		ad->Insert(expr);
 
-		sprintf( expr, "%s = %d", ATTR_QUILL_IS_REMOTELY_QUERYABLE, 
-			quill_is_remotely_queryable ); 
+		if (quill_is_remotely_queryable == TRUE) {
+			sprintf( expr, "%s = TRUE", ATTR_QUILL_IS_REMOTELY_QUERYABLE);
+		} else {
+			sprintf( expr, "%s = FALSE", ATTR_QUILL_IS_REMOTELY_QUERYABLE);
+		}
 		ad->Insert(expr);
 
 	} else {
 
-		sprintf( expr, "%s = FALSE", ATTR_QUILL_USE_QUILL ); 
+		sprintf( expr, "%s = FALSE", ATTR_QUILL_ENABLED ); 
 		ad->Insert(expr);
 	}
 #endif
