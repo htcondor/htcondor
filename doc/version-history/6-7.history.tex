@@ -55,6 +55,12 @@ string into separate macros.
 
 \begin{itemize}
 
+\item Fixed bug in the parallel universe that caused the schedd to
+crash when reconnecting to jobs that couldn't be reconnected to.
+
+\item Fixed bug in parallel shadow which caused Shadow Exceptions
+in parallel jobs when the components exited in the wrong order.
+
 % Gnats PR 534.
 \item Fixed a bug in \Condor{dagman} that caused it to fail on Windows
 for DAGs with nodes having absolute paths to their log files.  (This bug
