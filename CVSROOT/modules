@@ -468,7 +468,8 @@ V6_7_11_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/classads/0.9.8-b2 \
 		   externals/bundles/gsoap/2.7 \
 		   externals/bundles/srb/3.2.1 \
-		   externals/bundles/pcre/5.0
+		   externals/bundles/pcre/5.0 \
+		   externals/bundles/postgresql/8.0.2
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_11_EXT
@@ -476,7 +477,8 @@ V6_7_EXT	-a V6_7_11_EXT
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
                    externals/bundles/gsoap/2.7 \
-                   externals/bundles/openssl/0.9.8
+                   externals/bundles/openssl/0.9.8 \
+                   externals/bundles/postgresql/8.0.2
 
 # Externals needed for V6_7 with kerberos 1.4
 V6_7_KERB14_EXT -a V6_7_COMMON_EXT \
