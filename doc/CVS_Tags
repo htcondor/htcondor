@@ -8,6 +8,15 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+9/7/05  V6_7-pre-merge-V6_7-quill-doc-merge-1
+        V6_7-post-merge-V6_7-quill-doc-merge-1
+    The state of the doc directory in V6_7-branch before and after
+    merging changes from the V6_7-quill-branch as tagged V6_7-quill-doc-merge-1.
+
+9/7/05  V6_7-quill-doc-merge-1
+    The state of the doc directory in V6_7-quill-branch before a 
+    first time (and only time) merge into the V6_7-branch. 
+
 8/4/05 V6_7_10-branch
     A release branch for the 6.7.10 manual, created from the
     V6_7_10-root tag. Any changes to the 6.7.10 manual should be done
