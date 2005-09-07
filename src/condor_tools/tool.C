@@ -157,6 +157,9 @@ usage( char *str )
 		fprintf( stderr, "    -collector\n" );
 		fprintf( stderr, "    -negotiator\n" );
 		fprintf( stderr, "    -kbdd\n" );
+#if WANT_QUILL
+		fprintf( stderr, "    -quill\n" );
+#endif
 	}
 	fprintf( stderr, "\n" );
 
@@ -416,6 +419,12 @@ main( int argc, char *argv[] )
 		case 'v':
 			version();
 			break;
+#if WANT_QUILL
+		case 'q':
+			subsys_check( MyName );
+			dt = DT_QUILL;
+			break;
+#endif
 		case 'h':
 			usage( MyName );
 			break;
