@@ -73,6 +73,7 @@
 \newcommand{\Todo}{\begin{center} \fbox{This section has not yet been written} \end{center}}
 \newcommand{\Syscall}[1]{\texttt{#1()}}		% The name of a syscall
 \newcommand{\Login}[1] {{\tt #1}}       % login name like root or nobody
+\newcommand{\Username}[1]{``\textbf{#1}''}		% A username for an account
 
 % A keyword in a meta-language
 \newcommand{\Keyword}[1] {{\tt #1}}
@@ -91,6 +92,19 @@
 
 % Release directory entry
 \newcommand{\Release}[1]{\texttt{$<$release\_dir$>$/#1}}
+
+%
+% Talking about SQL entities
+%
+% Name of a Table
+\newcommand{\SQLTable}[1] {\Bold{#1}}
+% Defining a Table
+\newcommand{\SQLTableDef}[2] {\SQLTable{#1} \Bold{(}#2\Bold{)}}
+% Name of a View
+\newcommand{\SQLView}[1] {\Bold{#1}}
+% Defining a View
+\newcommand{\SQLViewDef}[2] {\Keyword{CREATE VIEW} \SQLView{#1} \Keyword{as} #2\Bold{;}}
+
 
 
 %
