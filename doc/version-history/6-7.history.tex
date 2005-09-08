@@ -25,6 +25,11 @@ Linux port.
 
 \begin{itemize}
 
+\item Added a new feature called \Bold{Quill} to Condor which allows an
+	SQL server to mirror the job queue in order to speed up queries about
+	the job queue via \Condor{q} and \Condor{history}. Please see 
+	page~\pageref{sec:Quill} for the description of this feature.
+
 \item \Condor{dagman} has a new \Opt{-maxidle} command-line argument
 that can be used to throttle DAG job submissions according to the number
 of idle jobs in the DAG.
