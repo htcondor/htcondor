@@ -1629,7 +1629,7 @@ STORK_ARGS = -p $(STORK_PORT) -f -Serverlog $(STORK_LOG_BASE)
 ##--------------------------------------------------------------------
 ##  Where is the Quill binary installed and what arguments should be passed?
 QUILL = $(SBIN)/condor_quill
-QUILL_ARGS = -f
+#QUILL_ARGS =
 
 # Where is the log file for the quill daemon?
 QUILL_LOG = $(LOG)/QuillLog
