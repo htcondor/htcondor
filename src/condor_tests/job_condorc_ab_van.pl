@@ -10,6 +10,9 @@ print "Submit file for this test is $cmd\n";
 print "looking at env for condor config\n";
 system("printenv | grep CONDOR_CONFIG");
 
+$condor_config = $ENV{CONDOR_CONFIG};
+print "CONDOR_CONFIG = $condor_config\n";
+
 $testname = 'Condor-C A & B test - vanilla U';
 
 $aborted = sub {
