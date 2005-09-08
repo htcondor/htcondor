@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task,v 1.1.4.4 2005-04-16 02:51:50 bgietzel Exp $
+# $Id: remote_task,v 1.1.4.5 2005-09-08 19:24:24 tannenba Exp $
 # Perform a given build task, and return the status of that task
 # 0 = success
 # 1 = build failed
@@ -61,7 +61,7 @@ print "------------------------- ENV DUMP ------------------------\n";
 
 if ($taskname eq "win_make") {
     chdir("$NTConfigDir") || c_die("Can't chdir($NTConfigDir): $!\n");
-    system("make.bat");
+    system("make.bat /exit");
 }
 elsif ($taskname eq "win_release") {
     mkdir("$PublicDir", 0777) || c_die ("Can't mkdir($PublicDir): $!\n");

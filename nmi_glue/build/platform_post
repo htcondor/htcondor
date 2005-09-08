@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.4.4 2005-08-24 22:27:10 bt Exp $
+# $Id: platform_post,v 1.1.4.5 2005-09-08 19:24:24 tannenba Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 

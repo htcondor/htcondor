@@ -89,6 +89,11 @@ LEXLIB = @LEXLIB@
 YACC = @YACC@
 STRIP = @STRIP@
 TRUE = @TRUE@
+#define HAVE_JAVAC @HAVE_JAVAC@
+JAVAC = @JAVAC@
+#define HAVE_JAR @HAVE_JAR@
+JAR = @JAR@
+
 
 TAR_CMD = @TarCmd@
 

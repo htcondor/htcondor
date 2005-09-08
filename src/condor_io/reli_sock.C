@@ -184,6 +184,7 @@ ReliSock::accept( ReliSock	&c )
 	}
 
 	c._sock = c_sock;
+	c.move_descriptor_up();	// must be called _after_ we initialize c._sock
 	c._state = sock_connect;
 	c.decode();
 

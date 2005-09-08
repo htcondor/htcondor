@@ -1,3 +1,11 @@
+09/07/05 V6_7-pre_merge-V6_6-merge-45
+   The state of the V6_7-branch before merging in the V6_6-branch
+   as it stood at tag V6_6-merge-45.
+
+09/07/05 V6_6-merge-45
+   The state of the V6_6-branch for a merge into V6_7-branch.  This should be
+   the last V6_6 -> V6_7 merge before the 6.7.11 release.
+
 09/07/05 V6_7-lease-merge-1
    The state of the V6_7-lease-branch for a merge into V6_7-branch. This
    should be the end of V6_7-lease-branch.

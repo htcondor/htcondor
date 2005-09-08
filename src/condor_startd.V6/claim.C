@@ -132,27 +132,40 @@ Claim::vacate()
 void
 Claim::publish( ClassAd* ad, amask_t how_much )
 {
-	char line[256];
+	MyString line;
 	char* tmp;
 	char *remoteUser;
 
 	if( IS_PRIVATE(how_much) ) {
+			// None of this belongs in private ads
 		return;
 	}
 
-	sprintf( line, "%s = %f", ATTR_CURRENT_RANK, c_rank );
-	ad->Insert( line );
+		/*
+		  NOTE: currently, we publish all of the following regardless
+		  of the mask (e.g. UPDATE vs. TIMEOUT).  Given the bug with
+		  ImageSize being recomputed but not used due to UPDATE
+		  vs. TIMEOUT confusion when publishing it, I'm inclined to
+		  ignore the performance cost of publishing the same stuff
+		  every timeout.  If, for some crazy reason, this becomes a
+		  problem, we can always seperate these into UPDATE + TIMEOUT
+		  attributes and only publish accordingly...  
+		  Derek <wright@cs.wisc.edu> 2005-08-11
+		*/
+
+	line.sprintf( "%s = %f", ATTR_CURRENT_RANK, c_rank );
+	ad->Insert( line.Value() );
 
 	if( c_client ) {
 		remoteUser = c_client->user();
 		if( remoteUser ) {
-			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_USER, remoteUser );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_USER, tmp );
+			ad->Insert( line.Value() );
 		}
 		tmp = c_client->owner();
 		if( tmp ) {
-			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
+			ad->Insert( line.Value() );
 		}
 		tmp = c_client->accountingGroup();
 		if( tmp ) {
@@ -163,40 +176,49 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 				uidDom = strchr(remoteUser,'@');
 			}
 			if ( uidDom ) {
-				sprintf( line, "%s=\"%s%s\"",ATTR_ACCOUNTING_GROUP,tmp,uidDom);
+				line.sprintf("%s=\"%s%s\"",ATTR_ACCOUNTING_GROUP,tmp,uidDom);
 			} else {
-				sprintf( line, "%s=\"%s\"", ATTR_ACCOUNTING_GROUP, tmp );
+				line.sprintf("%s=\"%s\"", ATTR_ACCOUNTING_GROUP, tmp );
 			}
-			ad->Insert( line );
+			ad->Insert( line.Value() );
 		}
 		tmp = c_client->host();
 		if( tmp ) {
-			sprintf( line, "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
-			ad->Insert( line );
+			line.sprintf( "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
+			ad->Insert( line.Value() );
 		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
-		sprintf( line, "%s=\"%d.%d\"", ATTR_JOB_ID, c_cluster, c_proc );
-		ad->Insert( line );
+		line.sprintf( "%s=\"%d.%d\"", ATTR_JOB_ID, c_cluster, c_proc );
+		ad->Insert( line.Value() );
 	}
 
 	if( c_global_job_id ) {
-		sprintf( line, "%s=\"%s\"", ATTR_GLOBAL_JOB_ID, c_global_job_id );
-		ad->Insert( line );
+		line.sprintf( "%s=\"%s\"", ATTR_GLOBAL_JOB_ID, c_global_job_id );
+		ad->Insert( line.Value() );
 	}
 
 	if( c_job_start > 0 ) {
-		sprintf(line, "%s=%d", ATTR_JOB_START, c_job_start );
-		ad->Insert( line );
+		line.sprintf( "%s=%d", ATTR_JOB_START, c_job_start );
+		ad->Insert( line.Value() );
 	}
 
 	if( c_last_pckpt > 0 ) {
-		sprintf(line, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
-		ad->Insert( line );
+		line.sprintf( "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
+		ad->Insert( line.Value() );
+	}
+
+		// update ImageSize attribute from procInfo (this is
+		// only for the opportunistic job, not COD)
+	if( isActive() ) {
+		unsigned long imgsize = imageSize();
+		line.sprintf( "%s = %lu", ATTR_IMAGE_SIZE, imgsize );
+		ad->Insert( line.Value() );
 	}
 
 	publishStateTimes( ad );
+
 }
 
 

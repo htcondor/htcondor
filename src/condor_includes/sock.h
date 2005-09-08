@@ -275,6 +275,8 @@ protected:
 	bool test_connection();
 	///
 	time_t connect_timeout_time();
+	///
+	int move_descriptor_up();
 
 	/*
 	**	Data structures

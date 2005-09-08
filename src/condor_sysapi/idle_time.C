@@ -52,11 +52,17 @@ static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
 static time_t dev_idle_time( char *path, time_t now );
 static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
-static int is_number(const char *str);
+
+#if defined(LINUX)
+/* used to get the keyboard and mouse idle time from /proc/interrupts as a
+	last resort */
+static time_t km_idle_time(const time_t now);
 static int get_keyboard_info(idle_t *fill_me);
 static int get_mouse_info(idle_t *fill_me);
 static int get_keyboard_mouse_info(idle_t *fill_me);
-static time_t km_idle_time(const time_t now);
+static int is_number(const char *str);
+#endif
+
 #endif
 
 /* we must now use the kstat interface to get this information under later
@@ -142,7 +148,10 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	time_t tty_idle;
 	time_t now = time( 0 );
 	char* tmp;
+#if defined(LINUX)
+	/* what is the idle time using the /proc/interrupts method? */
 	time_t m_interrupt_idle;
+#endif
 
 		// Find idle time from ptys/ttys.  See if we should trust
 		// utmp.  If so, only stat the devices that utmp says are
@@ -184,12 +193,14 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 		m_console_idle = now - _sysapi_last_x_event;
 	}
 
+#if defined(LINUX)
 	/* If we still don't have console idle info, (e.g. atime is not updated
 	   on device files in Linux 2.6 kernel), get keyboard and mouse idle
 	   time via /proc/interrupts.  Update user_idle appropriately too.
 	*/
 	m_interrupt_idle = km_idle_time(now);
 	m_console_idle = MIN(m_interrupt_idle, m_console_idle);
+#endif
 
 	m_idle = MIN(m_console_idle, m_idle);
 
@@ -502,6 +513,9 @@ dev_idle_time( char *path, time_t now )
 	return answer;
 }
 
+#if defined(LINUX)
+/* This block of code should only get compiled for linux machines which have
+	/proc/interrupts */
 
 /* Returns true if the string contains only digits (and is not empty) */
 int
@@ -716,6 +730,8 @@ km_idle_time(const time_t now)
 
 	return now - last_km_activity.timepoint;
 }
+
+#endif /* defined(LINUX) */
 
 #else /* here's the OS X version of calc_idle_time */
 

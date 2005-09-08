@@ -5,6 +5,12 @@ REM Todd Tannenbaum <tannenba@cs.wisc.edu> Feb 2002
 REM Make all environment changes local
 setlocal
 
+REM We want to be able to make the build exit with an exit code
+REM instead of setting ERRORLEVEL, if, say, we're calling the bat file
+REM from Perl, which doesn't understand ERRORLEVEL.
+set INTERACTIVE=/b
+IF "%1" == "/exit" set INTERACTIVE=
+
 REM This fixes the wierdness in condor_cpp_util.mak -stolley 08/2002
 awk "{ gsub(/\.\\\.\.\\Debug/, \"..\\Debug\") } { gsub(/\.\\\.\.\\Release/, \"..\\Release\") } { print }" condor_cpp_util.mak > ~temp.mak
 del condor_cpp_util.mak
@@ -47,8 +53,8 @@ REM Note - Order is important in the loop below
 for %%f in ( gsoap condor_util_lib condor_cpp_util condor_io condor_classad condor_kbdd_dll condor_procapi condor_sysapi condor_daemon_core condor_acct condor_qmgmt condor_collector condor_config_val condor_dagman condor_findhost condor_history condor_mail condor_master condor_negotiator condor_preen condor_prio condor_q condor_qedit condor_submit_dag condor_rm condor_schedd condor_shadow condor_startd condor_starter condor_drmaa condor_gridmanager condor_stats condor_advertise condor_fetchlog condor_status condor_submit condor_tool condor_version condor_wait condor_userlog condor_userprio condor_store_cred condor_cod condor_transfer_data condor_birdwatcher) do ( awk "{if (($0 !~ /microsoft/) && ($0 !~ /externals/)) print }" %%f.dep > %%f.dep.tmp && del %%f.dep & ren %%f.dep.tmp %%f.dep & echo *** Building %%f & echo . & nmake /U /C /f %%f.mak RECURSE="0" CFG="%%f - Win32 %conf%" %* || goto failure )
 echo .
 echo *** Done.  Build is all happy.  Congrats!  Go drink beer.  
-exit /B 0
+exit %INTERACTIVE% 0
 :failure
 echo .
 echo *** Build Stopped.  Please fix errors and try again.
-exit /B 1
+exit %INTERACTIVE% 1

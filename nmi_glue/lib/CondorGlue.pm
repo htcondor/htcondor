@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.4.12 2005-08-24 22:24:51 bt Exp $
+# $Id: CondorGlue.pm,v 1.1.4.13 2005-09-08 19:24:25 tannenba Exp $
 #
 ######################################################################
 
@@ -184,6 +184,7 @@ my %prereqs = (
   "sun4u_sol_5.9"  => "gcc-2.95.3, binutils-2.15",
   "sun4u_sol_5.8"  => "gcc-2.95.3, binutils-2.15",
   "alpha_osf_V5.1" => "gcc-2.95.3, binutils-2.15",
+  "alpha_rh_7.2"   => "gcc-2.96, binutils-2.15",
   "ppc_aix_5.2"    => "vac-6, vacpp-6",
   "irix_6.5"       => "gcc-3.3, binutils-2.15"
 );
@@ -200,7 +201,7 @@ sub printPrereqs
     # platform-specific prereqs
     foreach $platform ( "x86_rh_7.2", "x86_rh_8.0", "x86_rh_9", 
 			"sun4u_sol_5.9", "sun4u_sol_5.8",
-			"ppc_aix_5.2", "alpha_osf_V5.1", "irix_6.5" )
+			"ppc_aix_5.2", "alpha_osf_V5.1", "alpha_rh_7.2", "irix_6.5" )
     {
 	print $fh "prereqs_$platform = $prereqs{'global'}, "
 	    . "$prereqs{$platform}\n";
@@ -230,9 +231,9 @@ sub printTestingPrereqs
 	    . "$prereqs{$platform}, java-1.4.2_05\n";
     }
 
-    # HACK: irix_6.5 and alpha_osf_V5.1 don't have java yet, so we
+    # HACK: irix_6.5 and alpha platforms don't have java yet, so we
     # can't use the real loop above...
-    foreach $platform ( "irix_6.5", "alpha_osf_V5.1" )
+    foreach $platform ( "irix_6.5", "alpha_osf_V5.1", "alpha_rh_7.2" )
     {
 	print $fh "prereqs_$platform = $prereqs{'global'}, "
 	    . "$prereqs{$platform}\n";
@@ -423,10 +424,10 @@ sub makeFetchFile
 
     open( FILE, ">$file" ) || die "Can't open $file for writing: $!\n";
     print FILE "method = cvs\n";
-	print FILE "cvs_root = /space/cvs/CONDOR_SRC\n";
-#  	print FILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
-#	print FILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";
-#	print FILE "cvs_rsh = /nmi/scripts/ssh_no_x11\n";
+    print FILE "cvs_root = /space/cvs/CONDOR_SRC\n";
+#    print FILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
+#    print FILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";
+#    print FILE "cvs_rsh = /nmi/scripts/ssh_no_x11\n";
     print FILE "cvs_module = $module\n";
     if( $tag ) {
         print FILE "cvs_tag = $tag\n";

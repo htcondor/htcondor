@@ -1313,7 +1313,10 @@ int GlobusJob::doEvaluateState()
 					WriteGlobusSubmitFailedEventToUserLog( jobAd,
 														   submitFailureCode,
 														   gahp->globus_gram_client_error_string(submitFailureCode) );
-					gmState = GM_UNSUBMITTED;
+						// We go to CLEAR_REQUEST here so that wantRematch
+						// will be evaluated
+					doResubmit = 1;
+					gmState = GM_CLEAR_REQUEST;
 					reevaluate_state = true;
 				}
 			} else if ( condorState == REMOVED || condorState == HELD ) {
@@ -2941,7 +2944,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		if ( env_vec[0] ) {
 			*rsl += ")(environment=";
 		}
-		while (env_vec[i]) {
+		for ( i = 0; env_vec[i]; i++ ) {
 			char *equals = strchr(env_vec[i],'=');
 			if ( !equals ) {
 				// this environment entry has no equals sign!?!?
@@ -2951,7 +2954,6 @@ MyString *GlobusJob::buildSubmitRSL()
 			buff.sprintf( "(%s %s)", env_vec[i],
 							 rsl_stringify(equals + 1) );
 			*rsl += buff;
-			i++;
 		}
 	}
 	if ( attr_value ) {

@@ -73,6 +73,17 @@ leave the 4th argument empty...
 BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
 
+DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
+RUN(lib_procapi_pidtracking-snapshot)
+TESTCLASS(lib_procapi_pidtracking-snapshot,core)
+TESTCLASS(lib_procapi_pidtracking-snapshot,quick)
+TESTCLASS(lib_procapi_pidtracking-snapshot,btdebug)
+
+DESC(cmd_q_shows-hold,"Condor_q shows hold")
+RUN(cmd_q_shows-hold)
+TESTCLASS(cmd_q_shows-hold,core)
+TESTCLASS(cmd_q_shows-hold,quick)
+
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
 DEPS(lib_userlog,x_read_joblog.exe)

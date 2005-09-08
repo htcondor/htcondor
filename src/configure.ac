@@ -1170,6 +1170,26 @@ if test "$ac_purify" = "purify"; then
    fi
 fi
 
+AC_PATH_PROG(ac_javac,javac,no,[$PATH])
+if test $ac_javac = "no"; then
+  AC_MSG_WARN( [javac not found] )
+  _cv_have_javac="NO"
+else
+  _cv_have_javac="YES"
+fi
+AC_SUBST(HAVE_JAVAC,$_cv_have_javac)
+AC_SUBST(JAVAC,$ac_javac)
+
+AC_PATH_PROG(ac_jar,jar,no,[$PATH])
+if test $ac_jar = "no"; then
+  AC_MSG_WARN( [jar not found] )
+  _cv_have_jar="NO"
+else
+  _cv_have_jar="YES"
+fi
+AC_SUBST(HAVE_JAR,$_cv_have_jar)
+AC_SUBST(JAR,$ac_jar)
+
 
 ############################################################
 # checks for libraries

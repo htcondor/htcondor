@@ -134,7 +134,7 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 	If any of the above attributes are not present, then they will
 	be assigned defaults and inserted into the classad.
-	The defaults are: False, False, False, True, respectively.
+	The defaults are: False, False, False, False, True, respectively.
 
 	Now, if you are using mode PERIODIC_ONLY in AnalyzePolicy(),
 	then this is all that you need in the classad _plus_ any other
@@ -178,8 +178,8 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	the job.  You can also call FiringExpressionValue() to find out
 	what the firing expression evaluated to which casued the action.
 
-	If you do a periodic evaluation and neither periodic check
-	expression became true, the action you get is STAYS_IN_QUEUE and
+	If you do a periodic evaluation and none of the periodic check
+	expressions became true, the action you get is STAYS_IN_QUEUE and
 	the FiringExpression() will be NULL.  However, when you do an on
 	exit evaluation, if you get STAYS_IN_QUEUE, that's because an
 	expression fired (ON_EXIT_REMOVE_CHECK) and became false.  In this
