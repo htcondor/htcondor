@@ -418,12 +418,15 @@ NETMAN_FLAGS =
 #endif
 
 #if WANT_QUILL
-QUILL_LIB =
+QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a
+QUILL_INC = -I$(POSTGRESQL_INC)
 QUILL_FLAGS = -DWANT_QUILL
 #else
 QUILL_LIB =
+QUILL_INC =
 QUILL_FLAGS =
 #endif
+
 
 /********************************************
  end of externals-specific settings and flags

@@ -5,15 +5,7 @@ PROGRAMS =  	condor_config_val condor_preen condor_stats \
 
 all_target( $(PROGRAMS) )
 
-#if WANT_QUILL
-QUILL_INC = -I$(POSTGRESQL_INC)
-QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a
-#else
-QUILL_INC =
-QUILL_LIB = 
-#endif
-
-CFLAGS = $(STD_C_FLAGS) $(QUILL_INC)
+CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC)
 LIB = $(STD_LIBS)
 
@@ -62,10 +54,10 @@ strip_target(condor_findhost,bin,EXECUTABLE_MODE)
 static_target(condor_findhost,give_interactive.o,$(LIB),$(STATIC_DIR)/bin)
 
 /* Notice that this tool has a different link line for QUILL */
-c_plus_target_complex(condor_history,history.o,$(C_PLUS_FLAGS),$(LIBCRYPT) $(ALL_LDFLAGS),$(LIB) $(QUILL_LIB))
+c_plus_target_complex(condor_history,history.o,$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(QUILL_LIB))
 release_target(condor_history,bin,EXECUTABLE_MODE)
 strip_target(condor_history,bin,EXECUTABLE_MODE)
-static_target(condor_history,history.o,$(LIB) $(QUILL_LIB) $(LIBCRYPT),$(STATIC_DIR)/bin)
+static_target(condor_history,history.o,$(LIB) $(QUILL_LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_qedit,qedit.o,$(LIB))
 release_target(condor_qedit,bin,EXECUTABLE_MODE)
