@@ -1249,6 +1249,15 @@ condor__createJobTemplate(struct soap *soap,
 	attribute = MyString(ATTR_ON_EXIT_REMOVE_CHECK) + " = TRUE";
 	job.Insert(attribute.GetCStr());
 
+		// It is kinda scary but if ATTR_STAGE_IN_START/FINISH are
+		// present and non-zero in a Job Ad the Schedd will do the
+		// right thing, when run as root, and chown the job's spool
+		// directory, thus fixing a long standing permissions problem.
+	attribute = MyString(ATTR_STAGE_IN_START) + " = 1";
+	job.Insert(attribute.GetCStr());
+	attribute = MyString(ATTR_STAGE_IN_FINISH) + " = 1";
+	job.Insert(attribute.GetCStr());
+
 	attribute = MyString("FilesRetrieved") + " = FALSE";
 	job.Insert(attribute.GetCStr());
 
