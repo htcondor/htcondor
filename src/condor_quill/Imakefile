@@ -2,17 +2,13 @@ NAME = condor_quill
 
 all_target( $(NAME) )
 
+CFLAGS = $(STD_C_FLAGS) -I$(POSTGRESQL_INC)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(POSTGRESQL_INC)
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall -g -D_POSTGRESQL_DBMS_ -D_DEBUG_ -D_QUILL_DAEMON_ -I$(POSTGRESQL_INC)
-
-LDFLAGS = $(STD_LDFLAGS) $(LIBCRYPT)
-#LDFLAGS = $(STD_LDFLAGS) -L$(POSTGRESQL_LIB) -lrt -lpq
+LDFLAGS = $(STD_LDFLAGS) $(LIBCRYPT) 
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(POSTGRESQL_LIB)/libpq.a 
 
 OBJ = quill_main.o classadlogentry.o classadlogparser.o jobqueuedbmanager.o prober.o requestservice.o jobqueuecollection.o 
-
-DBLIB = $(STD_LIBS) $(POSTGRESQL_LIB)/libpq.a
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
@@ -24,8 +20,3 @@ quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
 
 release_target($(NAME),sbin,EXECUTABLE_MODE)
 
-#html:
-#release:: all
-#stripped:: 
-#static:: 
-#clean::

@@ -10,7 +10,16 @@
 
 all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes -D_POSTGRESQL_DBMS_ -I$(POSTGRESQL_INC) -I$(PCRE_INC)
+#if WANT_QUILL
+QUILL_INC = -I$(POSTGRESQL_INC)
+QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a
+#else
+QUILL_INC =
+QUILL_LIB = 
+#endif
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes -I$(PCRE_INC) $(QUILL_INC)
+
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS) -L$(PCRE_LIB) -lpcre
 

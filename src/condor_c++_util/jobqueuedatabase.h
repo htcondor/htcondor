@@ -23,9 +23,10 @@
 #ifndef _JOBQUEUEDATABASE_H_
 #define _JOBQUEUEDATABASE_H_
 
+#include "condor_common.h"
 #include "sqlquery.h"
 #include "quill_enums.h"
-#include <libpq-fe.h>
+#include "libpq-fe.h"
 
 //! JobQueueDatabase
 /*! It provides interfaces to talk to DBMS

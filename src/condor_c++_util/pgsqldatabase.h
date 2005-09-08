@@ -24,7 +24,8 @@
 #ifndef _PGSQLDATABASE_H_
 #define _PGSQLDATABASE_H_
 
-#include <libpq-fe.h>
+#include "condor_common.h"
+#include "libpq-fe.h"
 #include "sqlquery.h"
 #include "jobqueuedatabase.h"
 #include "quill_enums.h"
