@@ -54,6 +54,17 @@ be considered deprecated, and will eventually go away.  The new syntax
 splits the old colon separated ``name:prefix:executable:period''
 string into separate macros.
 
+\item Improved support for job leases. ``job_lease_duration''  now works for
+grid-type condor jobs. New job ad attribute ``TimerRemove'' specifies a
+specific time at which a job should be removed. These attributes will be 
+passed through multiple layers of grid-type condor jobs.
+
+\item Grid universe jobs now use a unified pair of attributes 
+(``GridResource'' and ``GridJobId'') to identify the remote resource. This
+will make it possible to match jobs to multiple types of resources. The
+submit file syntax remains the same for now, except that ``remote_pool'' is
+now required for grid-type condor jobs.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -100,6 +111,10 @@ job ad with '+'. Now, the attribute names are case-insensitive, they
 are not treated as normal submit attributes, and they always over-ride 
 normal submit attributes.
 
+\item Fixed bugs that would cause a segfault when reading a classad from
+a file. Triggered by consecutive blank lines and lines containing only
+white-space.
+
 \item Fixed a bug that could cause duplicated output when a gt4 grid job 
 is executed more than once.
 
@@ -143,6 +158,13 @@ minutes (or whatever \MacroNI{SCHEDD\_INTERVAL} is set to) before running.
 
 \item Fixed a bug that prevented the \Condor{starter} from running on a
 Win32 machine with a FAT32 filesystem.
+
+\item A reschedule command will now be sent to the \Condor{schedd} whenever
+a job is released from held state. This should make grid-type condor jobs
+start much faster.
+
+\item Config parameters \MacroNI{GAHP} and \MacroNI{GAHP\_ARGS} have been
+deprecated. \MacroNI{GT2\_GAHP} should be used instead.
 
 \end{itemize}
 
