@@ -1,3 +1,12 @@
+09/07/05 V6_7-post_merge-V6_6-merge-45
+   The state of the V6_7-branch before after merging in the V6_6-branch
+   as it stood at tag V6_6-merge-45,
+   EXCEPT for the patch to fix the StatInfo object to correctly
+   detect symbolic links on Unix platforms.  This patch needs to
+   be rewritten for v6.7 and will follow in another commit.
+   Specifically, the patch being ommitted from this merge is
+   src/condor_c++_util/directory.C ver 1.11.10.2.12.4.2.24 / Gnats 537.
+
 09/07/05 V6_7-pre_merge-V6_6-merge-45
    The state of the V6_7-branch before merging in the V6_6-branch
    as it stood at tag V6_6-merge-45.
