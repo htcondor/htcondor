@@ -39,6 +39,7 @@
 #define GAHP_COMMAND_JOB_STAGE_IN "CONDOR_JOB_STAGE_IN"
 #define GAHP_COMMAND_JOB_STAGE_OUT "CONDOR_JOB_STAGE_OUT"
 #define GAHP_COMMAND_JOB_REFRESH_PROXY "CONDOR_JOB_REFRESH_PROXY"
+#define GAHP_COMMAND_JOB_UPDATE_LEASE "CONDOR_JOB_UPDATE_LEASE"
 
 #define GAHP_COMMAND_ASYNC_MODE_ON "ASYNC_MODE_ON"
 #define GAHP_COMMAND_ASYNC_MODE_OFF "ASYNC_MODE_OFF"
@@ -77,6 +78,7 @@ int verify_schedd_name (const char *);
 int verify_job_id (const char *);
 int verify_class_ad (const char *);
 int verify_constraint (const char * s);
+int verify_number (const char*);
 int verify_number_args (const int, const int);
 
 void flush_request (int worker_id, const char * request);

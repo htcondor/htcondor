@@ -479,7 +479,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		if ( !attr_name  ) {
 			constraint.sprintf(" -C (%s=?=\"%s\"&&%s==%d)",
 				owner_or_user,full_owner_name.Value(),
-				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GLOBUS);
+				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 		} else {
 			constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
 				owner_or_user,full_owner_name.Value(),

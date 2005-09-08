@@ -148,7 +148,6 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 	: AttrListAbstract(ATTRLISTENTITY)
 {
     ExprTree 	*tree;
-	char		*delim_buffer;
 	int			delimLen = strlen( delimitor );
 	int 		index;
     MyString    line_buffer;
@@ -164,46 +163,33 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
     ptrExprInChain = false;
     ptrNameInChain = false;
 	empty			= TRUE;
-    delim_buffer    = NULL;
 
-	delim_buffer = (char *) malloc(delimLen+1);
 	while( 1 ) {
 			// get a line from the file
-		if( fgets( delim_buffer, delimLen+1, file ) == NULL ) {
+		if ( line_buffer.readLine( file, false ) == false ) {
 			error = ( isEOF = feof( file ) ) ? 0 : errno;
-            free(delim_buffer);
 			return;
 		}
 
 			// did we hit the delimitor?
-		if( strncmp( delim_buffer, delimitor, delimLen ) == 0 ) {
+		if ( strncmp( line_buffer.Value(), delimitor, delimLen ) == 0 ) {
 				// yes ... stop
 			isEOF = feof( file );
 			error = 0;
-            free(delim_buffer);
 			return;
-		} else {
-				// no ... read the rest of the line (into the same buffer)
-            line_buffer = delim_buffer;
-			if( line_buffer.readLine(file, true) == false) {
-				error = ( isEOF = feof( file ) ) ? 0 : errno;
-                free(delim_buffer);
-				return;
-			}
 		}
 
-			// if the string is empty, try reading again
-		if( line_buffer.Length() == 0 || strcmp( line_buffer.Value(), "\n" ) == 0 ) {
-			continue;
-		}
-
-			// if the string starts with a pound character ("#"),
-			// treat as a comment.
+			// Skip any leading white-space
 		index = 0;
-		while ( line_buffer[index]==' ' || line_buffer[index]=='\t' ) {
+		while ( index < line_buffer.Length() &&
+				( line_buffer[index] == ' ' || line_buffer[index] == '\t' ) ) {
 			index++;
 		}
-		if ( line_buffer[index] == '#' ) {
+
+			// if the rest of the string is empty, try reading again
+			// if it starts with a pound character ("#"), treat as a comment
+		if( index == line_buffer.Length() || line_buffer[index] == '\n' ||
+			line_buffer[index] == '#' ) {
 			continue;
 		}
 
@@ -213,20 +199,19 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 			dprintf(D_ALWAYS,"failed to create classad; bad expr = %s\n",
 				line_buffer.Value());
 				// read until delimitor or EOF; whichever comes first
-            delim_buffer[0] = 0;
-			while( strncmp( delim_buffer, delimitor, delimLen ) && !feof( file ) ) {
-				fgets( delim_buffer, delimLen+1, file );
+			line_buffer = "";
+			while ( strncmp( line_buffer.Value(), delimitor, delimLen ) &&
+					!feof( file ) ) {
+				line_buffer.readLine( file, false );
 			}
 			isEOF = feof( file );
 			error = -1;
-            free(delim_buffer);
 			return;
 		} else {
 			empty = FALSE;
 		}
 	}
 	ClearAllDirtyFlags();
-    free(delim_buffer);
 	return;
 }
 

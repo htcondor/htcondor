@@ -146,6 +146,12 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value);
 int SetAttributeString(int cluster, int proc, const char *attr,
 					   const char *value);
 
+/** Set LastJobLeaseRenewalReceived = <xact start time> and
+    JobLeaseDurationReceived = dur for the specified cluster/proc.
+	@return -1 on failure; 0 on success
+*/
+int SetTimerAttribute(int cluster, int proc, const char *attr_name, int dur);
+
 /** Set the password to the MyProxy server for specified cluster/proc. The
 	value should be a null-terminated string.
 	@return -1 on failure; 0 on success

@@ -137,15 +137,16 @@ void MirrorJobReconfig()
 	MirrorJob::setLeaseInterval( tmp_int );
 }
 
-const char *MirrorJobAdConst = "JobUniverse =?= 5 && MirrorSchedd =!= Undefined";
+bool MirrorJobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString schedd;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_VANILLA &&
+		 job_ad->LookupString( ATTR_MIRROR_SCHEDD, schedd ) ) {
 
-bool MirrorJobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-
-	return must_expand != 0;
+		return true;
+	}
+	return false;
 }
 
 BaseJob *MirrorJobCreate( ClassAd *jobad )

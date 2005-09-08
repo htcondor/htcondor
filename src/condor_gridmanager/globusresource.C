@@ -116,7 +116,7 @@ bool GlobusResource::Init()
 	}
 
 	MyString gahp_name;
-	gahp_name.sprintf( "GLOBUS/%s", proxySubject );
+	gahp_name.sprintf( "GT2/%s", proxySubject );
 
 	gahp = new GahpClient( gahp_name.Value() );
 
@@ -507,7 +507,7 @@ GlobusResource::SubmitMonitorJob()
 	}
 
 	MyString gahp_name;
-	gahp_name.sprintf( "GLOBUS/%s", proxySubject );
+	gahp_name.sprintf( "GT2/%s", proxySubject );
 
 	tmp_gahp = new GahpClient( gahp_name.Value() );
 	if ( tmp_gahp->isInitialized() == false ) {

@@ -533,7 +533,7 @@ PREEN_ARGS			= -m -r
 SHADOW				= $(SBIN)/condor_shadow
 SHADOW_PVM          = $(SBIN)/condor_shadow.pvm
 GRIDMANAGER			= $(SBIN)/condor_gridmanager
-GAHP				= $(SBIN)/gahp_server
+GT2_GAHP			= $(SBIN)/gahp_server
 GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 
 

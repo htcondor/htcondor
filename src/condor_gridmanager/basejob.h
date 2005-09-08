@@ -29,6 +29,7 @@
 #include "MyString.h"
 #include "user_log.c++.h"
 #include "user_job_policy.h"
+#include "classad_hashtable.h"
 #include "baseresource.h"
 
 class BaseResource;
@@ -55,8 +56,18 @@ class BaseJob
 				  int hold_sub_code = 0 );
 	void JobRemoved( const char *remove_reason );
 
+	virtual void SetRemoteJobId( const char *job_id );
+
+	void UpdateJobLeaseSent( int new_expiration_time );
+	void UpdateJobLeaseReceived( int new_expiration_time );
+
+	void SetJobLeaseTimers();
+	virtual int JobLeaseSentExpired();
+	virtual int JobLeaseReceivedExpired();
+
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad );
 
+	static int EvalAllPeriodicJobExprs(Service *ignore);
 	int EvalPeriodicJobExpr();
 	int EvalOnExitJobExpr();
 
@@ -66,6 +77,9 @@ class BaseJob
 	virtual void RequestPing();
 	virtual void NotifyResourceDown();
 	virtual void NotifyResourceUp();
+
+	static HashTable<PROC_ID, BaseJob *> JobsByProcId;
+	static HashTable<HashKey, BaseJob *> JobsByRemoteId;
 
 	ClassAd *jobAd;
 	PROC_ID procID;
@@ -98,10 +112,13 @@ class BaseJob
 	bool resourcePingComplete;
 
  protected:
+	static int periodicPolicyEvalTid;
+
 	void UpdateRuntimeStats();
 
-	int periodicPolicyEvalTid;
 	int evaluateStateTid;
+	int jobLeaseSentExpiredTid;
+	int jobLeaseReceivedExpiredTid;
 };
 
 UserLog *InitializeUserLog( ClassAd *job_ad );
@@ -112,6 +129,9 @@ bool WriteEvictEventToUserLog( ClassAd *job_ad );
 bool WriteHoldEventToUserLog( ClassAd *job_ad );
 bool WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad );
 bool WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusSubmitEventToUserLog( ClassAd *job_ad );
+bool WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
+											const char *failure_mesg = NULL );
 void EmailTerminateEvent( ClassAd * job_ad, bool exit_status_known );
 
 #endif // define BASEJOB_H

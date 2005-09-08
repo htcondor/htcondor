@@ -552,7 +552,7 @@ INVALID_LOG_FILES	= core
 ##  Where is the GridManager binary installed?
 
 GRIDMANAGER			= $(SBIN)/condor_gridmanager
-GAHP				= $(SBIN)/gahp_server
+GT2_GAHP			= $(SBIN)/gahp_server
 GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 
 ##--------------------------------------------------------------------

@@ -46,6 +46,10 @@ extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *Owner;
 
+int procIDHash( const PROC_ID &procID, int numBuckets );
+bool operator==( const PROC_ID a, const PROC_ID b);
+
+
 // initialization
 void Init();
 void Register();
@@ -56,6 +60,7 @@ void Reconfig();
 bool requestScheddUpdate( BaseJob *job );
 bool requestScheddVacate( BaseJob *job, action_result_t &result );
 bool requestJobStatus( BaseJob *job, int &job_status );
+void requestScheddUpdateNotification( int timer_id );
 
 
 #endif

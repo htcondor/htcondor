@@ -1035,7 +1035,7 @@ count( ClassAd *job )
 	}
 
 
-	if ( (universe != CONDOR_UNIVERSE_GLOBUS) &&	// handle Globus below...
+	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
 		 (!service_this_universe(universe,job))  ) 
 	{
 			// Deal with all the Universes which we do not service, expect
@@ -1079,7 +1079,7 @@ count( ClassAd *job )
 		return 0;
 	} 
 
-	if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
+	if ( universe == CONDOR_UNIVERSE_GRID ) {
 		// for Globus, count jobs in UNSUBMITTED state by owner.
 		// later we make certain there is a grid manager daemon
 		// per owner.
@@ -1095,20 +1095,15 @@ count( ClassAd *job )
 		if ( (job_managed == 0) && (want_service && cur_hosts == 0) ) {
 			status = HELD;
 		}
-		// if status is REMOVED, but the job contact string is not null,
+		// if status is REMOVED, but the remote job id is not null,
 		// then consider the job IDLE for purposes of the logic here.  after all,
 		// the gridmanager needs to be around to finish the task of removing the job.
 		if ( status == REMOVED ) {
-			char contact_string[20];
-			strncpy(contact_string,NULL_JOB_CONTACT,sizeof(contact_string));
-			job->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
-								sizeof(contact_string));
-			if ( strncmp(contact_string,NULL_JOB_CONTACT,
-							sizeof(contact_string)-1) ||
-				 job->LookupString(ATTR_REMOTE_JOB_ID,contact_string,
-								   sizeof(contact_string)-1) != 0 )
+			char job_id[20];
+			if ( job->LookupString( ATTR_GRID_JOB_ID, job_id,
+									sizeof(job_id) ) )
 			{
-				// looks like the job's globus contact string is still valid,
+				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.
 				// fire up the gridmanager to try and really clean it up!
 				status = IDLE;
@@ -1179,7 +1174,7 @@ service_this_universe(int universe, ClassAd* job)
 	   figure out what to do based on Universe and other misc logic...
 	*/
 	switch (universe) {
-		case CONDOR_UNIVERSE_GLOBUS:
+		case CONDOR_UNIVERSE_GRID:
 			{
 				// If this Globus job is already being managed, then the schedd
 				// should leave it alone... the gridmanager is dealing with it.
@@ -1187,20 +1182,12 @@ service_this_universe(int universe, ClassAd* job)
 				if ( job_managed ) {
 					return false;
 				}			
-				// Now if not managed, if the GlobusScheduler or RemoteSchedd 
-				// has a "$$", then  this job is at least _matchable_, so 
-				// return true, else false.
-				const char * ads_to_check[] = { ATTR_GLOBUS_RESOURCE,
-												 ATTR_REMOTE_SCHEDD };
-				for (unsigned int i = 0; 
-					     i < sizeof(ads_to_check)/sizeof(ads_to_check[0]);
-					     i++) {
-					char resource[500];
-					resource[0] = '\0';
-					job->LookupString(ads_to_check[i], resource);
-					if ( strstr(resource,"$$") ) {
-						return true;
-					}
+				// Now if not managed, if GridResource has a "$$", then this
+				// job is at least _matchable_, so return true, else false.
+				MyString resource = "";
+				job->LookupString( ATTR_GRID_RESOURCE, resource );
+				if ( strstr( resource.Value(), "$$" ) ) {
+					return true;
 				}
 
 				return false;
@@ -1342,30 +1329,25 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 	handle_mirror_job_notification(job_ad, mode, job_id);
 
 		// Handle Globus Universe
-	if (job_universe == CONDOR_UNIVERSE_GLOBUS) {
+	if (job_universe == CONDOR_UNIVERSE_GRID) {
 		int job_managed = jobExternallyManaged(job_ad);
 			// If job_managed is true, then notify the gridmanager and return.
 			// If job_managed is false, we will fall through the code at the
 			// bottom of this function will handle the operation.
 			// Special case: if job_managed is false, but the job being removed
-			// and the jobmanager contact string is still valid, 
+			// and the remote job id string is still valid, 
 			// then consider the job still "managed" so
 			// that the gridmanager will be notified.  
-			// If the job contact string is still valid, that means there is
+			// If the remote job id is still valid, that means there is
 			// still a job remotely submitted that has not been removed.  When
-			// the gridmanager confirms a job has been removed, it will set
-			// ATTR_GLOBUS_CONTACT_STRING to be NULL_JOB_CONTACT.
+			// the gridmanager confirms a job has been removed, it will
+			// delete ATTR_GRID_JOB_ID from the ad.
 		if (!job_managed && mode==REMOVED ) {
-			char contact_string[20];
-			strncpy(contact_string,NULL_JOB_CONTACT,sizeof(contact_string));
-			job_ad->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
-								sizeof(contact_string));
-			if ( strncmp(contact_string,NULL_JOB_CONTACT,
-							sizeof(contact_string)-1) ||
-				 job_ad->LookupString(ATTR_REMOTE_JOB_ID,contact_string,
-								   sizeof(contact_string)-1) != 0 )
+			char job_id[20];
+			if ( job_ad->LookupString( ATTR_GRID_JOB_ID, job_id,
+									   sizeof(job_id) ) )
 			{
-				// looks like the job's globus contact string is still valid,
+				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.
 				// fire up the gridmanager to try and really clean it up!
 				job_managed = 1;
@@ -1402,7 +1384,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 	// If it is not a Globus Universe job (which has already been
 	// dealt with above), then find the process/shadow managing it.
-	if ((job_universe != CONDOR_UNIVERSE_GLOBUS) && 
+	if ((job_universe != CONDOR_UNIVERSE_GRID) && 
 		(srec = scheduler.FindSrecByProcID(job_id)) != NULL) 
 	{
 
@@ -1632,7 +1614,7 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 
 	if( univ==CONDOR_UNIVERSE_SCHEDULER || univ==CONDOR_UNIVERSE_LOCAL ) {
 		return 1;
-	} else if(univ==CONDOR_UNIVERSE_GLOBUS) {
+	} else if(univ==CONDOR_UNIVERSE_GRID) {
 		if(managed) {
 			return 0;
 		} else {
@@ -2245,7 +2227,7 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		return true;
 		break;
 
-	case CONDOR_UNIVERSE_GLOBUS:
+	case CONDOR_UNIVERSE_GRID:
 			// grid universe is special, since we handle spawning
 			// gridmanagers in a different way, and don't need to do
 			// anything here.
@@ -2944,6 +2926,10 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		CommitTransaction();
 	}
 
+	daemonCore->Register_Timer( 0, 
+						(TimerHandlercpp)&Scheduler::reschedule_negotiator,
+						"Scheduler::reschedule_negotiator", this );
+
 	spoolJobFileWorkers->remove(tid);
 	delete jobs;
 	if (SpoolSpace) free(SpoolSpace);
@@ -3096,7 +3082,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 			FreeJobAd(ad);
 
-			if(universe == CONDOR_UNIVERSE_GLOBUS) {
+			if(universe == CONDOR_UNIVERSE_GRID) {
 				aboutToSpawnJobHandler( cluster, proc, NULL );
 			}
 		}
@@ -4500,7 +4486,7 @@ Scheduler::negotiate(int, Stream* s)
 					// is always yes.  If PVM, perhaps yes or no.  If
 					// Globus, then no.
 					shadow_num_increment = 1;
-					if(job_universe == CONDOR_UNIVERSE_GLOBUS) {
+					if(job_universe == CONDOR_UNIVERSE_GRID) {
 						shadow_num_increment = 0;
 					}
 					if( job_universe == CONDOR_UNIVERSE_PVM ) {
@@ -9815,7 +9801,7 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 
 	if ( (universe == CONDOR_UNIVERSE_PVM) ||
 		 (universe == CONDOR_UNIVERSE_MPI) ||
-		 (universe == CONDOR_UNIVERSE_GLOBUS) ||
+		 (universe == CONDOR_UNIVERSE_GRID) ||
 		 (universe == CONDOR_UNIVERSE_PARALLEL) )
 		return FALSE;
 

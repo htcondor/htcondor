@@ -81,6 +81,8 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 								const char *proxy_subject )
 	: BaseResource( resource_name )
 {
+	hasLeases = true;
+
 	if ( proxy_subject != NULL ) {
 		proxySubject = strdup( proxy_subject );
 	} else {
@@ -128,6 +130,11 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 		ping_gahp->setMode( GahpClient::normal );
 		ping_gahp->setTimeout( CondorJob::gahpCallTimeout );
 
+		lease_gahp = new GahpClient( buff.Value(), gahp_path, buff2.Value() );
+		lease_gahp->setNotificationTimerId( updateLeasesTimerId );
+		lease_gahp->setMode( GahpClient::normal );
+		lease_gahp->setTimeout( CondorJob::gahpCallTimeout );
+
 		free( gahp_path );
 	}
 }
@@ -148,6 +155,9 @@ CondorResource::~CondorResource()
 	}
 	if ( ping_gahp != NULL ) {
 		delete ping_gahp;
+	}
+	if ( lease_gahp != NULL ) {
+		delete lease_gahp;
 	}
 	if ( scheddName != NULL ) {
 		free( scheddName );
@@ -236,6 +246,8 @@ int CondorResource::DoScheddPoll()
 			dprintf( D_ALWAYS,
 					 "gahp->condor_job_status_constrained returned %d for remote schedd %s\n",
 					 rc, scheddName );
+			dprintf( D_ALWAYS, "Requesting ping of resource\n" );
+			RequestPing( NULL );
 		}
 
 		if ( rc == 0 ) {
@@ -253,11 +265,11 @@ int CondorResource::DoScheddPoll()
 				status_ads[i]->LookupInteger( ATTR_CLUSTER_ID, cluster );
 				status_ads[i]->LookupInteger( ATTR_PROC_ID, proc );
 
-				job_id_string.sprintf( "%s/%d.%d", scheddName, cluster,
-									   proc );
+				job_id_string.sprintf( "condor %s %s %d.%d", poolName,
+									   scheddName, cluster, proc );
 
-				rc = CondorJobsById.lookup( HashKey( job_id_string.Value() ),
-											job );
+				rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.Value() ),
+													 (BaseJob*)job );
 				if ( rc == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
 				} else {
@@ -287,7 +299,7 @@ void CondorResource::DoPing( time_t& ping_delay, bool& ping_complete,
 	int num_status_ads = 0;
 	ClassAd **status_ads = NULL;
 
-dprintf(D_ALWAYS,"*** DoPing called\n");
+dprintf(D_FULLDEBUG,"*** DoPing called\n");
 	if ( ping_gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
 		ping_delay = 5;
@@ -311,5 +323,66 @@ dprintf(D_ALWAYS,"*** DoPing called\n");
 	} else {
 		ping_complete = true;
 		ping_succeeded = true;
+	}
+}
+
+void CondorResource::DoUpdateLeases( time_t& update_delay,
+									 bool& update_complete,
+									 SimpleList<PROC_ID>& update_succeeded )
+{
+	int rc;
+	BaseJob *curr_job;
+	SimpleList<PROC_ID> jobs;
+	SimpleList<int> expirations;
+	SimpleList<PROC_ID> updated;
+
+dprintf(D_FULLDEBUG,"*** DoUpdateLeases called\n");
+	if ( lease_gahp->isStarted() == false ) {
+		dprintf( D_ALWAYS,"gahp server not up yet, delaying lease update\n" );
+		update_delay = 5;
+		return;
+	}
+
+	update_delay = 0;
+
+	if ( updateLeasesCmdActive == false ) {
+		leaseUpdates.Rewind();
+		while ( leaseUpdates.Next( curr_job ) ) {
+				// TODO When remote-job-id is homogenized and stored in 
+				//   BaseJob, BaseResource can skip jobs that don't have a
+				//   a remote-job-id yet
+			if ( ((CondorJob*)curr_job)->remoteJobId.cluster != 0 ) {
+				int exp = 0;
+				jobs.Append( ((CondorJob*)curr_job)->remoteJobId );
+				curr_job->jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT,
+												exp );
+				expirations.Append( exp );
+			}
+		}
+	}
+
+	rc = lease_gahp->condor_job_update_lease( scheddName, jobs, expirations,
+											  updated );
+
+	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+		update_complete = false;
+	} else if ( rc != 0 ) {
+dprintf( D_FULLDEBUG, "*** Lease update failed!\n" );
+		update_complete = true;
+	} else {
+dprintf( D_FULLDEBUG, "*** Lease udpate succeeded!\n" );
+		update_complete = true;
+
+		PROC_ID curr_id;
+		MyString id_str;
+		updated.Rewind();
+		while ( updated.Next( curr_id ) ) {
+			id_str.sprintf( "condor %s %s %d.%d", poolName, scheddName,
+							curr_id.cluster, curr_id.proc );
+			if ( BaseJob::JobsByRemoteId.lookup( HashKey( id_str.Value() ),
+												 curr_job ) == 0 ) {
+				update_succeeded.Append( curr_job->procID );
+			}
+		}
 	}
 }

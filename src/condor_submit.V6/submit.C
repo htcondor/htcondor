@@ -1073,7 +1073,7 @@ SetExecutable()
 	case CONDOR_UNIVERSE_SCHEDULER:
 	case CONDOR_UNIVERSE_MPI:  // for now
 	case CONDOR_UNIVERSE_PARALLEL:
-	case CONDOR_UNIVERSE_GLOBUS:
+	case CONDOR_UNIVERSE_GRID:
 	case CONDOR_UNIVERSE_JAVA:
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
 		InsertJobExpr (buffer);
@@ -1092,7 +1092,7 @@ SetExecutable()
 		copySpool = (char *)malloc(16);
 		if ( Remote ) {
 			strcpy(copySpool,"FALSE");
-		} else if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
+		} else if ( JobUniverse == CONDOR_UNIVERSE_GRID ) {
 			strcpy(copySpool, "FALSE");
 		} else {
 			strcpy(copySpool, "TRUE");
@@ -1203,9 +1203,9 @@ SetUniverse()
 			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
 			exit( 1 );
 		}
-		JobUniverse = CONDOR_UNIVERSE_GLOBUS;
+		JobUniverse = CONDOR_UNIVERSE_GRID;
 		
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS);
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID);
 		InsertJobExpr (buffer);
 		free(univ);
 		univ = 0;
@@ -1241,8 +1241,8 @@ SetUniverse()
 			}
 		}			
 		
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_GRID_TYPE, JobGridType);
-		InsertJobExpr (buffer);
+			// Setting ATTR_JOB_GRID_TYPE in the job ad has been moved to
+			// SetGlobusParams().
 		
 		return;
 	};
@@ -1746,7 +1746,7 @@ SetTransferFiles()
 	// this is a flawed strategy.
 
 	if ( should_transfer != STF_NO && job 
-					&& JobUniverse != CONDOR_UNIVERSE_GLOBUS ) {
+					&& JobUniverse != CONDOR_UNIVERSE_GRID ) {
 		char output[_POSIX_PATH_MAX + 32];
 		char error[_POSIX_PATH_MAX + 32];
 
@@ -1801,7 +1801,7 @@ SetTransferFiles()
 	}
 
 	if( should_transfer == STF_NO && 
-		JobUniverse != CONDOR_UNIVERSE_GLOBUS &&
+		JobUniverse != CONDOR_UNIVERSE_GRID &&
 		JobUniverse != CONDOR_UNIVERSE_JAVA )
 	{
 		char *transfer_exe;
@@ -2227,7 +2227,7 @@ SetStdFile( int which_file )
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
-	if(JobUniverse==CONDOR_UNIVERSE_GLOBUS && which_file != 0) {
+	if(JobUniverse==CONDOR_UNIVERSE_GRID && which_file != 0) {
 		if ( stricmp (JobGridType, "globus") == MATCH ||
 			 stricmp (JobGridType, "gt2") == MATCH ||
 			 stricmp (JobGridType, "gt3") == MATCH ) {
@@ -2283,7 +2283,7 @@ SetStdFile( int which_file )
 	macro_value = condor_param( generic_name, NULL );
 
 	/* Globus jobs are allowed to specify urls */
-	if(JobUniverse == CONDOR_UNIVERSE_GLOBUS && is_globus_friendly_url(macro_value)) {
+	if(JobUniverse == CONDOR_UNIVERSE_GRID && is_globus_friendly_url(macro_value)) {
 		transfer_it = false;
 		stream_it = false;
 	}
@@ -3368,12 +3368,14 @@ SetJobLease( void )
 	if( ! tmp ) {
 		return;
 	}
+/*
 	if( ! universeCanReconnect(JobUniverse) ) { 
 		fprintf( stderr, "\nERROR: cannot specify %s for %s universe jobs\n",
 				 ATTR_JOB_LEASE_DURATION, CondorUniverseName(JobUniverse) );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
+*/
 	int lease_duration = atoi( tmp );
 	if( lease_duration <= 0 ) {
 		fprintf( stderr, "\nERROR: invalid %s given: %s\n",
@@ -3436,9 +3438,21 @@ SetGlobusParams()
 {
 	char *tmp;
 	char *use_gridshell;
+	bool unified_syntax;
 
-	if ( JobUniverse != CONDOR_UNIVERSE_GLOBUS )
+		// Does the schedd support the new unified syntax for grid universe
+		// jobs (i.e. GridResource and GridJobId used for all types)?
+	CondorVersionInfo vi( MySchedd->version() );
+	unified_syntax = vi.built_since_version(6,7,11);
+
+	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
 		return;
+
+	if ( !unified_syntax ) {
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_GRID_TYPE,
+						JobGridType);
+		InsertJobExpr (buffer);
+	}
 
 	if ( stricmp (JobGridType, "globus") == MATCH ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
@@ -3446,6 +3460,22 @@ SetGlobusParams()
 		 stricmp (JobGridType, "gt4") == MATCH ||
 		 stricmp (JobGridType, "oracle") == MATCH ||
 		 stricmp (JobGridType, "nordugrid") == MATCH ) {
+
+		char * jobmanager_type;
+		jobmanager_type = condor_param ( GlobusJobmanagerType );
+		if (jobmanager_type) {
+			if (stricmp (JobGridType, "gt4") != MATCH ) {
+				fprintf(stderr, "\nWARNING: Param %s is not supported for grid types other than gt4\n", GlobusJobmanagerType );
+			}
+			if ( !unified_syntax ) {
+				sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE,
+						 jobmanager_type );
+				InsertJobExpr (buffer, false );
+			}
+		} else if (stricmp (JobGridType, "gt4") == MATCH ) {
+			jobmanager_type = strdup ("Fork");
+		}
+
 
 		char *globushost;
 		globushost = condor_param( GlobusScheduler, "globus_scheduler" );
@@ -3465,9 +3495,17 @@ SetGlobusParams()
 			}
 		}
 
-		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
-		InsertJobExpr (buffer);
-
+		if ( unified_syntax ) {
+				// GT4 jobs need the extra jobmanager_type field.
+			sprintf( buffer, "%s = \"%s %s%s%s\"", ATTR_GRID_RESOURCE,
+				 stricmp(JobGridType,"globus") == MATCH ? "gt2" : JobGridType,
+				 globushost, stricmp( JobGridType, "gt4" ) == MATCH ? " " : "",
+				 stricmp(JobGridType, "gt4") == MATCH ? jobmanager_type : "" );
+			InsertJobExpr( buffer );
+		} else {
+			sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
+			InsertJobExpr (buffer);
+		}
 
 		if ( strstr(globushost,"$$") ) {
 			// We need to perform matchmaking on the job in order to find
@@ -3481,10 +3519,15 @@ SetGlobusParams()
 		}
 
 		free( globushost );
+		if ( jobmanager_type ) {
+			free( jobmanager_type );
+		}
 
-		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
-				 NULL_JOB_CONTACT );
-		InsertJobExpr (buffer);
+		if ( !unified_syntax ) {
+			sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
+					 NULL_JOB_CONTACT );
+			InsertJobExpr (buffer);
+		}
 
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
 			sprintf( buffer, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
@@ -3495,19 +3538,6 @@ SetGlobusParams()
 			InsertJobExpr (buffer, false );
 		}
 	}
-
-	char * jobmanager_type;
-	jobmanager_type = condor_param ( GlobusJobmanagerType );
-	if (jobmanager_type) {
-		if (stricmp (JobGridType, "gt4") != MATCH ) {
-			fprintf(stderr, "\nWARNING: Param %s is not supported for grid types other than gt4\n", GlobusJobmanagerType );
-		}
-		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE,
-				 jobmanager_type );
-		InsertJobExpr (buffer, false );
-		free (jobmanager_type);
-	}
-
 
 	if ( (use_gridshell = condor_param(GridShell, ATTR_USE_GRID_SHELL)) ) {
 
@@ -3550,6 +3580,7 @@ SetGlobusParams()
 	if ( stricmp ( JobGridType, "condor" ) == MATCH ) {
 
 		char *remote_schedd;
+		char *remote_pool;
 
 		if ( !(remote_schedd = condor_param( RemoteSchedd, ATTR_REMOTE_SCHEDD ) ) ) {
 			fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" parameter\n",
@@ -3558,13 +3589,28 @@ SetGlobusParams()
 			exit( 1 );
 		}
 
-		sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_SCHEDD, remote_schedd );
-		InsertJobExpr (buffer);
+		if ( !(remote_pool = condor_param( RemotePool, ATTR_REMOTE_POOL ) ) &&
+			 unified_syntax ) {
+			fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" parameter\n",
+					RemotePool );
+			DoCleanup( 0, 0, NULL );
+			exit( 1 );
+		}
 
-		if( (tmp = condor_param(RemotePool, ATTR_REMOTE_POOL)) ) {
-			sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_POOL, tmp );
-			free( tmp );
-			InsertJobExpr ( buffer );
+		if ( unified_syntax ) {
+			sprintf( buffer, "%s = \"condor %s %s\"", ATTR_GRID_RESOURCE,
+					 remote_schedd, remote_pool );
+			InsertJobExpr( buffer );
+		} else {
+			sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_SCHEDD,
+					 remote_schedd );
+			InsertJobExpr (buffer);
+
+			if ( remote_pool ) {
+				sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_POOL,
+						 remote_pool );
+				InsertJobExpr ( buffer );
+			}
 		}
 
 		if ( strstr(remote_schedd,"$$") ) {
@@ -3580,7 +3626,7 @@ SetGlobusParams()
 		}
 
 		free( remote_schedd );
-
+		free( remote_pool );
 	}
 
 	//ckireyev: MyProxy-related crap
@@ -4049,7 +4095,7 @@ queue(int num)
 
 		char *proxy_file = condor_param( X509UserProxy );
 
-		if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GLOBUS &&
+		if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
 			 (stricmp (JobGridType, "globus") == MATCH ||
 			  stricmp (JobGridType, "gt2") == MATCH ||
 			  stricmp (JobGridType, "gt3") == MATCH ||
@@ -4345,7 +4391,7 @@ check_requirements( char *orig )
 		free( ptr );
 	}
 
-	if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
+	if ( JobUniverse == CONDOR_UNIVERSE_GRID ) {
 		// We don't want any defaults at all w/ Globus...
 		// If we don't have a req yet, set to TRUE
 		if ( answer[0] == '\0' ) {

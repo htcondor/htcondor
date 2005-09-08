@@ -187,3 +187,24 @@ SchedDRequest * SchedDRequest::createRefreshProxyRequest (const int request_id, 
 
 	return req;
 }
+
+SchedDRequest * SchedDRequest::createUpdateLeaseRequest ( const int request_id,
+													 const int num_jobs,
+														job_expiration * &expirations) {
+	SchedDRequest * req = new SchedDRequest;
+
+	req->command = SDC_UPDATE_LEASE;
+	req->status = SDCS_NEW;
+	req->request_id = request_id;
+
+	req->num_jobs = num_jobs;
+	
+	req->expirations = new job_expiration [num_jobs];
+	int i;
+	for (i=0; i < num_jobs; i++) {
+		req->expirations[i].copy_from(expirations[i]);
+	}
+
+	return req;
+}	
+														 

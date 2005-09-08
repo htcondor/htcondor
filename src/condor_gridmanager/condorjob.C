@@ -102,11 +102,6 @@ static char *GMStateNames[] = {
         func,error)
 
 
-#define HASH_TABLE_SIZE			500
-
-HashTable <HashKey, CondorJob *> CondorJobsById( HASH_TABLE_SIZE,
-												 hashFunction );
-
 
 void CondorJobInit()
 {
@@ -127,22 +122,17 @@ void CondorJobReconfig()
 	CondorJob::setConnectFailureRetry( tmp_int );
 }
 
-const char *CondorJobAdConst = "JobUniverse =?= 9 && (JobGridType == \"condor\") =?= True";
+bool CondorJobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString resource;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_GRID &&
+		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
+		 strncasecmp( resource.Value(), "condor ", 7 ) == 0 ) {
 
-bool CondorJobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-	if ( !must_expand ) {
-		char resource_name[800];
-		jobad->LookupString( ATTR_REMOTE_SCHEDD, resource_name );
-		if ( strstr(resource_name,"$$") ) {
-			must_expand = 1;
-		}
+		return true;
 	}
-
-	return must_expand != 0;
+	return false;
 }
 
 BaseJob *CondorJobCreate( ClassAd *jobad )
@@ -176,7 +166,6 @@ CondorJob::CondorJob( ClassAd *classad )
 	submitFailureCode = 0;
 	remoteScheddName = NULL;
 	remotePoolName = NULL;
-	remoteJobIdString = NULL;
 	submitterId = NULL;
 	connectFailureCount = 0;
 	jobProxy = NULL;
@@ -212,24 +201,44 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_REMOTE_SCHEDD, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
-		remoteScheddName = strdup( buff );
+		const char *token;
+		MyString str = buff;
+
+		str.Tokenize();
+
+		token = str.GetNextToken( " ", false );
+		if ( !token || stricmp( token, "condor" ) ) {
+			error_string = "GridResource not of type condor";
+			goto error_exit;
+		}
+
+		token = str.GetNextToken( " ", false );
+		if ( token && *token ) {
+			remoteScheddName = strdup( token );
+		} else {
+			error_string = "GridResource missing schedd name";
+			goto error_exit;
+		}
+
+		token = str.GetNextToken( " ", false );
+		if ( token && *token ) {
+			remotePoolName = strdup( token );
+		} else {
+			error_string = "GridResource missing pool name";
+			goto error_exit;
+		}
+
 	} else {
-		error_string = "RemoteSchedd is not set in the job ad";
+		error_string = "GridResource is not set in the job ad";
 		goto error_exit;
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_REMOTE_POOL, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
-		remotePoolName = strdup( buff );
-	}
-
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_REMOTE_JOB_ID, buff );
-	if ( buff[0] != '\0' ) {
-		SetRemoteJobId( buff );
+		SetRemoteJobId( strrchr( buff, ' ' )+1 );
 	} else {
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
@@ -300,10 +309,6 @@ CondorJob::~CondorJob()
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 	}
-	if ( remoteJobIdString != NULL ) {
-		CondorJobsById.remove( HashKey( remoteJobIdString ) );
-		free( remoteJobIdString );
-	}
 	if ( remoteScheddName ) {
 		free( remoteScheddName );
 	}
@@ -322,6 +327,15 @@ void CondorJob::Reconfig()
 {
 	BaseJob::Reconfig();
 	gahp->setTimeout( gahpCallTimeout );
+}
+
+int CondorJob::JobLeaseSentExpired()
+{
+dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
+	BaseJob::JobLeaseSentExpired();
+	SetRemoteJobId( NULL );
+	gmState = GM_CLEAR_REQUEST;
+	return 0;
 }
 
 int CondorJob::doEvaluateState()
@@ -511,6 +525,12 @@ int CondorJob::doEvaluateState()
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				char *job_id_string = NULL;
 				if ( gahpAd == NULL ) {
+					int new_expiration;
+					if ( CalculateLease( jobAd, new_expiration ) ) {
+							// This will set the job lease sent attrs,
+							// which get referenced in buildSubmitAd()
+						UpdateJobLeaseSent( new_expiration );
+					}
 					gahpAd = buildSubmitAd();
 				}
 				if ( gahpAd == NULL ) {
@@ -1095,27 +1115,26 @@ int CondorJob::doEvaluateState()
 
 void CondorJob::SetRemoteJobId( const char *job_id )
 {
-	if ( remoteJobIdString != NULL && job_id != NULL &&
-		 strcmp( remoteJobIdString, job_id ) == 0 ) {
-		return;
-	}
-	if ( remoteJobIdString != NULL ) {
-		CondorJobsById.remove( HashKey( remoteJobIdString ) );
-		free( remoteJobIdString );
-		remoteJobIdString = NULL;
+	int rc;
+	MyString full_job_id;
+
+	if ( job_id ) {
+		rc = sscanf( job_id, "%d.%d", &remoteJobId.cluster,
+					 &remoteJobId.proc );
+		if ( rc != 2 ) {
+			dprintf( D_ALWAYS,
+					 "(%d.%d.) SetRemoteJobId: malformed job id: %s\n",
+					 procID.cluster, procID.proc, job_id );
+			return;
+		}
+
+		full_job_id.sprintf( "condor %s %s %s", remoteScheddName,
+							 remotePoolName, job_id );
+	} else {
 		remoteJobId.cluster = 0;
-		jobAd->AssignExpr( ATTR_REMOTE_JOB_ID, "Undefined" );
 	}
-	if ( job_id != NULL ) {
-		MyString id_string;
-		sscanf( job_id, "%d.%d", &remoteJobId.cluster, &remoteJobId.proc );
-		id_string.sprintf( "%s/%d.%d", remoteScheddName, remoteJobId.cluster,
-						   remoteJobId.proc );
-		remoteJobIdString = strdup( id_string.Value() );
-		CondorJobsById.insert( HashKey( remoteJobIdString ), this );
-		jobAd->Assign( ATTR_REMOTE_JOB_ID, job_id );
-	}
-	requestScheddUpdate( this );
+
+	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
 
 void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
@@ -1241,6 +1260,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	MyString expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
+	int tmp_int;
 
 		// Base the submit ad on our own job ad
 	submit_ad = new ClassAd( *jobAd );
@@ -1251,6 +1271,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_OWNER );
 	submit_ad->Delete( ATTR_REMOTE_SCHEDD );
 	submit_ad->Delete( ATTR_REMOTE_POOL );
+	submit_ad->Delete( ATTR_GRID_RESOURCE );
 	submit_ad->Delete( ATTR_JOB_MATCHED );
 	submit_ad->Delete( ATTR_JOB_MANAGED );
 	submit_ad->Delete( ATTR_MIRROR_ACTIVE );
@@ -1288,6 +1309,11 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_RELEASE_REASON );
 	submit_ad->Delete( ATTR_LAST_RELEASE_REASON );
 	submit_ad->Delete( ATTR_JOB_STATUS_ON_RELEASE );
+	submit_ad->Delete( ATTR_LAST_JOB_LEASE_RENEWAL );
+	submit_ad->Delete( ATTR_JOB_LEASE_DURATION );
+	submit_ad->Delete( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED );
+	submit_ad->Delete( ATTR_TIMER_REMOVE_CHECK );
+	submit_ad->Delete( ATTR_TIMER_REMOVE_CHECK_SENT );
 
 	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
 	submit_ad->Assign( ATTR_HOLD_REASON, "Spooling input data files" );
@@ -1312,6 +1338,10 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
+
+	if ( jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT, tmp_int ) ) {
+		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
+	}
 
 	expr.sprintf( "%s = Undefined", ATTR_OWNER );
 	submit_ad->Insert( expr.Value() );

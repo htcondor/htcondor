@@ -48,9 +48,8 @@ void gramCallbackHandler( void *user_arg, char *job_contact, int state,
 
 void GlobusJobInit();
 void GlobusJobReconfig();
-bool GlobusJobAdMustExpand( const ClassAd *jobad );
 BaseJob *GlobusJobCreate( ClassAd *jobad );
-extern const char *GlobusJobAdConst;
+bool GlobusJobAdMatch( const ClassAd *job_ad );
 
 class GlobusJob : public BaseJob
 {
@@ -70,8 +69,7 @@ class GlobusJob : public BaseJob
 	bool GetCallbacks();
 	void ClearCallbacks();
 	BaseResource *GetResource();
-
-	void SetJobContact(const char * contact);
+	void SetRemoteJobId( const char *job_id );
 
 	/* If true, then ATTR_ON_EXIT_BY_SIGNAL, ATTR_ON_EXIT_SIGNAL, and
 	   ATTR_ON_EXIT_CODE are valid.  If false, no exit status is available.

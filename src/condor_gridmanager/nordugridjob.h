@@ -36,9 +36,8 @@
 
 void NordugridJobInit();
 void NordugridJobReconfig();
-bool NordugridJobAdMustExpand( const ClassAd *jobad );
 BaseJob *NordugridJobCreate( ClassAd *jobad );
-extern const char *NordugridJobAdConst;
+bool NordugridJobAdMatch( const ClassAd *job_ad );
 
 class NordugridResource;
 
@@ -53,6 +52,7 @@ class NordugridJob : public BaseJob
 	void Reconfig();
 	int doEvaluateState();
 	BaseResource *GetResource();
+	void SetRemoteJobId( const char *job_id );
 
 	static int probeInterval;
 	static int submitInterval;

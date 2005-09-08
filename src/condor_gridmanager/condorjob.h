@@ -36,13 +36,11 @@
 
 
 class CondorJob;
-extern HashTable <HashKey, CondorJob *> CondorJobsById;
 
 void CondorJobInit();
 void CondorJobReconfig();
-bool CondorJobAdMustExpand( const ClassAd *jobad );
 BaseJob *CondorJobCreate( ClassAd *jobad );
-extern const char *CondorJobAdConst;
+bool CondorJobAdMatch( const ClassAd *job_ad );
 
 class CondorResource;
 
@@ -57,6 +55,7 @@ class CondorJob : public BaseJob
 	void Reconfig();
 	int doEvaluateState();
 	BaseResource *GetResource();
+	int JobLeaseSentExpired();
 
 	static int submitInterval;
 	static int removeInterval;
@@ -82,7 +81,6 @@ class CondorJob : public BaseJob
 	char *remoteScheddName;
 	char *remotePoolName;
 	PROC_ID remoteJobId;
-	char *remoteJobIdString;
 	char *submitterId;
 	int connectFailureCount;
 

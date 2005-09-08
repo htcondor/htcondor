@@ -320,6 +320,7 @@ stdin_pipe_handler(int pipe) {
 					GAHP_COMMAND_JOB_RELEASE,
 					GAHP_COMMAND_JOB_STAGE_IN,
 					GAHP_COMMAND_JOB_STAGE_OUT,
+					GAHP_COMMAND_JOB_UPDATE_LEASE,
 					GAHP_COMMAND_JOB_REFRESH_PROXY,
 					GAHP_COMMAND_ASYNC_MODE_ON,
 					GAHP_COMMAND_ASYNC_MODE_OFF,
@@ -484,6 +485,13 @@ verify_gahp_command(char ** argv, int argc) {
 		// Expecting:GAHP_COMMAND_REFRESH_PROXY_FROM_FILE <proxy file>
 		return verify_number_args (argc, 2);
 
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_UPDATE_LEASE) == 0) {
+			// Expecting CONDOR_JOB_UPDATE_LEASE <req id> <schedd name> <num  jobs> <job id> <expiration> <job id> <expiration> ...
+		return (argc >= 4) &&
+			   verify_number (argv[3]) &&
+			   (argc == (atoi (argv[3]) * 2 + 4)) &&
+			   verify_request_id (argv[1]) &&
+			   verify_schedd_name (argv[2]);
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_RESULTS) == 0 ||
 				strcasecmp (argv[0], GAHP_COMMAND_VERSION) == 0 ||
 				strcasecmp (argv[0], GAHP_COMMAND_COMMANDS) == 0 ||
@@ -538,6 +546,22 @@ verify_class_ad (const char * s) {
 	// TODO: How can we verify XML?
 	return (s != NULL) && (strlen(s) > 0);
 }
+
+int
+verify_number (const char * s) {
+	if (!s || !(*s))
+		return FALSE;
+	
+	int i=0;
+   
+	do {
+		if (s[i]<'0' || s[i]>'9')
+			return FALSE;
+	} while (s[++i]);
+
+	return TRUE;
+}
+		
 
 int
 verify_job_id (const char * s) {

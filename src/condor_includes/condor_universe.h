@@ -42,7 +42,7 @@ with the strings in condor_universe.c
 #define CONDOR_UNIVERSE_PVMD      6  /* PVM daemon process */
 #define CONDOR_UNIVERSE_SCHEDULER 7  /* A job run under the schedd */
 #define CONDOR_UNIVERSE_MPI       8  /* Message Passing Interface jobs */
-#define CONDOR_UNIVERSE_GLOBUS    9  /* Jobs managed by condor_gmanager */
+#define CONDOR_UNIVERSE_GRID      9  /* Jobs managed by condor_gmanager */
 #define CONDOR_UNIVERSE_JAVA      10 /* Jobs for the Java Virtual Machine */
 #define CONDOR_UNIVERSE_PARALLEL  11 /* Generalized parallel jobs */
 #define CONDOR_UNIVERSE_LOCAL     12 /* Job run locally by the schedd */

@@ -37,7 +37,18 @@
  **/
 
 
+struct job_expiration {
+	int cluster;
+	int proc;
+	unsigned long expiration;
 
+	void copy_from(const job_expiration & r) {
+		cluster = r.cluster;
+		proc = r.proc;
+	    expiration = r.expiration;
+	}
+
+};
 	
  
 class SchedDRequest {
@@ -85,7 +96,10 @@ public:
 													  const int proc_id,
 													  const char * proxy_file);
 
-													
+	static SchedDRequest * createUpdateLeaseRequest (const int request_id,
+													 const int num_jobs,
+													 job_expiration* & expirations);
+
 	~SchedDRequest() {
 		if (classad)
 			delete classad;
@@ -95,6 +109,9 @@ public:
 			free (reason);
 		if (proxy_file)
 			free (proxy_file);
+		if (expirations)
+			delete [] expirations;
+
 	}
 
 	ClassAd * classad;
@@ -106,6 +123,9 @@ public:
 
 	char * reason;	// For release, remove, update
 	char * proxy_file;	// For refresh_proxy
+
+	int num_jobs;
+	job_expiration * expirations;
 
 	// Status of the command
 	enum {
@@ -130,6 +150,7 @@ typedef enum {
 		SDC_JOB_STAGE_IN,
 		SDC_JOB_STAGE_OUT,
 		SDC_JOB_REFRESH_PROXY,
+		SDC_UPDATE_LEASE,
 } schedd_command_type;
 	
 	schedd_command_type command;
@@ -143,6 +164,8 @@ protected:
 		reason = NULL;
 		proxy_file = NULL;
 		request_id = -1;
+		expirations = NULL;
+		num_jobs =0;
 	}
 
 };

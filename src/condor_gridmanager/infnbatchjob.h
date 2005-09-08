@@ -34,14 +34,10 @@
 #include "gahp-client.h"
 
 
-class INFNBatchJob;
-extern HashTable <HashKey, INFNBatchJob *> INFNBatchJobsById;
-
 void INFNBatchJobInit();
 void INFNBatchJobReconfig();
-bool INFNBatchJobAdMustExpand( const ClassAd *jobad );
 BaseJob *INFNBatchJobCreate( ClassAd *jobad );
-extern const char *INFNBatchJobAdConst;
+bool INFNBatchJobAdMatch( const ClassAd *job_ad );
 
 //class CondorResource;
 

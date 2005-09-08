@@ -128,6 +128,8 @@ const char ATTR_X509_USER_PROXY          [] = "x509userproxy";
 const char ATTR_X509_USER_PROXY_SUBJECT	 [] = "x509userproxysubject";
 const char ATTR_GLOBUS_JOBMANAGER_TYPE   []	= "JobmanagerType";	// for gt4
 const char ATTR_GLOBUS_SUBMIT_ID	     [] = "GlobusSubmitId"; // for gt4
+const char ATTR_GRID_RESOURCE			 [] = "GridResource";
+const char ATTR_GRID_JOB_ID				 [] = "GridJobId";
 // ckireyev myproxy
 const char ATTR_MYPROXY_SERVER_DN		 [] = "MyProxyServerDN";
 const char ATTR_MYPROXY_HOST_NAME		 [] = "MyProxyHost";
@@ -233,6 +235,7 @@ const char ATTR_LAST_HOLD_REASON         [] = "LastHoldReason";
 const char ATTR_LAST_HOLD_REASON_CODE	 [] = "LastHoldReasonCode";
 const char ATTR_LAST_HOLD_REASON_SUBCODE [] = "LastHoldReasonSubCode";
 const char ATTR_LAST_JOB_LEASE_RENEWAL   [] = "LastJobLeaseRenewal";
+const char ATTR_LAST_JOB_LEASE_RENEWAL_FAILED[] = "LastJobLeaseRenewalFailed";
 const char ATTR_LAST_MATCH_TIME			 [] = "LastMatchTime";
 const char ATTR_LAST_MATCH_LIST_PREFIX   [] = "LastMatchName";
 const char ATTR_LAST_MATCH_LIST_LENGTH   [] = "LastMatchListLength";
@@ -442,6 +445,8 @@ const char ATTR_ON_EXIT_SIGNAL		     [] = "ExitSignal";
 const char ATTR_PERIODIC_HOLD_CHECK		 [] = "PeriodicHold";
 const char ATTR_PERIODIC_RELEASE_CHECK	 [] = "PeriodicRelease";
 const char ATTR_PERIODIC_REMOVE_CHECK	 [] = "PeriodicRemove";
+const char ATTR_TIMER_REMOVE_CHECK		 [] = "TimerRemove";
+const char ATTR_TIMER_REMOVE_CHECK_SENT	 [] = "TimerRemoveSent";
 const char ATTR_GLOBUS_RESUBMIT_CHECK	 [] = "GlobusResubmit";
 const char ATTR_REMATCH_CHECK			 [] = "Rematch";
 

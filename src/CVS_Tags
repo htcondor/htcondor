@@ -1,3 +1,7 @@
+09/07/05 V6_7-lease-merge-1
+   The state of the V6_7-lease-branch for a merge into V6_7-branch. This
+   should be the end of V6_7-lease-branch.
+
 09/01/05 V6_7-quill-merge-1
    Abandoning V6_7-quill-branch, merging into V6_7-branch.
    This is the merge-from tag on V6_7-quill-branch.

@@ -53,9 +53,6 @@ int contact_schedd_interval = 20;
 // Do we use XML-formatted classads when talking to our invoker
 bool useXMLClassads = false;
 
-// Pointer to a socket open for QMGMT operations
-extern ReliSock* qmgmt_sock;
-
 // Queue for pending commands to schedd
 template class SimpleList<SchedDRequest*>;
 SimpleList <SchedDRequest*> command_queue;
@@ -128,6 +125,7 @@ doContactSchedd()
 	int error=FALSE;
 	char error_msg[1000];
 	CondorError errstack;
+	bool do_reschedule = false;
 
 	// Try connecting to schedd
 	DCSchedd dc_schedd ( ScheddAddr, ScheddPool );
@@ -255,6 +253,9 @@ doContactSchedd()
 		}
 		else {
 			result_ad->dPrint (D_FULLDEBUG);
+			if ( current_command->command == SchedDRequest::SDC_RELEASE_JOB ) {
+				do_reschedule = true;
+			}
 		}
 
 		// Go through the batch again, and create responses for each request
@@ -605,6 +606,97 @@ update_report_result:
 
 	} // elihw
 
+	
+	dprintf (D_FULLDEBUG, "Processing UPDATE_LEASE requests\n");
+
+	// UPDATE_LEASE
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+		
+		error = FALSE;
+
+		if (current_command->status != SchedDRequest::SDCS_NEW)
+			continue;
+
+		if (current_command->command != SchedDRequest::SDC_UPDATE_LEASE)
+			continue;
+
+		MyString success_job_ids="";
+		if (qmgr_connection == NULL) {
+			sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
+			error = TRUE;
+		} else {
+			error = FALSE;
+			BeginTransaction();
+		
+			current_command->status = SchedDRequest::SDCS_PENDING;
+
+			int i;
+			for (i=0; i<current_command->num_jobs; i++) {
+			
+				time_t time_now = time(NULL);
+				int duration = 
+					current_command->expirations[i].expiration - time_now;
+
+				dprintf (D_FULLDEBUG, 
+						 "Job %d.%d SetTimerAttribute=%d\n",
+						 current_command->expirations[i].cluster,
+						 current_command->expirations[i].proc,
+						 duration);
+		
+				if (SetTimerAttribute (current_command->expirations[i].cluster,
+									   current_command->expirations[i].proc,
+									   ATTR_TIMER_REMOVE_CHECK,
+									   duration) < 0) {
+
+					dprintf (D_ALWAYS, 
+							 "Unable to SetTimerAttribute(%d, %d), errno=%d\n",
+							 current_command->expirations[i].cluster,
+							 current_command->expirations[i].proc,
+							 errno);
+						 
+				} else {
+						// Append job id to the result line
+					if (success_job_ids.Length() > 0)
+						success_job_ids += ",";
+
+					success_job_ids.sprintf_cat (
+						"%d.%d",
+						current_command->expirations[i].cluster,
+						current_command->expirations[i].proc);
+				}
+			} //rof jobs for request
+		} // fi error
+
+
+update_lease_result:
+		if (error) {
+			const char * result[] = {
+				GAHP_RESULT_FAILURE,
+				error_msg,
+				NULL
+			};
+
+
+			//CloseConnection();
+			enqueue_result (current_command->request_id, result, 3);
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+			if ( qmgr_connection != NULL ) {
+				AbortTransaction();
+			}
+		} else {
+			const char * result[] = {
+				GAHP_RESULT_SUCCESS,
+				NULL,
+				success_job_ids.Length()?success_job_ids.Value():NULL
+			};
+			enqueue_result (current_command->request_id, result, 3);
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+			CloseConnection();
+		} // fi
+
+	} // elihw UPDATE_LEASE requests
+
 	dprintf (D_FULLDEBUG, "Processing SUBMIT_JOB requests\n");
 
 	// SUBMIT_JOB
@@ -649,6 +741,14 @@ update_report_result:
 		if ( error == FALSE ) {
 			current_command->classad->Assign(ATTR_CLUSTER_ID, ClusterId);
 			current_command->classad->Assign(ATTR_PROC_ID, ProcId);
+
+			// Special case for the job lease
+			int expire_time;
+			if ( current_command->classad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_time ) ) {
+				SetTimerAttribute( ClusterId, ProcId, ATTR_TIMER_REMOVE_CHECK,
+								   expire_time - time(NULL) );
+				current_command->classad->Delete( ATTR_TIMER_REMOVE_CHECK );
+			}
 
 			// Set all the classad attribute on the remote classad
 			current_command->classad->ResetExpr();
@@ -786,12 +886,15 @@ submit_report_result:
 	}	//elihw
 
 	
-	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
-
 	if ( qmgr_connection != NULL ) {
 		DisconnectQ (qmgr_connection, FALSE);
 	}
-	qmgmt_sock = NULL;
+
+	if ( do_reschedule ) {
+		dc_schedd.reschedule();
+	}
+
+	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
 
 	// Clean up the list
 	command_queue.Rewind();
@@ -962,6 +1065,42 @@ handle_gahp_command(char ** argv, int argc) {
 
 		delete classad;
 		return TRUE;
+	}  else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_UPDATE_LEASE) ==0) {
+		int req_id;
+		int num_jobs;
+
+		if (!(argc >= 4 &&
+			get_int (argv[1], &req_id) &&
+			get_int (argv[3], &num_jobs))) {
+
+			dprintf (D_ALWAYS, "Invalid args to %s\n", argv[0]);
+			return FALSE;
+		}
+
+		job_expiration * expirations = new job_expiration[num_jobs];
+		int i;
+		for (i=0; i<num_jobs; i++) {
+			if (!get_job_id(argv[4+i*2], 
+							&(expirations[i].cluster),
+							&(expirations[i].proc))) {
+				delete[] expirations;
+				return FALSE;
+			}
+
+			if (!get_ulong (argv[4+i*2+1], &(expirations[i].expiration))) {
+				delete [] expirations;
+				return FALSE;
+			}
+		}	
+
+		enqueue_command (
+			SchedDRequest::createUpdateLeaseRequest(
+													req_id,
+													num_jobs,
+													expirations));
+
+		delete [] expirations;
+		return TRUE;
 	}  else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_IN) ==0) {
 		int req_id;
 		ClassAd * classad;
@@ -1064,6 +1203,11 @@ get_int (const char * blah, int * s) {
 	return TRUE;
 }
 
+int
+get_ulong (const char * blah, unsigned long * s) {
+	*s=(unsigned long)atol(blah);
+	return TRUE;
+}
 
 // String -> "cluster, proc"
 int

@@ -1284,8 +1284,8 @@ format_remote_host (char *, AttrList *ad)
 			}
 			return result;
 		}
-	} else if (universe == CONDOR_UNIVERSE_GLOBUS) {
-		if (ad->LookupString(ATTR_GLOBUS_RESOURCE,result) == 1 )
+	} else if (universe == CONDOR_UNIVERSE_GRID) {
+		if (ad->LookupString(ATTR_GRID_RESOURCE,result) == 1 )
 			return result;
 		else
 			return unknownHost;
@@ -1416,32 +1416,57 @@ format_globusStatus( int globusStatus, AttrList *ad )
 	return result;
 }
 
+// The remote hostname may be in GlobusResource or GridResource.
+// We want this function to be called if at least one is defined,
+// but it will only be called if the one attribute it's registered
+// with is defined. So we register it with an attribute we know will
+// always be present and be a string. We then ignore that attribute
+// and examine GlobusResource and GridResource.
 static char *
-format_globusHostAndJM( char  *globusResource, AttrList *ad )
+format_globusHostAndJM( char  *ignore_me, AttrList *ad )
 {
 	static char result[64];
 	char	host[80] = "[?????]";
 	char	jm[80] = "fork";
 	char	*tmp;
 	int	p;
+	char *attr_value = NULL;
+	char *resource_name = NULL;
+	bool new_syntax;
+	char *grid_type = NULL;
 
-	
-	if ( globusResource != NULL ) {
+	if ( ad->LookupString( ATTR_GRID_RESOURCE, &attr_value ) ) {
+			// If ATTR_GRID_RESOURCE exists, skip past the initial
+			// '<job type> '.
+		resource_name = strchr( attr_value, ' ' );
+		if ( resource_name ) {
+			*resource_name = '\0';
+			grid_type = strdup( attr_value );
+			resource_name++;
+		}
+		new_syntax = true;
+	} else {
+			// ATTR_GRID_RESOURCE doesn't exist, try ATTR_GLOBUS_RESOURCE
+		ad->LookupString( ATTR_GLOBUS_RESOURCE, &attr_value );
+		resource_name = attr_value;
+		new_syntax = false;
 
-		char *grid_type;
 		ad->LookupString( ATTR_JOB_GRID_TYPE, &grid_type );
+	}
+
+	if ( resource_name != NULL ) {
 
 		if ( grid_type == NULL || !stricmp( grid_type, "gt2" ) ||
 			 !stricmp( grid_type, "globus" ) ) {
 
 			// copy the hostname
-			p = strcspn( globusResource, ":/" );
+			p = strcspn( resource_name, ":/" );
 			if ( p > (int) sizeof(host) )
 				p = sizeof(host) - 1;
-			strncpy( host, globusResource, p );
+			strncpy( host, resource_name, p );
 			host[p] = '\0';
 
-			if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
+			if ( ( tmp = strstr( resource_name, "jobmanager-" ) ) != NULL ) {
 				tmp += 11; // 11==strlen("jobmanager-")
 
 				// copy the jobmanager name
@@ -1454,29 +1479,50 @@ format_globusHostAndJM( char  *globusResource, AttrList *ad )
 
 		} else if ( !stricmp( grid_type, "gt3" ) ) {
 
-			strncpy( host, globusResource, sizeof(host) );
+			strncpy( host, resource_name, sizeof(host) );
 
 		} else if ( !stricmp( grid_type, "gt4" ) ) {
 
+			strcpy( jm, "Fork" );
+
+			if ( new_syntax ) {
+					// GridResource is of the form '<service url> <jm type>'
+					// Find the space, zero it out, and grab the jm type from
+					// the end (if it's non-empty).
+				tmp = strchr( resource_name, ' ' );
+				if ( tmp ) {
+					*tmp = '\0';
+					if ( tmp[1] != '\0' ) {
+						strcpy( jm, &tmp[1] );
+					}
+				}
+			} else {
+					// No ATTR_GRID_RESOURCE, so the jm type is stored as
+					// a separate attribute.
+				ad->LookupString( ATTR_GLOBUS_JOBMANAGER_TYPE, jm,
+								  sizeof(jm) );
+				jm[sizeof(jm)-1] = '\0';
+			}
+
 				// Pick the hostname out of the URL
-			if ( strncmp( "https://", globusResource, 8 ) == 0 ) {
-				strncpy( host, &globusResource[8], sizeof(host) );
+			if ( strncmp( "https://", resource_name, 8 ) == 0 ) {
+				strncpy( host, &resource_name[8], sizeof(host) );
 				host[sizeof(host)-1] = '\0';
 			} else {
-				strncpy( host, globusResource, sizeof(host) );
+				strncpy( host, resource_name, sizeof(host) );
 				host[sizeof(host)-1] = '\0';
 			}
 			p = strcspn( host, ":/" );
 			host[p] = '\0';
-
-			strcpy( jm, "Fork" );
-			ad->LookupString( ATTR_GLOBUS_JOBMANAGER_TYPE, jm, sizeof(jm) );
-			jm[sizeof(jm)-1] = '\0';
 		}
+	}
 
-		if ( grid_type ) {
-			free( grid_type );
-		}
+	if ( grid_type ) {
+		free( grid_type );
+	}
+
+	if ( attr_value ) {
+		free( attr_value );
 	}
 
 	// done --- pack components into the result string and return
@@ -1645,7 +1691,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 								 ATTR_GLOBUS_STATUS, "[?????]" );
 			mask.registerFormat( (StringCustomFmt)
 								 format_globusHostAndJM,
-								 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
+								 ATTR_JOB_CMD, "fork    [?????]" );
 			mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 			setup_mask = true;
 			usingPrintMask = true;
@@ -1977,7 +2023,7 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 									 ATTR_GLOBUS_STATUS, "[?????]" );
 				mask.registerFormat( (StringCustomFmt)
 									 format_globusHostAndJM,
-									 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
+									 ATTR_JOB_CMD, "fork    [?????]" );
 				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 				setup_mask = true;
 				usingPrintMask = true;
@@ -2470,7 +2516,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	/* Attributes to check for grid universe matchmaking */ 
 	const char * ads_to_check[] = { ATTR_GLOBUS_RESOURCE,
-									 ATTR_REMOTE_SCHEDD };
+									ATTR_REMOTE_SCHEDD,
+									ATTR_GRID_RESOURCE };
 
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	bool uses_matchmaking = false;
@@ -2489,7 +2536,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 			break;
 
 			// Maybe
-		case CONDOR_UNIVERSE_GLOBUS:
+		case CONDOR_UNIVERSE_GRID:
 			/* We may be able to detect when it's valid.  Check for existance
 			 * of "$$(FOO)" style variables in the classad. */
 			for (i = 0;   

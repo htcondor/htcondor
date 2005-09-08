@@ -509,10 +509,10 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	// in case we're recovering from a shutdown/meltdown.
 	if ( grabAllJobs ) {
 		sprintf( expr_buf, "%s  && %s == %d",
-				owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS );
+				owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID );
 	} else {
 		sprintf( expr_buf, "%s  && %s == %d && %s == %d",
-			owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+			owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID,
 			ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
 	}
 
@@ -756,7 +756,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	}
 
 	sprintf( expr_buf, "%s && %s == %d && %s == %d",
-		owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+		owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID,
 		ATTR_JOB_STATUS, REMOVED );
 
 

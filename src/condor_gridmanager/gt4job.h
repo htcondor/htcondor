@@ -39,16 +39,10 @@
 
 class GT4Resource;
 
-class GT4Job;
-extern HashTable <HashKey, GT4Job *> GT4JobsByContact;
-
-const char *gt4JobId( const char *contact );
-
 void GT4JobInit();
 void GT4JobReconfig();
-bool GT4JobAdMustExpand( const ClassAd *jobad );
 BaseJob *GT4JobCreate( ClassAd *jobad );
-extern const char *GT4JobAdConst;
+bool GT4JobAdMatch( const ClassAd *job_ad );
 
 class GT4Job : public BaseJob
 {
@@ -66,6 +60,7 @@ class GT4Job : public BaseJob
 	bool GetCallbacks();
 	void ClearCallbacks();
 	BaseResource *GetResource();
+	void SetRemoteJobId( const char *job_id );
 
 	static int probeInterval;
 	static int submitInterval;
@@ -108,7 +103,6 @@ class GT4Job : public BaseJob
 	Proxy *jobProxy;
 	GahpClient *gahp;
 
-	void SetJobContact( const char *job_contact );
 	MyString *buildSubmitRSL();
 	void DeleteOutput();
 

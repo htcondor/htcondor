@@ -104,52 +104,6 @@ static char *GMStateNames[] = {
 	} \
 }
 
-//////////////////////from gridmanager.C
-#define HASH_TABLE_SIZE			500
-
-static bool WriteGT3SubmitEventToUserLog( ClassAd *job_ad );
-static bool WriteGT3SubmitFailedEventToUserLog( ClassAd *job_ad,
-												int failure_code );
-
-HashTable <HashKey, GT3Job *> GT3JobsByContact( HASH_TABLE_SIZE,
-												hashFunction );
-
-const char *
-gt3JobId( const char *contact )
-{
-/*
-	static char buff[1024];
-	char *first_end;
-	char *second_begin;
-
-	ASSERT( strlen(contact) < sizeof(buff) );
-
-	first_end = strrchr( contact, ':' );
-	ASSERT( first_end );
-
-	second_begin = strchr( first_end, '/' );
-	ASSERT( second_begin );
-
-	strncpy( buff, contact, first_end - contact );
-	strcpy( buff + ( first_end - contact ), second_begin );
-
-	return buff;
-*/
-	return contact;
-}
-
-static
-void
-rehashJobContact( GT3Job *job, const char *old_contact,
-				  const char *new_contact )
-{
-	if ( old_contact ) {
-		GT3JobsByContact.remove(HashKey(gt3JobId(old_contact)));
-	}
-	if ( new_contact ) {
-		GT3JobsByContact.insert(HashKey(gt3JobId(new_contact)), job);
-	}
-}
 
 void
 gt3GramCallbackHandler( void *user_arg, char *job_contact, int state,
@@ -157,9 +111,13 @@ gt3GramCallbackHandler( void *user_arg, char *job_contact, int state,
 {
 	int rc;
 	GT3Job *this_job;
+	MyString job_id;
+
+	job_id.sprintf( "gt3 %s", job_contact );
 
 	// Find the right job object
-	rc = GT3JobsByContact.lookup( HashKey( gt3JobId(job_contact) ), this_job );
+	rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id.Value() ),
+										 (BaseJob*)this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"gt3GramCallbackHandler: Can't find record for globus job with "
@@ -207,22 +165,17 @@ void GT3JobReconfig()
 	}
 }
 
-const char *GT3JobAdConst = "JobUniverse =?= 9 && (JobGridType == \"gt3\") =?= True";
+bool GT3JobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString resource;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_GRID &&
+		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
+		 strncasecmp( resource.Value(), "gt3 ", 4 ) == 0 ) {
 
-bool GT3JobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-	if ( !must_expand ) {
-		char resource_name[800];
-		jobad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
-		if ( strstr(resource_name,"$$") ) {
-			must_expand = 1;
-		}
+		return true;
 	}
-
-	return must_expand != 0;
+	return false;
 }
 
 BaseJob *GT3JobCreate( ClassAd *jobad )
@@ -380,11 +333,29 @@ GT3Job::GT3Job( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
-		resourceManagerString = strdup( buff );
+		const char *token;
+		MyString str = buff;
+
+		str.Tokenize();
+
+		token = str.GetNextToken( " ", false );
+		if ( !token || stricmp( token, "gt3" ) ) {
+			error_string = "GridResource not of type gt3";
+			goto error_exit;
+		}
+
+		token = str.GetNextToken( " ", false );
+		if ( token && *token ) {
+			resourceManagerString = strdup( token );
+		} else {
+			error_string = "GridResource missing GRAM Service URL";
+			goto error_exit;
+		}
+
 	} else {
-		error_string = "GT3Resource is not set in the job ad";
+		error_string = "GridResource is not set in the job ad";
 		goto error_exit;
 	}
 
@@ -402,10 +373,9 @@ GT3Job::GT3Job( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
-	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
-		rehashJobContact( this, jobContact, buff );
-		jobContact = strdup( buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
+		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
 		job_already_submitted = true;
 	}
 
@@ -488,7 +458,6 @@ GT3Job::~GT3Job()
 		free( resourceManagerString );
 	}
 	if ( jobContact ) {
-		rehashJobContact( this, jobContact, NULL );
 		free( jobContact );
 	}
 	if ( RSL ) {
@@ -518,6 +487,22 @@ void GT3Job::Reconfig()
 {
 	BaseJob::Reconfig();
 	gahp->setTimeout( gahpCallTimeout );
+}
+
+void GT3Job::SetRemoteJobId( const char *job_id )
+{
+	free( jobContact );
+	if ( job_id ) {
+		jobContact = strdup( job_id );
+	} else {
+		jobContact = NULL;
+	}
+
+	MyString full_job_id;
+	if ( job_id ) {
+		full_job_id.sprintf( "gt3 %s", job_id );
+	}
+	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
 
 int GT3Job::doEvaluateState()
@@ -753,12 +738,8 @@ int GT3Job::doEvaluateState()
 				jmProxyExpireTime = jobProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
 					callbackRegistered = true;
-					rehashJobContact( this, jobContact, job_contact );
-						// job_contact was strdup()ed for us. Now we take
-						// responsibility for free()ing it.
-					jobContact = job_contact;
-					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-								   job_contact );
+					SetRemoteJobId( job_contact );
+					free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -766,8 +747,8 @@ int GT3Job::doEvaluateState()
 					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
 							procID.cluster, procID.proc,RSL->Value());
 					submitFailureCode = globusError = rc;
-					WriteGT3SubmitFailedEventToUserLog( jobAd,
-														submitFailureCode );
+					WriteGlobusSubmitFailedEventToUserLog( jobAd,
+														   submitFailureCode );
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
 				}
@@ -809,7 +790,8 @@ int GT3Job::doEvaluateState()
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_start()", rc );
 					globusError = rc;
-					WriteGT3SubmitFailedEventToUserLog( jobAd, globusError );
+					WriteGlobusSubmitFailedEventToUserLog( jobAd,
+														   globusError );
 					gmState = GM_CANCEL;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -933,15 +915,8 @@ rc=0;
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				if ( jobContact != NULL ) {
-					rehashJobContact( this, jobContact, NULL );
-					free( jobContact );
-					myResource->CancelSubmit( this );
-					jobContact = NULL;
-					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
-					requestScheddUpdate( this );
-				}
+				SetRemoteJobId( NULL );
+				myResource->CancelSubmit( this );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -991,13 +966,8 @@ rc=0;
 				break;
 			}
 
-			rehashJobContact( this, jobContact, NULL );
-			free( jobContact );
 			myResource->CancelSubmit( this );
-			jobContact = NULL;
-			jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-						   NULL_JOB_CONTACT );
-			requestScheddUpdate( this );
+			SetRemoteJobId( NULL );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -1057,14 +1027,8 @@ rc=0;
 			globusError = 0;
 			errorString = "";
 			ClearCallbacks();
-			if ( jobContact != NULL ) {
-				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
-				myResource->CancelSubmit( this );
-				jobContact = NULL;
-				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
-			}
+			SetRemoteJobId( NULL );
+			myResource->CancelSubmit( this );
 			JobIdle();
 			if ( submitLogged ) {
 				JobEvicted();
@@ -1283,8 +1247,8 @@ void GT3Job::UpdateGlobusState( int new_state, int new_error_code )
 					//   certain errors (ones we know are submit-related)?
 				submitFailureCode = new_error_code;
 				if ( !submitFailedLogged ) {
-					WriteGT3SubmitFailedEventToUserLog( jobAd,
-														submitFailureCode );
+					WriteGlobusSubmitFailedEventToUserLog( jobAd,
+														   submitFailureCode );
 					submitFailedLogged = true;
 				}
 			} else {
@@ -1292,7 +1256,7 @@ void GT3Job::UpdateGlobusState( int new_state, int new_error_code )
 					// the user-log and increment the globus submits count.
 				int num_globus_submits = 0;
 				if ( !submitLogged ) {
-					WriteGT3SubmitEventToUserLog( jobAd );
+					WriteGlobusSubmitEventToUserLog( jobAd );
 					submitLogged = true;
 				}
 				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
@@ -1693,88 +1657,3 @@ void GT3Job::DeleteOutput()
 	umask( old_umask );
 }
 
-static bool
-WriteGT3SubmitEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	int version;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus submit record to user logfile\n",
-			 cluster, proc );
-
-	GlobusSubmitEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact = strnewp(contact);
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, contact,
-						   sizeof(contact) - 1 );
-	event.jmContact = strnewp(contact);
-
-	version = 0;
-	job_ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, version );
-	event.restartableJM = version >= GRAM_V_1_5;
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-static bool
-WriteGT3SubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code )
-{
-	int cluster, proc;
-	char buf[1024];
-
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing submit-failed record to user logfile\n",
-			 cluster, proc );
-
-	GlobusSubmitFailedEvent event;
-
-	snprintf( buf, 1024, "%d %s", failure_code,
-			  "" );
-	event.reason =  strnewp(buf);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
-				 cluster, proc);
-		return false;
-	}
-
-	return true;
-}

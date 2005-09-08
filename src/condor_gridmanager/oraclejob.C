@@ -77,24 +77,7 @@ static char *GMStateNames[] = {
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
-#define HASH_TABLE_SIZE			500
-
 #define ATTR_ORACLE_JOB_RUN_PHASE "OracleJobRunPhase"
-
-HashTable <HashKey, OracleJob *> JobsByRemoteId( HASH_TABLE_SIZE,
-												 hashFunction );
-
-void
-rehashRemoteJobId( OracleJob *job, const char *old_id,
-				   const char *new_id )
-{
-	if ( old_id ) {
-		JobsByRemoteId.remove(HashKey(old_id));
-	}
-	if ( new_id ) {
-		JobsByRemoteId.insert(HashKey(new_id), job);
-	}
-}
 
 void OracleJobInit()
 {
@@ -117,15 +100,17 @@ void OracleJobReconfig()
 //	}
 }
 
-const char *OracleJobAdConst = "JobUniverse =?= 9 && (JobGridType == \"oracle\") =?= True";
+bool OracleJobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString resource;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_GRID &&
+		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
+		 strncasecmp( resource.Value(), "oracle ", 7 ) == 0 ) {
 
-bool OracleJobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-
-	return must_expand != 0;
+		return true;
+	}
+	return false;
 }
 
 BaseJob *OracleJobCreate( ClassAd *jobad )
@@ -255,11 +240,29 @@ OracleJob::OracleJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
-		resourceManagerString = strdup( buff );
+		const char *token;
+		MyString str = buff;
+
+		str.Tokenize();
+
+		token = str.GetNextToken( " ", false );
+		if ( !token || stricmp( token, "oracle" ) ) {
+			error_string = "GridResource not of type oracle";
+			goto error_exit;
+		}
+
+		token = str.GetNextToken( " ", false );
+		if ( token && *token ) {
+			resourceManagerString = strdup( token );
+		} else {
+			error_string = "GridResource missing server name";
+			goto error_exit;
+		}
+
 	} else {
-		error_string = "GlobusResource is not set in the job ad";
+		error_string = "GridResource is not set in the job ad";
 		goto error_exit;
 	}
 
@@ -285,10 +288,9 @@ OracleJob::OracleJob( ClassAd *classad )
 	ociSession->RegisterJob( this );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
-	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
-		rehashRemoteJobId( this, remoteJobId, buff );
-		remoteJobId = strdup( buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
+		SetRemoteJobId( strchr( buff, ' ' ) );
 	}
 
 	if ( OCIHandleAlloc( GlobalOciEnvHndl, (dvoid**)&ociErrorHndl,
@@ -313,7 +315,6 @@ OracleJob::~OracleJob()
 		ociSession->UnregisterJob( this );
 	}
 	if ( remoteJobId ) {
-		rehashRemoteJobId( this, remoteJobId, NULL );
 		free( remoteJobId );
 	}
 	if ( ociErrorHndl ) {
@@ -409,10 +410,7 @@ int OracleJob::doEvaluateState()
 				numSubmitAttempts++;
 
 				if ( job_id != NULL ) {
-					rehashRemoteJobId( this, remoteJobId, job_id );
-					remoteJobId = strdup( job_id );
-					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-								   job_id );
+					SetRemoteJobId( job_id );
 					gmState = GM_SUBMIT_1_SAVE;
 				} else {
 					dprintf(D_ALWAYS,"(%d.%d) job submit 1 failed!\n",
@@ -542,14 +540,7 @@ int OracleJob::doEvaluateState()
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				if ( remoteJobId != NULL ) {
-					rehashRemoteJobId( this, remoteJobId, NULL );
-					free( remoteJobId );
-					remoteJobId = NULL;
-					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
-					requestScheddUpdate( this );
-				}
+				SetRemoteJobId( NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -565,12 +556,7 @@ int OracleJob::doEvaluateState()
 			}
 			} break;
 		case GM_FAILED: {
-			rehashRemoteJobId( this, remoteJobId, NULL );
-			free( remoteJobId );
-			remoteJobId = NULL;
-			jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-						   NULL_JOB_CONTACT );
-			requestScheddUpdate( this );
+			SetRemoteJobId( NULL );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -623,13 +609,7 @@ int OracleJob::doEvaluateState()
 						procID.cluster, procID.proc );
 			}
 			errorString = "";
-			if ( remoteJobId != NULL ) {
-				rehashRemoteJobId( this, remoteJobId, NULL );
-				free( remoteJobId );
-				remoteJobId = NULL;
-				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
-			}
+			SetRemoteJobId( NULL );
 			if ( jobRunPhase == true ) {
 				jobRunPhase = false;
 				jobAd->Assign( ATTR_ORACLE_JOB_RUN_PHASE, false );
@@ -736,6 +716,22 @@ BaseResource *OracleJob::GetResource()
 {
 //	return (BaseResource *)myResource;
 	return NULL;
+}
+
+void OracleJob::SetRemoteJobId( const char *job_id )
+{
+	free( remoteJobId );
+	if ( job_id ) {
+		remoteJobId = strdup( job_id );
+	} else {
+		remoteJobId = NULL;
+	}
+
+	MyString full_job_id;
+	if ( job_id ) {
+		full_job_id.sprintf( "oracle %s", job_id );
+	}
+	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
 
 void OracleJob::UpdateRemoteState( int new_state )

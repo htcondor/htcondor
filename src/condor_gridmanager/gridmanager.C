@@ -65,26 +65,11 @@ struct JobType
 	char *Name;
 	void(*InitFunc)();
 	void(*ReconfigFunc)();
-	const char *AdMatchConst;
-	bool(*AdMustExpandFunc)(const ClassAd*);
+	bool(*AdMatchFunc)(const ClassAd*);
 	BaseJob *(*CreateFunc)(ClassAd*);
 };
 
 List<JobType> jobTypes;
-
-// Stole these out of the schedd code
-static
-int procIDHash( const PROC_ID &procID, int numBuckets )
-{
-	//dprintf(D_ALWAYS,"procIDHash: cluster=%d proc=%d numBuck=%d\n",procID.cluster,procID.proc,numBuckets);
-	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
-}
-
-static
-bool operator==( const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}
 
 struct VacateRequest {
 	BaseJob *job;
@@ -113,9 +98,12 @@ template class HashBucket<PROC_ID, JobStatusRequest>;
 template class List<JobType>;
 template class Item<JobType>;
 
+SimpleList<int> scheddUpdateNotifications;
+
 HashTable <PROC_ID, BaseJob *> pendingScheddUpdates( HASH_TABLE_SIZE,
 													 procIDHash );
 bool addJobsSignaled = false;
+bool checkLeasesSignaled = false;
 int contactScheddTid = TIMER_UNSET;
 int contactScheddDelay;
 time_t lastContactSchedd = 0;
@@ -124,9 +112,6 @@ char *ScheddAddr = NULL;
 char *ScheddJobConstraint = NULL;
 char *GridmanagerScratchDir = NULL;
 DCSchedd *ScheddObj = NULL;
-
-HashTable <PROC_ID, BaseJob *> JobsByProcID( HASH_TABLE_SIZE,
-											 procIDHash );
 
 bool firstScheddContact = true;
 int scheddFailureCount = 0;
@@ -140,6 +125,7 @@ int doContactSchedd();
 // handlers
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
+int CHECK_LEASES_signalHandler( int );
 
 
 static bool jobExternallyManaged(ClassAd * ad)
@@ -164,38 +150,24 @@ static int tSetAttributeString(int cluster, int proc,
 	return SetAttribute( cluster, proc, attr_name, tmp.Value());
 }
 
-bool JobMatchesConstraint( const ClassAd *jobad, const char *constraint )
-{
-	ExprTree *tree;
-	EvalResult *val;
+// Check if a job ad needs $$() expansion performed on it. The initial ad
+// we get is unexpanded, so we need to fetch it a second time if expansion
+// is needed. We look at the (currently unused) MustExpand attribute and
+// the resource name attribute to see if expansion is needed.
+bool MustExpandJobAd( const ClassAd *job_ad ) {
+	bool must_expand = false;
 
-	val = new EvalResult;
-
-	Parse( constraint, tree );
-	if ( tree == NULL ) {
-		dprintf( D_FULLDEBUG,
-				 "Parse() returned a NULL tree on constraint '%s'\n",
-				 constraint );
-		return false;
-	}
-	tree->EvalTree(jobad, val);           // evaluate the constraint.
-	if(!val || val->type != LX_INTEGER) {
-		delete tree;
-		delete val;
-		dprintf( D_FULLDEBUG, "Constraint '%s' evaluated to wrong type\n",
-				 constraint );
-		return false;
-	} else {
-        if( !val->i ) {
-			delete tree;
-			delete val;
-			return false; 
+	job_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
+	if ( !must_expand ) {
+		MyString resource_name;
+		if ( job_ad->LookupString( ATTR_GRID_RESOURCE, resource_name ) ) {
+			if ( strstr(resource_name.Value(),"$$") ) {
+				must_expand = true;
+			}
 		}
 	}
 
-	delete tree;
-	delete val;
-	return true;
+	return must_expand;
 }
 
 // Job objects should call this function when they have changes that need
@@ -225,6 +197,16 @@ requestScheddUpdate( BaseJob *job )
 	}
 
 	return false;
+}
+
+void
+requestScheddUpdateNotification( int timer_id )
+{
+	if ( scheddUpdateNotifications.IsMember( timer_id ) == false ) {
+		// A new request; add it to the list
+		scheddUpdateNotifications.Append( timer_id );
+		RequestContactSchedd();
+	}
 }
 
 bool
@@ -338,8 +320,7 @@ Init()
 	new_type->Name = strdup( "Oracle" );
 	new_type->InitFunc = OracleJobInit;
 	new_type->ReconfigFunc = OracleJobReconfig;
-	new_type->AdMatchConst = OracleJobAdConst;
-	new_type->AdMustExpandFunc = OracleJobAdMustExpand;
+	new_type->AdMatchFunc = OracleJobAdMatch;
 	new_type->CreateFunc = OracleJobCreate;
 	jobTypes.Append( new_type );
 #endif
@@ -349,8 +330,7 @@ Init()
 	new_type->Name = strdup( "Nordugrid" );
 	new_type->InitFunc = NordugridJobInit;
 	new_type->ReconfigFunc = NordugridJobReconfig;
-	new_type->AdMatchConst = NordugridJobAdConst;
-	new_type->AdMustExpandFunc = NordugridJobAdMustExpand;
+	new_type->AdMatchFunc = NordugridJobAdMatch;
 	new_type->CreateFunc = NordugridJobCreate;
 	jobTypes.Append( new_type );
 #endif
@@ -359,8 +339,7 @@ Init()
 	new_type->Name = strdup( "Mirror" );
 	new_type->InitFunc = MirrorJobInit;
 	new_type->ReconfigFunc = MirrorJobReconfig;
-	new_type->AdMatchConst = MirrorJobAdConst;
-	new_type->AdMustExpandFunc = MirrorJobAdMustExpand;
+	new_type->AdMatchFunc = MirrorJobAdMatch;
 	new_type->CreateFunc = MirrorJobCreate;
 	jobTypes.Append( new_type );
 
@@ -368,8 +347,7 @@ Init()
 	new_type->Name = strdup( "INFNBatch" );
 	new_type->InitFunc = INFNBatchJobInit;
 	new_type->ReconfigFunc = INFNBatchJobReconfig;
-	new_type->AdMatchConst = INFNBatchJobAdConst;
-	new_type->AdMustExpandFunc = INFNBatchJobAdMustExpand;
+	new_type->AdMatchFunc = INFNBatchJobAdMatch;
 	new_type->CreateFunc = INFNBatchJobCreate;
 	jobTypes.Append( new_type );
 
@@ -377,8 +355,7 @@ Init()
 	new_type->Name = strdup( "Condor" );
 	new_type->InitFunc = CondorJobInit;
 	new_type->ReconfigFunc = CondorJobReconfig;
-	new_type->AdMatchConst = CondorJobAdConst;
-	new_type->AdMustExpandFunc = CondorJobAdMustExpand;
+	new_type->AdMatchFunc = CondorJobAdMatch;
 	new_type->CreateFunc = CondorJobCreate;
 	jobTypes.Append( new_type );
 
@@ -386,8 +363,7 @@ Init()
 	new_type->Name = strdup( "GT3" );
 	new_type->InitFunc = GT3JobInit;
 	new_type->ReconfigFunc = GT3JobReconfig;
-	new_type->AdMatchConst = GT3JobAdConst;
-	new_type->AdMustExpandFunc = GT3JobAdMustExpand;
+	new_type->AdMatchFunc = GT3JobAdMatch;
 	new_type->CreateFunc = GT3JobCreate;
 	jobTypes.Append( new_type );
 
@@ -395,8 +371,7 @@ Init()
 	new_type->Name = strdup( "GT4" );
 	new_type->InitFunc = GT4JobInit;
 	new_type->ReconfigFunc = GT4JobReconfig;
-	new_type->AdMatchConst = GT4JobAdConst;
-	new_type->AdMustExpandFunc = GT4JobAdMustExpand;
+	new_type->AdMatchFunc = GT4JobAdMatch;
 	new_type->CreateFunc = GT4JobCreate;
 	jobTypes.Append( new_type );
 
@@ -404,8 +379,7 @@ Init()
 	new_type->Name = strdup( "Globus" );
 	new_type->InitFunc = GlobusJobInit;
 	new_type->ReconfigFunc = GlobusJobReconfig;
-	new_type->AdMatchConst = GlobusJobAdConst;
-	new_type->AdMustExpandFunc = GlobusJobAdMustExpand;
+	new_type->AdMatchFunc = GlobusJobAdMatch;
 	new_type->CreateFunc = GlobusJobCreate;
 	jobTypes.Append( new_type );
 
@@ -426,6 +400,14 @@ Register()
 	daemonCore->Register_Signal( GRIDMAN_REMOVE_JOBS, "RemoveJobs",
 								 (SignalHandler)&REMOVE_JOBS_signalHandler,
 								 "REMOVE_JOBS_signalHandler", NULL, WRITE );
+
+/*
+	daemonCore->Register_Signal( GRIDMAN_CHECK_LEASES, "CheckLeases",
+								 (SignalHandler)&CHECK_LEASES_signalHandler,
+								 "CHECK_LEASES_signalHandler", NULL, WRITE );
+*/
+	daemonCore->Register_Timer( 60, 60, (TimerHandler)&CHECK_LEASES_signalHandler,
+								"CHECK_LEASES_signalHandler", NULL );
 
 	Reconfig();
 }
@@ -450,9 +432,9 @@ Reconfig()
 	// Tell all the job objects to deal with their new config values
 	BaseJob *next_job;
 
-	JobsByProcID.startIterations();
+	BaseJob::JobsByProcId.startIterations();
 
-	while ( JobsByProcID.iterate( next_job ) != 0 ) {
+	while ( BaseJob::JobsByProcId.iterate( next_job ) != 0 ) {
 		next_job->Reconfig();
 	}
 }
@@ -525,6 +507,19 @@ initJobExprs()
 	expr_not_completely_done.sprintf("(%s == %s)", expr_completely_done.Value(), expr_false);
 
 	done = true;
+}
+
+int
+CHECK_LEASES_signalHandler( int signal )
+{
+	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
+
+	if ( !checkLeasesSignaled ) {
+		RequestContactSchedd();
+		checkLeasesSignaled = true;
+	}
+
+	return TRUE;
 }
 
 int
@@ -607,6 +602,41 @@ doContactSchedd()
 	}
 
 
+	// CheckLeases
+	/////////////////////////////////////////////////////
+	if ( checkLeasesSignaled ) {
+
+		dprintf( D_FULLDEBUG, "querying for renewed leases\n" );
+
+		// Grab the lease attributes of all the jobs in our global hashtable.
+
+		BaseJob::JobsByProcId.startIterations();
+
+		while ( BaseJob::JobsByProcId.iterate( curr_job ) != 0 ) {
+			int new_expiration;
+
+			rc = GetAttributeInt( curr_job->procID.cluster,
+								  curr_job->procID.proc,
+								  ATTR_TIMER_REMOVE_CHECK,
+								  &new_expiration );
+			if ( rc < 0 ) {
+				if ( errno == ETIMEDOUT ) {
+					failure_line_num = __LINE__;
+					commit_transaction = false;
+					goto contact_schedd_disconnect;
+				} else {
+						// This job doesn't have doesn't have a lease from
+						// the submitter. Skip it.
+					continue;
+				}
+			}
+			curr_job->UpdateJobLeaseReceived( new_expiration );
+		}
+
+		checkLeasesSignaled = false;
+	}	// end of handling check leases
+
+
 	// AddJobs
 	/////////////////////////////////////////////////////
 	if ( addJobsSignaled || firstScheddContact ) {
@@ -666,7 +696,7 @@ doContactSchedd()
 			bool job_is_managed = jobExternallyManaged(next_ad);
 			next_ad->LookupBool(ATTR_JOB_MATCHED,job_is_matched);
 
-			if ( JobsByProcID.lookup( procID, old_job ) != 0 ) {
+			if ( BaseJob::JobsByProcId.lookup( procID, old_job ) != 0 ) {
 
 				int rc;
 				JobType *job_type = NULL;
@@ -678,7 +708,7 @@ doContactSchedd()
 				// Search our job types for one that'll handle this job
 				jobTypes.Rewind();
 				while ( jobTypes.Next( job_type ) ) {
-					if ( JobMatchesConstraint( next_ad, job_type->AdMatchConst ) ) {
+					if ( job_type->AdMatchFunc( next_ad ) ) {
 
 						// Found one!
 						dprintf( D_FULLDEBUG, "Using job type %s for job %d.%d\n",
@@ -688,9 +718,9 @@ doContactSchedd()
 				}
 
 				if ( job_type != NULL ) {
-					if ( job_type->AdMustExpandFunc( next_ad ) ) {
+					if ( MustExpandJobAd( next_ad ) ) {
 						// Get the expanded ClassAd from the schedd, which
-						// has the globus resource filled in with info from
+						// has the GridResource filled in with info from
 						// the matched ad.
 						delete next_ad;
 						next_ad = NULL;
@@ -722,7 +752,6 @@ doContactSchedd()
 				new_job->SetEvaluateState();
 				dprintf(D_ALWAYS,"Found job %d.%d --- inserting\n",
 						new_job->procID.cluster,new_job->procID.proc);
-				JobsByProcID.insert( new_job->procID, new_job );
 				num_ads++;
 
 				if ( !job_is_managed ) {
@@ -795,7 +824,7 @@ contact_schedd_next_add_job:
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 			next_ad->LookupInteger( ATTR_JOB_STATUS, curr_status );
 
-			if ( JobsByProcID.lookup( procID, next_job ) == 0 ) {
+			if ( BaseJob::JobsByProcId.lookup( procID, next_job ) == 0 ) {
 				// Should probably skip jobs we already have marked as
 				// held or removed
 
@@ -1031,7 +1060,6 @@ contact_schedd_next_add_job:
 				continue;
 			}
 
-			JobsByProcID.remove( curr_job->procID );
 				// If wantRematch is set, send a reschedule now
 			if ( curr_job->wantRematch ) {
 				send_reschedule = true;
@@ -1051,12 +1079,21 @@ contact_schedd_next_add_job:
 
 	}
 
+	// Poke objects that wanted to be notified when a schedd update completed
+	// successfully (possibly minus deletes)
+	int timer_id;
+	scheddUpdateNotifications.Rewind();
+	while ( scheddUpdateNotifications.Next( timer_id ) ) {
+		daemonCore->Reset_Timer( timer_id, 0 );
+	}
+	scheddUpdateNotifications.Clear();
+
 	if ( send_reschedule == true ) {
 		ScheddObj->reschedule();
 	}
 
 	// Check if we have any jobs left to manage. If not, exit.
-	if ( JobsByProcID.getNumElements() == 0 ) {
+	if ( BaseJob::JobsByProcId.getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	}

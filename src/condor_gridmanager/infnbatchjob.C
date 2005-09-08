@@ -92,12 +92,6 @@ static char *GMStateNames[] = {
         func,error)
 
 
-#define HASH_TABLE_SIZE			500
-
-HashTable <HashKey, INFNBatchJob *> INFNBatchJobsById( HASH_TABLE_SIZE,
-													   hashFunction );
-
-
 void INFNBatchJobInit()
 {
 }
@@ -116,15 +110,17 @@ void INFNBatchJobReconfig()
 	INFNBatchJob::setConnectFailureRetry( tmp_int );
 }
 
-const char *INFNBatchJobAdConst = "JobUniverse =?= 9 && ((JobGridType == \"infn\") =?= True || (JobGridType == \"blah\") =?= True)";
+bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString resource;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_GRID &&
+		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
+		 strncasecmp( resource.Value(), "blah", 4 ) == 0 ) {
 
-bool INFNBatchJobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-
-	return must_expand != 0;
+		return true;
+	}
+	return false;
 }
 
 BaseJob *INFNBatchJobCreate( ClassAd *jobad )
@@ -171,9 +167,9 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( "RemoteJobId", buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
-		SetRemoteJobId( buff );
+		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
 	} else {
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
@@ -218,7 +214,6 @@ INFNBatchJob::~INFNBatchJob()
 		ReleaseProxy( jobProxy, evaluateStateTid );
 	}
 	if ( remoteJobId != NULL ) {
-		INFNBatchJobsById.remove( HashKey( remoteJobId ) );
 		free( remoteJobId );
 	}
 	if ( gahpAd ) {
@@ -636,22 +631,18 @@ int INFNBatchJob::doEvaluateState()
 
 void INFNBatchJob::SetRemoteJobId( const char *job_id )
 {
-	if ( remoteJobId != NULL && job_id != NULL &&
-		 strcmp( remoteJobId, job_id ) == 0 ) {
-		return;
-	}
-	if ( remoteJobId != NULL ) {
-		INFNBatchJobsById.remove( HashKey( remoteJobId ) );
-		free( remoteJobId );
-		remoteJobId = NULL;
-		jobAd->AssignExpr("RemoteJobId", "Undefined" );
-	}
-	if ( job_id != NULL ) {
+	free( remoteJobId );
+	if ( job_id ) {
 		remoteJobId = strdup( job_id );
-		INFNBatchJobsById.insert( HashKey( remoteJobId ), this );
-		jobAd->Assign( "RemoteJobId", job_id );
+	} else {
+		remoteJobId = NULL;
 	}
-	requestScheddUpdate( this );
+
+	MyString full_job_id;
+	if ( job_id ) {
+		full_job_id.sprintf( "blah %s", job_id );
+	}
+	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
 
 void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )

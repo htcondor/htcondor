@@ -193,19 +193,6 @@ globusJobId( const char *contact )
 	return buff;
 }
 
-static
-void
-rehashJobContact( GlobusJob *job, const char *old_contact,
-				  const char *new_contact )
-{
-	if ( old_contact ) {
-		JobsByContact.remove(HashKey(globusJobId(old_contact)));
-	}
-	if ( new_contact ) {
-		JobsByContact.insert(HashKey(globusJobId(new_contact)), job);
-	}
-}
-
 int
 orphanCallbackHandler()
 {
@@ -309,22 +296,17 @@ void GlobusJobReconfig()
 	}
 }
 
-const char *GlobusJobAdConst = "JobUniverse =?= 9 && ((JobGridType == \"globus\") =?= True || (JobGridType == \"gt2\") =?= True || JobGridType =?= Undefined)";
+bool GlobusJobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString resource;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_GRID &&
+		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
+		 strncasecmp( resource.Value(), "gt2 ", 4 ) == 0 ) {
 
-bool GlobusJobAdMustExpand( const ClassAd *jobad )
-{
-	int must_expand = 0;
-
-	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-	if ( !must_expand ) {
-		char resource_name[800];
-		jobad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
-		if ( strstr(resource_name,"$$") ) {
-			must_expand = 1;
-		}
+		return true;
 	}
-
-	return must_expand != 0;
+	return false;
 }
 
 BaseJob *GlobusJobCreate( ClassAd *jobad )
@@ -614,6 +596,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	char iwd[_POSIX_PATH_MAX];
 	bool job_already_submitted = false;
 	char *error_string = NULL;
+	char *gahp_path = NULL;
+	char *gahp_args = NULL;
 
 	RSL = NULL;
 	callbackRegistered = false;
@@ -804,9 +788,18 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	snprintf( buff, sizeof(buff), "GLOBUS/%s",
+	gahp_path = param( "GT2_GAHP" );
+	if ( gahp_path == NULL ) {
+		gahp_path = param( "GAHP" );
+		gahp_args = param( "GAHP_ARGS" );
+		if ( gahp_path == NULL ) {
+			error_string = "GT2_GAHP not defined";
+			goto error_exit;
+		}
+	}
+	snprintf( buff, sizeof(buff), "GT2/%s",
 			  jobProxy->subject->subject_name );
-	gahp = new GahpClient( buff );
+	gahp = new GahpClient( buff, gahp_path, gahp_args );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
@@ -814,11 +807,29 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
-		resourceManagerString = strdup( buff );
+		const char *token;
+		MyString str = buff;
+
+		str.Tokenize();
+
+		token = str.GetNextToken( " ", false );
+		if ( !token || stricmp( token, "gt2" ) ) {
+			error_string = "GridResource not of type gt2";
+			goto error_exit;
+		}
+
+		token = str.GetNextToken( " ", false );
+		if ( token && *token ) {
+			resourceManagerString = strdup( token );
+		} else {
+			error_string = "GridResource missing GRAM service name";
+			goto error_exit;
+		}
+
 	} else {
-		error_string = "GlobusResource is not set in the job ad";
+		error_string = "GridResource is not set in the job ad";
 		goto error_exit;
 	}
 
@@ -837,15 +848,14 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
-	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
 		if ( jmVersion == GRAM_V_UNKNOWN ) {
 			dprintf(D_ALWAYS,
 					"(%d.%d) Non-NULL contact string and unknown gram version!\n",
 					procID.cluster, procID.proc);
 		}
-		rehashJobContact( this, jobContact, buff );
-		SetJobContact(buff);
+		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
 		job_already_submitted = true;
 	}
 
@@ -912,6 +922,12 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	return;
 
  error_exit:
+	if ( gahp_path ) {
+		free( gahp_path );
+	}
+	if ( gahp_args ) {
+		free( gahp_args );
+	}
 	gmState = GM_HOLD;
 	if ( error_string ) {
 		jobAd->Assign( ATTR_HOLD_REASON, error_string );
@@ -931,7 +947,6 @@ GlobusJob::~GlobusJob()
 		free( resourceManagerString );
 	}
 	if ( jobContact ) {
-		rehashJobContact( this, jobContact, NULL );
 		free( jobContact );
 	}
 	if ( RSL ) {
@@ -1277,10 +1292,7 @@ int GlobusJob::doEvaluateState()
 						jobAd->Assign( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_6 );
 					}
 					callbackRegistered = true;
-					rehashJobContact( this, jobContact, job_contact );
-					SetJobContact(job_contact);
-					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-								   job_contact );
+					SetRemoteJobId( job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_RSL_EVALUATION_FAILED &&
@@ -1635,12 +1647,8 @@ int GlobusJob::doEvaluateState()
 				// the job will errantly go on hold when the user
 				// subsequently does a condor_rm.
 			if ( jobContact != NULL ) {
-				rehashJobContact( this, jobContact, NULL );
 				myResource->CancelSubmit( this );
-				SetJobContact(NULL);
-				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
-				requestScheddUpdate( this );
+				SetRemoteJobId( NULL );
 				jmDown = false;
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
@@ -1773,10 +1781,7 @@ int GlobusJob::doEvaluateState()
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					jmProxyExpireTime = jobProxy->expiration_time;
 					jmDown = false;
-					rehashJobContact( this, jobContact, job_contact );
-					SetJobContact(job_contact);
-					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-								   job_contact );
+					SetRemoteJobId( job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 						globusState = globusStateBeforeFailure;
@@ -1989,12 +1994,9 @@ int GlobusJob::doEvaluateState()
 
 				}
 
-				rehashJobContact( this, jobContact, NULL );
 				myResource->CancelSubmit( this );
 				jmDown = false;
-				SetJobContact(NULL);
-				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
+				SetRemoteJobId( NULL );
 				jmVersion = GRAM_V_UNKNOWN;
 				jobAd->Assign( ATTR_GLOBUS_GRAM_VERSION,
 								jmVersion );
@@ -2118,12 +2120,9 @@ int GlobusJob::doEvaluateState()
 			// HACK!
 			retryStdioSize = true;
 			if ( jobContact != NULL ) {
-				rehashJobContact( this, jobContact, NULL );
 				myResource->CancelSubmit( this );
-				SetJobContact(NULL);
+				SetRemoteJobId( NULL );
 				jmDown = false;
-				jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
 			}
 			JobIdle();
 			if ( submitLogged ) {
@@ -2566,13 +2565,34 @@ BaseResource *GlobusJob::GetResource()
 	return (BaseResource *)myResource;
 }
 
-void GlobusJob::SetJobContact(const char * contact)
+void GlobusJob::SetRemoteJobId( const char *job_id )
 {
-	free(jobContact);
-	if(contact)
-		jobContact = strdup( contact );
-	else
+		// We need to maintain a hashtable based on job contact strings with
+		// the port number stripped. This is because the port number in the
+		// jobmanager contact string changes as jobmanagers are restarted.
+		// We need to keep the port number of the current jobmanager so that
+		// we can contact it, but job status messages can arrive using either
+		// the current port (from the running jobmanager) or the original
+		// port (from the Grid Monitor).
+	if ( jobContact ) {
+		JobsByContact.remove(HashKey(globusJobId(jobContact)));
+	}
+	if ( job_id ) {
+		JobsByContact.insert(HashKey(globusJobId(job_id)), this);
+	}
+
+	free( jobContact );
+	if ( job_id ) {
+		jobContact = strdup( job_id );
+	} else {
 		jobContact = NULL;
+	}
+
+	MyString full_job_id;
+	if ( job_id ) {
+		full_job_id.sprintf( "gt2 %s %s", resourceManagerString, job_id );
+	}
+	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
 
 bool GlobusJob::IsExitStatusValid()
@@ -3213,90 +3233,4 @@ GlobusJob::JmShouldSleep()
 	default:
 		return false;
 	}
-}
-
-bool
-WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	int version;
-	char contact[256];
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus submit record to user logfile\n",
-			 cluster, proc );
-
-	GlobusSubmitEvent event;
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, contact,
-						   sizeof(contact) - 1 );
-	event.rmContact = strnewp(contact);
-
-	contact[0] = '\0';
-	job_ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, contact,
-						   sizeof(contact) - 1 );
-	event.jmContact = strnewp(contact);
-
-	version = 0;
-	job_ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, version );
-	event.restartableJM = version >= GRAM_V_1_5;
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-bool
-WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
-									   const char *failure_mesg )
-{
-	int cluster, proc;
-	char buf[1024];
-
-	UserLog *ulog = InitializeUserLog( job_ad );
-	if ( ulog == NULL ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing submit-failed record to user logfile\n",
-			 cluster, proc );
-
-	GlobusSubmitFailedEvent event;
-
-	snprintf( buf, 1024, "%d %s", failure_code, failure_mesg );
-	event.reason =  strnewp(buf);
-
-	int rc = ulog->writeEvent(&event);
-	delete ulog;
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
-				 cluster, proc);
-		return false;
-	}
-
-	return true;
 }

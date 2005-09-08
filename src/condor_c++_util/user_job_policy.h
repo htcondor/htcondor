@@ -125,6 +125,7 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 /* ok, here is the first set of expressions that should be available
 	in the classad when it is given to Init():
 
+	ATTR_TIMER_REMOVE_CHECK
 	ATTR_PERIODIC_HOLD_CHECK
 	ATTR_PERIODIC_REMOVE_CHECK
 	ATTR_PERIODIC_RELEASE_CHECK
@@ -156,12 +157,14 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	and ATTR_ON_EXIT_CODE is not, then AnalyzePolicy() will EXCEPT.
 
 	If PERIODIC_ONLY is used with AnalyzePolicy(), then only 
-	ATTR_PERIODIC_HOLD_CHECK and ATTR_PERIODIC_REMOVE_CHECK will be
+	ATTR_TIMER_REMOVE_CHECK, ATTR_PERIODIC_HOLD_CHECK,
+	ATTR_PERIODIC_REMOVE_CHECK and ATTR_PERIODIC_RELEASE_CHECK will be
 	evaluated(in that order) to determine if anything should happen with
 	the job.
 
 	If PERIODIC_THEN_EXIT is used with AnalyzePolicy(), then
-	ATTR_PERIODIC_HOLD_CHECK, ATTR_PERIODIC_REMOVE_CHECK,
+	ATTR_TIMER_REMOVE, ATTR_PERIODIC_HOLD_CHECK,
+	ATTR_PERIODIC_REMOVE_CHECK, ATTR_PERIODIC_RELEASE_CHECK,
 	ATTR_ON_EXIT_HOLD_CHECK, and ATTR_ON_EXIT_REMOVE_CHECK will be
 	evaluated(in that order) to determine if anything should happen
 	with the job.

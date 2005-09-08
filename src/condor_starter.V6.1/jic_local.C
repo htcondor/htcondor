@@ -496,7 +496,7 @@ JICLocal::checkUniverse( int univ )
 	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_SCHEDULER:
 	case CONDOR_UNIVERSE_MPI:
-	case CONDOR_UNIVERSE_GLOBUS:
+	case CONDOR_UNIVERSE_GRID:
 			// these are at least valid tries, but we don't work with
 			// any of them in stand-alone starter mode... yet.
 		dprintf( D_ALWAYS, "ERROR: %s %s (%d) not supported without the "

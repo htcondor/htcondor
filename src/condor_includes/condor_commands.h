@@ -337,6 +337,7 @@ const int INVALIDATE_QUILL_ADS  = 54;
 *** Commands used by the gridmanager daemon
 */
 #define DCGRIDMANAGER_BASE 73000
+#define GRIDMAN_CHECK_LEASES (DCGRIDMANAGER_BASE+0)
 #define GRIDMAN_REMOVE_JOBS SIGUSR1
 #define GRIDMAN_ADD_JOBS SIGUSR2
 

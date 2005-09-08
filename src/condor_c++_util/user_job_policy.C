@@ -408,6 +408,7 @@ UserPolicy::AnalyzePolicy( int mode )
 {
 	int periodic_hold, periodic_remove, periodic_release;
 	int on_exit_hold, on_exit_remove;
+	int timer_remove;
 	int state;
 
 	if (m_ad == NULL)
@@ -431,11 +432,22 @@ UserPolicy::AnalyzePolicy( int mode )
 	/*	The user_policy is checked in this
 			order. The first one to succeed is the winner:
 	
+			ATTR_TIMER_REMOVE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
 			ATTR_PERIODIC_REMOVE_CHECK
 			ATTR_ON_EXIT_HOLD_CHECK
 			ATTR_ON_EXIT_REMOVE_CHECK
 	*/
+
+	/* Should I perform a periodic remove? */
+	m_fire_expr = ATTR_TIMER_REMOVE_CHECK;
+	if(!m_ad->LookupInteger(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
+		timer_remove = -1;
+	}
+	if( timer_remove >= 0 && timer_remove < time(NULL) ) {
+		m_fire_expr_val = 1;
+		return REMOVE_FROM_QUEUE;
+	}
 
 	/* should I perform a periodic hold? */
 	if(state!=HELD) {

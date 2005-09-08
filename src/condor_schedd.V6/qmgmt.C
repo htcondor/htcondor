@@ -80,6 +80,7 @@ static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
 static int old_cluster_num = -1;	// next_cluster_num at start of transaction
 static bool JobQueueDirty = false;
+static time_t xact_start_time = 0;	// time at which the current transaction was started
 
 class Service;
 
@@ -231,6 +232,209 @@ RemoveMatchedAd(int cluster_id, int proc_id)
 		}
 	}
 	return;
+}
+
+// CRUFT: Everything in this function is cruft, but not necessarily all
+//    the same cruft. Individual sections should say if/when they should
+//    be removed.
+// Look for attributes that have changed name or syntax in a previous
+// version of Condor and convert the old format to the current format.
+// *This function is not transaction-safe!*
+// Returns true if the ad was modified, false otherwise.
+void
+ConvertOldJobAdAttrs( ClassAd *job_ad )
+{
+	int universe, cluster, proc;
+
+	if (!job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+		dprintf(D_ALWAYS,
+				"Job has no %s attribute. Skipping conversion.\n",
+				ATTR_CLUSTER_ID);
+		return;
+	}
+
+	if (!job_ad->LookupInteger(ATTR_PROC_ID, proc)) {
+		dprintf(D_ALWAYS,
+				"Job has no %s attribute. Skipping conversion.\n",
+				ATTR_PROC_ID);
+		return;
+	}
+
+	if( !job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
+		dprintf( D_ALWAYS,
+				 "Job %d.%d has no %s attribute. Skipping conversion.\n",
+				 cluster, proc, ATTR_JOB_UNIVERSE );
+		return;
+	}
+
+		// CRUFT
+		// Convert old job ads to the new format of GridResource
+		// and GridJobId. This switch happened on the V6_7-lease
+		// branch and should be merged in around the time of 6.7.11.
+		// At some future point in time, this code should be
+		// removed (sometime in the 6.9 series). - jfrey Aug-11-05
+	if ( universe == CONDOR_UNIVERSE_GRID ) {
+		MyString grid_type = "gt2";
+		MyString grid_resource = "";
+		MyString grid_job_id = "";
+
+		job_ad->LookupString( ATTR_JOB_GRID_TYPE, grid_type );
+		job_ad->LookupString( ATTR_GRID_RESOURCE, grid_resource );
+		job_ad->LookupString( ATTR_GRID_JOB_ID, grid_job_id );
+
+		grid_type.lower_case();
+
+		if ( grid_type == "gt2" || grid_type == "gt3" ||
+			 grid_type == "gt4" || grid_type == "nordugrid" ||
+			 grid_type == "oracle" ) {
+
+			MyString attr = "";
+			MyString new_value = "";
+
+			if ( grid_type == "globus" ) {
+				grid_type = "gt2";
+			}
+
+			if ( grid_resource.IsEmpty() &&
+				 job_ad->LookupString( ATTR_GLOBUS_RESOURCE, attr ) ) {
+
+				new_value.sprintf( "%s %s", grid_type.Value(),
+								   attr.Value() );
+				if ( grid_type == "gt4" ) {
+					attr = "Fork";
+					job_ad->LookupString( ATTR_GLOBUS_JOBMANAGER_TYPE,
+										  attr );
+					new_value.sprintf_cat( " %s", attr.Value() );
+				}
+				job_ad->Assign( ATTR_GRID_RESOURCE, new_value.Value() );
+				JobQueueDirty = true;
+			}
+
+			if ( grid_job_id.IsEmpty() &&
+				 job_ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, attr ) ) {
+
+				if ( attr != NULL_JOB_CONTACT ) {
+
+					if ( grid_type == "gt2" ) {
+							// For GT2, we need to include the
+							// resource name in the job id (so that
+							// we can restart the jobmanager if it
+							// crashes). If it's undefined, we're
+							// hosed anyway, so don't convert it.
+
+							// Ugly: If the job is using match-making,
+							// we need to grab the match-substituted
+							// version of GlobusResource. That means
+							// calling GetJobAd().
+						MyString resource;
+						ClassAd *job_ad2 = GetJobAd( cluster, proc,
+													true );
+						if ( !job_ad2 ||
+							 !job_ad2->LookupString(
+													ATTR_GLOBUS_RESOURCE,
+													resource ) ) {
+							dprintf( D_ALWAYS, "Warning: %s undefined"
+									 " when converting %s to %s, not"
+									 " converting\n",
+									 ATTR_GRID_RESOURCE,
+									 ATTR_GLOBUS_CONTACT_STRING,
+									 ATTR_GRID_JOB_ID );
+						} else {
+							new_value.sprintf( "%s %s %s",
+											   grid_type.Value(),
+											   resource.Value(),
+											   attr.Value() );
+							job_ad->Assign( ATTR_GRID_JOB_ID,
+											new_value.Value() );
+						}
+						if ( job_ad2 ) {
+							delete job_ad2;
+						}
+					} else {
+						new_value.sprintf( "%s %s", grid_type.Value(),
+										   attr.Value() );
+						job_ad->Assign( ATTR_GRID_JOB_ID,
+										new_value.Value() );
+					}
+
+					job_ad->AssignExpr( ATTR_GLOBUS_CONTACT_STRING,
+										"Undefined" );
+					JobQueueDirty = true;
+				}
+			}
+		}
+
+		if ( grid_type == "condor" ) {
+
+			static char *local_pool = NULL;
+
+			if ( local_pool == NULL ) {
+				DCCollector collector;
+				local_pool = strdup( collector.name() );
+			}
+
+			MyString schedd;
+			MyString pool = local_pool;
+			MyString jobid = "";
+			MyString new_value;
+
+			if ( grid_resource.IsEmpty() &&
+				 job_ad->LookupString( ATTR_REMOTE_SCHEDD, schedd ) ) {
+
+				job_ad->LookupString( ATTR_REMOTE_POOL, pool );
+				new_value.sprintf( "condor %s %s", schedd.Value(),
+								   pool.Value() );
+				job_ad->Assign( ATTR_GRID_RESOURCE, new_value.Value() );
+				JobQueueDirty = true;
+			}
+
+			if ( grid_job_id.IsEmpty() &&
+				 job_ad->LookupString( ATTR_REMOTE_JOB_ID, jobid ) ) {
+
+					// Ugly: If the job is using match-making, we
+					// need to grab the match-substituted versions
+					// of RemoteSchedd and RemotePool to stuff into
+					// GridJobId. That means calling GetJobAd().
+				ClassAd *job_ad2;
+
+				job_ad2 = GetJobAd( cluster, proc, true );
+
+				if ( job_ad2 ) {
+					schedd = "";
+					pool = "";
+					job_ad2->LookupString( ATTR_REMOTE_SCHEDD, schedd );
+					job_ad2->LookupString( ATTR_REMOTE_POOL, pool );
+					new_value.sprintf( "condor %s %s %s", schedd.Value(),
+									   pool.Value(), jobid.Value() );
+					job_ad->Assign( ATTR_GRID_JOB_ID,
+									new_value.Value() );
+					job_ad->AssignExpr( ATTR_REMOTE_JOB_ID, "Undefined" );
+					JobQueueDirty = true;
+
+					delete job_ad2;
+
+				}
+			}
+
+		}
+
+		if ( grid_type == "infn" || grid_type == "blah" ) {
+
+			MyString jobid;
+
+			if ( grid_job_id.IsEmpty() &&
+				 job_ad->LookupString( ATTR_REMOTE_JOB_ID, jobid ) ) {
+
+				MyString new_value;
+
+				new_value.sprintf( "blah %s", jobid.Value() );
+				job_ad->Assign( ATTR_GRID_JOB_ID, new_value.Value() );
+				job_ad->AssignExpr( ATTR_REMOTE_JOB_ID, "Undefined" );
+				JobQueueDirty = true;
+			}
+		}
+	}
+
 }
 
 // Read out any parameters from the config file that we need and
@@ -452,6 +656,7 @@ InitJobQueue(const char *job_queue_name)
 				}
 			}
 
+			ConvertOldJobAdAttrs( ad );
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			IncrementClusterSize(cluster_num);
@@ -473,6 +678,10 @@ InitJobQueue(const char *job_queue_name)
 		}
 		next_cluster_num = stored_cluster_num;
 	}
+
+		// Some of the conversions done in ConvertOldJobAdAttrs need to be
+		// persisted to disk. Particularly, GlobusContactString/RemoteJobId.
+	CleanJobQueue();
 }
 
 
@@ -710,6 +919,9 @@ handle_q(Service *, int, Stream *sock)
 	setQSock((ReliSock*)sock);
 
 	JobQueue->BeginTransaction();
+
+	// note what time we started the transaction (used by SetTimerAttribute())
+	xact_start_time = time( NULL );
 
 	// store the cluster num so when we commit the transaction, we can easily
 	// see if new clusters have been submitted and thus make links to cluster ads
@@ -1328,6 +1540,21 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	return 0;
 }
 
+int
+SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
+{
+	int rc = 0;
+	if ( xact_start_time == 0 ) {
+		dprintf(D_ALWAYS,
+				"SetTimerAttribute called for %d.%d outside of a transaction!\n",
+				cluster, proc);
+		return -1;
+	}
+
+	rc = SetAttributeInt( cluster, proc, attr_name, xact_start_time + dur );
+	return rc;
+}
+
 char * simple_encode (int key, const char * src);
 char * simple_decode (int key, const char * src);
 
@@ -1496,6 +1723,9 @@ void
 BeginTransaction()
 {
 	JobQueue->BeginTransaction();
+
+	// note what time we started the transaction (used by SetTimerAttribute())
+	xact_start_time = time( NULL );
 }
 
 
@@ -1503,6 +1733,8 @@ void
 CommitTransaction()
 {
 	JobQueue->CommitTransaction();
+
+	xact_start_time = 0;
 }
 
 
@@ -1581,6 +1813,7 @@ CloseConnection()
 				for ( i = 0; i < *numOfProcs; i++ ) {
 					if (JobQueue->LookupClassAd(IdToStr(cluster_id,i),procad)) {
 						procad->ChainToAd(clusterad);
+						ConvertOldJobAdAttrs(procad);
 					}
 				}	// end of loop thru all proc in cluster cluster_id
 			}	
@@ -1588,6 +1821,8 @@ CloseConnection()
 	}	// end of if a new cluster(s) submitted
 	old_cluster_num = next_cluster_num;
 					
+	xact_start_time = 0;
+
 	return 0;
 }
 
@@ -1827,7 +2062,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		// is a globus universe jobs or not.
 		int	job_universe;
 		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
-		if ( job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+		if ( job_universe == CONDOR_UNIVERSE_GRID ) {
 			// Globus job... find "startd ad" via our simple
 			// hash table.
 			startd_ad = NULL;
@@ -1937,7 +2172,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			while( !no_startd_ad && !attribute_not_found &&
 					get_var(attribute_value,&left,&name,&right,NULL,true) )
 			{
-				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GLOBUS) {
+				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GRID) {
 					no_startd_ad = true;
 					break;
 				}
@@ -1965,7 +2200,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					value_came_from_jobad = false;
 				} else {
 						// No startd ad -- use value from last match.
-						// Note: we will only do this for GLOBUS universe.
+						// Note: we will only do this for GRID universe.
 					MyString expr;
 					expr = "MATCH_";
 					expr += name;
@@ -2015,13 +2250,13 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					MyString expr;
 					expr = "MATCH_";
 					expr += name;
-						// If we are GLOBUS universe, we must
+						// If we are GRID universe, we must
 						// store the values from the startd ad
 						// persistantly to disk right now.  
 						// If any other universe, just updating
 						// our RAM image is fine since we will get
 						// a new match every time.
-					if ( job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+					if ( job_universe == CONDOR_UNIVERSE_GRID ) {
 						if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
 						{
 							EXCEPT("Failed to store %s into job ad %d.%d",
@@ -2063,7 +2298,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			}
 		}
 
-		if ( startd_ad && job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+		if ( startd_ad && job_universe == CONDOR_UNIVERSE_GRID ) {
 				// Can remove our matched ad since we stored all the
 				// values we need from it into the job ad.
 			RemoveMatchedAd(cluster_id,proc_id);
@@ -2118,7 +2353,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		}
 
 
-		if ( startd_ad && job_universe != CONDOR_UNIVERSE_GLOBUS ) {
+		if ( startd_ad && job_universe != CONDOR_UNIVERSE_GRID ) {
 			//Convert environment delimiters to syntax expected by target.
 			//In windows, the delimiter is '|'.  In Unix, it is ';'.
 			char* new_env = NULL;
@@ -2479,7 +2714,7 @@ int mark_idle(ClassAd *job)
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
-	if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
+	if ( universe == CONDOR_UNIVERSE_GRID ) {
 		MyString managed_status;
 		job->LookupString(ATTR_JOB_MANAGED, managed_status);
 		if ( managed_status == MANAGED_EXTERNAL ) {
@@ -2511,17 +2746,12 @@ int mark_idle(ClassAd *job)
 		DestroyProc(cluster,proc);
 	} else if ( status == REMOVED ) {
 		// a globus job with a non-null contact string should be left alone
-		if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
-			char contact_string[20];
-			strncpy(contact_string,NULL_JOB_CONTACT,sizeof(contact_string));
-			job->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
-								sizeof(contact_string));
-			if ( strncmp(contact_string,NULL_JOB_CONTACT,
-							sizeof(contact_string)-1) ||
-				 job->LookupString(ATTR_REMOTE_JOB_ID,contact_string,
-								   sizeof(contact_string)-1) != 0 )
+		if ( universe == CONDOR_UNIVERSE_GRID ) {
+			char job_id[20];
+			if ( job->LookupString( ATTR_GRID_JOB_ID, job_id,
+									sizeof(job_id) ) )
 			{
-				// looks like the job's globus contact string is still valid,
+				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.
 				// don't touch this job -- leave it alone so the gridmanager
 				// completes the task of removing it from the remote site.

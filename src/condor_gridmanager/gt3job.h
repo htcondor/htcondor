@@ -39,20 +39,14 @@
 
 class GT3Resource;
 
-/////////////////////from gridmanager.h
-class GT3Job;
-extern HashTable <HashKey, GT3Job *> GT3JobsByContact;
-
-const char *gt3JobId( const char *contact );
 void gramCallbackHandler( void *user_arg, char *job_contact, int state,
 						  int errorcode );
 
 void GT3JobInit();
 void GT3JobReconfig();
-bool GT3JobAdMustExpand( const ClassAd *jobad );
 BaseJob *GT3JobCreate( ClassAd *jobad );
-extern const char *GT3JobAdConst;
-///////////////////////////////////////
+bool GT3JobAdMatch( const ClassAd *job_ad );
+
 
 class GT3Job : public BaseJob
 {
@@ -69,6 +63,7 @@ class GT3Job : public BaseJob
 	bool GetCallbacks();
 	void ClearCallbacks();
 	BaseResource *GetResource();
+	void SetRemoteJobId( const char *job_id );
 
 	static int probeInterval;
 	static int submitInterval;
