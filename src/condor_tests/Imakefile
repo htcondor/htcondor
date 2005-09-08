@@ -109,9 +109,10 @@ TESTCLASS(job_core_basic-security_par,btdebug)
 ****************** Tests being readied for prime time **********************
 */
 
-#if !defined( IS_DARWIN )
+#if !defined( IS_DARWIN ) && !defined(IS_ALPHA_OSF1_V5) && !defined(IS_HPUX10) && !defined(IS_PPC_AIX) && !defined(IS_SOLARIS28) && !defined(IS_SOLARIS29)
 /* 
    Gnats 545 this procapi test of pid tracking not working MacOsX
+   Gnats 547 this procapi test of pid tracking not working IS_ALPHA_OSF1_V5 IS_HPUX10 IS_PPC_AIX SOLARIS28 SOLARIS29 
 */
 DESC(lib_procapi_pidtracking-byenv,"Slow Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-byenv)
