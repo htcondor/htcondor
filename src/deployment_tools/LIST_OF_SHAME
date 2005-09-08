@@ -38,6 +38,9 @@ LIST OF SHAME
 
 8. condor_local_stop is also very schedd specific.  It will not
    shutdown if the schedd still has jobs.
+   - the force option ignores the schedd
+   - the interface may need to be changed so that the default mode is
+     not schedd specific
 
 9. condor_install_local will not handle arbitrarily named log, exec,
    spool directories with its install from archive option
@@ -45,3 +48,8 @@ LIST OF SHAME
 10. condor_cleanup_local doesn't work with dynamically named local
     dirs 
 
+11. FileLock.pm::AcquireFLock(..) opens a file that it never closes,
+    this may lead to file handle exhaustion
+    - closing the file implicitly releases the flock
+    - possible sol: have AcquireFlock pass back a file handle and
+      ReleaseFLock take a file handle instead of a file name

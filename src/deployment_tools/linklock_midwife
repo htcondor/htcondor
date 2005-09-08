@@ -1,0 +1,65 @@
+#! /usr/bin/perl -w
+
+##********************************************************************
+## Starts the given program with a link lock artifact that an 
+## undertaker can check later.
+##********************************************************************
+
+#***
+# Uses
+#***
+use strict;
+use FindBin;
+use lib ($FindBin::Bin, "$FindBin::Bin/lib");
+use FileLock;
+use Getopt::Long;
+
+#***
+# Constant Static Variables
+#***
+my $USAGE = 
+    "Usage: linklock_midwife [--lockfile file] <program> [program_args]\n";
+
+#***
+# Non-constant Static Variables
+#***
+my $lockfile = 'lock.file';
+my $help = 0;
+my $target_command = 0;
+my @target_args = ();
+
+#***
+# Main Function
+#***
+
+# Parse the command line options
+Getopt::Long::Configure ("no_auto_abbrev", 
+			 "pass_through", 
+			 "require_order");
+GetOptions('lockfile=s'=>\$lockfile,
+	   'help'=>\$help,
+	   );
+
+# Process command line arguments
+die $USAGE if( $help || @ARGV < 1 );
+$target_command = shift @ARGV;
+@target_args = @ARGV;
+
+# Acquire a Link Lock on the lock file
+my $lock_handle = &AcquireLinkLockNB($lockfile);
+
+# The lock was already held
+if( ! defined $lock_handle ){
+    die "FAILED: Link lock on lock file [$lockfile]".
+	" is already held by another process";
+}
+
+# Execute the program
+# use two parameters to avoid the shell
+!system $target_command, @target_args
+    or die "Failed to execute command[$target_command]". 
+    "with args [@target_args]: $!";
+
+
+# Release the Link Lock
+&ReleaseLinkLock($lock_handle);
