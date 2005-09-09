@@ -3,7 +3,7 @@
 ###########################################################################
 #
 #  This is condor_submit_dag.  It takes a DAG input file to be used by
-#  condor_dagman, analyzes it for correctness and gleens important
+#  condor_dagman, analyzes it for correctness and gleans important
 #  information.  Then, it creates a file used to submit condor_dagman
 #  to Condor as a "meta-scheduler" with this DAG file.  Finally,
 #  unless you specify the "-no_submit" option to condor_submit_dag, it
@@ -27,6 +27,8 @@ $max_jobs = 0;
 $max_pre = 0;
 $max_post = 0;
 $notification = "";
+$no_event_checks = 0;
+$allow_log_error = 0;
 $NoPostFail = 0;
 $dagman_debug = 3;
 while( $_ = shift ) {
@@ -141,6 +143,15 @@ while( $_ = shift ) {
         }
         last SWITCH;
     }
+    if( /^-NoEv.*/i ) { # -NoEventChecks
+	$no_event_checks = 1;
+	last SWITCH;
+    }
+    if( /^-All.*/i ) { # -AllowLogError
+	$allow_log_error = 1;
+	last SWITCH;
+    }
+
     $dagfile = $_;
   }
 }
@@ -245,11 +256,15 @@ sub usage {
     print "    -storklog filename    (Specify the Stork log file shared by all DaP jobs in the DAG)\n";
     print "    -storkserver hostname (Specify the hostname to submit DaP jobs)\n";
 # <--DAP
-    print "    -notification value (Determines how much email you get from Condor)\n";
-    print "    -debug number       (Determines how verbosely DAGMan logs its work)\n";
+    print "    -notification value (Determines how much email you get from Condor\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
     print "         one of \"always\", \"never\", \"error\", or \"complete\".\n";
     print "         See the condor_submit man page for details.)\n";
+    print "    -NoEventChecks      (Turns off checks for \"bad\" events)\n";
+    print "    -AllowLogError      (Allows the DAG to attempt execution even if the log\n";
+    print "        reading code finds errors when parsing the submit files)\n"; 
+
+    print "    -debug number       (Determines how verbosely DAGMan logs its work)\n";
     exit( 1 );
 }
 
@@ -294,6 +309,13 @@ sub write_submit_file {
     if( $NoPostFail == 1 ) {
 	$args = $args . " -NoPostFail";
     }
+    if( $no_event_checks == 1 ) {
+    	$args = $args . " -NoEventChecks";
+    }
+    if( $allow_log_error == 1 ) {
+    	$args = $args . " -AllowLogError";
+    }
+
     print SUBMIT "arguments\t= $args\n";
     print SUBMIT "environment\t= _CONDOR_DAGMAN_LOG=$debug_log;_CONDOR_MAX_DAGMAN_LOG=0\n";
     if( $notification ) {
