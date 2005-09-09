@@ -41,6 +41,8 @@ struct SubmitDagOptions
         bool bNoPostFail;
         MyString strRemoteSchedd;
 	int iDebugLevel;
+	bool noEventChecks;
+	bool allowLogError;
 	MyString strDagFile;
 	
 	// non-command line options
@@ -64,6 +66,8 @@ struct SubmitDagOptions
 		bNoPostFail = false;
 		strRemoteSchedd = "";
 		iDebugLevel = 3;
+		noEventChecks = false;
+		allowLogError = false;
 		strDagFile = "";
 
 		strLibLog = "";
@@ -133,7 +137,7 @@ void submitDag(SubmitDagOptions &opts)
 	}
 	else
 	{
-		printf("Checking all your submit files for a consistent log file name.\n");
+		printf("Checking all your submit files for log file name(s).\n");
 		printf("This might take a while... \n");
 		getJobLogFilenameFromSubmitFiles(opts);
 		if (opts.strJobLog == "")
@@ -303,6 +307,14 @@ void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts
 	{
 		strArgs += " -NoPostFail";
     }
+	if(opts.noEventChecks)
+	{
+		strArgs += " -NoEventChecks";
+	}
+	if(opts.allowLogError)
+	{
+		strArgs += " -AllowLogError";
+	}
 
     fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
     fprintf(pSubFile, "environment\t= _CONDOR_DAGMAN_LOG=%s"
@@ -319,8 +331,6 @@ void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts
 
 void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 {
-	//printf("This isn't working yet, use -log for now\n");
-
 	MyString strDagFile = readFileToString(opts.strDagFile);
 	if (strDagFile == "")
 	{
@@ -368,13 +378,6 @@ void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 
 			MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile);
 
-			if (strLogFilename != strPreviousLogFilename && strPreviousLogFilename != "")
-			{
-				printf("ERROR: submit files use different log files (detected in: %s)\n", strSubFile.Value());
-				opts.strJobLog = "";
-				return;
-			}
-
 			strPreviousLogFilename = strLogFilename;
 		}
 	}	
@@ -403,6 +406,9 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			opts.strDagFile = strArg;
 			break;
 		}
+
+			// So arguments aren't case-sensitive.
+		strArg.lower_case();
 
 		if (strArg.find("-no_s") != -1)
 		{
@@ -434,25 +440,25 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				printUsage();
 			opts.iMaxJobs = atoi(argv[++iArg]);
 		}
-		else if (strArg.find("-MaxPr") != -1)
+		else if (strArg.find("-maxpr") != -1)
 		{
 			if (bIsLastArg)
 				printUsage();
 			opts.iMaxPre = atoi(argv[++iArg]);
 		}
-		else if (strArg.find("-MaxPo") != -1)
+		else if (strArg.find("-maxpo") != -1)
 		{
 			if (bIsLastArg)
 				printUsage();
 			opts.iMaxPost = atoi(argv[++iArg]);
 		}
-		else if (strArg.find("-Storklog") != -1)
+		else if (strArg.find("-storklog") != -1)
 		{
 		  if (bIsLastArg)
 		    printUsage();
 		  opts.strStorkLog = argv[++iArg];
 	        }
-		else if (strArg.find("-NoPo") != -1)
+		else if (strArg.find("-nopo") != -1)
 		{
 			opts.bNoPostFail = true;
 		}
@@ -467,6 +473,14 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 			if (bIsLastArg)
 				printUsage();
 			opts.iDebugLevel = atoi(argv[++iArg]);
+		}
+		else if (strArg.find("-noev") != -1) // -NoEventChecks
+		{
+			opts.noEventChecks = true;
+		}
+		else if (strArg.find("-all") != -1) // -AllowLogError
+		{
+			opts.allowLogError = true;
 		}
 		else
 		{
@@ -492,6 +506,9 @@ int printUsage()
     printf("    -log filename       (Specify the log file shared by all jobs in the DAG)\n");
     printf("    -Storklog filename  (Specify the Stork log file for jobs in this DAG)\n");
     printf("    -notification value (Determines how much email you get from Condor)\n");
+	printf("    -NoEventChecks      (Turns off checks for \"bad\" events)\n");
+	printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
+	printf("        reading code finds errors when parsing the submit files)\n");
     printf("    -debug number       (Determines how verbosely DAGMan logs its work)\n");
     printf("         about the life of the condor_dagman job.  'value' must be\n");
     printf("         one of \"always\", \"never\", \"error\", or \"complete\".\n");
