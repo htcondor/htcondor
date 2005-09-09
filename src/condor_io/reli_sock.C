@@ -191,6 +191,13 @@ ReliSock::accept( ReliSock	&c )
 	int on = 1;
 	c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
 
+
+		/* Set no delay to disable Nagle, since we buffer all our
+		   relisock output and it degrades performance of our
+		   various chatty protocols. -Todd T, 9/05
+		*/
+	c.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
+
 	if( DebugFlags & D_NETWORK ) {
 		char* src = strdup(	sock_to_string(_sock) );
 		char* dst = strdup( sin_to_string(c.endpoint()) );

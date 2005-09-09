@@ -4912,6 +4912,16 @@ int DaemonCore::Create_Process(
 				goto wrapup;
 			}
 
+			/* Set no delay to disable Nagle, since we buffer all our 
+			   relisock output and it degrades performance of our 
+			   various chatty protocols. -Todd T, 9/05
+			 */
+			if( !rsock.setsockopt(IPPROTO_TCP, TCP_NODELAY,
+									(char*)&on, sizeof(on)) )
+		    {
+				dprintf(D_ALWAYS,"Warning: setsockopt() TCP_NODELAY failed\n");
+			}
+
 			if ( (!rsock.listen( want_command_port)) ||
 				 (!ssock.bind( want_command_port)) ) {
 				dprintf(D_ALWAYS,"Create_Process:Failed to post listen "
@@ -6509,6 +6519,16 @@ DaemonCore::InitCommandSocket( int command_port )
 				(!dc_ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
 									   (char*)&on, sizeof(on))) ) {
 				EXCEPT( "setsockopt() SO_REUSEADDR failed\n" );
+			}
+
+			/* Set no delay to disable Nagle, since we buffer all our 
+			   relisock output and it degrades performance of our 
+			   various chatty protocols. -Todd T, 9/05
+			 */
+			if( !dc_rsock->setsockopt(IPPROTO_TCP, TCP_NODELAY,
+									(char*)&on, sizeof(on)) )
+		    {
+				dprintf(D_ALWAYS,"Warning: setsockopt() TCP_NODELAY failed\n");
 			}
 
 			if( (!dc_rsock->listen(command_port)) ||
