@@ -23,7 +23,7 @@
 #ifndef BUFFERS_H
 #define BUFFERS_H
 
-#define CONDOR_IO_BUF_SIZE 8192
+#define CONDOR_IO_BUF_SIZE 4096
 #include "sock.h"
 
 void sanity_check();
