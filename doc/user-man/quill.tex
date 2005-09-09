@@ -23,11 +23,10 @@ tables.
 
 \end{enumerate}
 
-As part of the official condor release, these two modified query tools
-(\Condor{q} and \Condor{quill}) may replace their traditional counterparts
-as in addition to querying the database, these modified tools allows
-users access to the old features of querying the schedd and the history
-file respectively.
+In this release, these two modified query tools will replace their traditional 
+counterparts as in addition to querying the database, these modified tools allows
+users access to the old features of querying the schedd and the history file 
+respectively.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Quill-Installation}Installing and Configuring Quill}
@@ -170,6 +169,7 @@ The following options go in the daemon-specific (in this case, quill)
 section with appropriately modified values to suit the local environment:
 
 \begin{verbatim}
+QUILL_ENABLED           = TRUE
 QUILL_NAME              = some-unique-quill-name.cs.wisc.edu
 QUILL_DB_NAME           = database-for-some-unique-quill-name
 QUILL_DB_IP_ADDR        = databaseipaddress:port
@@ -179,7 +179,7 @@ QUILL_POLLING_PERIOD    = 10
 QUILL_HISTORY_CLEANING_INTERVAL = 24
 # the following parameter's units is in days
 QUILL_HISTORY_DURATION 	= 30
-QUILL_IS_REMOTELY_QUERYABLE = 1
+QUILL_IS_REMOTELY_QUERYABLE = TRUE
 QUILL_DB_QUERY_PASSWORD =  password-for-database-user-quillreader
 QUILL_ADDRESS_FILE      = $(LOG)/.quill_address
 \end{verbatim}
@@ -188,6 +188,18 @@ Following is a description on each.  Skip to the next section for a brief
 overview on how to query quill:
 
 \begin{itemize}
+\item \Macro{QUILL\_ENABLED}\\
+Turning this flag on or off controls the enabling/disabling of quill functionality.  
+Setting it to TRUE results in the proper functioning of the quill server and client tools 
+can correctly access it.  Setting this variable to FALSE results in the quill server 
+exiting after noting down a descriptive message in its log file.  The clients 
+\Condor{q} and \Condor{history} will behave as though there is no quill instance 
+running.  As with many other variables, a change to this variable while quill is 
+running should be followed by a \Condor{reconfig} command for the change to take effect. 
+Note that one can also turn off quill by removing it from the DAEMON\_LIST variable.  
+However, this variable can be used to not only disable quill during the initial setup of 
+the condor instance but also while the quill server is running.
+
 \item \Macro{QUILL\_NAME}\\
 This is the name of this quill server.  Each quill server sends an ad to
 the collector containing its name.  As such its important that the name
@@ -235,8 +247,8 @@ is the number of hours between two successive scans.  By default,
 \item \Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}\\
 Thanks to postgres one can now remotely query both the job queue and the
 history tables. This variable controls whether this remote querying 
-feature should be enabled.  By default it is 1 (true).  Note that even if 
-this is 0 (false), one can still query the job queue in the remote schedd
+feature should be enabled.  By default it is TRUE.  Note that even if 
+this is FALSE, one can still query the job queue in the remote schedd
 This variable only controls whether the database tables are remotely queryable.
 
 \item \Macro{QUILL\_DB\_QUERY\_PASSWORD}\\
@@ -297,7 +309,7 @@ the queue
 
 \end{verbatim}
 There are two ways to get to a quill daemon: directly using its name as 
-specified in the \MacroNI{QUILL\_NAME} variable in part 3) above, or indirectly
+specified in the \MacroNI{QUILL\_NAME} variable in section 4) above, or indirectly
 by querying the schedd using its name.  In the latter case, \Condor{q} will detect 
 if that schedd is being serviced by a database, and if so, directly query it.
 In both cases, the ip address and port of the database server hosting the data of 
@@ -546,7 +558,7 @@ This file must be created and protected by the site administrator;
 if this file does not exist as and where expected, the \Condor{quill}
 daemon logs and error and exits.
 
-\item Finally, as mentioned in section 2c) above, the
+\item Finally, as mentioned in section 4) above, the
 \Attr{IsRemotelyQueryable} attribute in the ``quill ad'' advertised
 by the quill daemon to the collector can be used by site administrators
 to disallow the database from being read by all remote condor query tools.
