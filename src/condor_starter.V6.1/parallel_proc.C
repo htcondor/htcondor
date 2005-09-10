@@ -202,7 +202,7 @@ ParallelProc::Continue() {
 
 bool
 ParallelProc::ShutdownFast() {
-	VanillaProc::ShutdownGraceful();
+	return VanillaProc::ShutdownGraceful();
 }
 
 bool
