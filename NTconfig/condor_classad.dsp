@@ -106,6 +106,10 @@ SOURCE=..\src\condor_classad\classad_list.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_classad\classad_util.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_classad\classifiedjobs.C
 # End Source File
 # Begin Source File
