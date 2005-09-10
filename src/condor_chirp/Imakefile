@@ -17,9 +17,10 @@ static_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
 release_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
 strip_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
 static_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
-release_symlink_target($(RELEASE_DIR)/src/chirp/chirp_client.h,include,chirp_client.h)
-strip_symlink_target($(STRIP_DIR)/src/chirp/chirp_client.h,include,chirp_client.h)
-static_symlink_target($(STATIC_DIR)/src/chirp/chirp_client.h,include,chirp_client.h)
+
+release_symlink_target(../src/chirp/chirp_client.h,include,chirp_client.h)
+strip_symlink_target(../src/chirp/chirp_client.h,include,chirp_client.h)
+static_symlink_target(../src/chirp/chirp_client.h,include,chirp_client.h)
 
 library_target($(LIBNAME),$(LIBOBJ))
 release_library($(LIBNAME),lib)
