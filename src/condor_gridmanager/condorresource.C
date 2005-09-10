@@ -269,7 +269,7 @@ int CondorResource::DoScheddPoll()
 									   scheddName, cluster, proc );
 
 				rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.Value() ),
-													 (BaseJob*)job );
+													 (BaseJob*&)job );
 				if ( rc == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
 				} else {

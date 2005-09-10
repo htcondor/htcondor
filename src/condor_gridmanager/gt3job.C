@@ -117,7 +117,7 @@ gt3GramCallbackHandler( void *user_arg, char *job_contact, int state,
 
 	// Find the right job object
 	rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id.Value() ),
-										 (BaseJob*)this_job );
+										 (BaseJob*&)this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"gt3GramCallbackHandler: Can't find record for globus job with "
