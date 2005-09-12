@@ -43,6 +43,7 @@ GetOptions (
     'buildid=s'       => $opt_buildid,
     'test-src=s'      => $opt_test_src,
     'nmi-glue=s'      => $opt_nmi_glue,
+    'workspace'       => $opt_workspace
 );
 
 
