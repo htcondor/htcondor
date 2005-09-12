@@ -307,10 +307,15 @@ TESTCLASS(job_core_holdrelease_van,quick)
 
 */
 
+#if !defined(IS_HPUX10)
+/*
+	GNATS 548 perl md5 module missing on HPUX 10 machine(s)
+*/
 DESC(job_core_copytospool_van,"Vanilla: test that spooled executable is same via md5 checksum of both files")
 RUN(job_core_copytospool_van)
 TESTCLASS(job_core_copytospool_van,core)
 TESTCLASS(job_core_copytospool_van,quick)
+#endif
 
 DESC(job_core_getenv_van,"Vanilla: job which tests getenv both on and off")
 RUN(job_core_getenv_van)
@@ -514,10 +519,15 @@ RUN(job_filexfer_output_van)
 TESTCLASS(job_filexfer_output_van,filexfer)
 TESTCLASS(job_filexfer_output_van,quick)
 
+#if !defined(IS_HPUX10)
+/*
+	GNATS 548 perl md5 module missing on HPUX 10 machine(s)
+*/
 DESC(job_filexfer_md5_van,"Vanilla: Can we move 200 megs and not impact md5 checksum?")
 RUN(job_filexfer_md5_van)
 TESTCLASS(job_filexfer_md5_van,filexfer)
 TESTCLASS(job_filexfer_md5_van,quick)
+#endif
 
 /* Dagman Tests */
 

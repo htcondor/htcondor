@@ -1,3 +1,8 @@
+09/11/05 V6_6-merge-46
+   The state of the V6_6-branch for a merge into V6_7-branch.  A few
+   last-minute fixes for irix NWO builds, test cleanup, etc, before
+   the 6.7.11 release.
+
 09/07/05 V6_7-post_merge-V6_6-merge-45
    The state of the V6_7-branch before after merging in the V6_6-branch
    as it stood at tag V6_6-merge-45,

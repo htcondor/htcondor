@@ -377,32 +377,23 @@ foreach $module ( @modules ) {
 	# Make sure there's nothing in the way where we want to put it.
 	unlink( "$targetfile", "$targetfile.Z", "$targetfile.gz" );
 
-	# Compress as appropriate, and move to the final location.
-	if( $platform =~ /.*linux.*/ ) {
-	    print "gzipping $skel/$release-$platform.tar\n";
-	    $out = `gzip $skel/$release-$platform.tar`;
-	    if( ($? >> 8) != 0 ) {
-		die "Can't gzip $skel/$release-$platform.tar: $out";
-	    }
-	    print "Moving $release-$platform.tar.gz into $targetdir ... ";
-	    $out = `mv $skel/$release-$platform.tar.gz $targetdir`;
-	    if( ($? >> 8) != 0 ) {
-		die "Can't mv $skel/$release-$platform.tar.gz $targetdir: $out";
-	    }
-	    print "done.\n";
-	} else {
-	    print "compressing $skel/$release-$platform.tar\n";
-	    $out = `compress $skel/$release-$platform.tar`;
-	    if( ($? >> 8) != 0 ) {
-		die "Can't compress $skel/$release-$platform.tar: $out";
-	    }
-	    print "Moving $release-$platform.tar.Z into $targetdir ... ";
-	    $out = `mv $skel/$release-$platform.tar.Z $targetdir`;
-	    if( ($? >> 8) != 0 ) {
-		die "Can't mv $skel/$release-$platform.tar.Z $targetdir: $out";
-	    }
-	    print "done.\n";
+	# gzip, and move to the final location.  we no longer bother
+	# with trying to use compress on non-linux platforms, since
+	# it's not unreasonable to require gzip in this day and age.
+	# we already check for gzip (but not compress) on our build
+	# machines @ configure time, and some of our platforms don't
+	# put compress in a reasonable location... :(
+	print "gzipping $skel/$release-$platform.tar\n";
+	$out = `gzip $skel/$release-$platform.tar`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't gzip $skel/$release-$platform.tar: $out";
 	}
+	print "Moving $release-$platform.tar.gz into $targetdir ... ";
+	$out = `mv $skel/$release-$platform.tar.gz $targetdir`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't mv $skel/$release-$platform.tar.gz $targetdir: $out";
+	}
+	print "done.\n";
     }
 }
 
