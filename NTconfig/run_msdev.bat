@@ -24,6 +24,11 @@ if exist condor_util_lib.dsp.tmp (
 		   	exit /b 1
 		)
 
+REM Although we have it as a rule in the .dsp files, somehow our prebuild 
+REM rule for syscall_numbers.h gets lost into the translation to .mak files, 
+REM so we deal with it here explicitly.
+if not exist ..\src\h\syscall_numbers.h awk -f ..\src\h\awk_prog.include_file ..\src\h\syscall_numbers.tmpl > ..\src\h\syscall_numbers.h
+
 REM Build the externals and bail if it fails.
 call make_win32_externals.bat
 
