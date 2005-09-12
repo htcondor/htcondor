@@ -74,6 +74,16 @@ are larger than 4 kbytes (by disabling TCP Nagle algorithm as appropriate).
 
 \begin{itemize}
 
+% condor-support #1419
+\item Fixed a bug that was visible to the end user as file transfer
+  failures on a busy system.
+  The root problem was that if the \Condor{negotiator} gave out the
+  same match twice (due to having stale info in the \Condor{collector}
+  when trying to negotiate), the \Condor{schedd} would be confused,
+  attempt to re-use the match, fail to do so, and then kill the
+  previous (legitimate) use of the match.
+  This bug was introduced in verison 6.7.4.
+
 \item Fixed bug in the parallel universe that caused the schedd to
 crash when reconnecting to jobs that couldn't be reconnected to.
 
