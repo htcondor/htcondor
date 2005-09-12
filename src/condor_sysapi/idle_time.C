@@ -21,19 +21,33 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "condor_config.h"
-#include "condor_debug.h"
-#include "sysapi.h"
-#include "sysapi_externs.h"
-
 #ifdef Darwin
+/*
+  This is REALLY evil, but it works (for now).  Carbon.h defines a
+  bunch of stuff as enums that the regular system header files declare
+  with #define.  If you include all the system headers first and
+  *then* include Carbon.h, this enum crap creates header file parse
+  error madness on TCP_NODELAY (for example).  However, if you include
+  Carbon.h first, it all works, since Carbon.h does its own #define
+  and the system headers check #ifdef before they do their own
+  #define.  Even though it goes against everything else we say about
+  condor_common.h always being included first, for this 1 .C file
+  (since it's the only place we include Carbon.h), for this 1
+  platform, it seems that this is an easy work-around and this file
+  still compiles.  Derek <wright@cs.wisc.edu> 2005-09-11.
+*/
 #include <mach/mach.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/hid/IOHIDLib.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <Carbon/Carbon.h>
 #endif
+
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+#include "sysapi.h"
+#include "sysapi_externs.h"
 
 /* define some static functions */
 #if defined(WIN32)
