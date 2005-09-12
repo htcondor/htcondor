@@ -4159,7 +4159,7 @@ Scheduler::negotiate(int, Stream* s)
 	int		owner_num;
 	int		JobsRejected = 0;
 	Sock*	sock = (Sock*)s;
-	ContactStartdArgs * args;
+	ContactStartdArgs * args = NULL;
 	match_rec *mrec;
 	ClassAd* my_match_ad;
 	ClassAd* ad;
@@ -4692,22 +4692,43 @@ Scheduler::negotiate(int, Stream* s)
 					}
 						// sinful should now point to the sinful string
 						// of the startd we were matched with.
+					mrec = AddMrec( claim_id, sinful, &id, my_match_ad,
+									owner, negotiator_name );
 
-					mrec = AddMrec( claim_id, sinful, &id, my_match_ad, owner, negotiator_name );
+						/* if AddMrec returns NULL, it means we can't
+						   use that match.  in that case, we'll skip
+						   over the attempt to stash the info, go
+						   straight to deallocating memory we used in
+						   this protocol, and break out of this case
+						*/
 
-					/* Here we don't want to call contactStartd directly
-					   because we do not want to block the negotiator for 
-					   this, and because we want to minimize the possibility
-					   that the startd will have to block/wait for the 
-					   negotiation cycle to finish before it can finish
-					   the claim protocol.  So...we enqueue the
-					   args for a later call.  (The later call will be
-					   made from the startdContactSockHandler) */
-					args = new ContactStartdArgs( claim_id, sinful, false );
+						// clear this out so we know if we use it...
+					args = NULL;
 
-						// Now that the info is stored in the above
-						// object, we can deallocate all of our
-						// strings and other memory.
+					if( mrec ) {
+							/*
+							  Here we don't want to call contactStartd
+							  directly because we do not want to block
+							  the negotiator for this, and because we
+							  want to minimize the possibility that
+							  the startd will have to block/wait for
+							  the negotiation cycle to finish before
+							  it can finish the claim protocol.
+							  So...we enqueue the args for a later
+							  call.  (The later call will be made from
+							  the startdContactSockHandler)
+							*/
+						args = new ContactStartdArgs( claim_id, sinful,
+													  false );
+					}
+
+						/*
+						  either we already saved all this info in the
+						  ContactStartdArgs object, or we're going to
+						  throw away the match.  either way, we're
+						  done with all this memory and need to
+						  deallocate it now.
+						*/
 					free( sinful );
 					sinful = NULL;
 					free( claim_id );
@@ -4717,13 +4738,18 @@ Scheduler::negotiate(int, Stream* s)
 						my_match_ad = NULL;
 					}
 
+					if( ! mrec ) {
+						ASSERT( ! args );
+							// we couldn't use this match, so we're done.
+						break;
+					}
+
 					if( enqueueStartdContact(args) ) {
 						perm_rval = 1;	// happiness
 					} else {
 						perm_rval = 0;	// failure
 						delete( args );
 					}
-
 					JobsStarted += perm_rval;
 					addActiveShadows( perm_rval * shadow_num_increment ); 
 					host_cnt++;
