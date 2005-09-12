@@ -65,6 +65,9 @@ will make it possible to match jobs to multiple types of resources. The
 submit file syntax remains the same for now, except that ``remote\_pool'' is
 now required for grid-type condor jobs.
 
+\item Significantly improved response time for \Condor{q} when job classads
+are larger than 4 kbytes (by disabling TCP Nagle algorithm as appropriate).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
