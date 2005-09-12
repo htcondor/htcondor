@@ -83,6 +83,12 @@ my $NIGHTLY_IDS_FILE = "$cwd/test_ids";
 mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
 chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
+# This is a bit of a hack. Needed to make workspace build work.
+if (defined $opt_workspace) {
+  $opt_tag = 'workspace_build_1.2.3';
+  $opt_module = 'Condor';
+}
+
 if (defined $opt_buildid) {
     if (not defined($opt_tag) ) {
         print "ERROR: You need to specify --tag while using --buildid\n";
