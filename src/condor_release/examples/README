@@ -49,16 +49,16 @@ speed up the testing process, you may want to force Condor to run jobs
 on the machine you are using.  To do this, edit the local config file
 (described in the INSTALL file) and add the following lines:
 
-START : Owner == "your user name" || Owner == "condor"
-SUSPEND : False
-CONTINUE : True
-PREEMPT : False
-KILL : False
+START    = Owner == "your user name" || Owner == "condor"
+SUSPEND  = False
+CONTINUE = True
+PREEMPT  = False
+KILL     = False
 
 Of course, you should change "your user name" to the string containing
 your actual user name.  For example:
 
-START : Owner == "coltrane" || Owner == "condor"
+START = Owner == "coltrane" || Owner == "condor"
 
 To make these changes take effect, use "condor_reconfig" to
 reconfigure the local host, or "condor_reconfig [hostname1]
