@@ -646,6 +646,10 @@ SOURCE=..\src\h\proc.h
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\proc_id.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\query_result_type.h"
 # End Source File
 # Begin Source File

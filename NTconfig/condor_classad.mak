@@ -89,6 +89,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\buildtable.obj" \
 	"$(INTDIR)\classad.obj" \
 	"$(INTDIR)\classad_list.obj" \
+	"$(INTDIR)\classad_util.obj" \
 	"$(INTDIR)\classifiedjobs.obj" \
 	"$(INTDIR)\environment.obj" \
 	"$(INTDIR)\evaluateOperators.obj" \
@@ -99,7 +100,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\scanner.obj" \
 	"$(INTDIR)\value.obj" \
 	"$(INTDIR)\xml_classads.obj" \
-	"$(INTDIR)\classad_util.obj" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
@@ -168,6 +168,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\buildtable.obj" \
 	"$(INTDIR)\classad.obj" \
 	"$(INTDIR)\classad_list.obj" \
+	"$(INTDIR)\classad_util.obj" \
 	"$(INTDIR)\classifiedjobs.obj" \
 	"$(INTDIR)\environment.obj" \
 	"$(INTDIR)\evaluateOperators.obj" \
@@ -178,7 +179,6 @@ LIB32_OBJS= \
 	"$(INTDIR)\scanner.obj" \
 	"$(INTDIR)\value.obj" \
 	"$(INTDIR)\xml_classads.obj" \
-	"$(INTDIR)\classad_util.obj" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 

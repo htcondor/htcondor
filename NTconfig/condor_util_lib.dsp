@@ -261,10 +261,6 @@ SOURCE=..\src\condor_util_lib\proc.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_util_lib\proc_id.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_util_lib\rotate_file.c
 # End Source File
 # Begin Source File
@@ -289,27 +285,11 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 !IF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
 # PROP Ignore_Default_Tool 1
-# Begin Custom Build
-InputDir=..\src\h
-InputPath=..\src\h\syscall_numbers.tmpl
-
-"..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	$(InputDir)\..\..\NTconfig\awk.exe -f $(InputDir)\awk_prog.include_file $(InputDir)\syscall_numbers.tmpl > ..\src\h\syscall_numbers.h
-
-# End Custom Build
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
 # PROP BASE Ignore_Default_Tool 1
 # PROP Ignore_Default_Tool 1
-# Begin Custom Build
-InputDir=..\src\h
-InputPath=..\src\h\syscall_numbers.tmpl
-
-"..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-	$(InputDir)\..\..\NTconfig\awk.exe -f $(InputDir)\awk_prog.include_file $(InputDir)\syscall_numbers.tmpl > ..\src\h\syscall_numbers.h
-
-# End Custom Build
 
 !ENDIF 
 
