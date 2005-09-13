@@ -111,15 +111,3 @@ template class HashBucket<HashKey, ProxySubject *>;
 template class List<Proxy>;
 template class Item<Proxy>;
 template class SimpleList<MyProxyEntry*>;
-
-
-// Stole these out of the schedd code
-int procIDHash( const PROC_ID &procID, int numBuckets )
-{
-	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
-}
-
-bool operator==( const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}

@@ -77,9 +77,9 @@ struct VacateRequest {
 };
 
 HashTable <PROC_ID, VacateRequest> pendingScheddVacates( HASH_TABLE_SIZE,
-														 procIDHash );
+														 hashFuncPROC_ID );
 HashTable <PROC_ID, VacateRequest> completedScheddVacates( HASH_TABLE_SIZE,
-														   procIDHash );
+														   hashFuncPROC_ID );
 
 struct JobStatusRequest {
 	BaseJob *job;
@@ -87,9 +87,9 @@ struct JobStatusRequest {
 };
 
 HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( HASH_TABLE_SIZE,
-														procIDHash );
+														hashFuncPROC_ID );
 HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
-														  procIDHash );
+														  hashFuncPROC_ID );
 
 template class HashTable<PROC_ID, VacateRequest>;
 template class HashBucket<PROC_ID, VacateRequest>;
@@ -101,7 +101,7 @@ template class Item<JobType>;
 SimpleList<int> scheddUpdateNotifications;
 
 HashTable <PROC_ID, BaseJob *> pendingScheddUpdates( HASH_TABLE_SIZE,
-													 procIDHash );
+													 hashFuncPROC_ID );
 bool addJobsSignaled = false;
 bool checkLeasesSignaled = false;
 int contactScheddTid = TIMER_UNSET;

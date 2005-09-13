@@ -194,6 +194,7 @@ typedef struct {
 #define SUBMISSION_ERR	6
 #define JOB_STATUS_MAX  7 /* A placeholder, not a valid status. */
 
+// Put C funtion definitions here
 BEGIN_C_DECLS
 
 PROC_ID getProcByString( const char* str );
@@ -201,6 +202,11 @@ const char* getJobStatusString( int status );
 int getJobStatusNum( const char* name );
 
 END_C_DECLS
+
+// Put C++ definitions here
+#if defined(__cplusplus)
+bool operator==( const PROC_ID a, const PROC_ID b);
+#endif
 
 #define ICKPT -1
 

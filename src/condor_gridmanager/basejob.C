@@ -43,7 +43,7 @@
 int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
 
 HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( HASH_TABLE_SIZE,
-													 procIDHash );
+													 hashFuncPROC_ID );
 HashTable<HashKey, BaseJob *> BaseJob::JobsByRemoteId( HASH_TABLE_SIZE,
 													   hashFunction );
 

@@ -59,7 +59,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
 	filename_tools.o d_format_time.o chomp.o strupr.o globus_utils.o \
-	condor_universe.o condor_perms.o proc_id.o access_euid.o \
+	condor_universe.o condor_perms.o access_euid.o \
 	condor_snutils.o printf_format.o nullfile.o copy_file.o \
 	get_exec_path.o exit_utils.o condor_blkng_full_disk_io.o \
 	condor_full_io.o condor_pidenvid.o condor_create_id.o

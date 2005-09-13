@@ -46,10 +46,6 @@ extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *Owner;
 
-int procIDHash( const PROC_ID &procID, int numBuckets );
-bool operator==( const PROC_ID a, const PROC_ID b);
-
-
 // initialization
 void Init();
 void Register();

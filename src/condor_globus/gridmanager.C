@@ -58,17 +58,6 @@ extern GridManager gridmanager;
 List<JobUpdateEvent> JobUpdateEventQueue;
 static bool updateScheddTimerSet = false;
 
-// Stole these out of the schedd code
-int procIDHash( const PROC_ID &procID, int numBuckets )
-{
-	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
-}
-
-bool operator==( const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}
-
 template class HashTable<HashKey, GlobusJob *>;
 template class HashBucket<HashKey, GlobusJob *>;
 template class HashTable<PROC_ID, GlobusJob *>;
@@ -175,7 +164,7 @@ GridManager::GridManager()
 	JobsByContact = new HashTable <HashKey, GlobusJob *>( HASH_TABLE_SIZE,
 														  hashFunction );
 	JobsByProcID = new HashTable <PROC_ID, GlobusJob *>( HASH_TABLE_SIZE,
-														 procIDHash );
+														 hashFuncPROC_ID );
 	DeadMachines = new HashTable <HashKey, char *>( HASH_TABLE_SIZE,
 													hashFunction );
 }

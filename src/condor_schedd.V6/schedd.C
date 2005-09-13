@@ -103,7 +103,6 @@ extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 					 char * user);
 extern int Runnable(PROC_ID*);
 extern int Runnable(ClassAd*);
-extern bool	operator==( PROC_ID, PROC_ID );
 
 extern char* Spool;
 extern char * Name;
@@ -151,13 +150,6 @@ struct job_data_transfer_t {
 	char *peer_version;
 	ExtArray<PROC_ID> *jobs;
 };
-
-#ifdef WIN32	 // on unix, this is in instantiate.C
-bool operator==(const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}
-#endif
 
 int
 dc_reconfig()
@@ -8642,11 +8634,6 @@ int pidHash(const int &pid, int numBuckets)
 }
 
 
-int procIDHash(const PROC_ID &procID, int numBuckets)
-{
-	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
-}
-
 // initialize the configuration parameters and classad.  Since we call
 // this again when we reconfigure, we have to be careful not to leak
 // memory. 
@@ -8840,10 +8827,10 @@ Scheduler::Init()
 													  pidHash);
 	shadowsByProcID =
 		new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
-											 procIDHash);
+											 hashFuncPROC_ID);
 	resourcesByProcID = 
 		new HashTable<PROC_ID, ClassAd *>((int)(MaxJobsRunning*1.2),
-											 procIDHash,
+											 hashFuncPROC_ID,
 											 updateDuplicateKeys);
 	}
 

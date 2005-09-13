@@ -77,9 +77,3 @@ template class Queue<PROC_ID>;
 // <HashKey, ClassAd*> here, but those are already instantiated in
 // classad_log.C in the c++_util_lib (not in c++_util_instantiate.C
 // where you'd expect to find it *sigh*)
-
-
-bool operator==(const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}

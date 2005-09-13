@@ -133,7 +133,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
 	uids.o passwd_cache.o metric_units.o condor_ver_info.o condor_cred_base.o \
 	condor_md.o condor_credential.o \
-	HashTable.o MyString.o \
+	proc_id.o HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
 	RegExer.o Regex.o my_distribution.o error_utils.o $(DH_OBJ) \
 	translation_utils.o command_strings.o enum_utils.o \

@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "HashTable.h"
 
 int
 hashFuncInt( const int& n, int numBuckets )
@@ -38,7 +39,6 @@ hashFuncUInt( const unsigned int& n, int numBuckets )
 {
 	return n % numBuckets;
 }
-
 
 int
 hashFuncJobIdStr( char* const & key, int numBuckets )
@@ -60,3 +60,10 @@ hashFuncJobIdStr( char* const & key, int numBuckets )
     bkt %= numBuckets;
     return bkt;
 }
+
+int 
+hashFuncPROC_ID( const PROC_ID &procID, int numBuckets)
+{
+	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
+}
+

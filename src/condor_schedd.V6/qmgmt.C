@@ -52,7 +52,6 @@ extern char *Name;
 extern char* JobHistoryFileName;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
-extern bool	operator==( PROC_ID, PROC_ID );
 
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
