@@ -159,7 +159,7 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 	if( c_client ) {
 		remoteUser = c_client->user();
 		if( remoteUser ) {
-			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_USER, tmp );
+			line.sprintf( "%s=\"%s\"", ATTR_REMOTE_USER, remoteUser );
 			ad->Insert( line.Value() );
 		}
 		tmp = c_client->owner();
