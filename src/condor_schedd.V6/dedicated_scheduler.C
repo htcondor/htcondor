@@ -1163,6 +1163,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				claim_id = NULL;
 				if( my_match_ad ) {
 					delete my_match_ad;
+					my_match_ad = NULL;
 				}
 				break;
 			}
@@ -1181,6 +1182,17 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				dprintf( D_ALWAYS, "ERROR: No %s in resource ad: "
 						 "Aborting dedicated scheduler claim\n", ATTR_NAME );
 				delete mrec;
+					// it's lame we have to keep duplicating this code
+					// block, it'd be better if all these we MyString
+					// objects on the stack...
+				free( sinful );
+				free( claim_id );
+				sinful = NULL;
+				claim_id = NULL;
+				if( my_match_ad ) {
+					delete my_match_ad;
+					my_match_ad = NULL;
+				}
 				break;
 			}
 
