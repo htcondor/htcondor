@@ -579,6 +579,9 @@ sub TunePersonalCondor
 		close(LOCSRC);
 	}
 
+
+	print NEW "ALL_DEBUG = D_FULLDEBUG\n";
+
 	if($personal_daemons ne "")
 	{
 		# Allow the collector to run on the default and expected port as the main
@@ -612,6 +615,7 @@ sub TunePersonalCondor
 		print NEW "# Condor-C things\n";
 		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
 		print NEW "C_GAHP_LOG = \$(LOG)/CondorCgahp.\$(USERNAME)\n";
+		print NEW "GRIDMANAGER_LOG = \$(LOG)/GridManager.\$(USERNAME)\n";
 		print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CondorCgahpWThread.\$(USERNAME)\n";
 	}
 	elsif( $portchanges eq "standard" )
@@ -628,6 +632,7 @@ sub TunePersonalCondor
 		print NEW "# Condor-C things\n";
 		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
 		print NEW "C_GAHP_LOG = \$(LOG)/CondorCgahp.\$(USERNAME)\n";
+		print NEW "GRIDMANAGER_LOG = \$(LOG)/GridManager.\$(USERNAME)\n";
 		print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CondorCgahpWThread.\$(USERNAME)\n";
 	}
 	else
