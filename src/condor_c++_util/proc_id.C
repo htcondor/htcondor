@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "proc.h"
 
-
+extern "C" 
 PROC_ID
 getProcByString( const char* str )
 {
@@ -48,4 +48,8 @@ getProcByString( const char* str )
 	return rval;
 }
 
+bool operator==( const PROC_ID a, const PROC_ID b)
+{
+	return a.cluster == b.cluster && a.proc == b.proc;
+}
 
