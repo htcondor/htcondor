@@ -1507,25 +1507,28 @@ See section~\ref{sec:Job-Lease} for details of job leases.
 %%%%%%%%%%%%%%%%%%%
 %% remote_pool
 %%%%%%%%%%%%%%%%%%%
-\item[remote\_pool = $<$machine-name$>$]
+\item[remote\_pool = $<$centralmanagerhostname$>$[:$<$portnumber$>$]]
 \index{submit commands!remote\_pool}
-For a \Arg{grid} universe job, with a \SubmitCmd{grid\_type} of \Arg{condor},
-the machine that receives a query from the submit machine.
-The query is to the \Condor{collector} daemon
-(assumed to be at a standard IP address and port),
-and it is for the location (IP address and port) of the
-\Condor{schedd} daemon.
+A required command for a \Arg{grid} universe job with a
+\SubmitCmd{grid\_type} of \Arg{condor}.
+Use the \Argnm{centralmanagerhostname} as 
+the central manager to 
+locate the \Condor{schedd} to which the job will be submitted.
+The value
+is the same as you would use for the \Opt{-pool} option of \Condor{q} to
+dispay the job queue of the intended \Condor{schedd}.
 
 %%%%%%%%%%%%%%%%%%%
 %% remote_schedd
 %%%%%%%%%%%%%%%%%%%
-\item[remote\_schedd = $<$machine-name$>$]
+\item[remote\_schedd = $<$schedd-name$>$]
 \index{submit commands!remote\_schedd}
 A required command for a \Arg{grid} universe job with a
 \SubmitCmd{grid\_type} of \Arg{condor}.
-It is the machine with the job queue in the remote pool.
+It is the name of the \Condor{schedd} to which the job should be submitted.
+%It is the machine with the job queue in the remote pool.
 The value ought to be the same as the \AdAttr{Name} ClassAd attribute
-of the \Condor{schedd} daemon in the remote pool.
+of the \Condor{schedd} daemon as reported to its \Condor{collector}.
 
 %%%%%%%%%%%%%%%%%%%
 % +

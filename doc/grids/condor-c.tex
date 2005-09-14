@@ -113,6 +113,8 @@ the submit description file command \SubmitCmd{remote\_schedd}.
 The value assigned for this command is the same as
 the \Condor{schedd} ClassAd attribute
 \Attr{Name} on the remote machine.
+The remote pool's \Condor{collector} is defined by the submit
+description file command \SubmitCmd{remote\_pool}.
 
 The following represents a minimal submit description file for
 a job.
@@ -128,6 +130,7 @@ a job.
    log = mylog
 
    remote_schedd = joe@remotemachine.example.com
+   remote_pool = remotecentralmanager.example.com
    +remote_jobuniverse = 5
    +remote_requirements = True
    +remote_ShouldTransferFiles = "YES"
@@ -265,23 +268,25 @@ local & 12 & works well \\ \hline
 
 For communication between \Condor{schedd} daemons on the submit
 and remote machines,
-a location of the remote \Condor{schedd} daemon is needed.
-By default, the submit machine queries its \Condor{collector}
-daemon for the needed information.
-The \SubmitCmd{remote\_pool}
-command within the submit
-description file overrides the default.
+the location of the remote \Condor{schedd} daemon is needed.
+This information resides in the \Condor{collector} of the remote
+machine's pool.
+The \SubmitCmd{remote\_pool} command in the submit description file
+says which \Condor{collector} should be queried for the remote \Condor{schedd}
+daemon's location.
 An example of this submit command is
 \footnotesize
 \begin{verbatim}
 remote_pool = machine1.example.com
 \end{verbatim}
 \normalsize
-When a command such as this appears within the submit description
-for the job,
-it defines a different \Condor{collector} daemon 
-(assumed to be listening at a standard IP address and port)
-to ask for location information about the remote machine.
+If the remote \Condor{collector} is not listening on the standard port
+(9618), then the port it is listening on needs to be specified, like so:
+\footnotesize
+\begin{verbatim}
+remote_pool = machine1.example.com:12345
+\end{verbatim}
+\normalsize
 
 File transfer of a job's executable, \File{stdin}, \File{stdout}, and
 \File{stderr} are automatic.
