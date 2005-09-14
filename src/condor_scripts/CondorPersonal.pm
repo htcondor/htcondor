@@ -609,8 +609,10 @@ sub TunePersonalCondor
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
 		print NEW "CONDOR_HOST = $condorhost\n";
 		print NEW "START = TRUE\n";
-		print NEW "SCHEDD_INTERVAL = 30\n";
-		print NEW "UPDATE_INTERVAL = 30\n";
+		print NEW "SCHEDD_INTERVAL = 5\n";
+		print NEW "UPDATE_INTERVAL = 5\n";
+		print NEW "NEGOTIATOR_INTERVAL = 5\n";
+		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 
 		print NEW "# Condor-C things\n";
 		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
@@ -626,8 +628,10 @@ sub TunePersonalCondor
 		print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST)\n";
 		print NEW "CONDOR_HOST = $condorhost\n";
 		print NEW "START = TRUE\n";
-		print NEW "SCHEDD_INTERVAL = 30\n";
-		print NEW "UPDATE_INTERVAL = 30\n";
+		print NEW "SCHEDD_INTERVAL = 5\n";
+		print NEW "UPDATE_INTERVAL = 5\n";
+		print NEW "NEGOTIATOR_INTERVAL = 5\n";
+		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 
 		print NEW "# Condor-C things\n";
 		print NEW "CONDOR_GAHP = \$(SBIN)/condor_c-gahp\n";
