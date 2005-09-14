@@ -265,8 +265,8 @@ int CondorResource::DoScheddPoll()
 				status_ads[i]->LookupInteger( ATTR_CLUSTER_ID, cluster );
 				status_ads[i]->LookupInteger( ATTR_PROC_ID, proc );
 
-				job_id_string.sprintf( "condor %s %s %d.%d", poolName,
-									   scheddName, cluster, proc );
+				job_id_string.sprintf( "condor %s %s %d.%d", scheddName,
+									   poolName, cluster, proc );
 
 				rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.Value() ),
 													 (BaseJob*&)job );
@@ -377,7 +377,7 @@ dprintf( D_FULLDEBUG, "*** Lease udpate succeeded!\n" );
 		MyString id_str;
 		updated.Rewind();
 		while ( updated.Next( curr_id ) ) {
-			id_str.sprintf( "condor %s %s %d.%d", poolName, scheddName,
+			id_str.sprintf( "condor %s %s %d.%d", scheddName, poolName,
 							curr_id.cluster, curr_id.proc );
 			if ( BaseJob::JobsByRemoteId.lookup( HashKey( id_str.Value() ),
 												 curr_job ) == 0 ) {
