@@ -472,8 +472,11 @@ V6_7_11_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/openssl/0.9.8 \
 		   externals/bundles/postgresql/8.0.2
 
+# Externals needed for V6_7_12 (same as V6_7_11)
+V6_7_12_EXT	-a V6_7_11_EXT
+
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_11_EXT
+V6_7_EXT	-a V6_7_12_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
