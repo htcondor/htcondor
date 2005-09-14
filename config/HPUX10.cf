@@ -24,4 +24,4 @@
 #define PVM_ARCH			HPPA
 
 #define VendorCTestFlags -Aa -Ae
-#define VendorCPPTestFlags -Aa -ext +eh
+#define VendorCPPTestFlags -Aa -ext 
