@@ -1,3 +1,7 @@
+9/14/05 V6_7_11-branch
+   A branch for the 6.7.11 release, created from V6_7_11-root on the
+   V6_7_CODE module.  The "doc" directory hasn't yet been branched.
+
 09/11/05 V6_6-merge-46
    The state of the V6_6-branch for a merge into V6_7-branch.  A few
    last-minute fixes for irix NWO builds, test cleanup, etc, before
