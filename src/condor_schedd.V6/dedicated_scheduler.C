@@ -1196,22 +1196,19 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				break;
 			}
 
-			bool mrecExists;
 			match_rec *dummy;
 
-			mrecExists = false;
 			if( all_matches->lookup(HashKey(machine_name), dummy) == 0) {
 					// Already have this match
-				dprintf(D_ALWAYS, "DedicatedScheduler::negotiate sent match for %s, but we've already got it\n", machine_name);
-				mrecExists = true;
+				dprintf(D_ALWAYS, "DedicatedScheduler::negotiate sent match for %s, but we've already got it, deleting old one\n", machine_name);
+				DelMrec(claim_id);
 			}
 
-			if (!mrecExists) {
-					// Next, insert this match_rec into our hashtables
-				all_matches->insert( HashKey(machine_name), mrec );
-				all_matches_by_id->insert( HashKey(mrec->id), mrec );
-				num_matches++;
-
+				// Next, insert this match_rec into our hashtables
+			all_matches->insert( HashKey(machine_name), mrec );
+			all_matches_by_id->insert( HashKey(mrec->id), mrec );
+			num_matches++;
+			
 				/* 
 				   Here we don't want to call contactStartd directly
 				   because we do not want to block the negotiator for
@@ -1223,9 +1220,9 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				   made from the startdContactSockHandler)
 				*/
 
-				args = new ContactStartdArgs( claim_id, sinful, true );
+			args = new ContactStartdArgs( claim_id, sinful, true );
 
-			}
+
 
 				// Now that the info is stored in the above
 				// object, we can deallocate all of our strings
@@ -1242,23 +1239,21 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 			free(machine_name);
 			machine_name = NULL;
 				
-			if( !mrecExists) {
-				if( scheduler.enqueueStartdContact(args) ) {
-					perm_rval = 1;	// happiness
-				} else {
-					perm_rval = 0;	// failure
-					delete( args );
-				}
+			if( scheduler.enqueueStartdContact(args) ) {
+				perm_rval = 1;	// happiness
+			} else {
+				perm_rval = 0;	// failure
+				delete( args );
+			}
 				
-				reqs_matched += perm_rval;
+			reqs_matched += perm_rval;
 #if 0 
 				// Once we've got all this buisness w/ "are we
 				// spawning a new shadow?" worked out, we'll need to
 				// do this so our MAX_JOBS_RUNNING check still works. 
-				scheduler.addActiveShadows( perm_rval *
+			scheduler.addActiveShadows( perm_rval *
 										shadow_num_increment );  
 #endif
-			}
 				// We're done, return success
 			return NR_MATCHED;
 			break;
