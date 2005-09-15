@@ -617,8 +617,19 @@ UserProc::execute()
 		// defined in redhat 9 and not earlier, even though the kernel
 		// entry point existed. Even though the personality has been altered
 		// it will not become active in this process space until an exec()
-		// happens.
-		if (syscall(SYS_personality, PER_LINUX32) == -1) {
+		// happens. 
+		
+		// update: after kernel 2.6.12.2 revision, exec shield and the 
+		// randomization of the va space were separated, and using PER_LINUX32
+		// now only turns of exec-shield, leaving va randomization on.
+		// The stupid 0x40000 flag is ADDR_NO_RANDOMIZE, which 
+		// isn't yet defined for use outside of the kernel except in very new
+		// linux distributions, but, since we do redhat 9 for our compatibility
+		// build, it has to go here. From my compatibility testing, using this
+		// magic number on kernel pre 2.6.12.2 *appears* to have no detrimental
+		// effects.
+
+		if (syscall(SYS_personality, PER_LINUX32 | 0x40000) == -1) {
 			EXCEPT("Unable to set i386 personality: %d(%s)! "
 					"Memory layout will be uncheckpointable!\n", errno,
 					strerror(errno));
