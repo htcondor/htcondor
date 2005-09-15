@@ -2,6 +2,7 @@
 {View log of condor jobs completed to date}
 \Synopsis \SynProg{\Condor{history}}
 \oOpt{-help} \oOpt{-l} \oOptArg{-f}{filename}
+\oOptArg{-completedsince}{postgrestimestamp}
 \oArg{-constraint expr \Bar cluster \Bar cluster.process \Bar owner}
 
 \Description
@@ -37,7 +38,22 @@ specified boolean expression.
     \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default history file}
     \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the expression}
     \OptItem{\Opt{-l}}{Display job ads in long format}
+    \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{Display only job
+      ads that were in the Completed job state on or after the date and
+      time given by the \Arg{postgrestimestamp}. 
+      The \Arg{postgrestimestamp} follows the syntax as given for
+      \Prog{postgres} version 8.0.}
 \end{Options}
+
+\Examples
+
+To see all historical jobs since April 1, 2005 at 1pm,
+\footnotesize
+\begin{verbatim}
+%condor_history -completedsince '04/01/2005 13:00'
+\end{verbatim}
+\normalsize
+
 
 \ExitStatus
 

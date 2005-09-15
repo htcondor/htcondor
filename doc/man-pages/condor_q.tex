@@ -21,6 +21,7 @@
 \oOptArg{-format} {fmt attr}
 \oOpt{-cputime}
 \oOpt{-currentrun}
+\oOpt{-avgqueuetime}
 \oOptArg{-jobads}{file} 
 \oOptArg{-machineads}{file} 
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
@@ -195,87 +196,90 @@ along with the \Arg{-analyze} option, the reason for failure is displayed on a
 per machine basis.
 
 \begin{Options}
-    \OptItem{\Opt{-help}}{Get a brief description of the supported options}
-    \OptItem{\Opt{-global}}{Get queues of all the submitters in the system}
-    \ToolDebugDesc
-	\OptItem{\OptArg{-submitter}{submitter}}{List jobs of specific submitter 
-		from all the queues in the pool}
-	\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
-	       {Use the \Argnm{centralmanagerhostname} as 
-	       the central manager to 
-	       locate schedds. (The default is the \Macro{COLLECTOR\_HOST}
-	       specified in the configuration file.}
-	\OptItem{\Opt{-analyze}}{Perform an approximate analysis to determine how
-		many resources are available to run the requested jobs.  These results
-		are only meaningful for jobs using Condor's matchmaker.  This option
-		is never meaningful for Scheduler universe jobs and only meaningful
-		for Globus universe jobs doing matchmaking.}
-	\OptItem{\Opt{-run}}{Get information about running jobs.}
-	\OptItem{\Opt{-hold}}{Get information about jobs in the hold state.
-	        Also displays the time the job was placed into the hold state
-		and the reason why the job was placed in the hold state.}
-	\OptItem{\Opt{-globus}}{Get information only about jobs submitted
-	        to the globus universe.}
-	\OptItem{\Opt{-goodput}}{Display job goodput statistics.}
-	\OptItem{\Opt{-io}}{Display job input/output summaries.}
-	\OptItem{\Opt{-dag}}{Display DAG jobs under their DAGMan.}
-	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
-	\OptItem{\Opt{-long}}{Display job ads in long format}
-	\OptItem{\Opt{-xml}}{Display job ads  in xml format.
-	        The xml format is fully defined at
-		\URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
-	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \Arg{attr}
-    	        in format \Arg{fmt}.
-		To display the attribute the format must contain a single
-		\Code{printf(3)} style conversion specifier.
-		Attributes must be from the job ClassAd.  If the
-		attribute is not present in a given ClassAd,
-		then the format option will be silently skipped.
-		The conversion specifier must match the type of the
-		attribute.
-		\%s is suitable for strings such as \Attr{Owner},
-		\%d for integers such as \Attr{ClusterId},
-		and \%f for floating point numbers such as
-		\Attr{RemoteWallClockTime}.  An incorrect format
-		will result in undefined behavior.
-		Do not use more than one conversion specifier in a given
-		format.  More than one conversion specifier will result
-		in undefined behavior.  To output multiple attributes
-		repeat the \Opt{-format} option once for each desired
-		attribute.
-		Like {\Code{printf(3)}} style formats, you can include other
-		text that will be reproduced directly.   You can specify
-		a format without any conversion specifiers but you must
-		still give attribute.
-		You can include \Bs n to specify a line break. }
-	\OptItem{\Opt{-cputime}} {Instead of wall-clock allocation time (RUN\_TIME), 
-		display remote CPU time accumulated by the job to date in days,
-		hours, minutes, and seconds.  (If the job is currently running, time
-		accumulated during the current run is \emph{not} shown.)}
-	\OptItem{\Opt{-currentrun}} {Normally, RUN\_TIME contains all the time
-		accumulated during the current run plus all previous runs.  If this
-		option is specified, RUN\_TIME only displays the time accumulated so
-		far on this current run.}
-	\OptItem{\OptArg{-jobads}{file}}{Display jobs from a list of
-        ClassAds from a file instead of the real ads from the
-        schedd. This is mostly useful for debugging purposes. The ads
-        look as if you used \Condor{q} \Opt{-l} and stripped out the header.}
-	\OptItem{\OptArg{-machineads}{file}}{When doing analysis, use the
-        machine ads from the file instead of the ones from the
-        collector. This is mostly useful for debugging purposes. The
-        ads look as if you used \Condor{status} \Opt{-l}.}
-	\OptItem{Restriction list}{The restriction list may have zero or more items,
-		each of which may be:
-		\begin{description}
-			\item[\Arg{cluster}] match all jobs belonging to cluster
-			\item[\Arg{cluster.proc}] match all jobs belonging to cluster with
-				a process number of \emph{proc}
-			\item[\OptArg{-constraint}{expression}] match all jobs which match
-				the ClassAd expression constraint
-		\end{description} 
-		A job matches the restriction list if it matches any restriction in the 
-		list  Additionally, if \Arg{owner} restrictions are supplied, the job
-		matches the list only if it also matches an \Arg{owner} restriction.}
+  \OptItem{\Opt{-help}}{Get a brief description of the supported options}
+  \OptItem{\Opt{-global}}{Get queues of all the submitters in the system}
+  \ToolDebugDesc
+  \OptItem{\OptArg{-submitter}{submitter}}{List jobs of specific submitter 
+    from all the queues in the pool}
+  \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {Use the \Argnm{centralmanagerhostname} as 
+    the central manager to 
+    locate schedds. (The default is the \Macro{COLLECTOR\_HOST}
+    specified in the configuration file.}
+  \OptItem{\Opt{-analyze}}{Perform an approximate analysis to determine how
+    many resources are available to run the requested jobs.  These results
+    are only meaningful for jobs using Condor's matchmaker.  This option
+    is never meaningful for Scheduler universe jobs and only meaningful
+    for Globus universe jobs doing matchmaking.}
+  \OptItem{\Opt{-run}}{Get information about running jobs.}
+  \OptItem{\Opt{-hold}}{Get information about jobs in the hold state.
+    Also displays the time the job was placed into the hold state
+    and the reason why the job was placed in the hold state.}
+  \OptItem{\Opt{-globus}}{Get information only about jobs submitted
+    to the globus universe.}
+  \OptItem{\Opt{-goodput}}{Display job goodput statistics.}
+  \OptItem{\Opt{-io}}{Display job input/output summaries.}
+  \OptItem{\Opt{-dag}}{Display DAG jobs under their DAGMan.}
+  \OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
+  \OptItem{\Opt{-long}}{Display job ads in long format}
+  \OptItem{\Opt{-xml}}{Display job ads  in xml format.
+    The xml format is fully defined at
+    \URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
+  \OptItem{\OptArg{-format}{fmt attr}}{Display attribute \Arg{attr}
+    in format \Arg{fmt}.
+    To display the attribute the format must contain a single
+    \Code{printf(3)} style conversion specifier.
+    Attributes must be from the job ClassAd.  If the
+    attribute is not present in a given ClassAd,
+    then the format option will be silently skipped.
+    The conversion specifier must match the type of the
+    attribute.
+    \%s is suitable for strings such as \Attr{Owner},
+    \%d for integers such as \Attr{ClusterId},
+    and \%f for floating point numbers such as
+    \Attr{RemoteWallClockTime}.  An incorrect format
+    will result in undefined behavior.
+    Do not use more than one conversion specifier in a given
+    format.  More than one conversion specifier will result
+    in undefined behavior.  To output multiple attributes
+    repeat the \Opt{-format} option once for each desired
+    attribute.
+    Like {\Code{printf(3)}} style formats, you can include other
+    text that will be reproduced directly.   You can specify
+    a format without any conversion specifiers but you must
+    still give attribute.
+    You can include \Bs n to specify a line break. }
+  \OptItem{\Opt{-cputime}} {Instead of wall-clock allocation time (RUN\_TIME), 
+    display remote CPU time accumulated by the job to date in days,
+    hours, minutes, and seconds.  (If the job is currently running, time
+    accumulated during the current run is \emph{not} shown.)}
+  \OptItem{\Opt{-currentrun}} {Normally, RUN\_TIME contains all the time
+    accumulated during the current run plus all previous runs.  If this
+    option is specified, RUN\_TIME only displays the time accumulated so
+    far on this current run.}
+  \OptItem{\Opt{-avgqueuetime}} {Display the average of time spent in the
+    queue, considering all jobs not completed (those that do not have
+    \Expr{JobStatus == 4} or \Expr{JobStatus == 3}.  }
+  \OptItem{\OptArg{-jobads}{file}}{Display jobs from a list of
+    ClassAds from a file instead of the real ads from the
+    schedd. This is mostly useful for debugging purposes. The ads
+    look as if you used \Condor{q} \Opt{-l} and stripped out the header.}
+  \OptItem{\OptArg{-machineads}{file}}{When doing analysis, use the
+    machine ads from the file instead of the ones from the
+    collector. This is mostly useful for debugging purposes. The
+    ads look as if you used \Condor{status} \Opt{-l}.}
+  \OptItem{Restriction list}{The restriction list may have zero or more items,
+    each of which may be:
+        \begin{description}
+        \item[\Arg{cluster}] match all jobs belonging to cluster
+        \item[\Arg{cluster.proc}] match all jobs belonging to cluster with
+        a process number of \emph{proc}
+        \item[\OptArg{-constraint}{expression}] match all jobs which match
+        the ClassAd expression constraint
+        \end{description} 
+    A job matches the restriction list if it matches any restriction in the 
+    list  Additionally, if \Arg{owner} restrictions are supplied, the job
+    matches the list only if it also matches an \Arg{owner} restriction.}
 \end{Options}
 
 \GenRem
