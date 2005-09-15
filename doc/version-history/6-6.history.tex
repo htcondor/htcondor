@@ -37,11 +37,28 @@ limitation of 255 maximum file descriptors.  Before this patch, heavily
 loaded Condor daemons running on Solaris, particularly the \Condor{schedd},
 could exit complaining about lack of file descriptors for dprintf.
 
+
+\item Fixed a bug where the \Condor{starter} would follow symbolic links to
+directories, when calculating job disk usage.  This could cause an incorrect
+job disk usage calculation, or hang the starter upon encountering an infinite
+directory loop.  This bug only affected Unix platforms.
+
+\item For Globus jobs, the Rematch expression is now evaluated when a
+submit fails (in addition to when a submit commit times out).
+
+\item Fixed a bug that caused the \Condor{gridmanager} to go into an
+infinite loop if an entry in the job's environment string was missing
+an equals sign.
+
 \end{itemize}
 
-\noindent Bugs fixed that are included in version 6.7.9 and above:
+\noindent Bugs fixed that are included in version 6.7.9:
 
 \begin{itemize}
+
+\item Fixed a bug where the \Condor{startd} would erroneously compute the 
+console idle time utilizing a file called /proc/interrupts on unix machines
+that were not linux. 
 
 \item Fixed a bug where the \Condor{negotiator} might dump core if it was
 reconfiged in the middle of a negotiation cycle.
@@ -55,6 +72,23 @@ data it gets back from the \Condor{negotiator} is invalid.
 \item Fixed a bug where
 \Macro{DEFAULT\_PRIO\_FACTOR} was ignored if 
 \Macro{ACCOUNTANT\_LOCAL\_DOMAIN} was not defined.
+
+\end{itemize}
+
+\noindent Bugs fixes irrelevant to the 6.7 series:
+
+\begin{itemize}
+
+\item Added the \Opt{-NoEventChecks} and the \Opt{-AllowLogError}
+command-line flags to \Condor{submit\_dag} and the \Condor{submit\_dag}
+man page (they were already in \Condor{dagman}).
+Added \Opt{-r} and \Opt{-debug} to the \Condor{submit\_dag}
+man page (they were already in \Condor{submit\_dag}, just not
+documented).
+
+\item Made command-line arguments case insensitive in the Windows
+version of \Condor{submit\_dag}; also fixed log file checks in
+that version.
 
 \end{itemize}
 
