@@ -32,6 +32,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor on Solaris has been patched to work around a Solaris stdio
+limitation of 255 maximum file descriptors.  Before this patch, heavily
+loaded Condor daemons running on Solaris, particularly the \Condor{schedd},
+could exit complaining about lack of file descriptors for dprintf.
+
 \item Fixed a bug where the \Condor{starter} would follow symbolic links to
 directories, when calculating job disk usage.  This could cause an incorrect
 job disk usage calculation, or hang the starter upon encountering an infinite
