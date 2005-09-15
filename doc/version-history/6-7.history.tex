@@ -79,6 +79,9 @@ are larger than 4 kbytes (by disabling TCP Nagle algorithm as appropriate).
 
 \begin{itemize}
 
+\item Fixed a bug which prevented standard universe from working on a linux 
+kernel post 2.6.12.2.
+
 \item Fixed bug in the dedicated scheduler where if the \Condor{startd} 
 rejected a match, the \Condor{schedd} would never retry new matches 
 for that machine.  This would result in MPI and parallel jobs sticking 
