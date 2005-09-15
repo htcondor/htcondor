@@ -49,8 +49,11 @@ private:
 	int		stime;		// time we entered the current state
 	int		atime;		// time we entered the current activitiy
 
-	int		enter_action( State, Activity, int, int );
-	int		leave_action( State, Activity, int, int );
+	int		enter_action( State, Activity, bool, bool );
+	int		leave_action( State cur_s, Activity cur_a, 
+						  State new_s, Activity new_a, 
+						  bool statechange );
+
 };
 
 #endif /* _RES_STATE_H */
