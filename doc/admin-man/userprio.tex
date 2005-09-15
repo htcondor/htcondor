@@ -1,6 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:UserPrio}
-User Priorities}
+\section{\label{sec:UserPrio}User Priorities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Karen's understanding of this stuff, in preparation for a re-write
@@ -48,7 +47,9 @@ allocations in Condor.
 Documentation on configuring and controlling 
 priorities may be found in section~\ref{sec:Negotiator-Config-File-Entries}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Real User Priority (RUP)}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{real user priority (RUP)}
 \index{user priority!real (RUP)}
 A user's RUP measures the resource usage of the user 
@@ -67,7 +68,9 @@ is set to 86400 (one day), and if a user whose RUP was 10 removes all his
 jobs, the user's RUP would be 5 one day later, 2.5 two days later,
 and so on.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Effective User Priority (EUP)}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{effective user priority (EUP)}
 \index{user priority!effective (EUP)}
 The effective user priority (EUP) of a user is used to determine
@@ -124,7 +127,9 @@ The priority boost factors for individual users can be set with the
 Details may be found in the \Condor{userprio} manual page 
 on page~\pageref{man-condor-userprio}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Priorities and Preemption}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{preemption!priority}
 Priorities are used to ensure that users get their fair share of resources.  
 The priority values are used at allocation time.
@@ -144,7 +149,9 @@ due to user priority.  It does not have any effect if the machine rank
 expression prefers a different job, or if the startd policy expression
 causes the job to vacate due to other activity on the machine.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Priority Calculation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 This section may be skipped if the reader so feels, but for the curious,
 here is Condor's priority calculation algorithm.
 
@@ -186,3 +193,211 @@ down, no matches will be unaccounted for due to this variance.
 %  your user priority should always match your current usage.  if you're
 %  not using any resources, your priority will go back to the baseline
 %  value instantly.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:group-accounting}Group Accounting}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{groups!accounting}
+\index{accounting!by group}
+\index{priority!by group}
+
+By default, Condor does all accounting on a per-user basis, and this
+accounting is primarily used to compute priorities for Condor's
+fair-share scheduling algorithms. 
+However, accounting can also be done on a per-group basis.
+Multiple users can all submit jobs into the same accounting group,
+and all of the jobs will be treated with the same priority.
+
+\index{ClassAd job attribute!AccountingGroup}
+To use an accounting group,
+each job inserts an attribute into the job ClassAd which
+defines the accounting group name for the job.
+A common name is decided upon and used for the group.
+The following line is an example that defines the attribute
+within the job's submit description file:
+\begin{verbatim}
++AccountingGroup = "group_physics"
+\end{verbatim}
+
+The \AdAttr{AccountingGroup} attribute is a string,
+and it therefore must be enclosed in double quote marks.
+The string may have a maximum length of 40 characters.
+The name should \emph{not} be qualified with a domain.
+Certain parts of the Condor system 
+do append the value \MacroUNI{UID\_DOMAIN}
+(as specified in the configuration file on the submit machine)
+to this string for internal use.
+For example, if the value of \MacroNI{UID\_DOMAIN} is
+\Expr{example.com}, and the accounting group name
+is as specified,
+\Condor{userprio} will show statistics
+for this accounting group using the appended domain, for example
+\footnotesize
+\begin{verbatim}
+                                    Effective
+User Name                           Priority
+------------------------------      ---------
+group_physics@example.com                0.50
+user@example.com                        23.11
+heavyuser@example.com                  111.13
+...
+\end{verbatim}
+\normalsize
+
+Additionally, the \Condor{userprio} command allows administrators to
+remove an entity from the accounting system in Condor.
+The \Opt{-delete} option to \Condor{userprio}
+accomplishes this
+if all the jobs from a given accounting group are completed,
+and the administrator wishes to remove that group from the system.
+The \Opt{-delete} option
+identifies the accounting group with the fully-qualified name
+of the accounting group.
+For example
+\footnotesize
+\begin{verbatim}
+condor_userprio -delete group_physics@example.com
+\end{verbatim}
+\normalsize
+
+Condor removes entities itself as they are no longer
+relevant.
+Intervention by an administrator to delete entities can
+be beneficial when the use of thousands
+of short term accounting groups leads to scalability
+issues.
+
+Note that the name of an accounting group may include a period (.),
+and the period character has
+no special interpretation for group accounting.
+For group users, 
+as described in the next section,
+a period does have special meaning.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:group-quotas}Group Quotas}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{negotiation!by group}
+\index{groups!quotas}
+\index{quotas!for a group}
+The use of group quotas modifies the negotiation for 
+available resources (machines) within a Condor pool.
+This solves the difficulties inherent when
+priorities assigned based on each single user are insufficient.
+This may be the case when
+different groups (of varying size) own computers,
+and the groups choose to combine their computers to
+form a Condor pool.
+Consider an imaginary Condor pool example with thirty computers.
+Twenty computers are owned by the physics group and ten
+computers are owned by the chemistry group.
+One notion of fair allocation could be implemented 
+by configuring the twenty machines owned by the physics group
+to prefer (using the \MacroNI{RANK} configuration macro)
+jobs submitted by the users identified as associated
+with the physics group.
+Likewise, the ten machines owned by the chemistry group are
+configured to prefer jobs from users associated with the
+the chemistry group.
+This routes jobs to execute on specific machines,
+perhaps causing more preemption than necessary.
+The (fair allocation) policy desired is likely somewhat different,
+if these thirty machines have been pooled.
+It does not tie users to specific sets of machines,
+but to numbers of machines (a quota).
+Given thirty similar machines,
+the desired policy allows users within the physics group to have
+preference on up to twenty of the machines within the pool,
+and the machines can be any of the machines that are available.
+
+A quota for a set of users requires an identification for
+the set; members are called group users.
+Jobs to be negotiated for under the group quota
+specify the group user with the 
+\AdAttr{AccountingGroup} job ClassAd, as described above.
+
+The syntax for specifying a group user is
+\begin{verbatim}
+group.user
+\end{verbatim}
+The \verb@group@ is a name chosen for the group.
+Group names are not required to begin with the
+string \AdStr{group\_},
+as in the examples
+\AdStr{group\_physics.newton} and \AdStr{group\_chemistry.curie},
+but it is a useful convention because group names
+must not conflict with user names.
+The period character between the group and the user name is
+a required part of the syntax.
+
+Configuration controls the order of negotiation for
+groups and individual users,
+as well as sets quotas
+(preferentially allocated number of machines)
+for the groups.
+A declared number of virtual machines specifies the quota for each group
+(see \MacroNI{GROUP\_QUOTA\_<groupname>}
+in section~\ref{sec:Negotiator-Config-File-Entries}).
+The sum of the quotas for all groups must be less than or equal to
+the number of virtual machines in the entire pool.
+If the sum is less than the number of
+virtual machines in the entire pool,
+the remaining machines are 
+allocated to the \verb@none@ group,
+comprised of the general
+users not submitting jobs in a group.
+
+Where group users are specified for jobs,
+accounting is done per group user.
+It is no longer done by group, or by individual user.
+
+Negotiation is changed when group quotas are used.
+Condor negotiates first for defined groups,
+and then for independent job submitters.
+Given jobs belonging to different groups,
+Condor negotiates first for the group 
+currently utilizing the smallest percentage of machines
+in its quota.
+After this,
+Condor negotiates for the group 
+currently utilizing the second smallest percentage of machines
+in its quota.
+The last group will be the one with the highest percentage
+of machines in its quota.
+As an example, again use the imaginary pool and groups 
+given above.
+If various users within \verb@group_physics@ have
+jobs running on 15 computers, 
+then the physics group has 75\% of the 
+machines within its quota.
+If various users within \verb@group_chemistry@ have
+jobs running on 5 computers, 
+then the chemistry group has 50\% of the 
+machines within its quota.
+Negotiation will take place for the chemistry group first.
+For independent job submissions (those not part of any group),
+the classic Condor user fair share algorithm still applies.
+
+Note that there is no verification that a user is a member of
+the group that he claims.
+We rely on societal pressure for enforcement. 
+
+Configuration variables affect group quotas.
+See section~\ref{sec:Negotiator-Config-File-Entries} for detailed
+descriptions of the variables mentioned.
+Group names that may be given quotas to be used in
+negotiation are listed in the \Macro{GROUP\_NAMES} macro.
+The names chosen must not conflict with Condor user names.
+Quotas (by group) are defined in numbers of virtual machines.
+Each group may assign an initial value for each group user's
+user priority factor with the \Macro{GROUP\_PRIO\_FACTOR\_<groupname>}
+macro.
+If a group is currently allocated its entire quota of machines,
+and a group user has a submitted job that is not running,
+the \Macro{GROUP\_AUTOREGROUP} macro allows the job to be
+considered a second time within the negotiation cycle
+along with all other individual users' jobs.
+
+
+

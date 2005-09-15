@@ -215,13 +215,48 @@ value for most users.
 
 \begin{itemize}
 
-\item Add stuff here...
+\item This release contains all of the bug fixes and improvements from
+  the 6.6 stable series up to and including version 6.6.10.
+
+\item The Mac OS X binaries shipped with this release were built on OS
+  10.3.  Previous versions of Condor for OS X were built with version
+  10.2.  Condor is officially dropping support for Mac OS 10.2 with
+  this release (though it is possible the 10.3 binaries still work, we
+  have not verified it either way).  These binaries are known to work
+  with Mac OS 10.4 (``Tiger''), as well.
+
+\item There is a minor bug in version 6.7.10's \Condor{configure}
+  script.
+  It will create a directory called \File{ViewHist} in the local
+  directory (next to \File{log}, \File{spool}, etc).
+  This directory is not used by Condor at all, except in the case of a
+  \Condor{view} collector (which is optional, and not enabled by
+  default). 
+  This behavior will be removed in version 6.7.11, and
+  \Condor{configure} will go back to not creating the \File{ViewHist}
+  directory.
 
 \end{itemize}
 
 \noindent New Features:
 
 \begin{itemize}
+
+\item \Condor{dagman} can now run multiple DAGs in separate directories.
+
+
+\item Added \Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE},
+\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}, \Macro{DAGMAN\_CONDOR\_RM\_EXE},
+and \Macro{DAGMAN\_STORK\_RM\_EXE} configuration settings to specify
+the \Condor{submit}, \Stork{submit}, \Condor{rm}, and \Stork{rm}
+executables used by \Condor{dagman}.  If unset (which they are by
+default), \Condor{dagman} looks for each in the PATH.
+
+\item For Condor-C jobs, the \Condor{gridmanager} will retry and delay
+  failed connections to a remote \Condor{schedd} like it does for
+  Condor-G jobs. The same configuration settings apply 
+  (\Macro{GRIDMANAGER\_CONNECT\_FAILURE\_RETRY\_COUNT} and
+  \Macro{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL}).
 
 \item \SubmitCmd{remote\_initialdir} is now supported in all universes except
 for standard universe.  Previously, it was only supported in the grid universe.
@@ -230,6 +265,18 @@ for standard universe.  Previously, it was only supported in the grid universe.
 simplified for the specific commands of
 \SubmitCmd{universe}, \SubmitCmd{remote\_schedd}, \SubmitCmd{remote\_pool}, \SubmitCmd{globus\_rsl}, and \SubmitCmd{globus\_scheduler}.
 
+\item Added default user priority factors for accounting groups.  More on
+	accounting groups will be available in future versions of the manual.
+
+\item The \Condor{startd} can now be configured to write out the
+  \Attr{ClaimId} of the next available claim for each virtual machine
+  to seperate files.
+  This functionality will enable enhanced fault tolerance in future
+  versions of Condor.
+  For more information, see section~\ref{param:StartdClaimIdFile} for
+  details on \Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE} and
+  \Macro{STARTD\_CLAIM\_ID\_FILE}, the two configuration settings that
+  control this behavior.
 
 \end{itemize}
 
@@ -237,27 +284,110 @@ simplified for the specific commands of
 
 \begin{itemize}
 
+\item Fixed bugs on the Win32 platform in the \Condor{schedd} that could
+cause jobs to never complete when the \Condor{schedd} is busy with many jobs
+running at once.
+
+\item Fixed a bug on Windows where if lots of jobs submitted were from
+  the same \Condor{schedd}, some of the \Condor{shadow} processes
+  would block for an extremely long time trying to get a lock for
+  writing to the \File{ShadowLog} file.
+  Now, log writing happens more fairly, and no \Condor{shadow}
+  processes can be delayed indefinitely.
+
+\item \Condor{submit} \Opt{-name} formerly had no effect on Windows and
+did not work properly. This is now fixed.
+
+\item Significantly sped up the removal of large groups of jobs by
+changing the default value of \MacroNI{JOB\_IS\_FINISHED\_INTERVAL} from 1
+to 0 (see section~\ref{param:JobIsFinishedInterval} for details on this
+setting).
+
+\item Improved performance of the \Condor{schedd} when not running as
+  root.
+  In version 6.7.7, the new code to support the scheduler universe
+  with Condor-C involved adding some additional overhead to the
+  \Condor{schedd}.
+  However, this overhead is not needed unless the \Condor{schedd} is
+  running as root.
+  In version 6.7.10, the \Condor{schedd} notices if it is not root and
+  does an optimization to avoid the overhead.
+
 \item Fixed a bug that caused the gridmanager to crash if a gt2, gt3, or
 gt4 grid job had a proxy that couldn't be read properly. Now the job gets
 put on hold.
+
+\item The Condor-C GAHP now performs file staging in a 
+separate process, allowing remote grid jobs to be started earlier.
+
+\item When contacting the embedded web server on Condor daemons,
+  authentication is no longer requested.
+  The previous authentication requirement didn't provide any
+  additional security, and could confuse users.
 
 \item Fixed rare bug that could cause \Condor{submit} to crash when
   both getenv=true and environment=... were in a submit file and when
   very large variable names were in the environment. 
 
-\item Fixed bugs on the Win32 platform in the \Condor{schedd} that could
-cause jobs to never complete when the \Condor{schedd} is busy with many jobs
-running at once.
+\item Fixed a rare bug where the \Condor{schedd} would die with a
+  fatal exception under extremely heavy load on the machine.
+  The error message was:
+\begin{verbatim}  
+  ERROR ``Impossible: Create_Thread child_errno (xxx) is not
+  ERRNO_PID_COLLISION!'' at line 6181 in file daemon_core.C
+\end{verbatim}  
 
-\item Significantly speeded up the removal of large groups of jobs by
-changing the default value of \MacroNI{JOB\_IS\_FINISHED\_INTERVAL} from 1
-to 0 (see section~\ref{param:JobIsFinishedInterval} for details on this
-setting).
+\item Fixed a rare bug where certain attributes in a job description
+  file could cause the \Condor{schedd} to crash when restarting and
+  parsing the \File{job\_queue.log} file.
+
+\item Improved performance of standard universe jobs when
+  \Attr{WantRemoteIO} is set to false in the job ClassAd.  
+  In this case, Condor's checkpointing libraries now avoid some
+  additional communication with the \Condor{shadow} which are not
+  required if there's no remote IO.
+
+\item Fixed some messages in the Condor log files that were improperly
+  formatted, or contained incomplete information.
+
+\item Improved some user-log-reading error messages in \Condor{dagman}.
+
+\item Removed support for deprecated \Opt{-NoPostFail} option from
+\Condor{dagman}.  (The same functionality can be achieved through the
+use of a simple POST script.)
+
+\item Fixed bug in dedicated scheduler, where under heavy load, the
+  schedd would occasionally try to start the same job twice, and
+  subsequently exit with the message:
+\begin{verbatim}  
+  ERROR ``Trying to run job x.x, but already marked RUNNING!''
+\end{verbatim}  
+
+\item Fixed bug in dedicated scheduler, so that it now creates a 
+  spool directory for each condor proc of a parallel or MPI job
+  with multiple requirements.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+% Gnats PR 534.
+\item On Windows only, \Condor{dagman} fails for DAGs with
+nodes having absolute log file paths in their submit files.
+
+% Gnats PR 492.
+\item \Condor{dagman} does not correctly handle the case where all
+submit attempts for a node job fail, and the node has a POST script.
+If this happens for a single node in a DAG, it is usually okay,
+but if it happens for a second node, \Condor{dagman} will crash.
 
 \item The Condor-C GAHP now performs file staging in a 
 separate process, allowing remote grid jobs to be started earlier.
 
 \end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-7-9}Version 6.7.9}
@@ -277,6 +407,9 @@ separate process, allowing remote grid jobs to be started earlier.
 \begin{itemize}
 
 \item The Parallel Universe has been added.
+  For more information, see section~\ref{sec:Parallel} on
+  page~\pageref{sec:Parallel}.
+
 
 \item 
 \index{environment variables!X509\_USER\_PROXY}
@@ -299,8 +432,6 @@ needed if there are multiple log files, for unambiguous ordering of
 events during bootstrapping.)  Note that if \MacroNI{DAGMAN\_SUBMIT\_DELAY}
 is specified, the specified delay takes effect whether or not all
 jobs have the same log file.
-
-\item \Condor{dagman} can now run multiple DAGs in separate directories.
 
 \end{itemize}
 

@@ -2195,6 +2195,26 @@ Configuring The Startd Policy.
   section~\ref{param:SubsysAddressFile} as
   \Macro{SUBSYS\_ADDRESS\_FILE} 
 
+\item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}] \label{param:StartdShouldWriteClaimIdFile}
+  Starting with version 6.7.10, the \Condor{startd} can be configured
+  to write out the \Attr{ClaimId} for the next available claim on all
+  virtual machines to seperate files.
+  This boolean attribute controls whether the \Condor{startd} should
+  write these files.
+  The default value is true.
+  
+\item[\Macro{STARTD\_CLAIM\_ID\_FILE}] \label{param:StartdClaimIdFile}
+  This macro controls what file names are used if the above
+  \MacroNI{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE} is true.  By
+  default, Condor will write the ClaimId into a file in the
+  \MacroU{LOG} directory called \File{.startd\_claim\_id.vmX}, where
+  \verb@X@ is the value of \Attr{VirtualMachineID}, the integer that
+  identifies a given virtual machine on the system, or \verb@1@ on a
+  single-VM machine.
+  If you define your own value for this setting, you should provide a
+  full path, and Condor will automatically append the \verb@.vmX@
+  portion of the file name.
+
 \item[\Macro{NUM\_CPUS}] \label{param:NumCpus}
   This macro can be used to ``lie'' to the startd about how many CPUs
   your machine has.
@@ -3885,6 +3905,102 @@ These macros affect the \Condor{negotiator}.
 spend with a submitter. It defaults to one year.
 
 \end{description}
+The following configuration macros affect negotiation for 
+group users.
+\begin{description}
+
+\item[\Macro{GROUP\_NAMES}] \label{param:GroupNames}
+  A comma-separated list of the recognized group names, case insensitive.
+  If undefined (the default), group support is disabled.
+  Group names must not conflict with any user names.
+  That is, if there is a \verb@physics@ group, there may not be
+  a \verb@physics@ user.
+  Any group that is defined here must also have a quota,
+  or the group will be ignored. Example: 
+  \begin{verbatim}
+    GROUP_NAMES = group_physics, group_chemistry 
+  \end{verbatim}
+
+\item[\Macro{GROUP\_QUOTA\_<groupname>}] \label{param:GroupQuotaGroupname}
+  A positive integer  to represent a static quota specifing
+  the exact number of machines owned by this group.
+  Note that Condor does not verify or check consistency of quota values.
+  % When both are defined, static quotas supersede dynamic quotas. 
+  Example:
+  \begin{verbatim}
+    GROUP_QUOTA_group_physics = 20
+    GROUP_QUOTA_group_chemistry = 10
+  \end{verbatim}
+
+%\item[\Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}] \label{param:GroupDynamicMachConstraint}
+%  Filter the number of machines for use with dynamic groups accounting
+%  quotas, below.  Without this filter, dynamic quotas are calculated
+%  from the total of all machines, in all states, that have reported to
+%  the collector, which is probably not what you want.  Use this filter to
+%  restrict the number of machines reserved for calculating dynamic
+%  quotas.  The value is a ClassAd expression, and is evaluated every
+%  negotiation cycle.  For example, the following expression will only
+%  consider unclaimed Intel/Linux machines for dynamic quotas.
+%
+%  \begin{verbatim}
+%    GROUP_DYNAMIC_MACH_CONSTRAINT = State == "Unclaimed" && \
+%    Arch == "INTEL" && OpSys == "LINUX"
+%  \end{verbatim}
+%  will only considered. If all computers should be considered for
+%  dynamic quotas, then the following expression could be used:
+%  \begin{verbatim}
+%      GROUP_DYNAMIC_MACH_CONSTRAINT = TRUE
+%  \end{verbatim}
+
+
+%\item[\Macro{GROUP\_QUOTA\_DYNAMIC\_<groupname>}] \label{param:GroupQuotaDynamicGroupname}
+%  Specify a dynamic group accounting quota.  For example, the following
+%  specifies that a quota of 25\% of the total dynamic quota machines are
+%  reserved for members of the group\_biology group.
+%  \begin{verbatim}
+%  	GROUP_QUOTA_DYNAMIC_group_biology = 0.25
+%  \end{verbatim}
+%  The total dynamic quota machine count is determined using
+%  \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT above}. The group name must
+%  also be specified in the \Macro{GROUP\_NAMES} list. The value must be
+%  positive float between 0.0 and 1.0. Condor does not verify that the
+%  quota value is reasonable, nor does Condor verify that all specified
+%  quotas are consistent.  This parameter is evaluated whenever Condor
+%  negotiates for the group.  When both are defined, static quotas
+%  supersede dynamic quotas.
+
+\item[\Macro{GROUP\_PRIO\_FACTOR\_<groupname>}] \label{param:GroupPrioFactorGroupname}
+  A floating point value greater than or equal to 1.0 to specify the
+  default user priority factor for \verb@<groupname>@. 
+  The group name must also be specified in the \MacroNI{GROUP\_NAMES} list.
+  \MacroNI{GROUP\_PRIO\_FACTOR\_<groupname>} is evaluated when
+  the negotiator first negotiates for the user as a member of the group.
+  All members of the group inherit the default priority factor.
+  For example, the following setting
+  specifies that all member of the group named \verb@group_physics@
+  inherit a default user priority factor of 2.0:
+  \begin{verbatim}
+    GROUP_PRIO_FACTOR_group_physics = 2.0
+  \end{verbatim}
+
+\item[\Macro{GROUP\_AUTOREGROUP}] \label{param:GroupAutoregroup}
+  A boolean value (defaults to \Expr{False}) that when \Expr{True},
+  causes users who submitted to a specific group to
+  also negotiate a second time with the \verb@none@ group,
+  to be considered with the independent job submitters. 
+  This allows group submitted jobs to be matched with idle machines
+  even if the group is over its quota.
+
+\item[\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}] \label{param:NegotiatorConsiderPreemption}
+  For expert users only. A boolean value (defaults to \Expr{True}),
+  that when \Expr{False},
+  can cause the negotiator to run
+  faster and also have better spinning pie accuracy.
+  \emph{Only set this to \Expr{False} if \Macro{PREEMPTION\_REQUIREMENTS}
+  is \Expr{False},
+  and if all \condor{startd} rank expressions are \Expr{False}.}
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Eventd-Config-File-Entries}
@@ -4338,8 +4454,27 @@ This macro should almost always remain set to the default value!
 is described in section~\ref{param:SubsysDebug} as
 \Macro{SUBSYS\_DEBUG}.
 
-\end{description}
+\item[\Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE}]
+\label{param:DAGManCondorSubmitExe}
+The executable that \Condor{dagman} will use to submit Condor jobs.
+If undefined, \Condor{dagman} looks for \Condor{submit} in the PATH.
 
+\item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
+\label{param:DAGManStorkSubmitExe}
+The executable that \Condor{dagman} will use to submit Stork jobs.
+If undefined, \Condor{dagman} looks for \Stork{submit} in the PATH.
+
+\item[\Macro{DAGMAN\_CONDOR\_RM\_EXE}]
+\label{param:DAGManCondorRmExe}
+The executable that \Condor{dagman} will use to remove Condor jobs.
+If undefined, \Condor{dagman} looks for \Condor{rm} in the PATH.
+
+\item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
+\label{param:DAGManStorkRmExe}
+The executable that \Condor{dagman} will use to remove Stork jobs.
+If undefined, \Condor{dagman} looks for \Stork{rm} in the PATH.
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-Security}

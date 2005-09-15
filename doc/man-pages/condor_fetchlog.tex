@@ -32,10 +32,14 @@ security mechanisms.
 
 The \Arg{subsystem[.extension]} argument identifies the log file to retrieve.
 It is defined by the \Arg{subsystem}\_LOG entry
-given in the configuration file.  The optional extension is appended
-to this file name (e.g. ``STARTER.vm1'' becomes ``StarterLog.vm1'').
-For \MacroNI{COLLECTOR\_LOG}, it is \MacroNI{COLLECTOR}.
-The complete list of log files are defined by
+given in the configuration file.  
+For instance, the collector's log file is specified in the
+configuration file as \MacroNI{COLLECTOR\_LOG}.
+Therefore, to read the collector's log file, \MacroNI{COLLECTOR}
+should be specified.  
+The optional extension is appended to this file name
+(e.g. ``STARTER.vm1'' becomes ``StarterLog.vm1''). The complete list of log files that can be specified is:
+
 \begin{verbatim}
   MASTER
   COLLECTOR

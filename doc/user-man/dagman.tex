@@ -893,7 +893,10 @@ any generated rescue DAG file represents all of the input DAGs
 as a single DAG.
 The file name of this rescue DAG is based on the DAG input file
 listed first within the command-line arguments to
-\Condor{submit\_dag}.
+\Condor{submit\_dag} (unlike a single-DAG rescue DAG file, however,
+the file name will be
+\File{\textless{whatever}\textgreater.dag\_multi.rescue}, as opposed to
+just \File{\textless{whatever}\textgreater.dag.rescue}).
 Other files such
 as \File{dagman.out} and the lock file also have names based on this
 first DAG input file.
@@ -965,6 +968,12 @@ the current working directory as \Condor{submit\_dag} is executed.
 However, this means that, if the DAGs are in separate directories, they
 cannot be submitted from their own directories, only from the parent
 directory the paths are set up for.
+
+Note that if you use the \Arg{-usedagdir} argument, and your run
+results in a rescue DAG, the rescue DAG file will be written to
+the current working directory, and should be run from that directory.
+The rescue DAG includes all the path information necessary to
+run each node job in the proper directory.
 
 %I'm not sure whether or not it's a good idea to include the following
 % information any more.  wenger 2005-08-03.

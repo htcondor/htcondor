@@ -8,6 +8,7 @@
 \oOptArg{-setfactor}{username value}
 \oOptArg{-resetusage}{username}
 \oOpt{-resetall}
+\oOptArg{-delete}{username}
 \oOptArg{-getreslist}{username}
 \oOpt{-allusers}
 \oOptArg{-activefrom}{month day year}
@@ -100,6 +101,9 @@ for further explanation.
 
 \OptItem{\Opt{-resetall}}
 	{Reset the accumulated usage of all the users to zero.}
+
+\OptItem{\OptArg{-delete}{username}}
+	{Remove the specified \Arg{username} from Condor's accounting.}
 
 \OptItem{\OptArg{-getreslist}{username}}
 	{Display all the resources currently allocated to the specified user.}
