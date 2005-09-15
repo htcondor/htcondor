@@ -79,6 +79,15 @@ are larger than 4 kbytes (by disabling TCP Nagle algorithm as appropriate).
 
 \begin{itemize}
 
+\item Fixed bug in the dedicated scheduler where if the \Condor{startd} 
+rejected a match, the \Condor{schedd} would never retry new matches 
+for that machine.  This would result in MPI and parallel jobs sticking 
+in the Idle state, and the message "DedicatedScheduler::negotiate sent 
+match for machine, but we've already got it".
+
+\item Fixed problem with the parallel universe to allow for LAM jobs
+to get SIGTERM on exit so they can exit cleanly.
+
 % condor-support #1419
 \item Fixed a bug that was visible to the end user as file transfer
   failures on a busy system.
