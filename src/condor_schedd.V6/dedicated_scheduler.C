@@ -1309,7 +1309,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 			 mrec->proc ); 
 
 	if( !claimStartd(mrec, &dummy_job, true) ) {
-		mrec->setStatus( M_UNCLAIMED );
+		DelMrec(mrec);
 	}
 }
 
@@ -1342,7 +1342,7 @@ DedicatedScheduler::startdContactConnectHandler( Stream *sock )
 	dprintf ( D_FULLDEBUG, "Got mrec data pointer %p\n", mrec );
 
 	if(!claimStartdConnected( (Sock *)sock, mrec, &dummy_job, true )) {
-		mrec->setStatus( M_UNCLAIMED );
+		DelMrec(mrec);
 		return FALSE;
 	}
 
@@ -1354,7 +1354,7 @@ DedicatedScheduler::startdContactConnectHandler( Stream *sock )
 // Before each bad return we check to see if there's a pending call in
 // the contact queue.
 #define BAILOUT                         \
-        mrec->setStatus( M_UNCLAIMED ); \
+		DelMrec(mrec);					\
 		scheduler.checkContactQueue();  \
 		return FALSE;
 
