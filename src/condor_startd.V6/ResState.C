@@ -62,13 +62,14 @@ ResState::publish( ClassAd* cp, amask_t how_much )
 int
 ResState::change( State new_state, Activity new_act )
 {
-	int statechange = FALSE, actchange = FALSE, now;
+	bool statechange = false, actchange = false;
+	int now;
 
 	if( new_state != r_state ) {
-		statechange = TRUE;
+		statechange = true;
 	}
 	if( new_act != r_act ) {
-		actchange = TRUE;
+		actchange = true;
 	}
 	if( ! (actchange || statechange) ) {
 		return TRUE;   // If we're not changing anything, return
@@ -77,7 +78,7 @@ ResState::change( State new_state, Activity new_act )
 		// leave_action and enter_action return TRUE if they result in
 		// a state or activity change.  In these cases, we want to
 		// abort the current state change.
-	if( leave_action( r_state, r_act, statechange, actchange ) ) {
+	if( leave_action( r_state, r_act, new_state, new_act, statechange ) ) {
 		return TRUE;
 	}
 
@@ -293,10 +294,10 @@ act_to_load( Activity act )
 
 
 int
-ResState::leave_action( State s, Activity a, 
-						int statechange, int ) 
+ResState::leave_action( State cur_s, Activity cur_a, State new_s,
+						Activity, bool statechange )
 {
-	switch( s ) {
+	switch( cur_s ) {
 	case preempting_state:
 		if( statechange ) {
 				// If we're leaving the preepting state, we should
@@ -314,7 +315,7 @@ ResState::leave_action( State s, Activity a,
 	case unclaimed_state:
 		break;
 	case claimed_state:
-		if( a == suspended_act ) {
+		if( cur_a == suspended_act ) {
 			if( ! rip->r_cur->resumeClaim() ) {
 					// If there's an error sending kill, it could only
 					// mean the starter has blown up and we didn't
@@ -323,7 +324,22 @@ ResState::leave_action( State s, Activity a,
 				rip->r_cur->starterKillPg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
-				return change( owner_state );
+				if( new_s != owner_state ) {
+						/*
+						  if we're already trying to get into the
+						  owner state (because of an error like this,
+						  either suspending or resuming), we do NOT
+						  want to officially call ResState::change()
+						  again, or we just get into an infinite loop.
+						  instead, just return FALSE (that we didn't
+						  already change the state), and allow the
+						  previous attempt to change into owner_state
+						  to continue...
+						*/
+					return change( owner_state );
+				} else {
+					return FALSE;
+				}
 			}
 		}
 		if( statechange ) {
@@ -340,7 +356,7 @@ ResState::leave_action( State s, Activity a,
 
 int
 ResState::enter_action( State s, Activity a,
-						int statechange, int ) 
+						bool statechange, bool ) 
 {
 #ifdef WIN32
 	if (a == busy_act)
