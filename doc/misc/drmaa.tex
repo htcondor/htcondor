@@ -85,25 +85,5 @@ job attributes:
 
 The attribute \Attr{DRMAA\_NATIVE\_SPECIFICATION} can be used
 to direct all commands supported within
-submit description files.  
-See the \Condor{submit} manual page at
-section~\ref{man-condor-submit} for a complete list.
-Multiple commands can be specified if separated by newlines.  
-
-As in the normal submit file,
-arbitrary attributes can be added to the job's ClassAd
-by prefixing the attribute with +.  In this case, you will need to put
-string values in quotation marks, the same as in a submit file.
-
-Thus to tell Condor that the job will likely use 64 megabytes of memory (65536
-kilobytes), to more highly rank machines with more memory, and to add the
-arbitrary attribute of department set to chemistry, you would set
-Attr{DRMAA\_NATIVE\_SPECIFICATION} to the C string:
-
-\begin{verbatim}
-  drmaa_set_attribute(jobtemplate, DRMAA_NATIVE_SPECIFICATION,
-      "image_size=65536\nrank=Memory\n+department=\"chemistry\"",
-      err_buf, sizeof(err_buf)-1);
-
-\end{verbatim}
+submit description files.
 
