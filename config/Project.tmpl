@@ -53,8 +53,16 @@ SNPRINTF_FLAGS =
 #define PlatformLdFlags
 #endif
 
+/* Our tests often link with libcondorapi.a, which has calls to 
+ * dlopen and friends.  Thus when we link for tests, we want to
+ * include -ldl on the link line for platforms that have dlopen.
+ */
 #if !defined(TestPlatformLdFlags)
+#if HAS_DLOPEN
+#define TestPlatformLdFlags -ldl
+#else
 #define TestPlatformLdFlags
+#endif
 #endif
 
 #if !defined(PurifyPlatformLdFlags)

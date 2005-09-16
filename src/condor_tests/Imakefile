@@ -70,8 +70,8 @@ this case, we only need to specify libs, not dependent .o files, so we
 leave the 4th argument empty...
 */
 
-BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
-BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
+BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a)
+BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a)
 
 DESC(lib_procapi_pidtracking-snapshot,"Fast Termination Child Cleanup Test")
 RUN(lib_procapi_pidtracking-snapshot)
