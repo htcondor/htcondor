@@ -971,7 +971,7 @@ int GlobusJob::doEvaluateState()
 					submitFailureCode = globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( ad,
 														   submitFailureCode );
-					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+					ad->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 					if ( wantRematch ) {
 						// We go to CLEAR_REQUEST here so that wantRematch
 						// will be acted upon
