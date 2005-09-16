@@ -135,7 +135,7 @@ int Buf::read(
 {
 	int	nr;
 
-	if (sz < 0 || sz > num_free()){
+	if (sz <= 0 || sz > num_free()){
 		dprintf(D_ALWAYS, "IO: Buffer too small\n");
 		return -1;
 		/* sz = num_free(); */
