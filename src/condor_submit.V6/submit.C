@@ -169,6 +169,7 @@ char    *UseLogUseXML   = "log_xml";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
 
+char	*GridResource	= "grid_resource";
 char	*X509UserProxy	= "x509userproxy";
 char	*GlobusScheduler = "globusscheduler";
 char	*GlobusJobmanagerType = "jobmanager_type";
@@ -1211,19 +1212,46 @@ SetUniverse()
 		univ = 0;
 	
 		// Set Grid_Type
+		// Check both grid_type and grid_resource. If the latter one starts
+		// with '$$(', then we're matchmaking and don't know the grid-type.
+		// If both are blank, check globus_scheduler and its variants. If
+		// one of them exists, then this is an old gt2 submit file.
+		// Otherwise, we matchmaking and don't know the grid-type.
+		// If grid_resource exists, we ignore grid_type.
 		if ( JobGridType != NULL ) {
 			free( JobGridType );
+			JobGridType = NULL;
 		}
-		JobGridType = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
-		if( !JobGridType ) {
-			JobGridType = strdup("globus");
+		JobGridType = condor_param( GridResource, ATTR_GRID_RESOURCE );
+		if ( JobGridType ) {
+			if ( strncmp( JobGridType, "$$(", 3 ) == MATCH ) {
+				free( JobGridType );
+				JobGridType = NULL;
+			} else {
+				char *space = strchr( JobGridType, ' ' );
+				if ( space ) {
+					*space = '\0';
+				}
+			}
 		} else {
+			JobGridType = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
+			if ( !JobGridType ) {
+				char *tmp = condor_param( GlobusScheduler,
+										  "globus_scheduler" );
+				if ( tmp == NULL ) {
+					tmp = condor_param( ATTR_GLOBUS_RESOURCE, NULL );
+				}
+				if ( tmp ) {
+					JobGridType = strdup( "gt2" );
+					free( tmp );
+				}
+			}
+		}
+		if ( JobGridType ) {
 			// Validate
 			// Valid values are (as of 6.7): nordugrid, oracle, gt3, globus,
-
 			//    gt2, infn, condor
-			if ((stricmp (JobGridType, "globus") == MATCH) ||
-				(stricmp (JobGridType, "gt2") == MATCH) ||
+			if ((stricmp (JobGridType, "gt2") == MATCH) ||
 				(stricmp (JobGridType, "gt3") == MATCH) ||
 				(stricmp (JobGridType, "gt4") == MATCH) ||
 				(stricmp (JobGridType, "infn") == MATCH) ||
@@ -1233,6 +1261,10 @@ SetUniverse()
 				(stricmp (JobGridType, "oracle") == MATCH)) {
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
+			} else if ( stricmp( JobGridType, "globus" ) == MATCH ) {
+				// Convert 'globus' to 'gt2'
+				free( JobGridType );
+				JobGridType = strdup( "gt2" );
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", JobGridType );
@@ -2221,24 +2253,11 @@ void
 SetStdFile( int which_file )
 {
 	bool	transfer_it = true;
-	bool	stream_it = true;
+	bool	stream_it = false;
 	char	*macro_value = NULL;
 	char	*macro_value2 = NULL;
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
-
-	if(JobUniverse==CONDOR_UNIVERSE_GRID && which_file != 0) {
-		if ( stricmp (JobGridType, "globus") == MATCH ||
-			 stricmp (JobGridType, "gt2") == MATCH ||
-			 stricmp (JobGridType, "gt3") == MATCH ) {
-
-			stream_it = true;
-		} else {
-			stream_it = false;
-		}
-	} else {
-		stream_it = false;
-	}
 
 	switch( which_file ) 
 	{
@@ -3437,79 +3456,35 @@ void
 SetGlobusParams()
 {
 	char *tmp;
-	char *use_gridshell;
 	bool unified_syntax;
+
+	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
+		return;
 
 		// Does the schedd support the new unified syntax for grid universe
 		// jobs (i.e. GridResource and GridJobId used for all types)?
 	CondorVersionInfo vi( MySchedd->version() );
 	unified_syntax = vi.built_since_version(6,7,11);
 
-	if ( JobUniverse != CONDOR_UNIVERSE_GRID )
-		return;
+	tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
+	if ( tmp ) {
+			// If we find grid_resource, then just toss it into the job ad
 
-	if ( !unified_syntax ) {
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_GRID_TYPE,
-						JobGridType);
-		InsertJobExpr (buffer);
-	}
-
-	if ( stricmp (JobGridType, "globus") == MATCH ||
-		 stricmp (JobGridType, "gt2") == MATCH ||
-		 stricmp (JobGridType, "gt3") == MATCH ||
-		 stricmp (JobGridType, "gt4") == MATCH ||
-		 stricmp (JobGridType, "oracle") == MATCH ||
-		 stricmp (JobGridType, "nordugrid") == MATCH ) {
-
-		char * jobmanager_type;
-		jobmanager_type = condor_param ( GlobusJobmanagerType );
-		if (jobmanager_type) {
-			if (stricmp (JobGridType, "gt4") != MATCH ) {
-				fprintf(stderr, "\nWARNING: Param %s is not supported for grid types other than gt4\n", GlobusJobmanagerType );
-			}
-			if ( !unified_syntax ) {
-				sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE,
-						 jobmanager_type );
-				InsertJobExpr (buffer, false );
-			}
-		} else if (stricmp (JobGridType, "gt4") == MATCH ) {
-			jobmanager_type = strdup ("Fork");
-		}
-
-
-		char *globushost;
-		globushost = condor_param( GlobusScheduler, "globus_scheduler" );
-		if( !globushost ) {
-				// this is stupid, the "GlobusScheduler" global
-				// variable doesn't follow our usual conventions, so
-				// its value is "globusscheduler". *sigh* so, our
-				// first condor_param() uses the "old-style" format as
-				// the alternate.  if we don't have a value, we want
-				// to try again with the actual job classad value:
-			globushost = condor_param( ATTR_GLOBUS_RESOURCE, NULL );
-			if( ! globushost ) { 
-				fprintf( stderr, "Globus/gt3/gt4 universe jobs require a "
-						 "\"GlobusScheduler\" parameter\n" );
+		if ( !unified_syntax ) {
+				fprintf( stderr, "ERROR: Attribute %s cannot be used with "
+						 "schedds older than 6.7.11\n", GridResource );
 				DoCleanup( 0, 0, NULL );
 				exit( 1 );
-			}
 		}
 
-		if ( unified_syntax ) {
-				// GT4 jobs need the extra jobmanager_type field.
-			sprintf( buffer, "%s = \"%s %s%s%s\"", ATTR_GRID_RESOURCE,
-				 stricmp(JobGridType,"globus") == MATCH ? "gt2" : JobGridType,
-				 globushost, stricmp( JobGridType, "gt4" ) == MATCH ? " " : "",
-				 stricmp(JobGridType, "gt4") == MATCH ? jobmanager_type : "" );
-			InsertJobExpr( buffer );
-		} else {
-			sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
-			InsertJobExpr (buffer);
-		}
+			// TODO validate number of fields in grid_resource?
 
-		if ( strstr(globushost,"$$") ) {
-			// We need to perform matchmaking on the job in order to find
-			// the GlobusScheduler.
+		sprintf( buffer, "%s = \"%s\"", ATTR_GRID_RESOURCE, tmp );
+		InsertJobExpr( buffer );
+
+		if ( strstr(tmp,"$$") ) {
+				// We need to perform matchmaking on the job in order
+				// to fill GridResource.
 			sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
 			InsertJobExpr (buffer);
 			sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
@@ -3518,16 +3493,162 @@ SetGlobusParams()
 			InsertJobExpr (buffer);
 		}
 
-		free( globushost );
-		if ( jobmanager_type ) {
-			free( jobmanager_type );
+		free( tmp );
+
+	} else if ( JobGridType ) {
+			// If we don't find grid_resource but we know the grid-type,
+			// then the user is using the old syntax (with grid_type).
+			// Deal with all the attributes that go into GridResource.
+
+		if ( stricmp (JobGridType, "gt2") == MATCH ||
+			 stricmp (JobGridType, "gt3") == MATCH ||
+			 stricmp (JobGridType, "gt4") == MATCH ||
+			 stricmp (JobGridType, "oracle") == MATCH ||
+			 stricmp (JobGridType, "nordugrid") == MATCH ) {
+
+			char * jobmanager_type;
+			jobmanager_type = condor_param ( GlobusJobmanagerType );
+			if (jobmanager_type) {
+				if (stricmp (JobGridType, "gt4") != MATCH ) {
+					fprintf(stderr, "\nWARNING: Param %s is not supported for grid types other than gt4\n", GlobusJobmanagerType );
+				}
+				if ( !unified_syntax ) {
+					sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE,
+							 jobmanager_type );
+					InsertJobExpr (buffer, false );
+				}
+			} else if (stricmp (JobGridType, "gt4") == MATCH ) {
+				jobmanager_type = strdup ("Fork");
+			}
+
+			char *globushost;
+			globushost = condor_param( GlobusScheduler, "globus_scheduler" );
+			if( !globushost ) {
+					// this is stupid, the "GlobusScheduler" global
+					// variable doesn't follow our usual conventions, so
+					// its value is "globusscheduler". *sigh* so, our
+					// first condor_param() uses the "old-style" format as
+					// the alternate.  if we don't have a value, we want
+					// to try again with the actual job classad value:
+				globushost = condor_param( ATTR_GLOBUS_RESOURCE, NULL );
+				if( ! globushost ) { 
+					fprintf( stderr, "Globus/gt3/gt4 universe jobs require a "
+							 "\"GlobusScheduler\" parameter\n" );
+					DoCleanup( 0, 0, NULL );
+					exit( 1 );
+				}
+			}
+
+			if ( unified_syntax ) {
+					// GT4 jobs need the extra jobmanager_type field.
+				sprintf( buffer, "%s = \"%s %s%s%s\"", ATTR_GRID_RESOURCE,
+						 JobGridType, globushost,
+						 stricmp( JobGridType, "gt4" ) == MATCH ? " " : "",
+						 stricmp(JobGridType, "gt4") == MATCH ?
+						 jobmanager_type : "" );
+				InsertJobExpr( buffer );
+			} else {
+				sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
+				InsertJobExpr (buffer);
+			}
+
+			if ( strstr(globushost,"$$") ) {
+					// We need to perform matchmaking on the job in order
+					// to find the GlobusScheduler.
+				sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+				InsertJobExpr (buffer);
+				sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+				InsertJobExpr (buffer);
+				sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+				InsertJobExpr (buffer);
+			}
+
+			free( globushost );
+			if ( jobmanager_type ) {
+				free( jobmanager_type );
+			}
 		}
 
-		if ( !unified_syntax ) {
-			sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
-					 NULL_JOB_CONTACT );
-			InsertJobExpr (buffer);
+		if ( stricmp ( JobGridType, "condor" ) == MATCH ) {
+
+			char *remote_schedd;
+			char *remote_pool;
+
+			if ( !(remote_schedd = condor_param( RemoteSchedd,
+												 ATTR_REMOTE_SCHEDD ) ) ) {
+				fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" "
+						"parameter\n", RemoteSchedd );
+				DoCleanup( 0, 0, NULL );
+				exit( 1 );
+			}
+
+			if ( !(remote_pool = condor_param( RemotePool,
+											   ATTR_REMOTE_POOL ) ) &&
+				 unified_syntax ) {
+
+				fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" "
+						"parameter\n", RemotePool );
+				DoCleanup( 0, 0, NULL );
+				exit( 1 );
+			}
+
+			if ( unified_syntax ) {
+				sprintf( buffer, "%s = \"condor %s %s\"", ATTR_GRID_RESOURCE,
+						 remote_schedd, remote_pool );
+				InsertJobExpr( buffer );
+			} else {
+				sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_SCHEDD,
+						 remote_schedd );
+				InsertJobExpr (buffer);
+
+				if ( remote_pool ) {
+					sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_POOL,
+							 remote_pool );
+					InsertJobExpr ( buffer );
+				}
+			}
+
+			if ( strstr(remote_schedd,"$$") ) {
+
+				// We need to perform matchmaking on the job in order to find
+				// the RemoteSchedd.
+				sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+				InsertJobExpr (buffer);
+				sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+				InsertJobExpr (buffer);
+				sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+				InsertJobExpr (buffer);
+			}
+
+			free( remote_schedd );
+			free( remote_pool );
 		}
+	} else {
+			// TODO Make this allowable, triggering matchmaking for
+			//   GridResource
+		fprintf(stderr, "\nERROR: No resource identifier was found.\n" );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( !unified_syntax && JobGridType &&
+		 ( stricmp (JobGridType, "gt2") == MATCH ||
+		   stricmp (JobGridType, "gt3") == MATCH ||
+		   stricmp (JobGridType, "gt4") == MATCH ||
+		   stricmp (JobGridType, "oracle") == MATCH ||
+		   stricmp (JobGridType, "nordugrid") == MATCH ) ) {
+
+		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
+				 NULL_JOB_CONTACT );
+		InsertJobExpr (buffer);
+	}
+
+	if ( JobGridType == NULL ||
+		 stricmp (JobGridType, "gt2") == MATCH ||
+		 stricmp (JobGridType, "gt3") == MATCH ||
+		 stricmp (JobGridType, "gt4") == MATCH ||
+		 stricmp (JobGridType, "oracle") == MATCH ||
+		 stricmp (JobGridType, "nordugrid") == MATCH ) {
 
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
 			sprintf( buffer, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
@@ -3539,17 +3660,16 @@ SetGlobusParams()
 		}
 	}
 
-	if ( (use_gridshell = condor_param(GridShell, ATTR_USE_GRID_SHELL)) ) {
+	if ( (tmp = condor_param(GridShell, ATTR_USE_GRID_SHELL)) ) {
 
-		if( use_gridshell[0] == 't' || use_gridshell[0] == 'T' ) {
-			MyString tmp;
-			tmp.sprintf( "%s = TRUE", ATTR_USE_GRID_SHELL );
-			InsertJobExpr( tmp.GetCStr() );
+		if( tmp[0] == 't' || tmp[0] == 'T' ) {
+			sprintf( buffer, "%s = TRUE", ATTR_USE_GRID_SHELL );
+			InsertJobExpr( buffer );
 		}
-		free(use_gridshell);
+		free(tmp);
 	}
 
-	if ( stricmp (JobGridType, "globus") == MATCH ||
+	if ( JobGridType == NULL ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
 		 stricmp (JobGridType, "gt3") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ) {
@@ -3576,58 +3696,104 @@ SetGlobusParams()
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
+}
 
-	if ( stricmp ( JobGridType, "condor" ) == MATCH ) {
+void
+SetGSICredentials()
+{
+	char *tmp;
 
-		char *remote_schedd;
-		char *remote_pool;
+		// Find the X509 user proxy
+		// First param for it in the submit file. If it's not there
+		// and the job type requires an x509 proxy (globus, nordugrid),
+		// then check the usual locations (as defined by GSI) and
+		// bomb out if we can't find it.
 
-		if ( !(remote_schedd = condor_param( RemoteSchedd, ATTR_REMOTE_SCHEDD ) ) ) {
-			fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" parameter\n",
-					RemoteSchedd );
-			DoCleanup( 0, 0, NULL );
-			exit( 1 );
+	char *proxy_file = condor_param( X509UserProxy );
+
+	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
+		 JobGridType != NULL &&
+		 (stricmp (JobGridType, "gt2") == MATCH ||
+		  stricmp (JobGridType, "gt3") == MATCH ||
+		  stricmp (JobGridType, "gt4") == MATCH ||
+		  stricmp (JobGridType, "nordugrid") == MATCH)) {
+
+		proxy_file = get_x509_proxy_filename();
+		if ( proxy_file == NULL ) {
+
+			fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
+			fprintf( stderr, "x509 user proxy is required for gt2, gt3, gt4 or nordugrid jobs\n");
+			exit (1);
 		}
-
-		if ( !(remote_pool = condor_param( RemotePool, ATTR_REMOTE_POOL ) ) &&
-			 unified_syntax ) {
-			fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" parameter\n",
-					RemotePool );
-			DoCleanup( 0, 0, NULL );
-			exit( 1 );
-		}
-
-		if ( unified_syntax ) {
-			sprintf( buffer, "%s = \"condor %s %s\"", ATTR_GRID_RESOURCE,
-					 remote_schedd, remote_pool );
-			InsertJobExpr( buffer );
-		} else {
-			sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_SCHEDD,
-					 remote_schedd );
-			InsertJobExpr (buffer);
-
-			if ( remote_pool ) {
-				sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_POOL,
-						 remote_pool );
-				InsertJobExpr ( buffer );
-			}
-		}
-
-		if ( strstr(remote_schedd,"$$") ) {
-
-			// We need to perform matchmaking on the job in order to find
-			// the RemoteSchedd.
-			sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
-			InsertJobExpr (buffer);
-			sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
-			InsertJobExpr (buffer);
-			sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
-			InsertJobExpr (buffer);
-		}
-
-		free( remote_schedd );
-		free( remote_pool );
 	}
+
+	if (proxy_file != NULL) {
+		if ( proxy_file[0] == '#' ) {
+			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+						   &proxy_file[1]);
+			InsertJobExpr(buffer);	
+
+//			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
+//						   proxy_file);
+//			InsertJobExpr(buffer);	
+			free( proxy_file );
+		} else {
+#ifndef WIN32
+				// Versions of Condor prior to 6.7.3 set a different
+				// value for X509UserProxySubject. Specifically, the
+				// proxy's subject is used rather than the identity
+				// (the subject this is a proxy for), and spaces are
+				// converted to underscores. The elimination of spaces
+				// is important, as the proxy subject gets passed on
+				// the command line to the gridmanager in these older
+				// versions and daemon core's CreateProcess() can't
+				// handle spaces in command line arguments. So if
+				// we're talking to an older schedd, use the old format.
+			CondorVersionInfo vi( MySchedd->version() );
+
+			if ( check_x509_proxy(proxy_file) != 0 ) {
+				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				exit( 1 );
+			}
+
+			/* Insert the proxy subject name into the ad */
+			char *proxy_subject;
+			if ( !vi.built_since_version(6,7,3) ) {
+				proxy_subject = x509_proxy_subject_name(proxy_file);
+			} else {
+				proxy_subject = x509_proxy_identity_name(proxy_file);
+			}
+			if ( !proxy_subject ) {
+				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				exit( 1 );
+			}
+			/* Dreadful hack: replace all the spaces in the cert subject
+			* with underscores.... why?  because we need to pass this
+			* as a command line argument to the gridmanager, and until
+			* daemoncore handles command-line args w/ an argv array, spaces
+			* will cause trouble.  
+			*/
+			if ( !vi.built_since_version(6,7,3) ) {
+				char *space_tmp;
+				do {
+					if ( (space_tmp = strchr(proxy_subject,' ')) ) {
+						*space_tmp = '_';
+					}
+				} while (space_tmp);
+			}
+			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+						   proxy_subject);
+			InsertJobExpr(buffer);	
+			free( proxy_subject );
+#endif
+
+			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
+						   full_path(proxy_file));
+			InsertJobExpr(buffer);	
+			free( proxy_file );
+		}
+	}
+
 
 	//ckireyev: MyProxy-related crap
 	if ((tmp = condor_param (ATTR_MYPROXY_HOST_NAME))) {
@@ -4087,99 +4253,6 @@ queue(int num)
 		}
 		SetMachineCount();
 
-			// Find the X509 user proxy
-			// First param for it in the submit file. If it's not there
-			// and the job type requires an x509 proxy (globus, nordugrid),
-			// then check the usual locations (as defined by GSI) and
-			// bomb out if we can't find it.
-
-		char *proxy_file = condor_param( X509UserProxy );
-
-		if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
-			 (stricmp (JobGridType, "globus") == MATCH ||
-			  stricmp (JobGridType, "gt2") == MATCH ||
-			  stricmp (JobGridType, "gt3") == MATCH ||
-			  stricmp (JobGridType, "gt4") == MATCH ||
-			  stricmp (JobGridType, "nordugrid") == MATCH)) {
-
-			proxy_file = get_x509_proxy_filename();
-			if ( proxy_file == NULL ) {
-
-				fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-				fprintf( stderr, "x509 user proxy is required for globus, gt2, gt3, gt4 or nordugrid jobs\n");
-				exit (1);
-			}
-		}
-
-		if (proxy_file != NULL) {
-			if ( proxy_file[0] == '#' ) {
-				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
-							   &proxy_file[1]);
-				InsertJobExpr(buffer);	
-
-//				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-//							   proxy_file);
-//				InsertJobExpr(buffer);	
-				free( proxy_file );
-			} else {
-#ifndef WIN32
-					// Versions of Condor prior to 6.7.3 set a different
-					// value for X509UserProxySubject. Specifically, the
-					// proxy's subject is used rather than the identity
-					// (the subject this is a proxy for), and spaces are
-					// converted to underscores. The elimination of spaces
-					// is important, as the proxy subject gets passed on
-					// the command line to the gridmanager in these older
-					// versions and daemon core's CreateProcess() can't
-					// handle spaces in command line arguments. So if
-					// we're talking to an older schedd, use the old format.
-				CondorVersionInfo vi( MySchedd->version() );
-
-				if ( check_x509_proxy(proxy_file) != 0 ) {
-					fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-					exit( 1 );
-				}
-
-				/* Insert the proxy subject name into the ad */
-				char *proxy_subject;
-				if ( !vi.built_since_version(6,7,3) ) {
-					proxy_subject = x509_proxy_subject_name(proxy_file);
-				} else {
-					proxy_subject = x509_proxy_identity_name(proxy_file);
-				}
-				if ( !proxy_subject ) {
-					fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-					exit( 1 );
-				}
-				/* Dreadful hack: replace all the spaces in the cert subject
-				* with underscores.... why?  because we need to pass this
-				* as a command line argument to the gridmanager, and until
-				* daemoncore handles command-line args w/ an argv array, spaces
-				* will cause trouble.  
-				*/
-				if ( !vi.built_since_version(6,7,3) ) {
-					char *space_tmp;
-					do {
-						if ( (space_tmp = strchr(proxy_subject,' ')) ) {
-							*space_tmp = '_';
-						}
-					} while (space_tmp);
-				}
-				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
-							proxy_subject);
-				InsertJobExpr(buffer);	
-				free( proxy_subject );
-#endif
-
-						
-				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-							full_path(proxy_file));
-				InsertJobExpr(buffer);	
-				free( proxy_file );
-			}
-		}
-	
-
 		/* For MPI only... we have to define $(NODE) to some string
 		here so that we don't break the param parser.  In the
 		MPI shadow, we'll convert the string into an integer
@@ -4234,9 +4307,9 @@ queue(int num)
 		SetNoopJobExitSignal();
 		SetNoopJobExitCode();
 		SetLeaveInQueue();
-			//SetArguments needs to be last for Globus universe args
 		SetArguments();
 		SetGlobusParams();
+		SetGSICredentials();
 		SetMatchListLen();
 		SetDAGNodeName();
 		SetDAGManJobId();
