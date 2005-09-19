@@ -1313,10 +1313,20 @@ int GlobusJob::doEvaluateState()
 					WriteGlobusSubmitFailedEventToUserLog( jobAd,
 														   submitFailureCode,
 														   gahp->globus_gram_client_error_string(submitFailureCode) );
+					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
+					if ( wantRematch ) {
 						// We go to CLEAR_REQUEST here so that wantRematch
-						// will be evaluated
-					doResubmit = 1;
-					gmState = GM_CLEAR_REQUEST;
+						// will be acted upon
+						doResubmit = 1;
+						gmState = GM_CLEAR_REQUEST;
+					} else {
+						// We don't go to CLEAR_REQUEST here because it will
+						// clear out globusError, which we want to save once
+						// we run out of submit attempts.
+						// TODO We need a better solution to this, so that
+						//   we always go to the same state.
+						gmState = GM_UNSUBMITTED;
+					}
 					reevaluate_state = true;
 				}
 			} else if ( condorState == REMOVED || condorState == HELD ) {

@@ -44,6 +44,7 @@ GetOptions (
     'test-src=s'      => $opt_test_src,
     'nmi-glue=s'      => $opt_nmi_glue,
     'remote_declare_args=s'   => $opt_remote_declare_args,
+    'workspace'       => $opt_workspace
 );
 
 
@@ -92,6 +93,12 @@ my $NIGHTLY_IDS_FILE = "$cwd/test_ids";
 
 mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
 chdir($workspace) || die "Can't chdir($workspace): $!\n";
+
+# This is a bit of a hack. Needed to make workspace build work.
+if (defined $opt_workspace) {
+  $opt_tag = 'workspace_build_1.2.3';
+  $opt_module = 'Condor';
+}
 
 if (defined $opt_buildid) {
     if (not defined($opt_tag) ) {

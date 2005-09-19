@@ -22,12 +22,14 @@ C_PLUS_FLAGS = $(CFLAGS)
  * Core C++ Functionality 
  ***************************/
 
+#if !defined(IS_HPUX10)
 DESC(job_core-cpp_exception_std,"C++ exception handling")
 CBUILD($(CC),job_core-cpp_exception_std,C)
 DEP_SYMLINK_EXT(job_core-cpp_exception_std,cmd)
 RUN(job_core-cpp_exception_std)
 TESTCLASS(job_core-cpp_exception_std,framework)
 TESTCLASS(job_core-cpp_exception_std,quick)
+#endif
 
 DESC(job_core-cpp_mem-alloc_std,"Memory allocation and constructors")
 CBUILD($(CC),job_core-cpp_mem-alloc_std,C)
