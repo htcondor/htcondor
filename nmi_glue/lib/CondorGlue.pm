@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.4.14 2005-09-12 04:47:37 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.4.15 2005-09-19 21:18:18 pfc Exp $
 #
 ######################################################################
 
@@ -82,6 +82,9 @@ sub ProcessOptions
 
     if ( defined($opt_tag) or defined($opt_module) ) {
         print "You specified --tag=$opt_tag and --module=$opt_module\n";
+	if( $opt_module !=~ /_BUILD$/ ) {
+	    print STDERR "warning: module name should end in _BUILD to include externals\n";
+	}
         if ( defined ($opt_tag) and defined($opt_module) ) {
             $tags{"$opt_tag"} = $opt_module;
         } else {
@@ -402,7 +405,7 @@ This pulls the nightly tags file from http://www.cs.wisc.edu/condor/nwo-build-ta
 condor source code tag to be fetched from cvs
 
 --module
-condor source code module to be fetched from cvs
+condor source code module to be fetched from cvs (note: should end in _BUILD)
 
 --notify
 List of users to be notified about the results
