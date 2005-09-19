@@ -360,6 +360,14 @@ GLIDEIN_SERVER_URLS = \
   http://www.cs.wisc.edu/condor/glidein/binaries \
   gsiftp://gridftp.cs.wisc.edu/p/condor/public/binaries/glidein
 
+## List the sites you want to GlideIn to on the GLIDEIN_SITES. For example, 
+## if you'd like to GlideIn to some Alliance GiB resources, 
+## uncomment the line below.
+## Make sure that $(GLIDEIN_SITES) is included in HOSTALLOW_READ and
+## HOSTALLW_WRITE, or else your GlideIns won't be able to join your pool.
+#GLIDEIN_SITES = *.ncsa.uiuc.edu, *.cs.wisc.edu, *.mcs.anl.gov 
+GLIDEIN_SITES = 
+
 ##  If your site needs to use UID_DOMAIN settings (defined above) that
 ##  are not real Internet domains that match the hostnames, you can
 ##  tell Condor to trust whatever UID_DOMAIN a submit machine gives to
@@ -386,6 +394,28 @@ GLIDEIN_SERVER_URLS = \
 ## it being defined to False. Set it to True to allow the shadow to execute
 ## arbitrary shell code from the user job.
 #SHADOW_ALLOW_UNSAFE_REMOTE_EXEC = False
+
+## KEEP_OUTPUT_SANDBOX is an optional feature to tell Condor-G to not
+## remove the job spool when the job leaves the queue.  To use, just
+## set to TRUE.  Since you will be operating Condor-G in this manner,
+## you may want to put leave_in_queue = false in your job submit
+## description files, to tell Condor-G to simply remove the job from
+## the queue immediately when the job completes (since the output files
+## will stick around no matter what).
+#KEEP_OUTPUT_SANDBOX = False
+
+## This setting tells the negotiator to ignore user priorities.  This
+## avoids problems where jobs from different users won't run when using
+## condor_advertise instead of a full-blown startd (some of the user
+## priority system in Condor relies on information from the startd --
+## we will remove this reliance when we support the user priority
+## system for grid sites in the negotiator; for now, this setting will
+## just disable it).
+#NEGOTIATOR_IGNORE_USER_PRIORITIES = False
+
+## These are the directories used to locate classad plug-in functions
+#CLASSAD_SCRIPT_DIRECTORY =
+#CLASSAD_LIB_PATH =
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
@@ -1444,7 +1474,7 @@ GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 ## setting, which is a string to insert into a job submit description if the
 ## job does not try and define it's own universe
 ##
-#DEFAULT_UNIVERSE = globus
+#DEFAULT_UNIVERSE = grid
 
 #
 # The Cred_min_time_left is the first-pass at making sure that Condor-G
@@ -1455,6 +1485,12 @@ GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 # 2 hours seemed like a reasonable default.
 #
 CRED_MIN_TIME_LEFT		= 120 
+
+
+## 
+## The GridMonitor allows you to submit many more jobs to a GT2 GRAM server
+## than is normally possible.
+ENABLE_GRID_MONITOR = TRUE
 
 ##
 ## The location of the wrapper for invoking
