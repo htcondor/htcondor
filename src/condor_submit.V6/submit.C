@@ -54,6 +54,7 @@
 #include "sig_install.h"
 #include "access.h"
 #include "daemon.h"
+#include "match_prefix.h"
 
 #include "extArray.h"
 #include "HashTable.h"
@@ -86,6 +87,7 @@ char	*Architecture;
 char	*Spool;
 char	*Flavor;
 char	*ScheddName = NULL;
+char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
 char	*My_fs_domain;
 char    JobRequirements[2048];
@@ -564,28 +566,22 @@ main( int argc, char *argv[] )
 
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
-			switch( ptr[0][1] ) {
-			case 'v':
+			if ( match_prefix( ptr[0], "-verbose" ) ) {
 				Quiet = 0;
-				break;
-			case 'd':
-				if (ptr[0][2] == 'e') {
-					// dprintf to console
-					Termlog = 1;
-					dprintf_config ("TOOL", 2 );
-				} else {
-					DisableFileChecks = 1;
-				}
-				break;
-			case 's':
+			} else if ( match_prefix( ptr[0], "-disable" ) ) {
+				DisableFileChecks = 1;
+			} else if ( match_prefix( ptr[0], "-debug" ) ) {
+				// dprintf to console
+				Termlog = 1;
+				dprintf_config( "TOOL", 2 );
+			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
-				break;
-			case 'r':
+			} else if ( match_prefix( ptr[0], "-remote" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
 				if( !(--argc) || !(*(++ptr)) ) {
-					fprintf( stderr, "%s: -r requires another argument\n",
+					fprintf( stderr, "%s: -remote requires another argument\n",
 							 MyName );
 					exit(1);
 				}
@@ -597,10 +593,9 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
-				break;
-			case 'n':
+			} else if ( match_prefix( ptr[0], "-name" ) ) {
 				if( !(--argc) || !(*(++ptr)) ) {
-					fprintf( stderr, "%s: -n requires another argument\n",
+					fprintf( stderr, "%s: -name requires another argument\n",
 							 MyName );
 					exit(1);
 				}
@@ -612,24 +607,39 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
-				break;
-			case 'a':
+			} else if ( match_prefix( ptr[0], "-append" ) ) {
 				if( !(--argc) || !(*(++ptr)) ) {
-					fprintf( stderr, "%s: -a requires another argument\n",
+					fprintf( stderr, "%s: -append requires another argument\n",
 							 MyName );
 					exit( 1 );
 				}
 				extraLines.Append( *ptr );
-				break;
-			case 'p':
+			} else if ( match_prefix( ptr[0], "-password" ) ) {
 				if( !(--argc) || !(*(++ptr)) ) {
-					fprintf( stderr, "%s: -p requires another argument\n",
+					fprintf( stderr, "%s: -password requires another argument\n",
 							 MyName );
 				}
 				myproxy_password = strdup (*ptr);
-				break;
-			default:
+			} else if ( match_prefix( ptr[0], "-pool" ) ) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -pool requires another argument\n",
+							 MyName );
+					exit(1);
+				}
+				if( PoolName ) {
+					delete [] PoolName;
+				}
+					// TODO We should try to resolve the name to a full
+					//   hostname, but get_full_hostname() doesn't like
+					//   seeing ":<port>" at the end, which is valid for a
+					//   collector name.
+				PoolName = strnewp( *ptr );
+			} else if ( match_prefix( ptr[0], "-help" ) ) {
 				usage();
+				exit( 0 );
+			} else {
+				usage();
+				exit( 1 );
 			}
 		} else {
 			cmd_file = *ptr;
@@ -646,7 +656,7 @@ main( int argc, char *argv[] )
 
 		// Instantiate our DCSchedd so we can locate and communicate
 		// with our schedd.  
-	MySchedd = new DCSchedd( ScheddName, NULL );
+	MySchedd = new DCSchedd( ScheddName, PoolName );
 	if( ! MySchedd->locate() ) {
 		if( ScheddName ) {
 			fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
@@ -4795,18 +4805,19 @@ usage()
 {
 	fprintf( stderr, "Usage: %s [options] [cmdfile]\n", MyName );
 	fprintf( stderr, "	Valid options:\n" );
-	fprintf( stderr, "	-v\t\tverbose output\n" );
-	fprintf( stderr, "	-n schedd_name\tsubmit to the specified schedd\n" );
+	fprintf( stderr, "	-verbose\t\tverbose output\n" );
+	fprintf( stderr, "	-name <name>\t\tsubmit to the specified schedd\n" );
 	fprintf( stderr,
-			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
+			 "	-remote <name>\t\tsubmit to the specified remote schedd\n"
+			 "                \t\t(implies -spool)\n" );
 	fprintf( stderr,
-			 "	-a line       \tadd line to submit file before processing\n"
-			 "                \t(overrides submit file; multiple -a lines ok)\n" );
-	fprintf( stderr, "	-d\t\tdisable file permission checks\n\n" );
-	fprintf( stderr, "	-s\t\tspool all files to the schedd\n\n" );
-	fprintf( stderr, "	-p password\tspecify password to MyProxy server\n\n" );
+			 "	-append <line>\t\tadd line to submit file before processing\n"
+			 "                \t\t(overrides submit file; multiple -a lines ok)\n" );
+	fprintf( stderr, "	-disable\t\tdisable file permission checks\n" );
+	fprintf( stderr, "	-spool\t\t\tspool all files to the schedd\n" );
+	fprintf( stderr, "	-password <password>\tspecify password to MyProxy server\n" );
+	fprintf( stderr, "	-pool <host>\t\tUse host as the central manager to query\n\n" );
 	fprintf( stderr, "	If [cmdfile] is omitted, input is read from stdin\n" );
-	exit( 1 );
 }
 
 
