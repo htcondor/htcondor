@@ -22,6 +22,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a \Opt{-pool} option to \Condor{submit}. It lets you submit
+jobs to a \Condor{schedd} in a different pool. The other options to
+\Condor{submit} now have long names, but the single-character verions
+still work.
+
 \item ``grid\_resource'' can now be used to directly set the new grid
 universe job attribute ``GridResource.'' The old attributes still work,
 but they will be ignored if ``grid\_resource'' is present. As a

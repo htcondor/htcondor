@@ -1,15 +1,15 @@
 \begin{ManPage}{\label{man-condor-submit}\Condor{submit}}{1}
 {Queue jobs for execution under Condor}
 \Synopsis \SynProg{\Condor{submit}}
-\oOpt{---}
-\oOpt{-v}
-\oOptArg{-n}{schedd\_name}
-\oOptArg{-r}{schedd\_name}
-\oOpt{-d}
+\oOpt{-verbose}
+\oOptArg{-name}{schedd\_name}
+\oOptArg{-remote}{schedd\_name}
+\oOptArg{-pool}{pool\_name}
+\oOpt{-disable}
 \ToolDebugOption
 % this option needs the dots in boldface, so using the macro oOptArg won't work
-\Lbr\Opt{-a} \Arg{command} \Opt{\Dots}\Rbr 
-\oOpt{-s}
+\Lbr\Opt{-append} \Arg{command} \Opt{\Dots}\Rbr 
+\oOpt{-spool}
 \oArg{submit description file}
 
 \index{Condor commands!condor\_submit}
@@ -1751,45 +1751,39 @@ character are ignored by the submit description file parser.
 
 \begin{Options}
 
-\OptItem{\Opt{---}}{Accept the command file from stdin.}
-\OptItem{\Opt{-v}}{Verbose output - display the created job class-ad}
+\OptItem{\Opt{-verbose}}{Verbose output - display the created job class-ad}
 
-\OptItem{\OptArg{-n}{schedd\_name}}{Submit to the specified schedd. This option is used when there is more than one schedd running on the submitting machine}
+\OptItem{\OptArg{-name}{schedd\_name}}{Submit to the specified schedd. This option is used when you want to submit to a schedd other than the default local one.}
 
-\OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
-will be submitted to the schedd on the specified remote host. On Unix
-systems, the Condor administrator for you site must override the default 
-AUTHENTICATION\_METHODS configuration setting to enable remote file system 
-(FS\_REMOTE) authentication.}
+\OptItem{\OptArg{-remote}{schedd\_name}}{Submit to the specified schedd, 
+spooling all required input files over the network connection. This option is equivalent to using both -name and -spool.}
 
-\OptItem{\Opt{-d}}{Disable file permission checks.}
+\OptItem{\OptArg{-pool}{pool\_name}}{Look in the specified pool for the schedd
+to submit to. This option is used with \Opt{-name} or \Opt{-remote}.}
+
+\OptItem{\Opt{-disable}}{Disable file permission checks.}
 
 \OptItem{\Opt{-debug}}{Cause debugging information to be sent to \File{stderr},
 based on the value of the configuration variable \MacroNI{SUBMIT\_DEBUG}.}
 
-\OptItem{\OptArg{-a}{command}}{Augment the commands in the submit 
+\OptItem{\OptArg{-append}{command}}{Augment the commands in the submit 
 description file with the given command.
 This command will be considered to immediately precede the Queue
 command within the submit description file, and come after all other
 previous commands.
 The submit description file is not modified.
-Multiple commands are specified by using the \Opt{-a} option multiple times.
-Each new command is given in a separate \Opt{-a} option.
+Multiple commands are specified by using the \Opt{-append} option multiple times.
+Each new command is given in a separate \Opt{-append} option.
 Commands with spaces in them will need to be enclosed in double quote
 marks.}
 
-\OptItem{\Opt{-s}}{Spool all required input files, user log, and
-proxy to the machine defined by the \Macro{SCHEDD\_HOST} configuration
-variable.
-This is an alternative way to accomplish the same as using
-the 
-\OptArg{-r}{schedd\_name} option.
-With the 
-\Opt{-s} option, the remote \Condor{schedd} is specified using
-a configuration variable instead of a command line argument.}
+\OptItem{\Opt{-spool}}{Spool all required input files, user log, and
+proxy over the connection to the schedd. After submission, you can modify
+your local copies of the files without affecting your jobs. Any output
+files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
 
 \OptItem{submit description file}{The pathname to the submit description
-file. If this optional argument is missing, then the commands are
+file. If this optional argument is missing or equal to ``-'', then the commands are
 taken from standard input.}
 
 \end{Options}
@@ -1883,7 +1877,7 @@ in this cluster will be written into file \File{foo.log}.
 \end{verbatim}
 
 \item{Command Line example:} The following command uses the
-\Opt{-a} option to add two commands before the job(s) is queued.
+\Opt{-append} option to add two commands before the job(s) is queued.
 A log file and an error log file are specified.
 The submit description file is unchanged.
 \footnotesize
