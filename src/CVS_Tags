@@ -1,3 +1,8 @@
+09/18/05 V6_7_11-merge-1
+   The state of the V6_7_11-branch for a (probably final) merge into
+   the V6_7-branch.  This includes a few last minute fixes for 6.7.11,
+   along with the results from V6_6-merge-47.
+
 09/15/05 V6_6-merge-47
    The state of the V6_6-branch for a merge into V6_7_11-branch.
    Mostly for the show-stopper startd bug when it hits errors trying
