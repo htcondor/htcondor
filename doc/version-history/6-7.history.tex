@@ -22,7 +22,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item ``grid\_resource'' can now be used to directly set the new grid
+universe job attribute ``GridResource.'' The old attributes still work,
+but they will be ignored if ``grid\_resource'' is present. As a
+side-effect, ``stream\_output'' and ``stream\_error'' will default to
+``False'' for all jobs.
 
 \end{itemize}
 
