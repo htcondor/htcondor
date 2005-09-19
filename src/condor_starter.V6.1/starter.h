@@ -164,6 +164,7 @@ public:
 		/** Command handler for ClassAd-only protocol commands */
 	int classadCommand( int, Stream* );
 
+	int updateX509Proxy( int, Stream* );
 protected:
 	List<UserProc> JobList;
 	List<UserProc> CleanedUpJobList;

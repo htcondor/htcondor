@@ -32,6 +32,7 @@
 #include "internet.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dc_starter.h"
+#include "directory.h"
 
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
@@ -78,6 +79,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	began_execution = false;
 	supports_reconnect = false;
 	next_reconnect_tid = -1;
+	proxy_check_tid = -1;
+	last_proxy_timestamp = time(0); // We haven't sent the proxy to the shadow yet, so anything before "now" means it hasn't changed.
 	reconnect_attempts = 0;
 
 	lease_duration = -1;
@@ -98,6 +101,10 @@ RemoteResource::~RemoteResource()
 	if ( fs_domain     ) delete [] fs_domain;
 	if ( claim_sock    ) delete claim_sock;
 	if ( jobAd         ) delete jobAd;
+	if( proxy_check_tid != -1) {
+		daemonCore->Cancel_Timer(proxy_check_tid);
+		proxy_check_tid = -1;
+	}
 }
 
 
@@ -1140,6 +1147,16 @@ RemoteResource::beginExecution( void )
 
 	began_execution = true;
 	setResourceState( RR_EXECUTING );
+	
+    if( jobAd->LookupString(ATTR_X509_USER_PROXY, proxy_path) ) {
+		// This job has a proxy.  We need to check it regularlly to
+		// potentially upload a renewed one.
+		const int PROXY_CHECK_INTERVAL = 60; 
+		ASSERT(proxy_check_tid == -1);
+		proxy_check_tid = daemonCore->Register_Timer( 0, PROXY_CHECK_INTERVAL,
+							(TimerHandlercpp)&RemoteResource::checkX509Proxy,
+							"RemoteResource::checkX509Proxy()", this );
+    }
 
 		// Let our shadow know so it can make global decisions (for
 		// example, should it log a JOB_EXECUTE event)
@@ -1506,3 +1523,56 @@ RemoteResource::requestReconnect( void )
 		// wait to service requests on the syscall or command socket
 	return;
 }
+
+
+bool
+RemoteResource::updateX509Proxy(const char * filename)
+{
+	ASSERT(filename);
+	ASSERT(starterAddress);
+
+	DCStarter starter( starterAddress );
+
+	dprintf( D_FULLDEBUG, "Attempting to connect to starter %s to update X509 proxy\n", 
+			 starterAddress );
+
+	DCStarter::X509UpdateStatus ret = starter.updateX509Proxy(filename);
+	switch(ret) {
+		case DCStarter::XUS_Error:
+			dprintf( D_FULLDEBUG, "Failed to send updated X509 proxy to starter.\n");
+			return false;
+		case DCStarter::XUS_Okay:
+			dprintf( D_FULLDEBUG, "Successfully sent updated X509 proxy to starter.\n");
+			return true;
+		case DCStarter::XUS_Declined:
+			dprintf( D_FULLDEBUG, "Starter doesn't want updated X509 proxies.\n");
+			daemonCore->Cancel_Timer(proxy_check_tid);
+			return true;
+	}
+	dprintf( D_FULLDEBUG, "Unexpected response %d from starter when "
+		"updating X509 proxy.  Treating as failure.\n", ret);
+	return false;
+}
+
+void 
+RemoteResource::checkX509Proxy( void )
+{
+	if(proxy_path.IsEmpty()) {
+		/* Harmless, but suspicious. */
+		return;
+	}
+	
+	StatInfo si(proxy_path.Value());
+	time_t lastmod = si.GetModifyTime();
+	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %d, local %d (%d difference)\n",
+		last_proxy_timestamp, lastmod, lastmod - last_proxy_timestamp);
+	if(lastmod <= last_proxy_timestamp) {
+		// No change.
+		return;
+	}
+
+	// Proxy file updated.  Time to upload
+	last_proxy_timestamp = lastmod;
+	updateX509Proxy(proxy_path.Value());
+}
+

@@ -67,6 +67,13 @@ public:
 	bool reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock, 
 					int timeout = -1 );
 
+	// Error - Failed to update, a problem
+	// Okay - Success.  Updated
+	// Declined - Success.  Other side doesn't want it.  Don't bother
+	//      to try again.
+	enum X509UpdateStatus { XUS_Error = 0, XUS_Okay = 1, XUS_Declined = 2 };
+	X509UpdateStatus updateX509Proxy(const char * filename);
+
  private:
 	bool is_initialized;
 

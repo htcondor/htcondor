@@ -167,6 +167,10 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
 		Register_Command( CA_CMD, "CA_CMD",
 						  (CommandHandlercpp)&CStarter::classadCommand,
 						  "CStarter::classadCommand", this, WRITE );
+	daemonCore->
+		Register_Command( UPDATE_GSI_CRED, "UPDATE_GSI_CRED",
+						  (CommandHandlercpp)&CStarter::updateX509Proxy,
+						  "CStarter::updateX509Proxy", this, WRITE );
 
 
 	sysapi_set_resource_limits();
@@ -1006,6 +1010,16 @@ CStarter::classadCommand( int, Stream* s )
 		return FALSE;
 	}
 	return TRUE;
+}
+
+
+int 
+CStarter::updateX509Proxy( int, Stream* s )
+{
+	ASSERT(s);
+	ReliSock* rsock = (ReliSock*)s;
+	ASSERT(jic);
+	return jic->updateX509Proxy(rsock) ? TRUE : FALSE;
 }
 
 

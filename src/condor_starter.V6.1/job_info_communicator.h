@@ -248,6 +248,14 @@ public:
 		*/
 	virtual bool usingFileTransfer( void );
 
+		/* Receive new X509 proxy from the shadow
+			
+			Default implementation always fails.
+
+			jic_shadow knows how to do the right thing.
+		 */
+	virtual bool updateX509Proxy( ReliSock * s );
+
 
 protected:
 

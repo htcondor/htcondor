@@ -351,6 +351,9 @@ private:
 		// Are we using file transfer.  Overridden from parent classes version.
 	bool usingFileTransfer( void );
 
+		// The shadow is feeding us a new proxy. Override from parent
+	bool updateX509Proxy(ReliSock * s);
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //

@@ -116,3 +116,57 @@ DCStarter::reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock,
 	
 
 }
+
+// Based on dc_schedd.C's updateGSIcredential
+DCStarter::X509UpdateStatus
+DCStarter::updateX509Proxy( const char * filename)
+{
+	ReliSock rsock;
+	rsock.timeout(60);
+	if( ! rsock.connect(_addr) ) {
+		dprintf(D_ALWAYS, "DCStarter::updateX509Proxy: "
+			"Failed to connect to starter %s\n", _addr);
+		return XUS_Error;
+	}
+
+	CondorError errstack;
+	if( ! startCommand(UPDATE_GSI_CRED, &rsock, 0, &errstack) ) {
+		dprintf( D_ALWAYS, "DCStarter::updateX509Proxy: "
+				 "Failed send command to the starter: %s\n",
+				 errstack.getFullText());
+		return XUS_Error;
+	}
+		// If we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, &errstack )) {
+		dprintf( D_ALWAYS, 
+				"DCStarter::updateX509Proxy authentication failure: %s\n",
+				 errstack.getFullText() );
+		return XUS_Error;
+	}
+
+		// Send the gsi proxy
+	filesize_t file_size = 0;	// will receive the size of the file
+	if ( rsock.put_file(&file_size,filename) < 0 ) {
+		dprintf(D_ALWAYS,
+			"DCStarter::updateX509Proxy "
+			"failed to send proxy file %s (size=%d)\n",
+			filename, file_size);
+		return XUS_Error;
+	}
+
+		// Fetch the result
+	rsock.decode();
+	int reply = 0;
+	rsock.code(reply);
+	rsock.eom();
+
+	switch(reply) {
+		case 0: return XUS_Error;
+		case 1: return XUS_Okay;
+		case 2: return XUS_Declined;
+	}
+	dprintf(D_ALWAYS, "DCStarter::updateX509Proxy: "
+		"remote side returned unknown code %d. Treating "
+		"as an error.\n", reply);
+	return XUS_Error;
+}

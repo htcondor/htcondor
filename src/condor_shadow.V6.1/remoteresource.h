@@ -326,6 +326,17 @@ class RemoteResource : public Service {
 		*/
 	virtual void attemptReconnect( void );
 
+		/** Check if the X509 has been updated, if so upload it to the shadow
+
+			Intended for use as a DaemonCore timer handler (thus, it's public),
+			but should be safe if you really feel like calling it yourself.
+		*/
+	virtual void checkX509Proxy( void );
+
+
+		// Try to send an updated X509 proxy down to the starter
+	bool updateX509Proxy(const char * filename);
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -389,6 +400,10 @@ private:
 	void requestReconnect( void );
 	int reconnect_attempts;
 	int next_reconnect_tid;
+	int proxy_check_tid;
+
+	MyString proxy_path;
+	time_t last_proxy_timestamp;
 
 		/** For debugging, print out the values of various statistics
 			related to our bookkeeping of suspend/resume activity for

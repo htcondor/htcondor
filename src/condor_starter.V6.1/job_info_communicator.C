@@ -344,6 +344,12 @@ JobInfoCommunicator::usingFileTransfer( void )
 	return false;
 }
 
+bool
+JobInfoCommunicator::updateX509Proxy( ReliSock *  )
+{
+	return false;
+}
+
 
 bool
 JobInfoCommunicator::initUserPrivNoOwner( void ) 
