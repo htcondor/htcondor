@@ -422,6 +422,7 @@ Reconfig()
 
 	ReconfigProxyManager();
 	GahpReconfig();
+	BaseJob::BaseJobReconfig();
 
 	JobType *job_type;
 	jobTypes.Rewind();

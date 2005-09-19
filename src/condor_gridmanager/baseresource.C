@@ -62,7 +62,9 @@ BaseResource::BaseResource( const char *resource_name )
 BaseResource::~BaseResource()
 {
  	daemonCore->Cancel_Timer( pingTimerId );
-	daemonCore->Cancel_Timer( updateLeasesTimerId );
+	if ( updateLeasesTimerId != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( updateLeasesTimerId );
+	}
 	if ( resourceName != NULL ) {
 		free( resourceName );
 	}

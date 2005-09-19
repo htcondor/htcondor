@@ -47,6 +47,24 @@ HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( HASH_TABLE_SIZE,
 HashTable<HashKey, BaseJob *> BaseJob::JobsByRemoteId( HASH_TABLE_SIZE,
 													   hashFunction );
 
+void BaseJob::BaseJobReconfig()
+{
+	int tmp_int;
+
+	if ( periodicPolicyEvalTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( periodicPolicyEvalTid );
+		periodicPolicyEvalTid = TIMER_UNSET;
+	}
+
+	tmp_int = param_integer( "PERIODIC_EXPR_INTERVAL", 300 );
+	if ( tmp_int != 0 ) {
+		periodicPolicyEvalTid = daemonCore->Register_Timer( tmp_int, tmp_int,
+							(TimerHandler)&BaseJob::EvalAllPeriodicJobExprs,
+							"EvalAllPeriodicJobExprs", (Service*)NULL );
+	}
+
+}
+
 BaseJob::BaseJob( ClassAd *classad )
 {
 	calcRuntimeStats = true;
@@ -90,12 +108,6 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobAd->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
 
 	jobAd->ClearAllDirtyFlags();
-
-	if ( periodicPolicyEvalTid == TIMER_UNSET ) {
-		periodicPolicyEvalTid = daemonCore->Register_Timer( 30,
-							(TimerHandler)&BaseJob::EvalAllPeriodicJobExprs,
-							"EvalAllPeriodicJobExprs", (Service*)NULL );
-	}
 
 	jobLeaseSentExpiredTid = TIMER_UNSET;
 	jobLeaseReceivedExpiredTid = TIMER_UNSET;
@@ -668,8 +680,6 @@ int BaseJob::EvalPeriodicJobExpr()
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalPeriodicJobExpr", 
 				action );
 	}
-
-	daemonCore->Reset_Timer( periodicPolicyEvalTid, 30 );
 
 	return 0;
 }

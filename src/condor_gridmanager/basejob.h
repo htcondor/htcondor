@@ -40,6 +40,8 @@ class BaseJob
 	BaseJob( ClassAd *ad );
 	virtual ~BaseJob();
 
+	static void BaseJobReconfig();
+
 	virtual void Reconfig() {}
 	void SetEvaluateState();
 	virtual int doEvaluateState();
