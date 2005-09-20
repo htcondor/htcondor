@@ -46,14 +46,17 @@ the proxy file is updated, it will be transfered to the running job.
 \item The \Condor{gridmanager} now evaluates the periodic job policy
 expressions at the interval set by \Macro{PERIODIC\_EXPR\_INTERVAL}.
 
+\item Fixed a bug which prevented standard universe from working on a linux 
+kernel post 2.6.12.2.
+
 \end{itemize}
 
 \noindent Changes:
 
 \begin{itemize}
 
-\item Added a couple missing parameters to to the example config file
-\begin{verbatim} condor_config.generic\end{verbatim}.
+\item Added a couple missing parameters to the example configuration file
+\File{condor\_config.generic}.
 
 \end{itemize}
 
@@ -140,9 +143,6 @@ are larger than 4 kbytes (by disabling TCP Nagle algorithm as appropriate).
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item Fixed a bug which prevented standard universe from working on a linux 
-kernel post 2.6.12.2.
 
 \item Fixed bug in the dedicated scheduler where if the \Condor{startd} 
 rejected a match, the \Condor{schedd} would never retry new matches 
