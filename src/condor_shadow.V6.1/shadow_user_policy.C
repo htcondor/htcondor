@@ -163,45 +163,11 @@ ShadowUserPolicy::RestoreJobTime( float old_run_time )
 void
 ShadowUserPolicy::doAction( int action, bool is_periodic ) 
 {
-	const char* firing_expr = user_policy.FiringExpression();
-	char* tmp = NULL;
-	ExprTree *tree, *rhs = NULL;
+	MyString reason;
 
-	tree = job_ad->Lookup( firing_expr );
-	if( tree && (rhs=tree->RArg()) ) {
-			// cool, we've found the right expression.  let's print it
-			// out to a string so we can use it.
-		rhs->PrintToNewStr( &tmp );
-	} else {
-			// this is really strange, we think the firing expr went
-			// off, but now we can't look it up in the job ad.
-		EXCEPT( "ShadowUserPolicy: Can't find %s in job ClassAd\n",
-				firing_expr );
-	}
-
-	int firing_value = user_policy.FiringExpressionValue();
-
-	MyString reason = "The ";
-	reason += firing_expr;
-	reason += " expression '";
-	reason += tmp;
-	free( tmp );
-
-	reason += "' evaluated to ";
-	switch( firing_value ) {
-	case 0:
-		reason += "FALSE";
-		break;
-	case 1:
-		reason += "TRUE";
-		break;
-	case -1:
-		reason += "UNDEFINED";
-		break;
-	default:
-		EXCEPT( "Unrecognized FiringExpressionValue: %d", 
-				firing_value ); 
-		break;
+	reason = user_policy.FiringReason();
+	if ( reason == "" ) {
+		EXCEPT( "ShadowUserPolicy: Empty FiringReason." );
 	}
 
 	switch( action ) {

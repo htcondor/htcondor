@@ -653,20 +653,25 @@ int BaseJob::EvalPeriodicJobExpr()
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
+	MyString reason = user_policy.FiringReason();
+	if ( reason == "" ) {
+		reason = "Unknown user policy expression";
+	}
+
 	switch( action ) {
 	case UNDEFINED_EVAL:
-		JobHeld( "Undefined job policy expression" );
+		JobHeld( reason.Value() );
 		SetEvaluateState();
 		break;
 	case STAYS_IN_QUEUE:
 			// do nothing
 		break;
 	case REMOVE_FROM_QUEUE:
-		JobRemoved( "Remove job policy expression became true" );
+		JobRemoved( reason.Value() );
 		SetEvaluateState();
 		break;
 	case HOLD_IN_QUEUE:
-		JobHeld( "Hold job policy expression became true" );
+		JobHeld( reason.Value() );
 		SetEvaluateState();
 		break;
 	case RELEASE_FROM_HOLD:
@@ -719,9 +724,14 @@ int BaseJob::EvalOnExitJobExpr()
 		jobAd->AssignExpr( ATTR_ON_EXIT_SIGNAL, "Undefined" );
 	}
 
+	MyString reason = user_policy.FiringReason();
+	if ( reason == "" ) {
+		reason = "Unknown user policy expression";
+	}
+
 	switch( action ) {
 	case UNDEFINED_EVAL:
-		JobHeld( "Undefined job policy expression" );
+		JobHeld( reason.Value() );
 		break;
 	case STAYS_IN_QUEUE:
 			// clean up job but don't set status to complete
@@ -730,7 +740,7 @@ int BaseJob::EvalOnExitJobExpr()
 		JobCompleted();
 		break;
 	case HOLD_IN_QUEUE:
-		JobHeld( "Hold job policy became true" );
+		JobHeld( reason.Value() );
 		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalAtExitJobExpr", 

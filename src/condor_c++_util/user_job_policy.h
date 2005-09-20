@@ -215,6 +215,13 @@ class UserPolicy
 		   return -1. */
         int FiringExpressionValue( void ) { return m_fire_expr_val; };
 	
+		/* This returns a string explaining what expression fired, useful
+		   for a Reason string in the job ad. If no firing expression
+		   occurred, then NULL is returned. The user does NOT free this
+		   memory and it is overwritten when FiringReason() is called
+		   again (for any UserPolicy object). */
+		const char* FiringReason(void);
+
 	private: /* functions */
 		/* This function inserts the four user job policy expressions with 
 			default values into the classad if they are not already present. */

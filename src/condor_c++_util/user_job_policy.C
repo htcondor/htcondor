@@ -538,7 +538,52 @@ const char* UserPolicy::FiringExpression(void)
 	return m_fire_expr;
 }
 
+const char* UserPolicy::FiringReason()
+{
+	static MyString reason;
 
+	if ( m_ad == NULL || m_fire_expr == NULL ) {
+		return NULL;
+	}
+
+	ExprTree *tree, *rhs = NULL;
+	tree = m_ad->Lookup( m_fire_expr );
+
+	// Get a formatted expression string
+	char* exprString = NULL;
+	if( tree && (rhs=tree->RArg()) ) {
+		rhs->PrintToNewStr( &exprString );
+	}
+
+	// Format up the reason string
+	reason.sprintf( "The %s expression '%s' evaluated to ",
+					m_fire_expr,
+					exprString ? exprString : "" );
+
+	// Free up the buffer from PrintToNewStr()
+	if ( exprString ) {
+		free( exprString );
+	}
+
+	// Get a string for it's value
+	switch( m_fire_expr_val ) {
+	case 0:
+		reason += "FALSE";
+		break;
+	case 1:
+		reason += "TRUE";
+		break;
+	case -1:
+		reason += "UNDEFINED";
+		break;
+	default:
+		EXCEPT( "Unrecognized FiringExpressionValue: %d", 
+				m_fire_expr_val ); 
+		break;
+	}
+
+	return reason.Value();
+}
 
 
 

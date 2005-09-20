@@ -1639,57 +1639,6 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 	}
 }
 
-/* Return a MyString describing the policy's FiringExpressions. */
-static MyString
-ExplainPolicyDecision(UserPolicy & policy, ClassAd * jobad)
-{
-	ASSERT(jobad);
-	const char *firing_expr = policy.FiringExpression();
-	if( ! firing_expr ) {
-		return "Unknown user policy expression";
-	}
-	MyString reason;
-
-	ExprTree *tree, *rhs = NULL;
-	tree = jobad->Lookup( firing_expr );
-
-	// Get a formatted expression string
-	char* exprString = NULL;
-	if( tree && (rhs=tree->RArg()) ) {
-		rhs->PrintToNewStr( &exprString );
-	}
-
-	// Format up the log entry
-	reason.sprintf( "The %s expression '%s' evaluated to ",
-					firing_expr,
-					exprString ? exprString : "" );
-
-	// Free up the buffer from PrintToNewStr()
-	if ( exprString ) {
-		free( exprString );
-	}
-
-	// Get a string for it's value
-	int firing_value = policy.FiringExpressionValue();
-	switch( firing_value ) {
-	case 0:
-		reason += "FALSE";
-		break;
-	case 1:
-		reason += "TRUE";
-		break;
-	case -1:
-		reason += "UNDEFINED";
-		break;
-	default:
-		EXCEPT( "Unrecognized FiringExpressionValue: %d", 
-				firing_value ); 
-		break;
-	}
-
-	return reason;
-}
-
 /*
 For a given job, evaluate any periodic expressions
 and abort, hold, or release the job as necessary.
@@ -1732,7 +1681,10 @@ PeriodicExprEval( ClassAd *jobad )
 	action = policy.AnalyzePolicy(PERIODIC_ONLY);
 
 	// Build a "reason" string for logging
-	MyString reason = ExplainPolicyDecision(policy,jobad);
+	MyString reason = policy.FiringReason();
+	if ( reason == "" ) {
+		reason = "Unknown user policy expression";
+	}
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
@@ -8341,7 +8293,10 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 		UserPolicy policy;
 		policy.Init(job_ad);
 		action = policy.AnalyzePolicy(PERIODIC_THEN_EXIT);
-		reason = ExplainPolicyDecision(policy,job_ad);
+		reason = policy.FiringReason();
+		if ( reason == "" ) {
+			reason = "Unknown user policy expression";
+		}
 	}
 	FreeJobAd(job_ad);
 	job_ad = NULL;
