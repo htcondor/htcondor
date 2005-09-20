@@ -33,6 +33,10 @@ but they will be ignored if ``grid\_resource'' is present. As a
 side-effect, ``stream\_output'' and ``stream\_error'' will default to
 ``False'' for all jobs.
 
+\item X509 user proxies are now updated for vanilla universe jobs.   If
+a job specifically sets x509userproxy and is using file transfer, when
+the proxy file is updated, it will be transfered to the running job.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
