@@ -126,7 +126,7 @@ the user \Login{condor}'s home directory resides on an NFS server.
 
 If there is no \Login{condor} user and group on the system, an
 administrator can specify which UID and GID the Condor daemons should
-use when they do not need root privileges in two ways, 
+use when they do not need root privileges in two ways:
 either with the \Env{CONDOR\_IDS} environment variable or the
 \Macro{CONDOR\_IDS} configuration file setting.
 In either case, the value should be the UID integer, followed by a
@@ -209,7 +209,7 @@ both with and without root access.
    This is nice for the user, since they get unlimited access to the
    machine, but awful for the machine owner or administrator.  If you
    trust the users submitting jobs to Condor, this might not be a
-   concern.  However, to ensure that the policy you choose is
+   concern.  To ensure, however, that the policy you choose is
    effectively enforced by Condor, the \Condor{startd} should be
    started as \Login{root}.
 
@@ -231,7 +231,7 @@ both with and without root access.
    and that would at least solve the system information problem.
 
 \item[\Condor{schedd}] The biggest problem running the \Condor{schedd}
-    without root access, is that the \Condor{shadow} processes which it
+    without root access is that the \Condor{shadow} processes which it
     spawns are stuck with the same UID the \Condor{schedd} has.  This
     means that users submitting their jobs must go out of their way
     to grant write access to user or group \Login{condor} (or whoever the
@@ -270,12 +270,12 @@ both with and without root access.
 \end{description}
 
 If you do choose to run Condor as non-root, then you may choose almost any
-user you like. A common choice is to use the \Login{condor} user: this
+user you like. A common choice is to use the \Login{condor} user; this
 simplifies the setup because Condor will look for its configuration
 files in the \Login{condor} user's directory. If you do not
 select the \Login{condor}
 user, then you will need to ensure that the configuration is set
-properly so that Condor can find it's configuration files. 
+properly so that Condor can find its configuration files. 
 
 If users will be submitting jobs as a user different than the user
 Condor is running as (perhaps you are running as the \Login{condor} user and
@@ -294,8 +294,8 @@ own accounts and start up the daemons (to run with the UID of the
 user).  As in the case where the daemons run as user \Login{condor}, there is
 no ability to switch UIDs or GIDs.  The daemons run as the UID and GID
 of the user who started them.  On a machine where jobs are submitted,
-the \Condor{shadow} daemons all run as this same user.  However, if
-other users on the machine are using Condor in this environment, the
+the \Condor{shadow} daemons all run as this same user. But if other
+users are using Condor on the machine in this environment, the
 \Condor{shadow} daemons for these other users' jobs execute with the
 UID of the user who started the daemons.  This is a security risk,
 since the Condor job of the other user has access to all the files and
@@ -327,7 +327,7 @@ configuration variable of the
 submitting and executing machines are different.
 
 When Condor cleans up after a executing a vanilla universe job,
-Condor does the best that it can by
+it does the best that it can by
 deleting all of the processes started by the job.
 Unfortunately, it is possible to fool Condor,
 and leave processes behind after Condor has cleaned up.
@@ -412,7 +412,7 @@ for details of this command.
 \index{cwd!of jobs}
 \index{current working directory}
 
-Any executing process has a notion of its current working directory.
+Every executing process has a notion of its current working directory.
 This is the directory that acts as the base for all file system
 access. 
 There are two current working directories for any Condor job:
@@ -445,16 +445,16 @@ This directory is world-writable, since a Condor job usually runs as user
 Normally, standard universe jobs would never access this directory,
 since all I/O system calls are passed back to the
 \Condor{shadow} daemon on the submit machine.
-However, in the event
-that the job that creates a core dump, the execute-side
-current working directory needs to be accessible by the job,
+In the event, however,
+that a job crashes and creates a core dump file, the execute-side
+current working directory needs to be accessible by the job
 so that it can write the core file.
 The core file is moved back to the submit machine,
 and the \Condor{shadow} daemon is informed.
 The \Condor{shadow} daemon
 sends e-mail to the job owner announcing the core file, and provides a
-pointer to the core file.
-The core file resides in the submit-side current working directory.
+pointer to where
+the core file resides in the submit-side current working directory.
 
 \index{UIDs in Condor|)}
 
@@ -464,7 +464,7 @@ The core file resides in the submit-side current working directory.
 
 Condor provides support for strong authentication, encryption,
 integrity assurance, as well as authorization.
-However, Condor does not turn on these
+Condor, however, does not turn on these
 features by default for two reasons.
 First, setting up strong
 authentication and authorization require extra support outside of
@@ -479,12 +479,13 @@ This form of security limits access to Condor based on IP addresses.
 For example,
 Condor can be configured to allow job submissions from everyone in the
 example.com domain,
-but administrator commands must be run from
+but administrator commands can only be run from
 the machine command.example.com.
-Host-based security does not distinguish users,
-so in the example, anyone that has access to the machine
-command.example.com may run administrator commands.
-Condor is subject to attacks that can impersonate IP addresses.
+But because host-based security does not distinguish users,
+anyone that has access to the machine
+command.example.com may execute administrator commands.
+
+Condor is also susceptible to attacks that can impersonate IP addresses.
 Although host-based security is limited,
 it is acceptable for many small installations,
 particularly if machines are on private networks.
@@ -507,7 +508,7 @@ Condor tools such as \Condor{submit} and \Condor{config\_val} are
 client tools.
 They communicate with daemons.
 The \Condor{submit} command communicates with the \Condor{schedd}.
-The \Condor{config\_val} command may communicate with any Condor daemon. 
+The \Condor{config\_val} command may communicate with any Condor daemon.
 
 Behind the scenes, Condor daemons also communicate with each other.
 For instance, the \Condor{negotiator} daemon will act as a client,
@@ -1817,8 +1818,8 @@ for integrity checks over all access levels.
 Where a specific macro is present, its value takes
 precedence over any default given.
 
-There is currently only one method used for integrity checking:
-a signed MD5 checksum.
+A signed MD5 checksum is currently the only available method
+for integrity checking.
 Its use is implied whenever integrity checks occur.
 If more methods are implemented, then there will be further
 macros to allow both the client and the daemon to specify
@@ -1848,53 +1849,51 @@ relevant security information for future use and greatly speed up the
 establishment of secure communications between the various Condor
 daemons.
 
-The first time a connection is made from one daemon to another, a
-session is established.  
-This session has a lifetime,
-after which it expires and can no longer be used.
-A new session must be created.
+A new session is established the first time a connection is made from one daemon to another.
+Each session has a fixed lifetime after which it will expire and
+a new session will need to be created again.
 But while a valid session exists, it can be re-used as many times as
-needed, thereby saving expense on re-establishing a connection. 
-A \Term{session key} that both sides know proves the
-identity of the entity on either end of the connection.
-The session key is exchanged securely by the use of
-a strong authentication method, such as Kerberos or GSI. 
-Other authentication methods such as \MacroNI{NTSSPI},
+needed, thereby preventing the need to continuously re-establish secure connections.
+Each entity of a connection will have access to a \Term{session key} that proves the
+identity of the other entity on the opposing side of the connection.
+This session key is exchanged securely using
+a strong authentication method, such as Kerberos or GSI.
+Other authentication methods, such as \MacroNI{NTSSPI},
 \MacroNI{FS\_REMOTE},  \MacroNI{CLAIMTOBE}, and
-\MacroNI{ANONYMOUS} do not support secure key exchange.
+\MacroNI{ANONYMOUS}, do not support secure key exchange.
 An entity
 listening on the wire may be able to impersonate the client or server
-in a session that does not use a strong authentication method. 
+in a session that does not use a strong authentication method.
 
-A secure sessions requires either encryption or integrity enabled. 
-If encryption is used, the session is restarted using the session key
-as the encryption key. 
-If integrity is used, the checksum includes the session key even
-though it is not transmitted. 
-In either case, the session can be trusted. 
-If neither encryption nor integrity are used,
-then it is possible for an
+Establishing a secure session requires that either the encryption or the integrity options be enabled.
+If the encryption capability is enabled, then the session will be restarted using the session key
+as the encryption key.
+If integrity capability is enabled, then the checksum includes the session key even
+though it is not transmitted.
+Without either of these two methods enabled,
+it is possible for an
 attacker to use an open session to make a connection to a daemon and
-use that connection for nefarious purposes. 
-The important rule here is: \emph{if you have authentication turned
-on, you should also turn on integrity and/or encryption}. 
+use that connection for nefarious purposes.
+It is strongly recommended that if \emph{you have authentication turned
+on, you should also turn on integrity and/or encryption}.
 
-It is possible to disable sessions by setting
-\MacroNI{SEC\_DEFAULT\_NEGOTIATION}. This takes parameters similar to
-the other security settings, and can be required, preferred, optional,
-or never. 
+The configuration parameter \MacroNI{SEC\_DEFAULT\_NEGOTIATION} will allow
+a user to set the default level of secure sessions in Condor.
+Like other security settings, the possible values for this parameter can be
+\verb@REQUIRED@, \verb@PREFERRED@, \verb@OPTIONAL@,
+or \verb@NEVER@.
 If you disable sessions and you have authentication turned
 on, then most authentication (other than commands like
 \Condor{submit}) will fail because Condor requires sessions when you
 have security turned on. 
 On the other hand, if you are not using strong security in Condor, but
 you are relying on the default host-based security, turning off
-sessions may be useful in rare situations, such as debugging problems
+sessions may be useful in certain situations. These might include debugging problems
 with the security session management or slightly decreasing the memory
 consumption of the daemons, which keep track of the sessions in use. 
 
-Session lifetimes have been tuned in a default installation
-of Condor.  
+Session lifetimes for specific daemons are already properly configured in the default installation
+of Condor.
 Condor tools such as \Condor{q} and \Condor{status} create a
 session that expires after one minute. 
 Theoretically they should not create a session at all,
@@ -1917,54 +1916,55 @@ Condor}
 \index{security!host-based}
 
 This section describes the mechanisms for setting up Condor's
-host-based security.  
-This is now an outdated form of implementing security at
-the level of machine access. 
+host-based security.
+This is now an outdated form of implementing security
+levels for machine access.
 It remains available and documented for purposes of backward compatibility.
 If used at the same time as the user-based authorization,
 the two specifications are merged together.
 
-The host-based security allows control over what machines can
-join a Condor pool, what machines can find out information about
-your pool, and what machines within your pool can perform
+The host-based security paradigm allows control over which machines can
+join a Condor pool, which machines can find out information about
+your pool, and which machines within a pool can perform
 administrative commands.  By default, Condor is configured to allow
-anyone to view or join your pool.  You probably want to change that.
+anyone to view or join a pool. It is recommended that this parameter is changed
+to only allow access from machines that you trust.
 
 This section discusses how the host-based security works inside Condor.
 It lists the different levels of access and what
 parts of Condor use which levels.
 There is a description of how to configure
-your pool to grant (or deny) certain levels of access to various
+a pool to grant or deny certain levels of access to various
 machines.
 Configuration examples and the settings of configuration variables
 using the \Condor{config\_val} command complete this section.
 
 Inside the Condor daemons or tools that use DaemonCore (see
 section~\ref{sec:DaemonCore} for details), most
-things are accomplished by sending commands to another Condor daemon.
-These commands are formed from an integer to specify which command,
-followed
+tasks are accomplished by sending commands to another Condor daemon.
+These commands are represented by an integer value to specify which command
+is being requested, followed
 by any optional information that the protocol requires at that point
 (such as a ClassAd, capability string, etc).
 When the daemons start up,
-they register which commands they are willing to accept, what to
+they will register which commands they are willing to accept, what to
 do with arriving commands, and the access level required for
-that command.
-When a command arrives, Condor identifies the  access level
-required, and checks the IP address of the sender to be
-sure it passes the various allow/deny settings
-in the configuration file for the given access level.
-If permission is granted, the command continues. 
-If not, the command is aborted.
+each command.
+When a command request is received by a daemon, Condor identifies the  access level
+required and checks the IP address of the sender to verify that
+it satisfies the allow/deny settings
+from the configuration file.
+If permission is granted, the command request is honored;
+otherwise, the request will be aborted.
 %% What does it mean for a command to be aborted?  Is it just
 %% thrown away (ignored), or is a reply sent indicating failure?
 
-As expected, settings for the access levels in the global
-configuration file affect all the machines in the pool.
-Settings in a local configuration file only affect the specific machine.
+Settings for the access levels in the global
+configuration file will affect all the machines in the pool.
+Settings in a local configuration file will only affect the specific machine.
 The settings for a given machine determine what other hosts can send
 commands to that machine.
-So, if machine foo is to be given 
+If a machine foo is to be given
 administrator access on machine bar, place foo in
 bar's configuration file access list (not the other way around).
 
@@ -1975,25 +1975,26 @@ Condor can be registered with:
 \begin{description}
 
 \item[\DCPerm{READ}] \label{dcperm:read} Machines with \DCPerm{READ}
-   access can read information from Condor.  For example, they can
-   view the status of the pool, see the job queue(s) or view user
+   access can read information from the Condor daemons.  For example, they can
+   view the status of the pool, see the job queue(s), and view user
    permissions.  \DCPerm{READ} access does not allow a machine to
-   change anything, and it does not allow
+   alter any information, and does not allow
    job submission. A machine listed
-   with \DCPerm{READ} permission cannot join a Condor pool; the machine can
+   with \DCPerm{READ} permission will be unable join a Condor pool; the machine can
    only view information about the pool.
 
 \item[\DCPerm{WRITE}] \label{dcperm:write} Machines with
-   \DCPerm{WRITE} access can write information to Condor.
-   Most notably, a machine can join a pool by sending ClassAd
-   updates to the central manager. 
+   \DCPerm{WRITE} access can write information to the Condor daemons.
+   Most important for granting a machine with this access is that the machine
+   will be able to join a pool since they are allowed to send ClassAd
+   updates to the central manager.
    The machine can talk to the other machines
    in a pool in order to submit or run jobs.
    In addition, any machine with
-   \DCPerm{WRITE} access can request the \Condor{startd} daemon to perform a
-   periodic checkpoint on a currently executing job. After a
-   periodic checkpoint, the job will continue to execute, and the
-   machine will still be claimed by whatever \Condor{schedd} daemon had claimed it.
+   \DCPerm{WRITE} access can request the \Condor{startd} daemon to perform
+   periodic checkpoints on an executing job. After the
+   checkpoint is completed, the job will continue to execute and the
+   machine will still be claimed by the original \Condor{schedd} daemon.
    This allows users on the machines where they submitted their jobs
    to use the \Condor{checkpoint} command to get their jobs to
    periodically checkpoint, even if the users do not have an account on the
@@ -2004,22 +2005,21 @@ Condor can be registered with:
    \DCPerm{WRITE} permission is not enough.
 
 \item[\DCPerm{ADMINISTRATOR}] \label{dcperm:administrator} Machines
-   with \DCPerm{ADMINISTRATOR} access have additional Condor
+   with \DCPerm{ADMINISTRATOR} access are granted additional Condor
    administrator rights to the pool.  This includes the ability to
    change user priorities (with the command \Code{userprio -set}),
    and the ability to turn Condor on and off
-   (with the command \Code{off \Sinful{machine}}).
-   Typically, very few
-   machines are in this list, perhaps only the workstations where the
-   Condor administrators or system administrators work,
-   or perhaps only the pool's central manager.
+   (with the command \Code{\Condor{off} \Sinful{machine}}).
+   It is recommended that few machines be granted administrator access in a pool;
+   typically these are the machines that are used by Condor and system
+   administrators as their primary workstations,
+   or the machines running as the pool's central manager.
 
-   \textbf{IMPORTANT:} This access is given to a machine,
-   and it applies to an entire pool.
-   So, \DCPerm{ADMINISTRATOR} access for a given machine provides
-   \textbf{ANY USER} on that machine \DCPerm{ADMINISTRATOR}
-   rights (including users who can run Condor jobs on that machine).
-   Therefore, grant \DCPerm{ADMINISTRATOR} access carefully.
+   \textbf{IMPORTANT:} Giving \DCPerm{ADMINISTRATOR} privileges to a machine
+   grants administrator access for the pool to
+   \textbf{ANY USER} on that machine. This includes any
+   users who can run Condor jobs on that machine.
+   It is recommended that \DCPerm{ADMINISTRATOR} access is granted with due diligence.
 
 \item[\DCPerm{OWNER}] \label{dcperm:owner} This level of access is
    required for commands that the owner of a machine (any local user)
@@ -2030,7 +2030,7 @@ Condor can be registered with:
    so that any user logged into a local machine
    can issue a \Condor{vacate} command.
 
-\item[\DCPerm{NEGOTIATOR}] \label{dcperm:negotiator} This 
+\item[\DCPerm{NEGOTIATOR}] \label{dcperm:negotiator} This
    access level is used specifically to verify that commands are
    sent by the \Condor{negotiator} daemon.
    The \Condor{negotiator} daemon runs on the central manager of
@@ -2043,12 +2043,13 @@ Condor can be registered with:
 \item[\DCPerm{CONFIG}] \label{dcperm:config} This access level is
    required to modify a daemon's configuration using
    the \Condor{config\_val} command.
-   By default, machines with this level of access are able 
-   to change any configuration parameters, except those specified in
+   By default, machines with this level of access are able
+   to change any configuration parameter, except those specified in
    the \File{condor\_config.root} configuration file.
-   Therefore, granting this level of host-wide access requires
-   extreme caution.
-   By default, \DCPerm{CONFIG} access is denied for all hosts.
+   Therefore, one should exercise extreme caution before
+   granting this level of host-wide access.
+   Because of the implications caused by DCPerm{CONFIG} privileges,
+   it is disabled by default for all hosts.
 
 \end{description}
 
@@ -2066,7 +2067,7 @@ any machines
 given with \DCPerm{ADMINISTRATOR} access.
 \DCPerm{CONFIG} access is not granted to any machine
 as its default.
-These defaults work well, and should not be changed without
+These defaults are sufficient for most pools, and should not be changed without
 a compelling reason.
 If machines other than the default are to have to have \DCPerm{OWNER}
 access, they probably should also have \DCPerm{ADMINISTRATOR} access.
