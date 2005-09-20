@@ -1261,11 +1261,18 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 6.7): nordugrid, oracle, gt3, globus,
 			//    gt2, infn, condor
+
+			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
+			//   system names should be used (pbs, lsf). Glite are the only
+			//   people who care about the old value. This changed happend in
+			//   Condor 6.7.12.
 			if ((stricmp (JobGridType, "gt2") == MATCH) ||
 				(stricmp (JobGridType, "gt3") == MATCH) ||
 				(stricmp (JobGridType, "gt4") == MATCH) ||
 				(stricmp (JobGridType, "infn") == MATCH) ||
 				(stricmp (JobGridType, "blah") == MATCH) ||
+				(stricmp (JobGridType, "pbs") == MATCH) ||
+				(stricmp (JobGridType, "lsf") == MATCH) ||
 				(stricmp (JobGridType, "condor") == MATCH) ||
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
 				(stricmp (JobGridType, "oracle") == MATCH)) {

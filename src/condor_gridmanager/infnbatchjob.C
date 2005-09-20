@@ -113,10 +113,16 @@ void INFNBatchJobReconfig()
 bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
 	MyString resource;
+		// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
+		//   system names should be used (pbs, lsf). Glite are the only
+		//   people who care about the old value. This changed happend in
+		//   Condor 6.7.12.
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.Value(), "blah", 4 ) == 0 ) {
+		 ( strncasecmp( resource.Value(), "blah", 4 ) == 0 ||
+		   strncasecmp( resource.Value(), "pbs", 4 ) == 0 ||
+		   strncasecmp( resource.Value(), "lsf", 4 ) == 0 ) ) {
 
 		return true;
 	}
@@ -174,13 +180,28 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
 
-	gahp_path = param("BLAH_GAHP");
+	buff[0] = '\0';
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	if ( buff[0] != '\0' ) {
+		batchType = strdup( buff );
+	} else {
+		error_string = "GridResource is not set in the job ad";
+		goto error_exit;
+	}
+
+	strupr( batchType );
+
+	sprintf( buff, "%s_GAHP", batchType );
+	gahp_path = param(buff);
 	if ( gahp_path == NULL ) {
 		error_string = "BLAH_GAHP not defined";
 		goto error_exit;
 	}
-	gahp = new GahpClient( "BLAH", gahp_path );
+	gahp = new GahpClient( batchType, gahp_path );
 	free( gahp_path );
+
+		// Does this have to be lower-case for SetRemoteJobId()?
+	strlwr( batchType );
 
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -212,6 +233,9 @@ INFNBatchJob::~INFNBatchJob()
 {
 	if ( jobProxy != NULL ) {
 		ReleaseProxy( jobProxy, evaluateStateTid );
+	}
+	if ( batchType != NULL ) {
+		free( batchType );
 	}
 	if ( remoteJobId != NULL ) {
 		free( remoteJobId );
@@ -640,7 +664,7 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 
 	MyString full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "blah %s", job_id );
+		full_job_id.sprintf( "%s %s", batchType, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
@@ -762,6 +786,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 //		ATTR_JOB_PRIO,
 		ATTR_JOB_IWD,
 		ATTR_X509_USER_PROXY,
+		ATTR_GRID_RESOURCE,
 		NULL };		// list must end with a NULL
 
 	submit_ad = new ClassAd;
@@ -771,6 +796,14 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		if ( ( next_expr = jobAd->Lookup( attrs_to_copy[index] ) ) != NULL ) {
 			submit_ad->Insert( next_expr->DeepCopy() );
 		}
+	}
+
+		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'
+		//   and the blahp looks at the attribute "gridtype" for 'pbs' or
+		//   'lsf'. Until the blahp changes to look at GridResource, set
+		//   'gridtype' for non-glite users.
+	if ( strcmp( batchType, "blah" ) != 0 ) {
+		submit_ad->Assign( "gridtype", batchType );
 	}
 
 //	submit_ad->Assign( ATTR_JOB_STATUS, IDLE );

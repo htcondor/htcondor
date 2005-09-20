@@ -74,6 +74,7 @@ class INFNBatchJob : public BaseJob
 	time_t enteredCurrentRemoteState;
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
+	char *batchType;
 	char *remoteJobId;
 	int lastPollTime;
 	bool pollNow;
