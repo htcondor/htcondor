@@ -122,9 +122,9 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 			filename += mypid;
 			filename += "_XXXXXXXXX";
 			new_file = strdup( filename.Value() );
-			dprintf( D_ALWAYS, "FS_REMOTE: client template is %s\n", new_file );
+			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", new_file );
 			mktemp(new_file);
-			dprintf( D_ALWAYS, "FS_REMOTE: client filename is %s\n", new_file );
+			dprintf( D_SECURITY, "FS_REMOTE: client filename is %s\n", new_file );
 		} else {
 			new_file = tempnam("/tmp", "FS_");
 		}
@@ -178,7 +178,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 				filename_template += "_XXXXXX";
 				char* filename_inout = strdup(filename_template.Value());
 
-				dprintf( D_ALWAYS, "FS_REMOTE: sync filename is %s\n", filename_inout );
+				dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );
 
 				int sync_fd = mkstemp(filename_inout);
 				if (sync_fd >= 0) {
@@ -188,7 +188,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 					// we could have an else that fails here, but we may as well still
 					// check for the file -- this was just an attempt to make NFS sync.
 					// if the file still isn't there, we'll fail anyways.
-					dprintf( D_FULLDEBUG, "FS_REMOTE: warning, failed to make temp file %s\n");
+					dprintf( D_ALWAYS, "FS_REMOTE: warning, failed to make temp file %s\n");
 				}
 
 				free (filename_inout);
@@ -248,7 +248,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 		// leave new_file allocated until after dprintf below
     }
 
-   	dprintf( D_FULLDEBUG, "AUTHENTICATE_FS: used file %s, status: %d\n", 
+   	dprintf( D_SECURITY, "AUTHENTICATE_FS: used file %s, status: %d\n", 
              (new_file ? new_file : "(null)"), (retval == 0) );
 
 	if ( new_file ) {
