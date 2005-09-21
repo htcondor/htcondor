@@ -130,7 +130,7 @@ XCOMM End translation of func(all_target)
 #define single_target(dir,target)			@@\
 XCOMM Begin translation of func(single_target) @@\
 dir/target: dir							@@\
-	cd dir; make $(SMP_FLAGS) target	@@\
+	cd dir; $(MAKE) $(SMP_FLAGS) target	@@\
 XCOMM End translation of func(single_target)
 
 
