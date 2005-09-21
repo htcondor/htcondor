@@ -26,6 +26,7 @@
 #include "condor_string.h"
 #include "condor_environ.h"
 #include "CondorError.h"
+#include "my_hostname.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
@@ -98,19 +99,35 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
         setRemoteUser( NULL );
         
         if ( remote_ ) {
+	        int    mypid = 0;
+#ifdef WIN32
+	        mypid = ::GetCurrentProcessId();
+#else
+	        mypid = ::getpid();
+#endif
+
+			MyString filename;
 			char * rendezvous_dir = param("FS_REMOTE_DIR");
 			if (rendezvous_dir) {
-				new_file = tempnam(rendezvous_dir, "qmgr_");
+				filename = rendezvous_dir;
 				free(rendezvous_dir);
 			} else {
 				// misconfiguration.  complain, and then use /tmp
 				dprintf (D_SECURITY, "AUTHENTICATE_FS: FS_REMOTE was used but no FS_REMOTE_DIR defined!\n");
-            	new_file = tempnam("/tmp", "qmgr_");
+				filename = "/tmp";
 			}
-	    }
-        else {
-            new_file = tempnam("/tmp", "qmgr_");
-        }
+			filename += "/FS_REMOTE_";
+			filename += my_hostname();
+			filename += "_";
+			filename += mypid;
+			filename += "_XXXXXXXXX";
+			new_file = strdup( filename.Value() );
+			dprintf( D_ALWAYS, "FS_REMOTE: client template is %s\n", new_file );
+			mktemp(new_file);
+			dprintf( D_ALWAYS, "FS_REMOTE: client filename is %s\n", new_file );
+		} else {
+			new_file = tempnam("/tmp", "FS_");
+		}
         //now, send over filename for client to create
         // man page says string returned by tempnam has been malloc()'d
         mySock_->encode();
@@ -134,12 +151,56 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 			return fail;
 		}
         mySock_->encode();
-        
+
         retval = -1;	// assume failure.  i am glass-half-empty man.
         if ( fd > -1 ) {
+			if (remote_) {
+				// now, if this is a remote filesystem, it is likely to be NFS.
+				// before we stat the file, we need to do something that causes the
+				// NFS client to sync to the NFS server.  fsync() does not do this.
+				// in practice, creating a file or directory should force the NFS
+				// client to sync in order to avoid race conditions.
+				MyString filename_template = "/tmp";
+
+				char * rendezvous_dir = param("FS_REMOTE_DIR");
+				if (rendezvous_dir) {
+					filename_template = rendezvous_dir;
+					free(rendezvous_dir);
+				}
+
+				// construct the template. mkstemp modifies the string you pass in
+				// so we create a dup of it just in case MyString does anything
+				// funny or uses string spaces, etc.
+				filename_template += "/FS_REMOTE_";
+				filename_template += my_hostname();
+				filename_template += "_";
+				filename_template += getpid();
+				filename_template += "_XXXXXX";
+				char* filename_inout = strdup(filename_template.Value());
+
+				dprintf( D_ALWAYS, "FS_REMOTE: sync filename is %s\n", filename_inout );
+
+				int sync_fd = mkstemp(filename_inout);
+				if (sync_fd >= 0) {
+					::close(sync_fd);
+					unlink( filename_inout ); /* XXX hope we aren't root */
+				} else {
+					// we could have an else that fails here, but we may as well still
+					// check for the file -- this was just an attempt to make NFS sync.
+					// if the file still isn't there, we'll fail anyways.
+					dprintf( D_FULLDEBUG, "FS_REMOTE: warning, failed to make temp file %s\n");
+				}
+
+				free (filename_inout);
+
+				// at this point we should have created and deleted a unique file
+				// from the server side, forcing the nfs client to flush everything
+				// and sync with the server.  now, we can finally stat the file.
+			}
+
             //check file to ensure that claimant is owner
             struct stat stat_buf;
-            
+
             if ( lstat( new_file, &stat_buf ) < 0 ) {
                 retval = -1;  
             }
