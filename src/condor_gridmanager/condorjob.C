@@ -1360,7 +1360,10 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	jobAd->ResetExpr();
 	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
-		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(), "REMOTE_", 7 ) == 0 ) {
+		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(),
+						  "REMOTE_", 7 ) == 0 &&
+			 strlen( ((Variable*)next_expr->LArg())->Name() ) > 7 ) {
+
 			char *attr_value;
 			MyString buf;
 			submit_ad->Delete( ((Variable*)next_expr->LArg())->Name() );
