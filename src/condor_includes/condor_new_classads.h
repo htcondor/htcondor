@@ -37,27 +37,30 @@ class NewClassAdParser
     /** Destructor. */
 	~NewClassAdParser();
 
-	/** Parses an XML ClassAd. Only the first ClassAd in the buffer is 
+	/** Parses a New ClassAds ad. Only the first ClassAd in the buffer is 
 	 *  parsed.
-	 * @param buffer The string containing the XML ClassAd.
-	 * @return A pointer to a new ClassAd, which must be deleted by the caller.
+	 * @param buffer The string containing the new-style ClassAd.
+	 * @return A pointer to a freshly-allocated ClassAd, which must be
+	 *        deleted by the caller.
 	 */
 	ClassAd *ParseClassAd(const char *buffer);
 
-	/** Parses an XML ClassAd from a string. Parsing begins at place-th
+	/** Parses a New ClassAds ad from a string. Parsing begins at place-th
 	 * character of the string, and after a single ClassAd is parsed, place
 	 * is updated to indicate where parsing should resume for the next ClassAd.
-	 * @param buffer The string containing the XML ClassAd.
+	 * @param buffer The string containing the new-style ClassAd.
 	 * @param place  A pointer to an integer indicating where to start. This is
 	 *        updated upon return. 
-	 * @return A pointer to a new ClassAd, which must be deleted by the caller
+	 * @return A pointer to a freshly-allocated ClassAd, which must be
+	 *        deleted by the caller
 	 */
 	ClassAd *ParseClassAds(const char *buffer, int *place);
 
-	/** Parses an XML ClassAd from a file. Only the first ClassAd in the 
+	/** Parses a New ClassAds ad from a file. Only the first ClassAd in the 
 	 * buffer is parsed.
-	 * @param buffer The string containing the XML ClassAd.
-	 * @return A pointer to a new ClassAd, which must be deleted by the caller.
+	 * @param buffer The string containing the new-style ClassAd.
+	 * @return A pointer to a freshly-allocated ClassAd, which must be
+	 *        deleted by the caller.
 	 */
 	ClassAd *ParseClassAd(FILE *file);
 
@@ -68,23 +71,26 @@ class NewClassAdParser
 class NewClassAdUnparser
 {
  public:
-    /** Constructor. Creates an object that can be used to create XML
-	 * representations of ClassAds */
+    /** Constructor. Creates an object that can be used to create New
+	 * ClassAds representations of ClassAds */
 	NewClassAdUnparser();
 
     /** Destructor.  */
 	~NewClassAdUnparser();
 
-	/** Query to find if the XML uses compact spacing. Compact spacing 
-	 * places an entire ClassAd on one line, while non-compact places
+	/** Query to find if the unparsed ad will use compact spacing. Compact
+	 * spacing places an entire ClassAd on one line, while non-compact places
 	 * each attribute on a separate line. 
+	 * THIS FUNCTIONALITY IS UNIMPLEMENTED! COMPACT SPACING IS ALWAYS USED!
 	 * @return true if using compact spacing. */
 	bool GetUseCompactSpacing(void);
 
 	/** Set compact spacing. Compact spacing 
 	 * places an entire ClassAd on one line, while non-compact places
 	 * each attribute on a separate line. 
-	 * @param use_compact_spacing A boolean indicating if compact spacing is desired. */
+	 * THIS FUNCTIONALITY IS UNIMPLEMENTED! COMPACT SPACING IS ALWAYS USED!
+	 * @param use_compact_spacing A boolean indicating if compact spacing is
+	 *       desired. */
 	void SetUseCompactSpacing(bool use_compact_spacing);
 
 	/** Query to find out if we will output the Type attribute.
@@ -101,9 +107,9 @@ class NewClassAdUnparser
 	/** Set whether or not we output the Target attribute */
 	void SetOutputTargetType(bool output_target_type);
 
-	/** Format a ClassAd in XML. Note that this obeys the previously set
-	 * parameters for compact spacing and compact names. 
-	 * @param classsad The ClassAd to represent in XML.
+	/** Format a ClassAd in New ClassAds format. Note that this obeys the
+	 * previously set parameters for compact spacing and compact names. 
+	 * @param classsad The ClassAd to represent in new ClassAds format.
 	 * @param buffer The string to append the ClassAd to.
 	 * @see SetUseCompactNames().
 	 * @see SetUseCompactSpacing(). */

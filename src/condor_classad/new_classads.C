@@ -29,9 +29,9 @@
  *
  * Private Datatypes
  *
- * (Note that these are shared by the two classes (XML parser and unparser)
- *  so they don't belong in the class definition, yet they are certainly not 
- *  public.)
+ * (Note that these are shared by the two classes (NewClassAdParser and
+ *  NewClassAdUnparser) so they don't belong in the class definition, yet
+ *  they are certainly not public.)
  *
  *-------------------------------------------------------------------------*/
 
@@ -91,7 +91,7 @@ private:
 
 /**************************************************************************
  *
- * Function: ClassAdXMLParser Constructor
+ * Function: NewClassAdParser Constructor
  * Purpose:  Constructor and debug check
  *
  **************************************************************************/
@@ -102,7 +102,7 @@ NewClassAdParser::NewClassAdParser()
 
 /**************************************************************************
  *
- * Function: ClassAdXMLParser Destructor
+ * Function: NewClassAdParser Destructor
  * Purpose:  We don't actually have anything to destruct
  *
  **************************************************************************/
@@ -165,10 +165,10 @@ NewClassAdParser::ParseClassAd(FILE *file)
 /**************************************************************************
  *
  * Function: _ParseClassAd
- * Purpose:  This parses a ClassAd from an XML source. This is a private
- *           function used by the other ParseClassAds. It uses an XMLSource
- *           class so that it doesn't have to know about files or strings.
- *           Pretty much all of the parsing happens here. 
+ * Purpose:  This parses a New ClassAds ad from some source. This is a
+ *           private function used by the other ParseClassAds. It uses a
+ *           DataSource class so that it doesn't have to know about files
+ *           or strings. Pretty much all of the parsing happens here. 
  * See Also: ReadToken()
  *
  **************************************************************************/
@@ -314,8 +314,9 @@ NewClassAdUnparser::~NewClassAdUnparser()
 /**************************************************************************
  *
  * Function: GetUseCompactSpacing
- * Purpose:  Tells you if we print out XML compactly (one classad per line)
- *           or not.
+ * Purpose:  Tells you if we print out the classads compactly (one classad
+ *           per line) or not.
+ * THIS FUNCTIONALITY IS UNIMPLEMENTED! COMPACT SPACING IS ALWAYS USED!
  *
  **************************************************************************/
 bool 
@@ -327,9 +328,10 @@ NewClassAdUnparser::GetUseCompactSpacing(void)
 /**************************************************************************
  *
  * Function: SetUseCompactSpacing
- * Purpose:  Allows the caller to decide if we should print out one XML
+ * Purpose:  Allows the caller to decide if we should print out one
  *           classad per line (compact spacing), or print each attribute
  *           on a separate line (not compact spacing). 
+ * THIS FUNCTIONALITY IS UNIMPLEMENTED! COMPACT SPACING IS ALWAYS USED!
  *
  **************************************************************************/
 void 
@@ -393,8 +395,8 @@ NewClassAdUnparser::SetOutputTargetType(bool output_target_type)
 /**************************************************************************
  *
  * Function: Unparse
- * Purpose:  Converts a ClassAd into an XML representation, and appends
- *           it to a MyString. Note that the exact appearance of the
+ * Purpose:  Converts a ClassAd into a new ClassAds representation, and
+ *           appends it to a MyString. Note that the exact appearance of the
  *           representation is governed by two attributes you can set:
  *           compact spacing and compact names.
  *
@@ -476,6 +478,8 @@ NewClassAdUnparser::Unparse(ClassAd *classad, MyString &buffer)
 			curr_pos++;
 		}
 
+			// TODO We should add a new-line here and possibly indent the
+			//   next line if _use_compact_spacing is false.
 		buffer += "; ";
 
 		free( expr_str );
