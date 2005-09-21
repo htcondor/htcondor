@@ -52,6 +52,9 @@ expressions at the interval set by \Macro{PERIODIC\_EXPR\_INTERVAL}.
 \item Fixed a bug which prevented standard universe from working on a linux 
 kernel post 2.6.12.2.
 
+\item Fixed a bug that caused the \Condor{gridmanager} to crash if a
+grid-type condor job ad contained the attribute \Attr{remote\_}.
+
 \item Fixed a bug with the FS\_REMOTE authentication mechanism that caused
 it to fail occaisionaly when using NFS.
 
