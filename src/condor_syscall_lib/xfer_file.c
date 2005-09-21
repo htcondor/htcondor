@@ -30,9 +30,12 @@
 double	get_time();
 extern int	Syscalls;
 
+extern int open_file_stream( const char *file, int flags, size_t *len );
+
 /* remote systems calls we use in this file */
 extern int REMOTE_CONDOR_extern_name(char *path, char *buf, int bufsize);
 extern int REMOTE_CONDOR_getwd(char *path_name);
+
 
 #define CHUNK_SIZE 4096
 
@@ -76,7 +79,7 @@ send_a_file( const char *local, const char *remote, int perm )
 	}
 
 		/* transfer the data */
-	dprintf( D_ALWAYS, "File length is %d\n", len );
+	dprintf( D_ALWAYS, "File length is %lu\n", (unsigned long)len );
 	for(bytes_to_go = len; bytes_to_go; bytes_to_go -= nbytes ) {
 		nbytes = MIN( CHUNK_SIZE, bytes_to_go );
 		nbytes = read( local_fd, buf, nbytes );
@@ -102,8 +105,9 @@ send_a_file( const char *local, const char *remote, int perm )
 
 		/* report */
 	finish = get_time();
-	dprintf( D_ALWAYS,"Send_file() transferred %d bytes, %d bytes/second\n",
-										len, (int)(len/(finish-start)) );
+	dprintf( D_ALWAYS,"Send_file() transferred %lu bytes, %d bytes/second\n",
+										(unsigned long)len, 
+										(int)(len/(finish-start)) );
 
 	return len;
 }
@@ -165,8 +169,9 @@ get_file( const char *remote, const char *local, int mode )
 
 	finish = get_time();
 
-	dprintf( D_ALWAYS,"Get_file() transferred %d bytes, %d bytes/second\n",
-										len, (int)(len/(finish-start)) );
+	dprintf( D_ALWAYS,"Get_file() transferred %lu bytes, %d bytes/second\n",
+										(unsigned long) len, 
+										(int)(len/(finish-start)) );
 
 	return len;
 }

@@ -1383,7 +1383,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", remote_version.Value() );
 					will_authenticate = SEC_FEAT_ACT_NO;
 				} else {
-					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n", remote_version.Value() );
+					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n");
 				}
 			} else {
 				dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
@@ -1611,12 +1611,12 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 							}
 						} else {
 							if (DebugFlags & D_FULLDEBUG) {
-								dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf, sid);
+								dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf);
 							}
 						}
 					} else {
 						if (DebugFlags & D_FULLDEBUG) {
-							dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (remove failed!)\n", keybuf, sid);
+							dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (remove failed!)\n", keybuf);
 						}
 					}
 				}

@@ -248,7 +248,7 @@ int main( int argc, char *argv[] )
 					}
 
 					log.synchronize();
-					dprintf(D_FULLDEBUG,"No more events, sleeping for %d seconds\n",sleeptime);
+					dprintf(D_FULLDEBUG,"No more events, sleeping for %ld seconds\n", (long)sleeptime);
 					sleep(sleeptime);
 				}
 			}

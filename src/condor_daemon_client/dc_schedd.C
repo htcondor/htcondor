@@ -579,8 +579,8 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 	if ( rsock.put_file(&file_size,path_to_proxy_file) < 0 ) {
 		dprintf(D_ALWAYS,
 			"DCSchedd:updateGSIcredential "
-			"failed to send proxy file %s (size=%d)\n",
-			path_to_proxy_file, file_size);
+			"failed to send proxy file %s (size=%ld)\n",
+			path_to_proxy_file, (long) file_size);
 		return false;
 	}
 		

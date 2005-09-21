@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 int _condor_vfprintf_va( int fd, char* fmt, va_list args );
+int SYSCALL(int, ...);
 
 #if defined(__cplusplus)
 }

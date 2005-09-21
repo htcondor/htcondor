@@ -91,10 +91,12 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 			rval = write( dst_fd, buf+bytes_written, bytes_read-bytes_written );
 			if( rval < 0 ) {
 				dprintf( D_ALWAYS, "stream_file_xfer: %d bytes written, "
-						 "%d bytes to go\n", bytes_moved, bytes_to_go );
+						 "%d bytes to go\n", (int)bytes_moved, 
+						 (int)bytes_to_go );
+
 				dprintf( D_ALWAYS, "stream_file_xfer: write returns %d "
 						 "(errno=%d) when attempting to write %d bytes\n",
-						 rval, errno, bytes_read );
+						 rval, errno, (int)bytes_read );
 				return -1;
 			}
 		}
@@ -105,7 +107,7 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 		if( bytes_to_go == 0 ) {
 			dprintf( D_FULLDEBUG,
 				"\tChild Shadow: STREAM FILE XFER COMPLETE - %d bytes\n",
-				bytes_moved
+				(int)bytes_moved
 			);
 			return bytes_moved;
 		}
@@ -174,7 +176,7 @@ multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 		if( bytes_to_go == 0 ) {
 			dprintf( D_FULLDEBUG,
 				"\tChild Shadow: STREAM FILE XFER COMPLETE - %d bytes\n",
-				bytes_moved
+				(int)bytes_moved
 			);
 			return bytes_moved;
 		}

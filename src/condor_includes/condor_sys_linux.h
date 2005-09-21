@@ -44,9 +44,11 @@
 
 #include <sys/types.h>
 
-
 #include "condor_fix_sys_stat.h"
 #include "condor_fix_unistd.h"
+
+/* Allows use of setgroups() */
+#include <grp.h>
 
 /* Want stdarg.h before stdio.h so we get GNU's va_list defined */
 #include <stdarg.h>

@@ -33,8 +33,6 @@ extern dynuser *myDynuser;
 ProcFamily::ProcFamily( pid_t pid, PidEnvID *penvid, priv_state priv, 
 				int test_only )
 {
-	int i;
-
 	daddy_pid = pid;
 	old_pids = NULL;
 	mypriv = priv;

@@ -35,6 +35,7 @@ for details.
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #include <unistd.h>
 #include <sys/errno.h>
@@ -281,6 +282,7 @@ chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **ur
 	return result;
 }
 
+int 
 chirp_client_constrain( struct chirp_client *c, const char *expr)
 {
 	return simple_command(c,"constrain %s\n",expr);

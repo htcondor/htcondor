@@ -237,7 +237,7 @@ condor__beginTransaction(struct soap *soap,
 
 	dprintf(D_FULLDEBUG,
 			"SOAP leaving condor__beginTransaction() id=%ld\n",
-			result.response.transaction.id);
+			(long)result.response.transaction.id);
 
 	return SOAP_OK;
 }
@@ -955,7 +955,7 @@ condor__listSpool(struct soap * soap,
 		List<FileInfo> files;
 		int code;
 		CondorError errstack;
-		if (code = job->get_spool_list(files, errstack)) {
+		if ((code = job->get_spool_list(files, errstack))) {
 			result.response.status.code =
 				(condor__StatusCode) errstack.code();
 			result.response.status.message =

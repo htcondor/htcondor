@@ -476,15 +476,18 @@ dev_idle_time( char *path, time_t now )
 	/* ok, just check the device idle time for normal devices using stat() */
 	if (stat(pathname,&buf) < 0) {
 		if( errno != ENOENT ) {
-			dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
+			dprintf( D_FULLDEBUG, "Error on stat(%s,%p), errno = %d(%s)\n",
 					 pathname, &buf, errno, strerror(errno) );
 		}
 		buf.st_atime = 0;
 	}
+
+	/* XXX The signedness problem in this comparison is hard to fix properly */
 	if ( null_major_device > -1 && null_major_device == major(buf.st_rdev) ) {
 		// this device is related to /dev/null, it should not count
 		buf.st_atime = 0;
 	}
+
 	answer = now - buf.st_atime;
 	if( buf.st_atime > now ) {
 		answer = 0;

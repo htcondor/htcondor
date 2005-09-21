@@ -87,6 +87,16 @@ int ConnectToServer(request_type type)
 			break;
 		case RESTORE_REQ:
 			server_sa.sin_port = htons(CKPT_SVR_RESTORE_REQ_PORT);
+			break;
+		case REPLICATE_REQ:
+			dprintf(D_ALWAYS, "ERROR: REPLICATE_REQ not implemented.");
+			close(conn_req_sd);
+			return CKPT_SERVER_SOCKET_ERROR;
+			break;
+		default:
+			dprintf(D_ALWAYS, "ERROR: ConnectToServer(): Unknown type!\n");
+			close(conn_req_sd);
+			return CKPT_SERVER_SOCKET_ERROR;
 		}
 	if (connect(conn_req_sd, (struct sockaddr*) &server_sa, 
 				sizeof(server_sa)) < 0) {

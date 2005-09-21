@@ -1028,11 +1028,6 @@ submit_job(char* job_id, size_t job_id_len, const char* submit_file_name,
     // Submit to condor
     fs = popen(cmd, "r");
     if (fs == NULL){
-	snprintf(error_diagnosis, error_diag_len,
-		 "Unable to perform submit call");
-	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
-    }
-    else if ((int)fs == -1){
 	snprintf(error_diagnosis, error_diag_len, "Submit call failed");
 	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;	
     }
@@ -1500,10 +1495,6 @@ hold_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     // execute command
     fs = popen(cmd, "r");
     if (fs == NULL){
-	snprintf(error_diagnosis, error_diag_len, "Unable to perform hold call");
-	return DRMAA_ERRNO_NO_MEMORY;
-    }
-    else if ((int)fs == -1){
 	snprintf(error_diagnosis, error_diag_len, "Hold call failed");
 	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;	
     }
@@ -1560,11 +1551,6 @@ release_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     // execute command
     fs = popen(cmd, "r");
     if (fs == NULL){
-	snprintf(error_diagnosis, error_diag_len, 
-		 "Unable to perform release call");
-	return DRMAA_ERRNO_INTERNAL_ERROR;
-    }
-    else if ((int)fs == -1){
 	snprintf(error_diagnosis, error_diag_len, "Release call failed");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
@@ -1623,11 +1609,6 @@ terminate_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     // execute command
     fs = popen(cmd, "r");
     if (fs == NULL){
-	snprintf(error_diagnosis, error_diag_len, 
-		 "Unable to perform terminate call");
-	return DRMAA_ERRNO_INTERNAL_ERROR;
-    }
-    else if ((int)fs == -1){
 	snprintf(error_diagnosis, error_diag_len, "Terminate call failed");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }

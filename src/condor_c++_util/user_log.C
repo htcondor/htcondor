@@ -223,7 +223,7 @@ UserLog::display()
 {
 	dprintf( D_ALWAYS, "Path = \"%s\"\n", path );
 	dprintf( D_ALWAYS, "Job = %d.%d.%d\n", proc, cluster, subproc );
-	dprintf( D_ALWAYS, "fp = 0x%x\n", fp );
+	dprintf( D_ALWAYS, "fp = %p\n", fp );
 	lock->display();
 	dprintf( D_ALWAYS, "in_block = %s\n", in_block ? "TRUE" : "FALSE" );
 }
@@ -940,7 +940,7 @@ synchronize ()
 
 void ReadUserLog::outputFilePos(const char *pszWhereAmI)
 {
-	dprintf(D_ALWAYS, "Filepos: %d, context: %s\n", ftell(_fp), pszWhereAmI);
+	dprintf(D_ALWAYS, "Filepos: %ld, context: %s\n", ftell(_fp), pszWhereAmI);
 }
 
 void ReadUserLog::

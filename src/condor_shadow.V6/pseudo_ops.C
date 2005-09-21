@@ -793,7 +793,7 @@ pseudo_get_file_stream(
 	if (file_fd < 0) return -1;
 
 	*len = file_size( file_fd );
-	dprintf( D_FULLDEBUG, "\tlen = %d\n", *len );
+	dprintf( D_FULLDEBUG, "\tlen = %lu\n", (unsigned long)*len );
 	BytesSent += *len;
 
 	get_host_addr( ip_addr );
@@ -829,13 +829,13 @@ pseudo_get_file_stream(
 		if( data_sock < 0 ) {
 			exit( 1 );
 		}
-		dprintf( D_FULLDEBUG, "\tShould Send %d bytes of data\n", 
-				 *len );
+		dprintf( D_FULLDEBUG, "\tShould Send %lu bytes of data\n", 
+				 (unsigned long)*len );
 		bytes_sent = stream_file_xfer( file_fd, data_sock, *len );
 		if (bytes_sent != *len) {
 			dprintf(D_ALWAYS,
-					"Failed to transfer %d bytes (only sent %d)\n",
-					*len, bytes_sent);
+					"Failed to transfer %lu bytes (only sent %d)\n",
+					(unsigned long)*len, bytes_sent);
 			exit(1);
 		}
 
@@ -890,7 +890,7 @@ pseudo_put_file_stream(
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
-	dprintf( D_ALWAYS, "\tlen = %d\n", len );
+	dprintf( D_ALWAYS, "\tlen = %u\n", len );
 	dprintf( D_ALWAYS, "\towner = %s\n", p->owner );
 #if WANT_NETMAN
 	if (file_stream_info.active) {
@@ -1492,11 +1492,11 @@ display_ip_addr( unsigned int addr )
 	if( IN_CLASSB(addr) ) {
 		net_part = B_NET(addr);
 		host_part = B_HOST(addr);
-		dprintf( D_ALWAYS, "\t%d.%d.%d.%d\n",
-			HI(B_NET(addr)),
-			LO(B_NET(addr)),
-			HI(B_HOST(addr)),
-			LO(B_HOST(addr))
+		dprintf( D_ALWAYS, "\t%lu.%lu.%lu.%lu\n",
+			(unsigned long) HI(B_NET(addr)),
+			(unsigned long) LO(B_NET(addr)),
+			(unsigned long) HI(B_HOST(addr)),
+			(unsigned long) LO(B_HOST(addr))
 		);
 	} else {
 		dprintf( D_ALWAYS, "\t Weird 0x%x\n", addr );

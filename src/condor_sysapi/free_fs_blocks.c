@@ -283,7 +283,7 @@ const char *filename;
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif
-		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,0x%x) failed\n",
+		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,%p) failed\n",
 													filename, &statfsbuf );
 		dprintf(D_ALWAYS, "errno = %d\n", errno );
 		return(0);

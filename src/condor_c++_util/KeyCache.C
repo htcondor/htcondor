@@ -137,7 +137,7 @@ void KeyCacheEntry::delete_storage() {
 
 KeyCache::KeyCache(int nbuckets) {
 	key_table = new HashTable<MyString, KeyCacheEntry*>(nbuckets, MyStringHash, rejectDuplicateKeys);
-	dprintf ( D_SECURITY, "KEYCACHE: created: %x\n", key_table );
+	dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
 }
 
 KeyCache::KeyCache(const KeyCache& k) {
@@ -160,7 +160,7 @@ const KeyCache& KeyCache::operator=(const KeyCache& k) {
 void KeyCache::copy_storage(const KeyCache &copy) {
 	if (copy.key_table) {
 		key_table = new HashTable<MyString, KeyCacheEntry*>(copy.key_table->getTableSize(), MyStringHash, rejectDuplicateKeys);
-		dprintf ( D_SECURITY, "KEYCACHE: created: %x\n", key_table );
+		dprintf ( D_SECURITY, "KEYCACHE: created: %p\n", key_table );
 
 		// manually iterate all entries from the hash.  they are
 		// pointers, and we need to copy that object.
@@ -185,7 +185,7 @@ void KeyCache::delete_storage()
 		while( key_table->iterate(key_entry) ) {
 			if( key_entry ) {
 				if( DebugFlags & D_FULLDEBUG ) {
-					dprintf( D_SECURITY, "KEYCACHEENTRY: deleted: %x\n", 
+					dprintf( D_SECURITY, "KEYCACHEENTRY: deleted: %p\n", 
 							 key_entry );
 				}
 				delete key_entry;
@@ -193,7 +193,7 @@ void KeyCache::delete_storage()
 		}
 		delete key_table;
 		if( DebugFlags & D_FULLDEBUG ) {
-			dprintf( D_SECURITY, "KEYCACHE: deleted: %x\n", key_table );
+			dprintf( D_SECURITY, "KEYCACHE: deleted: %p\n", key_table );
 		}
 		key_table = NULL;
 	}

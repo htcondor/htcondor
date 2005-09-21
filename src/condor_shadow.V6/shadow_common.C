@@ -463,8 +463,8 @@ get_local_rusage( struct rusage *bsd_rusage )
         user = posix_usage.tms_utime + posix_usage.tms_cutime;
         sys = posix_usage.tms_stime + posix_usage.tms_cstime;
 
-        dprintf( D_ALWAYS, "user_time = %d ticks\n", user );
-        dprintf( D_ALWAYS, "sys_time = %d ticks\n", sys );
+        dprintf( D_ALWAYS, "user_time = %ld ticks\n", (long)user );
+        dprintf( D_ALWAYS, "sys_time = %ld ticks\n", (long)sys );
         clock_t_to_timeval( user, &bsd_rusage->ru_utime );
         clock_t_to_timeval( sys, &bsd_rusage->ru_stime );
 }

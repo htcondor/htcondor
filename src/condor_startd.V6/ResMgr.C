@@ -506,10 +506,10 @@ ResMgr::build_vm( int type, bool except )
 						 currentVMType );
 				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
 				dprintf( D_ALWAYS | D_NOHEADER, 
-						 "\tYou must specify a percentage (like \"25%\"), " );
+						 "\tYou must specify a percentage (like \"25%%\"), " );
 				dprintf( D_ALWAYS | D_NOHEADER, "a fraction (like \"1/4\"),\n" );
 				dprintf( D_ALWAYS | D_NOHEADER, 
-						 "\tor list all attributes (like \"c=1, r=25%, s=25%, d=25%\").\n" );
+						 "\tor list all attributes (like \"c=1, r=25%%, s=25%%, d=25%%\").\n" );
 				dprintf( D_ALWAYS | D_NOHEADER, 
 						 "\tSee the manual for details.\n" );
 				if( except ) {

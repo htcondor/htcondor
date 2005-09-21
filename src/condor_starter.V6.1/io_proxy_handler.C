@@ -102,7 +102,7 @@ void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 			got_cookie = true;
 		} else {
 			dprintf( D_ALWAYS, "IOProxyHandler: client presented "
-					 "*WRONG* cookie.\n", cookie );
+					 "*WRONG* cookie.\n" );
 			sleep(1);
 		}
 	} else {
@@ -329,7 +329,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		result = REMOTE_CONDOR_get_file_info_new(path,url);
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Filename %s maps to url %s\n",path,url);
-			sprintf(line,"%d",strlen(url));
+			sprintf(line,"%u",(unsigned int)strlen(url));
 			r->put_line_raw(line);
 			r->put_bytes_raw(url,strlen(url));
 		} else {
@@ -347,7 +347,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		result = REMOTE_CONDOR_get_job_attr(name,expr);
 		if(result==0) {
-			sprintf(line,"%d",strlen(expr));
+			sprintf(line,"%u",(unsigned int)strlen(expr));
 			r->put_line_raw(line);
 			r->put_bytes_raw(expr,strlen(expr));
 		} else {

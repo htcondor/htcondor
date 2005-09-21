@@ -110,7 +110,7 @@ int SetEnv( const char *env_var )
 	}
 
 		// hack up string and pass to other SetEnv version.
-	int namelen = (int) equalpos - (int) env_var;
+	size_t namelen = equalpos - env_var;
 	int valuelen = strlen(env_var) - namelen - 1;
 
 	char *name = new char[namelen+1];

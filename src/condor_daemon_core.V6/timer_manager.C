@@ -388,8 +388,9 @@ TimerManager::Timeout()
 			time(&time_sample);
 			if (now > time_sample) {
 				dprintf(D_ALWAYS, "DaemonCore: Clock skew detected "
-					"(time=%d; now=%d). Resetting TimerManager's "
-					"notion of 'now'\n", time_sample, now);
+					"(time=%ld; now=%ld). Resetting TimerManager's "
+					"notion of 'now'\n", (long) time_sample, 
+					(long) now);
 				now = time_sample;
 			}
 		}
@@ -501,8 +502,10 @@ void TimerManager::DumpTimerList(int flag, char* indent)
 		else
 			ptmp = "NULL";
 
-		dprintf(flag, "%sid = %d, when = %d, period = %d, handler_descrip=<%s>\n", indent,
-			 	timer_ptr->id, timer_ptr->when, timer_ptr->period,ptmp);
+		dprintf(flag, 
+			"%sid = %d, when = %ld, period = %d, handler_descrip=<%s>\n", 
+			indent, timer_ptr->id, (long)timer_ptr->when, 
+			timer_ptr->period,ptmp);
 	}
 	dprintf(flag, "\n");
 }
@@ -529,8 +532,9 @@ void TimerManager::Start()
 			dprintf(D_DAEMONCORE,"TimerManager::Start() about to block with no events!\n");
 			rv = select(0,0,0,0,NULL);
 		} else {
-			dprintf(D_DAEMONCORE,"TimerManager::Start() about to block, timeout=%d\n",
-				timer.tv_sec);
+			dprintf(D_DAEMONCORE,
+				"TimerManager::Start() about to block, timeout=%ld\n",
+				(long)timer.tv_sec);
 			rv = select(0,0,0,0, &timer);
 		}		
 	}

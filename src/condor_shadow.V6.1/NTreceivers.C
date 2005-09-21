@@ -379,7 +379,7 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
 		result = ( syscall_sock->code(len) );
 		ASSERT( result );
-		dprintf( D_SYSCALLS, "  len = %d\n", len );
+		dprintf( D_SYSCALLS, "  len = %ld\n", (long)len );
 		buf = (void *)malloc( (unsigned)len );
 		memset( buf, 0, (unsigned)len );
 		result = ( syscall_sock->end_of_message() );
@@ -418,7 +418,7 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
 		result = ( syscall_sock->code(len) );
 		ASSERT( result );
-		dprintf( D_SYSCALLS, "  len = %d\n", len );
+		dprintf( D_SYSCALLS, "  len = %ld\n", (long)len );
 		buf = (void *)malloc( (unsigned)len );
 		memset( buf, 0, (unsigned)len );
 		result = ( syscall_sock->code_bytes_bool(buf, len) );
@@ -457,7 +457,7 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "  fd = %d\n", fd );
 		result = ( syscall_sock->code(offset) );
 		ASSERT( result );
-		dprintf( D_SYSCALLS, "  offset = %d\n", offset );
+		dprintf( D_SYSCALLS, "  offset = %ld\n", (long)offset );
 		result = ( syscall_sock->code(whence) );
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  whence = %d\n", whence );

@@ -1557,7 +1557,7 @@ int main( int argc, char** argv )
 	}
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
-	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
+	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
 
 #ifndef WIN32
 		// Want to do this dprintf() here, since we can't do it w/n 

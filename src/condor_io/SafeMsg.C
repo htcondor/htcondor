@@ -998,7 +998,7 @@ bool _condorInMsg::addPacket(const bool last,
 			curDir = headDir;
 			curPacket = 0;
 			curData = 0;
-            dprintf(D_NETWORK, "long msg ready: %d bytes\n", msgLen);
+            dprintf(D_NETWORK, "long msg ready: %ld bytes\n", msgLen);
 			return true;
 		} else {
 			lastTime = time(NULL);
@@ -1103,7 +1103,7 @@ int _condorInMsg::getn(char* dta, const int size)
 
 	passed += total;
     if( D_FULLDEBUG & DebugFlags ) {
-        dprintf(D_NETWORK, "%d bytes read from UDP[size=%d, passed=%d]\n",
+        dprintf(D_NETWORK, "%d bytes read from UDP[size=%ld, passed=%d]\n",
                 total, msgLen, passed);
     }
 	return total;

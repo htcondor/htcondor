@@ -39,7 +39,7 @@ NameTable::display()
 	int		i;
 
 	for( i=0; i<n_entries; i++ ) {
-		dprintf( D_ALWAYS, "%d  %s\n", tab[i].value, tab[i].name );
+		dprintf( D_ALWAYS, "%ld  %s\n", tab[i].value, tab[i].name );
 	}
 }
 

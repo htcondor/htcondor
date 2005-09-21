@@ -71,7 +71,7 @@ EventHandler::display()
 {
 	dprintf( D_ALWAYS, "EventHandler {\n" );
 
-	dprintf( D_ALWAYS, "\tfunc = 0x%x\n", func );
+	dprintf( D_ALWAYS, "\tfunc = %p\n", func );
 	display_sigset( "\tmask = ", &mask );
 
 	dprintf( D_ALWAYS, "}\n" );
@@ -121,7 +121,7 @@ EventHandler::install()
 				exit( 1 );
 			}
 			dprintf( D_FULLDEBUG,
-				"\t*FSM* Installed handler 0x%x for signal %s, flags = 0x%x\n",
+				"\t*FSM* Installed handler %p for signal %s, flags = 0x%x\n",
 				action.sa_handler, SigNames.get_name(signo), action.sa_flags
 			);
 		}
@@ -153,7 +153,7 @@ EventHandler::de_install()
 				exit( 1 );
 			}
 			dprintf( D_FULLDEBUG,
-				"\t*FSM* Installed handler 0x%x for signal %s\n",
+				"\t*FSM* Installed handler %p for signal %s\n",
 				o_action[i].sa_handler, SigNames.get_name(signo)
 			);
 		}

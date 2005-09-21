@@ -233,9 +233,6 @@ void wait_for_debugger( int do_wait )
 void
 init_shadow_connections()
 {
-	int		scm;
-
-
 	(void) dup2( 1, RSC_SOCK );
 	(void) dup2( 2, CLIENT_LOG );
 	SyscallStream = init_syscall_connection( FALSE);
@@ -361,7 +358,7 @@ get_proc()
 
 	dprintf( D_ALWAYS, "Entering get_proc()\n" );
 
-	if( new_process=get_job_info() ) {
+	if( (new_process=get_job_info()) ) {
 		UProcList.Append( new_process );
 		return SUCCESS;
 	} else {
@@ -432,7 +429,7 @@ req_ckpt_exit_all()
 
 		// Request all the processes to ckpt and then exit
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		dprintf( D_ALWAYS, "req_ckpt_exit_all: Proc %d in state %s\n", 
 				 proc->get_id(),	ProcStates.get_name(proc->get_state())
 				 );
@@ -454,7 +451,7 @@ req_exit_all()
 
 		// Request all the processes to exit
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if ( proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			dprintf( D_ALWAYS, "req_exit_all: Proc %d in state %s\n", 
 					proc->get_id(),	ProcStates.get_name(proc->get_state())
@@ -479,7 +476,7 @@ terminate_all()
 	// dprintf( D_ALWAYS, "Entering function terminate_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_running() || proc->is_suspended() ) {
 			return DO_WAIT;
 		}
@@ -510,7 +507,7 @@ dispose_all()
 	// dprintf( D_ALWAYS, "Entering dispose_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		send_final_status( proc );
 		proc->delete_files();
 		UProcList.DeleteCurrent();
@@ -608,7 +605,7 @@ reaper()
 	);
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->get_pid() == pid ) {
 			break;
 		}
@@ -655,7 +652,7 @@ susp_all()
 	/* determine how many pids the starter suspended */
 	sum = 0;
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_suspended() ) {
 			sum += proc->get_num_pids_suspended();
 		}
@@ -715,7 +712,7 @@ stop_all()
 	// dprintf( D_ALWAYS, "Entering function stop_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_running() && proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->suspend();
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
@@ -723,7 +720,7 @@ stop_all()
 	}
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_running() && proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->suspend();
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
@@ -743,7 +740,7 @@ resume_all()
 	// dprintf( D_ALWAYS, "Entering function resume_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_suspended() && proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->resume();
 			dprintf( D_ALWAYS, "\tRequested user job to resume\n" );
@@ -751,7 +748,7 @@ resume_all()
 	}
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_suspended() && proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->resume();
 			dprintf( D_ALWAYS, "\tRequested user job to resume\n" );
@@ -768,7 +765,7 @@ periodic_ckpt_all()
 	UserProc	*proc;
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->ckpt_enabled() ) {
 			proc->request_periodic_ckpt();
 			dprintf( D_ALWAYS, "\tRequested user job to do a periodic checkpoint\n" );
@@ -788,7 +785,7 @@ spawn_all()
 	// dprintf( D_ALWAYS, "Entering function spawn_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->is_runnable() ) {
 			proc->execute();
 		} else {
@@ -850,7 +847,7 @@ supervise_all()
 	// dprintf( D_ALWAYS, "Entering function supervise_all()\n" );
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if( proc->ckpt_enabled() ) {
 			periodic_checkpointing = TRUE;
 			break;
@@ -1085,7 +1082,7 @@ cleanup()
 	UserProc	*proc;
 
 	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
+	while( (proc = UProcList.Next()) ) {
 		if ( proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->kill_forcibly();
 			proc->delete_files();
@@ -1094,7 +1091,7 @@ cleanup()
 		}
 	}
 	UProcList.Rewind();
-	while ( proc = UProcList.Next() ) {
+	while ( (proc = UProcList.Next()) ) {
 		if ( proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->kill_forcibly();
 			proc->delete_files();

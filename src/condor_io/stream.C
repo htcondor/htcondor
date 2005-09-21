@@ -100,6 +100,12 @@ Stream::code( char	&c)
 			return put(c);
 		case stream_decode:
 			return get(c);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(char &c) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(char &c)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -115,6 +121,12 @@ Stream::code( unsigned char	&c)
 			return put(c);
 		case stream_decode:
 			return get(c);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned char &c) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned char &c)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -130,6 +142,12 @@ Stream::code( int		&i)
 			return put(i);
 		case stream_decode:
 			return get(i);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(int &i) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(int &i)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -145,6 +163,12 @@ Stream::code( unsigned int		&i)
 			return put(i);
 		case stream_decode:
 			return get(i);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned int &i) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned int &i)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -159,6 +183,12 @@ Stream::code( long	&l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(long &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(long &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -173,6 +203,12 @@ Stream::code( unsigned long	&l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned long &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned long &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -187,6 +223,12 @@ Stream::code( long long	&l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(long long &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(long long &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -200,6 +242,12 @@ Stream::code( unsigned long long	&l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned long long &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned long long &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -213,6 +261,12 @@ Stream::code( LONGLONG &l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(LONGLONG &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(LONGLONG &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -226,6 +280,12 @@ Stream::code( ULONGLONG &l)
 			return put(l);
 		case stream_decode:
 			return get(l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(ULONGLONG &l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(ULONGLONG &l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -240,6 +300,12 @@ Stream::code( short	&s)
 			return put(s);
 		case stream_decode:
 			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(short &s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(short &s)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -255,6 +321,12 @@ Stream::code( unsigned short	&s)
 			return put(s);
 		case stream_decode:
 			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(unsigned short &s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(unsigned short &s)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -270,6 +342,12 @@ Stream::code( float	&f)
 			return put(f);
 		case stream_decode:
 			return get(f);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(float &f) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(float &f)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -285,6 +363,12 @@ Stream::code( double	&d)
 			return put(d);
 		case stream_decode:
 			return get(d);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(double &d) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(double &d)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -300,6 +384,12 @@ Stream::code( char	*&s)
 			return put(s);
 		case stream_decode:
 			return get(s);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(char *&s) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(char *&s)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -314,6 +404,12 @@ Stream::code( char	*&s, int		&len)
 			return put(s, len);
 		case stream_decode:
 			return get(s, len);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(char *&s, int &len) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(char *&s, int &len)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -335,10 +431,16 @@ int
 Stream::code_bytes(void *p, int l)
 {
 	switch(_coding) {
-	case stream_encode:
-		return put_bytes((const void *)p, l);
-	case stream_decode:
-		return get_bytes(p, l);
+		case stream_encode:
+			return put_bytes((const void *)p, l);
+		case stream_decode:
+			return get_bytes(p, l);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(void *p, int l) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(void *p, int l)'s _coding is illegal!");
+			break;
 	}
 
 	return FALSE;	/* will never get here */
@@ -884,7 +986,7 @@ Stream::put( int		i)
 		case external: {
 			tmp = htonl(i);
 			pad = (i >= 0) ? 0 : 0xff; // sign extend value
-			for (int s=0; s < INT_SIZE-sizeof(int); s++) {
+			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
 				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
 			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
@@ -917,7 +1019,7 @@ Stream::put( unsigned int		i)
 		case external: {
 			tmp = htonl(i);
 			pad = 0;
-			for (int s=0; s < INT_SIZE-sizeof(int); s++) {
+			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
 				if (put_bytes(&pad, 1) != 1) return FALSE;
 			}
 			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
@@ -1038,7 +1140,7 @@ Stream::put( long	l)
 				}
 				if (sizeof(long) < INT_SIZE) {
 					pad = (l >= 0) ? 0 : 0xff; // sign extend value
-					for (int s=0; s < INT_SIZE-sizeof(long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
@@ -1075,7 +1177,7 @@ Stream::put( unsigned long	l)
 				}
 				if (sizeof(long) < INT_SIZE) {
 					pad = 0;
-					for (int s=0; s < INT_SIZE-sizeof(long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
@@ -1111,7 +1213,7 @@ Stream::put( long long	l)
 				}
 				if (sizeof(long long) < INT_SIZE) {
 					pad = (l >= 0) ? 0 : 0xff; // sign extend value
-					for (int s=0; s < INT_SIZE-sizeof(long long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
@@ -1148,7 +1250,7 @@ Stream::put( long long unsigned	l)
 				}
 				if (sizeof(long long) < INT_SIZE) {
 					pad = 0;
-					for (int s=0; s < INT_SIZE-sizeof(long long); s++) {
+					for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) {
 						if (put_bytes(&pad, 1) != 1) return FALSE;
 					}
 				}
@@ -1485,7 +1587,7 @@ Stream::get( int		&i)
             }
 			i = ntohl(tmp);
 			sign = (i >= 0) ? 0 : 0xff;
-			for (int s=0; s < INT_SIZE-sizeof(int); s++) { // chk 4 overflow
+			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
 				if (pad[s] != sign) {
                     dprintf(D_NETWORK,
                             "Stream::get(int) incorrect pad received: %x\n",
@@ -1534,7 +1636,7 @@ Stream::get( unsigned int	&i)
                 return FALSE;
             }
 			i = ntohl(tmp);
-			for (int s=0; s < INT_SIZE-sizeof(int); s++) { // chk 4 overflow
+			for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
 				if (pad[s] != 0) {
                     dprintf(D_NETWORK,
                             "Stream::get(uint) incorrect pad received: %x\n",
@@ -1583,7 +1685,7 @@ Stream::get( long	&l)
 					l = ntohL(l);
 				}
 				sign = (l >= 0) ? 0 : 0xff;
-				for (int s=0; s < INT_SIZE-sizeof(long); s++) { // overflow?
+				for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
 					if (pad[s] != sign) {
 						return FALSE; // overflow
 					}
@@ -1626,7 +1728,7 @@ Stream::get( unsigned long	&l)
 				if (!hton_is_noop()) { // need to convert to host order
 					l = ntohL(l);
 				}
-				for (int s=0; s < INT_SIZE-sizeof(long); s++) { // overflow?
+				for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
 					if (pad[s] != 0) {
 						return FALSE; // overflow
 					}
@@ -1669,7 +1771,7 @@ Stream::get( long long	&l)
 					l = ntohLL(l);
 				}
 				sign = (l >= 0) ? 0 : 0xff;
-				for (int s=0; s < INT_SIZE-sizeof(long long); s++) { // overflow?
+				for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) { // overflow?
 					if (pad[s] != sign) {
 						return FALSE; // overflow
 					}
@@ -1712,7 +1814,7 @@ Stream::get( unsigned long long	&l)
 				if (!hton_is_noop()) { // need to convert to host order
 					l = ntohLL(l);
 				}
-				for (int s=0; s < INT_SIZE-sizeof(long long); s++) { // overflow?
+				for (int s=0; s < INT_SIZE-(int)sizeof(long long); s++) { // overflow?
 					if (pad[s] != 0) {
 						return FALSE; // overflow
 					}

@@ -80,7 +80,8 @@ XferSummary::init()
 	if( subnet ) { free( subnet ); }
 	subnet = (char *)calc_subnet_name(NULL);
 
-	if( ! getwd( pwd ) ) {
+	/* pwd is an array defined for this class to be of path_max size */
+	if( ! getcwd( pwd, _POSIX_PATH_MAX ) ) {
 		EXCEPT( "Can't get working directory." );
 	}
 }
@@ -121,8 +122,8 @@ XferSummary::Result(transferinfo *tinfo, bool success_flag,
 			time_sending += xfer_len;
 		}
 		dprintf(D_ALWAYS | D_NOHEADER,
-				"transferred %d bytes in %d seconds (%d bytes / sec)\n", 
-				xfer_size, xfer_len, xfer_bandwidth);
+				"transferred %lu bytes in %d seconds (%d bytes / sec)\n", 
+				(unsigned long) xfer_size, xfer_len, xfer_bandwidth);
 	}
 
 	log_transfer(now, tinfo, success_flag, peer, bytes_transferred);

@@ -123,7 +123,7 @@ void Server::Init()
 			 mySubSystem );
 	dprintf( D_ALWAYS, "** %s\n", CondorVersion() );
 	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
-	dprintf( D_ALWAYS, "** PID = %lu\n", getpid() );
+	dprintf( D_ALWAYS, "** PID = %lu\n", (unsigned long) getpid() );
 	dprintf( D_ALWAYS,
 			 "******************************************************\n" );
 
@@ -967,7 +967,7 @@ void Server::Replicate()
 			if (ret_code != sizeof(req)) {
 				dprintf(D_ALWAYS, 
 						"ERROR: write failed, wrote %d bytes instead of %d bytes\n", 
-						ret_code, sizeof(req));
+						ret_code, (int)sizeof(req));
 				exit(CHILDTERM_CANNOT_WRITE);
 			}
 			if (connect(server_sd, (struct sockaddr*) &server_sa,
@@ -1072,7 +1072,7 @@ void Server::Replicate()
 			ret_code = net_write(server_sd, (char *)&s_req, sizeof(s_req));
 			if (ret_code != sizeof(s_req)) {
 				dprintf(D_ALWAYS, "ERROR: Write failed (%d bytes instead of %d)\n",
-						ret_code, sizeof(s_req));
+						ret_code, (int)sizeof(s_req));
 				exit(CHILDTERM_CANNOT_WRITE);
 			}
 			bytes_recvd = 0;

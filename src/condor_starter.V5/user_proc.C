@@ -183,11 +183,11 @@ UserProc::display()
 	display_bool( D_ALWAYS, "  exit_requested", exit_requested );
 	dprintf( D_ALWAYS, "  image_size = %d blocks\n", image_size );
 
-	dprintf( D_ALWAYS, "  user_time = %d\n", user_time );
-	dprintf( D_ALWAYS, "  sys_time = %d\n", sys_time );
+	dprintf( D_ALWAYS, "  user_time = %ld\n", (long)user_time );
+	dprintf( D_ALWAYS, "  sys_time = %ld\n", (long)sys_time );
 
-	dprintf( D_ALWAYS, "  guaranteed_user_time = %d\n", guaranteed_user_time );
-	dprintf( D_ALWAYS, "  guaranteed_sys_time = %d\n", guaranteed_sys_time );
+	dprintf( D_ALWAYS, "  guaranteed_user_time = %ld\n", (long)guaranteed_user_time );
+	dprintf( D_ALWAYS, "  guaranteed_sys_time = %ld\n", (long)guaranteed_sys_time );
 
 	dprintf( D_ALWAYS, "}\n" );
 
@@ -655,7 +655,7 @@ UserProc::execute()
 			// Send the user process its startup environment conditions
 		close( pipe_fds[READ_END] );
 		cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
-		dprintf( D_ALWAYS, "cmd_fp = 0x%x\n", cmd_fp );
+		dprintf( D_ALWAYS, "cmd_fp = %p\n", cmd_fp );
 
 		if( is_restart() ) {
 #if 1

@@ -1079,7 +1079,7 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		curr_dataptr = NULL;
 
 	// Log a message
-	dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %x\n",
+	dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %p\n",
 			i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 
 	// Remove entry, move the last one in the list into this spot
@@ -3660,7 +3660,7 @@ int DaemonCore::HandleSig(int command,int sig)
 	switch (command) {
 		case _DC_RAISESIGNAL:
 			dprintf(D_DAEMONCORE,
-				"DaemonCore: received Signal %d (%s), raising event\n", sig,
+				"DaemonCore: received Signal %d (%s), raising event %s\n", sig,
 				sigTable[index].sig_descrip, sigTable[index].handler_descrip);
 			// set this signal entry to is_pending.
 			// the code to actually call the handler is
@@ -6037,7 +6037,8 @@ int DaemonCore::Create_Process(
 	}
 
 	dprintf(D_DAEMONCORE,
-		"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
+		"Child Process: pid %lu at %s\n",
+		(unsigned long)newpid,pidtmp->sinful_string);
 #ifdef WIN32
 	WatchPid(pidtmp);
 #endif
@@ -7079,8 +7080,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			if ( !hdescrip )
 				hdescrip = EMPTY_DESCRIP;
 			dprintf(D_DAEMONCORE,
-				"DaemonCore: %s %lu exited with status %d, invoking reaper %d <%s>\n",
-				whatexited,pid,exit_status,i+1,hdescrip);
+				"DaemonCore: %s %lu exited with status %d, invoking reaper "
+				"%d <%s>\n",
+				whatexited, (unsigned long)pid, exit_status, i+1, hdescrip);
 
 			if ( reapTable[i].handler )
 				// a C handler
@@ -7099,7 +7101,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			// no registered reaper
 			dprintf(D_DAEMONCORE,
 			"DaemonCore: %s %lu exited with status %d; no registered reaper\n",
-				whatexited,pid,exit_status);
+				whatexited, (unsigned long)pid, exit_status);
 		}
 	} else {
 		// TODO: the parent for this process is remote.
@@ -7129,7 +7131,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// TODO: should also set a timer and do a fast/hard kill later on!
 	if (pid == ppid) {
 		dprintf(D_ALWAYS,
-				"Our Parent process (pid %lu) exited; shutting down\n",pid);
+				"Our Parent process (pid %lu) exited; shutting down\n",
+				(unsigned long)pid);
 		Send_Signal(mypid,SIGTERM);	// SIGTERM means shutdown graceful
 	}
 

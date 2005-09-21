@@ -49,6 +49,6 @@ display_startup_info( const STARTUP_INFO *s, int flags )
 		s->coredump_limit_exists ? "TRUE" : "FALSE"
 	);
 	if( s->coredump_limit_exists ) {
-		dprintf( flags, "\tCoredump Limit %ld\n", s->coredump_limit );
+		dprintf( flags, "\tCoredump Limit %d\n", s->coredump_limit );
 	}
 }

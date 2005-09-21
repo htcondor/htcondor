@@ -702,7 +702,8 @@ ReliSock::put_file( filesize_t *size, int fd )
 			"ReliSock: put_file: sent " FILESIZE_T_FORMAT " bytes\n", total);
 
 	if (total < filesize) {
-		dprintf(D_ALWAYS,"ReliSock: put_file: only sent %d bytes out of %d\n",
+		dprintf(D_ALWAYS,"ReliSock: put_file: only sent " FILESIZE_T_FORMAT 
+					" bytes out of " FILESIZE_T_FORMAT "\n",
 			total, filesize);
 		return -1;
 	}

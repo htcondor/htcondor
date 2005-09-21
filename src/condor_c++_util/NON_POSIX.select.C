@@ -238,7 +238,8 @@ Selector::display()
 	}
 	if( timeout_wanted ) {
 		dprintf( D_ALWAYS,
-			"Timeout = %d.%06d seconds\n", timeout.tv_sec, timeout.tv_usec
+			"Timeout = %ld.%06ld seconds\n", (long) timeout.tv_sec, 
+			(long) timeout.tv_usec
 		);
 	} else {
 		dprintf( D_ALWAYS, "Timeout not wanted\n" );

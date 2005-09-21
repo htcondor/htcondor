@@ -1132,8 +1132,8 @@ daemon::SetupHighAvailability( void )
 	if ( tmp ) {
 		if ( !isdigit( tmp[0] ) ) {
 			dprintf(D_ALWAYS,
-					"HA time '%s' is not a number; using default %d\n",
-					tmp, lock_hold_time );
+					"HA time '%s' is not a number; using default %ld\n",
+					tmp, (long)lock_hold_time );
 		} else {
 			lock_hold_time = (time_t) atol( tmp );
 		}
@@ -1150,8 +1150,8 @@ daemon::SetupHighAvailability( void )
 	if ( tmp ) {
 		if ( !isdigit( tmp[0] ) ) {
 			dprintf(D_ALWAYS,
-					"HA time '%s' is not a number; using default %d\n",
-					tmp, poll_period );
+					"HA time '%s' is not a number; using default %ld\n",
+					tmp, (long)poll_period );
 		} else {
 			poll_period = (time_t) atol( tmp );
 		}
@@ -1169,8 +1169,9 @@ daemon::SetupHighAvailability( void )
 			dprintf( D_ALWAYS, "Failed to change HA lock parameters\n" );
 		} else {
 			dprintf( D_FULLDEBUG,
-					 "Set HA lock for %s; URL='%s' poll=%ds hold=%ds\n",
-					 name_in_config_file, url, poll_period, lock_hold_time );
+					 "Set HA lock for %s; URL='%s' poll=%lds hold=%lds\n",
+					 name_in_config_file, url, (long)poll_period, 
+					 (long)lock_hold_time );
 		}
 	} else {
 		ha_lock = new CondorLock( url,
@@ -1185,8 +1186,9 @@ daemon::SetupHighAvailability( void )
 			// Log the new lock creation (if successful)
 		if ( ha_lock ) {
 			dprintf( D_FULLDEBUG,
-					 "Created HA lock for %s; URL='%s' poll=%ds hold=%ds\n",
-					 name_in_config_file, url, poll_period, lock_hold_time );
+					 "Created HA lock for %s; URL='%s' poll=%lds hold=%lds\n",
+					 name_in_config_file, url, (long)poll_period, 
+					 (long)lock_hold_time );
 		}
 	}
 	free( url );

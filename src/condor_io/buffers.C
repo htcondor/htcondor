@@ -38,8 +38,8 @@ void
 sanity_check()
 {
 	dprintf(D_ALWAYS, "IO: Buffer management:\n");
-	dprintf(D_ALWAYS, "IO:     created: %d\n", num_created);
-	dprintf(D_ALWAYS, "IO:     deleted: %d\n\n", num_deleted);
+	dprintf(D_ALWAYS, "IO:     created: %lu\n", num_created);
+	dprintf(D_ALWAYS, "IO:     deleted: %lu\n\n", num_deleted);
 }
 
 

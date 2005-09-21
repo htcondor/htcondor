@@ -237,10 +237,10 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		sprintf( line, "%s=%lu", ATTR_TOTAL_DISK, m_disk );
 		cp->Insert( line ); 
 
-		sprintf( line, "%s=%lu", ATTR_TOTAL_CPUS, m_num_cpus );
+		sprintf( line, "%s=%lu", ATTR_TOTAL_CPUS, (unsigned long)m_num_cpus );
 		cp->Insert( line ); 
 
-		sprintf( line, "%s=%lu", ATTR_TOTAL_MEMORY, m_phys_mem );
+		sprintf( line, "%s=%lu", ATTR_TOTAL_MEMORY, (unsigned long)m_phys_mem );
 		cp->Insert( line ); 
 
 			// KFLOPS and MIPS are only conditionally computed; thus, only

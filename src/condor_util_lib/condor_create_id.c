@@ -1,4 +1,5 @@
 #include "condor_common.h"
+#include "condor_random_num.h"
 
 static int g_initialized = FALSE;
 static unsigned int g_mii= FALSE;

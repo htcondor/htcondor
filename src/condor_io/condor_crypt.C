@@ -70,11 +70,11 @@ Protocol Condor_Crypt_Base :: protocol()
 unsigned char * Condor_Crypt_Base :: randomKey(int length)
 {
     unsigned char * key = (unsigned char *)(malloc(length));
-	static bool already_seeded = false;
 
 	memset(key, 0, length);
 
 #if defined(CONDOR_ENCRYPTION)
+	static bool already_seeded = false;
     int size = 128;
     if( ! already_seeded ) {
         unsigned char * buf = (unsigned char *) malloc(size);
