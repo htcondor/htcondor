@@ -48,7 +48,11 @@
 #include "condor_fix_unistd.h"
 
 /* Allows use of setgroups() */
-#include <grp.h>
+/* It turns out we can't allow this inclusion to fix some other warnings
+	in the source code concerning setgroups() since it messes up some 
+	hand specified prototypes in the standard universe codebase. Once that
+	is investigated and fixed, this can be included properly. */
+/*#include <grp.h>*/
 
 /* Want stdarg.h before stdio.h so we get GNU's va_list defined */
 #include <stdarg.h>
