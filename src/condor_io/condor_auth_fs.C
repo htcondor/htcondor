@@ -99,7 +99,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
         setRemoteUser( NULL );
         
         if ( remote_ ) {
-	        int    mypid = 0;
+	        pid_t    mypid = 0;
 #ifdef WIN32
 	        mypid = ::GetCurrentProcessId();
 #else
@@ -168,7 +168,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 					free(rendezvous_dir);
 				}
 
-				int    mypid = 0;
+				pid_t    mypid = 0;
 #ifdef WIN32
 				mypid = ::GetCurrentProcessId();
 #else
