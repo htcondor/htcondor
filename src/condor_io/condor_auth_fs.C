@@ -168,13 +168,20 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 					free(rendezvous_dir);
 				}
 
-				// construct the template. mkstemp modifies the string you pass in
-				// so we create a dup of it just in case MyString does anything
-				// funny or uses string spaces, etc.
+				int    mypid = 0;
+#ifdef WIN32
+				mypid = ::GetCurrentProcessId();
+#else
+				mypid = ::getpid();
+#endif
+
+				// construct the template. mkstemp modifies the string you pass
+				// in so we create a dup of it just in case MyString does
+				// anything funny or uses string spaces, etc.
 				filename_template += "/FS_REMOTE_";
 				filename_template += my_hostname();
 				filename_template += "_";
-				filename_template += getpid();
+				filename_template += mypid;
 				filename_template += "_XXXXXX";
 				char* filename_inout = strdup(filename_template.Value());
 
