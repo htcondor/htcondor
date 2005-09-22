@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.30 2005-09-08 20:47:31 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.31 2005-09-22 22:14:26 wright Exp $
 #
 ######################################################################
 
@@ -15,7 +15,7 @@ use File::Basename;
 
 use Getopt::Long;
 use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify
-     $opt_platforms $opt_externals /;
+     $opt_platforms $opt_externals $opt_without_tests /;
 
 # database parameters
 my $database = "history";
@@ -33,6 +33,7 @@ my $notify;
 my $platforms;
 my $ext_mod;
 my %tags;
+our $no_tests;
 
 
 sub Initialize
@@ -62,6 +63,7 @@ sub ProcessOptions
            'externals=s'   => $opt_externals,
            'notify=s'      => $opt_notify,
            'platforms=s'   => $opt_platforms,
+	   'without-tests' => $opt_without_tests
     );
 
     if( defined($opt_help) ) {
@@ -104,6 +106,11 @@ sub ProcessOptions
         }
         $ext_mod = "$opt_externals";
     }
+
+    if( defined($opt_without_tests) ) {
+	$no_tests = 1;
+    }
+
 }
 
 
@@ -409,6 +416,10 @@ List of users to be notified about the results
 
 --platforms
 List of platforms to build (default: all currently known-working)
+
+--without-tests
+Submit a build job such that it will NOT submit test runs as each
+platform completes
 
 END_USAGE
 
