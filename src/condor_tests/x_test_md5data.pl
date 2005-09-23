@@ -7,13 +7,23 @@ use Digest::MD5;
 
 GetOptions (
 		'help' => \$help,
-		'megs=i' => \$megs,
+		'oldfile=s' => \$oldfile,
+		'newfile=s' => \$newfile,
 );
 
 if ( $help )    { help() and exit(0); }
 
+if(!$oldfile)
+{
+}
+
+if(!$newfile)
+{
+}
+
+my $oldmd5file = $oldfile . "md5";
 my $oldmd5;
-open(ORIGMD5,"<datamd5") || die "Can't open output file $!\n";
+open(ORIGMD5,"<$oldmd5file") || die "Can't open md5 checksum file $!\n";
 while(<ORIGMD5>)
 {
 	chomp($_);
@@ -22,9 +32,11 @@ while(<ORIGMD5>)
 close(ORIGMD5);
 print "Old MD5 = $oldmd5\n";
 
-open(MD5,">backdatamd5") || die "Can't open MD5 output file $!\n";
+my $newmd5file = $newfile . "md5";
 my $datamd5 = Digest::MD5->new;
-open(DATA,"<backdata") || die "Trying to open data file\n" ;
+
+open(MD5,">$newmd5file") || die "Can't open MD5 output file $!\n";
+open(DATA,"<$newfile") || die "Trying to open data file\n" ;
 $datamd5->addfile(DATA);
 close(DATA);
 
@@ -56,7 +68,8 @@ sub help
     print "Usage: writefile.pl --megs=#
 Options:
 	[-h/--help]				See this
-	[-m/--megs]				Number of megs to make file
+	[-o/--oldfile]			file which had filemd5 created
+	[-n/--newfile]			file which will have filemd5 created
 	\n";
 }
 

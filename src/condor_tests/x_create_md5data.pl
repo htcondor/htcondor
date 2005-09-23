@@ -4,7 +4,6 @@ use File::Path;
 use Getopt::Long;
 use Digest::MD5;
 
-open(DATA,">data") || die "Can't open output file $!\n";
 
 GetOptions (
 		'help' => \$help,
@@ -12,12 +11,14 @@ GetOptions (
 		'filenm=s' => \$filenm,
 );
 
+open(DATA,">$filenm") || die "Can't open output file $!\n";
+
 my $rows = $megs;
 my $rowsz = 1048576;
 my $seed_char = int(rand (ord("~") - ord(" ") + 1)) + ord(" ");
 my $start_char = chr($seed_char);
 
-print "Start char -$start_char-\mn";
+print "Start char -$start_char-\n";
 
 if ( $help )    { help() and exit(0); }
 
