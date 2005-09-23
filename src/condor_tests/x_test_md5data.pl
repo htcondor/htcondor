@@ -10,12 +10,7 @@ GetOptions (
 		'megs=i' => \$megs,
 );
 
-my $rows = $megs;
-my $rowsz = 1048576;
-my $start_char = 0;
-
 if ( $help )    { help() and exit(0); }
-
 
 my $oldmd5;
 open(ORIGMD5,"<datamd5") || die "Can't open output file $!\n";
