@@ -313,6 +313,23 @@ MyString::operator+=( unsigned int ui )
 
 
 MyString& 
+MyString::operator+=( long l )
+{
+	const int bufLen = 64;
+	char tmp[bufLen];
+	::snprintf( tmp, bufLen, "%l", l );
+	int s_len = strlen( tmp );
+	ASSERT(s_len < bufLen);
+	if( s_len + Len > capacity ) {
+		reserve_at_least( Len + s_len );
+	}
+	strcpy( Data + Len, tmp );
+	Len += s_len;
+	return *this;
+}
+
+
+MyString& 
 MyString::operator+=( double d )
 {
 	const int bufLen = 128;

@@ -162,6 +162,9 @@ class MyString
 	/** Appends the string version of the given unsigned int */
 	MyString& operator+=(unsigned int ui);
 
+	/** Appends the string version of the given long int */
+	MyString& operator+=(long l);
+
 	/** Appends the string version of the given double */
 	MyString& operator+=(double d);
 
