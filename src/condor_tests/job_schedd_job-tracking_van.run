@@ -44,7 +44,7 @@ $submit = sub
 	{
 		system("date");
 		Condor::debug( "Good it is all submitted and we'll start the timer....\n");
-		CondorTest::RegisterTimed($testname, $timed, 240);
+		CondorTest::RegisterTimed($testname, $timed, 360);
 	}
 };
 
