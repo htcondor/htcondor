@@ -18,7 +18,7 @@ $success = sub {
 if( ! -e "data")
 {
 	print "Making data file\n";
-	$stats = CondorTest::verbose_system("./x_create_md5data.pl -m=200");
+	$stats = CondorTest::verbose_system("./x_create_md5data.pl -m=200 -filenm=data");
 }
 else
 {

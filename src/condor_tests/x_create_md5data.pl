@@ -9,6 +9,7 @@ open(DATA,">data") || die "Can't open output file $!\n";
 GetOptions (
 		'help' => \$help,
 		'megs=i' => \$megs,
+		'filenm=s' => \$filenm,
 );
 
 my $rows = $megs;
@@ -21,6 +22,12 @@ print "Start char -$start_char-\mn";
 if ( $help )    { help() and exit(0); }
 
 die "Need megabytes defined\n" unless defined $megs;
+
+if( !$filenm )
+{
+	die "you must use --filenm=filename for this test to produce output!\n";
+}
+
 
 my $rowchar = $seed_char++;
 my $row = "";
@@ -47,8 +54,10 @@ foreach (1..$rows)
 
 close(DATA);
 
-open(DATA,"<data") || die "Can't open input file $!\n";
-open(MD5,">datamd5") || die "Can't open MD5 output file $!\n";
+my $outnamemd5 = $filenm . "md5";
+
+open(DATA,"<$filenm") || die "Can't open input file $!\n";
+open(MD5,">$outnamemd5") || die "Can't open MD5 output file $!\n";
 my $datamd5 = Digest::MD5->new;
 
 $datamd5->addfile(DATA);
@@ -72,6 +81,7 @@ sub help
 Options:
 	[-h/--help]				See this
 	[-m/--megs]				Number of megs to make file
+	[-f/--filenm]			output file base name. If fed data produces data and datamd5.
 	\n";
 }
 
