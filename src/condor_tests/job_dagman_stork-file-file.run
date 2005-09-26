@@ -1,0 +1,138 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+use Cwd;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+$testname = 'job_dagman_stork-file-file - Simple dagman/stork job';
+$corename = "job_dagman_stork-file-file";
+$topdir = getcwd();
+
+print "Working Directory is $topdir\n";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".log";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+my $configloc = CondorPersonal::StartCondor("x_param.storksrvr" ,"local");
+my @local = split /:/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+print "---local config is $locconfig and local port is $locport---\n";
+
+# find out the directory and cp stork submit file there and 
+# build dag file there to submit from there and preserve all logs etc.
+
+my $personaldir = "";
+if($locconfig =~ /(.*)\/condor_config/)
+{
+	$personaldir = $1;
+	print "Personal Condor and Dag runtime directory is $personaldir\n";
+}
+
+
+$ENV{CONDOR_CONFIG} = $locconfig;
+# submit into stork personal condor
+# we can not assume for a dagman test that we have a stork server
+# running in the personal condor which is being run for the test suite
+# so we setup and run our own.
+
+if( ! -e "job_stork_file-file.in" )
+{
+	system("date > job_stork_file-file.in");
+}
+
+my $src_url = "/dev/null";
+my $dest_url = "/dev/null";
+
+print "Transfer $src_url to $dest_url\n";
+
+my $storksubmitfile = "job_stork_file-file.stork" . $mypid;
+
+my $line = "";
+open(STORKSTUB,"<job_stork_file-file.stork") || die "Could not open data file 'job_stork_file-file.stork': $?";
+open(NEWSTORKSTUB,">$storksubmitfile") || die "Could not open test stork submit file <$storksubmitfile>: $?";
+while(<STORKSTUB>)
+{
+	chomp();
+	$line = $_;
+	if($line =~ /src_url/)
+	{
+		print NEWSTORKSTUB "src_url = \"file:/$src_url\";\n"
+	}
+	elsif($line =~ /dest_url/)
+	{
+		print NEWSTORKSTUB "dest_url = \"file:/$dest_url\";\n"
+	}
+	else
+	{
+		print NEWSTORKSTUB "$line\n"
+	}
+}
+close(STORKSTUB);
+close(NEWSTORKSTUB);
+
+
+system("cp -r $mypid $mysaveme");
+system("cp job_stork_file-file.stork* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+my @adarray;
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
+
+system("date");
+
+if( $result != 0 )
+{
+	# actual test failed but we allowed cleanup
+	print "Stork test failed!\n";
+	exit(1);
+}
+else
+{
+	print "Stork test SUCCESS!\n";
+}
+
