@@ -59,8 +59,8 @@ static int Create_Thread_With_Data_Start(void * data, Stream *)
 	return tmp->worker(tmp->data_n1, tmp->data_n2, tmp->data_vp);
 }
 
-template HashTable<int, Create_Thread_With_Data_Data *>;
-template HashBucket<int, Create_Thread_With_Data_Data *>;
+template class HashTable<int, Create_Thread_With_Data_Data *>;
+template class HashBucket<int, Create_Thread_With_Data_Data *>;
 static HashTable<int, Create_Thread_With_Data_Data *> tid_to_data(10, hashFuncInt, rejectDuplicateKeys);
 
 /// Support function for Create_Thread_With_Data
