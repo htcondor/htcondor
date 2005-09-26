@@ -15,10 +15,12 @@ if ( $help )    { help() and exit(0); }
 
 if(!$oldfile)
 {
+	die "oldfile=\"somefile\" must be passed in!\n";
 }
 
 if(!$newfile)
 {
+	die "newfile=\"somefile\" must be passed in!\n";
 }
 
 my $oldmd5file = $oldfile . "md5";
@@ -48,7 +50,7 @@ close(MD5);
 
 if($oldmd5 eq $hexmd5)
 {
-	print "worked\n";
+	print "Check some of $oldfile and $newfile match!\n";
 	#verbose_system("touch WORKED");
 	exit(0);
 }
