@@ -130,7 +130,11 @@ void RegExer::copy_deep(const RegExer &copy) {
 
 		// we don't actually need to copy the values in the cache, since
 		// they'll get recreated as necessary.  just allocate & initialize.
-		_scache = new (char*)[_nmatch];
+
+		// gcc 3.4 says that 'array bound forbidden after parenthesized
+		// type-id'
+		// 'note: try removing the parentheses around the type-id
+		_scache = new char*[_nmatch];
 		memset(_scache, 0, _nmatch * sizeof(char*));
 	}
 
@@ -384,7 +388,7 @@ bool RegExer::match(char *str) {
 			memcpy(_pmatch, pmatch, _nmatch * sizeof(regmatch_t));
 
 			// allocate and initialize the string cache
-			_scache = new (char*)[_nmatch];
+			_scache = new char*[_nmatch];
 			memset(_scache, 0, _nmatch * sizeof(char*));
 		}
 
