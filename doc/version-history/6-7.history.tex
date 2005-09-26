@@ -37,6 +37,10 @@ side-effect, ``stream\_output'' and ``stream\_error'' will default to
 a job specifically sets x509userproxy and is using file transfer, when
 the proxy file is updated, it will be transfered to the running job.
 
+\item If a  cycle is detected in the DAG while 
+running, \Condor{dagman} now prints (in the \File{dagman.out} file)
+the status of all DAG nodes.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -56,7 +60,18 @@ kernel post 2.6.12.2.
 grid-type condor job ad contained the attribute \Attr{remote\_}.
 
 \item Fixed a bug with the FS\_REMOTE authentication mechanism that caused
-it to fail occaisionaly when using NFS.
+it to fail occasionally when using NFS.
+
+% Gnats PR 553:
+\item Fixed a bug in which a double terminated event in a DAG node with
+a POST script could cause \Condor{dagman} to abort the DAG and claim
+that a cycle exists in the DAG.
+
+% Also related to Gnats PR 553:
+\item In the DAG status messages in \File{dagman.out} files,
+\Condor{dagman} now shows nodes with queued PRE or POST scripts
+in the Pre or Post columns.  Previously, these nodes were shown
+in the Un-Ready column.
 
 \end{itemize}
 
@@ -189,7 +204,7 @@ the POST script of a node whose Condor job had never been successfully
 submitted due to repeated \Condor{submit} failures.  (This bug was
 introduced in 6.7.7 or earlier.)
 
-\item Fixed a bug in a debug message.  If an error occured during file
+\item Fixed a bug in a debug message.  If an error occurred during file
 transfer, Condor would print the wrong expected filesize in the error message
 on some platforms.
 
@@ -230,7 +245,7 @@ held with hold reason ``Spooling input data files''.
 information from modern Condor configurations where
 \MacroNI{NEGOTIATOR\_HOST} is not defined.
 
-% Programmer explaination:
+% Programmer explanation:
 % MANAGED is no longer boolean in the job ad, it's
 % a string of complex state.  This enables the gridmanager
 % to no longer erroneously take control of jobs that are
