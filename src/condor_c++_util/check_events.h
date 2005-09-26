@@ -95,7 +95,6 @@ class CheckEvents {
 		@param The event to check.
 		@param A MyString to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
-		@param Whether the event is "good" (set by this method).
 		@return check_event_result_t, see above.
 	*/
 	check_event_result_t CheckAnEvent(const ULogEvent *event,
@@ -130,6 +129,30 @@ class CheckEvents {
 		int TotalEndCount() const { return abortCount + termCount; }
 	};
 
+	/** Check the status of a job after a submit event.
+		@param A string containing this job's ID, etc. (to be used in
+				any error message).
+		@param The info about events we've seen for this job.
+		@param A MyString to hold an error message (only relevant if
+				the result value is false and/or eventIsGood is false).
+		@param A reference to the result value (will be set only if
+				not okay).
+	*/
+	void CheckJobSubmit(const MyString &idStr, const JobInfo *info,
+			MyString &errorMsg, check_event_result_t &result);
+
+	/** Check the status of a job after an execute event.
+		@param A string containing this job's ID, etc. (to be used in
+				any error message).
+		@param The info about events we've seen for this job.
+		@param A MyString to hold an error message (only relevant if
+				the result value is false and/or eventIsGood is false).
+		@param A reference to the result value (will be set only if
+				not okay).
+	*/
+	void CheckJobExecute(const MyString &idStr, const JobInfo *info,
+			MyString &errorMsg, check_event_result_t &result);
+
 	/** Check the status after an event that indicates the end of a job
 		(ULOG_EXECUTABLE_ERROR, ULOG_JOB_ABORTED, or ULOG_JOB_TERMINATED).
 		@param A string containing this job's ID, etc. (to be used in
@@ -137,11 +160,39 @@ class CheckEvents {
 		@param The info about events we've seen for this job.
 		@param A MyString to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
-		@param Whether the event is "good" (set by this method)
-		@return true on success, false on failure
+		@param A reference to the result value (will be set only if
+				not okay).
 	*/
-	bool CheckJobEnd(const MyString &idStr, const JobInfo *info,
-			MyString &errorMsg, bool &eventIsGood);
+	void CheckJobEnd(const MyString &idStr, const JobInfo *info,
+			MyString &errorMsg, check_event_result_t &result);
+
+	/** Check the status after a ULOG_POST_SCRIPT_TERMINATED event.
+		@param A string containing this job's ID, etc. (to be used in
+				any error message).
+		@param The job's Condor ID.
+		@param The info about events we've seen for this job.
+		@param A MyString to hold an error message (only relevant if
+				the result value is false and/or eventIsGood is false).
+		@param A reference to the result value (will be set only if
+				not okay).
+	*/
+	void CheckPostTerm(const MyString &idStr,
+			const ReadMultipleUserLogs::JobID &id, const JobInfo *info,
+			MyString &errorMsg, check_event_result_t &result);
+
+	/** Check the status of all jobs at the end of a run.
+		@param A string containing this job's ID, etc. (to be used in
+				any error message).
+		@param The job's Condor ID.
+		@param The info about events we've seen for this job.
+		@param A MyString to hold an error message (only relevant if
+				the result value is false and/or eventIsGood is false).
+		@param A reference to the result value (will be set only if
+				not okay).
+	*/
+	void CheckJobFinal(const MyString &idStr,
+			const ReadMultipleUserLogs::JobID &id, const JobInfo *info,
+			MyString &errorMsg, check_event_result_t &result);
 
 	HashTable<ReadMultipleUserLogs::JobID, JobInfo *>	jobHash;
 
@@ -164,6 +215,9 @@ class CheckEvents {
 
 		// Bit-mapped flag for what "bad" events to allow.
 	int		allowEvents;
+
+		// Special Condor ID for POST script run after submit failures.
+	ReadMultipleUserLogs::JobID	noSubmitId;
 
 	// For instantiation in programs that use this class.
 #define CHECK_EVENTS_HASH_INSTANCE template class \

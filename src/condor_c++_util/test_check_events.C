@@ -38,7 +38,7 @@ Status
 CheckArgs(int argc, char **argv);
 
 void
-CheckThisEvent(CheckEvents &ce, const ULogEvent *event,
+CheckThisEvent(int line, CheckEvents &ce, const ULogEvent *event,
 		CheckEvents::check_event_result_t expectedResult, bool &result);
 
 int main(int argc, char **argv)
@@ -72,11 +72,11 @@ int main(int argc, char **argv)
 	se1.subproc = 0;
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce1, &se1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce1, &se1, CheckEvents::EVENT_OKAY, result);
 
 		// Re-do the same submit event -- this should generate an error.
 	printf("Testing submit... ");
-	CheckThisEvent(ce1, &se1, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce1, &se1, CheckEvents::EVENT_ERROR, result);
 
 		// Test a submit event for a new job.
 	SubmitEvent		se2;
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 	se2.subproc = 1;
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce1, &se2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce1, &se2, CheckEvents::EVENT_OKAY, result);
 
 		// Test a terminate event.  This should fail because we have
 		// two submits for this job.
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	te1.subproc = 0;
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce1, &te1, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce1, &te1, CheckEvents::EVENT_ERROR, result);
 
 		// Test a job aborted event.
 	JobAbortedEvent	ae2;
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 	ae2.subproc = 1;
 
 	printf("Testing job aborted... ");
-	CheckThisEvent(ce1, &ae2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce1, &ae2, CheckEvents::EVENT_OKAY, result);
 
 		// Test an execute event.  This should fail because we already
 		// got an aborted event for this job.
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 	exec.subproc = 1;
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce1, &exec, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce1, &exec, CheckEvents::EVENT_ERROR, result);
 
 		// Test an execute event.  This should fail because we haven't
 		// gotten a submit event for this job.
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 	exec.subproc = 1;
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce1, &exec, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce1, &exec, CheckEvents::EVENT_ERROR, result);
 
 		// Test a terminate event.  This should fail because we already
 		// got an aborted event for this job.
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 	te2.subproc = 1;
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce1, &te2, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce1, &te2, CheckEvents::EVENT_ERROR, result);
 
 		// Test a job aborted event.  This should fail because we
 		// don't have a submit event for this job yet.
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 	ae3.subproc = 0;
 
 	printf("Testing job aborted... ");
-	CheckThisEvent(ce1, &ae3, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce1, &ae3, CheckEvents::EVENT_ERROR, result);
 
 		// Test a submit event for the job that just aborted.  This
 		// should fail because we got the abort before the submit.
@@ -153,12 +153,12 @@ int main(int argc, char **argv)
 	se3.subproc = 0;
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce1, &se3, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce1, &se3, CheckEvents::EVENT_ERROR, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce1.CheckAllJobs(errorMsg) != CheckEvents::EVENT_ERROR) {
 		printf("...should have gotten an error (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -172,20 +172,20 @@ int main(int argc, char **argv)
 		// events...
 	CheckEvents		ce2;
 	printf("Testing submit... ");
-	CheckThisEvent(ce2, &se1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce2, &se1, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce2, &se2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce2, &se2, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce2, &te1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce2, &te1, CheckEvents::EVENT_OKAY, result);
 
 		// This should fail because the second job doesn't have a terminate
 		// or abort event.
 	printf("Testing CheckAllJobs()... ");
 	if ( ce2.CheckAllJobs(errorMsg) != CheckEvents::EVENT_ERROR ) {
 		printf("...should have gotten an error (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -197,27 +197,26 @@ int main(int argc, char **argv)
 	ee2.subproc = 1;
 
 	printf("Testing executable error... ");
-	CheckThisEvent(ce2, &ee2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce2, &ee2, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing job aborted... ");
-	CheckThisEvent(ce2, &ae2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce2, &ae2, CheckEvents::EVENT_OKAY, result);
 
 	PostScriptTerminatedEvent pt1;
-		// Note that ID doesn't match anything else -- this simulates
-		// running a post script where node submit failed.
-	pt1.cluster = 998866;
-	pt1.proc = 0;
-	pt1.subproc = 0;
+		// Note: special "no submit" ID.
+	pt1.cluster = -1;
+	pt1.proc = -1;
+	pt1.subproc = -1;
 
 	printf("Testing post script terminated...");
-	CheckThisEvent(ce2, &pt1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce2, &pt1, CheckEvents::EVENT_OKAY, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce2.CheckAllJobs(errorMsg) == CheckEvents::EVENT_OKAY ) {
 		printf("...succeeded\n");
 	} else {
 		printf("...FAILED (%s)\n", errorMsg.Value());
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	}
 
@@ -236,7 +235,7 @@ int main(int argc, char **argv)
 	se4.subproc = 9;
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce3, &se4, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce3, &se4, CheckEvents::EVENT_OKAY, result);
 
 	ExecuteEvent exec2;
 	exec2.cluster = 9876;
@@ -244,7 +243,7 @@ int main(int argc, char **argv)
 	exec2.subproc = 9;
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce3, &exec2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce3, &exec2, CheckEvents::EVENT_OKAY, result);
 
 	JobTerminatedEvent	te3;
 	te3.cluster = 9876;
@@ -252,7 +251,7 @@ int main(int argc, char **argv)
 	te3.subproc = 9;
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce3, &te3, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce3, &te3, CheckEvents::EVENT_OKAY, result);
 
 	JobAbortedEvent	ae4;
 	ae4.cluster = 9876;
@@ -260,12 +259,12 @@ int main(int argc, char **argv)
 	ae4.subproc = 9;
 
 	printf("Testing job aborted... ");
-	CheckThisEvent(ce3, &ae4, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce3, &ae4, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce3.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
 		printf("...should have gotten a bad event (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected bad event (%s)\n", errorMsg.Value());
@@ -279,21 +278,21 @@ int main(int argc, char **argv)
 	CheckEvents		ce4;
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce4, &se4, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce4, &se4, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce4, &exec2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce4, &exec2, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce4, &te3, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce4, &te3, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing job aborted... ");
-	CheckThisEvent(ce4, &ae4, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce4, &ae4, CheckEvents::EVENT_ERROR, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce4.CheckAllJobs(errorMsg) != CheckEvents::EVENT_ERROR ) {
 		printf("...should have gotten an error (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -305,24 +304,24 @@ int main(int argc, char **argv)
 	CheckEvents		ce5(CheckEvents::ALLOW_RUN_AFTER_TERM);
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce5, &se4, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce5, &se4, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce5, &exec2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce5, &exec2, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce5, &te3, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce5, &te3, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce5, &exec2, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce5, &exec2, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce5, &te3, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce5, &te3, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce5.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
 		printf("...should have gotten a bad event (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected bad event (%s)\n", errorMsg.Value());
@@ -336,27 +335,27 @@ int main(int argc, char **argv)
 	CheckEvents		ce6;
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce6, &se4, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce6, &se4, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce6, &exec2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce6, &exec2, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce6, &te3, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce6, &te3, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce6, &exec2, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce6, &exec2, CheckEvents::EVENT_ERROR, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce6, &te3, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce6, &te3, CheckEvents::EVENT_ERROR, result);
 
 	printf("Testing post script terminated...");
-	CheckThisEvent(ce6, &pt1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce6, &pt1, CheckEvents::EVENT_OKAY, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce6.CheckAllJobs(errorMsg) != CheckEvents::EVENT_ERROR ) {
 		printf("...should have gotten an error (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -374,7 +373,7 @@ int main(int argc, char **argv)
 	se4.subproc = 0;
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce7, &se5, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce7, &se5, CheckEvents::EVENT_OKAY, result);
 
 	ExecuteEvent exec3;
 	exec3.cluster = 2000; // Note different from submit event!
@@ -382,7 +381,7 @@ int main(int argc, char **argv)
 	exec3.subproc = 0;
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce7, &exec3, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce7, &exec3, CheckEvents::EVENT_BAD_EVENT, result);
 
 	JobTerminatedEvent	te4;
 	te4.cluster = 3000;
@@ -390,24 +389,24 @@ int main(int argc, char **argv)
 	te4.subproc = 0;
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce7, &te4, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce7, &te4, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce7.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
 		printf("...should have gotten a bad event (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected bad event (%s)\n", errorMsg.Value());
 	}
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce7, &te4, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce7, &te4, CheckEvents::EVENT_ERROR, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce7.CheckAllJobs(errorMsg) != CheckEvents::EVENT_ERROR ) {
 		printf("...should have gotten an error (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -425,24 +424,24 @@ int main(int argc, char **argv)
 	ee8.subproc = 0;
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce8, &ee8, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce8, &ee8, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce8, &se1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce8, &se1, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce8, &te1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce8, &te1, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce8, &se1, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce8, &se1, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce8, &te1, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce8, &te1, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce8.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
 		printf("...should have gotten a bad event (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected bad event (%s)\n", errorMsg.Value());
@@ -459,13 +458,13 @@ int main(int argc, char **argv)
 	ee9.cluster = 1234;
 	ee9.proc = 0;
 	ee9.subproc = 0;
-	CheckThisEvent(ce9, &ee9, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce9, &ee9, CheckEvents::EVENT_BAD_EVENT, result);
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce9, &se1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce9, &se1, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce9, &te1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce9, &te1, CheckEvents::EVENT_OKAY, result);
 
 		// This should return OKAY because at this point we don't
 		// remember that the execute came before the submit.
@@ -474,7 +473,7 @@ int main(int argc, char **argv)
 		printf("...succeeded\n");
 	} else {
 		printf("...FAILED (%s)\n", errorMsg.Value());
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	}
 
@@ -485,50 +484,57 @@ int main(int argc, char **argv)
 	CheckEvents		ce10(CheckEvents::ALLOW_DOUBLE_TERMINATE);
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce10, &se1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce10, &se1, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
 	ExecuteEvent ee10;
 	ee10.cluster = 1234;
 	ee10.proc = 0;
 	ee10.subproc = 0;
-	CheckThisEvent(ce10, &ee10, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce10, &ee10, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce10, &te1, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce10, &te1, CheckEvents::EVENT_OKAY, result);
 	printf("Testing terminate... ");
-	CheckThisEvent(ce10, &te1, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce10, &te1, CheckEvents::EVENT_BAD_EVENT, result);
+
+	printf("Testing post script terminated... ");
+	PostScriptTerminatedEvent pt10;
+	pt10.cluster = 1234;
+	pt10.proc = 0;
+	pt10.subproc = 0;
+	CheckThisEvent(__LINE__, ce10, &pt10, CheckEvents::EVENT_OKAY, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce10.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
 		printf("...should have gotten a bad event (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected bad event (%s)\n", errorMsg.Value());
 	}
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce10, &se2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce10, &se2, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
 	ee10.subproc = 1;
-	CheckThisEvent(ce10, &ee10, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce10, &ee10, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce10, &te2, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce10, &te2, CheckEvents::EVENT_OKAY, result);
 
 	printf("Testing execute... ");
-	CheckThisEvent(ce10, &ee10, CheckEvents::EVENT_ERROR, result);
+	CheckThisEvent(__LINE__, ce10, &ee10, CheckEvents::EVENT_ERROR, result);
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce10, &te2, CheckEvents::EVENT_BAD_EVENT, result);
+	CheckThisEvent(__LINE__, ce10, &te2, CheckEvents::EVENT_BAD_EVENT, result);
 
 		// We get bad event here instead of error because we don't
 		// "remember" that an execute event came after a terminated event.
 	if ( ce10.CheckAllJobs(errorMsg) != CheckEvents::EVENT_BAD_EVENT) {
 		printf("...should have gotten a bad event (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected bad event (%s)\n", errorMsg.Value());
@@ -547,18 +553,18 @@ int main(int argc, char **argv)
 	pt2.proc = -1;
 	pt2.subproc = -1;
 
-	printf("Testing post script terminated...");
-	CheckThisEvent(ce11, &pt2, CheckEvents::EVENT_OKAY, result);
+	printf("Testing post script terminated... ");
+	CheckThisEvent(__LINE__, ce11, &pt2, CheckEvents::EVENT_OKAY, result);
 
-	printf("Testing post script terminated...");
-	CheckThisEvent(ce11, &pt2, CheckEvents::EVENT_OKAY, result);
+	printf("Testing post script terminated... ");
+	CheckThisEvent(__LINE__, ce11, &pt2, CheckEvents::EVENT_OKAY, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce11.CheckAllJobs(errorMsg) == CheckEvents::EVENT_OKAY ) {
 		printf("...succeeded\n");
 	} else {
 		printf("...FAILED (%s)\n", errorMsg.Value());
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	}
 
@@ -570,7 +576,7 @@ int main(int argc, char **argv)
 	se11.subproc = 0;
 
 	printf("Testing submit... ");
-	CheckThisEvent(ce11, &se11, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce11, &se11, CheckEvents::EVENT_OKAY, result);
 
 	JobTerminatedEvent	te11;
 	te11.cluster = 1234;
@@ -578,26 +584,60 @@ int main(int argc, char **argv)
 	te11.subproc = 0;
 
 	printf("Testing terminate... ");
-	CheckThisEvent(ce11, &te11, CheckEvents::EVENT_OKAY, result);
+	CheckThisEvent(__LINE__, ce11, &te11, CheckEvents::EVENT_OKAY, result);
 
 	pt2.cluster = 1234;
 	pt2.proc = 0;
 	pt2.subproc = 0;
 
-	printf("Testing post script terminated...");
-	CheckThisEvent(ce11, &pt2, CheckEvents::EVENT_OKAY, result);
+	printf("Testing post script terminated... ");
+	CheckThisEvent(__LINE__, ce11, &pt2, CheckEvents::EVENT_OKAY, result);
 
-	printf("Testing post script terminated...");
-	CheckThisEvent(ce11, &pt2, CheckEvents::EVENT_ERROR, result);
+	printf("Testing post script terminated... ");
+	CheckThisEvent(__LINE__, ce11, &pt2, CheckEvents::EVENT_ERROR, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce11.CheckAllJobs(errorMsg) != CheckEvents::EVENT_ERROR) {
 		printf("...should have gotten an error (test FAILED)\n");
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", __LINE__);
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
 	}
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing terminate after post script terminate\n\n");
+
+	CheckEvents		ce12;
+
+	printf("Testing submit... ");
+	SubmitEvent		se12;
+	se12.cluster = 1234;
+	se12.proc = 1;
+	se12.subproc = 0;
+	CheckThisEvent(__LINE__, ce12, &se12, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing execute... ");
+	ExecuteEvent ee12;
+	ee12.cluster = 1234;
+	ee12.proc = 1;
+	ee12.subproc = 0;
+	CheckThisEvent(__LINE__, ce12, &ee12, CheckEvents::EVENT_OKAY, result);
+
+	printf("Testing post script terminated... ");
+	PostScriptTerminatedEvent pt12;
+	pt12.cluster = 1234;
+	pt12.proc = 1;
+	pt12.subproc = 0;
+	CheckThisEvent(__LINE__, ce12, &pt12, CheckEvents::EVENT_ERROR, result);
+
+	printf("Testing terminate... ");
+	JobTerminatedEvent	te12;
+	te12.cluster = 1234;
+	te12.proc = 1;
+	te12.subproc = 0;
+	CheckThisEvent(__LINE__, ce12, &te12, CheckEvents::EVENT_ERROR, result);
 
 	//-------------------------------------------------------------------------
 
@@ -649,7 +689,7 @@ CheckArgs(int argc, char **argv)
 }
 
 void
-CheckThisEvent(CheckEvents &ce, const ULogEvent *event,
+CheckThisEvent(int line, CheckEvents &ce, const ULogEvent *event,
 		CheckEvents::check_event_result_t expectedResult, bool &result)
 {
 	MyString		errorMsg;
@@ -687,6 +727,6 @@ CheckThisEvent(CheckEvents &ce, const ULogEvent *event,
 	}
 
 	if ( failedHere ) {
-		printf("########## TEST FAILED HERE ##########\n");
+		printf("########## TEST FAILED HERE (line %d) ##########\n", line);
 	}
 }

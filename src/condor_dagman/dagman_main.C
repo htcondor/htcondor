@@ -613,9 +613,9 @@ void
 print_status() {
 	int total = dagman.dag->NumJobs();
 	int done = dagman.dag->NumJobsDone();
-	int pre = dagman.dag->NumPreScriptsRunning();
+	int pre = dagman.dag->PreRunNodeCount();
 	int submitted = dagman.dag->NumJobsSubmitted();
-	int post = dagman.dag->NumPostScriptsRunning();
+	int post = dagman.dag->PostRunNodeCount();
 	int ready =  dagman.dag->NumJobsReady();
 	int failed = dagman.dag->NumJobsFailed();
 	int unready = total - (done + pre + submitted + post + ready + failed );
@@ -655,7 +655,7 @@ void condor_event_timer () {
     static int prevJobsFailed = 0;
     static int prevJobsSubmitted = 0;
     static int prevJobsReady = 0;
-    static int prevScriptsRunning = 0;
+    static int prevScriptRunNodes = 0;
 
 	int justSubmitted;
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
@@ -675,7 +675,8 @@ void condor_event_timer () {
 
     if( dagman.dag->DetectDaPLogGrowth() ) {
       if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
-debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
+	debug_printf( DEBUG_NORMAL,
+			"ProcessLogEvents(DAPLOG) returned false\n");
 	dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 	main_shutdown_rescue( EXIT_ERROR );
 	return;
@@ -688,7 +689,7 @@ debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
         || prevJobsFailed != dagman.dag->NumJobsFailed()
         || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
         || prevJobsReady != dagman.dag->NumJobsReady()
-        || prevScriptsRunning != dagman.dag->NumScriptsRunning()
+        || prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
         prevJobsDone = dagman.dag->NumJobsDone();
@@ -696,7 +697,7 @@ debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
         prevJobsFailed = dagman.dag->NumJobsFailed();
         prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
         prevJobsReady = dagman.dag->NumJobsReady();
-        prevScriptsRunning = dagman.dag->NumScriptsRunning();
+        prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();
@@ -730,7 +731,7 @@ debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
     // 
     if( dagman.dag->NumJobsSubmitted() == 0 &&
 		dagman.dag->NumJobsReady() == 0 &&
-		dagman.dag->NumScriptsRunning() == 0 ) {
+		dagman.dag->ScriptRunNodeCount() == 0 ) {
 		if( dagman.dag->NumJobsFailed() > 0 ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
@@ -741,6 +742,9 @@ debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
 		else {
 			// no jobs failed, so a cycle must exist
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
+			if ( debug_level >= DEBUG_NORMAL ) {
+				dagman.dag->PrintJobList();
+			}
 		}
 
 		main_shutdown_rescue( EXIT_ERROR );

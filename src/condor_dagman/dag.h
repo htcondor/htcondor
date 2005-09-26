@@ -259,6 +259,24 @@ class Dag {
     inline int NumScriptsRunning() const
 		{ return NumPreScriptsRunning() + NumPostScriptsRunning(); }
 
+	/** @return the number of nodes currently in the status
+	 *          Job::STATUS_PRERUN.
+	 */
+	inline int PreRunNodeCount() const
+		{ return _preRunNodeCount; }
+
+	/** @return the number of nodes currently in the status
+	 *          Job::STATUS_POSTRUN.
+	 */
+	inline int PostRunNodeCount() const
+		{ return _postRunNodeCount; }
+
+	/** @return the number of nodes currently in the status
+	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN.
+	 */
+	inline int ScriptRunNodeCount() const
+		{ return _preRunNodeCount + _postRunNodeCount; }
+
 	inline bool Done() const { return NumJobsDone() == NumJobs(); }
 
 		/** Submit all ready jobs, provided they are not waiting on a
@@ -463,6 +481,12 @@ class Dag {
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;
+
+		// Number of nodes currently in status Job::STATUS_PRERUN.
+	int		_preRunNodeCount;
+
+		// Number of nodes currently in status Job::STATUS_POSTRUN.
+	int		_postRunNodeCount;
 	
 	int DFS_ORDER; 
 

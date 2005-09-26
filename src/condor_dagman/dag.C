@@ -70,6 +70,8 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_numIdleNodes		  (0),
 	_maxIdleNodes		  (maxIdleNodes),
 	_allowLogError		  (allowLogError),
+	_preRunNodeCount	  (0),
+	_postRunNodeCount	  (0),
 	_checkEvents          (allow_events)
 {
 	ASSERT( dagFiles.number() >= 1 );
@@ -575,6 +577,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 
 			// a POST script is specified for the job, so run it
 		job->_Status = Job::STATUS_POSTRUN;
+		_postRunNodeCount++;
 
 			// there's no easy way to represent these errors as
 			// return values or signals, so just say SIGABRT
@@ -650,6 +653,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 			// if a POST script is specified for the job, run it
 		if (job->_scriptPost != NULL) {
 			job->_Status = Job::STATUS_POSTRUN;
+			_postRunNodeCount++;
 			// let the script know the job's exit status
 			job->_scriptPost->_retValJob = termEvent->normal
 				? termEvent->returnValue : -1;
@@ -696,6 +700,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						termEvent->signalNumber );
 
 			job->_Status = Job::STATUS_ERROR;
+			_postRunNodeCount--;
 
 			if( job->GetRetries() < job->GetRetryMax() ) {
 				RestartNode( job, recovery );
@@ -729,6 +734,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						termEvent->returnValue );
 
 			job->_Status = Job::STATUS_ERROR;
+			_postRunNodeCount--;
 
 			CheckForDagAbort(job, termEvent->returnValue, "POST script");
 
@@ -761,6 +767,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 						   "completed successfully.\n" );
 			TerminateJob( job, recovery );
+			_postRunNodeCount--;
 		}
 
 		PrintReadyQ( DEBUG_DEBUG_4 );
@@ -970,6 +977,7 @@ Dag::StartNode( Job *node )
 
     if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
 		node->_Status = Job::STATUS_PRERUN;
+		_preRunNodeCount++;
 		_preScriptQ->Run( node->_scriptPre );
 		return true;
     }
@@ -1083,6 +1091,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	if( job->_scriptPost ) {
 	  // a POST script is specified for the job, so run it
 	  job->_Status = Job::STATUS_POSTRUN;
+	  _postRunNodeCount++;
 	  // there's no easy way to represent helper errors as
 	  // return values or signals, so just say SIGUSR1
 	  job->_scriptPost->_retValJob = -10;
@@ -1150,6 +1159,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
         if( job->_scriptPost ) {
 	      // a POST script is specified for the job, so run it
 	      job->_Status = Job::STATUS_POSTRUN;
+		  _postRunNodeCount++;
 	      // there's no easy way to represent condor_submit errors as
 	      // return values or signals, so just say SIGUSR1
 		  // NOTE: actually, we do have unique return-code space
@@ -1240,6 +1250,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		}
 
         job->_Status = Job::STATUS_ERROR;
+		_preRunNodeCount--;
 
 		if( job->GetRetries() < job->GetRetryMax() ) {
 			RestartNode( job, false );
@@ -1260,6 +1271,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		debug_printf( DEBUG_QUIET, "PRE Script of Job %s completed "
 					  "successfully.\n", job->GetJobName() );
 		job->_Status = Job::STATUS_READY;
+		_preRunNodeCount--;
 		_readyQ->Append( job );
 	}
 	return true;
@@ -2349,7 +2361,7 @@ Dag::EventSanityCheck( const ULogEvent* event, const Job* node, bool* result )
 	}
 
 	if( checkResult == CheckEvents::EVENT_ERROR ) {
-		debug_printf( DEBUG_QUIET, "Aborting DAG because of bad event "
+		debug_printf( DEBUG_QUIET, "ERROR: aborting DAG because of bad event "
 					  "(%s)\n", eventError.Value() );
 			// set *result to indicate we should abort the DAG
 		*result = false;
