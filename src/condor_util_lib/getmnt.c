@@ -26,7 +26,7 @@
 #include "condor_common.h"
 #include "condor_getmnt.h"
 
-char			*strdup(), *malloc();
+/*char			*strdup(), *malloc(); */
 
 /*
  The function getmnt() is Ultrix specific and returns a different
