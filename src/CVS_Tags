@@ -1,3 +1,7 @@
+9/26/05 V6_7-SC2005_Stork_Demo-{root,branch}
+   A branch based off V6_7_11-root in which development for the SC2005
+   Stork demo will be done.
+
 9/19/05 V6_7-Technion-ha4-{root,branch}
    A branch based off V6_7_11-root in which further HA development
    will be done.  Both code and docs are branched.
