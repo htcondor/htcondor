@@ -1353,7 +1353,7 @@ get_real_username( void )
 {
 	if( ! RealUserName ) {
 		uid_t my_uid = getuid();
-		if ( !(pcache()->get_user_name( my_uid, (char*)RealUserName )) ) {
+		if ( !(pcache()->get_user_name( my_uid, (char *&)RealUserName )) ) {
 			char buf[64];
 			sprintf( buf, "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );
