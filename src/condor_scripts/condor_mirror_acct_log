@@ -1,0 +1,82 @@
+#!/usr/bin/env perl
+
+use strict;
+use FileHandle;
+use POSIX "strftime";
+
+# Figure out where it's going to go on the local system
+my $dest = `condor_config_val accountant_log 2>/dev/null`;
+chomp($dest);
+
+&log("Local accountant log = $dest");
+
+# Check the collector and make sure we're not the active negotiator or
+# in the middle of a vote
+my %negotiator_ad = map { s/\"//g; split / = / } `condor_status -negotiator -l 2>/dev/null`;
+if ($?)
+{
+    &log("Failed to query the collector for the negotiator ad.  Bailing out.");
+    exit 1;
+}
+
+my $hostname = `condor_config_val full_hostname 2>/dev/null`;
+chomp(%negotiator_ad);
+$hostname =~ s/\s//g;
+if ($?)
+{
+    &log("Failed to determine our hostname.  Bailing out.");
+    exit 1;
+}
+
+&log("Negotiator hostname = $negotiator_ad{Name}");
+&log("My hostname = $hostname");
+unless ($negotiator_ad{Name})
+{
+    &log("Unable to find a negotiator.  Looks like we're doing a HAD election.");
+    exit;
+}
+elsif ($negotiator_ad{Name} eq $hostname)
+{
+    &log("It looks like I'm the negotiator.  Don't bother with the fetch.");
+    exit;
+}
+else
+{
+    &log("The negotiator is active on another CM.  Mirror the accountant log.");
+}
+
+# Grab the new file
+my $accountant_log = `condor_fetchlog $negotiator_ad{Name} accountant`;
+if ($?)
+{
+    &log("Failed to fetch the accountant log.  Bailing out.");
+    exit 1;
+}
+
+&log("Pulled down " . length($accountant_log) . " bytes");
+
+exit unless $accountant_log;
+exit unless $accountant_log =~ /\S/;
+
+# Write it out, since we know it's not null
+my $fh = new FileHandle ">$dest";
+unless ($fh)
+{
+    &log("Failed to open $dest for writing, bailing out!");
+    exit 1;
+}
+print $fh $accountant_log;
+$fh->close;
+
+# All finished!
+&log("Done");
+
+# Do basic logging
+sub log
+{
+    my ($msg) = @_;
+
+    my $fh = new FileHandle ">>/tmp/get_accoutant_log.log";
+    print $fh strftime "%T %D: $msg\n", localtime();
+    $fh->close;
+}
