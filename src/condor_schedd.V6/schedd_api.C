@@ -443,11 +443,12 @@ Job::get_file(const MyString &name,
 			return 2;
 		}
 		int result;
-		if (length != 
+		if (-1 == 
 			(result = full_read(file, data, sizeof(unsigned char) * length))) {
 			errstack.pushf("SOAP",
 						   FAIL,
-						   "Failed to read from file '%s', wanted to read %d bytes but received %d",
+						   "Failed to read from file '%s', wanted to "
+						   "read %d bytes but received %d",
 						   name.GetCStr(),
 						   length,
 						   result);
