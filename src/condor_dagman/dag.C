@@ -1386,8 +1386,9 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 	}
 
 	if ( haveCondorJob ) {
-		snprintf( cmd, ARG_MAX, "%s -const \'%s == \"%d\"\'", dm.condorRmExe,
-			  	DAGManJobIdAttrName, dm.DAGManJobId._cluster );
+		snprintf( cmd, ARG_MAX, "%s -const \'%s == %d\'",
+			  dm.condorRmExe, DAGManJobIdAttrName,
+			  dm.DAGManJobId._cluster );
 		debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
 		if ( util_popen( cmd ) ) {
 			debug_printf( DEBUG_VERBOSE, "Error removing DAGMan jobs\n");

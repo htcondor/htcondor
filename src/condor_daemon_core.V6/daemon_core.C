@@ -6783,8 +6783,10 @@ pidWatcherThread( void* arg )
 	entry->nEntries = numentries;
 	::LeaveCriticalSection(&(entry->crit_section));
 
-	// if there are no more entries to watch, we're done.
-	if ( numentries == 0 )
+	// if there are no more entries to watch, AND we do
+	// not need to send a signal due to a previous process exit,
+	// then we're done.
+	if ( numentries == 0 && !must_send_signal )
 		return TRUE;	// this return will kill this thread
 
 	/*	The idea here is we call WaitForMultipleObjects in poll mode (zero timeout).

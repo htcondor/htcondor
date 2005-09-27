@@ -1,6 +1,34 @@
+09/26/05 V6_7_12-merge-1
+   The state of the V6_7_12-branch for a (probably final) merge into
+   the V6_7-branch.  This pulls all of the changes from both the
+   V6_7_11-branch and V6_7_12-branch that were made for 6.7.12 (two
+   critical bug fixes: one to dagman, and one to daemon_core for
+   win32).  This merge will include everything since V6_7_11-merge-1.
+
+09/26/05 V6_7_12-win32
+   The official 6.7.12 release tag for WIN32.  Unfortunately, we've
+   got seperate tags and packages for the WIN32 and UNIX releases of
+   6.7.12, but the only diff was inside an #ifdef WIN32, and it was
+   easier to just stick with the existing unix tarballs.  The windoze
+   binaries came from NWO build #xxxxx.  The version string for this
+   release is:
+       $CondorVersion: 6.7.12 Sep xx 2005 $
+
 9/26/05 V6_7-SC2005_Stork_Demo-{root,branch}
    A branch based off V6_7_11-root in which development for the SC2005
    Stork demo will be done.
+
+09/23/05 V6_7_12
+   The official 6.7.12 release.  The packages for all platforms came
+   from NWO build #12042.  The version string for this release is:
+       $CondorVersion: 6.7.12 Sep 24 2005 $
+
+09/23/05 V6_7_11
+   The official 6.7.11 release.  The packages for all platforms came
+   from NWO build #11654.  6.7.11 is known bad and the relesae was
+   pulled before being widely advertised.  The version string for 
+   this release is:
+       $CondorVersion: 6.7.11 Sep 15 2005 $
 
 9/19/05 V6_7-Technion-ha4-{root,branch}
    A branch based off V6_7_11-root in which further HA development
