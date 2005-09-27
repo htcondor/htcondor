@@ -53,16 +53,8 @@ SNPRINTF_FLAGS =
 #define PlatformLdFlags
 #endif
 
-/* Our tests often link with libcondorapi.a, which has calls to 
- * dlopen and friends.  Thus when we link for tests, we want to
- * include -ldl on the link line for platforms that have dlopen.
- */
 #if !defined(TestPlatformLdFlags)
-#if HAS_DLOPEN
-#define TestPlatformLdFlags -ldl
-#else
 #define TestPlatformLdFlags
-#endif
 #endif
 
 #if !defined(PurifyPlatformLdFlags)
@@ -100,6 +92,22 @@ STAR	= *
 PLATFORM_LDFLAGS = PlatformLdFlags
 PURIFY_PLATFORM_LDFLAGS = PurifyPlatformLdFlags
 TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
+
+/*
+   Our tests often link with libcondorapi.a, which has calls to dlopen
+   and friends.  Thus when we link for tests, we want to include -ldl
+   on the link line for platforms that have dlopen.  Similarly,
+   dirname() lives in libgen.so on some platforms.  So, all of our
+   autoconf-discovered libs should be added here... 
+*/
+#if HAVE_LIBDL
+TEST_PLATFORM_LDFLAGS += -ldl
+#endif
+
+#if HAVE_LIBGEN
+TEST_PLATFORM_LDFLAGS += -lgen
+#endif
+
 
 
 /*

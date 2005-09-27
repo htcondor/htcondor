@@ -1163,6 +1163,15 @@ AC_SUBST(JAR,$ac_jar)
 
 # checks for library functions
 
+ac_have_libgen=0
+AC_CHECK_FUNC(dirname,,AC_CHECK_LIB(gen,dirname,[ac_have_libgen=1],))
+AC_SUBST(HAVE_LIBGEN,$ac_have_libgen)
+
+ac_have_libdl=0
+AC_CHECK_FUNC(dlopen,,AC_CHECK_LIB(dl,dlopen,[ac_have_libdl=1],))
+AC_SUBST(HAVE_LIBDL,$ac_have_libdl)
+
+
 # checks for system services
 
 # checks for platform-specific settings we don't yet auto-detect
