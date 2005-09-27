@@ -72,6 +72,10 @@ that a cycle exists in the DAG.
 in the Pre or Post columns.  Previously, these nodes were shown
 in the Un-Ready column.
 
+\item Fixed the GetFile SOAP call on the \Condor{schedd} so that it
+  behaves more like POSIX read() and does not report errors when
+  trying to read more data than is available.
+
 \end{itemize}
 
 \noindent Changes:
@@ -155,9 +159,9 @@ Linux port.
 \begin{itemize}
 
 \item Added a new feature called \Bold{Quill} to Condor which allows an
-	SQL server to mirror the job queue in order to speed up queries about
-	the job queue via \Condor{q} and \Condor{history}. Please see 
-	page~\pageref{sec:Quill} for the description of this feature.
+        SQL server to mirror the job queue in order to speed up queries about
+        the job queue via \Condor{q} and \Condor{history}. Please see 
+        page~\pageref{sec:Quill} for the description of this feature.
 
 \item \Condor{dagman} has a new \Opt{-maxidle} command-line argument
 that can be used to throttle DAG job submissions according to the number
@@ -399,7 +403,7 @@ simplified for the specific commands of
 \SubmitCmd{universe}, \SubmitCmd{remote\_schedd}, \SubmitCmd{remote\_pool}, \SubmitCmd{globus\_rsl}, and \SubmitCmd{globus\_scheduler}.
 
 \item Added default user priority factors for accounting groups.  More on
-	accounting groups will be available in future versions of the manual.
+        accounting groups will be available in future versions of the manual.
 
 \item The \Condor{startd} can now be configured to write out the
   \Attr{ClaimId} of the next available claim for each virtual machine
@@ -756,22 +760,22 @@ select logs such as ``StarterLog.vm2''.
 \begin{itemize}
 
 \item Fixed a throughput performance bottle neck when standard universe
-	jobs vacate when the user has specified \Attr{WantCheckpoint} equal to
-	False in the submit file.
+        jobs vacate when the user has specified \Attr{WantCheckpoint} equal to
+        False in the submit file.
 
 \item Added initial support for the \Syscall{getdents},
-	\Syscall{getdents64}, \Syscall{glob}, and the family of functions
-	\Syscall{opendir}, \Syscall{readdir}, \Syscall{closedir} for the
-	standard universe.  
+        \Syscall{getdents64}, \Syscall{glob}, and the family of functions
+        \Syscall{opendir}, \Syscall{readdir}, \Syscall{closedir} for the
+        standard universe.  
 
-	It is recommended that you do not directly invoke \Syscall{getdents} 
-	or \Syscall{getdents64}, but instead use the other POSIX functions
-	specified above.
+        It is recommended that you do not directly invoke \Syscall{getdents} 
+        or \Syscall{getdents64}, but instead use the other POSIX functions
+        specified above.
 
-	There are two caveats: these calls will not work in heterogeneous
-	contexts, and you may not call \Syscall{getdents} directly when 
-	\Condor{compile}ing a 32-bit program while specifying the 64-bit
-	interfaces for the Unix API.
+        There are two caveats: these calls will not work in heterogeneous
+        contexts, and you may not call \Syscall{getdents} directly when 
+        \Condor{compile}ing a 32-bit program while specifying the 64-bit
+        interfaces for the Unix API.
 
 \item In versions 6.7.4 through 6.7.6, Computing On Demand (COD)
   support was broken due to a bug in how Condor daemons parsed their
@@ -873,15 +877,15 @@ to fail an assertion if PRE or POST scripts are throttled with the
 \begin{itemize}
 
 \item Added support for libc's \Syscall(system) function for standard
-	universe executables. This call is not checkpoint-safe in that
-	the standard universe job could call it twice or more times
-	in the event of a resumption from an earlier checkpoint. The
-	invocation of this call by the shadow on behalf of the user
-	job is controlled by a configuration file parameter called
-	\Attr{SHADOW\_ALLOW\_UNSAFE\_REMOTE\_EXEC} and is off by default.
-	The full environment of the user job is preserved during the
-	invocation of \Syscall(system) and this might cause problems in 
-	heterogeneous submission contexts of the user is not careful.
+        universe executables. This call is not checkpoint-safe in that
+        the standard universe job could call it twice or more times
+        in the event of a resumption from an earlier checkpoint. The
+        invocation of this call by the shadow on behalf of the user
+        job is controlled by a configuration file parameter called
+        \Attr{SHADOW\_ALLOW\_UNSAFE\_REMOTE\_EXEC} and is off by default.
+        The full environment of the user job is preserved during the
+        invocation of \Syscall(system) and this might cause problems in 
+        heterogeneous submission contexts of the user is not careful.
 
 \item Added support for a web services (SOAP) interface to Condor.
   For more information, see and section~\ref{API-WebService} on
