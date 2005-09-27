@@ -64,36 +64,23 @@ if( ! -e "job_stork_file-file.in" )
 	system("date > job_stork_file-file.in");
 }
 
-my $src_url = "/dev/null";
-my $dest_url = "/dev/null";
+print "Callling ./x_makestorkdag.pl\n";
 
-print "Transfer $src_url to $dest_url\n";
+my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --dagnm=dag1.dag --src_url=/dev/null --dest_url=/dev/null");
 
-my $storksubmitfile = "job_stork_file-file.stork" . $mypid;
+print "make dag result is <<$makeresult>>\n";
 
-my $line = "";
-open(STORKSTUB,"<job_stork_file-file.stork") || die "Could not open data file 'job_stork_file-file.stork': $?";
-open(NEWSTORKSTUB,">$storksubmitfile") || die "Could not open test stork submit file <$storksubmitfile>: $?";
-while(<STORKSTUB>)
-{
-	chomp();
-	$line = $_;
-	if($line =~ /src_url/)
-	{
-		print NEWSTORKSTUB "src_url = \"file:/$src_url\";\n"
-	}
-	elsif($line =~ /dest_url/)
-	{
-		print NEWSTORKSTUB "dest_url = \"file:/$dest_url\";\n"
-	}
-	else
-	{
-		print NEWSTORKSTUB "$line\n"
-	}
-}
-close(STORKSTUB);
-close(NEWSTORKSTUB);
+$cmd = "$dagnm";
+$testname = 'Condor submit dag - stork transfer test';
+$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
 
+print "Callling ./x_runstorkdag.pl\n";
+$now = getcwd();
+print "Calling from here<<$now>>\n";
+
+my $result = system("./x_runstorkdag.pl $personaldir/dag1 dag1.dag $testname");
+ 
+print "run dag result is <<$result>>\n";
 
 system("cp -r $mypid $mysaveme");
 system("cp job_stork_file-file.stork* $mysaveme");
