@@ -3,7 +3,6 @@
 #include <unistd.h>
 
 int signalcaught = 0;
-int exit(int code);
 
 void catchsig( int sig )
 {
