@@ -7068,7 +7068,7 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 }
 
 static void
-add_shadow_birthdate(int cluster, int proc)
+add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 {
 	dprintf( D_ALWAYS, "Starting add_shadow_birthdate(%d.%d)\n",
 			 cluster, proc );
@@ -7081,16 +7081,21 @@ add_shadow_birthdate(int cluster, int proc)
 		SetAttributeInt(cluster, proc, ATTR_JOB_START_DATE, current_time);
 	}
 
-	// Update the current start & last start times
-	if ( GetAttributeInt(cluster, proc,
-						  ATTR_JOB_CURRENT_START_DATE, 
-						 &job_start_date) >= 0 ) {
-		// It's been run before, so copy the current into last
-		SetAttributeInt(cluster, proc, ATTR_JOB_LAST_START_DATE, 
-						job_start_date);
+	// If we're reconnecting, the old ATTR_JOB_CURRENT_START_DATE is still
+	// correct
+	if ( !is_reconnect ) {
+		// Update the current start & last start times
+		if ( GetAttributeInt(cluster, proc,
+							 ATTR_JOB_CURRENT_START_DATE, 
+							 &job_start_date) >= 0 ) {
+			// It's been run before, so copy the current into last
+			SetAttributeInt(cluster, proc, ATTR_JOB_LAST_START_DATE, 
+							job_start_date);
+		}
+		// Update current
+		SetAttributeInt(cluster, proc, ATTR_JOB_CURRENT_START_DATE,
+						current_time);
 	}
-	// Update current
-	SetAttributeInt(cluster, proc, ATTR_JOB_CURRENT_START_DATE, current_time);
 
 	// Update the job run count
 	int count;
@@ -7183,12 +7188,13 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
 			if (tmp_id.cluster == cluster) {
 				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
-				add_shadow_birthdate(tmp_id.cluster, tmp_id.proc);
+				add_shadow_birthdate(tmp_id.cluster, tmp_id.proc,
+									 new_rec->is_reconnect);
 			}
 			ad = GetNextJob(0);
 		}
 	} else {
-		add_shadow_birthdate( cluster, proc );
+		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
 	}
 	CommitTransaction();
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
