@@ -1,0 +1,25 @@
+NAME = condor_schedman
+all_target( $(NAME) )
+
+NEW_CLASSADS_LINK =  -L$(NEW_CLASSADS_LIB) -lclassad_ns
+SCHEDMAN_INCLUDES = -I$(NEW_CLASSADS_INC)
+SCHEDMAN_FLAGS = $(SCHEDMAN_INCLUDES)
+SCHEDMAN_LIBS = $(NEW_CLASSADS_LINK)
+
+CFLAGS = $(STD_C_FLAGS) $(SCHEDMAN_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SCHEDMAN_FLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(SCHEDMAN_LIBS)
+
+soapobjs(schedman)
+
+OBJ = JobLogReader.o prober.o schedman_main.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o  $(SOAP_OBJS)
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+
+html:
+release:: all
+stripped:: all
+static:: all
+clean::
+
+gen_soapfiles(schedman,condorSchedman)
