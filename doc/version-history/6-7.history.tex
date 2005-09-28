@@ -40,6 +40,16 @@ the proxy file is updated, it will be transfered to the running job.
 running, \Condor{dagman} now prints (in the \File{dagman.out} file)
 the status of all DAG nodes.
 
+\item BeginTransaction call in \Condor{schedd}'s SOAP interface now
+  notifies the caller if too many transactions are currently running
+  via an error code of FAIL. Pervious behavior was to abort a running
+  transaction in order to allow the BeginTransaction call to succeed.
+  
+\item MAX_SOAP_TRANSACTION_DURATION config option added so that a
+  single transaction cannot take up too many \Condor{schedd}
+  resourced. This option specifies an optional maximum duration
+  between SOAP calls in a single transaction.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
