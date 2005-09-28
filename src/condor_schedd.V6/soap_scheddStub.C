@@ -609,6 +609,31 @@ condor__submit(struct soap *soap,
 				result.response.status.code = FAIL;
 				result.response.status.message = "Failed to parse job ad.";
 			} else {
+					// If the client is authenticated then ignore the
+					// ATTR_OWNER attribute it specified and calculate
+					// the proper value
+					// NOTICE: The test on soap->user only works
+					// because soap_core properly sets it to the
+					// authenticated users, if one exists
+				if (soap->user) {
+					for (int i = 0; i < jobAd->__size; i++) {
+						if (0 == strcmp(jobAd->__ptr[i].name, ATTR_OWNER)) {
+								// No need to free the value because
+								// it will be freed when the soap
+								// object is freed
+							jobAd->__ptr[i].value =
+								soap_strdup(soap, soap->user);
+
+								// WARNING: Don't break out of this
+								// loop, there could be multiple
+								// ATTR_OWNER attributes!
+						}
+					}
+				}
+					// There is certainly some trust going on here, if
+					// the client does not send a useful ClassAd we do
+					// not care. It would be nicer if clients could
+					// not so easily screw themselves.
 				CondorError errstack;
 				if (job->submit(*jobAd, errstack)) {
 					result.response.status.code =

@@ -71,6 +71,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "directory.h"
 #include "../condor_io/condor_rw.h"
 #include "httpget.h"
+#include "MapFile.h"
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
@@ -252,7 +253,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	sockTable->fill(blankSockEnt);
 
 	initial_command_sock = -1;
-	initial_http_sock = -1;
+	soap_ssl_sock = -1;
 
 	if(maxPipe == 0)
 		maxPipe = DEFAULT_MAXPIPES;
@@ -1754,6 +1755,38 @@ DaemonCore::ReInit()
 		}
 	}
 
+	MyString subsys = MyString(mySubSystem);
+	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
+	bool subsys_enable_soap_ssl =
+		param_boolean((subsys + "_ENABLE_SOAP_SSL").GetCStr(), false);
+	if (subsys_enable_soap_ssl ||
+		(enable_soap_ssl &&
+		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").GetCStr())) ||
+		  subsys_enable_soap_ssl))) {
+		if (mapfile) {
+			delete mapfile; mapfile = NULL;
+		}
+		mapfile = new MapFile;
+		char * credential_mapfile;
+		if (NULL == (credential_mapfile = param("CERTIFICATE_MAPFILE"))) {
+			EXCEPT("DaemonCore: No CERTIFICATE_MAPFILE defined, "
+				   "unable to identify users, required by ENABLE_SOAP_SSL");
+		}
+		char * user_mapfile;
+		if (NULL == (user_mapfile = param("USER_MAPFILE"))) {
+			EXCEPT("DaemonCore: No USER_MAPFILE defined, "
+				   "unable to identify users, required by ENABLE_SOAP_SSL");
+		}
+		int line;
+		if (0 != (line = mapfile->ParseCanonicalizationFile(credential_mapfile))) {
+			EXCEPT("DaemonCore: Error parsing CERTIFICATE_MAPFILE at line %d",
+				   line);
+	}
+		if (0 != (line = mapfile->ParseUsermapFile(user_mapfile))) {
+			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
+		}
+	}
+
 	return TRUE;
 }
 
@@ -1943,11 +1976,6 @@ void DaemonCore::Driver()
             }
 		}
 
-		// Add HTTP port if it is setup...
-		if ( initial_http_sock != -1 ) {
-			FD_SET((SOAP_SOCKET)initial_http_sock,&readfds);
-		}
-
 
 #if !defined(WIN32)
 		// Add the registered pipe fds into the list of descriptors to
@@ -1990,6 +2018,12 @@ void DaemonCore::Driver()
 				FD_ZERO(&writefds);
 				FD_ZERO(&exceptfds);
 				FD_SET( (*sockTable)[initial_command_sock].sockd, &readfds );
+					// This is ugly, and will break if the sockTable
+					// is ever "compacted" or otherwise rearranged
+					// after sockets are registered into it.
+				if (-1 != soap_ssl_sock) {
+					FD_SET( (*sockTable)[soap_ssl_sock].sockd, &readfds );
+				}
 			}
 		}
 
@@ -2115,33 +2149,6 @@ void DaemonCore::Driver()
 				}	// end of if valid pipe entry
 			}	// end of for loop through all pipe entries
 
-			// check if someone is knocking on our soap door...
-			//if (FD_ISSET((SOAP_SOCKET)initial_http_sock,&readfds)) {
-			//	call_soap_handler = true;
-			//}
-
-			// Now, call all the handler that are ready!
-
-			// Handle HTTP and SOAP calls
-#if 0
-			if ( call_soap_handler ) {
-				recheck_status = true;
-				int s = soap_accept(&soap);
-				if (s < 0)  {
-					soap_print_fault(&soap, stderr);
-				}  else {
-					dprintf(D_ALWAYS, "Received HTTP connection from IP=%d.%d.%d.%d socket=%d\n",
-								(soap.ip << 24)&0xFF, (soap.ip << 16)&0xFF,
-								(soap.ip << 8)&0xFF, soap.ip&0xFF, s);
-					soap_serve(&soap); // process RPC request
-					dprintf(D_DAEMONCORE, "Completed servicing HTTP request\n");
-					soap_destroy(&soap); // clean up class instances
-					soap_end(&soap); // clean up everything and close socket
-					CheckPrivState();	// Make sure we didn't leak our priv state
-					curr_dataptr = NULL; // Clear curr_dataptr
-				}
-			}
-#endif
 
 			// Now loop through all pipe entries, calling handlers if required.
 			for(i = 0; i < nPipe; i++) {
@@ -6432,46 +6439,6 @@ DaemonCore::Inherit( void )
 	}
 }
 
-void
-DaemonCore::InitHTTPSocket( int http_port )
-{
-#if 0
-	if( http_port < 0 ) {
-			// No command port wanted, just bail.
-		dprintf( D_ALWAYS, "DaemonCore: No HTTP port requested.\n" );
-		return;
-	}
-
-	dprintf( D_ALWAYS, "Setting up HTTP socket on port %d\n",http_port );
-#endif
-
-		// XXX: KEEP-ALIVE should be turned OFF, not ON.
-		soap_init(&soap);
-		//soap_init2(&soap, SOAP_IO_KEEPALIVE, SOAP_IO_KEEPALIVE);
-
-		// Register a plugin to handle HTTP GET messages.
-		// See httpget.c.
-	soap_register_plugin_arg(&soap,http_get,(void*)http_get_handler);
-
-	// soap.accept_flags = SO_NOSIGPIPE;
-	// soap.accept_flags = MSG_NOSIGNAL;
-
-#if 0
-	initial_http_sock = soap_bind(&soap,my_full_hostname(),http_port,100);
-
-	if ( initial_http_sock < 0 ) {
-		dprintf(D_ALWAYS,"Failed to setup HTTP socket on port %d\n");
-		soap_print_fault(&soap,stderr);	// TODD TODO - don't just puke to stderr
-	}
-
-	soap.accept_timeout = 200;	// years of careful reasearch!
-#endif
-
-
-	soap.send_timeout = 20;
-	soap.recv_timeout = 20;
-
-}
 
 void
 DaemonCore::InitCommandSocket( int command_port )
@@ -7804,113 +7771,3 @@ DaemonCore::SetPeacefulShutdown(bool value) {
 	peaceful_shutdown = value;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//  Web server support
-////////////////////////////////////////////////////////////////////////////////
-
-/******************************************************************************\
- *
- *	Copy static page
- *
-\******************************************************************************/
-
-int http_copy_file(struct soap *soap, const char *name, const char *type)
-{ FILE *fd;
-  size_t r;
-
-  char bbb[64000];
-
-  char * web_root_dir = param("WEB_ROOT_DIR");
-  if (!web_root_dir) {
-	    return 404; /* HTTP not found */
-  }
-  char * full_name = dircat(web_root_dir,name);
-  fd = fopen(full_name, "rb"); /* open file to copy */
-  delete [] full_name;
-  free(web_root_dir);
-  if (!fd) {
-    return SOAP_EOF; /* return HTTP error? */
-  }
-  soap->http_content = type;
-  if (soap_begin_send(soap)
-   || soap_response(soap, SOAP_FILE)) /* OK HTTP response header */
-    return soap->error;
-
-#if 0
-  if (soap_end_send(soap))
-    return soap->error;
-EXCEPT("BLAH");
-#endif
-
-  for (;;)
-  //{ r = fread(soap->tmpbuf, 1, sizeof(soap->tmpbuf), fd);
-  { r = fread(bbb, 1, sizeof(bbb), fd);
-    if (!r)
-      break;
-    //if (soap_send_raw(soap, soap->tmpbuf, r))
-	if (soap_send_raw(soap, bbb, r))
-    { soap_end_send(soap);
-      fclose(fd);
-      return soap->error;
-    }
-  }
-  fclose(fd);
-  if (soap_end_send(soap))
-    return soap->error;
-  return SOAP_OK;
-}
-
-
-int check_authentication(struct soap *soap)
-{ if (!soap->userid
-   || !soap->passwd
-   // || strcmp(soap->userid, AUTH_USERID)
-   // || strcmp(soap->passwd, AUTH_PASSWD))
-   )
-    return 401; /* HTTP not authorized error */
-  return SOAP_OK;
-}
-
-
-/******************************************************************************\
- *
- *	HTTP GET handler for plugin
- *
-\******************************************************************************/
-
-int http_get_handler(struct soap *soap)
-{ /* HTTP response choices: */
-  soap_omode(soap, SOAP_IO_STORE);  /* you have to buffer entire content when returning HTML pages to determine content length */
-  //soap_set_omode(soap, SOAP_IO_CHUNK); /* ... or use chunked HTTP content (faster) */
-#if 0
-  if (soap->zlib_out == SOAP_ZLIB_GZIP) /* client accepts gzip */
-    soap_set_omode(soap, SOAP_ENC_ZLIB); /* so we can compress content (gzip) */
-  soap->z_level = 9; /* best compression */
-#endif
-  /* Use soap->path (from request URL) to determine request: */
-  dprintf(D_ALWAYS, "HTTP Request: %s\n", soap->endpoint);
-  /* Note: soap->path starts with '/' */
-  if (strchr(soap->path + 1, '/') || strchr(soap->path + 1, '\\'))	/* we don't like snooping in dirs */
-    return 403; /* HTTP forbidden */
-  if (!soap_tag_cmp(soap->path, "*.html"))
-    return http_copy_file(soap, soap->path + 1, "text/html");
-  if (!soap_tag_cmp(soap->path, "*.xml")
-   || !soap_tag_cmp(soap->path, "*.xsd")
-   || !soap_tag_cmp(soap->path, "*.wsdl"))
-    return http_copy_file(soap, soap->path + 1, "text/xml");
-  if (!soap_tag_cmp(soap->path, "*.jpg"))
-    return http_copy_file(soap, soap->path + 1, "image/jpeg");
-  if (!soap_tag_cmp(soap->path, "*.gif"))
-    return http_copy_file(soap, soap->path + 1, "image/gif");
-  if (!soap_tag_cmp(soap->path, "*.ico"))
-    return http_copy_file(soap, soap->path + 1, "image/ico");
-  // if (!strncmp(soap->path, "/calc?", 6))
-  //  return calc(soap);
-  /* Check requestor's authentication: */
-  //if (check_authentication(soap))
-  //  return 401;
-  /* Return Web server status */
-  //if (!strcmp(soap->path, "/"))
-  //   return info(soap);
-  return 404; /* HTTP not found */
-}

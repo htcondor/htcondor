@@ -49,6 +49,7 @@
 #include "list.h"
 #include "extArray.h"
 #include "Queue.h"
+#include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.h"
 #endif
@@ -658,7 +659,7 @@ class DaemonCore : public Service
     /** Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    inline pid_t getpid() { return mypid; };
+    inline pid_t getpid() { return this->mypid; };
 
     /** Not_Yet_Documented
         @return Not_Yet_Documented
@@ -917,14 +918,76 @@ class DaemonCore : public Service
 	
     SelfMonitorData monitor_data;
 
-  private:      
+	MapFile * mapfile;
   	
+        // A little info on the "soap_ssl_sock"... There once was a
+        // bug known as the "single transaction problem" and it made
+        // the SOAP code very sad because it meant that if anything in
+        // the Schedd changed during a SOAP transaction bad things
+        // could happen. Things were horrible. A raging EXCEPT monster
+        // was roaming the daemons and no one had time to fight
+        // it. Until one day a powerful wizard named Ddot said, "I
+        // will vanquish the EXCEPT monster! I have a plan to kill it
+        // quickly." And everyone was happy, well mostly. For Ddot and
+        // others, mostly a young mage Ttam, knew that to truly
+        // vanquish the EXCEPT monster was not quick work. But
+        // everyone wanted the EXCEPT monster gone and they accepted
+        // Ddot's plan. True to his word, Ddot made quick work of the
+        // EXCEPT monster. To do so he didn't kill the monster but
+        // changed the daemons so that when a SOAP transaction was
+        // running everything else except the daemon's command socket
+        // (incidentally where the SOAP messages came in on) would be
+        // suspended. The plan worked and there was a time of great
+        // joy, nervous joy. But the joy could not last forever. Very
+        // few things do. The day came when Ttam was busily concocting
+        // a spell to secure SOAP communication using SSL. Ttam worked
+        // diligently trying to find the best way to integrate his SSL
+        // work. He knew that all SOAP communications came in on one
+        // port, the initial_command_sock, and he wanted to SOAP SSL
+        // communication to as well. Unfortunately, he was thwarted by
+        // SSL's evil multiple versions. Ttam could simply not create
+        // a simple way to tell if messages sent to daemons were
+        // CEDAR, SOAP or SSL messages. Ttam accepted a partial defeat
+        // and decided to allow SOAP SSL communication to arrive on a
+        // separate port. Ttam was excited, he felt things were
+        // working out well for him. Little did he know that the
+        // powerful spell the wizard Ddot had cast to vanquish the
+        // EXCEPT monster was about to stop him dead in his
+        // tracks. There he was, Ttam, nearly finished with the SOAP
+        // SSL spell. He had tested it with simple single message
+        // tests and it looked good. But, one day Ttam decided to do a
+        // full test of the new spell and discovered that it
+        // failed. While the first message to the SOAP SSL port went
+        // through fine all subsequent ones were ignored. At first
+        // Ttam was very perplexed, but then he remembered Ddot's
+        // magic. Ddot's solution to ignore all communication with a
+        // daemon during a SOAP transaction meant that the SOAP SSL
+        // messages were also ignored. The day had come that Ddot and
+        // Ttam had dreaded. The EXCEPT monster had to be dealt with
+        // properly. Unfortunately, yet again, Ttam was but a mage
+        // lacking the great power needed to vanquish the beast. And,
+        // Ddot had the power, he was one of the few, but he was off
+        // fighting other, more important, monsters in other
+        // lands. So, yet again, the EXCEPT monster was to be dealt
+        // with quickly instead of completely. A new plan was set and
+        // Ttam set out to perform it. A soap_ssl_sock was created
+        // that would hold the special number identifying the SOAP SSL
+        // port, and during a SOAP transaction not only would the
+        // initial_command_sock be allowed to accept messages, but the
+        // soap_ssl_sock would as well. Unfortunately, the
+        // soap_ssl_sock had to be set from the land of soap_core.C
+        // and not daemon_core.C, but that was of little consequence
+        // because Ttam knew that his spell must be undone when Ddot
+        // could return and properly dispatch the EXCEPT monster.
+	int			  	  soap_ssl_sock;
+
+  private:      
+
 	ReliSock* dc_rsock;	// tcp command socket
 	SafeSock* dc_ssock;	// udp command socket
 
     void Inherit( void );  // called in main()
 	void InitCommandSocket( int command_port );  // called in main()
-	void InitHTTPSocket( int http_port );
 
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki);
@@ -1043,9 +1106,7 @@ class DaemonCore : public Service
     int               nSock;      // number of socket handlers used
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
-	
-	int				  initial_http_sock;
-	struct soap		  soap;
+  	struct soap		  soap;
 	time_t			  only_allow_soap;
 
 	struct PidEntry;  // forward reference

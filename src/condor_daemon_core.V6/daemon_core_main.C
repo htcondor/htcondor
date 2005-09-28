@@ -34,6 +34,7 @@
 #include "condor_debug.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "soap_core.h"
 #include "setenv.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
@@ -1154,7 +1155,7 @@ int main( int argc, char** argv )
 {
 	char**	ptr;
 	int		command_port = -1;
-	int		http_port = -1;
+	int 	http_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
@@ -1776,8 +1777,8 @@ int main( int argc, char** argv )
 		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
 	daemonCore->InitSettableAttrsLists();
 
-		// SETUP HTTP SOCKET
-	daemonCore->InitHTTPSocket( http_port );
+		// SETUP SOAP SOCKET
+	init_soap(&daemonCore->soap);
 
 	// call the daemon's main_init()
 	main_init( argc, argv );

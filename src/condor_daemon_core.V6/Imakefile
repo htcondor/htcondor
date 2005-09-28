@@ -18,11 +18,11 @@ PURIFY_FLAG = -DHAS_PURIFY
 PURIFY_FLAG =
 #endif
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG)
-LIB = $(STD_LIBS)
+CFLAGS = $(STD_C_FLAGS) -I$(PCRE_INC)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG) -I$(PCRE_INC)
+LIB = $(STD_LIBS) -I$(PCRE_LIB) -lpcre
 
-OBJ = stdsoap2.o timer_manager.o daemon_core.o daemon_core_main.o \
+OBJ = stdsoap2.o soap_core.o timer_manager.o daemon_core.o daemon_core_main.o \
   daemon_core_instantiate.o condor_ipverify.o condor_perms.o \
   condor_lock_base.o condor_lock_implementation.o condor_lock_file.o \
   condor_lock.o self_monitor.o httpget.o datathread.o \
