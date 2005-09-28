@@ -13,23 +13,40 @@ system("mkdir $pid");
 my $curcwd = getcwd();
 print "current directory is $curcwd\n";
 
-my $socketname = "/tmp/maxpostsock";
+my $socketname = "maxpostsock";
 my $newsocketname = $curcwd . "/" . $pid . "/maxpostsock";
 print "current directory is $newsocketname\n";
-@filestoedit = qw/job_dagman_maxpostscripts-srvr.cmd job_dagman_maxpostscripts-srvr-close.cmd job_dagman_maxpostscripts-checkin.pl/;
+
+# start a server for this test
+
+system("rm -f $flowlog");
+defined(my $pid = fork) or die "Cannot fork: $!";
+unless ($pid)
+{
+    #child runs and ceases to exist
+    exec "./x_general_server.pl $newsocketname $flowlog";
+    die "can not exec dumpcore!\n";
+}
+#main process continues here
+
+# information for creating logging client from template.
+my $checkintemplate = "job_dagman_maxpostscripts-checkin.template";
+my $checkin = "job_dagman_maxpostscripts-checkin.pl";
+
 @filestochmod = qw/job_dagman_maxpostscripts-checkin.pl/;
 
-# now make sure each place using socket refers to pid specific directory!
-foreach $name (@filestoedit)
+# now make client script know the correct socket name. Create
+# client from template script.
 {
 	print "Correcting socket name in $name\n";
-	open(FF,"<$name") || die "Failed to open $name: $!\n";
-	open(NEWFF,">$name.new") || die "Failed to open $name.new: $!\n";
+	open(FF,"<$checkintemplate") || die "Failed to open $name: $!\n";
+	open(NEWFF,">$checkin") || die "Failed to open $name.new: $!\n";
 	my $line = "";
 	while(<FF>)
 	{
 		chomp($_);
 		$line = $_;
+		print "Looking at:<<$line>>\n";
 		if( $line =~ /(^\s*.*)$socketname(.*$)/)
 		{
 			print "Found ---$1$socketname$2---\n";
@@ -43,7 +60,6 @@ foreach $name (@filestoedit)
 	}
 	close(FF);
 	close(NEWFF);
-	system("mv $name.new $name");
 }
 
 foreach $name (@filestochmod)
@@ -103,9 +119,13 @@ $success = sub
 		print "$ret\n";
 		if( $ret ne "0" )
 		{
+			# shutdown the server we started
+			system("./x_general_client.pl $newsocketname quit");
 			die "MAXPOST of $maxjobs exceeded\n";
 		}
 	}
+	# shutdown the server we started
+	system("./x_general_client.pl $newsocketname quit");
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
@@ -115,14 +135,13 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
-system("rm -f $flowlog");
-my $cluster  = Condor::Submit($serversubFile);
-print   "Server for flow tracking started as Cluster -$cluster-\n";
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	print "$testname: SUCCESS\n";
 	exit(0);
 } else {
+	# shutdown the server we started
+	system("./x_general_client.pl $newsocketname quit");
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 
