@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "job_lease.h"
 
 #include "globusresource.h"
 #include "gridmanager.h"
@@ -389,67 +390,6 @@ void BaseResource::DoPing( time_t& ping_delay, bool& ping_complete,
 	ping_succeeded = true;
 }
 
-bool CalculateLease( const ClassAd *job_ad, int &new_expiration )
-{
-int cluster,proc;
-	int expire_received = -1;
-	int expire_sent = -1;
-	int lease_duration = -1;
-	bool last_renewal_failed = false;
-
-	new_expiration = -1;
-
-job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-job_ad->LookupInteger( ATTR_PROC_ID, proc );
-	job_ad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_received );
-	job_ad->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT, expire_sent );
-	job_ad->LookupBool( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
-						last_renewal_failed );
-	job_ad->LookupInteger( ATTR_JOB_LEASE_DURATION, lease_duration );
-
-		// If we didn't received a lease, there's no lease to renew
-	if ( expire_received == -1 && lease_duration == -1 ) {
-dprintf(D_FULLDEBUG,"*** (%d.%d) CalculateLease: no received lease\n",cluster,proc);
-		return false;
-	}
-
-		// If the lease we sent expires within 10 seconds of the lease we
-		// received, don't renew it.
-	if ( expire_received != -1 && expire_sent + 10 >= expire_received ) {
-dprintf(D_FULLDEBUG,"*** (%d.%d) CalculateLease: new lease close enough to old lease\n",cluster,proc);
-		return false;
-	}
-
-	if ( last_renewal_failed && expire_sent != -1 ) {
-		new_expiration = expire_sent;
-dprintf(D_FULLDEBUG,"*** (%d.%d) CalculateLease: retry failed lease at %d\n",cluster,proc,(int)new_expiration);
-		return true;
-	}
-
-	if ( lease_duration != -1 ) {
-		int now = time(NULL);
-		if ( expire_sent == -1 ) {
-			new_expiration = now + lease_duration;
-		} else if ( expire_sent - now < ( lease_duration * 2 ) / 3 ) {
-dprintf(D_FULLDEBUG,"    lease left(%d) < 2/3 duration(%d)\n",expire_sent-now,(lease_duration*2)/3);
-			new_expiration = now + lease_duration;
-		}
-	}
-
-	if ( expire_received != -1 && ( new_expiration == -1 ||
-									expire_received < new_expiration ) ) {
-		new_expiration = expire_received;
-	}
-
-	if ( new_expiration != -1 ) {
-dprintf(D_FULLDEBUG,"*** (%d.%d) CalculateLease: new lease should expire at %d\n",cluster,proc,(int)new_expiration);
-		return true;
-	} else {
-dprintf(D_FULLDEBUG,"*** (%d.%d) CalculateLease: no new lease at present\n",cluster,proc);
-		return false;
-	}
-}
-
 int BaseResource::UpdateLeases()
 {
 dprintf(D_FULLDEBUG,"*** UpdateLeases called\n");
@@ -477,7 +417,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		registeredJobs.Rewind();
 		while ( registeredJobs.Next( curr_job ) ) {
 			int new_expire;
-			if ( CalculateLease( curr_job->jobAd, new_expire ) ) {
+			if ( CalculateJobLease( curr_job->jobAd, new_expire ) ) {
 				curr_job->UpdateJobLeaseSent( new_expire );
 				leaseUpdates.Append( curr_job );
 			}

@@ -29,8 +29,6 @@
 
 #include "basejob.h"
 
-bool CalculateLease( const ClassAd *job_ad, int &new_expiration );
-
 class BaseJob;
 
 class BaseResource

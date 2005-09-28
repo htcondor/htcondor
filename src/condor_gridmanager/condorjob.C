@@ -31,6 +31,7 @@
 #include "condor_ckpt_name.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "job_lease.h"
 
 #include "gridmanager.h"
 #include "condorjob.h"
@@ -526,7 +527,7 @@ int CondorJob::doEvaluateState()
 				char *job_id_string = NULL;
 				if ( gahpAd == NULL ) {
 					int new_expiration;
-					if ( CalculateLease( jobAd, new_expiration ) ) {
+					if ( CalculateJobLease( jobAd, new_expiration ) ) {
 							// This will set the job lease sent attrs,
 							// which get referenced in buildSubmitAd()
 						UpdateJobLeaseSent( new_expiration );
