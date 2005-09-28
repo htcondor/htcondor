@@ -678,9 +678,12 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 int
 ReadMultipleUserLogs::hashFuncJobID(const JobID &key, int numBuckets)
 {
-		// Must be unsigned because modulus with negative value may
-		// produce a negative result (implementation-dependent).
-	unsigned int		result = key.cluster ^ key.proc ^ key.subproc;
+	int		result = key.cluster ^ key.proc ^ key.subproc;
+
+		// Make sure we produce a non-negative result (modulus on negative
+		// value may produce a negative result (implementation-dependent).
+	if ( result < 0 ) result = -result;
+
 	result %= numBuckets;
 
 	return result;
