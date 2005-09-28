@@ -203,13 +203,24 @@ condor__beginTransaction(struct soap *soap,
 	static int trans_offset = 0;
 
 	if ( current_trans_id ) {
-			// if there is an existing transaction, abort it.
+			// if there is an existing transaction, deny the request
 			// TODO - support more than one active transaction!!!
-		struct condor__abortTransactionResponse response;
-		struct condor__Transaction transaction;
-		transaction.id = current_trans_id;
-		condor__abortTransaction(soap, transaction, response);
+
+		result.response.status.code = FAIL;
+		result.response.status.message =
+			"Maximum number of transactions reached";
+
+		dprintf(D_FULLDEBUG,
+				"SOAP denied new transaction in condor__beginTransaction()\n");
+
+		return SOAP_OK;
 	}
+
+	int max = param_integer("MAX_SOAP_TRANSACTION_DURATION", -1);
+	if (0 < max) {
+		duration = duration > max ? max : duration;
+	}
+
 	if ( duration < 1 ) {
 		duration = 1;
 	}
