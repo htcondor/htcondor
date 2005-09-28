@@ -59,6 +59,13 @@ the status of all DAG nodes.
 
 \begin{itemize}
 
+\item When using file transfer, transfering the results back to
+the submit machine could silently fail for Condor releases 6.7.0
+though 6.7.12.  This was relatively rare through 6.7.10.  For
+6.7.11 and 6.7.12, the bug would be easily triggered if a vanilla
+job had an X509 user proxy associated with it.  This is now
+fixed.
+
 \item The reason strings generated when a user job policy expression fires
 are now consistent for grid universe jobs.
 
