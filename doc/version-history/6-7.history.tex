@@ -66,6 +66,17 @@ though 6.7.12.  This was relatively rare through 6.7.10.  For
 job had an X509 user proxy associated with it.  This is now
 fixed.
 
+\item Fixed a logic bug in the \Condor{schedd}.
+  Previously, if there was an error expanding any \verb@$$(attribute)@
+  references in a job classad when trying to spawn a \Condor{shadow},
+  the \Condor{schedd} would die with the fatal exception ``Impossible:
+  GetJobAd() returned NULL for X.Y but that job is already known to
+  exist''.
+  Now, the \Condor{schedd} correctly distinguishes between a non-fatal
+  error expanding \verb@$$(attribute)@ and the fatal error of the job
+  already being gone (which is, in fact, impossible).
+  This bug was first introduced in Condor version 6.7.1.
+
 \item The reason strings generated when a user job policy expression fires
 are now consistent for grid universe jobs.
 
