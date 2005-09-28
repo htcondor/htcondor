@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.32 2005-09-28 16:39:13 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.33 2005-09-28 17:31:50 wright Exp $
 #
 ######################################################################
 
@@ -43,7 +43,7 @@ sub Initialize
     $ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
         . $ENV{PATH};
 
-    $workspace = "/tmp/condor_$type." . "$$";
+    $workspace = "/tmp/condor_$type." . "$$" . "." . time;
 
     $init_cwd = &getcwd();
     mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
