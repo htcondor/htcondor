@@ -80,6 +80,10 @@ in the Un-Ready column.
 \item Fixed a hash function bug that could cause \Condor{dagman}
 to crash.
 
+\item \Attr{JobCurrentStartDate} and \Attr{JobLastStartDate} are no longer
+changed in the job ad when the \Condor{schedd} and \Condor{shadow} reconnect
+to a running job after a crash.
+
 \end{itemize}
 
 \noindent Changes:
