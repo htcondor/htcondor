@@ -1,3 +1,12 @@
+9/28/05 V6_7-SC2005_Stork_Demo_3-{root,branch}
+   New branch based off V6_7-root in which development for the SC2005
+   Stork demo will be done.
+
+9/28/05 V6_7-SC2005_Stork_Demo_2-{root,branch}
+   *Abondoned*
+   New branch based off V6_7-root in which development for the SC2005
+   Stork demo will be done.
+
 09/26/05 V6_7_12-merge-1
    The state of the V6_7_12-branch for a (probably final) merge into
    the V6_7-branch.  This pulls all of the changes from both the
@@ -15,7 +24,8 @@
        $CondorVersion: 6.7.12 Sep xx 2005 $
 
 9/26/05 V6_7-SC2005_Stork_Demo-{root,branch}
-   A branch based off V6_7_11-root in which development for the SC2005
+   *Abondoned*
+   A branch based off V6_7-root in which development for the SC2005
    Stork demo will be done.
 
 09/23/05 V6_7_12
