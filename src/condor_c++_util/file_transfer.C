@@ -1391,9 +1391,9 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	TransferStart = time(NULL);
 
 	if (blocking) {
-		DoUpload( &Info.bytes, (ReliSock *)s);
+		int status = DoUpload( &Info.bytes, (ReliSock *)s);
 		Info.duration = time(NULL)-TransferStart;
-		Info.success = (Info.bytes >= 0);
+		Info.success = (Info.bytes >= 0) && (status == 0);
 		Info.in_progress = false;
 		return Info.success;
 
