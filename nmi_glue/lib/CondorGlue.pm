@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.31 2005-09-22 22:14:26 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.32 2005-09-28 16:39:13 wright Exp $
 #
 ######################################################################
 
@@ -381,7 +381,7 @@ sub getNightlyTags
     my $tag_file = basename($tag_file_url);
 
     print "Fetching $tag_file ... \n";
-    run( "wget --tries=1 --non-verbose $tag_file_url" );
+    run( "wget --tries=1 $tag_file_url" );
 
     open(TAGS, $tag_file) || 
         die "Can't read nightly tag file $tag_file: $!\n";
