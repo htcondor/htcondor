@@ -6188,6 +6188,9 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	int pid = -1;
 	PROC_ID* job_id = &srec->job_id;
 
+		// for writing the job ad to the shadow's pipe
+	ClassAd* job_ad = NULL;  
+
 		/* Setup the array of fds for stdin, stdout, stderr */
 	int* std_fds_p = NULL;
 	int std_fds[3];
@@ -6195,10 +6198,41 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
 	if( wants_pipe ) {
+			/*
+			  if we want a pipe, make sure there's no problem with the
+			  job classad (e.g. an error expanding $$() stuff).  if
+			  so, we want to bail out before we do anything else.
+			  unfortunately, this means that we've got job_ad lying
+			  around in the heap, and we have to be careful not to
+			  leak it, but that's the lesser evil than trying to kill
+			  a shadow right after spawning it if there's an error.
+			*/
+		job_ad = GetJobAd( job_id->cluster, job_id->proc, true );
+		if( ! job_ad ) {
+				// this might happen if the job is asking for
+				// something in $$() that doesn't exist in the machine
+				// ad and/or if the machine ad is already gone for some
+				// reason.  so, verify the job is still here...
+			if( GetJobAd(job_id->cluster, job_id->proc, false) ) {
+					// the job is still there, it just failed b/c of
+					// $$() woes... abort. 
+				dprintf( D_ALWAYS, "ERROR: Failed to get classad for job "
+						 "%d.%d, can't spawn %s, aborting\n", 
+						 job_id->cluster, job_id->proc, name );
+				return false;
+			}
+			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d but " 
+					"that job is already known to exist",
+					job_id->cluster, job_id->proc );
+		}
+
 		if( ! daemonCore->Create_Pipe(pipe_fds) ) {
 			dprintf( D_ALWAYS, 
 					 "ERROR: Can't create DC pipe for writing job "
 					 "ClassAd to the %s, aborting\n", name );
+			if( job_ad ) {
+				delete job_ad;
+			}
 			return false;
 		} 
 			// pipe_fds[0] is the read-end of the pipe.  we want that
@@ -6247,6 +6281,9 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 				}
 			}
 		}
+		if( job_ad ) {
+			delete job_ad;
+		}
 		return false;
 	} 
 
@@ -6270,20 +6307,13 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// want to use "true" for the last argument so that we
 			// expand $$ expressions within the job ad to pull things
 			// out of the startd ad before we give it to the handler. 
-		ClassAd* ad = GetJobAd( job_id->cluster, job_id->proc, true );
 		FILE* fp = fdopen( pipe_fds[1], "w" );
-		if ( ad ) {
-			ad->fPrint( fp );
-
+		ASSERT( job_ad );
+		job_ad->fPrint( fp );
 			// Note that ONLY when GetJobAd() is called with expStartdAd==true
 			// do we want to delete the result.
-			delete ad;
-		} else {
-			// This should never happen
-			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d but that" 
-				"job is already known to exist",
-				 job_id->cluster, job_id->proc );
-		}
+		delete job_ad;
+		job_ad = NULL;
 
 			// since this is probably a DC pipe that we have to close
 			// with Close_Pipe(), we can't call fclose() on it.  so,
