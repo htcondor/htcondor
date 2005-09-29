@@ -129,7 +129,6 @@ void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 int fixAttrUser( ClassAd *job );
 shadow_rec * find_shadow_rec(PROC_ID*);
-shadow_rec * add_shadow_rec( int, PROC_ID*, int, match_rec*, int );
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool getSandbox( int cluster, int proc, MyString & path );
