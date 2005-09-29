@@ -273,7 +273,7 @@ JobQueueDBManager::config(bool reconfig)
 		// this function is also called when condor_reconfig is issued
 		// and so we dont want to recreate all essential objects
 	if(!reconfig) {
-		prober = new Prober(this);
+		prober = new Prober();
 		caLogParser = new ClassAdLogParser();
 
 		jqDatabase = new PGSQLDatabase(jobQueueDBConn);
@@ -315,7 +315,7 @@ JobQueueDBManager::maintain()
 	lastBatchSqlProcessed = 0;
 	
 
-	st = prober->getProbeInfo(); // get the last polling information
+	st = getJQPollingInfo(); // get the last polling information
 
 		//if we are unable to get to the database, then either the 
 		//postgres server is down or the database is deleted.  In 
@@ -327,7 +327,7 @@ JobQueueDBManager::maintain()
 		}
 	}
 
-	probe_st = prober->probe();	// polling
+	probe_st = prober->probe(caLogParser->getCurCALogEntry(),caLogParser->getJobQueueName());	// polling
 	
 		//this and the gettimeofday call just below the switch together
 		//determine the period of time taken by this whole batch of sql
@@ -862,7 +862,7 @@ JobQueueDBManager::addJobQueueTables()
 
 		// Store a polling information into DB
 	if (st == SUCCESS) {
-		prober->setProbeInfo();
+		setJQPollingInfo();
 		
 			// VACUUM should be called outside XACT
 			// but since any outstanding xacts will be ended by the time
@@ -909,7 +909,7 @@ JobQueueDBManager::initJobQueueTables()
 
 		// Store polling information in database
 	if (st == SUCCESS) {
-		prober->setProbeInfo();
+		setJQPollingInfo();
 
 			// VACUUM should be called outside XACT
 			// So, Commit XACT shouble be invoked beforehand.
@@ -1825,7 +1825,7 @@ JobQueueDBManager::init(bool initJQDB)
 			return FAILURE;
 		}
 
-		prober->probe();
+		prober->probe(caLogParser->getCurCALogEntry(),caLogParser->getJobQueueName());	// polling
 		return initJobQueueTables();
 	}
 
@@ -1834,26 +1834,21 @@ JobQueueDBManager::init(bool initJQDB)
 
 
 //! get Last Job Queue File Polling Information
-/*! \param mtime modification time
- *  \param size  file size
- *  \param lcmd  last classad log entry
- */
 QuillErrCode
-JobQueueDBManager::getJQPollingInfo(long& mtime, 
-									long& size, 
-									ClassAdLogEntry* lcmd)
+JobQueueDBManager::getJQPollingInfo()
 {
+	long mtime;
+	long size;
+	ClassAdLogEntry* lcmd;
 	char 	sql_str[MAX_FIXED_SQL_STR_LENGTH];
 	int		ret_st, num_result=0;
 
+	dprintf(D_FULLDEBUG, "Get JobQueue Polling Information\n");
+
 	memset(sql_str, 0, MAX_FIXED_SQL_STR_LENGTH);
 
-	if (lcmd == NULL) {
-		lcmd = caLogParser->getCurCALogEntry();
-	}
+	lcmd = caLogParser->getCurCALogEntry();
 
-	dprintf(D_FULLDEBUG, "Get JobQueue Polling Information\n");
-	
 	sprintf(sql_str, 
 			"SELECT last_file_mtime, last_file_size, last_next_cmd_offset, "
 			"last_cmd_offset, last_cmd_type, last_cmd_key, last_cmd_mytype,"
@@ -1888,6 +1883,10 @@ JobQueueDBManager::getJQPollingInfo(long& mtime,
 	
 	mtime = atoi(jqDatabase->getValue(0,0)); // last_file_mtime
 	size = atoi(jqDatabase->getValue(0,1)); // last_file_size
+
+	prober->setJQFile_Last_MTime(mtime);
+	prober->setJQFile_Last_Size(size);
+
 	lcmd->next_offset = atoi(jqDatabase->getValue(0,2)); // last_next_cmd_offset
 	lcmd->offset = atoi(jqDatabase->getValue(0,3)); // last_cmd_offset
 	lcmd->op_type = atoi(jqDatabase->getValue(0,4)); // last_cmd_type
@@ -1936,23 +1935,23 @@ JobQueueDBManager::addJQPollingInfoSQL(char* dest, char* src_name, char* src_val
 }
 
 //! set Current Job Queue File Polling Information
-/*! \param mtime modification time
- *  \param size  file size
- *  \param lcmd  last classad log entry
- *  \warning This method must be called between connectDB and disconnectDB
+/*! \warning This method must be called between connectDB and disconnectDB
  *           which means this method doesn't invoke thoses two methods
  */
 QuillErrCode
-JobQueueDBManager::setJQPollingInfo(long mtime, long size, ClassAdLogEntry* lcmd)
+JobQueueDBManager::setJQPollingInfo()
 {
+	long mtime;
+	long size;
+	ClassAdLogEntry* lcmd;
 	char 	       *sql_str;
 	QuillErrCode   ret_st;
 	int            num_result=0, db_err_code=0;
 
-
-	if (lcmd == NULL) {
-		lcmd = caLogParser->getCurCALogEntry();	
-	}
+	prober->incrementProbeInfo();
+	mtime = prober->getJQFile_Last_MTime();
+	size = prober->getJQFile_Last_Size();
+	lcmd = caLogParser->getCurCALogEntry();	
 
 	int sql_str_len = (sizeof(lcmd->value) + MAX_FIXED_SQL_STR_LENGTH);
 	sql_str = (char *) malloc(sql_str_len * sizeof(char));

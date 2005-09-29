@@ -23,11 +23,9 @@
 
 #include "condor_common.h"
 
-#include "classadlogentry.h"
+#include "../condor_quill/classadlogentry.h"
 #include "prober.h"
-#include "classadlogparser.h"
-#include "jobqueuedatabase.h"
-#include "jobqueuedbmanager.h"
+#include "../condor_quill/classadlogparser.h"
 
 //! constructor
 Prober::Prober()
@@ -35,18 +33,6 @@ Prober::Prober()
 	jqfile_last_mod_time = 0;
 	jqfile_last_size = 0;
 
-	jqDBManager = NULL;
-}
-
-//! constructor
-/*! \param jqDBManager pointer to JobQueueDBManager
- */
-Prober::Prober(JobQueueDBManager *jqDBManager)
-{
-	jqfile_last_mod_time = 0;
-	jqfile_last_size = 0;
-
-	this->jqDBManager = jqDBManager;
 }
 
 //! destructor
@@ -100,12 +86,13 @@ Prober::getJQFile_Last_Size()
 
 //! probe job_queue.log file
 ProbeResultType
-Prober::probe()
+Prober::probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name)
 {
 	FileOpErrCode   st;
 	int op_type;
 
 	struct stat fstat;
+	//TODO: should use condor's StatInfo instead.
 	if (stat(job_queue_name, &fstat) == -1)
 		dprintf(D_ALWAYS,"ERROR: calling stat()\n");
 	
@@ -113,7 +100,7 @@ Prober::probe()
 	dprintf(D_ALWAYS, "fsize: %ld\t\tmtime: %ld\n", 
 				(long)fstat.st_size, (long)fstat.st_mtime);
 
-		// store the currently probed stat
+	// get the new state
 	cur_probed_jqfile_last_mod_time = fstat.st_mtime;
 	cur_probed_jqfile_last_size = fstat.st_size;
 
@@ -138,11 +125,8 @@ Prober::probe()
 				//
 				// check the last command
 			ClassAdLogParser caLogParser;
-			ClassAdLogEntry *curCALogEntry = 
-				jqDBManager->getClassAdLogParser()->getCurCALogEntry();
 
-			caLogParser.setJobQueueName(
-				(jqDBManager->getClassAdLogParser())->getJobQueueName());
+			caLogParser.setJobQueueName((char *)job_queue_name);
 
 
 			caLogParser.setNextOffset(curCALogEntry->offset);
@@ -179,10 +163,7 @@ Prober::probe()
 				// check the last command
 
 			ClassAdLogParser caLogParser;
-			ClassAdLogEntry *curCALogEntry = 
-				jqDBManager->getClassAdLogParser()->getCurCALogEntry();
-			caLogParser.setJobQueueName(
-				(jqDBManager->getClassAdLogParser())->getJobQueueName());
+			caLogParser.setJobQueueName((char *)job_queue_name);
 
 			caLogParser.setNextOffset(curCALogEntry->offset);
 
@@ -207,27 +188,9 @@ Prober::probe()
 	return NO_CHANGE;
 }
 
-//! store polling information into DBMS
 void
-Prober::setProbeInfo()
-{
+Prober::incrementProbeInfo() {
+	// store the currently probed stat
 	jqfile_last_mod_time = cur_probed_jqfile_last_mod_time;
 	jqfile_last_size = cur_probed_jqfile_last_size;
-
-	jqDBManager->setJQPollingInfo(jqfile_last_mod_time, jqfile_last_size);
-}
-
-//! get lastly polling information from DBMS
-QuillErrCode
-Prober::getProbeInfo()
-{
-	int st;
-	st = jqDBManager->getJQPollingInfo(jqfile_last_mod_time, jqfile_last_size);
-	if(st == FAILURE) {
-		return FAILURE;
-	}
-	dprintf(D_ALWAYS, "=== Stored Last Probing Information ===\n");
-	dprintf(D_ALWAYS, "fsize: %ld\t\tmtime: %ld\n", 
-				(long)jqfile_last_size, (long)jqfile_last_mod_time);
-	return SUCCESS;
 }

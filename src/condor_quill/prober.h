@@ -26,8 +26,6 @@
 #include "condor_common.h"
 #include "quill_enums.h"
 
-class JobQueueDBManager;
-
 //! Prober
 /*! this polls and probes Job Qeueue Log (job_queue.log) file.
  *  So, it returns the result of polling: INIT_DB, ADDITION, 
@@ -38,8 +36,6 @@ class Prober
 public:
 	//! constructor	
 	Prober();
-	//! constructor	
-	Prober(JobQueueDBManager *jqDBManager);
 	//! destructor	
 	~Prober();
 	
@@ -47,12 +43,11 @@ public:
 	void			Init();
 
 	//! probe job_queue.log file
-	ProbeResultType probe();
+	ProbeResultType probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name);
 
-	//! store polling information into DBMS
-	void			setProbeInfo();
-	//! get polling information from DBMS
-	QuillErrCode	getProbeInfo();
+	//! update state information about size of log file last probed etc.
+	//! Call this after successfully responding to probe() result.
+	void incrementProbeInfo();
 
 		//
 		// accessors
@@ -77,9 +72,6 @@ private:
 
 	ClassAdLogEntry	lastCALogEntry;		//!< last command (ClassAd Log Entry)
 
-	JobQueueDBManager	*jqDBManager;	/*!< reference pointer 	
-										 *   to JobQueueDBManager object
-										 */
 };
 
 #endif /* _PROBER_H_ */

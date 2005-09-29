@@ -72,11 +72,9 @@ class JobQueueDBManager : public Service
 	QuillErrCode  	maintain();
 	
 		//! get Last Job Queue File Polling Information 
-	QuillErrCode    getJQPollingInfo(long& mtime, 
-									 long& size, 
-									 ClassAdLogEntry* lcmd = NULL); 	
+	QuillErrCode    getJQPollingInfo();
 		//! set Current Job Queue File Polling Information 
-	QuillErrCode	setJQPollingInfo(long mtime, long size, ClassAdLogEntry* lcmd = NULL); 	
+	QuillErrCode	setJQPollingInfo();
 		//	
 		// accessors
 		//
