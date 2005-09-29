@@ -1449,7 +1449,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	filesize_t bytes;
 	bool is_the_executable;
 	StringList * filelist = FilesToSend;
-	char * delegated_proxy_filename = NULL;
 
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
@@ -1489,35 +1488,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		saved_priv = set_priv( desired_priv_state );
 	}
 	
-	if (X509UserProxy) {
-			// For X509 user proxy file, don't send the proxy directly
-			// First create a derivate proxy and send that instead
-		dprintf (D_FULLDEBUG, "Creating delegated proxy for file %s\n",
-				 X509UserProxy);
-
-		if (!(delegated_proxy_filename = create_temp_file())) {
-			dprintf (D_ALWAYS, "ERROR: Unable to create temp file\n");
-			return_and_resetpriv(-1);
-		}
-
-		if (!delegate_x509_proxy (
-									 X509UserProxy,
-									 delegated_proxy_filename,
-									 FALSE,
-									 FALSE)) {
-				dprintf (D_ALWAYS,
-						 "Error creating delegated proxy %s from %s\n",
-						 delegated_proxy_filename,
-						 X509UserProxy);
-						
-				return_and_resetpriv(-1);
-		}
-	}
-
-	DeleteFileLater temp_file(delegated_proxy_filename);
-
 	while ( filelist && (filename=filelist->next()) ) {
-		bool is_the_x509_proxy = false;
 
 		dprintf(D_FULLDEBUG,"DoUpload: send file %s\n",filename);
 
@@ -1579,11 +1550,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			// this file is _not_ the job executable
 			is_the_executable = false;
 			basefilename = basename(filename);
-		}
-
-		if ( X509UserProxy && (strcmp (filename, X509UserProxy) == 0) ) {
-			is_the_x509_proxy = true;
-			filename = delegated_proxy_filename;
 		}
 
 		if( !s->code(basefilename) ) {
