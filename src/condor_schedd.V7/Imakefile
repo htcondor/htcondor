@@ -1,18 +1,18 @@
-NAME = condor_schedman
+NAME = condor_schedd
 all_target( $(NAME) )
 
 NEW_CLASSADS_LINK =  -L$(NEW_CLASSADS_LIB) -lclassad_ns
-SCHEDMAN_INCLUDES = -I$(NEW_CLASSADS_INC)
-SCHEDMAN_FLAGS = $(SCHEDMAN_INCLUDES)
-SCHEDMAN_LIBS = $(NEW_CLASSADS_LINK)
+SCHEDD_INCLUDES = -I$(NEW_CLASSADS_INC)
+SCHEDD_FLAGS = $(SCHEDD_INCLUDES)
+SCHEDD_LIBS = $(NEW_CLASSADS_LINK)
 
-CFLAGS = $(STD_C_FLAGS) $(SCHEDMAN_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SCHEDMAN_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(SCHEDMAN_LIBS)
+CFLAGS = $(STD_C_FLAGS) $(SCHEDD_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SCHEDD_FLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(SCHEDD_LIBS)
 
-soapobjs(schedman)
+soapobjs(schedd)
 
-OBJ = JobLogReader.o prober.o schedman_main.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o  $(SOAP_OBJS)
+OBJ = JobLogReader.o Scheduler.o schedd_main.o ../condor_quill/prober.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o  $(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
@@ -22,4 +22,4 @@ stripped:: all
 static:: all
 clean::
 
-gen_soapfiles(schedman,condorSchedman)
+gen_soapfiles(schedd,condorSchedd)

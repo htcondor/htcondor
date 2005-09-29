@@ -20,30 +20,30 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _JOBLOGREADER_H_
-#define _JOBLOGREADER_H_
+#ifndef _SCHEDULER_H_
+#define _SCHEDULER_H_
 
-#include "../condor_quill/classadlogentry.h"
-#include "../condor_quill/classadlogparser.h"
-#include "../condor_quill/prober.h"
+#include "condor_common.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #define WANT_NAMESPACES
 #include "classad_distribution.h"
 
-class JobLogReader {
+#include "JobLogReader.h"
+
+class Scheduler: public Service {
 public:
-	JobLogReader();
-	void poll(classad::ClassAdCollection *ad_collection);
-	void SetJobLogFileName(char const *fname);
-	char const *GetJobLogFileName();
+	Scheduler();
+	void config();
+
+	void JobLogPollingTime();
+
 private:
-	Prober prober;
-	ClassAdLogParser parser;
+	classad::ClassAdCollection ad_collection;
+	JobLogReader job_log_reader;
 
-	bool BulkLoad(classad::ClassAdCollection *ad_collection);
-	bool IncrementalLoad(classad::ClassAdCollection *ad_collection);
-	bool ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdCollection *ad_collection, ClassAdLogParser *caLogParser );
-
+	int log_reader_polling_timer;
+	int log_reader_polling_period;
 };
 
 #endif

@@ -48,17 +48,22 @@ JobLogReader::poll(classad::ClassAdCollection *ad_collection) {
 
 	probe_st = prober.probe(parser.getLastCALogEntry(),parser.getJobQueueName());
 
+	bool success = true;
 	switch(probe_st) {
 	case INIT_QUILL:
 	case COMPRESSED:
 	case ERROR:
-		BulkLoad(ad_collection);
+		success = BulkLoad(ad_collection);
 		break;
 	case ADDITION:
-		IncrementalLoad(ad_collection);
+		success = IncrementalLoad(ad_collection);
 		break;
 	case NO_CHANGE:
 		break;
+	}
+	if(success) {
+		// update prober to most recent observations about the job log file
+		prober.incrementProbeInfo();
 	}
 }
 static void ClearCollection(classad::ClassAdCollection *ad_collection) {
