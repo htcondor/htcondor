@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
-#include "schedman_test.h"
 
 //for the config_fill_ad call
 #include "condor_config.h"
