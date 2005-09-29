@@ -254,11 +254,6 @@ int x509_proxy_try_import( const char *proxy_file );
 
 const char* x509_error_string();
 
-int delegate_x509_proxy (const char * in_file,
-							const char * out_file,
-							int limited,
-							int old_skool );
-
 int have_condor_g();
 
 void parse_resource_manager_string( const char *string, char **host,
