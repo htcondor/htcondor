@@ -385,6 +385,9 @@ only happening to the globus libraries and only on AIX.  go figure.
 #endif
 
 #if NEEDS_OPENSSL && HAS_OPENSSL
+
+    GSOAP_CFLAGS = -DWITH_OPENSSL
+
 #  if USE_GLOBUS_OPENSSL
     OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor)
     OPENSSL_LIB = $(PRE_GLOBUS_LIBS) \
@@ -398,10 +401,12 @@ only happening to the globus libraries and only on AIX.  go figure.
     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto.a 
 #  endif
 #else
+  GSOAP_CFLAGS =
   OPENSSL_FLAGS =
   OPENSSL_LIB =
   OPENSSL_MD_LIB =
 #endif
+
 
 /* Collect all the security-related variables into a single variable */
 SECURITY_FLAGS = $(GSI_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
@@ -416,6 +421,10 @@ NETMAN_FLAGS = -DWANT_NETMAN
 NETMAN_LIB =
 NETMAN_FLAGS =
 #endif
+
+/* PCRE is sorta required everywhere at the moment */
+PCRE_INC_CFLAGS = -I$(PCRE_INC)
+PCRE_LIB_CFLAGS = -L$(PCRE_LIB) -lpcre
 
 #if WANT_QUILL
 QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a
@@ -458,8 +467,8 @@ GPP_VERS_FLAGS =
 #endif
 GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID)
-STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags 
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_CFLAGS) $(PCRE_INC_CFLAGS)
+STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
 /* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
 	but make sure there isn't -fno-implicit-templates in it
 	since we want any templates which need to be created to be created in 
@@ -519,5 +528,6 @@ STD_LIBS = \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
-  $(SECURITY_LIB)
+  $(SECURITY_LIB) \
+  $(PCRE_LIB_CFLAGS)
 
