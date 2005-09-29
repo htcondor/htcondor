@@ -1,4 +1,4 @@
-NAME = condor_schedd
+NAME = condor_schedd.V7
 all_target( $(NAME) )
 
 NEW_CLASSADS_LINK =  -L$(NEW_CLASSADS_LIB) -lclassad_ns
