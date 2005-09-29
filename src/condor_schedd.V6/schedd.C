@@ -1399,6 +1399,13 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 	if ((job_universe != CONDOR_UNIVERSE_GRID) && 
 		(srec = scheduler.FindSrecByProcID(job_id)) != NULL) 
 	{
+		if( srec->pid == 0 ) {
+				// there's no shadow process, so there's nothing to
+				// kill... we hit this case when we fail to expand a
+				// $$() attribute in the job, and put the job on hold
+				// before we exec the shadow.
+			return;
+		}
 
 		// if we have already preempted this shadow, we're done.
 		if ( srec->preempted ) {
@@ -6138,8 +6145,17 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 	if( ! rval ) {
 		mark_job_stopped(job_id);
-		RemoveShadowRecFromMrec(srec);
-		delete srec;
+		if( find_shadow_rec(job_id) ) { 
+				// we already added the srec to our tables..
+			delete_shadow_rec( srec );
+			srec = NULL;
+		} else {
+				// we didn't call add_shadow_rec(), so we can just do
+				// a little bit of clean-up and delete it. 
+			RemoveShadowRecFromMrec(srec);
+			delete srec;
+			srec = NULL;
+		}
 		return;
 	}
 
@@ -6213,6 +6229,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 {
 	int pid = -1;
 	PROC_ID* job_id = &srec->job_id;
+	ClassAd* job_ad = NULL;
 
 		/* Setup the array of fds for stdin, stdout, stderr */
 	int* std_fds_p = NULL;
@@ -6254,6 +6271,53 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		rid = dedicated_scheduler.rid;
 		}
 	
+
+		/*
+		  now, add our shadow record to our various tables.  we don't
+		  yet know the pid, but that's the only thing we're missing.
+		  otherwise, we've already got our match ad and all that.
+		  this allows us to call GetJobAd() once (and expand the $$()
+		  stuff, which is what the final argument of "true" does)
+		  before we actually try to spawn the shadow.  if there's a
+		  failure, we can bail out without actually having spawned the
+		  shadow, but everything else will still work.
+		  NOTE: ONLY when GetJobAd() is called with expStartdAd==true
+		  do we want to delete the result...
+		*/
+
+	srec->pid = 0; 
+	add_shadow_rec( srec );
+
+	if( wants_pipe ) {
+		job_ad = GetJobAd( job_id->cluster, job_id->proc, true );
+		if( ! job_ad ) {
+				// this might happen if the job is asking for
+				// something in $$() that doesn't exist in the machine
+				// ad and/or if the machine ad is already gone for some
+				// reason.  so, verify the job is still here...
+			if( ! GetJobAd(job_id->cluster, job_id->proc, false) ) {
+				EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d " 
+						"but that job is already known to exist",
+						job_id->cluster, job_id->proc );
+			}
+
+				// the job is still there, it just failed b/c of $$()
+				// woes... abort.
+			dprintf( D_ALWAYS, "ERROR: Failed to get classad for job "
+					 "%d.%d, can't spawn %s, aborting\n", 
+					 job_id->cluster, job_id->proc, name );
+			for( int i = 0; i < 2; i++ ) {
+				if( pipe_fds[i] >= 0 ) {
+					daemonCore->Close_Pipe( pipe_fds[i] );
+				}
+			}
+				// our caller will deal with cleaning up the srec
+				// as appropriate...  
+			return false;
+		}
+	}
+
+
 	/* For now, we should create the handler as PRIV_ROOT so it can do
 	   priv switching between PRIV_USER (for handling syscalls, moving
 	   files, etc), and PRIV_CONDOR (for writing to log files).
@@ -6273,15 +6337,18 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 				}
 			}
 		}
+		if( job_ad ) {
+			delete job_ad;
+			job_ad = NULL;
+		}
+			// again, the caller will deal w/ cleaning up the srec
 		return false;
 	} 
 
 		// if it worked, store the pid in our shadow record, and add
-		// this srec to our various tables.  this ensures we have
-		// ATTR_REMOTE_HOST set in the job ad by the time we give it
-		// to the shadow...
-	srec->pid=pid;
-	add_shadow_rec(srec);
+		// this srec to our table of srec's by pid.
+	srec->pid = pid;
+	add_shadow_rec_pid( srec );
 
 		// finally, now that the handler has been spawned, we need to
 		// do some things with the pipe (if there is one):
@@ -6292,24 +6359,10 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		daemonCore->Close_Pipe( pipe_fds[0] );
 
 			// 2) dump out the job ad to the write end, since the
-			// handler is now alive and can read from the pipe.  we
-			// want to use "true" for the last argument so that we
-			// expand $$ expressions within the job ad to pull things
-			// out of the startd ad before we give it to the handler. 
-		ClassAd* ad = GetJobAd( job_id->cluster, job_id->proc, true );
+			// handler is now alive and can read from the pipe.
+		ASSERT( job_ad );
 		FILE* fp = fdopen( pipe_fds[1], "w" );
-		if ( ad ) {
-			ad->fPrint( fp );
-
-			// Note that ONLY when GetJobAd() is called with expStartdAd==true
-			// do we want to delete the result.
-			delete ad;
-		} else {
-			// This should never happen
-			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d but that" 
-				"job is already known to exist",
-				 job_id->cluster, job_id->proc );
-		}
+		job_ad->fPrint( fp );
 
 			// since this is probably a DC pipe that we have to close
 			// with Close_Pipe(), we can't call fclose() on it.  so,
@@ -6329,6 +6382,10 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		daemonCore->Close_Pipe( fp );
 	}
 
+	if( job_ad ) {
+		delete job_ad;
+		job_ad = NULL;
+	}
 	return true;
 }
 
@@ -7133,11 +7190,14 @@ add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false)
 	SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, ++count);
 }
 
+
 struct shadow_rec *
 Scheduler::add_shadow_rec( shadow_rec* new_rec )
 {
 	numShadows++;
-	shadowsByPid->insert(new_rec->pid, new_rec);
+	if( new_rec->pid ) {
+		shadowsByPid->insert(new_rec->pid, new_rec);
+	}
 	shadowsByProcID->insert(new_rec->job_id, new_rec);
 
 		// To improve performance and to keep our sanity in case we
@@ -7225,12 +7285,28 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
 	}
 	CommitTransaction();
-	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
-			 new_rec->pid, cluster, proc );
-	scheduler.display_shadow_recs();
+	if( new_rec->pid ) {
+		dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
+				 new_rec->pid, cluster, proc );
+		scheduler.display_shadow_recs();
+	}
 	RecomputeAliveInterval(cluster,proc);
 	return new_rec;
 }
+
+
+void
+Scheduler::add_shadow_rec_pid( shadow_rec* new_rec )
+{
+	if( ! new_rec->pid ) {
+		EXCEPT( "add_shadow_rec_pid() called on an srec without a pid!" );
+	}
+	shadowsByPid->insert(new_rec->pid, new_rec);
+	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
+			 new_rec->pid, new_rec->job_id.cluster, new_rec->job_id.proc );
+	scheduler.display_shadow_recs();
+}
+
 
 void
 Scheduler::RecomputeAliveInterval(int cluster, int proc)
@@ -7325,94 +7401,129 @@ update_remote_wall_clock(int cluster, int proc)
 }
 
 
+
 void
 Scheduler::delete_shadow_rec(int pid)
 {
 	shadow_rec *rec;
-
-	dprintf( D_FULLDEBUG, "Entered delete_shadow_rec( %d )\n", pid );
-
 	if( shadowsByPid->lookup(pid, rec) == 0 ) {
-		int cluster = rec->job_id.cluster;
-		int proc = rec->job_id.proc;
+		delete_shadow_rec( rec );
+	} else {
+		dprintf( D_ALWAYS, "ERROR: can't find shadow record for pid %d\n",
+				 pid );
+	}
+}
 
+
+void
+Scheduler::delete_shadow_rec( shadow_rec *rec )
+{
+
+	int cluster = rec->job_id.cluster;
+	int proc = rec->job_id.proc;
+	int pid = rec->pid;
+
+	if( pid ) {
 		dprintf( D_FULLDEBUG,
 				 "Deleting shadow rec for PID %d, job (%d.%d)\n",
 				 pid, cluster, proc );
+	} else {
+		dprintf( D_FULLDEBUG, "Deleting shadow rec for job (%d.%d) "
+				 "no shadow PID -- shadow never spawned\n",
+				 cluster, proc );
+	}
 
-		BeginTransaction();
+	BeginTransaction();
 
-		int job_status = IDLE;
-		GetAttributeInt( cluster, proc, ATTR_JOB_STATUS, &job_status );
+	int job_status = IDLE;
+	GetAttributeInt( cluster, proc, ATTR_JOB_STATUS, &job_status );
 
-		if( rec->universe == CONDOR_UNIVERSE_PVM ) {
-			ClassAd *ad;
-			ad = GetNextJob(1);
-			while (ad != NULL) {
-				PROC_ID tmp_id;
-				ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
-				if (tmp_id.cluster == cluster) {
-					ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
-					update_remote_wall_clock(tmp_id.cluster, tmp_id.proc);
-				}
-				ad = GetNextJob(0);
+	if( rec->universe == CONDOR_UNIVERSE_PVM ) {
+		ClassAd *ad;
+		ad = GetNextJob(1);
+		while (ad != NULL) {
+			PROC_ID tmp_id;
+			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
+			if (tmp_id.cluster == cluster) {
+				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
+				update_remote_wall_clock(tmp_id.cluster, tmp_id.proc);
 			}
-		} else {
+			ad = GetNextJob(0);
+		}
+	} else {
+		if( pid ) {
+				// we only need to update this if we spawned a shadow.
 			update_remote_wall_clock(cluster, proc);
 		}
+	}
 
+		/*
+		  For ATTR_REMOTE_HOST and ATTR_CLAIM_ID, we only want to save
+		  what we have in ATTR_LAST_* if we actually spawned a
+		  shadow...
+		*/
+	if( pid ) {
 		char* last_host = NULL;
 		GetAttributeStringNew( cluster, proc, ATTR_REMOTE_HOST, &last_host );
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
 		if( last_host ) {
 			SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_HOST,
 								last_host );
 			free( last_host );
 			last_host = NULL;
 		}
-
+	}
+	DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
+ 
+	if( pid ) {
 		char* last_claim = NULL;
 		GetAttributeStringNew( cluster, proc, ATTR_CLAIM_ID, &last_claim );
-		DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
 		if( last_claim ) {
 			SetAttributeString( cluster, proc, ATTR_LAST_CLAIM_ID, 
 								last_claim );
 			free( last_claim );
 			last_claim = NULL;
 		}
+	}
+	DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
 
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID );
-		DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
 
-			// we want to commit all of the above changes before we
-			// call check_zombie() since it might do it's own
-			// transactions of one sort or another...
-		CommitTransaction();
+	DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
+	DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID );
+	DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
 
-		check_zombie( pid, &(rec->job_id) );
-			// If the shadow went away, this match is no longer
-			// "ACTIVE", it's just "CLAIMED"
-		if( rec->match ) {
-				// Be careful, since there might not be a match record
-				// for this shadow record anymore... 
-			rec->match->setStatus( M_CLAIMED );
-		}
-		RemoveShadowRecFromMrec(rec);
+		// we want to commit all of the above changes before we
+		// call check_zombie() since it might do it's own
+		// transactions of one sort or another...
+	CommitTransaction();
+
+	check_zombie( pid, &(rec->job_id) );
+		// If the shadow went away, this match is no longer
+		// "ACTIVE", it's just "CLAIMED"
+	if( rec->match ) {
+			// Be careful, since there might not be a match record
+			// for this shadow record anymore... 
+		rec->match->setStatus( M_CLAIMED );
+	}
+	RemoveShadowRecFromMrec(rec);
+	if( pid ) {
 		shadowsByPid->remove(pid);
-		shadowsByProcID->remove(rec->job_id);
-		if ( rec->conn_fd != -1 )
-			close(rec->conn_fd);
+	}
+	shadowsByProcID->remove(rec->job_id);
+	if ( rec->conn_fd != -1 ) {
+		close(rec->conn_fd);
+	}
 
-		delete rec;
-		numShadows -= 1;
-		if( ExitWhenDone && numShadows == 0 ) {
-			return;
-		}
-		display_shadow_recs();
+	delete rec;
+	numShadows -= 1;
+	if( ExitWhenDone && numShadows == 0 ) {
 		return;
 	}
+	if( pid ) {
+		display_shadow_recs();
+	}
+
 	dprintf( D_FULLDEBUG, "Exited delete_shadow_rec( %d )\n", pid );
+	return;
 }
 
 /*

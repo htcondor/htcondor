@@ -294,9 +294,11 @@ class Scheduler : public Service
 		// Used by the DedicatedScheduler class
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
+	void			delete_shadow_rec(shadow_rec*);
 	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
 									int fd );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
+	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec* );
 
 		// Used to manipulate the "extra ads" (read:Hawkeye)
