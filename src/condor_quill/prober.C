@@ -23,9 +23,9 @@
 
 #include "condor_common.h"
 
-#include "../condor_quill/classadlogentry.h"
+#include "classadlogentry.h"
 #include "prober.h"
-#include "../condor_quill/classadlogparser.h"
+#include "classadlogparser.h"
 
 //! constructor
 Prober::Prober()
