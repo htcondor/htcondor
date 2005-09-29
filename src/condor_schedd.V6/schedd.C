@@ -6660,6 +6660,8 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		BeginTransaction();
 		mark_job_stopped( job_id );
 		CommitTransaction();
+			// TODO: we're definitely leaking shadow recs in this case
+			// (and have been for a while).  must fix ASAP.
 		return;
 	}
 
