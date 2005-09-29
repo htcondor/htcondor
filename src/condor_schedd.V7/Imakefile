@@ -1,5 +1,10 @@
 NAME = condor_schedd.V7
-all_target( $(NAME) )
+
+VANILLATOGRID = vanilla2grid
+VANILLATOGRID_OBJS = VanillaToGrid.o
+VANILLATOGRID_LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
+
+all_target( $(NAME) $(VANILLATOGRID) )
 
 NEW_CLASSADS_LINK =  -L$(NEW_CLASSADS_LIB) -lclassad_ns
 SCHEDD_INCLUDES = -I$(NEW_CLASSADS_INC)
@@ -13,6 +18,8 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(SCHEDD_LIBS)
 soapobjs(schedd)
 
 OBJ = JobLogReader.o Scheduler.o schedd_main.o ../condor_quill/prober.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o  $(SOAP_OBJS)
+
+c_plus_target($(VANILLATOGRID),$(VANILLATOGRID_OBJS),$(VANILLATOGRID_LIB))
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
