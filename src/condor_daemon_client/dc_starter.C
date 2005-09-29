@@ -139,7 +139,10 @@ DCStarter::updateX509Proxy( const char * filename)
 		// If we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, &errstack )) {
 		dprintf( D_ALWAYS, 
-				"DCStarter::updateX509Proxy authentication failure: %s\n",
+			"Problem connecting to starter to update X509 user proxy. "
+			"It's possible the starter is version 6.7.11 or earlier "
+			"and does not support updating proxies.  "
+			"(Failed to autheDCStarter::updateX509Proxy authentication failure: %s)\n",
 				 errstack.getFullText() );
 		return XUS_Error;
 	}
