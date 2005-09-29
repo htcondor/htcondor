@@ -72,6 +72,7 @@
 #include "condor_id.h"
 #include "condor_classad_namedlist.h"
 #include "schedd_cronmgr.h"
+#include "misc_utils.h"  // for startdClaimFile()
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -271,7 +272,7 @@ Scheduler::Scheduler() :
 
 	N_RejectedClusters = 0;
 	N_Owners = 0;
-	LastTimeout = time(NULL);
+	NegotiationRequestTime = 0;
 
 	Collectors = NULL;
 		//gotiator = NULL;
@@ -458,7 +459,6 @@ Scheduler::timeout()
 	 * call preempt() here if we are shutting down.  When shutting down, we have
 	 * a timer which is progressively preempting just one job at a time.
 	 */
-
 	int real_jobs = numShadows - SchedUniverseJobsRunning 
 		- LocalUniverseJobsRunning;
 	if( (real_jobs > MaxJobsRunning) && (!ExitWhenDone) ) {
@@ -466,6 +466,13 @@ Scheduler::timeout()
 				 "Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
 				 (real_jobs - MaxJobsRunning) );
 		preempt( real_jobs - MaxJobsRunning );
+	}
+
+	/* Call function that will start using our local startd if it
+	   appears we have lost contact with the pool negotiator
+	 */
+	if ( claimLocalStartd() ) {
+		dprintf(D_ALWAYS,"Negotiator gone, trying to use our local startd\n");
 	}
 
 	/* Reset our timer */
@@ -875,6 +882,20 @@ Scheduler::count_jobs()
 			  ((DCCollector*)d)->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
 		  }
 	  }
+	}
+
+	// If JobsIdle > 0, then we are asking the negotiator to contact us. 
+	// Record the earliest time we asked the negotiator to talk to us.
+	if ( JobsIdle >  0 ) {
+		// We have idle jobs, we want the negotiator to talk to us.
+		// But don't clobber NegotiationRequestTime if already set,
+		// since we want the _earliest_ request time.
+		if ( NegotiationRequestTime == 0 ) {
+			NegotiationRequestTime = time(NULL);
+		}
+	} else {
+		// We don't care of the negotiator talks to us.
+		NegotiationRequestTime = 0;
 	}
 
 	check_claim_request_timeouts();
@@ -4115,6 +4136,12 @@ Scheduler::negotiate(int, Stream* s)
 
 	// Set timeout on socket
 	s->timeout( param_integer("NEGOTIATOR_TIMEOUT",20) );
+
+	// Clear variable that keeps track of how long we've been waiting
+	// for a negotiation cycle, since now we finally have got what
+	// we've been waiting for.  If only Todd can say the same about
+	// his life in general.  ;)
+	NegotiationRequestTime = 0;
 
 	// BIOTECH
 	bool	biotech = false;
@@ -9939,7 +9966,7 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "BadCluster", BadCluster );
 	intoAd ( ad, "BadProc", BadProc );
 	intoAd ( ad, "N_Owners", N_Owners );
-	intoAd ( ad, "LastTimeout", LastTimeout  );
+	intoAd ( ad, "NegotiationRequestTime", NegotiationRequestTime  );
 	intoAd ( ad, "ExitWhenDone", ExitWhenDone );
 	intoAd ( ad, "StartJobTimer", StartJobTimer );
 	intoAd ( ad, "timeoutid", timeoutid );
@@ -10675,4 +10702,165 @@ bool jobExternallyManaged(ClassAd * ad)
 		return false;
 	}
 	return job_managed == MANAGED_EXTERNAL;
+}
+
+
+bool 
+Scheduler::claimLocalStartd()
+{
+	Daemon startd(DT_STARTD,NULL,NULL);
+	char *startd_addr = NULL;	// local startd sinful string
+	PROC_ID matching_jobid;
+	int vm_id;
+	int number_of_claims = 0;
+	char claim_id[155];	
+	ClassAd* candidate_job_ad = NULL;
+	MyString vm_state;
+	char job_owner[150];
+
+	if ( NegotiationRequestTime==0 ) {
+		// We aren't expecting any negotiation cycle
+		return false;
+	}
+
+		 // If we are trying to exit, don't start any new jobs!
+	if ( ExitWhenDone ) {
+		return false;
+	}
+
+		// Check when we last had a negotiation cycle; if recent, return.
+	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",300);
+	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
+				negotiator_interval * 4);
+				//,	// default (20 min usually)
+				//10 * 60,	// minimum = 10 minutes
+				//120 * 60);	// maximum = 120 minutes
+	if ( time(NULL) - NegotiationRequestTime < claimlocal_interval ) {
+			// we have negotiated recently, no need to calim the local startd
+		return false;
+	}
+
+		// Grab the any job out of the queue.
+	candidate_job_ad = GetNextJob(1);	// start job queue iteration
+	if (!candidate_job_ad) {
+			// if we didn't find any jobs, return since there is nothing to do
+		return false;
+	}
+
+		// Find the local startd.
+	if ( !startd.locate() || !(startd_addr=startd.addr()) ) {
+		// failed to locate a local startd, probably because one is not running
+		return false;
+	}
+
+	dprintf(D_ALWAYS,
+		"Haven't heard from negotiator, trying to claim local startd\n");
+
+		// Fetch all the vm (machine) ads from the local startd
+	CondorError errstack;
+	CondorQuery query(STARTD_AD);
+	QueryResult q;
+	ClassAdList result;
+	q = query.fetchAds(result, startd_addr, &errstack);
+	if ( q != Q_OK ) {
+		dprintf(D_FULLDEBUG,
+			"ERROR: could not fetch ads from local startd- %s\n",
+			getStrQueryResult(q));
+		return false;
+	}
+
+
+	ClassAd *machine_ad = NULL;
+	result.Rewind();
+
+		/*	For each machine ad, make a match rec and enqueue a request
+			to claim the resource.
+		 */
+	while ( (machine_ad = result.Next()) && candidate_job_ad ) {
+
+		vm_id = 0;		
+		machine_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID,vm_id);
+
+			// first check if this startd is unclaimed
+		vm_state = " ";	// clear out old value before we reuse it
+		machine_ad->LookupString(ATTR_STATE,vm_state);
+		if ( vm_state != getClaimStateString(CLAIM_UNCLAIMED) ) {
+			dprintf(D_FULLDEBUG,"Local startd vm %d is not unclaimed\n", vm_id);
+			continue;
+		}
+
+			// now get the location of the claim id file
+		char *filename = startdClaimIdFile(vm_id);
+		if (!filename) continue;
+			// now open it as user condor and read out the claim
+		claim_id[0] = '\0';	// so we notice if we fail to read
+			// note: claim file written w/ condor priv by the startd
+		priv_state old_priv = set_condor_priv(); 
+		FILE* fp=fopen(filename,"r");
+		if ( fp ) {
+			fscanf(fp,"%150s\n",claim_id);
+			fclose(fp);
+		}
+		set_priv(old_priv);	// switch our priv state back
+		free(filename);
+		claim_id[150] = '\0';	// make certain it is null terminated
+			// if we failed to get the claim, move on
+		if ( !claim_id[0] ) {
+			dprintf(D_ALWAYS,"Failed to read startd claim id from file %s\n",
+				filename);
+			continue;
+		}
+
+			/*	
+				Grab any job from the hashtable that matches by searching the
+				job queue in hashtable order.  
+				We do this since we have no idea which owner has the highest 
+				priorty anyway (that info is in the negotiator).
+				Perhaps someday here we should sort to put the jobs into FIFO,
+				but for this first pass we're happy to run _any_ queued job.
+			*/
+		if ( !(*candidate_job_ad == *machine_ad) ) { 
+				// we failed to match, try the next job.
+			candidate_job_ad = GetNextJob(0);
+			if ( !candidate_job_ad ) {
+					// out of jobs.  start over w/ the next startd ad.
+				daemonCore->ServiceCommandSocket();	// let user commands run
+				candidate_job_ad = GetNextJob(1);	// restart job iteration
+				continue;	// loop back and try next startd ad
+			}
+		}
+
+			/* Fetch the job_id and user from the matching job. */
+		candidate_job_ad->LookupInteger(ATTR_CLUSTER_ID, matching_jobid.cluster);
+		candidate_job_ad->LookupInteger(ATTR_PROC_ID, matching_jobid.proc);
+		job_owner[0]='\0';
+		candidate_job_ad->LookupString(ATTR_OWNER,job_owner,sizeof(job_owner));
+		ASSERT(job_owner[0]);
+
+		match_rec* mrec = AddMrec( claim_id, startd_addr, &matching_jobid, machine_ad,
+						job_owner,	// special Owner name
+						NULL	// optional negotiator name
+						);
+
+		if( mrec ) {		
+			/*
+				We have successfully added a match_rec.  Now enqueue
+				a request to go claim this resource.
+				We don't want to call contactStartd
+				directly because we do not want to block.
+				So...we enqueue the args for a later
+				call.  (The later call will be made from
+				the startdContactSockHandler)
+			*/
+			ContactStartdArgs *args = 
+						new ContactStartdArgs(claim_id, startd_addr, false);
+			enqueueStartdContact(args);
+			dprintf(D_ALWAYS,"Claiming local startd vm %d at %s\n",
+				vm_id,startd_addr);
+			number_of_claims++;
+		}	
+	}
+
+		// Return true if we claimed anything, false if otherwise
+	return number_of_claims ? true : false;
 }

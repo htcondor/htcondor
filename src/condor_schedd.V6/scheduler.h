@@ -225,6 +225,7 @@ class Scheduler : public Service
 	void			addRunnableJob( shadow_rec* );
 	void			spawnShadow( shadow_rec* );
 	void			spawnLocalStarter( shadow_rec* );
+	bool			claimLocalStartd();
 	bool			isStillRunnable( int cluster, int proc, int &status ); 
 	UserLog*		InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
@@ -376,7 +377,7 @@ private:
 	int				N_RejectedClusters;
 	ExtArray<OwnerData> Owners;
 	int				N_Owners;
-	time_t			LastTimeout;
+	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	Queue<shadow_rec*> RunnableJobQueue;
 	int				StartJobTimer;
