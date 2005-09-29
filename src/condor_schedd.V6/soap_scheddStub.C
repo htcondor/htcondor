@@ -622,7 +622,7 @@ condor__submit(struct soap *soap,
 								// it will be freed when the soap
 								// object is freed
 							jobAd->__ptr[i].value =
-								soap_strdup(soap, soap->user);
+								soap_strdup(soap, (char *) soap->user);
 
 								// WARNING: Don't break out of this
 								// loop, there could be multiple
