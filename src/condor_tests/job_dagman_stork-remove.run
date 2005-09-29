@@ -1,0 +1,148 @@
+#! /usr/bin/env perl
+use CondorTest;
+use CondorPersonal;
+use Cwd;
+
+CondorPersonal::DebugOff();
+Condor::DebugOff();
+
+$testname = 'job_dagman_stork-file-file - Simple dagman/stork job';
+$corename = "job_dagman_stork-file-file";
+$topdir = getcwd();
+
+print "Working Directory is $topdir\n";
+
+# where am I running
+$dummyhost = "gamgee.cs.wisc.edu";
+$currenthost = `hostname`;
+chomp($currenthost);
+
+system("date");
+print "Dummyhost was $dummyhost and really running on $currenthost\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+system("mkdir $mysaveme");
+
+# the following allows us to copy PID based files back to the file names 
+# which the framework saves when the tests are done. We do this at the end of the test.
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".log";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+
+print "Master PID is $mypid\n";
+print "Master PID submit file is $mysubmitnm\n";
+
+# generate a running personal condor based on the condor binary
+# which we are currently configured to run and return a config_location:port 
+# string after starting up that personal condor.
+
+my $configloc = CondorPersonal::StartCondor("x_param.storksrvr" ,"local");
+my @local = split /:/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+print "---local config is $locconfig and local port is $locport---\n";
+
+# find out the directory and cp stork submit file there and 
+# build dag file there to submit from there and preserve all logs etc.
+# strip off /condor_config.
+
+my $personaldir = "";
+if($locconfig =~ /(.*)\/condor_config/)
+{
+	$personaldir = $1;
+	print "Personal Condor and Dag runtime directory is $personaldir\n";
+}
+
+
+$ENV{CONDOR_CONFIG} = $locconfig;
+
+# submit into stork personal condor
+# we can not assume for a dagman test that we have a stork server
+# running in the personal condor which is being run for the test suite
+# so we setup and run our own.
+
+if( ! -e "job_stork_file-file.in" )
+{
+	system("date > job_stork_file-file.in");
+}
+
+print "Callling ./x_makestorkdag.pl\n";
+
+my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --dagnm=dag1.dag --src_url=/dev/random --dest_url=/dev/null");
+
+print "make dag result is <<$makeresult>>\n";
+
+$cmd = "$dagnm";
+$testname = 'Condor submit dag - stork transfer test';
+$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
+
+print "Callling ./x_runstorkdag.pl\n";
+$now = getcwd();
+print "Calling from here<<$now>>\n";
+
+# pass a timeout so we can remove the dag from the queue and then see
+# if dagman correctly removed the "forever" running stork transfer.
+
+my $result = system("./x_runstorkdag.pl $personaldir/dag1 dag1.dag \"$testname\" 30");
+ 
+print "run dag result is <<$result>>\n";
+
+my @adarray;
+
+system("stork_q");
+system("stork_status 1");
+system("condor_rm 1");
+system("date");
+sleep(30);
+system("date");
+system("stork_q");
+system("stork_status 1");
+
+system("cp -r $mypid $mysaveme");
+system("cp job_stork_file-file.stork* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+@adarray = ();
+my $status = 1;
+my $cmd = "condor_off -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	return(1)
+}
+
+system("date");
+
+if( $result != 0 )
+{
+	# actual test failed but we allowed cleanup
+	print "Stork test failed!\n";
+	exit(1);
+}
+else
+{
+	print "Stork test SUCCESS!\n";
+}
+
