@@ -124,6 +124,7 @@ V6_7_SRC		-a V6_6_SRC \
 			src/condor_had \
 			src/classad_analysis \
 			src/deployment_tools \
+			src/condor_schedd.V7 \
 			src/condor_quill
 
 V_TRUNK_SRC		-a \
