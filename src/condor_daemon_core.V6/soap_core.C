@@ -39,6 +39,7 @@ init_soap(struct soap *soap)
 		// soap.accept_flags = SO_NOSIGPIPE;
 		// soap.accept_flags = MSG_NOSIGNAL;
 
+#ifdef COMPILE_SOAP_SSL
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
 	bool subsys_enable_soap_ssl =
 		param_boolean((subsys + "_ENABLE_SOAP_SSL").GetCStr(), false);
@@ -230,6 +231,7 @@ init_soap(struct soap *soap)
 
 		}
 	}
+#endif // COMPILE_SOAP_SSL
 }
 
 
@@ -249,6 +251,7 @@ init_soap(struct soap *soap)
 int
 handle_soap_ssl_socket(Service *, Stream *stream)
 {
+#ifdef COMPILE_SOAP_SSL
     struct soap *current_soap;
 
 	ssl_soap.accept_timeout = 10; // 10 seconds alloted for accept()
@@ -268,19 +271,6 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 
 	current_soap = soap_copy(&ssl_soap);
 	ASSERT(current_soap);
-
-		// Optional check, see Verify below...
-//	if (!daemonCore->Verify(SOAP_PERM, &sockaddr, NULL)) {
-//		dprintf(D_ALWAYS,
-//				"Received SOAP SSL connection from %s -- "
-//				"DENIED because host not authorized for SOAP\n",
-//				sin_to_string(&sockaddr));
-//
-//		soap_done(current_soap);
-//		free(current_soap);
-//
-//		return KEEP_STREAM;
-//	}
 
 	if (current_soap->recv_timeout > 0) {
 		stream->timeout(ssl_soap.recv_timeout);
@@ -436,6 +426,11 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 		// daemonCore->Only_Allow_Soap(0);
 
 	return KEEP_STREAM;
+#else // No COMPILE_SOAP_SSL
+	ASSERT("SOAP SSL SUPPORT NOT AVAILABLE");
+
+	return -1;
+#endif
 }
 
 

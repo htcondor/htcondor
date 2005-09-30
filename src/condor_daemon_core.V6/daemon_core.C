@@ -71,7 +71,10 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "directory.h"
 #include "../condor_io/condor_rw.h"
 #include "httpget.h"
+
+#ifdef COMPILE_SOAP_SSL
 #include "MapFile.h"
+#endif
 
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
@@ -1755,6 +1758,7 @@ DaemonCore::ReInit()
 		}
 	}
 
+#ifdef COMPILE_SOAP_SSL
 	MyString subsys = MyString(mySubSystem);
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
 	bool subsys_enable_soap_ssl =
@@ -1786,6 +1790,7 @@ DaemonCore::ReInit()
 			EXCEPT("DaemonCore: Error parsing USER_MAPFILE at line %d", line);
 		}
 	}
+#endif // COMPILE_SOAP_SSL
 
 	return TRUE;
 }

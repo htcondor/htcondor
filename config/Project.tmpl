@@ -386,8 +386,6 @@ only happening to the globus libraries and only on AIX.  go figure.
 
 #if NEEDS_OPENSSL && HAS_OPENSSL
 
-    GSOAP_CFLAGS = -DWITH_OPENSSL
-
 #  if USE_GLOBUS_OPENSSL
     OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include/$(GlobusFlavor)
     OPENSSL_LIB = $(PRE_GLOBUS_LIBS) \
@@ -401,12 +399,14 @@ only happening to the globus libraries and only on AIX.  go figure.
     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto.a 
 #  endif
 #else
-  GSOAP_CFLAGS =
   OPENSSL_FLAGS =
   OPENSSL_LIB =
   OPENSSL_MD_LIB =
 #endif
 
+#if WANT_SOAP_SSL
+    GSOAP_CFLAGS = -DWITH_OPENSSL -DCOMPILE_SOAP_SSL
+#endif
 
 /* Collect all the security-related variables into a single variable */
 SECURITY_FLAGS = $(GSI_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
