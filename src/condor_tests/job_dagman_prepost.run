@@ -12,18 +12,31 @@ system("mkdir $pid");
 my $curcwd = getcwd();
 print "current directory is $curcwd\n";
 
-my $socketname = "/tmp/prepostsock";
+my $socketname = "prepostsock";
 my $newsocketname = $curcwd . "/" . $pid . "/prepostsock";
 print "current directory is $newsocketname\n";
-@filestoedit = qw/job_dagman_prepost-srvr.cmd job_dagman_prepost-srvr-close.cmd job_dagman_prepost-prehello.pl job_dagman_prepost-posthello.pl/;
+
+# start a server for this test
+
+system("rm -f $flowlog");
+defined(my $pid = fork) or die "Cannot fork: $!";
+unless ($pid)
+{
+    #child runs and ceases to exist
+    exec "./x_general_server.pl $newsocketname $flowlog";
+    die "can not exec dumpcore!\n";
+}
+#main process continues here
+
+@filestoedit = qw/job_dagman_prepost-prehello job_dagman_prepost-posthello/;
 @filestochmod = qw/job_dagman_prepost-prehello.pl job_dagman_prepost-posthello.pl/;
 
 # now make sure each place using socket refers to pid specific directory!
 foreach $name (@filestoedit)
 {
 	print "Correcting socket name in $name\n";
-	open(FF,"<$name") || die "Failed to open $name: $!\n";
-	open(NEWFF,">$name.new") || die "Failed to open $name.new: $!\n";
+	open(FF,"<$name.template") || die "Failed to open $name.template: $!\n";
+	open(NEWFF,">$name.pl") || die "Failed to open $name.pl: $!\n";
 	my $line = "";
 	while(<FF>)
 	{
@@ -42,7 +55,6 @@ foreach $name (@filestoedit)
 	}
 	close(FF);
 	close(NEWFF);
-	system("mv $name.new $name");
 }
 
 foreach $name (@filestochmod)
@@ -103,9 +115,13 @@ $success = sub
 		print "$ret\n";
 		if( $ret ne "0" )
 		{
+			# shutdown the server we started
+            system("./x_general_client.pl $newsocketname quit");
 			die "failed to run exact number of pre/post scripts\n";
 		}
 	}
+	# shutdown the server we started
+    system("./x_general_client.pl $newsocketname quit");
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
@@ -115,14 +131,12 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
-system("rm -f $flowlog");
-my $cluster  = Condor::Submit($serversubFile);
-print   "Server for flow tracking started as Cluster -$cluster-\n";
-
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	print "$testname: SUCCESS\n";
 	exit(0);
 } else {
+	# shutdown the server we started
+    system("./x_general_client.pl $newsocketname quit");
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 
