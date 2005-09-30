@@ -20,9 +20,10 @@ set EXT_GSOAP_VERSION=gsoap-2.7
 set EXT_OPENSSL_VERSION=openssl-0.9.8
 set EXT_KERBEROS_VERSION=
 set EXT_GLOBUS_VERSION=
+set EXT_PCRE_VERSION=pcre-6.1
 
 REM Now tell the build system what externals we need built.
-set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_GLOBUS_VERSION%
+set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_GLOBUS_VERSION% %EXT_PCRE_VERSION%
 
 REM Put NTConfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
