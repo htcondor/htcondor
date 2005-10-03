@@ -40,13 +40,23 @@ Programs
     configuration file.  Dynamically binds a local configuration file
     into the already defined configuration of the current condor
     installation. Performs pre-start diagnostics to ensure all of the
-    needed binaries are present.  And finally starts condor.
-  - Usage: condor_local_start <condor_config_file> <release_dir>
+    needed binaries are present.  And finally starts condor with a
+    midwife.  Additionally, this program can install pre-made log,
+    execute, and/or spool directories by specifying the archived
+    versions on the command line.
+  - Usage: condor_local_start <-configfile config_file> <-basedir release_dir>
     [-localdir local_install_dir] [-localconfig local_config_file]
-    [-dyn] [-fg] [-help]
+    [-logarchive log_archive] [-spoolarchive spool_archive]
+    [-execarchive exec_archive]
+    [-linklock] [-flock] [-bpid] [-artifact artifact_file]
+    [-dyn] [-help]\n
   - Subprograms:
+    + linklock_midwife
+    + flock_midwife
+    + bpid_midwife
     + condor_config_val
     + condor_config_bind
+    + condor_install_local
     + condor_master
    
 + condor_cold_start
@@ -55,13 +65,18 @@ Programs
     and local_start together, passing information from the install
     process to the start process.  In addition, it has the
     functionality to determine the local arch if one is not
-    specified. 
+    specified. Additionally, this program can install pre-made log,
+    execute, and/or spool directories by specifying the archived
+    versions on the command line.
   - Usage: condor_cold_start [-basedir base_dir] <-configfile config_file>
-    [-f] [-dyn]
+    [-force] [-dyn]
     [-fg]
     [-setuponly || -runonly]
     [-arch architecture_string][-site install_repository_site]
     [-localdir local_dir] [-runlocalconfig local_config_file]
+    [-logarchive log_archive] [-spoolarchive spool_archive].
+    [-execarchive exec_archive]
+    [-linklock] [-flock] [-bpid] [-artifact artifact_file]
     [-help]
   - Subprograms:
     + uname
@@ -75,17 +90,24 @@ Programs
     dynamically bound into condor by local_start.  Locates the
     required condor binaries.  Then it determines whether the it is
     safe to shut condor down (i.e, whether the schedd has any jobs in
-    any status).  Finally, it calls condor_off.  Optionally, the user
-    can specify to shutdown regardless of whether there are jobs in
-    the Q or not.
-  - Usage: condor_local_stop [-f] <condor_config_file> <release_dir>
+    any status).  Finally, it calls condor_off and ensures that the
+    master has shutdown using an undertaker, the undertaker must match
+    the corresponding midwife that birthed the master.  Optionally,
+    the user can specify to shutdown regardless of whether there are
+    jobs in the Q or not.  Additionally, this program can archive the
+    log, execute, and/or spool directories.
+  - Usage: condor_local_stop [-f] 
+    <-configfile condor_config_file> <-basedir release_dir>
+    [-linklock] [-flock] [-bpid] [-artifact artifact_file] [-timeout max]
     [-localconfig config_file] [-help]
   - Subprograms:
     + condor_q
     + condor_config_val
     + condor_config_bind
-    + condor_install_local
     + condor_off
+    + linklock_undertaker
+    + flock_undertaker
+    + bpid_undertaker
 
 + cleanup_release 
   - Purpose: Uninstalls a previously installed software release done
@@ -95,15 +117,19 @@ Programs
   - Usage: cleanup_release [-help] <install_log>
 
 + condor_cold_stop
-  - Purpose: Stops and uninstalls a cold_started condor.  There is
-    less need for this program than for cold_start.  All it does is bind
-    local_stop and cleanup into a single interface.
-  - Usage: condor_cold_stop [-f] [-cleanonly || -stoponly]
-    [-basedir base_dir] <-configfile condor_config_file>
-    [-runlocalconfig config_file] [-log install_log][-help]
+  - Purpose: Stops and uninstalls a cold_started condor.  Binds
+    local_stop and cleanup into a single interface. Optionally
+    archives the log, execute, and/or spool directories.
+  - Usage: condor_cold_stop [-force] <-configfile condor_config_file>
+    [-basedir base_dir]
+    [-localdir local_dir] [-runlocalconfig config_file]
+    [-cleaninstall] [-cleanlocal] [-stop]
+    [-logarchive] [-spoolarchive] [-execarchive]
+    [-linklock] [-flock] [-bpid] [-artifact artifact_file]
   - Subprograms
     + condor_local_stop
     + cleanup_release
+    + condor_cleanup_local
 
 + condor_install_local
   - Purpose: Creates a local directory structure (log, spool,
@@ -126,3 +152,30 @@ Programs
   - Subprograms:
     + tar
     + gzip
+
++ flock_midwife
+  - Purpose: Births a program, creating an artifact of the life of
+    this process, in the form of a flock'ed file.  As long as the file
+    is flock'ed we can assume program is alive.  The midwife blocks
+    until the program exits.  This program will not work on a NFS
+    server that is not running an associated lock server.
+  - Usage: flock_midwife [--file lockfile] <program> [program_args]
+
++ flock_undertaker
+  - Purpose: Determine whether an flock midwifed program is still
+    running. This program can either block until the specified program
+    exits or return immediately with 1 for alive and 0 for dead.
+  - Usage: flock_undertaker [--file file][--block]
+  
++ linklock_midwife
+  - Purpose: Births a program, creating an artifact of the life of
+    this process, in the form of a link locked file.  As long as the
+    file is locked we can assume program is alive.  The midwife
+    blocks until the program exits.  This program may work on NFS.
+  - Usage: linklock_midwife [--file lockfile] <program> [program_args]
+
++ linklock_undertaker
+  - Purpose: Determine whether an linklock midwifed program is still
+    running. This program can either block until the specified program
+    exits or return immediately with 1 for alive and 0 for dead.
+  - Usage: linklock_midwife [--file lockfile] <program> [program_args]

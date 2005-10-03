@@ -41,9 +41,13 @@ use Socket;
 #***
 # Constant Static Variables
 #***
-my $USAGE = "Usage: condor_local_start <condor_config_file> <release_dir>\n".
+my $USAGE = 
+    "Usage: condor_local_start <-configfile config_file> <-basedir release_dir>\n".
     "[-localdir local_install_dir] [-localconfig local_config_file]\n".
-    "[-dyn] [-fg] [-help]\n";
+    "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
+    "[-execarchive exec_archive]\n".
+    "[-linklock] [-flock] [-bpid] [-artifact artifact_file]\n".
+    "[-dyn] [-help]\n";
 
 my $FG_OPT = '-f';
 
@@ -56,6 +60,14 @@ my $CONDOR_INSTALL_LOCAL = 'condor_install_local';
 my $LOCALDIR_OPT = '-localdir';
 my $CONFIGNAME_OPT = '-configname';
 my $CONDOR_INSTALL_CONFIG = 'condor_config.local_install';
+my $LOG_ARCHIVE_OPT = '-logarchive';
+my $SPOOL_ARCHIVE_OPT = '-spoolarchive';
+my $EXEC_ARCHIVE_OPT = '-execarchive';
+
+my $LINKLOCK_MIDWIFE = 'linklock_midwife';
+my $FLOCK_MIDWIFE = 'flock_midwife';
+my $BPID_MIDWIFE = 'bpid_midwife';
+my $MIDWIFE_FILE_OPT ='--file';
 
 #  environment variable names
 my $GLOBAL_CONFIG_ENV = 'CONDOR_CONFIG';
@@ -102,21 +114,36 @@ my $dynamic_naming = 0;
 my $foreground,
 my @master_params = ();
 my $local_install_config = 0;
+my $log_archive = 0;
+my $spool_archive = 0;
+my $exec_archive = 0;
+my $flock_flag = 0;
+my $linklock_flag = 0;
+my $bpid_flag = 0;
+my $midwife_artifact = 'MasterMidwife.artifact';
 
 #***
 # Main Function
 #***
-GetOptions('localdir=s'=>\$local_install_dir,
+GetOptions('configfile=s'=>\$condor_config_file,
+	   'basedir=s'=>\$release_dir,
+	   'localdir=s'=>\$local_install_dir,
 	   'localconfig=s'=>\$local_config_file,
+	   'logarchive=s'=>\$log_archive,
+	   'spoolarchive=s'=>\$spool_archive,
+	   'execarchive=s'=>\$exec_archive,
+	   'linklock'=>\$linklock_flag,
+	   'flock'=>\$flock_flag,
+	   'bpid'=>\$bpid_flag,
+	   'artifact=s'=>\$midwife_artifact,
 	   'dyn'=>\$dynamic_naming,
 	   'fg'=>\$foreground,
 	   'help'=>\$help);
 
-# Process command-line arguments
-die "$USAGE" if( @ARGV !=2 || $help );
 
-$condor_config_file = $ARGV[0];
-$release_dir = $ARGV[1];
+# Process command-line arguments
+my $missing_required_args = !$release_dir || !$condor_config_file;
+die "$USAGE" if( $missing_required_args || $help );
 
 # Ensure the arguments are valid
 if (!-e $condor_config_file){
@@ -208,6 +235,11 @@ sub SetupLocalDir(){
     my @args = ($LOCALDIR_OPT, $local_install_dir,
 		$CONFIGNAME_OPT, $install_config_path,
 		);
+
+    # add the archive args if neccessary
+    push @args, ($LOG_ARCHIVE_OPT, $log_archive) if( $log_archive );
+    push @args, ($SPOOL_ARCHIVE_OPT, $spool_archive) if( $spool_archive );
+    push @args, ($EXEC_ARCHIVE_OPT, $exec_archive) if($exec_archive);
 
     # Find condor_install_local
     my $install_local_path = File::Spec->catpath(0, 
@@ -374,16 +406,42 @@ sub PreStartDiagnostic(){
 }
 
 #*********************************************************************
-# Locates and starts the condor_master with dynamic directories.
+# Locates and starts the condor_master with a midwife.
 #*********************************************************************
 sub StartMaster(){
-    #Construct the arguments
-    push @master_params, $FG_OPT if( $foreground );
+    #Determine the midwife to use
+    my $midwife = 0;
+    if( $linklock_flag ){
+	$midwife = $LINKLOCK_MIDWIFE;
+    } 
+    
+    elsif( $flock_flag ){
+	$midwife = $FLOCK_MIDWIFE;
+    } 
+    
+    # defaults to the bpid midwife
+    else{
+	$midwife = $BPID_MIDWIFE;
+    } 
+    
+    # construct the arguments for the midwife program
+    my $midwife_path = File::Spec->catpath(0, $FindBin::Bin, $midwife);
+    my @args = ($MIDWIFE_FILE_OPT, $midwife_artifact);
 
+
+    #Construct the master arguments
+    #push @master_params, $FG_OPT if( $foreground );
+    push @master_params, $FG_OPT;
     my $master_cmd = QueryCondorConfig($MASTER_ATTR);
-    #!system $master_cmd, @master_params
-    exec $master_cmd, @master_params
-	or die "Failed to start $master_cmd: $!";
+    
+    # Add them to the midwife parameters
+    push @args, $master_cmd;
+    push @args, @master_params;
+
+    # Execute the master with the midwife
+    exec $midwife_path, @args
+	or die "Failed to start $midwife_path: $!";
+    
 }
 
 #*********************************************************************

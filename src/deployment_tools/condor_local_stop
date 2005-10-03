@@ -19,8 +19,10 @@ use File::Temp qw/ tempfile /;
 #***
 # Constant Static Variables
 #***
-my $USAGE = "Usage: condor_local_stop [-f] <condor_config_file> <release_dir>".
-    " [-localconfig config_file] [-help]\n";
+my $USAGE = 
+    "Usage: condor_local_stop [-f] <-configfile condor_config_file> <-basedir release_dir>\n".
+    "[-linklock] [-flock] [-bpid] [-artifact artifact_file] [-timeout max]\n".
+    "[-localconfig config_file] [-help]\n";
 
 my $CONDOR_Q = 'condor_q';
 my $CONDOR_OFF = 'condor_off';
@@ -37,6 +39,11 @@ my %JOB_STATUS_HASH = ( 1 => 'Idle',
 			4 => 'Completed',
 			5 => 'Held',);
 
+my $LINKLOCK_UNDERTAKER = 'linklock_undertaker';
+my $FLOCK_UNDERTAKER = 'flock_undertaker';
+my $BPID_UNDERTAKER = 'bpid_undertaker';
+my $UNDERTAKER_FILE_OPT ='--file';
+
 #  environment variable names
 my $GLOBAL_CONFIG_ENV = 'CONDOR_CONFIG';
 my $SCHEDD_NAME_ENV = '_CONDOR_SCHEDD_NAME';
@@ -52,6 +59,11 @@ my $force = 0;
 my $release_dir = 0;
 my $global_config_file = 0;
 my $local_config_file = 0;
+my $linklock_flag = 0;
+my $flock_flag = 0;
+my $bpid_flag = 0;
+my $midwife_artifact = 'MasterMidwife.artifact';
+my $timeout = 120;
 my $help = 0;
 
 my $condor_off_cmd = 0;
@@ -61,19 +73,26 @@ my @condor_q_params = ('-format', '%d\n', 'JobStatus');
 my $condor_config_val_cmd = 0;
 
 
+
 #***
 # Main function
 #***
 
 # set the location of the release_dir
-GetOptions('f'=>\$force,
+GetOptions('configfile=s'=>\$global_config_file,
+	   'basedir=s'=>\$release_dir,
+	   'linklock'=>\$linklock_flag,
+	   'flock'=>\$flock_flag,
+	   'bpid'=>\$bpid_flag,
+	   'artifact=s'=>\$midwife_artifact,
+	   'timeout'=>\$timeout,
+	   'f'=>\$force,
 	   'localconfig=s'=>\$local_config_file,
 	   'help'=>\$help);
 
 # Process command-line arguments
-die "$USAGE" if( @ARGV != 2 || $help );
-$global_config_file = $ARGV[0];
-$release_dir = $ARGV[1];
+my $missing_required_args = !$global_config_file || !$release_dir;
+die "$USAGE" if( $missing_required_args || $help );
 
 #Convert all the relative file paths to absolute file paths
 &ConvertToAbPaths();
@@ -242,7 +261,7 @@ sub JobsInQ(){
     # Ensure an error did not occur
     if( $returnHashRef->{EXIT_VALUE} ){
 	# die and print error messages
-	die @{$returnHashRef->{ERRORS}};
+	die "ERROR: condor_q failed check schedd log: @{$returnHashRef->{ERRORS}}";
     }
 
     # Get the output from condor_q
@@ -334,19 +353,70 @@ sub QueryCondorConfig(){
 
 
 #*********************************************************************
-# Shuts down the local condor installation
+# Shuts down the local condor installation.  Blocks until the 
+# master shutsdown or until timeout.
 #*********************************************************************
 sub StopMaster(){
 
-    !system $condor_off_cmd, @condor_off_params
-	or die "Failed to shutdown condor";
+    # Determine the undertaker to use
+    my $undertaker = 0;
+    if( $linklock_flag ){
+	$undertaker = $LINKLOCK_UNDERTAKER;
+    }
 
+    elsif( $flock_flag ){
+	$undertaker = $FLOCK_UNDERTAKER;
+    }
+    #defaults to bpid undertaker
+    else{
+	$undertaker = $BPID_UNDERTAKER;
+    }
+    
+    # construct the arguments for the undertaker program
+    my $undertaker_path = File::Spec->catpath(0, $FindBin::Bin, $undertaker);
+    my @undertaker_args = ($UNDERTAKER_FILE_OPT, $midwife_artifact);
+
+    my $still_alive = 1;
+    my $backoff = 0;
+    my $total_wait = 0;
+    while( $still_alive && $total_wait < $timeout ){
+
+	# linear backoff
+	sleep($backoff);
+	$backoff++;
+	$total_wait += $backoff;
+	
+	# attempt to shutdown the master
+	# repeat this step in case the CEDAR packet was lost (UDP)
+	!system $condor_off_cmd, @condor_off_params
+	    or die "ERROR: Failed to shutdown condor";
+
+	# see if it shutdown (returns 1 for alive, 0 for dead)
+	my $returnHashRef = ExecuteAndCapture($undertaker_path, @undertaker_args);
+	
+	# Ensure an error did not occur
+	$still_alive = $returnHashRef->{EXIT_VALUE};
+	if( $still_alive > 1 || $still_alive < 0 ){
+	    # die and print error messages
+	    die "ERROR: Undertaker failed: @{$returnHashRef->{ERRORS}}";
+	}
+	
+    }
+    
+    # See if we were successful
+    if( $still_alive ){
+	die "ERROR: Unable to shutdown the master";
+    }
+    
 }
 
 #*********************************************************************
 #  Perform any cleanup
 #*********************************************************************
 sub Cleanup(){
-    # Nothing needed yet
-    # Bind file is auto-removed by the File::Temp library
+    
+    # clean up the bpid file, if neccessary
+    if( !$linklock_flag && !$flock_flag ){
+	unlink $midwife_artifact;
+    }
 }

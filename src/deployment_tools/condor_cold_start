@@ -59,11 +59,14 @@ use Getopt::Long;
 
 my $USAGE = 
     "Usage: condor_cold_start [-basedir base_dir] <-configfile config_file>\n".
-    "[-f] [-dyn]\n".
+    "[-force] [-dyn]\n".
     "[-fg]\n".
     "[-setuponly || -runonly]\n".
     "[-arch architecture_string][-site install_repository_site]\n".
     "[-localdir local_dir] [-runlocalconfig local_config_file]\n".
+    "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
+    "[-execarchive exec_archive]\n".
+    "[-linklock] [-flock] [-bpid] [-artifact artifact_file]\n".
     "[-help]\n";
 
 
@@ -84,10 +87,18 @@ my $FORCE_OPT = '-f';
 
 #  startup program and options
 my $CONDOR_LOCAL_START = 'condor_local_start';
+my $CONFIG_OPT = '-configfile';
 my $LOCAL_DIR_OPT = '-localdir';
 my $LOCAL_CONFIG_OPT = '-localconfig';
 my $DYN_OPT = '-dyn';
 my $FG_OPT = '-fg';
+my $LINKLOCK_OPT = '-linklock';
+my $FLOCK_OPT = '-flock';
+my $BPID_OPT = '-bpid';
+my $ARTIFACT_OPT ='-artifact';
+my $LOG_ARCHIVE_OPT = '-logarchive';
+my $SPOOL_ARCHIVE_OPT = '-spoolarchive';
+my $EXEC_ARCHIVE_OPT = '-execarchive';
 
 #***
 # Non-constant Static Variables
@@ -106,6 +117,13 @@ my $site = 0;
 my $global_config_file = 0;
 my $binding_config_file = 0;
 my $run_local_config_file = 0;
+my $log_archive = 0;
+my $spool_archive = 0;
+my $exec_archive = 0;
+my $flock_flag = 0;
+my $linklock_flag = 0;
+my $bpid_flag = 0;
+my $midwife_artifact = 0;
 my $help = 0;
 #my $setup_configs_flag = 0;
 #my @setup_config_files = ();
@@ -117,7 +135,7 @@ my $help = 0;
 # Parse the command line options
 GetOptions('basedir=s'=>\$base_dir,
 	   'localdir=s'=>\$local_dir,
-	   'f'=>\$force,
+	   'force'=>\$force,
 	   'dyn'=>\$dynamic_naming,
 	   'fg'=>\$foreground,
 	   'setuponly'=>\$setup_only,
@@ -127,6 +145,13 @@ GetOptions('basedir=s'=>\$base_dir,
 	   'configfile=s'=>\$global_config_file,
 	   #'setuplocalconfigs'=>\$setup_configs_flag,
 	   'runlocalconfig=s'=>\$run_local_config_file,
+	   'logarchive=s'=>\$log_archive,
+	   'spoolarchive=s'=>\$spool_archive,
+	   'execarchive=s'=>\$exec_archive,
+	   'linklock'=>\$linklock_flag,
+	   'flock'=>\$flock_flag,
+	   'bpid'=>\$bpid_flag,
+	   'artifact=s'=>\$midwife_artifact,
 	   'help'=>\$help,
 	   );
 	   
@@ -238,7 +263,8 @@ sub Startup(){
     
     # construct the arguments for the local start program
     my $local_start_path = File::Spec->catpath(0, $FindBin::Bin, $CONDOR_LOCAL_START);
-    my @args = ($global_config_path, $base_dir, 
+    my @args = ($CONFIG_OPT, $global_config_path, 
+		$BASE_DIR_OPT, $base_dir, 
 		$LOCAL_DIR_OPT, $local_dir);
 
     if( $run_local_config_file ){
@@ -247,7 +273,17 @@ sub Startup(){
     push @args, $DYN_OPT if( $dynamic_naming );
     push @args, $FG_OPT if( $foreground );
 
-	
+    # archive args
+    push @args, ($LOG_ARCHIVE_OPT, $log_archive) if( $log_archive );
+    push @args, ($SPOOL_ARCHIVE_OPT, $spool_archive) if( $spool_archive );
+    push @args, ($EXEC_ARCHIVE_OPT, $exec_archive) if($exec_archive);
+    
+    # midwife args
+    push @args, $LINKLOCK_OPT if( $linklock_flag );
+    push @args, $FLOCK_OPT if( $flock_flag );
+    push @args, $BPID_OPT if( $bpid_flag );
+    push @args, ($ARTIFACT_OPT, $midwife_artifact) if( $midwife_artifact);
+
     # Execute the startup program
     #!system $local_start_path, @args
     exec $local_start_path, @args
