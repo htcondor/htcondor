@@ -97,7 +97,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						print "Test fails because PARENT pid $pidcheck should have been removed\n";
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -106,7 +106,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						print "Test fails because CHILD pid $pidcheck should have been removed\n";
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -123,7 +123,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						print "Test fails because PARENT pid $pidcheck should have been removed\n";
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -132,7 +132,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						print "Test fails because CHILD pid $pidcheck should have been removed\n";
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -144,7 +144,9 @@ $ExitSuccess = sub {
 	close(PULL);
 	if($worked eq "no")
 	{
-		print "$testname: FAILED\n";
+		print "$testname: FAILED. We created parent processes with children and inserted this list into testname.data \n";
+		print "and testname.data.kids. When we went through these files some processes were not cleaned up. They were\n";
+		print "labeled in the error as either PARENT or CHILD created by x_pid_tracking.pl. We removed them during the checking.\n";
 		exit(1);
 	}
 };
