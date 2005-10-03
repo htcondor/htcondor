@@ -150,10 +150,16 @@ sub AcquireLinkLockNB{
 # Releases a link lock
 #*********************************************************************
 sub ReleaseLinkLock{
-    my ($fh) = @_;   #Name the parameters
+    my ($fh, $file_name) = @_;   #Name the parameters
 
     close $fh
 	or die "FAILED: Lock may have been prematurely released: $!";
+
+    # Stat the file to ensure the link count is flushed
+    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+	$atime,$mtime,$ctime,$blksize,$blocks)
+	= stat($file_name);
+    
 }
 
 #*********************************************************************
@@ -170,7 +176,7 @@ sub TestLinkLock{
     my $success = defined $lock_handle;
     if( $success ){
 	# unlock
-	&ReleaseLinkLock($lock_handle);
+	&ReleaseLinkLock($lock_handle, $lock_file);
     }
 
     return $success;
