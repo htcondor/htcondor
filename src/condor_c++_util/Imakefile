@@ -10,10 +10,10 @@
 
 all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes -I$(PCRE_INC) $(QUILL_INC)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes $(QUILL_INC)
 
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
-LIB = $(STD_LIBS) -L$(PCRE_LIB) -lpcre
+LIB = $(STD_LIBS)
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
