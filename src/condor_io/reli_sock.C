@@ -919,9 +919,13 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
 		return FALSE;
 	}
-	if (len <= 0){
+	if ((len < 0) || 
+		(len == 0) && (end==0))	// len and end would never BOTH be zero
+	{
 		delete tmp;
-		dprintf(D_ALWAYS, "IO: Incoming packet improperly sized\n");
+		dprintf(D_ALWAYS, 
+			"IO: Incoming packet improperly sized (len=%d,end=%d)\n",
+			len,end);
 		return FALSE;
 	}
 	if ((tmp_len = tmp->read(_sock, len, _timeout)) != len){
