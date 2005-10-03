@@ -18,7 +18,7 @@ use Getopt::Long;
 # Constant Static Variables
 #***
 my $USAGE = 
-    "Usage: flock_midwife [--lockfile file] <program> [program_args]\n";
+    "Usage: flock_midwife [--file lockfile] <program> [program_args]\n";
 
 #***
 # Non-constant Static Variables
@@ -36,7 +36,7 @@ my @target_args = ();
 Getopt::Long::Configure ("no_auto_abbrev", 
 			 "pass_through", 
 			 "require_order");
-GetOptions('lockfile=s'=>\$lockfile,
+GetOptions('file=s'=>\$lockfile,
 	   'help'=>\$help,
 
 	   );
@@ -45,21 +45,38 @@ die $USAGE if( $help || @ARGV < 1 );
 $target_command = shift @ARGV;
 @target_args = @ARGV;
 
+# Ensure the lock file actually exist
+if( !-e $lockfile ){
+
+    # if not,
+    # create the file
+    open FILE, ">$lockfile"
+	or die "FAILED: Could not create $lockfile: $!";
+    close FILE;
+
+    # set the permission correctly
+    chmod(0644, $lockfile);
+    
+}
 # Acquire a flock on the lock file
 my $lock_handle = &AcquireFLockNB($lockfile, 'X');
 
 # The lock was already held
 if( ! defined $lock_handle ){
-    die "FAILED: Link lock on lock file [$lockfile]".
-	" is already held by another process";
+    die "FAILED: FLock on lock file [$lockfile]".
+	" is already held by another process".
+	"OR FLocking is not supported on the platform";
 }
 
 # Execute the program
 # use two parameters to avoid the shell
-!system $target_command, @target_args
-    or die "Failed to execute command[$target_command]". 
-    "with args [@target_args]: $!";
-
+my $result = system $target_command, @target_args;
+if( $result != 0 ){
+    my $exit_code = $result >> 8;
+    die "Failed to execute command[$target_command]". 
+    "with args [@target_args]\n".
+    "Exit code of target program: $exit_code\n";
+}
 
 # Release the Link Lock
 &ReleaseFLock($lock_handle);

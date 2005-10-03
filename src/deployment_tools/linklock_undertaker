@@ -18,7 +18,7 @@ use Getopt::Long;
 # Constant Static Variables
 #***
 my $USAGE = 
-    "Usage: linklock_undertaker [--lockfile file][--block]\n";
+    "Usage: linklock_undertaker [--file file][--block]\n";
 
 #***
 # Non-constant Static Variables
@@ -32,7 +32,7 @@ my $block = 0;
 #***
 
 # Parse the command line options
-GetOptions('lockfile=s'=>\$lockfile,
+GetOptions('file=s'=>\$lockfile,
 	   'block'=>\$block,
 	   'help'=>\$help,
 	   );
@@ -73,7 +73,7 @@ sub Blocking{
     my $lock_handle = AcquireLinkLock($lockfile);
 
     # Release the lock
-    &ReleaseLinkLock($lock_handle);
+    &ReleaseLinkLock($lock_handle, $lockfile);
 
     # exit
     exit 0;
