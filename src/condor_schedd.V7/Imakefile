@@ -1,7 +1,7 @@
 NAME = condor_schedd.V7
 
 VANILLATOGRID = vanilla2grid
-VANILLATOGRID_OBJS = VanillaToGrid.o
+VANILLATOGRID_OBJS = VanillaToGrid.o VanillaToGrid_main.o
 VANILLATOGRID_LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
 
 all_target( $(NAME) $(VANILLATOGRID) )

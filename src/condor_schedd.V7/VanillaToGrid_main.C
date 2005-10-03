@@ -1,0 +1,97 @@
+#include "condor_common.h"
+#include "condor_new_classads.h"
+#include "condor_classad.h"
+#include "VanillaToGrid.h"
+#define WANT_NAMESPACES
+#include "classad_distribution.h"
+
+
+
+void die(const char * s) {
+	printf("%s\n", s);
+	exit(1);
+}
+
+MyString slurp_file(const char * filename) {
+	int fd = open("classadin", O_RDONLY);
+	if(fd == -1) {
+		die("failed to open input");
+	}
+	MyString s;
+	char buf[1024];
+	while(true) {
+		int bytes = read(fd, buf, sizeof(buf));
+		for(int i = 0; i < bytes; ++i) {
+			s += buf[i];
+		}
+		if(bytes != sizeof(buf)) {
+			break;
+		}
+	}
+	return s;
+}
+
+void write_file(const char * filename, const char * data) {
+	FILE * f = fopen(filename, "w");
+	if( ! f ) {
+		die("Failed to open output");
+	}
+	fprintf(f, "%s\n", data);
+	fclose(f);
+}
+
+int main(int argc, char **argv) 
+{
+
+	// How hard can it be to take a file containing an old classad (in string
+	// form) and turn it into a new classad object?
+
+	// Load old classad string.
+	MyString s_oldad = slurp_file("classadin");
+	// Convert to old class ad.
+	ClassAd oldad((char *)s_oldad.Value(),'\n');
+
+	// Convert to new classad string
+	NewClassAdUnparser oldtonew;
+	oldtonew.SetOutputType(true);
+	oldtonew.SetOutputTargetType(true);
+	MyString s_newad;
+	oldtonew.Unparse(&oldad, s_newad);
+
+	// Convert to new classad
+	classad::ClassAdParser parser;
+	classad::ClassAd newad;
+	if( ! parser.ParseClassAd(s_newad.Value(), newad, true) )
+	{
+		die("Failed to parse class ad\n");
+	}
+
+
+	// Finally, a new classad.
+
+
+	//====================================================================
+	// Do something interesting:
+	VanillaToGrid::vanillaToGrid(&newad, "condor adesmet@puffin.cs.wisc.edu puffin.cs.wisc.edu");
+	//====================================================================
+
+
+	// Convert back to new classad string
+	classad::ClassAdUnParser unparser;
+	std::string s_newadout;
+	unparser.Unparse(s_newadout, &newad);
+
+	// Convert to old classad
+	NewClassAdParser newtoold;
+	ClassAd * newad2 = newtoold.ParseClassAd(s_newadout.c_str());
+
+	// Convert to old classad string
+	MyString out;
+	newad2->sPrint(out);
+
+	delete newad2;
+
+	printf("%s\n", out.Value());
+
+	return 0;
+}
