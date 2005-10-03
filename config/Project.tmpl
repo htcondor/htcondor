@@ -423,8 +423,8 @@ NETMAN_FLAGS =
 #endif
 
 /* PCRE is sorta required everywhere at the moment */
-PCRE_INC_CFLAGS = -I$(PCRE_INC)
-PCRE_LIB_CFLAGS = -L$(PCRE_LIB) -lpcre
+PCRE_FLAGS = -I$(PCRE_INC)
+PCRE_LIB = $(PCRE_LIB)/libpcre.a
 
 #if WANT_QUILL
 QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a
@@ -467,7 +467,7 @@ GPP_VERS_FLAGS =
 #endif
 GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_CFLAGS) $(PCRE_INC_CFLAGS)
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_CFLAGS) $(PCRE_FLAGS)
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
 /* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
 	but make sure there isn't -fno-implicit-templates in it
@@ -529,5 +529,6 @@ STD_LIBS = \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
   $(SECURITY_LIB) \
-  $(PCRE_LIB_CFLAGS)
+  $(PCRE_LIB)
+
 
