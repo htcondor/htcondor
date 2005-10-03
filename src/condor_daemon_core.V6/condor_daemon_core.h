@@ -49,7 +49,9 @@
 #include "list.h"
 #include "extArray.h"
 #include "Queue.h"
+#ifdef COMPILE_SOAP_SSL
 #include "MapFile.h"
+#endif
 #ifdef WIN32
 #include "ntsysinfo.h"
 #endif
@@ -918,7 +920,9 @@ class DaemonCore : public Service
 	
     SelfMonitorData monitor_data;
 
+#ifdef COMPILE_SOAP_SSL
 	MapFile * mapfile;
+#endif
   	
         // A little info on the "soap_ssl_sock"... There once was a
         // bug known as the "single transaction problem" and it made
