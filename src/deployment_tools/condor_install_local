@@ -36,9 +36,10 @@ my $INSTALL_CONFIG_COMMENT =
 my $DEFAULT_CONFIG_NAME = 'condor_config.local_dir';
 
 #  condor_install_release variables
-my $INSTALL_PROGRAM = 'condor_install_release';
+my $INSTALL_PROGRAM = 'install_release';
 my $BASEDIR_OPT = '-basedir';
 my $LOG_OPT = '-log';
+my $FORCE_OPT = '-f';
 
 #  condor_config variables
 my $LOG_DIR_ATTR = 'LOG';
@@ -166,6 +167,7 @@ sub CreateDirFromArchive(){
 
     # Create the arguments for the install program
     my @install_args = ($archive,
+			$FORCE_OPT,
 			$BASEDIR_OPT, $local_dir,
 			$LOG_OPT, $install_log,
 			);
