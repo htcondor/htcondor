@@ -3156,6 +3156,18 @@ These macros control the \Condor{schedd}.
   300 seconds (5 minutes).  A value of 0 prevents the schedd from
   performing the periodic evaluations.
 
+\item[\Macro{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE}]
+  \label{param:ScheddAssumeNegotiatorGone} This macro determines the period,
+  in seconds, that the \Condor{schedd} will wait for the \Condor{negotiator} to
+  initiate a negotiation cycle before the schedd will simply try to claim
+  any local \Condor{startd}.  This allows for a machine that is acting as
+  both a submit and execute node to run jobs locally if it cannot
+  communicate with the central manager.  The default value, if not
+  specified, is 4 x \MacroUNI{NEGOTIATOR\_INTERVAL}.  If
+  \MacroUNI{NEGOTIATOR\_INTERVAL} is not defined, then 
+  \MacroNI{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE} will default to 1200 (20
+  minutes).
+
 \item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
   \label{param:ScheddBackupSpool} This macro is used to enable the
   \Condor{schedd} to make a backup of the job queue as it starts.  If

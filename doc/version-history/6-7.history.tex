@@ -51,10 +51,18 @@ the status of all DAG nodes.
   via an error code of FAIL. Pervious behavior was to abort a running
   transaction in order to allow the BeginTransaction call to succeed.
   
-\item MAX\_SOAP\_TRANSACTION\_DURATION config option added so that a
+\item \Macro{MAX\_SOAP\_TRANSACTION\_DURATION} config option added so that a
   single transaction cannot take up too many \Condor{schedd}
   resourced. This option specifies an optional maximum duration
   between SOAP calls in a single transaction.
+
+\item If a machine is acting as both a submit and an execute node, and it
+  cannot communicate with the central manager, it will attempt to run jobs
+  locally.  If Condor specific terms, if the \Condor{schedd} fails to hear
+  from the central manager, it will attempt to run jobs on a locally running
+  \Condor{startd}.  The \Condor{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE} config
+  macro was added to support this feature; see
+  page~\pageref{param:ScheddAssumeNegotiatorGone} for details.
 
 \end{itemize}
 
