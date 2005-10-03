@@ -644,10 +644,7 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 {
 	bool	result = false;
 
-	JobID	id;
-	id.cluster = event->cluster;
-	id.proc = event->proc;
-	id.subproc = event->subproc;
+	CondorID	id(event->cluster, event->proc, event->subproc);
 
 	LogFileEntry *	oldLog;
 	if ( logHash.lookup(id, oldLog) == 0 ) {
@@ -676,9 +673,9 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 ///////////////////////////////////////////////////////////////////////////////
 
 int
-ReadMultipleUserLogs::hashFuncJobID(const JobID &key, int numBuckets)
+ReadMultipleUserLogs::hashFuncJobID(const CondorID &key, int numBuckets)
 {
-	int		result = key.cluster ^ key.proc ^ key.subproc;
+	int		result = key._cluster ^ key._proc ^ key._subproc;
 
 		// Make sure we produce a non-negative result (modulus on negative
 		// value may produce a negative result (implementation-dependent).

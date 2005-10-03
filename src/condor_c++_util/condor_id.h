@@ -68,7 +68,7 @@ class CondorID : public ServiceData
         @param the other CondorID object
         @return true if equal, false if not
     */
-    inline bool operator == (const CondorID condorID) const {
+    inline bool operator == (const CondorID &condorID) const {
         return Compare (condorID) == 0;
     }
 

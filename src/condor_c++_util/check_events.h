@@ -177,7 +177,7 @@ class CheckEvents {
 				not okay).
 	*/
 	void CheckPostTerm(const MyString &idStr,
-			const ReadMultipleUserLogs::JobID &id, const JobInfo *info,
+			const CondorID &id, const JobInfo *info,
 			MyString &errorMsg, check_event_result_t &result);
 
 	/** Check the status of all jobs at the end of a run.
@@ -191,10 +191,10 @@ class CheckEvents {
 				not okay).
 	*/
 	void CheckJobFinal(const MyString &idStr,
-			const ReadMultipleUserLogs::JobID &id, const JobInfo *info,
+			const CondorID &id, const JobInfo *info,
 			MyString &errorMsg, check_event_result_t &result);
 
-	HashTable<ReadMultipleUserLogs::JobID, JobInfo *>	jobHash;
+	HashTable<CondorID, JobInfo *>	jobHash;
 
 	inline bool		AllowAll() { return allowEvents & ALLOW_ALL; }
 
@@ -217,11 +217,11 @@ class CheckEvents {
 	int		allowEvents;
 
 		// Special Condor ID for POST script run after submit failures.
-	ReadMultipleUserLogs::JobID	noSubmitId;
+	CondorID	noSubmitId;
 
 	// For instantiation in programs that use this class.
 #define CHECK_EVENTS_HASH_INSTANCE template class \
-		HashTable<ReadMultipleUserLogs::JobID, CheckEvents::JobInfo *>;
+		HashTable<CondorID, CheckEvents::JobInfo *>;
 
 };
 

@@ -35,6 +35,7 @@
 #include "MyString.h"
 #include "string_list.h"
 #include "HashTable.h"
+#include "condor_id.h"
 
 class MultiLogFiles
 {
@@ -115,30 +116,7 @@ public:
 protected:
 	friend class CheckEvents;
 
-	class JobID 
-	{
-	public:
-		int			cluster;
-		int			proc;
-		int			subproc;
-
-		JobID() {
-			cluster = proc = subproc = 0;
-		}
-
-		JobID(const JobID &other) {
-			cluster = other.cluster;
-			proc = other.proc;
-			subproc = other.subproc;
-		}
-
-		int operator==(const JobID &other) {
-			return (cluster == other.cluster && proc == other.proc &&
-					subproc == other.subproc);
-		}
-	};
-
-	static int hashFuncJobID(const JobID &key, int numBuckets);
+	static int hashFuncJobID(const CondorID &key, int numBuckets);
 
 private:
 	void cleanup();
@@ -157,11 +135,11 @@ private:
 	int				iLogFileCount;
 	LogFileEntry *	pLogFileEntries;
 
-	HashTable<JobID, LogFileEntry *>	logHash;
+	HashTable<CondorID, LogFileEntry *>	logHash;
 
 	// For instantiation in programs that use this class.
 #define MULTI_LOG_HASH_INSTANCE template class \
-		HashTable<ReadMultipleUserLogs::JobID, \
+		HashTable<CondorID, \
 		ReadMultipleUserLogs::LogFileEntry *>
 
 

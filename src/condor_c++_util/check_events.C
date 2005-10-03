@@ -31,13 +31,10 @@
 
 CheckEvents::CheckEvents(int allowEvents) :
 		jobHash(JOB_HASH_SIZE, ReadMultipleUserLogs::hashFuncJobID,
-		rejectDuplicateKeys)
+			rejectDuplicateKeys),
+		noSubmitId(-1, -1, -1)
 {
 	this->allowEvents = allowEvents;
-
-	noSubmitId.cluster = -1;
-	noSubmitId.proc = -1;
-	noSubmitId.subproc = -1;
 }
 
 //-----------------------------------------------------------------------------
@@ -60,13 +57,10 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 	check_event_result_t	result = EVENT_OKAY;
 	errorMsg = "";
 
-	ReadMultipleUserLogs::JobID	id;
-	id.cluster = event->cluster;
-	id.proc = event->proc;
-	id.subproc = event->subproc;
+	CondorID	id(event->cluster, event->proc, event->subproc);
 
 	MyString	idStr("BAD EVENT: job ");
-	idStr.sprintf_cat("%d.%d.%d", id.cluster, id.proc, id.subproc);
+	idStr.sprintf_cat("(%d.%d.%d)", id._cluster, id._proc, id._subproc);
 
 	JobInfo *info = NULL;
 	if ( jobHash.lookup(id, info) == 0 ) {
@@ -129,13 +123,13 @@ CheckEvents::CheckJobSubmit(const MyString &idStr, const JobInfo *info,
 		MyString &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount != 1 ) {
-		errorMsg = idStr + " submitted; submit count != 1 (" +
+		errorMsg = idStr + " submitted, submit count != 1 (" +
 				MyString(info->submitCount) + ")";
 		result = AllowAll() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() != 0 ) {
-		errorMsg = idStr + " submitted; total end count != 0 (" +
+		errorMsg = idStr + " submitted, total end count != 0 (" +
 				MyString(info->TotalEndCount()) + ")";
 		result = AllowAll() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
@@ -147,7 +141,7 @@ CheckEvents::CheckJobExecute(const MyString &idStr, const JobInfo *info,
 		MyString &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount != 1 ) {
-		errorMsg = idStr + " executing; submit count != 1 (" +
+		errorMsg = idStr + " executing, submit count != 1 (" +
 				MyString(info->submitCount) + ")";
 		result = ((AllowExecSubmit() && (info->submitCount == 0)) ||
 				(AllowGarbage() && (info->submitCount <= 1))) ?
@@ -155,7 +149,7 @@ CheckEvents::CheckJobExecute(const MyString &idStr, const JobInfo *info,
 	}
 
 	if ( info->TotalEndCount() != 0 ) {
-		errorMsg = idStr + " executing; total end count != 0 (" +
+		errorMsg = idStr + " executing, total end count != 0 (" +
 				MyString(info->TotalEndCount()) + ")";
 		result = AllowExtraRuns() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
@@ -167,14 +161,14 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 		MyString &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount != 1 ) {
-		errorMsg = idStr + " ended; submit count != 1 (" +
+		errorMsg = idStr + " ended, submit count != 1 (" +
 				MyString(info->submitCount) + ")";
 		result = (AllowAll() || (AllowGarbage() && (info->submitCount <= 1))) ?
 				EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() != 1 ) {
-		errorMsg = idStr + " ended; total end "
+		errorMsg = idStr + " ended, total end "
 				"count != 1 (" + MyString(info->TotalEndCount()) + ")";
 		if ( AllowExtraAborts() &&
 				(info->abortCount == 1) && (info->termCount == 1) ) {
@@ -189,7 +183,7 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 	}
 
 	if ( info->postScriptCount != 0 ) {
-		errorMsg = idStr + " ended; post script "
+		errorMsg = idStr + " ended, post script "
 				"count != 0 (" + MyString(info->postScriptCount) + ")";
 		result = AllowAll() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
@@ -198,7 +192,7 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 //-----------------------------------------------------------------------------
 void
 CheckEvents::CheckPostTerm(const MyString &idStr,
-		const ReadMultipleUserLogs::JobID &id, const JobInfo *info,
+		const CondorID &id, const JobInfo *info,
 		MyString &errorMsg, check_event_result_t &result)
 {
 		// Allow for the case where we ran a post script after all submit
@@ -209,20 +203,20 @@ CheckEvents::CheckPostTerm(const MyString &idStr,
 	}
 
 	if ( info->submitCount != 1 ) {
-		errorMsg = idStr + " post script ended; submit count != 1 (" +
+		errorMsg = idStr + " post script ended, submit count != 1 (" +
 				MyString(info->submitCount) + ")";
 		result = (AllowAll() || (AllowGarbage() && (info->submitCount <= 1))) ?
 				EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() < 1 ) {
-		errorMsg = idStr + " post script ended; total end "
+		errorMsg = idStr + " post script ended, total end "
 				"count < 1 (" + MyString(info->TotalEndCount()) + ")";
 		result = AllowAll() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->postScriptCount > 1 ) {
-		errorMsg = idStr + " post script ended; post script "
+		errorMsg = idStr + " post script ended, post script "
 				"count > 1 (" + MyString(info->postScriptCount) + ")";
 		result = AllowGarbage() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
@@ -231,7 +225,7 @@ CheckEvents::CheckPostTerm(const MyString &idStr,
 //-----------------------------------------------------------------------------
 void
 CheckEvents::CheckJobFinal(const MyString &idStr,
-		const ReadMultipleUserLogs::JobID &id, const JobInfo *info,
+		const CondorID &id, const JobInfo *info,
 		MyString &errorMsg, check_event_result_t &result)
 {
 		// Allow for the case where we ran a post script after all submit
@@ -242,14 +236,14 @@ CheckEvents::CheckJobFinal(const MyString &idStr,
 	}
 
 	if ( info->submitCount != 1 ) {
-		errorMsg = idStr + " ended; submit count != 1 (" +
+		errorMsg = idStr + " ended, submit count != 1 (" +
 				MyString(info->submitCount) + ")";
 		result = (AllowAll() || (AllowGarbage() && (info->submitCount <= 1))) ?
 				EVENT_BAD_EVENT : EVENT_ERROR;
 	}
 
 	if ( info->TotalEndCount() != 1 ) {
-		errorMsg = idStr + " ended; total end "
+		errorMsg = idStr + " ended, total end "
 				"count != 1 (" + MyString(info->TotalEndCount()) + ")";
 		if ( AllowExtraAborts() &&
 				(info->abortCount == 1) && (info->termCount == 1) ) {
@@ -266,7 +260,7 @@ CheckEvents::CheckJobFinal(const MyString &idStr,
 	}
 
 	if ( info->postScriptCount > 1 ) {
-		errorMsg = idStr + " ended; post script "
+		errorMsg = idStr + " ended, post script "
 				"count > 1 (" + MyString(info->postScriptCount) + ")";
 		result = AllowGarbage() ? EVENT_BAD_EVENT : EVENT_ERROR;
 	}
@@ -283,7 +277,7 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 	const int	MAX_MSG_LEN = 1024;
 	bool		msgFull = false; // message length has hit max
 
-	ReadMultipleUserLogs::JobID	id;
+	CondorID	id;
 	JobInfo *info = NULL;
 	jobHash.startIterations();
 	while ( jobHash.iterate(id, info) != 0 ) {
@@ -296,12 +290,15 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 			msgFull = true;
 		}
 
-		MyString	idStr("JOB ERROR: job ");
-		idStr.sprintf_cat("%d.%d.%d", id.cluster, id.proc, id.subproc);
+		MyString	idStr("BAD EVENT: job ");
+		idStr.sprintf_cat("(%d.%d.%d)", id._cluster, id._proc, id._subproc);
 
 		MyString	tmpMsg;
 		CheckJobFinal(idStr, id, info, tmpMsg, result);
-		if ( !msgFull ) errorMsg += tmpMsg;
+		if ( tmpMsg != "" && !msgFull ) {
+			if ( errorMsg != "" ) errorMsg += "; ";
+			errorMsg += tmpMsg;
+		}
 	}
 
 	return result;
