@@ -111,6 +111,7 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	_dot_file_name_suffix  = 0;
 	_nextSubmitTime = 0;
 	_nextSubmitDelay = 1;
+	_recovery = false;
 
 	return;
 }
@@ -198,6 +199,8 @@ bool Dag::Bootstrap (bool recovery) {
     Job* job;
     ListIterator<Job> jobs (_jobs);
 
+	_recovery = recovery;
+
     // update dependencies for pre-completed jobs (jobs marked DONE in
     // the DAG input file)
     jobs.ToBeforeFirst();
@@ -214,11 +217,13 @@ bool Dag::Bootstrap (bool recovery) {
 
 		if( _condorLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
+				_recovery = false;
 				return false;
 			}
 		}
 		if( _dapLogName ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
+				_recovery = false;
 				return false;
 			}
 		}
@@ -244,6 +249,8 @@ bool Dag::Bootstrap (bool recovery) {
 			StartNode( job );
 		}
     }
+
+	_recovery = false;
     
     return true;
 }
@@ -389,9 +396,10 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 	}
 
 	if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
-		debug_printf( DEBUG_QUIET, "    -----------------------\n");
-		debug_printf( DEBUG_QUIET, "       Recovery Complete\n");
-		debug_printf( DEBUG_QUIET, "    -----------------------\n");
+		const char *name = (logsource == CONDORLOG) ? "Condor" : "Stork";
+		debug_printf( DEBUG_QUIET, "    ------------------------------\n");
+		debug_printf( DEBUG_QUIET, "       %s Recovery Complete\n", name);
+		debug_printf( DEBUG_QUIET, "    ------------------------------\n");
 	}
 
 	return result;
@@ -1301,20 +1309,35 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		e.returnValue = WEXITSTATUS( status );
 	}
 
-		// Determine whether the job's log is XML.  (Yes, it probably
-		// would be better to just figure that out from the submit file,
-		// but this is a quick way to do it.  wenger 2005-04-29.)
-	ReadUserLog readLog( job->_logFile );
-	bool useXml = readLog.getIsXMLLog();
+	if ( job->JobType() == Job::TYPE_STORK ) {
+			// Kludgey fix for Gnats PR 554 -- we are bypassing the whole
+			// writing of the ULOG_POST_SCRIPT_TERMINATED event because
+			// Stork doesn't use the UserLog code, and therefore presumably
+			// doesn't have the correct file locking on the log file.
+			// This means that in recovery mode we'll end up running this
+			// POST script again even if we successfully ran it already.
+			// wenger 2005-10-04.
+		e.cluster = job->_CondorID._cluster;
+		e.proc = job->_CondorID._proc;
+		e.subproc = job->_CondorID._subproc;
+		ProcessPostTermEvent(&e, job, _recovery);
 
-	UserLog ulog;
-	ulog.setUseXML( useXml );
-	ulog.initialize( job->_logFile, job->_CondorID._cluster,
-					 job->_CondorID._proc, job->_CondorID._subproc );
+	} else {
+			// Determine whether the job's log is XML.  (Yes, it probably
+			// would be better to just figure that out from the submit file,
+			// but this is a quick way to do it.  wenger 2005-04-29.)
+		ReadUserLog readLog( job->_logFile );
+		bool useXml = readLog.getIsXMLLog();
 
-	if( !ulog.writeEvent( &e ) ) {
-		debug_printf( DEBUG_QUIET,
-					  "Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
+		UserLog ulog;
+		ulog.setUseXML( useXml );
+		ulog.initialize( job->_logFile, job->_CondorID._cluster,
+					 	job->_CondorID._proc, job->_CondorID._subproc );
+
+		if( !ulog.writeEvent( &e ) ) {
+			debug_printf( DEBUG_QUIET,
+					  	"Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
+		}
 	}
 	return true;
 }

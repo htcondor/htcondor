@@ -514,6 +514,11 @@ class Dag {
 		// becomes the current time plus _nextSubmitDelay (this is in
 		// seconds).
 	int			_nextSubmitDelay;
+
+		// Whether we're in recovery mode.  We only need this here for
+		// the PR 554 fix in PostScriptReaper -- otherwise it gets passed
+		// down thru the call stack.
+	bool		_recovery;
 };
 
 #endif /* #ifndef DAG_H */
