@@ -525,6 +525,14 @@ SOURCE="..\src\condor_c++_util\java_config.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\job_lease.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\job_lease.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\KeyCache.C"
 # End Source File
 # Begin Source File

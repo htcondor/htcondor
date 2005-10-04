@@ -179,6 +179,14 @@ SOURCE=..\src\condor_daemon_core.V6\self_monitor.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_core.V6\soap_core.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\soap_core.h
+# End Source File
+# Begin Source File
+
 SOURCE="$(EXT_INSTALL)\$(EXT_GSOAP_VERSION)\src\stdsoap2.cpp"
 
 !IF  "$(CFG)" == "condor_daemon_core - Win32 Debug"

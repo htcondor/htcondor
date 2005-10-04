@@ -30,10 +30,10 @@ RSC=rc.exe
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -99,6 +99,7 @@ CLEAN :
 	-@erase "$(INTDIR)\HashTable.obj"
 	-@erase "$(INTDIR)\iso_dates.obj"
 	-@erase "$(INTDIR)\java_config.obj"
+	-@erase "$(INTDIR)\job_lease.obj"
 	-@erase "$(INTDIR)\KeyCache.obj"
 	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
@@ -230,6 +231,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
+	"$(INTDIR)\proc_id.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\setenv.obj" \
 	"$(INTDIR)\sig_name.obj" \
@@ -249,7 +251,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\proc_id.obj"
+	"$(INTDIR)\job_lease.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -258,10 +260,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -327,6 +329,7 @@ CLEAN :
 	-@erase "$(INTDIR)\HashTable.obj"
 	-@erase "$(INTDIR)\iso_dates.obj"
 	-@erase "$(INTDIR)\java_config.obj"
+	-@erase "$(INTDIR)\job_lease.obj"
 	-@erase "$(INTDIR)\KeyCache.obj"
 	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
@@ -457,6 +460,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
+	"$(INTDIR)\proc_id.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\setenv.obj" \
 	"$(INTDIR)\sig_name.obj" \
@@ -476,7 +480,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\proc_id.obj"
+	"$(INTDIR)\job_lease.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -919,6 +923,12 @@ SOURCE="..\src\condor_c++_util\iso_dates.C"
 SOURCE="..\src\condor_c++_util\java_config.C"
 
 "$(INTDIR)\java_config.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\job_lease.C"
+
+"$(INTDIR)\job_lease.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
