@@ -50,6 +50,7 @@ CLEAN :
 	-@erase "$(INTDIR)\httpget.obj"
 	-@erase "$(INTDIR)\self_draining_queue.obj"
 	-@erase "$(INTDIR)\self_monitor.obj"
+	-@erase "$(INTDIR)\soap_core.obj"
 	-@erase "$(INTDIR)\stdsoap2.obj"
 	-@erase "$(INTDIR)\timer_manager.obj"
 	-@erase "$(INTDIR)\vc60.idb"
@@ -114,7 +115,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\self_draining_queue.obj" \
 	"$(INTDIR)\self_monitor.obj" \
 	"$(INTDIR)\stdsoap2.obj" \
-	"$(INTDIR)\timer_manager.obj"
+	"$(INTDIR)\timer_manager.obj" \
+	"$(INTDIR)\soap_core.obj"
 
 "$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -146,6 +148,7 @@ CLEAN :
 	-@erase "$(INTDIR)\httpget.obj"
 	-@erase "$(INTDIR)\self_draining_queue.obj"
 	-@erase "$(INTDIR)\self_monitor.obj"
+	-@erase "$(INTDIR)\soap_core.obj"
 	-@erase "$(INTDIR)\stdsoap2.obj"
 	-@erase "$(INTDIR)\timer_manager.obj"
 	-@erase "$(INTDIR)\vc60.idb"
@@ -209,7 +212,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\self_draining_queue.obj" \
 	"$(INTDIR)\self_monitor.obj" \
 	"$(INTDIR)\stdsoap2.obj" \
-	"$(INTDIR)\timer_manager.obj"
+	"$(INTDIR)\timer_manager.obj" \
+	"$(INTDIR)\soap_core.obj"
 
 "$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -322,6 +326,12 @@ SOURCE=..\src\condor_daemon_core.V6\self_draining_queue.C
 SOURCE=..\src\condor_daemon_core.V6\self_monitor.C
 
 "$(INTDIR)\self_monitor.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_daemon_core.V6\soap_core.C
+
+"$(INTDIR)\soap_core.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
