@@ -278,6 +278,7 @@ condor_object_target(drmaa)
 #if WANT_CLASSAD_ANALYSIS
 object_target(ClassAdAnalysis,classad_analysis)
 #endif
+object_dir_target(condor_schedd.V7)
 
 condor_object_target(chirp)
 
