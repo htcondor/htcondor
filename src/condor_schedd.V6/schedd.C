@@ -2949,6 +2949,8 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
 		// if sending sandboxes, first tell the client how many
 		// we are about to send.
+		dprintf(D_FULLDEBUG, "Scheduler::generalJobFilesWorkerThread: "
+			"TRANSFER_DATA/WITH_PERMS: %d jobs to be sent\n", JobAdsArrayLen);
 		rsock->encode();
 		if ( !rsock->code(JobAdsArrayLen) || !rsock->eom() ) {
 			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
@@ -3197,6 +3199,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			}
 			tmp_ad = GetNextJobByConstraint(constraint_string,0);
 		}
+		dprintf(D_FULLDEBUG, "Scheduler::spoolJobFiles: "
+			"TRANSFER_DATA/WITH_PERMS: %d jobs matched constraint %s\n",
+			JobAdsArrayLen, constraint_string);
 		if (constraint_string) free(constraint_string);
 			// Now set ATTR_STAGE_OUT_START
 		for (i=0; i<JobAdsArrayLen; i++) {
