@@ -59,7 +59,7 @@ prereqs   = everything-1.0.0
 # Platforms with no prereqs at all
 ########################################
 [
-platforms = ia64_sles_8, ppc_macos_10.3, x86_winnt_5.1
+platforms = ia64_sles_8, ppc_macos_10.3, x86_64_rhas_3, x86_winnt_5.1
 ]
 
 
