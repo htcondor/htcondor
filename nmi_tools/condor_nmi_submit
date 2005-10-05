@@ -618,7 +618,7 @@ sub generateBuildFetchFiles
 
     @fetch_files = generateSharedFetchFiles( $tag );
 
-    my $srcfile = "condor_source.src";
+    my $srcfile = "source-$tag.src";
     makeFetchFile( $srcfile, $module, $tag );
     push( @fetch_files, $srcfile );
 
