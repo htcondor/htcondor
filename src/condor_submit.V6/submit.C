@@ -861,7 +861,7 @@ SetRemoteAttrs()
 				exit(1);
 			}
 			MyString attr = preremote + ATTR_JOB_UNIVERSE;
-			fprintf(stderr, "Adding %s = %d\n", attr.Value(), univ);
+			dprintf(D_FULLDEBUG, "Adding %s = %d\n", attr.Value(), univ);
 			InsertJobExprInt(attr.Value(), univ);
 
 		} else {
@@ -886,7 +886,7 @@ SetRemoteAttrs()
 					val = condor_param(ckey3);
 				}
 				ASSERT(val); // Shouldn't have gotten here if it's missing.
-				fprintf(stderr, "Adding %s = %s\n", ckey3, val);
+				dprintf(D_FULLDEBUG, "Adding %s = %s\n", ckey3, val);
 				InsertJobExprString(ckey3, val);
 				free(val);
 				break;
