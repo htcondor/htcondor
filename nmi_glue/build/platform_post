@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.4.5 2005-09-08 19:24:24 tannenba Exp $
+# $Id: platform_post,v 1.1.4.6 2005-10-05 06:32:42 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -21,6 +21,11 @@ if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
     print "NOT submitting tests for windows\n";
     exit 0;
 }
+
+if( $ARGV[0] eq "--without-tests" ) {
+    print "--without-tests specified on command-line, NOT submitting tests\n";
+    exit 0;
+}   
 
 
 my $tag = $ENV{NMI_tag};

@@ -16,7 +16,7 @@ Do the following:
 Then:
  $ tar xfz hawkeye-linux-0.1.tar.gz
  $ mkdir log execute spool
- 
+
 In this directory, you'll find the following created:
  bin
  sbin
@@ -60,32 +60,35 @@ With no other command line parameters, the "who" module package will
 be installed without asking any questions.  The module package
 installer also takes the following options:
 
--a : Ask before installing each module.  By default, the module
+--all : Install all the modules found in the packages
+
+--ask : Ask before installing each module.  By default, the module
 package installer will install all modules speicifed on the command
 line.
 
--c=file : Specify Hawkeye config file.  Normally, the module package
+--config=file : Specify Hawkeye config file.  Normally, the module package
 installer will try to find the Hawkeye configuration file itself.  If
 this fails, or if you wish to override this, specify the Hawkeye
 configureation file with this option.
 
--d=dir : Specify modules directory.  Normally, the module package
+--defaults : Use the default parameters when installing a module if possible
+
+--manual : Manual mode; asks lots of questions.  By default, the module
+package installer will use default values for the module parameters.
+Specifying this option will cause the installer to ask you about each
+of these.  This option implies "-a".
+
+--modules=dir : Specify modules directory.  Normally, the module package
 installer will install the modules in the directory specified by the
 MODULES parameter in the Hawkeye ocnfiguration file.  If you wish to
 override this behaviour, specify the target directory with this
 option.
 
--h : Dump help
-
--m : Manual mode; asks lots of questions.  By default, the module
-package installer will use default values for the module parameters.
-Specifying this option will cause the installer to ask you about each
-of these.  This option implies "-a".
-
--n : Don't update the config file.  Normally, the module package
+--no-update : Don't update the config file.  Normally, the module package
 installer will automatically update your Hawkeye configuration file.
 If you specify this option, it won't update your config.
 
+--help : Dump help
 
 2. Hawkeye Configuration File
 
@@ -119,15 +122,15 @@ and "vmstat" modules.
 
 ##
 ## Configuration for Module w
-##	Monitors the users, uptime, and load averages of the system
-##	(based on the "w" program)
+##        Monitors the users, uptime, and load averages of the system
+##        (based on the "w" program)
 HAWKEYE_JOBS = $(HAWKEYE_JOBS) w:w_:$(MODULES)/w:5m:
 ##  Parameters for module w:
 
 ##
 ## Configuration for Module vmstat
-##	Monitors the status of the Virtual Memory (VM) subsystem You may
-##	want set the vmstat parameters by hand
+##        Monitors the status of the Virtual Memory (VM) subsystem You may
+##        want set the vmstat parameters by hand
 HAWKEYE_JOBS = $(HAWKEYE_JOBS) vmstat:vmstat_:$(MODULES)/vmstat:1s:continuous
 ##  Parameters for module vmstat:
 ##  HAWKEYE_VMSTAT_PERIOD
@@ -137,7 +140,7 @@ HAWKEYE_VMSTAT_PERIOD =  30s
 
 In the above example 2 are defined (w and vmstat).  Each job entry is
 of the form:
-	name:prefix:executable:period:{options}
+        name:prefix:executable:period:{options}
 
 name - Defines the logical name of the module.  These must be
 unique.

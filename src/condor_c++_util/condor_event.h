@@ -23,18 +23,6 @@
 #ifndef __CONDOR_EVENT_H__
 #define __CONDOR_EVENT_H__
 
-#if defined(IRIX)
-#   ifdef _NO_ANSIMODE
-#       define _TMP_NO_ANSIMODE
-#   endif
-#   undef _NO_ANSIMODE
-#   include <time.h>
-#   ifdef _TMP_NO_ANSIMODE
-#       define _NO_ANSIMODE
-#       undef _TMP_NO_ANSIMODE
-#   endif
-#endif   /* IRIX */
-
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 

@@ -1,0 +1,77 @@
+###########################################################################
+# Input file to define platforms and prereqs for automated Condor
+# builds and tests.  This file is checked out of cvs, parsed by
+# nmi_submit/condor_nmi_submit and used to create the appropriate NMI
+# submit file for builds or tests from this branch of the source.
+###########################################################################
+# The syntax of this input file is described in a big comment at the
+# top of nmi_submit/condor_nmi_submit.  Please see that script (which
+# lives on the trunk) for a general overview and detailed information
+# about valid attributes you can use here.
+###########################################################################
+
+
+########################################
+# global settings
+########################################
+[
+platforms = global
+testargs = quick
+]
+
+
+########################################
+# common-prereq platforms
+########################################
+[
+platforms = alpha_osf_V5.1 alpha_rh_7.2, \
+	  irix_6.5, ppc_aix_5.2, \
+	  sun4u_sol_5.8 sun4u_sol_5.9, \
+	  x86_rh_7.2, x86_rh_8.0, x86_rh_9,
+
+# shared prereqs
+prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
+          make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4 
+
+# per-platform prereqs 
+prereqs_alpha_osf_V5.1   = gcc-2.95.3, binutils-2.15
+prereqs_alpha_rh_7.2     = gcc-2.96, binutils-2.15,
+prereqs_irix_6.5         = egcs-2.91.66
+prereqs_ppc_aix_5.2      = vac-6, vacpp-6
+prereqs_sun4u_sol_5.8    = gcc-2.95.3, binutils-2.15
+prereqs_sun4u_sol_5.9    = gcc-2.95.3, binutils-2.15
+prereqs_x86_rh_7.2       = binutils-2.15
+prereqs_x86_rh_8.0       = binutils-2.15
+prereqs_x86_rh_9         = binutils-2.15
+]   
+
+
+########################################
+# special-case hack for HPUX 10 machine
+########################################
+[
+platforms = hppa_hpux_B.10.20
+prereqs   = everything-1.0.0
+]
+
+
+########################################
+# Platforms with no prereqs at all
+########################################
+[
+platforms = ia64_sles_8, ppc_macos_10.3, x86_winnt_5.1
+]
+
+
+########################################
+# Platforms with special test prereqs
+########################################
+[
+platforms = ppc_aix_5.2, \
+	    sun4u_sol_5.8 sun4u_sol_5.9, \
+	    x86_rh_7.2, x86_rh_8.0, x86_rh_9
+
+test_append_prereqs = java-1.4.2_05
+]
+
+

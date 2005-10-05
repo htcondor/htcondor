@@ -93,6 +93,22 @@ PLATFORM_LDFLAGS = PlatformLdFlags
 PURIFY_PLATFORM_LDFLAGS = PurifyPlatformLdFlags
 TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
 
+/*
+   Our tests often link with libcondorapi.a, which has calls to dlopen
+   and friends.  Thus when we link for tests, we want to include -ldl
+   on the link line for platforms that have dlopen.  Similarly,
+   dirname() lives in libgen.so on some platforms.  So, all of our
+   autoconf-discovered libs should be added here... 
+*/
+#if HAVE_LIBDL
+TEST_PLATFORM_LDFLAGS += -ldl
+#endif
+
+#if HAVE_LIBGEN
+TEST_PLATFORM_LDFLAGS += -lgen
+#endif
+
+
 
 /*
    These next few lines are not supposed to be pre-processor

@@ -950,13 +950,17 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
 	if ( condor_read(_sock,hdr,header_size,_timeout) < 0 ) {
-			// condor_read() already does dprintfs into the log
-			// about what went wrong...
+		dprintf(D_ALWAYS,"IO: Failed to read packet header\n");
 		return FALSE;
 	}
 	end = (int) ((char *)hdr)[0];
 	memcpy(&len_t,  &hdr[1], 4);
 	len = (int) ntohl(len_t);
+
+	if (end < 0 || end > 10) {
+		dprintf(D_ALWAYS,"IO: Incoming packet header unrecognized\n");
+		return FALSE;
+	}
         
 	if (!(tmp = new Buf)){
 		dprintf(D_ALWAYS, "IO: Out of memory\n");
@@ -965,6 +969,15 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 	if (len > tmp->max_size()){
 		delete tmp;
 		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
+		return FALSE;
+	}
+	if ((len < 0) || 
+		(len == 0) && (end==0))	// len and end would never BOTH be zero
+	{
+		delete tmp;
+		dprintf(D_ALWAYS, 
+			"IO: Incoming packet improperly sized (len=%d,end=%d)\n",
+			len,end);
 		return FALSE;
 	}
 	if ((tmp_len = tmp->read(_sock, len, _timeout)) != len){

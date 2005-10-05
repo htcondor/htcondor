@@ -18,7 +18,6 @@ Job     NODE16         job_dagman_maxprescripts-node.cmd
 Job     NODE17         job_dagman_maxprescripts-node.cmd
 Job     NODE18         job_dagman_maxprescripts-node.cmd
 Job     NODE19         job_dagman_maxprescripts-node.cmd
-Job		FINAL			job_dagman_maxprescripts-srvr-close.cmd
 
 Script POST NODE0     ./job_dagman_monitor.pl $RETURN
 Script POST NODE1     ./job_dagman_monitor.pl $RETURN
@@ -62,4 +61,3 @@ Script PRE NODE17     ./job_dagman_maxprescripts-checkin.pl
 Script PRE NODE18     ./job_dagman_maxprescripts-checkin.pl 
 Script PRE NODE19     ./job_dagman_maxprescripts-checkin.pl 
 
-PARENT NODE0 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 NODE7 NODE8 NODE9 NODE10 NODE11 NODE12 NODE13 NODE14 NODE15 NODE16 NODE17 NODE18 NODE19 CHILD FINAL

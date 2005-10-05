@@ -1,0 +1,3 @@
+#!/usr/bin/env perl
+
+system("./x_general_client.pl prepostsock prescript_ran");

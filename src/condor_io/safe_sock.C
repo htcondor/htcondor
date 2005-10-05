@@ -511,7 +511,14 @@ int SafeSock::handle_incoming_packet()
 	length = received;
     _shortMsg.reset(); // To be sure
 	
-    if (_shortMsg.getHeader(received, last, seqNo, length, mID, data)) {
+	bool is_full_message = _shortMsg.getHeader(received, last, seqNo, length, mID, data);
+	if ( length <= 0 || length > SAFE_MSG_MAX_PACKET_SIZE ) {
+		// someone maybe sending us random garbage datagrams?
+		dprintf(D_ALWAYS,"IO: Incoming datagram improperly sized\n");
+		return FALSE;
+	}
+
+    if ( is_full_message ) {
         _shortMsg.curIndex = 0;
         _msgReady = true;
         _whole++;

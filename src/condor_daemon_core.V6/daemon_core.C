@@ -7351,13 +7351,13 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
 	for(int i = 0; i < 1000; i++) {
 		if ( !rsock->bind() ) {
-			dprintf(D_ALWAYS, "Failed to bind to command ReliSock");
+			dprintf(D_ALWAYS, "Failed to bind to command ReliSock\n");
 
 #ifndef WIN32
-			dprintf(D_ALWAYS, "(Make sure your IP address is correct in /etc/hosts.)");
+			dprintf(D_ALWAYS, "(Make sure your IP address is correct in /etc/hosts.)\n");
 #endif
 #ifdef WIN32
-			dprintf(D_ALWAYS, "(Your system network settings might be invalid.)");
+			dprintf(D_ALWAYS, "(Your system network settings might be invalid.)\n");
 #endif
 
 			return FALSE;
