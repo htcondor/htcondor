@@ -1,3 +1,12 @@
+10/05/05 V6_6-merge-48
+   The state of the V6_6-branch for a merge into V6_7-branch.  Fixes
+   a bunch of condor_tests stuff, such that we should be close to all
+   green (at least we were on V6_6, a few intermittent failures on AIX
+   notwithstanding), NMI glue, the nmi_glue/submit_info input file for
+   the new/improved condor_nmi_submit.pl script, a fix in CEDAR to
+   deal with badly formed packets not causing an EXCEPT(), and some
+   other minor fixes (e.g. to clarify some dprintfs, a README, etc).
+
 09/15/05 V6_6-merge-47
    The state of the V6_6-branch for a merge into V6_7_11-branch.
    Mostly for the show-stopper startd bug when it hits errors trying
