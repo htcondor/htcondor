@@ -1,9 +1,9 @@
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_new_classads.h"
 #include "condor_classad.h"
 #include "VanillaToGrid.h"
 #include "submit_job.h"
+#include "classad_newold.h"
 #define WANT_NAMESPACES
 #include "classad_distribution.h"
 
@@ -57,59 +57,33 @@ int main(int argc, char **argv)
 
 	config(); // Initialize param.
 
-	// How hard can it be to take a file containing an old classad (in string
-	// form) and turn it into a new classad object?
-
 	// Load old classad string.
 	MyString s_oldad = slurp_file(argv[1]);
 	// Convert to old class ad.
 	ClassAd oldad((char *)s_oldad.Value(),'\n');
 
-	// Convert to new classad string
-	NewClassAdUnparser oldtonew;
-	oldtonew.SetOutputType(true);
-	oldtonew.SetOutputTargetType(true);
-	MyString s_newad;
-	oldtonew.Unparse(&oldad, s_newad);
-
-	// Convert to new classad
-	classad::ClassAdParser parser;
 	classad::ClassAd newad;
-	if( ! parser.ParseClassAd(s_newad.Value(), newad, true) )
-	{
+	if( ! old_to_new(oldad, newad) ) {
 		die("Failed to parse class ad\n");
 	}
 
-
-	// Finally, a new classad.
-
-
 	//====================================================================
 	// Do something interesting:
-	VanillaToGrid::vanillaToGrid(&newad, "condor adesmet@puffin.cs.wisc.edu puffin.cs.wisc.edu");
+	VanillaToGrid::vanillaToGrid(&newad, argv[2]);
 	//====================================================================
 
-
-	// Convert back to new classad string
-	classad::ClassAdUnParser unparser;
-	std::string s_newadout;
-	unparser.Unparse(s_newadout, &newad);
-
-	// Convert to old classad
-	NewClassAdParser newtoold;
-	ClassAd * newad2 = newtoold.ParseClassAd(s_newadout.c_str());
+	ClassAd oldadout;
+	new_to_old(newad, oldadout); 
 
 	int cluster,proc;
-	if( ! submit_job( *newad2, 0, 0, &cluster, &proc ) ) {
+	if( ! submit_job( oldadout, 0, 0, &cluster, &proc ) ) {
 		fprintf(stderr, "Failed to submit job\n");
 	}
 	printf("Successfully submitted %d.%d\n",cluster,proc);
 
 	// Convert to old classad string
 	MyString out;
-	newad2->sPrint(out);
-
-	delete newad2;
+	oldadout.sPrint(out);
 
 	//printf("%s\n", out.Value());
 
