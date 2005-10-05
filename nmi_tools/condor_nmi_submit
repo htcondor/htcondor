@@ -1,0 +1,1047 @@
+#!/usr/bin/env perl
+
+###########################################################################
+# This script submits condor-specific NMI runs (either builds or tests) 
+# Invoke with "--help" for a detailed usage message 
+#
+# Overview of the tasks of this script:
+# 1. Get the buildtags from the nighlty build-tag on the CSL machine or 
+#    from the command line arguments
+# 2. For each tag defined
+#    - Checkout the nmi_glue/submit_info input file and parse it
+#    - Generate the appropriate NMI submit and fetch files
+#    - run nmi_submit
+#
+###########################################################################
+# Overview and syntax of the submit_info file:
+#
+# The branch-specific input file that defines platforms, prereqs and a
+# few other settings lives in the "nmi_glue" directory (which is
+# branched and merged) in a file called "submit_info".
+#
+# Each section enclosed in []'s (which I'll call a "block") defines a
+# group of platforms with some shared settings.  Each block must
+# define the platform(s) which the settings in that block apply to.
+# There's a special case for the "global" platform, and settings in
+# there are used to define the global NMI submit file attributes
+# ("prereqs").  Otherwise, all settings in platform-specific blocks
+# are used to define the platform specific NMI submit file attributes
+# (e.g. "prereqs_x86_rh_9").  
+#
+# Within each block, global settings (e.g. "prereqs") are shared
+# across all platforms listed in the block, while platform-specific
+# settings (e.g. "prereqs_x86_rh_9") are appended to the block-wide
+# setting (if any) only for that particular platform.
+#
+# This script parses all the blocks in the input file, and comes up
+# with the complete list of all platforms mentioned in the file, which
+# it uses to construct the "platforms" NMI submit attribute.  Then,
+# when writing out the necessary prereq-related attributes, the union
+# of all prereqs defined for that platform within any blocks are used.
+#
+# The point of this (somewhat complicated) setup is so that we can
+# express the prereqs for all our platforms with the least possible
+# duplication and most sharing of common traits.  
+#
+# Valid directives in the submit_info file:
+# "platforms"           defines the platforms in a given block
+# "prereqs"             shared prereqs across entire block
+# "test_append_prereqs" prereqs to append to the other defined prereqs
+#                       for use when submitting test runs
+# "testargs"            defines the value of remote_declare_args to
+#                       use when submitting test runs
+# (other than platforms, all of the above directives also support a
+# platform-specific version where you append "_<platform>" to the
+# attribute name, e.g. "prereqs_x86_rh_9", or "testargs_x86_rh_9")
+#
+###########################################################################
+
+
+######################################################################
+# Modules used by this script
+######################################################################
+
+use strict;
+use Cwd;
+use Getopt::Long;
+use File::Basename;
+
+use vars qw/ $opt_build $opt_test
+    $opt_help $opt_notify $opt_platforms $opt_nmi_glue 
+    $opt_tag $opt_module
+    $opt_nightly $opt_externals $opt_without_tests
+    $opt_buildid $opt_test_src
+    /;
+
+
+######################################################################
+# Configurable settings
+######################################################################
+
+# Location of the nightly build tag file
+my $tag_file_url = "http://www.cs.wisc.edu/condor/nwo-build-tags";
+
+# CVSROOT to use for checking out from CVS
+my $CVSROOT = "/space/cvs/CONDOR_SRC";
+
+# Location of the submit_info file
+my $submit_info = "nmi_glue/submit_info";
+
+# Path to the nmi_submit program we should invoke
+my $nmi_submit = "/nmi/bin/nmi_submit";
+
+
+######################################################################
+# Global variables (set at runtime, from submit_info, or ARGV)
+######################################################################
+
+# Who should get notification emails?
+my $notify;
+
+# What type of run is this? ("build" or "test")
+my $runtype;
+
+# Where the script was initially born
+my $init_cwd;
+
+# A temporary workspace to generate scratch files, etc
+my $workspace;
+
+# Hash of tag -> module mappings
+my %tags;
+
+# Platforms to use (either from command-line or from submit_info)
+my @platforms;
+
+# Platforms defined on the command-line, overrides values in the
+# submit_info file
+my %opt_platforms;
+
+# Data structures to hold parsed submit info
+# These get reset for each tag we're dealing with
+my %platforms;   # this is a hash, not a list, to guarantee uniqueness
+my $global_prereqs;
+my $global_test_prereqs;
+my $global_testargs;
+my %platform_prereqs;
+my %platform_test_prereqs;
+my %platform_testargs;
+
+# Global variable for better error messages when parsing submit_info
+my $orig_lineno = 0;
+
+
+######################################################################
+# Actual work of the script
+######################################################################
+
+my $tag;
+parseOptions();
+initialize();
+getTags();
+foreach $tag (sort keys %tags ) {
+
+    my $cmdfile;
+    print "Working on $tag\n";
+    chdir($workspace) || die "Can't chdir($workspace): $!\n";
+    if( ! -d $tag ) {
+        mkdir( $tag ) || die "Can't mkdir($tag): $!\n";
+    }
+    chdir( $tag ) || die "Can't chdir($tag): $!\n";
+
+    getSubmitInfo( $tag );
+    $cmdfile = createSubmitFiles( $tag );
+    submitRun( $cmdfile, $tag );
+}
+
+print "All steps completed successfully\n";
+myExit( 0 );
+
+
+
+######################################################################
+# functions
+######################################################################
+
+sub initialize
+{
+    print "Initializing\n";
+    $ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
+        . $ENV{PATH};
+
+    $workspace = "/tmp/condor_$runtype." . "$$" . "." . time;
+
+    $init_cwd = &getcwd();
+    mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
+    chdir($workspace) || die "Can't chdir($workspace): $!\n";
+}
+
+
+sub parseOptions
+{
+    my $platform;
+
+    GetOptions(
+# primary switch: build vs. test
+           'build'         => $opt_build,
+           'test'          => $opt_test,
+# global options
+           'help'          => $opt_help,
+           'notify=s'      => $opt_notify,
+           'platforms=s'   => $opt_platforms,
+           'nmi-glue=s'    => $opt_nmi_glue,
+           'tag=s'         => $opt_tag,
+           'module=s'      => $opt_module,
+# build-specific options
+           'nightly'       => $opt_nightly,
+           'externals=s'   => $opt_externals,
+           'without-tests' => $opt_without_tests,
+# test-specific options
+           'buildid=s'     => $opt_buildid,
+           'test-src=s'    => $opt_test_src,
+
+    );
+
+    if( defined $opt_help ) {
+        printUsage( 0 );
+    }
+
+    if( defined $opt_build ) {
+        if( defined $opt_test ) {
+            print "ERROR: You cannot specify both --build and --test\n";
+            printUsage( 1 );
+        }
+        $runtype = "build";
+    } elsif( defined $opt_test ) {
+        $runtype = "test";
+    } else {
+        print "ERROR: You must specify either --build or --test\n";
+        printUsage( 1 );
+    }
+
+    if( defined $opt_platforms ) {
+        foreach $platform ( split(/\s*\,\s*/, $opt_platforms) ) {
+            $opt_platforms{$platform} = 1;
+        }
+    }
+
+    # do some sanity checking for test submit...
+    if( $runtype eq "test" ) {
+        if( ! defined $opt_platforms ) {
+            print "ERROR: You must specify --platforms with --test\n";
+            printUsage( 1 );
+        }
+        if( ! defined $opt_buildid ) {
+            print "ERROR: You must specify --buildid with --test\n";
+            printUsage( 1 );
+        }
+        if( defined($opt_externals) ) {
+            print "ERROR: --externals is not valid with --test\n";
+            printUsage( 1 );
+        }
+        if( defined($opt_nightly) ) {
+            print "ERROR: --nightly is not valid with --test\n";
+            printUsage( 1 );
+        }
+    }
+
+    if( defined $opt_notify ) {
+        $notify = "$opt_notify";
+    } else {
+        $notify = "condor-build\@cs.wisc.edu";
+    }
+
+    if ( defined $opt_tag && defined $opt_module ) {
+        $tags{"$opt_tag"} = $opt_module;
+    }
+    elsif ( defined $opt_nightly ) {
+        print "You specified --nightly, will fetch tags\n";
+    }
+    else {
+        print "You need to define either --tag and --module, ";
+        print "or use --nightly\n";
+        printUsage( 1 );
+    }
+
+    if( defined($opt_externals) ) {
+        if( defined($opt_nightly) ) {
+            print "ERROR: You cannot use --externals with --nightly\n";
+            printUsage( 1 );
+        }
+    }
+
+    if( defined($opt_nmi_glue) ) {
+        # SCP the glue from different location
+        if ( not -d "$opt_nmi_glue/$runtype" ) {
+            print "Glue directory $opt_nmi_glue/$runtype does not exist\n";
+            printUsage( 1 );
+        }
+    }
+}
+
+
+# TODO: this should be more clear about the required vs. optional
+# arguments, especially for --test...
+sub printUsage
+{
+    my $exit_code = shift;
+    print <<END_USAGE;
+
+condor_nmi_submit.pl --build [options] [build-options]
+condor_nmi_submit.pl --test  [options] [test-options]
+
+Where [options] can be any of:
+--help             <This screen>
+--notify=string    <Comma-seprated list of users to notify with results>
+--platforms=string <Comma-sperated list of platforms to run tests on>
+--tag=string       <Condor source code tag to be fetched from cvs>
+--module=string    <Condor source code module to be fetched from cvs>
+--nmi_glue=string  <nmi_glue directory containing customised glue scripts>
+
+Where [build-options] can be any of:
+--nightly          <Default for builds: pulls the nightly tags file from 
+                    http://www.cs.wisc.edu/condor/nwo-build-tags and submits
+                    builds for all the tags listed there>
+--externals=string <Module name to use for fetching externals (only needed 
+                    if the tag defined with --tag doesn't define them)>
+--without-tests    <Submit a build job such that it will NOT submit
+                    test runs as each platform completes>
+ 
+Where [test-options] can be any of:
+--buildid=string   <Build RunId to test>
+--test-src=string  <Custom source tarball for building tests with>
+END_USAGE
+
+    myExit( $exit_code );
+}
+
+
+sub getTags
+{
+    if( defined $opt_nightly ) {
+        getNightlyTags();
+    }
+    # else nothing else to do?
+}
+
+
+sub getNightlyTags
+{
+    my $tag_file = basename($tag_file_url);
+
+    print "Fetching $tag_file ... \n";
+    run( "wget --tries=1 $tag_file_url" );
+
+    open(TAGS, $tag_file) || 
+        die "Can't read nightly tag file $tag_file: $!\n";
+    while (<TAGS>) {
+        chomp($_);
+        my @tag = split /\s/, $_;
+        $tags{$tag[1]} = $tag[0]; 
+    }
+    close(TAGS);
+}
+
+
+sub getSubmitInfo
+{
+    my( $tag ) = @_;
+    my $val;
+
+    $val = checkoutSubmitInfo( $tag );
+    
+    # TODO: all this should go away once submit_info has been
+    # propagated to all branches...
+    if( $val == 0 ) {
+	# submit_info isn't in the requested tag, see if can get it
+	# from a "nearby" branch, instead....  
+	if( $tag =~ /.*V6_6.*/ ) {
+	    $val = checkoutSubmitInfo( "V6_6-branch" );
+	} else {
+	    $val = checkoutSubmitInfo( "V6_7-branch" );
+	}
+    }
+
+    -f $submit_info || die "$submit_info doesn't exist!\n";
+
+    # clear out any existing values in any of our global data structs
+    clearGlobalSubmitInfo();
+
+    # parse the submit_info file
+    parseSubmitInfo( "$submit_info" );
+
+    if( %opt_platforms ) {
+        @platforms = sort keys %opt_platforms;
+    } else {
+        @platforms = sort keys %platforms;
+    }
+    print "Found platforms: " . join( ', ', @platforms ) . "\n"; 
+
+}
+
+
+sub checkoutSubmitInfo
+{
+    my( $tag ) = @_;
+    my @cvs_output;
+    my $retval;
+
+    print "Attempting to fetch $submit_info from $tag... ";
+    my $cvs_cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
+    open( CVS, "$cvs_cmd|" ) || die "Can't open 'cvs co' as a pipe: $!\n";
+    @cvs_output = <CVS>;
+    close( CVS );
+    $retval = $? / 256;
+    print "cvs returned $retval\n";
+    if( $retval != 0 ) {
+        print "FAILED\n" . join('\n', @cvs_output);
+	return 0;
+    } 
+    print "SUCCESS\n";
+    return 1;
+}
+
+
+sub clearGlobalSubmitInfo
+{
+    undef $global_prereqs;
+    undef $global_test_prereqs;
+    undef $global_testargs;
+    undef %platform_prereqs;
+    undef %platform_test_prereqs;
+    undef %platform_testargs;
+    undef @platforms;
+}
+
+
+sub printSubmitInfo
+{
+    my $key;
+    print "Platforms: " . join(', ',sort(keys(%platforms))) . "\n";
+    print "Global testargs: $global_testargs\n";
+    print "Global prereqs: $global_prereqs\n";
+    print "Global test prereqs: $global_test_prereqs\n";
+
+    print "Platform-specific testargs:\n";
+    foreach $key (sort keys %platform_testargs ) {
+        print "  $key: $platform_testargs{$key}\n";
+    }
+    print "Platform-specific prereqs:\n";
+    foreach $key (sort keys %platform_prereqs ) {
+        print "  $key: $platform_prereqs{$key}\n";
+    }
+    print "Platform-specific testing prereqs:\n";
+    foreach $key (sort keys %platform_test_prereqs ) {
+        print "  $key: $platform_test_prereqs{$key}\n";
+    }
+}
+
+
+sub createSubmitFiles
+{
+    my ( $tag ) = @_;
+
+    my $cmdfile = "condor_cmdfile-$tag";
+
+    my $module = $tags{$tag};
+    my @fetch_files;
+    
+    # Generate the cmdfile
+    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
+
+    writeCommonInfo( *CMDFILE, $tag, $module );
+
+    # define inputs
+    if( $runtype eq "build" ) {
+        @fetch_files = generateBuildFetchFiles( $tag, $module );
+    } else {
+        @fetch_files = generateTestFetchFiles( $tag, $module );
+    }
+    print CMDFILE "inputs = " . join(', ', @fetch_files) . "\n";
+
+
+    if( $runtype eq "build" ) {
+        print CMDFILE "run_type = build\n";
+        writeBuildPrereqs( *CMDFILE );
+        writeBuildGlue( *CMDFILE, $tag, $module );
+    } else {
+        print CMDFILE "run_type = test\n";
+        writeTestPrereqs( *CMDFILE );
+        writeTestGlue( *CMDFILE );
+    }
+
+    close CMDFILE;
+    return $cmdfile;
+}
+
+
+sub writeTestPrereqs
+{
+    my $fh = shift;
+    my $platform;
+
+    if( $global_test_prereqs ) {
+        print $fh "prereqs = $global_test_prereqs\n";
+    }
+    foreach $platform ( @platforms ) {
+        if( $platform_test_prereqs{$platform} ) {
+            print $fh "prereqs_$platform = "
+                . "$platform_test_prereqs{$platform}\n";
+        }
+    }
+}
+
+
+sub writeBuildPrereqs
+{
+    my $fh = shift;
+    my $platform;
+
+    if( $global_prereqs ) {
+        print $fh "prereqs = $global_prereqs\n";
+    }
+    foreach $platform ( @platforms ) {
+        if( $platform_prereqs{$platform} ) {
+            print $fh "prereqs_$platform = $platform_prereqs{$platform}\n";
+        }
+    }
+}
+
+
+
+sub writeCommonInfo
+{
+    my ( $fh, $tag, $module ) = @_;
+
+    my $desc;
+    my @vers;
+
+    ($desc, @vers) = parseTag( $tag );
+    my $vers_string = join( ',', @vers );
+
+    print $fh "description = $desc\n";
+    print $fh "project = condor\n";
+    print $fh "project_release = $vers_string\n";
+    print $fh "component = condor\n";
+    print $fh "component_version = $vers_string\n";
+    print $fh "notify = $notify\n";
+    print $fh "private_web_users = condor-team\n";
+    print $fh "priority = 1\n";
+
+    # print the tag and module in the cmdfile as the user variables
+    print $fh "tag = $tag\n";
+    print $fh "module = $module\n";
+
+    print $fh "platforms = " . join(', ', @platforms) . "\n";
+}
+
+
+sub writeBuildGlue
+{
+    my ( $fh, $tag, $module ) = @_;
+
+    # define the glue scripts we want
+    print $fh "pre_all = nmi_glue/build/pre_all\n";
+    print $fh "remote_declare = nmi_glue/build/remote_declare\n";
+    print $fh "remote_pre = nmi_glue/build/remote_pre\n";
+    print $fh "remote_task = nmi_glue/build/remote_task\n";
+    print $fh "remote_post = nmi_glue/build/remote_post\n";
+    print $fh "platform_post = nmi_glue/build/platform_post\n";
+    if( defined($opt_without_tests) ) {
+        print $fh "platform_post_args = --without-tests\n";
+    }
+}
+
+
+sub writeTestGlue
+{
+    my ( $fh ) = @_;
+
+    # define the glue scripts we want for test jobs
+    print $fh "pre_all = nmi_glue/test/pre_all\n";
+    if( defined $opt_test_src) {
+        print CMDFILE "pre_all_args = --src=$opt_test_src\n";
+    }
+    print $fh "platform_pre = nmi_glue/test/platform_pre\n";
+    print $fh "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
+    print $fh "remote_declare = nmi_glue/test/remote_declare\n";
+    # select scope of testsuite run 
+    # TODO: get this from global parsed submit_info data
+    print $fh "remote_declare_args = quick\n";
+    print $fh "remote_pre = nmi_glue/test/remote_pre\n";
+    print $fh "remote_task = nmi_glue/test/remote_task\n";
+    print $fh "remote_task_timeout = 20\n";
+    print $fh "remote_post = nmi_glue/test/remote_post\n";
+    print $fh "\n";
+}
+
+
+sub generateTestFetchFiles
+{
+    my( $tag, $module ) = @_;
+    my @fetch_files;
+
+    @fetch_files = generateSharedFetchFiles( $tag );
+
+    # generate the runid input file
+    my $runid_file = "input_build_runid.src";
+    open(RUNIDFILE, ">$runid_file") || 
+        die "Can't open $runid_file for writing: $!\n";
+    print RUNIDFILE "method = nmi\n";
+    print RUNIDFILE "input_runids = $opt_buildid\n";
+    print RUNIDFILE "untar_results = false\n";     
+    close RUNIDFILE;
+    push( @fetch_files, $runid_file );
+
+    my $test_src_file = "condor_test.src";
+    if( defined $opt_test_src ) {
+        open(SRCFILE, ">$test_src_file") || 
+            die "Can't open $test_src_file for writing: $!\n";
+        print SRCFILE "method = scp\n";
+        print SRCFILE "scp_file = $opt_test_src\n";
+        close SRCFILE;
+        push( @fetch_files, $test_src_file );
+    } elsif( !defined $opt_nmi_glue ) { 
+        my $glue_file = "condor_" . $runtype . "_glue.src";
+        makeFetchFile( $glue_file, "nmi_glue/$runtype", $tag );
+        push( @fetch_files, $glue_file );
+    }        
+    
+    return @fetch_files;
+}
+
+
+sub generateBuildFetchFiles
+{
+    my( $tag, $module ) = @_;
+    my @fetch_files;
+
+    @fetch_files = generateSharedFetchFiles( $tag );
+
+    my $srcfile = "condor-source.src";
+    makeFetchFile( $srcfile, $module, $tag );
+    push( @fetch_files, $srcfile );
+
+    if( defined $opt_externals ) { 
+        my $ext_file = "externals.src";
+        makeFetchFile( $ext_file, $opt_externals );
+        push( @fetch_files, "$ext_file" );
+    }
+
+    return @fetch_files;
+}
+
+
+sub generateSharedFetchFiles
+{
+    my( $tag ) = @_;
+
+    my @fetch_files;
+    my $glue_file = "condor_" . $runtype . "_glue.src";
+
+    if( defined($opt_nmi_glue) ) { 
+        open(GLUEFILE, ">$glue_file") || 
+            die "Can't open $glue_file for writing: $!\n";
+        print GLUEFILE "method = scp\n";
+        print GLUEFILE "scp_file = $opt_nmi_glue\n";
+        print GLUEFILE "recursive = true\n";     
+        close GLUEFILE;
+        push( @fetch_files, "$glue_file" );
+    }
+
+    return @fetch_files;
+}
+
+
+sub makeFetchFile
+{
+    # NOTE: this one breaks the convention of $tag first, b/c for
+    # things on the trunk (e.g. externals) there is no tag
+    my ( $file, $module, $tag ) = @_;
+
+    open( FILE, ">$file" ) || die "Can't open $file for writing: $!\n";
+    print FILE "method = cvs\n";
+    print FILE "cvs_root = $CVSROOT\n";
+    print FILE "cvs_module = $module\n";
+    if( $tag ) {
+        print FILE "cvs_tag = $tag\n";
+    }
+    close FILE;
+}
+
+
+sub parseTag
+{
+    my $tag = shift;
+    my $desc;
+    my @vers;
+
+    $tag =~ s/BUILD-//;
+    my $desc = $tag;
+    $tag =~ s/-branch-.*//;
+    $tag =~ s/V//;
+    if( $tag =~ /(\d+)(\D*)_(\d+)(\D*)_?(\d+)?(\D*)/ ) {
+        $vers[0] = $1;
+        $vers[1] = $3;
+        if( $5 ) {
+            $vers[2] = $5;
+        } else {
+            $vers[2] = "x";
+        }
+    }
+    return ( $desc, @vers );
+}
+
+
+sub submitRun()
+{
+    my( $cmdfile, $tag ) = @_;
+    my @submit_output;
+    print "Submitting condor $runtype from tag: $tag\n";
+    open( SUBMIT, "$nmi_submit $cmdfile|" ) || 
+	die "Can't open $nmi_submit as a pipe: $!\n";
+    while( <SUBMIT> ) {
+	print;
+    }
+    close( SUBMIT );
+    my $status = $? / 256;
+    if( $status == 0 ) {
+	print "nmi_submit successful\n";
+    } else {
+	print "ERROR: nmi_submit failed!\n";
+    }
+}
+
+
+sub run
+{
+    my ($cmd, $fatal) = @_;
+    my $ret;
+    my $output = "";
+
+    # if not specified, the command is fatal
+    if (!defined($fatal) or ($fatal != 0 and $fatal != 1)) {
+        $fatal = 1;
+    }
+
+    print "#  $cmd\n";
+
+    # run the command
+    system("($cmd)  </dev/null 2>&1");
+    $ret = $? / 256;
+
+    # should we die here?
+    if ($fatal && $ret != 0) {
+        print "\n";
+        print "FAILED COMMAND: $cmd\n";
+        print "RETURN VALUE:  $ret\n";
+        print "\n";
+        myExit( 1 );
+    }
+
+    # return the commands return value
+    return $ret;
+}
+
+
+sub myExit
+{
+    my $exit_code = shift;
+
+    if( defined $workspace && -d $workspace ) {
+        chdir($init_cwd);
+#        run("rm -rf $workspace", 0);
+    }
+    exit $exit_code;
+}
+
+
+######################################################################
+# submit_info parsing routines
+######################################################################
+
+#----------------------------------------------------------------------
+# The main parsing method.  This just parses the input to find the
+# data blocks.  For each block, it calls parseBlock() to do the real
+# work of parsing, managing, and saving data for the block.  Once it
+# reads the whole file, this method also calls cleanPlatformData() on
+# each platform to clean and make-sane all the platform-specific data
+# (removing duplicate prereqs, sorting, fixing the formatting, etc).
+#----------------------------------------------------------------------
+sub parseSubmitInfo
+{
+    my $filename = shift;
+    open(FH, "<$filename" ) || die "Can't open '$filename': $!\n";
+
+    my ( $line, $val, $platform );
+
+    while( $line = getLine(*FH) ) {
+        if( $line =~ /^\[/ ) {
+            # this will consume upto and including the next ']'
+            parseBlock(*FH);
+            next;
+        }
+        if( $line =~ /^\]/ ) {
+            parseError( "saw ']' while not in a block!" );
+        }
+        parseError( "Data ('$line') defined outside of a block!" );
+    }
+
+    # Now that we're done with the whole file, do some final cleaning
+    # of the data
+    foreach $platform (sort keys %platforms ) {
+        cleanPlatformData($platform);
+    }
+    delete $platforms{"global"};
+}
+
+
+#----------------------------------------------------------------------
+# Helper method to clean up the platform-specific data.  Makes sure
+# none of the prereqs are duplicate and ensure we've got a sorted,
+# well-formatted list without any funky whitespace, etc.  This method
+# just reads out the data for the given platform, stuffs it all into a
+# hash table (to guarantee uniqueness), and then uses sort and join to
+# format it nicely.  It also handles the special case of the "global"
+# platform, and takes the global data out of our hash tables and
+# stuffs it into the global scalar values, instead.
+#----------------------------------------------------------------------
+sub cleanPlatformData
+{
+    my $platform = shift;
+
+    my( $item, %prereqs, %t_prereqs );
+    my( @pre_order, %t_pre_order );
+    
+    foreach $item ( split(/[, \t]+/, $platform_prereqs{$platform}) ) {
+        $prereqs{$item}=1;
+    }
+    foreach $item ( split(/[, \t]+/, $platform_test_prereqs{$platform}) ) {
+        $t_prereqs{$item}=1;
+    }
+    if( $platform =~ /global/i ) {
+        if( $platform_prereqs{$platform} ) {
+            $global_prereqs = join(', ', sort(keys(%prereqs))); 
+            delete( $platform_prereqs{$platform} );
+        }
+        if( $platform_test_prereqs{$platform} ) {
+            $global_test_prereqs = join(', ', sort(keys(%t_prereqs))); 
+            delete( $platform_test_prereqs{$platform} );
+        }
+        if( $platform_testargs{$platform} ) { 
+            $global_testargs = $platform_testargs{$platform};
+            delete( $platform_testargs{$platform} );
+        }
+    } else {
+        if( $platform_prereqs{$platform} ) {
+            $platform_prereqs{$platform} = join(', ', sort(keys(%prereqs))); 
+        }
+        if( $platform_test_prereqs{$platform} ) {
+            $platform_test_prereqs{$platform} = 
+                join(', ', sort(keys(%t_prereqs))); 
+        }
+    }
+}
+
+
+#----------------------------------------------------------------------
+# Method to parse a given platform block.  This is the meat of the
+# entire parsing logic.  Assumes it's already read the '[' to start
+# the block.  Once it reads a complete block (upto a ']'), it updates
+# the global data structures with all the info for the platforms it
+# found in that block.
+#----------------------------------------------------------------------
+sub parseBlock
+{
+    my $fh = shift;
+
+    my ( $line, $val, $item, $platform );
+
+    # all of the "block_*" local variables hold data as defined in
+    # this block...  otherwise, the name should be obvious.
+
+    # these are hashes to guarantee uniqueness
+    my %block_platforms;
+    my %block_prereqs;
+    my %block_test_prereqs;
+
+    # these are hashes to map platform -> prereqs
+    my %block_platform_prereqs;
+    my %block_platform_test_prereqs;
+    my %block_testargs;
+
+    # flag to help check for sanity
+    my $in_block = 1;
+
+    while( $line = getLine(*$fh) ) {
+        if( $line =~ /^\[/ ) {
+            parseError( "saw '[' while already in a block" );
+        }
+        elsif( $line =~ /^\]/ ) {
+            $in_block = 0;
+            last;
+        }
+        elsif( $line =~ /^platforms\s*=\s*(.*)/i ) {
+            foreach $item ( split(/[, \t]+/, $1)) {
+                $block_platforms{$item}=1;
+            }
+        }
+        elsif( $line =~ /^prereqs\s*=\s*(.*)/i ) {
+            foreach $item ( split(/[, \t]+/, $1)) {
+                $block_prereqs{$item}=1;
+            }
+        }
+        elsif( $line =~ /^prereqs_(\S+)\s*=\s*(.*)/i ) {
+            $platform = $1;
+            $val = $2;
+            if( ! $block_platforms{$platform} ) {
+                parseError( "prereqs_$platform defined but "
+                            . "$platform not declared in this block" );
+            }
+            $block_platform_prereqs{$platform} = $val;
+        }
+        elsif( $line =~ /^test_append_prereqs\s*=\s*(.*)/i ) {
+            foreach $item ( split(/[, \t]+/, $1)) {
+                $block_test_prereqs{$item} = 1;
+            }
+        }
+        elsif( $line =~ /^test_append_prereqs_(\S+)\s*=\s*(.*)/i ) {
+            $platform = $1;
+            $val = $2;
+            if( ! $block_platforms{$platform} ) {
+                parseError( "test_append_prereqs_$platform defined but "
+                            . "$platform not declared in this block" );
+            }
+            $block_platform_test_prereqs{$platform} = $val;
+        }
+        elsif( $line =~ /^testargs(_(\S+))?\s*=\s*(.*)/i ) {
+            $platform = $2;
+            $val = $3;
+            if( ! $platform ) {
+                $platform = "block";
+            }
+            if( $block_testargs{$platform} ) {
+                $block_testargs{$platform} .= " ";
+            }
+            $block_testargs{$platform} .= $val;
+        }
+        else {
+            parseError( "unrecognized: '$line'" );
+        }
+    }
+
+    # now that we broke out of the loop, we're done with this block
+    # and we can process what we saw...
+
+    # first, some sanity checks:
+    $in_block && parseError( "hit EOM while still in a block" );
+    if( ! %block_platforms ) {
+        parseError( "Block defined without any platforms" );
+    }
+
+    # append all the (new) platforms we saw to our global list:
+    foreach $platform ( keys(%block_platforms) ) {
+        $platforms{$platform} = 1;
+    }
+
+    # for each platform we saw, append any platform-specific stuff to
+    # the global hash tables
+    foreach $platform ( keys(%block_platforms) ) {
+
+        # append all shared prereqs in this block to each platform
+        if( %block_prereqs ) { 
+            $platform_prereqs{$platform} .= 
+                join( ', ', sort(keys(%block_prereqs)) );
+            $platform_test_prereqs{$platform} .= 
+                join( ', ', sort(keys(%block_prereqs)) );
+        }
+
+        # append all shared test prereqs in this block to each platform
+        if( %block_test_prereqs ) { 
+            $platform_test_prereqs{$platform} .= ", " .
+                join( ', ', sort(keys(%block_test_prereqs)) );
+        }
+
+        # if this platform also has platform-specific prereqs, append
+        # those, too...
+        if( $block_platform_prereqs{$platform} ) {
+            $platform_prereqs{$platform} .= ", " .
+                $block_platform_prereqs{$platform};
+            $platform_test_prereqs{$platform} .= ", " .
+                $block_platform_prereqs{$platform};
+        }
+
+        # if this platform also has platform-specific test prereqs,
+        # append those, too...
+        if( $block_platform_test_prereqs{$platform} ) {
+            $platform_test_prereqs{$platform} .= ", " .
+                $block_platform_test_prereqs{$platform};
+        }
+
+        # if this platform defined testargs, over-write those.
+        # otherwise if, there was a global testarg defined for this
+        # block, use that...
+        if( $block_testargs{$platform} ) {
+            $platform_testargs{$platform} = $block_testargs{$platform};
+        } elsif( $block_testargs{"block"} ) {
+            $platform_testargs{$platform} = $block_testargs{"block"};
+        }
+    }
+}
+
+
+#----------------------------------------------------------------------
+# Helper method that reads another line out of the input file.  Keeps
+# track of the original line number in the file we're at, and handles
+# comments, continuation, and ignoring/trimming whitespace.
+#----------------------------------------------------------------------
+sub getLine
+{
+    my $fh = shift;
+    my $line = "";
+    my $tmp;
+
+    while( $tmp = <$fh> ) {
+        $orig_lineno++;
+        chomp( $tmp );
+        if( $tmp =~ /(.*)\\$/ ) {
+            # continuation, append everything except the '\' to $line
+            $line .= $1;
+            next;
+        } else {
+            # note: we want to append to line first, then decide if
+            # we're going to throw it out so that we handle comments
+            # that have a line continuation...
+            $line .= $tmp;
+            if( $line =~ /^\s*#.*/ ) {
+                # comment
+                $line = "";
+                next;
+            }
+            if( $line =~ /^\s*$/ ) {
+                # just whitespace
+                $line = "";
+                next;
+            }
+            # we're about to return the line.  first, clean it up:
+            # - ignore leading whitespace
+            # - ignore everything after a '#' (if there is one)
+            $line =~ /^\s*([^#]*)\#?(.*)$/;
+            return $1;
+        }
+    }
+    # if we're here, <> returned undefined, so we're done.
+    return;
+}
+
+
+#----------------------------------------------------------------------
+# Helper method to die with a message that includes the line number
+#----------------------------------------------------------------------
+sub parseError
+{
+    my $err = shift;
+    die "ERROR (line $orig_lineno): $err!\n";
+}
+
+
