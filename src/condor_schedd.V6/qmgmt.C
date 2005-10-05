@@ -285,7 +285,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad )
 
 		if ( grid_type == "gt2" || grid_type == "gt3" ||
 			 grid_type == "gt4" || grid_type == "nordugrid" ||
-			 grid_type == "oracle" ) {
+			 grid_type == "oracle" || grid_type == "globus" ) {
 
 			MyString attr = "";
 			MyString new_value = "";
@@ -420,6 +420,12 @@ ConvertOldJobAdAttrs( ClassAd *job_ad )
 		if ( grid_type == "infn" || grid_type == "blah" ) {
 
 			MyString jobid;
+
+			if ( grid_resource.IsEmpty() ) {
+
+				job_ad->Assign( ATTR_GRID_RESOURCE, "blah" );
+				JobQueueDirty = true;
+			}
 
 			if ( grid_job_id.IsEmpty() &&
 				 job_ad->LookupString( ATTR_REMOTE_JOB_ID, jobid ) ) {
