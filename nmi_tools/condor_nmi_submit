@@ -386,15 +386,15 @@ sub checkoutSubmitInfo
     my @cvs_output;
     my $retval;
 
-    print "Attempting to fetch $submit_info from $tag... ";
+    print "Attempting to fetch $submit_info from $tag...\n";
     my $cvs_cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
     open( CVS, "$cvs_cmd|" ) || die "Can't open 'cvs co' as a pipe: $!\n";
     @cvs_output = <CVS>;
     close( CVS );
     $retval = $? / 256;
-    print "cvs returned $retval\n";
     if( $retval != 0 ) {
-        print "FAILED\n" . join('\n', @cvs_output);
+        print "FAILED (cvs returned $retval)\n";
+	print @cvs_output;
 	return 0;
     } 
     print "SUCCESS\n";
@@ -441,7 +441,7 @@ sub createSubmitFiles
 {
     my ( $tag ) = @_;
 
-    my $cmdfile = "condor_cmdfile-$tag";
+    my $cmdfile = "cmdfile-$tag";
 
     my $module = $tags{$tag};
     my @fetch_files;
@@ -593,7 +593,7 @@ sub generateTestFetchFiles
     close RUNIDFILE;
     push( @fetch_files, $runid_file );
 
-    my $test_src_file = "condor_test.src";
+    my $test_src_file = "test_sources.src";
     if( defined $opt_test_src ) {
         open(SRCFILE, ">$test_src_file") || 
             die "Can't open $test_src_file for writing: $!\n";
@@ -602,7 +602,7 @@ sub generateTestFetchFiles
         close SRCFILE;
         push( @fetch_files, $test_src_file );
     } elsif( !defined $opt_nmi_glue ) { 
-        my $glue_file = "condor_" . $runtype . "_glue.src";
+        my $glue_file = "test_glue.src";
         makeFetchFile( $glue_file, "nmi_glue/$runtype", $tag );
         push( @fetch_files, $glue_file );
     }        
@@ -618,7 +618,7 @@ sub generateBuildFetchFiles
 
     @fetch_files = generateSharedFetchFiles( $tag );
 
-    my $srcfile = "condor-source.src";
+    my $srcfile = "condor_source.src";
     makeFetchFile( $srcfile, $module, $tag );
     push( @fetch_files, $srcfile );
 
@@ -637,7 +637,7 @@ sub generateSharedFetchFiles
     my( $tag ) = @_;
 
     my @fetch_files;
-    my $glue_file = "condor_" . $runtype . "_glue.src";
+    my $glue_file = $runtype . "_glue.src";
 
     if( defined($opt_nmi_glue) ) { 
         open(GLUEFILE, ">$glue_file") || 
