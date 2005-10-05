@@ -57,7 +57,7 @@ void write_file(const char * filename, const char * data) {
   condor_config file claims".
 
 */
-bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name )
+bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out = 0, int * proc_out = 0 )
 {
 		// Simplify my error handling and reporting code
 	struct FailObj {
@@ -196,7 +196,9 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 		return false;
 	}
 
-	printf("Successfully submitted %d.%d\n",cluster,proc);
+	if(cluster_out) { *cluster_out = cluster; }
+	if(proc_out) { *proc_out = proc; }
+
 	return true;
 }
 
@@ -257,9 +259,11 @@ int main(int argc, char **argv)
 	NewClassAdParser newtoold;
 	ClassAd * newad2 = newtoold.ParseClassAd(s_newadout.c_str());
 
-	if( ! submit_job( *newad2, 0, 0 ) ) {
+	int cluster,proc;
+	if( ! submit_job( *newad2, 0, 0, &cluster, &proc ) ) {
 		fprintf(stderr, "Failed to submit job\n");
 	}
+	printf("Successfully submitted %d.%d\n",cluster,proc);
 
 	// Convert to old classad string
 	MyString out;
