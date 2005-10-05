@@ -95,19 +95,16 @@ TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
 
 /*
    Our tests often link with libcondorapi.a, which has calls to dlopen
-   and friends.  Thus when we link for tests, we want to include -ldl
-   on the link line for platforms that have dlopen.  Similarly,
-   dirname() lives in libgen.so on some platforms.  So, all of our
-   autoconf-discovered libs should be added here... 
+   and friends.  However, since we're already including all the
+   autoconf discovered LIBS on the link line for the test suite, we
+   don't have to duplicate any of that here.  the only exceptions are
+   libraries we test for in autoconf that we don't just use the
+   default autoconf behavior and add to LIBS.  for now, that only
+   involves libgen, which is where dirname() lives on some platforms.
 */
-#if HAVE_LIBDL
-TEST_PLATFORM_LDFLAGS += -ldl
-#endif
-
 #if HAVE_LIBGEN
 TEST_PLATFORM_LDFLAGS += -lgen
 #endif
-
 
 
 /*

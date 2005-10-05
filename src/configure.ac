@@ -1239,13 +1239,10 @@ AC_CHECK_FUNCS([stat64])
 AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))
 
-ac_have_libgen=0
-AC_CHECK_FUNC(dirname,,AC_CHECK_LIB(gen,dirname,AC_DEFINE(HAVE_libgen=1],))
-AC_SUBST(HAVE_LIBGEN,$ac_have_libgen)
-
-ac_have_libdl=0
-AC_CHECK_FUNC(dlopen,,AC_CHECK_LIB(dl,dlopen,[ac_have_libdl=1],))
-AC_SUBST(HAVE_LIBDL,$ac_have_libdl)
+# we don't actually want to add -lgen to our link line, but we do want
+# HAVE_LIBGEN defined correctly for our test suite builds... 
+AC_CHECK_FUNC(dirname,,AC_CHECK_LIB(gen,dirname,
+AC_DEFINE(HAVE_LIBGEN,1,[Define to 1 if you have the `gen' library (-lgen)])))
 
 
 # checks for system services

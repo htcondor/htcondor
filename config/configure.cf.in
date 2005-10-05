@@ -94,9 +94,6 @@ JAVAC = @JAVAC@
 #define HAVE_JAR @HAVE_JAR@
 JAR = @JAR@
 
-#define HAVE_LIBGEN @HAVE_LIBGEN@
-#define HAVE_LIBDL @HAVE_LIBDL@
-
 
 TAR_CMD = @TarCmd@
 
