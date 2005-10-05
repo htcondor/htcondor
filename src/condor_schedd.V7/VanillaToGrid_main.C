@@ -46,6 +46,8 @@ void write_file(const char * filename, const char * data) {
 }
 
 /* 
+- src - The classad to submit.  The ad will be modified based on the needs of
+  the submission.  This will include adding QDate, ClusterId and ProcId as well as putting the job on hold (for spooling)
 
 - schedd_name - Name of the schedd to send the job to, as specified in the Name
   attribute of the schedd's classad.  Can be NULL to indicate "local schedd"
@@ -65,24 +67,30 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 		int proc;
 		Qmgr_connection * qmgr;
 		void fail( const char * fmt, ...) {
-			if(cluster != -1) {
-				ASSERT(qmgr);
+			if(cluster != -1 && qmgr) {
 				DestroyCluster(cluster);
 			}
 			if(qmgr) { DisconnectQ( qmgr, false /* don't commit */); }
 
-			fprintf( stderr, "ERROR (%s) ", scheddtitle.Value());
+			MyString msg;
+			msg += "ERROR (";
+			msg += scheddtitle;
+			msg += ") ";
+
 			if(cluster != -1) {
-				fprintf( stderr, "(%d", cluster);
+				msg += "(";
+				msg += cluster;
 				if(proc != -1) {
-					fprintf( stderr, ".%d", proc);
+					msg += ".";
+					msg += proc;
 				}
-				fprintf( stderr, ") ");
+				msg += ") ";
 			}
 			va_list args;
 			va_start(args,fmt);
-			vfprintf(stderr, fmt,args);
+			msg.vsprintf_cat(fmt,args);
 			va_end(args);
+			fprintf(stderr, "%s", msg.Value());
 		}
 	} failobj;
 
@@ -122,34 +130,38 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 		failobj.fail("Failed to create a new cluster (%d)\n", cluster);
 		return false;
 	}
+	failobj.cluster = cluster;
 
 	int proc = NewProc(cluster);
 	if( proc < 0 ) {
 		failobj.fail("Failed to create a new proc (%d)\n", proc);
 		return false;
 	}
+	failobj.proc = proc;
 
+	src.Assign(ATTR_PROC_ID, proc);
+	src.Assign(ATTR_CLUSTER_ID, cluster);
+	src.Assign(ATTR_Q_DATE, (int)time(0));
 
-	if( SetAttributeInt (cluster, proc, ATTR_PROC_ID, proc) == -1 ) {
-		failobj.fail("Failed to set %s = %d\n", ATTR_PROC_ID, proc);
-		return false;
+	// Things to set because we want to spool/sandbox input files
+	{
+		// we need to submit on hold (taken from condor_submit.V6/submit.C)
+		src.Assign(ATTR_JOB_STATUS, 5); // 5==HELD
+		src.Assign(ATTR_HOLD_REASON, "Spooling input data files");
+
+		// we want the job to hang around (taken from condor_submit.V6/submit.C)
+		MyString leaveinqueue;
+		leaveinqueue.sprintf("%s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
+			ATTR_JOB_STATUS,
+			COMPLETED,
+			ATTR_COMPLETION_DATE,
+			ATTR_COMPLETION_DATE,
+			ATTR_COMPLETION_DATE,
+			60 * 60 * 24 * 10);
+
+		src.Assign(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
 	}
-	if( SetAttributeInt (cluster, proc, ATTR_CLUSTER_ID, cluster) == -1 ) {
-		failobj.fail("Failed to set %s = %d\n", ATTR_CLUSTER_ID, cluster);
-		return false;
-	}
 
-	if( SetAttributeInt (cluster, proc, ATTR_Q_DATE, time(0)) == -1 ) {
-		failobj.fail("Failed to set %s = %d\n", ATTR_Q_DATE, time(0));
-		return false;
-	}
-
-	if( SetAttributeFloat (cluster, proc, ATTR_JOB_REMOTE_USER_CPU, 0.0) == -1 ) {
-		failobj.fail("Failed to set %s = %f\n", ATTR_JOB_REMOTE_USER_CPU, 0.0);
-		return false;
-	}
-
-	
 	ExprTree * tree;
 	src.ResetExpr();
 	while( (tree = src.NextExpr()) ) {
@@ -171,15 +183,20 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 		free(rhstr);
 	}
 
-
-
-	//if( ! DisconnectQ(qmgr, true /* commit */)) {
-	if( ! DisconnectQ(0) ) {
+	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.qmgr = 0;
 		failobj.fail("Failed to commit job submission\n");
 		return false;
 	}
 
+	ClassAd * adlist[1];
+	adlist[0] = &src;
+	if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
+		failobj.fail("Failed to spool job files\n");
+		return false;
+	}
+
+	printf("Successfully submitted %d.%d\n",cluster,proc);
 	return true;
 }
 
