@@ -130,6 +130,9 @@ to a running job after a crash.
 \item \Condor{dagman} now allows POST scripts to be used with DATA
 nodes in a DAG (previously this caused the DAG to hang).
 
+\item Using the new \SubmitCmd{Remote\_} simplified syntax no longer
+generates unnecessary debug messages.
+
 \end{itemize}
 
 \noindent Changes:
@@ -578,6 +581,10 @@ but if it happens for a second node, \Condor{dagman} will crash.
 
 \item The Condor-C GAHP now performs file staging in a 
 separate process, allowing remote grid jobs to be started earlier.
+
+\item Using the new \SubmitCmd{Remote\_} syntax simplification causes
+\Condor{submit} to display debug messages to standard output, possibly
+confusing programs that parse \Condor{submit}'s output.  Fixed in 6.7.13.
 
 \end{itemize}
 
