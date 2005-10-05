@@ -750,7 +750,7 @@ sub myExit
 
     if( defined $workspace && -d $workspace ) {
         chdir($init_cwd);
-#        run("rm -rf $workspace", 0);
+        run("rm -rf $workspace", 0);
     }
     exit $exit_code;
 }
