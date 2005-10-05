@@ -20,8 +20,6 @@ LIST OF SHAME
    - Adding ConfigMD will move functionality out of local_start,
      namely LB_RELEASE_DIR
 
-3. condor_install_release does not work with GSI
-
 5. Warnings: Warnings are kind of glommed together.  Its like endlines
    don't work.
    - Maybe just write directly to stderr and use endlines

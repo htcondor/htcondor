@@ -18,12 +18,14 @@ Programs
     directory.  In addition it creates a log of the installed files for
     easy uninstallation.
   - Usage: install_release [-f] [-help] <binary_tar>
-	   [-basedir base_dir] [-log log_file_name]
-	   [-o other_file1 other_file2 ...]
+    [-basedir base_dir] [-log log_file_name]
+    [-wget] [-globuslocation globus_location]
+    [-o other_file1 other_file2 ...]
   - Subprograms:
     + tar
     + wget
     + gzip
+    + globus-url-copy
   - Supported Release Types
     + tar
     + gzip
@@ -32,6 +34,7 @@ Programs
     + mounted file system
     + http
     + ftp
+    + gsiftp
 
 + condor_local_start
   - Purpose: Creates a local_dir directory structure for condor to run
