@@ -70,6 +70,11 @@ the status of all DAG nodes.
 
 \begin{itemize}
 
+\item Fixed a bug in the \Condor{schedd} that caused grid-type gt2 jobs
+submitted by an older \Condor{submit} or in the queue during an upgrade
+(version 6.7.10 or earlier) to go
+on hold if the grid\_type was ``globus''.
+
 \item When using file transfer, transfering the results back to
 the submit machine could silently fail for Condor releases 6.7.0
 though 6.7.12.  This was relatively rare through 6.7.10.  For
