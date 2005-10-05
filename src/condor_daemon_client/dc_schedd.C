@@ -331,6 +331,10 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
 
 	rsock.eom();
 
+	dprintf(D_FULLDEBUG,"DCSchedd:receiveJobSandbox: "
+		"%d jobs matched my constraint (%s)\n",
+		JobAdsArrayLen, constraint);
+
 		// Now read all the files via the file transfer object
 	for (i=0; i<JobAdsArrayLen; i++) {
 		FileTransfer ftrans;
