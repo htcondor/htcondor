@@ -425,6 +425,7 @@ doContactSchedd()
 	if (stage_out_batch.Number() > 0) {
 		MyString constraint = "";
 		stage_out_batch.Rewind();
+		int jobsexpected = stage_out_batch.Number();
 		while (stage_out_batch.Next(current_command)) {
 			constraint.sprintf_cat( "(ClusterId==%d&&ProcId==%d)||",
 									current_command->cluster_id,
@@ -434,11 +435,17 @@ doContactSchedd()
 
 		error = FALSE;
 		errstack.clear();
+		int jobssent;
 		if (!dc_schedd.receiveJobSandbox( constraint.Value(),
-										  &errstack )) {
+										  &errstack, &jobssent )) {
 			error = TRUE;
 			sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
 			dprintf (D_ALWAYS, "%s\n", error_msg);
+		}
+
+		if(error == FALSE && jobssent != jobsexpected) {
+			error = TRUE;
+			dprintf (D_ALWAYS, "Transfered files for %d jobs but got files for %d jobs. (Schedd %s with contraint %s\n", jobsexpected, jobssent, ScheddAddr, constraint.Value());
 		}
   
 		stage_out_batch.Rewind();
