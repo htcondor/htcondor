@@ -142,6 +142,11 @@ nodes in a DAG (previously this caused the DAG to hang).
 \item Using the new \SubmitCmd{Remote\_} simplified syntax no longer
 generates unnecessary debug messages.
 
+% Quill
+\item Fixed a bug in estimating the size of attribute value buffers that
+caused quill to crash.  This arose when job ads had variables with very
+large values (more than 3KB).  
+
 \end{itemize}
 
 \noindent Changes:
