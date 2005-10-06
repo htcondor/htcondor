@@ -326,7 +326,7 @@ static void test_classad(const Parameters &parameters, Results &results)
 
     cout << "Testing the ClassAd class...\n";
 
-    string input_basic = "[ A = 3; B = 4.0; C = \"babyzilla\"; D = true; E = {1}; F = [ AA = 3; ];]";
+    string input_basic = "[ A = 3; B = 4.0; C = \"babyzilla\"; D = true; E = {1}; F = [ AA = 3; ]; G =\"deleteme\";]";
     ClassAd *basic;
     int i;
     bool b;
@@ -374,6 +374,11 @@ static void test_classad(const Parameters &parameters, Results &results)
     TEST("Delete claims to have worked", (success == true));
     have_attribute = basic->EvaluateAttrInt("new", i);
     TEST("New attribute was deleted", (have_attribute == false));
+
+    success = basic->Delete("G");
+    TEST("DELETE claims to have worked", (success == true));
+    have_attribute = basic->EvaluateAttrString("G", s);
+    TEST("Attribute G was deleted", (have_attribute == false));
 
     /* ----- Test GetExternalReferences ----- */
     string input_ref = "[ Rank=Member(\"LCG-2_1_0\",other.Environment) ? other.Time/seconds : other.Time/minutes; minutes=60; ]";
@@ -682,14 +687,18 @@ static void test_collection(const Parameters &parameters, Results &results)
     TEST("Added machine2 to collection", success == true);
     success = collection->AddClassAd("machine3", machine3);
     TEST("Added machine3 to collection", success == true);
+    /* ----- Put in one machine twice, to make sure it doesn't break ----- */
+    success = collection->AddClassAd("machine3", machine3);
+    TEST("Added machine3 to collection", success == true);
+
 
     /* ----- Make sure that they are in the collection ----- */
     retrieved = collection->GetClassAd("machine1");
     TEST("machine1 in the collection", retrieved == machine1);
     retrieved = collection->GetClassAd("machine2");
-    TEST("machine1 in the collection", retrieved == machine2);
+    TEST("machine2 in the collection", retrieved == machine2);
     retrieved = collection->GetClassAd("machine3");
-    TEST("machine1 in the collection", retrieved == machine3);
+    TEST("machine3 in the collection", retrieved == machine3);
 
     /* ----- Make a couple of subviews ----- */
     success = collection->CreateSubView("Linux-View", "root",
