@@ -67,6 +67,7 @@ my $USAGE =
     "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
     "[-execarchive exec_archive]\n".
     "[-linklock] [-flock] [-bpid] [-artifact artifact_file]\n".
+    "[-wget] [-globuslocation globus_location]\n".
     "[-help]\n";
 
 
@@ -84,6 +85,8 @@ my $INSTALL_PROGRAM = 'install_release';
 my $BASE_DIR_OPT = '-basedir';
 my $OTHER_FILES_OPT = '-o';
 my $FORCE_OPT = '-f';
+my $WGET_OPT = '-wget';
+my $GLOBUS_LOC_OPT = '-globuslocation';
 
 #  startup program and options
 my $CONDOR_LOCAL_START = 'condor_local_start';
@@ -124,6 +127,8 @@ my $flock_flag = 0;
 my $linklock_flag = 0;
 my $bpid_flag = 0;
 my $midwife_artifact = 0;
+my $globus_location = 0;
+my $wget_flag = 0;
 my $help = 0;
 #my $setup_configs_flag = 0;
 #my @setup_config_files = ();
@@ -152,6 +157,8 @@ GetOptions('basedir=s'=>\$base_dir,
 	   'flock'=>\$flock_flag,
 	   'bpid'=>\$bpid_flag,
 	   'artifact=s'=>\$midwife_artifact,
+	   'wget'=>\$wget_flag,
+	   'globuslocation=s'=>\$globus_location,
 	   'help'=>\$help,
 	   );
 	   
@@ -218,6 +225,10 @@ sub Setup(){
 		$OTHER_FILES_OPT, $global_config_file);
     # add the force option if neccessary
     push @args, $FORCE_OPT if( $force );
+    
+    # add the transfer option flags if neccessary
+    push @args, $WGET_OPT if( $wget_flag );
+    push @args, ($GLOBUS_LOC_OPT, $globus_location) if( $globus_location );
 
     # Execute the installation program
     !system $install_program_path, @args
@@ -283,6 +294,10 @@ sub Startup(){
     push @args, $FLOCK_OPT if( $flock_flag );
     push @args, $BPID_OPT if( $bpid_flag );
     push @args, ($ARTIFACT_OPT, $midwife_artifact) if( $midwife_artifact);
+
+    # add the transfer option flags if neccessary
+    push @args, $WGET_OPT if( $wget_flag );
+    push @args, ($GLOBUS_LOC_OPT, $globus_location) if( $globus_location );
 
     # Execute the startup program
     #!system $local_start_path, @args

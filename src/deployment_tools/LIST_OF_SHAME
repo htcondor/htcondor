@@ -29,10 +29,6 @@ LIST OF SHAME
    (specified as a file path or a url).  If the path is specified as a
    url, this will fail strangely.
 
-7. condor_local_start's prediagnosis is very specific for schedd.  We
-   may want to use config variables or something else to make this
-   work for non-scheduler installs
-
 8. condor_local_stop is also very schedd specific.  It will not
    shutdown if the schedd still has jobs.
    - the force option ignores the schedd

@@ -47,6 +47,7 @@ my $USAGE =
     "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
     "[-execarchive exec_archive]\n".
     "[-linklock] [-flock] [-bpid] [-artifact artifact_file]\n".
+    "[-wget] [-globuslocation globus_location]\n".
     "[-dyn] [-help]\n";
 
 my $FG_OPT = '-f';
@@ -63,6 +64,8 @@ my $CONDOR_INSTALL_CONFIG = 'condor_config.local_install';
 my $LOG_ARCHIVE_OPT = '-logarchive';
 my $SPOOL_ARCHIVE_OPT = '-spoolarchive';
 my $EXEC_ARCHIVE_OPT = '-execarchive';
+my $WGET_OPT = '-wget';
+my $GLOBUS_LOC_OPT = '-globuslocation';
 
 my $LINKLOCK_MIDWIFE = 'linklock_midwife';
 my $FLOCK_MIDWIFE = 'flock_midwife';
@@ -81,25 +84,10 @@ my $SPOOL_DIR_ENV = '_CONDOR_SPOOL';
 
 #  condor_config attributes
 my $MASTER_ATTR = 'MASTER';
-my @REQUIRED_EXEC_ATTRS = ('MASTER',
-			   'SCHEDD',
-			   'PREEN',
-			   'STARTER',
-			   'STARTER_PVM',
-			   'STARTER_STANDARD',
-			   'SHADOW',
-			   'SHADOW_PVM',
-			   'SHADOW_STANDARD',
-			   'GRIDMANAGER',
-			   'GAHP',
-			   'CONDOR_GAHP',);
-
-my @REQUIRED_DIR_ATTRS = ();
-
-my @RECOMMENDED_EXEC_ATTRS = ('CREDD');
-
-my @RECOMMENDED_DIR_ATTRS = ('LIB',
-			     'LIBEXEC');
+my $REQUIRED_EXEC_ATTR = 'DEPLOYMENT_REQUIRED_EXECS';
+my $REQUIRED_DIR_ATTR = 'DEPLOYMENT_REQUIRED_DIRS';
+my $RECOMMENDED_EXEC_ATTR = 'DEPLOYMENT_RECOMMENDED_EXECS';
+my $RECOMMENDED_DIR_ATTR = 'DEPLOYMENT_RECOMMENDED_DIRS';
 
 #***
 # Non-constant Static Variables
@@ -121,6 +109,8 @@ my $flock_flag = 0;
 my $linklock_flag = 0;
 my $bpid_flag = 0;
 my $midwife_artifact = 'MasterMidwife.artifact';
+my $globus_location = 0;
+my $wget_flag = 0;
 
 #***
 # Main Function
@@ -136,6 +126,8 @@ GetOptions('configfile=s'=>\$condor_config_file,
 	   'flock'=>\$flock_flag,
 	   'bpid'=>\$bpid_flag,
 	   'artifact=s'=>\$midwife_artifact,
+	   'wget'=>\$wget_flag,
+	   'globuslocation=s'=>\$globus_location,
 	   'dyn'=>\$dynamic_naming,
 	   'fg'=>\$foreground,
 	   'help'=>\$help);
@@ -160,11 +152,6 @@ if(!-e $local_install_dir || !-d $local_install_dir ){
 
 if( $local_config_file && !-e $local_config_file ){
     die "$local_config_file does not exist";
-}
-
-# Process arguments
-if( $dynamic_naming ){
-    push(@master_params, '-dyn');
 }
 
 # Convert all relative file paths to absolute file paths
@@ -241,6 +228,10 @@ sub SetupLocalDir(){
     push @args, ($SPOOL_ARCHIVE_OPT, $spool_archive) if( $spool_archive );
     push @args, ($EXEC_ARCHIVE_OPT, $exec_archive) if($exec_archive);
 
+    # add the transfer option flags if neccessary
+    push @args, $WGET_OPT if( $wget_flag );
+    push @args, ($GLOBUS_LOC_OPT, $globus_location) if( $globus_location );
+
     # Find condor_install_local
     my $install_local_path = File::Spec->catpath(0, 
 						 $FindBin::Bin, 
@@ -270,7 +261,7 @@ sub SetupLocalDirDyn(){
 }
 
 #*********************************************************************
-# Setup the running environment for the schedd.  This includes the 
+# Setup the running environment for condor.  This includes the 
 # location of binaries, the location of the global configuration, the 
 # location of the local directory,  and the set of local 
 # configuration files.  Dynamically binds the runtime local config,
@@ -345,64 +336,190 @@ sub CreateBindingConfig(){
     return $binding_config_file;
 }
 
+
+sub RequiredExec(){
+    my ($attrName) = @_;
+
+    # Get the condor config value for the attribute
+    # and ensure it exists and
+    # has the correct permissions
+    my $attrValue = &QueryCondorConfig($attrName);
+    if( !$attrValue ){
+	die "Pre-Start Diagnostic FAILED: ".
+	    "$attrName is not defined\n";
+    } elsif( !-e $attrValue || !-x $attrValue ){
+	die "Pre-Start Diagnostic FAILED: ".
+	    "$attrValue defined by $attrName does not exist".
+	    " or is not executable by this user\n";
+    }
+
+    
+}
+
+sub RecommendedExec(){
+    my ($attrName) = @_;
+    
+    # Get the condor config value for the attribute
+    # and ensure it exists and
+    # has the correct permissions
+    my $attrValue = &QueryCondorConfig($attrName);
+    if( !$attrValue ){
+	warn "Pre-Start Diagnostic WARNING: ".
+	    "$attrName is not defined\n";
+    } elsif( !-e $attrValue || !-e $attrValue ){
+	warn "Pre-Start Diagnostic WARNING: ".
+	    "$attrValue defined by $attrName does not exist".
+	    " or is not executable by this user\n";
+    }
+}
+
+sub RequiredDir(){
+    my ($attrName) = @_;
+
+    # Get the condor config value for the attribute
+    # and ensure it exists and
+    # has the correct permissions
+    my $attrValue = &QueryCondorConfig($attrName);
+    if( !$attrValue ){
+	die "Pre-Start Diagnostic FAILED: ".
+	    "$attrName is not defined\n";
+    } elsif( !-e $attrValue || !-d $attrValue ){
+	die "Pre-Start Diagnostic FAILED: ".
+	    "$attrValue defined by $attrName does not exist".
+	    " or is not a directory\n";
+    }
+}
+
+sub RecommendedDir(){
+    my ($attrName) = @_;
+
+    # Get the condor config value for the attribute
+    # and ensure it exists and
+    # has the correct permissions
+    my $attrValue = &QueryCondorConfig($attrName);
+    if( !$attrValue ){
+	warn "Pre-Start Diagnostic WARNING: ".
+	    "$attrName is not defined\n";
+    } elsif( !-e $attrValue || !-d $attrValue ){
+	warn "Pre-Start Diagnostic WARNING: ".
+	    "$attrValue defined by $attrName does not exist".
+	    " or is not a directory\n";
+    }
+}
 #*********************************************************************
-# Currently this function just ensures that all of the binaries we 
-# will need exist.  Later incarnations of this function can perform
-# any number of pre-start sanity checks.
+# Currently this function just ensures that all of the binaries and 
+# directories we will need exist.  Later incarnations of this function 
+# can perform any number of pre-start sanity checks.
 #*********************************************************************
 sub PreStartDiagnostic(){
     
-    my $queryResult = 0;
+    my %AttrToEvalFunction;
 
+    
     # Check the required executables
-    my $attr;
-    foreach $attr(@REQUIRED_EXEC_ATTRS){
-	$queryResult = &QueryCondorConfig($attr);
-	if( !$queryResult ){
-	    die "Pre-Start Diagnostic Failed: ".
-		"$attr is not defined";
-	} elsif( !-e $queryResult || !-x $queryResult ){
-	    die "Pre-Start Diagnostic Failed: ".
-		"$queryResult does not exist or is not executable by this user";
+    my $reqExecString = &QueryCondorConfig($REQUIRED_EXEC_ATTR);
+    my $reqDirString = &QueryCondorConfig($REQUIRED_DIR_ATTR);
+    my $recExecString =  &QueryCondorConfig($RECOMMENDED_EXEC_ATTR);
+    my $recDirString = &QueryCondorConfig($RECOMMENDED_DIR_ATTR);
+    
+    
+    $AttrToEvalFunction{$reqExecString} = \&RequiredExec if( $recExecString );
+    $AttrToEvalFunction{$reqDirString} = \&RequiredDir if( $reqDirString );
+    $AttrToEvalFunction{$recExecString} = \&RecommendedExec if( $recExecString );
+    $AttrToEvalFunction{$recDirString} = \&RecommendedDir if( $recDirString );
+ 
+    my $eval_func = 0;
+    my @attrList = ();
+    foreach my $attrString( keys %AttrToEvalFunction ){
+	$eval_func = $AttrToEvalFunction{$attrString};
+	
+	@attrList = split /,\s*/, $attrString;
+	
+	foreach my $attrName(@attrList){
+	    &$eval_func($attrName);
+	}
+	
+    }
+    
+}
+
+sub PreStartDiagnosticXXX(){
+        
+    my $attrListString = 0;
+    my @attrList = ();
+    my $attrName = 0;
+    my $attrValue = 0;
+    
+    # Check the required executables
+    $attrListString = &QueryCondorConfig($REQUIRED_EXEC_ATTR);
+    if( $attrListString ){
+	# Tokenize into a list
+	@attrList = split /,\s+/, $attrListString;
+
+	# For each required executable attribute
+	foreach $attrName(@attrList){
+	    # Get the condor config value for each attribute
+	    # and ensure it exists and
+	    # has the correct permissions
+	    $attrValue = &QueryCondorConfig($attrName);
+	    if( !$attrValue ){
+		die "Pre-Start Diagnostic Failed: ".
+		    "$attrName is not defined";
+	    } elsif( !-e $attrValue || !-x $attrValue ){
+		die "Pre-Start Diagnostic Failed: ".
+		    "$attrValue does not exist or is not executable by this user\n";
+	    }
+	}
+    }
+    #BROKE FROM HERE DOWN
+
+    my @resultList;
+    my $queryResult;
+    # Check the recommended executables
+    $queryResult = &QueryCondorConfig($RECOMMENDED_EXEC_ATTR);
+    if( $queryResult ){
+	# Tokenize into a list
+	@resultList = split /','/, $queryResult;
+	
+	# Ensure each recommended executable exists and
+	# has the correct permissions
+	foreach(@resultList){
+	    if( !-e $_ || !-x $_ ){
+		warn "Pre-Start Diagnostic WARNING: ".
+		    "$_ does not exist or is not executable by this user\n";
+	    }
 	}
     }
 
     # Check the required directories
-    foreach my $attr(@REQUIRED_DIR_ATTRS){
-	$queryResult = &QueryCondorConfig($attr);
-	if( !$queryResult ){
-	    die "Pre-Start Diagnostic Failed: ".
-		"$attr is not defined";
-	} elsif( !-e $queryResult || !-d $queryResult ){
-	    die "Pre-Start Diagnostic Failed: ".
-		"$queryResult does not exist or is not a directory";
-	}
-    }
-
-    # Check the recommended executables
-    foreach $attr(@RECOMMENDED_EXEC_ATTRS){
-	$queryResult = &QueryCondorConfig($attr);
-	if( !$queryResult ){
-	    warn "Pre-Start Diagnostic WARNING: ".
-		"$attr is not defined";
-	} elsif( !-e $queryResult || !-e $queryResult ){
-	    warn "Pre-Start Diagnostic WARNING: ".
-		"$queryResult does not exist or is not executable by this user";
-	}
-    }
-
-    # Check the recommened directories
-    foreach $attr(@RECOMMENDED_DIR_ATTRS){
-	$queryResult = &QueryCondorConfig($attr);
-	if( !$queryResult ){
-	    die "Pre-Start Diagnostic WARNING: ".
-		"$attr is not defined";
-	} elsif( !-e $queryResult || !-d $queryResult ){
-	    warn "Pre-Start Diagnostic WARNING: ".
-		"$queryResult does not exist or is not a directory";
+    $queryResult = &QueryCondorConfig($REQUIRED_DIR_ATTR);
+    if( $queryResult ){
+	# Tokenize into a list
+	@resultList = split /','/, $queryResult;
+	
+	# Ensure each required directories exists
+	foreach(@resultList){
+	    if( !-e $_ || !-d $_ ){
+		die "Pre-Start Diagnostic Failed: ".
+		    "$_ does not exist or is not a directory\n";
+	    }
 	}
     }
     
+    # Check the recommended directories
+    $queryResult = &QueryCondorConfig($RECOMMENDED_DIR_ATTR);
+    if( $queryResult ){
+	# Tokenize into a list
+	@resultList = split /','/, $queryResult;
+	
+	# Ensure each recommended directories exists
+	foreach(@resultList){
+	    if( !-e $_ || !-d $_ ){
+		warn "Pre-Start Diagnostic WARNING: ".
+		    "$_ not exist or is not a directory\n";
+	    }
+	}    
+    }
 }
 
 #*********************************************************************
@@ -430,6 +547,7 @@ sub StartMaster(){
 
 
     #Construct the master arguments
+    push(@master_params, '-dyn') if( $dynamic_naming );
     #push @master_params, $FG_OPT if( $foreground );
     push @master_params, $FG_OPT;
     my $master_cmd = QueryCondorConfig($MASTER_ATTR);
