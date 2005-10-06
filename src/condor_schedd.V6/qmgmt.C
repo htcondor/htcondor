@@ -2704,7 +2704,7 @@ extern void mark_job_stopped(PROC_ID* job_id);
 
 int mark_idle(ClassAd *job)
 {
-    int     status, cluster, proc, hosts, job_managed, universe;
+    int     status, cluster, proc, hosts, universe;
 	PROC_ID	job_id;
 	static char birthdateAttr[200];
 	static time_t bDay = 0;
@@ -2719,15 +2719,15 @@ int mark_idle(ClassAd *job)
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
-	if ( universe == CONDOR_UNIVERSE_GRID ) {
-		MyString managed_status;
-		job->LookupString(ATTR_JOB_MANAGED, managed_status);
-		if ( managed_status == MANAGED_EXTERNAL ) {
-			// if a Globus Universe job is currently managed,
-			// don't touch a damn thing!!!  the gridmanager is
-			// in control.  stay out of its way!  -Todd 9/13/02
-			return 1;
-		}
+
+	MyString managed_status;
+	job->LookupString(ATTR_JOB_MANAGED, managed_status);
+	if ( managed_status == MANAGED_EXTERNAL ) {
+		// if a job is externally managed, don't touch a damn
+		// thing!!!  the gridmanager or schedd-on-the-side is
+		// in control.  stay out of its way!  -Todd 9/13/02
+		// -amended by Jaime 10/4/05
+		return 1;
 	}
 
 	int mirror_active = 0;

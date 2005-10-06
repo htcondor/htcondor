@@ -1167,6 +1167,13 @@ count( ClassAd *job )
 bool
 service_this_universe(int universe, ClassAd* job)
 {
+	/*  If a non-grid job is externally managed, it's been grabbed by
+		the schedd-on-the-side and we don't want to touch it.
+	 */
+	if ( universe != CONDOR_UNIVERSE_GRID && jobExternallyManaged( job ) ) {
+		return false;
+	}
+
 	/* If WantMatching attribute exists, evaluate it to discover if we want
 	   to "service" this universe or not.  BTW, "service" seems to really mean
 	   find a matching resource or not.... 
@@ -1339,6 +1346,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 		// Handle Mirror Job
 	handle_mirror_job_notification(job_ad, mode, job_id);
+
+		// If a non-grid job is externally managed, it's been grabbed by
+		// the schedd-on-the-side and we don't want to touch it.
+	if ( job_universe != CONDOR_UNIVERSE_GRID &&
+		 jobExternallyManaged( job_ad ) ) {
+
+		return;
+	}
 
 		// Handle Globus Universe
 	if (job_universe == CONDOR_UNIVERSE_GRID) {
@@ -1631,14 +1646,14 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 	jobad->LookupInteger(ATTR_JOB_UNIVERSE,univ);
 	bool managed = jobExternallyManaged(jobad);
 
+	if ( managed ) {
+		return 0;
+	}
+
 	if( univ==CONDOR_UNIVERSE_SCHEDULER || univ==CONDOR_UNIVERSE_LOCAL ) {
 		return 1;
 	} else if(univ==CONDOR_UNIVERSE_GRID) {
-		if(managed) {
-			return 0;
-		} else {
-			return 1;
-		}
+		return 1;
 	} else {
 		switch(status) {
 			case UNEXPANDED:
