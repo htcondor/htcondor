@@ -3517,6 +3517,9 @@ SetGlobusParams()
 			// then the user is using the old syntax (with grid_type).
 			// Deal with all the attributes that go into GridResource.
 
+		sprintf( buffer, "%s = \"%s\"", ATTR_JOB_GRID_TYPE, JobGridType );
+		InsertJobExpr( buffer, false );
+
 		if ( stricmp (JobGridType, "gt2") == MATCH ||
 			 stricmp (JobGridType, "gt3") == MATCH ||
 			 stricmp (JobGridType, "gt4") == MATCH ||
