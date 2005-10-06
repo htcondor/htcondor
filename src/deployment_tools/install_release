@@ -120,11 +120,11 @@ if( !$force ){
     unshift @tar_args, '-k';
 }
 
+# Store the initial working directory
+$iwd = cwd;
+
 #Setup globus-url-copy, if neccessary
 &SetupGurl() if( !$wget_flag );
-
-# Store the initial working directory
-$iwd = cwd; #File::Spec->curdir();
 
 #Move to install directory
 chdir $base_dir or die "Cannot chdir to $base_dir: $!";
@@ -263,7 +263,7 @@ sub FetchFileGurl(){
 					  $src_path,
 					  $dest_path);
     
-    #determine if the wget failed
+    #determine if the gurl failed
     if( $returnHashRef->{EXIT_VALUE} ){
 	&LogError(@{$returnHashRef->{ERRORS}});
 	&DieWithError("globus-url-copy failed");
