@@ -247,7 +247,7 @@ public:
 
 	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
 
-	bool receiveJobSandbox(const char* constraint, CondorError * errstack);
+	bool receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone = 0);
 
 	bool updateGSIcredential(const int cluster, const int proc, 
 		const char* path_to_proxy_file, CondorError * errstack);

@@ -241,9 +241,10 @@ DCSchedd::reschedule()
 	return sendCommand(RESCHEDULE, Stream::safe_sock, 0);
 }
 
-bool
-DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
+bool 
+DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone /*=0*/)
 {
+	if(numdone) { *numdone = 0; }
 	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
 	char *lhstr, *rhstr;
 	int reply;
@@ -394,7 +395,6 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
 		}
 	}	
 		
-		
 	rsock.eom();
 
 	rsock.encode();
@@ -402,6 +402,8 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
 	reply = OK;
 	rsock.code(reply);
 	rsock.eom();
+
+	if(numdone) { *numdone = JobAdsArrayLen; }
 
 	return true;
 }
