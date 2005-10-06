@@ -37,7 +37,9 @@ my $USAGE =
     "[-cleaninstall] [-cleanlocal] [-stop]\n".
     "[-logarchive] [-spoolarchive] [-execarchive]\n".
     "[-linklock] [-flock] [-bpid] [-artifact artifact_file]\n".
-    "[-log install_log][-help]\n";
+    "[-log install_log]\n".
+    "[-nogurl] [-globuslocation globus_location]\n".
+    "[-help]\n";
 
 my $INSTALL_LOG_DEFAULT = 'install.log';
 
@@ -63,6 +65,8 @@ my $ARCHIVEONLY_OPT       = '-archiveonly';
 my $LOGARCHIVE_OPT        = '-logarchive';
 my $SPOOLARCHIVE_OPT      = '-spoolarchive';
 my $EXECARCHIVE_OPT       = '-execarchive';
+my $GLOBUS_LOC_OPT        = '-globuslocation';
+my $NO_GURL_OPT           = '-nogurl';
 
 
 #***
@@ -84,6 +88,8 @@ my $flock_flag = 0;
 my $linklock_flag = 0;
 my $bpid_flag = 0;
 my $midwife_artifact = 0;
+my $no_gurl_flag = 0;
+my $globus_location = '/opt/globus';
 my $help_flag = 0;
 
 #***
@@ -107,6 +113,8 @@ GetOptions( 'force'=>\$force,
 	    'flock'=>\$flock_flag,
 	    'bpid'=>\$bpid_flag,
 	    'artifact=s'=>\$midwife_artifact,
+	    'nogurl'=>\$no_gurl_flag,
+	    'globuslocation=s'=>\$globus_location,
 	    'help'=>\$help_flag,
 	    );
 
@@ -219,6 +227,10 @@ sub CleanUpLocal(){
 
     # Archive the exec dir if required
     push @args, ($EXECARCHIVE_OPT, $exec_archive) if ($exec_archive);
+
+    # File transfer options
+    push @args, ($GLOBUS_LOC_OPT, $globus_location) if ($globus_location);
+    push @args, ($NO_GURL_OPT) if ($no_gurl_flag);
 
     # Find the cleanup_local executable
     my $local_cleanup_path = 

@@ -17,6 +17,7 @@ use File::Spec;
 use File::Path;
 use File::Copy;
 use File::Basename;
+use Cwd;
 
 #***
 # Constant Static Variables
@@ -25,10 +26,22 @@ my $USAGE = "Usage: condor_cleanup_local <-localdir local_dir>\n".
     "[-archiveonly]\n".
     "[-logarchive log_archive] [-spoolarchive spool_archive]\n".
     "[-execarchive exec_archive]\n".
+    "[-nogurl] [-globuslocation globus_location]\n".
     "[-help]\n";
 
 my $TAR_PROG = 'tar';
 my $GZIP_PROG = 'gzip';
+my $GURL_CMD = 'globus-url-copy';
+my $GURL_FILE_PROTOCOL_HEADER = 'file://';
+
+# Acceptable network protocols for fetching a file with globus-url-copy
+my %GURL_PROTOCOLS = ( 'http'=>1,
+		       'ftp'=>1,
+		       'gsiftp'=>1,
+		       );
+
+# Environment variables
+my $LD_LIBRARY_PATH = 'LD_LIBRARY_PATH';
 
 #***
 # Non-Constant Static Variables
@@ -38,7 +51,12 @@ my $archive_only = 0;
 my $log_archive = 0;
 my $spool_archive = 0;
 my $exec_archive = 0;
+my $gurl_flag = 1;
+my $globus_location = '/opt/globus';
 my $help = 0;
+
+my $iwd = 0;
+my @gurl_args = ();
 
 #***
 # Main Function
@@ -48,16 +66,25 @@ GetOptions('localdir=s'=>\$local_dir,
 	   'logarchive=s'=>\$log_archive,
 	   'spoolarchive=s'=>\$spool_archive,
 	   'execarchive=s'=>\$exec_archive,
+	   'gurl!'=>\$gurl_flag,
+	   'globuslocation=s'=>\$globus_location,
 	   'help'=>\$help,
 	   );
 
 # Check the usage
 die $USAGE if( !$local_dir || $help );
 
-# Convert to absolute paths
-# Because we are moving to the local_dir we need 
-# absolute paths for the other files specified
-&ConvertToAbPath();
+# Store the initial working directory
+$iwd = cwd;
+
+# Setup globus-url-copy, if necessary
+my $archive_flag = $log_archive || $spool_archive || $exec_archive;
+if( $archive_flag && $gurl_flag ){
+    &SetupGurl();
+}
+
+# Store the initial working directory
+$iwd = cwd;
 
 #Move to the local directory
 chdir $local_dir
@@ -73,34 +100,6 @@ if( !$archive_only ){
     rmtree('log', 0, 0);
     rmtree('spool', 0, 0);
     rmtree('execute', 0, 0);
-}
-
-#*********************************************************************
-# We cannot be sure that the user will pass absolute file paths.  
-# Therefore, we must convert arbitrary relative paths into absolute
-# paths.
-#*********************************************************************
-sub ConvertToAbPath(){
-    my @tempList = (\$local_dir, \$log_archive, 
-		    \$spool_archive, \$exec_archive);
-
-    
-    # foreach global reference in the list
-    foreach(@tempList){
-	
-	if( $$_ ){
-
-	    # Convert to absolute paths
-	    $$_ = File::Spec->rel2abs($$_);
-
-	    # Ensure the coversion was a success
-	    File::Spec->file_name_is_absolute($$_)
-		or warn "Could not convert $$_ to an absolute".
-		" path (possibly because it is in a different volume".
-		" that the current working directory";
-	}
-
-    }
 }
 
 #*********************************************************************
@@ -138,10 +137,109 @@ sub ArchiveDir(){
     !system $GZIP_PROG, @gzip_args
 	or die "FAILED: Failed to gzip $tar_name";
 
-    #3. Move it to the required spot
-    # mv temp.tar.gz $archive_path
-    #rename $gzip_name, $archive_path
-    move($gzip_name, $archive_path)
-	or die "FAILED: Failed to move $gzip_name to $archive_path: $!";
+    #3. Transfer the archive
+    &TransferArchive($gzip_name, $archive_path);
 
+}
+
+#*********************************************************************
+# Moves the archive to the storage destination
+#*********************************************************************
+sub TransferArchive(){
+    my ($archive_name, $archive_dest) = @_;  #Name the parameters
+    
+    if( $gurl_flag ){
+	# transfer with globus-url-copy
+	&TransferArchiveWithGurl($archive_name, $archive_dest);
+    } else{
+
+	# Ensure the file location is an absolute path (from iwd)
+	if( !File::Spec->file_name_is_absolute($archive_dest) ){
+	    $archive_dest = File::Spec->catpath(0, $iwd, $archive_dest);
+	}
+	
+	# Transfer with Perl Move
+	move($archive_name, $archive_dest)
+	    or die "FAILED: Failed to move $archive_name to $archive_dest: $!";
+    }
+}
+
+#*********************************************************************
+# Moves the archive to the storage destination using globus-url-copy
+#*********************************************************************
+sub TransferArchiveWithGurl(){
+    my ($archive_name, $archive_dest) = @_;  #Name the parameters
+
+    #1. Create the source url
+    my $src_url = $archive_name;
+
+    # Ensure the archive path is an absolute path
+    if( !File::Spec->file_name_is_absolute($src_url) ){
+	$src_url = File::Spec->rel2abs($src_url);
+    }
+    # Add the file protocol header
+    $src_url = $GURL_FILE_PROTOCOL_HEADER.$src_url;
+
+    
+    #2. Create the destination url
+    my $dest_url = $archive_dest;
+
+    # See if the destination url
+    # a. Has a protocol header?
+    # b. That the protocol header is valid?
+    # -
+    # match a protocol name followed by a colon and two forward slashes
+    # Ex: http://files.we.may/want
+    # $1 = protocol name
+    if( $dest_url =~ m{^(\w+)://} ){
+	if( !exists $GURL_PROTOCOLS{$1} ){
+	    &DieWithError( "This program does not currently support". 
+			   " the given protocol: $1");
+	}
+    }
+    
+    # c. Assume file system if there is no protocol header
+    else{
+	# Ensure the file location is an absolute path (from iwd)
+	if( !File::Spec->file_name_is_absolute($dest_url) ){
+	    $dest_url = File::Spec->catpath(0, $iwd, $dest_url);
+	}
+	# Append the file protocol header to the location
+	$dest_url = $GURL_FILE_PROTOCOL_HEADER.$dest_url;
+    }
+    
+    #3. Perform the transfer
+    #globus-url-copy [options] sourceURL destURL
+    push @gurl_args, ($src_url, $dest_url);
+    !system $GURL_CMD, @gurl_args
+	or die "FAILED: globus-url-copy failed to transfer".
+	" $src_url to $dest_url\n";
+}
+
+#*********************************************************************
+# Adds the globus location to the list of paths to check for 
+# dynamically linked libraries.
+#*********************************************************************
+sub SetupGurl(){
+    # Look up the current ld path list
+    my $ld_paths = $ENV{$LD_LIBRARY_PATH};
+
+    # Ensure the globus location is an absolute path
+    if( !File::Spec->file_name_is_absolute($globus_location) ){
+	$globus_location = File::Spec->catpath(0, $iwd, $globus_location);
+    }
+    
+    # Create globus libraries path
+    my $globus_lib_path = File::Spec->catpath(0, $globus_location, 'lib');
+
+    # Add globus location to the path list
+    if( $ld_paths ){
+	# colon-separated
+	$ld_paths = $ld_paths.':'.$globus_lib_path;
+    } else{
+	$ld_paths = $globus_lib_path;
+    }
+
+    # Reset the environment variable
+    $ENV{$LD_LIBRARY_PATH} = $ld_paths;
 }

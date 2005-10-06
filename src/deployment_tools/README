@@ -140,6 +140,7 @@ Programs
     [-cleaninstall] [-cleanlocal] [-stop]
     [-logarchive] [-spoolarchive] [-execarchive]
     [-linklock] [-flock] [-bpid] [-artifact artifact_file]
+    [-nogurl] [-globuslocation globus_location]
   - Subprograms
     + condor_local_stop
     + cleanup_release
@@ -163,14 +164,17 @@ Programs
 
 + condor_cleanup_local
   - Purpose: Cleanup and possibly archive local directory structure
-    (log, spool, execute).  
+    (log, spool, execute).  Can archive to a mounted file system, ftp
+    server, for grid ftp server.
   - Usage: condor_cleanup_local <-localdir local_dir>
     [-logarchive log_archive] [-spoolarchive spool_archive]
     [-execarchive exec_archive]
+    [-nogurl] [-globuslocation globus_location]
     [-help]
   - Subprograms:
     + tar
     + gzip
+    + globus-url-copy
 
 + flock_midwife
   - Purpose: Births a program, creating an artifact of the life of
