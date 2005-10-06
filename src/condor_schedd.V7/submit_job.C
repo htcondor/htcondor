@@ -104,6 +104,8 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 
 		// we want the job to hang around (taken from condor_submit.V6/submit.C)
 		MyString leaveinqueue;
+		leaveinqueue.sprintf("%s == %d", ATTR_JOB_STATUS, COMPLETED);
+		/*
 		leaveinqueue.sprintf("%s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
 			ATTR_JOB_STATUS,
 			COMPLETED,
@@ -111,8 +113,9 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 			ATTR_COMPLETION_DATE,
 			ATTR_COMPLETION_DATE,
 			60 * 60 * 24 * 10);
+		*/
 
-		src.Assign(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
+		src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
 	}
 
 	ExprTree * tree;
