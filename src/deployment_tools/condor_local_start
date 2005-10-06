@@ -336,7 +336,57 @@ sub CreateBindingConfig(){
     return $binding_config_file;
 }
 
+#*********************************************************************
+# Currently this function just ensures that all of the binaries and 
+# directories we will need exist.  Later incarnations of this function 
+# can perform any number of pre-start sanity checks.
+#*********************************************************************
+sub PreStartDiagnostic(){
+    
+    # Create a hash to map config attribute names
+    # to the functions that will evaluate whether the attribute value
+    # is valid
+    my %AttrToEvalFunction;
 
+    
+    # Query the recommended and required attributes
+    my $reqExecString = &QueryCondorConfig($REQUIRED_EXEC_ATTR);
+    my $reqDirString = &QueryCondorConfig($REQUIRED_DIR_ATTR);
+    my $recExecString =  &QueryCondorConfig($RECOMMENDED_EXEC_ATTR);
+    my $recDirString = &QueryCondorConfig($RECOMMENDED_DIR_ATTR);
+    
+    # Map the attributes to the evaluation functions
+    $AttrToEvalFunction{$reqExecString} = \&RequiredExec if( $recExecString );
+    $AttrToEvalFunction{$reqDirString} = \&RequiredDir if( $reqDirString );
+    $AttrToEvalFunction{$recExecString} = \&RecommendedExec if( $recExecString );
+    $AttrToEvalFunction{$recDirString} = \&RecommendedDir if( $recDirString );
+ 
+    # For each individual attribute name in the required/recommended list
+    # perform the evaluation function.
+    my $eval_func = 0;
+    my @attrList = ();
+    foreach my $attrString( keys %AttrToEvalFunction ){
+	# retrieve the evaluation function
+	$eval_func = $AttrToEvalFunction{$attrString};
+	# tokenize the list of required/recommended attributes
+	@attrList = split /,\s*/, $attrString;
+	
+	# foreach attribute, run the evaluation function
+	foreach my $attrName(@attrList){
+	    &$eval_func($attrName);
+	}
+	
+    }
+    
+}
+
+
+#*********************************************************************
+# Determines whether the executable represented by the given
+# condor_config attribute is defined, exists, and is executable by
+# this user.
+# Dies on failure.
+#*********************************************************************
 sub RequiredExec(){
     my ($attrName) = @_;
 
@@ -356,6 +406,12 @@ sub RequiredExec(){
     
 }
 
+#*********************************************************************
+# Determines whether the executable represented by the given
+# condor_config attribute is defined, exists, and is executable by
+# this user.
+# Warns on failure.
+#*********************************************************************
 sub RecommendedExec(){
     my ($attrName) = @_;
     
@@ -373,6 +429,11 @@ sub RecommendedExec(){
     }
 }
 
+#*********************************************************************
+# Determines whether the directory represented by the given
+# condor_config attribute is defined, exists, and is a directory..
+# Dies on failure.
+#*********************************************************************
 sub RequiredDir(){
     my ($attrName) = @_;
 
@@ -390,6 +451,11 @@ sub RequiredDir(){
     }
 }
 
+#*********************************************************************
+# Determines whether the directory represented by the given
+# condor_config attribute is defined, exists, and is a directory..
+# Warns on failure.
+#*********************************************************************
 sub RecommendedDir(){
     my ($attrName) = @_;
 
@@ -404,121 +470,6 @@ sub RecommendedDir(){
 	warn "Pre-Start Diagnostic WARNING: ".
 	    "$attrValue defined by $attrName does not exist".
 	    " or is not a directory\n";
-    }
-}
-#*********************************************************************
-# Currently this function just ensures that all of the binaries and 
-# directories we will need exist.  Later incarnations of this function 
-# can perform any number of pre-start sanity checks.
-#*********************************************************************
-sub PreStartDiagnostic(){
-    
-    my %AttrToEvalFunction;
-
-    
-    # Check the required executables
-    my $reqExecString = &QueryCondorConfig($REQUIRED_EXEC_ATTR);
-    my $reqDirString = &QueryCondorConfig($REQUIRED_DIR_ATTR);
-    my $recExecString =  &QueryCondorConfig($RECOMMENDED_EXEC_ATTR);
-    my $recDirString = &QueryCondorConfig($RECOMMENDED_DIR_ATTR);
-    
-    
-    $AttrToEvalFunction{$reqExecString} = \&RequiredExec if( $recExecString );
-    $AttrToEvalFunction{$reqDirString} = \&RequiredDir if( $reqDirString );
-    $AttrToEvalFunction{$recExecString} = \&RecommendedExec if( $recExecString );
-    $AttrToEvalFunction{$recDirString} = \&RecommendedDir if( $recDirString );
- 
-    my $eval_func = 0;
-    my @attrList = ();
-    foreach my $attrString( keys %AttrToEvalFunction ){
-	$eval_func = $AttrToEvalFunction{$attrString};
-	
-	@attrList = split /,\s*/, $attrString;
-	
-	foreach my $attrName(@attrList){
-	    &$eval_func($attrName);
-	}
-	
-    }
-    
-}
-
-sub PreStartDiagnosticXXX(){
-        
-    my $attrListString = 0;
-    my @attrList = ();
-    my $attrName = 0;
-    my $attrValue = 0;
-    
-    # Check the required executables
-    $attrListString = &QueryCondorConfig($REQUIRED_EXEC_ATTR);
-    if( $attrListString ){
-	# Tokenize into a list
-	@attrList = split /,\s+/, $attrListString;
-
-	# For each required executable attribute
-	foreach $attrName(@attrList){
-	    # Get the condor config value for each attribute
-	    # and ensure it exists and
-	    # has the correct permissions
-	    $attrValue = &QueryCondorConfig($attrName);
-	    if( !$attrValue ){
-		die "Pre-Start Diagnostic Failed: ".
-		    "$attrName is not defined";
-	    } elsif( !-e $attrValue || !-x $attrValue ){
-		die "Pre-Start Diagnostic Failed: ".
-		    "$attrValue does not exist or is not executable by this user\n";
-	    }
-	}
-    }
-    #BROKE FROM HERE DOWN
-
-    my @resultList;
-    my $queryResult;
-    # Check the recommended executables
-    $queryResult = &QueryCondorConfig($RECOMMENDED_EXEC_ATTR);
-    if( $queryResult ){
-	# Tokenize into a list
-	@resultList = split /','/, $queryResult;
-	
-	# Ensure each recommended executable exists and
-	# has the correct permissions
-	foreach(@resultList){
-	    if( !-e $_ || !-x $_ ){
-		warn "Pre-Start Diagnostic WARNING: ".
-		    "$_ does not exist or is not executable by this user\n";
-	    }
-	}
-    }
-
-    # Check the required directories
-    $queryResult = &QueryCondorConfig($REQUIRED_DIR_ATTR);
-    if( $queryResult ){
-	# Tokenize into a list
-	@resultList = split /','/, $queryResult;
-	
-	# Ensure each required directories exists
-	foreach(@resultList){
-	    if( !-e $_ || !-d $_ ){
-		die "Pre-Start Diagnostic Failed: ".
-		    "$_ does not exist or is not a directory\n";
-	    }
-	}
-    }
-    
-    # Check the recommended directories
-    $queryResult = &QueryCondorConfig($RECOMMENDED_DIR_ATTR);
-    if( $queryResult ){
-	# Tokenize into a list
-	@resultList = split /','/, $queryResult;
-	
-	# Ensure each recommended directories exists
-	foreach(@resultList){
-	    if( !-e $_ || !-d $_ ){
-		warn "Pre-Start Diagnostic WARNING: ".
-		    "$_ not exist or is not a directory\n";
-	    }
-	}    
     }
 }
 
