@@ -980,17 +980,19 @@ FindPartitionName( const ViewName &viewName, ClassAd *rep, ViewName &partition )
 bool ClassAdCollection::
 AddClassAd( const string &key, ClassAd *newAd )
 {
-	if( currentXactionName != "" ) {
+	if (currentXactionName != "") {
 		ClassAd *rec = _AddClassAd( currentXactionName, key, newAd );
-		if( !rec ) return( false );
+		if (!rec){
+            return false;
+        }
 
 		ServerTransaction       *xaction;
 		XactionTable::iterator  itr = xactionTable.find( currentXactionName );
-		if( itr == xactionTable.end( ) ) {
+		if (itr == xactionTable.end()) {
 			CondorErrno = ERR_NO_SUCH_TRANSACTION;
 			CondorErrMsg = "transaction " +currentXactionName+ " doesn't exist";
 			delete rec;
-			return( false );
+			return false;
 		}
 		xaction = itr->second;
 		xaction->AppendRecord( ClassAdCollOp_AddClassAd, key, rec );
@@ -998,75 +1000,76 @@ AddClassAd( const string &key, ClassAd *newAd )
 		ClassAdTable::iterator	itr = classadTable.find( key );
 		ClassAd					*ad;
 		ClassAdProxy			proxy;
+        bool                    duplicate_ad = false;
 
-		if( itr != classadTable.end( ) ) {
-				// some ad already present --- replace 
+		if (itr != classadTable.end()) {
+            // some ad already present --- replace 
 			ad = itr->second.ad;
-			viewTree.ClassAdDeleted( this, key, ad );
-			delete ad;
-			classadTable.erase( itr );
-			if (Cache==true) {
-			  Max_Classad--;
-			}
+            if (ad == newAd) {
+                duplicate_ad = true;
+            } else {
+                viewTree.ClassAdDeleted( this, key, ad );
+                delete ad;
+                classadTable.erase( itr );
+                if (Cache==true) {
+                    Max_Classad--;
+                }
+            }
+		} else if (Cache == true){
+            tag ptr;				
+            if (ClassAdStorage.FindInFile( key,ptr )){
+                ClassAdStorage.DeleteFromStorageFile(key);
+            };
 		}
-
-		else{
-		  if ( Cache== true){
-		        tag ptr;				
-		        if (ClassAdStorage.FindInFile( key,ptr )){
-		           ClassAdStorage.DeleteFromStorageFile(key);
-		        };
-		  }
-		}
-		if( !viewTree.ClassAdInserted( this, key, newAd ) ) {
+		if (!duplicate_ad && !viewTree.ClassAdInserted(this, key, newAd)) {
 			delete newAd;
 			return( false );
 		}
 
-		if ( Cache==true ) {
-		  if ( Max_Classad ==  MaxCacheSize){
-		    string write_back_key;
-		    if (!ReplaceClassad(write_back_key)){
-		      CondorErrno = ERR_CANNOT_REPLACE;
-		      CondorErrMsg = "failed in replacing classad in cache";
-		    };
+		if (!duplicate_ad && Cache==true) {
+            if (Max_Classad ==  MaxCacheSize){
+                string write_back_key;
+                if (!ReplaceClassad(write_back_key)){
+                    CondorErrno = ERR_CANNOT_REPLACE;
+                    CondorErrMsg = "failed in replacing classad in cache";
+                }
 
-		    if (CheckDirty(write_back_key)){
-		      string WriteBackClassad;
+                if (CheckDirty(write_back_key)){
+                    string WriteBackClassad;
+                    
+                    if (!GetStringClassAd(write_back_key,WriteBackClassad)){
+                        CondorErrMsg = "failed in get classad from cache";
+                    };
 		      
-		      if (!GetStringClassAd(write_back_key,WriteBackClassad)){
-			CondorErrMsg = "failed in get classad from cache";
-		      };
-		      
-		      ClassAdStorage.WriteBack(write_back_key,WriteBackClassad );
-		      ClearDirty(write_back_key);
-		    };          
-		    itr=classadTable.find(write_back_key);
-		    ad=itr->second.ad;
-		    delete ad;                                          
-		    classadTable.erase(write_back_key);
-		    Max_Classad--;
-		  }
-		  SetDirty(key);
-		  Max_Classad++;
+                    ClassAdStorage.WriteBack(write_back_key,WriteBackClassad );
+                    ClearDirty(write_back_key);
+                }
+                itr=classadTable.find(write_back_key);
+                ad=itr->second.ad;
+                delete ad;                                          
+                classadTable.erase(write_back_key);
+                Max_Classad--;
+            }
+            SetDirty(key);
+            Max_Classad++;
 		}
 		proxy.ad = newAd;
 		classadTable[key] = proxy;
-			// log if possible
-		if( log_fp ) {
-			ClassAd *rec = _AddClassAd( "", key, newAd );
-			if( !WriteLogEntry( log_fp, rec ) ) {
+        // log if possible
+		if (log_fp) {
+			ClassAd *rec = _AddClassAd("", key, newAd);
+			if (!WriteLogEntry(log_fp, rec)) {
 				CondorErrMsg += "; failed to log add classad";
-				rec->Remove( ATTR_AD );
+				rec->Remove(ATTR_AD);
 				delete rec;
-				return( false );
+				return false;
 			}
-			rec->Remove( ATTR_AD );
+			rec->Remove(ATTR_AD);
 			delete rec;
 		}
 	}
 
-	return( true );
+	return true;
 }
 
 
