@@ -276,6 +276,12 @@ void BaseJob::DoneWithJob()
 		}
 		break;
 
+		case IDLE:
+		{
+			jobAd->Assign( ATTR_JOB_MANAGED, MANAGED_SCHEDD );
+		}
+		break;
+
 		default:
 		{
 			EXCEPT("BaseJob::DoneWithJob called with unexpected state %s (%d)\n", getJobStatusString(condorState), condorState);
