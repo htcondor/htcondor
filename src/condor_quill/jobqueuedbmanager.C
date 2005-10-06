@@ -1557,9 +1557,9 @@ JobQueueDBManager::processSetAttribute(char* key,
 	char  pid[512];
 	int   job_id_type;
 	char* endptr;
-	char* newvalue;
-  
-	int sql_str_len = (sizeof(value) + MAX_FIXED_SQL_STR_LENGTH);
+	char* newvalue;  
+
+	int sql_str_len = (strlen(value) + MAX_FIXED_SQL_STR_LENGTH);
 	sql_str_del_in = (char *) malloc(sql_str_len * sizeof(char));
 	memset(sql_str_del_in, 0, sql_str_len);
 	
