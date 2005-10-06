@@ -72,20 +72,23 @@ int main(int argc, char **argv)
 	VanillaToGrid::vanillaToGrid(&newad, argv[2]);
 	//====================================================================
 
-	ClassAd oldadout;
-	new_to_old(newad, oldadout); 
 
 	int cluster,proc;
-	if( ! submit_job( oldadout, 0, 0, &cluster, &proc ) ) {
+	if( ! submit_job( newad, 0, 0, &cluster, &proc ) ) {
 		fprintf(stderr, "Failed to submit job\n");
 	}
 	printf("Successfully submitted %d.%d\n",cluster,proc);
 
-	// Convert to old classad string
-	MyString out;
-	oldadout.sPrint(out);
+	if(0) // Print the transformed add.
+	{
+		ClassAd oldadout;
+		new_to_old(newad, oldadout); 
+		// Convert to old classad string
+		MyString out;
+		oldadout.sPrint(out);
+		printf("%s\n", out.Value());
+	}
 
-	//printf("%s\n", out.Value());
 
 	return 0;
 }

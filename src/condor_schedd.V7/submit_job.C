@@ -5,7 +5,9 @@
 #include "dc_schedd.h"
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
-
+#include "classad_newold.h"
+#define WANT_NAMESPACES
+#include "classad_distribution.h"
 
 
 bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
@@ -151,4 +153,13 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 	if(proc_out) { *proc_out = proc; }
 
 	return true;
+}
+
+bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+{
+	ClassAd src2;
+	if( ! new_to_old(src, src2) ) {
+		return false;
+	}
+	return submit_job(src2, schedd_name, pool_name, cluster_out, proc_out);
 }
