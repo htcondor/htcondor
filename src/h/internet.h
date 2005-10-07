@@ -107,6 +107,15 @@ char* getAddrFromClaimId( const char* id );
    this machine.   Returns 1 if successful, 0 on error. */
 int _condor_local_bind( int fd );
 
+int is_priv_net(uint32_t ip);
+int in_same_net(uint32_t ipA, uint32_t ipB);
+char *ipport_to_string(const unsigned int ip, const unsigned short port);
+char *prt_fds(int maxfd, fd_set *fds);
+
+/* Get the address that a socket is bound to */
+// @ret: NULL if failed; non-NULL if succeed
+struct sockaddr_in *getSockAddr(int sockfd);
+
 #if defined(__cplusplus)
 }
 #endif

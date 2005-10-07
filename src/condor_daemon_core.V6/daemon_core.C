@@ -28,6 +28,11 @@
 // //////////////////////////////////////////////////////////////////////
 
 #include "condor_common.h"
+#if HAVE_EXT_GCB
+extern "C" {
+void Generic_stop_logging();
+}
+#endif
 
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
@@ -5798,6 +5803,15 @@ int DaemonCore::Create_Process(
 			// once again, make sure that if the dprintf code opened a
 			// lock file and has an fd, that we close it before we
 			// exec() so we don't leak it.
+#if HAVE_EXT_GCB
+		/*
+		  this method currently only lives in libGCB.a, so don't even
+		  try to param() or call this function unless we're on a
+		  platform where we're using the GCB external
+		*/
+        Generic_stop_logging();
+#endif
+
 		if( LockFd >= 0 ) {
 			close( LockFd );
 			LockFd = -1;

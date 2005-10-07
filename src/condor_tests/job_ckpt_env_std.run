@@ -27,13 +27,15 @@ _EOX
 
 @CondorTest::expected_output = split '\n', $foo;
 
-@CondorTest::skipped_output_lines = ( 4, 5, 6 );
+@CondorTest::skipped_output_lines = ( 4, 5, 6, 7 );
 # Line 4: 'environ[3] = "CONDOR_VM=vm1"', and we don't know what vm
 # we're going to run on, so just skip it.
-# Line 5: 'environ[4] = "CONDOR_SCRATCH_DIR=/tmp/condor/execute/dir_15341"'
+# Line 5: 'environ[4] = "_condor_BIND_ALL_INTERFACES=FALSE"'
+# we don't know (or care) if this should be TRUE or FALSE, so skip it.
+# Line 6: 'environ[5] = "CONDOR_SCRATCH_DIR=/tmp/condor/execute/dir_15341"'
 # this seems to be a new feature in the job env of a standard environment,
 # since the dir nuber always changes, we need to ignore this.
-# Line 6: 'argv[0] = "condor_exec.1213.0"', and we don't know the
+# Line 7 'argv[0] = "condor_exec.1213.0"', and we don't know the
 # cluster number, so just skip it.
 
 print join "\n", @CondorTest::expected_output; 

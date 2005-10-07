@@ -450,6 +450,15 @@ QUILL_FLAGS =
 #endif
 
 
+#if HAVE_EXT_GCB
+#  if ! HAVE_GNU_LD
+#    error GCB ENABLED BUT WE DO NOT HAVE GNU LD
+#  endif
+WRAP_LDFLAGS = -Wl,--wrap,socket -Wl,--wrap,bind -Wl,--wrap,listen -Wl,--wrap,connect -Wl,--wrap,accept -Wl,--wrap,select -Wl,--wrap,recv -Wl,--wrap,read -Wl,--wrap,recvfrom -Wl,--wrap,send -Wl,--wrap,sendto -Wl,--wrap,write -Wl,--wrap,close -Wl,--wrap,dup -Wl,--wrap,dup2 -Wl,--wrap,getsockname -Wl,--wrap,getsockaddr -Wl,--wrap,getsockopt -Wl,--wrap,execv -Wl,--wrap,execve -Wl,--wrap,execl
+GCB_FLAGS = -I$(GCB_INC)
+#endif
+
+
 /********************************************
  end of externals-specific settings and flags
 ********************************************/
@@ -459,7 +468,8 @@ VENDOR_C_FLAGS = CFlags -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS) \
-		 $(QUILL_FLAGS)
+		 $(QUILL_FLAGS) $(GCB_FLAGS)
+
 
 /*
 Generally, compile with -fPIC for position-independent code.
@@ -507,6 +517,7 @@ SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
+
 /* common ld flags which should be first in the list */
 COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
 
@@ -514,9 +525,11 @@ COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) -lm $(LDFLAGS) $(CONFIGURE_LIBS)
 COM_LDFLAGS_L = 
 
 /* The various lists of needed ldflags for differing contexts */
-ALL_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
+NOWRAP_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
+ALL_LDFLAGS = $(NOWRAP_LDFLAGS) $(WRAP_LDFLAGS)
 TEST_LDFLAGS = $(COM_LDFLAGS_F) $(TEST_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
-PURIFY_LDFLAGS = $(COM_LDFLAGS_F) $(PURIFY_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
+PURIFY_LDFLAGS = $(COM_LDFLAGS_F) $(PURIFY_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L) $(WRAP_LDFLAGS)
+
 
 STD_LIBS = \
   $(CUTIL_LIB) \
@@ -544,6 +557,5 @@ STD_LIBS = \
   $(PRE_EXT_LIBS) \
   $(SECURITY_LIB) \
   $(PCRE_LIB) \
+  $(GCB_LIB) \
   $(POST_EXT_LIBS)
-
-

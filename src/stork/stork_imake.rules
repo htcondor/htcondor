@@ -3,7 +3,7 @@
 /* Build a core (supported) module target */
 #define stork_module_target(program,objlist,libs) @@\
 XCOMM Begin translation of func(stork_module_target) @@\
-c_plus_public_target(program,$(STORK_MODULE_DIR),objlist,libs) @@\
+c_plus_public_nowrap_target(program,$(STORK_MODULE_DIR),objlist,libs) @@\
 XCOMM End translation of func(stork_module_target)
 
 /* Build a contrib (unsupported) target */
@@ -63,7 +63,7 @@ XCOMM End translation of func(stork_module_strip_link_target)
 #define stork_contrib_module_target(program,objlist,libs) @@\
 XCOMM Begin translation of func(stork_contrib_module_target) @@\
 contrib_target(program) @@\
-c_plus_target(program,objlist,libs) @@\
+c_plus_nowrap_target(program,objlist,libs) @@\
 stork_contrib_release_target(program,$(STORK_MODULE_DIR),EXECUTABLE_MODE) @@\
 stork_contrib_strip_target(program,$(STORK_MODULE_DIR),EXECUTABLE_MODE) @@\
 XCOMM End translation of func(stork_contrib_module_target)

@@ -728,10 +728,27 @@ else
 fi
 
 #########
+# figure out if we're using GNU ld (and therefore, can use --wrap)
+#########
+GET_GCC_VALUE([ld used by gcc],[-print-prog-name=ld],[gcc_ld_prog])
+_gcc_ld_dir=`AS_DIRNAME(["$_cv_gcc_ld_prog"])`
+if test "$_gcc_ld_dir" = "." ; then
+  # gcc doesn't have a full path, find out what we're really using
+  AC_PATH_PROG([LD],[ld],[no],[$PATH])
+else
+  LD=$_cv_gcc_ld_prog
+fi
+
+CHECK_PROG_IS_GNU([$LD],[ld])
+if test $_cv_ld_is_gnu = yes; then
+   AC_DEFINE(HAVE_GNU_LD,1,[are we using the GNU linker])
+fi
+
+
+#########
 # figure out what linker flags put us in static-link mode
 #########
-gcc_ld_prog=`gcc -print-prog-name=ld`
-AC_MSG_NOTICE([checking what gcc flag forces $gcc_ld_prog into static mode])
+AC_MSG_NOTICE([checking what gcc flag forces $_cv_gcc_ld_prog into static mode])
 gcc_static_ld_flag=""
 # determine the flags...
 if test $os = "AIX" ; then
@@ -1374,6 +1391,11 @@ CONDOR_EXTERNAL_VERSION([gsoap],[2.7])
 CONDOR_EXTERNAL_VERSION([pcre],[5.0])
 
 CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
+
+# GCB only matters and works if we have GNU ld...
+if test x$_cv_ld_is_gnu = xyes; then
+  CONDOR_EXTERNAL_VERSION([gcb],[1.2.1])
+fi
 
 else
 # if there's no externals at all, we still need to define these to

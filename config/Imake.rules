@@ -246,20 +246,51 @@ clean::								@@\
 XCOMM End translation of func(c_plus_target)
 #endif  /* c_plus_target */
 
-#else
+
+#ifndef c_plus_nowrap_target
+#define	c_plus_nowrap_target(program,objlist,libs)		@@\
+XCOMM Begin translation of func(c_plus_target)			@@\
+program: $(filter DEP_FILTER,objlist libs)			@@\
+	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
+	$(CC_LINK) $(C_PLUS_FLAGS) -o program __prelink__.o \
+		$(NOWRAP_LDFLAGS) $(DEMANGLE)			@@\
+	rm -f __prelink__.o					@@\
+clean::								@@\
+	rm -f program objlist					@@\
+XCOMM End translation of func(c_plus_nowrap_target)
+#endif  /* c_plus_nowarp_target */
+
+
+#else  /* ! NEEDS_PRELINKER */
+
+
+#ifndef c_plus_target_real
+#define c_plus_target_real(program,objlist,libs,ldflags)	@@\
+XCOMM Begin translation of func(c_plus_target_real)		@@\
+program: $(filter DEP_FILTER,objlist libs)			@@\
+	$(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs ldflags $(DEMANGLE) @@\
+clean::								@@\
+	rm -f program objlist					@@\
+XCOMM End translation of func(c_plus_target_real)
+#endif  /* c_plus_target_real */
 
 #ifndef c_plus_target
 #define	c_plus_target(program,objlist,libs)			@@\
-XCOMM Begin translation of func(c_plus_target) @@\
-program: $(filter DEP_FILTER,objlist libs)						@@\
-	$(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs \
-		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
-clean::								@@\
-	rm -f program objlist			@@\
+XCOMM Begin translation of func(c_plus_target)			@@\
+c_plus_target_real(program,objlist,libs,$(ALL_LDFLAGS))		@@\
 XCOMM End translation of func(c_plus_target)
 #endif  /* c_plus_target */
 
-#endif
+#ifndef c_plus_nowrap_target
+#define	c_plus_nowrap_target(program,objlist,libs)		@@\
+XCOMM Begin translation of func(c_plus_nowrap_target)		@@\
+c_plus_target_real(program,objlist,libs,$(NOWRAP_LDFLAGS))	@@\
+XCOMM End translation of func(c_plus_nowrap_target)
+#endif  /* c_plus_nowrap_target */
+
+
+#endif  /* NEEDS_PRELINKER */
+
 
 /*
 ** Build a C++ program from .o files and libraries supplying the compile and
@@ -639,28 +670,44 @@ XCOMM End translation of func(static_target)
 
 #else  /* ! NEEDS_PRELINKER */
 
-#ifndef	static_target
+
+#ifndef static_target_real
 #if HAS_STATIC
-#define	static_target(program,objlist,libs,dir)		@@\
-XCOMM Begin translation of func(static_target) @@\
-dir/program: program.static				@@\
-	/bin/rm -f dir/program				@@\
-	cp program.static dir/program			@@\
+#define static_target_real(program,objlist,libs,dir,ldflags)	@@\
+XCOMM Begin translation of func(static_target_real)		@@\
+dir/program: program.static					@@\
+	/bin/rm -f dir/program					@@\
+	cp program.static dir/program				@@\
 	chmod EXECUTABLE_MODE dir/program			@@\
-	$(STRIP) dir/program				@@\
-program.static: $(filter DEP_FILTER,objlist libs) 				@@\
-	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
+	$(STRIP) dir/program					@@\
+program.static: $(filter DEP_FILTER,objlist libs) 		@@\
+	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program.static objlist libs ldflags $(DEMANGLE) @@\
 clean:: 							@@\
 	rm -f program.static objlist				@@\
 static:: dir/program			@@\
-XCOMM End translation of func(static_target)
+XCOMM End translation of func(static_target_real)
 #else  /* ! HAS_STATIC */
-#define	static_target(program,objlist,libs,dir)	@@\
-XCOMM Begin translation of func(static_target)	@@\
-static::					@@\
-XCOMM End translation of func(static_target)
+#define static_target_real(program,objlist,libs,dir,ldflags)	@@\
+XCOMM Begin translation of func(static_target_real)		@@\
+static::							@@\
+XCOMM End translation of func(static_target_real)
 #endif  /* HAS_STATIC */
+#endif  /* static_target_real */
+
+#ifndef static_target
+#define static_target(program,objlist,libs,dir)			@@\
+XCOMM Begin translation of func(static_target)			@@\
+static_target_real(program,objlist,libs,dir,$(ALL_LDFLAGS))	@@\
+XCOMM End translation of func(static_target)
 #endif  /* static_target */
+
+#ifndef static_nowrap_target
+#define static_nowrap_target(program,objlist,libs,dir)		@@\
+XCOMM Begin translation of func(static_nowrap_target)		@@\
+static_target_real(program,objlist,libs,dir,$(NOWRAP_LDFLAGS))	@@\
+XCOMM End translation of func(static_nowrap_target)
+#endif  /* static_target */
+
 
 #endif  /* NEEDS_PRELINKER */
 
@@ -1072,6 +1119,23 @@ pure_c_plus_target(program,objlist,libs) @@\
 purecov_c_plus_target(program,objlist,libs) @@\
 XCOMM End translation of func(c_plus_public_target)
 #endif /* c_plus_public_target */
+
+
+/* Build public super target without any --wrap flags
+ * Build a program from C++ source, as well as the most common
+ * dependent public release targets.
+ */
+#ifndef c_plus_public_nowrap_target
+#define c_plus_public_nowrap_target(program,dir,objlist,libs) @@\
+XCOMM Begin translation of func(c_plus_public_nowrap_target) @@\
+all_target(program) @@\
+c_plus_nowrap_target(program,objlist,libs) @@\
+release_target(program,dir,EXECUTABLE_MODE) @@\
+strip_target(program,dir,EXECUTABLE_MODE) @@\
+static_nowrap_target(program,objlist,libs,$(STATIC_DIR)/dir) @@\
+XCOMM End translation of func(c_plus_public_nowrap_target)
+#endif /* c_plus_public_nowrap_target */
+
 
 
 /***********************************************************************

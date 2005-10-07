@@ -1,3 +1,8 @@
+10/07/05 V6_7-gcb-2-merge-1
+   The state of the V6_7-gcb-2-branch for the first (and final) merge
+   into the V6_7-branch.  This is the first time GCB support will go
+   into the mainline codebase.
+
 10/05/05 V6_6-merge-48
    The state of the V6_6-branch for a merge into V6_7-branch.  Fixes
    a bunch of condor_tests stuff, such that we should be close to all

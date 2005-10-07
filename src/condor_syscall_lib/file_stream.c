@@ -120,6 +120,8 @@ open_file_stream( const char *file, int flags, size_t *len )
 			dprintf( D_ALWAYS, "File stream access \"%s\" failed\n",local_path);
 			return -1;
 		}
+        dprintf(D_NETWORK, "Opening TCP stream to %s\n",
+                ipport_to_string(htonl(addr), htons(port)));
 
 			/* Connect to the specified party */
 		fd = open_tcp_stream( addr, port );

@@ -178,11 +178,19 @@ public:
 	/// peer's IP address, integer version (e.g. 2154390801)
 	unsigned int endpoint_ip_int();
 
+    /// my port and IP address in a struct sockaddr_in
+    /// @args: the address is returned via 'sin'
+    /// @ret: 0 if succeed, -1 if failed
+    int mypoint(struct sockaddr_in *sin);
+
 	/// local port number
 	int get_port();
 
 	/// local ip address integer
 	unsigned int get_ip_int();
+
+    /// sinful address in the form of "<a.b.c.d:pppp>"
+    char * Sock::get_sinful();
 
 	/// local file descriptor (fd) of this socket
 	int get_file_desc();

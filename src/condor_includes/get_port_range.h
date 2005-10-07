@@ -24,7 +24,11 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
 int get_port_range(int *low_port, int *high_port);
+
+int _condor_bind_all_interfaces( void );
+
 #if defined(__cplusplus)
 }
 #endif

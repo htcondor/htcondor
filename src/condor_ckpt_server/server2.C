@@ -115,7 +115,10 @@ void Server::Init()
 
 		// We have to do this after we call config, not in the Server
 		// constructor, or we won't have NETWORK_INTERFACE yet.
-	server_addr.s_addr = htonl( my_ip_addr() );
+        // Commented out the following line so that server_addr is determined after
+        // the socket is bound to an address. This is a part of making Condor GCB
+        // friendly. -- Sonny 5/18/2005
+	//server_addr.s_addr = htonl( my_ip_addr() );
 
 	dprintf( D_ALWAYS,
 			 "******************************************************\n" );
@@ -333,8 +336,9 @@ int Server::SetUpPort(u_short port)
   memset((char*) &socket_addr, 0, sizeof(struct sockaddr_in));
   socket_addr.sin_family = AF_INET;
   socket_addr.sin_port = htons(port);
-  memcpy((char*) &socket_addr.sin_addr, (char*) &server_addr, 
-	 sizeof(struct in_addr));
+  // Let OS choose address --Sonny 5/18/2005
+  //memcpy((char*) &socket_addr.sin_addr, (char*) &server_addr, 
+  //	 sizeof(struct in_addr));
   if ((ret_code=I_bind(temp_sd, &socket_addr)) != CKPT_OK) {
       dprintf(D_ALWAYS, "ERROR: I_bind() returned an error (#%d)\n", ret_code);
       exit(ret_code);
@@ -347,6 +351,15 @@ int Server::SetUpPort(u_short port)
       dprintf(D_ALWAYS, "ERROR: cannot use Condor well-known port\n");
       exit(BIND_ERROR);
   }
+  // Now we can set server_addr with the address that temp_sd is bound to
+  struct sockaddr_in *tmp = getSockAddr(temp_sd);
+  if (tmp == NULL) {
+      dprintf(D_ALWAYS, "failed getSockAddr(%d)\n", temp_sd);
+      exit(BIND_ERROR);
+  }
+  memcpy( (char*) &tmp->sin_addr.s_addr, (char*) &server_addr, 
+		  sizeof(struct in_addr) );
+
   return temp_sd;
 }
 
@@ -387,7 +400,12 @@ void Server::Execute()
 	current_time = last_reclaim_time = last_clean_time = time(NULL);
 
 	dprintf( D_FULLDEBUG, "Sending initial ckpt server ad to collector" );
-	xfer_summary.time_out(current_time);
+    struct sockaddr_in *tmp = getSockAddr(store_req_sd);
+    if (tmp == NULL) {
+        EXCEPT("Can't get the address that store_req_sd is bound to");
+    }
+    char *canon_name = inet_ntoa(tmp->sin_addr);
+    xfer_summary.time_out(current_time, canon_name);
 
 	while (more) {                          // Continues until SIGUSR2 signal
 		poll.tv_sec = reclaim_interval - ((unsigned int)current_time -
@@ -442,7 +460,7 @@ void Server::Execute()
 			if (replication_level)
 				Replicate();
 			Log("Sending ckpt server ad to collector...");
-			xfer_summary.time_out(current_time);
+            xfer_summary.time_out(current_time, canon_name);
 		}
 		if (((unsigned int) current_time - (unsigned int) last_clean_time)
 			>= clean_interval) {
@@ -696,8 +714,9 @@ void Server::ProcessServiceReq(int             req_id,
 				}
 				memset((char*) &server_sa, 0, sizeof(server_sa));
 				server_sa.sin_family = AF_INET;
-				server_sa.sin_addr = server_addr;
-				server_sa.sin_port = htons(0);
+                // let OS choose address
+				//server_sa.sin_addr = server_addr;
+				//server_sa.sin_port = htons(0);
 				if ((ret_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
 					dprintf(D_ALWAYS, "ERROR: I_bind() returned an error (#%d)", 
 							ret_code);
@@ -1265,8 +1284,9 @@ void Server::ProcessStoreReq(int            req_id,
 
 	memset((char*) &server_sa, 0, sizeof(server_sa));
 	server_sa.sin_family = AF_INET;
-	server_sa.sin_port = htons(0);
-	server_sa.sin_addr = server_addr;
+    // Let OS choose address
+	//server_sa.sin_port = htons(0);
+	//server_sa.sin_addr = server_addr;
 	if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
 		sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
 				err_code);
@@ -1534,8 +1554,8 @@ void Server::ProcessRestoreReq(int             req_id,
 	  }
       memset((char*) &server_sa, 0, sizeof(server_sa));
       server_sa.sin_family = AF_INET;
-      server_sa.sin_port = htons(0);
-      server_sa.sin_addr = server_addr;
+      //server_sa.sin_port = htons(0);
+      //server_sa.sin_addr = server_addr;
       if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
 		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
 		  Log(0, log_msg);

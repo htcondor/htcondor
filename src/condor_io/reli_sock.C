@@ -199,12 +199,12 @@ ReliSock::accept( ReliSock	&c )
 	c.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
 
 	if( DebugFlags & D_NETWORK ) {
-		char* src = strdup(	sock_to_string(_sock) );
-		char* dst = strdup( sin_to_string(c.endpoint()) );
-		dprintf( D_NETWORK, "ACCEPT src=%s fd=%d dst=%s\n",
-				 src, c._sock, dst );
-		free( src );
-		free( dst );
+        char* from = strdup( sin_to_string(c.endpoint()) );
+        char* to = strdup(  sock_to_string(_sock) );
+        dprintf( D_NETWORK, "ACCEPT from=%s newfd=%d to=%s\n",
+                 from, c._sock, to );
+        free( from );
+        free( to );
 	}
 	
 	return TRUE;

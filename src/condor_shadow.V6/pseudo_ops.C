@@ -97,7 +97,7 @@ extern "C" {
 int connect_file_stream( int connect_sock );
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
 size_t file_size( int fd );
-int create_tcp_port( u_short *port, int *fd );
+int create_tcp_port( unsigned int *ip, u_short *port, int *fd );
 void get_host_addr( unsigned int *ip_addr );
 void display_ip_addr( unsigned int addr );
 int has_ckpt_file();
@@ -796,11 +796,11 @@ pseudo_get_file_stream(
 	dprintf( D_FULLDEBUG, "\tlen = %lu\n", (unsigned long)*len );
 	BytesSent += *len;
 
-	get_host_addr( ip_addr );
-	display_ip_addr( *ip_addr );
+    //get_host_addr( ip_addr );
+	//display_ip_addr( *ip_addr );
 
-	create_tcp_port( port, &connect_sock );
-	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
+    create_tcp_port( ip_addr, port, &connect_sock );
+    dprintf( D_NETWORK, "\taddr = %s\n", ipport_to_string(htonl(*ip_addr), htons(*port)));
 		
 #if WANT_NETMAN
 	if (CkptFile || ICkptFile) {
@@ -909,13 +909,17 @@ pseudo_put_file_stream(
 	}
 #endif
 
-	get_host_addr( ip_addr );
-	display_ip_addr( *ip_addr );
+    // ip_addr will be updated down below because I changed create_tcp_port so that
+    // ip address the socket is bound to is determined by that function. Therefore,
+    // we don't need to initialize ip_addr here
+    //get_host_addr( ip_addr );
+	//display_ip_addr( *ip_addr );
 
 		/* open the file */
 	if (CkptFile && UseCkptServer) {
 		SetCkptServerHost(CkptServerHost);
 		do {
+            // ip_addr is set within RequestStore
 			rval = RequestStore(p->owner, scheddName, file, len,
 								(struct in_addr*)ip_addr, port);
 			if (rval) {	/* request denied or network error, try again */
@@ -987,11 +991,11 @@ pseudo_put_file_stream(
 
 	(void)umask(omask);
 
-	get_host_addr( ip_addr );
-	display_ip_addr( *ip_addr );
+	//get_host_addr( ip_addr );
+	//display_ip_addr( *ip_addr );
 
-	create_tcp_port( port, &connect_sock );
-	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
+	create_tcp_port(ip_addr, port, &connect_sock);
+    dprintf(D_NETWORK, "\taddr = %s\n", ipport_to_string(htonl(*ip_addr), htons(*port)));
 	
 #ifdef WANT_NETMAN
 	file_stream_info.active = true;
@@ -1214,6 +1218,8 @@ RequestCkptBandwidth()
 	dprintf(D_ALWAYS, "vm_id = %d\n", vm_id);
  	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm_id);
  	request.Insert(buf);
+    // Using ip:pid as an identity of the process is not complete because of private
+    // addresses are reusable. TODO (someday)
 	sprintf(buf, "%s = \"%u.%d\"", ATTR_TRANSFER_KEY, my_ip_addr(),
 			file_stream_info.pid);
  	request.Insert(buf);
@@ -1387,7 +1393,7 @@ connect_file_stream( int connect_sock )
 				data_sock, errno);
 		return -1;
 	}
-	dprintf( D_FULLDEBUG, "\tGot data connection at fd %d\n", data_sock );
+	dprintf( D_NETWORK, "\tGot data connection at fd %d\n", data_sock );
 
 	close( connect_sock );
 	return data_sock;
@@ -1423,46 +1429,49 @@ file_size( int fd )
 
 /*
   Create a tcp socket and begin listening for a connection by some
-  other process.  Using "port" and "fd" as output parameters, give back
-  the port number to which the other process should connect, and the
+  other process.  Using "ip", "port", and "fd" as output parameters, give back
+  the address to which the other process should connect, and the
   file descriptor with which this process can refer to the socket.  Return
   0 if everything works OK, and -1 otherwise.  N.B. The port number is
   returned in host byte order.
 */
 int
-create_tcp_port( u_short *port, int *fd )
+create_tcp_port( unsigned int *ip, u_short *port, int *fd )
 {
-	struct sockaddr_in	sin;
-	SOCKET_LENGTH_TYPE	addr_len;
-	
-	addr_len = sizeof(sin);
+    struct sockaddr_in  sin;
+    SOCKET_LENGTH_TYPE  addr_len;
+   
+    addr_len = sizeof(sin);
 
-		/* create a tcp socket */
-	if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
-		EXCEPT( "socket" );
-	}
-	dprintf( D_FULLDEBUG, "\tconnect_sock = %d\n", *fd );
+        /* create a tcp socket */
+    if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
+        EXCEPT( "socket" );
+    }
+    dprintf( D_FULLDEBUG, "\tconnect_sock = %d\n", *fd );
 
-		/* bind it to an address */
+        /* bind it to an address */
 
-	if( ! _condor_local_bind(*fd) ) {
-		EXCEPT( "bind" );
-	}
+    if( ! _condor_local_bind(*fd) ) {
+        EXCEPT( "bind" );
+    }
 
-		/* determine which local port number we were assigned to */
-	if( getsockname(*fd,(struct sockaddr *)&sin, &addr_len) < 0 ) {
-		EXCEPT("getsockname");
-	}
-	*port = ntohs( sin.sin_port );
+        /* determine which local port number we were assigned to */
+    struct sockaddr_in *tmp = getSockAddr(*fd);
+    if (tmp == NULL) {
+        EXCEPT("getSockAddr failed");
+    }
+    *ip = ntohl(tmp->sin_addr.s_addr);
+    *port = ntohs(tmp->sin_port);
 
-		/* Get ready to accept a connection */
-	if( listen(*fd,1) < 0 ) {
-		EXCEPT( "listen" );
-	}
-	dprintf( D_FULLDEBUG, "\tListening...\n" );
+        /* Get ready to accept a connection */
+    if( listen(*fd,1) < 0 ) {
+        EXCEPT( "listen" );
+    }
+    dprintf( D_FULLDEBUG, "\tListening...\n" );
 
-	return 0;
+    return 0;
 }
+
 
 /*
   Get the IP address of this host.  The address is in host byte order.

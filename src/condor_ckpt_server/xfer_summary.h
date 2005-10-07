@@ -34,7 +34,7 @@ public:
 	void init();
 	void Result( transferinfo *, bool success_flag, struct in_addr peer,
 				 int xfer_size);
-	void time_out(time_t);
+    void time_out(time_t, char *);
 
 private:
 	time_t	start_time;

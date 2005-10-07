@@ -45,6 +45,25 @@ purecov_c_plus_target(cedar.t.pc,$(OBJ),$(LIB))
 c_plus_target(buftest,buftest.o,$(LIB))
 html_target( ../condor_includes/stream.h ../condor_includes/reli_sock.h ../condor_includes/safe_sock.h ../condor_includes/sock.h )
 
+#if HAVE_EXT_GCB
+/* 
+   it's a little weird to have this happen here, but because of how
+   these imake rules work, they have to live in a subdirectory of src,
+   they can't live in the top-level src/Imakefile itself.  since GCB
+   is pretty closely tied with CEDAR, i figured this was the best
+   place to put this stuff...
+*/
+release_copy_target($(GCB_BIN)/gcb_broker,libexec,gcb_broker,EXECUTABLE_MODE)
+strip_copy_target($(GCB_BIN)/gcb_broker,libexec,gcb_broker,EXECUTABLE_MODE)
+static_copy_target($(GCB_BIN)/gcb_broker_static,libexec,gcb_broker,EXECUTABLE_MODE)
+
+release_copy_target($(GCB_BIN)/gcb_relay_server,libexec,gcb_relay_server,EXECUTABLE_MODE)
+strip_copy_target($(GCB_BIN)/gcb_relay_server,libexec,gcb_relay_server,EXECUTABLE_MODE)
+static_copy_target($(GCB_BIN)/gcb_relay_server_static,libexec,gcb_relay_server,EXECUTABLE_MODE)
+
+#endif /* HAVE_EXT_GCB */
+
+
 release:: all
 stripped:: all
 static:: all

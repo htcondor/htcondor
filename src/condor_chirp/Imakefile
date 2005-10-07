@@ -39,8 +39,9 @@ static_library($(LIBNAME),lib)
 
 html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )
 
-c_plus_target($(CONDOR_CHIRP_NAME),$(CONDOR_CHIRP_OBJ),$(LIBNAME))
-
+/* chirp isn't (for now) going to be linked with GCB, so we don't want
+to include the --wrap options on the link-line for it */
+c_plus_nowrap_target($(CONDOR_CHIRP_NAME),$(CONDOR_CHIRP_OBJ),$(LIBNAME))
 release_target($(CONDOR_CHIRP_NAME),libexec,EXECUTABLE_MODE)
 strip_target($(CONDOR_CHIRP_NAME),libexec,EXECUTABLE_MODE)
 

@@ -107,28 +107,21 @@ string_to_sin( const char *addr, struct sockaddr_in *sin )
 char *
 sin_to_string(const struct sockaddr_in *sin)
 {
-	int             i;
 	static  char    buf[24];
-	char    tmp_buf[10];
-	char    *cur_byte;
-	unsigned char   this_byte;
 
 	buf[0] = '\0';
 	if (!sin) return buf;
 	buf[0] = '<';
 	buf[1] = '\0';
-	cur_byte = (char *) &(sin->sin_addr);
-	for (i = 0; i < sizeof(sin->sin_addr); i++) {
-		this_byte = (unsigned char) *cur_byte;
-		sprintf(tmp_buf, "%u.", this_byte);
-		cur_byte++;
-		strcat(buf, tmp_buf);
-	}
-	buf[strlen(buf) - 1] = ':';
-	sprintf(tmp_buf, "%d>", ntohs(sin->sin_port));
-	strcat(buf, tmp_buf);
-	return buf;
+    if (sin->sin_addr.s_addr == INADDR_ANY) {
+        strcat(buf, my_ip_string());
+    } else {
+        strcat(buf, inet_ntoa(sin->sin_addr));
+    }
+    sprintf(&buf[strlen(buf)], ":%d>", ntohs(sin->sin_port));
+    return buf;
 }
+
 
 char *
 sock_to_string(SOCKET sockd)
@@ -152,13 +145,21 @@ sin_to_hostname( const struct sockaddr_in *from, char ***aliases)
 #ifndef WIN32
 	struct hostent  *gethostbyaddr();
 #endif
+    struct sockaddr_in caddr;
 
 	if( !from ) {
 		// make certain from is not NULL before derefencing it
 		return NULL;
 	}
+    memcpy(&caddr, from, sizeof(caddr));
 
-    if( (hp=gethostbyaddr((char *)&from->sin_addr,
+    // If 'from' is INADDR_ANY, then we use the canonical IP address
+    // instead of "0.0.0.0" as the input to name query
+    if (caddr.sin_addr.s_addr == INADDR_ANY) {
+        caddr.sin_addr.s_addr = my_ip_addr();
+    }
+
+    if( (hp=gethostbyaddr((char *)&caddr.sin_addr,
                 sizeof(struct in_addr), AF_INET)) == NULL ) {
 		// could not find a name for this address
         return NULL;
@@ -182,19 +183,27 @@ struct sockaddr_in  *from;
 #ifndef WIN32
 	struct hostent  *gethostbyaddr();
 #endif
+    struct sockaddr_in caddr;
 
 	if( !from ) {
 		dprintf( D_ALWAYS, "from NULL source\n" );
 		return;
 	}
+    memcpy(&caddr, from, sizeof(caddr));
 
-    if( (hp=gethostbyaddr((char *)&from->sin_addr,
+    // If 'from' is INADDR_ANY, then we use the canonical IP address
+    // instead of "0.0.0.0"
+    if (caddr.sin_addr.s_addr == INADDR_ANY) {
+        caddr.sin_addr.s_addr = my_ip_addr();
+    }
+
+    if( (hp=gethostbyaddr((char *)&caddr.sin_addr,
                 sizeof(struct in_addr), AF_INET)) == NULL ) {
         dprintf( D_ALWAYS, "from (%s), port %d\n",
-            inet_ntoa(from->sin_addr), ntohs(from->sin_port) );
+            inet_ntoa(caddr.sin_addr), ntohs(caddr.sin_port) );
     } else {
         dprintf( D_ALWAYS, "from %s, port %d\n",
-                                        hp->h_name, ntohs(from->sin_port) );
+                                        hp->h_name, ntohs(caddr.sin_port) );
     }
 }
 
@@ -572,6 +581,15 @@ _condor_local_bind( int fd )
 		memset( (char *)&sin, 0, sizeof(sin) );
 		sin.sin_family = AF_INET;
 		sin.sin_port = 0;
+			/*
+			  we don't want to honor BIND_ALL_INTERFACES == true in
+			  here.  this code is only used in the ckpt server (which
+			  isn't daemoncore, so the hostallow localhost stuff
+			  doesn't matter) and for bind()ing outbound connections
+			  inside do_connect().  so, there's no harm in always
+			  binding to all interfaces in here...
+			  Derek <wright@cs.wisc.edu> 2005-09-20
+			*/
 		sin.sin_addr.s_addr = htonl(INADDR_ANY);
 		if( bind(fd, (struct sockaddr*)&sin, sizeof(sin)) < 0 ) {
 			dprintf( D_ALWAYS, "ERROR: bind(%s:%d) failed, errno: %d\n",
@@ -620,6 +638,83 @@ int bindWithin(const int fd, const int low_port, const int high_port)
 	return FALSE;
 }
 
+/* Check if the ip is in private ip address space */
+/* ip: in host byte order */
+int
+is_priv_net(uint32_t ip)
+{
+    return ((ip & 0xFF000000) == 0x0A000000 ||      // 10/8
+            (ip & 0xFFF00000) == 0xAC100000 ||      // 172.16/12
+            (ip & 0xFFFF0000) == 0xC0A80000);       // 192.168/16
+}
+
+/* Check if two ip addresses, given in network byte, are in the same network */
+int
+in_same_net(uint32_t ipA, uint32_t ipB)
+{
+    unsigned char *byteA, *fA, *byteB;
+    int i, index;
+
+    fA = byteA = (char *)&ipA;
+    byteB = (char *)&ipB;
+
+    if (*fA < 128) { // A class
+        index = 1;
+    } else if(*fA < 192) { // B class
+        index = 2;
+    } else {    // C class
+        index = 3;
+    }
+
+    for (i = 0; i < index; i++) {
+        if (*byteA != *byteB) {
+            return 0;
+        }
+        byteA++;
+        byteB++;
+    }
+
+    return 1;
+}
+
+// ip: network-byte order
+// port: network-byte order
+char * ipport_to_string(const unsigned int ip, const unsigned short port)
+{
+    static  char    buf[24];
+    struct in_addr inaddr;
+
+    buf[0] = '<';
+    buf[1] = '\0';
+    if (ip == INADDR_ANY) {
+        strcat(buf, my_ip_string());
+    } else {
+        inaddr.s_addr = ip;
+        strcat(buf, inet_ntoa(inaddr));
+    }
+    sprintf(&buf[strlen(buf)], ":%d>", ntohs(port));
+    return buf;
+}
+
+char *
+prt_fds(int maxfd, fd_set *fds)
+{
+    static char buf[50];
+    int i, size;
+
+    sprintf(buf, "<");
+    for(i=0; i<maxfd; i++) {
+        if (fds && FD_ISSET(i, fds)) {
+            if ((size = strlen(buf)) > 40) {
+                strcat(buf, "...>");
+                return buf;
+            }
+        sprintf(&buf[strlen(buf)], "%d ", i);
+        }
+    }
+    strcat(buf, ">");
+    return buf;
+}
 
 int
 getPortFromAddr( const char* addr )
@@ -726,3 +821,21 @@ getAddrFromClaimId( const char* id )
 	return NULL;
 }
 
+
+struct sockaddr_in *
+getSockAddr(int sockfd)
+{
+    // do getsockname
+    static struct sockaddr_in sin;
+    SOCKET_LENGTH_TYPE namelen = sizeof(sin);
+    if (getsockname(sockfd, (struct sockaddr *)&sin, &namelen) < 0) {
+        dprintf(D_ALWAYS, "failed getsockname(%d): %s\n", sockfd, strerror(errno));
+        return NULL;
+    }
+    // if getsockname returns INADDR_ANY, we rely upon my_ip_addr() since returning
+    // 0.0.0.0 is not a good idea.
+    if (sin.sin_addr.s_addr == ntohl(INADDR_ANY)) {
+        sin.sin_addr.s_addr = htonl(my_ip_addr());
+    }
+    return &sin;
+}

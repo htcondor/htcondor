@@ -83,6 +83,9 @@ fi
 #  substitution in our output files for "ext_<name>_version".
 #######################################################################
 AC_DEFUN([CONDOR_EXTERNAL_VERSION],
+[CONDOR_EXTERNAL_VERSION_($1,$2,m4_toupper($1))])
+
+AC_DEFUN([CONDOR_EXTERNAL_VERSION_],
 [AC_MSG_CHECKING([$1])
  _err_msg="The requested version of [$1] ([$1]-[$2]) does not exist in $ac_cv_externals"
  _condor_VERIFY_DIR([$ac_cv_externals/bundles/[$1]],$_err_msg)
@@ -91,6 +94,7 @@ AC_DEFUN([CONDOR_EXTERNAL_VERSION],
  _cv_ext_$1_version="[$1]-[$2]"
  AC_MSG_RESULT([$_cv_ext_$1_version])
  AC_SUBST([ext_$1_version],$_cv_ext_$1_version)
+ AC_DEFINE([HAVE_EXT_$3],[1],[Do we have the $3 external package])
 ])
 
 

@@ -9241,8 +9241,7 @@ Scheduler::Init()
 		daemonCore->Register_Command_Socket( (Stream*)shadowCommandssock );
 
 		char nameBuf[50];
-		sprintf( nameBuf, "<%s:%d>", inet_ntoa(*(my_sin_addr())),
-				 shadowCommandrsock->get_port());
+        sprintf( nameBuf, "%s", shadowCommandrsock->get_sinful());
 		MyShadowSockName = strdup( nameBuf );
 
 		sent_shadow_failure_email = FALSE;

@@ -1276,6 +1276,13 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	}
 	/* end - Port regulation for user job */
 
+	if( param_boolean("BIND_ALL_INTERFACES", false) ) {
+		sprintf( buf, "_condor_BIND_ALL_INTERFACES=TRUE" );
+	} else {
+		sprintf( buf, "_condor_BIND_ALL_INTERFACES=FALSE" );
+	}
+	env_obj.add_string(buf);
+	
 
 		// Generate a directory where process can run and do its checkpointing
 	omask = umask(0);

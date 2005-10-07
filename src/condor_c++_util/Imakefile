@@ -160,7 +160,7 @@ c_plus_target(test_mystring,test_mystring.o,$(LIB))
 test_libcondorapi.o: test_libcondorapi.C
 	$(CPlusPlus) -I../h -I../condor_includes -c test_libcondorapi.C
 
-c_plus_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
+c_plus_nowrap_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
 
 c_plus_target(test_check_events,test_check_events.o,$(LIB))
 c_plus_target(check_log_files,check_log_files.o,$(LIB))

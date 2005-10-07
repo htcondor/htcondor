@@ -131,7 +131,7 @@ XferSummary::Result(transferinfo *tinfo, bool success_flag,
 
 
 void
-XferSummary::time_out(time_t now)
+XferSummary::time_out(time_t now, char *hostaddr)
 {
 	ClassAd	   	info;
 	char		line[128], *tmp;
@@ -141,7 +141,7 @@ XferSummary::time_out(time_t now)
 
 	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
 	info.Insert(line);
-	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
+    sprintf(line, "%s = \"%s\"", ATTR_MACHINE, hostaddr );
 	info.Insert(line);
 	sprintf(line, "%s = \"%s\"", ATTR_VERSION, CondorVersion() );
 	info.Insert(line);
@@ -180,6 +180,8 @@ XferSummary::time_out(time_t now)
 	
 	// Send to collector
 	if ( Collectors ) {
+        dprintf(D_NETWORK, "Sending CkptServer ClassAd:\n");
+        info.dPrint(D_NETWORK);
 		Collectors->sendUpdates (UPDATE_CKPT_SRVR_AD, &info, NULL);
 	}
 

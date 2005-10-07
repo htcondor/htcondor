@@ -91,7 +91,7 @@ test_get_exec_path: test_get_exec_path.o util_lib.a
 library_target(util_lib.a,ObjectFiles)
 
 stub_gen: y.tab.o lex.yy.o
-	$(CC) $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(LEXLIB) $(ALL_LDFLAGS)
+	$(CC) $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(LEXLIB) $(NOWRAP_LDFLAGS)
 
 clean::
 	rm -f stub_gen y.tab.o lex.yy.o 

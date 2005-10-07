@@ -190,6 +190,7 @@ struct sockaddr_in *sin;
 int             listen_count;
 {
 	int             socket_fd;
+    struct sockaddr_in *tmp;
 	SOCKET_LENGTH_TYPE len;
 	
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -205,10 +206,11 @@ int             listen_count;
 	}
 	
 	listen(socket_fd, listen_count);
-	
-	len = sizeof(*sin);
-	getsockname(socket_fd, (struct sockaddr *) sin, &len);
-	sin->sin_addr.s_addr = htonl( my_ip_addr() );
+
+    tmp = getSockAddr(socket_fd);
+    if (tmp) {
+        memcpy(sin, tmp, sizeof(struct sockaddr_in));
+    }
 
 	return socket_fd;
 }
