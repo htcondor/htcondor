@@ -13,7 +13,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added a new natively compiled clipped port for the Red Hat
+Enterprise Linux 3 IA64 distribution.
 
 \end{itemize}
 
@@ -21,8 +22,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added a new natively compiled clipped port for the Red Hat
-Enterprise Linux 3 IA64 distribution.
+\item Added support in Condor for the Generic Connection Broker
+  (GCB).
+  This is a system for managing network connections across public and
+  private networks.
+
+\item Added a new configuration option, \Macro{BIND\_ALL\_INTERFACES}
+  This is a boolean value that controls if Condor should bind and
+  listen to all the network interfaces on a multi-homed machine.
+  If set to TRUE, the value of \Macro{NETWORK\_INTERFACE} will only
+  control what IP address is published by Condor daemons, even though
+  they will still be listening on all interfaces.
+  The default is FALSE.
 
 \item Added a \Opt{-pool} option to \Condor{submit}. It lets you submit
 jobs to a \Condor{schedd} in a different pool. The other options to
