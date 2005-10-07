@@ -476,8 +476,9 @@ V6_7_11_EXT	-a V6_7_COMMON_EXT \
 # Externals needed for V6_7_12 (same as V6_7_11)
 V6_7_12_EXT	-a V6_7_11_EXT
 
-# Externals needed for V6_7_13 (same as V6_7_12)
-V6_7_13_EXT	-a V6_7_12_EXT
+# Externals needed for V6_7_13 (same as V6_7_12 plus GCB)
+V6_7_13_EXT	-a V6_7_12_EXT \
+		   externals/bundles/gcb/1.2.1
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_13_EXT
