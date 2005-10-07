@@ -32,4 +32,8 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 */
 bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out = 0, int * proc_out = 0 );
 
+
+bool finalize_job(int cluster, int proc, const char * schedd_name, const char * pool_name);
+
+
 #endif /* INCLUDE_SUBMIT_JOB_H*/

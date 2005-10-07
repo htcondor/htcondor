@@ -166,3 +166,34 @@ bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * 
 	}
 	return submit_job(src2, schedd_name, pool_name, cluster_out, proc_out);
 }
+
+bool finalize_job(int cluster, int proc, const char * schedd_name, const char * pool_name)
+{
+	DCSchedd schedd(schedd_name,pool_name);
+	if( ! schedd.locate() ) {
+		if(!schedd_name) { schedd_name = "local schedd"; }
+		if(!pool_name) { pool_name = "local pool"; }
+		dprintf(D_ALWAYS, "Unable to find address of %s at %s\n", schedd_name, pool_name);
+		printf("Unable to find address of %s at %s\n", schedd_name, pool_name);
+		return false;
+	}
+
+	MyString constraint;
+	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
+	fprintf(stderr,"%s\n",constraint.Value());
+
+	CondorError errstack;
+	int jobssent;
+	bool success = schedd.receiveJobSandbox(constraint.Value(), &errstack, &jobssent);
+	if( ! success ) {
+		dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox.\n", cluster, proc);
+		printf("(%d.%d) Failed to retrieve sandbox.\n", cluster, proc);
+		return false;
+	}
+
+	if(jobssent != 1) {
+		dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox (got %d, expected 1).\n", cluster, proc, jobssent);
+		printf("(%d.%d) Failed to retrieve sandbox (got %d, expected 1).\n", cluster, proc, jobssent);
+		return false;
+	}
+}

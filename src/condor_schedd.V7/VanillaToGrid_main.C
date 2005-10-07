@@ -7,6 +7,8 @@
 #define WANT_NAMESPACES
 #include "classad_distribution.h"
 
+#include <libgen.h>
+
 
 
 void die(const char * s) {
@@ -44,18 +46,16 @@ void write_file(const char * filename, const char * data) {
 
 
 
-
-
-int main(int argc, char **argv) 
+int vanilla2grid(int argc, char **argv)
 {
 	if(argc != 3) {
-		die("Usage:\n"
+		fprintf(stderr, "Usage:\n"
 			"  %s filename 'gridurl'\n"
 			"     filename - filename of classad to process\n"
-			"     girdurl - Unified grid URL\n");
+			"     girdurl - Unified grid URL\n", argv[0]);
+		return 1;
 	}
 
-	config(); // Initialize param.
 
 	// Load old classad string.
 	MyString s_oldad = slurp_file(argv[1]);
@@ -91,6 +91,35 @@ int main(int argc, char **argv)
 
 
 	return 0;
+}
+
+int grid2vanilla(int argc, char **argv)
+{
+	if(argc != 3) {
+		fprintf(stderr, "Usage:\n"
+			"  %s cluster proc\n", argv[0]);
+		return 1;
+	}
+	int cluster = atoi(argv[1]);
+	int proc = atoi(argv[2]);
+	bool b = finalize_job(cluster,proc,0,0);
+	printf("Finalize attempt on %d.%d %s\n", cluster,proc,b?"succeeded":"failed");
+	return b?0:1;
+}
+
+int main(int argc, char **argv) 
+{
+	config(); // Initialize param.
+	char * progname = basename(argv[0]);
+	if(progname[0] == 'v') {
+		return vanilla2grid(argc,argv);
+	} else if(progname[0] == 'g') {
+		return grid2vanilla(argc,argv);
+	} else {
+		fprintf(stderr, "Program must be named vanilla2grid or grid2vanilla\n");
+		return 1;
+	}
+
 }
 
 
