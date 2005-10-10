@@ -20,6 +20,14 @@ bool new_to_old(classad::ClassAd & src, ClassAd & dst)
 	}
 	dst = *newad;
 	delete newad;
+
+	// Ensure dirtiness is preserved
+	dst.ClearAllDirtyFlags();
+	for(classad::ClassAd::dirtyIterator it = src.dirtyBegin();
+		it != src.dirtyEnd(); ++it) {
+		dst.SetDirtyFlag(it->c_str(), true);
+	}
+
 	return true;
 }
 
