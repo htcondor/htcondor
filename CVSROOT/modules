@@ -487,7 +487,8 @@ V6_7_EXT	-a V6_7_13_EXT
 V6_7_NT_EXT -a EXT_COMMON \
                    externals/bundles/gsoap/2.7 \
                    externals/bundles/openssl/0.9.8 \
-                   externals/bundles/postgresql/8.0.2
+                   externals/bundles/postgresql/8.0.2 \
+                   externals/bundles/pcre/5.0 
 
 # Externals needed for V6_7 with kerberos 1.4
 V6_7_KERB14_EXT -a V6_7_COMMON_EXT \
