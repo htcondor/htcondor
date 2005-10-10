@@ -28,6 +28,17 @@ cclassad.o $(INSTANTIATIONS_O)
 
 HEADER_FILES = $(shell \ls *.[h])
 
+PERL_ARCHLIB = $(shell perl -MConfig -e 'print "$$Config{archlib}\n"')
+.PHONY: perl
+perl: all perl/lib/$(PERL_ARCHNAME)/ClassAd.so
+
+perl/lib/$(PERL_ARCHNAME)/ClassAd.so: $(LIB_OBJ) ClassAd.swg
+	swig -v -Wall -c++ -perl -proxy -o classad_wrap.C ClassAd.swg
+	g++ -fno-implicit-templates -g -DCLASSAD_DISTRIBUTION -I$(PERL_ARCHLIB)/CORE -c classad_wrap.C
+	g++ -shared $(LIB_OBJ) classad_wrap.o -o ClassAd.so
+	mkdir -p perl/lib/ClassAd
+	mv ClassAd.so ClassAd.pm perl/lib/
+
 $(LIB_NAME):  $(LIB_OBJ)
 	rm -f  $(LIB_NAME)
 	ar vrs $(LIB_NAME)  $(LIB_OBJ)
@@ -78,6 +89,7 @@ install:: $(LIB_NAME) classad_functional_tester classad_unit_tester classad_vers
 clean: tidy
 	rm -f classad_functional_tester classad_unit_tester classad_version
 	rm -f test_xml cxi sample $(LIB_NAME)
+	rm -f perl/lib/*.pm perl/lib/*.so
 tidy:
 	rm -f *.o *~ *.bak
 

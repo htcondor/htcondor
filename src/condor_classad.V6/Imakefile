@@ -102,7 +102,7 @@ source.h test_instantiations.C test_xml.C tests.txt transaction.C		\
 transaction.h util.C util.h value.C value.h view.C view.h xmlLexer.C	\
 xmlLexer.h xmlSink.h xmlSink.C xmlSource.h xmlSource.C					\
 classad_distribution.h cclassad.C cclassad.h classad_stl.h LICENSE		\
-README CHANGELOG configure functional_tests.txt
+README CHANGELOG configure functional_tests.txt ClassAd.swg
 
 WIN32_FILES = win32/classad_dist.dep win32/classad_dist.dsp \
 	win32/classad_dist.dsw win32/classad_dist.mak win32/make.bat
@@ -117,10 +117,14 @@ dist: $(DIST_FILES)
 	rm -rf $(DISTRIBUTION_DIR) *.gz
 	mkdir $(DISTRIBUTION_DIR)
 	mkdir $(DISTRIBUTION_DIR)/win32
+	mkdir -p $(DISTRIBUTION_DIR)/perl/lib/ClassAd
+	mkdir $(DISTRIBUTION_DIR)/perl/t
 	cp $(DIST_FILES) $(DISTRIBUTION_DIR)
 	cp makefile-dist $(DISTRIBUTION_DIR)/Makefile
 	cp $(WIN32_FILES) $(DISTRIBUTION_DIR)/win32
 	unix2dos $(DISTRIBUTION_DIR)/win32/classad_dist*
+	cp perl/Simple.pm $(DISTRIBUTION_DIR)/perl/lib/ClassAd
+	cp perl/basic.t $(DISTRIBUTION_DIR)/perl/t
 	tar cf $(DISTRIBUTION_DIR).tar $(DISTRIBUTION_DIR)
 	gzip $(DISTRIBUTION_DIR).tar
 	chmod 664 $(DISTRIBUTION_DIR).tar.gz
