@@ -19,4 +19,23 @@ public:
 	static bool vanillaToGrid(classad::ClassAd * ad, const char * gridresource);
 private:
 };
+
+/*
+
+Given a grid job created by vanillaToGrid, propogate updates to the grid
+job's classad back to the original classad.
+
+orig - The original classad, as was passed to vanillaToGrid.  Note
+that vanillaToGrid modifies the classad in place, so you need to keep
+your own copy (or be able to rebuild one on the fly).  Changes based on
+changes to newgrid will be placed here.
+
+newgrid - The current classad for the transformed job.
+
+return true on success, false on failure.
+
+
+*/
+bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid);
+
 #endif /*#ifndef _VANILLA_TO_GRID_H_*/

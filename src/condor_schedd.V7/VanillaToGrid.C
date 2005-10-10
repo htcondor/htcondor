@@ -98,3 +98,152 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, const char * gridresour
 
 	return true;
 }
+
+
+
+static void set_job_status_idle(classad::ClassAd &orig)
+{
+	int origstatus;
+	if( orig.EvaluateAttrInt(ATTR_JOB_STATUS, origstatus) ) {
+		if(origstatus == IDLE || origstatus == HELD || origstatus == REMOVED) {
+			return;
+		}
+	}
+	orig.InsertAttr(ATTR_JOB_STATE, IDLE);
+	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+}
+
+static void set_job_status_running(classad::ClassAd &orig)
+{
+	int origstatus;
+	if( orig.EvaluateAttrInt(ATTR_JOB_STATUS, origstatus) ) {
+		if(origstatus == RUNNING || origstatus == HELD || origstatus == REMOVED) {
+			return;
+		}
+	}
+	orig.InsertAttr(ATTR_JOB_STATE, RUNNING);
+	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+	// TODO: Should we be calling WriteExecuteEventToUserLog?
+}
+
+static void set_job_status_held(classad::ClassAd &orig,
+	const char * hold_reason, int hold_code, int hold_subcode)
+{
+	int origstatus;
+	if( orig.EvaluateAttrInt(ATTR_JOB_STATUS, origstatus) ) {
+		if(origstatus == HELD ) {
+			return;
+		}
+	}
+	orig.InsertAttr(ATTR_JOB_STATE, HELD);
+	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+	if( ! hold_reason) {
+		hold_reason = "Unknown reason";
+	}
+	orig.InsertAttr(ATTR_HOLD_REASON, hold_reason);
+	orig.InsertAttr(ATTR_HOLD_REASON_CODE, hold_code);
+	orig.InsertAttr(ATTR_HOLD_REASON_SUBCODE, hold_subcode);
+
+	classad::ExprTree * origexpr = orig.Lookup(ATTR_RELEASE_REASON);
+	if(origexpr) {
+		classad::ExprTree * toinsert = origexpr->Copy(); 
+		orig.Insert(ATTR_LAST_RELEASE_REASON, toinsert);
+	}
+	orig.Delete(ATTR_RELEASE_REASON);
+
+	int numholds;
+	if( ! orig.EvaluateAttrInt(ATTR_NUM_SYSTEM_HOLDS, numholds) ) {
+		numholds = 0;
+	}
+	numholds++;
+	orig.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, numholds);
+}
+
+bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
+{
+	// List courtesy of condor_gridmanager/condorjob.C CondorJob::ProcessRemoteAd
+
+	const char *attrs_to_copy[] = {
+		ATTR_BYTES_SENT,
+		ATTR_BYTES_RECVD,
+		ATTR_COMPLETION_DATE,
+		ATTR_JOB_RUN_COUNT,
+		ATTR_JOB_START_DATE,
+		ATTR_ON_EXIT_BY_SIGNAL,
+		ATTR_ON_EXIT_SIGNAL,
+		ATTR_ON_EXIT_CODE,
+		ATTR_EXIT_REASON,
+		ATTR_JOB_CURRENT_START_DATE,
+		ATTR_JOB_LOCAL_SYS_CPU,
+		ATTR_JOB_LOCAL_USER_CPU,
+		ATTR_JOB_REMOTE_SYS_CPU,
+		ATTR_JOB_REMOTE_USER_CPU,
+		ATTR_NUM_CKPTS,
+		ATTR_NUM_GLOBUS_SUBMITS,
+		ATTR_NUM_MATCHES,
+		ATTR_NUM_RESTARTS,
+		ATTR_JOB_REMOTE_WALL_CLOCK,
+		ATTR_JOB_CORE_DUMPED,
+		ATTR_EXECUTABLE_SIZE,
+		ATTR_IMAGE_SIZE,
+		NULL };		// list must end with a NULL
+		// ATTR_JOB_STATUS
+
+		
+	int origstatus;
+	if( ! orig.EvaluateAttrInt(ATTR_JOB_STATUS, origstatus) ) {
+		dprintf(D_ALWAYS, "Unable to read attribute %s from original ad\n", ATTR_JOB_STATUS);
+		return false;
+	}
+	int newgridstatus;
+	if( ! newgrid.EvaluateAttrInt(ATTR_JOB_STATUS, newgridstatus) ) {
+		dprintf(D_ALWAYS, "Unable to read attribute %s from new ad\n", ATTR_JOB_STATUS);
+		return false;
+	}
+	if(origstatus != newgridstatus) {
+		switch(newgridstatus) {
+		case IDLE:
+			set_job_status_idle(orig);
+			break;
+		case RUNNING:
+			set_job_status_running(orig);
+			break;
+		case HELD:
+			{
+			int reasoncode;
+			int reasonsubcode;
+			if( ! newgrid.EvaluateAttrInt(ATTR_HOLD_REASON_CODE, reasoncode) ) {
+				reasoncode = 0;
+			}
+			if( ! newgrid.EvaluateAttrInt(ATTR_HOLD_REASON_SUBCODE, reasonsubcode) ) {
+				reasonsubcode = 0;
+			}
+			std::string reason;
+			if( ! newgrid.EvaluateAttrString(ATTR_HOLD_REASON, reason) ) {
+				reasonsubcode = 0;
+			}
+			set_job_status_held(orig, reason.c_str(), reasoncode, reasonsubcode);
+			}
+			break;
+		default:
+			orig.InsertAttr(ATTR_JOB_STATE, newgridstatus);
+			break;
+		}
+	}
+
+	// updateRuntimeStats?
+	// See  condor_gridmanager/basejob.C BaseJob::updateRuntimeStats
+		
+
+	int index = -1;
+	while ( attrs_to_copy[++index] != NULL ) {
+		classad::ExprTree * origexpr = orig.Lookup(attrs_to_copy[index]);
+		classad::ExprTree * newgridexpr = newgrid.Lookup(attrs_to_copy[index]);
+		if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
+			classad::ExprTree * toinsert = newgridexpr->Copy(); 
+			orig.Insert(attrs_to_copy[index], toinsert);
+		}
+	}
+
+	return true;
+}
