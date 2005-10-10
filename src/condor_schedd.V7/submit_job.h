@@ -34,6 +34,30 @@ bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * 
 
 
 /*
+	Push the dirty attributes in src into the queue.  Does _not_ clear
+	the dirty attributes.
+	Assumes the existance of an open qmgr connection (via ConnectQ).
+
+	Likely usage:
+	// original_vanilla_ad is the ad passed to VanillaToGrid
+	//   (it can safely a more recent version pulled from the queue)
+	// new_grid_ad is the resulting ad from VanillaToGrid, with any updates 
+	//   (indeed, it should probably be the most recent version from the queue)
+	original_vanilla_ad.ClearAllDirtyFlags();
+	update_job_status(original_vanilla_ad, new_grid_ad);
+	push_dirty_attributes(original_vanilla_ad);
+*/
+bool push_dirty_attributes(classad::ClassAd & src);
+
+/*
+	Push the dirty attributes in src into the queue.  Does _not_ clear
+	the dirty attributes. 
+	Establishes (and tears down) a qmgr connection.
+	schedd_name and pool_name can be NULL to indicate "local".
+*/
+bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name);
+
+/*
 
 Pull a submit_job() job's results out of the sandbox and place them back where
 they came from.

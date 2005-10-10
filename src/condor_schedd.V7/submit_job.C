@@ -162,10 +162,104 @@ bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * 
 {
 	ClassAd src2;
 	if( ! new_to_old(src, src2) ) {
+		dprintf(D_ALWAYS, "submit_job failed to convert job ClassAd from new to old form\n");
 		return false;
 	}
 	return submit_job(src2, schedd_name, pool_name, cluster_out, proc_out);
 }
+
+/*
+	Push the dirty attributes in src into the queue.  Does _not_ clear
+	the dirty attributes (use ClassAd::ClearAllDirtyFlags() if you want).
+	Assumes the existance of an open qmgr connection (via ConnectQ).
+*/
+bool push_dirty_attributes(int cluster, int proc, ClassAd & src)
+{
+	src.ResetExpr();
+	ExprTree * tree;
+	while( (tree = src.NextDirtyExpr()) ) {
+		char *lhstr = 0;
+		char *rhstr = 0;
+		ExprTree * lhs = 0;
+		ExprTree * rhs = 0;
+		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
+		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
+		if( !lhs || !rhs || !lhstr || !rhstr) { 
+			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Problem processing classad\n", cluster, proc);
+			return false;
+		}
+		dprintf(D_FULLDEBUG, "Setting %s = %s\n", lhstr, rhstr);
+		if( SetAttribute(cluster, proc, lhstr, rhstr) == -1 ) {
+			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to set %s = %s\n", cluster, proc, lhstr, rhstr);
+			return false;
+		}
+		free(lhstr);
+		free(rhstr);
+	}
+	return true;
+}
+
+/*
+	Push the dirty attributes in src into the queue.  Does _not_ clear
+	the dirty attributes.
+	Assumes the existance of an open qmgr connection (via ConnectQ).
+*/
+bool push_dirty_attributes(classad::ClassAd & src)
+{
+	int cluster;
+	if( ! src.EvaluateAttrInt(ATTR_CLUSTER_ID, cluster) ) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a cluster\n");
+		return false;
+	}
+	int proc;
+	if( ! src.EvaluateAttrInt(ATTR_PROC_ID, proc) ) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a proc\n");
+		return false;
+	}
+	ClassAd src2;
+	if( ! new_to_old(src, src2) ) {
+		dprintf(D_ALWAYS, "push_dirty_attributes failed to convert job ClassAd from new to old form\n");
+		return false;
+	}
+	return push_dirty_attributes(cluster, proc, src2);
+}
+
+/*
+	Push the dirty attributes in src into the queue.  Does _not_ clear
+	the dirty attributes.
+	Establishes (and tears down) a qmgr connection.
+*/
+bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
+{
+	MyString scheddtitle = "local schedd";
+	if(schedd_name) {
+		scheddtitle = "schedd ";
+		scheddtitle += schedd_name;
+	}
+
+	DCSchedd schedd(schedd_name,pool_name);
+	if( ! schedd.locate() ) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: Can't find address of %s\n", scheddtitle.Value());
+		return false;
+	}
+
+	CondorError errstack;
+	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
+	if( ! qmgr ) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: Unable to connect to %s\n%s\n", scheddtitle.Value(), errstack.getFullText(true));
+		return false;
+	}
+
+	bool ret = push_dirty_attributes(src);
+
+	if( ! DisconnectQ(qmgr, ret /* commit */)) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: Failed to commit changes\n");
+		return false;
+	}
+
+	return ret;
+}
+
 
 bool finalize_job(int cluster, int proc, const char * schedd_name, const char * pool_name)
 {
@@ -196,4 +290,6 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 		printf("(%d.%d) Failed to retrieve sandbox (got %d, expected 1).\n", cluster, proc, jobssent);
 		return false;
 	}
+
+	return true;
 }
