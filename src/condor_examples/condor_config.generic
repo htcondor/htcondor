@@ -121,6 +121,7 @@ COLLECTOR_NAME 		= My Pool
 ##
 ##  The user/group ID <uid>.<gid> of the "Condor" user. 
 ##  (this can also be specified in the environment)
+##  Note: the CONDOR_IDS setting is ignored on Win32 platforms
 #CONDOR_IDS=x.x
 
 ##--------------------------------------------------------------------
@@ -1294,6 +1295,9 @@ PVMGS			= $(SBIN)/condor_pvmgs
 ##  following entry and set it to how "nice" do you want the user
 ##  jobs. (1-19)  The larger the number, the lower priority the
 ##  process gets on your machines.
+##  Note on Win32 platforms, this number needs to be greater than
+##  zero (i.e. the job must be reniced) or the mechanism that 
+##  monitors CPU load on Win32 systems will give erratic results.
 #JOB_RENICE_INCREMENT	= 10
 
 ##  Should the starter do local logging to its own log file, or send
