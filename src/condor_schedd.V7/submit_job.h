@@ -33,6 +33,12 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out = 0, int * proc_out = 0 );
 
 
+/*
+
+Pull a submit_job() job's results out of the sandbox and place them back where
+they came from.
+
+*/
 bool finalize_job(int cluster, int proc, const char * schedd_name, const char * pool_name);
 
 
