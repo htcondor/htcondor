@@ -4,6 +4,7 @@
 #include "VanillaToGrid.h"
 #include "submit_job.h"
 #include "classad_newold.h"
+#include "condor_attributes.h"
 #define WANT_NAMESPACES
 #include "classad_distribution.h"
 
@@ -93,15 +94,57 @@ int vanilla2grid(int argc, char **argv)
 	return 0;
 }
 
+bool load_classad_from_old_file(const char * filename, classad::ClassAd & ad_new) {
+	// Load old classad strings.
+	MyString ad_string = slurp_file(filename);
+	// Convert to old class ads.
+	ClassAd ad_old((char *)ad_string.Value(),'\n');
+	// Convert to new class ads
+	return old_to_new(ad_old, ad_new);
+}
+
 int grid2vanilla(int argc, char **argv)
 {
 	if(argc != 3) {
 		fprintf(stderr, "Usage:\n"
-			"  %s cluster proc\n", argv[0]);
+			"  %s vanillafile gridfile\n", argv[0]);
 		return 1;
 	}
-	int cluster = atoi(argv[1]);
-	int proc = atoi(argv[2]);
+
+	classad::ClassAd n_ad_van;
+	if( ! load_classad_from_old_file(argv[1], n_ad_van) ) {
+		die("Failed to parse vanilla class ad\n");
+	}
+	classad::ClassAd n_ad_grid;
+	if( ! load_classad_from_old_file(argv[2], n_ad_grid) ) {
+		die("Failed to parse grid class ad\n");
+	}
+
+	// Get new (grid) cluster.proc
+	int cluster;
+	if( ! n_ad_grid.EvaluateAttrInt(ATTR_CLUSTER_ID, cluster) ) {
+		dprintf(D_ALWAYS, "Vanilla job lacks a cluster\n");
+		return 1;
+	}
+	int proc;
+	if( ! n_ad_grid.EvaluateAttrInt(ATTR_PROC_ID, proc) ) {
+		dprintf(D_ALWAYS, "Vanilla job lacks a proc\n");
+		return 1;
+	}
+
+	// Right. That was a silly amount of prep work.
+
+	// Update the original ad
+	n_ad_van.ClearAllDirtyFlags();
+	if( ! update_job_status( n_ad_van, n_ad_grid) ) {
+		dprintf(D_ALWAYS, "Unable to update ad\n");
+		return 1;
+	}
+
+	// Push the updates!
+	push_dirty_attributes(n_ad_van, 0, 0);
+
+	// Put a fork in the job.
 	bool b = finalize_job(cluster,proc,0,0);
 	printf("Finalize attempt on %d.%d %s\n", cluster,proc,b?"succeeded":"failed");
 	return b?0:1;
