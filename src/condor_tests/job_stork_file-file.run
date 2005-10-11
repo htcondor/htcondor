@@ -108,11 +108,12 @@ my $timeout = 180;
 my $timecnt = 0;
 my $storkstatuscmd = "stork_status $jobid";
 
+my $jobstatus = "";
+
 while( $timecnt < $timeout )
 {
 	system("stork_q");
 	#system("stork_status $jobid");
-	my $jobstatus = "";
 	open(PULL, "$storkstatuscmd 2>&1 |") || die "ps -eo pid failed: $!\n";
 	while(<PULL>)
 	{
@@ -136,8 +137,20 @@ while( $timecnt < $timeout )
 }
 
 print "Done checking status\n";
-my $result = system("./x_test_md5data.pl --oldfile=$src_url --newfile=$dest_url");
-print "Result of crafted Stork job is  $result\n";
+
+my $result = 0;
+
+if($jobstatus ne "request_completed")
+{
+	print "Stork file transfer never completed!\n";
+	$result = 1;
+}
+else
+{
+	$result = system("./x_test_md5data.pl --oldfile=$src_url --newfile=$dest_url");
+	print "Result of crafted Stork job is  $result\n";
+}
+
 system("rm -f $dest_url*");
 
 system("cp -r $mypid $mysaveme");
