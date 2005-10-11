@@ -16,10 +16,17 @@ open(STDERR, ">&STDOUT");
 select(STDERR); $| = 1;
 select(STDOUT); $| = 1;
 
-$dir = $ARGV[0];
-$cmd = $ARGV[1];
+my $dir = $ARGV[0];
+my $cmd = $ARGV[1];
 #$testname = 'Condor submit dag - stork transfer test';
-$testname =  $ARGV[2];
+my $testname =  $ARGV[2];
+my $timerlength = $ARGV[3];
+print "Timer passed in is <<$timerlength>>\n";
+foreach my $arg  (@ARGV)
+{
+	print "$arg ";
+}
+print "\n";
 $dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
 
 chdir("$dir");
@@ -27,8 +34,21 @@ chdir("$dir");
 my $loc = getcwd();
 print "Currently in $loc\n";
 
+$timed = sub
+{
+	my $left = $submitcount - $donecount;
+	system("date");
+	print "Expected break-out!!!!!\n";
+	exit(1);
+};
+
 $executed = sub
 {
+		if($timerlength ne "0")
+		{
+			# set a timer on a dag run
+			CondorTest::RegisterTimed($testname, $timed, $timerlength);
+		}
         print "Good. We need the dag to run\n";
 };
 
