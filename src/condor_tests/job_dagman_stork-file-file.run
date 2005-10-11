@@ -64,9 +64,23 @@ if( ! -e "job_stork_file-file.in" )
 	system("date > job_stork_file-file.in");
 }
 
+# rather then test a NULL stork data move (--src_url=/dev/null --dest_url=/dev/null)
+# we will create a data file and use md5 checksums to verify the file gets correctly
+# to its destination before removing the file after the test.
+
+my $storkdatafile = "stork_file-file_data" . $mypid;
+system("./x_create_md5data.pl --megs=10 --filenm=$storkdatafile");
+
+# we will move the file via stork to /tmp
+
+my $src_url = $topdir . "/$storkdatafile";
+my $dest_url = "/tmp/$storkdatafile";
+
+print "Transfer $src_url to $dest_url\n";
 print "Callling ./x_makestorkdag.pl\n";
 
-my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --dagnm=dag1.dag --src_url=/dev/null --dest_url=/dev/null");
+#my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --dagnm=dag1.dag --src_url=/dev/null --dest_url=/dev/null");
+my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --dagnm=dag1.dag --src_url=$src_url --dest_url=$dest_url");
 
 print "make dag result is <<$makeresult>>\n";
 
@@ -78,10 +92,14 @@ print "Callling ./x_runstorkdag.pl\n";
 $now = getcwd();
 print "Calling from here<<$now>>\n";
 
-my $result = system("./x_runstorkdag.pl $personaldir/dag1 dag1.dag $testname");
+my $run_result = system("./x_runstorkdag.pl $personaldir/dag1 dag1.dag \"$testname\" 0");
  
-print "run dag result is <<$result>>\n";
+print "run dag result is <<$run_result>>\n";
 
+my $data_result = system("./x_test_md5data.pl --oldfile=$src_url --newfile=$dest_url");
+print "Result of crafted Stork job is  $data_result\n";
+
+system("rm -f $dest_url*");
 system("cp -r $mypid $mysaveme");
 system("cp job_stork_file-file.stork* $mysaveme");
 
@@ -112,10 +130,17 @@ if(!$status)
 
 system("date");
 
-if( $result != 0 )
+if( $run_result != 0 )
 {
 	# actual test failed but we allowed cleanup
-	print "Stork test failed!\n";
+	print "Stork - Dagman run test failed!\n";
+	exit(1);
+}
+
+if( $data_result != 0 )
+{
+	# actual test failed but we allowed cleanup
+	print "Stork - Dagman run test worked BUT data check failed!\n";
 	exit(1);
 }
 else
