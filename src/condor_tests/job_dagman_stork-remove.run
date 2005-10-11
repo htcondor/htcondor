@@ -75,6 +75,7 @@ if( ! -e "job_stork_file-file.in" )
 
 print "Callling ./x_makestorkdag.pl\n";
 
+# copy from /dev/random is a stork job which runs forever....
 my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --dagnm=dag1.dag --src_url=/dev/random --dest_url=/dev/null");
 
 print "make dag result is <<$makeresult>>\n";
@@ -94,16 +95,62 @@ my $result = system("./x_runstorkdag.pl $personaldir/dag1 dag1.dag \"$testname\"
  
 print "run dag result is <<$result>>\n";
 
-my @adarray;
+# verify we have a stork job still running after timeout in dag test
+# got us control back.
 
-system("stork_q");
-system("stork_status 1");
-system("condor_rm 1");
+my $cluster = 1;
+my @adarray;
+my $status = 1;
+my $cmd = "stork_status $cluster";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+foreach my $line (@adarray)
+{
+	print "STORK_STATUS:$line\n";
+	if($line =~ /status\s*=\s*processing_request.*$/)
+	{
+		print "STORK_STATUS:$line\n";
+		$result = 0; # good that we have an infinate stork job
+	}
+}
+
+
+# remove the dag. condor cluster number for dag just happens to match
+# stork dap_id.
+$cmd = "condor_rm $cluster";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+    print "Test failure due to Condor Tool Failure<$cmd>\n";
+    exit(1)
+}
+
 system("date");
-sleep(30);
+sleep(30); #allow settling time for dag removal ????? how to know remove command has finished?
 system("date");
-system("stork_q");
-system("stork_status 1");
+
+$cmd = "stork_status $cluster";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	exit(1)
+}
+
+foreach my $line (@adarray)
+{
+	print "STORK_STATUS:$line\n";
+	if($line =~ /status\s*=\s*request_removed.*$/)
+	{
+		print "STORK_STATUS:$line\n";
+		$result = 0; # good that we have an infinate stork job
+	}
+}
 
 system("cp -r $mypid $mysaveme");
 system("cp job_stork_file-file.stork* $mysaveme");
