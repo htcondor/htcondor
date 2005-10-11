@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.9 2005-09-22 20:12:34 wright Exp $
+# $Id: platform_post,v 1.1.2.10 2005-10-11 23:20:52 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -35,27 +35,15 @@ print "From the environment: module = $module\n";
 my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
 chomp $runid;
 
-if ( $tag and $module and $runid ) {
-    print "This is without using the test_ids file\n";
-    print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
-    system( "/nmi/bin/condor_test_submit.pl " .
-            "--buildid=$runid --platform=$ENV{NMI_PLATFORM} " .
-            "--tag=$tag --module=$module" );
-    my $status = $?;
-    if( $status ) {
-        die "condor_test_submit.pl failed with status $status\n";
-    }
-}
-elsif ( -f "test_ids" ) {
-    print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
-    system( "/nmi/bin/condor_test_submit.pl --nightly ".
-            "--platform=$ENV{NMI_PLATFORM}" );
-    my $status = $?;
-    if( $status ) {
-        die "condor_test_submit.pl failed with status $status\n";
-    }
-}
-else {
-    print "It seems no test_ids file was created. Not submitting a test run\n";
-}
+$tag || die "No tag to use, NOT submitting tests\n";
+$module || die "No module to use, NOT submitting tests\n";
+$runid || die "No runid to use, NOT submitting tests\n";
 
+print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
+system( "/nmi/bin/condor_test_submit.pl " .
+	"--buildid=$runid --platform=$ENV{NMI_PLATFORM} " .
+	"--tag=$tag --module=$module" );
+my $status = $?;
+if( $status ) {
+    die "condor_test_submit.pl failed with status $status\n";
+}
