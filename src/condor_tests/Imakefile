@@ -50,9 +50,10 @@ BUILD($(CC),x_trapsig,c)
 /* Library tests */
 
 /* Chirp */
-#if !defined( IS_ALPHA_LINUX)
+#if !defined( IS_ALPHA_LINUX) && !defined( IS_HPUX10 )
 /* 
    Gnats 546 Linux rh 7.2 on alph chip Needs MD5 perl module
+   GNATS 548 perl md5 module missing on HPUX 10 machine(s)
 */
 DESC(lib_chirpio_van,"Exercise the chirp I/O library using the C client library")
 BUILD_DEP_LIB($(CC),lib_chirpio,c,,../release_dir/lib/libchirp_client.a)
@@ -116,7 +117,7 @@ TESTCLASS(job_core_basic-security_par,btdebug)
 ****************** Tests being readied for prime time **********************
 */
 
-#if !defined( IS_DARWIN ) && !defined(IS_ALPHA_OSF1_V5) && !defined(IS_HPUX10) && !defined(IS_PPC_AIX) && !defined(IS_SOLARIS28) && !defined(IS_SOLARIS29) && !defined(IS_IRIX)
+#if !defined( IS_DARWIN ) && !defined(IS_DUX5) && !defined(IS_HPUX10) && !defined(IS_PPC_AIX) && !defined(IS_SOLARIS28) && !defined(IS_SOLARIS29) && !defined(IS_IRIX)
 /* 
    Gnats 545 this procapi test of pid tracking not working MacOsX
    Gnats 547 this procapi test of pid tracking not working IS_ALPHA_OSF1_V5 IS_HPUX10 IS_PPC_AIX SOLARIS28 SOLARIS29 
