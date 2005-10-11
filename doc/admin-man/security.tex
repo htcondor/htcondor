@@ -162,14 +162,14 @@ If the \Macro{UID\_DOMAIN} matches,
 and the user exists as the same UID in password files
 on both the submitting machine and on the execute machine,
 the job will run as the submitting user.
-However, if the user does not exist in the execute machine's
+If the user does not exist in the execute machine's
 password file and \Macro{SOFT\_UID\_DOMAIN} is True,
-then Condor will choose the submitting user's UID on the
-execute machine.
+then the job will run under the submitting user's UID anyway (as
+defined in the submitting machine's password file).
 If \MacroNI{SOFT\_UID\_DOMAIN} is False,
 and \MacroNI{UID\_DOMAIN} matches,
 and the user is not in the execute machine's password file,
-then the job will run as user \Login{nobody}.
+then the job execution attempt will be aborted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Non-Root}Running Condor as Non-Root}

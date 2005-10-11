@@ -1435,13 +1435,16 @@ is undefined, the e-mail is sent to \File{user@submitmachinename}.
 
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain}
 When Condor is about to run a job as a particular user (instead of the
-user nobody), it verifies that the UID given for the user is in the
+user nobody, see \Macro{UID\_DOMAIN} above for when this happens),
+it verifies that the UID given for the user is in the
 password file and actually matches the given user name.
 However, some
 installations may not have every user in every machine's password
-file, so this check will fail. If you prefer that Condor not do
+file, so this check will fail and the execution attempt will be
+aborted. If you prefer that Condor not do
 this check, because users are not in every password file, set
-this attribute to \Expr{True}.
+this attribute to \Expr{True}. Condor will then run the job under the
+user's UID anyway.
 
 
 \item[\Macro{VMx\_USER}] \label{param:VMxUser}
