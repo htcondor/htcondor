@@ -338,6 +338,7 @@ sub InstallPersonalCondor
 			}
 			else
 			{
+				print "which condor_q responded <<<$condor_q>>>! CondorPersonal Failing now\n";
 				die "Can not seem to find a Condor install!\n";
 			}
 			
