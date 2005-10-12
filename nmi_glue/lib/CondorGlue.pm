@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.35 2005-10-12 08:07:38 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.36 2005-10-12 08:49:36 wright Exp $
 #
 ######################################################################
 
@@ -52,7 +52,7 @@ sub run
     $ret = $?;
     # should we die here?
     if( $ret != 0 ) {
-	print "RESULT: statusString($ret) . "\n";
+	print "RESULT: " . statusString($ret) . "\n";
 	if( defined($fatal) && $fatal != 0 ) {
 	    exit( $fatal );
 	}
@@ -63,7 +63,7 @@ sub run
 }
 
 
-sub statusString()
+sub statusString
 {
     my $status = shift;
 
