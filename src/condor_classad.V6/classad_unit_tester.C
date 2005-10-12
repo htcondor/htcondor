@@ -552,6 +552,22 @@ static void test_exprlist(const Parameters &parameters, Results &results)
     // Note that we do not delete the Literals that we created, because
     // they should have been deleted when the list was deleted.
 
+    /* ----- Test an ExprList bug that Nate Mueller found ----- */
+    ClassAd       *classad;
+    ClassAdParser parser;
+    bool          b;
+    bool          have_attribute;
+    bool          can_evaluate;
+    Value         value;
+
+    string list_classad_text = "[foo = 3; have_foo = member(foo, {1, 2, 3});]";
+    classad = parser.ParseClassAd(list_classad_text);
+    have_attribute = classad->EvaluateAttrBool("have_foo", b);
+    TEST("Can evaluate list in member function", (have_attribute == true && b == true));
+
+    can_evaluate = classad->EvaluateExpr("member(foo, {1, 2, blah, 3})", value);
+    TEST("Can evaluate list in member() outside of ClassAd", can_evaluate == true);
+
     return;
 }
 
@@ -720,6 +736,54 @@ static void test_collection(const Parameters &parameters, Results &results)
     TEST("machine1 not in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine1") == true));
     TEST("machine2 in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine2") == false));
     TEST("machine3 not in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine3") == false));
+
+    bool have_machine1, have_machine2, have_machine3, have_others;
+    View::const_iterator view_iterator;
+
+    /* ----- Now test the iterator for the root view ----- */
+    const View *root_view = collection->GetView("root");
+
+    have_machine1 = have_machine2 = have_machine3 = have_others = false;
+    for (view_iterator = root_view->begin(); 
+         view_iterator != root_view->end();
+         view_iterator++) {
+        string key;
+        view_iterator->GetKey(key);
+        if (key == "machine1") {
+            have_machine1 = true;
+        } else if (key == "machine2") {
+            have_machine2 = true;
+        } else if (key == "machine3") {
+            have_machine3 = true;
+        } else {
+            have_others = true;
+        }
+    }
+    TEST("machine1 found with iterator",  have_machine1 == true);
+    TEST("machine2 found with iterator",  have_machine2 == true);
+    TEST("machine3 found with iterator",  have_machine3 == true);
+    TEST("No others found with iterator", have_others   == false);
+
+    /* ----- Now test the iterator for a subview ----- */
+    const View *linux_view = collection->GetView("Linux-View");
+
+    have_machine1 = have_machine2 = have_machine3 = have_others = false;
+    for (view_iterator = linux_view->begin(); 
+         view_iterator != linux_view->end();
+         view_iterator++) {
+        string key;
+        view_iterator->GetKey(key);
+        if (key == "machine1") {
+            have_machine1 = true;
+        } else if (key == "machine2") {
+            have_machine2 = true;
+        } else {
+            have_others = true;
+        }
+    }
+    TEST("machine1 found with iterator",  have_machine1 == true);
+    TEST("machine2 found with iterator",  have_machine2 == true);
+    TEST("No others found with iterator", have_others   == false);
 
     /* ----- Reread from the collection log and see if everything is still good ----- */
     delete collection;
