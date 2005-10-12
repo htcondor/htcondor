@@ -133,7 +133,7 @@ public:
 	/** An iterator we can use on a View */
 	typedef ViewMembers::iterator iterator;
 
-	/** A constatnt iterator we can use on a View */
+	/** A constant iterator we can use on a View */
 	typedef ViewMembers::const_iterator const_iterator;
 
 	/** Returns an iterator pointing to the beginning of the
