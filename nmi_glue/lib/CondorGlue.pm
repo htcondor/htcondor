@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.34 2005-10-12 07:56:45 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.35 2005-10-12 08:07:38 wright Exp $
 #
 ######################################################################
 
@@ -13,11 +13,12 @@ package CondorGlue;
 sub parseTag
 {
     my $tag = shift;
+
     my $desc;
     my @vers;
 
     $tag =~ s/BUILD-//;
-    my $desc = $tag;
+    $desc = $tag;
     $tag =~ s/-branch-.*//;
     $tag =~ s/V//;
     if( $tag =~ /(\d+)(\D*)_(\d+)(\D*)_?(\d+)?(\D*)/ ) {
@@ -37,31 +38,44 @@ sub run
 {
     my ($cmd, $fatal) = @_;
     my $ret;
-    my $output = "";
 
     # if not specified, the command is fatal
-    if (!defined($fatal) or ($fatal != 0 and $fatal != 1)) {
+    if( !defined($fatal) ) {
         $fatal = 1;
     }
 
-    print "\n";
-    print "#  $cmd\n";
+    print "RUNNING: $cmd\n";
 
     # run the command
     system("($cmd)  </dev/null 2>&1");
-    $ret = $? / 256;
 
+    $ret = $?;
     # should we die here?
-    if ($fatal && $ret != 0) {
-        print "\n";
-        print "FAILED COMMAND: $cmd\n";
-        print "RETURN VALUE:  $ret\n";
-        print "\n";
-        exit(1);
+    if( $ret != 0 ) {
+	print "RESULT: statusString($ret) . "\n";
+	if( defined($fatal) && $fatal != 0 ) {
+	    exit( $fatal );
+	}
     }
 
-    # return the commands return value
+    # return the command's return value
     return $ret;
+}
+
+
+sub statusString()
+{
+    my $status = shift;
+
+    if( $status == -1 ) {
+        return "failed to execute: $!";
+    } elsif( WIFEXITED($status) ) {
+        return "exited with status: " . WEXITVALUE($status);
+    } elsif( WIFSIGNALED($status) ) {
+        return "died with signal: " . WTERMSIG($status);
+    } else {
+        return "returned unrecognized status: $status";
+    }
 }
 
 
