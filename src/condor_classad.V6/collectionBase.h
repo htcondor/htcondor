@@ -78,6 +78,7 @@ public:
 				const std::string &constraint, const std::string &rank,
 				const std::string &partitionAttrs );
 	virtual bool GetViewInfo( const ViewName &viewName, ClassAd *&viewInfo );
+    virtual const View *GetView( const ViewName &viewName );
 	virtual bool ViewExists( const ViewName &viewName);
 	// Child view interrogation
 	virtual bool GetSubordinateViewNames( const ViewName &viewName,

@@ -917,6 +917,23 @@ GetViewInfo( const ViewName &viewName, ClassAd *&info )
 	return( true );
 }
 
+const View * ClassAdCollection::
+GetView( const ViewName &viewName )
+{
+	ViewRegistry::iterator i;
+    const View *view;
+
+	i = viewRegistry.find( viewName );
+	if( i == viewRegistry.end( ) ) {
+		CondorErrno = ERR_NO_SUCH_VIEW;
+		CondorErrMsg = "view " + viewName + " not found";
+		view = NULL;
+	} else {
+        view = i->second;
+    }
+	return view;
+}
+
 bool ClassAdCollection::
 ViewExists( const ViewName &viewName)
 {
