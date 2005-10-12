@@ -406,6 +406,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 				case 'T': nf = Value::T_FACTOR; break;
 				case '\0': nf = Value::NO_FACTOR; break;
 				default:
+                    nf = Value::NO_FACTOR; // Prevent uninitialized variable warning
 					realValue.SetErrorValue();
 					could_convert = false;
                     break;
@@ -483,21 +484,26 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 			if( end == buf && ivalue == 0 ) {
 				// strtol() returned an error
 				integerValue.SetErrorValue( );
-				return( true );
-			}
-			switch( toupper( *end ) ) {
-				case 'B': nf = Value::B_FACTOR; break;
-				case 'K': nf = Value::K_FACTOR; break;
-				case 'M': nf = Value::M_FACTOR; break;
-				case 'G': nf = Value::G_FACTOR; break;
-				case 'T': nf = Value::T_FACTOR; break;
-			        case '\0': nf = Value::NO_FACTOR; break;
-				default:  
-					integerValue.SetErrorValue( );
-					return( true );
-			}
-		
-			integerValue.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
+                could_convert = false;
+			} else {
+                could_convert = true;
+                switch( toupper( *end ) ) {
+                case 'B':  nf = Value::B_FACTOR; break;
+                case 'K':  nf = Value::K_FACTOR; break;
+                case 'M':  nf = Value::M_FACTOR; break;
+                case 'G':  nf = Value::G_FACTOR; break;
+                case 'T':  nf = Value::T_FACTOR; break;
+                case '\0': nf = Value::NO_FACTOR; break;
+                default:  
+                    nf = Value::NO_FACTOR; // avoid uninitialized warning
+                    integerValue.SetErrorValue( );
+                    could_convert = false;
+                    break;
+                }
+                if (could_convert) {
+                    integerValue.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
+                }
+            }
             break;
 
 		case Value::BOOLEAN_VALUE:
@@ -514,7 +520,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 		case Value::REAL_VALUE:
             value.IsRealValue(rvalue);
             integerValue.SetIntegerValue((int) rvalue);
-				could_convert = true;
+            could_convert = true;
             break;
 
 		case Value::ABSOLUTE_TIME_VALUE:
