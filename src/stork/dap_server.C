@@ -921,7 +921,8 @@ void regular_check_for_requests_in_process()
 
 
 								dapcollection->RemoveClassAd(key);
-								write_dap_log(historyfilename, "request_failed", 
+								write_dap_log(historyfilename,
+										"\"request_failed\"", 
 											  "dap_id", dap_id, "error_code", "\"ABORTED!\"");
 		   
 								char exit_status_str[MAXSTR];
@@ -1676,7 +1677,7 @@ int remove_requests_from_queue(ReliSock * sock)
       
 		dapcollection->RemoveClassAd(key);
 
-		write_dap_log(historyfilename, "request_removed", 
+		write_dap_log(historyfilename, "\"request_removed\"", 
 					  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
       
 		write_xml_user_log(userlogfilename, "MyType", "\"JobAbortedEvent\"", 
@@ -1844,7 +1845,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 
 
 
-		write_dap_log(historyfilename, "request_completed", "dap_id", dap_id);
+		write_dap_log(historyfilename, "\"request_completed\"", "dap_id", dap_id);
 			//    write_xml_log(xmllogfilename, job_ad, "\"request_completed\"");
     
 		write_xml_user_log(userlogfilename, "MyType", "\"JobCompleteEvent\"", 
@@ -1944,7 +1945,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 
 			dapcollection->RemoveClassAd(key);
 
-			write_dap_log(historyfilename, "request_failed", 
+			write_dap_log(historyfilename, "\"request_failed\"", 
 						  "dap_id", dap_id, "error_code", linebufstr);
             
 			char exit_status_str[MAXSTR];
