@@ -380,6 +380,9 @@ static void test_classad(const Parameters &parameters, Results &results)
     have_attribute = basic->EvaluateAttrString("G", s);
     TEST("Attribute G was deleted", (have_attribute == false));
 
+    delete basic;
+    basic = NULL;
+
     /* ----- Test GetExternalReferences ----- */
     string input_ref = "[ Rank=Member(\"LCG-2_1_0\",other.Environment) ? other.Time/seconds : other.Time/minutes; minutes=60; ]";
     References            refs;
@@ -425,6 +428,7 @@ static void test_classad(const Parameters &parameters, Results &results)
             }
         }
         delete c;
+        c = NULL;
     }
 
     // This ClassAd may cause problems. Perhaps a memory leak. 
@@ -433,6 +437,7 @@ static void test_classad(const Parameters &parameters, Results &results)
         "[ Updates = [status = \"request_completed\"; timestamp = absTime(\"2004-12-16T18:10:59-0600]\")] ]";
     c = parser.ParseClassAd(memory_problem_classad);
     delete c;
+    c = NULL;
 }
 
 /*********************************************************************
