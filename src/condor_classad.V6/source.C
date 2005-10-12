@@ -653,7 +653,10 @@ parseShiftExpression(ExprTree *&tree)
             case Lexer::LEX_URIGHT_SHIFT:	
 				op = Operation::URIGHT_SHIFT_OP;  	
 				break;
-            default:    CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
+            default:    
+                op = Operation::__NO_OP__; // Make gcc's -wuninitalized happy
+                CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
+                break;
         }
 		if(treeL && treeR&&(newTree=Operation::MakeOperation(op,treeL,treeR))){
 			tree = newTree;
@@ -732,7 +735,10 @@ parseMultiplicativeExpression(ExprTree *&tree)
 			case Lexer::LEX_MODULUS:	
 				op = Operation::MODULUS_OP;		
 				break;
-			default: CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
+			default: 
+                op = Operation::__NO_OP__; // Make gcc's -wuninitalized happy
+                CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
+                break;
 		}
 		if( treeL && treeR && ( newTree=Operation::MakeOperation( op,treeL, 
 				treeR ) ) ) {

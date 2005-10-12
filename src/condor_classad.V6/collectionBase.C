@@ -608,6 +608,7 @@ PlayClassAdOp( int opType, ClassAd *rec )
 			ClassAdProxy 			proxy;
 			Value					cv;
 
+            newAd = NULL;
 			if( !rec->EvaluateAttrString( "Key", key ) ) {
 				CondorErrno = ERR_NO_KEY;
 				CondorErrMsg = "bad or missing 'key' attribute";

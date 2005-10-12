@@ -66,6 +66,8 @@ Query( const string &viewName, ExprTree *expr )
 	string					key;
 	bool					match;
 
+    parent = NULL;
+
 	// get the view to query
 	if( !collection || ( vri = collection->viewRegistry.find( viewName ) ) == 
 			collection->viewRegistry.end( ) ) {

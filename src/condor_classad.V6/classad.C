@@ -88,6 +88,7 @@ CopyFrom( const ClassAd &ad )
 	ExprTree 					*tree;
 	bool                        succeeded;
 
+    succeeded = true;
 	if (this == &ad) {
 		succeeded = false;
 	} else {
@@ -101,7 +102,8 @@ CopyFrom( const ClassAd &ad )
 				Clear( );
 				CondorErrno = ERR_MEM_ALLOC_FAILED;
 				CondorErrMsg = "";
-				return( false );
+                succeeded = false;
+                break;
 			}
 			tree->SetParentScope(this); // ajr
 			attrList[itr->first] = tree;

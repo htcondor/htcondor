@@ -243,6 +243,8 @@ SameAs(const ExprTree *tree) const
                     break;
                 }
             }
+        } else {
+            is_same = false;
         }
     }
 
@@ -1884,11 +1886,10 @@ bool FunctionCall::
 convTime(const char* name,const ArgumentList &argList,EvalState &state,
 	Value &result)
 {
-
 	Value	arg, arg2;
 	bool	relative = ( strcasecmp( "reltime", name ) == 0 );
-	bool secondarg = false; // says whether a 2nd argument exists
-	int arg2num; 
+	bool    secondarg = false; // says whether a 2nd argument exists
+	int     arg2num;
 
 		// takes one or two argument
 	if(( argList.size() < 1 )  || (argList.size() > 2)) {
@@ -1926,7 +1927,10 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 			result.SetErrorValue( );
 			return( false );
 		}
-	}
+	} else {
+        secondarg = false;
+        arg2num = 0;
+    }
 
 	switch( arg.GetType( ) ) {
 		case Value::UNDEFINED_VALUE:

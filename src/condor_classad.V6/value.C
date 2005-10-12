@@ -445,7 +445,9 @@ bool convertValueToRealValue(const Value value, Value &realValue)
             break;
 
 		default:
+            could_convert = false; // Make gcc's -Wuninitalized happy
 			CLASSAD_EXCEPT( "Should not reach here" );
+            break;
     }
     return could_convert;
 }
@@ -528,7 +530,9 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
             break;
 
 		default:
+            could_convert = false; // Make gcc's -Wuninitalized happy
 			CLASSAD_EXCEPT( "Should not reach here" );
+            break;
     }
     return could_convert;
 }
@@ -582,7 +586,9 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
             break;
 
 		default:
+            could_convert = false; // Make gcc's -Wuninitalized happy
 			CLASSAD_EXCEPT( "Should not reach here" );
+            break;
     }
     return could_convert;
 }
