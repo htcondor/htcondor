@@ -1,4 +1,16 @@
 Changes for version 0.9.8:
+
+* Fixed segmentation fault that occured when evaluating lists that are
+  not within a ClassAd. 
+
+* Added a ClassAdCollection::GetView() function. In combination with
+  the existing view iterators, you can now iterate over an entire
+  view, including the "root" view. 
+
+* Some missing "virtual" keywords were added for virtual destructors
+
+* A bunch of -Wuninitialized warnings were corrected.
+
 * regexprMember has been added.
 
 * The subscript operator now returns error instead of undefined if the
