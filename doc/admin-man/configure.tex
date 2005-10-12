@@ -4845,6 +4845,89 @@ refresh proxy certificates.  By default, this macro is undefined.
 
 \end{description}
 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsection{\label{sec:API-Config-File-Entries}
+% Configuration File Macros affecting APIs}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% \begin{description}
+% 
+% \item[\Macro{ENABLE\_SOAP}]
+%   \label{param:EnableSoap}
+%   A boolean value that defaults to \Expr{False}.
+%   When \Expr{True}, Condor daemons will respond to HTTP PUT commands
+%   as if they were SOAP calls. When \Expr{False},
+%   all HTTP PUT commands are denied.
+% 
+% \item[\Macro{ENABLE\_WEB\_SERVER}]
+%   \label{param:EnableWebServer}
+%   A boolean value that defaults to \Expr{False}.
+%   When \Expr{True}, Condor daemons will respond to HTTP GET commands,
+%   and send the static files sitting in the subdirectory defined
+%   by the configuration variable \MacroNI{WEB\_ROOT\_DIR}.
+%   In addition, web commands are considered a READ command,
+%   so the client will be checked by host-based security.
+% 
+% \item[\Macro{SUBSYS\_ENABLE\_SOAP\_SSL}]
+%   \label{param:SubsysEnableSoapSSL}
+%   A boolean value that defaults to \Expr{False}.
+%   When \Expr{True}, enables SOAP over SSL for the specified
+%   \MacroNI{SUBSYS}.
+%   Any specific \MacroNI{SUBSYS\_ENABLE\_SOAP\_SSL} setting overrides
+%   the value of \MacroNI{ENABLE\_SOAP\_SSL}.
+% 
+% \item[\Macro{ENABLE\_SOAP\_SSL}]
+%   \label{param:EnableSoapSSL}
+%   A boolean value that defaults to \Expr{False}.
+%   When \Expr{True}, enables SOAP over SSL for all daemons.
+% 
+% \item[\Macro{SUBSYS\_SOAP\_SSL\_PORT}]
+%   \label{param:SubsysSoapSSLPort}
+%   A required port number on which SOAP over SSL messages are
+%   accepted, when SOAP over SSL is enabled.
+%   The \MacroNI{SUBSYS} must be specified, because multiple daemons
+%   running on a single machine may not share a port.
+%   There is no default value.
+% 
+% \item[\Macro{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE}]
+%   \label{param:SubsysSoapSSLServerKeyfile}
+%   A required complete path and file name to specify the daemon's
+%   identity, as used in authentication when SOAP over SSL is enabled.
+%   The file is to be  an OpenSSL PEM file containing a certificate
+%   and private key.
+%   There is no default value.
+% 
+% \item[\Macro{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD}]
+%   \label{param:SubsysSoapSSLServerKeyfilePassword}
+%   An optional complete path and file name to specify
+%   a password for unlocking the daemon's private key.
+%   There is no default value.
+% 
+% \item[\Macro{SUBSYS\_SOAP\_SSL\_CA\_FILE}]
+%   \label{param:SubsysSoapSSLCaFile}
+%   A required complete path and file name to specify 
+%   a file containing certificates of trusted Certificate Authorities (CAs).
+%   Only clients who present a certificate signed by a trusted
+%   CA will be authenticated.
+%   There is no default value.
+% 
+% \item[\Macro{SUBSYS\_SOAP\_SSL\_CA\_DIR}]
+%   \label{param:SubsysSoapSSLCaDir}
+%   A required complete path to a directory
+%   containing certificates of trusted Certificate Authorities (CAs).
+%   Only clients who present a certificate signed by a trusted
+%   CA will be authenticated.
+%   There is no default value.
+% 
+% \item[\Macro{SUBSYS\_SOAP\_SSL\_DH\_FILE}]
+%   \label{param:SubsysSoapSSLDhFile}
+%   An optional complete path and file name to a DH file
+%   containing keys for a DH key exchange.
+%   There is no default value.
+% 
+% \end{description}
+% 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Credd-Config-File-Entries}
 \condor{credd} Configuration File Macros}
