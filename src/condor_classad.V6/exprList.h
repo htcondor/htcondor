@@ -41,7 +41,7 @@ class ExprList : public ExprTree
         ExprList(const ExprList &other_list);
 
 		/// Destructor
-		~ExprList();
+		virtual ~ExprList();
 
         ExprList &operator=(const ExprList &other_list);
 

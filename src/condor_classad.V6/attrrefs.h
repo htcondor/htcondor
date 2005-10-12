@@ -35,7 +35,7 @@ class AttributeReference : public ExprTree
         AttributeReference(const AttributeReference &ref);
 
 		///  Destructor
-    	~AttributeReference ();
+    	virtual ~AttributeReference ();
 
         /// Assignment operator
         AttributeReference &operator=(const AttributeReference &ref);

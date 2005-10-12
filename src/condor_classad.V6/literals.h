@@ -35,7 +35,7 @@ class Literal : public ExprTree
 {
   	public:
 		/// Destructor
-    	~Literal ();
+    	virtual ~Literal ();
 
         /// Copy constructor
         Literal(const Literal &literal);

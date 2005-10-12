@@ -112,7 +112,7 @@ class Operation : public ExprTree
         Operation(const Operation &op);
 
 		/// Destructor
-		~Operation ();
+		virtual ~Operation ();
 
         /// Assignment operator
         Operation &operator=(const Operation &op);

@@ -68,7 +68,7 @@ class FunctionCall : public ExprTree
     FunctionCall(FunctionCall &functioncall);
 
 	/// Destructor
-	~FunctionCall ();
+	virtual ~FunctionCall ();
 	
     FunctionCall & operator=(FunctionCall &functioncall);
 

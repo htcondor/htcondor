@@ -75,7 +75,7 @@ class ClassAd : public ExprTree
 		ClassAd (const ClassAd &ad);
 
 		/// Destructor
-		~ClassAd ();
+		virtual ~ClassAd ();
 		//@}
 
 		/**@name Insertion Methods */

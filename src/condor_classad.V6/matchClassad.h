@@ -71,7 +71,7 @@ class MatchClassAd : public ClassAd
 		*/
 		MatchClassAd( ClassAd* al, ClassAd* ar );
 		/// Default destructor
-		~MatchClassAd();
+		virtual ~MatchClassAd();
 
 		/** Factory method to make a MatchClassad given two ClassAds to be
 			matched.
