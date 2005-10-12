@@ -175,17 +175,23 @@ SetScopes( const ClassAd *curScope )
 void EvalState::
 SetRootScope( )
 {
-	ClassAd *prevScope = curAd, *curScope = (ClassAd*)(curAd->parentScope);
-
-	while( curScope ) {
-		if( curScope == curAd ) {	// NAC - loop detection
-			return;					// NAC
-		}							// NAC
-		prevScope = curScope;
-		curScope  = (ClassAd*)(curScope->parentScope);
-	}
-
-	rootAd = prevScope;
+	ClassAd *prevScope = curAd;
+    if (curAd == NULL) {
+        rootAd = NULL;
+    } else {
+        ClassAd *curScope = (ClassAd*)(curAd->parentScope);
+        
+        while( curScope ) {
+            if( curScope == curAd ) {	// NAC - loop detection
+                return;					// NAC
+            }							// NAC
+            prevScope = curScope;
+            curScope  = (ClassAd*)(curScope->parentScope);
+        }
+        
+        rootAd = prevScope;
+    }
+    return;
 }
 
 ostream& operator<<(ostream &stream, const ExprTree &expr)
