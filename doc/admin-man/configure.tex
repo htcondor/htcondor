@@ -1435,16 +1435,13 @@ is undefined, the e-mail is sent to \File{user@submitmachinename}.
 
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain}
 When Condor is about to run a job as a particular user (instead of the
-user nobody, see \Macro{UID\_DOMAIN} above for when this happens),
-it verifies that the UID given for the user is in the
+user nobody), it verifies that the UID given for the user is in the
 password file and actually matches the given user name.
 However, some
 installations may not have every user in every machine's password
-file, so this check will fail and the execution attempt will be
-aborted. If you prefer that Condor not do
+file, so this check will fail. If you prefer that Condor not do
 this check, because users are not in every password file, set
-this attribute to \Expr{True}. Condor will then run the job under the
-user's UID anyway.
+this attribute to \Expr{True}.
 
 
 \item[\Macro{VMx\_USER}] \label{param:VMxUser}
@@ -3159,18 +3156,6 @@ These macros control the \Condor{schedd}.
   300 seconds (5 minutes).  A value of 0 prevents the schedd from
   performing the periodic evaluations.
 
-\item[\Macro{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE}]
-  \label{param:ScheddAssumeNegotiatorGone} This macro determines the period,
-  in seconds, that the \Condor{schedd} will wait for the \Condor{negotiator} to
-  initiate a negotiation cycle before the schedd will simply try to claim
-  any local \Condor{startd}.  This allows for a machine that is acting as
-  both a submit and execute node to run jobs locally if it cannot
-  communicate with the central manager.  The default value, if not
-  specified, is 4 x \MacroUNI{NEGOTIATOR\_INTERVAL}.  If
-  \MacroUNI{NEGOTIATOR\_INTERVAL} is not defined, then 
-  \MacroNI{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE} will default to 1200 (20
-  minutes).
-
 \item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
   \label{param:ScheddBackupSpool} This macro is used to enable the
   \Condor{schedd} to make a backup of the job queue as it starts.  If
@@ -4844,89 +4829,6 @@ Condor-G and \Condor{credd} will have the capability to autonomously
 refresh proxy certificates.  By default, this macro is undefined.
 
 \end{description}
-
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \subsection{\label{sec:API-Config-File-Entries}
-% Configuration File Macros affecting APIs}
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% \begin{description}
-% 
-% \item[\Macro{ENABLE\_SOAP}]
-%   \label{param:EnableSoap}
-%   A boolean value that defaults to \Expr{False}.
-%   When \Expr{True}, Condor daemons will respond to HTTP PUT commands
-%   as if they were SOAP calls. When \Expr{False},
-%   all HTTP PUT commands are denied.
-% 
-% \item[\Macro{ENABLE\_WEB\_SERVER}]
-%   \label{param:EnableWebServer}
-%   A boolean value that defaults to \Expr{False}.
-%   When \Expr{True}, Condor daemons will respond to HTTP GET commands,
-%   and send the static files sitting in the subdirectory defined
-%   by the configuration variable \MacroNI{WEB\_ROOT\_DIR}.
-%   In addition, web commands are considered a READ command,
-%   so the client will be checked by host-based security.
-% 
-% \item[\Macro{SUBSYS\_ENABLE\_SOAP\_SSL}]
-%   \label{param:SubsysEnableSoapSSL}
-%   A boolean value that defaults to \Expr{False}.
-%   When \Expr{True}, enables SOAP over SSL for the specified
-%   \MacroNI{SUBSYS}.
-%   Any specific \MacroNI{SUBSYS\_ENABLE\_SOAP\_SSL} setting overrides
-%   the value of \MacroNI{ENABLE\_SOAP\_SSL}.
-% 
-% \item[\Macro{ENABLE\_SOAP\_SSL}]
-%   \label{param:EnableSoapSSL}
-%   A boolean value that defaults to \Expr{False}.
-%   When \Expr{True}, enables SOAP over SSL for all daemons.
-% 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_PORT}]
-%   \label{param:SubsysSoapSSLPort}
-%   A required port number on which SOAP over SSL messages are
-%   accepted, when SOAP over SSL is enabled.
-%   The \MacroNI{SUBSYS} must be specified, because multiple daemons
-%   running on a single machine may not share a port.
-%   There is no default value.
-% 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE}]
-%   \label{param:SubsysSoapSSLServerKeyfile}
-%   A required complete path and file name to specify the daemon's
-%   identity, as used in authentication when SOAP over SSL is enabled.
-%   The file is to be  an OpenSSL PEM file containing a certificate
-%   and private key.
-%   There is no default value.
-% 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_SERVER\_KEYFILE\_PASSWORD}]
-%   \label{param:SubsysSoapSSLServerKeyfilePassword}
-%   An optional complete path and file name to specify
-%   a password for unlocking the daemon's private key.
-%   There is no default value.
-% 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_CA\_FILE}]
-%   \label{param:SubsysSoapSSLCaFile}
-%   A required complete path and file name to specify 
-%   a file containing certificates of trusted Certificate Authorities (CAs).
-%   Only clients who present a certificate signed by a trusted
-%   CA will be authenticated.
-%   There is no default value.
-% 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_CA\_DIR}]
-%   \label{param:SubsysSoapSSLCaDir}
-%   A required complete path to a directory
-%   containing certificates of trusted Certificate Authorities (CAs).
-%   Only clients who present a certificate signed by a trusted
-%   CA will be authenticated.
-%   There is no default value.
-% 
-% \item[\Macro{SUBSYS\_SOAP\_SSL\_DH\_FILE}]
-%   \label{param:SubsysSoapSSLDhFile}
-%   An optional complete path and file name to a DH file
-%   containing keys for a DH key exchange.
-%   There is no default value.
-% 
-% \end{description}
-% 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Credd-Config-File-Entries}

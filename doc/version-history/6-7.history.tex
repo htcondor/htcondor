@@ -6,34 +6,21 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7.13}Version 6.7.13}
+\subsection{\label{sec:New-6-7.12}Version 6.7.12}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Added a new natively compiled clipped port for the Red Hat
-Enterprise Linux 3 IA64 distribution.
+\item None.
 
 \end{itemize}
+
 
 \noindent New Features:
 
 \begin{itemize}
-
-\item Added support in Condor for the Generic Connection Broker
-  (GCB).
-  This is a system for managing network connections across public and
-  private networks.
-
-\item Added a new configuration option, \Macro{BIND\_ALL\_INTERFACES}
-  This is a boolean value that controls if Condor should bind and
-  listen to all the network interfaces on a multi-homed machine.
-  If set to TRUE, the value of \Macro{NETWORK\_INTERFACE} will only
-  control what IP address is published by Condor daemons, even though
-  they will still be listening on all interfaces.
-  The default is FALSE.
 
 \item Added a \Opt{-pool} option to \Condor{submit}. It lets you submit
 jobs to a \Condor{schedd} in a different pool. The other options to
@@ -50,63 +37,11 @@ side-effect, ``stream\_output'' and ``stream\_error'' will default to
 a job specifically sets x509userproxy and is using file transfer, when
 the proxy file is updated, it will be transfered to the running job.
 
-\item If a  cycle is detected in the DAG while 
-running, \Condor{dagman} now prints (in the \File{dagman.out} file)
-the status of all DAG nodes.
-
-\item Addition of SOAP SSL code. Daemons can now require clients to
-  authenticate using SSL.
-
-\item BeginTransaction call in \Condor{schedd}'s SOAP interface now
-  notifies the caller if too many transactions are currently running
-  via an error code of FAIL. Pervious behavior was to abort a running
-  transaction in order to allow the BeginTransaction call to succeed.
-  
-\item \Macro{MAX\_SOAP\_TRANSACTION\_DURATION} config option added so that a
-  single transaction cannot take up too many \Condor{schedd}
-  resourced. This option specifies an optional maximum duration
-  between SOAP calls in a single transaction.
-
-\item If a machine is acting as both a submit and an execute node, and it
-  cannot communicate with the central manager, it will attempt to run jobs
-  locally.  If Condor specific terms, if the \Condor{schedd} fails to hear
-  from the central manager, it will attempt to run jobs on a locally running
-  \Condor{startd}.  The \Condor{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE} config
-  macro was added to support this feature; see
-  page~\pageref{param:ScheddAssumeNegotiatorGone} for details.
-
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item Fixed a bug in the \Condor{schedd} that caused grid-type gt2 jobs
-submitted by an older \Condor{submit} or in the queue during an upgrade
-(version 6.7.10 or earlier) to go
-on hold if the grid\_type was ``globus''.
-
-\item Fixed a bug in \Condor{submit} that caused it to not set 
-\Attr{JobGridType} in the job ad for grid universe jobs when submitting
-to a \Condor{schedd} older than version 6.7.11.
-
-\item When using file transfer, transfering the results back to
-the submit machine could silently fail for Condor releases 6.7.0
-though 6.7.12.  This was relatively rare through 6.7.10.  For
-6.7.11 and 6.7.12, the bug would be easily triggered if a vanilla
-job had an X509 user proxy associated with it.  This is now
-fixed.
-
-\item Fixed a logic bug in the \Condor{schedd}.
-  Previously, if there was an error expanding any \verb@$$(attribute)@
-  references in a job classad when trying to spawn a \Condor{shadow},
-  the \Condor{schedd} would die with the fatal exception ``Impossible:
-  GetJobAd() returned NULL for X.Y but that job is already known to
-  exist''.
-  Now, the \Condor{schedd} correctly distinguishes between a non-fatal
-  error expanding \verb@$$(attribute)@ and the fatal error of the job
-  already being gone (which is, in fact, impossible).
-  This bug was first introduced in Condor version 6.7.1.
 
 \item The reason strings generated when a user job policy expression fires
 are now consistent for grid universe jobs.
@@ -121,45 +56,7 @@ kernel post 2.6.12.2.
 grid-type condor job ad contained the attribute \Attr{remote\_}.
 
 \item Fixed a bug with the FS\_REMOTE authentication mechanism that caused
-it to fail occasionally when using NFS.
-
-% Gnats PR 553:
-\item Fixed a bug in which a double terminated event in a DAG node with
-a POST script could cause \Condor{dagman} to abort the DAG and claim
-that a cycle exists in the DAG.
-
-% Also related to Gnats PR 553:
-\item In the DAG status messages in \File{dagman.out} files,
-\Condor{dagman} now shows nodes with queued PRE or POST scripts
-in the Pre or Post columns.  Previously, these nodes were shown
-in the Un-Ready column.
-
-\item Fixed the GetFile SOAP call on the \Condor{schedd} so that it
-  behaves more like POSIX read() and does not report errors when
-  trying to read more data than is available.
-
-% Gnats PR 557:
-\item Fixed a hash function bug that could cause \Condor{dagman}
-to crash.
-
-\item \Attr{JobCurrentStartDate} and \Attr{JobLastStartDate} are no longer
-changed in the job ad when the \Condor{schedd} and \Condor{shadow} reconnect
-to a running job after a crash.
-
-% Gnats PR 554:
-\item \Condor{dagman} now allows POST scripts to be used with DATA
-nodes in a DAG (previously this caused the DAG to hang).
-
-\item Using the new \SubmitCmd{Remote\_} simplified syntax no longer
-generates unnecessary debug messages.
-
-% Quill
-\item Fixed a bug in estimating the size of attribute value buffers that
-caused quill to crash.  This arose when job ads had variables with very
-large values (more than 3KB).  
-
-\item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
-when the \Attr{Rematch} attribute evaluates to True.
+it to fail occaisionaly when using NFS.
 
 \end{itemize}
 
@@ -170,8 +67,6 @@ when the \Attr{Rematch} attribute evaluates to True.
 \item Added a couple missing parameters to the example configuration file
 \File{condor\_config.generic}.
 
-\item Slightly cleaned up event checking error messages in \Condor{dagman}.
-
 \end{itemize}
 
 \noindent Known Bugs:
@@ -182,42 +77,6 @@ when the \Attr{Rematch} attribute evaluates to True.
 
 \end{itemize}
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7.12}Version 6.7.12}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -246,9 +105,9 @@ Linux port.
 \begin{itemize}
 
 \item Added a new feature called \Bold{Quill} to Condor which allows an
-        SQL server to mirror the job queue in order to speed up queries about
-        the job queue via \Condor{q} and \Condor{history}. Please see 
-        page~\pageref{sec:Quill} for the description of this feature.
+	SQL server to mirror the job queue in order to speed up queries about
+	the job queue via \Condor{q} and \Condor{history}. Please see 
+	page~\pageref{sec:Quill} for the description of this feature.
 
 \item \Condor{dagman} has a new \Opt{-maxidle} command-line argument
 that can be used to throttle DAG job submissions according to the number
@@ -330,7 +189,7 @@ the POST script of a node whose Condor job had never been successfully
 submitted due to repeated \Condor{submit} failures.  (This bug was
 introduced in 6.7.7 or earlier.)
 
-\item Fixed a bug in a debug message.  If an error occurred during file
+\item Fixed a bug in a debug message.  If an error occured during file
 transfer, Condor would print the wrong expected filesize in the error message
 on some platforms.
 
@@ -371,7 +230,7 @@ held with hold reason ``Spooling input data files''.
 information from modern Condor configurations where
 \MacroNI{NEGOTIATOR\_HOST} is not defined.
 
-% Programmer explanation:
+% Programmer explaination:
 % MANAGED is no longer boolean in the job ad, it's
 % a string of complex state.  This enables the gridmanager
 % to no longer erroneously take control of jobs that are
@@ -490,7 +349,7 @@ simplified for the specific commands of
 \SubmitCmd{universe}, \SubmitCmd{remote\_schedd}, \SubmitCmd{remote\_pool}, \SubmitCmd{globus\_rsl}, and \SubmitCmd{globus\_scheduler}.
 
 \item Added default user priority factors for accounting groups.  More on
-        accounting groups will be available in future versions of the manual.
+	accounting groups will be available in future versions of the manual.
 
 \item The \Condor{startd} can now be configured to write out the
   \Attr{ClaimId} of the next available claim for each virtual machine
@@ -609,10 +468,6 @@ but if it happens for a second node, \Condor{dagman} will crash.
 
 \item The Condor-C GAHP now performs file staging in a 
 separate process, allowing remote grid jobs to be started earlier.
-
-\item Using the new \SubmitCmd{Remote\_} syntax simplification causes
-\Condor{submit} to display debug messages to standard output, possibly
-confusing programs that parse \Condor{submit}'s output.  Fixed in 6.7.13.
 
 \end{itemize}
 
@@ -851,22 +706,22 @@ select logs such as ``StarterLog.vm2''.
 \begin{itemize}
 
 \item Fixed a throughput performance bottle neck when standard universe
-        jobs vacate when the user has specified \Attr{WantCheckpoint} equal to
-        False in the submit file.
+	jobs vacate when the user has specified \Attr{WantCheckpoint} equal to
+	False in the submit file.
 
 \item Added initial support for the \Syscall{getdents},
-        \Syscall{getdents64}, \Syscall{glob}, and the family of functions
-        \Syscall{opendir}, \Syscall{readdir}, \Syscall{closedir} for the
-        standard universe.  
+	\Syscall{getdents64}, \Syscall{glob}, and the family of functions
+	\Syscall{opendir}, \Syscall{readdir}, \Syscall{closedir} for the
+	standard universe.  
 
-        It is recommended that you do not directly invoke \Syscall{getdents} 
-        or \Syscall{getdents64}, but instead use the other POSIX functions
-        specified above.
+	It is recommended that you do not directly invoke \Syscall{getdents} 
+	or \Syscall{getdents64}, but instead use the other POSIX functions
+	specified above.
 
-        There are two caveats: these calls will not work in heterogeneous
-        contexts, and you may not call \Syscall{getdents} directly when 
-        \Condor{compile}ing a 32-bit program while specifying the 64-bit
-        interfaces for the Unix API.
+	There are two caveats: these calls will not work in heterogeneous
+	contexts, and you may not call \Syscall{getdents} directly when 
+	\Condor{compile}ing a 32-bit program while specifying the 64-bit
+	interfaces for the Unix API.
 
 \item In versions 6.7.4 through 6.7.6, Computing On Demand (COD)
   support was broken due to a bug in how Condor daemons parsed their
@@ -968,15 +823,15 @@ to fail an assertion if PRE or POST scripts are throttled with the
 \begin{itemize}
 
 \item Added support for libc's \Syscall(system) function for standard
-        universe executables. This call is not checkpoint-safe in that
-        the standard universe job could call it twice or more times
-        in the event of a resumption from an earlier checkpoint. The
-        invocation of this call by the shadow on behalf of the user
-        job is controlled by a configuration file parameter called
-        \Attr{SHADOW\_ALLOW\_UNSAFE\_REMOTE\_EXEC} and is off by default.
-        The full environment of the user job is preserved during the
-        invocation of \Syscall(system) and this might cause problems in 
-        heterogeneous submission contexts of the user is not careful.
+	universe executables. This call is not checkpoint-safe in that
+	the standard universe job could call it twice or more times
+	in the event of a resumption from an earlier checkpoint. The
+	invocation of this call by the shadow on behalf of the user
+	job is controlled by a configuration file parameter called
+	\Attr{SHADOW\_ALLOW\_UNSAFE\_REMOTE\_EXEC} and is off by default.
+	The full environment of the user job is preserved during the
+	invocation of \Syscall(system) and this might cause problems in 
+	heterogeneous submission contexts of the user is not careful.
 
 \item Added support for a web services (SOAP) interface to Condor.
   For more information, see and section~\ref{API-WebService} on
