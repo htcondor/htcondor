@@ -7,6 +7,11 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+
+10/13/05 V6_7_13-branch
+   A branch for the 6.7.13 release, created from V6_7_13-root on the
+   V6_7_ALL module.  Therefore, the "doc" directory is branched, too.
+
 9/19/05 V6_7_11-branch
     A release branch for the 6.7.11 manual, created from the
     V6_7_11-root tag. Any changes to the 6.7.11 manual should be done
