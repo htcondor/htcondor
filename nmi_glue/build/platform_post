@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.12 2005-10-12 07:48:15 wright Exp $
+# $Id: platform_post,v 1.1.2.13 2005-10-13 20:43:51 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -48,7 +48,7 @@ chomp $runid;
 
 $tag || die "No tag to use, NOT submitting tests\n";
 $module || die "No module to use, NOT submitting tests\n";
-#$runid || die "No runid to use, NOT submitting tests\n";
+$runid || die "No runid to use, NOT submitting tests\n";
 
 print "Submitting test job for platform: '$ENV{NMI_PLATFORM}' "
     . "runid: '$runid' ...\n";
