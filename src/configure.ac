@@ -515,13 +515,7 @@ if test $ac_cv_c_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU CC (gcc) is required] )
 fi   
 
-AC_MSG_CHECKING([for full path to gcc])
-if test $WHICH != no; then
-  gcc_path=`which gcc`
-  AC_MSG_RESULT([$gcc_path])
-else
-  AC_MSG_RESULT([this platform does not support 'which'])
-fi
+CHECK_PATH_PROG(gcc,gcc)
 
 
 # Figure out the version of gcc. 
@@ -697,13 +691,8 @@ AC_PROG_CXX
 if test $ac_cv_cxx_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU C++ (g++) is required] )
 fi   
-AC_MSG_CHECKING([for full path to g++])
-if test $WHICH != no; then
-  gpp_path=`which g++`
-  AC_MSG_RESULT([$gpp_path])
-else
-  AC_MSG_RESULT([this platform does not support 'which'])
-fi
+CHECK_PATH_PROG([g++],[gpp])
+
 
 #########
 # figure out what linker flags put us in static-link mode
@@ -886,14 +875,7 @@ AC_PROG_LEX
 if test "$LEX" = "no" ; then
     AC_MSG_ERROR( [lex is required] )
 fi
-AC_MSG_CHECKING([for full path to $LEX])
-
-if test $WHICH != no; then
-  lex_path=`which $LEX`
-  AC_MSG_RESULT([$lex_path])
-else
-  AC_MSG_RESULT([this platform does not support 'which'])
-fi
+CHECK_PATH_PROG([$LEX],[lex])
 
 
 # We don't want to do the default AC_PROG_YACC, since it selects

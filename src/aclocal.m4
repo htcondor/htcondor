@@ -418,3 +418,28 @@ AC_DEFUN([REQUIRE_PATH_PROG],
    AC_MSG_ERROR([$2 is required])
  fi
 ])
+
+
+#######################################################################
+# CHECK_PATH_PROG by Derek Wright <wright@cs.wisc.edu> 
+# Checks for the full path to the requested tool.
+# Assumes you already called AC_PATH_PROG(WHICH,which).
+# We can't use AC_REQUIRE for that assumption, b/c that only works
+# for macros without arguments.
+#
+# Arguments
+#  $1 program name
+#  $2 variable name prefix 
+# Side Effects:
+#  sets $2_path to the full path to $1
+#######################################################################
+AC_DEFUN([CHECK_PATH_PROG],
+[AC_MSG_CHECKING([for full path to $1])
+ if test $WHICH != no; then
+   $2_path=`$WHICH $1`
+   AC_MSG_RESULT($[$2_path])
+ else
+   AC_MSG_RESULT([this platform does not support 'which'])
+ fi
+])
+
