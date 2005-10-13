@@ -318,6 +318,8 @@ Where [build-options] can be any of:
 Where [test-options] can be any of:
 --buildid=string   <Build RunId to test>
 --test-src=string  <Custom source tarball for building tests with>
+--test-args=string <Arguments to select what tests to declare>
+--test-timeout=int <timeout in minutes for each test task (default is 20)>
 END_USAGE
 
     myExit( $exit_code );
