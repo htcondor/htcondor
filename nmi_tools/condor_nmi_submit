@@ -63,6 +63,7 @@
 
 use strict;
 use Cwd;
+use DBI;
 use Getopt::Long;
 use File::Basename;
 
@@ -89,6 +90,14 @@ my $submit_info = "nmi_glue/submit_info";
 
 # Path to the nmi_submit program we should invoke
 my $nmi_submit = "/nmi/bin/nmi_submit";
+
+# database parameters
+my $database = "history";
+my $username = "nmi";
+my $password = "nmi-nwo-nmi";
+my $DB_CONNECT_STR = "DBI:mysql:database=$database;host=localhost";
+my $RUN_TABLE = "Run";
+my $TASK_TABLE = "Task";
 
 
 ######################################################################
@@ -225,6 +234,16 @@ sub parseOptions
 
     if( defined $opt_platforms ) {
         foreach $platform ( split(/\s*\,\s*/, $opt_platforms) ) {
+            if( $platform =~ /all/ ) {
+                if( $runtype ne "test" ) {
+                    print "ERROR: --platform=all only works with --test\n";
+                    printUsage( 1 );
+                }
+                if( ! defined $opt_buildid ) {
+                    print "ERROR: --platform=all only works with --buildid\n";
+                    printUsage( 1 );
+                }
+            }
             $opt_platforms{$platform} = 1;
         }
     }
@@ -320,6 +339,8 @@ Where [test-options] can be any of:
 --test-src=string  <Custom source tarball for building tests with>
 --test-args=string <Arguments to select what tests to declare>
 --test-timeout=int <timeout in minutes for each test task (default is 20)>
+--platforms=all    <will query DB for all platforms in the given buildid>
+
 END_USAGE
 
     myExit( $exit_code );
@@ -382,6 +403,17 @@ sub getSubmitInfo
 
     if( %opt_platforms ) {
         @platforms = sort keys %opt_platforms;
+        if( grep(/all/, @platforms) ) {
+            # we already verified the command-line, so we know we've
+            # got opt_buildid and we're in test mode... 
+            if( ! defined $opt_buildid ) {
+                die "IMPOSSIBLE: saw --platforms=all without --builddid\n";
+            }
+            @platforms = ();
+            print "Saw --platforms=all, getting platforms from build runid: "
+                . "$opt_buildid\n";
+            @platforms = getPlatformsFromRunid( $opt_buildid );
+        }
     } else {
         @platforms = sort keys %platforms;
     }
@@ -788,6 +820,31 @@ sub myExit
         run("rm -rf $workspace", 0);
     }
     exit $exit_code;
+}
+
+
+sub getPlatformsFromRunid() {
+    my( $runid ) = @_;
+
+    my @platforms = ();
+    my $platform;
+
+    my $db = DBI->connect("$DB_CONNECT_STR","$username","$password")
+        || die "Could not connect to database: $!\n";
+    my $cmd_str = qq/SELECT DISTINCT platform from $TASK_TABLE WHERE
+        runid='$runid'/;
+    print "$cmd_str\n";
+
+    my $handle = $db->prepare("$cmd_str");
+    $handle->execute();
+    while ( my $row = $handle->fetchrow_hashref() ) {
+        $platform = $row->{'platform'};
+        push(@platforms, $platform) unless $platform =~ /local/;
+    }
+    $handle->finish();
+    $db->disconnect;
+
+    return @platforms;
 }
 
 
