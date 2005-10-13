@@ -590,6 +590,18 @@ sub generateTestFetchFiles
 
     @fetch_files = generateSharedFetchFiles( $tag );
 
+    # $opt_nmi_glue is handled in generateSharedFetchFiles().
+    # however, if it's not set, and we're a test job, we need to add a
+    # fetch file to checkout the glue from cvs so we have a working
+    # copy in our userdir as soon as the fetching is done.  we can't
+    # rely on the copy of the glue in the source tarball from the
+    # build output, since we have no way to untar it without glue. ;)
+    if( ! defined $opt_nmi_glue ) { 
+        my $glue_file = "test_glue.src";
+        makeFetchFile( $glue_file, "nmi_glue/$runtype", $tag );
+        push( @fetch_files, $glue_file );
+    }        
+    
     # generate the runid input file
     my $runid_file = "input_build_runid.src";
     open(RUNIDFILE, ">$runid_file") || 
@@ -608,12 +620,8 @@ sub generateTestFetchFiles
         print SRCFILE "scp_file = $opt_test_src\n";
         close SRCFILE;
         push( @fetch_files, $test_src_file );
-    } elsif( !defined $opt_nmi_glue ) { 
-        my $glue_file = "test_glue.src";
-        makeFetchFile( $glue_file, "nmi_glue/$runtype", $tag );
-        push( @fetch_files, $glue_file );
-    }        
-    
+    }
+
     return @fetch_files;
 }
 
