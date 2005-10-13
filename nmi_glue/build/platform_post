@@ -1,9 +1,16 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.4.6 2005-10-05 06:32:42 wright Exp $
+# $Id: platform_post,v 1.1.4.7 2005-10-13 22:35:46 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
+
+use Getopt::Long;
+use vars qw/ $opt_without_tests $opt_test_args /;
+GetOptions(
+            'without-tests' => $opt_without_tests,
+            'test-args=s' => $opt_test_args,
+);
 
 # we just want to chmod everything in the local directory (the
 # per-platform directory on the submit side, after everything was
@@ -22,11 +29,15 @@ if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
     exit 0;
 }
 
-if( $ARGV[0] eq "--without-tests" ) {
+if( defined $opt_without_tests ) {
     print "--without-tests specified on command-line, NOT submitting tests\n";
     exit 0;
 }   
 
+if( defined $opt_test_args ) {
+    print "--test-args specified on command-line, additional args for " 
+	. "condor_nmi_submit:\n   '$opt_test_args'\n";
+}   
 
 my $tag = $ENV{NMI_tag};
 my $module = $ENV{NMI_module};
@@ -35,27 +46,20 @@ print "From the environment: module = $module\n";
 my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
 chomp $runid;
 
-if ( $tag and $module and $runid ) {
-    print "This is without using the test_ids file\n";
-    print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
-    system( "/nmi/bin/condor_test_submit.pl " .
-            "--buildid=$runid --platform=$ENV{NMI_PLATFORM} " .
-            "--tag=$tag --module=$module" );
-    my $status = $?;
-    if( $status ) {
-        die "condor_test_submit.pl failed with status $status\n";
-    }
-}
-elsif ( -f "test_ids" ) {
-    print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
-    system( "/nmi/bin/condor_test_submit.pl ".
-            "--nightly --platform=$ENV{NMI_PLATFORM}" );
-    my $status = $?;
-    if( $status ) {
-        die "condor_test_submit.pl failed with status $status\n";
-    }
-}
-else {
-    print "It seems no test_ids file was created. Not submitting a test run\n";
+$tag || die "No tag to use, NOT submitting tests\n";
+$module || die "No module to use, NOT submitting tests\n";
+$runid || die "No runid to use, NOT submitting tests\n";
+
+print "Submitting test job for platform: '$ENV{NMI_PLATFORM}' "
+    . "runid: '$runid' ...\n";
+
+my $cmd = "/nmi/bin/condor_nmi_submit --test " . 
+          "--buildid=$runid --platform=$ENV{NMI_PLATFORM} " .
+	  "--tag=$tag --module=$module $opt_test_args";
+
+system( $cmd );
+my $status = $?;
+if( $status ) {
+    die "condor_nmi_submit --test failed with status $status\n";
 }
 

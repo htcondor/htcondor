@@ -2,7 +2,10 @@
 use CondorTest;
 
 $cmd = 'job_core_plus_sched.cmd';
-$testname = 'Condor_submit correctly places things into JobAds - scheduler U';
+$testname = 'Condor_submit correctly places attributes into JobAd - scheduler U';
+
+my $alreadydone=0;
+my $foundcount=0;
 
 $success = sub 
 {
@@ -19,10 +22,8 @@ $died = sub
 	my $error 		= $info{"error"};
 };
 
-my $alreadydone=0;
-my $foundcount=0;
 
-$execute = sub 
+$submit = sub 
 {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
@@ -73,8 +74,9 @@ $execute = sub
 			$foundcount += 1;
 		}
 	}
-	die "Missed some ads" unless $foundcount == 4;
 	$status = CondorTest::runCondorTool("condor_rm $cluster",\@adarray,2);
+	print "Expect to see 4 attributes {foo,bar,last and done}\n";
+	die "Missed some attributes" unless $foundcount == 4;
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
@@ -83,7 +85,7 @@ $execute = sub
 	exit(0);
 };
 
-CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedFailure( $testname, $died );
 CondorTest::RegisterExitedSuccess( $testname, $success );
 

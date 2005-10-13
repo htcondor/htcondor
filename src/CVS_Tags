@@ -1,3 +1,8 @@
+10/13/05 V6_6-merge-49
+   The state of the V6_6-branch for a merge into V6_7-branch.  fixes
+   some minor condor_tests, nmi_glue, and autoconf stuff.  this is the
+   final V6_6 -> V6_7 merge before the 6.7.13 release.
+
 10/07/05 V6_7-gcb-2-merge-1
    The state of the V6_7-gcb-2-branch for the first (and final) merge
    into the V6_7-branch.  This is the first time GCB support will go
