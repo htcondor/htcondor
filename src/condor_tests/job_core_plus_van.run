@@ -75,7 +75,7 @@ $submit = sub
 	}
 	$status = CondorTest::runCondorTool("condor_rm $cluster",\@adarray,2);
 	print "Expect to see 4 attributes {foo,bar,last and done}\n";
-	die "Missed some ads" unless $foundcount == 4;
+	die "Missed some attributes" unless $foundcount == 4;
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure<$cmd>\n";

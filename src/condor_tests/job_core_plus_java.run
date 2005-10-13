@@ -71,7 +71,7 @@ $execute = sub
 			$foundcount += 1;
 		}
 	}
-	die "Missed some ads" unless $foundcount == 4;
+	die "Missed some attributes" unless $foundcount == 4;
 };
 
 CondorTest::RegisterExecute($testname, $execute);
