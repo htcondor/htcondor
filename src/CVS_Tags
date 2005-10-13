@@ -1,3 +1,8 @@
+10/13/05 V6_6-merge-49
+   The state of the V6_6-branch for a merge into V6_7-branch.  fixes
+   some minor condor_tests, nmi_glue, and autoconf stuff.  this is the
+   final V6_6 -> V6_7 merge before the 6.7.13 release.
+
 10/05/05 V6_6-merge-48
    The state of the V6_6-branch for a merge into V6_7-branch.  Fixes
    a bunch of condor_tests stuff, such that we should be close to all
