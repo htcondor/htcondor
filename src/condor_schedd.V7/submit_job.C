@@ -5,58 +5,167 @@
 #include "dc_schedd.h"
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
+#include "proc.h"
 #include "classad_newold.h"
 #define WANT_NAMESPACES
 #include "classad_distribution.h"
 
+	// Simplify my error handling and reporting code
+class FailObj {
+public:
+	FailObj() : cluster(-1), proc(-1), qmgr(0) { }
 
-bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
-{
-		// Simplify my error handling and reporting code
-	struct FailObj {
-		FailObj() : cluster(-1), proc(-1), qmgr(0) { }
-		MyString scheddtitle;
-		int cluster;
-		int proc;
-		Qmgr_connection * qmgr;
-		void fail( const char * fmt, ...) {
-			if(cluster != -1 && qmgr) {
-				DestroyCluster(cluster);
-			}
-			if(qmgr) { DisconnectQ( qmgr, false /* don't commit */); }
+	void SetCluster(int c) { cluster = c; }
+	void SetProc(int p) { proc = p; }
 
-			MyString msg;
-			msg += "ERROR (";
-			msg += scheddtitle;
-			msg += ") ";
-
-			if(cluster != -1) {
-				msg += "(";
-				msg += cluster;
-				if(proc != -1) {
-					msg += ".";
-					msg += proc;
-				}
-				msg += ") ";
-			}
-			va_list args;
-			va_start(args,fmt);
-			msg.vsprintf_cat(fmt,args);
-			va_end(args);
-			fprintf(stderr, "%s", msg.Value());
+	void SetNames(const char * schedd_name, const char * pool_name) {
+		if(schedd_name) {
+			names = "schedd ";
+			names += schedd_name;
+		} else {
+			names = "local schedd";
 		}
-	} failobj;
-
-	MyString scheddtitle = "local schedd";
-	if(schedd_name) {
-		scheddtitle = "schedd ";
-		scheddtitle += schedd_name;
+		names += " at ";
+		if(pool_name) {
+			names = "pool ";
+			names += pool_name;
+		} else {
+			names = "local pool";
+		}
 	}
-	failobj.scheddtitle = scheddtitle;
+
+	void SetQmgr(Qmgr_connection * q) { qmgr = q; }
+
+	void fail( const char * fmt, ...) {
+		if(cluster != -1 && qmgr) {
+			DestroyCluster(cluster);
+		}
+		if(qmgr) { DisconnectQ( qmgr, false /* don't commit */); }
+
+		MyString msg;
+		msg = "ERROR ";
+		if(names.Length()) {
+			msg += "(";
+			msg += names;
+			msg += ") ";
+		}
+
+		if(cluster != -1) {
+			msg += "(";
+			msg += cluster;
+			if(proc != -1) {
+				msg += ".";
+				msg += proc;
+			}
+			msg += ") ";
+		}
+		va_list args;
+		va_start(args,fmt);
+		msg.vsprintf_cat(fmt,args);
+		va_end(args);
+		dprintf(D_ALWAYS, "%s", msg.Value());
+	}
+private:
+	MyString names;
+	int cluster;
+	int proc;
+	Qmgr_connection * qmgr;
+};
+
+
+
+ClaimJobResult claim_job(int cluster, int proc, MyString * error_details)
+{
+	ASSERT(cluster > 0);
+	ASSERT(proc >= 0);
+
+	// Check that the job's status is still IDLE
+	int status;
+	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) == -1) {
+		if(error_details) {
+			error_details->sprintf("Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
+		}
+		return CJR_ERROR;
+	}
+	if(status != IDLE) {
+		if(error_details) {
+			error_details->sprintf("Job %d.%d isn't idle, is %s (%d)", cluster, proc, getJobStatusString(status), status); 
+		}
+		return CJR_BUSY;
+	}
+
+	// Check that the job is still managed by the schedd
+	char * managed;
+	if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &managed) == 0) {
+		bool ok = strcmp(managed, MANAGED_SCHEDD) == 0;
+		free(managed);
+		if( ! ok ) {
+			if(error_details) {
+				error_details->sprintf("Job %d.%d is already managed by another process", cluster, proc); 
+			}
+			return CJR_BUSY;
+		}
+	}
+	// else: No Managed attribute?  Assume it's schedd managed (ok) and carry on.
+	
+	// No one else has a claim.  Claim it ourselves.
+	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL) == -1 ) {
+		if(error_details) {
+			error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
+		}
+		return CJR_ERROR;
+	}
+
+	return CJR_OK;
+}
+
+ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details)
+{
+	// Open a qmgr
+	FailObj failobj;
+	failobj.SetNames(schedd_name, pool_name);
 
 	DCSchedd schedd(schedd_name,pool_name);
 	if( ! schedd.locate() ) {
-		failobj.fail("Can't find address of %s\n", scheddtitle.Value());
+		failobj.fail("Can't find address of schedd\n");
+		return CJR_ERROR;
+	}
+
+	CondorError errstack;
+	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
+	if( ! qmgr ) {
+		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
+		return CJR_ERROR;
+	}
+	failobj.SetQmgr(qmgr);
+
+
+	//-------
+	// Do the actual claim
+	ClaimJobResult res = claim_job(cluster, proc, error_details);
+	//-------
+
+
+	// Tear down the qmgr
+	if( ! DisconnectQ(qmgr, true /* commit */)) {
+		failobj.SetQmgr(0);
+		failobj.fail("Failed to commit job claim\n");
+		return CJR_ERROR;
+	}
+
+	return res;
+}
+
+
+
+bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+{
+	FailObj failobj;
+	failobj.SetNames(schedd_name, pool_name);
+
+	DCSchedd schedd(schedd_name,pool_name);
+	if( ! schedd.locate() ) {
+		failobj.fail("Can't find address of schedd\n");
 		return false;
 	}
 	// TODO Consider: condor_submit has to fret about storing a credential on Win32.
@@ -76,21 +185,21 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
 		return false;
 	}
-	failobj.qmgr = qmgr;
+	failobj.SetQmgr(qmgr);
 
 	int cluster = NewCluster();
 	if( cluster < 0 ) {
 		failobj.fail("Failed to create a new cluster (%d)\n", cluster);
 		return false;
 	}
-	failobj.cluster = cluster;
+	failobj.SetCluster(cluster);
 
 	int proc = NewProc(cluster);
 	if( proc < 0 ) {
 		failobj.fail("Failed to create a new proc (%d)\n", proc);
 		return false;
 	}
-	failobj.proc = proc;
+	failobj.SetProc(proc);
 
 	src.Assign(ATTR_PROC_ID, proc);
 	src.Assign(ATTR_CLUSTER_ID, cluster);
@@ -140,7 +249,7 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 	}
 
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
-		failobj.qmgr = 0;
+		failobj.SetQmgr(0);
 		failobj.fail("Failed to commit job submission\n");
 		return false;
 	}
@@ -276,6 +385,8 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
 	fprintf(stderr,"%s\n",constraint.Value());
 
+
+	// Get our sandbox back
 	CondorError errstack;
 	int jobssent;
 	bool success = schedd.receiveJobSandbox(constraint.Value(), &errstack, &jobssent);
@@ -290,6 +401,35 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 		printf("(%d.%d) Failed to retrieve sandbox (got %d, expected 1).\n", cluster, proc, jobssent);
 		return false;
 	}
+
+
+	// Yield the job (clear MANAGED).
+	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
+	if( ! qmgr ) {
+		dprintf(D_ALWAYS, "finalize_job: Unable to connect to schedd\n%s\n", errstack.getFullText(true));
+		return false;
+	}
+
+	// Check that the job is managed.
+	char * managed;
+	bool is_managed = false;
+	if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &managed) == 0) {
+		is_managed = strcmp(managed, MANAGED_EXTERNAL) == 0;
+		free(managed);
+	}
+	if( ! is_managed ) {
+		dprintf(D_ALWAYS, "finalize_job: job %d.%d doesn't appear to be managed.\n", cluster, proc);
+	} else {
+		if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, MANAGED_DONE) == -1 ) {
+			dprintf(D_ALWAYS, "finalize_job: failed to set %s = %s for %d.%d\n", ATTR_JOB_MANAGED, MANAGED_DONE, cluster, proc);
+		}
+	}
+
+	if( ! DisconnectQ(qmgr, true /* commit */)) {
+		dprintf(D_ALWAYS, "finalize_job: Failed to commit changes\n");
+		return false;
+	}
+
 
 	return true;
 }

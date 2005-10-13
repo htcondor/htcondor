@@ -1,8 +1,39 @@
 #ifndef INCLUDE_SUBMIT_JOB_H
 #define INCLUDE_SUBMIT_JOB_H
 
+#include "MyString.h"
+
 namespace classad { class ClassAd; }
 class ClassAd;
+
+enum ClaimJobResult { 
+	CJR_OK,       // Job claimed (put in managed state)
+	CJR_BUSY,     // The job was not IDLE or is claimed by another manager
+	CJR_ERROR     // Something went wrong, probably failure to connect to the schedd.
+};
+
+/*
+	Assuming an active qmgr connection to the schedd holding the job,
+	attempt to the put cluster.proc into the managed state (claiming it
+	for our own management).  Before doing so, does a last minute check
+	to confirm the job is IDLE.  error_details is optional. If non NULL,
+	error_details will contain a message explaining why claim_job didn't
+	return OK.  The message will be suitable for reporting to a log file.
+*/
+ClaimJobResult claim_job(int cluster, int proc, MyString * error_details = 0);
+
+/*
+	As the above claim_job, but will attempt to create the qmgr connection
+	itself.  pool_name can be null to indicate "whatever COLLECTOR_HOST"
+	is set to.  schedd_name can be null to indicate "local schedd".
+
+	Attempt to the put cluster.proc into the managed state (claiming it
+	for our own management).  Before doing so, does a last minute check
+	to confirm the job is IDLE.  error_details is optional. If non NULL,
+	error_details will contain a message explaining why claim_job didn't
+	return OK.  The message will be suitable for reporting to a log file.
+*/
+ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details = 0);
 
 /* 
 - src - The classad to submit.  The ad will be modified based on the needs of

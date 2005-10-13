@@ -68,17 +68,40 @@ int vanilla2grid(int argc, char **argv)
 		die("Failed to parse class ad\n");
 	}
 
+	int orig_cluster;
+	if( ! newad.EvaluateAttrInt(ATTR_CLUSTER_ID, orig_cluster) ) {
+		dprintf(D_ALWAYS, "Vanilla job lacks a cluster\n");
+		return 1;
+	}
+	int orig_proc;
+	if( ! newad.EvaluateAttrInt(ATTR_PROC_ID, orig_proc) ) {
+		dprintf(D_ALWAYS, "Vanilla job lacks a proc\n");
+		return 1;
+	}
+
 	//====================================================================
 	// Do something interesting:
 	VanillaToGrid::vanillaToGrid(&newad, argv[2]);
-	//====================================================================
 
+	MyString errors;
+	switch(claim_job(NULL, NULL, orig_cluster, orig_proc, &errors))
+	{
+		case CJR_OK:
+			break;
+		case CJR_BUSY:
+			dprintf(D_ALWAYS, "Unable to claim original job %d.%d because it's busy (%s)\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.Value());
+			break;
+		case CJR_ERROR:
+			dprintf(D_ALWAYS, "Unable to claim original job %d.%d because of an error: %s\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.Value());
+			break;
+	}
 
 	int cluster,proc;
 	if( ! submit_job( newad, 0, 0, &cluster, &proc ) ) {
 		fprintf(stderr, "Failed to submit job\n");
 	}
 	printf("Successfully submitted %d.%d\n",cluster,proc);
+
 
 	if(0) // Print the transformed add.
 	{
