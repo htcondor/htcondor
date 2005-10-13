@@ -430,7 +430,7 @@ sub InstallPersonalCondor
 sub TunePersonalCondor
 {
 	my %control = %personal_condor_params;
-	my $myhost = `/bin/hostname`;
+	my $myhost = `hostname`;
 	chomp($myhost);
 	my @domainparts = split /\./, $myhost;
 	my $condorhost = "";
