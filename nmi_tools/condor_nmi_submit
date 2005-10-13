@@ -70,7 +70,7 @@ use vars qw/ $opt_build $opt_test
     $opt_help $opt_notify $opt_platforms $opt_nmi_glue 
     $opt_tag $opt_module
     $opt_nightly $opt_externals $opt_without_tests
-    $opt_buildid $opt_test_src
+    $opt_buildid $opt_test_src $opt_test_timeout
     /;
 
 
@@ -129,6 +129,9 @@ my %platform_testargs;
 
 # Global variable for better error messages when parsing submit_info
 my $orig_lineno = 0;
+
+# Test timeout value to use (from command-line)
+my $test_timeout = 20;
 
 
 ######################################################################
@@ -199,7 +202,7 @@ sub parseOptions
 # test-specific options
            'buildid=s'     => $opt_buildid,
            'test-src=s'    => $opt_test_src,
-
+	   'test-timeout=i' => $opt_test_timeout,
     );
 
     if( defined $opt_help ) {
@@ -276,6 +279,10 @@ sub parseOptions
             print "Glue directory $opt_nmi_glue/$runtype does not exist\n";
             printUsage( 1 );
         }
+    }
+
+    if( defined($opt_test_timeout) ) {
+	$test_timeout = $opt_test_timeout;
     }
 }
 
@@ -570,7 +577,7 @@ sub writeTestGlue
     print $fh "remote_declare_args = quick\n";
     print $fh "remote_pre = nmi_glue/test/remote_pre\n";
     print $fh "remote_task = nmi_glue/test/remote_task\n";
-    print $fh "remote_task_timeout = 20\n";
+    print $fh "remote_task_timeout = $test_timeout\n";
     print $fh "remote_post = nmi_glue/test/remote_post\n";
     print $fh "\n";
 }
