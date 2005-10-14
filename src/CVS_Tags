@@ -1,7 +1,7 @@
 10/14/05 V6_7-cron-branch
    A branch off of V6_7 for Andy Pavlo's work to add cron-like
    scheduling to various parts of Condor.  This is initially motivated
-   by efforts to use Condor for LIGO, but many of the features will be
+   by efforts to use Condor for INCA, but many of the features will be
    useful for other sites, too.  Functionality slated for this branch
    includes: job "deferal" in the starter to spawn a job at a specific
    time, a Requirements expression for local universe jobs, cron-like
