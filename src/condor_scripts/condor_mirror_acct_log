@@ -4,6 +4,9 @@ use strict;
 use FileHandle;
 use POSIX "strftime";
 
+# Figure out where to store this script's log
+chomp(my $LOG_DIR = `condor_config_val log 2>/dev/null`);
+
 # Figure out where it's going to go on the local system
 my $dest = `condor_config_val accountant_log 2>/dev/null`;
 chomp($dest);
@@ -76,7 +79,7 @@ sub log
 {
     my ($msg) = @_;
 
-    my $fh = new FileHandle ">>/tmp/get_accoutant_log.log";
-    print $fh strftime "%T %D: $msg\n", localtime();
+    my $fh = new FileHandle ">>${LOG_DIR}/AcctLogMirrorLog";
+    print $fh strftime("%Y-%m-%d %H:%M:%S -- $msg\n", localtime);
     $fh->close;
 }
