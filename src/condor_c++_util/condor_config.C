@@ -975,9 +975,27 @@ clear_config()
 char *
 param( const char *name )
 {
-	char *val = lookup_macro( name, ConfigTab, TABLESIZE );
+	// prepend the subsystem and a period and check for that first.
 
-	if( val == NULL || val[0] == '\0' ) {
+	MyString subsysparamname = mySubSystem;
+	subsysparamname += ".";
+	subsysparamname += name;
+
+	char *val = lookup_macro( subsysparamname.GetCStr(), ConfigTab, TABLESIZE );
+
+	if( val == NULL ) {
+		// not present, so param for the actual name
+		val = lookup_macro( name, ConfigTab, TABLESIZE );
+
+		// return NULL if not present or set to the empty string
+		if( val == NULL || val[0] == '\0' ) {
+			return( NULL );
+		}
+	} else if (val[0] == '\0' ) {
+		// the subsytem-specific setting was set to the empty string, so we
+		// return NULL without checking for the actual name since presumably
+		// it was set to empty specifically to clear this parameter for this
+		// specific subsystem.
 		return( NULL );
 	}
 

@@ -49,9 +49,9 @@ condor_isalnum(int c)
 		return 0;
 	}
 }
-#define ISIDCHAR(c)		(condor_isalnum(c) || ((c) == '_'))
+#define ISIDCHAR(c)		(condor_isalnum(c) || ((c) == '_') || ((c)=='.') )
 #else
-#define ISIDCHAR(c)		(isalnum(c) || ((c) == '_'))
+#define ISIDCHAR(c)		(isalnum(c) || ((c) == '_') || ((c)=='.') )
 #endif
 
 // $$ expressions may also contain a colon
