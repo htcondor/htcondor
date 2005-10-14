@@ -1,3 +1,14 @@
+10/14/05 V6_7-cron-branch
+   A branch off of V6_7 for Andy Pavlo's work to add cron-like
+   scheduling to various parts of Condor.  This is initially motivated
+   by efforts to use Condor for LIGO, but many of the features will be
+   useful for other sites, too.  Functionality slated for this branch
+   includes: job "deferal" in the starter to spawn a job at a specific
+   time, a Requirements expression for local universe jobs, cron-like
+   scheduling attributes for jobs that turn into a time-to-next-start
+   clause in the requirements expr, etc.  Created from the
+   V6_7-cron-root tag on the V6_7_CODE module.
+
 10/13/05 V6_7_13-branch
    A branch for the 6.7.13 release, created from V6_7_13-root on the
    V6_7_ALL module.  Therefore, the "doc" directory is branched, too.
