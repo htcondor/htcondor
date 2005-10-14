@@ -35,6 +35,21 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details = 0);
 */
 ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details = 0);
 
+
+/*
+	The opposite of claim_job.  Assuming the job is claimed (managed)
+	yield it.
+
+	done - true to indiciate the job is all done, the schedd should
+	       take no more efforts to manage it (short of evaluating
+		   LeaveJobInQueue)
+           false to indicate that the job is unfinished, the schedd
+		   is free to do what it likes, including probably trying to run it.
+*/
+bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0);
+bool yield_job(const char * pool_name, const char * schedd_name,
+	bool done, int cluster, int proc, MyString * error_details = 0);
+
 /* 
 - src - The classad to submit.  The ad will be modified based on the needs of
   the submission.  This will include adding QDate, ClusterId and ProcId as well as putting the job on hold (for spooling)
@@ -91,7 +106,10 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 /*
 
 Pull a submit_job() job's results out of the sandbox and place them back where
-they came from.
+they came from.  If successful, let the job leave the queue.
+
+cluster.proc - ID of the grid (transformed) job.
+schedd_name and pool_name can be NULL to indicate "local".
 
 */
 bool finalize_job(int cluster, int proc, const char * schedd_name, const char * pool_name);

@@ -83,16 +83,17 @@ int vanilla2grid(int argc, char **argv)
 	// Do something interesting:
 	VanillaToGrid::vanillaToGrid(&newad, argv[2]);
 
+	printf("Claiming job %d.%d\n", orig_cluster, orig_proc);
 	MyString errors;
 	switch(claim_job(NULL, NULL, orig_cluster, orig_proc, &errors))
 	{
 		case CJR_OK:
 			break;
 		case CJR_BUSY:
-			dprintf(D_ALWAYS, "Unable to claim original job %d.%d because it's busy (%s)\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.Value());
+			fprintf(stderr, "Unable to claim original job %d.%d because it's busy (%s)\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.Value());
 			break;
 		case CJR_ERROR:
-			dprintf(D_ALWAYS, "Unable to claim original job %d.%d because of an error: %s\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.Value());
+			fprintf(stderr, "Unable to claim original job %d.%d because of an error: %s\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.Value());
 			break;
 	}
 
@@ -143,15 +144,27 @@ int grid2vanilla(int argc, char **argv)
 		die("Failed to parse grid class ad\n");
 	}
 
+	// Get old (vanilla) cluster.proc
+	int vcluster;
+	if( ! n_ad_van.EvaluateAttrInt(ATTR_CLUSTER_ID, vcluster) ) {
+		dprintf(D_ALWAYS, "Vanilla job lacks a cluster\n");
+		return 1;
+	}
+	int vproc;
+	if( ! n_ad_van.EvaluateAttrInt(ATTR_PROC_ID, vproc) ) {
+		dprintf(D_ALWAYS, "Vanilla job lacks a proc\n");
+		return 1;
+	}
+
 	// Get new (grid) cluster.proc
 	int cluster;
 	if( ! n_ad_grid.EvaluateAttrInt(ATTR_CLUSTER_ID, cluster) ) {
-		dprintf(D_ALWAYS, "Vanilla job lacks a cluster\n");
+		dprintf(D_ALWAYS, "Grid job lacks a cluster\n");
 		return 1;
 	}
 	int proc;
 	if( ! n_ad_grid.EvaluateAttrInt(ATTR_PROC_ID, proc) ) {
-		dprintf(D_ALWAYS, "Vanilla job lacks a proc\n");
+		dprintf(D_ALWAYS, "Grid job lacks a proc\n");
 		return 1;
 	}
 
@@ -167,9 +180,14 @@ int grid2vanilla(int argc, char **argv)
 	// Push the updates!
 	push_dirty_attributes(n_ad_van, 0, 0);
 
-	// Put a fork in the job.
+	// Put a fork in the grid job.
 	bool b = finalize_job(cluster,proc,0,0);
 	printf("Finalize attempt on %d.%d %s\n", cluster,proc,b?"succeeded":"failed");
+	if( ! b ) { return 1; }
+
+	// Yield the original job
+	b = yield_job(0,0,true, vcluster, vproc);
+	printf("Yield attempt on %d.%d %s\n", vcluster, vproc, b?"succeeded":"failed");
 	return b?0:1;
 }
 

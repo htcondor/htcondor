@@ -128,6 +128,11 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 	DCSchedd schedd(schedd_name,pool_name);
 	if( ! schedd.locate() ) {
 		failobj.fail("Can't find address of schedd\n");
+		if(error_details) {
+			error_details->sprintf("Can't find address of schedd %s in pool %s",
+				schedd_name ? schedd_name : "local schedd",
+				pool_name ? pool_name : "local pool");
+		}
 		return CJR_ERROR;
 	}
 
@@ -135,6 +140,12 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
 	if( ! qmgr ) {
 		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
+		if(error_details) {
+			error_details->sprintf("Can't connect to schedd %s in pool %s (%s)",
+				schedd_name ? schedd_name : "local schedd",
+				pool_name ? pool_name : "local pool",
+				errstack.getFullText(true));
+		}
 		return CJR_ERROR;
 	}
 	failobj.SetQmgr(qmgr);
@@ -150,11 +161,106 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.SetQmgr(0);
 		failobj.fail("Failed to commit job claim\n");
+		if(error_details && res == CJR_OK) {
+			error_details->sprintf("Failed to commit job claim for schedd %s in pool %s",
+				schedd_name ? schedd_name : "local schedd",
+				pool_name ? pool_name : "local pool");
+		}
 		return CJR_ERROR;
 	}
 
 	return res;
 }
+
+
+
+
+bool yield_job(bool done, int cluster, int proc, MyString * error_details) {
+	ASSERT(cluster > 0);
+	ASSERT(proc >= 0);
+
+	// Check that the job is still managed by us
+	bool is_managed = false;
+	char * managed;
+	if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &managed) == 0) {
+		is_managed = strcmp(managed, MANAGED_EXTERNAL) == 0;
+		free(managed);
+	}
+	if( ! is_managed ) {
+		if(error_details) {
+			error_details->sprintf("Job %d.%d is not managed!", cluster, proc); 
+		}
+		return false;
+	}
+	
+	const char * newsetting = done ? MANAGED_DONE : MANAGED_SCHEDD;
+	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, newsetting) == -1 ) {
+		if(error_details) {
+			error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, newsetting); 
+		}
+		return false;
+	}
+
+	return true;
+}
+
+
+
+
+bool yield_job(const char * pool_name, const char * schedd_name,
+	bool done, int cluster, int proc, MyString * error_details) {
+	// Open a qmgr
+	FailObj failobj;
+	failobj.SetNames(schedd_name, pool_name);
+
+	DCSchedd schedd(schedd_name,pool_name);
+	if( ! schedd.locate() ) {
+		failobj.fail("Can't find address of schedd\n");
+		if(error_details) {
+			error_details->sprintf("Can't find address of schedd %s in pool %s",
+				schedd_name ? schedd_name : "local schedd",
+				pool_name ? pool_name : "local pool");
+		}
+		return false;
+	}
+
+	CondorError errstack;
+	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack);
+	if( ! qmgr ) {
+		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
+		if(error_details) {
+			error_details->sprintf("Can't connect to schedd %s in pool %s (%s)",
+				schedd_name ? schedd_name : "local schedd",
+				pool_name ? pool_name : "local pool",
+				errstack.getFullText(true));
+		}
+		return false;
+	}
+	failobj.SetQmgr(qmgr);
+
+
+	//-------
+	// Do the actual yield
+	bool res = yield_job(done, cluster, proc, error_details);
+	//-------
+
+
+	// Tear down the qmgr
+	if( ! DisconnectQ(qmgr, true /* commit */)) {
+		failobj.SetQmgr(0);
+		failobj.fail("Failed to commit job claim\n");
+		if(error_details && res) {
+			error_details->sprintf("Failed to commit job claim for schedd %s in pool %s",
+				schedd_name ? schedd_name : "local schedd",
+				pool_name ? pool_name : "local pool");
+		}
+		return false;
+	}
+
+	return res;
+}
+
+
 
 
 
@@ -408,6 +514,10 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 	if( ! qmgr ) {
 		dprintf(D_ALWAYS, "finalize_job: Unable to connect to schedd\n%s\n", errstack.getFullText(true));
 		return false;
+	}
+
+	if( SetAttribute(cluster, proc, ATTR_JOB_LEAVE_IN_QUEUE, "FALSE") == -1 ) {
+		dprintf(D_ALWAYS, "finalize_job: failed to set %s = %s for %d.%d\n", ATTR_JOB_LEAVE_IN_QUEUE, "FALSE", cluster, proc);
 	}
 
 	// Check that the job is managed.
