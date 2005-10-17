@@ -216,6 +216,13 @@ public:
 
 //		int ClassAd::deep_insert( ExprTree *scopeExpr, std::string attrName, ExprTree *expr ) {}
 
+		int ClassAd::insert_attr_classad( std::string attrName, ClassAd* value ) {
+			bool iserr = self->Insert(attrName, (ExprTree *)value);
+			return bool_to_int(iserr);
+		}
+
+// 	int ClassAd::deep_insert_attr_classad( ExprTree *scopeExpr, std::string attrName, ClassAd* value ) {}
+
 		int ClassAd::insert_attr_int( std::string attrName, int value ) {
 			bool iserr = self->InsertAttr(attrName, value);
 			return bool_to_int(iserr);
