@@ -33,20 +33,31 @@
 #include <stdlib.h>
 #include <limits.h>
 
-int main() {
+int main( int argc, char* argv[] ) {
+	int i, num_iter = 1;
 	float x = 45;
 	float y = 23;
 	float z = 256;
 	int count=0;
 	int success=1;
 
-	while (count<INT_MAX) {
-		count++;
-		if ((x+y)>=z) {
-			printf("error: floating point comparison failed on iteration "
-				   "0x%x\n", count);
-			success=0;
+	if( argc >= 2 ) {
+		num_iter = atoi( argv[1] );
+	}
+	if( num_iter < 1 ) {
+		num_iter = 1;
+	}
+
+	for( i=0; i<num_iter; i++ ) {
+		while( count<INT_MAX ) {
+			count++;
+			if( (x+y)>=z ) {
+				printf( "error: floating point comparison failed on "
+						"iteration 0x%x\n", count );
+				success=0;
+			}
 		}
+		count = 0;
 	}
 	if (success) {
 		printf("Program completed successfully.\n");
@@ -55,3 +66,4 @@ int main() {
 	}
 	return 1;
 }
+
