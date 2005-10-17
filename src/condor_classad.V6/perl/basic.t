@@ -2,7 +2,7 @@
 
 use strict;
 use ClassAd::Simple;
-use Test::More tests => 14;
+use Test::More tests => 16;
 
 # Make ads from text and a hash, they should be the same
 my $ad_text = "[ foo = 50; bar = [ foo = 1 ]; qux = { 1, 2, 3 }; ]";
@@ -36,12 +36,14 @@ $ad->insert(string => "bar");
 $ad->insert(int => 35);
 $ad->insert(double => 35.5);
 $ad->insert(expr => new ClassAd::Simple::Expr "int < 50");
+$ad->insert(ad => new ClassAd::Simple "[ foo = string ]");
 diag("Created from inserts:\n" . $ad->as_string);
 
 is($ad->evaluate_attr("int"), 35, "insert/evaluate_attr int");
 is($ad->evaluate_attr("double"), 35.5, "insert/evaluate_attr double");
-cmp_ok($ad->evaluate_attr("string"), 'eq', "bar", "insert/evaluate_attr string");
+is($ad->evaluate_attr("string"), "bar", "insert/evaluate_attr string");
 ok($ad->evaluate_attr("expr"), "insert/evaluate_attr expr");
+is($ad->evaluate_expr("ad.foo"), $ad->evaluate_attr("string"), "insert/evaluate_attr classad");
 
 # Lookup+evaluate
 my $expr = $ad->lookup("expr");
