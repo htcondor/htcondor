@@ -2,7 +2,7 @@
 
 use strict;
 use ClassAd::Simple;
-use Test::More tests => 16;
+use Test::More tests => 20;
 
 # Make ads from text and a hash, they should be the same
 my $ad_text = "[ foo = 50; bar = [ foo = 1 ]; qux = { 1, 2, 3 }; ]";
@@ -44,6 +44,20 @@ is($ad->evaluate_attr("double"), 35.5, "insert/evaluate_attr double");
 is($ad->evaluate_attr("string"), "bar", "insert/evaluate_attr string");
 ok($ad->evaluate_attr("expr"), "insert/evaluate_attr expr");
 is($ad->evaluate_expr("ad.foo"), $ad->evaluate_attr("string"), "insert/evaluate_attr classad");
+
+# Deep inserts
+$ad->insert("ad.string" => "bar");
+$ad->insert("ad.int" => 35);
+$ad->insert("ad.double" => 35.5);
+$ad->insert("ad.expr" => new ClassAd::Simple::Expr "int < 50");
+$ad->insert("ad.ad" => new ClassAd::Simple "[ foo = string ]");
+diag("After deep inserts:\n" . $ad->as_string);
+
+is($ad->evaluate_expr("ad.int"), 35, "deep insert/evaluate_attr int");
+is($ad->evaluate_expr("ad.double"), 35.5, "deep insert/evaluate_attr double");
+is($ad->evaluate_expr("ad.string"), "bar", "deep insert/evaluate_attr string");
+ok($ad->evaluate_expr("ad.expr"), "deep insert/evaluate_attr expr");
+is($ad->evaluate_expr("ad.ad.foo"), $ad->evaluate_attr("string"), "deep insert/evaluate_attr classad");
 
 # Lookup+evaluate
 my $expr = $ad->lookup("expr");

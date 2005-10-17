@@ -214,35 +214,50 @@ public:
 			return bool_to_int(iserr);
 		}
 
-//		int ClassAd::deep_insert( ExprTree *scopeExpr, std::string attrName, ExprTree *expr ) {}
+		int ClassAd::deep_insert( ExprTree *scopeExpr, std::string attrName, ExprTree *expr ) {
+			bool iserr = self->DeepInsert(scopeExpr, attrName, expr);
+			return bool_to_int(iserr);
+		}
 
 		int ClassAd::insert_attr_classad( std::string attrName, ClassAd* value ) {
 			bool iserr = self->Insert(attrName, (ExprTree *)value);
 			return bool_to_int(iserr);
 		}
 
-// 	int ClassAd::deep_insert_attr_classad( ExprTree *scopeExpr, std::string attrName, ClassAd* value ) {}
+		int ClassAd::deep_insert_attr_classad( ExprTree *scopeExpr, std::string attrName, ClassAd* value ) {
+			bool iserr = self->DeepInsert(scopeExpr, attrName, (ExprTree *)value);
+			return bool_to_int(iserr);
+		}
 
 		int ClassAd::insert_attr_int( std::string attrName, int value ) {
 			bool iserr = self->InsertAttr(attrName, value);
 			return bool_to_int(iserr);
 		}
 
-// 	int ClassAd::deep_insert_attr_int( ExprTree *scopeExpr, std::string attrName, int value ) {}
+		int ClassAd::deep_insert_attr_int( ExprTree *scopeExpr, std::string attrName, int value ) {
+			bool iserr = self->DeepInsertAttr(scopeExpr, attrName, value);
+			return bool_to_int(iserr);
+		}
 
 		int ClassAd::insert_attr_double( std::string attrName, double value ) {
 			bool iserr = self->InsertAttr(attrName, value);
 			return bool_to_int(iserr);
 		}
 
-//	int ClassAd::deep_insert_attr_double( ExprTree *scopeExpr, std::string attrName, double value ) {}
+		int ClassAd::deep_insert_attr_double( ExprTree *scopeExpr, std::string attrName, double value ) {
+			bool iserr = self->DeepInsertAttr(scopeExpr, attrName, value);
+			return bool_to_int(iserr);
+		}
 
 		int ClassAd::insert_attr_bool( std::string attrName, int value ) {
 			bool iserr = self->InsertAttr(attrName, value);
 			return bool_to_int(iserr);
 		}
 
-//	int ClassAd::deep_insert_attr_bool( ExprTree *scopeExpr, std::string attrName, int value ) {}
+		int ClassAd::deep_insert_attr_bool( ExprTree *scopeExpr, std::string attrName, int value ) {
+			bool iserr = self->DeepInsertAttr(scopeExpr, attrName, value);
+			return bool_to_int(iserr);
+		}
 
 		int ClassAd::insert_attr_string( std::string attrName, 
 										 std::string value ) {
@@ -250,14 +265,17 @@ public:
 			return bool_to_int(iserr);
 		}
 
-//	int ClassAd::deep_insert_attr_string( ExprTree *scopeExpr, std::string attrName, std::string value ) {}
+		int ClassAd::deep_insert_attr_string( ExprTree *scopeExpr, std::string attrName, std::string value ) {
+			bool iserr = self->DeepInsertAttr(scopeExpr, attrName, value);
+			return bool_to_int(iserr);
+		}
 
 		ExprTree* ClassAd::lookup( std::string attrName ) {
 			ExprTree *rv = self->Lookup(attrName);
 			return rv;
 		}
 
-//	ExprTree* ClassAd::lookup_in_scope( std::string attrName, ClassAd *ad ) {}
+// ExprTree* ClassAd::lookup_in_scope( std::string attrName, ClassAd *ad ) {}
 
 		void ClassAd::clear() {
 			self->Clear();
@@ -268,7 +286,10 @@ public:
 			return bool_to_int(iserr);
 		}
 
-//	int ClassAd::deep_delete( ExprTree *scopeExpr, std::string attrName ) {}
+		int ClassAd::deep_delete( ExprTree *scopeExpr, std::string attrName ) {
+			bool iserr = self->DeepDelete(scopeExpr, attrName);
+			return bool_to_int(iserr);
+		}
 
 		ExprTree* ClassAd::remove( std::string attrName ) {
 			ExprTree* rv = self->Remove(attrName);

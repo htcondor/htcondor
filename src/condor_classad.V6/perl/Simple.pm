@@ -69,6 +69,10 @@ sub get_value
     {
 	return $this->get_classad_value;
     }
+    elsif ($type eq "error")
+    {
+	return undef;
+    }
     else
     {
 	my $type = $this->get_type;
@@ -198,7 +202,11 @@ sub insert
     # Hmm, weak typing meets strong typing
     foreach my $key (keys %inserts)
     {
-	if (ref($inserts{$key}) eq "ClassAd::Simple")
+	if ($key =~ /\./)
+	{
+	    $this->deep_insert($key => $inserts{$key});
+	}
+	elsif (ref($inserts{$key}) eq "ClassAd::Simple")
 	{
 	    $this->insert_attr_classad($key, $inserts{$key});
 	}
@@ -221,6 +229,43 @@ sub insert
 	else
 	{
 	    $this->SUPER::insert($key, new ClassAd::Simple::Expr("UNDEFINED"));
+	}
+    }
+}
+
+sub deep_insert
+{
+    
+    my ($this, %inserts) = @_;
+    
+    foreach my $key (keys %inserts)
+    {
+	my ($scope, $attr) = $key =~ /(.*)\.(.*)/;
+	my $scope_expr = new ClassAd::Simple::Expr $scope;
+
+	if (ref($inserts{$key}) eq "ClassAd::Simple")
+	{
+	    $this->deep_insert_attr_classad($scope_expr, $attr, $inserts{$key});
+	}
+	elsif (ref($inserts{$key}) eq "ClassAd::Simple::Expr")
+	{
+	    $this->SUPER::deep_insert($scope_expr, $attr, $inserts{$key});
+	}
+	elsif ($inserts{$key} =~ /^-?\d+$/)
+	{
+	    $this->deep_insert_attr_int($scope_expr, $attr, $inserts{$key});
+	}
+	elsif ($inserts{$key} =~ /^-?\d+\.\d*$/)
+	{
+	    $this->deep_insert_attr_double($scope_expr, $attr, $inserts{$key});
+	}
+	elsif (defined($inserts{$key}))
+	{
+	    $this->deep_insert_attr_string($scope_expr, $attr, $inserts{$key});
+	}
+	else
+	{
+	    $this->SUPER::deep_insert($scope_expr, $attr, new ClassAd::Simple::Expr("UNDEFINED"));
 	}
     }
 }
