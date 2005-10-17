@@ -53,7 +53,7 @@ int main( int argc, char* argv[] ) {
 			count++;
 			if( (x+y)>=z ) {
 				printf( "error: floating point comparison failed on "
-						"iteration 0x%x\n", count );
+						"iteration 0x%x, outer-loop %d\n", count, i );
 				success=0;
 			}
 		}
