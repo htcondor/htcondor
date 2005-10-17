@@ -77,10 +77,16 @@ sub get_value
     }
 }
 
+package ClassAd::Simple::MatchClassAd;
+
+use strict;
+use base "ClassAd::Simple";
+
 package ClassAd::Simple;
 
 use strict;
 use ClassAd;
+use FileHandle;
 use base "ClassAd::ClassAd";
 
 use overload "==" => \&equality,
@@ -100,6 +106,10 @@ sub new
     {
 	$ad = new ClassAd::ClassAd(&_struct_to_text($src));
     }
+    else
+    {
+	$ad = new ClassAd::ClassAd("[]");
+    }
     return undef unless $ad;
 
     $ad->DISOWN;
@@ -111,12 +121,15 @@ sub new
 # or similar.
 sub new_from_old_classads
 {
-    my ($class, $text) = @_;
+    my ($class, @text) = @_;
+
+    my $text = join "", @text;
 
     my @ads = split /\n\n/, $text;
     @ads = map { s/\n/;\n/g; "[ $_ ]" } @ads;
     @ads = map { new ClassAd::Simple($_) } @ads;
-
+    @ads = grep { $_ } @ads;
+    
     return @ads;
 }
 
@@ -185,17 +198,21 @@ sub insert
     # Hmm, weak typing meets strong typing
     foreach my $key (keys %inserts)
     {
-	if ($inserts{$key} =~ /^-?\d+$/)
+	if (ref($inserts{$key}) eq "ClassAd::Simple")
+	{
+	    $this->insert_attr_classad($key, $inserts{$key});
+	}
+	elsif (ref($inserts{$key}) eq "ClassAd::Simple::Expr")
+	{
+	    $this->SUPER::insert($key, $inserts{$key});
+	}
+	elsif ($inserts{$key} =~ /^-?\d+$/)
 	{
 	    $this->insert_attr_int($key, $inserts{$key});
 	}
 	elsif ($inserts{$key} =~ /^-?\d+\.\d*$/)
 	{
 	    $this->insert_attr_double($key, $inserts{$key});
-	}
-	elsif (ref($inserts{$key}) eq "ClassAd::Simple::Expr")
-	{
-	    $this->SUPER::insert($key, $inserts{$key});
 	}
 	elsif (defined($inserts{$key}))
 	{
@@ -214,9 +231,10 @@ sub match
     my ($this, $other_ad) = @_;
 
     my $matcher = new ClassAd::MatchClassAd($this->copy, $other_ad->copy);
+    bless $matcher, "ClassAd::Simple::MatchClassAd";
     my ($match, $err) = $matcher->evaluate_attr_bool('symmetricMatch');
 
-    return $match;
+    return $match && $matcher;
 }
 
 # Asymmetric (r match l) matching
@@ -225,9 +243,10 @@ sub match_asymmetric
     my ($this, $other_ad) = @_;
 
     my $matcher = new ClassAd::MatchClassAd($this->copy, $other_ad->copy);
+    bless $matcher, "ClassAd::Simple::MatchClassAd";
     my ($match, $err) = $matcher->evaluate_attr_bool('rightMatchesLeft');
     
-    return $match;
+    return $match && $matcher;
 }
 
 # copy w/memory management
