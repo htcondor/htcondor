@@ -95,8 +95,8 @@ DAG input files as command-line arguments to \Condor{submit\_dag}.
        the DAG and prevents the POST script within a node
        from running in the case that the job within the node fails.
        Without this option, POST scripts always run when jobs fail.}
-    \OptItem{\Opt{-noeventchecks}}{This argument is deprecated and
-       is now ignored.  Its functionality is now implemented by
+    \OptItem{\Opt{-noeventchecks}}{This argument is no longer used;
+       it is now ignored.  Its functionality is now implemented by
        the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration macro
        (see section~\ref{param:DAGManAllowEvents}).}
     \OptItem{\Opt{-allowlogerror}}{This optional argument has 

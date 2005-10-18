@@ -268,9 +268,8 @@ page~\pageref{sec:file-transfer}.
 
 \item[transfer\_input\_files = $<$ file1,file2,file... $>$] 
 \index{submit commands!transfer\_input\_files}
-Lists all the files to be transferred into the 
+A comma-delimited list of all the files to be transferred into the 
 working directory for the job before the job is started.
-You must separate multiple file names with a comma.
 By default, the file specified in the
 \SubmitCmd{executable} command and any file specified in the \SubmitCmd{input}
 command (for example, \File{stdin}) are transferred.
@@ -363,7 +362,7 @@ has enough memory to run your job.
 	\item If Universe is set to Vanilla, FileSystemDomain is set equal to
 the submit machine's FileSystemDomain.
 \end{enumerate}
-You can view the requirements of a job
+View the requirements of a job
 which has already been submitted (along with everything else about the
 job ClassAd) with the command \Condor{q -l}; see the command reference for
 \Condor{q} on page~\pageref{man-condor-q}.  Also, see the Condor Users

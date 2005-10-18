@@ -4817,6 +4817,61 @@ These macros affect the high availability operation of Condor.
 \end{description}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Quill-Config-File-Entries}
+Configuration File Entries Relating to Quill}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!Quill configuration variables}
+These macros affect the Quill database
+management and interface to its representation of the job queue.
+
+\begin{description}
+\item[\Macro{QUILL}] \label{param:Quill}  The full path name to the
+  \Condor{quill} daemon.
+
+\item[\Macro{QUILL\_ARGS}] \label{param:QuillArgs} Arguments
+  to be passed to the \Condor{quill} daemon upon its invocation.
+
+\item[\Macro{QUILL\_LOG}] \label{param:QuillLog}
+  Path to the log file.
+
+\item[\Macro{QUILL\_ENABLED}] \label{param:QuillEnabled}
+  A boolean variable that defaults to \Expr{False}.
+  When \Expr{True}, Quill functionality is enabled.
+  When \Expr{False}, the Quill server writes a message to its log and exits.
+  The \Condor{q} and \Condor{history} tools then do not use Quill.
+
+\item[\Macro{QUILL\_<NAME>}] \label{param:QuillName}
+  A string that uniquely identifies an instance of the \Condor{quill}
+  server.  It also must be unique from the name of any \Condor{schedd}
+  daemon.
+  A convient name to choose is of the form
+\footnotesize
+\begin{verbatim}
+quill@machinename.fully.qualified.address
+\end{verbatim}
+\normalsize
+
+\item[\Macro{QUILL\_DB\_<NAME>}] \label{param:QuillDBName}
+
+\item[\Macro{QUILL\_DB\_IP\_ADDR}] \label{param:QuillDBIPAddr}
+
+\item[\Macro{QUILL\_POLLING\_PERIOD}] \label{param:QuillPollingPeriod}
+
+\item[\Macro{QUILL\_HISTORY\_CLEANING\_INTERVAL}] 
+  \label{param:QuillHistoryCleaningInterval}
+
+\item[\Macro{QUILL\_HISTORY\_DURATION}] \label{param:QuillHistoryDuration}
+
+\item[\Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}]
+  \label{param:QuillIsRemotelyQueryable}
+
+\item[\Macro{QUILL\_DB\_QUERY\_PASSWORD}] \label{param:QuillDBQueryPassword}
+
+\item[\Macro{QUILL\_ADDRESS\_FILE}] \label{param:QuillAddressFile}
+\end{description}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{admin-man/root-config.tex}

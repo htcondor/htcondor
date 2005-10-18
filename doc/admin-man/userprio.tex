@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:UserPrio}User Priorities}
+\section{\label{sec:UserPrio}User Priorities and Negotiation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Karen's understanding of this stuff, in preparation for a re-write
@@ -23,7 +23,8 @@
 \index{priority!in machine allocation}
 \index{user priority}
 Condor uses priorities to determine machine allocation for jobs.
-This section details the priorities.
+This section details the priorities and the allocation of
+machines (negotiation).
 
 For accounting purposes, each user is identified by username@uid\_domain.
 Each user is assigned a priority value even if submitting jobs from
@@ -48,7 +49,7 @@ Documentation on configuring and controlling
 priorities may be found in section~\ref{sec:Negotiator-Config-File-Entries}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Real User Priority (RUP)}
+\subsection{\label{sec:RUP}Real User Priority (RUP)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{real user priority (RUP)}
 \index{user priority!real (RUP)}
@@ -69,7 +70,7 @@ jobs, the user's RUP would be 5 one day later, 2.5 two days later,
 and so on.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Effective User Priority (EUP)}
+\subsection{\label{sec:EUP}Effective User Priority (EUP)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{effective user priority (EUP)}
 \index{user priority!effective (EUP)}
@@ -193,6 +194,99 @@ down, no matches will be unaccounted for due to this variance.
 %  your user priority should always match your current usage.  if you're
 %  not using any resources, your priority will go back to the baseline
 %  value instantly.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:negotiation}Negotiation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{negotiation}
+\index{matchmaking!negotiation algorithm}
+
+Negotiation is the method Condor undergoes periodically to
+match queued jobs with resources capable of running jobs.
+The \Condor{negotiator} daemon is responsible for
+negotiation.
+
+During a negotiation cycle, the \Condor{negotiator} daemon
+accomplishes the following ordered list of items.
+\begin{enumerate}
+  \item Build a list of all possible resources,
+  regardless of the state of those resources.
+  \item Obtain a list of all job submitters (for the entire pool).
+  \item Sort the list of all job submitters based on EUP
+  (see section ~\ref{sec:EUP} for an explanation of EUP).
+  The submitter with the best priority is first within the sorted list.
+  \item Iterate until there are either no more resources to match,
+  or no more jobs to match.
+    \begin{description}
+      \item For each submitter (in EUP order):
+        \begin{description}
+          \item For each submitter, get each job.
+	  Since jobs may be submitted from more than one machine
+	  (hence to more than one \Condor{schedd} daemon),
+	  here is a further definition of the ordering of these jobs.
+	  With jobs from a single \Condor{schedd} daemon, 
+	  jobs are typically returned in job priority order.
+	  When more than one \Condor{schedd} daemon is involved,
+	  they are contacted in an undefined order. 
+	  All jobs from a single \Condor{schedd} daemon are considered
+	  before moving on to the next.
+	  For each job:
+              \begin{itemize}
+	        \item For each machine in the pool that can execute jobs:
+                  \begin{enumerate}
+		  \item If \Expr{machine.requirements} evaluates to
+		  \Expr{False} or
+		  \Expr{job.requirements} evaluates to \Expr{False},
+		  skip this machine
+		  \item If the machine is in the Claimed state, but
+		  not running a job, skip this machine.
+		  \item If this machine is not running a job, add it to
+		  the potential match list by reason of
+		  No Preemption.
+		  \item If the machine is running a job
+                    \begin{itemize}
+		    \item If the \Expr{machine.RANK} on this job is
+		    better than the running job, add this machine to the
+		    potential match list by reason of Rank.
+		    \item  If the EUP of this job is better than the EUP
+		    of the currently running job, and
+		    \MacroNI{PREEMPTION\_REQUIREMENTS} is \Expr{True},
+		    and the \Expr{machine.RANK} on this job is not worse
+		    than the currently running job, add this machine to the
+		    potential match list by reason of Priority.
+                    \end{itemize}
+                  \end{enumerate}
+	        \item Of machines in the potential match list, sort by
+		\MacroNI{NEGOTIATOR\_PRE\_JOB\_RANK}, \Expr{job.RANK},
+		\MacroNI{NEGOTIATOR\_POST\_JOB\_RANK}, Reason for claim
+		(No Preemption, then Rank, then Priority),
+		\MacroNI{PREEMPTION\_RANK}
+	        \item The job is assigned to the top machine on the
+		potential match list.  The machine is removed
+		from the list of resources to match
+		(on this negotiation cycle).
+              \end{itemize}
+          \end{description}
+    \end{description}
+\end{enumerate}
+
+The \Condor{negotiatior} asks the \Condor{schedd} for the 
+"next job" from a given submitter/user.
+Typically, the \Condor{schedd} returns jobs in the order of
+job priority.
+If priorities are the same,
+job submission time is used; older jobs go first.
+If a cluster has multiple procs in it and one of the jobs cannot be matched,
+the \Condor{schedd} will not return any more jobs in that cluster
+on that negotiation pass.
+This is an optimization based on the theory that the cluster jobs are similar.
+The configuration variable \Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}
+disables the cluster-skipping optimization.
+Use of the configuration variable \Macro{SIGNIFICANT\_ATTRIBUTES}
+will change the
+definition of what the \Condor{schedd} considers a cluster from the
+default definition of all jobs that share the same \Attr{ClusterId}.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:group-accounting}Group Accounting}

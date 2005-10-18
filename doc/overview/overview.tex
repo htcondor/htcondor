@@ -333,7 +333,8 @@ desire the Condor source code, please contact the Condor Team in order to discus
 \begin{table}[hbt]
 \begin{tabular}{|ll|} \hline
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
-%Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
+Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\
+ & HPUX 11.00 (clipped) \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 8, 9 \\
  & Solaris 10 (clipped), using the Solaris 9 binaries \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 (clipped) \\ \hline
@@ -345,8 +346,8 @@ Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0, 9 \\
  & Fedora Core 1 \\
  & Fedora Core 2, 3 \\
 % & Fedora Core 2, 3, with \File{compat-glibc} and \File{compat-glibc-headers} packages \\
- & Windows 2000 Professional and Server \\
- & Windows 2003 Server (Win NT 5.0) \\
+ & Windows 2000 Professional and Server (clipped) \\
+ & Windows 2003 Server (Win NT 5.0) (clipped) \\
  & Windows XP Professional (Win NT 5.1) (clipped) \\ \hline
 ALPHA & Tru64 5.1 (clipped) \\
  & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\ \hline
@@ -413,10 +414,10 @@ Fedora Core 2 on x86 & gcc, g++, and g77 & as shipped  \\
 \hline
 Fedora Core 3 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-% HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
-% & gcc, g++, and g77; version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
-% & cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
-% \hline
+HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
+& gcc, g++, and g77; version egcs-1.1.2 \\ 
+& cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
+\hline
 % Digitial Unix 4.0 on ALPHA \\ 
 % & cc, CC, cxx, and c89 \\ 
 % & KCC \\ 
@@ -441,7 +442,7 @@ supported, the support is automatic.
 \begin{table}[hbt]
 \begin{tabular}{|lc|} \hline
 \emph{Platform} & \emph{Large File Transfer Supported?} \\ \hline \hline
-% Hewlett Packard PA-RISC with HPUX 10.20 & Yes \\ \hline
+Hewlett Packard PA-RISC with HPUX 10.20 & Yes \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 8, 9 & Yes \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) with IRIX 6.5 &  Yes \\ \hline
 Intel x86 with Red Hat Linux 7.1, 7.2, 7,3, 8.0, 9, Enterprise Linux 3, Debian Linux 3.1 (sarge) & Yes \\ 
