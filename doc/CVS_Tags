@@ -8,6 +8,33 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+10/18/05  V6_7-pre-merge-V6_7_13-doc-merge-1
+        V6_7-post-merge-V6_7_13-doc-merge-1
+    The state of the doc directory in V6_7-branch before and after
+    merging changes from the V6_7_13-branch as tagged V6_7_13-doc-merge-1.
+
+10/18/05  V6_7_13-doc-merge-1
+   The state of the doc directory in the V6_7_13-branch for a 
+   first-time merge into the V6_7-branch.
+
+10/17/05  V6_7_13-pre-merge-V6_7_12-doc-merge-1
+        V6_7_13-post-merge-V6_7_12-doc-merge-1
+    The state of the doc directory in V6_7_13-branch before and after
+    merging changes from the V6_7_12-branch as tagged V6_7_12-doc-merge-1.
+
+10/17/05  V6_7_12-doc-merge-1
+   The state of the doc directory in the V6_7_12-branch for a 
+   first-time merge into the V6_7_13-branch.
+
+10/14/05  V6_7-pre-merge-V6_6-doc-merge-21
+        V6_7-post-merge-V6_6-doc-merge-21
+    The state of the doc directory in V6_7_12-branch before and after
+    merging changes from the V6_6-branch as tagged V6_6-doc-merge-21.
+
+10/14/05 V6_6-doc-merge-21
+   The state of the doc directory in the V6_6-branch for a merge
+   into the V6_7-branch. This goes into the V6_7_12-branch.
+
 10/13/05 V6_7_13-branch
    A branch for the 6.7.13 release, created from V6_7_13-root on the
    V6_7_ALL module.  Therefore, the "doc" directory is branched, too.
