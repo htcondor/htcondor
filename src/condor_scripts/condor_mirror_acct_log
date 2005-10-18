@@ -79,7 +79,7 @@ sub log
 {
     my ($msg) = @_;
 
-    my $fh = new FileHandle ">>${LOG_DIR}/AcctLogMirrorLog";
-    print $fh strftime("%Y-%m-%d %H:%M:%S -- $msg\n", localtime);
+    my $fh = new FileHandle ">>$LOG_DIR/AcctLogMirrorLog";
+    print $fh strftime("%m/%d %H:%M:%S $msg\n", localtime);
     $fh->close;
 }
