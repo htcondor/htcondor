@@ -10,6 +10,8 @@
 
 #include <libgen.h>
 
+const char * MYID ="vanilla2grid";
+
 
 
 void die(const char * s) {
@@ -85,7 +87,7 @@ int vanilla2grid(int argc, char **argv)
 
 	printf("Claiming job %d.%d\n", orig_cluster, orig_proc);
 	MyString errors;
-	switch(claim_job(NULL, NULL, orig_cluster, orig_proc, &errors))
+	switch(claim_job(NULL, NULL, orig_cluster, orig_proc, &errors, MYID))
 	{
 		case CJR_OK:
 			break;
@@ -186,7 +188,8 @@ int grid2vanilla(int argc, char **argv)
 	if( ! b ) { return 1; }
 
 	// Yield the original job
-	b = yield_job(0,0,true, vcluster, vproc);
+	MyString errors;
+	b = yield_job(0,0,true, vcluster, vproc, &errors, MYID);
 	printf("Yield attempt on %d.%d %s\n", vcluster, vproc, b?"succeeded":"failed");
 	return b?0:1;
 }

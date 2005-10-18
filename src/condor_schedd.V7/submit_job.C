@@ -74,7 +74,7 @@ private:
 
 
 
-ClaimJobResult claim_job(int cluster, int proc, MyString * error_details)
+ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const char * my_identity)
 {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
@@ -116,10 +116,19 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details)
 		return CJR_ERROR;
 	}
 
+	if(my_identity) {
+		if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED_MANAGER, my_identity) == -1 ) {
+			if(error_details) {
+				error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
+			}
+			return CJR_ERROR;
+		}
+	}
+
 	return CJR_OK;
 }
 
-ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details)
+ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity)
 {
 	// Open a qmgr
 	FailObj failobj;
@@ -153,7 +162,7 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 
 	//-------
 	// Do the actual claim
-	ClaimJobResult res = claim_job(cluster, proc, error_details);
+	ClaimJobResult res = claim_job(cluster, proc, error_details, my_identity);
 	//-------
 
 
@@ -175,7 +184,7 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 
 
 
-bool yield_job(bool done, int cluster, int proc, MyString * error_details) {
+bool yield_job(bool done, int cluster, int proc, MyString * error_details, const char * my_identity) {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
 
@@ -192,6 +201,21 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details) {
 		}
 		return false;
 	}
+
+	if(my_identity) {
+		char * manager;
+		if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &manager) == 0) {
+			if(strcmp(manager, my_identity) != 0) {
+				if(error_details) {
+					error_details->sprintf("Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);
+				}
+				free(manager);
+				return false;
+			}
+			free(manager);
+		}
+	}
+
 	
 	const char * newsetting = done ? MANAGED_DONE : MANAGED_SCHEDD;
 	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, newsetting) == -1 ) {
@@ -200,6 +224,8 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details) {
 		}
 		return false;
 	}
+		// Wipe the manager (if present).
+	SetAttributeString(cluster, proc, ATTR_JOB_MANAGED_MANAGER, "");
 
 	return true;
 }
@@ -208,7 +234,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details) {
 
 
 bool yield_job(const char * pool_name, const char * schedd_name,
-	bool done, int cluster, int proc, MyString * error_details) {
+	bool done, int cluster, int proc, MyString * error_details, const char * my_identity) {
 	// Open a qmgr
 	FailObj failobj;
 	failobj.SetNames(schedd_name, pool_name);

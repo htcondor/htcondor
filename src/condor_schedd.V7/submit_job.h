@@ -19,8 +19,15 @@ enum ClaimJobResult {
 	to confirm the job is IDLE.  error_details is optional. If non NULL,
 	error_details will contain a message explaining why claim_job didn't
 	return OK.  The message will be suitable for reporting to a log file.
+
+	my_identity is an optional string.  If non-NULL, it will be inserted
+	into the job's classad as 1. a useful debugging identifier and 
+	2. a double check that we're the current owner.  The identity is an
+	arbitrary string, but should as uniquely as possible identify
+	this process.  "$(SUBSYS) /path/to/condor_config" is recommended.
 */
-ClaimJobResult claim_job(int cluster, int proc, MyString * error_details = 0);
+ClaimJobResult claim_job(int cluster, int proc, MyString * error_details = 0,
+	const char * my_identity = 0);
 
 /*
 	As the above claim_job, but will attempt to create the qmgr connection
@@ -33,7 +40,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details = 0);
 	error_details will contain a message explaining why claim_job didn't
 	return OK.  The message will be suitable for reporting to a log file.
 */
-ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details = 0);
+ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0);
 
 
 /*
@@ -45,10 +52,14 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 		   LeaveJobInQueue)
            false to indicate that the job is unfinished, the schedd
 		   is free to do what it likes, including probably trying to run it.
+	my_identity - If non null, will be checked against the identity registered
+		as having claimed the job.  If a different identity claimed the
+		job, the yield attempt fails.  See claim_job for details
+		on suggested identity strings.
 */
-bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0);
+bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0);
 bool yield_job(const char * pool_name, const char * schedd_name,
-	bool done, int cluster, int proc, MyString * error_details = 0);
+	bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0);
 
 /* 
 - src - The classad to submit.  The ad will be modified based on the needs of
