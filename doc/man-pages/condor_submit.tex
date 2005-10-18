@@ -124,6 +124,8 @@ for submission to a Windows machine.
 Multiple jobs should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
+The output file and the error file should not be the same file
+as the outputs will overwrite each other or be lost.
 For grid universe jobs, \SubmitCmd{output} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
@@ -145,6 +147,8 @@ If not specified, error messages are ignored
 for submission to a Windows machine.
 More than one job should not use the same error file, since
 this will cause one job to overwrite the errors of another.
+The error file and the output file should not be the same file
+as the outputs will overwrite each other or be lost.
 For grid universe jobs, \SubmitCmd{error} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
