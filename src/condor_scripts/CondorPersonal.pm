@@ -365,19 +365,51 @@ sub InstallPersonalCondor
 
 			debug( "Sandbox started rooted here: $topleveldir\n");
 
-			#system("mkdir -p $topleveldir/sbin");
-			#system("mkdir -p $topleveldir/bin");
-			#system("mkdir -p $topleveldir/lib");
 			system("mkdir -p $topleveldir/execute");
 			system("mkdir -p $topleveldir/spool");
 			system("mkdir -p $topleveldir/log");
+		}
+		elsif( $condordistribution eq "nightlies" )
+		{
+			# we want a mechanism by which to find the condor binaries
+			# we are testing. But we know where they are relative to us
+			# ../../condor/bin etc
+			# That is simply the nightly test setup.... for now at least
+			# where is the hosting condor_config file? The one assumed to be based
+			# on a setup with condor_configure.
+
+			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+			while(<CONFIG>)
+			{
+				chomp;
+				$configline = $_;
+				push @configfiles, $configline;
+			}
+			close(CONFIG);
+			# yes this assumes we don't have multiple config files!
+			$personal_condor_params{"condortemplate"} = shift @configfiles;
+			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+
+			$binloc = "../../condor/bin/";
+			$sbinloc = "../../condor/";
+
+			debug( "My path to condor_q is $binloc and topleveldir is $topleveldir\n");
+
+			$schedd = $sbinloc . "sbin/" .  "condor_schedd";
+			$master = $sbinloc . "sbin/" .  "condor_master";
+			$collector = $sbinloc . "sbin/" .  "condor_collector";
+			$submit = $binloc . "condor_submit";
+			$startd = $sbinloc . "sbin/" .  "condor_startd";
+			$negotiator = $sbinloc . "sbin/" .  "condor_negotiator";
+
+			debug( "$schedd $master $collector $submit $startd $negotiator\n");
 
 
-			# now install condor
+			debug( "Sandbox started rooted here: $topleveldir\n");
 
-			#system("cp $sbinloc/sbin/* $topleveldir/sbin");
-			#system("cp $binloc/* $topleveldir/bin");
-			#system("cp $sbinloc/lib/* $topleveldir/lib");
+			system("mkdir -p $topleveldir/execute");
+			system("mkdir -p $topleveldir/spool");
+			system("mkdir -p $topleveldir/log");
 		}
 		elsif( -e $condordistribution )
 		{
