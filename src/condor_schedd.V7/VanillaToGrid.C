@@ -109,7 +109,7 @@ static void set_job_status_idle(classad::ClassAd &orig)
 			return;
 		}
 	}
-	orig.InsertAttr(ATTR_JOB_STATE, IDLE);
+	orig.InsertAttr(ATTR_JOB_STATUS, IDLE);
 	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
 }
 
@@ -121,7 +121,7 @@ static void set_job_status_running(classad::ClassAd &orig)
 			return;
 		}
 	}
-	orig.InsertAttr(ATTR_JOB_STATE, RUNNING);
+	orig.InsertAttr(ATTR_JOB_STATUS, RUNNING);
 	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
 	// TODO: Should we be calling WriteExecuteEventToUserLog?
 }
@@ -135,7 +135,7 @@ static void set_job_status_held(classad::ClassAd &orig,
 			return;
 		}
 	}
-	orig.InsertAttr(ATTR_JOB_STATE, HELD);
+	orig.InsertAttr(ATTR_JOB_STATUS, HELD);
 	orig.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
 	if( ! hold_reason) {
 		hold_reason = "Unknown reason";
@@ -226,7 +226,7 @@ bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
 			}
 			break;
 		default:
-			orig.InsertAttr(ATTR_JOB_STATE, newgridstatus);
+			orig.InsertAttr(ATTR_JOB_STATUS, newgridstatus);
 			break;
 		}
 	}
@@ -244,6 +244,18 @@ bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
 			orig.Insert(attrs_to_copy[index], toinsert);
 		}
 	}
+
+#if 1
+	dprintf(D_FULLDEBUG, "Dirty fields updated:\n");
+	fprintf(stderr, "Dirty fields updated:\n");
+	for(classad::ClassAd::dirtyIterator it = orig.dirtyBegin();
+		it != orig.dirtyEnd(); ++it) {
+		std::string val;
+		orig.EvaluateAttrString(*it, val);
+		dprintf(D_FULLDEBUG, "    %s = %s\n", it->c_str(), val.c_str());
+		fprintf(stderr,"    %s = %s\n", it->c_str(), val.c_str());
+	}
+#endif
 
 	return true;
 }
