@@ -377,6 +377,9 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "error\t\t= %s\n", opts.strLibLog.Value());
     fprintf(pSubFile, "log\t\t= %s\n", opts.strSchedLog.Value());
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
+		// this is so that DAGMan is automatically requeued if killed
+		// by something other than the schedd (e.g., a fast reboot)
+    fprintf(pSubFile, "on_exit_remove\t= (ExitSignal =!= 9)\n" );
 
 	MyString strArgs;
 	strArgs.reserve_at_least(256);
