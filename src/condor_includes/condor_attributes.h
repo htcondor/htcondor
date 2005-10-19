@@ -192,6 +192,7 @@ const char ATTR_JOB_LOCAL_CPU			 [] = "LocalCpu";
 const char ATTR_JOB_LOCAL_SYS_CPU		 [] = "LocalSysCpu";
 const char ATTR_JOB_LOCAL_USER_CPU		 [] = "LocalUserCpu";
 const char ATTR_JOB_MANAGED				 [] = "Managed";
+const char ATTR_JOB_MANAGED_MANAGER		 [] = "ManagedManager";
 const char ATTR_JOB_MATCHED				 [] = "Matched";
 const char ATTR_JOB_NOOP				 [] = "IsNoopJob";
 const char ATTR_JOB_NOOP_EXIT_SIGNAL	 [] = "NoopJobExitSignal";
