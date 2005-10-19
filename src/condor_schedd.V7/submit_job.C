@@ -386,6 +386,7 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 		return false;
 	}
 
+	failobj.SetQmgr(0);
 	ClassAd * adlist[1];
 	adlist[0] = &src;
 	if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
