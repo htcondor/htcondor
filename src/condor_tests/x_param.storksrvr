@@ -7,7 +7,7 @@ universe = vanilla
 type = jobs
 
 ports = dynamic
-condor = install
+condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
 condortemplate = x_condor_config_template

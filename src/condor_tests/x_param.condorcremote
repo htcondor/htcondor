@@ -6,7 +6,7 @@ duration = 20
 universe = vanilla
 type = jobs
 
-condor = install
+condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
 condortemplate = x_condor_config_template
