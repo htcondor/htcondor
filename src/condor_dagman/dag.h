@@ -94,7 +94,7 @@ class Dag {
 
 	/** Initialize log files, lock files, etc.
 	*/
-	void InitializeDagFiles( char *lockFileName );
+	void InitializeDagFiles( char *lockFileName, bool deleteOldLogs );
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
         @param recovery specifies if this is a recovery

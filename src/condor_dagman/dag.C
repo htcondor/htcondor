@@ -151,7 +151,7 @@ Dag::~Dag() {
 
 //-------------------------------------------------------------------------
 void
-Dag::InitializeDagFiles( char *lockFileName )
+Dag::InitializeDagFiles( char *lockFileName, bool deleteOldLogs )
 {
 		// if there is an older version of the log files,
 		// we need to delete these.
@@ -175,6 +175,7 @@ Dag::InitializeDagFiles( char *lockFileName )
 		// have DAGMan keep its own log independant of
 		// Condor -- but Miron hates that idea...
 
+	if( deleteOldLogs ) {
 	debug_printf( DEBUG_VERBOSE,
 				  "Deleting any older versions of log files...\n" );
 
@@ -191,6 +192,7 @@ Dag::InitializeDagFiles( char *lockFileName )
 
 	if ( _condorLogName != NULL ) touch (_condorLogName);  //<-- DAP
 	if ( _dapLogName != NULL ) touch (_dapLogName);
+	}
 	touch (lockFileName);
 }
 

@@ -89,6 +89,7 @@ Dagman::Dagman() :
 	max_submit_attempts (0),
 	primaryDagFile (NULL),
 	allowLogError (false),
+	deleteOldLogs (true),
 	useDagDir (false)
 {
 }
@@ -184,6 +185,10 @@ Dagman::Config()
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES", true );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %d\n",
 				mungeNodeNames );
+
+	deleteOldLogs = param_boolean( "DAGMAN_DELETE_OLD_LOGS", deleteOldLogs );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DELETE_OLD_LOGS setting: %d\n",
+				  deleteOldLogs );
 
 	free( condorSubmitExe );
 	condorSubmitExe = param( "DAGMAN_CONDOR_SUBMIT_EXE" );
@@ -590,7 +595,8 @@ int main_init (int argc, char ** const argv) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
                            lockFileName);
         } else {
-			dagman.dag->InitializeDagFiles( lockFileName );
+			dagman.dag->InitializeDagFiles( lockFileName,
+ 											dagman.deleteOldLogs );
         }
 
         debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
