@@ -26,6 +26,13 @@ The details of each version are described below.
 by prepending the subsystem name and a period to the normal name.  The
 per-subsystem settings take precedence over the regular settings.
 
+\item \Condor{dagman} now recovers automatically after being abruptly
+killed by something other than Condor itself (e.g., by Unix initd
+during a ``fast'' system shutdown).  This is accomplished through the
+use of a default \Attr{OnExitRemove} expression inserted by
+\Condor{submit\_dag} which instructs the \Condor{schedd} not to treat
+death by SIGKILL as a valid exit condition for \Condor{dagman}.
+
 \end{itemize}
 
 
