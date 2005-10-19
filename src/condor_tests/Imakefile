@@ -39,12 +39,6 @@ all_symlink_target(../condor_scripts/CondorPersonal.pm,CondorPersonal.pm)
 all_symlink_target(../condor_scripts/safe_append.pl,safe_append.pl)
 all_symlink_target(../condor_scripts/batch_test.pl,batch_test.pl)
 
-/* for submit files for unix and windows with perl scripts as executables,
-	we will have perl.bat be the executable and the script the first argument. 
-	The test glue will see that for windows that condor_scripts/win32.perl.bat 
-	becomes perl.bat */
-all_symlink_target(../condor_scripts/unix.perl.bat,perl.bat)
-
 BUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
 BUILD($(CC),x_dumpcore,c)
 BUILD($(CC),x_trapsig,c)
