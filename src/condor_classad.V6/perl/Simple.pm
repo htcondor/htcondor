@@ -67,7 +67,9 @@ sub get_value
     }
     elsif ($type eq "classad")
     {
-	return $this->get_classad_value;
+	my $ad = $this->get_classad_value;
+	bless $ad, "ClassAd::Simple";
+	return $ad;
     }
     elsif ($type eq "error")
     {
@@ -109,10 +111,6 @@ sub new
     elsif ($src)
     {
 	$ad = new ClassAd::ClassAd(&_struct_to_text($src));
-    }
-    else
-    {
-	$ad = new ClassAd::ClassAd("[]");
     }
     return undef unless $ad;
 
@@ -194,6 +192,35 @@ sub as_string
 
 *ClassAd::MatchClassAd::as_string = *ClassAd::ExprTree::as_string = *ClassAd::Simple::as_string;
 
+sub flatten
+{
+    my ($this, $expr) = @_;
+
+    my $value = $this->SUPER::flatten($expr);
+    $value->DISOWN;
+    
+    bless $value, "ClassAd::Simple::Value";
+
+    return $value->get_value;
+}
+
+sub attributes
+{
+    my ($this) = @_;
+
+    my $iterator = new ClassAd::ClassAdIterator $this;
+    $iterator->DISOWN;
+
+    my @attrs;
+    while (!$iterator->is_after_last)
+    {
+	push @attrs, $iterator->current_attribute;
+	$iterator->next_attribute;
+    }
+
+    return @attrs;
+}
+
 # Figure out a type and do an appropriate insert
 sub insert
 {
@@ -242,6 +269,7 @@ sub deep_insert
     {
 	my ($scope, $attr) = $key =~ /(.*)\.(.*)/;
 	my $scope_expr = new ClassAd::Simple::Expr $scope;
+	$this->autovivicate($key);
 
 	if (ref($inserts{$key}) eq "ClassAd::Simple")
 	{
@@ -267,6 +295,26 @@ sub deep_insert
 	{
 	    $this->SUPER::deep_insert($scope_expr, $attr, new ClassAd::Simple::Expr("UNDEFINED"));
 	}
+    }
+}
+
+# Provide auto-vivication
+sub autovivicate
+{
+    my ($this, $path) = @_;
+
+    my @path = split /\./, $path;
+    pop @path;
+    
+    my $scope;
+    foreach my $element (@path)
+    {
+	$scope .= ".$element";
+	$scope =~ s/^\.//;
+	
+	next if defined $this->evaluate_expr($scope);
+
+	$this->insert($scope, new ClassAd::Simple {});
     }
 }
 

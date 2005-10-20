@@ -2,7 +2,7 @@
 
 use strict;
 use ClassAd::Simple;
-use Test::More tests => 20;
+use Test::More tests => 21;
 
 # Make ads from text and a hash, they should be the same
 my $ad_text = "[ foo = 50; bar = [ foo = 1 ]; qux = { 1, 2, 3 }; ]";
@@ -45,6 +45,13 @@ is($ad->evaluate_attr("string"), "bar", "insert/evaluate_attr string");
 ok($ad->evaluate_attr("expr"), "insert/evaluate_attr expr");
 is($ad->evaluate_expr("ad.foo"), $ad->evaluate_attr("string"), "insert/evaluate_attr classad");
 
+# Attribute iterator
+my @attrs = $ad->attributes;
+diag(join ", ", @attrs);
+my %attrs = map { $_ => 1 } @attrs;
+ok($attrs{int} && $attrs{double} && $attrs{string} && $attrs{expr} 
+   && $attrs{ad} && @attrs == 5, "correct attributes");
+
 # Deep inserts
 $ad->insert("ad.string" => "bar");
 $ad->insert("ad.int" => 35);
@@ -81,3 +88,10 @@ ok($old_ad == $new_ad, "Creating from old classads");
 # Some functions
 $ad = new ClassAd::Simple "[ one = 1; foo = 50; bar = [ foo = 1 ]; qux = { 1, 2, 3 }; ]";
 ok($ad->evaluate_expr("member(1, { 1, 2, 3 })"), "member()");
+
+# Flatten
+my $ad = new ClassAd::Simple "[ str = \"foo\"; foo = [ foo = 3 + 5; bar = str ] ]";
+diag($ad);
+my $expr = $ad->evaluate_attr("foo");
+$expr = $ad->flatten($expr);
+diag($expr);

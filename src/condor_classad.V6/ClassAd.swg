@@ -8,6 +8,7 @@
 #include "sink.h"
 #include "source.h"
 #include "value.h"
+#include "classadItor.h"
 %}
 
 // Perl has no "bool" so this helps.
@@ -193,6 +194,56 @@ public:
     }
 };
 
+class ClassAdIterator {
+public:
+	ClassAdIterator();
+	~ClassAdIterator();
+
+	%extend {
+
+		ClassAdIterator( ClassAd* ca ) {
+			ClassAdIterator *it = new ClassAdIterator(*ca);
+
+			return it;
+		}
+
+		void ClassAdIterator::to_first() {
+			self->ToFirst();
+		}
+
+		void ClassAdIterator::to_after_last() {
+			self->ToAfterLast();
+		}
+
+		std::string ClassAdIterator::next_attribute() {
+			std::string attr;
+			ExprTree* expr;
+			bool iserr = self->NextAttribute(attr, (const ExprTree*&)expr);
+
+			return attr;
+		}
+
+		std::string ClassAdIterator::current_attribute() {
+			std::string attr;
+			ExprTree* expr;
+			self->CurrentAttribute(attr, (const ExprTree*&)expr);
+
+			return attr;
+		}
+
+		int ClassAdIterator::is_at_first() {
+			bool isfirst = self->IsAtFirst();
+			return bool_to_int(isfirst);
+		}
+
+		int ClassAdIterator::is_after_last() {
+			bool islast = self->IsAfterLast();
+			return bool_to_int(islast);
+		}
+
+	}
+};
+
 class ClassAd {
 public:
     ClassAd();
@@ -374,11 +425,22 @@ public:
 			return bool_to_int(same);
 		}
 
-/*
-	int ClassAd::flatten( ExprTree *expr, Value val, ExprTree *fexpr) {}
 
-	int ClassAd::get_external_references( ExprTree *tree, PortReferences refs ) {}
-*/
+		Value ClassAd::flatten( ClassAd* ad ) {
+			Value val;
+			ExprTree* fexpr;
+			ExprTree* expr = (ExprTree *)ad;
+			self->Flatten(expr, val, fexpr);
+
+			if (fexpr != NULL) {
+				val = Value();
+				val.SetClassAdValue((ClassAd *)fexpr);
+			}
+			
+			return val;
+		}
+
+//	int ClassAd::get_external_references( ExprTree *tree, PortReferences refs ) {}
 
         std::string ClassAd::unparse() {
             PrettyPrint printer;
