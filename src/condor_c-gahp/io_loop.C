@@ -256,8 +256,6 @@ stdin_pipe_handler(int pipe) {
 		// Don't make this a while() loop b/c
 		// stdin read is blocking
 	MyString * line = NULL;
-	char ** argv;
-	int argc;
 
 	if (stdin_buffer.IsError()) {
 		dprintf (D_ALWAYS, "Problem with stdin buffer, exiting\n");
@@ -269,11 +267,13 @@ stdin_pipe_handler(int pipe) {
 
 		dprintf (D_ALWAYS, "got stdin: %s\n", command);
 
-		if (parse_gahp_command (command, &argv, &argc) &&
-			verify_gahp_command (argv, argc)) {
+		Gahp_Args args;
+
+		if (parse_gahp_command (command, &args) &&
+			verify_gahp_command (args.argv, args.argc)) {
 
 				// Catch "special commands first
-			if (strcasecmp (argv[0], GAHP_COMMAND_RESULTS) == 0) {
+			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
 					// Print number of results
 				MyString rn_buff;
 				rn_buff+=result_list.number();
@@ -292,23 +292,23 @@ stdin_pipe_handler(int pipe) {
 				}
 
 				new_results_signaled = FALSE;
-			} else if (strcasecmp (argv[0], GAHP_COMMAND_VERSION) == 0) {
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
 				printf ("S %s\n", version);
 				fflush (stdout);
-			} else if (strcasecmp (argv[0], GAHP_COMMAND_QUIT) == 0) {
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_QUIT) == 0) {
 				gahp_output_return_success();
 				DC_Exit(0);
-			} else if (strcasecmp (argv[0], GAHP_COMMAND_ASYNC_MODE_ON) == 0) {
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_ASYNC_MODE_ON) == 0) {
 				async_mode = TRUE;
 				new_results_signaled = FALSE;
 				gahp_output_return_success();
-			} else if (strcasecmp (argv[0], GAHP_COMMAND_ASYNC_MODE_OFF) == 0) {
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_ASYNC_MODE_OFF) == 0) {
 				async_mode = FALSE;
 				gahp_output_return_success();
-			} else if (strcasecmp (argv[0], GAHP_COMMAND_QUIT) == 0) {
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_QUIT) == 0) {
 				gahp_output_return_success();
 				return 0; // exit
-			} else if (strcasecmp (argv[0], GAHP_COMMAND_COMMANDS) == 0) {
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
 				const char * commands [] = {
 					GAHP_RESULT_SUCCESS,
 					GAHP_COMMAND_JOB_SUBMIT,
@@ -329,13 +329,13 @@ stdin_pipe_handler(int pipe) {
 					GAHP_COMMAND_VERSION,
 					GAHP_COMMAND_COMMANDS};
 				gahp_output_return (commands, 15);
-			} else if (strcasecmp (argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
 					// For now, just return success. This will work if
 					// the file is the same as that given to
 					// INITIALIZE_FROM_FILE (since our worker reads from
 					// the file on every use.
 				gahp_output_return_success();
-			} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) {
 				flush_request (1, 	// worker for stage in requests
 							   command);
 				gahp_output_return_success(); 
@@ -345,7 +345,6 @@ stdin_pipe_handler(int pipe) {
 				gahp_output_return_success(); 
 			}
 			
-			delete [] argv;
 		} else {
 			gahp_output_return_error();
 		}

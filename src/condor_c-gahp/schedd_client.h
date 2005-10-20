@@ -32,6 +32,7 @@
 #include "SchedDCommands.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "gahp_common.h"
 
 //#include "basejob.h"
 
@@ -77,7 +78,7 @@ int doContactSchedd();
 int request_pipe_handler();
 
 int handle_gahp_command(char ** argv, int argc);
-int parse_gahp_command (const char *, char ***, int *);
+int parse_gahp_command (const char *, Gahp_Args *);
 
 
 #endif

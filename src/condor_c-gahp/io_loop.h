@@ -26,6 +26,7 @@
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h" // For Stream decl
+#include "gahp_common.h"
 #include "FdBuffer.h"
 
 #define GAHP_COMMAND_JOB_SUBMIT "CONDOR_JOB_SUBMIT"
@@ -71,7 +72,7 @@ void gahp_output_return_success();
 void gahp_output_return_error();
 
 
-int parse_gahp_command (const char *, char ***, int *);
+int parse_gahp_command (const char *, Gahp_Args *);
 int verify_gahp_command(char ** argv, int argc);
 int verify_request_id(const char *);
 int verify_schedd_name (const char *);

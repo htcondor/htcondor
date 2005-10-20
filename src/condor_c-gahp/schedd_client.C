@@ -89,20 +89,16 @@ request_pipe_handler() {
 	if ( ((next_line = request_buffer.GetNextLine()) != NULL)) {
 		dprintf (D_FULLDEBUG, "got work request: %s\n", next_line->Value());
 
-		char ** argv;
-		int argc;
+		Gahp_Args args;
 
 			// Parse the command...
-		if (!(parse_gahp_command (next_line->Value(), &argv, &argc) && handle_gahp_command (argv, argc))) {
+		if (!(parse_gahp_command (next_line->Value(), &args) &&
+			  handle_gahp_command (args.argv, args.argc))) {
 			dprintf (D_ALWAYS, "ERROR processing %s\n", next_line->Value());
 		}
 
 			// Clean up...
 		delete  next_line;
-		while ((--argc) >= 0)
-			free (argv[argc]);
-		free( argv );
-
 	}
 
 	return TRUE;

@@ -3,18 +3,14 @@
 #include "condor_debug.h"
 
 int
-parse_gahp_command (const char* raw, char *** _argv, int * _argc) {
-
-	*_argv = NULL;
-	*_argc = 0;
+parse_gahp_command (const char* raw, Gahp_Args* args) {
 
 	if (!raw) {
 		dprintf(D_ALWAYS,"ERROR parse_gahp_command: empty command\n");
 		return FALSE;
 	}
 
-	char ** argv = (char**)calloc (10,sizeof(char*)); 	// Max possible number of arguments
-	int argc = 0;
+	args->reset();
 
 	int beginning = 0;
 
@@ -39,7 +35,7 @@ parse_gahp_command (const char* raw, char *** _argv, int * _argc) {
 			if they WEREN'T escaped, so treat them as arg separators
 			*/
 			buff[buff_len++] = '\0';
-			argv[argc++] = strdup(buff);
+			args->add_arg( strdup(buff) );
 			buff_len = 0;	// re-set temporary buffer
 
 			beginning = i+1; // next char will be one after whitespace
@@ -52,10 +48,7 @@ parse_gahp_command (const char* raw, char *** _argv, int * _argc) {
 
 	/* Copy the last portion */
 	buff[buff_len++] = '\0';
-	argv[argc++] = strdup (buff);
-
-	*_argv = argv;
-	*_argc = argc;
+	args->add_arg( strdup(buff) );
 
 	free (buff);
 	return TRUE;
