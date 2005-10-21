@@ -245,15 +245,19 @@ bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
 		}
 	}
 
-#if 1
+#if 0
 	dprintf(D_FULLDEBUG, "Dirty fields updated:\n");
-	fprintf(stderr, "Dirty fields updated:\n");
 	for(classad::ClassAd::dirtyIterator it = orig.dirtyBegin();
 		it != orig.dirtyEnd(); ++it) {
+		classad::PrettyPrint unp;
 		std::string val;
-		orig.EvaluateAttrString(*it, val);
+		classad::ExprTree * p = orig.Lookup(*it);
+		if( p ) {
+			unp.Unparse(val, p);
+		} else {
+			val = "UNABLE TO LOCATE ATTRIBUTE";
+		}
 		dprintf(D_FULLDEBUG, "    %s = %s\n", it->c_str(), val.c_str());
-		fprintf(stderr,"    %s = %s\n", it->c_str(), val.c_str());
 	}
 #endif
 
