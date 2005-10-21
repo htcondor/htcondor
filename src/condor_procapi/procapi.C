@@ -740,6 +740,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 	// So to first see if this pid is still alive
 	// on Win32, open a handle to the pid and call GetExitStatus
+	DWORD last_error;
 	int status = FALSE;
 	HANDLE pidHandle = ::OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,pid);
 	if (pidHandle) {
@@ -752,7 +753,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	} else {
 		// OpenProcess() may have failed
 		// due to permissions, or because all handles to that pid are gone.
-		if ( ::GetLastError() == 5 ) {
+		last_error = ::GetLastError();
+		if ( last_error == 5 ) {
 			// failure due to permissions.  this means the process object must
 			// still exist, although we have no idea if the process itself still
 			// does or not.  error on the safe side; return TRUE.
@@ -763,7 +765,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		}
 	}
     if ( status == FALSE ) {
-        dprintf( D_FULLDEBUG, "ProcAPI: pid # %d was not found\n", pid );
+        dprintf( D_FULLDEBUG, 
+			"ProcAPI: pid # %d was not found (OpenProcess err=%d)\n"
+			,pid, last_error );
 		return -1;
     }
 	
