@@ -1216,7 +1216,9 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 
 	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
 	contact.Tokenize();
-	contact.GetNextToken( " ", false );
+	if ( strcasecmp( contact.GetNextToken( " ", false ), "gt2" ) == 0 ) {
+		contact.GetNextToken( " ", false );
+	}
 	event.jmContact = strnewp(contact.GetNextToken( " ", false ));
 
 	version = 0;
