@@ -383,7 +383,7 @@ private:
 	void			preempt( int n, bool force_sched_jobs = false );
 	void			preempt_one_job();
 	static void		refuse( Stream* s );
-	void			tryNextJob( void );
+	void			tryNextJob( int secs = -1 );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 
 

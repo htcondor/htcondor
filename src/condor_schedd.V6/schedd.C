@@ -4259,16 +4259,24 @@ Scheduler::StartJobHandler()
 		srec->pid=pid;
 		add_shadow_rec(srec);
 	}
-	tryNextJob();
+	int delay = JobStartDelay;
+	if (jobAd) {
+		jobAd->EvalInteger(ATTR_NEXT_JOB_START_DELAY,NULL,delay);
+	}	
+	tryNextJob(delay);
 }
 
 void
-Scheduler::tryNextJob( void )
+Scheduler::tryNextJob( int secs )
 {
+	int delay = MAX(secs, JobStartDelay);
+
 		// Re-set timer if there are any jobs left in the queue
 	if( !RunnableJobQueue.IsEmpty() ) {
+		dprintf(D_FULLDEBUG,
+			"Will delay %d seconds until next shadow spawn\n",delay);
 		StartJobTimer = daemonCore->
-			Register_Timer( JobStartDelay,
+			Register_Timer( delay,
 							(Eventcpp)&Scheduler::StartJobHandler,
 							"start_job", this ); 
 	} else {
