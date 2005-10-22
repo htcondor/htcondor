@@ -89,7 +89,9 @@ my $CVSROOT = "/space/cvs/CONDOR_SRC";
 my $submit_info = "nmi_glue/submit_info";
 
 # Path to the nmi_submit program we should invoke
-my $nmi_submit = "/nmi/bin/nmi_submit";
+my $nmibin = (exists $ENV{'NMIBIN'} and defined $ENV{'NMIBIN'})?
+  $ENV{'NMIBIN'} : '/nmi/bin';
+my $nmi_submit = "/${nmibin}/nmi_submit";
 
 # database parameters
 my $database = "history";
