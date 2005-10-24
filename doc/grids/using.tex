@@ -427,7 +427,7 @@ queue
 There are two optional submit description file commands
 of note:
 \SubmitCmd{x509userproxy} and
-\SubmitCmd{globusrsl}.
+\SubmitCmd{globus\_rsl}.
 The \SubmitCmd{x509userproxy} command specifies the path to
 an X.509 proxy.
 The command is of the form:
@@ -443,15 +443,15 @@ looks for the proxy in the file
 where the characters \verb@XXXX@ in this file name are
 replaced with the Unix user id.
 
-The \SubmitCmd{globusrsl} command is used to add additional
+The \SubmitCmd{globus\_rsl} command is used to add additional
 attribute settings to a job's RSL string.
-The format of the \SubmitCmd{globusrsl} command is
+The format of the \SubmitCmd{globus\_rsl} command is
 \begin{verbatim}
-globusrsl = (name=value)(name=value)
+globus\_rsl = (name=value)(name=value)
 \end{verbatim}
 Here is an example of this command from a submit description file:
 \begin{verbatim}
-globusrsl = (project=Test_Project)
+globus\_rsl = (project=Test_Project)
 \end{verbatim}
 This example's attribute name for the additional RSL is
 \AdAttr{project}, and the value assigned is \AdAttr{Test\_Project}.
