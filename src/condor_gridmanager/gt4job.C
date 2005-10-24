@@ -1490,6 +1490,7 @@ MyString *GT4Job::buildSubmitRSL()
 	MyString *rsl = new MyString;
 	MyString local_iwd = "";
 	MyString remote_iwd = "";
+	MyString riwd_parent="";
 	MyString local_executable = "";
 	MyString remote_executable = "";
 	bool create_remote_iwd = false;
@@ -1568,6 +1569,14 @@ MyString *GT4Job::buildSubmitRSL()
 		// ticket 2846 for details. To keep it happy, throw in an extra
 		// slash, even though this'll result in file:////....
 		remote_iwd.sprintf ("/${GLOBUS_SCRATCH_DIR}/job_%s", my_submit_id);
+		// The default GLOBUS_SCRATCH_DIR (~/.globus/scratch) is not
+		// created by Globus, so our attempt to create a sub-directory
+		// will fail. As a work-around, try to create it. This will
+		// succeed even if the directory already exists and is not
+		// writable by the user.
+		// http://bugzilla.globus.org/globus/show_bug.cgi?id=3802
+		// http://bugzilla.globus.org/globus/show_bug.cgi?id=3803
+		riwd_parent.sprintf("/${GLOBUS_SCRATCH_DIR}");
 	}
 
 	if ( remote_iwd[remote_iwd.Length()-1] != '/' ) {
@@ -1762,6 +1771,15 @@ MyString *GT4Job::buildSubmitRSL()
 		// First upload an emtpy dummy directory
 		// This will be the job's sandbox directory
 		if ( create_remote_iwd ) {
+			if ( riwd_parent != "" ) {
+				*rsl += "<transfer>";
+				buff.sprintf( "%s%s/", local_url_base,
+							  getDummyJobScratchDir() );
+				*rsl += printXMLParam( "sourceUrl", buff.Value() );
+				buff.sprintf( "file://%s", riwd_parent.Value() );
+				*rsl += printXMLParam( "destinationUrl", buff.Value());
+				*rsl += "</transfer>";
+			}
 			*rsl += "<transfer>";
 			buff.sprintf( "%s%s/", local_url_base, getDummyJobScratchDir() );
 			*rsl += printXMLParam( "sourceUrl", buff.Value() );
@@ -1999,20 +2017,6 @@ GT4Job::getDummyJobScratchDir() {
 					 dirname.Value(), rc);
 			return NULL;
 		}
-	}
-		// Work-around for globus rft bug: rft hangs when you try to
-		// transfer an empty directory. So create an innocuous file in
-		// our dummy directory
-	MyString filename;
-	filename.sprintf( "%s%c.ignoreme", dirname.Value(), DIR_DELIM_CHAR );
-	if ( stat(filename.Value(), &stat_buff) < 0 ) {
-		int rc;
-		if ( (rc = creat( filename.Value(), 0600 )) < 0 ) {
-			dprintf (D_ALWAYS, "Unable to create file in scratch directory %s, rc=%d\n", 
-					 dirname.Value(), rc);
-			return NULL;
-		}
-		close( rc );
 	}
 
 	return dirname.Value();
