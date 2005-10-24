@@ -169,6 +169,12 @@ large values (more than 3KB).
 \item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
 when the \Attr{Rematch} attribute evaluates to True.
 
+% http://bugzilla.globus.org/globus/show_bug.cgi?id=3802
+% http://bugzilla.globus.org/globus/show_bug.cgi?id=3803
+\item The default base scratch directory for WS-GRAM doesn't exist on most
+server machines. Added a work-around to create the directory as part of the
+job submission.
+
 \end{itemize}
 
 \noindent Changes:
