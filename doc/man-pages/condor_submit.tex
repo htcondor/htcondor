@@ -1209,7 +1209,17 @@ specify the correct service for the jobmanager to perform.
 \item[globus\_rsl = $<$RSL-string$>$] Used to provide any additional Globus RSL
 \index{submit commands!globus\_rsl}
 string attributes which are not covered by regular submit description
-file parameters.
+file parameters. Used by grid-type gt2 and gt3 jobs.
+
+%%%%%%%%%%%%%%%%%%%
+%% globus_xml
+%%%%%%%%%%%%%%%%%%%
+
+\item[globus\_xml = $<$XML-string$>$]
+\index{submit commands!globus\_xml}
+Used to provide any additional attributes in the GRAM XML job description
+that Condor writes which are not covered by regular submit description
+file parameters. Used by grid-type gt4 jobs.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_resubmit

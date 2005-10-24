@@ -447,11 +447,11 @@ The \SubmitCmd{globus\_rsl} command is used to add additional
 attribute settings to a job's RSL string.
 The format of the \SubmitCmd{globus\_rsl} command is
 \begin{verbatim}
-globus\_rsl = (name=value)(name=value)
+globus_rsl = (name=value)(name=value)
 \end{verbatim}
 Here is an example of this command from a submit description file:
 \begin{verbatim}
-globus\_rsl = (project=Test_Project)
+globus_rsl = (project=Test_Project)
 \end{verbatim}
 This example's attribute name for the additional RSL is
 \AdAttr{project}, and the value assigned is \AdAttr{Test\_Project}.
@@ -588,6 +588,16 @@ SGE
 %Its value is the URL of the appropriate GT4 job factory service.
 %It is the same, for example,
 %as the URL provided to the \Prog{globusrun-ws} tool in GT4.
+
+The \SubmitCmd{globus\_xml} command can be used to add additional
+attributes to the XML-based RSL string that Condor writes to submit the
+job to GRAM.
+Here is an example of this command from a submit description file:
+\begin{verbatim}
+globus_xml = <project>Test_Project</project>
+\end{verbatim}
+This example's attribute name for the additional RSL is
+\AdAttr{project}, and the value assigned is \AdAttr{Test\_Project}.
 
 File transfer occurs as expected for a Condor job 
 (for the executable, \File{input}, and \File{output}).
