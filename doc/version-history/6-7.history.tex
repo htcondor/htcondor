@@ -6,62 +6,6 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-14}Version 6.7.14}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item You can now specify per-subsystem entries in your condor\_config file
-by prepending the subsystem name and a period to the normal name.  The
-per-subsystem settings take precedence over the regular settings.
-
-\item \Condor{dagman} now recovers automatically after being abruptly
-killed by something other than Condor itself (e.g., by Unix initd
-during a ``fast'' system shutdown).  This is accomplished through the
-use of a default \Attr{OnExitRemove} expression inserted by
-\Condor{submit\_dag} which instructs the \Condor{schedd} not to treat
-death by SIGKILL as a valid exit condition for \Condor{dagman}.
-
-\end{itemize}
-
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item Fixed a bug in the \Condor{c-gahp} that caused it to crash when
-handling grid-type condor jobs with job leases.
-
-\item Starting in 6.7.11, the ``JM-Contact'' field of the ``Job submitted
-to Globus'' user log event was mis-printed. This has been corrected.
-
-\item Fixed bug that prevented Stork detection of hung jobs.
-
-\end{itemize}
-
-
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-7.13}Version 6.7.13}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -127,6 +71,17 @@ the status of all DAG nodes.
   \Condor{startd}.  The \Condor{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE} config
   macro was added to support this feature; see
   page~\pageref{param:ScheddAssumeNegotiatorGone} for details.
+
+\item You can now specify per-subsystem entries in your condor\_config file
+by prepending the subsystem name and a period to the normal name.  The
+per-subsystem settings take precedence over the regular settings.
+
+\item \Condor{dagman} now recovers automatically after being abruptly
+killed by something other than Condor itself (e.g., by Unix initd
+during a ``fast'' system shutdown).  This is accomplished through the
+use of a default \Attr{OnExitRemove} expression inserted by
+\Condor{submit\_dag} which instructs the \Condor{schedd} not to treat
+death by SIGKILL as a valid exit condition for \Condor{dagman}.
 
 \end{itemize}
 
@@ -224,6 +179,14 @@ when the \Attr{Rematch} attribute evaluates to True.
 \File{condor\_config.generic}.
 
 \item Slightly cleaned up event checking error messages in \Condor{dagman}.
+
+\item Fixed a bug in the \Condor{c-gahp} that caused it to crash when
+handling grid-type condor jobs with job leases.
+
+\item Starting in 6.7.11, the ``JM-Contact'' field of the ``Job submitted
+to Globus'' user log event was mis-printed. This has been corrected.
+
+\item Fixed bug that prevented Stork detection of hung jobs.
 
 \end{itemize}
 
