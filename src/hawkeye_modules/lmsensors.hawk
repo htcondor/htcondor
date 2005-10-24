@@ -1,0 +1,14 @@
+# Data file describing the LMSENSORS module
+ModuleFiles: lmsensors
+
+Description:
+Monitors hardware status using the lmsensors system
+
+Default: lmsensors
+options: 
+period: 5m
+prefix: sensors_
+
+# It's parameters
+paramater: LMSENSORS_CMD = /usr/bin/sensors
+Path to the sensors command.

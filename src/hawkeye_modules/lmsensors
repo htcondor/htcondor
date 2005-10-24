@@ -1,0 +1,67 @@
+#! /usr/bin/perl
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+
+# Do it
+Init();
+RunIt();
+
+sub Init {
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+}
+
+sub RunIt {
+
+    ###
+    ### Get sensors output
+    ###
+
+    # Start things off
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    # Run it, parse it
+    my $Cmd = HawkeyeLib::ReadConfig("_lmsensors_cmd", "/usr/bin/sensors");
+    my @SensorOutput = `$Cmd`;
+    chomp(@SensorOutput);
+    if ( 0 == $? )
+    {
+	foreach my $Line ( @SensorOutput )
+	{
+	    my ($Key, $Value) = split /:\s*/, $Line, 2;
+	    $Key =~ s/^\+/plus_/;
+	    $Key =~ s/^-/minus_/;
+	    $Key =~ s/\W/_/;
+	    next unless $Value =~ /\d/;
+
+	    my ($NowVal, $Additional) = $Value =~ /([-+]?[\d\.]+)(.*\((.*)\))?/;
+	    $Hash->Add( $Key, HawkeyePublish::TypeNumber, $NowVal );
+
+	    while ($Additional =~ s/(\w+)\s*=\s*([-+]?[\d\.]+)//)
+	    {
+		$Hash->Add( "${Key}_$1", HawkeyePublish::TypeNumber, $2 );
+	    }
+	}
+    }
+
+    # Ok, summary is done...
+    $Hash->Store( );
+    $Hawkeye->Publish( );
+}
