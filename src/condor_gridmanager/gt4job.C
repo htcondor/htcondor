@@ -374,7 +374,14 @@ GT4Job::GT4Job( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( token && *token ) {
-			resourceManagerString = strdup( token );
+			// If the resource url is missing a scheme, insert one
+			if ( strncmp( token, "http://", 7 ) == 0 ||
+				 strncmp( token, "https://", 8 ) == 0 ) {
+				resourceManagerString = strdup( token );
+			} else {
+				snprintf( buff2, sizeof(buff2), "https://%s", token );
+				resourceManagerString = strdup( buff2 );
+			}
 		} else {
 			error_string = "GridResource missing GRAM Service URL";
 			goto error_exit;
