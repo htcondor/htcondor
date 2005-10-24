@@ -559,17 +559,17 @@ The \SubmitCmd{globusscheduler} command is still required,
 and is given in the form of a URL; the syntax follows the form:
 \footnotesize
 \begin{verbatim}
-globusscheduler = https://hostname[:port]/wsrf/services/ManagedJobFactoryService
+globusscheduler = [https://]hostname[:port][/wsrf/services/ManagedJobFactoryService]
 \end{verbatim}
 \normalsize
 
 or
 \footnotesize
 \begin{verbatim}
-globusscheduler = https://IPaddress[:port]/wsrf/services/ManagedJobFactoryService
+globusscheduler = [https://]IPaddress[:port][/wsrf/services/ManagedJobFactoryService]
 \end{verbatim}
 \normalsize
-The portion of this syntax specification enclosed within
+The portions of this syntax specification enclosed within
 square brackets (\Lbr and \Rbr) is optional.
 
 \index{submit commands!jobmanager\_type}
