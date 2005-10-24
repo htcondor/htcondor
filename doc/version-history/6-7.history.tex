@@ -83,6 +83,10 @@ use of a default \Attr{OnExitRemove} expression inserted by
 \Condor{submit\_dag} which instructs the \Condor{schedd} not to treat
 death by SIGKILL as a valid exit condition for \Condor{dagman}.
 
+\item Added submit attribute \SubmitCmd{globus\_xml}, for use with grid-type
+gt4 jobs. The given XML text will be inserted at the end of the XML job
+description written by Condor for submission to the WS-GRAM server.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
