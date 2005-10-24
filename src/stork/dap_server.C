@@ -799,8 +799,8 @@ void regular_check_for_requests_in_process()
 	classad::ClassAd       *job_ad;
 	classad::ClassAdParser  parser;
 	std::string             key, constraint;
-	char   dap_id[MAXSTR], timestamp[MAXSTR];
-	double timediff_inseconds, maxdelay_inseconds;
+	char   dap_id[MAXSTR];
+	int timediff_inseconds, maxdelay_inseconds;
 	int num_attempts = 0; 
 		
 		//  printf("regular check for requests in process..\n");
@@ -825,41 +825,33 @@ void regular_check_for_requests_in_process()
 			job_ad = dapcollection->GetClassAd(key);
 			if (!job_ad) { //no matching classad
 				break;
-			}
-			else{
-					//create a new classad for time comparison
-				classad::ClassAd *classad = new classad::ClassAd;
-				classad::ClassAdParser parser;
-				classad::ExprTree *expr = NULL;
-
-				classad->Insert("currenttime",classad::Literal::MakeAbsTime());
-
-				getValue(job_ad, "timestamp", timestamp); 
-				if ( !parser.ParseExpression(timestamp, expr) ) {
-					dprintf(D_ALWAYS,"Parse error\n");
+			} else {
+				// determine elapsed run time for this job.
+				classad::Value timediff_value;
+				std::string time_expr = "int(currentTime() - timestamp)";
+				if (! job_ad->EvaluateExpr(time_expr, timediff_value ) ) {
+					dprintf(D_ALWAYS, "%s:%d EvaluateExpr() timediff failed\n",
+							__FILE__, __LINE__);
+					continue;
 				}
-				classad->Insert("timeofrequest", expr);
-
-				if( !parser.ParseExpression("InSeconds(currenttime - timeofrequest)", 
-											expr) ) {
-					dprintf(D_ALWAYS,"Parse error\n");
-				}
-				classad->Insert("diffseconds", expr);
-
-				if (!classad->EvaluateAttrNumber("diffseconds", timediff_inseconds)) {
-					dprintf(D_ALWAYS, "Error in parsing the attribute: diffseconds\n");
+				if (! timediff_value.IsIntegerValue(timediff_inseconds)) {
+					dprintf(D_ALWAYS,"%s:%d IsIntegerValue() timediff failed\n",
+							__FILE__, __LINE__);
+					continue;
 				}
 	
-					//if the elapsed time is greater than the maximum delay allowed,
-					//then reprocess the request..
-
+				// if the elapsed time is greater than the maximum delay
+				// allowed, then reprocess the request..
 				if (timediff_inseconds > maxdelay_inseconds){
 					getValue(job_ad, "dap_id", dap_id); 
 					dprintf(D_ALWAYS, 
-							"dap_id: %s, not completed in %d minutes. Reprocessing...\n", 
-							dap_id, (int)timediff_inseconds/60);
-	  
-	  
+							"job id: %s may be hung.  "
+							"Elapsed time: %d min, limit: %lu min .  "
+							"Reprocessing ...\n",
+							dap_id,
+							timediff_inseconds/60,
+							Max_delayInMinutes
+					   );
 	  
 					unsigned int pid;
 					if (dap_queue.get_pid(pid, dap_id) == DAP_SUCCESS){
@@ -960,9 +952,7 @@ void regular_check_for_requests_in_process()
 		
 					}
 	    
-				}
-	
-				if (classad != NULL) delete classad;	
+				} // hung job
 			}//else
 		}while (query.Next(key));
 	}//if
