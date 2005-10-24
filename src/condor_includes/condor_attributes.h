@@ -124,6 +124,7 @@ const char ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME [] = "GlobusResourceUnavailable
 const char ATTR_JOB_MUST_EXPAND			 [] = "MustExpand";
 const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
 const char ATTR_GLOBUS_STATUS			 [] = "GlobusStatus";
+const char ATTR_GLOBUS_XML				 [] = "GlobusXML";
 const char ATTR_X509_USER_PROXY          [] = "x509userproxy";
 const char ATTR_X509_USER_PROXY_SUBJECT	 [] = "x509userproxysubject";
 const char ATTR_GLOBUS_JOBMANAGER_TYPE   []	= "JobmanagerType";	// for gt4

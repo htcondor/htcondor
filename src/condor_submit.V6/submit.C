@@ -176,7 +176,8 @@ char	*X509UserProxy	= "x509userproxy";
 char	*GlobusScheduler = "globusscheduler";
 char	*GlobusJobmanagerType = "jobmanager_type";
 char    *GridShell = "gridshell";
-char	*GlobusRSL = "globusrsl";
+char	*GlobusRSL = "globus_rsl";
+char	*GlobusXML = "globus_xml";
 char	*RemoteSchedd = "remote_schedd";
 char	*RemotePool = "remote_pool";
 char	*RendezvousDir	= "rendezvousdir";
@@ -815,6 +816,7 @@ SetRemoteAttrs()
 		{ RemotePool, 0, ATTR_REMOTE_POOL },
 		{ GlobusScheduler, "globus_scheduler", ATTR_GLOBUS_RESOURCE },
 		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
+		{ GlobusXML, "globus_xml", ATTR_GLOBUS_XML },
 	};
 	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
 
@@ -3711,8 +3713,14 @@ SetGlobusParams()
 		InsertJobExpr (buffer, false );
 	}
 
-	if( (tmp = condor_param(GlobusRSL, "globus_rsl")) ) {
+	if( (tmp = condor_param(GlobusRSL, ATTR_GLOBUS_RSL)) ) {
 		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
+		free( tmp );
+		InsertJobExpr ( buffer );
+	}
+
+	if( (tmp = condor_param(GlobusXML, ATTR_GLOBUS_XML)) ) {
+		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}

@@ -1905,16 +1905,16 @@ MyString *GT4Job::buildSubmitRSL()
 	*rsl += delegation_epr;
 	*rsl += "</stagingCredentialEndpoint>";
 
-	if ( jobAd->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) ) {
-		*rsl += rsl_suffix;
-		free( rsl_suffix );
-	}
-
 		// Start the job on hold
 	if ( staging_input ) {
 		*rsl += printXMLParam( "holdState", "StageIn" );
 	} else {
 		*rsl += printXMLParam( "holdState", "Pending" );
+	}
+
+	if ( jobAd->LookupString( ATTR_GLOBUS_XML, &rsl_suffix ) ) {
+		*rsl += rsl_suffix;
+		free( rsl_suffix );
 	}
 
 	*rsl += "</job>";
