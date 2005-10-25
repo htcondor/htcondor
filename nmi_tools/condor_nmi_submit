@@ -67,11 +67,14 @@ use DBI;
 use Getopt::Long;
 use File::Basename;
 
+use IO::File;
+use NMI::NmiConf;
+
 use vars qw/ $opt_build $opt_test
     $opt_help $opt_notify $opt_platforms $opt_nmi_glue 
     $opt_tag $opt_module
     $opt_nightly $opt_externals $opt_without_tests
-    $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
+    $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args $opt_nmiconf
     /;
 
 
@@ -93,14 +96,11 @@ my $nmibin = (exists $ENV{'NMIBIN'} and defined $ENV{'NMIBIN'})?
   $ENV{'NMIBIN'} : '/nmi/bin';
 my $nmi_submit = "${nmibin}/nmi_submit";
 
-# database parameters
-my $database = "history";
-my $username = "nmi";
-my $password = "nmi-nwo-nmi";
-my $DB_CONNECT_STR = "DBI:mysql:database=$database;host=localhost";
-my $RUN_TABLE = "Run";
-my $TASK_TABLE = "Task";
+my $condor_prefix = (exists $ENV{'CONDOR_PREFIX'} and defined $ENV{'CONDOR_PREFIX'})?
+  $ENV{'CONDOR_PREFIX'} : '/usr/local/condor';
 
+# Config file encapsulating dependencies on NMI framework.
+my $nmiconf = '/usr/local/nmi/etc/nmi.conf' if -f '/usr/local/nmi/etc/nmi.conf';  # default.
 
 ######################################################################
 # Global variables (set at runtime, from submit_info, or ARGV)
@@ -151,7 +151,43 @@ my $test_timeout = 20;
 
 my $tag;
 parseOptions();
-initialize();
+
+die "FATAL: $0: No NMI config file specified.\n" unless defined $nmiconf;
+die "FATAL: $0: NMI config file $nmiconf is not readable.\n" unless -r $nmiconf;
+
+my %conf_nmi;
+my $fh = new IO::File $nmiconf, 'r';
+die "Could not open $nmiconf: $!" unless defined $fh;
+NMI::NmiConf::parse(\%conf_nmi, $fh);
+$fh->close;
+
+# database parameters
+for my $key qw(database username password mysqlhost) {
+  die "FATAL: $0: config file $nmiconf does not contain value for $key."
+    unless exists $conf_nmi{$key};
+}
+
+# Database parameters.
+my $database = $conf_nmi{'database'};
+my $username = $conf_nmi{'username'};
+my $password = $conf_nmi{'password'};
+my $mysqlhost = $conf_nmi{'mysqlhost'};
+my $DB_CONNECT_STR = "DBI:mysql:database=$database;host=$mysqlhost";
+$DB_CONNECT_STR .= ";port=${conf_nmi{'mysqlport'}}"  if exists $conf_nmi{'mysqlport'}
+  and defined $conf_nmi{'mysqlport'};
+my $RUN_TABLE = "Run";
+my $TASK_TABLE = "Task";
+
+print "Initializing\n";
+$ENV{PATH} = "${nmibin}:${condor_prefix}/bin:${condor_prefix}/sbin:"
+    . $ENV{PATH};
+
+$workspace = "/tmp/condor_$runtype." . "$$" . "." . time;
+
+$init_cwd = &getcwd();
+mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
+chdir($workspace) || die "Can't chdir($workspace): $!\n";
+
 getTags();
 foreach $tag (sort keys %tags ) {
 
@@ -177,18 +213,6 @@ myExit( 0 );
 # functions
 ######################################################################
 
-sub initialize
-{
-    print "Initializing\n";
-    $ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
-        . $ENV{PATH};
-
-    $workspace = "/tmp/condor_$runtype." . "$$" . "." . time;
-
-    $init_cwd = &getcwd();
-    mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
-    chdir($workspace) || die "Can't chdir($workspace): $!\n";
-}
 
 
 sub parseOptions
@@ -305,6 +329,12 @@ sub parseOptions
 
     if( defined($opt_test_timeout) ) {
 	$test_timeout = $opt_test_timeout;
+    }
+
+    if (defined $opt_nmiconf) {
+      die "Config file ${main::opt_nmiconf} does not exist. Exiting...\n"
+	unless -f $opt_nmiconf;
+      $nmiconf = $opt_nmiconf;
     }
 }
 
