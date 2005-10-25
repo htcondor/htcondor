@@ -182,6 +182,10 @@ when the \Attr{Rematch} attribute evaluates to True.
 server machines. Added a work-around to create the directory as part of the
 job submission.
 
+\item Starting in version 6.7.11, the execute host reported for grid jobs
+in the user log execute event can contain spaces. The C++ user log reading
+code now properly reads the entire string for these events.
+
 \end{itemize}
 
 \noindent Changes:
