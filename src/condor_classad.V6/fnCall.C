@@ -1126,10 +1126,14 @@ currentTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 		return( true );
 	}
 
-	Literal *lit;
-	lit = lit->MakeAbsTime(NULL);
-	lit->GetValue(val);
-	return( true );
+	Literal *time_literal = Literal::MakeAbsTime(NULL);
+    if (time_literal != NULL) {
+        time_literal->GetValue(val);
+        delete time_literal;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 
