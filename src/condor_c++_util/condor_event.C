@@ -1296,7 +1296,9 @@ readEvent (FILE *file)
 		return 0; // EOF or error
 	}
 
-	int retval  = sscanf (line.Value(), "Job executing on host: %s", executeHost);
+		// 127 is sizeof(executeHost)-1
+	int retval  = sscanf (line.Value(), "Job executing on host: %127[^\n]",
+						  executeHost);
 	if (retval == 1)
 	{
 		return 1;
