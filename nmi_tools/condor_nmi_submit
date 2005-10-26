@@ -66,7 +66,6 @@ use Cwd;
 use DBI;
 use Getopt::Long;
 use File::Basename;
-
 use IO::File;
 use NMI::NmiConf;
 
@@ -97,7 +96,10 @@ my $nmibin = (exists $ENV{'NMIBIN'} and defined $ENV{'NMIBIN'})?
 my $nmi_submit = "${nmibin}/nmi_submit";
 
 # Config file encapsulating dependencies on NMI framework.
-my $nmiconf = '/usr/local/nmi/etc/nmi.conf' if -f '/usr/local/nmi/etc/nmi.conf';  # default.
+my $nmiconf;
+if( -f '/usr/local/nmi/etc/nmi.conf' ) {
+    $nmiconf = '/usr/local/nmi/etc/nmi.conf';
+}
 
 ######################################################################
 # Global variables (set at runtime, from submit_info, or ARGV)
@@ -141,47 +143,30 @@ my $orig_lineno = 0;
 # Test timeout value to use (from command-line)
 my $test_timeout = 20;
 
+# NMI-specific configuration values
+my %conf_nmi;
+
+# NMI Database parameters
+my $database;
+my $username;
+my $password;
+my $mysqlhost;
+my $DB_CONNECT_STR;
+my $RUN_TABLE;
+my $TASK_TABLE;
+
 
 ######################################################################
 # Actual work of the script
 ######################################################################
 
+
 my $tag;
 parseOptions();
 
-die "FATAL: $0: No NMI config file specified.\n" unless defined $nmiconf;
-die "FATAL: $0: NMI config file $nmiconf is not readable.\n" unless -r $nmiconf;
-
-my %conf_nmi;
-my $fh = new IO::File $nmiconf, 'r';
-die "Could not open $nmiconf: $!" unless defined $fh;
-NMI::NmiConf::parse(\%conf_nmi, $fh);
-$fh->close;
-
-# database parameters
-for my $key qw(database username password mysqlhost) {
-  die "FATAL: $0: config file $nmiconf does not contain value for $key."
-    unless exists $conf_nmi{$key};
-}
-
-# Database parameters.
-my $database = $conf_nmi{'database'};
-my $username = $conf_nmi{'username'};
-my $password = $conf_nmi{'password'};
-my $mysqlhost = $conf_nmi{'mysqlhost'};
-my $DB_CONNECT_STR = "DBI:mysql:database=$database;host=$mysqlhost";
-$DB_CONNECT_STR .= ";port=${conf_nmi{'mysqlport'}}"  if exists $conf_nmi{'mysqlport'}
-  and defined $conf_nmi{'mysqlport'};
-my $RUN_TABLE = "Run";
-my $TASK_TABLE = "Task";
-
-print "Initializing\n";
-
 $workspace = "/tmp/condor_$runtype." . "$$" . "." . time;
-
 $init_cwd = &getcwd();
 mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
-chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
 getTags();
 foreach $tag (sort keys %tags ) {
@@ -207,6 +192,43 @@ myExit( 0 );
 ######################################################################
 # functions
 ######################################################################
+
+sub initializeDB
+{
+    print "Initializing Database Parameters\n";
+
+    if( ! defined $nmiconf ) {
+        die "FATAL: $0: No NMI config file specified.\n";
+    } 
+    if( ! -r $nmiconf ) {
+        die "FATAL: $0: NMI config file $nmiconf is not readable.\n";
+    }
+
+    # parse the NMI-specific config file to get useful settings
+    my $fh = new IO::File $nmiconf, 'r';
+    die "Could not open $nmiconf: $!" unless defined $fh;
+    NMI::NmiConf::parse(\%conf_nmi, $fh);
+    $fh->close;
+
+    # Initialize database parameters from NMi config file
+
+    # first, make sure the ones we require are all there...
+    for my $key qw(database username password mysqlhost) {
+        die "FATAL: $0: config file $nmiconf does not contain value for $key"
+            unless exists $conf_nmi{$key};
+    }
+
+    $database = $conf_nmi{'database'};
+    $username = $conf_nmi{'username'};
+    $password = $conf_nmi{'password'};
+    $mysqlhost = $conf_nmi{'mysqlhost'};
+    $DB_CONNECT_STR = "DBI:mysql:database=$database;host=$mysqlhost";
+    if( defined $conf_nmi{'mysqlport'} and exists $conf_nmi{'mysqlport'} ) {
+        $DB_CONNECT_STR .= ";port=${conf_nmi{'mysqlport'}}";
+    }
+    $RUN_TABLE = "Run";
+    $TASK_TABLE = "Task";
+}
 
 
 
@@ -852,6 +874,12 @@ sub myExit
 
 sub getPlatformsFromRunid() {
     my( $runid ) = @_;
+
+    # this is the only place we need to talk to the DB, so we'll only
+    # incur the cost and complication of initializing our DB settings
+    # (i.e. finding and parsing the NMI config file, etc) if we really
+    # need to... 
+    initializeDB();
 
     my @platforms = ();
     my $platform;
