@@ -67,6 +67,7 @@ use DBI;
 use Getopt::Long;
 use File::Basename;
 use IO::File;
+use lib $ENV{'NMI_LIB'} || "/nmi/lib";
 use NMI::NmiConf;
 
 use vars qw/ $opt_build $opt_test
