@@ -247,6 +247,7 @@ sub parseOptions
            'nmi-glue=s'    => $opt_nmi_glue,
            'tag=s'         => $opt_tag,
            'module=s'      => $opt_module,
+           'nmiconf=s'     => $opt_nmiconf,
 # build-specific options
            'nightly'       => $opt_nightly,
            'externals=s'   => $opt_externals,
@@ -348,10 +349,13 @@ sub parseOptions
 	$test_timeout = $opt_test_timeout;
     }
 
-    if (defined $opt_nmiconf) {
-      die "Config file ${main::opt_nmiconf} does not exist. Exiting...\n"
-	unless -f $opt_nmiconf;
-      $nmiconf = $opt_nmiconf;
+    if( defined $opt_nmiconf ) {
+        if( -f $opt_nmiconf ) {
+            $nmiconf = $opt_nmiconf;
+        } else {
+            print "NMI Config file '$opt_nmiconf' does not exist\n";
+            printUsage( 1 );
+        }
     }
 }
 
