@@ -92,9 +92,13 @@ my $CVSROOT = "/space/cvs/CONDOR_SRC";
 my $submit_info = "nmi_glue/submit_info";
 
 # Path to the nmi_submit program we should invoke
-my $nmibin = (exists $ENV{'NMIBIN'} and defined $ENV{'NMIBIN'})?
-  $ENV{'NMIBIN'} : '/nmi/bin';
-my $nmi_submit = "${nmibin}/nmi_submit";
+my $nmi_bin = $ENV{'NMI_BIN'} || "/nmi/bin";
+if( ! -d $nmi_bin ) { 
+    die "$0: FATAL error\n" .
+        "Directory for NMI binaries ($nmi_bin) doesn't exist\n" .
+        "Please set your NMI_BIN environment variable correctly\n";
+}
+my $nmi_submit = "${nmi_bin}/nmi_submit";
 
 # Find where the Condor binaries we should use are located
 my $condor_bin = $ENV{'CONDOR_BIN'} || "/usr/local/condor/bin";
@@ -106,7 +110,7 @@ if( ! -d $condor_bin ) {
 
 # Setup our real system PATH, too, since (for now) NMI tools depend on
 # the caller's PATH to find condor tools like condor_submit_dag
-$ENV{PATH} = "${nmibin}:${condor_bin}:" . $ENV{PATH};
+$ENV{PATH} = "${nmi_bin}:${condor_bin}:" . $ENV{PATH};
 
 # Config file encapsulating dependencies on NMI framework.
 my $nmiconf;
