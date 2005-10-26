@@ -95,6 +95,18 @@ my $nmibin = (exists $ENV{'NMIBIN'} and defined $ENV{'NMIBIN'})?
   $ENV{'NMIBIN'} : '/nmi/bin';
 my $nmi_submit = "${nmibin}/nmi_submit";
 
+# Find where the Condor binaries we should use are located
+my $condor_bin = $ENV{'CONDOR_BIN'} || "/usr/local/condor/bin";
+if( ! -d $condor_bin ) { 
+    die "$0: FATAL error\n" .
+        "Directory for Condor binaries ($condor_bin) doesn't exist\n" .
+        "Please set your CONDOR_BIN environment variable correctly\n";
+}
+
+# Setup our real system PATH, too, since (for now) NMI tools depend on
+# the caller's PATH to find condor tools like condor_submit_dag
+$ENV{PATH} = "${nmibin}:${condor_bin}:" . $ENV{PATH};
+
 # Config file encapsulating dependencies on NMI framework.
 my $nmiconf;
 if( -f '/usr/local/nmi/etc/nmi.conf' ) {
