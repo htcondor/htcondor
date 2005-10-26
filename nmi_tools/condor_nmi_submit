@@ -96,9 +96,6 @@ my $nmibin = (exists $ENV{'NMIBIN'} and defined $ENV{'NMIBIN'})?
   $ENV{'NMIBIN'} : '/nmi/bin';
 my $nmi_submit = "${nmibin}/nmi_submit";
 
-my $condor_prefix = (exists $ENV{'CONDOR_PREFIX'} and defined $ENV{'CONDOR_PREFIX'})?
-  $ENV{'CONDOR_PREFIX'} : '/usr/local/condor';
-
 # Config file encapsulating dependencies on NMI framework.
 my $nmiconf = '/usr/local/nmi/etc/nmi.conf' if -f '/usr/local/nmi/etc/nmi.conf';  # default.
 
@@ -179,8 +176,6 @@ my $RUN_TABLE = "Run";
 my $TASK_TABLE = "Task";
 
 print "Initializing\n";
-$ENV{PATH} = "${nmibin}:${condor_prefix}/bin:${condor_prefix}/sbin:"
-    . $ENV{PATH};
 
 $workspace = "/tmp/condor_$runtype." . "$$" . "." . time;
 
