@@ -164,8 +164,8 @@ CharLexerSource::~CharLexerSource()
 
 void CharLexerSource::SetNewSource(const char *string, int offset)
 {
-	_source_start = string+offset;
-	_current      = _source_start;
+    _string = string;
+    _offset = offset;
 	return;
 }
 
@@ -174,11 +174,11 @@ CharLexerSource::ReadCharacter(void)
 {
 	int character;
 
-	character = *_current;
+	character = _string[_offset];
 	if (character == 0) {
 		character = -1; 
 	} else {
-		_current++;
+        _offset++;
 	}
 
  	_previous_character = character;
@@ -188,8 +188,8 @@ CharLexerSource::ReadCharacter(void)
 void 
 CharLexerSource::UnreadCharacter(void)
 {
-	if (_current > _source_start) {
-		_current--;
+	if (_offset > 0) {
+		_offset--;
 	}
 	return;
 }
@@ -199,14 +199,18 @@ CharLexerSource::AtEnd(void) const
 {
 	bool at_end;
 
-	at_end = (*_current == 0);
+    if (_string[_offset] == 0) {
+        at_end = true;
+    } else {
+        at_end = false;
+    }
 	return at_end;
 }
 
 int 
 CharLexerSource::GetCurrentLocation(void) const
 {
-	return _current - _source_start;
+	return _offset;
 }
 
 /*--------------------------------------------------------------------

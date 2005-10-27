@@ -128,8 +128,8 @@ public:
 
 	virtual int GetCurrentLocation(void) const;
 private:
-	const char *_source_start;
-	const char *_current;
+	const char *_string;
+	int         _offset;
     CharLexerSource(const CharLexerSource &source)            { return;       }
     CharLexerSource &operator=(const CharLexerSource &source) { return *this; }
 };
@@ -150,7 +150,7 @@ public:
 	virtual int GetCurrentLocation(void) const;
 private:
 	const std::string *_string;
-	int           _offset;
+	int                _offset;
     StringLexerSource(const StringLexerSource &source)            { return;       }
     StringLexerSource &operator=(const StringLexerSource &source) { return *this; }
 };
