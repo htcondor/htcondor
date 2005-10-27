@@ -9,23 +9,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{port usage!nonstandard ports for central managers}
 By default,
-Condor uses port 9618 for the \Condor{collector} daemon
-and 9614 for the \Condor{negotiator} daemon.
-To use non well-known port numbers for these daemons,
+Condor uses port 9618 for the \Condor{collector} daemon.
+To use a non well-known port number for this daemon,
 the configuration variables that tell Condor these communication
 details are modified.
 Instead of
 \begin{verbatim}
 CONDOR_HOST = machX.cs.wisc.edu
 COLLECTOR_HOST = $(CONDOR_HOST)
-NEGOTIATOR_HOST = $(CONDOR_HOST)
 \end{verbatim}
 the configuration might be
 \footnotesize
 \begin{verbatim}
 CONDOR_HOST = machX.cs.wisc.edu
 COLLECTOR_HOST = $(CONDOR_HOST):9650
-NEGOTIATOR_HOST = $(CONDOR_HOST):9651
 \end{verbatim}
 \normalsize
 
@@ -40,55 +37,51 @@ is not being shared.
 
 On single-machine pools, 
 it is permitted to configure the
-\Condor{collector} and \Condor{negotiator} daemons
+\Condor{collector} daemon
 to use a dynamically assigned port,
 as given out by the operating system.
 This prevents port conflicts with other services on the same machine.
-However, dynamically assigned ports are only to be used on
+However, a dynamically assigned port is only to be used on
 single-machine Condor pools,
 and only if the
-\Macro{COLLECTOR\_ADDRESS\_FILE} and \Macro{NEGOTIATOR\_ADDRESS\_FILE}
-configuration variables have also been defined.
+\Macro{COLLECTOR\_ADDRESS\_FILE} 
+configuration variable has also been defined.
 This mechanism allows all of the Condor daemons and tools running on
-the same machine to find the real port for the \Condor{collector} and
-\Condor{negotiator} daemons,
-even when these ports are not defined in the
-configuration file and are not known in advance.
+the same machine to find the real port for the \Condor{collector}
+daemon,
+even when this port is not defined in the
+configuration file and is not known in advance.
 
-To enable these daemons to use a dynamic port,
-the port number is set to 0 in the \Macro{COLLECTOR\_HOST} and
-\Macro{NEGOTIATOR\_HOST} variables.
-The \MacroNI{COLLECTOR\_ADDRESS\_FILE} and \MacroNI{NEGOTIATOR\_ADDRESS\_FILE}
-configuration variables must also be defined,
-as they provide known files where the IP address
+To enable this daemon to use a dynamic port,
+the port number is set to 0 in the \Macro{COLLECTOR\_HOST}
+variable.
+The \MacroNI{COLLECTOR\_ADDRESS\_FILE}
+configuration variable must also be defined,
+as it provides a known file where the IP address
 and port information that is dynamically generated will be stored.
 All Condor clients know to look at the
-information stored in these files.
+information stored in this file.
 For example:
 \footnotesize
 \begin{verbatim}
 COLLECTOR_HOST = $(CONDOR_HOST):0
-NEGOTIATOR_HOST = $(CONDOR_HOST):0
 COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
-NEGOTIATOR_ADDRESS_FILE = $(LOG)/.negotiator_address
 \end{verbatim}
 \normalsize
 
-\Note Using a port of 0 for the \Condor{collector} and
-\Condor{negotiator} and specifying a
-\MacroNI{COLLECTOR\_ADDRESS\_FILE} or
-\MacroNI{NEGOTIATOR\_ADDRESS\_FILE} 
+\Note Using a port of 0 for the \Condor{collector}
+and specifying a
+\MacroNI{COLLECTOR\_ADDRESS\_FILE}
 only works in Condor version 6.6.8 or later in the 6.6 stable series,
 and in version 6.7.4 or later in the 6.7 development series.
-Do not attempt to use these settings with older versions of Condor.
+Do not attempt to use this setting with older versions of Condor.
 
-Configuration definitions of \MacroNI{COLLECTOR\_ADDRESS\_FILE}
-and \MacroNI{NEGOTIATOR\_ADDRESS\_FILE}
-are in section~\ref{param:SubsysAddressFile} on
+Configuration definition of \MacroNI{COLLECTOR\_ADDRESS\_FILE}
+is in section~\ref{param:SubsysAddressFile} on
 page~\pageref{param:SubsysAddressFile},
 and
-\MacroNI{COLLECTOR\_HOST} and
-\MacroNI{NEGOTIATOR\_HOST} are in
+\MacroNI{COLLECTOR\_HOST}
+is in
 section~\ref{param:CollectorHost} on
 page~\pageref{param:CollectorHost}.
 
@@ -108,11 +101,10 @@ specific ports and to utilize a specific range of ports.
 
 By default,
 Condor uses port 9618 for the \Condor{collector} daemon,
-9614 for the \Condor{negotiator} daemon,
 and dynamic (apparently random) ports for everything else.
 See section~\ref{sec:Ports-NonStandard},
-if dynamic ports are desired for the
-\Condor{collector} and \Condor{negotiator} daemons.
+if a dynamic port is desired for the
+\Condor{collector} daemon.
 
 The configuration variables
 \Macro{HIGHPORT} and \Macro{LOWPORT} facilitate setting a restricted

@@ -1231,23 +1231,20 @@ Some Condor programs will react slowly if they expect to find a
 Notably, \Condor{q} can be very slow.
 The \Condor{schedd} daemon will also be slow,
 and it will log lots of harmless messages complaining.
-If you are not running a \Condor{collector} daemon and
-\Condor{negotiator} daemon,
-it is important that the configuration variables
-\Macro{COLLECTOR\_HOST} and \Macro{NEGOTIATOR\_HOST} be set to nothing.
+If you are not running a \Condor{collector} daemon,
+it is important that the configuration variable
+\Macro{COLLECTOR\_HOST} be set to nothing.
 This is typically done by setting \MacroNI{CONDOR\_HOST} with
 \footnotesize
 \begin{verbatim}
 CONDOR_HOST=
 COLLECTOR_HOST=$(CONDOR_HOST)
-NEGOTIATOR_HOST=$(CONDOR_HOST)
 \end{verbatim}
 \normalsize
 or
 \footnotesize
 \begin{verbatim}
 COLLECTOR_HOST=
-NEGOTIATOR_HOST=
 \end{verbatim}
 \normalsize
 

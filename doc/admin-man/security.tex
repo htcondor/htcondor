@@ -1571,9 +1571,16 @@ ALLOW_READ            = *@cs.wisc.edu/*
 ALLOW_WRITE           = *@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_ADMINISTRATOR   = condor-admin@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_CONFIG          = condor-admin@cs.wisc.edu/*.cs.wisc.edu
-ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/$(NEGOTIATOR_HOST)
+ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/$(COLLECTOR_HOST)
 \end{verbatim}
 \normalsize
+
+% NEGOTIATOR_HOST is no longer used since ports are dynamically
+% allocated, so suggest COLLECTOR_HOST instead
+% ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/$(NEGOTIATOR_HOST)
+This example configuration presumes that the \Condor{collector}
+and \Condor{negotiator} daemons are running on the same machine.
+
 % commented out June 04, as it has not been implemented
 %ALLOW_DAEMON          = condor@cs.wisc.edu/*.cs.wisc.edu
 
@@ -2082,14 +2089,19 @@ HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 HOSTALLOW_READ = *
 HOSTALLOW_WRITE = *
-HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
-HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
+HOSTALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
 HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
 HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
 HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 \end{verbatim}
 \normalsize
+
+% NEGOTIATOR_HOST is no longer used since ports are dynamically
+% allocated, so suggest COLLECTOR_HOST instead
+This example configuration presumes that the \Condor{collector}
+and \Condor{negotiator} daemons are running on the same machine.
 
 For each access level, an ALLOW or a DENY may be added.
 \begin{itemize}

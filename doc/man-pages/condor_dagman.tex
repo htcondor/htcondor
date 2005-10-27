@@ -48,6 +48,21 @@ by specifying multiple \OptArg{-dag} arguments.
 Pass multiple
 DAG input files as command-line arguments to \Condor{submit\_dag}.
 
+Debugging output may be obtained by using the
+\OptArg{-debug}{level} option.
+Level values and what they produce is described as
+\begin{itemize}
+  \item level = 0; never produce output, 
+        except for usage info 
+  \item level = 1; very quiet, output severe errors 
+  \item level = 2; normal output, errors and warnings
+  \item level = 3; output errors, as well as all warnings
+  \item level = 4; internal debugging output
+  \item level = 5; internal debugging output; outer loop debugging
+  \item level = 6; internal debugging output; inner loop debugging
+  \item level = 7; internal debugging output; rarely used
+\end{itemize}
+
 
 \begin{Options}
     \OptItem{\OptArg{-debug}{level}}{An integer level of debugging output.
@@ -55,7 +70,9 @@ DAG input files as command-line arguments to \Condor{submit\_dag}.
        where 7 is the most verbose output.
        This command-line option to \Condor{submit\_dag}
        is passed to \Condor{dagman} or
-       defaults to the value 3, as set by \Condor{submit\_dag}.  }
+       defaults to the value 3, as set by \Condor{submit\_dag}.
+       }
+
     \OptItem{\OptArg{-rescue}{filename}}{Sets the file name of
        the rescue DAG to write in the case of a failure.
        As passed by \Condor{submit\_dag}, the name of the file

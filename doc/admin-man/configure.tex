@@ -360,9 +360,9 @@ This section describes settings which affect all parts of the Condor
 system. 
 \begin{description}
   
-\item[\Macro{CONDOR\_HOST}] \label{param:CondorHost} This macro is
-  used to define the \MacroUNI{NEGOTIATOR\_HOST} and
-  \MacroUNI{COLLECTOR\_HOST} macros.  Normally the \Condor{collector}
+\item[\Macro{CONDOR\_HOST}] \label{param:CondorHost} This macro may be
+  used to define the \MacroUNI{NEGOTIATOR\_HOST} and is used to define the
+  \MacroUNI{COLLECTOR\_HOST} macro.  Normally the \Condor{collector}
   and \Condor{negotiator} would run on the same machine.  If for some
   reason they were not run on the same machine,
   \MacroUNI{CONDOR\_HOST} would not be needed.  Some
@@ -395,7 +395,12 @@ system.
   page~\pageref{sec:Ports-NonStandard}.
 
 
-\item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} The
+\item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} 
+  This configuration variable is no longer used.
+  The port where the \Condor{negotiator} is listening is normally
+  dynamically allocated since version 6.7.4.
+
+  For pools running 6.7.3 and older versions: The
   host name of the machine where the \Condor{negotiator} is running for
   the pool.
   Normally, it is defined relative to the \MacroUNI{CONDOR\_HOST}
@@ -404,7 +409,7 @@ system.
   properly.
   This variable may also be used to optionally define a network port for
   the \Condor{negotatior} daemon, as explained for the
-  the \MacroNI{COLLECTOR\_HOST} variable.
+  \MacroNI{COLLECTOR\_HOST} variable.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
   hostname of the machine where the CondorView server is running.
@@ -980,11 +985,12 @@ of the subsystem corresponding to the daemon.
 
 \item[\Macro{SUBSYS\_DEBUG}] \label{param:SubsysDebug} All of the
   Condor daemons can produce different levels of output depending on
-  how much information you want to see.  The various levels of
+  how much information is desired.  The various levels of
   verbosity for a given daemon are determined by this macro.  All
   daemons have the default level \Dflag{ALWAYS}, and log messages for
   that level will be printed to the daemon's log, regardless of this
-  macro's setting.  The other possible debug levels are:
+  macro's setting.  Settings are a comma- or space-separated list
+  of the following values:
 
 \begin{description}
 \label{list:debug-level-description}
@@ -993,8 +999,10 @@ of the subsystem corresponding to the daemon.
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_ALL@\texttt{D\_ALL}}
   This flag turns on \emph{all} debugging output by enabling all of the debug
   levels at once.  There is no need to list any other debug levels in addition
-  to \Dflag{ALL}; doing so would be redundant.  Be warned: we are talking
-  about a HUGE amount of output.  If you are interested in just a higher
+  to \Dflag{ALL}; doing so would be redundant.  Be warned: this will
+  generate
+  about a \emph{HUGE} amount of output.
+  To obtain a higher
   level of output than the default, consider using \Dflag{FULLDEBUG} before
   using this option.
 
@@ -1082,7 +1090,7 @@ The \Condor{startd} keeps track
 \item[\Dflag{MATCH}] \label{dflag:match}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_MATCH@\texttt{D\_MATCH}}
   When this flag is
-  set, the negotiator logs a message for every match.
+  set, the \Condor{negotiator} logs a message for every match.
 
 \item[\Dflag{NETWORK}] \label{dflag:network}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_NETWORK@\texttt{D\_NETWORK}}
@@ -1098,7 +1106,7 @@ The \Condor{startd} keeps track
   names, and IP addresses.
   This is useful for sites that are having trouble getting Condor to
   work because of problems with DNS, NIS or other host name resolving
-  systems your machines are using.
+  systems in use.
 
 \item[\Dflag{CKPT}] \label{dflag:ckpt}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_CKPT@\texttt{D\_CKPT}}
@@ -1119,14 +1127,15 @@ The \Condor{startd} keeps track
 
 \item[\Dflag{PROCFAMILY}] \label{dflag:procfamily}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PROCFAMILY@\texttt{D\_PROCFAMILY}}
-  Condor often times needs to manage an entire family of processes, i.e. a 
-  process and all descendants of that process.  This debug flag will 
+  Condor often times needs to manage an entire family of processes, (that
+  is, a 
+  process and all descendants of that process).  This debug flag will 
   turn on debugging output for the management of families of processes.
 
 \item[\Dflag{ACCOUNTANT}] \label{dflag:accountant}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_ACCOUNTANT@\texttt{D\_ACCOUNTANT}}
   When this flag is set,
-  the \condor{negotiator} will output debug messages relating to the computation
+  the \Condor{negotiator} will output debug messages relating to the computation
   of user priorities (see section~\ref{sec:UserPrio}).
 
 \item[\Dflag{PROTOCOL}] \label{dflag:protocol}
@@ -1136,22 +1145,22 @@ The \Condor{startd} keeps track
 	
 \item[\Dflag{PID}] \label{dflag:pid}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PID@\texttt{D\_PID}}
-  This flag is different from the other types of flags because it is
+  This flag is different from the other flags, because it is
   used to change the formatting of all log messages that are printed,
   as opposed to specifying what kinds of messages should be printed.
   If \Dflag{PID} is set, Condor will always print out the process
   identifier (PID) of the process writing each line to the log file.
-  This is especially helpful for Condor daemons that can fork()
+  This is especially helpful for Condor daemons that can fork
   multiple helper-processes (such as the \Condor{schedd} or
   \Condor{collector}) so the log file will clearly show which thread
   of execution is generating each log message.
 	
 \item[\Dflag{FDS}] \label{dflag:fds}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_FDS@\texttt{D\_FDS}}
-  This flag is different from the other types of flags because it is
+  This flag is different from the other flags, because it is
   used to change the formatting of all log messages that are printed,
   as opposed to specifying what kinds of messages should be printed.
-  If \Dflag{FDS} is set, Condor will always print out file descriptor
+  If \Dflag{FDS} is set, Condor will always print out the file descriptor
   that the open of the log file was allocated by the operating system.
   This can be helpful in debugging Condor's use of system file
   descriptors as it will generally track the number of file descriptors
@@ -1160,8 +1169,8 @@ The \Condor{startd} keeps track
 	
 \end{description}
 
-\item[\Macro{ALL\_DEBUG}] \label{param:AllDebug} To make all subsystems
-  share a debug flag, simply set the parameter \MacroNI{ALL\_DEBUG}
+\item[\Macro{ALL\_DEBUG}] \label{param:AllDebug} Used to make all subsystems
+  share a debug flag. Set the parameter \MacroNI{ALL\_DEBUG}
   instead of changing all of the individual parameters.  For example,
   to turn on all debugging in all subsystems, set
   \verb$ALL_DEBUG = D_ALL$.

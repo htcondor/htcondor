@@ -6,7 +6,7 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7.13}Version 6.7.13}
+\subsection*{\label{sec:New-6-7.13}Version 6.7.13}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -21,6 +21,12 @@ Enterprise Linux 3 IA64 distribution.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Fixed a bug concerning backslash escaping in classad attribute values
+	when \Condor{q} was using quill.
+
+\item Fixed a bug where \Condor{q} could not accept multiple jobids
+	on the command line.
 
 \item Added support in Condor for the Generic Connection Broker
   (GCB).
@@ -186,6 +192,9 @@ job submission.
 in the user log execute event can contain spaces. The C++ user log reading
 code now properly reads the entire string for these events.
 
+\item Fixed a bug that caused the \Condor{gridmanager} to die when it 
+tried to renew the job lease of a grid-type condor job.
+
 \end{itemize}
 
 \noindent Changes:
@@ -217,7 +226,7 @@ to Globus'' user log event was mis-printed. This has been corrected.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7.12}Version 6.7.12}
+\subsection*{\label{sec:New-6-7.12}Version 6.7.12}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -244,7 +253,7 @@ on Windows would not properly shut down.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7.11}Version 6.7.11}
+\subsection*{\label{sec:New-6-7.11}Version 6.7.11}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -459,7 +468,7 @@ value for most users.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-10}Version 6.7.10}
+\subsection*{\label{sec:New-6-7-10}Version 6.7.10}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -645,7 +654,7 @@ confusing programs that parse \Condor{submit}'s output.  Fixed in 6.7.13.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-9}Version 6.7.9}
+\subsection*{\label{sec:New-6-7-9}Version 6.7.9}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -708,7 +717,7 @@ GRAM.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-8}Version 6.7.8}
+\subsection*{\label{sec:New-6-7-8}Version 6.7.8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -810,7 +819,7 @@ remote server.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-7}Version 6.7.7}
+\subsection*{\label{sec:New-6-7-7}Version 6.7.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -978,7 +987,7 @@ to fail an assertion if PRE or POST scripts are throttled with the
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-6}Version 6.7.6}
+\subsection*{\label{sec:New-6-7-6}Version 6.7.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -1143,7 +1152,7 @@ but can be any integer value.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-5}Version 6.7.5}
+\subsection*{\label{sec:New-6-7-5}Version 6.7.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  This was 6.7.4, but we took 6.7.4 away and replaced it quickly
 %  with 6.7.5
@@ -1261,7 +1270,7 @@ aborted event is now ignored.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-3}Version 6.7.3}
+\subsection*{\label{sec:New-6-7-3}Version 6.7.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -1400,7 +1409,7 @@ in recovery mode.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-2}Version 6.7.2}
+\subsection*{\label{sec:New-6-7-2}Version 6.7.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -1515,7 +1524,7 @@ list of input files to transfer.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-1}Version 6.7.1}
+\subsection*{\label{sec:New-6-7-1}Version 6.7.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -1665,7 +1674,7 @@ option.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-0}Version 6.7.0}
+\subsection*{\label{sec:New-6-7-0}Version 6.7.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
