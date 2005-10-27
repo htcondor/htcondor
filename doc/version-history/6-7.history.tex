@@ -138,6 +138,18 @@ expressions at the interval set by \Macro{PERIODIC\_EXPR\_INTERVAL}.
 \item Fixed a bug which prevented standard universe from working on a linux 
 kernel post 2.6.12.2.
 
+
+\item The \Condor{schedd} used to crash in certain cases if a given
+  job was vacated using \Condor{vacate\_job}, then put on hold and
+  released.
+  The bug only appeared if a specific job id was given to
+  \Condor{vacate\_job}, as opposed to specifying a username or another
+  constraint.
+  Now, the use of \Condor{vacate\_job} for individual job identifiers
+  is safe and the \Condor{schedd} will not crash.
+  This bug has been in Condor since support for \Condor{vacate\_job}
+  was first added in version 6.7.0.
+
 \item Fixed a bug that caused the \Condor{gridmanager} to crash if a
 grid-type condor job ad contained the attribute \Attr{remote\_}.
 
