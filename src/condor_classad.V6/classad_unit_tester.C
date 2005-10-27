@@ -438,6 +438,18 @@ static void test_classad(const Parameters &parameters, Results &results)
     c = parser.ParseClassAd(memory_problem_classad);
     delete c;
     c = NULL;
+
+    /* ----- Test Parsing multiple ClassAds ----- */
+    char *two_classads = "[ a = 3; ][ b = 4; ]";
+    ClassAd classad1;
+    ClassAd classad2;
+    int offset = 0;
+
+    parser.ParseClassAd(two_classads, classad1, offset);
+    TEST("Have good offset #1", offset == 10);
+    parser.ParseClassAd(two_classads, classad2, offset);
+    TEST("Have good offset #2", offset == 20);
+    return;
 }
 
 /*********************************************************************
