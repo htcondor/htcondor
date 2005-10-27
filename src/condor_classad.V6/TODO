@@ -31,10 +31,6 @@
   memory to be referenced, and I can't figure out why. Until I do, I
   would rather have a leak than to access freed memory. This should be fixed.
 
-* Make a SWIG interface so people can use ClassAds from scripting
-  languages. SWIG supports Java, TCL, Python, Perl, and a couple
-  more. http://www.swig.org/
-
 * Write some cool XSL to display XML ClassAds.
 
 * Purify, purify, and purify again.

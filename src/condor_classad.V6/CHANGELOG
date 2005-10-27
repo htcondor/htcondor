@@ -1,5 +1,7 @@
 Changes for version 0.9.8:
 
+* Added SWIG interface for Perl.
+
 * Fixed segmentation fault that occured when evaluating lists that are
   not within a ClassAd. 
 
