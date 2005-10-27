@@ -3836,7 +3836,7 @@ Scheduler::actOnJobs(int, Stream* s)
 					// authorized to vacate this job, and if so,
 					// record that we found this job_id and we're
 					// done.
-				ad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
+				ClassAd *ad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
 				if( ! ad ) {
 					EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
 							"yet GetAttributeInt(%s) returned success",
