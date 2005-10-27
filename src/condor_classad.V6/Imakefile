@@ -86,7 +86,7 @@ template_inst( coll-client-inst.C,coll-client-inst.o) 	/* collection client*/
 template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 
 /* Standalone distribution of classads/collections */
-DIST_VERSION = 0.9.8-b2
+DIST_VERSION = 0.9.8-b3
 DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
 DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h					\
@@ -104,8 +104,13 @@ xmlLexer.h xmlSink.h xmlSink.C xmlSource.h xmlSource.C					\
 classad_distribution.h cclassad.C cclassad.h classad_stl.h LICENSE		\
 README CHANGELOG configure functional_tests.txt ClassAd.swg
 
-WIN32_FILES = win32/classad_dist.dep win32/classad_dist.dsp \
-	win32/classad_dist.dsw win32/classad_dist.mak win32/make.bat
+WIN32_FILES = win32/classad_dist.dsw						\
+win32/classad_functional_tester.dep							\
+win32/classad_functional_tester.dsp							\
+win32/classad_functional_tester.mak win32/classad_lib.dep	\
+win32/classad_lib.dsp win32/classad_lib.mak					\
+win32/classad_unit_tester.dep win32/classad_unit_tester.dsp	\
+win32/classad_unit_tester.mak win32/make.bat
 
 dist: $(DIST_FILES)
 	cp build_external build_classads-$(DIST_VERSION)
@@ -122,7 +127,9 @@ dist: $(DIST_FILES)
 	cp $(DIST_FILES) $(DISTRIBUTION_DIR)
 	cp makefile-dist $(DISTRIBUTION_DIR)/Makefile
 	cp $(WIN32_FILES) $(DISTRIBUTION_DIR)/win32
-	unix2dos $(DISTRIBUTION_DIR)/win32/classad_dist*
+# Originally this line was simpler, but it ended in an asterisk,
+# and that caused condor_imake problems.
+	find $(DISTRIBUTION_DIR)/win32/ -type f | xargs unix2dos
 	cp perl/Simple.pm $(DISTRIBUTION_DIR)/perl/lib/ClassAd
 	cp perl/basic.t $(DISTRIBUTION_DIR)/perl/t
 	tar cf $(DISTRIBUTION_DIR).tar $(DISTRIBUTION_DIR)
