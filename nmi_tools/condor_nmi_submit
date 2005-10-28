@@ -70,11 +70,13 @@ use IO::File;
 use lib $ENV{'NMI_LIB'} || "/nmi/lib";
 use NMI::NmiConf;
 
+# variables we'll be using for from Getopt::Long.  keep these in the
+# same order as the call to GetOptions() to help notice discrepancies
 use vars qw/ $opt_build $opt_test
     $opt_help $opt_notify $opt_platforms $opt_nmi_glue 
-    $opt_tag $opt_module
+    $opt_tag $opt_module $opt_nmiconf
     $opt_nightly $opt_externals $opt_without_tests
-    $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args $opt_nmiconf
+    $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
     /;
 
 
@@ -91,26 +93,11 @@ my $CVSROOT = "/space/cvs/CONDOR_SRC";
 # Location of the submit_info file
 my $submit_info = "nmi_glue/submit_info";
 
-# Path to the nmi_submit program we should invoke
-my $nmi_bin = $ENV{'NMI_BIN'} || "/nmi/bin";
-if( ! -d $nmi_bin ) { 
-    die "$0: FATAL error\n" .
-        "Directory for NMI binaries ($nmi_bin) doesn't exist\n" .
-        "Please set your NMI_BIN environment variable correctly\n";
-}
-my $nmi_submit = "${nmi_bin}/nmi_submit";
+# Default location to check for NMI tools (if NMI_BIN isn't set)
+my $default_nmi_bin = "/nmi/bin";
 
 # Find where the Condor binaries we should use are located
-my $condor_bin = $ENV{'CONDOR_BIN'} || "/usr/local/condor/bin";
-if( ! -d $condor_bin ) { 
-    die "$0: FATAL error\n" .
-        "Directory for Condor binaries ($condor_bin) doesn't exist\n" .
-        "Please set your CONDOR_BIN environment variable correctly\n";
-}
-
-# Setup our real system PATH, too, since (for now) NMI tools depend on
-# the caller's PATH to find condor tools like condor_submit_dag
-$ENV{PATH} = "${nmi_bin}:${condor_bin}:" . $ENV{PATH};
+my $default_condor_bin = "/usr/local/condor/bin";
 
 # Config file encapsulating dependencies on NMI framework.
 my $nmiconf;
@@ -172,6 +159,19 @@ my $DB_CONNECT_STR;
 my $RUN_TABLE;
 my $TASK_TABLE;
 
+# These next 3 paths are initialized at runtime based on the
+# environment or the defaults supplied above
+
+# Directory for NMI binaries we should use (e.g. nmi_submit)
+my $nmi_bin;
+
+# Full path to the nmi_submit program we should invoke
+my $nmi_submit;
+
+# Directory for Condor binaries we schould use (actually, these are
+# only used by nmi_submit, but set still have to find them) 
+my $condor_bin;
+
 
 ######################################################################
 # Actual work of the script
@@ -180,11 +180,7 @@ my $TASK_TABLE;
 
 my $tag;
 parseOptions();
-
-$workspace = "/tmp/condor_$runtype." . "$$" . "." . time;
-$init_cwd = &getcwd();
-mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
-
+initialize();
 getTags();
 foreach $tag (sort keys %tags ) {
 
@@ -209,6 +205,39 @@ myExit( 0 );
 ######################################################################
 # functions
 ######################################################################
+
+sub initialize
+{
+    # initialize these first, so we don't create the workspace until 
+    # afer we're sure these are valid and working...
+
+    $nmi_bin = $ENV{'NMI_BIN'} || $default_nmi_bin;
+    if( ! -d $nmi_bin ) { 
+        die "$0: FATAL error\n" .
+            "Directory for NMI binaries ($nmi_bin) doesn't exist\n" .
+            "Please set your NMI_BIN environment variable correctly\n";
+    }
+    $nmi_submit = "${nmi_bin}/nmi_submit";
+
+    $condor_bin = $ENV{'CONDOR_BIN'} || $default_condor_bin;
+    if( ! -d $condor_bin ) { 
+        die "$0: FATAL error\n" .
+            "Directory for Condor binaries ($condor_bin) doesn't exist\n" .
+            "Please set your CONDOR_BIN environment variable correctly\n";
+    }
+
+    # Setup our real system PATH, too, since (for now) NMI tools
+    # depend on the caller's PATH to find condor tools like
+    # condor_submit_dag
+    $ENV{PATH} = "${nmi_bin}:${condor_bin}:" . $ENV{PATH};
+
+    # finally, setup the local workspace for all our temp files
+    $init_cwd = &getcwd();
+    $workspace = "/tmp/condor_$runtype." . "$$" . "." . time;
+    mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
+    chdir($workspace) || die "Can't chdir($workspace): $!\n";
+}
+
 
 sub initializeDB
 {
@@ -246,7 +275,6 @@ sub initializeDB
     $RUN_TABLE = "Run";
     $TASK_TABLE = "Task";
 }
-
 
 
 sub parseOptions
@@ -429,6 +457,11 @@ sub getTags
 sub getNightlyTags
 {
     my $tag_file = basename($tag_file_url);
+
+    # just to be paranoid (in case anyone re-reorganizes this code
+    # again *sigh*), cd into our workspace before we attempt to do
+    # this, so we're sure we're using the right build tag file.
+    chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
     print "Fetching $tag_file ... \n";
     run( "wget --tries=1 $tag_file_url" );
