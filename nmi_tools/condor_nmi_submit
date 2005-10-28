@@ -427,7 +427,7 @@ Where [options] can be any of:
 --platforms=string <Comma-sperated list of platforms to run tests on>
 --tag=string       <Condor source code tag to be fetched from cvs>
 --module=string    <Condor source code module to be fetched from cvs>
---nmi_glue=string  <nmi_glue directory containing customised glue scripts>
+--nmi-glue=string  <nmi_glue directory containing customised glue scripts>
 
 Where [build-options] can be any of:
 --nightly          <Default for builds: pulls the nightly tags file from 
