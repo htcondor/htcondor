@@ -428,6 +428,8 @@ Where [options] can be any of:
 --tag=string       <Condor source code tag to be fetched from cvs>
 --module=string    <Condor source code module to be fetched from cvs>
 --nmi-glue=string  <nmi_glue directory containing customised glue scripts>
+--nmiconf=string   <full path to the NMI config file to use if needed
+                    (defaults to /usr/local/nmi/etc/nmi.conf)>
 
 Where [build-options] can be any of:
 --nightly          <Default for builds: pulls the nightly tags file from 
