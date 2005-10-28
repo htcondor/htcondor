@@ -241,6 +241,12 @@ sub initialize
 
 sub initializeDB
 {
+    # Initialization of the DB-related paramters.  This is in a
+    # seperate function because we don't always need to do all this
+    # work (find and parse the NMI config file, die if there are
+    # errors, etc).  We only need it if we have to query the DB (at
+    # this point, only when we're invoked with "--platforms=all").
+
     print "Initializing Database Parameters\n";
 
     if( ! defined $nmiconf ) {
