@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.14 2005-10-29 07:02:53 wright Exp $
+# $Id: platform_post,v 1.1.2.15 2005-10-29 21:01:47 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -20,11 +20,15 @@ GetOptions(
 
 system("chmod a+r *");
 
+my $platform = $ENV{NMI_PLATFORM};
+print "From the environment: platform = $platform\n";
+$platform || die "No platform to use, NOT submitting tests\n";
+
 # until we do a big day of reckoning for condor_tests and win32, we
 # know all the current test infrastructure will fail on that
 # platform.  so, for now, just exit success without submitting a test
 # job on win32...
-if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+if( $platform eq "x86_winnt_5.1" ) {
     print "NOT submitting tests for windows\n";
     exit 0;
 }
@@ -50,11 +54,11 @@ $tag || die "No tag to use, NOT submitting tests\n";
 $module || die "No module to use, NOT submitting tests\n";
 $runid || die "No runid to use, NOT submitting tests\n";
 
-print "Submitting test job for platform: '$ENV{NMI_PLATFORM}' "
+print "Submitting test job for platform: '$platform' "
     . "runid: '$runid' ...\n";
 
 my $cmd = "nmi_tools/condor_nmi_submit --test " . 
-          "--buildid=$runid --platform=$ENV{NMI_PLATFORM} " .
+          "--buildid=$runid --platform=$platform " .
 	  "--tag=$tag --module=$module $opt_test_args";
 
 system( $cmd );
