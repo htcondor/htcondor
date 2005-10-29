@@ -618,7 +618,7 @@ V6_6_UNIX_CODE	-a TOOLS V6_6_SRC
 V6_6_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_6_SRC
 V6_6_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_6_SRC 
 V6_6_ALL	-a DOC V6_6_CODE
-V6_6_BUILD	-a V6_6_ALL V6_6_EXT
+V6_6_BUILD	-a V6_6_ALL externals
 
 # For now, the 6.7 modules share the same source as 6.6.
 V6_7_UNIX_CODE	-a TOOLS V6_7_SRC
@@ -626,21 +626,7 @@ V6_7_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_7_SRC
 V6_7_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_SRC
 SC2005_DEMO	-a V6_7_CODE src/sc2005
 V6_7_ALL	-a DOC V6_7_CODE
-V6_7_BUILD	-a V6_7_ALL V6_7_EXT
-
-V6_7_0_BUILD	-a V6_7_ALL V6_7_0_EXT
-V6_7_2_BUILD	-a V6_7_ALL V6_7_2_EXT
-V6_7_3_BUILD	-a V6_7_ALL V6_7_3_EXT
-V6_7_4_BUILD    -a V6_7_ALL V6_7_4_EXT
-V6_7_6_BUILD    -a V6_7_ALL V6_7_6_EXT
-V6_7_7_BUILD    -a V6_7_ALL V6_7_7_EXT
-V6_7_8_BUILD    -a V6_7_ALL V6_7_8_EXT
-V6_7_9_BUILD    -a V6_7_ALL V6_7_9_EXT
-V6_7_10_BUILD   -a V6_7_ALL V6_7_10_EXT
-V6_7_11_BUILD   -a V6_7_ALL V6_7_11_EXT
-V6_7_12_BUILD   -a V6_7_ALL V6_7_12_EXT
-V6_7_13_BUILD   -a V6_7_ALL V6_7_13_EXT
-V6_7_14_BUILD   -a V6_7_ALL V6_7_14_EXT
+V6_7_BUILD	-a V6_7_ALL externals
 
 # The V6_7-mirror-branch has condor_c-gahp, so we need to use
 # different modules for it
@@ -648,20 +634,8 @@ V6_7_MIRROR_UNIX_CODE	-a TOOLS V6_7_MIRROR_SRC
 V6_7_MIRROR_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_7_MIRROR_SRC
 V6_7_MIRROR_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_MIRROR_SRC
 V6_7_MIRROR_ALL		-a DOC V6_7_MIRROR_CODE
-V6_7_MIRROR_BUILD	-a V6_7_MIRROR_ALL V6_7_EXT
+V6_7_MIRROR_BUILD	-a V6_7_MIRROR_ALL externals
 
-# The V6_7-soap-*-branch(s) use a new external, so they need this
-V6_7_SOAP_BUILD		-a V6_7_ALL V6_7_SOAP_EXT
-V6_7_SOAP_3_BUILD	-a V6_7_ALL V6_7_SOAP_3_EXT
-
-# For 1-off builds to see if we can get krb5-1.2.7 working, we need this:
-V6_6_7_KRB_1_2_7_BUILD	-a V6_6_ALL V6_6_7_KRB_1_2_7_EXT
-
-# For 1-off builds to see if we can get krb5-1.4 working, we need this:
-V6_7_KERB14_BUILD 	-a V6_7_ALL V6_7_KERB14_EXT
-
-# For the builds ont eh V6_7-gcb-branch, we need this:
-V6_7_GCB_2_BUILD 	-a V6_7_ALL V6_7_GCB_2_EXT
 
 # For 1-off builds to see if we can get Quill working, we need this:
 V6_7_QUILL_SRC		-a V6_7_SRC \
@@ -670,13 +644,8 @@ V6_7_QUILL_UNIX_CODE	-a TOOLS V6_7_QUILL_SRC
 V6_7_QUILL_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_7_QUILL_SRC
 V6_7_QUILL_CODE		-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_QUILL_SRC
 V6_7_QUILL_ALL		-a DOC V6_7_QUILL_CODE
-V6_7_QUILL_BUILD	-a V6_7_QUILL_ALL V6_7_QUILL_EXT
+V6_7_QUILL_BUILD	-a V6_7_QUILL_ALL externals
 
-# For 1-off builds to see if we can get globus 4.0.0 working, we need this:
-V6_7_GLOBUS4_BUILD 	-a V6_7_ALL V6_7_GLOBUS4_EXT
-
-# For 1-off builds to see if the unicore branch works, we need this:
-V6_7_UNICORE_BUILD 	-a V6_7_ALL V6_7_UNICORE_EXT
 
 # Point these to whatever version is living on the trunk.
 # For now, they're just called "TRUNK", since it's not obvious what
