@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.13 2005-10-13 20:43:51 wright Exp $
+# $Id: platform_post,v 1.1.2.14 2005-10-29 07:02:53 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -53,7 +53,7 @@ $runid || die "No runid to use, NOT submitting tests\n";
 print "Submitting test job for platform: '$ENV{NMI_PLATFORM}' "
     . "runid: '$runid' ...\n";
 
-my $cmd = "/nmi/bin/condor_nmi_submit --test " . 
+my $cmd = "nmi_tools/condor_nmi_submit --test " . 
           "--buildid=$runid --platform=$ENV{NMI_PLATFORM} " .
 	  "--tag=$tag --module=$module $opt_test_args";
 
