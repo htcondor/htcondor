@@ -93,6 +93,9 @@ my $CVSROOT = "/space/cvs/CONDOR_SRC";
 # Location of the submit_info file
 my $submit_info = "nmi_glue/submit_info";
 
+# CVS location of condor_nmi_submit
+my $cvs_condor_nmi_submit = "nmi_tools/condor_nmi_submit";
+
 # Default location to check for NMI tools (if NMI_BIN isn't set)
 my $default_nmi_bin = "/nmi/bin";
 
@@ -805,6 +808,10 @@ sub generateBuildFetchFiles
         makeFetchFile( $ext_file, $opt_externals );
         push( @fetch_files, "$ext_file" );
     }
+
+    my $nmi_tools_file = "nmi_tools.src";
+    makeFetchFile( $nmi_tools_file, $cvs_condor_nmi_submit );
+    push( @fetch_files, $nmi_tools_file );
 
     return @fetch_files;
 }
