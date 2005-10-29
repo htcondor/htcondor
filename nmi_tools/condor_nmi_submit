@@ -764,7 +764,7 @@ sub generateTestFetchFiles
     # build output, since we have no way to untar it without glue. ;)
     if( ! defined $opt_nmi_glue ) { 
         my $glue_file = "test_glue.src";
-        makeFetchFile( $glue_file, "nmi_glue/$runtype", $tag );
+        makeFetchFileCVS( $glue_file, "nmi_glue/$runtype", $tag );
         push( @fetch_files, $glue_file );
     }        
     
@@ -778,13 +778,9 @@ sub generateTestFetchFiles
     close RUNIDFILE;
     push( @fetch_files, $runid_file );
 
-    my $test_src_file = "test_sources.src";
     if( defined $opt_test_src ) {
-        open(SRCFILE, ">$test_src_file") || 
-            die "Can't open $test_src_file for writing: $!\n";
-        print SRCFILE "method = scp\n";
-        print SRCFILE "scp_file = $opt_test_src\n";
-        close SRCFILE;
+        my $test_src_file = "test_sources.src";
+        makeFetchFileSCP( $test_src_file, $opt_test_src );
         push( @fetch_files, $test_src_file );
     }
 
@@ -800,17 +796,17 @@ sub generateBuildFetchFiles
     @fetch_files = generateSharedFetchFiles( $tag );
 
     my $srcfile = "source-$tag.src";
-    makeFetchFile( $srcfile, $module, $tag );
+    makeFetchFileCVS( $srcfile, $module, $tag );
     push( @fetch_files, $srcfile );
 
     if( defined $opt_externals ) { 
         my $ext_file = "externals.src";
-        makeFetchFile( $ext_file, $opt_externals );
+        makeFetchFileCVS( $ext_file, $opt_externals );
         push( @fetch_files, "$ext_file" );
     }
 
     my $nmi_tools_file = "nmi_tools.src";
-    makeFetchFile( $nmi_tools_file, $cvs_condor_nmi_submit );
+    makeFetchFileCVS( $nmi_tools_file, $cvs_condor_nmi_submit );
     push( @fetch_files, $nmi_tools_file );
 
     return @fetch_files;
@@ -822,15 +818,10 @@ sub generateSharedFetchFiles
     my( $tag ) = @_;
 
     my @fetch_files;
-    my $glue_file = $runtype . "_glue.src";
 
     if( defined($opt_nmi_glue) ) { 
-        open(GLUEFILE, ">$glue_file") || 
-            die "Can't open $glue_file for writing: $!\n";
-        print GLUEFILE "method = scp\n";
-        print GLUEFILE "scp_file = $opt_nmi_glue\n";
-        print GLUEFILE "recursive = true\n";     
-        close GLUEFILE;
+        my $glue_file = $runtype . "_glue.src";
+        makeFetchFileSCP( $glue_file, $opt_nmi_glue, "recursive" );
         push( @fetch_files, "$glue_file" );
     }
 
@@ -838,7 +829,7 @@ sub generateSharedFetchFiles
 }
 
 
-sub makeFetchFile
+sub makeFetchFileCVS
 {
     # NOTE: this one breaks the convention of $tag first, b/c for
     # things on the trunk (e.g. externals) there is no tag
@@ -850,6 +841,19 @@ sub makeFetchFile
     print FILE "cvs_module = $module\n";
     if( $tag ) {
         print FILE "cvs_tag = $tag\n";
+    }
+    close FILE;
+}
+
+
+sub makeFetchFileSCP
+{
+    my ( $file, $path, $is_recursive ) = @_;
+    open( FILE, ">$file" ) || die "Can't open $file for writing: $!\n";
+    print FILE "method = scp\n";
+    print FILE "scp_file = $path\n";
+    if( defined $is_recursive ) {
+        print FILE "recursive = true\n";
     }
     close FILE;
 }
