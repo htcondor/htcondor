@@ -329,10 +329,15 @@ int INFNBatchJob::doEvaluateState()
 			} break;
 		case GM_SUBMIT: {
 			// Start a new remote submission for this job.
+
+			// Can't break in the middle of a submit, because the job will
+			// end up running if the submit succeeds
+			/*
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_UNSUBMITTED;
 				break;
 			}
+			*/
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
 				jobAd->Assign( ATTR_HOLD_REASON,
 							   "Attempts to submit failed" );
