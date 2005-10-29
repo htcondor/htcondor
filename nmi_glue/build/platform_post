@@ -1,10 +1,11 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.15 2005-10-29 21:01:47 wright Exp $
+# $Id: platform_post,v 1.1.2.16 2005-10-29 21:15:58 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
+use POSIX;
 use Getopt::Long;
 use vars qw/ $opt_without_tests $opt_test_args /;
 GetOptions(
@@ -40,7 +41,7 @@ if( defined $opt_without_tests ) {
 
 if( defined $opt_test_args ) {
     print "--test-args specified on command-line, additional args for " 
-	. "condor_nmi_submit:\n   '$opt_test_args'\n";
+        . "condor_nmi_submit:\n   '$opt_test_args'\n";
 }   
 
 my $tag = $ENV{NMI_tag};
@@ -54,15 +55,41 @@ $tag || die "No tag to use, NOT submitting tests\n";
 $module || die "No module to use, NOT submitting tests\n";
 $runid || die "No runid to use, NOT submitting tests\n";
 
-print "Submitting test job for platform: '$platform' "
+print "Attempting to submit test job for platform: '$platform' "
     . "runid: '$runid' ...\n";
 
-my $cmd = "nmi_tools/condor_nmi_submit --test " . 
-          "--buildid=$runid --platform=$platform " .
-	  "--tag=$tag --module=$module $opt_test_args";
+# path to the condor_nmi_submit binary we're planning to use
+my $cns = "nmi_tools/condor_nmi_submit";
+-f $cns || die "Can't submit tests: $cns does not exist\n";
+if( ! -x $cns ) {
+    chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
+        . "and chmod() failed: $!\n";
+}
 
-system( $cmd );
+my $cmd = "$cns --test --buildid=$runid --platform=$platform " .
+          "--tag=$tag --module=$module $opt_test_args";
+
+print "Invoking: '$cmd'\n";
+open( CNS, "$cmd|" ) || 
+    die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
+while( <CNS> ) {
+    print "CNS: $_";
+}
+close( CNS );
 my $status = $?;
-if( $status ) {
-    die "condor_nmi_submit --test failed with status $status\n";
+
+if( ! $status ) {
+    # exited with status 0, we're happy
+    print "platform_post: SUCCESS\n";
+    exit 0;
+}
+
+if( $status == -1 ) {
+    die "$cns failed to execute: $!";
+} elsif( WIFEXITED($status) ) {
+    die "$cns exited with status " . WEXITSTATUS($status);
+} elsif( WIFSIGNALED($status) ) {
+    die "$cns died with signal " . WTERMSIG($status);
+} else {
+    die "$cns returned unrecognized status: $status";
 }
