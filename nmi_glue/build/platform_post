@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.16 2005-10-29 21:15:58 wright Exp $
+# $Id: platform_post,v 1.1.2.17 2005-10-30 06:55:45 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -19,10 +19,12 @@ GetOptions(
 # the results.  until Condor's file transfer mechanism preserves
 # permissions, we'll have to use this hack. :(
 
+print "Running 'chmod a+r *' to make build output world readable\n";
 system("chmod a+r *");
 
+print "Initializing values from the environment\n";
 my $platform = $ENV{NMI_PLATFORM};
-print "From the environment: platform = $platform\n";
+print "ENV: NMI_PLATFORM = $platform\n";
 $platform || die "No platform to use, NOT submitting tests\n";
 
 # until we do a big day of reckoning for condor_tests and win32, we
@@ -46,14 +48,18 @@ if( defined $opt_test_args ) {
 
 my $tag = $ENV{NMI_tag};
 my $module = $ENV{NMI_module};
-print "From the environment: tag = $tag\n";
-print "From the environment: module = $module\n";
-my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
-chomp $runid;
+my $gid = $ENV{_NMI_GID};
+print "ENV: NMI_tag = $tag\n";
+print "ENV: NMI_module = $module\n";
+print "ENV: _NMI_GID = $gid\n";
 
 $tag || die "No tag to use, NOT submitting tests\n";
 $module || die "No module to use, NOT submitting tests\n";
-$runid || die "No runid to use, NOT submitting tests\n";
+$gid || die "No gid to use, NOT submitting tests\n";
+
+my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
+chomp $runid;
+$runid || die "Can't find runid from gid, NOT submitting tests\n";
 
 print "Attempting to submit test job for platform: '$platform' "
     . "runid: '$runid' ...\n";
@@ -69,7 +75,7 @@ if( ! -x $cns ) {
 my $cmd = "$cns --test --buildid=$runid --platform=$platform " .
           "--tag=$tag --module=$module $opt_test_args";
 
-print "Invoking: '$cmd'\n";
+print "Invoking CNS ($cmd)\n";
 open( CNS, "$cmd|" ) || 
     die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
 while( <CNS> ) {
