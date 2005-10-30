@@ -35,7 +35,6 @@
 #include "basejob.h"
 #include "condor_config.h"
 #include "condor_email.h"
-#include "gridutil.h"
 
 #define HASH_TABLE_SIZE			500
 
