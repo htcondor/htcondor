@@ -76,6 +76,10 @@ static 	char * bufferJobShort (ClassAd *);
 */
 static	bool show_queue (char* v1, char* v2, char* v3, char* v4, bool useDB);
 static	bool show_queue_buffered (char* v1, char* v2, char* v3, char* v4, bool useDB);
+
+/* a type used to point to one of the above two functions */
+typedef bool (*show_queue_fp)(char* v1, char* v2, char* v3, char* v4, bool useDB);
+
 static bool read_classad_file(const char *filename, ClassAdList &classads);
 
 #if WANT_QUILL
@@ -266,6 +270,7 @@ int main (int argc, char **argv)
 	char		*tmp;
 	bool        useDB; /* Is there a database to query for a schedd */
 	int         retval;
+	show_queue_fp sqfp;
 
 	Collectors = NULL;
 
@@ -302,11 +307,15 @@ int main (int argc, char **argv)
 	if( analyze ) {
 		setupAnalysis();
 	}
+
 	// if we haven't figured out what to do yet, just display the
 	// local queue 
 	if (!global && !querySchedds && !querySubmittors) {
+
 		Daemon schedd( DT_SCHEDD, 0, 0 );
+
 		if ( schedd.locate() ) {
+
 			sprintf( scheddAddr, "%s", schedd.addr() );
 			if( (tmp = schedd.name()) ) {
 				sprintf( scheddName, "%s", tmp );
@@ -319,8 +328,8 @@ int main (int argc, char **argv)
 				sprintf( scheddMachine, "Unknown" );
 			}
 			
-				/* perform direct DB query if indicated */
 			if ( directDBquery ) {				
+				/* perform direct DB query if indicated and exit */
 #if WANT_QUILL
 
 					/* check if database is available */
@@ -333,152 +342,115 @@ int main (int argc, char **argv)
 				freeConnectionStrings();
 				exit(EXIT_SUCCESS);
 #endif /* WANT_QUILL */
+			} 
+
+			/* .. not a direct db query, so just happily continue ... */
+
+           	// When we use the new analysis code, it can be really
+           	// slow. Slow enough that show_queue_buffered()'s connection
+           	// to the schedd time's out and the user gets nothing
+           	// useful printed out. Therefore, we use show_queue,
+           	// which fetches all of the ads, then analyzes them. 
+			if ( verbose || better_analyze || jobads_file ) {
+				sqfp = show_queue;
+			} else {
+				sqfp = show_queue_buffered;
 			}
-            // When we use the new analysis code, it can be really
-            // slow. Slow enough that show_queue_buffered()'s connection
-            // to the schedd time's out and the user gets nothing
-            // useful printed out. Therefore, we use show_queue,
-            // which fetches all of the ads, then analyzes them. 
-			else if ( verbose || better_analyze || jobads_file ) {
-				if  (useDB) {
+				
+			if  (useDB) {
 #if WANT_QUILL
-						/* When an installation has database parameters configured, it means 
-						   there is quill daemon. If database is not accessible, we fail
-						   over to quill daemon, and if quill daemon is not available, 
-						   we fail over the schedd daemon */
+				/* When an installation has database parameters configured, 
+					it means there is quill daemon. If database
+					is not accessible, we fail over to
+					quill daemon, and if quill daemon
+					is not available, we fail over the
+					schedd daemon */
 
-						/* query the database first */
-					if (!show_queue( NULL, NULL, NULL, 
-									 NULL, /* in both cases we pass a null for queryPassword */
-									 TRUE) ) {
-						printf( "-- Database not reachable - Failing over to the quill daemon --\n");
-
-						Daemon quill( DT_QUILL, 0, 0 );
-						char tmp[8];
-						strcpy(tmp, "Unknown");
-
-							/* query the quill daemon */
-						if ( !quill.locate() ||
-							 !show_queue( quill.addr(), 
-										  (quill.name())?(quill.name()):tmp,
-										  (quill.fullHostname())?(quill.fullHostname()):tmp, 
-										  NULL, /* in both cases we pass a null for queryPassword */
-										  FALSE) ) {
-							
-							printf( "-- Quill daemon at %s not reachable \n\t- Failing over to the schedd at %s --\n", quill.addr(), scheddAddr);
-
-								/* query the schedd daemon */
-							retval = !show_queue(scheddAddr, scheddName, scheddMachine, 
-											  NULL, /* in both cases we pass a null for queryPassword */
-											  FALSE);
-							freeConnectionStrings();
-							exit(retval);
-						}  else {
-							freeConnectionStrings();
-							exit(EXIT_SUCCESS);
-						}
-						
-					} else {
-						freeConnectionStrings();
-						exit(EXIT_SUCCESS);
-					}
-#endif /* WANT_QUILL */
-				} else {
-					
-						/* database not configed, query the schedd daemon directly */
-				    retval = !show_queue(scheddAddr, scheddName, scheddMachine, 
-									  NULL, /* in both cases we pass a null for queryPassword */
-									  FALSE);
-					freeConnectionStrings();
-					exit(retval);
-					
-				}
-			} else {				
-				if  (useDB) {
-#if WANT_QUILL
-						/* When an installation has database parameters configured, it means 
-						   there is quill daemon. If database is not accessible, we fail
-						   over to quill daemon, and if quill daemon is not available, 
-						   we fail over the schedd daemon */
-
-						/* query the database first */
-					if (!show_queue_buffered( NULL, NULL, NULL, 
-											  NULL, /* in both cases we pass a null for queryPassword */
-											  TRUE) ) {
-						printf( "-- Database not reachable - Failing over to the quill daemon --\n");
-
-						Daemon quill( DT_QUILL, 0, 0 );
-						char tmp[8];
-						strcpy(tmp, "Unknown");
-
-							/* query the quill daemon */
-						if ( !quill.locate() ||
-							 !show_queue_buffered( quill.addr(), 
-												   (quill.name())?(quill.name()):tmp,
-												   (quill.fullHostname())?(quill.fullHostname()):tmp, 
-												   NULL, /* in both cases we pass a null for queryPassword */
-												   FALSE) ) {
-							printf( "-- Quill daemon at %s not reachable \n\t- Failing over to the schedd at %s --\n", quill.addr(), scheddAddr);
-
-								/* query the schedd */
-							retval = !show_queue_buffered(scheddAddr, scheddName, scheddMachine, 
-													   NULL, /* in both cases we pass a null for queryPassword */
-													   FALSE);
-							freeConnectionStrings();
-							exit(retval);
-						} else {
-							freeConnectionStrings();
-							exit(EXIT_SUCCESS);
-						}							 
-					} else {
-						freeConnectionStrings();
-						exit(EXIT_SUCCESS);
-					}
-#endif /* WANT_QUILL */
-				} else {
-						/* database not configed, query the schedd daemon directly */
-					retval = !show_queue_buffered(scheddAddr, scheddName, scheddMachine, 
-									  NULL, /* in both cases we pass a null for queryPassword */
-									  FALSE);
+				/* query the database first */
+				if ( (retval = sqfp( NULL, NULL, NULL, NULL, TRUE) ) ) {
 					freeConnectionStrings();
 					exit(retval);
 				}
+
+				printf( "-- Database not reachable - Failing over to the "
+						"quill daemon --\n");
+
+				/* Hmm... couldn't find the database, so try the quilld */
+
+				Daemon quill( DT_QUILL, 0, 0 );
+				char tmp[8];
+				strcpy(tmp, "Unknown");
+
+				/* query the quill daemon */
+				if ( quill.locate() &&
+					 ( (retval = 
+					 	sqfp( quill.addr(), 
+						  (quill.name())?(quill.name()):tmp,
+						  (quill.fullHostname())?(quill.fullHostname()):tmp,
+						  NULL, FALSE) ) ) )
+				{
+					freeConnectionStrings();
+					exit(retval);
+				}
+
+				printf( "-- Quill daemon at %s not reachable \n"
+						"\t- Failing over to the schedd at %s --\n", 
+						quill.addr(), scheddAddr);
+
+				/* Hmm... couldn't find the quilld, so fall out and try the
+					schedd */
+
+#endif /* WANT_QUILL */
 			}
-		} else {
-			fprintf( stderr, "Error: %s\n", schedd.error() );
-			if (!expert) {
-				fprintf(stderr, "\n");
-				print_wrapped_text("Extra Info: You probably saw this "
-								   "error because the condor_schedd is "
-								   "not running on the machine you are "
-								   "trying to query.  If the condor_schedd "
-								   "is not running, the Condor system "
-								   "will not be able to find an address "
-								   "and port to connect to and satisfy "
-								   "this request.  Please make sure "
-								   "the Condor daemons are running and "
-								   "try again.\n", stderr );
-				print_wrapped_text("Extra Info: "
-								   "If the condor_schedd is running on the "
-								   "machine you are trying to query and "
-								   "you still see the error, the most "
-								   "likely cause is that you have setup a " 
-								   "personal Condor, you have not "
-								   "defined SCHEDD_NAME in your "
-								   "condor_config file, and something "
-								   "is wrong with your "
-								   "SCHEDD_ADDRESS_FILE setting. "
-								   "You must define either or both of "
-								   "those settings in your config "
-								   "file, or you must use the -name "
-								   "option to condor_q. Please see "
-								   "the Condor manual for details on "
-								   "SCHEDD_NAME and "
-								   "SCHEDD_ADDRESS_FILE.",  stderr );
-				freeConnectionStrings();
-				exit( 1 );
-			}
+
+			/* database not configured or could not be reached,
+				query the schedd daemon directly */
+
+			retval = !sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
+			
+			/* Hopefully I got the queue from the schedd... */
+			freeConnectionStrings();
+			exit(retval);
+
+		} 
+		
+		/* looks like I couldn't locate a schedd, so dump a nice error
+			message and bail */
+
+		fprintf( stderr, "Error: %s\n", schedd.error() );
+		if (!expert) {
+			fprintf(stderr, "\n");
+			print_wrapped_text("Extra Info: You probably saw this "
+							   "error because the condor_schedd is "
+							   "not running on the machine you are "
+							   "trying to query.  If the condor_schedd "
+							   "is not running, the Condor system "
+							   "will not be able to find an address "
+							   "and port to connect to and satisfy "
+							   "this request.  Please make sure "
+							   "the Condor daemons are running and "
+							   "try again.\n", stderr );
+			print_wrapped_text("Extra Info: "
+							   "If the condor_schedd is running on the "
+							   "machine you are trying to query and "
+							   "you still see the error, the most "
+							   "likely cause is that you have setup a " 
+							   "personal Condor, you have not "
+							   "defined SCHEDD_NAME in your "
+							   "condor_config file, and something "
+							   "is wrong with your "
+							   "SCHEDD_ADDRESS_FILE setting. "
+							   "You must define either or both of "
+							   "those settings in your config "
+							   "file, or you must use the -name "
+							   "option to condor_q. Please see "
+							   "the Condor manual for details on "
+							   "SCHEDD_NAME and "
+							   "SCHEDD_ADDRESS_FILE.",  stderr );
 		}
+
+		freeConnectionStrings();
+		exit( EXIT_FAILURE );
 	}
 	
 	// if a global queue is required, query the schedds instead of submittors
@@ -539,6 +511,15 @@ int main (int argc, char **argv)
 
 		freeConnectionStrings();
 
+		useDB = FALSE;
+		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
+				 ad->LookupString(ATTR_NAME, scheddName)		&&
+				 ad->LookupString(ATTR_MACHINE, scheddMachine) ) ) 
+		{
+			/* something is wrong with this schedd/quill ad, try the next one */
+			continue;
+		}
+
 #if WANT_QUILL
 			// get the address of the database
 		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) &&
@@ -547,33 +528,13 @@ int main (int argc, char **argv)
 			ad->LookupString(ATTR_QUILL_DB_QUERY_PASSWORD, &queryPassword) &&
 			(!ad->LookupBool(ATTR_QUILL_IS_REMOTELY_QUERYABLE,flag) || flag)) {
 
+			/* If the quill information is available, try to use it first */
 			useDB = TRUE;
 
-
 				/* get the quill info for fail-over processing */
-			//ASSERT(ad->LookupString(ATTR_MY_ADDRESS, &quillAddr));
 			ASSERT(ad->LookupString(ATTR_MACHINE, &quillMachine));
-
-				/* get the schedd info for fail-over processing */
-			ASSERT(ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr));
-			ASSERT(ad->LookupString(ATTR_NAME, scheddName));
-			ASSERT(ad->LookupString(ATTR_MACHINE, scheddMachine));
-
 		}
-#else 
-		if(0) {
-		}
-#endif /* WANT_QUILL */
-
-			// get the address of the schedd
-		else if (ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
-				 ad->LookupString(ATTR_NAME, scheddName)		&&
-				 ad->LookupString(ATTR_MACHINE, scheddMachine)) {
-			useDB = FALSE;
-		}
-		else {
-			continue;
-		}
+#endif 
 
 		first = false;
 
@@ -582,80 +543,65 @@ int main (int argc, char **argv)
 #if WANT_QUILL
 			if (!useDB) {
 				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
-				fprintf(stderr, "Database query not supported on schedd: %s\n", scheddName);
+				fprintf(stderr, "Database query not supported on schedd: %s\n",
+						scheddName);
 				continue;
 			}
 			
 			exec_db_query(quillName, dbIpAddr, dbName, queryPassword);
+
+			/* done processing the ad, so get the next one */
+			continue;
+
 #endif /* WANT_QUILL */
 		}
+
         // When we use the new analysis code, it can be really
         // slow. Slow enough that show_queue_buffered()'s connection
         // to the schedd time's out and the user gets nothing
         // useful printed out. Therefore, we use show_queue,
         // which fetches all of the ads, then analyzes them. 
-		else if ( verbose || better_analyze ) {
-				/* When an installation has database parameters configured, it means 
-				   there is quill daemon. If database is not accessible, we fail
-				   over to quill daemon, and if quill daemon is not available, 
-				   we fail over the schedd daemon */			
-			if (useDB) {
-				if (!show_queue(quillName, 
-								dbIpAddr, 
-								dbName, 
-								queryPassword,
-								TRUE )) {
-
-					result2 = getQuillAddrFromCollector(quillName, quillAddr);
-
-					printf( "-- Database at %s not reachable \n\t- "
-							"Failing over to the quill daemon at %s--\n", 
-							dbIpAddr, quillAddr);
-					
-					if((result2 != Q_OK) ||
-					   !quillAddr ||
-					   !show_queue(quillAddr, quillName, quillMachine, NULL, FALSE)) {  
-						
-						printf( "-- Quill daemon at %s not reachable \n\t-"
-								"Failing over to the schedd at %s --\n", 
-								quillAddr, scheddAddr);
-						show_queue(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
-					}
-				}
-			} else {
-				show_queue(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
-			}
+		if ( verbose || better_analyze ) {
+			sqfp = show_queue;
 		} else {
-				/* When an installation has database parameters configured, it means 
-				   there is quill daemon. If database is not accessible, we fail
-				   over to quill daemon, and if quill daemon is not available, 
-				   we fail over the schedd daemon */			
-			if (useDB) {
-				if (!show_queue_buffered(quillName, 
-										 dbIpAddr, 
-										 dbName, 
-										 queryPassword,
-										 TRUE )) {
-
-					result2 = getQuillAddrFromCollector(quillName, quillAddr);
-
-					printf( "-- Database at %s not reachable \n\t- "
-							"Failing over to the quill daemon at %s--\n", 
-							dbIpAddr, quillAddr);
-					if((result2 != Q_OK) ||
-					   !quillAddr ||
-					   !show_queue_buffered(quillAddr, quillName, quillMachine, NULL, FALSE)) {
-						
-						printf( "-- Quill daemon at %s not reachable \n\t- "
-								"Failing over to the schedd at %s --\n", 
-								quillAddr, scheddAddr);
-						show_queue_buffered(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
-					}
-				}
-			} else {
-				show_queue_buffered(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
-			}
+			sqfp = show_queue_buffered;
 		}
+
+		/* When an installation has database parameters configured, it means 
+		   there is quill daemon. If database is not accessible, we fail
+		   over to quill daemon, and if quill daemon is not available, 
+		   we fail over the schedd daemon */			
+		if (useDB) {
+			if (sqfp(quillName, dbIpAddr, dbName, queryPassword, TRUE )) {
+				/* processed correctly, so do the next ad */
+				continue;
+			}
+
+			result2 = getQuillAddrFromCollector(quillName, quillAddr);
+
+			printf( "-- Database at %s not reachable \n\t- "
+					"Failing over to the quill daemon at %s--\n", 
+					dbIpAddr, quillAddr);
+			
+			if((result2 == Q_OK) && quillAddr &&
+			   sqfp(quillAddr, quillName, quillMachine, NULL, FALSE))
+			{
+				/* processed correctly, so do the next ad */
+				continue;
+			}
+
+			printf( "-- Quill daemon at %s not reachable \n\t-"
+					"Failing over to the schedd at %s --\n", 
+					quillAddr, scheddAddr);
+			
+			/* Since we couldn't talk to the DB or the quilld, simply fall out
+				and ask the schedd directly... */
+		}
+
+		/* database not configured or could not be reached,
+			query the schedd daemon directly */
+
+		sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
 	}
 
 	// close list
