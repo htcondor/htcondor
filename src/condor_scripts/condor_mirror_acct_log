@@ -6,6 +6,7 @@ use POSIX "strftime";
 
 # Figure out where to store this script's log
 chomp(my $LOG_DIR = `condor_config_val log 2>/dev/null`);
+die "Could not get LOG from condor_config_val -- make sure PATH (currently $ENV{PATH}) includes Condor binaries and LOG is defined\n" unless $LOG_DIR;
 
 # Figure out where it's going to go on the local system
 my $dest = `condor_config_val accountant_log 2>/dev/null`;
