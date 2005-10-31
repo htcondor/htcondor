@@ -489,13 +489,13 @@ V6_7_13_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/pcre/5.0 \
 		   externals/bundles/openssl/0.9.8 \
 		   externals/bundles/postgresql/8.0.2 \
-		   externals/bundles/gcb/1.2.1
+		   externals/bundles/gcb/1.2.2
 
 # Externals needed for V6_7_14 (same as V6_7_13)
 V6_7_14_EXT	-a V6_7_13_EXT
 
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_14_EXT
+V6_7_EXT	-a V6_7_13_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
