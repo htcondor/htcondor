@@ -80,6 +80,13 @@ sub log
     my ($msg) = @_;
 
     my $fh = new FileHandle ">>$LOG_DIR/AcctLogMirrorLog";
-    print $fh strftime("%m/%d %H:%M:%S $msg\n", localtime);
-    $fh->close;
+    if (defined($fh))
+    {
+        print $fh strftime("%m/%d %H:%M:%S $msg\n", localtime);
+        $fh->close;
+    }
+    else
+    {
+        die strftime("%m/%d %H:%M:%S ", localtime) . "Could not open $LOG_DIR/AcctLogMirrorLog for appending: $!\n";
+    }
 }
