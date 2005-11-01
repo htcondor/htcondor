@@ -426,6 +426,10 @@ CronMgrBase::DoConfig( bool initial )
 		// Find our environment variable, if it exits..
 		dprintf( D_FULLDEBUG, "CronMgr: Doing config (%s)\n",
 				 initial ? "initial" : "reconfig" );
+		if ( !paramBuf ) {
+			paramBuf = strdup( "" );
+		}
+		ASSERT( paramBuf );
 		ParseOldJobList( paramBuf );
 	}
 
