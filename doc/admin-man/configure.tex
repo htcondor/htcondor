@@ -9,13 +9,12 @@ This section describes how to configure all parts of the Condor
 system.  General information about the configuration
 files and their syntax is followed by a description of
 settings that affect all
-Condor daemons and tools.  At the end is a section describing the
-settings for each part of Condor.  The 
+Condor daemons and tools.
+The 
 settings that control the policy under which Condor will start,
 suspend, resume, vacate or kill jobs
 are described in 
-section~\ref{sec:Configuring-Policy} on Configuring Condor's Job
-Execution Policy. 
+section~\ref{sec:Configuring-Policy} on Startd Policy Configuration. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}
@@ -35,8 +34,7 @@ Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
 various configuration files that might be used including pool-wide,
 platform-specific, machine-specific, and root-owned configuration files.
-The result is a list of constants and expressions which are
-evaluated as needed at run time.
+
 
 The order in which attributes are defined is important, since later
 definitions will override existing definitions.
@@ -45,9 +43,23 @@ using the \Macro{LOCAL\_CONFIG\_FILE} setting described in
 sections~\ref{sec:Condor-wide-Config-File-Entries}
 and~\ref{sec:Multiple-Platforms} below.
 
+The result of configuration is a list of key/value pairs.
+Each key is a configuration variable name,
+and each value is a string literal
+that may utilize macro substitution (as defined below).
+Note that the string literal value portion of a pair is not an expression,
+and therefore it is not evaluated.
+Those configuration variables that express the policy for
+starting and stopping of jobs appear as expressions in the
+configuration file.
+However, these expressions (for configuration) are string literals.
+Other portions of Condor use these strings as expressions,
+parsing them in order to do evaluation.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Macros}
-Config File Macros}
+Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{macro!in configuration file}
@@ -58,7 +70,7 @@ Macro definitions are of the form:
         <macro_name> = <macro_definition>
 \end{verbatim}
 
-\Note You must have white space between the macro name, the
+\Note There must be white space between the macro name, the
 ``='' sign, and the macro definition.
 
 Macro invocations are of the form: 
@@ -67,9 +79,9 @@ Macro invocations are of the form:
 \end{verbatim}
 
 Macro definitions may contain references to other macros, even ones
-that aren't yet defined (so long as they are eventually defined in
-your config files somewhere).
-All macro expansion is done after all config files have been parsed
+that are not yet defined (as long as they are eventually defined in
+the configuration files).
+All macro expansion is done after all configuration files have been parsed
 (with the exception of macros that reference themselves, described
 below). 
 
@@ -122,17 +134,18 @@ They create definitions that Condor refuses to parse.
 \Note Macros should not be incrementally defined in the
 \Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
 
-\Note Condor used to distinguish between ``macros'' and ``expressions''
-in its config files.
-Beginning with Condor version 6.1.13, this distinction has been
-removed.
-For backward compatibility, you can still use ``:'' instead of ``=''
-in your config files, and these attributes will just be treated as
-macros.
+% commented out in 2005, as it is too old, and is now confusing
+%\Note Condor used to distinguish between ``macros'' and ``expressions''
+%in its config files.
+%Beginning with Condor version 6.1.13, this distinction has been
+%removed.
+%For backward compatibility, you can still use ``:'' instead of ``=''
+%in your config files, and these attributes will just be treated as
+%macros.
 
 All entries in a configuration file must have an operator,
-which will be an equals sign (``='')
-or a colon character (``:'').
+which will be an equals sign (``='').
+%or a colon character (``:'').
 Identifiers must be alphanumerics combined with the underscore character.
 As a special case,
 a line without an operator that begins with a left square bracket
@@ -152,7 +165,7 @@ Special Configuration File Macros}
 \index{configuration file!\$ENV definition}
 \index{\$ENV!in configuration file}
 References to the Condor process's environment are allowed in the
-configuration file.
+configuration files.
 Environment references are of the form:
 \begin{verbatim}
         $ENV(environment_variable_name)
@@ -192,7 +205,7 @@ chosen, the macro usage is
 Comments and Line Continuations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A Condor configuration file can also contain comments or
+A Condor configuration file may contain comments and
 line continuations.
 A comment is any line beginning with a ``\#'' character.
 A continuation is any entry that continues across multiples lines.
