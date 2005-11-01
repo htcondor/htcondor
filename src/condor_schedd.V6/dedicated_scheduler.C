@@ -3450,7 +3450,7 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 	char *buf = (char *) malloc(strlen(rhs) + strlen(name()) + 80);
 	sprintf( buf, "%s = (DedicatedScheduler == \"%s\") && (%s)", 
 			 ATTR_REQUIREMENTS, name(), rhs );
-	req->InsertOrUpdate( tmp );
+	req->InsertOrUpdate( buf );
 
 	free(rhs);
 	free(buf);
