@@ -213,6 +213,10 @@ tried to renew the job lease of a grid-type condor job.
 \item Fixed a bug that was causing the \Condor{schedd} to crash on Solaris
 if the cron macros aren't defined.
 
+\item Fixed a bug where output may be lost when spooling (with the -s option to
+\Condor{submit} or implicitly with Condor-C).  This bug could only happen if
+the job terminated within one second of starting.
+
 \end{itemize}
 
 \noindent Changes:
