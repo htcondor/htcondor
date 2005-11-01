@@ -8,7 +8,6 @@
 	"..\src\condor_gridmanager\basejob.h"\
 	"..\src\condor_gridmanager\baseresource.h"\
 	"..\src\condor_gridmanager\gridmanager.h"\
-	"..\src\condor_gridmanager\gridutil.h"\
 	
 
 ..\src\condor_gridmanager\baseresource.C : \
@@ -128,10 +127,6 @@
 	"..\src\condor_gridmanager\basejob.h"\
 	"..\src\condor_gridmanager\baseresource.h"\
 	"..\src\condor_gridmanager\gridmanager.h"\
-	
-
-..\src\condor_gridmanager\gridutil.C : \
-	"..\src\condor_gridmanager\gridutil.h"\
 	
 
 ..\src\condor_gridmanager\gt3job.C : \
