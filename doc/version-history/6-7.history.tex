@@ -102,6 +102,9 @@ name, ``https://'' will be inserted automatically.
 
 \begin{itemize}
 
+\item Fixed a bug in the dedicated scheduler that caused it to request
+resources it could not use, resulting in longer job startup times.
+
 \item Fixed a bug in the \Condor{schedd} that caused grid-type gt2 jobs
 submitted by an older \Condor{submit} or in the queue during an upgrade
 (version 6.7.10 or earlier) to go
