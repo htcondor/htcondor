@@ -230,7 +230,12 @@ handling grid-type condor jobs with job leases.
 \item Starting in 6.7.11, the ``JM-Contact'' field of the ``Job submitted
 to Globus'' user log event was mis-printed. This has been corrected.
 
+% Gnats 565
 \item Fixed bug that prevented Stork detection of hung jobs.
+
+% Gnats 562
+\item Fixed an obscure bug that incorrectly quoted the status of completed
+jobs, visible via \Stork{status}.
 
 \end{itemize}
 
