@@ -1,3 +1,8 @@
+10/31/05 V6_7_13-gcb-pre_release-2005-10-31
+   A 6.7.13 pre-release specifically for GCB.  Initially given to
+   Gaurang Mehta <gmehta@ISI.EDU>.  The version string is:
+   $CondorVersion: 6.7.13 Oct 31 2005 PRE-RELEASE-UWCS $
+
 10/14/05 V6_7-cron-branch
    A branch off of V6_7 for Andy Pavlo's work to add cron-like
    scheduling to various parts of Condor.  This is initially motivated
