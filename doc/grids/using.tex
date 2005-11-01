@@ -887,16 +887,7 @@ of authentication:
   \item{an existing proxy (the proxy to be renewed)}
   \end{enumerate}
 
-\item{Use the \Opt{-p} option to \Condor{submit}}
-to avoid using the password in the submit description file.
-The submit command appears as
-\footnotesize
-\begin{verbatim}
-condor_submit -p mypassword /home/user/myjob.submit
-\end{verbatim}
-\normalsize
-
-A submit description file may include the password.
+\item{A submit description file may include the password.}
 An example contains commands of the form:
 \footnotesize
 \begin{verbatim}
@@ -911,8 +902,25 @@ MyProxyCredentialName = my_executable_run
 queue
 \end{verbatim}
 \normalsize
-Note that storing this submit file reduces security, as it
-contains the password.
+Note that placing the password within the submit file
+is not really secure,
+as it relies upon whatever file system security there is.
+This may still be better than option 5.
+
+\item{Use the \Opt{-p} option to \Condor{submit}.}
+The submit command appears as
+\footnotesize
+\begin{verbatim}
+condor_submit -p mypassword /home/user/myjob.submit
+\end{verbatim}
+\normalsize
+The argument list for \Condor{submit} defaults to
+being publically available.
+An attacker with a log in to the local machine could
+generate a simple shell script
+%  such as:
+%  while 1; ps -efwww| grep 'condor_submit.*-p';done
+to watch for the password. 
 
 \end{enumerate}
 
