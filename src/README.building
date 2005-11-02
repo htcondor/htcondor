@@ -1,4 +1,19 @@
 
+NOTICE: This file is out of date, particuarly the Unix 
+build instructions. (11/02/2005). 
+
+The 5-second replacement is
+
+cd src; ./configure; make
+
+You can also see http://www.cs.wisc.edu/condor/new-build.html but that's
+meant for people building on a CSL-supported machine in the UW Computer 
+Sciences department
+
+We'll be updating this soon, but probably not in time for 6.7.13
+
+---OUT OF DATE INSTRUCTIONS FOLLOW---  
+
 This file is intended to describe the steps needed to build Condor version
 6.x from the source code tree.  The Condor build environment is very 
 large and full of specific features for the UW Condor Team.  This document
