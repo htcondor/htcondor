@@ -1,5 +1,82 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_submit_dag.mak
 
 ..\src\condor_dagman\condor_submit_dag.C : \
+	"..\src\condor_c++_util\env.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\which.h"\
 	"..\src\condor_dagman\dagman_multi_dag.h"\
+	"..\src\condor_includes\basename.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_distribution.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	
+
+..\src\condor_dagman\dagman_multi_dag.C : \
+	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\condor_id.h"\
+	"..\src\condor_c++_util\dc_service.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\read_multiple_logs.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\tmp_dir.h"\
+	"..\src\condor_c++_util\user_log.c++.h"\
+	"..\src\condor_includes\basename.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	
+
+"..\src\condor_c++_util\dc_stub.C" : \
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
 	

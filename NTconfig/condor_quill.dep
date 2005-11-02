@@ -1,26 +1,190 @@
-# Microsoft Developer Studio Generated Dependency File, included by condor_collector.mak
+# Microsoft Developer Studio Generated Dependency File, included by condor_quill.mak
 
-..\src\condor_collector.V6\collector.C : \
+..\src\condor_quill\classadlogentry.C : \
+	"..\src\condor_c++_util\CondorError.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\my_hostname.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\quill_enums.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_md.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_perms.h"\
+	"..\src\condor_includes\condor_random_num.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\SafeMsg.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_quill\classadlogentry.h"\
+	"..\src\condor_quill\classadlogparser.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\startup.h"\
+	
+
+..\src\condor_quill\classadlogparser.C : \
+	"..\src\condor_c++_util\CondorError.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\my_hostname.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\quill_enums.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_md.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_perms.h"\
+	"..\src\condor_includes\condor_random_num.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\SafeMsg.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_quill\classadlogentry.h"\
+	"..\src\condor_quill\classadlogparser.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\startup.h"\
+	
+
+..\src\condor_quill\jobqueuecollection.C : \
+	"..\src\condor_c++_util\classad_collection.h"\
+	"..\src\condor_c++_util\classad_collection_types.h"\
+	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\classad_log.h"\
+	"..\src\condor_c++_util\CondorError.h"\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\log.h"\
+	"..\src\condor_c++_util\log_transaction.h"\
+	"..\src\condor_c++_util\my_hostname.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\Set.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_md.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_perms.h"\
+	"..\src\condor_includes\condor_random_num.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\SafeMsg.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_quill\jobqueuecollection.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\startup.h"\
+	
+
+..\src\condor_quill\jobqueuedbmanager.C : \
+	"..\src\condor_c++_util\classad_collection.h"\
+	"..\src\condor_c++_util\classad_collection_types.h"\
+	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\classad_log.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\dc_service.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
+	"..\src\condor_c++_util\get_daemon_name.h"\
 	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\jobqueuedatabase.h"\
+	"..\src\condor_c++_util\jobqueuesnapshot.h"\
+	"..\src\condor_c++_util\log.h"\
+	"..\src\condor_c++_util\log_transaction.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\pgsqldatabase.h"\
 	"..\src\condor_c++_util\query_result_type.h"\
+	"..\src\condor_c++_util\quill_enums.h"\
+	"..\src\condor_c++_util\Set.h"\
 	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\sqlquery.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
 	"..\src\condor_c++_util\translation_utils.h"\
-	"..\src\condor_collector.V6\collector.h"\
-	"..\src\condor_collector.V6\collector_engine.h"\
-	"..\src\condor_collector.V6\collector_stats.h"\
-	"..\src\condor_collector.V6\forkwork.h"\
-	"..\src\condor_collector.V6\hashkey.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_list.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
@@ -46,7 +210,6 @@
 	"..\src\condor_includes\condor_create_id.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_file_lock.h"\
@@ -57,20 +220,16 @@
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_old_shadow_types.h"\
-	"..\src\condor_includes\condor_parameters.h"\
-	"..\src\condor_includes\condor_parser.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_pidenvid.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_sys_nt.h"\
 	"..\src\condor_includes\condor_sys_types.h"\
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\fdprintf.h"\
 	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -78,91 +237,74 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\condor_status.V6\status_types.h"\
-	"..\src\condor_status.V6\totals.h"\
+	"..\src\condor_quill\classadlogentry.h"\
+	"..\src\condor_quill\classadlogparser.h"\
+	"..\src\condor_quill\jobqueuecollection.h"\
+	"..\src\condor_quill\jobqueuedbmanager.h"\
+	"..\src\condor_quill\prober.h"\
+	"..\src\condor_quill\quill_dbschema_def.h"\
+	"..\src\condor_quill\requestservice.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	
 
-..\src\condor_collector.V6\collector_engine.C : \
-	"..\src\condor_c++_util\command_strings.h"\
+..\src\condor_quill\prober.C : \
 	"..\src\condor_c++_util\CondorError.h"\
-	"..\src\condor_c++_util\dc_service.h"\
-	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\quill_enums.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_c++_util\stringSpace.h"\
-	"..\src\condor_c++_util\translation_utils.h"\
-	"..\src\condor_collector.V6\collector_engine.h"\
-	"..\src\condor_collector.V6\collector_stats.h"\
-	"..\src\condor_collector.V6\hashkey.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
-	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
-	"..\src\condor_daemon_core.V6\self_monitor.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_collector.h"\
-	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_config.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_create_id.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_error_codes.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_file_lock.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_old_shadow_types.h"\
-	"..\src\condor_includes\condor_parser.h"\
 	"..\src\condor_includes\condor_perms.h"\
-	"..\src\condor_includes\condor_pidenvid.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_sys_nt.h"\
 	"..\src\condor_includes\condor_sys_types.h"\
 	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_quill\classadlogentry.h"\
+	"..\src\condor_quill\classadlogparser.h"\
+	"..\src\condor_quill\prober.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
 	
 
-..\src\condor_collector.V6\collector_main.C : \
+..\src\condor_quill\quill_main.C : \
+	"..\src\condor_c++_util\classad_collection.h"\
+	"..\src\condor_c++_util\classad_collection_types.h"\
+	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\classad_log.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\CondorError.h"\
@@ -170,21 +312,18 @@
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
 	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\log.h"\
+	"..\src\condor_c++_util\log_transaction.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\query_result_type.h"\
+	"..\src\condor_c++_util\quill_enums.h"\
 	"..\src\condor_c++_util\Set.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
 	"..\src\condor_c++_util\translation_utils.h"\
-	"..\src\condor_collector.V6\collector.h"\
-	"..\src\condor_collector.V6\collector_engine.h"\
-	"..\src\condor_collector.V6\collector_stats.h"\
-	"..\src\condor_collector.V6\forkwork.h"\
-	"..\src\condor_collector.V6\hashkey.h"\
-	"..\src\condor_collector.V6\view_server.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_list.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
@@ -202,6 +341,98 @@
 	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_collector.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_config.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_md.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_perms.h"\
+	"..\src\condor_includes\condor_pidenvid.h"\
+	"..\src\condor_includes\condor_random_num.h"\
+	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\SafeMsg.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_quill\classadlogentry.h"\
+	"..\src\condor_quill\jobqueuecollection.h"\
+	"..\src\condor_quill\jobqueuedbmanager.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\getopt.h"\
+	"..\src\h\my_getopt.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\startup.h"\
+	
+
+..\src\condor_quill\requestservice.C : \
+	"..\src\condor_c++_util\classad_collection.h"\
+	"..\src\condor_c++_util\classad_collection_types.h"\
+	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\classad_log.h"\
+	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\condor_query.h"\
+	"..\src\condor_c++_util\CondorError.h"\
+	"..\src\condor_c++_util\dc_service.h"\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\generic_query.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\jobqueuedatabase.h"\
+	"..\src\condor_c++_util\jobqueuesnapshot.h"\
+	"..\src\condor_c++_util\log.h"\
+	"..\src\condor_c++_util\log_transaction.h"\
+	"..\src\condor_c++_util\my_hostname.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\query_result_type.h"\
+	"..\src\condor_c++_util\quill_enums.h"\
+	"..\src\condor_c++_util\Set.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\sqlquery.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
+	"..\src\condor_daemon_client\daemon.h"\
+	"..\src\condor_daemon_client\daemon_list.h"\
+	"..\src\condor_daemon_client\daemon_types.h"\
+	"..\src\condor_daemon_client\dc_collector.h"\
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attributes.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_classad_util.h"\
 	"..\src\condor_includes\condor_collector.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -236,8 +467,11 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\condor_status.V6\status_types.h"\
-	"..\src\condor_status.V6\totals.h"\
+	"..\src\condor_quill\classadlogentry.h"\
+	"..\src\condor_quill\jobqueuecollection.h"\
+	"..\src\condor_quill\jobqueuedbmanager.h"\
+	"..\src\condor_quill\requestservice.h"\
+	"..\src\condor_schedd.V6\qmgmt_constants.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
@@ -245,183 +479,7 @@
 	"..\src\h\startup.h"\
 	
 
-..\src\condor_collector.V6\collector_stats.C : \
-	"..\src\condor_c++_util\command_strings.h"\
-	"..\src\condor_c++_util\CondorError.h"\
-	"..\src\condor_c++_util\dc_service.h"\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_c++_util\simplelist.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_c++_util\stringSpace.h"\
-	"..\src\condor_c++_util\translation_utils.h"\
-	"..\src\condor_collector.V6\collector_engine.h"\
-	"..\src\condor_collector.V6\collector_stats.h"\
-	"..\src\condor_collector.V6\hashkey.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
-	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
-	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
-	"..\src\condor_daemon_core.V6\self_monitor.h"\
-	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
-	"..\src\condor_includes\condor_adtypes.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_collector.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_create_id.h"\
-	"..\src\condor_includes\condor_crypt.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_error_codes.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
-	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_old_shadow_types.h"\
-	"..\src\condor_includes\condor_perms.h"\
-	"..\src\condor_includes\condor_pidenvid.h"\
-	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_types.h"\
-	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_includes\condor_universe.h"\
-	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
-	"..\src\condor_includes\reli_sock.h"\
-	"..\src\condor_includes\safe_sock.h"\
-	"..\src\condor_includes\SafeMsg.h"\
-	"..\src\condor_includes\sock.h"\
-	"..\src\condor_includes\sockCache.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\internet.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\startup.h"\
-	
-
-..\src\condor_collector.V6\forkwork.C : \
-	"..\src\condor_c++_util\command_strings.h"\
-	"..\src\condor_c++_util\CondorError.h"\
-	"..\src\condor_c++_util\dc_service.h"\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_c++_util\simplelist.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_c++_util\stringSpace.h"\
-	"..\src\condor_c++_util\translation_utils.h"\
-	"..\src\condor_collector.V6\forkwork.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
-	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
-	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
-	"..\src\condor_daemon_core.V6\self_monitor.h"\
-	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
-	"..\src\condor_includes\condor_adtypes.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_create_id.h"\
-	"..\src\condor_includes\condor_crypt.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_error_codes.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
-	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_old_shadow_types.h"\
-	"..\src\condor_includes\condor_perms.h"\
-	"..\src\condor_includes\condor_pidenvid.h"\
-	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_types.h"\
-	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_includes\condor_universe.h"\
-	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
-	"..\src\condor_includes\reli_sock.h"\
-	"..\src\condor_includes\safe_sock.h"\
-	"..\src\condor_includes\SafeMsg.h"\
-	"..\src\condor_includes\sock.h"\
-	"..\src\condor_includes\sockCache.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\startup.h"\
-	
-
-..\src\condor_collector.V6\hashkey.C : \
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_c++_util\simplelist.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_c++_util\stringSpace.h"\
-	"..\src\condor_collector.V6\hashkey.h"\
-	"..\src\condor_includes\cedar_enums.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_create_id.h"\
-	"..\src\condor_includes\condor_crypt.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_macros.h"\
-	"..\src\condor_includes\condor_old_shadow_types.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_types.h"\
-	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_includes\condor_universe.h"\
-	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\startup.h"\
-	
-
-..\src\condor_collector.V6\soap_collectorC.C : \
-	"..\src\condor_collector.V6\soap_collectorH.h"\
-	"..\src\condor_collector.V6\soap_collectorStub.h"\
+..\src\condor_quill\soap_quillC.C : \
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -435,14 +493,14 @@
 	"..\src\condor_includes\condor_sys_nt.h"\
 	"..\src\condor_includes\condor_sys_types.h"\
 	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_quill\soap_quillH.h"\
+	"..\src\condor_quill\soap_quillStub.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
-..\src\condor_collector.V6\soap_collectorServer.C : \
-	"..\src\condor_collector.V6\soap_collectorH.h"\
-	"..\src\condor_collector.V6\soap_collectorStub.h"\
+..\src\condor_quill\soap_quillServer.C : \
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -456,224 +514,33 @@
 	"..\src\condor_includes\condor_sys_nt.h"\
 	"..\src\condor_includes\condor_sys_types.h"\
 	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_quill\soap_quillH.h"\
+	"..\src\condor_quill\soap_quillStub.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
-..\src\condor_collector.V6\soap_collectorStub.C : \
-	"..\src\condor_c++_util\command_strings.h"\
-	"..\src\condor_c++_util\condor_query.h"\
+..\src\condor_quill\soap_quillStub.C : \
 	"..\src\condor_c++_util\condor_version.h"\
-	"..\src\condor_c++_util\CondorError.h"\
-	"..\src\condor_c++_util\dc_service.h"\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\generic_query.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_c++_util\query_result_type.h"\
-	"..\src\condor_c++_util\simplelist.h"\
-	"..\src\condor_c++_util\soap_helpers.cpp"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_c++_util\stringSpace.h"\
-	"..\src\condor_c++_util\translation_utils.h"\
-	"..\src\condor_collector.V6\collector.h"\
-	"..\src\condor_collector.V6\collector_engine.h"\
-	"..\src\condor_collector.V6\collector_stats.h"\
-	"..\src\condor_collector.v6\condorcollector.nsmap"\
-	"..\src\condor_collector.V6\forkwork.h"\
-	"..\src\condor_collector.V6\hashkey.h"\
-	"..\src\condor_collector.V6\soap_collectorH.h"\
-	"..\src\condor_collector.V6\soap_collectorStub.h"\
-	"..\src\condor_daemon_client\daemon.h"\
-	"..\src\condor_daemon_client\daemon_list.h"\
-	"..\src\condor_daemon_client\daemon_types.h"\
-	"..\src\condor_daemon_client\dc_collector.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
-	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
-	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
-	"..\src\condor_daemon_core.V6\self_monitor.h"\
 	"..\src\condor_daemon_core.v6\soap_daemon_core.cpp"\
-	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\cedar_enums.h"\
-	"..\src\condor_includes\condor_adtypes.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_collector.h"\
-	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_create_id.h"\
-	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_error_codes.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
-	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\condor_old_shadow_types.h"\
-	"..\src\condor_includes\condor_perms.h"\
-	"..\src\condor_includes\condor_pidenvid.h"\
-	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_types.h"\
-	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_includes\condor_universe.h"\
-	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
-	"..\src\condor_includes\reli_sock.h"\
-	"..\src\condor_includes\safe_sock.h"\
-	"..\src\condor_includes\SafeMsg.h"\
-	"..\src\condor_includes\sock.h"\
-	"..\src\condor_includes\sockCache.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\condor_status.V6\status_types.h"\
-	"..\src\condor_status.V6\totals.h"\
-	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\startup.h"\
-	
-
-..\src\condor_status.V6\totals.C : \
-	"..\src\condor_c++_util\enum_utils.h"\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_c++_util\simplelist.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_c++_util\stringSpace.h"\
-	"..\src\condor_c++_util\translation_utils.h"\
-	"..\src\condor_includes\cedar_enums.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_create_id.h"\
-	"..\src\condor_includes\condor_crypt.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_file_lock.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_macros.h"\
-	"..\src\condor_includes\condor_old_shadow_types.h"\
-	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_sys_nt.h"\
 	"..\src\condor_includes\condor_sys_types.h"\
 	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_includes\condor_universe.h"\
-	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\condor_status.V6\status_types.h"\
-	"..\src\condor_status.V6\totals.h"\
+	"..\src\condor_quill\condorquill.nsmap"\
+	"..\src\condor_quill\soap_quillH.h"\
+	"..\src\condor_quill\soap_quillStub.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\startup.h"\
-	
-
-..\src\condor_collector.V6\view_server.C : \
-	"..\src\condor_c++_util\command_strings.h"\
-	"..\src\condor_c++_util\condor_query.h"\
-	"..\src\condor_c++_util\CondorError.h"\
-	"..\src\condor_c++_util\dc_service.h"\
-	"..\src\condor_c++_util\directory.h"\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\generic_query.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_c++_util\query_result_type.h"\
-	"..\src\condor_c++_util\Set.h"\
-	"..\src\condor_c++_util\simplelist.h"\
-	"..\src\condor_c++_util\string_list.h"\
-	"..\src\condor_c++_util\stringSpace.h"\
-	"..\src\condor_c++_util\translation_utils.h"\
-	"..\src\condor_collector.V6\collector.h"\
-	"..\src\condor_collector.V6\collector_engine.h"\
-	"..\src\condor_collector.V6\collector_stats.h"\
-	"..\src\condor_collector.V6\forkwork.h"\
-	"..\src\condor_collector.V6\hashkey.h"\
-	"..\src\condor_collector.V6\view_server.h"\
-	"..\src\condor_daemon_client\daemon.h"\
-	"..\src\condor_daemon_client\daemon_list.h"\
-	"..\src\condor_daemon_client\daemon_types.h"\
-	"..\src\condor_daemon_client\dc_collector.h"\
-	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
-	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
-	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
-	"..\src\condor_daemon_core.V6\self_monitor.h"\
-	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
-	"..\src\condor_includes\condor_adtypes.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_collector.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_config.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_create_id.h"\
-	"..\src\condor_includes\condor_crypt.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_error_codes.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
-	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\condor_old_shadow_types.h"\
-	"..\src\condor_includes\condor_perms.h"\
-	"..\src\condor_includes\condor_pidenvid.h"\
-	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_state.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_types.h"\
-	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_includes\condor_universe.h"\
-	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
-	"..\src\condor_includes\reli_sock.h"\
-	"..\src\condor_includes\safe_sock.h"\
-	"..\src\condor_includes\SafeMsg.h"\
-	"..\src\condor_includes\sock.h"\
-	"..\src\condor_includes\sockCache.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\condor_status.V6\status_types.h"\
-	"..\src\condor_status.V6\totals.h"\
-	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\startup.h"\
 	

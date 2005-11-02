@@ -27,10 +27,10 @@ NULL=nul
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=.\..\Debug
-INTDIR=.\..\Debug
+OUTDIR=..\Debug
+INTDIR=..\Debug
 # Begin Custom Macros
-OutDir=.\..\Debug
+OutDir=..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -95,9 +95,11 @@ CLEAN :
 	-@erase "$(INTDIR)\get_full_hostname.obj"
 	-@erase "$(INTDIR)\get_mysubsystem.obj"
 	-@erase "$(INTDIR)\HashTable.obj"
+	-@erase "$(INTDIR)\historysnapshot.obj"
 	-@erase "$(INTDIR)\iso_dates.obj"
 	-@erase "$(INTDIR)\java_config.obj"
 	-@erase "$(INTDIR)\job_lease.obj"
+	-@erase "$(INTDIR)\jobqueuesnapshot.obj"
 	-@erase "$(INTDIR)\KeyCache.obj"
 	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
@@ -114,11 +116,13 @@ CLEAN :
 	-@erase "$(INTDIR)\MyString.obj"
 	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\perm.obj"
+	-@erase "$(INTDIR)\pgsqldatabase.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\setenv.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
+	-@erase "$(INTDIR)\sqlquery.obj"
 	-@erase "$(INTDIR)\stat_wrapper.obj"
 	-@erase "$(INTDIR)\status_string.obj"
 	-@erase "$(INTDIR)\store_cred.obj"
@@ -145,7 +149,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -238,14 +242,17 @@ LIB32_OBJS= \
 	"$(INTDIR)\file_lock.obj" \
 	"$(INTDIR)\file_transfer.obj" \
 	"$(INTDIR)\format_time.obj" \
+	"$(INTDIR)\gahp_common.obj" \
 	"$(INTDIR)\generic_query.obj" \
 	"$(INTDIR)\get_daemon_name.obj" \
 	"$(INTDIR)\get_full_hostname.obj" \
 	"$(INTDIR)\get_mysubsystem.obj" \
 	"$(INTDIR)\HashTable.obj" \
+	"$(INTDIR)\historysnapshot.obj" \
 	"$(INTDIR)\iso_dates.obj" \
 	"$(INTDIR)\java_config.obj" \
 	"$(INTDIR)\job_lease.obj" \
+	"$(INTDIR)\jobqueuesnapshot.obj" \
 	"$(INTDIR)\KeyCache.obj" \
 	"$(INTDIR)\killfamily.obj" \
 	"$(INTDIR)\linebuffer.obj" \
@@ -262,11 +269,13 @@ LIB32_OBJS= \
 	"$(INTDIR)\MyString.obj" \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
+	"$(INTDIR)\pgsqldatabase.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_id.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\setenv.obj" \
 	"$(INTDIR)\sig_name.obj" \
+	"$(INTDIR)\sqlquery.obj" \
 	"$(INTDIR)\stat_wrapper.obj" \
 	"$(INTDIR)\status_string.obj" \
 	"$(INTDIR)\store_cred.obj" \
@@ -282,8 +291,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\gahp_common.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -292,10 +300,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=.\..\Release
-INTDIR=.\..\Release
+OUTDIR=..\Release
+INTDIR=..\Release
 # Begin Custom Macros
-OutDir=.\..\Release
+OutDir=..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -360,9 +368,11 @@ CLEAN :
 	-@erase "$(INTDIR)\get_full_hostname.obj"
 	-@erase "$(INTDIR)\get_mysubsystem.obj"
 	-@erase "$(INTDIR)\HashTable.obj"
+	-@erase "$(INTDIR)\historysnapshot.obj"
 	-@erase "$(INTDIR)\iso_dates.obj"
 	-@erase "$(INTDIR)\java_config.obj"
 	-@erase "$(INTDIR)\job_lease.obj"
+	-@erase "$(INTDIR)\jobqueuesnapshot.obj"
 	-@erase "$(INTDIR)\KeyCache.obj"
 	-@erase "$(INTDIR)\killfamily.obj"
 	-@erase "$(INTDIR)\linebuffer.obj"
@@ -379,11 +389,13 @@ CLEAN :
 	-@erase "$(INTDIR)\MyString.obj"
 	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\perm.obj"
+	-@erase "$(INTDIR)\pgsqldatabase.obj"
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\setenv.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
+	-@erase "$(INTDIR)\sqlquery.obj"
 	-@erase "$(INTDIR)\stat_wrapper.obj"
 	-@erase "$(INTDIR)\status_string.obj"
 	-@erase "$(INTDIR)\store_cred.obj"
@@ -409,7 +421,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -502,14 +514,17 @@ LIB32_OBJS= \
 	"$(INTDIR)\file_lock.obj" \
 	"$(INTDIR)\file_transfer.obj" \
 	"$(INTDIR)\format_time.obj" \
+	"$(INTDIR)\gahp_common.obj" \
 	"$(INTDIR)\generic_query.obj" \
 	"$(INTDIR)\get_daemon_name.obj" \
 	"$(INTDIR)\get_full_hostname.obj" \
 	"$(INTDIR)\get_mysubsystem.obj" \
 	"$(INTDIR)\HashTable.obj" \
+	"$(INTDIR)\historysnapshot.obj" \
 	"$(INTDIR)\iso_dates.obj" \
 	"$(INTDIR)\java_config.obj" \
 	"$(INTDIR)\job_lease.obj" \
+	"$(INTDIR)\jobqueuesnapshot.obj" \
 	"$(INTDIR)\KeyCache.obj" \
 	"$(INTDIR)\killfamily.obj" \
 	"$(INTDIR)\linebuffer.obj" \
@@ -526,11 +541,13 @@ LIB32_OBJS= \
 	"$(INTDIR)\MyString.obj" \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
+	"$(INTDIR)\pgsqldatabase.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\proc_id.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
 	"$(INTDIR)\setenv.obj" \
 	"$(INTDIR)\sig_name.obj" \
+	"$(INTDIR)\sqlquery.obj" \
 	"$(INTDIR)\stat_wrapper.obj" \
 	"$(INTDIR)\status_string.obj" \
 	"$(INTDIR)\store_cred.obj" \
@@ -546,8 +563,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\gahp_common.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -655,7 +671,7 @@ SOURCE="..\src\condor_c++_util\condor_common.C"
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi- /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fp"..\Debug\condor_common.pch" /Yc"condor_common.h" /Fo"..\Debug/" /Fd"..\Debug/" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi- /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fp"..\Debug\condor_common.pch" /Yc"condor_common.h" /Fo"..\Debug/" /Fd"..\Debug/" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "..\Debug\condor_common.obj"	"..\Debug\condor_common.pch" : $(SOURCE)
 	$(CPP) @<<
@@ -665,7 +681,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi- /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fp"..
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /Gi- /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fp"..\Release\condor_common.pch" /Yc"condor_common.h" /Fo"..\Release/" /Fd"..\Release/" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MT /W3 /Gi- /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fp"..\Release\condor_common.pch" /Yc"condor_common.h" /Fo"..\Release/" /Fd"..\Release/" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "..\Release\condor_common.obj"	"..\Release\condor_common.pch" : $(SOURCE)
 	$(CPP) @<<
@@ -739,7 +755,7 @@ SOURCE="..\src\condor_c++_util\condor_version.C"
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\condor_version.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -749,7 +765,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fo"$(I
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\condor_version.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -957,6 +973,12 @@ SOURCE="..\src\condor_c++_util\HashTable.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\historysnapshot.C"
+
+"$(INTDIR)\historysnapshot.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\iso_dates.C"
 
 "$(INTDIR)\iso_dates.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -972,6 +994,12 @@ SOURCE="..\src\condor_c++_util\java_config.C"
 SOURCE="..\src\condor_c++_util\job_lease.C"
 
 "$(INTDIR)\job_lease.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\jobqueuesnapshot.C"
+
+"$(INTDIR)\jobqueuesnapshot.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -1045,7 +1073,7 @@ SOURCE="..\src\condor_c++_util\my_subsystem.C"
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\my_subsystem.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -1055,7 +1083,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /Fo"$(I
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\my_subsystem.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -1089,6 +1117,12 @@ SOURCE="..\src\condor_c++_util\perm.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\pgsqldatabase.C"
+
+"$(INTDIR)\pgsqldatabase.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\print_wrapped_text.C"
 
 "$(INTDIR)\print_wrapped_text.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -1116,6 +1150,12 @@ SOURCE="..\src\condor_c++_util\setenv.C"
 SOURCE="..\src\condor_c++_util\sig_name.C"
 
 "$(INTDIR)\sig_name.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\sqlquery.C"
+
+"$(INTDIR)\sqlquery.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

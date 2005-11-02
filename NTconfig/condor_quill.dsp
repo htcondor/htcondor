@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="condor_shadow" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="condor_quill" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=condor_shadow - Win32 Release
+CFG=condor_quill - Win32 Release
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_shadow.mak".
+!MESSAGE NMAKE /f "condor_quill.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_shadow.mak" CFG="condor_shadow - Win32 Release"
+!MESSAGE NMAKE /f "condor_quill.mak" CFG="condor_quill - Win32 Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_shadow - Win32 Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "condor_shadow - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_quill - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_quill - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=condor_shadow - Win32 Release
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "condor_shadow - Win32 Debug"
+!IF  "$(CFG)" == "condor_quill - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -51,20 +51,20 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
 # ADD LINK32 ../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# SUBTRACT LINK32 /incremental:no
+# SUBTRACT LINK32 /map
 
-!ELSEIF  "$(CFG)" == "condor_shadow - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_quill - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "condor_shadow___Win32_Release"
-# PROP BASE Intermediate_Dir "condor_shadow___Win32_Release"
+# PROP BASE Output_Dir "condor_quill___Win32_Release"
+# PROP BASE Intermediate_Dir "condor_quill___Win32_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "..\Release"
-# PROP Intermediate_Dir "..\Release"
+# PROP Output_Dir "../Release"
+# PROP Intermediate_Dir "../Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
@@ -77,109 +77,93 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# SUBTRACT BASE LINK32 /incremental:no
+# SUBTRACT BASE LINK32 /map
 # ADD LINK32 ../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map /debug /machine:I386
 
 !ENDIF 
 
 # Begin Target
 
-# Name "condor_shadow - Win32 Debug"
-# Name "condor_shadow - Win32 Release"
+# Name "condor_quill - Win32 Debug"
+# Name "condor_quill - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\baseshadow.C
+SOURCE=..\src\condor_quill\classadlogentry.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\baseshadow.h
+SOURCE=..\src\condor_quill\classadlogentry.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\mpiresource.C
+SOURCE=..\src\condor_quill\classadlogparser.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\mpiresource.h
+SOURCE=..\src\condor_quill\classadlogparser.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\mpishadow.C
+SOURCE=..\src\condor_quill\jobqueuecollection.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\mpishadow.h
+SOURCE=..\src\condor_quill\jobqueuecollection.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\NTreceivers.C
+SOURCE=..\src\condor_quill\jobqueuedbmanager.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\parallelshadow.C
+SOURCE=..\src\condor_quill\jobqueuedbmanager.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\parallelshadow.h
+SOURCE=..\src\condor_quill\prober.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.C
+SOURCE=..\src\condor_quill\prober.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.h
+SOURCE=..\src\condor_quill\quill_dbschema_def.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\remoteresource.C
+SOURCE=..\src\condor_quill\quill_main.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\remoteresource.h
+SOURCE=..\src\condor_quill\requestservice.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\shadow.C
+SOURCE=..\src\condor_quill\requestservice.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\shadow.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_shadow.V6.1\shadow_user_policy.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_shadow.V6.1\shadow_user_policy.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_shadow.V6.1\shadow_v61_main.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_shadow.V6.1\soap_shadowC.C
+SOURCE=..\src\condor_quill\soap_quillC.C
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\soap_shadowH.h
+SOURCE=..\src\condor_quill\soap_quillH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\soap_shadowServer.C
+SOURCE=..\src\condor_quill\soap_quillServer.C
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\soap_shadowStub.C
+SOURCE=..\src\condor_quill\soap_quillStub.C
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\soap_shadowStub.h
+SOURCE=..\src\condor_quill\soap_quillStub.h
 # End Source File
 # End Target
 # End Project

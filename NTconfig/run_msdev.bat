@@ -29,9 +29,15 @@ REM rule for syscall_numbers.h gets lost into the translation to .mak files,
 REM so we deal with it here explicitly.
 if not exist ..\src\h\syscall_numbers.h awk -f ..\src\h\awk_prog.include_file ..\src\h\syscall_numbers.tmpl > ..\src\h\syscall_numbers.h
 
-REM Build the externals and bail if it fails.
+REM Build the externals
 call make_win32_externals.bat
+if not errorlevel 0 goto extfail
 
+REM Copy any .dll files created by the externals in debug and release
+call copy_external_dlls.bat
+if not errorlevel 0 goto extfail
+
+REM Deal with gsoap
 nmake /f gsoap.mak
 
 REM make_win32_externals implicitly calls set_vars.bat, so just run
@@ -43,6 +49,9 @@ goto success
 
 :failure
 echo *** gsoap stub generator failed ***
+exit /b 1
+:extfail
+echo *** Failed to build externals ***
 exit /b 1
 
 :success
