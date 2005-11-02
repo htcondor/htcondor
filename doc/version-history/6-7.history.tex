@@ -22,12 +22,6 @@ Enterprise Linux 3 IA64 distribution.
 
 \begin{itemize}
 
-\item Fixed a bug concerning backslash escaping in classad attribute values
-	when \Condor{q} was using quill.
-
-\item Fixed a bug where \Condor{q} could not accept multiple jobids
-	on the command line.
-
 \item Added support in Condor for the Generic Connection Broker
   (GCB).
   This is a system for managing network connections across public and
@@ -101,6 +95,12 @@ name, ``https://'' will be inserted automatically.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug concerning backslash escaping in classad attribute values
+	when \Condor{q} was using quill.
+
+\item Fixed a bug where \Condor{q} could not accept multiple jobids
+	on the command line.
 
 \item Fixed parallel universe ssh script to now clean up all
 temporary files it creates.
