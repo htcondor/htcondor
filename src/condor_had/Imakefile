@@ -5,7 +5,9 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-OBJ =  StateMachine.o HAD.o
+soapobjs(had)
+
+OBJ =  StateMachine.o HAD.o $(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)
@@ -14,3 +16,4 @@ static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
+gen_soapfiles(had,condorHad)
