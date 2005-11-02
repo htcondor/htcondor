@@ -1,7 +1,7 @@
 #!/bin/sh
 
 sshd_cleanup() {
-	/bin/rm -f $hostkey ${hostkey}.pub	${idkey} ${idkey}.pub sshd.out contact
+	/bin/rm -f $hostkey ${hostkey}.pub ${idkey} ${idkey}.pub sshd.out $_CONDOR_SCRATCH_DIR/contact
 }
 
 trap sshd_cleanup 15
@@ -117,6 +117,11 @@ then
 						node=`expr $node + 1`
 				done
 				chmod 0700 $_CONDOR_SCRATCH_DIR/tmp/*.key
+
+				# Erase the contact file from the spool directory, in case
+				# this job is held and rescheduled
+	
+				$CONDOR_CHIRP put /dev/null $_CONDOR_REMOTE_SPOOL_DIR/contact
 			else
 				sleep 1
 			fi
