@@ -57,9 +57,13 @@ set the following configuration variables:
   ##  Now, with flocking we need to let the SCHEDD trust the other
   ##  negotiators we are flocking with as well.  You should normally
   ##  not have to change this either.
-  HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+  HOSTALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
   \end{verbatim}
   \normalsize
+  % NEGOTIATOR_HOST is no longer used since ports are dynamically
+  % allocated, so suggest COLLECTOR_HOST instead
+  This example configuration presumes that the \Condor{collector}
+  and \Condor{negotiator} daemons are running on the same machine.
   See 
   section~\ref{sec:Security-Authorization} on
   page~\pageref{sec:Security-Authorization} for a discussion
@@ -93,7 +97,7 @@ If the user-based configuration macros for security are used,
 then the default will be:
 \footnotesize
 \begin{verbatim}
-ALLOW_NEGOTIATOR =  $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_NEGOTIATOR =  $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 \end{verbatim}
 \normalsize
 
@@ -101,7 +105,7 @@ Further, if using Kerberos or GSI authentication, then the setting
 becomes:
 \footnotesize
 \begin{verbatim}
-ALLOW_NEGOTIATOR = condor@$(UID_DOMAIN)/$(NEGOTIATOR_HOST)
+ALLOW_NEGOTIATOR = condor@$(UID_DOMAIN)/$(COLLECTOR_HOST)
 \end{verbatim}
 \normalsize
 
