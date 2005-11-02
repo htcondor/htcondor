@@ -30,9 +30,10 @@ JobQueueCollection::JobQueueCollection(int iBucketNum)
 	int i;
 
 	_iBucketSize = iBucketNum;
-	_ppProcAdBucketList = new (ClassAdBucket*)[_iBucketSize];
-	_ppClusterAdBucketList = new (ClassAdBucket*)[_iBucketSize];
-	_ppHistoryAdBucketList = new (ClassAdBucket*)[_iBucketSize];
+	typedef ClassAdBucket* ClassAdBucketPtr;
+	_ppProcAdBucketList = new ClassAdBucketPtr[_iBucketSize];
+	_ppClusterAdBucketList = new ClassAdBucketPtr[_iBucketSize];
+	_ppHistoryAdBucketList = new ClassAdBucketPtr[_iBucketSize];
 	for (i = 0; i < _iBucketSize; i++) {
 		_ppProcAdBucketList[i] = NULL;
 		_ppClusterAdBucketList[i] = NULL;

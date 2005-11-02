@@ -7,7 +7,9 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC)
 LDFLAGS = $(STD_LDFLAGS) 
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(QUILL_LIB)
 
-OBJ = quill_main.o classadlogentry.o classadlogparser.o jobqueuedbmanager.o prober.o requestservice.o jobqueuecollection.o 
+soapobjs(quill)
+
+OBJ = quill_main.o classadlogentry.o classadlogparser.o jobqueuedbmanager.o prober.o requestservice.o jobqueuecollection.o $(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
@@ -19,3 +21,4 @@ quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
 
 release_target($(NAME),sbin,EXECUTABLE_MODE)
 
+gen_soapfiles(quill,condorQuill)

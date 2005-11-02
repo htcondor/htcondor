@@ -52,7 +52,7 @@ JobLogReader::poll(classad::ClassAdCollection *ad_collection) {
 	switch(probe_st) {
 	case INIT_QUILL:
 	case COMPRESSED:
-	case ERROR:
+	case PROBE_ERROR:
 		success = BulkLoad(ad_collection);
 		break;
 	case ADDITION:

@@ -36,7 +36,7 @@ enum    XactState {    NOT_IN_XACT,
                         COMMIT_XACT,
                         ABORT_XACT};
 
-enum 	QuillErrCode {	FAILURE,
+enum QuillErrCode {	FAILURE,
 						FAILURE_QUERY_PROCADS_STR,
 						FAILURE_QUERY_PROCADS_NUM,
 						FAILURE_QUERY_CLUSTERADS_STR,
@@ -52,16 +52,19 @@ enum 	QuillErrCode {	FAILURE,
 						DONE_PROCADS_CUR_CLUSTERAD,
 						SUCCESS};
 
-enum ProbeResultType {  ERROR, 
+
+enum ProbeResultType {  PROBE_ERROR, 
 						NO_CHANGE, 
 						INIT_QUILL, 
 						ADDITION, 
 						COMPRESSED};
+
 enum FileOpErrCode {    FILE_OPEN_ERROR,
 						FILE_READ_ERROR,
 						FILE_WRITE_ERROR,
 						FILE_READ_EOF,
                         FILE_READ_SUCCESS};
+
 #endif
 
 

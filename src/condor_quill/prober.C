@@ -120,7 +120,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name)
 				// 1. if it's the same as the last one, that's normal addition
 				// return ADDITION;
 				// 2. if not, it's error state
-				// return ERROR;
+				// return PROBE_ERROR;
 
 				//
 				// check the last command
@@ -133,7 +133,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name)
 			st = caLogParser.readLogEntry(op_type);
 
 			if (st != FILE_READ_SUCCESS) {
-				return ERROR;
+				return PROBE_ERROR;
 			}
 
 			if (caLogParser.getCurCALogEntry()->equal(curCALogEntry))
@@ -142,7 +142,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name)
 			}
 			else 
 			{
-				return ERROR;
+				return PROBE_ERROR;
 			}
 		}
 		else if (fstat.st_size < jqfile_last_size) {
@@ -157,7 +157,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name)
 				// 1. if it's the same as the last one, that's OK
 				// return NO_CHANGE; 
 				// 2. if not, it's error state
-				// return ERROR;
+				// return PROBE_ERROR;
 
 				//
 				// check the last command
@@ -170,19 +170,19 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,char const *job_queue_name)
 			st = caLogParser.readLogEntry(op_type); 
 
 			if (st != FILE_READ_EOF && st != FILE_READ_SUCCESS) {
-				return ERROR;
+				return PROBE_ERROR;
 			}
 
 			if (caLogParser.getCurCALogEntry()->equal(curCALogEntry)) { 
 				return NO_CHANGE;
 			}
 			else {
-				return ERROR;
+				return PROBE_ERROR;
 			}
 		}
 	}
 	else {
-		return ERROR;
+		return PROBE_ERROR;
 	}
 
 	return NO_CHANGE;

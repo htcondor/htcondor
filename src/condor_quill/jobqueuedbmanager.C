@@ -309,7 +309,7 @@ JobQueueDBManager::maintain()
 {	
 	QuillErrCode st, ret_st;
 	ProbeResultType probe_st;
-	struct timeval t1, t2;
+	time_t t1, t2;
 
 		//reset the reporting counters at the beginning of each probe
 	lastBatchSqlProcessed = 0;
@@ -329,10 +329,10 @@ JobQueueDBManager::maintain()
 
 	probe_st = prober->probe(caLogParser->getCurCALogEntry(),caLogParser->getJobQueueName());	// polling
 	
-		//this and the gettimeofday call just below the switch together
+		//this and the time call just below the switch together
 		//determine the period of time taken by this whole batch of sql
 		//statements
-	gettimeofday(&t1, NULL);
+	t1 = time(NULL);
 
 		// {init|add}JobQueueDB processes the  Log and stores probing
 		// information into DB documentation for how do we determine 
@@ -350,7 +350,7 @@ JobQueueDBManager::maintain()
 		dprintf(D_ALWAYS, "POLLING RESULT: COMPRESSED\n");
 		ret_st = initJobQueueTables();
 		break;
-	case ERROR:
+	case PROBE_ERROR:
 		dprintf(D_ALWAYS, "POLLING RESULT: ERROR\n");
 		ret_st = initJobQueueTables();
 		break;
@@ -363,9 +363,9 @@ JobQueueDBManager::maintain()
 		ret_st = FAILURE;
 	}
 
-	gettimeofday(&t2, NULL);
+	t2 = time(NULL);
 
-	secsLastBatch = t2.tv_sec - t1.tv_sec;
+	secsLastBatch = t2 - t1;
 	
 	totalSqlProcessed += lastBatchSqlProcessed;
 
@@ -378,7 +378,7 @@ JobQueueDBManager::maintain()
 QuillErrCode
 JobQueueDBManager::cleanupJobQueueTables()
 {
-	int		sqlNum = 4;
+	const int		sqlNum = 4;
 	int		i;
 	char 	sql_str[sqlNum][128];
 
@@ -409,7 +409,7 @@ JobQueueDBManager::cleanupJobQueueTables()
 QuillErrCode
 JobQueueDBManager::tuneupJobQueueTables()
 {
-	int		sqlNum = 5;
+	const int		sqlNum = 5;
 	int		i;
 	char 	sql_str[sqlNum][128];
 
@@ -448,7 +448,7 @@ JobQueueDBManager::tuneupJobQueueTables()
 int
 JobQueueDBManager::purgeOldHistoryRows()
 {
-	int		sqlNum = 4;
+	const int		sqlNum = 4;
 	int		i;
 	char 	sql_str[sqlNum][256];
 
