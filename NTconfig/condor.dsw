@@ -119,6 +119,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_quill
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_had
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -562,6 +565,39 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_procapi
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_had"=".\condor_had.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_daemon_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
     End Project Dependency
 }}}
 

@@ -20,7 +20,7 @@ SOAPCPP = soapcpp2.exe
 !endif
 SOAPCPPFLAGS = -I $(SRCDIR)\condor_daemon_core.V6
 
-DAEMONS = collector dagman gridmanager master negotiator \
+DAEMONS = collector dagman gridmanager master negotiator had \
 		schedd shadow startd starter cgahp cgahp_worker quill
 
 all : $(DAEMONS)
@@ -169,6 +169,19 @@ cgahp_worker : $(SRCDIR)\condor_c-gahp\soap_$@Stub.C \
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
 quill : $(SRCDIR)\condor_$@\soap_$@Stub.C \
+			$(SRCDIR)\condor_$@\gsoap_$@.h
+	-2mkdir $(TEMPDIR)
+	cd $(SRCDIR)\condor_$@
+	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\condor$@.nsmap    .
+	copy /Y $(TEMPDIR)\soap_$@H.h        .
+	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
+	copy /Y $(TEMPDIR)\condor$@.wsdl     .
+	rd /q /s $(TEMPDIR) > NUL 2>&1
+
+had : $(SRCDIR)\condor_$@\soap_$@Stub.C \
 			$(SRCDIR)\condor_$@\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@

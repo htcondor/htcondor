@@ -31,9 +31,9 @@ popd
 echo Stripping out debug symbols from files...
 pushd %1\bin
 for %%f in (*.exe) do rebase -b 0x400000 -x . -a %%f
-for %%f in (master startd quill schedd collector negotiator shadow starter eventd) do move condor_%%f.dbg condor_%%f.save
+for %%f in (master startd quill had schedd collector negotiator shadow starter eventd) do move condor_%%f.dbg condor_%%f.save
 del *.dbg 
-for %%f in (master startd quill schedd collector negotiator shadow starter eventd) do move condor_%%f.save condor_%%f.dbg
+for %%f in (master startd quill had schedd collector negotiator shadow starter eventd) do move condor_%%f.save condor_%%f.dbg
 copy condor_rm.exe condor_hold.exe
 copy condor_rm.exe condor_release.exe
 copy condor_rm.exe condor_vacate_job.exe
