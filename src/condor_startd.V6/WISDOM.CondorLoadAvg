@@ -1,0 +1,284 @@
+first, a minor terminology point: the non-condor load average is just
+the system load average minus the "condor load average".  so, the
+problem isn't so much with non-condor load as it is with the "condor
+load average" itself.
+
+the condor load average is an attempt to calculate how much of the
+total system load is "condor's fault", i.e. caused by jobs spawned by
+condor.  ideally, if there's a single VM on the machine, and a condor
+job that's prefectly CPU bound, and nothing else on the machine, the
+system load will be 1.0, the condor load will be 1.0, and the
+non-condor load will be 0.0.
+
+the problem is that there's no way to actually get this information
+from the system at all.  you can't just ask "what's the load generated
+by this subset of processes?"  the best you can do is get the current
+% cpu utilization for a given set of processes.  however, load avg is
+a weighted average (we use the 1 minute load avg, since that's the
+only one that's available on all platforms... some use 1 min, 5 min,
+and 15 min; others use something like 5 sec, 30 sec, and 1 min or
+something).  unfortunately, the act of asking about % cpu usage is
+expensive, and the more accurate you want your 1 minute average, the
+more you impact the load on the system. :(
+
+our basic assumption is that if the load is 1.0, and the % cpu
+utilization of all the pids that makes up a condor job is 50%, than
+we'd say the CondorLoadAvg is 0.5.  i.e., we just multiply the system
+load by the cpu utilization.  however, since we only get % cpu from
+the system as an instantaneous value, but the load avg is weighted, we
+decided to maintain a 1 minute % cpu average, as well.
+
+so, the first problem w/ condor load is that the minute around state
+boundries (e.g. idle -> busy) is wrong.  assume the system load is
+steadily climbing from 0 to 1.0, over that entire minute.  at the same
+time, our weighted % cpu average will also climb from 0 to 100% over
+the same minute.  in practice, we know all the load is from the condor
+job, but the condor load grows slowly (due to this % cpu weighted
+average).  in rough ascii art style, here's what's going on:
+
+(vertical axis = load, horizontal = time)
+
+         1.0
+   sys  /|
+      /  | CondorLoad  
+    /  _'
+0 /_,-'
+t:0      1min
+
+
+the system load climbs steadily, in a straight line, from 0 to 1.0.
+however, the CondorLoad stays closer to 0 for longer, and near the end
+of the minute, climbs rapidly towards 1.0.  this is because while the
+1 minute system load is climbing steadily, the 1 minute condor % cpu
+utilization average is also climbing.  roughly speaking, at time 0
+seconds we have 0.0 * 0% = 0.0 load.  at time 30 seconds, we'd have
+0.5 * 50% = 0.25 load, at time 60 we'd have 1.0 * 100% = 1.0.  make
+sense?
+
+similarly, the same thing happens (in reverse) when a condor job is
+suspend or killed.  for the next minute, the CondorLoad falls off
+faster than the system load, since the 1 minute average of cpu % is
+dropping in addition to the load average.  since we're multiplying two
+numbers together that are both dropping, they fall off faster than
+they really should.
+
+"why use the 1 minute average of % cpu utilization at all then?" you
+might ask.  it's a nasty problem.  if we didn't have the 1 minute
+weighted % cpu utilization, than when the process is suspended or
+killed, the % utilization would immediately drop to 0.  so, if we did
+NOT maintain the 1 minute average, the CondorLoad would also
+immediately drop to 0, which is clearly wrong.  so, we're sort of
+stuck between a rock and a hard place... we're trying to provide a
+value the system doesn't give us a good way to report, and we're sort
+of hacking concepts together to provide something admins think they
+can make sense of.  however, there's no way to accurately provide the
+info.  the more accurately we try to do it (i.e. more frequently we
+poll), the more load the condor daemons themselves would generate).
+furthermore, we're least accurate right at the times that admins care
+the most: the first minute after a job starts or stops.  in the steady
+state, things basically work fine.  the real problems are around job
+boundries.  alas.
+
+ok, onto the more complex situation of an SMP machine or a single CPU
+configured with multiple Condor VMs (which are identical cases from
+the condor code's perspective).  things are considerably worse in the
+SMP case.
+
+again, there's no help from the OS on prividing the real per-CPU load
+average (at least not portably).  we just get a total system load,
+shared across all VMs.
+
+not only are the above problems still true, but we have this
+additional problem of trying to "split up" the total system load
+across the various condor VMs.  again, each VM is maintaining its own
+1 minute average for % cpu utilization.  the startd knows the current
+condor state of all the VMs, and the total system load.  on some
+platforms, the % cpu utilization is per CPU (e.g., on a 4-cpu box, a
+CPU bound process will be reported as having 25% CPU utilization).  on
+others, it's reported as 100%.  we account for that, such that all %
+cpu utilization stuff is divided by the number of VMs we're dealing
+with (i.e. even if the OS says 100%, meaning 1 full CPU, if we've got
+4 VMs, we think of that as 25% usage).  then, the basic idea of the
+VM-specific CondorLoad is the same... we just take the total system
+load and multiply the VM-specific CPU utilization, and come up with a
+(as described above, not always exactly accurate) value.  
+
+so, now we've got the total system load, and the (approximate)
+CondorLoad on each VM.  now, we have to assign out the share of the
+system load to each virtual machine, since condor is pretending these
+are totally seperate entities that need to have their own system load,
+condorload and non-condor load, as if none of them are even on the
+same machine.  here's the basic algorithm:
+
+1) find the total system load
+2) compute the CondorLoad on each VM
+3) find the total non-condor load (a.k.a. "owner load") by subtracting
+   all of the CondorLoad avg values from the total system load.  if
+   there's error in the CondorLoad, we correct for it so we never end
+   up with negative owner load or anything crazy like that.
+4) assign out the non-condor load to each VM according to the Condor
+   state its in.
+
+steps 1-3 should be pretty obvious based on the above.  step 4 is what
+probably needs clarification.  here's a simple case that should start
+to help you make sense of it:
+
+say you've got a 4-VM startd, and 3 VMs are busy with condor jobs
+(vm1, vm2, and vm3), each at load 1.0 (100% cpu), and the 4th VM is
+idle (say it's in Unclaimed/Idle).  futher, let's say there's a
+cpu-bound background process running as the machine owner (outside of
+condor), also with a load of 1.0.  so, the total system load is 4.0.
+the condorload on vm's 1-3 will be 1.0, and we'll have 4.0 (total
+system load) - 3.0 (total of all condorload) = 1.0 of non-condor load
+"left over".  so, as the startd is assigning the load average to each
+VM, it does this:
+
+     CondorLoad   OwnerLoad  LoadAvg (total system load for this vm) 
+vm1 => 1.0          0.0        1.0
+vm2 => 1.0          0.0        1.0
+vm3 => 1.0          0.0        1.0
+vm4 => 0.0          1.0        1.0
+
+so, from condor's perspective, it's as if the machine owner has taken
+over vm4, it's not available for condor, and, depending on the policy
+expressions, would probably be in the "Owner" state.  since vm4 is
+already in Owner (or Unclaimed, whatever), condor wants to give it as
+much of the non-condor load as possible (within reason), so that the
+other VMs won't be bothered by this background process.  a crappy way
+to do it instead would be to evenly divide the non-condor-load across
+all the VMs, but then a single background job would suspend/evict all
+condor jobs on the whole machine, even though there's plenty of system
+resources to run all 4 jobs.  make sense?
+
+so, now imagine that the machine owner has spawned a 2nd background
+job.  now the system load will start climbing towards 5.0, and will
+reach it in 1 minute... now, things get a little more complicated.
+say the startd is trying to assign out loadavg at the point when the
+total system load has reached 4.3.  so, it's got a load of 4.3 to give
+out, and only 3.0 worth of condor load that's already "bound" to the
+specific VMs where that load came from.  so, now it's got a load of
+1.3 "left over" of owner/non-condor load to allocate to the VMs.  the
+really greedy thing would be to assign all of it to vm4, but, that's
+not what machine owners expect.  they're thinking that if they have a
+4-way machine, and they're running 2 of their own cpu bound background
+jobs, they want condor to only run on the other 2 cpus.  so,
+basically, condor only gives out owner-load in maximum increments of
+1.0.  it's got 1.3 of load, and wants to give as much as it can to
+vm4, but it will only give vm4 1.0 worth.  that additional 0.3 will be
+given to one of the other vms, for the sake of argument, say vm3.
+now, the load will look like this:
+
+     CondorLoad   OwnerLoad  LoadAvg
+vm1 => 1.0          0.0        1.0
+vm2 => 1.0          0.0        1.0
+vm3 => 1.0          0.3        1.3
+vm4 => 0.0          1.0        1.0
+
+for a moment, pretend that's all that happened.  the next time the
+startd looks, there's now, say, 4.7 total system load.  that 0.7 would
+all be assigned to vm3.  once the load reached 5.0, vm3 would have 1.0
+condor load and 1.0 owner load.  if the owner started a 3rd job, then
+vm2 would start to get some owner load, too.  does that much make
+sense?  
+
+but, in practice, this above paragraph is a lie.  when the load on vm3
+got to 1.3, with 0.3 of owner load, chances are good that those values
+would have caused vm3 to suspend its condor job, and go into
+claimed/suspended.  that's exactly the moment where it gets really
+crappy for the startd to try to keep an accurate picture of what's
+going on... :( so, the system load *was* headed steadily towards 5.0
+b/c of this additional background job the owner had spawned.  however,
+while the load is climbing because of that job, it's also falling
+because one of the condor jobs was just suspended. :( so, roughly
+speaking, the load will level off around 4.3 for a little while, and
+then gradually fall back towards 4.0 as the steady state of 2 running
+condor jobs, 2 running owner jobs is reached.  during that period, the
+condorload avg on vm3 is going to be partially wrong (see my original
+explaination of why at the top of this message).  it'll probably fall
+off faster than it should, and therefore, the ownerload will climb
+faster that it should.  however, because the total system load will be
+roughly constant for a little while as the 1-minute average is taking
+the 2nd background job into effect at the same time that the suspended
+condor job is causing it to want to fall.  so, in this case, it's
+possible the condor load on vm3 will actually fall slower than it
+should, since the %cpu average will be the only thing dropping, and
+might not be dropping at the same rate as the system thinks the load
+is (since condor has to poll much less frequently than the kernel,
+etc, etc).
+
+bottom line, this scenario really sucks for the startd.  it does a
+reasonably-ok job given how amazing complicated it is, but as the
+author of all of this code, i'll be the first to admit it's not
+perfect.  in fact, i believe this whole idea of condor load is just
+dangerous and misleading.  it's great in papers and talks, but it's a
+miserable way to try to define machine policies in practice, since we
+have zero help from the OS to provide accurate numbers (even for the
+per-VM load average at all, much less the per-VM CondorLoad).  since
+we can't get really good numbers, and the numbers we do have are prone
+to being wrong exactly at the times when policy expressions matter
+most (right around job state changes), it just leads to troubles for
+admins trying to write policy expressions.
+
+in practice, we're forced to add other clauses to policy expressions
+to try to correct for this mess.  e.g. this "CpuBusyTime" stuff.  our
+SUSPEND expression does not just look at the load attributes.  it says
+"only if the owner load has been over our threshold for at least 2
+minutes should we suspend".  so, we force the machine to run in the
+new state for a good 2 minutes (to give the all these 1 minute
+averages a chance to settle down and reach a somewhat steady state)
+before we make any decisions to suspend a job.  that's just too bad.
+both since it makes our expressions more complicated, and because it
+means owners have to wait for 2 minutes of resource contention before
+condor finally starts to get out of the way.  in our defense, we just
+encourage everyone to submit their cpu-bound batch jobs as condor
+jobs, so that condor can better schedule them, and then we don't have
+this problem. ;) but, in the real world, that's not always a valid
+answer.  
+
+another example of additional policy complication because of this
+stuff is the clause in the START expression that says:
+
+($(CPU_Idle) || (State!="Unclaimed" && State!="Owner"))
+
+say a condor job is running on your VM (forget about SMPs for a
+moment).  the system load is 1.0, the condor load is 1.0.  the job
+exits on its own.  the machine owner is nowhere to be found, so the
+job wasn't evicted, and the schedd still has a claim on this machine.
+to avoid needless cost of releasing the claim, waiting to negotiate
+for a new match, etc, the schedd just sees if it has any other idle
+jobs that would match this resource and spawn them directly.  however,
+because of all this mojo with 1 minute load averages, the CPU_Idle
+(which is really a macro for "$(NonCondorLoadAvg) <=
+$(BackgroundLoad)") would NOT evaluate to true.  so, we have to put
+this weird clause in the START expression that we're going to allow a
+job to start even if the load is high (from the previous condor job),
+so long as we're not currently in the "Unclaimed" or "Owner" state.  i
+mean, condor's fully flexible and powerful, and it works, and that's
+great, but this just seems like an unfortunate complication to an
+already highly complicated thing (policy expressions) just because
+we're forcing admins to think in terms of load avg, which is really
+not necessarily a great thing to be thinking in terms of.
+
+finally, an additional problem with load average.  our good friends
+[sic] in linux kernel developement land have completely broken load
+average in newer versions of the linux kernel. :( instead of it
+reporting what everyone in the world thinks it should (the average
+length of the kernel's run queue), it now "factors in" I/O and other
+system metrics to give a "general view of the system responsiveness".
+this is enraging, evil, and totally uncalled for.  what was once a
+(partially) useful system metric is now completely useless.  :( so,
+it's not uncommon on linux machines doing a lot of I/O to have a load
+of 10.0 or more, yet the machine is still totally usable and
+responsive (unlike most machines with a *real* load of 10.0, which
+means 10 cpu-bound processes all fighting for CPU time).  i honestly
+don't think we do a good enough job warning our linux users of this
+evil change in the linux kernel and the implications for their policy
+expressions.
+
+that should be everything you wanted to know about CondorLoad and then
+some. ;)  if you have follow-up questions, feel free to send them my
+way, but i can't promise i'll have much more time to spend on this.
+
+-derek
+
+
