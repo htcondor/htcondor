@@ -1,3 +1,9 @@
+11/02/05 V6_7_13-merge-1
+   The state of the V6_7_13-branch for a merge into V6_7-branch.  The
+   original V6_7_13-branch was supposed to be abandoned, but folks
+   still checked into it.  so, we're merging these changes back into
+   V6_7 before we make the real 6.7.13 branch (V6_7_13-2-branch). 
+
 10/31/05 V6_7_13-gcb-pre_release-2005-10-31
    A 6.7.13 pre-release specifically for GCB.  Initially given to
    Gaurang Mehta <gmehta@ISI.EDU>.  The version string is:

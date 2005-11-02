@@ -56,8 +56,10 @@ JobQueueSnapshot::~JobQueueSnapshot()
 		SUCCESS: Success
 */
 QuillErrCode 
-JobQueueSnapshot::startIterateAllClassAds(int cluster, 
-					  int proc, 
+JobQueueSnapshot::startIterateAllClassAds(int *clusterarray,
+					  int numclusters, 
+					  int *procarray, 
+					  int numprocs,
 					  char *owner, 
 					  bool isfullscan)
 {
@@ -78,8 +80,10 @@ JobQueueSnapshot::startIterateAllClassAds(int cluster,
 		return FAILURE;
 	}
 
-	st = jqDB->getJobQueueDB(cluster, 
-				 proc, 
+	st = jqDB->getJobQueueDB(clusterarray, 
+				 numclusters,
+				 procarray, 
+				 numprocs,
 				 owner, 
 				 isfullscan,
 				 procads_str_num, 

@@ -84,6 +84,7 @@ class CondorQ
 	int add (CondorQFltCategories, float);
 	int addAND (char *);  // custom
 	int addOR (char *);  // custom
+	int addDBConstraint (CondorQIntCategories, int);
 
 	// fetch the job ads from the schedd corresponding to the given classad
 	// which pass the criterion specified by the constraints; default is
@@ -105,8 +106,11 @@ class CondorQ
 	// default timeout when talking the schedd (via ConnectQ())
 	int connect_timeout;
 	
-	int cluster;
-	int proc;
+	int *clusterarray;
+	int *procarray;
+	int clusterprocarraysize;
+	int numclusters;
+	int numprocs;
 	char owner[MAXOWNERLEN];
 	
 	// helper functions

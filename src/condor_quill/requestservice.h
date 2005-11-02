@@ -55,7 +55,9 @@ private:
 										int initScan, 
 										ClassAd *&);
 	static bool  parseConstraint(const char *constraint, 
-								 int &cluster, int &proc, char *owner);
+					int *&clusterarray, int &numclusters, 
+					int *&procarray, int &numprocs,
+					char *owner);
 	void		 freeJobAd(ClassAd *&ad);
 	QuillErrCode closeConnection();
 

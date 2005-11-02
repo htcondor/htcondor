@@ -173,20 +173,20 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( buff[0] != '\0' ) {
-		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
-	} else {
-		remoteState = JOB_STATE_UNSUBMITTED;
-	}
-
-	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
 		batchType = strdup( buff );
 	} else {
 		error_string = "GridResource is not set in the job ad";
 		goto error_exit;
+	}
+
+	buff[0] = '\0';
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
+		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
+	} else {
+		remoteState = JOB_STATE_UNSUBMITTED;
 	}
 
 	strupr( batchType );

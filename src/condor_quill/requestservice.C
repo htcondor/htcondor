@@ -171,19 +171,35 @@ RequestService::service(ReliSock *syscall_sock) {
 
 bool
 RequestService::parseConstraint(const char *constraint, 
-				int &cluster, int &proc, char *owner) {
+				int *&clusterarray, int &numclusters, 
+				int *&procarray, int &numprocs, char *owner) {
   char *ptrC, *ptrP, *ptrT;
-  int index_rparen=0, length=0;
+  int index_rparen=0, length=0, clusterprocarraysize;
   bool isfullscan = false;
   char *temp_constraint = 
     (char *) malloc((strlen(constraint) + 1) * sizeof(char));
   temp_constraint = strcpy(temp_constraint, constraint);
   
+  //currently if there's anything more than one restriction, we treat it
+  //as something that cannot be pushed down to the database and return 
+  //isfullscan = true.  This will be handled properly by condor_q as 
+  //it would properly apply all applicable filters to each and every
+  //classad
+
+  clusterprocarraysize = 128;
+  clusterarray = (int *) malloc(clusterprocarraysize * sizeof(int));
+  for(int i=0; i < clusterprocarraysize; i++) clusterarray[i] = -1;
+  procarray = (int *) malloc(clusterprocarraysize * sizeof(int));  
+  for(int i=0; i < clusterprocarraysize; i++) procarray[i] = -1; 
+  numclusters = 0;
+  numprocs = 0;  
+
   ptrC = strstr( temp_constraint, "ClusterId == ");
   if(ptrC != NULL) {
     index_rparen = strchr(ptrC, ')') - ptrC;
     ptrC += 13;
-    sscanf(ptrC, "%d", &cluster);
+    sscanf(ptrC, "%d", &(clusterarray[0]));
+    numclusters++;
     ptrC -= 13;
     for(int i=0; i < index_rparen; i++) ptrC[i] = ' ';
   }
@@ -191,7 +207,8 @@ RequestService::parseConstraint(const char *constraint,
   if(ptrP != NULL) {
     index_rparen = strchr(ptrP, ')') - ptrP;
     ptrP += 10;
-    sscanf(ptrP, "%d", &proc);
+    sscanf(ptrP, "%d", &(procarray[0]));
+    numprocs++;
     ptrP -= 10;
     for(int i=0; i < index_rparen; i++) ptrP[i] = ' ';
   }
@@ -243,21 +260,39 @@ RequestService::getNextJobByConstraint(const char* constraint,
 									   ClassAd *&ad)
 {
 	bool isfullscan = false;
-	int cluster=-1, proc=-1;
+
+	//it is allocated inside parseConstraint
+	int *clusterarray=NULL, *procarray=NULL;
+ 
+	//passed as a reference to parseConstraint which sets its value
+	int numclusters, numprocs; 
+
 	char owner[20] = "";
 	QuillErrCode ret_st;
 
 	if (initScan) { // is it the first request?
-	  isfullscan = parseConstraint(constraint, cluster, proc, owner);
+	   isfullscan = parseConstraint(constraint, 
+			clusterarray, numclusters, 
+			procarray, numprocs, owner);
 
-	  ret_st = jqSnapshot->startIterateAllClassAds(cluster, 
-												   proc, 
-												   owner, 
-												   isfullscan);
-	  if (ret_st != SUCCESS) {
-		  return ret_st;
+	   ret_st = jqSnapshot->startIterateAllClassAds(clusterarray, 
+							numclusters, 
+							procarray, numprocs, 
+							owner, 
+	  						isfullscan);
 	  
-	  }
+	 
+	   if(clusterarray != NULL) {
+	      free(clusterarray);
+	      clusterarray = NULL;
+	   }
+	   if(procarray != NULL) {
+	      free(procarray);
+	      procarray = NULL;
+	   }
+	   if (ret_st != SUCCESS) {
+	      return ret_st;
+	   }
 
 	}
 

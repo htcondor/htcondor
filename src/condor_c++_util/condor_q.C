@@ -79,8 +79,18 @@ CondorQ ()
 	query.setIntegerKwList ((char **) intKeywords);
 	query.setStringKwList ((char **) strKeywords);
 	query.setFloatKwList ((char **) fltKeywords);
-	cluster = -1;
-	proc = -1;
+
+	clusterprocarraysize = 128;
+	clusterarray = (int *) malloc(clusterprocarraysize * sizeof(int));
+	procarray = (int *) malloc(clusterprocarraysize * sizeof(int));
+	int i;
+	for(i=0; i < clusterprocarraysize; i++) { 
+		clusterarray[i] = -1;
+		procarray[i] = -1;
+	}
+	numclusters = 0;
+	numprocs = 0;
+
 	owner[0] = '\0';
 }
 
@@ -100,21 +110,44 @@ init()
 
 
 int CondorQ::
-add (CondorQIntCategories cat, int value)
+addDBConstraint (CondorQIntCategories cat, int value) 
 {
-
 		// remember the cluster and proc values so that they can be pushed down to DB query
 	switch (cat) {
 	case CQ_CLUSTER_ID:
-		cluster = value;
+		clusterarray[numclusters] = value;
+		numclusters++;
+		if(numclusters == clusterprocarraysize-1) {
+		   clusterarray = (int *) realloc(clusterarray, 
+					clusterprocarraysize * 2);
+		   procarray = (int *) realloc(procarray, 
+					clusterprocarraysize * 2);
+		   for(int i=clusterprocarraysize; 
+				i < clusterprocarraysize * 2; i++) {
+		      clusterarray[i] = -1;
+		      procarray[i] = -1;
+		   }
+		   clusterprocarraysize *= 2;
+		} 
 		break;
 	case CQ_PROC_ID:
-		proc = value;
+		// we want to store the procs at the same index as its 
+		// corresponding cluster so we simply use the numclusters 
+		// value.  numclusters is already incremented above as the 
+		// cluster value appears before proc in the user's 
+		// constraint string, so we store it at numclusters-1
+		procarray[numclusters-1] = value;
+		numprocs++;
 		break;
 	default:
 		break;
 	}
+	return 1;
+}
 
+int CondorQ::
+add (CondorQIntCategories cat, int value)
+{
 	return query.addInteger (cat, value);
 }
 
@@ -242,10 +275,12 @@ fetchQueueFromDB (ClassAdList &list, char *dbconn, CondorError* errstack)
 
 	jqSnapshot = new JobQueueSnapshot(dbconn);
 
-	rv = jqSnapshot->startIterateAllClassAds(cluster,
-											 proc,
-											 owner,
-											 FALSE);
+	rv = jqSnapshot->startIterateAllClassAds(clusterarray,
+						 numclusters,
+						 procarray,
+						 numprocs,
+						 owner,
+						 FALSE);
 
 	if (rv == FAILURE) {
 		delete jqSnapshot;
@@ -335,10 +370,12 @@ fetchQueueFromDBAndProcess ( char *dbconn, process_function process_func, Condor
 
 	jqSnapshot = new JobQueueSnapshot(dbconn);
 
-	rv = jqSnapshot->startIterateAllClassAds(cluster,
-											 proc,
-											 owner,
-											 FALSE);
+	rv = jqSnapshot->startIterateAllClassAds(clusterarray,
+						 numclusters,
+						 procarray,
+						 numprocs,
+						 owner,
+						 FALSE);
 
 	if (rv == FAILURE) {
 		delete jqSnapshot;

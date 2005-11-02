@@ -372,13 +372,14 @@ PGSQLDatabase::releaseHistoryResults()
  *		
  */
 QuillErrCode
-PGSQLDatabase::getJobQueueDB(int cluster, int proc, char *owner, bool isfullscan,
+PGSQLDatabase::getJobQueueDB(int *clusterarray, int numclusters, int *procarray, int numprocs,
+			     char *owner, bool isfullscan,
 			     int& procAdsStrRes_num, int& procAdsNumRes_num, 
 			     int& clusterAdsStrRes_num, int& clusterAdsNumRes_num)
 {
   
   char *procAds_str_query, *procAds_num_query, *clusterAds_str_query, *clusterAds_num_query;
-  char *clusterpredicate, *procpredicate;
+  char *clusterpredicate, *procpredicate, *temppredicate;
   QuillErrCode st;
 
   procAds_str_query = (char *) malloc(MAX_FIXED_SQL_STR_LENGTH * sizeof(char));
@@ -398,22 +399,43 @@ PGSQLDatabase::getJobQueueDB(int cluster, int proc, char *owner, bool isfullscan
     strcpy(clusterpredicate, "  ");
     procpredicate = (char *) malloc(1024 * sizeof(char));
     strcpy(procpredicate, "  ");
+    temppredicate = (char *) malloc(1024 * sizeof(char));
+    strcpy(temppredicate, "  ");
 
-    if(cluster != -1) {
-      sprintf(clusterpredicate, " %s %d ", "WHERE cid =", cluster);
-    }
-    if(proc != -1) {
-      sprintf(procpredicate, " %s %d ", "and pid =", proc);
+    if(numclusters > 0) {
+      sprintf(clusterpredicate, "%s%d)", " WHERE (cid = ", clusterarray[0]);
+      for(int i=1; i < numclusters; i++) {
+	 sprintf(temppredicate, "%s%d) ", " OR (cid = ", clusterarray[i]);
+	 strcat(clusterpredicate, temppredicate); 	 
+      }
+
+	 if(procarray[0] != -1) {
+            sprintf(procpredicate, "%s%d%s%d)", " WHERE (cid = ", clusterarray[0], " AND pid = ", procarray[0]);
+	 }
+	 else {
+            sprintf(procpredicate, "%s%d)", " WHERE (cid = ", clusterarray[0]);
+	 }
+	 
+	 // note that we really want to iterate till numclusters and not numprocs 
+	 // because procarray has holes and clusterarray does not
+         for(int i=1; i < numclusters; i++) {
+	    if(procarray[i] != -1) {
+	       sprintf(temppredicate, "%s%d%s%d) ", " OR (cid = ", clusterarray[i], " AND pid = ", procarray[i]);
+	       procpredicate = strcat(procpredicate, temppredicate); 	 
+            }
+	    else {
+	       sprintf(temppredicate, "%s%d) ", " OR (cid = ", clusterarray[i]);
+	       procpredicate = strcat(procpredicate, temppredicate); 	 
+            }
+	 }
     }
 
-    sprintf(procAds_str_query, "%s %s %s %s", 
+    sprintf(procAds_str_query, "%s %s %s", 
 	    "SELECT cid, pid, attr, val FROM ProcAds_Str", 
-	    clusterpredicate,
 	    procpredicate,
 	    "ORDER BY cid, pid;");
-    sprintf(procAds_num_query, "%s %s %s %s", 
+    sprintf(procAds_num_query, "%s %s %s", 
 	    "SELECT cid, pid, attr, val FROM ProcAds_Num",
-	    clusterpredicate,
 	    procpredicate,
 	    "ORDER BY cid, pid;");
     sprintf(clusterAds_str_query, "%s %s %s", 
@@ -427,8 +449,14 @@ PGSQLDatabase::getJobQueueDB(int cluster, int proc, char *owner, bool isfullscan
 
     free(clusterpredicate);
     free(procpredicate);
-
+    free(temppredicate);
   }
+
+  /*dprintf(D_ALWAYS, "clusterAds_str_query = %s\n", clusterAds_str_query);
+  dprintf(D_ALWAYS, "clusterAds_num_query = %s\n", clusterAds_num_query);
+  dprintf(D_ALWAYS, "procAds_str_query = %s\n", procAds_str_query);
+  dprintf(D_ALWAYS, "procAds_num_query = %s\n", procAds_num_query);*/
+
 	  // Query against ProcAds_Str Table
   if ((st = execQuery(procAds_str_query, procAdsStrRes, procAdsStrRes_num)) == FAILURE) {
 	  return FAILURE_QUERY_PROCADS_STR;

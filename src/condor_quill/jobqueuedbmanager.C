@@ -2369,14 +2369,14 @@ JobQueueDBManager::fillEscapeCharacters(char * str) {
 	j = 0;
 	for (i = 0; i < len; i++) {
 		switch(str[i]) {
+        case '\\':
+            newstr[j] = '\\';
+            newstr[j+1] = '\\';
+            j += 2;
+            break;
         case '\'':
             newstr[j] = '\\';
             newstr[j+1] = '\'';
-            j += 2;
-            break;
-        case '\t':
-            newstr[j] = '\\';
-            newstr[j+1] = 't';
             j += 2;
             break;
         default:

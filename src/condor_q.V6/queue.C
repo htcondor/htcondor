@@ -634,12 +634,18 @@ processCommandLineArguments (int argc, char *argv[])
 		if( *argv[i] != '-' ) {
 			// no dash means this arg is a cluster/proc, proc, or owner
 			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
-				Q.add(CQ_CLUSTER_ID, cluster);
-				Q.add(CQ_PROC_ID, proc);
+				sprintf( constraint, "((%s == %d) && (%s == %d))",
+					ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
+                                Q.addOR( constraint );
+   
+				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
+				Q.addDBConstraint(CQ_PROC_ID, proc);
 				summarize = 0;
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
-				Q.add(CQ_CLUSTER_ID, cluster);
+				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
+				Q.addOR( constraint );
+   				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				summarize = 0;
 			} 
 			else if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
@@ -762,7 +768,6 @@ processCommandLineArguments (int argc, char *argv[])
 
 			delete [] daemonname;
 			i++;
-//printf("setting querySchedds to true\n");
 			querySchedds = true;
 		} 
 		else

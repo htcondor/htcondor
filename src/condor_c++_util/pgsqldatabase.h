@@ -83,7 +83,7 @@ public:
 	QuillErrCode         releaseQueryResult();
 
 
-	QuillErrCode		 getJobQueueDB(int, int, char *, bool, 
+	QuillErrCode		 getJobQueueDB(int *, int, int *, int, char *, bool, 
 									   int&, int&, int&, int&);
 	const char*	         getJobQueueProcAds_StrValue(int row, int col);
 	const char*	         getJobQueueProcAds_NumValue(int row, int col);

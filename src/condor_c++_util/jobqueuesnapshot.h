@@ -41,8 +41,12 @@ public:
 	~JobQueueSnapshot();
 
 	//! prepare iteration of Job Ads in the job queue database
-	QuillErrCode startIterateAllClassAds(int cluster, int proc, 
-				    char *owner, bool isfullscan);
+	QuillErrCode startIterateAllClassAds(int *clusterarray, 
+					     int numclusters, 
+					     int *procarray, 
+					     int numprocs,
+				    	     char *owner, 
+					     bool isfullscan);
 	//! iterate one by one
 	QuillErrCode iterateAllClassAds(ClassAd*& ad);
 	//! release snapshot

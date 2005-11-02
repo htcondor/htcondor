@@ -148,6 +148,12 @@ doContactSchedd()
 									NULL,
 									error_msg };
 				enqueue_result (current_command->request_id, result, 3);
+			} else if (current_command->command == SchedDRequest::SDC_UPDATE_LEASE) {
+				const char * result[] = {
+									GAHP_RESULT_FAILURE,
+									error_msg,
+									NULL };
+				enqueue_result (current_command->request_id, result, 3);
 			} else {
 				const char * result[] = {
 									GAHP_RESULT_FAILURE,

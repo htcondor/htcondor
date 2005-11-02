@@ -89,7 +89,7 @@ public:
 		// Job Queue DB processing methods
 		//
 	//! get the queue from the database
-	virtual QuillErrCode        getJobQueueDB(int, int, char *, bool,
+	virtual QuillErrCode        getJobQueueDB(int *, int, int *, int, char *, bool,
 											  int&, int&, int&, int&) = 0;
 	//! get a value retrieved from ProcAds_Str table
 	virtual const char*         getJobQueueProcAds_StrValue(int row, 
