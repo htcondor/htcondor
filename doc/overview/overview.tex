@@ -381,25 +381,31 @@ Other compilers may work, but are not supported.
 \index{compilers!supported with condor\_compile}
 
 % condor_compile works on. . .
+% This table must be formatted oddly, to make the pdf version look OK.
 \begin{center}
 \begin{table}[hbt]
-\begin{tabular}{|ll|l}
+\begin{tabular}{|ll|l|}
 \textbf{Platform} & \textbf{Compiler} & \textbf{Notes}\\ \hline \hline
 Solaris (all versions) on SPARC \\ 
-& gcc, g++, and g77 & The entire GNU compiler suite must be versions 2.95.3 or 2.95.4. \\ 
+& gcc, g++, and g77 & The entire GNU compiler suite \\
+& & must be versions 2.95.3 or 2.95.4 \\ 
 & cc, CC & use the standard, native compiler \\ 
 & f77, f90 & use the standard, native compiler \\ 
 \hline
-Red Hat Linux, versions 7.2, and 7.3 on Intel x86 \\ 
-& gcc, g++, and g77 & as shipped \\ 
-& pgf77 and pgf90, version 5.0 & Portland Group compilers \\ 
-& pghpf, version 5.0 & Portland Group high performance Fortran compiler \\ 
+Red Hat Linux, versions 7.2, and 7.3 \\
+on Intel x86 & gcc, g++, and g77 & as shipped \\ 
+& pgf77 and pgf90, \\
+& version 5.0 & Portland Group compilers \\ 
+& pghpf, version 5.0 & Portland Group high performance \\
+& & Fortran compiler \\ 
 & pgcc, version 5.0 \\ 
 \hline
 Red Hat Linux, version 8 on x86 \\ 
 & gcc, g++, and g77 & version 3.2 \\ 
-& pgf77 and pgf90, version 5.0 & Portland Group compilers \\ 
-& pghpf, version 5.0 & Portland Group high performance Fortran compiler \\ 
+& pgf77 and pgf90, \\
+& version 5.0 & Portland Group compilers \\ 
+& pghpf, version 5.0 & Portland Group high performance \\
+& & Fortran compiler \\ 
 & pgcc, version 5.0 \\ 
 \hline
 Red Hat Linux, version 9 on x86 & gcc, g++, and g77 & as shipped  \\ 
@@ -414,9 +420,11 @@ Fedora Core 2 on x86 & gcc, g++, and g77 & as shipped  \\
 \hline
 Fedora Core 3 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
-& gcc, g++, and g77; version egcs-1.1.2 \\ 
-& cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
+HPUX 10.20 on HP PA-RISC \\
+(both PA7000 and PA8000) & gcc, g++, and g77; \\
+& version egcs-1.1.2 \\ 
+& cc, CC, aCC & cc and aCC cannot use C++ \\
+& & exceptions \\ 
 \hline
 % Digitial Unix 4.0 on ALPHA \\ 
 % & cc, CC, cxx, and c89 \\ 
@@ -445,9 +453,12 @@ supported, the support is automatic.
 Hewlett Packard PA-RISC with HPUX 10.20 & Yes \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 8, 9 & Yes \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) with IRIX 6.5 &  Yes \\ \hline
-Intel x86 with Red Hat Linux 7.1, 7.2, 7,3, 8.0, 9, Enterprise Linux 3, Debian Linux 3.1 (sarge) & Yes \\ 
+Intel x86 with Red Hat Linux 7.1, 7.2, 7,3, 8.0, 9 & Yes \\ 
+Intel x86 with Enterprise Linux 3, Debian Linux 3.1 (sarge) & Yes \\ 
 Intel x86 with Fedora Core 1, 2, 3 & Yes \\
-Intel x86 with Windows 2000 Professional and Server, 2003 Server (Win NT 5.0), Windows XP Professional (Win NT 5.1) & Yes \\ \hline
+Intel x86 with Windows 2000 Professional and Server  & Yes \\ 
+Intel x86 with 2003 Server (Win NT 5.0) & Yes \\ 
+Intel x86 with Windows XP Professional (Win NT 5.1) & Yes \\ \hline
 % ALPHA with Digital Unix 4.0 & No \\ \hline
 ALPHA with  Tru64 5.1  & No \\ 
 ALPHA with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
