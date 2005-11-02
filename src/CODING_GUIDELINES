@@ -1,3 +1,39 @@
+General Rules of Thumb:
+
+- Be wary of minor tweaks just to bring it into compliance with
+  these guidelines. If it's new code you just wrote, no problem.
+  But if it's older code you'll likely create large numbers of
+  conflicts that will need to be resolved in upcoming merges.
+  You'll also make the output of "cvs annotate" less useful;
+  you'll be listed as the last person to touch the code.  In
+  particular, don't mess with switching spaces to tabs and back.
+  Unless the code is deeply disfunctional, let the old warts
+  persist. That said, feel free to tweak the formatting of a line
+  you're editting anyway for some other purpose.
+
+- When in doubt, match the style of the file you're working on.
+  Condor's style is heavily inconsistant; at least try to
+  minimize inconsistancies within a single file.
+
+
+
+Class Members:
+
+- Class member variables should be prefixed with m_. This is the
+  only bit of Hungarian notation we specifically use.
+
+
+
+
+The remainder of this file is the original CODING_GUIDELINES from
+1994.  Much of it is still relevant, but it's 11 years old and
+hasn't been reviewed.  For example, you can probably ignore
+everything referring to coding with non-ANSI standard C
+compilers.  So give it a read, but take it with a grain of salt.
+
+
+
+
 Dear Colleagues,
 
 Following is a brief [sic] set of coding guidelines for Condor.  The
