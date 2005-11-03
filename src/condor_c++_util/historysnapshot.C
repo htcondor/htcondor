@@ -112,6 +112,7 @@ HistorySnapshot::getNextAd_Hor(AttrList*& ad)
 {
 	const char	*cid, *pid, *attr, *val;
 	char *expr;
+	int i;
 
 	if(cur_historyads_hor_index >= historyads_hor_num) {
 	  return DONE_HISTORY_CURSOR;
@@ -144,7 +145,7 @@ HistorySnapshot::getNextAd_Hor(AttrList*& ad)
 	int numfields = jqDB->getHistoryHorNumFields();
 
 		//starting from 2 as 0 and 1 are cid and pid respectively
-	for(int i=2; i < numfields; i++) {
+	for(i=2; i < numfields; i++) {
 	  attr = jqDB->getHistoryHorFieldName(i); // attr
 	  val = jqDB->getHistoryHorValue(cur_historyads_hor_index, i); // val
 	  

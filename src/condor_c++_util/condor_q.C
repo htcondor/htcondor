@@ -112,6 +112,8 @@ init()
 int CondorQ::
 addDBConstraint (CondorQIntCategories cat, int value) 
 {
+	int i;
+
 		// remember the cluster and proc values so that they can be pushed down to DB query
 	switch (cat) {
 	case CQ_CLUSTER_ID:
@@ -122,7 +124,7 @@ addDBConstraint (CondorQIntCategories cat, int value)
 					clusterprocarraysize * 2);
 		   procarray = (int *) realloc(procarray, 
 					clusterprocarraysize * 2);
-		   for(int i=clusterprocarraysize; 
+		   for(i=clusterprocarraysize; 
 				i < clusterprocarraysize * 2; i++) {
 		      clusterarray[i] = -1;
 		      procarray[i] = -1;
