@@ -49,6 +49,7 @@ extern void		_condor_dprintf_saved_lines( void );
 FILE *open_debug_file( int debug_level, char flags[] );
 
 #if HAVE_EXT_GCB
+void	_condor_gcb_dprintf_va( int flags, char* fmt, va_list args );
 extern void Generic_set_log_va(void(*app_log_va)(int level, char *fmt, va_list args));
 #endif
 
@@ -188,9 +189,27 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 		  platform where we're using the GCB external
 		*/
     if ( param_boolean_int("NET_REMAP_ENABLE", 0) ) {
-        Generic_set_log_va(_condor_dprintf_va);
+        Generic_set_log_va(_condor_gcb_dprintf_va);
     }
 #endif
 	_condor_dprintf_saved_lines();
 }
 
+
+#if HAVE_EXT_GCB
+void
+_condor_gcb_dprintf_va( int flags, char* fmt, va_list args )
+{
+	char* new_fmt;
+	int len;
+
+	len = strlen(fmt);
+	new_fmt = (char*) malloc( (len + 6) * sizeof(char) );
+	if( ! new_fmt ) {
+		EXCEPT( "_condor_gcb_dprintf_va() out of memory!" );
+	}
+	snprintf( new_fmt, len + 6, "GCB: %s", fmt );
+	_condor_dprintf_va( flags, new_fmt, args );
+	free( new_fmt );
+}
+#endif /* HAVE_EXT_GCB */
