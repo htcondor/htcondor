@@ -1869,11 +1869,11 @@ These macros control the \Condor{master}.
   seconds and defaults to 3600 (1 hour).
 
 \item[\Macro{MASTER\_RECOVER\_FACTOR}]
-  \label{param:MasterRecoverFactor}  A macro to set How long a daemon 
+  \label{param:MasterRecoverFactor}  A macro to set how long a daemon 
   needs to run without crashing before it is considered \emph{recovered}.
   Once a
   daemon has recovered, the number of restarts is reset, so the
-  exponential back off stuff returns to its initial state.  
+  exponential back off returns to its initial state.  
   The macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
 
@@ -1917,7 +1917,7 @@ the daemon crashing.
 If it stayed alive for
 \MacroUNI{MASTER\_RECOVER\_FACTOR} seconds (defaults to 5 minutes),
 the count of how many restarts this daemon has performed is reset to
-10 seconds.
+0.
 
 The moral of the example is that 
 the defaults work quite well, and you probably 
@@ -2137,7 +2137,7 @@ Configuring The Startd Policy.
   to the \Condor{collector}.  The startd also sends update on any
   state or activity change, or if the value of its \Expr{START} expression
   changes.  See section~\ref{sec:States} on \condor{startd}
-  States, section~\ref{sec:Activities} on \condor{startd}
+  states, section~\ref{sec:Activities} on \condor{startd}
   Activities, and section~\ref{sec:Start-Expr} on \condor{startd}
   \Expr{START} expression for details on states, activities, and the
   \Expr{START} expression.  This macro is defined in
@@ -2607,10 +2607,10 @@ used in other situations, as well.
 
 \item[\Macro{STARTD\_CRON\_modulename\_OPTIONS}]
 \label{param:StartdCronModuleOptions}
-    \item Several options are available. Using more than one
-    of these options for one module does not make sense.  If this happens,
-    the last one in the list is followed.  This is a colon separated
-    list of options.
+    A colon separated list of options. 
+    Not all combinations of options make sense;
+    when a nonsense combination is listed,
+    the last one in the list is followed.
 
     If \MacroNI{STARTD\_CRON\_NAME}
     is defined, then this configuration macro name is changed from
@@ -2640,11 +2640,11 @@ used in other situations, as well.
 use of it:
 \begin{verbatim}
 # Hawkeye Job Definitions
-HAWKEYE_JOBLIST   =
+STARTD_CRON_NAME = HAWKEYE
 
 # Job 1
-HAWKEYE_JOBLIST = $(HAWKEYE_JOBLIST) job1
-HAKWEYE_job1_PREFX = prefix_
+HAWKEYE_JOBLIST = job1
+HAKWEYE_job1_PREFIX = prefix_
 HAKWEYE_job1_EXECUTABLE = $(MODULES)/job1
 HAKWEYE_job1_PERIOD = 5m
 HAKWEYE_job1_MODE = WaitForExit
@@ -2747,24 +2747,24 @@ below will be misinterpreted and will not work as expected:
 \begin{verbatim}
 # Hawkeye Job Definitions
 HAWKEYE_JOBS   =\
-    job1:prefix_:$(MODULES)/job1:5m:nokill\
-    job2:prefix_:$(MODULES)/job1_co:1h
+    JOB1:prefix_:$(MODULES)/job1:5m:nokill\
+    JOB2:prefix_:$(MODULES)/job1_co:1h
 HAWKEYE_JOB1_ARGS =-foo -bar
 HAWKEYE_JOB1_ENV = xyzzy=somevalue
 HAWKEYE_JOB2_ENV = lwpi=somevalue
 \end{verbatim}
-Instead, you should write this as below:
+Instead, write this as below:
 \begin{verbatim}
 # Hawkeye Job Definitions
 HAWKEYE_JOBS   =
 
 # Job 1
-HAWKEYE_JOBS = $(HAWKEYE_JOBS) job1:prefix_:$(MODULES)/job1:5m:nokill
+HAWKEYE_JOBS = $(HAWKEYE_JOBS) JOB1:prefix_:$(MODULES)/job1:5m:nokill
 HAWKEYE_JOB1_ARGS =-foo -bar
 HAWKEYE_JOB1_ENV = xyzzy=somevalue
 
 # Job 2
-HAWKEYE_JOBS = $(HAWKEYE_JOBS) job2:prefix_:$(MODULES)/job2:1h
+HAWKEYE_JOBS = $(HAWKEYE_JOBS) JOB2:prefix_:$(MODULES)/job2:1h
 HAWKEYE_JOB2_ENV = lwpi=somevalue
 \end{verbatim}
 
