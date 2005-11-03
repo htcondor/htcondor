@@ -2975,7 +2975,7 @@ These macros control the \Condor{schedd}.
   during a certain period of time (defined via
   \Macro{MAX\_CLAIM\_ALIVES\_MISSED}, described on
   page~\pageref{param:MaxClaimAlivesMissed})
-  the startd releases the claim, and the schedd is no longer pays for
+  the startd releases the claim, and the schedd no longer pays for
   the resource (in terms of user priority in the system).
   The macro is defined in terms of seconds and defaults to 300 (every
   5 minutes).
@@ -3401,10 +3401,17 @@ Defaults to 1200 (20 minutes).
   arguments.
   For example the argument "argument one" will become the two arguments
   "argument" and "one".
-  For Bourne shells, the following preserves the arguments:
+  For Bourne type shells (sh, bash, ksh),
+  the following preserves the arguments:
 \begin{verbatim}
         exec "$@"
 \end{verbatim}
+  For the C type shells (csh, tcsh), the following preserves the
+  arguments:
+\begin{verbatim}
+        exec $*:q
+\end{verbatim}
+
 
   For Windows machines, the wrapper will either be
   a batch script (with a file extension of \File{.bat} or \File{.cmd})
