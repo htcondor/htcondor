@@ -139,7 +139,8 @@ machine.  For Condor \VersionNotice\ typically one of the following:
 	\item[\AdStr{IRIX6}] : for IRIX 6.2, 6.3, or 6.4
 	\item[\AdStr{IRIX65}] : for IRIX 6.5
 	\item[\AdStr{IRIX62}] : for IRIX 6.2
-	\item[\AdStr{LINUX}] : for LINUX 2.0.x or LINUX 2.2.x kernel systems
+	\item[\AdStr{LINUX}] : for LINUX 2.0.x, LINUX 2.2.x,
+	LINUX 2.4.x, or LINUX 2.6.x kernel systems
 	\item[\AdStr{OSF1}] : for Digital Unix 4.x
 	\item[\AdStr{SOLARIS25}] : for Solaris 2.4 or 5.5
 	\item[\AdStr{SOLARIS251}] : for Solaris 2.5.1 or 5.5.1
@@ -269,7 +270,7 @@ attributes will be defined.
 
 \index{ClassAd machine attribute (when running)!JobId}
 \item[\AdAttr{JobId}] : The job's identifier (for example,
-\begin{verbatim}152.3\end{verbatim}), like you would see in \Condor{q}
+\verb@152.3@), as seen from \Condor{q}
 on the submitting machine.
 
 \index{ClassAd machine attribute (when running)!JobStart}
