@@ -381,6 +381,7 @@ PGSQLDatabase::getJobQueueDB(int *clusterarray, int numclusters, int *procarray,
   char *procAds_str_query, *procAds_num_query, *clusterAds_str_query, *clusterAds_num_query;
   char *clusterpredicate, *procpredicate, *temppredicate;
   QuillErrCode st;
+  int i;
 
   procAds_str_query = (char *) malloc(MAX_FIXED_SQL_STR_LENGTH * sizeof(char));
   procAds_num_query = (char *) malloc(MAX_FIXED_SQL_STR_LENGTH * sizeof(char));
@@ -404,7 +405,7 @@ PGSQLDatabase::getJobQueueDB(int *clusterarray, int numclusters, int *procarray,
 
     if(numclusters > 0) {
       sprintf(clusterpredicate, "%s%d)", " WHERE (cid = ", clusterarray[0]);
-      for(int i=1; i < numclusters; i++) {
+      for(i=1; i < numclusters; i++) {
 	 sprintf(temppredicate, "%s%d) ", " OR (cid = ", clusterarray[i]);
 	 strcat(clusterpredicate, temppredicate); 	 
       }
@@ -418,7 +419,7 @@ PGSQLDatabase::getJobQueueDB(int *clusterarray, int numclusters, int *procarray,
 	 
 	 // note that we really want to iterate till numclusters and not numprocs 
 	 // because procarray has holes and clusterarray does not
-         for(int i=1; i < numclusters; i++) {
+         for(i=1; i < numclusters; i++) {
 	    if(procarray[i] != -1) {
 	       sprintf(temppredicate, "%s%d%s%d) ", " OR (cid = ", clusterarray[i], " AND pid = ", procarray[i]);
 	       procpredicate = strcat(procpredicate, temppredicate); 	 
