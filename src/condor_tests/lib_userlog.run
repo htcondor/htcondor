@@ -32,7 +32,7 @@ $testname = 'Test user log - write all events and expect to read the same';
 );
 
 system("rm -f local.log");
-my $stats = system("x_write_joblog.exe");
+my $stats = system("./x_write_joblog.exe");
 if($stats != 0)
 {
 	if( -e "x_write_joblog.exe" )

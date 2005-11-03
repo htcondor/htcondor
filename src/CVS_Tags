@@ -1,3 +1,13 @@
+11/03/05 V6_6-merge-50
+   The state of the V6_6-branch for a merge into V6_7-branch.  moves
+   todd's new "jobs define their own JOB_START_DELAY" feature from
+   V6_6 into V6_7 (though it conflicts heavily with changes in V6_7,
+   so for now, it's commented out), some minor condor_tests fixes, and
+   nmi_glue changes to use the version of condor_nmi_submit from the
+   build's run directory, not a hard-coded path on grandcentral.
+   This *should* be the final V6_6 -> V6_7 merge before the 6.7.13
+   release (which was previously delayed for a number of reasons).
+
 11/02/05 V6_7_13-merge-1
    The state of the V6_7_13-branch for a merge into V6_7-branch.  The
    original V6_7_13-branch was supposed to be abandoned, but folks

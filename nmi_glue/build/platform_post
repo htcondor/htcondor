@@ -1,10 +1,11 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.4.7 2005-10-13 22:35:46 wright Exp $
+# $Id: platform_post,v 1.1.4.8 2005-11-03 22:14:14 wright Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
+use POSIX;
 use Getopt::Long;
 use vars qw/ $opt_without_tests $opt_test_args /;
 GetOptions(
@@ -18,13 +19,19 @@ GetOptions(
 # the results.  until Condor's file transfer mechanism preserves
 # permissions, we'll have to use this hack. :(
 
+print "Running 'chmod a+r *' to make build output world readable\n";
 system("chmod a+r *");
+
+print "Initializing values from the environment\n";
+my $platform = $ENV{NMI_PLATFORM};
+print "ENV: NMI_PLATFORM = $platform\n";
+$platform || die "No platform to use, NOT submitting tests\n";
 
 # until we do a big day of reckoning for condor_tests and win32, we
 # know all the current test infrastructure will fail on that
 # platform.  so, for now, just exit success without submitting a test
 # job on win32...
-if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+if( $platform eq "x86_winnt_5.1" ) {
     print "NOT submitting tests for windows\n";
     exit 0;
 }
@@ -36,30 +43,60 @@ if( defined $opt_without_tests ) {
 
 if( defined $opt_test_args ) {
     print "--test-args specified on command-line, additional args for " 
-	. "condor_nmi_submit:\n   '$opt_test_args'\n";
+        . "condor_nmi_submit:\n   '$opt_test_args'\n";
 }   
 
 my $tag = $ENV{NMI_tag};
 my $module = $ENV{NMI_module};
-print "From the environment: tag = $tag\n";
-print "From the environment: module = $module\n";
-my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
-chomp $runid;
+my $gid = $ENV{_NMI_GID};
+print "ENV: NMI_tag = $tag\n";
+print "ENV: NMI_module = $module\n";
+print "ENV: _NMI_GID = $gid\n";
 
 $tag || die "No tag to use, NOT submitting tests\n";
 $module || die "No module to use, NOT submitting tests\n";
-$runid || die "No runid to use, NOT submitting tests\n";
+$gid || die "No gid to use, NOT submitting tests\n";
 
-print "Submitting test job for platform: '$ENV{NMI_PLATFORM}' "
+my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
+chomp $runid;
+$runid || die "Can't find runid from gid, NOT submitting tests\n";
+
+print "Attempting to submit test job for platform: '$platform' "
     . "runid: '$runid' ...\n";
 
-my $cmd = "/nmi/bin/condor_nmi_submit --test " . 
-          "--buildid=$runid --platform=$ENV{NMI_PLATFORM} " .
-	  "--tag=$tag --module=$module $opt_test_args";
+# path to the condor_nmi_submit binary we're planning to use
+my $cns = "nmi_tools/condor_nmi_submit";
+-f $cns || die "Can't submit tests: $cns does not exist\n";
+if( ! -x $cns ) {
+    chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
+        . "and chmod() failed: $!\n";
+}
 
-system( $cmd );
+my $cmd = "$cns --test --buildid=$runid --platform=$platform " .
+          "--tag=$tag --module=$module $opt_test_args";
+
+print "Invoking CNS ($cmd)\n";
+open( CNS, "$cmd|" ) || 
+    die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
+while( <CNS> ) {
+    print "CNS: $_";
+}
+close( CNS );
 my $status = $?;
-if( $status ) {
-    die "condor_nmi_submit --test failed with status $status\n";
+
+if( ! $status ) {
+    # exited with status 0, we're happy
+    print "platform_post: SUCCESS\n";
+    exit 0;
+}
+
+if( $status == -1 ) {
+    die "$cns failed to execute: $!";
+} elsif( WIFEXITED($status) ) {
+    die "$cns exited with status " . WEXITSTATUS($status);
+} elsif( WIFSIGNALED($status) ) {
+    die "$cns died with signal " . WTERMSIG($status);
+} else {
+    die "$cns returned unrecognized status: $status";
 }
 

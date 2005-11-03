@@ -3,12 +3,13 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.4.17 2005-10-13 22:35:47 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.4.18 2005-11-03 22:14:14 wright Exp $
 #
 ######################################################################
 
 package CondorGlue;
 
+use POSIX;
 
 sub parseTag
 {
@@ -70,7 +71,7 @@ sub statusString
     if( $status == -1 ) {
         return "failed to execute: $!";
     } elsif( WIFEXITED($status) ) {
-        return "exited with status: " . WEXITVALUE($status);
+        return "exited with status: " . WEXITSTATUS($status);
     } elsif( WIFSIGNALED($status) ) {
         return "died with signal: " . WTERMSIG($status);
     } else {

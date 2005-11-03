@@ -433,7 +433,7 @@ private:
 	void			preempt( int n, bool force_sched_jobs = false );
 	void			attempt_shutdown();
 	static void		refuse( Stream* s );
-	void			tryNextJob( void );
+	void			tryNextJob( int secs = -1 );
 	int				jobThrottle( void );
 	void			initLocalStarterDir( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );

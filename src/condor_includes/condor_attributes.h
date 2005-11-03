@@ -273,6 +273,7 @@ const char ATTR_NAME                     [] = "Name";
 const char ATTR_NICE_USER			 	 [] = "NiceUser";
 const char ATTR_NEGOTIATOR_REQUIREMENTS  [] = "NegotiatorRequirements";
 const char ATTR_NEXT_CLUSTER_NUM		 [] = "NextClusterNum";
+const char ATTR_NEXT_JOB_START_DELAY	 [] = "NextJobStartDelay";
 const char ATTR_NODE					 [] = "Node";
 const char ATTR_NOTIFY_USER				 [] = "NotifyUser";
 const char ATTR_NOTIFY_JOB_SCHEDULER     [] = "NotifyJobScheduler";

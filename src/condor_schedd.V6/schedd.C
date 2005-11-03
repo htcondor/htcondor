@@ -6214,17 +6214,42 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	    (universe == CONDOR_UNIVERSE_PARALLEL) ){
 		dedicated_scheduler.shadowSpawned( srec );
 	}
+/*
+  CVS conflict ... too complicated to resolve just inside a specific
+  "merged V6_6 -> V6_7" check-in.  Todd's feature is hereby crippled
+  (for now) and i'll fix it for real in a forthcoming commit.  -derek
+
+	int delay = JobStartDelay;
+	if (jobAd) {
+		jobAd->EvalInteger(ATTR_NEXT_JOB_START_DELAY,NULL,delay);
+	}	
+	tryNextJob(delay);
+*/
 }
 
 
 void
-Scheduler::tryNextJob( void )
+Scheduler::tryNextJob( int secs )
 {
+/*
+  CVS conflict... see below. -derek 
+	int delay = MAX(secs, JobStartDelay);
+*/
 		// Re-set timer if there are any jobs left in the queue
 	if( !RunnableJobQueue.IsEmpty() ) {
+/*
+  CVS conflict... see below. -derek 
+		dprintf(D_FULLDEBUG,
+			"Will delay %d seconds until next shadow spawn\n",delay);
+*/
 		StartJobTimer = daemonCore->
 		// Queue the next job start via the daemoncore timer.  jobThrottle()
 		// implements job bursting, and returns the proper delay for the timer.
+/*
+  CVS conflict ... too complicated to resolve just inside a specific
+  "merged V6_6 -> V6_7" check-in.  Todd's feature is hereby crippled
+  (for now) and i'll fix it for real in a forthcoming commit.  -derek
+*/ 
 			Register_Timer( jobThrottle(),
 							(Eventcpp)&Scheduler::StartJobHandler,
 							"start_job", this ); 
