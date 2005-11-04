@@ -173,6 +173,7 @@ bool
 RequestService::parseConstraint(const char *constraint, 
 				int *&clusterarray, int &numclusters, 
 				int *&procarray, int &numprocs, char *owner) {
+  int i;
   char *ptrC, *ptrP, *ptrT;
   int index_rparen=0, length=0, clusterprocarraysize;
   bool isfullscan = false;
@@ -188,9 +189,9 @@ RequestService::parseConstraint(const char *constraint,
 
   clusterprocarraysize = 128;
   clusterarray = (int *) malloc(clusterprocarraysize * sizeof(int));
-  for(int i=0; i < clusterprocarraysize; i++) clusterarray[i] = -1;
+  for(i=0; i < clusterprocarraysize; i++) clusterarray[i] = -1;
   procarray = (int *) malloc(clusterprocarraysize * sizeof(int));  
-  for(int i=0; i < clusterprocarraysize; i++) procarray[i] = -1; 
+  for(i=0; i < clusterprocarraysize; i++) procarray[i] = -1; 
   numclusters = 0;
   numprocs = 0;  
 
@@ -201,7 +202,7 @@ RequestService::parseConstraint(const char *constraint,
     sscanf(ptrC, "%d", &(clusterarray[0]));
     numclusters++;
     ptrC -= 13;
-    for(int i=0; i < index_rparen; i++) ptrC[i] = ' ';
+    for(i=0; i < index_rparen; i++) ptrC[i] = ' ';
   }
   ptrP = strstr( temp_constraint, "ProcId == ");
   if(ptrP != NULL) {
@@ -210,7 +211,7 @@ RequestService::parseConstraint(const char *constraint,
     sscanf(ptrP, "%d", &(procarray[0]));
     numprocs++;
     ptrP -= 10;
-    for(int i=0; i < index_rparen; i++) ptrP[i] = ' ';
+    for(i=0; i < index_rparen; i++) ptrP[i] = ' ';
   }
   
   /* turns out that since we have a vertical schema, we can only
@@ -226,7 +227,7 @@ RequestService::parseConstraint(const char *constraint,
 	 ptrO += 17;
 	 sscanf(ptrO, "%s", owner);
 	 ptrO -= 17;
-	 for(int i=0; i < index_rparen; i++) ptrO[i] = ' ';
+	 for(i=0; i < index_rparen; i++) ptrO[i] = ' ';
 	 index_equals = strchr(owner, '"') - owner;
     owner[index_equals] = '\0';
 	}
@@ -234,11 +235,11 @@ RequestService::parseConstraint(const char *constraint,
   
   ptrT = strstr( temp_constraint, "TRUE");
   if(ptrT != NULL) {
-	  for(int i=0; i < 4; i++) ptrT[i] = ' ';
+	  for(i=0; i < 4; i++) ptrT[i] = ' ';
   }
     
   length = strlen(temp_constraint);
-  for(int i=0; i < length; i++) {
+  for(i=0; i < length; i++) {
     if(isalnum(temp_constraint[i])) {
       isfullscan = true;
       break;
