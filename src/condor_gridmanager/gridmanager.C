@@ -857,7 +857,7 @@ contact_schedd_next_add_job:
 
 			} else {
 
-				dprintf( D_ALWAYS, "Don't know about held job %d.%d. "
+				dprintf( D_ALWAYS, "Don't know about held/completed job %d.%d. "
 						 "Ignoring it\n",
 						 procID.cluster, procID.proc );
 
