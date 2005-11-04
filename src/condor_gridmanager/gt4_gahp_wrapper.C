@@ -112,6 +112,12 @@ main( int argc, char* argv[] ) {
 	buff.sprintf ("-DX509_USER_PROXY=%s", user_proxy.Value());
 	command_line.append (buff.Value());
 
+	char *cacertdir = param ("GSI_DAEMON_TRUSTED_CA_DIR");
+	if ( cacertdir ) {
+		buff.sprintf( "-DX509_CERT_DIR=%s", cacertdir );
+		command_line.append( buff.Value() );
+	}
+
 	const char *port_range = GetEnv( "GLOBUS_TCP_PORT_RANGE" );
 	if ( port_range != NULL ) {
 		buff.sprintf( "-DGLOBUS_TCP_PORT_RANGE=%s", port_range );
