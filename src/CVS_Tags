@@ -1,3 +1,7 @@
+11/04/05 V6_7-db_logs_nonblocking-3-branch
+   Another branch for the "quill++" work.  This one comes
+   from V6_7_13-2-root.
+
 11/04/05 V6_7_13-2-branch
    The real release branch for the 6.7.13 release.  because of the
    previous failed attempt on V6_7_13-branch, we have to use this
