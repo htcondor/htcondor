@@ -403,7 +403,7 @@ CStarter::createTempExecuteDir( void )
 		dirperm.init(nobody_login);
 		bool ret_val = dirperm.set_acls( WorkingDir );
 		if ( !ret_val ) {
-			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY");
+			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
 			return false;
 		}
