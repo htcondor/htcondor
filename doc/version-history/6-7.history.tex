@@ -32,6 +32,10 @@ The details of each version are described below.
 \item Fixed a bug that could cause the \Condor{gridmanager} to crash when
 a job using job leases left the queue.
 
+\item Fixed a bug that could cause the \Condor{schedd} to repeatedly start
+the \Condor{gridmanager} to manage jobs that were complete. This would
+happen when LeaveJobInQueue evaluated to True.
+
 \item When \Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR} is set, pass the setting
 down to the gt4 gahp server.
 
