@@ -495,7 +495,7 @@ V6_7_13_EXT	-a V6_7_COMMON_EXT \
 V6_7_14_EXT	-a V6_7_13_EXT
 
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_13_EXT
+V6_7_EXT	-a V6_7_14_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
