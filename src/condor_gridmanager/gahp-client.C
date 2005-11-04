@@ -32,6 +32,7 @@
 #include "condor_xml_classads.h"
 #include "condor_new_classads.h"
 #include "gahp_common.h"
+#include "env.h"
 
 #include "gahp-client.h"
 #include "gridmanager.h"
@@ -536,7 +537,7 @@ GahpServer::Startup()
 	int stderr_pipefds[2];
 	int low_port;
 	int high_port;
-	char *newenv = NULL;
+	Env newenv;
 
 		// Check if we already have spawned a GAHP server.  
 	if ( m_gahp_pid != -1 ) {
@@ -567,10 +568,12 @@ GahpServer::Startup()
 
 	if (!gahp_path) return false;
 
+	newenv.Put( "GAHP_TEMP", GridmanagerScratchDir );
+
 	if ( get_port_range( &low_port, &high_port ) == TRUE ) {
-		newenv = (char *)malloc( 64 );
-		snprintf( newenv, 64, "GLOBUS_TCP_PORT_RANGE=%d,%d", low_port,
-				  high_port );
+		MyString buff;
+		buff.sprintf( "%d.%d", low_port, high_port );
+		newenv.Put( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
 	}
 
 		// Now register a reaper, if we haven't already done so.
@@ -596,7 +599,6 @@ GahpServer::Startup()
 			errno);
 		free( gahp_path );
 		if (gahp_args) free(gahp_args);
-		if (newenv) free(newenv);
 		return false;
 	}
 
@@ -611,7 +613,7 @@ GahpServer::Startup()
 			PRIV_UNKNOWN,	// Priv State ---- keep the same 
 			m_reaperid,		// id for our registered reaper
 			FALSE,			// do not want a command port
-			newenv,			// env
+			newenv.getDelimitedString(),	// env
 			NULL,			// cwd
 			FALSE,			// new process group?
 			NULL,			// network sockets to inherit
@@ -623,7 +625,6 @@ GahpServer::Startup()
 				gahp_path);
 		free( gahp_path );
 		if (gahp_args) free(gahp_args);
-		if (newenv) free(newenv);
 		m_gahp_pid = -1;
 		return false;
 	} else {
@@ -632,7 +633,6 @@ GahpServer::Startup()
 
 	free( gahp_path );
 	if (gahp_args) free(gahp_args);
-	if (newenv) free(newenv);
 
 		// Now that the GAHP server is running, close the sides of
 		// the pipes we gave away to the server, and stash the ones
