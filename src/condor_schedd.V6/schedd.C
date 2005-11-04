@@ -136,6 +136,7 @@ bool sandboxHasRightOwner( int cluster, int proc, ClassAd* job_ad );
 bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
+bool jobManagedDone(ClassAd * ad);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
@@ -1026,11 +1027,11 @@ count( ClassAd *job )
 	job->LookupString(ATTR_MIRROR_SCHEDD,&mirror_schedd_name);
 	if ( mirror_schedd_name ) {
 			// We have a mirrored job
-		int job_managed = jobExternallyManaged(job);
+		bool job_managed = jobExternallyManaged(job);
 		bool needs_management = true;
 			// if job is held or completed and not managaged, don't worry about it.
 		if ( ( status==HELD || status==COMPLETED || status==REMOVED ) &&
-			 (job_managed==0 ) ) 
+			 (job_managed==false ) ) 
 		{
 			needs_management = false;
 		}
@@ -1098,19 +1099,22 @@ count( ClassAd *job )
 		int needs_management = 0;
 		int real_status = status;
 		bool want_service = service_this_universe(universe,job);
-		int job_managed = jobExternallyManaged(job);
+		bool job_managed = jobExternallyManaged(job);
+		bool job_managed_done = jobManagedDone(job);
 		// if job is not already being managed : if we want matchmaking 
 		// for this job, but we have not found a 
 		// match yet, consider it "held" for purposes of the logic here.  we
 		// have no need to tell the gridmanager to deal with it until we've
 		// first found a match.
-		if ( (job_managed == 0) && (want_service && cur_hosts == 0) ) {
+		if ( (job_managed == false) && (want_service && cur_hosts == 0) ) {
 			status = HELD;
 		}
 		// if status is REMOVED, but the remote job id is not null,
 		// then consider the job IDLE for purposes of the logic here.  after all,
 		// the gridmanager needs to be around to finish the task of removing the job.
-		if ( status == REMOVED ) {
+		// if the gridmanager has set Managed="ScheddDone", then it's done
+		// with the job and doesn't want to see it again.
+		if ( status == REMOVED && job_managed_done == false ) {
 			char job_id[20];
 			if ( job->LookupString( ATTR_GRID_JOB_ID, job_id,
 									sizeof(job_id) ) )
@@ -1123,12 +1127,15 @@ count( ClassAd *job )
 		}
 
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
-		if ( status != HELD || job_managed != 0 ) 
+		// Don't count jobs that the gridmanager has said it's completely
+		// done with.
+		if ( ( status != HELD || job_managed != false ) &&
+			 job_managed_done == false ) 
 		{
 			needs_management = 1;
 			scheduler.Owners[OwnerNum].GlobusJobs++;
 		}
-		if ( status != HELD && job_managed == 0 ) 
+		if ( status != HELD && job_managed == 0 && job_managed_done == 0 ) 
 		{
 			scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
 		}
@@ -1197,8 +1204,7 @@ service_this_universe(int universe, ClassAd* job)
 			{
 				// If this Globus job is already being managed, then the schedd
 				// should leave it alone... the gridmanager is dealing with it.
-				int job_managed = jobExternallyManaged(job);
-				if ( job_managed ) {
+				if ( jobExternallyManaged(job) ) {
 					return false;
 				}			
 				// Now if not managed, if GridResource has a "$$", then this
@@ -1256,7 +1262,7 @@ handle_mirror_job_notification(ClassAd *job_ad, int mode, PROC_ID & job_id)
 	job_ad->LookupString(ATTR_MIRROR_SCHEDD,&mirror_schedd_name);
 	if ( mirror_schedd_name ) {
 			// We have a mirrored job
-		int job_managed = jobExternallyManaged(job_ad);
+		bool job_managed = jobExternallyManaged(job_ad);
 			// If job_managed is true, then notify the gridmanager.
 			// Special case: if job_managed is false, but the job is being removed
 			// still has a mirror job id,
@@ -1271,7 +1277,7 @@ handle_mirror_job_notification(ClassAd *job_ad, int mode, PROC_ID & job_id)
 				// looks like the mirror job id is still valid,
 				// so there is still a job submitted remotely somewhere.
 				// fire up the gridmanager to try and really clean it up!
-				job_managed = 1;
+				job_managed = true;
 			}
 		}
 		if ( job_managed  ) {
@@ -1357,19 +1363,21 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 		// Handle Globus Universe
 	if (job_universe == CONDOR_UNIVERSE_GRID) {
-		int job_managed = jobExternallyManaged(job_ad);
+		bool job_managed = jobExternallyManaged(job_ad);
+		bool job_managed_done = jobManagedDone(job_ad);
 			// If job_managed is true, then notify the gridmanager and return.
 			// If job_managed is false, we will fall through the code at the
 			// bottom of this function will handle the operation.
-			// Special case: if job_managed is false, but the job being removed
-			// and the remote job id string is still valid, 
-			// then consider the job still "managed" so
+			// Special case: if job_managed and job_managed_done are false,
+			// but the job is being removed and the remote job id string is
+			// still valid, then consider the job still "managed" so
 			// that the gridmanager will be notified.  
 			// If the remote job id is still valid, that means there is
 			// still a job remotely submitted that has not been removed.  When
 			// the gridmanager confirms a job has been removed, it will
-			// delete ATTR_GRID_JOB_ID from the ad.
-		if (!job_managed && mode==REMOVED ) {
+			// delete ATTR_GRID_JOB_ID from the ad and set Managed to
+			// ScheddDone.
+		if ( !job_managed && !job_managed_done && mode==REMOVED ) {
 			char job_id[20];
 			if ( job_ad->LookupString( ATTR_GRID_JOB_ID, job_id,
 									   sizeof(job_id) ) )
@@ -1377,7 +1385,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.
 				// fire up the gridmanager to try and really clean it up!
-				job_managed = 1;
+				job_managed = true;
 			}
 		}
 		if ( job_managed  ) {
@@ -10858,6 +10866,16 @@ bool jobExternallyManaged(ClassAd * ad)
 		return false;
 	}
 	return job_managed == MANAGED_EXTERNAL;
+}
+
+bool jobManagedDone(ClassAd * ad)
+{
+	ASSERT(ad);
+	MyString job_managed;
+	if( ! ad->LookupString(ATTR_JOB_MANAGED, job_managed) ) {
+		return false;
+	}
+	return job_managed == MANAGED_DONE;
 }
 
 
