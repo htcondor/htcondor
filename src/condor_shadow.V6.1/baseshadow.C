@@ -485,125 +485,6 @@ BaseShadow::removeJob( const char* reason )
 	DC_Exit( JOB_SHOULD_REMOVE );
 }
 
-//Move output data from intermediate files to user-specified locations.
-//This happens in "transfer file" mode when the stdout or stderr
-//files specified by the user contain path information.
-void
-BaseShadow::moveOutputFiles( void )
-{
-    char* orig_output = NULL;
-    char* output = NULL;
-    char* orig_error = NULL;
-    char* error = NULL;
-    char* should_transfer_str = NULL;
-	ShouldTransferFiles_t should_transfer = STF_NO;
-	bool wants_verbose = true;
-
-		// if we're in transfer IF_NEEDED mode, we don't want verbose
-		// dprintfs from moveOutputFile(), since we expect it to fail
-		// if we didn't use file transfer in this run...
-	if( jobAd->LookupString(ATTR_SHOULD_TRANSFER_FILES, 
-							&should_transfer_str) ) { 
-		should_transfer = getShouldTransferFilesNum( should_transfer_str );
-		if( should_transfer == STF_IF_NEEDED ) {
-			wants_verbose = false;
-		}
-		free( should_transfer_str );
-	}
-
-    jobAd->LookupString( ATTR_JOB_OUTPUT, &output );
-    jobAd->LookupString( ATTR_JOB_ERROR, &error );
-    jobAd->LookupString( ATTR_JOB_OUTPUT_ORIG, &orig_output );
-    jobAd->LookupString( ATTR_JOB_ERROR_ORIG, &orig_error );
-
-    //First move stdout data.
-    if( orig_output && output ) {
-		moveOutputFile( output, orig_output, wants_verbose );
-	}
-
-    //Now move stderr data (unless it is the same file as stdout).
-    if( orig_error && error && strcmp(error,output) != 0 ) {
-		moveOutputFile( error, orig_error, wants_verbose );
-	}
-
-	if( output ) { 
-		free( output );
-	}
-	if( orig_output ) { 
-		free( orig_output );
-	}
-	if( error ) { 
-		free( error );
-	}
-	if( orig_error ) { 
-		free( orig_error );
-	}
-}
-
-
-void
-BaseShadow::moveOutputFile( const char* in, const char* out, bool verbose )
-{
-	int in_fd = -1, out_fd = -1;
-
-	in_fd = open(in,O_RDONLY);
-	if( in_fd == -1 ) {
-		if( verbose ) { 
-			dprintf( D_ALWAYS,
-					 "moveOutputFile: failed to read from '%s': %s\n",
-					 in, strerror(errno) );
-		}
-		return;
-	}
-
-	out_fd = open(out,O_WRONLY|O_CREAT|O_TRUNC);
-	if( out_fd == -1 ) {
-		if( verbose ) { 
-			dprintf( D_ALWAYS, "moveOutputFile: failed to write to "
-					 "'%s': %s\n", out, strerror(errno) );
-		}
-		close( in_fd );
-		return;
-	}
-	
-		// Copy the data, rather than just moving the files,
-		// because there are too many subtle problems with just
-		// doing rename().
-
-		// the rest of the errors in here mean we found the files and
-		// are trying to move the data but we still had a problem.  we
-		// want to see these messages even if we were called with
-		// verbose == false
-
-	char buf[100];
-	int n_in,n_out;
-	bool do_removal = true;
-	
-	while( (n_in = read(in_fd,buf,sizeof(buf))) > 0 ) {
-		n_out = write(out_fd,buf,n_in);
-		if( n_out != n_in ) {
-			dprintf( D_ALWAYS, "moveOutputFile: failed to write to "
-					 "'%s': %s\n", out, strerror(errno));
-			do_removal = false;
-		}
-	}
-
-	if( n_in == -1 ) {
-		dprintf( D_ALWAYS, "moveOutputFiles: failed to read '%s': "
-				 "%s\n", in, strerror(errno) );
-		do_removal = false;
-	}
-
-	close( in_fd );
-	close( out_fd );
-
-	if( do_removal && remove(in) == -1 ) {
-		dprintf( D_ALWAYS, "moveOutputFile: failed to remove '%s': "
-				 "%s\n", in, strerror(errno) );
-	}
-}
-
-
 void
 BaseShadow::terminateJob( void )
 {
@@ -622,9 +503,6 @@ BaseShadow::terminateJob( void )
 			 getCluster(), getProc(), 
 			 signaled ? "killed by signal" : "exited with status",
 			 signaled ? exitSignal() : exitCode() );
-
-	//move intermediate stdout/stderr if necessary
-	moveOutputFiles();
 
 		// email the user
 	emailTerminateEvent( reason );

@@ -176,6 +176,15 @@ int filename_remap_find( const char *input, const char *filename, char *output )
 	return 0;
 }
 
+int is_relative_to_cwd( const char *path )
+{
+	if(*path == DIR_DELIM_CHAR) return 0;
+#ifdef WIN32
+	if(('A' <= toupper(*path) && toupper(*path) <= 'Z') && path[1] == ':') return 0;
+#endif
+	return 1;
+}
+
 int filename_split( const char *path, char *dir, char *file )
 {
 	char *last_slash;

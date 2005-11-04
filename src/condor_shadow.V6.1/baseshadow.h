@@ -359,15 +359,6 @@ class BaseShadow : public Service
 
 	virtual void emailTerminateEvent( int exitReason ) = 0;
 
-		// move output data from intermediate files to user-specified
-		// locations
-	void moveOutputFiles( void );
-
-		// since all the work is identical for the stdout and stderr
-		// files, i put all the code into its own method so it can be
-		// shared between the two...
-	void moveOutputFile( const char* in, const char* out, bool verbose );
-
  private:
 
 	// private methods

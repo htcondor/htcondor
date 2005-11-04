@@ -40,6 +40,7 @@
 #include "nullfile.h"
 #include "condor_ver_info.h"
 #include "globus_utils.h"
+#include "filename_tools.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -436,6 +437,39 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		DontEncryptOutputFiles = new StringList(NULL,",");
 	}
 
+	// We need to know whether to apply output file remaps or not.
+	// The case where we want to apply them is when we are the shadow
+	// or anybody else who is writing the files to their final
+	// location.  We do not want to apply them if we are the shadow
+	// and this job was submitted with 'condor_submit -s' or something
+	// similar, because we are writing to the spool directory, and the
+	// filenames in the spool directory should be the same as they are
+	// in the execute dir, or we have trouble when we try to write
+	// files that get mapped to subdirectories within the spool
+	// directory.
+
+	// Unfortunately, we can't tell for sure whether we are a client
+	// who should be doing remaps, so clients who do want it (like
+	// condor_transfer_data), should explicitly call
+	// InitDownloadFilenameRemaps().
+
+	bool spooling_output = false;
+	{
+		char *Spool = param("SPOOL");
+		if(Spool) {
+			if(!strncmp(Iwd,Spool,strlen(Spool))) {
+				// We are in the spool directory.
+				// Wish there was a better way to find this out!
+				spooling_output = true;
+			}
+			free(Spool);
+		}
+	}
+
+	if(IsServer() && !spooling_output) {
+		if(!InitDownloadFilenameRemaps(Ad)) return 0;
+	}
+
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
 	last_download_time = spool_completion_time;
@@ -444,6 +478,49 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	return 1;
 }
 
+int
+FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
+	char *remap_fname = NULL;
+
+	dprintf(D_FULLDEBUG,"Entering FileTransfer::InitDownloadFilenameRemaps\n");
+
+	download_filename_remaps = "";
+	if(!Ad) return 1;
+
+	// when downloading files from the job, apply output name remaps
+	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,&remap_fname)) {
+		AddDownloadFilenameRemaps(remap_fname);
+		free(remap_fname);
+		remap_fname = NULL;
+	}
+
+	// NOTE: We only pay attention to _ORIG values here for backwards
+	// compatibility with jobs that were submitted by versions of
+	// Condor submit prior to ATTR_TRANSFER_OUTPUT_REMAPS (pre 6.7.14).
+
+	if (Ad->LookupString(ATTR_JOB_OUTPUT_ORIG,&remap_fname)) {
+		char *output_fname = NULL;
+		if (Ad->LookupString(ATTR_JOB_OUTPUT,&output_fname)) {
+			AddDownloadFilenameRemap(output_fname,remap_fname);
+			free(output_fname);
+		}
+		free(remap_fname);
+		remap_fname = NULL;
+	}
+	if (Ad->LookupString(ATTR_JOB_ERROR_ORIG,&remap_fname)) {
+		char *error_fname = NULL;
+		if (Ad->LookupString(ATTR_JOB_ERROR,&error_fname)) {
+			AddDownloadFilenameRemap(error_fname,remap_fname);
+			free(error_fname);
+		}
+		free(remap_fname);
+		remap_fname = NULL;
+	}
+	if(!download_filename_remaps.IsEmpty()) {
+		dprintf(D_FULLDEBUG, "FileTransfer: output file remaps: %s\n",download_filename_remaps.Value());
+	}
+	return 1;
+}
 int
 FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv ) 
 {
@@ -1149,6 +1226,24 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 	return ( status == 0 );
 }
 
+void
+FileTransfer::AddDownloadFilenameRemap(char const *source_name,char const *target_name) {
+	if(!download_filename_remaps.IsEmpty()) {
+		download_filename_remaps += ";";
+	}
+	download_filename_remaps += source_name;
+	download_filename_remaps += "=";
+	download_filename_remaps += target_name;
+}
+
+void
+FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
+	if(!download_filename_remaps.IsEmpty()) {
+		download_filename_remaps += ";";
+	}
+	download_filename_remaps += remaps;
+}
+
 
 /*
   Define a macro to restore our priv state (if needed) and return.  We
@@ -1241,7 +1336,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		if( final_transfer || IsClient() ) {
-			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
+			char remap_filename[_POSIX_PATH_MAX];
+			if(filename_remap_find(download_filename_remaps.Value(),filename,remap_filename)) {
+				if(!is_relative_to_cwd(remap_filename)) {
+					strcpy(fullname,remap_filename);
+				}
+				else {
+					sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename);
+				}
+				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename,remap_filename);
+			}
+			else {
+				sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
+			}
 #ifdef WIN32
 			// check for write permission on this file, if we are supposed to check
 			if ( perm_obj && (perm_obj->write_access(fullname) != 1) ) {
@@ -1271,6 +1378,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		} else {
 			rc = s->get_file( &bytes, fullname );
 		}
+
 		if( rc < 0 ) {
 			return_and_resetpriv( -1 );
 		}

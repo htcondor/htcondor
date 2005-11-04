@@ -424,6 +424,7 @@ const char ATTR_TRANSFER_ERROR			 [] = "TransferErr";
 const char ATTR_TRANSFER_INPUT_FILES	 [] = "TransferInput";
 const char ATTR_TRANSFER_INTERMEDIATE_FILES [] = "TransferIntermediate";
 const char ATTR_TRANSFER_OUTPUT_FILES	 [] = "TransferOutput";
+const char ATTR_TRANSFER_OUTPUT_REMAPS   [] = "TransferOutputRemaps";
 const char ATTR_ENCRYPT_INPUT_FILES		 [] = "EncryptInputFiles";
 const char ATTR_ENCRYPT_OUTPUT_FILES	 [] = "EncryptOutputFiles";
 const char ATTR_DONT_ENCRYPT_INPUT_FILES [] = "DontEncryptInputFiles";

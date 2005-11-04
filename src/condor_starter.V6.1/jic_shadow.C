@@ -1121,6 +1121,12 @@ JICShadow::initStdFiles( void )
 	if( ! job_input_name ) {
 		job_input_name = getJobStdFile( ATTR_JOB_INPUT, NULL );
 	}
+
+	// NOTE: We only need to look at _ORIG values for backwards
+	// compatibility with old submitters (pre 6.7.14).  Modern
+	// submitters do not mess with the filename when streaming
+	// is being used, so there will be no _ORIG attribute.
+
 	if( ! job_output_name ) {
 		job_output_name = getJobStdFile( ATTR_JOB_OUTPUT,
 										 ATTR_JOB_OUTPUT_ORIG );

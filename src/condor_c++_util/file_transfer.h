@@ -82,6 +82,11 @@ class FileTransfer {
 						 ReliSock *sock_to_use = NULL, 
 						 priv_state priv = PRIV_UNKNOWN);
 
+	/** @param Ad contains filename remaps for downloaded files.
+		       If NULL, turns off remaps.
+		@return 1 on success, 0 on failure */
+	int InitDownloadFilenameRemaps(ClassAd *Ad);
+
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
 
@@ -184,6 +189,17 @@ class FileTransfer {
 	float bytesSent, bytesRcvd;
 	StringList* InputFiles;
 
+	// When downloading files, store files matching source_name as the name
+	// specified by target_name.
+	void AddDownloadFilenameRemap(char const *source_name,char const *target_name);
+
+	// Add any number of download remaps, encoded in the form:
+	// "source1 = target1; source2 = target2; ..."
+	// or in other words, the format expected by the util function
+	// filename_remap_find().
+	void AddDownloadFilenameRemaps(char const *remaps);
+	
+
   private:
 
 	bool TransferFilePermissions;
@@ -229,6 +245,7 @@ class FileTransfer {
 	bool did_init;
 	bool simple_init;
 	ReliSock *simple_sock;
+	MyString download_filename_remaps;
 };
 
 #endif

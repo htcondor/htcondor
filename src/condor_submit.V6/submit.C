@@ -119,6 +119,8 @@ bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool    UseXMLInLog = false;
 ShouldTransferFiles_t should_transfer = STF_NO;
+bool stream_stdout_toggle = false;
+bool stream_stderr_toggle = false;
 bool    NeedsPerFileEncryption = false;
 bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
 bool HasTDP = false;
@@ -201,6 +203,7 @@ char	*SuspendJobAtExec = "suspend_job_at_exec";
 
 char	*TransferInputFiles = "transfer_input_files";
 char	*TransferOutputFiles = "transfer_output_files";
+char    *TransferOutputRemaps = "transfer_output_remaps";
 char	*TransferFiles = "transfer_files";
 char	*TransferExecutable = "transfer_executable";
 char	*TransferInput = "transfer_input";
@@ -1609,6 +1612,7 @@ SetTransferFiles()
 	char	 input_files[ATTRLIST_MAX_EXPRESSION];
 	char	 output_files[ATTRLIST_MAX_EXPRESSION];
 	StringList input_file_list(NULL, ",");
+	MyString output_remaps;
 
 	should_transfer = STF_YES;
 
@@ -1785,16 +1789,12 @@ SetTransferFiles()
 		InsertJobExpr( buffer );
 	}
 
-	// If either stdout or stderr contains path information, and
-	// the file is being transfered back, use an intermediate
-	// file in the working directory.  The shadow will move the
-	// output data to the user-specified path when the job finishes.
-	//
-	// NOTE: this behavior is likely to surprise new universes
-	// which have non-standard shadow behavior.  For example, the
-	// globus universe doesn't have a shadow at all!  While the 
-	// globus universe has been special cased out below, perhaps
-	// this is a flawed strategy.
+	// If either stdout or stderr contains path information, and the
+	// file is being transfered back via the FileTransfer object,
+	// substitute a safe name to use in the sandbox and stash the
+	// original name in the output file "remaps".  The FileTransfer
+	// object will take care of transferring the data back to the
+	// correct path.
 
 	if ( should_transfer != STF_NO && job 
 					&& JobUniverse != CONDOR_UNIVERSE_GRID ) {
@@ -1806,37 +1806,30 @@ SetTransferFiles()
 		job->LookupString(ATTR_JOB_ERROR,error,sizeof(error));
 
 		if(*output && condor_basename(output) != output && 
-		   strcmp(output,"/dev/null") != 0)
+		   strcmp(output,"/dev/null") != 0 && !stream_stdout_toggle)
 		{
-			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_OUTPUT_ORIG,output);
+			char const *working_name = "_condor_stdout";
+			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_OUTPUT,working_name);
 			InsertJobExpr(buffer);
-			sprintf(
-					buffer,
-					"%s = \"_condor_stdout_%d.%d\"",
-					ATTR_JOB_OUTPUT,ClusterId,ProcId);
-			InsertJobExpr(buffer);
+
+			if(!output_remaps.IsEmpty()) output_remaps += ";";
+			output_remaps.sprintf_cat("%s=%s",working_name,MyString(output).EscapeChars(";=",'\\').Value());
 		}
 
 		if(*error && condor_basename(error) != error && 
-		   strcmp(error,"/dev/null") != 0)
+		   strcmp(error,"/dev/null") != 0 && !stream_stderr_toggle)
 		{
-			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_ERROR_ORIG,error);
-			InsertJobExpr(buffer);
-			
+			char const *working_name = "_condor_stderr";
+
 			if(strcmp(error,output) == 0) {
 				//stderr will use same file as stdout
-				sprintf(
-						buffer,
-						"%s = \"_condor_stdout_%d.%d\"",
-						ATTR_JOB_ERROR,ClusterId,ProcId);
+				working_name = "_condor_stdout";
 			}
-			else {
-				sprintf(
-						buffer,
-						"%s = \"_condor_stderr_%d.%d\"",
-						ATTR_JOB_ERROR,ClusterId,ProcId);
-			}
+			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_ERROR,working_name);
 			InsertJobExpr(buffer);
+
+			if(!output_remaps.IsEmpty()) output_remaps += ";";
+			output_remaps.sprintf_cat("%s=%s",working_name,MyString(error).EscapeChars(";=",'\\').Value());
 		}
 	}
 
@@ -1880,6 +1873,27 @@ SetTransferFiles()
 		}
 
 		free(transfer_exe);
+	}
+
+	macro_value = condor_param( TransferOutputRemaps,ATTR_TRANSFER_OUTPUT_REMAPS);
+	if(macro_value) {
+		if(*macro_value != '"' || macro_value[1] == '\0' || macro_value[strlen(macro_value)-1] != '"') {
+			fprintf(stderr,"\nERROR: transfer_output_remaps must be a quoted string, not: %s\n",macro_value);
+			exit( 1 );
+		}
+
+		macro_value[strlen(macro_value)-1] = '\0';  //get rid of terminal quote
+
+		if(!output_remaps.IsEmpty()) output_remaps += ";";
+		output_remaps += macro_value+1; // add user remaps to auto-generated ones
+
+		free(macro_value);
+	}
+
+	if(!output_remaps.IsEmpty()) {
+		MyString expr;
+		expr.sprintf("%s = \"%s\"",ATTR_TRANSFER_OUTPUT_REMAPS,output_remaps.Value());
+		InsertJobExpr(expr.Value());
 	}
 }
 
@@ -2370,6 +2384,7 @@ SetStdFile( int which_file )
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
 			sprintf( buffer, "%s = %s", ATTR_STREAM_OUTPUT, stream_it ? "TRUE" : "FALSE" );
 			InsertJobExpr( buffer );
+			stream_stdout_toggle = stream_it;
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
 			InsertJobExpr( buffer );
@@ -2382,6 +2397,7 @@ SetStdFile( int which_file )
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
 			sprintf( buffer, "%s = %s", ATTR_STREAM_ERROR, stream_it ? "TRUE" : "FALSE" );
 			InsertJobExpr( buffer );
+			stream_stderr_toggle = stream_it;
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
 			InsertJobExpr( buffer );

@@ -387,6 +387,11 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
 			return false;
 		}
+		// We want files to be copied to their final places, so apply
+		// any filename remaps when downloading.
+		if ( !ftrans.InitDownloadFilenameRemaps(&job) ) {
+			return false;
+		}
 		if ( use_new_command ) {
 			ftrans.setPeerVersion( version() );
 		}

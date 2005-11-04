@@ -76,6 +76,20 @@ int filename_remap_find( const char *input, const char *filename, char *output )
 
 void canonicalize_dir_delimiters( char *path );
 
+/*
+Returns true if path is a relative path; false if it is not.
+
+Example: is_relative_to_cwd("some/path/to/file") is true
+         is_relative_to_cwd("/some/path/to/file") is false
+         is_relative_to_cwd("C:\path\to\my\file") is false
+
+Just because a file is not relative does NOT mean it is in any sort of
+absolute "canonical" format.  It may still contain references to ".." or to
+symlinks or whatever.
+
+*/
+int is_relative_to_cwd( const char *path );
+
 END_C_DECLS
 
 #endif
