@@ -94,6 +94,13 @@ description written by Condor for submission to the WS-GRAM server.
 \item For grid-type gt4 jobs, if a URL scheme is missing from the resource
 name, ``https://'' will be inserted automatically.
 
+\item Added submit attribute \SubmitCmd{transfer\_output\_remaps}.
+This specifies the name (and optionally path) to use when downloading output
+files from the completed job.  Normally output files are transferred back
+to the initial working directory with the same name they had in the execution
+directory.  This gives you the option to save them with a different path
+or name.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -223,6 +230,16 @@ if the cron macros aren't defined.
 \item Fixed a bug where output may be lost when spooling (with the -s option to
 \Condor{submit} or implicitly with Condor-C).  This bug could only happen if
 the job terminated within one second of starting.
+
+\item Fixed a bug affecting transferral of output and error files where the
+file specified in the submit file contains path information.  The file
+was being staged back into the initial working directory and then it was
+copied to the final path specified.  The bug is that if there was an error
+copying the file to the final location, the intermediate copy would not
+be deleted and the job would still exit successfully, as though it had
+succeeded.  Now, no intermedidate copy of the file is made, and errors
+in transferring the file will be treated as a failure to run the job,
+which will typically cause the job to return to idle state and run again.
 
 \end{itemize}
 

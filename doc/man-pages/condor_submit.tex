@@ -325,6 +325,27 @@ page~\pageref{sec:file-transfer}.
 
 
 %%%%%%%%%%%%%%%%%%%
+%% transfer_output_remaps
+%%%%%%%%%%%%%%%%%%%
+
+\item[transfer\_output\_remaps $=$ $<$ `` name $=$ newname ; name2 $=$ newname2 ... ''$>$ ]
+\index{submit commands!transfer\_output\_remaps}
+This specifies the name (and optionally path) to use when downloading output
+files from the completed job.  Normally, output files are transferred back
+to the initial working directory with the same name they had in the execution
+directory.  This gives you the option to save them with a different path
+or name.  If you specify a relative path, the final path will be relative
+to the job's initial working directory.
+
+\Arg{name} describes an output file name produced by your job, and
+\Arg{newname} describes the file name it should be downloaded to.
+Multiple remaps can be specified by separating each with a semicolon.
+If you wish to remap file names that contain equals signs or
+semicolons, these special characters may be escaped with a backslash.
+
+
+
+%%%%%%%%%%%%%%%%%%%
 %% requirements
 %%%%%%%%%%%%%%%%%%%
 
