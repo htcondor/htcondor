@@ -169,6 +169,7 @@ void BaseResource::UnregisterJob( BaseJob *job )
 
 	pingRequesters.Delete( job );
 	registeredJobs.Delete( job );
+	leaseUpdates.Delete( job );
 
 	if ( IsEmpty() ) {
 		delete this;
