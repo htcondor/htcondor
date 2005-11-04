@@ -435,7 +435,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		// On the wire protocol
 		// // // // // // // //
 
-	rsock.timeout(60*60*8);   // years of research... :)
+	rsock.timeout(20);   // years of research... :)
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
 				 "Failed to connect to schedd (%s)\n", _addr );
@@ -552,7 +552,7 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 	}
 
 		// connect to the schedd, send the UPDATE_GSI_CRED command
-	rsock.timeout(60*60*8);   // years of research... :)
+	rsock.timeout(20);   // years of research... :)
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::updateGSIcredential: "
 				 "Failed to connect to schedd (%s)\n", _addr );
