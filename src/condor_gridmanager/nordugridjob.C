@@ -376,9 +376,10 @@ int NordugridJob::doEvaluateState()
 					break;
 				} else if ( rc != 0 ) {
 					// What to do about failure?
+					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
 							 procID.cluster, procID.proc,
-							 gahp->getErrorString() );
+							 errorString.Value() );
 					gmState = GM_CANCEL;
 					break;
 				} else {
@@ -445,9 +446,10 @@ int NordugridJob::doEvaluateState()
 					free( job_id );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
+					errorString = gahp->getErrorString();
 					dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s\n",
 							procID.cluster, procID.proc,
-							gahp->getErrorString());
+							errorString.Value() );
 					gmState = GM_UNSUBMITTED;
 				}
 
@@ -480,8 +482,9 @@ int NordugridJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc != 0 ) {
+				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) file stage in failed: %s\n",
-						 procID.cluster, procID.proc, gahp->getErrorString() );
+						 procID.cluster, procID.proc, errorString.Value() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_SUBMITTED;
@@ -523,9 +526,10 @@ int NordugridJob::doEvaluateState()
 					break;
 				} else if ( rc != 0 ) {
 					// What to do about failure?
+					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
 							 procID.cluster, procID.proc,
-							 gahp->getErrorString() );
+							 errorString.Value() );
 				} else {
 					remoteJobState = remoteStateNameConvert( new_status );
 					//requestScheddUpdate( this );
@@ -546,8 +550,9 @@ int NordugridJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc != 0 ) {
+				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) exit info gathering failed: %s\n",
-						 procID.cluster, procID.proc, gahp->getErrorString() );
+						 procID.cluster, procID.proc, errorString.Value() );
 				gmState = GM_CANCEL;
 			} else {
 				normalExit = normal_exit;
@@ -572,8 +577,9 @@ int NordugridJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc != 0 ) {
+				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) file stage out failed: %s\n",
-						 procID.cluster, procID.proc, gahp->getErrorString() );
+						 procID.cluster, procID.proc, errorString.Value() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_DONE_SAVE;
@@ -597,8 +603,9 @@ int NordugridJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc != 0 ) {
+				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) job cleanup failed: %s\n",
-						 procID.cluster, procID.proc, gahp->getErrorString() );
+						 procID.cluster, procID.proc, errorString.Value() );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -622,8 +629,9 @@ int NordugridJob::doEvaluateState()
 				gmState = GM_FAILED;
 			} else {
 				// What to do about a failed cancel?
+				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s\n",
-						 procID.cluster, procID.proc, gahp->getErrorString() );
+						 procID.cluster, procID.proc, errorString.Value() );
 				gmState = GM_FAILED;
 			}
 			} break;
