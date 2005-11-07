@@ -432,6 +432,13 @@ int NordugridJob::doEvaluateState()
 						 procID.cluster, procID.proc, errorString.Value() );
 				gmState = GM_CANCEL;
 			} else {
+				if ( normalExit ) {
+					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+					jobAd->Assign( ATTR_ON_EXIT_CODE, exitCode );
+				} else {
+					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
+					jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exitCode );
+				}
 				gmState = GM_STAGE_OUT;
 			}
 			} break;
@@ -449,13 +456,6 @@ int NordugridJob::doEvaluateState()
 			} break;
 		case GM_DONE_SAVE: {
 			if ( condorState != HELD && condorState != REMOVED ) {
-				if ( normalExit ) {
-					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
-					jobAd->Assign( ATTR_ON_EXIT_CODE, exitCode );
-				} else {
-					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
-					jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exitCode );
-				}
 				JobTerminated();
 				if ( condorState == COMPLETED ) {
 					done = requestScheddUpdate( this );
