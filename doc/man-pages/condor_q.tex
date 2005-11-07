@@ -24,6 +24,7 @@
 \oOpt{-avgqueuetime}
 \oOptArg{-jobads}{file} 
 \oOptArg{-machineads}{file} 
+\oOptArg{-direct}{rdbms \Bar quilld \Bar schedd} 
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
   \OptArg{-constraint}{expression} \Dots \} }
 
@@ -268,6 +269,13 @@ per machine basis.
     machine ads from the file instead of the ones from the
     collector. This is mostly useful for debugging purposes. The
     ads look as if you used \Condor{status} \Opt{-l}.}
+  \OptItem{\OptArg{-direct}{rdbms \Bar quilld \Bar schedd}}{When the
+    use of quill is enabled, this option allows a direct query to either
+    the rdbms, the quill daemon, or the schedd for the requested queue
+    information. It also prevents the queue location discovery algorithm
+    from failing over to alternate sources of information for the queue
+    in case of error. It is very useful for debugging an installation
+    of quill.}
   \OptItem{Restriction list}{The restriction list may have zero or more items,
     each of which may be:
         \begin{description}
