@@ -1571,6 +1571,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	char *dbName;
 	char *queryPassword;
 	char *dbconn=NULL;
+	int i;
 
 	output_buffer = new ExtArray<clusterProcString*>;
 
@@ -1728,7 +1729,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		}
 
 		if (!output_buffer_empty) {
-			for (int i=0;i<=output_buffer->getlast(); i++) {
+			for (i=0;i<=output_buffer->getlast(); i++) {
 				if ((*output_buffer)[i])
 					printf("%s",((*output_buffer)[i])->string);
 			}
@@ -1747,7 +1748,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	}
 
 	if (!output_buffer_empty) {
-		for (int i=0;i<=output_buffer->getlast(); i++) {
+		for (i=0;i<=output_buffer->getlast(); i++) {
 			if ((*output_buffer)[i]) {
 				delete[] ((*output_buffer)[i])->string;
 				delete ((*output_buffer)[i]);

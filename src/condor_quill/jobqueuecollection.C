@@ -333,6 +333,7 @@ JobQueueCollection::remove(char* cid, char* pid)
 {
 	int 	cid_len, pid_len, ad_type, index;
 	char* 	id = NULL;
+	int i;
 
 	cid_len = pid_len = 0;
 
@@ -365,7 +366,7 @@ JobQueueCollection::remove(char* cid, char* pid)
 	}
 
 	
-	for (int i = 0; pCurBucket != NULL; i++)
+	for (i = 0; pCurBucket != NULL; i++)
 	{
 		if (((ad_type == ClassAdBucket::CLUSTER_AD) && 
 		    (strcmp(cid, pCurBucket->cid) == 0)) 
