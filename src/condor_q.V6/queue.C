@@ -58,6 +58,26 @@
 #include "sqlquery.h"
 #endif /* WANT_QUILL */
 
+/* Since this enum can have conditional compilation applied to it, I'm
+	specifying the values for it to keep their actual integral values
+	constant in case someone decides to write this information to disk to
+	pass it to another daemon or something. This enum is used to determine
+	who to talk to when using the -direct option. */
+enum {
+	/* don't know who I should be talking to */
+	DIRECT_UNKNOWN = 0,
+	/* start at the rdbms and fail over like normal */
+	DIRECT_ALL = 1,
+#if WANT_QUILL
+	/* talk directly to the rdbms system */
+	DIRECT_RDBMS = 2,
+	/* talk directly to the quill daemon */
+	DIRECT_QUILLD = 3,
+#endif
+	/* talk directly to the schedd */
+	DIRECT_SCHEDD = 4
+};
+
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
@@ -82,6 +102,9 @@ typedef bool (*show_queue_fp)(char* v1, char* v2, char* v3, char* v4, bool useDB
 
 static bool read_classad_file(const char *filename, ClassAdList &classads);
 
+/* convert the -direct aqrgument prameter into an enum */
+unsigned int process_direct_argument(char *arg);
+
 #if WANT_QUILL
 /* execute a database query directly */ 
 static void exec_db_query(char *quillName, char *dbIpAddr, char *dbName,char *queryPassword);
@@ -99,6 +122,10 @@ static  bool avgqueuetime = false;
 
 /* directDBquery means we will just run a database query and return results directly to user */
 static  bool directDBquery = false;
+
+/* who is it that I should directly ask for the queue, defaults to the normal
+	failover semantics */
+static unsigned int direct = DIRECT_ALL;
 
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
@@ -356,66 +383,141 @@ int main (int argc, char **argv)
 			} else {
 				sqfp = show_queue_buffered;
 			}
-				
-			if  (useDB) {
+			
+			/* When an installation has database parameters configured, 
+				it means there is quill daemon. If database
+				is not accessible, we fail over to
+				quill daemon, and if quill daemon
+				is not available, we fail over the
+				schedd daemon */
+			switch(direct)
+			{
+				case DIRECT_ALL:
+					/* always try the failover sequence */
+
+					/* FALL THROUGH */
+
 #if WANT_QUILL
-				/* When an installation has database parameters configured, 
-					it means there is quill daemon. If database
-					is not accessible, we fail over to
-					quill daemon, and if quill daemon
-					is not available, we fail over the
-					schedd daemon */
+				case DIRECT_RDBMS:
+					if (useDB) {
 
-				/* query the database first */
-				if ( (retval = sqfp( NULL, NULL, NULL, NULL, TRUE) ) ) {
-					freeConnectionStrings();
-					exit(retval);
-				}
+						/* ask the database for the queue */
 
-				printf( "-- Database not reachable - Failing over to the "
-						"quill daemon --\n");
+						if ( (retval = sqfp( NULL, NULL, NULL, NULL, TRUE) ) ) {
+							/* if the queue was retrieved, then I am done */
+							freeConnectionStrings();
+							exit(retval);
+						}
+						
+						fprintf( stderr, 
+							"-- Database not reachable or down.\n");
 
-				/* Hmm... couldn't find the database, so try the quilld */
+						if (direct == DIRECT_RDBMS) {
+							fprintf(stderr,
+								"\t- Not failing over due to -direct\n");
+							exit(retval);
+						} 
 
-				Daemon quill( DT_QUILL, 0, 0 );
-				char tmp[8];
-				strcpy(tmp, "Unknown");
+						fprintf(stderr,
+							"\t- Failing over to the quill daemon --\n");
 
-				/* query the quill daemon */
-				if ( quill.locate() &&
-					 ( (retval = 
-					 	sqfp( quill.addr(), 
-						  (quill.name())?(quill.name()):tmp,
-						  (quill.fullHostname())?(quill.fullHostname()):tmp,
-						  NULL, FALSE) ) ) )
-				{
-					freeConnectionStrings();
-					exit(retval);
-				}
+						/* Hmm... couldn't find the database, so try the 
+							quilld */
+					} else {
+						if (direct == DIRECT_RDBMS) {
+							fprintf(stderr, 
+								"-- Direct query to rdbms on behalf of\n"
+								"\tschedd %s(%s) failed.\n"
+								"\t- Schedd doesn't appear to be using "
+								"quill.\n",
+								scheddName, scheddAddr);
+							fprintf(stderr,
+								"\t- Not failing over due to -direct\n");
+							exit(EXIT_FAILURE);
+						}
+					}
 
-				printf( "-- Quill daemon at %s not reachable \n"
-						"\t- Failing over to the schedd at %s --\n", 
-						quill.addr(), scheddAddr);
+					/* FALL THROUGH */
 
-				/* Hmm... couldn't find the quilld, so fall out and try the
-					schedd */
+				case DIRECT_QUILLD:
+					if (useDB) {
+
+						Daemon quill( DT_QUILL, 0, 0 );
+						char tmp[8];
+						strcpy(tmp, "Unknown");
+
+						/* query the quill daemon */
+						if ( quill.locate() &&
+					 		( (retval = 
+					 			sqfp( quill.addr(), 
+						  		(quill.name())?
+									(quill.name()):tmp,
+						  		(quill.fullHostname())?
+									(quill.fullHostname()):tmp,
+						  		NULL, FALSE) ) ) )
+						{
+							/* if the queue was retrieved, then I am done */
+							freeConnectionStrings();
+							exit(retval);
+						}
+
+						fprintf( stderr,
+							"-- Quill daemon at %s(%s)\n"
+							"\tassociated with schedd %s(%s)\n"
+							"\tis not reachable or can't talk to rdbms.\n",
+							quill.name(), quill.addr(),
+							scheddName, scheddAddr );
+
+						if (direct == DIRECT_QUILLD) {
+							fprintf(stderr,
+								"\t- Not failing over due to -direct\n");
+							exit(retval);
+						}
+
+						fprintf(stderr,
+							"\t- Failing over to the schedd %s(%s).\n", 
+							scheddName, scheddAddr);
+
+					} else {
+						if (direct == DIRECT_QUILLD) {
+							fprintf(stderr,
+								"-- Direct query to quilld associated with\n"
+								"\tschedd %s(%s) failed.\n"
+								"\t- Schedd doesn't appear to be using "
+								"quill.\n",
+								scheddName, scheddAddr);
+
+							fprintf(stderr,
+								"\t- Not failing over due to use of -direct\n");
+
+							exit(EXIT_FAILURE);
+						}
+					}
 
 #endif /* WANT_QUILL */
-			}
-
-			/* database not configured or could not be reached,
-				query the schedd daemon directly */
-
-			retval = !sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
+				case DIRECT_SCHEDD:
+					retval = sqfp(scheddAddr, scheddName, scheddMachine, 
+									NULL, FALSE);
 			
-			/* Hopefully I got the queue from the schedd... */
-			freeConnectionStrings();
-			exit(retval);
+					/* Hopefully I got the queue from the schedd... */
+					freeConnectionStrings();
+					exit(!retval);
+					break;
 
+				case DIRECT_UNKNOWN:
+				default:
+					fprintf( stderr,
+						"-- Cannot determine any location for queue "
+						"using option -direct!\n"
+						"\t- This is an internal error and should be "
+						"reported to condor-admin@cs.wisc.edu." );
+					exit(EXIT_FAILURE);
+					break;
+			}
 		} 
 		
-		/* looks like I couldn't locate a schedd, so dump a nice error
-			message and bail */
+		/* I couldn't find a local schedd, so dump a message about what
+			happened. */
 
 		fprintf( stderr, "Error: %s\n", schedd.error() );
 		if (!expert) {
@@ -571,37 +673,129 @@ int main (int argc, char **argv)
 		   there is quill daemon. If database is not accessible, we fail
 		   over to quill daemon, and if quill daemon is not available, 
 		   we fail over the schedd daemon */			
-		if (useDB) {
-			if (sqfp(quillName, dbIpAddr, dbName, queryPassword, TRUE )) {
-				/* processed correctly, so do the next ad */
-				continue;
-			}
+		switch(direct)
+		{
+			case DIRECT_ALL:
+				/* FALL THROUGH */
+#if WANT_QUILL
+			case DIRECT_RDBMS:
+				if (useDB) {
+					if (sqfp(quillName, dbIpAddr, dbName, queryPassword, TRUE ))
+					{
+						/* processed correctly, so do the next ad */
+						continue;
+					}
 
-			result2 = getQuillAddrFromCollector(quillName, quillAddr);
+					fprintf( stderr, "-- Database server %s\n"
+							"\tbeing used by the quill daemon %s\n"
+							"\tassociated with schedd %s(%s)\n"
+							"\tis not reachable or down.\n",
+							dbIpAddr, quillName, scheddName, scheddAddr);
 
-			printf( "-- Database at %s not reachable \n\t- "
-					"Failing over to the quill daemon at %s--\n", 
-					dbIpAddr, quillAddr);
-			
-			if((result2 == Q_OK) && quillAddr &&
-			   sqfp(quillAddr, quillName, quillMachine, NULL, FALSE))
-			{
-				/* processed correctly, so do the next ad */
-				continue;
-			}
+					if (direct == DIRECT_RDBMS) {
+						fprintf(stderr, 
+							"\t- Not failing over due to -direct\n");
+						continue;
+					} 
 
-			printf( "-- Quill daemon at %s not reachable \n\t-"
-					"Failing over to the schedd at %s --\n", 
-					quillAddr, scheddAddr);
-			
-			/* Since we couldn't talk to the DB or the quilld, simply fall out
-				and ask the schedd directly... */
+					fprintf(stderr, 
+						"\t- Failing over to the quill daemon at %s--\n", 
+						quillName);
+
+				} else {
+					if (direct == DIRECT_RDBMS) {
+						fprintf(stderr, 
+							"-- Direct query to rdbms on behalf of\n"
+							"\tschedd %s(%s) failed.\n"
+							"\t- Schedd doesn't appear to be using quill.\n",
+							scheddName, scheddAddr);
+						fprintf(stderr,
+							"\t- Not failing over due to -direct\n");
+						continue;
+					}
+				}
+
+				/* FALL THROUGH */
+
+			case DIRECT_QUILLD:
+				if (useDB) {
+					result2 = getQuillAddrFromCollector(quillName, quillAddr);
+
+					/* if quillAddr is NULL, then while the collector's 
+						schedd's ad had a quill name in it, the collector
+						didn't have a quill ad by that name. */
+
+					if((result2 == Q_OK) && quillAddr &&
+			   			sqfp(quillAddr, quillName, quillMachine, NULL, FALSE))
+					{
+						/* processed correctly, so do the next ad */
+						continue;
+					}
+
+					/* NOTE: it is not impossible that quillAddr could be
+						NULL if the quill name is specified in a schedd ad
+						but the collector has no record of such quill ad by
+						that name. So we deal with that mess here in the 
+						debugging output. */
+
+					fprintf( stderr,
+						"-- Quill daemon %s(%s)\n"
+						"\tassociated with schedd %s(%s)\n"
+						"\tis not reachable or can't talk to rdbms.\n",
+						quillName, quillAddr!=NULL?quillAddr:"<???>", 
+						scheddName, scheddAddr);
+
+					if (quillAddr == NULL) {
+						fprintf(stderr,
+							"\t- Possible misconfiguration of quill\n"
+							"\tassociated with this schedd since associated\n"
+							"\tquilld ad is missing and was expected to be\n"
+							"\tfound in the collector.\n");
+					}
+
+					if (direct == DIRECT_QUILLD) {
+						fprintf(stderr,
+							"\t- Not failing over due to use of -direct\n");
+						continue;
+					}
+
+					fprintf(stderr,
+						"\t- Failing over to the schedd at %s(%s) --\n",
+						scheddName, scheddAddr);
+
+				} else {
+					if (direct == DIRECT_QUILLD) {
+						fprintf(stderr,
+							"-- Direct query to quilld associated with\n"
+							"\tschedd %s(%s) failed.\n"
+							"\t- Schedd doesn't appear to be using quill.\n",
+							scheddName, scheddAddr);
+						printf("\t- Not failing over due to use of -direct\n");
+						continue;
+					}
+				}
+
+				/* FALL THROUGH */
+
+#endif /* WANT_QUILL */
+
+			case DIRECT_SCHEDD:
+				/* database not configured or could not be reached,
+					query the schedd daemon directly */
+				sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
+
+				break;
+
+			case DIRECT_UNKNOWN:
+			default:
+				fprintf( stderr,
+					"-- Cannot determine any location for queue "
+					"using option -direct!\n"
+					"\t- This is an internal error and should be "
+					"reported to condor-admin@cs.wisc.edu." );
+				exit(EXIT_FAILURE);
+				break;
 		}
-
-		/* database not configured or could not be reached,
-			query the schedd daemon directly */
-
-		sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
 	}
 
 	// close list
@@ -770,6 +964,18 @@ processCommandLineArguments (int argc, char *argv[])
 			i++;
 			querySchedds = true;
 		} 
+		else
+		if (match_prefix (arg, "direct")) {
+			/* check for one more argument */
+			if (argc <= i+1) {
+				fprintf( stderr, 
+					"Error: Argument -direct requires "
+						"[rdbms | quilld | schedd]\n" );
+				exit(EXIT_FAILURE);
+			}
+			direct = process_direct_argument(argv[i+1]);
+			i++;
+		}
 		else
 		if (match_prefix (arg, "submitter")) {
 
@@ -1034,6 +1240,29 @@ job_time(float cpu_time,ClassAd *ad)
 		(cur_time - shadow_bday)*(job_status == RUNNING && shadow_bday);
 
 	return total_wall_time;
+}
+
+unsigned int process_direct_argument(char *arg)
+{
+	if (strcasecmp(arg, "rdbms") == MATCH) {
+		return DIRECT_RDBMS;
+	}
+
+	if (strcasecmp(arg, "quilld") == MATCH) {
+		return DIRECT_QUILLD;
+	}
+
+	if (strcasecmp(arg, "schedd") == MATCH) {
+		return DIRECT_SCHEDD;
+	}
+
+	fprintf( stderr, 
+			"Error: Argument -direct requires [rdbms | quilld | schedd]\n" );
+
+	exit(EXIT_FAILURE);
+
+	/* Here to make the compiler happy since there is an exit above */
+	return DIRECT_UNKNOWN;
 }
 
 static void
@@ -1677,8 +1906,10 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		if( Q.fetchQueueFromDBAndProcess( dbconn,
 											process_buffer_line,
 											&errstack) != Q_OK ) {
-			printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
-					dbIpAddr, dbName, errstack.getFullText(true) );
+			fprintf( stderr, 
+					"\n-- Failed to fetch ads from db [%s] at database "
+					"server %s\n%s\n",
+					dbName, dbIpAddr, errstack.getFullText(true) );
 
 			delete output_buffer;
 
@@ -1693,8 +1924,9 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		if( Q.fetchQueueFromHostAndProcess( scheddAddr,
 											process_buffer_line,
 											&errstack) != Q_OK ) {
-			printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
-					scheddAddr, scheddMachine, errstack.getFullText(true) );
+			fprintf(stderr,
+				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				scheddAddr, scheddMachine, errstack.getFullText(true) );
 
 			delete output_buffer;
 
@@ -1897,7 +2129,8 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 
 				// fetch queue from database
 			if( Q.fetchQueueFromDB(jobs, dbconn, &errstack) != Q_OK ) {
-				printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				fprintf( stderr,
+						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
 						dbIpAddr, dbName, errstack.getFullText(true) );
 				return false;
 			}
@@ -1905,8 +2138,9 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		} else {
 				// fetch queue from schedd	
 			if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
-				printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddr, scheddMachine, errstack.getFullText(true) );
+				fprintf( stderr,
+					"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+					scheddAddr, scheddMachine, errstack.getFullText(true) );
 				return false;
 			}
 		}
