@@ -1376,7 +1376,7 @@ CONDOR_EXTERNAL_VERSION([postgresql],[8.0.2])
 
 # GCB only matters and works if we have GNU ld...
 if test x$_cv_ld_is_gnu = xyes; then
-  CONDOR_EXTERNAL_VERSION([gcb],[1.2.3])
+  CONDOR_EXTERNAL_VERSION([gcb],[1.3.0])
 fi
 
 else
