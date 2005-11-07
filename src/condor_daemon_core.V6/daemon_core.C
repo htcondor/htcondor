@@ -1767,6 +1767,7 @@ void DaemonCore::Driver()
 		FD_ZERO(&readfds);
 		FD_ZERO(&writefds);
 		FD_ZERO(&exceptfds);
+        int maxfd = 0;
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
@@ -1782,6 +1783,9 @@ void DaemonCore::Driver()
 						// to read.
 					FD_SET( (*sockTable)[i].sockd,&readfds);
 				}
+                if ( (*sockTable)[i].sockd >= maxfd ) {
+                    maxfd = (*sockTable)[i].sockd + 1;
+                }
             }
 		}
 
@@ -1793,6 +1797,9 @@ void DaemonCore::Driver()
 			if ( (*pipeTable)[i].pipefd ) {	// if a valid entry....
 				// Add the pipe fd to our read fd set
 				FD_SET( (*pipeTable)[i].pipefd,&readfds);
+                if ( (*pipeTable)[i].pipefd >= maxfd ) {
+                    maxfd = (*pipeTable)[i].pipefd + 1;
+                }
 			}
         }
 
@@ -1800,6 +1807,9 @@ void DaemonCore::Driver()
 		// select on.  We write to async_pipe if a unix async signal 
 		// is delivered after we unblock signals and before we block on select.
 		FD_SET(async_pipe[0],&readfds);
+        if ( async_pipe[0] >= maxfd ) {
+            maxfd = async_pipe[0] + 1;
+        }
 
 		// Set aync_sigs_unblocked flag to true so that Send_Signal()
 		// knows to put info onto the async_pipe in order to wake up select().
@@ -1816,7 +1826,7 @@ void DaemonCore::Driver()
 #endif
 
 		errno = 0;
-		rv = select( FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, 
+		rv = select( maxfd, (SELECT_FDSET_PTR) &readfds, 
 					 (SELECT_FDSET_PTR) &writefds, 
 					 (SELECT_FDSET_PTR) &exceptfds, ptimer );
 		tmpErrno = errno;
@@ -2044,7 +2054,7 @@ void DaemonCore::Driver()
 							struct timeval stimeout;
 							stimeout.tv_sec = 0;	// set timeout for a poll
 							stimeout.tv_usec = 0;
-							int sresult = select( FD_SETSIZE, 
+							int sresult = select( (*sockTable)[i].sockd + 1,
 								(SELECT_FDSET_PTR) &readfds, 
 								(SELECT_FDSET_PTR) 0,(SELECT_FDSET_PTR) 0, 
 								&stimeout );
@@ -2187,7 +2197,8 @@ int DaemonCore::ServiceCommandSocket()
 		FD_ZERO(&fds);
 		FD_SET( (*sockTable)[initial_command_sock].sockd,&fds);
 		errno = 0;
-		rv = select(FD_SETSIZE,(SELECT_FDSET_PTR) &fds, NULL, NULL, &timer);
+		rv = select((*sockTable)[initial_command_sock].sockd + 1,
+                (SELECT_FDSET_PTR) &fds, NULL, NULL, &timer);
 #ifndef WIN32
 		// Unix
 		if(rv < 0) {

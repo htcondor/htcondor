@@ -331,7 +331,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
 #if defined(AIX31) || defined(AIX32)
 	errno = EINTR;  /* Shouldn't have to do this... */
 #endif
-    count = select(FD_SETSIZE, 
+    count = select(ConnectionSock+1, 
 				   (SELECT_FDSET_PTR) &readfds, 
 				   (SELECT_FDSET_PTR) 0, 
 				   (SELECT_FDSET_PTR) 0,
