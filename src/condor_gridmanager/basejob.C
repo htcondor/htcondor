@@ -456,24 +456,25 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 void BaseJob::UpdateJobLeaseSent( int new_expiration_time )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
-	int old_expiration_time = -1;
+	int old_expiration_time = TIMER_UNSET;
 
 	jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT,
 						  old_expiration_time );
 
-	if ( new_expiration_time == 0 ) {
-		jobAd->AssignExpr( ATTR_TIMER_REMOVE_CHECK_SENT, "Undefined" );
-		jobAd->AssignExpr( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED, "Undefined" );
-
-		requestScheddUpdate( this );
-
-		SetJobLeaseTimers();
+	if ( new_expiration_time <= 0 ) {
+		new_expiration_time = TIMER_UNSET;
 	}
 
 	if ( new_expiration_time != old_expiration_time ) {
 
-		jobAd->Assign( ATTR_TIMER_REMOVE_CHECK_SENT,
-					   new_expiration_time );
+		if ( new_expiration_time == TIMER_UNSET ) {
+			jobAd->AssignExpr( ATTR_TIMER_REMOVE_CHECK_SENT, "Undefined" );
+			jobAd->AssignExpr( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
+							   "Undefined" );
+		} else {
+			jobAd->Assign( ATTR_TIMER_REMOVE_CHECK_SENT,
+						   new_expiration_time );
+		}
 
 		requestScheddUpdate( this );
 
@@ -483,25 +484,29 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.pro
 
 void BaseJob::UpdateJobLeaseReceived( int new_expiration_time )
 {
-	int old_expiration_time = -1;
+	int old_expiration_time = TIMER_UNSET;
 dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
 
 	jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK, old_expiration_time );
 
-	if ( old_expiration_time == -1 ) {
-		dprintf( D_ALWAYS, "(%d.%d) New lease but no old lease, ignoring!\n",
-				 procID.cluster, procID.proc );
-		return;
-	}
-
-	if ( new_expiration_time < old_expiration_time ) {
-		dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%d) is older than old lease expiration (%d), ignoring!\n",
-				 procID.cluster, procID.proc, new_expiration_time,
-				 old_expiration_time );
-		return;
+	if ( new_expiration_time <= 0 ) {
+		new_expiration_time = TIMER_UNSET;
 	}
 
 	if ( new_expiration_time != old_expiration_time ) {
+
+		if ( old_expiration_time == TIMER_UNSET ) {
+			dprintf( D_ALWAYS, "(%d.%d) New lease but no old lease, ignoring!\n",
+					 procID.cluster, procID.proc );
+			return;
+		}
+
+		if ( new_expiration_time < old_expiration_time ) {
+			dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%d) is older than old lease expiration (%d), ignoring!\n",
+					 procID.cluster, procID.proc, new_expiration_time,
+					 old_expiration_time );
+			return;
+		}
 
 		jobAd->Assign( ATTR_TIMER_REMOVE_CHECK, new_expiration_time );
 		jobAd->SetDirtyFlag( ATTR_TIMER_REMOVE_CHECK, false );
