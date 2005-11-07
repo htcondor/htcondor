@@ -29,10 +29,7 @@
 
 #include "nordugridjob.h"
 #include "baseresource.h"
-
-#define ACQUIRE_DONE		0
-#define ACQUIRE_QUEUED		1
-#define ACQUIRE_FAILED		2
+#include "gahp-client.h"
 
 class NordugridJob;
 class NordugridResource;
@@ -41,30 +38,24 @@ class NordugridResource : public BaseResource
 {
  public:
 
-	NordugridResource( const char *resource_name );
+	NordugridResource( const char *resource_name, const char *proxy_subject );
 	~NordugridResource();
 
-	bool IsEmpty();
-
 	void Reconfig();
-	void RegisterJob( NordugridJob *job );
-	void UnregisterJob( NordugridJob *job );
 
-	int AcquireConnection( NordugridJob *job, ftp_lite_server *&server );
-	void ReleaseConnection( NordugridJob *job );
+	static const char *HashName( const char *resource_name,
+								 const char *proxy_subject );
+	static NordugridResource *FindOrCreateResource( const char *resource_name,
+													const char *proxy_subject );
 
-	static NordugridResource *FindOrCreateResource( const char *resource_name );
+	char *proxySubject;
+	GahpClient *gahp;
 
  private:
-	bool OpenConnection();
-	bool CloseConnection();
-
+	void DoPing( time_t& ping_delay, bool& ping_complete,
+				 bool& ping_succeeded  );
 	static HashTable <HashKey, NordugridResource *> ResourcesByName;
 
-	List<NordugridJob> *registeredJobs;
-	NordugridJob *connectionUser;
-	List<NordugridJob> *connectionWaiters;
-	ftp_lite_server *ftpServer;
 };
 
 #endif

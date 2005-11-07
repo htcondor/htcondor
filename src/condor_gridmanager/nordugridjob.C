@@ -55,6 +55,7 @@
 #define GM_STAGE_OUT			14
 #define GM_EXIT_INFO			15
 #define GM_RECOVER_QUERY		16
+#define GM_START				17
 
 static char *GMStateNames[] = {
 	"GM_INIT",
@@ -73,13 +74,9 @@ static char *GMStateNames[] = {
 	"GM_STAGE_IN",
 	"GM_STAGE_OUT",
 	"GM_EXIT_INFO",
-	"GM_RECOVER_QUERY"
+	"GM_RECOVER_QUERY",
+	"GM_START"
 };
-
-#define TASK_IN_PROGRESS	1
-#define TASK_DONE			2
-#define TASK_FAILED			3
-#define TASK_QUEUED			4
 
 #define REMOTE_STATE_UNKNOWN		0
 #define REMOTE_STATE_ACCEPTED		1
@@ -100,7 +97,6 @@ static char *GMStateNames[] = {
 #	define file_contains contains
 #endif
 
-#define STAGE_COMPLETE_FILE	".condor_complete"
 #define NORDUGRID_LOG_DIR ".nordugrid_log"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
@@ -163,12 +159,15 @@ BaseJob *NordugridJobCreate( ClassAd *jobad )
 
 int NordugridJob::probeInterval = 300;	// default value
 int NordugridJob::submitInterval = 300;	// default value
+int NordugridJob::gahpCallTimeout = 300;	// default value
+int NordugridJob::maxConnectFailures = 3;	// default value
 
 NordugridJob::NordugridJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[4096];
 	char *error_string = NULL;
+	char *gahp_path = NULL;
 
 	remoteJobId = NULL;
 	remoteJobState = REMOTE_STATE_UNKNOWN;
@@ -179,14 +178,35 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
 	resourceManagerString = NULL;
-	ftp_srvr = NULL;
-	stage_list = NULL;
+	jobProxy = NULL;
 	myResource = NULL;
+	gahp = NULL;
+	RSL = NULL;
+	stageList = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
-	// sure it's unset when we start.
-	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	// sure it's unset when we start (unless the job is already held).
+	if ( condorState != HELD &&
+		 jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
+	}
+
+	buff[0] = '\0';
+	jobAd->LookupString( ATTR_X509_USER_PROXY, buff );
+	if ( buff[0] != '\0' ) {
+		jobProxy = AcquireProxy( buff, evaluateStateTid );
+		if ( jobProxy == NULL ) {
+			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
+					 procID.cluster, procID.proc );
+			error_string = "Failed to acquire proxy";
+			goto error_exit;
+		}
+	} else {
+		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
+				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
+		error_string = "x509userproxy is not set in the job ad";
+		goto error_exit;
 	}
 
 	buff[0] = '\0';
@@ -216,12 +236,29 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	myResource = NordugridResource::FindOrCreateResource( resourceManagerString );
+	myResource = NordugridResource::FindOrCreateResource( resourceManagerString,
+														  jobProxy->subject->subject_name );
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	SetRemoteJobId( strrchr( buff, ' ' ) );
+	if ( strrchr( buff, ' ' ) ) {
+		SetRemoteJobId( buff + 1 );
+	} else {
+		SetRemoteJobId( NULL );
+	}
+
+	gahp_path = param( "NORDUGRID_GAHP" );
+	if ( gahp_path == NULL ) {
+		error_string = "NORDUGRID_GAHP not defined";
+		goto error_exit;
+	}
+	snprintf( buff, sizeof(buff), "NORDUGRID/%s",
+			  jobProxy->subject->subject_name );
+	gahp = new GahpClient( buff, gahp_path );
+	gahp->setNotificationTimerId( evaluateStateTid );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
 
 	return;
 
@@ -235,11 +272,23 @@ NordugridJob::NordugridJob( ClassAd *classad )
 
 NordugridJob::~NordugridJob()
 {
+	if ( jobProxy != NULL ) {
+		ReleaseProxy( jobProxy, evaluateStateTid );
+	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 	}
 	if ( remoteJobId ) {
 		free( remoteJobId );
+	}
+	if ( gahp != NULL ) {
+		delete gahp;
+	}
+	if ( RSL ) {
+		delete RSL;
+	}
+	if ( stageList ) {
+		delete stageList;
 	}
 }
 
@@ -252,7 +301,7 @@ int NordugridJob::doEvaluateState()
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
-	time_t now;	// make sure you set this before every use!!!
+	time_t now = time(NULL);
 
 	bool done;
 	int rc;
@@ -263,12 +312,45 @@ int NordugridJob::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, condorState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],condorState);
 
+	if ( gahp ) {
+		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
+			gahp->setMode( GahpClient::results_only );
+		} else {
+			gahp->setMode( GahpClient::normal );
+		}
+	}
+
 	do {
 		reevaluate_state = false;
 		old_gm_state = gmState;
 
 		switch ( gmState ) {
 		case GM_INIT: {
+			// This is the state all jobs start in when the GlobusJob object
+			// is first created. Here, we do things that we didn't want to
+			// do in the constructor because they could block (the
+			// constructor is called while we're connected to the schedd).
+			if ( gahp->Startup() == false ) {
+				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
+						 procID.cluster, procID.proc );
+
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				gmState = GM_HOLD;
+				break;
+			}
+			if ( gahp->Initialize( jobProxy ) == false ) {
+				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
+						 procID.cluster, procID.proc );
+
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Failed to initialize GAHP" );
+				gmState = GM_HOLD;
+				break;
+			}
+
+			gmState = GM_START;
+			} break;
+		case GM_START: {
 			errorString = "";
 			if ( remoteJobId == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
@@ -283,17 +365,32 @@ int NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_RECOVER_QUERY: {
-			bool need_stage_in;
-
-			rc = doStageInQuery( need_stage_in );
-			if ( rc == TASK_QUEUED || rc == TASK_IN_PROGRESS ) {
-				break;
-			} else if ( rc == TASK_FAILED ) {
-				dprintf( D_ALWAYS, "(%d.%d) file stage in query failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				if ( need_stage_in ) {
+				char *new_status = NULL;
+				rc = gahp->nordugrid_status( resourceManagerString,
+											 remoteJobId, new_status );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				} else if ( rc != 0 ) {
+					// What to do about failure?
+					dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
+							 procID.cluster, procID.proc,
+							 gahp->getErrorString() );
+					gmState = GM_CANCEL;
+					break;
+				} else {
+					remoteJobState = remoteStateNameConvert( new_status );
+					//requestScheddUpdate( this );
+				}
+				if ( new_status ) {
+					free( new_status );
+				}
+				lastProbeTime = now;
+				if ( remoteJobState == REMOTE_STATE_ACCEPTED ||
+					 remoteJobState == REMOTE_STATE_PREPARING ) {
 					gmState = GM_STAGE_IN;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -317,31 +414,40 @@ int NordugridJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			now = time(NULL);
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 
 				char *job_id = NULL;
 
-				rc = doSubmit( job_id );
-
-				if ( rc == TASK_QUEUED || rc == TASK_IN_PROGRESS ) {
+				if ( RSL == NULL ) {
+					RSL = buildSubmitRSL();
+				}
+				if ( RSL == NULL ) {
+					gmState = GM_HOLD;
+					break;
+				}
+				rc = gahp->nordugrid_submit( 
+										resourceManagerString,
+										RSL->Value(),
+										job_id );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
 
-				if ( rc == TASK_DONE ) {
+				if ( rc == 0 ) {
 					ASSERT( job_id != NULL );
 					SetRemoteJobId( job_id );
 					free( job_id );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s\n",
-							procID.cluster, procID.proc, errorString.Value());
-					myResource->ReleaseConnection( this );
+							procID.cluster, procID.proc,
+							gahp->getErrorString());
 					gmState = GM_UNSUBMITTED;
 				}
 
@@ -365,12 +471,17 @@ int NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_STAGE_IN: {
-			rc = doStageIn();
-			if ( rc == TASK_QUEUED || rc == TASK_IN_PROGRESS ) {
+			if ( stageList == NULL ) {
+				stageList = buildStageInList();
+			}
+			rc = gahp->nordugrid_stage_in( resourceManagerString, remoteJobId,
+										   *stageList );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc == TASK_FAILED ) {
+			} else if ( rc != 0 ) {
 				dprintf( D_ALWAYS, "(%d.%d) file stage in failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_SUBMITTED;
@@ -382,7 +493,6 @@ int NordugridJob::doEvaluateState()
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				now = time(NULL);
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
 				}
@@ -403,35 +513,45 @@ int NordugridJob::doEvaluateState()
 			} break;
 		case GM_PROBE_JOB: {
 			if ( condorState == REMOVED || condorState == HELD ) {
-				myResource->ReleaseConnection( this );
 				gmState = GM_CANCEL;
 			} else {
-				int new_remote_state;
-				rc = doStatus( new_remote_state );
-				if ( rc == TASK_QUEUED ) {
+				char *new_status = NULL;
+				rc = gahp->nordugrid_status( resourceManagerString,
+											 remoteJobId, new_status );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
-				} else if ( rc == TASK_FAILED ) {
+				} else if ( rc != 0 ) {
 					// What to do about failure?
 					dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
 							 procID.cluster, procID.proc,
-							 errorString.Value() );
+							 gahp->getErrorString() );
 				} else {
-					remoteJobState = new_remote_state;
+					remoteJobState = remoteStateNameConvert( new_status );
 					//requestScheddUpdate( this );
+				}
+				if ( new_status ) {
+					free( new_status );
 				}
 				lastProbeTime = now;
 				gmState = GM_SUBMITTED;
 			}
 			} break;
 		case GM_EXIT_INFO: {
-			rc = doExitInfo();
-			if ( rc == TASK_QUEUED || rc == TASK_IN_PROGRESS ) {
+			bool normal_exit;
+			int exit_code;
+			rc = gahp->nordugrid_exit_info( resourceManagerString, remoteJobId,
+											normal_exit, exit_code );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc == TASK_FAILED ) {
+			} else if ( rc != 0 ) {
 				dprintf( D_ALWAYS, "(%d.%d) exit info gathering failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_CANCEL;
 			} else {
+				normalExit = normal_exit;
+				exitCode = exit_code;
 				if ( normalExit ) {
 					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 					jobAd->Assign( ATTR_ON_EXIT_CODE, exitCode );
@@ -443,12 +563,17 @@ int NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_STAGE_OUT: {
-			rc = doStageOut();
-			if ( rc == TASK_QUEUED || rc == TASK_IN_PROGRESS ) {
+			if ( stageList == NULL ) {
+				stageList = buildStageInList();
+			}
+			rc = gahp->nordugrid_stage_out( resourceManagerString, remoteJobId,
+											*stageList );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc == TASK_FAILED ) {
+			} else if ( rc != 0 ) {
 				dprintf( D_ALWAYS, "(%d.%d) file stage out failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_DONE_SAVE;
@@ -467,12 +592,13 @@ int NordugridJob::doEvaluateState()
 			gmState = GM_DONE_COMMIT;
 			} break;
 		case GM_DONE_COMMIT: {
-			rc = doRemove();
-			if ( rc == TASK_QUEUED ) {
+			rc = gahp->nordugrid_cancel( resourceManagerString, remoteJobId );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc == TASK_FAILED ) {
+			} else if ( rc != 0 ) {
 				dprintf( D_ALWAYS, "(%d.%d) job cleanup failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -488,15 +614,16 @@ int NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_CANCEL: {
-			rc = doRemove();
-			if ( rc == TASK_QUEUED ) {
+			rc = gahp->nordugrid_cancel( resourceManagerString, remoteJobId );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc == TASK_DONE ) {
+			} else if ( rc == 0 ) {
 				gmState = GM_FAILED;
 			} else {
 				// What to do about a failed cancel?
 				dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s\n",
-						 procID.cluster, procID.proc, errorString.Value() );
+						 procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_FAILED;
 			}
 			} break;
@@ -641,12 +768,21 @@ int NordugridJob::doEvaluateState()
 
 		if ( gmState != old_gm_state ) {
 			reevaluate_state = true;
-		}
-		if ( gmState != old_gm_state ) {
 			dprintf(D_FULLDEBUG, "(%d.%d) gm state change: %s -> %s\n",
 					procID.cluster, procID.proc, GMStateNames[old_gm_state],
 					GMStateNames[gmState]);
 			enteredCurrentGmState = time(NULL);
+
+			// If we were calling a gahp call that used RSL, we're done
+			// with it now, so free it.
+			if ( RSL ) {
+				delete RSL;
+				RSL = NULL;
+			}
+			if ( stageList ) {
+				delete stageList;
+				stageList = NULL;
+			}
 		}
 
 	} while ( reevaluate_state );
@@ -674,592 +810,6 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 							 job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );
-}
-
-int NordugridJob::doSubmit( char *&job_id )
-{
-	FILE *ftp_put_fp = NULL;
-	MyString *rsl = NULL;
-	size_t rsl_len;
-	char *job_dir = NULL;
-	char *tmp_job_id = NULL;
-	MyString buff;
-	int rc;
-
-	rc = myResource->AcquireConnection( this, ftp_srvr );
-	if ( rc == ACQUIRE_QUEUED ) {
-		return TASK_QUEUED;
-	} else if ( rc == ACQUIRE_FAILED ) {
-		return TASK_FAILED;
-	}
-
-	rsl = buildSubmitRSL();
-	rsl_len = strlen( rsl->Value() );
-
-	if ( ftp_lite_change_dir( ftp_srvr, "/jobs/new" ) == 0 ) {
-		errorString.sprintf( "ftp_lite_change_dir(/jobs/new) failed, errno=%d",
-							 errno );
-		goto doSubmit_error_exit;
-	}
-
-	if ( ftp_lite_print_dir( ftp_srvr, &job_dir ) == 0 ) {
-		errorString.sprintf( "ftp_lite_print_dir() failed, errno=%d", errno );
-		goto doSubmit_error_exit;
-	}
-
-	tmp_job_id = strrchr( job_dir, '/' );
-	if ( tmp_job_id == NULL ) {
-		errorString = "strrchr() failed";
-		goto doSubmit_error_exit;
-	}
-	tmp_job_id++;
-
-	ftp_put_fp = ftp_lite_put( ftp_srvr, "/jobs/new/job", 0,
-							   FTP_LITE_WHOLE_FILE );
-	if ( ftp_put_fp == NULL ) {
-		errorString.sprintf( "ftp_lite_put() failed, errno=%d", errno );
-		goto doSubmit_error_exit;
-	}
-
-	if ( fwrite( rsl->Value(), 1, rsl_len, ftp_put_fp ) != rsl_len ) {
-		errorString = "fwrite() failed";
-		goto doSubmit_error_exit;
-	}
-
-	fclose( ftp_put_fp );
-	ftp_put_fp = NULL;
-
-	if ( ftp_lite_done( ftp_srvr ) == 0 ) {
-		errorString.sprintf( "ftp_lite_done() failed, errno=%d", errno );
-		goto doSubmit_error_exit;
-	}
-
-	if ( ftp_lite_change_dir( ftp_srvr, "/jobs" ) == 0 ) {
-		errorString.sprintf( "ftp_lite_change_dir(/jobs) failed, errno=%d",
-							 errno );
-		goto doSubmit_error_exit;
-	}
-
-	job_id = strdup( tmp_job_id );
-	free( job_dir );
-	delete rsl;
-	myResource->ReleaseConnection( this );
-	return TASK_DONE;
-
- doSubmit_error_exit:
-	if ( ftp_put_fp != NULL ) {
-		fclose( ftp_put_fp );
-	}
-	if ( job_dir != NULL ) {
-		free( job_dir );
-	}
-	if ( rsl != NULL ) {
-		delete rsl;
-	}
-	myResource->ReleaseConnection( this );
-
-	return TASK_FAILED;
-}
-
-int NordugridJob::doStatus( int &new_remote_state )
-{
-	MyString filename;
-	char *status_buff = NULL;
-	int status_len = 0;
-	FILE *status_fp = NULL;
-	MyString buff;
-	int rc;
-
-	rc = myResource->AcquireConnection( this, ftp_srvr );
-	if ( rc == ACQUIRE_QUEUED ) {
-		return TASK_QUEUED;
-	} else if ( rc == ACQUIRE_FAILED ) {
-		return TASK_FAILED;
-	}
-
-	filename.sprintf( "/jobs/%s/%s/status", remoteJobId, NORDUGRID_LOG_DIR );
-
-	status_fp = ftp_lite_get( ftp_srvr, filename.Value(), 0 );
-	if ( status_fp == NULL ) {
-		errorString.sprintf( "ftp_lite_get() failed, errno=%d", errno );
-		goto doStatus_error_exit;
-	}
-
-	status_len = ftp_lite_stream_to_buffer( status_fp, &status_buff );
-	if ( status_len == -1 ) {
-		errorString.sprintf( "ftp_lite_stream_to_buffer() failed, errno=%d",
-							 errno );
-		goto doStatus_error_exit;
-	}
-
-	fclose( status_fp );
-	status_fp = NULL;
-
-	if ( ftp_lite_done( ftp_srvr ) == 0 ) {
-		errorString.sprintf( "ftp_lite_done() failed, errno=%d", errno );
-		goto doStatus_error_exit;
-	}
-
-	myResource->ReleaseConnection( this );
-
-	status_buff[status_len-1] = '\0';
-	new_remote_state = remoteStateNameConvert( status_buff );
-	if ( new_remote_state == REMOTE_STATE_UNKNOWN ) {
-		errorString.sprintf( "invalid job status of '%s'", status_buff );
-		goto doStatus_error_exit;
-	}
-
-	return TASK_DONE;
-
- doStatus_error_exit:
-	if ( status_buff != NULL ) {
-		free( status_buff );
-	}
-	if ( status_fp != NULL ) {
-		fclose( status_fp );
-	}
-	myResource->ReleaseConnection( this );
-
-	return TASK_FAILED;
-}
-
-int NordugridJob::doRemove()
-{
-	MyString dir;
-	MyString buff;
-	int rc;
-
-	rc = myResource->AcquireConnection( this, ftp_srvr );
-	if ( rc == ACQUIRE_QUEUED ) {
-		return TASK_QUEUED;
-	} else if ( rc == ACQUIRE_FAILED ) {
-		return TASK_FAILED;
-	}
-
-	dir.sprintf( "/jobs/%s", remoteJobId );
-	if ( ftp_lite_delete_dir( ftp_srvr, dir.Value() ) == 0 ) {
-		errorString.sprintf( "ftp_lite_delete_dir() failed, errno=%d", errno );
-		goto doRemove_error_exit;
-	}
-
-	myResource->ReleaseConnection( this );
-
-	return TASK_DONE;
-
- doRemove_error_exit:
-	myResource->ReleaseConnection( this );
-
-	return TASK_FAILED;
-}
-
-int NordugridJob::doStageIn()
-{
-	FILE *curr_file_fp = NULL;
-	FILE *curr_ftp_fp = NULL;
-	char *curr_filename = NULL;
-	int rc;
-
-	if ( stage_list == NULL ) {
-		char *buf = NULL;
-		int transfer_exec = TRUE;
-
-		jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, &buf );
-		stage_list = new StringList( buf, "," );
-		if ( buf != NULL ) {
-			free( buf );
-		}
-
-		jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
-		if ( transfer_exec ) {
-			jobAd->LookupString( ATTR_JOB_CMD, &buf );
-			if ( !stage_list->file_contains( buf ) ) {
-				stage_list->append( buf );
-			}
-			free( buf );
-		}
-
-		if ( jobAd->LookupString( ATTR_JOB_INPUT, &buf ) == 1) {
-			// only add to list if not NULL_FILE (i.e. /dev/null)
-			if ( ! nullFile(buf) ) {
-				if ( !stage_list->file_contains( buf ) ) {
-					stage_list->append( buf );			
-				}
-			}
-			free( buf );
-		}
-
-		stage_list->append( STAGE_COMPLETE_FILE );
-
-		stage_list->rewind();
-	}
-
-
-	rc = myResource->AcquireConnection( this, ftp_srvr );
-	if ( rc == ACQUIRE_QUEUED ) {
-		return TASK_QUEUED;
-	} else if ( rc == ACQUIRE_FAILED ) {
-		return TASK_FAILED;
-	}
-
-	curr_filename = stage_list->next();
-
-	if ( curr_filename != NULL ) {
-
-		MyString full_filename;
-		if ( strcmp( curr_filename, STAGE_COMPLETE_FILE ) == 0 ) {
-			full_filename = "/dev/null";
-		} else {
-			if ( curr_filename[0] != DIR_DELIM_CHAR ) {
-				char *iwd = NULL;
-				jobAd->LookupString( ATTR_JOB_IWD, &iwd );
-				full_filename.sprintf( "%s%c%s", iwd, DIR_DELIM_CHAR,
-									   curr_filename );
-				free( iwd );
-			} else {
-				full_filename = curr_filename;
-			}
-		}
-		curr_file_fp = fopen( full_filename.Value(), "r" );
-		if ( curr_file_fp == NULL ) {
-			errorString = "fopen failed";
-			goto doStageIn_error_exit;
-		}
-
-full_filename.sprintf("/jobs/%s",remoteJobId);
-if ( ftp_lite_change_dir( ftp_srvr, full_filename.Value() ) == 0 ) {
-errorString.sprintf( "ftp_lite_change_dir() failed, errno=%d", errno );
-goto doStageIn_error_exit;
-}
-
-		full_filename.sprintf( "/jobs/%s/%s", remoteJobId,
-							   basename(curr_filename) );
-		curr_ftp_fp = ftp_lite_put( ftp_srvr, full_filename.Value(), 0,
-									FTP_LITE_WHOLE_FILE );
-		if ( curr_ftp_fp == NULL ) {
-			errorString.sprintf( "ftp_lite_put() failed, errno=%d", errno );
-			goto doStageIn_error_exit;
-		}
-
-		if ( ftp_lite_stream_to_stream( curr_file_fp, curr_ftp_fp ) == -1 ) {
-			errorString.sprintf( "ftp_lite_stream_to_stream failed, errno=%d",
-								 errno );
-			goto doStageIn_error_exit;
-		}
-
-		fclose( curr_file_fp );
-		curr_file_fp = NULL;
-
-		fclose( curr_ftp_fp );
-		curr_ftp_fp = NULL;
-
-		if ( ftp_lite_done( ftp_srvr ) == 0 ) {
-			errorString.sprintf( "ftp_lite_done() failed, errno=%d", errno );
-			goto doStageIn_error_exit;
-		}
-
-		SetEvaluateState();
-		return TASK_IN_PROGRESS;
-	}
-
-	delete stage_list;
-	stage_list = NULL;
-	myResource->ReleaseConnection( this );
-
-	return TASK_DONE;
-
- doStageIn_error_exit:
-	if ( curr_file_fp != NULL ) {
-		fclose( curr_file_fp );
-	}
-	if ( curr_ftp_fp != NULL ) {
-		fclose( curr_ftp_fp );
-	}
-	if ( stage_list != NULL ) {
-		delete stage_list;
-		stage_list = NULL;
-	}
-	myResource->ReleaseConnection( this );
-	return TASK_FAILED;
-}
-
-int NordugridJob::doStageOut()
-{
-	FILE *curr_file_fp = NULL;
-	FILE *curr_ftp_fp = NULL;
-	char *curr_filename = NULL;
-	int rc;
-
-	if ( stage_list == NULL ) {
-		char *buf = NULL;
-
-		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, &buf );
-		stage_list = new StringList( buf, "," );
-		if ( buf != NULL ) {
-			free( buf );
-		}
-
-		if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &buf ) == 1) {
-			// only add to list if not NULL_FILE (i.e. /dev/null)
-			if ( ! nullFile(buf) ) {
-				if ( !stage_list->file_contains( buf ) ) {
-					stage_list->append( buf );			
-				}
-			}
-			free( buf );
-		}
-
-		if ( jobAd->LookupString( ATTR_JOB_ERROR, &buf ) == 1) {
-			// only add to list if not NULL_FILE (i.e. /dev/null)
-			if ( ! nullFile(buf) ) {
-				if ( !stage_list->file_contains( buf ) ) {
-					stage_list->append( buf );			
-				}
-			}
-			free( buf );
-		}
-
-		stage_list->rewind();
-	}
-
-	rc = myResource->AcquireConnection( this, ftp_srvr );
-	if ( rc == ACQUIRE_QUEUED ) {
-		return TASK_QUEUED;
-	} else if ( rc == ACQUIRE_FAILED ) {
-		return TASK_FAILED;
-	}
-
-	curr_filename = stage_list->next();
-
-	if ( curr_filename != NULL ) {
-
-		MyString full_filename;
-		if ( curr_filename[0] != DIR_DELIM_CHAR ) {
-			char *iwd = NULL;
-			jobAd->LookupString( ATTR_JOB_IWD, &iwd );
-			full_filename.sprintf( "%s%c%s", iwd, DIR_DELIM_CHAR,
-								   curr_filename );
-			free( iwd );
-		} else {
-			full_filename = curr_filename;
-		}
-		curr_file_fp = fopen( full_filename.Value(), "w" );
-		if ( curr_file_fp == NULL ) {
-			errorString = "fopen failed";
-			goto doStageOut_error_exit;
-		}
-
-		full_filename.sprintf( "/jobs/%s/%s", remoteJobId,
-							   basename(curr_filename) );
-		curr_ftp_fp = ftp_lite_get( ftp_srvr, full_filename.Value(), 0 );
-		if ( curr_ftp_fp == NULL ) {
-			errorString.sprintf( "ftp_lite_get() failed, errno=%d", errno );
-			goto doStageOut_error_exit;
-		}
-
-		if ( ftp_lite_stream_to_stream( curr_ftp_fp, curr_file_fp ) == -1 ) {
-			errorString.sprintf( "ftp_lite_stream_to_stream failed, errno=%d",
-								 errno );
-			goto doStageOut_error_exit;
-		}
-
-		fclose( curr_file_fp );
-		curr_file_fp = NULL;
-
-		fclose( curr_ftp_fp );
-		curr_ftp_fp = NULL;
-
-		if ( ftp_lite_done( ftp_srvr ) == 0 ) {
-			errorString.sprintf( "ftp_lite_done() failed, errno=%d", errno );
-			goto doStageOut_error_exit;
-		}
-
-		SetEvaluateState();
-		return TASK_IN_PROGRESS;
-	}
-
-	delete stage_list;
-	stage_list = NULL;
-	myResource->ReleaseConnection( this );
-
-	return TASK_DONE;
-
- doStageOut_error_exit:
-	if ( curr_file_fp != NULL ) {
-		fclose( curr_file_fp );
-	}
-	if ( curr_ftp_fp != NULL ) {
-		fclose( curr_ftp_fp );
-	}
-	myResource->ReleaseConnection( this );
-	if ( stage_list != NULL ) {
-		delete stage_list;
-		stage_list = NULL;
-	}
-	return TASK_FAILED;
-}
-
-int NordugridJob::doExitInfo()
-{
-	MyString diag_filename;
-	char diag_buff[256];
-	FILE *diag_fp = NULL;
-	int rc;
-
-	rc = myResource->AcquireConnection( this, ftp_srvr );
-	if ( rc == ACQUIRE_QUEUED ) {
-		return TASK_QUEUED;
-	} else if ( rc == ACQUIRE_FAILED ) {
-		return TASK_FAILED;
-	}
-
-	diag_filename.sprintf( "/jobs/%s/%s/diag", remoteJobId,
-						   NORDUGRID_LOG_DIR );
-
-	diag_fp = ftp_lite_get( ftp_srvr, diag_filename.Value(), 0 );
-	if ( diag_fp == NULL ) {
-		errorString.sprintf( "ftp_lite_get() failed, errno=%d", errno );
-		goto doExitInfo_error_exit;
-	}
-
-		// line "runtimeenvironments="
-	if ( fgets( diag_buff, sizeof(diag_buff), diag_fp ) == NULL ) {
-		errorString = "fgets() on diag failed";
-		goto doExitInfo_error_exit;
-	}
-		// line "nodename=<hostname>"
-	if ( fgets( diag_buff, sizeof(diag_buff), diag_fp ) == NULL ) {
-		errorString = "fgets() on diag failed";
-		goto doExitInfo_error_exit;
-	}
-		// not sure what this line will be yet...
-	if ( fgets( diag_buff, sizeof(diag_buff), diag_fp ) == NULL ) {
-		errorString = "fgets() on diag failed";
-		goto doExitInfo_error_exit;
-	}
-	if ( sscanf( diag_buff, "Command exited with non-zero status %d",
-				 &exitCode ) == 1 ) {
-		normalExit = true;
-
-		if ( fgets( diag_buff, sizeof(diag_buff), diag_fp ) == NULL ) {
-			errorString = "fgets() on diag failed";
-			goto doExitInfo_error_exit;
-		}
-	} else if ( sscanf( diag_buff, "Command terminated by signal %d",
-						&exitCode ) == 1 ) {
-		normalExit = false;
-
-		if ( fgets( diag_buff, sizeof(diag_buff), diag_fp ) == NULL ) {
-			errorString = "fgets() on diag failed";
-			goto doExitInfo_error_exit;
-		}
-	} else {
-		normalExit = true;
-		exitCode = 0;
-	}
-		// now we've just read "WallTime=<float>s"
-		// we can read more if we want, but not for now
-
-	fclose( diag_fp );
-	diag_fp = NULL;
-
-	if ( ftp_lite_done( ftp_srvr ) == 0 ) {
-		errorString.sprintf( "ftp_lite_done() failed, errno=%d", errno );
-		goto doExitInfo_error_exit;
-	}
-
-	myResource->ReleaseConnection( this );
-
-	return TASK_DONE;
-
- doExitInfo_error_exit:
-	if ( diag_fp != NULL ) {
-		fclose( diag_fp );
-	}
-	myResource->ReleaseConnection( this );
-
-	return TASK_FAILED;
-}
-
-int NordugridJob::doStageInQuery( bool &need_stage_in )
-{
-	int rc;
-	MyString dir_name;
-	StringList *dir_list = NULL;
-
-	dir_name.sprintf( "/jobs/%s", remoteJobId );
-
-	rc = doList( dir_name.Value(), dir_list );
-	if ( rc != TASK_DONE ) {
-		return rc;
-	}
-
-	if ( dir_list->contains( STAGE_COMPLETE_FILE ) == true ) {
-		need_stage_in = false;
-	} else {
-		need_stage_in = true;
-	}
-
-	delete dir_list;
-
-	return TASK_DONE;
-}
-
-int NordugridJob::doList( const char *dir_name, StringList *&dir_list )
-{
-	char list_buff[256];
-	FILE *list_fp = NULL;
-	StringList *my_dir_list = NULL;
-	int rc;
-
-	rc = myResource->AcquireConnection( this, ftp_srvr );
-	if ( rc == ACQUIRE_QUEUED ) {
-		return TASK_QUEUED;
-	} else if ( rc == ACQUIRE_FAILED ) {
-		return TASK_FAILED;
-	}
-
-	list_fp = ftp_lite_list( ftp_srvr, dir_name );
-	if ( list_fp == NULL ) {
-		errorString.sprintf( "ftp_lite_get() failed, errno=%d", errno );
-		goto doList_error_exit;
-	}
-
-	my_dir_list = new StringList;
-
-	while ( fgets( list_buff, sizeof(list_buff), list_fp ) != NULL ) {
-		int len = strlen( list_buff );
-		if ( list_buff[len-2] == '\015' && list_buff[len-1] == '\012' ) {
-			list_buff[len-2] = '\0';
-		} else if ( list_buff[len-1] == '\n' ) {
-			list_buff[len-1] = '\0';
-		}
-		my_dir_list->append( list_buff );
-	}
-
-	fclose( list_fp );
-	list_fp = NULL;
-
-	if ( ftp_lite_done( ftp_srvr ) == 0 ) {
-		errorString.sprintf( "ftp_lite_done() failed, errno=%d", errno );
-		goto doList_error_exit;
-	}
-
-	myResource->ReleaseConnection( this );
-
-	dir_list = my_dir_list;
-
-	return TASK_DONE;
-
- doList_error_exit:
-	if ( my_dir_list != NULL ) {
-		delete my_dir_list;
-	}
-	if ( list_fp != NULL ) {
-		fclose( list_fp );
-	}
-	myResource->ReleaseConnection( this );
-
-	return TASK_FAILED;
 }
 
 MyString *NordugridJob::buildSubmitRSL()
@@ -1290,7 +840,10 @@ MyString *NordugridJob::buildSubmitRSL()
 	}
 
 	//Start off the RSL
-	rsl->sprintf( "&(savestate=yes)(action=request)(lrmstype=pbs)(hostname=nostos.cs.wisc.edu)(gmlog=%s)", NORDUGRID_LOG_DIR );
+	attr_value = param( "FULL_HOSTNAME" );
+	rsl->sprintf( "&(savestate=yes)(action=request)(lrmstype=pbs)(hostname=%s)(gmlog=%s)", attr_value, NORDUGRID_LOG_DIR );
+	free( attr_value );
+	attr_value = NULL;
 
 	//We're assuming all job clasads have a command attribute
 	jobAd->LookupString( ATTR_JOB_CMD, &executable );
@@ -1419,3 +972,66 @@ dprintf(D_FULLDEBUG,"*** RSL='%s'\n",rsl->Value());
 	return rsl;
 }
 
+StringList *NordugridJob::buildStageInList()
+{
+	StringList *stage_list = NULL;
+	MyString buf;
+	int transfer = TRUE;
+
+	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, buf );
+	stage_list = new StringList( buf.Value(), "," );
+
+	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer );
+	if ( transfer ) {
+		jobAd->LookupString( ATTR_JOB_CMD, buf );
+		if ( !stage_list->file_contains( buf.Value() ) ) {
+			stage_list->append( buf.Value() );
+		}
+	}
+
+	transfer = TRUE;
+	jobAd->LookupBool( ATTR_TRANSFER_INPUT, transfer );
+	if ( transfer && jobAd->LookupString( ATTR_JOB_INPUT, buf ) == 1) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(buf.Value()) ) {
+			if ( !stage_list->file_contains( buf.Value() ) ) {
+				stage_list->append( buf.Value() );
+			}
+		}
+	}
+
+	return stage_list;
+}
+
+StringList *NordugridJob::buildStageOutList()
+{
+	StringList *stage_list;
+	MyString buf;
+	bool transfer = TRUE;
+
+	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
+	stage_list = new StringList( buf.Value(), "," );
+
+	jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
+	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(buf.Value()) ) {
+			if ( !stage_list->file_contains( buf.Value() ) ) {
+				stage_list->append( buf.Value() );
+			}
+		}
+	}
+
+	transfer = TRUE;
+	jobAd->LookupBool( ATTR_TRANSFER_ERROR, transfer );
+	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(buf.Value()) ) {
+			if ( !stage_list->file_contains( buf.Value() ) ) {
+				stage_list->append( buf.Value() );
+			}
+		}
+	}
+
+	return stage_list;
+}

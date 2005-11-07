@@ -544,6 +544,31 @@ class GahpClient : public Service {
 		int
 		blah_job_refresh_proxy(const char *job_id, const char *proxy_file);
 
+		int
+		nordugrid_submit(const char *hostname, const char *rsl, char *&job_id);
+
+		int
+		nordugrid_status(const char *hostname, const char *job_id,
+						 char *&status);
+
+		int
+		nordugrid_cancel(const char *hostname, const char *job_id);
+
+		int
+		nordugrid_stage_in(const char *hostname, const char *job_id,
+						   StringList &files);
+
+		int
+		nordugrid_stage_out(const char *hostname, const char *job_id,
+							StringList &files);
+
+		int
+		nordugrid_exit_info(const char *hostname, const char *job_id,
+							bool &normal_exit, int &exit_code);
+
+		int
+		nordugrid_ping(const char *hostname);
+
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
 	globus_duroc_control_barrier_release();

@@ -42,18 +42,13 @@
 #include "infnbatchjob.h"
 #include "mirrorjob.h"
 #include "mirrorresource.h"
+#include "nordugridjob.h"
+#include "nordugridresource.h"
 
-#if defined(NORDUGRID_UNIVERSE)
-#   include "nordugridjob.h"
-#   include "nordugridresource.h"
-
-    template class HashTable<HashKey, NordugridJob *>;
-    template class HashBucket<HashKey, NordugridJob *>;
-    template class List<NordugridJob>;
-    template class Item<NordugridJob>;
-    template class HashTable<HashKey, NordugridResource *>;
-    template class HashBucket<HashKey, NordugridResource *>;
-#endif
+template class List<NordugridJob>;
+template class Item<NordugridJob>;
+template class HashTable<HashKey, NordugridResource *>;
+template class HashBucket<HashKey, NordugridResource *>;
 
 #if defined(ORACLE_UNIVERSE)
 #   include "oraclejob.h"

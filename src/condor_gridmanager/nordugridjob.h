@@ -29,10 +29,10 @@
 #include "MyString.h"
 #include "classad_hashtable.h"
 
-#include "ftp_lite.h"
-
 #include "basejob.h"
 #include "nordugridresource.h"
+#include "proxymanager.h"
+#include "gahp-client.h"
 
 void NordugridJobInit();
 void NordugridJobReconfig();
@@ -56,11 +56,17 @@ class NordugridJob : public BaseJob
 
 	static int probeInterval;
 	static int submitInterval;
+	static int gahpCallTimeout;
+	static int maxConnectFailures;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
+	static void setGahpCallTimeout( int new_timeout )
+		{ gahpCallTimeout = new_timeout; }
+	static void setConnectFailureRetry( int count )
+		{ maxConnectFailures = count; }
 
 	int gmState;
 	time_t lastProbeTime;
@@ -75,27 +81,26 @@ class NordugridJob : public BaseJob
 	char *remoteJobId;
 	int remoteJobState;
 
-	ftp_lite_server *ftp_srvr;
+	Proxy *jobProxy;
 	NordugridResource *myResource;
+	GahpClient *gahp;
 
-		// Used by doStageIn() and doStageOut()
-	StringList *stage_list;
+		// If we're in the middle of a gahp call that requires an RSL,
+		// the RSL is stored here (so that we don't have to reconstruct the
+		// RSL every time we test the call for completion). It should be
+		// freed and reset to NULL once the call completes.
+	MyString *RSL;
+		// Same as for RSL, but used by the file staging calls.
+	StringList *stageList;
 
 		// These get set before file stage out, but don't get handed
 		// to JobTerminated() until after file stage out succeeds.
 	int exitCode;
 	bool normalExit;
 
-	int doSubmit( char *&job_id );
-	int doStatus( int &new_remote_state );
-	int doRemove();
-	int doStageIn();
-	int doStageOut();
-	int doExitInfo();
-	int doStageInQuery( bool &need_stage_in );
-	int doList( const char *dir_name, StringList *&dir_list );
-
 	MyString *buildSubmitRSL();
+	StringList *buildStageInList();
+	StringList *buildStageOutList();
 
  protected:
 };

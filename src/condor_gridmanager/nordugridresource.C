@@ -29,22 +29,44 @@
 #include "nordugridresource.h"
 #include "gridmanager.h"
 
+template class List<NordugridJob>;
+template class Item<NordugridJob>;
+template class HashTable<HashKey, NordugridResource *>;
+template class HashBucket<HashKey, NordugridResource *>;
+
 #define HASH_TABLE_SIZE			500
 
 HashTable <HashKey, NordugridResource *>
     NordugridResource::ResourcesByName( HASH_TABLE_SIZE,
 										hashFunction );
 
-NordugridResource *NordugridResource::FindOrCreateResource( const char * resource_name )
+const char *NordugridResource::HashName( const char *resource_name,
+										 const char *proxy_subject )
+{
+	static MyString hash_name;
+
+	hash_name.sprintf( "%s#%s", resource_name, 
+					   proxy_subject ? proxy_subject : "NULL" );
+
+	return hash_name.Value();
+}
+
+NordugridResource *NordugridResource::FindOrCreateResource( const char * resource_name,
+															const char *proxy_subject )
 {
 	int rc;
+	MyString resource_key;
 	NordugridResource *resource = NULL;
 
-	rc = ResourcesByName.lookup( HashKey( resource_name ), resource );
+	rc = ResourcesByName.lookup( HashKey( HashName( resource_name,
+													proxy_subject ) ),
+								 resource );
 	if ( rc != 0 ) {
-		resource = new NordugridResource( resource_name );
+		resource = new NordugridResource( resource_name, proxy_subject );
 		ASSERT(resource);
-		ResourcesByName.insert( HashKey( resource_name ), resource );
+		ResourcesByName.insert( HashKey( HashName( resource_name,
+												   proxy_subject ) ),
+								resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -52,127 +74,75 @@ NordugridResource *NordugridResource::FindOrCreateResource( const char * resourc
 	return resource;
 }
 
-NordugridResource::NordugridResource( const char *resource_name )
+NordugridResource::NordugridResource( const char *resource_name,
+									  const char *proxy_subject )
 	: BaseResource( resource_name )
 {
-	connectionUser = NULL;
-	ftpServer = NULL;
+	proxySubject = strdup( proxy_subject );
 
-	registeredJobs = new List<NordugridJob>;
-	connectionWaiters = new List<NordugridJob>;
+	gahp = NULL;
+
+	char *gahp_path = param("NORDUGRID_GAHP");
+	if ( gahp_path == NULL ) {
+		EXCEPT( "NORDUGRID_GAHP not defined in condor config file" );
+	} else {
+		MyString buff;
+		buff.sprintf( "NORDUGRID/%s", proxySubject );
+
+		gahp = new GahpClient( buff.Value(), gahp_path );
+		gahp->setNotificationTimerId( pingTimerId );
+		gahp->setMode( GahpClient::normal );
+		gahp->setTimeout( NordugridJob::gahpCallTimeout );
+
+		free( gahp_path );
+	}
 }
 
 NordugridResource::~NordugridResource()
 {
-	CloseConnection();
-	if ( registeredJobs != NULL ) {
-		delete registeredJobs;
+	if ( proxySubject ) {
+		free( proxySubject );
 	}
-	if ( connectionWaiters != NULL ) {
-		delete connectionWaiters;
+	if ( gahp ) {
+		delete gahp;
 	}
-}
-
-bool NordugridResource::IsEmpty()
-{
-	return registeredJobs->IsEmpty();
 }
 
 void NordugridResource::Reconfig()
 {
 	BaseResource::Reconfig();
+
+	gahp->setTimeout( NordugridJob::gahpCallTimeout );
 }
 
-void NordugridResource::RegisterJob( NordugridJob *job )
+void NordugridResource::DoPing( time_t& ping_delay, bool& ping_complete,
+								bool& ping_succeeded )
 {
-	registeredJobs->Append( job );
-}
+	int rc;
 
-void NordugridResource::UnregisterJob( NordugridJob *job )
-{
-	registeredJobs->Delete( job );
-
-		// TODO: if this is last job, arrange to close session and delete
-		//   this object
-}
-
-int NordugridResource::AcquireConnection( NordugridJob *job,
-										  ftp_lite_server *&server )
-{
-	NordugridJob *jobptr;
-
-	if ( connectionUser == NULL ) {
-		connectionUser = job;
-	} else if ( connectionUser != job ) {
-		connectionWaiters->Rewind();
-		while ( connectionWaiters->Next( jobptr ) ) {
-			if ( jobptr == job ) {
-				return ACQUIRE_QUEUED;
-			}
-		}
-		connectionWaiters->Append( job );
-		return ACQUIRE_QUEUED;
+	if ( gahp->isInitialized() == false ) {
+		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
+		ping_delay = 5;
+		return;
+	}
+	gahp->setNormalProxy( gahp->getMasterProxy() );
+	if ( PROXY_IS_EXPIRED( gahp->getMasterProxy() ) ) {
+		dprintf( D_ALWAYS,"proxy near expiration or invalid, delaying ping\n" );
+		ping_delay = TIMER_NEVER;
+		return;
 	}
 
-	if ( OpenConnection() ) {
-		server = ftpServer;
-		return ACQUIRE_DONE;
+	ping_delay = 0;
+
+	rc = gahp->nordugrid_ping( resourceName );
+
+	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+		ping_complete = false;
+	} else if ( rc != 0 ) {
+		ping_complete = true;
+		ping_succeeded = false;
 	} else {
-		return ACQUIRE_FAILED;
+		ping_complete = true;
+		ping_succeeded = true;
 	}
-}
-
-void NordugridResource::ReleaseConnection( NordugridJob *job )
-{
-	if ( connectionUser == NULL ) {
-		return;
-	} else if ( connectionUser != job ) {
-		connectionWaiters->Delete( job );
-		return;
-	}
-
-	connectionUser = NULL;
-
-	if ( connectionWaiters->IsEmpty() == false ) {
-		connectionWaiters->Rewind();
-		connectionUser = connectionWaiters->Next();
-		connectionWaiters->DeleteCurrent();
-		connectionUser->SetEvaluateState();
-	}
-
-		// set timer to close connection after a time?
-}
-
-bool NordugridResource::OpenConnection()
-{
-	if ( ftpServer != NULL ) {
-		return true;
-	}
-
-	ftpServer = ftp_lite_open( resourceName, 2811, NULL );
-	if ( ftpServer == NULL ) {
-		dprintf( D_FULLDEBUG, "ftp_lite_open failed!\n" );
-		return false;
-	}
-
-	if ( ftp_lite_auth_globus( ftpServer ) == 0 ) {
-		dprintf( D_FULLDEBUG, "ftp_lite_auth_globus() failed\n" );
-		ftp_lite_close( ftpServer );
-		ftpServer = NULL;
-		return false;
-	}
-
-	return true;
-}
-
-bool NordugridResource::CloseConnection()
-{
-	if ( ftpServer == NULL ) {
-		return true;
-	}
-
-	ftp_lite_close( ftpServer );
-	ftpServer = NULL;
-
-	return true;
 }
