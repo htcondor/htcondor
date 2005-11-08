@@ -243,7 +243,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
 	if ( strrchr( buff, ' ' ) ) {
-		SetRemoteJobId( buff + 1 );
+		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
 	} else {
 		SetRemoteJobId( NULL );
 	}
@@ -569,7 +569,7 @@ int NordugridJob::doEvaluateState()
 			} break;
 		case GM_STAGE_OUT: {
 			if ( stageList == NULL ) {
-				stageList = buildStageInList();
+				stageList = buildStageOutList();
 			}
 			rc = gahp->nordugrid_stage_out( resourceManagerString, remoteJobId,
 											*stageList );
@@ -982,18 +982,27 @@ dprintf(D_FULLDEBUG,"*** RSL='%s'\n",rsl->Value());
 
 StringList *NordugridJob::buildStageInList()
 {
+	StringList *tmp_list = NULL;
 	StringList *stage_list = NULL;
+	char *filename = NULL;
 	MyString buf;
+	MyString iwd;
 	int transfer = TRUE;
 
+	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
+		if ( iwd.Length() > 1 && iwd[iwd.Length() - 1] != '/' ) {
+			iwd += '/';
+		}
+	}
+
 	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, buf );
-	stage_list = new StringList( buf.Value(), "," );
+	tmp_list = new StringList( buf.Value(), "," );
 
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer );
 	if ( transfer ) {
 		jobAd->LookupString( ATTR_JOB_CMD, buf );
-		if ( !stage_list->file_contains( buf.Value() ) ) {
-			stage_list->append( buf.Value() );
+		if ( !tmp_list->file_contains( buf.Value() ) ) {
+			tmp_list->append( buf.Value() );
 		}
 	}
 
@@ -1002,30 +1011,53 @@ StringList *NordugridJob::buildStageInList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_INPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.Value()) ) {
-			if ( !stage_list->file_contains( buf.Value() ) ) {
-				stage_list->append( buf.Value() );
+			if ( !tmp_list->file_contains( buf.Value() ) ) {
+				tmp_list->append( buf.Value() );
 			}
 		}
 	}
+
+	stage_list = new StringList;
+
+	tmp_list->rewind();
+	while ( ( filename = tmp_list->next() ) ) {
+		if ( filename[0] == '/' ) {
+			buf.sprintf( "%s", filename );
+		} else {
+			buf.sprintf( "%s%s", iwd.Value(), filename );
+		}
+		stage_list->append( buf.Value() );
+	}
+
+	delete tmp_list;
 
 	return stage_list;
 }
 
 StringList *NordugridJob::buildStageOutList()
 {
-	StringList *stage_list;
+	StringList *tmp_list = NULL;
+	StringList *stage_list = NULL;
+	char *filename = NULL;
 	MyString buf;
+	MyString iwd = "/";
 	bool transfer = TRUE;
 
+	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
+		if ( iwd.Length() > 1 && iwd[iwd.Length() - 1] != '/' ) {
+			iwd += '/';
+		}
+	}
+
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
-	stage_list = new StringList( buf.Value(), "," );
+	tmp_list = new StringList( buf.Value(), "," );
 
 	jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.Value()) ) {
-			if ( !stage_list->file_contains( buf.Value() ) ) {
-				stage_list->append( buf.Value() );
+			if ( !tmp_list->file_contains( buf.Value() ) ) {
+				tmp_list->append( buf.Value() );
 			}
 		}
 	}
@@ -1035,11 +1067,25 @@ StringList *NordugridJob::buildStageOutList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.Value()) ) {
-			if ( !stage_list->file_contains( buf.Value() ) ) {
-				stage_list->append( buf.Value() );
+			if ( !tmp_list->file_contains( buf.Value() ) ) {
+				tmp_list->append( buf.Value() );
 			}
 		}
 	}
+
+	stage_list = new StringList;
+
+	tmp_list->rewind();
+	while ( ( filename = tmp_list->next() ) ) {
+		if ( filename[0] == '/' ) {
+			buf.sprintf( "%s", filename );
+		} else {
+			buf.sprintf( "%s%s", iwd.Value(), filename );
+		}
+		stage_list->append( buf.Value() );
+	}
+
+	delete tmp_list;
 
 	return stage_list;
 }
