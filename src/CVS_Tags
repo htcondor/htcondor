@@ -1,3 +1,8 @@
+11/08/05 V6_7_13
+   The official 6.7.13 release.  The packages for all platforms came
+   from NMI build #14344.  The version string for this release is:
+       $CondorVersion: 6.7.13 Nov  7 2005 $
+
 11/06/05 V6_7_13-2-merge-1
    The state of the V6_7_13-2-branch for the first (and hopefully
    only) merge into V6_7.  This includes the fixes for the windoze
