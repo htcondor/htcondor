@@ -112,13 +112,12 @@ static void exec_db_query(char *quillName, char *dbIpAddr, char *dbName,char *qu
 /* build database connection string */
 static char * getDBConnStr(char *&, char *&, char *&, char *&);
 
-#endif /* WANT_QUILL */ 
-
 /* get the quill address for the quillName specified */
 static QueryResult getQuillAddrFromCollector(char *quillName, char *&quillAddr);
 
 /* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
 static  bool avgqueuetime = false;
+#endif
 
 /* directDBquery means we will just run a database query and return results directly to user */
 static  bool directDBquery = false;
@@ -137,7 +136,11 @@ static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
 
 static	CondorQ 	Q;
-static	QueryResult result, result2;
+static	QueryResult result;
+
+#if WANT_QUILL
+static  QueryResult result2;
+#endif
 
 static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
@@ -609,7 +612,9 @@ int main (int argc, char **argv)
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
+#if WANT_QUILL
 		int flag=1;
+#endif
 
 		freeConnectionStrings();
 
@@ -1244,6 +1249,7 @@ job_time(float cpu_time,ClassAd *ad)
 
 unsigned int process_direct_argument(char *arg)
 {
+#if WANT_QUILL
 	if (strcasecmp(arg, "rdbms") == MATCH) {
 		return DIRECT_RDBMS;
 	}
@@ -1251,13 +1257,20 @@ unsigned int process_direct_argument(char *arg)
 	if (strcasecmp(arg, "quilld") == MATCH) {
 		return DIRECT_QUILLD;
 	}
+#endif
 
 	if (strcasecmp(arg, "schedd") == MATCH) {
 		return DIRECT_SCHEDD;
 	}
 
+#if WANT_QUILL
 	fprintf( stderr, 
-			"Error: Argument -direct requires [rdbms | quilld | schedd]\n" );
+		"Error: Argument -direct requires [rdbms | quilld | schedd]\n" );
+#else
+	fprintf( stderr, 
+		"Error: Quill feature set is not available.\n"
+		"Error: Argument -direct may only take 'schedd' as an option.\n" );
+#endif
 
 	exit(EXIT_FAILURE);
 
@@ -1746,7 +1759,15 @@ usage (char *myName)
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-jobads <file>\t\tFile of job ads to display\n"
 		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
-		"\t\t-avgqueuetime\t\tAverage time in queue for uncompleted jobs\n"
+#if WANT_QUILL
+		"\t\t-direct <rdbms | quilld | schedd>\n"
+		"\t\t\tPerform a direct query to the rdbms, or to the quilld,\n"
+		"\t\t\tor to the schedd without falling back to the queue\n"
+		"\t\t\tlocation discovery algortihm, even in case of error\n"
+#else
+		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
+#endif
+		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
@@ -2850,6 +2871,8 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     return success;
 }
 
+#if WANT_QUILL
+
 /* get the quill address for the quillName specified */
 static QueryResult getQuillAddrFromCollector(char *quillName, char *&quillAddr) {
 	QueryResult result = Q_OK;
@@ -2871,7 +2894,6 @@ static QueryResult getQuillAddrFromCollector(char *quillName, char *&quillAddr) 
 	return result;
 }
 
-#if WANT_QUILL
 
 static char * getDBConnStr(char *&quillName,
                            char *&databaseIp,
