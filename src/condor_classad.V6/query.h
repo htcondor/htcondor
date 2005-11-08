@@ -40,7 +40,8 @@ public:
 	~LocalCollectionQuery( );
 
 	void Bind( ClassAdCollection * );
-	bool Query( const std::string &viewName, ExprTree *constraint=NULL );
+	bool Query( const std::string &viewName, ExprTree *constraint=NULL, 
+                bool two_way_matching = false);
 	void Clear( );
 
 	void ToFirst(void);

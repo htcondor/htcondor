@@ -55,7 +55,7 @@ Bind( ClassAdCollection *c )
 
 
 bool LocalCollectionQuery::
-Query( const string &viewName, ExprTree *expr )
+Query( const string &viewName, ExprTree *expr, bool two_way_matching )
 {
 	ViewRegistry::iterator	vri;
 	ViewMembers::iterator	vmi;
@@ -65,6 +65,13 @@ Query( const string &viewName, ExprTree *expr )
 	const ClassAd			*parent;
 	string					key;
 	bool					match;
+    bool                    given_classad;
+    
+    if (expr && expr->GetKind() == ExprTree::CLASSAD_NODE) {
+        given_classad = true;
+    } else {
+        given_classad = false;
+    }
 
     parent = NULL;
 
@@ -76,12 +83,16 @@ Query( const string &viewName, ExprTree *expr )
 	view = vri->second;
 
 	if( expr ) {
-		// setup evluation environment if a constraint was supplied
-		parent = expr->GetParentScope( );
-		if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr ) ) {
-			expr->SetParentScope( parent );
-			return( false );
-		}
+        if (given_classad) {
+            mad.ReplaceLeftAd((ClassAd*)expr);
+        } else {
+            // setup evluation environment if a constraint was supplied
+            parent = expr->GetParentScope( );
+            if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr ) ) {
+                expr->SetParentScope( parent );
+                return( false );
+            }
+        }
 	}
 	keys.clear( );
 
@@ -96,7 +107,17 @@ Query( const string &viewName, ExprTree *expr )
 			ad = collection->GetClassAd( key );
 			mad.ReplaceRightAd( ad );
 			if( mad.EvaluateAttrBool( "RightMatchesLeft", match ) && match ) {
-				keys.push_back( key );
+                bool add_key;
+                if (!given_classad || !two_way_matching) {
+                    add_key = true;
+                } else if (mad.EvaluateAttrBool( "LeftMatchesRight", match ) && match) {
+                    add_key = true;
+                } else {
+                    add_key = false;
+                }
+                if (add_key) {   
+                    keys.push_back( key );
+                }
 			}
 			mad.RemoveRightAd( );
 		} else {
@@ -109,6 +130,9 @@ Query( const string &viewName, ExprTree *expr )
 
 	// clean up and return
 	if( expr ) {
+        if (given_classad) {
+            mad.RemoveLeftAd();
+        }
 		expr->SetParentScope( parent );
 		ad = mad.GetLeftAd();
 		if (ad != NULL) {
