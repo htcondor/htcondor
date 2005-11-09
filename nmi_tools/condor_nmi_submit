@@ -544,15 +544,21 @@ sub checkoutSubmitInfo
 
     print "Attempting to fetch $submit_info from $tag...\n";
     my $cvs_cmd = "cvs -d $CVSROOT co -r $tag $submit_info";
-    open( CVS, "$cvs_cmd|" ) || die "Can't open 'cvs co' as a pipe: $!\n";
+    open( CVS, "$cvs_cmd 2>&1 |" ) ||
+        die "Can't open 'cvs co' as a pipe: $!\n";
     @cvs_output = <CVS>;
     close( CVS );
     $retval = $? / 256;
     if( $retval != 0 ) {
+        print @cvs_output;
         print "FAILED (cvs returned $retval)\n";
-	print @cvs_output;
-	return 0;
+        return 0;
     } 
+    if( ! -f $submit_info ) {
+        print @cvs_output;
+        print "FAILED ($submit_info does not exist)\n";
+        return 0;
+    }
     print "SUCCESS\n";
     return 1;
 }
