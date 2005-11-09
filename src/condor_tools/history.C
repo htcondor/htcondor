@@ -70,7 +70,7 @@ main(int argc, char* argv[])
 {
   Collectors = NULL;
 
-#ifdef WANT_QUILL
+#if WANT_QUILL
   HistorySnapshot *historySnapshot;
   SQLQuery queryhor;
   SQLQuery queryver;
