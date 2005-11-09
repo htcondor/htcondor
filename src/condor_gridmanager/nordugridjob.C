@@ -1083,7 +1083,7 @@ char *NordugridJob::GetStageInCompleteFile()
 		MyString filename;
 		filename.sprintf( "%s%c%s", GridmanagerScratchDir, DIR_DELIM_CHAR,
 						  ".condor_complete" );
-		fd = open( filename.Value(), O_CREAT );
+		fd = open( filename.Value(), O_CREAT, 0600 );
 		if ( fd < 0 ) {
 			EXCEPT( "open(%s,O_CREAT) failed: %s", filename.Value(),
 					strerror(errno) );
