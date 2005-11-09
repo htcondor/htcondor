@@ -68,6 +68,9 @@ class NordugridJob : public BaseJob
 	static void setConnectFailureRetry( int count )
 		{ maxConnectFailures = count; }
 
+	static char *stageInCompleteFile;
+	static char *GetStageInCompleteFile();
+
 	int gmState;
 	time_t lastProbeTime;
 	bool probeNow;

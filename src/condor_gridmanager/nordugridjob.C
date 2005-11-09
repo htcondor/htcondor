@@ -161,6 +161,7 @@ int NordugridJob::probeInterval = 300;	// default value
 int NordugridJob::submitInterval = 300;	// default value
 int NordugridJob::gahpCallTimeout = 300;	// default value
 int NordugridJob::maxConnectFailures = 3;	// default value
+char *NordugridJob::stageInCompleteFile = NULL;
 
 NordugridJob::NordugridJob( ClassAd *classad )
 	: BaseJob( classad )
@@ -825,8 +826,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	int transfer_exec = TRUE;
 	MyString *rsl = new MyString;
 	MyString buff;
-	StringList stage_in_list( NULL, "," );
-	StringList stage_out_list( NULL, "," );
+	StringList *stage_list = NULL;
 	char *attr_value = NULL;
 	char *rsl_suffix = NULL;
 	char *iwd = NULL;
@@ -882,60 +882,39 @@ MyString *NordugridJob::buildSubmitRSL()
 		*rsl += basename( executable );
 	}
 
-	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, &attr_value );
-	if ( attr_value != NULL ) {
-		stage_in_list.initializeFromString( attr_value );
-		free( attr_value );
-		attr_value = NULL;
-	}
-
 	if ( jobAd->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stdin=";
 			*rsl += basename(attr_value);
-			if ( !stage_in_list.file_contains( attr_value ) ) {
-				stage_in_list.append( attr_value );
-			}
 		}
 		free( attr_value );
 		attr_value = NULL;
 	}
 
-	if ( transfer_exec ) {
-		if ( !stage_in_list.file_contains( executable ) ) {
-			stage_in_list.append( executable );
-		}
-	}
+	stage_list = buildStageInList();
 
-	if ( stage_in_list.isEmpty() == false ) {
+	if ( stage_list->isEmpty() == false ) {
 		char *file;
-		stage_in_list.rewind();
+		stage_list->rewind();
 
 		*rsl += ")(inputfiles=";
 
-		while ( (file = stage_in_list.next()) != NULL ) {
+		while ( (file = stage_list->next()) != NULL ) {
 			*rsl += "(";
-			*rsl += basename(file);
+			*rsl += condor_basename(file);
 			*rsl += " \"\")";
 		}
 	}
 
-	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, &attr_value );
-	if ( attr_value != NULL ) {
-		stage_out_list.initializeFromString( attr_value );
-		free( attr_value );
-		attr_value = NULL;
-	}
+	delete stage_list;
+	stage_list = NULL;
 
 	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stdout=";
 			*rsl += basename(attr_value);
-			if ( !stage_out_list.file_contains( attr_value ) ) {
-				stage_out_list.append( attr_value );
-			}
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -946,25 +925,27 @@ MyString *NordugridJob::buildSubmitRSL()
 		if ( ! nullFile(attr_value) ) {
 			*rsl += ")(stderr=";
 			*rsl += basename(attr_value);
-			if ( !stage_out_list.file_contains( attr_value ) ) {
-				stage_out_list.append( attr_value );
-			}
 		}
 		free( attr_value );
 	}
 
-	if ( stage_out_list.isEmpty() == false ) {
+	stage_list = buildStageOutList();
+
+	if ( stage_list->isEmpty() == false ) {
 		char *file;
-		stage_out_list.rewind();
+		stage_list->rewind();
 
 		*rsl += ")(outputfiles=";
 
-		while ( (file = stage_out_list.next()) != NULL ) {
+		while ( (file = stage_list->next()) != NULL ) {
 			*rsl += "(";
-			*rsl += basename(file);
+			*rsl += condor_basename(file);
 			*rsl += " \"\")";
 		}
 	}
+
+	delete stage_list;
+	stage_list = NULL;
 
 	*rsl += ')';
 
@@ -1016,6 +997,11 @@ StringList *NordugridJob::buildStageInList()
 			}
 		}
 	}
+
+		// This is an empty file transferred last. It's presence on the
+		// remote end indicates that all of the input files have been
+		// staged in.
+	tmp_list->append( GetStageInCompleteFile() );
 
 	stage_list = new StringList;
 
@@ -1088,4 +1074,22 @@ StringList *NordugridJob::buildStageOutList()
 	delete tmp_list;
 
 	return stage_list;
+}
+
+char *NordugridJob::GetStageInCompleteFile()
+{
+	if ( stageInCompleteFile == NULL ) {
+		int fd;
+		MyString filename;
+		filename.sprintf( "%s%c%s", GridmanagerScratchDir, DIR_DELIM_CHAR,
+						  ".condor_complete" );
+		fd = open( filename.Value(), O_CREAT );
+		if ( fd < 0 ) {
+			EXCEPT( "open(%s,O_CREAT) failed: %s", filename.Value(),
+					strerror(errno) );
+		}
+		close( fd );
+		stageInCompleteFile = strdup( filename.Value() );
+	}
+	return stageInCompleteFile;
 }
