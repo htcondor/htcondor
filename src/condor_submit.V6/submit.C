@@ -183,6 +183,11 @@ char	*GlobusXML = "globus_xml";
 char	*RemoteSchedd = "remote_schedd";
 char	*RemotePool = "remote_pool";
 char	*RendezvousDir	= "rendezvousdir";
+char	*UnicoreUSite = "unicore_u_site";
+char 	*UnicoreVSite = "unicore_v_site";
+char	*KeystoreFile = "keystore_file";
+char	*KeystoreAlias = "keystore_alias";
+char	*KeystorePassphraseFile = "keystore_passphrase_file";
 
 char	*FileRemaps = "file_remaps";
 char	*BufferFiles = "buffer_files";
@@ -1280,6 +1285,7 @@ SetUniverse()
 				(stricmp (JobGridType, "lsf") == MATCH) ||
 				(stricmp (JobGridType, "condor") == MATCH) ||
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
+				(stricmp (JobGridType, "unicore") == MATCH) ||
 				(stricmp (JobGridType, "oracle") == MATCH)) {
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
@@ -1290,7 +1296,7 @@ SetUniverse()
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", JobGridType );
-				fprintf( stderr, "Must be one of: globus, gt2, gt3, gt4, condor, nordugrid, or oracle\n" );
+				fprintf( stderr, "Must be one of: globus, gt2, gt3, gt4, condor, nordugrid, unicore, or oracle\n" );
 				exit( 1 );
 			}
 		}			
@@ -3661,6 +3667,55 @@ SetGlobusParams()
 			free( remote_schedd );
 			free( remote_pool );
 		}
+
+		if ( stricmp ( JobGridType, "unicore" ) == MATCH ) {
+
+			char *u_site = NULL;
+			char *v_site = NULL;
+
+			if ( !(u_site = condor_param( UnicoreUSite, "UnicoreUSite" )) ) {
+				fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
+						"parameter\n", UnicoreUSite );
+				DoCleanup( 0, 0, NULL );
+				exit( 1 );
+			}
+
+			if ( !(v_site = condor_param( UnicoreVSite, "UnicoreVSite" )) ) {
+				fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
+						"parameter\n", UnicoreVSite );
+				DoCleanup( 0, 0, NULL );
+				exit( 1 );
+			}
+
+			if ( unified_syntax ) {
+				sprintf( buffer, "%s = \"unicore %s %s\"", ATTR_GRID_RESOURCE,
+						 u_site, v_site );
+				InsertJobExpr( buffer );
+			} else {
+				sprintf( buffer, "%s = \"%s\"", "UnicoreUSite", u_site );
+				InsertJobExpr (buffer);
+
+				sprintf( buffer, "%s = \"%s\"", "UnicoreVSite", v_site );
+				InsertJobExpr ( buffer );
+			}
+
+			if ( strstr(u_site,"$$") || strstr(v_site,"$$") ) {
+
+				// We need to perform matchmaking on the job in order to find
+				// the remote resource.
+				sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+				InsertJobExpr (buffer);
+				sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+				InsertJobExpr (buffer);
+				sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+				InsertJobExpr (buffer);
+			}
+
+			free( u_site );
+			free( v_site );
+
+		}
+
 	} else {
 			// TODO Make this allowable, triggering matchmaking for
 			//   GridResource
@@ -3739,6 +3794,39 @@ SetGlobusParams()
 		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
+	}
+
+	if ( (tmp = condor_param( KeystoreFile, "KeystoreFile" )) ) {
+		sprintf( buffer, "KeystoreFile = \"%s\"", tmp );
+		InsertJobExpr( buffer );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
+				"parameter\n", KeystoreFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( KeystoreAlias, "KeystoreAlias" )) ) {
+		sprintf( buffer, "KeystoreAlias = \"%s\"", tmp );
+		InsertJobExpr( buffer );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
+				"parameter\n", KeystoreAlias );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( KeystorePassphraseFile, "KeystorePassphraseFile" )) ) {
+		sprintf( buffer, "KeystorePassphraseFile = \"%s\"", tmp );
+		InsertJobExpr( buffer );
+		free( tmp );
+	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Unicore grid jobs require a \"%s\" "
+				"parameter\n", KeystorePassphraseFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
 	}
 }
 

@@ -32,3 +32,5 @@ EXT_GSOAP_VERSION=@ext_gsoap_version@
 EXT_PCRE_VERSION=@ext_pcre_version@
 
 EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
+
+EXT_UNICOREGAHP_VERSION=@ext_unicoregahp_version@

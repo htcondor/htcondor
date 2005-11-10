@@ -1,3 +1,7 @@
+11/09/05 V6_7-unicore-3-merge-1
+   The state of the V6_7-unicore-3-branch when merged into the 
+   V6_7-branch.
+
 11/08/05 V6_7_13
    The official 6.7.13 release.  The packages for all platforms came
    from NMI build #14344.  The version string for this release is:
@@ -687,6 +691,18 @@ soon as the damn thing works. As of this writing the latest GT4 release is
    V6_7-branch has new code (from the condor-c branch) that we now want
    on the unicore branch.
 
+11/19/04 V6_7-unicore-3-post_merge-V6_7-unicore-2-merge-1
+   The state of the V6_7-unicore-3-branch after merging in the
+   V6_7-unicore-2-branch as tagged at V6_7-unicore-2-merge-1.
+      
+11/19/04 V6_7-unicore-3-pre_merge-V6_7-unicore-2-merge-1
+   The state of the V6_7-unicore-3-branch before merging in the
+   V6_7-unicore-2-branch as tagged at V6_7-unicore-2-merge-1.
+
+11/19/04 V6_7-unicore-2-merge-1
+   The state of the V6_7-unicore-2-branch when merged into the
+   V6_7-unicore-3-branch.
+
 11/16/04 V6_7-post-merge-V6_7-condorc-3-m-1
    After merging V6_7-condorc-3-branch (at V6_7-condorc-merge-1) into
    V6_7-branch.
@@ -1107,6 +1123,18 @@ V6_7-credd-root. By ckireyev.
    V6_7-branch has new syntax for specifying grid universe job subtypes
    and parsing to/from new classad native format that we now want on the
    unicore branch.
+
+05/12/04 V6_7-unicore-2-post_merge-V6_7-unicore-merge-1
+   The state of the V6_7-unicore-2-branch after merging in the
+   V6_7-unicore-branch as tagged at V6_7-unicore-merge-1.
+
+05/12/04 V6_7-unicore-2-pre_merge-V6_7-unicore-merge-1
+   The state of the V6_7-unicore-2-branch before merging in the
+   V6_7-unicore-branch as tagged at V6_7-unicore-merge-1.
+
+05/12/04 V6_7-unicore-merge-1
+   The state of the V6_7-unicore-branch when merged into the
+   V6_7-unicore-2-branch.
 
 05/11/04 V6_7-condorc-2-branch
    A new branch off of V6_7-branch created from the V6_7-condorc-2-root

@@ -2,6 +2,8 @@ NAME=condor_gridmanager
 GT3GAHP_WRAPPER_NAME = gt3_gahp
 GT4GAHP_WRAPPER_NAME = gt4_gahp
 all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) $(GT4GAHP_WRAPPER_NAME))
+UNICOREGAHP_WRAPPER_NAME = unicore_gahp
+all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) $(UNICOREGAHP_WRAPPER_NAME))
 
 #if WANT_ORACLE_UNIVERSE
 ORACLE_JOB_FLAGS = -DORACLE_UNIVERSE -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/demo -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/public
@@ -35,6 +37,7 @@ pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 
 GT3GAHP_WRAPPER_OBJ = gt3_gahp_wrapper.o
 GT4GAHP_WRAPPER_OBJ = gt4_gahp_wrapper.o
+UNICOREGAHP_WRAPPER_OBJ = unicore_gahp_wrapper.o
 
 c_plus_target($(GT3GAHP_WRAPPER_NAME),$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS))
 release_target($(GT3GAHP_WRAPPER_NAME),sbin,EXECUTABLE_MODE)
@@ -42,6 +45,13 @@ strip_target($(GT3GAHP_WRAPPER_NAME),sbin,EXECUTABLE_MODE)
 static_target($(GT3GAHP_WRAPPER_NAME),$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS),$(STATIC_DIR)/sbin)
 purecov_c_plus_target($(GT3GAHP_WRAPPER_NAME).pc,$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS))
 pure_c_plus_target($(GT3GAHP_WRAPPER_NAME).pure,$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS))
+
+c_plus_target($(UNICOREGAHP_WRAPPER_NAME),$(UNICOREGAHP_WRAPPER_OBJ),$(STD_LIBS))
+release_target($(UNICOREGAHP_WRAPPER_NAME),sbin,EXECUTABLE_MODE)
+strip_target($(UNICOREGAHP_WRAPPER_NAME),sbin,EXECUTABLE_MODE)
+static_target($(UNICOREGAHP_WRAPPER_NAME),$(UNICOREGAHP_WRAPPER_OBJ),$(STD_LIBS),$(STATIC_DIR)/sbin)
+purecov_c_plus_target($(UNICOREGAHP_WRAPPER_NAME).pc,$(UNICOREGAHP_WRAPPER_OBJ),$(STD_LIBS))
+pure_c_plus_target($(UNICOREGAHP_WRAPPER_NAME).pure,$(UNICOREGAHP_WRAPPER_OBJ),$(STD_LIBS))
 
 
 c_plus_target($(GT4GAHP_WRAPPER_NAME),$(GT4GAHP_WRAPPER_OBJ),$(STD_LIBS))
@@ -76,6 +86,9 @@ release_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
 static_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
 strip_recursive_copy_target($(GT4GAHP_DIR)/gt4,lib/gt4)
 
+release_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
+static_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
+strip_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
 
 $(GAHP_DIR)/gahp_server:
 	/bin/true

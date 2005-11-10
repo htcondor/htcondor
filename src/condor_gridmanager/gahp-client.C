@@ -322,7 +322,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 	static char* buf = NULL;
 	int ibuf = 0;
 	int result = 0;
-	bool trash_this_line;
+	bool trash_this_line = false;
 	bool escape_seen = false;
 	static const int buf_size = 1024 * 500;
 
@@ -2012,6 +2012,10 @@ GahpServer::poll()
 	GahpClient* entry;
 	ExtArray<Gahp_Args*> result_lines;
 
+		// We must set poll_pending to false before returning from this
+		// function!!
+	poll_pending = false;
+
 		// First, send the RESULTS comand to the gahp server
 	write_line("RESULTS");
 
@@ -2023,9 +2027,9 @@ GahpServer::poll()
 	if ( result->argc < 2 || result->argv[0][0] != 'S' ) {
 			// Badness !
 		dprintf(D_ALWAYS,"GAHP command 'RESULTS' failed\n");
+		delete result;
 		return 0;
 	}
-	poll_pending = false;
 	num_results = atoi(result->argv[1]);
 
 		// Now store each result line in an array.
@@ -5033,6 +5037,308 @@ GahpClient::nordugrid_ping(const char *hostname)
 	if ( check_pending_timeout(command,buf) ) {
 		// pending command timed out.
 		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int 
+GahpClient::unicore_job_create(
+	const char * description,
+	char ** job_contact)
+{
+
+	static const char* command = "UNICORE_JOB_CREATE";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!description) description=NULLSTRING;
+char *desc = strdup(description);
+int i = strlen( desc );
+if ( i > 0 && desc[i-1] == '\n' ) {
+desc[i-1] = '\0';
+}
+description = desc;
+	MyString reqline;
+	bool x = reqline.sprintf("%s", escapeGahpString(description) );
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+free(desc);
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 4) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = 1;
+		if ( result->argv[1][0] == 'S' ) {
+			rc = 0;
+		}
+		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
+			*job_contact = strdup(result->argv[2]);
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int 
+GahpClient::unicore_job_start(const char * job_contact)
+{
+	static const char* command = "UNICORE_JOB_START";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!job_contact) job_contact=NULLSTRING;
+	MyString reqline;
+	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,normal_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = 1;
+		if ( result->argv[1][0] == 'S' ) {
+			rc = 0;
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::unicore_job_destroy(const char * job_contact)
+{
+	static const char* command = "UNICORE_JOB_DESTROY";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!job_contact) job_contact=NULLSTRING;
+	MyString reqline;
+	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,normal_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = 1;
+		if ( result->argv[1][0] == 'S' ) {
+			rc = 0;
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
+int
+GahpClient::unicore_job_status(const char * job_contact,
+	char **job_status)
+{
+	static const char* command = "UNICORE_JOB_STATUS";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!job_contact) job_contact=NULLSTRING;
+	MyString reqline;
+	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,normal_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 4) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = 1;
+		if ( result->argv[1][0] == 'S' ) {
+			rc = 0;
+		}
+		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
+			*job_status = strdup(result->argv[2]);
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int 
+GahpClient::unicore_job_recover(
+	const char * description)
+{
+
+	static const char* command = "UNICORE_JOB_RECOVER";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!description) description=NULLSTRING;
+char *desc = strdup(description);
+int i = strlen( desc );
+if ( i > 0 && desc[i-1] == '\n' ) {
+desc[i-1] = '\0';
+}
+description = desc;
+	MyString reqline;
+	bool x = reqline.sprintf("%s", escapeGahpString(description) );
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+free(desc);
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = 1;
+		if ( result->argv[1][0] == 'S' ) {
+			rc = 0;
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
 

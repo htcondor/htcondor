@@ -569,6 +569,28 @@ class GahpClient : public Service {
 		int
 		nordugrid_ping(const char *hostname);
 
+		///
+		int 
+		unicore_job_create(const char * description,
+						   char ** job_contact);
+
+		///
+		int
+		unicore_job_start(const char *job_contact);
+
+		///
+		int 
+		unicore_job_destroy(const char * job_contact);
+
+		///
+		int
+		unicore_job_status(const char * job_contact,
+						   char **job_status);
+
+		///
+		int
+		unicore_job_recover(const char * description);
+
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
 	globus_duroc_control_barrier_release();
