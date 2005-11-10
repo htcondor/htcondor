@@ -102,10 +102,16 @@ void UnicoreJobReconfig()
 	UnicoreJob::setGahpCallTimeout( tmp_int );
 }
 
-const char *UnicoreJobAdConst = "JobUniverse =?= 9 && (JobGridType == \"unicore\") =?= True";
+bool UnicoreJobAdMatch( const ClassAd *job_ad ) {
+	int universe;
+	MyString resource;
+	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+		 universe == CONDOR_UNIVERSE_GRID &&
+		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
+		 strncasecmp( resource.Value(), "unicore ", 4 ) == 0 ) {
 
-bool UnicoreJobAdMustExpand( const ClassAd *jobad )
-{
+		return true;
+	}
 	return false;
 }
 
@@ -142,8 +148,8 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
-	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
-		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+		jobAd->AssignExpr( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
 	char *gahp_path = param("UNICORE_GAHP");
@@ -159,7 +165,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	buff[0] = '\0';
-	ad->LookupString( "GridJobId", buff );
+	jobAd->LookupString( "GridJobId", buff );
 	if ( buff[0] != '\0' && strrchr( buff, ' ' ) != NULL ) {
 		jobContact = strdup( strrchr( buff, ' ' ) + 1 );
 		job_already_submitted = true;
@@ -172,7 +178,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( error_string ) {
-		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+		jobAd->Assign( ATTR_HOLD_REASON, error_string );
 	}
 	return;
 }
@@ -230,7 +236,7 @@ int UnicoreJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) Error starting up GAHP\n",
 						 procID.cluster, procID.proc );
 				
-				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -303,8 +309,8 @@ int UnicoreJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				jobAd->Assign( ATTR_HOLD_REASON,
+							   "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -332,10 +338,10 @@ int UnicoreJob::doEvaluateState()
 						// responsibility for free()ing it.
 					jobContact = job_contact;
 					char val[80];
-					ad->LookupString( "GridResource", val );
+					jobAd->LookupString( "GridResource", val );
 					strcat( val, " " );
 					strcat( val, jobContact );
-					UpdateJobAdString( "GridJobId", val );
+					jobAd->Assign( "GridJobId", val );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -475,7 +481,7 @@ int UnicoreJob::doEvaluateState()
 //				if ( jobContact != NULL ) {
 //					free( jobContact );
 //					jobContact = NULL;
-//					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
+//					jobAd->Assign( ATTR_GLOBUS_CONTACT_STRING,
 //									   NULL_JOB_CONTACT );
 //					requestScheddUpdate( this );
 //				}
@@ -521,7 +527,7 @@ if ( unicoreState != COMPLETED ) {
 			if ( jobContact != NULL ) {
 				free( jobContact );
 				jobContact = NULL;
-				UpdateJobAd( "GridJobId", "Undefined" );
+				jobAd->Assign( "GridJobId", "Undefined" );
 			}
 			JobIdle();
 
@@ -560,8 +566,8 @@ if ( unicoreState != COMPLETED ) {
 				char holdReason[1024];
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
-				ad->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
+									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.Value(),
 							 sizeof(holdReason) - 1 );
@@ -645,7 +651,7 @@ void UnicoreJob::UpdateUnicoreState( const char *update_ad_string )
 			}
 		}
 		next_expr = update_ad->Lookup( next_attr_name );
-		this->ad->Insert( next_expr->DeepCopy() );
+		jobAd->Insert( next_expr->DeepCopy() );
 	}
 
 	delete update_ad;
@@ -686,7 +692,7 @@ MyString *UnicoreJob::buildSubmitAd()
 	for ( int i = 0; regular_attrs[i] != NULL; i++ ) {
 
 		ExprTree *expr;
-		if ( ( expr = ad->Lookup( regular_attrs[i] ) ) != NULL ) {
+		if ( ( expr = jobAd->Lookup( regular_attrs[i] ) ) != NULL ) {
 			submit_ad.Insert( expr->DeepCopy() );
 		}
 
@@ -698,7 +704,7 @@ MyString *UnicoreJob::buildSubmitAd()
 	xml_unp.SetOutputTargetType( false );
 	ad_string = new MyString;
 //	xml_unp.Unparse( &submit_ad, *ad_string );
-xml_unp.Unparse( ad, *ad_string );
+xml_unp.Unparse( jobAd, *ad_string );
 
 	return ad_string;
 }

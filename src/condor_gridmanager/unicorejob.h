@@ -38,9 +38,8 @@
 
 void UnicoreJobInit();
 void UnicoreJobReconfig();
-bool UnicoreJobAdMustExpand( const ClassAd *jobad );
 BaseJob *UnicoreJobCreate( ClassAd *jobad );
-extern const char *UnicoreJobAdConst;
+bool UnicoreJobAdMatch( const ClassAd *job_ad );
 
 class UnicoreJob : public BaseJob
 {
