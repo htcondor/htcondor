@@ -493,7 +493,8 @@ V6_7_13_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/gcb/1.3.0
 
 # Externals needed for V6_7_14 (same as V6_7_13)
-V6_7_14_EXT	-a V6_7_13_EXT
+V6_7_14_EXT	-a V6_7_13_EXT \
+		   externals/bundles/unicoregahp/1.0.0
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_14_EXT
