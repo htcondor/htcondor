@@ -3796,8 +3796,8 @@ SetGlobusParams()
 		InsertJobExpr ( buffer );
 	}
 
-	if ( (tmp = condor_param( KeystoreFile, "KeystoreFile" )) ) {
-		sprintf( buffer, "KeystoreFile = \"%s\"", tmp );
+	if ( (tmp = condor_param( KeystoreFile, ATTR_KEYSTORE_FILE )) ) {
+		sprintf( buffer, "%s = \"%s\"", ATTR_KEYSTORE_FILE, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
@@ -3807,8 +3807,8 @@ SetGlobusParams()
 		exit( 1 );
 	}
 
-	if ( (tmp = condor_param( KeystoreAlias, "KeystoreAlias" )) ) {
-		sprintf( buffer, "KeystoreAlias = \"%s\"", tmp );
+	if ( (tmp = condor_param( KeystoreAlias, ATTR_KEYSTORE_ALIAS )) ) {
+		sprintf( buffer, "%s = \"%s\"", ATTR_KEYSTORE_ALIAS, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
@@ -3818,8 +3818,9 @@ SetGlobusParams()
 		exit( 1 );
 	}
 
-	if ( (tmp = condor_param( KeystorePassphraseFile, "KeystorePassphraseFile" )) ) {
-		sprintf( buffer, "KeystorePassphraseFile = \"%s\"", tmp );
+	if ( (tmp = condor_param( KeystorePassphraseFile,
+							  ATTR_KEYSTORE_PASSPHRASE_FILE )) ) {
+		sprintf( buffer, "%s = \"%s\"", ATTR_KEYSTORE_PASSPHRASE_FILE, tmp );
 		InsertJobExpr( buffer );
 		free( tmp );
 	} else if ( JobGridType && stricmp( JobGridType, "unicore" ) == 0 ) {
