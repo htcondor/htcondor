@@ -45,6 +45,12 @@ happen when LeaveJobInQueue evaluated to True.
 \item When \Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR} is set, pass the setting
 down to the gt4 gahp server.
 
+% Gnats PR 582
+\item Fixed a bug in \Condor{dagman} that caused rescue DAGs to fail
+if the original DAG was run with the \Opt{-UseDagDir} command-line flag.
+(This bug was introduced at some point after version 6.7.10 and before
+version 6.7.13.)
+
 \end{itemize}
 
 \noindent Changes:
