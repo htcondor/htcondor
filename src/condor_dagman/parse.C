@@ -281,6 +281,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 		// next token (if any) is "DIR" or "DONE"
 	const char *doneKey = NULL;
 	const char* nextTok = strtok( NULL, DELIMITERS );
+	TmpDir nodeDir;
 	if ( nextTok && (strcasecmp(nextTok, "DIR") == 0) ) {
 		if ( strcmp(directory, "") ) {
 			debug_printf( DEBUG_QUIET, "ERROR: DIR specification in node "
@@ -298,7 +299,6 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 		}
 
 		MyString errMsg;
-		TmpDir nodeDir;
 		if ( !nodeDir.Cd2TmpDir(directory, errMsg) ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: can't change to directory %s: %s\n",
