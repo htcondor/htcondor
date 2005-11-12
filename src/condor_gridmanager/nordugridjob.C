@@ -348,6 +348,8 @@ int NordugridJob::doEvaluateState()
 				break;
 			}
 
+			gahp->setDelegProxy( jobProxy );
+
 			gmState = GM_START;
 			} break;
 		case GM_START: {
