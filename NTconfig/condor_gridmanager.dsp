@@ -241,5 +241,13 @@ SOURCE=..\src\condor_gridmanager\soap_gridmanagerStub.C
 
 SOURCE=..\src\condor_gridmanager\soap_gridmanagerStub.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\unicorejob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\unicorejob.h
+# End Source File
 # End Target
 # End Project
