@@ -161,7 +161,6 @@ int NordugridJob::probeInterval = 300;	// default value
 int NordugridJob::submitInterval = 300;	// default value
 int NordugridJob::gahpCallTimeout = 300;	// default value
 int NordugridJob::maxConnectFailures = 3;	// default value
-char *NordugridJob::stageInCompleteFile = NULL;
 
 NordugridJob::NordugridJob( ClassAd *classad )
 	: BaseJob( classad )
@@ -849,7 +848,7 @@ MyString *NordugridJob::buildSubmitRSL()
 
 	//Start off the RSL
 	attr_value = param( "FULL_HOSTNAME" );
-	rsl->sprintf( "&(savestate=yes)(action=request)(lrmstype=pbs)(hostname=%s)(gmlog=%s)", attr_value, NORDUGRID_LOG_DIR );
+	rsl->sprintf( "&(savestate=yes)(action=request)(lrmstype=pbs)(hostname=%s)", attr_value );
 	free( attr_value );
 	attr_value = NULL;
 
@@ -998,11 +997,6 @@ StringList *NordugridJob::buildStageInList()
 		}
 	}
 
-		// This is an empty file transferred last. It's presence on the
-		// remote end indicates that all of the input files have been
-		// staged in.
-	tmp_list->append( GetStageInCompleteFile() );
-
 	stage_list = new StringList;
 
 	tmp_list->rewind();
@@ -1074,22 +1068,4 @@ StringList *NordugridJob::buildStageOutList()
 	delete tmp_list;
 
 	return stage_list;
-}
-
-char *NordugridJob::GetStageInCompleteFile()
-{
-	if ( stageInCompleteFile == NULL ) {
-		int fd;
-		MyString filename;
-		filename.sprintf( "%s%c%s", GridmanagerScratchDir, DIR_DELIM_CHAR,
-						  ".condor_complete" );
-		fd = open( filename.Value(), O_CREAT, 0600 );
-		if ( fd < 0 ) {
-			EXCEPT( "open(%s,O_CREAT) failed: %s", filename.Value(),
-					strerror(errno) );
-		}
-		close( fd );
-		stageInCompleteFile = strdup( filename.Value() );
-	}
-	return stageInCompleteFile;
 }
