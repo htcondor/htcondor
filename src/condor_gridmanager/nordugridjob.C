@@ -411,6 +411,10 @@ int NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_SUBMIT: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_UNSUBMITTED;
+				break;
+			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
 //				jobAd->Assign( ATTR_HOLD_REASON,
 //							   "Attempts to submit failed" );
