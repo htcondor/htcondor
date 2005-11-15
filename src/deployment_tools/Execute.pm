@@ -7,6 +7,7 @@
 package Execute;
 require      Exporter;
 use File::Temp qw/ tempfile /;
+use File::Spec;
 
 our @ISA       = qw(Exporter);
 our @EXPORT    = qw(ExecuteAndCapture);    # Symbols to be exported by default
@@ -47,11 +48,11 @@ sub ExecuteAndCapture{
 
     # Create a pair of temporary files for the redirected output
     my ($outFh, $outFile) = tempfile( $TEMPFILE_BASE_NAME, 
-				      DIR => '.', 
+				      DIR => File::Spec->tmpdir(), 
 				      SUFFIX => $TEMPFILE_OUTPUT_SUFFIX, 
 				      UNLINK => 0);
     my ($errFh, $errFile) = tempfile( $TEMPFILE_BASE_NAME, 
-				      DIR => '.', 
+				      DIR => File::Spec->tmpdir(), 
 				      SUFFIX => $TEMPFILE_ERROR_SUFFIX, 
 				      UNLINK => 0);
 
