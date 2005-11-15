@@ -129,11 +129,22 @@ TESTCLASS(lib_procapi_pidtracking-byenv,quick)
 TESTCLASS(lib_procapi_pidtracking-byenv,btdebug)
 #endif
 
+#if 0
+/*
+   this test is just a big race condition, and doesn't actually test
+   what it claims it's testing.  futhermore, it has nothing to do with
+   vanilla universe, so at the very least, it should be renamed.  for
+   now, i'm disabling it, since it's consistently been one of the only
+   tests that's failing, and it's because of the test, not condor.
+   we should either remove it completely, or re-implement it from
+   scratch with a better methodology and a decent name.
+*/  
 DESC(job_schedd_job-tracking_van,"Scheduler: test for schedd loosing track of jobs")
 RUN(job_schedd_job-tracking_van)
 TESTCLASS(job_schedd_job-tracking_van,core)
 TESTCLASS(job_schedd_job-tracking_van,quick)
 TESTCLASS(job_schedd_job-tracking_van,btdebug)
+#endif /* 0 -- test disabled */
 
 DESC(job_filexfer_streamout_van,"Vanilla: test for streaming of output when both stream_output is true and false")
 RUN(job_filexfer_streamout_van)
