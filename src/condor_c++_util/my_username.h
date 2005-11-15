@@ -26,7 +26,9 @@
 #ifndef MY_USERNAME_H
 #define MY_USERNAME_H
 
+/* Returns malloc()ed memory.  Be sure to free() it.  Return NULL on failure */
 char *my_username( int uuid = -1 );
+/* Returns malloc()ed memory.  Be sure to free() it.  Return NULL on failure */
 char *my_domainname( void );
 
 #ifdef WIN32
