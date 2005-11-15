@@ -678,7 +678,11 @@ main( int argc, char *argv[] )
 
 #ifdef WIN32
 	char userdom[256];
-	sprintf(userdom, "%s@%s", my_username(), my_domainname());
+	char the_username = my_username();
+	char the_domainname = my_domainname();
+	sprintf(userdom, "%s@%s", the_username, the_domainname);
+	free(the_username);
+	free(the_domainname);
 	if ( store_cred(userdom, NULL, QUERY_MODE, MySchedd) != SUCCESS ) {
 		fprintf( stderr, "\nERROR: No credential stored for %s\n"
 				"\n\tCorrect this by running:\n"
