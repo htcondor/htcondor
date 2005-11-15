@@ -47,6 +47,10 @@ int compute_user_hash(const MyString &key, int numBuckets);
 typedef HashTable <MyString, uid_entry*> UidHashTable;
 typedef HashTable <MyString, group_entry*> GroupHashTable;
 
+/*
+Don't declare your own instances of this.  Instead see
+the pcache() function declared in condor_includes/condor_uid.h.
+*/
 class passwd_cache {
 
 	public:
