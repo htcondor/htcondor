@@ -23,6 +23,9 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "my_username.h"
+#include "passwd_cache.h"
+#include "condor_uid.h"
+
 
 char *
 my_username( int uuid ) {
@@ -34,17 +37,17 @@ my_username( int uuid ) {
    }
    return strdup(username);
 #else
-   struct passwd  *pwd;
-
-	int tryUid = uuid;
-	if ( tryUid < 0 ) {
-		tryUid = geteuid();
-	}
-
-   if( (pwd=getpwuid(tryUid)) == NULL ) {
-		return( NULL );
+   if( uuid < 0 ) {
+		uuid = geteuid();
    }
-   return strdup(pwd->pw_name);
+   passwd_cache * my_cache = pcache();
+   ASSERT(my_cache);
+   char * name = 0;
+   if( ! my_cache->get_user_name(uuid, name) ) {
+	   free(name); // Just in case;
+	   name = 0;
+   }
+   return name;
 #endif
 }
 
