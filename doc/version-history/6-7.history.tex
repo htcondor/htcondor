@@ -35,6 +35,9 @@ location discovery algorithm.
 
 \begin{itemize}
 
+\item Update job information such as ImageSize, RemoteUserCpu and RemoteSysCpu 
+at job completion.  Previously this was only done periodically.
+
 \item Fixed a bug that could cause the \Condor{gridmanager} to crash when
 a job using job leases left the queue.
 
