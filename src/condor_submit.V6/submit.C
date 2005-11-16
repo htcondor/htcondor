@@ -678,8 +678,8 @@ main( int argc, char *argv[] )
 
 #ifdef WIN32
 	char userdom[256];
-	char the_username = my_username();
-	char the_domainname = my_domainname();
+	char* the_username = my_username();
+	char* the_domainname = my_domainname();
 	sprintf(userdom, "%s@%s", the_username, the_domainname);
 	free(the_username);
 	free(the_domainname);
