@@ -66,6 +66,10 @@ public:
 protected:
 	bool	hasMainDir;
 	char    mainDir[_POSIX_PATH_MAX];
+	int		m_objectNum;
+	bool	m_inMainDir;
+
+	static int	nextObjectNum;
 };
 
 #endif /* #ifndef TMP_DIR_H */

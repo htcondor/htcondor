@@ -240,6 +240,16 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 	fclose(fp);
 
+	if ( useDagDir ) {
+		MyString	errMsg;
+		if ( !dagDir.Cd2MainDir( errMsg ) ) {
+			debug_printf( DEBUG_QUIET,
+					"Could not change to original directory: %s\n",
+					errMsg.Value() );
+			return false;
+		}
+	}
+
 	return true;
 }
 
@@ -285,7 +295,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	if ( nextTok && (strcasecmp(nextTok, "DIR") == 0) ) {
 		if ( strcmp(directory, "") ) {
 			debug_printf( DEBUG_QUIET, "ERROR: DIR specification in node "
-						"lines not allowed with -GetDagDir command-line "
+						"lines not allowed with -UseDagDir command-line "
 						"argument\n");
 			return false;
 		}
@@ -335,6 +345,15 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 		return false;
 	}
+
+	MyString errMsg;
+	if ( !nodeDir.Cd2MainDir(errMsg) ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: can't change to original directory: %s\n",
+					errMsg.Value() );
+		return false;
+	}
+
 	return true;
 }
 

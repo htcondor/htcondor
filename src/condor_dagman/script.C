@@ -67,10 +67,9 @@ Script::BackgroundRun( int reaperId )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
-		// NOTE: we will automatically cd back again in tmpDir's destructor
 	if ( !tmpDir.Cd2TmpDir( _node->GetDirectory(), errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
-				"Could not change to DAG directory %s: %s\n",
+				"Could not change to node directory %s: %s\n",
 				_node->GetDirectory(), errMsg.Value() );
 
 		return 0;
@@ -108,5 +107,13 @@ Script::BackgroundRun( int reaperId )
 									   PRIV_UNKNOWN, reaperId, FALSE,
 									   NULL, NULL, FALSE, NULL, NULL, 0 );
     delete [] cmd;
+
+	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to original directory: %s\n",
+				errMsg.Value() );
+		return 0;
+	}
+
 	return _pid;
 }

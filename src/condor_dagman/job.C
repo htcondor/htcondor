@@ -85,6 +85,9 @@ Init( const char* jobName, const char* directory, const char* cmdFile )
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
 
+	debug_printf( DEBUG_DEBUG_1, "Job::Init(%s, %s, %s)\n", jobName,
+				directory, cmdFile );
+
     _scriptPre = NULL;
     _scriptPost = NULL;
     _Status = STATUS_READY;

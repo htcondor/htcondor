@@ -162,10 +162,9 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
-        // NOTE: we will automatically cd back again in tmpDir's destructor
 	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
-				"Could not change to DAG directory %s: %s\n",
+				"Could not change to node directory %s: %s\n",
 				directory, errMsg.Value() );
 		return false;
 	}
@@ -233,6 +232,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	
 	bool success = do_submit( command.Value(), condorID, Job::TYPE_CONDOR );
 
+	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to original directory: %s\n",
+				errMsg.Value() );
+		success = false;
+	}
+
 	return success;
 }
 
@@ -243,7 +249,6 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
-        // NOTE: we will automatically cd back again in tmpDir's destructor
 	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to DAG directory %s: %s\n",
@@ -259,6 +264,13 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				  cmdFile );
 
   bool success = do_submit( command.Value(), condorID, Job::TYPE_STORK );
+
+	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to original directory: %s\n",
+				errMsg.Value() );
+		success = false;
+	}
 
   return success;
 }

@@ -78,7 +78,7 @@ GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
 			AppendError( errMsg,
 					MyString("Unable to change to original directory ") +
 					tmpErrMsg );
-			return false;
+			result = false;
 		}
 
 	}

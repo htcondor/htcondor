@@ -461,6 +461,14 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		}
 	}
 
+	if ( directory != "" ) {
+		MyString	errMsg;
+		if ( !td.Cd2MainDir(errMsg) ) {
+			dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.Value());
+			return "";
+		}
+	}
+
 	return logFileName;
 }
 

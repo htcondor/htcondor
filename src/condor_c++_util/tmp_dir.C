@@ -31,19 +31,30 @@
 #include "condor_debug.h"
 #include "tmp_dir.h"
 
+int TmpDir::nextObjectNum = 0;
+
 //-------------------------------------------------------------------------
 TmpDir::TmpDir() :
-		hasMainDir		(false)
+		hasMainDir		(false),
+		m_inMainDir		(true)
 {
+	m_objectNum = nextObjectNum++;
+
+	dprintf( D_FULLDEBUG, "TmpDir(%d)::TmpDir()\n", m_objectNum );
 }
 
 //-------------------------------------------------------------------------
 TmpDir::~TmpDir()
 {
-	MyString	errMsg;
-	if ( !Cd2MainDir(errMsg) ) {
-		dprintf( D_ALWAYS, "ERROR: Cd2Main fails in TmpDir::~TmpDir(): %s\n",
-				errMsg.Value() );
+	dprintf( D_FULLDEBUG, "TmpDir(%d)::~TmpDir()\n", m_objectNum );
+
+	if ( !m_inMainDir ) {
+		MyString	errMsg;
+		if ( !Cd2MainDir(errMsg) ) {
+			dprintf( D_ALWAYS,
+					"ERROR: Cd2Main fails in TmpDir::~TmpDir(): %s\n",
+					errMsg.Value() );
+		}
 	}
 }
 
@@ -51,6 +62,9 @@ TmpDir::~TmpDir()
 bool
 TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 {
+	dprintf( D_FULLDEBUG, "TmpDir(%d)::Cd2TmpDir(%s)\n",
+				m_objectNum, directory );
+
 	bool	result = true;
 
 	errMsg = "";
@@ -72,6 +86,8 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 					directory + ": " + strerror( errno );
 			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.Value() );
 			result = false;
+		} else {
+			m_inMainDir = false;
 		}
 	}
 
@@ -82,6 +98,9 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 bool
 TmpDir::Cd2TmpDirFile(const char *filePath, MyString &errMsg)
 {
+	dprintf( D_FULLDEBUG, "TmpDir(%d)::Cd2TmpDirFile(%s)\n",
+				m_objectNum, filePath );
+
 	bool	result = true;
 
 	char *	dir = condor_dirname( filePath );
@@ -95,6 +114,8 @@ TmpDir::Cd2TmpDirFile(const char *filePath, MyString &errMsg)
 bool
 TmpDir::Cd2MainDir(MyString &errMsg)
 {
+	dprintf( D_FULLDEBUG, "TmpDir(%d)::Cd2MainDir()\n", m_objectNum );
+
 	bool	result = true;
 	errMsg = "";
 
@@ -106,6 +127,8 @@ TmpDir::Cd2MainDir(MyString &errMsg)
 			result = false;
 		}
 	}
+
+	if ( result ) m_inMainDir = true;
 
 	return result;
 }
