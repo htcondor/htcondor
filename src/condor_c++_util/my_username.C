@@ -23,9 +23,11 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "my_username.h"
-#include "passwd_cache.h"
 #include "condor_uid.h"
 
+#if ! defined(WIN32)
+#include "passwd_cache.h"
+#endif /* ! WIN32 */
 
 char *
 my_username( int uuid ) {
