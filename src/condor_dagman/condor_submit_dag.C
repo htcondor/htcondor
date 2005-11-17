@@ -107,22 +107,6 @@ int main(int argc, char *argv[])
 	
 	opts.strLibLog = opts.primaryDagFile + ".lib.out";
 
-		// if the DAG input filename was not already specified as an
-		// absolute PATH, use the cwd to make it into one so that
-		// dprintf still works inside condor_dagman when it cds to
-		// other directories.
-	if ( !fullpath( opts.primaryDagFile.Value() ) ) {
-		char	currentDir[_POSIX_PATH_MAX];
-		if ( !getcwd( currentDir, sizeof(currentDir) ) ) {
-			fprintf( stderr, "ERROR: unable to get cwd: %d, %s\n",
-					errno, strerror(errno) );
-			return 1;
-		}
-		if ( opts.useDagDir ) {
-			opts.strDebugLog = currentDir;
-			opts.strDebugLog += DIR_DELIM_STRING;
-		}
-	}
 	opts.strDebugLog += opts.primaryDagFile + ".dagman.out";
 
 	opts.strSchedLog = opts.primaryDagFile + ".dagman.log";
