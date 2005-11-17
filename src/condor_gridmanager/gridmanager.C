@@ -715,6 +715,30 @@ doContactSchedd()
 				// job had better be either managed or matched! (or both)
 				ASSERT( job_is_managed || job_is_matched );
 
+				if ( MustExpandJobAd( next_ad ) ) {
+					// Get the expanded ClassAd from the schedd, which
+					// has the GridResource filled in with info from
+					// the matched ad.
+					delete next_ad;
+					next_ad = NULL;
+					next_ad = GetJobAd(procID.cluster,procID.proc);
+					if ( next_ad == NULL && errno == ETIMEDOUT ) {
+						failure_line_num = __LINE__;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
+					}
+//					ASSERT(next_ad);
+					if ( next_ad == NULL ) {
+						// We may get here if it was not possible to expand
+						// one of the $$() expressions.  We don't want to
+						// roll back the transaction and blow away the
+						// hold that the schedd just put on the job, so
+						// simply skip over this ad.
+						dprintf(D_ALWAYS,"Failed to get expanded job ClassAd from Schedd for %d.%d.  errno=%d\n",procID.cluster,procID.proc,errno);
+						goto contact_schedd_next_add_job;
+					}
+				}
+
 				// Search our job types for one that'll handle this job
 				jobTypes.Rewind();
 				while ( jobTypes.Next( job_type ) ) {
@@ -728,29 +752,6 @@ doContactSchedd()
 				}
 
 				if ( job_type != NULL ) {
-					if ( MustExpandJobAd( next_ad ) ) {
-						// Get the expanded ClassAd from the schedd, which
-						// has the GridResource filled in with info from
-						// the matched ad.
-						delete next_ad;
-						next_ad = NULL;
-						next_ad = GetJobAd(procID.cluster,procID.proc);
-						if ( next_ad == NULL && errno == ETIMEDOUT ) {
-							failure_line_num = __LINE__;
-							commit_transaction = false;
-							goto contact_schedd_disconnect;
-						}
-//						ASSERT(next_ad);
-						if ( next_ad == NULL ) {
-							// We may get here if it was not possible to expand
-							// one of the $$() expressions.  We don't want to
-							// roll back the transaction and blow away the
-							// hold that the schedd just put on the job, so
-							// simply skip over this ad.
-							dprintf(D_ALWAYS,"Failed to get expanded job ClassAd from Schedd for %d.%d.  errno=%d\n",procID.cluster,procID.proc,errno);
-							goto contact_schedd_next_add_job;
-						}
-					}
 					new_job = job_type->CreateFunc( next_ad );
 				} else {
 					dprintf( D_ALWAYS, "No handlers for job %d.%d\n",
