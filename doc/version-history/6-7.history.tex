@@ -65,7 +65,10 @@ page~\pageref{param:PasswdCacheRefresh} for more details.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{dagman} log file path is converted to an absolute
+path inside \Condor{dagman} itself, so that the logging works for
+multi-directory rescue DAGs (which it didn't before), but the
+\File{.condor.sub} files are still portable.
 
 \end{itemize}
 
