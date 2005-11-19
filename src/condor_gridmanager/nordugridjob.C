@@ -837,7 +837,7 @@ MyString *NordugridJob::buildSubmitRSL()
 	char *iwd = NULL;
 	char *executable = NULL;
 
-	if ( jobAd->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) &&
+	if ( jobAd->LookupString( ATTR_NORDUGRID_RSL, &rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
 		*rsl = rsl_suffix;
 		free( rsl_suffix );

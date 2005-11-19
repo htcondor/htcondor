@@ -278,6 +278,7 @@ const char ATTR_NEGOTIATOR_REQUIREMENTS  [] = "NegotiatorRequirements";
 const char ATTR_NEXT_CLUSTER_NUM		 [] = "NextClusterNum";
 const char ATTR_NEXT_JOB_START_DELAY	 [] = "NextJobStartDelay";
 const char ATTR_NODE					 [] = "Node";
+const char ATTR_NORDUGRID_RSL			 [] = "NordugridRSL";
 const char ATTR_NOTIFY_USER				 [] = "NotifyUser";
 const char ATTR_NOTIFY_JOB_SCHEDULER     [] = "NotifyJobScheduler";
 const char ATTR_NT_DOMAIN				 [] = "NTDomain";

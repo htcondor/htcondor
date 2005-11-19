@@ -180,6 +180,7 @@ char	*GlobusJobmanagerType = "jobmanager_type";
 char    *GridShell = "gridshell";
 char	*GlobusRSL = "globus_rsl";
 char	*GlobusXML = "globus_xml";
+char	*NordugridRSL = "nordugrid_rsl";
 char	*RemoteSchedd = "remote_schedd";
 char	*RemotePool = "remote_pool";
 char	*RendezvousDir	= "rendezvousdir";
@@ -829,6 +830,7 @@ SetRemoteAttrs()
 		{ GlobusScheduler, "globus_scheduler", ATTR_GLOBUS_RESOURCE },
 		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
 		{ GlobusXML, "globus_xml", ATTR_GLOBUS_XML },
+		{ NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
 	};
 	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
 
@@ -3796,6 +3798,12 @@ SetGlobusParams()
 
 	if( (tmp = condor_param(GlobusXML, ATTR_GLOBUS_XML)) ) {
 		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
+		free( tmp );
+		InsertJobExpr ( buffer );
+	}
+
+	if( (tmp = condor_param(NordugridRSL, ATTR_NORDUGRID_RSL)) ) {
+		sprintf( buffer, "%s = \"%s\"", ATTR_NORDUGRID_RSL, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
