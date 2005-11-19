@@ -139,7 +139,7 @@ public:
 	void	Insert( ObjType * obj );
 	bool	IsEmpty() const;
 	int		Number() const;
-	int		Length() { return Number(); };
+	int		Length() const { return Number(); };
 
 		// Scans
 	void	Rewind();

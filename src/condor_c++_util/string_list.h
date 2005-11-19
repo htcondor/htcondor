@@ -52,8 +52,8 @@ public:
 	void remove_anycase (const char* str);
 	char *next (void) { return strings.Next(); }
 	void deleteCurrent();
-	int number (void) { return strings.Number(); };
-	bool isEmpty(void) { return strings.IsEmpty(); };
+	int number (void) const { return strings.Number(); };
+	bool isEmpty(void) const { return strings.IsEmpty(); };
 
 	/* return a comma delimited list if the internals of the class. This will
 		rewind the string in order to construct this char array, and you
