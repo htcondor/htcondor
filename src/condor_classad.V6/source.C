@@ -391,7 +391,9 @@ parseLogicalORExpression(ExprTree *&tree)
 	if( !parseLogicalANDExpression(tree) ) return false;
 	while( ( tt = lexer.PeekToken() ) == Lexer::LEX_LOGICAL_OR ) {
 		lexer.ConsumeToken();
-		treeL = tree;
+		treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseLogicalANDExpression(treeR);
 		if(treeL && treeR &&
 			( newTree=Operation::MakeOperation(Operation::LOGICAL_OR_OP,
@@ -420,7 +422,9 @@ parseLogicalANDExpression(ExprTree *&tree)
 	if( !parseInclusiveORExpression(tree) ) return false;
 	while( ( tt = lexer.PeekToken() ) == Lexer::LEX_LOGICAL_AND ) {
 		lexer.ConsumeToken();
-        treeL = tree;
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseInclusiveORExpression(treeR);
 		if(treeL && treeR &&
 			( newTree=Operation::MakeOperation(Operation::LOGICAL_AND_OP,
@@ -449,7 +453,9 @@ parseInclusiveORExpression(ExprTree *&tree)
 	if( !parseExclusiveORExpression(tree) ) return false;
 	while( ( tt = lexer.PeekToken() ) == Lexer::LEX_BITWISE_OR ) {
 		lexer.ConsumeToken();
-        treeL = tree;
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseExclusiveORExpression(treeR);
 		if(treeL && treeR &&
 			( newTree=Operation::MakeOperation(Operation::BITWISE_OR_OP,
@@ -478,7 +484,9 @@ parseExclusiveORExpression(ExprTree *&tree)
 	if( !parseANDExpression(tree) ) return false;
 	while( ( tt = lexer.PeekToken() ) == Lexer::LEX_BITWISE_XOR ) {
 		lexer.ConsumeToken();
-        treeL = tree;
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseANDExpression(treeR);
 		if(treeL && treeR &&
 			( newTree=Operation::MakeOperation(Operation::BITWISE_XOR_OP,
@@ -507,7 +515,9 @@ parseANDExpression(ExprTree *&tree)
 	if( !parseEqualityExpression(tree) ) return false;
 	while( ( tt = lexer.PeekToken() ) == Lexer::LEX_BITWISE_AND ) {
 		lexer.ConsumeToken();
-        treeL = tree;
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseEqualityExpression(treeR);
 		if(treeL && treeR &&
 			( newTree=Operation::MakeOperation(Operation::BITWISE_AND_OP,
@@ -542,7 +552,9 @@ parseEqualityExpression(ExprTree *&tree)
 	while( tt == Lexer::LEX_EQUAL || tt == Lexer::LEX_NOT_EQUAL || 
 			tt == Lexer::LEX_META_EQUAL || tt == Lexer::LEX_META_NOT_EQUAL ) {
 		lexer.ConsumeToken();
-        treeL = tree;
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseRelationalExpression(treeR);
 		switch( tt ) {
 			case Lexer::LEX_EQUAL: 			
@@ -591,8 +603,10 @@ parseRelationalExpression(ExprTree *&tree)
 	while( tt == Lexer::LEX_LESS_THAN || tt == Lexer::LEX_GREATER_THAN || 
 			tt==Lexer::LEX_LESS_OR_EQUAL || tt==Lexer::LEX_GREATER_OR_EQUAL ) {
 		lexer.ConsumeToken();
-        treeL = tree;
-		parseRelationalExpression(treeR);
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
+		parseShiftExpression(treeR);
         switch( tt )    {
             case Lexer::LEX_LESS_THAN:      	
 				op = Operation::LESS_THAN_OP;       
@@ -641,7 +655,9 @@ parseShiftExpression(ExprTree *&tree)
 	while( tt == Lexer::LEX_LEFT_SHIFT || tt == Lexer::LEX_RIGHT_SHIFT || 
 			tt == Lexer::LEX_URIGHT_SHIFT ) {
 		lexer.ConsumeToken();
-        treeL = tree;
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseAdditiveExpression(treeR);
         switch( tt )    {
             case Lexer::LEX_LEFT_SHIFT:    
@@ -687,7 +703,9 @@ parseAdditiveExpression(ExprTree *&tree)
 	tt = lexer.PeekToken();
 	while( tt == Lexer::LEX_PLUS || tt == Lexer::LEX_MINUS ) {
 		lexer.ConsumeToken();
-        treeL = tree;
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseMultiplicativeExpression(treeR);
 		if( treeL && treeR && (newTree=Operation::MakeOperation(
 				(tt==Lexer::LEX_PLUS) ? Operation::ADDITION_OP : 
@@ -723,7 +741,9 @@ parseMultiplicativeExpression(ExprTree *&tree)
 	while( tt==Lexer::LEX_MULTIPLY || tt==Lexer::LEX_DIVIDE ||
 			tt==Lexer::LEX_MODULUS ) {
 		lexer.ConsumeToken();
-        treeL = tree;
+        treeL   = tree;
+        treeR   = NULL;
+        newTree = NULL;
 		parseUnaryExpression(treeR);
 		switch( tt ) {
 			case Lexer::LEX_MULTIPLY:	
@@ -815,6 +835,7 @@ parsePostfixExpression(ExprTree *&tree)
 			tt == Lexer::LEX_SELECTION ) {
 		lexer.ConsumeToken();
 		treeL = tree;
+        treeR = NULL;
 
 		if( tt == Lexer::LEX_OPEN_BOX ) {
 			Operation *newTree = NULL;

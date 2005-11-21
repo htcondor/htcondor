@@ -64,6 +64,7 @@ public:
     bool  very_verbose;
 
     bool  check_all;
+    bool  check_parsing;
     bool  check_classad;
 	bool  check_exprlist;
     bool  check_value;
@@ -98,6 +99,7 @@ private:
  *
  *--------------------------------------------------------------------*/
 
+static void test_parsing(const Parameters &parameters, Results &results);
 static void test_classad(const Parameters &parameters, Results &results);
 static void test_exprlist(const Parameters &parameters, Results &results);
 static void test_value(const Parameters &parameters, Results &results);
@@ -126,6 +128,7 @@ void Parameters::ParseCommandLine(
     verbose             = false;
     very_verbose        = false;
     check_all           = false;
+    check_parsing       = false;
     check_classad       = false;
 	check_exprlist      = false;
     check_value         = false;
@@ -153,6 +156,9 @@ void Parameters::ParseCommandLine(
             very_verbose = true;
 		} else if (!strcasecmp(argv[arg_index], "-all")){
             check_all           = true;
+            selected_test       = true;
+		} else if (!strcasecmp(argv[arg_index], "-parsing")){
+            check_parsing       = true;
             selected_test       = true;
 		} else if (!strcasecmp(argv[arg_index], "-classad")){
             check_classad       = true;
@@ -195,6 +201,7 @@ void Parameters::ParseCommandLine(
         cout << "\n";
         cout << "Test selectors:\n";
         cout << "    -all:        all tests listed below (the default)\n";
+        cout << "    -parsing:    test non-ClassAd parsing.\n";
         cout << "    -classad:    test the ClassAd class.\n";
         cout << "    -exprlist:   test the ExprList class.\n";
         cout << "    -value:      test the Value class.\n";
@@ -274,6 +281,10 @@ int main(
     Results  results(parameters);
 
     /* ----- Run tests ----- */
+    if (parameters.check_all || parameters.check_parsing) {
+        test_parsing(parameters, results);
+    }
+
     if (parameters.check_all || parameters.check_classad) {
         test_classad(parameters, results);
     }
@@ -310,6 +321,52 @@ int main(
         cout << "    " << number_of_tests << " tests\n";
     }
     return have_errors;
+}
+
+/*********************************************************************
+ *
+ * Function: test_parsing
+ * Purpose:  Test parsing that isn't ClassAd-specific. (ClassAd-specific
+ *           is in test_clasad
+ *
+ *********************************************************************/
+static void test_parsing(const Parameters &parameters, Results &results)
+{
+    ClassAdParser parser;
+    ExprTree  *tree;
+
+    // My goal is to ensure that these expressions don't crash
+    // They should also return a NULL tree
+    tree = parser.ParseExpression("true || false || ;");
+    TEST("Bad or doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("true && false && ;");
+    TEST("Bad and doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("3 | 4 | ;");
+    TEST("Bad and doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("3 ^ 4 ^ ;");
+    TEST("Bad exclusive or doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("3 & 4 & ;");
+    TEST("Bad bitwise and doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("3 == 4 ==  ;");
+    TEST("Bad equality doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("1 < 3 < ;");
+    TEST("Bad relational doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("1 << 3 << ;");
+    TEST("Bad shift doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("1 + 3 + ;");
+    TEST("Bad additive doesn't crash & isn't bogus", tree == NULL);
+
+    tree = parser.ParseExpression("1 * 3 * ;");
+    TEST("Bad multiplicative doesn't crash & isn't bogus", tree == NULL);
+    return;
 }
 
 /*********************************************************************
