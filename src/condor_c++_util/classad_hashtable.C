@@ -61,3 +61,29 @@ int hashFunction(const HashKey &key, int numBuckets)
 
 	return bkt;
 }
+
+
+AttrKey& AttrKey::operator= (const AttrKey& from)
+{
+	if (this->key)
+		free(this->key);
+	this->key = strdup(from.key);
+	return *this;
+}
+
+bool operator==(const AttrKey &lhs, const AttrKey &rhs)
+{
+	return (strcasecmp(lhs.key, rhs.key) == 0);
+}
+
+int 
+AttrKeyHashFunction (const AttrKey &key, int numBuckets)
+{
+	const char *str = key.value();
+	int i = strlen( str ) - 1, hashVal = 0;
+	while (i >= 0) {
+		hashVal += tolower(str[i]);
+		i--;
+	}
+	return (hashVal % numBuckets);
+}
