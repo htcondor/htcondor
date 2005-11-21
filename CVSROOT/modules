@@ -649,6 +649,15 @@ V6_7_QUILL_ALL		-a DOC V6_7_QUILL_CODE
 V6_7_QUILL_BUILD	-a V6_7_QUILL_ALL externals
 
 
+# For 1-off builds to see if we can get Quill working, we need this:
+V6_7_TT_SRC		-a V6_7_SRC \
+			src/condor_tt
+V6_7_TT_UNIX_CODE	-a TOOLS V6_7_TT_SRC
+V6_7_TT_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_7_TT_SRC
+V6_7_TT_CODE		-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_TT_SRC
+V6_7_TT_ALL		-a DOC V6_7_TT_CODE
+V6_7_TT_BUILD	-a V6_7_TT_ALL externals
+
 # Point these to whatever version is living on the trunk.
 # For now, they're just called "TRUNK", since it's not obvious what
 # actual version is on the trunk these days...
