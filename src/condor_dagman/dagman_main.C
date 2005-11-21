@@ -26,6 +26,7 @@
 #include "condor_daemon_core.h"
 #include "condor_string.h"
 #include "basename.h"
+#include "setenv.h"
 #include "dag.h"
 #include "debug.h"
 #include "parse.h"
@@ -763,6 +764,23 @@ void
 main_pre_dc_init( int argc, char* argv[] )
 {
 	DC_Skip_Auth_Init();
+
+		// Convert the DAGMan log file name to an absolute path if it's
+		// not one already, so that we'll log things to the right file
+		// if we change to a different directory.
+	const char *	logFile = GetEnv( "_CONDOR_DAGMAN_LOG" );
+	if ( logFile && !fullpath( logFile ) ) {
+		char	currentDir[_POSIX_PATH_MAX];
+		if ( getcwd( currentDir, sizeof(currentDir) ) ) {
+			MyString newLogFile(currentDir);
+			newLogFile += DIR_DELIM_STRING;
+			newLogFile += logFile;
+			SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.Value() );
+		} else {
+			debug_printf( DEBUG_NORMAL, "ERROR: unable to get cwd: %d, %s\n",
+					errno, strerror(errno) );
+		}
+	}
 }
 
 
