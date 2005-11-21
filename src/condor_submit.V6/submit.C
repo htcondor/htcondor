@@ -68,14 +68,19 @@
 #include "globus_utils.h"
 #include "enum_utils.h"
 #include "setenv.h"
+#include "classad_hashtable.h"
 
 #include "list.h"
 
 static int hashFunction( const MyString&, int );
-HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
+HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
 HashTable<MyString,int> ClusterAdAttrs( 31, hashFunction );
+
+// Explicit template instantiation
+template class HashTable<AttrKey, MyString>;
+template class HashBucket<AttrKey, MyString>;
 
 char* mySubSystem = "SUBMIT";	/* Used for SUBMIT_EXPRS */
 
@@ -3472,7 +3477,7 @@ SetJobLease( void )
 void
 SetForcedAttributes()
 {
-	MyString	name;
+	AttrKey		name;
 	MyString	value;
 	char		*exValue;
 
@@ -3487,7 +3492,7 @@ SetForcedAttributes()
 					 "  Ignoring.\n", value.Value() );
 			continue;
 		}
-		sprintf( buffer, "%s = %s", name.Value(), exValue );
+		sprintf( buffer, "%s = %s", name.value(), exValue );
 			// Call InserJobExpr with checkcluster set to false.
 			// This will result in forced attributes always going
 			// into the proc ad, not the cluster ad.  This allows
@@ -4117,7 +4122,7 @@ read_condor_file( FILE *fp )
 		else if (*name == '-') {
 			name++;
 			strlwr( name );
-			forcedAttributes.remove( MyString( name ) );
+			forcedAttributes.remove( AttrKey( name ) );
 			job->Delete( name );
 			continue;
 		}
@@ -4212,15 +4217,15 @@ read_condor_file( FILE *fp )
 			}
 		}
 
-		strlwr( name );
-
 		/* if the user wanted to force the parameter into the classad, do it 
 		   We want to remove it first, so we get the new value if it's
 		   already in there. -Derek Wright 7/13/98 */
 		if (force == 1) {
-			forcedAttributes.remove( MyString( name ) );
-			forcedAttributes.insert( MyString( name ), MyString( value ) );
+			forcedAttributes.remove( AttrKey( name ) );
+			forcedAttributes.insert( AttrKey( name ), MyString( value ) );
 		} 
+
+		strlwr( name );
 
 		if( strcmp(name, Executable) == 0 ) {
 			NewExecutable = true;
