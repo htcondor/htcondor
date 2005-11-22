@@ -29,6 +29,19 @@ using or querying a quill installation, allows talking directly to the
 rdbms, the quill daemon, or the schedd without performing the queue
 location discovery algorithm.
 
+\item Added the concept of a ``controlling'' daemon to the
+\Condor{master}.  This feature is currently used only for
+\Condor{HAD}.  To properly use the HAD feature for the
+\Condor{negotiator} daemon, you must now add an entry to your
+condor\_config:
+
+\begin{verbatim}
+MASTER_NEGOTIATOR_CONTROLLER = HAD
+\end{verbatim}
+
+This will cause the \Condor{master} to treat the \Condor{HAD} as the
+``controller'' of \Condor{negotiator}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
