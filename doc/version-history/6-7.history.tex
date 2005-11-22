@@ -42,6 +42,10 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 This will cause the \Condor{master} to treat the \Condor{HAD} as the
 ``controller'' of \Condor{negotiator}.
 
+\item Grid-type condor grid universe jobs now respect configuration
+parameters \Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMIT\_PER\_RESOURCE} and
+\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}.
+
 \item Grid universe jobs can now match-make across multiple grid-types.
 
 \end{itemize}
