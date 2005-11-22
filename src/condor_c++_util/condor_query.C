@@ -168,6 +168,13 @@ CondorQuery (AdTypes qType)
 		command = QUERY_NEGOTIATOR_ADS;
 		break;
 
+	  case HAD_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_HAD_ADS;
+		break;
+
           case STORAGE_AD:
                 query.setNumStringCats (0);
                 query.setNumIntegerCats(0);

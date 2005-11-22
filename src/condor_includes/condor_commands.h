@@ -144,6 +144,9 @@
 #define UPDATE_GSI_CRED		(SCHED_VERS+87) // send refreshed gsi proxy file
 #define SPOOL_JOB_FILES_WITH_PERMS	(SCHED_VERS+88)	// spool all job files via filetransfer object (new version with file permissions)
 #define TRANSFER_DATA_WITH_PERMS	(SCHED_VERS+89) // send all job files back via filetransfer object (new version with file permissions)
+#define CHILD_ON            (SCHED_VERS+90) // Turn my child ON (HAD)
+#define CHILD_OFF           (SCHED_VERS+91) // Turn my child OFF (HAD)
+#define CHILD_OFF_FAST      (SCHED_VERS+92) // Turn my child OFF/Fast (HAD)
 
 
 /*
@@ -232,6 +235,9 @@ const int UPDATE_QUILL_AD	= 52;
 const int QUERY_QUILL_ADS	= 53;
 const int INVALIDATE_QUILL_ADS  = 54;
 
+const int UPDATE_HAD_AD = 55;
+const int QUERY_HAD_ADS = 56;
+const int INVALIDATE_HAD_ADS = 57;
 
 /*
 *** Daemon Core Signals

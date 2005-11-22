@@ -381,6 +381,24 @@ makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 }
 
 
+bool
+makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	char	*name = NULL;
+	if (!ad->LookupString ("Name", &name ))
+	{
+		dprintf (D_ALWAYS, "Error:  No 'Name' attribute\n");
+		return false;
+	}
+
+	hk.name = name;
+	free( name );
+	hk.ip_addr = "";
+
+	return true;
+}
+
+
 // utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"
 //  Extracts the ip address portion ("aaa.bbb.ccc.ddd")
 int 

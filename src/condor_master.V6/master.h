@@ -33,6 +33,9 @@ enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
 enum StopStateT { PEACEFUL, GRACEFUL, FAST, KILL, NONE };
 
+// Max # of controllee's a controller can support
+const int MAX_CONTROLLEES = 5;
+
 class daemon : public Service
 {
 public:
@@ -46,7 +49,6 @@ public:
 	char*	watch_name;
 	char*	log_name;
 	int		runs_here;
-	int		on_hold;
 	int		pid;
 	int 	restarts;
 	int		newExec; 
@@ -64,11 +66,13 @@ public:
 #endif
 
 	int		NextStart();
-	int		Start();
+	int		Start( bool never_forward = false );
 	int		RealStart();
 	int		Restart();
-	void	Stop();
-	void	StopFast();
+	void    Hold( bool on_hold, bool never_forward = false );
+	bool	OnHold( void ) { return on_hold; };
+	void	Stop( bool never_forward = false );
+	void	StopFast( bool never_forward = false );
 	void	StopPeaceful();
 	void	HardKill();
 	void	Exited( int );
@@ -80,6 +84,9 @@ public:
 	void	Reconfig();
 	void	InitProcFam( int pid, PidEnvID *penvid );
 	void	DeleteProcFam( void );
+
+	int		SetupController( void );
+	int		RegisterControllee( class daemon * );
 
 private:
 
@@ -97,6 +104,8 @@ private:
 	int		stop_fast_tid;
 	int 	hard_kill_tid;
 
+	int		on_hold;
+
 	int		needs_update;
 	StopStateT stop_state;
 
@@ -107,6 +116,12 @@ private:
 
 	CondorLock	*ha_lock;
 	bool	is_ha;
+
+	char	*controller_name;
+	class daemon  *controller;
+
+	int		num_controllees;
+	class daemon  *controllees[MAX_CONTROLLEES];
 };
 
 
@@ -163,6 +178,8 @@ public:
 	void	StartNewExecTimer();
 	void	CancelNewExecTimer();
 
+	int		SetupControllers( );
+
 	int		immediate_restart;
 	int		immediate_restart_master;
 
@@ -170,6 +187,7 @@ public:
 	void	UpdateCollector();
 
 	class daemon*	FindDaemon( daemon_t dt );
+	class daemon*	FindDaemon( const char * );
 
 private:
 	class daemon **daemon_ptr;

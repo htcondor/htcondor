@@ -39,6 +39,7 @@
 #define LICENSE_ADTYPE		"License"
 #define STORAGE_ADTYPE		"Storage"
 #define NEGOTIATOR_ADTYPE	"Negotiator"
+#define HAD_ADTYPE          "HAD"
 #define ANY_ADTYPE			"Any"
 #define SUBMITTER_ADTYPE	"Submitter"
 #define COMMAND_ADTYPE		"Command"

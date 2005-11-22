@@ -47,8 +47,8 @@
 // command names
 #define HAD_ALIVE_CMD_STR           "HAD_ALIVE_CMD"
 #define HAD_SEND_ID_CMD_STR         "HAD_SEND_ID_CMD"
-#define DAEMON_ON_STR           "DAEMON_ON"
-#define DAEMON_OFF_FAST_STR           "DAEMON_OFF_FAST"
+#define CHILD_ON_STR                "CHILD_ON"
+#define CHILD_OFF_FAST_STR          "CHILD_OFF_FAST"
 // end TODO
 
 

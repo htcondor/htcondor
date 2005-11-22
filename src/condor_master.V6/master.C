@@ -62,7 +62,7 @@ extern "C"
 
 // local function prototypes
 void	init_params();
-void	init_daemon_list();
+int		init_daemon_list();
 void	init_classad();
 void	init_firewall_exceptions();
 void	lock_or_except(const char * );
@@ -247,7 +247,9 @@ main_init( int argc, char* argv[] )
 		// Grab all parameters needed by the master.
 	init_params();
 		// param() for DAEMON_LIST and initialize our daemons object.
-	init_daemon_list();
+	if ( init_daemon_list() < 0 ) {
+		EXCEPT( "Daemon list initialization failed" );
+	}
 		// Lookup the paths to all the daemons we now care about.
 	daemons.InitParams();
 		// Initialize our classad;
@@ -292,6 +294,15 @@ main_init( int argc, char* argv[] )
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_OFF_PEACEFUL, "DAEMON_OFF_PEACEFUL",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( CHILD_ON, "CHILD_ON",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( CHILD_OFF, "CHILD_OFF",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( CHILD_OFF_FAST, "CHILD_OFF_FAST",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 
@@ -368,6 +379,9 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	case DAEMON_OFF:
 	case DAEMON_OFF_FAST:
 	case DAEMON_OFF_PEACEFUL:
+	case CHILD_ON:
+	case CHILD_OFF:
+	case CHILD_OFF_FAST:
 		return handle_subsys_command( cmd, stream );
 
 			// This function is also special, since it needs to read
@@ -459,7 +473,6 @@ handle_subsys_command( int cmd, Stream* stream )
 {
 	char* subsys = NULL;
 	class daemon* daemon;
-	daemon_t dt;
 
 	stream->decode();
 	if( ! stream->code(subsys) ) {
@@ -472,13 +485,8 @@ handle_subsys_command( int cmd, Stream* stream )
 		free( subsys );
 		return FALSE;
 	}
-	if( !(dt = stringToDaemonType(subsys)) ) {
-		dprintf( D_ALWAYS, "Error: got unknown subsystem string \"%s\"\n", 
-				 subsys );
-		free( subsys );
-		return FALSE;
-	}
-	if( !(daemon = daemons.FindDaemon(dt)) ) {
+	subsys = strupr( subsys );
+	if( !(daemon = daemons.FindDaemon(subsys)) ) {
 		dprintf( D_ALWAYS, "Error: Can't find daemon of type \"%s\"\n", 
 				 subsys );
 		free( subsys );
@@ -487,21 +495,33 @@ handle_subsys_command( int cmd, Stream* stream )
 	dprintf( D_COMMAND, "Handling daemon-specific command for \"%s\"\n", 
 			 subsys );
 	free( subsys );
+
 	switch( cmd ) {
 	case DAEMON_ON:
-		daemon->on_hold = FALSE;
+		daemon->Hold( false );
 		return daemon->Start();
 	case DAEMON_OFF:
-		daemon->on_hold = TRUE;
+		daemon->Hold( true );
 		daemon->Stop();
 		return TRUE;
 	case DAEMON_OFF_FAST:
-		daemon->on_hold = TRUE;
+		daemon->Hold( true );
 		daemon->StopFast();
 		return TRUE;
 	case DAEMON_OFF_PEACEFUL:
-		daemon->on_hold = TRUE;
+		daemon->Hold( true );
 		daemon->StopPeaceful();
+		return TRUE;
+	case CHILD_ON:
+		daemon->Hold( false, true );
+		return daemon->Start( true );
+	case CHILD_OFF:
+		daemon->Hold( true, true );
+		daemon->Stop( true );
+		return TRUE;
+	case CHILD_OFF_FAST:
+		daemon->Hold( true, true );
+		daemon->StopFast( true );
 		return TRUE;
 	default:
 		EXCEPT( "Unknown command (%d) in handle_subsys_command", cmd );
@@ -723,7 +743,7 @@ init_params()
 }
 
 
-void
+int
 init_daemon_list()
 {
 	char	*daemon_name;
@@ -803,6 +823,8 @@ init_daemon_list()
 			new_daemon = new class daemon(default_daemon_list[i]);
 		}
 	}
+
+	return daemons.SetupControllers( );
 }
 
 

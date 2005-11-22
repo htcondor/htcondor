@@ -98,7 +98,7 @@ HADStateMachine::finilize()
         // always kill leader when HAD dies - if I am leader I should 
         // kill my Negotiator.If I am not a leader - my Negotiator
         // should not be on anyway
-        sendNegotiatorCmdToMaster( DAEMON_OFF_FAST );
+        sendNegotiatorCmdToMaster( CHILD_OFF_FAST );
         delete masterDaemon;
         masterDaemon = NULL;
     }
@@ -245,7 +245,7 @@ HADStateMachine::reinitialize()
     }
  
     if( masterDaemon == NULL ||
-        sendNegotiatorCmdToMaster(DAEMON_OFF_FAST) == FALSE ) {
+        sendNegotiatorCmdToMaster(CHILD_OFF_FAST) == FALSE ) {
          onError("HAD ERROR: unable to send NEGOTIATOR_OFF command");
     }
  
@@ -334,13 +334,13 @@ HADStateMachine::step()
             }
 
             // no leader in the system and this HAD has biggest id
-            if( sendNegotiatorCmdToMaster(DAEMON_ON) == TRUE ) {
+            if( sendNegotiatorCmdToMaster(CHILD_ON) == TRUE ) {
                 state = LEADER_STATE;
                 printStep( "ELECTION_STATE","LEADER_STATE") ;
             } else {
                 // TO DO : what with this case ? stay in election case ?
                 // return to passive ?
-                // may be call sendNegotiatorCmdToMaster(DAEMON_ON)in a loop?
+                // may be call sendNegotiatorCmdToMaster(CHILD_ON)in a loop?
                 dprintf( D_FULLDEBUG,"id %d , cannot send NEGOTIATOR_ON cmd,"
                     " stay in ELECTION state\n",
                     daemonCore->getpid() );
@@ -356,7 +356,7 @@ HADStateMachine::step()
                     printStep( "LEADER_STATE","PASSIVE_STATE" );
                     state = PASSIVE_STATE;
                     if( !standAloneMode ) {
-                        sendNegotiatorCmdToMaster( DAEMON_OFF_FAST );
+                        sendNegotiatorCmdToMaster( CHILD_OFF_FAST );
                     }
                     break;
                 }
@@ -797,10 +797,10 @@ HADStateMachine::commandToString(int command)
             return HAD_ALIVE_CMD_STR ;
         case HAD_SEND_ID_CMD:
             return HAD_SEND_ID_CMD_STR ;
-        case DAEMON_ON:
-            return DAEMON_ON_STR ;
-        case DAEMON_OFF_FAST:
-            return DAEMON_OFF_FAST_STR ;
+        case CHILD_ON:
+            return CHILD_ON_STR ;
+        case CHILD_OFF_FAST:
+            return CHILD_OFF_FAST_STR ;
         default :
             return "unknown command";
 

@@ -86,6 +86,7 @@ class CollectorEngine : public Service
 	CollectorHashTable GatewayAds;
 	CollectorHashTable CollectorAds;
 	CollectorHashTable NegotiatorAds;
+	CollectorHashTable HadAds;
 
 	// relevant variables from the config file
 	int	clientTimeout; 
