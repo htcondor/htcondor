@@ -178,9 +178,11 @@ int filename_remap_find( const char *input, const char *filename, char *output )
 
 int is_relative_to_cwd( const char *path )
 {
-	if(*path == DIR_DELIM_CHAR) return 0;
-#ifdef WIN32
+#if WIN32
+	if(*path == '/' || *path == '\\') return 0;
 	if(('A' <= toupper(*path) && toupper(*path) <= 'Z') && path[1] == ':') return 0;
+#else
+	if(*path == DIR_DELIM_CHAR) return 0;
 #endif
 	return 1;
 }
