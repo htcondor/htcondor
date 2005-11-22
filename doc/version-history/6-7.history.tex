@@ -62,6 +62,11 @@ page~\pageref{param:PasswdCacheRefresh} for more details.
 absolute paths in the job's output/error if the path began with a
 forward slash rather than a backslash.
 
+\item Fixed a bug in the \Condor{master} that caused ``condor\_off
+-subsystem'' (and similar commands) to fail if the deamon name wasn't
+hard-coded into the \Condor{master}.  The \Condor{master} now handle
+any daemon listed in the \Macro{DAEMON\_LIST} for these commands.
+
 \end{itemize}
 
 \noindent Changes:
