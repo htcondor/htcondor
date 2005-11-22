@@ -58,6 +58,9 @@ version 6.7.13.)
 further reduce load on NIS servers.  See section~\ref{param:PasswdCacheRefresh} on
 page~\pageref{param:PasswdCacheRefresh} for more details.
 
+\item Fixed a bug in 6.7.13 for Windows causing incorrect handling of
+absolute paths in the job's output/error if the path began with a
+forward slash rather than a backslash.
 
 \end{itemize}
 
