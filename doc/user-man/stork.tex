@@ -19,16 +19,21 @@ data placements are queued, managed, queried and
 autonomously restarted upon error.
 Stork understands the semantics and protocols of data placement.
 
-Protocol translation and transfer are implemented by modules.
-The module where the protocol at both the source and destination
-is \SubmitCmd{file:/} is included with Condor.
-Other modules 
-are available for transferring 
-data using the following protocols:
+The underlying data placement jobs are performed by Stork
+\Term{modules}, typically installed in the Condor \File{libexec}
+directory.  The module name is encoded from the data placement type
+and functions.  
+For example, the \File{stork.transfer.file-file} module transfers data
+from the \File{file:/} (local filesystem) to the \File{file:/}
+protocol.  The \File{stork.transfer.file-file} module is the only
+module bundled with Condor/Stork.  Additionally, contributed modules
+may be \htmladdnormallink{downloaded}
+{http://www.cs.wisc.edu/condor/stork/download.html}
+for these data transfer protocols:
 
 \begin{table}[hbt]
 \begin{tabular}{ l l }
-file:/		& (Stork Server) local file system \\
+%file:/		& (Stork Server) local file system \\
 ftp://		& FTP File Transfer Protocol \\
 http://		& HTTP Hypertext Transfer Protocol \\
 gsiftp://	& Globus Grid FTP  \\ 
@@ -46,10 +51,9 @@ unitree://    & NCSA UniTree (see
 \end{tabular}
 \end{table}
 
-Specific modules that do protocol translation and transfer
-are available for download at
-\URL{http://www.cs.wisc.edu/condor/stork/download.html}.
-Users may create and use their own modules.
+The Stork
+module API is simple and extensible, enabling users to create 
+and use their own modules.
 
 Stork includes high level features for managing data transfers.
 By configuration, the number of active jobs running
@@ -74,9 +78,9 @@ It is important to note the syntax of the submit description file
 for a Stork job is different than that used by Condor jobs.
 Specifically,
 Stork submit description files are written in the
-ClassAd Language, as defined at
-\URL{http://www.cs.wisc.edu/condor/classad};
-see the ClassAd Language Reference Manual for complete details.
+\htmladdnormallink{ClassAd}{http://www.cs.wisc.edu/condor/classad}
+language.  
+See the ClassAd Language Reference Manual for complete details.
 Please note that while most of Condor uses ClassAds,
 Stork utilizes the most recent version of this language,
 which has evolved over time.
@@ -217,8 +221,8 @@ configuration variable
 (section \ref{param:StorkMaxRetry}).  
 
 For each attempt at transfer,
-the translation protocols to be used at both source and destination are defined.
-These translation protocols may vary,
+the transfer protocols to be used at both source and destination are defined.
+These transfer protocols may vary,
 when defined by an \SubmitCmd{alt\_protocols} entry in the
 submit description file.
 The location of the data at the source and destination
@@ -250,7 +254,7 @@ and the Stork job submit description file contains
 \begin{verbatim}
 [
     dap_type = transfer;
-    src_url = "file:/serverA/dirA/fileA";
+    src_url = "gsiftp://serverA/dirA/fileA";
     dest_url = "http://serverB/dirB/fileB";
 ]
 \end{verbatim}
@@ -258,23 +262,23 @@ and the Stork job submit description file contains
 
 then Stork will attempt up to 4 transfers,
 with each using the same translation protocol.
-\SubmitCmd{file:/} is used at the source,
+\SubmitCmd{gsiftp://} is used at the source,
 and \SubmitCmd{http://} is used at the destination.
 The Stork job fails if it has not been completed after
 4 attempts.
 
-A second example shows the translation protocols used for
+A second example shows the transfer protocols used for
 each attempted transfer, 
 when \SubmitCmd{alt\_protocols} is used.
 For this example, assume that 
-\MacroNI{STORK\_MAX\_RETRY} has the value 10.
+\MacroNI{STORK\_MAX\_RETRY} has the value 7.
 \footnotesize
 \begin{verbatim}
 [
     dap_type = transfer;
-    src_url = "file:/serverA/dirA/fileA";
-    dest_url = "http://serverB/dirB/fileB";
-    alt_protocols = "file-srb, gsiftp-file";
+    src_url = "gsiftp://no-such-server/dir/file";
+    dest_url = "file:/dir/file";
+    alt_protocols = "ftp-file, http-file";
 ]
 \end{verbatim}
 \normalsize
@@ -283,46 +287,34 @@ Stork attempts the following transfers, in the given order,
 stopping when the transfer succeeds.
 \begin{enumerate}
     \item from 
-			\File{file:/serverA/dirA/fileA}
+			\File{gsiftp://no-such-server/dir/file}
             to
-			\File{http://serverB/dirB/fileB}
+			\File{file:/dir/file}
     \item from 
-			\File{file:/serverA/dirA/fileA}
+			\File{ftp://no-such-server/dir/file}
             to
-			\File{srb://serverB/dirB/fileB}
+			\File{file:/dir/file}
     \item from 
-			\File{gsiftp://serverA/dirA/fileA}
+			\File{http://no-such-server/dir/file}
             to
-			\File{file:/serverB/dirB/fileB}
+			\File{file:/dir/file}
     \item from 
-			\File{file:/serverA/dirA/fileA}
+			\File{gsiftp://no-such-server/dir/file}
             to
-			\File{http://serverB/dirB/fileB}
+			\File{file:/dir/file}
     \item from 
-			\File{file:/serverA/dirA/fileA}
+			\File{ftp://no-such-server/dir/file}
             to
-			\File{srb://serverB/dirB/fileB}
+			\File{file:/dir/file}
     \item from 
-			\File{gsiftp://serverA/dirA/fileA}
+			\File{http://no-such-server/dir/file}
             to
-			\File{file:/serverB/dirB/fileB}
+			\File{file:/dir/file}
     \item from 
-			\File{file:/serverA/dirA/fileA}
+			\File{gsiftp://no-such-server/dir/file}
             to
-			\File{http://serverB/dirB/fileB}
-    \item from 
-			\File{file:/serverA/dirA/fileA}
-            to
-			\File{srb://serverB/dirB/fileB}
-    \item from 
-			\File{gsiftp://serverA/dirA/fileA}
-            to
-			\File{file:/serverB/dirB/fileB}
-    \item from 
-			\File{file:/serverA/dirA/fileA}
-            to
-			\File{http://serverB/dirB/fileB}
-\end{enumerate}
+			\File{file:/dir/file}
+ \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Stork-Advanced}Running Stork Jobs Under DAGMan}
