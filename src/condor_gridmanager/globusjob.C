@@ -833,6 +833,18 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		goto error_exit;
 	}
 
+	buff[0] = '\0';
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
+		if ( jmVersion == GRAM_V_UNKNOWN ) {
+			dprintf(D_ALWAYS,
+					"(%d.%d) Non-NULL contact string and unknown gram version!\n",
+					procID.cluster, procID.proc);
+		}
+		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
+		job_already_submitted = true;
+	}
+
 	// Find/create an appropriate GlobusResource for this job
 	myResource = GlobusResource::FindOrCreateResource( resourceManagerString,
 													   jobProxy->subject->subject_name);
@@ -845,18 +857,6 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	myResource->RegisterJob( this );
 	if ( job_already_submitted ) {
 		myResource->AlreadySubmitted( this );
-	}
-
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( buff[0] != '\0' ) {
-		if ( jmVersion == GRAM_V_UNKNOWN ) {
-			dprintf(D_ALWAYS,
-					"(%d.%d) Non-NULL contact string and unknown gram version!\n",
-					procID.cluster, procID.proc);
-		}
-		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
-		job_already_submitted = true;
 	}
 
 	useGridJobMonitor = true;

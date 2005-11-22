@@ -359,6 +359,13 @@ GT3Job::GT3Job( ClassAd *classad )
 		goto error_exit;
 	}
 
+	buff[0] = '\0';
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
+		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
+		job_already_submitted = true;
+	}
+
 	myResource = GT3Resource::FindOrCreateResource( resourceManagerString,
 													jobProxy->subject->subject_name);
 	if ( myResource == NULL ) {
@@ -370,13 +377,6 @@ GT3Job::GT3Job( ClassAd *classad )
 	myResource->RegisterJob( this );
 	if ( job_already_submitted ) {
 		myResource->AlreadySubmitted( this );
-	}
-
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( buff[0] != '\0' ) {
-		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
-		job_already_submitted = true;
 	}
 
 	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );

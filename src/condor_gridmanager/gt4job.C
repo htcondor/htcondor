@@ -400,6 +400,13 @@ GT4Job::GT4Job( ClassAd *classad )
 		goto error_exit;
 	}
 
+	buff[0] = '\0';
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	if ( buff[0] != '\0' ) {
+		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
+		job_already_submitted = true;
+	}
+
 		// Find/create an appropriate GT4Resource for this job
 	myResource = GT4Resource::FindOrCreateResource( resourceManagerString,
 													jobProxy->subject->subject_name);
@@ -412,13 +419,6 @@ GT4Job::GT4Job( ClassAd *classad )
 	myResource->RegisterJob( this );
 	if ( job_already_submitted ) {
 		myResource->AlreadySubmitted( this );
-	}
-
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( buff[0] != '\0' ) {
-		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
-		job_already_submitted = true;
 	}
 
 	if (jobAd->LookupString ( ATTR_GLOBUS_SUBMIT_ID, buff )) {
