@@ -80,6 +80,10 @@ forward slash rather than a backslash.
 hard-coded into the \Condor{master}.  The \Condor{master} now handle
 any daemon listed in the \Macro{DAEMON\_LIST} for these commands.
 
+\item Fixed a bug in the \condor{gridmanager} that caused it to undercount
+already-submitted jobs at start-up for purposes of job throttling to Globus
+grid resources.
+
 \end{itemize}
 
 \noindent Changes:
