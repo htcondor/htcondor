@@ -291,6 +291,8 @@ void BaseResource::CancelSubmit( BaseJob *job )
 
 	SubmitComplete( job );
 
+	leaseUpdates.Delete( job );
+
 	return;
 }
 

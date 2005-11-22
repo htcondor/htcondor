@@ -340,7 +340,11 @@ int CondorJob::JobLeaseSentExpired()
 dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	BaseJob::JobLeaseSentExpired();
 	SetRemoteJobId( NULL );
-	gmState = GM_CLEAR_REQUEST;
+		// We always want to go through GM_INIT. With the remote job id set
+		// to NULL, we'll go to GM_CLEAR_REQUEST afterwards.
+	if ( gmState != GM_INIT ) {
+		gmState = GM_CLEAR_REQUEST;
+	}
 	return 0;
 }
 
@@ -1019,6 +1023,7 @@ int CondorJob::doEvaluateState()
 			if ( submitLogged ) {
 				JobEvicted();
 			}
+			UpdateJobLeaseSent( -1 );
 
 			// If there are no updates to be done when we first enter this
 			// state, requestScheddUpdate will return done immediately
