@@ -31,6 +31,7 @@
 #include "condor_ckpt_name.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "setenv.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
@@ -99,6 +100,7 @@ void INFNBatchJobInit()
 void INFNBatchJobReconfig()
 {
 	int tmp_int;
+	char *tmp_char = NULL;
 
 	tmp_int = param_integer( "INFN_JOB_POLL_INTERVAL", 5 * 60 );
 	INFNBatchJob::setPollInterval( tmp_int );
@@ -108,6 +110,12 @@ void INFNBatchJobReconfig()
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	INFNBatchJob::setConnectFailureRetry( tmp_int );
+
+	tmp_char = param("GLITE_LOCATION");
+	if ( tmp_char ) {
+		SetEnv( "GLITE_LOCATION", tmp_char );
+		free( tmp_char );
+	}
 }
 
 bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
