@@ -90,6 +90,10 @@ any daemon listed in the \Macro{DAEMON\_LIST} for these commands.
 already-submitted jobs at start-up for purposes of job throttling to Globus
 grid resources.
 
+\item Improved the handling of job leases for grid-type condor jobs in the
+race condition of the lease expiring while the \Condor{gridmanager} is
+trying to extend the lease.
+
 \end{itemize}
 
 \noindent Changes:
