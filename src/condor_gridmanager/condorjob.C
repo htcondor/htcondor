@@ -154,6 +154,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	char buff2[4096];
 	char *error_string = NULL;
 	char *gahp_path;
+	bool job_already_submitted = false;
 
 	remoteJobId.cluster = 0;
 	gahpAd = NULL;
@@ -240,6 +241,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( strrchr( buff, ' ' )+1 );
+		job_already_submitted = true;
 	} else {
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
@@ -261,6 +263,9 @@ CondorJob::CondorJob( ClassAd *classad )
 													   remotePoolName,
 													   jobProxy ? jobProxy->subject->subject_name : NULL );
 	myResource->RegisterJob( this, submitterId );
+	if ( job_already_submitted ) {
+		myResource->AlreadySubmitted( this );
+	}
 
 	gahp_path = param("CONDOR_GAHP");
 	if ( gahp_path == NULL ) {
@@ -510,6 +515,7 @@ int CondorJob::doEvaluateState()
 		case GM_SUBMIT: {
 			// Start a new remote submission for this job.
 			if ( condorState == REMOVED || condorState == HELD ) {
+				myResource->CancelSubmit(this);
 				gmState = GM_UNSUBMITTED;
 				break;
 			}
@@ -524,6 +530,12 @@ int CondorJob::doEvaluateState()
 			// After a submit, wait at least submitInterval before trying
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
+				// Once RequestSubmit() is called at least once, you must
+				// CancelSubmit() or SubmitComplete() once you're done with
+				// the request call
+				if ( myResource->RequestSubmit(this) == false ) {
+					break;
+				}
 				char *job_id_string = NULL;
 				if ( gahpAd == NULL ) {
 					int new_expiration;
@@ -546,6 +558,7 @@ int CondorJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+				myResource->SubmitComplete(this);
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
@@ -919,6 +932,7 @@ int CondorJob::doEvaluateState()
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
 				SetRemoteJobId( NULL );
+				myResource->CancelSubmit( this );
 				requestScheddUpdate( this );
 				gmState = GM_CLEAR_REQUEST;
 			}
@@ -996,6 +1010,7 @@ int CondorJob::doEvaluateState()
 			}
 			errorString = "";
 			SetRemoteJobId( NULL );
+			myResource->CancelSubmit( this );
 			if ( newRemoteStatusAd != NULL ) {
 				delete newRemoteStatusAd;
 				newRemoteStatusAd = NULL;
