@@ -82,7 +82,14 @@ Reqexp::restore()
 	} else {
 		rip->r_classad->Delete( ATTR_RUNNING_COD_JOB );
 	}
-	if( rstate != ORIG_REQ ) {
+	if( resmgr->isShuttingDown() ) {
+		if( rstate != UNAVAIL_REQ ) {
+			unavail();
+			return true;
+		}
+		return false;
+	}
+	if( rstate != ORIG_REQ) {
 		rstate = ORIG_REQ;
 		publish( rip->r_classad, A_PUBLIC );
 		return true;

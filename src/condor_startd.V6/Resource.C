@@ -304,6 +304,12 @@ Resource::shutdownAllClaims( bool graceful )
 	} else {
 		kill_claim();
 	}
+
+		// Tell the negotiator not to match any new jobs to this VM, since
+		// they would just be rejected by the startd anyway.
+	r_reqexp->unavail();
+	update();
+
 	return TRUE;
 }
 
