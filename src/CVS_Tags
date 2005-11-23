@@ -1,3 +1,7 @@
+11/23/05 V6_7-Technion_ha5-{root,branch}
+   A branch based off V6_7-branch in which further HA development
+   will be done.  Both code and docs are branched.
+
 11/21/05 V6_7-Technion_ha4-merge-1
    The state of the V6_7-Technion_ha4-branch for a merge into V6_7-branch.
 
