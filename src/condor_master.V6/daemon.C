@@ -766,7 +766,8 @@ daemon::Stop( bool never_forward )
 			dprintf( D_FULLDEBUG,
 					 "Forwarding Stop to %s's controller (%s)\n",
 					 name_in_config_file, controller->name_in_config_file );
-			return controller->Stop( );
+			controller->Stop();
+			return;
 		} else {
 			dprintf( D_FULLDEBUG,
 					 "Handling Stop for %s myself\n",
@@ -848,7 +849,8 @@ daemon::StopFast( bool never_forward )
 			dprintf( D_FULLDEBUG,
 					 "Forwarding StopFast to %s's controller (%s)\n",
 					 name_in_config_file, controller->name_in_config_file );
-			return controller->StopFast( );
+			controller->StopFast();
+			return;
 		} else {
 			dprintf( D_FULLDEBUG,
 					 "Handling StopFast for %s myself\n",
