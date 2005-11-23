@@ -24,6 +24,11 @@
 #ifndef CONDOR_CLASSAD_UTIL_H
 #define CONDOR_CLASSAD_UTIL_H
 
+#include "string_list.h"
+
 bool EvalBool(ClassAd *ad, const char *constraint);
+
+bool ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, 
+					  StringList* ignored_attrs=NULL, bool verbose=false );
 
 #endif
