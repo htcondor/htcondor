@@ -399,7 +399,7 @@ void Server::Execute()
 	
 	current_time = last_reclaim_time = last_clean_time = time(NULL);
 
-	dprintf( D_FULLDEBUG, "Sending initial ckpt server ad to collector" );
+	dprintf( D_FULLDEBUG, "Sending initial ckpt server ad to collector\n" );
     struct sockaddr_in *tmp = getSockAddr(store_req_sd);
     if (tmp == NULL) {
         EXCEPT("Can't get the address that store_req_sd is bound to");
@@ -718,12 +718,13 @@ void Server::ProcessServiceReq(int             req_id,
 				//server_sa.sin_addr = server_addr;
 				//server_sa.sin_port = htons(0);
 				if ((ret_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
-					dprintf(D_ALWAYS, "ERROR: I_bind() returned an error (#%d)", 
-							ret_code);
+					dprintf( D_ALWAYS,
+							 "ERROR: I_bind() returned an error (#%d)\n", 
+							 ret_code );
 					exit(ret_code);
 				}
 				if (I_listen(data_conn_sd, 1) != CKPT_OK) {
-					dprintf(D_ALWAYS, "ERROR: I_listen() failed to listen");
+					dprintf(D_ALWAYS, "ERROR: I_listen() failed to listen\n");
 					exit(LISTEN_ERROR);
 				}
 				service_reply.server_addr = server_addr;
@@ -1943,7 +1944,7 @@ void InstallSigHandlers()
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
 	if (sigaction(SIGHUP, &sig_info, NULL) < 0) {
-		dprintf(D_ALWAYS, "ERROR: cannot install SIGHUP signal handle\n");
+		dprintf(D_ALWAYS, "ERROR: cannot install SIGHUP signal handler\n");
 		exit(SIGNAL_HANDLER_ERROR);
     }
 	sig_info.sa_handler = (SIG_HANDLER) SIG_IGN;
