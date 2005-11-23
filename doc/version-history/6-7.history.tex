@@ -94,6 +94,15 @@ grid resources.
 race condition of the lease expiring while the \Condor{gridmanager} is
 trying to extend the lease.
 
+\item The startd no longer advertises itself as available to run jobs
+when it is in shutdown mode (e.g. waiting for jobs to finish).  This
+was a noticable problem when using large values for
+\Macro{MaxJobRetirementTime} on multi-VM startds; while waiting for
+one of its VMs to finish running a job, the startd would be available
+for matching to jobs, but it would reject them when the schedd tried
+to start them, possibly causing an endless cycle of matching, attempting
+to run, and failing.
+
 \end{itemize}
 
 \noindent Changes:
