@@ -550,8 +550,12 @@ int NordugridJob::doEvaluateState()
 		case GM_EXIT_INFO: {
 			bool normal_exit;
 			int exit_code;
+			float wallclock = 0;
+			float sys_cpu = 0;
+			float user_cpu = 0;
 			rc = gahp->nordugrid_exit_info( resourceManagerString, remoteJobId,
-											normal_exit, exit_code );
+											normal_exit, exit_code, wallclock,
+											sys_cpu, user_cpu );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -570,6 +574,9 @@ int NordugridJob::doEvaluateState()
 					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
 					jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exitCode );
 				}
+				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock );
+				jobAd->Assign( ATTR_JOB_REMOTE_SYS_CPU, sys_cpu );
+				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, user_cpu );
 				gmState = GM_STAGE_OUT;
 			}
 			} break;

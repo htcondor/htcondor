@@ -564,7 +564,9 @@ class GahpClient : public Service {
 
 		int
 		nordugrid_exit_info(const char *hostname, const char *job_id,
-							bool &normal_exit, int &exit_code);
+							bool &normal_exit, int &exit_code,
+							float &wallclock, float &sys_cpu,
+							float &user_cpu );
 
 		int
 		nordugrid_ping(const char *hostname);

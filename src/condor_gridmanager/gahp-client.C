@@ -4918,7 +4918,9 @@ GahpClient::nordugrid_stage_out(const char *hostname, const char *job_id,
 
 int
 GahpClient::nordugrid_exit_info(const char *hostname, const char *job_id,
-								bool &normal_exit, int &exit_code)
+								bool &normal_exit, int &exit_code,
+								float &wallclock, float &sys_cpu,
+								float &user_cpu )
 {
 	static const char* command = "NORDUGRID_EXIT_INFO";
 
@@ -4956,7 +4958,7 @@ GahpClient::nordugrid_exit_info(const char *hostname, const char *job_id,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 5) {
+		if (result->argc != 8) {
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
@@ -4966,8 +4968,11 @@ GahpClient::nordugrid_exit_info(const char *hostname, const char *job_id,
 			normal_exit = false;
 		}
 		exit_code = atoi( result->argv[3] );
-		if ( strcasecmp(result->argv[4], NULLSTRING) ) {
-			error_string = result->argv[4];
+		wallclock = atof( result->argv[4] );
+		sys_cpu = atof( result->argv[5] );
+		user_cpu = atof( result->argv[6] );
+		if ( strcasecmp(result->argv[7], NULLSTRING) ) {
+			error_string = result->argv[7];
 		} else {
 			error_string = "";
 		}
