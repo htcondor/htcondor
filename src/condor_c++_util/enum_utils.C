@@ -86,6 +86,18 @@ struct Translation JobActionTranslation[] = {
 };
 
 
+struct Translation CronAutoPublishTranslation[] = {
+	{ "Never", CAP_NEVER },
+	{ "False", CAP_NEVER },
+	{ "Always", CAP_ALWAYS },
+	{ "IfChanged", CAP_IF_CHANGED },
+	{ "If_Changed", CAP_IF_CHANGED },
+	{ "IfDifferent", CAP_IF_CHANGED },
+	{ "If_Different", CAP_IF_CHANGED },
+	{ "NULL", 0 }
+};
+
+
 const char*
 getClaimTypeString( ClaimType type )
 {
@@ -170,4 +182,19 @@ getJobActionNum( const char* str )
 {
 	return (JobAction)getNumFromName( str, JobActionTranslation );
 }
+
+
+const char*
+getCronAutoPublishString( CronAutoPublish_t val )
+{
+	return getNameFromNum( (int)val, CronAutoPublishTranslation );
+}
+
+
+CronAutoPublish_t
+getCronAutoPublishNum( const char* str )
+{
+	return (CronAutoPublish_t)getNumFromName(str, CronAutoPublishTranslation);
+}
+
 

@@ -97,4 +97,16 @@ const char* getJobActionString( JobAction action );
 JobAction getJobActionNum( const char* string );
 
 
+// enum for possible CRON_AUTOPUBLISH values
+typedef enum {
+	CAP_ERROR = -1,
+	CAP_NEVER = 0,
+	CAP_ALWAYS,
+	CAP_IF_CHANGED
+} CronAutoPublish_t;
+
+const char* getCronAutoPublishString( CronAutoPublish_t val );
+CronAutoPublish_t getCronAutoPublishNum( const char* string );
+
+
 #endif /* _CONDOR_ENUM_UTILS_H */
