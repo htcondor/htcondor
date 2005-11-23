@@ -357,7 +357,7 @@ int Server::SetUpPort(u_short port)
       dprintf(D_ALWAYS, "failed getSockAddr(%d)\n", temp_sd);
       exit(BIND_ERROR);
   }
-  memcpy( (char*) &tmp->sin_addr.s_addr, (char*) &server_addr, 
+  memcpy( (char*) &server_addr, (char*) &tmp->sin_addr.s_addr, 
 		  sizeof(struct in_addr) );
 
   return temp_sd;
