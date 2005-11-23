@@ -310,6 +310,7 @@ private:
 	struct connect_state_struct {
 			int timeout_interval;
 			bool connect_failed, failed_once;
+			bool connect_refused;
 			time_t timeout_time;
 			int	old_timeout_value;
 			bool non_blocking_flag;

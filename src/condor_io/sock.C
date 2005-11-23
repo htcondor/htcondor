@@ -607,11 +607,13 @@ int Sock::do_connect(
 	connect_state.timeout_time = time(NULL) + connect_state.timeout_interval;
 	connect_state.connect_failed = false;
 	connect_state.failed_once = false;
+	connect_state.connect_refused = false;
 	connect_state.non_blocking_flag = non_blocking_flag;
 	if ( connect_state.host ) free( connect_state.host );
 	connect_state.host = strdup(host);
 	connect_state.port = port;
 
+	time_t connect_start_time = time(NULL);
 	do {
 		connect_state.connect_failed = false;
 
@@ -680,6 +682,9 @@ int Sock::do_connect(
 			}
 		}
 
+		// Do not keep trying if we have been explicitly refused.
+		if(connect_state.connect_refused) break;
+
 		// we don't want to busyloop on connect, so sleep for a second
 		// before we try again
 		sleep(1);
@@ -687,7 +692,7 @@ int Sock::do_connect(
 	} while (time(NULL) < connect_state.timeout_time);
 
 	dprintf( D_ALWAYS, "Connect failed for %d seconds; returning FALSE\n",
-			 connect_state.timeout_interval );
+			 (int)(time(NULL) - connect_start_time) );
 	return FALSE;
 }
 
@@ -717,7 +722,7 @@ bool Sock::do_connect_finish()
 
 	if ( connect_state.non_blocking_flag ) {
 
-		if (time(NULL) < connect_state.timeout_time)
+		if (time(NULL) < connect_state.timeout_time && !connect_state.connect_refused)
 		{
 				// we don't want to busyloop on connect, so sleep for a second
 				// before we try again
@@ -768,11 +773,16 @@ bool Sock::do_connect_tryit()
 #if defined(WIN32)
 	int lasterr = WSAGetLastError();
 	if (lasterr != WSAEINPROGRESS && lasterr != WSAEWOULDBLOCK) {
+		if(lasterr == WSACONNREFUSED) {
+			connect_state.connect_refused = true;
+		}
 		if (!connect_state.failed_once) {
 			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
 					 connect_state.host, connect_state.port, lasterr );
-			dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-					 connect_state.timeout_interval );
+			if(!connect_state.connect_refused) {
+				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+						 connect_state.timeout_interval );
+			}
 			connect_state.failed_once = true;
 		}
 		connect_state.connect_failed = true;
@@ -782,11 +792,16 @@ bool Sock::do_connect_tryit()
 		// errno can only be EINPROGRESS if timeout is > 0.
 		// -Derek, Todd, Pete K. 1/19/01
 	if (errno != EINPROGRESS) {
+		if(errno == ECONNREFUSED) {
+			connect_state.connect_refused = true;
+		}
 		if (!connect_state.failed_once) {
 			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
 					 connect_state.host, connect_state.port, errno );
-			dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-					 connect_state.timeout_interval );
+			if(!connect_state.connect_refused) {
+				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+						 connect_state.timeout_interval );
+			}
 			connect_state.failed_once = true;
 		}
 		connect_state.connect_failed = true;
