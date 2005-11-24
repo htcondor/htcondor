@@ -33,8 +33,8 @@ class CronMgrBase : public Service
   public:
 	CronMgrBase( const char *name );
 	virtual ~CronMgrBase( );
-	int Initialize( void );
-	int Reconfig( void );
+	virtual int Initialize( void );
+	virtual int Reconfig( void );
 	int KillAll( bool force );
 	bool IsAllIdle( void );
 
