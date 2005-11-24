@@ -2452,9 +2452,41 @@ used in other situations, as well.
   This example allows Condor to refer to other related macros
   with the string ``HAWKEYE'' in their name.
 
+\item[\Macro{STARTD\_CRON\_AUTOPUBLISH}]
+\label{param:StartdCronAutopublish}
+   Optional setting that determines if the \Condor{startd} should
+   automatically publish a new update to the \Condor{collector} after
+   any of the cron modules produce output.
+   Beware that enabling this setting can greatly increase the network
+   traffic in a Condor pool, especially if lots of cron modules are
+   configured or if the period in which they run is short.
+   There are three possible (case insensitive) values for this
+   setting: 
+   \begin{description}
+     \item[\texttt{Never}] This is the default value, meaning that the
+     \Condor{startd} will not automatically publish updates based on
+     any cron modules, and will rely on the usual behavior for sending
+     updates (periodically, based on the \Macro{UPDATE\_INTERVAL}
+     configuration setting, or whenever a given virtual machine
+     changes state).
+     \item[\texttt{Always}] The \Condor{startd} will always send a new
+     update to the \Condor{collector} whenever any cron module exits.
+     \item[\texttt{If\_Changed}] The \Condor{startd} will only send a
+     new update to the \Condor{collector} if the output produced by a
+     given cron module is different than the previous output of the
+     same module.
+     The only exception is the \Attr{LastUpdate} attribute
+     (automatically set for all cron modules to be the timestamp when
+     the module last ran), which is ignored when
+     \MacroNI{STARTD\_CRON\_AUTOPUBLISH} is set to \verb@If_Changed@.
+   \end{description}
+   Beware that \MacroNI{STARTD\_CRON\_AUTOPUBLISH} does not honor the
+   \MacroNI{STARTD\_CRON\_NAME} setting described above.
+   Even if \MacroNI{STARTD\_CRON\_NAME} is defined,
+   \MacroNI{STARTD\_CRON\_AUTOPUBLISH} will have the same name.
+
 \item[\Macro{STARTD\_CRON\_JOBLIST}]
 \label{param:StartdCronJobList}
-
   This configuration variable is defined by a whitespace separated
   list of job names (called modules) to run.
   Each of these is the logical name of the module.  This name
@@ -2767,7 +2799,6 @@ HAWKEYE_JOB1_ENV = xyzzy=somevalue
 HAWKEYE_JOBS = $(HAWKEYE_JOBS) JOB2:prefix_:$(MODULES)/job2:1h
 HAWKEYE_JOB2_ENV = lwpi=somevalue
 \end{verbatim}
-
 
 
 \end{description}

@@ -48,6 +48,17 @@ parameters \Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMIT\_PER\_RESOURCE} and
 
 \item Grid universe jobs can now match-make across multiple grid-types.
 
+\item Added support for a new configuration value,
+  \Macro{STARTD\_CRON\_AUTOPUBLISH}.
+  This setting can be used to tell the \Condor{startd} to
+  automatically publish a new update to the \Condor{collector}
+  whenever any of the \Term{cron} modules it is configured to run have
+  produced output.
+  For more information, see the description of
+  \MacroNI{STARTD\_CRON\_AUTOPUBLISH} in
+  section~\ref{param:StartdCronAutopublish} on
+  page~\pageref{param:StartdCronAutopublish}. 
+
 \end{itemize}
 
 \noindent Bugs Fixed:
