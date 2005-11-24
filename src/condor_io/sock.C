@@ -773,7 +773,7 @@ bool Sock::do_connect_tryit()
 #if defined(WIN32)
 	int lasterr = WSAGetLastError();
 	if (lasterr != WSAEINPROGRESS && lasterr != WSAEWOULDBLOCK) {
-		if(lasterr == WSACONNREFUSED) {
+		if(lasterr == WSAECONNREFUSED) {
 			connect_state.connect_refused = true;
 		}
 		if (!connect_state.failed_once) {
