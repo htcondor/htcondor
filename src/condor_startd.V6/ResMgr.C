@@ -827,8 +827,15 @@ ResMgr::adlist_register( const char *name )
 }
 
 int
-ResMgr::adlist_replace( const char *name, ClassAd *newAd )
+ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff )
 {
+	if( report_diff ) {
+		StringList ignore_list;
+		MyString ignore = name;
+		ignore += "_LastUpdate";
+		ignore_list.append( ignore.Value() );
+		return extra_ads.Replace( name, newAd, true, &ignore_list );
+	}
 	return extra_ads.Replace( name, newAd );
 }
 
