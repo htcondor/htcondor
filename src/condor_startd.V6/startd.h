@@ -74,6 +74,7 @@ class Resource;
 #include "util.h"
 #include "starter_mgr.h"
 #include "cod_mgr.h"
+#include "startd_cronmgr.h"
 
 static const int MAX_STARTERS = 10;
 
@@ -142,6 +143,8 @@ extern	int		pid_snapshot_interval;
     // How often do we take snapshots of the pid families? 
 
 extern  int main_reaper;
+
+extern StartdCronMgr* Cronmgr;
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 

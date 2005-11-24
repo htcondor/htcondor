@@ -28,7 +28,6 @@
  */
 #define _STARTD_NO_DECLARE_GLOBALS 1
 #include "startd.h"
-#include "startd_cronmgr.h"
 
 // Define global variables
 
