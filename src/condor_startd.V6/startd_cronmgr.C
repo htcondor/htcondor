@@ -39,6 +39,8 @@ StartdCronMgr::StartdCronMgr( void ) :
 
 	// Set my initial "shutdown" state
 	ShuttingDown = false;
+	
+	auto_publish = CAP_NEVER;
 }
 
 // Basic destructor
@@ -46,6 +48,45 @@ StartdCronMgr::~StartdCronMgr( )
 {
 	dprintf( D_FULLDEBUG, "StartdCronMgr: Bye\n" );
 }
+
+
+int
+StartdCronMgr::Initialize()
+{
+	ParamAutoPublish();
+	return CronMgrBase::Initialize();
+}
+
+
+int
+StartdCronMgr::Reconfig()
+{
+	ParamAutoPublish();
+	return CronMgrBase::Reconfig();
+}
+
+
+void
+StartdCronMgr::ParamAutoPublish()
+{
+	auto_publish = CAP_NEVER;  // always default to never if not set
+	char* tmp = param("STARTD_CRON_AUTOPUBLISH");
+	if( tmp ) {
+		auto_publish = getCronAutoPublishNum(tmp);
+		if( auto_publish == CAP_ERROR ) {
+			dprintf( D_ALWAYS, "StartdCronMgr::Reconfig(): "
+					 "invalid value for STARTD_CRON_AUTOPUBLISH: \"%s\" "
+					 "using default value of NEVER\n", tmp );
+			auto_publish = CAP_NEVER;
+		} else {
+			dprintf( D_FULLDEBUG, "StartdCronMgr::Reconfig(): "
+					 "STARTD_CRON_AUTOPUBLISH set to \"%s\"\n", tmp );
+		}
+		free( tmp );
+		tmp = NULL;
+	}
+}
+
 
 // Perform shutdown
 int
@@ -66,6 +107,7 @@ StartdCronMgr::ShutdownOk( void )
 	return idle;
 }
 
+
 // Create a new job
 CronJobBase *
 StartdCronMgr::NewJob( const char *jobname )
@@ -80,6 +122,7 @@ StartdCronMgr::NewJob( const char *jobname )
 
 	return (CronJobBase *) job;
 }
+
 
 // Notified when a job dies
 void
