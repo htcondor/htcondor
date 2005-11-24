@@ -26,6 +26,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "simplelist.h"
+#include "string_list.h"
 
 // A name / ClassAd pair to manage together
 class NamedClassAd
@@ -49,7 +50,8 @@ class NamedClassAdList
 	~NamedClassAdList( void );
 
 	int Register( const char *name );
-	int	Replace( const char *name, ClassAd *ad );
+	int	Replace( const char *name, ClassAd *ad, bool report_diff = false,
+				 StringList* ignore_attrs = NULL );
 	int	Delete( const char *name );
 	int	Publish( ClassAd *ad );
 

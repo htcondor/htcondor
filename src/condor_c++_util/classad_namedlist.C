@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_classad_util.h"
 #include "condor_classad_namedlist.h"
 #include "classad_merge.h"
 
@@ -92,7 +93,8 @@ NamedClassAdList::Register( const char *name )
 }
 
 int
-NamedClassAdList::Replace( const char *name, ClassAd *newAd )
+NamedClassAdList::Replace( const char *name, ClassAd *newAd, 
+						   bool report_diff, StringList* ignore_attrs )
 {
 	NamedClassAd	*cur;
 
@@ -101,7 +103,29 @@ NamedClassAdList::Replace( const char *name, ClassAd *newAd )
 	while ( ads.Next( cur ) ) {
 		if ( ! strcmp( cur->GetName( ), name ) ) {	
 			dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", name );
+			bool found_diff = false;
+			if( report_diff ) {
+					/*
+					  caller wants to know if this new ad actually has
+					  any different data from the previous, (except
+					  attributes they want to ignore, for example,
+					  "LastUpdate" for startd-cron ads).  this is a
+					  little expensive, but in general, these ads are
+					  small, and this isn't the default behavior...
+					*/
+				ClassAd* oldAd = cur->GetAd();
+				if( ! oldAd ) {
+						// there's no oldAd, everything is different. ;)
+					found_diff = true;
+				} else { 
+						// we actually have to see if there's any diff...
+					found_diff = ! ClassAdsAreSame(newAd, oldAd, ignore_attrs);
+				}
+			}
 			cur->ReplaceAd( newAd );
+			if( report_diff && found_diff ) {
+				return 1;
+			}
 			return 0;
 		}
 	}
