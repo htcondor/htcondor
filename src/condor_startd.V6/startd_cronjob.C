@@ -43,5 +43,49 @@ StartdCronJob::~StartdCronJob( )
 int
 StartdCronJob::Publish( const char *name, ClassAd *ad )
 {
-	return resmgr->adlist_replace( name, ad );
+		// first, update the ad in the ResMgr, so we have the new
+		// values.  we only want to do the (somewhat expensive)
+		// operation of reportind a diff if we care about that.
+	bool report_diff = false;
+	CronAutoPublish_t auto_publish = Cronmgr->getAutoPublishValue();
+	if( auto_publish == CAP_IF_CHANGED ) { 
+		report_diff = true;
+	}
+	int rval = resmgr->adlist_replace( name, ad, report_diff );
+
+		// now, figure out if we need to update the collector based on
+		// the startd_cron_autopublish stuff and if the ad changed...
+	bool wants_update = false;
+	switch( auto_publish ) {
+	case CAP_NEVER:
+		return rval;
+		break;
+
+	case CAP_ALWAYS:
+		wants_update = true;
+		dprintf( D_FULLDEBUG, "StartdCronJob::Publish() updating collector "
+				 "[STARTD_CRON_AUTOPUBLISH=\"Always\"]\n" );
+		break;
+
+	case CAP_IF_CHANGED:
+		if( rval == 1 ) {
+			dprintf( D_FULLDEBUG, "StartdCronJob::Publish() has new data, "
+					 "updating collector\n" );
+			wants_update = true;
+		} else {
+			dprintf( D_FULLDEBUG, "StartdCronJob::Publish() has no new data, "
+					 "skipping collector update\n" );
+		}
+		break;
+
+	default:
+		EXCEPT( "PROGRAMMER ERROR: unknown value of auto_publish (%d)", 
+				(int)auto_publish );
+		break;
+	}
+	if( wants_update ) {
+		resmgr->first_eval_and_update_all();
+	}
+	return rval;
 }
+
