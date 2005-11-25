@@ -78,6 +78,8 @@ int		agent_starter(ReliSock *);
 int		handle_agent_fetch_log(ReliSock *);
 int		admin_command_handler(Service *, int, Stream *);
 int		handle_subsys_command(int, Stream *);
+void	time_skip_handler(void * /*data*/, int delta);
+void	restart_everyone();
 
 extern "C" int	DoCleanup(int,int,char*);
 
@@ -312,6 +314,8 @@ main_init( int argc, char* argv[] )
 					  "admin_command_handler", 0, ADMINISTRATOR );
 	*/
 
+	daemonCore->RegisterTimeSkipCallback(time_skip_handler,0);
+
 	_EXCEPT_Cleanup = DoCleanup;
 
 #if !defined(WIN32)
@@ -346,8 +350,7 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
 		return TRUE;
 	case RESTART:
-		daemons.immediate_restart = TRUE;
-		daemons.RestartMaster();
+		restart_everyone();
 		return TRUE;
 	case RESTART_PEACEFUL:
 		daemons.immediate_restart = TRUE;
@@ -1220,3 +1223,14 @@ void init_firewall_exceptions() {
 #endif
 }
 
+void restart_everyone() {
+		daemons.immediate_restart = TRUE;
+		daemons.RestartMaster();
+}
+
+	// We could care less about our arguments.
+void time_skip_handler(void * /*data*/, int delta)
+{
+	dprintf(D_ALWAYS, "The system clocked jumped %d seconds unexpectedly.  Restarting all daemons\n", delta);
+	restart_everyone();
+}
