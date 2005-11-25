@@ -103,6 +103,11 @@ typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 ///
 typedef int		(*ThreadStartFunc)(void *,Stream*);
 
+/// Register with RegisterTimeSkipCallback. Call when clock skips.  First
+//variable is opaque data pointer passed to RegisterTimeSkipCallback.  Second
+//variable is the _rough_ unexpected change in time (negative for backwards).
+typedef void	(*TimeSkipFunc)(void *,int);
+
 /** Does work in thread.  For Create_Thread_With_Data.
 	@see Create_Thread_With_Data
 */
@@ -911,6 +916,21 @@ class DaemonCore : public Service
 	bool GetPeacefulShutdown();
 	void SetPeacefulShutdown(bool value);
 
+	/** Called when it looks like the clock jumped unexpectedly.
+
+	data is opaquely passed to the TimeSkipFunc.
+
+	If you register a callback multiple times, it will be called multiple
+	times.  Also, you'll need to call Unregister repeatedly if you want to
+	totally silence it.  You should probably avoid registering the same
+	callback function / data pointer combation multiple times.
+
+	When Unregistering a callback, both fnc and data are considered; it
+	must be an exact match for the Registered pair.
+	*/
+	void RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
+	void UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data);
+
 	/** Disable all daemon core callbacks for duration seconds, except for the
 		processing of SOAP calls.
 		@param seconds The number of seconds to only permit SOAP callbacks
@@ -1046,6 +1066,8 @@ class DaemonCore : public Service
                         char *handler_descrip,
                         Service* s, 
                         int is_cpp);
+
+	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
 	MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm);
 
@@ -1275,6 +1297,13 @@ class DaemonCore : public Service
 	StringList* SettableAttrsLists[LAST_PERM];
 
 	bool peaceful_shutdown;
+
+	struct TimeSkipWatcher {
+		TimeSkipFunc fn;
+		void * data;
+	};
+
+    List<TimeSkipWatcher> m_TimeSkipWatchers;
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

@@ -36,3 +36,5 @@ template class ExtArray<DaemonCore::PipeEnt>;
 template class Queue<DaemonCore::WaitpidEntry>;
 template class Queue<ServiceData*>;
 template class HashTable<MyString, StringList *>;
+template class List<DaemonCore::TimeSkipWatcher>;
+template class Item<DaemonCore::TimeSkipWatcher>;

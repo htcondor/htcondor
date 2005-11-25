@@ -44,6 +44,7 @@ static const int ERRNO_EXEC_AS_ROOT = 666666;
 static const int ERRNO_PID_COLLISION = 666667;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
+static const int MAX_TIME_SKIP = (60*20); //20 minutes
 
 
 #include "authentication.h"
@@ -2053,9 +2054,14 @@ void DaemonCore::Driver()
 #endif
 
 		errno = 0;
+		time_t time_before = time(NULL);
 		rv = select( FD_SETSIZE, (SELECT_FDSET_PTR) &readfds,
 					 (SELECT_FDSET_PTR) &writefds,
 					 (SELECT_FDSET_PTR) &exceptfds, ptimer );
+		CheckForTimeSkip(time_before, timer.tv_sec);
+
+
+
 		tmpErrno = errno;
 
 #ifndef WIN32
@@ -7790,3 +7796,78 @@ DaemonCore::SetPeacefulShutdown(bool value) {
 	peaceful_shutdown = value;
 }
 
+void 
+DaemonCore::RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
+{
+	TimeSkipWatcher * watcher = new TimeSkipWatcher;
+	ASSERT(fnc);
+	watcher->fn = fnc;
+	watcher->data = data;
+	if( ! m_TimeSkipWatchers.Append(watcher)) {
+		EXCEPT("Unable to register time skip callback.  Possible out of memory condition.");	
+	}
+}
+
+void 
+DaemonCore::UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
+{
+	m_TimeSkipWatchers.Rewind();
+	TimeSkipWatcher * p;
+	while( (p = m_TimeSkipWatchers.Next()) ) {
+		if(p->fn == fnc && p->data == data) {
+			m_TimeSkipWatchers.DeleteCurrent();
+			return;
+		}
+	}
+	EXCEPT("Attempted to remove time skip watcher (%p, %p), but it was not registered", fnc, data);
+}
+
+void
+DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
+{
+	if(m_TimeSkipWatchers.Number() == 0) {
+		// No one cares if the clock jumped.
+		return;
+	}
+	/*
+	Okay, let's see if the time jumped in an unexpected way.
+	*/
+	time_t time_after = time(NULL);
+	int delta = 0;
+		/* Specifically doing the math in time_t space to
+		try and avoid getting burned by int being unable to 
+		represent a given time_t value.  This means
+		different code paths depending on which variable is
+		larger. */
+	if((time_after + MAX_TIME_SKIP) < time_before) {
+		// We've jumped backward in time.
+
+		// If this test is ever made more aggressive, remember that
+		// minor updated by ntpd might out time() sampling to
+		// occasionally move back 1 second.
+
+		delta = -(int)(time_before - time_after);
+	}
+	if((time_before + okay_delta*2 + MAX_TIME_SKIP) < time_after) {
+		/*
+		We've jumped forward in time.
+
+			Why okay_delta*2?  Crude attempt to capture that timers
+			aren't necessarily as accurate as we might hope.
+		*/
+		delta = time_after - time_before - okay_delta;
+	}
+	if(delta == 0) { 
+		// No time jump.  Nothing to see here. Move along, move along.
+		return;
+	}
+	dprintf(D_FULLDEBUG, "Time skip noticed.  The system clock jumped approximately %d seconds.\n", delta);
+
+	// Hrm.  I guess the clock got wonky.  Warn anyone who cares.
+	m_TimeSkipWatchers.Rewind();
+	TimeSkipWatcher * p;
+	while( (p = m_TimeSkipWatchers.Next()) ) {
+		ASSERT(p->fn);
+		p->fn(p->data, delta);
+	}
+}
