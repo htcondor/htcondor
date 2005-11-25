@@ -80,7 +80,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	supports_reconnect = false;
 	next_reconnect_tid = -1;
 	proxy_check_tid = -1;
-	last_proxy_timestamp = time(0); // We haven't sent the proxy to the shadow yet, so anything before "now" means it hasn't changed.
+	last_proxy_timestamp = time(0); // We haven't sent the proxy to the starter yet, so anything before "now" means it hasn't changed.
 	reconnect_attempts = 0;
 
 	lease_duration = -1;
