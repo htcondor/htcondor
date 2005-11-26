@@ -21,20 +21,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-<<<<<<< 6-7.history.tex
+
 \item The Condor daemons now automatically restart when the
 system clock jumps more than 20 minutes in either
 direction.  This may happen if the machine running Condor entered
 a "sleep" state.  This resolves a variety of minor problems.
-=======
-\item Added \Arg{-direct} to the usage message for \Condor{q} and reworded
-some entries for clarity.
 
 \item Added a \Arg{-direct} debugging option to \Condor{q} which, when
 using or querying a quill installation, allows talking directly to the
 rdbms, the quill daemon, or the schedd without performing the queue
 location discovery algorithm.
->>>>>>> 1.1.2.227
 
 \item Added the concept of a ``controlling'' daemon to the
 \Condor{master}.  This feature is currently used only for
