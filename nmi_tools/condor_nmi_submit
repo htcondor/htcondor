@@ -68,7 +68,7 @@ use Getopt::Long;
 use File::Basename;
 use IO::File;
 use lib $ENV{'NMI_LIB'} || "/nmi/lib";
-use NMI::NmiConf;
+use NmiConf;
 
 # variables we'll be using for from Getopt::Long.  keep these in the
 # same order as the call to GetOptions() to help notice discrepancies
@@ -262,7 +262,7 @@ sub initializeDB
     # parse the NMI-specific config file to get useful settings
     my $fh = new IO::File $nmiconf, 'r';
     die "Could not open $nmiconf: $!" unless defined $fh;
-    NMI::NmiConf::parse(\%conf_nmi, $fh);
+    NmiConf::parse(\%conf_nmi, $fh);
     $fh->close;
 
     # Initialize database parameters from NMi config file
