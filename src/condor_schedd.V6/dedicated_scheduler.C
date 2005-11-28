@@ -3442,14 +3442,17 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 
 		// Construct the new requirements expression by adding a
 		// clause that says we need to run on a machine that's going
-		// to accept us as the dedicated scheduler.  
+		// to accept us as the dedicated scheduler, and isn't already
+		// running one of our jobs.
+
 		// TODO: In the future, we don't want to require this, we just
 		// want to rank it, and require that the minimum claim time is
 		// >= the duration of the job...
 
-	char *buf = (char *) malloc(strlen(rhs) + strlen(name()) + 80);
-	sprintf( buf, "%s = (DedicatedScheduler == \"%s\") && (%s)", 
-			 ATTR_REQUIREMENTS, name(), rhs );
+	char *buf = (char *) malloc(strlen(rhs) + 2 * strlen(name()) + 160);
+	sprintf( buf, "%s = (DedicatedScheduler == \"%s\") && "
+					"(RemoteOwner =!= \"%s\") && (%s)", 
+			 ATTR_REQUIREMENTS, name(), name(), rhs );
 	req->InsertOrUpdate( buf );
 
 	free(rhs);
