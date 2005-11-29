@@ -492,8 +492,20 @@ V6_7_13_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/postgresql/8.0.2 \
 		   externals/bundles/gcb/1.3.0
 
-# Externals needed for V6_7_14 (same as V6_7_13)
-V6_7_14_EXT	-a V6_7_13_EXT \
+# Externals needed for V6_7_14 (same as V6_7_13, but update gsoap and add unicore)
+V6_7_14_EXT	-a V6_7_COMMON_EXT \
+		   externals/bundles/krb5/1.2.7 \
+		   externals/bundles/gahp/1.0.14 \
+		   externals/bundles/globus/4.0.1 \
+		   externals/bundles/gt3gahp/2.0 \
+		   externals/bundles/gt4gahp/1.4 \
+		   externals/bundles/classads/0.9.8-b3 \
+		   externals/bundles/gsoap/2.7.6c \
+		   externals/bundles/srb/3.2.1 \
+		   externals/bundles/pcre/5.0 \
+		   externals/bundles/openssl/0.9.8 \
+		   externals/bundles/postgresql/8.0.2 \
+		   externals/bundles/gcb/1.3.0 \
 		   externals/bundles/unicoregahp/1.0.0
 
 # Externals needed for the head of the V6_7-branch
@@ -501,7 +513,7 @@ V6_7_EXT	-a V6_7_14_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
-                   externals/bundles/gsoap/2.7 \
+                   externals/bundles/gsoap/2.7.6c \
                    externals/bundles/openssl/0.9.8 \
                    externals/bundles/postgresql/8.0.2 \
                    externals/bundles/pcre/5.0 
