@@ -854,8 +854,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	jobAd->ResetExpr();
 	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
-		if ( strncmp( ((Variable*)next_expr->LArg())->Name(),
-					  "REMOTE_", 7 ) == 0 &&
+		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(),
+						  "REMOTE_", 7 ) == 0 &&
 			 strlen( ((Variable*)next_expr->LArg())->Name() ) > 7 ) {
 
 			char *attr_value;
