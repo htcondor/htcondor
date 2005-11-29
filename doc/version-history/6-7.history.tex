@@ -70,6 +70,10 @@ parameters \Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMIT\_PER\_RESOURCE} and
 
 \begin{itemize}
 
+\item Fixed bug in the dedicated scheduler where on busy pools
+running mixed parallel and sequential jobs, it would incorrectly 
+try to preempt dedicated jobs.
+
 \item Fixed some problems when Microsoft .NET clients communicate with Condor
 via SOAP. The issues were resolved by upgrading the version of gsoap inlcuded
 inside of Condor to gsoap ver 2.7.6c.
