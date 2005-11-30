@@ -205,6 +205,7 @@ void print_truncated_string(const char *s, int max_characters);
 static void make_big_string(int length, char **string,
     char **quoted_string);
 void test_random(TestResults *results);
+void test_equality(TestResults *results);
 
 int 
 main(
@@ -448,6 +449,8 @@ main(
     if (parameters.test_random) {
         test_random(&test_results);
     }
+
+    test_equality(&test_results);
 
 	//ClassAd *many_ads[LARGE_NUMBER_OF_CLASSADS];
 	/*
@@ -1644,5 +1647,33 @@ void test_random(
         results->AddResult(false);
     }
     delete classad;
+    return;
+}
+
+void test_equality(TestResults *results)
+{
+    ExprTree *e1, *e2, *e3;
+    const char *s1 = "Foo = 3";
+    const char *s3 = "Bar = 5";
+
+    Parse(s1, e1);
+    Parse(s1, e2);
+    Parse(s3, e3);
+
+    if ((*e1) == (*e2)) {
+        printf("Passed: operator== detects equality in line %d\n", __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: operator== does not detect equality in line %d\n", __LINE__);
+        results->AddResult(false);
+    }
+
+    if ((*e1) == (*e3)) {
+        printf("Failed: operator== does not detect inequality in line %d\n", __LINE__);
+        results->AddResult(false);
+    } else {
+        printf("Passed: operator== detects inequality in line %d\n", __LINE__);
+        results->AddResult(true);
+    }
     return;
 }
