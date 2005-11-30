@@ -114,6 +114,28 @@ CopyFrom( const ClassAd &ad )
 }
 
 bool ClassAd::
+UpdateFromChain( const ClassAd &ad )
+{
+	ClassAd *parent = ad.chained_parent_ad;
+	if(parent) {
+		if(!UpdateFromChain(*parent)) {
+			return false;
+		}
+	}
+	return Update(ad);
+}
+
+bool ClassAd::
+CopyFromChain( const ClassAd &ad )
+{
+	if (this == &ad) return false;
+
+	Clear( );
+	ExprTree::CopyFrom(ad);
+	return UpdateFromChain(ad);
+}
+
+bool ClassAd::
 SameAs(const ExprTree *tree) const
 {
     bool is_same;
@@ -558,13 +580,16 @@ _SetParentScope( const ClassAd* )
 }
 
 
-void ClassAd::
+bool ClassAd::
 Update( const ClassAd& ad )
 {
 	AttrList::const_iterator itr;
 	for( itr=ad.attrList.begin( ); itr!=ad.attrList.end( ); itr++ ) {
-		Insert( itr->first, itr->second->Copy( ) );
+		if(!Insert( itr->first, itr->second->Copy( ) )) {
+			return false;
+		}
 	}
+	return true;
 }
 
 void ClassAd::
@@ -1464,6 +1489,11 @@ void ClassAd::Unchain(void)
 {
 	chained_parent_ad = NULL;
 	return;
+}
+
+ClassAd *ClassAd::GetChainedParentAd(void)
+{
+	return chained_parent_ad;
 }
 
 void ClassAd::ClearAllDirtyFlags(void)

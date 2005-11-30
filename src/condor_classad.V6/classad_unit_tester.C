@@ -506,6 +506,49 @@ static void test_classad(const Parameters &parameters, Results &results)
     TEST("Have good offset #1", offset == 10);
     parser.ParseClassAd(two_classads, classad2, offset);
     TEST("Have good offset #2", offset == 20);
+
+	/* ----- Test chained ClassAds ----- */
+	//classad1 and classad2 from above test are used.
+	ClassAd classad3;
+
+	classad1.ChainToAd(&classad2);
+	TEST("classad1's parent is classad2", classad1.GetChainedParentAd() == &classad2);
+	have_attribute = classad1.EvaluateAttrInt("b", i);
+	TEST("chain has attribute b from parent", (have_attribute == true));
+	TEST("chain attribute b from parent is 4", (i == 4));
+
+	have_attribute = classad1.EvaluateAttrInt("a", i);
+	TEST("chain has attribute a from self", (have_attribute == true));
+	TEST("chain attribute a is 3", (i == 3));
+
+	// Now we modify classad2 (parent) to contain "a".
+	success = classad2.InsertAttr("a",7);
+	TEST("insert a into parent",(success == true));
+	have_attribute = classad1.EvaluateAttrInt("a", i);
+	TEST("chain has attribute a from self (overriding parent)", (have_attribute == true));
+	TEST("chain attribute a is 3 (overriding parent)", (i == 3));
+	have_attribute = classad2.EvaluateAttrInt("a", i);
+	TEST("chain parent has attribute a", (have_attribute == true));
+	TEST("chain parent attribute a is 7", (i == 7));
+
+	success = classad3.CopyFromChain(classad1);
+	TEST("copy from chain succeeded", (success == true));
+	have_attribute = classad3.EvaluateAttrInt("b",i);
+	TEST("copy of chain has attribute b",(have_attribute == true));
+	TEST("copy of chain has attribute b==4",(i==4));
+
+	success = classad3.InsertAttr("c", 6);
+	TEST("insert into copy of chain succeeded",(success==true));
+	classad3.CopyFromChain(classad1);
+	have_attribute = classad3.EvaluateAttrInt("c",i);
+	TEST("copy of chain is clean",(have_attribute==false));
+	classad3.InsertAttr("c", 6);
+	success = classad3.UpdateFromChain(classad1);
+	TEST("update from chain succeeded",(success == true));
+	have_attribute = classad3.EvaluateAttrInt("c",i);
+	TEST("update from chain is merged",(have_attribute==true));
+	TEST("update from chain has attribute c==6",(i==6));
+
     return;
 }
 

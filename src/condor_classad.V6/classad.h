@@ -479,7 +479,7 @@ e		*/
          *  import everything from the other ad. This could be called Merge().
          *  @param ad The ad to copy attributes from.
          */
-		void Update( const ClassAd& ad );	
+		bool Update( const ClassAd& ad );	
 
         /** Modify this ClassAd in a specific way
          *  Ad is a ClassAd that looks like:
@@ -715,6 +715,24 @@ e		*/
         /** If we are chained to a parent ad, remove the chain. 
          */
 		void		Unchain(void);
+
+		/** Return a pointer to the parent ad.
+		 */
+		ClassAd *   GetChainedParentAd(void);
+
+		/** Fill in this ClassAd with the contents of the other ClassAd,
+		 *  including any attributes from the other ad's chained parent.
+		 *  Any previous contents of this ad are cleared.
+		 *  @return true if the copy succeeded, false otherwise.
+		 */
+		bool CopyFromChain( const ClassAd &ad );
+
+		/** Insert all attributes from the other ad and its chained
+		 *  parents into this ad, but do not clear out existing
+		 *  contents of this ad before doing so.
+		 *  @return true if the operation succeeded, false otherwise.
+		 */
+		bool UpdateFromChain( const ClassAd &ad );
         //@}
 
 		/**@name Dirty Tracking */
