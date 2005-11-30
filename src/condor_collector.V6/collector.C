@@ -192,7 +192,7 @@ void CollectorDaemon::Init()
 		"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_NEGOTIATOR_ADS,
 		"INVALIDATE_NEGOTIATOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,DAEMON);
+		"receive_invalidation",NULL,NEGOTIATOR);
 	daemonCore->Register_Command(INVALIDATE_HAD_ADS,
 		"INVALIDATE_HAD_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
@@ -227,7 +227,7 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
 	daemonCore->Register_Command(UPDATE_HAD_AD,"UPDATE_HAD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
