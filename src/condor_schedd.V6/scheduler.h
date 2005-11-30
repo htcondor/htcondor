@@ -412,7 +412,7 @@ private:
 	char*			AccountantName;
     char*			UidDomain;
 
-	bool reschedule_request_pending;
+	time_t last_reschedule_request;
 
 	// connection variables
 	struct sockaddr_in	From;

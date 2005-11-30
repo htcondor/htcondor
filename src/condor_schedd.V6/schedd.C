@@ -336,6 +336,8 @@ Scheduler::Scheduler() :
 	_gridlogic = NULL;
 
 	CronMgr = NULL;
+
+	last_reschedule_request = 0;
 }
 
 
@@ -3970,6 +3972,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		for( i=0; i<num_matches; i++ ) {
 			WriteReleaseToUserLog( jobs[i] );		
 		}
+		sendReschedule();
 		break;
 
 	case JA_REMOVE_X_JOBS:
@@ -4176,6 +4179,7 @@ Scheduler::negotiate(int, Stream* s)
 	// we've been waiting for.  If only Todd can say the same about
 	// his life in general.  ;)
 	NegotiationRequestTime = 0;
+	last_reschedule_request = 0; // Our request was fulfilled.
 
 	// BIOTECH
 	bool	biotech = false;
@@ -9684,6 +9688,14 @@ Scheduler::reschedule_negotiator(int, Stream *)
 void
 Scheduler::sendReschedule( void )
 {
+		// MIN_RESCHEDULE_GAP: If we've sent a reschedule request in the
+		// last MIN_RESCHEDULE_GAP second
+	const int MIN_RESCHEDULE_GAP = 30;
+	time_t now = time(0);
+	if( (last_reschedule_request + MIN_RESCHEDULE_GAP) > now ) {
+		dprintf( D_FULLDEBUG, "Skipping RESCHEDULE as optimization: sent one %d seconds ago and still haven't heard from negotiatator.  Will not reschedule more frequently than every %d seconds\n", (int)(now - last_reschedule_request), MIN_RESCHEDULE_GAP);
+		return;
+	}
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
 
 	Daemon negotiator(DT_NEGOTIATOR);
@@ -9706,6 +9718,8 @@ Scheduler::sendReschedule( void )
 			}
 		}
 	}
+
+	last_reschedule_request = time(0);
 }
 
 
@@ -10757,6 +10771,8 @@ releaseJob( int cluster, int proc, const char* reason,
 			AbortTransaction();
 		}
 	}
+
+	scheduler.sendReschedule();
 
 	return result;
 }
