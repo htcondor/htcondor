@@ -64,6 +64,12 @@ parameters \Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMIT\_PER\_RESOURCE} and
   section~\ref{param:StartdCronAutopublish} on
   page~\pageref{param:StartdCronAutopublish}. 
 
+\item Reduced delay in negotiation when a job is released.  A reschedule
+request is sent to the negotiator when a job is released from hold.  This
+reduces the delay in several cases, most notably when using Condor-C or
+"condor\_submit -s".  Previously the negotiatior would not be notified and
+would normally wait until the next scheduled negotiation cycle.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
