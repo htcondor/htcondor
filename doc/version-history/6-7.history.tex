@@ -76,6 +76,12 @@ would normally wait until the next scheduled negotiation cycle.
 
 \begin{itemize}
 
+\item Fixed a potential security problem where any machine in the pool
+  could advertise an additional \Condor{negotiator} in the pool.
+  Now, the \Condor{collector} will only accept negotiator classads
+  from machines listed in the \Macro{HOSTALLOW\_NEGOTIATOR} variable.
+  This bug has been in Condor since version 6.7.4.
+
 \item Fixed bug in the dedicated scheduler where on busy pools
 running mixed parallel and sequential jobs, it would incorrectly 
 try to preempt dedicated jobs.
