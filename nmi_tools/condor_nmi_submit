@@ -66,6 +66,7 @@ use Cwd;
 use DBI;
 use Getopt::Long;
 use File::Basename;
+use File::Spec;
 use IO::File;
 use lib $ENV{'NMI_LIB'} || "/nmi/lib";
 use NmiConf;
@@ -74,6 +75,7 @@ use NmiConf;
 # same order as the call to GetOptions() to help notice discrepancies
 use vars qw/ $opt_build $opt_test
     $opt_help $opt_notify $opt_platforms $opt_nmi_glue 
+    $opt_workspace
     $opt_tag $opt_module $opt_nmiconf
     $opt_nightly $opt_externals $opt_without_tests
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
@@ -90,8 +92,11 @@ my $tag_file_url = "http://www.cs.wisc.edu/condor/nwo-build-tags";
 # CVSROOT to use for checking out from CVS
 my $CVSROOT = "/space/cvs/CONDOR_SRC";
 
+# name of the submit_info file
+my $submit_info_basename = "submit_info";
+
 # Location of the submit_info file
-my $submit_info = "nmi_glue/submit_info";
+my $submit_info = "nmi_glue/$submit_info_basename";
 
 # CVS location of condor_nmi_submit
 my $cvs_condor_nmi_submit = "nmi_tools/condor_nmi_submit";
@@ -123,6 +128,10 @@ my $init_cwd;
 
 # A temporary workspace to generate scratch files, etc
 my $workspace;
+
+# User specified directory to build Condor out of.
+# undef for builds out of CVS
+my $src_workspace;
 
 # Hash of tag -> module mappings
 my %tags;
@@ -186,6 +195,11 @@ parseOptions();
 initialize();
 getTags();
 foreach $tag (sort keys %tags ) {
+    if( defined $src_workspace ) {
+        if( $tag ne 'workspace' ) {
+            die "Internal consistency error: attempting --workspace build, but a non-workspace tag was requested.";
+        }
+    }
 
     my $cmdfile;
     print "Working on $tag\n";
@@ -194,6 +208,12 @@ foreach $tag (sort keys %tags ) {
         mkdir( $tag ) || die "Can't mkdir($tag): $!\n";
     }
     chdir( $tag ) || die "Can't chdir($tag): $!\n";
+
+    if( defined $src_workspace ) {
+        # this isn't really a tag.  Set it to undef
+        # to help catch errors.
+        $tag = undef;
+    }
 
     getSubmitInfo( $tag );
     $cmdfile = createSubmitFiles( $tag );
@@ -299,6 +319,7 @@ sub parseOptions
            'notify=s'      => $opt_notify,
            'platforms=s'   => $opt_platforms,
            'nmi-glue=s'    => $opt_nmi_glue,
+           'workspace=s'   => $opt_workspace,
            'tag=s'         => $opt_tag,
            'module=s'      => $opt_module,
            'nmiconf=s'     => $opt_nmiconf,
@@ -369,7 +390,12 @@ sub parseOptions
     if( defined $opt_notify ) {
         $notify = "$opt_notify";
     } else {
-        $notify = "condor-build\@cs.wisc.edu";
+        if( defined $opt_workspace ) {
+            my $username = (getpwuid($<))[0];
+            $notify = "$username\@cs.wisc.edu";
+        } else {
+            $notify = "condor-build\@cs.wisc.edu";
+        }
     }
 
     if ( defined $opt_tag && defined $opt_module ) {
@@ -378,9 +404,13 @@ sub parseOptions
     elsif ( defined $opt_nightly ) {
         print "You specified --nightly, will fetch tags\n";
     }
+    elsif ( defined $opt_workspace ) {
+            print "Working from local workspace $opt_workspace\n";
+            $src_workspace = File::Spec->rel2abs($opt_workspace);
+    }
     else {
         print "You need to define either --tag and --module, ";
-        print "or use --nightly\n";
+        print "or use --nightly, or use --workspace\n";
         printUsage( 1 );
     }
 
@@ -390,6 +420,43 @@ sub parseOptions
             printUsage( 1 );
         }
     }
+
+    if( defined $opt_workspace ) {
+        if( defined $opt_nightly ) {
+                # Notably, the %tags list can have a list of tags
+                # OR a dummy entry for a workspace build
+            print "ERROR: You cannot use --workspace with --nightly\n";
+            printUsage( 1 );
+        }
+        if(defined $opt_module ) {
+            print "ERROR: You cannot use --workspace with --module\n";
+            printUsage( 1 );
+        }
+        if( not -d $opt_workspace ) {
+            print "ERROR: Workspace $opt_workspace does not exist\n";
+            printUsage( 1 );
+        }
+
+            # Try to catch incomplete workspaces
+        my(@condor_req_dirs) = qw( src doc );
+		if( ! defined($opt_externals) ) { push @condor_req_dirs, 'externals'; }
+        foreach my $subdir (@condor_req_dirs) {
+            if( not -d "$opt_workspace/$subdir" ) {
+                print "ERROR: Workspace $opt_workspace does not not appear to be a Condor workspace (missing $opt_workspace/$subdir)\n";
+                printUsage( 1 );
+            }
+        }
+
+        $tags{"workspace"} = undef;
+    }
+
+	if( defined($src_workspace) && defined($opt_nmi_glue) && -d "$src_workspace/nmi_glue" ) {
+		# If you want to try and fix the race condition, it will
+		# involve somehow not copying the $src_workspace/nmi_glue directory
+		# in generateBuildFetchFiles().
+		print "WARNING: Your workspace ($src_workspace) contains an nmi_glue subdirectory.  You also specified an --nmi-glue directory ($opt_nmi_glue).  At the moment there is a race condition and you could get either directory.  As a workaround, rename %src_workspace/nmi_glue.\n";
+
+	}
 
     if( defined($opt_nmi_glue) ) {
         # SCP the glue from different location
@@ -431,6 +498,7 @@ Where [options] can be any of:
 --tag=string       <Condor source code tag to be fetched from cvs>
 --module=string    <Condor source code module to be fetched from cvs>
 --nmi-glue=string  <nmi_glue directory containing customised glue scripts>
+--workspace=path   <directory containing Condor source to build> 
 --nmiconf=string   <full path to the NMI config file to use if needed
                     (defaults to /usr/local/nmi/etc/nmi.conf)>
 
@@ -462,6 +530,12 @@ sub getTags
         getNightlyTags();
     }
     # else nothing else to do?
+
+    # Sanity checking 
+    if( (scalar keys %tags > 1) && (exists $tags{'workspace'}) ) {
+        # parseOptions should have caught this, but just in case.
+        die "Internal consistency error: Multiple tags present, one of which is 'workspace'.  This is probably a --workspace build which has no hope of working with --tag or --nightly builds.";
+    }
 }
 
 
@@ -491,29 +565,41 @@ sub getNightlyTags
 sub getSubmitInfo
 {
     my( $tag ) = @_;
-    my $val;
 
-    $val = checkoutSubmitInfo( $tag );
-    
-    # TODO: all this should go away once submit_info has been
-    # propagated to all branches...
-    if( $val == 0 ) {
-	# submit_info isn't in the requested tag, see if can get it
-	# from a "nearby" branch, instead....  
-	if( $tag =~ /.*V6_6.*/ ) {
-	    $val = checkoutSubmitInfo( "V6_6-branch" );
-	} else {
-	    $val = checkoutSubmitInfo( "V6_7-branch" );
-	}
+    my $submit_info_path;
+    if( defined $opt_nmi_glue ) {
+        $submit_info_path = "$opt_nmi_glue/$submit_info_basename";
+    }
+    elsif( defined $src_workspace ) {
+        $submit_info_path = "$src_workspace/$submit_info";
+        # in this case $tag is worthless, so trying to
+        # check it out is hopeless.
+    }
+    else {
+        my $val;
+        $val = checkoutSubmitInfo( $tag );
+
+        # TODO: all this should go away once submit_info has been
+        # propagated to all branches...
+        if( $val == 0 ) {
+            # submit_info isn't in the requested tag, see if can get it
+            # from a "nearby" branch, instead....  
+            if( $tag =~ /.*V6_6.*/ ) {
+                $val = checkoutSubmitInfo( "V6_6-branch" );
+            } else {
+                $val = checkoutSubmitInfo( "V6_7-branch" );
+            }
+        }
+        $submit_info_path = $submit_info;
     }
 
-    -f $submit_info || die "$submit_info doesn't exist!\n";
+    -f $submit_info_path || die "$submit_info_path doesn't exist!\n";
 
     # clear out any existing values in any of our global data structs
     clearGlobalSubmitInfo();
 
     # parse the submit_info file
-    parseSubmitInfo( "$submit_info" );
+    parseSubmitInfo( $submit_info_path );
 
     if( %opt_platforms ) {
         @platforms = sort keys %opt_platforms;
@@ -603,9 +689,13 @@ sub createSubmitFiles
 {
     my ( $tag ) = @_;
 
-    my $cmdfile = "cmdfile-$tag";
+    my $cmdfile = "cmdfile";
+    if( defined $tag ) { $cmdfile .= "-$tag"; }
+	else { $cmdfile .= "-workspace"; }
 
-    my $module = $tags{$tag};
+    my $module;
+    if( defined $tag) { $module = $tags{$tag}; }
+
     my @fetch_files;
     
     # Generate the cmdfile
@@ -676,23 +766,36 @@ sub writeCommonInfo
     my ( $fh, $tag, $module ) = @_;
 
     my $desc;
-    my @vers;
+    my $vers_string;
 
-    ($desc, @vers) = parseTag( $tag );
-    my $vers_string = join( ',', @vers );
+    if( defined $tag ) {
+        my @vers;
+        ($desc, @vers) = parseTag( $tag );
+        $vers_string = join( ',', @vers );
+    } elsif( defined $src_workspace ) {
+        $desc = 'workspace';
+    } else {
+        $desc = 'unknown';
+    }
 
     print $fh "description = $desc\n";
     print $fh "project = condor\n";
-    print $fh "project_release = $vers_string\n";
+    if( defined $vers_string ) {
+        print $fh "project_release = $vers_string\n";
+    }
     print $fh "component = condor\n";
-    print $fh "component_version = $vers_string\n";
+    if( defined $vers_string ) {
+        print $fh "component_version = $vers_string\n";
+    }
     print $fh "notify = $notify\n";
     print $fh "private_web_users = condor-team\n";
     print $fh "priority = 1\n";
 
     # print the tag and module in the cmdfile as the user variables
-    print $fh "tag = $tag\n";
-    print $fh "module = $module\n";
+    if( defined $tag ) {
+        print $fh "tag = $tag\n";
+        print $fh "module = $module\n";
+    }
 
     print $fh "platforms = " . join(', ', @platforms) . "\n";
 }
@@ -701,6 +804,7 @@ sub writeCommonInfo
 sub writeBuildGlue
 {
     my ( $fh, $tag, $module ) = @_;
+    # tag and module may be null (if $src_workspace is defined)
 
     # define the glue scripts we want
     print $fh "pre_all = nmi_glue/build/pre_all\n";
@@ -711,7 +815,9 @@ sub writeBuildGlue
     print $fh "platform_post = nmi_glue/build/platform_post\n";
     if( defined($opt_without_tests) ) {
         print $fh "platform_post_args = --without-tests\n";
-    }
+    } elsif( defined($src_workspace) ) {
+        print $fh "platform_post_args = --test-args=--workspace='$src_workspace'\n";
+	}
 }
 
 
@@ -721,6 +827,8 @@ sub writeTestGlue
 
     # select scope of testsuite run
     my $args;
+
+
     if( defined $opt_test_args ) {
         # command-line takes precedent
         $args = $opt_test_args;
@@ -737,6 +845,7 @@ sub writeTestGlue
         # if not specified at all, use a default test class
         $args = "quick";
     }
+
 
     # define the glue scripts we want for test jobs
     print $fh "pre_all = nmi_glue/test/pre_all\n";
@@ -762,17 +871,30 @@ sub generateTestFetchFiles
 
     @fetch_files = generateSharedFetchFiles( $tag );
 
-    # $opt_nmi_glue is handled in generateSharedFetchFiles().
-    # however, if it's not set, and we're a test job, we need to add a
-    # fetch file to checkout the glue from cvs so we have a working
-    # copy in our userdir as soon as the fetching is done.  we can't
-    # rely on the copy of the glue in the source tarball from the
-    # build output, since we have no way to untar it without glue. ;)
-    if( ! defined $opt_nmi_glue ) { 
+	if( defined $src_workspace ) {
+		# Workspace build.  Grab out glue from our workspace
+		# (We can't assume it will be copied along with the workspace
+		# since we don't copy the workspace in a test run.)
+        my $glue_file = "test_glue.src";
+		# We rather crudely copy all of nmi_glue when we really
+		# on need nmi_glue/$runtype.  But we want the nmi_glue path
+		# in front of it.
+        makeFetchFileSCP( $glue_file, "$src_workspace/nmi_glue", "recursive" );
+        push( @fetch_files, $glue_file );
+
+	} elsif( ( ! defined $opt_nmi_glue) ) {
+		# $opt_nmi_glue is handled in generateSharedFetchFiles().
+		# however, if it's not set, and we're a test job, we need to add a
+		# fetch file to checkout the glue from cvs so we have a working
+		# copy in our userdir as soon as the fetching is done.  we can't
+		# rely on the copy of the glue in the source tarball from the
+		# build output, since we have no way to untar it without glue. ;)
         my $glue_file = "test_glue.src";
         makeFetchFileCVS( $glue_file, "nmi_glue/$runtype", $tag );
         push( @fetch_files, $glue_file );
-    }        
+    }
+	# else: Not workspace build.  Using --nmi_glue 
+	# (handled in generateSharedFetchFiles()).  Nothing to do.
     
     # generate the runid input file
     my $runid_file = "input_build_runid.src";
@@ -801,9 +923,26 @@ sub generateBuildFetchFiles
 
     @fetch_files = generateSharedFetchFiles( $tag );
 
-    my $srcfile = "source-$tag.src";
-    makeFetchFileCVS( $srcfile, $module, $tag );
-    push( @fetch_files, $srcfile );
+    if( defined $tag ) {
+        my $srcfile = "source-$tag.src";
+        makeFetchFileCVS( $srcfile, $module, $tag );
+        push( @fetch_files, $srcfile );
+    }
+    elsif( defined $src_workspace ) {
+		# TODO: There is a race condition if the user also specified
+		# --nmi-glue and this directory ($src_workspace) contains
+		# an nmi_glue directory.  At the moment parseOptions warns
+		# the user, but we don't cope with it.  The solution would
+		# likely be: if $opt_nmi_glue is defined and 
+		# $src_workspace/nmi_glue exists, somehow pass makeFetchFileSCP
+		# a "don't copy this particular subdirectory" option.
+        my $srcfile = "source-workspace.src";
+        makeFetchFileSCP( $srcfile, $src_workspace, "recursive" );
+        push( @fetch_files, $srcfile );
+    }
+    else {
+        die "Internal consistancy error: build lacks a --tag/--nightly or a --workspace.";
+    }
 
     if( defined $opt_externals ) { 
         my $ext_file = "externals.src";
@@ -892,7 +1031,15 @@ sub submitRun()
 {
     my( $cmdfile, $tag ) = @_;
     my @submit_output;
-    print "Submitting condor $runtype from tag: $tag\n";
+    print "Submitting condor $runtype from ";
+    if( defined $tag ) {
+        print "tag: $tag";
+    } elsif( defined $src_workspace ) {
+        print "workspace: $src_workspace";
+    } else {
+        print "unknown source";
+    }
+    print "\n";
     open( SUBMIT, "$nmi_submit $cmdfile|" ) || 
 	die "Can't open $nmi_submit as a pipe: $!\n";
     while( <SUBMIT> ) {
