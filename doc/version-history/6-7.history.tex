@@ -146,9 +146,10 @@ any daemon listed in the \Macro{DAEMON\_LIST} for these commands.
 already-submitted jobs at start-up for purposes of job throttling to Globus
 grid resources.
 
-\item Improved the handling of job leases for grid-type condor jobs in the
-race condition of the lease expiring while the \Condor{gridmanager} is
-trying to extend the lease.
+\item Improved the handling of job leases for grid-type condor jobs. There
+was a race condition between the lease expiring and the
+\Condor{gridmanager} attempting to extend the lease. Also, a lease could
+be set and not extended well before the job was actually submitted.
 
 \item The startd no longer advertises itself as available to run jobs
 when it is in shutdown mode (e.g. waiting for jobs to finish).  This
