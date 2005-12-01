@@ -420,7 +420,13 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		registeredJobs.Rewind();
 		while ( registeredJobs.Next( curr_job ) ) {
 			int new_expire;
-			if ( CalculateJobLease( curr_job->jobAd, new_expire ) ) {
+			MyString  job_id;
+				// Don't update the lease for a job that isn't submitted
+				// anywhere. The Job object will start the lease when it
+				// submits the job.
+			if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) &&
+				 CalculateJobLease( curr_job->jobAd, new_expire ) ) {
+
 				curr_job->UpdateJobLeaseSent( new_expire );
 				leaseUpdates.Append( curr_job );
 			}
