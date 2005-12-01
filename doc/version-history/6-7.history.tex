@@ -125,6 +125,16 @@ happen when LeaveJobInQueue evaluated to True.
 \item When \Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR} is set, pass the setting
 down to the gt4 gahp server.
 
+% Gnats PR 518
+\item Fixed a bug in \Condor{dagman} that caused the UNLESS-EXIT
+feature to not work with POST scripts (the return value from a POST
+script was not tested against the UNLESS-EXIT value).
+
+% Gnats PR 469
+\item Fixed a bug in \Condor{dagman} that caused POST scripts to work
+incorrectly with node retries:  if the node job failed for a node
+with retries, the POST script was only run on the last retry.
+
 % Gnats PR 582
 \item Fixed a bug in \Condor{dagman} that caused rescue DAGs to fail
 if the original DAG was run with the \Opt{-UseDagDir} command-line flag.
@@ -187,6 +197,12 @@ another, were no longer listening on the expected TCP port.
 path inside \Condor{dagman} itself, so that the logging works for
 multi-directory rescue DAGs (which it didn't before), but the
 \File{.condor.sub} files are still portable.
+
+\item Added the Stork log file (if any) to the list of log files that
+\Condor{dagman} lists in the dagman.out file.
+
+\item \Condor{dagman} now reports the node return value for all failed
+nodes.
 
 \end{itemize}
 
