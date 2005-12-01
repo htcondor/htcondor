@@ -73,6 +73,8 @@ template class HashBucket<HashKey, BaseJob *>;
 
 template class HashTable<HashKey, CondorResource *>;
 template class HashBucket<HashKey, CondorResource *>;
+template class List<CondorJob>;
+template class Item<CondorJob>;
 
 template class HashTable<int,GahpClient*>;
 template class ExtArray<Gahp_Args*>;

@@ -176,6 +176,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	myResource = NULL;
 	newRemoteStatusAd = NULL;
 	newRemoteStatusServerTime = 0;
+	doActivePoll = false;
 
 	lastRemoteStatusServerTime = 0;
 
@@ -697,6 +698,9 @@ int CondorJob::doEvaluateState()
 				delete newRemoteStatusAd;
 				newRemoteStatusAd = NULL;
 				reevaluate_state = true;
+			} else if ( doActivePoll ) {
+				doActivePoll = false;
+				gmState = GM_POLL_ACTIVE;
 			} else if ( remoteState == COMPLETED ) {
 				gmState = GM_STAGE_OUT;
 			} else if ( condorState == HELD ) {
@@ -1019,6 +1023,7 @@ int CondorJob::doEvaluateState()
 				delete newRemoteStatusAd;
 				newRemoteStatusAd = NULL;
 			}
+			doActivePoll = false;
 			JobIdle();
 			if ( submitLogged ) {
 				JobEvicted();
@@ -1161,6 +1166,15 @@ void CondorJob::SetRemoteJobId( const char *job_id )
 void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 {
 	int tmp_int;
+	if ( update_ad == NULL ) {
+			// This job was missing from a collective status query. Trigger
+			// a specific query to see what's wrong.
+		dprintf( D_FULLDEBUG, "(%d.%d) Got NULL classad from CondorResource\n",
+				 procID.cluster, procID.proc );
+		doActivePoll = true;
+		delete update_ad;
+		SetEvaluateState();
+	}
 	dprintf( D_FULLDEBUG, "(%d.%d) Got classad from CondorResource\n",
 			 procID.cluster, procID.proc );
 	if ( update_ad->LookupInteger( ATTR_SERVER_TIME, tmp_int ) == 0 ) {

@@ -48,6 +48,7 @@ class CondorResource : public BaseResource
 
 	void Reconfig();
 	void RegisterJob( CondorJob *job, const char *submitter_id );
+	void UnregisterJob( CondorJob *job );
 
 	int DoScheddPoll();
 
@@ -82,6 +83,10 @@ class CondorResource : public BaseResource
 	GahpClient *gahp;
 	GahpClient *ping_gahp;
 	GahpClient *lease_gahp;
+
+		// Used by DoPollSchedd() to determine which jobs we expect to
+		// see ads for. It is rebuilt on every poll.
+	List<CondorJob> submittedJobs;
 };
 
 #endif

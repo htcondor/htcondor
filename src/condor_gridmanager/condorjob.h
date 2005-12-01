@@ -93,6 +93,7 @@ class CondorJob : public BaseJob
 	ClassAd *newRemoteStatusAd;
 	int newRemoteStatusServerTime;
 	int lastRemoteStatusServerTime;
+	bool doActivePoll;
 
 	void NotifyNewRemoteStatus( ClassAd *update_ad );
 

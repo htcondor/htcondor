@@ -187,6 +187,13 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 	}
 }
 
+void CondorResource::UnregisterJob( CondorJob *job )
+{
+	BaseResource::UnregisterJob( job );
+
+	submittedJobs.Delete( job );
+}
+
 int CondorResource::DoScheddPoll()
 {
 	int rc;
@@ -215,6 +222,21 @@ int CondorResource::DoScheddPoll()
 		dprintf( D_FULLDEBUG, "Starting collective poll: %s\n",
 				 scheddName );
 		MyString constraint;
+
+			// create a list of jobs we expect to hear about in our
+			// status command
+		submittedJobs.Rewind();
+		while ( submittedJobs.Next() ) {
+			submittedJobs.DeleteCurrent();
+		}
+		BaseJob *job;
+		MyString job_id;
+		registeredJobs.Rewind();
+		while ( ( job = registeredJobs.Next() ) ) {
+			if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
+				submittedJobs.Append( (CondorJob *)job );
+			}
+		}
 
 		constraint.sprintf( "(%s)", submitter_constraint.Value() );
 
@@ -272,6 +294,7 @@ int CondorResource::DoScheddPoll()
 													 (BaseJob*&)job );
 				if ( rc == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
+					submittedJobs.Delete( job );
 				} else {
 					delete status_ads[i];
 				}
@@ -280,6 +303,20 @@ int CondorResource::DoScheddPoll()
 
 		if ( status_ads != NULL ) {
 			free( status_ads );
+		}
+
+			// Check if any jobs were missing from the status result
+		CondorJob *job;
+		MyString job_id;
+		submittedJobs.Rewind();
+		while ( ( job = submittedJobs.Next() ) ) {
+			if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
+					// We should have gotten a status ad for this job,
+					// but didn't. Tell the job that there may be something
+					// wrong by giving it a NULL status ad.
+				job->NotifyNewRemoteStatus( NULL );
+			}
+			submittedJobs.DeleteCurrent();
 		}
 
 		scheddStatusActive = false;
