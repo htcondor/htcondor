@@ -72,15 +72,20 @@ dprintf(D_FULLDEBUG,"*** (%d.%d) CalculateLease: retry failed lease at %d\n",clu
 	if ( lease_duration != -1 ) {
 		int now = time(NULL);
 		if ( expire_sent == -1 ) {
+dprintf(D_FULLDEBUG,"    Starting sent lease\n");
 			new_expiration = now + lease_duration;
-		} else if ( expire_sent - now < ( lease_duration * 2 ) / 3 ) {
+		} else if ( expire_sent - now < ( ( lease_duration * 2 ) / 3 ) + 10 ) {
 dprintf(D_FULLDEBUG,"    lease left(%d) < 2/3 duration(%d)\n",expire_sent-now,(lease_duration*2)/3);
 			new_expiration = now + lease_duration;
+		} else {
+dprintf(D_FULLDEBUG,"*** (%d.%d) CalculateLease: no new lease at present\n",cluster,proc);
+			return false;
 		}
 	}
 
 	if ( expire_received != -1 && ( new_expiration == -1 ||
 									expire_received < new_expiration ) ) {
+dprintf(D_FULLDEBUG,"    Cap sent lease to received lease\n");
 		new_expiration = expire_received;
 	}
 
