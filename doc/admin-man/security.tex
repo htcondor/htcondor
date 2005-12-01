@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Security}Security In Condor}
+\section{\label{sec:Security}Security}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security! in Condor|(}
 
@@ -250,8 +250,8 @@ both with and without root access.
     on the directories they submit from.
 
 \item[\Condor{master}] The \Condor{master} is what spawns the
-    \Condor{startd} and \Condor{schedd}, so if want them both running
-    as \Login{root}, you should have the master run as \Login{root}.
+    \Condor{startd} and \Condor{schedd}. To have both running
+    as \Login{root}, have the \Condor{master} run as \Login{root}.
     This happens
     automatically if you start the master from your boot scripts.
 
@@ -2476,52 +2476,13 @@ example to make sense.
 
 \end{itemize}
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:security-networks}Using 
 Condor w/ Firewalls, Private Networks, and NATs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{security!firewalls}
-\index{security!private networks}
-\index{security!NATs}
-\index{port usage}
-
-The \Condor{collector} and \Condor{negotiator} daemons
-use well-known port numbers by default.
-The \Condor{collector} uses port 9618
-and the \Condor{negotiator} uses port 9614.
-All other Condor daemons use dynamically chosen ports.
-Other port numbers may be chosen by modifications to
-the configuration.
-
-All of these ports must be greater than 0 and less than 65,536.
-They ought to be greater than 1024 in order to avoid port restrictions
-on your machine, in the case that these daemons are not run as root.
-Also, they need to be ports that are not in use,
-or the daemons will get very unhappy and pout.
-
-Many more details on port usage are located in
-section~\ref{sec:Port-Details}.
-
-% NAT -- Network address translation
-% when access to internet uses a single IP addr/port,
-%  but there are multiple computers communicating by this single
-%  place
-% The NAT is an extra layer that translates the multiple addr/port
-%  to the single, and visa versa (from the single to one of the
-%  multiple).
-
-% Lore from Derek:
-% however, "nat" is also one of those strange condor-team terms (like
-% "frank") that has it's own, special meaning. :)
-%
-% a "nat" is a unit for measuring productivity (or lack thereof) in
-% condor work over time.  it can be normalized to any time unit you
-% want, by dividing the amount of work accomplished into the time scale
-% you want.  1 nat is *very* little work over a given time period,
-% almost too small to measure unless you use a long time scale.  at the
-% time it first came up, we decided that jim basney *sleeps* at about 40
-% nats, just for comparison. :)
+This topic is now addressed in more detail in
+section~\ref{sec:Networking}, which explains network communication in
+Condor.
 
 \index{security! in Condor|)}

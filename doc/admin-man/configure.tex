@@ -17,8 +17,8 @@ are described in
 section~\ref{sec:Configuring-Policy} on Startd Policy Configuration. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Intro-to-Config-Files}
-Introduction to Configuration Files}
+\subsection{\label{sec:Intro-to-Config-Files}Introduction to
+Configuration Files} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Condor configuration files are used to customize how Condor
@@ -58,8 +58,7 @@ parsing them in order to do evaluation.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-File-Macros}
-Configuration File Macros}
+\subsubsection{\label{sec:Config-File-Macros}Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{macro!in configuration file}
@@ -158,8 +157,8 @@ my_classad = [ foo=bar ]
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-File-Special}
-Special Configuration File Macros}
+\subsubsection{\label{sec:Config-File-Special}Special Configuration
+File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration file!\$ENV definition}
@@ -201,8 +200,7 @@ chosen, the macro usage is
   for an actual use of this specialized macro.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Other-Syntax}
-Comments and Line Continuations}
+\subsubsection{\label{sec:Other-Syntax}Comments and Line Continuations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A Condor configuration file may contain comments and
@@ -235,8 +233,7 @@ It is a poor idea to use this functionality, as it is likely to
 stop working in future Condor releases.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Pre-Defined-Macros}
-Pre-Defined Macros}
+\subsubsection{\label{sec:Pre-Defined-Macros}Pre-Defined Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!pre-defined macros}
@@ -363,14 +360,20 @@ Only do so if you know what you are doing.
   
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-wide-Config-File-Entries}
-Condor-wide Configuration File Entries}
+\subsection{\label{sec:Condor-wide-Config-File-Entries}Condor-wide
+Configuration File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!Condor-wide configuration variables}
 
 This section describes settings which affect all parts of the Condor
 system. 
+Other system-wide settings can be found in
+section~\ref{sec:Network-Related-Config-File-Entries} on
+``Network-Related Configuration File Entries'', and
+section~\ref{sec:Shared-Filesystem-Config-File-Entries} on ``Shared
+File System Configuration File Entries''. 
+
 \begin{description}
   
 \item[\Macro{CONDOR\_HOST}] \label{param:CondorHost} This macro may be
@@ -706,20 +709,6 @@ system.
 % Default definition in config file: bogus value
 % Result if not defined or RHS is empty: autodiscovered domain, if any, is used.
 
-\item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
-  For systems with multiple network interfaces, Condor chooses the
-  first one defined.
-  If this configuration macro is not defined,
-  Condor binds to first interface found.
-  To choose a network interface other than the
-  first one, this macro is defined by giving the IP address
-  to use.
-% PKK
-% Described in default config file: NO
-% Defined in the default config file: NO
-% Default definition in config file: N/A
-% Result if not defined or RHS is empty: Condor binds to first interface found
-
 \item[\Macro{CM\_IP\_ADDR}] \label{param:CMIPAddr}
   If neither \MacroNI{COLLECTOR\_HOST} nor 
   \MacroNI{COLLECTOR\_IP\_ADDR} macros are defined, then this
@@ -731,36 +720,6 @@ system.
 % Defined in the default config file: NO
 % Default definition in config file: N/A
 % Result if not defined or RHS is empty: Condor performs above algorithm
-
-\item[\Macro{HIGHPORT}] \label{param:HighPort}
-  Specifies an upper limit of given port numbers for Condor to use,
-  such that Condor is restricted to a range of port numbers.
-  If this macro is not explicitly specified, then Condor will
-  not restrict the port numbers that it uses. Condor will use
-  system-assigned port numbers.
-  For this macro to work, both \MacroNI{HIGHPORT} and
-  \MacroNI{LOWPORT} (given below) must be defined.
-% PKK
-% Described in default config file: YES
-% Defined in the default config file: NO
-% Default definition in config file: bogus
-% Result if not defined or RHS is empty: Condor uses any ports available,
-% regardless of the LOWPORT setting
-
-\item[\Macro{LOWPORT}] \label{param:LowPort}
-  Specifies a lower limit of given port numbers for Condor to use,
-  such that Condor is restricted to a range of port numbers.
-  If this macro is not explicitly specified, then Condor will
-  not restrict the port numbers that it uses. Condor will use
-  system-assigned port numbers.
-  For this macro to work, both \MacroNI{HIGHPORT} (given above) and
-  \MacroNI{LOWPORT} must be defined.
-% PKK
-% Described in default config file: YES
-% Defined in the default config file: NO
-% Default definition in config file: bogus
-% Result if not defined or RHS is empty: Condor uses any ports available,
-% regardless of the HIGHPORT setting
 
 \item[\Macro{EMAIL\_DOMAIN}] \label{param:EmailDomain}
   By default, if a user does not specify \AdAttr{notify\_user} in the
@@ -831,73 +790,6 @@ system.
 % Defined in the default config file: NO
 % Default definition in config file: N/A
 % Result if not defined or RHS is empty: defaults to 20 seconds.
-
-\item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
-  \label{param:UpdateCollectorWithTcp}
-  If your site needs to use TCP connections to send ClassAd updates to
-  your collector (which it almost certainly does NOT), set to TRUE
-  to enable this feature.
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when this
-  functionality is needed. 
-  At this time, this setting only affects the main \Condor{collector}
-  for the site, not any sites that a \Condor{schedd} might flock to. 
-  If enabled, also define
-  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] at the central manager, so
-  that the collector will accept TCP connections for updates, and will
-  keep them open for reuse.
-  Defaults to FALSE.
-% PKK
-% Described in default config file: YES
-% Defined in the default config file: NO
-% Default definition in config file: bogus
-% Result if not defined or RHS is empty: disable the feature of TCP updates to
-% collectors
-% WARNING: The code also looks for UPDATE_COLLECTORS_WITH_TCP, which
-% means the SAME THING as UPDATE_COLLECTOR_WITH_TCP
-
-\item[\Macro{TCP\_UPDATE\_COLLECTORS}]
-  \label{param:TcpUpdateCollectors}
-  The list of collectors which will be updated with TCP instead of UDP.
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when a site needs this
-  functionality. 
-  If not defined, no collectors use TCP instead of UDP.
-% PKK
-% Described in default config file: NO
-% Defined in the default config file: NO
-% Default definition in config file: N/A
-% Result if not defined or RHS is empty: no collectors are updated with TCP
-% WARNING: Look in Version 6.5.2 version history for more information about
-% this particular entry.
-
-\item[\Macro{TRUST\_UID\_DOMAIN}]
-  \label{param:TrustUidDomain}
-  As an added security precaution when Condor is about to spawn a job,
-  it ensures that the \MacroNI{UID\_DOMAIN} (defined above) of a given
-  submit machine is a substring of that machine's fully-qualified
-  host name.
-  However, at some sites, there may be multiple UID spaces that do
-  not clearly correspond to Internet domain names.
-  In these cases, administrators may wish to use names to describe the
-  UID domains which are not substrings of the hostnames of the
-  machines.
-  For this to work, Condor must not do this regular security check.
-  If the \MacroNI{TRUST\_UID\_DOMAIN} setting is defined to TRUE,
-  Condor will not perform this test, and will trust whatever
-  \MacroNI{UID\_DOMAIN} is presented by the submit machine when trying
-  to spawn a job, instead of making sure the submit machine's hostname
-  matches the \MacroNI{UID\_DOMAIN}.
-  When not defined, the default is FALSE,
-  since it is more secure to perform this test. 
-% PKK
-% Described in default config file: YES
-% Defined in the default config file: NO
-% Default definition in config file: bogus
-% Result if not defined or RHS is empty: this entry is considered False
-
 \item[\Macro{PASSWD\_CACHE\_REFRESH}]
   \label{param:PasswdCacheRefresh}
   Condor can cause NIS servers to become overwhelmed by queries for uid
@@ -927,8 +819,8 @@ system.
 % Default value check end here: PKK 8 Jan 2004
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Daemon-Logging-Config-File-Entries}
-Daemon Logging Config File Entries}
+\subsection{\label{sec:Daemon-Logging-Config-File-Entries}Daemon
+Logging Config File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!daemon logging configuration variables}
@@ -1222,8 +1114,8 @@ Log files may optionally be specified per debug level as follows:
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DaemonCore-Config-File-Entries}
-DaemonCore Config File Entries}
+\subsection{\label{sec:DaemonCore-Config-File-Entries}DaemonCore
+Config File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!DaemonCore configuration variables}
@@ -1375,8 +1267,161 @@ server, shadow, and starter, none of which use DaemonCore yet).
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Shared-Filesystem-Config-File-Entries}
-Shared File System Configuration File Macros}
+\subsection{\label{sec:Network-Related-Config-File-Entries}Network-Related
+Configuration File Entries}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!network-related configuration variables}
+
+More information about networking in Condor can be found in
+section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
+
+\begin{description}
+
+\item[\Macro{BIND\_ALL\_INTERFACES}] \label{param:BindAllInterfaces}
+  For systems with multiple network interfaces, if this configuration
+  setting is not defined, Condor binds all network sockets to first
+  interface found, or the IP address specified with
+  \MacroNI{NETWORK\_INTERFACE} (described below).
+  Starting with version 6.7.13, \MacroNI{BIND\_ALL\_INTERFACES} can be
+  set to \verb@TRUE@ to cause Condor to bind to all interfaces on the
+  machine.
+  However, currently Condor is still only able to advertise a single
+  IP address, even if it is listening on multiple interfaces.
+  More information about using this setting can be found in
+  section~\ref{sec:Using-BindAllInterfaces} on
+  page~\pageref{sec:Using-BindAllInterfaces}. 
+
+\item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
+  For systems with multiple network interfaces, if this configuration
+  setting is not defined, Condor binds all network sockets to first
+  interface found.
+  To bind to a specific network interface other than the
+  first one, this \MacroNI{NETWORK\_INTERFACE} should be set to 
+  the IP address to use.
+  When \MacroNI{BIND\_ALL\_INTERFACES} is set to \verb@TRUE@, this
+  setting simply controls what IP address a given Condor host will
+  advertise.
+  More information about configuring Condor on machines with multiple
+  network interfaces can be found in
+  section~\ref{sec:Multiple-Interfaces} on
+  page~\pageref{sec:Multiple-Interfaces}.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: Condor binds to first interface found
+
+\item[\Macro{HIGHPORT}] \label{param:HighPort}
+  Specifies an upper limit of given port numbers for Condor to use,
+  such that Condor is restricted to a range of port numbers.
+  If this macro is not explicitly specified, then Condor will
+  not restrict the port numbers that it uses. Condor will use
+  system-assigned port numbers.
+  For this macro to work, both \MacroNI{HIGHPORT} and
+  \MacroNI{LOWPORT} (given below) must be defined.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: Condor uses any ports available,
+% regardless of the LOWPORT setting
+
+\item[\Macro{LOWPORT}] \label{param:LowPort}
+  Specifies a lower limit of given port numbers for Condor to use,
+  such that Condor is restricted to a range of port numbers.
+  If this macro is not explicitly specified, then Condor will
+  not restrict the port numbers that it uses. Condor will use
+  system-assigned port numbers.
+  For this macro to work, both \MacroNI{HIGHPORT} (given above) and
+  \MacroNI{LOWPORT} must be defined.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: Condor uses any ports available,
+% regardless of the HIGHPORT setting
+
+\item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
+  \label{param:UpdateCollectorWithTcp}
+  If your site needs to use TCP connections to send ClassAd updates to
+  your collector (which it almost certainly does NOT), set to TRUE
+  to enable this feature.
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when this
+  functionality is needed. 
+  At this time, this setting only affects the main \Condor{collector}
+  for the site, not any sites that a \Condor{schedd} might flock to. 
+  If enabled, also define
+  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE} at the central manager, so
+  that the collector will accept TCP connections for updates, and will
+  keep them open for reuse.
+  Defaults to FALSE.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: disable the feature of TCP updates to
+% collectors
+% WARNING: The code also looks for UPDATE_COLLECTORS_WITH_TCP, which
+% means the SAME THING as UPDATE_COLLECTOR_WITH_TCP
+
+\item[\Macro{TCP\_UPDATE\_COLLECTORS}]
+  \label{param:TcpUpdateCollectors}
+  The list of collectors which will be updated with TCP instead of UDP.
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when a site needs this
+  functionality. 
+  If not defined, no collectors use TCP instead of UDP.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: no collectors are updated with TCP
+% WARNING: Look in Version 6.5.2 version history for more information about
+% this particular entry.
+
+\end{description}
+
+The following settings are specific to enabling Generic Connection
+Brokering or GCB in your Condor pool.
+More information about GCB and how to configure it can be found in
+section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
+
+\begin{description}
+
+\item[\Macro{NET\_REMAP\_ENABLE}] 
+  If defined to \verb@TRUE@, this setting will enable a network
+  remapping service for Condor.
+  The service to use is controlled by \MacroNI{NET\_REMAP\_SERVICE},
+  described below.
+  This boolean value defaults to \verb@FALSE@.
+
+\item[\Macro{NET\_REMAP\_SERVICE}] If \MacroNI{NET\_REMAP\_ENABLE} is
+  defined to \verb@TRUE@, this setting controls what network remapping
+  service should be used.
+  Currently, the only value supported is \verb@GCB@.
+  The default is undefined.
+
+\item[\Macro{NET\_REMAP\_INAGENT}]
+  Hosts with the GCB network remapping service enabled that require a
+  GCB broker (see the section on GCB referenced above for more
+  details) specify the IP address of their broker with this setting.
+  The default is undefined.
+
+\item[\Macro{NET\_REMAP\_ROUTE}]
+  Hosts with the GCB network remapping service enabled that would like
+  to use a GCB routing table 
+  GCB broker (again, see the section on GCB for more details) specify
+  The full path to their routing table with this setting.
+  The default is undefined.
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Shared-Filesystem-Config-File-Entries}Shared
+File System Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!shared file system configuration variables}
 
@@ -1454,6 +1499,31 @@ When Condor sends e-mail about a job, Condor sends the e-mail to
 If \MacroUNI{UID\_DOMAIN}
 is undefined, the e-mail is sent to \File{user@submitmachinename}.
 
+
+\item[\Macro{TRUST\_UID\_DOMAIN}]
+  \label{param:TrustUidDomain}
+  As an added security precaution when Condor is about to spawn a job,
+  it ensures that the \MacroNI{UID\_DOMAIN} (defined above) of a given
+  submit machine is a substring of that machine's fully-qualified
+  host name.
+  However, at some sites, there may be multiple UID spaces that do
+  not clearly correspond to Internet domain names.
+  In these cases, administrators may wish to use names to describe the
+  UID domains which are not substrings of the hostnames of the
+  machines.
+  For this to work, Condor must not do this regular security check.
+  If the \MacroNI{TRUST\_UID\_DOMAIN} setting is defined to TRUE,
+  Condor will not perform this test, and will trust whatever
+  \MacroNI{UID\_DOMAIN} is presented by the submit machine when trying
+  to spawn a job, instead of making sure the submit machine's hostname
+  matches the \MacroNI{UID\_DOMAIN}.
+  When not defined, the default is FALSE,
+  since it is more secure to perform this test. 
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: this entry is considered False
 
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain}
 When Condor is about to run a job as a particular user (instead of the
@@ -1634,8 +1704,8 @@ they will not be considered to have shared file systems.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Checkpoint-Server-Config-File-Entries}
-Checkpoint Server Configuration File Macros}
+\subsection{\label{Checkpoint-Server-Config-File-Entries}Checkpoint
+Server Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!checkpoint server configuration variables}
@@ -1694,8 +1764,8 @@ checkpoint server host (see below).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Master-Config-File-Entries}
-\condor{master} Configuration File Macros}
+\subsection{\label{sec:Master-Config-File-Entries}\condor{master}
+Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_master configuration variables}
@@ -2043,8 +2113,8 @@ will not want to change them for any reason.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Startd-Config-File-Entries}
-\condor{startd} Configuration File Macros}
+\subsection{\label{sec:Startd-Config-File-Entries}\condor{startd}
+Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_startd configuration variables}
@@ -2223,7 +2293,7 @@ Configuring The Startd Policy.
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}] \label{param:StartdShouldWriteClaimIdFile}
   Starting with version 6.7.10, the \Condor{startd} can be configured
   to write out the \Attr{ClaimId} for the next available claim on all
-  virtual machines to seperate files.
+  virtual machines to separate files.
   This boolean attribute controls whether the \Condor{startd} should
   write these files.
   The default value is true.
@@ -2903,8 +2973,8 @@ The following configuration variables support java universe jobs.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Schedd-Config-File-Entries}
-\condor{schedd} Configuration File Entries}
+\subsection{\label{sec:Schedd-Config-File-Entries}\condor{schedd}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_schedd configuration variables}
@@ -3258,8 +3328,8 @@ These macros control the \Condor{schedd}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Shadow-Config-File-Entries}
-\condor{shadow} Configuration File Entries}
+\subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_shadow configuration variables}
@@ -3314,8 +3384,8 @@ Defaults to 900 (15 minutes).
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Shadow-PVM-Config-File-Entries}
-\condor{shadow.pvm} Configuration File Entries}
+\subsection{\label{sec:Shadow-PVM-Config-File-Entries}\condor{shadow.pvm}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_shadow.pvm configuration variables}
@@ -3340,8 +3410,8 @@ special shadow.  See section~\ref{sec:Shadow-Config-File-Entries}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Starter-Config-File-Entries}
-\condor{starter} Configuration File Entries}
+\subsection{\label{sec:Starter-Config-File-Entries}\condor{starter}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_starter configuration variables}
@@ -3466,8 +3536,8 @@ Defaults to 1200 (20 minutes).
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Submit-Config-File-Entries}
-\condor{submit} Configuration File Entries}
+\subsection{\label{sec:Submit-Config-File-Entries}\condor{submit}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!condor\_submit configuration variables}
 \begin{description}
@@ -3575,11 +3645,11 @@ as:
   The default value is True.
 
 \item[\Macro{SUBMIT\_EXPRS}] \label{param:SubmitExprs}
-  The given comma-seperated, named expressions are inserted into all 
+  The given comma-separated, named expressions are inserted into all 
   the job ClassAds that \Condor{submit} creates.  This is equivalent
   to the ``+'' syntax in submit files.  See the
   the \Condor{submit} manual page
-  on page~\pageref{sec:man-condor-submit} for details on using the ``+''
+  on page~\pageref{man-condor-submit} for details on using the ``+''
   syntax to add attributes to the job ClassAd.
   Attributes defined in the submit description file with ``+'' will
   override attributes defined in the config file with
@@ -3589,8 +3659,8 @@ as:
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Preen-Config-File-Entries}
-\condor{preen} Configuration File Entries}
+\subsection{\label{sec:Preen-Config-File-Entries}\condor{preen}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_preen configuration variables}
@@ -3623,8 +3693,8 @@ These macros affect \Condor{preen}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Collector-Config-File-Entries}
-\condor{collector} Configuration File Entries}
+\subsection{\label{sec:Collector-Config-File-Entries}\condor{collector}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_collector configuration variables}
@@ -3842,8 +3912,8 @@ These macros affect the \Condor{collector}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Negotiator-Config-File-Entries}
-\condor{negotiator} Configuration File Entries}
+\subsection{\label{sec:Negotiator-Config-File-Entries}\condor{negotiator}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!condor\_negotiator configuration variables}
 
@@ -4077,60 +4147,61 @@ group users.
 
 \end{description}
 
+% entire section commented out Nov 2005
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Eventd-Config-File-Entries}
-\condor{eventd} Configuration File Entries}
+% \subsection{\label{sec:Eventd-Config-File-Entries}
+% \condor{eventd} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration!condor\_eventd configuration variables}
-These macros affect the Condor Event daemon.  See
-section~\ref{sec:EventD} on page~\pageref{sec:EventD} for an
-introduction.  The eventd is not included in the main Condor binary
-distribution or installation procedure.  It can be installed as a
-contrib module.
-
-\begin{description}
+% \index{configuration!condor\_eventd configuration variables}
+% These macros affect the Condor Event daemon.  See
+% section~\ref{sec:EventD} on page~\pageref{sec:EventD} for an
+% introduction.  The eventd is not included in the main Condor binary
+% distribution or installation procedure.  It can be installed as a
+% contrib module.
+% 
+% \begin{description}
   
-\item[\Macro{EVENT\_LIST}] \label{param:EventList} List of macros
-which define events to be managed by the event daemon.
+% \item[\Macro{EVENT\_LIST}] \label{param:EventList} List of macros
+% which define events to be managed by the event daemon.
 
-\item[\Macro{EVENTD\_CAPACITY\_INFO}] \label{param:EventdCapInfo}
-Configures the bandwidth limits used when scheduling job checkpoint
-transfers before \MacroNI{SHUTDOWN} events.
-The \MacroNI{EVENTD\_CAPACITY\_INFO} file has the same
-format as the \MacroNI{NETWORK\_CAPACITY\_INFO} file, described in
-section~\ref{sec:Bandwidth-Alloc-Capinfo}.
+% \item[\Macro{EVENTD\_CAPACITY\_INFO}] \label{param:EventdCapInfo}
+% Configures the bandwidth limits used when scheduling job checkpoint
+% transfers before \MacroNI{SHUTDOWN} events.
+% The \MacroNI{EVENTD\_CAPACITY\_INFO} file has the same
+% format as the \MacroNI{NETWORK\_CAPACITY\_INFO} file, described in
+% section~\ref{sec:Bandwidth-Alloc-Capinfo}.
 
-\item[\Macro{EVENTD\_ROUTING\_INFO}] \label{param:EventdRouteInfo}
-Configures the network routing information used when scheduling job
-checkpoint transfers before \MacroNI{SHUTDOWN} events.
-The \MacroNI{EVENTD\_ROUTING\_INFO} file has the same
-format as the \MacroNI{NETWORK\_ROUTING\_INFO} file, described in
-section~\ref{sec:Bandwidth-Alloc-Routes}.
+% \item[\Macro{EVENTD\_ROUTING\_INFO}] \label{param:EventdRouteInfo}
+% Configures the network routing information used when scheduling job
+% checkpoint transfers before \MacroNI{SHUTDOWN} events.
+% The \MacroNI{EVENTD\_ROUTING\_INFO} file has the same
+% format as the \MacroNI{NETWORK\_ROUTING\_INFO} file, described in
+% section~\ref{sec:Bandwidth-Alloc-Routes}.
 
-\item[\Macro{EVENTD\_INTERVAL}] \label{param:EventdInterval} The number
-of seconds between collector queries to determine pool
-state.  The default is 15 minutes (300 seconds).
+% \item[\Macro{EVENTD\_INTERVAL}] \label{param:EventdInterval} The number
+% of seconds between collector queries to determine pool
+% state.  The default is 15 minutes (300 seconds).
 
-\item[\Macro{EVENTD\_MAX\_PREPARATION}]
-\label{param:EventdMaxPreparation}  The number of minutes before a
-scheduled event when the eventd should start periodically querying the
-collector.  If 0 (default), the eventd always polls.
+% \item[\Macro{EVENTD\_MAX\_PREPARATION}]
+% \label{param:EventdMaxPreparation}  The number of minutes before a
+% scheduled event when the eventd should start periodically querying the
+% collector.  If 0 (default), the eventd always polls.
 
-\item[\Macro{EVENTD\_SHUTDOWN\_SLOW\_START\_INTERVAL}]
-\label{param:EventdShutdownSlowStartInterval} The number of seconds
-between each machine startup after a shutdown event.  The default is 0.
+% \item[\Macro{EVENTD\_SHUTDOWN\_SLOW\_START\_INTERVAL}]
+% \label{param:EventdShutdownSlowStartInterval} The number of seconds
+% between each machine startup after a shutdown event.  The default is 0.
 
-\item[\Macro{EVENTD\_SHUTDOWN\_CLEANUP\_INTERVAL}]
-\label{param:EventdShutdownCleanupInterval} The number of seconds
-between each check for old shutdown configurations in the pool.  The default
-is one hour (3600 seconds).
+% \item[\Macro{EVENTD\_SHUTDOWN\_CLEANUP\_INTERVAL}]
+% \label{param:EventdShutdownCleanupInterval} The number of seconds
+% between each check for old shutdown configurations in the pool.  The default
+% is one hour (3600 seconds).
 
-\end{description}
+% \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Gridmanager-Config-File-Entries}
-\condor{gridmanager} Configuration File Entries}
+\subsection{\label{sec:Gridmanager-Config-File-Entries}\condor{gridmanager}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_gridmanager configuration variables}
@@ -4314,8 +4385,8 @@ related to GT3 job submission.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:GridMonitor-Config-File-Entries}
-\Prog{grid\_monitor} Configuration File Entries}
+\subsection{\label{sec:GridMonitor-Config-File-Entries}\Prog{grid\_monitor}
+Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!grid\_monitor configuration variables}
@@ -4361,8 +4432,8 @@ These macros affect the \Prog{grid\_monitor}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGMan-Config-File-Entries}
-Configuration File Entries for DAGMan}
+\subsection{\label{sec:DAGMan-Config-File-Entries}Configuration File 
+Entries for DAGMan}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!DAGMan configuration variables}
@@ -4552,14 +4623,14 @@ If undefined, \Condor{dagman} looks for \Stork{rm} in the PATH.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-Security}
-Configuration File Entries Relating to Security}
+\subsection{\label{sec:Config-Security}Configuration File Entries
+Relating to Security}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!security configuration variables}
 These macros affect the secure operation of Condor.
 Many of these macros are described in
-section~\ref{sec:Security} on Security In Condor.
+section~\ref{sec:Security} on Security.
 
 \begin{description}
 \item[\Macro{SEC\_*\_AUTHENTICATION}]
@@ -4673,8 +4744,8 @@ for a change from the default value.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:HA-Config-File-Entries}
-Configuration File Entries Relating to High Availability}
+\subsection{\label{sec:HA-Config-File-Entries}Configuration File Entries
+Relating to High Availability}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!high availability configuration variables}
@@ -4898,8 +4969,8 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Quill-Config-File-Entries}
-Configuration File Entries Relating to Quill}
+\subsection{\label{sec:Quill-Config-File-Entries}Configuration File
+Entries Relating to Quill}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!Quill configuration variables}
@@ -4959,8 +5030,8 @@ quill@machinename.fully.qualified.address
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:MyProxy-Config-File-Entries}
-MyProxy Configuration File Macros}
+\subsection{\label{sec:MyProxy-Config-File-Entries}MyProxy
+Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
 In some cases, Condor can autonomously refresh GSI certificate proxies
@@ -5064,8 +5135,8 @@ refresh proxy certificates.  By default, this macro is undefined.
 % 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Credd-Config-File-Entries}
-\condor{credd} Configuration File Macros}
+\subsection{\label{sec:Credd-Config-File-Entries}\condor{credd}
+Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
 \begin{description}
@@ -5107,8 +5178,8 @@ Units = seconds.  Default value = 60 seconds (1 minute).
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Stork-Config-File-Entries}
-Stork Configuration File Macros}
+\subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
+File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
 \begin{description}

@@ -110,7 +110,7 @@ The following is an example event daemon configuration:
 \index{event daemon!example configuration}
 \begin{verbatim}
 EVENT_LIST	= TestEvent, TestEvent2
-TestEvent	= SHUTDOWN_RUNTIME MTWRFSU 2:00 1:00 TestEventConstraint
+TestEvent	= SHUTDOWN_RUNTIME W 2:00 1:00 TestEventConstraint
 TestEvent2	= SHUTDOWN MTWRF 14:00 0:30 TestEventConstraint2
 TestEventConstraint		= (Arch == "INTEL")
 TestEventConstraint2	= (True)
@@ -120,10 +120,10 @@ In this example, the \verb@TestEvent@ is a \Macro{SHUTDOWN\_RUNTIME}
 type event, which
 specifies that all machines whose startd ads match the constraint
 \verb@Arch == "INTEL"@ should be shutdown for one hour (or until the
-startd restarts) starting at 2:00 every Wednesday.
+\Condor{startd} daemon restarts) starting at 2:00 every Wednesday.
 \verb@TestEvent2@ is a \MacroNI{SHUTDOWN} type event, which specifies
 that all machines should be shutdown for 30 minutes starting at
-14:00 every Friday.
+14:00 on weekdays.
 
 The bandwidth limits used in the eventd's schedule are specified in
 the file indicated by the \Macro{EVENTD\_CAPACITY\_INFO} parameter, and

@@ -628,9 +628,9 @@ the startd to run them more than once in its lifetime.
 
 \Note \Attr{LastBenchmark} is initialized to 0 before benchmarks
 have ever been run.
-So, if you want the startd to run benchmarks as soon as the machine is
-Unclaimed (if it hasn't done so already),
-include a term for \Attr{LastBenchmark} as in the example above.
+To have the \Condor{startd} run benchmarks as soon as the machine is
+Unclaimed (if it has not done so already),
+include a term using \Attr{LastBenchmark} as in the example above.
 
 \index{RunBenchmarks@\Expr{RunBenchmarks} expression}
 \Note If \Expr{RunBenchmarks} is defined and set to something
@@ -1412,7 +1412,7 @@ WANT_VACATE  = ( $(ActivationTimer) > 10 * $(MINUTE) \
                  || $(IsPVM) || $(IsVanilla) )
 
 # Suspend jobs if:
-# 1) The CPU has been busy for more than 1 minute, AND
+# 1) The CPU has been busy for more than 2 minutes, AND
 # 2) the job has been running for more than 90 seconds
 # 3) OR suspend if this is a desktop and the user is active
 SUSPEND = ( ((CpuBusyTime > 2 * $(MINUTE)) && ($(ActivationTimer) > 90)) \

@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:tcp-collector-update}
-Using TCP to Send Updates to the \Condor{collector}}
+\subsection{\label{sec:tcp-collector-update}Using TCP to Send Updates to
+the \Condor{collector}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{TCP}
@@ -40,18 +40,18 @@ Configuration variables are set to enable the use of TCP sockets.
 There are two variables that an
 administrator must define to enable this feature:
 
-\begin{itemize}
+\begin{description}
 
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
-  When set to TRUE, the Condor daemons to use TCP to
+  When set to \Expr{True}, the Condor daemons to use TCP to
   update the \Condor{collector}, instead of the default UDP.
-  Defaults to FALSE.
+  Defaults to \Expr{False}.
 
 \item[\Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] 
   Specifies the number of TCP sockets cached at the \Condor{collector}.
   The default value for this setting is 0, with no cache enabled.
 
-\end{itemize}
+\end{description}
 
 The use of a cache allows Condor to leave established TCP sockets open,
 facilitating much better performance.
