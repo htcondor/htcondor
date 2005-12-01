@@ -56,10 +56,21 @@ prereqs   = everything-1.0.0
 
 
 ########################################
+# On OSX we must specify the gcc version
+########################################
+[
+platforms = ppc_macos_10.3
+prereqs   = gcc-3.1
+# V6_6 requires gcc-3.1, because we're using an older
+# version of globus that won't compile with 3.3...
+]
+
+
+########################################
 # Platforms with no prereqs at all
 ########################################
 [
-platforms = ia64_sles_8, ppc_macos_10.3, x86_winnt_5.1
+platforms = ia64_sles_8, x86_winnt_5.1
 ]
 
 
