@@ -153,7 +153,8 @@ grid resources.
 \item Improved the handling of job leases for grid-type condor jobs. There
 was a race condition between the lease expiring and the
 \Condor{gridmanager} attempting to extend the lease. Also, a lease could
-be set and not extended well before the job was actually submitted.
+be set and not extended well before the job was actually submitted. In
+certain cases, the forwarded lease could exceed \Attr{JobLeaseDuration}.
 
 \item The startd no longer advertises itself as available to run jobs
 when it is in shutdown mode (e.g. waiting for jobs to finish).  This
