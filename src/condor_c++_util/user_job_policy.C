@@ -439,7 +439,7 @@ UserPolicy::AnalyzePolicy( int mode )
 			ATTR_ON_EXIT_REMOVE_CHECK
 	*/
 
-	/* Should I perform a periodic remove? */
+	/* Should I perform a remove based on the epoch time? */
 	m_fire_expr = ATTR_TIMER_REMOVE_CHECK;
 	if(!m_ad->LookupInteger(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 		timer_remove = -1;
