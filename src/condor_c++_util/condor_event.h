@@ -74,6 +74,9 @@ enum ULogEventNumber {
 	/** RSC socket lost           */  ULOG_JOB_DISCONNECTED         = 22,
 	/** RSC socket re-established */  ULOG_JOB_RECONNECTED          = 23,
 	/** RSC reconnect failure     */  ULOG_JOB_RECONNECT_FAILED     = 24,
+	/** Grid Resource Up          */  ULOG_GRID_RESOURCE_UP         = 25,
+	/** Grid Resource Down        */  ULOG_GRID_RESOURCE_DOWN       = 26,
+	/** Job Submitted remotely    */  ULOG_GRID_SUBMIT 	    	    = 27,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -1489,6 +1492,118 @@ private:
 	char *reason;
 };
 
+
+class GridResourceUpEvent : public ULogEvent
+{
+  public:
+    ///
+    GridResourceUpEvent();
+    ///
+    ~GridResourceUpEvent();
+
+    /** Read the body of the next GridResoruceUp event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next GridResourceUp event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this GridResourceUpEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+    /// Name of the remote resource (GridResource attribute)
+    char* resourceName;
+
+};
+
+class GridResourceDownEvent : public ULogEvent
+{
+  public:
+    ///
+    GridResourceDownEvent();
+    ///
+    ~GridResourceDownEvent();
+
+    /** Read the body of the next GridResourceDown event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next GridResourceDown event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this GridResourceDownEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+    /// Name of the remote resource (GridResource attribute)
+    char* resourceName;
+
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a GridSubmitEvent object.  Occurs when a Grid Universe
+    job is actually submitted to a grid resource and we have a remote
+    job id for it
+*/
+class GridSubmitEvent : public ULogEvent
+{
+  public:
+    ///
+    GridSubmitEvent();
+    ///
+    ~GridSubmitEvent();
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Submit event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this GridSubmitEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+    /// Name of the remote resource (GridResource attribute)
+    char* resourceName;
+
+	/// Job ID on the remote resource (GridJobId attribute)
+    char* jobId;
+};
 
 
 #endif // __CONDOR_EVENT_H__

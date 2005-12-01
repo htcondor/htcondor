@@ -65,6 +65,9 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_DISCONNECTED",        // RSC socket lost
 	"ULOG_JOB_RECONNECTED",         // RSC socket re-established
 	"ULOG_JOB_RECONNECT_FAILED",    // RSC reconnect failure
+	"ULOG_GRID_RESOURCE_UP",		// Grid machine UP 
+	"ULOG_GRID_RESOURCE_DOWN",		// Grid machine Down
+	"ULOG_GRID_SUBMIT",				// Job submitted to grid resource
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -166,6 +169,15 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_JOB_RECONNECT_FAILED:
 		return new JobReconnectFailedEvent;
+
+	case ULOG_GRID_RESOURCE_DOWN:
+		return new GridResourceDownEvent;
+
+	case ULOG_GRID_RESOURCE_UP:
+		return new GridResourceUpEvent;
+
+	case ULOG_GRID_SUBMIT:
+		return new GridSubmitEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
@@ -371,6 +383,15 @@ toClassAd()
 		break;
 	case ULOG_JOB_RECONNECT_FAILED:
 		myad->SetMyTypeName("JobReconnectFailedEvent");
+		break;
+	case ULOG_GRID_RESOURCE_UP:
+		myad->SetMyTypeName("GridResourceUpEvent");
+		break;
+	case ULOG_GRID_RESOURCE_DOWN:
+		myad->SetMyTypeName("GridResourceDownEvent");
+		break;
+	case ULOG_GRID_SUBMIT:
+		myad->SetMyTypeName("GridSubmitEvent");
 		break;
 	  default:
 		return NULL;
@@ -4047,3 +4068,309 @@ JobReconnectFailedEvent::initFromClassAd( ClassAd* ad )
 		mallocstr = NULL;
 	}
 }
+
+
+// ----- the GridResourceUp class
+GridResourceUpEvent::
+GridResourceUpEvent()
+{	
+	eventNumber = ULOG_GRID_RESOURCE_UP;
+	resourceName = NULL;
+}
+
+GridResourceUpEvent::
+~GridResourceUpEvent()
+{
+	delete[] resourceName;
+}
+
+int GridResourceUpEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * resource = unknown;
+
+	int retval = fprintf (file, "Grid Resource Back Up\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( resourceName ) resource = resourceName;
+
+	retval = fprintf( file, "    GridResource: %.8191s\n", resource );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GridResourceUpEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] resourceName;
+	resourceName = NULL;
+	int retval = fscanf (file, "Grid Resource Back Up\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	resourceName = strnewp(s);	
+	return 1;
+}
+
+ClassAd* GridResourceUpEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( resourceName && resourceName[0] ) {
+		MyString buf2;
+		buf2.sprintf("GridResource = \"%s\"",resourceName);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GridResourceUpEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("GridResource", &mallocstr);
+	if( mallocstr ) {
+		resourceName = new char[strlen(mallocstr) + 1];
+		strcpy(resourceName, mallocstr);
+		free(mallocstr);
+	}
+}
+
+
+// ----- the GridResourceDown class
+GridResourceDownEvent::
+GridResourceDownEvent()
+{	
+	eventNumber = ULOG_GRID_RESOURCE_DOWN;
+	resourceName = NULL;
+}
+
+GridResourceDownEvent::
+~GridResourceDownEvent()
+{
+	delete[] resourceName;
+}
+
+int GridResourceDownEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * resource = unknown;
+
+	int retval = fprintf (file, "Detected Down Grid Resource\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( resourceName ) resource = resourceName;
+
+	retval = fprintf( file, "    GridResource: %.8191s\n", resource );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GridResourceDownEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] resourceName;
+	resourceName = NULL;
+	int retval = fscanf (file, "Detected Down Grid Resource\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	resourceName = strnewp(s);	
+	return 1;
+}
+
+ClassAd* GridResourceDownEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( resourceName && resourceName[0] ) {
+		MyString buf2;
+		buf2.sprintf("GridResource = \"%s\"",resourceName);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GridResourceDownEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("GridResource", &mallocstr);
+	if( mallocstr ) {
+		resourceName = new char[strlen(mallocstr) + 1];
+		strcpy(resourceName, mallocstr);
+		free(mallocstr);
+	}
+}
+
+
+// ----- the GridSubmitEvent class
+GridSubmitEvent::
+GridSubmitEvent()
+{	
+	eventNumber = ULOG_GRID_SUBMIT;
+	resourceName = NULL;
+	jobId = NULL;
+}
+
+GridSubmitEvent::
+~GridSubmitEvent()
+{
+	delete[] resourceName;
+	delete[] jobId;
+}
+
+int GridSubmitEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * resource = unknown;
+	const char * job = unknown;
+
+	int retval = fprintf (file, "Job submitted to grid resource\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( resourceName ) resource = resourceName;
+	if ( jobId ) job = jobId;
+
+	retval = fprintf( file, "    GridResource: %.8191s\n", resource );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	retval = fprintf( file, "    GridJobId: %.8191s\n", job );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GridSubmitEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] resourceName;
+	delete[] jobId;
+	resourceName = NULL;
+	jobId = NULL;
+	int retval = fscanf (file, "Job submitted to grid resource\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	resourceName = strnewp(s);
+	retval = fscanf( file, "    GridJobId: %8191[^\n]\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	jobId = strnewp(s);
+
+	return 1;
+}
+
+ClassAd* GridSubmitEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( resourceName && resourceName[0] ) {
+		MyString buf2;
+		buf2.sprintf("GridResource = \"%s\"",resourceName);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+	if( jobId && jobId[0] ) {
+		MyString buf3;
+		buf3.sprintf("GridJobId = \"%s\"",jobId);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GridSubmitEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("GridResource", &mallocstr);
+	if( mallocstr ) {
+		resourceName = new char[strlen(mallocstr) + 1];
+		strcpy(resourceName, mallocstr);
+		free(mallocstr);
+	}
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	mallocstr = NULL;
+	ad->LookupString("GridJobId", &mallocstr);
+	if( mallocstr ) {
+		jobId = new char[strlen(mallocstr) + 1];
+		strcpy(jobId, mallocstr);
+		free(mallocstr);
+	}
+}
+

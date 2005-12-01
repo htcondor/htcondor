@@ -813,8 +813,9 @@ void BaseJob::NotifyResourceDown()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == false ) {
-			// TODO add a generic resource-down event
+			// The GlobusResourceDown event is now deprecated
 		WriteGlobusResourceDownEventToUserLog( jobAd );
+		WriteGridResourceDownEventToUserLog( jobAd );
 	}
 	resourceDown = true;
 	if ( resourcePingPending ) {
@@ -828,8 +829,9 @@ void BaseJob::NotifyResourceUp()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == true ) {
-			// TODO add a generic resource-up event
+			// The GlobusResourceUp event is now deprecated
 		WriteGlobusResourceUpEventToUserLog( jobAd );
+		WriteGridResourceUpEventToUserLog( jobAd );
 	}
 	resourceDown = false;
 	if ( resourcePingPending ) {
@@ -1118,6 +1120,8 @@ WriteHoldEventToUserLog( ClassAd *job_ad )
 	return true;
 }
 
+// The GlobusResourceUpEvent is now deprecated and should be removed at
+// some point in the future (6.9?).
 bool
 WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 {
@@ -1160,6 +1164,8 @@ WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
 	return true;
 }
 
+// The GlobusResourceDownEvent is now deprecated and should be removed at
+// some point in the future (6.9?).
 bool
 WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 {
@@ -1202,6 +1208,8 @@ WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
 	return true;
 }
 
+// The GlobusSubmitEvent is now deprecated and should be removed at
+// some point in the future (6.9?).
 bool
 WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 {
@@ -1285,6 +1293,128 @@ WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
 				 cluster, proc);
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing grid resource up record to user logfile\n",
+			 cluster, proc );
+
+	GridResourceUpEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	if ( contact.IsEmpty() ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) %s attribute missing in job ad\n",
+				 cluster, proc, ATTR_GRID_RESOURCE );
+	}
+	event.resourceName =  strnewp( contact.Value() );
+
+	int rc = ulog->writeEvent( &event );
+	delete ulog;
+
+	if ( !rc ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GRID_RESOURCE_UP event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing grid source down record to user logfile\n",
+			 cluster, proc );
+
+	GridResourceDownEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	if ( contact.IsEmpty() ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) %s attribute missing in job ad\n",
+				 cluster, proc, ATTR_GRID_RESOURCE );
+	}
+	event.resourceName =  strnewp( contact.Value() );
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GRID_RESOURCE_DOWN event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteGridSubmitEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	int version;
+	MyString contact;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing grid submit record to user logfile\n",
+			 cluster, proc );
+
+	GridSubmitEvent event;
+
+	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
+	event.resourceName = strnewp( contact.Value() );
+
+	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
+	event.jobId = strnewp( contact.Value() );
+
+	int rc = ulog->writeEvent( &event );
+	delete ulog;
+
+	if ( !rc ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GRID_SUBMIT event\n",
+				 cluster, proc );
 		return false;
 	}
 

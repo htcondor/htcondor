@@ -568,6 +568,7 @@ int CondorJob::doEvaluateState()
 				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
 					SetRemoteJobId( job_id_string );
+					WriteGridSubmitEventToUserLog( jobAd );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					dprintf( D_ALWAYS,

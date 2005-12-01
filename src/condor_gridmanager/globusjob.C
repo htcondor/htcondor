@@ -2505,7 +2505,9 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 					// the user-log and increment the globus submits count.
 				int num_globus_submits = 0;
 				if ( !submitLogged ) {
+						// The GlobusSubmit event is now deprecated
 					WriteGlobusSubmitEventToUserLog( jobAd );
+					WriteGridSubmitEventToUserLog( jobAd );
 					submitLogged = true;
 				}
 				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
