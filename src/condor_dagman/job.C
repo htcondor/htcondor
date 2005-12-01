@@ -145,6 +145,7 @@ void Job::Dump () const {
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
     dprintf( D_ALWAYS, "         NodeID: %d\n", _jobID );
     dprintf( D_ALWAYS, "    Node Status: %s\n", status_t_names[_Status] );
+    dprintf( D_ALWAYS, "Node return val: %d\n", retval );
 	if( _Status == STATUS_ERROR ) {
 		dprintf( D_ALWAYS, "          Error: %s\n",
 				 error_text ? error_text : "unknown" );

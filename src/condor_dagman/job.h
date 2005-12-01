@@ -291,7 +291,7 @@ class Job {
     int retval;
 	
     // special return code indicating that a node shouldn't be retried
-    int retry_abort_val;
+    int retry_abort_val; // UNLESS-EXIT
     // indicates whether retry_abort_val has been set
     bool have_retry_abort_val;
 
