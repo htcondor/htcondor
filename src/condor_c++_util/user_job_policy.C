@@ -406,7 +406,6 @@ void UserPolicy::SetDefaults()
 int
 UserPolicy::AnalyzePolicy( int mode )
 {
-	int periodic_hold, periodic_remove, periodic_release;
 	int on_exit_hold, on_exit_remove;
 	int timer_remove;
 	int state;
@@ -449,38 +448,25 @@ UserPolicy::AnalyzePolicy( int mode )
 		return REMOVE_FROM_QUEUE;
 	}
 
+	int retval;
+
 	/* should I perform a periodic hold? */
 	if(state!=HELD) {
-		m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
-		if( ! m_ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, m_ad, periodic_hold) ) {
-			return UNDEFINED_EVAL;
-		}
-		if( periodic_hold ) {
-			m_fire_expr_val = 1;
-			return HOLD_IN_QUEUE;
+		if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_HOLD_CHECK, HOLD_IN_QUEUE, retval)) {
+			return retval;
 		}
 	}
 
 	/* Should I perform a periodic release? */
 	if(state==HELD) {
-		m_fire_expr = ATTR_PERIODIC_RELEASE_CHECK;
-		if(!m_ad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, m_ad, periodic_release)) {
-			return UNDEFINED_EVAL;
-		}
-		if( periodic_release ) {
-			m_fire_expr_val = 1;
-			return RELEASE_FROM_HOLD;
+		if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_RELEASE_CHECK, RELEASE_FROM_HOLD, retval)) {
+			return retval;
 		}
 	}
 
 	/* Should I perform a periodic remove? */
-	m_fire_expr = ATTR_PERIODIC_REMOVE_CHECK;
-	if(!m_ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, m_ad, periodic_remove)) {
-		return UNDEFINED_EVAL;
-	}
-	if( periodic_remove ) {
-		m_fire_expr_val = 1;
-		return REMOVE_FROM_QUEUE;
+	if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_REMOVE_CHECK, REMOVE_FROM_QUEUE, retval)) {
+		return retval;
 	}
 
 	if( mode == PERIODIC_ONLY ) {
@@ -531,6 +517,30 @@ UserPolicy::AnalyzePolicy( int mode )
 		// which means we want the job to stay in the queue...
 	m_fire_expr_val = 0;
 	return STAYS_IN_QUEUE;
+}
+
+
+bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, int on_true_return, int & retval)
+{
+	ASSERT(attrname);
+
+	int result;
+	m_fire_expr = attrname;
+	if(!m_ad->EvalBool(attrname, m_ad, result)) {
+		retval = UNDEFINED_EVAL;
+		return true;
+	}
+	if( result ) {
+		m_fire_expr_val = 1;
+		m_fire_source = FS_JobAttribute;
+		retval = on_true_return;
+		return true;
+	}
+
+	return false;
+
+	//MyString macroname = "system_";
+	//macroname += attrname;
 }
 
 const char* UserPolicy::FiringExpression(void)

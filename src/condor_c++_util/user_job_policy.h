@@ -231,9 +231,33 @@ class UserPolicy
 		UserPolicy(const UserPolicy&);
 		UserPolicy& operator=(const UserPolicy&);
 
+		/*
+		Consider a single periodic_* policy, both in the job ad and the
+		system_peridoic_* version.  If true, we should return retval.  The
+		retval should be on_true_return (if the expression evaluated to true),
+		or UNDEFINED_EVAL if the classad is damaged.  If false, we didn't
+		trigger the policy.  The details on what why will be automatically
+		set.
+
+		attrname - The job attribute to consider.  Should be one of the ATTR_*
+		constants, as it may be stored beyond the lifespan of this function
+		(but not the object).  The corresponding system version is found by
+		simply stuffing "system_" in front of it.
+
+		on_true_return - if the job attribute (or corresponding system one)
+		evaluates to true, return this.
+
+		retval - For output.  If this function returns true, this is the value
+		that AnalyzePolicy should return.  If this function is false, retval is
+		undefined.
+		*/
+		bool AnalyzeSinglePeriodicPolicy(const char * attrname, int on_true_return, int & retval);
+
 	private: /* variables */
 		ClassAd *m_ad;
 	    int m_fire_expr_val;
+		enum FireSource { FS_JobAttribute, FS_SystemMacro };
+		FireSource m_fire_source;
 		const char *m_fire_expr;
 };
 
