@@ -1,3 +1,9 @@
+12/02/05 V6_6-merge-51
+   The state of the V6_6-branch for a merge into V6_7-branch.  Bring
+   the minor negotiator fix for ignoring poorly formed schedd ads, the
+   submit_info fix for specifying OSX gcc prereqs, and sonny's change
+   for calling select() with the right # of fds, not a compile-time max.
+
 11/03/05 V6_6-merge-50
    The state of the V6_6-branch for a merge into V6_7-branch.  moves
    todd's new "jobs define their own JOB_START_DELAY" feature from
