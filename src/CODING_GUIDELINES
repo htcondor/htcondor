@@ -57,6 +57,15 @@ for() loops:
     {for(int i = 0; i < 10; i++) { }}
 
 
+Pre-Processor Usage:
+
+- When checking a given preprocessor define, use "#if FOO", not
+  "#ifdef FOO".  when FOO is undefined, "#if FOO" is still false, not
+  an error.  However, if FOO is defined to 0, FALSE, etc, then "#ifdef
+  FOO" is true, which is not what you'd expect.  Also, anything
+  defined by autoconf (which will be more and more of our preprocessor
+  definitions as time goes on) will always be defined, and when
+  disabled, will be defined to 0, so #ifdef is just not safe.
 
 
 

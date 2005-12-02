@@ -1954,6 +1954,7 @@ void DaemonCore::Driver()
 		FD_ZERO(&writefds);
 		FD_ZERO(&exceptfds);
 		min_connect_timeout = 0;
+        int maxfd = 0;
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
@@ -1984,6 +1985,9 @@ void DaemonCore::Driver()
 						// to read.
 					FD_SET( (*sockTable)[i].sockd,&readfds);
 				}
+                if ( (*sockTable)[i].sockd >= maxfd ) {
+                    maxfd = (*sockTable)[i].sockd + 1;
+                }
             }
 		}
 
@@ -1993,6 +1997,9 @@ void DaemonCore::Driver()
 		// select on.
 		for (i = 0; i < nPipe; i++) {
 			if ( (*pipeTable)[i].pipefd ) {	// if a valid entry....
+                if ( (*pipeTable)[i].pipefd >= maxfd ) {
+                    maxfd = (*pipeTable)[i].pipefd + 1;
+                }
 				switch( (*pipeTable)[i].handler_type ) {
 				case HANDLE_READ:
 					FD_SET( (*pipeTable)[i].pipefd,&readfds);
@@ -2012,6 +2019,9 @@ void DaemonCore::Driver()
 		// select on.  We write to async_pipe if a unix async signal
 		// is delivered after we unblock signals and before we block on select.
 		FD_SET(async_pipe[0],&readfds);
+        if ( async_pipe[0] >= maxfd ) {
+            maxfd = async_pipe[0] + 1;
+        }
 #endif
 
 		if ( only_allow_soap ) {
@@ -2033,7 +2043,11 @@ void DaemonCore::Driver()
 					// is ever "compacted" or otherwise rearranged
 					// after sockets are registered into it.
 				if (-1 != soap_ssl_sock) {
-					FD_SET( (*sockTable)[soap_ssl_sock].sockd, &readfds );
+					int soap_sock_fd = (*sockTable)[soap_ssl_sock].sockd;
+					FD_SET( soap_sock_fd, &readfds );
+					if ( soap_sock_fd >= maxfd ) {
+						maxfd = soap_sock_fd + 1;
+					}
 				}
 			}
 		}
@@ -2055,11 +2069,10 @@ void DaemonCore::Driver()
 
 		errno = 0;
 		time_t time_before = time(NULL);
-		rv = select( FD_SETSIZE, (SELECT_FDSET_PTR) &readfds,
+		rv = select( maxfd, (SELECT_FDSET_PTR) &readfds,
 					 (SELECT_FDSET_PTR) &writefds,
 					 (SELECT_FDSET_PTR) &exceptfds, ptimer );
 		CheckForTimeSkip(time_before, timer.tv_sec);
-
 
 
 		tmpErrno = errno;
@@ -2305,7 +2318,8 @@ void DaemonCore::Driver()
 							struct timeval stimeout;
 							stimeout.tv_sec = 0;	// set timeout for a poll
 							stimeout.tv_usec = 0;
-							int sresult = select( FD_SETSIZE,
+
+							int sresult = select( (*sockTable)[i].sockd + 1,
 								(SELECT_FDSET_PTR) &readfds,
 								(SELECT_FDSET_PTR) 0,(SELECT_FDSET_PTR) 0,
 								&stimeout );
@@ -2448,7 +2462,8 @@ int DaemonCore::ServiceCommandSocket()
 		FD_ZERO(&fds);
 		FD_SET( (*sockTable)[initial_command_sock].sockd,&fds);
 		errno = 0;
-		rv = select(FD_SETSIZE,(SELECT_FDSET_PTR) &fds, NULL, NULL, &timer);
+		rv = select((*sockTable)[initial_command_sock].sockd + 1,
+                (SELECT_FDSET_PTR) &fds, NULL, NULL, &timer);
 #ifndef WIN32
 		// Unix
 		if(rv < 0) {

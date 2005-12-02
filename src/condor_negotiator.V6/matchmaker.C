@@ -936,7 +936,9 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 			{
 				dprintf (D_ALWAYS,"  Error!  Could not get %s and %s from ad\n",
 							ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
-				return FALSE;
+				dprintf( D_ALWAYS, "  Ignoring this schedd and continuing\n" );
+				scheddAds.Delete( schedd );
+				continue;
 			}	
 			num_idle_jobs = 0;
 			schedd->LookupInteger(ATTR_IDLE_JOBS,num_idle_jobs);
