@@ -290,11 +290,16 @@ condor__abortTransaction(struct soap *s,
 						 struct condor__Transaction transaction,
 						 struct condor__abortTransactionResponse & result )
 {
+	dprintf(D_FULLDEBUG,
+			"SOAP entered abortTransaction(), transaction: %d\n",
+			transaction.id);
+
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
 		result.response.message = "Invalid transaction.";
 	} else {
+			// XXX: I believe this condition is always true!
 		if (transaction.id && transaction.id == current_trans_id) {
 			AbortTransactionAndRecomputeClusters();
 			dprintf(D_FULLDEBUG,
@@ -497,13 +502,12 @@ condor__removeJob(struct soap *s,
 			result.response.code = FAIL;
 			result.response.message = "Failed to abort job.";
 		} else {
-			if (removeJob(clusterId, jobId)) {
-				result.response.code = FAIL;
-				result.response.message = "Failed to remove job.";
-			} else {
-				result.response.code = SUCCESS;
-				result.response.message = "Poor thing, it just wanted to run.";
-			}
+				// We don't care about the return value because if the schedd
+				// was restarted there will be no entry in the jobs HashTable.
+			removeJob(clusterId, jobId);
+
+			result.response.code = SUCCESS;
+			result.response.message = "Poor thing, it just wanted to run.";
 		}
 	}
 
@@ -533,12 +537,12 @@ condor__holdJob(struct soap *s,
 		extendTransaction(transaction);
 
 		if (!holdJob(clusterId,jobId,reason,transaction.id ? false : true,
-					 email_user, email_admin, system_hold)) {
+					 true, email_user, email_admin, system_hold)) {
 			result.response.code = FAIL;
 			result.response.message = "Failed to hold job.";
 		} else {
 			result.response.code = SUCCESS;
-			result.response.message =
+			result.response.message = 
 				"Release soon, before the job runs out of air.";
 		}
 	}
@@ -810,10 +814,16 @@ condor__sendFile(struct soap *soap,
 			result.response.message = "Invalid transaction.";
 		} else {
 			CondorError errstack;
+			char *data_buffer = NULL;
+			int data_size = 0;
+			if (NULL != data) {
+				data_buffer = (char *) data->__ptr;
+				data_size = data->__size;
+			}
 			if (0 == job->put_file(MyString(filename),
 								   offset,
-								   (char *) data->__ptr,
-								   data->__size,
+								   data_buffer,
+								   data_size,
 								   errstack)) {
 				result.response.code = SUCCESS;
 				result.response.message = "That's quite a fastball.";
