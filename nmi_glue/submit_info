@@ -60,9 +60,10 @@ prereqs   = everything-1.0.0
 ########################################
 [
 platforms = ppc_macos_10.3
-prereqs   = gcc-3.1
-# V6_6 requires gcc-3.1, because we're using an older
-# version of globus that won't compile with 3.3...
+prereqs   = gcc-3.3
+# V6_7 requires gcc-3.3, because the latest gsoap external
+# causes gcc-3.1 to seg fault.  since we're using a newer
+# globus external, gcc-3.3 can now build all our externals. 
 ]
 
 
