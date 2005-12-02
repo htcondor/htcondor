@@ -14,6 +14,8 @@ Contents, and add a new section, using the existing format.  Thank you.
 
 1) The interaction of my_hostname.C and condor_config.C
 2) Always use the Daemon Object to locate daemons
+3) Deciding if a ClassAd-related utility belongs in classad_helpers.C
+   or in condor_classad/classad_util.C
 
 
 ###########################################################################
@@ -112,5 +114,41 @@ Condor *MUST USE THE DAEMON OBJECT*.  There is a lot of code to handle
 special cases and rules for locating daemons in there.  Do *NOT* just
 try to query the collector yourself, since you won't get it right.
 Thanks. 
+
+
+###########################################################################
+# 3) classad_helpers.C vs. condor_classad/classad_util.C
+###########################################################################
+
+> Just a quick question, why should this go into classad_util and not
+> classad_helpers?
+
+here's how i see the difference:
+
+condor_classad *could* be a stand-alone library, totally separate from
+the condor source (except from a few templates and util objects that
+we used to implement classads themselves), and used as an "external"
+to our build.  in fact, that's exactly what's going on with "new
+classads" right now.  so, things should only go in there that are
+specific to classads themselves, and don't really depend on the rest
+of the condor source.  therefore, condor_classad/classad_util.[Ch]
+should be for utilities that don't belong as actual member functions
+of the ClassAd object itself, but are useful utilities for
+manipulating classads, unrelated to condor.  since InsertIntoAd() just
+takes a classad and some strings (or ints, or whatever), and builds up
+a valid thing to insert into that classad, that's independent of
+condor, and is really a utility of the classad library.
+
+condor_c++_util/classad_helpers.[Ch], on the other hand, are things
+very specific to the condor source, that rely on classads.  it's sort
+of a silly file, but at the time, there was no other good place to put
+those things.  basically, it's for stuff like "assuming this classad
+is representing a condor job, find out something i need to know based
+on the possible attribute names it could have".  that's clearly NOT
+general purpose enough to be part of the classad library itself, but
+it's a handy helper method to have for the various places in the
+condor code where we need to look something up from a classad.
+
+make sense?
 
 
