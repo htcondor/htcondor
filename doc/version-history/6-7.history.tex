@@ -83,6 +83,11 @@ user log event for grid universe jobs.
 
 \begin{itemize}
 
+\item Fixed the following problems with the Condor SOAP interface: a) placing a
+job on hold now stops the job as expected, b) fixed potential schedd segfaults
+when sending NULL buffers via SOAP, c) fixed compatibility problems with .NET
+clients
+
 \item Fixed a potential security problem where any machine in the pool
   could advertise an additional \Condor{negotiator} in the pool.
   Now, the \Condor{collector} will only accept negotiator classads
