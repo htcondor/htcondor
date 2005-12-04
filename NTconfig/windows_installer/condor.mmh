@@ -1,0 +1,26 @@
+;----------------------------------------------------------------------------
+;--- Set up some options specific to my requirements ------------------------
+;----------------------------------------------------------------------------
+#define? DEPT_ARP_URL_PUBLISHER          http://www.cs.wisc.edu/condor
+#define? DEPT_ARP_URL_TECHNICAL_SUPPORT  http://www.cs.wisc.edu/condor
+#define? DEPT_NAME                       The Condor Team
+#define? DEPT_ADDRESS                    University of Wisconsin, Madison
+#define? COMPANY_CONTACT_NAME            <$DEPT_NAME>
+#define? COMPANY_CONTACT_NAME_PHONE                      ;;No phone
+
+
+;----------------------------------------------------------------------------
+;--- Override/set some standard defaults ------------------------------------
+;----------------------------------------------------------------------------
+#define? DEFAULT_SERVICE_CONTROL_UNINSTALL_EVENTS            ;;I think this option is safer than the MAKEMSI default
+#define? DEFAULT_SERVICE_CONTROL_INSTALL_EVENTS              ;;I think this option is better
+#define? DEFAULT_FILE_WANT_FILEHASH                Y         ;;My box can generate MD5 hashes!
+#define? COMPANY_PREPROCESS_LICENCE_FILE           Y         ;;Default is to preprocess licence files
+#define? MAKEMSI_HTML_EXTENSION                    hta       ;;Default extension (HTML Application - gets around WINXP SP2 issue)
+#define? UISAMPLE_LEFTSIDE_TEXT_FONT_COLOR         &H7F0000  ;;Medium Blue in BGR (believe it or not...)
+
+;----------------------------------------------------------------------------
+;--- Include MAKEMSI support ------------------------------------------------
+;----------------------------------------------------------------------------
+#include "DEPT.MMH"
+
