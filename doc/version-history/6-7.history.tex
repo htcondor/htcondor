@@ -77,6 +77,15 @@ events, but are used for all grid universe jobs.
 \item When known, CPU-usage information will be reflected in the Terminated
 user log event for grid universe jobs.
 
+\item Changed ClassAd expression evaluation so that logical and and
+logical or are short-circuited. This means that an expression like
+\verb@TARGET.foo && TARGET.bar@ will not evaluate \verb@TARGET.bar@
+if \verb@TARGET.foo@ evaluates to false. This will speed up some
+expressions, particularly those involving user-defined
+functions. Although this was thoroughly tested, this is the sort of
+change that could have subtle, unexpected behavior, so please be on
+the lookout for problems that might be caused by it. 
+
 \end{itemize}
 
 \noindent Bugs Fixed:
