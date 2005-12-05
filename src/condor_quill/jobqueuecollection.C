@@ -523,9 +523,9 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 	char	tmp_line_str1[MAX_FIXED_SQL_STR_LENGTH];
 	char    tmp_line_str2[MAX_FIXED_SQL_STR_LENGTH];
 
-	AssignOpBase*	expr;		// For Each Attribute in ClassAd
-	VariableBase* 	nameExpr;	// For Attribute Name
-	StringBase* 	valExpr;	// For Value
+	AssignOp*	expr;		// For Each Attribute in ClassAd
+	Variable* 	nameExpr;	// For Attribute Name
+	String* 	valExpr;	// For Value
 
 
 	// The below two attributes should be inserted into 
@@ -557,9 +557,9 @@ JobQueueCollection::makeHistoryAdSqlStr(char* cid, char* pid, ClassAd* ad,
 		
 	ad->ResetExpr(); // for iteration initialization
 
-	while((expr = (AssignOpBase*)(ad->NextExpr())) != NULL) {
-	  nameExpr = (VariableBase*)expr->LArg(); // Name Express Tree
-	  valExpr = (StringBase*)expr->RArg();	// Value Express Tree
+	while((expr = (AssignOp*)(ad->NextExpr())) != NULL) {
+	  nameExpr = (Variable*)expr->LArg(); // Name Express Tree
+	  valExpr = (String*)expr->RArg();	// Value Express Tree
 	  val = valExpr->Value();	      		// Value
 	  if (val == NULL) {
 		  break;
