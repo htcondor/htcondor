@@ -141,6 +141,23 @@
 ;--- set CONDOR_CONFIG registry key ----------------------------------------
 <$Registry HKEY="LOCAL_MACHINE" KEY="software\Condor"  VALUE="[INSTALLDIR_NTS]\condor_config" MsiFormatted="VALUE" Name="CONDOR_CONFIG">
 
+;--- Install the Condor Service ----------------------------------------
+<$Component "Condor" Create="Y" Directory_="INSTALLDIR">
+   ;--- The service EXE MUST be the keypath of the component ----------------
+   <$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
+
+#(
+   <$ServiceInstall
+                  Name="Condor"
+           DisplayName="Condor"
+           Description="Condor Master Daemon"
+               Process="OWN"
+			     Start="AUTO"
+   >
+#)
+<$/Component>
+
+
 ;--- Set Config file parameters ---------------------------------------------
 #(
 <$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^ Args=^

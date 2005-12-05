@@ -1,9 +1,16 @@
 @echo off
+set MAKEMSI_DB_COMPARE_TEMPLATE.MSI=%cd%\MakeMSI\UiSample.MSI
+set PPWIZARD_TEST_REGINA_VER=3.3(JULIAN)(MT)
+set MAKEMSI_DIR=%cd%\MakeMSI\
+set MAKEMSI_MSIVAL2_DIR=
+set MAKEMSI_WILOGUTL_EXE=
+set REGINA_MACROS=%cd%\MakeMSI
+set PPWIZARD_INCLUDE=%cd%\MakeMsi\
 setlocal
 if A%CONDORRELEASEDIR%==A set CONDORRELEASEDIR=%cd%\..\..\release-dir
-set PATH=%PATH%;"C:\Program Files\MakeMSI";%SystemRoot%\system32
+set PATH=%PATH%;"%cd%\MakeMSI";%SystemRoot%\system32
 
-@REM *** PVCS: $Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/NTconfig/windows_installer/mm.cmd,v 1.1.2.1 2005-12-04 02:26:37 stolley Exp $
+@REM *** PVCS: $Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/NTconfig/windows_installer/mm.cmd,v 1.1.2.2 2005-12-05 07:01:29 stolley Exp $
 @REM ************************************
 @REM ******** RC = 0 means OK ***********
 @REM ************************************
