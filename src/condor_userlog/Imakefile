@@ -1,5 +1,5 @@
 NAME = condor_userlog
-all_target($(NAME))
+all_target($(NAME) condor_check_userlogs)
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
@@ -13,5 +13,12 @@ strip_target($(NAME),bin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+
+c_plus_target(condor_check_userlogs,condor_check_userlogs.o,$(LIB))
+release_target(condor_check_userlogs,bin,EXECUTABLE_MODE)
+strip_target(condor_check_userlogs,bin,EXECUTABLE_MODE)
+static_target(condor_check_userlogs,condor_check_userlogs.o,$(LIB),$(STATIC_DIR)/bin)
+pure_c_plus_target(condor_check_userlogs.pure,condor_check_userlogs.o,$(LIB))
+purecov_c_plus_target(condor_check_userlogs.pc,condor_check_userlogs.o,$(LIB))
 
 html:

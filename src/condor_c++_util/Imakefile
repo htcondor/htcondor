@@ -164,7 +164,6 @@ test_libcondorapi.o: test_libcondorapi.C
 c_plus_nowrap_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
 
 c_plus_target(test_check_events,test_check_events.o,$(LIB))
-c_plus_target(check_log_files,check_log_files.o,$(LIB))
 c_plus_target(test_multi_log,test_multi_log.o,$(LIB))
 c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
 c_plus_target(test_log_reader,test_log_reader.o,$(LIB))

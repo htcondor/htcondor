@@ -22,8 +22,6 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include <stdio.h>
-#include <string>
 #include "string_list.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
@@ -36,7 +34,8 @@ int main(int argc, char **argv)
 	int		result = 0;
 
 	if ( argc <= 1 || (argc >= 2 && !strcmp("-usage", argv[1])) ) {
-		printf("Usage: check_log_files <log file 1> <log file 2> ...\n");
+		printf("Usage: condor_check_userlogs <log file 1> "
+				"[log file 2] ... [log file n]\n");
 		exit(0);
 	}
 
