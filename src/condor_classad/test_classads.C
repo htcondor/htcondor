@@ -170,6 +170,8 @@ void test_integer_value(ClassAd *classad, const char *attribute_name,
     int expected_value,int line_number, TestResults *results);
 void test_eval_bool(ClassAd *classad, const char  *attribute_name,
 	int expected_value, int line_number, TestResults *results);
+void test_eval_error(ClassAd *classad, const char  *attribute_name,
+	int line_number, TestResults *results);
 void test_token_float(const Token *token, float number,
     int line_number, TestResults *test_results);
 void test_string_value(ClassAd *classad, const char *attribute_name,
@@ -206,6 +208,8 @@ static void make_big_string(int length, char **string,
     char **quoted_string);
 void test_random(TestResults *results);
 void test_equality(TestResults *results);
+void test_operators(TestResults *results);
+void test_debug_function_run(bool expect_run, int line_number, TestResults *results);
 
 int 
 main(
@@ -450,6 +454,7 @@ main(
         test_random(&test_results);
     }
 
+    test_operators(&test_results);
     test_equality(&test_results);
 
 	//ClassAd *many_ads[LARGE_NUMBER_OF_CLASSADS];
@@ -872,6 +877,42 @@ test_eval_bool(
 	} else {
 		printf("Failed: %s is %d not %d in line %d\n",
 			   attribute_name, actual_value, expected_value, line_number);
+		results->AddResult(false);
+	}
+	return;
+}
+
+/***************************************************************
+ *
+ * Function: test_eval_error
+ * Purpose:  Given a classad and an attribute within the classad,
+ *           test that the attribute evaluates an error
+ *
+ ***************************************************************/
+void 
+test_eval_error(
+    ClassAd     *classad,        // IN: The ClassAd we're examining
+	const char  *attribute_name, // IN: The attribute we're examining
+	int         line_number,     // IN: The line number to print
+    TestResults *results)        // OUT: Modified to reflect result of test
+{
+ 	int is_error;
+	ExprTree *tree;
+	EvalResult val;
+
+	tree = classad->Lookup(attribute_name);
+	if(!tree) {
+        is_error = false;
+    } else if (tree->EvalTree(classad, NULL, &val) && val.type == LX_ERROR) {
+        is_error = true;
+    } else {
+        is_error = false;
+    }
+	if (is_error) {
+		printf("Passed: Found expected error in line %d\n", line_number);
+		results->AddResult(true);
+	} else {
+		printf("Failed: Did not find error in line %d\n", line_number);
 		results->AddResult(false);
 	}
 	return;
@@ -1676,4 +1717,132 @@ void test_equality(TestResults *results)
         results->AddResult(true);
     }
     return;
+}
+
+// I wrote this function to ensure that short-circuiting
+// in ClassAds works correctly, and to ensure that when
+// I added short-circuiting, I didn't break normal evaluation
+void test_operators(TestResults *results)
+{
+    extern bool classad_debug_function_run;
+    char *classad_string = 
+        // Test short-circuiting with logical OR
+        "A = TRUE || _debug_function_(), "
+        "B = 1 || _debug_function_(), "
+        "C = 1.2 || _debug_function_(), "
+        // Test no short-circuiting with logical OR
+        "D = \"foo\" || _debug_function_(), "
+        "E = FALSE || _debug_function_(), "
+        "G = 0 || _debug_function_(), "
+        "H = 0.0 || _debug_function_(), "
+        // Test short-circuiting with logical AND
+        "I = FALSE && _debug_function_(), "
+        "J = 0 && _debug_function_(), "
+        "K = 0.0 && _debug_function_(), "
+        "L = \"foo\" && _debug_function_(), "
+        // Test no short-circuiting with logical AND
+        "M = TRUE && _debug_function_(), "
+        "N = 1 && _debug_function_(), "
+        "O = 1.2 && _debug_function_() ";
+    ClassAd *c = new ClassAd(classad_string, ',');
+
+    // Test short-circuiting with logical OR
+    classad_debug_function_run = false;
+    test_eval_bool(c, "A", 1, __LINE__, results);
+    test_debug_function_run(false, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "B", 1, __LINE__, results);
+    test_debug_function_run(false, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "C", 1, __LINE__, results);
+    test_debug_function_run(false, __LINE__, results);
+
+    // Test no short-circuiting with logical OR
+    classad_debug_function_run = false;
+    test_eval_bool(c, "D", 1, __LINE__, results);
+    test_debug_function_run(true, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "E", 1, __LINE__, results);
+    test_debug_function_run(true, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "G", 1, __LINE__, results);
+    test_debug_function_run(true, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "H", 1, __LINE__, results);
+    test_debug_function_run(true, __LINE__, results);
+
+    // Test short-circuiting with logical AND
+    classad_debug_function_run = false;
+    test_eval_bool(c, "I", 0, __LINE__, results);
+    test_debug_function_run(false, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "J", 0, __LINE__, results);
+    test_debug_function_run(false, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "K", 0, __LINE__, results);
+    test_debug_function_run(false, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_error(c, "L", __LINE__, results);
+    test_debug_function_run(false, __LINE__, results);
+
+    // Test no short-circuiting with logical AND
+    classad_debug_function_run = false;
+    test_eval_bool(c, "M", 1, __LINE__, results);
+    test_debug_function_run(true, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "N", 1, __LINE__, results);
+    test_debug_function_run(true, __LINE__, results);
+
+    classad_debug_function_run = false;
+    test_eval_bool(c, "O", 1, __LINE__, results);
+    test_debug_function_run(true, __LINE__, results);
+
+}
+
+/***************************************************************
+ *
+ * Function: test_eval_error
+ * Purpose:  Given a classad and an attribute within the classad,
+ *           test that the attribute evaluates an error
+ *
+ ***************************************************************/
+void 
+test_debug_function_run(
+    bool        expect_run,      // IN: Do we expect that it ran?
+    int         line_number,     // IN: The line number to print
+    TestResults *results)        // OUT: Modified to reflect result of test
+{
+    extern bool classad_debug_function_run;
+    if (expect_run) {
+        if (classad_debug_function_run) {
+            printf("Passed: ClassAd debug function ran as expected in line %d\n", 
+                   line_number);
+            results->AddResult(true);
+        } else {
+            printf("Failed: ClassAd debug function did not run, but was expected to in line %d\n", 
+                   line_number);
+            results->AddResult(false);
+        }
+    } else {
+        if (!classad_debug_function_run) {
+            printf("Passed: ClassAd debug function did not run, and was not expected to in line %d.\n", 
+                   line_number);
+            results->AddResult(true);
+        } else {
+            printf("Failed: ClassAd debug function run when it was not expected to in line %d.\n", 
+                   line_number);
+            results->AddResult(false);
+        }
+    }
+
+	return;
 }

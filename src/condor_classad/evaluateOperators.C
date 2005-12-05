@@ -42,35 +42,39 @@ _EvalTree( const AttrList *myScope, const AttrList *targetScope, EvalResult *res
 	Value		lValue, rValue, resultValue;
 	OpKind		op;
 
-	// evaluate the left and right children of the expression
-	if( lArg ) lArg->EvalTree( myScope, targetScope, &lArgResult );
-	if( rArg ) rArg->EvalTree( myScope, targetScope, &rArgResult );
-
-	// translate from old types/values to new types/values
-	EvalResultToValue( lArgResult, lValue );
-	EvalResultToValue( rArgResult, rValue );
-
-	// translate from old operation to new operation
+	// translate from the lexer's name for the operation to a reasonable operation name
 	op = LexemeTypeToOpKind( MyType() );
 
-	// convert overloaded subtraction operator to unary minus
-	if( op == SUBTRACTION_OP && lArg == NULL ) {
-		operate( UNARY_MINUS_OP, rValue, resultValue );
-	} else
-	// convert overloaded addition operator to parenthesis operator
-	if( op == ADDITION_OP && lArg == NULL ) {
-		resultValue = rValue;
-	} else
-	if( op == TERNARY_OP ) {
-		// operator was assignment operator
-		resultValue = rValue;
-	} else {
-		// use evaluation function
-		operate( op, lValue, rValue, resultValue );
-	}
+	// evaluate the left side
+	if( lArg ) lArg->EvalTree( myScope, targetScope, &lArgResult );
+    EvalResultToValue( lArgResult, lValue );
+    
+    if (!operateShortCircuit(op, lValue, resultValue)) {
 
-	// translate from new types/values to old types/values
-	ValueToEvalResult( resultValue, (*result) );
+        // Evaluating just the left side was insufficient, so
+        // we now evaluate the right-hand side. 
+        if( rArg ) rArg->EvalTree( myScope, targetScope, &rArgResult );
+        EvalResultToValue( rArgResult, rValue );
+
+        // convert overloaded subtraction operator to unary minus
+        if( op == SUBTRACTION_OP && lArg == NULL ) {
+            operate( UNARY_MINUS_OP, rValue, resultValue );
+        } else
+        // convert overloaded addition operator to parenthesis operator
+        if( op == ADDITION_OP && lArg == NULL ) {
+            resultValue = rValue;
+        } else
+        if( op == TERNARY_OP ) {
+            // operator was assignment operator
+            resultValue = rValue;
+        } else {
+            // use evaluation function
+            operate( op, lValue, rValue, resultValue );
+        }
+    }
+
+    // translate from new types/values to old types/values
+    ValueToEvalResult( resultValue, (*result) );
 
 	// this version of evaluation never fails
 	return TRUE;

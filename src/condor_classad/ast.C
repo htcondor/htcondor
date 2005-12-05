@@ -40,6 +40,8 @@ static bool name_in_list(const char *name, StringList &references);
 static void printComparisonOpToStr (char *, ExprTree *, ExprTree *, char *);
 static int calculate_math_op_length(ExprTree *lArg, ExprTree *rArg, int op_length);
 
+bool classad_debug_function_run = 0;
+
 #define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 
 void EvalResult::fPrintResult(FILE *f)
@@ -1556,7 +1558,9 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			successful_eval = FunctionRandom(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "script")) {
 			successful_eval = FunctionScript(number_of_args, evaluated_args, result);
-		} 
+		} else if (!strcasecmp(name, "_debug_function_")) {
+            successful_eval = FunctionClassadDebugFunction(number_of_args, evaluated_args, result);
+        }
 #ifdef CLASSAD_FUNCTIONS
         else {
 			successful_eval = FunctionSharedLibrary(number_of_args, 
@@ -1839,5 +1843,17 @@ int Function::FunctionRandom(
         result->type = LX_ERROR;
     }
 	return success;
+}
+
+int Function::FunctionClassadDebugFunction(
+	int number_of_args,         
+	EvalResult *evaluated_args, 
+	EvalResult *result)         
+{
+    classad_debug_function_run = true;
+    result->i    = 1;
+    result->type = LX_INTEGER;
+
+	return TRUE;
 }
 

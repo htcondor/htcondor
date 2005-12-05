@@ -83,6 +83,7 @@ extern char *opString[];
 
 // public access to operation function
 void operate (OpKind, Value &, Value &);
+bool operateShortCircuit (OpKind, Value &, Value &);
 void operate (OpKind, Value &, Value &, Value &);
 
 #endif//__OPERATORS_H__

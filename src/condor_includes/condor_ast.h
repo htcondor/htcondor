@@ -401,6 +401,9 @@ class Function: public FunctionBase
 						EvalResult *result);
     int FunctionRandom(int number_of_arguments, EvalResult *arguments, 
 						EvalResult *result);
+    int FunctionClassadDebugFunction(int number_of_args, EvalResult *evaluated_args, 
+                                     EvalResult *result);
+
 };
 
 extern	int		Parse(const char*, ExprTree*&);

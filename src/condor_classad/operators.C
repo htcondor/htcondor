@@ -27,6 +27,7 @@
 static void _doOperation	(OpKind,Value&,Value&,Value&,bool,bool,bool,Value&);
 static void doComparison	(OpKind, Value&, Value&, Value&);
 static void doArithmetic	(OpKind, Value&, Value&, Value&);
+static bool doLogicalShortCircuit (OpKind op, Value &v1, Value &result);
 static void doLogical	 	(OpKind, Value&, Value&, Value&);
 static void doBitwise	 	(OpKind, Value&, Value&, Value&);
 static void doRealArithmetic(OpKind, Value&, Value&, Value&);
@@ -88,6 +89,21 @@ operate (OpKind op, Value &op1, Value &op2, Value &result)
 	Value dummy;
 
 	_doOperation (op, op1, op2, dummy, true, true, false, result);
+}
+
+bool 
+operateShortCircuit (OpKind op, Value &op1, Value &result)
+{
+    bool did_short_circuit;
+    if (op == LOGICAL_OR_OP || op == LOGICAL_AND_OP) 
+    {
+        did_short_circuit = doLogicalShortCircuit(op, op1, result);
+    }
+    else
+    {
+        did_short_circuit = false;
+    }
+    return did_short_circuit;
 }
 
 
@@ -367,6 +383,79 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	return;
 }
 
+static bool
+doLogicalShortCircuit (OpKind op, Value &v1, Value &result)
+{
+    int       i1;
+    double    r1;
+    ValueType vt1 = v1.getType();
+    bool      did_short_circuit;
+
+    did_short_circuit = false;
+    v1.isIntegerValue (i1);
+    v1.isRealValue (r1);
+
+    if (op == LOGICAL_OR_OP)
+    {
+        // no logic on strings --- a string is equivalent to the ERROR
+        // value. But due to the logic in doLogical, we can't short-circuit
+        // on it, because "somestring" || 3 would evaluate to 1. Stupid
+        // old ClassAds.
+        if (vt1 == STRING_VALUE) 
+        {
+            did_short_circuit = false;
+        }
+        else
+        if ((vt1 == INTEGER_VALUE && i1 != 0) || (vt1 == REAL_VALUE && r1 != 0)) 
+        {
+            result.setIntegerValue(1);
+            did_short_circuit = true;
+        }
+        // We don't short-circuit on error because according to the
+        // stupid semantics of old ClassAds, error || 3 is 1. (See
+        // doLogical.) Ditto for undefined, but that's actually good.
+        else
+        {
+            did_short_circuit = false;
+        }
+    }
+    else
+    if (op == LOGICAL_AND_OP)
+    {
+        // no logic on strings --- a string is equivalent to the ERROR
+        // value. 
+        if (vt1 == STRING_VALUE) 
+        {
+            result.setErrorValue();
+            did_short_circuit = true;
+        }
+        else
+        if ((vt1 == INTEGER_VALUE && i1 == 0) || (vt1==REAL_VALUE && r1 == 0))
+        {
+            result.setIntegerValue(0);
+            did_short_circuit = true;
+        }
+        else
+        if (vt1 == ERROR_VALUE) 
+        {
+            result.setErrorValue();
+            did_short_circuit = true;
+        }
+        else
+        if (vt1 == UNDEFINED_VALUE)
+        {
+            result.setUndefinedValue();
+            did_short_circuit = true;
+        }
+        else
+        {
+            did_short_circuit = false;
+        }
+    }
+
+    // done
+    return did_short_circuit;
+}
 
 static void 
 doLogical (OpKind op, Value &v1, Value &v2, Value &result)
