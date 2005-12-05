@@ -51,7 +51,10 @@ This will cause the \Condor{master} to treat the \Condor{had} as the
 parameters \Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMIT\_PER\_RESOURCE} and
 \Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}.
 
-\item Grid universe jobs can now match-make across multiple grid-types.
+\item Grid universe jobs can now determine their grid-type via
+match-making, in addition to which resource they'll be submitted to. Thus,
+you can submit a grid universe job that may become a gt2, gt4, or condor
+grid-type job, depending on what resource ad it's matched with.
 
 \item Added support for a new configuration value,
   \Macro{STARTD\_CRON\_AUTOPUBLISH}.
