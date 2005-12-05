@@ -378,22 +378,50 @@ JobQueueSnapshot::getNextProcAd(ClassAd*& ad)
 QuillErrCode
 JobQueueSnapshot::iterateAllClassAds(ClassAd*& ad)
 {
-	QuillErrCode		st;
+	QuillErrCode		st1, st2;
 
 	/* while there are still more procads associated with current clusterad,
 	   dont get another clusterad
 	*/
 	
-	st = getNextProcAd(ad);
-	while(st == DONE_PROCADS_CUR_CLUSTERAD) {
-		getNextClusterAd(curClusterId, curClusterAd);
-		st = getNextProcAd(ad);
+	st1 = getNextProcAd(ad);
+	while(st1 == DONE_PROCADS_CUR_CLUSTERAD) {
+		st2 = getNextClusterAd(curClusterId, curClusterAd);
+		
+			//a sanity check for a race condition that should never occur
+			//but has, in the past. Not having the below check may result
+			//in an infinite loop. If this sanity check is removed, one
+			//way to recreate this infinite loop
+			//is by simply submitting 2 sets of jobs (so two 
+			//clusters) and then logging into the db and deleting the 
+			//clusterad attributes for the most recent cluster. Then simply
+			//issue a condor_q and the infinite loop will result
+			//I'm not sure how this race condition occurs. Firstly, querying
+			//clusterads and procads are done within a transaction. Secondly,
+			//if st2 was in fact DONE_CLUSTERADS_CURSOR, then st1 should have
+			//been DONE_PROCADS_CURSOR and not DONE_PROCADS_CUR_CLUSTERAD. 
+			//So if st1 was DONE_PROCADS_CURSOR, we'd immediately exit the 
+			//while loop, and there wouldn't be an infinite loop.
+			//Anyway, this sanity check avoids this race condition although
+			//we are still not sure how this race condition is caused in the
+			//first place
+			// - Ameet 10/18
+		if(st2 == DONE_CLUSTERADS_CURSOR) {
+			break;
+		}
+		st1 = getNextProcAd(ad);
 	};
 
-	if (st == SUCCESS) {
+	if (st1 == SUCCESS) {
 		ad->ChainToAd(curClusterAd);
 	}	
-	else if (st == DONE_PROCADS_CURSOR || st == FAILURE) {
+
+		//the third check here is triggered when the above bizarre race 
+		//condition occurs
+	else if (st1 == DONE_PROCADS_CURSOR 
+			 || st1 == FAILURE 
+			 || (st1 == DONE_PROCADS_CUR_CLUSTERAD 
+				 && st2 == DONE_CLUSTERADS_CURSOR)) {
 		return DONE_JOBS_CURSOR;
 	}
 	return SUCCESS;
