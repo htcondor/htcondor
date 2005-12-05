@@ -1,0 +1,29 @@
+\begin{ManPage}{\label{man-condor-check-userlogs}\Condor{check\_userlogs}}{1}
+{Check user log files for errors}
+\Synopsis \SynProg{\Condor{check\_userlogs}}
+\Arg{UserLogFile1}
+\oArg{{UserLogFile2} \Dots {UserLogFileN} }
+
+
+\index{Condor commands!condor\_check\_userlogs}
+\index{condor\_check\_userlogs command}
+
+\Description
+
+\Condor{check\_userlogs} is a program for checking a user log or
+set of users logs for errors.  (Errors include things such as an
+execute or terminated event without a corresponding submit event,
+multiple terminated events for the same job, etc.)
+
+\Condor{check\_userlogs} is especially useful for debugging
+\Condor{dagman} problems.  If \Condor{dagman} reports an error
+it is often useful to run \Condor{check\_userlogs} on the relevant
+log files.
+
+\ExitStatus
+
+\Condor{check\_userlogs} will exit with a status value of 0 (zero)
+upon success, and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
+
