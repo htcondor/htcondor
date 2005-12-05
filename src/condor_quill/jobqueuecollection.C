@@ -751,9 +751,9 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 	const int	OTHER_TYPE = 2;	
 	int  		value_type; // 1: Number, 
 
-	AssignOpBase*	expr;		// For Each Attribute in ClassAd
-	VariableBase* 	nameExpr;	// For Attribute Name
-	StringBase* 	valExpr;	// For Value
+	AssignOp*	expr;		// For Each Attribute in ClassAd
+	Variable* 	nameExpr;	// For Attribute Name
+	String* 	valExpr;	// For Value
 
 
 		// init of returned string
@@ -785,10 +785,10 @@ JobQueueCollection::makeCopyStr(bool bStr, char* cid, char* pid, ClassAd* ad, ch
 	
 	ad->ResetExpr(); // for iteration initialization
 
-	while((expr = (AssignOpBase*)(ad->NextExpr())) != NULL) {
+	while((expr = (AssignOp*)(ad->NextExpr())) != NULL) {
 
-		nameExpr = (VariableBase*)expr->LArg(); // Name Express Tree
-		valExpr = (StringBase*)expr->RArg();	// Value Express Tree
+		nameExpr = (Variable*)expr->LArg(); // Name Express Tree
+		valExpr = (String*)expr->RArg();	// Value Express Tree
 		val = valExpr->Value();					// Value
 		if (val == NULL) break;
 		
