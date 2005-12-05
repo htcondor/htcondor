@@ -84,6 +84,11 @@ release_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
 static_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
 strip_copy_target($(UNICOREGAHP_DIR)/ugahp.jar,lib,ugahp.jar,TEXT_MODE)
 
+release_copy_target($(NORDUGRIDGAHP_DIR)/bin/nordugrid_gahp.dynamic,sbin,nordugrid_gahp,EXECUTABLE_MODE)
+static_copy_target($(NORDUGRIDGAHP_DIR)/bin/nordugrid_gahp.static,sbin,nordugrid_gahp,EXECUTABLE_MODE)
+strip_copy_target($(NORDUGRIDGAHP_DIR)/bin/nordugrid_gahp.dynamic,sbin,nordugrid_gahp,EXECUTABLE_MODE)
+
+
 $(GAHP_DIR)/gahp_server:
 	/bin/true
 

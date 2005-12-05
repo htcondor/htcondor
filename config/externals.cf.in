@@ -21,6 +21,7 @@ EXT_GSOAP_VERSION = @ext_gsoap_version@
 EXT_PCRE_VERSION = @ext_pcre_version@
 EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
 EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
+EXT_NORDUGRIDGAHP_VERSION = @ext_nordugridgahp_version@
 
 #define WANT_EXT_GLIBC @want_ext_glibc@
 #if WANT_EXT_GLIBC && HAS_EXTERNALS
@@ -131,3 +132,5 @@ PCRE_DIR = $(EXT_INSTALL)/$(EXT_PCRE_VERSION)
 PCRE_INC = $(PCRE_DIR)/include
 
 UNICOREGAHP_DIR = $(EXT_INSTALL)/$(EXT_UNICOREGAHP_VERSION)
+
+NORDUGRIDGAHP_DIR = $(EXT_INSTALL)/$(EXT_NORDUGRIDGAHP_VERSION)

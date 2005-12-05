@@ -29,7 +29,6 @@
 #define WANT_DAGMAN_HELPER     YES
 #define WANT_NEST	NO		/* the NeST I/O module */
 #define WANT_ORACLE_UNIVERSE   NO
-#define WANT_NORDUGRID_UNIVERSE	NO
 #define WANT_DRMAA		YES
 #define WANT_QUILL		YES
 
