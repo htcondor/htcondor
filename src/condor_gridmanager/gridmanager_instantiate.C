@@ -42,7 +42,6 @@
 #include "infnbatchjob.h"
 #include "mirrorjob.h"
 #include "mirrorresource.h"
-/*
 #include "nordugridjob.h"
 #include "nordugridresource.h"
 
@@ -50,7 +49,6 @@ template class List<NordugridJob>;
 template class Item<NordugridJob>;
 template class HashTable<HashKey, NordugridResource *>;
 template class HashBucket<HashKey, NordugridResource *>;
-*/
 
 #if defined(ORACLE_UNIVERSE)
 #   include "oraclejob.h"
