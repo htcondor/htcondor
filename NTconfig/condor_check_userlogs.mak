@@ -1,20 +1,20 @@
-# Microsoft Developer Studio Generated NMAKE File, Based on condor_preen.dsp
+# Microsoft Developer Studio Generated NMAKE File, Based on condor_check_userlogs.dsp
 !IF "$(CFG)" == ""
-CFG=condor_preen - Win32 Release
-!MESSAGE No configuration specified. Defaulting to condor_preen - Win32 Release.
+CFG=condor_check_userlogs - Win32 Release
+!MESSAGE No configuration specified. Defaulting to condor_check_userlogs - Win32 Release.
 !ENDIF 
 
-!IF "$(CFG)" != "condor_preen - Win32 Debug" && "$(CFG)" != "condor_preen - Win32 Release"
+!IF "$(CFG)" != "condor_check_userlogs - Win32 Debug" && "$(CFG)" != "condor_check_userlogs - Win32 Release"
 !MESSAGE Invalid configuration "$(CFG)" specified.
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_preen.mak" CFG="condor_preen - Win32 Release"
+!MESSAGE NMAKE /f "condor_check_userlogs.mak" CFG="condor_check_userlogs - Win32 Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_preen - Win32 Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "condor_preen - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_check_userlogs - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_check_userlogs - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 !ERROR An invalid configuration is specified.
 !ENDIF 
@@ -28,7 +28,7 @@ NULL=nul
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "condor_preen - Win32 Debug"
+!IF  "$(CFG)" == "condor_check_userlogs - Win32 Debug"
 
 OUTDIR=.\..\Debug
 INTDIR=.\..\Debug
@@ -38,53 +38,50 @@ OutDir=.\..\Debug
 
 !IF "$(RECURSE)" == "0" 
 
-ALL : "$(OUTDIR)\condor_preen.exe"
+ALL : "$(OUTDIR)\condor_check_userlogs.exe"
 
 !ELSE 
 
-ALL : "condor_sysapi - Win32 Debug" "condor_qmgmt - Win32 Debug" "condor_io - Win32 Debug" "condor_classad - Win32 Debug" "condor_util_lib - Win32 Debug" "condor_cpp_util - Win32 Debug" "$(OUTDIR)\condor_preen.exe"
+ALL : "condor_sysapi - Win32 Debug" "condor_io - Win32 Debug" "condor_classad - Win32 Debug" "condor_util_lib - Win32 Debug" "condor_cpp_util - Win32 Debug" "$(OUTDIR)\condor_check_userlogs.exe"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor_cpp_util - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" "condor_classad - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN" "condor_qmgmt - Win32 DebugCLEAN" "condor_sysapi - Win32 DebugCLEAN" 
+CLEAN :"condor_cpp_util - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" "condor_classad - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN" "condor_sysapi - Win32 DebugCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
-	-@erase "$(INTDIR)\dc_stub.obj"
-	-@erase "$(INTDIR)\preen.obj"
+	-@erase "$(INTDIR)\condor_check_userlogs.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
-	-@erase "$(OUTDIR)\condor_preen.exe"
-	-@erase "$(OUTDIR)\condor_preen.ilk"
-	-@erase "$(OUTDIR)\condor_preen.pdb"
+	-@erase "$(OUTDIR)\condor_check_userlogs.exe"
+	-@erase "$(OUTDIR)\condor_check_userlogs.ilk"
+	-@erase "$(OUTDIR)\condor_check_userlogs.pdb"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_preen.bsc" 
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_check_userlogs.bsc" 
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_preen.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_preen.exe" /pdbtype:sept 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_check_userlogs.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_check_userlogs.exe" /pdbtype:sept 
 LINK32_OBJS= \
-	"$(INTDIR)\dc_stub.obj" \
-	"$(INTDIR)\preen.obj" \
+	"$(INTDIR)\condor_check_userlogs.obj" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_io.lib" \
-	"$(OUTDIR)\condor_qmgmt.lib" \
 	"$(OUTDIR)\condor_sysapi.lib"
 
-"$(OUTDIR)\condor_preen.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+"$(OUTDIR)\condor_check_userlogs.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
 
-!ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_check_userlogs - Win32 Release"
 
 OUTDIR=.\..\Release
 INTDIR=.\..\Release
@@ -94,46 +91,43 @@ OutDir=.\..\Release
 
 !IF "$(RECURSE)" == "0" 
 
-ALL : "$(OUTDIR)\condor_preen.exe"
+ALL : "$(OUTDIR)\condor_check_userlogs.exe"
 
 !ELSE 
 
-ALL : "condor_sysapi - Win32 Release" "condor_qmgmt - Win32 Release" "condor_io - Win32 Release" "condor_classad - Win32 Release" "condor_util_lib - Win32 Release" "condor_cpp_util - Win32 Release" "$(OUTDIR)\condor_preen.exe"
+ALL : "condor_sysapi - Win32 Release" "condor_io - Win32 Release" "condor_classad - Win32 Release" "condor_util_lib - Win32 Release" "condor_cpp_util - Win32 Release" "$(OUTDIR)\condor_check_userlogs.exe"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor_cpp_util - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" "condor_classad - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN" "condor_qmgmt - Win32 ReleaseCLEAN" "condor_sysapi - Win32 ReleaseCLEAN" 
+CLEAN :"condor_cpp_util - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" "condor_classad - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN" "condor_sysapi - Win32 ReleaseCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
-	-@erase "$(INTDIR)\dc_stub.obj"
-	-@erase "$(INTDIR)\preen.obj"
+	-@erase "$(INTDIR)\condor_check_userlogs.obj"
 	-@erase "$(INTDIR)\vc60.idb"
-	-@erase "$(OUTDIR)\condor_preen.exe"
-	-@erase "$(OUTDIR)\condor_preen.map"
+	-@erase "$(OUTDIR)\condor_check_userlogs.exe"
+	-@erase "$(OUTDIR)\condor_check_userlogs.map"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_preen.bsc" 
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_check_userlogs.bsc" 
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_preen.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_preen.exe" 
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_check_userlogs.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_check_userlogs.exe" 
 LINK32_OBJS= \
-	"$(INTDIR)\dc_stub.obj" \
-	"$(INTDIR)\preen.obj" \
+	"$(INTDIR)\condor_check_userlogs.obj" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_io.lib" \
-	"$(OUTDIR)\condor_qmgmt.lib" \
 	"$(OUTDIR)\condor_sysapi.lib"
 
-"$(OUTDIR)\condor_preen.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+"$(OUTDIR)\condor_check_userlogs.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
@@ -172,17 +166,17 @@ LINK32_OBJS= \
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
-!IF EXISTS("condor_preen.dep")
-!INCLUDE "condor_preen.dep"
+!IF EXISTS("condor_check_userlogs.dep")
+!INCLUDE "condor_check_userlogs.dep"
 !ELSE 
-!MESSAGE Warning: cannot find "condor_preen.dep"
+!MESSAGE Warning: cannot find "condor_check_userlogs.dep"
 !ENDIF 
 !ENDIF 
 
 
-!IF "$(CFG)" == "condor_preen - Win32 Debug" || "$(CFG)" == "condor_preen - Win32 Release"
+!IF "$(CFG)" == "condor_check_userlogs - Win32 Debug" || "$(CFG)" == "condor_check_userlogs - Win32 Release"
 
-!IF  "$(CFG)" == "condor_preen - Win32 Debug"
+!IF  "$(CFG)" == "condor_check_userlogs - Win32 Debug"
 
 "condor_cpp_util - Win32 Debug" : 
    cd "."
@@ -194,7 +188,7 @@ LINK32_OBJS= \
    $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
-!ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_check_userlogs - Win32 Release"
 
 "condor_cpp_util - Win32 Release" : 
    cd "."
@@ -208,7 +202,7 @@ LINK32_OBJS= \
 
 !ENDIF 
 
-!IF  "$(CFG)" == "condor_preen - Win32 Debug"
+!IF  "$(CFG)" == "condor_check_userlogs - Win32 Debug"
 
 "condor_util_lib - Win32 Debug" : 
    cd "."
@@ -220,7 +214,7 @@ LINK32_OBJS= \
    $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
-!ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_check_userlogs - Win32 Release"
 
 "condor_util_lib - Win32 Release" : 
    cd "."
@@ -234,7 +228,7 @@ LINK32_OBJS= \
 
 !ENDIF 
 
-!IF  "$(CFG)" == "condor_preen - Win32 Debug"
+!IF  "$(CFG)" == "condor_check_userlogs - Win32 Debug"
 
 "condor_classad - Win32 Debug" : 
    cd "."
@@ -246,7 +240,7 @@ LINK32_OBJS= \
    $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
-!ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_check_userlogs - Win32 Release"
 
 "condor_classad - Win32 Release" : 
    cd "."
@@ -260,7 +254,7 @@ LINK32_OBJS= \
 
 !ENDIF 
 
-!IF  "$(CFG)" == "condor_preen - Win32 Debug"
+!IF  "$(CFG)" == "condor_check_userlogs - Win32 Debug"
 
 "condor_io - Win32 Debug" : 
    cd "."
@@ -272,7 +266,7 @@ LINK32_OBJS= \
    $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
-!ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_check_userlogs - Win32 Release"
 
 "condor_io - Win32 Release" : 
    cd "."
@@ -286,33 +280,7 @@ LINK32_OBJS= \
 
 !ENDIF 
 
-!IF  "$(CFG)" == "condor_preen - Win32 Debug"
-
-"condor_qmgmt - Win32 Debug" : 
-   cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Debug" 
-   cd "."
-
-"condor_qmgmt - Win32 DebugCLEAN" : 
-   cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Debug" RECURSE=1 CLEAN 
-   cd "."
-
-!ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
-
-"condor_qmgmt - Win32 Release" : 
-   cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Release" 
-   cd "."
-
-"condor_qmgmt - Win32 ReleaseCLEAN" : 
-   cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Release" RECURSE=1 CLEAN 
-   cd "."
-
-!ENDIF 
-
-!IF  "$(CFG)" == "condor_preen - Win32 Debug"
+!IF  "$(CFG)" == "condor_check_userlogs - Win32 Debug"
 
 "condor_sysapi - Win32 Debug" : 
    cd "."
@@ -324,7 +292,7 @@ LINK32_OBJS= \
    $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
-!ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_check_userlogs - Win32 Release"
 
 "condor_sysapi - Win32 Release" : 
    cd "."
@@ -338,15 +306,9 @@ LINK32_OBJS= \
 
 !ENDIF 
 
-SOURCE="..\src\condor_c++_util\dc_stub.C"
+SOURCE=..\src\condor_userlog\condor_check_userlogs.C
 
-"$(INTDIR)\dc_stub.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_tools\preen.C
-
-"$(INTDIR)\preen.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\condor_check_userlogs.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

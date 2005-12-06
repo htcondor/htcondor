@@ -1,6 +1,15 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_dagman.mak
 
 ..\src\condor_dagman\dag.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\check_events.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -86,6 +95,15 @@
 	
 
 ..\src\condor_dagman\dagman_commands.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\check_events.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -163,6 +181,15 @@
 	
 
 ..\src\condor_dagman\dagman_instantiate.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\check_events.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -237,6 +264,15 @@
 	
 
 ..\src\condor_dagman\dagman_main.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\check_events.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -250,6 +286,7 @@
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\read_multiple_logs.h"\
+	"..\src\condor_c++_util\setenv.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
@@ -325,6 +362,14 @@
 	
 
 ..\src\condor_dagman\dagman_multi_dag.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_id.h"\
 	"..\src\condor_c++_util\dc_service.h"\
@@ -357,6 +402,15 @@
 	
 
 ..\src\condor_dagman\dagman_submit.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\check_events.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -435,6 +489,14 @@
 	
 
 ..\src\condor_dagman\dagman_util.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_dagman\debug.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
@@ -455,6 +517,15 @@
 	
 
 ..\src\condor_dagman\debug.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\dc_service.h"\
@@ -520,6 +591,14 @@
 	
 
 ..\src\condor_dagman\helper.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_dagman\helper.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
@@ -540,6 +619,14 @@
 	
 
 ..\src\condor_dagman\job.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_id.h"\
 	"..\src\condor_c++_util\dc_service.h"\
@@ -593,6 +680,15 @@
 	
 
 ..\src\condor_dagman\parse.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\check_events.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -678,6 +774,15 @@
 	
 
 ..\src\condor_dagman\script.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_id.h"\
 	"..\src\condor_c++_util\CondorError.h"\
@@ -756,6 +861,15 @@
 	
 
 ..\src\condor_dagman\scriptQ.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\check_events.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -830,6 +944,15 @@
 	
 
 ..\src\condor_dagman\soap_dagmanC.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_dagman\soap_dagmanH.h"\
 	"..\src\condor_dagman\soap_dagmanStub.h"\
 	"..\src\condor_includes\cedar_enums.h"\
@@ -851,6 +974,15 @@
 	
 
 ..\src\condor_dagman\soap_dagmanServer.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_dagman\soap_dagmanH.h"\
 	"..\src\condor_dagman\soap_dagmanStub.h"\
 	"..\src\condor_includes\cedar_enums.h"\
@@ -872,6 +1004,15 @@
 	
 
 ..\src\condor_dagman\soap_dagmanStub.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_daemon_core.v6\soap_daemon_core.cpp"\
 	"..\src\condor_dagman\condordagman.nsmap"\

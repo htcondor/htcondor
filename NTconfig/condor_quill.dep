@@ -1,6 +1,14 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_quill.mak
 
 ..\src\condor_quill\classadlogentry.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -49,6 +57,14 @@
 	
 
 ..\src\condor_quill\classadlogparser.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -97,6 +113,14 @@
 	
 
 ..\src\condor_quill\jobqueuecollection.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -157,6 +181,17 @@
 	
 
 ..\src\condor_quill\jobqueuedbmanager.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\postgresql-8.0.2\inc32\libpq-fe.h"\
+	"..\..\ws_v67_ext\externals\install\postgresql-8.0.2\inc32\postgres_ext.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -252,6 +287,14 @@
 	
 
 ..\src\condor_quill\prober.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -301,6 +344,15 @@
 	
 
 ..\src\condor_quill\quill_main.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -389,6 +441,17 @@
 	
 
 ..\src\condor_quill\requestservice.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\postgresql-8.0.2\inc32\libpq-fe.h"\
+	"..\..\ws_v67_ext\externals\install\postgresql-8.0.2\inc32\postgres_ext.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -480,6 +543,15 @@
 	
 
 ..\src\condor_quill\soap_quillC.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -501,6 +573,15 @@
 	
 
 ..\src\condor_quill\soap_quillServer.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -522,6 +603,15 @@
 	
 
 ..\src\condor_quill\soap_quillStub.C : \
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
+	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_daemon_core.v6\soap_daemon_core.cpp"\
 	"..\src\condor_includes\cedar_enums.h"\

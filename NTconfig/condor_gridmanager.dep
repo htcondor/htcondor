@@ -9,7 +9,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -109,7 +109,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -204,7 +204,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -309,7 +309,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -403,7 +403,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -504,7 +504,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -610,7 +610,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -704,7 +704,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -811,7 +811,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -900,7 +900,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -1004,7 +1004,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -1098,7 +1098,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -1203,7 +1203,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -1297,7 +1297,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -1311,6 +1311,7 @@
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\setenv.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
@@ -1400,7 +1401,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -1504,7 +1505,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -1598,7 +1599,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -1697,7 +1698,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_gridmanager\soap_gridmanagerH.h"\
 	"..\src\condor_gridmanager\soap_gridmanagerStub.h"\
 	"..\src\condor_includes\cedar_enums.h"\
@@ -1727,7 +1728,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_gridmanager\soap_gridmanagerH.h"\
 	"..\src\condor_gridmanager\soap_gridmanagerStub.h"\
 	"..\src\condor_includes\cedar_enums.h"\
@@ -1757,7 +1758,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_daemon_core.v6\soap_daemon_core.cpp"\
 	"..\src\condor_gridmanager\condorgridmanager.nsmap"\
@@ -1790,7 +1791,7 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\externals\install\gsoap-2.7\src\stdsoap2.h"\
+	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
