@@ -174,6 +174,7 @@ void test_user_policy_periodic_hold_yes(void)
 	jad->Insert(buf);
 	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 	jad->Insert(buf);
+	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
 
@@ -229,6 +230,7 @@ void test_user_policy_periodic_exit_yes(void)
 	jad->Insert(buf);
 	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 	jad->Insert(buf);
+	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
 
@@ -284,6 +286,7 @@ void test_user_policy_periodic_hold_no(void)
 	jad->Insert(buf);
 	sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 	jad->Insert(buf);
+	jad->Assign(ATTR_JOB_STATUS, RUNNING);
 
 	result = user_job_policy(jad);
 
