@@ -251,12 +251,12 @@ class UserPolicy
 		that AnalyzePolicy should return.  If this function is false, retval is
 		undefined.
 		*/
-		bool AnalyzeSinglePeriodicPolicy(const char * attrname, int on_true_return, int & retval);
+		bool AnalyzeSinglePeriodicPolicy(const char * attrname, const char * macroname, int on_true_return, int & retval);
 
 	private: /* variables */
 		ClassAd *m_ad;
 	    int m_fire_expr_val;
-		enum FireSource { FS_JobAttribute, FS_SystemMacro };
+		enum FireSource { FS_NotYet, FS_JobAttribute, FS_SystemMacro };
 		FireSource m_fire_source;
 		const char *m_fire_expr;
 };

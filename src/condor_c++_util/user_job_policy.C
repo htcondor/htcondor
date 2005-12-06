@@ -23,7 +23,12 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
+#include "condor_config.h"
 #include "user_job_policy.h"
+
+const char * PARAM_SYSTEM_PERIODIC_REMOVE = "SYSTEM_PERIODIC_REMOVE";
+const char * PARAM_SYSTEM_PERIODIC_RELEASE = "SYSTEM_PERIODIC_RELEASE";
+const char * PARAM_SYSTEM_PERIODIC_HOLD = "SYSTEM_PERIODIC_HOLD";
 
 /* If a job ad was pre user policy and it was determined to have exited. */
 const char *old_style_exit = "OldStyleExit";
@@ -346,6 +351,7 @@ int JadKind(ClassAd *suspect)
 UserPolicy::UserPolicy()
 {
 	m_ad = NULL;
+	m_fire_source = FS_NotYet;
 	m_fire_expr = NULL;
 	m_fire_expr_val = -1;
 }
@@ -452,20 +458,20 @@ UserPolicy::AnalyzePolicy( int mode )
 
 	/* should I perform a periodic hold? */
 	if(state!=HELD) {
-		if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_HOLD_CHECK, HOLD_IN_QUEUE, retval)) {
+		if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_HOLD_CHECK, PARAM_SYSTEM_PERIODIC_HOLD, HOLD_IN_QUEUE, retval)) {
 			return retval;
 		}
 	}
 
 	/* Should I perform a periodic release? */
 	if(state==HELD) {
-		if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_RELEASE_CHECK, RELEASE_FROM_HOLD, retval)) {
+		if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_RELEASE_CHECK, PARAM_SYSTEM_PERIODIC_RELEASE, RELEASE_FROM_HOLD, retval)) {
 			return retval;
 		}
 	}
 
 	/* Should I perform a periodic remove? */
-	if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_REMOVE_CHECK, REMOVE_FROM_QUEUE, retval)) {
+	if(AnalyzeSinglePeriodicPolicy(ATTR_PERIODIC_REMOVE_CHECK, PARAM_SYSTEM_PERIODIC_REMOVE, REMOVE_FROM_QUEUE, retval)) {
 		return retval;
 	}
 
@@ -520,10 +526,11 @@ UserPolicy::AnalyzePolicy( int mode )
 }
 
 
-bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, int on_true_return, int & retval)
+bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, const char * macroname, int on_true_return, int & retval)
 {
 	ASSERT(attrname);
 
+	// Evaluate the specified expression in the job ad
 	int result;
 	m_fire_expr = attrname;
 	if(!m_ad->EvalBool(attrname, m_ad, result)) {
@@ -535,6 +542,24 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, int on_true_
 		m_fire_source = FS_JobAttribute;
 		retval = on_true_return;
 		return true;
+	}
+	if(macroname) {
+		char * sysexpr = param(macroname);
+		if(sysexpr && sysexpr[0]) {
+			// Just temporarily toss the expression into the job ad
+			const char * ATTR_SCRATCH_EXPRESSION = "UserJobPolicyScratchExpression";
+			m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, sysexpr);
+			free(sysexpr);
+			int result_ok = m_ad->EvalBool(ATTR_SCRATCH_EXPRESSION, m_ad, result);
+			m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
+			if(result_ok && result) {
+				m_fire_expr = macroname;
+				m_fire_expr_val = 1;
+				m_fire_source = FS_SystemMacro;
+				retval = on_true_return;
+				return true;
+			}
+		}
 	}
 
 	return false;
@@ -556,24 +581,49 @@ const char* UserPolicy::FiringReason()
 		return NULL;
 	}
 
-	ExprTree *tree, *rhs = NULL;
-	tree = m_ad->Lookup( m_fire_expr );
 
-	// Get a formatted expression string
-	char* exprString = NULL;
-	if( tree && (rhs=tree->RArg()) ) {
-		rhs->PrintToNewStr( &exprString );
+	const char * expr_src;
+	MyString exprString;
+	switch(m_fire_source) {
+		case FS_NotYet:
+			expr_src = "UNKNOWN (never set)";
+			break;
+
+		case FS_JobAttribute:
+		{
+			expr_src = "job attribute";
+			ExprTree *tree, *rhs = NULL;
+			tree = m_ad->Lookup( m_fire_expr );
+
+			// Get a formatted expression string
+			if( tree && (rhs=tree->RArg()) ) {
+				char* exprStringTmp = NULL;
+				rhs->PrintToNewStr( &exprStringTmp );
+				exprString = exprStringTmp;
+				free(exprStringTmp);
+			}
+			break;
+		}
+
+		case FS_SystemMacro:
+		{
+			expr_src = "system macro";
+			char * val = param(m_fire_expr);
+			exprString = val;
+			free(val);
+			break;
+		}
+
+		default:
+			expr_src = "UNKNOWN (bad value)";
+			break;
 	}
 
 	// Format up the reason string
-	reason.sprintf( "The %s expression '%s' evaluated to ",
+	reason.sprintf( "The %s %s expression '%s' evaluated to ",
+					expr_src,
 					m_fire_expr,
-					exprString ? exprString : "" );
-
-	// Free up the buffer from PrintToNewStr()
-	if ( exprString ) {
-		free( exprString );
-	}
+					exprString.Value());
 
 	// Get a string for it's value
 	switch( m_fire_expr_val ) {
