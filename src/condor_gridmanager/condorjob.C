@@ -1175,6 +1175,7 @@ void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 		doActivePoll = true;
 		delete update_ad;
 		SetEvaluateState();
+		return;
 	}
 	dprintf( D_FULLDEBUG, "(%d.%d) Got classad from CondorResource\n",
 			 procID.cluster, procID.proc );
