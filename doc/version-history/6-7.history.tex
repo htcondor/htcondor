@@ -92,6 +92,16 @@ the lookout for problems that might be caused by it.
 \item Added the \Condor{check\_userlogs} command, which checks user log
 files for "illegal" events.
 
+\item New settings
+\Macro{SYSTEM\_PERIODIC\_HOLD},
+\Macro{SYSTEM\_PERIODIC\_RELEASE}, and
+\Macro{SYSTEM\_PERIODIC\_REMOVE}.
+These expressions behave identically to the job expressions
+\AdAttr{periodic\_hold},
+\AdAttr{periodic\_release}, and
+\AdAttr{periodic\_remove}, but are evaluated for all jobs in the
+queue.  If not present, they default to FALSE.
+
 \item An improved version of the DRMAA C library is available for download from
 \URL{http://prdownloads.sourceforge.net/condor-ext/condor\_drmaa\_6\_7\_14\_src.tgz}
 
