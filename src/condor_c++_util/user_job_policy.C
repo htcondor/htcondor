@@ -67,7 +67,6 @@ ClassAd* user_job_policy(ClassAd *jad)
 {
 	ClassAd *result;
 	char buf[4096]; /* old classads needs to go away */
-	int periodic_hold = 0, periodic_remove = 0, periodic_release = 0;
 	int on_exit_hold = 0, on_exit_remove = 0;
 	int cdate = 0;
 	int adkind;
@@ -153,6 +152,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 			break;
 
 		case KIND_NEWSTYLE:
+		{
 			/*	The user_policy is checked in this
 				order. The first one to succeed is the winner:
 		
@@ -162,9 +162,12 @@ ClassAd* user_job_policy(ClassAd *jad)
 				on_exit_remove
 			*/
 
+			UserPolicy userpolicy;
+			userpolicy.Init(jad);
+			int analyze_result = userpolicy.AnalyzePolicy(PERIODIC_ONLY);
+
 			/* should I perform a periodic hold? */
-			jad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, jad, periodic_hold);
-			if (periodic_hold == 1)
+			if(analyze_result == HOLD_IN_QUEUE)
 			{
 				/* make a result classad explaining this and return it */
 
@@ -173,15 +176,14 @@ ClassAd* user_job_policy(ClassAd *jad)
 				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
 				result->Insert(buf);
 				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-					ATTR_PERIODIC_HOLD_CHECK);
+					userpolicy.FiringExpression());
 				result->Insert(buf);
 
 				return result;
 			}
 
 			/* Should I perform a periodic remove? */
-			jad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, jad, periodic_remove);
-			if (periodic_remove == 1)
+			if(analyze_result == REMOVE_FROM_QUEUE)
 			{
 				/* make a result classad explaining this and return it */
 
@@ -190,15 +192,14 @@ ClassAd* user_job_policy(ClassAd *jad)
 				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
 				result->Insert(buf);
 				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-					ATTR_PERIODIC_REMOVE_CHECK);
+					userpolicy.FiringExpression());
 				result->Insert(buf);
 
 				return result;
 			}
 
 			/* Should I perform a periodic release? */
-			jad->EvalBool(ATTR_PERIODIC_RELEASE_CHECK, jad, periodic_release);
-			if (periodic_release == 1)
+			if(analyze_result == RELEASE_FROM_HOLD)
 			{
 				/* make a result classad explaining this and return it */
 
@@ -207,7 +208,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
 				result->Insert(buf);
 				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-					ATTR_PERIODIC_RELEASE_CHECK);
+					userpolicy.FiringExpression());
 				result->Insert(buf);
 
 				return result;
@@ -264,6 +265,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 			return result;
 
 			break;
+		}
 
 		default:
 			dprintf(D_ALWAYS, "JadKind() returned unknown ad kind\n");
