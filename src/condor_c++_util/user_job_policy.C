@@ -326,7 +326,7 @@ int JadKind(ClassAd *suspect)
 		/* check to see if it has ATTR_COMPLETION_DATE, if so then it is
 			an oldstyle jobad. If not, it isn't a job ad at all. */
 
-		if (suspect->LookupInteger(ATTR_COMPLETION_DATE, cdate) == 0)
+		if (suspect->LookupInteger(ATTR_COMPLETION_DATE, cdate) == 1)
 		{
 			return KIND_OLDSTYLE;
 		}
