@@ -262,7 +262,10 @@ preserve the case of attribute names.
 
 \begin{itemize}
 
-\item None.
+\item The \Macro{NEGOTIATOR\_MATCHLIST\_CACHING} setting is broken.
+  It should not be used.
+  This setting is \verb@FALSE@ by default, but if set to \verb@TRUE@,
+  the \Condor{negotiator} will crash.  
 
 \end{itemize}
 
