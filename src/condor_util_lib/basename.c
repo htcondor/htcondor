@@ -88,6 +88,7 @@ condor_dirname(const char *path)
 		}
 		return parent;
 	} else {
+		free(parent);
 		return strdup( "." );
 	}
 }
