@@ -375,11 +375,11 @@ NOTE: we also need the same crap for libpcre.a...
   GSI_LIB   = \
 	      $(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_proxy_ssl_$(GlobusFlavor).a \
-	      $(GLOBUS_DIR)/lib/libglobus_gsi_callback_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
+	      $(GLOBUS_DIR)/lib/libglobus_gsi_callback_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libssl_$(GlobusFlavor).a \
    	      $(GLOBUS_DIR)/lib/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
 	      $(GLOBUS_DIR)/lib/libglobus_openssl_$(GlobusFlavor).a \
@@ -418,9 +418,9 @@ NOTE: we also need the same crap for libpcre.a...
 #endif
 
 /* Collect all the security-related variables into a single variable */
-SECURITY_FLAGS = $(GSI_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
+SECURITY_FLAGS = $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
 		 $(MD_FLAGS) $(GSI_FLAGS) $(OPENSSL_FLAGS)
-SECURITY_LIB   = $(GSI_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
+SECURITY_LIB   = $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
 		 $(MD_LIB) $(GSI_LIB) $(OPENSSL_LIB)
 
 #if WANT_NETMAN
