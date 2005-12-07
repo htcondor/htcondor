@@ -234,6 +234,10 @@ timeing out.  These retries were causing 10 second or longer delays
 when trying to connect to Condor services which, for one reason or
 another, were no longer listening on the expected TCP port.
 
+\item Fixed a bug in the \Condor{c-gahp} that could cause it to crash
+if it fails to connect to a remote \Condor{schedd} when submitting a
+job.
+
 \end{itemize}
 
 \noindent Changes:
