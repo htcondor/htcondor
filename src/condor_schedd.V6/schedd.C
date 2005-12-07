@@ -1713,20 +1713,6 @@ PeriodicExprEval( ClassAd *jobad )
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
-	if ( status == COMPLETED || status == REMOVED ) {
-		// Note: should also call DestroyProc on REMOVED, but 
-		// that will screw up globus universe jobs until we fix
-		// up confusion w/ MANAGED==True.  The issue is a job may be
-		// removed; if the remove failed, it may be placed on hold
-		// with managed==false.  If it is released again, we want the 
-		// gridmanager to go at it again.....  
-		// So for now, just call if status==COMPLETED -Todd <tannenba@cs.wisc.edu>
-		if ( status == COMPLETED ) {
-			DestroyProc(cluster,proc);
-		}
-		return 1;
-	}
-
 	UserPolicy policy;
 	policy.Init(jobad);
 
@@ -1755,6 +1741,20 @@ PeriodicExprEval( ClassAd *jobad )
 				releaseJob(cluster, proc, reason.Value(), true);
 			}
 			break;
+	}
+
+	if ( status == COMPLETED || status == REMOVED ) {
+		// Note: should also call DestroyProc on REMOVED, but 
+		// that will screw up globus universe jobs until we fix
+		// up confusion w/ MANAGED==True.  The issue is a job may be
+		// removed; if the remove failed, it may be placed on hold
+		// with managed==false.  If it is released again, we want the 
+		// gridmanager to go at it again.....  
+		// So for now, just call if status==COMPLETED -Todd <tannenba@cs.wisc.edu>
+		if ( status == COMPLETED ) {
+			DestroyProc(cluster,proc);
+		}
+		return 1;
 	}
 
 	return 1;
