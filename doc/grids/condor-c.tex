@@ -39,12 +39,13 @@ submitted, and there is the remote machine upon which the
 jobs are placed in the queue (executed).
 
 Configuration of a machine from which jobs are submitted
-requires two extra configuration variables:
+requires a few extra configuration variables:
 
 \footnotesize
 \begin{verbatim}
 CONDOR_GAHP=$(SBIN)/condor_c-gahp
 C_GAHP_LOG=/tmp/CGAHPLog.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOG=/tmp/CGAHPWorkerLog.$(USERNAME)
 \end{verbatim}
 \normalsize
 

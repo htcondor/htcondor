@@ -1,0 +1,25 @@
+\index{Unicore|(}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Unicore}The unicore grid\_type }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Unicore is a java-based grid scheduling system. See
+\URL{http://unicore.sourceforge.net} for more information about Unicore.
+
+You can submit jobs to Unicore resources using the \SubmitCmd{unicore}
+\SubmitCmd{grid\_type} of the grid universe. The semantics are the same as
+for other \SubmitCmd{grid\_type}s, except as noted here.
+
+The commands \SubmitCmd{unicore\_u\_site} and \SubmitCmd{unicore\_v\_site}
+are required. They specify the name of the Unicore resource to which the
+job should be submitted.
+
+Unicore uses certificates stored in a java keystore file for
+authentication. Unicore jobs require the following commands that tell
+Condor which certificate to use for the job. The command
+\SubmitCmd{keystore\_file} specifies the filename of the keystore file to 
+use. \SubmitCmd{keystore\_alias} specifies which certificate in the
+keystore file to use. \SubmitCmd{keystore\_passphrase\_file} specifies the
+path to a file containg the passphrase protecting the certificate in the  
+keystore file.

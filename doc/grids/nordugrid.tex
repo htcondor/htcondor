@@ -1,0 +1,32 @@
+\index{NorduGrid|(}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:NorduGrid}The nordugrid grid\_type }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+NorduGrid is a project to develop a free grid middleware called Advanced  
+Resource Connector (ARC). See the NorduGrid web page
+(\URL{http://www.nordugrid.org}) for more information about the NorduGrid
+software.
+
+You can submit jobs to NorduGrid resources using the \SubmitCmd{nordugrid}
+\SubmitCmd{grid\_type} of the grid universe. The semantics are the same as
+for other \SubmitCmd{grid\_type}s, except as noted here.
+
+The command \SubmitCmd{nordugrid\_resource} is required. It specifies the
+hostname of the NorduGrid resource to which the job should be submitted.
+
+NorduGrid uses X.509 credentials for authentication, usually in the form a
+proxy certificate. For more information about proxies and certificates,
+please consult the Alliance PKI pages at
+\URL{http://archive.ncsa.uiuc.edu/SCD/Alliance/GridSecurity/}.
+\Condor{submit} will look in the default locations for the proxy. You can 
+override this with the \SubmitCmd{x509userproxy} command.
+
+NorduGrid uses a form of RSL (see the Condor-G section for a description
+of RSL) to describe jobs. You can use the \SubmitCmd{nordugrid\_rsl}
+command to add additional attribute settings to the job RSL that Condor
+constructs. The format of the \SubmitCmd{nordugrid\_rsl} is
+\begin{verbatim}
+nordugrid_rsl = (name=value)(name=value)
+\end{verbatim}
