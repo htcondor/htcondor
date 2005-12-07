@@ -160,6 +160,7 @@ public:
 	int		eval_start( void );			// returns -1 on undefined
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
 
+	bool    claimWorklifeExpired();
 	int		retirementExpired( void );
 	int		mayUnretire( void );
 	int		hasPreemptingClaim( void );

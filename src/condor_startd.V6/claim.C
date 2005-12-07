@@ -67,6 +67,7 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_has_job_ad = 0;
 	c_pending_cmd = -1;
 	c_wants_remove = false;
+	c_claim_started = 0;
 		// to make purify happy, we want to initialize this to
 		// something.  however, we immediately set it to UNCLAIMED
 		// (which is what it should really be) by using changeState()
@@ -1356,6 +1357,9 @@ Claim::changeState( ClaimState s )
 
 		}
 	}
+	if( c_state == CLAIM_UNCLAIMED && c_claim_started == 0 ) {
+		c_claim_started = time(NULL);
+	}
 
 		// now that all the appropriate time values are updated, we
 		// can actually do the deed.
@@ -1369,6 +1373,15 @@ Claim::changeState( ClaimState s )
 	}
 }
 
+time_t
+Claim::getClaimAge()
+{
+	time_t now = time(NULL);
+	if(c_claim_started) {
+		return now - c_claim_started;
+	}
+	return 0;
+}
 
 bool
 Claim::writeJobAd( int fd )

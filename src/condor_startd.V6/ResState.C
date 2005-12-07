@@ -128,9 +128,9 @@ ResState::change( State new_state, Activity new_act )
 		// We want to update the CM on every state or activity change
 	rip->update();   
 
-	if( r_act == retiring_act ) {
-		// When we enter retirement, check right away to see if we should
-		// be preempting instead.
+	if( r_act == retiring_act || r_act == idle_act ) {
+		// When we enter retirement or idleness, check right away to
+		// see if we should be preempting instead.
 		this->eval();
 	}
 
@@ -267,6 +267,10 @@ ResState::eval( void )
 				// to evaluate against.
 			dprintf( D_ALWAYS, "State change: START is false\n" );
 			return change( preempting_state ); 
+		}
+		if( (r_act == idle_act) && rip->claimWorklifeExpired() ) {
+			dprintf( D_ALWAYS, "State change: idle claim shutting down due to CLAIM_WORKLIFE\n" );
+			return change( preempting_state );
 		}
 		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();

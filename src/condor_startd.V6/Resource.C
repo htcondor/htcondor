@@ -955,6 +955,34 @@ Resource::preemptIsTrue()
 	if(r_cur) r_cur->preemptIsTrue();
 }
 
+bool
+Resource::claimWorklifeExpired()
+{
+	//This function evaulates to true if the claim has been alive
+	//for longer than the CLAIM_WORKLIFE expression dictates.
+
+	if (r_cur) {
+		int ClaimWorklife = 0;
+
+		//look up the maximum retirement time specified by the startd
+		if(!r_classad->LookupElem("CLAIM_WORKLIFE") ||
+		   !r_classad->EvalInteger(
+				  "CLAIM_WORKLIFE",
+		          NULL,
+		          ClaimWorklife)) {
+			ClaimWorklife = -1;
+		}
+
+		int ClaimAge = r_cur->getClaimAge();
+
+		if(ClaimWorklife >= 0) {
+			dprintf(D_FULLDEBUG,"Computing claimWorklifeExpired(); ClaimAge=%d, ClaimWorklife=%d\n",ClaimAge,ClaimWorklife);
+			return (ClaimAge > ClaimWorklife);
+		}
+	}
+	return false;
+}
+
 int
 Resource::retirementExpired()
 {

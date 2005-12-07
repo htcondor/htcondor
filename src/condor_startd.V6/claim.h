@@ -176,6 +176,7 @@ public:
 	int  		pendingCmd()	{return c_pending_cmd;};
 	bool		wantsRemove()	{return c_wants_remove;};
 	time_t      getJobTotalRunTime();
+	time_t      getClaimAge();
 	bool        mayUnretire()   {return c_may_unretire;}
 	bool        getRetirePeacefully() {return c_retire_peacefully;}
 	bool        preemptWasTrue() const {return c_preempt_was_true;}
@@ -248,6 +249,7 @@ private:
 	char*		c_global_job_id;
 	int			c_job_start;
 	int			c_last_pckpt;
+	time_t      c_claim_started;
 	time_t		c_entered_state;
 	time_t		c_job_total_run_time;
 	time_t		c_job_total_suspend_time;
