@@ -107,6 +107,11 @@ queue.  If not present, they default to FALSE.
 \item An improved version of the DRMAA C library is available for download from
 \URL{http://prdownloads.sourceforge.net/condor-ext/condor\_drmaa\_6\_7\_14\_src.tgz}
 
+\item Added \Macro{CLAIM\_WORKLIFE} configuration option.  The startd
+will not allow claims older than the specified number of seconds to
+run more jobs.  Any existing job that is running when the worklife expires,
+however, is allowed to continue to run as normal.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
