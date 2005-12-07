@@ -659,3 +659,13 @@ GT4_LOCATION = $(LIB)/gt4
 ##
 
 GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
+
+##
+## The location of the wrapper for invoking the Unicore GAHP server
+##
+UNICORE_GAHP = $(SBIN)/unicore_gahp
+
+##
+## The location of the wrapper for invoking the NorduGrid GAHP server
+##
+NORDUGRID_GAHP = $(SBIN)/nordugrid_gahp
