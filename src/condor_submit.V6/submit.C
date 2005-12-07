@@ -3558,8 +3558,7 @@ SetGlobusParams()
 		if ( stricmp (JobGridType, "gt2") == MATCH ||
 			 stricmp (JobGridType, "gt3") == MATCH ||
 			 stricmp (JobGridType, "gt4") == MATCH ||
-			 stricmp (JobGridType, "oracle") == MATCH ||
-			 stricmp (JobGridType, "nordugrid") == MATCH ) {
+			 stricmp (JobGridType, "oracle") == MATCH ) {
 
 			char * jobmanager_type;
 			jobmanager_type = condor_param ( GlobusJobmanagerType );
@@ -3677,6 +3676,37 @@ SetGlobusParams()
 
 			free( remote_schedd );
 			free( remote_pool );
+		}
+
+		if ( stricmp (JobGridType, "nordugrid") == MATCH ) {
+
+			char *host;
+			host = condor_param( "nordugrid_resource", "nordugridresource" );
+			if( !host ) {
+				fprintf( stderr, "Nordugrid jobs require a "
+						 "\"nordugrid_resource\" parameter\n" );
+				DoCleanup( 0, 0, NULL );
+				exit( 1 );
+			}
+
+				// nordugrid is only supported in versions that use the
+				// unified grid resource syntax
+			sprintf( buffer, "%s = \"nordugrid %s\"", ATTR_GRID_RESOURCE, 
+					 host );
+			InsertJobExpr( buffer );
+
+			if ( strstr(host,"$$") ) {
+					// We need to perform matchmaking on the job in order
+					// to find the nordugrid_resource.
+				sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+				InsertJobExpr (buffer);
+				sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+				InsertJobExpr (buffer);
+				sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+				InsertJobExpr (buffer);
+			}
+
+			free( host );
 		}
 
 		if ( stricmp ( JobGridType, "unicore" ) == MATCH ) {
