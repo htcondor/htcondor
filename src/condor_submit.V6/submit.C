@@ -836,6 +836,7 @@ SetRemoteAttrs()
 		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
 		{ GlobusXML, "globus_xml", ATTR_GLOBUS_XML },
 		{ NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
+		{ GridResource, 0, ATTR_GRID_RESOURCE },
 	};
 	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
 
