@@ -721,8 +721,10 @@ update_lease_result:
 		int ClusterId = -1;
 		int ProcId = -1;
 
-		if (qmgr_connection == NULL)
+		if (qmgr_connection == NULL) {
+			error = TRUE;
 			goto submit_report_result;
+		}
 
 		BeginTransaction();
 		error = FALSE;
