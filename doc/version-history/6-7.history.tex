@@ -145,6 +145,18 @@ Read: ERROR:open_ckpt_file failed, aborting ckpt
   Version 6.7.14 of the \Condor{ckpt\_server} is working properly once
   again. 
 
+\item Fixed bugs in Condor's Generic Connection Broker (GCB) support.
+  Condor version 6.7.14 is linked with a new version of the GCB
+  library (1.3.1) that fixes a major bug in how GCB handles UDP
+  messages.
+  Previous versions of GCB had a UDP receive buffer that was far too
+  small, resulting in many dropped UDP packets.
+  Now, GCB will dynamically allocate more buffer space as needed.
+  The new version of GCB also adds support for comments (any line
+  beginning with \verb@#@) in the GCB routing table.
+  For more information about GCB, see section~\ref{sec:GCB} on
+  page~\pageref{sec:GCB}. 
+
 \item Update job information such as ImageSize, RemoteUserCpu and RemoteSysCpu 
 at job completion.  Previously this was only done periodically.
 
