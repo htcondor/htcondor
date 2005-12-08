@@ -2989,7 +2989,49 @@ These macros control the \Condor{schedd}.
   determines the full path of the special \Condor{shadow.pvm} binary
   used for supporting PVM jobs that the \Condor{schedd} spawns.  It is
   normally defined in terms of \MacroUNI{SBIN}.
-
+  
+\item[\Macro{START\_LOCAL\_UNIVERSE}] \label{param:StartLocalUniverse}
+  \Condor{schedd} uses this macro to determine whether to start
+  a local universe job. During each poll interval, \Condor{schedd}
+  evaluates this macro for each idle local universe job that it
+  has. For a given job, if the \Macro{START\_LOCAL\_UNIVERSE} 
+  macro evaluates to true, then the job's \Macro{Requirements} expression
+  is evaluated. If both conditions are met, then the job is allowed
+  to begin execution. 
+  
+  The following example only allows 10 local universe jobs to
+  execute concurrently. The attribute \Attr{TotalLocalJobsRunning}
+  is supplied by \Condor{schedd}'s ClassAd:
+  
+  \begin{verbatim}
+    MAX_LOCAL_JOBS = 10
+    START_LOCAL_UNIVERSE = TotalLocalJobsRunning < $(MAX_LOCAL_JOBS)
+  \end{verbatim}
+  
+  If \Macro{START\_LOCAL\_UNIVERSE} is not defined, the default setting 
+  is \Expr{True}.
+  
+\item[\Macro{START\_SCHEDULER\_UNIVERSE}] \label{param:StartSchedulerUniverse}
+  \Condor{schedd} uses this macro to determine whether to start
+  a scheduler universe job. During each poll interval, \Condor{schedd}
+  evaluates this macro for each idle scheduler universe job that it
+  has. For a given job, if the \Macro{START\_SCHEDULER\_UNIVERSE} 
+  macro evaluates to true, then the job's \Macro{Requirements} expression
+  is evaluated. If both conditions are met, then the job is allowed
+  to begin execution. 
+  
+  The following example only allows 10 scheduler universe jobs to
+  execute concurrently. The attribute \Attr{TotalSchedulerJobsRunning}
+  is supplied by \Condor{schedd}'s ClassAd:
+  
+  \begin{verbatim}
+    MAX_SCHEDULER_JOBS = 10
+    START_SCHEDULER_UNIVERSE = TotalSchedulerJobsRunning < $(MAX_SCHEDULER_JOBS)
+  \end{verbatim}
+  
+  If \Macro{START\_SCHEDULER\_UNIVERSE} is not defined, the default setting 
+  is \Expr{True}.
+  
 \item[\Macro{MAX\_JOBS\_RUNNING}] \label{param:MaxJobsRunning} This
   macro limits the number of processes spawned by a given
   \Condor{schedd}, for all job universes except the 
