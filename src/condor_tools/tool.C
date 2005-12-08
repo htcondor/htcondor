@@ -1283,6 +1283,12 @@ doCommand( Daemon* d )
 		}
 		break;
 
+	case RESTART:
+		if( peaceful_shutdown ) {
+			my_cmd = RESTART_PEACEFUL;
+		}
+		break;
+
 	case DAEMONS_OFF:
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
