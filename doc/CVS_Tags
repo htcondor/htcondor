@@ -7,6 +7,29 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+
+12/8/05  V6_7-pre-merge-V6_7_13-2-doc-merge-2
+         V6_7-post-merge-V6_7_13-2-doc-merge-2
+    The state of the doc directory in V6_7-branch before and after
+    merging changes from the V6_7_13-2-branch as tagged V6_7_13-2-doc-merge-2.
+
+12/8/05  V6_7_13-2-doc-merge-2
+   The state of the doc directory in the V6_7_13-2-branch for a 
+   merge into the V6_7-branch.
+
+12/8/05  tryagain-V6_7_13-2-pre-merge-V6_6-doc-merge-22
+    The state of the doc directory in V6_7_13-2-branch before a second
+    tagging, since the first tagged a file that still had a conflict.
+
+12/8/05  V6_7_13-2-pre-merge-V6_6-doc-merge-22
+       V6_7_13-2-post-merge-V6_6-doc-merge-22
+    The state of the doc directory in V6_7_13-2-branch before and after
+    merging changes from the V6_6-branch as tagged V6_6-doc-merge-22.
+
+12/8/05  V6_6-doc-merge-22
+   The state of the doc directory in the V6_6-branch for a merge
+   into the V6_7-branch. This goes into the V6_7_13-2-branch.
+
 12/1/05  V6_7-pre-merge-V6_7_13-2-doc-merge-1
         V6_7-post-merge-V6_7_13-2-doc-merge-1
     The state of the doc directory in V6_7-branch before and after
