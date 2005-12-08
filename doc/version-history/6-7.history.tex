@@ -30,7 +30,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{restart} \Opt{-peaceful} was causing \Condor{master} to only
+do a graceful shutdown, rather than a peaceful one.  This means that
+\Macro{GRACEFUL\_SHUTDOWN\_TIMEOUT} would come into effect if jobs running
+under the startd took too long to finish.  However, \Opt{-peaceful} restart
+did work in the case where a specific subsystem (e.g. \Opt{-startd}) was
+specified.
 
 \end{itemize}
 
