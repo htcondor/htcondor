@@ -1,0 +1,103 @@
+#!/usr/bin/env perl
+#########################################################
+## Max Local Jobs
+##
+## We are testing to make sure that if the user puts
+## in a requirement to limit how many local universe jobs will
+## be started, the schedd will be able to block them accordingly
+##
+#########################################################
+use CondorTest;
+
+$testname 		= 'Max Running Local Universe Jobs';
+$cmdfile		= 'job_core_max-running_local.cmd';
+
+##
+## Sleep time 
+## This needs to match the arguements value that is in the .cmd file
+##
+my $SLEEP_TIME = 10; # seconds
+	
+##
+## Last Run Time
+## When a job runs, we record the last run time
+## All the jobs should only run one at a time
+##
+my $LAST_RUN_TIME = 0;
+	
+##
+## If the runs succeed, but when we analyze the jobs' runtimes
+## and see that they are running when they shouldn't, we will store
+## the error message in here
+##
+my $testFailure = "";
+
+##
+## All the jobs are outputting to the same file, so we 
+## have to get the time out and compare it to the last job
+## that finished. This isn't 100% because the jobs are overwriting
+## the same file. I had to do it this way because the testing suite
+## cannot differeniate between multiple jobs, and we need to be 
+## able to check the jobs in the order that they complete
+##
+$successCallback = sub {
+	my %info = @_;
+	my $outfile = $info{"output"};
+	##
+	## This is the time that they said they ran on the execute machine
+	##
+	open(FILE, $outfile) || die("Failed to open output file '$outfile'");
+	my @output = <FILE>;
+	close(FILE);
+	my $reportTime = "@output";
+	chomp($reportTime);
+	
+	##
+	## If there wasn't a last run time value, then this is the first
+	## job submitted. Otherwise we to check to make sure that they 
+	## ran far enough apart from each other
+	##
+	if ( $LAST_RUN_TIME ) {
+		if ( ( $reportTime - $LAST_RUN_TIME ) < $SLEEP_TIME ) {
+			$testFailure = "More than one local job ran concurrently!";
+			return ( 0 );
+		}
+	}
+	$LAST_RUN_TIME = $reportTime;
+	return ( 1 );
+};
+	
+	
+##
+## Run ye olde' test
+##
+my $success = 1;
+CondorTest::RegisterExitedSuccess($testname, $successCallback );
+if (CondorTest::RunTest( $testname, $cmdfile, 0)) {	
+	##
+	## Check if there was a failure
+	##
+	if ( $testFailure ) {
+		print "$testname: FAILED - $testFailure\n";
+		$success = 0;
+	}
+##
+## For some reason it failed to run!
+##
+} else {
+	print "$testname: CondorTest::RunTest() failed to run\n";
+	$success = 0;
+}	
+
+##
+## Print success message
+##
+if ( $success ) {
+	print "$testname: SUCCESS\n";
+}
+	
+## 
+## Return an exit status based on what happened with all our tests!
+##
+exit( $success ? 0 : -1 );
+	

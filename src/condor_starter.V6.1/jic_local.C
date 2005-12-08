@@ -115,7 +115,7 @@ void
 JICLocal::setupJobEnvironment( void )
 { 
 		// nothing to do, tell the starter we're ready
-	Starter->jobEnvironmentReady();
+	Starter->jobWaitUntilExecuteTime();
 }
 
 

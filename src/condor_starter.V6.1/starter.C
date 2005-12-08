@@ -47,7 +47,7 @@
 #include "perm.h"
 #include "filename_tools.h"
 #include "directory.h"
-
+#include "exit.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -67,6 +67,7 @@ CStarter::CStarter()
 	starter_stdin_fd = -1;
 	starter_stdout_fd = -1;
 	starter_stderr_fd = -1;
+	deferral_tid = -1;
 }
 
 
@@ -172,7 +173,6 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
 						  (CommandHandlercpp)&CStarter::updateX509Proxy,
 						  "CStarter::updateX509Proxy", this, WRITE );
 
-
 	sysapi_set_resource_limits();
 
 		// initialize our JobInfoCommunicator
@@ -230,6 +230,14 @@ CStarter::ShutdownGraceful(int)
 		// tell our JobInfoCommunicator about this so it can take any
 		// necessary actions
 	jic->gotShutdownGraceful();
+	
+		//
+		// Check if there is currently a timer registerd for a 
+		// deferred job. If there is then we need to cancel it
+		//
+	if ( this->deferral_tid != -1 ) {
+		this->removeDeferredJobs();
+	}
 
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
@@ -266,6 +274,14 @@ CStarter::ShutdownFast(int)
 	if( jic ) {
 		jic->gotShutdownFast();
 	}
+	
+		//
+		// Check if there is currently a timer registerd for a 
+		// deferred job. If there is then we need to cancel it
+		//
+	if ( this->deferral_tid != -1 ) {
+		this->removeDeferredJobs();
+	}
 
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
@@ -287,7 +303,6 @@ CStarter::ShutdownFast(int)
 	return 0;
 }
 
-
 int
 CStarter::Remove( int )
 {
@@ -300,6 +315,14 @@ CStarter::Remove( int )
 		// necessary actions
 	if( jic ) {
 		jic->gotRemove();
+	}
+
+		//
+		// Check if there is currently a timer registerd for a 
+		// deferred job. If there is then we need to cancel it
+		//
+	if ( this->deferral_tid != -1 ) {
+		this->removeDeferredJobs();
 	}
 
 	JobList.Rewind();
@@ -483,10 +506,263 @@ CStarter::createTempExecuteDir( void )
 	return true;
 }
 
+//
+// After any file transfers are complete, will enter this method
+// to determine whether we need to wait until a certain time
+// before executing the job.
+//
+// Currently the user can specify in their job submission file
+// a UTC timestamp of when the job should be deferred until.
+// The following example would have the Starter attempt
+// to execute the job on Friday 10.14.2005 at 12:00:00
+// 
+// 		DeferralTime = 1129309200
+//
+// The starter will check to see if this DeferralTime is 
+// not in the past, and if it is it can be given a window in seconds
+// to say how far in the past we are willing to run a job
+//
+// There is also an additional time offset parameter that can
+// be stuffed into the job ad by the Shadow to specify the clock
+// difference between itself and this Starter. When this offset
+// is subtracted for our current time, we can ensure that we will
+// execute at the Shadow's proper time, not what we think the current
+// time is. This offset will be in seconds.
+//
+bool
+CStarter::jobWaitUntilExecuteTime( void )
+{
+		//
+		// Return value
+		//
+	bool ret = true;
+		//
+		// If this is set to true, then we'll want to abort the job
+		//
+	bool abort = false;
+	MyString error;
+	
+		//
+		// First check to see if the job is set to be
+		// deferred until a certain time before beginning to
+		// execute 
+		//		
+	ClassAd* jobAd = this->jic->jobClassAd();
+	int deferralTime = 0;
+	int deferralOffset = 0;
+	int deltaT = 0;
+	int deferralWindow = 0;
+	if ( jobAd->Lookup( ATTR_DEFERRAL_TIME ) != NULL ) {
+			//
+		 	// Make sure that the expression evaluated and we 
+		 	// got a positive integer. Otherwise we'll have to kick out
+		 	//
+		if ( ! jobAd->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime ) ) {
+			error.sprintf( "Invalid deferred execution time for Job %d.%d.",
+							this->jic->jobCluster(),
+							this->jic->jobProc() );
+			abort = true;
+		} else if ( deferralTime <= 0 ) {
+			error.sprintf( "Invalid execution time '%d' for Job %d.%d.",
+							deferralTime,
+							this->jic->jobCluster(),
+							this->jic->jobProc() );
+			abort = true;
+ 
+		} else {
+				//
+				// It was valid, so we need to figure out what the time difference
+				// between the deferral time and our current time is. There
+				// are two scenarios that can occur in this situation:
+				//
+				//  1) The deferral time still hasn't arrived, so we'll need
+				//     to set the trigger to hit us up in the delta time
+				//	2) The deferral time has passed, meaning we're late, and
+				//     the job has missed its window. We will not execute it
+				//		
+			time_t now = time(NULL);
+				//
+				// We can also be passed a offset value
+				// This is from the Shadow who has determined that
+				// our clock is different from theirs
+				// Thus, we will just need to subtract this offset from
+				// our currrent time measurement
+				//
+			if ( jobAd->LookupInteger( ATTR_DEFERRAL_OFFSET, deferralOffset ) ) {
+				dprintf( D_FULLDEBUG, "Job %d.%d deferral time offset by "
+				                      "%d seconds\n", 
+							this->jic->jobCluster(),
+							this->jic->jobProc(),
+							deferralOffset );
+				now -= deferralOffset;
+			}
+				//
+				// Along with an offset we can be given a window range
+				// to say how much leeway we will allow a late job to have
+				// So if the deferralTime is less than the currenTime,
+				// but within this window, we'll still run the job
+				//
+			if ( jobAd->Lookup( ATTR_DEFERRAL_WINDOW ) != NULL &&
+				 jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow ) ) {
+				dprintf( D_FULLDEBUG, "Job %d.%d has a deferral time window of "
+				                      "%d seconds\n", 
+							this->jic->jobCluster(),
+							this->jic->jobProc(),
+							deferralWindow );
+			}
+			deltaT = deferralTime - now;
+				//
+				// The time has already passed, check whether it's
+				// within our window. If not then abort
+				//
+			if ( deltaT < 0 ) {
+				if ( abs( deltaT ) > deferralWindow ) {
+					error.sprintf( "Job %d.%d missed its execution time.",
+								this->jic->jobCluster(),
+								this->jic->jobProc() );
+					abort = true;
+
+				} else {
+						//
+						// Be sure to set the deltaT to zero so
+						// that the timer goes right off
+						//
+					dprintf( D_ALWAYS, "Job %d.%d missed its execution time but "
+										"is within the %d seconds window\n",
+								this->jic->jobCluster(),
+								this->jic->jobProc(),
+								deferralWindow );
+					deltaT = 0;
+				}
+			} // if deltaT < 0
+		}	
+	}
+	
+		//
+		// Start the job timer
+		//
+	if ( ! abort ) {
+			//
+			// Quick sanity check
+			// Make sure another timer isn't already registered
+			//
+		ASSERT( this->deferral_tid == -1 );
+		
+			//
+			// Now we will register a callback that will
+			// call the function to actually execute the job
+			// If there wasn't a deferral time then the job will 
+			// be started right away. We store the timer id so that
+			// if a suspend comes in, we can cancel the job from being
+			// executed
+			//
+		this->deferral_tid = daemonCore->Register_Timer(
+										deltaT,
+										0,
+										(TimerHandlercpp)&CStarter::jobEnvironmentReady,
+										"deferred job start",
+										this );
+			//
+			// Make sure our timer callback registered properly
+			//
+		if( this->deferral_tid < 0 ) {
+			EXCEPT( "Can't register Deferred Execution DaemonCore timer" );
+		}
+			//
+			// Our job will start in the future
+			//
+		if ( deltaT > 0 ) { 
+			dprintf( D_FULLDEBUG, "Job %d.%d deferred for %d seconds\n", 
+						this->jic->jobCluster(),
+						this->jic->jobProc(),
+						deltaT );
+			//
+			// Our job will start right away!
+			//
+		} else {
+			dprintf( D_FULLDEBUG, "Job %d.%d set to execute immediately\n",
+						this->jic->jobCluster(),
+						this->jic->jobProc() );
+		}
+		
+		//
+		// Aborting the job!
+		// We are not going to start the job so we'll let the jic know
+		//
+	} else {
+			//
+			// Hack!
+			// I want to send back that the job missed its time
+			// and that the schedd needs to decide what to do with
+			// the job. But the only way to do this is if you
+			// have a UserProc object. So we're going to make
+			// a quick on here and then send back the exit error
+			//
+		if ( ! error.IsEmpty() ) {
+			dprintf( D_ALWAYS, "%s Aborting.\n", error.Value() );
+		}
+		OsProc proc( jobAd );
+		proc.JobCleanup( -1, JOB_MISSED_DEFERRAL_TIME );
+		this->jic->notifyJobExit( -1, JOB_MISSED_DEFERRAL_TIME, &proc );
+		this->jic->allJobsGone();
+		ret = false;
+	}
+	
+	return ( ret );
+}
+
+//
+// removeDeferredJobs()
+//
+// If we need to remove all our jobs, this method can
+// be called to remove any jobs that are currently being
+// deferred. All a deferral means is that there is a timer
+// that has been registered to wakeup when its time to
+// execute the job. So we just need to cancel the timer
+//
+bool
+CStarter::removeDeferredJobs() {
+	bool ret = true;
+	
+	if ( this->deferral_tid == -1 ) {
+		return ( ret );
+	}
+		//
+		// Attempt to cancel the the timer
+		//
+	if ( daemonCore->Cancel_Timer( this->deferral_tid ) >= 0 ) {
+		dprintf( D_FULLDEBUG, "Cancelled time deferred execution for "
+							  "Job %d.%d\n", 
+					this->jic->jobCluster(),
+					this->jic->jobProc() );
+		this->deferral_tid = -1;
+
+	} else {
+			//
+			// We failed to cancel the timer!
+			// This is bad because our job might execute when it shouldn't have
+			//
+		MyString error = "Failed to cancel deferred execution timer for Job ";
+		error += this->jic->jobCluster();
+		error += ".";
+		error += this->jic->jobProc();
+		EXCEPT( (char*)error.Value() );
+		ret = false;
+	}
+	return ( ret );
+}
 
 int
 CStarter::jobEnvironmentReady( void )
 {
+		//
+		// Unset the deferral timer so that we know that no job
+		// is waiting to be spawned
+		//
+	if ( this->deferral_tid != -1 ) {
+		this->deferral_tid = -1;
+	}
+	
 		// first, see if we're going to need any pre and post scripts
 	ClassAd* jobAd = jic->jobClassAd();
 	char* tmp = NULL;
@@ -628,6 +904,14 @@ CStarter::Suspend(int)
 
 		// notify our JobInfoCommunicator that the jobs are suspended
 	jic->Suspend();
+	
+		//
+		// If we have a deferral timer still active, then we need to
+		// cancel it
+		//
+	if ( this->deferral_tid != this->deferral_tid ) {
+		this->removeDeferredJobs();
+	}
 
 	return 0;
 }

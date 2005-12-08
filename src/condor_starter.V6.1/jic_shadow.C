@@ -1577,7 +1577,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 		// Now that we're done transfering files, we can let the
 		// Starter object know the execution environment is ready. 
-	Starter->jobEnvironmentReady();
+	Starter->jobWaitUntilExecuteTime();
 
 	return TRUE;
 }

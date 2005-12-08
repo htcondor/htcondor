@@ -45,6 +45,7 @@ template class List<int>; 		template class Item<int>;
 template class SimpleList<int>; 
 template class SimpleList<float>;
 template class ExtArray<char *>;
+template class ExtArray<int>;
 template class ExtArray<StringSpace::SSStringEnt>;
 template class ExtArray<StringSpace*>;
 template class ExtArray<ProcFamily::a_pid>;

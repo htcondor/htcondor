@@ -51,6 +51,7 @@
 #include "self_draining_queue.h"
 #include "schedd_cronmgr.h"
 #include "condor_classad_namedlist.h"
+//#include "condor_crontab.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 extern  int         STARTD_CONTACT_TIMEOUT;
@@ -198,6 +199,7 @@ class Scheduler : public Service
 	friend	int		count(ClassAd *);
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_local_jobs(ClassAd *);
+	//friend	int		calculateCronSchedule( ClassAd* );
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
 	int				updateGSICred(int, Stream* s);
@@ -210,6 +212,7 @@ class Scheduler : public Service
 	void			PeriodicExprHandler( void );
 
 	// match managing
+	int 			publish( ClassAd *ad );
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
@@ -352,6 +355,8 @@ private:
 	int				JobStartCount;
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
+	char*			StartLocalUniverse; // expression for local jobs
+	char*			StartSchedulerUniverse; // expression for scheduler jobs
 	int				MaxJobsSubmitted;
 	bool			NegotiateAllJobsInCluster;
 	int				JobsStarted; // # of jobs started last negotiating session
@@ -437,6 +442,11 @@ private:
 	int				jobThrottle( void );
 	void			initLocalStarterDir( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
+		//
+		// This method will insert the next runtime for a 
+		// job into its requirements
+		//
+	//bool calculateCronSchedule( ClassAd*, bool force = false );
 
 
 		/** We begin the process of opening a non-blocking ReliSock
@@ -489,10 +499,24 @@ private:
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 	bool			ManageBandwidth;
 
+		//
+		// This table is used for scheduling cron jobs
+		// If a ClassAd has an entry in this table then we need
+		// to query the CronTab object to ask it what the next
+		// runtime is for job is
+		//
+	//HashTable<PROC_ID, CronTab*> *cronTabs;
+		//
+		// We also keep a list of job's that do not need a cronTab
+		// This way we can quickly look at this to see if we 
+		// should skip it when trying to figure out cron schedules
+		// Hopefully, a lookup in this table should be faster
+		// then checking to see if a CronTab is needed
+		//
+	//Queue<PROC_ID> *cronTabsExclude;
+
 		// put state into ClassAd return it.  Used for condor_squawk
 	int	dumpState(int, Stream *);
-	int intoAd ( ClassAd *ad, char *lhs, char *rhs );
-	int intoAd ( ClassAd *ad, char *lhs, int rhs );
 
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.

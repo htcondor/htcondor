@@ -31,6 +31,7 @@
 #include "simplelist.h"
 #include "list.h"
 #include "schedd_api.h"
+//#include "condor_crontab.h"
 
 template class HashTable<MyString, JobFile>;
 template class List<FileInfo>;
@@ -48,12 +49,13 @@ template class HashTable<PROC_ID, shadow_rec *>;
 template class HashBucket<PROC_ID,shadow_rec *>;
 template class HashTable<PROC_ID, ClassAd *>;
 template class HashBucket<PROC_ID, ClassAd *>;
+//template class HashTable<PROC_ID, CronTab *>;
+//template class HashBucket<PROC_ID, CronTab *>;
 template class Queue<shadow_rec*>;
 template class Queue<ContactStartdArgs*>;
 template class List<shadow_rec*>;
 template class Item<shadow_rec*>;
 template class SimpleList<PROC_ID>;
-template class ExtArray<int>;
 template class ExtArray<MyString*>;
 template class ExtArray<bool>;
 template class ExtArray<PROC_ID>;

@@ -40,6 +40,7 @@
 #include "condor_scanner.h"
 #include "condor_distribution.h"
 #include "condor_ver_info.h"
+//#include "condor_crontab.h"
 #if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>
@@ -127,6 +128,7 @@ ShouldTransferFiles_t should_transfer = STF_NO;
 bool stream_stdout_toggle = false;
 bool stream_stderr_toggle = false;
 bool    NeedsPerFileEncryption = false;
+bool	NeedsJobDeferral = false;
 bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
 bool HasTDP = false;
 char* tdp_cmd = NULL;
@@ -259,6 +261,8 @@ char    *ParallelScriptShadow  = "parallel_script_shadow";
 char    *ParallelScriptStarter = "parallel_script_starter"; 
 
 char    *MaxJobRetirementTime = "max_job_retirement_time";
+char	*DeferralTime = "deferral_time";
+char	*DeferralWindow = "deferral_window";
 
 const char * REMOTE_PREFIX="Remote_";
 
@@ -285,6 +289,7 @@ void 	SetNotifyUser ();
 void	SetRemoteInitialDir();
 void	SetExitRequirements();
 void 	SetArguments();
+void 	SetJobDeferral();
 void 	SetEnvironment();
 #if !defined(WIN32)
 void 	ComputeRootDir();
@@ -714,7 +719,7 @@ main( int argc, char *argv[] )
 	_EXCEPT_Cleanup = DoCleanup;
 
 	IsFirstExecutable = true;
-	init_job_ad();
+	init_job_ad();	
 
 	if (Quiet) {
 		fprintf(stdout, "Submitting job(s)");
@@ -2941,6 +2946,61 @@ SetArguments()
 	free(args);
 }
 
+//
+// SetDeferral()
+// Inserts the job deferral time into the ad if present
+// This needs to be called before SetRequirements()
+//
+void
+SetJobDeferral() {
+		//
+		// Job Deferral Time
+		// Only update the job ad if they provided a deferral time
+		// We will only be able to validate the deferral time when the
+		// Starter evaluates it and tries to set the timer for it
+		//
+	char *temp = condor_param( DeferralTime, ATTR_DEFERRAL_TIME );
+	if ( temp != NULL ) {
+		sprintf (buffer, "%s = %s", ATTR_DEFERRAL_TIME, temp );
+		InsertJobExpr (buffer);
+		free( temp );
+		
+			//
+			// We set this flag to true so that SetRequirements()
+			// will add the HasDeferral requirement
+			// Hack to skip Local universe for now
+			//
+		if ( JobUniverse != CONDOR_UNIVERSE_LOCAL ) { 
+			NeedsJobDeferral = true;
+		}
+	}
+	
+		//
+		// Job Deferral Window
+		// The window allows for some slack if the Starter
+		// misses the exact execute time for a job
+		//
+	temp = condor_param( DeferralWindow, ATTR_DEFERRAL_WINDOW );
+	if ( temp != NULL ) {
+		sprintf (buffer, "%s = %s", ATTR_DEFERRAL_WINDOW, temp );
+		InsertJobExpr (buffer);
+		free( temp );
+	}
+	
+		//
+		// Validation
+		// Because the scheduler universe doesn't use a Starter,
+		// we can't let them use the job deferral feature
+		//
+	if ( NeedsJobDeferral && JobUniverse == CONDOR_UNIVERSE_SCHEDULER ) {
+		fprintf( stderr, "\nScheduler universe jobs are unable to support "
+						 "job deferral submissions.\n" );
+		DoCleanup( 0, 0, NULL );
+		fprintf( stderr, "Error in submit file\n" );
+		exit(1);
+	} // validation	
+}
+
 void
 SetEnvironment()
 {
@@ -4475,7 +4535,14 @@ queue(int num)
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
-		SetRequirements();	// must be called _after_ SetTransferFiles() and SetPerFileEncryption()
+		SetJobDeferral();	// must be called _before SetRequirements()
+		
+			//
+			// Must be called _after_ SetTransferFiles(), SetJobDeferral()
+			// and SetPerFileEncryption()
+			//
+		SetRequirements();	
+		
 		SetJobLease();		// must be called _after_ SetStdFile(0,1,2)
 
 		SetRemoteAttrs();
@@ -4845,8 +4912,22 @@ check_requirements( char *orig )
 		}
 	}
 
-	/* if the user specified they want this feature, add it to the requirements */
+		//
+		// Job Deferral
+		// If the flag was set true by SetJobDeferral() then we will
+		// add the requirement in for this feature
+		//
+	if ( NeedsJobDeferral ) {
+			//
+			// Add the HasJobDeferral to the attributes so that it will
+			// match with a Starter that can actually provide this feature
+			//
+		(void)strcat( answer, " && (" );
+		(void)strcat( answer, ATTR_HAS_JOB_DEFERRAL );
+		(void)strcat( answer, ")" );
+	}
 
+	/* if the user specified they want this feature, add it to the requirements */
 	return answer;
 }
 
@@ -5413,9 +5494,6 @@ isTrue( const char* attr )
 	}
 	return false;
 }
-
-
-
 
 /************************************
 	The following are dummy stubs for the DaemonCore class to allow

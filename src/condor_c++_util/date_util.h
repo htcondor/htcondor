@@ -1,7 +1,7 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
   *
   * Condor Software Copyright Notice
-  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * Copyright (C) 1990-2005, Condor Team, Computer Sciences Department,
   * University of Wisconsin-Madison, WI.
   *
   * This source code is covered by the Condor Public License, which can
@@ -20,25 +20,25 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  
+#ifndef DATE_UTIL_H
+#define DATE_UTIL_H
 
-#ifndef CONDOR_CLASSAD_UTIL_H
-#define CONDOR_CLASSAD_UTIL_H
-
-#include "string_list.h"
-
-bool EvalBool(ClassAd *ad, const char *constraint);
-
-bool ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, 
-					  StringList* ignored_attrs=NULL, bool verbose=false );
+// ---------------------------------------------------
+// This file contains some helper functions for working
+// with the calendar.
+// ---------------------------------------------------
 
 //
-// Convenience methods for inserting info an ad
-// This was moved from the scheduler
+// Returns the # of days for a month in a given year
 //
-bool InsertIntoAd ( ClassAd *ad, const char *lhs, const char *rhs );
-bool InsertIntoAd ( ClassAd *ad, const char *lhs, char *rhs );
-bool InsertIntoAd ( ClassAd *ad, char *lhs, char *rhs );
-bool InsertIntoAd ( ClassAd *ad, const char *lhs, int rhs );
-bool InsertIntoAd ( ClassAd *ad, char *lhs, int rhs );
+int daysInMonth( int month, int year );
 
-#endif
+//
+// Returns the day of week for a given date 
+// Sunday (0) to Saturday (6)
+// Assuming Gregorian Calendar
+//
+int dayOfWeek( int month, int day, int year );
+
+#endif // DATE_UTIL_H

@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_classad_util.h"
-
+#include "MyString.h"
 
 bool EvalBool(ClassAd *ad, const char *constraint)
 {
@@ -70,7 +70,6 @@ bool EvalBool(ClassAd *ad, const char *constraint)
 	return false;
 }
 
-
 bool
 ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, StringList* ignored_attrs,
 				 bool verbose )
@@ -116,4 +115,51 @@ ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, StringList* ignored_attrs,
 	return ! found_diff;
 }
 
+bool
+InsertIntoAd( ClassAd *ad, char *lhs, char *rhs )
+{
+	return ( InsertIntoAd( ad, (const char*)lhs, (const char*)rhs ) );
+}
 
+bool
+InsertIntoAd( ClassAd *ad, const char *lhs, char *rhs )
+{
+	return ( InsertIntoAd( ad, (const char*)lhs, (const char*)rhs ) );
+}
+
+bool
+InsertIntoAd( ClassAd *ad, const char *lhs, const char *rhs )
+{
+	if ( !lhs || !rhs || !ad ) {
+		return FALSE;
+	}
+
+	MyString tmp(lhs);
+	tmp += " = \"";
+	tmp += rhs;
+	tmp += "\"";
+	ad->Insert( tmp.Value() );
+	
+	return TRUE;
+}
+
+bool
+InsertIntoAd( ClassAd *ad, char *lhs, int rhs )
+{
+	return ( InsertIntoAd( ad, (const char*)lhs, rhs ) );
+}
+
+bool
+InsertIntoAd( ClassAd *ad, const char *lhs, int rhs )
+{
+	if ( !lhs || !ad ) {
+		return FALSE;
+	}
+
+	MyString tmp(lhs);
+	tmp += " = ";
+	tmp += rhs;
+	ad->Insert( tmp.Value() );
+
+	return TRUE;
+}

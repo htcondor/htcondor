@@ -47,6 +47,11 @@ class ExtArray
 	void truncate (int);
 	void fill (Element);
 	void setFiller( Element );
+	
+	// Vector-like functions
+	Element set( int, Element );
+	Element add( Element );
+	Element& getElementAt( int );
 
   private:
 
@@ -149,6 +154,81 @@ operator[] (int i)
 	return array[i];
 }
 
+//
+// set()
+// Set a value for an element at a specific position
+// Will return the original value if there is one
+//
+template <class Element>
+Element ExtArray<Element>::
+set( int idx, Element elt ) 
+{
+		//
+		// First we check bounds
+		// I don't think that it should changing the index if 
+		// we are below zero, but I need to keep this backwards
+		// compatiable with the old code
+		//
+	if ( idx < 0 ) {	
+		idx = 0;
+		//
+		// If we are not large enough for this position, increase
+		// our size
+		//
+	} else if ( idx >= this->size ) {
+		this->resize( idx * 2 );
+	}
+		//
+		// If this new value is the largest position, we'll 
+		// set this value as the new last
+		//
+	if ( idx > this->last ) {
+		this->last = idx;
+	}
+	
+		//
+		// Get the old value, then save the new value
+		//
+	Element orig = this->array[idx];
+	this->array[idx] = elt;
+	return ( orig );
+}
+
+//
+// add()
+// This is so you can append things to the end of the array
+// without having to keep track of your current size
+//
+template <class Element>
+Element ExtArray<Element>::
+add( Element elt ) 
+{
+		//
+		// Take the last size and add 1
+		// We'll pass this to set who will take care of everything
+		// for us
+		//
+	return ( this->set( this->last + 1, elt ) );
+}	
+
+//
+// getElementAt()
+//
+//
+template <class Element>
+inline Element& ExtArray<Element>::
+getElementAt( int idx )
+{
+		//
+		// We will check bounds but not resize the array
+		//
+	if ( idx < 0 )  {
+		idx = 0;
+	} else if ( idx >= size ) {
+		idx = size;
+	}
+	return ( array[idx] );
+}
 
 template <class Element>
 inline int ExtArray<Element>::

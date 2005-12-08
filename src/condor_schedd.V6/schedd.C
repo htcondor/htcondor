@@ -33,6 +33,7 @@
 #include "condor_attributes.h"
 #include "condor_parameters.h"
 #include "condor_classad.h"
+#include "condor_classad_util.h"
 #include "classad_helpers.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
@@ -73,6 +74,7 @@
 #include "condor_classad_namedlist.h"
 #include "schedd_cronmgr.h"
 #include "misc_utils.h"  // for startdClaimFile()
+//#include "condor_crontab.h"
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -268,6 +270,18 @@ Scheduler::Scheduler() :
 	ReservedSwap = 0;
 	SwapSpace = 0;
 
+		//
+		// ClassAd attribute for evaluating whether to start
+		// a local universe job
+		// 
+	StartLocalUniverse = NULL;
+
+		//
+		// ClassAd attribute for evaluating whether to start
+		// a scheduler universe job
+		// 
+	StartSchedulerUniverse = NULL;
+
 	ShadowSizeEstimate = 0;
 
 	N_RejectedClusters = 0;
@@ -351,6 +365,12 @@ Scheduler::~Scheduler()
 	if( LocalUnivExecuteDir ) {
 		free( LocalUnivExecuteDir );
 	}
+	if ( this->StartLocalUniverse ) {
+		free ( this->StartLocalUniverse );
+	}
+	if ( this->StartSchedulerUniverse ) {
+		free ( this->StartSchedulerUniverse );
+	}
 
 	if ( CronMgr ) {
 		delete CronMgr;
@@ -431,6 +451,19 @@ Scheduler::~Scheduler()
 
 	if (_gridlogic)
 		delete _gridlogic;
+		
+		//
+		// Delete CronTab objects
+		//
+//	if ( this->cronTabs ) {
+//		this->cronTabs->startIterations();
+//		CronTab *current;
+//		while ( this->cronTabs->iterate( current ) == 1 ) {
+//			if ( current ) delete current;
+//		} // WHILE
+//		delete this->cronTabs;
+//		delete this->cronTabsExclude;
+//	}
 }
 
 void
@@ -638,6 +671,15 @@ Scheduler::count_jobs()
 	
 	sprintf(tmp, "%s = %d", ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
 	ad->InsertOrUpdate(tmp);
+	
+	sprintf(tmp, "%s = %s", ATTR_START_LOCAL_UNIVERSE,
+							this->StartLocalUniverse );
+	ad->InsertOrUpdate(tmp);
+	
+	sprintf(tmp, "%s = %s", ATTR_START_SCHEDULER_UNIVERSE,
+							this->StartSchedulerUniverse );
+	ad->InsertOrUpdate(tmp);
+	
 	
 	 sprintf(tmp, "%s = \"%s\"", ATTR_NAME, Name);
 	 ad->InsertOrUpdate(tmp);
@@ -2836,7 +2878,6 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			// just go to the next one
 			continue;
 		}
-	
 		if ( SpoolSpace ) free(SpoolSpace);
 		SpoolSpace = strdup( gen_ckpt_name(Spool,cluster,proc,0) );
 		ASSERT(SpoolSpace);
@@ -5538,6 +5579,15 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	addRunnableJob( srec );
 }
 
+//
+//
+//
+//int
+//calculateCronSchedule( ClassAd *job )
+//{
+//	return ( (int) scheduler.calculateCronSchedule( job ) );	
+//}
+
 
 int
 find_idle_local_jobs( ClassAd *job )
@@ -5566,11 +5616,80 @@ find_idle_local_jobs( ClassAd *job )
 	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
+	
+		//
+		// Before evaluating whether we can run this job, first make 
+		// sure its even eligible to run
+		// We do not count REMOVED or HELD jobs
+		//
+	if ( max_hosts > cur_hosts &&
+		(status == IDLE || status == UNEXPANDED || status == RUNNING) ) {
+			//
+			// The jobs will now attempt to have their requirements
+			// evalulated. We first check to see if the requirements are defined.
+			// If they are not, then we'll continue.
+			// If they are, then we make sure that they evaluate to true.
+			// Evaluate the schedd's ad and the job ad against each 
+			// other. We break it out so we can print out any errors 
+			// as needed
+			//
+		ClassAd scheddAd;
+		scheduler.publish( &scheddAd );
 
-	// don't count REMOVED or HELD jobs
-	if( max_hosts > cur_hosts &&
-		(status == IDLE || status == UNEXPANDED || status == RUNNING) )
-	{
+			//
+			// Select the start expression based on the universe
+			//
+		const char *universeExp = ( univ == CONDOR_UNIVERSE_LOCAL ?
+									ATTR_START_LOCAL_UNIVERSE :
+									ATTR_START_SCHEDULER_UNIVERSE );
+	
+			//
+			// Start Universe Evaluation
+			//
+		bool requirementsMet = true;
+		int requirements = 1;
+		if ( scheddAd.Lookup( universeExp ) != NULL && 
+			 scheddAd.EvalBool( universeExp, job, requirements ) ) {
+			requirementsMet = (bool)requirements;
+		}
+		if ( ! requirementsMet ) {
+			dprintf( D_FULLDEBUG, "%s evaluated to false for local job "
+								  "%d.%d. Unable to start job.\n",
+								  universeExp, id.cluster, id.proc );
+				//
+				// Print the expression to the user
+				//
+			char *exp = scheddAd.sPrintExpr( NULL, false, universeExp );
+			if ( exp ) {
+				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
+				free( exp );
+			}
+			return ( 0 );
+		}
+			//
+			// Job Requirements Evaluation
+			//
+		if ( job->Lookup( ATTR_REQUIREMENTS ) != NULL && 
+			 job->EvalBool( ATTR_REQUIREMENTS, &scheddAd, requirements ) ) {
+			requirementsMet = (bool)requirements;
+		}
+		if ( ! requirementsMet ) {
+			dprintf( D_FULLDEBUG, "Local job %d.%d requirements did not evaluate "
+								  "to true. Unable to start job\n",
+								  id.cluster, id.proc );
+				//
+				// Print the expression to the user
+				//
+			char *exp = job->sPrintExpr( NULL, false, ATTR_REQUIREMENTS );
+			if ( exp ) {
+				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
+				free( exp );
+			}
+			return ( 0 );
+		}
+			//
+			// It's safe to go ahead and run the job!
+			//
 		if( univ == CONDOR_UNIVERSE_LOCAL ) {
 			dprintf( D_FULLDEBUG, "Found idle local universe job %d.%d\n",
 					 id.cluster, id.proc );
@@ -5625,7 +5744,7 @@ Scheduler::StartJobs()
 	if ( ExitWhenDone ) {
 		return;
 	}
-
+	
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
 	startJobsDelayBit = FALSE;
 	matches->startIterations();
@@ -6684,6 +6803,20 @@ Scheduler::start_local_universe_job( PROC_ID* job_id )
 		// status wrong while the job sits in the RunnableJob queue,
 		// since we're not negotiating for them at all... 
 	SetAttributeInt( job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1 );
+
+		//
+		// If we start a local universe job, the LocalUniverseJobsRunning
+		// tally isn't updated so we have no way of knowing whether we can
+		// start the next job. This would cause a ton of local jobs to
+		// just get fired off all at once even though there was a limit set.
+		// So instead, I am following Derek's example with the scheduler 
+		// universe and updating our running tally
+		// Andy - 11.14.2004 - pavlo@cs.wisc.edu
+		//	
+	if ( this->LocalUniverseJobsIdle > 0 ) {
+		this->LocalUniverseJobsIdle--;
+	}
+	this->LocalUniverseJobsRunning++;
 
 	srec = add_shadow_rec( 0, job_id, CONDOR_UNIVERSE_LOCAL, NULL, -1 );
 	addRunnableJob( srec );
@@ -8290,8 +8423,19 @@ Scheduler::child_exit(int pid, int status)
 		}
 	} else if (srec) {
 		char* name = NULL;
+			//
+			// Local Universe
+			//
 		if( IsLocalUniverse(srec) ) {
 			name = "Local starter";
+				//
+				// Following the scheduler universe example, we need
+				// to try to keep track of how many local jobs are 
+				// running in realtime
+				//
+			if ( this->LocalUniverseJobsRunning > 0 ) {
+				this->LocalUniverseJobsRunning--;
+			}
 		} else {
 				// A real shadow
 			name = "Shadow";
@@ -8342,6 +8486,32 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_BAD_STATUS:
 				EXCEPT( "%s exited because job status != RUNNING", name );
 				break;
+				
+				//
+				// Super Hack! - Missed Deferral Time
+				// The job missed the time that it was suppose to
+				// start executing, so we'll add an error message
+				// to the remove reason so that it shows up in the userlog
+				//
+				// Please note that I am not proud of this code,
+				// but it was needed just for now to know that the 
+				// job did not run and is being removed
+				//
+			case JOB_MISSED_DEFERRAL_TIME: {
+				MyString _error("\"Job missed deferred execution time\"");
+				if ( SetAttribute( job_id.cluster, job_id.proc,
+						  		  ATTR_REMOVE_REASON, _error.Value() ) < 0 ) {
+					dprintf( D_ALWAYS, "WARNING: Failed to set %s to %s for "
+							 "job %d.%d\n", ATTR_REMOVE_REASON, _error.Value(), 
+							 job_id.cluster, job_id.proc );
+				}
+				dprintf( D_ALWAYS, "Job %d.%d missed its deferred execution time\n",
+									srec->job_id.cluster, srec->job_id.proc );
+				//
+				// This case will fall down into the remove case so that
+				// the job is removed from the queue
+				//
+			}		
 			case JOB_SHOULD_REMOVE:
 				dprintf( D_ALWAYS, "Removing job %d.%d\n",
 						 srec->job_id.cluster, srec->job_id.proc );
@@ -8391,8 +8561,8 @@ Scheduler::child_exit(int pid, int status)
 					(WEXITSTATUS(status) != JOB_EXCEPTION) )
 				{
 					dprintf( D_ALWAYS,
-							 "ERROR: %s exited with unknown value!\n",
-							 name );
+							 "ERROR: %s exited with unknown value %d!\n",
+							 name, WEXITSTATUS(status) );
 				}
 				// record that we had an exception.  This function will
 				// relinquish the match if we get too many
@@ -8415,8 +8585,8 @@ Scheduler::child_exit(int pid, int status)
 		// If we're not trying to shutdown, now that either an agent
 		// or a shadow (or both) have exited, we should try to
 		// activate all our claims and start jobs on them.
-	if( ! ExitWhenDone ) {
-		if (StartJobsFlag) StartJobs();
+	if( ! ExitWhenDone && StartJobsFlag ) {
+		this->StartJobs();
 	}
 }
 
@@ -8638,6 +8808,24 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	default:
 		break;
 	}
+		//
+		// I'm not sure if this is proper place for this,
+		// but I need to check to see if the job uses the CronTab
+		// scheduling. If it does, then we'll call out to have the
+		// next execution time calculated for it
+		// 11.01.2005 - Andy - pavlo@cs.wisc.edu 
+		//
+	/*
+	if ( !this->cronTabsExclude->IsMember( *job_id ) ) {
+			//
+			// Set the force flag to true so it will always 
+			// calculate the next execution time
+			//
+		ClassAd *ad = GetJobAd( job_id->cluster, job_id->proc );
+		this->calculateCronSchedule( ad, true );
+	}
+	*/
+	
 	dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%p )\n", pid,
 			 job_id );
 }
@@ -8952,6 +9140,52 @@ Scheduler::Init()
 		MaxJobsRunning = atoi( tmp );
 		free( tmp );
 	}
+	
+		//
+		// Start Local Universe Expression
+		// This will be added into the requirements expression for
+		// the schedd to know whether we can start a local job 
+		// 
+	if ( this->StartLocalUniverse ) {
+		free( this->StartLocalUniverse );
+	}
+	tmp = param( "START_LOCAL_UNIVERSE" );
+	if ( ! tmp ) {
+			//
+			// Default Expression: TRUE
+			//
+		this->StartLocalUniverse = strdup( "TRUE" );
+	} else {
+			//
+			// Use what they had in the config file
+			// Should I be checking this first??
+			//
+		this->StartLocalUniverse = tmp;
+		tmp = NULL;
+	}
+
+		//
+		// Start Scheduler Universe Expression
+		// This will be added into the requirements expression for
+		// the schedd to know whether we can start a scheduler job 
+		// 
+	if ( this->StartSchedulerUniverse ) {
+		free( this->StartSchedulerUniverse );
+	}
+	tmp = param( "START_SCHEDULER_UNIVERSE" );
+	if ( ! tmp ) {
+			//
+			// Default Expression: TRUE
+			//
+		this->StartSchedulerUniverse = strdup( "TRUE" );
+	} else {
+			//
+			// Use what they had in the config file
+			// Should I be checking this first??
+			//
+		this->StartSchedulerUniverse = tmp;
+		tmp = NULL;
+	}
 
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	
@@ -9065,6 +9299,30 @@ Scheduler::Init()
 		  free(tmp);
 	}
 
+		//
+		// This HashTable is used to figure out the next runtime
+		// of certain jobs that have a specified cron schedule
+		// Check if the object already exists and we 
+		// need to delete what's in there
+		//
+//	if ( this->cronTabs ) {
+//		this->cronTabs->startIterations();
+//		CronTab *current;
+//		while ( this->cronTabs->iterate( current ) == 1 ) {
+//			if ( current ) delete current;
+//		} // WHILE
+//		delete this->cronTabs;
+//		if ( this->cronTabsExclude ) delete this->cronTabsExclude;
+//	}
+//	this->cronTabs = new HashTable<PROC_ID, CronTab*>(
+//												(int)( MaxJobsRunning * 1.2 ),
+//												hashFuncPROC_ID,
+//												updateDuplicateKeys );
+		//
+		// Along with the cronTabs HashTable we have a list
+		// of jobs that do not need an entry in cronTabs
+		//
+//	this->cronTabsExclude = new Queue<PROC_ID>;
 
 	tmp = param("MAX_SHADOW_EXCEPTIONS");
 	 if(!tmp) {
@@ -9678,6 +9936,18 @@ Scheduler::reschedule_negotiator(int, Stream *)
 	sendReschedule();
 
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
+			//
+			// This shouldn't be here, but it works for now
+			// The problem is we are trying to start a local job before
+			// we get a chance to calculate the cron schedule for it
+			// As such, a job will run right away when it should really
+			// have waited.
+			//
+			// What should happen is that we calculate the cron schedule
+			// when the ClassAd immediately arrives at the schedd, but I 
+			// just haven't figured out where that it yet
+			//
+		//WalkJobQueue( (int(*)(ClassAd *))::calculateCronSchedule );
 		StartLocalJobs();
 	}
 
@@ -9801,7 +10071,6 @@ Scheduler::DelMrec(char* id)
 	dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
 			 rec->peer, rec->cluster, rec->proc ); 
 	dprintf( D_FULLDEBUG, "ClaimId of deleted match: %s\n", rec->id );
-	
 	matches->remove(key);
 		// Remove this match from the associated shadowRec.
 	if (rec->shadowRec)
@@ -10114,54 +10383,143 @@ Scheduler::HadException( match_rec* mrec )
 	}
 }
 
+//
+// publish()
+// Populates the ClassAd for the schedd
+//
+int
+Scheduler::publish( ClassAd *ad ) {
+	int ret = (int)true;
+	char *temp;
+	
+		// -------------------------------------------------------
+		// Copied from dumpState()
+		// Many of these might not be necessary for the 
+		// general case of publish() and should probably be
+		// moved back into dumpState()
+		// -------------------------------------------------------
+	InsertIntoAd ( ad, "MySockName", MySockName );
+	InsertIntoAd ( ad, "MyShadowSockname", MyShadowSockName );
+	InsertIntoAd ( ad, "SchedDInterval", SchedDInterval );
+	InsertIntoAd ( ad, "QueueCleanInterval", QueueCleanInterval );
+	InsertIntoAd ( ad, "JobStartDelay", JobStartDelay );
+	InsertIntoAd ( ad, "JobStartCount", JobStartCount );
+	InsertIntoAd ( ad, "JobsThisBurst", JobsThisBurst );
+	InsertIntoAd ( ad, "MaxJobsRunning", MaxJobsRunning );
+	InsertIntoAd ( ad, "MaxJobsSubmitted", MaxJobsSubmitted );
+	InsertIntoAd ( ad, "JobsStarted", JobsStarted );
+	InsertIntoAd ( ad, "SwapSpace", SwapSpace );
+	InsertIntoAd ( ad, "ShadowSizeEstimate", ShadowSizeEstimate );
+	InsertIntoAd ( ad, "SwapSpaceExhausted", SwapSpaceExhausted );
+	InsertIntoAd ( ad, "ReservedSwap", ReservedSwap );
+	InsertIntoAd ( ad, "JobsIdle", JobsIdle );
+	InsertIntoAd ( ad, "JobsRunning", JobsRunning );
+	InsertIntoAd ( ad, "BadCluster", BadCluster );
+	InsertIntoAd ( ad, "BadProc", BadProc );
+	InsertIntoAd ( ad, "N_Owners", N_Owners );
+	InsertIntoAd ( ad, "NegotiationRequestTime", NegotiationRequestTime  );
+	InsertIntoAd ( ad, "ExitWhenDone", ExitWhenDone );
+	InsertIntoAd ( ad, "StartJobTimer", StartJobTimer );
+	InsertIntoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
+	InsertIntoAd ( ad, "CondorAdministrator", CondorAdministrator );
+	InsertIntoAd ( ad, "AccountantName", AccountantName );
+	InsertIntoAd ( ad, "UidDomain", UidDomain );
+	InsertIntoAd ( ad, "MaxFlockLevel", MaxFlockLevel );
+	InsertIntoAd ( ad, "FlockLevel", FlockLevel );
+	InsertIntoAd ( ad, "MaxExceptions", MaxExceptions );
+	
+		// -------------------------------------------------------
+		// Basic Attributes
+		// -------------------------------------------------------
+
+		//
+		// Architecture
+		//
+	temp = param( "ARCH" );
+	if ( temp ) {
+		InsertIntoAd( ad, ATTR_ARCH, temp );
+		free( temp );
+	}
+		//
+		// Operating System
+		//
+	temp = param( "OPSYS" );
+	if ( temp ) {
+		InsertIntoAd( ad, ATTR_OPSYS, temp );
+		free( temp );
+	}
+		//
+		// Disk Space in LocalUnivExecuteDir
+		//
+	unsigned long disk_space = sysapi_disk_space( this->LocalUnivExecuteDir );
+	InsertIntoAd( ad, ATTR_DISK, disk_space );
+	
+		// -------------------------------------------------------
+		// Local Universe Attributes
+		// -------------------------------------------------------
+	InsertIntoAd( ad, ATTR_TOTAL_LOCAL_IDLE_JOBS,
+				 this->LocalUniverseJobsIdle );
+	InsertIntoAd( ad, ATTR_TOTAL_LOCAL_RUNNING_JOBS,
+				 this->LocalUniverseJobsRunning );
+	
+		//
+		// Limiting the # of local universe jobs allowed to start
+		//
+	if ( this->StartLocalUniverse ) {
+		MyString temp;
+		temp  = ATTR_START_LOCAL_UNIVERSE;
+		temp += " = ";
+		temp += this->StartLocalUniverse;
+		ad->Insert( temp.Value() );	
+	}
+
+		// -------------------------------------------------------
+		// Scheduler Universe Attributes
+		// -------------------------------------------------------
+	InsertIntoAd( ad, ATTR_TOTAL_SCHEDULER_IDLE_JOBS,
+				 this->SchedUniverseJobsIdle );
+	InsertIntoAd( ad, ATTR_TOTAL_SCHEDULER_RUNNING_JOBS,
+				 this->SchedUniverseJobsRunning );
+	
+		//
+		// Limiting the # of scheduler universe jobs allowed to start
+		//
+	if ( this->StartSchedulerUniverse ) {
+		MyString temp;
+		temp  = ATTR_START_SCHEDULER_UNIVERSE;
+		temp += " = ";
+		temp += this->StartSchedulerUniverse;
+		ad->Insert( temp.Value() );	
+	}
+	
+	return ( ret );
+}
+
 
 int
 Scheduler::dumpState(int, Stream* s) {
 
 	dprintf ( D_FULLDEBUG, "Dumping state for Squawk\n" );
 
-	ClassAd *ad = new ClassAd;
-	intoAd ( ad, "MySockName", MySockName );
-	intoAd ( ad, "MyShadowSockname", MyShadowSockName );
-	intoAd ( ad, "SchedDInterval", SchedDInterval );
-	intoAd ( ad, "QueueCleanInterval", QueueCleanInterval );
-	intoAd ( ad, "JobStartDelay", JobStartDelay );
-	intoAd ( ad, "JobStartCount", JobStartCount );
-	intoAd ( ad, "JobsThisBurst", JobsThisBurst );
-	intoAd ( ad, "MaxJobsRunning", MaxJobsRunning );
-	intoAd ( ad, "MaxJobsSubmitted", MaxJobsSubmitted );
-	intoAd ( ad, "JobsStarted", JobsStarted );
-	intoAd ( ad, "SwapSpace", SwapSpace );
-	intoAd ( ad, "ShadowSizeEstimate", ShadowSizeEstimate );
-	intoAd ( ad, "SwapSpaceExhausted", SwapSpaceExhausted );
-	intoAd ( ad, "ReservedSwap", ReservedSwap );
-	intoAd ( ad, "JobsIdle", JobsIdle );
-	intoAd ( ad, "JobsRunning", JobsRunning );
-	intoAd ( ad, "LocalUniverseJobsIdle", LocalUniverseJobsIdle );
-	intoAd ( ad, "LocalUniverseJobsRunning", LocalUniverseJobsRunning );
-	intoAd ( ad, "SchedUniverseJobsIdle", SchedUniverseJobsIdle );
-	intoAd ( ad, "SchedUniverseJobsRunning", SchedUniverseJobsRunning );
-	intoAd ( ad, "BadCluster", BadCluster );
-	intoAd ( ad, "BadProc", BadProc );
-	intoAd ( ad, "N_Owners", N_Owners );
-	intoAd ( ad, "NegotiationRequestTime", NegotiationRequestTime  );
-	intoAd ( ad, "ExitWhenDone", ExitWhenDone );
-	intoAd ( ad, "StartJobTimer", StartJobTimer );
-	intoAd ( ad, "timeoutid", timeoutid );
-	intoAd ( ad, "startjobsid", startjobsid );
-	intoAd ( ad, "startJobsDelayBit", startJobsDelayBit );
-	intoAd ( ad, "num_reg_contacts", num_reg_contacts );
-	intoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
-	intoAd ( ad, "CondorAdministrator", CondorAdministrator );
-	intoAd ( ad, "Mail", Mail );
-	intoAd ( ad, "filename", filename );
-	intoAd ( ad, "AccountantName", AccountantName );
-	intoAd ( ad, "UidDomain", UidDomain );
-	intoAd ( ad, "MaxFlockLevel", MaxFlockLevel );
-	intoAd ( ad, "FlockLevel", FlockLevel );
-	intoAd ( ad, "alive_interval", alive_interval );
-	intoAd ( ad, "leaseAliveInterval", leaseAliveInterval );
-	intoAd ( ad, "MaxExceptions", MaxExceptions );
+		//
+		// The new publish() method will stuff all the attributes
+		// that we used to set in this method
+		//
+	ClassAd ad;
+	this->publish( &ad );
+	
+		//
+		// These items we want to keep in here because they're
+		// not needed for the general info produced by publish()
+		//
+	InsertIntoAd ( &ad, "num_reg_contacts", num_reg_contacts );
+	InsertIntoAd ( &ad, "leaseAliveInterval", leaseAliveInterval );
+	InsertIntoAd ( &ad, "alive_interval", alive_interval );
+	InsertIntoAd ( &ad, "startjobsid", startjobsid );
+	InsertIntoAd ( &ad, "startJobsDelayBit", startJobsDelayBit );
+	InsertIntoAd ( &ad, "timeoutid", timeoutid );
+	InsertIntoAd ( &ad, "Mail", Mail );
+	InsertIntoAd ( &ad, "filename", filename );
 	
 	int cmd;
 	s->code( cmd );
@@ -10169,38 +10527,10 @@ Scheduler::dumpState(int, Stream* s) {
 
 	s->encode();
 	
-	ad->put( *s );
-
-	delete ad;
+	ad.put( *s );
 
 	return TRUE;
 }
-
-int Scheduler::intoAd( ClassAd *ad, char *lhs, char *rhs ) {
-	char tmp[16000];
-	
-	if ( !lhs || !rhs || !ad ) {
-		return FALSE;
-	}
-
-	sprintf ( tmp, "%s = \"%s\"", lhs, rhs );
-	ad->Insert( tmp );
-	
-	return TRUE;
-}
-
-int Scheduler::intoAd( ClassAd *ad, char *lhs, int rhs ) {
-	char tmp[256];
-	if ( !lhs || !ad ) {
-		return FALSE;
-	}
-
-	sprintf ( tmp, "%s = %d", lhs, rhs );
-	ad->Insert( tmp );
-
-	return TRUE;
-}
-
 
 int
 fixAttrUser( ClassAd *job )
@@ -10813,7 +11143,22 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 	int proc = job_id->_proc;
 	delete job_id;
 	job_id = NULL; 
-
+	
+		//
+		// Remove the record from our cronTab lists
+		// We do it here before we fire off any threads
+		// so that we don't cause problems
+		//
+//	PROC_ID id;
+//	id.cluster = cluster;
+//	id.proc    = proc;
+//	CronTab *cronTab;
+//	if ( this->cronTabsExclude->IsMember( id ) ) {
+//		this->cronTabsExclude->dequeue( id );
+//	} else if ( this->cronTabs->lookup( id, cronTab ) >= 0 ) {
+//		if ( cronTab != NULL) delete cronTab;
+//	}
+	
 	if( jobCleanupNeedsThread(cluster, proc) ) {
 		dprintf( D_FULLDEBUG, "Job cleanup for %d.%d will block, "
 				 "calling jobIsFinished() in a thread\n", cluster, proc );
@@ -10829,6 +11174,7 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 		jobIsFinished( cluster, proc );
 		jobIsFinishedDone( cluster, proc );
 	}
+
 
 	return TRUE;
 }
@@ -11054,3 +11400,310 @@ Scheduler::claimLocalStartd()
 		// Return true if we claimed anything, false if otherwise
 	return number_of_claims ? true : false;
 }
+
+//
+// calculateCronSchedule()
+//
+// If this is set to true then we will always generate 
+// a new runtime for the job
+//
+// IMPORTANT:
+// To handle when the system time steps, the master
+// will call a condor_reconfig and we will delete
+// our cronTab cache. This will force us to recalculate
+// next run time for all our jobs
+//
+//bool 
+//Scheduler::calculateCronSchedule( ClassAd *ad, bool force ) {
+//		//
+//		// I allocate other variables we need below these first
+//		// checks since if it would be a waste if the job did not
+//		// even need a CronTab schedule
+//		//
+//	PROC_ID id;
+//	ad->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
+//	ad->LookupInteger(ATTR_PROC_ID, id.proc);
+//		
+//	dprintf( D_ALWAYS, "PAVLO: Trying to calc cron runtime for Job %d.%d\n",
+//					id.cluster, id.proc );
+//		
+//		//
+//		// We keep an exclusion table so we can quickly look up
+//		// whether we don't even need to bother with this ad
+//		//
+//	if ( this->cronTabsExclude->IsMember( id ) ) {
+//		dprintf( D_ALWAYS, "PAVLO: Cached exclusion entry for Job %d.%d\n",
+//					id.cluster, id.proc );
+//		return ( true );
+//	}
+//		//
+//		// Check whether this needs a schedule
+//		// If not, then add it to our exclusion list so that the
+//		// next time we won't check
+//		//
+//	if ( !CronTab::needsCronTab( ad ) ) {	
+//		this->cronTabsExclude->enqueue( id );
+//		dprintf( D_ALWAYS, "PAVLO: Job %d.%d does not need a cron! Caching!\n",
+//					id.cluster, id.proc );
+//		return ( true );
+//	}
+//
+//		//
+//		// If this is set to true then the cron schedule in the job ad 
+//		// had proper syntax and was parsed by the CronTab object successfully
+//		//
+//	bool valid = true;
+//		//
+//		// CronTab validation errors
+//		//
+//	MyString error;
+//		//
+//		// See if we can get the cached scheduler object 
+//		//
+//	CronTab *cronTab = NULL;
+//	if ( this->cronTabs->lookup( id, cronTab ) < 0 ) {
+//			//
+//			// There wasn't a cached object, so we'll need to create
+//			// one then shove it back in the lookup table
+//			// Make sure that the schedule is valid first
+//			//
+//		if ( CronTab::validate( ad, error ) ) {
+//			cronTab = new CronTab( ad );
+//				//
+//				// You never know what might have happended during
+//				// the initialization so it's good to check after
+//				// we instantiate the object
+//				//
+//			valid = cronTab->isValid();
+//			if ( valid ) {
+//				this->cronTabs->insert( id, cronTab );
+//			}
+//				//
+//				// We set the force flag to true so that we are 
+//				// sure to calculate the next runtime even if
+//				// the job ad already has one in it
+//				//
+//			force = true;
+//
+//			//
+//			// It was invalid!
+//			// We'll notify the user and put the job on hold
+//			//
+//		} else {
+//			valid = false;
+//		}
+//	}
+//
+//		//
+//		// Now determine whether we need to calculate a new runtime:
+//		//
+//		//	1) valid
+//		//		The CronTab object must have parsed the parameters
+//		//		for the schedule successfully
+//		//	2) cronTab != NULL
+//		//		Cheap safety check
+//		//	3) !seenBefore || force
+//		//		We can look to see whether the job has already
+//		//		had a job calculated for it. If it has, and 
+//		//		the force flag isn't set to true, then we won't
+//		//		calculate a new time.
+//		//	
+//	bool seenBefore = ( ad->Lookup( ATTR_CRON_NEXT_RUNTIME ) != NULL );
+//	dprintf( D_ALWAYS, "PAVLO: seenBefore -> %s\n",
+//						(seenBefore ? "TRUE" : "FALSE") );
+//	dprintf( D_ALWAYS, "PAVLO: force -> %s\n",
+//						(force ? "TRUE" : "FALSE") );
+//	
+//	if ( valid && ( cronTab != NULL ) && ( !seenBefore || force ) ) {
+//			//
+//			// If seenBefore is false, then that means we haven't
+//			// updated the job's requirement expression
+//			//
+//		if ( !seenBefore ) {
+//				//
+//				// Prepare our new requirement attribute
+//				//
+//			MyString attrib = "(";
+//			attrib += ATTR_HAS_JOB_DEFERRAL;
+//			attrib += ") && (";
+//			attrib += ATTR_CURRENT_TIME;
+//			attrib += " + ";
+//			attrib += ATTR_CRON_CURRENT_TIME_RANGE;
+//			attrib += ") >= ";
+//			attrib += ATTR_CRON_NEXT_RUNTIME;
+//				//
+//				// Check to see if requirements are empty
+//				// If they're not, then we need to make sure we are appending
+//				// it to what's already there properly
+//				//
+//			MyString newAttrib( ATTR_REQUIREMENTS );
+//			newAttrib += " = ";
+//			ExprTree *tree = ad->Lookup( ATTR_REQUIREMENTS );
+//			if ( tree ) {
+//				char *buffer;
+//				tree->RArg()->PrintToNewStr( &buffer );
+//				newAttrib += buffer;
+//				newAttrib += " && (";
+//				newAttrib += attrib;
+//				newAttrib += ")";
+//				dprintf( D_ALWAYS, "PAVLO: Pulled out existing requirements %s\n",
+//								buffer );
+//				free( buffer );
+//				//
+//				// We will create a new requirements expression
+//				// No need to worry about what might already be there
+//				//
+//			} else {
+//				newAttrib += attrib;
+//			}
+//				//
+//				// For some reason we can't update the requirements!
+//				// This is a big problem!
+//				//
+//			if ( ! ad->Insert( newAttrib.Value(), true ) ) {
+//				EXCEPT( "Unable to update Requirements expression for "
+//						"Cron Jobs!\n" );
+//			}
+//			
+//				//
+//				// We also need to stuff what the schedd's interval
+//				// value is. This way we can specify a range of when 
+//				// our job should be started. This is needed so
+//				// that we can send the job to the starter if 
+//				// the job execution time comes after the current time
+//				// but before the next time the schedd will pool it's
+//				// jobs
+//				//
+//			ad->Assign( ATTR_CRON_CURRENT_TIME_RANGE, this->SchedDInterval );
+//			
+//		} // !seenBefore
+//		
+//			//
+//			// The user can specify a window range of when we are allowed
+//			// to run the job. This allows them to specify that a job
+//			// can be ran even if we missed the exact run time
+//			// So we need to get the current time and then 
+//			// subtract the window before asking what the next runtime is
+//			//
+//		int runTimeWindow = 0;
+//		if ( ad->Lookup( ATTR_DEFERRAL_WINDOW) != NULL ) {
+//			ad->LookupInteger( ATTR_DEFERRAL_WINDOW, runTimeWindow );
+//			dprintf( D_ALWAYS, "PAVLO: Pulled %s from ad with value '%d'\n",
+//								ATTR_DEFERRAL_WINDOW, runTimeWindow );
+//		}
+//		
+//			//
+//			// Get the next runtime starting at our "windowed" time
+//			//
+//		long curTime = (long)time( NULL );
+//		long calculatedRunTime = cronTab->nextRunTime( curTime - runTimeWindow );
+//		long runTime = calculatedRunTime;
+//		dprintf( D_ALWAYS, "PAVLO: Next runtime for Job %d.%d is %d\n",
+//						id.cluster, id.proc, (int)runTime );
+//			//
+//			// We have a valid runtime, so let's figure out 
+//			// when we should run it next
+//			//
+//		if ( runTime != CRONTAB_INVALID ) {
+//				//
+//				// The preparation time is how much in advance we 
+//				// want to send the job to the starter so it can 
+//				// prepare the environment
+//				// This can either be a user option in their job file
+//				// or in the config file
+//				//
+//			int prepTime = 0;
+//			char *tmp = param( "CRON_PREPARATION_TIME" );
+//			if ( tmp ) {
+//				prepTime = atoi( tmp );
+//				free( tmp );
+//			}
+//			if ( ad->Lookup( ATTR_CRON_PREP_TIME ) != NULL ) {
+//				ad->LookupInteger( ATTR_CRON_PREP_TIME, prepTime );
+//				dprintf( D_ALWAYS, "PAVLO: Pulled %s from ad with value '%d'\n",
+//								ATTR_CRON_PREP_TIME, prepTime );
+//			}
+//			dprintf( D_ALWAYS, "PAVLO: Cron Prep Time %d\n", prepTime );
+//				//
+//				// Subtract the preparation time
+//				//
+//			runTime -= prepTime;			
+//				//
+//				// Now that we have it all figured out, stuff this runtime
+//				// into the job ad! This is the time that the will 
+//				// be released by the schedd and sent over to the starter
+//				//
+//			ad->Assign( ATTR_CRON_NEXT_RUNTIME, (int)runTime );
+//			
+//				//
+//				// We also need to put in the real runtime. This is the
+//				// time that we figured out when it should run next
+//				//
+//			ad->Assign( ATTR_DEFERRAL_TIME,	(int)calculatedRunTime );
+//			
+//				//
+//				// Debug Info
+//				//
+//			dprintf( D_ALWAYS, "\n----------------------------------------\n"
+//								"%s = %d\n"
+//								"%s = %d\n"
+//								"%s = %d\n"
+//								"%s = %d\n"
+//								"%s = %d\n"
+//								"\n----------------------------------------\n",
+//								ATTR_DEFERRAL_TIME, (int)calculatedRunTime,
+//								ATTR_CRON_NEXT_RUNTIME, (int)runTime,
+//								ATTR_CRON_PREP_TIME, (int)prepTime,
+//								ATTR_CRON_CURRENT_TIME_RANGE, (int)this->SchedDInterval,
+//								ATTR_DEFERRAL_WINDOW, (int)runTimeWindow );
+//			
+//			//
+//			// We got back an invalid response
+//			// This is a little odd because the parameters
+//			// should have come back invalid when we instantiated
+//			// the object up above, but either way it's a good 
+//			// way to check
+//			//
+//		} else {
+//			valid = false;
+//		}
+//	}
+//		//
+//		// After jumping through all our hoops, check to see
+//		// if the cron scheduling failed, meaning that the
+//		// crontab parameters were incorrect. We should
+//		// put the job on hold. condor_submit does check to make
+//		// sure that the cron schedule syntax is valid but the job
+//		// may have been submitted by an older version. The key thing
+//		// here is that if the scheduling failed the job should
+//		// NEVER RUN. They wanted it to run at a certain time, but
+//		// we couldn't figure out what that time was, so we can't just
+//		// run the job regardless because it may cause big problems
+//		//
+//	if ( !valid ) { 
+//			//
+//			// Get the error message to report back to the user
+//			// If we have a cronTab object then get the error 
+//			// message from that, otherwise look at the static 
+//			// error log which will be populated on CronTab::validate()
+//			//
+//		MyString reason( "Invalid cron schedule parameters:\n" );
+//		if ( cronTab != NULL ) {
+//			reason += cronTab->getError();
+//		} else {
+//			reason += error;
+//		}
+//			//
+//			// Throw the job on hold. For this call we want to:
+//			// 	use_transaction - true
+//			//	notify_shadow	- false
+//			//	email_user		- true
+//			//	email_admin		- false
+//			//	system_hold		- false
+//			//
+//		holdJob( id.cluster, id.proc, reason.Value(),
+//				 true, false, true, false, false );
+//	}
+//	
+//	return ( valid );
+//}

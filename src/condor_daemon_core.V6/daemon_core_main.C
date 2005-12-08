@@ -36,6 +36,7 @@
 #include "condor_environ.h"
 #include "soap_core.h"
 #include "setenv.h"
+//#include "time_offset.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -1743,6 +1744,15 @@ int main( int argc, char** argv )
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,
 								  "handle_invalidate_key()", 0, ALLOW );
+								  
+		//
+		// The time offset command is used to figure out what
+		// the clock skew is between the daemon code and another
+		// entity calling into us
+		//
+	//daemonCore->Register_Command( DC_TIME_OFFSET, "DC_TIME_OFFSET",
+	//							  (CommandHandler)time_offset_receive_cedar_stub,
+	//							  "time_offset_cedar_stub", 0, DAEMON );
 
 	// Call daemonCore's ReInit(), which clears the cached DNS info.
 	// It also initializes some stuff, which is why we call it now. 

@@ -487,6 +487,16 @@ RUN(job_core_queue_sched)
 TESTCLASS(job_core_queue_sched,core)
 TESTCLASS(job_core_queue_sched,quick)
 
+DESC(job_core_time-deferral,"Vanilla: Verify deferred execution")
+RUN(job_core_time-deferral)
+TESTCLASS(job_core_time-deferral,core)
+TESTCLASS(job_core_time-deferral,quick)
+
+DESC(job_core_max-running_local,"Local: Max job running limit")
+RUN(job_core_max-running_local)
+TESTCLASS(job_core_max-running_local,core)
+TESTCLASS(job_core_max-running_local,quick)
+
 /* File Transfer Tests */
 
 DESC(job_filexfer_base-input1_van,"Vanilla: Tests input file does not make it with filetransfer off")

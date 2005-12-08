@@ -1,3 +1,7 @@
+12/07/05 V6_7-cron-merge-1
+   A branch that adds cron capabilities, job deferral, and time offset
+   This was created by Derek from V6_7-branch on the V6_7_ALL module.
+
 12/02/05 V6_6-merge-51
    The state of the V6_6-branch for a merge into V6_7-branch.  Bring
    the minor negotiator fix for ignoring poorly formed schedd ads, the

@@ -92,6 +92,9 @@
 /* The job should be removed */
 #define JOB_SHOULD_REMOVE (13 + EXIT_CODE_OFFSET)
 
+/* The job missed its deferred execution time */
+#define JOB_MISSED_DEFERRAL_TIME (14 + EXIT_CODE_OFFSET)
+
 /*
   WARNING: don't go above 27 with these, or we run out of bits in the
   exit status code

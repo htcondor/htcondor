@@ -543,6 +543,18 @@ WANT_VACATE		= $(UWCS_WANT_VACATE)
 ##  When is this machine willing to start a job? 
 START			= $(UWCS_START)
 
+##  When should a local universe job be allowed to start?
+START_LOCAL_UNIVERSE	= True
+# Only start a local universe jobs if there are less
+# than 100 local jobs currently running
+#START_LOCAL_UNIVERSE	= LocalUniverseJobsRunning < 100
+
+##  When should a scheduler universe job be allowed to start?
+START_SCHEDULER_UNIVERSE	= True
+# Only start a scheduler universe jobs if there are less
+# than 100 scheduler jobs currently running
+#START_SCHEDULER_UNIVERSE	= SchedulerlUniverseJobsRunning < 100
+
 ##  When to suspend a job?
 SUSPEND			= $(UWCS_SUSPEND)
 
@@ -697,11 +709,11 @@ UWCS_PREEMPTION_RANK = (RemoteUserPrio * 1000000) - TARGET.ImageSize
 
 TESTINGMODE_WANT_SUSPEND	= False
 TESTINGMODE_WANT_VACATE		= False
-TESTINGMODE_START		= True
-TESTINGMODE_SUSPEND		= False
+TESTINGMODE_START			= True
+TESTINGMODE_SUSPEND			= False
 TESTINGMODE_CONTINUE		= True
-TESTINGMODE_PREEMPT		= False
-TESTINGMODE_KILL		= False
+TESTINGMODE_PREEMPT			= False
+TESTINGMODE_KILL			= False
 TESTINGMODE_PERIODIC_CHECKPOINT	= False
 TESTINGMODE_PREEMPTION_REQUIREMENTS = False
 TESTINGMODE_PREEMPTION_RANK = 0
@@ -927,6 +939,7 @@ STARTER_LIST = STARTER, STARTER_PVM, STARTER_STANDARD
 STARTER			= $(SBIN)/condor_starter
 STARTER_PVM		= $(SBIN)/condor_starter.pvm
 STARTER_STANDARD	= $(SBIN)/condor_starter.std
+STARTER_LOCAL		= $(SBIN)/condor_starter
 
 ##  When the startd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't

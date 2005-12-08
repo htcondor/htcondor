@@ -165,6 +165,13 @@ JICLocalSchedd::notifyJobExit( int exit_status, int reason,
 					"had_hold or had_remove are TRUE!" );
 		}
 		break;
+	case JOB_MISSED_DEFERRAL_TIME:
+		up_type = U_REMOVE;
+			//
+			// Set the exit code to be the deferral exit code
+			//
+		exit_code = JOB_MISSED_DEFERRAL_TIME;
+		break;
 	default:
 		EXCEPT( "Programmer error: unknown reason (%d) in "
 				"JICLocalSchedd::notifyJobExit", reason );

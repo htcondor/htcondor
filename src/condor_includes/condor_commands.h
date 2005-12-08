@@ -148,7 +148,6 @@
 #define CHILD_OFF           (SCHED_VERS+91) // Turn my child OFF (HAD)
 #define CHILD_OFF_FAST      (SCHED_VERS+92) // Turn my child OFF/Fast (HAD)
 
-
 /*
   The ClassAd-only protocol.  CA_CMD is the base command that's sent
   on the wire that means "read a ClassAd off the wire, lookup
@@ -274,6 +273,7 @@ const int INVALIDATE_HAD_ADS = 57;
 #define DC_INVALIDATE_KEY   (DC_BASE+14)
 #define DC_OFF_PEACEFUL     (DC_BASE+15)
 #define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
+#define DC_TIME_OFFSET      (DC_BASE+17)
 
 /*
 *** Log type supported by DC_FETCH_LOG

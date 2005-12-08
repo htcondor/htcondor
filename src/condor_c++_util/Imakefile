@@ -139,6 +139,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	translation_utils.o command_strings.o enum_utils.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
 	domain_tools.o CondorError.o utc_time.o status_string.o \
+	time_offset.o condor_crontab.o date_util.o \
 	$(QUILL_OBJS) \
 	New_classads_obj setenv.o condor_id.o build_job_env.o job_lease.o \
 	gahp_common.o
@@ -155,6 +156,7 @@ c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
 c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
 c_plus_target(test_mystring,test_mystring.o,$(LIB))
+c_plus_target(test_condor_crontab,test_condor_crontab.o,$(LIB))
 
 /* this needs to be built more like a user would use the library, so it */
 /* can't have all of our usual cflags... */
@@ -171,6 +173,7 @@ c_plus_target(test_write_term,test_write_term.o,$(LIB))
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
+c_plus_target(Queue.t,Queue.t.o,$(LIB))
 c_plus_target(killfamily.t,killfamily.t.o,$(LIB))
 pure_c_plus_target(killfamily.t.pure,killfamily.t.o,$(LIB))
 purecov_c_plus_target(killfamily.t.pc,killfamily.t.o,$(LIB))

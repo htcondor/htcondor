@@ -30,6 +30,7 @@
 #include "job_info_communicator.h"
 
 
+
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
 	represent a running job.
@@ -80,7 +81,22 @@ public:
 			by the JobInfoCommunicator.
 		*/
 	virtual bool createTempExecuteDir( void );
-
+	
+		/**
+		 * Before a job is spawned, this method checks whether
+		 * a job has a deferrral time, which means we will need
+		 * to register timer to call jobEnvironmentReady()
+		 * when it is the correct time to run the job
+		 */
+	virtual bool jobWaitUntilExecuteTime( void );
+	
+		/**
+		 * Clean up any the timer that we have might
+		 * have registered to put a job on hold. As of now
+		 * there can only be one job on hold
+		 */
+	virtual bool removeDeferredJobs( void );
+		
 		/** Called by the JobInfoCommunicator whenever the job
 			execution environment is ready so we can actually spawn
 			the job.
@@ -194,6 +210,11 @@ private:
 	int starter_stdin_fd;
 	int starter_stdout_fd;
 	int starter_stderr_fd;
+	
+		//
+		// This is the id of the timer for when a job gets deferred
+		//
+	int deferral_tid;
 
 	UserProc* pre_script;
 	UserProc* post_script;
