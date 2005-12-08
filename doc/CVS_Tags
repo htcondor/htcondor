@@ -7,6 +7,9 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+12/8/05  V6_7_14-root and V6_7_14-branch
+   A branch for the 6.7.14 doc release, created from V6_7_14-root
+   on V6_7-branch.
 
 12/8/05  V6_7-pre-merge-V6_7_13-2-doc-merge-2
          V6_7-post-merge-V6_7_13-2-doc-merge-2
