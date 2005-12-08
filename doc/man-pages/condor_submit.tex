@@ -447,7 +447,8 @@ See the Condor User's Manual for more information about using Universe.
 %%%%%%%%%%%%%%%%%%%
 %% grid_type
 %%%%%%%%%%%%%%%%%%%
-\item[grid\_type = $<$ gt2 \Bar\ gt3 \Bar\ gt4 \Bar\ condor $>$ ] A
+\item[grid\_type = $<$ gt2 \Bar\ gt3 \Bar\ gt4 \Bar\ condor \Bar\ nordugrid
+\Bar\ unicore $>$ ] A
 \index{submit commands!grid\_type}
 case insensitive string to further specify the intended type of resource
 for \SubmitCmd{grid} universe jobs.
@@ -1242,6 +1243,54 @@ that Condor writes which are not covered by regular submit description
 file parameters. Used by grid-type gt4 jobs.
 
 %%%%%%%%%%%%%%%%%%%
+%% nordugrid_resource
+%%%%%%%%%%%%%%%%%%%
+
+\item[nordugrid\_resource = $<$hostname$>$]
+\index{submit commands!nordugrid\_resource}
+Identifies the NorduGrid resource to which the job should be
+submitted.
+
+The \SubmitCmd{nordugrid\_resource} command is required when
+the \SubmitCmd{universe} is \SubmitCmd{grid},
+and \SubmitCmd{grid\_type} is \SubmitCmd{nordugrid}.
+
+%%%%%%%%%%%%%%%%%%%
+%% nordugrid_rsl
+%%%%%%%%%%%%%%%%%%%
+
+\item[nordugrid\_rsl = $<$RSL-string$>$] Used to provide any additional RSL
+\index{submit commands!globus\_rsl}
+string attributes which are not covered by regular submit description
+file parameters. Used by grid-type nordugrid jobs.
+
+%%%%%%%%%%%%%%%%%%%
+%% unicore_u_site
+%%%%%%%%%%%%%%%%%%%
+
+\item[unicore\_u\_site = $<$hostname$>$]
+\index{submit commands!unicore\_u\_site}
+Identifies the Unicore gateway to which the job should be
+submitted.
+
+The \SubmitCmd{unicore\_u\_site} command is required when
+the \SubmitCmd{universe} is \SubmitCmd{grid},
+and \SubmitCmd{grid\_type} is \SubmitCmd{unicore}.
+
+%%%%%%%%%%%%%%%%%%%
+%% unicore_v_site
+%%%%%%%%%%%%%%%%%%%
+
+\item[unicore\_v\_site = $<$hostname$>$]
+\index{submit commands!unicore\_v\_site}
+Identifies the Unicore virtual resource to which the job should be
+submitted.
+
+The \SubmitCmd{unicore\_v\_site} command is required when
+the \SubmitCmd{universe} is \SubmitCmd{grid},
+and \SubmitCmd{grid\_type} is \SubmitCmd{unicore}.
+
+%%%%%%%%%%%%%%%%%%%
 %% globus_resubmit
 %%%%%%%%%%%%%%%%%%%
 
@@ -1359,6 +1408,38 @@ it expires.
 \item[MyProxyNewProxyLifetime = $<$number-of-minutes$>$]
 \index{submit commands!MyProxyNewProxyLifetime}
 The new lifetime (in minutes) of the proxy after it is refreshed.
+
+%%%%%%%%%%%%%%%%%%%
+%% keystore_file
+%%%%%%%%%%%%%%%%%%%
+
+\item[keystore\_file = $<$pathname$>$]
+\index{submit commands!keystore\_file}
+Path to a java keystore file containing the certificate to be
+used for a Unicore job.
+Used with \SubmitCmd{keystore\_alias} and
+\SubmitCmd{keystore\_passphrase\_file}.
+
+%%%%%%%%%%%%%%%%%%%
+%% keystore_alias
+%%%%%%%%%%%%%%%%%%%
+
+\item[keystore\_alias = $<$name$>$]
+\index{submit commands!keystore\_alias}
+Alias for the certificate in a java keystore file to be used for
+a Unicore job.
+Used with \SubmitCmd{keystore\_file} and
+\SubmitCmd{keystore\_passphrase\_file}.
+
+%%%%%%%%%%%%%%%%%%%
+%% keystore_passphrase_file
+%%%%%%%%%%%%%%%%%%%
+\item[keystore\_passphrase\_file = $<$pathname$>$]
+\index{submit commands!keystore\_passphrase\_file}
+Path to a file containing the passphrase protecting a java keystore
+file containing the certificate to be used for Unicore job.
+Used with \SubmitCmd{keystore\_file} and
+\SubmitCmd{keystore\_alias}.
 
 %%%%%%%%%%%%%%%%%%%
 %% leave_in_queue
