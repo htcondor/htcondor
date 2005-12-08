@@ -34,6 +34,31 @@ using or querying a quill installation, allows talking directly to the
 rdbms, the quill daemon, or the schedd without performing the queue
 location discovery algorithm.
 
+\item \Condor{schedd} provides more flexibility in how local and
+scheduler universe jobs are started. The new configuration macros
+\Macro{START\_LOCAL\_UNIVERSE} and \Macro{START\_SCHEDULER\_UNIVERSE}
+allow administrators to control whether \Condor{schedd} will start
+an idle local or scheduler universe job. If a job's respective universe
+macro evaluates to true, \Condor{schedd} will then evaluate the 
+\Macro{Requirements} expression for the job. Only if both conditions are
+met will a job be allowed to begin execution.
+
+\item \Condor{schedd} advertises how many local and scheduler
+universe jobs are currently running or idle in its ClassAd. The
+total number of running jobs is denoted by the
+\Attr{TotalLocalJobsRunning} and \Attr{TotalSchedulerJobsRunning}
+attributes. The total number of idle jobs is denoted by the
+\Attr{TotalLocalJobsIdle} and \Attr{TotalSchedulerJobsIdle}.
+
+\item A job submission can now specify the exact time that it should be
+executed at using the \Attr{DeferralTime} attribute. The time is specified
+as the number seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+An additional attribute \Attr{DeferralWindow} can be specified along with
+the deferral time that will allow a job to run even if it misses the
+execution time. The window is the number of seconds in the past that
+Condor will allow for a missed job to execute. This feature is not 
+supported for scheduler universe jobs.
+
 \item Added the concept of a ``controlling'' daemon to the
 \Condor{master}.  This feature is currently used only for ``High
 Availablity'' (HA) configurations involving the \Condor{had} daemon.
