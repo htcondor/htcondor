@@ -28,7 +28,23 @@ The details of each version are described below.
 %
 %\end{itemize}
 
-\noindent Bugs fixed that are included in version 6.7.11 and above:
+\noindent Bugs fixed that are included in version 6.7.14:
+
+\begin{itemize}
+
+\item Fixed a rare problem in the \Condor{negotiator} where a poorly
+  formed classad from a single \Condor{schedd} could halt negotiation
+  for the entire pool.
+  This poorly formed ad could only happen in extrememly rare
+  circumstances, but it was possible.
+  Now, the \Condor{negotiator} will simply ignore poorly formed
+  classads and continue to negotiate with any other \Condor{schedd} in
+  the system that has idle jobs.
+
+\end{itemize}
+
+
+\noindent Bugs fixed that are included in version 6.7.11:
 
 \begin{itemize}
 

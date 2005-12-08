@@ -1493,6 +1493,15 @@ but can be any integer value.
 
 \begin{itemize}
 
+\item Previous versions of the \Condor{master} had a bug where if the
+  administrator attempted to use \Macro{SUBSYS\_ARGS} to pass \Opt{-p}
+  to any Condor daemon to have it listen on a specific, fixed port,
+  the underlying daemon would not honor the flag.
+  Now, the \Condor{master} correctly supports using
+  \Macro{SUBSYS\_ARGS} to define a port using \Opt{-p}.
+  For more information about \Macro{SUBSYS\_ARGS}, see
+  section~\ref{param:SubsysArgs} on page~\pageref{param:SubsysArgs}.
+
 \item Removed case-sensitivity of command-line argument names in
 \Condor{submit\_dag}.
 
