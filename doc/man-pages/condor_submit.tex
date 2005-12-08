@@ -1645,15 +1645,6 @@ The value ought to be the same as the \AdAttr{Name} ClassAd attribute
 of the \Condor{schedd} daemon as reported to its \Condor{collector}.
 
 %%%%%%%%%%%%%%%%%%%
-% +
-%%%%%%%%%%%%%%%%%%%
-
-\item[+$<$attribute$>$ = $<$value$>$] A line which begins with a '+'
-(plus) character instructs \Condor{submit} to insert the
-following \Arg{attribute} into the job ClasssAd with the given 
-\Arg{value}. 
-
-%%%%%%%%%%%%%%%%%%%
 %% want_remote_io
 %%%%%%%%%%%%%%%%%%%
 
@@ -1740,6 +1731,79 @@ executable before the \Prog{exec}.
 \end{verbatim} 
 If this command is not present (defined), then the value
 defaults to false.
+
+%%%%%%%%%%%%%%%%%%%
+%% deferral_time
+%%%%%%%%%%%%%%%%%%%
+
+\item[deferral\_time = $<$Unix Epoch Timestamp$>$]
+\index{submit commands!deferral\_time}
+This option allows a job to begin execution at a specific time
+instead of executing as soon as it arrives at the execution
+machine. The deferral time is an expression that must
+evaluate to a Unix Epoch timestamp (the number of
+seconds elapsed since 00:00:00 on January 1, 1970, Coordinated
+Universal Time). A job using this option will be delayed for
+execution by the \Condor{starter} until the deferral
+time arrives. If the job misses its execution time, that is, if
+the deferral time is in the past, the job will be aborted and
+removed from the queue. The time that the job will start at is 
+based on the execution machine's system clock.
+
+The following example will set a job to run at exactly on
+January 1st, 2006 at 12:00 pm:
+
+\begin{verbatim} 
+   DeferralTime = 1136138400
+\end{verbatim} 
+
+This example will cause a job to always wait 60 seconds after 
+it arrives at the execution machine before executing:
+
+\begin{verbatim} 
+   DeferralTime = (CurrentTime + 60)
+\end{verbatim}
+
+To allow for jobs to run even if the deferral time is missed,
+please refer to \SubmitCmd{deferral\_window}.
+
+Please note that scheduler universe jobs are unable to use this
+feature because they are not executed by the \Condor{starter}.
+A scheduler job will fail to be submitted if \Condor{deferral\_time}
+is defined in its submission file.
+
+%%%%%%%%%%%%%%%%%%%
+%% deferral_window
+%%%%%%%%%%%%%%%%%%%
+
+\item[deferral\_window = $<$number-of-seconds$>$]
+\index{submit commands!deferral\_time}
+The deferral window is used in conjunction with the
+\SubmitCmd{deferral\_time} command to allow jobs that
+miss their execution time to run anyway. The window is
+the number of seconds in the past Condor is willingly
+to run a job if the deferral time is missed.
+
+In the example below, the \SubmitCmd{deferral\_time} always
+evaluate to 60 seconds in the past from the current time, but
+the job is still allowed to execute because the 
+\SubmitCmd{deferral\_window} is 120 seconds:
+
+\begin{verbatim} 
+   DeferralWindow = 120
+   DeferralTime   = (CurrentTime - 60)
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%
+% +
+% This should always be at the end of the list
+%%%%%%%%%%%%%%%%%%%
+
+\item[+$<$attribute$>$ = $<$value$>$] A line which begins with a '+'
+(plus) character instructs \Condor{submit} to insert the
+following \Arg{attribute} into the job ClasssAd with the given 
+\Arg{value}. 
+
 
 \end{description}
 
