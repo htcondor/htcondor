@@ -16,7 +16,7 @@ $cmdfile		= 'job_core_max-running_local.cmd';
 ## Sleep time 
 ## This needs to match the arguements value that is in the .cmd file
 ##
-my $SLEEP_TIME = 10; # seconds
+my $SLEEP_TIME = 20; # seconds
 	
 ##
 ## Last Run Time
@@ -51,6 +51,10 @@ $successCallback = sub {
 	close(FILE);
 	my $reportTime = "@output";
 	chomp($reportTime);
+	
+	#print "REPORT TIME: $reportTime\n".
+	#      "LAST TIME:   $LAST_RUN_TIME\n".
+	#      "DIFFERENCE:  ".( $reportTime - $LAST_RUN_TIME )."\n";
 	
 	##
 	## If there wasn't a last run time value, then this is the first
