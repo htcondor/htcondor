@@ -67,3 +67,16 @@ hashFuncPROC_ID( const PROC_ID &procID, int numBuckets)
 	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
 }
 
+int hashFuncChars( char const *key, int numBuckets)
+{
+    unsigned int i = 0;
+    if(key) for(;*key;key++) {
+        i += *(unsigned char *)key;
+    }
+    return i % numBuckets;
+}
+
+int hashFuncStdString( std::string const & key, int numBuckets)
+{
+    return hashFuncChars(key.c_str(),numBuckets);
+}

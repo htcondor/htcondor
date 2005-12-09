@@ -700,4 +700,10 @@ int hashFuncJobIdStr( char* const & key, int numBuckets );
 /// hash function for PROC_ID versions of job ids (cluster.proc)
 int hashFuncPROC_ID( const PROC_ID &procID, int numBuckets);
 
+/// hash function for char* string
+int hashFuncChars(char const *key, int numBuckets);
+
+/// hash function for std::string
+int hashFuncStdString(std::string const & key, int numBuckets);
+
 #endif // HASH_H
