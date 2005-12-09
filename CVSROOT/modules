@@ -511,7 +511,7 @@ V6_7_14_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/nordugridgahp/1.0.0
 
 # Externals needed for V6_7_15 (same as V6_7_14)
-V6_7_15_EXT	-a V6_7_COMMON_EXT
+V6_7_15_EXT	-a V6_7_14_EXT
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_15_EXT
