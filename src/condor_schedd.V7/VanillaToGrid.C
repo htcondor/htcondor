@@ -225,6 +225,9 @@ bool update_job_status( classad::ClassAd & orig, classad::ClassAd & newgrid)
 			set_job_status_held(orig, reason.c_str(), reasoncode, reasonsubcode);
 			}
 			break;
+		case REMOVED:
+			// Do not pass back "removed" status to the orig job.
+			break;
 		default:
 			orig.InsertAttr(ATTR_JOB_STATUS, newgridstatus);
 			break;

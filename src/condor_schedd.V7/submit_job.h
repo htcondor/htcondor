@@ -57,9 +57,9 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 		job, the yield attempt fails.  See claim_job for details
 		on suggested identity strings.
 */
-bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0);
+bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0, bool *keep_trying = 0);
 bool yield_job(const char * pool_name, const char * schedd_name,
-	bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0);
+	bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0, bool *keep_trying = 0);
 
 /* 
 - src - The classad to submit.  The ad will be modified based on the needs of
@@ -124,6 +124,13 @@ schedd_name and pool_name can be NULL to indicate "local".
 
 */
 bool finalize_job(int cluster, int proc, const char * schedd_name, const char * pool_name);
+
+/*
+
+Remove a job from the schedd.
+
+ */
+bool remove_job(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc);
 
 
 #endif /* INCLUDE_SUBMIT_JOB_H*/

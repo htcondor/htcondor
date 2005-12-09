@@ -7,20 +7,22 @@ VANILLATOGRID_LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
 all_target( $(NAME) $(VANILLATOGRID) )
 
 NEW_CLASSADS_LINK =  -L$(NEW_CLASSADS_LIB) -lclassad_ns
-SCHEDD_INCLUDES = -I$(NEW_CLASSADS_INC)
+SCHEDD_INCLUDES = -I$(NEW_CLASSADS_INC) -I$(GSOAP_INC)
 SCHEDD_FLAGS = $(SCHEDD_INCLUDES)
 SCHEDD_LIBS = $(NEW_CLASSADS_LINK)
 
 CFLAGS = $(STD_C_FLAGS) $(SCHEDD_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SCHEDD_FLAGS)
+INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) $(SCHEDD_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(SCHEDD_LIBS)
 
 soapobjs(schedd)
 
-OBJ = JobLogReader.o Scheduler.o schedd_main.o ../condor_quill/prober.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o  $(SOAP_OBJS)
+OBJ = classad_newold.o submit_job.o VanillaToGrid.o JobRouter.o JobLogReader.o Scheduler.o schedd_main.o ../condor_quill/prober.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o  $(SOAP_OBJS)
+
+template_inst( JobRouter.C, JobRouter.o )
 
 c_plus_target($(VANILLATOGRID),$(VANILLATOGRID_OBJS),$(VANILLATOGRID_LIB))
-
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
 html:

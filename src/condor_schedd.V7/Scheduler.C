@@ -23,14 +23,67 @@
 
 #include "Scheduler.h"
 #include "condor_config.h"
+#include "dc_collector.h"
+#include "get_daemon_name.h"
 
 Scheduler::Scheduler() {
 	log_reader_polling_timer = -1;
 	log_reader_polling_period = 10;
+	m_collectors = NULL;
+	m_public_ad_update_timer = -1;
+	m_public_ad_update_interval = -1;
+}
+
+Scheduler::~Scheduler() {
+	if(m_collectors) {
+		delete m_collectors;
+	}
+}
+
+void
+Scheduler::init() {
+	m_collectors = CollectorList::create();
+	config();
+}
+
+void
+Scheduler::stop() {
+	InvalidatePublicAd();
+}
+
+void
+Scheduler::InitPublicAd() {
+	m_public_ad = ClassAd();
+
+	//TODO: this is the wrong ADTYPE.
+	//Use the new generic ad type when it becomes available.
+
+	m_public_ad.SetMyTypeName( SCHEDD_ADTYPE );
+	m_public_ad.SetTargetTypeName( "" );
+
+	m_public_ad.Assign(ATTR_MACHINE,my_full_hostname());
+	m_public_ad.Assign(ATTR_NAME,m_name.c_str());
+
+	config_fill_ad( &m_public_ad );
 }
 
 void
 Scheduler::config() {
+	char *name = param("SCHEDD7_NAME");
+	if(name) {
+		char *valid_name = build_valid_daemon_name(name);
+		m_name = valid_name;
+		free(name);
+		delete [] valid_name;
+	}
+	else {
+		char *default_name = default_daemon_name();
+		if(default_name) {
+			m_name = default_name;
+			delete [] default_name;
+		}
+	}
+
 	char *spool = param("SPOOL");
 	if(!spool) {
 		EXCEPT("No SPOOL defined in config file.\n");
@@ -58,38 +111,49 @@ Scheduler::config() {
 	}
 		// register timer handlers
 	log_reader_polling_timer = daemonCore->Register_Timer(
-								  0, 
-								  log_reader_polling_period,
-								  (Eventcpp)&Scheduler::JobLogPollingTime, 
-								  "Scheduler::JobLogPollingTime", this);
+		0, 
+		log_reader_polling_period,
+		(Eventcpp)&Scheduler::TimerHandler_JobLogPolling, 
+		"Scheduler::TimerHandler_JobLogPolling", this);
 
-}
+	InitPublicAd();
 
-static void
-DebugDisplayClassAdCollection(classad::ClassAdCollection *ad_collection) {
-	classad::LocalCollectionQuery query;
-	classad::ClassAd *ad;
-	std::string key;
+	int update_interval = 60;
+	char *update_interval_str = param("UPDATE_INTERVAL");
+	if(update_interval_str) {
+		update_interval = atoi(update_interval_str);
+	}
+	if(m_public_ad_update_interval != update_interval) {
+		m_public_ad_update_interval = update_interval;
 
-	query.Bind(ad_collection);
-	query.Query("root", NULL);
-	query.ToFirst();
-
-	if(query.Current(key)) {
-		do {
-			classad::ClassAdUnParser unparser;
-			std::string ad_string;
-			ad = ad_collection->GetClassAd(key);
-			unparser.Unparse(ad_string, ad);
-			dprintf(D_ALWAYS, "%s: %s\n\n\n",key.c_str(),ad_string.c_str());
-		}while(query.Next(key));
+		if(m_public_ad_update_timer >= 0) {
+			daemonCore->Cancel_Timer(m_public_ad_update_timer);
+			m_public_ad_update_timer = -1;
+		}
+		dprintf(D_FULLDEBUG, "Setting update interval to %d\n",
+				m_public_ad_update_interval);
+		m_public_ad_update_timer = daemonCore->Register_Timer(
+			0,
+			m_public_ad_update_interval,
+			(Eventcpp)&Scheduler::TimerHandler_UpdateCollector,
+			"Scheduler::TimerHandler_UpdateCollector",
+			this);
 	}
 }
 
-
 void
-Scheduler::JobLogPollingTime() {
+Scheduler::TimerHandler_JobLogPolling() {
 	dprintf(D_ALWAYS, "JobQueuePollingtime() called\n");
 	job_log_reader.poll(&ad_collection);
-	DebugDisplayClassAdCollection(&ad_collection);
+	//DebugDisplayClassAdCollection(&ad_collection);
+}
+
+void
+Scheduler::TimerHandler_UpdateCollector() {
+	m_collectors->sendUpdates(UPDATE_SCHEDD_AD, &m_public_ad);
+}
+
+void
+Scheduler::InvalidatePublicAd() {
+	m_collectors->sendUpdates(INVALIDATE_SCHEDD_ADS, &m_public_ad);
 }

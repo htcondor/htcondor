@@ -27,12 +27,14 @@
 
 #include "JobLogReader.h"
 #include "Scheduler.h"
+#include "JobRouter.h"
 
 // about self
 char* mySubSystem = "SCHEDD7";		// used by Daemon Core
 
 
 Scheduler schedd;
+JobRouter *job_router;
 
 //-------------------------------------------------------------
 
@@ -40,7 +42,10 @@ int main_init(int argc, char *argv[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
-	schedd.config();
+	schedd.init();
+	
+	job_router = new JobRouter(&schedd);
+	job_router->init();
 
 	return TRUE;
 }
@@ -53,8 +58,18 @@ main_config( bool is_full )
 	dprintf(D_ALWAYS, "main_config() called\n");
 
 	schedd.config();
+	job_router->config();
 
 	return TRUE;
+}
+
+static void Stop()
+{
+	// JobRouter creates an instance lock, so delete it now to clean up.
+	schedd.stop();
+	delete job_router;
+	job_router = NULL;
+	DC_Exit(0);
 }
 
 //-------------------------------------------------------------
@@ -62,7 +77,7 @@ main_config( bool is_full )
 int main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
-	DC_Exit(0);
+	Stop();
 	return TRUE;	// to satisfy c++
 }
 
@@ -71,7 +86,7 @@ int main_shutdown_fast()
 int main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
-	DC_Exit(0);
+	Stop();
 	return TRUE;	// to satisfy c++
 }
 

@@ -184,9 +184,13 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 
 
 
-bool yield_job(bool done, int cluster, int proc, MyString * error_details, const char * my_identity) {
+bool yield_job(bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool *keep_trying) {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
+
+	bool junk_keep_trying;
+	if(!keep_trying) keep_trying = &junk_keep_trying;
+	*keep_trying = true;
 
 	// Check that the job is still managed by us
 	bool is_managed = false;
@@ -199,17 +203,19 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 		if(error_details) {
 			error_details->sprintf("Job %d.%d is not managed!", cluster, proc); 
 		}
+		*keep_trying = false;
 		return false;
 	}
 
 	if(my_identity) {
 		char * manager;
-		if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &manager) == 0) {
+		if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED_MANAGER, &manager) == 0) {
 			if(strcmp(manager, my_identity) != 0) {
 				if(error_details) {
 					error_details->sprintf("Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);
 				}
 				free(manager);
+				*keep_trying = false;
 				return false;
 			}
 			free(manager);
@@ -227,6 +233,17 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 		// Wipe the manager (if present).
 	SetAttributeString(cluster, proc, ATTR_JOB_MANAGED_MANAGER, "");
 
+	int status;
+	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) != -1) {
+		if(status == REMOVED) {
+			int rc = DestroyProc(cluster, proc);
+			if(rc < 0) {
+				dprintf(D_ALWAYS,"yield_job: failed to remove %d.%d: rc=%d\n",cluster,proc,rc);
+				// Do not treat this as a failure of yield_job().
+			}
+		}
+	}
+
 	return true;
 }
 
@@ -234,10 +251,14 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 
 
 bool yield_job(const char * pool_name, const char * schedd_name,
-	bool done, int cluster, int proc, MyString * error_details, const char * my_identity) {
+	bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool *keep_trying) {
 	// Open a qmgr
 	FailObj failobj;
 	failobj.SetNames(schedd_name, pool_name);
+
+	bool junk_keep_trying;
+	if(!keep_trying) keep_trying = &junk_keep_trying;
+	*keep_trying = true;
 
 	DCSchedd schedd(schedd_name,pool_name);
 	if( ! schedd.locate() ) {
@@ -267,7 +288,7 @@ bool yield_job(const char * pool_name, const char * schedd_name,
 
 	//-------
 	// Do the actual yield
-	bool res = yield_job(done, cluster, proc, error_details);
+	bool res = yield_job(done, cluster, proc, error_details, my_identity, keep_trying);
 	//-------
 
 
@@ -390,7 +411,7 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 	ClassAd * adlist[1];
 	adlist[0] = &src;
 	if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
-		failobj.fail("Failed to spool job files\n");
+		failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true));
 		return false;
 	}
 
@@ -510,13 +531,11 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 		if(!schedd_name) { schedd_name = "local schedd"; }
 		if(!pool_name) { pool_name = "local pool"; }
 		dprintf(D_ALWAYS, "Unable to find address of %s at %s\n", schedd_name, pool_name);
-		printf("Unable to find address of %s at %s\n", schedd_name, pool_name);
 		return false;
 	}
 
 	MyString constraint;
 	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
-	fprintf(stderr,"%s\n",constraint.Value());
 
 
 	// Get our sandbox back
@@ -525,13 +544,11 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 	bool success = schedd.receiveJobSandbox(constraint.Value(), &errstack, &jobssent);
 	if( ! success ) {
 		dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox.\n", cluster, proc);
-		printf("(%d.%d) Failed to retrieve sandbox.\n", cluster, proc);
 		return false;
 	}
 
 	if(jobssent != 1) {
 		dprintf(D_ALWAYS, "(%d.%d) Failed to retrieve sandbox (got %d, expected 1).\n", cluster, proc, jobssent);
-		printf("(%d.%d) Failed to retrieve sandbox (got %d, expected 1).\n", cluster, proc, jobssent);
 		return false;
 	}
 
@@ -547,21 +564,6 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 		dprintf(D_ALWAYS, "finalize_job: failed to set %s = %s for %d.%d\n", ATTR_JOB_LEAVE_IN_QUEUE, "FALSE", cluster, proc);
 	}
 
-	// Check that the job is managed.
-	char * managed;
-	bool is_managed = false;
-	if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED, &managed) == 0) {
-		is_managed = strcmp(managed, MANAGED_EXTERNAL) == 0;
-		free(managed);
-	}
-	if( ! is_managed ) {
-		dprintf(D_ALWAYS, "finalize_job: job %d.%d doesn't appear to be managed.\n", cluster, proc);
-	} else {
-		if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, MANAGED_DONE) == -1 ) {
-			dprintf(D_ALWAYS, "finalize_job: failed to set %s = %s for %d.%d\n", ATTR_JOB_MANAGED, MANAGED_DONE, cluster, proc);
-		}
-	}
-
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		dprintf(D_ALWAYS, "finalize_job: Failed to commit changes\n");
 		return false;
@@ -569,4 +571,49 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 
 
 	return true;
+}
+
+
+bool remove_job(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc)
+{
+	DCSchedd schedd(schedd_name,pool_name);
+	bool success = true;
+	CondorError errstack;
+
+	if( ! schedd.locate() ) {
+		if(!schedd_name) { schedd_name = "local schedd"; }
+		if(!pool_name) { pool_name = "local pool"; }
+		dprintf(D_ALWAYS, "Unable to find address of %s at %s\n", schedd_name, pool_name);
+		error_desc.sprintf("Unable to find address of %s at %s", schedd_name, pool_name);
+		return false;
+	}
+
+	MyString constraint;
+	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
+	ClassAd *result_ad;
+
+	result_ad = schedd.removeJobs(constraint.Value(), reason, &errstack, AR_LONG);
+
+	PROC_ID job_id;
+	job_id.cluster = cluster;
+	job_id.proc = proc;
+
+	char *err_str = NULL;
+	if(result_ad) {
+		JobActionResults results(AR_LONG);
+		results.readResults(result_ad);
+		success = results.getResultString(job_id,&err_str);
+	}
+	else {
+		error_desc = "No result ClassAd returned by schedd.removeJobs()";
+		success = false;
+	}
+
+	if(!success && err_str) {
+		error_desc = err_str;
+	}
+	if(err_str) free(err_str);
+	if(result_ad) delete result_ad;
+
+	return success;
 }

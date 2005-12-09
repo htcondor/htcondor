@@ -34,16 +34,33 @@
 class Scheduler: public Service {
 public:
 	Scheduler();
+	virtual ~Scheduler();
+	void init();
 	void config();
+	void stop();
 
-	void JobLogPollingTime();
+	classad::ClassAdCollection *GetClassAds() {return &ad_collection;}
+	char const *Name() const {return m_name.c_str();}
 
 private:
+	std::string m_name;
+
+	ClassAd m_public_ad;
+	int m_public_ad_update_interval;
+	int m_public_ad_update_timer;
+
 	classad::ClassAdCollection ad_collection;
 	JobLogReader job_log_reader;
+	class CollectorList *m_collectors;
 
 	int log_reader_polling_timer;
 	int log_reader_polling_period;
+
+	void InitPublicAd();
+	void TimerHandler_UpdateCollector();
+	void InvalidatePublicAd();
+
+	void TimerHandler_JobLogPolling();
 };
 
 #endif

@@ -92,7 +92,7 @@ bool JobLogReader::IncrementalLoad(classad::ClassAdCollection *ad_collection) {
 
 		err = parser.readLogEntry(op_type);
 		if (err == FILE_READ_SUCCESS) {
-			dprintf(D_ALWAYS, "Read op_type %d\n",op_type);
+			//dprintf(D_ALWAYS, "Read op_type %d\n",op_type);
 			bool processed = ProcessLogEntry(parser.getCurCALogEntry(), ad_collection, &parser);
 			if(!processed) {
 				dprintf(D_ALWAYS, "Failed to process log entry.\n");
@@ -121,6 +121,21 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 		//We may not need these anyway, so leave them commented out for now.
 		//ad->SetMyTypeName((const char *)log_entry->mytype);
 		//ad->SetTargetTypeName((const char *)log_entry->targettype);
+
+		//Chain this ad to its parent, if any.
+		PROC_ID proc = getProcByString(log_entry->key);
+		if(proc.proc >= 0) {
+			char cluster_key[50];
+			//NOTE: cluster keys start with a 0: e.g. 021.-1
+			sprintf(cluster_key,"0%d.-1",proc.cluster);
+			classad::ClassAd* cluster_ad = ad_collection->GetClassAd(cluster_key);
+			if(!cluster_ad) {
+				dprintf(D_ALWAYS,"JobLogReader warning: cluster ad not found for %s\n",log_entry->key);
+			}
+			else {
+				ad->ChainToAd(cluster_ad);
+			}
+		}
 
 		ad_collection->AddClassAd(log_entry->key,ad);
 
@@ -156,16 +171,18 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 			return false;
 		}
 		if(!ad->Delete(log_entry->name)) {
-			dprintf(D_ALWAYS, "ERROR: no such attribute name '%s' in %s\n",log_entry->name,log_entry->key);
-			return false;
+			dprintf(D_ALWAYS, "WARNING: in JobLogReader DeleteAttribute: no such attribute name '%s' in %s\n",log_entry->name,log_entry->key);
+			break;
 		}
 		break;
 	}
 	case CondorLogOp_BeginTransaction:
-		dprintf(D_ALWAYS, "DEBUG: BeginTransaction event encountered in ClassAd log.  Not implemented.\n");
+		// Transactions may be ignored, because the transaction will either
+		// be completed eventually, or the log writer will backtrack
+		// and wipe out the transaction, which will cause us to do a
+		// bulk reload.
 		break;
 	case CondorLogOp_EndTransaction:
-		dprintf(D_ALWAYS, "DEBUG: EndTransaction event encountered in ClassAd log.  Not implemented.\n");
 		break;
 	default:
 		dprintf(D_ALWAYS, "[QUILL] Unsupported Job Queue Command\n");
