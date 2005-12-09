@@ -6,7 +6,7 @@ HELPER_FLAGS = -DBUILD_HELPER
 #endif
 
 C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
-	-I../condor_daemon_core.V6 -I- -I.. \
+	-I../condor_daemon_core.V6 -I.. \
 	-Wall $(HELPER_FLAGS)
 
 CFLAGS = $(STD_C_FLAGS)
