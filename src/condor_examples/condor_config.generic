@@ -547,13 +547,13 @@ START			= $(UWCS_START)
 START_LOCAL_UNIVERSE	= True
 # Only start a local universe jobs if there are less
 # than 100 local jobs currently running
-#START_LOCAL_UNIVERSE	= LocalUniverseJobsRunning < 100
+#START_LOCAL_UNIVERSE	= TotalLocalJobsRunning < 100
 
 ##  When should a scheduler universe job be allowed to start?
 START_SCHEDULER_UNIVERSE	= True
 # Only start a scheduler universe jobs if there are less
 # than 100 scheduler jobs currently running
-#START_SCHEDULER_UNIVERSE	= SchedulerlUniverseJobsRunning < 100
+#START_SCHEDULER_UNIVERSE	= TotalSchedulerJobsRunning < 100
 
 ##  When to suspend a job?
 SUSPEND			= $(UWCS_SUSPEND)
@@ -860,6 +860,7 @@ SCHEDD				= $(SBIN)/condor_schedd
 KBDD				= $(SBIN)/condor_kbdd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
+STARTER_LOCAL			= $(SBIN)/condor_starter
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
