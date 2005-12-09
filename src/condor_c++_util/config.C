@@ -218,7 +218,7 @@ int Read_config( char* config_file, BUCKET** table,
 ** 0 <= value < size 
 */
 int
-hash( register char *string, register int size )
+condor_hash( register char *string, register int size )
 {
 	register unsigned int		answer;
 
@@ -247,7 +247,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 		/* Make sure not already in hash table */
 	strcpy( tmp_name, name );
 	strlwr( tmp_name );
-	loc = hash( tmp_name, table_size );
+	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( strcmp(tmp_name,ptr->name) == 0 ) {
 			FREE( ptr->value );
@@ -727,7 +727,7 @@ lookup_macro( const char *name, BUCKET **table, int table_size )
 
 	strcpy( tmp_name, name );
 	strlwr( tmp_name );
-	loc = hash( tmp_name, table_size );
+	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( !strcmp(tmp_name,ptr->name) ) {
 			return ptr->value;
