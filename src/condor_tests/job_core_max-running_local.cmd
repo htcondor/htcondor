@@ -14,8 +14,8 @@ Log                     = job_core_max-running_local.log
 Error                   = job_core_max-running_local.error
 ShouldTransferFiles		= yes
 WhenToTransferOutput	= ON_EXIT_OR_EVICT
-Requirements            = Target.TotalLocalJobsRunning < 1
-Arguments				= 10
+Requirements            = TotalLocalJobsRunning < 1
+Arguments				= 20
 
 ##
 ## Queue a bunch of jobs 
