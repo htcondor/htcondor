@@ -20,6 +20,9 @@
 <$Property "SUBMITJOBS" VALUE="Y">
 <$Property "VACATEJOBS" VALUE="N">
 <$Property "NEWPOOL" VALUE="N">
+<$Property "HOSTALLOWREAD" VALUE="*.cs.wisc.edu">
+<$Property "HOSTALLOWWRITE" VALUE="*">
+<$Property "HOSTALLOWADMINISTRATOR" VALUE="$(FULL_HOSTNAME)">
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
 
@@ -95,6 +98,12 @@
 	<$DialogEntry Property="JVMLOCATION" Label="Path to Java Virtual Machine:" ToolTip="Path to JAVA.EXE" Width=200 Blank="Y">
 <$/Dialog>
 
+<$Dialog "Host Permission Settings" Description="What hosts have access to this machine?" Dialog="HostPermissionSettings" INSERT="EmailSettings">
+	<$DialogEntry Property="HOSTALLOWREAD" Label="Hosts with Read access:" ToolTip="Query machine status and job queues." Width=130 Blank="N">
+	<$DialogEntry Property="HOSTALLOWWRITE" Label="Hosts with Write access:" ToolTip="All machines in the pool require Write access." Width=130 Blank="N">
+	<$DialogEntry Property="HOSTALLOWADMINISTRATOR" Label="Hosts with Administrator access:" ToolTip="Turn Condor on/off, modify job queue." Width=130 Blank="N">
+<$/Dialog>
+
 ;--- Create INSTALLDIR ------------------------------------------------------
 <$DirectoryTree Key="INSTALLDIR" Dir="c:\condor" CHANGE="\" PrimaryFolder="Y">
 
@@ -139,10 +148,11 @@
 <$VbsCaSetup Binary="RemoveSlashFromINSTALLDIR.vbs" Entry="RemoveTrailingSlash" Seq=1401 CONDITION=^<$CONDITION_INSTALL_ONLY>^ Deferred="N">
 
 ;--- set CONDOR_CONFIG registry key ----------------------------------------
-<$Registry HKEY="LOCAL_MACHINE" KEY="software\Condor"  VALUE="[INSTALLDIR_NTS]\condor_config" MsiFormatted="VALUE" Name="CONDOR_CONFIG">
+<$Access "AdminOnly" Users="Administrators SYSTEM" Access="GENERIC_ALL">
+<$Registry HKEY="LOCAL_MACHINE" KEY="software\Condor"  VALUE="[INSTALLDIR_NTS]\condor_config" MsiFormatted="VALUE" Name="CONDOR_CONFIG" Access="AdminOnly">
 
 ;--- Install the Condor Service ----------------------------------------
-<$Component "Condor" Create="Y" Directory_="INSTALLDIR">
+<$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin">
    ;--- The service EXE MUST be the keypath of the component ----------------
    <$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
 
@@ -159,18 +169,27 @@
 
 
 ;--- Set Config file parameters ---------------------------------------------
+;-- we split into two calls because the arglist can only be 255 characters.
 #(
 <$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^ Args=^
 -n "[NEWPOOL]"
--a "[ACCOUNTINGDOMAIN]"
 -r "[RUNJOBS]"
 -v "[VACATEJOBS]"
 -s "[SUBMITJOBS]"
 -c "[CONDOREMAIL]"
--j "[JVMLOCATION]"
+-e "[HOSTALLOWREAD]"
+-t "[HOSTALLOWWRITE]"
+-i "[HOSTALLOWADMINISTRATOR]"
+^ WorkDir=^INSTALLDIR^   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="StartServices-">
+#)
+
+#(
+<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^ Args=^
 -p "[POOLNAME]"
 -o "[POOLHOSTNAME]"
 -d "[INSTALLDIR_NTS]"
+-a "[ACCOUNTINGDOMAIN]"
+-j "[JVMLOCATION]"
 -m "[SMTPSERVER]"
 ^ WorkDir=^INSTALLDIR^   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="StartServices-">
 #)

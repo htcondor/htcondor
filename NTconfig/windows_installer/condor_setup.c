@@ -24,23 +24,30 @@ struct Options {
 	char *release_dir;
 	char *smtpserver;
 	char *condoremail;
-} Opt = { '\0', '\0', '\0', '\0', NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	char *hostallowread;
+	char *hostallowwrite;
+	char *hostallowadministrator;
+} Opt = { '\0', '\0', '\0', '\0', NULL, NULL, NULL, NULL, NULL, 
+	NULL, NULL, NULL, NULL, NULL};
 
-const char *short_options = ":c:d:j:v:n::p:o:r:a:s::m:h";
+const char *short_options = ":c:d:e:i:j:v:n::p:o:r:a:s::t:m:h";
 static struct option long_options[] =
 { 
-	{"acctdomain",   optional_argument, 0, 'a'},
-	{"newpool",      optional_argument, 0, 'n'},
-	{"runjobs",      required_argument, 0, 'r'},
-	{"vacatejobs",   optional_argument, 0, 'v'},
-	{"submitjobs",   optional_argument, 0, 's'},
-	{"condoremail",  required_argument, 0, 'c'},
-	{"jvmlocation",  required_argument, 0, 'j'},
-	{"poolname",     required_argument, 0, 'p'},
-	{"poolhostname", required_argument, 0, 'o'},
-	{"release_dir",  required_argument, 0, 'd'},
-	{"smtpserver",   required_argument, 0, 'm'},
-	{"help",         no_argument,       0, 'h'},
+	{"acctdomain",              optional_argument, 0, 'a'},
+	{"hostallowread",           required_argument, 0, 'e'},
+	{"hostallowwrite",          required_argument, 0, 't'},
+	{"hostallowadministrator",  required_argument, 0, 'i'},
+	{"newpool",                 optional_argument, 0, 'n'},
+	{"runjobs",                 required_argument, 0, 'r'},
+	{"vacatejobs",              optional_argument, 0, 'v'},
+	{"submitjobs",              optional_argument, 0, 's'},
+	{"condoremail",             required_argument, 0, 'c'},
+	{"jvmlocation",             required_argument, 0, 'j'},
+	{"poolname",                required_argument, 0, 'p'},
+	{"poolhostname",            required_argument, 0, 'o'},
+	{"release_dir",             required_argument, 0, 'd'},
+	{"smtpserver",              required_argument, 0, 'm'},
+	{"help",                    no_argument,       0, 'h'},
    	{0, 0, 0, 0}
 };
 	
@@ -52,6 +59,7 @@ bool append_option(const char *attribute, const char *val);
 bool set_option(const char *attribute, const char *val);
 bool set_int_option(const char *attribute, const int val);
 bool setup_config_file(void) { Config_file = "condor_config"; return true; };
+bool isempty(const char * a) { return ((a == NULL) || (a[0] == '\0')); }
 bool attribute_matches( const char *string, const char *attr );
 
 void Usage();
@@ -62,6 +70,7 @@ void set_poolinfo();
 void set_startdpolicy();
 void set_jvmlocation();
 void set_mailoptions();
+void set_hostpermissions();
 
 int 
 main(int argc, char**argv) {
@@ -80,6 +89,7 @@ main(int argc, char**argv) {
 	set_startdpolicy();
 	set_jvmlocation();
 	set_mailoptions();
+	set_hostpermissions();
 
 //	getc(stdin);
 	return 0;
@@ -175,11 +185,13 @@ void
 set_poolinfo() {
 	if ( Opt.poolname != NULL ) {
 		set_option("COLLECTOR_NAME", Opt.poolname);
+		set_option("CONDOR_HOST", "$(FULL_HOSTNAME)");
 	}
 
-	if ( Opt.poolhostname != NULL ) {
+	if ( Opt.poolhostname != NULL && Opt.poolhostname[0] != '\0' ) {
 		set_option("CONDOR_HOST", Opt.poolhostname);
 	}
+
 }
 
 void
@@ -196,6 +208,19 @@ set_daemonlist() {
 	set_option("DAEMON_LIST", buf);
 }
 
+void
+set_hostpermissions() {
+	if ( Opt.hostallowread != NULL ) {
+		set_option("HOSTALLOW_READ", Opt.hostallowread);
+	}
+	if ( Opt.hostallowwrite != NULL ) {
+		set_option("HOSTALLOW_WRITE", Opt.hostallowwrite);
+	}
+	if ( Opt.hostallowadministrator != NULL ) {
+		set_option("HOSTALLOW_ADMINISTRATOR", Opt.hostallowadministrator);
+	}
+}
+
 bool 
 parse_args(int argc, char** argv) {
 
@@ -208,14 +233,38 @@ parse_args(int argc, char** argv) {
 
 		switch(i) {
 			case 'a':
-				Opt.accountingdomain = strdup(optarg);
+				if (!isempty(optarg)) {
+					Opt.accountingdomain = strdup(optarg);
+				}
 			break;
 			case 'c':
-				Opt.condoremail = strdup(optarg);
+				if (!isempty(optarg)) {
+					Opt.condoremail = strdup(optarg);
+				}
+			break;
+
+			case 'e':
+				if (!isempty(optarg)) {
+					Opt.hostallowread = strdup(optarg);
+				}
+			break;
+
+			case 't':
+				if (!isempty(optarg)) {
+					Opt.hostallowwrite = strdup(optarg);
+				}
+			break;
+
+			case 'i':
+				if (!isempty(optarg)) {
+					Opt.hostallowadministrator = strdup(optarg);
+				}
 			break;
 
 			case 'j':
-				Opt.jvmlocation = strdup(optarg);
+				if (!isempty(optarg)) {
+					Opt.jvmlocation = strdup(optarg);
+				}
 			break;
 
 			case 'n': 
@@ -227,15 +276,21 @@ parse_args(int argc, char** argv) {
 			break;
 			
 			case 'd':
-				Opt.release_dir = strdup(optarg);
+				if (!isempty(optarg)) {
+					Opt.release_dir = strdup(optarg);
+				}
 			break;
 
 			case 'p':
-				Opt.poolname = strdup(optarg);
+				if (!isempty(optarg)) {
+					Opt.poolname = strdup(optarg);
+				}
 			break;
 
 			case 'o':
-				Opt.poolhostname = strdup(optarg);
+				if (!isempty(optarg)) {
+					Opt.poolhostname = strdup(optarg);
+				}
 			break;
 			
 			case 'r':
@@ -259,7 +314,9 @@ parse_args(int argc, char** argv) {
 			break;
 
 			case 'm':
-				Opt.smtpserver = strdup(optarg);
+				if (!isempty(optarg)) {
+					Opt.smtpserver = strdup(optarg);
+				}
 			break;
 
 			case 'h':
