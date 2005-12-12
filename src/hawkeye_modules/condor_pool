@@ -16,9 +16,11 @@ use HawkeyeLib;
 # Prototypes
 sub Init( );
 sub RunIt( );
+sub CheckCollectors( $ );
 sub RunAbsent( );
 sub RunTotal( $$ );
 sub RunSubmit(  );
+sub RunNegotiator( $ );
 
 
 # Setup the hawkeye stuff
@@ -31,12 +33,15 @@ my %Config = (
 	      DoAbsent => 1,
 	      DoSummary => 1,
 	      DoRun => 1,
+	      DoCollectors => 1,
+	      DoNegotiator => 1,
 	      DoSubmit => 1,
 	      DoSubmitMunge => 0,
 	      DoCheckpoint => 1,
 	      DoSubmitDetails => 1,
 	      DoArchDetail => 1,
 	      PoolDescription => "",
+	      FpingExe => 0,
 	     );
 my $Hash;
 
@@ -92,6 +97,12 @@ sub Init()
     $Tmp = HawkeyeLib::ReadConfig( "_submit", "true" );
     $Config{DoSubmit} = ( $Tmp =~ /true/i ) ? 1 : 0;
 
+    $Tmp = HawkeyeLib::ReadConfig( "_collector", "true" );
+    $Config{DoCollectors} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_negotiator", "true" );
+    $Config{DoNegotiator} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
     $Tmp = HawkeyeLib::ReadConfig( "_submit_munge", "true" );
     $Config{DoSubmitMunge} = ( $Tmp =~ /true/i ) ? 1 : 0;
 
@@ -123,15 +134,126 @@ sub RunIt()
 	$Hawkeye->StoreIndex( "Description" );
     }
 
+    my %Collectors;
+    CheckCollectors( \%Collectors );
     RunAbsent() if ( $Config{DoAbsent} );
     RunTotal( "", "Sum" ) if ( $Config{DoSummary} );
     RunTotal( "-run", "Run" ) if ( $Config{DoRun} );
     RunSubmit( ) if ( $Config{DoSubmit} );
     RunCheckPoint( ) if ( $Config{DoCheckpoint} );
+    RunNegotiator( \%Collectors ) if ( $Config{DoNegotiator} );
 
     # Ok, summary is done...
     $Hash->Store( );
     $Hawkeye->Publish( );
+}
+
+
+# Gather collector info
+sub CheckCollectors( $ )
+{
+    my $Collectors = shift;
+
+    my $Publish = $Config{DoCollectors};
+
+    # Get the collector list
+    my $Cmd = "condor_config_val collector_host";
+    if ( ! open( CCV, "$Cmd|" ) )
+    {
+	print STDERR "Can't get collector info\n";
+	return;
+    }
+
+    # Only one line
+    $_ = <CCV>;
+    chomp;
+    s/^\s+//g;
+    close( CCV );
+    if ( length == 0 )
+    {
+	print STDERR "No collector list\n";
+	return;
+    }
+
+    # Parse it
+    my @ConfigList = split( /,\s+/, $_ );
+    if ( $Publish )
+    {
+	$Hash->Add( "Collectors_Count", HawkeyePublish::TypeNumber,
+		    scalar( @ConfigList ) );
+    }
+
+    my @ConfigNames;
+    foreach my $Host ( @ConfigList )
+    {
+	my $Name = $Host;
+	$Name =~ s/\..*$//;
+	my $r = ();
+	$r->{ConfigName} = $Host;
+	$Collectors->{$Name} = $r;
+	if ( $Publish )
+	{
+	    $Hash->Add( "Collectors__".$Name."_ConfigName",
+			HawkeyePublish::TypeString,
+			$Host )
+	}
+    }
+    if ( $Publish )
+    {
+	$Hash->Add( "Collectors_Index", HawkeyePublish::TypeString,
+		    join( ",", sort keys %{$Collectors} ) )
+    }
+
+    # Query each collector
+    foreach my $Name( keys %{$Collectors} )
+    {
+	my $Collector = $Collectors->{$Name};
+	my $ConfigHost = $Collector->{ConfigName};
+	my $Cmd = "condor_status -pool $ConfigHost -any";
+	if ( ! open( STATUS, "$Cmd|" ) )
+	{
+	    print STDERR "Can't query collector '$ConfigHost'\n";
+	    return;
+	}
+	my %AdTypes;
+	my $NumAds = 0;
+	while( <STATUS> )
+	{
+	    chomp;
+	    s/^\s+//g;
+	    if ( /(\w+)\s+(\w+)\s+(\S+)/ )
+	    {
+		my $Type = $1;
+		next if ( $Type eq "MyType" );
+		$AdTypes{$Type} = 0 if ( ! exists $AdTypes{$Type} );
+		$AdTypes{$Type}++;
+		$NumAds++;
+	    }
+	}
+	close( STATUS );
+	if ( $Publish )
+	{
+	    $Hash->Add( "Collectors__".$Name."_NumAds",
+			HawkeyePublish::TypeNumber,
+			$NumAds )
+	}
+	$Collector->{NumAds} = $NumAds;
+	$Collector->{AdTypes} = %AdTypes;
+	next if ( ! $NumAds );
+
+	if ( $Publish )
+	{
+	    $Hash->Add( "Collectors__".$Name."_Ads_Index",
+			HawkeyePublish::TypeString,
+			join( ",", sort(keys %AdTypes))  );
+	    foreach my $Type ( keys %AdTypes )
+	    {
+		$Hash->Add( "Collectors__".$Name."_Ads_$Type",
+			    HawkeyePublish::TypeNumber,
+			    $AdTypes{$Type} );
+	    }
+	}
+    }
 }
 
 # Do the real work here...
@@ -515,4 +637,134 @@ sub RunCheckPoint(  )
 
     # Done
     close( CKPT );
+}
+
+
+# Run condor_status -negotiator & parse it's output..
+sub RunNegotiator( $ )
+{
+    my $Collectors = shift;
+
+    # Significant attributes
+    my %SigAttrs = ( Name => HawkeyePublish::TypeString,
+		     NegotiatorIpAddr => HawkeyePublish::TypeString,
+		     CondorVersion => HawkeyePublish::TypeString,
+		     DaemonStartTime => HawkeyePublish::TypeNumber,,
+		   );
+
+
+    my %Negotiators;
+    foreach my $Collector ( "", keys %{$Collectors} )
+    {
+	# Run it..
+	my $Cmd = "condor_status -negotiator -l";
+	$Cmd .= " -pool $Collector" if ( $Collector ne "" );
+	if ( ! open( STATUS, "$Cmd|" ) )
+	{
+	    print STDERR "Can't get negotiator info\n";
+	    return;
+	}
+
+	# Parse the output...
+	my @CollectorNegotiators;
+	my %Attrs;
+	my $Name = "";
+	while ( <STATUS> )
+	{
+	    chomp;
+	    s/^\s+//g;
+	    if ( /(\S+)\s*=\s*(.*)$/ )
+	    {
+		my $Attr = $1;
+		my $Value = $2;
+		if ( $Value =~ /^\"(.*)\"$/ )
+		{
+		    $Value = $1;
+		}
+		if ( exists $SigAttrs{$Attr} )
+		{
+		    $Attrs{$Attr} = $Value;
+		    $Name = $Value if ( $Attr eq "Name" );
+		}
+		next;
+	    }
+
+	    # Not an "attr = value" line
+
+	    # No name; clear it all & start over
+	    if ( $Name eq "" )
+	    {
+		foreach my $Attr ( keys %Attrs )
+		{
+		    delete( $Attrs{$Attr} );
+		}
+		next;
+	    }
+
+	    # Got a real name
+	    $Name =~ s/\..*$//;
+
+	    # Handle the default collector case
+	    if ( $Collector eq "" )
+	    {
+		foreach my $Attr ( keys %Attrs )
+		{
+		    $Hash->Add( "Negotiators__".$Name."_".$Attr,
+				$SigAttrs{$Attr},
+				$Attrs{$Attr} );
+		}
+	    }
+	    else
+	    {
+		push( @{$Negotiators{$Name}}, $Collector );
+		push( @CollectorNegotiators, $Name );
+		if ( $Config{DoCollectors} )
+		{
+		    my $BaseAttr = 
+			"Collectors__".$Collector."_Negotiators_".$Name."_";
+		    foreach my $Attr ( keys %Attrs )
+		    {
+			$Hash->Add( $BaseAttr . $Attr,
+				    $SigAttrs{$Attr},
+				    $Attrs{$Attr} );
+		    }
+		}
+	    }
+
+	    # Clear the attr hash
+	    foreach my $Attr ( keys %Attrs )
+	    {
+		delete( $Attrs{$Attr} );
+	    }
+
+	    if ( ( $Collector ne "" ) && ( $Config{DoCollectors} ) )
+	    {
+		$Hash->Add( "Collectors__".$Collector."_Negotiators_Index",
+			    HawkeyePublish::TypeString,
+			    join( ",", @CollectorNegotiators ) );
+		$Hash->Add( "Collectors__".$Collector."_Negotiators_Count",
+			    HawkeyePublish::TypeNumber,
+			    scalar @CollectorNegotiators );
+	    }
+	    $Name = "";
+	}
+	close( STATUS );
+    }
+
+    my $Count = 0;
+    foreach my $Nego ( keys %Negotiators )
+    {
+	$Count++;
+	$Hash->Add( "Negotiators__".$Nego."_Collectors",
+		    HawkeyePublish::TypeString,
+		    join( ",", sort @{$Negotiators{$Nego}} ) );
+    }
+
+    $Hash->Add( "Negotiators_Index",
+		HawkeyePublish::TypeString,
+		join( ",", sort keys %Negotiators ) );
+    $Hash->Add( "Negotiators_Count",
+		HawkeyePublish::TypeNumber,
+		$Count );
+
 }

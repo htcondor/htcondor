@@ -36,6 +36,10 @@ parameter: ABSENT = true
 ABSENT = true/false
 Enable / disable absent check
 
+parameter: COLLECTOR = true
+COLLECTOR = true/false
+Enable / disable collector information
+
 parameter: CLUSTER = true
 CLUSTER = true/false
 Enable / disable cluster check (only w/absent)
@@ -79,6 +83,10 @@ parameter: CKPT = false
 CKPT = true/false
 Specify whether to report on the health of the Condor checkpoint
 servers
+
+parameter: NEGOTIATOR = true/false
+NEGOTIATOR = true/false
+Enable / disable negotiator information gathering
 
 parameter: FPING_EXE = /usr/local/bin/fping
 FPING_EXE = /path/to/fping
