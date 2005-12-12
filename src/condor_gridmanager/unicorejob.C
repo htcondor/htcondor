@@ -130,7 +130,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 {
 	char buff[4096];
 	bool job_already_submitted = false;
-	char *error_string = NULL;
+	MyString error_string = "";
 
 	jobContact = NULL;
 	gmState = GM_INIT;
@@ -177,8 +177,8 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }

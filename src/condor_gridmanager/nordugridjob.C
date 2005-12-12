@@ -166,7 +166,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[4096];
-	char *error_string = NULL;
+	MyString error_string = "";
 	char *gahp_path = NULL;
 
 	remoteJobId = NULL;
@@ -205,7 +205,8 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	} else {
 		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
 				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
-		error_string = "x509userproxy is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_X509_USER_PROXY );
 		goto error_exit;
 	}
 
@@ -219,7 +220,8 @@ NordugridJob::NordugridJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "nordugrid" ) ) {
-			error_string = "GridResource not of type nordugrid";
+			error_string.sprintf( "%s not of type nordugrid",
+								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
@@ -227,12 +229,14 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			error_string = "GridResource missing server name";
+			error_string.sprintf( "%s missing server name",
+								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string = "GridResource is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
@@ -264,8 +268,8 @@ NordugridJob::NordugridJob( ClassAd *classad )
 
  error_exit:
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }

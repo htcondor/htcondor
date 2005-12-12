@@ -152,7 +152,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[4096];
-	char *error_string = NULL;
+	MyString error_string = "";
 	char *gahp_path;
 
 	gahpAd = NULL;
@@ -185,7 +185,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	if ( buff[0] != '\0' ) {
 		batchType = strdup( buff );
 	} else {
-		error_string = "GridResource is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
@@ -231,8 +232,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }

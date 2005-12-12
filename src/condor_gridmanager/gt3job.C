@@ -263,7 +263,7 @@ GT3Job::GT3Job( ClassAd *classad )
 	char buff2[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
 	bool job_already_submitted = false;
-	char *error_string = NULL;
+	MyString error_string = "";
 	char *gahp_path = NULL;
 
 	RSL = NULL;
@@ -342,7 +342,7 @@ GT3Job::GT3Job( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "gt3" ) ) {
-			error_string = "GridResource not of type gt3";
+			error_string.sprintf( "%S not of type gt3", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
@@ -350,12 +350,14 @@ GT3Job::GT3Job( ClassAd *classad )
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			error_string = "GridResource missing GRAM Service URL";
+			error_string.sprintf( "%s missing GRAM Service URL",
+								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string = "GridResource is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
@@ -443,8 +445,8 @@ GT3Job::GT3Job( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }

@@ -595,7 +595,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	char buff2[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
 	bool job_already_submitted = false;
-	char *error_string = NULL;
+	MyString error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_args = NULL;
 
@@ -784,7 +784,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	} else {
 		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
 				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
-		error_string = "x509userproxy is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_X509_USER_PROXY );
 		goto error_exit;
 	}
 
@@ -816,7 +817,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "gt2" ) ) {
-			error_string = "GridResource not of type gt2";
+			error_string.sprintf( "%s not of type gt2", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
@@ -824,12 +825,14 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			error_string = "GridResource missing GRAM service name";
+			error_string.sprintf( "%s missing GRAM service name",
+								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string = "GridResource is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
@@ -929,8 +932,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		free( gahp_args );
 	}
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }

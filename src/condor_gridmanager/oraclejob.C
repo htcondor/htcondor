@@ -210,7 +210,7 @@ OracleJob::OracleJob( ClassAd *classad )
 {
 	int bool_val;
 	char buff[4096];
-	char *error_string = NULL;
+	MyString error_string = "";
 
 	remoteJobId = NULL;
 	gmState = GM_INIT;
@@ -249,7 +249,8 @@ OracleJob::OracleJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || stricmp( token, "oracle" ) ) {
-			error_string = "GridResource not of type oracle";
+			error_string.sprintf( "%s not of type oracle",
+								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
@@ -257,12 +258,14 @@ OracleJob::OracleJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			error_string = "GridResource missing server name";
+			error_string.sprintf( "%s missing server name",
+								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string = "GridResource is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
@@ -303,8 +306,8 @@ OracleJob::OracleJob( ClassAd *classad )
 
  error_exit:
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }

@@ -229,7 +229,7 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	int tmp;
 	char buff[4096];
 	char buff2[4096];
-	char *error_string = NULL;
+	MyString error_string = "";
 	char *gahp_path;
 
 	mirrorJobId.cluster = 0;
@@ -270,7 +270,8 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	if ( buff[0] != '\0' ) {
 		mirrorScheddName = strdup( buff );
 	} else {
-		error_string = "MirrorSchedd is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_MIRROR_SCHEDD );
 		goto error_exit;
 	}
 
@@ -291,7 +292,8 @@ MirrorJob::MirrorJob( ClassAd *classad )
 		}
 		submitterId = strdup( buff );
 	} else {
-		error_string = "GlobalJobId is not set in the job ad";
+		error_string.sprintf( "%s is not set in the job ad",
+							  ATTR_GLOBAL_JOB_ID );
 		goto error_exit;
 	}
 
@@ -335,8 +337,8 @@ MirrorJob::MirrorJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( error_string ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string );
+	if ( !error_string.IsEmpty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
 	}
 	return;
 }
