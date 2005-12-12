@@ -37,6 +37,17 @@ under the startd took too long to finish.  However, \Opt{-peaceful} restart
 did work in the case where a specific subsystem (e.g. \Opt{-startd}) was
 specified.
 
+% Gnats PR 588
+\item When run from a privileged (root) Stork server, modules lose
+\Macro{LD\_LIBRARY\_PATH} and other key environments, for security
+reasons.  This is not actually a Stork bug, but a feature of glibc.
+When run with a dynamically linked \File{globus-url-copy}, the
+contributed modules for the HTTP, FTP and GSIFTP transfer protocols
+will fail.  To compensate, these modules can now restore their
+environment via the pre-existing \Macro{STORK\_ENVIRONMENT}
+configuration macro.  Unprivileged (user level) Storks are not
+affected by this behavior.
+
 \end{itemize}
 
 \noindent Known Bugs:
