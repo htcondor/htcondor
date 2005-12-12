@@ -3,6 +3,9 @@
 #include "dap_error.h"
 #include "dap_utility.h"
 #include "condor_string.h"
+#include "condor_config.h"
+#include "env.h"
+#include "setenv.h"
 #include <unistd.h>
 #include <string>
 
@@ -147,6 +150,41 @@ int main(int argc, char *argv[])
     fprintf(stderr, "==============================================================\n");
     exit(-1);
    }
+
+    config(); // read config file
+
+  // TODO: The correct parameter name is actually daemonname_ENVIRONMENT, where
+  // daemonname is the Stork daemon name, known to the Condor Master, and
+  // defined in the DAEMON_LIST parameter.  The daemonname is _usually_ defined
+  // to be STORK by convention, but can be anything.
+#define STORK_ENVIRONMENT		"STORK_ENVIRONMENT"
+  char* env = param(STORK_ENVIRONMENT);
+  if (env) {
+	  printf("merging environment defined by %s configuration\n",
+			  STORK_ENVIRONMENT);
+	  Env envStrParser;
+	// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
+	// Env::Merge(null) will always return true, so the warning will not be
+	// printed in this case.
+	if( !envStrParser.Merge(env) ) {
+		// this is an invalid env string
+		fprintf(stderr, "Warning! Configuration file variable "
+				"`%s' has invalid value `%s'; ignoring.\n",
+				STORK_ENVIRONMENT, env);
+	} else {
+		char **unix_env;	// TODO: delete when done?
+		unix_env = envStrParser.getStringArray();
+		for ( int j=0 ; (unix_env[j] && unix_env[j][0]) ; j++ ) {
+			if ( !SetEnv( unix_env[j] ) ) {
+				dprintf ( D_ALWAYS, "Failed to put "
+						  "\"%s\" into environment.\n", unix_env[j] );
+			  free(env);
+				return DAP_ERROR;
+			}
+		}
+	}
+	  free(env);
+  }
 
   strncpy(src_url, argv[1], MAXSTR);
   strncpy(dest_url, argv[2], MAXSTR);
