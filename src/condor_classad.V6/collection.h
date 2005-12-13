@@ -97,8 +97,7 @@ public:
 	virtual bool InitializeFromLog( const std::string &filename,
 									const std::string storagefile="", 
 									const std::string checkpointfile="" ) = 0;
-	bool TruncateLog( );
-
+	virtual bool TruncateLog(void);
 
 		// View creation/deletion/interrogation
 	virtual bool CreateSubView( const ViewName &viewName,
