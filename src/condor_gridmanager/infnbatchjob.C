@@ -216,14 +216,9 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_X509_USER_PROXY, buff );
-	if ( buff[0] != '\0' ) {
-		jobProxy = AcquireProxy( buff, evaluateStateTid );
-		if ( jobProxy == NULL ) {
-			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
-					 procID.cluster, procID.proc );
-		}
+	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	if ( jobProxy == NULL && error_string != "" ) {
+		goto error_exit;
 	}
 
 	return;

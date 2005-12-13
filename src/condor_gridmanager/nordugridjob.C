@@ -192,21 +192,12 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_X509_USER_PROXY, buff );
-	if ( buff[0] != '\0' ) {
-		jobProxy = AcquireProxy( buff, evaluateStateTid );
-		if ( jobProxy == NULL ) {
-			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
-					 procID.cluster, procID.proc );
-			error_string = "Failed to acquire proxy";
-			goto error_exit;
+	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	if ( jobProxy == NULL ) {
+		if ( error_string == "" ) {
+			error_string.sprintf( "%s is not set in the job ad",
+								  ATTR_X509_USER_PROXY );
 		}
-	} else {
-		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
-				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
-		error_string.sprintf( "%s is not set in the job ad",
-							  ATTR_X509_USER_PROXY );
 		goto error_exit;
 	}
 
