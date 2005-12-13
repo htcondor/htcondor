@@ -26,6 +26,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "proc.h"	// for PROC_ID
+#include <string>
 
 // a generic hash bucket class
 
