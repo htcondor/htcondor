@@ -1285,6 +1285,7 @@ void get_two_exprs(
     tree1 = parser.ParseExpression(&lexer_source, false);
     if (tree1 == NULL) {
         print_error_message("Couldn't parse first expression.", state);
+        tree2 = NULL;
     } else {
         if (parameters.debug) {
             cout << "# Tree1: "; 
