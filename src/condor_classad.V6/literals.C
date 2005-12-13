@@ -29,6 +29,10 @@ using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
+static inline void nextDigitChar(string Str, int &index);
+static inline void prevNonSpaceChar(string Str, int &index);
+static int revInt(string revNumStr);
+static double revDouble(string revNumStr);
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
 
 Literal::
@@ -121,121 +125,6 @@ MakeAbsTime( abstime_t *tim )
     val.SetAbsoluteTimeValue( abst);
     return( MakeLiteral( val ) );
 }
-
-Literal* Literal::
-MakeRelTime( time_t t1, time_t t2 )
-{
-	Value	val;
-
-	if( t1<0 ) time( &t1 );
-	if( t2<0 ) time( &t2 );
-	val.SetRelativeTimeValue( t1 - t2 );
-	return( MakeLiteral( val ) );
-}
-
-
-Literal* Literal::
-MakeRelTime( time_t secs )
-{
-	Value		val;
-	struct	tm 	lt;
-
-	if( secs<0 ) {
-		time(&secs );
-		getLocalTime( &secs, &lt );
-	}
-	val.SetRelativeTimeValue((time_t) (lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec));
-	return( MakeLiteral( val ) );
-}
-
-
-/* Function which iterates through the string Str from the location 'index', 
- *returning the index of the next digit-char 
- */
-inline void nextDigitChar(string Str, int &index) 
-{
-	int len = Str.length();
-    while((index<len) &&(!isdigit(Str[index]))) {
-		index++;
-    }
-}
-
-
-/* Function which iterates through the string Str backwards from the location 'index'
- *returning the index of the first occuring non-space character
- */
-inline void prevNonSpaceChar(string Str, int &index) 
-{
-    while((index>=0) &&(isspace(Str[index]))) {
-		index--;
-    }
-}
-
-
-/* Function which takes a number in string format, and reverses the
- * order of the digits & returns the corresponding number as an
- * integer.
- */
-int revInt(string revNumStr) 
-{
-	string numStr = "";
-    int number;
-
-	int len = revNumStr.length();
-	for(int i=len-1; i>=0 ; i--) {
-		numStr += revNumStr[i];
-	}
-
-    number = atoi(numStr.c_str());
-	return number;
-}
-
-/* Function which takes a number in string format, and reverses the
- * order of the digits & returns the corresponding number as a double.
- */
-double revDouble(string revNumStr) 
-{
-	string numStr = "";
-    double number;
-    const char *cNumStr;
-
-	int len = revNumStr.length();
-	for(int i=len-1; i>=0 ; i--) {
-		numStr += revNumStr[i];
-	}
-
-    cNumStr = numStr.c_str();
-    
-    number = strtod(cNumStr, NULL);
-	return number;
-}
-
-/* function which returns the timezone offset corresponding to the argument epochsecs,
- *  which is the number of seconds since the epoch 
- */
-int Literal::
-findOffset(time_t epochsecs) 
-{
-	tm abstm;
-	int  offset;
-
-	abstm.tm_year = 70;
-	abstm.tm_mon = 0;
-	abstm.tm_mday = 1;
-	abstm.tm_hour = 0;
-	abstm.tm_min =0;
-	abstm.tm_sec = epochsecs;
-	if(mktime(&abstm) == -1) {
-		offset = -1;
-	}
-	if(abstm.tm_isdst > 0) {
-		offset = -timezone_offset()+3600;
-	} else {
-		offset = -timezone_offset();
-	}
-	return offset;
-} 
-
 
 /* Creates an absolute time literal, from the string timestr, 
  *parsing it as the regular expression:
@@ -350,6 +239,31 @@ MakeAbsTime(string timeStr )
 	return( MakeLiteral( val ) );
 }
 
+Literal* Literal::
+MakeRelTime( time_t t1, time_t t2 )
+{
+	Value	val;
+
+	if( t1<0 ) time( &t1 );
+	if( t2<0 ) time( &t2 );
+	val.SetRelativeTimeValue( t1 - t2 );
+	return( MakeLiteral( val ) );
+}
+
+
+Literal* Literal::
+MakeRelTime( time_t secs )
+{
+	Value		val;
+	struct	tm 	lt;
+
+	if( secs<0 ) {
+		time(&secs );
+		getLocalTime( &secs, &lt );
+	}
+	val.SetRelativeTimeValue((time_t) (lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec));
+	return( MakeLiteral( val ) );
+}
 
 /* Creates a relative time literal, from the string timestr, 
  *parsing it as [[[days+]hh:]mm:]ss
@@ -444,6 +358,94 @@ MakeRelTime(string timeStr)
 	
 	return( MakeLiteral( val ) );
 }
+
+/* Function which iterates through the string Str from the location 'index', 
+ *returning the index of the next digit-char 
+ */
+static inline void nextDigitChar(string Str, int &index) 
+{
+	int len = Str.length();
+    while((index<len) &&(!isdigit(Str[index]))) {
+		index++;
+    }
+}
+
+
+/* Function which iterates through the string Str backwards from the location 'index'
+ *returning the index of the first occuring non-space character
+ */
+static inline void prevNonSpaceChar(string Str, int &index) 
+{
+    while((index>=0) &&(isspace(Str[index]))) {
+		index--;
+    }
+}
+
+
+/* Function which takes a number in string format, and reverses the
+ * order of the digits & returns the corresponding number as an
+ * integer.
+ */
+static int revInt(string revNumStr) 
+{
+	string numStr = "";
+    int number;
+
+	int len = revNumStr.length();
+	for(int i=len-1; i>=0 ; i--) {
+		numStr += revNumStr[i];
+	}
+
+    number = atoi(numStr.c_str());
+	return number;
+}
+
+/* Function which takes a number in string format, and reverses the
+ * order of the digits & returns the corresponding number as a double.
+ */
+static double revDouble(string revNumStr) 
+{
+	string numStr = "";
+    double number;
+    const char *cNumStr;
+
+	int len = revNumStr.length();
+	for(int i=len-1; i>=0 ; i--) {
+		numStr += revNumStr[i];
+	}
+
+    cNumStr = numStr.c_str();
+    
+    number = strtod(cNumStr, NULL);
+	return number;
+}
+
+/* function which returns the timezone offset corresponding to the argument epochsecs,
+ *  which is the number of seconds since the epoch 
+ */
+int Literal::
+findOffset(time_t epochsecs) 
+{
+	tm abstm;
+	int  offset;
+
+	abstm.tm_year = 70;
+	abstm.tm_mon = 0;
+	abstm.tm_mday = 1;
+	abstm.tm_hour = 0;
+	abstm.tm_min =0;
+	abstm.tm_sec = epochsecs;
+	if(mktime(&abstm) == -1) {
+		offset = -1;
+	}
+	if(abstm.tm_isdst > 0) {
+		offset = -timezone_offset()+3600;
+	} else {
+		offset = -timezone_offset();
+	}
+	return offset;
+} 
+
 
 Literal* Literal::
 MakeLiteral( const Value& val, Value::NumberFactor f ) 
