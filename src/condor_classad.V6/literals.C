@@ -101,24 +101,25 @@ MakeReal(string number_string)
 Literal* Literal::
 MakeAbsTime( abstime_t *tim )
 {
-	Value val;	
-	abstime_t abst;
-	if(tim == NULL) { // => current time/offset
-		time_t now;
-		struct tm *tt;
-		time( &now );
-		tt = localtime(&now);
-		abst.secs = now;
-		abst.offset = -timezone_offset();
-		if (tt->tm_isdst > 0) { // add an hour to the offset, if day-light saving is set
-			abst.offset += 3600;
-        }	  
-	}
-	else { //make a literal out of the passed value
-		abst = *tim;
-	}
-	val.SetAbsoluteTimeValue( abst);
-	return( MakeLiteral( val ) );
+    Value val;
+    abstime_t abst;
+    if (tim == NULL) { // => current time/offset
+        time_t now;
+        struct tm tt;
+        time( &now );
+        getLocalTime(&now, &tt);
+        abst.secs = now;
+        abst.offset = -timezone_offset();
+        if (tt.tm_isdst > 0) { // add an hour to the offset, if day-light saving is set
+            abst.offset += 3600;
+        }
+        abst.secs += abst.offset;
+    }
+    else { //make a literal out of the passed value
+        abst = *tim;
+    }
+    val.SetAbsoluteTimeValue( abst);
+    return( MakeLiteral( val ) );
 }
 
 Literal* Literal::
