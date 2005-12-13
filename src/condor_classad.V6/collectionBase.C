@@ -45,15 +45,15 @@ ClassAdCollection( ) : viewTree( NULL )
 }
 
 ClassAdCollection::
-ClassAdCollection(bool CacheOn) : viewTree( NULL ) 
+ClassAdCollection(bool cacheOn) : viewTree( NULL ) 
 {
-	Setup(CacheOn);
+	Setup(cacheOn);
 	return;
 }
 void ClassAdCollection::
-Setup(bool CacheOn)
+Setup(bool cacheOn)
 {
-	Cache = CacheOn;
+	Cache = cacheOn;
 	test_checkpoint=0;
 	// create "root" view
 	viewTree.SetViewName( "root" );
@@ -85,7 +85,7 @@ ClassAdCollection::
 
 
 bool ClassAdCollection::
-InitializeFromLog( const string &filename, const string storagefile, const string checkpointfile )
+InitializeFromLog( const string &logfile, const string storagefile, const string checkpointfile )
 {
         int     storagefd;
 	string  StorageFileName=storagefile;
@@ -157,15 +157,27 @@ InitializeFromLog( const string &filename, const string storagefile, const strin
           ReadCheckPointFile();	 
 	}		
 		// load info from new log file
-	logFileName = filename;
-	if( !filename.empty( ) ) {
+	logFileName = logfile;
+	if( !logfile.empty( ) ) {
 		if( !ReadLogFile( ) ) {
-			CondorErrMsg += "; could not initialize from file " + filename;
+			CondorErrMsg += "; could not initialize from file " + logfile;
 			return( false );
 		}
 	}
 	return( true );
 }
+
+// One might ask why this function is virtual, yet we define it to
+// just call the base class. The reason is that I want to be able to
+// document how to use TruncateLog in the Doxygen comments in the
+// header file, so that users have a single source for the
+// documentation.
+bool ClassAdCollection::
+TruncateLog(void)
+{
+    return ClassAdCollectionInterface::TruncateLog();
+}
+
 
 bool ClassAdCollection::
 ReadCheckPointFile(){
@@ -645,7 +657,7 @@ PlayClassAdOp( int opType, ClassAd *rec )
 			  //If the cache in memory is full, we have to swap out a ClassAd
 			  if ( Max_Classad ==  MaxCacheSize){
 			    string write_back_key;
-			    if (!ReplaceClassad(write_back_key)){
+			    if (!SelectClassadToReplace(write_back_key)){
 			      CondorErrno = ERR_CANNOT_REPLACE;
 			      CondorErrMsg = "failed in replacing classad in cache";
 			    };
@@ -996,100 +1008,126 @@ FindPartitionName( const ViewName &viewName, ClassAd *rep, ViewName &partition )
 
 
 bool ClassAdCollection::
-AddClassAd( const string &key, ClassAd *newAd )
+AddClassAd(const string &key, ClassAd *newAd)
 {
-	if (currentXactionName != "") {
-		ClassAd *rec = _AddClassAd( currentXactionName, key, newAd );
-		if (!rec){
-            return false;
-        }
+    bool success;
 
-		ServerTransaction       *xaction;
-		XactionTable::iterator  itr = xactionTable.find( currentXactionName );
-		if (itr == xactionTable.end()) {
-			CondorErrno = ERR_NO_SUCH_TRANSACTION;
-			CondorErrMsg = "transaction " +currentXactionName+ " doesn't exist";
-			delete rec;
-			return false;
-		}
-		xaction = itr->second;
-		xaction->AppendRecord( ClassAdCollOp_AddClassAd, key, rec );
-	} else {
-		ClassAdTable::iterator	itr = classadTable.find( key );
-		ClassAd					*ad;
-		ClassAdProxy			proxy;
-        bool                    duplicate_ad = false;
+    if (currentXactionName != "") {
+        success = AddClassAd_Transaction(key, newAd);
+    } else {
+        success = AddClassAd_NoTransaction(key, newAd);
+    }
 
-		if (itr != classadTable.end()) {
-            // some ad already present --- replace 
-			ad = itr->second.ad;
-            if (ad == newAd) {
-                duplicate_ad = true;
-            } else {
-                viewTree.ClassAdDeleted( this, key, ad );
-                delete ad;
-                classadTable.erase( itr );
-                if (Cache==true) {
-                    Max_Classad--;
-                }
-            }
-		} else if (Cache == true){
-            tag ptr;				
-            if (ClassAdStorage.FindInFile( key,ptr )){
-                ClassAdStorage.DeleteFromStorageFile(key);
-            };
-		}
-		if (!duplicate_ad && !viewTree.ClassAdInserted(this, key, newAd)) {
-			delete newAd;
-			return( false );
-		}
-
-		if (!duplicate_ad && Cache==true) {
-            if (Max_Classad ==  MaxCacheSize){
-                string write_back_key;
-                if (!ReplaceClassad(write_back_key)){
-                    CondorErrno = ERR_CANNOT_REPLACE;
-                    CondorErrMsg = "failed in replacing classad in cache";
-                }
-
-                if (CheckDirty(write_back_key)){
-                    string WriteBackClassad;
-                    
-                    if (!GetStringClassAd(write_back_key,WriteBackClassad)){
-                        CondorErrMsg = "failed in get classad from cache";
-                    };
-		      
-                    ClassAdStorage.WriteBack(write_back_key,WriteBackClassad );
-                    ClearDirty(write_back_key);
-                }
-                itr=classadTable.find(write_back_key);
-                ad=itr->second.ad;
-                delete ad;                                          
-                classadTable.erase(write_back_key);
-                Max_Classad--;
-            }
-            SetDirty(key);
-            Max_Classad++;
-		}
-		proxy.ad = newAd;
-		classadTable[key] = proxy;
-        // log if possible
-		if (log_fp) {
-			ClassAd *rec = _AddClassAd("", key, newAd);
-			if (!WriteLogEntry(log_fp, rec)) {
-				CondorErrMsg += "; failed to log add classad";
-				rec->Remove(ATTR_AD);
-				delete rec;
-				return false;
-			}
-			rec->Remove(ATTR_AD);
-			delete rec;
-		}
-	}
-
-	return true;
+    return success;
 }
 
+bool ClassAdCollection::
+AddClassAd_Transaction(const string &key, ClassAd *newAd)
+{
+    bool success;
+
+    // First, get the transaction. 
+    ServerTransaction       *xaction;
+    XactionTable::iterator  itr = xactionTable.find(currentXactionName);
+    if (itr == xactionTable.end()) {
+        CondorErrno = ERR_NO_SUCH_TRANSACTION;
+        CondorErrMsg = "transaction " + currentXactionName + " doesn't exist";
+        success = false;
+    } else {
+        // Next, create our change that will be added to the transaction.
+        ClassAd *rec = _AddClassAd( currentXactionName, key, newAd );
+        if (!rec){
+            success = false;
+        } else {
+            // Finally, stuff this change into the transaction
+            xaction = itr->second;
+            xaction->AppendRecord(ClassAdCollOp_AddClassAd, key, rec);
+            success = true;
+        }
+    }
+    return success;
+}
+
+bool ClassAdCollection::
+AddClassAd_NoTransaction(const string &key, ClassAd *newAd)
+{
+    ClassAdTable::iterator  itr;
+    ClassAd                 *old_ad; // A pre-existing ad with the given key.
+    ClassAdProxy            proxy;
+    bool                    is_duplicate_ad;
+    
+    old_ad          = NULL;
+    is_duplicate_ad = false;
+
+    // First, see if we have an old ad that we need to replace
+    // and delete it from the table--as long as it's not an exact duplicate
+    itr = classadTable.find(key);
+    if (itr != classadTable.end()) {
+        old_ad = itr->second.ad;
+        if (old_ad == newAd) {
+            is_duplicate_ad = true;
+            old_ad          = NULL; // Avoid deleting it later.
+        } else {
+            viewTree.ClassAdDeleted( this, key, old_ad );
+            classadTable.erase( itr );
+            if (Cache==true) {
+                Max_Classad--;
+            }
+        }
+    } else if (Cache == true) {
+        ClassAdStorage.DeleteFromStorageFile(key);
+    }
+
+    // Make sure all the views that need to incorporate this ad do so
+    if (!is_duplicate_ad && !viewTree.ClassAdInserted(this, key, newAd)) {
+        return( false );
+    }
+    
+    // If we are using a cache, update it.
+    if (!is_duplicate_ad && Cache==true) {
+        MaybeSwapOutClassAd();
+        SetDirty(key);
+        Max_Classad++;
+    }
+
+    // Now insert the new ad into the in-memory table.
+    proxy.ad = newAd;
+    classadTable[key] = proxy;
+
+    // Log what we did, if we have a log
+    if (log_fp) {
+        ClassAd *rec = _AddClassAd("", key, newAd);
+        if (!WriteLogEntry(log_fp, rec)) {
+            CondorErrMsg += "; failed to log add classad";
+            rec->Remove(ATTR_AD);
+            delete rec;
+            
+            // If we failed to log it, we must delete it from the collection
+            itr = classadTable.find(key);
+            if (itr != classadTable.end()) {
+                classadTable.erase(itr);
+                viewTree.ClassAdDeleted(this, key, newAd);
+            }
+
+            // If there was an old ad, we must add it back in.
+            if (old_ad) {
+                if (Cache) {
+                    MaybeSwapOutClassAd();
+                    SetDirty(key);
+                    Max_Classad++;
+                }
+            
+                // Now insert the new ad into the in-memory table.
+                proxy.ad = newAd;
+                classadTable[key] = proxy;
+            }
+            return false;
+        }
+        rec->Remove(ATTR_AD);
+        delete rec;
+    }
+    return true;
+}
 
 bool ClassAdCollection::
 UpdateClassAd( const string &key, ClassAd *updAd )
@@ -1647,7 +1685,7 @@ SwitchInClassAd(string key){
   if (Max_Classad==MaxCacheSize){
     //pick up a classad, write it back to storage file
            string write_back_key;
-	   if (!ReplaceClassad(write_back_key)){
+	   if (!SelectClassadToReplace(write_back_key)){
 	          CondorErrno = ERR_CANNOT_REPLACE;
 		  CondorErrMsg = "failed in replacing classad in cache";
 	   };
@@ -1800,36 +1838,87 @@ ReadStorageEntry(int sfiled, int &offset,string &ckey){
 	 }
 }
 
+// This function has a clear problem: it can find errors, 
+// but they are not propagated or reacted to. This is bad. 
+void ClassAdCollection::
+MaybeSwapOutClassAd(void)
+{
+    ClassAd                 *swapout_ad;
+    ClassAdTable::iterator  itr;
+
+    if (Max_Classad == MaxCacheSize) {
+        // First, we randomly pick a Classad that can be removed from 
+        // the in-memory cache. 
+        string write_back_key;
+        if (!SelectClassadToReplace(write_back_key)) {
+            CondorErrno = ERR_CANNOT_REPLACE;
+            CondorErrMsg = "failed in replacing classad in cache";
+        } else {
+            // Does the ClassAd need to be written to disk before
+            // it is removed from memory?
+            if (CheckDirty(write_back_key)){
+                string WriteBackClassad;
+            
+                if (!GetStringClassAd(write_back_key,WriteBackClassad)){
+                    CondorErrMsg = "failed in get classad from cache";
+                } else {
+                    ClassAdStorage.WriteBack(write_back_key,WriteBackClassad );
+                    ClearDirty(write_back_key);
+                }
+            }
+            // Now we remove that ClassAd from memory
+            itr = classadTable.find(write_back_key);
+            swapout_ad = itr->second.ad;
+            delete swapout_ad;                                          
+            classadTable.erase(write_back_key);
+            Max_Classad--;
+        }
+    }
+    return;
+}
+    
 bool ClassAdCollection::
-ReplaceClassad(string &key){
-         int      i=(int)((classadTable.size())*rand() /(RAND_MAX+1.0));
-	 ClassAdTable::iterator m=classadTable.begin();
-	 int count = 0;
-	 while (count!=i){ m++;count++;};	 
-	 key=(m->first);
-	 return true;
+SelectClassadToReplace(string &key)
+{
+    int                    i;
+    ClassAdTable::iterator m;
+    int                    count;
+
+    i     = (int)((classadTable.size())*rand() /(RAND_MAX+1.0));
+    m     = classadTable.begin();
+    count = 0;
+
+    while (count!=i){ 
+        m++;
+        count++;
+    }
+    key=(m->first);
+    return true;
 }
 
 bool ClassAdCollection::
-SetDirty(string key){
-         DirtyClassad[key]=1;
-	 return true;
+SetDirty(string key)
+{
+    DirtyClassad[key] = 1;
+    return true;
 }
 
 bool ClassAdCollection::
-ClearDirty(string key){
-         DirtyClassad.erase(key);
-	 return true;
+ClearDirty(string key)
+{
+    DirtyClassad.erase(key);
+    return true;
 }
 
 bool ClassAdCollection::
-CheckDirty(string key){
-         map<string,int>::iterator m=DirtyClassad.find(key);
-	 if ((m!=DirtyClassad.end())&&(m->second>0)){
-	   return true;
-	 }else{
-	   return false;
-	 }
+CheckDirty(string key)
+{
+    map <string,int>::iterator m = DirtyClassad.find(key);
+    if ((m != DirtyClassad.end()) && (m->second > 0)) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool ClassAdCollection::

@@ -25,15 +25,13 @@
 #define __COLLECTION_BASE_H__
 
 #include "collection.h"
-
 #include "indexfile.h"
-#include <string>
 
 #ifndef WIN32
   #include <sys/time.h>
   #include <unistd.h>
 #endif
-//#endif
+
 #define MaxCacheSize 5
 
 BEGIN_NAMESPACE( classad )
@@ -48,21 +46,93 @@ public:
     ClassAd *ad;
 };
 
-
 typedef classad_hash_map<std::string,View*,StringHash> ViewRegistry;
 typedef classad_hash_map<std::string,ClassAdProxy,StringHash> ClassAdTable;
 typedef classad_hash_map<std::string,ServerTransaction*,StringHash> XactionTable;
 
+/** A ClassAdCollection stores a set of ClassAds. It is similar to a
+    hash table, but with more interesting querying capabilities. */
 class ClassAdCollection : public ClassAdCollectionInterface {
 public:
+    /**@name Constructors/Destructor
+     * Note that the ClassAdCollection constructors talk about caching. 
+     * If caching is off, all ClassAds are stored in memory. For large
+     * collections, this may be a problem. If caching is on, only some 
+     * ClassAds will be kept in memory, and all of them will be written
+     * to disk. This is similar to virtual memory. Please note, however, 
+     * that caching has been barely tested, and is not production ready.
+     */
+    //@{
+    /** Default constructor for a Collection. Caching will be turned off. 
+    */
     ClassAdCollection( );
+
+    /** Constructor that allows you to enable or disable caching.
+        @param cacheOn true if you want caching on, false otherwise
+    */
+    ClassAdCollection(bool cacheOn);
+
+    /// Destructor. This will delete all ClassAds in the Collection
     virtual ~ClassAdCollection( );
-    ClassAdCollection(bool CacheOn);
-    // Logfile control
-    virtual bool InitializeFromLog( const std::string &filename,
+    //@}
+
+    /**@name Persistence
+     * ClassAd collections are most useful when they are stored
+     * persistently to disk, otherwise they will not be saved
+     * between invocations of your program. The log file is a journal
+     * of the changes to the Collection. It is created or read
+     * by InitializeFromLog, and it can be compressed by TruncateLog()
+     */
+    //@{
+    /** Setup persistence and caching.
+     *  This function has two purposes, and should probably be two functions.
+     *  First, it either creates the persistent log file if it is not there, or
+     *  reads the collection back from the log file. 
+     *  Second, it sets up the caching, if caching is turned on. 
+     *  @param logfile The name of the persistent log file.
+     *  @param storagefile The name of file to keep the cache. Leave empty if you are not using a cache
+     *  @param checkpointfile The name of the checkpoint file for the cache.  Leave empty if you are not using a cache
+     */
+    virtual bool InitializeFromLog( const std::string &logfile,
                                     const std::string storagefile="", 
                                     const std::string checkpointfile=""  );
 
+    /** This function compresses the persistent log file. Before compression,
+     *  the log file contains a list of changes to the collection. After
+     *  compression, it contains the state of the collection. 
+     * 
+     */
+	virtual bool TruncateLog(void);
+    //@}
+
+    /**@name Manipulating ClassAds in a collection
+     * This set of functions allows you to manipulate ClassAds in a Collection.
+     * There are a couple of important things to be aware of. First, once you
+     * successfully give a ClassAd to a collection, it is owned by the collection, 
+     * and you should not delete it. 
+     * (If it is not successful--for instance, if AddClassAd() fails--you still own
+     * the ClassAd.) Second, once a ClassAd is owned by the collection, you should
+     * not directly modify it. Instead you should use UpdateClassAd or ModifyClassAd().
+     */
+    //@{
+    /** Add a ClassAd to the collection. If a ClassAd is already in the Collection 
+     *  for the given key, the one in the Collection is deleted and the new one 
+     *  replaces it. If this function succeeds, the Collection now owns the ClassAd,
+     *  and you should not change it or delete it directly. If this function fails,
+     *  you still own the ClassAd and are responsible for deleting it when appropriate. 
+     *  @param key The unique identifier for this ClassAd
+     *  @param newAd The new add to put into the Collection
+     */
+    virtual bool AddClassAd( const std::string &key, ClassAd *newAd );
+    virtual bool UpdateClassAd( const std::string &key, ClassAd *updateAd );
+
+    // Note: modifyAd is deleted before this function returns.
+    virtual bool ModifyClassAd( const std::string &key, ClassAd *modifyAd );
+    virtual bool RemoveClassAd( const std::string &key );
+
+    // ClassAd interrogation
+    virtual ClassAd *GetClassAd(const std::string &key );
+    //@}
 
     // View creation/deletion/interrogation
     virtual bool CreateSubView( const ViewName &viewName,
@@ -88,19 +158,6 @@ public:
     virtual bool FindPartitionName( const ViewName &viewName, ClassAd *rep, 
                                     ViewName &partition );
 
-
-    // ClassAd manipulation 
-    virtual bool AddClassAd( const std::string &key, ClassAd *newAd );
-    virtual bool UpdateClassAd( const std::string &key, ClassAd *updateAd );
-
-    // Note: modifyAd is deleted before this function returns.
-    virtual bool ModifyClassAd( const std::string &key, ClassAd *modifyAd );
-    virtual bool RemoveClassAd( const std::string &key );
-
-    // ClassAd interrogation
-    virtual ClassAd *GetClassAd(const std::string &key );
-
-    
     // Transaction management
     virtual bool OpenTransaction( const std::string &transactionName );
     virtual bool CloseTransaction(const std::string &transactionName,bool commit,
@@ -149,7 +206,7 @@ protected:
     bool LogViews( FILE *log, View *view, bool subView );
     void Setup(bool CacheOn);
     bool Cache;
-    bool ReplaceClassad(std::string &key);
+    bool SelectClassadToReplace(std::string &key);
     bool SetDirty(std::string key);
     bool ClearDirty(std::string key);
     bool CheckDirty(std::string key);
@@ -157,6 +214,8 @@ protected:
     bool SwitchInClassAd(std::string key);
     int  ReadStorageEntry(int sfiled, int &offset,std::string &ckey);        
     bool ReadCheckPointFile();
+    void MaybeSwapOutClassAd(void);
+
     int Max_Classad;
     int CheckPoint;      
     std::map<std::string,int> DirtyClassad;
@@ -167,6 +226,10 @@ protected:
  private:
     ClassAdCollection(const ClassAdCollection &collection) : viewTree(NULL) { return; }
     ClassAdCollection &operator=(const ClassAdCollection &collection) { return *this; }
+
+    bool AddClassAd_Transaction(const std::string &key, ClassAd *newAd);
+    bool AddClassAd_NoTransaction(const std::string &key, ClassAd *newAd);
+    
 };
 
 END_NAMESPACE
