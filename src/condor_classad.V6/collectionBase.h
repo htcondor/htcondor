@@ -26,9 +26,9 @@
 
 #include "collection.h"
 
-//#ifdef ADDCACHE
-  #include "indexfile.h"
-  #include <string>
+#include "indexfile.h"
+#include <string>
+
 #ifndef WIN32
   #include <sys/time.h>
   #include <unistd.h>
@@ -116,13 +116,10 @@ public:
     // Debugging function
     bool DisplayView( const ViewName &viewName, FILE * );
 
-//#ifdef  ADDCACHE
     bool dump_collection();
     IndexFile ClassAdStorage;
     int  WriteCheckPoint();
     bool TruncateStorageFile();
-//#endif
-
 
 protected:
     virtual bool OperateInRecoveryMode( ClassAd * );
@@ -152,7 +149,6 @@ protected:
     bool LogViews( FILE *log, View *view, bool subView );
     void Setup(bool CacheOn);
     bool Cache;
-//#ifdef  ADDCACHE
     bool ReplaceClassad(std::string &key);
     bool SetDirty(std::string key);
     bool ClearDirty(std::string key);
@@ -167,7 +163,6 @@ protected:
     timeval LatestCheckpoint;
     std::string CheckFileName;
     int test_checkpoint;
-//#endif
     
  private:
     ClassAdCollection(const ClassAdCollection &collection) : viewTree(NULL) { return; }
