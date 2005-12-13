@@ -1895,7 +1895,10 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 	bool    secondarg = false; // says whether a 2nd argument exists
 	int     arg2num;
 
-		// takes one or two argument
+    if (argList.size() == 0 && !relative) {
+        // absTime with no arguments returns the current time. 
+        return currentTime(name, argList, state, result);
+    }
 	if(( argList.size() < 1 )  || (argList.size() > 2)) {
 		result.SetErrorValue( );
 		return( true );
