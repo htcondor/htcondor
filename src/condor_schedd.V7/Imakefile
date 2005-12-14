@@ -18,7 +18,7 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(SCHEDD_LIBS)
 
 soapobjs(schedd)
 
-OBJ = classad_newold.o submit_job.o VanillaToGrid.o JobRouter.o JobLogReader.o Scheduler.o schedd_main.o ../condor_quill/prober.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o  $(SOAP_OBJS)
+OBJ = classad_newold.o submit_job.o VanillaToGrid.o JobRouter.o JobLogReader.o Scheduler.o schedd_main.o schedd_v7_utils.o ../condor_quill/prober.o ../condor_quill/classadlogparser.o ../condor_quill/classadlogentry.o  $(SOAP_OBJS)
 
 template_inst( JobRouter.C, JobRouter.o )
 

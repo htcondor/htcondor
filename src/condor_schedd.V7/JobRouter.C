@@ -32,6 +32,7 @@
 #include "condor_config.h"
 #include "VanillaToGrid.h"
 #include "submit_job.h"
+#include "schedd_v7_utils.h"
 
 template class HashTable<std::string,RoutedJob *>;
 template HashTable<std::string,JobRoute *>;
