@@ -1055,9 +1055,13 @@ AddClassAd_NoTransaction(const string &key, ClassAd *newAd)
     ClassAd                 *old_ad; // A pre-existing ad with the given key.
     ClassAdProxy            proxy;
     bool                    is_duplicate_ad;
+    bool                    success;
+    bool                    reinsert_old_ad;
     
+    success         = true;
     old_ad          = NULL;
     is_duplicate_ad = false;
+    reinsert_old_ad = false;
 
     // First, see if we have an old ad that we need to replace
     // and delete it from the table--as long as it's not an exact duplicate
@@ -1080,53 +1084,62 @@ AddClassAd_NoTransaction(const string &key, ClassAd *newAd)
 
     // Make sure all the views that need to incorporate this ad do so
     if (!is_duplicate_ad && !viewTree.ClassAdInserted(this, key, newAd)) {
-        return( false );
-    }
-    
-    // If we are using a cache, update it.
-    if (!is_duplicate_ad && Cache==true) {
-        MaybeSwapOutClassAd();
-        SetDirty(key);
-        Max_Classad++;
-    }
+        success = false;
+        reinsert_old_ad = true;
+    } else {
+        // If we are using a cache, update it.
+        if (!is_duplicate_ad && Cache==true) {
+            MaybeSwapOutClassAd();
+            SetDirty(key);
+            Max_Classad++;
+        }
 
-    // Now insert the new ad into the in-memory table.
-    proxy.ad = newAd;
-    classadTable[key] = proxy;
-
-    // Log what we did, if we have a log
-    if (log_fp) {
-        ClassAd *rec = _AddClassAd("", key, newAd);
-        if (!WriteLogEntry(log_fp, rec)) {
-            CondorErrMsg += "; failed to log add classad";
+        // Now insert the new ad into the in-memory table.
+        proxy.ad = newAd;
+        classadTable[key] = proxy;
+        
+        // Log what we did, if we have a log
+        if (log_fp) {
+            ClassAd *rec = _AddClassAd("", key, newAd);
+            if (!WriteLogEntry(log_fp, rec)) {
+                CondorErrMsg += "; failed to log add classad";
+                
+                // If we failed to log it, we must delete it from the collection
+                itr = classadTable.find(key);
+                if (itr != classadTable.end()) {
+                    classadTable.erase(itr);
+                    viewTree.ClassAdDeleted(this, key, newAd);
+                }
+                
+                reinsert_old_ad = true;
+                success = false;
+            }
             rec->Remove(ATTR_AD);
             delete rec;
-            
-            // If we failed to log it, we must delete it from the collection
-            itr = classadTable.find(key);
-            if (itr != classadTable.end()) {
-                classadTable.erase(itr);
-                viewTree.ClassAdDeleted(this, key, newAd);
-            }
-
-            // If there was an old ad, we must add it back in.
-            if (old_ad) {
-                if (Cache) {
-                    MaybeSwapOutClassAd();
-                    SetDirty(key);
-                    Max_Classad++;
-                }
-            
-                // Now insert the new ad into the in-memory table.
-                proxy.ad = newAd;
-                classadTable[key] = proxy;
-            }
-            return false;
         }
-        rec->Remove(ATTR_AD);
-        delete rec;
     }
-    return true;
+
+    // If something has failed, and we were replacing an ad,
+    // we need to put it back into the collection.
+    if (reinsert_old_ad && old_ad != NULL) {
+        // Update the cache as necessary
+        if (Cache) {
+            MaybeSwapOutClassAd();
+            SetDirty(key);
+            Max_Classad++;
+        }
+        
+        // Now insert the old ad into the in-memory table.
+        proxy.ad = old_ad;
+        classadTable[key] = proxy;
+        old_ad = NULL; // mark it as NULL so we don't delete it.
+    }
+    
+    if (old_ad != NULL) {
+        delete old_ad;
+    }
+
+    return success;
 }
 
 bool ClassAdCollection::
