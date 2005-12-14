@@ -75,8 +75,3 @@ int hashFuncChars( char const *key, int numBuckets)
     }
     return i % numBuckets;
 }
-
-int hashFuncStdString( std::string const & key, int numBuckets)
-{
-    return hashFuncChars(key.c_str(),numBuckets);
-}
