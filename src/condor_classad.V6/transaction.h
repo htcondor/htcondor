@@ -37,8 +37,8 @@ class ClassAdCollection;
 class XactionRecord {
 public:
 	XactionRecord( ) { op = -1; key = ""; rec = 0; }
-	bool operator==( const XactionRecord &xrec ) { return false; }
-	bool operator< ( const XactionRecord &xrec ) { return false; }
+	bool operator==( const XactionRecord &xrec ) const { return false; }
+	bool operator< ( const XactionRecord &xrec ) const { return false; }
 
 	int 	op;
 	std::string	key;

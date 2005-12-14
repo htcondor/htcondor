@@ -3,7 +3,7 @@ DESTDIR = /usr/include
 # This include will redefine DESTDIR, if Makefile.config exists
 include Makefile.config
 
-LD_FLAGS = $(EXTRA_LD_FLAGS) -L. -l$(LIB_LINK_NAME)
+LD_FLAGS = $(EXTRA_LD_FLAGS) -L. -l$(LIB_LINK_NAME) $(STLPORT_LIB)
 
 all:: $(LIB_NAME) classad_functional_tester classad_unit_tester classad_version cxi extra_tests test_xml sample
 
@@ -12,7 +12,7 @@ BIN_INSTALL = $(DESTDIR)/bin
 INCLUDE_INSTALL = $(DESTDIR)/include
 
 CPlusPlus = g++
-BASE_C_PLUS_FLAGS = $(EXTRA_C_PLUS_FLAGS) -Wall -Wuninitialized -O -g -DCLASSAD_DISTRIBUTION 
+BASE_C_PLUS_FLAGS = $(STLPORT_FLAGS) $(EXTRA_C_PLUS_FLAGS) -Wall -Wuninitialized -O -g -DCLASSAD_DISTRIBUTION 
 INST_C_PLUS_FLAGS = $(BASE_C_PLUS_FLAGS) -w
 C_PLUS_FLAGS = $(TEMPLATE_FLAGS) $(BASE_C_PLUS_FLAGS)
 PURIFY = purify -g++=yes -chain-length=35 $(CPlusPlus)

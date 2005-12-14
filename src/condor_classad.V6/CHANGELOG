@@ -1,5 +1,7 @@
 Changes for version 0.9.8:
 
+* Added support for compiling with stlport (known to work with stlport5.0RC6).
+
 * Added SWIG interface for Perl.
 
 * Fixed segmentation fault that occured when evaluating lists that are

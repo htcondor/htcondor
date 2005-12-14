@@ -63,7 +63,8 @@ OBJ = $(CLASSAD_OBJ_3) ../condor_c++_util/condor_attributes.o
 LIB_BASE =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a \
       ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
-	../condor_util_lib/util_lib.a ../condor_sysapi/libsysapi.a 
+      ../condor_util_lib/util_lib.a ../condor_sysapi/libsysapi.a \
+      $(STLPORT_LIB)
 
 #if defined(CLASSAD_DEPRECATED)
 LIB = $(LIB_BASE) $(IO_LIB) $(SECURITY_LIB) $(CPLUS_LIB) $(SECURITY_LIB) 

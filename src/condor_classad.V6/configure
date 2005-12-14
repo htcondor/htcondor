@@ -26,6 +26,7 @@ Where options are:
  --use-pcre <dir>          The directory to find PCRE in. 
                            There should be include and lib subdirectories
  --use-explicit-templates  Use explicit template instantiation (not implicit)
+ --use-stlport <dir>       The directory to find stlport in.
  --lib-name <name>         The name for the ClassAd library
  --enable-shlib            Allow user functions in shared libraries.
  --enable-namespace        Use the classad namespace
@@ -42,6 +43,7 @@ hold_arguments "$@"
 project="ClassAds"
 install_dir="/usr/local"
 pcre_dir=""
+stlport_dir=""
 use_explicit_templates=0
 lib_name=""
 enable_shlib=0
@@ -58,6 +60,10 @@ do
 		--use-pcre)
 			shift
 			pcre_dir=$1
+			;;
+		--use-stlport)
+			shift
+			stlport_dir=$1
 			;;
 		--lib-name)
 			shift
@@ -115,6 +121,14 @@ then
 else
 	echo "REGEX_INCLUDE_FLAGS = -DUSE_PCRE -I${pcre_dir}/include" >> Makefile.config
 	echo "REGEX_LIB_FLAGS = -L${pcre_dir}/lib -lpcre" >> Makefile.config
+fi
+
+if ! [ -z "${stlport_dir}" ]
+then
+	STLPORT_THREAD_FLAGS=-pthread
+	STLPORT_THREAD_LIB=-lpthread
+	echo "STLPORT_FLAGS = -DUSING_STLPORT ${STLPORT_THREAD_FLAGS} -isystem ${stlport_dir}/stlport" >> Makefile.config
+	echo "STLPORT_LIB = ${stlport_dir}/lib/libstlport.a ${STLPORT_THREAD_LIB}" >> Makefile.config
 fi
 
 if [ "${enable_shlib}" = 1 ]

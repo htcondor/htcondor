@@ -32,7 +32,7 @@ class ClientTransaction;
 
 BEGIN_NAMESPACE( classad )
 
-typedef hash_map<std::string,ClientTransaction*,StringHash> LocalXactionTable;
+typedef classad_hash_map<std::string,ClientTransaction*,StringHash> LocalXactionTable;
 
 class ClassAdCollectionClient : public ClassAdCollectionInterface {
 public:
@@ -59,9 +59,9 @@ public:
 	virtual bool GetViewInfo( const ViewName &viewName, ClassAd *&viewInfo );
 		// Child view interrogation
 	virtual bool GetSubordinateViewNames( const ViewName &viewName,
-				vector<std::string>& views );
+				std::vector<std::string>& views );
 	virtual bool GetPartitionedViewNames( const ViewName &viewName,
-				vector<std::string>& views );
+				std::vector<std::string>& views );
 	virtual bool FindPartitionName( const ViewName &viewName, ClassAd *rep, 
 				ViewName &partition );
 
@@ -81,15 +81,15 @@ public:
 				int &outcome);
 
 	virtual bool IsMyActiveTransaction( const std::string &transactionName );
-	virtual void GetMyActiveTransactions( vector<std::string>& );
+	virtual void GetMyActiveTransactions( std::vector<std::string>& );
 	virtual bool IsActiveTransaction( const std::string &transactionName );
-	virtual bool GetAllActiveTransactions( vector<std::string>& );
+	virtual bool GetAllActiveTransactions( std::vector<std::string>& );
 	virtual bool IsMyPendingTransaction( const std::string &transactionName );
-	virtual void GetMyPendingTransactions( vector<std::string>& );
+	virtual void GetMyPendingTransactions( std::vector<std::string>& );
 	virtual bool IsCommittedTransaction( const std::string &transactionName );
 	virtual bool IsMyCommittedTransaction( const std::string &transactionName );
-	virtual void GetMyCommittedTransactions( vector<std::string>& );
-	virtual bool GetAllCommittedTransactions( vector<std::string>& );
+	virtual void GetMyCommittedTransactions( std::vector<std::string>& );
+	virtual bool GetAllCommittedTransactions( std::vector<std::string>& );
 
 		// Server connection and disconnection
 	bool Connect( const std::string &address, int port, bool UseTCP=true );
@@ -106,9 +106,9 @@ private:
 
 		// helper functions
 	bool SendOpToServer( int, ClassAd *, int, ClassAd *& );
-	bool _GetViewNames( int, const ViewName &, vector<std::string>& );
+	bool _GetViewNames( int, const ViewName &, std::vector<std::string>& );
 	bool _CheckTransactionState( int, const std::string &, Value & );
-	bool _GetAllxxxTransactions( int, vector<std::string>& );
+	bool _GetAllxxxTransactions( int, std::vector<std::string>& );
 	bool DoCommitProtocol( const std::string &, int &, ClientTransaction * );
 	bool GetServerXactionState( const std::string &, int & );
 

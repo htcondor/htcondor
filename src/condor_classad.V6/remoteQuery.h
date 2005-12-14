@@ -47,8 +47,8 @@ public:
 	bool GetWantResults( ) const { return( wantResults ); }
 	void SetWantPostlude( bool b ) { wantPostlude = b; }
 	bool GetWantPostlude( ) const { return( wantPostlude ); }
-	void SetProjectionAttrs( const vector<std::string> & );
-	void GetProjectionAttrs( vector<std::string> & ) const;
+	void SetProjectionAttrs( const std::vector<std::string> & );
+	void GetProjectionAttrs( std::vector<std::string> & ) const;
 	void SetAccumulate( bool b ) { accumulate = b; }
 	bool GetAccumulate( ) const { return( accumulate ); }
 
@@ -68,9 +68,9 @@ public:
 private:
 	ReliSock					serverSock;
 	bool						wantResults,wantPostlude,accumulate,finished;
-	vector<std::string>				projectionAttrs;
-	std::list<pair<std::string,ClassAd*> >results;
-	std::list<pair<std::string,ClassAd*> >::iterator itr;
+	std::vector<std::string>				projectionAttrs;
+	std::list<std::pair<std::string,ClassAd*> >results;
+	std::list<std::pair<std::string,ClassAd*> >::iterator itr;
 	ClassAd						postlude;
 	ClassAdParser				parser;
 };

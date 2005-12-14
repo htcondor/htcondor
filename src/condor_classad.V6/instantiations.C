@@ -189,7 +189,29 @@ class _ClassAdInit
 
 END_NAMESPACE
 
-#if (__GNUC__>=3)
+#if (__GNUC__>=3) && USING_STLPORT
 template string std::operator+<char, std::char_traits<char>, std::allocator<char> >(const string&, const string&);
 #endif
 
+/*Some STL implementations (e.g. stlport) need instantiation of all
+  sorts of messy templates, requiring deep knowledge of the internal
+  implementation in the STL library, so below in a dummy function, we
+  simply use the various functions and operators that we need.
+ */
+void classad_instantiations_dummy() {
+	string std_string;
+	char ch = ' ';
+	ifstream input_stream;
+	ofstream output_stream;
+	cout << std_string;
+	getline(cin,std_string,'\n');
+	cout << std_string.find('\n',0);
+	cout << 1;
+	cout << std_string[0];
+	std_string.insert(1,"");
+	cin.get(ch);
+	std_string.replace(1,1,std_string);
+	std_string.find(std_string,1);
+	input_stream >> std_string;
+	output_stream << std_string;
+}
