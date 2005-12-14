@@ -727,17 +727,14 @@ sub RunNegotiator( $ )
     }
     if ( ! scalar @NegoList )
     {
-	print "Reading negotiator_host\n";
 	@NegoList = GetConfigList( "negotiator_host", 0 );
     }
     if ( ! scalar @NegoList )
     {
-	print "Reading had_list\n";
 	@NegoList = GetConfigList( "had_list", 0 );
     }
     if ( ! scalar @NegoList )
     {
-	print "Reading collector_host\n";
 	@NegoList = GetConfigList( "collector_host", 0 );
     }
     my @ConanList = GetConanicalList( @NegoList );
