@@ -678,7 +678,7 @@ sub RunCheckPoint(  )
     close( CKPT );
 }
 
-sub GetConanicalList( @ )
+sub GetCanonicalList( @ )
 {
     my @List;
     foreach my $Off ( 0 .. $#_ )
@@ -737,17 +737,17 @@ sub RunNegotiator( $ )
     {
 	@NegoList = GetConfigList( "collector_host", 0 );
     }
-    my @ConanList = GetConanicalList( @NegoList );
+    my @CanonList = GetCanonicalList( @NegoList );
 
     $Hash->Add( "Negotiators_ConfigList",
 		HawkeyePublish::TypeString,
 		join( ",", @NegoList ) );
-    $Hash->Add( "Negotiators_ConanicalList",
+    $Hash->Add( "Negotiators_CanonicalList",
 		HawkeyePublish::TypeString,
-		join( ",", @ConanList ) );
+		join( ",", @CanonList ) );
     $Hash->Add( "Negotiators_Primary",
 		HawkeyePublish::TypeString,
-		$ConanList[0] );
+		$CanonList[0] );
 
     my %Negotiators;
     my %NegoNames;
