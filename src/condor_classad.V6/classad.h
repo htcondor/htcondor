@@ -70,8 +70,9 @@ class ClassAd : public ExprTree
 		/// Default constructor 
 		ClassAd ();
 
-		/// Copy constructor
-        ///	@param ad The ClassAd to copy
+		/** Copy constructor
+            @param ad The ClassAd to copy
+        */
 		ClassAd (const ClassAd &ad);
 
 		/// Destructor
