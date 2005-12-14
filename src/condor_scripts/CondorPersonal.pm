@@ -42,6 +42,26 @@ package CondorPersonal;
 #   universe		parallel configuration of schedd	none						$personal_universe
 #	encryption		turns on encryption					none						comma list
 #
+#   Notes added 12/14/05 bt
+#
+#   The current uses of this module only support condor = [ nightlies | install ]
+#	The difference is that we "look" for the binaries using condor_config_val -config
+#	if "install" is specified and we assume the "testing" environment for binary locations
+#	if "nightlies" is called out. In either case we utilize the current condor configuration
+#	file and the current local config file to ensure working with an up to date
+#	base configuration file. These we copy into the new directory we are building
+#	for the personal condor. We then "tune" them up....
+#
+#	currently "universe" is only used to add a bit to the config file for the parallel
+#	universe.
+#
+#   So a base parameter file could be as little as: (I think)
+#					condor = install
+#					ports = dynamic
+#					condordaemon = master, startd, schedd
+#
+#	Current uses to look at are *stork*.run tests, *_par.run tests and *condorc*.run tests.
+#	This module is in a very early stage supporting current testing.
 #
 
 require 5.0;
