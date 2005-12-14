@@ -30,6 +30,7 @@ my %Config = (
 	      PoolName => "",
 	      Cluster => "",
 	      Reserved => "",
+	      NegotiatorList => "",
 	      DoAbsent => 1,
 	      DoSummary => 1,
 	      DoRun => 1,
@@ -67,7 +68,7 @@ sub Init()
     $Config{PoolProg} = $Tmp if ( $Tmp ne "" );
 
     $Tmp = HawkeyeLib::ReadConfig( "_dir", "" );
-    push( @{$Config{Options}}, "--dir=$Tmp" ) if ( $Tmp ne "" );
+    push( @{$Config{AbsentOptions}}, "--dir=$Tmp" ) if ( $Tmp ne "" );
 
     $Tmp = HawkeyeLib::ReadConfig( "_name", "" );
     $Config{PoolName} = $Tmp if ( $Tmp ne "" );
@@ -78,12 +79,12 @@ sub Init()
     $Tmp = HawkeyeLib::ReadConfig( "_cluster", "true" );
     if ( $Tmp =~ /true/i )
     {
-	push( @{$Config{Options}}, "--down=cluster" );
-	push( @{$Config{Options}}, "--downlist=cluster" );
+	push( @{$Config{AbsentOptions}}, "--down=cluster" );
+	push( @{$Config{AbsentOptions}}, "--downlist=cluster" );
     }
 
     $Tmp = HawkeyeLib::ReadConfig( "_reserved", "false" );
-    push( @{$Config{Options}}, "--reserved" );
+    push( @{$Config{AbsentOptions}}, "--reserved" );
 
     $Tmp = HawkeyeLib::ReadConfig( "_absent", "true" );
     $Config{DoAbsent} = ( $Tmp =~ /true/i ) ? 1 : 0;
@@ -117,6 +118,10 @@ sub Init()
 
     $Tmp = HawkeyeLib::ReadConfig( "_fping_exe", "" );
     $Config{FpingExe} = $Tmp if ( $Tmp ne "" );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_negotiator_list", "" );
+    $Config{NegotiatorList} = $Tmp if ( $Tmp ne "" );
+
 }
 
 # Do the real work here...
@@ -134,6 +139,11 @@ sub RunIt()
 	$Hawkeye->StoreIndex( "Description" );
     }
 
+    my $cc = "";
+    $cc = $ENV{CONDOR_CONFIG} if ( exists $ENV{CONDOR_CONFIG} );
+    print STDERR "CONDOR_CONFIG=$cc\n";
+    print STDERR "PATH=" . $ENV{PATH} . "\n";
+
     my %Collectors;
     CheckCollectors( \%Collectors );
     RunAbsent() if ( $Config{DoAbsent} );
@@ -148,6 +158,49 @@ sub RunIt()
     $Hawkeye->Publish( );
 }
 
+# Read a list from the condor_config
+sub GetConfigList( $$ )
+{
+    my $Param = shift;
+    my $PrintErrors = shift;
+    my @List;
+
+    # Get the collector list
+    my $Cmd = "condor_config_val $Param";
+    if ( ! open( CCV, "$Cmd 2>/dev/null |" ) )
+    {
+	print STDERR "Can't get run '$Cmd'\n" if ( $PrintErrors );
+	return @List;
+    }
+
+    # Only one line
+    $_ = <CCV>;
+    close( CCV );
+
+    # Parse it
+    if ( ! defined $_ )
+    {
+	print STDERR "No $Param value\n" if ( $PrintErrors );
+	return @List;
+    }
+    chomp;
+    s/^\s+//g;
+    if ( length == 0 )
+    {
+	print STDERR "No $Param list\n" if ( $PrintErrors );
+	return @List;
+    }
+
+    # Parse it
+    @List = split( /[,\s]+/, $_ );
+    foreach my $Off ( 0 .. $#List )
+    {
+	$List[$Off] =~ s/:\d+//;
+    }
+
+    # Done
+    return @List;
+}
 
 # Gather collector info
 sub CheckCollectors( $ )
@@ -156,27 +209,7 @@ sub CheckCollectors( $ )
 
     my $Publish = $Config{DoCollectors};
 
-    # Get the collector list
-    my $Cmd = "condor_config_val collector_host";
-    if ( ! open( CCV, "$Cmd|" ) )
-    {
-	print STDERR "Can't get collector info\n";
-	return;
-    }
-
-    # Only one line
-    $_ = <CCV>;
-    chomp;
-    s/^\s+//g;
-    close( CCV );
-    if ( length == 0 )
-    {
-	print STDERR "No collector list\n";
-	return;
-    }
-
-    # Parse it
-    my @ConfigList = split( /,\s+/, $_ );
+    my @ConfigList = GetConfigList( "collector_host", 1 );
     if ( $Publish )
     {
 	$Hash->Add( "Collectors_Count", HawkeyePublish::TypeNumber,
@@ -268,26 +301,26 @@ sub RunAbsent()
     my @NotDown;
 
     # Now, run condor_status and gather some more info...
-    push( @{$Config{Options}}, "--absent" );
-    push( @{$Config{Options}}, "--no-rcfile" );
-    push( @{$Config{Options}}, "--script" );
-    push( @{$Config{Options}}, "--ping" );
-    push( @{$Config{Options}}, "--pingok" );
-    push( @{$Config{Options}}, "--bygroup" );
+    push( @{$Config{AbsentOptions}}, "--absent" );
+    push( @{$Config{AbsentOptions}}, "--no-rcfile" );
+    push( @{$Config{AbsentOptions}}, "--script" );
+    push( @{$Config{AbsentOptions}}, "--ping" );
+    push( @{$Config{AbsentOptions}}, "--pingok" );
+    push( @{$Config{AbsentOptions}}, "--bygroup" );
 
     # Configure it to use fping
     if ( $Config{FpingExe} ne "" )
     {
-	push( @{$Config{Options}}, "--fping=$Config{FpingExe}" )
+	push( @{$Config{AbsentOptions}}, "--fping=$Config{FpingExe}" )
     }
     else
     {
-	push( @{$Config{Options}}, "--fping" )
+	push( @{$Config{AbsentOptions}}, "--fping" )
     }
 
     # Now, form the final command & run it...
     my $Cmd = "$Config{PoolProg} $Config{PoolName} ".
-	  join( " ", @{$Config{Options}} );
+	  join( " ", @{$Config{AbsentOptions}} );
     print STDERR "Running '$Cmd'\n";
     if ( ! open( ABSENT, "$Cmd|" ) )
     {
@@ -364,17 +397,20 @@ sub RunAbsent()
 	elsif ( $Attr =~ /^Cluster(\w+)$/ )
 	{
 	    my $What = $1;
-	    $Hash->Add( "Cluster_$What", HawkeyePublish::TypeAuto, shift @Values );
+	    $Hash->Add( "Cluster_$What", HawkeyePublish::TypeAuto,
+			shift @Values );
 	    $Hawkeye->StoreIndex( "Cluster_$What" );
 	}
 	elsif ( $Attr eq /NodesAbsent/ )
 	{
-	    $Hash->Add( "Absent_Count", HawkeyePublish::TypeNumber, shift @Values );
+	    $Hash->Add( "Absent_Count", HawkeyePublish::TypeNumber,
+			shift @Values );
 	    $Hawkeye->StoreIndex( "Absent_Count" );
 	}
 	elsif ( $Attr eq "Description" )
 	{
-	    $Hash->Add( "Description", HawkeyePublish::TypeString, shift @Values );
+	    $Hash->Add( "Description", HawkeyePublish::TypeString,
+			shift @Values );
 	    $Hawkeye->StoreIndex( "Description" );
 	}
     }
@@ -593,8 +629,10 @@ sub RunCheckPoint(  )
 	# Total line
 	if ( $Values[0] eq "Total" )
 	{
-	    $Hash->Add( "Ckpt_Total_Servers", HawkeyePublish::TypeNumber, $Values[1] );
-	    $Hash->Add( "Ckpt_Total_AvailDisk", HawkeyePublish::TypeNumber, $Values[2] );
+	    $Hash->Add( "Ckpt_Total_Servers", HawkeyePublish::TypeNumber,
+			$Values[1] );
+	    $Hash->Add( "Ckpt_Total_AvailDisk", HawkeyePublish::TypeNumber,
+			$Values[2] );
 	}
 	# Server line
 	elsif ( $Values[1] =~ /^\d+$/ )
@@ -633,12 +671,41 @@ sub RunCheckPoint(  )
     }
 
     # And, the server list
-    $Hash->Add( "Ckpt_Servers", HawkeyePublish::TypeString, join( " ", keys %Servers  ) );
+    $Hash->Add( "Ckpt_Servers", HawkeyePublish::TypeString,
+		join( " ", keys %Servers  ) );
 
     # Done
     close( CKPT );
 }
 
+sub GetConanicalList( @ )
+{
+    my @List;
+    foreach my $Off ( 0 .. $#_ )
+    {
+	my $Host = $_[$Off];
+	my $Cmd = "host $Host";
+	if ( !open( HOST, "$Cmd|" ) )
+	{
+	    print STDERR "Can't run '$Cmd'\n";
+	}
+	else
+	{
+	    while( <HOST> )
+	    {
+		chomp;
+		if ( /is an alias for ([\w\.]+)/ )
+		{
+		    $Host = $1;
+		    $Host =~ s/\.$//;
+		}
+	    }
+	    close( HOST );
+	}
+	push( @List, $Host );
+    }
+    return @List;
+}
 
 # Run condor_status -negotiator & parse it's output..
 sub RunNegotiator( $ )
@@ -652,8 +719,41 @@ sub RunNegotiator( $ )
 		     DaemonStartTime => HawkeyePublish::TypeNumber,,
 		   );
 
+    # Get the negotiator list
+    my @NegoList;
+    if ( $Config{NegotiatorList} eq "" )
+    {
+	@NegoList = split( /,\s/, $Config{NegotiatorList} );
+    }
+    if ( ! scalar @NegoList )
+    {
+	print "Reading negotiator_host\n";
+	@NegoList = GetConfigList( "negotiator_host", 0 );
+    }
+    if ( ! scalar @NegoList )
+    {
+	print "Reading had_list\n";
+	@NegoList = GetConfigList( "had_list", 0 );
+    }
+    if ( ! scalar @NegoList )
+    {
+	print "Reading collector_host\n";
+	@NegoList = GetConfigList( "collector_host", 0 );
+    }
+    my @ConanList = GetConanicalList( @NegoList );
+
+    $Hash->Add( "Negotiators_ConfigList",
+		HawkeyePublish::TypeString,
+		join( ",", @NegoList ) );
+    $Hash->Add( "Negotiators_ConanicalList",
+		HawkeyePublish::TypeString,
+		join( ",", @ConanList ) );
+    $Hash->Add( "Negotiators_Primary",
+		HawkeyePublish::TypeString,
+		$ConanList[0] );
 
     my %Negotiators;
+    my %NegoNames;
     foreach my $Collector ( "", keys %{$Collectors} )
     {
 	# Run it..
@@ -702,7 +802,9 @@ sub RunNegotiator( $ )
 	    }
 
 	    # Got a real name
+	    my $FullName = $Name;
 	    $Name =~ s/\..*$//;
+	    $NegoNames{$Name} = $FullName;
 
 	    # Handle the default collector case
 	    if ( $Collector eq "" )
@@ -766,5 +868,16 @@ sub RunNegotiator( $ )
     $Hash->Add( "Negotiators_Count",
 		HawkeyePublish::TypeNumber,
 		$Count );
+
+    # This is sort of a lie; there should never *be* more than one collector,
+    # but, if there are, the meaning of "current" is undefined.  Thus, I'm
+    # going to pretend that there's only one, and spew it out.
+    my @List = keys %NegoNames;
+    if ( my $Current = shift @List )
+    {
+	$Hash->Add( "Negotiators_Current",
+		    HawkeyePublish::TypeString,
+		    $NegoNames{$Current} );
+    }
 
 }
