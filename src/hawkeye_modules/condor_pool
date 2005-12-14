@@ -866,15 +866,12 @@ sub RunNegotiator( $ )
 		HawkeyePublish::TypeNumber,
 		$Count );
 
-    # This is sort of a lie; there should never *be* more than one collector,
-    # but, if there are, the meaning of "current" is undefined.  Thus, I'm
-    # going to pretend that there's only one, and spew it out.
+    # If there is more than one negotiator, publish "UNKNOWN", otherwise,
+    # publish the name of the one we have.
     my @List = keys %NegoNames;
-    if ( my $Current = shift @List )
-    {
-	$Hash->Add( "Negotiators_Current",
-		    HawkeyePublish::TypeString,
-		    $NegoNames{$Current} );
-    }
-
+    my $Current = "UNKNOWN";
+    $Current = $NegoNames{@List[0]} if ( scalar @List == 1 );
+    $Hash->Add( "Negotiators_Current",
+		HawkeyePublish::TypeString,
+		$Current );
 }
