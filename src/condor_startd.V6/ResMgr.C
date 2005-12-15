@@ -1180,6 +1180,15 @@ ResMgr::report_updates( void )
 	}  
 }
 
+void
+ResMgr::refresh_benchmarks()
+{
+	if( ! resources ) {
+		return;
+	}
+
+	walk( &Resource::refresh_classad, A_TIMEOUT );
+}
 
 void
 ResMgr::compute( amask_t how_much )

@@ -325,6 +325,9 @@ MachAttributes::benchmark( Resource* rip, int force )
 	m_last_benchmark = (int)time(NULL);
 
 	if( ! force ) {
+		// Update all ClassAds with this new value for LastBenchmark.
+		resmgr->refresh_benchmarks();
+
 		dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
 		rip->change_state( idle_act );
 	}

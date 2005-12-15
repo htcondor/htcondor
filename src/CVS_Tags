@@ -1,3 +1,6 @@
+12/14/05 V6_7_14-merge-1
+   Merging V6_7_14 changes back into V6_7-branch.
+
 12/09/05 V6_7-starter_local_expr-{root,branch}
    This branch will be used to add policy expressions (OnExit,PeriodicRemove) to
    the Starter for local universe jobs. I also plan to clean up my CronTab code
