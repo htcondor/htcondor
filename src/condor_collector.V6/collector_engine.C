@@ -319,7 +319,11 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			MasterAds.walk(scanFunction) &&
 			SubmittorAds.walk(scanFunction) &&
 			NegotiatorAds.walk(scanFunction) &&
+#if WANT_QUILL
+			QuillAds.walk(scanFunction) &&
+#endif
 			HadAds.walk(scanFunction);
+
 
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
