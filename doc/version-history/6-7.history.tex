@@ -31,6 +31,8 @@ all grid universe jobs. Before, it only worked for grid-type gt2 jobs.
 
 \begin{itemize}
 
+\item \Condor{status} \Opt{-any} now reports quill ads when quill is enabled.
+
 \item \Condor{restart} \Opt{-peaceful} was causing \Condor{master} to only
 do a graceful shutdown, rather than a peaceful one.  This means that
 \Macro{GRACEFUL\_SHUTDOWN\_TIMEOUT} would come into effect if jobs running
