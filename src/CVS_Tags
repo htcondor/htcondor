@@ -1,3 +1,10 @@
+12/15/05 V6_7_14
+   The official 6.7.14 release.  The packages for all platforms came
+   from NMI build #16187.  The version string for this release is one
+   of the following (varies by platform):
+       $CondorVersion: 6.7.14 Dec 13 2005 $
+       $CondorVersion: 6.7.14 Dec 14 2005 $
+
 12/14/05 V6_7_14-merge-1
    Merging V6_7_14 changes back into V6_7-branch.
 
