@@ -36,7 +36,6 @@
 #include "condor_uid.h"
 #include "string_list.h"
 #include "directory.h"
-#include "alloc.h"
 #include "condor_qmgr.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
@@ -149,10 +148,6 @@ main( int argc, char *argv[] )
 
 		// Clean up
 	delete BadFiles;
-
-#if defined(ALLOC_DEBUG)
-	print_alloc_stats( "End of main" );
-#endif
 
 	return 0;
 }
@@ -272,7 +267,6 @@ check_spool_dir()
 		dprintf( D_ALWAYS, 
 				 "Error disconnecting from job queue, not deleting spool files.\n" );
 	}
-	// print_alloc_stats( "End of check_spool_dir" );
 }
 
 /*
@@ -285,15 +279,12 @@ BOOLEAN
 is_ckpt_file( const char *name )
 {
 
-	// clear_alloc_stats();
-
 	if( strstr(name,"cluster") ) {
 		return is_v3_ckpt( name );
 	} else {
 		return is_v2_ckpt( name );
 	}
 
-	// print_alloc_stats( "End of is_ckpt_file");
 }
 
 

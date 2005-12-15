@@ -116,7 +116,7 @@ DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	New_classads_dc_obj
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
-	alarm.o alloc.o user_job_policy.o classad_support.o \
+	alarm.o user_job_policy.o classad_support.o \
 	directory.o stat_wrapper.o my_hostname.o file_lock.o sig_name.o \
 	email.o env.o environ.o c++_util_instantiate.o \
 	string_list.o condor_event.o $(URL_OBJ) get_daemon_name.o \

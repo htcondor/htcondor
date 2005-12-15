@@ -26,7 +26,6 @@
 #include "condor_debug.h"
 #include "condor_network.h"
 #include "condor_io.h"
-#include "alloc.h"
 #include "get_daemon_name.h"
 #include "internet.h"
 #include "condor_attributes.h"
