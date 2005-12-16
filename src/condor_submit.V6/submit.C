@@ -65,6 +65,7 @@
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "dc_schedd.h"
+#include "dc_collector.h"
 #include "my_username.h"
 #include "globus_utils.h"
 #include "enum_utils.h"
@@ -3697,9 +3698,15 @@ SetGlobusParams()
 				exit( 1 );
 			}
 
-			if ( !(remote_pool = condor_param( RemotePool,
-											   ATTR_REMOTE_POOL ) ) &&
-				 unified_syntax ) {
+			remote_pool = condor_param( RemotePool, ATTR_REMOTE_POOL );
+			if ( remote_pool == NULL ) {
+				DCCollector collector;
+				remote_pool = collector.name();
+				if ( remote_pool ) {
+					remote_pool = strdup( remote_pool );
+				}
+			}
+			if ( remote_pool == NULL && unified_syntax ) {
 
 				fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" "
 						"parameter\n", RemotePool );
