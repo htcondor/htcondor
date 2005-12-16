@@ -78,10 +78,9 @@ main(int argc, char**argv) {
 	// parse arguments
 	
 	int i;
-	for (i=0; i<argc; i++) {
-		printf("%d: %s\n", i, argv[i]);
+	if (! parse_args(argc, argv) ) {
+		exit(1);
 	}
-	parse_args(argc, argv);
 
 	set_release_dir();
 	set_daemonlist();
@@ -198,14 +197,16 @@ void
 set_daemonlist() {
 	char buf[1024];
 
-	snprintf(buf, 1024, "MASTER %s %s %s", 
-			(Opt.newpool == 'Y') ? "COLLECTOR NEGOTIATOR" : "",
-			(Opt.submitjobs == 'Y') ? "SCHEDD" : "",
-			(Opt.runjobs == 'A' ||
-			 Opt.runjobs == 'I' ||
-			 Opt.runjobs == 'C') ? "STARTD" : "");
+	if ( Opt.newpool && Opt.submitjobs && Opt.runjobs ) {
+		snprintf(buf, 1024, "MASTER %s %s %s", 
+				(Opt.newpool == 'Y') ? "COLLECTOR NEGOTIATOR" : "",
+				(Opt.submitjobs == 'Y') ? "SCHEDD" : "",
+				(Opt.runjobs == 'A' ||
+				 Opt.runjobs == 'I' ||
+				 Opt.runjobs == 'C') ? "STARTD" : "");
 
-	set_option("DAEMON_LIST", buf);
+		set_option("DAEMON_LIST", buf);
+	}
 }
 
 void
@@ -328,7 +329,7 @@ parse_args(int argc, char** argv) {
 	
 
 	
-	printf("Opt.newpool = %c\n"
+/*	printf("Opt.newpool = %c\n"
 	"Opt.submitjobs = %c\n"
 	"Opt.runjobs = %c\n"
 	"Opt.vacatejobs = %c\n"
@@ -340,7 +341,13 @@ parse_args(int argc, char** argv) {
 	Opt.vacatejobs,
 	Opt.poolhostname, Opt.poolname, Opt.jvmlocation, Opt.smtpserver,
 	Opt.condoremail);
-
+*/
+	if (!((Opt.submitjobs && Opt.runjobs && Opt.newpool ) ||
+	      (!Opt.submitjobs && !Opt.runjobs && !Opt.newpool ) )) {
+		fprintf(stderr, "%s: --newpool, --runjobs and --submitjobs must be\n"
+				"\tspecified together\n", argv[0]);
+		return false;
+	}
 	return true;
 }
 
