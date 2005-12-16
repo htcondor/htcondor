@@ -509,6 +509,7 @@ UserPolicy::AnalyzePolicy( int mode )
 	}
 	if( on_exit_hold ) {
 		m_fire_expr_val = 1;
+		m_fire_source = FS_JobAttribute;
 		return HOLD_IN_QUEUE;
 	}
 
@@ -519,11 +520,13 @@ UserPolicy::AnalyzePolicy( int mode )
 	}
 	if( on_exit_remove ) {
 		m_fire_expr_val = 1;
+		m_fire_source = FS_JobAttribute;
 		return REMOVE_FROM_QUEUE;
 	}
 		// If we didn't want to remove it, OnExitRemove was false,
 		// which means we want the job to stay in the queue...
 	m_fire_expr_val = 0;
+	m_fire_source = FS_JobAttribute;
 	return STAYS_IN_QUEUE;
 }
 
