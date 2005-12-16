@@ -118,7 +118,7 @@ set_mailoptions() {
 		set_option("CONDOR_ADMIN", Opt.condoremail);
 	}
 
-	if ( Opt.condoremail && Opt.condoremail[0] != '\0' ) {
+	if ( Opt.accountingdomain && Opt.accountingdomain[0] != '\0' ) {
 		set_option("UID_DOMAIN", Opt.accountingdomain);
 	}
 }
