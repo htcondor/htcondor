@@ -37,7 +37,6 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\..\ws_v67_ext\externals\install\gsoap-2.7.6c\src\stdsoap2.h"\
-	"..\src\condor_c++_util\alloc.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\

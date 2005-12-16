@@ -36,7 +36,6 @@
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
 	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
-	"..\src\condor_c++_util\alloc.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_name.h"\
