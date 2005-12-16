@@ -5651,7 +5651,7 @@ int DaemonCore::Create_Process(
 				if ( NULL == nametmp ) {
 					dprintf( D_ALWAYS, "malloc(%d) failed!\n", namelen );
 					free( (void *) origname );
-					return FALSE;
+					exit(ENOMEM);
 				}
 
 				// Build the new (absolute) name in nametmp2
