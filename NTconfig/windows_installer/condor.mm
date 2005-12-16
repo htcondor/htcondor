@@ -12,6 +12,11 @@
 #define? COMPANY_MSINAME_SUFFIX.D  
 
 #include "condor.mmh"
+#define  UISAMPLE_BLINE_TEXT           Condor for Windows <$ProductVersion>
+#define UISAMPLE_BLINE_TEXT_INDENT    10
+#define UISAMPLE_BLINE_TEXT_WIDTH    110
+#define UISAMPLE_DIALOG_FILE_dlgbmp Leftside-condor.bmp
+#define UISAMPLE_BITMAP_WHITE_BANNER banner-condor.bmp   
 #define ImageRootDirectory <??*CondorReleaseDir>
 #undef DIALOGTEMPLATE_LABEL_COLUMN_WIDTH 
 #define DIALOGTEMPLATE_LABEL_COLUMN_WIDTH 115
@@ -20,12 +25,11 @@
 <$Property "SUBMITJOBS" VALUE="Y">
 <$Property "VACATEJOBS" VALUE="N">
 <$Property "NEWPOOL" VALUE="N">
-<$Property "HOSTALLOWREAD" VALUE="*.cs.wisc.edu">
+<$Property "HOSTALLOWREAD" VALUE="your.domain.com, *.cs.wisc.edu">
 <$Property "HOSTALLOWWRITE" VALUE="*">
 <$Property "HOSTALLOWADMINISTRATOR" VALUE="$(FULL_HOSTNAME)">
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
-
 
 <$FileFind File="JAVA.EXE" Property="JVMLOCATION" Depth="3" Path="[ProgramFilesFolder]" Default="JAVA.EXE">
 
@@ -82,7 +86,7 @@
 <$/Table>
 
 
-<$Dialog "Accounting Domain" Description="What Condor accounting (or UID) domain is this machine in?" Dialog="AccountingDomain" INSERT="RunOrSubmitJobs">
+<$Dialog "Accounting Domain" Description="What accounting (or UID) domain is this machine in?" Dialog="AccountingDomain" INSERT="RunOrSubmitJobs">
 
 	<$DialogEntry LabelWidth="265" Property="AA" Label="Usually a DNS domain can be the accounting domain (e.g. cs.wisc.edu)." Control="Text">
 	<$DialogEntry LabelWidth="200" Property="AB" Label="Leave it blank if you are unsure." Control="Text">
@@ -99,9 +103,9 @@
 <$/Dialog>
 
 <$Dialog "Host Permission Settings" Description="What hosts have access to this machine?" Dialog="HostPermissionSettings" INSERT="EmailSettings">
-	<$DialogEntry Property="HOSTALLOWREAD" Label="Hosts with Read access:" ToolTip="Query machine status and job queues." Width=130 Blank="N">
-	<$DialogEntry Property="HOSTALLOWWRITE" Label="Hosts with Write access:" ToolTip="All machines in the pool require Write access." Width=130 Blank="N">
-	<$DialogEntry Property="HOSTALLOWADMINISTRATOR" Label="Hosts with Administrator access:" ToolTip="Turn Condor on/off, modify job queue." Width=130 Blank="N">
+	<$DialogEntry Property="HOSTALLOWREAD" Label="Hosts with Read access:" ToolTip="Query machine status and job queues." LabelWidth=140 Width=160 Blank="N">
+	<$DialogEntry Property="HOSTALLOWWRITE" Label="Hosts with Write access:" ToolTip="All machines in the pool require Write access." LabelWidth=140 Width=160 Blank="N">
+	<$DialogEntry Property="HOSTALLOWADMINISTRATOR" LabelWidth=140 Label="Hosts with Administrator access:" ToolTip="Turn Condor on/off, modify job queue." Width=160 Blank="N">
 <$/Dialog>
 
 ;--- Create INSTALLDIR ------------------------------------------------------
@@ -165,6 +169,9 @@
 			     Start="AUTO"
    >
 #)
+;--- start/stop service -------------------------------------------------
+   <$ServiceControl Name="Condor" AtInstall="stop start" AtUninstall="stop delete">
+
 <$/Component>
 
 
