@@ -37,6 +37,8 @@
 #include "my_username.h"
 
 
+const char *ATTR_GRIDFTP_URL_BASE = "GridftpUrlBase";
+
 // GridManager job states
 #define GM_INIT					0
 #define GM_REGISTER				1
@@ -323,6 +325,8 @@ GT4Job::GT4Job( ClassAd *classad )
 	gahp = NULL;
 	submit_id = NULL;
 	delegatedCredentialURI = NULL;
+	gridftpServer = NULL;
+	checkGridftpUrlBase = false;
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -418,6 +422,14 @@ GT4Job::GT4Job( ClassAd *classad )
 		myResource->AlreadySubmitted( this );
 	}
 
+	buff[0] = '\0';
+	if ( jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, buff ) ) {
+		checkGridftpUrlBase = true;
+	}
+
+	gridftpServer = GridftpServer::FindOrCreateServer( jobProxy,
+													   buff[0] ? buff : NULL );
+
 	if (jobAd->LookupString ( ATTR_GLOBUS_SUBMIT_ID, buff )) {
 		submit_id = strdup ( buff );
 	}
@@ -499,6 +511,9 @@ GT4Job::GT4Job( ClassAd *classad )
 
 GT4Job::~GT4Job()
 {
+	if ( gridftpServer ) {
+		gridftpServer->UnregisterClient( this );
+	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 	}
@@ -720,7 +735,9 @@ int GT4Job::doEvaluateState()
 			} else if ( condorState == HELD ) {
 				gmState = GM_DELETE;
 				break;
-			} else {
+			} else if ( gridftpServer->GetUrlBase() ) {
+				jobAd->Assign( ATTR_GRIDFTP_URL_BASE, gridftpServer->GetUrlBase() );
+				checkGridftpUrlBase = true;
 				gmState = GM_DELEGATE_PROXY;
 			}
 			} break;
@@ -909,6 +926,16 @@ int GT4Job::doEvaluateState()
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
+				if ( checkGridftpUrlBase ) {
+					MyString url_base;
+					jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, url_base );
+					if ( !strcmp( url_base.Value(),
+								  gridftpServer->GetUrlBase() ) ) {
+						gmState = GM_CANCEL;
+						break;
+					}
+					checkGridftpUrlBase = false;
+				}
 				if ( GetCallbacks() == true ) {
 					reevaluate_state = true;
 					break;
@@ -1160,6 +1187,8 @@ int GT4Job::doEvaluateState()
 					evictLogged = true;
 				}
 			}
+			jobAd->Delete( ATTR_GRIDFTP_URL_BASE );
+			checkGridftpUrlBase = false;
 			
 			if ( wantRematch ) {
 				dprintf(D_ALWAYS,
@@ -1507,10 +1536,10 @@ MyString *GT4Job::buildSubmitRSL()
 	StringList stage_in_list;
 	StringList stage_out_list;
 	bool staging_input = false;
+	MyString local_url_base = "";
 
-	char *local_url_base = param("GRIDFTP_URL_BASE");
-	if ( local_url_base == NULL ) {
-		errorString = "GRIDFTP_URL_BASE not defined";
+	if ( !jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, local_url_base ) ) {
+		errorString.sprintf( "%s not defined", ATTR_GRIDFTP_URL_BASE );
 		return NULL;
 	}
 
@@ -1779,7 +1808,7 @@ MyString *GT4Job::buildSubmitRSL()
 		if ( create_remote_iwd ) {
 			if ( riwd_parent != "" ) {
 				*rsl += "<transfer>";
-				buff.sprintf( "%s%s/", local_url_base,
+				buff.sprintf( "%s%s/", local_url_base.Value(),
 							  getDummyJobScratchDir() );
 				*rsl += printXMLParam( "sourceUrl", buff.Value() );
 				buff.sprintf( "file://%s", riwd_parent.Value() );
@@ -1787,7 +1816,8 @@ MyString *GT4Job::buildSubmitRSL()
 				*rsl += "</transfer>";
 			}
 			*rsl += "<transfer>";
-			buff.sprintf( "%s%s/", local_url_base, getDummyJobScratchDir() );
+			buff.sprintf( "%s%s/", local_url_base.Value(),
+						  getDummyJobScratchDir() );
 			*rsl += printXMLParam( "sourceUrl", buff.Value() );
 			buff.sprintf( "file://%s", remote_iwd.Value() );
 			*rsl += printXMLParam( "destinationUrl", buff.Value());
@@ -1797,7 +1827,8 @@ MyString *GT4Job::buildSubmitRSL()
 		// Next, add the executable if needed
 		if ( transfer_executable ) {
 			*rsl += "<transfer>";
-			buff.sprintf( "%s%s", local_url_base, local_executable.Value() );
+			buff.sprintf( "%s%s", local_url_base.Value(),
+						  local_executable.Value() );
 			*rsl += printXMLParam( "sourceUrl", buff.Value() );
 			buff.sprintf( "file://%s", remote_executable.Value() );
 			*rsl += printXMLParam( "destinationUrl", buff.Value());
@@ -1812,7 +1843,7 @@ MyString *GT4Job::buildSubmitRSL()
 			while ( (filename = stage_in_list.next()) != NULL ) {
 
 				*rsl += "<transfer>";
-				buff.sprintf( "%s%s%s", local_url_base,
+				buff.sprintf( "%s%s%s", local_url_base.Value(),
 							  filename[0] == '/' ? "" : local_iwd.Value(),
 							  filename );
 				*rsl += printXMLParam ("sourceUrl", 
@@ -1851,7 +1882,7 @@ MyString *GT4Job::buildSubmitRSL()
 						  condor_basename (filename));
 			*rsl += printXMLParam ("sourceUrl", 
 								   buff.Value());
-			buff.sprintf( "%s%s%s", local_url_base,
+			buff.sprintf( "%s%s%s", local_url_base.Value(),
 						  filename[0] == '/' ? "" : local_iwd.Value(),
 						  filename );
 			*rsl += printXMLParam ("destinationUrl", 
@@ -1924,8 +1955,6 @@ MyString *GT4Job::buildSubmitRSL()
 	}
 
 	*rsl += "</job>";
-
-	free( local_url_base );
 
 	return rsl;
 }
@@ -2026,4 +2055,15 @@ GT4Job::getDummyJobScratchDir() {
 	}
 
 	return dirname.Value();
+}
+
+void GT4Job::NewGridftpUrlBase( const char *new_url_base )
+{
+	MyString url_base;
+	if ( !jobAd->LookupString( ATTR_GRIDFTP_URL_BASE, url_base ) ) {
+		SetEvaluateState();
+	} else if ( strcmp( url_base.Value(), new_url_base ) ) {
+		checkGridftpUrlBase = true;
+		SetEvaluateState();
+	}
 }

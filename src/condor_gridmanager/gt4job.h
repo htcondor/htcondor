@@ -34,10 +34,12 @@
 #include "basejob.h"
 #include "gt4resource.h"
 #include "gahp-client.h"
+#include "gridftpmanager.h"
 
 #define JM_COMMIT_TIMEOUT	600
 
 class GT4Resource;
+class GridftpServer;
 
 void GT4JobInit();
 void GT4JobReconfig();
@@ -61,6 +63,8 @@ class GT4Job : public BaseJob
 	void ClearCallbacks();
 	BaseResource *GetResource();
 	void SetRemoteJobId( const char *job_id );
+
+	void NewGridftpUrlBase( const char *new_url_base );
 
 	static int probeInterval;
 	static int submitInterval;
@@ -94,7 +98,8 @@ class GT4Job : public BaseJob
 	char *resourceManagerString;
 	char * submit_id;
 	char * jobmanagerType;
-	
+	GridftpServer *gridftpServer;
+	bool checkGridftpUrlBase;
 
 		// TODO should query these from GahpClient when needed
 	char *gramCallbackContact;
