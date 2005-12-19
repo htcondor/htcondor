@@ -11,6 +11,7 @@ use CondorTest;
 
 $testname 		= 'Max Running Local Universe Jobs';
 $cmdfile		= 'job_core_max-running_local.cmd';
+$basefile		= 'job_core_max-running_local.out.';
 
 ##
 ## Sleep time 
@@ -33,28 +34,31 @@ my $LAST_RUN_TIME = 0;
 my $testFailure = "";
 
 ##
-## All the jobs are outputting to the same file, so we 
-## have to get the time out and compare it to the last job
-## that finished. This isn't 100% because the jobs are overwriting
-## the same file. I had to do it this way because the testing suite
-## cannot differeniate between multiple jobs, and we need to be 
-## able to check the jobs in the order that they complete
+## Each job will write to its own file, so we need to just check
+## to the time that they said they completed is greater than or equal
+## to the time of the last job
 ##
 $successCallback = sub {
 	my %info = @_;
-	my $outfile = $info{"output"};
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	
 	##
 	## This is the time that they said they ran on the execute machine
 	##
+	my $outfile = "$basefile$cluster.$job";
 	open(FILE, $outfile) || die("Failed to open output file '$outfile'");
 	my @output = <FILE>;
 	close(FILE);
 	my $reportTime = "@output";
 	chomp($reportTime);
 	
-	#print "REPORT TIME: $reportTime\n".
-	#      "LAST TIME:   $LAST_RUN_TIME\n".
-	#      "DIFFERENCE:  ".( $reportTime - $LAST_RUN_TIME )."\n";
+	print "JOB:         $cluster.$job\n".
+		  "OUTFILE:     $outfile\n".
+		  "REPORT TIME: $reportTime\n".
+	      "LAST TIME:   $LAST_RUN_TIME\n".
+	      "DIFFERENCE:  ".( $LAST_RUN_TIME ? ($reportTime - $LAST_RUN_TIME) :
+	      									 "SKIP" )."\n\n";
 	
 	##
 	## If there wasn't a last run time value, then this is the first

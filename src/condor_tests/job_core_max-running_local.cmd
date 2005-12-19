@@ -19,8 +19,15 @@ Arguments				= 20
 
 ##
 ## Queue a bunch of jobs 
-## They have to output to the same file because the Condor
-## testing library can't differeniate between multiple jobs
 ##
-Output                  = job_core_max-running_local.out
-Queue 6
+BaseFile				= job_core_max-running_local.out
+Output                  = $(BaseFile).$(Cluster).$(Process)
+Queue
+Output                  = $(BaseFile).$(Cluster).$(Process)
+Queue
+Output                  = $(BaseFile).$(Cluster).$(Process)
+Queue
+Output                  = $(BaseFile).$(Cluster).$(Process)
+Queue
+Output                  = $(BaseFile).$(Cluster).$(Process)
+Queue
