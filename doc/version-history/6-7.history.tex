@@ -51,6 +51,12 @@ environment via the pre-existing \Macro{STORK\_ENVIRONMENT}
 configuration macro.  Unprivileged (user level) Storks are not
 affected by this behavior.
 
+\item  Jobs that are are placed on held because of \AdAttr{on\_exit\_hold}
+evaluated to TRUE or jobs that stay in the queue after finishing because
+\AdAttr{on\_exit\_remove} evaluated to FALSE again correctly report the
+expression as being a "job attribute", not "UNKNOWN (never set)".
+
+
 \end{itemize}
 
 \noindent Known Bugs:
