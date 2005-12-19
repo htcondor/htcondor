@@ -24,60 +24,46 @@
 #ifndef __GRIDFTPMANAGER_H__
 #define __GRIDFTPMANAGER_H__
 
-
-#include "gridmanager.h"
-#include "proxymanager.h"
-#include "gt4job.h"
-
-class GT4Job;
-
-class GridftpServer : public Service
-{
- protected:
-	GridftpServer( Proxy *proxy, const char *req_url_base = NULL );
-	~GridftpServer();
-
+class GridftpServer {
+	friend class GridftpManager;
  public:
-	static GridftpServer *FindOrCreateServer( Proxy *proxy,
-											  const char *req_url_base = NULL );
-	static const int STARTING;
-	static const int ACTIVE;
-	static const int FAILED;
+	const char * GetAddress();
+	int GetState();
+	
 
-	void RegisterClient( GT4Job *job );
-	void UnregisterClient( GT4Job *job );
-	bool IsEmpty();
-	const char *GetUrlBase();
+protected:
+	GridftpServer();
+	~GridftpServer();
+	
+	int StdoutReady();
+	void SetState(int state);
+
+	int m_retry_count;
+	int m_state;
+
+};
+
+
+class GridftpManager {
+ public:
+	GridftpManager();
+	~GridftpManager();
+
+	GridftpServer * CreateNew();
+	GrdiftpServer * Restart();
+	GridftpServer * FindOrCreate();
+
+	void ShutdownAll();
 
  protected:
-	static int CheckServers();
-	static void CheckServersSoon( int delta = 0 );
-	static bool ScanSchedd();
+	void Reaper(Service*,int pid,int status);
+	void Shutdown (GridftpServer * gridftp);
+	
+	GridftpServer * m_gridftp;
 
-	static HashTable <HashKey, GridftpServer *> m_serversByProxy;
-	static bool m_initialized;
-	static int m_checkServersTid;
-	static bool m_initialScanDone;
 
-	void CheckServer( bool &delete_me );
-	bool SubmitServerJob();
-	bool ReadUrlBase();
-	int CheckJobStatus();
-	void CheckProxy();
-	bool CheckPortError();
-	bool RemoveJob();
-
-	Proxy *m_proxy;
-	char *m_urlBase;
-	char *m_requestedUrlBase;
-	int m_refCount;
-	char *m_userLog;
-	char *m_outputFile;
-	char *m_errorFile;
-	char *m_proxyFile;
-	int m_proxyExpiration;
-	List<GT4Job> m_registeredJobs;
-	PROC_ID m_jobId;
 };
+
+
 
 #endif
