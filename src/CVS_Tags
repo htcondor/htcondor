@@ -1,3 +1,8 @@
+12/19/05 V6_7-gridftp-{root,branch}
+   Branch for developing Condor-started gridftp servers for GT4 GRAM jobs. 
+   Branched from successful BUILD-V6_7-branch-2005-12-19 nightly build 
+   tag, for V6_7_CODE module.
+
 12/16/05 V6_7-stork_userlog-{root,branch}
    Branch for developing per-job Stork user logs, and associated DAGMan
    compatability.  Branched from successful BUILD-V6_7-branch-2005-12-16
