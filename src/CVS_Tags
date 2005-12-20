@@ -1,3 +1,20 @@
+12/19/05 V6_7-win32_tests-{root,branch}
+   Branch for bill's efforts to get condor_tests workin on windoze.
+   Created from the V6_7-branch of V6_7_CODE after andy committed
+   fixes to condor_tests from BUILD-V6_7-branch-2005-12-19.
+
+12/19/05 V6_7-eventd_v2-{root,branch}
+   Branch for bill's eventd development efforts.  Created from the
+   V6_7-branch of V6_7_CODE after andy committed fixes to condor_tests
+   from BUILD-V6_7-branch-2005-12-19.
+
+12/19/05 V6_7-new_classads-{root,branch}
+   Branch for using an old-classads compatibility interface on top of
+   the new classad implementation.  This will not be merged back into
+   V6_7 before 6.8.0, but will probably be merged early in the 6.9.x
+   series.  Created from the V6_7-branch of V6_7_CODE after andy
+   committed fixes to condor_tests from BUILD-V6_7-branch-2005-12-19.
+
 12/19/05 V6_7-gridftp-{root,branch}
    Branch for developing Condor-started gridftp servers for GT4 GRAM jobs. 
    Branched from successful BUILD-V6_7-branch-2005-12-19 nightly build 
