@@ -1,3 +1,9 @@
+12/20/05 V6_7-boinc-{root,branch}
+   Branch for Derek's efforts to get Condor to run a BOINC client
+   (http://boinc.berkeley.edu) whenever the startd doesn't have any
+   other work to do.  Created from the V6_7-branch of V6_7_CODE after
+   the successful build from BUILD-V6_7-branch-2005-12-20.
+
 12/19/05 V6_7-win32_tests-{root,branch}
    Branch for bill's efforts to get condor_tests workin on windoze.
    Created from the V6_7-branch of V6_7_CODE after andy committed
