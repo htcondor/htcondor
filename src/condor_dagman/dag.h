@@ -355,6 +355,16 @@ class Dag {
 		*/
 	const char *GetDapLog() { return _dapLogName; }
 
+
+		// non-exe failure codes for return value integers -- we
+		// represent DAGMan, batch-system, or other external errors
+		// with the integer return-code space *below* -64.  So, 0-255
+		// are normal exe return codes, -1 to -64 represent catching
+		// exe signals 1 to 64, and -1000 and below represent DAGMan,
+		// batch-system, or other external errors
+	const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
+	const DAG_ERROR_CONDOR_JOB_ABORTED;
+	const DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
 	
   protected:
 

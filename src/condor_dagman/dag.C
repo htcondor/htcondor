@@ -68,6 +68,9 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleNodes		  (0),
+	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
+	DAG_ERROR_CONDOR_JOB_ABORTED (-1002),
+	DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED (-1101),
 	_maxIdleNodes		  (maxIdleNodes),
 	_allowLogError		  (allowLogError),
 	_preRunNodeCount	  (0),
@@ -591,9 +594,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		job->_Status = Job::STATUS_POSTRUN;
 		_postRunNodeCount++;
 
-			// there's no easy way to represent these errors as
-			// return values or signals, so just say SIGABRT
-		job->_scriptPost->_retValJob = -6;
+		job->_scriptPost->_retValJob = DAG_ERROR_CONDOR_JOB_ABORTED;
 		if( !recovery ) {
 			_postScriptQ->Run( job->_scriptPost );
 		}
@@ -1117,9 +1118,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	  // a POST script is specified for the job, so run it
 	  job->_Status = Job::STATUS_POSTRUN;
 	  _postRunNodeCount++;
-	  // there's no easy way to represent helper errors as
-	  // return values or signals, so just say SIGUSR1
-	  job->_scriptPost->_retValJob = -10;
+	  job->_scriptPost->_retValJob = DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
 	  _postScriptQ->Run( job->_scriptPost );
 	} else {
 	  job->_Status = Job::STATUS_ERROR;
@@ -1186,11 +1185,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	      // a POST script is specified for the job, so run it
 	      job->_Status = Job::STATUS_POSTRUN;
 		  _postRunNodeCount++;
-	      // there's no easy way to represent condor_submit errors as
-	      // return values or signals, so just say SIGUSR1
-		  // NOTE: actually, we do have unique return-code space
-		  // *below* -32 which we could use for this (e.g., -35)...
-	      job->_scriptPost->_retValJob = -10;
+	      job->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
 	      _postScriptQ->Run( job->_scriptPost );
         } else {
 	      job->_Status = Job::STATUS_ERROR;
