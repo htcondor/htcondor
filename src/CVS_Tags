@@ -1,3 +1,9 @@
+12/21/05 V6_7-cron-2-{root,branch}
+   Cleaning up the CronTab code and finalize it after PCRE is working
+   for Windows. I had to merge a new branch because Todd turned on
+   the Windows external after I had made my starter_local_expr branch.
+   Created from the V6_7-branch of V6_7_CODE.
+
 12/20/05 V6_7-boinc-{root,branch}
    Branch for Derek's efforts to get Condor to run a BOINC client
    (http://boinc.berkeley.edu) whenever the startd doesn't have any
