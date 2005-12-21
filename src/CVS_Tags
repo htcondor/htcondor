@@ -1,3 +1,10 @@
+12/21/05 V6_7-jyoon_vm-{root,branch}
+   Created a branch for Jaeyoung Yoon (jyoon@cs.wisc.edu) for him to
+   develop his code to support virtual machines. 
+   Created from the V6_7-branch of V6_7_CODE by Alain Roy. Our hope is
+   to merge this back in mid-January 2005 for Condor 6.7.15, but
+   that's only if the code is good enough. 
+
 12/21/05 V6_7-cron-2-{root,branch}
    Cleaning up the CronTab code and finalize it after PCRE is working
    for Windows. I had to merge a new branch because Todd turned on
