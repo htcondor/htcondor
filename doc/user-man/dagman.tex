@@ -257,10 +257,14 @@ A node not marked as failed at any point is successful.
 Two variables are available to ease script writing.
 The \Env{\$JOB} variable evaluates to \Arg{JobName}.
 For POST scripts, the \Env{\$RETURN} variable evaluates to the return value of the program.
-Jobs that are aborted, removed, preempted, etc. are passed a \Env{\$RETURN}
-value of -6.
-The variables may be
-placed anywhere within the arguments.
+Jobs that die from signals are reported with a \Env{\$RETURN} value
+representing the negative signal number.  For example, SIGKILL (signal
+9) is reported as -9.
+Jobs whose batch system submission fails are reported as -1001.
+Jobs which are externally removed from the batch system queue (i.e.,
+by something other than \Condor{dagman}) are reported as -1002.
+The \Env{\$JOB} and \Env{\$RETURN} variables may be
+placed anywhere within the POST script arguments.
 
 As an example, suppose the \Arg{PRE} script expands a compressed file named
 \File{\Arg{JobName}.gz}.
