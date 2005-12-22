@@ -94,10 +94,16 @@ class Dagman {
 		// errors; see check_events.h for values.
 	int allow_events;
 
-		// If this is true, nodes for which a submit fails are retried
+		// If this is true, nodes for which the job submit fails are retried
 		// before any other ready nodes; otherwise a submit failure puts
 		// a node at the back of the ready queue.  (Default is true.)
 	bool retrySubmitFirst;
+
+		// If this is true, nodes for which the node fails (and the node
+		// has retries) are retried before any other ready nodes; 
+		// otherwise a node failure puts a node at the back of the ready 
+		// queue.  (Default is false.)
+	bool retryNodeFirst;
 
 		// Whether to munge the node names for multi-DAG runs to make
 		// sure they're unique.  The default is true, but the user can

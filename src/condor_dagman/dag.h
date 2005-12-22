@@ -81,13 +81,18 @@ class Dag {
 		       if true
 		@param maxIdleNodes the maximum number of idle nodes to allow
 		       at one time (0 means unlimited)
+		@param retrySubmitFirst whether, when a submit fails for a node's
+		       job, to put the node at the head of the ready queue
+		@param retryNodeFirst whether, when a node fails and has retries,
+			   to put the node at the head of the ready queue
     */
 
     Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		 const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
 		 int allowEvents, const char *dapLogName, bool allowLogError,
-		 bool useDagDir, int maxIdleNodes);
+		 bool useDagDir, int maxIdleNodes, bool retrySubmitFirst,
+		 bool retryNodeFirst);
 
     ///
     ~Dag();
@@ -363,8 +368,8 @@ class Dag {
 		// exe signals 1 to 64, and -1000 and below represent DAGMan,
 		// batch-system, or other external errors
 	const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
-	const DAG_ERROR_CONDOR_JOB_ABORTED;
-	const DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
+	const int DAG_ERROR_CONDOR_JOB_ABORTED;
+	const int DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED;
 	
   protected:
 
@@ -382,9 +387,11 @@ class Dag {
 
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()
+	   @param The job to start
+	   @param Whether this is a retry
 	   @return true on success, false on failure
     */
-    bool StartNode( Job *node );
+    bool StartNode( Job *node, bool isRetry );
 
     // add job to termination queue and report termination to all
     // child jobs by removing job ID from each child's waiting queue
@@ -481,6 +488,17 @@ class Dag {
 		// Whether to allow the DAG to run even if we have an error
 		// determining the job log files.
 	bool		_allowLogError;
+
+		// If this is true, nodes for which the job submit fails are retried
+		// before any other ready nodes; otherwise a submit failure puts
+		// a node at the back of the ready queue.  (Default is true.)
+	bool		m_retrySubmitFirst;
+
+		// If this is true, nodes for which the node fails (and the node
+		// has retries) are retried before any other ready nodes;
+		// otherwise a node failure puts a node at the back of the ready
+		// queue.  (Default is false.)
+	bool		m_retryNodeFirst;
 
 	// queue of jobs ready to be submitted to Condor
 	SimpleList<Job*>* _readyQ;

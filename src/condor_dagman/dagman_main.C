@@ -173,6 +173,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_SUBMIT_FIRST setting: %d\n",
 				retrySubmitFirst );
 
+	retryNodeFirst = param_boolean( "DAGMAN_RETRY_NODE_FIRST", false );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_RETRY_NODE_FIRST setting: %d\n",
+				retryNodeFirst );
+
 	maxIdle =
 		param_integer( "DAGMAN_MAX_JOBS_IDLE", maxIdle, 0, INT_MAX );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOBS_IDLE setting: %d\n",
@@ -541,7 +545,8 @@ int main_init (int argc, char ** const argv) {
 						  dagman.maxPreScripts, dagman.maxPostScripts,
 						  dagman.allow_events, dapLogName, //<-- DaP
 						  dagman.allowLogError, dagman.useDagDir,
-						  dagman.maxIdle );
+						  dagman.maxIdle, dagman.retrySubmitFirst,
+						  dagman.retryNodeFirst );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");

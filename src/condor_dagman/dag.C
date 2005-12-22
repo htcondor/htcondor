@@ -55,7 +55,8 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 		  const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
 		  int allow_events, const char* dapLogName, bool allowLogError,
-		  bool useDagDir, int maxIdleNodes) :
+		  bool useDagDir, int maxIdleNodes, bool retrySubmitFirst,
+		  bool retryNodeFirst) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	_condorLogName		  (NULL),
@@ -73,6 +74,8 @@ Dag::Dag( /* const */ StringList &dagFiles, char *condorLogName,
 	DAG_ERROR_DAGMAN_HELPER_COMMAND_FAILED (-1101),
 	_maxIdleNodes		  (maxIdleNodes),
 	_allowLogError		  (allowLogError),
+	m_retrySubmitFirst	  (retrySubmitFirst),
+	m_retryNodeFirst	  (retryNodeFirst),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
 	_checkEvents          (allow_events)
@@ -251,7 +254,7 @@ bool Dag::Bootstrap (bool recovery) {
     while( jobs.Next( job ) ) {
 		if( job->GetStatus() == Job::STATUS_READY &&
 			job->IsEmpty( Job::Q_WAITING ) ) {
-			StartNode( job );
+			StartNode( job, false );
 		}
     }
 
@@ -992,7 +995,7 @@ Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
 
 //-------------------------------------------------------------------------
 bool
-Dag::StartNode( Job *node )
+Dag::StartNode( Job *node, bool isRetry )
 {
     ASSERT( node != NULL );
 	ASSERT( node->CanSubmit() );
@@ -1008,7 +1011,11 @@ Dag::StartNode( Job *node )
 		return true;
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
-	_readyQ->Append( node );
+	if ( isRetry && m_retryNodeFirst ) {
+		_readyQ->Prepend( node );
+	} else {
+		_readyQ->Append( node );
+	}
 	return TRUE;
 }
 
@@ -1200,7 +1207,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				dm.max_submit_attempts, thisSubmitDelay,
 				thisSubmitDelay == 1 ? "" : "s" );
 
-		if ( dm.retrySubmitFirst ) {
+		if ( m_retrySubmitFirst ) {
 		  _readyQ->Prepend(job);
 		} else {
 		  _readyQ->Append(job);
@@ -1667,7 +1674,7 @@ Dag::TerminateJob( Job* job, bool recovery )
 		// if child has no more parents in its waiting queue, submit it
 		if( child->GetStatus() == Job::STATUS_READY &&
 			child->IsEmpty( Job::Q_WAITING ) && recovery == FALSE ) {
-			StartNode( child );
+			StartNode( child, false );
 		}
     }
 		// this is a little ugly, but since this function can be
@@ -1721,7 +1728,7 @@ Dag::RestartNode( Job *node, bool recovery )
 				  node->GetJobName(), node->GetRetries(),
 				  node->GetRetryMax() );
 	if( !recovery ) {
-		StartNode( node );
+		StartNode( node, true );
 	}
 }
 
