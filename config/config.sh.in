@@ -11,8 +11,6 @@ EXT_KERBEROS_VERSION=@ext_krb5_version@
 EXT_GLOBUS_VERSION=@ext_globus_version@
 GLOBUS_FLAVOR=@globus_flavor@
 
-EXT_GPT_VERSION=@ext_gpt_version@
-
 EXT_GAHP_VERSION=@ext_gahp_version@
 
 EXT_ZLIB_VERSION=@ext_zlib_version@

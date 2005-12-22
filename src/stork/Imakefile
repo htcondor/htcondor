@@ -6,7 +6,7 @@
 /* Specify Stork build configuration here. */
 #define WANT_STORK_API			YES
 #define WANT_STORK_GLOBUS		YES
-#define WANT_STORK_SRB			NO
+#define WANT_STORK_SRB			YES
 #define WANT_STORK_UNITREE		YES
 #define WANT_STORK_SRM_CASTOR	YES
 #define WANT_STORK_SRM_DCACHE	YES
@@ -124,14 +124,6 @@ GLOBUS_LIBS = \
 	$(GSI_LIB) \
 	$(OPENSSL_LIB)
 GLOBUS_COPY = $(MODULE)transfer.globus-url-copy
-#if HAS_GLOBUS
-/* The Globus data package external is only needed for this Stork contrib module
- */
-ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
-contrib:: $(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION)
-#else
-#	error Globus data not available on this platform
-#endif
 stork_contrib_module_target($(GLOBUS_COPY),dap_transfer_globus-url-copy.o $(STORK_UTIL),$(GLOBUS_LIBS))
 stork_contrib_module_link_target($(GLOBUS_COPY),$(MODULE)transfer.file-gsiftp)
 stork_contrib_module_link_target($(GLOBUS_COPY),$(MODULE)transfer.file-ftp)
@@ -172,7 +164,7 @@ stork_contrib_module_link_target($(UNITREE_COPY),$(MODULE)transfer.file-unitree)
 stork_contrib_module_link_target($(UNITREE_COPY),$(MODULE)transfer.unitree-file)
 #endif /* WANT_STORK_UNITREE */
 
-#if WANT_STORK_SRB
+#if WANT_STORK_SRB && HAS_GLOBUS
 SRB_COPY = $(MODULE)transfer.srb
 SRB_ROOT   = $(EXT_INSTALL)/$(EXT_SRB_VERSION)
 SRB_LIB    = $(SRB_ROOT)/obj
@@ -186,7 +178,9 @@ SRB_OBJS = \
 SRB_LIBS = \
 	$(SRB_LIB)/libSrbClient.a \
 	-lpthread \
-	$(STD_LIBS)
+	$(STD_LIBS) \
+	$(GLOBUS_LIB)/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
+	$(GLOBUS_LIB)/libglobus_proxy_ssl_$(GlobusFlavor).a
 XCOMM SRB objects need additional C_FLAGS
 /* FIXME: dap_url.o should be moved into libstorkutil.a, without SRB dependency
  */
