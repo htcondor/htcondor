@@ -6,7 +6,7 @@
 /* Specify Stork build configuration here. */
 #define WANT_STORK_API			YES
 #define WANT_STORK_GLOBUS		YES
-#define WANT_STORK_SRB			YES
+#define WANT_STORK_SRB			NO
 #define WANT_STORK_UNITREE		YES
 #define WANT_STORK_SRM_CASTOR	YES
 #define WANT_STORK_SRM_DCACHE	YES
