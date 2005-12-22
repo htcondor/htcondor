@@ -71,7 +71,7 @@ prereqs   = gcc-3.3
 # Platforms with no prereqs at all
 ########################################
 [
-platforms = ia64_sles_8, ia64_rhas_3, x86_64_rhas_3, ppc_ydl_3.0, \ 
+platforms = ia64_sles_8, ia64_rhas_3, x86_64_rhas_3, ppc_ydl_3.0, \
             x86_winnt_5.1
 ]
 
