@@ -1311,8 +1311,52 @@ obtainAdsFromCollector (
 				oldSequence = -1;
 				if( oldAdEntry ) {
 					oldSequence = oldAdEntry->sequenceNum;
+					oldAd = oldAdEntry->oldAd;
 				}
-				if(newSequence > oldSequence) {
+
+					// Find classad expression that decides if
+					// new ad should replace old ad
+				char *exprStr = param("STARTD_AD_REEVAL_EXPR");
+				if (!exprStr) {
+						// This matches the "old" semantic.
+					exprStr = strdup("my.UpdateSequenceNumber > target.UpdateSequenceNumber");
+				}
+
+				ExprTree *expr = NULL;
+				::Parse(exprStr, expr); // expr will be null on error
+
+				int replace = true;
+				if (expr == NULL) {
+					// error evaluating expression
+					dprintf(D_ALWAYS, "Can't compile STARTD_AD_REEVAL_EXPR %s, treating as TRUE\n", exprStr);
+					replace = true;
+				} else {
+
+						// Expression is valid, now evaluate it
+						// old ad is "my", new one is "target"
+					EvalResult er;
+					int evalRet = expr->EvalTree(oldAd, ad, &er);
+
+					if( !evalRet || er.type != LX_BOOL) {
+							// Something went wrong
+						dprintf(D_ALWAYS, "Can't evaluate STARTD_AD_REEVAL_EXPR %s as a bool, treating as TRUE\n", exprStr);
+						replace = true;
+					} else {
+							// evaluation OK, result type bool
+						replace = er.i;
+					}
+
+						// But, if oldAd was null (i.e.. the first time), always replace
+					if (!oldAd) {
+						replace = true;
+					}
+				}
+
+				free(exprStr);
+				delete expr ;
+
+					//if(newSequence > oldSequence) {
+				if (replace) {
 					if(oldSequence >= 0) {
 						delete(oldAdEntry->oldAd);
 						delete(oldAdEntry->remoteHost);
@@ -1327,8 +1371,11 @@ obtainAdsFromCollector (
 				} else {
 					/*
 					  We have a stashed copy of this ad, and it's the
-					  the same or a more recent sequence number, and we
-					  we don't want to use the one in allAds. However, 
+					  the same or a more recent ad, and we
+					  we don't want to use the one in allAds. We determine
+					  if an ad is more recent by evaluating an expression
+					  from the config file that decides "newness".  By default,
+					  this is just based on the sequence number.  However,
 					  we need to make sure that the "stashed" ad gets into
 					  allAds for this negotiation cycle, but we don't want 
 					  to get stuck in a loop evaluating the, so we remove
@@ -2046,6 +2093,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		ClassAd *bestCached = MatchList->pop_candidate();
 		// TODO - do bestCached and bestSoFar refer to the same
 		// machine preference? (sanity check)
+		bestCached = NULL; // just to remove unused variable warning
 	}
 
 #if WANT_NETMAN
@@ -2326,7 +2374,7 @@ addRemoteUserPrios( ClassAdList &cal )
 		}
 		if( ad->LookupInteger( ATTR_TOTAL_VIRTUAL_MACHINES, totalVMs) ) {
 			for(i = 1; i <= totalVMs; i++) {
-				int result = snprintf( vm_prefix, 16, "vm%d_", i);
+				snprintf( vm_prefix, 16, "vm%d_", i);
 				strcpy(buffer, vm_prefix);
 				strcat(buffer, ATTR_REMOTE_USER);
 				if( ad->LookupString( buffer , remoteUser ) ) {
