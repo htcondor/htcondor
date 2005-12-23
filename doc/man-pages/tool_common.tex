@@ -9,21 +9,30 @@
 
 %% How to locate the machines with which you want to mess.
 \newcommand{\ToolArgsLocate}{
-\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \oOptnm{ $|$ -all} \\
+\Lbr \OptArg{-name}{hostname} $|$ \Arg{hostname} $|$ \OptArg{-addr}{"\SinfulAny"} $|$ \Arg{"\SinfulAny"} \Opt{\Dots} \Rbr $|$ \oOpt{-all} \\
 }
+%%%% Was:
+%%%%\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \oOptnm{ $|$ -all} \\
 
 %% for checkpoint, off, on, reconfig, reschedule, restart and vacate
 \newcommand{\ToolWhere}{
-\Optnm{-pool centralmanagerhostname[:portnumber]}\\
-\Optnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Optnm{\Dots} \oOptnm{ $|$ -all} \\
+\Lbr \OptArg{-pool}{centralmanagerhostname\Lbr:portnumber\Rbr}
+$|$ \OptArg{-name}{hostname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
+\Optnm{\Dots} \oOptnm{ $|$ -all} \\
 }
+%%%% Was:
+%%%%\Optnm{-pool centralmanagerhostname[:portnumber]}\\
+%%%%\Optnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Optnm{\Dots} \oOptnm{ $|$ -all} \\
 
 %% Alternative to locate the machines with which you want to mess.
 %% Used by _rm, _hold, and _release.
 \newcommand{\ToolLocate}{
-\oOptnm{-pool centralmanagerhostname\oOptnm{:portnumber}}
-\oOptnm{-name hostname $|$ -addr "\SinfulAny" }
+\Lbr \OptArg{-pool}{centralmanagerhostname\Lbr:portnumber\Rbr}
+$|$ \OptArg{-name}{hostname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 }
+%%%% Was:
+%%%%\oOptnm{-pool centralmanagerhostname\oOptnm{:portnumber}}
+%%%%\oOptnm{-name hostname $|$ -addr "\SinfulAny" }
 
 %% Specification of the jobs with which you want to mess.
 \newcommand{\ToolJobs}{
@@ -32,7 +41,7 @@
 
 %% Specification of the jobs with which you want to mess.
 \newcommand{\ToolAll}{
-\Argnm{ -all } 
+\Opt{-all} 
 }
 
 %% Which daemons you wish to affect. XXX maybe split up nicer...
@@ -69,11 +78,11 @@
 \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}{Specify a pool by giving the
 	central manager's hostname and an optional port number}
 \OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Arg{hostname}}
-\OptItem{\Opt{hostname}}{Send the command to a machine identified by \Opt{hostname}}
+\OptItem{\Arg{hostname}}{Send the command to a machine identified by \Arg{hostname}}
 \OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
 	to a machine's master located at \Arg{"\SinfulAny"}}
-\OptItem{\Opt{"\SinfulAny"}}{Send the command
-	to a machine located at \Opt{"\SinfulAny"}}
+\OptItem{\Arg{"\SinfulAny"}}{Send the command
+	to a machine located at \Arg{"\SinfulAny"}}
 \OptItem{\Opt{-all}}{Send the command
 	to all machines in the pool}
 }
@@ -84,9 +93,9 @@
 \newcommand{\ToolLocateDesc}{
 \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}{Specify a pool by giving the
 	central manager's hostname and an optional port number}
-\OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Opt{hostname}}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Arg{hostname}}
 \OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
-	to a machine located at "\SinfulAny"}
+	to a machine located at \Arg{"\SinfulAny"}}
 }
 
 %% Descriptions of Affected Daemons
