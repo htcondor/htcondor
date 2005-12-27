@@ -143,7 +143,7 @@ Scheduler::config() {
 
 void
 Scheduler::TimerHandler_JobLogPolling() {
-	dprintf(D_ALWAYS, "JobQueuePollingtime() called\n");
+	dprintf(D_FULLDEBUG, "TimerHandler_JobLogPolling() called\n");
 	job_log_reader.poll(&ad_collection);
 	//DebugDisplayClassAdCollection(&ad_collection);
 }
