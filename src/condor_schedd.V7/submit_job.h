@@ -39,8 +39,10 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details = 0,
 	to confirm the job is IDLE.  error_details is optional. If non NULL,
 	error_details will contain a message explaining why claim_job didn't
 	return OK.  The message will be suitable for reporting to a log file.
+    The ClassAd is used to set priv state appropriately for manipulating
+    the job through qmgmt.
 */
-ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0);
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0);
 
 
 /*
@@ -58,8 +60,10 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 		on suggested identity strings.
 */
 bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0, bool *keep_trying = 0);
-bool yield_job(const char * pool_name, const char * schedd_name,
-	bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0, bool *keep_trying = 0);
+bool yield_job(classad::ClassAd const &ad, const char * pool_name,
+	const char * schedd_name, bool done, int cluster, int proc,
+	MyString * error_details = 0, const char * my_identity = 0,
+	bool *keep_trying = 0);
 
 /* 
 - src - The classad to submit.  The ad will be modified based on the needs of
@@ -119,18 +123,24 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 Pull a submit_job() job's results out of the sandbox and place them back where
 they came from.  If successful, let the job leave the queue.
 
+ad - ClassAd of job (for owner info when switching privs)
 cluster.proc - ID of the grid (transformed) job.
 schedd_name and pool_name can be NULL to indicate "local".
 
 */
-bool finalize_job(int cluster, int proc, const char * schedd_name, const char * pool_name);
+bool finalize_job(classad::ClassAd const &ad, int cluster, int proc, const char * schedd_name, const char * pool_name);
 
 /*
 
 Remove a job from the schedd.
 
+ad - ClassAd of job (for owner info when switching privs)
+cluster.proc - ID of the job to remove
+reason - description of reason for removal
+schedd_name and pool_name can be NULL to indicate "local"
+
  */
-bool remove_job(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc);
+bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc);
 
 
 #endif /* INCLUDE_SUBMIT_JOB_H*/

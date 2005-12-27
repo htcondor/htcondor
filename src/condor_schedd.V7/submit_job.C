@@ -9,6 +9,7 @@
 #include "classad_newold.h"
 #define WANT_NAMESPACES
 #include "classad_distribution.h"
+#include "condor_uid.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -73,6 +74,43 @@ private:
 };
 
 
+static priv_state set_user_priv_from_ad(ClassAd const &ad)
+{
+	char *owner = NULL;
+	char *domain = NULL;
+	if( !ad.LookupString(ATTR_OWNER,&owner) ) {
+		EXCEPT("Failed to find %s in job ad.\n",ATTR_OWNER);
+	}
+	if( !ad.LookupString(ATTR_NT_DOMAIN,&domain) ) {
+		domain = strdup("");
+	}
+
+	if( !init_user_ids(owner,domain) ) {
+		EXCEPT("Failed in init_user_ids(%s,%s)\n",owner ? owner : "(nil)",domain ? domain : "(nil)");
+	}
+
+	free(owner);
+	free(domain);
+
+	return set_user_priv();
+}
+
+static priv_state set_user_priv_from_ad(classad::ClassAd const &ad)
+{
+	std::string owner;
+	std::string domain;
+	if( !ad.EvaluateAttrString(ATTR_OWNER,owner) ) {
+		EXCEPT("Failed to find %s in job ad.\n",ATTR_OWNER);
+	}
+	ad.EvaluateAttrString(ATTR_NT_DOMAIN,domain);
+
+	if( !init_user_ids(owner.c_str(),domain.c_str()) ) {
+		EXCEPT("Failed in init_user_ids(%s,%s)\n",owner.c_str(),domain.c_str());
+	}
+
+	return set_user_priv();
+}
+
 
 ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const char * my_identity)
 {
@@ -128,7 +166,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	return CJR_OK;
 }
 
-ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity)
+static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity)
 {
 	// Open a qmgr
 	FailObj failobj;
@@ -179,6 +217,16 @@ ClaimJobResult claim_job(const char * pool_name, const char * schedd_name, int c
 	}
 
 	return res;
+}
+
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity)
+{
+	priv_state priv = set_user_priv_from_ad(ad);
+
+	ClaimJobResult result = claim_job_with_current_privs(pool_name,schedd_name,cluster,proc,error_details,my_identity);
+
+	set_priv(priv);
+	return result;
 }
 
 
@@ -250,7 +298,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 
 
 
-bool yield_job(const char * pool_name, const char * schedd_name,
+static bool yield_job_with_current_privs(const char * pool_name, const char * schedd_name,
 	bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool *keep_trying) {
 	// Open a qmgr
 	FailObj failobj;
@@ -308,10 +356,22 @@ bool yield_job(const char * pool_name, const char * schedd_name,
 }
 
 
+bool yield_job(classad::ClassAd const &ad,const char * pool_name,
+	const char * schedd_name, bool done, int cluster, int proc,
+	MyString * error_details, const char * my_identity, bool *keep_trying)
+{
+	bool success;
+	priv_state priv = set_user_priv_from_ad(ad);
+
+	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,keep_trying);
+
+	set_priv(priv);
+
+	return success;
+}
 
 
-
-bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	FailObj failobj;
 	failobj.SetNames(schedd_name, pool_name);
@@ -421,6 +481,18 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 	return true;
 }
 
+bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+{
+	bool success;
+	priv_state priv = set_user_priv_from_ad(src);
+
+	success = submit_job_with_current_priv(src,schedd_name,pool_name,cluster_out,proc_out);
+
+	set_priv(priv);
+
+	return success;
+}
+
 bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	ClassAd src2;
@@ -487,12 +559,7 @@ bool push_dirty_attributes(classad::ClassAd & src)
 	return push_dirty_attributes(cluster, proc, src2);
 }
 
-/*
-	Push the dirty attributes in src into the queue.  Does _not_ clear
-	the dirty attributes.
-	Establishes (and tears down) a qmgr connection.
-*/
-bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
+static bool push_dirty_attributes_with_current_priv(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
 {
 	MyString scheddtitle = "local schedd";
 	if(schedd_name) {
@@ -523,8 +590,23 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 	return ret;
 }
 
+/*
+	Push the dirty attributes in src into the queue.  Does _not_ clear
+	the dirty attributes.
+	Establishes (and tears down) a qmgr connection.
+*/
+bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
+{
+	bool success;
+	priv_state priv = set_user_priv_from_ad(src);
 
-bool finalize_job(int cluster, int proc, const char * schedd_name, const char * pool_name)
+	success = push_dirty_attributes_with_current_priv(src,schedd_name,pool_name);
+
+	set_priv(priv);
+	return success;
+}
+
+static bool finalize_job_with_current_privs(int cluster, int proc, const char * schedd_name, const char * pool_name)
 {
 	DCSchedd schedd(schedd_name,pool_name);
 	if( ! schedd.locate() ) {
@@ -573,8 +655,18 @@ bool finalize_job(int cluster, int proc, const char * schedd_name, const char * 
 	return true;
 }
 
+bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name)
+{
+	bool success;
+	priv_state priv = set_user_priv_from_ad(ad);
 
-bool remove_job(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc)
+	success = finalize_job_with_current_privs(cluster,proc,schedd_name,pool_name);
+
+	set_priv(priv);
+	return success;
+}
+
+static bool remove_job_with_current_privs(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc)
 {
 	DCSchedd schedd(schedd_name,pool_name);
 	bool success = true;
@@ -615,5 +707,16 @@ bool remove_job(int cluster, int proc, char const *reason, const char * schedd_n
 	if(err_str) free(err_str);
 	if(result_ad) delete result_ad;
 
+	return success;
+}
+
+bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc)
+{
+	bool success;
+	priv_state priv = set_user_priv_from_ad(ad);
+
+	success = remove_job_with_current_privs(cluster,proc,reason,schedd_name,pool_name,error_desc);
+
+	set_priv(priv);
 	return success;
 }

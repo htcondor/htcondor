@@ -512,7 +512,7 @@ JobRouter::AdoptOrphans() {
 		if(!src_ad) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): removing orphaned destination job with no matching source job.\n",src_key.c_str(),dest_key.c_str());
 			MyString err_desc;
-			if(!remove_job(dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",NULL,NULL,err_desc)) {
+			if(!remove_job(*dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",NULL,NULL,err_desc)) {
 				dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): failed to remove dest job: %s\n",src_key.c_str(),dest_key.c_str(),err_desc.Value());
 			}
 			continue;
@@ -536,7 +536,7 @@ JobRouter::AdoptOrphans() {
 		if(!AddJob(job)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to add orphaned job to my routed job list; aborting it.\n",job->JobDesc().c_str());
 			MyString err_desc;
-			if(!remove_job(dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",NULL,NULL,err_desc)) {
+			if(!remove_job(job->dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",NULL,NULL,err_desc)) {
 				dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.Value());
 			}
 			delete job;
@@ -568,6 +568,9 @@ JobRouter::AdoptOrphans() {
     if( query.Current(src_key) ) do {
 		if(LookupJobWithSrcKey(src_key)) continue;
 
+		classad::ClassAd *src_ad = ad_collection->GetClassAd(src_key);
+		if(!src_ad) continue;
+
 		dprintf(D_ALWAYS,"JobRouter (src=%s): found orphan with no routed destination job; yielding management of it.\n",src_key.c_str());
 
 		//Yield management of this job so that it doesn't sit there
@@ -575,7 +578,7 @@ JobRouter::AdoptOrphans() {
 
 		MyString error_details;
 		PROC_ID src_proc_id = getProcByString(src_key.c_str());
-		if(!yield_job(NULL,NULL,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str())) {
+		if(!yield_job(*src_ad,NULL,NULL,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str())) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.Value());
@@ -784,7 +787,7 @@ JobRouter::TakeOverJob(RoutedJob *job) {
 	if(job->state != RoutedJob::UNCLAIMED) return;
 
 	MyString error_details;
-	ClaimJobResult cjr = claim_job(NULL,NULL,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str());
+	ClaimJobResult cjr = claim_job(job->src_ad,NULL,NULL,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str());
 
 	switch(cjr) {
 	case CJR_ERROR: {
@@ -942,8 +945,15 @@ void
 JobRouter::FinalizeJob(RoutedJob *job) {
 	if(job->state != RoutedJob::FINISHED) return;
 
-	if(!finalize_job(job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL)) {
+	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
+
+			// Put the src job back in idle state to prevent it from
+			// exiting the queue.
+		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
+		if(!push_dirty_attributes(job->src_ad,NULL,NULL)) {
+			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+		}
 	}
 	else {
 		dprintf(D_ALWAYS,"JobRouter (%s): finalized job\n",job->JobDesc().c_str());
@@ -962,7 +972,7 @@ JobRouter::CleanupJob(RoutedJob *job) {
 	if(!job->is_done && job->dest_proc_id.cluster != -1) {
 		// Remove (abort) destination job.
 		MyString err_desc;
-		if(!remove_job(job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",NULL,NULL,err_desc)) {
+		if(!remove_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",NULL,NULL,err_desc)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.Value());
 		}
 		else {
@@ -973,7 +983,7 @@ JobRouter::CleanupJob(RoutedJob *job) {
 	if(job->is_claimed) {
 		MyString error_details;
 		bool keep_trying = true;
-		if(!yield_job(NULL,NULL,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),&keep_trying))
+		if(!yield_job(job->src_ad,NULL,NULL,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),&keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
 					job->JobDesc().c_str(),
