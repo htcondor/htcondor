@@ -249,6 +249,7 @@ class RoutedJob {
 	std::string JobDesc();
 
 	bool SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdCollection *ad_collection);
+	void SetDestJobAd(classad::ClassAd const *ad);
 };
 
 #endif

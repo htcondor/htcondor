@@ -28,6 +28,8 @@
 #include "JobRouter.h"
 #include "Scheduler.h"
 #include "condor_md.h"
+#include "my_username.h"
+#include "condor_uid.h"
 
 #include "condor_config.h"
 #include "VanillaToGrid.h"
@@ -526,7 +528,7 @@ JobRouter::AdoptOrphans() {
 			delete job;
 			continue;
 		}
-		job->dest_ad = *dest_ad;
+		job->SetDestJobAd(dest_ad);
 		job->dest_key = dest_key;
 		job->dest_proc_id = getProcByString(dest_key.c_str());
 		job->route_name = route_name;
@@ -656,8 +658,34 @@ JobRouter::GetCandidateJobs() {
 	//For now, require vanilla universe, but in future this may be removed.
 	umbrella_constraint += " && (other.ProcId >= 0 && other.JobStatus == 1 && other.JobUniverse == 5 && other.Managed isnt \"ScheddDone\" && other.Managed isnt \"External\")";
 
-	dprintf(D_FULLDEBUG,"JobRouter: umbrella constraint: %s\n",umbrella_constraint.c_str());
+	if(!can_switch_ids()) {
+			// We are not running as root.  Ensure that we only try to
+			// manage jobs submitted by the same user we are running as.
 
+		char *username = my_username();
+		char *domain = my_domainname();
+
+		ASSERT(username);
+
+		umbrella_constraint += " && (other.";
+		umbrella_constraint += ATTR_OWNER;
+		umbrella_constraint += " == \"";
+		umbrella_constraint += username;
+		umbrella_constraint += "\"";
+		if(domain) {
+			umbrella_constraint += " && other.";
+			umbrella_constraint += ATTR_NT_DOMAIN;
+			umbrella_constraint += " == \"";
+			umbrella_constraint += domain;
+			umbrella_constraint += "\"";
+		}
+		umbrella_constraint += ")";
+
+		free(username);
+		free(domain);
+	}
+
+	dprintf(D_FULLDEBUG,"JobRouter: umbrella constraint: %s\n",umbrella_constraint.c_str());
 
 	constraint_tree = parser.ParseExpression(umbrella_constraint.c_str());
 	if(!constraint_tree) {
@@ -901,15 +929,15 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 	if(!ad) {
 		int age = time(NULL) - job->submission_time;
 		if(age > m_max_job_mirror_update_lag) {
-			dprintf(D_ALWAYS,"JobRouter failure (%s): cannot find target job in job queue mirror (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
+			dprintf(D_ALWAYS,"JobRouter failure (%s): giving up, because submitted job is still not in job queue mirror (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
 			GracefullyRemoveJob(job);
 			return;
 		}
-		dprintf(D_FULLDEBUG,"JobRouter (%s): waiting for job to appear in job queue mirror (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
+		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
 		return;
 	}
 
-	job->dest_ad = *ad;
+	job->SetDestJobAd(ad);
 	if(!update_job_status(job->src_ad,job->dest_ad)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update job status for finished job\n",job->JobDesc().c_str());
 	}
@@ -933,7 +961,12 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 		return;
 	}
 
-	if(job_status == COMPLETED) {
+	int job_finished = 0;
+	if( !ad->EvaluateAttrInt( ATTR_JOB_FINISHED_HOOK_DONE, job_finished ) ) {
+		job_finished = 0;
+	}
+
+	if(job_status == COMPLETED && job_finished != 0) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found target job finished\n",job->JobDesc().c_str());
 
 		job->state = RoutedJob::FINISHED;
@@ -1228,4 +1261,13 @@ RoutedJob::SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdColl
 	// changes back to the schedd.
 	src_ad.EnableDirtyTracking();
 	return true;
+}
+
+void
+RoutedJob::SetDestJobAd(classad::ClassAd const *ad) {
+	// We do not want to just do dest_ad = *ad, among other reasons,
+	// because this copies the pointer to the chained parent, which
+	// could get deleted before we are done with this ad.
+
+	ASSERT(dest_ad.CopyFromChain(*ad));
 }

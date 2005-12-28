@@ -87,7 +87,7 @@ int vanilla2grid(int argc, char **argv)
 
 	printf("Claiming job %d.%d\n", orig_cluster, orig_proc);
 	MyString errors;
-	switch(claim_job(NULL, NULL, orig_cluster, orig_proc, &errors, MYID))
+	switch(claim_job(newad, NULL, NULL, orig_cluster, orig_proc, &errors, MYID))
 	{
 		case CJR_OK:
 			break;
@@ -183,13 +183,13 @@ int grid2vanilla(int argc, char **argv)
 	push_dirty_attributes(n_ad_van, 0, 0);
 
 	// Put a fork in the grid job.
-	bool b = finalize_job(cluster,proc,0,0);
+	bool b = finalize_job(n_ad_van,cluster,proc,0,0);
 	printf("Finalize attempt on %d.%d %s\n", cluster,proc,b?"succeeded":"failed");
 	if( ! b ) { return 1; }
 
 	// Yield the original job
 	MyString errors;
-	b = yield_job(0,0,true, vcluster, vproc, &errors, MYID);
+	b = yield_job(n_ad_van,0,0,true, vcluster, vproc, &errors, MYID);
 	printf("Yield attempt on %d.%d %s\n", vcluster, vproc, b?"succeeded":"failed");
 	return b?0:1;
 }
