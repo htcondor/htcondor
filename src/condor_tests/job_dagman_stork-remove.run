@@ -145,7 +145,7 @@ if(!$status)
 foreach my $line (@adarray)
 {
 	print "STORK_STATUS:$line\n";
-	if($line =~ /status\s*=\s*request_removed.*$/)
+	if($line =~ /status\s*=\s*"request_removed".*$/)
 	{
 		print "STORK_STATUS:$line\n";
 		$result = 0; # good that we have an infinate stork job
