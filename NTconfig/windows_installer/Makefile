@@ -47,6 +47,7 @@ version_file:
 # Windows-happy
 config_file:
 	cmd /c copy /Y condor_setup.exe    $(CONDORRELEASEDIR)
+	cmd /c copy /Y set_perms   $(CONDORRELEASEDIR)\\set_perms.exe
 	cmd /c copy /Y condor_config.local $(CONDORRELEASEDIR)
 	cmd /c awk -f $(BASE)\\src\\condor_examples\\convert_config_to_win32.awk $(BASE)\\src\\condor_examples\\condor_config.generic > $(CONDORRELEASEDIR)\\condor_config
 	

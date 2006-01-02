@@ -31,7 +31,12 @@
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
 
+<$AbortIf Condition=^not VersionNT OR (VersionNT < 500)^ Message=^Condor for Windows can only be installed on Windows 2000, XP or greater.^>
+
+
 <$FileFind File="JAVA.EXE" Property="JVMLOCATION" Depth="3" Path="[ProgramFilesFolder]" Default="JAVA.EXE">
+
+
 
 <$Dialog "New Or Existing Condor Pool?" Dialog="NewOrExistingPool" INSERT="LicenseAgreementDlg">
    ;--- A Radio Button ------------------------------------------------------
@@ -102,7 +107,7 @@
 	<$DialogEntry Property="JVMLOCATION" Label="Path to Java Virtual Machine:" ToolTip="Path to JAVA.EXE" Width=200 Blank="Y">
 <$/Dialog>
 
-<$Dialog "Host Permission Settings" Description="What hosts have access to this machine?" Dialog="HostPermissionSettings" INSERT="EmailSettings">
+<$Dialog "Host Permission Settings" Description="What hosts have access to this machine?" Dialog="HostPermissionSettings" INSERT="JavaSettings">
 	<$DialogEntry Property="HOSTALLOWREAD" Label="Hosts with Read access:" ToolTip="Query machine status and job queues." LabelWidth=140 Width=160 Blank="N">
 	<$DialogEntry Property="HOSTALLOWWRITE" Label="Hosts with Write access:" ToolTip="All machines in the pool require Write access." LabelWidth=140 Width=160 Blank="N">
 	<$DialogEntry Property="HOSTALLOWADMINISTRATOR" LabelWidth=140 Label="Hosts with Administrator access:" ToolTip="Turn Condor on/off, modify job queue." Width=160 Blank="N">
@@ -155,6 +160,7 @@
 <$Access "AdminOnly" Users="Administrators SYSTEM" Access="GENERIC_ALL">
 <$Registry HKEY="LOCAL_MACHINE" KEY="software\Condor"  VALUE="[INSTALLDIR_NTS]\condor_config" MsiFormatted="VALUE" Name="CONDOR_CONFIG" Access="AdminOnly">
 
+<$ExeCa EXE=^[INSTALLDIR]set_perms.exe^ Args=^^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
 ;--- Install the Condor Service ----------------------------------------
 <$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin">
    ;--- The service EXE MUST be the keypath of the component ----------------
@@ -187,7 +193,7 @@
 -e "[HOSTALLOWREAD]"
 -t "[HOSTALLOWWRITE]"
 -i "[HOSTALLOWADMINISTRATOR]"
-^ WorkDir=^INSTALLDIR^   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="StartServices-">
+^ WorkDir=^INSTALLDIR^   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
 #)
 
 #(
@@ -198,13 +204,13 @@
 -a "[ACCOUNTINGDOMAIN]"
 -j "[JVMLOCATION]"
 -m "[SMTPSERVER]"
-^ WorkDir=^INSTALLDIR^   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="StartServices-">
+^ WorkDir=^INSTALLDIR^   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
 #)
 
 ;--- Set directory Permissions ----------------------------------------------
 ;-------- Set INSTALLDIR perms first ---
-<$ExeCa EXE=^cmd.exe^ Args=^/c echo y|cacls "[INSTALLDIR_NTS]" /t /g Everyone:R Administrators:F^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="StartServices-">
+<$ExeCa EXE=^cmd.exe^ Args=^/c echo y|cacls "[INSTALLDIR_NTS]" /t /g Everyone:R Administrators:F^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
 
 ;-------- Set everything under INSTALLDIR ----
-<$ExeCa EXE=^cmd.exe^ Args=^/c echo y|cacls "[INSTALLDIR_NTS]"\*.* /t /g Everyone:R Administrators:F^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="StartServices-">
+<$ExeCa EXE=^cmd.exe^ Args=^/c echo y|cacls "[INSTALLDIR_NTS]"\*.* /t /g Everyone:R Administrators:F^ WorkDir="INSTALLDIR"   Condition="<$CONDITION_EXCEPT_UNINSTALL>" Seq="InstallServices-">
 
