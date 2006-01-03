@@ -21,10 +21,22 @@ EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
 EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
 EXT_NORDUGRIDGAHP_VERSION = @ext_nordugridgahp_version@
 
+#define WANT_EXT_LINUXLIBCHEADERS @want_ext_linuxlibcheaders@
+
+#if HAS_EXTERNALS
+#if WANT_EXT_LINUXLIBCHEADERS 
+EXT_LINUXLIBCHEADERS_VERSION = @ext_linuxlibcheaders_version@
+LINUXLIBCHEADERS_DIR = $(EXT_INSTALL)/$(EXT_LINUXLIBCHEADERS_VERSION)
+LINUXLIBCHEADERS_INC = $(LINUXLIBCHEADERS_DIR)/include
+#endif
+#endif
+
 #define WANT_EXT_GLIBC @want_ext_glibc@
-#if WANT_EXT_GLIBC && HAS_EXTERNALS
+#if HAS_EXTERNALS
+#if WANT_EXT_GLIBC 
 EXT_GLIBC_VERSION = @ext_glibc_version@
 GLIBC_DIR = $(EXT_INSTALL)/$(EXT_GLIBC_VERSION)/lib
+#endif
 #endif
 
 #if HAS_EXTERNALS

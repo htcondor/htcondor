@@ -12,6 +12,7 @@ SYSNAME = @_cv_sysname@
 #define OperatingSystem @_cv_op_sys@
 #define Architecture @_cv_arch@
 #define Platform @_cv_arch@-@_cv_opsys_vers@
+#define Distribution @_cv_opsys_vers@
 #define IS_@_cv_arch@_@_cv_opsys_vers@ YES
 #define IS_@_cv_arch@_@_cv_opsys@ YES
 #define IS_@_cv_opsys_vers@ YES

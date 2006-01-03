@@ -130,6 +130,10 @@ _cv_opsys_vers=""
 # packaged filenames should be when we try to release this platform
 _cv_sysname=""
 
+# Sometimes, I need to know the specific kernel revision. This is mostly
+# needed under Linux, but I'll make every OS produce this identification.
+_cv_kernel_rev="XXX"
+
 # Make sure if we get back something that begins with "IRIX" that we
 # strip off anything after it (e.g. "IRIX64", etc).
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
@@ -206,6 +210,9 @@ elif test $os = "Linux" ; then
 	 "3" )
        _cv_linux_distro="RHEL3"
        ;;
+	 "4.2" )
+       _cv_linux_distro="CENTOS42"
+       ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
@@ -254,6 +261,10 @@ elif test $os = "Linux" ; then
   _cv_sysname="`echo $_cv_arch $_cv_linux_distro | $PERL -ane 'print lc join('_',@F)'`"
   _cv_opsys_vers="LINUX_$_cv_linux_distro"
 
+  # now figure out the kernel revision. Under linux this will have
+  # the form: major.minor.patch
+  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
+
 elif test $os = "SunOS" ; then
   _cv_op_sys="Solaris"
   _cv_opsys="SOLARIS"
@@ -276,6 +287,10 @@ elif test $os = "SunOS" ; then
     _cv_sysname="sun4x_59"
   fi
 
+  # now figure out the kernel revision. Under solaris this will have
+  # the form: major.minor
+  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
+
 elif test $os = "IRIX" ; then
   _cv_arch="SGI"
   _cv_op_sys="IRIX"
@@ -291,6 +306,10 @@ elif test $os = "IRIX" ; then
     IsMipsVersion=2
     IsMipsABI=O32
   fi
+
+  # now figure out the kernel revision. Under irix this will have
+  # the form: major.minor
+  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
 
 elif test $os = "AIX" ; then
   # add detection to this when ia64 is needed
@@ -315,6 +334,12 @@ elif test $os = "AIX" ; then
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   fi
 
+  # now figure out the kernel revision. Under aix this will have
+  # the form: major.minor
+  _cv_kernel_rev_major=`uname -v`
+  _cv_kernel_rev_minor=`uname -r`
+  _cv_kernel_rev="$_cv_kernel_rev_major.$_cv_kernel_rev_minor"
+
 elif test $os = "Darwin" ; then
   _cv_arch="PPC"
   _cv_op_sys="Darwin"
@@ -328,12 +353,20 @@ elif test $os = "Darwin" ; then
   fi
   _cv_sysname="ppc_macosx"
 
+  # now figure out the kernel revision. Under macosx this will have
+  # the form: major.minor.patch
+  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
+
 elif test $os = "FreeBSD" ; then
   _cv_arch="I386"
   _cv_op_sys="FreeBSD"
   _cv_opsys="CONDOR_FREEBSD"
   _cv_opsys_vers="5_3"
   _cv_sysname="i386_freebsd"
+
+  # now figure out the kernel revision. Under freebsd this will have
+  # the form: major.minor
+  _cv_kernel_rev=`uname -r | sed -e 's#^\\([0-9]\\+\\.[0-9]\\+\\).*#\\1#'`;
 
 else
   AC_MSG_ERROR([Condor has not been ported to this platform])
@@ -356,6 +389,11 @@ AC_MSG_CHECKING([system identifying string])
 AC_MSG_RESULT([$_cv_sysname])
 AC_SUBST(_cv_sysname,$_cv_sysname)
 
+AC_MSG_CHECKING([kernel revision])
+AC_MSG_RESULT([$_cv_kernel_rev])
+AC_SUBST(_cv_kernel_rev,$_cv_kernel_rev)
+
+# check out the libc
 if test "$_cv_opsys" = "LINUX" ; then 
   AC_MSG_CHECKING([exact libc version])
   for _libc in "/lib/libc.so.6" "/lib/libc.so.6.1" ; do
@@ -1297,6 +1335,66 @@ fi
 if test $ac_cv_has_externals = "YES" ; then
 AC_MSG_NOTICE([determining versions of external packages])
 
+#
+# Figure out if I need to use the linuclibcheaders package to build glibc.
+#
+
+# assume no, unless I discover otherwise.
+llh_use=NO
+
+# if this is a linux machine, determine if I need the linux libc headers to
+# build glibc
+if test "x$os" = "xLinux" ; then
+
+	llh_use=YES
+
+	case "x$_cv_kernel_rev" in
+		"x2.6.3" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.3.0])
+			;;
+		"x2.6.4" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.4.0])
+			;;
+		"x2.6.5" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.5.2])
+			;;
+		"x2.6.6" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.6.0])
+			;;
+		"x2.6.7" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.7.0])
+			;;
+		"x2.6.8" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.8.1])
+			;;
+		"x2.6.9" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.9.1])
+			;;
+		"x2.6.10" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.10.0])
+			;;
+		"x2.6.11" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.11.2])
+			;;
+		"x2.6.12" )
+			CONDOR_EXTERNAL_VERSION([linuxlibcheaders],[2.6.12.0])
+			;;
+		*)
+			llh_use=NO
+			;;
+	esac
+fi
+
+# Tell the build system I want to use this module since it very well might
+# not always be defined or desired to be defined.
+if test "x$llh_use" = "xYES" ; then
+	AC_SUBST([want_ext_linuxlibcheaders],[YES])
+else
+	AC_SUBST([want_ext_linuxlibcheaders],[NO])
+  	AC_SUBST([ext_linuxlibcheaders_version],[UNUSED])
+fi
+
+
 # For now, we hardcode that non-i386 platforms are clipped and don't
 # need an external glibc for anything...
 if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
@@ -1314,6 +1412,12 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
   "2.3.2" )
     # the glibc 2.3.2 from redhat's source rpms are very different than the
 	# stock 2.3.2 you can download off of the web.
+    CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
+    ;;
+  "2.3.4" )
+  	# I'm using this here to avoid a full port of Condor to the centos 4 OS.
+	# XXX Also, one must use gcc 3.2.2 instead of as shipped gcc 3.4.4 to 
+	# compile this package.
     CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
     ;;
   * )  
@@ -1386,6 +1490,8 @@ fi
 else
 # if there's no externals at all, we still need to define these to
 # avoid imake troubles...
+  AC_SUBST([want_ext_linuxlibcheaders],[NO])
+  AC_SUBST([ext_linuxlibcheaders_version],[UNUSED])
   AC_SUBST(want_ext_glibc,NO)
   AC_SUBST(ext_glibc_version,UNUSED)
 fi

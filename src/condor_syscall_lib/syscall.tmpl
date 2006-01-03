@@ -862,8 +862,14 @@ report an error if reside on different devices.
 		ALLOC_PATH( path );
 	}
 
-#	if defined( LINUX )
+
+#	if defined( LINUX ) && !defined( LINUX_CENTOS42 )
+	/* CENTOS42 uses a header files where this func is const, but
+		the glibc that we use with condor does not define this
+		function as const. So this avoids link errors. */
+
 		int utimes( map_name(char *path), struct timeval *times ) {
+
 #	else
 		int utimes( map_name(const char *path), const struct timeval *times ) {
 #	endif

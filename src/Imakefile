@@ -357,11 +357,17 @@ pure_target(condor_collector.V6,condor_collector.pure)
 pure_target(condor_negotiator.V6,condor_negotiator.pure)
 pure_target(condor_dagman,condor_dagman.pure)
 
-
 ext_target(EXT_ZLIB_VERSION,$(NULL))
+
 #if WANT_EXT_GLIBC
+#if WANT_EXT_LINUXLIBCHEADERS
+ext_target(EXT_LINUXLIBCHEADERS_VERSION,$(NULL))
+ext_target(EXT_GLIBC_VERSION,$(EXT_TRIGGER)/$(EXT_LINUXLIBCHEADERS_VERSION))
+#else
 ext_target(EXT_GLIBC_VERSION,$(NULL))
 #endif
+#endif
+
 #if WANT_KERBEROS
 ext_target(EXT_KERBEROS_VERSION,$(NULL))
 #endif
