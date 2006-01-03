@@ -1,3 +1,8 @@
+01/03/06 V6_7-cron-3-{root,branch}
+   This is a second attempt to merge my V6_7-starter_local_exp branch
+   into a new branch to get test the CronTab code. Created from the
+   V6_7-branch of V6_7_CODE.
+
 12/21/05 V6_7-jyoon_vm-{root,branch}
    Created a branch for Jaeyoung Yoon (jyoon@cs.wisc.edu) for him to
    develop his code to support virtual machines. 
