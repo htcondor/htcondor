@@ -364,6 +364,9 @@ job.
 
 \item Minor memory leaks have been fixed.
 
+\item Fixed a bug in Quill that could result in an infinite loop in
+\Condor{q} when querying Quill.
+
 \end{itemize}
 
 \noindent Changes:
@@ -399,6 +402,11 @@ jobs in the schedd.
   It should not be used.
   This setting is \verb@FALSE@ by default, but if set to \verb@TRUE@,
   the \Condor{negotiator} will crash.  
+
+\item Jobs that are are placed on held because of \AdAttr{on\_exit\_hold}
+evaluated to TRUE or jobs that stay in the queue after finishing because
+\AdAttr{on\_exit\_remove} evaluated to FALSE will erroneously report the reason
+as "UNKNOWN (never set)".
 
 \end{itemize}
 

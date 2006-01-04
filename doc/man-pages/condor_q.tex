@@ -270,13 +270,14 @@ per machine basis.
     collector. This is mostly useful for debugging purposes. The
     ads look as if you used \Condor{status} \Opt{-l}.}
   \OptItem{\OptArg{-direct}{rdbms \Bar quilld \Bar schedd}}{When the
-    use of quill is enabled, this option allows a direct query to either
-    the rdbms, the quill daemon, or the schedd for the requested queue
-    information. It also prevents the queue location discovery algorithm
+    use of Quill is enabled, this option allows a direct query to either
+    the rdbms, the \Condor{quill} daemon, or the \Condor{schedd}
+    daemon for the requested queue information.
+    It also prevents the queue location discovery algorithm
     from failing over to alternate sources of information for the queue
-    in case of error. It is very useful for debugging an installation
-    of quill. You must use the actual words ``rdbms'', ``quilld'', or 
-	``schedd'' with this option.}
+    in case of error. It is useful for debugging an installation
+    of Quill. One of the strings \Arg{rdbms}, \Arg{quilld}, or
+    \Arg{schedd} is required with this option.}
   \OptItem{Restriction list}{The restriction list may have zero or more items,
     each of which may be:
         \begin{description}

@@ -1188,9 +1188,10 @@ it will use the environment variable X509\_USER\_CERT.
 If that variable is not present,
 it will search in the default location.
 
-\SubmitCmd{x509userproxy} is only required when
+\SubmitCmd{x509userproxy} is relevant when
 the \SubmitCmd{universe} is \SubmitCmd{grid},
-and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2}, \SubmitCmd{gt3}, or \SubmitCmd{nordugrid}.
+and \SubmitCmd{grid\_type} is one of \SubmitCmd{gt2}, \SubmitCmd{gt3},
+\SubmitCmd{gt4}, or \SubmitCmd{nordugrid}.
 
 %%%%%%%%%%%%%%%%%%%
 %% globusscheduler
@@ -1230,7 +1231,8 @@ specify the correct service for the jobmanager to perform.
 \item[globus\_rsl = $<$RSL-string$>$] Used to provide any additional Globus RSL
 \index{submit commands!globus\_rsl}
 string attributes which are not covered by regular submit description
-file parameters. Used by grid-type gt2 and gt3 jobs.
+file parameters. Used for \SubmitCmd{grid\_type}
+\SubmitCmd{gt2} and \SubmitCmd{gt3} jobs.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_xml
@@ -1240,7 +1242,7 @@ file parameters. Used by grid-type gt2 and gt3 jobs.
 \index{submit commands!globus\_xml}
 Used to provide any additional attributes in the GRAM XML job description
 that Condor writes which are not covered by regular submit description
-file parameters. Used by grid-type gt4 jobs.
+file parameters. Used for \SubmitCmd{grid\_type} \SubmitCmd{gt4} jobs.
 
 %%%%%%%%%%%%%%%%%%%
 %% nordugrid_resource
@@ -1251,9 +1253,9 @@ file parameters. Used by grid-type gt4 jobs.
 Identifies the NorduGrid resource to which the job should be
 submitted.
 
-The \SubmitCmd{nordugrid\_resource} command is required when
+This is a required submit file entry when
 the \SubmitCmd{universe} is \SubmitCmd{grid},
-and \SubmitCmd{grid\_type} is \SubmitCmd{nordugrid}.
+and the \SubmitCmd{grid\_type} is \SubmitCmd{nordugrid}.
 
 %%%%%%%%%%%%%%%%%%%
 %% nordugrid_rsl
@@ -1262,7 +1264,8 @@ and \SubmitCmd{grid\_type} is \SubmitCmd{nordugrid}.
 \item[nordugrid\_rsl = $<$RSL-string$>$] Used to provide any additional RSL
 \index{submit commands!globus\_rsl}
 string attributes which are not covered by regular submit description
-file parameters. Used by grid-type nordugrid jobs.
+file parameters. Used when the \SubmitCmd{universe} is \SubmitCmd{grid},
+and the \SubmitCmd{grid\_type} is \SubmitCmd{nordugrid}.
 
 %%%%%%%%%%%%%%%%%%%
 %% unicore_u_site
@@ -1273,7 +1276,7 @@ file parameters. Used by grid-type nordugrid jobs.
 Identifies the Unicore gateway to which the job should be
 submitted.
 
-The \SubmitCmd{unicore\_u\_site} command is required when
+This is a required submit file entry when
 the \SubmitCmd{universe} is \SubmitCmd{grid},
 and \SubmitCmd{grid\_type} is \SubmitCmd{unicore}.
 
@@ -1286,7 +1289,7 @@ and \SubmitCmd{grid\_type} is \SubmitCmd{unicore}.
 Identifies the Unicore virtual resource to which the job should be
 submitted.
 
-The \SubmitCmd{unicore\_v\_site} command is required when
+This is a required submit file entry when
 the \SubmitCmd{universe} is \SubmitCmd{grid},
 and \SubmitCmd{grid\_type} is \SubmitCmd{unicore}.
 
@@ -1415,10 +1418,8 @@ The new lifetime (in minutes) of the proxy after it is refreshed.
 
 \item[keystore\_file = $<$pathname$>$]
 \index{submit commands!keystore\_file}
-Path to a java keystore file containing the certificate to be
-used for a Unicore job.
-Used with \SubmitCmd{keystore\_alias} and
-\SubmitCmd{keystore\_passphrase\_file}.
+The complete path and file name of the Java keystore file
+containing the certificate to be used for a \SubmitCmd{unicore} job.
 
 %%%%%%%%%%%%%%%%%%%
 %% keystore_alias
@@ -1426,20 +1427,18 @@ Used with \SubmitCmd{keystore\_alias} and
 
 \item[keystore\_alias = $<$name$>$]
 \index{submit commands!keystore\_alias}
-Alias for the certificate in a java keystore file to be used for
-a Unicore job.
-Used with \SubmitCmd{keystore\_file} and
-\SubmitCmd{keystore\_passphrase\_file}.
+A string to locate the certificate in a Java keystore file,
+as used for a \SubmitCmd{unicore} job.
 
 %%%%%%%%%%%%%%%%%%%
 %% keystore_passphrase_file
 %%%%%%%%%%%%%%%%%%%
 \item[keystore\_passphrase\_file = $<$pathname$>$]
 \index{submit commands!keystore\_passphrase\_file}
-Path to a file containing the passphrase protecting a java keystore
-file containing the certificate to be used for Unicore job.
-Used with \SubmitCmd{keystore\_file} and
-\SubmitCmd{keystore\_alias}.
+The complete path and file name 
+to the file containing the passphrase protecting a Java keystore
+file containing the certificate.
+Relevant for a \SubmitCmd{unicore} job.
 
 %%%%%%%%%%%%%%%%%%%
 %% leave_in_queue
@@ -1987,6 +1986,7 @@ arguments of
 output. Standard error output (if any) from all three programs will
 appear in \File{foo.error}.
 
+\footnotesize
 \begin{verbatim}
       ####################
       #
@@ -2014,6 +2014,7 @@ appear in \File{foo.error}.
       Error   = foo.err3
       Queue                   
 \end{verbatim}
+\normalsize
 
 \item{Submit Description File Example 2:} This submit description file
 example queues 150
@@ -2032,6 +2033,7 @@ A log file containing entries
 about where and when Condor runs, takes checkpoints, and migrates processes
 in this cluster will be written into file \File{foo.log}.
 
+\footnotesize
 \begin{verbatim}
       ####################                                                    
       #                                                                       
@@ -2053,16 +2055,17 @@ in this cluster will be written into file \File{foo.log}.
                                                                           
       Queue 150
 \end{verbatim}
+\normalsize
 
 \item{Command Line example:} The following command uses the
 \Opt{-append} option to add two commands before the job(s) is queued.
 A log file and an error log file are specified.
 The submit description file is unchanged.
 \footnotesize
-\normalsize
 \begin{verbatim}
 condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
 \end{verbatim}
+\normalsize
 Note that each of the added commands is contained within quote marks
 because there are space characters within the command.
 

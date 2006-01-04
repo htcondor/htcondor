@@ -390,6 +390,8 @@ The following list describes all the possible state/activity pairs.
 \item[Idle] In this activity, the machine has been claimed, but the
   schedd that claimed it has yet to \Term{activate} the claim by
   requesting a \Condor{starter} to be spawned to service a job.
+  The machine returns to this state (usually briefly) when jobs
+  (and therefore \Condor{starter}) finish.
   
 \index{machine activity!Busy}
 \item[Busy] Once a \Condor{starter} has been started and the claim is
@@ -976,6 +978,23 @@ It serves as a quick reference.
   \Expr{WANT\_SUSPEND} is FALSE, the machine enters the Claimed/Retiring
   state whenever \Expr{PREEMPT} is TRUE. 
 
+\item[\Expr{CLAIM\_WORKLIFE}] If provided, this expression specifies
+the number of seconds during which a claim will continue accepting new
+jobs.  Once this time expires, any existing job may continue to run as
+usual, but once it finishes or is preempted, the claim is closed.
+This may be useful if you want to force periodic renegotiation of
+resources without preemption having to occur.  For example, if you
+have some low-priority jobs which should never be interrupted with
+kill signals, you could prevent them from being killed with
+\Expr{MaxJobRetirementTime}, but now high-priority jobs may have to
+wait in line when they match to a machine that is busy running one of
+these uninterruptible jobs.  You can prevent the high-priority jobs
+from ever matching to such a machine by using a rank expression in the
+job or in the negotiator's rank expressions, but then the low-priority
+claim will never be interrupted; it can keep running more jobs.  The
+solution is to use \Expr{CLAIM\_WORKLIFE} to force the claim to stop
+running additional jobs after a certain amount of time.
+
 \item[\Expr{MaxJobRetirementTime}] If the machine is in the
 Claimed/Retiring state, this expression specifies the maximum time (in
 seconds) that the startd will wait for the job to finish naturally
@@ -1434,7 +1453,7 @@ PREEMPT = ( ((Activity == "Suspended") && \
            || (SUSPEND && (WANT_SUSPEND == False)) )
 
 # Replace 0 in the following expression with whatever amount of
-# retirement time you want dedicated jobs to provide.  The other part
+# retirement time you want dedicated machines to provide.  The other part
 # of the expression forces the whole expression to 0 on desktop
 # machines.
 MaxJobRetirementTime = (IsDesktop =!= True) * 0
