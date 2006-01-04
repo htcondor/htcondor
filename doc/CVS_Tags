@@ -8,6 +8,33 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+1/4/06  V6_7-pre-merge-V6_7_14-doc-merge-1
+       V6_7-post-merge-V6_7_14-doc-merge-1
+   The state of the doc directory in V6_7-branch before and after
+   merging changes from the V6_7-14-branch as tagged V6_7_14-doc-merge-1.
+
+1/4/06  V6_7_14-doc-merge-1
+   The state of the doc directory in the V6_7_14-branch for a 
+   first-time merge into the V6_7-branch.
+
+12/23/05 V6_7_14-pre-merge-V6_6-doc-merge-23
+        V6_7_14-post-merge-V6_6-doc-merge-23
+   The state of the doc directory in V6_7_14-branch before and after
+   merging changes from the V6_6-branch as tagged V6_6-doc-merge-23.
+
+12/23/05 V6_6-doc-merge-23
+   The state of the doc directory in the V6_6-branch for a merge
+   into the V6_7-branch. This goes into the V6_7_14-branch.
+
+12/23/05 V6_6-pre-merge-V6_6_10-doc-merge-2
+       V6_6-post-merge-V6_6_10-doc-merge-2
+   The state of the doc directory in V6_6-branch before and after
+   merging changes from the V6_6_10-branch as tagged V6_6_10-doc-merge-2.
+
+12/23/05 V6_6_10-doc-merge-2
+   The state of the doc directory in the V6_6_10-branch for a merge
+   into the V6_6-branch.
+
 12/16/05 V6_7-stork_userlog-{root,branch}
    Branch for developing per-job Stork user logs, and associated DAGMan
    compatability.  Branched from successful BUILD-V6_7-branch-2005-12-16
