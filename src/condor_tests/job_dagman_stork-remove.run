@@ -112,7 +112,7 @@ if(!$status)
 foreach my $line (@adarray)
 {
 	print "STORK_STATUS:$line\n";
-	if($line =~ /status\s*=\s*processing_request.*$/)
+	if($line =~ /status\s*=\s*"processing_request".*$/)
 	{
 		print "STORK_STATUS:$line\n";
 		$result = 0; # good that we have an infinate stork job
