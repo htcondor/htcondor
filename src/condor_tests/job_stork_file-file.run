@@ -112,14 +112,14 @@ my $jobstatus = "";
 
 while( $timecnt < $timeout )
 {
-	system("stork_q");
-	#system("stork_status $jobid");
+	#system("stork_q");
+	system("stork_status $jobid");
 	open(PULL, "$storkstatuscmd 2>&1 |") || die "ps -eo pid failed: $!\n";
 	while(<PULL>)
 	{
 		chomp();
 		$line = $_;
-		if($line =~ /status\s*=\s*(\w+)/)
+		if($line =~ /status\s*=\s*"(\w+)"/)
 		{
 			print "<<<$line>>>\n";
 			$jobstatus = $1;
