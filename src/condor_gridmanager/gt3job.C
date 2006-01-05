@@ -25,7 +25,7 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
+#include "env.h"
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
@@ -34,6 +34,7 @@
 #include "gridmanager.h"
 #include "gt3job.h"
 #include "condor_config.h"
+#include "globusjob.h" // for rsl_stringify
 
 
 // GridManager job states
@@ -183,72 +184,6 @@ BaseJob *GT3JobCreate( ClassAd *jobad )
 	return (BaseJob *)new GT3Job( jobad );
 }
 ////////////////////////////////////////
-
-static
-const char *rsl_stringify( const MyString& src )
-{
-	int src_len = src.Length();
-	int src_pos = 0;
-	int var_pos1;
-	int var_pos2;
-	int quote_pos;
-	static MyString dst;
-
-	if ( src_len == 0 ) {
-		dst = "''";
-	} else {
-		dst = "";
-	}
-
-	while ( src_pos < src_len ) {
-		var_pos1 = src.find( "$(", src_pos );
-		var_pos2 = var_pos1 == -1 ? -1 : src.find( ")", var_pos1 );
-		quote_pos = src.find( "'", src_pos );
-		if ( var_pos2 == -1 && quote_pos == -1 ) {
-			dst += "'";
-			dst += src.Substr( src_pos, src.Length() - 1 );
-			dst += "'";
-			src_pos = src.Length();
-		} else if ( var_pos2 == -1 ||
-					(quote_pos != -1 && quote_pos < var_pos1 ) ) {
-			if ( src_pos < quote_pos ) {
-				dst += "'";
-				dst += src.Substr( src_pos, quote_pos - 1 );
-				dst += "'#";
-			}
-			dst += '"';
-			while ( src[quote_pos] == '\'' ) {
-				dst += "'";
-				quote_pos++;
-			}
-			dst += '"';
-			if ( quote_pos < src_len ) {
-				dst += '#';
-			}
-			src_pos = quote_pos;
-		} else {
-			if ( src_pos < var_pos1 ) {
-				dst += "'";
-				dst += src.Substr( src_pos, var_pos1 - 1 );
-				dst += "'#";
-			}
-			dst += src.Substr( var_pos1, var_pos2 );
-			if ( var_pos2 + 1 < src_len ) {
-				dst += '#';
-			}
-			src_pos = var_pos2 + 1;
-		}
-	}
-
-	return dst.Value();
-}
-static
-const char *rsl_stringify( const char *string )
-{
-	static MyString src;
-	src = string;
-	return rsl_stringify( src );
-}
 
 int GT3Job::probeInterval = 300;			// default value
 int GT3Job::submitInterval = 300;			// default value
@@ -1417,13 +1352,41 @@ MyString *GT3Job::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
-		*rsl += ")(arguments=";
-		*rsl += attr_value;
-	}
-	if ( attr_value != NULL ) {
-		free( attr_value );
-		attr_value = NULL;
+	{
+		ArgList args;
+		MyString arg_errors;
+		MyString rsl_args;
+		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
+					procID.cluster, procID.proc, arg_errors.Value());
+			errorString.sprintf("Failed to read job arguments: %s\n",
+					arg_errors.Value());
+			return NULL;
+		}
+		if(args.Count() != 0) {
+			if(args.InputWasV1()) {
+					// In V1 syntax, the user's input _is_ RSL
+				if(!args.GetArgsStringV1Raw(&rsl_args,&arg_errors)) {
+					dprintf(D_ALWAYS,
+							"(%d.%d) Failed to get job arguments: %s\n",
+							procID.cluster,procID.proc,arg_errors.Value());
+					errorString.sprintf("Failed to get job arguments: %s\n",
+							arg_errors.Value());
+					return NULL;
+				}
+			}
+			else {
+					// In V2 syntax, we convert the ArgList to RSL
+				for(int i=0;i<args.Count();i++) {
+					if(i) {
+						rsl_args += ' ';
+					}
+					rsl_args += rsl_stringify(args.GetArg(i));
+				}
+			}
+			*rsl += ")(arguments=";
+			*rsl += rsl_args;
+		}
 	}
 
 	if ( jobAd->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
@@ -1558,10 +1521,17 @@ MyString *GT3Job::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value) && *attr_value ) {
-		Environ env_obj;
-		env_obj.add_string(attr_value);
-		char **env_vec = env_obj.get_vector();
+	{
+		Env envobj;
+		MyString env_errors;
+		if(!envobj.MergeFrom(jobAd,&env_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
+					procID.cluster, procID.proc, env_errors.Value());
+			errorString.sprintf("Failed to read job environment: %s\n",
+					env_errors.Value());
+			return NULL;
+		}
+		char **env_vec = envobj.getStringArray();
 		int i = 0;
 		if ( env_vec[0] ) {
 			*rsl += ")(environment=";
@@ -1577,7 +1547,9 @@ MyString *GT3Job::buildSubmitRSL()
 							 rsl_stringify(equals + 1) );
 			*rsl += buff;
 		}
+		deleteStringArray(env_vec);
 	}
+
 	if ( attr_value ) {
 		free( attr_value );
 		attr_value = NULL;

@@ -50,6 +50,8 @@ END_C_DECLS
 #ifdef __cplusplus
 /* like strdup() but uses new[] */
 char *strnewp( const char * );
+
+#include "condor_arglist.h"
 #endif
 
 #include "basename.h"

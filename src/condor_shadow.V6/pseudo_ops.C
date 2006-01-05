@@ -1558,8 +1558,8 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 	s->soft_kill_sig = soft_kill;
 
 	s->cmd = Strdup( p->cmd[0] );
-	s->args = Strdup( p->args[0] );
-	s->env = Strdup( p->env );
+	s->args_v1or2 = Strdup( p->args_v1or2[0] );
+	s->env_v1or2 = Strdup( p->env_v1or2 );
 	s->iwd = Strdup( p->iwd );
 
 	if (JobAd->LookupBool(ATTR_WANT_CHECKPOINT, s->ckpt_wanted) == 0) {

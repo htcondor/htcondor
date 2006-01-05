@@ -546,8 +546,9 @@ int
 Starter::execCODStarter( void )
 {
 	int rval;
-	MyString env;
-	char* args = NULL;
+	MyString lock_env;
+	ArgList args;
+	Env env;
 	char* tmp;
 
 	tmp = param( "LOCK" );
@@ -557,13 +558,18 @@ Starter::execCODStarter( void )
 	if( ! tmp ) { 
 		EXCEPT( "LOG not defined!" );
 	}
-	env = "_condor_STARTER_LOCK=";
-	env += tmp;
+	lock_env = "_condor_STARTER_LOCK=";
+	lock_env += tmp;
 	free( tmp );
-	env += DIR_DELIM_CHAR;
-	env += "StarterLock.cod";
+	lock_env += DIR_DELIM_CHAR;
+	lock_env += "StarterLock.cod";
 
-	args = s_claim->makeCODStarterArgs();
+	env.SetEnv(lock_env.Value());
+
+	if(!s_claim->makeCODStarterArgs(args)) {
+		dprintf( D_ALWAYS, "ERROR: failed to create COD starter args.\n");
+		return 0;
+	}
 
 	int* std_fds_p = NULL;
 	int std_fds[3];
@@ -583,7 +589,7 @@ Starter::execCODStarter( void )
 		std_fds_p = std_fds;
 	}
 
-	rval = execDCStarter( args, env.Value(), std_fds_p, NULL );
+	rval = execDCStarter( args, &env, std_fds_p, NULL );
 
 	if( s_claim->hasJobAd() ) {
 			// now that the starter has been spawned, we need to do
@@ -604,10 +610,6 @@ Starter::execCODStarter( void )
 		daemonCore->Close_Pipe( pipe_fds[1] );
 	}
 
-	if( args ) {
-		free( args );
-		args = NULL;
-	}
 	return rval;
 }
 
@@ -615,16 +617,21 @@ Starter::execCODStarter( void )
 int
 Starter::execDCStarter( Stream* s )
 {
-	char args[_POSIX_ARG_MAX];
+	ArgList args;
 
 	char* hostname = s_claim->client()->host();
 	if ( resmgr->is_smp() ) {
 		// Note: the "-a" option is a daemon core option, so it
 		// must come first on the command line.
-		sprintf( args, "condor_starter -f -a %s %s",  
-				 s_claim->rip()->r_id_str, hostname );
+		args.AppendArg("condor_starter");
+		args.AppendArg("-f");
+		args.AppendArg("-a");
+		args.AppendArg(s_claim->rip()->r_id_str);
+		args.AppendArg(hostname);
 	} else {
-		sprintf(args, "condor_starter -f %s", hostname );
+		args.AppendArg("condor_starter");
+		args.AppendArg("-f");
+		args.AppendArg(hostname);
 	}
 	execDCStarter( args, NULL, NULL, s );
 
@@ -633,7 +640,7 @@ Starter::execDCStarter( Stream* s )
 
 
 int
-Starter::execDCStarter( const char* args, const char* env, 
+Starter::execDCStarter( ArgList const &args, Env const *env, 
 						int* std_fds, Stream* s )
 {
 	Stream *sock_inherit_list[] = { s, 0 };
@@ -642,10 +649,15 @@ Starter::execDCStarter( const char* args, const char* env,
 		inherit_list = sock_inherit_list;
 	}
 
-	dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n", args );
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString args_string;
+		args.GetArgsStringForDisplay(&args_string);
+		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
+				 args_string.Value() );
+	}
 
 	s_pid = daemonCore->
-		Create_Process( s_path, (char*)args, PRIV_ROOT, main_reaper,
+		Create_Process( s_path, args, PRIV_ROOT, main_reaper,
 						TRUE, env, NULL, TRUE, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");

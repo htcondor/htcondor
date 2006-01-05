@@ -33,6 +33,7 @@
 #include "condor_new_classads.h"
 #include "gahp_common.h"
 #include "env.h"
+#include "condor_string.h"
 
 #include "gahp-client.h"
 #include "gridmanager.h"
@@ -77,7 +78,7 @@ void GahpReconfig()
 
 GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 											   const char *path,
-											   const char *args)
+											   const ArgList *args)
 {
 	int rc;
 	GahpServer *server = NULL;
@@ -98,7 +99,7 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 	return server;
 }
 
-GahpServer::GahpServer(const char *id, const char *path, const char *args)
+GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 {
 	m_gahp_pid = -1;
 	m_reaperid = -1;
@@ -145,9 +146,7 @@ GahpServer::GahpServer(const char *id, const char *path, const char *args)
 	my_id = strdup(id);
 	binary_path = strdup(path);
 	if ( args != NULL ) {
-		binary_args = strdup( args );
-	} else {
-		binary_args = NULL;
+		binary_args.AppendArgsFromArgList( *args );
 	}
 	proxy_check_tid = TIMER_UNSET;
 	master_proxy = NULL;
@@ -175,9 +174,6 @@ GahpServer::~GahpServer()
 	}
 	if ( binary_path != NULL ) {
 		free(binary_path);
-	}
-	if ( binary_args != NULL ) {
-		free(binary_args);
 	}
 	if ( master_proxy != NULL ) {
 		ReleaseProxy( master_proxy->proxy );
@@ -279,7 +275,7 @@ GahpServer::Reaper(int pid,int status)
 }
 
 
-GahpClient::GahpClient(const char *id, const char *path, const char *args)
+GahpClient::GahpClient(const char *id, const char *path, const ArgList *args)
 {
 	server = GahpServer::FindOrCreateGahpServer(id,path,args);
 	m_timeout = 0;
@@ -531,7 +527,7 @@ bool
 GahpServer::Startup()
 {
 	char *gahp_path = NULL;
-	char *gahp_args = NULL;
+	ArgList gahp_args;
 	int stdin_pipefds[2];
 	int stdout_pipefds[2];
 	int stderr_pipefds[2];
@@ -549,31 +545,29 @@ GahpServer::Startup()
 		// First, get path to the GAHP server.
 	if ( binary_path && strcmp( binary_path, GAHPCLIENT_DEFAULT_SERVER_PATH ) != 0 ) {
 		gahp_path = strdup(binary_path);
-		if ( binary_args != NULL ) {
-			gahp_args = strdup(binary_args);
-		}
+		gahp_args.AppendArgsFromArgList(binary_args);
 	} else {
 		gahp_path = param("GAHP");
-		gahp_args = param("GAHP_ARGS");
-	}
 
-	// If we're passing arguments to the gahp server, insert binary_path
-	// as argv[0] for Create_Process().
-	if ( gahp_args != NULL ) {
-		MyString new_args;
-		new_args.sprintf( "%s %s", gahp_path, gahp_args );
-		free( gahp_args );
-		gahp_args = strdup( new_args.Value() );
+		char *args = param("GAHP_ARGS");
+		MyString args_error;
+		if(!gahp_args.AppendArgsV1or2Input(args,&args_error)) {
+			EXCEPT("Failed to parse arguments: %s",args_error.Value());
+		}
+		free(args);
 	}
 
 	if (!gahp_path) return false;
 
-	newenv.Put( "GAHP_TEMP", GridmanagerScratchDir );
+	// Insert binary_path as argv[0] for Create_Process().
+	gahp_args.InsertArg( gahp_path, 0);
+
+	newenv.SetEnv( "GAHP_TEMP", GridmanagerScratchDir );
 
 	if ( get_port_range( &low_port, &high_port ) == TRUE ) {
 		MyString buff;
 		buff.sprintf( "%d.%d", low_port, high_port );
-		newenv.Put( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
+		newenv.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
 	}
 
 		// Now register a reaper, if we haven't already done so.
@@ -598,7 +592,6 @@ GahpServer::Startup()
 		dprintf(D_ALWAYS,"GahpServer::Startup - pipe() failed, errno=%d\n",
 			errno);
 		free( gahp_path );
-		if (gahp_args) free(gahp_args);
 		return false;
 	}
 
@@ -613,7 +606,7 @@ GahpServer::Startup()
 			PRIV_UNKNOWN,	// Priv State ---- keep the same 
 			m_reaperid,		// id for our registered reaper
 			FALSE,			// do not want a command port
-			newenv.getDelimitedString(),	// env
+			&newenv,	  	// env
 			NULL,			// cwd
 			FALSE,			// new process group?
 			NULL,			// network sockets to inherit
@@ -624,7 +617,6 @@ GahpServer::Startup()
 		dprintf(D_ALWAYS,"Failed to start GAHP server (%s)\n",
 				gahp_path);
 		free( gahp_path );
-		if (gahp_args) free(gahp_args);
 		m_gahp_pid = -1;
 		return false;
 	} else {
@@ -632,7 +624,6 @@ GahpServer::Startup()
 	}
 
 	free( gahp_path );
-	if (gahp_args) free(gahp_args);
 
 		// Now that the GAHP server is running, close the sides of
 		// the pipes we gave away to the server, and stash the ones

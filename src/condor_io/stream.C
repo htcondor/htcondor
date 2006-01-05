@@ -504,8 +504,8 @@ Stream::code(STARTUP_INFO &start)
 	start.soft_kill_sig = (int)temp;
 #endif
 	STREAM_ASSERT(code(start.cmd));
-	STREAM_ASSERT(code(start.args));
-	STREAM_ASSERT(code(start.env));
+	STREAM_ASSERT(code(start.args_v1or2));
+	STREAM_ASSERT(code(start.env_v1or2));
 	STREAM_ASSERT(code(start.iwd));
 	STREAM_ASSERT(code(start.ckpt_wanted));
 	STREAM_ASSERT(code(start.is_restart));

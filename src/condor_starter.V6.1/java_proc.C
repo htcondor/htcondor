@@ -25,6 +25,7 @@
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "starter.h"
+#include "condor_ver_info.h"
 
 #include "java_proc.h"
 #include "java_config.h"
@@ -51,13 +52,9 @@ int JavaProc::StartJob()
 	char tmp[ATTRLIST_MAX_EXPRESSION];
 	
 	char java_cmd[_POSIX_PATH_MAX];
-	char java_args[_POSIX_ARG_MAX];
 	char* jarfiles = NULL;
-
-	ExprTree  *tree;
-	char	  *tmp_args;
-	char      *job_args;
-	int		  length;
+	ArgList args;
+	MyString arg_buf;
 
 	// Construct the list of jar files for the command line
 	// If a jar file is transferred locally, use its local name
@@ -108,7 +105,10 @@ int JavaProc::StartJob()
 		}			
 	}
 
-	if( !java_config(java_cmd,java_args,jarfiles_final_list) ) {
+	sprintf(startfile,"%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
+	sprintf(endfile,"%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
+
+	if( !java_config(java_cmd,&args,jarfiles_final_list) ) {
 		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Java is not configured!\n");
 		return 0;
 	}
@@ -116,70 +116,53 @@ int JavaProc::StartJob()
 	sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,java_cmd);
 	JobAd->InsertOrUpdate(tmp);
 
-	sprintf(startfile,"%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
-	sprintf(endfile,"%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
+	arg_buf.sprintf("-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
+	args.AppendArg(arg_buf.Value());
 
-	// this new code pulls the value out of the classad with the
-	// quote backwhacks still in place, so when we InsertOrUpdate() we
-	// don't lose any of the backwhacks.  -stolley, 8/02
-
-	tree = JobAd->Lookup(ATTR_JOB_ARGUMENTS);
-	if ( tree == NULL ) {
-		dprintf(D_ALWAYS,"JavaProc: %s is not defined!\n",ATTR_JOB_ARGUMENTS);
-		return 0;
-	} else if ( tree->RArg() == NULL ) { 
-		// this shouldn't happen, but to be safe
-		dprintf(D_ALWAYS,"JavaProc: %s RArg is not defined!\n",ATTR_JOB_ARGUMENTS);
+	char *vm_args1 = NULL;
+	char *vm_args2 = NULL;
+	MyString vm_args_error;
+	bool vm_args_success = true;
+	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS1, &vm_args1);
+	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS2, &vm_args2);
+	if(vm_args2) {
+		vm_args_success = args.AppendArgsV2Raw(vm_args2,&vm_args_error);
+	}
+	else if(vm_args1) {
+		vm_args_success = args.AppendArgsV1Raw(vm_args1,&vm_args_error);
+	}
+	free(vm_args1);
+	free(vm_args2);
+	if(!vm_args_success) {
+		dprintf(D_ALWAYS,"JavaProc: failed to parse VM args: %s\n",
+				vm_args_error.Value());
 		return 0;
 	}
-	tree->RArg()->PrintToNewStr(&tmp_args);
-	job_args = tmp_args+1; // skip first quote
-	length = strlen(job_args);
-	job_args[length-1] = '\0'; // destroy last quote
 
-	char *vm_args = NULL;
+	args.AppendArg("CondorJavaWrapper");
+	args.AppendArg(startfile);
+	args.AppendArg(endfile);
 
-	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS, &vm_args);
-
-		// If no VM args, just pass empty string
-	if (vm_args == NULL) {
-		vm_args = (char *)malloc(1);
-		vm_args[0] = '\000';
+	MyString args_error;
+	if(!args.AppendArgsFromClassAd(JobAd,&args_error)) {
+		dprintf(D_ALWAYS,"JavaProc: failed to read job arguments: %s\n",
+				args_error.Value());
+		return 0;
 	}
 
-	/*
-	We really need to be passing these arguments through an
-	argv-like interface to DaemonCore.  However, we don't have
-	one.  Currently, the Windows version interprets and removes
-	quotes in argument strings, but the UNIX version does not.
-	Thus, we need two different strings, depending on the platform.
-	Todd and Colin promise to fix this.  -thain
-	*/
-	
-	sprintf(tmp,
-#ifdef WIN32
-		"%s=\"%s -Dchirp.config=\\\"%s%cchirp.config\\\" %s CondorJavaWrapper \\\"%s\\\" \\\"%s\\\" %s\"",
-#else
-		"%s=\"%s -Dchirp.config=%s%cchirp.config %s CondorJavaWrapper %s %s %s\"",
-#endif
-
-		ATTR_JOB_ARGUMENTS,
-		java_args,
-		execute_dir,
-		DIR_DELIM_CHAR,
-		vm_args,
-		startfile,
-		endfile,
-		job_args);
-
-	JobAd->InsertOrUpdate(tmp);
-	
-	free(tmp_args);
-
-	free(vm_args);
+	// We are just talking to ourselves, so it is fine to use argument
+	// syntax compatible with this current version of Condor.
+	CondorVersionInfo ver_info;
+	if(!args.InsertArgsIntoClassAd(JobAd,&ver_info,&args_error)) {
+		dprintf(D_ALWAYS,"JavaProc: failed to insert java job arguments: %s\n",
+				args_error.Value());
+		return 0;
+	}
 
 	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java_cmd);
-	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",tmp);
+	MyString args_string;
+	args.GetArgsStringForDisplay(&args_string);
+	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",args_string.Value());
 
 	return VanillaProc::StartJob();
 }

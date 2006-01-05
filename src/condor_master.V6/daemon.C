@@ -35,7 +35,6 @@
 #include "condor_parameters.h"
 #include "daemon_list.h"
 #include "sig_name.h"
-#include "env.h"
 #include "internet.h"
 #include "strupr.h"
 
@@ -336,7 +335,6 @@ daemon::DoConfig( bool init )
 	// Initialize some variables the first time through
 	if ( init ) {
 		flag_in_config_file = NULL;
-		env = NULL;
 	}
 
 	// Check for the _FLAG parameter
@@ -369,43 +367,20 @@ daemon::DoConfig( bool init )
 
 	// get env settings from config file if present
 	sprintf(buf, "%s_ENVIRONMENT", name_in_config_file );
-	tmp = param( buf );
-	bool	envModified = false;
+	char *env_string = param( buf );
 
-	// Previously defind?
-	if ( NULL != env ) {
-		// Has it changed?
-		if ( strcmp( env, tmp ) ) {
-			free( env );
-			env = tmp;
-			envModified = true;
-		} else if ( NULL != tmp ) {
-			// Unchanged, just free up tmp
-			free( tmp );
-		} else {
-			// Do nothing
-		}
-	} else {
-		// Not previously defined; just use tmp whatever it is
-		env = tmp;
-		envModified = true;
-	}
+	Env env_parser;
+	MyString env_error_msg;
 
-	// Check the new & improved ENV.
-	if ( ( envModified ) && ( NULL != env ) ) {
-		Env envStrParser;
-		// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
-		// Env::Merge(null) will always return true, so the warning will not be
-		// printed in this case.
-		if( !envStrParser.Merge(env) ) {
-			// this is an invalid env string
-			dprintf(D_ALWAYS, "Warning! Configuration file variable "
-					"`%s_ENVIRONMENT' has invalid value `%s'; ignoring.\n",
-					name_in_config_file, env);
-			free( env );
-			env = NULL;
-		}
+	if(!env_parser.MergeFromV1or2Input(env_string,&env_error_msg)) {
+		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s\n",
+		       name_in_config_file,
+			   env_error_msg.Value());
 	}
+	free(env_string);
+
+	this->env.Clear();
+	this->env.MergeFrom(env_parser);
 
 	// Check for the _INITIAL_STATE parameter (only at init time)
 	// Default to on_hold = false, set to true of state eq "off"
@@ -502,6 +477,7 @@ int daemon::RealStart( )
 	const char	*shortname;
 	int 	command_port = isDC ? TRUE : FALSE;
 	char	buf[512];
+	ArgList args;
 
 	// Copy a couple of checks from Start
 	dprintf( D_FULLDEBUG, "::RealStart; %s on_hold=%d\n", name_in_config_file, on_hold );
@@ -634,29 +610,29 @@ int daemon::RealStart( )
 #endif /* WIN32 */
 	}
 
+	args.AppendArg(shortname);
+	if(isDC) {
+		args.AppendArg("-f");
+	}
+
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
 	char *daemon_args = param( buf );
+
+	MyString args_error;
+	if(!args.AppendArgsV1or2Input(daemon_args,&args_error)) {
+		dprintf(D_ALWAYS,"ERROR: failed to parse %s daemon arguments: %s\n",
+				buf,
+				args_error.Value());
+		Restart();
+		free(daemon_args);
+		return 0;
+	}
+
+	free(daemon_args);
+
 	if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
-		if( daemon_args ) { 
-			sprintf( buf, "%s -f %s -n %s", shortname, daemon_args,
-					 MasterName ); 
-		} else {
-			sprintf( buf, "%s -f -n %s", shortname, MasterName ); 
-		}
-	} else {
-		if( isDC ) {
-			if( daemon_args ) { 
-				sprintf( buf, "%s -f %s", shortname, daemon_args );
-			} else {
-				sprintf( buf, "%s -f", shortname );
-			}
-		} else {
-			if( daemon_args ) { 
-				sprintf( buf, "%s %s", shortname, daemon_args );
-			} else {
-				sprintf( buf, "%s", shortname );
-			}
-		}
+		args.AppendArg("-n");
+		args.AppendArg(MasterName);
 	}
 
     // The below chunk is for HAD support
@@ -664,36 +640,26 @@ int daemon::RealStart( )
     // take command port from arguments( buf )
     // Don't mess with buf or tmp (they are not our variables) -
     // allocate them again
-    if ( isDC && daemon_args ) {
-		StringList args_list;
-		args_list.initializeFromString( daemon_args );
-
-		char* cur_arg;
-		bool is_port = false;
-
-		args_list.rewind();
-		while( (cur_arg = args_list.next()) )
-		{
-			if( is_port ){
-				command_port =  atoi( cur_arg );
-				is_port = false;
-			}
+    if ( isDC ) {
+		int i;
+		for(i=0;i<args.Count();i++) {
+			char const *cur_arg = args.GetArg(i);
 			if(strcmp( cur_arg, "-p" ) == 0 ) {
-				is_port = true;
+				if(i+1<args.Count()) {
+					char const *port_arg = args.GetArg(i+1);
+					command_port = atoi(port_arg);
+				}
 			}
 		}
     }
-	if ( daemon_args ) {
-		free( daemon_args );
-	}
 
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
-				buf,			// args
+				args,			// args
 				priv_mode,		// privledge level
 				1,				// which reaper ID to use; use default reaper
 				command_port,	// port to use for command port; TRUE=choose one dynamically
-				env,			// environment
+				&env,			// environment
 				NULL,			// current working directory
 				TRUE);			// new_process_group flag; we want a new group
 

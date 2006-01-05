@@ -182,29 +182,30 @@ main_init( int argc, char ** const argv )
 	free (c_gahp_name);
 
 	for (i=0; i<NUMBER_WORKERS; i++) {
-		MyString args;
-		args += exec_name;
-		args += " -f";
+		ArgList args;
+
+		args.AppendArg(exec_name.Value());
+		args.AppendArg("-f");
 
 		if (ScheddAddr.Length()) {
-			args += " -s ";
-			args += ScheddAddr;
+			args.AppendArg("-s");
+			args.AppendArg(ScheddAddr.Value());
 		}
 
 		if (ScheddPool.Length()) {
-			args += " -P ";
-			args += ScheddPool;
+			args.AppendArg("-P");
+			args.AppendArg(ScheddPool.Value());
 		}
 	
 
-		MyString _fds;
-		_fds.sprintf (" -I %d -O %d",
-					  workers[i].request_pipe[0],
-					  workers[i].result_pipe[1]);
+		args.AppendArg("-I");
+		args.AppendArg(workers[i].request_pipe[0]);
+		args.AppendArg("-O");
+		args.AppendArg(workers[i].result_pipe[1]);
 
-		args += _fds;
-
-		dprintf (D_FULLDEBUG, "Staring worker # %d: %s\n", i, args.Value());
+		MyString args_string;
+		args.GetArgsStringForDisplay(&args_string);
+		dprintf (D_FULLDEBUG, "Staring worker # %d: %s\n", i, args_string.Value());
 
 			// We want IO thread to inherit these ends of pipes
 		int inherit_fds[3];
@@ -215,7 +216,7 @@ main_init( int argc, char ** const argv )
 		workers[i].pid = 
 			daemonCore->Create_Process (
 										exec_name.Value(),
-										args.Value(),
+										args,
 										PRIV_UNKNOWN,
 										reaper_id,
 										FALSE,			// no command port

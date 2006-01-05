@@ -28,6 +28,7 @@
 #include "dc_collector.h"
 #include "killfamily.h"
 #include "condor_pidenvid.h"
+#include "env.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
@@ -56,9 +57,7 @@ public:
 	time_t	startTime;		// Time this daemon was started
 	bool	isDC;
 
-	char*   env;			// Environment of daemon, e.g.,
-							// "FOO=bar;CONDOR_CONFIG=/some/path/config"
-							// null if there is none
+	Env     env;			// Environment of daemon.
 
 #if 0
 	char*	port;				 	// for config server

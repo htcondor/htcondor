@@ -25,6 +25,7 @@
 #include "get_mysubsystem.h"
 #include "condor_cronjob.h"
 #include "condor_cronjob_classad.h"
+#include "condor_string.h"
 
 // Interface version number
 #define	INTERFACE_VERSION	"1"
@@ -46,12 +47,17 @@ ClassAdCronJob::ClassAdCronJob( const char *mgrName,
 				*namePtr = toupper( *namePtr );
 			}
 		}
+		MyString EnvStr;
+
 		EnvStr = nameUc;
 		EnvStr += "_INTERFACE_VERSION=" INTERFACE_VERSION;
-		EnvStr += ";";
-		EnvStr += get_mySubSystem( );
+		classad_env.SetEnv(EnvStr.Value());
+
+		EnvStr = get_mySubSystem( );
 		EnvStr += "_CRON_NAME=";
 		EnvStr += mgrName;
+		classad_env.SetEnv(EnvStr.Value());
+
 		free( nameUc );
 	}
 }
@@ -69,7 +75,9 @@ ClassAdCronJob::~ClassAdCronJob( )
 int
 ClassAdCronJob::Initialize( )
 {
-	AddEnv( EnvStr.GetCStr() );
+	char **env_array = classad_env.getStringArray();
+	AddEnv( env_array );
+	deleteStringArray(env_array);
 
 	// And, run the "main" Initialize function
 	return CronJobBase::Initialize( );

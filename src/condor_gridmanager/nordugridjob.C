@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
@@ -35,6 +34,7 @@
 #include "gridmanager.h"
 #include "nordugridjob.h"
 #include "condor_config.h"
+#include "globusjob.h" // for rsl_stringify()
 
 
 // GridManager job states
@@ -873,13 +873,41 @@ MyString *NordugridJob::buildSubmitRSL()
 		*rsl += executable;
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
-		*rsl += " ";
-		*rsl += attr_value;
-	}
-	if ( attr_value != NULL ) {
-		free( attr_value );
-		attr_value = NULL;
+	{
+		ArgList args;
+		MyString arg_errors;
+		MyString rsl_args;
+		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
+					procID.cluster, procID.proc, arg_errors.Value());
+			errorString.sprintf("Failed to read job arguments: %s\n",
+					arg_errors.Value());
+			return NULL;
+		}
+		if(args.Count() != 0) {
+			if(args.InputWasV1()) {
+					// In V1 syntax, the user's input _is_ RSL
+				if(!args.GetArgsStringV1Raw(&rsl_args,&arg_errors)) {
+					dprintf(D_ALWAYS,
+							"(%d.%d) Failed to get job arguments: %s\n",
+							procID.cluster,procID.proc,arg_errors.Value());
+					errorString.sprintf("Failed to get job arguments: %s\n",
+							arg_errors.Value());
+					return NULL;
+				}
+			}
+			else {
+					// In V2 syntax, we convert the ArgList to RSL
+				for(int i=0;i<args.Count();i++) {
+					if(i) {
+						rsl_args += ' ';
+					}
+					rsl_args += rsl_stringify(args.GetArg(i));
+				}
+			}
+			*rsl += ' ';
+			*rsl += rsl_args;
+		}
 	}
 
 	// If we're transferring the executable, tell Nordugrid to set the

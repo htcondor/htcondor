@@ -70,4 +70,5 @@ template class HashTable<MyString, group_entry*>;
 template class HashTable<MyString, uid_entry*>;
 template class SimpleList<Daemon*>;
 template class HashTable<Credential_t, Condor_Credential_B*>;
-
+template class SimpleList<MyString>;
+template class SimpleListIterator<MyString>;

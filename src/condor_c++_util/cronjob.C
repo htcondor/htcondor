@@ -28,6 +28,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_cronmgr.h"
 #include "condor_cron.h"
+#include "condor_string.h"
 
 // Size of the buffer for reading from the child process
 #define STDOUT_READBUF_SIZE	1024
@@ -250,18 +251,24 @@ CronJobBase::SetPath( const char *newPath )
 
 // Set job characteristics: Command line args
 int
-CronJobBase::SetArgs( const char *newArgs )
+CronJobBase::SetArgs( ArgList const &new_args )
 {
-	args = newArgs;
-	return 0;
+	args.Clear();
+	return AddArgs(new_args);
 }
 
 // Set job characteristics: Environment
 int
-CronJobBase::SetEnv( const char *newEnv )
+CronJobBase::SetEnv( char const * const *env_array )
 {
-	env = newEnv;
-	return 0;
+	env.Clear();
+	return !env.MergeFrom(env_array);
+}
+
+int
+CronJobBase::AddEnv( char const * const *env_array )
+{
+	return !env.MergeFrom(env_array);
 }
 
 // Set job characteristics: CWD
@@ -301,24 +308,10 @@ CronJobBase::AddPath( const char *newPath )
 
 // Add to the job's arg list
 int
-CronJobBase::AddArgs( const char *newArgs )
+CronJobBase::AddArgs( ArgList const &new_args )
 {
-	if ( args.Length() ) {
-		args += " ";
-	}
-	args += newArgs;
-	return 0;
-}
-
-// Add to the job's environment
-int
-CronJobBase::AddEnv( const char *newEnv )
-{
-	if ( env.Length() ) {
-		env += ";";
-	}
-	env += newEnv;
-	return 0;
+	args.AppendArgsFromArgList(new_args);
+	return 1;
 }
 
 // Set job died handler
@@ -640,6 +633,7 @@ CronJobBase::ProcessOutputQueue( void )
 int
 CronJobBase::RunProcess( void )
 {
+	ArgList final_args;
 
 	// Create file descriptors
 	if ( OpenFds( ) < 0 ) {
@@ -648,19 +642,9 @@ CronJobBase::RunProcess( void )
 		return -1;
 	}
 
-	// Are there arguments to pass it?
-	char *argBuf = NULL;
-	if ( args.Length() ) {
-		int		len = args.Length() + 1 + name.Length() + 1;
-		if ( NULL == ( argBuf = (char *) malloc( len ) )  ) {
-			dprintf( D_ALWAYS, 
-					 "Cron: Couldn't allocate arg buffer %d bytes\n",
-					 len );
-			return -1;
-		}
-		strcpy( argBuf, name.GetCStr() );
-		strcat( argBuf, " " );
-		strcat( argBuf, args.GetCStr() );
+	if(args.Count()) {
+		args.AppendArg(name.GetCStr());
+		final_args.AppendArgsFromArgList(args);
 	}
 
 	// Create the priv state for the process
@@ -689,11 +673,11 @@ CronJobBase::RunProcess( void )
 	// Create the process, finally..
 	pid = daemonCore->Create_Process(
 		path.GetCStr(),		// Path to executable
-		argBuf,				// argv
+		final_args,			// argv
 		priv,				// Priviledge level
 		reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
-		env.GetCStr(),		// Env to give to child
+		&env, 		 		// Env to give to child
 		cwd.GetCStr(),		// Starting CWD
 		FALSE,				// New process group?
 		NULL,				// Socket list
@@ -711,9 +695,6 @@ CronJobBase::RunProcess( void )
 	// Did it work?
 	if ( pid <= 0 ) {
 		dprintf( D_ALWAYS, "Cron: Error running job '%s'\n", GetName() );
-		if ( NULL != argBuf ) {
-			free( argBuf );
-		}
 		CleanAll( );
 		return -1;
 	}

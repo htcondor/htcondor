@@ -25,7 +25,6 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_ckpt_name.h"
@@ -151,7 +150,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[4096];
-	char buff2[4096];
+	ArgList args;
 	MyString error_string = "";
 	char *gahp_path;
 	bool job_already_submitted = false;
@@ -278,12 +277,14 @@ CondorJob::CondorJob( ClassAd *classad )
 	sprintf( buff, "CONDOR/%s/%s/%s", remotePoolName ? remotePoolName : "NULL",
 			 remoteScheddName,
 			 jobProxy != NULL ? jobProxy->subject->subject_name : "NULL" );
-	sprintf( buff2, "-f -s %s", remoteScheddName );
+	args.AppendArg("-f");
+	args.AppendArg("-s");
+	args.AppendArg(remoteScheddName);
 	if ( remotePoolName ) {
-		strcat( buff2, " -P " );
-		strcat( buff2, remotePoolName );
+		args.AppendArg("-P");
+		args.AppendArg(remotePoolName);
 	}
-	gahp = new GahpClient( buff, gahp_path, buff2 );
+	gahp = new GahpClient( buff, gahp_path, &args );
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );

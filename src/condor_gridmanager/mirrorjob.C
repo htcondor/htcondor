@@ -25,7 +25,6 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_ckpt_name.h"
@@ -228,9 +227,9 @@ MirrorJob::MirrorJob( ClassAd *classad )
 {
 	int tmp;
 	char buff[4096];
-	char buff2[4096];
 	MyString error_string = "";
 	char *gahp_path;
+	ArgList args;
 
 	mirrorJobId.cluster = 0;
 	gahpAd = NULL;
@@ -311,8 +310,12 @@ MirrorJob::MirrorJob( ClassAd *classad )
 		// TODO remove mirrorScheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
 	sprintf( buff, "MIRROR/%s", mirrorScheddName );
-	sprintf( buff2, "-f -s %s", mirrorScheddName );
-	gahp = new GahpClient( buff, gahp_path, buff2 );
+
+	args.AppendArg("-f");
+	args.AppendArg("-s");
+	args.AppendArg(mirrorScheddName);
+
+	gahp = new GahpClient( buff, gahp_path, &args );
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );

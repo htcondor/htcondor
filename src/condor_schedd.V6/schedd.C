@@ -38,7 +38,6 @@
 #include "condor_adtypes.h"
 #include "condor_string.h"
 #include "condor_email.h"
-#include "environ.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
 #include "get_daemon_name.h"
@@ -6115,7 +6114,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	//-------------------------------
 
 	bool	rval;
-	char	args[_POSIX_ARG_MAX];
+	ArgList args;
 
 	match_rec* mrec = srec->match;
 	int universe = srec->universe;
@@ -6264,29 +6263,37 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		return;
 	}
 
+	args.AppendArg("condor_shadow");
+	if(sh_is_dc) {
+		args.AppendArg("-f");
+	}
+
+	MyString argbuf;
 	if ( sh_reads_file ) {
 		if( sh_is_dc ) { 
-			sprintf( args, "condor_shadow -f %d.%d%s%s -", 
-					 job_id->cluster, job_id->proc, 
-					 wants_reconnect ? " --reconnect " : " ",
-					 MyShadowSockName ); 
+			argbuf.sprintf("%d.%d",job_id->cluster,job_id->proc);
+			args.AppendArg(argbuf.Value());
+
+			if(wants_reconnect) {
+				args.AppendArg("--reconnect");
+			}
+			args.AppendArg(MyShadowSockName);
+			args.AppendArg("-");
 		} else {
-			sprintf( args, "condor_shadow %s %s %s %d %d -", 
-					 MyShadowSockName, mrec->peer, mrec->id,
-					 job_id->cluster, job_id->proc );
+			args.AppendArg(MyShadowSockName);
+			args.AppendArg(mrec->peer);
+			args.AppendArg(mrec->id);
+			args.AppendArg(job_id->cluster);
+			args.AppendArg(job_id->proc);
+			args.AppendArg("-");
 		}
 	} else {
 			// CRUFT: pre-6.7.0 shadows...
-		if ( sh_is_dc ) {
-			sprintf( args, "condor_shadow -f %s %s %s %d %d",
-					 MyShadowSockName, mrec->peer, mrec->id, 
-					 job_id->cluster, job_id->proc );
-		} else {
-				// standard universe shadow 
-			sprintf( args, "condor_shadow %s %s %s %d %d", 
-					 MyShadowSockName, mrec->peer, mrec->id,
-					 job_id->cluster, job_id->proc );
-		}
+		args.AppendArg(MyShadowSockName);
+		args.AppendArg(mrec->peer);
+		args.AppendArg(mrec->id);
+		args.AppendArg(job_id->cluster);
+		args.AppendArg(job_id->proc);
 	}
 
 	rval = spawnJobHandlerRaw( srec, shadow_path, args, NULL, "shadow",
@@ -6400,7 +6407,7 @@ Scheduler::tryNextJob( int secs )
 
 bool
 Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path, 
-							   const char* args, const char* env, 
+							   ArgList const &args, Env const *env, 
 							   const char* name, bool is_dc, bool wants_pipe )
 {
 	int pid = -1;
@@ -6504,8 +6511,10 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 									  std_fds_p, niceness );
 
 	if( pid == FALSE ) {
+		MyString arg_string;
+		args.GetArgsStringForDisplay(&arg_string);
 		dprintf( D_FAILURE|D_ALWAYS, "spawnJobHandlerRaw: "
-				 "CreateProcess(%s, %s) failed\n", path, args );
+				 "CreateProcess(%s, %s) failed\n", path, arg_string.Value() );
 		if( wants_pipe ) {
 			for( int i = 0; i < 2; i++ ) {
 				if( pipe_fds[i] >= 0 ) {
@@ -6678,7 +6687,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 {
 
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-	char			args[128];
+	ArgList         args;
 	char			cluster[10], proc_str[10];
 	int				pid;
 	int				shadow_fd;
@@ -6731,13 +6740,18 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 			return NULL;
 		}
 		shadow_path = shadow_obj->path();
-	    sprintf( args, "condor_shadow.pvm %s", MyShadowSockName );
+		args.AppendArg("condor_shadow.pvm");
+		args.AppendArg(MyShadowSockName);
 
 		int fds[3];
 		fds[0] = pipes[0];  // the effect is to dup the pipe to stdin in child.
 	    fds[1] = fds[2] = -1;
-		dprintf( D_ALWAYS, "About to Create_Process( %s, %s, ... )\n", 
-				 shadow_path, args );
+		{
+			MyString args_string;
+			args.GetArgsStringForDisplay(&args_string);
+			dprintf( D_ALWAYS, "About to Create_Process( %s, %s, ... )\n", 
+				 shadow_path, args_string.Value() );
+		}
 		
 		pid = daemonCore->Create_Process( shadow_path, args, PRIV_ROOT, 
 										  1, FALSE, NULL, NULL, FALSE, 
@@ -6856,7 +6870,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	static bool notify_admin = true;
 	PROC_ID* job_id = &srec->job_id;
 	char* starter_path;
-	MyString starter_args;
+	ArgList starter_args;
 	bool rval;
 
 	dprintf( D_FULLDEBUG, "Starting local universe job %d.%d\n",
@@ -6877,26 +6891,38 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		return;
 	}
 
-	starter_args = "condor_starter -f -job-cluster ";
-	starter_args += job_id->cluster;
-	starter_args += " -job-proc ";
-	starter_args += job_id->proc;
-	starter_args += " -job-input-ad - -schedd-addr ";
-	starter_args += MyShadowSockName;
+	starter_args.AppendArg("condor_starter");
+	starter_args.AppendArg("-f");
 
-	dprintf( D_FULLDEBUG, "About to spawn %s %s\n", 
-			 starter_path, starter_args.Value() );
+	starter_args.AppendArg("-job-cluster");
+	starter_args.AppendArg(job_id->cluster);
+
+	starter_args.AppendArg("-job-proc");
+	starter_args.AppendArg(job_id->proc);
+
+	starter_args.AppendArg("-job-input-ad");
+	starter_args.AppendArg("-");
+	starter_args.AppendArg("-schedd-addr");
+	starter_args.AppendArg(MyShadowSockName);
+
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString argstring;
+		starter_args.GetArgsStringForDisplay(&argstring);
+		dprintf( D_FULLDEBUG, "About to spawn %s %s\n", 
+				 starter_path, argstring.Value() );
+	}
 
 	BeginTransaction();
 	mark_job_running( job_id );
 	CommitTransaction();
 
-	MyString starter_env;
-	starter_env.sprintf( "_%s_EXECUTE=%s", myDistro->Get(),
-						 LocalUnivExecuteDir );
+	Env starter_env;
+	MyString execute_env;
+	execute_env.sprintf( "_%s_EXECUTE", myDistro->Get());
+	starter_env.SetEnv(execute_env.Value(),LocalUnivExecuteDir);
 	
-	rval = spawnJobHandlerRaw( srec, starter_path, starter_args.Value(),
-							   starter_env.Value(), "starter", true, true );
+	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
+							   &starter_env, "starter", true, true );
 
 	free( starter_path );
 	starter_path = NULL;
@@ -7008,20 +7034,34 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char	input[_POSIX_PATH_MAX];
 	char	output[_POSIX_PATH_MAX];
 	char	error[_POSIX_PATH_MAX];
-	char	*env = NULL;
-	char	job_args[_POSIX_ARG_MAX];
-	char	args[_POSIX_ARG_MAX];
+	ArgList args;
+	MyString argbuf;
+	MyString error_msg;
 	char	owner[_POSIX_PATH_MAX], iwd[_POSIX_PATH_MAX];
 	char	domain[_POSIX_PATH_MAX];
 	int		pid;
 	StatInfo* filestat;
 	bool is_executable;
+	ClassAd *userJob = NULL;
+	shadow_rec *retval = NULL;
+	Env envobject;
+	MyString env_error_msg;
+    int niceness = 0;
+	char tmpCwd[_POSIX_PATH_MAX];
+	char *p_tmpCwd = tmpCwd;
+	int inouterr[3];
+	bool cannot_open_files = false;
+	priv_state priv;
+	int i;
 
 	is_executable = false;
-	
+
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
 		job_id->cluster, job_id->proc );
-	
+
+	userJob = GetJobAd(job_id->cluster,job_id->proc);
+	ASSERT(userJob);
+
 	// make sure file is executable
 	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
 	errno = 0;
@@ -7045,15 +7085,13 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// the job with copy_to_spool = false and therefore it is not
 		// in the SPOOL directory.  So check where the 
 		// ClassAd says the executable is.
-		ClassAd *userJob = GetJobAd(job_id->cluster,job_id->proc);
 		a_out_name[0] = '\0';
 		userJob->LookupString(ATTR_JOB_CMD,a_out_name,sizeof(a_out_name));
-		FreeJobAd(userJob);
 		if (a_out_name[0]=='\0') {
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
 				false, false, true, false, false );
-			return NULL;
+			goto wrapup;
 		}
 		
 		// at least make certain the file is still there, and that
@@ -7069,7 +7107,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			snprintf(tmpstr, 255, "File '%s' is missing or not executable", a_out_name);
 			holdJob(job_id->cluster, job_id->proc, tmpstr,
 					false, false, true, false, false);
-			return NULL;
+			goto wrapup;
 		}
 	}
 	
@@ -7085,7 +7123,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	if (stricmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 			job_id->cluster, job_id->proc);
-		return NULL;
+		goto wrapup;
 	}
 	
 	if (! init_user_ids(owner, domain) ) {
@@ -7097,7 +7135,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr,
 				false, false, true, false, false);
-		return NULL;
+		goto wrapup;
 	}
 	
 	// Get std(in|out|err)
@@ -7115,7 +7153,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		sprintf(error, NULL_FILE);
 	}
 	
-	priv_state priv = set_user_priv(); // need user's privs...
+	priv = set_user_priv(); // need user's privs...
 	
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
 		iwd) < 0) {
@@ -7131,14 +7169,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 	//change to IWD before opening files, easier than prepending 
 	//IWD if not absolute pathnames
-	char tmpCwd[_POSIX_PATH_MAX];
-	char *p_tmpCwd = tmpCwd;
 	p_tmpCwd = getcwd( p_tmpCwd, _POSIX_PATH_MAX );
 	chdir(iwd);
 	
 	// now open future in|out|err files
-	int inouterr[3];
-	bool cannot_open_files = false;
 	
 #ifdef WIN32
 	
@@ -7202,71 +7236,57 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			}
 		}
 		set_priv( priv );  // back to regular privs...
-		return NULL;
+		goto wrapup;
 	}
 	
 	set_priv( priv );  // back to regular privs...
 	
-	if (GetAttributeStringNew(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
-		&env) < 0) {
-		// Note that GetAttributeStringNew always fills in the env variable,
-		// even if it's an empty string. We get back -1 if it's empty. 
-		// Filling it in with 0 is redundant, I suppose. 
-		env[0] = '\0';
+	if(!envobject.MergeFrom(userJob,&env_error_msg)) {
+		dprintf(D_ALWAYS,"Failed to read job environment: %s\n",
+				env_error_msg.Value());
+		goto wrapup;
 	}
 	
 	// stick a CONDOR_ID environment variable in job's environment
 	char condor_id_string[64];
 	sprintf( condor_id_string, "%d.%d", job_id->cluster, job_id->proc );
-	Env envobject;
-	envobject.Merge(env);
-	envobject.Put("CONDOR_ID",condor_id_string);
-	char *newenv = envobject.getDelimitedString();
-	
-	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
-		args) < 0) {
-		args[0] = '\0';
-	}
-	
+	envobject.SetEnv("CONDOR_ID",condor_id_string);
+
 	// Don't use a_out_name for argv[0], use
 	// "condor_scheduniv_exec.cluster.proc" instead. 
-    // NOTE: a trailing space with no args causes Create_Process to
-    // call the program with a single arg consisting of the null
-    // string (''), so we have to avoid that
-    sprintf(job_args, "condor_scheduniv_exec.%d.%d%s%s",
-		job_id->cluster, job_id->proc, args[0] != '\0' ? " " : "", args );
+	argbuf.sprintf("condor_scheduniv_exec.%d.%d",job_id->cluster,job_id->proc);
+	args.AppendArg(argbuf.Value());
+
+	if(!args.AppendArgsFromClassAd(userJob,&error_msg)) {
+		dprintf(D_ALWAYS,"Failed to read job arguments: %s\n",
+				error_msg.Value());
+		goto wrapup;
+	}
 
         // get the job's nice increment
-    char *nice_config = param( "SCHED_UNIV_RENICE_INCREMENT" );
-    int niceness = 0;
-    if( nice_config ) {
-        niceness = atoi( nice_config );
-        free( nice_config );
-        nice_config = NULL;
-    }
+	{
+		char *nice_config = param( "SCHED_UNIV_RENICE_INCREMENT" );
+		if( nice_config ) {
+			niceness = atoi( nice_config );
+			free( nice_config );
+			nice_config = NULL;
+		}
+	}
 	
-	pid = daemonCore->Create_Process( a_out_name, job_args, PRIV_USER_FINAL, 
-								1, FALSE, newenv, iwd, FALSE, NULL, inouterr,
+	pid = daemonCore->Create_Process( a_out_name, args, PRIV_USER_FINAL, 
+							1, FALSE, &envobject, iwd, FALSE, NULL, inouterr,
 									  niceness );
 	
 	// now close those open fds - we don't want them here.
-	for ( int i=0 ; i<3 ; i++ ) {
+	for ( i=0 ; i<3 ; i++ ) {
 		if ( close( inouterr[i] ) == -1 ) {
 			dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
 		}
 	}
-	
-	if (env) {
-		free(env);
-	}
 
-	if (newenv) {
-		delete[] newenv;
-	}
-	
 	if ( pid <= 0 ) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Create_Process problems!\n" );
-		return NULL;
+		goto wrapup;
 	}
 	
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
@@ -7288,7 +7308,13 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 	SchedUniverseJobsRunning++;
 
-	return add_shadow_rec( pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1 );
+	retval =  add_shadow_rec( pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1 );
+
+wrapup:
+	if(userJob) {
+		FreeJobAd(userJob);
+	}
+	return retval;
 }
 
 void
@@ -8248,7 +8274,8 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 {
 	int notification;
 	char owner[2048], subject[2048];
-	char cmd[_POSIX_PATH_MAX], args[_POSIX_ARG_MAX];
+	char cmd[_POSIX_PATH_MAX];
+	MyString args;
 
 	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
 						ATTR_JOB_NOTIFICATION, &notification) < 0) {
@@ -8295,10 +8322,12 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 		EXCEPT("GetAttributeString(%d, %d, \"cmd\")", srec->job_id.cluster,
 				srec->job_id.proc);
 	}
-	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-							ATTR_JOB_ARGUMENTS, args) < 0) {
-		EXCEPT("GetAttributeString(%d, %d, \"%s\"", srec->job_id.cluster,
-				srec->job_id.proc, ATTR_JOB_ARGUMENTS);
+	{
+		ClassAd *ad = GetJobAd(srec->job_id.cluster,srec->job_id.proc);
+		if(!ad) {
+			EXCEPT("Failed to get job ad when sending notification.");
+		}
+		ArgList::GetArgsStringForDisplay(ad,&args);
 	}
 
 	// Send mail to user
@@ -8310,7 +8339,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	FILE* mailer = email_open(owner, subject);
 	if( mailer ) {
 		fprintf( mailer, "Your condor job %s%d.\n\n", msg, status );
-		fprintf( mailer, "Job: %s %s\n", cmd, args );
+		fprintf( mailer, "Job: %s %s\n", cmd, args.Value() );
 		email_close( mailer );
 	}
 

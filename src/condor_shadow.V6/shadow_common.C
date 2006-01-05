@@ -41,6 +41,7 @@
 #include "condor_commands.h"
 #include "condor_config.h"
 #include "../condor_ckpt_server/server_interface.h"
+#include "env.h"
 
 #include "daemon.h"
 #include "stream.h"
@@ -210,12 +211,23 @@ publishNotifyEmail( FILE* mailer, char* buf, PROC* proc )
 
         fprintf(mailer, "Your condor job " );
 #if defined(NEW_PROC)
-		if ( proc->args[0] )
-        	fprintf(mailer, "%s %s ", proc->cmd[0], proc->args[0] );
-		else
-        	fprintf(mailer, "%s ", proc->cmd[0] );
+	if ( proc->args_v1or2[0] ) {
+		ArgList args;
+		MyString args_string;
+		args.AppendArgsV1or2Raw(proc->args_v1or2[0],NULL);
+		args.GetArgsStringForDisplay(&args_string);
+
+		fprintf(mailer, "%s %s ", proc->cmd[0], args_string.Value() );
+	}
+	else
+		fprintf(mailer, "%s ", proc->cmd[0] );
 #else
-        fprintf(mailer, "%s %s ", proc->cmd, proc->args );
+	ArgList args;
+	MyString args_string;
+	args.AppendArgsV1or2(proc->args_v1or2,NULL);
+	args.GetArgsStringForDisplay(&args_string);
+
+	fprintf(mailer, "%s %s ", proc->cmd, args_string.Value() );
 #endif
 
         fprintf(mailer, "%s\n\n", buf );
@@ -365,8 +377,13 @@ HoldJob( const char* buf )
 	}
 
 	fprintf( mailer, "Your condor job " );
-	if( Proc->args[0] ) {
-		fprintf( mailer, "%s %s ", Proc->cmd[0], Proc->args[0] );
+	if( Proc->args_v1or2[0] ) {
+		ArgList args;
+		MyString args_string;
+		args.AppendArgsV1or2Raw(Proc->args_v1or2[0],NULL);
+		args.GetArgsStringForDisplay(&args_string);
+
+		fprintf( mailer, "%s %s ", Proc->cmd[0], args_string.Value() );
 	} else {
 		fprintf( mailer, "%s ", Proc->cmd[0] );
 	}
@@ -909,28 +926,48 @@ MakeProc(ClassAd *ad, PROC *p)
 	ad->LookupInteger(ATTR_JOB_PRIO, p->prio);
 	ad->LookupInteger(ATTR_JOB_NOTIFICATION, p->notification);
 	ad->LookupInteger(ATTR_IMAGE_SIZE, p->image_size);
-	// This is the old way of getting the string, and it's bad, bad, bad.
-   	// It doesn't do well if you have strings > 10K. 
-	// ad->LookupString(ATTR_JOB_ENVIRONMENT, buf);
-	// p->env = strdup(buf);
 
-	// Note that we are using the new version of LookupString here.
-	// It allocates a new string of the correct length with malloc()
-	// and returns that string, so we no longer copy it. 
-	ad->LookupString(ATTR_JOB_ENVIRONMENT, &(p->env));
+	// There are two different syntaxes for the environment.  Since
+	// the wire protocol only expects one, we pack either one into the
+	// same proc variable "env_v1or2" and make sure they are
+	// distinguishable.  For backward compatibility, the schedd
+	// will have already ensured that we use V1 syntax if the
+	// remote side only understands that.
+
+	Env envobj;
+	MyString env_v1or2;
+	MyString env_error_msg;
+	if(!envobj.getDelimitedStringV1or2Raw(ad,&env_v1or2,&env_error_msg)) {
+		EXCEPT("Failed to parse environment string: %s\n",
+			   env_error_msg.Value());
+	}
+	p->env_v1or2 = strdup(env_v1or2.Value());
 
 	p->n_cmds = 1;
 	p->cmd = (char **) malloc(p->n_cmds * sizeof(char *));
-	p->args = (char **) malloc(p->n_cmds * sizeof(char *));
+	p->args_v1or2 = (char **) malloc(p->n_cmds * sizeof(char *));
 	p->in = (char **) malloc(p->n_cmds * sizeof(char *));
 	p->out = (char **) malloc(p->n_cmds * sizeof(char *));
 	p->err = (char **) malloc(p->n_cmds * sizeof(char *));
 	p->exit_status = (int *) malloc(p->n_cmds * sizeof(int));
 
+	// There are two different syntaxes for arguments.  Since
+	// the wire protocol only expects one, we pack either one into the
+	// same proc variable "env_v1or2" and make sure they are
+	// distinguishable.  For backward compatibility, the schedd
+	// will have already ensured that we use V1 syntax if the
+	// remote side only understands that.
+
+	ArgList args;
+	MyString args_v1or2;
+	MyString error_msg;
+	if(!args.GetArgsStringV1or2Raw(ad,&args_v1or2,&error_msg)) {
+		EXCEPT("Failed to get V1or2 arguments string: %s\n",error_msg.Value());
+	}
+	p->args_v1or2[0] = strdup(args_v1or2.Value());
+
 	ad->LookupString(ATTR_JOB_CMD, buf);
 	p->cmd[0] = strdup(buf);
-	ad->LookupString(ATTR_JOB_ARGUMENTS, buf);
-	p->args[0] = strdup(buf);
 	ad->LookupString(ATTR_JOB_INPUT, buf);
 	p->in[0] = strdup(buf);
 	ad->LookupString(ATTR_JOB_OUTPUT, buf);

@@ -77,7 +77,7 @@ int stream_proc_vers3( Stream *s, PROC *proc )
 		return FALSE;
 	if( !s->code(proc->image_size) )
 		return FALSE;
-	if( !s->code(proc->env) )
+	if( !s->code(proc->env_v1or2) )
 		return FALSE;
 
 	if( !s->code(proc->n_cmds) ) {
@@ -86,7 +86,7 @@ int stream_proc_vers3( Stream *s, PROC *proc )
 
 	if( s->is_decode() ) {
 		proc->cmd = (char **)calloc( proc->n_cmds, sizeof(char *) );
-		proc->args = (char **)calloc( proc->n_cmds, sizeof(char *) );
+		proc->args_v1or2 = (char **)calloc( proc->n_cmds, sizeof(char *) );
 		proc->in = (char **)calloc( proc->n_cmds, sizeof(char *) );
 		proc->out = (char **)calloc( proc->n_cmds, sizeof(char *) );
 		proc->err = (char **)calloc( proc->n_cmds, sizeof(char *) );
@@ -99,7 +99,7 @@ int stream_proc_vers3( Stream *s, PROC *proc )
 	for( i=0; i<proc->n_cmds; i++ ) {
 		if( !s->code(proc->cmd[i]) )
 			return FALSE;
-		if( !s->code(proc->args[i]) )
+		if( !s->code(proc->args_v1or2[i]) )
 			return FALSE;
 		if( !s->code(proc->in[i]) )
 			return FALSE;
@@ -171,9 +171,9 @@ int stream_proc_vers2( Stream *s, V2_PROC *proc )
 		return FALSE;
 	if( !s->code(proc->cmd) )
 		return FALSE;
-	if( !s->code(proc->args) )
+	if( !s->code(proc->args_v1or2) )
 		return FALSE;
-	if( !s->code(proc->env) )
+	if( !s->code(proc->env_v1or2) )
 		return FALSE;
 	if( !s->code(proc->in) )
 		return FALSE;
@@ -215,9 +215,9 @@ int stream_old_proc( Stream *s, OLD_PROC *proc )
 		return FALSE;
 	if( !s->code(proc->cmd) )
 		return FALSE;
-	if( !s->code(proc->args) )
+	if( !s->code(proc->args_v1or2) )
 		return FALSE;
-	if( !s->code(proc->env) )
+	if( !s->code(proc->env_v1or2) )
 		return FALSE;
 	if( !s->code(proc->in) )
 		return FALSE;

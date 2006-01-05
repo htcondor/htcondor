@@ -26,7 +26,7 @@
 #ifndef USER_PROC_H
 #define USER_PROC_H
 
-#include "environ.h"
+#include "env.h"
 
 #include "killfamily.h"
 
@@ -139,9 +139,9 @@ protected:
 	int		proc;
 
 	char	*cmd;
-	char	*args;
+	ArgList args;
 	char	*env;
-	Environ	env_obj;
+	Env     env_obj;
 
 #if 0
 	char	*a_out;			// on submitting machine

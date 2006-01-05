@@ -479,53 +479,63 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 {
 /* simple:  get args, add -p4pg (and more...), put args back in */
 
-	char args[_POSIX_ARG_MAX];
-	if ( !ad->LookupString( ATTR_JOB_ARGUMENTS, args )) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
-				 ATTR_JOB_ARGUMENTS );
+	ArgList args;
+	MyString args_error;
+	if(!args.AppendArgsFromClassAd(ad,&args_error)) {
+		dprintf( D_ALWAYS, "Aborting.  Failed to read arguments from JobAd: %s\n", 
+				 args_error.Value() );
 		shutDown( JOB_NOT_STARTED );
 	}
     
-    char tmp[_POSIX_ARG_MAX];
+	args.InsertArg("-p4pg",0);
 
-    sprintf ( tmp, "%s = \"-p4pg procgroup.%d.%d %s\"", 
-              ATTR_JOB_ARGUMENTS, getCluster(), getProc(), args );
+	MyString procgroup;
+	procgroup.sprintf("procgroup.%d.%d",getCluster(),getProc());
+	args.InsertArg(procgroup.Value(),1);
 
-    ad->Delete( ATTR_JOB_ARGUMENTS );
-
-	if ( !ad->Insert( tmp )) {
-		dprintf( D_ALWAYS, "Unable to update args! Aborting.\n" );
+	if(!args.InsertArgsIntoClassAd(ad,NULL,&args_error)) {
+		dprintf( D_ALWAYS, "Unable to update args! Aborting: %s\n",
+				 args_error.Value());
 		shutDown( JOB_NOT_STARTED );
 	}
 
 		// While we're at it, if the job wants files transfered,
 		// include the procgroup file in the list of input files.
 		// This is only needed on the master.
-	if( !ad->LookupString(ATTR_TRANSFER_FILES, args) ) {
+	char *transfer_files = NULL;
+	if( !ad->LookupString(ATTR_TRANSFER_FILES, &transfer_files) ) {
 			// Nothing, we're done.
 		return;
 	}
 		// Ok, we found it.  If it's set to anything other than
 		// "Never", we need to do our work.
-	if( args[0] == 'n' || args[0] == 'N' ) {
+	if( transfer_files[0] == 'n' || transfer_files[0] == 'N' ) {
 			// It's "never", we're done.
+		free(transfer_files);
 		return;
 	}
+	free(transfer_files);
+	transfer_files = NULL;
 
 		// Now, see if they already gave us a list.
-	if( !ad->LookupString(ATTR_TRANSFER_INPUT_FILES, args) ) {
+	MyString new_transfer_files;
+	if( !ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &transfer_files) ) {
 			// Nothing here, so we can safely add it ourselves. 
-		sprintf( tmp, "%s = \"procgroup.%d.%d\"",
+		new_transfer_files.sprintf( "%s = \"procgroup.%d.%d\"",
 				 ATTR_TRANSFER_INPUT_FILES, getCluster(), getProc() ); 
 	} else {
 			// There's a list already.  We've got to append to it. 
-		sprintf( tmp, "%s = \"%s, procgroup.%d.%d\"",
-				 ATTR_TRANSFER_INPUT_FILES, args, getCluster(),
+		new_transfer_files.sprintf( "%s = \"%s, procgroup.%d.%d\"",
+				 ATTR_TRANSFER_INPUT_FILES, transfer_files, getCluster(),
 				 getProc() );
 
 	}
-	dprintf( D_FULLDEBUG, "About to append to job ad: %s\n", tmp );
-	if ( !ad->Insert( tmp )) {
+	free(transfer_files);
+	transfer_files = NULL;
+
+	dprintf( D_FULLDEBUG, "About to append to job ad: %s\n",
+			 new_transfer_files.Value() );
+	if ( !ad->Insert( new_transfer_files.Value() )) {
 		dprintf( D_ALWAYS, "Unable to update %s! Aborting.\n",
 				 ATTR_TRANSFER_INPUT_FILES );
 		shutDown( JOB_NOT_STARTED );
@@ -543,33 +553,37 @@ MPIShadow::hackComradeAd( char *comradeArgs, ClassAd *ad )
    executable master_machine port -p4amslave
 */
 
-    char newargs[_POSIX_ARG_MAX];
+	ArgList args;
+	MyString args_error;
     char *tmparg;
+
         // we expect the executable name to be "condor_exec"
     if ( !(tmparg = strstr( comradeArgs, "condor_exec" )) ) {
         dprintf ( D_ALWAYS, "No \"condor_exec\" found in comradeArgs!\n" );
         dprintf ( D_ALWAYS, "Comrade Args: %s\n", comradeArgs );
         shutDown( JOB_NOT_STARTED );
     }
-    sprintf( newargs, "%s", &tmparg[12] );
-    
-    char args[2048];
-    if ( !ad->LookupString( ATTR_JOB_ARGUMENTS, args )) {
-        dprintf ( D_ALWAYS, "Failed to get Job args in hackComradeAd!\n" );
+	if(!args.AppendArgsV1Raw(&tmparg[12],&args_error)) {
+		dprintf(D_ALWAYS, "Failed to insert comradArgs! %s\n",
+				args_error.Value());
+		shutDown( JOB_NOT_STARTED );
+	}
+
+	if(!args.AppendArgsFromClassAd(ad,&args_error)) {
+        dprintf ( D_ALWAYS, "Failed to get Job args in hackComradeAd: %s\n",
+				  args_error.Value());
         shutDown( JOB_NOT_STARTED );
     }
 
-    char tmp[2048];
-    sprintf( tmp, "%s = \"%s %s\"", 
-			 ATTR_JOB_ARGUMENTS, newargs, args );
     free( comradeArgs );
 
-    dprintf ( D_FULLDEBUG, "Inserting args: %s\n", tmp );
+	MyString args_string;
+	args.GetArgsStringForDisplay(&args_string);
+    dprintf ( D_FULLDEBUG, "Inserting args: %s\n", args_string.Value() );
 
-    ad->Delete( ATTR_JOB_ARGUMENTS );
-
-    if ( !ad->Insert( tmp )) {
-        dprintf ( D_ALWAYS, "Failed to insert Job args!\n" );
+	if(!args.InsertArgsIntoClassAd(ad,NULL,&args_error)) {
+        dprintf ( D_ALWAYS, "Failed to insert Job args! %s\n",
+				  args_error.Value() );
         shutDown( JOB_NOT_STARTED );
     }
 }
@@ -621,12 +635,13 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		*/
 
 	Env env;
-	char* env_str = NULL;
-	if( ad->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) ) {
-		if( env_str && env_str[0] ) {
-			env.Merge(env_str);
-		}
-		free( env_str );
+	MyString env_errors;
+	if( !env.MergeFrom(ad,&env_errors) ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR: cannot get environment from job ad: %s\n", 
+				 env_errors.Value() );
+		shutDown( JOB_NOT_STARTED );
+		return false;
 	}
 
 		// Now, add all the MPICH-specific variables.
@@ -635,7 +650,7 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		// number of nodes we're going to spawn
 	char numNodesString[127];
 	sprintf(numNodesString,"%d",numNodes);
-	env.Put("MPICH_NPROC",numNodesString);
+	env.SetEnv("MPICH_NPROC",numNodesString);
 
 		// We need the delimiter for all the rest of them... 
 
@@ -643,19 +658,19 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		// mpich_jobid, since we want that to be constant across all
 		// nodes we spawn, and we can just compute it once when we
 		// start up and reuse it.
-	env.Put("MPICH_JOBID",mpich_jobid);
+	env.SetEnv("MPICH_JOBID",mpich_jobid);
 
 		// Conveniently, nextResourceToStart always holds the right
 		// value for IPROC, since that's what we use to keep track of
 		// what node we're spawning...
 	char nextResourceToStartStr[127];
 	sprintf(nextResourceToStartStr,"%d",nextResourceToStart);
-	env.Put("MPICH_IPROC",nextResourceToStartStr);
+	env.SetEnv("MPICH_IPROC",nextResourceToStartStr);
 
 		// Now, if we're a comrade (rank > 0), we also need to add
 		// MPICH_ROOT, which is what we got from our pseudo syscall. 
 	if( nextResourceToStart > 0 ) {
-		env.Put("MPICH_ROOT",master_addr);
+		env.SetEnv("MPICH_ROOT",master_addr);
 	} else {
 			// For the root node, we need to set MPICH_ROOT just to
 			// the hostname of the resource where it's executing
@@ -674,19 +689,19 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 			delete [] sinful;
 			shutDown( JOB_NOT_STARTED );
 		}
-		env.Put("MPICH_ROOT",&sinful[1]);
+		env.SetEnv("MPICH_ROOT",&sinful[1]);
 		delete [] sinful;
 	}
 
 		// Now, the env contains the modified environment
 		// attribute, so we just need to re-insert that into our ad. 
-	env_str = env.getDelimitedString();
-	int ret = ad->Assign(ATTR_JOB_ENVIRONMENT,env_str);
-	delete[] env_str;
-	if(ret) {
-		return true;
-	} 
-	return false;
+	if(!env.InsertEnvIntoClassAd(ad,&env_errors)) {
+		dprintf(D_ALWAYS,"ERROR: failed to update job environment: %s\n",
+				env_errors.Value());
+		shutDown( JOB_NOT_STARTED );
+		return false;
+	}
+	return true;
 }
 
 #endif /* MPI_USES_RSH */

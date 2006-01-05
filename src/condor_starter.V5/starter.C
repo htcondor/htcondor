@@ -1059,8 +1059,8 @@ get_job_info()
     // safe to free this memory, because the UserProc class makes
 	// copies of it. --Alain 25-Sep-2001
 	if (s.cmd)  free(s.cmd);
-	if (s.args) free(s.args);
-	if (s.env)  free (s.env);
+	if (s.args_v1or2) free(s.args_v1or2);
+	if (s.env_v1or2)  free (s.env_v1or2);
 	if (s.iwd)  free (s.iwd);
 
 	return u_proc;

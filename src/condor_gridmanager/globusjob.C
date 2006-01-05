@@ -36,7 +36,7 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
+#include "env.h"
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
@@ -404,7 +404,6 @@ static bool write_classad_input_file( ClassAd *classad,
 	return true;
 }
 
-static
 const char *rsl_stringify( const MyString& src )
 {
 	int src_len = src.Length();
@@ -462,7 +461,7 @@ const char *rsl_stringify( const MyString& src )
 
 	return dst.Value();
 }
-static
+
 const char *rsl_stringify( const char *string )
 {
 	static MyString src;
@@ -597,7 +596,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	bool job_already_submitted = false;
 	MyString error_string = "";
 	char *gahp_path = NULL;
-	char *gahp_args = NULL;
+	ArgList gahp_args;
 
 	RSL = NULL;
 	callbackRegistered = false;
@@ -671,15 +670,24 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	gahp_path = param( "GT2_GAHP" );
 	if ( gahp_path == NULL ) {
 		gahp_path = param( "GAHP" );
-		gahp_args = param( "GAHP_ARGS" );
 		if ( gahp_path == NULL ) {
 			error_string = "GT2_GAHP not defined";
 			goto error_exit;
 		}
+
+		char *args = param("GAHP_ARGS");
+		MyString args_error;
+		if(!gahp_args.AppendArgsV1or2Input(args,&args_error)) {
+			dprintf(D_ALWAYS,"Failed to parse gahp arguments: %s",args_error.Value());
+			error_string = "ERROR: failed to parse GAHP arguments.";
+			free(args);
+			goto error_exit;
+		}
+		free(args);
 	}
 	snprintf( buff, sizeof(buff), "GT2/%s",
 			  jobProxy->subject->subject_name );
-	gahp = new GahpClient( buff, gahp_path, gahp_args );
+	gahp = new GahpClient( buff, gahp_path, &gahp_args );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
@@ -806,9 +814,6 @@ GlobusJob::GlobusJob( ClassAd *classad )
  error_exit:
 	if ( gahp_path ) {
 		free( gahp_path );
-	}
-	if ( gahp_args ) {
-		free( gahp_args );
 	}
 	gmState = GM_HOLD;
 	if ( !error_string.IsEmpty() ) {
@@ -2658,14 +2663,41 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += " -job-output-ad ";
 		*rsl += output_classad_filename;
 		*rsl += " -job-stdin - -job-stdout - -job-stderr -";
-	} else if ( jobAd->LookupString(ATTR_JOB_ARGUMENTS, &attr_value)
-				&& *attr_value ) {
-		*rsl += ")(arguments=";
-		*rsl += attr_value;
-	}
-	if ( attr_value != NULL ) {
-		free( attr_value );
-		attr_value = NULL;
+	} else {
+		ArgList args;
+		MyString arg_errors;
+		MyString rsl_args;
+		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
+					procID.cluster, procID.proc, arg_errors.Value());
+			errorString.sprintf("Failed to read job arguments: %s\n",
+					arg_errors.Value());
+			return NULL;
+		}
+		if(args.Count() != 0) {
+			if(args.InputWasV1()) {
+					// In V1 syntax, the user's input _is_ RSL
+				if(!args.GetArgsStringV1Raw(&rsl_args,&arg_errors)) {
+					dprintf(D_ALWAYS,
+							"(%d.%d) Failed to get job arguments: %s\n",
+							procID.cluster,procID.proc,arg_errors.Value());
+					errorString.sprintf("Failed to get job arguments: %s\n",
+							arg_errors.Value());
+					return NULL;
+				}
+			}
+			else {
+					// In V2 syntax, we convert the ArgList to RSL
+				for(int i=0;i<args.Count();i++) {
+					if(i) {
+						rsl_args += ' ';
+					}
+					rsl_args += rsl_stringify(args.GetArg(i));
+				}
+			}
+			*rsl += ")(arguments=";
+			*rsl += rsl_args;
+		}
 	}
 
 	if ( jobAd->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
@@ -2829,11 +2861,17 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += "(_CONDOR_GRIDSHELL_LOG '";
 		*rsl += gridshell_log_filename.GetCStr();
 		*rsl += "')";
-	} else if ( jobAd->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value)
-				&& *attr_value ) {
-		Environ env_obj;
-		env_obj.add_string(attr_value);
-		char **env_vec = env_obj.get_vector();
+	} else {
+		Env envobj;
+		MyString env_errors;
+		if(!envobj.MergeFrom(jobAd,&env_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
+					procID.cluster, procID.proc, env_errors.Value());
+			errorString.sprintf("Failed to read job environment: %s\n",
+					env_errors.Value());
+			return NULL;
+		}
+		char **env_vec = envobj.getStringArray();
 		int i = 0;
 		if ( env_vec[0] ) {
 			*rsl += ")(environment=";
@@ -2849,6 +2887,7 @@ MyString *GlobusJob::buildSubmitRSL()
 							 rsl_stringify(equals + 1) );
 			*rsl += buff;
 		}
+		deleteStringArray(env_vec);
 	}
 	if ( attr_value ) {
 		free( attr_value );

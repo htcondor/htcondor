@@ -40,6 +40,7 @@
 #include "proxymanager.h"
 //#include "myproxy_manager.h"
 #include "gridmanager.h"
+#include "condor_string.h"
 
 #define HASH_TABLE_SIZE			500
 
@@ -703,13 +704,13 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	if (myProxyEntry->myproxy_server_dn) {
 		sprintf (buff, "MYPROXY_SERVER_DN=%s",
 				 myProxyEntry->myproxy_server_dn);
-		myEnv.Put (buff);
+		myEnv.SetEnv(buff);
 		dprintf (D_FULLDEBUG, "%s\n", buff);
 	}
 
 
 	sprintf (buff,"X509_USER_PROXY=%s", proxy_filename);
-	myEnv.Put (buff);
+	myEnv.SetEnv (buff);
 	dprintf (D_FULLDEBUG, "%s\n", buff);
 
 
@@ -730,24 +731,31 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	int myproxy_port = getPortFromAddr (myProxyEntry->myproxy_host);
 
 	// args
-	char args[1000];
-	sprintf(args, "-v -o %s -s %s -d -t %d -S -l %s",
-			proxy_filename,
-			myproxy_host,
-			myProxyEntry->new_proxy_lifetime,
-			username);
+	ArgList args;
+	args.AppendArg(proxy_filename);
+	args.AppendArg("-v");
+	args.AppendArg("-o");
+	args.AppendArg(proxy_filename);
+	args.AppendArg("-s");
+	args.AppendArg(myproxy_host);
+	args.AppendArg("-d");
+	args.AppendArg("-t");
+	args.AppendArg(myProxyEntry->new_proxy_lifetime);
+	args.AppendArg("-S");
+	args.AppendArg("-l");
+	args.AppendArg(username);
 
 
 	// Optional port argument
 	if (myproxy_port) {
-		sprintf (buff, " -p %d ", myproxy_port);
-		strcat (args, buff);
+		args.AppendArg("-p");
+		args.AppendArg(myproxy_port);
 	}
 
 	// Optional credential name argument
 	if (myProxyEntry->myproxy_credential_name) {
-		sprintf (buff, " -k %s ", myProxyEntry->myproxy_credential_name);
-		strcat (args, buff);
+		args.AppendArg("-k");
+		args.AppendArg(myProxyEntry->myproxy_credential_name);
 	}
 
 	free (username);
@@ -775,7 +783,9 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	}
 
 
-	dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args);
+	MyString args_string;
+	args.GetArgsStringForDisplay(&args_string);
+	dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args_string.Value());
 
 	int pid = daemonCore->Create_Process (
 					myproxy_get_delegation_pgm,
@@ -783,7 +793,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 					PRIV_USER_FINAL,
 					myproxyGetDelegationReaperId,
 					FALSE,
-					myEnv.getDelimitedString(),
+					&myEnv,
 					NULL,	// cwd
 					FALSE, // new proc group
 					NULL,  // socket inherit

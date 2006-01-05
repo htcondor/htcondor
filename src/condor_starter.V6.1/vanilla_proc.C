@@ -87,47 +87,33 @@ VanillaProc::StartJob()
 
 		// now change arguments to include name of program cmd.exe 
 		// should run
-
-		// this little piece of code preserves the backwhacking of quotes,
-		// so when it's re-inserted into the JobAd any original backwhacks are still there.
-		ExprTree  *tree;
-        char	  *job_args;
-		char      *argstmp;
-		int		  length;
-
-		job_args = argstmp = NULL;
-		
-		tree = JobAd->Lookup(ATTR_JOB_ARGUMENTS);
-		if ( tree != NULL && tree->RArg() != NULL ) {
-			tree->RArg()->PrintToNewStr(&argstmp);
-			job_args = argstmp+1;		// skip first quote
-			length = strlen(job_args);
-			job_args[length-1] = '\0';	// destroy last quote
-		} else {
-			job_args = (char*) malloc(1*sizeof(char));
-			job_args[0] = '\0';
-		}
-		
 		// also pass /Q and /C arguments to cmd.exe, to tell it we do not
 		// want an interactive shell -- just run the command and exit
-		sprintf ( tmp, "%s=\"/Q /C condor_exec.bat %s\"",
-				  ATTR_JOB_ARGUMENTS, job_args );
-		JobAd->InsertOrUpdate(tmp);		
 
-		if ( argstmp != NULL ) {
-			// this is needed if we had to call PrintToNewStr() in classads
-			free(argstmp);
-		} else {
-			// otherwise we just need to free the byte we used to store the empty string
-			free(job_args);
+		ArgList args;
+		MyString arg_errors;
+
+		args.AppendArg("/Q");
+		args.AppendArg("/C");
+		args.AppendArg("condor_exec.bat");
+
+		if(!args.AppendArgsFromClassAd(JobAd,&arg_errors) ||
+		   !args.InsertArgsIntoClassAd(JobAd,NULL,&arg_errors)) {
+			dprintf(D_ALWAYS,"ERROR: failed to get args from job ad: %s\n",
+					arg_errors.Value());
+			return FALSE;
 		}
 
 		// finally we must rename file condor_exec to condor_exec.bat
 		rename(CONDOR_EXEC,"condor_exec.bat");
 
-		dprintf(D_FULLDEBUG,
-			"Executable is .bat, so running %s\\cmd.exe %s\n",
-			systemshell,tmp);
+		if(DebugFlags & D_FULLDEBUG) {
+			MyString args_desc;
+			args.GetArgsStringForDisplay(&args_desc);
+			dprintf(D_FULLDEBUG,
+					"Executable is .bat, so running %s\\cmd.exe %s\n",
+					systemshell,args_desc.Value());
+		}
 
 	}	// end of if executable name ends in .bat
 #endif

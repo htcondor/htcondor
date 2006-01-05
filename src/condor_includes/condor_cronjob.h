@@ -27,6 +27,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "linebuffer.h"
 #include "Queue.h"
+#include "env.h"
 
 // Cron's StdOut Line Buffer
 class CronJobOut : public LineBuffer
@@ -100,8 +101,7 @@ class CronJobBase : public Service
 	const char *GetName( void ) { return name.GetCStr(); };
 	const char *GetPrefix( void ) { return prefix.GetCStr(); };
 	const char *GetPath( void ) { return path.GetCStr(); };
-	const char *GetArgs( void ) { return args.GetCStr(); };
-	const char *GetEnv( void ) { return env.GetCStr(); };
+	//const char *GetArgs( void ) { return args.GetCStr(); };
 	const char *GetCwd( void ) { return cwd.GetCStr(); };
 	unsigned GetPeriod( void ) { return period; };
 
@@ -122,15 +122,15 @@ class CronJobBase : public Service
 	int SetName( const char *name );
 	int SetPrefix( const char *prefix );
 	int SetPath( const char *path );	
-	int SetArgs( const char *args );
-	int SetEnv( const char *env );
+	int SetArgs( ArgList const &new_args );
+	int SetEnv( char const * const *env );
+	int AddEnv( char const * const *env );
 	int SetCwd( const char *cwd );
 	int SetPeriod( CronJobMode mode, unsigned period );
 	int SetKill( bool );
 	int SetReconfig( bool );
 	int AddPath( const char *path );	
-	int AddArgs( const char *args );
-	int AddEnv( const char *env );
+	int AddArgs( ArgList const &new_args );
 
 	virtual int KillJob( bool );
 
@@ -147,8 +147,8 @@ class CronJobBase : public Service
 	MyString		name;			// Logical name of the job
 	MyString		prefix;			// Publishing prefix
 	MyString		path;			// Path to the executable
-	MyString		args;			// Arguments to pass it
-	MyString		env;			// Environment variables
+	ArgList         args;           // Arguments to pass it
+	Env             env;			// Environment variables
 	MyString		cwd;			// Process's initial CWD
 	unsigned		period;			// The configured period
 	int				runTimer;		// It's DaemonCore "run" timerID

@@ -40,8 +40,8 @@ display_startup_info( const STARTUP_INFO *s, int flags )
 	dprintf( flags, "\tVirtPid: %d\n", s->virt_pid );
 	dprintf( flags, "\tSoftKillSignal: %d\n", s->soft_kill_sig );
 	dprintf( flags, "\tCmd: \"%s\"\n", s->cmd );
-	dprintf( flags, "\tArgs: \"%s\"\n", s->args );
-	dprintf( flags, "\tEnv: \"%s\"\n", s->env );
+	dprintf( flags, "\tArgs: \"%s\"\n", s->args_v1or2 );
+	dprintf( flags, "\tEnv: \"%s\"\n", s->env_v1or2 );
 	dprintf( flags, "\tIwd: \"%s\"\n", s->iwd );
 	dprintf( flags, "\tCkpt Wanted: %s\n", s->ckpt_wanted ? "TRUE" : "FALSE" );
 	dprintf( flags, "\tIs Restart: %s\n", s->is_restart ? "TRUE" : "FALSE" );

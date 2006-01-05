@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "authentication.h"
 #include "condor_auth_x509.h"
-#include "environ.h"
 #include "globus_utils.h"
 
 #if !defined(SKIP_AUTHENTICATION)

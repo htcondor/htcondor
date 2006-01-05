@@ -155,8 +155,8 @@ PROC	*proc_template;
 		FREE( proc );
 		return NULL;
 	}
-	proc->args = (char **) MALLOC( sizeof( char *) * n_cmds );
-	if ( proc->args == NULL) {
+	proc->args_v1or2 = (char **) MALLOC( sizeof( char *) * n_cmds );
+	if ( proc->args_v1or2 == NULL) {
 		FREE( proc->cmd );
 		FREE( proc );
 		return NULL;
@@ -164,14 +164,14 @@ PROC	*proc_template;
 	proc->in = (char **) MALLOC( sizeof( char *) * n_cmds );
 	if ( proc->in == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc );
 		return NULL;
 	}
 	proc->out = (char **) MALLOC( sizeof( char *) * n_cmds );
 	if ( proc->out == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc->in );
 		FREE( proc );
 		return NULL;
@@ -179,7 +179,7 @@ PROC	*proc_template;
 	proc->err = (char **) MALLOC( sizeof( char *) * n_cmds );
 	if ( proc->err == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc->in );
 		FREE( proc->out );
 		FREE( proc );
@@ -189,7 +189,7 @@ PROC	*proc_template;
 												  n_cmds );
 	if ( proc->remote_usage == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc->in );
 		FREE( proc->out );
 		FREE( proc->err );
@@ -200,7 +200,7 @@ PROC	*proc_template;
 
 	if ( proc->err == NULL) {
 		FREE( proc->cmd );
-		FREE( proc->args );
+		FREE( proc->args_v1or2 );
 		FREE( proc->in );
 		FREE( proc->out );
 		FREE( proc->err );
@@ -216,7 +216,7 @@ DestructProc( proc )
 PROC	*proc;
 {
 	FREE( proc->cmd );
-	FREE( proc->args );
+	FREE( proc->args_v1or2 );
 	FREE( proc->in );
 	FREE( proc->out );
 	FREE( proc->err );

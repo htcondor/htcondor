@@ -35,8 +35,8 @@ typedef struct {
 #endif
 	int		soft_kill_sig;			/* Use this signal for a soft kill */
 	char	*cmd;					/* Command name given by the user */
-	char	*args;					/* Command arguments given by the user */
-	char	*env;					/* Environment variables */
+	char	*args_v1or2;			/* Command arguments given by the user */
+	char	*env_v1or2;	   			/* Environment variables */
 	char	*iwd;					/* Initial working directory */
 	BOOLEAN	ckpt_wanted;			/* Whether user wants checkpointing */
 	BOOLEAN	is_restart;				/* Whether this run is a restart */

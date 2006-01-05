@@ -60,6 +60,7 @@ class SimpleList
     inline void    Rewind() { current = -1; }
     bool    Current(ObjType &) const;
     bool    Next(ObjType &);
+    bool    Next(ObjType *&);
     inline bool    AtEnd() const { return (current >= size-1); }
     void    DeleteCurrent();
 	bool Delete(const ObjType &, bool delete_all = false);
@@ -144,6 +145,15 @@ Next (ObjType &item)
 {
     if (current >= size - 1) return false;
     item = items [++current];
+    return true;
+}
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+Next (ObjType *&item)
+{
+    if (current >= size - 1) return false;
+    item = &items[++current];
     return true;
 }
 
@@ -258,6 +268,7 @@ class SimpleListIterator {
   inline void ToBeforeFirst () { _cur = -1; }
   inline void ToAfterLast   () { _cur = -2; }
   bool Next( ObjType& );
+  bool Next( ObjType*& );
   bool Current( ObjType& ) const;
   bool Prev( ObjType& );
   
@@ -293,6 +304,20 @@ SimpleListIterator<ObjType>::Next( ObjType& obj)
   obj = _list->items[++_cur];
   return true;
 }
+
+template <class ObjType>
+bool
+SimpleListIterator<ObjType>::Next( ObjType*& obj)
+{
+  if (_list == NULL || IsAfterLast()) return false;
+  if (_cur >= _list->size - 1) {
+    ToAfterLast();
+    return false;
+  }
+  obj = &_list->items[++_cur];
+  return true;
+}
+
 		
 template <class ObjType>
 bool

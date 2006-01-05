@@ -25,7 +25,6 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_ckpt_name.h"
@@ -1496,9 +1495,8 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 	JobName[0] = '\0';
 	job_ad->LookupString( ATTR_JOB_CMD, JobName );
 
-	char Args[_POSIX_ARG_MAX];
-	Args[0] = '\0';
-	job_ad->LookupString(ATTR_JOB_ARGUMENTS, Args);
+	MyString Args;
+	ArgList::GetArgsStringForDisplay(job_ad,&Args);
 	
 	/*
 	// Not present.  Probably doesn't make sense for Globus
@@ -1537,7 +1535,7 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 
 	fprintf( mailer, "Your Condor job %d.%d \n", cluster, proc);
 	if ( JobName[0] ) {
-		fprintf(mailer,"\t%s %s\n",JobName,Args);
+		fprintf(mailer,"\t%s %s\n",JobName,Args.Value());
 	}
 	if(exit_status_known) {
 		fprintf(mailer, "has ");

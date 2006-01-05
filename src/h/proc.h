@@ -57,7 +57,7 @@ typedef struct {
 	int				prio;				/* Job priority */
 	int				notification;		/* Notification options */
 	int				image_size;			/* Size of the virtual image in K */
-	char			*env;				/* environment */
+	char			*env_v1or2;			/* environment */
 
 		/* Number of commands and per/command items.  Each of these items
 		** is declared as a pointer, but should be allocated as an array
@@ -65,7 +65,7 @@ typedef struct {
 		*/
 	int				n_cmds;				/* Number of executable files */
 	char			**cmd;				/* Names of executable files */
-	char			**args;				/* command line args */
+	char			**args_v1or2;		/* command line args */
 	char			**in;				/* file for stdin */
 	char			**out;				/* file for stdout */
 	char			**err;				/* file for stderr */
@@ -111,8 +111,8 @@ typedef struct {
 	int				notification;		/* Notification options */
 	int				image_size;			/* Size of the virtual image in K */
 	char			*cmd;				/* a.out file */
-	char			*args;				/* command line args */
-	char			*env;				/* environment */
+	char			*args_v1or2;		/* command line args */
+	char			*env_v1or2;			/* environment */
 	char			*in;				/* file for stdin */
 	char			*out;				/* file for stdout */
 	char			*err;				/* file for stderr */
@@ -147,8 +147,8 @@ typedef struct {
 	int				prio;
 	int				notification;		/* Notification options */
 	char			*cmd;
-	char			*args;
-	char			*env;
+	char			*args_v1or2;
+	char			*env_v1or2;
 	char			*in;
 	char			*out;
 	char			*err;

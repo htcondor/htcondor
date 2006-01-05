@@ -25,7 +25,6 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_ckpt_name.h"
@@ -779,8 +778,10 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	int index;
 	const char *attrs_to_copy[] = {
 		ATTR_JOB_CMD,
-		ATTR_JOB_ARGUMENTS,
-		ATTR_JOB_ENVIRONMENT,
+		ATTR_JOB_ARGUMENTS1,
+		ATTR_JOB_ARGUMENTS2,
+		ATTR_JOB_ENVIRONMENT1,
+		ATTR_JOB_ENVIRONMENT2,
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
 		ATTR_JOB_ERROR,

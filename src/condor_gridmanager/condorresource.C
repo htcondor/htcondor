@@ -112,25 +112,28 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 		// TODO remove scheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
 		MyString buff;
-		MyString buff2;
+		ArgList args;
 		buff.sprintf( "CONDOR/%s/%s/%s", poolName ? poolName : "NULL",
 					  scheddName, proxySubject ? proxySubject : "NULL" );
-		buff2.sprintf( "-f -s %s", scheddName );
+		args.AppendArg("-f");
+		args.AppendArg("-s");
+		args.AppendArg(scheddName);
 		if ( poolName != NULL ) {
-			buff2.sprintf_cat( " -P %s", poolName );
+			args.AppendArg("-P");
+			args.AppendArg(poolName);
 		}
 
-		gahp = new GahpClient( buff.Value(), gahp_path, buff2.Value() );
+		gahp = new GahpClient( buff.Value(), gahp_path, &args );
 		gahp->setNotificationTimerId( scheddPollTid );
 		gahp->setMode( GahpClient::normal );
 		gahp->setTimeout( CondorJob::gahpCallTimeout );
 
-		ping_gahp = new GahpClient( buff.Value(), gahp_path, buff2.Value() );
+		ping_gahp = new GahpClient( buff.Value(), gahp_path, &args );
 		ping_gahp->setNotificationTimerId( pingTimerId );
 		ping_gahp->setMode( GahpClient::normal );
 		ping_gahp->setTimeout( CondorJob::gahpCallTimeout );
 
-		lease_gahp = new GahpClient( buff.Value(), gahp_path, buff2.Value() );
+		lease_gahp = new GahpClient( buff.Value(), gahp_path, &args );
 		lease_gahp->setNotificationTimerId( updateLeasesTimerId );
 		lease_gahp->setMode( GahpClient::normal );
 		lease_gahp->setTimeout( CondorJob::gahpCallTimeout );

@@ -1143,10 +1143,10 @@ CStarter::PublishToEnv( Env* proc_env )
 		MyString key,value;
 		while(classenv.iterate(key,value)) {
 			MyString dummy;
-			if( ! proc_env->getenv(key,dummy) ) {
+			if( ! proc_env->GetEnv(key,dummy) ) {
 				// Only set the variable if it wasn't already
 				// set (let user settings override).
-				proc_env->Put(key.Value(),value.Value());
+				proc_env->SetEnv(key.Value(),value.Value());
 			}
 		}
 	} else {
@@ -1167,13 +1167,13 @@ CStarter::PublishToEnv( Env* proc_env )
 	if( output_ad && !(output_ad[0] == '-' && output_ad[1] == '\0') ) {
 		env_name = base.GetCStr();
 		env_name += "OUTPUT_CLASSAD";
-		proc_env->Put( env_name.GetCStr(), output_ad );
+		proc_env->SetEnv( env_name.GetCStr(), output_ad );
 	}
 	
 		// job scratch space
 	env_name = base.GetCStr();
 	env_name += "SCRATCH_DIR";
-	proc_env->Put( env_name.GetCStr(), GetWorkingDir() );
+	proc_env->SetEnv( env_name.GetCStr(), GetWorkingDir() );
 
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
@@ -1184,11 +1184,11 @@ CStarter::PublishToEnv( Env* proc_env )
 	if( low && high ) {
 		env_name = base.GetCStr();
 		env_name += "HIGHPORT";
-		proc_env->Put( env_name.GetCStr(), high );
+		proc_env->SetEnv( env_name.GetCStr(), high );
 
 		env_name = base.GetCStr();
 		env_name += "LOWPORT";
-		proc_env->Put( env_name.GetCStr(), low );
+		proc_env->SetEnv( env_name.GetCStr(), low );
 
 		free( high );
 		free( low );

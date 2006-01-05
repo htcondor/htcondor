@@ -1041,9 +1041,11 @@ NewExecutable(char* file, time_t *tsp)
 int
 run_preen(Service*)
 {
-	int		child_pid, size;
-	char	*preen_args, *tmp;
+	int		child_pid;
+	char *args=NULL;
 	const char	*preen_base;
+	ArgList arglist;
+	MyString error_msg;
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 
@@ -1051,22 +1053,22 @@ run_preen(Service*)
 		return 0;
 	}
 	preen_base = condor_basename( FS_Preen );
-	if( (tmp = param("PREEN_ARGS")) ) {
-		size = strlen(tmp) + strlen(preen_base) + 2;
-		preen_args = new char[size];
-		sprintf( preen_args, "%s %s", preen_base, tmp );
-		free( tmp );
-	} else {
-		preen_args = strnewp( preen_base );
+	arglist.AppendArg(preen_base);
+
+	args = param("PREEN_ARGS");
+	if(!arglist.AppendArgsV1or2Input(args,&error_msg)) {
+		EXCEPT("ERROR: failed to parse preen args: %s\n",error_msg.Value());
 	}
+	free(args);
+
 	child_pid = daemonCore->Create_Process(
 					FS_Preen,		// program to exec
-					preen_args,		// args
+					arglist,   		// args
 					PRIV_ROOT,		// privledge level
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
-	delete [] preen_args;
+
 	return child_pid;
 }
 

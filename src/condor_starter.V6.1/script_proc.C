@@ -112,30 +112,40 @@ ScriptProc::StartJob()
 		// Args
 		// // // // // // 
 
-	attr = name;
-	attr += ATTR_JOB_ARGUMENTS;
-	if( ! JobAd->LookupString(attr.GetCStr(), &tmp) ) {
-		dprintf( D_FULLDEBUG, "%s not found in JobAd\n", attr.GetCStr() );
-	}
+	char *args1 = NULL;
+	char *args2 = NULL;
+	MyString args1_attr;
+	MyString args2_attr;
+	args1_attr = name;
+	args1_attr += ATTR_JOB_ARGUMENTS1;
+	args2_attr = name;
+	args2_attr += ATTR_JOB_ARGUMENTS2;
 
-	MyString args;
+	JobAd->LookupString(args1_attr.Value(), &args1);
+	JobAd->LookupString(args2_attr.Value(), &args2);
+
+	ArgList args;
 
 		// First, put "condor_<name>script" at the front of Args,
 		// since that will become argv[0] of what we exec(), either
 		// the wrapper or the actual job.
-	args = "condor_";
-	args += name;
-	args += "script ";
+	MyString arg0;
+	arg0 = "condor_";
+	arg0 += name;
+	arg0 += "script";
+	args.AppendArg(arg0.Value());
 
-		// This variable is used to keep track of the position
-		// of the arguments immediately following argv[0].
-	int skip = args.Length();
-
-		// If specified, append the real arguments now.
-	if( tmp ) {
-		args += tmp;
-		free( tmp );
-		tmp = NULL;
+	MyString args_error;
+	bool args_success = false;
+	if(args2 && *args2) {
+		args_success = args.AppendArgsV2Raw(args2,&args_error);
+	}
+	else if(args1 && *args1) {
+		args_success = args.AppendArgsV1Raw(args1,&args_error);
+	}
+	else {
+		dprintf( D_FULLDEBUG, "neither %s nor %s could be found in JobAd\n",
+				 args1_attr.Value(), args2_attr.Value());
 	}
 
 
@@ -143,26 +153,43 @@ ScriptProc::StartJob()
 		// Environment 
 		// // // // // // 
 
-	attr = name;
-	attr += ATTR_JOB_ENVIRONMENT;
-	JobAd->LookupString( attr.GetCStr(), &tmp );
+	char *env1 = NULL;
+	char *env2 = NULL;
+	MyString env1_attr;
+	MyString env2_attr;
+	env1_attr = name;
+	env1_attr += ATTR_JOB_ENVIRONMENT1;
+	env2_attr = name;
+	env2_attr += ATTR_JOB_ENVIRONMENT2;
+	JobAd->LookupString( env1_attr.Value(), &env1 );
+	JobAd->LookupString( env2_attr.Value(), &env2 );
 			// TODO do we want to use the regular ATTR_JOB_ENVIRONMENT
 			// if there's nothing specific for this script?
 
 		// Now, instantiate an Env object so we can manipulate the
 		// environment as needed.
 	Env job_env;
-	if( tmp ) { 
-		if( ! job_env.Merge(tmp) ) {
-			dprintf( D_ALWAYS, "Invalid %s found in JobAd.  "
-					 "Aborting ScriptProc::StartJob.\n", attr.GetCStr() );  
+	MyString env_errors;
+	if( env2 && *env2 ) { 
+		if( ! job_env.MergeFromV2Raw(env2,&env_errors) ) {
+			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
+					 "Aborting ScriptProc::StartJob.\n",
+					 env2_attr.GetCStr(),env_errors.Value() );  
 			return 0;
 		}
-			// Next, we can free the string we got back from
-			// LookupString() so we don't leak any memory.
-		free( tmp );
-		tmp = NULL;
 	}
+	else if( env1 && *env1 ) { 
+		if( ! job_env.MergeFromV1Raw(env1,&env_errors) ) {
+			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
+					 "Aborting ScriptProc::StartJob.\n",
+					 env1_attr.GetCStr(),env_errors.Value() );  
+			return 0;
+		}
+	}
+
+	free(env1);
+	free(env2);
+
 		// Now, let the starter publish any env vars it wants to add
 	Starter->PublishToEnv( &job_env );
 
@@ -170,8 +197,12 @@ ScriptProc::StartJob()
 		// TODO: Deal with port regulation stuff?
 
 		// Grab the full environment back out of the Env object 
-	char* env_str = job_env.getDelimitedString();
-	dprintf(D_FULLDEBUG, "%sEnv = %s\n", name, env_str );
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString env_str;
+		job_env.getDelimitedStringForDisplay(&env_str);
+		dprintf(D_FULLDEBUG, "%sEnv = %s\n", name, env_str.Value() );
+	}
+
 
 
 		// // // // // // 
@@ -196,15 +227,15 @@ ScriptProc::StartJob()
 
 		// in the below dprintfs, we want to skip past argv[0], which
 		// is sometimes condor_exec, in the Args string. 
-		// We rely on the "skip" variable defined above when
-		// argv[0] was set according to the universe and job name.
 
+	MyString args_string;
+	args.GetArgsStringForDisplay(&args_string,1);
 	dprintf( D_ALWAYS, "About to exec %s script: %s %s\n", 
 			 name, exe_path.GetCStr(), 
-			 (skip < args.Length()) ? &(args[skip]) : "" );
+			 args_string.Value() );
 
 	JobPid = daemonCore->Create_Process(exe_path.GetCStr(), 
-				args.GetCStr(), PRIV_USER_FINAL, 1, FALSE, env_str,
+				args, PRIV_USER_FINAL, 1, FALSE, &job_env,
 				Starter->jic->jobIWD(), TRUE, NULL, NULL, nice_inc,
 				DCJOBOPT_NO_ENV_INHERIT );
 
@@ -215,9 +246,6 @@ ScriptProc::StartJob()
 		create_process_error = strerror( errno );
 	}
 
-		// Free up memory we allocated so we don't leak.
-	delete [] env_str;
-
 	if( JobPid == FALSE ) {
 		JobPid = -1;
 
@@ -225,14 +253,14 @@ ScriptProc::StartJob()
 			MyString err_msg = "Failed to execute '";
 			err_msg += exe_path.GetCStr();
 			err_msg += ' ';
-			err_msg += args.GetCStr();
+			err_msg += args_string;
 			err_msg += "': ";
 			err_msg += create_process_error;
 			Starter->jic->notifyStarterError( err_msg.Value(), true );
 		}
 
 		EXCEPT( "Create_Process(%s,%s, ...) failed",
-				exe_path.GetCStr(), args.GetCStr() );
+				exe_path.GetCStr(), args_string.Value() );
 		return 0;
 	}
 

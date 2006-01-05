@@ -443,15 +443,22 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		return NULL;
 	}
 
-	char *gman_args;
-	gman_args = param("GRIDMANAGER_ARGS");
-	char gman_final_args[_POSIX_ARG_MAX];
-	if (gman_args) {
-		sprintf(gman_final_args,"condor_gridmanager -f %s",gman_args);
+	ArgList args;
+	MyString error_msg;
+
+	args.AppendArg("condor_gridmanager");
+	args.AppendArg("-f");
+
+	char *gman_args = param("GRIDMANAGER_ARGS");
+
+	if(!args.AppendArgsV1or2Input(gman_args,&error_msg)) {
+		dprintf( D_ALWAYS, "ERROR: failed to parse gridmanager args: %s\n",
+				 error_msg.Value());
 		free(gman_args);
-	} else {
-		sprintf(gman_final_args,"condor_gridmanager -f");
+		return NULL;
 	}
+	free(gman_args);
+
 	if (cluster) {
 		dprintf( D_ALWAYS, "ERROR - gridman_per_job not supported!\n" );
 		return NULL;
@@ -477,15 +484,16 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 			owner_or_user = ATTR_OWNER;
 		}
 		if ( !attr_name  ) {
-			constraint.sprintf(" -C (%s=?=\"%s\"&&%s==%d)",
+			constraint.sprintf("(%s=?=\"%s\"&&%s==%d)",
 				owner_or_user,full_owner_name.Value(),
 				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 		} else {
-			constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
+			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
 				owner_or_user,full_owner_name.Value(),
 				attr_name,attr_value);
 		}
-		strcat(gman_final_args,constraint.Value());
+		args.AppendArg("-C");
+		args.AppendArg(constraint.Value());
 	}
 
 	if (!init_user_ids(owner, domain)) {
@@ -559,8 +567,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 			failed = true;
 		}
 		set_priv(saved_priv);
-		strcat(gman_final_args," -S ");	// -S = "ScratchDir" argument
-		strcat(gman_final_args,finalpath);
+		args.AppendArg("-S");	// -S = "ScratchDir" argument
+		args.AppendArg(finalpath);
 		delete [] finalpath;
 		if ( failed ) {
 			// we already did dprintf reason to the log...
@@ -569,11 +577,15 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		}
 	}
 
-	dprintf(D_FULLDEBUG,"Really Execing %s\n",gman_final_args);
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString args_string;
+		args.GetArgsStringForDisplay(&args_string);
+		dprintf(D_FULLDEBUG,"Really Execing %s\n",args_string.Value());
+	}
 
 	pid = daemonCore->Create_Process( 
 		gman_binary,			// Program to exec
-		gman_final_args,		// Command-line args
+		args,					// Command-line args
 		PRIV_USER_FINAL,		// Run as the Owner
 		rid						// Reaper ID
 		);

@@ -82,28 +82,29 @@ Script::BackgroundRun( int reaperId )
 
     const char *delimiters = " \t";
     char * token;
-    MyString send;
+	ArgList args;
     char * cmd = strnewp(_cmd);
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
+		MyString arg;
 		if( !strcasecmp( token, "$JOB" ) ) {
-			send += _node->GetJobName();
+			arg += _node->GetJobName();
 		} 
         else if ( !strcasecmp( token, "$RETRY" ) ) {
-            send += _node->retries;
+            arg += _node->retries;
         }
         else if ( _post && !strcasecmp( token, "$JOBID" ) ) {
-            send += _node->_CondorID._cluster;
-            send += '.';
-            send += _node->_CondorID._proc;
+            arg += _node->_CondorID._cluster;
+            arg += '.';
+            arg += _node->_CondorID._proc;
         }
-        else if (!strcasecmp(token, "$RETURN")) send += _retValJob;
-        else                                    send += token;
+        else if (!strcasecmp(token, "$RETURN")) arg += _retValJob;
+        else                                    arg += token;
 
-        send += ' ';
+		args.AppendArg(arg.Value());
     }
 
-	_pid = daemonCore->Create_Process( cmd, (char*) send.Value(),
+	_pid = daemonCore->Create_Process( cmd, args,
 									   PRIV_UNKNOWN, reaperId, FALSE,
 									   NULL, NULL, FALSE, NULL, NULL, 0 );
     delete [] cmd;

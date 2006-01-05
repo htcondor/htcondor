@@ -1364,8 +1364,10 @@ bufferJobShort( ClassAd *ad ) {
 		return( return_buff );
 	}
 	
-	if (ad->EvalString ("Args", NULL, args)) {
-		sprintf( buffer, "%s %s", condor_basename(cmd), args );
+	MyString args_string;
+	ArgList::GetArgsStringForDisplay(ad,&args_string);
+	if (!args_string.IsEmpty()) {
+		sprintf( buffer, "%s %s", condor_basename(cmd), args_string.Value() );
 	} else {
 		sprintf( buffer, "%s", condor_basename(cmd) );
 	}

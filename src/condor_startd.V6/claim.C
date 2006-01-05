@@ -1051,42 +1051,48 @@ Claim::starterKillHard( void )
 }
 
 
-char* 
-Claim::makeCODStarterArgs( void )
+bool
+Claim::makeCODStarterArgs( ArgList &args )
 {
-	MyString args;
-
 		// first deal with everthing that's shared, no matter what.
-	args = "condor_starter -f -append cod ";
-	args += "-header (";
+	args.AppendArg("condor_starter");
+	args.AppendArg("-f");
+	args.AppendArg("-append");
+	args.AppendArg("cod");
+	args.AppendArg("-header");
+
+	MyString cod_id_arg;
+	cod_id_arg += "(";
 	if( resmgr->is_smp() ) {
-		args += c_rip->r_id_str;
-		args += ':';
+		cod_id_arg += c_rip->r_id_str;
+		cod_id_arg += ':';
 	}
-	args += codId();
-	args += ") ";
+	cod_id_arg += codId();
+	cod_id_arg += ")";
+	args.AppendArg(cod_id_arg.Value());
 
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
-		args += " -job-cluster ";
-		args += c_cluster;
+		args.AppendArg("-job-cluster");
+		args.AppendArg(c_cluster);
 	} 
 	if( c_proc >= 0 ) {
-		args += " -job-proc ";
-		args += c_proc;
+		args.AppendArg("-job-proc");
+		args.AppendArg(c_proc);
 	} 
 
 		// finally, specify how the job should get its ClassAd
 	if( c_cod_keyword ) { 
-		args += " -job-keyword ";
-		args += c_cod_keyword;
+		args.AppendArg("-job-keyword");
+		args.AppendArg(c_cod_keyword);
 	}
 
 	if( c_has_job_ad ) { 
-		args += " -job-input-ad - ";
+		args.AppendArg("-job-input-ad");
+		args.AppendArg("-");
 	}
 
-	return strdup( args.Value() );
+	return true;
 }
 
 

@@ -93,7 +93,7 @@ private:
 	int		execOldStarter( void );
 	int		execCODStarter( void );
 	int		execDCStarter( Stream* s );
-	int		execDCStarter( const char* args, const char* env, 
+	int		execDCStarter( ArgList const &args, Env const *env, 
 						   int std_fds[], Stream* s );
 	void	initRunData( void );
 

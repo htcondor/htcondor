@@ -99,7 +99,8 @@ class MyString
 	const char& operator[](int pos);
 
 	/** Sets the character at the given position to the given value,
-	 *  if the position is within the string. */
+	 *  if the position is within the string.  Setting the character
+	 *  to '\0' truncates the string to end at that position. */
 	void setChar(int pos, char value);
 
 	//@}

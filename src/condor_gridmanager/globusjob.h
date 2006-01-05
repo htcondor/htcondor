@@ -193,5 +193,8 @@ bool WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad,
 											int failure_code,
 											const char *failure_mesg);
 
+const char *rsl_stringify( const MyString& src );
+const char *rsl_stringify( const char *string );
+
 #endif
 

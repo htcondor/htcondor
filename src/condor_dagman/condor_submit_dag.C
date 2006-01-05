@@ -365,44 +365,56 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 		// by something other than the schedd (e.g., a fast reboot)
     fprintf(pSubFile, "on_exit_remove\t= (ExitBySignal == false || ExitSignal =!= 9)\n" );
 
-	MyString strArgs;
-	strArgs.reserve_at_least(256);
+	ArgList args;
 
-	strArgs = "-f -l . -Debug " + makeString(opts.iDebugLevel) +
-				" -Lockfile " + opts.strLockFile;
+	args.AppendArg("-f");
+	args.AppendArg("-l");
+	args.AppendArg(".");
+	args.AppendArg("-Debug");
+	args.AppendArg(opts.iDebugLevel);
+	args.AppendArg("-Lockfile");
+	args.AppendArg(opts.strLockFile.Value());
+
 	if ( opts.strJobLog == "" ) {
 			// Condor_dagman can't parse command-line args if we have
 			// an empty value for the log file name.
 		opts.strJobLog = opts.primaryDagFile + ".log";
 	}
-    strArgs += " -Condorlog " + opts.strJobLog;
+	args.AppendArg("-Condorlog");
+	args.AppendArg(opts.strJobLog.Value());
 	
 	opts.dagFiles.rewind();
 	while ( (dagFile = opts.dagFiles.next()) != NULL ) {
-		strArgs += " -Dag ";
-		strArgs += dagFile;
+		args.AppendArg("-Dag");
+		args.AppendArg(dagFile);
 	}
 
-    strArgs += " -Rescue " + opts.strRescueFile;
+	args.AppendArg("-Rescue");
+	args.AppendArg(opts.strRescueFile.Value());
     if(opts.iMaxIdle) 
 	{
-		strArgs += " -MaxIdle " + makeString(opts.iMaxIdle);
+		args.AppendArg("-MaxIdle");
+		args.AppendArg(opts.iMaxIdle);
     }
     if(opts.iMaxJobs) 
 	{
-		strArgs += " -MaxJobs " + makeString(opts.iMaxJobs);
+		args.AppendArg("-MaxJobs");
+		args.AppendArg(opts.iMaxJobs);
     }
     if(opts.iMaxPre) 
 	{
-		strArgs += " -MaxPre " + makeString(opts.iMaxPre);
+		args.AppendArg("-MaxPre");
+		args.AppendArg(opts.iMaxPre);
     }
     if(opts.iMaxPost) 
 	{
-		strArgs += " -MaxPost " + makeString(opts.iMaxPost);
+		args.AppendArg("-MaxPost");
+		args.AppendArg(opts.iMaxPost);
     }
     if(opts.strStorkLog != "") 
 	{
-		strArgs += " -Storklog " + opts.strStorkLog;
+		args.AppendArg("-Storklog");
+		args.AppendArg(opts.strStorkLog.Value());
     }
 	if(opts.bNoEventChecks)
 	{
@@ -412,22 +424,31 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	}
 	if(opts.bAllowLogError)
 	{
-		strArgs += " -AllowLogError";
+		args.AppendArg("-AllowLogError");
 	}
 	if(opts.useDagDir)
 	{
-		strArgs += " -UseDagDir";
+		args.AppendArg("-UseDagDir");
 	}
 
-    fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
+	MyString arg_str,args_error;
+	if(!args.GetArgsStringV2Input(&arg_str,&args_error)) {
+		fprintf(stderr,"Failed to insert arguments: %s",args_error.Value());
+		exit(1);
+	}
+    fprintf(pSubFile, "arguments\t= %s\n", arg_str.Value());
 
 	Env env;
-	env.Put("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
-	env.Put("_CONDOR_MAX_DAGMAN_LOG=0");
+	env.SetEnv("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
+	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
 
-	char *env_str = env.getDelimitedString();
-    fprintf(pSubFile, "environment\t=%s\n",env_str);
-	delete[] env_str;
+	MyString env_str;
+	MyString env_errors;
+	if(!env.getDelimitedStringV2Input(&env_str,&env_errors)) {
+		fprintf(stderr,"Failed to insert environment: %s",env_errors.Value());
+		exit(1);
+	}
+    fprintf(pSubFile, "environment\t=%s\n",env_str.Value());
 
     if(opts.strNotification != "") 
 	{	

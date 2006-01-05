@@ -30,6 +30,7 @@
 #include "simplelist.h"
 #include "condor_cron.h"
 #include "condor_cronmgr.h"
+#include "condor_string.h"
 
 
 // Class to parse the job lists
@@ -632,12 +633,32 @@ CronMgrBase::ParseJobList( const char *jobListString )
 		}
 
 		// Are there arguments for it?
+		ArgList args;
+		MyString args_errors;
+
 		// Force the first arg to be the "Job Name"..
-		MyString	jobArgs( jobName );
-		if ( ! paramArgs.IsEmpty() ) {
-			jobArgs += " ";
-			jobArgs += paramArgs;
+		args.AppendArg(jobName);
+
+		if(!args.AppendArgsV1or2Input(paramArgs.Value(),&args_errors)) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job '%s': "
+					 "Failed to parse arguments: %s\n",
+					 jobName, args_errors.Value());
+			jobOk = false;
 		}
+
+		// Parse the environment.
+		Env envobj;
+		MyString env_error_msg;
+
+		if(!envobj.MergeFromV1or2Input(paramEnv.Value(),&env_error_msg)) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job '%s': "
+					 "Failed to parse environment: %s\n",
+					 jobName, env_error_msg.Value());
+			jobOk = false;
+		}
+
 
 		// Create the job & add it to the list (if it's new)
 		CronJobBase *job = NULL;
@@ -678,10 +699,13 @@ CronMgrBase::ParseJobList( const char *jobListString )
 			// And, set it's characteristics
 			job->SetPath( paramExecutable.Value() );
 			job->SetPrefix( paramPrefix.Value() );
-			job->SetArgs( jobArgs.GetCStr() );
-			job->SetEnv( paramEnv.Value() );
+			job->SetArgs( args );
 			job->SetCwd( paramCwd.Value() );
 			job->SetPeriod( jobMode, jobPeriod );
+
+			char **env_array = envobj.getStringArray();
+			job->SetEnv( env_array );
+			deleteStringArray(env_array);
 
 			// Mark the job so that it doesn't get deleted (below)
 			job->Mark( );
@@ -842,6 +866,45 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 			}
 		}
 
+		// Are there arguments for it?
+		// Force the first arg to be the "Job Name"..
+		char *paramArgs = GetParam( jobName, "_ARGS" );
+
+		// Are there arguments for it?
+		// Force the first arg to be the "Job Name"..
+		ArgList args;
+		MyString args_errors;
+
+		// Force the first arg to be the "Job Name"..
+		args.AppendArg(jobName);
+
+		if(!args.AppendArgsV1or2Input(paramArgs,&args_errors)) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job '%s': "
+					 "Failed to parse arguments: %s\n",
+					 jobName, args_errors.Value());
+			free(paramArgs);
+			continue;
+		}
+		free(paramArgs);
+
+		// Special environment vars?
+		char *paramEnv       = GetParam( jobName, "_ENV" );
+
+		// Parse the environment.
+		Env envobj;
+		MyString env_error_msg;
+
+		if(envobj.MergeFromV1or2Input(paramEnv,&env_error_msg)) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job '%s': "
+					 "Failed to parse environment: %s\n",
+					 jobName, env_error_msg.Value());
+			free(paramEnv);
+			continue;
+		}
+		free(paramEnv);
+
 		// Create the job & add it to the list (if it's new)
 		CronJobBase *job = Cron.FindJob( jobName );
 		if ( NULL == job ) {
@@ -863,24 +926,6 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		job->SetKill( killMode );
 		job->SetReconfig( reconfig );
 
-		// Are there arguments for it?
-		// Force the first arg to be the "Job Name"..
-		char *argBufTmp = GetParam( jobName, "_ARGS" );
-		char *argBuf;
-		if ( NULL == argBufTmp ) {
-			argBuf = strdup( jobName );
-		} else {
-			int		len = strlen( jobName ) + 1 + strlen( argBufTmp ) + 1;
-			argBuf = new char[len];
-			strcpy( argBuf, jobName );
-			strcat( argBuf, " " );
-			strcat( argBuf, argBufTmp );
-			free( argBufTmp );
-		}
-
-		// Special environment vars?
-		char *envBuf = GetParam( jobName, "_ENV" );
-
 		// CWD?
 		char *cwdBuf = GetParam( jobName, "_CWD" );
 
@@ -891,18 +936,15 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		// And, set it's characteristics
 		job->SetPath( jobPath );
 		job->SetPrefix( jobPrefix );
-		job->SetArgs( argBuf );
-		job->SetEnv( envBuf );
+		job->SetArgs( args );
 		job->SetCwd( cwdBuf );
 		job->SetPeriod( jobMode, jobPeriod );
 
+		char **env_array = envobj.getStringArray();
+		job->SetEnv( env_array );
+		deleteStringArray(env_array);
+
 		// Free up memory from param()
-		if ( argBuf ) {
-			free( argBuf );
-		}
-		if ( envBuf ) {
-			free( envBuf );
-		}
 		if ( cwdBuf ) {
 			free( cwdBuf );
 		}

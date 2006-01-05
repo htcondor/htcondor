@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include "globus_utils.h"
+#include "condor_string.h"
 
 
 #define MAX_CRED_DATA_SIZE 100000
@@ -700,16 +701,13 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   if (((X509Credential*)proxy->cred)->GetMyProxyServerDN()) {
     strBuff="MYPROXY_SERVER_DN=";
     strBuff+= ((X509Credential*)proxy->cred)->GetMyProxyServerDN();
-    myEnv.Put (strBuff.Value());
+    myEnv.SetEnv (strBuff.Value());
     dprintf (D_FULLDEBUG, "%s\n", strBuff.Value());
   }
 
   strBuff="X509_USER_PROXY=";
   strBuff+=proxy->GetStorageName();
-  myEnv.Put (strBuff.Value());
   dprintf (D_FULLDEBUG, "%s\n", strBuff.Value());
-
-  char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
   // Get password (this will end up in stdin for myproxy-get-delegation)
   const char * myproxy_password =((X509Credential*)proxy->cred)->GetRefreshPassword();
@@ -741,39 +739,39 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   int myproxy_port = getPortFromAddr (((X509Credential*)proxy->cred)->GetMyProxyServerHost());
 
   // construct arguments
-  MyString strArgs = "";
-  strArgs += " --verbose ";
+  ArgList args;
+  args.AppendArg("--verbose ");
 
-  strArgs += " --out ";
-  strArgs += proxy_filename;
+  args.AppendArg("--out");
+  args.AppendArg(proxy_filename);
 
-  strArgs += " --pshost ";
-  strArgs += myproxy_host;
+  args.AppendArg("--pshost");
+  args.AppendArg(myproxy_host);
   if ( myproxy_host != NULL ) {
 	  free ( myproxy_host );
   }
 
-  strArgs += " --dn_as_username ";
+  args.AppendArg("--dn_as_username");
 
-  strArgs += " --proxy_lifetime ";	// hours
-  strArgs += 6;
+  args.AppendArg("--proxy_lifetime");	// hours
+  args.AppendArg(6);
 
-  strArgs += " --stdin_pass ";
+  args.AppendArg("--stdin_pass");
 
-  strArgs += " --username ";
-  strArgs += username;
+  args.AppendArg("--username");
+  args.AppendArg(username);
 
   // Optional port argument
   if (myproxy_port) {
-    strArgs += " --psport ";
-    strArgs += myproxy_port;
+	  args.AppendArg("--psport");
+	  args.AppendArg(myproxy_port);
   }
 
   // Optional credential name
   if	(	((X509Credential*)proxy->cred)->GetCredentialName() && 
   			( ((X509Credential*)proxy->cred)->GetCredentialName() )[0] ) {
-    strArgs += " --credname ";
-    strArgs += ((X509Credential*)proxy->cred)->GetCredentialName();
+	  args.AppendArg("--credname");
+	  args.AppendArg(((X509Credential*)proxy->cred)->GetCredentialName());
   }
 
 
@@ -818,15 +816,17 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
     dprintf (D_ALWAYS, "MYPROXY_GET_DELEGATION not defined in config file\n");
     return FALSE;
   }
-  dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, strArgs.Value());
+  MyString args_string;
+  args.GetArgsStringForDisplay(&args_string);
+  dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args_string.Value());
 
   int pid = daemonCore->Create_Process (
 					myproxy_get_delegation_pgm,		// name
-					strArgs.Value(),				// args
+					args,				 			// args
 					PRIV_USER_FINAL,				// priv
 					myproxyGetDelegationReaperId,	// reaper_id
 					FALSE,							// want_command_port
-					env_string,						// env
+					&myEnv,							// env
 					NULL,							// cwd		
 					FALSE,							// new_process_group
 					NULL,							// sock_inherit_list
@@ -836,7 +836,6 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   free (myproxy_get_delegation_pgm);
   myproxy_get_delegation_pgm = NULL;
 
-  if (env_string) delete []env_string;// delete string from "new"
 
   
 

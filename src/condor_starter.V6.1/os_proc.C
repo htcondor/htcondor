@@ -117,14 +117,7 @@ OsProc::StartJob()
 		}
 	} 
 
-	char Args[_POSIX_ARG_MAX];
-	char tmp[_POSIX_ARG_MAX];
-
-	if (JobAd->LookupString(ATTR_JOB_ARGUMENTS, tmp) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  "
-				"Aborting OsProc::StartJob.\n", ATTR_JOB_ARGUMENTS);
-		return 0;
-	}
+	ArgList args;
 
 		// First, put "condor_exec" at the front of Args, since that
 		// will become argv[0] of what we exec(), either the wrapper
@@ -134,15 +127,10 @@ OsProc::StartJob()
 		// For Java, set it correctly.  In a future version, we
 		// may consider removing the CONDOR_EXEC feature entirely.
 	if( job_universe==CONDOR_UNIVERSE_JAVA ) {
-		strcpy( Args, JobName );
+		args.AppendArg(JobName);
 	} else {
-		strcpy( Args, CONDOR_EXEC );
+		args.AppendArg(CONDOR_EXEC);
 	}
-
-		// This variable is used to keep track of the position
-		// of the arguments immediately following argv[0].
-
-	int skip = strlen(Args)+1;
 
 		// Support USER_JOB_WRAPPER parameter...
 
@@ -160,16 +148,17 @@ OsProc::StartJob()
 			// "JobName" so we exec it directly, and we want to put
 			// what was the JobName (with the full path) as the first
 			// argument to the wrapper
-		strcat( Args, " " );
-		strcat( Args, JobName );
+		args.AppendArg(JobName);
 		strcpy( JobName, wrapper );
 		free(wrapper);
 	} 
 		// Either way, we now have to add the user-specified args as
 		// the rest of the Args string.
-	if ( tmp[0] != '\0' ) {
-		strcat( Args, " " );
-		strcat( Args, tmp );
+	MyString args_error;
+	if(!args.AppendArgsFromClassAd(JobAd,&args_error)) {
+		dprintf(D_ALWAYS, "Failed to read job arguments from JobAd.  "
+				"Aborting OsProc::StartJob: %s\n",args_error.Value());
+		return 0;
 	}
 
 		// // // // // // 
@@ -179,31 +168,24 @@ OsProc::StartJob()
 		// Now, instantiate an Env object so we can manipulate the
 		// environment as needed.
 	Env job_env;
-	char* env_str = NULL;
 
-	env_str = param( "STARTER_JOB_ENVIRONMENT" );
-	if(env_str) {
-		if( ! job_env.Merge(env_str) ) {
-			dprintf( D_ALWAYS, "Aborting OSProc::StartJob: "
-					           "Invalid value for STARTER_JOB_ENVIRONMENT: "
-				               "%s\n",env_str);
-			return 0;
-		}
+	char *env_str = param( "STARTER_JOB_ENVIRONMENT" );
+
+	MyString env_errors;
+	if( ! job_env.MergeFromV1or2Input(env_str,&env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: "
+				 "%s\nThe full value for STARTER_JOB_ENVIRONMENT: "
+				 "%s\n",env_errors.Value(),env_str);
 		free(env_str);
-		env_str = NULL;
+		return 0;
 	}
+	free(env_str);
 
-	JobAd->LookupString( ATTR_JOB_ENVIRONMENT, &env_str );
-
-	if( env_str ) { 
-		if( ! job_env.Merge(env_str) ) {
-			dprintf( D_ALWAYS, "Invalid %s found in JobAd.  "
-					 "Aborting OsProc::StartJob.\n", ATTR_JOB_ENVIRONMENT );  
-			return 0;
-		}
-			// Next, we can free the string we got back from
-			// LookupString() so we don't leak any memory.
-		free( env_str );
+	if(!job_env.MergeFrom(JobAd,&env_errors)) {
+		dprintf( D_ALWAYS, "Invalid environment found in JobAd.  "
+		         "Aborting OsProc::StartJob: %s\n",
+		         env_errors.Value());
+		return 0;
 	}
 
 		// Now, let the starter publish any env vars it wants to into
@@ -310,29 +292,26 @@ OsProc::StartJob()
 
 		// in the below dprintfs, we want to skip past argv[0], which
 		// is sometimes condor_exec, in the Args string. 
-		// We rely on the "skip" variable defined above when
-		// argv[0] was set according to the universe and job name.
 
+	MyString args_string;
+	int start_arg = has_wrapper ? 2 : 1;
+	args.GetArgsStringForDisplay(&args_string,start_arg);
 	if( has_wrapper ) { 
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
 		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName, 
-				 &(Args[skip]) );
+				 args_string.Value() );
 	} else {
-		if (skip < (int)strlen(Args)){
-			/* some arguments exist, so skip and print them out */
-			dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
-				 &(Args[skip]) );
-		} else {
-			/* no arguments exist, so just print out executable */
-			dprintf( D_ALWAYS, "About to exec %s\n", JobName);
-		}
+		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
+				 args_string.Value() );
 	}
 
 		// Grab the full environment back out of the Env object 
-	env_str = job_env.getDelimitedString();
-	dprintf(D_FULLDEBUG, "Env = %s\n", env_str);
-
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString env_str;
+		job_env.getDelimitedStringForDisplay(&env_str);
+		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.Value());
+	}
 
 	// Check to see if we need to start this process paused, and if
 	// so, pass the right flag to DC::Create_Process().
@@ -347,8 +326,8 @@ OsProc::StartJob()
 
 	set_priv ( priv );
 
-	JobPid = daemonCore->Create_Process( JobName, Args, PRIV_USER_FINAL,
-					     1, FALSE, env_str, job_iwd, TRUE,
+	JobPid = daemonCore->Create_Process( JobName, args, PRIV_USER_FINAL,
+					     1, FALSE, &job_env, job_iwd, TRUE,
 					     NULL, fds, nice_inc, job_opt_mask );
 
 	//NOTE: Create_Process() saves the errno for us if it is an
@@ -378,9 +357,6 @@ OsProc::StartJob()
 		close(fds[2]);
 	}
 
-		// Free up memory we allocated so we don't leak.
-	delete [] env_str;
-
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
 
@@ -388,14 +364,14 @@ OsProc::StartJob()
 			MyString err_msg = "Failed to execute '";
 			err_msg += JobName;
 			err_msg += ' ';
-			err_msg += Args;
+			err_msg += args_string.Value();
 			err_msg += "': ";
 			err_msg += create_process_error;
 			Starter->jic->notifyStarterError( err_msg.Value(), true );
 		}
 
 		EXCEPT("Create_Process(%s,%s, ...) failed",
-			JobName, Args );
+			JobName, args_string.Value() );
 		return 0;
 	}
 

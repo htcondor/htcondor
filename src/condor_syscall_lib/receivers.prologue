@@ -240,8 +240,8 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 			assert( syscall_sock->code(s) );
 		}
 		free( s->cmd );
-		free( s->args );
-		free( s->env );
+		free( s->args_v1or2 );
+		free( s->env_v1or2 );
 		free( s->iwd );
 		free( s );
 

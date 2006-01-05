@@ -126,51 +126,55 @@ ToolDaemonProc::StartJob()
 		// Arguments
 		// // // // // // 
 
-	char DaemonArgs[_POSIX_ARG_MAX];
+	ArgList DaemonArgs;
 	ASSERT( tmp == NULL );
 
-	JobAd->LookupString( ATTR_TOOL_DAEMON_ARGS, &tmp );
+	DaemonArgs.AppendArg(DaemonName);
+
+	JobAd->LookupString( ATTR_TOOL_DAEMON_ARGS2, &tmp );
+	bool args_success = true;
+	MyString args_error;
 	if( tmp ) {
-		snprintf( DaemonArgs, _POSIX_ARG_MAX, "%s %s", DaemonName, tmp );
+		args_success = DaemonArgs.AppendArgsV2Raw(tmp,&args_error);
 		dprintf( D_FULLDEBUG, "Daemon Args: %s\n", tmp ) ;
 		free( tmp );
 		tmp = NULL;
-	} else {
-		snprintf( DaemonArgs, _POSIX_ARG_MAX, "%s", DaemonName );
+	}
+	else {
+		JobAd->LookupString( ATTR_TOOL_DAEMON_ARGS1, &tmp );
+		if( tmp ) {
+			args_success = DaemonArgs.AppendArgsV1Raw(tmp,&args_error);
+			dprintf( D_FULLDEBUG, "Daemon Args: %s\n", tmp ) ;
+			free( tmp );
+			tmp = NULL;
+		}
 	}
 
+	if(!args_success) {
+		dprintf(D_ALWAYS, "Aborting.  Failed to read daemon args: %s\n",
+				args_error.Value());
+		return 0;
+	}
 
 		// // // // // // 
 		// Environment 
 		// // // // // // 
 
-	char* env_str = NULL;
-	if( JobAd->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) != 1 ) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting "
-				 "ToolDaemonProc::StartJob.\n", ATTR_JOB_ENVIRONMENT );  
-		return 0;
-	}
-
-		// Now, instantiate an Env object so we can manipulate the
-		// environment as needed.
 	Env job_env;
-
-	if( ! job_env.Merge(env_str) ) {
-		dprintf( D_ALWAYS, "Invalid %s found in JobAd.  Aborting "
-				 "ToolDaemonProc::StartJob.\n", ATTR_JOB_ENVIRONMENT );  
+	MyString env_errors;
+	if( !job_env.MergeFrom(JobAd,&env_errors) ) {
+		dprintf( D_ALWAYS, "Failed to read environment from JobAd.  Aborting "
+				 "ToolDaemonProc::StartJob: %s\n",env_errors.Value());
 		return 0;
 	}
-		// Next, we can free the string we got back from
-		// LookupString() so we don't leak any memory.
-	free( env_str );
 
 	// for now, we pass "ENV" as the address of the LASS
 	// this tells the tool that the job PID will be placed
 	// in the environment variable, "TDP_AP_PID"
-	job_env.Put("TDP_LASS_ADDRESS", "ENV");
+	job_env.SetEnv("TDP_LASS_ADDRESS", "ENV");
 	char pid_buf[256];
 	sprintf(pid_buf, "%d", ApplicationPid);
-	job_env.Put("TDP_AP_PID", pid_buf);
+	job_env.SetEnv("TDP_AP_PID", pid_buf);
 
 		// Now, let the starter publish any env vars it wants to into
 		// the mainjob's env...
@@ -228,25 +232,21 @@ ToolDaemonProc::StartJob()
 		nice_inc = 0;
 	}
 
-	dprintf( D_ALWAYS, "About to exec %s\n", DaemonArgs ); 
-
-	// Grab the full environment back out of the Env object 
-	env_str = job_env.getDelimitedString();
+	MyString args_string;
+	DaemonArgs.GetArgsStringForDisplay(&args_string);
+	dprintf( D_ALWAYS, "About to exec %s\n", args_string.Value() ); 
 
 	set_priv( priv );
 
 	JobPid = daemonCore->
 		Create_Process( DaemonName, DaemonArgs,
-						PRIV_USER_FINAL, 1, FALSE, env_str, job_iwd, TRUE,
+						PRIV_USER_FINAL, 1, FALSE, &job_env, job_iwd, TRUE,
 						NULL, fds, nice_inc, DCJOBOPT_NO_ENV_INHERIT );
 
 		//NOTE: Create_Process() saves the errno for us if it is an
 		//"interesting" error.
 	char const *create_process_error = NULL;
 	if(JobPid == FALSE && errno) create_process_error = strerror(errno);
-
-	// free memory so we don't leak
-	delete[] env_str;
 
 		// now close the descriptors in daemon_fds array.  our child has inherited
 		// them already, so we should close them so we do not leak descriptors.
@@ -262,10 +262,10 @@ ToolDaemonProc::StartJob()
 		if( create_process_error ) {
 			MyString err_msg;
 			err_msg.sprintf( "Failed to execute '%s': %s",
-							 DaemonArgs, create_process_error );
+							 args_string.Value(), create_process_error );
 			Starter->jic->notifyStarterError( err_msg.Value(), true );
 		}
-		EXCEPT( "Create_Process(%s, ...) failed", DaemonArgs );
+		EXCEPT( "Create_Process(%s, ...) failed", args_string.Value() );
 		return FALSE;
 
 	} else {

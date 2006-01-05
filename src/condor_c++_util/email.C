@@ -31,6 +31,7 @@
 #include "my_hostname.h"
 #include "exit.h"               // for possible job exit_reason values
 #include "metric_units.h"
+#include "condor_arglist.h"
 
 
 extern "C" char* d_format_time(double);   // this should be in a .h
@@ -282,18 +283,16 @@ Email::writeJobId( ClassAd* ad )
 	char* cmd = NULL;
 	ad->LookupString( ATTR_JOB_CMD, &cmd );
 
-	char* args = NULL;
-	ad->LookupString(ATTR_JOB_ARGUMENTS, &args);
+	MyString args;
+	ArgList::GetArgsStringForDisplay(ad,&args);
 
 	fprintf( fp, "Condor job %d.%d\n", cluster, proc);
 	if( cmd ) {
 		fprintf( fp, "\t%s", cmd );
 		free( cmd );
 		cmd = NULL;
-		if( args ) {
-			fprintf( fp, " %s\n", args );
-			free( args );
-			args = NULL;
+		if( !args.IsEmpty() ) {
+			fprintf( fp, " %s\n", args.Value() );
 		} else {
 			fprintf( fp, "\n" );
 		}

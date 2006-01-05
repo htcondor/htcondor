@@ -25,7 +25,7 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "environ.h"  // for Environ object
+#include "env.h"
 #include "condor_string.h"	// for strnewp and friends
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
@@ -1643,18 +1643,21 @@ MyString *GT4Job::buildSubmitRSL()
 	*rsl += printXMLParam( "directory", remote_iwd.Value() );
 
 		// parse arguments
-	if ( jobAd->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
-		StringList arg_list( attr_value, " " );
-		char *arg;
-
-		arg_list.rewind();
-		while ( (arg = arg_list.next()) != NULL ) {
+	{
+		ArgList args;
+		MyString arg_errors;
+		MyString rsl_args;
+		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
+					procID.cluster, procID.proc, arg_errors.Value());
+			errorString.sprintf("Failed to read job arguments: %s\n",
+					arg_errors.Value());
+			return NULL;
+		}
+		for(int a=0; a<args.Count(); a++) {
+			char const *arg = args.GetArg(a);
 			*rsl += printXMLParam ("argument", xml_stringify(arg));
 		}
-	}
-	if ( attr_value != NULL ) {
-		free( attr_value );
-		attr_value = NULL;
 	}
 
 		// Start building the list of files to be staged in
@@ -1874,10 +1877,17 @@ MyString *GT4Job::buildSubmitRSL()
 			"</file></deletion></fileCleanUp>";
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value) && *attr_value ) {
-		Environ env_obj;
-		env_obj.add_string(attr_value);
-		char **env_vec = env_obj.get_vector();
+	{
+		Env envobj;
+		MyString env_errors;
+		if(!envobj.MergeFrom(jobAd,&env_errors)) {
+			dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
+					procID.cluster, procID.proc, env_errors.Value());
+			errorString.sprintf("Failed to read job environment: %s\n",
+					env_errors.Value());
+			return NULL;
+		}
+		char **env_vec = envobj.getStringArray();
 
 		for ( int i = 0; env_vec[i]; i++ ) {
 			char *equals = strchr(env_vec[i],'=');
@@ -1895,6 +1905,7 @@ MyString *GT4Job::buildSubmitRSL()
 
 			*equals = '=';
 		}
+		deleteStringArray(env_vec);
 	}
 	if ( attr_value ) {
 		free( attr_value );

@@ -183,11 +183,11 @@ UserProc::PublishToEnv( Env* proc_env )
 		if( WIFSIGNALED(exit_status) ) {
 			env_name = base.GetCStr();
 			env_name += "EXIT_SIGNAL";
-			proc_env->Put( env_name.GetCStr(), WTERMSIG(exit_status) );
+			proc_env->SetEnv( env_name.GetCStr(), WTERMSIG(exit_status) );
 		} else {
 			env_name = base.GetCStr();
 			env_name += "EXIT_CODE";
-			proc_env->Put( env_name.GetCStr(), WEXITSTATUS(exit_status) );
+			proc_env->SetEnv( env_name.GetCStr(), WEXITSTATUS(exit_status) );
 		}
 	}
 }

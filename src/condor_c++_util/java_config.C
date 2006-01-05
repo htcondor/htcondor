@@ -25,6 +25,7 @@
 #include "string_list.h"
 #include "condor_config.h"
 #include "../condor_sysapi/sysapi.h"
+#include "java_config.h"
 
 /*
 Extract the java configuration from the local config files.
@@ -33,10 +34,11 @@ arguments get put in 'args'.  If you have other dirs or jarfiles
 that should be placed in the classpath, provide them in 'extra_classpath'.
 */
 
-int java_config( char *cmd, char *args, StringList *extra_classpath )
+int java_config( char *cmd, ArgList *args, StringList *extra_classpath )
 {
 	char *tmp;
 	char separator;
+	MyString arg_buf;
 
 	tmp = param("JAVA");
 	if(!tmp) return 0;
@@ -45,18 +47,15 @@ int java_config( char *cmd, char *args, StringList *extra_classpath )
 
 	tmp = param("JAVA_MAXHEAP_ARGUMENT");
 	if(tmp) {
-		sprintf(args,"%s%dm ",tmp,sysapi_phys_memory());
+		arg_buf.sprintf("%s%dm",tmp,sysapi_phys_memory());
+		args->AppendArg(arg_buf.Value());
 		free(tmp);
-	} else {
-		args[0] = 0;
 	}
 	
 	tmp = param("JAVA_CLASSPATH_ARGUMENT");
 	if(!tmp) tmp = strdup("-classpath");
 	if(!tmp) return 0;
-	strcat(args," ");
-	strcat(args,tmp);
-	strcat(args," ");
+	args->AppendArg(tmp);
 	free(tmp);
 
 	tmp = param("JAVA_CLASSPATH_SEPARATOR");
@@ -76,29 +75,40 @@ int java_config( char *cmd, char *args, StringList *extra_classpath )
 	int first = 1;
 
 	classpath_list.rewind();
+	arg_buf = "";
 	while((tmp=classpath_list.next())) {
 		if(!first) {
-			strncat(args,&separator,1);
+			arg_buf += separator;
 		} else {
 			first = 0;
 		}
-		strcat(args,tmp);
+		arg_buf += tmp;
 	}
 
 	if(extra_classpath) {
 		extra_classpath->rewind();
 		while((tmp=extra_classpath->next())) {
-			strncat(args,&separator,1);
-			strcat(args,tmp);
+			if(!first) {
+				arg_buf += separator;
+			}
+			else {
+				first = 0;
+			}
+			arg_buf += tmp;
 		}
 	}
+	args->AppendArg(arg_buf.Value());
+
+	MyString args_error;
 
 	tmp = param("JAVA_EXTRA_ARGUMENTS");
-	if(tmp) {
-		strcat(args," ");
-		strcat(args,tmp);
+	if(!args->AppendArgsV1or2Input(tmp,&args_error)) {
+		dprintf(D_ALWAYS,"java_config: failed to parse extra arguments: %s\n",
+				args_error.Value());
 		free(tmp);
+		return 0;
 	}
+	free(tmp);
 
 	return 1;
 }

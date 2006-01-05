@@ -51,6 +51,7 @@
 #include "self_draining_queue.h"
 #include "schedd_cronmgr.h"
 #include "condor_classad_namedlist.h"
+#include "env.h"
 //#include "condor_crontab.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
@@ -466,7 +467,8 @@ private:
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	shadow_rec*		start_local_universe_job(PROC_ID*);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
-										const char* args, const char* env, 
+										ArgList const &args,
+										Env const *env, 
 										const char* name, bool is_dc,
 										bool wants_pipe );
 	void			Relinquish(match_rec*);

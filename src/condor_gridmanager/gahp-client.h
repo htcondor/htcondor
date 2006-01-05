@@ -31,6 +31,7 @@
 #include "classad_hashtable.h"
 #include "globus_utils.h"
 #include "proxymanager.h"
+#include "condor_arglist.h"
 
 
 struct GahpProxyInfo
@@ -69,10 +70,10 @@ class GahpServer : public Service {
  public:
 	static GahpServer *FindOrCreateGahpServer(const char *id,
 											  const char *path,
-											  const char *args = NULL);
+											  const ArgList *args = NULL);
 	static HashTable <HashKey, GahpServer *> GahpServersById;
 
-	GahpServer(const char *id, const char *path, const char *args = NULL);
+	GahpServer(const char *id, const char *path, const ArgList *args = NULL);
 	~GahpServer();
 
 	bool Startup();
@@ -169,7 +170,7 @@ class GahpServer : public Service {
 	GahpProxyInfo *current_proxy;
 	bool skip_next_r;
 	char *binary_path;
-	char *binary_args;
+	ArgList binary_args;
 	char *my_id;
 
 	char *globus_gass_server_url;
@@ -208,7 +209,7 @@ class GahpClient : public Service {
 			/// Constructor
 		GahpClient(const char *id=GAHPCLIENT_DEFAULT_SERVER_ID,
 				   const char *path=GAHPCLIENT_DEFAULT_SERVER_PATH,
-				   const char *args=NULL);
+				   const ArgList *args=NULL);
 			/// Destructor
 		~GahpClient();
 		

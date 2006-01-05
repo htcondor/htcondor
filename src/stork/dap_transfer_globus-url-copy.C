@@ -166,24 +166,26 @@ int main(int argc, char *argv[])
 	// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
 	// Env::Merge(null) will always return true, so the warning will not be
 	// printed in this case.
-	if( !envStrParser.Merge(env) ) {
+    MyString env_errors;
+	if( !envStrParser.MergeFromV1or2Input(env,&env_errors) ) {
 		// this is an invalid env string
 		fprintf(stderr, "Warning! Configuration file variable "
-				"`%s' has invalid value `%s'; ignoring.\n",
-				STORK_ENVIRONMENT, env);
+				"`%s' has invalid value `%s'; ignoring: %s\n",
+				STORK_ENVIRONMENT, env, env_errors.Value());
+		free(env);
 	} else {
-		char **unix_env;	// TODO: delete when done?
+		char **unix_env;
+		free(env);
 		unix_env = envStrParser.getStringArray();
 		for ( int j=0 ; (unix_env[j] && unix_env[j][0]) ; j++ ) {
 			if ( !SetEnv( unix_env[j] ) ) {
 				dprintf ( D_ALWAYS, "Failed to put "
 						  "\"%s\" into environment.\n", unix_env[j] );
-			  free(env);
 				return DAP_ERROR;
 			}
 		}
+		deleteStringArray(unix_env);
 	}
-	  free(env);
   }
 
   strncpy(src_url, argv[1], MAXSTR);

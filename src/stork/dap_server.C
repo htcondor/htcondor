@@ -269,14 +269,15 @@ void get_last_dapid()
 /* ============================================================================
  * dap transfer function
  * ==========================================================================*/
-int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, char * cred_file_name)
+int transfer_dap(char *dap_id, char *src_url, char *dest_url, const ArgList &arguments, char * cred_file_name)
 {
 
 	char src_protocol[MAXSTR], src_host[MAXSTR], src_file[MAXSTR];
 	char dest_protocol[MAXSTR], dest_host[MAXSTR], dest_file[MAXSTR];
-	char command[MAXSTR], commandbody[MAXSTR], argument_str[MAXSTR];
+	char command[MAXSTR], commandbody[MAXSTR];
 	int pid;
 	char unstripped[MAXSTR];
+	ArgList new_args;
 
 	parse_url(src_url, src_protocol, src_host, src_file);
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
@@ -287,17 +288,16 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 	strcpy(unstripped, dest_url);
 	strncpy(dest_url, strip_str(unstripped), MAXSTR);  
 
-	strcpy(unstripped, arguments);
-	strncpy(arguments, strip_str(unstripped), MAXSTR);  
-
 	snprintf(commandbody, MAXSTR, "%stransfer.%s-%s",
 		DAP_CATALOG_NAMESPACE, src_protocol, dest_protocol);
 
 		//create a new process to transfer the files
 	snprintf(command, MAXSTR, "%s/%s", Module_dir, commandbody);
-	snprintf(argument_str ,MAXSTR, "%s %s %s %s", 
-			 commandbody, src_url, dest_url, arguments);
-  
+
+	new_args.AppendArg(commandbody);
+	new_args.AppendArg(src_url);
+	new_args.AppendArg(dest_url);
+	new_args.AppendArgsFromArgList(arguments);
 
 		// If using GSI proxy set up the environment to point to it
 	Env myEnv;
@@ -311,17 +311,18 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 	// child process will need additional environments
 	newenv_buff="X509_USER_PROXY=";
 	newenv_buff+=cred_file_name;
-	myEnv.Put (newenv_buff.Value());
+	myEnv.SetEnv (newenv_buff.Value());
     
 	newenv_buff="X509_USER_KEY=";
 	newenv_buff+=cred_file_name;
-	myEnv.Put (newenv_buff.Value());
+	myEnv.SetEnv (newenv_buff.Value());
 
 	newenv_buff="X509_USER_CERT=";
 	newenv_buff+=cred_file_name;
-	myEnv.Put (newenv_buff.Value());
+	myEnv.SetEnv (newenv_buff.Value());
 
-	char *env_string = myEnv.getDelimitedString();	// return string from "new"
+	MyString args_string;
+	arguments.GetArgsStringForDisplay(&args_string);
 
 	// Create child process via daemoncore
 	MyString src_url_value, dest_url_value;
@@ -335,17 +336,17 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 					   "Type", "transfer",
 					   "SrcUrl", (char *)src_url_value.Value(),
 					   "DestUrl", (char *)dest_url_value.Value(),
-					   "Arguments", arguments,
+					   "Arguments", (char *)args_string.Value(),
 					   "CredFile", cred_file_name);
 
 	pid =
 	daemonCore->Create_Process(
 		 command,						// command path
-		 argument_str,					// args string
+		 new_args,						// args string
 		 PRIV_USER_FINAL,				// privilege state
 		 transfer_dap_reaper_id,		// reaper id
 		 FALSE,							// do not want a command port
-		 env_string,                	// colon seperated environment string
+		 &myEnv,	                 	// environment
 		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
@@ -354,7 +355,6 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 		 								// job_opt_mask = 0
 	);
 
-	if (env_string) delete []env_string;// delete string from "new"
 	if (pid > 0) {
 		dap_queue.insert(dap_id, pid);
 		return DAP_SUCCESS;
@@ -373,8 +373,9 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 {
 
 	char dest_protocol[MAXSTR], dest_host[MAXSTR], dest_file[MAXSTR];
-	char command[MAXSTR], commandbody[MAXSTR], argument_str[MAXSTR];
+	char command[MAXSTR], commandbody[MAXSTR];
 	int pid;
+	ArgList args;
   
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
   
@@ -384,14 +385,18 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 
 		//create a new process to transfer the files
 	snprintf(command, MAXSTR, "%s/%s", Module_dir, commandbody);
-	snprintf(argument_str ,MAXSTR, "%s %s %s %s %s", 
-			 commandbody, dest_host, output_file, reserve_size, duration);
+
+	args.AppendArg(commandbody);
+	args.AppendArg(dest_host);
+	args.AppendArg(output_file);
+	args.AppendArg(reserve_size);
+	args.AppendArg(duration);
 
 	// Create child process via daemoncore
 	pid =
 	daemonCore->Create_Process(
 		 command,						// command path
-		 argument_str,					// args string
+		 args,							// args string
 		 PRIV_USER_FINAL,				// privilege state
 		 reserve_dap_reaper_id,			// reaper id
 		 FALSE,							// do not want a command port
@@ -413,8 +418,9 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 {
 	char dest_protocol[MAXSTR], dest_host[MAXSTR], dest_file[MAXSTR];
-	char command[MAXSTR], commandbody[MAXSTR], argument_str[MAXSTR];
+	char command[MAXSTR], commandbody[MAXSTR];
 	int pid;
+	ArgList args;
   
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
 
@@ -464,14 +470,15 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 	snprintf(command, MAXSTR, "%s/%s",  Module_dir, commandbody);
   
 		//create a new process to transfer the files
-	snprintf(argument_str ,MAXSTR, "%s %s %s", 
-			 commandbody, dest_host, lot_id);
+	args.AppendArg(commandbody);
+	args.AppendArg(dest_host);
+	args.AppendArg(lot_id);
 
 	// Create child process via daemoncore
 	pid =
 	daemonCore->Create_Process(
 		 command,						// command path
-		 argument_str,					// args string
+		 args,							// args string
 		 PRIV_USER_FINAL,				// privilege state
 		 release_dap_reaper_id,			// reaper id
 		 FALSE,							// do not want a command port
@@ -497,8 +504,9 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 	char src_protocol[MAXSTR], src_host[MAXSTR], src_file[MAXSTR];
 	char dest_protocol[MAXSTR], dest_host[MAXSTR], dest_file[MAXSTR];
 
-	char command[MAXSTR], commandbody[MAXSTR], argument_str[MAXSTR];
+	char command[MAXSTR], commandbody[MAXSTR];
 	int pid;
+	ArgList args;
   
 	parse_url(src_url, src_protocol, src_host, src_file);
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
@@ -509,14 +517,16 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 
 		//create a new process to transfer the files
 	snprintf(command, MAXSTR, "%s/%s", Module_dir, commandbody);
-	snprintf(argument_str ,MAXSTR, "%s %s %s", 
-			 commandbody, src_host, dest_host);
+
+	args.AppendArg(commandbody);
+	args.AppendArg(src_host);
+	args.AppendArg(dest_host);
 
 	// Create child process via daemoncore
 	pid =
 	daemonCore->Create_Process(
 		 command,						// command path
-		 argument_str,					// args string
+		 args,							// args string
 		 PRIV_USER_FINAL,				// privilege state
 		 requestpath_dap_reaper_id,		// reaper id
 		 FALSE,							// do not want a command port
@@ -664,10 +674,33 @@ void process_request(classad::ClassAd *currentAd)
 		char src_alt_protocol[MAXSTR], dest_alt_protocol[MAXSTR];
 		char next_protocol[MAXSTR];
 		int protocol_num;
+		ArgList args;
 
 		getValue(currentAd, "src_url", src_url);
 		getValue(currentAd, "dest_url", dest_url);
+
 		getValue(currentAd, "arguments", arguments);
+
+		MyString args_error;
+		if(!args.AppendArgsV2Raw(arguments,&args_error)) {
+			dprintf(D_ALWAYS,"Failed to read arguments: %s\n",
+					args_error.Value());
+
+			dapcollection->RemoveClassAd(dap_id);
+			write_dap_log(historyfilename, "\"request_failed\"",
+						  "dap_id",dap_id,"error_code","\"bad arguments\"");
+			write_xml_user_log(userlogfilename, "MyType", "\"JobCompletedEvent\"", 
+							   "EventTypeNumber", "5", 
+							   "TerminatedNormally", "0",
+							   "ReturnValue", "1",
+							   "Cluster", dap_id,
+							   "Proc", "-1",
+							   "Subproc", "-1",
+							   "LogNotes", lognotes);
+			remove_credential(dap_id);
+
+			return;
+		}
 
 			//select which protocol to use
 		getValue(currentAd, "use_protocol", use_protocol);
@@ -675,14 +708,14 @@ void process_request(classad::ClassAd *currentAd)
     
 		if (!strcmp(use_protocol, "0")){
 				//dprintf(D_ALWAYS, "use_protocol: %s\n", use_protocol);      
-			transfer_dap(dap_id, src_url, dest_url, arguments, cred_file_name);
+			transfer_dap(dap_id, src_url, dest_url, args, cred_file_name);
 		}
 		else{
 			getValue(currentAd, "alt_protocols", alt_protocols);
 			dprintf(D_ALWAYS, "alt. protocols = %s\n", alt_protocols);
       
 			if (!strcmp(alt_protocols,"")) { //if no alt. protocol defined
-				transfer_dap(dap_id, src_url, dest_url, arguments, cred_file_name);
+				transfer_dap(dap_id, src_url, dest_url, args, cred_file_name);
 			}
 			else{ //use alt. protocols
 				strcpy(next_protocol, strtok(alt_protocols, ",") );   
@@ -723,7 +756,7 @@ void process_request(classad::ClassAd *currentAd)
 	
 	
 					//--> These "arguments" may need to be removed or chaged !!
-				transfer_dap(dap_id, src_alt_url, dest_alt_url, arguments, cred_file_name);
+				transfer_dap(dap_id, src_alt_url, dest_alt_url, args, cred_file_name);
 			}// end use alt. protocols
 		}
 	}

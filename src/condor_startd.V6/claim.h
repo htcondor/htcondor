@@ -206,7 +206,7 @@ public:
 	bool starterKillPg( int sig );
 	bool starterKillSoft( void );
 	bool starterKillHard( void );
-	char* makeCODStarterArgs( void );
+	bool makeCODStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
 	bool publishStarterAd( ClassAd* ad );
 

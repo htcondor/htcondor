@@ -74,16 +74,13 @@ ParallelProc::addEnvVars()
    dprintf ( D_FULLDEBUG, "ParallelProc::addEnvVars()\n" );
 
 	   // Pull the environment out of the job ad...
-	char *env_str = NULL;
 	Env env;
-	if ( !JobAd->LookupString( ATTR_JOB_ENVIRONMENT, &env_str )) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
-				 ATTR_JOB_ENVIRONMENT );
+	MyString env_errors;
+	if ( !env.MergeFrom(JobAd,&env_errors) ) {
+		dprintf( D_ALWAYS, "Failed to read environment from JobAd: %s\n", 
+				 env_errors.Value() );
 		return 0;
 	}
-
-	env.Merge(env_str);
-	free(env_str);
 
 		// Add the remote spool dir, the "server" directory for
 		// condor_chirp to stage files to/from
@@ -95,12 +92,12 @@ ParallelProc::addEnvVars()
 		return 0;
 	}
 
-    env.Put( "_CONDOR_REMOTE_SPOOL_DIR", spool );
+    env.SetEnv( "_CONDOR_REMOTE_SPOOL_DIR", spool );
 
 		// Add this node's number to CONDOR_PROCNO
 	char buf[128];
 	sprintf(buf, "%d", Node);
-	env.Put("_CONDOR_PROCNO", buf);
+	env.SetEnv("_CONDOR_PROCNO", buf);
 
 
 		// And put the total number of nodes into CONDOR_NPROC
@@ -112,7 +109,7 @@ ParallelProc::addEnvVars()
 	}
 
 	sprintf(buf, "%d", machine_count);
-	env.Put("_CONDOR_NPROCS", buf);
+	env.SetEnv("_CONDOR_NPROCS", buf);
 
 		// Now stick the condor bin directory in front of the path,
 		// so user scripts can call condor_config_val
@@ -130,7 +127,7 @@ ParallelProc::addEnvVars()
 	new_path = bin;
 	new_path += ":";
 
-	if(env.getenv("PATH",path)) {
+	if(env.GetEnv("PATH",path)) {
         // The user gave us a path in env.  Find & alter:
         dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.Value() );
 
@@ -151,23 +148,23 @@ ParallelProc::addEnvVars()
 			new_path = bin;
         }
     }
-	env.Put("PATH",new_path.Value());
+	env.SetEnv("PATH",new_path.Value());
 
 	char *condor_config = getenv( "CONDOR_CONFIG");
 	if (condor_config) {
-		env.Put("CONDOR_CONFIG", condor_config);
+		env.SetEnv("CONDOR_CONFIG", condor_config);
 	}
 	
-        // now put the env back into the JobAd:
-	env_str = env.getDelimitedString();
-    dprintf ( D_FULLDEBUG, "New env: %s\n", env_str );
-
-	bool assigned = JobAd->Assign( ATTR_JOB_ENVIRONMENT,env_str );
-	if(env_str) {
-		delete[] env_str;
+	if(DebugFlags & D_FULLDEBUG) {
+		MyString env_str;
+		env.getDelimitedStringForDisplay(&env_str);
+		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.Value() );
 	}
-	if(!assigned) {
-		dprintf( D_ALWAYS, "Unable to update env! Aborting.\n" );
+
+        // now put the env back into the JobAd:
+	if(!env.InsertEnvIntoClassAd(JobAd,&env_errors)) {
+		dprintf( D_ALWAYS, "Unable to update env! Aborting: %s\n",
+				 env_errors.Value());
 		return 0;
 	}
 

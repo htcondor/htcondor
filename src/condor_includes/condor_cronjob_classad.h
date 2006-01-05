@@ -24,6 +24,7 @@
 #define _CONDOR_CRONJOB_CLASSAD_H
 
 #include "condor_cronjob.h"
+#include "env.h"
 
 // Define a "ClassAd" 'Cron' job
 class ClassAdCronJob : public CronJobBase
@@ -40,7 +41,7 @@ class ClassAdCronJob : public CronJobBase
 	ClassAd		*OutputAd;
 	int			OutputAdCount;
 
-	MyString	EnvStr;			// My environment string
+	Env         classad_env;
 };
 
 #endif /* _CONDOR_CRONJOB_CLASSAD_H */

@@ -4792,11 +4792,11 @@ void exit(int status)
 
 int DaemonCore::Create_Process(
 			const char	*name,
-			const char	*args,
+			ArgList const &args,
 			priv_state	priv,
 			int			reaper_id,
 			int			want_command_port,
-			const char	*env,
+			Env const *env,
 			const char	*cwd,
 			int			new_process_group,
 			Stream		*sock_inherit_list[],
@@ -4842,8 +4842,11 @@ int DaemonCore::Create_Process(
 
 	char *newenv = NULL;
 	MyString strArgs;
+	MyString args_errors;
 	int namelen = 0;
 	bool bIs16Bit = FALSE;
+	int first_arg_to_copy = 0;
+	bool args_success = false;
 
 #else
 	int inherit_handles;
@@ -5119,7 +5122,7 @@ int DaemonCore::Create_Process(
 		envbuf[0]='\0';
 		GetEnvironmentVariable("PATH",envbuf,sizeof(envbuf));
 		if (envbuf[0]) {
-			job_environ.Put("PATH",envbuf);
+			job_environ.SetEnv("PATH",envbuf);
 		}
 
 		// do the same for what likely is the system default TEMP
@@ -5127,12 +5130,12 @@ int DaemonCore::Create_Process(
 		envbuf[0]='\0';
 		GetEnvironmentVariable("TEMP",envbuf,sizeof(envbuf));
 		if (envbuf[0]) {
-			job_environ.Put("TEMP",envbuf);
+			job_environ.SetEnv("TEMP",envbuf);
 		}
 
 			// now add in env vars from user
-		if ( env ) {
-			job_environ.Merge(env);
+		if(env) {
+			job_environ.MergeFrom(*env);
 		}
 
 			// next, add in default system env variables.  we do this after
@@ -5143,13 +5146,13 @@ int DaemonCore::Create_Process(
 			envbuf[0]='\0';
 			GetEnvironmentVariable(default_vars[i],envbuf,sizeof(envbuf));
 			if (envbuf[0]) {
-				job_environ.Put(default_vars[i],envbuf);
+				job_environ.SetEnv(default_vars[i],envbuf);
 			}
 			i++;
 		}
 
 			// now, add in the inherit buf
-		job_environ.Put( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+		job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
 
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
@@ -5185,7 +5188,6 @@ int DaemonCore::Create_Process(
 	// CreateProcess requires different params for 16-bit apps:
 	//		NULL for the app name
 	//		args begins with app name
-	strArgs = args;
 	namelen = strlen(namebuf);
 	if (bIs16Bit)
 	{
@@ -5196,34 +5198,19 @@ int DaemonCore::Create_Process(
 		// make sure we're only using backslashes
 		strArgs.replaceString("/", "\\", 0);
 
-		// args already should contain the executable name as the first param
-		// we have to strip it out but preserve any real args after it
-		MyString strOldArgs = args;
-		int iFindFirstSpace = strOldArgs.FindChar(' ');
-		if (iFindFirstSpace != -1)
-			strArgs += (args + iFindFirstSpace + 1);
+		first_arg_to_copy = 1;
+		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
 
-		args = const_cast<char *>(strArgs.GetCStr());
 		dprintf(D_ALWAYS, "Create_Process: 16-bit job detected, args=%s\n", args);
+
 
 	} else if ( (stricmp(".bat",&(namebuf[namelen-4])) == 0) ||
 			(stricmp(".cmd",&(namebuf[namelen-4])) == 0) ) {
 
 		char systemshell[_POSIX_PATH_MAX+1];
-		int firstspace;
-
-		// deal with .cmd and .bat files, so they're exec'd properly too
-
-		// first, skip argv[0], since that will goof up the args to the
-		// batch script.
-		firstspace = strArgs.FindChar(' ');
-		if ( firstspace != -1 ) {
-			strArgs = args+firstspace+1;
-		}
 
 		// next, stuff the extra cmd.exe args in with the arguments
-		strArgs = " /Q /C \"" + MyString(namebuf) + MyString("\" ") + strArgs;
-		args = strArgs.Value();
+		strArgs = " /Q /C \"" + MyString(namebuf) + MyString("\" ");
 
 		// now find out where cmd.exe lives on this box and
 		// set it to our executable
@@ -5232,9 +5219,22 @@ int DaemonCore::Create_Process(
 		free((void*)namebuf);
 		namebuf = strdup(systemshell);
 
-		dprintf(D_ALWAYS, "Executable is a batch script, so executing %s %s\n",
-			namebuf, args);
+		// skip argv[0], since that will goof up the args to the batch
+		// script.
+		first_arg_to_copy = 1;
+		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
 
+		dprintf(D_ALWAYS, "Executable is a batch script, so executing %s %s\n",
+			namebuf, strArgs.Value());
+	}
+	else {
+		first_arg_to_copy = 0;
+		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
+	}
+
+	if(!args_success) {
+		dprintf(D_ALWAYS, "ERROR: failed to produce Win32 argument string from CreateProcess: %s\n",args_errors.Value());
+		goto wrapup;
 	}
 
 	BOOL cp_result, gbt_result;
@@ -5250,16 +5250,13 @@ int DaemonCore::Create_Process(
 			   	namebuf);
 		cp_result = 0;
 
-		if ( newenv ) {
-			delete [] newenv;
-		}
 		goto wrapup;
 	} else {
 		dprintf(D_FULLDEBUG, "GetBinaryType() returned %d\n", binType);
 	}
 
    	if ( priv != PRIV_USER_FINAL ) {
-		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)args,NULL,
+		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
@@ -5310,7 +5307,7 @@ int DaemonCore::Create_Process(
 		priv_state s = set_user_priv();
 
 		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : namebuf,
-			(char *)args,NULL,NULL, inherit_handles,
+			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
 			new_process_group | CREATE_NEW_CONSOLE, newenv,cwd,&si,&piProcess);
 
 		set_priv(s);
@@ -5320,13 +5317,7 @@ int DaemonCore::Create_Process(
 	if ( !cp_result ) {
 		dprintf(D_ALWAYS,
 			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
-		if ( newenv ) {
-			delete [] newenv;
-		}
 		goto wrapup;
-	}
-	if ( newenv ) {
-		delete [] newenv;
 	}
 
 	// save pid info out of piProcess
@@ -5476,13 +5467,15 @@ int DaemonCore::Create_Process(
 
 		// We may determine to seed the child's environment with the parent's.
 		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) ) {
-			envobject.Merge((const char**)environ);
+			envobject.MergeFrom((const char**)environ);
 		}
 
 		// Put the caller's env requests into the job's environment, potentially
 		// adding/overriding things in the current env if the job was allowed to
 		// inherit the parent's environment.
-		envobject.Merge(env);
+		if(env) {
+			envobject.MergeFrom(*env);
+		}
 
 		// if I have brought in the parent's environment, then ensure that
 		// after the caller's changes have been enacted, this overrides them.
@@ -5490,7 +5483,7 @@ int DaemonCore::Create_Process(
 
 			// add/override the inherit variable with the correct value
 			// for this process.
-			envobject.Put( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+			envobject.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
 
 			// Make sure PURIFY can open windows for the daemons when
 			// they start. This functionality appears to only exist when we've
@@ -5500,7 +5493,7 @@ int DaemonCore::Create_Process(
         	char *display;
         	display = param ( "PURIFY_DISPLAY" );
         	if ( display ) {
-            	envobject.Put( "DISPLAY", display );
+            	envobject.SetEnv( "DISPLAY", display );
             	free ( display );
             	char *purebuf;
 				purebuf = (char*)malloc(sizeof(char) * 
@@ -5510,7 +5503,7 @@ int DaemonCore::Create_Process(
 					EXCEPT("Create_Process: PUREOPTIONS is out of memory!");
 				}
             	sprintf ( purebuf, "-program-name=%s", namebuf );
-            	envobject.Put( "PUREOPTIONS", purebuf );
+            	envobject.SetEnv( "PUREOPTIONS", purebuf );
 				free(purebuf);
         	}
 		}
@@ -5553,7 +5546,7 @@ int DaemonCore::Create_Process(
 			// Propogate the ancestor history to the child's environment
 			for (i = 0; i < PIDENVID_MAX; i++) {
 				if (penvid.ancestors[i].active == TRUE) { 
-					envobject.Put( penvid.ancestors[i].envid );
+					envobject.SetEnv( penvid.ancestors[i].envid );
 				} else {
 					// After the first FALSE entry, there will never be
 					// true entries.
@@ -5577,7 +5570,7 @@ int DaemonCore::Create_Process(
 		// if the new entry fits into the penvid, then add it to the 
 		// environment, else EXCEPT cause it is programmer's error 
 		if (pidenvid_append(&penvid, envid) == PIDENVID_OK) {
-			envobject.Put( envid );
+			envobject.SetEnv( envid );
 		} else {
 			dprintf ( D_ALWAYS, "Create_Process: Failed to insert envid "
 				  	"\"%s\" because its insertion would mean more than "
@@ -5599,7 +5592,7 @@ int DaemonCore::Create_Process(
 		char **unix_args;
 		
 		// set up the args to the process
-		if( (args == NULL) || (args[0] == 0) ) {
+		if( args.Count() == 0 ) {
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
 			unix_args = new char*[2];
 			unix_args[0] = new char[strlen(namebuf)+1];
@@ -5607,8 +5600,12 @@ int DaemonCore::Create_Process(
 			unix_args[1] = 0;
 		}
 		else {
-			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", args);
-			unix_args = ParseArgsString(args);
+			if(DebugFlags & D_DAEMONCORE) {
+				MyString arg_string;
+				args.GetArgsStringForDisplay(&arg_string);
+				dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", arg_string.Value());
+			}
+			unix_args = args.GetStringArray();
 		}
 
 		//create a new process group if we are supposed to
@@ -6103,6 +6100,10 @@ int DaemonCore::Create_Process(
 		// we had too many and gave up.  either way, we should clear
 		// out our static counter.
 	num_pid_collisions = 0;
+#else
+	if(newenv) {
+		delete [] newenv;
+	}
 #endif
 
 	errno = return_errno;

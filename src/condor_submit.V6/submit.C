@@ -155,10 +155,14 @@ char	*Priority		= "priority";
 char	*Notification	= "notification";
 char	*WantRemoteIO	= "want_remote_io";
 char	*Executable		= "executable";
-char	*Arguments		= "arguments";
+char	*Arguments1		= "arguments";
+char	*Arguments2		= "arguments2";
+char    *AllowArgumentsV1 = "allow_arguments_v1";
 char	*GetEnvironment	= "getenv";
 char	*AllowStartupScript = "allow_startup_script";
-char	*Environment	= "environment";
+char	*AllowEnvironmentV1 = "allow_environment_v1";
+char	*Environment1	= "environment";
+char	*Environment2	= "environment2";
 char	*Input			= "input";
 char	*Output			= "output";
 char	*Error			= "error";
@@ -209,7 +213,9 @@ char	*AppendFiles = "append_files";
 char	*LocalFiles = "local_files";
 
 char	*ToolDaemonCmd = "tool_daemon_cmd";
-char	*ToolDaemonArgs = "tool_daemon_args";
+char	*ToolDaemonArgs = "tool_daemon_args"; // for backward compatibility
+char	*ToolDaemonArguments1 = "tool_daemon_arguments";
+char	*ToolDaemonArguments2 = "tool_daemon_arguments2";
 char	*ToolDaemonInput = "tool_daemon_input";
 char	*ToolDaemonError = "tool_daemon_error";
 char	*ToolDaemonOutput = "tool_daemon_output";
@@ -257,6 +263,8 @@ char	*LogNotesCommand = "submit_event_notes";
 char	*UserNotesCommand = "submit_event_user_notes";
 char	*JarFiles = "jar_files";
 char	*JavaVMArgs = "java_vm_args";
+char	*JavaVMArguments1 = "java_vm_arguments";
+char	*JavaVMArguments2 = "java_vm_arguments2";
 
 char    *ParallelScriptShadow  = "parallel_script_shadow";  
 char    *ParallelScriptStarter = "parallel_script_starter"; 
@@ -2277,14 +2285,85 @@ SetJarFiles()
 void
 SetJavaVMArgs()
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
-	char *value;
+	ArgList args;
+	MyString error_msg;
+	MyString buffer;
+	MyString value;
+	char *args1 = condor_param(JavaVMArgs); // for backward compatibility
+	char *args1_ext=condor_param(JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1);
+		// NOTE: no ATTR_JOB_JAVA_VM_ARGS2 in the following,
+		// because that is the same as JavaVMArguments1.
+	char *args2 = condor_param( JavaVMArguments2 );
+	char *allow_arguments_v1 = condor_param(AllowArgumentsV1);
 
-	value = condor_param( JavaVMArgs, ATTR_JOB_JAVA_VM_ARGS );
-	if(value) {
-		sprintf(buffer,"%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS, value);
-		InsertJobExpr (buffer);
+	if(args1_ext && args1) {
+		fprintf(stderr,"\nERROR: you specified a value for both %s and %s.\n",
+				JavaVMArgs,JavaVMArguments1);
+		DoCleanup(0,0,NULL);
+		exit( 1 );
 	}
+
+	if(args1_ext) {
+		free(args1);
+		args1 = args1_ext;
+		args1_ext = NULL;
+	}
+
+	if(args2 && args1 && !isTrue(allow_arguments_v1)) {
+		fprintf(stderr,
+		 "\nERROR: If you wish to specify both 'java_vm_arguments' and\n"
+		 "'java_vm_arguments2' for maximal compatibility with different\n"
+		 "versions of Condor, then you must also specify\n"
+		 "allow_arguments_v1=true.\n");
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+
+	bool args_success = true;
+
+	if(args2) {
+		args_success = args.AppendArgsV2Input(args2,&error_msg);
+	}
+	else if(args1) {
+		args_success = args.AppendArgsV1or2Input(args1,&error_msg);
+	}
+
+	if(!args_success) {
+		fprintf(stderr,"ERROR: failed to parse java VM arguments: %s\n"
+				"The full arguments you specified were %s\n",
+				error_msg.Value(),args2 ? args2 : args1);
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+
+	if(args.InputWasV1()) {
+		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
+		if(!value.IsEmpty()) {
+			buffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS1,
+						   value.EscapeChars("\"",'\\').Value());
+			InsertJobExpr (buffer.Value());
+		}
+	}
+	else {
+		args_success = args.GetArgsStringV2Raw(&value,&error_msg);
+		if(!value.IsEmpty()) {
+			buffer.sprintf("%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS2,
+						   value.EscapeChars("\"",'\\').Value());
+			InsertJobExpr (buffer.Value());
+		}
+	}
+
+	if(!args_success) {
+		fprintf(stderr,"\nERROR: failed to insert java vm arguments into "
+				"ClassAd: %s\n",error_msg.Value());
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+
+	free(args1);
+	free(args2);
+	free(args1_ext);
+	free(allow_arguments_v1);
 }
 
 void
@@ -2919,32 +2998,75 @@ SetExitRequirements()
 void
 SetArguments()
 {
-	char	*args = NULL;
+	ArgList arglist;
+	char	*args1 = condor_param( Arguments1, ATTR_JOB_ARGUMENTS1 );
+		// NOTE: no ATTR_JOB_ARGUMENTS2 in the following,
+		// because that is the same as Arguments1
+	char    *args2 = condor_param( Arguments2 );
+	char *allow_arguments_v1 = condor_param( AllowArgumentsV1 );
+	bool args_success = true;
+	MyString error_msg;
 
-	args = condor_param( Arguments, ATTR_JOB_ARGUMENTS );
-
-	if( args == NULL ) {
-		args = strdup("");
-	} 
-	else if (strlen(args) > _POSIX_ARG_MAX) {
-		fprintf(stderr, "\nERROR: arguments are too long:\n"
-				"\tPosix limits argument lists to %d bytes\n",
-				_POSIX_ARG_MAX);
+	if(args2 && args1 && !isTrue(allow_arguments_v1)) {
+		fprintf(stderr,
+		 "\nERROR: If you wish to specify both 'arguments' and\n"
+		 "'arguments2' for maximal compatibility with different\n"
+		 "versions of Condor, then you must also specify\n"
+		 "allow_arguments_v1=true.\n");
 		DoCleanup(0,0,NULL);
-		exit( 1 );
+		exit(1);
 	}
 
-	sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
-	InsertJobExpr (buffer);
+	if(args2) {
+		args_success = arglist.AppendArgsV2Input(args2,&error_msg);
+	}
+	else if(args1) {
+		args_success = arglist.AppendArgsV1or2Input(args1,&error_msg);
+	}
 
-	if( JobUniverse == CONDOR_UNIVERSE_JAVA && !*args)
+	if(!args_success) {
+		if(error_msg.IsEmpty()) {
+			error_msg = "ERROR in arguments.";
+		}
+		fprintf(stderr,"\n%s\nThe full arguments you specified were: %s\n",
+				error_msg.Value(),
+				args2 ? args2 : args1);
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+
+	MyString buffer;
+	MyString value;
+	if(arglist.InputWasV1()) {
+		args_success = arglist.GetArgsStringV1Raw(&value,&error_msg);
+		buffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS1,
+					   value.EscapeChars("\"",'\\').Value());
+	}
+	else {
+		args_success = arglist.GetArgsStringV2Raw(&value,&error_msg);
+		buffer.sprintf("%s = \"%s\"",ATTR_JOB_ARGUMENTS2,
+					   value.EscapeChars("\"",'\\').Value());
+	}
+
+	if(!args_success) {
+		fprintf(stderr,"\nERROR: failed to insert arguments: %s\n",
+				error_msg.Value());
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+
+	InsertJobExpr (buffer.Value());
+
+	if( JobUniverse == CONDOR_UNIVERSE_JAVA && arglist.Count() == 0)
 	{
 		fprintf(stderr, "\nERROR: In Java universe, you must specify the class name to run.\nExample:\n\narguments = MyClass\n\n");
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
 
-	free(args);
+	if(args1) free(args1);
+	if(args2) free(args2);
+	if(allow_arguments_v1) free(allow_arguments_v1);
 }
 
 //
@@ -3005,76 +3127,108 @@ SetJobDeferral() {
 void
 SetEnvironment()
 {
-	char *env = condor_param( Environment, ATTR_JOB_ENVIRONMENT );
+	char *env1 = condor_param( Environment1, ATTR_JOB_ENVIRONMENT1 );
+		// NOTE: no ATTR_JOB_ENVIRONMENT2 in the following,
+		// because that is the same as Environment1
+	char *env2 = condor_param( Environment2 );
+	char *allow_environment_v1 = condor_param( AllowEnvironmentV1 );
+	bool allow_v1 = isTrue(allow_environment_v1);
 	char *shouldgetenv = condor_param( GetEnvironment, "get_env" );
 	char *allowscripts = condor_param( AllowStartupScript,
 									   "AllowStartupScript" );
 	Env envobject;
-	MyString newenv;
     MyString varname;
-	int envlen;
 
-	envobject.GenerateParseMessages();
-	if(!envobject.Merge(env)) {
-		char const *err_msg = envobject.GetParseMessages();
-		if(!err_msg || !*err_msg) err_msg = "ERROR parsing environment.";
+	if( env1 && env2 && !allow_v1 ) {
 		fprintf(stderr,
-		  "\n%s\nThe environment you specified was: '%s'\n",err_msg,env);
+		 "\nERROR: If you wish to specify both 'environment' and\n"
+		 "'environment2' for maximal compatibility with different\n"
+		 "versions of Condor, then you must also specify\n"
+		 "allow_environment_v1=true.\n");
+		DoCleanup(0,0,NULL);
 		exit(1);
 	}
 
-	char const *warning_msg = envobject.GetParseMessages();
-	if(warning_msg && *warning_msg) {
+	bool env_success;
+	char const *environment_string = env2 ? env2 : env1;
+	MyString error_msg;
+	if(env2) env_success = envobject.MergeFromV2Input(env2,&error_msg);
+	else env_success = envobject.MergeFromV1or2Input(env1,&error_msg);
+
+	if(!env_success) {
 		fprintf(stderr,
-		  "\n%s\nThe environment you specified was %s\n",warning_msg,env);
+				"\n%s\nThe environment you specified was: '%s'\n",
+				error_msg.Value(),environment_string);
+		DoCleanup(0,0,NULL);
+		exit(1);
 	}
 
 	if (allowscripts && (*allowscripts=='T' || *allowscripts=='t') ) {
-		envobject.Put("_CONDOR_NOCHECK","1");
+		envobject.SetEnv("_CONDOR_NOCHECK","1");
 	}
-
-	envlen = newenv.Length();
 
 	// grab user's environment if getenv == TRUE
 	if ( shouldgetenv && ( shouldgetenv[0] == 'T' || shouldgetenv[0] == 't' ) )
  	{
 		for (int i=0; environ[i]; i++) {
-			if(!envobject.IsSafeEnvValue(environ[i])) {
+			if(!env2 && env1 && !envobject.IsSafeEnvV1Value(environ[i])) {
 				// We silently filter out anything that is not expressible
-				// in the current environment string syntax.
+				// in the 'environment1' syntax.  This avoids breaking
+				// our ability to submit jobs to older startds that do
+				// not support 'environment2' syntax.
 				continue;
 			}
 
-			envlen += strlen(environ[i]);
 			// don't override submit file environment settings
 			// check if environment variable is set in submit file
 			int j;
             varname = "";
-			for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
+			for (j=0; environ[i][j] && environ[i][j] != '='; j++) {
 				varname += environ[i][j];
 			}
 			MyString existing_val;
-			if (!envobject.getenv(varname,existing_val)) {
-				envobject.Put(environ[i]);
+			if (!envobject.GetEnv(varname,existing_val)) {
+				envobject.SetEnv(environ[i]);
 			}
 		}
 	}
 
-	char *newenv_unescaped = envobject.getDelimitedString();
-	MyString E(newenv_unescaped);
-	newenv += ATTR_JOB_ENVIRONMENT;
-	newenv += " = \"";
-	newenv += E.EscapeChars("\"",'\\');
-	newenv += "\"";
+	MyString newenv;
+	MyString newenv_raw;
+	if(envobject.InputWasV1()) {
+		env_success = envobject.getDelimitedStringV1Raw(&newenv_raw,&error_msg);
+		newenv.sprintf("%s = \"%s\"",
+					   ATTR_JOB_ENVIRONMENT1,
+					   newenv_raw.EscapeChars("\"",'\\').Value());
+		InsertJobExpr(newenv.Value());
 
-	InsertJobExpr (newenv.Value());
+		// Record in the JobAd the V1 delimiter that is being used.
+		// This way remote submits across platforms have a prayer.
+		MyString delim_assign;
+		delim_assign.sprintf("%s = \"%c\"",
+							 ATTR_JOB_ENVIRONMENT1_DELIM,
+							 envobject.GetEnvV1Delimiter());
+		InsertJobExpr(delim_assign.Value());
+	}
+	else {
+		env_success = envobject.getDelimitedStringV2Raw(&newenv_raw,&error_msg);
+		newenv.sprintf("%s = \"%s\"",
+					   ATTR_JOB_ENVIRONMENT2,
+					   newenv_raw.EscapeChars("\"",'\\').Value());
+		InsertJobExpr(newenv.Value());
+	}
 
-	if( newenv_unescaped ) {
-		delete[] newenv_unescaped;
+	if(!env_success) {
+		fprintf(stderr,
+				"\nERROR: failed to insert environment into job ad: %s\n",
+				error_msg.Value());
+		DoCleanup(0,0,NULL);
+		exit(1);
 	}
-	if( env ) {
-		free(env);
-	}
+
+	free(env2);
+	free(env1);
+
 	if( allowscripts ) {
 		free(allowscripts);
 	}
@@ -3160,7 +3314,12 @@ SetTDP( void )
 		// SetRequirements() an SetTransferFiles(), too. 
 	tdp_cmd = condor_param( ToolDaemonCmd, ATTR_TOOL_DAEMON_CMD );
 	tdp_input = condor_param( ToolDaemonInput, ATTR_TOOL_DAEMON_INPUT );
-	char* tdp_args = condor_param( ToolDaemonArgs, ATTR_TOOL_DAEMON_ARGS );
+	char* tdp_args1 = condor_param( ToolDaemonArgs );
+	char* tdp_args1_ext = condor_param( ToolDaemonArguments1, ATTR_TOOL_DAEMON_ARGS1 );
+		// NOTE: no ATTR_TOOL_DAEMON_ARGS2 in the following,
+		// because that is the same as ToolDaemonArguments1.
+	char* tdp_args2 = condor_param( ToolDaemonArguments2 );
+	char* allow_arguments_v1 = condor_param(AllowArgumentsV1);
 	char* tdp_error = condor_param( ToolDaemonError, ATTR_TOOL_DAEMON_ERROR );
 	char* tdp_output = condor_param( ToolDaemonOutput, 
 									 ATTR_TOOL_DAEMON_OUTPUT );
@@ -3198,19 +3357,74 @@ SetTDP( void )
 		free( tdp_error );
 		tdp_error = NULL;
 	}
-	if( tdp_args ) {
-		if( strlen(tdp_args) > _POSIX_ARG_MAX ) {
-			fprintf( stderr, "\nERROR: %s are too long:\n"
-					 "\tPosix limits argument lists to %d bytes\n",
-					 ATTR_TOOL_DAEMON_ARGS, _POSIX_ARG_MAX );
-			DoCleanup( 0, 0, NULL );
-			exit( 1 );
-		}
-		buf.sprintf( "%s = \"%s\"", ATTR_TOOL_DAEMON_ARGS, tdp_args );
-		InsertJobExpr( buf.Value() );
-		free( tdp_args );
-		tdp_args = NULL;
+
+	bool args_success = true;
+	MyString error_msg;
+	ArgList args;
+
+	if(tdp_args1_ext && tdp_args1) {
+		fprintf(stderr,
+				"\nERROR: you specified both tdp_daemon_args and tdp_daemon_arguments\n");
+		DoCleanup(0,0,NULL);
+		exit(1);
 	}
+	if(tdp_args1_ext) {
+		free(tdp_args1);
+		tdp_args1 = tdp_args1_ext;
+		tdp_args1_ext = NULL;
+	}
+
+	if(tdp_args2 && tdp_args1 && !isTrue(allow_arguments_v1)) {
+		fprintf(stderr,
+		 "\nERROR: If you wish to specify both 'tool_daemon_arguments' and\n"
+		 "'tool_daemon_arguments2' for maximal compatibility with different\n"
+		 "versions of Condor, then you must also specify\n"
+		 "allow_arguments_v1=true.\n");
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+
+	if( tdp_args2 ) {
+		args_success = args.AppendArgsV2Input(tdp_args2,&error_msg);
+	}
+	else if( tdp_args1 ) {
+		args_success = args.AppendArgsV1or2Input(tdp_args1,&error_msg);
+	}
+
+	if(!args_success) {
+		fprintf(stderr,"ERROR: failed to parse tool daemon arguments: %s\n"
+				"The arguments you specified were: %s\n",
+				error_msg.Value(),
+				tdp_args2 ? tdp_args2 : tdp_args1);
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	MyString args_value;
+	if(args.InputWasV1()) {
+		args_success = args.GetArgsStringV1Raw(&args_value,&error_msg);
+		if(!args_value.IsEmpty()) {
+			buf.sprintf("%s = \"%s\"",ATTR_TOOL_DAEMON_ARGS1,
+						args_value.EscapeChars("\"",'\\').Value());
+			InsertJobExpr( buf.Value() );
+		}
+	}
+	else if(args.Count()) {
+		args_success = args.GetArgsStringV2Raw(&args_value,&error_msg);
+		if(!args_value.IsEmpty()) {
+			buf.sprintf("%s = \"%s\"",ATTR_TOOL_DAEMON_ARGS2,
+						args_value.EscapeChars("\"",'\\').Value());
+			InsertJobExpr( buf.Value() );
+		}
+	}
+
+	if(!args_success) {
+		fprintf(stderr,"ERROR: failed to insert tool daemon arguments: %s\n",
+				error_msg.Value());
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
 	if( suspend_at_exec ) {
 		buf.sprintf( "%s = %s", ATTR_SUSPEND_JOB_AT_EXEC,
 					 isTrue(suspend_at_exec) ? "TRUE" : "FALSE" );
@@ -3218,6 +3432,11 @@ SetTDP( void )
 		free( suspend_at_exec );
 		suspend_at_exec = NULL;
 	}
+
+	free(tdp_args1);
+	free(tdp_args2);
+	free(tdp_args1_ext);
+	free(allow_arguments_v1);
 }
 
 

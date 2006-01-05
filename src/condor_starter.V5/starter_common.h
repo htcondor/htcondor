@@ -31,6 +31,7 @@
 #include "condor_syscall_mode.h"
 #include "my_hostname.h"
 #include "exit.h"
+#include "condor_arglist.h"
 
 void init_params(void);
 void init_sig_mask();
@@ -39,7 +40,7 @@ void init_shadow_connections();
 void init_logging();
 void usage( char *my_name );
 ReliSock* NewConnection( int id );
-void support_job_wrapper(char *a_out_name,int *argc, char *argv[]);
+void support_job_wrapper(char *a_out_name,ArgList *args);
 
 extern "C" int exception_cleanup(int,int,char*);
 

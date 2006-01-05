@@ -58,6 +58,8 @@
 #include "self_monitor.h"
 #include "stdsoap2.h"
 #include "condor_pidenvid.h"
+#include "condor_arglist.h"
+#include "env.h"
 
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
@@ -711,9 +713,9 @@ class DaemonCore : public Service
                is a relative path name AND cwd is specified, then we
                prepend the result of getcwd() to 'name' and pass 
                that to exec().
-        @param args The list of args, separated by spaces.  The 
+        @param args The list of args as an ArgList object.  The 
                first arg is argv[0], the name you want to appear in 
-               'ps'.  If you don't specify agrs, then 'name' is 
+               'ps'.  If you don't specify args, then 'name' is 
                used as argv[0].
         @param priv The priv state to change into right before
                the exec.  Default = no action.
@@ -725,8 +727,7 @@ class DaemonCore : public Service
 			   socket.  If it is any integer > 1, then it will have a
 			   command socket on a port well-known port 
 			   specified by want_command_port.
-        @param env A colon-separated list of stuff to be put into
-               the environment of the new process
+        @param env Environment values to place in job environment.
         @param cwd Current Working Directory
         @param new_process_group Do you want to make one? Default = FALSE
         @param sock_inherit_list A list of socks to inherit.
@@ -749,11 +750,11 @@ class DaemonCore : public Service
     */
     int Create_Process (
         const char  *name,
-        const char  *args,
+        ArgList const &arglist,
         priv_state  priv                 = PRIV_UNKNOWN,
         int         reaper_id            = 1,
         int         want_commanand_port  = TRUE,
-        const char  *env                 = NULL,
+        Env const *env                   = NULL,
         const char  *cwd                 = NULL,
         int         new_process_group    = FALSE,
         Stream      *sock_inherit_list[] = NULL,

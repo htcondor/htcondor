@@ -1232,7 +1232,7 @@ condor__createJobTemplate(struct soap *soap,
 	attribute = MyString(ATTR_JOB_PRIO) + " = 0";
 	job.Insert(attribute.GetCStr());
 
-	attribute = MyString(ATTR_JOB_ENVIRONMENT) + " = \"\"";
+	attribute = MyString(ATTR_JOB_ENVIRONMENT2) + " = \"\"";
 	job.Insert(attribute.GetCStr());
 
 	attribute = MyString(ATTR_JOB_NOTIFICATION) + " = 2";
@@ -1317,8 +1317,20 @@ condor__createJobTemplate(struct soap *soap,
 		// XXX: This is recoverable!
 	ASSERT(job.Insert(attribute.GetCStr()));
 
-	attribute = MyString(ATTR_JOB_ARGUMENTS) + " = \"" + args + "\"";
-	job.Insert(attribute.GetCStr());
+	ArgList arglist;
+	MyString arg_errors;
+	if(!arglist.AppendArgsV2Raw(args,&arg_errors) ||
+	   !arglist.InsertArgsIntoClassAd(&job,NULL,&arg_errors)) {
+
+		result.response.status.code = FAIL;
+		result.response.status.message = "Invalid arguments string.";
+		convert_ad_to_adStruct(soap, &job, &result.response.classAd, true);
+
+		dprintf(D_ALWAYS,"Failed to parse job args from soap caller: %s\n",
+				arg_errors.Value());
+
+		return SOAP_OK;
+	}
 
 		// Need more attributes! Skim submit.C more.
 
