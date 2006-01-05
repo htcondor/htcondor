@@ -1,14 +1,6 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_sysapi.mak
 
 ..\src\condor_sysapi\arch.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -37,14 +29,6 @@
 	
 
 ..\src\condor_sysapi\free_fs_blocks.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -65,14 +49,6 @@
 	
 
 ..\src\condor_sysapi\idle_time.C : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -94,14 +70,6 @@
 	
 
 ..\src\condor_sysapi\last_x_event.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -122,14 +90,6 @@
 	
 
 ..\src\condor_sysapi\load_avg.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -149,14 +109,6 @@
 	
 
 ..\src\condor_sysapi\ncpus.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -178,14 +130,6 @@
 	
 
 ..\src\condor_sysapi\phys_mem.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -206,14 +150,6 @@
 	
 
 ..\src\condor_sysapi\reconfig.C : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\basename.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
@@ -244,14 +180,6 @@
 	
 
 ..\src\condor_sysapi\resource_limits.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_c++_util\limit.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
@@ -272,25 +200,9 @@
 	
 
 ..\src\condor_sysapi\timers_b.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	
 
 ..\src\condor_sysapi\virt_mem.c : \
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\propidl.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\reason.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\specstrings.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\stralign.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\tvout.h"\
-	"..\..\..\..\program files\microsoft platform sdk for windows xp sp2\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\

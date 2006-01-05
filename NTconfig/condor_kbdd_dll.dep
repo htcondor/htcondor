@@ -1,2 +1,4 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_kbdd_dll.mak
 
+"..\src\condor_kbdd\NT-kbdd-dll.C" : \
+	

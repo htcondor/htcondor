@@ -175,6 +175,14 @@ SOURCE="..\src\condor_c++_util\command_strings.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_arglist.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_arglist.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_attributes.C"
 # End Source File
 # Begin Source File
@@ -225,6 +233,10 @@ SOURCE=..\src\condor_includes\condor_distribution.h
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\condor_environ.C"
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_environ.h
 # End Source File
 # Begin Source File
 
@@ -422,14 +434,6 @@ SOURCE="..\src\condor_c++_util\env.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\env.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\environ.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\environ.h"
 # End Source File
 # Begin Source File
 
