@@ -51,6 +51,12 @@ or after other ready nodes.  The default is FALSE (\Condor{dagman}'s
 previous behavior), which means that failed nodes will be retried
 after other ready nodes.
 
+\item Added a new (backward compatible) syntax for job arguments and
+environment, allowing special characters to be escaped in a uniform
+way.  The old limit of 4096 characters in the job arguments has also
+been removed.  See \Condor{submit} manual for details of the new
+syntax.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
