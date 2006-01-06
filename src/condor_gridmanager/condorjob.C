@@ -1377,9 +1377,16 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
 
+	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
+				  COMPLETED );
+
 	if ( jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK_SENT, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
+		expr.sprintf_cat( " && ( %s < %s )", ATTR_CURRENT_TIME,
+						  ATTR_TIMER_REMOVE_CHECK );
 	}
+
+	submit_ad->Insert( expr.Value() );
 
 	expr.sprintf( "%s = Undefined", ATTR_OWNER );
 	submit_ad->Insert( expr.Value() );
@@ -1388,10 +1395,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	expr.sprintf( "%s = (%s > 0) =!= True && CurrentTime > %s + %d",
 				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
 				  ATTR_Q_DATE, STAGE_IN_TIME_LIMIT );
-	submit_ad->Insert( expr.Value() );
-
-	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
-				  COMPLETED );
 	submit_ad->Insert( expr.Value() );
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
