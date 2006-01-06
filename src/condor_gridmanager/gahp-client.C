@@ -566,7 +566,7 @@ GahpServer::Startup()
 
 	if ( get_port_range( &low_port, &high_port ) == TRUE ) {
 		MyString buff;
-		buff.sprintf( "%d.%d", low_port, high_port );
+		buff.sprintf( "%d,%d", low_port, high_port );
 		newenv.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
 	}
 
