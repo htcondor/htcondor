@@ -192,9 +192,10 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 
 void CondorResource::UnregisterJob( CondorJob *job )
 {
-	BaseResource::UnregisterJob( job );
-
 	submittedJobs.Delete( job );
+
+		// This may call delete, so don't put anything after it!
+	BaseResource::UnregisterJob( job );
 }
 
 int CondorResource::DoScheddPoll()
