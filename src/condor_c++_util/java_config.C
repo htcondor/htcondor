@@ -102,7 +102,7 @@ int java_config( char *cmd, ArgList *args, StringList *extra_classpath )
 	MyString args_error;
 
 	tmp = param("JAVA_EXTRA_ARGUMENTS");
-	if(!args->AppendArgsV1or2Input(tmp,&args_error)) {
+	if(!args->AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
 		dprintf(D_ALWAYS,"java_config: failed to parse extra arguments: %s\n",
 				args_error.Value());
 		free(tmp);

@@ -312,51 +312,40 @@ Env::ReadFromDelimitedString(char const *&input, char *output) {
 }
 
 bool
-Env::IsV2InputString(char const *str)
+Env::IsV2QuotedString(char const *str)
 {
-	return ArgList::IsV2InputString(str);
+	return ArgList::IsV2QuotedString(str);
 }
 
 bool
-Env::V2InputToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
+Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
 {
-	return ArgList::V2InputToV2Raw(v1_input,v2_raw,errmsg);
+	return ArgList::V2QuotedToV2Raw(v1_quoted,v2_raw,errmsg);
 }
 
 bool
-Env::V1InputToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
-{
-	return ArgList::V1InputToV1Raw(v1_input,v1_raw,errmsg);
-}
-
-
-bool
-Env::MergeFromV1or2Input( const char *delimitedString, MyString *error_msg )
+Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg )
 {
 	if(!delimitedString) return true;
-	if(IsV2InputString(delimitedString)) {
+	if(IsV2QuotedString(delimitedString)) {
 		MyString v2;
-		if(!V2InputToV2Raw(delimitedString,&v2,error_msg)) {
+		if(!V2QuotedToV2Raw(delimitedString,&v2,error_msg)) {
 			return false;
 		}
 		return MergeFromV2Raw(v2.Value(),error_msg);
 	}
 	else {
-		MyString v1;
-		if(!V1InputToV1Raw(delimitedString,&v1,error_msg)) {
-			return false;
-		}
-		return MergeFromV1Raw(v1.Value(),error_msg);
+		return MergeFromV1Raw(delimitedString,error_msg);
 	}
 }
 
 bool
-Env::MergeFromV2Input( const char *delimitedString, MyString *error_msg )
+Env::MergeFromV2Quoted( const char *delimitedString, MyString *error_msg )
 {
 	if(!delimitedString) return true;
-	if(IsV2InputString(delimitedString)) {
+	if(IsV2QuotedString(delimitedString)) {
 		MyString v2;
-		if(!V2InputToV2Raw(delimitedString,&v2,error_msg)) {
+		if(!V2QuotedToV2Raw(delimitedString,&v2,error_msg)) {
 			return false;
 		}
 		return MergeFromV2Raw(v2.Value(),error_msg);
@@ -554,13 +543,13 @@ Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_del
 }
 
 bool
-Env::getDelimitedStringV2Input(MyString *result,MyString *error_msg) const
+Env::getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const
 {
 	MyString v2_raw;
 	if(!getDelimitedStringV2Raw(&v2_raw,error_msg)) {
 		return false;
 	}
-	ArgList::V2RawToV2Input(v2_raw,result);
+	ArgList::V2RawToV2Quoted(v2_raw,result);
 	return true;
 }
 

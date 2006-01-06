@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 	// Env::Merge(null) will always return true, so the warning will not be
 	// printed in this case.
     MyString env_errors;
-	if( !envStrParser.MergeFromV1or2Input(env,&env_errors) ) {
+	if( !envStrParser.MergeFromV1RawOrV2Quoted(env,&env_errors) ) {
 		// this is an invalid env string
 		fprintf(stderr, "Warning! Configuration file variable "
 				"`%s' has invalid value `%s'; ignoring: %s\n",

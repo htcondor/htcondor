@@ -2322,10 +2322,10 @@ SetJavaVMArgs()
 	bool args_success = true;
 
 	if(args2) {
-		args_success = args.AppendArgsV2Input(args2,&error_msg);
+		args_success = args.AppendArgsV2Quoted(args2,&error_msg);
 	}
 	else if(args1) {
-		args_success = args.AppendArgsV1or2Input(args1,&error_msg);
+		args_success = args.AppendArgsV1WackedOrV2Quoted(args1,&error_msg);
 	}
 
 	if(!args_success) {
@@ -3018,10 +3018,10 @@ SetArguments()
 	}
 
 	if(args2) {
-		args_success = arglist.AppendArgsV2Input(args2,&error_msg);
+		args_success = arglist.AppendArgsV2Quoted(args2,&error_msg);
 	}
 	else if(args1) {
-		args_success = arglist.AppendArgsV1or2Input(args1,&error_msg);
+		args_success = arglist.AppendArgsV1WackedOrV2Quoted(args1,&error_msg);
 	}
 
 	if(!args_success) {
@@ -3152,8 +3152,12 @@ SetEnvironment()
 	bool env_success;
 	char const *environment_string = env2 ? env2 : env1;
 	MyString error_msg;
-	if(env2) env_success = envobject.MergeFromV2Input(env2,&error_msg);
-	else env_success = envobject.MergeFromV1or2Input(env1,&error_msg);
+	if(env2) {
+		env_success = envobject.MergeFromV2Quoted(env2,&error_msg);
+	}
+	else {
+		env_success = envobject.MergeFromV1RawOrV2Quoted(env1,&error_msg);
+	}
 
 	if(!env_success) {
 		fprintf(stderr,
@@ -3385,10 +3389,10 @@ SetTDP( void )
 	}
 
 	if( tdp_args2 ) {
-		args_success = args.AppendArgsV2Input(tdp_args2,&error_msg);
+		args_success = args.AppendArgsV2Quoted(tdp_args2,&error_msg);
 	}
 	else if( tdp_args1 ) {
-		args_success = args.AppendArgsV1or2Input(tdp_args1,&error_msg);
+		args_success = args.AppendArgsV1WackedOrV2Quoted(tdp_args1,&error_msg);
 	}
 
 	if(!args_success) {

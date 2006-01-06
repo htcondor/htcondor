@@ -255,20 +255,38 @@ ArgList::GetStringArray() const {
 }
 
 bool
-ArgList::AppendArgsV1or2Input(char const *args,MyString *error_msg)
+ArgList::AppendArgsV1RawOrV2Quoted(char const *args,MyString *error_msg)
 {
-	if(IsV2InputString(args)) {
-			// This is actually a V2 input string (enclosed in double-quotes).
+	if(IsV2QuotedString(args)) {
+			// This is actually a V2Quoted string (enclosed in double-quotes).
 		MyString v2;
-		if(!V2InputToV2Raw(args,&v2,error_msg)) {
+		if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
 			return false;
 		}
 		return AppendArgsV2Raw(v2.Value(),error_msg);
 	}
 
-		// It is a V1 input string, not enclosed in double-quotes.
+		// It is a raw V1 input string, not enclosed in double-quotes.
+
+	return AppendArgsV1Raw(args,error_msg);
+}
+
+bool
+ArgList::AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg)
+{
+	if(IsV2QuotedString(args)) {
+			// This is actually a V2Quoted string (enclosed in double-quotes).
+		MyString v2;
+		if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
+			return false;
+		}
+		return AppendArgsV2Raw(v2.Value(),error_msg);
+	}
+
+		// It is a V1Wacked string.  Literal double-quotes are
+		// backwacked.
 	MyString v1;
-	if(!V1InputToV1Raw(args,&v1,error_msg)) {
+	if(!V1WackedToV1Raw(args,&v1,error_msg)) {
 		return false;
 	}
 
@@ -276,15 +294,15 @@ ArgList::AppendArgsV1or2Input(char const *args,MyString *error_msg)
 }
 
 bool
-ArgList::AppendArgsV2Input(char const *args,MyString *error_msg)
+ArgList::AppendArgsV2Quoted(char const *args,MyString *error_msg)
 {
-	if(!IsV2InputString(args)) {
+	if(!IsV2QuotedString(args)) {
 		AddErrorMessage("Expecting double-quoted input string (V2 format).",error_msg);
 		return false;
 	}
 
 	MyString v2;
-	if(!V2InputToV2Raw(args,&v2,error_msg)) {
+	if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
 		return false;
 	}
 	return AppendArgsV2Raw(v2.Value(),error_msg);
@@ -522,18 +540,18 @@ ArgList::GetArgsStringV1Raw(MyString *result,MyString *error_msg) const
 }
 
 bool
-ArgList::GetArgsStringV2Input(MyString *result,MyString *error_msg)
+ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg)
 {
 	MyString v2_raw;
 	if(!GetArgsStringV2Raw(&v2_raw,error_msg)) {
 		return false;
 	}
-	V2RawToV2Input(v2_raw,result);
+	V2RawToV2Quoted(v2_raw,result);
 	return true;
 }
 
 void
-ArgList::V2RawToV2Input(MyString const &v2_raw,MyString *result)
+ArgList::V2RawToV2Quoted(MyString const &v2_raw,MyString *result)
 {
 	result->sprintf_cat("\"%s\"",v2_raw.EscapeChars("\"",'\\').Value());
 }
@@ -667,7 +685,7 @@ ArgList::GetArgsStringWin32(MyString *result,int skip_args,MyString *error_msg) 
 }
 
 bool
-ArgList::IsV2InputString(char const *str)
+ArgList::IsV2QuotedString(char const *str)
 {
 	if(!str) return false;
 
@@ -680,7 +698,7 @@ ArgList::IsV2InputString(char const *str)
 }
 
 bool
-ArgList::V2InputToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
+ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 {
 	if(!v1_input) return true;
 	ASSERT(v2_raw);
@@ -690,7 +708,7 @@ ArgList::V2InputToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 		v1_input++;
 	}
 
-	ASSERT(IsV2InputString(v1_input));
+	ASSERT(IsV2QuotedString(v1_input));
 	ASSERT(*v1_input == '"');
 	v1_input++;
 
@@ -736,11 +754,11 @@ ArgList::V2InputToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 }
 
 bool
-ArgList::V1InputToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
+ArgList::V1WackedToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
 {
 	if(!v1_input) return true;
 	ASSERT(v1_raw);
-	ASSERT(!IsV2InputString(v1_input));
+	ASSERT(!IsV2QuotedString(v1_input));
 
 	while(*v1_input) {
 		if(*v1_input == '"') {

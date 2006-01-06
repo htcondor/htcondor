@@ -372,7 +372,7 @@ daemon::DoConfig( bool init )
 	Env env_parser;
 	MyString env_error_msg;
 
-	if(!env_parser.MergeFromV1or2Input(env_string,&env_error_msg)) {
+	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string,&env_error_msg)) {
 		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s\n",
 		       name_in_config_file,
 			   env_error_msg.Value());
@@ -619,7 +619,7 @@ int daemon::RealStart( )
 	char *daemon_args = param( buf );
 
 	MyString args_error;
-	if(!args.AppendArgsV1or2Input(daemon_args,&args_error)) {
+	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args,&args_error)) {
 		dprintf(D_ALWAYS,"ERROR: failed to parse %s daemon arguments: %s\n",
 				buf,
 				args_error.Value());

@@ -27,25 +27,29 @@
   This module contains functions for manipulating argument strings,
   such as the argument string specified for a job in a submit file.
 
-  The preferred argument format is called "V2", because there was an
-  older format ("V1") which could not represent spaces within
-  arguments.  V2 contains tokens (arguments) delimited by whitespace.
+  There are two formats for argument strings.  The old backward-compatible
+  one is V1.  The new one is V2.  V1 is interpreted differently on
+  different platforms and universes.  In some cases, spaces can be
+  inserted in argument values (windows and globus), but in other cases
+  there is no way to do that.
+
+  The V2 syntax contains tokens (arguments) delimited by whitespace.
   Special characters within the tokens (e.g. whitespace) may be quoted
-  with single quotes.  To insert a literal single quote, enter two
-  single quotes if you are already inside a quoted section; otherwise
-  enter four single quotes if you are not already within quotes.  The
-  backslash is a normal character (because it is too common in Windows
-  args and environment).  Note that quotes do not delimit tokens, so
-  you may begin and end quotes any number of times within the same
-  token.
+  with single quotes.  To insert a literal single quote, you must put
+  a repeated single quote inside single quotes.  In other words, enter
+  two single quotes if you are already inside a quoted section;
+  otherwise enter four single quotes if you are not already within
+  quotes.  The backslash is a normal character (because it is too
+  common in Windows args and environment).  Note that quotes do not
+  delimit tokens, so you may begin and end quotes any number of times
+  within the same token.
 
   The above text describes the "raw" argument syntax.  In cases where
-  Condor is reading argument strings from the user, the "input" syntax
-  is used.  V2 strings must be enclosed in double quotes and V1
-  strings must contain only backwacked double quotes.  This syntax was
-  chosen for backward compatibility, because unescaped double-quotes
-  were not legal in V1 submit-file syntax.  The double-quoted V2
-  syntax string is called an "extended V1" string.
+  Condor is reading argument strings from the user, the "quoted" syntax
+  is generally used.  V2 strings must be enclosed in double quotes and V1
+  strings must _not_ begin with double quotes.  This syntax was chosen
+  for maximal backward compatibility, because unescaped double-quotes
+  were not legal in V1 submit-file syntax.
 
   Example raw V2 syntax:
            this 'contains spaces' and 'some ''quoted'' "text"'
@@ -53,7 +57,7 @@
        or 'this' 'contains spaces' and 'some ''quoted'' "text"'
   yields  "this", "contains spaces", "and", "some 'quoted' \"text\""
 
-  Example input V2 syntax yielding same as above:
+  Example quoted V2 syntax yielding same as above:
            "this 'contains spaces' and 'some ''quoted'' \"text\"'"
 
 */
@@ -98,24 +102,45 @@ class ArgList {
 	void AppendArgsFromArgList(ArgList const &args);
 
 		// Parse args string in plain old V1 syntax.
+		// Double-quotes should not be backwacked.
 	bool AppendArgsV1Raw(char const *args,MyString *error_msg);
 
-		// Parse args string in V1 or V2 input syntax.  If the string
+		// Parse args string in V1Raw or V2Quoted syntax.  This is used
+		// anywhere except for arguments strings in submit files (that
+		// means it applies to config files and environment strings in
+		// submit files).  If the string is enclosed in double-quotes,
+		// it will be treated as V2, otherwise it will be treated as
+		// V1.  Literal double-quotes in V1 strings should _not_ be
+		// escaped, unlike V1 submit syntax (aka V1WackedOrV2Quoted).
+		// Therefore, in this format, it is not possible to
+		// have a V1 string that begins with a double-quote.  This
+		// format was chosen for maximal backward compatibility with
+		// the old V1 syntax in the places where this function is used.
+	bool AppendArgsV1RawOrV2Quoted(char const *args,MyString *error_msg);
+
+		// Parse args string in V1Wacked or V2Quoted syntax.  This is
+		// used for argument strings in submit files.  If the string
 		// is enclosed in double-quotes, it will be treated as V2,
-		// otherwise it will be treated as V1.
-	bool AppendArgsV1or2Input(char const *args,MyString *error_msg);
+		// otherwise it will be treated as V1.  In V1 syntax, any
+		// literal double-quotes must be escaped (backwacked), for
+		// compatibility with the original V1 submit-file syntax.
+	bool AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg);
 
 		// Parse args string in V2 syntax.
+		// Double quotes have no special meaning, unlike V2Quoted syntax.
 	bool AppendArgsV2Raw(char const *args,MyString *error_msg);
 
-		// Parse args string in V2 user input syntax.
-		// Just like AppendArgsV1or2Input(), except the input string
-		// must be enclosed in double-quotes or an error (and message)
+		// Parse args string in V2Quoted syntax.
+		// Just like AppendArgsV1BlahOrV2Quoted(), except the input string
+		// _must_ be enclosed in double-quotes or an error (and message)
 		// will be generated.
-	bool AppendArgsV2Input(char const *args,MyString *error_msg);
+	bool AppendArgsV2Quoted(char const *args,MyString *error_msg);
 
 		// Internal on-the-wire format allowing V2 or V1 syntax in a
-		// backward compatible way.
+		// backward compatible way.  For backward compatibility,
+		// this has to be slightly different from the other user-input
+		// V1or2 formats.  To produce a string in this format,
+		// use GetArgsStringV1or2Raw().
 	bool AppendArgsV1or2Raw(char const *args,MyString *error_msg);
 
 	bool AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg);
@@ -131,48 +156,55 @@ class ArgList {
 		// Caller should delete array (e.g. with deleteStringArray())
 	char **GetStringArray() const;
 
-		// Create a V1 format args string (no quoting)
+		// Create a V1 format args string (no quoting or backwacking)
 		// false on error (e.g. because an argument contains spaces).
 	bool GetArgsStringV1Raw(MyString *result,MyString *error_msg) const;
 
-		// Create a V2 format args string.
+		// Create a V2 format args string.  This differs from
+		// GetArgsStringV2Quoted in that string is _not_ enclosed in
+		// double quotes.
 	bool GetArgsStringV2Raw(MyString *result,MyString *error_msg,int start_arg=0) const;
 
-		// Create a V1 args string if possible.  o.w. marked V2.
+		// Create V2Quoted args string (i.e. enclosed in double-quotes).
+	bool GetArgsStringV2Quoted(MyString *result,MyString *error_msg);
+
+		// Create a V1 args string if possible.  o.w. V2, with
+		// necessary markings to make it correctly recognized as V2
+		// by AppendArgsV1or2Raw().
 	bool GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const;
 
 		// From args in ClassAd, create V1 args string if
-		// possible. o.w. marked V2.
+		// possible. o.w. V2, with necessary markings to make it
+		// correctly recognized as V2 by AppendArgsV1or2Raw().
 	bool GetArgsStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg);
-
-		// Create V2 input args string (i.e. enclosed in double-quotes).
-	bool GetArgsStringV2Input(MyString *result,MyString *error_msg);
 
 		// Create an args string for windows CreateProcess().
 	bool GetArgsStringWin32(MyString *result,int skip_args,MyString *error_msg) const;
 
 	bool InputWasV1() {return input_was_v1;}
 
-		// Return true if the input string is a V2 input string.  Such
+		// Return true if the string is a V2Quoted string.  Such
 		// strings begin and end with double-quotes, since that is not
 		// valid in plain old V1 submit file syntax.  The contents
 		// within the double quotes should be V2 syntax, but that is
 		// not validated by this function; neither is the terminal quote.
-		// Instead, such input errors are detected in V2InputToV2Raw().
-	static bool IsV2InputString(char const *str);
+		// Instead, such input errors are detected in V2QuotedToV2Raw().
+	static bool IsV2QuotedString(char const *str);
 
-		// Convert a V2 input string to a V2 raw string.
-		// (IsV2InputString() must be true or this will EXCEPT.)
-	static bool V2InputToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg);
+		// Convert a V2Quoted string to a V2Raw string.
+	    // In other words, remove the surrounding double quotes
+	    // and remove backwacks in front of inner double-quotes.
+		// (IsV2QuotedString() must be true or this will EXCEPT.)
+	static bool V2QuotedToV2Raw(char const *v2_quoted,MyString *v2_raw,MyString *errmsg);
 
-		// Convert V1 input string to V1 raw string.
+		// Convert V1Wacked string to V1Raw string.
 		// In other words, remove backwacks in front of double-quotes.
-		// (IsV2InExtendedV1String() must be false or this will EXCEPT.)
-	static bool V1InputToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg);
+		// (IsV2QuotedString() must be false or this will EXCEPT.)
+	static bool V1WackedToV1Raw(char const *v1_wacked,MyString *v1_raw,MyString *errmsg);
 
-		// Convert V2 raw to V2 input string.
+		// Convert V2Raw to V2Quoted string.
 		// In other words, enclose in double-quotes (and escape as necessary).
-	static void V2RawToV2Input(MyString const &v2_raw,MyString *result);
+	static void V2RawToV2Quoted(MyString const &v2_raw,MyString *result);
 
 		// Convenience function for appending error messages.
 		// Each new message begins on a new line.

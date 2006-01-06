@@ -551,7 +551,7 @@ GahpServer::Startup()
 
 		char *args = param("GAHP_ARGS");
 		MyString args_error;
-		if(!gahp_args.AppendArgsV1or2Input(args,&args_error)) {
+		if(!gahp_args.AppendArgsV1RawOrV2Quoted(args,&args_error)) {
 			EXCEPT("Failed to parse arguments: %s",args_error.Value());
 		}
 		free(args);

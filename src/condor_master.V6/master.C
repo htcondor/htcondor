@@ -1056,7 +1056,7 @@ run_preen(Service*)
 	arglist.AppendArg(preen_base);
 
 	args = param("PREEN_ARGS");
-	if(!arglist.AppendArgsV1or2Input(args,&error_msg)) {
+	if(!arglist.AppendArgsV1RawOrV2Quoted(args,&error_msg)) {
 		EXCEPT("ERROR: failed to parse preen args: %s\n",error_msg.Value());
 	}
 	free(args);

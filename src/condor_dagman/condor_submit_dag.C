@@ -432,7 +432,7 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	}
 
 	MyString arg_str,args_error;
-	if(!args.GetArgsStringV2Input(&arg_str,&args_error)) {
+	if(!args.GetArgsStringV2Quoted(&arg_str,&args_error)) {
 		fprintf(stderr,"Failed to insert arguments: %s",args_error.Value());
 		exit(1);
 	}
@@ -444,7 +444,7 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 
 	MyString env_str;
 	MyString env_errors;
-	if(!env.getDelimitedStringV2Input(&env_str,&env_errors)) {
+	if(!env.getDelimitedStringV2Quoted(&env_str,&env_errors)) {
 		fprintf(stderr,"Failed to insert environment: %s",env_errors.Value());
 		exit(1);
 	}

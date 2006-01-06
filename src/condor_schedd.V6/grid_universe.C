@@ -451,7 +451,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 	char *gman_args = param("GRIDMANAGER_ARGS");
 
-	if(!args.AppendArgsV1or2Input(gman_args,&error_msg)) {
+	if(!args.AppendArgsV1RawOrV2Quoted(gman_args,&error_msg)) {
 		dprintf( D_ALWAYS, "ERROR: failed to parse gridmanager args: %s\n",
 				 error_msg.Value());
 		free(gman_args);

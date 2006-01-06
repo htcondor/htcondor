@@ -31,7 +31,7 @@ void condor_arglist_unit_test() {
 	MyString *arg;
 	char const *test_string = "This '''quoted''' arg' 'string 'contains ''many'' \"\"surprises\\'";
 	char const *test_cooked_string = "\"This '''quoted''' arg' 'string 'contains ''many'' \\\"\\\"surprises\\'\"";
-	char const *test_v1_cooked = "one \\\"two\\\" 'three\\ four'";
+	char const *test_v1_wacked = "one \\\"two\\\" 'three\\ four'";
 	MyString joined_args,joined_args2;
 	MyString error_msg;
 	char **string_array;
@@ -82,7 +82,7 @@ void condor_arglist_unit_test() {
 	ArgList arglist;
 
 	arglist.Clear();
-	ASSERT(arglist.AppendArgsV1or2Input(test_v1_cooked,NULL));
+	ASSERT(arglist.AppendArgsV1WackedOrV2Quoted(test_v1_wacked,NULL));
 	ASSERT(arglist.Count() == 4);
 	ASSERT(!strcmp(arglist.GetArg(0),"one"));
 	ASSERT(!strcmp(arglist.GetArg(1),"\"two\""));
@@ -90,17 +90,17 @@ void condor_arglist_unit_test() {
 	ASSERT(!strcmp(arglist.GetArg(3),"four'"));
 
 	arglist.Clear();
-	ASSERT(arglist.AppendArgsV2Input(test_cooked_string,NULL));
+	ASSERT(arglist.AppendArgsV2Quoted(test_cooked_string,NULL));
 	ASSERT(arglist.Count() == 4);
 	ASSERT(!strcmp(arglist.GetArg(0),"This"));
 	ASSERT(!strcmp(arglist.GetArg(1),"'quoted'"));
 	ASSERT(!strcmp(arglist.GetArg(2),"arg string"));
 	ASSERT(!strcmp(arglist.GetArg(3),"contains 'many' \"\"surprises\\"));
 	MyString v2_cooked_args;
-	ASSERT(arglist.GetArgsStringV2Input(&v2_cooked_args,&error_msg));
+	ASSERT(arglist.GetArgsStringV2Quoted(&v2_cooked_args,&error_msg));
 
 	arglist.Clear();
-	ASSERT(arglist.AppendArgsV1or2Input(v2_cooked_args.Value(),NULL));
+	ASSERT(arglist.AppendArgsV1WackedOrV2Quoted(v2_cooked_args.Value(),NULL));
 	ASSERT(arglist.Count() == 4);
 	ASSERT(!strcmp(arglist.GetArg(0),"This"));
 	ASSERT(!strcmp(arglist.GetArg(1),"'quoted'"));

@@ -39,7 +39,7 @@ envobj.MergeFromV2Raw("env1=val1 env2=val2 ...");
 // Add env settings in raw V1 syntax.
 envobj.MergeFromV1Raw("env1=val1;env2=val2;...");
 // Add env settings in input V1or2 syntax (in this example V2 input syntax).
-envobj.MergeFromV1or2Input("\"env1=val1 env2=val2 ...\"");
+envobj.MergeFromV1RaworV2Quoted("\"env1=val1 env2=val2 ...\"");
 // Add a single environment value.
 envobj.SetEnv("env1=val1");
 // Add a single environment value that is already broken into key and value.
@@ -51,20 +51,18 @@ syntax is a sequence of whitespace delimited tokens processed by
 split_args().  Each token is then split on the first '=' sign into
 key=value pairs.
 
-There is a "raw" syntax and an "input" syntax.  The input syntax is
+There is a "raw" format and a quoted format.  The quoted format is
 designed to differentiate in a backward compatible way between input
 strings that are in the old V1 syntax and the new V2 syntax.  Input
-strings in V2 syntax should be enclosed in double-quotes.  In V1
-input syntax, any double quotes should be backwacked.  In raw syntax,
-the double quote has no special meaning, but to prevent mistakes,
-any double quotes must be protected by enclosing them in single quotes.
+strings in V2 syntax should be enclosed in double-quotes and any
+literal double-quotes should be backwacked.
 
-Example raw V2 syntax:
-           env1='val one' 'env2=''val2''' env3='"val3"'
+Example V2Raw syntax:
+           env1='val one' 'env2=''val2''' env3="val3"
   yields {"env1" = "val one"}, {"env2" = "'val2'"}, {"env3" = "\"val3\""}
 
-Example input V2 syntax yielding same as above:
-           "env1='val one' 'env2=''val2''' env3='\"val3\"'"
+Example V2Quoted syntax yielding same as above:
+           "env1='val one' 'env2=''val2''' env3=\"val3\""
 
 ***********************************************************************/
 
@@ -86,14 +84,15 @@ class Env {
 		// Remove all environment entries.
 	void Clear();
 
-		// Add (or overwrite) environment entries from an input string.
-		// The string may be in either V1 or V2 input format.
-	bool MergeFromV1or2Input( const char *delimitedString, MyString *error_msg );
+		// Add (or overwrite) environment entries from an input
+		// string.  If the string begins with a double-quote, it will
+		// be treated as V2Quoted; otherwise it will be read as V1Raw.
+	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
-		// If the string is not in V2 input format, this function
+		// If the string is not in V2Quoted format, this function
 		// returns false and generates an error message.
-	bool MergeFromV2Input( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV2Quoted( const char *delimitedString, MyString *error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V2 format.
@@ -156,8 +155,8 @@ class Env {
 		// Returns V1 string if possible, o.w. marked V2 string.
 	bool getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char delim='\0') const;
 
-		// Returns V2 input string (i.e. enclosed in double quotes).
-	bool getDelimitedStringV2Input(MyString *result,MyString *error_msg) const;
+		// Returns V2Quoted string (i.e. enclosed in double quotes).
+	bool getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const;
 
 		// Get a string describing the environment in this Env object.
 	void getDelimitedStringForDisplay(MyString *result) const;
@@ -179,18 +178,13 @@ class Env {
 		// Return the appropriate environment delimiter for this opsys.
 	static char GetEnvV1Delimiter(char const *opsys=NULL);
 
-		// Returns true if string is V2 input format.  In other words,
+		// Returns true if string is V2Quoted format.  In other words,
 		// this checks that the string begins with a double-quote.
-	static bool IsV2InputString(char const *str);
+	static bool IsV2QuotedString(char const *str);
 
-		// Convert a V2 input string to a V2 raw string.
-		// (IsV2InputString() must be true or this will EXCEPT.)
-	static bool V2InputToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg);
-
-		// Convert V1 input string to V1 raw string.
-		// In other words, remove backwacks in front of double-quotes.
-		// (IsV2InExtendedV1String() must be false or this will EXCEPT.)
-	static bool V1InputToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg);
+		// Convert a V2Quoted string to a V2Raw string.
+		// (IsV2QuotedString() must be true or this will EXCEPT.)
+	static bool V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg);
 
 	bool InputWasV1() const {return input_was_v1;}
 

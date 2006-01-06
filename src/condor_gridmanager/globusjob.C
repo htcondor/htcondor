@@ -677,7 +677,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 		char *args = param("GAHP_ARGS");
 		MyString args_error;
-		if(!gahp_args.AppendArgsV1or2Input(args,&args_error)) {
+		if(!gahp_args.AppendArgsV1RawOrV2Quoted(args,&args_error)) {
 			dprintf(D_ALWAYS,"Failed to parse gahp arguments: %s",args_error.Value());
 			error_string = "ERROR: failed to parse GAHP arguments.";
 			free(args);

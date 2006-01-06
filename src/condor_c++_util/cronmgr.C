@@ -639,7 +639,7 @@ CronMgrBase::ParseJobList( const char *jobListString )
 		// Force the first arg to be the "Job Name"..
 		args.AppendArg(jobName);
 
-		if(!args.AppendArgsV1or2Input(paramArgs.Value(),&args_errors)) {
+		if(!args.AppendArgsV1RawOrV2Quoted(paramArgs.Value(),&args_errors)) {
 			dprintf( D_ALWAYS,
 					 "CronMgr: Job '%s': "
 					 "Failed to parse arguments: %s\n",
@@ -651,7 +651,7 @@ CronMgrBase::ParseJobList( const char *jobListString )
 		Env envobj;
 		MyString env_error_msg;
 
-		if(!envobj.MergeFromV1or2Input(paramEnv.Value(),&env_error_msg)) {
+		if(!envobj.MergeFromV1RawOrV2Quoted(paramEnv.Value(),&env_error_msg)) {
 			dprintf( D_ALWAYS,
 					 "CronMgr: Job '%s': "
 					 "Failed to parse environment: %s\n",
@@ -878,7 +878,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		// Force the first arg to be the "Job Name"..
 		args.AppendArg(jobName);
 
-		if(!args.AppendArgsV1or2Input(paramArgs,&args_errors)) {
+		if(!args.AppendArgsV1RawOrV2Quoted(paramArgs,&args_errors)) {
 			dprintf( D_ALWAYS,
 					 "CronMgr: Job '%s': "
 					 "Failed to parse arguments: %s\n",
@@ -895,7 +895,7 @@ CronMgrBase::ParseOldJobList( const char *jobString )
 		Env envobj;
 		MyString env_error_msg;
 
-		if(envobj.MergeFromV1or2Input(paramEnv,&env_error_msg)) {
+		if(envobj.MergeFromV1RawOrV2Quoted(paramEnv,&env_error_msg)) {
 			dprintf( D_ALWAYS,
 					 "CronMgr: Job '%s': "
 					 "Failed to parse environment: %s\n",
