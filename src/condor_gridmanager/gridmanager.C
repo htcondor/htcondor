@@ -727,7 +727,6 @@ doContactSchedd()
 						commit_transaction = false;
 						goto contact_schedd_disconnect;
 					}
-//					ASSERT(next_ad);
 					if ( next_ad == NULL ) {
 						// We may get here if it was not possible to expand
 						// one of the $$() expressions.  We don't want to
