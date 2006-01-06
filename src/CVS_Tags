@@ -1,3 +1,8 @@
+01/06/06 V6_7-MB-SC2005_Stork_Demo_3-{root,branch}
+   Root & branch tags for the merge branch for the SC2005 / Stork Demo
+   code.  This is a tag off V6_7-branch, and the branch to merge in
+   is V6_7-SC2005_Stork_Demo_3-branch.  This branches V6_7_CODE.
+
 01/03/06 V6_7-cron-3-{root,branch}
    This is a second attempt to merge my V6_7-starter_local_exp branch
    into a new branch to get test the CronTab code. Created from the
