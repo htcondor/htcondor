@@ -96,6 +96,9 @@ expression as being a "job attribute", not "UNKNOWN (never set)".
 glidein pools.  It now simply leaves this value undefined so that
 the default behavior may be assumed.
 
+\item Fixed a bug that could cause the \Condor{gridmanager} to crash when
+a grid-type condor grid universe job left the queue.
+
 \item When using job leases with the condor grid-type, a completed job will
 now leave the remote \Condor{schedd}'s queue when the lease expires.
 
