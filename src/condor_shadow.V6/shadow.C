@@ -139,6 +139,8 @@ int  LastCkptTime = -1;			// time when job last completed a ckpt
 int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
 int  CommittedTime = 0;			// run-time committed in checkpoints
+// last known checkpointing signature of a successful checkpoint
+extern char *LastCkptPlatform;
 
 #ifdef WANT_NETMAN
 extern bool ManageBandwidth;	// notify negotiator about network usage?
@@ -1058,6 +1060,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 							 ATTR_LAST_VACATE_TIME, time(0) );
 		}
 
+		// if we had checkpointed, then save all of these attributes as well.
 		if (LastCkptTime > LastRestartTime) {
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_LAST_CKPT_TIME, LastCkptTime);
@@ -1090,6 +1093,12 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			} else {
 				DeleteAttribute(Proc->id.cluster, Proc->id.proc,
 								   ATTR_LAST_CKPT_SERVER);
+			}
+
+			if (LastCkptPlatform) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+								   ATTR_LAST_CHECKPOINT_PLATFORM, 
+								   LastCkptPlatform);
 			}
 		}
 		// if the job completed, we should include the run-time in

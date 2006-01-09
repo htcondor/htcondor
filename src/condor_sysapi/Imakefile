@@ -11,7 +11,8 @@ LDFLAGS = -framework IOKit -framework Carbon
 
 OBJ = phys_mem.o free_fs_blocks.o ncpus.o clinpack.o dhry21a.o \
       dhry21b.o timers_b.o idle_time.o reconfig.o last_x_event.o \
-      load_avg.o arch.o virt_mem.o resource_limits.o analyze_exec.o 
+      load_avg.o arch.o virt_mem.o resource_limits.o analyze_exec.o \
+	  kernel_memory_model.o kernel_version.o ckptpltfrm.o
 
 # the test files for the sysapi tester
 TEST_OBJS = sysapi.t.o test.o arch_t.o free_fs_blocks_t.o idle_time_t.o \

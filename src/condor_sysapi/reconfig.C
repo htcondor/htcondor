@@ -68,6 +68,9 @@ int _sysapi_ncpus = 0;
 int _sysapi_memory = 0;
 int _sysapi_reserve_memory = 0;
 
+/* needed by ckptpltfrm.c */
+char *_sysapi_ckptpltfrm = NULL;
+
 
 BEGIN_C_DECLS
 
@@ -160,6 +163,20 @@ sysapi_reconfig(void)
 	if( tmp ) {
 		_sysapi_reserve_memory = atoi( tmp );
 		free( tmp );
+	}
+
+	/* _sysapi_ckptpltfrm is either set to NULL, or whatever 
+		CHECKPOINT_PLATFORM says in the config file. If set to NULL,
+		then _sysapi_ckptpltfrm will be properly initialized after the first
+		call to sysapi_ckptpltfrm() */
+	if (_sysapi_ckptpltfrm != NULL) {
+		free(_sysapi_ckptpltfrm);
+		_sysapi_ckptpltfrm = NULL;
+	}
+	tmp = param( "CHECKPOINT_PLATFORM" );
+	if (tmp != NULL) {
+		_sysapi_ckptpltfrm = strdup(tmp);
+		free(tmp);
 	}
 
 	/* tell the library I have configured myself */

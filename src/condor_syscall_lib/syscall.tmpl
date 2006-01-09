@@ -1115,6 +1115,15 @@ they should be built in the special "clipped" version.
 
 #if !defined( SWITCH )
 
+	/* allow the starter to explain to the shadow the checkpointing signature
+		of the platform where a job is about to be executed. All platforms,
+		even clipped platforms specify this string.  */
+	int register_ckpt_platform( const char *platform, int len ) : pseudo
+	{
+		in code_bytes_bool( platform, len );
+		alloc( platform, len );
+	}
+
 	int register_fs_domain( const char *domain ) : pseudo {
 		SEND_PATH( domain );
 		ALLOC_PATH( domain );

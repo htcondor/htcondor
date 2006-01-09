@@ -86,6 +86,7 @@ extern int  NumRestarts;
 extern int MaxDiscardedRunTime;
 extern char *ExecutingHost;
 extern char *scheddName;
+extern char *LastCkptPlatform;
 
 int		LastCkptSig = 0;
 
@@ -135,6 +136,23 @@ int	 NetworkHorizon = 0;		// how often do we request network bandwidth?
 static Daemon Negotiator(DT_NEGOTIATOR);
 void RequestCkptBandwidth();
 #endif
+
+int
+pseudo_register_ckpt_platform( const char *platform, int len )
+{
+	/* Here we set the platform into a global variable which the
+		shadow will only be placed into the jobad (much later)
+		IFF the checkpoint was actually successful. */
+
+	if (LastCkptPlatform != NULL) {
+		free(LastCkptPlatform);
+	}
+
+	LastCkptPlatform = strdup(platform);
+
+	return 0;
+}
+
 
 /* performing a blocking call to system() */
 int
@@ -298,6 +316,7 @@ void
 commit_rusage()
 {
 	struct rusage local_rusage;
+	char buf[1024*10];
 
 	get_local_rusage( &local_rusage );
 
@@ -306,11 +325,20 @@ commit_rusage()
 		log_checkpoint (&local_rusage, &uncommitted_rusage);
 		// update job info to the job queue
 		update_job_status( &local_rusage, &uncommitted_rusage );
+
+		// update the checkpointing signature
 	} else {
 		// no need to update job queue here on a vacate checkpoint, since
 		// we will do it in Wrapup()
 		update_job_rusage( &local_rusage, &uncommitted_rusage );
 	}
+
+	// Also, we should update the job ad to record the
+	// checkpointing signature of the execution machine now
+	// that we know we wrote the checkpoint properly.
+	sprintf(buf, "%s = %s", ATTR_LAST_CHECKPOINT_PLATFORM,
+		LastCkptPlatform);
+	JobAd->Insert(buf);
 }
 
 int

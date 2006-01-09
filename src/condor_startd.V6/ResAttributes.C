@@ -39,6 +39,7 @@ MachAttributes::MachAttributes()
 	m_filesystem_domain = NULL;
 	m_subnet = NULL;
 	m_idle_interval = -1;
+	m_ckptpltfrm = NULL;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -61,6 +62,9 @@ MachAttributes::MachAttributes()
 	}
 
 	dprintf( D_FULLDEBUG, "Memory: Detected %d megs RAM\n", m_phys_mem );
+
+		// identification of the checkpointing platform signature
+	m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
 }
 
 
@@ -71,6 +75,7 @@ MachAttributes::~MachAttributes()
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_subnet ) free( m_subnet );
+	if( m_ckptpltfrm ) free( m_ckptpltfrm );
 }
 
 
@@ -133,6 +138,12 @@ MachAttributes::compute( amask_t how_much )
 		} else {
 			m_idle_interval = -1;
 		}
+
+			// checkpoint platform signature
+		if (m_ckptpltfrm) {
+			free(m_ckptpltfrm);
+		}
+		m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
 	}
 
 
@@ -227,6 +238,9 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		sprintf( line, "%s = TRUE", ATTR_HAS_IO_PROXY );
 		cp->Insert(line);
+
+		sprintf( line, "%s = \"%s\"", ATTR_CHECKPOINT_PLATFORM, m_ckptpltfrm );
+		cp->Insert( line );
 	}
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {

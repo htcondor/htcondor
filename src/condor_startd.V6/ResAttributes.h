@@ -126,6 +126,7 @@ private:
 	char*			m_filesystem_domain;
 	char*			m_subnet;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
+	char*			m_ckptpltfrm;
 };	
 
 

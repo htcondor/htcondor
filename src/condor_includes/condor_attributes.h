@@ -529,6 +529,9 @@ const char ATTR_QUILL_DB_QUERY_PASSWORD	[] = "QuillDatabaseQueryPassword";
 const char ATTR_QUILL_SQL_TOTAL		[] = "NumSqlTotal";
 const char ATTR_QUILL_SQL_LAST_BATCH	[] = "NumSqlLastBatch";
 
+const char ATTR_CHECKPOINT_PLATFORM			[] = "CheckpointPlatform";
+const char ATTR_LAST_CHECKPOINT_PLATFORM	[] = "LastCheckpointPlatform";
+
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
 const char MANAGED_EXTERNAL				 [] = "External";

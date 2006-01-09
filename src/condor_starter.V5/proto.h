@@ -133,4 +133,5 @@ extern "C" {
 	int REMOTE_CONDOR_register_ckpt_server(char *host);
 	int REMOTE_CONDOR_register_arch(char *arch);
 	int REMOTE_CONDOR_register_opsys(char *opsys);
+	int REMOTE_CONDOR_register_ckpt_platform(const char *platform, int len);
 }

@@ -26,6 +26,7 @@
  
 BEGIN_C_DECLS
 
+int pseudo_register_ckpt_platform( const char *platform, int len );
 int pseudo_shell( char *command, int len );
 int pseudo_get_ckpt_speed();
 int pseudo_register_arch( const char *arch );

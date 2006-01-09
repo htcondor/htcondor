@@ -95,6 +95,7 @@ extern int NumRestarts;
 extern float TotalBytesSent, TotalBytesRecvd;
 extern float BytesSent, BytesRecvd;
 extern ReliSock *syscall_sock;
+char *LastCkptPlatform = NULL;
 
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
@@ -561,7 +562,17 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		JobAd->Insert(buf);
 		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
 		JobAd->Insert(buf);
+
+		/* add in the signature of the checkpointing host for this 
+			completed ckpt */
+		if (LastCkptPlatform != NULL) {
+			sprintf(buf, "%s = %s", ATTR_LAST_CHECKPOINT_PLATFORM, 
+				LastCkptPlatform);
+			JobAd->Insert(buf);
+		}
+
 		break;
+
 
 	 default:	/* Job exited abnormally */
 		if (coredir == NULL) {

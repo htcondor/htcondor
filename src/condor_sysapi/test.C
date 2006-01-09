@@ -41,7 +41,10 @@
 #define	PHYS_MEM		0x0100
 #define	VIRT_MEM		0x0200
 #define	DUMP			0x0400
-#define	TEST_ALL		0x07ff
+#define	CKPTPLTFRM		0x0800
+#define	KERN_VERS		0x1000
+#define	KERN_MEMMOD		0x2000
+#define	TEST_ALL		0xFFFF
 #define	TEST_NONE		0x0000
 
 // Default test limits
@@ -113,6 +116,8 @@ sysapi_test_dump_internal_vars(void)
 		"SysAPI: _sysapi_reserve_disk = %d\n", _sysapi_reserve_disk);
 	dprintf(D_ALWAYS, "SysAPI: _sysapi_startd_has_bad_utmp = %s\n",
 		_sysapi_startd_has_bad_utmp==TRUE?"TRUE":"FALSE");
+	dprintf(D_ALWAYS, "SysAPI: _sysapi_ckptpltfrm = %s\n",
+		_sysapi_ckptpltfrm!=NULL?_sysapi_ckptpltfrm:"(null)");
 }
 
 /* this function calls every function in sysapi that makes sense to call and
@@ -126,6 +131,11 @@ sysapi_test_dump_functions(void)
 	time_t t0, t1;
 
 	dprintf(D_ALWAYS, "SysAPI: Calling SysAPI functions....\n");
+
+	qux = sysapi_ckptpltfrm_raw();
+	dprintf(D_ALWAYS, "SysAPI: sysapi_ckptpltfrm_raw -> %s\n", qux);
+	qux = sysapi_ckptpltfrm();
+	dprintf(D_ALWAYS, "SysAPI: sysapi_ckptpltfrm -> %s\n", qux);
 
 	foo = sysapi_phys_memory_raw();
 	dprintf(D_ALWAYS, "SysAPI: sysapi_phys_memory_raw() -> %d\n", foo);
@@ -192,6 +202,12 @@ sysapi_test_dump_all(int argc, char** argv)
 	for (i=1; i<argc; i++) {
 		if (strcmp(argv[i], "--arch") == 0)
 			tests |= ARCH;
+		else if (strcmp(argv[i], "--kern_memmod") == 0)
+			tests |= KERN_MEMMOD;
+		else if (strcmp(argv[i], "--kern_vers") == 0)
+			tests |= KERN_VERS;
+		else if (strcmp(argv[i], "--ckptpltfrm") == 0)
+			tests |= CKPTPLTFRM;
 		else if (strcmp(argv[i], "--dump") == 0)
 			tests |= DUMP;
 		else if (strcmp(argv[i], "--free_fs_blocks") == 0)
@@ -222,6 +238,9 @@ sysapi_test_dump_all(int argc, char** argv)
 		if (print_help != 0) {
 			printf("Please use zero or more or:\n");
 			printf("--arch\n");
+			printf("--kern_vers\n");
+			printf("--kern_memmod\n");
+			printf("--ckptpltfrm\n");
 			printf("--dump\n");
 			printf("--free_fs_blocks\n");
 			printf("--idle_time\n");
@@ -234,6 +253,30 @@ sysapi_test_dump_all(int argc, char** argv)
 			printf("--virt_mem\n");
 			return;
 		}
+	}
+
+	if ((tests & KERN_MEMMOD) == KERN_MEMMOD) {
+		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
+		dprintf(D_ALWAYS, "SysAPI: Kernel memory model: %s\n", 
+			sysapi_kernel_memory_model());
+		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
+	}
+
+	if ((tests & KERN_VERS) == KERN_VERS) {
+		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
+		dprintf(D_ALWAYS, "SysAPI: Kernel version: %s\n", 
+			sysapi_kernel_version());
+		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
+	}
+
+	if ((tests & CKPTPLTFRM) == CKPTPLTFRM) {
+		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
+		sysapi_test_dump_internal_vars();
+		sysapi_reconfig();
+		sysapi_test_dump_internal_vars();
+		dprintf(D_ALWAYS, "SysAPI: Checkpoint platform: %s\n", 
+			sysapi_ckptpltfrm());
+		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
 
 	if ((tests & DUMP) == DUMP) {

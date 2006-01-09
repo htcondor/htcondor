@@ -1199,6 +1199,7 @@ init_environment_info()
 	char		*my_uid_domain;
 	char		*ckpt_server_host;
 	char		*arch, *opsys;
+	const char  *ckptpltfrm;
 
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
@@ -1211,6 +1212,10 @@ init_environment_info()
 		REMOTE_CONDOR_register_uid_domain( my_uid_domain );
 		free(my_uid_domain);
 	}
+
+	ckptpltfrm = sysapi_ckptpltfrm();
+	/* don't forget one more for the NULL which needs to go over as well */
+	REMOTE_CONDOR_register_ckpt_platform( ckptpltfrm, strlen(ckptpltfrm) + 1);
 
 #if !defined(CONTRIB)
 	ckpt_server_host = param( "CKPT_SERVER_HOST" );

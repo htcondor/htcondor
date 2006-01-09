@@ -65,4 +65,7 @@ extern int _sysapi_ncpus;
 extern int _sysapi_memory;
 extern int _sysapi_reserve_memory;
 
+/* needed by ckptpltfrm.c */
+extern char* _sysapi_ckptpltfrm;
+
 #endif /* SYSAPI_EXTERNS_H */
