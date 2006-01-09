@@ -22,6 +22,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Due to kernel bugs between the Linux 2.4.x and 2.6.x kernels,
+Condor now implements "checkpointing signatures" which allow more fine
+grained and automatic control over whether or not a particular machine
+is willing to resume a previously created checkpoint. This functionality
+is homogenized across all platforms which provide the standard universe
+feature set.
+
 \item Grid matchmaking ads are now aged and replaced by the negotiator 
 based on a configurable classad expression from the condor config file. This
 configuration parameter is called \Macro{STARTD\_AD\_REEVAL\_EXPR}.  
