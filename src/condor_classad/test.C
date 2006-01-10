@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_config.h"
 
 ClassAd a;
 ClassAd b;
@@ -35,6 +36,7 @@ int main (void)
 	char		buffer[1024];
 	char		buf[2048];
 
+	config();
 	while( strcmp( gets( buffer ) , "done" ) != 0 ) {
 		buf[0] = '\0';
 		if (Parse (buffer, t)) {
