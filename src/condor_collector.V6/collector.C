@@ -1170,9 +1170,11 @@ int CollectorDaemon::sendCollectorAd()
 	collectorStats.publishGlobal( ad );
 
     // Send the ad
+	char *update_addr = updateCollector->addr();
+	if (!update_addr) update_addr = "(null)";
 	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad) ) {
 		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
-				 "(%s): %s\n", updateCollector->fullHostname(),
+				 "(%s): %s\n", update_addr,
 				 updateCollector->error() );
 		return 0;
     }
