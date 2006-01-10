@@ -531,6 +531,7 @@ const char ATTR_QUILL_SQL_LAST_BATCH	[] = "NumSqlLastBatch";
 
 const char ATTR_CHECKPOINT_PLATFORM			[] = "CheckpointPlatform";
 const char ATTR_LAST_CHECKPOINT_PLATFORM	[] = "LastCheckpointPlatform";
+const char ATTR_IS_VALID_CHECKPOINT_PLATFORM  [] = "IsValidCheckpointPlatform";
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)

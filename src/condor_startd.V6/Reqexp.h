@@ -50,6 +50,7 @@ private:
 	Resource*		rip;
 	char* 			origreqexp;
 	char* 			origstart;
+	char*			m_origvalidckptpltfrm;
 	reqexp_state	rstate;
 };
 
