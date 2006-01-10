@@ -71,6 +71,7 @@ const char ATTR_CLOCK_DAY                [] = "ClockDay";
 const char ATTR_CLOCK_MIN                [] = "ClockMin";
 const char ATTR_CLUSTER_ID               [] = "ClusterId";
 const char ATTR_AUTO_CLUSTER_ID			 [] = "AutoClusterId";
+const char ATTR_AUTO_CLUSTER_ATTRS		 [] = "AutoClusterAttrs";
 const char ATTR_COMPLETION_DATE			 [] = "CompletionDate";
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )

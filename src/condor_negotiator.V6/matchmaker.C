@@ -76,6 +76,7 @@ Matchmaker ()
 
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
+	job_attr_references = NULL;
 	
 	stashedAds = new AdHash(1000, HashFunc);
 
@@ -105,6 +106,9 @@ Matchmaker::
 ~Matchmaker()
 {
 	if (AccountantHost) free (AccountantHost);
+	AccountantHost = NULL;
+	if (job_attr_references) free (job_attr_references);
+	job_attr_references = NULL;
 	delete rankCondStd;
 	delete rankCondPrioPreempt;
 	delete PreemptionReq;
@@ -588,6 +592,86 @@ static ClassAd * lookup_global( const char *constraint, void *arg )
 }
 #endif
 
+char *
+Matchmaker::
+compute_signficant_attrs(ClassAdList & startdAds)
+{
+	char *result = NULL;
+
+	// Figure out list of all external attribute references in all startd ads
+	dprintf(D_FULLDEBUG,"Entering compute_signficant_attrs()\n");
+	ClassAd *startd_ad = NULL;
+	ClassAd *sample_startd_ad = NULL;
+	startdAds.Open ();
+	StringList internal_references;	// not used...
+	StringList external_references;	// this is what we want to compute. 
+	while ((startd_ad = startdAds.Next ())) { // iterate through all startd ads
+		if ( !sample_startd_ad ) {
+			sample_startd_ad = new ClassAd(*startd_ad);
+		}
+			// Make a stringlist of all attribute names in this startd ad.
+		StringList AttrsToExpand;
+		startd_ad->ResetName();
+		const char *attr_name = startd_ad->NextNameOriginal();
+		while ( attr_name ) {
+			AttrsToExpand.append(attr_name);
+			attr_name = startd_ad->NextNameOriginal();
+		}
+			// Get list of external references for all attributes.  Note that 
+			// it is _not_ sufficient to just get references via requirements
+			// and rank.  Don't understand why? Ask Todd <tannenba@cs.wisc.edu>
+		AttrsToExpand.rewind();
+		while ( (attr_name = AttrsToExpand.next()) ) {
+			startd_ad->GetReferences(attr_name,internal_references,
+					external_references);
+		}
+	}
+	// Now add external attributes references from negotiator policy exprs; at
+	// this point, we only have to worry about PREEMPTION_REQUIREMENTS.
+	// PREEMPTION_REQUIREMENTS is evaluated in the context of a machine ad 
+	// followed by a job ad.  So to help figure out the external (job) attributes
+	// that are significant, we take a sample startd ad and add any startd_job_exprs
+	// to it.
+	if (!sample_startd_ad) {	// if no startd ads, just return.
+		return NULL;	// if no startd ads, there are no sig attrs
+	}
+	char *startd_job_exprs = param("STARTD_JOB_EXPRS");
+	if ( startd_job_exprs ) {	// add in startd_job_exprs
+		StringList exprs(startd_job_exprs);
+		exprs.rewind();
+		char *v = NULL;
+		while ( (v=exprs.next()) ) {
+			sample_startd_ad->Assign(v,true);
+		}
+		free(startd_job_exprs);
+	}
+	char *tmp=param("PREEMPTION_REQUIREMENTS");
+	if ( tmp && PreemptionReq ) {	// add references from preemption_requirements
+		const char* preempt_req_name = "preempt_req__";	// any name will do
+		sample_startd_ad->AssignExpr(preempt_req_name,tmp);
+		sample_startd_ad->GetReferences(preempt_req_name,internal_references,
+					external_references);
+		free(tmp);
+	}
+	if (sample_startd_ad) {
+		delete sample_startd_ad;
+		sample_startd_ad = NULL;
+	}
+		// Always get rid of the follow attrs:
+		//    CurrentTime - for obvious reasons
+		//    RemoteUserPrio - not needed since we negotiate per user
+		//    SubmittorPrio - not needed since we negotiate per user
+	external_references.remove_anycase(ATTR_CURRENT_TIME);
+	external_references.remove_anycase(ATTR_REMOTE_USER_PRIO);
+	external_references.remove_anycase(ATTR_SUBMITTOR_PRIO);
+		// Note: print_to_string mallocs memory on the heap
+	result = external_references.print_to_string();
+	dprintf(D_FULLDEBUG,"Leaving compute_signficant_attrs() - result=%s\n",
+					result ? result : "(none)" );
+	return result;
+}
+
+
 int Matchmaker::
 negotiationTime ()
 {
@@ -643,9 +727,16 @@ negotiationTime ()
     // Get number of available VMs in any state.
     int numDynGroupVms = startdAds.MyLength();
 
-	// Register a lookup function that passes through the list of all ads.	
+	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
-	
+
+	// Compute the signficant attributes to pass to the schedd, so
+	// the schedd can do autoclustering to speed up the negotiation cycles.
+	if ( job_attr_references ) {
+		free(job_attr_references);
+	}
+	job_attr_references = compute_signficant_attrs(startdAds);
+
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
 	accountant.UpdatePriorities();
@@ -887,6 +978,7 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 	bool ignore_schedd_limit;
 	int			num_idle_jobs;
 	time_t		startTime;
+	
 
 	// ----- Sort the schedd list in decreasing priority order
 	dprintf( D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n" );
@@ -962,6 +1054,17 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 			send_ad_to_schedd = FALSE;
 			schedd->LookupBool( ATTR_WANT_RESOURCE_AD, send_ad_to_schedd);
 	
+
+			// store the verison of the schedd, so we can take advantage of
+			// protocol improvements in newer versions while still being
+			// backwards compatible.
+			char *schedd_ver_string = NULL;
+			schedd->LookupString(ATTR_VERSION, &schedd_ver_string);
+			ASSERT(schedd_ver_string);
+			CondorVersionInfo	scheddVersion(schedd_ver_string);
+			free(schedd_ver_string);
+			schedd_ver_string = NULL;
+
 			// calculate the percentage of machines that this schedd can use
 			scheddPrio = accountant.GetPriority ( scheddName );
 			scheddUsage = accountant.GetResourcesUsed ( scheddName );
@@ -1050,7 +1153,7 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 					result=negotiate( scheddName,scheddAddr,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, startdPvtAds, 
-								  send_ad_to_schedd,ignore_schedd_limit,
+								  send_ad_to_schedd, scheddVersion, ignore_schedd_limit,
 								  startTime);
 					updateNegCycleEndTime(startTime, schedd);
 				}
@@ -1421,7 +1524,8 @@ int Matchmaker::
 negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd, bool ignore_schedd_limit, time_t startTime)
+		   int send_ad_to_schedd, const CondorVersionInfo & scheddVersion,
+		   bool ignore_schedd_limit, time_t startTime)
 {
 	ReliSock	*sock;
 	int			i;
@@ -1434,7 +1538,14 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	bool		only_consider_startd_rank;
 	bool		display_overlimit = true;
 	char		prioExpr[128], remoteUser[128];
+	int negotiate_command = NEGOTIATE;
 
+		// Starting w/ ver 6.7.15, the schedd supports the 
+		// NEGOTIATE_WITH_SIGATTRS command that expects a
+		// list of significant attributes.  
+	if ( job_attr_references && scheddVersion.built_since_version(6,7,15) ) {
+		negotiate_command = NEGOTIATE_WITH_SIGATTRS;
+	}
 	
 	// 0.  connect to the schedd --- ask the cache for a connection
 	sock = sockCache->findReliSock( scheddAddr );
@@ -1452,7 +1563,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 			sockCache->invalidateSock( scheddAddr );
 			return MM_ERROR;
 		}
-		if( ! schedd.startCommand(NEGOTIATE, sock, NegotiatorTimeout) ) {
+		if( ! schedd.startCommand(negotiate_command, sock, NegotiatorTimeout) ) {
 			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
 					 scheddAddr );
 			sockCache->invalidateSock( scheddAddr );
@@ -1469,7 +1580,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 			// session, we just want to encode the NEGOTIATE int on
 			// the socket...
 		sock->encode();
-		if( ! sock->put(NEGOTIATE) ) {
+		if( ! sock->put(negotiate_command) ) {
 			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
 					 scheddAddr );
 			sockCache->invalidateSock( scheddAddr );
@@ -1479,7 +1590,22 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 	// 1.  send NEGOTIATE command, followed by the scheddName (user@uiddomain)
 	sock->encode();
-	if (!sock->put(scheddName) || !sock->end_of_message())
+	if (!sock->put(scheddName))
+	{
+		dprintf (D_ALWAYS, "    Failed to send scheddName\n");
+		sockCache->invalidateSock(scheddAddr);
+		return MM_ERROR;
+	}
+	// send the significant attributes if the schedd can understand it
+	if ( negotiate_command == NEGOTIATE_WITH_SIGATTRS ) {
+		if (!sock->put(job_attr_references)) 
+		{
+			dprintf (D_ALWAYS, "    Failed to send significant attrs\n");
+			sockCache->invalidateSock(scheddAddr);
+			return MM_ERROR;
+		}
+	}
+	if (!sock->end_of_message())
 	{
 		dprintf (D_ALWAYS, "    Failed to send scheddName/eom\n");
 		sockCache->invalidateSock(scheddAddr);
@@ -1904,6 +2030,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 			// the candidate offer and request must match
 		if( !( *candidate == request ) ) {
 				// they don't match; continue
+			//dprintf(D_ALWAYS,"TAT - %d\n",__LINE__);
 			continue;
 		}
 
@@ -1925,12 +2052,14 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 					// startd rank yet because it does not make sense (the
 					// startd has nothing to compare against).  
 					// So try the next offer...
+				//dprintf(D_ALWAYS,"TAT - %d\n",__LINE__);
 				continue;
 			}
 			if ( !(rankCondStd->EvalTree(candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
+				//dprintf(D_ALWAYS,"TAT - %d\n",__LINE__);
 				continue;
 			}
 			// If we made it here, we have a candidate which strictly prefers
@@ -1961,6 +2090,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
 						result.type == LX_INTEGER && result.i == TRUE) ) {
 					rejPreemptForPolicy++;
+					//dprintf(D_ALWAYS,"TAT - %d\n",__LINE__);
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
@@ -1970,6 +2100,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 						result.type == LX_INTEGER && result.i == TRUE ) ) {
 						// machine doesn't like this job as much -- find another
 					rejPreemptForRank++;
+					//dprintf(D_ALWAYS,"TAT - %d\n",__LINE__);
 					continue;
 				}
 			} else {
@@ -1980,6 +2111,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 						// preempt one of our own jobs!
 					rejPreemptForPrio++;
 				}
+				//dprintf(D_ALWAYS,"TAT - %d\n",__LINE__);
 				continue;
 			}
 		}
@@ -1992,9 +2124,11 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 										   ckptSize, request, *candidate);
 		if (rval == 1) {
 			rejForNetworkShare++;
+			//dprintf(D_ALWAYS,"TAT - %d\n",__LINE__);
 			continue;
 		} else if (rval == 0) {
 			rejForNetwork++;
+			//dprintf(D_ALWAYS,"TAT - %d\n",__LINE__);
 			continue;
 		}
 #endif

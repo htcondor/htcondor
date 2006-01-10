@@ -147,6 +147,7 @@
 #define CHILD_ON            (SCHED_VERS+90) // Turn my child ON (HAD)
 #define CHILD_OFF           (SCHED_VERS+91) // Turn my child OFF (HAD)
 #define CHILD_OFF_FAST      (SCHED_VERS+92) // Turn my child OFF/Fast (HAD)
+#define NEGOTIATE_WITH_SIGATTRS	(SCHED_VERS+93)	// same as NEGOTIATE, but send sig attrs after Owner
 
 /*
   The ClassAd-only protocol.  CA_CMD is the base command that's sent

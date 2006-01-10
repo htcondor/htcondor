@@ -27,7 +27,9 @@
 #include "condor_accountant.h"
 #include "condor_io.h"
 #include "HashTable.h"
+#include "string_list.h"
 #include "dc_collector.h"
+#include "condor_ver_info.h"
 
 #ifdef WANT_NETMAN
 #include "../condor_netman/netman.h"
@@ -88,6 +90,7 @@ class Matchmaker : public Service
 
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList& );	
+		char * compute_signficant_attrs(ClassAdList & startdAds);
 		
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
 			@param scheddName Name attribute from the submitter ad.
@@ -98,6 +101,7 @@ class Matchmaker : public Service
 			@param startdAds
 			@param startdPvtAdss
 			@param send_ad_to_schedd
+			@param scheddVersion
 			@param ignore_schedd_limit After hit scheddLimit, keep 
 					negotiating but only consider startd rank.
 			@return MM_RESUME if schedd hits its resource limit before
@@ -109,8 +113,8 @@ class Matchmaker : public Service
 		   double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd, bool ignore_schedd_limit,
-		   time_t startTime);
+		   int send_ad_to_schedd, const CondorVersionInfo & scheddVersion,
+		   bool ignore_schedd_limit, time_t startTime);
 
 		int negotiateWithGroup ( ClassAdList& startdAds, 
 			ClassAdList& startdPvtAds, ClassAdList& scheddAds, 
@@ -182,6 +186,9 @@ class Matchmaker : public Service
 		// DaemonCore Timer ID for periodic negotiations
 		int negotiation_timerID;
 		bool GotRescheduleCmd;
+
+		// external references in startd ads ... used for autoclustering
+		char * job_attr_references;
 
 		// Epoch time when we finished most rescent negotiation cycle
 		time_t completedLastCycleTime;
@@ -285,8 +292,6 @@ class Matchmaker : public Service
 			ClassAdList submitterAds;			
 		};
 		static int groupSortCompare(const void*, const void*);
-		
-		
 		
 };
 

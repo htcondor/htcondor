@@ -644,19 +644,7 @@ void VariableBase::GetReferences(const AttrList *base_attrlist,
 
 static bool name_in_list(const char *name, StringList &references)
 {
-	bool is_in_list;
-	const char *reference;
-
-	is_in_list = false;
-	references.rewind(); 
-	while ((reference = references.next()) != NULL) {
-		if (!strcmp(name, reference)) {
-			is_in_list = true;
-			break;
-		}
-	}
-
-	return is_in_list;
+	return ( references.contains_anycase(name) ? true : false );
 }
 
 // Calculate how many bytes an expression will print to

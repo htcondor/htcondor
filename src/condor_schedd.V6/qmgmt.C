@@ -71,7 +71,6 @@ void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 void	FindPrioJob(PROC_ID &);
 int		Runnable(PROC_ID*);
 int		Runnable(ClassAd*);
-int		get_job_prio(ClassAd *ad);
 
 
 static ClassAdCollection *JobQueue = 0;
@@ -1399,7 +1398,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 {
 //	LogSetAttribute	*log;
 	char			key[_POSIX_PATH_MAX];
-	ClassAd			*ad;
+	ClassAd			*ad = NULL;
 	char			alternate_attrname_buf[_POSIX_PATH_MAX];
 
 	// Only an authenticated user or the schedd itself can set an attribute.
@@ -1534,6 +1533,25 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%d!=%d)\n",
 				atoi(attr_value), proc_id);
 			return -1;
+		}
+	}
+
+	// If any of the attrs used to create the signature are
+	// changed, then delete the ATTR_AUTO_CLUSTER_ID, since
+	// the signature needs to be recomputed as it may have changed.
+	// Note we do this whether or not the transaction is committed - that
+	// is ok, and actually is probably more efficient than hitting disk.
+	if ( ad ) {
+		char * sigAttrs = NULL;
+		ad->LookupString(ATTR_AUTO_CLUSTER_ATTRS,&sigAttrs);
+		if ( sigAttrs ) {
+			StringList attrs(sigAttrs);
+			if ( attrs.contains_anycase(attr_name) ) {
+				ad->Delete(ATTR_AUTO_CLUSTER_ID);
+				ad->Delete(ATTR_AUTO_CLUSTER_ATTRS);
+			}
+			free(sigAttrs);
+			sigAttrs = NULL;
 		}
 	}
 
@@ -2563,7 +2581,7 @@ PrintQ()
 // Returns cur_hosts so that another function in the scheduler can
 // update JobsRunning and keep the scheduler and queue manager
 // seperate. 
-int get_job_prio(ClassAd *job)
+int get_job_prio(ClassAd *job, bool compute_autoclusters)
 {
     int job_prio;
     int job_status;

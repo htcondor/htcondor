@@ -27,6 +27,7 @@
 #include "extArray.h"
 #include "condor_classad.h"
 #include "string_list.h"
+#include "HashTable.h"
 
 class AutoCluster {
 
@@ -35,21 +36,22 @@ public:
 	AutoCluster();
 	~AutoCluster();
 
-	bool config();
-	void clearArray();
-
+	bool config(const char* significant_target_attrs = NULL);	
 	int getAutoClusterid( ClassAd *job );
 
 		// garbage collection methods...
 	void mark();
 	void sweep();
 
-private:
+protected:
 
-    ExtArray<MyString*>   array;
+	void clearArray();
+	ExtArray<MyString*>   array;
 	ExtArray<bool> mark_array;
+
 	StringList* significant_attrs;
 	char *old_sig_attrs;
+	bool sig_attrs_came_from_config_file;
 
 };
 

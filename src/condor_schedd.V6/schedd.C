@@ -4060,17 +4060,7 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 		return (!KEEP_STREAM);
 	}
 
-	// since this is the socket from the negotiator, the only command that can
-	// come in at this point is NEGOTIATE.  If we get something else, something
-	// goofy in going on.
-	if (command != NEGOTIATE)
-	{
-		dprintf(D_ALWAYS,
-				"Negotiator command was %d (not NEGOTIATE) --- aborting\n", command);
-		return (!(KEEP_STREAM));
-	}
-
-	rval = negotiate(NEGOTIATE, stream);
+	rval = negotiate(command, stream);
 	return rval;	
 }
 
@@ -4078,8 +4068,17 @@ int
 Scheduler::delayedNegotiatorHandler(Stream *stream)
 {
 	int rval;
+	int* iptr = NULL;
 
-	rval = negotiate(NEGOTIATE, stream);
+	iptr = (int*)daemonCore->GetDataPtr();
+	ASSERT(iptr);
+	rval = negotiate(*iptr, stream);
+	if ( rval != KEEP_STREAM ) {
+		free(iptr);
+		iptr = NULL;
+		daemonCore->SetDataPtr(NULL);
+	}
+	// TODO if rval is KEEP_STREAM, shouldn't we be registering a socket?
 	return rval;
 }
 
@@ -4093,6 +4092,12 @@ Scheduler::doNegotiate (int i, Stream *s)
 		daemonCore->Register_Socket(s,"<Another-Negotiator-Socket>",
 			(SocketHandlercpp)&Scheduler::delayedNegotiatorHandler,
 			"delayedNegotiatorHandler()", this, ALLOW);
+		// Stash the command int as well, since we need to know later on what type
+		// of negotiate command we are dealing with
+		int* iptr = (int*)malloc(sizeof(int));
+		ASSERT(iptr);
+		*iptr = i;
+		daemonCore->Register_DataPtr( (void*)iptr );
 		return KEEP_STREAM;
 	}
 
@@ -4177,7 +4182,7 @@ Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
      -Derek 2/7/01
 */
 int
-Scheduler::negotiate(int, Stream* s)
+Scheduler::negotiate(int command, Stream* s)
 {
 	int		i;
 	int		op;
@@ -4210,6 +4215,16 @@ Scheduler::negotiate(int, Stream* s)
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
+
+	// since this is the socket from the negotiator, the only command that can
+	// come in at this point is NEGOTIATE.  If we get something else, something
+	// goofy in going on.
+	if (command != NEGOTIATE && command != NEGOTIATE_WITH_SIGATTRS)
+	{
+		dprintf(D_ALWAYS,
+				"Negotiator command was %d (not NEGOTIATE) --- aborting\n", command);
+		return (!(KEEP_STREAM));
+	}
 
 	// Set timeout on socket
 	s->timeout( param_integer("NEGOTIATOR_TIMEOUT",20) );
@@ -4320,13 +4335,21 @@ Scheduler::negotiate(int, Stream* s)
 	// Get Owner name from negotiator
 	//-----------------------------------------------
 	char owner[200], *ownerptr = owner;
+	char *sig_attrs_from_cm = NULL;	
 	s->decode();
 	if (!s->code(ownerptr)) {
-		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
+		dprintf( D_ALWAYS, "Can't receive owner from manager\n" );
 		return (!(KEEP_STREAM));
 	}
+	if ( command == NEGOTIATE_WITH_SIGATTRS ) {
+		if (!s->code(sig_attrs_from_cm)) {	// result is mallec-ed!
+			dprintf( D_ALWAYS, "Can't receive sig attrs from manager\n" );
+			return (!(KEEP_STREAM));
+		}
+
+	}
 	if (!s->end_of_message()) {
-		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
+		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
 		return (!(KEEP_STREAM));
 	}
 	if (negotiator_name) {
@@ -4347,6 +4370,17 @@ Scheduler::negotiate(int, Stream* s)
 
 		// If we got this far, we're negotiating for a regular user,
 		// so go ahead and do our expensive setup operations.
+
+		// Tell the autocluster code what significant attributes the
+		// negotiator told us about
+	if ( sig_attrs_from_cm ) {
+		if ( autocluster.config(sig_attrs_from_cm) ) {
+			// clear out auto cluster id attributes
+			WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
+		}
+		free(sig_attrs_from_cm);
+		sig_attrs_from_cm = NULL;
+	}
 
 	autocluster.mark();
 	N_PrioRecs = 0;
@@ -9588,7 +9622,11 @@ Scheduler::Register()
 {
 	 // message handlers for schedd commands
 	 daemonCore->Register_Command( NEGOTIATE, "NEGOTIATE", 
-		 (CommandHandlercpp)&Scheduler::doNegotiate, "negotiate", 
+		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
+		 this, NEGOTIATOR );
+	 daemonCore->Register_Command( NEGOTIATE_WITH_SIGATTRS, 
+		 "NEGOTIATE_WITH_SIGATTRS", 
+		 (CommandHandlercpp)&Scheduler::doNegotiate, "doNegotiate", 
 		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)&Scheduler::reschedule_negotiator, 
@@ -10391,7 +10429,7 @@ Scheduler::sendAlives()
 void
 job_prio(ClassAd *ad)
 {
-	scheduler.JobsRunning += get_job_prio(ad);
+	scheduler.JobsRunning += get_job_prio(ad,true);
 }
 
 
