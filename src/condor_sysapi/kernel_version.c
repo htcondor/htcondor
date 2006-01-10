@@ -113,7 +113,7 @@ sysapi_kernel_version_raw(void)
 #elif defined(HPUX)
 	_sysapi_kernel_version = strdup(buf.release);
 #elif defined(WIN32)
-	_sysapi_kernel_version = strdup("XXX");
+	_sysapi_kernel_version = strdup("Unknown");
 #else
 #	error Please port sysapi_kernel_version_raw() to this platform!
 #endif
