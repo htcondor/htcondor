@@ -116,6 +116,52 @@ StringList::~StringList ()
 		delete [] delimiters;
 }
 
+
+bool
+StringList::create_union(StringList & subset, bool anycase)
+{
+	char *x;
+	BOOLEAN ret_val = TRUE;
+	bool result = false;	// true if list modified
+
+	subset.rewind ();
+	while ((x = subset.next ())) {
+		if ( anycase ) {
+			ret_val = contains_anycase(x);
+		} else {
+			ret_val = contains(x);
+		}
+			// not there, add it.
+		if( ret_val == FALSE ) {
+			result = true;
+			append(x);
+		}
+	}
+	return result;
+}
+
+
+bool
+StringList::contains_list(StringList & subset, bool anycase)
+{
+	char *x;
+	BOOLEAN ret_val;
+
+	subset.rewind ();
+	while ((x = subset.next ())) {
+		if ( anycase ) {
+			ret_val = contains_anycase(x);
+		} else {
+			ret_val = contains(x);
+		}
+		if( ret_val == FALSE ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+
 BOOLEAN
 StringList::contains( const char *st )
 {

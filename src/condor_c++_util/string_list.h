@@ -55,6 +55,24 @@ public:
 	int number (void) const { return strings.Number(); };
 	bool isEmpty(void) const { return strings.IsEmpty(); };
 
+	/** Add all members of a given stringlist into the current list, 
+		avoiding any duplicates.
+		@param subset the list with members to add
+		@param anycase false for case sensitive comparison, true for case 
+				in-sensitive.
+		@retval true if the list is modified, false if not.
+	*/
+	bool create_union(StringList & subset, bool anycase);
+
+	/** Checks to see if the given list is a subset, i.e. if every member
+		in the given list is a member of the current list.
+		@param subset 
+		@param anycase false for case sensitive comparison, true for case 
+				in-sensitive.
+		@retval true if subset is indeed a subset, else false
+	*/
+	bool contains_list(StringList & subset, bool anycase);
+
 	/* return a comma delimited list if the internals of the class. This will
 		rewind the string in order to construct this char array, and you
 		are responsible to release the memory allocated by this function 
