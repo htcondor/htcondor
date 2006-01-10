@@ -34,12 +34,14 @@ char *_sysapi_kernel_version = NULL;
 const char *
 sysapi_kernel_version_raw(void)
 {
+#if !defined(WIN32)
 	struct utsname buf;
 
 	if( uname(&buf) < 0 ) {
 		_sysapi_kernel_version = strdup("N/A");
 		return _sysapi_kernel_version;
 	}
+#endif
 
 #if defined(LINUX)
 	if (strncmp(buf.release, "2.2.", 4) == MATCH) {
