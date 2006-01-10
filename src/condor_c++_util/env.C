@@ -86,7 +86,11 @@ Env::MergeFrom( const ClassAd *ad, MyString *error_msg )
 		input_was_v1 = true;
 	}
 	else {
-		AddErrorMessage("No environment found in job ad.\n",error_msg);
+			// this shouldn't be considered an error... maybe the job
+			// just doesn't define an environment.  condor_submit always 
+			// adds something, but we should't rely on that.
+		merge_success = true;
+			// leave input_was_v1 untouched... (at dan's recommendation)
 	}
 
 	free(env1);

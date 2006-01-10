@@ -416,7 +416,11 @@ ArgList::AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg)
 		input_was_v1 = true;
 	}
 	else {
-		AddErrorMessage("No arguments found in job ad.",error_msg);
+			// this shouldn't be considered an error... maybe the job
+			// just doesn't define any args.  condor_submit always
+			// adds an empty string, but we should't rely on that.
+		success = true;
+			// leave input_was_v1 untouched... (at dan's recommendation)
 	}
 
 	if(args1) free(args1);
