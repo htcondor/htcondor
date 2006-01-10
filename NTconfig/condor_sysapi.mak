@@ -38,11 +38,14 @@ ALL : "$(OUTDIR)\condor_sysapi.lib"
 
 CLEAN :
 	-@erase "$(INTDIR)\arch.obj"
+	-@erase "$(INTDIR)\ckptpltfrm.obj"
 	-@erase "$(INTDIR)\clinpack.obj"
 	-@erase "$(INTDIR)\dhry21a.obj"
 	-@erase "$(INTDIR)\dhry21b.obj"
 	-@erase "$(INTDIR)\free_fs_blocks.obj"
 	-@erase "$(INTDIR)\idle_time.obj"
+	-@erase "$(INTDIR)\kernel_memory_model.obj"
+	-@erase "$(INTDIR)\kernel_version.obj"
 	-@erase "$(INTDIR)\last_x_event.obj"
 	-@erase "$(INTDIR)\load_avg.obj"
 	-@erase "$(INTDIR)\ncpus.obj"
@@ -100,11 +103,14 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_sysapi.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\arch.obj" \
+	"$(INTDIR)\ckptpltfrm.obj" \
 	"$(INTDIR)\clinpack.obj" \
 	"$(INTDIR)\dhry21a.obj" \
 	"$(INTDIR)\dhry21b.obj" \
 	"$(INTDIR)\free_fs_blocks.obj" \
 	"$(INTDIR)\idle_time.obj" \
+	"$(INTDIR)\kernel_memory_model.obj" \
+	"$(INTDIR)\kernel_version.obj" \
 	"$(INTDIR)\last_x_event.obj" \
 	"$(INTDIR)\load_avg.obj" \
 	"$(INTDIR)\ncpus.obj" \
@@ -132,11 +138,14 @@ ALL : "$(OUTDIR)\condor_sysapi.lib"
 
 CLEAN :
 	-@erase "$(INTDIR)\arch.obj"
+	-@erase "$(INTDIR)\ckptpltfrm.obj"
 	-@erase "$(INTDIR)\clinpack.obj"
 	-@erase "$(INTDIR)\dhry21a.obj"
 	-@erase "$(INTDIR)\dhry21b.obj"
 	-@erase "$(INTDIR)\free_fs_blocks.obj"
 	-@erase "$(INTDIR)\idle_time.obj"
+	-@erase "$(INTDIR)\kernel_memory_model.obj"
+	-@erase "$(INTDIR)\kernel_version.obj"
 	-@erase "$(INTDIR)\last_x_event.obj"
 	-@erase "$(INTDIR)\load_avg.obj"
 	-@erase "$(INTDIR)\ncpus.obj"
@@ -193,11 +202,14 @@ LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_sysapi.lib" 
 LIB32_OBJS= \
 	"$(INTDIR)\arch.obj" \
+	"$(INTDIR)\ckptpltfrm.obj" \
 	"$(INTDIR)\clinpack.obj" \
 	"$(INTDIR)\dhry21a.obj" \
 	"$(INTDIR)\dhry21b.obj" \
 	"$(INTDIR)\free_fs_blocks.obj" \
 	"$(INTDIR)\idle_time.obj" \
+	"$(INTDIR)\kernel_memory_model.obj" \
+	"$(INTDIR)\kernel_version.obj" \
 	"$(INTDIR)\last_x_event.obj" \
 	"$(INTDIR)\load_avg.obj" \
 	"$(INTDIR)\ncpus.obj" \
@@ -228,6 +240,12 @@ LIB32_OBJS= \
 SOURCE=..\src\condor_sysapi\arch.c
 
 "$(INTDIR)\arch.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_sysapi\ckptpltfrm.c
+
+"$(INTDIR)\ckptpltfrm.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -312,6 +330,18 @@ SOURCE=..\src\condor_sysapi\free_fs_blocks.c
 SOURCE=..\src\condor_sysapi\idle_time.C
 
 "$(INTDIR)\idle_time.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_sysapi\kernel_memory_model.c
+
+"$(INTDIR)\kernel_memory_model.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_sysapi\kernel_version.c
+
+"$(INTDIR)\kernel_version.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
