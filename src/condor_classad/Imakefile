@@ -18,7 +18,7 @@ depend_cplus_objects_target(OBJ)
 
 library_target(libclassad.a,$(OBJ))
 
-c_plus_target(test,test.o,libclassad.a $(CUTIL_LIB))
+c_plus_target(test,test.o,libclassad.a $(LIB))
 c_plus_target(test_classads,test_classads.o,$(LIB))
 c_plus_target(test_functions,test_functions.o,$(LIB))
 pure_c_plus_target(test_classads.pure,test_classads.o,$(LIB))
