@@ -156,7 +156,7 @@ RUN(job_filexfer_streamerr_van)
 TESTCLASS(job_filexfer_streamerr_van,core)
 TESTCLASS(job_filexfer_streamerr_van,quick)
 
-#if !defined( IS_ALPHA_LINUX) && !defined(IS_HPUX10) && !defined(IS_CONDOR_PPC_LINUX)
+#if !defined( IS_ALPHA_LINUX) && !defined(IS_HPUX10)
 /* 
    NOTE: this is an unfortunate way to do this selection.  we should
    have reliable HAVE_GLOBUS, HAVE_CONDOR_C, and HAVE_CONDOR_G macros
@@ -165,7 +165,6 @@ TESTCLASS(job_filexfer_streamerr_van,quick)
 
    Gnats 544 Linux rh 7.2 on alph chip is broken
    Gnats 561 HPUX 10 does not allow submits for lack of globus support.
-   Gnats 599 Condor-C not supported on PPC_LINUX
 */
 DESC(job_condorc_ab_van,"Condor-C AB test")
 RUN(job_condorc_ab_van)
