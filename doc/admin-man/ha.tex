@@ -254,6 +254,21 @@ single \Condor{negotiator} daemon is to run.
 \item \verb@condor_on -neg@
 \end{enumerate}
 
+When configuring \Condor{had} to control the \Condor{negotiator},
+the default backoff constant value is too small, and can result in
+a ``churning'' of the negotitor, especially in cases in which the
+primary negotiator is unable to run due to misconfiguration, etc.
+In these cases, the \Condor{master} will kill the \Condor{had} after
+the \Condor{negotiator} exists, wait a short period, then restart
+\Condor{had}.  The \Condor{had} will then ``win'' the election, so
+the secondary \Condor{negotiator} will be killed, and the primary
+will be restarted, only to exit again.  If this happens to quickly,
+neither negotiator will run long enough to complete a negotiation
+cycle, resulting in no jobs getting started.  Increasing this value
+via \Macro{MASTER\_HAD\_BACKOFF\_CONSTANT}
+to be larger than a typical negotiation cycle can help solve this
+problem.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:HA-sample-config} Sample Configuration} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -336,6 +351,7 @@ HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 ###################################################################
 ## THE PARAMETERS BELOW ARE ALLOWED TO BE DIFFERENT ON EACH       #
 ## CENTRAL MANAGERS                                               #
+## THESE ARE MASTER SPECIFIC PARAMETERS
 ###################################################################
 
 ## The location of executable files
@@ -345,12 +361,18 @@ DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
 ## DC_Daemon list should contain at least these four
 DC_DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
 
+## The HAD controlls the negotiator, and should have a larger
+## backoff constant
+MASTER_NEGOTIATOR_CONTROLLER	= HAD
+MASTER_HAD_BACKOFF_CONSTANT	= 360
+
 ## The size of the log file
 MAX_HAD_LOG = 640000
 ## debug level 
 HAD_DEBUG = D_COMMAND
 ## location of the condor_had log file
 HAD_LOG = $(LOG)/HADLog
+
 \end{verbatim}
 \normalsize
 

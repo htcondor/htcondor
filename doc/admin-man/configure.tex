@@ -1923,22 +1923,56 @@ These macros control the \Condor{master}.
   fast shutdown procedure before the \Condor{master} kills them
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
 
-\item[\Macro{MASTER\_BACKOFF\_FACTOR}]
-  \label{param:MasterBackoffFactor} If a daemon keeps crashing, an
-  exponential back off waits longer and longer before
-  restarting it.  At the end of this section, there is an example that
-  shows how all these settings work.  This setting is the base of the
+\item[\Macro{MASTER\_BACKOFF\_CONSTANT} and
+      \Macro{MASTER\_<name>\_BACKOFF\_CONSTANT}]
+  \label{param:MasterBackoffConstant}
+  When a daemon crashs, \Condor{master} uses an exponential back off
+  delay before restarting it; see the discussion at the end of this
+  section for a detailed discssion on how these parameters work together.
+  These settings define the constant value of the expression used to
+  determine how long to wait before starting the daemon again (and,
+  effectively becomes the initial backoff time).  It is an integer in
+  units of seconds, and defaults to 9 seconds.
+
+  \MacroUNI{MASTER\_<name>\_BACKOFF\_CONSTANT} is the daemon-specific
+  form of \Macro{MASTER\_BACKOFF\_CONSTANT}; if this daemon-specic
+  macro isn't defined for a specific daemon, the non-daemon-specific
+  value will used.
+
+\item[\Macro{MASTER\_BACKOFF\_FACTOR} and
+      \Macro{MASTER\_<name>\_BACKOFF\_FACTOR}]
+  \label{param:MasterBackoffFactor}
+  When a daemon crashs, \Condor{master} uses an exponential back off
+  delay before restarting it; see the discussion at the end of this
+  section for a detailed discssion on how these parameters work together.
+  This setting is the base of the
   exponent used to determine how long to wait before starting the
   daemon again.  It defaults to 2 seconds.
 
-\item[\Macro{MASTER\_BACKOFF\_CEILING}]
-  \label{param:MasterBackoffCeiling} This entry determines the maximum
-  amount of time you want the master to wait between attempts to start
-  a given daemon.  (With 2.0 as the \MacroUNI{MASTER\_BACKOFF\_FACTOR},
+  \MacroUNI{MASTER\_<name>\_BACKOFF\_FACTOR} is the daemon-specific
+  form of \Macro{MASTER\_BACKOFF\_FACTOR}; if this daemon-specic
+  macro isn't defined for a specific daemon, the non-daemon-specific
+  value will used.
+
+\item[\Macro{MASTER\_BACKOFF\_CEILING} and
+      \Macro{MASTER\_<name>\_BACKOFF\_CEILING}]
+  \label{param:MasterBackoffCeiling}
+  When a daemon crashs, \Condor{master} uses an exponential back off
+  delay before restarting it; see the discussion at the end of this
+  section for a detailed discssion on how these parameters work together.
+  This entry determines the maximum amount of time you want the master
+  to wait between attempts to start a given daemon.
+  (With 2.0 as the \MacroUNI{MASTER\_BACKOFF\_FACTOR},
   1 hour is obtained in 12 restarts).  It is defined in terms of
   seconds and defaults to 3600 (1 hour).
 
-\item[\Macro{MASTER\_RECOVER\_FACTOR}]
+  \MacroUNI{MASTER\_<name>\_BACKOFF\_CEILING} is the daemon-specific
+  form of \Macro{MASTER\_BACKOFF\_CEILING}; if this daemon-specic
+  macro isn't defined for a specific daemon, the non-daemon-specific
+  value will used.
+
+\item[\Macro{MASTER\_RECOVER\_FACTOR} and
+      \Macro{MASTER\_<name>\_RECOVER\_FACTOR}]
   \label{param:MasterRecoverFactor}  A macro to set how long a daemon 
   needs to run without crashing before it is considered \emph{recovered}.
   Once a
@@ -1947,33 +1981,50 @@ These macros control the \Condor{master}.
   The macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
 
+  \MacroUNI{MASTER\_<name>\_RECOVER\_FACTOR} is the daemon-specific
+  form of \Macro{MASTER\_RECOVER\_FACTOR}; if this daemon-specic
+  macro isn't defined for a specific daemon, the non-daemon-specific
+  value will used.
+
 \end{description}
 
-For clarity, the following is an example of the workings of
-the exponential back off settings.  The example is worked out assuming
-the default settings.
+When a daemon crashes, \Condor{master} will restart the daemon after a
+delay (``back off'').
+The length of this delay is based on how many times it has been
+restarted, and gets larger after each crashes. 
+The equation for calculating this backoff time is
+given by: $$t = c + k^n$$ where $t$ is the calculated time, $c$ is
+the constant defined by \MacroUNI{MASTER\_BACKOFF\_CONSTANT}, $k$ is
+the ``factor'' defined by \MacroUNI{MASTER\_BACKOFF\_FACTOR}, and $n$
+is the number of restarts already attempted (0 for the first restart,
+1 for the next, etc.).
 
-When a daemon crashes, it is restarted in 10 seconds.  If it keeps
-crashing, a longer amount of time is waited before restarting.
-The length of time is based on how
-many times it has been restarted.  
-Take the \MacroUNI{MASTER\_BACKOFF\_FACTOR} (defaults to 2) to 
-the power the number of times the daemon has restarted, and add 9.
-An example:
-\begin{verbatim}
-        1st crash:  restarts == 0, so, 9 + 2^0 = 9 + 1 = 10 seconds
-        2nd crash:  restarts == 1, so, 9 + 2^1 = 9 + 2 = 11 seconds
-        3rd crash:  restarts == 2, so, 9 + 2^2 = 9 + 4 = 13 seconds
-        ...
-        6th crash:  restarts == 5, so, 9 + 2^5 = 9 + 32 = 41 seconds
-        ...
-        9th crash:  restarts == 8, so, 9 + 2^8 = 9 + 256 = 265 seconds
-\end{verbatim}
+With default values, after the first crash, the delay would be $t = 9
++ 2.0^0$, giving 10 seconds (remember, $n = 0$).  If the daemon keeps
+crashing, the delay increases.
 
-After the 13th crash, it would be:
-\begin{verbatim}
-        13th crash:  restarts == 12, so, 9 + 2^12 = 9 + 4096 = 4105 seconds
-\end{verbatim}
+For example, take the \MacroUNI{MASTER\_BACKOFF\_FACTOR} (which defaults
+to 2.0) to the power the number of times the daemon has restarted, and add
+\MacroUNI{MASTER\_BACKOFF\_CONSTANT} (which defaults to 9).
+Thus:
+
+ $1^{st}$ crash:  $n = 0$, so: $t = 9 + 2^0 = 9 + 1 = 10\ seconds$
+
+ $2^{nd}$ crash:  $n = 1$, so: $t = 9 + 2^1 = 9 + 2 = 11\ seconds$
+
+ $3^{rd}$ crash:  $n = 2$, so: $t = 9 + 2^2 = 9 + 4 = 13\ seconds$
+
+    ...
+
+ $6^{th}$ crash:  $n = 5$, so: $t = 9 + 2^5 = 9 + 32 = 41\ seconds$
+
+    ...
+
+ $9^{th}$ crash:  $n = 8$, so: $t = 9 + 2^8 = 9 + 256 = 265\ seconds$
+
+And, after the 13 crashes, it would be:
+
+ $13^{th}$ crash:  $n = 12$, so: $t = 9 + 2^{12} = 9 + 4096 = 4105\ seconds$
 
 This is bigger than the \MacroUNI{MASTER\_BACKOFF\_CEILING}, which
 defaults to 3600, so the daemon would really be restarted after only
@@ -4956,7 +5007,6 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 %
 %HAD\_LIST=ds-r3.cs.technion.ac.il:10001,ds-r3.cs.technion.ac.il:10002,ds-r3.cs.technion.ac.il:1045
 %
-
 
 \item[\Macro{HAD\_USE\_PRIMARY}]
   \label{param:HADUsePrimary}
