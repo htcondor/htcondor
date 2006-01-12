@@ -75,8 +75,8 @@ int		hourly_housekeeping(void);
 // make sure that the master does not start itself : set runs_here off
 
 extern Daemons 		daemons;
-extern int			master_backoff_initial;		// Initial backoff time
-extern int			master_backoff_ceiling;		// Backoff ceiling
+extern int			master_backoff_constant;	// Backoff time constant
+extern int			master_backoff_ceiling;		// Backoff time ceiling
 extern float		master_backoff_factor;		// exponential factor
 extern int			master_recover_time;		// recovering time
 extern int			shutdown_graceful_timeout;
@@ -260,7 +260,7 @@ int
 daemon::NextStart()
 {
 	int seconds;
-	seconds = m_backoff_initial + (int)ceil(pow(m_backoff_factor, restarts));
+	seconds = m_backoff_constant + (int)ceil(pow(m_backoff_factor, restarts));
 	if( seconds > m_backoff_ceiling || seconds < 0 ) {
 		seconds = m_backoff_ceiling;
 	}
@@ -396,15 +396,15 @@ daemon::DoConfig( bool init )
 		}
 	}
 
-	m_backoff_initial = master_backoff_initial;
-	sprintf(buf, "MASTER_%s_BACKOFF_INITIAL", name_in_config_file );
+	m_backoff_constant = master_backoff_constant;
+	sprintf(buf, "MASTER_%s_BACKOFF_CONSTANT", name_in_config_file );
 	tmp = param( buf );
 	if( tmp ) {
-		m_backoff_initial = atoi( tmp );
+		m_backoff_constant = atoi( tmp );
 		free( tmp );
 	} 
-	if( m_backoff_initial <= 0 ) {
-		m_backoff_initial = master_backoff_initial;
+	if( m_backoff_constant <= 0 ) {
+		m_backoff_constant = master_backoff_constant;
 	}
 
 	m_backoff_ceiling = 0;

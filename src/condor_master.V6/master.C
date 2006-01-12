@@ -100,7 +100,7 @@ char	*MasterName = NULL;
 CollectorList *Collectors = NULL;
 DaemonList* secondary_collectors = NULL;
 
-int		master_backoff_initial = 9;
+int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
 float	master_backoff_factor = 2.0;		// exponential factor
 int		master_recover_time = 300;			// recover factor
@@ -623,14 +623,14 @@ init_params()
 		Lines = 20;
 	}
 
-	master_backoff_initial = 0;
-	tmp = param( "MASTER_BACKOFF_INITIAL" );
+	master_backoff_constant = 0;
+	tmp = param( "MASTER_BACKOFF_CONSTANT" );
 	if( tmp ) {
-		master_backoff_initial = atoi( tmp );
+		master_backoff_constant = atoi( tmp );
 		free( tmp );
 	} 
-	if( master_backoff_initial <= 0 ) {
-		master_backoff_initial = 9;
+	if( master_backoff_constant <= 0 ) {
+		master_backoff_constant = 9;
 	}
 
 	master_backoff_ceiling = 0;

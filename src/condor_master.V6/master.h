@@ -116,7 +116,7 @@ private:
 	CondorLock	*ha_lock;
 	bool	is_ha;
 
-	int		m_backoff_initial;
+	int		m_backoff_constant;
 	float	m_backoff_factor;
 	int		m_backoff_ceiling;
 	int		m_recover_time;
