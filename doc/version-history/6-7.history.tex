@@ -64,6 +64,13 @@ way.  The old limit of 4096 characters in the job arguments has also
 been removed.  See \Condor{submit} manual for details of the new
 syntax.
 
+\item Added more configuration parameters to the \Condor{master}'s
+restart / backoff mechanism.  You can now configure the initial value
+of the backoff time (via \Macro{MASTER_BACKOFF_INITIAL}).
+Additionally, you can now set daemon specific values for all of these
+parameters.  See the \Condor{master} entry in the manual for more
+details.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
