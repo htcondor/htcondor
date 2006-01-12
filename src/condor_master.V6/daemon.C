@@ -75,9 +75,10 @@ int		hourly_housekeeping(void);
 // make sure that the master does not start itself : set runs_here off
 
 extern Daemons 		daemons;
-extern int			ceiling;
-extern float		e_factor;					// exponential factor
-extern int			r_factor;					// recovering factor
+extern int			master_backoff_initial;		// Initial backoff time
+extern int			master_backoff_ceiling;		// Backoff ceiling
+extern float		master_backoff_factor;		// exponential factor
+extern int			master_recover_time;		// recovering time
 extern int			shutdown_graceful_timeout;
 extern int			shutdown_fast_timeout;
 extern int			Lines;
@@ -258,12 +259,12 @@ daemon::Recover()
 int
 daemon::NextStart()
 {
-	int n;
-	n = 9 + (int)ceil(pow(e_factor, restarts));
-	if( n > ceiling || n < 0 ) {
-		n = ceiling;
+	int seconds;
+	seconds = m_backoff_initial + (int)ceil(pow(m_backoff_factor, restarts));
+	if( seconds > m_backoff_ceiling || seconds < 0 ) {
+		seconds = m_backoff_ceiling;
 	}
-	return n;
+	return seconds;
 }
 
 
@@ -394,6 +395,50 @@ daemon::DoConfig( bool init )
 					 name_in_config_file, controller_name );
 		}
 	}
+
+	m_backoff_initial = master_backoff_initial;
+	sprintf(buf, "MASTER_%s_BACKOFF_INITIAL", name_in_config_file );
+	tmp = param( buf );
+	if( tmp ) {
+		m_backoff_initial = atoi( tmp );
+		free( tmp );
+	} 
+	if( m_backoff_initial <= 0 ) {
+		m_backoff_initial = master_backoff_initial;
+	}
+
+	m_backoff_ceiling = 0;
+	sprintf(buf, "MASTER_%s_BACKOFF_CEILING", name_in_config_file );
+	tmp = param( buf );
+	if( tmp ) {
+		m_backoff_ceiling = atoi( tmp );
+		free( tmp );
+	} 
+	if( m_backoff_ceiling <= 0 ) {
+		m_backoff_ceiling = master_backoff_ceiling;
+	}
+
+	m_backoff_factor = 0;
+	sprintf(buf, "MASTER_%s_BACKOFF_FACTOR", name_in_config_file );
+	tmp = param( buf );
+    if( tmp ) {
+        m_backoff_factor = atof( tmp );
+		free( tmp );
+    } 
+	if( m_backoff_factor <= 0.0 ) {
+    	m_backoff_factor = master_backoff_factor;
+    }
+	
+	m_recover_time = 0;
+	sprintf(buf, "MASTER_%s_RECOVER_FACTOR", name_in_config_file );
+	tmp = param( buf );
+    if( tmp ) {
+        m_recover_time = atoi( tmp );
+		free( tmp );
+    } 
+	if( m_recover_time <= 0 ) {
+    	m_recover_time = master_recover_time;
+    }
 
 
 	// Weiru
@@ -676,7 +721,7 @@ int daemon::RealStart( )
 
 	// if this is a restart, start recover timer
 	if (restarts > 0) {
-		recover_tid = daemonCore->Register_Timer( r_factor,
+		recover_tid = daemonCore->Register_Timer( m_recover_time,
 						(TimerHandlercpp)&daemon::Recover,
 						"daemon::Recover()", this );
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);

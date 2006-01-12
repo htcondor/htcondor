@@ -100,10 +100,12 @@ char	*MasterName = NULL;
 CollectorList *Collectors = NULL;
 DaemonList* secondary_collectors = NULL;
 
-int		ceiling = 3600;
-float	e_factor = 2.0;								// exponential factor
-int		r_factor = 300;								// recover factor
-char*	config_location;						// config file from server
+int		master_backoff_initial = 9;
+int		master_backoff_ceiling = 3600;
+float	master_backoff_factor = 2.0;		// exponential factor
+int		master_recover_time = 300;			// recover factor
+
+char*	config_location;					// config file from server
 int		doConfigFromServer = FALSE; 
 char	*FS_Preen = NULL;
 int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
@@ -621,34 +623,44 @@ init_params()
 		Lines = 20;
 	}
 
-	ceiling = 0;
-	tmp = param( "MASTER_BACKOFF_CEILING" );
+	master_backoff_initial = 0;
+	tmp = param( "MASTER_BACKOFF_INITIAL" );
 	if( tmp ) {
-		ceiling = atoi( tmp );
+		master_backoff_initial = atoi( tmp );
 		free( tmp );
 	} 
-	if( !ceiling ) {
-		ceiling = 3600;
+	if( master_backoff_initial <= 0 ) {
+		master_backoff_initial = 9;
 	}
 
-	e_factor = 0;
+	master_backoff_ceiling = 0;
+	tmp = param( "MASTER_BACKOFF_CEILING" );
+	if( tmp ) {
+		master_backoff_ceiling = atoi( tmp );
+		free( tmp );
+	} 
+	if( master_backoff_ceiling <= 0 ) {
+		master_backoff_ceiling = 3600;
+	}
+
+	master_backoff_factor = 0;
 	tmp = param( "MASTER_BACKOFF_FACTOR" );
     if( tmp ) {
-        e_factor = atof( tmp );
+        master_backoff_factor = atof( tmp );
 		free( tmp );
     } 
-	if( !e_factor ) {
-    	e_factor = 2.0;
+	if( master_backoff_factor <= 0.0 ) {
+    	master_backoff_factor = 2.0;
     }
 	
-	r_factor = 0;
+	master_recover_time = 0;
 	tmp = param( "MASTER_RECOVER_FACTOR" );
     if( tmp ) {
-        r_factor = atoi( tmp );
+        master_recover_time = atoi( tmp );
 		free( tmp );
     } 
-	if( !r_factor ) {
-    	r_factor = 300;
+	if( master_recover_time <= 0 ) {
+    	master_recover_time = 300;
     }
 	
 	update_interval = 0;
