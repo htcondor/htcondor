@@ -80,6 +80,9 @@ main(int argc, char* argv[])
   int DeleteUser=0;
   int SetFactor=0;
   int SetPrio=0;
+  int SetAccum=0;
+  int SetBegin=0;
+  int SetLast=0;
   bool ResetAll=false;
   int GetResList=0;
   char* pool = NULL;
@@ -98,6 +101,21 @@ main(int argc, char* argv[])
     else if (strcmp(argv[i],"-setfactor")==0) {
       if (i+2>=argc) usage(argv[0]);
       SetFactor=i;
+      i+=2;
+    }
+    else if (strcmp(argv[i],"-setbegin")==0) {
+      if (i+2>=argc) usage(argv[0]);
+      SetBegin=i;
+      i+=2;
+    }
+    else if (strcmp(argv[i],"-setaccum")==0) {
+      if (i+2>=argc) usage(argv[0]);
+      SetAccum=i;
+      i+=2;
+    }
+    else if (strcmp(argv[i],"-setlast")==0) {
+      if (i+2>=argc) usage(argv[0]);
+      SetLast=i;
       i+=2;
     }
     else if (strcmp(argv[i],"-resetusage")==0) {
@@ -225,6 +243,110 @@ main(int argc, char* argv[])
 
   }
 
+  else if (SetAccum) { // set accumulated usage
+
+    char* tmp;
+	if( ! (tmp = strchr(argv[SetAccum+1], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the submittor you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto update the Accumulated usage of (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
+    float accumUsage=atof(argv[SetAccum+2]);
+	if (accumUsage<0.0) {
+		fprintf( stderr, "Usage must be greater than 0 seconds\n");
+		exit(1);
+	}
+
+    // send request
+    Sock* sock;
+    if( !(sock = negotiator.startCommand(SET_ACCUMUSAGE,
+										 Stream::reli_sock, 0) ) ||
+        !sock->put(argv[SetAccum+1]) ||
+        !sock->put(accumUsage) ||
+        !sock->end_of_message()) {
+      fprintf( stderr, "failed to send SET_ACCUMUSAGE command to negotiator\n" );
+      exit(1);
+    }
+
+    sock->close();
+    delete sock;
+
+    printf("The Accumulated Usage of %s was set to %f\n",argv[SetAccum+1],accumUsage);
+
+  }
+  else if (SetBegin) { // set begin usage time
+
+    char* tmp;
+	if( ! (tmp = strchr(argv[SetBegin+1], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the submittor you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto update the begin usage time of (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
+    int beginTime=atoi(argv[SetBegin+2]);
+	if (beginTime<0) {
+		fprintf( stderr, "Time must be greater than 0 seconds\n");
+		exit(1);
+	}
+
+    // send request
+    Sock* sock;
+    if( !(sock = negotiator.startCommand(SET_BEGINTIME,
+										 Stream::reli_sock, 0) ) ||
+        !sock->put(argv[SetBegin+1]) ||
+        !sock->put(beginTime) ||
+        !sock->end_of_message()) {
+      fprintf( stderr, "failed to send SET_BEGINTIME command to negotiator\n" );
+      exit(1);
+    }
+
+    sock->close();
+    delete sock;
+
+    printf("The Begin Usage Time of %s was set to %d\n",
+			argv[SetBegin+1],beginTime);
+
+  }
+  else if (SetLast) { // set last usage time
+
+    char* tmp;
+	if( ! (tmp = strchr(argv[SetLast+1], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the submittor you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto update the last usage time of (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
+    int lastTime=atoi(argv[SetLast+2]);
+	if (lastTime<0) {
+		fprintf( stderr, "Time must be greater than 0 seconds\n");
+		exit(1);
+	}
+
+    // send request
+    Sock* sock;
+    if( !(sock = negotiator.startCommand(SET_LASTTIME,
+										 Stream::reli_sock, 0) ) ||
+        !sock->put(argv[SetLast+1]) ||
+        !sock->put(lastTime) ||
+        !sock->end_of_message()) {
+      fprintf( stderr, "failed to send SET_LASTTIME command to negotiator\n" );
+      exit(1);
+    }
+
+    sock->close();
+    delete sock;
+
+    printf("The Last Usage Time of %s was set to %d\n",
+			argv[SetLast+1],lastTime);
+
+  }
   else if (ResetUsage) { // set priority
 
     char* tmp;
@@ -532,7 +654,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 //-----------------------------------------------------------------
 
 static void usage(char* name) {
-  fprintf( stderr, "usage: %s [ -pool hostname ] [ -all | -usage | { -setprio | -setfactor }  user value | "
+  fprintf( stderr, "usage: %s [ -pool hostname ] [ -all | -usage | { -setprio | -setfactor | -setaccum | -setbegin | -setlast }  user value | "
 			"-resetusage user | -resetall | -getreslist user | -delete user ] "
 			"[-allusers | -activefrom month day year] [-l]\n", name );
   exit(1);
