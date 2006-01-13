@@ -15,8 +15,15 @@
 .f.o:
 	$(Fortran) $(FFLAGS) -c $<
 
+/*
+ * The return value of a Unix pipeline is the last command in the pipeline
+ * If we are running ld through c++filt, we don't care about the return value
+ * of c++ filt, we only care about the return value of the command in 
+ * front of c++filt.  To simulate this, we "know" that c++filt is always
+ * run in front of ld, and we return the executability of the linker output
+ */
 #if defined(Demangler)
-DEMANGLE = 2>&1 | Demangler
+DEMANGLE = 2>&1 | Demangler && test -x $@
 #endif
 
 /* Since the *_target macros use the objlist and libs variables BOTH
