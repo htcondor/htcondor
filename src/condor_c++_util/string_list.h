@@ -34,14 +34,13 @@
 class StringList {
 public:
 	StringList(const char *s = NULL, const char *delim = " ," ); 
-	~StringList();
+	virtual ~StringList();
 	void initializeFromString (const char *);
 	BOOLEAN contains( const char * );
 	BOOLEAN substring( const char * );	
 	BOOLEAN contains_anycase( const char * );
 	BOOLEAN contains_withwildcard( const char *str );				
 	BOOLEAN contains_anycase_withwildcard( const char * );
-	const char *  string_withnetwork( const char * );
     const char *  string_anycase_withwildcard( const char *);
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
@@ -79,7 +78,7 @@ public:
 		with free() */
 	char* print_to_string(void);
 
-private:
+protected:
     const char * contains_withwildcard(const char *string, bool anycase);
 	List<char> strings;
 	char *delimiters;

@@ -246,53 +246,12 @@ StringList::contains_anycase_withwildcard(const char *string)
 	return (contains_withwildcard(string, true) != NULL);
 }
 
+
 const char * StringList :: string_anycase_withwildcard( const char * string)
 {
     return contains_withwildcard(string, true);
 }
 
-
-// contains_withnetmask() is just like the contains() method except that
-// list members can be IP addresses with netmasks in them, and anything on
-// the subnet is a match.  two forms are allowed:
-//
-// 192.168.0.0/24 
-// 192.168.0.0/255.255.255.0
-//
-// this only checks against strings which are in netmask form.  so, just an
-// IP address or hostname will not match in this function.
-//
-// function returns a string pointer to the pattern it matched against.
-
-const char *
-StringList::string_withnetwork(const char *ip_address)
-{
-	char *x;
-	struct in_addr test_ip, base_ip, mask;
-	
-	// fill in test_ip
-	if (!is_ipaddr(ip_address, &test_ip)) {
-		// not even a valid IP
-		return NULL;
-	}
-
-	strings.Rewind();
-	while ( (x = strings.Next()) ) {
-		if (is_valid_network(x, &base_ip, &mask)) {
-			// test_ip, base_ip, and mask are all filled
-
-			// logic here:
-			// all bits specified in the mask must be equal in the
-			// test_ip and base_ip.  so, AND both of them with the mask,
-			// and then compare them.
-			if ((base_ip.s_addr & mask.s_addr) == (test_ip.s_addr & mask.s_addr)) {
-				return x;
-			}
-		}
-	}
-
-	return NULL;
-}
 
 // contains_withwildcard() is just like the contains() method except that
 // list members can have an asterisk wildcard in them.  So, if

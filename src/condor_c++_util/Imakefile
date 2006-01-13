@@ -74,6 +74,7 @@ CLASSAD_OBJ = \
 	../condor_classad/registration.o \
 	../condor_util_lib/condor_snutils.o \
 	stringSpace.o \
+	string_list.o \
 	MyString.o
 
 /* Construct a libcondorapi.a that includes enough stuff to read and write
@@ -119,7 +120,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o user_job_policy.o classad_support.o \
 	directory.o stat_wrapper.o my_hostname.o file_lock.o sig_name.o \
 	email.o env.o c++_util_instantiate.o \
-	string_list.o condor_event.o $(URL_OBJ) get_daemon_name.o \
+	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
+	get_daemon_name.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
