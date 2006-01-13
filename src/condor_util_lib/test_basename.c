@@ -27,7 +27,7 @@
 #include <string.h>
 #include "basename.h"
 
-//TEMP static const char * VERSION = "0.9.0";
+//TEMP static const char * VERSION = "0.9.1";
 
 int // 0 = OK, 1 = failed
 TestAPath(const char *path, const char *expectedDir,
@@ -37,7 +37,7 @@ TestAPath(const char *path, const char *expectedDir,
 
 	printf("\nTesting path <%s>\n", path);
 	char *dir = condor_dirname(path);
-	char *file = condor_basename(path);
+	const char *file = condor_basename(path);
 
 	if ( strcmp(dir, expectedDir) ) {
 		printf("ERROR: dirname returned <%s>, should have returned <%s>\n",
@@ -56,6 +56,25 @@ TestAPath(const char *path, const char *expectedDir,
 	}
 
 	free(dir);
+
+	return result;
+}
+
+int // 0 = OK, 1 = failed
+TestForFull(const char *path, int expectFull)
+{
+	int result = 0;
+
+	printf("\nTesting fullpath on <%s>\n", path);
+
+	int tmpResult = fullpath(path);
+	if ( tmpResult == expectFull ) {
+		printf( "fullpath OK\n" );
+	} else {
+		printf("ERROR: fullpath returned <%d>, should have returned <%d>\n",
+				tmpResult, expectFull);
+		result = 1;
+	}
 
 	return result;
 }
@@ -100,6 +119,14 @@ main(int argc, char **argv)
 
 	result |= TestAPath("//foo/bar/zap.txt", "//foo/bar", "zap.txt");
 	result |= TestAPath("\\\\foo\\bar\\zap.txt", "\\\\foo\\bar", "zap.txt");
+
+	result |= TestForFull("/tmp/foo", 1);
+	result |= TestForFull("tmp/foo", 0);
+	result |= TestForFull("c:\\", 1);
+	result |= TestForFull(":\\", 0);
+	result |= TestForFull("\\", 1);
+	result |= TestForFull("x:/", 1);
+	result |= TestForFull(":/", 0);
 
 	if ( result == 0 ) {
 		printf("\nTest OK\n");

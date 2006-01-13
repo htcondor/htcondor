@@ -148,7 +148,10 @@ fullpath( const char* path )
 		  compare against, it's just the thing *after* NULL we don't
 		  want to touch. :)
 		*/
-	if( path[0] && path[1] && path[1]==':' && path[2]=='\\' ) {
+		// "?:/" counts as a full path, since Windows allows forward
+		// slashes -- wenger 2006-01-13.
+	if( path[0] && path[1] && path[1]==':' &&
+			(path[2]=='\\' || path[2]=='/') ) {
 		return TRUE;
 	}
 	return FALSE;
