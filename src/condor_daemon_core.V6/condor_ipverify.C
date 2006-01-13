@@ -497,14 +497,14 @@ IpVerify::add_host_entry( const char* addr, int mask )
 void
 IpVerify::fill_table(PermTypeEntry * pentry, int mask, char * list, bool allow)
 {
-    StringList * whichHostList = NULL;
+    NetStringList * whichHostList = NULL;
     UserHash_t * whichUserHash = NULL;
     StringList * slist;
 
     assert(pentry);
 
     if (whichHostList == NULL) {
-        whichHostList = new StringList();
+        whichHostList = new NetStringList();
     }
     if (whichUserHash == NULL) {
         whichUserHash = new UserHash_t(1024, compute_host_hash);

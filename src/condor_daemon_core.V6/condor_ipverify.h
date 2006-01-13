@@ -36,6 +36,7 @@
 #include "condor_debug.h"
 #include "HashTable.h"
 #include "string_list.h"
+#include "net_string_list.h"
 #include "MyString.h"
 #include "condor_perms.h"
 
@@ -112,8 +113,8 @@ private:
 	class PermTypeEntry {
 	public:
 		int behavior;
-		StringList* allow_hosts;
-		StringList* deny_hosts;
+		NetStringList* allow_hosts;
+		NetStringList* deny_hosts;
 		UserHash_t* allow_users;
 		UserHash_t* deny_users;
 		PermTypeEntry() {
