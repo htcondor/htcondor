@@ -427,6 +427,38 @@ void Accountant::SetPriority(const MyString& CustomerName, float Priority)
 }
 
 //------------------------------------------------------------------
+// Set the accumulated usage of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetAccumUsage(const MyString& CustomerName, float AccumulatedUsage) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetAccumUsage - CustomerName=%s, Usage=%8.3f\n",CustomerName.Value(),AccumulatedUsage);
+  SetAttributeFloat(CustomerRecord+CustomerName,AccumulatedUsageAttr,AccumulatedUsage);
+}
+
+//------------------------------------------------------------------
+// Set the begin usage time of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetBeginTime(const MyString& CustomerName, int BeginTime) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetBeginTime - CustomerName=%s, BeginTime=%8d\n",CustomerName.Value(),BeginTime);
+  SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,BeginTime);
+}
+
+//------------------------------------------------------------------
+// Set the last usage time of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetLastTime(const MyString& CustomerName, int LastTime) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetLastTime - CustomerName=%s, LastTime=%8d\n",CustomerName.Value(),LastTime);
+  SetAttributeInt(CustomerRecord+CustomerName,LastUsageTimeAttr,LastTime);
+}
+
+
+
+//------------------------------------------------------------------
 // Add a match
 //------------------------------------------------------------------
 
