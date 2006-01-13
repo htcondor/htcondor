@@ -116,6 +116,11 @@ a grid-type condor grid universe job left the queue.
 \item When using job leases with the condor grid-type, a completed job will
 now leave the remote \Condor{schedd}'s queue when the lease expires.
 
+\item Fixed a bug in the \Code{fullpath()} function that tests whether
+a file path is a full path -- paths of the form \File{"c:/"} were not
+recognized as full paths, which could lead to something being prepended
+to what was already a full path, thereby creating an invalid path.
+
 \end{itemize}
 
 \noindent Known Bugs:
