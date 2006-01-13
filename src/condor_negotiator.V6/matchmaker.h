@@ -61,6 +61,9 @@ class Matchmaker : public Service
 		int DELETE_USER_commandHandler(int, Stream*);
 		int SET_PRIORITYFACTOR_commandHandler(int, Stream*);
 		int SET_PRIORITY_commandHandler(int, Stream*);
+		int SET_ACCUMUSAGE_commandHandler(int, Stream*);
+		int SET_BEGINTIME_commandHandler(int, Stream*);
+		int SET_LASTTIME_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
 		int GET_RESLIST_commandHandler(int, Stream*);
 #ifdef WANT_NETMAN

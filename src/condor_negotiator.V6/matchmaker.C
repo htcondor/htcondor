@@ -156,6 +156,15 @@ initialize ()
     daemonCore->Register_Command (SET_PRIORITY, "SetPriority",
             (CommandHandlercpp) &Matchmaker::SET_PRIORITY_commandHandler, 
 			"SET_PRIORITY_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (SET_ACCUMUSAGE, "SetAccumUsage",
+            (CommandHandlercpp) &Matchmaker::SET_ACCUMUSAGE_commandHandler, 
+			"SET_ACCUMUSAGE_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (SET_BEGINTIME, "SetBeginUsageTime",
+            (CommandHandlercpp) &Matchmaker::SET_BEGINTIME_commandHandler, 
+			"SET_BEGINTIME_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (SET_LASTTIME, "SetLastUsageTime",
+            (CommandHandlercpp) &Matchmaker::SET_LASTTIME_commandHandler, 
+			"SET_LASTTIME_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (GET_PRIORITY, "GetPriority",
 		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_commandHandler, 
 			"GET_PRIORITY_commandHandler", this, READ);
@@ -484,6 +493,81 @@ SET_PRIORITY_commandHandler (int, Stream *strm)
 	// set the priority
 	dprintf (D_ALWAYS,"Setting the priority of %s to %f\n",scheddName,priority);
 	accountant.SetPriority (scheddName, priority);
+	
+	return TRUE;
+}
+
+int Matchmaker::
+SET_ACCUMUSAGE_commandHandler (int, Stream *strm)
+{
+	float	accumUsage;
+	char	scheddName[64];
+	char	*sn = scheddName;
+	int		len = 64;
+
+	// read the required data off the wire
+	if (!strm->get(sn, len) 	|| 
+		!strm->get(accumUsage) 	|| 
+		!strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not read schedd name and accumulatedUsage\n");
+		return FALSE;
+	}
+
+	// set the priority
+	dprintf (D_ALWAYS,"Setting the accumulated usage of %s to %f\n",
+			scheddName,accumUsage);
+	accountant.SetAccumUsage (scheddName, accumUsage);
+	
+	return TRUE;
+}
+
+int Matchmaker::
+SET_BEGINTIME_commandHandler (int, Stream *strm)
+{
+	int	beginTime;
+	char	scheddName[64];
+	char	*sn = scheddName;
+	int		len = 64;
+
+	// read the required data off the wire
+	if (!strm->get(sn, len) 	|| 
+		!strm->get(beginTime) 	|| 
+		!strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not read schedd name and begin usage time\n");
+		return FALSE;
+	}
+
+	// set the priority
+	dprintf (D_ALWAYS,"Setting the begin usage time of %s to %d\n",
+			scheddName,beginTime);
+	accountant.SetBeginTime (scheddName, beginTime);
+	
+	return TRUE;
+}
+
+int Matchmaker::
+SET_LASTTIME_commandHandler (int, Stream *strm)
+{
+	int	lastTime;
+	char	scheddName[64];
+	char	*sn = scheddName;
+	int		len = 64;
+
+	// read the required data off the wire
+	if (!strm->get(sn, len) 	|| 
+		!strm->get(lastTime) 	|| 
+		!strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not read schedd name and last usage time\n");
+		return FALSE;
+	}
+
+	// set the priority
+	dprintf (D_ALWAYS,"Setting the last usage time of %s to %d\n",
+			scheddName,lastTime);
+	accountant.SetLastTime (scheddName, lastTime);
 	
 	return TRUE;
 }
