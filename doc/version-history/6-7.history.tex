@@ -71,6 +71,13 @@ Additionally, you can now set daemon specific values for all of these
 parameters.  See the \Condor{master} entry in the manual for more
 details.
 
+\item \Condor{userprio} now supports \Opt{-setaccum} \Opt{-setbegin} 
+\Opt{-setlast}  options to set the Accumulated Usage, Begin Usage Time, and
+Last Usage time of a submitter. This is in addition to the existing
+\Opt{-setprio} and \Opt{-setfactor} options.
+These options can be used to safely reconstruct priority information if
+the only backup data available is the output from \Condor{userprio} \Opt{-l}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

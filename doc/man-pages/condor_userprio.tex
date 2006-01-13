@@ -6,6 +6,9 @@
 \oOpt{-usage}
 \oOptArg{-setprio}{username value}
 \oOptArg{-setfactor}{username value}
+\oOptArg{-setaccum}{username value}
+\oOptArg{-setbegin}{username value}
+\oOptArg{-setlast}{username value}
 \oOptArg{-resetusage}{username}
 \oOpt{-resetall}
 \oOptArg{-delete}{username}
@@ -46,6 +49,9 @@ The -usage option displays the username, accumulated usage, usage start time and
 for each user, sorted on accumulated usage.
 
 The -setprio, -setfactor options are used to change a user's real priority and priority factor.
+The -setaccum option sets a user's accumulated usage.
+The -setbegin, -setlast options are used to change a user's begin usage time and last usage time.
+The -setaccum option sets a user's accumulated usage.
 The -resetusage and -resetall options are used to reset the accumulated usage for users. The
 usage start time is set to the current time when the accumulated usage is reset. These
 options require administrator privileges.
@@ -95,6 +101,16 @@ for further explanation.
 
 \OptItem{\OptArg{-setfactor}{username value}}
 	{Set the priority factor of the specified user to the specified value.}
+
+\OptItem{\OptArg{-setaccum}{username value}}
+	{Set the accumulated usage of the specified user to the specified floating
+     point value.}
+
+\OptItem{\OptArg{-setbegin}{username value}}
+	{Set the begin usage time of the specified user to the specified value.}
+
+\OptItem{\OptArg{-setlast}{username value}}
+	{Set the last usage time of the specified user to the specified value.}
 
 \OptItem{\OptArg{-resetusage}{username}}
 	{Reset the accumulated usage of the specified user to zero.}
