@@ -49,7 +49,8 @@
   is generally used.  V2 strings must be enclosed in double quotes and V1
   strings must _not_ begin with double quotes.  This syntax was chosen
   for maximal backward compatibility, because unescaped double-quotes
-  were not legal in V1 submit-file syntax.
+  were not legal in V1 submit-file syntax.  In V2 strings, literal
+  double-quotes may be escaped by repeating them.
 
   Example raw V2 syntax:
            this 'contains spaces' and 'some ''quoted'' "text"'
@@ -58,7 +59,24 @@
   yields  "this", "contains spaces", "and", "some 'quoted' \"text\""
 
   Example quoted V2 syntax yielding same as above:
-           "this 'contains spaces' and 'some ''quoted'' \"text\"'"
+           "this 'contains spaces' and 'some ''quoted'' ""text""'"
+
+Example Usage of ArgList class:
+
+ArgList args;
+MyString errmsg;
+bool success;
+
+args.AppendArg("one");
+args.AppendArg("two and");
+success = args.AppendArgsV1RawOrV2Quoted("three",&errmsg);
+
+
+Example Usage of split_args():
+
+char **argv=NULL;
+MyString errmsg;
+bool success = split_args("one 'two and' three",&argv,&errmsg);
 
 */
 
@@ -69,16 +87,20 @@
 
 
 // Parse a string into a list of tokens.
+// This expects args in "raw V2" format (no surrounding double-quotes)
 bool split_args(char const *args,SimpleList<MyString> *args_list,MyString *error_msg=NULL);
 
 // Parse a string into a NULL-terminated string array.
+// This expects args in "raw V2" format (no surrounding double-quotes)
 // Caller should delete the array (e.g. deleteStringArray()).
 bool split_args(char const *args,char ***args_array,MyString *error_msg=NULL);
 
 // Produce a string from a list of tokens, quoting as necessary.
+// This produces args in "raw V2" format (no surrounding double-quotes)
 void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg=0);
 
 // Produce a string from a NULL-terminated string array, quoting as necessary.
+// This produces args in "raw V2" format (no surrounding double-quotes)
 void join_args(char const * const *args_array,MyString *result,int start_arg=0);
 
 

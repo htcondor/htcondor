@@ -557,7 +557,7 @@ ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg)
 void
 ArgList::V2RawToV2Quoted(MyString const &v2_raw,MyString *result)
 {
-	result->sprintf_cat("\"%s\"",v2_raw.EscapeChars("\"",'\\').Value());
+	result->sprintf_cat("\"%s\"",v2_raw.EscapeChars("\"",'\"').Value());
 }
 
 bool
@@ -716,18 +716,18 @@ ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 	ASSERT(*v1_input == '"');
 	v1_input++;
 
-	bool quote_terminated = false;
+	const char *quote_terminated = NULL;
 	while(*v1_input) {
 		if(*v1_input == '"') {
 			v1_input++;
-			quote_terminated = true;
-			break;
-		}
-		else if(v1_input[0] == '\\' && v1_input[1] == '"' && v1_input[2]) {
-			// Escaped double-quote, not at the end of the input string.
-			// This is the same as old-classad escape-syntax.
-			v1_input++;
-			(*v2_raw) += *(v1_input++);
+			if(*v1_input == '"') {
+					// Repeated (i.e. escaped) double-quote.
+				(*v2_raw) += *(v1_input++);
+			}
+			else {
+				quote_terminated = v1_input-1;
+				break;
+			}
 		}
 		else {
 			(*v2_raw) += *(v1_input++);
@@ -747,9 +747,10 @@ ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 	if(*v1_input) {
 		if(errmsg) {
 			MyString msg;
-			msg.sprintf("Unexpected characters following double-quote.  "
-						"Did you forget to escape the double-quote?  "
-						"Here are the trailing characters: %s\n",v1_input);
+			msg.sprintf(
+				"Unexpected characters following double-quote.  "
+				"Did you forget to escape the double-quote by repeating it?  "
+				"Here is the quote and trailing characters: %s\n",quote_terminated);
 			AddErrorMessage(msg.Value(),errmsg);
 		}
 		return false;

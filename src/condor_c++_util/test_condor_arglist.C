@@ -30,7 +30,7 @@ void condor_arglist_unit_test() {
 	SimpleListIterator<MyString> it(args);
 	MyString *arg;
 	char const *test_string = "This '''quoted''' arg' 'string 'contains ''many'' \"\"surprises\\'";
-	char const *test_cooked_string = "\"This '''quoted''' arg' 'string 'contains ''many'' \\\"\\\"surprises\\'\"";
+	char const *test_cooked_string = "\"This '''quoted''' arg' 'string 'contains ''many'' \"\"\"\"surprises\\'\"";
 	char const *test_v1_wacked = "one \\\"two\\\" 'three\\ four'";
 	MyString joined_args,joined_args2;
 	MyString error_msg;

@@ -53,16 +53,16 @@ key=value pairs.
 
 There is a "raw" format and a quoted format.  The quoted format is
 designed to differentiate in a backward compatible way between input
-strings that are in the old V1 syntax and the new V2 syntax.  Input
-strings in V2 syntax should be enclosed in double-quotes and any
-literal double-quotes should be backwacked.
+strings that are in the old V1 syntax and the new V2 syntax.  The
+quoted format simply means that V2 strings should be enclosed in
+double-quotes and any literal double-quotes should be backwacked.
 
 Example V2Raw syntax:
            env1='val one' 'env2=''val2''' env3="val3"
   yields {"env1" = "val one"}, {"env2" = "'val2'"}, {"env3" = "\"val3\""}
 
 Example V2Quoted syntax yielding same as above:
-           "env1='val one' 'env2=''val2''' env3=\"val3\""
+           "env1='val one' 'env2=''val2''' env3=""val3"""
 
 ***********************************************************************/
 
