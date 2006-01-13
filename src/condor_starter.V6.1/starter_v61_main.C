@@ -673,9 +673,10 @@ main_shutdown_graceful()
 }
 
 extern "C" 
-int exception_cleanup(int,int,char*)
+int exception_cleanup(int,int,char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
+	Starter->jic->notifyStarterError(errmsg,true);
 	Starter->ShutdownFast(0);
 	return 0;
 }
