@@ -38,7 +38,7 @@
 extern int errno;
 
 static char* master_path = "/unsup/condor/sbin/condor_master";
-static char* config_val_path = "/unsup/condor/bin/condor_config_val master";
+static char* config_val_cmd[] = {"/unsup/condor/bin/condor_config_val", "master", NULL};
 
 int
 main( int argc, char* argv[], char *env[] )
@@ -73,7 +73,7 @@ main( int argc, char* argv[], char *env[] )
 		exit(1);
 	}
 	
-	config_val = popen(config_val_path, "r");
+	config_val = my_popenv(config_val_cmd, "r");
 	if(config_val == NULL) {
 		fprintf( stderr, "warning: Can't popen config_val"
 				 " errno: %d (%s)\n",
@@ -94,7 +94,7 @@ main( int argc, char* argv[], char *env[] )
 			fprintf(stderr, "default of /unsup/condor/sbin/condor_master\n ");
 			master_path = static_master_path;
 		}
-		pclose(config_val);
+		my_pclose(config_val);
 	}
 				
 

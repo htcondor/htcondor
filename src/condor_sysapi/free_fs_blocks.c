@@ -117,7 +117,7 @@ reserve_for_afs_cache()
 #else
 	int		answer;
 	FILE	*fp;
-	char	cmd[512];
+	char	*args[] = {FS_PROGRAM, FS_COMMAND, NULL};
 	int		cache_size, cache_in_use;
 	int		do_it;
 
@@ -132,8 +132,7 @@ reserve_for_afs_cache()
 		/* Run an AFS utility program to learn how big the cache is and
 		   how much is in use. */
 	dprintf( D_FULLDEBUG, "Checking AFS cache parameters\n" );
-	sprintf( cmd, "%s %s", FS_PROGRAM, FS_COMMAND );
-	fp = my_popen( cmd, "r" );
+	fp = my_popenv( args, "r" );
 	fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size );
 	my_pclose( fp );
 	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",

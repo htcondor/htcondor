@@ -57,9 +57,9 @@ private:
 
 
 #if defined( BSD_PS ) 
-static const char* PS_CMD = "/bin/ps auwwx";
+static char* PS_CMD[] = {"/bin/ps", "auwwx", NULL};
 #else 
-static const char* PS_CMD = "/bin/ps -ef";
+static char* PS_CMD[] = {"/bin/ps", "-ef", NULL};
 #endif
 
 List<CondorPid>* condor_pids = NULL;
@@ -249,11 +249,11 @@ find_condor_pids() {
 		fprintf( stderr, "ERROR: out of memory!\n" );
 		my_exit( 1 );
 	}
-	
-	ps = popen( PS_CMD, "r" );
+
+	ps = my_popenv( PS_CMD, "r" );
 	if( !ps ) {
 		fprintf( stderr, "Error: can't open %s for reading.\n", 
-				 PS_CMD );
+				 PS_CMD[0] );
 		my_exit( 1 );
 	}
 
@@ -265,7 +265,8 @@ find_condor_pids() {
 			cpid = new CondorPid( pid, line );
 			condor_pids->Append( cpid );
 		}
-	}    
+	}
+	my_pclose(ps);
 }
 
 #endif	// defined( linux )	

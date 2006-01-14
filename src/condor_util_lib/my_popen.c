@@ -26,24 +26,67 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 
+#ifdef WIN32
+typedef HANDLE child_handle_t;
+#define INVALID_CHILD_HANDLE INVALID_HANDLE_VALUE;
+#else
+typedef pid_t child_handle_t;
+#define INVALID_CHILD_HANDLE ((pid_t)-1)
+#endif
 
-static pid_t	ChildPid = 0;
+struct popen_entry {
+	FILE* fp;
+	child_handle_t ch;
+	struct popen_entry *next;
+};
+struct popen_entry *popen_entry_head = NULL;
 
-static int	READ_END = 0;
-static int	WRITE_END = 1;
+static void add_child(FILE* fp, child_handle_t ch)
+{
+	struct popen_entry *pe = malloc(sizeof(struct popen_entry));
+	pe->fp = fp;
+	pe->ch = ch;
+	pe->next = popen_entry_head;
+	popen_entry_head = pe;
+}
 
+static child_handle_t remove_child(FILE* fp)
+{
+	struct popen_entry *pe = popen_entry_head;
+	struct popen_entry **last_ptr = &popen_entry_head;
+	while (pe != NULL) {
+		if (pe->fp == fp) {
+			child_handle_t ch = pe->ch;
+			*last_ptr = pe->next;
+			free(pe);
+			return ch;
+		}
+		last_ptr = &(pe->next);
+		pe = pe->next;
+	}
+	return INVALID_CHILD_HANDLE;
+}
 
 /*
-  This is just like popen(3) except it isn't quite as smart in some
-  ways, but is smarter in others.  This one is less smart in that it
-  only allows for one process at a time.  It is smarter than at least
-  some implementation of standard popen() in that it handles
-  termination of the child process more carefully.  It is careful
-  how it waits for it's child's status so that it doesn't reap status
-  information for other processes which the calling code may want to
-  reap.
 
-  However, it does *NOT* "eat" SIGCHLD, since a) SIGCHLD is
+  FILE *my_popenv(char *const args[]);
+
+  These are some popen(3)-like functions that intentionally avoid
+  calling out to the shell in order to limit what can be done for
+  security reasons. Please note that these do not intent to behave
+  in the same way as a normal popen, they exist as a convenience. 
+  
+  The my_popen(consr char*) version on UNIX parses the command line
+  into an argv using spaces as delimiters, so it should not be used
+  if it's possible that an argument could have space it in (i.e. a
+  pathname with spaces). The my_popenv(char *const args[]) version is
+  preferred since it works well on both platforms.
+ 
+  These functions are careful in how they wait for their children's
+  status so that they don't reap status information for other processes
+  which the calling code may want to reap.
+
+  However, we do *NOT* "eat" SIGCHLD, since a) SIGCHLD is
   probably blocked when this method is invoked, b) there are cases
   where our attempt to eat SIGCHLD might result in eating too many of
   them, and that's really bad, c) to try to do this right would be
@@ -52,31 +95,314 @@ static int	WRITE_END = 1;
   DaemonCore, just results in a D_FULLDEBUG and nothing more.  the
   potential harm of doing this wrong far outweighs the harm of this
   extra dprintf()... Derek Wright <wright@cs.wisc.edu> 2004-05-27
+
 */
 
-FILE *
-my_popen( const char *cmd, const char * mode )
-{
-	int		pipe_d[2];
-	int		parent_reads;
-	uid_t	euid;
-	gid_t	egid;
+#ifdef WIN32
 
-		/* Use ChildPid as a simple semaphore-like lock */
-	if ( ChildPid ) {
+/* Windows versions of my_popen / my_pclose */
+
+/*
+  Utility function to build a command line suitable for Create_Process.
+  We quote each argument in order to handle spaces in args. The pointer
+  returned from this function should be free()d when no longer needed.
+*/
+static char*
+build_cmdline(char *const args[])
+{
+	const char *arg;
+	int i, arg_count;
+	char *cmdline;
+	int cmdline_size;
+	const char *srcp;
+	char *dstp;
+	int illegal = 0;
+
+	if (args == NULL)
+		return NULL;
+
+	/* first pass: determine size */
+	arg_count = 0;
+	cmdline_size = 0;
+	for (i = 0; (arg = args[i]) != NULL; i++) {
+		/* update size (add 3 for quotes and space/null) */
+		cmdline_size += 3 + strlen(args[i]);
+		arg_count++;
+	}
+	if (arg_count == 0)
+		return NULL;
+
+	/* second pass: build the string */
+	cmdline = (char *)malloc(cmdline_size);
+	dstp = cmdline;
+	for (i = 0; i < arg_count; i++) {
+		*(dstp++) = '\"';
+		srcp = args[i];
+		while (*srcp != '\0') {
+			*(dstp++) = *(srcp++);
+			if (*(srcp) == '\"') {
+				illegal = 1;
+			}
+		}
+		if (*(dstp - 1) == '\\') {
+			illegal = 1;
+		}
+		*(dstp++) = '\"';
+		*(dstp++) = ' ';
+	}
+	*(dstp - 1) = '\0';
+
+	if (illegal) {
+		/*
+		  bail out it any arg had a double quote or backslash as the last character
+		  this should be moved over to using the ArgList class in V6.7
+		*/
+		dprintf(D_ALWAYS, "my_popen: invalid double-quote or backslash in command line (%s)\n",
+			cmdline);
+		free(cmdline);
 		return NULL;
 	}
+
+	return cmdline;
+}
+
+static FILE *
+my_popen(const char *const_cmd, const char *mode)
+{
+	BOOL read_mode;
+	SECURITY_ATTRIBUTES saPipe;
+	HANDLE hReadPipe, hWritePipe;
+	HANDLE hParentPipe, hChildPipe;
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	char *cmd;
+	BOOL result;
+	int fd;
+	FILE *retval;
+
+	if (!mode)
+		return NULL;
+	read_mode = mode[0] == 'r';
+
+	// use SECURITY_ATTRIBUTES to mark pipe handles as inheritable
+	saPipe.nLength = sizeof(SECURITY_ATTRIBUTES);
+	saPipe.lpSecurityDescriptor = NULL;
+	saPipe.bInheritHandle = TRUE;
+
+	// create the pipe (and mark the parent's end as uninheritable)
+	if (CreatePipe(&hReadPipe, &hWritePipe, &saPipe, 0) == 0) {
+		dprintf(D_ALWAYS, "my_popen: CreatePipe failed\n");
+		return NULL;
+	}
+	if (read_mode) {
+		hParentPipe = hReadPipe;
+		hChildPipe = hWritePipe;
+	}
+	else {
+		hParentPipe = hWritePipe;
+		hChildPipe = hReadPipe;
+	}
+	SetHandleInformation(hParentPipe, HANDLE_FLAG_INHERIT, 0);
+
+	// initialize PROCESS_INFORMATION
+	memset(&pi, 0, sizeof(PROCESS_INFORMATION));
+
+	// initialize STARTUPINFO to set standard handles
+	memset(&si, 0, sizeof(STARTUPINFO));
+	si.cb = sizeof(STARTUPINFO);
+	if (read_mode) {
+		si.hStdOutput = hChildPipe;
+		si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+	}
+	else {
+		si.hStdInput = hChildPipe;
+		si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+	}
+	si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+	si.dwFlags = STARTF_USESTDHANDLES;
+
+	// make call to CreateProcess
+	cmd = strdup(const_cmd);
+	result = CreateProcess(NULL,
+		cmd,	// command line
+		NULL,	// process SA
+		NULL,	// primary thread SA
+		TRUE,	// inherit handles 
+		0,		// creation flags
+		NULL,	// use our environment
+		NULL,	// use our CWD
+		&si,	// STARTUPINFO
+		&pi);	// receive PROCESS_INFORMATION
+	free(cmd);
+	if (result == 0) {
+		CloseHandle(hParentPipe);
+		CloseHandle(hChildPipe);
+		dprintf(D_ALWAYS, "my_popen: CreateProcess failed\n");
+		return NULL;
+	}
+
+	// don't care about child's primary thread handle
+	// or child's ends of the pipes
+	CloseHandle(pi.hThread);
+	CloseHandle(hChildPipe);
+
+	// convert pipe handle specified in mode into a FILE pointer
+	fd = _open_osfhandle((long)hParentPipe, 0);
+	if (fd == -1) {
+		CloseHandle(hParentPipe);
+		CloseHandle(pi.hProcess);
+		dprintf(D_ALWAYS, "my_popen: _open_osfhandle failed\n");
+		return NULL;
+	}
+	retval = _fdopen(fd, mode);
+	if (retval == NULL) {
+		CloseHandle(hParentPipe);
+		CloseHandle(pi.hProcess);
+		dprintf(D_ALWAYS, "my_popen: _fdopen failed\n");
+		return NULL;
+	}
+
+	// save child's process handle (for pclose)
+	add_child(retval, pi.hProcess);
+
+	return retval;
+}
+
+FILE *my_popenv(char *const args[], const char *mode)
+{
+	char *cmdline;
+	FILE *fp;
+
+	cmdline = build_cmdline(args);
+	if (cmdline == NULL) {
+		dprintf(D_ALWAYS, "mypopenv: invalid args\n");
+		return NULL;
+	}
+	fp = my_popen(cmdline, mode);
+	free(cmdline);
+
+	return fp;
+}
+
+int
+my_pclose(FILE *fp)
+{
+	HANDLE hChildProcess;
+	DWORD result;
+
+	hChildProcess = remove_child(fp);
+
+	fclose(fp);
+
+	result = WaitForSingleObject(hChildProcess, INFINITE);
+	if (result != WAIT_OBJECT_0) {
+		dprintf(D_FULLDEBUG, "my_pclose: WaitForSingleObject failed\n");
+		return -1;
+	}
+	if (!GetExitCodeProcess(hChildProcess, &result)) {
+		dprintf(D_FULLDEBUG, "my_pclose: GetExitCodeProcess failed\n");
+		return -1;
+	}
+	CloseHandle(hChildProcess);
+
+	return result;
+}
+
+
+#else
+
+/* UNIX versions of my_popen(v) / my_pclose */
+
+static int	READ_END = 0;
+static int	WRITE_END = 1;
+
+#if 0
+/*
+  Utility function to split the command line into a format
+  suitable for execvp(). This function dynamically allocates
+  memory for the strings and the argv array of pointers.
+  Call free_cmdline() when the returned strings are no longer
+  needed.
+*/
+static char**
+parse_cmdline(const char *cmd)
+{
+	char	**argv;
+	char	*arg_space;
+	char	*p;
+	int	arg_count, i;
+
+	/*
+	  make a first pass, counting arguments and delimiting
+	  with '\0's
+	*/
+	arg_space = strdup(cmd);
+	arg_count = 0;
+	p = arg_space;
+	for (;;) {
+		while (*p == ' ') p++;
+		if (*p == '\0') break;
+		arg_count++;
+		while (*p != ' ' && *p != '\0') p++;
+		if (*p == '\0') break;
+		*p = '\0';
+		p++;
+	}
+	if (arg_count == 0) {
+		// TODO: right debug level???
+		dprintf(D_FULLDEBUG, "my_popen: empty command line\n");
+		free(arg_space);
+		return NULL;
+	}
+	
+	/* second pass - allocate argv array and fill it in */
+	argv = (char**)malloc((arg_count + 1) * sizeof(char *));
+	p = arg_space;
+	i = 0;
+	do {
+		while(*p == ' ') p++;
+		argv[i] = p;
+		p += strlen(p) + 1;
+	} while (++i < arg_count);
+	argv[arg_count] = NULL;
+
+	return argv;
+}
+
+static void
+free_cmdline(char **args)
+{
+	int i;
+
+	/* free the individual strings */
+	for (i = 0; args[i] != NULL; i++)
+		free(args[i]);
+
+	/* free the array of pointers */
+	free(args);
+}
+#endif
+
+FILE *
+my_popenv( char *const args[], const char * mode )
+{
+	int	pipe_d[2];
+	int	parent_reads;
+	uid_t	euid;
+	gid_t	egid;
+	pid_t	pid;
+	FILE*	retp;
 
 		/* Figure out who reads and who writes on the pipe */
 	parent_reads = mode[0] == 'r';
 
-		/* Creat the pipe */
+		/* Create the pipe */
 	if( pipe(pipe_d) < 0 ) {
 		return NULL;
 	}
 
 		/* Create a new process */
-	if( (ChildPid=fork()) < 0 ) {
+	if( (pid=fork()) < 0 ) {
 			/* Clean up file descriptors */
 		close( pipe_d[0] );
 		close( pipe_d[1] );
@@ -84,7 +410,8 @@ my_popen( const char *cmd, const char * mode )
 	}
 
 		/* The child */
-	if( ChildPid == 0 ) {
+	if( pid == 0 ) {
+
 		if( parent_reads ) {
 				/* Close stdin, dup pipe to stdout */
 			close( pipe_d[READ_END] );
@@ -117,30 +444,51 @@ my_popen( const char *cmd, const char * mode )
 		setgid( egid );
 		setuid( euid );
 
-		execl( "/bin/sh", "sh", "-c", cmd, 0 );
+		execvp(args[0], args);
 		_exit( ENOEXEC );		/* This isn't safe ... */
 	}
 
 		/* The parent */
 	if( parent_reads ) {
 		close( pipe_d[WRITE_END] );
-		return( fdopen(pipe_d[READ_END],mode) );
+		retp = fdopen(pipe_d[READ_END],mode);
 	} else {
 		close( pipe_d[READ_END] );
-		return( fdopen(pipe_d[WRITE_END],mode) );
+		retp = fdopen(pipe_d[WRITE_END],mode);
 	}
+	add_child(retp, pid);
+	return retp;
 }
-		
+
+#if 0
+FILE*
+my_popen(const char *cmd, const char *mode)
+{
+	char **args;
+	FILE *fp;
+
+	args = parse_cmdline(cmd);
+	fp = my_popenv(args, mode);
+	free_cmdline(args);
+
+	return fp;
+}
+#endif
+
 int
 my_pclose(FILE *fp)
 {
 	int			status;
+	pid_t			pid;
+
+		/* Pop the child off our list */
+	pid = remove_child(fp);
 
 		/* Close the pipe */
 	(void)fclose( fp );
 
 		/* Wait for child process to exit and get its status */
-	while( waitpid(ChildPid,&status,0) < 0 ) {
+	while( waitpid(pid,&status,0) < 0 ) {
 		if( errno != EINTR ) {
 			status = -1;
 			break;
@@ -151,6 +499,7 @@ my_pclose(FILE *fp)
 	return status;
 }
 
+pid_t ChildPid = 0;
 
 /*
   This is similar to the UNIX system(3) call, except it doesn't invoke
@@ -261,4 +610,41 @@ my_spawnv( const char* cmd, char *const argv[] )
 		/* Now return status from child process */
 	ChildPid = 0;
 	return status;
+}
+
+#endif // ndef WIN32
+
+/*
+  These are implementations of system(3) that do not call out to
+  the shell. They are implemented on top of my_popen. Beware that
+  for my_system(const char*) , we split the command line into
+  an argv on spaces only (so no quoting or other shell
+  fanciness). On Windows, we just pass the given command line
+  on to CreateProcess. The my_systemv(char *const args[])
+  function works well on both platforms and is much preferred.
+*/
+
+#if 0
+int
+my_system(const char *cmd)
+{
+	FILE *fp;
+
+	fp = my_popen(cmd, "w");
+	if (fp == NULL)
+		return -1;
+
+	return my_pclose(fp);
+}
+#endif
+
+int my_systemv(char *const args[])
+{
+	FILE *fp;
+
+	fp = my_popenv(args, "w");
+	if (fp == NULL)
+		return -1;
+
+	return my_pclose(fp);
 }

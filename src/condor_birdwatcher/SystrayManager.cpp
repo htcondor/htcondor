@@ -155,7 +155,7 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 			}
 			else if (wParam == 5) // vacate all
 			{
-				strLogMsg = "Got vacate  command";
+				strLogMsg = "Got vacate command";
 				system("condor_vacate");
 			}
 			else if (wParam == 6)
