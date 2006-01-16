@@ -650,6 +650,14 @@ SOURCE="..\src\condor_c++_util\MyString.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\net_string_list.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\net_string_list.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\ntsysinfo.C"
 # End Source File
 # Begin Source File
