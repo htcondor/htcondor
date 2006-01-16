@@ -29,7 +29,7 @@
 
 
 NetStringList::NetStringList(const char *s, const char *delim ) 
-	: StringList::StringList(s,delim)
+	: StringList(s,delim)
 {
 		// nothing else to do
 }
