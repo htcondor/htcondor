@@ -64,6 +64,7 @@ CLEAN :
 	-@erase "$(INTDIR)\ltrunc.obj"
 	-@erase "$(INTDIR)\match_prefix.obj"
 	-@erase "$(INTDIR)\mkargv.obj"
+	-@erase "$(INTDIR)\my_popen.obj"
 	-@erase "$(INTDIR)\nullfile.obj"
 	-@erase "$(INTDIR)\printf_format.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
@@ -157,7 +158,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\win32_posix.obj"
+	"$(INTDIR)\win32_posix.obj" \
+	"$(INTDIR)\my_popen.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -203,6 +205,7 @@ CLEAN :
 	-@erase "$(INTDIR)\ltrunc.obj"
 	-@erase "$(INTDIR)\match_prefix.obj"
 	-@erase "$(INTDIR)\mkargv.obj"
+	-@erase "$(INTDIR)\my_popen.obj"
 	-@erase "$(INTDIR)\nullfile.obj"
 	-@erase "$(INTDIR)\printf_format.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
@@ -295,7 +298,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\win32_posix.obj"
+	"$(INTDIR)\win32_posix.obj" \
+	"$(INTDIR)\my_popen.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -522,6 +526,12 @@ SOURCE=..\src\condor_util_lib\match_prefix.c
 SOURCE=..\src\condor_util_lib\mkargv.c
 
 "$(INTDIR)\mkargv.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_util_lib\my_popen.c
+
+"$(INTDIR)\my_popen.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
