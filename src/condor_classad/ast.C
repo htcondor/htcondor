@@ -1544,8 +1544,6 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			successful_eval = FunctionGetTime(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "random")) {
 			successful_eval = FunctionRandom(number_of_args, evaluated_args, result);
-		} else if (!strcasecmp(name, "script")) {
-			successful_eval = FunctionScript(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "_debug_function_")) {
             successful_eval = FunctionClassadDebugFunction(number_of_args, evaluated_args, result);
         }
@@ -1578,123 +1576,6 @@ bool string_is_all_whitespace(char *s)
 		}
 	}
 	return is_all_whitespace;
-}
-
-int Function::FunctionScript(
-	int number_of_args,         // IN:  size of evaluated args array
-	EvalResult *evaluated_args, // IN:  the arguments to the function
-	EvalResult *result)         // OUT: the result of calling the function
-{
-	int       eval_succeeded;
-	char      *script_directory;
-	MyString  command_line;
-
-	result->i = 0;
-	result->type = LX_ERROR;
-	eval_succeeded = TRUE;
-    script_directory = NULL;
-
-	if (   number_of_args >= 1 
-		&& evaluated_args[0].type == LX_STRING
-		&& (script_directory = param("CLASSAD_SCRIPT_DIRECTORY")) != NULL){
-		
-		command_line = script_directory;
-		command_line += '/';
-		command_line += evaluated_args[0].s;
-
-        free(script_directory);
-        script_directory = NULL;
-
-		struct stat stat_info;
-		if (stat(command_line.Value(), &stat_info)) {
-			eval_succeeded = FALSE;
-		} else {
-
-			command_line += ' ';
-
-			for (int i = 1; i < number_of_args; i++) {
-				char temp_string[128];
-				
-				switch (evaluated_args[i].type) {
-				case LX_INTEGER:
-					sprintf(temp_string, "%d", evaluated_args[i].i);
-					command_line += temp_string;
-					break;
-				case LX_FLOAT:
-					sprintf(temp_string, "%f", evaluated_args[i].f);
-					command_line += temp_string;
-					break;
-				case LX_STRING:
-					command_line += '\"';
-					command_line += evaluated_args[i].s;
-					command_line += '\"';
-					break;
-				default:
-					eval_succeeded = FALSE;
-					i = number_of_args; // force out of the loop
-					break;
-				}
-				command_line += ' ';
-			}
-
-			if (eval_succeeded) {
-				FILE *script_stream;
-				char script_character;
-				MyString script_output;
-
-				// Execute the script, using popen(). 
-				// This has security implications, I know. Given that this
-				// is prototype code, I checked if the executable exists, and
-				// I quote the string arguments, I'm not too worried about it,
-				// even though I probably should be.
-				script_stream = popen(command_line.Value(), "r");
-				if (script_stream == NULL) {
-					eval_succeeded = FALSE;
-				} else {
-					// Read the output from the script, up to, but not
-					// including the first newline. Everything after that
-					// newline is ignored.
-					while ((script_character = fgetc(script_stream)) != EOF) {
-						if (script_character == '\n') {
-							break;
-						} else {
-							script_output += script_character;
-						}
-					}
-					pclose(script_stream);
-
-					// We interpret the result by seeing if standard
-					// functions can interpret them. We check if it's an
-					// integer first: if there is a decimal it fails. (If we
-					// checked if it was a float first, it would succeed even 
-					// if it was a vanillia integer.) If both integer and 
-					// float fail, it's a string.
-					const char   *start;
-					char         *end;
-					start = script_output.Value();
-
-					long long_result = strtol(start, &end, 10);
-					if (start != end && string_is_all_whitespace(end)) {
-						result->i = long_result;
-						result->type = LX_INTEGER;
-					} else {
-						double real_result = strtod(start, &end);
-						if (start != end && string_is_all_whitespace(end)) {
-							result->f = real_result;
-							result->type = LX_FLOAT;
-						} else {
-							result->s = strnewp(script_output.Value());
-							result->type = LX_STRING;
-						}
-					}
-				}
-			} else {
-				eval_succeeded = FALSE;
-			}
-		}
-	}
-
-	return eval_succeeded;
 }
 
 #ifdef CLASSAD_FUNCTIONS

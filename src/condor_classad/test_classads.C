@@ -47,7 +47,7 @@ extern StringSpace classad_string_space; // for debugging only!
 char *classad_strings[] = 
 {
 #ifdef CLASSAD_FUNCTIONS
-	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', E=script(\"testscript\";\"|/dev/zero\";3), G=GetTime(1), H=foo(1)",
+	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', G=GetTime(1), H=foo(1)",
 #else
 	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', E=TRUE",
 #endif
@@ -1467,10 +1467,7 @@ static void test_functions(
 	char   big_string[1024];
 	int    integer;
     float  real;
-	char classad_string[] = "A=script(\"scriptfloat\"),"
-                            "B=script(\"scriptinteger\"),"
-	                        "C=script(\"scriptstring\"; \"|/dev/zero\"),"
-	                        "D=GetTime(),"
+	char classad_string[] = "D=GetTime(),"
 		                    "E=sharedstring(),"
                             "G=sharedinteger(2),"
 	                        "H=sharedfloat(3.14)";
@@ -1487,36 +1484,6 @@ static void test_functions(
 		printf("Parsed ClassAd for testing functions in line %d\n", 
 			   __LINE__);
 		results->AddResult(true);
-
-		if (classad->EvalFloat("A", NULL, real)) {
-			printf("Passed: Evaluting scriptfloat gives: %f in line %d\n", 
-				   real, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed to evaluate scriptfloat in line %d\n",
-				   __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalInteger("B", NULL, integer)) {
-			printf("Passed: Evaluting scriptinteger gives: %d in line %d\n", 
-				   integer, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating scriptinteger in line %d\n",
-				   __LINE__);
-			results->AddResult(false);
-		}
-
-		if (classad->EvalString("C", NULL, big_string)) {
-			printf("Passed: Evaluting scriptstring gives: '%s', in line %d\n", 
-				   big_string, __LINE__);
-			results->AddResult(true);
-		} else {
-			printf("Failed: Evaluating scriptstring in line %d\n",
-				   __LINE__);
-			results->AddResult(false);
-		} 
 
 		if (classad->EvalInteger("D", NULL, integer)) {
 			printf("Passed: Evaluting gettime function gives: %d in line %d\n", 
