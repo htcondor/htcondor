@@ -34,6 +34,7 @@ typedef pid_t child_handle_t;
 #define INVALID_CHILD_HANDLE ((pid_t)-1)
 #endif
 
+/* We manage outstanding children with a simple linked list. */
 struct popen_entry {
 	FILE* fp;
 	child_handle_t ch;
@@ -71,20 +72,19 @@ static child_handle_t remove_child(FILE* fp)
 
   FILE *my_popenv(char *const args[]);
 
-  These are some popen(3)-like functions that intentionally avoid
+  This is a popen(3)-like function that intentionally avoids
   calling out to the shell in order to limit what can be done for
-  security reasons. Please note that these do not intent to behave
-  in the same way as a normal popen, they exist as a convenience. 
+  security reasons. Please note that this does not intend to behave
+  in the same way as a normal popen, it exists as a convenience. 
   
-  The my_popen(consr char*) version on UNIX parses the command line
-  into an argv using spaces as delimiters, so it should not be used
-  if it's possible that an argument could have space it in (i.e. a
-  pathname with spaces). The my_popenv(char *const args[]) version is
-  preferred since it works well on both platforms.
- 
-  These functions are careful in how they wait for their children's
-  status so that they don't reap status information for other processes
-  which the calling code may want to reap.
+  This function is careful in how it waits for its children's
+  status so that it doesn't reap status information for other
+  processes which the calling code may want to reap.
+
+  FIXME: The windows version of my_popenv() does not support
+  arguments that contain double quotes or end in a backslash.
+  This can be fixed by using the ArgList class to generate the
+  command line.
 
   However, we do *NOT* "eat" SIGCHLD, since a) SIGCHLD is
   probably blocked when this method is invoked, b) there are cases
@@ -106,6 +106,8 @@ static child_handle_t remove_child(FILE* fp)
   Utility function to build a command line suitable for Create_Process.
   We quote each argument in order to handle spaces in args. The pointer
   returned from this function should be free()d when no longer needed.
+  This function fails (returns NULL) if any argument contains double
+  quotes or ends in a backslash.
 */
 static char*
 build_cmdline(char *const args[])
@@ -139,10 +141,10 @@ build_cmdline(char *const args[])
 		*(dstp++) = '\"';
 		srcp = args[i];
 		while (*srcp != '\0') {
-			*(dstp++) = *(srcp++);
 			if (*(srcp) == '\"') {
 				illegal = 1;
 			}
+			*(dstp++) = *(srcp++);
 		}
 		if (*(dstp - 1) == '\\') {
 			illegal = 1;
@@ -316,73 +318,6 @@ my_pclose(FILE *fp)
 static int	READ_END = 0;
 static int	WRITE_END = 1;
 
-#if 0
-/*
-  Utility function to split the command line into a format
-  suitable for execvp(). This function dynamically allocates
-  memory for the strings and the argv array of pointers.
-  Call free_cmdline() when the returned strings are no longer
-  needed.
-*/
-static char**
-parse_cmdline(const char *cmd)
-{
-	char	**argv;
-	char	*arg_space;
-	char	*p;
-	int	arg_count, i;
-
-	/*
-	  make a first pass, counting arguments and delimiting
-	  with '\0's
-	*/
-	arg_space = strdup(cmd);
-	arg_count = 0;
-	p = arg_space;
-	for (;;) {
-		while (*p == ' ') p++;
-		if (*p == '\0') break;
-		arg_count++;
-		while (*p != ' ' && *p != '\0') p++;
-		if (*p == '\0') break;
-		*p = '\0';
-		p++;
-	}
-	if (arg_count == 0) {
-		// TODO: right debug level???
-		dprintf(D_FULLDEBUG, "my_popen: empty command line\n");
-		free(arg_space);
-		return NULL;
-	}
-	
-	/* second pass - allocate argv array and fill it in */
-	argv = (char**)malloc((arg_count + 1) * sizeof(char *));
-	p = arg_space;
-	i = 0;
-	do {
-		while(*p == ' ') p++;
-		argv[i] = p;
-		p += strlen(p) + 1;
-	} while (++i < arg_count);
-	argv[arg_count] = NULL;
-
-	return argv;
-}
-
-static void
-free_cmdline(char **args)
-{
-	int i;
-
-	/* free the individual strings */
-	for (i = 0; args[i] != NULL; i++)
-		free(args[i]);
-
-	/* free the array of pointers */
-	free(args);
-}
-#endif
-
 FILE *
 my_popenv( char *const args[], const char * mode )
 {
@@ -459,21 +394,6 @@ my_popenv( char *const args[], const char * mode )
 	add_child(retp, pid);
 	return retp;
 }
-
-#if 0
-FILE*
-my_popen(const char *cmd, const char *mode)
-{
-	char **args;
-	FILE *fp;
-
-	args = parse_cmdline(cmd);
-	fp = my_popenv(args, mode);
-	free_cmdline(args);
-
-	return fp;
-}
-#endif
 
 int
 my_pclose(FILE *fp)
@@ -615,30 +535,17 @@ my_spawnv( const char* cmd, char *const argv[] )
 #endif // ndef WIN32
 
 /*
-  These are implementations of system(3) that do not call out to
-  the shell. They are implemented on top of my_popen. Beware that
-  for my_system(const char*) , we split the command line into
-  an argv on spaces only (so no quoting or other shell
-  fanciness). On Windows, we just pass the given command line
-  on to CreateProcess. The my_systemv(char *const args[])
-  function works well on both platforms and is much preferred.
+  This is a system(3)-like function that does not call out to
+  the shell. It is implemented on top of my_popenv().
+
+  FIXME: The windows version of my_systemv() does not support
+  arguments that contain double quotes or end in a backslash.
+  This can be fixed by using the ArgList class to generate the
+  command line.
 */
 
-#if 0
 int
-my_system(const char *cmd)
-{
-	FILE *fp;
-
-	fp = my_popen(cmd, "w");
-	if (fp == NULL)
-		return -1;
-
-	return my_pclose(fp);
-}
-#endif
-
-int my_systemv(char *const args[])
+my_systemv(char *const args[])
 {
 	FILE *fp;
 
