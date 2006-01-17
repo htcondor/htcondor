@@ -828,6 +828,37 @@ XCOMM End translation of func(static_symlink_target)
 
 
 /***********************************************************************
+** "public" targets
+**
+** These rules are used for "make public", which is how we build our
+** actual releases (since "make release" has different legacy
+** meaning).  these are basically just used to simplify your
+** Imakefile, since anytime we want to put something in a tarball, we
+** usually have to have 3 rules for it (release, static and
+** stripped).  this way, we can just use a single target that invokes
+** the other 3 for us automatically.  in some cases, like if we want
+** to copy a separate ".static" version of something for "make
+** static", we'll still have to use the individual rules directly, but
+** in most cases, this will simplify a lot.
+**
+***********************************************************************/
+
+/*
+** Target is released by copying
+*/
+#ifndef public_copy_target
+#define public_copy_target(src,dir,dest,mode)	@@\
+XCOMM Begin translation of func(public_copy_target) @@\
+release_copy_target(src,dir,dest,mode) @@\
+strip_copy_target(src,dir,dest,mode) @@\
+static_copy_target(src,dir,dest,mode) @@\
+XCOMM End translation of func(public_copy_target)
+#endif /* public_copy_target */
+
+
+
+
+/***********************************************************************
 ** Misc link-related targets
 **
 ** These rules are used for creating hard and soft links for various
