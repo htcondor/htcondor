@@ -120,8 +120,12 @@ determining the state and activity of a machine.
 
 The \Expr{Requirements} expression is used for
 matching machines with jobs.
+
 The \Condor{startd} defines the
-\Expr{Requirements} expression by using the \Expr{START} expression.
+\Expr{Requirements} expression by logically \Bold{and}ing the 
+\Expr{START} expression and the \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}
+expression. 
+
 In situations where a machine wants to make itself
 unavailable for further matches, the \Expr{Requirements}
 expression is set to FALSE.  
@@ -175,6 +179,62 @@ response on the machines will not suffer.
 You probably would not notice Condor was running the jobs, 
 assuming you had enough free memory for the Condor jobs that there
 was little swapping.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Is-Valid-Checkpoint-Platform}
+The \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} expression}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{expression!\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}}
+
+When a standard universe jobs checkpoints, there are certain information
+embedded in the checkpoint which limits the machines able to resume
+the checkpoint. 
+Usually, these are obvious things like architecture or operating system,
+but they also can be very subtle, like the difference between normal,
+bigmem, and hugemem kernels for the Linux platform.
+
+At a high level, \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} is an expression
+which becomes true when a job's checkpoint platform matches the
+current checkpointing platform of the machine. 
+
+Since this expression is \Bold{and}ed with the \Expr{START} expression,
+it must also behave correctly when evaluating in the context of non
+standard universe jobs.
+
+The current default policy for this expression in prose is this:
+
+\Bold{ Allow all non standard universe jobs to run normally.  
+Only allow standard universe jobs to run on machines with the new checkpointing
+identification system. 
+Run the job if it is a standard universe job, but had not ever checkpointed 
+before. 
+If the standard universe job had checkpointed before, then make sure the 
+checkpoint platforms between the job and the machine match.}
+
+The default boolean expression for the above policy (which may be
+over ridden in the Condor configuration files) is:
+
+\begin{verbatim}
+IS_VALID_CHECKPOINT_PLATFORM = 
+(
+  ( (TARGET.JobUniverse == 1) == FALSE) ||
+
+  (
+    (MY.CheckpointPlatform =!= UNDEFINED) &&
+    (
+      (TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform) ||
+      (TARGET.NumCkpts == 0)
+    )
+  )
+)
+\end{verbatim}
+
+The reason why \Expr{IS\_VALID\_CHECKPOINT\_PLATFORM}
+is a seperate policy expression is because the complexity of
+\Expr{IS\_VALID\_CHECKPOINT\_PLATFORM} can be very high and while this
+functionality is conceptually seperate from the normal \Expr{START}
+policies usually constructed, it is also a part of the \Expr{Requirements}
+to allow the job to run.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Rank-Expression}
