@@ -253,6 +253,10 @@ SOURCE=..\src\condor_util_lib\my_getopt.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\my_popen.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\nullfile.c
 # End Source File
 # Begin Source File

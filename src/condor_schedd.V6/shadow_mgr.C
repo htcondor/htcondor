@@ -254,14 +254,12 @@ ShadowMgr::makeShadow( const char* path )
 {
 	Shadow* new_shadow;
 	FILE* fp;
-	MyString cmd;
-	cmd += path;
-	cmd += " -classad";
+	char *args[] = {const_cast<char*>(path), "-classad", NULL};
 	char buf[1024];
 
 		// first, try to execute the given path with a "-classad"
 		// option, and grab the output as a ClassAd
-	fp = popen( cmd.Value(), "r" );
+	fp = my_popenv( args, "r" );
 
 	if( ! fp ) {
 		dprintf( D_ALWAYS, "Failed to execute %s, ignoring\n", path );
@@ -275,11 +273,11 @@ ShadowMgr::makeShadow( const char* path )
 			dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
 					 "ignoring invalid shadow\n", buf );
 			delete( ad );
-			pclose( fp );
+			my_pclose( fp );
 			return NULL;
 		}
 	}
-	pclose( fp );
+	my_pclose( fp );
 	if( ! read_something ) {
 		dprintf( D_ALWAYS, "\"%s -classad\" did not produce any output, "
 				 "ignoring\n", path ); 

@@ -236,6 +236,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\my_subsystem.obj" \
 	"$(INTDIR)\my_username.obj" \
 	"$(INTDIR)\MyString.obj" \
+	"$(INTDIR)\net_string_list.obj" \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\pgsqldatabase.obj" \
@@ -260,8 +261,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\net_string_list.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -475,6 +475,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\my_subsystem.obj" \
 	"$(INTDIR)\my_username.obj" \
 	"$(INTDIR)\MyString.obj" \
+	"$(INTDIR)\net_string_list.obj" \
 	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\pgsqldatabase.obj" \
@@ -499,8 +500,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\net_string_list.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<

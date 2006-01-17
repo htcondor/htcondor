@@ -749,6 +749,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 	dprintf( D_ALWAYS, "Directory: about to call \"%s\" as %s\n",
 			 rm_buf.Value(), log_msg );
 #elif defined( WIN32 )
+		// we use system here instead of my_system since rmdir is a shell command
 		rval = system( rm_buf.Value() );
 #else
 		rval = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );

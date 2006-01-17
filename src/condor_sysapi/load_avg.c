@@ -742,14 +742,15 @@ lookup_load_avg_via_uptime()
 	 *  next number.  This is the number we want.
 	 */
 	if (uptime_path != NULL) {
-		if ((output_fp = popen(uptime_path, "r")) == NULL) {
+		char *args = {uptime_path, NULL};
+		if ((output_fp = my_popenv(args, "r")) == NULL) {
 			return DEFAULT_LOADAVG;
 		}
 		
 		do { 
 			if (fscanf(output_fp, "%s", word) == EOF) {
 				dprintf(D_ALWAYS,"can't get \"average:\" from uptime\n");
-				pclose(output_fp);
+				my_pclose(output_fp);
 				return DEFAULT_LOADAVG;
 			}
 			
@@ -761,7 +762,7 @@ lookup_load_avg_via_uptime()
 				 */
 				if (fscanf(output_fp, "%f", &loadavg) != 1) {
 					dprintf(D_ALWAYS, "can't read loadavg from uptime\n");
-					pclose(output_fp);
+					my_pclose(output_fp);
 					return DEFAULT_LOADAVG;
 				}
 				
@@ -771,7 +772,7 @@ lookup_load_avg_via_uptime()
 				 *  We check if this is the case and use fclose instead.
 				 *  -- Ajitk
 				 */
-				pclose(output_fp);
+				my_pclose(output_fp);
 				return loadavg;
 			}
 		} while (!feof(output_fp)); 
@@ -780,7 +781,7 @@ lookup_load_avg_via_uptime()
 		 *  Reached EOF before getting at load average!  -- Ajitk
 		 */
         
-		pclose(output_fp);
+		my_pclose(output_fp);
 	}
 	
 	/* not reached */
