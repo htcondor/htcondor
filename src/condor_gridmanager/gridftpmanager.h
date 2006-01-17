@@ -24,46 +24,64 @@
 #ifndef __GRIDFTPMANAGER_H__
 #define __GRIDFTPMANAGER_H__
 
-class GridftpServer {
-	friend class GridftpManager;
- public:
-	const char * GetAddress();
-	int GetState();
-	
 
-protected:
-	GridftpServer();
+#include "gridmanager.h"
+#include "proxymanager.h"
+#include "gt4job.h"
+
+class GT4Job;
+
+class GridftpServer : public Service
+{
+ protected:
+	GridftpServer( Proxy *proxy );
 	~GridftpServer();
-	
-	int StdoutReady();
-	void SetState(int state);
 
-	int m_retry_count;
-	int m_state;
-
-};
-
-
-class GridftpManager {
  public:
-	GridftpManager();
-	~GridftpManager();
+	static GridftpServer *FindOrCreateServer( Proxy *proxy );
+	static void Reconfig();
 
-	GridftpServer * CreateNew();
-	GrdiftpServer * Restart();
-	GridftpServer * FindOrCreate();
-
-	void ShutdownAll();
+	void RegisterClient( int notify_tid, const char *req_url_base = NULL );
+	void UnregisterClient( int notify_tid );
+	bool IsEmpty();
+	const char *GetUrlBase();
+	const char *GetErrorMessage();
+	bool UseSelfCred();
 
  protected:
-	void Reaper(Service*,int pid,int status);
-	void Shutdown (GridftpServer * gridftp);
-	
-	GridftpServer * m_gridftp;
+	static bool ScanSchedd();
+	static int UpdateLeases();
 
+	static HashTable <HashKey, GridftpServer *> m_serversByProxy;
+	static bool m_initialScanDone;
+	static int m_updateLeasesTid;
+	static bool m_configRead;
+	static char *m_configUrlBase;
 
+	void CheckServerSoon( int delta = 0 );
+	int CheckServer();
+	bool SubmitServerJob();
+	bool ReadUrlBase();
+	int CheckJobStatus();
+	void CheckProxy();
+	bool CheckPortError();
+	bool RemoveJob();
+
+	int m_checkServerTid;
+	Proxy *m_proxy;
+	char *m_urlBase;
+	char *m_requestedUrlBase;
+	bool m_canRequestUrlBase;
+	int m_refCount;
+	char *m_userLog;
+	char *m_outputFile;
+	char *m_errorFile;
+	char *m_proxyFile;
+	int m_proxyExpiration;
+	SimpleList<int> m_registeredClients;
+	PROC_ID m_jobId;
+	MyString m_errorMessage;
+	int m_lastSubmitAttempt;
 };
-
-
 
 #endif

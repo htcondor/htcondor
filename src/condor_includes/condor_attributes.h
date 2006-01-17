@@ -142,6 +142,9 @@ const char ATTR_X509_USER_PROXY          [] = "x509userproxy";
 const char ATTR_X509_USER_PROXY_SUBJECT	 [] = "x509userproxysubject";
 const char ATTR_GLOBUS_JOBMANAGER_TYPE   []	= "JobmanagerType";	// for gt4
 const char ATTR_GLOBUS_SUBMIT_ID	     [] = "GlobusSubmitId"; // for gt4
+const char ATTR_GRIDFTP_SERVER_JOB       [] = "GridftpServerJob";
+const char ATTR_GRIDFTP_URL_BASE         [] = "GridftpUrlBase";
+const char ATTR_REQUESTED_GRIDFTP_URL_BASE [] = "RequestedGridftpUrlBase";
 const char ATTR_GRID_RESOURCE			 [] = "GridResource";
 const char ATTR_GRID_JOB_ID				 [] = "GridJobId";
 // ckireyev myproxy

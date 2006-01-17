@@ -30,6 +30,8 @@
 #include "condor_attributes.h"
 #include "sig_name.h"
 #include "exit.h"
+#include "enum_utils.h"
+#include "condor_adtypes.h"
 
 
 /*
@@ -211,4 +213,114 @@ printExitString( ClassAd* ad, int exit_reason, MyString &str )
 		free( reason_str );
 	}		
 	return true;
+}
+
+/* Utility function to create a generic job ad. The caller can then fill
+ * in the relevant details.
+ */
+ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
+{
+	ClassAd *job_ad = new ClassAd();
+
+	job_ad->SetMyTypeName(JOB_ADTYPE);
+	job_ad->SetTargetTypeName(STARTD_ADTYPE);
+
+	if ( owner ) {
+		job_ad->Assign( ATTR_OWNER, owner );
+	} else {
+		job_ad->AssignExpr( ATTR_OWNER, "Undefined" );
+	}
+	job_ad->Assign( ATTR_JOB_UNIVERSE, universe );
+	job_ad->Assign( ATTR_JOB_CMD, cmd );
+
+	job_ad->Assign( ATTR_Q_DATE, (int)time(NULL) );
+	job_ad->Assign( ATTR_COMPLETION_DATE, 0 );
+
+	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
+
+		// This is a magic cookie, see how condor_submit sets it
+	job_ad->Assign( ATTR_CORE_SIZE, -1 );
+
+		// Are these ones really necessary?
+	job_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
+	job_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+
+	job_ad->Assign( ATTR_NUM_CKPTS, 0 );
+	job_ad->Assign( ATTR_NUM_RESTARTS, 0 );
+	job_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
+	job_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
+	job_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
+	job_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
+	job_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
+
+	job_ad->Assign( ATTR_JOB_ROOT_DIR, "/" );
+
+	job_ad->Assign( ATTR_MIN_HOSTS, 1 );
+	job_ad->Assign( ATTR_MAX_HOSTS, 1 );
+	job_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
+
+	job_ad->Assign( ATTR_WANT_REMOTE_SYSCALLS, false );
+	job_ad->Assign( ATTR_WANT_CHECKPOINT, false );
+	job_ad->Assign( ATTR_WANT_REMOTE_IO, true );
+
+	job_ad->Assign( ATTR_JOB_STATUS, IDLE );
+	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+
+	job_ad->Assign( ATTR_JOB_PRIO, 0 );
+	job_ad->Assign( ATTR_NICE_USER, false );
+
+	job_ad->Assign( ATTR_JOB_ENVIRONMENT1, "" );
+
+	job_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
+
+	job_ad->Assign( ATTR_KILL_SIG, "SIGTERM" );
+
+	job_ad->Assign( ATTR_IMAGE_SIZE, 0 );
+
+	job_ad->Assign( ATTR_JOB_IWD, "/tmp" );
+	job_ad->Assign( ATTR_JOB_INPUT, NULL_FILE );
+	job_ad->Assign( ATTR_JOB_OUTPUT, NULL_FILE );
+	job_ad->Assign( ATTR_JOB_ERROR, NULL_FILE );
+
+		// Not sure what to do with these. If stdin/out/err is unset in the
+		// submit file, condor_submit sets In/Out/Err to the NULL_FILE and
+		// these transfer attributes to false. Otherwise, it leaves the
+		// transfer attributes unset (which is treated as true). If we
+		// explicitly set these to false here, our caller needs to reset
+		// them to true if it changes In/Out/Err and wants the default
+		// behavior of transfering them. This will probably be a common
+		// oversite. Leaving them unset should be safe if our caller doesn't
+		// change In/Out/Err.
+	//job_ad->Assign( ATTR_TRANSFER_INPUT, false );
+	//job_ad->Assign( ATTR_TRANSFER_OUTPUT, false );
+	//job_ad->Assign( ATTR_TRANSFER_ERROR, false );
+	//job_ad->Assign( ATTR_TRANSFER_EXECUTABLE, false );
+
+	job_ad->Assign( ATTR_BUFFER_SIZE, 512*1024 );
+	job_ad->Assign( ATTR_BUFFER_BLOCK_SIZE, 32*1024 );
+
+	job_ad->Assign( ATTR_SHOULD_TRANSFER_FILES,
+					getShouldTransferFilesString( STF_YES ) );
+	job_ad->Assign( ATTR_TRANSFER_FILES, "ONEXIT" );
+	job_ad->Assign( ATTR_WHEN_TO_TRANSFER_OUTPUT,
+					getFileTransferOutputString( FTO_ON_EXIT ) );
+
+	job_ad->Assign( ATTR_REQUIREMENTS, true );
+
+	job_ad->Assign( ATTR_PERIODIC_HOLD_CHECK, false );
+	job_ad->Assign( ATTR_PERIODIC_REMOVE_CHECK, false );
+	job_ad->Assign( ATTR_PERIODIC_RELEASE_CHECK, false );
+
+	job_ad->Assign( ATTR_ON_EXIT_HOLD_CHECK, false );
+	job_ad->Assign( ATTR_ON_EXIT_REMOVE_CHECK, true );
+
+	job_ad->Assign( ATTR_JOB_ARGUMENTS1, "" );
+
+	job_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, false );
+
+	return job_ad;
 }

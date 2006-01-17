@@ -42,3 +42,11 @@ int findHoldKillSig( ClassAd* ad );
 // the appropriate string describing the fate of the job...
 bool printExitString( ClassAd* ad, int exit_reason, MyString &str );
 
+// Create an empty job ad, with sensible defaults for all of the attributes
+// that the schedd expects to be set, like condor_submit would set them.
+// owner, universe, and cmd are the only attributes that require an
+// explicit value. If NULL is passed for owner, the attribute is explicitly
+// set to Undefined, which tells the schedd to fill in the attribute. This
+// feature is only used by the soap interface currently.
+// The caller is responible for calling 'delete' on the returned ClassAd.
+ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd );

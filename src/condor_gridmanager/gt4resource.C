@@ -318,6 +318,9 @@ dprintf(D_FULLDEBUG,"    creating new ProxyDelegation\n");
 	return NULL;
 }
 
+// BUG: If proxy refresh fails, we go into an infinite loop of starting
+//   a set-lifetime, then starting a proxy refresh when we check on the
+//   set-lifetime.
 int GT4Resource::checkDelegation()
 {
 dprintf(D_FULLDEBUG,"*** checkDelegation()\n");

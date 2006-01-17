@@ -654,11 +654,16 @@ GT4_GAHP = $(SBIN)/gt4_gahp
 GT4_LOCATION = $(LIB)/gt4
 
 ##
-## gt4-gahp requires gridftp server. This should be the address of gridftp
-## server to use
+## gt4 gram requires a gridftp server to perform file transfers.
+## If GRIDFTP_URL_BASE is set, then Condor assumes there is a gridftp
+## server set up at that URL suitable for its use. Otherwise, Condor
+## will start its own gridftp servers as needed, using the binary
+## pointed at by GRIDFTP_SERVER. GRIDFTP_SERVER_WRAPPER points to a
+## wrapper script needed to properly set the path to the gridmap file.
 ##
-
-GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
+#GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
+GRIDFTP_SERVER = $(SBIN)/globus-gridftp-server
+GRIDFTP_SERVER_WRAPPER = $(SBIN)/gridftp_wrapper.sh
 
 ##
 ## The location of the wrapper for invoking the Unicore GAHP server

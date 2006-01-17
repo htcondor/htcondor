@@ -1,9 +1,10 @@
 NAME=condor_gridmanager
 GT3GAHP_WRAPPER_NAME = gt3_gahp
 GT4GAHP_WRAPPER_NAME = gt4_gahp
-all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) $(GT4GAHP_WRAPPER_NAME))
+#all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) $(GT4GAHP_WRAPPER_NAME))
 UNICOREGAHP_WRAPPER_NAME = unicore_gahp
-all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) $(UNICOREGAHP_WRAPPER_NAME))
+GRIDFTP_WRAPPER_NAME = gridftp_wrapper.sh
+all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) $(GT4GAHP_WRAPPER_NAME) $(UNICOREGAHP_WRAPPER_NAME) $(GRIDFTP_WRAPPER_NAME))
 
 #if WANT_ORACLE_UNIVERSE
 ORACLE_JOB_FLAGS = -DORACLE_UNIVERSE -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/demo -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/public
@@ -17,7 +18,7 @@ LIB = $(ORACLE_JOB_LIB) $(DAEMONCORE_LIB) $(STD_LIBS)
 
 soapobjs(gridmanager)
 
-OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt3job.o gt3resource.o gt4job.o gt4resource.o infnbatchjob.o mirrorjob.o mirrorresource.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o proxymanager.o gahp-client.o $(ORACLE_JOB_OBJ) basejob.o baseresource.o gridmanager_instantiate.o $(SOAP_OBJS)
+OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt3job.o gt3resource.o gt4job.o gt4resource.o infnbatchjob.o mirrorjob.o mirrorresource.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o proxymanager.o gahp-client.o $(ORACLE_JOB_OBJ) basejob.o baseresource.o gridftpmanager.o gridmanager_instantiate.o $(SOAP_OBJS)
 
 template_inst( gridmanager_instantiate.C, gridmanager_instantiate.o )
 
@@ -63,6 +64,14 @@ strip_copy_target($(GAHP_DIR)/gahp_server.dynamic,sbin,gahp_server,EXECUTABLE_MO
 release_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
 static_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
 strip_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
+
+release_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.dynamic,sbin,globus-gridftp-server,EXECUTABLE_MODE)
+static_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.static,sbin,globus-gridftp-server,EXECUTABLE_MODE)
+strip_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.dynamic,sbin,globus-gridftp-server,EXECUTABLE_MODE)
+
+release_copy_target($(GRIDFTP_WRAPPER_NAME),sbin,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
+static_copy_target($(GRIDFTP_WRAPPER_NAME),sbin,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
+strip_copy_target($(GRIDFTP_WRAPPER_NAME),sbin,$(GRIDFTP_WRAPPER_NAME),EXECUTABLE_MODE)
 
 grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
 	cat grid_monitor_wrapper grid_manager_monitor_agent > grid_monitor.sh

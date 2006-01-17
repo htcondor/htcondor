@@ -35,6 +35,7 @@
 
 #include "gridmanager.h"
 #include "gahp-client.h"
+#include "gridftpmanager.h"
 
 #include "globusjob.h"
 
@@ -431,6 +432,7 @@ Reconfig()
 
 	ReconfigProxyManager();
 	GahpReconfig();
+	GridftpServer::Reconfig();
 	BaseJob::BaseJobReconfig();
 
 	JobType *job_type;
