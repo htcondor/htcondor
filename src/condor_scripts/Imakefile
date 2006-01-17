@@ -2,51 +2,25 @@ all_target(condor_install condor_init condor_compile ld condor_configure)
 
 CFLAGS = $(STD_C_FLAGS)
 
-release_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
-release_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
-release_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
-release_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
-release_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
-release_copy_target(sshd.sh,libexec,sshd.sh,EXECUTABLE_MODE)
+public_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
+public_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
+public_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
+public_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
+public_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
+public_copy_target(sshd.sh,libexec,sshd.sh,EXECUTABLE_MODE)
 
 #if IS_CLIPPED
-release_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
+public_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
-release_copy_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
-release_copy_target(ld,lib,ld,EXECUTABLE_MODE)
+public_copy_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
+public_copy_target(ld,lib,ld,EXECUTABLE_MODE)
 release_link_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
-strip_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
-strip_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
-strip_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
-strip_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
+
 strip_copy_target(condor_clean_checkpoints,$(STRIP_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
-strip_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
-strip_copy_target(sshd.sh,libexec,sshd.sh,EXECUTABLE_MODE)
-
-#if IS_CLIPPED
-strip_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
-#else 
-strip_copy_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
-strip_copy_target(ld,lib,ld,EXECUTABLE_MODE)
-strip_link_target($(STRIP_DIR)/lib/ld,lib,real-ld)
-#endif /* IS_CLIPPED */
-
-static_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
-static_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
-static_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
-static_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
 static_copy_target(condor_clean_checkpoints,$(STATIC_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
-static_copy_target(condor_ssh,libexec,condor_ssh,EXECUTABLE_MODE)
-static_copy_target(sshd.sh,libexec,sshd.sh,EXECUTABLE_MODE)
-#if IS_CLIPPED
-static_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
-#else 
-static_copy_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
-static_copy_target(ld,lib,ld,EXECUTABLE_MODE)
-static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
-#endif /* IS_CLIPPED */
+
 
 #if ! IS_CLIPPED
 all_symlink_target(ld,real-ld)
@@ -102,31 +76,20 @@ all_symlink_target(/usr/lib/c++/ptcomp,ptcomp)
 all_symlink_target(/usr/lib/c++/ptlink,ptlink)
 #endif
 
-release_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
-strip_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
-static_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
+public_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
 
-release_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
-strip_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
-static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
+public_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 
 /* These Condor-C scripts are for EGEE gLite - eventually they 
    should go someplace other than BIN, but EGEE really wants 
    them there for the time being, until they can more easily
    change their packaging/deployment scripts - Todd 04/05 
    */
-release_copy_target(condorc-advertiser,libexec/glite,condorc-advertiser,EXECUTABLE_MODE)
-strip_copy_target(condorc-advertiser,libexec/glite,condorc-advertiser,EXECUTABLE_MODE)
-static_copy_target(condorc-advertiser,libexec/glite,condorc-advertiser,EXECUTABLE_MODE)
-release_copy_target(condorc-authorizer,libexec/glite,condorc-authorizer,EXECUTABLE_MODE)
-strip_copy_target(condorc-authorizer,libexec/glite,condorc-authorizer,EXECUTABLE_MODE)
-static_copy_target(condorc-authorizer,libexec/glite,condorc-authorizer,EXECUTABLE_MODE)
-release_copy_target(condorc-initialize,libexec/glite,condorc-initialize,EXECUTABLE_MODE)
-strip_copy_target(condorc-initialize,libexec/glite,condorc-initialize,EXECUTABLE_MODE)
-static_copy_target(condorc-initialize,libexec/glite,condorc-initialize,EXECUTABLE_MODE)
-release_copy_target(condorc-launcher,libexec/glite,condorc-launcher,EXECUTABLE_MODE)
-strip_copy_target(condorc-launcher,libexec/glite,condorc-launcher,EXECUTABLE_MODE)
-static_copy_target(condorc-launcher,libexec/glite,condorc-launcher,EXECUTABLE_MODE)
+public_copy_target(condorc-advertiser,libexec/glite,condorc-advertiser,EXECUTABLE_MODE)
+public_copy_target(condorc-authorizer,libexec/glite,condorc-authorizer,EXECUTABLE_MODE)
+public_copy_target(condorc-initialize,libexec/glite,condorc-initialize,EXECUTABLE_MODE)
+public_copy_target(condorc-launcher,libexec/glite,condorc-launcher,EXECUTABLE_MODE)
+
 
 clean::
 html:
