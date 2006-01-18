@@ -131,6 +131,16 @@ a file path is a full path -- paths of the form \File{"c:/"} were not
 recognized as full paths, which could lead to something being prepended
 to what was already a full path, thereby creating an invalid path.
 
+\item Fixed a problem with \AdAttr{WhenToTransferOutput}=ALWAYS.  The
+bug affected jobs that were evicted after producing one or more
+intermediate files that were removed by the job before finally running
+to completion in a subsequent run.  Condor was treating the missing
+intermediate files as an error and the job would typically keep
+running and failing until the user intervened.  In addition to fixing
+this bug, file transfer error messages are now propagated back to the
+shadow log and the user log, making it easier to debug problems
+related to file-transfers.
+
 \end{itemize}
 
 \noindent Known Bugs:
