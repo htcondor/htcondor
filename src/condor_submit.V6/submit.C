@@ -71,6 +71,7 @@
 #include "enum_utils.h"
 #include "setenv.h"
 #include "classad_hashtable.h"
+#include "filename_tools.h"
 
 #include "list.h"
 
@@ -1644,6 +1645,7 @@ SetTransferFiles()
 	char	 input_files[ATTRLIST_MAX_EXPRESSION];
 	char	 output_files[ATTRLIST_MAX_EXPRESSION];
 	StringList input_file_list(NULL, ",");
+	StringList output_file_list(NULL,",");
 	MyString output_remaps;
 
 	should_transfer = STF_YES;
@@ -1695,21 +1697,20 @@ SetTransferFiles()
 								"TransferOutputFiles" ); 
 	if( macro_value ) 
 	{
-		StringList files(macro_value,",");
-		files.rewind();
+		output_file_list.initializeFromString(macro_value);
+		output_file_list.rewind();
 		count = 0;
-		while ( (tmp_ptr=files.next()) ) {
+		while ( (tmp_ptr=output_file_list.next()) ) {
 			count++;
 			tmp = tmp_ptr;
 			if ( check_and_universalize_path(tmp,TransferOutputFiles) != 0) 
 			{
 				// we universalized the path, so update the string list
-				files.deleteCurrent();
-				files.insert(tmp.Value());
+				output_file_list.deleteCurrent();
+				output_file_list.insert(tmp.Value());
 			}
-			check_open(tmp.Value(), O_WRONLY|O_CREAT|O_TRUNC );
 		}
-		tmp_ptr = files.print_to_string();
+		tmp_ptr = output_file_list.print_to_string();
 		if ( count ) {
 			(void) sprintf (output_files, "%s = \"%s\"", 
 				ATTR_TRANSFER_OUTPUT_FILES, tmp_ptr);
@@ -1926,6 +1927,18 @@ SetTransferFiles()
 		MyString expr;
 		expr.sprintf("%s = \"%s\"",ATTR_TRANSFER_OUTPUT_REMAPS,output_remaps.Value());
 		InsertJobExpr(expr.Value());
+	}
+
+		// Check accessibility of output files.
+	output_file_list.rewind();
+	while ( (tmp_ptr=output_file_list.next()) ) {
+		// Apply filename remaps if there are any.
+		char remap_fname[_POSIX_PATH_MAX*3];
+		if(filename_remap_find(output_remaps.Value(),tmp_ptr,remap_fname)) {
+			tmp_ptr = remap_fname;
+		}
+
+		check_open(tmp_ptr, O_WRONLY|O_CREAT|O_TRUNC );
 	}
 }
 
