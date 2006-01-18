@@ -511,10 +511,12 @@ V6_7_14_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/nordugridgahp/1.0.0
 
 # Externals needed for V6_7_15 (added special header package which allows 
-# compiling of glibc 2.3.2 on a kernel 2.6.x linux machine)
+# compiling of glibc 2.3.2 on a kernel 2.6.x linux machine, and add a
+# new DRMAA external to replace src/condor_drmaa. )
 V6_7_15_EXT	-a V6_7_14_EXT \
 			externals/bundles/linuxlibcheaders \
-			externals/bundles/coredumper
+			externals/bundles/coredumper \
+			externals/bundles/drmaa/1.1
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_15_EXT
