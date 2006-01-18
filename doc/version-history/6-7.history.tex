@@ -88,6 +88,28 @@ the only backup data available is the output from \Condor{userprio} \Opt{-l}
 \item An updated DRMAA version is available on supported platforms.  The 
 previous DRMAA implementation has been removed.
 
+% Gnats PR 248, new per-job Stork user logs.
+% Implicitly added PR 278, which requires Stork user logs to
+% be owned by user, and not Stork server daemon.  Implicitly added PR 572, now
+% Stork user logs use standard Condor user log API.
+\item Added new per-job Stork user logs.  Stork user logs are now optional, and
+specified in the job submit file.  Stork now uses Condor user log output
+format, including optional XML format.  Previous, per-server Stork user log in
+\File{LOG/Stork.user\_log} is now deprecated, and will be removed in a future
+release.
+
+\item \Condor{dagman} now supports the new, per-job Stork user logs.
+"Old-style" Stork logs (specified with \Opt{-Storklog} on the
+\Condor{submit\_dag} command line) are supported for now, but this
+support will probably be eliminated in the 6.7.16 release.
+
+% Gnats PR 600.
+\item Added new per-job Stork input, output and error output file
+specifications.  Stork job output is now optional, and
+specified in the job submit file.  Previous, per-server Stork user log in 
+\File{LOG/Stork-module.stderr} and \File{LOG/Stork-module.stdout} has been
+removed.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
