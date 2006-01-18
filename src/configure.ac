@@ -1431,6 +1431,11 @@ else
   AC_SUBST(ext_glibc_version,UNUSED)
 fi
 
+# DRMAA only builds on RedHat 8.0, RedHat 9, and Sles8-ia64 platforms
+if test x$_cv_linux_distro = "xRH80" -o x$_cv_linux_distro = "xRH9" -o x$_cv_linux_distro = "xSLES81" ; then
+  CONDOR_EXTERNAL_VERSION([drmaa],[1.1])
+fi
+
 if test "$os" = "AIX" ; then
   # for now, we don't even have a krb5 1.3.1 external, so even though
   # that's what we think we want, we should just not use anything.
