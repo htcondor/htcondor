@@ -558,6 +558,17 @@ Env::getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const
 }
 
 bool
+Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) const
+{
+	if(getDelimitedStringV1Raw(result,NULL)) {
+		return true;
+	}
+	else {
+		return getDelimitedStringV2Quoted(result,error_msg);
+	}
+}
+
+bool
 Env::getDelimitedStringV2Raw(MyString *result,MyString *error_msg,bool mark_v2) const
 {
 	MyString var, val;

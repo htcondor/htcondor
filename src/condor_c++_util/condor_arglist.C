@@ -554,10 +554,29 @@ ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg)
 	return true;
 }
 
+bool
+ArgList::GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg)
+{
+	MyString v1_raw;
+	if(GetArgsStringV1Raw(&v1_raw,NULL)) {
+		V1RawToV1Wacked(v1_raw,result);
+		return true;
+	}
+	else {
+		return GetArgsStringV2Quoted(result,error_msg);
+	}
+}
+
 void
 ArgList::V2RawToV2Quoted(MyString const &v2_raw,MyString *result)
 {
 	result->sprintf_cat("\"%s\"",v2_raw.EscapeChars("\"",'\"').Value());
+}
+
+void
+ArgList::V1RawToV1Wacked(MyString const &v1_raw,MyString *result)
+{
+	(*result) += v1_raw.EscapeChars("\"",'\\');
 }
 
 bool

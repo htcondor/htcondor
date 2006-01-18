@@ -190,6 +190,11 @@ class ArgList {
 		// Create V2Quoted args string (i.e. enclosed in double-quotes).
 	bool GetArgsStringV2Quoted(MyString *result,MyString *error_msg);
 
+		// Create V1Wacked args string if possible; o.w. V2Quoted.  In
+		// other words, if possible, produce a string that is
+		// backward-compatible with older versions of condor_submit.
+	bool GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg);
+
 		// Create a V1 args string if possible.  o.w. V2, with
 		// necessary markings to make it correctly recognized as V2
 		// by AppendArgsV1or2Raw().
@@ -227,6 +232,10 @@ class ArgList {
 		// Convert V2Raw to V2Quoted string.
 		// In other words, enclose in double-quotes (and escape as necessary).
 	static void V2RawToV2Quoted(MyString const &v2_raw,MyString *result);
+
+		// Convert V1Raw to V1Wacked string.
+		// In other words, escape double-quotes with backwacks.
+	static void ArgList::V1RawToV1Wacked(MyString const &v1_raw,MyString *result);
 
 		// Convenience function for appending error messages.
 		// Each new message begins on a new line.
