@@ -92,6 +92,21 @@
 	"..\src\condor_gridmanager\proxymanager.h"\
 	
 
+..\src\condor_gridmanager\gridftpmanager.C : \
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\self_monitor.h"\
+	"..\src\condor_gridmanager\basejob.h"\
+	"..\src\condor_gridmanager\baseresource.h"\
+	"..\src\condor_gridmanager\gahp-client.h"\
+	"..\src\condor_gridmanager\gridftpmanager.h"\
+	"..\src\condor_gridmanager\gridmanager.h"\
+	"..\src\condor_gridmanager\gt4job.h"\
+	"..\src\condor_gridmanager\gt4resource.h"\
+	"..\src\condor_gridmanager\proxymanager.h"\
+	
+
 ..\src\condor_gridmanager\gridmanager.C : \
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
@@ -104,6 +119,7 @@
 	"..\src\condor_gridmanager\gahp-client.h"\
 	"..\src\condor_gridmanager\globusjob.h"\
 	"..\src\condor_gridmanager\globusresource.h"\
+	"..\src\condor_gridmanager\gridftpmanager.h"\
 	"..\src\condor_gridmanager\gridmanager.h"\
 	"..\src\condor_gridmanager\gt3job.h"\
 	"..\src\condor_gridmanager\gt3resource.h"\
@@ -168,6 +184,7 @@
 	"..\src\condor_gridmanager\basejob.h"\
 	"..\src\condor_gridmanager\baseresource.h"\
 	"..\src\condor_gridmanager\gahp-client.h"\
+	"..\src\condor_gridmanager\gridftpmanager.h"\
 	"..\src\condor_gridmanager\gridmanager.h"\
 	"..\src\condor_gridmanager\gt4job.h"\
 	"..\src\condor_gridmanager\gt4resource.h"\
@@ -182,6 +199,7 @@
 	"..\src\condor_gridmanager\basejob.h"\
 	"..\src\condor_gridmanager\baseresource.h"\
 	"..\src\condor_gridmanager\gahp-client.h"\
+	"..\src\condor_gridmanager\gridftpmanager.h"\
 	"..\src\condor_gridmanager\gridmanager.h"\
 	"..\src\condor_gridmanager\gt4job.h"\
 	"..\src\condor_gridmanager\gt4resource.h"\

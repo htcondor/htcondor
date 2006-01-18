@@ -144,6 +144,14 @@ SOURCE=..\src\condor_gridmanager\globusresource.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_gridmanager\gridftpmanager.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\gridftpmanager.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_gridmanager\gridmanager.C
 # End Source File
 # Begin Source File
