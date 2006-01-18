@@ -781,6 +781,7 @@ FileTransfer::DownloadFiles(bool blocking)
 void
 FileTransfer::ComputeFilesToSend()
 {
+	StringList final_files_to_send(NULL,",");
 	if (IntermediateFiles) delete(IntermediateFiles);
 	IntermediateFiles = NULL;
 	FilesToSend = NULL;
@@ -798,11 +799,7 @@ FileTransfer::ComputeFilesToSend()
 		// but also the files which have been modified during
 		// previous runs (i.e. the SpooledIntermediateFiles).
 		if ( m_final_transfer_flag && SpooledIntermediateFiles ) {
-			IntermediateFiles = 
-				new StringList(SpooledIntermediateFiles,",");
-			FilesToSend = IntermediateFiles;
-			EncryptFiles = EncryptOutputFiles;
-			DontEncryptFiles = DontEncryptOutputFiles;
+			final_files_to_send.initializeFromString(SpooledIntermediateFiles);
 		}
 	
 			// if desired_priv_state is PRIV_UNKNOWN, the Directory
@@ -824,10 +821,20 @@ FileTransfer::ComputeFilesToSend()
 							
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
+			bool send_it = false;
 			if ( dir.GetModifyTime() > last_download_time ) {
 				dprintf( D_FULLDEBUG, 
 						 "Sending changed file %s, mod=%ld, dow=%ld\n",	
 						 f, dir.GetModifyTime(), last_download_time );
+				send_it = true;
+			}
+			else if(final_files_to_send.contains(f)) {
+				dprintf( D_FULLDEBUG, 
+						 "Sending previously changed file %s, mod=%ld, dow=%ld\n",	
+						 f, dir.GetModifyTime(), last_download_time );
+				send_it = true;
+			}
+			if(send_it) {
 				if (!IntermediateFiles) {
 					// Initialize it with intermediate files
 					// which we already have spooled.  We want to send
@@ -1336,7 +1343,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 
 		if( final_transfer || IsClient() ) {
-			char remap_filename[_POSIX_PATH_MAX];
+			char remap_filename[_POSIX_PATH_MAX*3];
 			if(filename_remap_find(download_filename_remaps.Value(),filename,remap_filename)) {
 				if(!is_relative_to_cwd(remap_filename)) {
 					strcpy(fullname,remap_filename);
