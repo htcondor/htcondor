@@ -3,9 +3,56 @@
 ..\src\condor_mail\condor_email_main.cpp : \
 	"..\src\condor_mail\smtp.h"\
 	"..\src\condor_mail\StdAfx.h"\
+	"c:\program files\microsoft platform sdk\include\basetsd.h"\
+	"c:\program files\microsoft platform sdk\include\guiddef.h"\
+	"c:\program files\microsoft platform sdk\include\propidl.h"\
+	"c:\program files\microsoft platform sdk\include\reason.h"\
+	"c:\program files\microsoft platform sdk\include\shldisp.h"\
+	"c:\program files\microsoft platform sdk\include\shobjidl.h"\
+	"c:\program files\microsoft platform sdk\include\shtypes.h"\
+	"c:\program files\microsoft platform sdk\include\specstrings.h"\
+	"c:\program files\microsoft platform sdk\include\stralign.h"\
+	"c:\program files\microsoft platform sdk\include\tvout.h"\
 	
 
 ..\src\condor_mail\smtp.cpp : \
 	"..\src\condor_mail\smtp.h"\
 	"..\src\condor_mail\StdAfx.h"\
+	"c:\program files\microsoft platform sdk\include\basetsd.h"\
+	"c:\program files\microsoft platform sdk\include\guiddef.h"\
+	"c:\program files\microsoft platform sdk\include\propidl.h"\
+	"c:\program files\microsoft platform sdk\include\reason.h"\
+	"c:\program files\microsoft platform sdk\include\shldisp.h"\
+	"c:\program files\microsoft platform sdk\include\shobjidl.h"\
+	"c:\program files\microsoft platform sdk\include\shtypes.h"\
+	"c:\program files\microsoft platform sdk\include\specstrings.h"\
+	"c:\program files\microsoft platform sdk\include\stralign.h"\
+	"c:\program files\microsoft platform sdk\include\tvout.h"\
+	
+
+..\src\condor_util_lib\uuid_lib.WIN32.c : \
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_create_id.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"c:\program files\microsoft platform sdk\include\basetsd.h"\
+	"c:\program files\microsoft platform sdk\include\guiddef.h"\
+	"c:\program files\microsoft platform sdk\include\propidl.h"\
+	"c:\program files\microsoft platform sdk\include\reason.h"\
+	"c:\program files\microsoft platform sdk\include\specstrings.h"\
+	"c:\program files\microsoft platform sdk\include\stralign.h"\
+	"c:\program files\microsoft platform sdk\include\tvout.h"\
+	"c:\program files\microsoft platform sdk\include\winefs.h"\
 	

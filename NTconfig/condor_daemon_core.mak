@@ -25,9 +25,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_daemon_core - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -63,7 +60,40 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
 BSC32_SBRS= \
@@ -127,37 +157,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\accessdesktop.WIN32.obj" \
-	"$(INTDIR)\condor_ipverify.obj" \
-	"$(INTDIR)\condor_lock.obj" \
-	"$(INTDIR)\condor_lock_base.obj" \
-	"$(INTDIR)\condor_lock_file.obj" \
-	"$(INTDIR)\condor_lock_implementation.obj" \
-	"$(INTDIR)\daemon_core.obj" \
-	"$(INTDIR)\daemon_core_main.obj" \
-	"$(INTDIR)\datathread.obj" \
-	"$(INTDIR)\exphnd.WIN32.obj" \
-	"$(INTDIR)\httpget.obj" \
-	"$(INTDIR)\self_draining_queue.obj" \
-	"$(INTDIR)\self_monitor.obj" \
-	"$(INTDIR)\soap_core.obj" \
-	"$(INTDIR)\stdsoap2.obj" \
-	"$(INTDIR)\timer_manager.obj"
-
-"$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -188,6 +189,38 @@ LIB32_OBJS= \
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\accessdesktop.WIN32.obj" \
+	"$(INTDIR)\condor_ipverify.obj" \
+	"$(INTDIR)\condor_lock.obj" \
+	"$(INTDIR)\condor_lock_base.obj" \
+	"$(INTDIR)\condor_lock_file.obj" \
+	"$(INTDIR)\condor_lock_implementation.obj" \
+	"$(INTDIR)\daemon_core.obj" \
+	"$(INTDIR)\daemon_core_main.obj" \
+	"$(INTDIR)\datathread.obj" \
+	"$(INTDIR)\exphnd.WIN32.obj" \
+	"$(INTDIR)\httpget.obj" \
+	"$(INTDIR)\self_draining_queue.obj" \
+	"$(INTDIR)\self_monitor.obj" \
+	"$(INTDIR)\soap_core.obj" \
+	"$(INTDIR)\stdsoap2.obj" \
+	"$(INTDIR)\timer_manager.obj"
+
+"$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"

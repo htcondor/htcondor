@@ -1,2 +1,5 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_classad_test.mak
 
+"..\src\condor_c++_util\dc_stub.C" : \
+	"c:\program files\microsoft platform sdk\include\winefs.h"\
+	

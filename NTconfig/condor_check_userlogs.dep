@@ -1,2 +1,23 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_check_userlogs.mak
 
+..\src\condor_userlog\condor_check_userlogs.C : \
+	"..\src\condor_c++_util\check_events.h"\
+	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\condor_id.h"\
+	"..\src\condor_c++_util\dc_service.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\read_multiple_logs.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\user_log.c++.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	"c:\program files\microsoft platform sdk\include\winefs.h"\
+	
