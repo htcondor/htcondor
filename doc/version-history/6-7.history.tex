@@ -39,6 +39,10 @@ In previous versions, this was done strictly based on the
 UpdateSequenceNumber field in the ad.  The default value for the new 
 parameter behaves the same as the older, hard-coded algorithm.
 
+\item Condor can now dynamically start its own gridftp server to handle
+file transfers for grid-type gt4 jobs. The gridftp server appears
+as a job in the queue and disappears when it's no longer needed.
+
 \item Automatic renewal of job proxies from a MyProxy server now works for
 all grid universe jobs. Before, it only worked for grid-type gt2 jobs.
 
