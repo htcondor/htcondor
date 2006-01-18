@@ -76,7 +76,7 @@ use NmiConf;
 use vars qw/ $opt_build $opt_test
     $opt_help $opt_notify $opt_platforms $opt_nmi_glue 
     $opt_workspace
-    $opt_tag $opt_module $opt_nmiconf
+    $opt_tag $opt_module $opt_nmiconf $opt_desc
     $opt_nightly $opt_externals $opt_without_tests
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
     /;
@@ -323,6 +323,7 @@ sub parseOptions
            'tag=s'         => $opt_tag,
            'module=s'      => $opt_module,
            'nmiconf=s'     => $opt_nmiconf,
+		   'desc=s'        => $opt_desc,
 # build-specific options
            'nightly'       => $opt_nightly,
            'externals=s'   => $opt_externals,
@@ -501,6 +502,7 @@ Where [options] can be any of:
 --workspace=path   <directory containing Condor source to build> 
 --nmiconf=string   <full path to the NMI config file to use if needed
                     (defaults to /usr/local/nmi/etc/nmi.conf)>
+--desc=string      <arbitrary text for a human readable description of the job>
 
 Where [build-options] can be any of:
 --nightly          <Default for builds: pulls the nightly tags file from 
@@ -777,6 +779,10 @@ sub writeCommonInfo
     } else {
         $desc = 'unknown';
     }
+
+	if ( defined $opt_desc ) {
+		$desc = $desc . ": $opt_desc";
+	}
 
     print $fh "description = $desc\n";
     print $fh "project = condor\n";
