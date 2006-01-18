@@ -1,3 +1,11 @@
+#if WANT_NEW_CLASSADS
+#define New_classads_defines    -DWANT_NEW_CLASSADS
+#define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
+#else
+#define New_classads_defines
+#define New_classads_lib
+#endif
+
 NAME = condor_dagman
 all_target($(NAME) t_helper condor_submit_dag)
 
@@ -7,11 +15,12 @@ HELPER_FLAGS = -DBUILD_HELPER
 
 C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
 	-I../condor_daemon_core.V6 -I.. \
+	New_classads_defines \
 	-Wall $(HELPER_FLAGS)
 
-CFLAGS = $(STD_C_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
-TOOL_LIB = $(STD_LIBS)
+CFLAGS = $(STD_C_FLAGS) New_classads_defines
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) New_classads_lib
+TOOL_LIB = $(STD_LIBS) New_classads_lib
 
 soapobjs(dagman)
 

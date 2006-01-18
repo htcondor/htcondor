@@ -9,6 +9,7 @@
 #include "dap_logger.h"
 #include "dap_error.h"
 #include "dap_server_interface.h"
+#include "user_log.c++.h"
 
 extern char *clientagenthost;
 
@@ -314,6 +315,13 @@ write_xml_user_log(
 )
 {
 
+	// this function has been replaced by user_log() below.  However, disable
+	// this function, but keep it around for a release or two, as this is
+	// significant API change.
+	if ( ! param_boolean("STORK_ENABLE_DEPRECATED_USERLOG", false) ) {
+		return;
+	}
+
   classad::ClassAdParser parser;
   classad::ExprTree *expr = NULL;
   classad::ClassAdXMLUnParser  xmlunparser;
@@ -381,8 +389,9 @@ write_xml_user_log(
   //write the classad to classad file
   if ((flog = fopen(logfilename,"a+")) == NULL){
     dprintf(D_ALWAYS,
-	    "cannot open logfile :%s...\n",logfilename);
-    exit(1);
+	    "cannot open user logfile :%s...\n",logfilename);
+	if (classad) delete classad;
+	return;
   }
   fprintf (flog,"%s",adbuffer.c_str());
 
@@ -391,16 +400,238 @@ write_xml_user_log(
   }
       
   fclose(flog);
+  if (classad) delete classad;
+  return;
 }
 
+bool
+user_log_submit(	const classad::ClassAd *ad,
+					UserLog& user_log)
+{
+	SubmitEvent jobSubmit;
+	std::string logNotes;
 
+	std::string dap_id;
+	ad->EvaluateAttrString("dap_id", dap_id);
 
+	if	(	ad->EvaluateAttrString("LogNotes", logNotes) &&
+			!logNotes.empty()
+		)
+	{
+		// Ugh.  The SubmitEvent destructor will
+		// delete[] submitEventLogNotes, so "new" one up here.
+		jobSubmit.submitEventLogNotes = strnewp( logNotes.c_str() );
+	}
 
+	std::string submit_host;
+	ad->EvaluateAttrString("submit_host", submit_host);
+	strncpy(jobSubmit.submitHost, submit_host.c_str(),
+			sizeof(jobSubmit.submitHost) - 1 );
+	jobSubmit.submitHost[ sizeof(jobSubmit.submitHost) - 1 ] = '\0';
 
+	if ( ! user_log.writeEvent(&jobSubmit) ) {
+		dprintf(D_ALWAYS, "ERROR: Failed to log job %s submit event.\n",
+				dap_id.c_str() );
+		return false;
+	}
 
+	return true;
+}
 
+bool
+user_log_execute(	const classad::ClassAd *ad,
+					UserLog& user_log)
+{
+	ExecuteEvent event;
 
+	std::string dap_id;
+	ad->EvaluateAttrString("dap_id", dap_id);
 
+	std::string execute_host;
+	ad->EvaluateAttrString("execute_host", execute_host);
+	strncpy(event.executeHost, execute_host.c_str(),
+			sizeof(event.executeHost) - 1 );
+	event.executeHost[ sizeof(event.executeHost) - 1 ] = '\0';
 
+	if ( ! user_log.writeEvent(&event) ) {
+		dprintf(D_ALWAYS, "ERROR: Failed to log job %s execute event.\n",
+				dap_id.c_str() );
+		return false;
+	}
 
+	return true;
+}
+
+bool
+user_log_generic(	const classad::ClassAd *ad,
+					UserLog& user_log)
+{
+	GenericEvent event;
+
+	std::string dap_id;
+	ad->EvaluateAttrString("dap_id", dap_id);
+
+	std::string generic_event;
+	ad->EvaluateAttrString("generic_event", generic_event);
+	event.setInfoText( generic_event.c_str() );
+
+	if ( ! user_log.writeEvent(&event) ) {
+		dprintf(D_ALWAYS, "ERROR: Failed to log job %s generic event.\n",
+				dap_id.c_str() );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+user_log_terminated(	const classad::ClassAd *ad,
+						UserLog& user_log)
+{
+	JobTerminatedEvent event;
+	std::string termination_type;
+
+	std::string dap_id;
+	ad->EvaluateAttrString("dap_id", dap_id);
+
+	if	(	! ad->EvaluateAttrString("termination_type", termination_type) ||
+			termination_type.empty() )
+	{
+		dprintf(D_ALWAYS, "job %s has no termination type\n", dap_id.c_str() );
+		return false;
+	}
+
+	if (termination_type == "job_retry_limit") {
+		// Stork removed the job before it could exit.  exit_status has no
+		// useful information.
+		event.normal = false;
+	} else if (termination_type == "exited") {
+		// The job exited.  Parse the exit status.
+		int exit_status;
+		if (! ad->EvaluateAttrInt("exit_status", exit_status) ) {
+			dprintf(D_ALWAYS, "job %s exit_status not found\n",
+					dap_id.c_str() );
+			return false;
+		} else if ( WIFEXITED( exit_status) ) {
+			// Stork requires all successful jobs to exit with status 0
+			event.normal = (exit_status == 0) ? true : false;
+			event.returnValue = WEXITSTATUS( exit_status );
+		} else if ( WIFSIGNALED( exit_status) ) {
+			event.normal = false;
+			event.signalNumber = WTERMSIG( exit_status );
+		} else {
+			dprintf(D_ALWAYS, "job %s exit_status %d unknown\n",
+					dap_id.c_str(), exit_status );
+			return false;
+		}
+	} else {
+		dprintf(D_ALWAYS, "job %s unknown termination type: %s\n",
+				dap_id.c_str(), termination_type.c_str() );
+		return false;
+	}
+
+	if ( ! user_log.writeEvent(&event) ) {
+		dprintf(D_ALWAYS, "ERROR: Failed to log job %s terminated event.\n",
+				dap_id.c_str() );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+user_log_aborted(	const classad::ClassAd *ad,
+						UserLog& user_log)
+{
+	JobAbortedEvent event;
+
+	std::string dap_id;
+	ad->EvaluateAttrString("dap_id", dap_id);
+
+	if ( ! user_log.writeEvent(&event) ) {
+		dprintf(D_ALWAYS, "ERROR: Failed to log job %s aborted event.\n",
+				dap_id.c_str() );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+user_log(			const classad::ClassAd *ad,
+					const enum ULogEventNumber eventNum)
+{
+	std::string userLogFile;
+	int cluster_id, proc_id;
+	bool log_xml;
+	UserLog usr_log;
+
+	if	(	!ad->EvaluateAttrString("log", userLogFile) ||
+			userLogFile.empty()
+		)
+	{
+		// No valid user log file specified.
+		return true;
+	}
+
+	// Get job identifiers
+	ad->EvaluateAttrInt("cluster_id",	cluster_id);
+	ad->EvaluateAttrInt("proc_id",		proc_id);
+
+	if	(	!ad->EvaluateAttrBool("log_xml", log_xml) ) {
+		log_xml = false;	// Default: do not log in XML format
+	}
+	usr_log.setUseXML(log_xml);
+
+	std::string owner;
+	if ( ! ad->EvaluateAttrString("owner", owner) || owner.empty() ) {
+		dprintf(D_ALWAYS,
+				"unable to extract owner to log job %d user log event %d\n",
+				cluster_id, eventNum);
+		return false;
+	}
+	if (! usr_log.initialize(
+				owner.c_str(),
+				NULL,					// domain TODO: fix for WIN32
+				userLogFile.c_str(),
+				cluster_id,
+				proc_id,
+				-1)
+		)
+	{
+		dprintf(D_ALWAYS,
+				"error initializing user log event %d for job %d\n",
+				eventNum, cluster_id);
+		return false;
+	}
+
+	switch(eventNum) {
+		case ULOG_SUBMIT:
+			return user_log_submit(ad, usr_log);
+			break;
+
+		case ULOG_EXECUTE:
+			return user_log_execute(ad, usr_log);
+			break;
+
+		case ULOG_JOB_TERMINATED:
+			return user_log_terminated(ad, usr_log);
+			break;
+
+		case ULOG_JOB_ABORTED:
+			return user_log_aborted(ad, usr_log);
+			break;
+
+		case ULOG_GENERIC:
+			return user_log_generic(ad, usr_log);
+			break;
+
+		default:
+			dprintf(D_ALWAYS, "job %d write user log for unknown event %d\n",
+					cluster_id, eventNum);
+			return false;
+	}
+
+	return true;
+}
 

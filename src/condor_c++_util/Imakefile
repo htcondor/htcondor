@@ -2,10 +2,14 @@
 #define New_classads_includes	-I$(NEW_CLASSADS_INC)
 #define New_classads_obj		credential.o X509credential.o
 #define New_classads_dc_obj		dc_credd.o
+#define New_classads_defines	-DWANT_NEW_CLASSADS
+#define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
 #else
 #define New_classads_includes
 #define New_classads_obj
 #define New_classads_dc_obj
+#define New_classads_defines
+#define New_classads_lib
 #endif
 
 #if HAVE_CC_SHARED_FLAG
@@ -16,7 +20,11 @@ LIBCONDORAPI = libcondorapi.a
 
 all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) test_libcondorapi)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes $(QUILL_INC)
+C_PLUS_FLAGS =	\
+				$(STD_C_PLUS_FLAGS) \
+				New_classads_defines \
+				New_classads_includes \
+				$(QUILL_INC)
 
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS)
@@ -180,8 +188,8 @@ test_libcondorapi.o: test_libcondorapi.C
 
 c_plus_nowrap_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
 
-c_plus_target(test_check_events,test_check_events.o,$(LIB))
-c_plus_target(test_multi_log,test_multi_log.o,$(LIB))
+c_plus_target(test_check_events,test_check_events.o,$(LIB) New_classads_lib)
+c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
 c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
 c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))

@@ -16,6 +16,7 @@
 #include "env.h"
 #include "daemon.h"
 #include "condor_config.h"
+#include "internet.h"
 
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
@@ -40,7 +41,6 @@ char *Cred_tmp_dir = NULL;				// temporary credential storage directory
 char *Module_dir = NULL;				// Module directory (DAP Catalog)
 char *Log_dir = NULL;					// LOG directory
 
-int  daemon_std[3];
 int  transfer_dap_reaper_id, reserve_dap_reaper_id, release_dap_reaper_id;
 int  requestpath_dap_reaper_id;
 
@@ -53,69 +53,13 @@ int listenfd_submit;
 int listenfd_status;
 int listenfd_remove;
 
-/* ==========================================================================
- * Open daemon core file pointers.
- * All modules will inherit these standard I/O file descriptors.
- * results in daemon_std[]
- * ==========================================================================*/
-void open_daemon_core_file_pointers()
-{
-	const char* log_dir = param("LOG");
-	const char* alt_log_dir = "/tmp";
-	const char* name = "/Stork-module.";
-	const int flags = O_CREAT | O_RDWR;
-	const mode_t mode = 00644;
-	MyString dc_stdin, dc_stderr, dc_stdout;
+void remove_job(const char *dap_id);
 
-	if (! log_dir ) log_dir = alt_log_dir;
-
-	// Standard input
-	dc_stdin = NULL_FILE;
-	dprintf(D_ALWAYS, "module standard input redirected from %s\n",
-			dc_stdin.Value() );
-	daemon_std[0] = open ( dc_stdin.Value(), flags, mode);
-	if ( daemon_std[0] < 0 ) {
-			dprintf( D_ALWAYS,
-				"ERROR: daemoncore stdin fd %d open(%s,%#o,%#o): (%d)%s\n",
-					0, dc_stdin.Value(), flags, mode,
-					errno, strerror(errno)
-			);
-	}
-
-	// Standard output
-	dc_stdout = log_dir;
-	dc_stdout += name;
-	dc_stdout += "stdout";
-	dprintf(D_ALWAYS, "module standard output redirected to %s\n",
-			dc_stdout.Value() );
-	daemon_std[1] = open ( dc_stdout.Value(), flags, mode);
-	if ( daemon_std[1] < 0 ) {
-			dprintf( D_ALWAYS,
-				"ERROR: daemoncore stdout fd %d open(%s,%#o,%#o): (%d)%s\n",
-					1, dc_stdout.Value(), flags, mode,
-					errno, strerror(errno)
-			);
-	}
-
-	// Standard error
-	dc_stderr = log_dir;
-	dc_stderr += name;
-	dc_stderr += "stderr";
-	dprintf(D_ALWAYS, "module standard error redirected to %s\n",
-			dc_stderr.Value() );
-	daemon_std[2] = open ( dc_stderr.Value(), flags, mode);
-	if ( daemon_std[2] < 0 ) {
-			dprintf( D_ALWAYS,
-				"ERROR: daemoncore stderr fd %d open(%s,%#o,%#o): (%d)%s\n",
-					2, dc_stderr.Value(), flags, mode,
-					errno, strerror(errno)
-			);
-	}
-
-
-	if (log_dir && strcmp(log_dir, alt_log_dir) ) free( (char *)log_dir);
-	return;
-}
+// Module standard I/O file descriptor type and indices.
+typedef int module_stdio_t[3];
+#define MODULE_STDIN_INDEX		0
+#define MODULE_STDOUT_INDEX		1
+#define MODULE_STDERR_INDEX		2
 
 /* ==========================================================================
  * read the config file and set some global parameters
@@ -177,14 +121,97 @@ int read_config_file()
 }
 
 /* ==========================================================================
- * close daemon core file pointers
+ * open module stdio file descriptors
  * ==========================================================================*/
-void close_daemon_core_file_pointers()
+bool
+open_module_stdio(	classad::ClassAd*   ad,
+					module_stdio_t		module_stdio)
 {
-	close(daemon_std[0]);
-	close(daemon_std[1]);
-	close(daemon_std[2]);
+	std::string path;
+	int dap_id;
+
+	module_stdio[ MODULE_STDIN_INDEX ] = -1;
+	module_stdio[ MODULE_STDOUT_INDEX ] = -1;
+	module_stdio[ MODULE_STDERR_INDEX ] = -1;
+
+	if (! ad->EvaluateAttrInt("dap_id", dap_id) ) {
+		dprintf(D_ALWAYS, "open_module_stdio: error, no dap_id: %s\n",
+				classad::CondorErrMsg.c_str() );
+	}
+	if ( ! ad->EvaluateAttrString("input", path) ) {
+		path = NULL_FILE;
+	}
+	if ( path.empty() ) {
+		dprintf(D_ALWAYS, "error: job %d empty input file path\n", dap_id);
+		return false;
+	}
+	module_stdio[ MODULE_STDIN_INDEX ] =
+		open( path.c_str(), O_RDONLY);
+	if ( module_stdio[ MODULE_STDIN_INDEX ] < 0 ) {
+		dprintf(D_ALWAYS, "error: job %d open input file %s: %s\n",
+				dap_id, path.c_str(), strerror(errno) );
+		return false;
+	}
+
+	if ( ! ad->EvaluateAttrString("output", path) ) {
+		path = NULL_FILE;
+	}
+	if ( path.empty() ) {
+		dprintf(D_ALWAYS, "error: job %d empty output file path\n",
+				dap_id);
+		return false;
+	}
+	module_stdio[ MODULE_STDOUT_INDEX ] =
+		open( path.c_str(), O_WRONLY|O_CREAT|O_APPEND, 0644);
+	if ( module_stdio[ MODULE_STDOUT_INDEX ] < 0 ) {
+		dprintf(D_ALWAYS, "error: job %d open output file %s: %s\n",
+				dap_id, path.c_str(), strerror(errno) );
+		return false;
+	}
+
+	if ( ! ad->EvaluateAttrString("err", path) ) {
+		path = NULL_FILE;
+	}
+	if ( path.empty() ) {
+		dprintf(D_ALWAYS, "error: job %d empty error file path\n",
+				dap_id);
+		return false;
+	}
+	module_stdio[ MODULE_STDERR_INDEX ] =
+		open( path.c_str(), O_WRONLY|O_CREAT|O_APPEND, 0644);
+	if ( module_stdio[ MODULE_STDERR_INDEX ] < 0 ) {
+		dprintf(D_ALWAYS, "error: job %d open error file %s: %s\n",
+				dap_id, path.c_str(), strerror(errno) );
+		return false;
+	}
+
+	return true;
 }
+
+/* ==========================================================================
+ * close module stdio file descriptors
+ * ==========================================================================*/
+void
+close_module_stdio( module_stdio_t module_stdio)
+{
+	if ( module_stdio[ MODULE_STDIN_INDEX ] >= 0) {
+		close( module_stdio[ MODULE_STDIN_INDEX ] );
+		module_stdio[ MODULE_STDIN_INDEX ] = -1;
+	}
+
+	if ( module_stdio[ MODULE_STDOUT_INDEX ] >= 0) {
+		close( module_stdio[ MODULE_STDOUT_INDEX ] );
+		module_stdio[ MODULE_STDOUT_INDEX ] = -1;
+	}
+
+	if ( module_stdio[ MODULE_STDERR_INDEX ] >= 0) {
+		close( module_stdio[ MODULE_STDERR_INDEX ] );
+		module_stdio[ MODULE_STDERR_INDEX ] = -1;
+	}
+
+	return;
+}
+
 /* ============================================================================
  * check whether the status of a dap job is already logged or not 
  * ==========================================================================*/
@@ -266,10 +293,28 @@ void get_last_dapid()
 	last_dap = max_dapid;
 }
 
+
+/* ============================================================================
+ * Remove a job from the queue.
+ * ==========================================================================*/
+void
+remove_job(const char *dap_id)
+{
+	std::string                  key;
+	key = "key = ";
+	key += dap_id;
+	dprintf(D_ALWAYS, "remove job %s from queue\n", dap_id);
+	bool status = dapcollection->RemoveClassAd(key);
+	if ( ! status ) {
+		dprintf(D_ALWAYS, "Failed to remove job %s from queue\n", dap_id);
+	}
+	return;
+}
+
 /* ============================================================================
  * dap transfer function
  * ==========================================================================*/
-int transfer_dap(char *dap_id, char *src_url, char *dest_url, const ArgList &arguments, char * cred_file_name)
+bool transfer_dap(char *dap_id, char *src_url, char *dest_url, const ArgList &arguments, char * cred_file_name)
 {
 
 	char src_protocol[MAXSTR], src_host[MAXSTR], src_file[MAXSTR];
@@ -325,9 +370,27 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, const ArgList &arg
 	arguments.GetArgsStringForDisplay(&args_string);
 
 	// Create child process via daemoncore
+
+    classad::ClassAd                *job_ad;
+	std::string key;
+    key = "key = ";
+    key += dap_id;
+    job_ad = dapcollection->GetClassAd(key);
+	MyString generic_event;
+	generic_event = "job type: transfer";
+	job_ad->InsertAttr("generic_event", generic_event.Value() );
+	user_log(job_ad, ULOG_GENERIC);
+	generic_event.sprintf("src_url: %s", src_url);
+	job_ad->InsertAttr("generic_event", generic_event.Value() );
+	user_log(job_ad, ULOG_GENERIC);
+	generic_event.sprintf("dest_url: %s", dest_url);
+	job_ad->InsertAttr("generic_event", generic_event.Value() );
+	user_log(job_ad, ULOG_GENERIC);
+
 	MyString src_url_value, dest_url_value;
 	src_url_value.sprintf("\"%s\"", src_url);
 	dest_url_value.sprintf("\"%s\"", dest_url);
+	// FIXME delete this old userlog writer
 	write_xml_user_log(userlogfilename, "MyType", "\"GenericEvent\"", 
 					   "EventTypeNumber", "8", 
 					   "Cluster", dap_id,
@@ -339,6 +402,14 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, const ArgList &arg
 					   "Arguments", (char *)args_string.Value(),
 					   "CredFile", cred_file_name);
 
+
+	// Open file descriptors for child module.
+	module_stdio_t module_stdio;
+	if (!  open_module_stdio( job_ad, module_stdio) ) {
+		return false;
+	}
+
+	// Create child module process.
 	pid =
 	daemonCore->Create_Process(
 		 command,						// command path
@@ -350,18 +421,22 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, const ArgList &arg
 		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
-		 daemon_std						// child stdio file descriptors
+		 module_stdio					// child stdio file descriptors
 		 								// nice increment = 0
 		 								// job_opt_mask = 0
 	);
 
+	// Close module file descriptors in parent process.
+	close_module_stdio( module_stdio);
+
 	if (pid > 0) {
 		dap_queue.insert(dap_id, pid);
-		return DAP_SUCCESS;
+		return true;
 	}
 	else{
+		// FIXME  
 		transfer_dap_reaper(NULL, 0 ,111); //executable not found!
-		return DAP_ERROR;                  //--> Find a better soln!
+		return false;                  //--> Find a better soln!
 	}
   
 }
@@ -392,6 +467,17 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 	args.AppendArg(reserve_size);
 	args.AppendArg(duration);
 
+	// Open file descriptors for child module.
+    classad::ClassAd                *job_ad;
+	std::string key;
+    key = "key = ";
+    key += dap_id;
+    job_ad = dapcollection->GetClassAd(key);
+	module_stdio_t module_stdio;
+	if (!  open_module_stdio( job_ad, module_stdio) ) {
+		return; //  FIXME: must return failure! DAP_SUCCESS;
+	}
+
 	// Create child process via daemoncore
 	pid =
 	daemonCore->Create_Process(
@@ -404,10 +490,13 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
-		 daemon_std						// child stdio file descriptors
+		 module_stdio					// child stdio file descriptors
 		 								// nice increment = 0
 		 								// job_opt_mask = 0
 	);
+
+	// Close module file descriptors in parent process.
+	close_module_stdio( module_stdio);
 
 	dap_queue.insert(dap_id, pid);
 }
@@ -474,6 +563,12 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 	args.AppendArg(dest_host);
 	args.AppendArg(lot_id);
 
+	// Open file descriptors for child module.
+	module_stdio_t module_stdio;
+	if (!  open_module_stdio( job_ad, module_stdio) ) {
+		return; //  FIXME: must return failure! DAP_SUCCESS;
+	}
+
 	// Create child process via daemoncore
 	pid =
 	daemonCore->Create_Process(
@@ -486,10 +581,13 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
-		 daemon_std						// child stdio file descriptors
+		 module_stdio					// child stdio file descriptors
 		 								// nice increment = 0
 		 								// job_opt_mask = 0
 	);
+
+	// Close module file descriptors in parent process.
+	close_module_stdio( module_stdio);
 
 	dap_queue.insert(dap_id, pid);
 	if (constraint_tree != NULL) delete constraint_tree;
@@ -522,6 +620,17 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 	args.AppendArg(src_host);
 	args.AppendArg(dest_host);
 
+	// Open file descriptors for child module.
+    classad::ClassAd                *job_ad;
+	std::string key;
+    key = "key = ";
+    key += dap_id;
+    job_ad = dapcollection->GetClassAd(key);
+	module_stdio_t module_stdio;
+	if (!  open_module_stdio( job_ad, module_stdio) ) {
+		return; //  FIXME: must return failure! DAP_SUCCESS;
+	}
+
 	// Create child process via daemoncore
 	pid =
 	daemonCore->Create_Process(
@@ -534,10 +643,13 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
-		 daemon_std						// child stdio file descriptors
+		 module_stdio					// child stdio file descriptors
 		 								// nice increment = 0
 		 								// job_opt_mask = 0
 	);
+
+	// Close module file descriptors in parent process.
+	close_module_stdio( module_stdio);
 
 	dap_queue.insert(dap_id, pid);
 }
@@ -550,6 +662,7 @@ void process_request(classad::ClassAd *currentAd)
 {
 	char dap_id[MAXSTR], dap_type[MAXSTR];
 	char unstripped[MAXSTR];
+	bool status;
   
 		//get the dap_id of the request
 	getValue(currentAd, "dap_id", unstripped); 
@@ -559,9 +672,12 @@ void process_request(classad::ClassAd *currentAd)
 	write_collection_log(dapcollection, dap_id, 
 						 "status = \"processing_request\"");
   
+	user_log(currentAd, ULOG_EXECUTE);
+
 	char lognotes[MAXSTR];
 	getValue(currentAd, "LogNotes", lognotes);
   
+	// FIXME delete this old userlog writer
 	write_xml_user_log(userlogfilename, "MyType", "\"ExecuteEvent\"", 
 					   "EventTypeNumber", "1", 
 					   "Cluster", dap_id,
@@ -579,18 +695,20 @@ void process_request(classad::ClassAd *currentAd)
 
 
 		// Init user id for the right user
-	std::string key="owner";
-	std::string _owner;
-	const char * owner = NULL;
-
-	if (currentAd->EvaluateAttrString(key, _owner)) {
-		owner = _owner.c_str();
+	std::string owner;
+	std::string key = "owner";
+	if (! currentAd->EvaluateAttrString(key, owner) || owner.empty() ) {
+		dprintf (D_ALWAYS, "Unable to extract owner for job %s\n", dap_id);
+		return;
 	}
-
-	if (!init_user_id_from_FQN (owner) ) {
-		dprintf (D_ALWAYS, "Unable to find local user for \"%s\"\n", owner);
+#ifdef WIN32
+#error FIX init_user_ids( domain ) for Windows
+#endif
+	if ( ! init_user_ids(owner.c_str(), NULL) ) {
+		dprintf (D_ALWAYS, "Unable to find local user for owner \"%s\"\n",
+				owner.c_str() );
+		return;
 	}
-
 
 		// Check for GSI proxy
 	char * cred_file_name = NULL;
@@ -609,8 +727,23 @@ void process_request(classad::ClassAd *currentAd)
 
 				// Save to file
 
-				// Create file as root
-			priv_state old_priv = set_root_priv();
+			// Create file as user
+			//priv_state old_priv = set_root_priv();
+			std::string owner;
+			if	(	! currentAd->EvaluateAttrString("owner", owner) ||
+					owner.empty()
+				)
+			{
+				dprintf (D_ALWAYS, "Unable to extract owner for job %s\n",
+						dap_id);
+				return;
+			}
+			if ( ! init_user_ids( owner.c_str(), NULL) ) {
+				dprintf (D_ALWAYS, "Unable to switch to owner %s for job %s\n",
+						owner.c_str(), dap_id);
+				return;
+			}
+			priv_state old_priv = set_user_priv();
 			int fd = open (cred_file_name, O_WRONLY | O_CREAT );
 			if (fd > -1) {
 				if ( fchmod (fd, S_IRUSR | S_IWUSR) < 0 ) {
@@ -679,7 +812,13 @@ void process_request(classad::ClassAd *currentAd)
 		getValue(currentAd, "src_url", src_url);
 		getValue(currentAd, "dest_url", dest_url);
 
-		getValue(currentAd, "arguments", arguments);
+		//getValue(currentAd, "arguments", arguments);
+		// awful, ugly hack to import arguments strings from ad, without
+		// embedded double quotes.
+		std::string arguments_string;
+		currentAd->EvaluateAttrString("arguments", arguments_string);
+		strncpy(arguments, arguments_string.c_str(), sizeof(arguments) );
+		arguments[ sizeof(arguments) - 1 ] = '\0';	// ensure null termination
 
 		MyString args_error;
 		if(!args.AppendArgsV2Raw(arguments,&args_error)) {
@@ -708,14 +847,32 @@ void process_request(classad::ClassAd *currentAd)
     
 		if (!strcmp(use_protocol, "0")){
 				//dprintf(D_ALWAYS, "use_protocol: %s\n", use_protocol);      
-			transfer_dap(dap_id, src_url, dest_url, args, cred_file_name);
+			status = 
+				transfer_dap(dap_id, src_url, dest_url, args, cred_file_name);
+			if (! status) {
+				currentAd->InsertAttr("generic_event",
+						"server error: job removed");
+				user_log(currentAd, ULOG_GENERIC);
+				write_dap_log(historyfilename, "\"request_removed\"", 
+					  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
+				remove_job( dap_id);
+			}
 		}
 		else{
 			getValue(currentAd, "alt_protocols", alt_protocols);
 			dprintf(D_ALWAYS, "alt. protocols = %s\n", alt_protocols);
       
 			if (!strcmp(alt_protocols,"")) { //if no alt. protocol defined
-				transfer_dap(dap_id, src_url, dest_url, args, cred_file_name);
+				status = transfer_dap(dap_id, src_url, dest_url, args,
+						cred_file_name);
+				if (! status) {
+					currentAd->InsertAttr("generic_event",
+							"server error: job removed");
+					user_log(currentAd, ULOG_GENERIC);
+					write_dap_log(historyfilename, "\"request_removed\"", 
+						  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
+					remove_job( dap_id);
+				}
 			}
 			else{ //use alt. protocols
 				strcpy(next_protocol, strtok(alt_protocols, ",") );   
@@ -756,7 +913,16 @@ void process_request(classad::ClassAd *currentAd)
 	
 	
 					//--> These "arguments" may need to be removed or chaged !!
-				transfer_dap(dap_id, src_alt_url, dest_alt_url, args, cred_file_name);
+				status = transfer_dap(dap_id, src_alt_url, dest_alt_url,
+						args, cred_file_name);
+				if (! status) {
+					currentAd->InsertAttr("generic_event",
+							"server error: job removed");
+					user_log(currentAd, ULOG_GENERIC);
+					write_dap_log(historyfilename, "\"request_removed\"", 
+						  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
+					remove_job( dap_id);
+				}
 			}// end use alt. protocols
 		}
 	}
@@ -944,15 +1110,21 @@ void regular_check_for_requests_in_process()
 
 								remove_credential (dap_id);
 
+								//write user log
+								job_ad->InsertAttr("termination_type",
+										"job_retry_limit");
+								user_log(job_ad, ULOG_JOB_TERMINATED);
+
 
 								dapcollection->RemoveClassAd(key);
 								write_dap_log(historyfilename,
 										"\"request_failed\"", 
 											  "dap_id", dap_id, "error_code", "\"ABORTED!\"");
 		   
+								//write XML user logs
+								// FIXME delete this old userlog writer
 								char exit_status_str[MAXSTR];
 								snprintf(exit_status_str, MAXSTR, "%d", 9);
-		   
 								write_xml_user_log(userlogfilename, "MyType", "\"JobCompletedEvent\"", 
 												   "EventTypeNumber", "5", 
 												   "TerminatedNormally", "1",
@@ -1086,11 +1258,6 @@ void initialize_dapcollection()
  * ==========================================================================*/
 int initializations()
 {
-
-		//initialize and open daemoncore file pointers
-	open_daemon_core_file_pointers();
-
-
 		//read the config file and set values for some global parameters
 	if (!read_config_file()) {
 		return FALSE;
@@ -1265,24 +1432,37 @@ int write_requests_to_file(ReliSock * sock)
 		return FALSE;
     }
 
-		// Insert "owner" attribute
-    char owner[MAXSTR];
-    sprintf (owner, "\"%s\"", sock->getFullyQualifiedUser());
-    if ( !parser.ParseExpression (owner, expr) ) {
-		dprintf(D_ALWAYS,"Parse error (owner)\n");
+	// Insert "owner" attribute
+	std::string owner = sock->getOwner();
+	if (! requestAd->InsertAttr("owner", owner) ) {
+		// Must perform this error check for security reasons!
+		dprintf(D_ALWAYS, "error inserting owner into job ad: %s\n",
+				classad::CondorErrMsg.c_str() );
 		return FALSE;
-    }else {
-		requestAd->Delete("owner");
-		requestAd->Insert("owner", expr);
-    }
+	}
 
+	// Insert "remote_user" attribute
+	requestAd->InsertAttr("remote_user", sock->getFullyQualifiedUser() );
+
+	// Get remote submit host.
+	std::string submit_host = sin_to_string(sock->endpoint() );
+	requestAd->InsertAttr("submit_host", submit_host);
+
+	// Get this execute host.
+	struct sockaddr_in sin;
+	sock->mypoint(&sin);
+	std::string execute_host = sin_to_string( &sin );
+	requestAd->InsertAttr("execute_host", execute_host);
 
 		//add the dap_id to the request
-    snprintf(last_dapstr, MAXSTR, "%ld", last_dap + 1);
+	unsigned long this_dap_id = last_dap + 1;
+    snprintf(last_dapstr, MAXSTR, "%lu", this_dap_id);
     if ( !parser.ParseExpression(last_dapstr, expr) ) {
 		dprintf(D_ALWAYS,"Parse error\n");
     }
     requestAd->Insert("dap_id", expr);
+	requestAd->InsertAttr("cluster_id", (int)this_dap_id);
+	requestAd->InsertAttr("proc_id", -1);
 
 		//add the status to the request
     if ( !parser.ParseExpression("\"request_received\"", expr) ) {
@@ -1300,74 +1480,50 @@ int write_requests_to_file(ReliSock * sock)
 
     if (cred_buff) {
 		char _dap_id_buff[10];
-		sprintf (_dap_id_buff, "%ld", last_dap+1);
+		sprintf (_dap_id_buff, "%ld", this_dap_id);
 		char * cred_file_name = get_credential_filename (_dap_id_buff);
 
-		if (!init_user_id_from_FQN(sock->getFullyQualifiedUser())) {
-			dprintf (D_ALWAYS, "ERROR: Unable to find local user for \"%s\"\n", sock->getFullyQualifiedUser());
+		// Switch to job user
+		if (! init_user_ids(owner.c_str(), NULL) ) {
+			dprintf(D_ALWAYS, "%s:%d init_user_ids(%s,NULL) failed\n",
+					__FILE__, __LINE__, owner.c_str() );
+			if (cred_buff) free(cred_buff);
+			return FALSE;
 		}
-     
-			// Switch to root
-		priv_state old_priv = set_root_priv();
-		int fd = open (cred_file_name, O_WRONLY | O_CREAT);
-		if (fd > -1) {
-			if ( fchmod (fd, S_IRUSR | S_IWUSR) < 0 ) {
-				dprintf( D_ALWAYS,
-						"%s:%d: cred file fchmod(%d,%#o): (%d)%s\n",
-						__FILE__, __LINE__,
-						fd, S_IRUSR | S_IWUSR,
-						errno, strerror(errno)
-				);
-			}
-			if ( fchown (fd, get_user_uid(), get_user_gid() ) < 0 ) {
-				dprintf( D_ALWAYS,
-						"%s:%d: cred file fchown(%d,%d,%d): (%d)%s\n",
-						__FILE__, __LINE__,
-						fd,  get_user_uid(), get_user_gid(),
-						errno, strerror(errno)
-				);
-			}
+		priv_state old_priv = set_user_priv();
+		int fd = open (cred_file_name, O_WRONLY | O_CREAT, 0600);
+		if (fd < 0) {
+			set_priv(old_priv);
+			dprintf(D_ALWAYS,
+					"error opening credential file %s for write: %s\n",
+					cred_file_name, strerror(errno) );
+			if (cred_buff) free(cred_buff);
+			if (cred_file_name) free(cred_file_name);
+			return FALSE;
 		}
-			// Switch back to non-priviledged user
-		set_priv(old_priv);
-
-		if (fd > -1) {
-			int nbytes = write (fd, cred_buff, cred_size);
-			if ( nbytes < cred_size ) {
-				dprintf( D_ALWAYS,
-						"%s:%d: cred short write: %d out of %d (%d)%s\n",
-						__FILE__, __LINE__,
-						nbytes, cred_size,
-						errno, strerror(errno)
-				);
-			}
-			close (fd);
-		} else {
-			dprintf(
-				D_ALWAYS,
-				"Unable to create credential storage file %s !\n%d(%s)\n",
-				cred_file_name,
-				errno,
-				strerror(errno)
-			);
+		int nbytes = full_write (fd, cred_buff, cred_size);
+		if (cred_buff) free(cred_buff);
+		if (nbytes != cred_size) {
+			close(fd);
+			unlink(cred_file_name);
+			set_priv(old_priv);
+			dprintf(D_ALWAYS,
+					"error writing credential file %s: %s\n",
+					cred_file_name, strerror(errno) );
+			if (cred_file_name) free(cred_file_name);
 			return FALSE;
 		}
 
-		free (cred_buff);
-      
-		char cred_file_name_expr[MAXSTR];
-		sprintf (cred_file_name_expr, "\"%s\"", cred_file_name);
-		if ( !parser.ParseExpression(cred_file_name_expr, expr) ) {
-			dprintf(D_ALWAYS,"Parse error (cred file name)\n");
-		}
+		close(fd);
+		set_priv(old_priv);
 
-		requestAd->Insert("x509proxy", expr);
-		free (cred_file_name);
+		requestAd->InsertAttr("x509proxy", cred_file_name);
+		if (cred_file_name) free (cred_file_name);
     } // if cred_buff
 
 		//insert the request to the dap collection
     char keystr[MAXSTR];
-    snprintf(keystr, MAXSTR, "key = %ld", last_dap + 1);
+    snprintf(keystr, MAXSTR, "key = %ld", this_dap_id);
 
 		//add the rquest classad to dap collection
     dapcollection->AddClassAd(keystr, requestAd);
@@ -1388,10 +1544,12 @@ int write_requests_to_file(ReliSock * sock)
 		//write_xml_log(xmllogfilename, requestAd, "\"request_received\"");
     
     
-		//write XML user logs
+	//write user log
+	user_log(requestAd, ULOG_SUBMIT);
+
+	// FIXME delete this old userlog writer
     char lognotes[MAXSTR];
     getValue(requestAd, "LogNotes", lognotes);
-    
     write_xml_user_log(userlogfilename, "MyType", "\"SubmitEvent\"", 
 					   "EventTypeNumber", "0", 
 					   "Cluster", last_dapstr,
@@ -1446,14 +1604,14 @@ int list_queue(ReliSock * sock)
 		}
 	}
 
-		// Determine the onwer of the request
-	const char * request_owner = sock->getFullyQualifiedUser();
+		// Determine the remote user of the request
+	const char * remote_user = sock->getFullyQualifiedUser();
 
 		// Create a query
 	std::string constraint;
-	constraint = "other.owner == ";
+	constraint = "other.remote_user == ";
 	constraint += "\"";
-	constraint += request_owner;
+	constraint += remote_user;
 	constraint += "\"";
 
 	classad::ClassAdParser parser;
@@ -1511,6 +1669,7 @@ int list_queue(ReliSock * sock)
 int send_dap_status_to_client(ReliSock * sock)
 {
 	char nextdap[MAXSTR];
+	char unstripped[MAXSTR];
 
 
 
@@ -1566,8 +1725,8 @@ int send_dap_status_to_client(ReliSock * sock)
 		ClassAd_Reader adreader(historyfilename);
       
 		while(adreader.readAd()) {
-			adreader.getValue("dap_id", nextdap); 
-			strncpy(nextdap, strip_str(nextdap), MAXSTR);
+			adreader.getValue("dap_id", unstripped); 
+			strncpy(nextdap, strip_str(unstripped), MAXSTR);
       
 			if ( !strcmp(dap_id, nextdap) ){
 				found_job = true;
@@ -1698,11 +1857,14 @@ int remove_requests_from_queue(ReliSock * sock)
 		char lognotes[MAXSTR] ;
 		getValue(job_ad, "LogNotes", lognotes);
       
+		user_log(job_ad, ULOG_JOB_ABORTED);
+
 		dapcollection->RemoveClassAd(key);
 
 		write_dap_log(historyfilename, "\"request_removed\"", 
 					  "dap_id", dap_id, "error_code", "\"REMOVED!\"");
       
+		// FIXME delete this old userlog writer
 		write_xml_user_log(userlogfilename, "MyType", "\"JobAbortedEvent\"", 
 						   "EventTypeNumber", "9", 
 						   "TerminatedNormally", "0",
@@ -1783,6 +1945,10 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 
 		//---- if process completed succesfully ----
 	if (exit_status == 0){
+
+		job_ad->InsertAttr("exit_status", exit_status);
+		job_ad->InsertAttr("termination_type", "exited");
+		user_log(job_ad, ULOG_JOB_TERMINATED);
 
 		remove_credential (dap_id);
 
@@ -1871,6 +2037,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 		write_dap_log(historyfilename, "\"request_completed\"", "dap_id", dap_id);
 			//    write_xml_log(xmllogfilename, job_ad, "\"request_completed\"");
     
+		// FIXME delete this old userlog writer
 		write_xml_user_log(userlogfilename, "MyType", "\"JobCompleteEvent\"", 
 						   "EventTypeNumber", "5", 
 						   "TerminatedNormally", "1",
@@ -1913,16 +2080,48 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 
 			//    string sstatus = "";
     
+		std::string next_action;
 		if (num_attempts + 1 < (int)Max_retry){
 				//sstatus = "\"request_rescheduled\"";
 			modify_s += "status = \"request_rescheduled\";";
+			next_action = "Rescheduling.";
 		}
     
 		else{
 				//      sstatus = "\"request_failed\"";
 			modify_s += "status = \"request_failed\";";
+			next_action = "Max retry limit reached.";
 		}
-    
+
+		MyString generic_event;
+		if ( WIFSIGNALED( exit_status) ) {
+			generic_event.sprintf(
+				"Job attempt %d exited by signal %d",
+				num_attempts+1, WTERMSIG( exit_status ) );
+#ifdef WCOREDUMP 
+			if ( WCOREDUMP( exit_status) ) {
+				MyString core;
+				core.sprintf(
+					"Core file for process %d in server directory %s",
+					pid, Log_dir );
+				job_ad->InsertAttr("generic_event", core.Value() );
+				user_log(job_ad, ULOG_GENERIC);
+			}
+#endif // WCOREDUMP 
+		} else if ( WIFEXITED( exit_status) ) {
+			generic_event.sprintf(
+				"Job attempt %d exited with status %d",
+				num_attempts+1, WEXITSTATUS( exit_status ) );
+		} else {
+			generic_event.sprintf(
+				"job attempt %d terminated with unknown status %d",
+				num_attempts+1, exit_status );
+		}
+		job_ad->InsertAttr("generic_event", generic_event.Value() );
+		user_log(job_ad, ULOG_GENERIC);
+		job_ad->InsertAttr("generic_event", next_action );
+		user_log(job_ad, ULOG_GENERIC);
+
 		snprintf(tempstr, MAXSTR, 
 				 "num_attempts = %d;",num_attempts + 1);
     
@@ -1966,6 +2165,10 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 			strncat(linebufstr, linebuf, MAXSTR-2);
 			strcat(linebufstr, "\"");
 
+			job_ad->InsertAttr("exit_status", exit_status);
+			job_ad->InsertAttr("termination_type", "exited");
+			user_log(job_ad, ULOG_JOB_TERMINATED);
+
 			dapcollection->RemoveClassAd(key);
 
 			write_dap_log(historyfilename, "\"request_failed\"", 
@@ -1974,6 +2177,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 			char exit_status_str[MAXSTR];
 			snprintf(exit_status_str, MAXSTR, "%d", exit_status);
       
+			// FIXME delete this old userlog writer
 			write_xml_user_log(userlogfilename, "MyType", "\"JobCompletedEvent\"", 
 							   "EventTypeNumber", "5", 
 							   "TerminatedNormally", "1",
@@ -2163,44 +2367,4 @@ get_cred_from_credd (const char * request, void *& buff, int & size) {
 	set_priv (priv);
 	return (rc==1)?TRUE:FALSE;
 }
-
-int
-init_user_id_from_FQN (const char * _fqn) {
-
-	char * uid = NULL;
-	char * domain = NULL;
-	char * fqn = NULL;
-  
-	if (_fqn) {
-		fqn = strdup (_fqn);
-		uid = fqn;
-
-			// Domain?
-		char * pAt = strchr (fqn, '@');
-		if (pAt) {
-			*pAt='\0';
-			domain = pAt+1;
-		}
-	}
-  
-	if (uid == NULL) {
-		uid = "nobody";
-	}
-
-	int rc = init_user_ids (uid, domain);
-	dprintf (D_FULLDEBUG, "Switching to user %s@%s, result = %d\n", uid, domain, rc);
-
-	if (fqn)
-		free (fqn);
-
-	return rc;
-}
-
-
-
-
-
-
-
-
 

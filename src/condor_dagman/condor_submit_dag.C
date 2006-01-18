@@ -175,10 +175,12 @@ submitDag( SubmitDagOptions &opts )
 		printf("Checking all your submit files for log file names.\n");
 		printf("This might take a while... \n");
 
-		StringList	logFiles;
+		StringList	condorLogFiles;
+		StringList	storkLogFiles;
 
 		MyString	msg;
-		if ( !GetLogFiles( opts.dagFiles, opts.useDagDir, logFiles, msg ) ) {
+		if ( !GetLogFiles( opts.dagFiles, opts.useDagDir, condorLogFiles,
+					storkLogFiles, msg ) ) {
 			fprintf( stderr, "ERROR: %s\n", msg.Value() );
 			if ( opts.bAllowLogError ) {
 				fprintf( stderr, "Continuing anyhow because of "
@@ -191,8 +193,13 @@ submitDag( SubmitDagOptions &opts )
 			}
 		}
 
-		logFiles.rewind();
-		opts.strJobLog = logFiles.next();
+		condorLogFiles.rewind();
+		storkLogFiles.rewind();
+		if ( condorLogFiles.number() > 0 ) {
+			opts.strJobLog = condorLogFiles.next();
+		} else if ( storkLogFiles.number() > 0 ) {
+			opts.strJobLog = storkLogFiles.next();
+		}
 		printf("Done.\n");
 	}
 

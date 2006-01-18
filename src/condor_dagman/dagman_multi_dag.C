@@ -40,7 +40,8 @@ AppendError(MyString &errMsg, const MyString &newError)
 //-------------------------------------------------------------------------
 bool
 GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir, 
-			StringList &logFiles, MyString &errMsg)
+			StringList &condorLogFiles, StringList &storkLogFiles,
+			MyString &errMsg)
 {
 	bool		result = true;
 
@@ -66,11 +67,28 @@ GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
 
 			// Note: this returns absolute paths to the log files.
 		MyString msg = MultiLogFiles::getJobLogsFromSubmitFiles(
-				file, "job", "dir", logFiles);
+				file, "job", "dir", condorLogFiles);
 		if ( msg != "" ) {
 			AppendError( errMsg,
-					MyString("Failed to locate job log files: ") + msg );
+					MyString("Failed to locate Condor job log files: ") +
+					msg );
 			result = false;
+		}
+
+			// Note: this returns absolute paths to the log files.
+		msg = MultiLogFiles::getJobLogsFromSubmitFiles(
+				file, "data", "dir", storkLogFiles);
+		if ( msg != "" ) {
+#if 1
+				// Get rid of this after 6.7.15 release.  wenger 2006-01-11.
+			dprintf( D_ALWAYS, "Warning: failed to locate Stork job log "
+					"files (%s) but continuing anyhow\n", msg.Value() );
+#else
+			AppendError( errMsg,
+					MyString("Failed to locate Stork job log files: ") +
+					msg );
+			result = false;
+#endif
 		}
 
 		MyString	tmpErrMsg;

@@ -269,7 +269,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 		// If this is a DAP/DATA node, make sure we have a Stork log
 		// file specified.
 	if ( nodeType == Job::TYPE_STORK ) {
-		if ( !dag->GetDapLog() ) {
+		if ( dag->GetStorkLogCount() == 0 ) {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): DAP/DATA node, "
 						"but no Stork log file is specified (-Storklog "
 						"command-line argument)\n", dagFile, lineNum);

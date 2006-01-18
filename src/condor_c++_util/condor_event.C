@@ -1099,7 +1099,7 @@ void GenericEvent::
 setInfoText(char const *str)
 {
 	strncpy(info,str,sizeof(info));
-	info[sizeof(info)] = '\0'; //ensure null-termination
+	info[ sizeof(info) - 1 ] = '\0'; //ensure null-termination
 }
 
 // ----- the RemoteErrorEvent class

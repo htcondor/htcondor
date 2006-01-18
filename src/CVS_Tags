@@ -1,3 +1,6 @@
+01/17/06 V6_7-stork_userlog-merge-1
+	State of the V6_7-stork_userlog-branch prior to merging to V6_7-branch.
+
 01/17/06 V6_7-gridftp-merge-1
    The state of the V6_7-gridftp-branch for a merge into V6_8-branch. This
    add support in Condor-G for automatically spawning a gridftp server to

@@ -26,6 +26,12 @@
 #include "read_multiple_logs.h"
 #include "condor_string.h" // for strnewp()
 #include "tmp_dir.h"
+#ifdef WANT_NEW_CLASSADS
+#ifndef WANT_NAMESPACES
+#define WANT_NAMESPACES
+#endif
+#include "classad_distribution.h"
+#endif
 
 #define LOG_HASH_SIZE 37 // prime
 
@@ -474,6 +480,156 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef WANT_NEW_CLASSADS
+
+// Skip whitespace in a std::string buffer.
+void
+MultiLogFiles::skip_whitespace(std::string const &s,int &offset) {
+	while((int)s.size() > offset && isspace(s[offset])) offset++;
+};
+
+// Read a file into a std::string.  Return false on error.
+MyString
+MultiLogFiles::readFile(char const *filename,std::string& buf)
+{
+    char chunk[4000];
+	MyString rtnVal;
+
+	int fd = open(filename, O_RDONLY);
+	if (fd < 0) {
+		rtnVal.sprintf("error opening submit file %s: %s",
+				filename, strerror(errno) );
+		dprintf(D_ALWAYS, "%s\n", rtnVal.Value() );
+		return rtnVal;
+	}
+
+    while(1) {
+        size_t n = read(fd,chunk,sizeof(chunk)-1);
+        if(n>0) {
+            chunk[n] = '\0';
+            buf += chunk;
+        }
+        else if(n==0) {
+            break;
+        }
+        else {
+            rtnVal.sprintf("failed to read submit file %s: %s",
+					filename, strerror(errno) );
+			dprintf(D_ALWAYS, "%s\n", rtnVal.Value() );
+			close(fd);
+			return rtnVal;
+        }
+    }
+
+	close(fd);
+    return rtnVal;
+}
+
+// Gets the log files from a Stork submit file.
+MyString
+MultiLogFiles::loadLogFileNamesFromStorkSubFile(
+		const MyString &strSubFilename,
+		const MyString &directory,
+		StringList &listLogFilenames)
+{
+	MyString rtnVal;
+	MyString path;
+	std::string adBuf;
+	classad::ClassAdParser parser;
+	classad::PrettyPrint unparser;
+	std::string unparsed;
+
+	dprintf( D_FULLDEBUG,
+			"MultiLogFiles::loadLogFileNamesFromStorkSubFile(%s, %s)\n",
+				strSubFilename.Value(), directory.Value() );
+
+	// Construct fully qualified path from directory and log file.
+	if ( directory.Length() > 0 ) {
+		path = directory + DIR_DELIM_STRING;
+	}
+	path += strSubFilename;
+
+	// Read submit file into std::string buffer, the native input buffer for
+	// the [new] ClassAds parser.
+	rtnVal = MultiLogFiles::readFile( path.Value(), adBuf);
+	if (rtnVal.Length() > 0 ) {
+		return rtnVal;
+	}
+
+	// read all classads out of the input file
+    int offset = 0;
+    classad::ClassAd ad;
+
+	// Loop through the Stork submit file, parsing out one submit job [ClassAd]
+	// at a time.
+	skip_whitespace(adBuf,offset);  // until the parser can do this itself
+    while (parser.ParseClassAd(adBuf, ad, offset) ) {
+		std::string logfile;
+
+		// ad now contains the next Stork job ClassAd.  Extract log file, if
+		// found.
+		if ( ! ad.EvaluateAttrString("log", logfile) ) {
+			// no log file specified
+			continue;
+		}
+
+		// reject empty log file names
+		if ( logfile.empty() ) {
+			unparser.Unparse( unparsed, &ad);
+			rtnVal.sprintf("Stork job specifies null log file:%s",
+					unparsed.c_str() );
+			return rtnVal;
+		}
+
+		// reject log file names with embedded macros
+		if ( logfile.find('$') != std::string::npos) {
+			unparser.Unparse( unparsed, &ad);
+			rtnVal.sprintf("macros not allowed in Stork log file names:%s",
+					unparsed.c_str() );
+			return rtnVal;
+		}
+
+		// All logfile must be fully qualified paths.  Prepend the current
+		// working directory if logfile not a fully qualified path.
+		if ( ! fullpath(logfile.c_str() ) ) {
+			char	tmpCwd[PATH_MAX];
+			if ( ! getcwd(tmpCwd, sizeof(tmpCwd) ) ) {
+				rtnVal.sprintf("%s:%d strange and rare getcwd() error: %s",
+						__FILE__, __LINE__, strerror(errno) );
+				return rtnVal;
+			}
+			std::string tmp  = tmpCwd;
+			tmp += DIR_DELIM_STRING;
+			tmp += logfile;
+			logfile = tmp;
+		}
+
+		// Add the log file we just found to the log file list
+		// (if it's not already in the list -- we don't want
+		// duplicates).
+		listLogFilenames.rewind();
+		char *psLogFilename;
+		bool bAlreadyInList = false;
+		while ( (psLogFilename = listLogFilenames.next()) ) {
+			if (logfile == psLogFilename) {
+				bAlreadyInList = true;
+			}
+		}
+
+		if (!bAlreadyInList) {
+				// Note: append copies the string here.
+			listLogFilenames.append(logfile.c_str() );
+		}
+
+        skip_whitespace(adBuf,offset);	// until the parser can do this itself
+    }
+
+	return rtnVal;
+}
+#endif /* WANT_NEW_CLASSADS */
+
+///////////////////////////////////////////////////////////////////////////////
+
 MyString
 MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
             const MyString &jobKeyword, const MyString &dirKeyword,
@@ -542,8 +698,37 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 				}
 
 					// get the log = value from the sub file
-				MyString strLogFilename = loadLogFileNameFromSubFile(
+				MyString strLogFilename;
+				if ( !stricmp(jobKeyword.Value(), "data") ) {
+#ifdef WANT_NEW_CLASSADS
+						// Warning!  For the moment we are only supporting
+						// one log file per Stork submit file.
+						// wenger 2006-01-17.
+					StringList tmpLogFiles;
+					MyString tmpResult = loadLogFileNamesFromStorkSubFile(
+								strSubFile, directory, tmpLogFiles);
+					if ( tmpResult != "" ) return tmpResult;
+					tmpLogFiles.rewind();
+					strLogFilename = tmpLogFiles.next();
+
+#  if 1 // Remove for 6.7.16
+						// Temporarily allow old-style Stork submit files
+						// with no log file specification.  wenger 2006-01-17.
+					if ( strLogFilename == "" ) {
+						dprintf(D_ALWAYS, "Warning: No 'log =' value found "
+								"in submit file %s for node %s\n",
+								strSubFile.Value(), nodeName);
+						continue;
+					}
+#  endif
+#else
+					return "Stork unavailable on this platform because "
+								"new classads are not yet supported";
+#endif
+				} else {
+					strLogFilename = loadLogFileNameFromSubFile(
 						strSubFile, directory);
+				}
 				if (strLogFilename == "") {
 					MyString result = "No 'log =' value found in submit file "
 								+ strSubFile + " for node " + nodeName;

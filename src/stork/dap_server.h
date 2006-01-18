@@ -35,6 +35,9 @@ void remove_credential (char * dap_id);
 char * get_credential_filename (char * dap_id);
 int get_cred_from_credd (const char * request, void *& buff, int & size);
 
+#if 0
 int init_user_id_from_FQN (const char *owner);
+#endif
+
 #endif
 

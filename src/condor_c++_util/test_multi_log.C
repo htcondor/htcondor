@@ -32,7 +32,7 @@
 #include "string_list.h"
 #include "read_multiple_logs.h"
 
-static const char * VERSION = "0.9.1";
+static const char * VERSION = "0.9.2";
 
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 
@@ -65,6 +65,9 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	printf("Testing multi-log reading code\n");
+	fflush(stdout);
+
 	if ( !GetBadLogFiles() ) {
 		result = 1;
 	}
@@ -81,8 +84,10 @@ int main(int argc, char **argv)
 
 	if ( result == 0 ) {
 		printf("\nTest succeeded\n");
+		fflush(stdout);
 	} else {
-		printf("\nTest FAILED !!!!!!!!!!!!!!!!!!!!!!!!\n");
+		fprintf(stderr, "\nTest FAILED !!!!!!!!!!!!!!!!!!!!!!!!\n");
+		fflush(stdout);
 	}
 
 	return result;
@@ -143,7 +148,8 @@ GetGoodLogFiles(StringList &logFiles)
 {
 	bool		isOkay = true;
 
-	printf("Getting log files...\n");
+	printf("\nGetting log files...\n");
+	fflush(stdout);
 	MyString		errorMsg;
 	MultiLogFiles	mlf;
 	errorMsg = mlf.getJobLogsFromSubmitFiles(
@@ -151,20 +157,37 @@ GetGoodLogFiles(StringList &logFiles)
 	if ( errorMsg != "" ) {
 		printf("...error getting log files: %s", errorMsg.Value());
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	} else {
 		printf("...succeeded\n");
+		fflush(stdout);
+	}
+
+	printf("\nGetting log files...\n");
+	fflush(stdout);
+	errorMsg = mlf.getJobLogsFromSubmitFiles(
+			"test_multi_log1.dag", "data", "dir", logFiles);
+	if ( errorMsg != "" ) {
+		printf("...error getting log files: %s", errorMsg.Value());
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	} else {
+		printf("...succeeded\n");
+		fflush(stdout);
 	}
 
 	if ( verbosity >= 1 ) {
-		printf("Log files:\n");
+		printf("\nLog files:\n");
 		logFiles.print();
+		fflush(stdout);
 	}
 
 	char currentDir[PATH_MAX];
 	if ( !getcwd(currentDir, PATH_MAX) ) {
 		fprintf(stderr, "Buffer is too short for getcwd()");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fprintf(stderr, " (at %s: %d)\n", __FILE__, __LINE__);
 		isOkay = false;
 	}
 	MyString	logPath;
@@ -176,6 +199,8 @@ GetGoodLogFiles(StringList &logFiles)
 	logPath = MyString(currentDir) + "/test_multi_log.log3";
 	reference.append(logPath.Value());
 	logPath = MyString(currentDir) + "/../condor_c++_util/test_multi_log.log3";
+	reference.append(logPath.Value());
+	logPath = MyString(currentDir) + "/test_multi_log.log4";
 	reference.append(logPath.Value());
 
 	if ( !CompareStringLists(reference, logFiles) ) {
@@ -194,7 +219,8 @@ GetBadLogFiles()
 
 	StringList	logFiles;
 
-	printf("Getting log files...\n");
+	printf("\nGetting log files...\n");
+	fflush(stdout);
 	MyString		errorMsg;
 	MultiLogFiles	mlf;
 	errorMsg = mlf.getJobLogsFromSubmitFiles(
@@ -204,28 +230,34 @@ GetBadLogFiles()
 	} else {
 		printf("...should have gotten an error (test failed)");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
 	if ( verbosity >= 1 ) {
-		printf("Log files:\n");
+		printf("\nLog files:\n");
 		logFiles.print();
+		fflush(stdout);
 	}
 
-	printf("Getting log files...\n");
+	printf("\nGetting log files...\n");
+	fflush(stdout);
 	errorMsg = mlf.getJobLogsFromSubmitFiles(
 			"test_multi_log3.dag", "job", "dir", logFiles);
 	if ( errorMsg != "" ) {
 		printf("...got expected error (%s)\n", errorMsg.Value());
+		fflush(stdout);
 	} else {
 		printf("...should have gotten an error (test failed)");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
 	if ( verbosity >= 1 ) {
-		printf("Log files:\n");
+		printf("\nLog files:\n");
 		logFiles.print();
+		fflush(stdout);
 	}
 
 	return isOkay;
@@ -238,9 +270,10 @@ CompareStringLists(StringList &reference, StringList &test)
 	bool	isOkay = true;
 
 	if ( reference.number() != test.number() ) {
-		printf("Error: expected %d strings, got %d", reference.number(),
+		printf("ERROR: expected %d strings, got %d", reference.number(),
 				test.number());
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
@@ -248,8 +281,9 @@ CompareStringLists(StringList &reference, StringList &test)
 	char	*str;
 	while ( (str = reference.next()) != NULL ) {
 		if ( !test.contains(str) ) {
-			printf("Test list should contain <%s> but does not", str);
+			printf("ERROR: test list should contain <%s> but does not", str);
 			printf(" (at %s: %d)\n", __FILE__, __LINE__);
+			fflush(stdout);
 			isOkay = false;
 		}
 	}
@@ -262,6 +296,9 @@ bool
 ReadEvents(StringList &logFiles)
 {
 	bool	isOkay = true;
+
+	printf("\nReading events\n");
+	fflush(stdout);
 
 	MultiLogFiles::DeleteLogs(logFiles);
 
@@ -276,9 +313,11 @@ ReadEvents(StringList &logFiles)
 	printf("Testing detectLogGrowth() on empty files...\n");
 	if ( !reader.detectLogGrowth() ) {
 		printf("...succeeded\n");
+		fflush(stdout);
 	} else {
 		printf("...failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
@@ -287,29 +326,35 @@ ReadEvents(StringList &logFiles)
 	if ( reader.readEvent(event) != ULOG_NO_EVENT ) {
 		printf("...failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	} else {
 		printf("...succeeded\n");
+		fflush(stdout);
 	}
 
 	printf("Testing writing and reading events...\n");
+	fflush(stdout);
 
 	UserLog		log1("test", "test_multi_log.log1", 1, 0, 0, false);
 	UserLog		log2("test", "test_multi_log.log2", 2, 0, 0, true);
 	UserLog		log3("test", "test_multi_log.log3", 3, 0, 0, false);
 	UserLog		log4("test", "test_multi_log.log3", 4, 0, 0, false);
+	UserLog		log5("test", "test_multi_log.log4", 5, -1, -1, false);
 
 	SubmitEvent	subE;
 	strcpy(subE.submitHost, "<128.105.165.12:32779>");
 	if ( !log1.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
 	if ( !reader.detectLogGrowth() ) {
 		printf("Error: should have gotten log growth");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
@@ -321,13 +366,17 @@ ReadEvents(StringList &logFiles)
 	if ( reader.detectLogGrowth() ) {
 		printf("Error: should NOT have gotten log growth");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
 	JobTerminatedEvent	termE;
+	termE.normal = true;
+	termE.returnValue = 0;
 	if ( !log1.writeEvent(&termE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
@@ -339,6 +388,7 @@ ReadEvents(StringList &logFiles)
 	if ( !log2.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 		// Sleep to make event order deterministic, to simplify the test.
@@ -346,12 +396,14 @@ ReadEvents(StringList &logFiles)
 	if ( !log3.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
 	if ( !reader.detectLogGrowth() ) {
 		printf("Error: should have gotten log growth");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
@@ -372,6 +424,7 @@ ReadEvents(StringList &logFiles)
 	if ( !log2.writeEvent(&termE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 		// Sleep to make event order deterministic, to simplify the test.
@@ -379,6 +432,7 @@ ReadEvents(StringList &logFiles)
 	if ( !log3.writeEvent(&termE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
@@ -399,6 +453,7 @@ ReadEvents(StringList &logFiles)
 	if ( !log4.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
@@ -414,6 +469,7 @@ ReadEvents(StringList &logFiles)
 	if ( !log4.writeEvent(&termE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
 		isOkay = false;
 	}
 
@@ -426,10 +482,82 @@ ReadEvents(StringList &logFiles)
 		isOkay = false;
 	}
 
+	subE.cluster = 5;
+	subE.proc = -1;
+	subE.subproc = -1;
+	if ( !log5.writeEvent(&subE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	ExecuteEvent	execE;
+	strcpy(execE.executeHost, "<128.105.666.99:12345>");
+	if ( !log5.writeEvent(&execE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	if ( !ReadAndTestEvent(&subE) ) {
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(&execE) ) {
+		isOkay = false;
+	}
+
+	GenericEvent	genE;
+	strcpy(genE.info, "job type: transfer");
+	if ( !log5.writeEvent(&genE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(&genE) ) {
+		isOkay = false;
+	}
+
+	strcpy(genE.info, "src_url: file:/dev/null");
+	if ( !log5.writeEvent(&genE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(&genE) ) {
+		isOkay = false;
+	}
+
+	strcpy(genE.info, "dest_url: file:/dev/null");
+	if ( !log5.writeEvent(&genE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(&genE) ) {
+		isOkay = false;
+	}
+
+	if ( !log5.writeEvent(&termE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(&termE) ) {
+		isOkay = false;
+	}
+
 	if ( isOkay ) {
 		printf("...succeeded\n");
+		fflush(stdout);
 	} else {
 		printf("...failed\n");
+		fflush(stdout);
 	}
 
 	return isOkay;
@@ -445,6 +573,7 @@ ReadAndTestEvent(ULogEvent *expectedEvent)
 		if ( expectedEvent ) {
 			printf("Error reading event");
 			printf(" (at %s: %d)\n", __FILE__, __LINE__);
+			fflush(stdout);
 			isOkay = false;
 		}
 	} else {
@@ -461,11 +590,13 @@ ReadAndTestEvent(ULogEvent *expectedEvent)
 				PrintEvent(expectedEvent);
 				printf("  Event read: ");
 				PrintEvent(event);
+				fflush(stdout);
 				isOkay = false;
 			}
 		} else {
 			printf("Error: should NOT have gotten an event");
 			printf(" (at %s: %d)\n", __FILE__, __LINE__);
+			fflush(stdout);
 			isOkay = false;
 		}
 	}
@@ -473,6 +604,7 @@ ReadAndTestEvent(ULogEvent *expectedEvent)
 	if ( !isOkay ) {
 		printf("  Expecting ");
 		PrintEvent(expectedEvent);
+		fflush(stdout);
 	}
 
 	return isOkay;
@@ -484,7 +616,9 @@ PrintEvent(ULogEvent *event)
 	if ( event ) {
 		printf("Event: %d.%d.%d: %s\n", event->cluster, event->proc,
 				event->subproc,ULogEventNumberNames[event->eventNumber]);
+		fflush(stdout);
 	} else {
 		printf("Event: NULL\n");
+		fflush(stdout);
 	}
 }

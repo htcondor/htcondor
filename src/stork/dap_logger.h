@@ -4,6 +4,7 @@
 #include "condor_common.h"
 #include "condor_string.h"
 #include "condor_debug.h"
+#include "condor_event.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #ifndef WANT_NAMESPACES
@@ -26,6 +27,10 @@ void write_xml_user_log(char *logfilename,char *param1, char *value1, char
 		*param7 = NULL, char *value7 = NULL,char *param8 = NULL, char *value8 =
 		NULL,char *param9 = NULL, char *value9 = NULL,
 		char *param10 = NULL, char *value10 = NULL);
+bool
+user_log(	const classad::ClassAd *ad,
+			const enum ULogEventNumber eventNum);
+
 
 #endif
 

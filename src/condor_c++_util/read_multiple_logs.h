@@ -55,6 +55,19 @@ public:
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			const MyString &directory);
 
+#ifdef WANT_NEW_CLASSADS
+	    /** Gets the log files from a Stork submit file.
+		 * @param The submit file line.
+		 * @param The directory containing the submit file.
+		 * @param Output string list of log file names.
+		 * @return "" if okay, or else an error message.
+		 */
+    static MyString loadLogFileNamesFromStorkSubFile(
+		const MyString &strSubFilename,
+		const MyString &directory,
+		StringList &listLogFilenames);
+#endif
+
 	    /** Deletes the given log files.
 		 */
 	static void DeleteLogs(StringList &logFileNames);
@@ -88,6 +101,29 @@ private:
 		 */
 	static MyString CombineLines(StringList &listIn, char continuation,
 			const MyString &filename, StringList &listOut);
+
+#ifdef WANT_NEW_CLASSADS
+		/**
+		 * Skip whitespace in a std::string buffer.  This is a helper function
+		 * for loadLogFileNamesFromStorkSubFile().  When the new ClassAds
+		 * parser can skip whitespace on it's own, this function can be
+		 * removed.
+		 * @param buffer name
+		 * @param input/output offset into buffer
+		 * @return void
+		 */
+	static void skip_whitespace(std::string const &s,int &offset);
+
+		/**
+		 * Read a file into a std::string helper function for
+		 * loadLogFileNamesFromStorkSubFile().
+		 * @param Filename to read.
+		 * @param output buffer
+		 * @return "" if okay, or else an error message.
+		 */
+	static MyString readFile(char const *filename,std::string& buf);
+#endif
+
 };
 
 class ReadMultipleUserLogs
@@ -177,6 +213,7 @@ private:
 		 * @return True iff a duplicate log exists.
 		 */
 	bool DuplicateLogExists(ULogEvent *event, LogFileEntry *log);
+
 };
 
 #endif

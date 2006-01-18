@@ -39,6 +39,7 @@
 	@return true if successful, false otherwise
 */ 
 bool GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
-			StringList &logFiles, MyString &errMsg);
+			StringList &condorLogFiles, StringList &storkLogFiles,
+			MyString &errMsg);
 
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

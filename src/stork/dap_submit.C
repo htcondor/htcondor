@@ -79,6 +79,76 @@ void IllegalOption(char *argv0,char *arg)
   exit(1);
 }
 
+// Ensure job ad contains fully qualified file paths.
+bool
+check_job_paths( classad::ClassAd *currentAd ) {
+
+	std::string path;
+	char tmpCwd[PATH_MAX];
+
+	// build current working directory prefix
+	if ( ! getcwd(tmpCwd, sizeof(tmpCwd) ) ) {
+		fprintf(stderr, "getcwd() error: %s\n",
+				strerror(errno) );
+		return false;
+	}
+	strcat(tmpCwd, DIR_DELIM_STRING);
+
+	// prepend CWD to user log, if necessary.
+	if	(	currentAd->EvaluateAttrString("log", path) && 
+			!fullpath(path.c_str() )
+		)
+	{
+		if ( path.empty() ) {
+			fprintf(stderr, "empty log path\n");
+			return false;
+		}
+		path.insert(0, tmpCwd);
+		currentAd->InsertAttr("log", path);
+	}
+
+	// prepend CWD to job input file, if necessary.
+	if	(	currentAd->EvaluateAttrString("input", path) && 
+			!fullpath(path.c_str() )
+		)
+	{
+		if ( path.empty() ) {
+			fprintf(stderr, "empty input path\n");
+			return false;
+		}
+		path.insert(0, tmpCwd);
+		currentAd->InsertAttr("input", path);
+	}
+
+	// prepend CWD to job output file, if necessary.
+	if	(	currentAd->EvaluateAttrString("output", path) && 
+			!fullpath(path.c_str() )
+		)
+	{
+		if ( path.empty() ) {
+			fprintf(stderr, "empty output path\n");
+			return false;
+		}
+		path.insert(0, tmpCwd);
+		currentAd->InsertAttr("output", path);
+	}
+
+	// prepend CWD to job error file, if necessary.
+	if	(	currentAd->EvaluateAttrString("err", path) && 
+			!fullpath(path.c_str() )
+		)
+	{
+		if ( path.empty() ) {
+			fprintf(stderr, "empty error path\n");
+			return false;
+		}
+		path.insert(0, tmpCwd);
+		currentAd->InsertAttr("err", path);
+	}
+
+	return true;
+}
+
 /* ============================================================================
  * main body of dap_submit
  * ==========================================================================*/
@@ -195,6 +265,7 @@ int main(int argc, char **argv)
     currentAd = parser.ParseClassAd(adstr);
     if (currentAd == NULL) {
       fprintf(stderr, "Invalid input format! Not a valid classad!\n");
+      fprintf(stderr, "error = '%s'\n", classad::CondorErrMsg.c_str() );
       return 1;
     }
 
@@ -206,6 +277,11 @@ int main(int argc, char **argv)
         }
     }
     
+	// Ensure job ad contains fully qualified file paths.
+	if ( ! check_job_paths( currentAd ) ) {
+		return 1;
+	}
+
     //check format of the submit classad
     if ( !check_dap_format(currentAd)){
       fprintf(stderr, "========================\n");
