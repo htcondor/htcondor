@@ -1,78 +1,44 @@
-all_target( libcondordrmaa.a )
-
-#if HAS_PTHREADS
-CFLAGS = $(STD_C_FLAGS) -D_REENTRANT -DHAS_PTHREADS
-#else
-CFLAGS = $(STD_C_FLAGS)
-#endif
-
-#define ObjectFiles \
-	libDrmaa.o drmaa_common.o
-
-library_target(libcondordrmaa.a,ObjectFiles)
-
-release_library(libcondordrmaa.a,lib)
-strip_library(libcondordrmaa.a,lib)
-static_library(libcondordrmaa.a,lib)
-
-release_copy_target(lib_condor_drmaa.h,include,lib_condor_drmaa.h,TEXT_MODE)
-strip_copy_target(lib_condor_drmaa.h,include,lib_condor_drmaa.h,TEXT_MODE)
-static_copy_target(lib_condor_drmaa.h,include,lib_condor_drmaa.h,TEXT_MODE)
-
-release_copy_target(README,include,lib_condor_drmaa.README,TEXT_MODE)
-strip_copy_target(README,include,lib_condor_drmaa.README,TEXT_MODE)
-static_copy_target(README,include,lib_condor_drmaa.README,TEXT_MODE)
-
-release_copy_target(makefile.dist,src/drmaa,Makefile,TEXT_MODE)
-strip_copy_target(makefile.dist,src/drmaa,Makefile,TEXT_MODE)
-static_copy_target(makefile.dist,src/drmaa,Makefile,TEXT_MODE)
-
-release_copy_target(README,src/drmaa,README,TEXT_MODE)
-strip_copy_target(README,src/drmaa,README,TEXT_MODE)
-static_copy_target(README,src/drmaa,README,TEXT_MODE)
-
-release_copy_target(STATUS,src/drmaa,STATUS,TEXT_MODE)
-strip_copy_target(STATUS,src/drmaa,STATUS,TEXT_MODE)
-static_copy_target(STATUS,src/drmaa,STATUS,TEXT_MODE)
-
-release_copy_target(WISDOM,src/drmaa,WISDOM,TEXT_MODE)
-strip_copy_target(WISDOM,src/drmaa,WISDOM,TEXT_MODE)
-static_copy_target(WISDOM,src/drmaa,WISDOM,TEXT_MODE)
-
-release_copy_target(auxDrmaa.c,src/drmaa,auxDrmaa.c,TEXT_MODE)
-strip_copy_target(auxDrmaa.c,src/drmaa,auxDrmaa.c,TEXT_MODE)
-static_copy_target(auxDrmaa.c,src/drmaa,auxDrmaa.c,TEXT_MODE)
-
-release_copy_target(auxDrmaa.h,src/drmaa,auxDrmaa.h,TEXT_MODE)
-strip_copy_target(auxDrmaa.h,src/drmaa,auxDrmaa.h,TEXT_MODE)
-static_copy_target(auxDrmaa.h,src/drmaa,auxDrmaa.h,TEXT_MODE)
-
-release_copy_target(documentation,src/drmaa,documentation,TEXT_MODE)
-strip_copy_target(documentation,src/drmaa,documentation,TEXT_MODE)
-static_copy_target(documentation,src/drmaa,documentation,TEXT_MODE)
-
-release_copy_target(drmaa_common.c,src/drmaa,drmaa_common.c,TEXT_MODE)
-strip_copy_target(drmaa_common.c,src/drmaa,drmaa_common.c,TEXT_MODE)
-static_copy_target(drmaa_common.c,src/drmaa,drmaa_common.c,TEXT_MODE)
-
-release_copy_target(drmaa_common.h,src/drmaa,drmaa_common.h,TEXT_MODE)
-strip_copy_target(drmaa_common.h,src/drmaa,drmaa_common.h,TEXT_MODE)
-static_copy_target(drmaa_common.h,src/drmaa,drmaa_common.h,TEXT_MODE)
-
-release_copy_target(libDrmaa.c,src/drmaa,libDrmaa.c,TEXT_MODE)
-strip_copy_target(libDrmaa.c,src/drmaa,libDrmaa.c,TEXT_MODE)
-static_copy_target(libDrmaa.c,src/drmaa,libDrmaa.c,TEXT_MODE)
-
-release_copy_target(lib_condor_drmaa.h,src/drmaa,lib_condor_drmaa.h,TEXT_MODE)
-strip_copy_target(lib_condor_drmaa.h,src/drmaa,lib_condor_drmaa.h,TEXT_MODE)
-static_copy_target(lib_condor_drmaa.h,src/drmaa,lib_condor_drmaa.h,TEXT_MODE)
-
-
-html_target( documentation )
-
+all::
+clean::
 html:
+
+#if HAVE_EXT_DRMAA
+
+DRMAA_SRC = $(DRMAA_DIR)/src 
+
+/* copy the DRMAA files from the externals build */
+
+public_copy_target($(DRMAA_LIB)/libdrmaa.so,lib,libdrmaa.so,TEXT_MODE) 
+public_copy_target($(DRMAA_LIB)/libcondordrmaa.a,lib,libcondordrmaa.a,TEXT_MODE)
+public_copy_target($(DRMAA_INC)/drmaa.h,include,drmaa.h,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/README,include,README,TEXT_MODE)
+
+public_copy_target($(DRMAA_SRC)/auxDrmaa.c,src/drmaa,auxDrmaa.c,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/auxDrmaa.h,src/drmaa,auxDrmaa.h,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/config.h,src/drmaa,config.h,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/config.h.in,src/drmaa,config.h.in,TEXT_MODE)
+
+public_copy_target($(DRMAA_SRC)/configure,src/drmaa,configure,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/configure.in,src/drmaa,configure.in,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/documentation,src/drmaa,documentation,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/drmaa_common.c,src/drmaa,drmaa_common.c,TEXT_MODE)
+
+public_copy_target($(DRMAA_SRC)/drmaa_common.h,src/drmaa,drmaa_common.h,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/drmaa.h,src/drmaa,drmaa.h,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/iniparser.c,src/drmaa,iniparser.c,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/iniparser.h,src/drmaa,iniparser.h,TEXT_MODE)
+
+public_copy_target($(DRMAA_SRC)/libDrmaa.c,src/drmaa,libDrmaa.c,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/Makefile.in,src/drmaa,Makefile.in,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/README,src/drmaa,README,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/STATUS,src/drmaa,STATUS,TEXT_MODE)
+public_copy_target($(DRMAA_SRC)/WISDOM,src/drmaa,WISDOM,TEXT_MODE)
+
+#else
+
 release::
 stripped:: 
 static:: 
-clean::
+
+#endif
 
