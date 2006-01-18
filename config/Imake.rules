@@ -10,10 +10,22 @@
 .SUFFIXES: .C
 
 .C.o:
-	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c $< -o $@
 
 .f.o:
-	$(Fortran) $(FFLAGS) -c $<
+	$(Fortran) $(FFLAGS) -c $< -o $@
+
+#if HAVE_CC_PIC_FLAG
+%-pic.o: %.c
+	$(CC) $(CC_PIC_FLAGS) $(STD_C_FLAGS) -c $< -o $@
+
+%-pic.o: %.C
+	$(CPlusPlus) $(CC_PIC_FLAGS) $(C_PLUS_FLAGS) -c $< -o $@
+
+/* make functions to help produce pic versions of things... */
+picobjs = $(patsubst %.o,%-pic.o,$(1))
+#endif
+
 
 /*
  * The return value of a Unix pipeline is the last command in the pipeline
@@ -164,6 +176,21 @@ clean::							@@\
 XCOMM End translation of func(library_target)
 #endif /* library_target */
 
+#ifdef HAVE_CC_SHARED_FLAG
+/*
+** Build a shared library from .o files, and force PIC code for the objs.
+*/
+#ifndef shared_library_target
+#define shared_library_target(libname,objlist)		@@\
+XCOMM Begin translation of func(shared_library_target) @@\
+libname: $(call picobjs,objlist)					@@\
+	rm -f libname						@@\
+	$(CC) $(CC_SHARED_FLAGS) $(CC_PIC_FLAGS) -o libname $(call picobjs,objlist) @@\
+clean::							@@\
+	rm -f libname $(call picobjs,objlist)		@@\
+XCOMM End translation of func(shared_library_target)
+#endif /* sahred_library_target */
+#endif
 
 /*
 ** Build a C program from .o files and libraries.
@@ -454,6 +481,18 @@ release:: $(RELEASE_DIR)/dir/lib	@@\
 XCOMM End translation of func(release_library)
 #endif  /* release_library */
 
+/*
+** Copy the given shared library to the specified directory
+*/
+#ifndef release_shared_library
+#define release_shared_library(lib,dir) 			@@\
+XCOMM Begin translation of func(release_shared_library) @@\
+$(RELEASE_DIR)/dir/lib: lib					@@\
+	COPY_LIBRARY(lib,$(RELEASE_DIR)/dir/lib)		@@\
+release:: $(RELEASE_DIR)/dir/lib	@@\
+XCOMM End translation of func(release_shared_library)
+#endif  /* release_shared_library */
+
 
 /*
 ** Target is released by creating a symbolic link to another.
@@ -569,6 +608,19 @@ $(STRIP_DIR)/dir/lib: lib				@@\
 stripped:: $(STRIP_DIR)/dir/lib		@@\
 XCOMM End translation of func(strip_library)
 #endif  /* strip_library */
+
+/*
+** Copy the given shared library to the specified directory
+*/
+#ifndef strip_shared_library
+#define strip_shared_library(lib,dir)			@@\
+XCOMM Begin translation of func(strip_shared_library) @@\
+$(STRIP_DIR)/dir/lib: lib				@@\
+	COPY_LIBRARY(lib,$(STRIP_DIR)/dir/lib)	@@\
+	chmod OBJECT_MODE $(STRIP_DIR)/dir/lib	@@\
+stripped:: $(STRIP_DIR)/dir/lib		@@\
+XCOMM End translation of func(strip_shared_library)
+#endif  /* strip_shared_library */
 
 
 /* 
@@ -740,6 +792,25 @@ XCOMM End translation of func(static_library)
 #endif  /* HAS_STATIC */
 #endif  /* static_library */
 
+/*
+** Copy the given shared library to the specified directory
+*/
+#ifndef static_shared_library
+#if HAS_STATIC
+#define static_shared_library(lib,dir)			@@\
+XCOMM Begin translation of func(static_shared_library) @@\
+$(STATIC_DIR)/dir/lib: lib			@@\
+	COPY_LIBRARY(lib,$(STATIC_DIR)/dir/lib) @@\
+	chmod OBJECT_MODE $(STATIC_DIR)/dir/lib	@@\
+static:: $(STATIC_DIR)/dir/lib			@@\
+XCOMM End translation of func(static_shared_library)
+#else  /* ! HAS_STATIC */
+#define static_shared_library(lib,dir)			@@\
+XCOMM Begin translation of func(static_shared_library) @@\
+static::					@@\
+XCOMM End translation of func(static_shared_library)
+#endif  /* HAS_STATIC */
+#endif  /* static_shared_library */
 
 
 /* 

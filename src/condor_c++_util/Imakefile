@@ -8,7 +8,13 @@
 #define New_classads_dc_obj
 #endif
 
-all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
+#if HAVE_CC_SHARED_FLAG
+LIBCONDORAPI = libcondorapi.a libcondorapi.so
+#else
+LIBCONDORAPI = libcondorapi.a
+#endif
+
+all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) test_libcondorapi)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes $(QUILL_INC)
 
@@ -147,9 +153,14 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	gahp_common.o \
 	condor_arglist.o
 
-library_target( cplus_lib.a,$(OBJ))
-library_target( liburl.a,$(URL_OBJ))
-library_target( libcondorapi.a,$(CONLIBAPI_OBJ) )
+library_target(cplus_lib.a,$(OBJ))
+library_target(liburl.a,$(URL_OBJ))
+
+library_target(libcondorapi.a,$(CONLIBAPI_OBJ))
+
+#if HAVE_CC_SHARED_FLAG
+shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
+#endif
 
 c_plus_target(test_mapfile,test_mapfile.o,$(LIB))
 c_plus_target(test_locks,test_locks.o,$(LIB))
@@ -200,6 +211,12 @@ import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 release_library(libcondorapi.a,lib)
 strip_library(libcondorapi.a,lib)
 static_library(libcondorapi.a,lib)
+
+#if HAVE_CC_SHARED_FLAG
+release_shared_library(libcondorapi.so,lib)
+strip_shared_library(libcondorapi.so,lib)
+static_shared_library(libcondorapi.so,lib)
+#endif
 
 release_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
 strip_copy_target(user_log.README,include,user_log.README,TEXT_MODE)

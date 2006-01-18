@@ -468,18 +468,6 @@ VENDOR_C_FLAGS = CFlags -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(QUILL_FLAGS) $(GCB_FLAGS)
 
 
-/*
-Generally, compile with -fPIC for position-independent code.
-However, leave it as a separate Make variable so that particular
-modules that cannot use it (i.e. checkpointing) can turn it off.
-
-This is commented out by default.
-This will only be activated for special builds done by hand to
-make the SDK.
-*/
-
-/* CC_PIC_FLAG = -fPIC */
-
 #ifdef IS_C_COMP_MAJOR_GCC_3
 GPP_VERS_FLAGS = -Wno-deprecated
 #else
@@ -487,7 +475,7 @@ GPP_VERS_FLAGS =
 #endif
 GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_CFLAGS) $(PCRE_FLAGS)
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(GSOAP_CFLAGS) $(PCRE_FLAGS)
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
 /* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
 	but make sure there isn't -fno-implicit-templates in it

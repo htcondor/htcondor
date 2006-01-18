@@ -823,7 +823,7 @@ else
 fi
 
 #########
-# determine of gcc has -rdynamic
+# determine if gcc has -rdynamic
 #########
 AC_MSG_CHECKING([if gcc supports -rdynamic])
 
@@ -839,6 +839,46 @@ else
 fi
 rm -f rdynamic_test.c rdynamic_test
 AC_SUBST([gcc_rdynamic_flag],[$gcc_rdynamic_flag])
+
+#########
+# determine if gcc has -fPIC
+#########
+AC_MSG_CHECKING([if gcc supports -fPIC])
+
+echo "int main(void) { return 0; }" > fpic_test.c
+_test_output=`gcc -fPIC fpic_test.c -o fpic_test 2>&1`
+_test_status=$?
+# AIX and HPUX have idiotic problems, so turn them off for now
+if test $_test_status -eq 0 -a "x$_test_output" = "x" -a \( "x$os" != "xAIX" -a "x$os" != "xHP-UX" \); then 
+  cc_pic_flags="-fPIC -DPIC"
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([HAVE_CC_PIC_FLAG], [1], [does gcc support the -fPIC flag])
+else
+  cc_pic_flags=""
+  AC_MSG_RESULT([no])
+fi
+rm -f fpic_test.c fpic_test
+AC_SUBST([cc_pic_flags],[$cc_pic_flags])
+
+#########
+# determine if gcc has -shared
+#########
+AC_MSG_CHECKING([if gcc supports -shared])
+
+echo "int bar(void) { return 0; }" > fpic_test.c
+_test_output=`gcc -shared -fPIC -DPIC fpic_test.c -o libfpic_test.so 2>&1`
+_test_status=$?
+# AIX and HPUX have idiotic problems, so turn them off for now
+if test $_test_status -eq 0 -a "x$_test_output" = "x" -a \( "x$os" != "xAIX" -a "x$os" != "xHP-UX" \); then 
+  AC_MSG_RESULT([yes])
+  cc_shared_flags="-shared"
+  AC_DEFINE([HAVE_CC_SHARED_FLAG], [1], [does gcc support the -shared flag])
+else
+  cc_shared_flags=""
+  AC_MSG_RESULT([no])
+fi
+rm -f fpic_test.c libfpic_test.so
+AC_SUBST([cc_shared_flags],[$cc_shared_flags])
 
 #########################################
 # vendor compilers (for the test suites)

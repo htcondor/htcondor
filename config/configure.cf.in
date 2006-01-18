@@ -54,6 +54,14 @@ GCC_RDYNAMIC_FLAG = @gcc_rdynamic_flag@
 /* Used for DRMAA */
 #define HAS_PTHREADS @has_pthreads@
 
+/* Used for -fPIC */
+#if HAVE_CC_PIC_FLAG
+CC_PIC_FLAGS = @cc_pic_flags@
+#endif
+
+#if HAVE_CC_SHARED_FLAG
+CC_SHARED_FLAGS = @cc_shared_flags@
+#endif
 
 /* Settings related to the vendor compilers used for the test suites */
 
