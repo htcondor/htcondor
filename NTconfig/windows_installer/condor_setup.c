@@ -379,7 +379,7 @@ set_option(const char *attribute, const char *val) {
 		 fprintf(stderr, "tmp file: %s\n", config_file_tmp);
 	}
 
-	cfg_out = fopen(config_file_tmp, "wb");
+	cfg_out = fopen(config_file_tmp, "w");
 	if ( cfg_out == NULL ) {
 		fprintf(stderr, "Error opening config file '%s'.\n\tErr=%s\n",
 				config_file_tmp, strerror(errno));
@@ -387,7 +387,7 @@ set_option(const char *attribute, const char *val) {
 		return result;
 	}
 
-	cfg = fopen(Config_file, "rb");
+	cfg = fopen(Config_file, "r");
 
 	if ( cfg == NULL ) {
 		fprintf(stderr, "Error opening config file '%s'.\n\tErr=%s\n",

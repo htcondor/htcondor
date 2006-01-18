@@ -25,8 +25,8 @@
 <$Property "SUBMITJOBS" VALUE="Y">
 <$Property "VACATEJOBS" VALUE="N">
 <$Property "NEWPOOL" VALUE="N">
-<$Property "HOSTALLOWREAD" VALUE="your.domain.com, *.cs.wisc.edu">
-<$Property "HOSTALLOWWRITE" VALUE="*">
+<$Property "HOSTALLOWREAD" VALUE="*">
+<$Property "HOSTALLOWWRITE" VALUE="your.domain.com, *.cs.wisc.edu">
 <$Property "HOSTALLOWADMINISTRATOR" VALUE="$(FULL_HOSTNAME)">
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
