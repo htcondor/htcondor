@@ -37,6 +37,13 @@ DCShadow::DCShadow( const char* name ) : Daemon( DT_SHADOW, name, NULL )
 {
 	is_initialized = false;
 	shadow_safesock = NULL;
+
+	if(!_addr && !_name) {
+			// We must have been given a sinful string instead of a hostname.
+			// Just use the sinful string in place of a hostname, contrary
+			// to the default behavior in Daemon::Daemon().
+		_name = strnewp(_addr);
+	}
 }
 
 
