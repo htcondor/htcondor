@@ -728,7 +728,7 @@ the startd starts a timer to make sure it does not stay in the
 Matched state too long.
 The timer is set with the \Macro{MATCH\_TIMEOUT}
 \label{param:MatchTimeout} configuration file macro.
-It is specified in seconds and defaults to 300 (5 minutes).
+It is specified in seconds and defaults to 120 (2 minutes).
 If the schedd that was matched with this machine does not
 claim it within this period of time, the machine gives up,
 and goes back into the Owner state via transition \Bold{7}.
